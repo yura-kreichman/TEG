@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RideTrack — кабинет владельца · прототип v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F7F5;
+    --card:#FFFFFF;
+    --ink:#1B1F1D;
+    --ink-2:#5C6662;
+    --ink-3:#9AA39F;
+    --line:#E8EBE8;
+    --accent:#0E8074;
+    --accent-ink:#0A5F56;
+    --accent-soft:#E4F3F0;
+    --warn:#B45309;
+    --warn-soft:#FEF4E6;
+    --danger:#C4372B;
+    --danger-soft:#FBEDEB;
+    --radius-lg:20px;
+    --radius-md:14px;
+    --shadow-card:0 1px 2px rgba(27,31,29,.04), 0 8px 24px rgba(27,31,29,.05);
+    --shadow-sheet:0 -12px 40px rgba(27,31,29,.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:#ECEEEA;color:var(--ink);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    padding:32px 16px 64px;-webkit-font-smoothing:antialiased;
+  }
+  .proto-header{max-width:420px;width:100%;margin-bottom:20px}
+  .proto-header h1{font-size:15px;font-weight:600;color:var(--ink-2)}
+  .proto-header p{font-size:12.5px;color:var(--ink-3);margin-top:4px}
+  .switcher{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .switcher button{
+    border:1px solid var(--line);background:#fff;border-radius:999px;
+    padding:7px 13px;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink-2);cursor:pointer;
+  }
+  .switcher button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+
+  /* — Phone frame — */
+  .phone{
+    width:390px;max-width:100%;height:820px;
+    background:var(--bg);border-radius:36px;border:1px solid #DDE1DC;
+    box-shadow:0 24px 60px rgba(27,31,29,.14);
+    overflow:hidden;position:relative;display:flex;flex-direction:column;
+  }
+  .screen{flex:1;overflow-y:auto;padding:28px 20px 110px;display:none}
+  .screen.active{display:block}
+
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px}
+  .page-title{font-size:26px;font-weight:800;letter-spacing:-.02em}
+  .page-sub{font-size:13.5px;color:var(--ink-2);margin-bottom:20px}
+  .crumb{
+    display:inline-flex;align-items:center;gap:6px;margin-bottom:10px;
+    font-size:13px;font-weight:600;color:var(--accent-ink);
+    background:none;border:none;cursor:pointer;font-family:inherit;padding:0;
+  }
+
+  /* — Buttons — */
+  .btn-add{
+    display:inline-flex;align-items:center;gap:6px;flex:none;
+    background:var(--ink);color:#fff;border:none;cursor:pointer;
+    font:inherit;font-size:13px;font-weight:700;
+    padding:9px 15px;border-radius:999px;margin-top:2px;
+  }
+  .btn-add .plus{font-size:15px;line-height:1;font-weight:600}
+  .btn-primary{
+    display:block;width:100%;margin-top:8px;
+    background:var(--accent);color:#fff;border:none;cursor:pointer;
+    font:inherit;font-size:15px;font-weight:700;
+    padding:14px;border-radius:var(--radius-md);transition:background .15s;
+  }
+  .btn-primary:hover{background:var(--accent-ink)}
+  .kebab{
+    width:34px;height:34px;flex:none;border-radius:50%;
+    border:1px solid var(--line);background:#fff;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;font-weight:700;color:var(--ink-2);letter-spacing:1px;padding-bottom:8px;
+  }
+
+  /* — Cards — */
+  .card{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius-lg);box-shadow:var(--shadow-card);
+    padding:18px;margin-bottom:14px;
+  }
+  .card.tappable{cursor:pointer;transition:transform .12s, box-shadow .12s}
+  .card.tappable:active{transform:scale(.985)}
+  .card-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+  .card-head{display:flex;align-items:center;gap:12px}
+  .tile-icon{
+    width:46px;height:46px;border-radius:13px;background:var(--accent-soft);
+    display:flex;align-items:center;justify-content:center;font-size:23px;flex:none;
+  }
+  .card-title{font-size:17.5px;font-weight:700;letter-spacing:-.01em}
+  .card-meta{font-size:12.5px;color:var(--ink-3);margin-top:1px}
+  .grow{flex:1;min-width:0}
+
+  .chip{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;
+    background:var(--accent-soft);color:var(--accent-ink);
+  }
+  .chip .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .chip.warn{background:var(--warn-soft);color:var(--warn)}
+  .chip.warn .dot{background:var(--warn)}
+  .chip.plain{background:var(--bg);color:var(--ink-2)}
+
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+  .divider-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:13px 0;border-top:1px solid var(--line);
+  }
+  .divider-row:first-of-type{border-top:none}
+  .row-title{font-size:14.5px;font-weight:500}
+  .row-sub{font-size:12px;color:var(--ink-3);margin-top:1px}
+
+  .add-inline{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+    margin-top:12px;padding:11px;cursor:pointer;
+    border:1.5px dashed #C9D0CB;border-radius:var(--radius-md);background:transparent;
+    font:inherit;font-size:13.5px;font-weight:600;color:var(--accent-ink);
+  }
+  .add-inline:disabled{color:var(--ink-3);cursor:default}
+
+  .color-dot{width:12px;height:12px;border-radius:50%;flex:none}
+  .asset-thumb{
+    width:38px;height:38px;border-radius:10px;flex:none;object-fit:cover;
+    background:linear-gradient(135deg,#DCE7E2,#C4D6CF);
+    display:flex;align-items:center;justify-content:center;font-size:18px;
+  }
+  .avatar{
+    width:50px;height:50px;border-radius:50%;flex:none;
+    background:linear-gradient(135deg,#0E8074,#3BA99C);
+    color:#fff;font-size:19px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+  }
+
+  /* — Money — */
+  .money-hero{display:flex;align-items:baseline;gap:8px}
+  .money-hero .big{font-size:34px;font-weight:800;letter-spacing:-.02em}
+  .money-hero .cur{font-size:15px;font-weight:600;color:var(--ink-3)}
+  .money-split{display:flex;margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+  .money-split>div{flex:1}
+  .money-split>div+div{border-left:1px solid var(--line);padding-left:16px}
+  .stat-label{font-size:12px;color:var(--ink-3);font-weight:500;margin-bottom:3px}
+  .stat-value{font-size:17px;font-weight:700}
+  .stat-value.pos{color:var(--accent-ink)}
+  .cash-amount{font-size:15.5px;font-weight:700}
+  .cash-amount.zero{color:var(--ink-3);font-weight:500}
+  .link{font-size:13px;font-weight:600;color:var(--accent-ink);background:none;border:none;cursor:pointer;font-family:inherit;padding:0}
+
+  /* — Bottom nav — */
+  .bottom-nav{
+    position:absolute;left:0;right:0;bottom:0;z-index:5;
+    background:rgba(255,255,255,.92);backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);display:flex;padding:8px 6px 18px;
+  }
+  .nav-item{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:none;border:none;cursor:pointer;font-family:inherit;
+    font-size:10.5px;font-weight:600;color:var(--ink-3);padding:4px 0;
+  }
+  .nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .nav-item.on{color:var(--accent-ink)}
+  .nav-item.on svg{stroke-width:2.2}
+
+  /* — Bottom sheet — */
+  .scrim{
+    position:absolute;inset:0;z-index:10;background:rgba(20,24,22,.44);
+    opacity:0;pointer-events:none;transition:opacity .22s;
+  }
+  .scrim.open{opacity:1;pointer-events:auto}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:11;
+    background:#fff;border-radius:24px 24px 0 0;box-shadow:var(--shadow-sheet);
+    padding:10px 20px 26px;max-height:78%;overflow-y:auto;
+    transform:translateY(105%);transition:transform .26s cubic-bezier(.32,.72,.25,1);
+  }
+  .sheet.open{transform:translateY(0)}
+  .grabber{width:38px;height:4px;border-radius:99px;background:#D9DED9;margin:4px auto 16px}
+  .sheet-title{font-size:19px;font-weight:800;letter-spacing:-.01em;margin-bottom:2px}
+  .sheet-sub{font-size:13px;color:var(--ink-2);margin-bottom:18px}
+
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .field label .opt{font-weight:400;color:var(--ink-3)}
+  .field input{
+    width:100%;font:inherit;font-size:15px;
+    padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-md);
+    background:#FBFCFB;color:var(--ink);outline:none;transition:border .15s, box-shadow .15s;
+  }
+  .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
+  .field input::placeholder{color:var(--ink-3)}
+  .icon-pick,.photo-pick{
+    display:inline-flex;align-items:center;gap:8px;
+    border:1px dashed #C9D0CB;border-radius:var(--radius-md);
+    padding:10px 16px;font-size:14px;font-weight:500;color:var(--ink-2);
+    background:transparent;cursor:pointer;font-family:inherit;
+  }
+  .swatches{display:flex;gap:10px}
+  .swatch{
+    width:32px;height:32px;border-radius:50%;cursor:pointer;border:none;
+    outline:2px solid transparent;outline-offset:3px;transition:outline-color .12s;
+  }
+  .swatch.sel{outline-color:var(--ink)}
+
+  .action-list{display:flex;flex-direction:column}
+  .action-item{
+    display:flex;align-items:center;gap:12px;width:100%;
+    padding:15px 2px;border:none;border-top:1px solid var(--line);
+    background:none;cursor:pointer;font:inherit;font-size:15px;font-weight:500;color:var(--ink);text-align:left;
+  }
+  .action-item:first-child{border-top:none}
+  .action-item.danger{color:var(--danger)}
+  .action-item .ai{width:20px;text-align:center;font-size:16px}
+</style>
+</head>
+<body>
+
+<div class="proto-header">
+  <h1>RideTrack · Кабинет владельца — прототип v2</h1>
+  <p>Формы «Добавить» открываются шторкой снизу (bottom sheet). Действия карточек — за кнопкой «···». Кликайте по кнопкам, всё работает.</p>
+  <div class="switcher">
+    <button class="on" data-go="points">Точки</button>
+    <button data-go="zones">Зоны</button>
+    <button data-go="zone">Машинки</button>
+    <button data-go="operators">Операторы</button>
+    <button data-go="money">Деньги</button>
+  </div>
+</div>
+
+<div class="phone">
+
+  <!-- ————————— ТОЧКИ ————————— -->
+  <div class="screen active" id="scr-points">
+    <div class="page-head">
+      <div class="page-title">Точки</div>
+      <button class="btn-add" onclick="openSheet('sheet-point')"><span class="plus">+</span> Добавить</button>
+    </div>
+    <div class="page-sub">Локации, где стоят аттракционы</div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="tile-icon">🏡</div>
+        <div class="grow">
+          <div class="card-title">Парк Екатерининский</div>
+          <div class="card-meta">3 зоны · 1 устройство активировано</div>
+        </div>
+        <button class="kebab" onclick="openSheet('sheet-point-actions')">···</button>
+      </div>
+
+      <div class="divider-row" style="margin-top:14px">
+        <div>
+          <div class="row-title">Автогородок <span class="chip" style="margin-left:6px"><span class="dot"></span>активировано</span></div>
+          <div class="row-sub">устройство · планшет на кассе</div>
+        </div>
+        <button class="kebab" onclick="openSheet('sheet-device-actions')">···</button>
+      </div>
+
+      <button class="add-inline" onclick="openSheet('sheet-device')">+ Устройство / ссылка активации</button>
+    </div>
+  </div>
+
+  <!-- ————————— ЗОНЫ ————————— -->
+  <div class="screen" id="scr-zones">
+    <button class="crumb" data-go="points">← Все точки</button>
+    <div class="page-head">
+      <div class="page-title">Зоны</div>
+      <button class="btn-add" onclick="openSheet('sheet-zone')"><span class="plus">+</span> Добавить</button>
+    </div>
+    <div class="page-sub">Парк Екатерининский</div>
+
+    <div class="card tappable" data-go="zone">
+      <div class="card-head">
+        <div class="tile-icon">🏎️</div>
+        <div class="grow">
+          <div class="card-title">Машинки</div>
+          <div class="card-meta">2 актива</div>
+        </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA39F" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+      </div>
+      <div class="chip-row num">
+        <span class="chip plain">Обычный · 35</span>
+        <span class="chip plain">Вторая скорость · 50</span>
+      </div>
+    </div>
+
+    <div class="card tappable">
+      <div class="card-head">
+        <div class="tile-icon">🤸</div>
+        <div class="grow">
+          <div class="card-title">Батуты</div>
+          <div class="card-meta">Нет активов</div>
+        </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA39F" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+      </div>
+      <div class="chip-row">
+        <span class="chip warn"><span class="dot"></span>Тарифы не заданы</span>
+      </div>
+    </div>
+
+    <div class="card tappable">
+      <div class="card-head">
+        <div class="tile-icon">🥽</div>
+        <div class="grow">
+          <div class="card-title">Виртуалка</div>
+          <div class="card-meta">Нет активов</div>
+        </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA39F" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+      </div>
+      <div class="chip-row">
+        <span class="chip warn"><span class="dot"></span>Тарифы не заданы</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ————————— ЗОНА: ДЕТАЛЬНО ————————— -->
+  <div class="screen" id="scr-zone">
+    <button class="crumb" data-go="zones">← Зоны · Парк Екатерининский</button>
+    <div class="page-head">
+      <div class="card-head" style="gap:14px">
+        <div class="tile-icon" style="width:52px;height:52px;font-size:26px">🏎️</div>
+        <div>
+          <div class="page-title" style="font-size:24px">Машинки</div>
+          <button class="link" onclick="openSheet('sheet-icon')">Сменить иконку</button>
+        </div>
+      </div>
+      <button class="kebab" onclick="openSheet('sheet-zone-actions')">···</button>
+    </div>
+    <div style="height:18px"></div>
+
+    <div class="card">
+      <div class="card-label">Тарифы · до 2</div>
+      <div class="divider-row num">
+        <div>
+          <div class="row-title">Обычный</div>
+          <div class="row-sub">за один заезд</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <span class="cash-amount">35.00</span>
+          <button class="kebab" onclick="openSheet('sheet-tariff-actions')">···</button>
+        </div>
+      </div>
+      <div class="divider-row num">
+        <div>
+          <div class="row-title">Вторая скорость</div>
+          <div class="row-sub">ускоренный режим</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <span class="cash-amount">50.00</span>
+          <button class="kebab" onclick="openSheet('sheet-tariff-actions')">···</button>
+        </div>
+      </div>
+      <button class="add-inline" disabled>Достигнут лимит: 2 тарифа</button>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Активы · 2</div>
+      <div class="divider-row">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="color-dot" style="background:#4CAF6D"></span>
+          <div class="asset-thumb">🏎️</div>
+          <div>
+            <div class="row-title">Гоночная</div>
+            <div class="row-sub">без фото · иконка</div>
+          </div>
+        </div>
+        <button class="kebab" onclick="openSheet('sheet-asset-actions')">···</button>
+      </div>
+      <div class="divider-row">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="color-dot" style="background:#E5484D"></span>
+          <div class="asset-thumb" style="background:linear-gradient(135deg,#F2B8A0,#D97757)">🏷</div>
+          <div>
+            <div class="row-title">Формула 1</div>
+            <div class="row-sub">фото загружено</div>
+          </div>
+        </div>
+        <button class="kebab" onclick="openSheet('sheet-asset-actions')">···</button>
+      </div>
+      <button class="add-inline" onclick="openSheet('sheet-asset')">+ Добавить актив</button>
+    </div>
+  </div>
+
+  <!-- ————————— ОПЕРАТОРЫ ————————— -->
+  <div class="screen" id="scr-operators">
+    <div class="page-head">
+      <div class="page-title">Операторы</div>
+      <button class="btn-add" onclick="openSheet('sheet-operator')"><span class="plus">+</span> Добавить</button>
+    </div>
+    <div class="page-sub">Сотрудники и доступ в приложение</div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="avatar">Ж</div>
+        <div class="grow">
+          <div class="card-title">Женя</div>
+          <div style="margin-top:4px"><span class="chip"><span class="dot"></span>активен</span></div>
+        </div>
+        <button class="kebab" onclick="openSheet('sheet-operator-actions')">···</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ————————— ДЕНЬГИ ————————— -->
+  <div class="screen" id="scr-money">
+    <div class="page-head"><div class="page-title">Деньги</div></div>
+    <div class="page-sub">Сегодня, 7 июля</div>
+
+    <div class="card">
+      <div class="card-label">Бизнес · расходы и прибыль</div>
+      <div class="money-hero num">
+        <span class="big">300.00</span><span class="cur">прибыль</span>
+      </div>
+      <div class="money-split num">
+        <div><div class="stat-label">Выручка</div><div class="stat-value">300.00</div></div>
+        <div><div class="stat-label">Расходы</div><div class="stat-value">0.00</div></div>
+        <div><div class="stat-label">Прибыль</div><div class="stat-value pos">+300.00</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Остаток наличных по зонам</div>
+      <div class="divider-row">
+        <div><div class="row-title">Машинки</div><div class="row-sub">Парк Екатерининский</div></div>
+        <div style="display:flex;align-items:center;gap:14px" class="num">
+          <span class="cash-amount">50.00</span><button class="link">Размен</button>
+        </div>
+      </div>
+      <div class="divider-row">
+        <div><div class="row-title">Батуты</div><div class="row-sub">Парк Екатерининский</div></div>
+        <div style="display:flex;align-items:center;gap:14px" class="num">
+          <span class="cash-amount zero">0.00</span><button class="link">Размен</button>
+        </div>
+      </div>
+      <div class="divider-row">
+        <div><div class="row-title">Виртуалка</div><div class="row-sub">Парк Екатерининский</div></div>
+        <div style="display:flex;align-items:center;gap:14px" class="num">
+          <span class="cash-amount zero">0.00</span><button class="link">Размен</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ————————— NAV ————————— -->
+  <nav class="bottom-nav">
+    <button class="nav-item" data-go="home">
+      <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Главная
+    </button>
+    <button class="nav-item on" data-go="points">
+      <svg viewBox="0 0 24 24"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>Точки
+    </button>
+    <button class="nav-item" data-go="operators">
+      <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.6-3.4 2.9-5 5.5-5s4.9 1.6 5.5 5"/><path d="M16 5a3.2 3.2 0 0 1 0 6"/><path d="M17.5 15c2 .5 3.2 2 3.5 5"/></svg>Операторы
+    </button>
+    <button class="nav-item" data-go="money">
+      <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><circle cx="17" cy="14.5" r="1.2" fill="currentColor" stroke="none"/></svg>Деньги
+    </button>
+    <button class="nav-item" data-go="settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.07-.4.1-.8.1-1.2z"/></svg>Настройки
+    </button>
+  </nav>
+
+  <!-- ————————— SCRIM + SHEETS ————————— -->
+  <div class="scrim" id="scrim" onclick="closeSheets()"></div>
+
+  <div class="sheet" id="sheet-point">
+    <div class="grabber"></div>
+    <div class="sheet-title">Новая точка</div>
+    <div class="sheet-sub">Локация, где работают аттракционы</div>
+    <div class="field"><label>Название точки</label><input type="text" placeholder="Например, Парк Победы"></div>
+    <div class="field"><label>Адрес <span class="opt">· необязательно</span></label><input type="text" placeholder="Улица, ориентир"></div>
+    <div class="field"><label>Иконка</label>
+      <button class="icon-pick"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5C6662" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Выбрать иконку</button>
+    </div>
+    <button class="btn-primary" onclick="closeSheets()">Добавить точку</button>
+  </div>
+
+  <div class="sheet" id="sheet-zone">
+    <div class="grabber"></div>
+    <div class="sheet-title">Новая зона</div>
+    <div class="sheet-sub">Группа аттракционов внутри точки</div>
+    <div class="field"><label>Название зоны</label><input type="text" placeholder="Например, Квадроциклы"></div>
+    <div class="field"><label>Иконка</label>
+      <button class="icon-pick"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5C6662" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Выбрать иконку</button>
+    </div>
+    <button class="btn-primary" onclick="closeSheets()">Добавить зону</button>
+  </div>
+
+  <div class="sheet" id="sheet-asset">
+    <div class="grabber"></div>
+    <div class="sheet-title">Новый актив</div>
+    <div class="sheet-sub">Конкретная машинка, батут или шлем</div>
+    <div class="field"><label>Название актива</label><input type="text" placeholder="Например, Полицейская"></div>
+    <div class="field"><label>Цветовая метка</label>
+      <div class="swatches">
+        <button class="swatch sel" style="background:#4CAF6D"></button>
+        <button class="swatch" style="background:#E5484D"></button>
+        <button class="swatch" style="background:#3B82D6"></button>
+        <button class="swatch" style="background:#EAB308"></button>
+        <button class="swatch" style="background:#9A5BD0"></button>
+        <button class="swatch" style="background:#5C6662"></button>
+      </div>
+    </div>
+    <div class="field"><label>Фото <span class="opt">· необязательно</span></label>
+      <button class="photo-pick">📷 Загрузить фото</button>
+    </div>
+    <div class="field"><label>Иконка <span class="opt">· если нет фото</span></label>
+      <button class="icon-pick"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5C6662" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Выбрать иконку</button>
+    </div>
+    <button class="btn-primary" onclick="closeSheets()">Добавить актив</button>
+  </div>
+
+  <div class="sheet" id="sheet-operator">
+    <div class="grabber"></div>
+    <div class="sheet-title">Новый оператор</div>
+    <div class="sheet-sub">Сотрудник получит вход по ПИН-коду</div>
+    <div class="field"><label>Имя оператора</label><input type="text" placeholder="Как в графике смен"></div>
+    <div class="field"><label>ПИН-код <span class="opt">· 4–6 цифр</span></label><input type="text" inputmode="numeric" placeholder="••••"></div>
+    <button class="btn-primary" onclick="closeSheets()">Добавить оператора</button>
+  </div>
+
+  <div class="sheet" id="sheet-device">
+    <div class="grabber"></div>
+    <div class="sheet-title">Новое устройство</div>
+    <div class="sheet-sub">Ссылка активации для планшета или телефона на точке</div>
+    <div class="field"><label>Название <span class="opt">· необязательно</span></label><input type="text" placeholder="Планшет на кассе"></div>
+    <button class="btn-primary" onclick="closeSheets()">Создать ссылку активации</button>
+  </div>
+
+  <div class="sheet" id="sheet-operator-actions">
+    <div class="grabber"></div>
+    <div class="sheet-title" style="margin-bottom:12px">Меню</div>
+    <div class="action-list">
+      <button class="action-item" onclick="closeSheets()"><span class="ai">🖼</span>Загрузить фото</button>
+      <button class="action-item" onclick="closeSheets()"><span class="ai">✏️</span>Изменить имя</button>
+      <button class="action-item" onclick="closeSheets()"><span class="ai">🔑</span>Сменить ПИН</button>
+      <button class="action-item danger" onclick="closeSheets()"><span class="ai">⏸</span>Деактивировать</button>
+      <button class="action-item danger" onclick="closeSheets()"><span class="ai">🗑</span>Удалить</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet-point-actions">
+    <div class="grabber"></div>
+    <div class="sheet-title" style="margin-bottom:12px">Парк Екатерининский</div>
+    <div class="action-list">
+      <button class="action-item" onclick="closeSheets()"><span class="ai">✏️</span>Переименовать</button>
+      <button class="action-item" onclick="closeSheets()"><span class="ai">🖼</span>Сменить иконку</button>
+      <button class="action-item danger" onclick="closeSheets()"><span class="ai">🗑</span>Удалить точку</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet-device-actions">
+    <div class="grabber"></div>
+    <div class="sheet-title" style="margin-bottom:12px">Автогородок</div>
+    <div class="action-list">
+      <button class="action-item" onclick="closeSheets()"><span class="ai">✏️</span>Переименовать</button>
+      <button class="action-item" onclick="closeSheets()"><span class="ai">🔗</span>Скопировать ссылку активации</button>
+      <button class="action-item danger" onclick="closeSheets()"><span class="ai">🗑</span>Удалить устройство</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet-zone-actions">
+    <div class="grabber"></div>
+    <div class="sheet-title" style="margin-bottom:12px">Машинки</div>
+    <div class="action-list">
+      <button class="action-item" onclick="closeSheets()"><span class="ai">✏️</span>Переименовать зону</button>
+      <button class="action-item danger" onclick="closeSheets()"><span class="ai">🗑</span>Удалить зону</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet-tariff-actions">
+    <div class="grabber"></div>
+    <div class="sheet-title" style="margin-bottom:12px">Тариф</div>
+    <div class="action-list">
+      <button class="action-item" onclick="closeSheets()"><span class="ai">✏️</span>Изменить название и цену</button>
+      <button class="action-item danger" onclick="closeSheets()"><span class="ai">🗑</span>Удалить тариф</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet-asset-actions">
+    <div class="grabber"></div>
+    <div class="sheet-title" style="margin-bottom:12px">Актив</div>
+    <div class="action-list">
+      <button class="action-item" onclick="closeSheets()"><span class="ai">✏️</span>Переименовать</button>
+      <button class="action-item" onclick="closeSheets()"><span class="ai">🎨</span>Сменить цветовую метку</button>
+      <button class="action-item" onclick="closeSheets()"><span class="ai">📷</span>Заменить фото</button>
+      <button class="action-item danger" onclick="closeSheets()"><span class="ai">🗑</span>Удалить актив</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet-icon">
+    <div class="grabber"></div>
+    <div class="sheet-title">Иконка зоны</div>
+    <div class="sheet-sub">Выберите подходящую</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
+      <button class="tile-icon" style="width:100%;height:56px;border:2px solid var(--accent);cursor:pointer">🏎️</button>
+      <button class="tile-icon" style="width:100%;height:56px;border:none;cursor:pointer">🚂</button>
+      <button class="tile-icon" style="width:100%;height:56px;border:none;cursor:pointer">🤸</button>
+      <button class="tile-icon" style="width:100%;height:56px;border:none;cursor:pointer">🥽</button>
+      <button class="tile-icon" style="width:100%;height:56px;border:none;cursor:pointer">🏹</button>
+      <button class="tile-icon" style="width:100%;height:56px;border:none;cursor:pointer">🐠</button>
+      <button class="tile-icon" style="width:100%;height:56px;border:none;cursor:pointer">🪁</button>
+      <button class="tile-icon" style="width:100%;height:56px;border:none;cursor:pointer">▲</button>
+      <button class="tile-icon" style="width:100%;height:56px;border:none;cursor:pointer">🎮</button>
+      <button class="tile-icon" style="width:100%;height:56px;border:none;cursor:pointer">🎪</button>
+    </div>
+    <button class="btn-primary" onclick="closeSheets()">Сохранить</button>
+  </div>
+
+</div>
+
+<script>
+  const screens={points:'scr-points',zones:'scr-zones',zone:'scr-zone',operators:'scr-operators',money:'scr-money'};
+  function go(id){
+    if(!screens[id])return;
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById(screens[id]).classList.add('active');
+    const navMap={zones:'points',zone:'points'};
+    const navId=navMap[id]||id;
+    document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('on',b.dataset.go===navId));
+    document.querySelectorAll('.switcher button').forEach(b=>b.classList.toggle('on',b.dataset.go===id));
+  }
+  document.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',e=>{
+    if(e.target.closest('.kebab'))return;
+    go(el.dataset.go);
+  }));
+  function openSheet(id){
+    document.getElementById('scrim').classList.add('open');
+    document.getElementById(id).classList.add('open');
+  }
+  function closeSheets(){
+    document.getElementById('scrim').classList.remove('open');
+    document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));
+  }
+  document.querySelectorAll('.swatch').forEach(s=>s.addEventListener('click',()=>{
+    s.parentElement.querySelectorAll('.swatch').forEach(x=>x.classList.remove('sel'));
+    s.classList.add('sel');
+  }));
+</script>
+</body>
+</html>

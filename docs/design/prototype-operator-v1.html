@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RideTrack — PWA оператора · прототип v1 (тёмная тема)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* ── Тёмная тема оператора ── */
+    --bg:#141917;
+    --card:#1D2421;
+    --card-2:#232B28;
+    --ink:#F1F4F2;
+    --ink-2:#A6B0AB;
+    --ink-3:#6E7A74;
+    --line:#2B3330;
+    --accent:#2BB3A3;
+    --accent-ink:#7FE0D3;
+    --accent-soft:rgba(43,179,163,.16);
+    --ok:#3ECF8E;
+    --ok-soft:rgba(62,207,142,.15);
+    --warn:#E5A54B;
+    --warn-soft:rgba(229,165,75,.14);
+    --danger:#EF6A5E;
+    --radius-lg:20px;
+    --radius-md:14px;
+    --shadow-sheet:0 -12px 40px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:#0E1211;color:var(--ink);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    padding:32px 16px 64px;-webkit-font-smoothing:antialiased;
+  }
+  .proto-header{max-width:420px;width:100%;margin-bottom:20px;color:#B9C2BD}
+  .proto-header h1{font-size:15px;font-weight:600}
+  .proto-header p{font-size:12.5px;color:#7C8781;margin-top:4px}
+  .switcher{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .switcher button{
+    border:1px solid #333B37;background:#1A201D;border-radius:999px;
+    padding:7px 13px;font:inherit;font-size:12.5px;font-weight:600;color:#B9C2BD;cursor:pointer;
+  }
+  .switcher button.on{background:#F1F4F2;border-color:#F1F4F2;color:#141917}
+
+  .phone{
+    width:390px;max-width:100%;height:820px;
+    background:var(--bg);border-radius:36px;border:1px solid #262E2A;
+    box-shadow:0 24px 60px rgba(0,0,0,.5);
+    overflow:hidden;position:relative;display:flex;flex-direction:column;
+  }
+  .screen{flex:1;overflow-y:auto;padding:28px 20px 120px;display:none}
+  .screen.active{display:flex;flex-direction:column}
+
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+  /* ── Главный экран ── */
+  #scr-home{justify-content:center;align-items:center;text-align:center}
+  .op-avatar{
+    width:84px;height:84px;border-radius:50%;
+    background:linear-gradient(135deg,#0E8074,#3BA99C);
+    color:#fff;font-size:34px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;margin:0 auto 18px;
+  }
+  .hello{font-size:26px;font-weight:800;letter-spacing:-.02em}
+  .hello-sub{font-size:14px;color:var(--ink-2);margin-top:6px;margin-bottom:34px}
+  .hello-sub b{color:var(--ink);font-weight:600}
+  .big-btn{
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    width:100%;max-width:300px;margin:0 auto 12px;
+    font:inherit;font-size:16px;font-weight:700;cursor:pointer;
+    padding:17px;border-radius:16px;transition:filter .15s;
+  }
+  .big-btn:active{filter:brightness(1.12)}
+  .big-btn.primary{background:var(--accent);color:#0C1513;border:none}
+  .big-btn.secondary{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+  .switch-op{
+    position:absolute;right:16px;bottom:18px;
+    display:inline-flex;align-items:center;gap:7px;
+    background:var(--card);border:1px solid var(--line);border-radius:999px;
+    padding:9px 15px;font:inherit;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;
+  }
+
+  /* ── Мастер: шапка ── */
+  .wiz-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .wiz-back{
+    display:inline-flex;align-items:center;gap:6px;
+    background:none;border:none;cursor:pointer;font-family:inherit;
+    font-size:13.5px;font-weight:600;color:var(--ink-2);padding:0;
+  }
+  .wiz-step{font-size:12px;font-weight:600;color:var(--ink-3)}
+  .wiz-progress{display:flex;gap:5px;margin:12px 0 22px}
+  .wiz-progress span{height:4px;flex:1;border-radius:99px;background:var(--line)}
+  .wiz-progress span.done{background:var(--accent)}
+  .wiz-title{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px}
+  .wiz-sub{font-size:13.5px;color:var(--ink-2);margin-bottom:20px}
+
+  /* ── Плитки зон ── */
+  .tile-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .zone-tile{
+    display:flex;flex-direction:column;align-items:center;gap:10px;
+    padding:22px 12px 18px;border-radius:var(--radius-lg);cursor:pointer;
+    background:var(--card);border:1.5px solid var(--line);
+    font:inherit;color:var(--ink-2);
+    transition:border-color .15s, background .15s, color .15s, transform .1s;
+    position:relative;
+  }
+  .zone-tile:active{transform:scale(.97)}
+  .zone-tile .z-icon{
+    width:56px;height:56px;border-radius:16px;font-size:28px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--card-2);filter:grayscale(1);opacity:.55;
+    transition:filter .15s, opacity .15s, background .15s;
+  }
+  .zone-tile .z-name{font-size:14.5px;font-weight:600}
+  .zone-tile.sel{
+    background:var(--accent-soft);border-color:var(--accent);color:var(--ink);
+  }
+  .zone-tile.sel .z-icon{filter:none;opacity:1;background:rgba(43,179,163,.22)}
+  .zone-tile .z-check{
+    position:absolute;top:10px;right:10px;
+    width:22px;height:22px;border-radius:50%;
+    background:var(--accent);color:#0C1513;
+    display:none;align-items:center;justify-content:center;
+  }
+  .zone-tile.sel .z-check{display:flex}
+
+  /* ── Плитки активов ── */
+  .asset-tile{
+    display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+    padding:16px;border-radius:var(--radius-lg);cursor:pointer;
+    background:var(--card);border:1.5px solid var(--line);
+    font:inherit;color:var(--ink);text-align:left;
+    transition:border-color .15s, transform .1s;position:relative;
+  }
+  .asset-tile:active{transform:scale(.97)}
+  .asset-tile.done{border-color:var(--ok)}
+  .a-head{display:flex;align-items:center;gap:9px;width:100%}
+  .color-dot{width:11px;height:11px;border-radius:50%;flex:none}
+  .a-thumb{
+    width:44px;height:44px;border-radius:12px;flex:none;font-size:22px;
+    display:flex;align-items:center;justify-content:center;background:var(--card-2);
+  }
+  .a-name{font-size:15px;font-weight:700;letter-spacing:-.01em}
+  .a-state{font-size:12px;color:var(--ink-3);line-height:1.5}
+  .a-state.filled{color:var(--ink-2)}
+  .a-state .d{color:var(--accent-ink);font-weight:600}
+  .a-check{
+    position:absolute;top:12px;right:12px;
+    width:24px;height:24px;border-radius:50%;
+    background:var(--ok);color:#0C1513;
+    display:none;align-items:center;justify-content:center;
+  }
+  .asset-tile.done .a-check{display:flex}
+
+  .extras-row{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    margin-top:16px;padding:14px 16px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+  }
+  .extras-row label{font-size:14px;font-weight:600}
+  .extras-row .hint{font-size:11.5px;color:var(--ink-3);font-weight:400;margin-top:2px}
+  .stepper{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .stepper button{
+    width:40px;height:40px;background:var(--card-2);border:none;cursor:pointer;
+    font-size:19px;font-weight:600;color:var(--ink);font-family:inherit;
+  }
+  .stepper .val{width:44px;text-align:center;font-size:15px;font-weight:700}
+
+  /* ── Нижняя панель мастера ── */
+  .wiz-bar{
+    position:absolute;left:0;right:0;bottom:0;z-index:5;
+    display:flex;gap:10px;padding:14px 16px 22px;
+    background:rgba(20,25,23,.92);backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);
+  }
+  .wiz-bar .back{
+    flex:1;background:var(--card);color:var(--ink-2);border:1px solid var(--line);
+    font:inherit;font-size:15px;font-weight:600;padding:15px;border-radius:14px;cursor:pointer;
+  }
+  .wiz-bar .next{
+    flex:1.6;background:var(--accent);color:#0C1513;border:none;
+    font:inherit;font-size:15px;font-weight:700;padding:15px;border-radius:14px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .wiz-bar .next .cnt{font-size:12px;font-weight:600;opacity:.75}
+
+  /* ── Шторка ── */
+  .scrim{
+    position:absolute;inset:0;z-index:10;background:rgba(0,0,0,.55);
+    opacity:0;pointer-events:none;transition:opacity .22s;
+  }
+  .scrim.open{opacity:1;pointer-events:auto}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:11;
+    background:var(--card);border-radius:24px 24px 0 0;box-shadow:var(--shadow-sheet);
+    border-top:1px solid var(--line);
+    padding:10px 20px 26px;max-height:82%;overflow-y:auto;
+    transform:translateY(105%);transition:transform .26s cubic-bezier(.32,.72,.25,1);
+  }
+  .sheet.open{transform:translateY(0)}
+  .grabber{width:38px;height:4px;border-radius:99px;background:#3A443F;margin:4px auto 16px}
+  .sheet-head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .sheet-title{font-size:19px;font-weight:800;letter-spacing:-.01em}
+  .sheet-sub{font-size:13px;color:var(--ink-2);margin-bottom:18px}
+
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .field .prev{font-weight:400;color:var(--ink-3)}
+  .field input{
+    width:100%;font:inherit;font-size:22px;font-weight:700;
+    font-variant-numeric:tabular-nums;
+    padding:13px 15px;border:1.5px solid var(--line);border-radius:var(--radius-md);
+    background:var(--card-2);color:var(--ink);outline:none;
+    transition:border .15s, box-shadow .15s;
+  }
+  .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .field input::placeholder{color:var(--ink-3);font-weight:500;font-size:17px}
+  .delta{
+    display:flex;align-items:center;gap:7px;margin-top:8px;
+    font-size:13px;font-weight:600;color:var(--accent-ink);min-height:18px;
+  }
+  .delta.warn{color:var(--warn)}
+  .delta:empty{display:none}
+  .btn-primary{
+    display:block;width:100%;margin-top:4px;
+    background:var(--accent);color:#0C1513;border:none;cursor:pointer;
+    font:inherit;font-size:15px;font-weight:700;
+    padding:15px;border-radius:var(--radius-md);
+  }
+
+  .icon-svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+</style>
+</head>
+<body>
+
+<div class="proto-header">
+  <h1>RideTrack · PWA оператора — прототип v1 · тёмная тема</h1>
+  <p>Зоны и активы — плитками. Тап по активу открывает шторку ввода, дельта считается вживую (с переходом 9999→0), после сохранения — зелёная галочка. Всё кликабельно.</p>
+  <div class="switcher">
+    <button class="on" data-go="home">Главный</button>
+    <button data-go="zones">Шаг 1 · Зоны</button>
+    <button data-go="counters">Шаг 2 · Показания</button>
+  </div>
+</div>
+
+<div class="phone">
+
+  <!-- ═════════ ГЛАВНЫЙ ═════════ -->
+  <div class="screen active" id="scr-home">
+    <div>
+      <div class="op-avatar">Ж</div>
+      <div class="hello">Здравствуйте, Женя</div>
+      <div class="hello-sub">Точка: <b>Парк Екатерининский</b></div>
+      <button class="big-btn primary" data-go="zones">
+        <svg class="icon-svg" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 10l2 2 4-4"/></svg>
+        Сдать итоги
+      </button>
+      <button class="big-btn secondary">
+        <svg class="icon-svg" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="2"/><circle cx="12" cy="12.5" r="2.4"/><path d="M6 7V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>
+        Инкассация
+      </button>
+    </div>
+    <button class="switch-op">
+      <svg class="icon-svg" style="width:15px;height:15px" viewBox="0 0 24 24"><path d="M4 7h13l-3-3"/><path d="M20 17H7l3 3"/></svg>
+      Сменить оператора
+    </button>
+  </div>
+
+  <!-- ═════════ ШАГ 1: ЗОНЫ ═════════ -->
+  <div class="screen" id="scr-zones">
+    <div class="wiz-top">
+      <button class="wiz-back" data-go="home">← Отмена</button>
+      <span class="wiz-step">Шаг 1 из 3</span>
+    </div>
+    <div class="wiz-progress"><span class="done"></span><span></span><span></span></div>
+    <div class="wiz-title">Какие зоны работали?</div>
+    <div class="wiz-sub">Можно выбрать несколько</div>
+
+    <div class="tile-grid">
+      <button class="zone-tile sel" onclick="toggleZone(this)">
+        <span class="z-check"><svg class="icon-svg" style="width:13px;height:13px" viewBox="0 0 24 24"><path d="M5 13l5 5 9-11"/></svg></span>
+        <span class="z-icon">🏎️</span>
+        <span class="z-name">Машинки</span>
+      </button>
+      <button class="zone-tile" onclick="toggleZone(this)">
+        <span class="z-check"><svg class="icon-svg" style="width:13px;height:13px" viewBox="0 0 24 24"><path d="M5 13l5 5 9-11"/></svg></span>
+        <span class="z-icon">🤸</span>
+        <span class="z-name">Батуты</span>
+      </button>
+      <button class="zone-tile" onclick="toggleZone(this)">
+        <span class="z-check"><svg class="icon-svg" style="width:13px;height:13px" viewBox="0 0 24 24"><path d="M5 13l5 5 9-11"/></svg></span>
+        <span class="z-icon">🥽</span>
+        <span class="z-name">Виртуалка</span>
+      </button>
+    </div>
+
+    <div class="wiz-bar">
+      <button class="back" data-go="home">Назад</button>
+      <button class="next" data-go="counters">Далее
+        <svg class="icon-svg" style="width:16px;height:16px" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═════════ ШАГ 2: ПОКАЗАНИЯ ═════════ -->
+  <div class="screen" id="scr-counters">
+    <div class="wiz-top">
+      <button class="wiz-back" data-go="zones">← Зоны</button>
+      <span class="wiz-step">Шаг 2 из 3</span>
+    </div>
+    <div class="wiz-progress"><span class="done"></span><span class="done"></span><span></span></div>
+    <div class="wiz-title">Машинки</div>
+    <div class="wiz-sub">Нажмите на актив и введите показания</div>
+
+    <div class="tile-grid">
+      <button class="asset-tile" id="tile-1" onclick="openCounter(1)">
+        <span class="a-check"><svg class="icon-svg" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M5 13l5 5 9-11"/></svg></span>
+        <span class="a-head">
+          <span class="color-dot" style="background:#4CAF6D"></span>
+          <span class="a-thumb">🏎️</span>
+        </span>
+        <span class="a-name">Гоночная</span>
+        <span class="a-state" id="state-1">Не заполнено</span>
+      </button>
+
+      <button class="asset-tile" id="tile-2" onclick="openCounter(2)">
+        <span class="a-check"><svg class="icon-svg" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M5 13l5 5 9-11"/></svg></span>
+        <span class="a-head">
+          <span class="color-dot" style="background:#E5484D"></span>
+          <span class="a-thumb" style="background:linear-gradient(135deg,#7A5648,#4A3B33)">📷</span>
+        </span>
+        <span class="a-name">Формула 1</span>
+        <span class="a-state" id="state-2">Не заполнено</span>
+      </button>
+    </div>
+
+    <div class="extras-row">
+      <div>
+        <label>Возвраты / тестовые пуски</label>
+        <div class="hint">вычитаются из заездов, шт.</div>
+      </div>
+      <div class="stepper num">
+        <button onclick="stepExtras(-1)">−</button>
+        <span class="val" id="extras-val">0</span>
+        <button onclick="stepExtras(1)">+</button>
+      </div>
+    </div>
+
+    <div class="wiz-bar">
+      <button class="back" data-go="zones">Назад</button>
+      <button class="next">Далее <span class="cnt num" id="fill-cnt">0 из 2</span>
+        <svg class="icon-svg" style="width:16px;height:16px" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═════════ ШТОРКА ВВОДА ═════════ -->
+  <div class="scrim" id="scrim" onclick="closeSheets()"></div>
+
+  <div class="sheet" id="sheet-counter">
+    <div class="grabber"></div>
+    <div class="sheet-head">
+      <span class="color-dot" id="sh-dot" style="background:#4CAF6D"></span>
+      <div class="sheet-title" id="sh-title">Гоночная</div>
+    </div>
+    <div class="sheet-sub">Введите текущие показания счётчика</div>
+
+    <div class="field">
+      <label>Обычный <span class="prev num">· пред. показание: <b id="prev-1">12</b></span></label>
+      <input type="text" inputmode="numeric" id="in-1" placeholder="0–9999" oninput="calcDelta(1)">
+      <div class="delta num" id="delta-1"></div>
+    </div>
+
+    <div class="field">
+      <label>Вторая скорость <span class="prev num">· пред. показание: <b id="prev-2">0</b></span></label>
+      <input type="text" inputmode="numeric" id="in-2" placeholder="0–9999" oninput="calcDelta(2)">
+      <div class="delta num" id="delta-2"></div>
+    </div>
+
+    <button class="btn-primary" onclick="saveCounter()">Сохранить показания</button>
+  </div>
+
+</div>
+
+<script>
+  const screens={home:'scr-home',zones:'scr-zones',counters:'scr-counters'};
+  function go(id){
+    if(!screens[id])return;
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById(screens[id]).classList.add('active');
+    document.querySelectorAll('.switcher button').forEach(b=>b.classList.toggle('on',b.dataset.go===id));
+  }
+  document.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>go(el.dataset.go)));
+
+  function toggleZone(t){t.classList.toggle('sel')}
+
+  /* — данные активов (демо) — */
+  const assets={
+    1:{name:'Гоночная',dot:'#4CAF6D',prev:[12,0],vals:null},
+    2:{name:'Формула 1',dot:'#E5484D',prev:[0,0],vals:null},
+  };
+  let current=1;
+
+  function openCounter(id){
+    current=id;
+    const a=assets[id];
+    document.getElementById('sh-title').textContent=a.name;
+    document.getElementById('sh-dot').style.background=a.dot;
+    document.getElementById('prev-1').textContent=a.prev[0];
+    document.getElementById('prev-2').textContent=a.prev[1];
+    document.getElementById('in-1').value=a.vals?a.vals[0]:'';
+    document.getElementById('in-2').value=a.vals?a.vals[1]:'';
+    calcDelta(1);calcDelta(2);
+    document.getElementById('scrim').classList.add('open');
+    document.getElementById('sheet-counter').classList.add('open');
+    setTimeout(()=>document.getElementById('in-1').focus(),280);
+  }
+  function closeSheets(){
+    document.getElementById('scrim').classList.remove('open');
+    document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));
+  }
+
+  function calcDelta(n){
+    const el=document.getElementById('delta-'+n);
+    const raw=document.getElementById('in-'+n).value.trim();
+    if(raw===''){el.textContent='';el.classList.remove('warn');return}
+    const cur=parseInt(raw,10);
+    if(isNaN(cur)||cur<0||cur>9999){el.textContent='Введите число 0–9999';el.classList.add('warn');return}
+    const prev=assets[current].prev[n-1];
+    let d=cur-prev, roll=false;
+    if(d<0){d=cur+10000-prev;roll=true}
+    el.classList.toggle('warn',roll);
+    el.textContent='Заездов: '+d+(roll?' · переход счётчика через 9999 — проверьте':'');
+  }
+
+  function saveCounter(){
+    const v1=parseInt(document.getElementById('in-1').value,10);
+    const v2=parseInt(document.getElementById('in-2').value,10);
+    if(isNaN(v1)&&isNaN(v2)){closeSheets();return}
+    const a=assets[current];
+    a.vals=[isNaN(v1)?a.prev[0]:v1, isNaN(v2)?a.prev[1]:v2];
+    const d1=(a.vals[0]-a.prev[0]+10000)%10000;
+    const d2=(a.vals[1]-a.prev[1]+10000)%10000;
+    const tile=document.getElementById('tile-'+current);
+    tile.classList.add('done');
+    const st=document.getElementById('state-'+current);
+    st.classList.add('filled');
+    st.innerHTML='Обычный: <span class="d num">'+a.vals[0]+' (+'+d1+')</span><br>Вторая: <span class="d num">'+a.vals[1]+' (+'+d2+')</span>';
+    const done=Object.values(assets).filter(x=>x.vals).length;
+    document.getElementById('fill-cnt').textContent=done+' из 2';
+    closeSheets();
+  }
+
+  let extras=0;
+  function stepExtras(d){
+    extras=Math.max(0,extras+d);
+    document.getElementById('extras-val').textContent=extras;
+  }
+</script>
+</body>
+</html>

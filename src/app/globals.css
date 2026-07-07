@@ -1,0 +1,323 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Named design-system tokens (docs/design/design-system.md) — added alongside
+     the existing relative --radius-* scale above rather than replacing it, so
+     old usages keep working while new screens opt in via rounded-control/card/
+     block, bg-surface-0, shadow-card-rest/card-hover/floating/sheet. Radius
+     values are fixed literals (spec doesn't vary them by theme); surface/shadow
+     vary by theme so they're indirected through :root/.dark below. Card/control
+     radius updated 2026-07-07 to match docs/design/prototype-owner-v2.html
+     (was 1rem/0.75rem under the earlier Airbnb-referenced pass). */
+  --radius-control: 0.875rem;
+  --radius-card: 1.25rem;
+  --radius-block: 1.5rem;
+  --color-surface-0: var(--surface-0);
+  --shadow-card-rest: var(--shadow-card-rest);
+  --shadow-card-hover: var(--shadow-card-hover);
+  --shadow-floating: var(--shadow-floating);
+  --shadow-sheet: var(--shadow-sheet);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  /* ink/ink-2/line below per docs/design/prototype-owner-v2.html (2026-07-07) —
+     supersedes the generic shadcn near-black/gray neutrals with the prototype's
+     slightly sage-tinted palette. */
+  --foreground: #1B1F1D;
+  --card: oklch(1 0 0);
+  --card-foreground: #1B1F1D;
+  --popover: oklch(1 0 0);
+  --popover-foreground: #1B1F1D;
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: #1B1F1D;
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: #5C6662;
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: #1B1F1D;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: #E8EBE8;
+  --input: #E8EBE8;
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+
+  /* Semantic colors — fixed across all accent schemes (see accent presets below). */
+  --success: oklch(0.6 0.14 152);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.75 0.15 80);
+  --warning-foreground: oklch(0.2 0.02 80);
+
+  /* Per docs/design/prototype-owner-v2.html (approved 2026-07-07) — supersedes
+     the prior Airbnb-referenced values (#FBFBF9 bg, shadow-only depth). Page
+     background is distinct from --background/--card (kept pure white) so
+     components are unaffected until a screen opts into bg-surface-0/border-border
+     together. Depth now comes from a thin border AND a soft shadow together,
+     not shadow alone. */
+  --surface-0: #F6F7F5;
+  --shadow-card-rest: 0 1px 2px rgba(27, 31, 29, 0.04), 0 8px 24px rgba(27, 31, 29, 0.05);
+  --shadow-card-hover: 0 2px 4px rgba(27, 31, 29, 0.08), 0 8px 24px rgba(27, 31, 29, 0.1);
+  --shadow-floating: 0 8px 28px rgba(27, 31, 29, 0.16);
+  --shadow-sheet: 0 -12px 40px rgba(27, 31, 29, 0.18);
+}
+
+.dark {
+  /* Per docs/design/prototype-operator-v1.html (approved 2026-07-07) — supersedes
+     the prior generic shadcn oklch neutrals with the operator prototype's exact
+     dark palette. --primary/--ring/--sidebar-primary stay as a neutral fallback
+     here since they're overridden per-tenant by [data-accent="..."].dark below. */
+  --background: #141917;
+  --foreground: #F1F4F2;
+  --card: #1D2421;
+  --card-foreground: #F1F4F2;
+  --popover: #1D2421;
+  --popover-foreground: #F1F4F2;
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: #232B28;
+  --secondary-foreground: #F1F4F2;
+  --muted: #232B28;
+  --muted-foreground: #A6B0AB;
+  --accent: #232B28;
+  --accent-foreground: #F1F4F2;
+  --destructive: #EF6A5E;
+  --border: #2B3330;
+  --input: #2B3330;
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: #1D2421;
+  --sidebar-foreground: #F1F4F2;
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: #232B28;
+  --sidebar-accent-foreground: #F1F4F2;
+  --sidebar-border: #2B3330;
+  --sidebar-ring: oklch(0.556 0 0);
+
+  --success: #3ECF8E;
+  --success-foreground: #0C1513;
+  --warning: #E5A54B;
+  --warning-foreground: #0C1513;
+
+  /* Dark mode: per spec, elevation comes from lightening the surface a step
+     (--card is already lighter than --background here) rather than shadows —
+     so shadows are kept subtle/near-invisible instead of the light-mode values. */
+  --surface-0: var(--background);
+  --shadow-card-rest: 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-card-hover: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow-floating: 0 8px 28px rgba(0, 0, 0, 0.5);
+  --shadow-sheet: 0 -12px 40px rgba(0, 0, 0, 0.5);
+}
+
+/*
+ * Акцентные схемы (docs/spec/03-design-system.md): настройка тенанта, 5 пресетов,
+ * произвольный цвет не даётся. Меняют только primary/ring/sidebar-primary —
+ * нейтральная палитра и семантические цвета (success/warning/destructive) общие.
+ * Значения подобраны консервативно для контраста AA с primary-foreground; перед
+ * продакшеном перепроверить реальным контраст-чекером (WebAIM/axe), инструмента
+ * для этого в текущей среде нет.
+ */
+[data-accent="green"] {
+  --primary: oklch(0.52 0.13 149);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: oklch(0.52 0.13 149);
+  --sidebar-primary: oklch(0.52 0.13 149);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-ring: oklch(0.52 0.13 149);
+}
+[data-accent="green"].dark {
+  --primary: oklch(0.75 0.15 149);
+  --primary-foreground: oklch(0.15 0.02 149);
+  --ring: oklch(0.75 0.15 149);
+  --sidebar-primary: oklch(0.75 0.15 149);
+  --sidebar-primary-foreground: oklch(0.15 0.02 149);
+  --sidebar-ring: oklch(0.75 0.15 149);
+}
+
+[data-accent="blue"] {
+  --primary: oklch(0.5 0.16 258);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: oklch(0.5 0.16 258);
+  --sidebar-primary: oklch(0.5 0.16 258);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-ring: oklch(0.5 0.16 258);
+}
+[data-accent="blue"].dark {
+  --primary: oklch(0.72 0.14 258);
+  --primary-foreground: oklch(0.15 0.02 258);
+  --ring: oklch(0.72 0.14 258);
+  --sidebar-primary: oklch(0.72 0.14 258);
+  --sidebar-primary-foreground: oklch(0.15 0.02 258);
+  --sidebar-ring: oklch(0.72 0.14 258);
+}
+
+[data-accent="orange"] {
+  --primary: oklch(0.63 0.19 45);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: oklch(0.63 0.19 45);
+  --sidebar-primary: oklch(0.63 0.19 45);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-ring: oklch(0.63 0.19 45);
+}
+[data-accent="orange"].dark {
+  --primary: oklch(0.75 0.17 45);
+  --primary-foreground: oklch(0.18 0.02 45);
+  --ring: oklch(0.75 0.17 45);
+  --sidebar-primary: oklch(0.75 0.17 45);
+  --sidebar-primary-foreground: oklch(0.18 0.02 45);
+  --sidebar-ring: oklch(0.75 0.17 45);
+}
+
+[data-accent="purple"] {
+  --primary: oklch(0.5 0.19 302);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: oklch(0.5 0.19 302);
+  --sidebar-primary: oklch(0.5 0.19 302);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-ring: oklch(0.5 0.19 302);
+}
+[data-accent="purple"].dark {
+  --primary: oklch(0.74 0.15 302);
+  --primary-foreground: oklch(0.16 0.02 302);
+  --ring: oklch(0.74 0.15 302);
+  --sidebar-primary: oklch(0.74 0.15 302);
+  --sidebar-primary-foreground: oklch(0.16 0.02 302);
+  --sidebar-ring: oklch(0.74 0.15 302);
+}
+
+[data-accent="teal"] {
+  --primary: oklch(0.55 0.12 195);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: oklch(0.55 0.12 195);
+  --sidebar-primary: oklch(0.55 0.12 195);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-ring: oklch(0.55 0.12 195);
+}
+[data-accent="teal"].dark {
+  --primary: oklch(0.75 0.12 195);
+  --primary-foreground: oklch(0.16 0.02 195);
+  --ring: oklch(0.75 0.12 195);
+  --sidebar-primary: oklch(0.75 0.12 195);
+  --sidebar-primary-foreground: oklch(0.16 0.02 195);
+  --sidebar-ring: oklch(0.75 0.12 195);
+}
+
+/* Coral — 6th preset added per the Airbnb-referenced visual language update. */
+[data-accent="coral"] {
+  --primary: oklch(0.62 0.2 25);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: oklch(0.62 0.2 25);
+  --sidebar-primary: oklch(0.62 0.2 25);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-ring: oklch(0.62 0.2 25);
+}
+[data-accent="coral"].dark {
+  --primary: oklch(0.76 0.17 25);
+  --primary-foreground: oklch(0.18 0.02 25);
+  --ring: oklch(0.76 0.17 25);
+  --sidebar-primary: oklch(0.76 0.17 25);
+  --sidebar-primary-foreground: oklch(0.18 0.02 25);
+  --sidebar-ring: oklch(0.76 0.17 25);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* Typographic scale — named utilities so every screen pulls from the same
+   scale instead of repeating arbitrary text-[Npx] values per page. Updated
+   2026-07-07 to match docs/design/prototype-owner-v2.html (.page-title/
+   .card-label/.row-title/.row-sub) — supersedes the earlier Airbnb-referenced
+   sizes (28px/600, 18px/600, 15px, 13px). */
+@layer utilities {
+  .text-screen-title {
+    @apply text-[26px] font-extrabold leading-tight tracking-[-0.02em];
+  }
+  .text-card-title {
+    @apply text-[17.5px] font-bold leading-snug tracking-[-0.01em];
+  }
+  .text-section-title {
+    @apply text-[11px] font-bold uppercase leading-snug tracking-[0.08em] text-muted-foreground;
+  }
+  .text-body-airbnb {
+    @apply text-[14.5px] font-medium leading-snug;
+  }
+  .text-caption-airbnb {
+    @apply text-[12.5px] leading-snug text-muted-foreground;
+  }
+}

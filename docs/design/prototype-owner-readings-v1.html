@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RideTrack — Показания по дням · прототип v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F7F5;
+    --card:#FFFFFF;
+    --ink:#1B1F1D;
+    --ink-2:#5C6662;
+    --ink-3:#9AA39F;
+    --line:#E8EBE8;
+    --accent:#0E8074;
+    --accent-ink:#0A5F56;
+    --accent-soft:#E4F3F0;
+    --warn:#B45309;
+    --warn-soft:#FEF4E6;
+    --danger:#C4372B;
+    --danger-soft:#FBEDEB;
+    --radius-lg:20px;
+    --radius-md:14px;
+    --shadow-card:0 1px 2px rgba(27,31,29,.04), 0 8px 24px rgba(27,31,29,.05);
+    --shadow-sheet:0 -12px 40px rgba(27,31,29,.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;background:#ECEEEA;color:var(--ink);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    padding:32px 16px 64px;-webkit-font-smoothing:antialiased;
+  }
+  .proto-header{max-width:420px;width:100%;margin-bottom:20px}
+  .proto-header h1{font-size:15px;font-weight:600;color:var(--ink-2)}
+  .proto-header p{font-size:12.5px;color:var(--ink-3);margin-top:4px}
+
+  .phone{
+    width:390px;max-width:100%;height:820px;
+    background:var(--bg);border-radius:36px;border:1px solid #DDE1DC;
+    box-shadow:0 24px 60px rgba(27,31,29,.14);
+    overflow:hidden;position:relative;display:flex;flex-direction:column;
+  }
+  .screen{flex:1;overflow-y:auto;padding:26px 20px 40px}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+  .crumb{
+    display:inline-flex;align-items:center;gap:6px;margin-bottom:10px;
+    font-size:13px;font-weight:600;color:var(--accent-ink);
+    background:none;border:none;cursor:pointer;font-family:inherit;padding:0;
+  }
+  .page-title{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:14px}
+
+  .seg{display:flex;gap:8px;margin-bottom:16px}
+  .seg button{
+    border:1px solid var(--line);background:#fff;border-radius:999px;
+    padding:8px 15px;font:inherit;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;
+  }
+  .seg button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+
+  /* ── Календарь ── */
+  .cal{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);padding:16px;margin-bottom:16px;
+  }
+  .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .cal-title{font-size:15px;font-weight:700}
+  .cal-nav{
+    width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:#fff;
+    cursor:pointer;color:var(--ink-2);font-size:14px;display:flex;align-items:center;justify-content:center;
+  }
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+  .dow{font-size:11px;font-weight:600;color:var(--ink-3);padding:6px 0}
+  .day{
+    aspect-ratio:1;border:none;background:none;border-radius:12px;cursor:default;
+    font:inherit;font-size:13.5px;font-weight:500;color:var(--ink-3);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  }
+  .day.has{color:var(--ink);font-weight:600;cursor:pointer;background:var(--accent-soft)}
+  .day.has .mark{width:4px;height:4px;border-radius:50%;background:var(--accent)}
+  .day.sel{background:var(--accent);color:#fff}
+  .day.sel .mark{background:#fff}
+
+  /* ── Карточка сдачи ── */
+  .day-head{display:flex;align-items:baseline;gap:8px;margin:6px 2px 12px}
+  .day-title{font-size:17px;font-weight:800;letter-spacing:-.01em}
+  .day-sub{font-size:12.5px;color:var(--ink-3)}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);padding:18px;margin-bottom:14px;
+  }
+  .sub-head{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+  .sub-time{font-size:15px;font-weight:700}
+  .sub-op{font-size:12.5px;color:var(--ink-3)}
+  .grow{flex:1;min-width:0}
+  .kebab{
+    width:34px;height:34px;flex:none;border-radius:50%;
+    border:1px solid var(--line);background:#fff;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;font-weight:700;color:var(--ink-2);letter-spacing:1px;padding-bottom:8px;
+  }
+  .chip{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;
+    background:var(--warn-soft);color:var(--warn);
+  }
+
+  .zone-block{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+  .zone-name{font-size:13.5px;font-weight:700;margin-bottom:8px}
+  .asset-line{display:flex;align-items:center;gap:8px;margin:9px 0 4px}
+  .color-dot{width:10px;height:10px;border-radius:50%;flex:none}
+  .asset-name{font-size:13.5px;font-weight:600}
+  .t-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:3px 0 3px 18px;font-size:13px;color:var(--ink-2);
+  }
+  .t-vals{display:flex;align-items:center;gap:8px}
+  .t-chain{color:var(--ink-2)}
+  .t-delta{font-weight:700;color:var(--accent-ink);min-width:38px;text-align:right}
+  .edited{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:16px;height:16px;border-radius:50%;background:var(--warn-soft);color:var(--warn);
+    font-size:9px;cursor:help;flex:none;
+  }
+
+  .money-block{margin-top:12px;border-top:1px solid var(--line);padding-top:6px}
+  .m-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:13.5px}
+  .m-row .lbl{color:var(--ink-2);display:flex;align-items:center;gap:6px}
+  .m-row .val{font-weight:600}
+  .m-row.total{border-top:1px solid var(--line);margin-top:4px;padding-top:10px}
+  .m-row.total .lbl{color:var(--ink);font-weight:600}
+  .m-row .val.pos{color:var(--accent-ink);font-weight:700}
+  .m-row .val.neg{color:var(--danger);font-weight:700}
+
+  .lock-note{
+    display:flex;gap:8px;margin-top:12px;padding:10px 12px;
+    background:var(--bg);border-radius:var(--radius-md);
+    font-size:12px;color:var(--ink-3);line-height:1.5;
+  }
+
+  /* ── Шторки ── */
+  .scrim{position:absolute;inset:0;z-index:10;background:rgba(20,24,22,.44);opacity:0;pointer-events:none;transition:opacity .22s}
+  .scrim.open{opacity:1;pointer-events:auto}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:11;
+    background:#fff;border-radius:24px 24px 0 0;box-shadow:var(--shadow-sheet);
+    padding:10px 20px 26px;max-height:84%;overflow-y:auto;
+    transform:translateY(105%);transition:transform .26s cubic-bezier(.32,.72,.25,1);
+  }
+  .sheet.open{transform:translateY(0)}
+  .grabber{width:38px;height:4px;border-radius:99px;background:#D9DED9;margin:4px auto 16px}
+  .sheet-title{font-size:19px;font-weight:800;letter-spacing:-.01em;margin-bottom:2px}
+  .sheet-sub{font-size:13px;color:var(--ink-2);margin-bottom:16px}
+  .sheet-section{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 10px}
+  .sheet-section:first-of-type{margin-top:0}
+
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:5px}
+  .field .prev{font-weight:400;color:var(--ink-3)}
+  .field input{
+    width:100%;font:inherit;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;
+    padding:11px 13px;border:1px solid var(--line);border-radius:var(--radius-md);
+    background:#FBFCFB;color:var(--ink);outline:none;transition:border .15s, box-shadow .15s;
+  }
+  .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
+  .field input.txt{font-size:14px;font-weight:400}
+  .two-col{display:flex;gap:10px}
+  .two-col .field{flex:1}
+  .btn-primary{
+    display:block;width:100%;margin-top:10px;
+    background:var(--accent);color:#fff;border:none;cursor:pointer;
+    font:inherit;font-size:15px;font-weight:700;padding:14px;border-radius:var(--radius-md);
+  }
+  .btn-danger{
+    display:block;width:100%;margin-top:10px;
+    background:var(--danger);color:#fff;border:none;cursor:pointer;
+    font:inherit;font-size:15px;font-weight:700;padding:14px;border-radius:var(--radius-md);
+  }
+  .btn-ghost{
+    display:block;width:100%;margin-top:8px;
+    background:none;color:var(--ink-2);border:none;cursor:pointer;
+    font:inherit;font-size:14px;font-weight:600;padding:10px;
+  }
+  .action-list{display:flex;flex-direction:column}
+  .action-item{
+    display:flex;align-items:center;gap:12px;width:100%;
+    padding:15px 2px;border:none;border-top:1px solid var(--line);
+    background:none;cursor:pointer;font:inherit;font-size:15px;font-weight:500;color:var(--ink);text-align:left;
+  }
+  .action-item:first-child{border-top:none}
+  .action-item.danger{color:var(--danger)}
+  .action-item:disabled{color:var(--ink-3);cursor:default}
+  .action-item .ai{width:20px;text-align:center;font-size:16px}
+  .action-note{font-size:12px;color:var(--ink-3);line-height:1.5;padding:4px 2px 10px}
+</style>
+</head>
+<body>
+
+<div class="proto-header">
+  <h1>RideTrack · Показания по дням — прототип v1</h1>
+  <p>Кабинет владельца. Тапните день 6 или 7 в календаре. У последней сдачи «···» → редактирование в шторке (значения предзаполнены, комментарий необязателен) и удаление с подтверждением. У сдачи за 6 июля действия заблокированы — есть более поздняя сдача.</p>
+</div>
+
+<div class="phone">
+  <div class="screen">
+    <button class="crumb">← Деньги</button>
+    <div class="page-title">Показания по дням</div>
+
+    <div class="seg">
+      <button class="on">Парк Екатерининский</button>
+      <button>Парк Победа</button>
+    </div>
+
+    <div class="cal">
+      <div class="cal-head">
+        <button class="cal-nav">‹</button>
+        <div class="cal-title">Июль 2026</div>
+        <button class="cal-nav">›</button>
+      </div>
+      <div class="cal-grid num">
+        <span class="dow">Пн</span><span class="dow">Вт</span><span class="dow">Ср</span><span class="dow">Чт</span><span class="dow">Пт</span><span class="dow">Сб</span><span class="dow">Вс</span>
+        <span class="day"></span><span class="day"></span><button class="day">1</button><button class="day">2</button><button class="day">3</button><button class="day">4</button><button class="day">5</button>
+        <button class="day has" id="d6" onclick="selDay(6)">6<span class="mark"></span></button>
+        <button class="day has sel" id="d7" onclick="selDay(7)">7<span class="mark"></span></button>
+        <button class="day">8</button><button class="day">9</button><button class="day">10</button><button class="day">11</button><button class="day">12</button>
+      </div>
+    </div>
+
+    <!-- ═══ День 7 ═══ -->
+    <div id="panel-7">
+      <div class="day-head">
+        <div class="day-title">7 июля, вторник</div>
+        <div class="day-sub">1 сдача</div>
+      </div>
+
+      <div class="card">
+        <div class="sub-head">
+          <div class="grow">
+            <div class="sub-time">12:03 <span class="chip" id="edit-chip" style="display:none;margin-left:6px">изменено владельцем</span></div>
+            <div class="sub-op">Оператор: Женя · последняя сдача</div>
+          </div>
+          <button class="kebab" onclick="openSheet('sheet-actions')">···</button>
+        </div>
+
+        <div class="zone-block">
+          <div class="zone-name">Машинки</div>
+
+          <div class="asset-line"><span class="color-dot" style="background:#4CAF6D"></span><span class="asset-name">Гоночная</span></div>
+          <div class="t-row num">
+            <span>Обычный</span>
+            <span class="t-vals">
+              <span class="edited" id="ed-g1" style="display:none" title="Изменено владельцем 8 июля · было: 27">✎</span>
+              <span class="t-chain">12 → <b id="v-g1" style="color:var(--ink)">27</b></span>
+              <span class="t-delta" id="dl-g1">+15</span>
+            </span>
+          </div>
+          <div class="t-row num">
+            <span>Вторая скорость</span>
+            <span class="t-vals"><span class="t-chain">0 → <b style="color:var(--ink)">0</b></span><span class="t-delta">+0</span></span>
+          </div>
+
+          <div class="asset-line"><span class="color-dot" style="background:#E5484D"></span><span class="asset-name">Формула 1</span></div>
+          <div class="t-row num">
+            <span>Обычный</span>
+            <span class="t-vals"><span class="t-chain">0 → <b style="color:var(--ink)">12</b></span><span class="t-delta">+12</span></span>
+          </div>
+          <div class="t-row num">
+            <span>Вторая скорость</span>
+            <span class="t-vals"><span class="t-chain">0 → <b style="color:var(--ink)">15</b></span><span class="t-delta">+15</span></span>
+          </div>
+        </div>
+
+        <div class="money-block num">
+          <div class="m-row"><span class="lbl">Наличные <span class="edited" id="ed-cash" style="display:none" title="Изменено владельцем 8 июля · было: 200.00">✎</span></span><span class="val" id="v-cash">200.00</span></div>
+          <div class="m-row"><span class="lbl">Мобильный платёж</span><span class="val">970.00</span></div>
+          <div class="m-row"><span class="lbl">Возвраты / тестовые</span><span class="val" id="v-ret">1 шт</span></div>
+          <div class="m-row total"><span class="lbl">Расчётная выручка</span><span class="val" id="v-calc">1126.67</span></div>
+          <div class="m-row"><span class="lbl">Разница</span><span class="val pos" id="v-diff">+43.33</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ День 6 ═══ -->
+    <div id="panel-6" style="display:none">
+      <div class="day-head">
+        <div class="day-title">6 июля, понедельник</div>
+        <div class="day-sub">1 сдача</div>
+      </div>
+
+      <div class="card">
+        <div class="sub-head">
+          <div class="grow">
+            <div class="sub-time">19:12</div>
+            <div class="sub-op">Оператор: Женя</div>
+          </div>
+          <button class="kebab" onclick="openSheet('sheet-locked')">···</button>
+        </div>
+
+        <div class="zone-block">
+          <div class="zone-name">Машинки</div>
+          <div class="asset-line"><span class="color-dot" style="background:#4CAF6D"></span><span class="asset-name">Гоночная</span></div>
+          <div class="t-row num"><span>Обычный</span><span class="t-vals"><span class="t-chain">4 → <b style="color:var(--ink)">12</b></span><span class="t-delta">+8</span></span></div>
+          <div class="t-row num"><span>Вторая скорость</span><span class="t-vals"><span class="t-chain">0 → <b style="color:var(--ink)">0</b></span><span class="t-delta">+0</span></span></div>
+        </div>
+
+        <div class="money-block num">
+          <div class="m-row"><span class="lbl">Наличные</span><span class="val">280.00</span></div>
+          <div class="m-row"><span class="lbl">Мобильный платёж</span><span class="val">0.00</span></div>
+          <div class="m-row"><span class="lbl">Возвраты / тестовые</span><span class="val">0 шт</span></div>
+          <div class="m-row total"><span class="lbl">Расчётная выручка</span><span class="val">280.00</span></div>
+          <div class="m-row"><span class="lbl">Разница</span><span class="val">0.00</span></div>
+        </div>
+
+        <div class="lock-note">
+          <span>🔒</span>
+          <span>Редактирование и удаление недоступны: по активам этой сдачи есть более поздняя сдача (7 июля). Исправлять можно только последнюю сдачу в цепочке.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Шторки ═══ -->
+  <div class="scrim" id="scrim" onclick="closeSheets()"></div>
+
+  <div class="sheet" id="sheet-actions">
+    <div class="grabber"></div>
+    <div class="sheet-title" style="margin-bottom:12px">Сдача · 7 июля, 12:03</div>
+    <div class="action-list">
+      <button class="action-item" onclick="closeSheets();openSheet('sheet-edit')"><span class="ai">✏️</span>Изменить показания и суммы</button>
+      <button class="action-item danger" onclick="closeSheets();openSheet('sheet-delete')"><span class="ai">🗑</span>Удалить сдачу</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet-locked">
+    <div class="grabber"></div>
+    <div class="sheet-title" style="margin-bottom:8px">Сдача · 6 июля, 19:12</div>
+    <div class="action-note">🔒 По активам этой сдачи есть более поздняя сдача (7 июля). Чтобы исправить эту, сначала удалите последующую.</div>
+    <div class="action-list">
+      <button class="action-item" disabled><span class="ai">✏️</span>Изменить показания и суммы</button>
+      <button class="action-item" disabled><span class="ai">🗑</span>Удалить сдачу</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet-edit">
+    <div class="grabber"></div>
+    <div class="sheet-title">Изменить сдачу</div>
+    <div class="sheet-sub">7 июля, 12:03 · Оператор: Женя. Дельты и выручка пересчитаются автоматически.</div>
+
+    <div class="sheet-section">Гоночная · показания</div>
+    <div class="two-col">
+      <div class="field">
+        <label>Обычный <span class="prev num">· пред.: 12</span></label>
+        <input type="text" inputmode="numeric" id="e-g1" value="27">
+      </div>
+      <div class="field">
+        <label>Вторая ск. <span class="prev num">· пред.: 0</span></label>
+        <input type="text" inputmode="numeric" value="0">
+      </div>
+    </div>
+
+    <div class="sheet-section">Формула 1 · показания</div>
+    <div class="two-col">
+      <div class="field">
+        <label>Обычный <span class="prev num">· пред.: 0</span></label>
+        <input type="text" inputmode="numeric" value="12">
+      </div>
+      <div class="field">
+        <label>Вторая ск. <span class="prev num">· пред.: 0</span></label>
+        <input type="text" inputmode="numeric" value="15">
+      </div>
+    </div>
+
+    <div class="sheet-section">Деньги</div>
+    <div class="two-col">
+      <div class="field">
+        <label>Наличные</label>
+        <input type="text" inputmode="decimal" id="e-cash" value="200.00">
+      </div>
+      <div class="field">
+        <label>Мобильный платёж</label>
+        <input type="text" inputmode="decimal" value="970.00">
+      </div>
+    </div>
+    <div class="field">
+      <label>Возвраты / тестовые пуски, шт</label>
+      <input type="text" inputmode="numeric" value="1">
+    </div>
+
+    <div class="sheet-section">Аудит</div>
+    <div class="field">
+      <label>Причина изменения <span class="prev">· необязательно</span></label>
+      <input type="text" class="txt" id="e-reason" placeholder="Например: оператор опечатался в показании">
+    </div>
+
+    <button class="btn-primary" onclick="saveEdit()">Сохранить изменения</button>
+    <button class="btn-ghost" onclick="closeSheets()">Отмена</button>
+  </div>
+
+  <div class="sheet" id="sheet-delete">
+    <div class="grabber"></div>
+    <div class="sheet-title">Удалить сдачу?</div>
+    <div class="sheet-sub">7 июля, 12:03 · Оператор: Женя. Показания, суммы и записи в журнале денег по этой сдаче будут удалены. Действие попадёт в журнал изменений. Отменить нельзя.</div>
+    <button class="btn-danger" onclick="closeSheets()">Удалить сдачу</button>
+    <button class="btn-ghost" onclick="closeSheets()">Отмена</button>
+  </div>
+
+</div>
+
+<script>
+  function selDay(d){
+    document.getElementById('panel-6').style.display = d===6 ? 'block':'none';
+    document.getElementById('panel-7').style.display = d===7 ? 'block':'none';
+    document.getElementById('d6').classList.toggle('sel', d===6);
+    document.getElementById('d7').classList.toggle('sel', d===7);
+  }
+  function openSheet(id){
+    document.getElementById('scrim').classList.add('open');
+    document.getElementById(id).classList.add('open');
+  }
+  function closeSheets(){
+    document.getElementById('scrim').classList.remove('open');
+    document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));
+  }
+
+  /* Демо-сохранение: пересчёт дельты и метки аудита */
+  function saveEdit(){
+    const g1=parseInt(document.getElementById('e-g1').value,10);
+    const cash=parseFloat(document.getElementById('e-cash').value.replace(',','.'));
+    const reason=document.getElementById('e-reason').value.trim();
+    const when='8 июля'+(reason?' · «'+reason+'»':'');
+
+    if(!isNaN(g1)&&g1!==27){
+      const d=(g1-12+10000)%10000;
+      document.getElementById('v-g1').textContent=g1;
+      document.getElementById('dl-g1').textContent='+'+d;
+      const ed=document.getElementById('ed-g1');
+      ed.style.display='inline-flex';
+      ed.title='Изменено владельцем '+when+' · было: 27';
+      document.getElementById('edit-chip').style.display='inline-flex';
+    }
+    if(!isNaN(cash)&&Math.abs(cash-200)>0.001){
+      document.getElementById('v-cash').textContent=cash.toFixed(2);
+      const ed=document.getElementById('ed-cash');
+      ed.style.display='inline-flex';
+      ed.title='Изменено владельцем '+when+' · было: 200.00';
+      document.getElementById('edit-chip').style.display='inline-flex';
+      const diff=cash+970-1126.67+43.33-200; /* демо-пересчёт разницы */
+      const el=document.getElementById('v-diff');
+      el.textContent=(diff>=0?'+':'')+diff.toFixed(2);
+      el.className='val '+(diff>=0?'pos':'neg');
+    }
+    closeSheets();
+  }
+</script>
+</body>
+</html>

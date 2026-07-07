@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "prisma.prisma",
+    "ms-azuretools.vscode-docker",
+    "ms-vscode-remote.remote-wsl",
+    "eamodio.gitlens",
+    "usernamehw.errorlens",
+    "christian-kohler.path-intellisense",
+    "yoavbls.pretty-ts-errors",
+    "editorconfig.editorconfig"
+  ]
+}

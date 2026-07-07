@@ -1,0 +1,380 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// ЯДРО: тенанты, подписки, пакеты, модули
+// ============================================================================
+
+enum SubscriptionStatus {
+  active
+  paused
+  expired
+}
+
+// Пакет подписки — набор модулей + лимиты + цена. Управляется из админ-модуля,
+// не зашит в код (см. docs/spec/00-architecture.md).
+model Package {
+  id        String   @id @default(cuid())
+  name      String
+  // Модули, включённые в пакет по умолчанию. Ключи — свободные строки
+  // (список модулей открытый, ядро не должно знать о конкретных модулях).
+  modules   String[]
+  maxPoints    Int
+  maxZones     Int
+  maxAssets    Int
+  maxOperators Int
+  priceMonthly Decimal @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenants Tenant[]
+}
+
+model Tenant {
+  id                 String             @id @default(cuid())
+  name               String
+  packageId          String
+  package            Package            @relation(fields: [packageId], references: [id])
+  subscriptionStatus SubscriptionStatus @default(active)
+
+  // Мультиязычность / темы (настройки тенанта, см. 00-architecture.md).
+  // themeMode — тенантный дефолт светлой/тёмной темы, задаётся только Владельцем
+  // и распространяется на кабинет Владельца и PWA всех Операторов; личный
+  // локальный оверрайд темы на конкретном устройстве (next-themes localStorage)
+  // это переопределяет только для этого браузера, не меняя настройку тенанта.
+  locale       String @default("ru")
+  accentScheme String @default("green")
+  themeMode    String @default("light")
+
+  // Telegram-сводка (01-counters.md) — токен и chat_id хранятся здесь;
+  // шифрование/секреты-механизм подключить перед продакшеном (см. TODO в коде).
+  telegramBotToken String?
+  telegramChatId   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users         User[]
+  operators     Operator[]
+  points        Point[]
+  moduleFlags   TenantModule[]
+  moneyOps      MoneyOperation[]
+}
+
+// Ручное включение/отключение модуля конкретному тенанту (индивидуальные условия),
+// поверх набора модулей из пакета.
+model TenantModule {
+  id        String  @id @default(cuid())
+  tenantId  String
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  moduleKey String
+  enabled   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, moduleKey])
+}
+
+// ============================================================================
+// ЛЮДИ: Owner / Super Admin (обычный аккаунт) и Operator (только PIN)
+// ============================================================================
+
+enum UserRole {
+  super_admin
+  owner
+}
+
+// Owner и Super Admin — полноценные аккаунты с email+паролем.
+// Super Admin платформенный, tenantId = null. Owner всегда привязан к тенанту.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Личное переопределение языка тенанта (см. 00-architecture.md); null = язык тенанта.
+  locale String?
+
+  // Личный PIN — удобство входа с личного устройства (не путать с Operator PIN).
+  pinHash           String?
+  failedPinAttempts Int       @default(0)
+  pinLockedUntil    DateTime?
+
+  resetTokenHash      String?   @unique
+  resetTokenExpiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdOperators Operator[] @relation("OperatorCreatedBy")
+  corrections      CorrectionLog[]
+  moneyOps         MoneyOperation[]
+}
+
+// Operator — создаётся и правится только Owner'ом. Нет email/пароля.
+// PIN уникален в рамках тенанта (проверяется bcrypt-перебором при входе —
+// до ~50 операторов на тенанта, см. решение в чате аудита).
+model Operator {
+  id       String  @id @default(cuid())
+  tenantId String
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name      String
+  pinHash   String
+  active    Boolean @default(true)
+  avatarUrl String?
+
+  // Доступ к зонам: все (по умолчанию) или выборочно через allowedZones.
+  allZonesAccess Boolean @default(true)
+  allowedZones   Zone[]  @relation("OperatorAllowedZones")
+
+  createdByUserId String
+  createdBy       User   @relation("OperatorCreatedBy", fields: [createdByUserId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resultsSubmissions ResultsSubmission[]
+  moneyOps           MoneyOperation[]
+}
+
+// ============================================================================
+// СЧЁТЧИКИ: точки → зоны → активы → тарифы (см. 01-counters.md)
+// ============================================================================
+
+model Point {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name    String
+  address String?
+  iconKey String? // ключ иконки lucide (см. src/components/icon-picker.tsx)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  zones   Zone[]
+  devices PointDevice[]
+  resultsSubmissions ResultsSubmission[]
+}
+
+// Устройство точки: активируется владельцем или через установочный QR/ссылку —
+// одна активация = одна привязка PWA к этой точке (см. 00-architecture.md).
+model PointDevice {
+  id      String @id @default(cuid())
+  pointId String
+  point   Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  label     String? // например, "Планшет у входа" — редактируется Владельцем
+  activated Boolean @default(false)
+  revokedAt DateTime? // Владелец отозвал/удалил устройство
+
+  // Устройство не привязано намертво к одной точке — оператор может сменить
+  // точку прямо в PWA (POST /api/operator/switch-point), не запрашивая новую
+  // ссылку активации у владельца. Обычные "киоск"-устройства (по умолчанию)
+  // остаются жёстко привязанными к pointId, заданному при создании.
+  roaming Boolean @default(false)
+
+  // Хеш одноразового токена установочной ссылки/QR (до активации) и срок его действия.
+  installTokenHash      String?   @unique
+  installTokenExpiresAt DateTime?
+  activatedAt           DateTime?
+
+  // PIN оператора вводится без выбора имени, поэтому при неверном PIN невозможно
+  // понять, чей счётчик попыток увеличивать — блокировка ведётся на уровне
+  // устройства точки целиком, а не конкретного оператора.
+  failedPinAttempts Int       @default(0)
+  pinLockedUntil    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Zone {
+  id      String @id @default(cuid())
+  pointId String
+  point   Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  name    String
+  iconKey String? // ключ иконки lucide
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tariffs  Tariff[]
+  assets   Asset[]
+  operatorsWithAccess Operator[] @relation("OperatorAllowedZones")
+  zoneSubmissions ZoneSubmission[]
+  moneyOps MoneyOperation[]
+}
+
+// 1 или 2 тарифа на зону: свободное название + цена за сеанс.
+model Tariff {
+  id     String @id @default(cuid())
+  zoneId String
+  zone   Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  name  String
+  price Decimal @db.Decimal(10, 2)
+  // Порядковый номер тарифа в зоне (1 или 2) — определяет, какой из двух
+  // счётчиков актива ему соответствует.
+  order Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assetReadings AssetReading[]
+
+  @@unique([zoneId, order])
+}
+
+model Asset {
+  id     String @id @default(cuid())
+  zoneId String
+  zone   Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  name     String
+  photoUrl String? // относительный путь в /uploads/<tenantId>/... (см. src/lib/uploads.ts)
+  iconKey  String? // ключ иконки lucide — запасной вариант, когда нет фото
+  colorTag String // hex или ключ цвета — обязательный элемент карточки
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  readings AssetReading[]
+}
+
+// ============================================================================
+// СДАЧА ИТОГОВ (не "смена" — см. терминологию в CLAUDE.md)
+// ============================================================================
+
+// Один "мастер" сдачи итогов — может быть несколько в день (пересменка).
+model ResultsSubmission {
+  id       String @id @default(cuid())
+  tenantId String
+  pointId  String
+  point    Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  operatorId String
+  operator   Operator @relation(fields: [operatorId], references: [id])
+
+  submittedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  zoneSubmissions ZoneSubmission[]
+}
+
+// Данные по одной работавшей зоне внутри одной сдачи итогов.
+// Невыбранная зона = не работала, отдельной записи не создаётся.
+model ZoneSubmission {
+  id                  String            @id @default(cuid())
+  resultsSubmissionId String
+  resultsSubmission   ResultsSubmission @relation(fields: [resultsSubmissionId], references: [id], onDelete: Cascade)
+
+  zoneId String
+  zone   Zone   @relation(fields: [zoneId], references: [id])
+
+  returnsCount Int // возвраты/тестовые пуски, шт.
+  cashAmount   Decimal @db.Decimal(10, 2)
+  mobileAmount Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+
+  assetReadings AssetReading[]
+  expenses      ExpenseEntry[]
+}
+
+// Показание одного актива по одному тарифу в рамках сдачи итогов зоны.
+model AssetReading {
+  id               String         @id @default(cuid())
+  zoneSubmissionId String
+  zoneSubmission   ZoneSubmission @relation(fields: [zoneSubmissionId], references: [id], onDelete: Cascade)
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  tariffId String
+  tariff   Tariff @relation(fields: [tariffId], references: [id])
+
+  // Показание счётчика, 4 разряда (0-9999); переполнение и расчёт разницы
+  // по модулю 10000 — на уровне приложения, не в БД.
+  reading Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([zoneSubmissionId, assetId, tariffId])
+}
+
+model ExpenseEntry {
+  id               String         @id @default(cuid())
+  zoneSubmissionId String
+  zoneSubmission   ZoneSubmission @relation(fields: [zoneSubmissionId], references: [id], onDelete: Cascade)
+
+  amount  Decimal @db.Decimal(10, 2)
+  comment String?
+
+  createdAt DateTime @default(now())
+}
+
+// Правки записей — только владелец. Журнал: кто, когда, было → стало.
+// entityType/entityId — свободная ссылка на исправляемую запись (например,
+// "AssetReading" + id), чтобы не плодить отдельную таблицу правок на каждую сущность.
+model CorrectionLog {
+  id         String @id @default(cuid())
+  entityType String
+  entityId   String
+
+  correctedByUserId String
+  correctedBy       User   @relation(fields: [correctedByUserId], references: [id])
+
+  beforeJson Json
+  afterJson  Json
+  comment    String?
+
+  correctedAt DateTime @default(now())
+}
+
+// ============================================================================
+// ДЕНЬГИ (см. 02-money.md)
+// ============================================================================
+
+// Тип операции — свободная строка (список расширяемый, будущие модули
+// добавляют свои типы). На сегодня: revenue / expense / collection / change_fund.
+model MoneyOperation {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  zoneId String
+  zone   Zone   @relation(fields: [zoneId], references: [id])
+
+  type   String
+  amount Decimal @db.Decimal(10, 2)
+
+  performedByUserId     String?
+  performedByUser       User?     @relation(fields: [performedByUserId], references: [id])
+  performedByOperatorId String?
+  performedByOperator   Operator? @relation(fields: [performedByOperatorId], references: [id])
+
+  comment String?
+
+  // Ссылка на сдачу итогов, если операция создана автоматически ею (revenue/expense).
+  resultsSubmissionId String?
+
+  occurredAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+}
