@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowRightLeft, Banknote, Check, ClipboardCheck, MapPin, X } from "lucide-react";
+import { ArrowRightLeft, Banknote, Check, ChevronRight, ClipboardCheck, Clock, MapPin, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,8 @@ export default function OperatorHomePage() {
   const [pointName, setPointName] = useState<string | null>(null);
   const [zones, setZones] = useState<ZoneOption[]>([]);
   const [checking, setChecking] = useState(true);
+  const [workTimeEnabled, setWorkTimeEnabled] = useState(false);
+  const [toPayOut, setToPayOut] = useState<number | null>(null);
   const [roaming, setRoaming] = useState(false);
   const [switchPointOpen, setSwitchPointOpen] = useState(false);
   const [points, setPoints] = useState<PointOption[]>([]);
@@ -52,7 +54,13 @@ export default function OperatorHomePage() {
         setPointId(data.device.pointId);
         setPointName(data.device.pointName);
         setRoaming(data.device.roaming === true);
+        setWorkTimeEnabled(!!data.workTimeEnabled);
         setChecking(false);
+        if (data.workTimeEnabled) {
+          fetch("/api/operator/work-time/summary")
+            .then((res) => (res.ok ? res.json() : null))
+            .then((summary) => setToPayOut(summary ? summary.toPayOut : null));
+        }
       });
   }
 
@@ -164,6 +172,27 @@ export default function OperatorHomePage() {
           )}
         </div>
 
+        {workTimeEnabled && toPayOut !== null && (
+          <PressableScale className="mt-6">
+            <button
+              type="button"
+              onClick={() => router.push("/operator/work-time")}
+              className="flex w-full items-center justify-between rounded-control border border-border bg-card px-4 py-3 text-left"
+            >
+              <span>
+                <span className="block text-caption-airbnb text-muted-foreground">
+                  {t.operatorApp.workTime.toPayOutLabel}
+                </span>
+                <span className="block text-[19px] font-extrabold tabular-nums">{toPayOut.toFixed(2)}</span>
+              </span>
+              <span className="flex items-center gap-1 text-caption-airbnb font-semibold text-primary">
+                {t.operatorApp.workTime.viewAllLink}
+                <ChevronRight className="size-4" />
+              </span>
+            </button>
+          </PressableScale>
+        )}
+
         <div className="mt-6 flex flex-col gap-4">
           <PressableScale>
             <Button
@@ -174,6 +203,19 @@ export default function OperatorHomePage() {
               {t.operatorApp.submitResults}
             </Button>
           </PressableScale>
+
+          {workTimeEnabled && (
+            <PressableScale>
+              <Button
+                variant="outline"
+                className="h-14 w-full gap-2 rounded-control border-2 text-base font-bold"
+                onClick={() => router.push("/operator/work-time?add=1")}
+              >
+                <Clock className="size-5" />
+                {t.operatorApp.workTime.addShiftButton}
+              </Button>
+            </PressableScale>
+          )}
 
           {!showCollection ? (
             <PressableScale>

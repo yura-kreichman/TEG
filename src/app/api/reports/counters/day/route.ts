@@ -49,7 +49,9 @@ export async function GET(request: Request) {
         },
       },
     },
-    orderBy: { submittedAt: "asc" },
+    // Newest submission first — that's the one an owner is most likely checking
+    // (and the only one still editable, per the lock-chain rule below).
+    orderBy: { submittedAt: "desc" },
   });
 
   if (submissions.length === 0) {
@@ -61,10 +63,13 @@ export async function GET(request: Request) {
   // asset's whole reading history chronologically rather than only this day's
   // rows. The same pass also tells us, per reading, whether it's the LAST one
   // recorded for its asset+tariff — i.e. whether its zone-submission is still
-  // editable (see docs/spec/01-counters.md, "Прозрачность").
+  // editable (see docs/spec/01-counters.md, "Прозрачность"). Only "counters"
+  // zones have this chain at all — "launches" readings are already the
+  // finished count, "cash_only" zones have no readings to begin with.
   const assetIds = new Set<string>();
   for (const s of submissions) {
     for (const zs of s.zoneSubmissions) {
+      if (zs.zone.accountingMode !== "counters") continue;
       for (const r of zs.assetReadings) assetIds.add(r.assetId);
     }
   }
@@ -103,21 +108,25 @@ export async function GET(request: Request) {
 
   const cards = submissions.flatMap((s) =>
     s.zoneSubmissions.map((zs) => {
+      const isLaunches = zs.zone.accountingMode === "launches";
+      const readingSessions = (r: (typeof zs.assetReadings)[number]) =>
+        isLaunches ? r.reading : (sessionsById.get(r.id) ?? 0);
+
       const tariffCalc = zs.zone.tariffs.map((tariff) => ({
         tariffId: tariff.id,
         price: Number(tariff.price),
         sessions: zs.assetReadings
           .filter((r) => r.tariffId === tariff.id)
-          .reduce((sum, r) => sum + (sessionsById.get(r.id) ?? 0), 0),
+          .reduce((sum, r) => sum + readingSessions(r), 0),
       }));
 
       const calculatedRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
       const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
       const difference = Math.round((actualCash - calculatedRevenue) * 100) / 100;
 
-      const editable = zs.assetReadings.every(
-        (r) => lastReadingIdByKey.get(`${r.assetId}:${r.tariffId}`) === r.id
-      );
+      const editable =
+        zs.zone.accountingMode !== "counters" ||
+        zs.assetReadings.every((r) => lastReadingIdByKey.get(`${r.assetId}:${r.tariffId}`) === r.id);
 
       const log = latestLogByZoneSubmissionId.get(zs.id);
       const before = log?.beforeJson as CorrectionDiff | undefined;
@@ -130,6 +139,8 @@ export async function GET(request: Request) {
           assetId: asset.id,
           assetName: asset.name,
           colorTag: asset.colorTag,
+          photoUrl: asset.photoUrl,
+          iconKey: asset.iconKey,
           readings: zs.assetReadings
             .filter((r) => r.assetId === asset.id)
             .map((r) => {
@@ -140,9 +151,9 @@ export async function GET(request: Request) {
               return {
                 tariffId: r.tariffId,
                 tariffName: tariff?.name ?? "",
-                previousValue: previousById.get(r.id) ?? 0,
+                previousValue: isLaunches ? null : (previousById.get(r.id) ?? 0),
                 value: r.reading,
-                sessions: sessionsById.get(r.id) ?? 0,
+                sessions: readingSessions(r),
                 editedBefore,
               };
             }),
@@ -153,6 +164,7 @@ export async function GET(request: Request) {
         zoneSubmissionId: zs.id,
         zoneId: zs.zoneId,
         zoneName: zs.zone.name,
+        accountingMode: zs.zone.accountingMode,
         submittedAt: s.submittedAt,
         operatorName: s.operator.name,
         editable,

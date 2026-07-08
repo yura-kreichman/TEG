@@ -20,6 +20,7 @@ export function SpringCard({
   className,
   hover = true,
   animate = true,
+  onClick,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -27,6 +28,7 @@ export function SpringCard({
   /** Set false inside a StaggerItem — the parent already drives the entrance, so a second
    * independent fade/translate here would double up instead of composing with it. */
   animate?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <motion.div
@@ -34,6 +36,7 @@ export function SpringCard({
       animate={animate ? { opacity: 1, y: 0 } : undefined}
       transition={cardSpring}
       whileHover={hover ? { y: -2 } : undefined}
+      onClick={onClick}
       className={cn(
         "w-full rounded-card border border-border bg-card p-4.5 shadow-card-rest transition-shadow duration-200",
         hover && "hover:shadow-card-hover",

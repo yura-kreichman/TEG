@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Home, MapPin, Minus, Plus, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
+import { ImageLightbox } from "@/components/motion/image-lightbox";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { calcSessions, calcZoneRevenue } from "@/lib/results-calc";
 import { useI18n } from "@/components/i18n-provider";
@@ -32,6 +33,7 @@ interface ZoneCtx {
   id: string;
   name: string;
   iconKey: string | null;
+  accountingMode: "counters" | "launches" | "cash_only";
   tariffs: TariffCtx[];
   assets: AssetCtx[];
 }
@@ -61,10 +63,14 @@ export default function SubmitResultsPage() {
   const [expenses, setExpenses] = useState<ExpenseRow[]>([]);
   const [stepIndex, setStepIndex] = useState(0);
   const [counterAssetId, setCounterAssetId] = useState<string | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFired = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<{
     summary: { zoneId: string; zoneName: string; calculatedRevenue: number; actualCash: number; difference: number }[];
+    remindMarkDeparture?: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -110,6 +116,27 @@ export default function SubmitResultsPage() {
     }));
   }
 
+  function handlePhotoPressStart(url: string) {
+    longPressFired.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressFired.current = true;
+      setLightboxUrl(url);
+    }, 350);
+  }
+
+  function handlePhotoPressEnd() {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    setLightboxUrl(null);
+  }
+
+  function handlePhotoClick(event: React.MouseEvent) {
+    if (longPressFired.current) {
+      event.preventDefault();
+      event.stopPropagation();
+      longPressFired.current = false;
+    }
+  }
+
   function addExpense() {
     setExpenses((prev) => [
       ...prev,
@@ -141,6 +168,7 @@ export default function SubmitResultsPage() {
       const sessions = zone.assets.reduce((sum, asset) => {
         const key = `${asset.id}:${tariff.id}`;
         const current = Number(form.readings[key] ?? asset.previousReadings[tariff.id] ?? 0);
+        if (zone.accountingMode === "launches") return sum + current;
         const previous = asset.previousReadings[tariff.id] ?? 0;
         return sum + calcSessions(current, previous);
       }, 0);
@@ -230,6 +258,11 @@ export default function SubmitResultsPage() {
                 </span>
               </div>
             ))}
+            {result.remindMarkDeparture && (
+              <p className="rounded-control bg-warning/15 px-3 py-2 text-sm font-medium text-warning">
+                {t.operatorApp.workTime.markDepartureReminder}
+              </p>
+            )}
             <PressableScale>
               <Button onClick={() => router.push("/operator")} className="h-14 w-full gap-2 rounded-control font-bold">
                 <Home className="size-5" />
@@ -339,9 +372,15 @@ export default function SubmitResultsPage() {
           <div className="flex flex-col gap-5">
             <div>
               <h1 className="text-[24px] font-extrabold tracking-[-0.02em]">{activeZone.name}</h1>
-              <p className="mt-1 text-[13.5px] text-muted-foreground">{t.operatorApp.submit.enterReadingsSub}</p>
+              <p className="mt-1 text-[13.5px] text-muted-foreground">
+                {activeZone.accountingMode === "cash_only"
+                  ? t.operatorApp.submit.cashOnlySub
+                  : t.operatorApp.submit.enterReadingsSub}
+              </p>
             </div>
 
+            {activeZone.accountingMode !== "cash_only" && (
+            <>
             <div className="grid grid-cols-2 gap-3">
               {activeZone.assets.map((asset) => {
                 const filled = isAssetFilled(activeZone, asset, activeForm);
@@ -351,37 +390,48 @@ export default function SubmitResultsPage() {
                       type="button"
                       onClick={() => setCounterAssetId(asset.id)}
                       className={cn(
-                        "relative flex w-full flex-col items-start gap-2 rounded-card border-[1.5px] bg-card p-4 text-left",
+                        "relative flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card text-left",
                         filled ? "border-success" : "border-border"
                       )}
                     >
-                      {filled && (
-                        <span className="absolute right-3 top-3 flex size-6 items-center justify-center rounded-full bg-success text-success-foreground">
-                          <Check className="size-3.5" />
-                        </span>
-                      )}
-                      <div className="flex w-full items-center gap-2.5">
+                      <div
+                        className="relative flex h-24 w-full shrink-0 items-center justify-center overflow-hidden bg-muted"
+                        {...(asset.photoUrl
+                          ? {
+                              onPointerDown: () => handlePhotoPressStart(asset.photoUrl!),
+                              onPointerUp: handlePhotoPressEnd,
+                              onPointerLeave: handlePhotoPressEnd,
+                              onPointerCancel: handlePhotoPressEnd,
+                              onClick: handlePhotoClick,
+                            }
+                          : {})}
+                      >
+                        {asset.photoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={asset.photoUrl} alt="" className="size-full object-contain object-center" />
+                        ) : asset.iconKey ? (
+                          <AssetOrZoneIcon iconKey={asset.iconKey} className="size-7 text-muted-foreground" />
+                        ) : null}
                         <span
-                          className="size-2.5 shrink-0 rounded-full"
+                          className="absolute left-2.5 top-2.5 size-4 rounded-full ring-[2.5px] ring-card"
                           style={{ backgroundColor: asset.colorTag }}
                         />
-                        <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-control bg-muted">
-                          {asset.photoUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={asset.photoUrl} alt="" className="size-11 object-cover" />
-                          ) : asset.iconKey ? (
-                            <AssetOrZoneIcon iconKey={asset.iconKey} className="size-5 text-muted-foreground" />
-                          ) : null}
-                        </div>
+                        {filled && (
+                          <span className="absolute right-2.5 top-2.5 flex size-6 items-center justify-center rounded-full bg-success text-success-foreground shadow-sm">
+                            <Check className="size-3.5" />
+                          </span>
+                        )}
                       </div>
-                      <span className="text-[15px] font-bold tracking-[-0.01em]">{asset.name}</span>
-                      <span className="text-xs leading-snug text-muted-foreground">
-                        {filled
-                          ? activeZone.tariffs
-                              .map((tariff) => `${tariff.name}: ${activeForm.readings[`${asset.id}:${tariff.id}`]}`)
-                              .join(" · ")
-                          : t.operatorApp.submit.assetNotFilled}
-                      </span>
+                      <div className="flex flex-col gap-1 p-3">
+                        <span className="text-[14.5px] font-bold tracking-[-0.01em]">{asset.name}</span>
+                        <span className="text-xs leading-snug text-muted-foreground">
+                          {filled
+                            ? activeZone.tariffs
+                                .map((tariff) => `${tariff.name}: ${activeForm.readings[`${asset.id}:${tariff.id}`]}`)
+                                .join(" · ")
+                            : t.operatorApp.submit.assetNotFilled}
+                        </span>
+                      </div>
                     </button>
                   </PressableScale>
                 );
@@ -421,6 +471,8 @@ export default function SubmitResultsPage() {
                 </button>
               </div>
             </div>
+            </>
+            )}
 
             <div className="flex flex-col gap-1">
               <Label htmlFor="cash">{t.operatorApp.submit.cashLabel}</Label>
@@ -443,18 +495,19 @@ export default function SubmitResultsPage() {
               />
             </div>
 
-            {(() => {
-              const preview = previewFor(activeZone.id);
-              return (
-                preview && (
-                  <p className="text-caption-airbnb tabular-nums">
-                    {t.operatorApp.submit.calculatedRevenue} {preview.calculatedRevenue.toFixed(2)} ·{" "}
-                    {t.operatorApp.submit.difference} {preview.difference > 0 ? "+" : ""}
-                    {preview.difference.toFixed(2)}
-                  </p>
-                )
-              );
-            })()}
+            {activeZone.accountingMode !== "cash_only" &&
+              (() => {
+                const preview = previewFor(activeZone.id);
+                return (
+                  preview && (
+                    <p className="text-caption-airbnb tabular-nums">
+                      {t.operatorApp.submit.calculatedRevenue} {preview.calculatedRevenue.toFixed(2)} ·{" "}
+                      {t.operatorApp.submit.difference} {preview.difference > 0 ? "+" : ""}
+                      {preview.difference.toFixed(2)}
+                    </p>
+                  )
+                );
+              })()}
           </div>
         )}
 
@@ -520,7 +573,12 @@ export default function SubmitResultsPage() {
                   className="flex flex-col gap-1 rounded-card border border-border bg-card p-3 text-body-airbnb"
                 >
                   <span className="font-semibold">{zone.name}</span>
-                  {preview && (
+                  {preview && zone.accountingMode === "cash_only" && (
+                    <span className="tabular-nums text-muted-foreground">
+                      {t.operatorApp.submit.actualCash} {preview.actualCash.toFixed(2)}
+                    </span>
+                  )}
+                  {preview && zone.accountingMode !== "cash_only" && (
                     <>
                       <span className="tabular-nums text-muted-foreground">
                         {t.operatorApp.submit.calculatedRevenue} {preview.calculatedRevenue.toFixed(2)}
@@ -533,6 +591,9 @@ export default function SubmitResultsPage() {
                         {preview.difference.toFixed(2)}
                       </span>
                     </>
+                  )}
+                  {preview && preview.calculatedRevenue === 0 && preview.actualCash === 0 && (
+                    <span className="mt-1 text-caption-airbnb text-warning">{t.operatorApp.submit.allZeroWarning}</span>
                   )}
                 </div>
               );
@@ -573,7 +634,7 @@ export default function SubmitResultsPage() {
                 disabled={currentStep.kind === "select" && selectedZoneIds.length === 0}
               >
                 {t.common.next}
-                {currentStep.kind === "zone" && (
+                {currentStep.kind === "zone" && activeZone?.accountingMode !== "cash_only" && (
                   <span className="text-xs font-semibold tabular-nums opacity-75">
                     {filledCount}/{activeZone?.assets.length ?? 0}
                   </span>
@@ -588,27 +649,39 @@ export default function SubmitResultsPage() {
       <BottomSheet open={counterAssetId !== null} onClose={() => setCounterAssetId(null)}>
         {activeZone && activeForm && activeAsset && (
           <div className="flex flex-col gap-4 pt-2">
-            <div className="flex items-center gap-2.5">
-              <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: activeAsset.colorTag }} />
-              <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{activeAsset.name}</h2>
+            <div className="relative flex h-[150px] w-full items-center justify-center overflow-hidden rounded-card bg-muted">
+              {activeAsset.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={activeAsset.photoUrl} alt="" className="size-full object-contain object-center" />
+              ) : activeAsset.iconKey ? (
+                <AssetOrZoneIcon iconKey={activeAsset.iconKey} className="size-10 text-muted-foreground" />
+              ) : null}
+              <span
+                className="absolute left-3 top-3 size-4.5 rounded-full ring-[3px] ring-card"
+                style={{ backgroundColor: activeAsset.colorTag }}
+              />
             </div>
+            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{activeAsset.name}</h2>
 
             {activeZone.tariffs.map((tariff) => {
+              const isLaunches = activeZone.accountingMode === "launches";
               const key = `${activeAsset.id}:${tariff.id}`;
               const value = activeForm.readings[key] ?? "";
               const previous = activeAsset.previousReadings[tariff.id] ?? 0;
               const parsed = value.trim() === "" ? null : Number(value);
               const invalid = value.trim() !== "" && (!Number.isFinite(parsed) || parsed! < 0 || parsed! > 9999);
-              const rollover = !invalid && parsed !== null && parsed < previous;
-              const sessions = !invalid && parsed !== null ? calcSessions(parsed, previous) : null;
+              const rollover = !isLaunches && !invalid && parsed !== null && parsed < previous;
+              const sessions = !invalid && parsed !== null ? (isLaunches ? parsed : calcSessions(parsed, previous)) : null;
 
               return (
                 <div key={tariff.id} className="flex flex-col gap-1">
                   <Label htmlFor={key}>
-                    {tariff.name}{" "}
-                    <span className="font-normal text-muted-foreground">
-                      · {t.operatorApp.submit.previousReading} {previous}
-                    </span>
+                    {tariff.name}
+                    {!isLaunches && (
+                      <span className="font-normal text-muted-foreground">
+                        {" "}· {t.operatorApp.submit.previousReading} {previous}
+                      </span>
+                    )}
                   </Label>
                   <Input
                     id={key}
@@ -628,9 +701,11 @@ export default function SubmitResultsPage() {
                     >
                       {invalid
                         ? t.operatorApp.submit.invalidNumberWarning
-                        : `${t.operatorApp.submit.sessionsLabel} ${sessions}${
-                            rollover ? " · " + t.operatorApp.submit.rolloverWarning : ""
-                          }`}
+                        : isLaunches
+                          ? `${t.operatorApp.submit.sessionsLabel} ${sessions}`
+                          : `${t.operatorApp.submit.sessionsLabel} ${sessions}${
+                              rollover ? " · " + t.operatorApp.submit.rolloverWarning : ""
+                            }`}
                     </p>
                   )}
                 </div>
@@ -645,6 +720,8 @@ export default function SubmitResultsPage() {
           </div>
         )}
       </BottomSheet>
+
+      <ImageLightbox src={lightboxUrl} />
     </div>
   );
 }

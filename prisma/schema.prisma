@@ -42,6 +42,9 @@ model Package {
 model Tenant {
   id                 String             @id @default(cuid())
   name               String
+  // Логотип на главной владельца и в отчётах — путь в /uploads/<tenantId>/...,
+  // как Asset.photoUrl/Operator.avatarUrl (см. src/lib/uploads.ts).
+  logoUrl            String?
   packageId          String
   package            Package            @relation(fields: [packageId], references: [id])
   subscriptionStatus SubscriptionStatus @default(active)
@@ -60,14 +63,21 @@ model Tenant {
   telegramBotToken String?
   telegramChatId   String?
 
+  // Можно ли уводить баланс оператора в минус авансом сверх доступного
+  // (docs/spec/05-work-time.md, "БАЛАНС"/"АВАНС"). Настройка владельца.
+  overdraftAllowed Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users         User[]
-  operators     Operator[]
-  points        Point[]
-  moduleFlags   TenantModule[]
-  moneyOps      MoneyOperation[]
+  users             User[]
+  operators         Operator[]
+  points            Point[]
+  moduleFlags       TenantModule[]
+  moneyOps          MoneyOperation[]
+  operatorRates     OperatorRate[]
+  shifts            Shift[]
+  balanceCarryovers OperatorBalanceCarryover[]
 }
 
 // Ручное включение/отключение модуля конкретному тенанту (индивидуальные условия),
@@ -119,9 +129,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  createdOperators Operator[] @relation("OperatorCreatedBy")
-  corrections      CorrectionLog[]
-  moneyOps         MoneyOperation[]
+  createdOperators  Operator[] @relation("OperatorCreatedBy")
+  corrections       CorrectionLog[]
+  moneyOps          MoneyOperation[]
+  balanceCarryovers OperatorBalanceCarryover[]
 }
 
 // Operator — создаётся и правится только Owner'ом. Нет email/пароля.
@@ -144,11 +155,20 @@ model Operator {
   createdByUserId String
   createdBy       User   @relation("OperatorCreatedBy", fields: [createdByUserId], references: [id])
 
+  // Цветовая метка оператора (docs/spec/05-work-time.md) — как Asset.colorTag,
+  // атрибут карточки сотрудника, используется в табеле/сводках/отчётах.
+  colorTag String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   resultsSubmissions ResultsSubmission[]
   moneyOps           MoneyOperation[]
+  // Получатель аванса/премии — отдельно от "кто провёл" (moneyOps выше).
+  receivedMoneyOps   MoneyOperation[] @relation("MoneyOperationBeneficiary")
+  rateHistory        OperatorRate[]
+  shifts             Shift[]
+  balanceCarryovers  OperatorBalanceCarryover[]
 }
 
 // ============================================================================
@@ -170,6 +190,10 @@ model Point {
   zones   Zone[]
   devices PointDevice[]
   resultsSubmissions ResultsSubmission[]
+  // Операции advance/bonus_payout (docs/spec/05-work-time.md) — касса точки в
+  // целом, не привязанная ни к одной конкретной зоне. См. MoneyOperation.pointId.
+  moneyOps MoneyOperation[]
+  shifts   Shift[]
 }
 
 // Устройство точки: активируется владельцем или через установочный QR/ссылку —
@@ -211,6 +235,15 @@ model Zone {
 
   name    String
   iconKey String? // ключ иконки lucide
+
+  // Режим учёта (docs/spec/01-counters.md) — открытый список, как MoneyOperation.type:
+  // "counters" (по счётчикам, накопительные показания активов, по умолчанию) |
+  // "launches" (пуски — активы остаются, но вводится готовое число заездов за
+  // сдачу, без непрерывного показания) | "cash_only" (только касса — без
+  // тарифов/активов, сдаётся только сумма). Меняется только пока у зоны нет ни
+  // одной сдачи итогов — иначе более поздние сдачи молча посчитают показания
+  // не в том смысле, что был задуман изначально.
+  accountingMode String @default("counters")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -276,6 +309,10 @@ model ResultsSubmission {
   createdAt   DateTime @default(now())
 
   zoneSubmissions ZoneSubmission[]
+
+  // Отчёты (calendar/day, docs/spec/01-counters.md) сканируют по точке и
+  // диапазону дат за месяц/день — без индекса это full scan таблицы.
+  @@index([pointId, submittedAt])
 }
 
 // Данные по одной работавшей зоне внутри одной сдачи итогов.
@@ -317,6 +354,10 @@ model AssetReading {
   createdAt DateTime @default(now())
 
   @@unique([zoneSubmissionId, assetId, tariffId])
+  // "Предыдущее показание"/"это последняя сдача в цепочке" (src/lib/results-calc.ts,
+  // src/lib/results-submission.ts) всегда ищутся по этой паре с сортировкой по
+  // времени — самый горячий путь чтения в модуле Счётчики.
+  @@index([assetId, tariffId, createdAt])
 }
 
 model ExpenseEntry {
@@ -353,28 +394,134 @@ model CorrectionLog {
 // ============================================================================
 
 // Тип операции — свободная строка (список расширяемый, будущие модули
-// добавляют свои типы). На сегодня: revenue / expense / collection / change_fund.
+// добавляют свои типы). На сегодня: revenue / expense / collection / change_fund
+// (касса зоны) и advance / bonus_payout (касса точки, см. 05-work-time.md).
 model MoneyOperation {
   id       String @id @default(cuid())
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  zoneId String
-  zone   Zone   @relation(fields: [zoneId], references: [id])
+  // РОВНО ОДНО из двух заполнено (CHECK-констрейнт в миграции) — какая касса
+  // меняется. zoneId — обычные операции Счётчиков/Денег. pointId — операции
+  // Рабочего времени: касса точки в целом, не привязанная к конкретной зоне.
+  zoneId String?
+  zone   Zone?   @relation(fields: [zoneId], references: [id])
+
+  pointId String?
+  point   Point?  @relation(fields: [pointId], references: [id])
 
   type   String
   amount Decimal @db.Decimal(10, 2)
 
+  // "Кто провёл" операцию (ввёл/отредактировал).
   performedByUserId     String?
   performedByUser       User?     @relation(fields: [performedByUserId], references: [id])
   performedByOperatorId String?
   performedByOperator   Operator? @relation(fields: [performedByOperatorId], references: [id])
+
+  // "Получатель" — чей баланс меняет операция (только advance/bonus_payout).
+  // Отдельно от performedBy*: владелец может провести операцию за оператора.
+  beneficiaryOperatorId String?
+  beneficiaryOperator   Operator? @relation("MoneyOperationBeneficiary", fields: [beneficiaryOperatorId], references: [id])
 
   comment String?
 
   // Ссылка на сдачу итогов, если операция создана автоматически ею (revenue/expense).
   resultsSubmissionId String?
 
+  // Ссылка на смену, если аванс/премия введены прямо в форме смены (тот же
+  // свободный приём без формального @relation, что у resultsSubmissionId).
+  shiftId String?
+
   occurredAt DateTime @default(now())
   createdAt  DateTime @default(now())
+
+  // Отчёт «Деньги» сканирует весь журнал тенанта; правка/удаление сдачи
+  // (src/app/api/reports/counters/zone-submission/[id]) ищет операцию по
+  // конкретной сдаче+зоне.
+  @@index([tenantId])
+  @@index([resultsSubmissionId, zoneId])
+  // Расчёт баланса оператора ("к выдаче"/"заработано за период") сканирует
+  // все advance/bonus_payout конкретного получателя — горячий путь карточки
+  // оператора и вкладки "Время" в PWA.
+  @@index([beneficiaryOperatorId, type, occurredAt])
+  @@index([pointId])
+  @@index([shiftId])
+}
+
+// ============================================================================
+// РАБОЧЕЕ ВРЕМЯ (см. 05-work-time.md)
+// ============================================================================
+
+// История ставок оператора. Действующая ставка на дату X = запись с
+// максимальным effectiveFrom <= X. Смена ставки не пересчитывает прошлые
+// смены ("СТАВКА" в 05-work-time.md) — Shift ищет свою дату в этой истории
+// при каждом чтении, ничего не денормализуется.
+model OperatorRate {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  operatorId String
+  operator   Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+
+  rate          Decimal  @db.Decimal(10, 2) // часовая ставка
+  effectiveFrom DateTime // действует начиная с этой даты (включительно)
+
+  createdAt DateTime @default(now())
+
+  @@index([operatorId, effectiveFrom])
+}
+
+// Смена — только сырые факты (начало/конец). Начислено/минуты/действовавшая
+// ставка НЕ хранятся — считаются на чтении (минуты = endAt − startAt, ставка
+// = OperatorRate на дату startAt), как AssetReading/сеансы в Счётчиках.
+// Аванс/премия по смене — НЕ поля здесь, а отдельные MoneyOperation
+// (type=advance|bonus_payout, shiftId=this.id) — единственный источник
+// правды про деньги остаётся журнал Денег (см. 02-money.md).
+model Shift {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  operatorId String
+  operator   Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+
+  // Точка, на которой отмечена смена (из сессии устройства при создании
+  // оператором — как ResultsSubmission.pointId). Нужна, чтобы знать, из кассы
+  // какой точки списывать привязанные к смене advance/bonus_payout — Operator
+  // сам по себе не привязан к одной точке (роуминг-устройства).
+  pointId String
+  point   Point  @relation(fields: [pointId], references: [id])
+
+  // Смена через полночь: endAt физически на следующие сутки после startAt —
+  // "дата смены" (для группировки/фильтров) всегда дата startAt.
+  startAt DateTime
+  endAt   DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Табель сортирует/фильтрует по оператору и дате — горячий путь.
+  @@index([operatorId, startAt])
+}
+
+// Перенос баланса — ручная запись владельца (стартовый баланс/корректировка),
+// НЕ операция денежного журнала: это не движение физической наличности, а
+// корректировка того, сколько компания должна оператору ("БАЛАНС" в
+// 05-work-time.md). Хранится отдельно от MoneyOperation по этой же причине.
+model OperatorBalanceCarryover {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  operatorId String
+  operator   Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+
+  amount  Decimal @db.Decimal(10, 2) // может быть отрицательным
+  comment String?
+
+  createdByUserId String
+  createdByUser   User   @relation(fields: [createdByUserId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([operatorId])
 }

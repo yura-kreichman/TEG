@@ -1,5 +1,14 @@
 // Общие для сервера и клиента правила расчёта из docs/spec/01-counters.md.
 
+// Режим учёта зоны — открытый список, как MoneyOperation.type (см. "Режим учёта
+// зоны" в 01-counters.md). Валидируется через этот массив на сервере и клиенте.
+export const ZONE_ACCOUNTING_MODES = ["counters", "launches", "cash_only"] as const;
+export type ZoneAccountingMode = (typeof ZONE_ACCOUNTING_MODES)[number];
+
+export function isZoneAccountingMode(value: unknown): value is ZoneAccountingMode {
+  return typeof value === "string" && (ZONE_ACCOUNTING_MODES as readonly string[]).includes(value);
+}
+
 // Счётчики 4-разрядные (0-9999), переполнение 9999→0 — разница считается по модулю 10000.
 export const COUNTER_MOD = 10000;
 

@@ -39,7 +39,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/co
     return NextResponse.json({ error: "Сдача не найдена" }, { status: 404 });
   }
 
-  if (!(await isZoneSubmissionEditable(id))) {
+  if (!(await isZoneSubmissionEditable(id, zoneSubmission.zone.accountingMode))) {
     return NextResponse.json(
       { error: "Есть более поздняя сдача по одному из активов этой зоны — сначала удалите её." },
       { status: 409 }
@@ -164,7 +164,7 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/reports/
     return NextResponse.json({ error: "Сдача не найдена" }, { status: 404 });
   }
 
-  if (!(await isZoneSubmissionEditable(id))) {
+  if (!(await isZoneSubmissionEditable(id, zoneSubmission.zone.accountingMode))) {
     return NextResponse.json(
       { error: "Есть более поздняя сдача по одному из активов этой зоны — сначала удалите её." },
       { status: 409 }

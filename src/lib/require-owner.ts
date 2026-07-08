@@ -25,3 +25,10 @@ export async function findTenantZone(tenantId: string, zoneId: string) {
   if (!zone || zone.point.tenantId !== tenantId) return null;
   return zone;
 }
+
+/** Loads an Operator and verifies it belongs to the given tenant. */
+export async function findTenantOperator(tenantId: string, operatorId: string) {
+  const operator = await prisma.operator.findUnique({ where: { id: operatorId } });
+  if (!operator || operator.tenantId !== tenantId) return null;
+  return operator;
+}

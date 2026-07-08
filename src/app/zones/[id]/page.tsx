@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Pencil, Palette, Camera, ImagePlus, Trash2, Plus } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { Check, Pencil, Palette, Camera, ImagePlus, ListChecks, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,8 +13,11 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconPicker, IconPickerSheet, AssetOrZoneIcon } from "@/components/icon-picker";
 import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
+import { StatusChip } from "@/components/status-chip";
 import { TileIcon } from "@/components/tile-icon";
+import { FilePickerButton } from "@/components/file-picker-button";
 import { useI18n } from "@/components/i18n-provider";
+import { compressImageFile } from "@/lib/client-image";
 
 interface TariffInfo {
   id: string;
@@ -35,13 +38,17 @@ interface ZoneDetail {
   id: string;
   name: string;
   iconKey: string | null;
+  accountingMode: "counters" | "launches" | "cash_only";
+  modeLocked: boolean;
   pointId: string;
   pointName: string;
   tariffs: TariffInfo[];
   assets: AssetInfo[];
 }
 
-type ZoneKebabView = "menu" | "rename" | "confirm-delete";
+const ACCOUNTING_MODES = ["counters", "launches", "cash_only"] as const;
+
+type ZoneKebabView = "menu" | "rename" | "mode" | "confirm-delete";
 type TariffKebabView = "menu" | "edit" | "confirm-delete";
 type AssetKebabView = "menu" | "edit" | "photo" | "icon" | "confirm-delete";
 
@@ -76,7 +83,6 @@ export default function ZoneDetailPage() {
   const [assetIconKey, setAssetIconKey] = useState<string | null>(null);
   const [assetError, setAssetError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [assetKebab, setAssetKebab] = useState<AssetInfo | null>(null);
   const [assetKebabView, setAssetKebabView] = useState<AssetKebabView>("menu");
@@ -85,7 +91,6 @@ export default function ZoneDetailPage() {
   const [editAssetPhotoUrl, setEditAssetPhotoUrl] = useState<string | null>(null);
   const [editAssetError, setEditAssetError] = useState<string | null>(null);
   const [editUploading, setEditUploading] = useState(false);
-  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadZone() {
     const res = await fetch(`/api/zones/${params.id}`);
@@ -126,6 +131,22 @@ export default function ZoneDetailPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: renameZoneValue }),
     });
+    setZoneKebabOpen(false);
+    await loadZone();
+  }
+
+  async function changeAccountingMode(mode: (typeof ACCOUNTING_MODES)[number]) {
+    setZoneActionError(null);
+    const res = await fetch(`/api/zones/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accountingMode: mode }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      setZoneActionError(data.error ?? "Не удалось изменить режим учёта");
+      return;
+    }
     setZoneKebabOpen(false);
     await loadZone();
   }
@@ -193,14 +214,13 @@ export default function ZoneDetailPage() {
     await loadZone();
   }
 
-  async function handleUploadPhoto(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  async function handleUploadPhoto(file: File) {
     setUploading(true);
     setAssetError(null);
     try {
+      const compressed = await compressImageFile(file);
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", compressed);
       const res = await fetch("/api/uploads", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) {
@@ -210,7 +230,6 @@ export default function ZoneDetailPage() {
       setAssetPhotoUrl(data.url);
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
 
@@ -249,14 +268,13 @@ export default function ZoneDetailPage() {
     setEditAssetError(null);
   }
 
-  async function handleEditUploadPhoto(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  async function handleEditUploadPhoto(file: File) {
     setEditUploading(true);
     setEditAssetError(null);
     try {
+      const compressed = await compressImageFile(file);
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", compressed);
       const res = await fetch("/api/uploads", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) {
@@ -266,7 +284,6 @@ export default function ZoneDetailPage() {
       setEditAssetPhotoUrl(data.url);
     } finally {
       setEditUploading(false);
-      if (editFileInputRef.current) editFileInputRef.current.value = "";
     }
   }
 
@@ -331,19 +348,23 @@ export default function ZoneDetailPage() {
                 <TileIcon iconKey={zone.iconKey} size="lg" />
                 <div>
                   <h1 className="text-[24px] font-extrabold tracking-[-0.02em]">{zone.name}</h1>
-                  <button
-                    type="button"
-                    className="text-caption-airbnb font-semibold text-primary"
-                    onClick={() => setZoneIconSheetOpen(true)}
-                  >
-                    {t.common.changeIcon}
-                  </button>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <StatusChip>{t.zonesList.modeChip[zone.accountingMode]}</StatusChip>
+                  </div>
                 </div>
               </div>
               <KebabButton onClick={openZoneKebab} label={t.zoneDetail.zoneActionsLabel} />
             </div>
           </div>
 
+          {zone.accountingMode === "cash_only" && (
+            <SpringCard hover={false}>
+              <p className="text-body-airbnb text-muted-foreground">{t.zoneDetail.cashOnlyNote}</p>
+            </SpringCard>
+          )}
+
+          {zone.accountingMode !== "cash_only" && (
+          <>
           <SpringCard hover={false} className="flex flex-col gap-1">
             <h2 className="text-section-title">{t.zoneDetail.tariffsCardLabel}</h2>
 
@@ -410,6 +431,8 @@ export default function ZoneDetailPage() {
               </Button>
             </PressableScale>
           </SpringCard>
+          </>
+          )}
         </div>
       </div>
 
@@ -427,9 +450,62 @@ export default function ZoneDetailPage() {
             <ActionSheetItem icon={Pencil} onClick={() => setZoneKebabView("rename")}>
               {t.zoneDetail.renameZone}
             </ActionSheetItem>
+            <ActionSheetItem
+              icon={ImagePlus}
+              onClick={() => {
+                setZoneKebabOpen(false);
+                setZoneIconSheetOpen(true);
+              }}
+            >
+              {t.common.changeIcon}
+            </ActionSheetItem>
+            {!zone.modeLocked && (
+              <ActionSheetItem icon={ListChecks} onClick={() => setZoneKebabView("mode")}>
+                {t.zoneDetail.changeAccountingModeAction}
+              </ActionSheetItem>
+            )}
             <ActionSheetItem icon={Trash2} destructive onClick={() => setZoneKebabView("confirm-delete")}>
               {t.zoneDetail.deleteZone}
             </ActionSheetItem>
+          </div>
+        )}
+        {zoneKebabView === "mode" && (
+          <div className="flex flex-col gap-3 pt-2">
+            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">
+              {t.zoneDetail.changeAccountingModeAction}
+            </h2>
+            <div className="rounded-control border border-border">
+              {ACCOUNTING_MODES.map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => changeAccountingMode(mode)}
+                  className="flex w-full items-center justify-between border-t border-border px-3 py-2.5 text-left first:border-t-0"
+                >
+                  <span>
+                    <span className="block text-body-airbnb">
+                      {mode === "counters"
+                        ? t.zonesList.accountingModeCounters
+                        : mode === "launches"
+                          ? t.zonesList.accountingModeLaunches
+                          : t.zonesList.accountingModeCashOnly}
+                    </span>
+                    <span className="block text-caption-airbnb">
+                      {mode === "counters"
+                        ? t.zonesList.accountingModeCountersHint
+                        : mode === "launches"
+                          ? t.zonesList.accountingModeLaunchesHint
+                          : t.zonesList.accountingModeCashOnlyHint}
+                    </span>
+                  </span>
+                  {zone.accountingMode === mode && <Check className="size-4 shrink-0 text-primary" />}
+                </button>
+              ))}
+            </div>
+            {zoneActionError && <p className="text-sm text-destructive">{zoneActionError}</p>}
+            <Button variant="outline" className="w-full" onClick={() => setZoneKebabView("menu")}>
+              {t.common.cancel}
+            </Button>
           </div>
         )}
         {zoneKebabView === "rename" && (
@@ -583,13 +659,11 @@ export default function ZoneDetailPage() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={assetPhotoUrl} alt="" className="size-12 rounded-control object-cover" />
               )}
-              <input
-                ref={fileInputRef}
-                type="file"
+              <FilePickerButton
                 accept="image/jpeg,image/png,image/webp"
-                onChange={handleUploadPhoto}
+                onFileSelected={handleUploadPhoto}
                 disabled={uploading}
-                className="text-body-airbnb"
+                hasFile={!!assetPhotoUrl}
               />
               {assetPhotoUrl && (
                 <Button
@@ -697,13 +771,11 @@ export default function ZoneDetailPage() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={editAssetPhotoUrl} alt="" className="size-12 rounded-control object-cover" />
               )}
-              <input
-                ref={editFileInputRef}
-                type="file"
+              <FilePickerButton
                 accept="image/jpeg,image/png,image/webp"
-                onChange={handleEditUploadPhoto}
+                onFileSelected={handleEditUploadPhoto}
                 disabled={editUploading}
-                className="text-body-airbnb"
+                hasFile={!!editAssetPhotoUrl}
               />
               {editAssetPhotoUrl && (
                 <Button

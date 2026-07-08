@@ -21,6 +21,7 @@ export default async function Home() {
       <OwnerDashboardCard
         email={user.email}
         tenantName={user.tenant?.name ?? null}
+        tenantLogoUrl={user.tenant?.logoUrl ?? null}
         hasPin={Boolean(user.pinHash)}
       />
     </OwnerShell>

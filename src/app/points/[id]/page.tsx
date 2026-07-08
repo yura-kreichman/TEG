@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { ChevronRight, Plus } from "lucide-react";
+import { Check, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,9 +21,12 @@ interface ZoneInfo {
   id: string;
   name: string;
   iconKey: string | null;
+  accountingMode: "counters" | "launches" | "cash_only";
   tariffs: { id: string; name: string; price: string }[];
   assets: { id: string }[];
 }
+
+const ACCOUNTING_MODES = ["counters", "launches", "cash_only"] as const;
 
 export default function PointDetailPage() {
   const params = useParams<{ id: string }>();
@@ -35,6 +38,7 @@ export default function PointDetailPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const [iconKey, setIconKey] = useState<string | null>(null);
+  const [accountingMode, setAccountingMode] = useState<(typeof ACCOUNTING_MODES)[number]>("counters");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -66,7 +70,7 @@ export default function PointDetailPage() {
       const res = await fetch(`/api/points/${params.id}/zones`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, iconKey }),
+        body: JSON.stringify({ name, iconKey, accountingMode }),
       });
       const data = await res.json();
 
@@ -77,6 +81,7 @@ export default function PointDetailPage() {
 
       setName("");
       setIconKey(null);
+      setAccountingMode("counters");
       setCreateOpen(false);
       await loadZones();
     } finally {
@@ -96,7 +101,15 @@ export default function PointDetailPage() {
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-screen-title">{t.zonesList.title}</h1>
             <PressableScale>
-              <Button variant="dark" size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
+              <Button
+                variant="dark"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  setAccountingMode("counters");
+                  setCreateOpen(true);
+                }}
+              >
                 <Plus className="size-4" />
                 {t.common.add}
               </Button>
@@ -118,25 +131,31 @@ export default function PointDetailPage() {
                           <div className="min-w-0 grow">
                             <div className="text-card-title">{zone.name}</div>
                             <p className="text-caption-airbnb">
-                              {zone.assets.length} {t.zonesList.assetsCount}
+                              {zone.accountingMode === "cash_only"
+                                ? t.zonesList.modeChip.cash_only
+                                : `${zone.assets.length} ${t.zonesList.assetsCount}`}
+                              {zone.accountingMode !== "cash_only" &&
+                                ` · ${t.zonesList.modeChip[zone.accountingMode]}`}
                             </p>
                           </div>
                           <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
                         </div>
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                          {zone.tariffs.length === 0 ? (
-                            <StatusChip variant="warning">{t.zonesList.noTariffs}</StatusChip>
-                          ) : (
-                            zone.tariffs.map((tariff) => (
-                              <span
-                                key={tariff.id}
-                                className="rounded-full bg-surface-0 px-2.5 py-1 text-xs font-semibold tabular-nums text-muted-foreground"
-                              >
-                                {tariff.name} · {tariff.price}
-                              </span>
-                            ))
-                          )}
-                        </div>
+                        {zone.accountingMode !== "cash_only" && (
+                          <div className="mt-3 flex flex-wrap gap-1.5">
+                            {zone.tariffs.length === 0 ? (
+                              <StatusChip variant="warning">{t.zonesList.noTariffs}</StatusChip>
+                            ) : (
+                              zone.tariffs.map((tariff) => (
+                                <span
+                                  key={tariff.id}
+                                  className="rounded-full bg-surface-0 px-2.5 py-1 text-xs font-semibold tabular-nums text-muted-foreground"
+                                >
+                                  {tariff.name} · {tariff.price}
+                                </span>
+                              ))
+                            )}
+                          </div>
+                        )}
                       </SpringCard>
                     </Link>
                   </PressableScale>
@@ -160,6 +179,37 @@ export default function PointDetailPage() {
           <div className="flex flex-col gap-1">
             <Label>{t.zonesList.iconLabel}</Label>
             <IconPicker value={iconKey} onChange={setIconKey} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label>{t.zonesList.accountingModeLabel}</Label>
+            <div className="rounded-control border border-border">
+              {ACCOUNTING_MODES.map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setAccountingMode(mode)}
+                  className="flex w-full items-center justify-between border-t border-border px-3 py-2.5 text-left first:border-t-0"
+                >
+                  <span>
+                    <span className="block text-body-airbnb">
+                      {mode === "counters"
+                        ? t.zonesList.accountingModeCounters
+                        : mode === "launches"
+                          ? t.zonesList.accountingModeLaunches
+                          : t.zonesList.accountingModeCashOnly}
+                    </span>
+                    <span className="block text-caption-airbnb">
+                      {mode === "counters"
+                        ? t.zonesList.accountingModeCountersHint
+                        : mode === "launches"
+                          ? t.zonesList.accountingModeLaunchesHint
+                          : t.zonesList.accountingModeCashOnlyHint}
+                    </span>
+                  </span>
+                  {accountingMode === mode && <Check className="size-4 shrink-0 text-primary" />}
+                </button>
+              ))}
+            </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <PressableScale>

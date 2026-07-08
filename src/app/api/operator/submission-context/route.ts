@@ -25,8 +25,12 @@ export async function GET() {
 
   // Previous reading per (assetId, tariffId): the latest AssetReading recorded
   // across any past submission, regardless of date — "расчёт всегда от
-  // предыдущей сдачи" (docs/spec/01-counters.md).
-  const assetIds = zones.flatMap((z) => z.assets.map((a) => a.id));
+  // предыдущей сдачи" (docs/spec/01-counters.md). Only meaningful in "counters"
+  // mode — "launches" readings aren't a running meter, so there's nothing to
+  // look up (previousReadings stays all-zero for those zones).
+  const assetIds = zones
+    .filter((z) => z.accountingMode === "counters")
+    .flatMap((z) => z.assets.map((a) => a.id));
   const previousReadings = assetIds.length
     ? await prisma.assetReading.findMany({
         where: { assetId: { in: assetIds } },
@@ -44,6 +48,7 @@ export async function GET() {
     id: zone.id,
     name: zone.name,
     iconKey: zone.iconKey,
+    accountingMode: zone.accountingMode,
     tariffs: zone.tariffs.map((t) => ({ id: t.id, name: t.name, price: t.price, order: t.order })),
     assets: zone.assets.map((asset) => ({
       id: asset.id,

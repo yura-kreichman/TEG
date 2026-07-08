@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { isZoneAccountingMode } from "@/lib/results-calc";
 
 export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]/zones">) {
   const owner = await requireOwner();
@@ -35,9 +36,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
   }
 
-  const { name, iconKey } = await request.json();
+  const { name, iconKey, accountingMode } = await request.json();
   if (typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ error: "Название зоны обязательно" }, { status: 400 });
+  }
+  if (accountingMode !== undefined && !isZoneAccountingMode(accountingMode)) {
+    return NextResponse.json({ error: "Некорректный режим учёта" }, { status: 400 });
   }
 
   const zoneCount = await prisma.zone.count({ where: { point: { tenantId: owner.tenantId } } });
@@ -56,6 +60,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
       pointId,
       name: name.trim(),
       iconKey: typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null,
+      accountingMode: isZoneAccountingMode(accountingMode) ? accountingMode : "counters",
     },
   });
 

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ImagePlus, Pencil, KeyRound, Pause, Play, Trash2, Plus, MapPin, Check } from "lucide-react";
+import { ImagePlus, Pencil, KeyRound, Pause, Play, Trash2, Plus, MapPin, Check, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,12 +14,14 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
 import { StatusChip } from "@/components/status-chip";
 import { useI18n } from "@/components/i18n-provider";
+import { compressImageFile } from "@/lib/client-image";
 
 interface OperatorInfo {
   id: string;
   name: string;
   active: boolean;
   avatarUrl: string | null;
+  colorTag: string | null;
   allZonesAccess: boolean;
   allowedZones: { id: string; name: string }[];
 }
@@ -31,7 +33,7 @@ interface ZoneOption {
   pointName: string;
 }
 
-type KebabView = "menu" | "rename" | "pin" | "zones" | "confirm-delete";
+type KebabView = "menu" | "rename" | "pin" | "zones" | "color" | "confirm-delete";
 
 export default function OperatorsPage() {
   const router = useRouter();
@@ -50,6 +52,7 @@ export default function OperatorsPage() {
   const [kebabView, setKebabView] = useState<KebabView>("menu");
   const [renameValue, setRenameValue] = useState("");
   const [pinValue, setPinValue] = useState("");
+  const [colorValue, setColorValue] = useState("#22c55e");
   const [actionError, setActionError] = useState<string | null>(null);
 
   const [allZones, setAllZones] = useState<ZoneOption[]>([]);
@@ -119,9 +122,21 @@ export default function OperatorsPage() {
     setKebabView("menu");
     setRenameValue(operator.name);
     setPinValue("");
+    setColorValue(operator.colorTag ?? "#22c55e");
     setActionError(null);
     setZoneAccessAll(operator.allZonesAccess);
     setZoneAccessSelected(new Set(operator.allowedZones.map((z) => z.id)));
+  }
+
+  async function confirmColor() {
+    if (!kebab) return;
+    await fetch(`/api/operators/${kebab.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ colorTag: colorValue }),
+    });
+    setKebab(null);
+    await loadOperators();
   }
 
   function toggleZoneSelected(zoneId: string) {
@@ -213,8 +228,9 @@ export default function OperatorsPage() {
   async function handleUploadAvatar(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file || !kebab) return;
+    const compressed = await compressImageFile(file, { maxDimension: 640, maxBytes: 120 * 1024 });
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", compressed);
     const uploadRes = await fetch("/api/uploads", { method: "POST", body: formData });
     const uploadData = await uploadRes.json();
     if (!uploadRes.ok) {
@@ -253,36 +269,52 @@ export default function OperatorsPage() {
             <StaggerList className="mt-4 flex flex-col gap-3.5">
               {operators.map((operator) => (
                 <StaggerItem key={operator.id}>
-                  <SpringCard animate={false}>
-                    <div className="flex items-center gap-3">
-                      {operator.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={operator.avatarUrl} alt="" className="size-12.5 shrink-0 rounded-full object-cover" />
-                      ) : (
-                        <div className="flex size-12.5 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
-                          {operator.name.slice(0, 1).toUpperCase()}
-                        </div>
-                      )}
-                      <div className="min-w-0 grow">
-                        <div className="text-card-title">{operator.name}</div>
-                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                          <StatusChip variant={operator.active ? "accent" : "warning"}>
-                            {operator.active ? t.operators.active : t.operators.inactive}
-                          </StatusChip>
-                          {operator.allZonesAccess ? (
-                            <StatusChip variant="accent">{t.operators.allZonesChip}</StatusChip>
-                          ) : operator.allowedZones.length > 0 ? (
-                            <StatusChip variant="accent">
-                              {operator.allowedZones.map((z) => z.name).join(", ")}
-                            </StatusChip>
+                  <PressableScale>
+                    <SpringCard
+                      animate={false}
+                      className="cursor-pointer"
+                      onClick={() => router.push(`/operators/${operator.id}`)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="relative shrink-0">
+                          {operator.avatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={operator.avatarUrl} alt="" className="size-12.5 rounded-full object-cover" />
                           ) : (
-                            <StatusChip variant="warning">{t.operators.noZoneAccessChip}</StatusChip>
+                            <div className="flex size-12.5 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
+                              {operator.name.slice(0, 1).toUpperCase()}
+                            </div>
+                          )}
+                          {operator.colorTag && (
+                            <span
+                              className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full ring-2 ring-card"
+                              style={{ backgroundColor: operator.colorTag }}
+                            />
                           )}
                         </div>
+                        <div className="min-w-0 grow">
+                          <div className="text-card-title">{operator.name}</div>
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <StatusChip variant={operator.active ? "accent" : "warning"}>
+                              {operator.active ? t.operators.active : t.operators.inactive}
+                            </StatusChip>
+                            {operator.allZonesAccess ? (
+                              <StatusChip variant="accent">{t.operators.allZonesChip}</StatusChip>
+                            ) : operator.allowedZones.length > 0 ? (
+                              <StatusChip variant="accent">
+                                {operator.allowedZones.map((z) => z.name).join(", ")}
+                              </StatusChip>
+                            ) : (
+                              <StatusChip variant="warning">{t.operators.noZoneAccessChip}</StatusChip>
+                            )}
+                          </div>
+                        </div>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <KebabButton onClick={() => openKebab(operator)} label={t.operators.actionsLabel} />
+                        </div>
                       </div>
-                      <KebabButton onClick={() => openKebab(operator)} label={t.operators.actionsLabel} />
-                    </div>
-                  </SpringCard>
+                    </SpringCard>
+                  </PressableScale>
                 </StaggerItem>
               ))}
             </StaggerList>
@@ -343,6 +375,9 @@ export default function OperatorsPage() {
             </ActionSheetItem>
             <ActionSheetItem icon={MapPin} onClick={() => setKebabView("zones")}>
               {t.operators.zoneAccess}
+            </ActionSheetItem>
+            <ActionSheetItem icon={Palette} onClick={() => setKebabView("color")}>
+              {t.operators.colorTagAction}
             </ActionSheetItem>
             <ActionSheetItem icon={kebab.active ? Pause : Play} destructive={kebab.active} onClick={handleToggleActive}>
               {kebab.active ? t.operators.deactivate : t.operators.activate}
@@ -440,6 +475,30 @@ export default function OperatorsPage() {
               </Button>
               <PressableScale className="flex-1">
                 <Button className="w-full" onClick={confirmZoneAccess}>
+                  {t.common.save}
+                </Button>
+              </PressableScale>
+            </div>
+          </div>
+        )}
+        {kebab && kebabView === "color" && (
+          <div className="flex flex-col gap-3 pt-2">
+            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operators.colorTagAction}</h2>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={colorValue}
+                onChange={(e) => setColorValue(e.target.value)}
+                className="h-11 w-16 rounded-control border border-input"
+              />
+              <span className="text-caption-airbnb">{t.operators.colorTagHint}</span>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setKebabView("menu")}>
+                {t.common.cancel}
+              </Button>
+              <PressableScale className="flex-1">
+                <Button className="w-full" onClick={confirmColor}>
                   {t.common.save}
                 </Button>
               </PressableScale>

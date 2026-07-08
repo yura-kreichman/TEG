@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RideTrack — Главная владельца · прототип v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F7F5;
+    --card:#FFFFFF;
+    --ink:#1B1F1D;
+    --ink-2:#5C6662;
+    --ink-3:#9AA39F;
+    --line:#E8EBE8;
+    --accent:#0E8074;
+    --accent-ink:#0A5F56;
+    --accent-soft:#E4F3F0;
+    --warn:#B45309;
+    --warn-soft:#FEF4E6;
+    --danger:#C4372B;
+    --radius-lg:20px;
+    --radius-md:14px;
+    --shadow-card:0 1px 2px rgba(27,31,29,.04), 0 8px 24px rgba(27,31,29,.05);
+    --shadow-sheet:0 -12px 40px rgba(27,31,29,.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;background:#ECEEEA;color:var(--ink);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    padding:32px 16px 64px;-webkit-font-smoothing:antialiased;
+  }
+  .proto-header{max-width:420px;width:100%;margin-bottom:20px}
+  .proto-header h1{font-size:15px;font-weight:600;color:var(--ink-2)}
+  .proto-header p{font-size:12.5px;color:var(--ink-3);margin-top:4px}
+
+  .phone{
+    width:390px;max-width:100%;height:820px;
+    background:var(--bg);border-radius:36px;border:1px solid #DDE1DC;
+    box-shadow:0 24px 60px rgba(27,31,29,.14);
+    overflow:hidden;position:relative;display:flex;flex-direction:column;
+  }
+  .screen{flex:1;overflow-y:auto;padding:28px 20px 110px}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  .grow{flex:1;min-width:0}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);padding:18px;margin-bottom:14px;
+  }
+  .card-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+  .kebab{
+    width:34px;height:34px;flex:none;border-radius:50%;
+    border:1px solid var(--line);background:#fff;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;font-weight:700;color:var(--ink-2);letter-spacing:1px;padding-bottom:8px;
+  }
+
+  /* ── Приветствие ── */
+  .hero{display:flex;align-items:center;gap:14px}
+  .logo-tile{
+    width:56px;height:56px;border-radius:16px;flex:none;
+    background:linear-gradient(135deg,#0E8074,#3BA99C);
+    color:#fff;font-size:24px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .hello-small{font-size:13px;color:var(--ink-2)}
+  .hello-name{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-top:1px}
+  .hello-mail{font-size:12px;color:var(--ink-3);margin-top:2px}
+
+  /* ── Сводка сегодня ── */
+  .today-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px}
+  .today-hero{display:flex;align-items:baseline;gap:8px}
+  .today-hero .big{font-size:32px;font-weight:800;letter-spacing:-.02em}
+  .today-hero .cur{font-size:14px;font-weight:600;color:var(--ink-3)}
+  .link{font-size:13px;font-weight:600;color:var(--accent-ink);background:none;border:none;cursor:pointer;font-family:inherit;padding:0}
+  .today-split{display:flex;margin-top:14px;border-top:1px solid var(--line);padding-top:13px}
+  .today-split>div{flex:1}
+  .today-split>div+div{border-left:1px solid var(--line);padding-left:16px}
+  .stat-label{font-size:11.5px;color:var(--ink-3);font-weight:500;margin-bottom:3px}
+  .stat-value{font-size:16px;font-weight:700}
+  .stat-value.pos{color:var(--accent-ink)}
+
+  /* ── Навигационные карточки ── */
+  .nav-card{
+    display:flex;align-items:center;gap:13px;width:100%;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);padding:16px 18px;margin-bottom:14px;
+    cursor:pointer;font-family:inherit;text-align:left;transition:transform .12s;
+  }
+  .nav-card:active{transform:scale(.985)}
+  .nav-icon{
+    width:44px;height:44px;border-radius:13px;flex:none;font-size:21px;
+    background:var(--accent-soft);display:flex;align-items:center;justify-content:center;
+  }
+  .nav-title{font-size:15px;font-weight:700;color:var(--ink)}
+  .nav-sub{font-size:12.5px;color:var(--ink-3);margin-top:1px}
+
+  /* ── Тариф ── */
+  .chip{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;
+    background:var(--accent-soft);color:var(--accent-ink);
+  }
+  .chip .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .plan-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .plan-name{font-size:16px;font-weight:800;letter-spacing:-.01em}
+  .limit{margin-top:10px}
+  .limit-row{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px}
+  .limit-row .l{color:var(--ink-2)}
+  .limit-row .v{font-weight:600}
+  .bar{height:6px;border-radius:99px;background:var(--bg);overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:99px;background:var(--accent)}
+
+  /* ── Bottom nav ── */
+  .bottom-nav{
+    position:absolute;left:0;right:0;bottom:0;z-index:5;
+    background:rgba(255,255,255,.92);backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);display:flex;padding:8px 6px 18px;
+  }
+  .nav-item{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:none;border:none;cursor:pointer;font-family:inherit;
+    font-size:10.5px;font-weight:600;color:var(--ink-3);padding:4px 0;
+  }
+  .nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .nav-item.on{color:var(--accent-ink)}
+  .nav-item.on svg{stroke-width:2.2}
+
+  /* ── Шторки ── */
+  .scrim{position:absolute;inset:0;z-index:10;background:rgba(20,24,22,.44);opacity:0;pointer-events:none;transition:opacity .22s}
+  .scrim.open{opacity:1;pointer-events:auto}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:11;
+    background:#fff;border-radius:24px 24px 0 0;box-shadow:var(--shadow-sheet);
+    padding:10px 20px 26px;max-height:80%;overflow-y:auto;
+    transform:translateY(105%);transition:transform .26s cubic-bezier(.32,.72,.25,1);
+  }
+  .sheet.open{transform:translateY(0)}
+  .grabber{width:38px;height:4px;border-radius:99px;background:#D9DED9;margin:4px auto 16px}
+  .sheet-title{font-size:19px;font-weight:800;letter-spacing:-.01em;margin-bottom:2px}
+  .sheet-sub{font-size:13px;color:var(--ink-2);margin-bottom:16px}
+  .action-list{display:flex;flex-direction:column}
+  .action-item{
+    display:flex;align-items:center;gap:12px;width:100%;
+    padding:15px 2px;border:none;border-top:1px solid var(--line);
+    background:none;cursor:pointer;font:inherit;font-size:15px;font-weight:500;color:var(--ink);text-align:left;
+  }
+  .action-item:first-child{border-top:none}
+  .action-item.danger{color:var(--danger)}
+  .action-item .ai{width:20px;text-align:center;font-size:16px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .field input{
+    width:100%;font:inherit;font-size:15px;
+    padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-md);
+    background:#FBFCFB;color:var(--ink);outline:none;transition:border .15s, box-shadow .15s;
+  }
+  .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
+  .btn-primary{
+    display:block;width:100%;margin-top:6px;
+    background:var(--accent);color:#fff;border:none;cursor:pointer;
+    font:inherit;font-size:15px;font-weight:700;padding:14px;border-radius:var(--radius-md);
+  }
+</style>
+</head>
+<body>
+
+<div class="proto-header">
+  <h1>RideTrack · Главная владельца — прототип v1</h1>
+  <p>Приветствие с компанией, сводка дня, навигация, карточка тарифа. «···» открывает шторку действий аккаунта, «Переименовать» — форму. Всё кликабельно.</p>
+</div>
+
+<div class="phone">
+  <div class="screen">
+
+    <!-- ═══ Приветствие ═══ -->
+    <div class="card">
+      <div class="hero">
+        <div class="logo-tile">Т</div>
+        <div class="grow">
+          <div class="hello-small">Здравствуйте!</div>
+          <div class="hello-name" id="company-name">Компания «Тест»</div>
+          <div class="hello-mail">yk.intro@gmail.com</div>
+        </div>
+        <button class="kebab" onclick="openSheet('sheet-account')">···</button>
+      </div>
+    </div>
+
+    <!-- ═══ Последние итоги ═══ -->
+    <div class="card">
+      <div class="today-head">
+        <div class="card-label" style="margin-bottom:8px">Последние итоги · вчера, 6 июля</div>
+        <button class="link">В «Деньги» →</button>
+      </div>
+      <div class="today-hero num">
+        <span class="big">1 126.67</span><span class="cur">выручка</span>
+      </div>
+      <div class="today-split num">
+        <div><div class="stat-label">Прибыль</div><div class="stat-value pos">+1 126.67</div></div>
+        <div><div class="stat-label">Сдач итогов</div><div class="stat-value">1</div></div>
+        <div><div class="stat-label">Разница</div><div class="stat-value pos">+43.33</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px;margin-top:13px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-3)">
+        <span style="width:7px;height:7px;border-radius:50%;background:#D3D9D4;flex:none"></span>
+        Сегодня сдач пока не было
+      </div>
+    </div>
+
+    <!-- ═══ Навигация ═══ -->
+    <button class="nav-card">
+      <span class="nav-icon">📅</span>
+      <span class="grow">
+        <span class="nav-title">Показания по дням</span><br>
+        <span class="nav-sub">Календарь сдач итогов по точкам</span>
+      </span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA39F" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+
+    <!-- ═══ Тариф ═══ -->
+    <div class="card">
+      <div class="plan-head">
+        <div>
+          <div class="card-label" style="margin-bottom:4px">Ваш план</div>
+          <div class="plan-name">Бесплатный</div>
+        </div>
+        <span class="chip"><span class="dot"></span>активен</span>
+      </div>
+
+      <div class="limit num">
+        <div class="limit-row"><span class="l">Точки</span><span class="v">1 из 1</span></div>
+        <div class="bar"><i style="width:100%"></i></div>
+      </div>
+      <div class="limit num">
+        <div class="limit-row"><span class="l">Операторы</span><span class="v">1 из 2</span></div>
+        <div class="bar"><i style="width:50%"></i></div>
+      </div>
+      <div class="limit num">
+        <div class="limit-row"><span class="l">Зоны</span><span class="v">3 из 5</span></div>
+        <div class="bar"><i style="width:60%"></i></div>
+      </div>
+
+      <button class="link" style="margin-top:14px">Управлять подпиской →</button>
+    </div>
+
+  </div>
+
+  <!-- ═══ NAV ═══ -->
+  <nav class="bottom-nav">
+    <button class="nav-item on">
+      <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Главная
+    </button>
+    <button class="nav-item">
+      <svg viewBox="0 0 24 24"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>Точки
+    </button>
+    <button class="nav-item">
+      <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.6-3.4 2.9-5 5.5-5s4.9 1.6 5.5 5"/><path d="M16 5a3.2 3.2 0 0 1 0 6"/><path d="M17.5 15c2 .5 3.2 2 3.5 5"/></svg>Операторы
+    </button>
+    <button class="nav-item">
+      <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><circle cx="17" cy="14.5" r="1.2" fill="currentColor" stroke="none"/></svg>Деньги
+    </button>
+    <button class="nav-item">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.07-.4.1-.8.1-1.2z"/></svg>Настройки
+    </button>
+  </nav>
+
+  <!-- ═══ Шторки ═══ -->
+  <div class="scrim" id="scrim" onclick="closeSheets()"></div>
+
+  <div class="sheet" id="sheet-account">
+    <div class="grabber"></div>
+    <div class="sheet-title" style="margin-bottom:2px">Компания «Тест»</div>
+    <div class="sheet-sub">yk.intro@gmail.com</div>
+    <div class="action-list">
+      <button class="action-item" onclick="closeSheets();openSheet('sheet-rename')"><span class="ai">✏️</span>Сменить название компании</button>
+      <button class="action-item" onclick="closeSheets()"><span class="ai">🖼</span>Загрузить логотип</button>
+      <button class="action-item" onclick="closeSheets()"><span class="ai">🔑</span>Сменить ПИН-код</button>
+      <button class="action-item danger" onclick="closeSheets()"><span class="ai">🚪</span>Выйти из аккаунта</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet-rename">
+    <div class="grabber"></div>
+    <div class="sheet-title">Название компании</div>
+    <div class="sheet-sub">Отображается на главной и в отчётах</div>
+    <div class="field">
+      <label>Название</label>
+      <input type="text" id="rename-input" value="Компания «Тест»">
+    </div>
+    <button class="btn-primary" onclick="saveRename()">Сохранить</button>
+  </div>
+
+</div>
+
+<script>
+  function openSheet(id){
+    document.getElementById('scrim').classList.add('open');
+    document.getElementById(id).classList.add('open');
+  }
+  function closeSheets(){
+    document.getElementById('scrim').classList.remove('open');
+    document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));
+  }
+  function saveRename(){
+    const v=document.getElementById('rename-input').value.trim();
+    if(v)document.getElementById('company-name').textContent=v;
+    closeSheets();
+  }
+</script>
+</body>
+</html>

@@ -320,4 +320,12 @@
   .text-caption-airbnb {
     @apply text-[12.5px] leading-snug text-muted-foreground;
   }
+  /* Колёсико выбора времени (WheelTimePicker) — скролл без видимого скроллбара. */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
 }

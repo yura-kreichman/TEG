@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantZone, requireOwner } from "@/lib/require-owner";
+import { isZoneAccountingMode } from "@/lib/results-calc";
 
 export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]">) {
   const owner = await requireOwner();
@@ -19,10 +20,14 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
     prisma.asset.findMany({ where: { zoneId: id }, orderBy: { createdAt: "asc" } }),
   ]);
 
+  const submissionCount = await prisma.zoneSubmission.count({ where: { zoneId: id } });
+
   return NextResponse.json({
     id: zone.id,
     name: zone.name,
     iconKey: zone.iconKey,
+    accountingMode: zone.accountingMode,
+    modeLocked: submissionCount > 0,
     pointId: zone.pointId,
     pointName: zone.point.name,
     tariffs,
@@ -42,8 +47,8 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
   }
 
-  const { name, iconKey } = await request.json();
-  const data: { name?: string; iconKey?: string | null } = {};
+  const { name, iconKey, accountingMode } = await request.json();
+  const data: { name?: string; iconKey?: string | null; accountingMode?: string } = {};
 
   if (name !== undefined) {
     if (typeof name !== "string" || name.trim().length === 0) {
@@ -53,6 +58,19 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
   }
   if (iconKey !== undefined) {
     data.iconKey = typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null;
+  }
+  if (accountingMode !== undefined) {
+    if (!isZoneAccountingMode(accountingMode)) {
+      return NextResponse.json({ error: "Некорректный режим учёта" }, { status: 400 });
+    }
+    const submissionCount = await prisma.zoneSubmission.count({ where: { zoneId: id } });
+    if (submissionCount > 0) {
+      return NextResponse.json(
+        { error: "У зоны уже есть сдачи итогов — режим учёта менять нельзя." },
+        { status: 409 }
+      );
+    }
+    data.accountingMode = accountingMode;
   }
 
   await prisma.zone.update({ where: { id }, data });

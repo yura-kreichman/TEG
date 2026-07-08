@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { calcSessions, calcZoneRevenue } from "@/lib/results-calc";
 import { sendTenantTelegramMessage } from "@/lib/telegram";
+import { isModuleEnabled } from "@/lib/modules";
 
 interface ReadingInput {
   assetId: string;
@@ -52,7 +53,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Одна из зон не найдена" }, { status: 400 });
   }
 
-  const allAssetIds = zoneSubmissions.flatMap((z) => z.readings.map((r) => r.assetId));
+  // "Previous reading" only means anything in "counters" mode (running meter) —
+  // "launches" readings are already the finished count for this submission.
+  const allAssetIds = zoneSubmissions
+    .filter((z) => zoneById.get(z.zoneId)?.accountingMode === "counters")
+    .flatMap((z) => z.readings.map((r) => r.assetId));
   const previousReadings = allAssetIds.length
     ? await prisma.assetReading.findMany({
         where: { assetId: { in: allAssetIds } },
@@ -70,6 +75,7 @@ export async function POST(request: Request) {
     const tariffCalc = zone.tariffs.map((tariff) => {
       const readingsForTariff = zs.readings.filter((r) => r.tariffId === tariff.id);
       const sessions = readingsForTariff.reduce((sum, r) => {
+        if (zone.accountingMode === "launches") return sum + r.reading;
         const previous = previousByKey.get(`${r.assetId}:${tariff.id}`) ?? 0;
         return sum + calcSessions(r.reading, previous);
       }, 0);
@@ -174,10 +180,13 @@ export async function POST(request: Request) {
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   const zoneBlocks = summary
-    .map(
-      (s) =>
-        `Зона «${s.zoneName}»\nПоказания: ${s.readingsText}\nВозвраты/тесты: ${s.returnsCount}\nКасса vs счётчики: ${s.actualCash.toFixed(2)} / ${s.calculatedRevenue.toFixed(2)}\nРазница: ${s.difference > 0 ? "+" : ""}${s.difference.toFixed(2)}`
-    )
+    .map((s) => {
+      const zone = zoneById.get(s.zoneId)!;
+      if (zone.accountingMode === "cash_only") {
+        return `Зона «${s.zoneName}»\nКасса: ${s.actualCash.toFixed(2)}`;
+      }
+      return `Зона «${s.zoneName}»\nПоказания: ${s.readingsText}\nВозвраты/тесты: ${s.returnsCount}\nКасса vs счётчики: ${s.actualCash.toFixed(2)} / ${s.calculatedRevenue.toFixed(2)}\nРазница: ${s.difference > 0 ? "+" : ""}${s.difference.toFixed(2)}`;
+    })
     .join("\n\n");
 
   const message = [
@@ -188,5 +197,20 @@ export async function POST(request: Request) {
 
   await sendTenantTelegramMessage(point.tenantId, message);
 
-  return NextResponse.json({ id: submission.id, summary });
+  // Мягкое напоминание (docs/spec/05-work-time.md, "СВЯЗЬ СО СДАЧЕЙ ИТОГОВ") —
+  // после сдачи итогов, если модуль подключён и сегодня ещё не отмечен уход
+  // (нет смены с startAt сегодня — сама смена вводится целиком, "уход" не
+  // отдельное событие, поэтому это буквально "смена сегодня ещё не введена").
+  let remindMarkDeparture = false;
+  if (await isModuleEnabled(point.tenantId, "work_time")) {
+    const dayStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+    const todayShift = await prisma.shift.findFirst({
+      where: { operatorId: operator.id, startAt: { gte: dayStart, lt: dayEnd } },
+      select: { id: true },
+    });
+    remindMarkDeparture = !todayShift;
+  }
+
+  return NextResponse.json({ id: submission.id, summary, remindMarkDeparture });
 }

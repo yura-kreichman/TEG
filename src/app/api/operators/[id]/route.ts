@@ -3,6 +3,32 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { deleteUploadedImage } from "@/lib/uploads";
 
+export async function GET(_request: Request, ctx: RouteContext<"/api/operators/[id]">) {
+  const owner = await requireOwner();
+  if (!owner) {
+    return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+
+  const { id } = await ctx.params;
+  const operator = await prisma.operator.findUnique({
+    where: { id },
+    include: { allowedZones: { select: { id: true, name: true } } },
+  });
+  if (!operator || operator.tenantId !== owner.tenantId) {
+    return NextResponse.json({ error: "Оператор не найден" }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    id: operator.id,
+    name: operator.name,
+    active: operator.active,
+    avatarUrl: operator.avatarUrl,
+    colorTag: operator.colorTag,
+    allZonesAccess: operator.allZonesAccess,
+    allowedZones: operator.allowedZones,
+  });
+}
+
 export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/[id]">) {
   const owner = await requireOwner();
   if (!owner) {
@@ -15,13 +41,14 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
     return NextResponse.json({ error: "Оператор не найден" }, { status: 404 });
   }
 
-  const { name, avatarUrl, active, allZonesAccess, zoneIds } = await request.json();
+  const { name, avatarUrl, active, allZonesAccess, zoneIds, colorTag } = await request.json();
   const data: {
     name?: string;
     avatarUrl?: string | null;
     active?: boolean;
     allZonesAccess?: boolean;
     allowedZones?: { set: { id: string }[] };
+    colorTag?: string | null;
   } = {};
 
   if (name !== undefined) {
@@ -29,6 +56,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
       return NextResponse.json({ error: "Имя оператора обязательно" }, { status: 400 });
     }
     data.name = name.trim();
+  }
+  if (colorTag !== undefined) {
+    data.colorTag = typeof colorTag === "string" && colorTag.trim() ? colorTag.trim() : null;
   }
   if (avatarUrl !== undefined) {
     const nextAvatarUrl = typeof avatarUrl === "string" && avatarUrl.trim() ? avatarUrl.trim() : null;

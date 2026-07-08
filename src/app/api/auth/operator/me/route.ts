@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getActivatedDevice, getOperatorSessionId } from "@/lib/operator-auth";
+import { isModuleEnabled } from "@/lib/modules";
 
 export async function GET() {
   const device = await getActivatedDevice();
@@ -16,19 +17,23 @@ export async function GET() {
     tenantName: tenant?.name ?? null,
     roaming: device.roaming,
   };
+  // Нижняя навигация PWA собирается динамически из включённых модулей
+  // (docs/spec/03-design-system.md) — пока единственный опциональный пункт.
+  const workTimeEnabled = await isModuleEnabled(point.tenantId, "work_time");
 
   const operatorId = await getOperatorSessionId();
   if (!operatorId) {
-    return NextResponse.json({ device: deviceInfo, operator: null });
+    return NextResponse.json({ device: deviceInfo, operator: null, workTimeEnabled });
   }
 
   const operator = await prisma.operator.findUnique({ where: { id: operatorId } });
   if (!operator || !operator.active || operator.tenantId !== point.tenantId) {
-    return NextResponse.json({ device: deviceInfo, operator: null });
+    return NextResponse.json({ device: deviceInfo, operator: null, workTimeEnabled });
   }
 
   return NextResponse.json({
     device: deviceInfo,
     operator: { id: operator.id, name: operator.name, avatarUrl: operator.avatarUrl },
+    workTimeEnabled,
   });
 }

@@ -23,7 +23,7 @@ export default async function OperatorLayout({ children }: { children: React.Rea
         <div className="flex justify-end p-2">
           <ThemeToggle />
         </div>
-        <div className="flex flex-1 flex-col">{children}</div>
+        {children}
       </div>
     </ThemeProvider>
   );

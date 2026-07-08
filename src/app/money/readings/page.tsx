@@ -8,6 +8,7 @@ import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
+import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +24,7 @@ interface PointOption {
 interface DayAssetReading {
   tariffId: string;
   tariffName: string;
-  previousValue: number;
+  previousValue: number | null;
   value: number;
   sessions: number;
   editedBefore: number | null;
@@ -33,6 +34,7 @@ interface DayCard {
   zoneSubmissionId: string;
   zoneId: string;
   zoneName: string;
+  accountingMode: "counters" | "launches" | "cash_only";
   submittedAt: string;
   operatorName: string;
   editable: boolean;
@@ -43,11 +45,23 @@ interface DayCard {
   returnsCount: number;
   calculatedRevenue: number;
   difference: number;
-  assets: { assetId: string; assetName: string; colorTag: string; readings: DayAssetReading[] }[];
+  assets: {
+    assetId: string;
+    assetName: string;
+    colorTag: string;
+    photoUrl: string | null;
+    iconKey: string | null;
+    readings: DayAssetReading[];
+  }[];
 }
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
+}
+
+function formatTime(iso: string) {
+  const d = new Date(iso);
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 type ActionsView = "menu" | "edit" | "confirm-delete";
@@ -124,6 +138,7 @@ export default function ReadingsCalendarPage() {
   }
 
   function goMonth(delta: number) {
+    if (delta > 0 && year === today.getUTCFullYear() && month === today.getUTCMonth() + 1) return;
     let nextMonth = month + delta;
     let nextYear = year;
     if (nextMonth < 1) {
@@ -201,17 +216,32 @@ export default function ReadingsCalendarPage() {
   const firstWeekdayIndex = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7; // 0=Mon
   const todayKey = `${today.getUTCFullYear()}-${pad(today.getUTCMonth() + 1)}-${pad(today.getUTCDate())}`;
 
+  // Compact calendar: no point showing empty future days, so the grid never
+  // extends past today (and the current month is as far forward as nav goes).
+  const isCurrentMonth = year === today.getUTCFullYear() && month === today.getUTCMonth() + 1;
+  const isFutureMonth =
+    year > today.getUTCFullYear() || (year === today.getUTCFullYear() && month > today.getUTCMonth() + 1);
+  const lastVisibleDay = isFutureMonth ? 0 : isCurrentMonth ? today.getUTCDate() : daysInMonth;
+
   const cells: (string | null)[] = [
     ...Array(firstWeekdayIndex).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => `${year}-${pad(month)}-${pad(i + 1)}`),
+    ...Array.from({ length: lastVisibleDay }, (_, i) => `${year}-${pad(month)}-${pad(i + 1)}`),
   ];
+
+  function formatReadableDate(dateStr: string) {
+    const d = new Date(`${dateStr}T00:00:00Z`);
+    const day = d.getUTCDate();
+    const monthName = t.readings.monthsGenitive[d.getUTCMonth()];
+    const weekday = t.readings.weekdaysFull[(d.getUTCDay() + 6) % 7];
+    return `${day} ${monthName} (${weekday})`;
+  }
 
   return (
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl flex-col gap-1">
-          <Link href="/money" className="mb-2 w-fit text-caption-airbnb font-semibold text-primary">
-            ← {t.money.title}
+          <Link href="/" className="mb-2 w-fit text-caption-airbnb font-semibold text-primary">
+            ← {t.readings.backToHome}
           </Link>
           <h1 className="text-screen-title">{t.readings.title}</h1>
 
@@ -256,7 +286,8 @@ export default function ReadingsCalendarPage() {
                     type="button"
                     aria-label={t.readings.nextMonth}
                     onClick={() => goMonth(1)}
-                    className="flex size-8 items-center justify-center rounded-control text-muted-foreground"
+                    disabled={isCurrentMonth}
+                    className="flex size-8 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
                   >
                     <ChevronRight className="size-4.5" />
                   </button>
@@ -294,21 +325,18 @@ export default function ReadingsCalendarPage() {
 
               {selectedDate && (
                 <div className="flex flex-col gap-3">
-                  <p className="mt-1 text-card-title">{selectedDate}</p>
                   {cards === null ? null : cards.length === 0 ? (
-                    <p className="text-body-airbnb text-muted-foreground">{t.readings.noSubmissions}</p>
+                    <p className="mt-1 text-body-airbnb text-muted-foreground">
+                      {t.readings.noSubmissionsPrefix} {formatReadableDate(selectedDate)}
+                    </p>
                   ) : (
                     cards.map((card) => (
                       <SpringCard key={card.zoneSubmissionId} hover={false} className="flex flex-col gap-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 grow">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-body-airbnb font-bold tabular-nums">
-                                {(() => {
-                                  const d = new Date(card.submittedAt);
-                                  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-                                })()}
-                              </span>
+                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                              <span className="text-body-airbnb font-bold">{formatReadableDate(selectedDate)}</span>
+                              <span className="text-caption-airbnb tabular-nums">{formatTime(card.submittedAt)}</span>
                               {card.edited && (
                                 <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
                                   {t.readings.editedByOwner}
@@ -317,7 +345,9 @@ export default function ReadingsCalendarPage() {
                             </div>
                             <p className="text-caption-airbnb">
                               {t.readings.operatorLabel}: {card.operatorName}
-                              {card.editable && ` · ${t.readings.lastSubmissionNote}`}
+                              {card.accountingMode === "counters" &&
+                                card.editable &&
+                                ` · ${t.readings.lastSubmissionNote}`}
                             </p>
                           </div>
                           <KebabButton onClick={() => openActions(card)} label={t.readings.actionsLabel} />
@@ -325,41 +355,44 @@ export default function ReadingsCalendarPage() {
 
                         <div className="mt-3 border-t border-border pt-3">
                           <p className="text-caption-airbnb font-bold">{card.zoneName}</p>
-                          {card.assets.map((asset) => (
-                            <div key={asset.assetId} className="mt-2">
-                              <div className="flex items-center gap-1.5">
-                                <span
-                                  className="size-2.5 shrink-0 rounded-full"
-                                  style={{ backgroundColor: asset.colorTag }}
-                                />
-                                <span className="text-caption-airbnb font-semibold text-foreground">
-                                  {asset.assetName}
-                                </span>
-                              </div>
-                              {asset.readings.map((r) => (
-                                <div
-                                  key={r.tariffId}
-                                  className="flex items-center justify-between py-1 pl-4 text-caption-airbnb"
-                                >
-                                  <span>{r.tariffName}</span>
-                                  <span className="flex items-center gap-1.5 tabular-nums">
-                                    {r.editedBefore !== null && (
-                                      <Info
-                                        className="size-3.5 shrink-0 text-warning"
-                                        aria-label={`${t.readings.editedByOwner} · ${t.readings.wasLabel}: ${r.editedBefore}`}
-                                      />
-                                    )}
-                                    <span className="text-muted-foreground">
-                                      {r.previousValue} → <b className="text-foreground">{r.value}</b>
-                                    </span>
-                                    <span className="min-w-10 text-right font-bold text-primary">
-                                      +{r.sessions}
-                                    </span>
+                          {card.accountingMode !== "cash_only" &&
+                            card.assets.map((asset) => (
+                              <div key={asset.assetId} className="mt-2">
+                                <div className="flex items-center gap-1.5">
+                                  <span
+                                    className="size-2.5 shrink-0 rounded-full"
+                                    style={{ backgroundColor: asset.colorTag }}
+                                  />
+                                  <span className="text-caption-airbnb font-semibold text-foreground">
+                                    {asset.assetName}
                                   </span>
                                 </div>
-                              ))}
-                            </div>
-                          ))}
+                                {asset.readings.map((r) => (
+                                  <div
+                                    key={r.tariffId}
+                                    className="flex items-center justify-between py-1 pl-4 text-caption-airbnb"
+                                  >
+                                    <span>{r.tariffName}</span>
+                                    <span className="flex items-center gap-1.5 tabular-nums">
+                                      {r.editedBefore !== null && (
+                                        <Info
+                                          className="size-3.5 shrink-0 text-warning"
+                                          aria-label={`${t.readings.editedByOwner} · ${t.readings.wasLabel}: ${r.editedBefore}`}
+                                        />
+                                      )}
+                                      {r.previousValue !== null && (
+                                        <span className="text-muted-foreground">
+                                          {r.previousValue} → <b className="text-foreground">{r.value}</b>
+                                        </span>
+                                      )}
+                                      <span className="min-w-10 text-right font-bold text-primary">
+                                        +{r.sessions}
+                                      </span>
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
                         </div>
 
                         <div className="mt-3 flex flex-col gap-1 border-t border-border pt-3 tabular-nums">
@@ -379,10 +412,14 @@ export default function ReadingsCalendarPage() {
                             <span>{t.operatorApp.submit.mobileLabel}</span>
                             <span className="text-foreground">{card.mobileAmount.toFixed(2)}</span>
                           </div>
+                          {card.accountingMode !== "cash_only" && (
                           <div className="flex items-center justify-between text-caption-airbnb">
                             <span>{t.operatorApp.submit.returnsLabel}</span>
                             <span className="text-foreground">{card.returnsCount}</span>
                           </div>
+                          )}
+                          {card.accountingMode !== "cash_only" && (
+                          <>
                           <div className="flex items-center justify-between border-t border-border pt-1.5 text-caption-airbnb font-semibold">
                             <span className="text-foreground">{t.operatorApp.submit.calculatedRevenue}</span>
                             <span className="text-foreground">{card.calculatedRevenue.toFixed(2)}</span>
@@ -403,6 +440,8 @@ export default function ReadingsCalendarPage() {
                               {card.difference.toFixed(2)}
                             </span>
                           </div>
+                          </>
+                          )}
                         </div>
 
                         {!card.editable && (
@@ -424,11 +463,7 @@ export default function ReadingsCalendarPage() {
         {actionsFor && (
           <div className="pt-2">
             <h2 className="mb-2 text-[19px] font-extrabold tracking-[-0.01em]">
-              {t.readings.actionsSheetPrefix}{" "}
-              {(() => {
-                const d = new Date(actionsFor.submittedAt);
-                return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-              })()}
+              {t.readings.actionsSheetPrefix} {formatTime(actionsFor.submittedAt)}
             </h2>
             {!actionsFor.editable && (
               <p className="mb-2 text-sm text-muted-foreground">{t.readings.lockedNote}</p>
@@ -461,18 +496,32 @@ export default function ReadingsCalendarPage() {
 
             {actionsFor.assets.map((asset) => (
               <div key={asset.assetId} className="flex flex-col gap-2">
-                <p className="text-section-title">
-                  {asset.assetName} · {t.readings.readingsSectionSuffix}
-                </p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-control bg-muted">
+                    {asset.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={asset.photoUrl} alt="" className="size-full object-contain object-center" />
+                    ) : asset.iconKey ? (
+                      <AssetOrZoneIcon iconKey={asset.iconKey} className="size-4.5 text-muted-foreground" />
+                    ) : null}
+                    <span
+                      className="absolute left-1 top-1 size-2.5 rounded-full ring-2 ring-card"
+                      style={{ backgroundColor: asset.colorTag }}
+                    />
+                  </div>
+                  <p className="text-section-title">
+                    {asset.assetName} · {t.readings.readingsSectionSuffix}
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {asset.readings.map((r) => {
                     const key = `${asset.assetId}:${r.tariffId}`;
                     return (
                       <div key={r.tariffId} className="flex flex-col gap-1">
-                        <Label htmlFor={key}>
-                          {r.tariffName}{" "}
-                          <span className="font-normal text-muted-foreground">
-                            · {t.operatorApp.submit.previousReading} {r.previousValue}
+                        <Label htmlFor={key} className="flex-col items-start gap-0.5">
+                          <span>{r.tariffName}</span>
+                          <span className="text-xs font-normal text-muted-foreground">
+                            {t.operatorApp.submit.previousReading} {r.previousValue}
                           </span>
                         </Label>
                         <Input
@@ -491,7 +540,7 @@ export default function ReadingsCalendarPage() {
 
             <div className="flex flex-col gap-2">
               <p className="text-section-title">{t.readings.moneySection}</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-1">
                   <Label htmlFor="editCash">{t.operatorApp.submit.cashLabel}</Label>
                   <Input
@@ -513,16 +562,18 @@ export default function ReadingsCalendarPage() {
                   />
                 </div>
               </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="editReturns">{t.operatorApp.submit.returnsLabel}</Label>
-                <Input
-                  id="editReturns"
-                  inputMode="numeric"
-                  className="tabular-nums"
-                  value={editReturns}
-                  onChange={(e) => setEditReturns(e.target.value)}
-                />
-              </div>
+              {actionsFor.accountingMode !== "cash_only" && (
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="editReturns">{t.operatorApp.submit.returnsLabel}</Label>
+                  <Input
+                    id="editReturns"
+                    inputMode="numeric"
+                    className="tabular-nums"
+                    value={editReturns}
+                    onChange={(e) => setEditReturns(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-1">

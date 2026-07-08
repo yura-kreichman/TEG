@@ -2,34 +2,112 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 
-// "Бизнес: расходы и прибыль" и текущий остаток "сколько наличных должно быть
-// на точке" (docs/spec/02-money.md) — оба считаются из единого журнала
-// MoneyOperation, без отдельного хранения остатков.
-export async function GET() {
+type Granularity = "day" | "week" | "month" | "year";
+
+function isGranularity(value: unknown): value is Granularity {
+  return value === "day" || value === "week" || value === "month" || value === "year";
+}
+
+// Период для карточки "Бизнес: расходы и прибыль" — иначе сумма растёт
+// бесконечно с возрастом тенанта. Текущий (незавершённый) период обрезается
+// сегодняшним днём (тот же приём, что в компактном календаре "Показаний по
+// дням" — не показываем то, чего ещё не произошло), прошлые периоды — целиком.
+function getPeriodRange(granularity: Granularity, anchor: Date, today: Date) {
+  let start: Date;
+  let end: Date;
+  if (granularity === "day") {
+    start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate()));
+    end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  } else if (granularity === "week") {
+    const dayIndex = (anchor.getUTCDay() + 6) % 7; // 0=Mon
+    start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate() - dayIndex));
+    end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+  } else if (granularity === "month") {
+    start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), 1));
+    end = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 1));
+  } else {
+    start = new Date(Date.UTC(anchor.getUTCFullYear(), 0, 1));
+    end = new Date(Date.UTC(anchor.getUTCFullYear() + 1, 0, 1));
+  }
+  const todayEnd = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 1));
+  if (end > todayEnd) end = todayEnd;
+  return { start, end };
+}
+
+// "Бизнес: расходы и прибыль" (за выбранный период) и текущий остаток "сколько
+// наличных должно быть на точке" (docs/spec/02-money.md, всегда весь журнал —
+// это текущее состояние кассы, а не показатель за период) — оба считаются из
+// единого журнала MoneyOperation, без отдельного хранения остатков.
+export async function GET(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
 
-  const zones = await prisma.zone.findMany({
-    where: { point: { tenantId: owner.tenantId } },
-    include: { point: true },
-    orderBy: [{ point: { createdAt: "asc" } }, { createdAt: "asc" }],
-  });
+  const { searchParams } = new URL(request.url);
+  const today = new Date();
+  const todayEnd = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 1));
+
+  // Свой диапазон (from/to) — отдельная ветка от granularity/anchor: владелец
+  // выбирает произвольные даты вместо готового периода. Конец диапазона
+  // включительно на клиенте, здесь переводим в exclusive-границу и так же
+  // обрезаем будущим — как и у остальных периодов.
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
+  let start: Date;
+  let end: Date;
+  let granularity: Granularity | "custom";
+  if (fromParam && toParam && /^\d{4}-\d{2}-\d{2}$/.test(fromParam) && /^\d{4}-\d{2}-\d{2}$/.test(toParam)) {
+    granularity = "custom";
+    start = new Date(`${fromParam}T00:00:00.000Z`);
+    const toDate = new Date(`${toParam}T00:00:00.000Z`);
+    end = new Date(toDate.getTime() + 24 * 60 * 60 * 1000);
+    if (end > todayEnd) end = todayEnd;
+    if (start > end) start = end;
+  } else {
+    const granularityParam = searchParams.get("granularity");
+    granularity = isGranularity(granularityParam) ? granularityParam : "month";
+    const anchorParam = searchParams.get("anchor");
+    const anchor =
+      anchorParam && /^\d{4}-\d{2}-\d{2}$/.test(anchorParam) ? new Date(`${anchorParam}T00:00:00.000Z`) : new Date();
+    ({ start, end } = getPeriodRange(granularity, anchor, today));
+  }
+
+  const [zones, points] = await Promise.all([
+    prisma.zone.findMany({
+      where: { point: { tenantId: owner.tenantId } },
+      include: { point: true },
+      orderBy: [{ point: { createdAt: "asc" } }, { createdAt: "asc" }],
+    }),
+    prisma.point.findMany({ where: { tenantId: owner.tenantId }, orderBy: { createdAt: "asc" } }),
+  ]);
 
   const operations = await prisma.moneyOperation.findMany({
     where: { tenantId: owner.tenantId },
   });
 
   const balanceByZone = new Map<string, number>();
+  // Операции advance/bonus_payout (docs/spec/05-work-time.md) — касса точки
+  // в целом, не привязаны ни к одной зоне (MoneyOperation.pointId, а не zoneId).
+  const balanceByPoint = new Map<string, number>();
   let totalRevenue = 0;
   let totalExpense = 0;
 
   for (const op of operations) {
     const amount = Number(op.amount);
-    balanceByZone.set(op.zoneId, (balanceByZone.get(op.zoneId) ?? 0) + amount);
+    // Остаток — текущее состояние кассы, весь журнал, без периода.
+    if (op.zoneId) {
+      balanceByZone.set(op.zoneId, (balanceByZone.get(op.zoneId) ?? 0) + amount);
+    } else if (op.pointId) {
+      balanceByPoint.set(op.pointId, (balanceByPoint.get(op.pointId) ?? 0) + amount);
+    }
+
+    if (op.occurredAt < start || op.occurredAt >= end) continue;
     if (op.type === "revenue") totalRevenue += amount;
-    if (op.type === "expense") totalExpense += amount; // stored negative
+    // Расходы бизнес-карточки: обычные expense + аванс/премия модуля Рабочее
+    // время (docs/spec/05-work-time.md) — оба уменьшают кассу, оба реальные
+    // траты бизнеса на персонал.
+    if (op.type === "expense" || op.type === "advance" || op.type === "bonus_payout") totalExpense += amount;
   }
 
   const zoneBalances = zones.map((zone) => ({
@@ -40,8 +118,25 @@ export async function GET() {
     balance: Math.round((balanceByZone.get(zone.id) ?? 0) * 100) / 100,
   }));
 
+  // Остаток по точке в целом = Σ остатков её зон + point-level операции
+  // (авансы/премии) — без этого "сколько наличных должно быть на точке"
+  // не учитывало бы деньги, выданные из общей кассы, а не кассы зоны.
+  const pointTotals = points.map((point) => {
+    const zonesSum = zones
+      .filter((z) => z.pointId === point.id)
+      .reduce((sum, z) => sum + (balanceByZone.get(z.id) ?? 0), 0);
+    const pointLevel = balanceByPoint.get(point.id) ?? 0;
+    return {
+      pointId: point.id,
+      pointName: point.name,
+      total: Math.round((zonesSum + pointLevel) * 100) / 100,
+    };
+  });
+
   return NextResponse.json({
     zoneBalances,
+    pointTotals,
+    period: { granularity, start: start.toISOString(), end: end.toISOString() },
     business: {
       revenue: Math.round(totalRevenue * 100) / 100,
       expense: Math.round(totalExpense * 100) / 100,
