@@ -38,18 +38,21 @@ export function ActionSheetItem({
   children,
   onClick,
   destructive = false,
+  disabled = false,
 }: {
   icon: LucideIcon;
   children: React.ReactNode;
   onClick: () => void;
   destructive?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       className={cn(
-        "flex w-full items-center gap-3 border-t border-border py-3.5 text-left text-body-airbnb first:border-t-0",
+        "flex w-full items-center gap-3 border-t border-border py-3.5 text-left text-body-airbnb first:border-t-0 disabled:cursor-default disabled:text-muted-foreground/50",
         destructive ? "text-destructive" : "text-foreground"
       )}
     >

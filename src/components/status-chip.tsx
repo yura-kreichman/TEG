@@ -11,17 +11,25 @@ export function StatusChip({
   variant = "accent",
 }: {
   children: React.ReactNode;
-  variant?: "accent" | "warning";
+  variant?: "accent" | "warning" | "neutral";
 }) {
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
         variant === "accent" && "bg-primary/10 text-primary",
-        variant === "warning" && "bg-warning/15 text-warning"
+        variant === "warning" && "bg-warning/15 text-warning",
+        variant === "neutral" && "bg-muted text-muted-foreground"
       )}
     >
-      <span className={cn("size-1.5 rounded-full", variant === "accent" ? "bg-primary" : "bg-warning")} />
+      <span
+        className={cn(
+          "size-1.5 rounded-full",
+          variant === "accent" && "bg-primary",
+          variant === "warning" && "bg-warning",
+          variant === "neutral" && "bg-muted-foreground/40"
+        )}
+      />
       {children}
     </span>
   );

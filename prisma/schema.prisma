@@ -15,6 +15,7 @@ datasource db {
 // ============================================================================
 
 enum SubscriptionStatus {
+  trialing
   active
   paused
   expired
@@ -48,24 +49,34 @@ model Tenant {
   packageId          String
   package            Package            @relation(fields: [packageId], references: [id])
   subscriptionStatus SubscriptionStatus @default(active)
+  // Управляется вручную из админ-модуля (нет реального биллинга — докс, шаг
+  // "план+лимиты без денег" 2026-07-10). Планировщик (summary-scheduler.ts)
+  // раз в минуту переводит active/trialing в expired, когда дата прошла.
+  subscriptionExpiresAt DateTime?
+  trialEndsAt           DateTime?
 
-  // Мультиязычность / темы (настройки тенанта, см. 00-architecture.md).
-  // themeMode — тенантный дефолт светлой/тёмной темы, задаётся только Владельцем
-  // и распространяется на кабинет Владельца и PWA всех Операторов; личный
-  // локальный оверрайд темы на конкретном устройстве (next-themes localStorage)
-  // это переопределяет только для этого браузера, не меняя настройку тенанта.
+  // Контакты тенанта для платформенной поддержки — заполняет Super Admin в
+  // админ-модуле, не сам владелец (докс 2026-07-10, "полные настройки
+  // тенанта"). contactPhone — телефон, отдельный от email логина владельца
+  // (User.email). adminNote — внутренняя заметка, владельцу никогда не видна.
+  contactPhone String?
+  adminNote    String?
+
+  // Мультиязычность (настройка тенанта, см. 00-architecture.md). Тема
+  // светлая/тёмная больше не тенантная настройка (убрано по фидбеку
+  // пользователя 2026-07-09) — только личный выбор каждого устройства
+  // (next-themes localStorage), см. src/app/layout.tsx/operator/layout.tsx.
   locale       String @default("ru")
   accentScheme String @default("green")
-  themeMode    String @default("light")
-
-  // Telegram-сводка (01-counters.md) — токен и chat_id хранятся здесь;
-  // шифрование/секреты-механизм подключить перед продакшеном (см. TODO в коде).
-  telegramBotToken String?
-  telegramChatId   String?
 
   // Можно ли уводить баланс оператора в минус авансом сверх доступного
   // (docs/spec/05-work-time.md, "БАЛАНС"/"АВАНС"). Настройка владельца.
   overdraftAllowed Boolean @default(false)
+
+  // "HH:MM" — во сколько обычно начинается смена, подставляется по умолчанию
+  // в форму "Добавить смену" оператора (было зашито как 10:00, стало
+  // настройкой владельца по фидбеку пользователя 2026-07-10).
+  defaultShiftStartTime String @default("10:00")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -78,6 +89,13 @@ model Tenant {
   operatorRates     OperatorRate[]
   shifts            Shift[]
   balanceCarryovers OperatorBalanceCarryover[]
+  summaryChannels   TenantSummaryChannel[]
+  telegramBindCodes TelegramBindCode[]
+  zoneSummarySettings       ZoneSummarySettings?
+  dailyCashSummarySettings  DailyCashSummarySettings?
+  shiftCloseSummarySettings ShiftCloseSummarySettings?
+  dailyCashSummaryDeliveries DailyCashSummaryDelivery[]
+  tasks Task[]
 }
 
 // Ручное включение/отключение модуля конкретному тенанту (индивидуальные условия),
@@ -133,6 +151,8 @@ model User {
   corrections       CorrectionLog[]
   moneyOps          MoneyOperation[]
   balanceCarryovers OperatorBalanceCarryover[]
+  createdTasks      Task[] @relation("TaskCreatedBy")
+  assignedTasks     Task[] @relation("TaskAssignedUsers")
 }
 
 // Operator — создаётся и правится только Owner'ом. Нет email/пароля.
@@ -146,7 +166,17 @@ model Operator {
   name      String
   pinHash   String
   active    Boolean @default(true)
+  // Загруженное фото — как Asset.photoUrl. iconKey — аватар из личной
+  // коллекции (icon-library/avatars/), запасной вариант, если фото не
+  // загружено (тот же приём, что Asset.iconKey — см. icon-picker.tsx).
   avatarUrl String?
+  iconKey   String?
+
+  // Личный выбор языка (найдено 2026-07-10: без этого поля язык, выбранный
+  // на экране входа оператора, слетал сразу после входа — resolveLocale()
+  // падал обратно на язык тенанта, а сменить его сам оператор не мог).
+  // null = язык тенанта, как раньше.
+  locale String?
 
   // Доступ к зонам: все (по умолчанию) или выборочно через allowedZones.
   allZonesAccess Boolean @default(true)
@@ -169,6 +199,7 @@ model Operator {
   rateHistory        OperatorRate[]
   shifts             Shift[]
   balanceCarryovers  OperatorBalanceCarryover[]
+  assignedTasks      Task[] @relation("TaskAssignedOperators")
 }
 
 // ============================================================================
@@ -194,6 +225,9 @@ model Point {
   // целом, не привязанная ни к одной конкретной зоне. См. MoneyOperation.pointId.
   moneyOps MoneyOperation[]
   shifts   Shift[]
+  summaryChannels TenantSummaryChannel[]
+  dailyCashSummaryDeliveries DailyCashSummaryDelivery[]
+  tasks Task[]
 }
 
 // Устройство точки: активируется владельцем или через установочный QR/ссылку —
@@ -235,6 +269,13 @@ model Zone {
 
   name    String
   iconKey String? // ключ иконки lucide
+
+  // Временная деактивация (докс: пользовательский фидбек 2026-07-09) — зона
+  // на техобслуживании/сезонно не работает. Оператор не видит её в мастере
+  // сдачи итогов (см. /api/operator/submission-context), и она не входит в
+  // ожидание "все зоны отчитались" для событийной сводки "Касса за день"
+  // (см. src/lib/summary-channels/daily-cash-trigger.ts).
+  active Boolean @default(true)
 
   // Режим учёта (docs/spec/01-counters.md) — открытый список, как MoneyOperation.type:
   // "counters" (по счётчикам, накопительные показания активов, по умолчанию) |
@@ -524,4 +565,202 @@ model OperatorBalanceCarryover {
   createdAt DateTime @default(now())
 
   @@index([operatorId])
+}
+
+// ============================================================================
+// СВОДКИ В КАНАЛЫ (docs/spec/telegram-summaries.md)
+// ============================================================================
+
+enum SummaryChannelType {
+  telegram
+  email
+}
+
+// Один платформенный Telegram-бот на всех тенантов (токен — секрет бэкенда,
+// в .env, никогда не в этой таблице и не на фронте) — модель отличается от
+// email: для Telegram нужен факт привязки конкретного чата через код,
+// для email привязки как таковой нет, просто список адресов.
+//
+// pointId=null — общий чат тенанта (единственный режим, который использует
+// сейчас UI); точечные привязки — задел на будущее, см. спеку.
+//
+// Пересвязка на новый чат не затирает старую запись, а деактивирует её
+// (enabled=false, chatStatus=inactive) и создаёт новую — так остаётся
+// история "куда раньше уходили сводки", как и везде в проекте (CorrectionLog).
+model TenantSummaryChannel {
+  id         String             @id @default(cuid())
+  tenantId   String
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channelType SummaryChannelType
+
+  pointId String?
+  point   Point?  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  // Пользовательский тумблер "вкл/выкл" на экране настроек — независим от
+  // chatStatus (это системный факт "бот всё ещё состоит в чате").
+  enabled Boolean @default(true)
+
+  // --- Telegram ---
+  chatId     String?
+  chatTitle  String?
+  // active | inactive (бот кикнут/вышел — my_chat_member вебхук).
+  chatStatus String?
+
+  // --- Email ---
+  // Через запятую, как договорились в Шаге 3.5 (без отдельной таблицы адресов —
+  // это не тянет на самостоятельную сущность).
+  emailAddresses String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, channelType])
+  @@index([chatId])
+}
+
+// Одноразовый код привязки Telegram-чата (/start <код> в группе).
+// Криптослучайный, не последовательный, TTL 15 минут, гасится после первого
+// использования (usedAt) — не удаляется, чтобы не терять аудит-след попыток.
+model TelegramBindCode {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  code String @unique
+
+  // Задел на точечные привязки — сейчас всегда null (общий чат тенанта).
+  pointId String?
+
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+// Настройки состава и триггера каждого типа сводки — по одной строке на
+// тенанта, лениво создаётся при первом сохранении (как остальные настройки
+// тенанта в проекте — locale/accentScheme и т.п. живут прямо на Tenant, но
+// здесь полей многовато для этого, отсюда три отдельные модели 1:1, не JSON).
+// Дефолты повторяют то, что включено/выключено в прототипе.
+
+model ZoneSummarySettings {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  enabled Boolean @default(true)
+
+  showReadings Boolean @default(true) // Показания по активам
+  showDelta    Boolean @default(true) // Заезды (дельта)
+  showCash     Boolean @default(true) // Касса по типам оплаты
+  showCalc     Boolean @default(true) // Расчёт по счётчику
+  showDiff     Boolean @default(true) // Разница
+  showReturns  Boolean @default(true) // Возвраты/тестовые
+  showOperator Boolean @default(false) // Имя оператора
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DailyCashSummarySettings {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  enabled Boolean @default(true)
+
+  // "event" (когда все смены закроются) | "fixed" (по времени) — см.
+  // src/lib/summary-settings.ts, DAILY_CASH_SEND_MODES.
+  sendMode  String @default("event")
+  fixedTime String @default("23:00") // HH:MM, используется только при sendMode="fixed"
+
+  // Сдачи/смены до этого часа относятся к предыдущему бизнес-дню; тот же час
+  // — предохранитель для принудительной отправки, если смены забыли закрыть.
+  businessDayBoundary String @default("06:00")
+
+  skipIfNoSubmissions    Boolean @default(true) // Не отправлять без сдач
+  updateOnLateSubmission Boolean @default(true) // Обновлять при досдаче (editMessageText, не новое сообщение)
+
+  showCash          Boolean @default(true) // Касса по типам оплаты
+  showExpenses      Boolean @default(true) // Расходы за день
+  showZoneBreakdown Boolean @default(false) // Разбивка по зонам
+  showCashOnHand    Boolean @default(false) // Остаток наличных на точке
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ShiftCloseSummarySettings {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  enabled Boolean @default(true)
+
+  showPeriod  Boolean @default(true)
+  showHours   Boolean @default(false)
+  showAdvance Boolean @default(true)
+  showBonus   Boolean @default(true)
+  showTotal   Boolean @default(true) // К выдаче
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Факт отправки "Кассы за день" на точку+бизнес-день+канал — источник
+// идемпотентности (не отправить дважды за один тик планировщика) и место для
+// externalMessageId, нужного editMessageText при досдаче ("обновлять при
+// досдаче" в DailyCashSummarySettings).
+model DailyCashSummaryDelivery {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pointId  String
+  point    Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  // Полночь UTC начала бизнес-дня (не календарная дата) — см. businessDateKey.
+  businessDate DateTime
+
+  channelType       SummaryChannelType
+  externalMessageId String? // Telegram message_id как строка; для email не используется
+
+  sentAt    DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([pointId, businessDate, channelType])
+}
+
+// ============================================================================
+// ЗАДАЧИ (см. docs/design/prototype-tasks-v1.html) — привязаны к Точке, не к
+// тенанту целиком (подтверждено пользователем 2026-07-09): у владельца с
+// несколькими точками — своя доска на каждую, оператор видит только доску
+// своей точки. Статус — открытая строка (тот же приём, что MoneyOperation.type):
+// "todo" | "doing" | "done".
+model Task {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pointId  String
+  point    Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  title  String
+  note   String?
+  status String  @default("todo")
+
+  createdByUserId String
+  createdBy       User   @relation("TaskCreatedBy", fields: [createdByUserId], references: [id])
+
+  // Ответственные — операторы и/или сам Владелец (User); пусто в обоих
+  // спискax = "видят все операторы" (см. prototype-tasks-v1.html, opVisible()).
+  // Назначение на User — просто пометка "это моё", доска владельца и так
+  // показывает все задачи точки независимо от назначения.
+  assignedOperators Operator[] @relation("TaskAssignedOperators")
+  assignedUsers     User[]     @relation("TaskAssignedUsers")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pointId, status])
 }

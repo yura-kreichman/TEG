@@ -21,6 +21,7 @@ export function SpringCard({
   hover = true,
   animate = true,
   onClick,
+  style,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -29,14 +30,18 @@ export function SpringCard({
    * independent fade/translate here would double up instead of composing with it. */
   animate?: boolean;
   onClick?: () => void;
+  /** Escape hatch for a per-instance tint (e.g. an entity's own colorTag at low
+   * opacity) that can't be expressed as a Tailwind class — layers under `bg-card`. */
+  style?: React.CSSProperties;
 }) {
   return (
     <motion.div
       initial={animate ? { opacity: 0, y: 8 } : undefined}
       animate={animate ? { opacity: 1, y: 0 } : undefined}
       transition={cardSpring}
-      whileHover={hover ? { y: -2 } : undefined}
+      whileHover={hover ? { y: -3 } : undefined}
       onClick={onClick}
+      style={style}
       className={cn(
         "w-full rounded-card border border-border bg-card p-4.5 shadow-card-rest transition-shadow duration-200",
         hover && "hover:shadow-card-hover",

@@ -7,12 +7,14 @@ import { ChevronLeft, ChevronRight, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { KebabButton } from "@/components/kebab-menu";
 import { StatusChip } from "@/components/status-chip";
+import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +23,7 @@ interface Profile {
   name: string;
   active: boolean;
   avatarUrl: string | null;
+  iconKey: string | null;
   colorTag: string | null;
   allZonesAccess: boolean;
   allowedZones: { id: string; name: string }[];
@@ -102,11 +105,6 @@ export default function OperatorCardPage() {
   const [rateFormOpen, setRateFormOpen] = useState(false);
   const [rateValue, setRateValue] = useState("");
   const [rateError, setRateError] = useState<string | null>(null);
-
-  const [carryoverFormOpen, setCarryoverFormOpen] = useState(false);
-  const [carryoverAmount, setCarryoverAmount] = useState("");
-  const [carryoverComment, setCarryoverComment] = useState("");
-  const [carryoverError, setCarryoverError] = useState<string | null>(null);
 
   const [editingShift, setEditingShift] = useState<ShiftRow | null>(null);
   const [editStartTime, setEditStartTime] = useState("");
@@ -316,29 +314,6 @@ export default function OperatorCardPage() {
     await loadAll();
   }
 
-  function openCarryoverForm() {
-    setCarryoverAmount("");
-    setCarryoverComment("");
-    setCarryoverError(null);
-    setCarryoverFormOpen(true);
-  }
-
-  async function submitCarryoverForm() {
-    setCarryoverError(null);
-    const res = await fetch(`/api/operators/${params.id}/work-time/carryover`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: Number(carryoverAmount), comment: carryoverComment }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setCarryoverError(data.error ?? t.operatorApp.workTime.saveError);
-      return;
-    }
-    setCarryoverFormOpen(false);
-    await loadAll();
-  }
-
   function openShiftEdit(shift: ShiftRow) {
     setEditingShift(shift);
     setEditStartTime(timeInputValue(shift.startAt));
@@ -425,6 +400,10 @@ export default function OperatorCardPage() {
                 {profile.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={profile.avatarUrl} alt="" className="size-16 rounded-full object-cover" />
+                ) : profile.iconKey ? (
+                  <div className="flex size-16 items-center justify-center rounded-full bg-primary/10">
+                    <AssetOrZoneIcon iconKey={profile.iconKey} className="size-9" />
+                  </div>
                 ) : (
                   <div className="flex size-16 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
                     {profile.name.slice(0, 1).toUpperCase()}
@@ -633,15 +612,6 @@ export default function OperatorCardPage() {
                     <span className="tabular-nums text-body-airbnb font-bold">{carryoverTotal.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="border-t border-border pt-3">
-                  <button
-                    type="button"
-                    onClick={openCarryoverForm}
-                    className="text-caption-airbnb font-semibold text-primary"
-                  >
-                    + {t.operatorApp.workTime.carryoverAction}
-                  </button>
-                </div>
               </SpringCard>
             </>
           )}
@@ -666,18 +636,22 @@ export default function OperatorCardPage() {
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor="moneyPoint">{t.operatorApp.workTime.pointLabel}</Label>
-            <select
-              id="moneyPoint"
+            <Select
               value={moneyPointId}
-              onChange={(e) => setMoneyPointId(e.target.value)}
-              className="h-11 rounded-control border border-input bg-background px-3 text-body-airbnb"
+              onValueChange={(v) => v && setMoneyPointId(v)}
+              items={points.map((p) => ({ value: p.id, label: p.name }))}
             >
-              {points.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="moneyPoint">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {points.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           {moneyError && <p className="text-sm text-destructive">{moneyError}</p>}
           <PressableScale>
@@ -705,35 +679,6 @@ export default function OperatorCardPage() {
           {rateError && <p className="text-sm text-destructive">{rateError}</p>}
           <PressableScale>
             <Button className="w-full" onClick={submitRateForm}>
-              {t.common.save}
-            </Button>
-          </PressableScale>
-        </div>
-      </BottomSheet>
-
-      <BottomSheet open={carryoverFormOpen} onClose={() => setCarryoverFormOpen(false)}>
-        <div className="flex flex-col gap-4 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operatorApp.workTime.carryoverAction}</h2>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="carryoverAmount">{t.money.amountLabel}</Label>
-            <Input
-              id="carryoverAmount"
-              autoFocus
-              inputMode="decimal"
-              className="h-14 text-lg tabular-nums"
-              value={carryoverAmount}
-              onChange={(e) => setCarryoverAmount(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="carryoverComment">
-              {t.readings.reasonLabel} <span className="font-normal text-muted-foreground">· {t.common.optional}</span>
-            </Label>
-            <Input id="carryoverComment" value={carryoverComment} onChange={(e) => setCarryoverComment(e.target.value)} />
-          </div>
-          {carryoverError && <p className="text-sm text-destructive">{carryoverError}</p>}
-          <PressableScale>
-            <Button className="w-full" onClick={submitCarryoverForm}>
               {t.common.save}
             </Button>
           </PressableScale>

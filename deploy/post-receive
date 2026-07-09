@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Хук голого git-репозитория на VPS (/srv/git/rentos.git/hooks/post-receive).
+# Копируется вручную один раз при настройке сервера — не запускается локально.
+set -euo pipefail
+WORK_TREE=/srv/rentos
+GIT_DIR=/srv/git/rentos.git
+
+git --work-tree="$WORK_TREE" --git-dir="$GIT_DIR" checkout -f main
+"$WORK_TREE/deploy/deploy.sh"

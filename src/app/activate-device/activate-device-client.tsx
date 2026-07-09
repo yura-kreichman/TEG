@@ -54,7 +54,15 @@ export default function ActivateDeviceClient({ token }: { token: string }) {
           </a>
         </>
       )}
-      {status === "error" && <p className="text-sm text-destructive">{error}</p>}
+      {status === "error" && (
+        <>
+          <p className="text-sm text-destructive">{error}</p>
+          <p className="text-body-airbnb text-muted-foreground">{t.auth.activateErrorHint}</p>
+          <a href="/operator/login" className="text-sm underline underline-offset-2">
+            {t.auth.goToOperatorLogin}
+          </a>
+        </>
+      )}
     </AuthCard>
   );
 }

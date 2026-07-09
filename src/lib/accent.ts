@@ -7,7 +7,7 @@ import { cookies } from "next/headers";
 const ACCENT_COOKIE = "accent_scheme";
 const ACCENT_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
-export const ACCENT_SCHEMES = ["green", "blue", "orange", "purple", "teal", "coral"] as const;
+export const ACCENT_SCHEMES = ["green", "blue", "orange", "purple", "teal", "coral", "pink", "indigo", "amber"] as const;
 export type AccentScheme = (typeof ACCENT_SCHEMES)[number];
 
 export function isAccentScheme(value: string): value is AccentScheme {

@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
+import type { ZoneAccountingMode } from "@/lib/results-calc";
 
 interface PointOption {
   id: string;
@@ -34,7 +35,7 @@ interface DayCard {
   zoneSubmissionId: string;
   zoneId: string;
   zoneName: string;
-  accountingMode: "counters" | "launches" | "cash_only";
+  accountingMode: ZoneAccountingMode;
   submittedAt: string;
   operatorName: string;
   editable: boolean;

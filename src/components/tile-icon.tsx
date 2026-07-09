@@ -19,14 +19,14 @@ export function TileIcon({
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary",
+        "flex shrink-0 items-center justify-center rounded-control bg-linear-to-br from-primary/15 to-primary/6 text-primary shadow-[0_2px_6px_rgba(0,0,0,.08)]",
         size === "lg" ? "size-[52px]" : "size-[46px]"
       )}
     >
       {iconKey ? (
-        <AssetOrZoneIcon iconKey={iconKey} className={size === "lg" ? "size-6" : "size-5"} />
+        <AssetOrZoneIcon iconKey={iconKey} className={size === "lg" ? "size-8" : "size-7"} />
       ) : (
-        <Fallback className={size === "lg" ? "size-6" : "size-5"} />
+        <Fallback className={size === "lg" ? "size-8" : "size-7"} />
       )}
     </div>
   );

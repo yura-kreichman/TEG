@@ -1,40 +1,124 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { DynamicIcon, iconNames, type IconName } from "lucide-react/dynamic";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/i18n-provider";
+import { ICON_FAMILIES, GENERAL_ICON_FAMILIES, type IconFamily } from "@/lib/icon-families";
 import { cn } from "@/lib/utils";
 
-const MAX_RESULTS = 90;
+const FAMILY_SEPARATOR = ":";
 
-function isIconName(value: string): value is IconName {
-  return (iconNames as readonly string[]).includes(value);
+function parseIconKey(iconKey: string | null | undefined): { family: IconFamily; name: string } | null {
+  if (!iconKey) return null;
+  const sep = iconKey.indexOf(FAMILY_SEPARATOR);
+  if (sep === -1) return null;
+  const family = iconKey.slice(0, sep);
+  const name = iconKey.slice(sep + 1);
+  if (!(ICON_FAMILIES as readonly string[]).includes(family) || !name) return null;
+  return { family: family as IconFamily, name };
+}
+
+function iconSrc(family: IconFamily, name: string) {
+  return `/api/icon-library/${family}/${name}.svg`;
+}
+
+// Material-иконки в коллекции — залитые "fill=#FFFFFF" одноцветные силуэты
+// (белые на прозрачном), в отличие от Fluent (градиенты/несколько цветов —
+// см. icon-library/fluent/fluent-color--*.svg). <img src> не подхватывает
+// currentColor из внешнего SVG-документа, поэтому для Material рендерим
+// через CSS mask-image + bg-current — сам SVG остаётся исходным файлом,
+// только его альфа-канал используется как маска, цвет берётся из темы
+// (чёрный в светлой, светлый в тёмной). Fluent остаётся <img>, чтобы не
+// потерять его собственные цвета/градиенты.
+function IconGlyph({ family, name, className }: { family: IconFamily; name: string; className?: string }) {
+  const src = iconSrc(family, name);
+  if (family === "material") {
+    return (
+      <span
+        aria-hidden
+        className={cn("inline-block bg-current", className)}
+        style={{
+          maskImage: `url(${src})`,
+          maskSize: "contain",
+          maskRepeat: "no-repeat",
+          maskPosition: "center",
+          WebkitMaskImage: `url(${src})`,
+          WebkitMaskSize: "contain",
+          WebkitMaskRepeat: "no-repeat",
+          WebkitMaskPosition: "center",
+        }}
+      />
+    );
+  }
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt="" className={cn("object-contain", className)} />;
 }
 
 function IconGrid({
   value,
   onChange,
+  families = GENERAL_ICON_FAMILIES,
 }: {
   value: string | null | undefined;
   onChange: (iconKey: string) => void;
+  families?: readonly IconFamily[];
 }) {
   const t = useI18n();
+  const parsedValue = parseIconKey(value);
+  const [family, setFamily] = useState<IconFamily>(
+    parsedValue && families.includes(parsedValue.family) ? parsedValue.family : families[0]
+  );
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState<string[]>([]);
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return iconNames.slice(0, MAX_RESULTS);
-    return iconNames.filter((name) => name.includes(q)).slice(0, MAX_RESULTS);
-  }, [query]);
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const params = new URLSearchParams({ family });
+      if (query.trim()) params.set("q", query.trim());
+      fetch(`/api/icon-library?${params}`)
+        .then((res) => res.json())
+        .then((data) => setResults(data.icons ?? []));
+    }, 200);
+    return () => clearTimeout(handle);
+  }, [family, query]);
+
+  const familyLabels: Record<IconFamily, string> = useMemo(
+    () => ({
+      fluent: t.iconPicker.familyFluent,
+      material: t.iconPicker.familyMaterial,
+      avatars: t.iconPicker.familyAvatars,
+      // "app-icons" никогда не выбирается ни в одном picker'е (см.
+      // icon-families.ts) — подпись сюда не попадёт, но Record должен быть
+      // исчерпывающим по типу IconFamily.
+      "app-icons": "App icons",
+    }),
+    [t]
+  );
 
   return (
     <div className="flex flex-col gap-3 pt-2">
       <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.iconPicker.title}</h2>
+      {families.length > 1 && (
+        <div className="grid grid-cols-2 gap-1">
+          {families.map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFamily(f)}
+              className={cn(
+                "rounded-full px-2 py-1.5 text-center text-xs font-semibold",
+                family === f ? "bg-primary/10 text-primary" : "bg-surface-0 text-muted-foreground"
+              )}
+            >
+              {familyLabels[f]}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -51,13 +135,13 @@ function IconGrid({
             key={name}
             type="button"
             title={name}
-            onClick={() => onChange(name)}
+            onClick={() => onChange(`${family}${FAMILY_SEPARATOR}${name}`)}
             className={cn(
-              "flex flex-col items-center gap-1 rounded-control border-2 border-border p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-              value === name && "border-primary text-primary"
+              "flex aspect-square items-center justify-center rounded-control border border-border p-2 transition-colors hover:bg-muted",
+              parsedValue?.family === family && parsedValue.name === name && "border-primary bg-primary/10"
             )}
           >
-            <DynamicIcon name={name} className="size-5" />
+            <IconGlyph family={family} name={name} className="size-full" />
           </button>
         ))}
         {results.length === 0 && (
@@ -72,10 +156,9 @@ function IconGrid({
 
 /**
  * Searchable icon picker for Point/Zone/Asset (docs/spec/00-architecture.md).
- * Icon names are lucide's own kebab-case keys (`iconNames` from
- * "lucide-react/dynamic") — stored as-is in `iconKey`, rendered anywhere via
- * `<DynamicIcon name={iconKey} />`. Using the dynamic entry point means the
- * ~3000-icon set is never bundled up front, only the icons actually shown.
+ * Icons come from the personal SVG collection in icon-library/<family>/
+ * (see icon-library/README.md), served via /api/icon-library — not bundled,
+ * not a static npm icon set. `iconKey` is stored as `"<family>:<name>"`.
  *
  * Self-contained trigger + sheet, for create-forms. For a kebab-menu-driven
  * "change icon" action (sheet already open/closed by the kebab), use
@@ -85,29 +168,33 @@ function IconGrid({
 export function IconPicker({
   value,
   onChange,
+  families,
 }: {
   value: string | null | undefined;
   onChange: (iconKey: string) => void;
+  families?: readonly IconFamily[];
 }) {
   const t = useI18n();
   const [open, setOpen] = useState(false);
+  const parsed = parseIconKey(value);
 
   return (
     <>
       <PressableScale className="w-fit">
         <Button type="button" variant="outline" className="w-fit gap-2" onClick={() => setOpen(true)}>
-          {value && isIconName(value) ? (
-            <DynamicIcon name={value} className="size-4" />
+          {parsed ? (
+            <IconGlyph family={parsed.family} name={parsed.name} className="size-4" />
           ) : (
             <Search className="size-4" />
           )}
-          {value ?? t.iconPicker.selectIcon}
+          {parsed?.name ?? t.iconPicker.selectIcon}
         </Button>
       </PressableScale>
 
       <BottomSheet open={open} onClose={() => setOpen(false)} className="max-h-[80vh]">
         <IconGrid
           value={value}
+          families={families}
           onChange={(iconKey) => {
             onChange(iconKey);
             setOpen(false);
@@ -123,16 +210,19 @@ export function IconPickerSheet({
   onClose,
   value,
   onChange,
+  families,
 }: {
   open: boolean;
   onClose: () => void;
   value: string | null | undefined;
   onChange: (iconKey: string) => void;
+  families?: readonly IconFamily[];
 }) {
   return (
     <BottomSheet open={open} onClose={onClose} className="max-h-[80vh]">
       <IconGrid
         value={value}
+        families={families}
         onChange={(iconKey) => {
           onChange(iconKey);
           onClose();
@@ -149,6 +239,7 @@ export function AssetOrZoneIcon({
   iconKey: string | null | undefined;
   className?: string;
 }) {
-  if (!iconKey || !isIconName(iconKey)) return null;
-  return <DynamicIcon name={iconKey} className={className} />;
+  const parsed = parseIconKey(iconKey);
+  if (!parsed) return null;
+  return <IconGlyph family={parsed.family} name={parsed.name} className={className} />;
 }

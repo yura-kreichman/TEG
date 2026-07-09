@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RideTrack — Показания по дням · прототип v1</title>
+<title>RentOS — Показания по дням · прототип v1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -199,7 +199,7 @@
 <body>
 
 <div class="proto-header">
-  <h1>RideTrack · Показания по дням — прототип v1</h1>
+  <h1>RentOS · Показания по дням — прототип v1</h1>
   <p>Кабинет владельца. Тапните день 6 или 7 в календаре. У последней сдачи «···» → редактирование в шторке (значения предзаполнены, комментарий необязателен) и удаление с подтверждением. У сдачи за 6 июля действия заблокированы — есть более поздняя сдача.</p>
 </div>
 
@@ -274,7 +274,7 @@
 
         <div class="money-block num">
           <div class="m-row"><span class="lbl">Наличные <span class="edited" id="ed-cash" style="display:none" title="Изменено владельцем 8 июля · было: 200.00">✎</span></span><span class="val" id="v-cash">200.00</span></div>
-          <div class="m-row"><span class="lbl">Мобильный платёж</span><span class="val">970.00</span></div>
+          <div class="m-row"><span class="lbl">Безнал</span><span class="val">970.00</span></div>
           <div class="m-row"><span class="lbl">Возвраты / тестовые</span><span class="val" id="v-ret">1 шт</span></div>
           <div class="m-row total"><span class="lbl">Расчётная выручка</span><span class="val" id="v-calc">1126.67</span></div>
           <div class="m-row"><span class="lbl">Разница</span><span class="val pos" id="v-diff">+43.33</span></div>
@@ -307,7 +307,7 @@
 
         <div class="money-block num">
           <div class="m-row"><span class="lbl">Наличные</span><span class="val">280.00</span></div>
-          <div class="m-row"><span class="lbl">Мобильный платёж</span><span class="val">0.00</span></div>
+          <div class="m-row"><span class="lbl">Безнал</span><span class="val">0.00</span></div>
           <div class="m-row"><span class="lbl">Возвраты / тестовые</span><span class="val">0 шт</span></div>
           <div class="m-row total"><span class="lbl">Расчётная выручка</span><span class="val">280.00</span></div>
           <div class="m-row"><span class="lbl">Разница</span><span class="val">0.00</span></div>
@@ -379,7 +379,7 @@
         <input type="text" inputmode="decimal" id="e-cash" value="200.00">
       </div>
       <div class="field">
-        <label>Мобильный платёж</label>
+        <label>Безнал</label>
         <input type="text" inputmode="decimal" value="970.00">
       </div>
     </div>

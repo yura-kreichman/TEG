@@ -16,17 +16,17 @@ import { IconPicker } from "@/components/icon-picker";
 import { StatusChip } from "@/components/status-chip";
 import { TileIcon } from "@/components/tile-icon";
 import { useI18n } from "@/components/i18n-provider";
+import { ZONE_ACCOUNTING_MODES, type ZoneAccountingMode } from "@/lib/results-calc";
 
 interface ZoneInfo {
   id: string;
   name: string;
   iconKey: string | null;
-  accountingMode: "counters" | "launches" | "cash_only";
+  accountingMode: ZoneAccountingMode;
+  active: boolean;
   tariffs: { id: string; name: string; price: string }[];
   assets: { id: string }[];
 }
-
-const ACCOUNTING_MODES = ["counters", "launches", "cash_only"] as const;
 
 export default function PointDetailPage() {
   const params = useParams<{ id: string }>();
@@ -38,7 +38,7 @@ export default function PointDetailPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const [iconKey, setIconKey] = useState<string | null>(null);
-  const [accountingMode, setAccountingMode] = useState<(typeof ACCOUNTING_MODES)[number]>("counters");
+  const [accountingMode, setAccountingMode] = useState<ZoneAccountingMode>("counters");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -129,7 +129,12 @@ export default function PointDetailPage() {
                         <div className="flex items-center gap-3">
                           <TileIcon iconKey={zone.iconKey} />
                           <div className="min-w-0 grow">
-                            <div className="text-card-title">{zone.name}</div>
+                            <div className="flex items-center gap-1.5">
+                              <div className="text-card-title">{zone.name}</div>
+                              {!zone.active && (
+                                <StatusChip variant="neutral">{t.zonesList.zoneInactiveChip}</StatusChip>
+                              )}
+                            </div>
                             <p className="text-caption-airbnb">
                               {zone.accountingMode === "cash_only"
                                 ? t.zonesList.modeChip.cash_only
@@ -183,7 +188,7 @@ export default function PointDetailPage() {
           <div className="flex flex-col gap-1">
             <Label>{t.zonesList.accountingModeLabel}</Label>
             <div className="rounded-control border border-border">
-              {ACCOUNTING_MODES.map((mode) => (
+              {ZONE_ACCOUNTING_MODES.map((mode) => (
                 <button
                   key={mode}
                   type="button"

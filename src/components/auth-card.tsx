@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { AuthLocalePicker } from "@/components/auth-locale-picker";
 
 const cardSpring = { type: "spring" as const, stiffness: 340, damping: 32 };
 
@@ -21,7 +22,8 @@ export function AuthCard({
   className?: string;
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-surface-0 px-4">
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-surface-0 px-4">
+      <AuthLocalePicker />
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}

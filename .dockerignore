@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.vscode
+.claude
+docs
+*.docx
+*.log
+*.tsbuildinfo
+next-env.d.ts
+src/generated
+public/uploads
+.env
+.env.*
+!.env.example
+npm-debug.log*

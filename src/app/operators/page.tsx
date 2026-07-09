@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ImagePlus, Pencil, KeyRound, Pause, Play, Trash2, Plus, MapPin, Check, Palette } from "lucide-react";
+import { ImagePlus, Pencil, KeyRound, Pause, Play, Trash2, Plus, MapPin, Check, Palette, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,14 +13,18 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
 import { StatusChip } from "@/components/status-chip";
+import { IconPickerSheet, AssetOrZoneIcon } from "@/components/icon-picker";
+import { ColorTagPicker } from "@/components/color-tag-picker";
 import { useI18n } from "@/components/i18n-provider";
 import { compressImageFile } from "@/lib/client-image";
+import { colorTagGradient } from "@/lib/utils";
 
 interface OperatorInfo {
   id: string;
   name: string;
   active: boolean;
   avatarUrl: string | null;
+  iconKey: string | null;
   colorTag: string | null;
   allZonesAccess: boolean;
   allowedZones: { id: string; name: string }[];
@@ -54,6 +58,7 @@ export default function OperatorsPage() {
   const [pinValue, setPinValue] = useState("");
   const [colorValue, setColorValue] = useState("#22c55e");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
 
   const [allZones, setAllZones] = useState<ZoneOption[]>([]);
   const [zoneAccessAll, setZoneAccessAll] = useState(true);
@@ -247,6 +252,18 @@ export default function OperatorsPage() {
     await loadOperators();
   }
 
+  async function handleChooseAvatarIcon(iconKey: string) {
+    if (!kebab) return;
+    await fetch(`/api/operators/${kebab.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ iconKey }),
+    });
+    setAvatarPickerOpen(false);
+    setKebab(null);
+    await loadOperators();
+  }
+
   if (checking) return null;
 
   return (
@@ -274,12 +291,17 @@ export default function OperatorsPage() {
                       animate={false}
                       className="cursor-pointer"
                       onClick={() => router.push(`/operators/${operator.id}`)}
+                      style={{ background: colorTagGradient(operator.colorTag) }}
                     >
                       <div className="flex items-center gap-3">
                         <div className="relative shrink-0">
                           {operator.avatarUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={operator.avatarUrl} alt="" className="size-12.5 rounded-full object-cover" />
+                          ) : operator.iconKey ? (
+                            <div className="flex size-12.5 items-center justify-center rounded-full bg-primary/10">
+                              <AssetOrZoneIcon iconKey={operator.iconKey} className="size-7" />
+                            </div>
                           ) : (
                             <div className="flex size-12.5 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
                               {operator.name.slice(0, 1).toUpperCase()}
@@ -366,6 +388,9 @@ export default function OperatorsPage() {
             <h2 className="mb-2 text-[19px] font-extrabold tracking-[-0.01em]">{kebab.name}</h2>
             <ActionSheetItem icon={ImagePlus} onClick={() => avatarInputRef.current?.click()}>
               {t.operators.uploadAvatar}
+            </ActionSheetItem>
+            <ActionSheetItem icon={Smile} onClick={() => setAvatarPickerOpen(true)}>
+              {t.operators.chooseAvatarAction}
             </ActionSheetItem>
             <ActionSheetItem icon={Pencil} onClick={() => setKebabView("rename")}>
               {t.operators.rename}
@@ -484,15 +509,8 @@ export default function OperatorsPage() {
         {kebab && kebabView === "color" && (
           <div className="flex flex-col gap-3 pt-2">
             <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operators.colorTagAction}</h2>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={colorValue}
-                onChange={(e) => setColorValue(e.target.value)}
-                className="h-11 w-16 rounded-control border border-input"
-              />
-              <span className="text-caption-airbnb">{t.operators.colorTagHint}</span>
-            </div>
+            <ColorTagPicker value={colorValue} onChange={setColorValue} />
+            <span className="text-caption-airbnb">{t.operators.colorTagHint}</span>
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setKebabView("menu")}>
                 {t.common.cancel}
@@ -523,6 +541,14 @@ export default function OperatorsPage() {
           </div>
         )}
       </BottomSheet>
+
+      <IconPickerSheet
+        open={avatarPickerOpen}
+        onClose={() => setAvatarPickerOpen(false)}
+        value={kebab?.iconKey}
+        onChange={handleChooseAvatarIcon}
+        families={["avatars"]}
+      />
     </OwnerShell>
   );
 }

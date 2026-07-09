@@ -6,12 +6,13 @@ import { Check, ChevronLeft, ChevronRight, Home, MapPin, Minus, Plus, Send, Tras
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { ImageLightbox } from "@/components/motion/image-lightbox";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
-import { calcSessions, calcZoneRevenue } from "@/lib/results-calc";
+import { calcSessions, calcZoneRevenue, type ZoneAccountingMode } from "@/lib/results-calc";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +34,7 @@ interface ZoneCtx {
   id: string;
   name: string;
   iconKey: string | null;
-  accountingMode: "counters" | "launches" | "cash_only";
+  accountingMode: ZoneAccountingMode;
   tariffs: TariffCtx[];
   assets: AssetCtx[];
 }
@@ -159,6 +160,16 @@ export default function SubmitResultsPage() {
     setStepIndex((i) => Math.max(i - 1, 0));
   }
 
+  // Тариф, который оператор не тронул (или очистил) на конкретном активе —
+  // не блокер: считаем показание неизменным (заездов 0 по этому тарифу), а
+  // не буквальным нулём на счётчике (иначе гигантский "переход через 9999" —
+  // фидбек пользователя 2026-07-09). Пустая строка и отсутствие ключа
+  // трактуются одинаково.
+  function resolveReading(raw: string | undefined, previous: number): number {
+    if (raw === undefined || raw === "") return previous;
+    return Number(raw);
+  }
+
   function previewFor(zoneId: string) {
     const zone = zones.find((z) => z.id === zoneId);
     const form = zoneForms[zoneId];
@@ -167,9 +178,9 @@ export default function SubmitResultsPage() {
     const tariffCalc = zone.tariffs.map((tariff) => {
       const sessions = zone.assets.reduce((sum, asset) => {
         const key = `${asset.id}:${tariff.id}`;
-        const current = Number(form.readings[key] ?? asset.previousReadings[tariff.id] ?? 0);
-        if (zone.accountingMode === "launches") return sum + current;
         const previous = asset.previousReadings[tariff.id] ?? 0;
+        const current = resolveReading(form.readings[key], previous);
+        if (zone.accountingMode === "launches") return sum + current;
         return sum + calcSessions(current, previous);
       }, 0);
       return { tariffId: tariff.id, price: Number(tariff.price), sessions };
@@ -181,8 +192,11 @@ export default function SubmitResultsPage() {
     return { calculatedRevenue, actualCash, difference };
   }
 
+  // Актив "заполнен", если хотя бы один тариф введён — не обязательно все
+  // (например, "Вторая скорость" сегодня не использовалась). Незаполненные
+  // тарифы этого актива посчитаются как 0 заездов через resolveReading выше.
   function isAssetFilled(zone: ZoneCtx, asset: AssetCtx, form: ZoneFormState) {
-    return zone.tariffs.every((tariff) => (form.readings[`${asset.id}:${tariff.id}`] ?? "") !== "");
+    return zone.tariffs.some((tariff) => (form.readings[`${asset.id}:${tariff.id}`] ?? "") !== "");
   }
 
   async function handleSubmit() {
@@ -196,7 +210,7 @@ export default function SubmitResultsPage() {
         zone.tariffs.map((tariff) => ({
           assetId: asset.id,
           tariffId: tariff.id,
-          reading: Number(form.readings[`${asset.id}:${tariff.id}`] ?? asset.previousReadings[tariff.id] ?? 0),
+          reading: resolveReading(form.readings[`${asset.id}:${tariff.id}`], asset.previousReadings[tariff.id] ?? 0),
         }))
       );
       return {
@@ -346,9 +360,9 @@ export default function SubmitResultsPage() {
                           )}
                         >
                           {zone.iconKey ? (
-                            <AssetOrZoneIcon iconKey={zone.iconKey} className="size-6" />
+                            <AssetOrZoneIcon iconKey={zone.iconKey} className="size-9" />
                           ) : (
-                            <MapPin className="size-6" />
+                            <MapPin className="size-9" />
                           )}
                         </div>
                         <span
@@ -410,7 +424,7 @@ export default function SubmitResultsPage() {
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={asset.photoUrl} alt="" className="size-full object-contain object-center" />
                         ) : asset.iconKey ? (
-                          <AssetOrZoneIcon iconKey={asset.iconKey} className="size-7 text-muted-foreground" />
+                          <AssetOrZoneIcon iconKey={asset.iconKey} className="size-12 text-muted-foreground" />
                         ) : null}
                         <span
                           className="absolute left-2.5 top-2.5 size-4 rounded-full ring-[2.5px] ring-card"
@@ -427,7 +441,11 @@ export default function SubmitResultsPage() {
                         <span className="text-xs leading-snug text-muted-foreground">
                           {filled
                             ? activeZone.tariffs
-                                .map((tariff) => `${tariff.name}: ${activeForm.readings[`${asset.id}:${tariff.id}`]}`)
+                                .map((tariff) => {
+                                  const key = `${asset.id}:${tariff.id}`;
+                                  const previous = asset.previousReadings[tariff.id] ?? 0;
+                                  return `${tariff.name}: ${resolveReading(activeForm.readings[key], previous)}`;
+                                })
                                 .join(" · ")
                             : t.operatorApp.submit.assetNotFilled}
                         </span>
@@ -517,17 +535,25 @@ export default function SubmitResultsPage() {
             {expenses.map((expense, index) => (
               <div key={index} className="flex flex-col gap-2 rounded-card border border-border bg-card p-3">
                 {selectedZoneIds.length > 1 && (
-                  <select
-                    className="h-10 rounded-control border border-border bg-muted px-2 text-sm"
+                  <Select
                     value={expense.zoneId}
-                    onChange={(e) => updateExpense(index, "zoneId", e.target.value)}
+                    onValueChange={(v) => v && updateExpense(index, "zoneId", v)}
+                    items={selectedZoneIds.map((zoneId) => ({
+                      value: zoneId,
+                      label: zones.find((z) => z.id === zoneId)?.name ?? zoneId,
+                    }))}
                   >
-                    {selectedZoneIds.map((zoneId) => (
-                      <option key={zoneId} value={zoneId}>
-                        {zones.find((z) => z.id === zoneId)?.name}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="h-10 bg-muted text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedZoneIds.map((zoneId) => (
+                        <SelectItem key={zoneId} value={zoneId}>
+                          {zones.find((z) => z.id === zoneId)?.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
                 <Input
                   inputMode="numeric"
@@ -654,7 +680,7 @@ export default function SubmitResultsPage() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={activeAsset.photoUrl} alt="" className="size-full object-contain object-center" />
               ) : activeAsset.iconKey ? (
-                <AssetOrZoneIcon iconKey={activeAsset.iconKey} className="size-10 text-muted-foreground" />
+                <AssetOrZoneIcon iconKey={activeAsset.iconKey} className="size-16 text-muted-foreground" />
               ) : null}
               <span
                 className="absolute left-3 top-3 size-4.5 rounded-full ring-[3px] ring-card"

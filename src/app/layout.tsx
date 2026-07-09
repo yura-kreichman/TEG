@@ -5,7 +5,6 @@ import InstallAppBanner from "./install-app-banner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { I18nProvider } from "@/components/i18n-provider";
 import { getAccentCookie } from "@/lib/accent";
-import { getThemeModeCookie } from "@/lib/theme-mode";
 import { getDictionary, resolveLocale } from "@/lib/i18n";
 
 // Per docs/design/prototype-owner-v2.html (approved 2026-07-07, supersedes the
@@ -18,12 +17,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "TEG",
-  description: "TEG SaaS",
+  title: "RentOS",
+  description: "RentOS SaaS",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "TEG",
+    title: "RentOS",
   },
 };
 
@@ -37,7 +36,6 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const accent = await getAccentCookie();
-  const themeMode = await getThemeModeCookie();
   const locale = await resolveLocale();
   const dict = getDictionary(locale);
 
@@ -52,7 +50,7 @@ export default async function RootLayout({
         <I18nProvider dict={dict}>
           <ThemeProvider
             attribute="class"
-            defaultTheme={themeMode}
+            defaultTheme="light"
             enableSystem={false}
             storageKey="teg-theme-owner"
           >

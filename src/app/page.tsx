@@ -12,7 +12,7 @@ export default async function Home() {
       })
     : null;
 
-  if (!user) {
+  if (!user || user.role !== "owner") {
     return <WelcomeCard />;
   }
 

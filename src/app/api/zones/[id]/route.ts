@@ -28,6 +28,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
     iconKey: zone.iconKey,
     accountingMode: zone.accountingMode,
     modeLocked: submissionCount > 0,
+    active: zone.active,
     pointId: zone.pointId,
     pointName: zone.point.name,
     tariffs,
@@ -47,8 +48,8 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
   }
 
-  const { name, iconKey, accountingMode } = await request.json();
-  const data: { name?: string; iconKey?: string | null; accountingMode?: string } = {};
+  const { name, iconKey, accountingMode, active } = await request.json();
+  const data: { name?: string; iconKey?: string | null; accountingMode?: string; active?: boolean } = {};
 
   if (name !== undefined) {
     if (typeof name !== "string" || name.trim().length === 0) {
@@ -71,6 +72,12 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
       );
     }
     data.accountingMode = accountingMode;
+  }
+  if (active !== undefined) {
+    if (typeof active !== "boolean") {
+      return NextResponse.json({ error: "Некорректное значение active" }, { status: 400 });
+    }
+    data.active = active;
   }
 
   await prisma.zone.update({ where: { id }, data });

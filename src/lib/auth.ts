@@ -5,6 +5,14 @@ import bcrypt from "bcryptjs";
 const SESSION_COOKIE = "session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
+// Separate cookie for Super Admin (found 2026-07-10: admin login shared the
+// same "session" cookie as Owner, so logging into /admin in one tab silently
+// logged the Owner out of another tab in the same browser — the "какая-то
+// ошибка у Владельца" bug — Owner-scoped API calls then 401'd against an
+// admin session that had overwritten it. Same signing scheme, own name/path
+// so the two roles can be logged in simultaneously in one browser.
+const ADMIN_SESSION_COOKIE = "admin_session";
+
 // Long-lived, separate from the session cookie: remembers which User (Owner/Super
 // Admin) this browser last logged into, so a personal PIN can be entered without
 // retyping the email. Not to be confused with PointDevice/operator sessions below —
@@ -78,6 +86,29 @@ export async function destroySession() {
 export async function getSessionUserId(): Promise<string | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  return verifyToken(token);
+}
+
+export async function createAdminSession(userId: string) {
+  const cookieStore = await cookies();
+  cookieStore.set(ADMIN_SESSION_COOKIE, signToken(userId), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_MAX_AGE,
+  });
+}
+
+export async function destroyAdminSession() {
+  const cookieStore = await cookies();
+  cookieStore.delete(ADMIN_SESSION_COOKIE);
+}
+
+export async function getAdminSessionUserId(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   if (!token) return null;
   return verifyToken(token);
 }

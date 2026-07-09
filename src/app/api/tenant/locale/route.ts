@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { isLocale } from "@/lib/i18n";
 
-const LOCALE_OPTIONS = ["ru", "en", "ro"] as const;
+const LOCALE_OPTIONS = ["ru", "en", "ro", "uk"] as const;
 
 export async function GET() {
   const owner = await requireOwner();

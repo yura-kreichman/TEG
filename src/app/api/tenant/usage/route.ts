@@ -16,17 +16,21 @@ export async function GET() {
     return NextResponse.json({ error: "Тенант не найден" }, { status: 404 });
   }
 
-  const [pointsUsed, operatorsUsed, zonesUsed] = await Promise.all([
+  const [pointsUsed, operatorsUsed, zonesUsed, assetsUsed] = await Promise.all([
     prisma.point.count({ where: { tenantId: owner.tenantId } }),
     prisma.operator.count({ where: { tenantId: owner.tenantId } }),
     prisma.zone.count({ where: { point: { tenantId: owner.tenantId } } }),
+    prisma.asset.count({ where: { zone: { point: { tenantId: owner.tenantId } } } }),
   ]);
 
   return NextResponse.json({
     packageName: tenant.package.name,
     subscriptionStatus: tenant.subscriptionStatus,
+    subscriptionExpiresAt: tenant.subscriptionExpiresAt,
+    trialEndsAt: tenant.trialEndsAt,
     points: { used: pointsUsed, max: tenant.package.maxPoints },
     operators: { used: operatorsUsed, max: tenant.package.maxOperators },
     zones: { used: zonesUsed, max: tenant.package.maxZones },
+    assets: { used: assetsUsed, max: tenant.package.maxAssets },
   });
 }

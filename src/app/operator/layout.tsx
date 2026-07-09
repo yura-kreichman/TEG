@@ -1,21 +1,17 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { getThemeModeCookie } from "@/lib/theme-mode";
 
-// Per docs/spec/03-design-system.md (updated 2026-07-06): theme is a
-// tenant-wide default set only by the Owner (src/lib/theme-mode.ts), applied
-// here as next-themes' `defaultTheme` — same tenant setting the owner cabinet
-// uses, via a separate storageKey so this side's local override doesn't fight
-// with the owner cabinet's. Each Operator can still flip light/dark for their
-// own device via the toggle below; that's a local override (next-themes
-// localStorage) that never changes the tenant's default for anyone else.
-export default async function OperatorLayout({ children }: { children: React.ReactNode }) {
-  const themeMode = await getThemeModeCookie();
-
+// Тема — только локальная настройка устройства (next-themes localStorage,
+// storageKey отдельный от кабинета владельца), никакого тенантного дефолта
+// владелец не назначает — каждый оператор переключает светлую/тёмную сам на
+// своём устройстве, независимо от других (см. фидбек пользователя
+// 2026-07-09). PWA оператора по умолчанию тёмная (docs/spec/03-design-system.md),
+// это просто стартовое значение для устройства, где ещё ничего не выбирали.
+export default function OperatorLayout({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider
       attribute="class"
-      defaultTheme={themeMode}
+      defaultTheme="dark"
       enableSystem={false}
       storageKey="teg-theme-operator"
     >

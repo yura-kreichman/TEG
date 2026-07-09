@@ -6,4 +6,4 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Project spec
 
-This is RideTrack, a multi-tenant SaaS for rental tracking of children's attractions (electric cars, trampolines, VR, etc.). Before implementing any feature, read the relevant file in `docs/spec/` (start with `00-architecture.md`). The spec is the source of truth — on conflict between the spec and existing code, the spec wins, but surface the conflict instead of resolving it silently.
+This is RentOS, a multi-tenant SaaS for rental tracking of children's attractions (electric cars, trampolines, VR, etc.). Before implementing any feature, read the relevant file in `docs/spec/` (start with `00-architecture.md`). The spec is the source of truth — on conflict between the spec and existing code, the spec wins, but surface the conflict instead of resolving it silently.

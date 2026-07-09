@@ -8,7 +8,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        // Лёгкий градиент + тень "объёма" в рамках акцентного цвета
+        // (фидбек пользователя 2026-07-09: "больше эффекта объёма для
+        // объектов по которым кликаем") — только для primary-CTA, не для
+        // всех кнопок, чтобы не перегружать интерфейс.
+        default:
+          "bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary),black_14%)] text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,.12),inset_0_1px_0_rgba(255,255,255,.16)] hover:brightness-105 hover:shadow-[0_2px_6px_rgba(0,0,0,.16),inset_0_1px_0_rgba(255,255,255,.18)] active:brightness-95",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
@@ -21,7 +26,7 @@ const buttonVariants = cva(
         // "+ Добавить" pill per docs/design/prototype-owner-v2.html (.btn-add) —
         // deliberately not --primary: this is a neutral chrome action, accent
         // stays reserved for genuinely primary CTAs (see design-system.md §3).
-        dark: "rounded-full bg-foreground text-background hover:bg-foreground/90",
+        dark: "rounded-full bg-linear-to-b from-foreground to-[color-mix(in_oklch,var(--foreground),transparent_12%)] text-background shadow-[0_1px_3px_rgba(0,0,0,.18)] hover:brightness-110",
       },
       size: {
         default:

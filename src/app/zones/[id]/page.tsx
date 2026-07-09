@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Check, Pencil, Palette, Camera, ImagePlus, ListChecks, Trash2, Plus } from "lucide-react";
+import { Check, Pencil, Palette, Camera, ImagePlus, ListChecks, Trash2, Plus, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,9 @@ import { TileIcon } from "@/components/tile-icon";
 import { FilePickerButton } from "@/components/file-picker-button";
 import { useI18n } from "@/components/i18n-provider";
 import { compressImageFile } from "@/lib/client-image";
+import { ZONE_ACCOUNTING_MODES, type ZoneAccountingMode } from "@/lib/results-calc";
+import { colorTagGradient } from "@/lib/utils";
+import { ColorTagPicker } from "@/components/color-tag-picker";
 
 interface TariffInfo {
   id: string;
@@ -38,15 +41,14 @@ interface ZoneDetail {
   id: string;
   name: string;
   iconKey: string | null;
-  accountingMode: "counters" | "launches" | "cash_only";
+  accountingMode: ZoneAccountingMode;
   modeLocked: boolean;
+  active: boolean;
   pointId: string;
   pointName: string;
   tariffs: TariffInfo[];
   assets: AssetInfo[];
 }
-
-const ACCOUNTING_MODES = ["counters", "launches", "cash_only"] as const;
 
 type ZoneKebabView = "menu" | "rename" | "mode" | "confirm-delete";
 type TariffKebabView = "menu" | "edit" | "confirm-delete";
@@ -135,7 +137,18 @@ export default function ZoneDetailPage() {
     await loadZone();
   }
 
-  async function changeAccountingMode(mode: (typeof ACCOUNTING_MODES)[number]) {
+  async function toggleZoneActive() {
+    if (!zone) return;
+    await fetch(`/api/zones/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: !zone.active }),
+    });
+    setZoneKebabOpen(false);
+    await loadZone();
+  }
+
+  async function changeAccountingMode(mode: ZoneAccountingMode) {
     setZoneActionError(null);
     const res = await fetch(`/api/zones/${params.id}`, {
       method: "PATCH",
@@ -350,6 +363,9 @@ export default function ZoneDetailPage() {
                   <h1 className="text-[24px] font-extrabold tracking-[-0.02em]">{zone.name}</h1>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <StatusChip>{t.zonesList.modeChip[zone.accountingMode]}</StatusChip>
+                    {!zone.active && (
+                      <StatusChip variant="neutral">{t.zonesList.zoneInactiveChip}</StatusChip>
+                    )}
                   </div>
                 </div>
               </div>
@@ -394,7 +410,11 @@ export default function ZoneDetailPage() {
             </h2>
 
             {zone.assets.map((asset) => (
-              <div key={asset.id} className="flex items-center justify-between border-t border-border py-3 first:border-t-0">
+              <div
+                key={asset.id}
+                className="-mx-2 flex items-center justify-between rounded-control border-t border-border px-2 py-3 first:border-t-0"
+                style={{ background: colorTagGradient(asset.colorTag) }}
+              >
                 <div className="flex items-center gap-3">
                   <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: asset.colorTag }} />
                   <div className="flex size-9.5 shrink-0 items-center justify-center rounded-control bg-muted">
@@ -464,6 +484,9 @@ export default function ZoneDetailPage() {
                 {t.zoneDetail.changeAccountingModeAction}
               </ActionSheetItem>
             )}
+            <ActionSheetItem icon={zone.active ? Pause : Play} onClick={toggleZoneActive}>
+              {zone.active ? t.zoneDetail.deactivateZone : t.zoneDetail.activateZone}
+            </ActionSheetItem>
             <ActionSheetItem icon={Trash2} destructive onClick={() => setZoneKebabView("confirm-delete")}>
               {t.zoneDetail.deleteZone}
             </ActionSheetItem>
@@ -475,7 +498,7 @@ export default function ZoneDetailPage() {
               {t.zoneDetail.changeAccountingModeAction}
             </h2>
             <div className="rounded-control border border-border">
-              {ACCOUNTING_MODES.map((mode) => (
+              {ZONE_ACCOUNTING_MODES.map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -644,13 +667,7 @@ export default function ZoneDetailPage() {
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor="assetColor">{t.zoneDetail.assetColorLabel}</Label>
-            <input
-              id="assetColor"
-              type="color"
-              value={assetColor}
-              onChange={(e) => setAssetColor(e.target.value)}
-              className="h-9 w-16 rounded-control border border-input"
-            />
+            <ColorTagPicker value={assetColor} onChange={setAssetColor} />
           </div>
           <div className="flex flex-col gap-2">
             <Label>{t.zoneDetail.assetPhotoLabel}</Label>
@@ -724,13 +741,7 @@ export default function ZoneDetailPage() {
             </div>
             <div className="flex flex-col gap-1">
               <Label htmlFor="editAssetColor">{t.zoneDetail.assetColorLabel}</Label>
-              <input
-                id="editAssetColor"
-                type="color"
-                value={editAssetColor}
-                onChange={(e) => setEditAssetColor(e.target.value)}
-                className="h-9 w-16 rounded-control border border-input"
-              />
+              <ColorTagPicker value={editAssetColor} onChange={setEditAssetColor} />
             </div>
             {editAssetError && <p className="text-sm text-destructive">{editAssetError}</p>}
             <div className="flex gap-2">

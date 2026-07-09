@@ -33,6 +33,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.production.example
+
+# dev-server logs from local test runs
+dev-server.log
 
 # Claude Code local session/tool state — not shared project config
 .claude/
@@ -48,3 +52,7 @@ next-env.d.ts
 
 # user-uploaded files (asset photos, operator avatars) — local disk per tenant
 /public/uploads
+
+# vendor reference source dropped in for integration research (e.g. FluentCart) —
+# not part of this project, not committed
+/temp apps/

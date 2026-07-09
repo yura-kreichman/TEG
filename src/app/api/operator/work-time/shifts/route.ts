@@ -11,9 +11,9 @@ import {
   listStandaloneMoneyOps,
   validateShift,
 } from "@/lib/work-time";
-import { sendTenantTelegramMessage } from "@/lib/telegram";
-
-const WEEKDAYS = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"];
+import { dispatchShiftCloseSummary } from "@/lib/summary-channels/dispatch";
+import { SHIFT_CLOSE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
+import { notifyDailyCashLateSubmission } from "@/lib/summary-channels/daily-cash-trigger";
 
 export async function GET(request: Request) {
   const ctx = await requireOperator();
@@ -138,26 +138,41 @@ export async function POST(request: Request) {
     : null;
   const noResultsToday = accessibleZoneIds.length > 0 && !todaySubmission;
 
-  // Telegram-сводка (docs/spec/05-work-time.md, "TELEGRAM-СВОДКА") — по факту
-  // ввода смены, тот же канал/чат, что у сводок сдач итогов.
   const rate = await getRateForDate(operator.id, startAt);
   const { minutes, accrued } = calcShiftAccrual(startAt, endAt, rate);
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  const durationText = `${hours} ч${mins ? ` ${mins} мин` : ""}`;
-  const fmtTime = (d: Date) => `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
-  const weekday = WEEKDAYS[(startAt.getUTCDay() + 6) % 7];
-  const dateText = `${startAt.getUTCDate()}.${String(startAt.getUTCMonth() + 1).padStart(2, "0")}.${startAt.getUTCFullYear()}`;
 
-  const lines = [
-    `🕐 СМЕНА: ${operator.name} — ${dateText} (${weekday})`,
-    `${fmtTime(startAt)}–${fmtTime(endAt)} · ${durationText} — ${accrued.toFixed(2)}`,
-  ];
-  if (advanceAmount > 0 || bonusAmount > 0) {
-    lines.push(`💵 Аванс: ${advanceAmount.toFixed(2)} — 🏆 Премия: ${bonusAmount.toFixed(2)}`);
+  // "Закрытие смены" (docs/spec/telegram-summaries.md) — по факту ввода
+  // смены, как и раньше (docs/spec/05-work-time.md уже описывала этот триггер
+  // для старой единой Telegram-сводки; теперь это настраиваемый тип сводки,
+  // каналы и состав берутся из ShiftCloseSummarySettings).
+  const shiftCloseSettings =
+    (await prisma.shiftCloseSummarySettings.findUnique({ where: { tenantId: point.tenantId } })) ??
+    SHIFT_CLOSE_SUMMARY_DEFAULTS;
+  if (shiftCloseSettings.enabled) {
+    dispatchShiftCloseSummary(
+      point.tenantId,
+      {
+        operatorName: operator.name,
+        startAt,
+        endAt,
+        minutes,
+        rate,
+        accrued,
+        advanceAmount,
+        bonusAmount,
+        toPayOut: balance.toPayOut,
+      },
+      shiftCloseSettings
+    ).catch((err) => console.error("shift close summary dispatch failed", err));
   }
-  lines.push(`💰 К выдаче: ${balance.toPayOut.toFixed(2)}`);
-  await sendTenantTelegramMessage(point.tenantId, lines.join("\n"));
+
+  // Смена с авансом/премией меняет остаток кассы точки — если сегодняшняя
+  // "Касса за день" уже отправлена, это досдача.
+  if (advanceAmount > 0 || bonusAmount > 0) {
+    notifyDailyCashLateSubmission(point.id, point.tenantId, startAt).catch((err) =>
+      console.error("daily cash late-submission notify failed", err)
+    );
+  }
 
   const shiftRow = { id: shift.id, startAt, endAt, minutes, rate, accrued, advanceAmount, bonusAmount };
   return NextResponse.json({ shift: shiftRow, warnings, noResultsToday, balance });

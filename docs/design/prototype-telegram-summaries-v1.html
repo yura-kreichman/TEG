@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RentOS — Конструктор Telegram-сводок · прототип v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F7F5;
+    --card:#FFFFFF;
+    --ink:#1B1F1D;
+    --ink-2:#5C6662;
+    --ink-3:#9AA39F;
+    --line:#E8EBE8;
+    --accent:#0E8074;
+    --accent-ink:#0A5F56;
+    --accent-soft:#E4F3F0;
+    --radius-lg:20px;
+    --radius-md:14px;
+    --shadow-card:0 1px 2px rgba(27,31,29,.04), 0 8px 24px rgba(27,31,29,.05);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;background:#ECEEEA;color:var(--ink);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    padding:32px 16px 64px;-webkit-font-smoothing:antialiased;
+  }
+  .proto-header{max-width:420px;width:100%;margin-bottom:20px}
+  .proto-header h1{font-size:15px;font-weight:600;color:var(--ink-2)}
+  .proto-header p{font-size:12.5px;color:var(--ink-3);margin-top:4px}
+  .switcher{display:flex;gap:6px;margin-top:12px}
+  .switcher button{
+    border:1px solid var(--line);background:#fff;border-radius:999px;
+    padding:7px 14px;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink-2);cursor:pointer;
+  }
+  .switcher button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+
+  .phone{
+    width:390px;max-width:100%;height:840px;
+    background:var(--bg);border-radius:36px;border:1px solid #DDE1DC;
+    box-shadow:0 24px 60px rgba(27,31,29,.14);
+    overflow:hidden;position:relative;display:flex;flex-direction:column;
+  }
+  .screen{flex:1;overflow-y:auto;padding:26px 20px 40px;display:none}
+  .screen.active{display:block}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  .grow{flex:1;min-width:0}
+
+  .crumb{
+    display:inline-flex;align-items:center;gap:6px;margin-bottom:10px;
+    font-size:13px;font-weight:600;color:var(--accent-ink);
+    background:none;border:none;cursor:pointer;font-family:inherit;padding:0;
+  }
+  .page-title{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px}
+  .page-sub{font-size:13.5px;color:var(--ink-2);margin-bottom:20px}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);padding:18px;margin-bottom:14px;
+  }
+  .card-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+
+  .sum-card{
+    display:flex;align-items:center;gap:13px;width:100%;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);padding:16px 18px;margin-bottom:12px;
+    cursor:pointer;font-family:inherit;text-align:left;
+  }
+  .sum-icon{
+    width:44px;height:44px;border-radius:13px;flex:none;font-size:21px;
+    background:var(--accent-soft);display:flex;align-items:center;justify-content:center;
+  }
+  .sum-title{font-size:15px;font-weight:700;color:var(--ink)}
+  .sum-sub{font-size:12.5px;color:var(--ink-3);margin-top:1px}
+  .chip{
+    display:inline-flex;align-items:center;gap:5px;flex:none;
+    font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;
+    background:var(--accent-soft);color:var(--accent-ink);
+  }
+  .chip.off{background:var(--bg);color:var(--ink-3)}
+  .chip .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .chip.off .dot{background:#C4CBC6}
+
+  .dest-row{display:flex;align-items:center;gap:10px}
+  .dest-row .tg{
+    width:38px;height:38px;border-radius:50%;flex:none;background:#2AABEE;
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;
+  }
+  .dest-name{font-size:14px;font-weight:600}
+  .dest-sub{font-size:12px;color:var(--ink-3)}
+  .link{font-size:13px;font-weight:600;color:var(--accent-ink);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;flex:none}
+
+  .opt-row{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:12px 0;border-top:1px solid var(--line);
+  }
+  .opt-row:first-of-type{border-top:none;padding-top:2px}
+  .opt-name{font-size:14px;font-weight:500}
+  .opt-sub{font-size:11.5px;color:var(--ink-3);margin-top:1px}
+  .toggle{
+    width:46px;height:28px;border-radius:99px;flex:none;cursor:pointer;border:none;
+    background:#D9DED9;position:relative;transition:background .18s;
+  }
+  .toggle::after{
+    content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .18s;
+  }
+  .toggle.on{background:var(--accent)}
+  .toggle.on::after{transform:translateX(18px)}
+
+  .mode-card{
+    display:flex;align-items:flex-start;gap:11px;width:100%;
+    padding:13px 14px;margin-bottom:10px;cursor:pointer;text-align:left;
+    background:#FBFCFB;border:1.5px solid var(--line);border-radius:var(--radius-md);
+    font-family:inherit;transition:border-color .15s, background .15s;
+  }
+  .mode-card.sel{border-color:var(--accent);background:var(--accent-soft)}
+  .radio{
+    width:20px;height:20px;border-radius:50%;flex:none;margin-top:1px;
+    border:2px solid #C4CBC6;background:#fff;position:relative;
+  }
+  .mode-card.sel .radio{border-color:var(--accent)}
+  .mode-card.sel .radio::after{
+    content:'';position:absolute;inset:3px;border-radius:50%;background:var(--accent);
+  }
+  .mode-name{font-size:14px;font-weight:700;color:var(--ink)}
+  .mode-sub{font-size:12px;color:var(--ink-2);margin-top:2px;line-height:1.45}
+  .time-inline{
+    display:inline-flex;align-items:center;gap:8px;margin-top:8px;
+  }
+  .time-inline input{
+    width:76px;font:inherit;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;
+    padding:7px 10px;border:1px solid var(--line);border-radius:10px;
+    background:#fff;color:var(--ink);outline:none;text-align:center;
+  }
+
+  .scrim{position:absolute;inset:0;z-index:10;background:rgba(20,24,22,.44);opacity:0;pointer-events:none;transition:opacity .22s}
+  .scrim.open{opacity:1;pointer-events:auto}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:11;
+    background:#fff;border-radius:24px 24px 0 0;box-shadow:0 -12px 40px rgba(27,31,29,.18);
+    padding:10px 20px 26px;max-height:84%;overflow-y:auto;
+    transform:translateY(105%);transition:transform .26s cubic-bezier(.32,.72,.25,1);
+  }
+  .sheet.open{transform:translateY(0)}
+  .grabber{width:38px;height:4px;border-radius:99px;background:#D9DED9;margin:4px auto 16px}
+  .sheet-title{font-size:19px;font-weight:800;letter-spacing:-.01em;margin-bottom:2px}
+  .sheet-sub{font-size:13px;color:var(--ink-2);margin-bottom:18px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .field .hint{display:block;font-size:11.5px;color:var(--ink-3);font-weight:400;margin-top:5px;line-height:1.45}
+  .field input{
+    width:100%;font:inherit;font-size:14px;font-variant-numeric:tabular-nums;
+    padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-md);
+    background:#FBFCFB;color:var(--ink);outline:none;transition:border .15s, box-shadow .15s;
+  }
+  .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#fff}
+  .field input::placeholder{color:var(--ink-3)}
+  .btn-test{
+    display:flex;align-items:center;justify-content:center;gap:9px;width:100%;
+    background:#fff;color:var(--accent-ink);border:1.5px solid var(--accent);cursor:pointer;
+    font:inherit;font-size:14.5px;font-weight:700;padding:13px;border-radius:var(--radius-md);
+    transition:opacity .15s;
+  }
+  .btn-test:disabled{opacity:.6;cursor:default}
+  .spinner{
+    width:16px;height:16px;border-radius:50%;flex:none;
+    border:2.5px solid var(--accent-soft);border-top-color:var(--accent);
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .status{
+    display:none;gap:9px;align-items:flex-start;margin-top:12px;
+    padding:12px 14px;border-radius:var(--radius-md);font-size:13px;line-height:1.5;
+  }
+  .status.show{display:flex}
+  .status.ok{background:var(--accent-soft);color:var(--accent-ink)}
+  .status.err{background:#FBEDEB;color:#C4372B}
+  .status .ic{flex:none;font-size:15px}
+  .status b{font-weight:700}
+  .btn-primary{
+    display:block;width:100%;margin-top:14px;
+    background:var(--accent);color:#fff;border:none;cursor:pointer;
+    font:inherit;font-size:15px;font-weight:700;padding:14px;border-radius:var(--radius-md);
+  }
+
+  .tg-preview{
+    background:#17212B;border-radius:var(--radius-lg);padding:14px;
+  }
+  .tg-bubble{
+    background:#232E3C;border-radius:14px 14px 14px 4px;padding:10px 12px;
+    max-width:100%;
+  }
+  .tg-name{font-size:12px;font-weight:700;color:#6AB2F2;margin-bottom:4px}
+  .tg-text{
+    font-family:'Inter',monospace;font-size:12.5px;line-height:1.65;color:#E9EEF4;
+    white-space:pre-wrap;font-variant-numeric:tabular-nums;
+  }
+  .tg-text b{color:#fff}
+  .tg-time{font-size:10.5px;color:#6C7883;text-align:right;margin-top:4px}
+</style>
+</head>
+<body>
+
+<div class="proto-header">
+  <h1>RentOS · Конструктор Telegram-сводок — прототип v1</h1>
+  <p>Экран списка сводок и редактор сводки по зоне. Щёлкайте тумблеры — предпросмотр сообщения обновляется сразу.</p>
+  <div class="switcher">
+    <button class="on" data-go="list">Сводки</button>
+    <button data-go="editor">Редактор · зона</button>
+    <button data-go="editor3">Редактор · касса</button>
+    <button data-go="editor2">Редактор · смена</button>
+  </div>
+</div>
+
+<div class="phone">
+
+  <div class="screen active" id="scr-list">
+    <button class="crumb">← Настройки</button>
+    <div class="page-title">Сводки в Telegram</div>
+    <div class="page-sub">Что и куда бот отправляет автоматически</div>
+
+    <div class="card">
+      <div class="card-label">Каналы доставки</div>
+
+      <div class="opt-row" style="padding-top:2px;border-top:none">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div class="tg" style="width:36px;height:36px;border-radius:50%;flex:none;background:#2AABEE;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px">✈</div>
+          <div>
+            <div class="opt-name">Telegram</div>
+            <div class="opt-sub">чат «Аттракционы · админ» · <button class="link" style="font-size:11.5px" onclick="openSheet('sheet-connect')">изменить</button></div>
+          </div>
+        </div>
+        <button class="toggle on"></button>
+      </div>
+
+      <div class="opt-row">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div style="width:36px;height:36px;border-radius:50%;flex:none;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:15px">✉️</div>
+          <div>
+            <div class="opt-name">Email</div>
+            <div class="opt-sub">yk.intro@gmail.com · <button class="link" style="font-size:11.5px" onclick="openSheet('sheet-email')">изменить</button></div>
+          </div>
+        </div>
+        <button class="toggle on"></button>
+      </div>
+
+      <div class="opt-row">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div style="width:36px;height:36px;border-radius:50%;flex:none;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:15px">🔔</div>
+          <div>
+            <div class="opt-name">Push-уведомления</div>
+            <div class="opt-sub">в приложении владельца</div>
+          </div>
+        </div>
+        <button class="toggle"></button>
+      </div>
+    </div>
+
+    <button class="sum-card" data-go="editor">
+      <span class="sum-icon">💡</span>
+      <span class="grow">
+        <span class="sum-title">Сводка по зоне</span><br>
+        <span class="sum-sub">после каждой сдачи итогов</span>
+      </span>
+      <span class="chip"><span class="dot"></span>вкл</span>
+    </button>
+
+    <button class="sum-card" data-go="editor3">
+      <span class="sum-icon">💰</span>
+      <span class="grow">
+        <span class="sum-title">Касса за день</span><br>
+        <span class="sum-sub">итог по точке · когда все смены закроются</span>
+      </span>
+      <span class="chip"><span class="dot"></span>вкл</span>
+    </button>
+
+    <button class="sum-card" data-go="editor2">
+      <span class="sum-icon">⏱</span>
+      <span class="grow">
+        <span class="sum-title">Закрытие смены</span><br>
+        <span class="sum-sub">когда оператор завершает работу</span>
+      </span>
+      <span class="chip"><span class="dot"></span>вкл</span>
+    </button>
+  </div>
+
+  <div class="screen" id="scr-editor3">
+    <button class="crumb" data-go="list">← Сводки в Telegram</button>
+    <div class="page-title">Касса за день</div>
+    <div class="page-sub">Итог по всей точке за бизнес-день</div>
+
+    <div class="card">
+      <div class="card-label">Когда отправлять</div>
+
+      <button class="mode-card sel" id="mode-event" onclick="setMode('event')">
+        <span class="radio"></span>
+        <span>
+          <span class="mode-name">Когда все смены закроются</span><br>
+          <span class="mode-sub">Сводка уходит, как только на точке не остаётся открытых смен. Подстраивается под реальный график — хоть 22:00, хоть 3:00 ночи.</span>
+        </span>
+      </button>
+
+      <button class="mode-card" id="mode-time" onclick="setMode('time')">
+        <span class="radio"></span>
+        <span>
+          <span class="mode-name">В фиксированное время</span><br>
+          <span class="mode-sub">Каждый день в указанный час, независимо от смен.</span>
+          <span class="time-inline"><input type="text" value="23:00" onclick="event.stopPropagation()"></span>
+        </span>
+      </button>
+
+      <div class="opt-row" style="margin-top:4px">
+        <div><div class="opt-name">Граница бизнес-дня</div><div class="opt-sub">сдачи до этого часа относятся к предыдущему дню; предохранитель, если смены забыли закрыть</div></div>
+        <span class="time-inline" style="margin:0"><input type="text" value="06:00"></span>
+      </div>
+      <div class="opt-row">
+        <div><div class="opt-name">Не отправлять без сдач</div><div class="opt-sub">молчать, если точка не работала</div></div>
+        <button class="toggle on"></button>
+      </div>
+      <div class="opt-row">
+        <div><div class="opt-name">Обновлять при досдаче</div><div class="opt-sub">редактировать отправленное сообщение, а не слать новое</div></div>
+        <button class="toggle on"></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Состав сводки</div>
+      <div class="opt-row">
+        <div><div class="opt-name">Касса по типам оплаты</div><div class="opt-sub">наличные и безнал</div></div>
+        <button class="toggle on" data-k3="cash" onclick="flip3(this)"></button>
+      </div>
+      <div class="opt-row">
+        <div><div class="opt-name">Расходы за день</div><div class="opt-sub">из журнала денег</div></div>
+        <button class="toggle on" data-k3="exp" onclick="flip3(this)"></button>
+      </div>
+      <div class="opt-row">
+        <div><div class="opt-name">Разбивка по зонам</div><div class="opt-sub">выручка каждой зоны строкой</div></div>
+        <button class="toggle" data-k3="zones" onclick="flip3(this)"></button>
+      </div>
+      <div class="opt-row">
+        <div><div class="opt-name">Остаток наличных на точке</div><div class="opt-sub">сколько должно быть в кассах</div></div>
+        <button class="toggle" data-k3="rest" onclick="flip3(this)"></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Предпросмотр</div>
+      <div class="tg-preview">
+        <div class="tg-bubble">
+          <div class="tg-name">RentOS Бот</div>
+          <div class="tg-text num" id="tg-text3"></div>
+          <div class="tg-time">03:07</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="scr-editor2">
+    <button class="crumb" data-go="list">← Сводки в Telegram</button>
+    <div class="page-title">Закрытие смены</div>
+    <div class="page-sub">Отправляется, когда оператор завершает работу</div>
+
+    <div class="card">
+      <div class="card-label">Состав сводки</div>
+
+      <div class="opt-row">
+        <div><div class="opt-name">Период работы</div><div class="opt-sub">вход по ПИН — закрытие смены</div></div>
+        <button class="toggle on" data-k2="period" onclick="flip2(this)"></button>
+      </div>
+      <div class="opt-row">
+        <div><div class="opt-name">Отработано часов</div><div class="opt-sub">длительность смены</div></div>
+        <button class="toggle" data-k2="hours" onclick="flip2(this)"></button>
+      </div>
+      <div class="opt-row">
+        <div><div class="opt-name">Аванс</div><div class="opt-sub">выданный за смену, из журнала денег</div></div>
+        <button class="toggle on" data-k2="advance" onclick="flip2(this)"></button>
+      </div>
+      <div class="opt-row">
+        <div><div class="opt-name">Премия</div><div class="opt-sub">начисленная за смену</div></div>
+        <button class="toggle on" data-k2="bonus" onclick="flip2(this)"></button>
+      </div>
+      <div class="opt-row">
+        <div><div class="opt-name">К выдаче</div><div class="opt-sub">заработок оператора: ставка × часы + премия − аванс</div></div>
+        <button class="toggle on" data-k2="total" onclick="flip2(this)"></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Предпросмотр</div>
+      <div class="tg-preview">
+        <div class="tg-bubble">
+          <div class="tg-name">RentOS Бот</div>
+          <div class="tg-text num" id="tg-text2"></div>
+          <div class="tg-time">22:12</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="scr-editor">
+    <button class="crumb" data-go="list">← Сводки в Telegram</button>
+    <div class="page-title">Сводка по зоне</div>
+    <div class="page-sub">Отправляется после каждой сдачи итогов</div>
+
+    <div class="card">
+      <div class="card-label">Состав сводки</div>
+
+      <div class="opt-row">
+        <div><div class="opt-name">Показания по активам</div><div class="opt-sub">текущие значения счётчиков</div></div>
+        <button class="toggle on" data-k="readings" onclick="flip(this)"></button>
+      </div>
+      <div class="opt-row">
+        <div><div class="opt-name">Заезды (дельта)</div><div class="opt-sub">сколько накатали за период</div></div>
+        <button class="toggle on" data-k="delta" onclick="flip(this)"></button>
+      </div>
+      <div class="opt-row">
+        <div><div class="opt-name">Касса по типам оплаты</div><div class="opt-sub">наличные и безнал</div></div>
+        <button class="toggle on" data-k="cash" onclick="flip(this)"></button>
+      </div>
+      <div class="opt-row">
+        <div><div class="opt-name">Расчёт по счётчику</div><div class="opt-sub">заезды × тарифу</div></div>
+        <button class="toggle on" data-k="calc" onclick="flip(this)"></button>
+      </div>
+      <div class="opt-row">
+        <div><div class="opt-name">Разница</div><div class="opt-sub">касса минус расчётная выручка</div></div>
+        <button class="toggle on" data-k="diff" onclick="flip(this)"></button>
+      </div>
+      <div class="opt-row">
+        <div><div class="opt-name">Возвраты / тестовые</div><div class="opt-sub">шт. за период</div></div>
+        <button class="toggle on" data-k="ret" onclick="flip(this)"></button>
+      </div>
+      <div class="opt-row">
+        <div><div class="opt-name">Имя оператора</div><div class="opt-sub">кто сдал итоги</div></div>
+        <button class="toggle" data-k="op" onclick="flip(this)"></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Предпросмотр</div>
+      <div class="tg-preview">
+        <div class="tg-bubble">
+          <div class="tg-name">RentOS Бот</div>
+          <div class="tg-text num" id="tg-text"></div>
+          <div class="tg-time">22:00</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scrim" id="scrim" onclick="closeSheets()"></div>
+  <div class="sheet" id="sheet-connect">
+    <div class="grabber"></div>
+    <div class="sheet-title">Подключение Telegram</div>
+    <div class="sheet-sub">Без токенов и настроек — один тап</div>
+
+    <div id="conn-idle">
+      <button class="btn-primary" style="margin-top:0" onclick="startBind()">+ Добавить бота RentOS в чат</button>
+      <div class="field" style="margin-top:10px">
+        <span class="hint">Откроется Telegram и предложит выбрать чат или группу. Бот добавится сам, привязка произойдёт автоматически — ничего копировать не нужно.</span>
+      </div>
+    </div>
+
+    <div id="conn-wait" style="display:none">
+      <div class="status show" style="background:var(--bg);color:var(--ink-2)">
+        <span class="spinner ic" style="margin-top:2px"></span>
+        <span>Ждём, когда бот появится в чате… Выберите чат в открывшемся Telegram. Код привязки <b class="num">RT-7K2M</b> передастся сам.</span>
+      </div>
+      <button class="btn-test" style="margin-top:12px" onclick="cancelBind()">Отмена</button>
+    </div>
+
+    <div id="conn-done" style="display:none">
+      <div class="status show ok">
+        <span class="ic">✅</span>
+        <span><b>Подключён чат «Аттракционы · админ»</b><br>Сводки будут приходить сюда.</span>
+      </div>
+
+      <button class="btn-test" id="btn-test" style="margin-top:12px" onclick="testConnection()">
+        <span id="test-spinner" class="spinner" style="display:none"></span>
+        <span id="test-label">📨 Отправить тестовое сообщение</span>
+      </button>
+      <div class="status" id="test-status"></div>
+
+      <button class="btn-primary" onclick="closeSheets()">Готово</button>
+      <button class="link" style="display:block;margin:14px auto 0;color:#C4372B" onclick="resetBind()">Отключить чат</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet-email">
+    <div class="grabber"></div>
+    <div class="sheet-title">Email для сводок</div>
+    <div class="sheet-sub">Сводки будут приходить письмами на этот адрес</div>
+
+    <div class="field">
+      <label>Адрес</label>
+      <input type="text" id="email-addr" value="yk.intro@gmail.com" placeholder="you@example.com">
+      <span class="hint">Можно несколько адресов через запятую</span>
+    </div>
+
+    <button class="btn-test" id="btn-email-test" onclick="testEmail()">
+      <span id="email-spinner" class="spinner" style="display:none"></span>
+      <span id="email-label">📨 Отправить тестовое письмо</span>
+    </button>
+    <div class="status" id="email-status"></div>
+
+    <button class="btn-primary" onclick="closeSheets()">Сохранить</button>
+  </div>
+
+</div>
+
+<script>
+  const screens={list:'scr-list',editor:'scr-editor',editor2:'scr-editor2',editor3:'scr-editor3'};
+  function go(id){
+    if(!screens[id])return;
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById(screens[id]).classList.add('active');
+    document.querySelectorAll('.switcher button').forEach(b=>b.classList.toggle('on',b.dataset.go===id));
+  }
+  document.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>go(el.dataset.go)));
+
+  const state={readings:true,delta:true,cash:true,calc:true,diff:true,ret:true,op:false};
+
+  function flip(t){
+    t.classList.toggle('on');
+    state[t.dataset.k]=t.classList.contains('on');
+    render();
+  }
+
+  function render(){
+    const L=[];
+    L.push('🏁 <b>МАШИНКИ · 08/07 (Ср)</b>');
+    if(state.readings||state.delta){
+      L.push('');
+      const row=(n,v,d)=>{
+        let s=n+': ';
+        if(state.readings)s+=v;
+        if(state.readings&&state.delta)s+=' ';
+        if(state.delta)s+='(+'+d+')';
+        return s;
+      };
+      L.push(row('Тесла · Обычный','3132',15));
+      L.push(row('Тесла · Вторая ск.','429',3));
+      L.push(row('Формула 1 · Обычный','8162',12));
+      L.push(row('Формула 1 · Вторая ск.','1724',9));
+    }
+    if(state.cash||state.calc||state.diff||state.ret){
+      L.push('');
+      if(state.cash)L.push('💵 Нал.: <b>1 345 ₽</b> · 📱 Безнал.: <b>370 ₽</b>');
+      if(state.calc)L.push('🧮 По счётчику: <b>1 715 ₽</b>');
+      if(state.diff)L.push('⚖️ Разница: <b>0 ₽</b>');
+      if(state.ret)L.push('↩️ Возвраты/тест: <b>0</b>');
+    }
+    if(state.op){
+      L.push('');
+      L.push('👤 Оператор: Женя');
+    }
+    document.getElementById('tg-text').innerHTML=L.join('\n');
+  }
+  render();
+
+  const state2={period:true,hours:false,total:true,advance:true,bonus:true};
+
+  function flip2(t){
+    t.classList.toggle('on');
+    state2[t.dataset.k2]=t.classList.contains('on');
+    render2();
+  }
+
+  function render2(){
+    const L=[];
+    L.push('🕐 <b>Женя · смена 08/07 (Ср)</b>');
+    L.push('');
+    if(state2.period)L.push('🕐 Период: 10:00 – 22:11');
+    if(state2.hours)L.push('⏱ Отработано: 12 ч 11 мин');
+    if(state2.advance)L.push('💸 Аванс: 0 ₽');
+    if(state2.bonus)L.push('🏆 Премия: 150 ₽');
+    if(state2.total)L.push('💰 К выдаче: <b>778 ₽</b>');
+    document.getElementById('tg-text2').innerHTML=L.join('\n');
+  }
+  render2();
+
+  let mode='event';
+  function setMode(m){
+    mode=m;
+    document.getElementById('mode-event').classList.toggle('sel',m==='event');
+    document.getElementById('mode-time').classList.toggle('sel',m==='time');
+  }
+
+  const state3={cash:true,exp:true,zones:false,rest:false};
+  function flip3(t){
+    t.classList.toggle('on');
+    state3[t.dataset.k3]=t.classList.contains('on');
+    render3();
+  }
+  function render3(){
+    const L=[];
+    L.push('💰 <b>КАССА · Парк Екатерининский · 08/07 (Ср)</b>');
+    L.push('');
+    if(state3.cash)L.push('💵 Нал.: <b>1 345 ₽</b> · 📱 Безнал.: <b>805 ₽</b>');
+    if(state3.exp)L.push('🧾 Расходы: 120 ₽');
+    L.push('Σ Итого за день: <b>2 030 ₽</b>');
+    if(state3.zones){
+      L.push('');
+      L.push('🚗 Машинки: 1 715 ₽');
+      L.push('🤸 Батуты: 265 ₽');
+      L.push('🥽 Виртуалка: 50 ₽');
+    }
+    if(state3.rest){
+      L.push('');
+      L.push('📦 Остаток на точке: 620 ₽');
+    }
+    document.getElementById('tg-text3').innerHTML=L.join('\n');
+  }
+  render3();
+
+  function openSheet(id){
+    document.getElementById('scrim').classList.add('open');
+    document.getElementById(id).classList.add('open');
+  }
+  function closeSheets(){
+    document.getElementById('scrim').classList.remove('open');
+    document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));
+  }
+
+  function setStatus(kind,html){
+    const st=document.getElementById('test-status');
+    st.className='status show '+kind;
+    st.innerHTML='<span class="ic">'+(kind==='ok'?'✅':'⚠️')+'</span><span>'+html+'</span>';
+  }
+
+  let bindTimer=null;
+  function showConn(state){
+    ['idle','wait','done'].forEach(s=>{
+      document.getElementById('conn-'+s).style.display = s===state ? 'block':'none';
+    });
+  }
+  function startBind(){
+    showConn('wait');
+    bindTimer=setTimeout(()=>{showConn('done')},2200);
+  }
+  function cancelBind(){
+    clearTimeout(bindTimer);
+    showConn('idle');
+  }
+  function resetBind(){
+    document.getElementById('test-status').className='status';
+    showConn('idle');
+  }
+
+  function testConnection(){
+    const btn=document.getElementById('btn-test');
+    const sp=document.getElementById('test-spinner');
+    const lbl=document.getElementById('test-label');
+    const st=document.getElementById('test-status');
+
+    btn.disabled=true;
+    sp.style.display='block';
+    lbl.textContent='Отправляем…';
+    st.className='status';
+
+    setTimeout(()=>{
+      btn.disabled=false;
+      sp.style.display='none';
+      lbl.textContent='📨 Отправить тестовое сообщение';
+      setStatus('ok','<b>Сообщение доставлено</b> в чат «Аттракционы · админ». Проверьте Telegram.');
+    },1400);
+  }
+
+  function testEmail(){
+    const addr=document.getElementById('email-addr').value.trim();
+    const st=document.getElementById('email-status');
+    if(!addr||!/^[^\s@]+@[^\s@]+\.[^\s@]+(\s*,\s*[^\s@]+@[^\s@]+\.[^\s@]+)*$/.test(addr)){
+      st.className='status show err';
+      st.innerHTML='<span class="ic">⚠️</span><span>Проверьте адрес — похоже, в нём опечатка.</span>';
+      return;
+    }
+    const btn=document.getElementById('btn-email-test');
+    const sp=document.getElementById('email-spinner');
+    const lbl=document.getElementById('email-label');
+    btn.disabled=true;sp.style.display='block';lbl.textContent='Отправляем…';st.className='status';
+    setTimeout(()=>{
+      btn.disabled=false;sp.style.display='none';lbl.textContent='📨 Отправить тестовое письмо';
+      st.className='status show ok';
+      st.innerHTML='<span class="ic">✅</span><span><b>Письмо отправлено</b> на '+addr.split(',')[0].trim()+'. Если его нет во входящих — проверьте «Спам».</span>';
+    },1400);
+  }
+</script>
+</body>
+</html>

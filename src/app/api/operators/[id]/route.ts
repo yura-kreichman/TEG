@@ -23,6 +23,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/operators/[
     name: operator.name,
     active: operator.active,
     avatarUrl: operator.avatarUrl,
+    iconKey: operator.iconKey,
     colorTag: operator.colorTag,
     allZonesAccess: operator.allZonesAccess,
     allowedZones: operator.allowedZones,
@@ -41,10 +42,11 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
     return NextResponse.json({ error: "Оператор не найден" }, { status: 404 });
   }
 
-  const { name, avatarUrl, active, allZonesAccess, zoneIds, colorTag } = await request.json();
+  const { name, avatarUrl, iconKey, active, allZonesAccess, zoneIds, colorTag } = await request.json();
   const data: {
     name?: string;
     avatarUrl?: string | null;
+    iconKey?: string | null;
     active?: boolean;
     allZonesAccess?: boolean;
     allowedZones?: { set: { id: string }[] };
@@ -66,6 +68,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
       await deleteUploadedImage(operator.avatarUrl);
     }
     data.avatarUrl = nextAvatarUrl;
+  }
+  if (iconKey !== undefined) {
+    data.iconKey = typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null;
   }
   if (active !== undefined) {
     if (typeof active !== "boolean") {

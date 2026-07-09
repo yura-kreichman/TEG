@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
-import { calcSessions, calcZoneRevenue } from "@/lib/results-calc";
-import { sendTenantTelegramMessage } from "@/lib/telegram";
+import { calcSessions, calcZoneRevenue, type ZoneAccountingMode } from "@/lib/results-calc";
 import { isModuleEnabled } from "@/lib/modules";
+import { dispatchZoneSummary } from "@/lib/summary-channels/dispatch";
+import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
+import { onResultsSubmission } from "@/lib/summary-channels/daily-cash-trigger";
 
 interface ReadingInput {
   assetId: string;
@@ -96,6 +98,23 @@ export async function POST(request: Request) {
       })
       .join(", ");
 
+    // Для сводки "по зоне" (docs/spec/telegram-summaries.md, Шаг 3, п.1):
+    // "<Актив> · <Тариф>: <показание> (+<дельта>)", полные имена — построчно
+    // по каждой введённой паре актив+тариф, не агрегируя.
+    const readingLines = zone.assets.flatMap((asset) =>
+      zone.tariffs
+        .map((tariff) => {
+          const reading = zs.readings.find((r) => r.assetId === asset.id && r.tariffId === tariff.id);
+          if (!reading) return null;
+          const delta =
+            zone.accountingMode === "launches"
+              ? reading.reading
+              : calcSessions(reading.reading, previousByKey.get(`${asset.id}:${tariff.id}`) ?? 0);
+          return { assetName: asset.name, tariffName: tariff.name, reading: reading.reading, delta };
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null)
+    );
+
     return {
       zoneId: zs.zoneId,
       zoneName: zone.name,
@@ -103,6 +122,7 @@ export async function POST(request: Request) {
       actualCash,
       difference,
       readingsText,
+      readingLines,
       returnsCount: zs.returnsCount,
       cashAmount: zs.cashAmount,
       mobileAmount: zs.mobileAmount,
@@ -175,27 +195,40 @@ export async function POST(request: Request) {
     return created;
   });
 
-  const totalCash = zoneSubmissions.reduce((sum, zs) => sum + zs.cashAmount, 0);
-  const totalMobile = zoneSubmissions.reduce((sum, zs) => sum + zs.mobileAmount, 0);
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-
-  const zoneBlocks = summary
-    .map((s) => {
+  // "Сводка по зоне" (docs/spec/telegram-summaries.md) — одна сводка на каждую
+  // выбранную зону, не одно сообщение на всю сдачу (замена старой единой
+  // Telegram-сводки submit-results — см. Шаг 0, решение о платформенном боте).
+  const zoneSummarySettings =
+    (await prisma.zoneSummarySettings.findUnique({ where: { tenantId: point.tenantId } })) ?? ZONE_SUMMARY_DEFAULTS;
+  if (zoneSummarySettings.enabled) {
+    for (const s of summary) {
       const zone = zoneById.get(s.zoneId)!;
-      if (zone.accountingMode === "cash_only") {
-        return `Зона «${s.zoneName}»\nКасса: ${s.actualCash.toFixed(2)}`;
-      }
-      return `Зона «${s.zoneName}»\nПоказания: ${s.readingsText}\nВозвраты/тесты: ${s.returnsCount}\nКасса vs счётчики: ${s.actualCash.toFixed(2)} / ${s.calculatedRevenue.toFixed(2)}\nРазница: ${s.difference > 0 ? "+" : ""}${s.difference.toFixed(2)}`;
-    })
-    .join("\n\n");
+      dispatchZoneSummary(
+        point.tenantId,
+        {
+          pointName: point.name,
+          zoneName: s.zoneName,
+          accountingMode: zone.accountingMode as ZoneAccountingMode,
+          occurredAt: submission.submittedAt,
+          readings: s.readingLines,
+          cashAmount: s.cashAmount,
+          mobileAmount: s.mobileAmount,
+          calculatedRevenue: s.calculatedRevenue,
+          difference: s.difference,
+          returnsCount: s.returnsCount,
+          operatorName: operator.name,
+        },
+        zoneSummarySettings
+      ).catch((err) => console.error("zone summary dispatch failed", err));
+    }
+  }
 
-  const message = [
-    `Сдача итогов — ${point.name}`,
-    zoneBlocks,
-    `Касса\nОператор: ${operator.name}\nНаличные: ${totalCash.toFixed(2)}\nМобильный: ${totalMobile.toFixed(2)}\nРасходы: ${totalExpenses.toFixed(2)}`,
-  ].join("\n\n");
-
-  await sendTenantTelegramMessage(point.tenantId, message);
+  // "Касса за день": в режиме event — отправить сразу, как только все активные
+  // зоны точки отчитались за сегодня; если сводка уже уходила — досдача
+  // (пересчитать и обновить/переслать). См. daily-cash-trigger.ts.
+  onResultsSubmission(point.id, point.tenantId, submission.submittedAt).catch((err) =>
+    console.error("daily cash trigger failed", err)
+  );
 
   // Мягкое напоминание (docs/spec/05-work-time.md, "СВЯЗЬ СО СДАЧЕЙ ИТОГОВ") —
   // после сдачи итогов, если модуль подключён и сегодня ещё не отмечен уход

@@ -68,6 +68,7 @@ export default function WorkTimePage() {
   const [standaloneMoneyOps, setStandaloneMoneyOps] = useState<StandaloneMoneyOp[]>([]);
   const [granularity, setGranularity] = useState<PeriodGranularity>("month");
   const [anchor, setAnchor] = useState(() => new Date());
+  const [defaultShiftStartTime, setDefaultShiftStartTime] = useState("10:00");
 
   const [formOpen, setFormOpen] = useState(false);
   const [startHour, setStartHour] = useState(9);
@@ -108,7 +109,9 @@ export default function WorkTimePage() {
       router.replace("/operator");
       return;
     }
-    setBalance(await summaryRes.json());
+    const summaryData = await summaryRes.json();
+    setBalance(summaryData);
+    setDefaultShiftStartTime(summaryData.defaultShiftStartTime ?? "10:00");
     const shiftsData = await shiftsRes.json();
     setShifts(shiftsData.shifts ?? []);
     setStandaloneMoneyOps(shiftsData.standaloneMoneyOps ?? []);
@@ -153,12 +156,14 @@ export default function WorkTimePage() {
   }
 
   function openForm() {
-    // "Пришёл" по умолчанию — около 10:00 (типичное начало рабочего дня);
-    // "ушёл" — реальное текущее время устройства/браузера, а не фиксированное
+    // "Пришёл" по умолчанию — время из настроек владельца (Settings ->
+    // Рабочее время), было зашито как 10:00, теперь настраиваемо; "ушёл" —
+    // реальное текущее время устройства/браузера, а не фиксированное
     // значение, чтобы форма сразу отражала "я ухожу прямо сейчас".
+    const [defaultHour, defaultMinute] = defaultShiftStartTime.split(":").map(Number);
     const now = new Date();
-    setStartHour(10);
-    setStartMinute(0);
+    setStartHour(defaultHour);
+    setStartMinute(defaultMinute);
     setEndHour(now.getHours());
     setEndMinute(now.getMinutes());
     setAdvanceAmount("");

@@ -65,16 +65,11 @@ export async function activatePointDevice(pointDeviceId: string) {
   });
 }
 
-export async function getPointDeviceId(): Promise<string | null> {
+async function getPointDeviceId(): Promise<string | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(POINT_DEVICE_COOKIE)?.value;
   if (!token) return null;
   return verifyToken(token);
-}
-
-export async function forgetPointDevice() {
-  const cookieStore = await cookies();
-  cookieStore.delete(POINT_DEVICE_COOKIE);
 }
 
 export async function createOperatorSession(operatorId: string) {

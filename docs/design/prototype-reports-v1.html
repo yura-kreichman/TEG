@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RentOS — Отчёты · прототип v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F7F5; --card:#FFFFFF; --card-2:#F0F2EF;
+    --ink:#1B1F1D; --ink-2:#5C6662; --ink-3:#9AA39F; --line:#E8EBE8;
+    --accent:#0E8074; --accent-ink:#0A5F56; --accent-soft:#E4F3F0;
+    --warn:#B45309; --warn-soft:#FEF4E6;
+    --danger:#C4372B; --danger-soft:#FBEDEB;
+    --radius-lg:20px; --radius-md:14px;
+    --shadow-card:0 1px 2px rgba(27,31,29,.04), 0 8px 24px rgba(27,31,29,.05);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;background:#ECEEEA;color:var(--ink);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    padding:32px 16px 64px;-webkit-font-smoothing:antialiased;
+  }
+  .proto-header{max-width:420px;width:100%;margin-bottom:20px}
+  .proto-header h1{font-size:15px;font-weight:600;color:#5C6662}
+  .proto-header p{font-size:12.5px;color:#9AA39F;margin-top:4px}
+  .switcher{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .switcher button{
+    border:1px solid var(--line);background:#fff;border-radius:999px;
+    padding:7px 13px;font:inherit;font-size:12.5px;font-weight:600;color:#5C6662;cursor:pointer;
+  }
+  .switcher button.on{background:#1B1F1D;border-color:#1B1F1D;color:#fff}
+
+  .phone{
+    width:390px;max-width:100%;height:840px;
+    background:var(--bg);border-radius:36px;border:1px solid #DDE1DC;
+    box-shadow:0 24px 60px rgba(27,31,29,.14);
+    overflow:hidden;position:relative;display:flex;flex-direction:column;
+  }
+  .screen{flex:1;overflow-y:auto;padding:26px 20px 40px;display:none}
+  .screen.active{display:block}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  .grow{flex:1;min-width:0}
+
+  .crumb{
+    display:inline-flex;align-items:center;gap:6px;margin-bottom:10px;
+    font-size:13px;font-weight:600;color:var(--accent-ink);
+    background:none;border:none;cursor:pointer;font-family:inherit;padding:0;
+  }
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .page-title{font-size:24px;font-weight:800;letter-spacing:-.02em}
+  .page-sub{font-size:13.5px;color:var(--ink-2);margin:2px 0 16px}
+  .export{
+    display:inline-flex;align-items:center;gap:6px;flex:none;margin-top:4px;
+    border:1px solid var(--line);background:#fff;border-radius:999px;cursor:pointer;
+    padding:8px 13px;font:inherit;font-size:12px;font-weight:600;color:var(--ink-2);
+  }
+
+  /* — Период — */
+  .period{display:flex;gap:6px;margin-bottom:16px}
+  .period button{
+    flex:1;border:1px solid var(--line);background:var(--card);border-radius:12px;
+    padding:9px;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink-2);cursor:pointer;
+  }
+  .period button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);padding:18px;margin-bottom:14px;
+  }
+  .card-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:12px}
+
+  .hero{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .hero .big{font-size:32px;font-weight:800;letter-spacing:-.02em}
+  .delta{
+    display:inline-flex;align-items:center;gap:4px;
+    font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;
+  }
+  .delta.up{background:var(--accent-soft);color:var(--accent-ink)}
+  .delta.down{background:var(--danger-soft);color:var(--danger)}
+  .hero-sub{font-size:12px;color:var(--ink-3);width:100%;margin-top:2px}
+
+  /* — Бар-чарт — */
+  .chart{display:flex;align-items:flex-end;gap:7px;height:120px;margin-top:16px}
+  .bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+  .bar{width:100%;border-radius:7px 7px 3px 3px;background:var(--accent);opacity:.85;min-height:3px}
+  .bar.muted{background:#C9D6D2}
+  .bar-lbl{font-size:10px;font-weight:600;color:var(--ink-3)}
+  .bar-val{font-size:9.5px;font-weight:700;color:var(--ink-2)}
+
+  .split{display:flex;margin-top:14px;border-top:1px solid var(--line);padding-top:13px}
+  .split>div{flex:1}
+  .split>div+div{border-left:1px solid var(--line);padding-left:14px}
+  .stat-label{font-size:11.5px;color:var(--ink-3);font-weight:500;margin-bottom:3px}
+  .stat-value{font-size:16px;font-weight:700}
+  .stat-value.pos{color:var(--accent-ink)}
+  .stat-value.neg{color:var(--danger)}
+
+  .insight{
+    display:flex;gap:9px;align-items:flex-start;
+    background:var(--warn-soft);border-radius:var(--radius-md);
+    padding:12px 14px;font-size:12.5px;line-height:1.55;color:#7A4A10;margin-bottom:14px;
+  }
+  .insight.good{background:var(--accent-soft);color:var(--accent-ink)}
+  .insight .ic{flex:none}
+
+  /* — P&L — */
+  .pl-row{display:flex;justify-content:space-between;padding:8px 0;font-size:13.5px}
+  .pl-row .l{color:var(--ink-2)}
+  .pl-row .v{font-weight:600}
+  .pl-row.total{border-top:1px solid var(--line);margin-top:4px;padding-top:12px}
+  .pl-row.total .l{color:var(--ink);font-weight:700}
+  .pl-row.total .v{font-weight:800;color:var(--accent-ink);font-size:15px}
+
+  /* — Рейтинг — */
+  .rank{margin-bottom:4px}
+  .rank-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+  .rank-name{font-size:13.5px;font-weight:600}
+  .rank-val{font-size:13px;font-weight:700}
+  .rank-share{font-size:11px;color:var(--ink-3);font-weight:500;margin-left:6px}
+  .rank-bar{height:8px;border-radius:99px;background:var(--card-2);overflow:hidden;margin-bottom:12px}
+  .rank-bar i{display:block;height:100%;border-radius:99px;background:var(--accent)}
+  .rank-bar i.w{background:#D9A048}
+  .rank-bar i.g{background:#9AA39F}
+
+  .tariff-pie{display:flex;height:12px;border-radius:99px;overflow:hidden;margin:8px 0 6px}
+  .tariff-pie i{display:block;height:100%}
+  .legend{display:flex;gap:14px;font-size:11.5px;color:var(--ink-2)}
+  .legend .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+
+  /* — Операторы — */
+  .op-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .avx{
+    width:44px;height:44px;border-radius:50%;flex:none;
+    display:flex;align-items:center;justify-content:center;
+    font-size:17px;font-weight:700;color:#fff;
+    background:linear-gradient(135deg,#0E8074,#3BA99C);
+  }
+  .avx.b{background:linear-gradient(135deg,#B45309,#D97706)}
+  .op-name{font-size:16px;font-weight:700}
+  .op-sub{font-size:12px;color:var(--ink-3)}
+  .flag{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;
+    background:var(--danger-soft);color:var(--danger);
+  }
+
+  /* — Тепловая карта — */
+  .heat{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:6px}
+  .heat .h-lbl{font-size:10.5px;font-weight:600;color:var(--ink-3);text-align:center;padding-bottom:2px}
+  .heat .cell{
+    aspect-ratio:1;border-radius:8px;background:var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    font-size:9px;font-weight:700;color:#fff;
+  }
+  .heat .cell.z{background:var(--card-2);color:var(--ink-3)}
+  .heat-legend{display:flex;align-items:center;gap:6px;margin-top:12px;font-size:11px;color:var(--ink-3)}
+  .heat-legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
+</style>
+</head>
+<body>
+
+<div class="proto-header">
+  <h1>RentOS · Отчёты — прототип v1</h1>
+  <p>Четыре отчёта под четыре решения владельца. На «Динамике» работает переключатель периода. Все цифры — демо.</p>
+  <div class="switcher">
+    <button class="on" data-go="dyn">Динамика</button>
+    <button data-go="zones">Зоны и активы</button>
+    <button data-go="ops">Операторы</button>
+    <button data-go="cal">Календарь</button>
+  </div>
+</div>
+
+<div class="phone">
+
+  <!-- ————————— ДИНАМИКА ————————— -->
+  <div class="screen active" id="scr-dyn">
+    <button class="crumb">← Отчёты</button>
+    <div class="page-head">
+      <div class="page-title">Динамика</div>
+      <button class="export">⬇ Excel</button>
+    </div>
+    <div class="page-sub">Парк Екатерининский</div>
+
+    <div class="period" id="per"></div>
+
+    <div class="card">
+      <div class="hero num">
+        <span class="big" id="d-total">14 380</span>
+        <span class="delta up" id="d-delta">▲ +18% к прошлой неделе</span>
+        <span class="hero-sub" id="d-range">1–7 июля · выручка</span>
+      </div>
+      <div class="chart" id="d-chart"></div>
+      <div class="split num">
+        <div><div class="stat-label">Наличные</div><div class="stat-value" id="d-cash">9 120</div></div>
+        <div><div class="stat-label">Мобильный</div><div class="stat-value" id="d-mob">5 260</div></div>
+        <div><div class="stat-label">Сдач</div><div class="stat-value" id="d-cnt">7</div></div>
+      </div>
+    </div>
+
+    <div class="insight good"><span class="ic">💡</span><span>Лучший день недели — <b>суббота, 5 июля (3 210 ₽)</b>. Выходные дают 47% недельной выручки.</span></div>
+
+    <div class="card num">
+      <div class="card-label">Прибыль за период</div>
+      <div class="pl-row"><span class="l">Выручка</span><span class="v">14 380</span></div>
+      <div class="pl-row"><span class="l">− Расходы</span><span class="v">1 240</span></div>
+      <div class="pl-row"><span class="l">− Зарплаты операторов</span><span class="v">4 890</span></div>
+      <div class="pl-row total"><span class="l">= Прибыль</span><span class="v">+8 250</span></div>
+    </div>
+  </div>
+
+  <!-- ————————— ЗОНЫ И АКТИВЫ ————————— -->
+  <div class="screen" id="scr-zones">
+    <button class="crumb">← Отчёты</button>
+    <div class="page-head">
+      <div class="page-title">Зоны и активы</div>
+      <button class="export">⬇ Excel</button>
+    </div>
+    <div class="page-sub">1–7 июля · Парк Екатерининский</div>
+
+    <div class="card num">
+      <div class="card-label">Выручка по зонам</div>
+      <div class="rank">
+        <div class="rank-head"><span class="rank-name">🏎 Машинки</span><span class="rank-val">11 210<span class="rank-share">78%</span></span></div>
+        <div class="rank-bar"><i style="width:78%"></i></div>
+      </div>
+      <div class="rank">
+        <div class="rank-head"><span class="rank-name">🤸 Батуты</span><span class="rank-val">2 420<span class="rank-share">17%</span></span></div>
+        <div class="rank-bar"><i class="w" style="width:17%"></i></div>
+      </div>
+      <div class="rank">
+        <div class="rank-head"><span class="rank-name">🥽 Виртуалка</span><span class="rank-val">750<span class="rank-share">5%</span></span></div>
+        <div class="rank-bar"><i class="g" style="width:5%"></i></div>
+      </div>
+    </div>
+
+    <div class="insight"><span class="ic">💡</span><span><b>«Формула 1» приносит 62% выручки Машинок</b> при двух активах в зоне. «Гоночная» — кандидат на замену или ремонт.</span></div>
+
+    <div class="card num">
+      <div class="card-label">Активы · Машинки</div>
+      <div class="rank">
+        <div class="rank-head"><span class="rank-name">Формула 1</span><span class="rank-val">6 950<span class="rank-share">142 заезда</span></span></div>
+        <div class="rank-bar"><i style="width:62%"></i></div>
+      </div>
+      <div class="rank">
+        <div class="rank-head"><span class="rank-name">Гоночная</span><span class="rank-val">4 260<span class="rank-share">96 заездов</span></span></div>
+        <div class="rank-bar"><i style="width:38%"></i></div>
+      </div>
+    </div>
+
+    <div class="card num">
+      <div class="card-label">Тарифы · Машинки</div>
+      <div class="tariff-pie">
+        <i style="width:34%;background:var(--accent)"></i>
+        <i style="width:66%;background:#D9A048"></i>
+      </div>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--accent)"></span>Обычный · 34%</span>
+        <span><span class="dot" style="background:#D9A048"></span>Вторая скорость · 66%</span>
+      </div>
+      <div style="font-size:12px;color:var(--ink-2);margin-top:10px;line-height:1.5">«Вторую скорость» берут вдвое чаще — есть запас для повышения её цены.</div>
+    </div>
+  </div>
+
+  <!-- ————————— ОПЕРАТОРЫ ————————— -->
+  <div class="screen" id="scr-ops">
+    <button class="crumb">← Отчёты</button>
+    <div class="page-head">
+      <div class="page-title">Операторы</div>
+      <button class="export">⬇ Excel</button>
+    </div>
+    <div class="page-sub">1–7 июля · Парк Екатерининский</div>
+
+    <div class="card">
+      <div class="op-head">
+        <div class="avx">Ж</div>
+        <div class="grow">
+          <div class="op-name">Женя</div>
+          <div class="op-sub">5 смен · 52 ч</div>
+        </div>
+      </div>
+      <div class="split num">
+        <div><div class="stat-label">Выручка/час</div><div class="stat-value">198 ₽</div></div>
+        <div><div class="stat-label">К выдаче</div><div class="stat-value">3 240 ₽</div></div>
+        <div><div class="stat-label">Разница Σ</div><div class="stat-value pos">+43 ₽</div></div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#EFC7C2">
+      <div class="op-head">
+        <div class="avx b">С</div>
+        <div class="grow">
+          <div class="op-name">Саша</div>
+          <div class="op-sub">3 смены · 28 ч</div>
+        </div>
+        <span class="flag">⚠ разница</span>
+      </div>
+      <div class="split num">
+        <div><div class="stat-label">Выручка/час</div><div class="stat-value">176 ₽</div></div>
+        <div><div class="stat-label">К выдаче</div><div class="stat-value">1 650 ₽</div></div>
+        <div><div class="stat-label">Разница Σ</div><div class="stat-value neg">−320 ₽</div></div>
+      </div>
+    </div>
+
+    <div class="insight"><span class="ic">⚠️</span><span>У Саши <b>минус-разница в 3 сменах подряд</b> (−90, −110, −120 ₽). Единичное расхождение — шум, повторяющееся — повод поговорить.</span></div>
+  </div>
+
+  <!-- ————————— КАЛЕНДАРЬ ————————— -->
+  <div class="screen" id="scr-cal">
+    <button class="crumb">← Отчёты</button>
+    <div class="page-head">
+      <div class="page-title">Календарь загрузки</div>
+      <button class="export">⬇ Excel</button>
+    </div>
+    <div class="page-sub">Июнь–июль · Парк Екатерининский</div>
+
+    <div class="card">
+      <div class="card-label">Выручка по дням недели · 4 недели</div>
+      <div class="heat num">
+        <span class="h-lbl">Пн</span><span class="h-lbl">Вт</span><span class="h-lbl">Ср</span><span class="h-lbl">Чт</span><span class="h-lbl">Пт</span><span class="h-lbl">Сб</span><span class="h-lbl">Вс</span>
+      </div>
+      <div class="heat num" id="heat"></div>
+      <div class="heat-legend">
+        <span>меньше</span>
+        <i style="background:var(--card-2)"></i>
+        <i style="background:var(--accent);opacity:.3"></i>
+        <i style="background:var(--accent);opacity:.6"></i>
+        <i style="background:var(--accent)"></i>
+        <span>больше</span>
+      </div>
+    </div>
+
+    <div class="insight"><span class="ic">💡</span><span><b>Вторник стабильно слабейший день</b> — в среднем 240 ₽ за 4 недели. Смена стоит дороже: день-кандидат на выходной.</span></div>
+    <div class="insight good"><span class="ic">💡</span><span><b>Суббота перегружена</b>: 3× от среднего. Второй оператор в субботу может поднять выручку ещё выше.</span></div>
+  </div>
+
+</div>
+
+<script>
+  const screens={dyn:'scr-dyn',zones:'scr-zones',ops:'scr-ops',cal:'scr-cal'};
+  document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById(screens[b.dataset.go]).classList.add('active');
+    document.querySelectorAll('.switcher button').forEach(x=>x.classList.toggle('on',x===b));
+  }));
+
+  /* — Динамика: периоды — */
+  const P={
+    week:{total:'14 380',delta:'▲ +18% к прошлой неделе',up:true,range:'1–7 июля · выручка',
+      cash:'9 120',mob:'5 260',cnt:'7',
+      bars:[['Пн',1150],['Вт',240],['Ср',1420],['Чт',1730],['Пт',2340],['Сб',3210],['Вс',4290]]},
+    month:{total:'52 940',delta:'▼ −6% к июню',up:false,range:'Июль · выручка по неделям',
+      cash:'33 800',mob:'19 140',cnt:'27',
+      bars:[['1–7',14380],['8–14',13200],['15–21',12900],['22–28',12460]]},
+  };
+  let cur='week';
+  function renderPeriod(){
+    const per=document.getElementById('per');
+    per.innerHTML='';
+    [['week','Неделя'],['month','Месяц'],['custom','Период…']].forEach(([k,n])=>{
+      const b=document.createElement('button');
+      b.textContent=n;b.className=k===cur?'on':'';
+      b.onclick=()=>{if(k==='custom')return;cur=k;renderPeriod();renderDyn()};
+      per.appendChild(b);
+    });
+  }
+  function renderDyn(){
+    const p=P[cur];
+    document.getElementById('d-total').textContent=p.total;
+    const d=document.getElementById('d-delta');
+    d.textContent=p.delta;d.className='delta '+(p.up?'up':'down');
+    document.getElementById('d-range').textContent=p.range;
+    document.getElementById('d-cash').textContent=p.cash;
+    document.getElementById('d-mob').textContent=p.mob;
+    document.getElementById('d-cnt').textContent=p.cnt;
+    const max=Math.max(...p.bars.map(b=>b[1]));
+    document.getElementById('d-chart').innerHTML=p.bars.map(([l,v])=>
+      '<div class="bar-wrap"><span class="bar-val">'+(v>=1000?(v/1000).toFixed(1)+'к':v)+'</span>'+
+      '<div class="bar'+(v<max*.2?' muted':'')+'" style="height:'+Math.max(4,v/max*100)+'%"></div>'+
+      '<span class="bar-lbl">'+l+'</span></div>'
+    ).join('');
+  }
+  renderPeriod();renderDyn();
+
+  /* — Тепловая карта — */
+  const heat=[
+    [900,210,1100,1300,1900,2800,3400],
+    [1000,260,980,1500,2100,3100,3900],
+    [1150,240,1420,1730,2340,3210,4290],
+    [800,250,1200,1400,2000,2900,3600],
+  ];
+  const hmax=Math.max(...heat.flat());
+  document.getElementById('heat').innerHTML=heat.map(w=>w.map(v=>{
+    const op=v/hmax;
+    if(op<.1)return '<div class="cell z">'+Math.round(v/100)/10+'к</div>';
+    return '<div class="cell" style="opacity:'+(0.25+op*0.75)+'">'+(Math.round(v/100)/10)+'к</div>';
+  }).join('')).join('');
+</script>
+</body>
+</html>

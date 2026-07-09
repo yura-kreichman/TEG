@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RentOS — Задачи · прототип v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F7F5; --card:#FFFFFF; --card-2:#F0F2EF;
+    --ink:#1B1F1D; --ink-2:#5C6662; --ink-3:#9AA39F; --line:#E8EBE8;
+    --accent:#0E8074; --accent-ink:#0A5F56; --accent-soft:#E4F3F0;
+    --warn:#B45309; --warn-soft:#FEF4E6;
+    --danger:#C4372B; --danger-soft:#FBEDEB;
+    --ok:#0E8074; --ok-soft:#E4F3F0;
+    --scrim:rgba(20,24,22,.44); --sheet-bg:#FFFFFF; --grab:#D9DED9;
+    --radius-lg:20px; --radius-md:14px;
+    --shadow-card:0 1px 2px rgba(27,31,29,.04), 0 8px 24px rgba(27,31,29,.05);
+  }
+  .dark{
+    --bg:#141917; --card:#1D2421; --card-2:#232B28;
+    --ink:#F1F4F2; --ink-2:#A6B0AB; --ink-3:#6E7A74; --line:#2B3330;
+    --accent:#2BB3A3; --accent-ink:#7FE0D3; --accent-soft:rgba(43,179,163,.16);
+    --warn:#E5A54B; --warn-soft:rgba(229,165,75,.14);
+    --danger:#EF6A5E; --danger-soft:rgba(239,106,94,.14);
+    --ok:#3ECF8E; --ok-soft:rgba(62,207,142,.15);
+    --scrim:rgba(0,0,0,.55); --sheet-bg:#1D2421; --grab:#3A443F;
+    --shadow-card:none;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;background:#ECEEEA;color:#1B1F1D;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    padding:32px 16px 64px;-webkit-font-smoothing:antialiased;
+  }
+  .proto-header{max-width:420px;width:100%;margin-bottom:20px}
+  .proto-header h1{font-size:15px;font-weight:600;color:#5C6662}
+  .proto-header p{font-size:12.5px;color:#9AA39F;margin-top:4px}
+  .switcher{display:flex;gap:6px;margin-top:12px}
+  .switcher button{
+    border:1px solid #E8EBE8;background:#fff;border-radius:999px;
+    padding:7px 14px;font:inherit;font-size:12.5px;font-weight:600;color:#5C6662;cursor:pointer;
+  }
+  .switcher button.on{background:#1B1F1D;border-color:#1B1F1D;color:#fff}
+
+  .phone{
+    width:390px;max-width:100%;height:840px;
+    background:var(--bg);border-radius:36px;border:1px solid #DDE1DC;
+    box-shadow:0 24px 60px rgba(27,31,29,.14);
+    overflow:hidden;position:relative;display:none;flex-direction:column;color:var(--ink);
+  }
+  .phone.active{display:flex}
+  .phone.dark{border-color:#262E2A;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .screen{flex:1;overflow-y:auto;padding:28px 20px 40px}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  .grow{flex:1;min-width:0}
+
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .page-title{font-size:24px;font-weight:800;letter-spacing:-.02em}
+  .page-sub{font-size:13.5px;color:var(--ink-2);margin:2px 0 18px}
+  .btn-add{
+    display:inline-flex;align-items:center;gap:6px;flex:none;
+    background:var(--ink);color:var(--bg);border:none;cursor:pointer;
+    font:inherit;font-size:13px;font-weight:700;padding:9px 15px;border-radius:999px;margin-top:2px;
+  }
+
+  /* — Сегменты канбана — */
+  .seg{display:flex;gap:6px;margin-bottom:16px}
+  .seg button{
+    flex:1;border:1px solid var(--line);background:var(--card);border-radius:12px;
+    padding:9px 4px;font:inherit;font-size:12px;font-weight:600;color:var(--ink-2);cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+  }
+  .seg button .cnt{font-size:15px;font-weight:800;color:var(--ink)}
+  .seg button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+  .seg button.on .cnt{color:var(--accent-ink)}
+
+  /* — Карточка задачи — */
+  .task{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);padding:15px 16px;margin-bottom:12px;
+  }
+  .task-top{display:flex;align-items:flex-start;gap:10px}
+  .task-title{font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1.35}
+  .task-note{font-size:12.5px;color:var(--ink-2);margin-top:4px;line-height:1.5}
+  .task.done .task-title{color:var(--ink-3);text-decoration:line-through;text-decoration-thickness:1.5px}
+  .kebab{
+    width:32px;height:32px;flex:none;border-radius:50%;
+    border:1px solid var(--line);background:var(--card);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;font-weight:700;color:var(--ink-2);letter-spacing:1px;padding-bottom:8px;
+  }
+  .task-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px}
+  .assignees{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .avx{
+    width:26px;height:26px;border-radius:50%;flex:none;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:700;color:#fff;
+    background:linear-gradient(135deg,#0E8074,#3BA99C);
+  }
+  .avx.b{background:linear-gradient(135deg,#B45309,#D97706)}
+  .all-chip{font-size:11px;font-weight:600;color:var(--ink-3)}
+  .chip{
+    display:inline-flex;align-items:center;gap:5px;flex:none;
+    font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;
+  }
+  .chip.todo{background:var(--card-2);color:var(--ink-2)}
+  .chip.doing{background:var(--warn-soft);color:var(--warn)}
+  .chip.done{background:var(--ok-soft);color:var(--accent-ink)}
+  .empty{
+    text-align:center;color:var(--ink-3);font-size:13px;padding:34px 20px;
+    border:1.5px dashed var(--line);border-radius:var(--radius-lg);
+  }
+
+  /* — Оператор: главный — */
+  .op-center{text-align:center;padding-top:6px}
+  .op-avatar{
+    width:72px;height:72px;border-radius:50%;margin:0 auto 14px;
+    background:linear-gradient(135deg,#0E8074,#3BA99C);
+    color:#fff;font-size:29px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .hello{font-size:23px;font-weight:800;letter-spacing:-.02em}
+  .hello-sub{font-size:13.5px;color:var(--ink-2);margin:5px 0 22px}
+  .hello-sub b{color:var(--ink);font-weight:600}
+  .big-btn{
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    width:100%;margin:0 0 10px;
+    font:inherit;font-size:15.5px;font-weight:700;cursor:pointer;
+    padding:15px;border-radius:16px;
+  }
+  .big-btn.primary{background:var(--accent);color:#0C1513;border:none}
+  .big-btn.secondary{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+
+  .tasks-card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+    padding:16px;margin-top:14px;text-align:left;
+  }
+  .tasks-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+  .tasks-title{font-size:14px;font-weight:800;letter-spacing:-.01em}
+  .tasks-cnt{font-size:12px;font-weight:600;color:var(--ink-3)}
+  .op-task{
+    display:flex;align-items:center;gap:11px;width:100%;
+    padding:12px 2px;border:none;border-top:1px solid var(--line);
+    background:none;cursor:pointer;font:inherit;color:var(--ink);text-align:left;
+  }
+  .op-task:first-of-type{border-top:none}
+  .ot-mark{
+    width:22px;height:22px;border-radius:50%;flex:none;border:2px solid var(--ink-3);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .ot-mark.doing{border-color:var(--warn);background:var(--warn-soft)}
+  .ot-mark.doing::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--warn)}
+  .ot-title{font-size:13.5px;font-weight:600;line-height:1.35}
+  .ot-sub{font-size:11px;color:var(--ink-3);margin-top:1px}
+  .done-line{
+    display:flex;align-items:center;gap:8px;margin-top:4px;padding-top:12px;
+    border-top:1px solid var(--line);font-size:12px;color:var(--ink-3);
+  }
+
+  /* — Шторки — */
+  .scrim{position:absolute;inset:0;z-index:10;background:var(--scrim);opacity:0;pointer-events:none;transition:opacity .22s}
+  .scrim.open{opacity:1;pointer-events:auto}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:11;
+    background:var(--sheet-bg);border-radius:24px 24px 0 0;
+    box-shadow:0 -12px 40px rgba(0,0,0,.3);border-top:1px solid var(--line);
+    padding:10px 20px 26px;max-height:84%;overflow-y:auto;
+    transform:translateY(105%);transition:transform .26s cubic-bezier(.32,.72,.25,1);
+  }
+  .sheet.open{transform:translateY(0)}
+  .grabber{width:38px;height:4px;border-radius:99px;background:var(--grab);margin:4px auto 16px}
+  .sheet-title{font-size:19px;font-weight:800;letter-spacing:-.01em;margin-bottom:2px}
+  .sheet-sub{font-size:13px;color:var(--ink-2);margin-bottom:16px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .field .opt{font-weight:400;color:var(--ink-3)}
+  .field input,.field textarea{
+    width:100%;font:inherit;font-size:15px;
+    padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius-md);
+    background:var(--card-2);color:var(--ink);outline:none;resize:none;
+    transition:border .15s, box-shadow .15s;
+  }
+  .field input:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .assignee-pick{display:flex;flex-wrap:wrap;gap:8px}
+  .ap{
+    display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+    border:1.5px solid var(--line);border-radius:999px;background:var(--card);
+    padding:7px 13px 7px 7px;font:inherit;font-size:13px;font-weight:600;color:var(--ink-2);
+  }
+  .ap.sel{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-ink)}
+  .ap .avx{width:22px;height:22px;font-size:10px}
+  .btn-primary{
+    display:block;width:100%;margin-top:8px;
+    background:var(--accent);color:#fff;border:none;cursor:pointer;
+    font:inherit;font-size:15px;font-weight:700;padding:14px;border-radius:var(--radius-md);
+  }
+  .dark .btn-primary{color:#0C1513}
+  .action-list{display:flex;flex-direction:column}
+  .action-item{
+    display:flex;align-items:center;gap:12px;width:100%;
+    padding:15px 2px;border:none;border-top:1px solid var(--line);
+    background:none;cursor:pointer;font:inherit;font-size:15px;font-weight:500;color:var(--ink);text-align:left;
+  }
+  .action-item:first-child{border-top:none}
+  .action-item.danger{color:var(--danger)}
+  .action-item:disabled{color:var(--ink-3);cursor:default}
+  .action-item .ai{width:20px;text-align:center;font-size:16px}
+  .btn-progress{
+    display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-top:8px;
+    background:var(--accent);color:#0C1513;border:none;cursor:pointer;
+    font:inherit;font-size:15px;font-weight:700;padding:15px;border-radius:var(--radius-md);
+  }
+</style>
+</head>
+<body>
+
+<div class="proto-header">
+  <h1>RentOS · Задачи — прототип v1</h1>
+  <p>Данные общие: создайте задачу с владельца — она появится у оператора. Оператор двигает статус кнопкой прогресса, изменения видны на доске владельца.</p>
+  <div class="switcher">
+    <button class="on" data-ph="owner">Владелец · Задачи</button>
+    <button data-ph="op">Оператор · Главная</button>
+  </div>
+</div>
+
+<!-- ————————— ВЛАДЕЛЕЦ ————————— -->
+<div class="phone active" id="ph-owner">
+  <div class="screen">
+    <div class="page-head">
+      <div class="page-title">Задачи</div>
+      <button class="btn-add" onclick="openCreate()">+ Добавить</button>
+    </div>
+    <div class="page-sub">Парк Екатерининский</div>
+
+    <div class="seg" id="seg"></div>
+    <div id="board"></div>
+  </div>
+
+  <div class="scrim" id="scrim-o" onclick="closeSheets('o')"></div>
+
+  <!-- Создание / редактирование -->
+  <div class="sheet" id="sheet-task">
+    <div class="grabber"></div>
+    <div class="sheet-title" id="st-title">Новая задача</div>
+    <div class="sheet-sub">Оператор увидит её на главном экране</div>
+    <div class="field">
+      <label>Что нужно сделать</label>
+      <input type="text" id="f-title" placeholder="Например, подкачать колёса">
+    </div>
+    <div class="field">
+      <label>Описание <span class="opt">· необязательно</span></label>
+      <textarea id="f-note" rows="2" placeholder="Детали, если нужны"></textarea>
+    </div>
+    <div class="field">
+      <label>Ответственные <span class="opt">· пусто = видят все операторы</span></label>
+      <div class="assignee-pick">
+        <button class="ap" data-op="zh" onclick="this.classList.toggle('sel')"><span class="avx">Ж</span>Женя</button>
+        <button class="ap" data-op="sa" onclick="this.classList.toggle('sel')"><span class="avx b">С</span>Саша</button>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="saveTask()">Сохранить</button>
+  </div>
+
+  <!-- Действия по задаче -->
+  <div class="sheet" id="sheet-actions">
+    <div class="grabber"></div>
+    <div class="sheet-title" id="sa-title" style="margin-bottom:12px">Задача</div>
+    <div class="action-list">
+      <button class="action-item" onclick="editTask()"><span class="ai">✏️</span>Изменить</button>
+      <button class="action-item" id="mv-todo" onclick="moveTask('todo')"><span class="ai">📋</span>В «Надо сделать»</button>
+      <button class="action-item" id="mv-doing" onclick="moveTask('doing')"><span class="ai">🔧</span>В «В процессе»</button>
+      <button class="action-item" id="mv-done" onclick="moveTask('done')"><span class="ai">✅</span>В «Выполнено»</button>
+      <button class="action-item danger" onclick="deleteTask()"><span class="ai">🗑</span>Удалить задачу</button>
+    </div>
+  </div>
+</div>
+
+<!-- ————————— ОПЕРАТОР ————————— -->
+<div class="phone dark" id="ph-op">
+  <div class="screen">
+    <div class="op-center">
+      <div class="op-avatar">Ж</div>
+      <div class="hello">Здравствуйте, Женя</div>
+      <div class="hello-sub">Точка: <b>Парк Екатерининский</b></div>
+      <button class="big-btn primary">📋 Сдать итоги</button>
+      <button class="big-btn secondary">💵 Инкассация</button>
+    </div>
+
+    <div class="tasks-card">
+      <div class="tasks-head">
+        <div class="tasks-title">Задачи</div>
+        <div class="tasks-cnt num" id="op-cnt"></div>
+      </div>
+      <div id="op-list"></div>
+    </div>
+  </div>
+
+  <div class="scrim" id="scrim-p" onclick="closeSheets('p')"></div>
+
+  <!-- Задача у оператора -->
+  <div class="sheet" id="sheet-optask">
+    <div class="grabber"></div>
+    <div class="sheet-title" id="ot-title">Задача</div>
+    <div class="sheet-sub" id="ot-note"></div>
+    <div id="ot-chip" style="margin-bottom:6px"></div>
+    <button class="btn-progress" id="ot-btn" onclick="opProgress()">Взять в работу</button>
+  </div>
+</div>
+
+<script>
+  /* — Общие данные — */
+  const OPS={zh:{n:'Женя',cls:''},sa:{n:'Саша',cls:'b'}};
+  let seq=5;
+  const tasks=[
+    {id:1,title:'Подкатать колёса у «Формулы 1»',note:'Переднее левое спускает за день',who:['zh'],st:'todo'},
+    {id:2,title:'Помыть машинки после дождя',note:'',who:[],st:'todo'},
+    {id:3,title:'Заменить сетку на батуте №2',note:'Сетка в подсобке, у дальней стены',who:['zh'],st:'doing'},
+    {id:4,title:'Проверить ремешки шлемов виртуалки',note:'',who:['sa'],st:'done'},
+  ];
+  const ST={todo:'Надо сделать',doing:'В процессе',done:'Выполнено'};
+  let curSeg='todo', curTask=null, editing=null;
+
+  /* — Владелец: доска — */
+  function renderSeg(){
+    const seg=document.getElementById('seg');
+    seg.innerHTML='';
+    for(const k of ['todo','doing','done']){
+      const n=tasks.filter(t=>t.st===k).length;
+      const b=document.createElement('button');
+      b.className=k===curSeg?'on':'';
+      b.innerHTML='<span class="cnt num">'+n+'</span>'+ST[k];
+      b.onclick=()=>{curSeg=k;renderSeg();renderBoard()};
+      seg.appendChild(b);
+    }
+  }
+  function avatars(t){
+    if(!t.who.length)return '<span class="all-chip">👥 все операторы</span>';
+    return t.who.map(w=>'<span class="avx '+OPS[w].cls+'">'+OPS[w].n[0]+'</span>').join('');
+  }
+  function renderBoard(){
+    const box=document.getElementById('board');
+    const list=tasks.filter(t=>t.st===curSeg);
+    if(!list.length){box.innerHTML='<div class="empty">Здесь пусто</div>';return}
+    box.innerHTML=list.map(t=>
+      '<div class="task '+(t.st==='done'?'done':'')+'">'+
+        '<div class="task-top"><div class="grow">'+
+          '<div class="task-title">'+t.title+'</div>'+
+          (t.note?'<div class="task-note">'+t.note+'</div>':'')+
+        '</div><button class="kebab" onclick="openActions('+t.id+')">···</button></div>'+
+        '<div class="task-foot"><div class="assignees">'+avatars(t)+'</div>'+
+        '<span class="chip '+t.st+'">'+ST[t.st]+'</span></div>'+
+      '</div>'
+    ).join('');
+  }
+
+  /* — Владелец: шторки — */
+  function openSheet(side,id){
+    document.getElementById('scrim-'+side).classList.add('open');
+    document.getElementById(id).classList.add('open');
+  }
+  function closeSheets(side){
+    document.getElementById('scrim-'+side).classList.remove('open');
+    document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));
+  }
+  function openCreate(){
+    editing=null;
+    document.getElementById('st-title').textContent='Новая задача';
+    document.getElementById('f-title').value='';
+    document.getElementById('f-note').value='';
+    document.querySelectorAll('.ap').forEach(a=>a.classList.remove('sel'));
+    openSheet('o','sheet-task');
+  }
+  function openActions(id){
+    curTask=tasks.find(t=>t.id===id);
+    document.getElementById('sa-title').textContent=curTask.title;
+    for(const k of ['todo','doing','done'])
+      document.getElementById('mv-'+k).disabled = curTask.st===k;
+    openSheet('o','sheet-actions');
+  }
+  function editTask(){
+    editing=curTask;
+    closeSheets('o');
+    document.getElementById('st-title').textContent='Изменить задачу';
+    document.getElementById('f-title').value=editing.title;
+    document.getElementById('f-note').value=editing.note;
+    document.querySelectorAll('.ap').forEach(a=>a.classList.toggle('sel',editing.who.includes(a.dataset.op)));
+    openSheet('o','sheet-task');
+  }
+  function saveTask(){
+    const title=document.getElementById('f-title').value.trim();
+    if(!title)return;
+    const note=document.getElementById('f-note').value.trim();
+    const who=[...document.querySelectorAll('.ap.sel')].map(a=>a.dataset.op);
+    if(editing){Object.assign(editing,{title,note,who})}
+    else{tasks.unshift({id:seq++,title,note,who,st:'todo'});curSeg='todo'}
+    closeSheets('o');renderAll();
+  }
+  function moveTask(st){curTask.st=st;closeSheets('o');curSeg=st;renderAll()}
+  function deleteTask(){tasks.splice(tasks.indexOf(curTask),1);closeSheets('o');renderAll()}
+
+  /* — Оператор — */
+  function opVisible(){
+    /* видит Женя: без ответственных или назначенные ему */
+    return tasks.filter(t=>!t.who.length||t.who.includes('zh'));
+  }
+  function renderOp(){
+    const vis=opVisible();
+    const act=vis.filter(t=>t.st!=='done');
+    const doneToday=vis.filter(t=>t.st==='done').length;
+    document.getElementById('op-cnt').textContent=act.length?act.length+' активных':'всё сделано';
+    const box=document.getElementById('op-list');
+    box.innerHTML=act.map(t=>
+      '<button class="op-task" onclick="openOpTask('+t.id+')">'+
+        '<span class="ot-mark '+(t.st==='doing'?'doing':'')+'"></span>'+
+        '<span class="grow"><span class="ot-title">'+t.title+'</span>'+
+        '<span class="ot-sub" style="display:block">'+(t.st==='doing'?'в процессе':'надо сделать')+
+        (t.who.length?'':' · общая')+'</span></span>'+
+        '<span style="color:var(--ink-3)">›</span>'+
+      '</button>'
+    ).join('') || '<div class="empty" style="padding:20px">Активных задач нет 🎉</div>';
+    if(doneToday)box.innerHTML+='<div class="done-line">✅ Выполнено: '+doneToday+'</div>';
+  }
+  function openOpTask(id){
+    curTask=tasks.find(t=>t.id===id);
+    document.getElementById('ot-title').textContent=curTask.title;
+    document.getElementById('ot-note').textContent=curTask.note||'Без описания';
+    document.getElementById('ot-chip').innerHTML='<span class="chip '+curTask.st+'">'+ST[curTask.st]+'</span>';
+    document.getElementById('ot-btn').textContent = curTask.st==='todo'?'🔧 Взять в работу':'✅ Выполнено';
+    openSheet('p','sheet-optask');
+  }
+  function opProgress(){
+    curTask.st = curTask.st==='todo' ? 'doing' : 'done';
+    closeSheets('p');renderAll();
+  }
+
+  /* — Переключение телефонов — */
+  document.querySelectorAll('[data-ph]').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('.phone').forEach(p=>p.classList.remove('active'));
+    document.getElementById('ph-'+b.dataset.ph).classList.add('active');
+    document.querySelectorAll('.switcher button').forEach(x=>x.classList.toggle('on',x===b));
+  }));
+
+  function renderAll(){renderSeg();renderBoard();renderOp()}
+  renderAll();
+</script>
+</body>
+</html>

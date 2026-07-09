@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { isModuleEnabled } from "@/lib/modules";
 import { getRateForDate, calcOperatorBalance } from "@/lib/work-time";
@@ -30,6 +31,14 @@ export async function GET(request: Request) {
 
   const balance = await calcOperatorBalance(ctx.operator.id, period);
   const currentRate = await getRateForDate(ctx.operator.id, new Date());
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: ctx.point.tenantId },
+    select: { defaultShiftStartTime: true },
+  });
 
-  return NextResponse.json({ ...balance, currentRate });
+  return NextResponse.json({
+    ...balance,
+    currentRate,
+    defaultShiftStartTime: tenant?.defaultShiftStartTime ?? "10:00",
+  });
 }

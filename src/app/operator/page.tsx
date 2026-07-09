@@ -2,13 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowRightLeft, Banknote, Check, ChevronRight, ClipboardCheck, Clock, MapPin, X } from "lucide-react";
+import { ArrowRightLeft, Check, ChevronRight, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
+import { BottomSheet } from "@/components/motion/bottom-sheet";
+import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n } from "@/components/i18n-provider";
+import { cn } from "@/lib/utils";
 
 interface ZoneOption {
   id: string;
@@ -20,11 +24,20 @@ interface PointOption {
   name: string;
 }
 
+interface OperatorTask {
+  id: string;
+  title: string;
+  note: string | null;
+  status: "todo" | "doing" | "done";
+  shared: boolean;
+}
+
 export default function OperatorHomePage() {
   const router = useRouter();
   const t = useI18n();
   const [operatorName, setOperatorName] = useState<string | null>(null);
   const [operatorAvatarUrl, setOperatorAvatarUrl] = useState<string | null>(null);
+  const [operatorIconKey, setOperatorIconKey] = useState<string | null>(null);
   const [pointId, setPointId] = useState<string | null>(null);
   const [pointName, setPointName] = useState<string | null>(null);
   const [zones, setZones] = useState<ZoneOption[]>([]);
@@ -41,6 +54,11 @@ export default function OperatorHomePage() {
   const [collectionError, setCollectionError] = useState<string | null>(null);
   const [collectionDone, setCollectionDone] = useState(false);
 
+  const [tasks, setTasks] = useState<OperatorTask[]>([]);
+  const [doneToday, setDoneToday] = useState(0);
+  const [openTask, setOpenTask] = useState<OperatorTask | null>(null);
+  const [advancing, setAdvancing] = useState(false);
+
   function loadMe() {
     fetch("/api/auth/operator/me")
       .then((res) => res.json())
@@ -51,6 +69,7 @@ export default function OperatorHomePage() {
         }
         setOperatorName(data.operator.name);
         setOperatorAvatarUrl(data.operator.avatarUrl ?? null);
+        setOperatorIconKey(data.operator.iconKey ?? null);
         setPointId(data.device.pointId);
         setPointName(data.device.pointName);
         setRoaming(data.device.roaming === true);
@@ -70,11 +89,34 @@ export default function OperatorHomePage() {
       .then((data) => setZones((data.zones ?? []).map((z: ZoneOption) => ({ id: z.id, name: z.name }))));
   }
 
+  function loadTasks() {
+    fetch("/api/operator/tasks")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+        setTasks(data.tasks ?? []);
+        setDoneToday(data.doneToday ?? 0);
+      });
+  }
+
   useEffect(() => {
     loadMe();
     loadZones();
+    loadTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
+
+  async function advanceOpenTask() {
+    if (!openTask) return;
+    setAdvancing(true);
+    try {
+      await fetch(`/api/operator/tasks/${openTask.id}/progress`, { method: "POST" });
+      setOpenTask(null);
+      loadTasks();
+    } finally {
+      setAdvancing(false);
+    }
+  }
 
   async function handleSwitchOperator() {
     await fetch("/api/auth/operator/logout", { method: "POST" });
@@ -104,6 +146,10 @@ export default function OperatorHomePage() {
   async function handleCollection(event: FormEvent) {
     event.preventDefault();
     setCollectionError(null);
+    if (!collectionZoneId) {
+      setCollectionError(t.operatorApp.selectZone);
+      return;
+    }
 
     const res = await fetch("/api/operator/collection", {
       method: "POST",
@@ -119,6 +165,14 @@ export default function OperatorHomePage() {
     setCollectionAmount("");
   }
 
+  function openCollection() {
+    setCollectionZoneId("");
+    setCollectionAmount("");
+    setCollectionError(null);
+    setCollectionDone(false);
+    setShowCollection(true);
+  }
+
   if (checking) return null;
 
   return (
@@ -128,6 +182,10 @@ export default function OperatorHomePage() {
           {operatorAvatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={operatorAvatarUrl} alt="" className="size-21 rounded-full object-cover" />
+          ) : operatorIconKey ? (
+            <div className="flex size-21 items-center justify-center rounded-full bg-primary/10">
+              <AssetOrZoneIcon iconKey={operatorIconKey} className="size-12" />
+            </div>
           ) : (
             <div className="flex size-21 items-center justify-center rounded-full bg-primary text-3xl font-bold text-primary-foreground">
               {operatorName?.slice(0, 1).toUpperCase()}
@@ -193,14 +251,15 @@ export default function OperatorHomePage() {
           </PressableScale>
         )}
 
-        <div className="mt-6 flex flex-col gap-4">
+        <div className={cn("mt-6 grid gap-2.5", workTimeEnabled ? "grid-cols-3" : "grid-cols-2")}>
           <PressableScale>
             <Button
-              className="h-14 w-full gap-2 rounded-control text-base font-bold"
+              className="flex h-24 w-full flex-col items-center justify-center gap-1.5 rounded-control p-2 text-center text-xs font-bold"
               onClick={() => router.push("/operator/submit")}
             >
-              <ClipboardCheck className="size-5" />
-              {t.operatorApp.submitResults}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/api/icon-library/app-icons/calculator.svg" alt="" className="size-7" />
+              <span className="leading-tight">{t.operatorApp.submitResults}</span>
             </Button>
           </PressableScale>
 
@@ -208,81 +267,143 @@ export default function OperatorHomePage() {
             <PressableScale>
               <Button
                 variant="outline"
-                className="h-14 w-full gap-2 rounded-control border-2 text-base font-bold"
+                className="flex h-24 w-full flex-col items-center justify-center gap-1.5 rounded-control border-2 p-2 text-center text-xs font-bold"
                 onClick={() => router.push("/operator/work-time?add=1")}
               >
-                <Clock className="size-5" />
-                {t.operatorApp.workTime.addShiftButton}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/api/icon-library/app-icons/clock.svg" alt="" className="size-7" />
+                <span className="leading-tight">{t.operatorApp.workTime.addShiftButton}</span>
               </Button>
             </PressableScale>
           )}
 
-          {!showCollection ? (
-            <PressableScale>
-              <Button
-                variant="outline"
-                className="h-14 w-full gap-2 rounded-control border-2 text-base font-bold"
-                onClick={() => {
-                  setShowCollection(true);
-                  setCollectionDone(false);
-                }}
-              >
-                <Banknote className="size-5" />
-                {t.operatorApp.collection}
-              </Button>
-            </PressableScale>
-          ) : (
-            <form onSubmit={handleCollection} className="flex flex-col gap-3 rounded-control border-2 border-border p-3">
-              {collectionDone ? (
-                <p className="text-body-airbnb text-success">{t.operatorApp.collectionDone}</p>
-              ) : (
-                <>
-                  <Label htmlFor="collectionZone">{t.operatorApp.zoneLabel}</Label>
-                  <select
-                    id="collectionZone"
-                    className="h-14 rounded-control border-2 border-input bg-background px-3 text-base"
-                    value={collectionZoneId}
-                    onChange={(e) => setCollectionZoneId(e.target.value)}
-                    required
-                  >
-                    <option value="">{t.operatorApp.selectZone}</option>
-                    {zones.map((z) => (
-                      <option key={z.id} value={z.id}>
-                        {z.name}
-                      </option>
-                    ))}
-                  </select>
-                  <Label htmlFor="collectionAmount">{t.operatorApp.collectionAmountLabel}</Label>
-                  <Input
-                    id="collectionAmount"
-                    inputMode="numeric"
-                    className="h-14 border-2 text-lg tabular-nums"
-                    value={collectionAmount}
-                    onChange={(e) => setCollectionAmount(e.target.value)}
-                    required
-                  />
-                  {collectionError && <p className="text-sm text-destructive">{collectionError}</p>}
-                  <PressableScale>
-                    <Button type="submit" className="h-12 w-full gap-2">
-                      <Check className="size-4" />
-                      {t.operatorApp.recordCollection}
-                    </Button>
-                  </PressableScale>
-                </>
-              )}
-              <Button
-                type="button"
-                variant="link"
-                className="h-auto gap-1 p-0 text-sm"
-                onClick={() => setShowCollection(false)}
-              >
-                <X className="size-4" />
-                {t.common.close}
-              </Button>
-            </form>
-          )}
+          <PressableScale>
+            <Button
+              variant="outline"
+              className="flex h-24 w-full flex-col items-center justify-center gap-1.5 rounded-control border-2 p-2 text-center text-xs font-bold"
+              onClick={openCollection}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/api/icon-library/app-icons/Transfer%20Money.svg" alt="" className="size-7" />
+              <span className="leading-tight">{t.operatorApp.collection}</span>
+            </Button>
+          </PressableScale>
         </div>
       </SpringCard>
+
+      <SpringCard hover={false} className="mt-4 w-full max-w-sm text-left">
+        <div className="mb-1.5 flex items-baseline justify-between">
+          <h2 className="text-[14px] font-extrabold tracking-[-0.01em]">{t.operatorApp.tasks.title}</h2>
+          <span className="text-caption-airbnb">
+            {tasks.length > 0
+              ? `${tasks.length} ${t.operatorApp.tasks.activeCountSuffix}`
+              : t.operatorApp.tasks.allDone}
+          </span>
+        </div>
+        {tasks.length === 0 ? (
+          <p className="py-3 text-center text-caption-airbnb">{t.operatorApp.tasks.noActiveTasks}</p>
+        ) : (
+          tasks.map((task) => (
+            <button
+              key={task.id}
+              type="button"
+              onClick={() => setOpenTask(task)}
+              className="flex w-full items-center gap-2.5 border-t border-border py-3 text-left first:border-t-0"
+            >
+              <span
+                className={cn(
+                  "flex size-5.5 shrink-0 items-center justify-center rounded-full border-2",
+                  task.status === "doing" ? "border-warning bg-warning/15" : "border-muted-foreground/40"
+                )}
+              >
+                {task.status === "doing" && <span className="size-2 rounded-full bg-warning" />}
+              </span>
+              <span className="min-w-0 grow">
+                <span className="block text-body-airbnb font-semibold leading-snug">{task.title}</span>
+                {task.note && <span className="mt-0.5 block text-caption-airbnb leading-snug">{task.note}</span>}
+                <span className="block text-caption-airbnb">
+                  {task.status === "doing" ? t.operatorApp.tasks.statusDoing : t.operatorApp.tasks.statusTodo}
+                  {task.shared && ` · ${t.operatorApp.tasks.sharedSuffix}`}
+                </span>
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            </button>
+          ))
+        )}
+        {doneToday > 0 && (
+          <div className="mt-1 flex items-center gap-2 border-t border-border pt-3 text-caption-airbnb">
+            <Check className="size-3.5 shrink-0" />
+            {t.operatorApp.tasks.doneTodayPrefix} {doneToday}
+          </div>
+        )}
+      </SpringCard>
+
+      <BottomSheet open={openTask !== null} onClose={() => setOpenTask(null)}>
+        {openTask && (
+          <div className="flex flex-col gap-3 pt-2">
+            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{openTask.title}</h2>
+            <p className="text-body-airbnb text-muted-foreground">{openTask.note || t.operatorApp.tasks.noNote}</p>
+            <PressableScale>
+              <Button
+                className="h-14 w-full gap-2 text-base font-bold"
+                disabled={advancing}
+                onClick={advanceOpenTask}
+              >
+                {openTask.status === "todo" ? t.operatorApp.tasks.takeInProgress : t.operatorApp.tasks.markDone}
+              </Button>
+            </PressableScale>
+          </div>
+        )}
+      </BottomSheet>
+
+      <BottomSheet open={showCollection} onClose={() => setShowCollection(false)}>
+        <form onSubmit={handleCollection} className="flex flex-col gap-4 pt-2">
+          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operatorApp.collection}</h2>
+          {collectionDone ? (
+            <p className="text-body-airbnb text-success">{t.operatorApp.collectionDone}</p>
+          ) : (
+            <>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="collectionZone">{t.operatorApp.zoneLabel}</Label>
+                <Select
+                  value={collectionZoneId || null}
+                  onValueChange={(v) => setCollectionZoneId(v ?? "")}
+                  items={zones.map((z) => ({ value: z.id, label: z.name }))}
+                >
+                  <SelectTrigger id="collectionZone" className="h-14 border-2 text-base">
+                    <SelectValue placeholder={t.operatorApp.selectZone} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {zones.map((z) => (
+                      <SelectItem key={z.id} value={z.id}>
+                        {z.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="collectionAmount">{t.operatorApp.collectionAmountLabel}</Label>
+                <Input
+                  id="collectionAmount"
+                  inputMode="numeric"
+                  className="h-14 border-2 text-lg tabular-nums"
+                  value={collectionAmount}
+                  onChange={(e) => setCollectionAmount(e.target.value)}
+                  required
+                />
+              </div>
+              {collectionError && <p className="text-sm text-destructive">{collectionError}</p>}
+              <PressableScale>
+                <Button type="submit" className="h-14 w-full gap-2 text-base font-bold">
+                  <Check className="size-4" />
+                  {t.operatorApp.recordCollection}
+                </Button>
+              </PressableScale>
+            </>
+          )}
+        </form>
+      </BottomSheet>
 
       <button
         type="button"

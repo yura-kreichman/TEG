@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus, Pencil, Trash2, Link2, ImagePlus, Check } from "lucide-react";
+import { Plus, Pencil, Trash2, Link2, ImagePlus, Check, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -234,21 +234,25 @@ export default function PointsPage() {
                   <StaggerItem key={point.id}>
                     <SpringCard animate={false}>
                       <div className="flex items-center gap-3">
-                        <TileIcon iconKey={point.iconKey} />
-                        <div className="min-w-0 grow">
-                          <Link href={`/points/${point.id}`} className="text-card-title hover:underline">
-                            {point.name}
-                          </Link>
-                          <p className="text-caption-airbnb">
-                            {point.zonesCount} {t.points.zonesSuffix}
-                            {point.devices.length > 0 && (
-                              <>
-                                {" · "}
-                                {activatedCount} {t.points.devicesActivatedText}
-                              </>
-                            )}
-                          </p>
-                        </div>
+                        <Link
+                          href={`/points/${point.id}`}
+                          className="-m-1.5 flex min-w-0 grow items-center gap-3 rounded-control bg-muted/50 p-1.5 transition-colors hover:bg-muted active:bg-muted"
+                        >
+                          <TileIcon iconKey={point.iconKey} />
+                          <div className="min-w-0 grow">
+                            <div className="text-card-title">{point.name}</div>
+                            <p className="text-caption-airbnb">
+                              {point.zonesCount} {t.points.zonesSuffix}
+                              {point.devices.length > 0 && (
+                                <>
+                                  {" · "}
+                                  {activatedCount} {t.points.devicesActivatedText}
+                                </>
+                              )}
+                            </p>
+                          </div>
+                          <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
+                        </Link>
                         <KebabButton onClick={() => openPointKebab(point)} label={t.points.renamePoint} />
                       </div>
 

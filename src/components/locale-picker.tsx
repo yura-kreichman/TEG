@@ -1,18 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 const LABELS: Record<string, string> = {
   ru: "Русский",
   en: "English",
   ro: "Română",
+  uk: "Українська",
 };
 
-/** Tenant-wide default language — set only by the Owner (docs/spec/00-architecture.md). */
+/**
+ * Tenant-wide default language — set only by the Owner (docs/spec/00-architecture.md).
+ * Full page reload after saving, not router.refresh() — same fix as
+ * AuthLocalePicker (2026-07-10): router.refresh() wasn't reliably re-running
+ * the root layout that resolves the locale in this Next.js version.
+ */
 export function LocalePicker() {
-  const router = useRouter();
   const [options, setOptions] = useState<string[]>([]);
   const [current, setCurrent] = useState<string>("ru");
   const [saving, setSaving] = useState(false);
@@ -26,7 +30,8 @@ export function LocalePicker() {
       });
   }, []);
 
-  async function handleSelect(locale: string) {
+  async function handleSelect(locale: string | null) {
+    if (!locale) return;
     setSaving(true);
     setCurrent(locale);
     await fetch("/api/tenant/locale", {
@@ -34,28 +39,23 @@ export function LocalePicker() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ locale }),
     });
-    setSaving(false);
-    router.refresh();
+    window.location.reload();
   }
 
   if (options.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((locale) => (
-        <button
-          key={locale}
-          type="button"
-          disabled={saving}
-          onClick={() => handleSelect(locale)}
-          className={cn(
-            "rounded-control border px-3 py-2 text-sm transition-colors",
-            current === locale ? "border-primary" : "border-border hover:bg-muted"
-          )}
-        >
-          {LABELS[locale] ?? locale}
-        </button>
-      ))}
-    </div>
+    <Select value={current} onValueChange={handleSelect} disabled={saving}>
+      <SelectTrigger className="max-w-xs">
+        <SelectValue>{LABELS[current] ?? current}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((locale) => (
+          <SelectItem key={locale} value={locale}>
+            {LABELS[locale] ?? locale}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

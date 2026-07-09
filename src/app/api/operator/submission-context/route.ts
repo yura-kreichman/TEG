@@ -11,8 +11,8 @@ export async function GET() {
   const { operator, point } = ctx;
 
   const zoneWhere = operator.allZonesAccess
-    ? { pointId: point.id }
-    : { pointId: point.id, operatorsWithAccess: { some: { id: operator.id } } };
+    ? { pointId: point.id, active: true }
+    : { pointId: point.id, active: true, operatorsWithAccess: { some: { id: operator.id } } };
 
   const zones = await prisma.zone.findMany({
     where: zoneWhere,

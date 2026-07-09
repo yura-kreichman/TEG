@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { RefreshCw } from "lucide-react";
 import { AuthCard } from "@/components/auth-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,24 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [captchaQuestion, setCaptchaQuestion] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaAnswer, setCaptchaAnswer] = useState("");
+
+  async function loadCaptcha() {
+    const res = await fetch("/api/auth/captcha");
+    const data = await res.json();
+    setCaptchaQuestion(data.question);
+    setCaptchaToken(data.token);
+    setCaptchaAnswer("");
+  }
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    loadCaptcha();
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
@@ -28,12 +47,19 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tenantName, email, password }),
+        body: JSON.stringify({
+          tenantName,
+          email,
+          password,
+          captchaToken,
+          captchaAnswer: Number(captchaAnswer),
+        }),
       });
       const data = await res.json();
 
       if (!res.ok) {
         setError(data.error ?? "Не удалось зарегистрироваться");
+        if (data.captchaFailed) await loadCaptcha();
         return;
       }
 
@@ -88,6 +114,32 @@ export default function RegisterPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
           <p className="text-caption-airbnb">{t.auth.minPasswordHint}</p>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="captcha">
+            {t.auth.captchaLabel} {captchaQuestion}?
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              id="captcha"
+              type="text"
+              inputMode="numeric"
+              required
+              placeholder={t.auth.captchaPlaceholder}
+              value={captchaAnswer}
+              onChange={(e) => setCaptchaAnswer(e.target.value)}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label={t.auth.captchaRefresh}
+              onClick={loadCaptcha}
+            >
+              <RefreshCw className="size-4" />
+            </Button>
+          </div>
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}

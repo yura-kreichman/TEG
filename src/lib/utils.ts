@@ -19,3 +19,15 @@ const twMerge = extendTailwindMerge({
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+// Оператор/Актив хранят colorTag как #rrggbb (ColorTagPicker). Фон
+// карточки/строки — не плоская заливка, а лёгкий градиент (фидбек
+// пользователя 2026-07-09: "используй везде лёгкие градиенты, изменяй
+// прозрачность в процентах немного" — первая версия с плоскими 20%
+// оказалась слишком выраженной). CSS Color Level 4 hex-альфа (#rrggbb + 2
+// hex-цифры) без rgba/color-mix парсинга; 26/0d ≈ 15%/5% — лёгкий переход,
+// не сплошной цвет.
+export function colorTagGradient(colorTag: string | null | undefined): string | undefined {
+  if (!colorTag || !/^#[0-9a-fA-F]{6}$/.test(colorTag)) return undefined
+  return `linear-gradient(135deg, ${colorTag}26, ${colorTag}0d)`
+}

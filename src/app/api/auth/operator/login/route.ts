@@ -7,7 +7,7 @@ import {
   getActivatedDevice,
 } from "@/lib/operator-auth";
 import { setAccentCookie } from "@/lib/accent";
-import { setThemeModeCookie } from "@/lib/theme-mode";
+import { getPreAuthLocaleCookie } from "@/lib/i18n";
 
 export async function POST(request: Request) {
   const device = await getActivatedDevice();
@@ -57,13 +57,21 @@ export async function POST(request: Request) {
   });
   await createOperatorSession(operator.id);
 
+  // Whatever language the operator picked on the login screen (see
+  // AuthLocalePicker) becomes their persisted personal preference — otherwise
+  // it silently reverted to the tenant's language the instant they logged in
+  // (found 2026-07-10, "у Оператора не переключается язык").
+  const preAuthLocale = await getPreAuthLocaleCookie();
+  if (preAuthLocale && preAuthLocale !== operator.locale) {
+    await prisma.operator.update({ where: { id: operator.id }, data: { locale: preAuthLocale } });
+  }
+
   const tenant = await prisma.tenant.findUnique({
     where: { id: device.point.tenantId },
-    select: { accentScheme: true, themeMode: true },
+    select: { accentScheme: true },
   });
   if (tenant) {
     await setAccentCookie(tenant.accentScheme);
-    await setThemeModeCookie(tenant.themeMode);
   }
 
   return NextResponse.json({ id: operator.id, name: operator.name });

@@ -33,7 +33,7 @@ export async function GET() {
 
   return NextResponse.json({
     device: deviceInfo,
-    operator: { id: operator.id, name: operator.name, avatarUrl: operator.avatarUrl },
+    operator: { id: operator.id, name: operator.name, avatarUrl: operator.avatarUrl, iconKey: operator.iconKey },
     workTimeEnabled,
   });
 }

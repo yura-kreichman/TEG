@@ -17,6 +17,7 @@ export async function GET() {
       name: true,
       active: true,
       avatarUrl: true,
+      iconKey: true,
       colorTag: true,
       allZonesAccess: true,
       allowedZones: { select: { id: true, name: true } },

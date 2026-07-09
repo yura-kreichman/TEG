@@ -1,0 +1,5 @@
+# Скрипты деплоя выполняются на Linux VPS — CRLF от Git for Windows их сломает
+# (shebang станет "#!/usr/bin/env bash\r"). Остальное — авто по типу файла.
+*.sh text eol=lf
+deploy/post-receive text eol=lf
+Dockerfile text eol=lf
