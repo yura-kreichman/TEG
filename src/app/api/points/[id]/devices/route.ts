@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { INSTALL_TOKEN_TTL_MS, generateInstallToken } from "@/lib/operator-auth";
+import { getRequestOrigin } from "@/lib/request-origin";
 
 export async function POST(
   request: Request,
@@ -31,7 +32,7 @@ export async function POST(
     },
   });
 
-  const installLink = `${new URL(request.url).origin}/activate-device?token=${token}`;
+  const installLink = `${getRequestOrigin(request)}/activate-device?token=${token}`;
 
   return NextResponse.json({ id: device.id, installLink }, { status: 201 });
 }
