@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireOwner } from "@/lib/require-owner";
+import { findTenantPoint, requireOwner } from "@/lib/require-owner";
 import { round2 } from "@/lib/reports";
-
-async function findTenantPoint(tenantId: string, pointId: string) {
-  const point = await prisma.point.findUnique({ where: { id: pointId } });
-  if (!point || point.tenantId !== tenantId) return null;
-  return point;
-}
 
 const WEEKS = 4;
 

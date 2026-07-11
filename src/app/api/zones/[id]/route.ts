@@ -17,7 +17,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
 
   const [tariffs, assets] = await Promise.all([
     prisma.tariff.findMany({ where: { zoneId: id }, orderBy: { order: "asc" } }),
-    prisma.asset.findMany({ where: { zoneId: id }, orderBy: { createdAt: "asc" } }),
+    prisma.asset.findMany({ where: { zoneId: id }, orderBy: { sortOrder: "asc" } }),
   ]);
 
   const submissionCount = await prisma.zoneSubmission.count({ where: { zoneId: id } });

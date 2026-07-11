@@ -10,16 +10,9 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
+import { pad, toDateStr } from "@/lib/datetime-format";
 
 type Granularity = "day" | "week" | "month" | "year";
-
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
-
-function toDateStr(d: Date) {
-  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
-}
 
 interface Report {
   business: { revenue: number; expense: number; profit: number };

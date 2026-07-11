@@ -33,12 +33,18 @@ export async function GET(request: Request) {
   const currentRate = await getRateForDate(ctx.operator.id, new Date());
   const tenant = await prisma.tenant.findUnique({
     where: { id: ctx.point.tenantId },
-    select: { defaultShiftStartTime: true },
+    select: {
+      defaultShiftStartTime: true,
+      earlyToleranceMinutes: true,
+      lateToleranceMinutes: true,
+    },
   });
 
   return NextResponse.json({
     ...balance,
     currentRate,
     defaultShiftStartTime: tenant?.defaultShiftStartTime ?? "10:00",
+    earlyToleranceMinutes: tenant?.earlyToleranceMinutes ?? 120,
+    lateToleranceMinutes: tenant?.lateToleranceMinutes ?? 120,
   });
 }

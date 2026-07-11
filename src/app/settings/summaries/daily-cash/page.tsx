@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { Switch } from "@/components/ui/switch";
-import { WheelTimePicker } from "@/components/wheel-time-picker";
+import { TimeSelect } from "@/components/time-select";
 import { TelegramPreviewBubble } from "@/components/telegram-preview-bubble";
 import { useI18n } from "@/components/i18n-provider";
 import { OwnerShell } from "@/components/owner-shell";
@@ -98,7 +98,6 @@ export default function DailyCashSummaryEditorPage() {
   if (checking) return null;
 
   const fixedTime = parseTime(settings.fixedTime);
-  const boundaryTime = parseTime(settings.businessDayBoundary);
 
   return (
     <OwnerShell>
@@ -141,11 +140,19 @@ export default function DailyCashSummaryEditorPage() {
                   </span>
                 </button>
 
-                <button
-                  type="button"
+                <div
+                  role="radio"
+                  aria-checked={settings.sendMode === "fixed"}
+                  tabIndex={0}
                   onClick={() => patch({ sendMode: "fixed" as DailyCashSendMode })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      patch({ sendMode: "fixed" as DailyCashSendMode });
+                    }
+                  }}
                   className={cn(
-                    "mb-1 flex w-full items-start gap-2.5 rounded-control border p-3.5 text-left transition-colors",
+                    "mb-1 flex w-full cursor-pointer items-start gap-2.5 rounded-control border p-3.5 text-left transition-colors",
                     settings.sendMode === "fixed" ? "border-primary bg-primary/10" : "border-border bg-muted/20"
                   )}
                 >
@@ -164,7 +171,7 @@ export default function DailyCashSummaryEditorPage() {
                     <span className="mt-0.5 block text-caption-airbnb leading-relaxed">{t.summaries.modeFixedSub}</span>
                     {settings.sendMode === "fixed" && (
                       <span className="mt-2 block" onClick={(e) => e.stopPropagation()}>
-                        <WheelTimePicker
+                        <TimeSelect
                           hour={fixedTime.hour}
                           minute={fixedTime.minute}
                           onChange={(v) => patch({ fixedTime: formatTime(v.hour, v.minute) })}
@@ -172,18 +179,6 @@ export default function DailyCashSummaryEditorPage() {
                       </span>
                     )}
                   </span>
-                </button>
-
-                <div className="flex items-center justify-between gap-3 border-t border-border py-3">
-                  <div className="min-w-0">
-                    <div className="text-body-airbnb">{t.summaries.businessDayBoundaryLabel}</div>
-                    <div className="text-caption-airbnb">{t.summaries.businessDayBoundarySub}</div>
-                  </div>
-                  <WheelTimePicker
-                    hour={boundaryTime.hour}
-                    minute={boundaryTime.minute}
-                    onChange={(v) => patch({ businessDayBoundary: formatTime(v.hour, v.minute) })}
-                  />
                 </div>
 
                 <div className="flex items-center justify-between gap-3 border-t border-border py-3">

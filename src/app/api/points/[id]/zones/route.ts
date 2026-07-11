@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkPackageLimit } from "@/lib/packages";
 import { requireOwner } from "@/lib/require-owner";
 import { isZoneAccountingMode } from "@/lib/results-calc";
 
@@ -17,7 +18,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]
 
   const zones = await prisma.zone.findMany({
     where: { pointId },
-    include: { tariffs: { orderBy: { order: "asc" } }, assets: true },
+    include: { tariffs: { orderBy: { order: "asc" } }, assets: { orderBy: { sortOrder: "asc" } } },
     orderBy: { createdAt: "asc" },
   });
 
@@ -45,15 +46,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
   }
 
   const zoneCount = await prisma.zone.count({ where: { point: { tenantId: owner.tenantId } } });
-  const pkg = await prisma.tenant
-    .findUnique({ where: { id: owner.tenantId }, include: { package: true } })
-    .then((t) => t?.package);
-  if (pkg && zoneCount >= pkg.maxZones) {
-    return NextResponse.json(
-      { error: `Достигнут лимит зон по вашему пакету (${pkg.maxZones})` },
-      { status: 409 }
-    );
-  }
+  const limitError = await checkPackageLimit(owner.tenantId, "maxZones", zoneCount);
+  if (limitError) return limitError;
 
   const zone = await prisma.zone.create({
     data: {

@@ -1,22 +1,13 @@
-import { createHmac, timingSafeEqual } from "crypto";
+import { timingSafeEqual } from "crypto";
+import { sign } from "@/lib/session-crypto";
 
 // Lightweight arithmetic captcha for /register (docs feedback 2026-07-10) —
 // stops generic spam bots that blindly fill every field of a form, not a
 // serious anti-abuse measure. Deliberately no third-party service (reCAPTCHA
 // etc.) — same self-hosted philosophy as the rest of auth. Stateless: the
-// expected answer is embedded in a signed token (same HMAC approach as
-// src/lib/auth.ts session tokens), so there's no server-side challenge store.
+// expected answer is embedded in a signed token (same HMAC scheme as session
+// tokens, see src/lib/session-crypto.ts), so there's no server-side challenge store.
 const CAPTCHA_TTL_MS = 5 * 60 * 1000; // 5 minutes — enough to fill the form, short enough to limit replay
-
-function getSecret() {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) throw new Error("AUTH_SECRET is not set");
-  return secret;
-}
-
-function sign(value: string) {
-  return createHmac("sha256", getSecret()).update(value).digest("base64url");
-}
 
 export interface CaptchaChallenge {
   question: string;

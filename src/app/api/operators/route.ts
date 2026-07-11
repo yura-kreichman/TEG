@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkPackageLimit } from "@/lib/packages";
 import { requireOwner } from "@/lib/require-owner";
 import { hashPin } from "@/lib/auth";
 import { isPinTakenInTenant } from "@/lib/operator-auth";
@@ -23,7 +24,7 @@ export async function GET() {
       allowedZones: { select: { id: true, name: true } },
       createdAt: true,
     },
-    orderBy: { createdAt: "asc" },
+    orderBy: { sortOrder: "asc" },
   });
 
   return NextResponse.json({ operators });
@@ -48,15 +49,8 @@ export async function POST(request: Request) {
   }
 
   const operatorCount = await prisma.operator.count({ where: { tenantId: owner.tenantId } });
-  const pkg = await prisma.tenant
-    .findUnique({ where: { id: owner.tenantId }, include: { package: true } })
-    .then((t) => t?.package);
-  if (pkg && operatorCount >= pkg.maxOperators) {
-    return NextResponse.json(
-      { error: `Достигнут лимит операторов по вашему пакету (${pkg.maxOperators})` },
-      { status: 409 }
-    );
-  }
+  const limitError = await checkPackageLimit(owner.tenantId, "maxOperators", operatorCount);
+  if (limitError) return limitError;
 
   if (await isPinTakenInTenant(owner.tenantId, pin)) {
     return NextResponse.json(
@@ -71,6 +65,8 @@ export async function POST(request: Request) {
       name: name.trim(),
       pinHash: await hashPin(pin),
       createdByUserId: owner.user.id,
+      // Новый оператор — в конец списка, не перед существующими.
+      sortOrder: operatorCount,
     },
   });
 

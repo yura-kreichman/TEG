@@ -1,38 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-
-type Granularity = "day" | "week" | "month" | "year";
-
-function isGranularity(value: unknown): value is Granularity {
-  return value === "day" || value === "week" || value === "month" || value === "year";
-}
-
-// Период для карточки "Бизнес: расходы и прибыль" — иначе сумма растёт
-// бесконечно с возрастом тенанта. Текущий (незавершённый) период обрезается
-// сегодняшним днём (тот же приём, что в компактном календаре "Показаний по
-// дням" — не показываем то, чего ещё не произошло), прошлые периоды — целиком.
-function getPeriodRange(granularity: Granularity, anchor: Date, today: Date) {
-  let start: Date;
-  let end: Date;
-  if (granularity === "day") {
-    start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate()));
-    end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
-  } else if (granularity === "week") {
-    const dayIndex = (anchor.getUTCDay() + 6) % 7; // 0=Mon
-    start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate() - dayIndex));
-    end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
-  } else if (granularity === "month") {
-    start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), 1));
-    end = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 1));
-  } else {
-    start = new Date(Date.UTC(anchor.getUTCFullYear(), 0, 1));
-    end = new Date(Date.UTC(anchor.getUTCFullYear() + 1, 0, 1));
-  }
-  const todayEnd = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 1));
-  if (end > todayEnd) end = todayEnd;
-  return { start, end };
-}
+import { getPeriodRange, isPeriodGranularity, type PeriodGranularity } from "@/lib/reports";
 
 // "Бизнес: расходы и прибыль" (за выбранный период) и текущий остаток "сколько
 // наличных должно быть на точке" (docs/spec/02-money.md, всегда весь журнал —
@@ -56,7 +25,7 @@ export async function GET(request: Request) {
   const toParam = searchParams.get("to");
   let start: Date;
   let end: Date;
-  let granularity: Granularity | "custom";
+  let granularity: PeriodGranularity | "custom";
   if (fromParam && toParam && /^\d{4}-\d{2}-\d{2}$/.test(fromParam) && /^\d{4}-\d{2}-\d{2}$/.test(toParam)) {
     granularity = "custom";
     start = new Date(`${fromParam}T00:00:00.000Z`);
@@ -66,7 +35,7 @@ export async function GET(request: Request) {
     if (start > end) start = end;
   } else {
     const granularityParam = searchParams.get("granularity");
-    granularity = isGranularity(granularityParam) ? granularityParam : "month";
+    granularity = isPeriodGranularity(granularityParam) ? granularityParam : "month";
     const anchorParam = searchParams.get("anchor");
     const anchor =
       anchorParam && /^\d{4}-\d{2}-\d{2}$/.test(anchorParam) ? new Date(`${anchorParam}T00:00:00.000Z`) : new Date();

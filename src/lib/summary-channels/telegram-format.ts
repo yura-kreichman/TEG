@@ -1,5 +1,6 @@
 import type { ZoneSummarySettingsData, DailyCashSummarySettingsData, ShiftCloseSummarySettingsData } from "@/lib/summary-settings";
 import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData } from "./types";
+import { formatDuration, formatSummaryDate, formatUtcTime } from "./format-shared";
 
 // Чистые функции построения текста Telegram-сводок — без сети, без БД, без
 // Bot API. Каждая — вход "данные + настройки", выход "готовый текст". Это то,
@@ -10,19 +11,8 @@ import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData } fro
 // голые .toFixed(2). День/время — UTC, как и весь остальной server-side
 // day-boundary код в проекте (см. business-day.ts).
 
-const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-
 function formatDate(d: Date): string {
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const weekday = WEEKDAYS[(d.getUTCDay() + 6) % 7];
-  return `${day}/${month} (${weekday})`;
-}
-
-function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m ? `${h} ч ${m} мин` : `${h} ч`;
+  return formatSummaryDate(d, "/");
 }
 
 export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneSummarySettingsData): string {
@@ -110,9 +100,7 @@ export function formatShiftCloseSummaryTelegram(
 ): string {
   const lines: string[] = [`🕐 <b>${data.operatorName} · смена ${formatDate(data.startAt)}</b>`, ""];
 
-  const fmtTime = (d: Date) => `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
-
-  if (settings.showPeriod) lines.push(`🕐 Период: ${fmtTime(data.startAt)} – ${fmtTime(data.endAt)}`);
+  if (settings.showPeriod) lines.push(`🕐 Период: ${formatUtcTime(data.startAt)} – ${formatUtcTime(data.endAt)}`);
   if (settings.showHours) lines.push(`⏱ Отработано: ${formatDuration(data.minutes)}`);
   if (settings.showAdvance && data.advanceAmount > 0) lines.push(`💸 Аванс: ${data.advanceAmount.toFixed(2)}`);
   if (settings.showBonus && data.bonusAmount > 0) lines.push(`🏆 Премия: ${data.bonusAmount.toFixed(2)}`);

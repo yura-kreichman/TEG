@@ -1,22 +1,12 @@
 import type { ZoneSummarySettingsData, DailyCashSummarySettingsData, ShiftCloseSummarySettingsData } from "@/lib/summary-settings";
 import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData } from "./types";
+import { formatDuration, formatSummaryDate, formatUtcTime } from "./format-shared";
 
 // Чистые функции построения HTML-писем — тот же принцип, что telegram-format.ts:
 // данные + настройки → готовый {subject, html}, без SMTP, без сети.
 
-const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-
 function formatDate(d: Date): string {
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const weekday = WEEKDAYS[(d.getUTCDay() + 6) % 7];
-  return `${day}.${month} (${weekday})`;
-}
-
-function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m ? `${h} ч ${m} мин` : `${h} ч`;
+  return formatSummaryDate(d, ".");
 }
 
 function escapeHtml(s: string): string {
@@ -114,10 +104,9 @@ export function formatShiftCloseSummaryEmail(
   companyName: string
 ): { subject: string; html: string } {
   const subject = `Закрытие смены · ${data.operatorName} · ${formatDate(data.startAt)}`;
-  const fmtTime = (d: Date) => `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
   const rows: EmailRow[] = [];
 
-  if (settings.showPeriod) rows.push({ label: "Период", value: `${fmtTime(data.startAt)} – ${fmtTime(data.endAt)}` });
+  if (settings.showPeriod) rows.push({ label: "Период", value: `${formatUtcTime(data.startAt)} – ${formatUtcTime(data.endAt)}` });
   if (settings.showHours) rows.push({ label: "Отработано", value: formatDuration(data.minutes) });
   if (settings.showAdvance && data.advanceAmount > 0) rows.push({ label: "Аванс", value: data.advanceAmount.toFixed(2) });
   if (settings.showBonus && data.bonusAmount > 0) rows.push({ label: "Премия", value: data.bonusAmount.toFixed(2) });

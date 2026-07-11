@@ -1,17 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { isTaskStatus } from "@/lib/tasks";
-
-const TASK_SELECT = {
-  id: true,
-  title: true,
-  note: true,
-  status: true,
-  createdAt: true,
-  assignedOperators: { select: { id: true, name: true, colorTag: true } },
-  assignedUsers: { select: { id: true, email: true } },
-} as const;
+import { TASK_SELECT, isTaskStatus } from "@/lib/tasks";
 
 async function findTenantTask(tenantId: string, taskId: string) {
   const task = await prisma.task.findUnique({ where: { id: taskId } });

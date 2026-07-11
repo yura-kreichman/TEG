@@ -17,6 +17,14 @@ import { StatusChip } from "@/components/status-chip";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
+import { formatDuration as formatDurationBase, formatTime } from "@/lib/datetime-format";
+import {
+  formatPeriodLabel as formatPeriodLabelFor,
+  isCurrentPeriod as isCurrentPeriodFor,
+  periodRange as periodRangeFor,
+  steppedAnchor,
+  type PeriodGranularity,
+} from "@/lib/period-nav";
 
 interface Profile {
   id: string;
@@ -27,6 +35,7 @@ interface Profile {
   colorTag: string | null;
   allZonesAccess: boolean;
   allowedZones: { id: string; name: string }[];
+  timeTrackingMode: "manual" | "auto";
 }
 
 interface Balance {
@@ -41,13 +50,15 @@ interface Balance {
 interface ShiftRow {
   id: string;
   startAt: string;
-  endAt: string;
-  minutes: number;
-  rate: number;
-  accrued: number;
+  endAt: string | null;
+  minutes: number | null;
+  rate: number | null;
+  accrued: number | null;
   advanceAmount: number;
   bonusAmount: number;
   edited: boolean;
+  open: boolean;
+  requiresEdit: boolean;
 }
 
 interface StandaloneMoneyOp {
@@ -63,20 +74,6 @@ interface PointOption {
   name: string;
 }
 
-type Granularity = "week" | "month";
-
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
-function toDateStr(d: Date) {
-  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
-}
-// Локальное время устройства (см. WorkTimePage/operator/work-time для того же
-// принципа) — показываем и редактируем то, что реально видно на часах, не UTC.
-function formatTime(iso: string) {
-  const d = new Date(iso);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 function timeInputValue(iso: string) {
   return formatTime(iso);
 }
@@ -94,17 +91,13 @@ export default function OperatorCardPage() {
   const [carryoverTotal, setCarryoverTotal] = useState(0);
   const [points, setPoints] = useState<PointOption[]>([]);
 
-  const [granularity, setGranularity] = useState<Granularity>("month");
+  const [granularity, setGranularity] = useState<PeriodGranularity>("month");
   const [anchor, setAnchor] = useState(() => new Date());
 
   const [moneyForm, setMoneyForm] = useState<"advance" | "bonus" | null>(null);
   const [moneyAmount, setMoneyAmount] = useState("");
   const [moneyPointId, setMoneyPointId] = useState("");
   const [moneyError, setMoneyError] = useState<string | null>(null);
-
-  const [rateFormOpen, setRateFormOpen] = useState(false);
-  const [rateValue, setRateValue] = useState("");
-  const [rateError, setRateError] = useState<string | null>(null);
 
   const [editingShift, setEditingShift] = useState<ShiftRow | null>(null);
   const [editStartTime, setEditStartTime] = useState("");
@@ -163,21 +156,8 @@ export default function OperatorCardPage() {
     await loadAll();
   }
 
-  function periodRange(): { from: string; to: string } {
-    const a = new Date(anchor);
-    if (granularity === "week") {
-      const dayIndex = (a.getUTCDay() + 6) % 7;
-      const start = new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), a.getUTCDate() - dayIndex));
-      const end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
-      return { from: toDateStr(start), to: toDateStr(end) };
-    }
-    const start = new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), 1));
-    const end = new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth() + 1, 0));
-    return { from: toDateStr(start), to: toDateStr(end) };
-  }
-
   async function loadAll() {
-    const { from, to } = periodRange();
+    const { from, to } = periodRangeFor(granularity, anchor);
     const [profileRes, summaryRes, shiftsRes, carryoverRes, pointsRes] = await Promise.all([
       fetch(`/api/operators/${params.id}`),
       fetch(`/api/operators/${params.id}/work-time/summary?from=${from}&to=${to}`),
@@ -223,33 +203,16 @@ export default function OperatorCardPage() {
   }, [granularity, anchor]);
 
   function isCurrentPeriod() {
-    const today = new Date();
-    if (granularity === "week") {
-      const weekStart = (d: Date) => {
-        const day = (d.getUTCDay() + 6) % 7;
-        return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day);
-      };
-      return weekStart(anchor) === weekStart(today);
-    }
-    return anchor.getUTCFullYear() === today.getUTCFullYear() && anchor.getUTCMonth() === today.getUTCMonth();
+    return isCurrentPeriodFor(granularity, anchor);
   }
 
   function stepPeriod(delta: number) {
     if (delta > 0 && isCurrentPeriod()) return;
-    const next = new Date(anchor);
-    if (granularity === "week") next.setUTCDate(next.getUTCDate() + delta * 7);
-    else next.setUTCMonth(next.getUTCMonth() + delta);
-    setAnchor(next);
+    setAnchor(steppedAnchor(granularity, anchor, delta));
   }
 
   function formatPeriodLabel() {
-    if (granularity === "week") {
-      const dayIndex = (anchor.getUTCDay() + 6) % 7;
-      const start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate() - dayIndex));
-      const end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
-      return `${start.getUTCDate()}–${end.getUTCDate()} ${t.readings.monthsGenitive[start.getUTCMonth()]}`;
-    }
-    return `${t.readings.months[anchor.getUTCMonth()]} ${anchor.getUTCFullYear()}`;
+    return formatPeriodLabelFor(granularity, anchor, t);
   }
 
   function formatShiftDate(iso: string) {
@@ -258,9 +221,7 @@ export default function OperatorCardPage() {
   }
 
   function formatDuration(minutes: number) {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return m ? `${h} ${t.operatorApp.workTime.hoursShort} ${m} ${t.operatorApp.workTime.minutesShort}` : `${h} ${t.operatorApp.workTime.hoursShort}`;
+    return formatDurationBase(minutes, t);
   }
 
   function warningText(code: string) {
@@ -292,32 +253,12 @@ export default function OperatorCardPage() {
     await loadAll();
   }
 
-  function openRateForm() {
-    setRateValue(balance ? String(balance.currentRate) : "");
-    setRateError(null);
-    setRateFormOpen(true);
-  }
-
-  async function submitRateForm() {
-    setRateError(null);
-    const res = await fetch(`/api/operators/${params.id}/work-time/rate`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rate: Number(rateValue) }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setRateError(data.error ?? t.operatorApp.workTime.saveError);
-      return;
-    }
-    setRateFormOpen(false);
-    await loadAll();
-  }
-
   function openShiftEdit(shift: ShiftRow) {
     setEditingShift(shift);
     setEditStartTime(timeInputValue(shift.startAt));
-    setEditEndTime(timeInputValue(shift.endAt));
+    // Открытая смена (docs/spec/05-work-time.md) — endAt ещё не задан;
+    // подставляем текущее время как разумный дефолт для закрытия владельцем.
+    setEditEndTime(timeInputValue(shift.endAt ?? new Date().toISOString()));
     setEditAdvance(shift.advanceAmount ? String(shift.advanceAmount) : "");
     setEditBonus(shift.bonusAmount ? String(shift.bonusAmount) : "");
     setEditReason("");
@@ -433,13 +374,16 @@ export default function OperatorCardPage() {
               </div>
               {moduleEnabled && balance && (
                 <div className="flex flex-col items-end gap-1">
-                  <span className="text-caption-airbnb">{t.operatorApp.workTime.rateLabel}</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[17px] font-bold tabular-nums">{balance.currentRate.toFixed(2)}</span>
-                    <KebabButton onClick={openRateForm} label={t.operatorApp.workTime.rateLabel} />
-                  </div>
+                  <span className="text-caption-airbnb text-muted-foreground">{t.operatorApp.workTime.rateLabel}</span>
+                  <span className="text-[17px] font-bold tabular-nums text-muted-foreground">
+                    {balance.currentRate.toFixed(2)}
+                  </span>
                 </div>
               )}
+              <KebabButton
+                onClick={() => router.push(`/operators/${params.id}/settings`)}
+                label={t.operators.actionsLabel}
+              />
             </div>
           </SpringCard>
 
@@ -547,22 +491,31 @@ export default function OperatorCardPage() {
                     item.kind === "shift" ? (
                       <div
                         key={`shift-${item.shift.id}`}
-                        className="flex items-start gap-2 border-t border-border py-3 first:border-t-0"
+                        className={cn(
+                          "flex items-start gap-2 border-t border-border py-3 first:border-t-0",
+                          item.shift.requiresEdit && "-mx-3 rounded-control border-t-0 bg-destructive/10 px-3"
+                        )}
                       >
                         <div className="flex flex-1 flex-col gap-0.5">
                           <div className="flex items-center justify-between">
                             <span className="flex items-center gap-1.5 text-body-airbnb font-semibold">
                               {formatShiftDate(item.shift.startAt)}
                               {item.shift.edited && <Pencil className="size-3 text-muted-foreground" />}
+                              {item.shift.requiresEdit && (
+                                <span className="text-caption-airbnb font-semibold text-destructive">
+                                  {t.operatorApp.workTime.requiresEditBadge}
+                                </span>
+                              )}
                             </span>
                             <span className="tabular-nums text-body-airbnb font-bold">
-                              {item.shift.accrued.toFixed(2)}
+                              {item.shift.open ? t.operatorApp.workTime.shiftInProgress : item.shift.accrued!.toFixed(2)}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="tabular-nums text-caption-airbnb">
-                              {formatTime(item.shift.startAt)}–{formatTime(item.shift.endAt)} ·{" "}
-                              {formatDuration(item.shift.minutes)}
+                              {item.shift.open
+                                ? `${formatTime(item.shift.startAt)} – …`
+                                : `${formatTime(item.shift.startAt)}–${formatTime(item.shift.endAt!)} · ${formatDuration(item.shift.minutes!)}`}
                             </span>
                             {(item.shift.advanceAmount > 0 || item.shift.bonusAmount > 0) && (
                               <span className="flex gap-2 text-xs tabular-nums">
@@ -656,29 +609,6 @@ export default function OperatorCardPage() {
           {moneyError && <p className="text-sm text-destructive">{moneyError}</p>}
           <PressableScale>
             <Button className="w-full" onClick={submitMoneyForm}>
-              {t.common.save}
-            </Button>
-          </PressableScale>
-        </div>
-      </BottomSheet>
-
-      <BottomSheet open={rateFormOpen} onClose={() => setRateFormOpen(false)}>
-        <div className="flex flex-col gap-4 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operatorApp.workTime.changeRateTitle}</h2>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="rateValue">{t.operatorApp.workTime.rateLabel}</Label>
-            <Input
-              id="rateValue"
-              autoFocus
-              inputMode="decimal"
-              className="h-14 text-lg tabular-nums"
-              value={rateValue}
-              onChange={(e) => setRateValue(e.target.value)}
-            />
-          </div>
-          {rateError && <p className="text-sm text-destructive">{rateError}</p>}
-          <PressableScale>
-            <Button className="w-full" onClick={submitRateForm}>
               {t.common.save}
             </Button>
           </PressableScale>

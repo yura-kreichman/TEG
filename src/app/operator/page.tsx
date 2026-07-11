@@ -10,6 +10,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
+import { SweepButton } from "@/components/motion/SweepButton";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,21 @@ export default function OperatorHomePage() {
   const [checking, setChecking] = useState(true);
   const [workTimeEnabled, setWorkTimeEnabled] = useState(false);
   const [toPayOut, setToPayOut] = useState<number | null>(null);
+  const [timeTrackingMode, setTimeTrackingMode] = useState<"manual" | "auto">("manual");
+  const [activeShiftStartAt, setActiveShiftStartAt] = useState<string | null>(null);
+  const [checkInOutBusy, setCheckInOutBusy] = useState(false);
+  const [checkInOutError, setCheckInOutError] = useState<string | null>(null);
+  const [checkoutSheetOpen, setCheckoutSheetOpen] = useState(false);
+  const [checkoutAdvance, setCheckoutAdvance] = useState("");
+  const [checkoutBonus, setCheckoutBonus] = useState("");
+  const [checkoutSheetError, setCheckoutSheetError] = useState<string | null>(null);
+  // Мягкие напоминания после check-in/check-out (docs/spec/05-work-time.md,
+  // "СВЯЗЬ СО СДАЧЕЙ ИТОГОВ") — то же самое уведомление, что в ручном режиме.
+  const [homeNotice, setHomeNotice] = useState<{ warnings: string[]; noResultsToday: boolean } | null>(null);
+  // Единый тикер (раз в секунду) — от него живут и текущее время под "Начать
+  // смену", и счётчик отработанного времени, и живой предпросмотр интервала/
+  // длительности в bottom sheet завершения.
+  const [now, setNow] = useState(() => new Date());
   const [roaming, setRoaming] = useState(false);
   const [switchPointOpen, setSwitchPointOpen] = useState(false);
   const [points, setPoints] = useState<PointOption[]>([]);
@@ -74,6 +90,8 @@ export default function OperatorHomePage() {
         setPointName(data.device.pointName);
         setRoaming(data.device.roaming === true);
         setWorkTimeEnabled(!!data.workTimeEnabled);
+        setTimeTrackingMode(data.timeTrackingMode === "auto" ? "auto" : "manual");
+        setActiveShiftStartAt(data.activeShift?.startAt ?? null);
         setChecking(false);
         if (data.workTimeEnabled) {
           fetch("/api/operator/work-time/summary")
@@ -105,6 +123,90 @@ export default function OperatorHomePage() {
     loadTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
+
+  // Тикает раз в секунду, пока есть что показывать живым (текущее время до
+  // check-in, счётчик/предпросмотр интервала после) — ничего не запрашивает
+  // с сервера, серверный started_at остаётся единственным источником истины.
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  function formatElapsed(startIso: string, at: Date): string {
+    const minutesTotal = Math.max(0, Math.floor((at.getTime() - new Date(startIso).getTime()) / 60000));
+    const h = Math.floor(minutesTotal / 60);
+    const m = minutesTotal % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  }
+
+  function formatClock(at: Date): string {
+    return `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}:${String(at.getSeconds()).padStart(2, "0")}`;
+  }
+
+  const elapsedLabel = activeShiftStartAt ? formatElapsed(activeShiftStartAt, now) : "00:00";
+  const shiftTooLong = activeShiftStartAt ? now.getTime() - new Date(activeShiftStartAt).getTime() > 16 * 60 * 60 * 1000 : false;
+
+  async function handleCheckIn() {
+    setCheckInOutError(null);
+    setCheckInOutBusy(true);
+    try {
+      const res = await fetch("/api/operator/work-time/check-in", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setCheckInOutError(data.error ?? t.operatorApp.workTime.saveError);
+        return;
+      }
+      setActiveShiftStartAt(data.shift.startAt);
+      setHomeNotice(data.noResultsToday ? { warnings: [], noResultsToday: true } : null);
+    } finally {
+      setCheckInOutBusy(false);
+    }
+  }
+
+  // Один тап "Закончить смену" сразу открывает bottom sheet подтверждения
+  // (docs/spec/05-work-time.md, "РЕЖИМ УЧЁТА ВРЕМЕНИ") — кнопка "Завершить"
+  // внутри него и есть подтверждение, отдельного "Точно?" на кнопке больше нет.
+  function openCheckoutSheet() {
+    setCheckoutAdvance("");
+    setCheckoutBonus("");
+    setCheckoutSheetError(null);
+    setCheckoutSheetOpen(true);
+  }
+
+  async function handleCheckOut() {
+    setCheckoutSheetError(null);
+    setCheckInOutBusy(true);
+    try {
+      const res = await fetch("/api/operator/work-time/check-out", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          advanceAmount: checkoutAdvance ? Number(checkoutAdvance) : 0,
+          bonusAmount: checkoutBonus ? Number(checkoutBonus) : 0,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCheckoutSheetError(data.error ?? t.operatorApp.workTime.saveError);
+        return;
+      }
+      setActiveShiftStartAt(null);
+      setToPayOut(data.balance.toPayOut);
+      setCheckoutSheetOpen(false);
+      if (data.warnings?.length || data.noResultsToday) {
+        setHomeNotice({ warnings: data.warnings ?? [], noResultsToday: !!data.noResultsToday });
+      } else {
+        setHomeNotice(null);
+      }
+    } finally {
+      setCheckInOutBusy(false);
+    }
+  }
+
+  function warningText(code: string) {
+    if (code === "too_long") return t.operatorApp.workTime.warningTooLong;
+    return code;
+  }
 
   async function advanceOpenTask() {
     if (!openTask) return;
@@ -141,6 +243,7 @@ export default function OperatorHomePage() {
     setSwitchPointOpen(false);
     loadMe();
     loadZones();
+    loadTasks();
   }
 
   async function handleCollection(event: FormEvent) {
@@ -263,7 +366,7 @@ export default function OperatorHomePage() {
             </Button>
           </PressableScale>
 
-          {workTimeEnabled && (
+          {workTimeEnabled && timeTrackingMode === "manual" && (
             <PressableScale>
               <Button
                 variant="outline"
@@ -273,6 +376,37 @@ export default function OperatorHomePage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/api/icon-library/app-icons/clock.svg" alt="" className="size-7" />
                 <span className="leading-tight">{t.operatorApp.workTime.addShiftButton}</span>
+              </Button>
+            </PressableScale>
+          )}
+
+          {workTimeEnabled && timeTrackingMode === "auto" && activeShiftStartAt && (
+            <PressableScale>
+              <SweepButton
+                disabled={checkInOutBusy}
+                onClick={openCheckoutSheet}
+                className="flex h-24 w-full flex-col items-center justify-center gap-0.5 px-1 text-center"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/api/icon-library/app-icons/stop_squared.svg" alt="" className="size-5" />
+                <span className="text-[11px] leading-tight font-bold">{t.operatorApp.workTime.checkoutButton}</span>
+                <span className="text-[11px] font-bold tabular-nums text-muted-foreground">{elapsedLabel}</span>
+              </SweepButton>
+            </PressableScale>
+          )}
+
+          {workTimeEnabled && timeTrackingMode === "auto" && !activeShiftStartAt && (
+            <PressableScale>
+              <Button
+                variant="outline"
+                disabled={checkInOutBusy}
+                className="flex h-24 w-full flex-col items-center justify-center gap-1 rounded-control border-2 p-2 text-center text-xs font-bold"
+                onClick={handleCheckIn}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/api/icon-library/app-icons/Square%20Play%20Button.svg" alt="" className="size-6" />
+                <span className="leading-tight">{t.operatorApp.workTime.checkinButton}</span>
+                <span className="text-[11px] font-bold tabular-nums text-muted-foreground">{formatClock(now)}</span>
               </Button>
             </PressableScale>
           )}
@@ -289,6 +423,26 @@ export default function OperatorHomePage() {
             </Button>
           </PressableScale>
         </div>
+        {checkInOutError && <p className="mt-2 text-center text-caption-airbnb text-destructive">{checkInOutError}</p>}
+
+        {shiftTooLong && (
+          <div className="mt-3 rounded-control bg-warning/15 p-3 text-sm font-medium text-warning">
+            {t.operatorApp.workTime.shiftTooLongBanner}
+          </div>
+        )}
+
+        {homeNotice && (
+          <div className="mt-3 flex flex-col gap-1.5 rounded-control bg-warning/15 p-3">
+            {homeNotice.warnings.map((w) => (
+              <p key={w} className="text-sm font-medium text-warning">
+                {warningText(w)}
+              </p>
+            ))}
+            {homeNotice.noResultsToday && (
+              <p className="text-sm font-medium text-warning">{t.operatorApp.workTime.noResultsTodayNote}</p>
+            )}
+          </div>
+        )}
       </SpringCard>
 
       <SpringCard hover={false} className="mt-4 w-full max-w-sm text-left">
@@ -403,6 +557,53 @@ export default function OperatorHomePage() {
             </>
           )}
         </form>
+      </BottomSheet>
+
+      <BottomSheet open={checkoutSheetOpen} onClose={() => !checkInOutBusy && setCheckoutSheetOpen(false)}>
+        <div className="flex flex-col gap-4 pt-2">
+          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operatorApp.workTime.checkoutButton}</h2>
+
+          {activeShiftStartAt && (
+            <div className="rounded-control bg-muted/40 p-3 text-center">
+              <p className="tabular-nums text-body-airbnb font-semibold">
+                {formatClock(new Date(activeShiftStartAt)).slice(0, 5)}–{formatClock(now).slice(0, 5)}
+              </p>
+              <p className="tabular-nums text-caption-airbnb text-muted-foreground">{elapsedLabel}</p>
+            </div>
+          )}
+          {shiftTooLong && (
+            <p className="text-sm font-medium text-warning">{t.operatorApp.workTime.warningTooLong}</p>
+          )}
+
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="checkoutAdvance">{t.operatorApp.workTime.advanceFieldLabel}</Label>
+            <Input
+              id="checkoutAdvance"
+              inputMode="decimal"
+              className="h-14 text-lg tabular-nums"
+              value={checkoutAdvance}
+              onChange={(e) => setCheckoutAdvance(e.target.value)}
+              placeholder="0"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="checkoutBonus">{t.operatorApp.workTime.bonusFieldLabel}</Label>
+            <Input
+              id="checkoutBonus"
+              inputMode="decimal"
+              className="h-14 text-lg tabular-nums"
+              value={checkoutBonus}
+              onChange={(e) => setCheckoutBonus(e.target.value)}
+              placeholder="0"
+            />
+          </div>
+          {checkoutSheetError && <p className="text-sm text-destructive">{checkoutSheetError}</p>}
+          <PressableScale>
+            <Button onClick={handleCheckOut} disabled={checkInOutBusy} className="h-14 w-full rounded-control font-bold">
+              {t.operatorApp.workTime.checkoutButton}
+            </Button>
+          </PressableScale>
+        </div>
       </BottomSheet>
 
       <button

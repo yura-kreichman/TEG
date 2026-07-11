@@ -32,8 +32,9 @@ export async function POST(request: Request) {
 
   if (process.env.NODE_ENV === "production") {
     // TODO: wire up a real email provider (SMTP/Resend/etc.) once the app is deployed
-    // to production hosting. Until then, log it so it's still recoverable from the server.
-    console.log(`Password reset link for ${email}: ${resetLink}`);
+    // to production hosting. Until then, resets are silently unusable in production —
+    // deliberately not logging the live reset link/token: server logs are a wider trust
+    // boundary than the DB, and a logged link is a working account-takeover token.
     return NextResponse.json({ message: GENERIC_MESSAGE });
   }
 

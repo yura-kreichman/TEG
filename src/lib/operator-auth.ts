@@ -1,7 +1,8 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { sessionCookieOptions, signToken, verifyToken } from "@/lib/session-crypto";
 
 // Two distinct cookies for the operator (point-of-sale) flow, separate from the
 // Owner/Super Admin cookies in src/lib/auth.ts:
@@ -21,30 +22,6 @@ const OPERATOR_SESSION_MAX_AGE = 60 * 60 * 12; // 12 hours
 
 export const INSTALL_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-function getSecret() {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) throw new Error("AUTH_SECRET is not set");
-  return secret;
-}
-
-function sign(value: string) {
-  return createHmac("sha256", getSecret()).update(value).digest("base64url");
-}
-
-function signToken(id: string) {
-  return `${id}.${sign(id)}`;
-}
-
-function verifyToken(token: string): string | null {
-  const [id, signature] = token.split(".");
-  if (!id || !signature) return null;
-  const expected = sign(id);
-  const a = Buffer.from(signature);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-  return id;
-}
-
 export function hashInstallToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -56,13 +33,7 @@ export function generateInstallToken() {
 
 export async function activatePointDevice(pointDeviceId: string) {
   const cookieStore = await cookies();
-  cookieStore.set(POINT_DEVICE_COOKIE, signToken(pointDeviceId), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: POINT_DEVICE_MAX_AGE,
-  });
+  cookieStore.set(POINT_DEVICE_COOKIE, signToken(pointDeviceId), sessionCookieOptions(POINT_DEVICE_MAX_AGE));
 }
 
 async function getPointDeviceId(): Promise<string | null> {
@@ -74,13 +45,7 @@ async function getPointDeviceId(): Promise<string | null> {
 
 export async function createOperatorSession(operatorId: string) {
   const cookieStore = await cookies();
-  cookieStore.set(OPERATOR_SESSION_COOKIE, signToken(operatorId), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: OPERATOR_SESSION_MAX_AGE,
-  });
+  cookieStore.set(OPERATOR_SESSION_COOKIE, signToken(operatorId), sessionCookieOptions(OPERATOR_SESSION_MAX_AGE));
 }
 
 export async function destroyOperatorSession() {

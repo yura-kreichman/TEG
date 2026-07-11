@@ -4,19 +4,25 @@ import { DAILY_CASH_SUMMARY_DEFAULTS, type DailyCashSummarySettingsData } from "
 import { buildDailyCashSummaryData, hasActivityInBounds } from "./daily-cash-data";
 import { dispatchDailyCashSummary } from "./dispatch";
 
-function toSettingsData(row: {
-  enabled: boolean;
-  sendMode: string;
-  fixedTime: string;
-  businessDayBoundary: string;
-  skipIfNoSubmissions: boolean;
-  updateOnLateSubmission: boolean;
-  showCash: boolean;
-  showExpenses: boolean;
-  showZoneBreakdown: boolean;
-  showCashOnHand: boolean;
-}): DailyCashSummarySettingsData {
-  return row as DailyCashSummarySettingsData;
+// businessDayBoundary живёт на Tenant, не на DailyCashSummarySettings
+// (docs/spec/05-work-time.md, перенесено 2026-07-11 — значение общетенантное,
+// его же читает Рабочее время) — поэтому собирается отдельным параметром,
+// не полем самой строки настроек.
+function toSettingsData(
+  row: {
+    enabled: boolean;
+    sendMode: string;
+    fixedTime: string;
+    skipIfNoSubmissions: boolean;
+    updateOnLateSubmission: boolean;
+    showCash: boolean;
+    showExpenses: boolean;
+    showZoneBreakdown: boolean;
+    showCashOnHand: boolean;
+  },
+  businessDayBoundary: string
+): DailyCashSummarySettingsData {
+  return { ...row, businessDayBoundary } as DailyCashSummarySettingsData;
 }
 
 /**
@@ -30,7 +36,7 @@ function toSettingsData(row: {
 export async function maybeSendDailyCashSummary(
   pointId: string,
   tenantId: string,
-  settingsRow: Parameters<typeof toSettingsData>[0],
+  settings: DailyCashSummarySettingsData,
   bounds: { start: Date; end: Date },
   forcedIncomplete: boolean
 ): Promise<void> {
@@ -41,7 +47,6 @@ export async function maybeSendDailyCashSummary(
   });
   if (alreadySent) return;
 
-  const settings = toSettingsData(settingsRow);
   const active = await hasActivityInBounds(pointId, bounds);
   if (!active && settings.skipIfNoSubmissions) return;
 
@@ -103,8 +108,14 @@ async function getZoneCoverage(
  * единственной сетью для случая "зона за весь день так и не отчиталась".
  */
 export async function onResultsSubmission(pointId: string, tenantId: string, at: Date): Promise<void> {
-  const settingsRow = await prisma.dailyCashSummarySettings.findUnique({ where: { tenantId } });
-  const settings = settingsRow ? toSettingsData(settingsRow) : DAILY_CASH_SUMMARY_DEFAULTS;
+  const [settingsRow, tenant] = await Promise.all([
+    prisma.dailyCashSummarySettings.findUnique({ where: { tenantId } }),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { businessDayBoundary: true } }),
+  ]);
+  const businessDayBoundary = tenant?.businessDayBoundary ?? DAILY_CASH_SUMMARY_DEFAULTS.businessDayBoundary;
+  const settings = settingsRow
+    ? toSettingsData(settingsRow, businessDayBoundary)
+    : { ...DAILY_CASH_SUMMARY_DEFAULTS, businessDayBoundary };
   if (!settings.enabled) return;
 
   const bounds = getBusinessDayBounds(settings.businessDayBoundary, at);
@@ -121,7 +132,7 @@ export async function onResultsSubmission(pointId: string, tenantId: string, at:
   const { activeZones, coveredZones } = await getZoneCoverage(pointId, bounds);
   if (activeZones === 0 || coveredZones < activeZones) return; // ещё не все активные зоны отчитались
 
-  await maybeSendDailyCashSummary(pointId, tenantId, settingsRow ?? DAILY_CASH_SUMMARY_DEFAULTS, bounds, false);
+  await maybeSendDailyCashSummary(pointId, tenantId, settings, bounds, false);
 }
 
 /**
@@ -132,10 +143,14 @@ export async function onResultsSubmission(pointId: string, tenantId: string, at:
  * не планировщиком.
  */
 export async function notifyDailyCashLateSubmission(pointId: string, tenantId: string, at: Date): Promise<void> {
-  const settingsRow = await prisma.dailyCashSummarySettings.findUnique({ where: { tenantId } });
+  const [settingsRow, tenant] = await Promise.all([
+    prisma.dailyCashSummarySettings.findUnique({ where: { tenantId } }),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { businessDayBoundary: true } }),
+  ]);
   if (!settingsRow?.enabled) return;
 
-  const bounds = getBusinessDayBounds(settingsRow.businessDayBoundary, at);
+  const businessDayBoundary = tenant?.businessDayBoundary ?? DAILY_CASH_SUMMARY_DEFAULTS.businessDayBoundary;
+  const bounds = getBusinessDayBounds(businessDayBoundary, at);
   const businessDate = businessDateKey(bounds);
 
   const existingDeliveries = await prisma.dailyCashSummaryDelivery.findMany({
@@ -143,7 +158,7 @@ export async function notifyDailyCashLateSubmission(pointId: string, tenantId: s
   });
   if (existingDeliveries.length === 0) return; // ничего не отправляли — это Шаг обычной первой отправки, не досдача
 
-  const settings = toSettingsData(settingsRow);
+  const settings = toSettingsData(settingsRow, businessDayBoundary);
   const data = await buildDailyCashSummaryData(pointId, bounds, false);
   if (!data) return;
 

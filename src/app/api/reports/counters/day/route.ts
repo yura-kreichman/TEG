@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       operator: { select: { name: true } },
       zoneSubmissions: {
         include: {
-          zone: { include: { tariffs: true, assets: true } },
+          zone: { include: { tariffs: true, assets: { orderBy: { sortOrder: "asc" } } } },
           assetReadings: true,
         },
       },

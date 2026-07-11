@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getBusinessDayBounds, isAtBoundaryMinute, isAtTimeMinute } from "@/lib/business-day";
 import { maybeSendDailyCashSummary } from "@/lib/summary-channels/daily-cash-trigger";
-import { DAILY_CASH_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
+import { DAILY_CASH_SUMMARY_DEFAULTS, type DailyCashSummarySettingsData } from "@/lib/summary-settings";
 
 // Планировщик "Кассы за день" — единственный источник time-based (не по
 // действию пользователя) триггеров в проекте, поэтому просто setInterval
@@ -47,7 +47,13 @@ async function tick() {
   });
 
   for (const tenant of tenants) {
-    const settings = tenant.dailyCashSummarySettings ?? DAILY_CASH_SUMMARY_DEFAULTS;
+    // businessDayBoundary — поле Tenant, не DailyCashSummarySettings
+    // (docs/spec/05-work-time.md, перенесено 2026-07-11), поэтому докладывается
+    // отдельно поверх остальных настроек сводки.
+    const settings = {
+      ...(tenant.dailyCashSummarySettings ?? DAILY_CASH_SUMMARY_DEFAULTS),
+      businessDayBoundary: tenant.businessDayBoundary,
+    } as DailyCashSummarySettingsData;
     if (!settings.enabled) continue;
 
     const bounds = getBusinessDayBounds(settings.businessDayBoundary, now);

@@ -32,3 +32,10 @@ export async function findTenantOperator(tenantId: string, operatorId: string) {
   if (!operator || operator.tenantId !== tenantId) return null;
   return operator;
 }
+
+/** Loads a Point and verifies it belongs to the given tenant. */
+export async function findTenantPoint(tenantId: string, pointId: string) {
+  const point = await prisma.point.findUnique({ where: { id: pointId } });
+  if (!point || point.tenantId !== tenantId) return null;
+  return point;
+}

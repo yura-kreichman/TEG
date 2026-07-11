@@ -13,7 +13,11 @@ export async function hasActivityInBounds(pointId: string, bounds: { start: Date
  * Собирает структурированные данные "Кассы за день" для точки за бизнес-день.
  * Наличные/безнал — из ZoneSubmission (единственное место, где вообще
  * хранится безнал, docs/spec/02-money.md — в журнале денег его нет).
- * Расходы — из MoneyOperation type=expense (единый источник правды по деньгам).
+ * Расходы — MoneyOperation type=expense + авансы/премии модуля Рабочее время
+ * (docs/spec/05-work-time.md) — тот же состав, что "Бизнес: расходы и прибыль"
+ * в /api/reports/money, иначе "Касса за день" занижала бы расходы всякий раз,
+ * когда у операторов в этот день были авансы/премии. Авансы/премии пишутся с
+ * pointId, а не zoneId (касса точки в целом, не привязана к зоне) — отсюда OR.
  * Остаток на точке — ВЕСЬ журнал, без периода (как /api/reports/money), это
  * текущее состояние кассы, а не показатель за день.
  */
@@ -49,9 +53,9 @@ export async function buildDailyCashSummaryData(
 
   const expenseOps = await prisma.moneyOperation.findMany({
     where: {
-      type: "expense",
+      type: { in: ["expense", "advance", "bonus_payout"] },
       occurredAt: { gte: bounds.start, lt: bounds.end },
-      zone: { pointId },
+      OR: [{ zone: { pointId } }, { pointId }],
     },
   });
   const expenses = expenseOps.reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0);

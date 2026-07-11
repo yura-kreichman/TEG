@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireOwner } from "@/lib/require-owner";
+import { findTenantPoint, requireOwner } from "@/lib/require-owner";
 import { computeZoneSubmissionRevenues, getPeriodRange, isReportGranularity, round2 } from "@/lib/reports";
-
-async function findTenantPoint(tenantId: string, pointId: string) {
-  const point = await prisma.point.findUnique({ where: { id: pointId } });
-  if (!point || point.tenantId !== tenantId) return null;
-  return point;
-}
 
 export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/reports/operators">) {
   const owner = await requireOwner();
@@ -41,7 +35,9 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
         })
       : Promise.resolve([]),
     prisma.shift.findMany({
-      where: { pointId, startAt: { gte: start, lt: end } },
+      // isOpen: открытая смена (docs/spec/05-work-time.md, "АВТО"), ещё
+      // не начислена, не учитывается в отчёте до check-out.
+      where: { pointId, startAt: { gte: start, lt: end }, isOpen: false },
       select: { id: true, operatorId: true, startAt: true, endAt: true },
     }),
   ]);
@@ -67,7 +63,10 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   }
 
   const [operatorRows, rates, moneyOps] = await Promise.all([
-    prisma.operator.findMany({ where: { id: { in: [...operatorIds] } }, select: { id: true, name: true, colorTag: true } }),
+    prisma.operator.findMany({
+      where: { id: { in: [...operatorIds] } },
+      select: { id: true, name: true, colorTag: true, avatarUrl: true, iconKey: true },
+    }),
     prisma.operatorRate.findMany({ where: { operatorId: { in: [...operatorIds] } }, orderBy: { effectiveFrom: "asc" } }),
     prisma.moneyOperation.findMany({
       where: { pointId, type: { in: ["advance", "bonus_payout"] }, occurredAt: { gte: start, lt: end } },
@@ -106,9 +105,9 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
 
   const operators = operatorRows.map((op) => {
     const opShifts = shiftsByOperator.get(op.id) ?? [];
-    const totalHours = opShifts.reduce((sum, sh) => sum + (sh.endAt.getTime() - sh.startAt.getTime()) / 3_600_000, 0);
+    const totalHours = opShifts.reduce((sum, sh) => sum + (sh.endAt!.getTime() - sh.startAt.getTime()) / 3_600_000, 0);
     const accrued = opShifts.reduce(
-      (sum, sh) => sum + ((sh.endAt.getTime() - sh.startAt.getTime()) / 3_600_000) * rateAt(op.id, sh.startAt),
+      (sum, sh) => sum + ((sh.endAt!.getTime() - sh.startAt.getTime()) / 3_600_000) * rateAt(op.id, sh.startAt),
       0
     );
     const payouts = payoutsByOperator.get(op.id) ?? 0;
@@ -125,6 +124,8 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       operatorId: op.id,
       name: op.name,
       colorTag: op.colorTag,
+      avatarUrl: op.avatarUrl,
+      iconKey: op.iconKey,
       shiftsCount: opShifts.length,
       totalHours: round2(totalHours),
       revenue: round2(revenue),

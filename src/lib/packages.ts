@@ -1,4 +1,6 @@
+import { NextResponse } from "next/server";
 import { MODULE_KEYS } from "@/lib/modules";
+import { prisma } from "@/lib/prisma";
 
 export interface PackagePayload {
   name: string;
@@ -31,4 +33,35 @@ export function validatePackagePayload(body: unknown): PackagePayload | null {
     maxOperators: b.maxOperators as number,
     priceMonthly: price,
   };
+}
+
+const LIMIT_LABELS = {
+  maxPoints: "точек",
+  maxZones: "зон",
+  maxAssets: "активов",
+  maxOperators: "операторов",
+} as const;
+
+/**
+ * Checks a tenant's current usage of one resource against their package's limit.
+ * Returns a ready-to-return 409 NextResponse if the limit is reached, or null
+ * if the tenant may create another (no package assigned = no limit enforced).
+ */
+export async function checkPackageLimit(
+  tenantId: string,
+  limitKey: keyof typeof LIMIT_LABELS,
+  currentCount: number
+) {
+  const pkg = await prisma.tenant
+    .findUnique({ where: { id: tenantId }, include: { package: true } })
+    .then((t) => t?.package);
+
+  if (pkg && currentCount >= pkg[limitKey]) {
+    return NextResponse.json(
+      { error: `Достигнут лимит ${LIMIT_LABELS[limitKey]} по вашему пакету (${pkg[limitKey]})` },
+      { status: 409 }
+    );
+  }
+
+  return null;
 }

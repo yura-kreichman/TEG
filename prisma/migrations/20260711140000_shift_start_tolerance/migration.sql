@@ -1,0 +1,4 @@
+ALTER TABLE "Tenant" ADD COLUMN "autoEarlyToleranceMinutes" INTEGER NOT NULL DEFAULT 60;
+ALTER TABLE "Tenant" ADD COLUMN "autoLateToleranceMinutes" INTEGER NOT NULL DEFAULT 60;
+ALTER TABLE "Tenant" ADD COLUMN "manualEarlyToleranceMinutes" INTEGER NOT NULL DEFAULT 120;
+ALTER TABLE "Tenant" ADD COLUMN "manualLateToleranceMinutes" INTEGER NOT NULL DEFAULT 120;

@@ -6,6 +6,7 @@ import {
   calcOperatorBalance,
   calcShiftAccrual,
   getRateForDate,
+  hasNoResultsToday,
   hasOverlappingShift,
   listShiftDetails,
   listStandaloneMoneyOps,
@@ -50,6 +51,16 @@ export async function POST(request: Request) {
   if (!(await isModuleEnabled(point.tenantId, "work_time"))) {
     return NextResponse.json({ error: "Модуль не подключён" }, { status: 403 });
   }
+  // Запрет на уровне API, не только UI (docs/spec/05-work-time.md, "РЕЖИМ
+  // УЧЁТА ВРЕМЕНИ"): в авто-режиме время фиксируется только сервером через
+  // check-in/check-out, ручной ввод произвольного времени недоступен даже
+  // прямым запросом к этому эндпоинту.
+  if (operator.timeTrackingMode === "auto") {
+    return NextResponse.json(
+      { error: "Для этого оператора включён автоматический учёт времени — используйте Начать/Закончить смену" },
+      { status: 403 }
+    );
+  }
 
   const body = await request.json();
   const startAt = new Date(body.startAt);
@@ -66,7 +77,6 @@ export async function POST(request: Request) {
   }
 
   if (advanceAmount > 0) {
-    const tenant = await prisma.tenant.findUnique({ where: { id: point.tenantId }, select: { overdraftAllowed: true } });
     const balance = await calcOperatorBalance(operator.id);
     // Аванс вводится в той же форме, что и сама смена — доступный баланс
     // должен уже учитывать начисление ЗА ЭТУ смену, иначе самый первый аванс
@@ -75,7 +85,8 @@ export async function POST(request: Request) {
     const rate = await getRateForDate(operator.id, startAt);
     const { accrued } = calcShiftAccrual(startAt, endAt, rate);
     const projectedToPayOut = balance.toPayOut + accrued;
-    if (!tenant?.overdraftAllowed && advanceAmount > projectedToPayOut) {
+    // overdraftAllowed — персональная настройка оператора (docs/spec/05-work-time.md), не тенанта.
+    if (!operator.overdraftAllowed && advanceAmount > projectedToPayOut) {
       return NextResponse.json(
         { error: `Аванс превышает доступный баланс к выдаче (${projectedToPayOut.toFixed(2)})` },
         { status: 400 }
@@ -117,26 +128,7 @@ export async function POST(request: Request) {
   }
 
   const balance = await calcOperatorBalance(operator.id);
-
-  // Мягкое напоминание (docs/spec/05-work-time.md, "СВЯЗЬ СО СДАЧЕЙ ИТОГОВ") —
-  // не блокирует: по доступным оператору зонам сегодня ещё не было сдачи итогов.
-  const dayStart = new Date(Date.UTC(startAt.getUTCFullYear(), startAt.getUTCMonth(), startAt.getUTCDate()));
-  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-  const zoneWhere = operator.allZonesAccess
-    ? { pointId: point.id }
-    : { pointId: point.id, operatorsWithAccess: { some: { id: operator.id } } };
-  const accessibleZoneIds = (await prisma.zone.findMany({ where: zoneWhere, select: { id: true } })).map((z) => z.id);
-  const todaySubmission = accessibleZoneIds.length
-    ? await prisma.resultsSubmission.findFirst({
-        where: {
-          pointId: point.id,
-          submittedAt: { gte: dayStart, lt: dayEnd },
-          zoneSubmissions: { some: { zoneId: { in: accessibleZoneIds } } },
-        },
-        select: { id: true },
-      })
-    : null;
-  const noResultsToday = accessibleZoneIds.length > 0 && !todaySubmission;
+  const noResultsToday = await hasNoResultsToday(point, operator, startAt);
 
   const rate = await getRateForDate(operator.id, startAt);
   const { minutes, accrued } = calcShiftAccrual(startAt, endAt, rate);

@@ -13,6 +13,14 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { WheelTimePicker } from "@/components/wheel-time-picker";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
+import { formatDuration as formatDurationBase, formatTime } from "@/lib/datetime-format";
+import {
+  formatPeriodLabel as formatPeriodLabelFor,
+  isCurrentPeriod as isCurrentPeriodFor,
+  periodRange as periodRangeFor,
+  steppedAnchor,
+  type PeriodGranularity,
+} from "@/lib/period-nav";
 
 interface Balance {
   toPayOut: number;
@@ -42,21 +50,25 @@ interface StandaloneMoneyOp {
   comment: string | null;
 }
 
-type PeriodGranularity = "week" | "month";
-
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
-function toDateStr(d: Date) {
-  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
-}
-// Локальное время устройства — то, что оператор реально видит на часах,
-// а не UTC-час хранения (см. handleSubmitShift ниже: смена конструируется
-// из локальных компонент, а не Date.UTC, чтобы округлять туда-обратно
-// без сдвига на часовой пояс).
-function formatTime(iso: string) {
-  const d = new Date(iso);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+// Часы, пересекающиеся с окном допуска [центр−early; центр+late] с учётом
+// переноса через полночь — ограничивает колесо "Пришёл" в ручном режиме
+// (docs/spec/05-work-time.md, "РЕЖИМ УЧЁТА ВРЕМЕНИ"). Проверяем обе границы
+// часа (h*60 и h*60+59), сравнивая во всех трёх сдвигах на сутки, чтобы не
+// зависеть от того, где именно проходит полночь относительно окна.
+function allowedStartHours(centerTime: string, earlyMinutes: number, lateMinutes: number): number[] {
+  const [ch, cm] = centerTime.split(":").map(Number);
+  const centerMin = ch * 60 + cm;
+  if (earlyMinutes + lateMinutes >= 24 * 60) return Array.from({ length: 24 }, (_, i) => i);
+  const lower = centerMin - earlyMinutes;
+  const upper = centerMin + lateMinutes;
+  const hours: number[] = [];
+  for (let h = 0; h < 24; h++) {
+    const inWindow = [h * 60, h * 60 + 59].some((probe) =>
+      [probe, probe - 1440, probe + 1440].some((p) => p >= lower && p <= upper)
+    );
+    if (inWindow) hours.push(h);
+  }
+  return hours;
 }
 
 export default function WorkTimePage() {
@@ -69,6 +81,12 @@ export default function WorkTimePage() {
   const [granularity, setGranularity] = useState<PeriodGranularity>("month");
   const [anchor, setAnchor] = useState(() => new Date());
   const [defaultShiftStartTime, setDefaultShiftStartTime] = useState("10:00");
+  const [earlyToleranceMinutes, setEarlyToleranceMinutes] = useState(120);
+  const [lateToleranceMinutes, setLateToleranceMinutes] = useState(120);
+  // Ручной ввод смены (docs/spec/05-work-time.md, "РЕЖИМ УЧЁТА ВРЕМЕНИ") —
+  // доступен только в режиме "manual"; в "auto" время фиксирует только
+  // check-in/check-out на главном экране.
+  const [timeTrackingMode, setTimeTrackingMode] = useState<"manual" | "auto">("manual");
 
   const [formOpen, setFormOpen] = useState(false);
   const [startHour, setStartHour] = useState(9);
@@ -82,24 +100,12 @@ export default function WorkTimePage() {
 
   const [notice, setNotice] = useState<{ warnings: string[]; noResultsToday: boolean } | null>(null);
 
-  function periodRange(): { from: string; to: string } {
-    const a = new Date(anchor);
-    if (granularity === "week") {
-      const dayIndex = (a.getUTCDay() + 6) % 7;
-      const start = new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), a.getUTCDate() - dayIndex));
-      const end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
-      return { from: toDateStr(start), to: toDateStr(end) };
-    }
-    const start = new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), 1));
-    const end = new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth() + 1, 0));
-    return { from: toDateStr(start), to: toDateStr(end) };
-  }
-
   async function loadData() {
-    const { from, to } = periodRange();
-    const [summaryRes, shiftsRes] = await Promise.all([
+    const { from, to } = periodRangeFor(granularity, anchor);
+    const [summaryRes, shiftsRes, meRes] = await Promise.all([
       fetch(`/api/operator/work-time/summary?from=${from}&to=${to}`),
       fetch(`/api/operator/work-time/shifts?from=${from}&to=${to}`),
+      fetch("/api/auth/operator/me"),
     ]);
     if (summaryRes.status === 401 || shiftsRes.status === 401) {
       router.replace("/operator/login");
@@ -109,9 +115,15 @@ export default function WorkTimePage() {
       router.replace("/operator");
       return;
     }
+    if (meRes.ok) {
+      const meData = await meRes.json();
+      setTimeTrackingMode(meData.timeTrackingMode === "auto" ? "auto" : "manual");
+    }
     const summaryData = await summaryRes.json();
     setBalance(summaryData);
     setDefaultShiftStartTime(summaryData.defaultShiftStartTime ?? "10:00");
+    setEarlyToleranceMinutes(summaryData.earlyToleranceMinutes ?? 120);
+    setLateToleranceMinutes(summaryData.lateToleranceMinutes ?? 120);
     const shiftsData = await shiftsRes.json();
     setShifts(shiftsData.shifts ?? []);
     setStandaloneMoneyOps(shiftsData.standaloneMoneyOps ?? []);
@@ -126,33 +138,16 @@ export default function WorkTimePage() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function isCurrentPeriod() {
-    const today = new Date();
-    if (granularity === "week") {
-      const weekStart = (d: Date) => {
-        const day = (d.getUTCDay() + 6) % 7;
-        return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day);
-      };
-      return weekStart(anchor) === weekStart(today);
-    }
-    return anchor.getUTCFullYear() === today.getUTCFullYear() && anchor.getUTCMonth() === today.getUTCMonth();
+    return isCurrentPeriodFor(granularity, anchor);
   }
 
   function stepPeriod(delta: number) {
     if (delta > 0 && isCurrentPeriod()) return;
-    const next = new Date(anchor);
-    if (granularity === "week") next.setUTCDate(next.getUTCDate() + delta * 7);
-    else next.setUTCMonth(next.getUTCMonth() + delta);
-    setAnchor(next);
+    setAnchor(steppedAnchor(granularity, anchor, delta));
   }
 
   function formatPeriodLabel() {
-    if (granularity === "week") {
-      const dayIndex = (anchor.getUTCDay() + 6) % 7;
-      const start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate() - dayIndex));
-      const end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
-      return `${start.getUTCDate()}–${end.getUTCDate()} ${t.readings.monthsGenitive[start.getUTCMonth()]}`;
-    }
-    return `${t.readings.months[anchor.getUTCMonth()]} ${anchor.getUTCFullYear()}`;
+    return formatPeriodLabelFor(granularity, anchor, t);
   }
 
   function openForm() {
@@ -176,13 +171,14 @@ export default function WorkTimePage() {
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     // "Добавить смену" с главного экрана (?add=1) — сразу открыть форму, не
-    // заставляя оператора ещё раз тапать по кнопке на этой странице.
-    if (!checking && searchParams.get("add") === "1") {
+    // заставляя оператора ещё раз тапать по кнопке на этой странице. Только
+    // в ручном режиме — в авто время фиксирует check-in/check-out.
+    if (!checking && timeTrackingMode === "manual" && searchParams.get("add") === "1") {
       openForm();
       router.replace("/operator/work-time");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checking]);
+  }, [checking, timeTrackingMode]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   async function handleSubmitShift() {
@@ -224,11 +220,7 @@ export default function WorkTimePage() {
   }
 
   function formatDuration(minutes: number) {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return m
-      ? `${h} ${t.operatorApp.workTime.hoursShort} ${m} ${t.operatorApp.workTime.minutesShort}`
-      : `${h} ${t.operatorApp.workTime.hoursShort}`;
+    return formatDurationBase(minutes, t);
   }
 
   function formatShiftDate(iso: string) {
@@ -351,12 +343,14 @@ export default function WorkTimePage() {
           </button>
         </div>
 
-        <PressableScale>
-          <Button onClick={openForm} className="h-14 w-full gap-2 rounded-control font-bold">
-            <Plus className="size-5" />
-            {t.operatorApp.workTime.addShiftButton}
-          </Button>
-        </PressableScale>
+        {timeTrackingMode === "manual" && (
+          <PressableScale>
+            <Button onClick={openForm} className="h-14 w-full gap-2 rounded-control font-bold">
+              <Plus className="size-5" />
+              {t.operatorApp.workTime.addShiftButton}
+            </Button>
+          </PressableScale>
+        )}
 
         <div className="flex flex-col gap-2">
           {historyItems.length === 0 ? (
@@ -418,6 +412,7 @@ export default function WorkTimePage() {
               <WheelTimePicker
                 hour={startHour}
                 minute={startMinute}
+                hourValues={allowedStartHours(defaultShiftStartTime, earlyToleranceMinutes, lateToleranceMinutes)}
                 onChange={(v) => {
                   setStartHour(v.hour);
                   setStartMinute(v.minute);

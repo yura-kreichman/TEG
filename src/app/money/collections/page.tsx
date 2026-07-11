@@ -7,10 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { useI18n } from "@/components/i18n-provider";
-
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
+import { formatTime } from "@/lib/datetime-format";
 
 interface CollectionEntry {
   id: string;
@@ -64,11 +61,6 @@ export default function CollectionsRegisterPage() {
   function formatGroupDate(dateStr: string) {
     const d = new Date(`${dateStr}T00:00:00Z`);
     return `${d.getUTCDate()} ${t.readings.monthsGenitive[d.getUTCMonth()]}`;
-  }
-
-  function formatTime(iso: string) {
-    const d = new Date(iso);
-    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
   const collectionGroups: { date: string; items: CollectionEntry[] }[] = [];

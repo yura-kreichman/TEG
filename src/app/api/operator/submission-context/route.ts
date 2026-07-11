@@ -18,7 +18,7 @@ export async function GET() {
     where: zoneWhere,
     include: {
       tariffs: { orderBy: { order: "asc" as const } },
-      assets: true,
+      assets: { orderBy: { sortOrder: "asc" as const } },
     },
     orderBy: { createdAt: "asc" },
   });

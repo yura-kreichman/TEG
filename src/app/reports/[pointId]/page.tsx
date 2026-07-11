@@ -6,6 +6,7 @@ import { use, useEffect, useState } from "react";
 import { AlertTriangle, ArrowDown, ArrowUp, Lightbulb } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
+import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,8 @@ interface OperatorRow {
   operatorId: string;
   name: string;
   colorTag: string | null;
+  avatarUrl: string | null;
+  iconKey: string | null;
   shiftsCount: number;
   totalHours: number;
   revenue: number;
@@ -347,7 +350,12 @@ function ZonesTab({
               <SelectTrigger className="h-8 w-auto border-none bg-transparent p-0 font-semibold">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              {/* Триггер здесь — короткая надпись (w-auto), а не полноширинное
+                  поле формы, как у остальных Select в приложении: попап,
+                  привязанный к --anchor-width, наследовал бы эту узкую ширину
+                  и обрезал названия зон длиннее выбранной сейчас. min-w
+                  переопределяет это именно для этого вызова. */}
+              <SelectContent className="min-w-40">
                 {data.zoneRanking.map((z) => (
                   <SelectItem key={z.zoneId} value={z.zoneId}>
                     {z.zoneName}
@@ -397,12 +405,26 @@ function OperatorsTab({ operators, t }: { operators: OperatorRow[]; t: ReturnTyp
       {operators.map((op) => (
         <SpringCard key={op.operatorId} animate={false}>
           <div className="mb-3 flex items-center gap-3">
-            <span
-              className="flex size-11 shrink-0 items-center justify-center rounded-full text-base font-bold text-white"
-              style={{ background: op.colorTag ?? "var(--color-primary)" }}
-            >
-              {op.name.slice(0, 1).toUpperCase()}
-            </span>
+            <div className="relative shrink-0">
+              {op.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={op.avatarUrl} alt="" className="size-11 rounded-full object-cover" />
+              ) : op.iconKey ? (
+                <div className="flex size-11 items-center justify-center rounded-full bg-primary/10">
+                  <AssetOrZoneIcon iconKey={op.iconKey} className="size-6" />
+                </div>
+              ) : (
+                <div className="flex size-11 items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground">
+                  {op.name.slice(0, 1).toUpperCase()}
+                </div>
+              )}
+              {op.colorTag && (
+                <span
+                  className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full ring-2 ring-card"
+                  style={{ backgroundColor: op.colorTag }}
+                />
+              )}
+            </div>
             <div className="min-w-0 grow">
               <div className="text-card-title">{op.name}</div>
               <div className="text-caption-airbnb">

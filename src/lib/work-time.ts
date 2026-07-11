@@ -1,5 +1,56 @@
 import { prisma } from "@/lib/prisma";
 
+export type TimeTrackingMode = "manual" | "auto";
+
+export function isTimeTrackingMode(value: unknown): value is TimeTrackingMode {
+  return value === "manual" || value === "auto";
+}
+
+const SHIFT_TOO_LONG_MS = 16 * 60 * 60 * 1000;
+
+// Открытая смена дольше 16 часов (docs/spec/05-work-time.md, "РЕЖИМ УЧЁТА
+// ВРЕМЕНИ") — оператору при входе плашка "обратись к владельцу", владельцу в
+// табеле подсветка "требует правки". Автозакрытия нет, это только флаг.
+export function isShiftTooLong(startAt: Date, now: Date = new Date()): boolean {
+  return now.getTime() - startAt.getTime() > SHIFT_TOO_LONG_MS;
+}
+
+// Мягкое напоминание (docs/spec/05-work-time.md, "СВЯЗЬ СО СДАЧЕЙ ИТОГОВ") —
+// по доступным оператору зонам за день `at` ещё не было сдачи итогов. Общее
+// для ручного ввода смены и check-in/check-out — раньше было продублировано.
+export async function hasNoResultsToday(
+  point: { id: string },
+  operator: { id: string; allZonesAccess: boolean },
+  at: Date
+): Promise<boolean> {
+  const dayStart = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()));
+  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+  const zoneWhere = operator.allZonesAccess
+    ? { pointId: point.id }
+    : { pointId: point.id, operatorsWithAccess: { some: { id: operator.id } } };
+  const accessibleZoneIds = (await prisma.zone.findMany({ where: zoneWhere, select: { id: true } })).map((z) => z.id);
+  if (accessibleZoneIds.length === 0) return false;
+
+  const todaySubmission = await prisma.resultsSubmission.findFirst({
+    where: {
+      pointId: point.id,
+      submittedAt: { gte: dayStart, lt: dayEnd },
+      zoneSubmissions: { some: { zoneId: { in: accessibleZoneIds } } },
+    },
+    select: { id: true },
+  });
+  return !todaySubmission;
+}
+
+// Открытая смена (docs/spec/05-work-time.md, "РЕЖИМ УЧЁТА ВРЕМЕНИ") — startAt задан, endAt ещё
+// null (isOpen=true), между check-in и check-out. На оператора не больше
+// одной сразу (см. частичный уникальный индекс Shift_operatorId_open_unique
+// в миграции). Фильтруем по isOpen, а не endAt — см. комментарий у
+// Shift.isOpen в schema.prisma.
+export async function getOpenShift(operatorId: string) {
+  return prisma.shift.findFirst({ where: { operatorId, isOpen: true } });
+}
+
 // Часовая ставка, действующая на указанную дату — последняя запись истории
 // ставок оператора с effectiveFrom <= date (docs/spec/05-work-time.md,
 // "СТАВКА"). Смена ставки не пересчитывает прошлые смены: каждая смена
@@ -80,7 +131,9 @@ export async function calcOperatorBalance(
   period?: { from: Date; to: Date }
 ): Promise<OperatorBalance> {
   const [shifts, rates, moneyOps, carryovers] = await Promise.all([
-    prisma.shift.findMany({ where: { operatorId } }),
+    // isOpen: открытая смена (docs/spec/05-work-time.md, "АВТО"), ещё не
+    // начислена, не в этом расчёте: попадёт в баланс при check-out.
+    prisma.shift.findMany({ where: { operatorId, isOpen: false } }),
     prisma.operatorRate.findMany({ where: { operatorId }, orderBy: [{ effectiveFrom: "desc" }, { createdAt: "desc" }] }),
     prisma.moneyOperation.findMany({
       where: { beneficiaryOperatorId: operatorId, type: { in: ["advance", "bonus_payout"] } },
@@ -96,7 +149,7 @@ export async function calcOperatorBalance(
   let totalAccrued = 0;
   let periodAccrued = 0;
   for (const shift of shifts) {
-    const { accrued } = calcShiftAccrual(shift.startAt, shift.endAt, rateForDate(shift.startAt));
+    const { accrued } = calcShiftAccrual(shift.startAt, shift.endAt!, rateForDate(shift.startAt));
     totalAccrued += accrued;
     if (period && shift.startAt >= period.from && shift.startAt < period.to) periodAccrued += accrued;
   }
@@ -131,25 +184,43 @@ export async function calcOperatorBalance(
 export interface ShiftDetail {
   id: string;
   startAt: Date;
-  endAt: Date;
-  minutes: number;
-  rate: number;
-  accrued: number;
+  endAt: Date | null; // null только для open:true (открытая смена)
+  minutes: number | null;
+  rate: number | null;
+  accrued: number | null;
   advanceAmount: number;
   bonusAmount: number;
+  open: boolean;
+  // Открытая смена дольше 16 часов (docs/spec/05-work-time.md) — подсветка
+  // "требует правки" в табеле владельца. Всегда false для open:false.
+  requiresEdit: boolean;
 }
 
 // Табель (список смен с начислением и связанными авансом/премией) — общий
-// для PWA оператора (свои смены) и карточки оператора в кабинете владельца.
+// для PWA оператора (свои смены, includeOpen всегда false — открытая смена
+// не показывается оператору до check-out) и карточки оператора в кабинете
+// владельца (includeOpen:true — владелец должен видеть и суметь поправить
+// зависшую открытую смену). Начисление для открытой смены не считается
+// (endAt/minutes/rate/accrued = null) — по спеке расчёт только после закрытия.
+// Открытая смена показывается вне периода-фильтра: это не историческая
+// запись, а текущее состояние, требующее внимания.
 export async function listShiftDetails(
   operatorId: string,
-  period?: { from: Date; to: Date }
+  period?: { from: Date; to: Date },
+  options?: { includeOpen?: boolean }
 ): Promise<ShiftDetail[]> {
-  const shifts = await prisma.shift.findMany({
-    where: { operatorId, ...(period ? { startAt: { gte: period.from, lt: period.to } } : {}) },
-    orderBy: { startAt: "desc" },
-  });
-  if (shifts.length === 0) return [];
+  const [closedShifts, openShift] = await Promise.all([
+    prisma.shift.findMany({
+      where: {
+        operatorId,
+        isOpen: false,
+        ...(period ? { startAt: { gte: period.from, lt: period.to } } : {}),
+      },
+      orderBy: { startAt: "desc" },
+    }),
+    options?.includeOpen ? getOpenShift(operatorId) : Promise.resolve(null),
+  ]);
+  if (closedShifts.length === 0 && !openShift) return [];
 
   const rates = await prisma.operatorRate.findMany({
     where: { operatorId },
@@ -160,9 +231,11 @@ export async function listShiftDetails(
     return rate ? Number(rate.rate) : 0;
   }
 
-  const moneyOps = await prisma.moneyOperation.findMany({
-    where: { shiftId: { in: shifts.map((s) => s.id) }, type: { in: ["advance", "bonus_payout"] } },
-  });
+  const moneyOps = closedShifts.length
+    ? await prisma.moneyOperation.findMany({
+        where: { shiftId: { in: closedShifts.map((s) => s.id) }, type: { in: ["advance", "bonus_payout"] } },
+      })
+    : [];
   const moneyByShift = new Map<string, { advance: number; bonus: number }>();
   for (const op of moneyOps) {
     const entry = moneyByShift.get(op.shiftId!) ?? { advance: 0, bonus: 0 };
@@ -172,21 +245,39 @@ export async function listShiftDetails(
     moneyByShift.set(op.shiftId!, entry);
   }
 
-  return shifts.map((shift) => {
+  const closedRows: ShiftDetail[] = closedShifts.map((shift) => {
     const rate = rateForDate(shift.startAt);
-    const { minutes, accrued } = calcShiftAccrual(shift.startAt, shift.endAt, rate);
+    const { minutes, accrued } = calcShiftAccrual(shift.startAt, shift.endAt!, rate);
     const money = moneyByShift.get(shift.id) ?? { advance: 0, bonus: 0 };
     return {
       id: shift.id,
       startAt: shift.startAt,
-      endAt: shift.endAt,
+      endAt: shift.endAt!,
       minutes,
       rate,
       accrued,
       advanceAmount: money.advance,
       bonusAmount: money.bonus,
+      open: false,
+      requiresEdit: false,
     };
   });
+
+  if (!openShift) return closedRows;
+
+  const openRow: ShiftDetail = {
+    id: openShift.id,
+    startAt: openShift.startAt,
+    endAt: null,
+    minutes: null,
+    rate: null,
+    accrued: null,
+    advanceAmount: 0,
+    bonusAmount: 0,
+    open: true,
+    requiresEdit: isShiftTooLong(openShift.startAt),
+  };
+  return [openRow, ...closedRows];
 }
 
 export interface StandaloneMoneyOp {

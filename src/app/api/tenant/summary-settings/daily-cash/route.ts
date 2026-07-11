@@ -14,8 +14,15 @@ export async function GET() {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
 
-  const row = await prisma.dailyCashSummarySettings.findUnique({ where: { tenantId: owner.tenantId } });
-  return NextResponse.json(row ?? DAILY_CASH_SUMMARY_DEFAULTS);
+  // businessDayBoundary — поле Tenant, не этой таблицы (docs/spec/05-work-time.md,
+  // перенесено 2026-07-11: значение общетенантное, его же читает Рабочее время).
+  const [row, tenant] = await Promise.all([
+    prisma.dailyCashSummarySettings.findUnique({ where: { tenantId: owner.tenantId } }),
+    prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { businessDayBoundary: true } }),
+  ]);
+  const businessDayBoundary = tenant?.businessDayBoundary ?? DAILY_CASH_SUMMARY_DEFAULTS.businessDayBoundary;
+
+  return NextResponse.json({ ...(row ?? DAILY_CASH_SUMMARY_DEFAULTS), businessDayBoundary });
 }
 
 const BOOLEAN_FIELDS = [
@@ -35,7 +42,7 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json();
-  const data: Partial<DailyCashSummarySettingsData> = {};
+  const data: Partial<Omit<DailyCashSummarySettingsData, "businessDayBoundary">> = {};
 
   for (const key of BOOLEAN_FIELDS) {
     if (typeof body[key] === "boolean") data[key] = body[key];
@@ -52,18 +59,24 @@ export async function PATCH(request: Request) {
     }
     data.fixedTime = body.fixedTime;
   }
-  if (body.businessDayBoundary !== undefined) {
-    if (!isTimeString(body.businessDayBoundary)) {
-      return NextResponse.json({ error: "Некорректная граница бизнес-дня (ЧЧ:ММ)" }, { status: 400 });
-    }
-    data.businessDayBoundary = body.businessDayBoundary;
-  }
 
+  // businessDayBoundary больше НЕ редактируется здесь (фидбек пользователя
+  // 2026-07-11 — дублировалось с Настройками Рабочего времени, единственное
+  // место редактирования теперь там); GET по-прежнему отдаёт текущее значение
+  // справочно.
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: owner.tenantId },
+    select: { businessDayBoundary: true },
+  });
+  const businessDayBoundary = tenant?.businessDayBoundary ?? DAILY_CASH_SUMMARY_DEFAULTS.businessDayBoundary;
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- отбрасываем поле, которого больше нет в этой таблице
+  const { businessDayBoundary: discardedBoundaryDefault, ...settingsDefaults } = DAILY_CASH_SUMMARY_DEFAULTS;
   const row = await prisma.dailyCashSummarySettings.upsert({
     where: { tenantId: owner.tenantId },
-    create: { tenantId: owner.tenantId, ...DAILY_CASH_SUMMARY_DEFAULTS, ...data },
+    create: { tenantId: owner.tenantId, ...settingsDefaults, ...data },
     update: data,
   });
 
-  return NextResponse.json(row);
+  return NextResponse.json({ ...row, businessDayBoundary });
 }

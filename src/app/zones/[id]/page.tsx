@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Check, Pencil, Palette, Camera, ImagePlus, ListChecks, Trash2, Plus, Pause, Play } from "lucide-react";
+import { Check, Pencil, Palette, Camera, ImagePlus, ListChecks, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -272,6 +272,17 @@ export default function ZoneDetailPage() {
     await loadZone();
   }
 
+  // Порядок активов внутри зоны — ручной, задаёт владелец (фидбек
+  // 2026-07-11), влияет на список/форму сдачи итогов/отчёты/сводки везде.
+  async function moveAsset(id: string, direction: "up" | "down") {
+    await fetch(`/api/assets/${id}/move`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ direction }),
+    });
+    await loadZone();
+  }
+
   function openAssetKebab(asset: AssetInfo) {
     setAssetKebab(asset);
     setAssetKebabView("menu");
@@ -409,7 +420,7 @@ export default function ZoneDetailPage() {
               {t.zoneDetail.assetsTitle} · {zone.assets.length}
             </h2>
 
-            {zone.assets.map((asset) => (
+            {zone.assets.map((asset, index) => (
               <div
                 key={asset.id}
                 className="-mx-2 flex items-center justify-between rounded-control border-t border-border px-2 py-3 first:border-t-0"
@@ -436,7 +447,29 @@ export default function ZoneDetailPage() {
                     </p>
                   </div>
                 </div>
-                <KebabButton onClick={() => openAssetKebab(asset)} label={t.zoneDetail.assetActionsLabel} />
+                <div className="flex shrink-0 items-center gap-1">
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      disabled={index === 0}
+                      onClick={() => moveAsset(asset.id, "up")}
+                      aria-label={t.common.moveUp}
+                      className="flex size-6 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
+                    >
+                      <ChevronUp className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === zone.assets.length - 1}
+                      onClick={() => moveAsset(asset.id, "down")}
+                      aria-label={t.common.moveDown}
+                      className="flex size-6 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
+                    >
+                      <ChevronDown className="size-4" />
+                    </button>
+                  </div>
+                  <KebabButton onClick={() => openAssetKebab(asset)} label={t.zoneDetail.assetActionsLabel} />
+                </div>
               </div>
             ))}
 

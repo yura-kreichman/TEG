@@ -1,23 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireOwner } from "@/lib/require-owner";
-import { isTaskStatus } from "@/lib/tasks";
-
-async function findTenantPoint(tenantId: string, pointId: string) {
-  const point = await prisma.point.findUnique({ where: { id: pointId } });
-  if (!point || point.tenantId !== tenantId) return null;
-  return point;
-}
-
-const TASK_SELECT = {
-  id: true,
-  title: true,
-  note: true,
-  status: true,
-  createdAt: true,
-  assignedOperators: { select: { id: true, name: true, colorTag: true } },
-  assignedUsers: { select: { id: true, email: true } },
-} as const;
+import { findTenantPoint, requireOwner } from "@/lib/require-owner";
+import { TASK_SELECT, isTaskStatus } from "@/lib/tasks";
 
 export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]/tasks">) {
   const owner = await requireOwner();

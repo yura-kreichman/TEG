@@ -8,10 +8,7 @@ import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
-
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
+import { formatTime } from "@/lib/datetime-format";
 
 interface AdvanceBonusEntry {
   id: string;
@@ -68,10 +65,6 @@ export default function AdvancesBonusesRegisterPage() {
     return `${d.getUTCDate()} ${t.readings.monthsGenitive[d.getUTCMonth()]}`;
   }
 
-  function formatTime(iso: string) {
-    const d = new Date(iso);
-    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
 
   const advanceBonusGroups: { date: string; items: AdvanceBonusEntry[] }[] = [];
   for (const op of advancesBonuses) {

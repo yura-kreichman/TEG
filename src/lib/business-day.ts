@@ -39,3 +39,60 @@ export function isAtTimeMinute(timeStr: string, at: Date): boolean {
   const { hours, minutes } = parseBoundary(timeStr);
   return at.getUTCHours() === hours && at.getUTCMinutes() === minutes;
 }
+
+// Допуск начала смены (docs/spec/05-work-time.md, "РЕЖИМ УЧЁТА ВРЕМЕНИ") —
+// попадает ли момент `at` в окно [centerTime−earlyMinutes; centerTime+lateMinutes]
+// с учётом переноса через полночь (окно может начинаться накануне, если
+// centerTime близко к 00:00). Если суммарная ширина окна покрывает целые
+// сутки — ограничения фактически нет, разрешаем всегда.
+/** "HH:MM" границ окна допуска, только для отображения (сообщение об ошибке check-in). */
+export function formatShiftStartWindow(
+  centerTime: string,
+  earlyMinutes: number,
+  lateMinutes: number
+): { start: string; end: string } {
+  const { hours, minutes } = parseBoundary(centerTime);
+  const centerMin = hours * 60 + minutes;
+  const fmt = (m: number) => {
+    const wrapped = ((m % 1440) + 1440) % 1440;
+    return `${String(Math.floor(wrapped / 60)).padStart(2, "0")}:${String(wrapped % 60).padStart(2, "0")}`;
+  };
+  return { start: fmt(centerMin - earlyMinutes), end: fmt(centerMin + lateMinutes) };
+}
+
+// Пересекает ли окно допуска начала смены границу бизнес-дня (только для
+// предупреждения владельцу в настройках, ни на что не влияет функционально —
+// businessDayBoundary продолжает бакетировать смены строго по фактическому
+// startAt, окно допуска лишь решает "можно ли вообще начать сейчас"). Если
+// пересекает — смена, начатая в этом "раннем хвосте", попадёт в предыдущий
+// бизнес-день, хотя оператор может считать это началом сегодняшней смены.
+export function toleranceCrossesBusinessDayBoundary(
+  centerTime: string,
+  boundaryTime: string,
+  earlyMinutes: number,
+  lateMinutes: number
+): boolean {
+  if (earlyMinutes + lateMinutes >= 24 * 60) return true;
+  const { hours: ch, minutes: cm } = parseBoundary(centerTime);
+  const { hours: bh, minutes: bm } = parseBoundary(boundaryTime);
+  const centerMin = ch * 60 + cm;
+  const boundaryMin = bh * 60 + bm;
+  const lower = centerMin - earlyMinutes;
+  const upper = centerMin + lateMinutes;
+  return [boundaryMin, boundaryMin - 1440, boundaryMin + 1440].some((b) => b > lower && b < upper);
+}
+
+export function isWithinShiftStartWindow(
+  centerTime: string,
+  earlyMinutes: number,
+  lateMinutes: number,
+  at: Date
+): boolean {
+  if (earlyMinutes + lateMinutes >= 24 * 60) return true;
+  const { hours, minutes } = parseBoundary(centerTime);
+  const centerMin = hours * 60 + minutes;
+  const nowMin = at.getUTCHours() * 60 + at.getUTCMinutes();
+  const lower = (((centerMin - earlyMinutes) % 1440) + 1440) % 1440;
+  const upper = (((centerMin + lateMinutes) % 1440) + 1440) % 1440;
+  return lower <= upper ? nowMin >= lower && nowMin <= upper : nowMin >= lower || nowMin <= upper;
+}

@@ -16,6 +16,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 import type { ZoneAccountingMode } from "@/lib/results-calc";
+import { formatTime, pad } from "@/lib/datetime-format";
 
 interface PointOption {
   id: string;
@@ -56,14 +57,6 @@ interface DayCard {
   }[];
 }
 
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
-
-function formatTime(iso: string) {
-  const d = new Date(iso);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 type ActionsView = "menu" | "edit" | "confirm-delete";
 
@@ -90,6 +83,7 @@ export default function ReadingsCalendarPage() {
   const [editReturns, setEditReturns] = useState("");
   const [editReason, setEditReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function loadPoints() {
     const res = await fetch("/api/points");
@@ -197,18 +191,23 @@ export default function ReadingsCalendarPage() {
   }
 
   async function confirmDelete() {
-    if (!actionsFor) return;
-    const res = await fetch(`/api/reports/counters/zone-submission/${actionsFor.zoneSubmissionId}`, {
-      method: "DELETE",
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      setActionError(data.error ?? t.readings.deleteError);
-      return;
+    if (!actionsFor || deleting) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/reports/counters/zone-submission/${actionsFor.zoneSubmissionId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setActionError(data?.error ?? t.readings.deleteError);
+        return;
+      }
+      setActionsFor(null);
+      if (selectedDate) await loadDay(selectedDate);
+      await loadCalendar();
+    } finally {
+      setDeleting(false);
     }
-    setActionsFor(null);
-    if (selectedDate) await loadDay(selectedDate);
-    await loadCalendar();
   }
 
   if (checking) return null;
@@ -612,11 +611,11 @@ export default function ReadingsCalendarPage() {
             <p className="text-body-airbnb">{t.readings.deleteConfirmBody}</p>
             {actionError && <p className="text-sm text-destructive">{actionError}</p>}
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setActionsView("menu")}>
+              <Button variant="outline" className="flex-1" disabled={deleting} onClick={() => setActionsView("menu")}>
                 {t.common.cancel}
               </Button>
               <PressableScale className="flex-1">
-                <Button variant="destructive" className="w-full" onClick={confirmDelete}>
+                <Button variant="destructive" className="w-full" disabled={deleting} onClick={confirmDelete}>
                   {t.readings.deleteAction}
                 </Button>
               </PressableScale>

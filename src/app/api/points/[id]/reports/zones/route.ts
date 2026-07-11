@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireOwner } from "@/lib/require-owner";
+import { findTenantPoint, requireOwner } from "@/lib/require-owner";
 import {
   computeZoneSubmissionRevenues,
   getPeriodRange,
@@ -8,12 +8,6 @@ import {
   round2,
   sumByKey,
 } from "@/lib/reports";
-
-async function findTenantPoint(tenantId: string, pointId: string) {
-  const point = await prisma.point.findUnique({ where: { id: pointId } });
-  if (!point || point.tenantId !== tenantId) return null;
-  return point;
-}
 
 export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/reports/zones">) {
   const owner = await requireOwner();

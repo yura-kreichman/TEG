@@ -33,7 +33,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/operators/[i
         }
       : undefined;
 
-  const shifts = await listShiftDetails(operator.id, period);
+  const shifts = await listShiftDetails(operator.id, period, { includeOpen: true });
   const editedIds = new Set(
     (
       await prisma.correctionLog.findMany({

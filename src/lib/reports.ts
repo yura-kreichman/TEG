@@ -2,26 +2,38 @@ import { prisma } from "@/lib/prisma";
 import { calcSessions, calcZoneRevenue } from "@/lib/results-calc";
 
 export type ReportGranularity = "week" | "month";
+export type PeriodGranularity = "day" | "week" | "month" | "year";
 
 export function isReportGranularity(value: unknown): value is ReportGranularity {
   return value === "week" || value === "month";
 }
 
+export function isPeriodGranularity(value: unknown): value is PeriodGranularity {
+  return value === "day" || value === "week" || value === "month" || value === "year";
+}
+
 /**
- * Same period-range convention as /api/reports/money: calendar week (Mon-Sun)
- * or calendar month containing `anchor`, truncated to `today` so an in-progress
- * period doesn't silently include days that haven't happened yet.
+ * Calendar period (day/week/month/year) containing `anchor`, truncated to
+ * `today` so an in-progress period doesn't silently include days that
+ * haven't happened yet. Shared by the per-point reports (week/month only,
+ * via `ReportGranularity`) and /api/reports/money (all four).
  */
-export function getPeriodRange(granularity: ReportGranularity, anchor: Date, today: Date) {
+export function getPeriodRange(granularity: PeriodGranularity, anchor: Date, today: Date) {
   let start: Date;
   let end: Date;
-  if (granularity === "week") {
+  if (granularity === "day") {
+    start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate()));
+    end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  } else if (granularity === "week") {
     const dayIndex = (anchor.getUTCDay() + 6) % 7; // 0=Mon
     start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate() - dayIndex));
     end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
-  } else {
+  } else if (granularity === "month") {
     start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), 1));
     end = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 1));
+  } else {
+    start = new Date(Date.UTC(anchor.getUTCFullYear(), 0, 1));
+    end = new Date(Date.UTC(anchor.getUTCFullYear() + 1, 0, 1));
   }
   const todayEnd = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 1));
   if (end > todayEnd) end = todayEnd;

@@ -6,7 +6,7 @@ import { calcOperatorBalance, calcShiftAccrual, getRateForDate, hasOverlappingSh
 
 interface ShiftCorrectionDiff {
   startAt: string;
-  endAt: string;
+  endAt: string | null;
   advanceAmount: number;
   bonusAmount: number;
 }
@@ -55,8 +55,16 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
       reason?: string;
     };
 
+  // Открытая смена (docs/spec/05-work-time.md, "АВТО") — endAt ещё null, пока
+  // оператор не нажал "Закончить смену". Владелец может её закрыть за
+  // оператора, указав endAt явно (например, если тот забыл), но не может
+  // сохранить правку без endAt вообще — редактировать здесь нечего.
+  if (shift.endAt === null && endAtInput === undefined) {
+    return NextResponse.json({ error: "Смена ещё не завершена — укажите время окончания" }, { status: 400 });
+  }
+
   const nextStartAt = startAtInput !== undefined ? new Date(startAtInput) : shift.startAt;
-  const nextEndAt = endAtInput !== undefined ? new Date(endAtInput) : shift.endAt;
+  const nextEndAt = endAtInput !== undefined ? new Date(endAtInput) : shift.endAt!;
   if (Number.isNaN(nextStartAt.getTime()) || Number.isNaN(nextEndAt.getTime()) || nextEndAt <= nextStartAt) {
     return NextResponse.json({ error: "Некорректное время смены" }, { status: 400 });
   }
@@ -72,12 +80,15 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   }
 
   if (nextAdvance > currentAdvance) {
-    const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { overdraftAllowed: true } });
+    const shiftOperator = await prisma.operator.findUnique({
+      where: { id: shift.operatorId },
+      select: { overdraftAllowed: true },
+    });
     // Баланс без учёта уже выданного по этой же смене аванса — иначе он бы
     // дважды вычитался (уже сидит в текущем toPayOut).
     const balance = await calcOperatorBalance(shift.operatorId);
     const availableExcludingThisShift = balance.toPayOut + currentAdvance;
-    if (!tenant?.overdraftAllowed && nextAdvance > availableExcludingThisShift) {
+    if (!shiftOperator?.overdraftAllowed && nextAdvance > availableExcludingThisShift) {
       return NextResponse.json(
         { error: `Аванс превышает доступный баланс к выдаче (${availableExcludingThisShift.toFixed(2)})` },
         { status: 400 }
@@ -89,7 +100,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
 
   const before: ShiftCorrectionDiff = {
     startAt: shift.startAt.toISOString(),
-    endAt: shift.endAt.toISOString(),
+    endAt: shift.endAt?.toISOString() ?? null,
     advanceAmount: currentAdvance,
     bonusAmount: currentBonus,
   };
@@ -108,7 +119,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   const shiftOperatorId = shift.operatorId;
 
   await prisma.$transaction(async (tx) => {
-    await tx.shift.update({ where: { id }, data: { startAt: nextStartAt, endAt: nextEndAt } });
+    // isOpen держим синхронно с endAt (см. Shift.isOpen в schema.prisma) — эта
+    // правка всегда задаёт endAt (см. проверку выше), значит смена закрыта.
+    await tx.shift.update({ where: { id }, data: { startAt: nextStartAt, endAt: nextEndAt, isOpen: false } });
 
     const syncLinkedOp = async (type: "advance" | "bonus_payout", amount: number) => {
       const existing = linkedOps.find((o) => o.type === type);
@@ -193,7 +206,7 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
   const linkedOps = await loadLinkedMoneyOps(id);
   const before = {
     startAt: shift.startAt.toISOString(),
-    endAt: shift.endAt.toISOString(),
+    endAt: shift.endAt?.toISOString() ?? null,
     advanceAmount: linkedOps.filter((o) => o.type === "advance").reduce((s, o) => s + Math.abs(Number(o.amount)), 0),
     bonusAmount: linkedOps.filter((o) => o.type === "bonus_payout").reduce((s, o) => s + Math.abs(Number(o.amount)), 0),
   };

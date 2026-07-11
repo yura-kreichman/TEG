@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkPackageLimit } from "@/lib/packages";
 import { requireOwner } from "@/lib/require-owner";
 
 export async function GET() {
@@ -31,15 +32,8 @@ export async function POST(request: Request) {
   }
 
   const pointCount = await prisma.point.count({ where: { tenantId: owner.tenantId } });
-  const pkg = await prisma.tenant
-    .findUnique({ where: { id: owner.tenantId }, include: { package: true } })
-    .then((t) => t?.package);
-  if (pkg && pointCount >= pkg.maxPoints) {
-    return NextResponse.json(
-      { error: `Достигнут лимит точек по вашему пакету (${pkg.maxPoints})` },
-      { status: 409 }
-    );
-  }
+  const limitError = await checkPackageLimit(owner.tenantId, "maxPoints", pointCount);
+  if (limitError) return limitError;
 
   const point = await prisma.point.create({
     data: {

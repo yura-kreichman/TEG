@@ -66,6 +66,8 @@
   --shadow-card-hover: var(--shadow-card-hover);
   --shadow-floating: var(--shadow-floating);
   --shadow-sheet: var(--shadow-sheet);
+  --color-nav-glass-bg: var(--nav-glass-bg);
+  --color-nav-glass-border: var(--nav-glass-border);
 }
 
 :root {
@@ -124,6 +126,28 @@
   --shadow-card-hover: 0 6px 14px rgba(27, 31, 29, 0.12), 0 16px 36px rgba(27, 31, 29, 0.16);
   --shadow-floating: 0 8px 28px rgba(27, 31, 29, 0.16);
   --shadow-sheet: 0 -12px 40px rgba(27, 31, 29, 0.18);
+
+  /* Нижний бар "стекло" (docs/spec/03-design-system.md, НАВИГАЦИЯ) —
+     непрозрачность встроена в сам цвет через вложенный color-mix (не через
+     отдельное opacity), чтобы значением можно было пользоваться напрямую как
+     background: var(--nav-glass-bg), а backdrop-filter blur видел именно этот
+     полупрозрачный цвет. Пересчитывается автоматически из --primary при смене
+     акцентного пресета — своего кода на пресет не требуется. Спека называет
+     исходную переменную "--accent", но в токенах проекта --accent уже занят
+     нейтральной поверхностью (см. :root выше) — реальный акцент тенанта это
+     --primary/--ring (см. src/components/accent-picker.tsx), поэтому вычисляем
+     из --primary. */
+  --nav-glass-bg: color-mix(in oklab, color-mix(in oklab, var(--primary) 14%, white) 73%, transparent);
+  --nav-glass-border: color-mix(in oklab, var(--primary) 14%, transparent);
+  /* Fallback без backdrop-filter (@supports not (...) — старые WebView/слабые
+     GPU): та же тонировка, но 96% непрозрачности, без блюра позади — иначе
+     контент под баром просвечивал бы совсем без размытия. */
+  --nav-glass-bg-solid: color-mix(in oklab, color-mix(in oklab, var(--primary) 14%, white) 96%, transparent);
+  /* Неактивный пункт нижнего бара — нейтральный "с примесью акцента", не
+     чистый серый (docs/spec/03-design-system.md). Формула одна на обе темы —
+     var(--foreground)/var(--primary) сами уже разные в .dark, пересчитывать
+     отдельно не нужно. */
+  --nav-inactive-fg: color-mix(in oklab, var(--foreground) 80%, var(--primary) 20%);
 }
 
 .dark {
@@ -179,6 +203,15 @@
   --shadow-card-hover: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 12px 28px rgba(0, 0, 0, 0.5);
   --shadow-floating: 0 8px 28px rgba(0, 0, 0, 0.5);
   --shadow-sheet: 0 -12px 40px rgba(0, 0, 0, 0.5);
+
+  /* Тёмная тема: не светлое стекло на тёмном фоне — базовая поверхность
+     тёмная, тонированная акцентом. Спека называет базу "surface-2"; в токенах
+     проекта нет отдельного surface-2 — ближайший эквивалент "поверхность на
+     ступень светлее фона" здесь это --card (см. комментарий в начале .dark
+     выше), от него и берём. */
+  --nav-glass-bg: color-mix(in oklab, color-mix(in oklab, var(--primary) 18%, var(--card)) 75%, transparent);
+  --nav-glass-border: color-mix(in oklab, var(--primary) 14%, transparent);
+  --nav-glass-bg-solid: color-mix(in oklab, color-mix(in oklab, var(--primary) 18%, var(--card)) 96%, transparent);
 }
 
 /*
@@ -385,5 +418,27 @@
   }
   .scrollbar-none::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Нижний бар "стекло" (docs/spec/03-design-system.md, НАВИГАЦИЯ) — общий
+     класс для бара кабинета владельца и PWA оператора. Fallback без
+     backdrop-filter объявлен здесь же (не через отдельную utility-класс —
+     @supports внутри @layer utilities не поддерживается Tailwind так же
+     чисто, проще держать оба правила рядом). */
+  .nav-glass {
+    background: var(--nav-glass-bg);
+    border-top: 0.5px solid var(--nav-glass-border);
+    backdrop-filter: blur(18px) saturate(170%);
+    -webkit-backdrop-filter: blur(18px) saturate(170%);
+  }
+  @supports not (backdrop-filter: blur(1px)) {
+    .nav-glass {
+      background: var(--nav-glass-bg-solid);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+  }
+  .text-nav-inactive {
+    color: var(--nav-inactive-fg);
   }
 }

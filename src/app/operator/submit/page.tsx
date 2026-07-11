@@ -252,7 +252,11 @@ export default function SubmitResultsPage() {
     return (
       <div className="flex flex-1 flex-col items-center justify-center bg-background px-4 py-10">
         <SpringCard hover={false} className="w-full max-w-md">
-          <h1 className="text-screen-title">{t.operatorApp.submit.acceptedTitle}</h1>
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-screen-title">{t.operatorApp.submit.acceptedTitle}</h1>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/api/icon-library/app-icons/done.svg" alt="" className="size-7 shrink-0" />
+          </div>
           <div className="mt-4 flex flex-col gap-3">
             {result.summary.map((s) => (
               <div

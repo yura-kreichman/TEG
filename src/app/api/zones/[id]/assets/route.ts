@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkPackageLimit } from "@/lib/packages";
 import { findTenantZone, requireOwner } from "@/lib/require-owner";
 
 const DEFAULT_COLOR_TAGS = [
@@ -26,20 +27,17 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   }
 
   const assetCount = await prisma.asset.count({ where: { zone: { point: { tenantId: owner.tenantId } } } });
-  const pkg = await prisma.tenant
-    .findUnique({ where: { id: owner.tenantId }, include: { package: true } })
-    .then((t) => t?.package);
-  if (pkg && assetCount >= pkg.maxAssets) {
-    return NextResponse.json(
-      { error: `Достигнут лимит активов по вашему пакету (${pkg.maxAssets})` },
-      { status: 409 }
-    );
-  }
+  const limitError = await checkPackageLimit(owner.tenantId, "maxAssets", assetCount);
+  if (limitError) return limitError;
 
   const { name, photoUrl, iconKey, colorTag } = await request.json();
   if (typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ error: "Название актива обязательно" }, { status: 400 });
   }
+
+  // Порядок — в рамках зоны, не всего тенанта (assetCount выше — тенантный
+  // счётчик для лимита пакета, для sortOrder нужен именно счёт внутри зоны).
+  const zoneAssetCount = await prisma.asset.count({ where: { zoneId } });
 
   const asset = await prisma.asset.create({
     data: {
@@ -51,6 +49,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
         typeof colorTag === "string" && colorTag.trim()
           ? colorTag.trim()
           : DEFAULT_COLOR_TAGS[assetCount % DEFAULT_COLOR_TAGS.length],
+      sortOrder: zoneAssetCount,
     },
   });
 

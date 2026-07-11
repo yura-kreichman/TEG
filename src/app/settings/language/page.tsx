@@ -6,6 +6,7 @@ import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { LocalePicker } from "@/components/locale-picker";
+import { TimezonePicker } from "@/components/timezone-picker";
 
 export default function LanguageSettingsPage() {
   const t = useI18n();
@@ -22,8 +23,20 @@ export default function LanguageSettingsPage() {
 
           <StaggerList className="flex flex-col gap-3">
             <StaggerItem>
-              <SpringCard animate={false} hover={false} className="flex flex-col gap-4">
+              <SpringCard animate={false} hover={false} className="flex flex-col gap-2">
+                <span className="text-[11px] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+                  {t.settings.languageSectionLabel}
+                </span>
                 <LocalePicker />
+              </SpringCard>
+            </StaggerItem>
+            <StaggerItem>
+              <SpringCard animate={false} hover={false} className="flex flex-col gap-2">
+                <span className="text-[11px] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+                  {t.settings.timezoneTitle}
+                </span>
+                <TimezonePicker />
+                <p className="text-caption-airbnb">{t.settings.timezoneHint}</p>
               </SpringCard>
             </StaggerItem>
           </StaggerList>

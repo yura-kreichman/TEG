@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
 import { requireOwner } from "@/lib/require-owner";
 import { isZoneSubmissionEditable } from "@/lib/results-submission";
 
@@ -180,31 +181,41 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/reports/
     ),
   };
 
-  await prisma.$transaction(async (tx) => {
-    await tx.moneyOperation.deleteMany({
-      where: { resultsSubmissionId: zoneSubmission.resultsSubmissionId, zoneId: zoneSubmission.zoneId },
-    });
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.moneyOperation.deleteMany({
+        where: { resultsSubmissionId: zoneSubmission.resultsSubmissionId, zoneId: zoneSubmission.zoneId },
+      });
 
-    await tx.correctionLog.create({
-      data: {
-        entityType: "ZoneSubmission",
-        entityId: id,
-        correctedByUserId: owner.user.id,
-        beforeJson: JSON.parse(JSON.stringify(before)),
-        afterJson: { deleted: true },
-        comment: null,
-      },
-    });
+      await tx.correctionLog.create({
+        data: {
+          entityType: "ZoneSubmission",
+          entityId: id,
+          correctedByUserId: owner.user.id,
+          beforeJson: JSON.parse(JSON.stringify(before)),
+          afterJson: { deleted: true },
+          comment: null,
+        },
+      });
 
-    await tx.zoneSubmission.delete({ where: { id } });
+      await tx.zoneSubmission.delete({ where: { id } });
 
-    const remaining = await tx.zoneSubmission.count({
-      where: { resultsSubmissionId: zoneSubmission.resultsSubmissionId },
+      const remaining = await tx.zoneSubmission.count({
+        where: { resultsSubmissionId: zoneSubmission.resultsSubmissionId },
+      });
+      if (remaining === 0) {
+        await tx.resultsSubmission.delete({ where: { id: zoneSubmission.resultsSubmissionId } });
+      }
     });
-    if (remaining === 0) {
-      await tx.resultsSubmission.delete({ where: { id: zoneSubmission.resultsSubmissionId } });
+  } catch (err) {
+    // Гонка двойного клика/повторного запроса — эту сдачу уже удалил первый
+    // запрос (P2025 "record not found"). Транзакция атомарна, поэтому ничего
+    // не осталось наполовину применённым: для DELETE это идемпотентно, не ошибка.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+      return NextResponse.json({ ok: true });
     }
-  });
+    throw err;
+  }
 
   return NextResponse.json({ ok: true });
 }

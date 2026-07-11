@@ -15,10 +15,12 @@ function WheelColumn({
   values,
   value,
   onChange,
+  format = (v: number) => String(v).padStart(2, "0"),
 }: {
   values: number[];
   value: number;
   onChange: (v: number) => void;
+  format?: (v: number) => string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -98,7 +100,7 @@ function WheelColumn({
             )}
             style={{ height: ITEM_HEIGHT }}
           >
-            {String(v).padStart(2, "0")}
+            {format(v)}
           </button>
         ))}
       </div>
@@ -114,10 +116,12 @@ function WheelColumnWithSteppers({
   values,
   value,
   onChange,
+  format,
 }: {
   values: number[];
   value: number;
   onChange: (v: number) => void;
+  format?: (v: number) => string;
 }) {
   function step(delta: number) {
     const index = values.indexOf(value);
@@ -136,7 +140,7 @@ function WheelColumnWithSteppers({
       >
         <ChevronUp className="size-4" />
       </button>
-      <WheelColumn values={values} value={value} onChange={onChange} />
+      <WheelColumn values={values} value={value} onChange={onChange} format={format} />
       <button
         type="button"
         onClick={() => step(-1)}
@@ -152,6 +156,9 @@ function WheelColumnWithSteppers({
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTES = Array.from({ length: 60 }, (_, i) => i);
+function minutesForStep(step: number): number[] {
+  return step <= 1 ? MINUTES : Array.from({ length: Math.ceil(60 / step) }, (_, i) => i * step);
+}
 
 // 24-часовой time picker "колёсиками" (docs/spec/05-work-time.md, "СМЕНА") —
 // два вертикальных скролл-снап списка (часы/минуты), выбранное значение
@@ -162,19 +169,38 @@ const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 export function WheelTimePicker({
   hour,
   minute,
+  minuteStep = 1,
+  hourValues,
   onChange,
 }: {
   hour: number;
   minute: number;
+  minuteStep?: number;
+  // Ограниченный список часов (docs/spec/05-work-time.md, "РЕЖИМ УЧЁТА
+  // ВРЕМЕНИ", допуск раньше/позже начала) — если задан, колесо часов
+  // прокручивает только эти значения вместо полных 0..23.
+  hourValues?: number[];
   onChange: (v: { hour: number; minute: number }) => void;
 }) {
+  const minuteValues = minutesForStep(minuteStep);
+  // Если пришедшее значение минут не кратно шагу (старые данные), приводим
+  // к ближайшему разрешённому, чтобы колесо не «зависало» между делениями.
+  const snappedMinute = minuteValues.reduce((closest, v) =>
+    Math.abs(v - minute) < Math.abs(closest - minute) ? v : closest
+  );
+  const hoursList = hourValues && hourValues.length > 0 ? hourValues : HOURS;
+  const snappedHour = hoursList.includes(hour)
+    ? hour
+    : hoursList.reduce((closest, v) => (Math.abs(v - hour) < Math.abs(closest - hour) ? v : closest));
+
   return (
     <div className="flex items-center gap-1">
-      <WheelColumnWithSteppers values={HOURS} value={hour} onChange={(h) => onChange({ hour: h, minute })} />
+      <WheelColumnWithSteppers values={hoursList} value={snappedHour} onChange={(h) => onChange({ hour: h, minute: snappedMinute })} />
       <div className="flex items-center justify-center" style={{ height: COLUMN_HEIGHT }}>
         <span className="text-[22px] font-bold text-muted-foreground">:</span>
       </div>
-      <WheelColumnWithSteppers values={MINUTES} value={minute} onChange={(m) => onChange({ hour, minute: m })} />
+      <WheelColumnWithSteppers values={minuteValues} value={snappedMinute} onChange={(m) => onChange({ hour: snappedHour, minute: m })} />
     </div>
   );
 }
+

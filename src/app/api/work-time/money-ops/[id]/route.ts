@@ -31,10 +31,13 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   const before = Math.abs(Number(op.amount));
 
   if (op.type === "advance" && amountNumber > before && op.beneficiaryOperatorId) {
-    const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { overdraftAllowed: true } });
+    const beneficiary = await prisma.operator.findUnique({
+      where: { id: op.beneficiaryOperatorId },
+      select: { overdraftAllowed: true },
+    });
     const balance = await calcOperatorBalance(op.beneficiaryOperatorId);
     const availableExcludingThis = balance.toPayOut + before;
-    if (!tenant?.overdraftAllowed && amountNumber > availableExcludingThis) {
+    if (!beneficiary?.overdraftAllowed && amountNumber > availableExcludingThis) {
       return NextResponse.json(
         { error: `Аванс превышает доступный баланс к выдаче (${availableExcludingThis.toFixed(2)})` },
         { status: 400 }

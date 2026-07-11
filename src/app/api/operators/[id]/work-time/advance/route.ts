@@ -34,9 +34,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operators/[
     return NextResponse.json({ error: "Точка не найдена" }, { status: 400 });
   }
 
-  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { overdraftAllowed: true } });
   const balance = await calcOperatorBalance(operator.id);
-  if (!tenant?.overdraftAllowed && amountNumber > balance.toPayOut) {
+  if (!operator.overdraftAllowed && amountNumber > balance.toPayOut) {
     return NextResponse.json(
       { error: `Аванс превышает доступный баланс к выдаче (${balance.toPayOut.toFixed(2)})` },
       { status: 400 }

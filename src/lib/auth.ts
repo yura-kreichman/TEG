@@ -1,6 +1,7 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
+import { sessionCookieOptions, signToken, verifyToken } from "@/lib/session-crypto";
 
 const SESSION_COOKIE = "session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -24,12 +25,6 @@ export const PIN_LOCK_THRESHOLD = 5;
 export const PIN_LOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 export const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
-function getSecret() {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) throw new Error("AUTH_SECRET is not set");
-  return secret;
-}
-
 export function hashPassword(password: string) {
   return bcrypt.hash(password, 12);
 }
@@ -46,36 +41,9 @@ export function verifyPin(pin: string, hash: string) {
   return bcrypt.compare(pin, hash);
 }
 
-function sign(value: string) {
-  return createHmac("sha256", getSecret()).update(value).digest("base64url");
-}
-
-function signToken(id: string) {
-  const signature = sign(id);
-  return `${id}.${signature}`;
-}
-
-function verifyToken(token: string): string | null {
-  const [id, signature] = token.split(".");
-  if (!id || !signature) return null;
-
-  const expected = sign(id);
-  const a = Buffer.from(signature);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-
-  return id;
-}
-
 export async function createSession(userId: string) {
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, signToken(userId), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE,
-  });
+  cookieStore.set(SESSION_COOKIE, signToken(userId), sessionCookieOptions(SESSION_MAX_AGE));
 }
 
 export async function destroySession() {
@@ -92,13 +60,7 @@ export async function getSessionUserId(): Promise<string | null> {
 
 export async function createAdminSession(userId: string) {
   const cookieStore = await cookies();
-  cookieStore.set(ADMIN_SESSION_COOKIE, signToken(userId), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: SESSION_MAX_AGE,
-  });
+  cookieStore.set(ADMIN_SESSION_COOKIE, signToken(userId), sessionCookieOptions(SESSION_MAX_AGE));
 }
 
 export async function destroyAdminSession() {
@@ -115,13 +77,7 @@ export async function getAdminSessionUserId(): Promise<string | null> {
 
 export async function rememberOwnerDevice(userId: string) {
   const cookieStore = await cookies();
-  cookieStore.set(OWNER_DEVICE_COOKIE, signToken(userId), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: OWNER_DEVICE_MAX_AGE,
-  });
+  cookieStore.set(OWNER_DEVICE_COOKIE, signToken(userId), sessionCookieOptions(OWNER_DEVICE_MAX_AGE));
 }
 
 export async function forgetOwnerDevice() {

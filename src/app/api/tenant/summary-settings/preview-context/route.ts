@@ -21,7 +21,7 @@ export async function GET() {
     include: {
       point: true,
       tariffs: { orderBy: { order: "asc" } },
-      assets: { orderBy: { createdAt: "asc" } },
+      assets: { orderBy: { sortOrder: "asc" } },
     },
   });
 
@@ -31,7 +31,7 @@ export async function GET() {
 
   const operator = await prisma.operator.findFirst({
     where: { tenantId: owner.tenantId },
-    orderBy: { createdAt: "asc" },
+    orderBy: { sortOrder: "asc" },
   });
 
   let zoneNames: string[] = [];
