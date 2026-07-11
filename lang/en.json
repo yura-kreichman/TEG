@@ -814,6 +814,7 @@
   "install": {
     "hint": "Install the app for quick access from your phone's home screen.",
     "installButton": "Install",
-    "dismiss": "Dismiss"
+    "manualHintIOS": "Tap Share at the bottom of Safari, then \"Add to Home Screen\".",
+    "manualHintOther": "Open your browser menu and choose \"Install app\" or \"Add to Home screen\"."
   }
 }

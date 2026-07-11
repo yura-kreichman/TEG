@@ -814,6 +814,7 @@
   "install": {
     "hint": "Instalați aplicația pentru acces rapid de pe ecranul telefonului.",
     "installButton": "Instalează",
-    "dismiss": "Ascunde"
+    "manualHintIOS": "Atingeți Partajare în Safari, apoi „Adaugă pe ecranul principal”.",
+    "manualHintOther": "Deschideți meniul browserului și alegeți „Instalează aplicația” sau „Adaugă pe ecranul principal”."
   }
 }
