@@ -12,12 +12,12 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#18181b",
     icons: [
       {
-        src: "/app-icons/PWA/icon-192.png",
+        src: "/icon-library/app-icons/PWA/icon-192.png",
         sizes: "192x192",
         type: "image/png",
       },
       {
-        src: "/app-icons/PWA/icon-512.png",
+        src: "/icon-library/app-icons/PWA/icon-512.png",
         sizes: "512x512",
         type: "image/png",
       },
@@ -29,19 +29,19 @@ export default function manifest(): MetadataRoute.Manifest {
       // тех же устройствах, см. Progressify/includes/.../PwaAssets.php —
       // processMaskableIconVariants() генерирует ровно эти три размера).
       {
-        src: "/app-icons/PWA/icon-180-maskable.png",
+        src: "/icon-library/app-icons/PWA/icon-180-maskable.png",
         sizes: "180x180",
         type: "image/png",
         purpose: "maskable",
       },
       {
-        src: "/app-icons/PWA/icon-192-maskable.png",
+        src: "/icon-library/app-icons/PWA/icon-192-maskable.png",
         sizes: "192x192",
         type: "image/png",
         purpose: "maskable",
       },
       {
-        src: "/app-icons/PWA/icon-512-maskable.png",
+        src: "/icon-library/app-icons/PWA/icon-512-maskable.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
