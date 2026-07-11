@@ -389,7 +389,7 @@ export default function ZoneDetailPage() {
             </Link>
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3.5">
-                <TileIcon iconKey={zone.iconKey} size="lg" />
+                <TileIcon iconKey={zone.iconKey} emoji={zone.telegramEmoji} size="lg" />
                 <div>
                   <h1 className="text-[24px] font-extrabold tracking-[-0.02em]">{zone.name}</h1>
                   <div className="mt-1 flex flex-wrap items-center gap-2">

@@ -38,8 +38,8 @@
     "familyAvatars": "Avatare"
   },
   "emojiPicker": {
-    "title": "Emoji pentru Telegram",
-    "sub": "Afișat pe primul rând al sumarului acestei zone",
+    "title": "Emoji pentru sumaruri",
+    "sub": "Afișat lângă pictograma zonei și pe primul rând al sumarului (Telegram, Push)",
     "clear": "Elimină emoji",
     "groups": {
       "smileys": "Fețe",

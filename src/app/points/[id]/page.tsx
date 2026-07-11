@@ -22,6 +22,7 @@ interface ZoneInfo {
   id: string;
   name: string;
   iconKey: string | null;
+  telegramEmoji: string | null;
   accountingMode: ZoneAccountingMode;
   active: boolean;
   tariffs: { id: string; name: string; price: string }[];
@@ -127,7 +128,7 @@ export default function PointDetailPage() {
                     <Link href={`/zones/${zone.id}`} className="block">
                       <SpringCard animate={false}>
                         <div className="flex items-center gap-3">
-                          <TileIcon iconKey={zone.iconKey} />
+                          <TileIcon iconKey={zone.iconKey} emoji={zone.telegramEmoji} />
                           <div className="min-w-0 grow">
                             <div className="flex items-center gap-1.5">
                               <div className="text-card-title">{zone.name}</div>
