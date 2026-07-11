@@ -779,6 +779,9 @@ model DailyCashSummarySettings {
   showZoneBreakdown Boolean @default(false) // Разбивка по зонам
   showCashOnHand    Boolean @default(false) // Остаток наличных на точке
 
+  // Только Telegram — см. ZoneSummarySettings.compact.
+  compact Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

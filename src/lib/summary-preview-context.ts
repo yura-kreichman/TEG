@@ -7,4 +7,5 @@ export interface SummaryPreviewContext {
   readingPairs: Array<{ assetName: string; tariffName: string }>;
   zoneNames: string[];
   operatorName: string | null;
+  operatorColorTag: string | null;
 }

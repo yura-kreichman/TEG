@@ -93,6 +93,7 @@ export default function DailyCashSummaryEditorPage() {
     { key: "showExpenses", label: t.summaries.dcShowExpensesLabel, sub: t.summaries.dcShowExpensesSub },
     { key: "showZoneBreakdown", label: t.summaries.dcShowZoneBreakdownLabel, sub: t.summaries.dcShowZoneBreakdownSub },
     { key: "showCashOnHand", label: t.summaries.dcShowCashOnHandLabel, sub: t.summaries.dcShowCashOnHandSub },
+    { key: "compact", label: t.summaries.dcCompactLabel, sub: t.summaries.dcCompactSub },
   ];
 
   if (checking) return null;

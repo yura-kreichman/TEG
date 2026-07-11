@@ -1,21 +1,14 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { COLOR_TAG_PALETTE } from "@/lib/color-tag";
 
 // Фиксированная палитра вместо нативного <input type="color"> (цветовое
 // колесо) — фидбек пользователя 2026-07-09: цвета как у квадратиков-эмодзи
 // (🟥🟧🟨🟩🟦🟪🟫⬛⬜), не произвольный подбор. Общая для Оператора и Актива.
-export const COLOR_TAG_PALETTE = [
-  "#EF4444", // 🟥
-  "#F97316", // 🟧
-  "#EAB308", // 🟨
-  "#22C55E", // 🟩
-  "#3B82F6", // 🟦
-  "#A855F7", // 🟪
-  "#92400E", // 🟫
-  "#18181B", // ⬛
-  "#F4F4F5", // ⬜
-] as const;
+// Сама палитра — в lib/color-tag.ts (общий модуль, не "use client"), чтобы
+// её мог использовать и telegram-format.ts (эмодзи рядом с оператором в сводке).
+export { COLOR_TAG_PALETTE };
 
 export function ColorTagPicker({
   value,

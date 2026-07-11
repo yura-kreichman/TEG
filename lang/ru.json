@@ -330,6 +330,8 @@
     "dcShowZoneBreakdownSub": "выручка каждой зоны строкой",
     "dcShowCashOnHandLabel": "Остаток наличных на точке",
     "dcShowCashOnHandSub": "сколько должно быть в кассах",
+    "dcCompactLabel": "Компактно",
+    "dcCompactSub": "зоны в 2 колонки, без пустых строк — для Telegram",
     "shiftCloseEditorTitle": "Закрытие смены",
     "shiftCloseEditorSub": "Отправляется, когда оператор завершает работу",
     "scShowPeriodLabel": "Период работы",

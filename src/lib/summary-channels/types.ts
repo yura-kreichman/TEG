@@ -47,6 +47,10 @@ export interface DailyCashSummaryData {
 
 export interface ShiftCloseSummaryData {
   operatorName: string;
+  // Цветовая метка оператора (Operator.colorTag, #rrggbb) — telegram-format.ts
+  // показывает соответствующий эмодзи цветного квадрата рядом с именем
+  // (фидбек пользователя 2026-07-12). null, если метка не назначена.
+  operatorColorTag: string | null;
   startAt: Date;
   endAt: Date;
   minutes: number;

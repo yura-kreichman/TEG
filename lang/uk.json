@@ -330,6 +330,8 @@
     "dcShowZoneBreakdownSub": "виручка кожної зони окремим рядком",
     "dcShowCashOnHandLabel": "Залишок готівки на точці",
     "dcShowCashOnHandSub": "скільки має бути в касах",
+    "dcCompactLabel": "Компактно",
+    "dcCompactSub": "зони у 2 колонки, без порожніх рядків — для Telegram",
     "shiftCloseEditorTitle": "Закриття зміни",
     "shiftCloseEditorSub": "Надсилається, коли оператор завершує роботу",
     "scShowPeriodLabel": "Період роботи",

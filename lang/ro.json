@@ -330,6 +330,8 @@
     "dcShowZoneBreakdownSub": "venitul fiecărei zone pe un rând separat",
     "dcShowCashOnHandLabel": "Sold numerar la punct",
     "dcShowCashOnHandSub": "cât ar trebui să fie în case",
+    "dcCompactLabel": "Compact",
+    "dcCompactSub": "zone pe 2 coloane, fără rânduri goale — pentru Telegram",
     "shiftCloseEditorTitle": "Închidere tură",
     "shiftCloseEditorSub": "Se trimite când operatorul termină lucrul",
     "scShowPeriodLabel": "Perioada de lucru",

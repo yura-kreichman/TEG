@@ -61,5 +61,6 @@ export async function GET() {
     readingPairs,
     zoneNames,
     operatorName: operator?.name ?? null,
+    operatorColorTag: operator?.colorTag ?? null,
   });
 }

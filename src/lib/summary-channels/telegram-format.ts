@@ -1,6 +1,7 @@
 import type { ZoneSummarySettingsData, DailyCashSummarySettingsData, ShiftCloseSummarySettingsData } from "@/lib/summary-settings";
 import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData } from "./types";
 import { formatDuration, formatSummaryDate, formatUtcTime } from "./format-shared";
+import { colorTagToEmoji } from "@/lib/color-tag";
 
 // Чистые функции построения текста Telegram-сводок — без сети, без БД, без
 // Bot API. Каждая — вход "данные + настройки", выход "готовый текст". Это то,
@@ -15,17 +16,18 @@ function formatDate(d: Date): string {
   return formatSummaryDate(d, "/");
 }
 
-// compact (фидбек пользователя 2026-07-12, скриншот с примером): вместо
-// списка "AssetName · TariffName: value (+delta)" по одному активу на
-// строку — 2 колонки, имя актива обрезано до 5 символов (без названия
-// тарифа — при обрезке до 5 симв. его всё равно некуда вписать), заезды
-// (delta) в компактном режиме не показываются. Цель — сообщение целиком
+// compact (фидбек пользователя 2026-07-12, скриншот с примером) — общий
+// принцип для ВСЕХ трёх сводок: никаких пустых строк-отступов между
+// секциями, всё что можно — на одну строку через короткий разделитель, а
+// списки переменной длины (показания по активам, разбивка по зонам) — в
+// 2 колонки с именем, обрезанным до 5 символов. Цель — сообщение целиком
 // умещается по ширине экрана телефона, без переноса строк.
-function formatCompactReadings(readings: ZoneSummaryData["readings"]): string {
-  const NAME_WIDTH = 5;
-  const valueWidth = Math.max(4, ...readings.map((r) => String(r.reading).length));
-  const cells = readings.map(
-    (r) => `${r.assetName.slice(0, NAME_WIDTH).padEnd(NAME_WIDTH)}: ${String(r.reading).padStart(valueWidth)}`
+const COMPACT_NAME_WIDTH = 5;
+
+function formatCompactGrid(items: { label: string; value: string }[]): string {
+  const valueWidth = Math.max(4, ...items.map((it) => it.value.length));
+  const cells = items.map(
+    (it) => `${it.label.slice(0, COMPACT_NAME_WIDTH).padEnd(COMPACT_NAME_WIDTH)}: ${it.value.padStart(valueWidth)}`
   );
   const rows: string[] = [];
   for (let i = 0; i < cells.length; i += 2) {
@@ -35,16 +37,48 @@ function formatCompactReadings(readings: ZoneSummaryData["readings"]): string {
 }
 
 export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneSummarySettingsData): string {
+  if (settings.compact) {
+    const parts: string[] = [`🏁 <b>${data.zoneName.toUpperCase()} · ${formatDate(data.occurredAt)}</b>`];
+
+    if (data.accountingMode === "cash_only") {
+      parts.push(`💵 Касса: <b>${data.cashAmount.toFixed(2)}</b>`);
+    } else {
+      if (settings.showReadings && data.readings.length > 0) {
+        const grid = formatCompactGrid(data.readings.map((r) => ({ label: r.assetName, value: String(r.reading) })));
+        parts.push(`<blockquote><code>${grid}</code></blockquote>`);
+      }
+
+      if (settings.showCash || settings.showCalc) {
+        const cmp = data.cashAmount < data.calculatedRevenue ? "<" : data.cashAmount > data.calculatedRevenue ? ">" : "=";
+        const bits: string[] = [];
+        if (settings.showCash) bits.push(`💵 Касс: <b>${data.cashAmount.toFixed(2)}</b>`);
+        if (settings.showCash && settings.showCalc) bits.push(cmp);
+        if (settings.showCalc) bits.push(`🧮 Счёт: <b>${data.calculatedRevenue.toFixed(2)}</b>`);
+        parts.push(bits.join("  "));
+      }
+      if (settings.showDiff || settings.showReturns) {
+        const bits: string[] = [];
+        if (settings.showDiff) {
+          const sign = data.difference > 0 ? "+" : "";
+          bits.push(`✅ Разн.: <b>${sign}${data.difference.toFixed(2)}</b>`);
+        }
+        if (settings.showDiff && settings.showReturns) bits.push("—");
+        if (settings.showReturns) bits.push(`🔄 Возвр.: <b>${data.returnsCount}</b>`);
+        parts.push(bits.join("  "));
+      }
+    }
+
+    if (settings.showOperator) parts.push(`👤 ${data.operatorName}`);
+
+    return parts.join("\n");
+  }
+
   const lines: string[] = [`🏁 <b>${data.zoneName.toUpperCase()} · ${formatDate(data.occurredAt)}</b>`];
 
   if (data.accountingMode === "cash_only") {
     lines.push("", `💵 Касса: <b>${data.cashAmount.toFixed(2)}</b>`);
   } else {
-    if (settings.compact) {
-      if (settings.showReadings && data.readings.length > 0) {
-        lines.push("", `<blockquote><code>${formatCompactReadings(data.readings)}</code></blockquote>`);
-      }
-    } else if (settings.showReadings || settings.showDelta) {
+    if (settings.showReadings || settings.showDelta) {
       // Выровнено в столбик (фидбек пользователя 2026-07-09) — внутри <code>
       // моноширинный шрифт, поэтому паддинг пробелами реально работает как
       // колонки. Подпись дополняется пробелами до общей ширины, показание —
@@ -91,6 +125,28 @@ export function formatDailyCashSummaryTelegram(
   settings: DailyCashSummarySettingsData
 ): string {
   const total = data.cashAmount + data.mobileAmount - data.expenses;
+
+  if (settings.compact) {
+    const parts: string[] = [`💰 <b>КАССА · ${data.pointName} · ${formatDate(data.businessDate)}</b>`];
+
+    if (data.forcedIncomplete) parts.push("⚠️ Принудительно — не все данные могли поступить");
+
+    if (settings.showCash) {
+      parts.push(`💵 Нал.: <b>${data.cashAmount.toFixed(2)}</b>  📱 Безнал.: <b>${data.mobileAmount.toFixed(2)}</b>`);
+    }
+    if (settings.showExpenses) parts.push(`🧾 Расх.: ${data.expenses.toFixed(2)}`);
+    parts.push(`Σ Итог: <b>${total.toFixed(2)}</b>`);
+
+    if (settings.showZoneBreakdown && data.zoneBreakdown.length > 0) {
+      const grid = formatCompactGrid(data.zoneBreakdown.map((z) => ({ label: z.zoneName, value: z.revenue.toFixed(2) })));
+      parts.push(`<blockquote><code>${grid}</code></blockquote>`);
+    }
+
+    if (settings.showCashOnHand) parts.push(`📦 Ост.: ${data.cashOnHand.toFixed(2)}`);
+
+    return parts.join("\n");
+  }
+
   const lines: string[] = [`💰 <b>КАССА · ${data.pointName} · ${formatDate(data.businessDate)}</b>`];
 
   if (data.forcedIncomplete) {
@@ -121,22 +177,28 @@ export function formatShiftCloseSummaryTelegram(
   data: ShiftCloseSummaryData,
   settings: ShiftCloseSummarySettingsData
 ): string {
+  // Цветовой квадрат перед именем оператора (фидбек пользователя 2026-07-12) —
+  // и в компактном, и в обычном виде; null (метка не задана) — без эмодзи.
+  const colorPrefix = colorTagToEmoji(data.operatorColorTag);
+  const operatorLabel = colorPrefix ? `${colorPrefix} ${data.operatorName}` : data.operatorName;
+
   if (settings.compact) {
     // Все включённые поля сводятся на одну строку через " · " вместо
-    // одной строки на поле — та же цель, что у compact в Zone Summary
-    // (фидбек пользователя 2026-07-12): сообщение целиком в ширину экрана.
+    // одной строки на поле — та же цель, что у compact в Zone/Daily Cash
+    // Summary: сообщение целиком в ширину экрана. "Итог" сокращён до
+    // "Бал." (баланс) — фидбек пользователя 2026-07-12.
     const parts: string[] = [];
     if (settings.showPeriod) parts.push(`🕐 ${formatUtcTime(data.startAt)}–${formatUtcTime(data.endAt)}`);
     if (settings.showHours) parts.push(`⏱ ${formatDuration(data.minutes)}`);
     if (settings.showAdvance && data.advanceAmount > 0) parts.push(`💸 Аванс: ${data.advanceAmount.toFixed(2)}`);
     if (settings.showBonus && data.bonusAmount > 0) parts.push(`🏆 Прем.: ${data.bonusAmount.toFixed(2)}`);
-    if (settings.showTotal) parts.push(`💰 Итог: <b>${data.toPayOut.toFixed(2)}</b>`);
+    if (settings.showTotal) parts.push(`💰 Бал.: <b>${data.toPayOut.toFixed(2)}</b>`);
 
-    const header = `🕐 <b>${data.operatorName} · ${formatDate(data.startAt)}</b>`;
+    const header = `🕐 <b>${operatorLabel} · ${formatDate(data.startAt)}</b>`;
     return parts.length > 0 ? `${header}\n${parts.join(" · ")}` : header;
   }
 
-  const lines: string[] = [`🕐 <b>${data.operatorName} · смена ${formatDate(data.startAt)}</b>`, ""];
+  const lines: string[] = [`🕐 <b>${operatorLabel} · смена ${formatDate(data.startAt)}</b>`, ""];
 
   if (settings.showPeriod) lines.push(`🕐 Период: ${formatUtcTime(data.startAt)} – ${formatUtcTime(data.endAt)}`);
   if (settings.showHours) lines.push(`⏱ Отработано: ${formatDuration(data.minutes)}`);

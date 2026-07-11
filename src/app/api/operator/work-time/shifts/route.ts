@@ -137,6 +137,7 @@ export async function POST(request: Request) {
       point.tenantId,
       {
         operatorName: operator.name,
+        operatorColorTag: operator.colorTag,
         startAt,
         endAt,
         minutes,

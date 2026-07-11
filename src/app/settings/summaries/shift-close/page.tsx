@@ -16,15 +16,20 @@ import type { SummaryPreviewContext } from "@/lib/summary-preview-context";
 import type { Dictionary } from "@/lib/i18n";
 
 // См. zone/page.tsx — числа демо, имя оператора настоящее.
+// advanceAmount ненулевой (было 0) — formatShiftCloseSummaryTelegram
+// показывает Аванс только при amount > 0, с нулём тумблер showAdvance было
+// невозможно проверить в превью (фидбек пользователя 2026-07-12: "Аванс
+// вообще не отображается" — это был как раз нулевой демо-аванс, не баг формата).
 function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): ShiftCloseSummaryData {
   return {
     operatorName: ctx?.operatorName ?? t.summaries.previewNoOperator,
+    operatorColorTag: ctx?.operatorColorTag ?? null,
     startAt: new Date(Date.UTC(2026, 6, 8, 10, 0)),
     endAt: new Date(Date.UTC(2026, 6, 8, 22, 11)),
     minutes: 731,
     rate: 0,
     accrued: 628,
-    advanceAmount: 0,
+    advanceAmount: 1500,
     bonusAmount: 150,
     toPayOut: 778,
   };

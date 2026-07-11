@@ -330,6 +330,8 @@
     "dcShowZoneBreakdownSub": "each zone's revenue on its own line",
     "dcShowCashOnHandLabel": "Cash on hand at the point",
     "dcShowCashOnHandSub": "how much should be in the cash boxes",
+    "dcCompactLabel": "Compact",
+    "dcCompactSub": "zones in 2 columns, no blank lines — for Telegram",
     "shiftCloseEditorTitle": "Shift close summary",
     "shiftCloseEditorSub": "Sent when an operator finishes work",
     "scShowPeriodLabel": "Work period",

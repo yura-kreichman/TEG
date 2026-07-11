@@ -56,6 +56,8 @@ export interface DailyCashSummarySettingsData {
   showExpenses: boolean;
   showZoneBreakdown: boolean;
   showCashOnHand: boolean;
+  // Только Telegram — см. compact в ZoneSummarySettingsData.
+  compact: boolean;
 }
 
 export const DAILY_CASH_SUMMARY_DEFAULTS: DailyCashSummarySettingsData = {
@@ -69,6 +71,7 @@ export const DAILY_CASH_SUMMARY_DEFAULTS: DailyCashSummarySettingsData = {
   showExpenses: true,
   showZoneBreakdown: false,
   showCashOnHand: false,
+  compact: false,
 };
 
 export interface ShiftCloseSummarySettingsData {
