@@ -810,8 +810,11 @@
       "submitting": "Se trimite…",
       "submitButton": "Predă rezultatele",
       "acceptedTitle": "Predarea rezultatelor a fost acceptată",
+      "queuedTitle": "Salvat, se va trimite când apare conexiunea",
+      "queuedHint": "Momentan nu există internet — datele sunt salvate pe acest dispozitiv și vor fi trimise automat imediat ce conexiunea revine.",
       "homeButton": "Acasă"
-    }
+    },
+    "offlineQueueHint": "În așteptare: {count} predări — se trimit automat la reconectare"
   },
   "install": {
     "hint": "Instalați aplicația pentru acces rapid de pe ecranul telefonului.",

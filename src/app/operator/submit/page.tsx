@@ -13,6 +13,7 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { ImageLightbox } from "@/components/motion/image-lightbox";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { calcSessions, calcZoneRevenue, type ZoneAccountingMode } from "@/lib/results-calc";
+import { queueSubmission } from "@/lib/offline-submissions";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
@@ -69,6 +70,7 @@ export default function SubmitResultsPage() {
   const longPressFired = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [queued, setQueued] = useState(false);
   const [result, setResult] = useState<{
     summary: { zoneId: string; zoneName: string; calculatedRevenue: number; actualCash: number; difference: number }[];
     remindMarkDeparture?: boolean;
@@ -229,21 +231,56 @@ export default function SubmitResultsPage() {
         .map((e) => ({ zoneId: e.zoneId, amount: Number(e.amount), comment: e.comment })),
     };
 
-    const res = await fetch("/api/operator/submit-results", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+    // Клиентский предпросмотр (та же previewFor, что и на шаге "Проверка") —
+    // единственные цифры, которые можно показать, если сдача уходит в
+    // офлайн-очередь: сервер их ещё не считал (округления/сверка с кассой
+    // на сервере могут чуть отличаться, это лишь предварительный итог).
+    const clientSummary = selectedZoneIds.map((zoneId) => {
+      const zone = zones.find((z) => z.id === zoneId)!;
+      const preview = previewFor(zoneId);
+      return {
+        zoneId,
+        zoneName: zone.name,
+        calculatedRevenue: preview?.calculatedRevenue ?? 0,
+        actualCash: preview?.actualCash ?? 0,
+        difference: preview?.difference ?? 0,
+      };
     });
-    const data = await res.json();
 
-    if (!res.ok) {
-      setSubmitError(data.error ?? "Не удалось отправить сдачу итогов");
+    async function queueForLater() {
+      await queueSubmission(payload);
+      setResult({ summary: clientSummary });
+      setQueued(true);
       setSubmitting(false);
+    }
+
+    if (!navigator.onLine) {
+      await queueForLater();
       return;
     }
 
-    setResult(data);
-    setSubmitting(false);
+    try {
+      const res = await fetch("/api/operator/submit-results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setSubmitError(data.error ?? "Не удалось отправить сдачу итогов");
+        setSubmitting(false);
+        return;
+      }
+
+      setResult(data);
+      setSubmitting(false);
+    } catch {
+      // Сетевая ошибка (не HTTP-ошибка от сервера) — navigator.onLine мог
+      // соврать, либо связь пропала прямо во время запроса. Тот же путь,
+      // что и явный офлайн: не пугаем оператора ошибкой, кладём в очередь.
+      await queueForLater();
+    }
   }
 
   if (loading) return null;
@@ -253,10 +290,15 @@ export default function SubmitResultsPage() {
       <div className="flex flex-1 flex-col items-center justify-center bg-background px-4 py-10">
         <SpringCard hover={false} className="w-full max-w-md">
           <div className="flex items-start justify-between gap-3">
-            <h1 className="text-screen-title">{t.operatorApp.submit.acceptedTitle}</h1>
+            <h1 className="text-screen-title">{queued ? t.operatorApp.submit.queuedTitle : t.operatorApp.submit.acceptedTitle}</h1>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/api/icon-library/app-icons/done.svg" alt="" className="size-7 shrink-0" />
           </div>
+          {queued && (
+            <p className="mt-2 rounded-control bg-warning/15 px-3 py-2 text-sm font-medium text-warning">
+              {t.operatorApp.submit.queuedHint}
+            </p>
+          )}
           <div className="mt-4 flex flex-col gap-3">
             {result.summary.map((s) => (
               <div

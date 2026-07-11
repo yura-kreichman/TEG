@@ -810,8 +810,11 @@
       "submitting": "Submitting…",
       "submitButton": "Submit results",
       "acceptedTitle": "Results submission accepted",
+      "queuedTitle": "Saved, will send once online",
+      "queuedHint": "No internet right now — data is saved on this device and will be sent automatically once the connection is back.",
       "homeButton": "Go home"
-    }
+    },
+    "offlineQueueHint": "Waiting to send: {count} submission(s) — will send automatically once online"
   },
   "install": {
     "hint": "Install the app for quick access from your phone's home screen.",

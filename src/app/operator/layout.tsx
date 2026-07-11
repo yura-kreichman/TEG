@@ -1,5 +1,6 @@
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { OfflineSync } from "./offline-sync";
 
 // Тема — только локальная настройка устройства (next-themes localStorage,
 // storageKey отдельный от кабинета владельца), никакого тенантного дефолта
@@ -16,6 +17,7 @@ export default function OperatorLayout({ children }: { children: React.ReactNode
       storageKey="teg-theme-operator"
     >
       <div className="flex flex-1 flex-col">
+        <OfflineSync />
         <div className="flex justify-end p-2">
           <ThemeToggle />
         </div>
