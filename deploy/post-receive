@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 # Хук голого git-репозитория на VPS (/srv/git/rentos.git/hooks/post-receive).
 # Копируется вручную один раз при настройке сервера — не запускается локально.
+#
+# WORK_TREE — папка домена my.rentos365.app в ISPmanager (не /srv/rentos),
+# по просьбе пользователя 2026-07-11: удобнее видеть файлы приложения через
+# файловый менеджер панели/FTP, а не только по SSH. node_modules/.next всё
+# равно собираются только внутри Docker-образа — здесь лежат сами исходники,
+# конфиги и .env, как в обычном чекауте git.
 set -euo pipefail
-WORK_TREE=/srv/rentos
+WORK_TREE=/var/www/md33/data/www/my.rentos365.app
 GIT_DIR=/srv/git/rentos.git
 
 git --work-tree="$WORK_TREE" --git-dir="$GIT_DIR" checkout -f main
+chown -R md33:md33 "$WORK_TREE"
 "$WORK_TREE/deploy/deploy.sh"
