@@ -14,7 +14,7 @@ export async function POST() {
   }
 
   const { code, expiresAt } = await createBindCode(owner.tenantId);
-  const deepLink = getBindDeepLink(code);
+  const deepLink = await getBindDeepLink(code);
 
   return NextResponse.json({ code, deepLink, expiresAt });
 }

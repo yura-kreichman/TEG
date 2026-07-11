@@ -16,6 +16,7 @@ const eslintConfig = defineConfig([
     // for integration research.
     "temp apps/**",
     "FluentCart/**",
+    "Progressify/**",
   ]),
 ]);
 

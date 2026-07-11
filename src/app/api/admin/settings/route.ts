@@ -33,6 +33,9 @@ export async function PATCH(request: Request) {
   const current = await getSystemSettingsConfig();
   const next: SystemSettingsConfig = {
     telegramBotToken: typeof body.telegramBotToken === "string" ? body.telegramBotToken : current.telegramBotToken,
+    // Нет поля в форме — всегда сохраняем как было (кэш, обновляется только
+    // через getBotUsername()/test-telegram, см. system-settings.ts).
+    telegramBotUsername: current.telegramBotUsername,
     smtp: {
       ...current.smtp,
       ...(typeof body.smtp === "object" && body.smtp !== null ? body.smtp : {}),

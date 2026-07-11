@@ -7,6 +7,14 @@ import { prisma } from "@/lib/prisma";
 // заполненных настроек в БД не переставали работать молча).
 export interface SystemSettingsConfig {
   telegramBotToken: string;
+  // Не редактируется формой /admin/settings напрямую (нет такого поля) —
+  // кэш username бота, получаемый через getMe по уже сохранённому токену
+  // (см. src/lib/telegram-bot.ts getBotUsername). Раньше username брался
+  // только из .env TELEGRAM_BOT_USERNAME, который никогда не заполнялся на
+  // проде (для него нет формы, в отличие от токена) — из-за этого
+  // getBindDeepLink() молча возвращал null, а ссылка "Открыть Telegram" в
+  // визарде привязки вообще не рендерилась (нашли 2026-07-11).
+  telegramBotUsername: string;
   // from — реальный email (обязан совпадать с authenticated SMTP user для
   // SPF/DKIM-выравнивания, см. src/lib/summary-channels/email-channel.ts);
   // fromName — отображаемое имя отправителя, не влияет на прохождение
@@ -16,6 +24,7 @@ export interface SystemSettingsConfig {
 
 const EMPTY: SystemSettingsConfig = {
   telegramBotToken: "",
+  telegramBotUsername: "",
   smtp: { host: "", port: "", user: "", password: "", from: "", fromName: "" },
 };
 
@@ -24,8 +33,15 @@ export async function getSystemSettingsConfig(): Promise<SystemSettingsConfig> {
   const config = (row?.config as Partial<SystemSettingsConfig> | undefined) ?? {};
   return {
     telegramBotToken: config.telegramBotToken || EMPTY.telegramBotToken,
+    telegramBotUsername: config.telegramBotUsername || EMPTY.telegramBotUsername,
     smtp: { ...EMPTY.smtp, ...(config.smtp ?? {}) },
   };
+}
+
+/** Точечное обновление одного поля без риска затереть остальные (см. telegramBotUsername выше). */
+export async function patchSystemSettingsConfig(patch: Partial<SystemSettingsConfig>): Promise<void> {
+  const current = await getSystemSettingsConfig();
+  await saveSystemSettingsConfig({ ...current, ...patch });
 }
 
 export async function saveSystemSettingsConfig(next: SystemSettingsConfig): Promise<void> {

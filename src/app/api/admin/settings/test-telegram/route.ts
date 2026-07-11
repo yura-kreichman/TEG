@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireSuperAdmin } from "@/lib/require-super-admin";
-import { getSystemSettingsConfig } from "@/lib/system-settings";
+import { getSystemSettingsConfig, patchSystemSettingsConfig } from "@/lib/system-settings";
 
 // Проверка токена бота (docs/spec/06-super-admin.md, /admin/settings) —
 // getMe ничего не отправляет, просто подтверждает, что токен рабочий, и
@@ -22,6 +22,10 @@ export async function POST() {
   if (!res.ok || !data?.ok) {
     return NextResponse.json({ error: data?.description ?? "Токен не работает" }, { status: 400 });
   }
+
+  // Держим кэш username свежим (см. src/lib/telegram-bot.ts getBotUsername) —
+  // на случай если токен когда-нибудь сменят на другого бота.
+  await patchSystemSettingsConfig({ telegramBotUsername: data.result.username });
 
   return NextResponse.json({ ok: true, username: data.result.username });
 }

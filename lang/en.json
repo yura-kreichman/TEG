@@ -819,7 +819,14 @@
   "install": {
     "hint": "Install the app for quick access from your phone's home screen.",
     "installButton": "Install",
-    "manualHintIOS": "Tap Share at the bottom of Safari, then \"Add to Home Screen\".",
-    "manualHintOther": "Open your browser menu and choose \"Install app\" or \"Add to Home screen\"."
+    "manualHintIOSSafari": "1. Tap Share at the bottom of Safari.\n2. Choose \"Add to Home Screen\".\n3. Confirm by tapping \"Add\".",
+    "manualHintIOSOther": "1. Tap the Share icon at the top of the screen.\n2. Tap \"More\" (three dots).\n3. Choose \"Add to Home Screen\" and confirm \"Add\".",
+    "manualHintAndroidChrome": "1. Tap the menu icon (three dots) in the top-right corner.\n2. Choose \"Add to Home Screen\".\n3. Confirm by tapping \"Add\".",
+    "manualHintAndroidSamsung": "1. Tap the menu icon (three dots) at the bottom.\n2. Choose \"Add page to\" → \"Home screen\".\n3. Confirm by tapping \"Add\".",
+    "manualHintAndroidOpera": "1. Tap the menu icon (three dots).\n2. Choose \"Home screen\" / \"Install\".\n3. Confirm by tapping \"Add\".",
+    "manualHintAndroidEdge": "1. Tap the menu icon (≡) at the bottom right.\n2. Choose \"Add to phone\".\n3. Confirm by tapping \"Install\".",
+    "manualHintAndroidFirefox": "1. Tap the menu icon (three dots).\n2. Choose \"Install\".\n3. Confirm by tapping \"Add to Home Screen\".",
+    "manualHintAndroidOther": "This browser may not support installing apps directly. Copy the page address and open it in Chrome — installation will work from there.",
+    "manualHintDesktop": "Open your browser menu (usually ⋮ or ≡) and choose \"Install app\" or \"Add to Home screen\"."
   }
 }

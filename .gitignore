@@ -57,3 +57,4 @@ next-env.d.ts
 # not part of this project, not committed
 /temp apps/
 /FluentCart/
+/Progressify/

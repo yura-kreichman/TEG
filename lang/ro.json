@@ -819,7 +819,14 @@
   "install": {
     "hint": "Instalați aplicația pentru acces rapid de pe ecranul telefonului.",
     "installButton": "Instalează",
-    "manualHintIOS": "Atingeți Partajare în Safari, apoi „Adaugă pe ecranul principal”.",
-    "manualHintOther": "Deschideți meniul browserului și alegeți „Instalează aplicația” sau „Adaugă pe ecranul principal”."
+    "manualHintIOSSafari": "1. Atingeți Partajare în partea de jos a Safari.\n2. Alegeți „Adaugă pe ecranul principal”.\n3. Confirmați atingând „Adaugă”.",
+    "manualHintIOSOther": "1. Atingeți pictograma Partajare din partea de sus.\n2. Atingeți „Mai multe” (trei puncte).\n3. Alegeți „Adaugă pe ecranul principal” și confirmați „Adaugă”.",
+    "manualHintAndroidChrome": "1. Atingeți meniul (trei puncte) din colțul din dreapta sus.\n2. Alegeți „Adaugă pe ecranul principal”.\n3. Confirmați atingând „Adaugă”.",
+    "manualHintAndroidSamsung": "1. Atingeți meniul (trei puncte) din partea de jos.\n2. Alegeți „Adaugă pagina la” → „Ecran principal”.\n3. Confirmați atingând „Adaugă”.",
+    "manualHintAndroidOpera": "1. Atingeți meniul (trei puncte).\n2. Alegeți „Ecran principal” / „Instalează”.\n3. Confirmați atingând „Adaugă”.",
+    "manualHintAndroidEdge": "1. Atingeți meniul (≡) din dreapta jos.\n2. Alegeți „Adaugă pe telefon”.\n3. Confirmați atingând „Instalează”.",
+    "manualHintAndroidFirefox": "1. Atingeți meniul (trei puncte).\n2. Alegeți „Instalează”.\n3. Confirmați atingând „Adaugă pe ecranul principal”.",
+    "manualHintAndroidOther": "Acest browser poate să nu accepte instalarea directă a aplicațiilor. Copiați adresa paginii și deschideți-o în Chrome — instalarea va funcționa de acolo.",
+    "manualHintDesktop": "Deschideți meniul browserului (de obicei ⋮ sau ≡) și alegeți „Instalează aplicația” sau „Adaugă pe ecranul principal”."
   }
 }

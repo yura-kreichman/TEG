@@ -1,6 +1,6 @@
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
-import { getSystemSettingsConfig } from "@/lib/system-settings";
+import { getSystemSettingsConfig, patchSystemSettingsConfig } from "@/lib/system-settings";
 
 // Единый платформенный бот на всех тенантов (docs/spec/telegram-summaries.md) —
 // НЕ путать со старым src/lib/telegram.ts (Tenant.telegramBotToken, бот на
@@ -13,8 +13,29 @@ async function getBotToken(): Promise<string | null> {
   return telegramBotToken || process.env.TELEGRAM_BOT_TOKEN || null;
 }
 
-export function getBotUsername(): string | null {
-  return process.env.TELEGRAM_BOT_USERNAME || null;
+// Раньше только .env TELEGRAM_BOT_USERNAME — для него нет формы в
+// /admin/settings (в отличие от токена), на проде он всегда оставался
+// пустым, и getBindDeepLink() молча возвращал null (нашли 2026-07-11, см.
+// комментарий у SystemSettingsConfig.telegramBotUsername). Теперь получаем
+// сами через getMe по уже сохранённому токену и кэшируем в БД — не требует
+// от админа отдельного шага, "просто работает" сразу после ввода токена.
+export async function getBotUsername(): Promise<string | null> {
+  const config = await getSystemSettingsConfig();
+  if (config.telegramBotUsername) return config.telegramBotUsername;
+
+  const token = await getBotToken();
+  if (!token) return process.env.TELEGRAM_BOT_USERNAME || null;
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+    const data = await res.json();
+    const username: string | undefined = data?.result?.username;
+    if (!username) return process.env.TELEGRAM_BOT_USERNAME || null;
+    await patchSystemSettingsConfig({ telegramBotUsername: username });
+    return username;
+  } catch {
+    return process.env.TELEGRAM_BOT_USERNAME || null;
+  }
 }
 
 export async function isBotConfigured(): Promise<boolean> {
@@ -32,8 +53,8 @@ export function generateBindCode(): string {
   return `RT-${code}`;
 }
 
-export function getBindDeepLink(code: string): string | null {
-  const username = getBotUsername();
+export async function getBindDeepLink(code: string): Promise<string | null> {
+  const username = await getBotUsername();
   if (!username) return null;
   return `https://t.me/${username}?startgroup=${encodeURIComponent(code)}`;
 }
