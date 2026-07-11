@@ -1,32 +1,38 @@
 import webpush from "web-push";
 import { prisma } from "@/lib/prisma";
+import { getSystemSettingsConfig } from "@/lib/system-settings";
 
 // Обёртка над web-push для отправки коротких Push-уведомлений владельцу
 // (фидбек пользователя 2026-07-12) — параллель email-channel.ts/telegram-bot.ts:
-// секреты только из env (VAPID-пара стабильна для всего окружения, в отличие
-// от Telegram-токена/SMTP, которые настраиваются в БД per-тенант — подписка
-// на push физически привязана к конкретной паре ключей, сменить её нельзя
-// без потери всех существующих подписок браузеров).
+// VAPID-пара хранится в SystemSettings (БД, редактируется в /admin/settings —
+// "сделай настройки для Админа для Push уведомлений"), .env остаётся тихим
+// фоллбэком, как у остальных платформенных секретов (см. system-settings.ts).
+// Читаем конфиг заново на каждый вызов (не кэшируем в памяти процесса) —
+// иначе смена ключей в /admin/settings не подхватилась бы без рестарта
+// контейнера; сам запрос — один индексированный findUnique, не дорого.
 
-let vapidConfigured = false;
-
-function ensureVapid(): boolean {
-  if (vapidConfigured) return true;
-  const publicKey = process.env.VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT;
-  if (!publicKey || !privateKey || !subject) return false;
-  webpush.setVapidDetails(subject, publicKey, privateKey);
-  vapidConfigured = true;
-  return true;
+interface VapidConfig {
+  publicKey: string;
+  privateKey: string;
+  subject: string;
 }
 
-export function isPushConfigured(): boolean {
-  return ensureVapid();
+async function loadVapidConfig(): Promise<VapidConfig | null> {
+  const { vapid } = await getSystemSettingsConfig();
+  const publicKey = vapid.publicKey || process.env.VAPID_PUBLIC_KEY || "";
+  const privateKey = vapid.privateKey || process.env.VAPID_PRIVATE_KEY || "";
+  const subject = vapid.subject || process.env.VAPID_SUBJECT || "";
+  if (!publicKey || !privateKey || !subject) return null;
+  return { publicKey, privateKey, subject };
 }
 
-export function getVapidPublicKey(): string | null {
-  return ensureVapid() ? (process.env.VAPID_PUBLIC_KEY ?? null) : null;
+export async function isPushConfigured(): Promise<boolean> {
+  return (await loadVapidConfig()) !== null;
+}
+
+export async function getVapidPublicKey(): Promise<string | null> {
+  const config = await loadVapidConfig();
+  return config?.publicKey ?? null;
 }
 
 interface PushPayload {
@@ -42,7 +48,9 @@ interface PushPayload {
 // из БД сразу же — иначе на неё продолжали бы бессмысленно отправлять
 // каждый раз, копя ошибки.
 export async function sendPushToTenant(tenantId: string, payload: PushPayload): Promise<void> {
-  if (!ensureVapid()) return;
+  const config = await loadVapidConfig();
+  if (!config) return;
+  webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
 
   const subscriptions = await prisma.pushSubscription.findMany({ where: { tenantId } });
   if (subscriptions.length === 0) return;

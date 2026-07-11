@@ -40,6 +40,10 @@ export async function PATCH(request: Request) {
       ...current.smtp,
       ...(typeof body.smtp === "object" && body.smtp !== null ? body.smtp : {}),
     },
+    vapid: {
+      ...current.vapid,
+      ...(typeof body.vapid === "object" && body.vapid !== null ? body.vapid : {}),
+    },
   };
 
   await saveSystemSettingsConfig(next);

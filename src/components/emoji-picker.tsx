@@ -15,6 +15,18 @@ import type { Dictionary } from "@/lib/i18n";
 // сама ОС/шрифт). Группы — те же смысловые категории, что в нативном
 // эмодзи-пикере Telegram/iOS/Android.
 const EMOJI_GROUPS = {
+  people: [
+    "👶", "🧒", "👦", "👧", "🧑", "👱", "👨", "🧔", "👩", "🧓", "👴", "👵",
+    "🙍", "🙎", "🙅", "🙆", "💁", "🙋", "🧏", "🙇", "🤦", "🤷", "🧑‍⚕️", "🧑‍🎓",
+    "👮", "🕵️", "💂", "🥷", "👷", "🤴", "👸", "👳", "👲", "🧕", "🤵", "👰",
+    "🤰", "🤱", "👼", "🎅", "🤶", "🦸", "🦹", "🧙", "🧚", "🧛", "🧜", "🧝",
+    "💆", "💇", "🚶", "🧍", "🧎", "🏃", "💃", "🕺", "🧖", "🧗",
+    "🤺", "🏇", "⛷️", "🏂", "🏌️", "🏄", "🚣", "🏊", "⛹️", "🏋️", "🚴", "🚵",
+    "🤸", "🤼", "🤽", "🤾", "🤹", "🧘", "🛀", "🛌",
+    "👭", "👫", "👬", "💏", "💑", "👪", "🗣️", "👤", "👥", "🫂",
+    "🥽", "🥼", "🦺", "👔", "👕", "👖", "🧣", "🧤", "🧥", "🧦",
+    "👗", "👘", "🥻", "👙", "👠", "👑", "🎩", "🎓", "🧢",
+  ],
   smileys: [
     "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊",
     "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😙", "😋", "😛", "😜", "🤪",
@@ -107,7 +119,7 @@ const EMOJI_GROUPS = {
 } as const;
 
 type EmojiGroupKey = keyof typeof EMOJI_GROUPS;
-const GROUP_ORDER: EmojiGroupKey[] = ["smileys", "animals", "food", "activities", "travel", "objects", "symbols"];
+const GROUP_ORDER: EmojiGroupKey[] = ["people", "smileys", "animals", "food", "activities", "travel", "objects", "symbols"];
 
 function groupLabel(t: Dictionary, group: EmojiGroupKey): string {
   return t.emojiPicker.groups[group];

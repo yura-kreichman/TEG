@@ -12,6 +12,7 @@ import { useI18n } from "@/components/i18n-provider";
 interface SystemSettingsConfig {
   telegramBotToken: string;
   smtp: { host: string; port: string; user: string; password: string; from: string; fromName: string };
+  vapid: { publicKey: string; privateKey: string; subject: string };
 }
 
 export default function AdminSettingsPage() {
@@ -28,6 +29,9 @@ export default function AdminSettingsPage() {
 
   const [testTelegramStatus, setTestTelegramStatus] = useState<string | null>(null);
   const [testTelegramChecking, setTestTelegramChecking] = useState(false);
+
+  const [vapidStatus, setVapidStatus] = useState<string | null>(null);
+  const [vapidGenerating, setVapidGenerating] = useState(false);
 
   const [currentLogin, setCurrentLogin] = useState("");
   const [newLogin, setNewLogin] = useState("");
@@ -111,6 +115,27 @@ export default function AdminSettingsPage() {
       setTestTelegramStatus(res.ok ? `${t.admin.testTelegramOk} @${data.username}` : (data.error ?? t.admin.genericError));
     } finally {
       setTestTelegramChecking(false);
+    }
+  }
+
+  async function generateVapidKeys() {
+    setVapidStatus(null);
+    setVapidGenerating(true);
+    try {
+      const res = await fetch("/api/admin/settings/generate-vapid-keys", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setVapidStatus(data.error ?? t.admin.genericError);
+        return;
+      }
+      // Приватный ключ бэкенд не возвращает (нет смысла показывать его дважды —
+      // подставляем placeholder, реальное значение уже сохранено в БД) —
+      // перечитываем конфиг целиком, чтобы форма не разошлась с БД.
+      const configRes = await fetch("/api/admin/settings");
+      setConfig(await configRes.json());
+      setVapidStatus(t.admin.vapidGenerated);
+    } finally {
+      setVapidGenerating(false);
     }
   }
 
@@ -256,6 +281,35 @@ export default function AdminSettingsPage() {
                 </div>
                 {testEmailStatus && <p className="text-caption-airbnb">{testEmailStatus}</p>}
               </div>
+            </div>
+          </SpringCard>
+
+          <SpringCard animate={false}>
+            <div className="mb-3 text-card-title">{t.admin.vapidSectionTitle}</div>
+            <p className="mb-3 text-caption-airbnb">{t.admin.vapidSectionSub}</p>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="vapid-subject">{t.admin.vapidSubjectLabel}</Label>
+                <Input
+                  id="vapid-subject"
+                  placeholder={t.admin.vapidSubjectPlaceholder}
+                  value={config.vapid.subject}
+                  onChange={(e) => setConfig({ ...config, vapid: { ...config.vapid, subject: e.target.value } })}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="vapid-public-key">{t.admin.vapidPublicKeyLabel}</Label>
+                <Input id="vapid-public-key" readOnly value={config.vapid.publicKey} className="font-mono text-xs" />
+              </div>
+              <div className="flex items-center gap-3 border-t border-border pt-3">
+                <Button type="button" variant="outline" size="sm" disabled={vapidGenerating} onClick={generateVapidKeys}>
+                  {vapidGenerating ? t.admin.testChecking : t.admin.vapidGenerateButton}
+                </Button>
+                {vapidStatus && <p className="text-caption-airbnb">{vapidStatus}</p>}
+              </div>
+              {config.vapid.publicKey && (
+                <p className="text-caption-airbnb text-muted-foreground">{t.admin.vapidRegenerateWarning}</p>
+              )}
             </div>
           </SpringCard>
 

@@ -20,12 +20,19 @@ export interface SystemSettingsConfig {
   // fromName — отображаемое имя отправителя, не влияет на прохождение
   // проверок, чисто косметическое поле "От кого" в письме.
   smtp: { host: string; port: string; user: string; password: string; from: string; fromName: string };
+  // VAPID-пара для Web Push (фидбек пользователя 2026-07-12: "сделай
+  // настройки для Админа для Push уведомлений") — та же логика "БД
+  // первична, .env фоллбэк", что и у остальных секретов здесь. Ключ
+  // генерируется кнопкой в /admin/settings (POST .../generate-vapid-keys),
+  // а не вручную — это ECDSA-пара, а не пароль, который можно придумать.
+  vapid: { publicKey: string; privateKey: string; subject: string };
 }
 
 const EMPTY: SystemSettingsConfig = {
   telegramBotToken: "",
   telegramBotUsername: "",
   smtp: { host: "", port: "", user: "", password: "", from: "", fromName: "" },
+  vapid: { publicKey: "", privateKey: "", subject: "" },
 };
 
 export async function getSystemSettingsConfig(): Promise<SystemSettingsConfig> {
@@ -35,6 +42,7 @@ export async function getSystemSettingsConfig(): Promise<SystemSettingsConfig> {
     telegramBotToken: config.telegramBotToken || EMPTY.telegramBotToken,
     telegramBotUsername: config.telegramBotUsername || EMPTY.telegramBotUsername,
     smtp: { ...EMPTY.smtp, ...(config.smtp ?? {}) },
+    vapid: { ...EMPTY.vapid, ...(config.vapid ?? {}) },
   };
 }
 

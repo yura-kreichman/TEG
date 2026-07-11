@@ -14,7 +14,7 @@ export async function GET() {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
 
-  const publicKey = getVapidPublicKey();
+  const publicKey = await getVapidPublicKey();
   if (!publicKey) {
     return NextResponse.json({ error: "Push-уведомления не настроены на сервере" }, { status: 503 });
   }

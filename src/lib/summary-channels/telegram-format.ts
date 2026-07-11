@@ -55,6 +55,21 @@ function formatCompactGrid(items: { label: string; value: string }[]): string {
   return rows.join("\n");
 }
 
+// Активу с несколькими тарифами (до 2 на зону, docs/spec/01-counters.md)
+// соответствует несколько строк подряд с одинаковым assetName — голое
+// имя актива для обеих было бы неразличимо ("Форму: 3132 | Форму: 429").
+// Фидбек пользователя 2026-07-12: различать суффиксом-номером тарифа
+// ("Форм1"/"Форм2"), обрезая имя актива до 4 символов + 1 цифра = 5 (лимит
+// компактной колонки), а не полным/частичным именем тарифа. Один тариф на
+// актив — суффикс не нужен, имя обрезается как обычно до 5 символов.
+function compactAssetLabel(readings: ZoneSummaryData["readings"], index: number): string {
+  const assetName = readings[index].assetName;
+  const sameAsset = readings.filter((r) => r.assetName === assetName);
+  if (sameAsset.length <= 1) return assetName;
+  const occurrence = readings.slice(0, index + 1).filter((r) => r.assetName === assetName).length;
+  return `${assetName.slice(0, COMPACT_NAME_WIDTH - 1)}${occurrence}`;
+}
+
 // Разница считается "нормальной" только при 0 — зелёная галочка на
 // ненулевой разнице вводит в заблуждение (фидбек пользователя 2026-07-12:
 // "это не нормально, чтобы была зелёная галочка"). ⚠️ на любое ненулевое
@@ -84,7 +99,9 @@ export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneS
       parts.push(`💵 Касса: <b>${data.cashAmount.toFixed(2)}</b>`);
     } else {
       if (settings.showReadings && data.readings.length > 0) {
-        const grid = formatCompactGrid(data.readings.map((r) => ({ label: r.assetName, value: String(r.reading) })));
+        const grid = formatCompactGrid(
+          data.readings.map((r, i) => ({ label: compactAssetLabel(data.readings, i), value: String(r.reading) }))
+        );
         parts.push(`<blockquote><code>${grid}</code></blockquote>`);
       }
 

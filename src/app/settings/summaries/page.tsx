@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Clock, DollarSign, Mail, Send, Zap } from "lucide-react";
+import { Bell, Clock, DollarSign, Mail, Send, Zap } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { TelegramConnectSheet } from "@/components/summary-telegram-connect-sheet";
 import { EmailChannelSheet } from "@/components/summary-email-sheet";
 import { useI18n } from "@/components/i18n-provider";
+import { isPushSupported, getPushSubscription } from "@/lib/push-client";
 
 interface TelegramStatus {
   botConfigured: boolean;
@@ -37,6 +38,12 @@ export default function SummariesListPage() {
   const [shiftCloseEnabled, setShiftCloseEnabled] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
   const [emailSheetOpen, setEmailSheetOpen] = useState(false);
+  // Push — не тенантный toggle как Telegram/email (нет единого "chatId"),
+  // а подписка конкретного устройства (фидбек пользователя 2026-07-12:
+  // "Push-уведомления должны быть в Сводке с итогами, как Канал Доставки") —
+  // статус берём прямо у браузера, полное управление (per-тип тумблеры,
+  // подписать/отписать это устройство) — на отдельном экране /settings/push.
+  const [pushSubscribed, setPushSubscribed] = useState(false);
 
   async function loadAll() {
     const [tgRes, emailRes, zoneRes, dcRes, scRes] = await Promise.all([
@@ -55,6 +62,9 @@ export default function SummariesListPage() {
     setZoneEnabled((await zoneRes.json()).enabled);
     setDailyCashEnabled((await dcRes.json()).enabled);
     setShiftCloseEnabled((await scRes.json()).enabled);
+    if (isPushSupported()) {
+      setPushSubscribed(!!(await getPushSubscription()));
+    }
     setChecking(false);
   }
 
@@ -173,6 +183,24 @@ export default function SummariesListPage() {
                     </div>
                   </div>
                   <Switch checked={email.enabled} onCheckedChange={toggleEmail} className="shrink-0" />
+                </div>
+
+                <div
+                  className="flex cursor-pointer items-center justify-between gap-3 border-t border-border py-2 pt-3"
+                  onClick={() => router.push("/settings/push")}
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Bell className="size-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-body-airbnb font-medium">{t.pushSettings.title}</div>
+                      <div className="truncate text-caption-airbnb">
+                        {pushSubscribed ? t.summaries.pushOnThisDevice : t.summaries.pushNotConnected}{" "}
+                        <span className="font-semibold text-primary">{t.summaries.telegramChangeLink}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </SpringCard>
             </StaggerItem>
