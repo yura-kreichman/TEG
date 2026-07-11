@@ -13,6 +13,7 @@ import { OwnerShell } from "@/components/owner-shell";
 import { isIOS } from "@/lib/browser-detect";
 import { isPushSupported, getPushSubscription, subscribeToPush, unsubscribeFromPush } from "@/lib/push-client";
 import { PUSH_NOTIFICATION_DEFAULTS, type PushNotificationSettingsData } from "@/lib/summary-settings";
+import { PushNotificationPreview } from "@/components/push-notification-preview";
 
 type DeviceState = "checking" | "unsupported" | "subscribed" | "not-subscribed";
 
@@ -26,6 +27,8 @@ export default function PushSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isStandalone, setIsStandalone] = useState(true); // true до проверки — не мигаем подсказкой на гидрации
   const [onIOS, setOnIOS] = useState(false);
+  const [testSending, setTestSending] = useState(false);
+  const [testStatus, setTestStatus] = useState<string | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -78,6 +81,18 @@ export default function PushSettingsPage() {
     setDeviceState("not-subscribed");
   }
 
+  async function handleTest() {
+    setTestSending(true);
+    setTestStatus(null);
+    try {
+      const res = await fetch("/api/tenant/push/test", { method: "POST" });
+      const data = await res.json();
+      setTestStatus(res.ok ? t.pushSettings.testSent : (data.error ?? t.admin.genericError));
+    } finally {
+      setTestSending(false);
+    }
+  }
+
   const rows: Array<{ key: keyof PushNotificationSettingsData; label: string; sub: string }> = [
     { key: "zoneSummary", label: t.pushSettings.zoneLabel, sub: t.pushSettings.zoneSub },
     { key: "dailyCashSummary", label: t.pushSettings.dailyCashLabel, sub: t.pushSettings.dailyCashSub },
@@ -90,8 +105,8 @@ export default function PushSettingsPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-md flex-col gap-1">
-          <Link href="/settings" className="mb-2 w-fit text-caption-airbnb font-semibold text-primary">
-            ← {t.settings.title}
+          <Link href="/settings/summaries" className="mb-2 w-fit text-caption-airbnb font-semibold text-primary">
+            ← {t.summaries.listTitle}
           </Link>
           <h1 className="text-screen-title">{t.pushSettings.title}</h1>
           <p className="mb-4 text-caption-airbnb">{t.pushSettings.sub}</p>
@@ -111,22 +126,45 @@ export default function PushSettingsPage() {
 
                 {deviceState !== "unsupported" && deviceState !== "checking" && (
                   <>
-                    <PressableScale className="w-fit">
-                      <Button
-                        type="button"
-                        variant={deviceState === "subscribed" ? "outline" : "default"}
-                        disabled={busy}
-                        onClick={deviceState === "subscribed" ? handleDisable : handleEnable}
-                      >
-                        {deviceState === "subscribed" ? t.pushSettings.disableButton : t.pushSettings.enableButton}
-                      </Button>
-                    </PressableScale>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <PressableScale className="w-fit">
+                        <Button
+                          type="button"
+                          variant={deviceState === "subscribed" ? "outline" : "default"}
+                          disabled={busy}
+                          onClick={deviceState === "subscribed" ? handleDisable : handleEnable}
+                        >
+                          {deviceState === "subscribed" ? t.pushSettings.disableButton : t.pushSettings.enableButton}
+                        </Button>
+                      </PressableScale>
+                      {deviceState === "subscribed" && (
+                        <PressableScale className="w-fit">
+                          <Button type="button" variant="outline" disabled={testSending} onClick={handleTest}>
+                            {testSending ? t.admin.testChecking : t.pushSettings.testButton}
+                          </Button>
+                        </PressableScale>
+                      )}
+                    </div>
                     {error && <p className="text-caption-airbnb text-destructive">{error}</p>}
+                    {testStatus && <p className="text-caption-airbnb">{testStatus}</p>}
                     {onIOS && !isStandalone && deviceState === "not-subscribed" && (
                       <p className="text-caption-airbnb text-muted-foreground">{t.pushSettings.iosHint}</p>
                     )}
                   </>
                 )}
+              </SpringCard>
+            </StaggerItem>
+
+            <StaggerItem>
+              <SpringCard animate={false} hover={false} className="flex flex-col gap-3">
+                <span className="text-[11px] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+                  {t.pushSettings.previewCardLabel}
+                </span>
+                <PushNotificationPreview
+                  title={t.pushSettings.previewTitle}
+                  body={t.pushSettings.previewBody}
+                  time={t.pushSettings.previewTime}
+                />
               </SpringCard>
             </StaggerItem>
 

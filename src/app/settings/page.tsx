@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, ChevronRight, Clock, Languages, Palette, Send, Trash2 } from "lucide-react";
+import { ChevronRight, Clock, Languages, Palette, Send, Trash2 } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
@@ -28,12 +28,6 @@ export default function SettingsPage() {
       icon: Send,
       title: t.summaries.listTitle,
       sub: t.summaries.listSubtitle,
-    },
-    {
-      href: "/settings/push",
-      icon: Bell,
-      title: t.pushSettings.title,
-      sub: t.pushSettings.sub,
     },
     {
       href: "/settings/work-time",
