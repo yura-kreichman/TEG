@@ -345,6 +345,7 @@
     "connectBotNotConfigured": "Бот платформы ещё не настроен — обратитесь в поддержку.",
     "connectWaitPrefix": "Ждём, когда бот появится в чате… Выберите чат в открывшемся Telegram. Код привязки",
     "connectWaitSuffix": "передастся сам.",
+    "connectOpenTelegramButton": "Открыть Telegram",
     "connectCancelButton": "Отмена",
     "connectDoneConnectedPrefix": "Подключён чат",
     "connectDoneHint": "Сводки будут приходить сюда.",

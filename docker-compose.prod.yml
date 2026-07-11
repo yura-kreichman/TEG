@@ -27,6 +27,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # public/uploads это bind-mount на папку домена (не именованный volume) —
+    # владелец на хосте это пользователь сайта в ISPmanager (id <имя_сайта>),
+    # не UID образа (rentos, 100:101). Без этого mkdir внутри контейнера
+    # падает EACCES, т.к. bind-mount живёт под host-правами, не docker'овскими.
+    user: "${SITE_UID:-1000}:${SITE_GID:-1000}"
     volumes:
       - ./public/uploads:/app/public/uploads
     ports:

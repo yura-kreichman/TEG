@@ -27,6 +27,13 @@ export default function InstallAppBanner() {
       setDismissed(true);
     }
 
+    // Без зарегистрированного service worker Chrome вообще не считает
+    // сайт устанавливаемым и никогда не шлёт beforeinstallprompt — баннер
+    // ниже был мёртвым кодом без этого (см. public/sw.js).
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+
     function handleBeforeInstallPrompt(event: Event) {
       event.preventDefault();
       setDeferredPrompt(event as BeforeInstallPromptEvent);

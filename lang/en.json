@@ -345,6 +345,7 @@
     "connectBotNotConfigured": "The platform bot isn't set up yet — contact support.",
     "connectWaitPrefix": "Waiting for the bot to appear in the chat… Pick a chat in the Telegram window that opened. The pairing code",
     "connectWaitSuffix": "will be sent automatically.",
+    "connectOpenTelegramButton": "Open Telegram",
     "connectCancelButton": "Cancel",
     "connectDoneConnectedPrefix": "Connected to chat",
     "connectDoneHint": "Summaries will be sent here.",

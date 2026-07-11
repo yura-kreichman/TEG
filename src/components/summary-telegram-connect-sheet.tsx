@@ -27,6 +27,7 @@ export function TelegramConnectSheet({
   const [connState, setConnState] = useState<ConnState>("idle");
   const [chatTitle, setChatTitle] = useState<string | null>(null);
   const [code, setCode] = useState("");
+  const [deepLink, setDeepLink] = useState<string | null>(null);
   const [testLoading, setTestLoading] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -66,15 +67,29 @@ export function TelegramConnectSheet({
   useEffect(() => () => stopPolling(), []);
 
   async function startBind() {
+    // Открываем окно СИНХРОННО, до await — иначе мобильные браузеры (в
+    // первую очередь iOS Safari) блокируют window.open как всплывающее,
+    // т.к. к моменту резолва fetch это уже не считается прямым откликом на
+    // клик пользователя. Пустое окно, location задаём после ответа сервера.
+    // На случай если и это заблокировано (или desktop-браузер вообще не
+    // открыл окно) — ниже в UI есть настоящая <a href> ссылка как гарантированный fallback.
+    const win = typeof window !== "undefined" ? window.open("", "_blank") : null;
+
     const res = await fetch("/api/tenant/summary-channels/telegram/bind", { method: "POST" });
     const data = await res.json();
     if (!res.ok) {
+      win?.close();
       setBotConfigured(false);
       return;
     }
     setCode(data.code);
+    setDeepLink(data.deepLink ?? null);
     setConnState("wait");
-    if (data.deepLink) window.open(data.deepLink, "_blank");
+    if (data.deepLink && win) {
+      win.location.href = data.deepLink;
+    } else {
+      win?.close();
+    }
     pollRef.current = setInterval(async () => {
       const s = await loadStatus();
       if (s?.connected) onChanged();
@@ -84,6 +99,7 @@ export function TelegramConnectSheet({
   function cancelBind() {
     stopPolling();
     setConnState("idle");
+    setDeepLink(null);
   }
 
   async function handleDisconnect() {
@@ -149,6 +165,19 @@ export function TelegramConnectSheet({
                 {t.summaries.connectWaitSuffix}
               </span>
             </div>
+            {deepLink && (
+              <PressableScale className="mt-3">
+                <a
+                  href={deepLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-transparent bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary),black_14%)] text-sm font-medium text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,.12),inset_0_1px_0_rgba(255,255,255,.16)]"
+                >
+                  <Send className="size-4" />
+                  {t.summaries.connectOpenTelegramButton}
+                </a>
+              </PressableScale>
+            )}
             <PressableScale className="mt-3">
               <Button type="button" variant="outline" className="w-full" onClick={cancelBind}>
                 {t.summaries.connectCancelButton}

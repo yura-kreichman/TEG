@@ -345,6 +345,7 @@
     "connectBotNotConfigured": "Botul platformei nu este încă configurat — contactați suportul.",
     "connectWaitPrefix": "Așteptăm ca botul să apară în chat… Alegeți chatul în fereastra Telegram deschisă. Codul de asociere",
     "connectWaitSuffix": "se va transmite automat.",
+    "connectOpenTelegramButton": "Deschide Telegram",
     "connectCancelButton": "Anulează",
     "connectDoneConnectedPrefix": "Conectat la chatul",
     "connectDoneHint": "Rezumatele vor sosi aici.",
