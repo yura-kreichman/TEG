@@ -170,6 +170,8 @@
     "smtpUserLabel": "User",
     "smtpPasswordLabel": "Password",
     "smtpFromLabel": "From (email)",
+    "smtpFromNameLabel": "Sender name",
+    "smtpFromNamePlaceholder": "RentOS",
     "testChecking": "Checking…",
     "testTelegramButton": "Test token",
     "testTelegramOk": "Token works, bot:",

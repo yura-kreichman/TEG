@@ -11,7 +11,7 @@ import { useI18n } from "@/components/i18n-provider";
 
 interface SystemSettingsConfig {
   telegramBotToken: string;
-  smtp: { host: string; port: string; user: string; password: string; from: string };
+  smtp: { host: string; port: string; user: string; password: string; from: string; fromName: string };
 }
 
 export default function AdminSettingsPage() {
@@ -228,6 +228,15 @@ export default function AdminSettingsPage() {
                   type="email"
                   value={config.smtp.from}
                   onChange={(e) => setConfig({ ...config, smtp: { ...config.smtp, from: e.target.value } })}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="smtp-from-name">{t.admin.smtpFromNameLabel}</Label>
+                <Input
+                  id="smtp-from-name"
+                  placeholder={t.admin.smtpFromNamePlaceholder}
+                  value={config.smtp.fromName}
+                  onChange={(e) => setConfig({ ...config, smtp: { ...config.smtp, fromName: e.target.value } })}
                 />
               </div>
               <div className="flex flex-col gap-1 border-t border-border pt-3">

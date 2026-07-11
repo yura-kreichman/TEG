@@ -7,12 +7,16 @@ import { prisma } from "@/lib/prisma";
 // заполненных настроек в БД не переставали работать молча).
 export interface SystemSettingsConfig {
   telegramBotToken: string;
-  smtp: { host: string; port: string; user: string; password: string; from: string };
+  // from — реальный email (обязан совпадать с authenticated SMTP user для
+  // SPF/DKIM-выравнивания, см. src/lib/summary-channels/email-channel.ts);
+  // fromName — отображаемое имя отправителя, не влияет на прохождение
+  // проверок, чисто косметическое поле "От кого" в письме.
+  smtp: { host: string; port: string; user: string; password: string; from: string; fromName: string };
 }
 
 const EMPTY: SystemSettingsConfig = {
   telegramBotToken: "",
-  smtp: { host: "", port: "", user: "", password: "", from: "" },
+  smtp: { host: "", port: "", user: "", password: "", from: "", fromName: "" },
 };
 
 export async function getSystemSettingsConfig(): Promise<SystemSettingsConfig> {

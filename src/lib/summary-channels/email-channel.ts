@@ -15,7 +15,11 @@ async function getConfig() {
   const pass = smtp.password || process.env.SMTP_PASS;
   const from = smtp.from || process.env.SMTP_FROM || user;
   if (!host || !port || !user || !pass || !from) return null;
-  return { host, port: Number(port), user, pass, from };
+  // Формат '"Имя" <email>' — nodemailer сам берёт email-часть для envelope
+  // (SPF/DKIM проверяются по нему, не по отображаемому имени), в заголовке
+  // получателю показывается имя. fromName опционален — без него просто email.
+  const fromHeader = smtp.fromName ? `"${smtp.fromName.replace(/"/g, "")}" <${from}>` : from;
+  return { host, port: Number(port), user, pass, from: fromHeader };
 }
 
 export async function isEmailConfigured(): Promise<boolean> {

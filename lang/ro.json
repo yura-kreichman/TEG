@@ -170,6 +170,8 @@
     "smtpUserLabel": "Utilizator",
     "smtpPasswordLabel": "Parolă",
     "smtpFromLabel": "De la (email)",
+    "smtpFromNameLabel": "Numele expeditorului",
+    "smtpFromNamePlaceholder": "RentOS",
     "testChecking": "Se verifică…",
     "testTelegramButton": "Testează token-ul",
     "testTelegramOk": "Token funcțional, bot:",

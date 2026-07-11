@@ -170,6 +170,8 @@
     "smtpUserLabel": "Користувач",
     "smtpPasswordLabel": "Пароль",
     "smtpFromLabel": "Від кого (email)",
+    "smtpFromNameLabel": "Ім'я відправника",
+    "smtpFromNamePlaceholder": "RentOS",
     "testChecking": "Перевірка…",
     "testTelegramButton": "Перевірити токен",
     "testTelegramOk": "Токен робочий, бот:",
