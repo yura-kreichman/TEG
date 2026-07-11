@@ -101,6 +101,7 @@ export default function ZoneSummaryEditorPage() {
     { key: "showDiff", label: t.summaries.zoneShowDiffLabel, sub: t.summaries.zoneShowDiffSub },
     { key: "showReturns", label: t.summaries.zoneShowReturnsLabel, sub: t.summaries.zoneShowReturnsSub },
     { key: "showOperator", label: t.summaries.zoneShowOperatorLabel, sub: t.summaries.zoneShowOperatorSub },
+    { key: "compact", label: t.summaries.zoneCompactLabel, sub: t.summaries.zoneCompactSub },
   ];
 
   if (checking) return null;

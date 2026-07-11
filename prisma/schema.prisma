@@ -748,6 +748,10 @@ model ZoneSummarySettings {
   showReturns  Boolean @default(true) // Возвраты/тестовые
   showOperator Boolean @default(false) // Имя оператора
 
+  // Только Telegram — компактная 2-колоночная таблица показаний (имя актива
+  // до 5 символов) вместо списка, чтобы сообщение помещалось по ширине экрана.
+  compact Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -791,6 +795,9 @@ model ShiftCloseSummarySettings {
   showAdvance Boolean @default(true)
   showBonus   Boolean @default(true)
   showTotal   Boolean @default(true) // К выдаче
+
+  // Только Telegram — сводит поля на 2 строки вместо одной строки на каждое.
+  compact Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -25,6 +25,12 @@ export interface ZoneSummarySettingsData {
   showDiff: boolean;
   showReturns: boolean;
   showOperator: boolean;
+  // Только Telegram (см. telegram-format.ts) — сжимает таблицу показаний в
+  // 2 колонки (имя актива до 5 символов) вместо списка "AssetName · TariffName:
+  // value", чтобы сообщение помещалось в ширину экрана телефона без переноса.
+  // Email-версия (email-format.ts) не поддерживает compact — там нет того же
+  // ограничения по ширине.
+  compact: boolean;
 }
 
 export const ZONE_SUMMARY_DEFAULTS: ZoneSummarySettingsData = {
@@ -36,6 +42,7 @@ export const ZONE_SUMMARY_DEFAULTS: ZoneSummarySettingsData = {
   showDiff: true,
   showReturns: true,
   showOperator: false,
+  compact: false,
 };
 
 export interface DailyCashSummarySettingsData {
@@ -71,6 +78,9 @@ export interface ShiftCloseSummarySettingsData {
   showAdvance: boolean;
   showBonus: boolean;
   showTotal: boolean;
+  // Только Telegram — сводит включённые поля на 2 строки вместо одной строки
+  // на каждое поле, см. zoneCompact в ZoneSummarySettingsData.
+  compact: boolean;
 }
 
 export const SHIFT_CLOSE_SUMMARY_DEFAULTS: ShiftCloseSummarySettingsData = {
@@ -80,4 +90,5 @@ export const SHIFT_CLOSE_SUMMARY_DEFAULTS: ShiftCloseSummarySettingsData = {
   showAdvance: true,
   showBonus: true,
   showTotal: true,
+  compact: false,
 };

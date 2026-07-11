@@ -15,13 +15,36 @@ function formatDate(d: Date): string {
   return formatSummaryDate(d, "/");
 }
 
+// compact (фидбек пользователя 2026-07-12, скриншот с примером): вместо
+// списка "AssetName · TariffName: value (+delta)" по одному активу на
+// строку — 2 колонки, имя актива обрезано до 5 символов (без названия
+// тарифа — при обрезке до 5 симв. его всё равно некуда вписать), заезды
+// (delta) в компактном режиме не показываются. Цель — сообщение целиком
+// умещается по ширине экрана телефона, без переноса строк.
+function formatCompactReadings(readings: ZoneSummaryData["readings"]): string {
+  const NAME_WIDTH = 5;
+  const valueWidth = Math.max(4, ...readings.map((r) => String(r.reading).length));
+  const cells = readings.map(
+    (r) => `${r.assetName.slice(0, NAME_WIDTH).padEnd(NAME_WIDTH)}: ${String(r.reading).padStart(valueWidth)}`
+  );
+  const rows: string[] = [];
+  for (let i = 0; i < cells.length; i += 2) {
+    rows.push(cells[i + 1] ? `${cells[i]}  |  ${cells[i + 1]}` : cells[i]);
+  }
+  return rows.join("\n");
+}
+
 export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneSummarySettingsData): string {
   const lines: string[] = [`🏁 <b>${data.zoneName.toUpperCase()} · ${formatDate(data.occurredAt)}</b>`];
 
   if (data.accountingMode === "cash_only") {
     lines.push("", `💵 Касса: <b>${data.cashAmount.toFixed(2)}</b>`);
   } else {
-    if (settings.showReadings || settings.showDelta) {
+    if (settings.compact) {
+      if (settings.showReadings && data.readings.length > 0) {
+        lines.push("", `<blockquote><code>${formatCompactReadings(data.readings)}</code></blockquote>`);
+      }
+    } else if (settings.showReadings || settings.showDelta) {
       // Выровнено в столбик (фидбек пользователя 2026-07-09) — внутри <code>
       // моноширинный шрифт, поэтому паддинг пробелами реально работает как
       // колонки. Подпись дополняется пробелами до общей ширины, показание —
@@ -98,6 +121,21 @@ export function formatShiftCloseSummaryTelegram(
   data: ShiftCloseSummaryData,
   settings: ShiftCloseSummarySettingsData
 ): string {
+  if (settings.compact) {
+    // Все включённые поля сводятся на одну строку через " · " вместо
+    // одной строки на поле — та же цель, что у compact в Zone Summary
+    // (фидбек пользователя 2026-07-12): сообщение целиком в ширину экрана.
+    const parts: string[] = [];
+    if (settings.showPeriod) parts.push(`🕐 ${formatUtcTime(data.startAt)}–${formatUtcTime(data.endAt)}`);
+    if (settings.showHours) parts.push(`⏱ ${formatDuration(data.minutes)}`);
+    if (settings.showAdvance && data.advanceAmount > 0) parts.push(`💸 Аванс: ${data.advanceAmount.toFixed(2)}`);
+    if (settings.showBonus && data.bonusAmount > 0) parts.push(`🏆 Прем.: ${data.bonusAmount.toFixed(2)}`);
+    if (settings.showTotal) parts.push(`💰 Итог: <b>${data.toPayOut.toFixed(2)}</b>`);
+
+    const header = `🕐 <b>${data.operatorName} · ${formatDate(data.startAt)}</b>`;
+    return parts.length > 0 ? `${header}\n${parts.join(" · ")}` : header;
+  }
+
   const lines: string[] = [`🕐 <b>${data.operatorName} · смена ${formatDate(data.startAt)}</b>`, ""];
 
   if (settings.showPeriod) lines.push(`🕐 Период: ${formatUtcTime(data.startAt)} – ${formatUtcTime(data.endAt)}`);

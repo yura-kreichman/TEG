@@ -73,6 +73,7 @@ export default function ShiftCloseSummaryEditorPage() {
     { key: "showAdvance", label: t.summaries.scShowAdvanceLabel, sub: t.summaries.scShowAdvanceSub },
     { key: "showBonus", label: t.summaries.scShowBonusLabel, sub: t.summaries.scShowBonusSub },
     { key: "showTotal", label: t.summaries.scShowTotalLabel, sub: t.summaries.scShowTotalSub },
+    { key: "compact", label: t.summaries.scCompactLabel, sub: t.summaries.scCompactSub },
   ];
 
   if (checking) return null;
