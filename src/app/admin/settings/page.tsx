@@ -29,6 +29,15 @@ export default function AdminSettingsPage() {
   const [testTelegramStatus, setTestTelegramStatus] = useState<string | null>(null);
   const [testTelegramChecking, setTestTelegramChecking] = useState(false);
 
+  const [currentLogin, setCurrentLogin] = useState("");
+  const [newLogin, setNewLogin] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [credentialsSaving, setCredentialsSaving] = useState(false);
+  const [credentialsSaved, setCredentialsSaved] = useState(false);
+  const [credentialsError, setCredentialsError] = useState<string | null>(null);
+
   async function load() {
     const res = await fetch("/api/admin/settings");
     if (res.status === 401) {
@@ -36,6 +45,14 @@ export default function AdminSettingsPage() {
       return;
     }
     setConfig(await res.json());
+
+    const accountRes = await fetch("/api/admin/account");
+    if (accountRes.ok) {
+      const data = await accountRes.json();
+      setCurrentLogin(data.login ?? "");
+      setNewLogin(data.login ?? "");
+    }
+
     setChecking(false);
   }
 
@@ -94,6 +111,46 @@ export default function AdminSettingsPage() {
       setTestTelegramStatus(res.ok ? `${t.admin.testTelegramOk} @${data.username}` : (data.error ?? t.admin.genericError));
     } finally {
       setTestTelegramChecking(false);
+    }
+  }
+
+  async function saveCredentials() {
+    setCredentialsError(null);
+
+    if (newPassword && newPassword !== confirmPassword) {
+      setCredentialsError(t.admin.passwordsMismatch);
+      return;
+    }
+    if (!currentPassword.trim()) {
+      setCredentialsError(t.admin.currentPasswordRequired);
+      return;
+    }
+
+    setCredentialsSaving(true);
+    try {
+      const res = await fetch("/api/admin/account", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword,
+          newLogin: newLogin.trim() !== currentLogin ? newLogin.trim() : undefined,
+          newPassword: newPassword || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCredentialsError(data.error ?? t.admin.genericError);
+        return;
+      }
+      setCurrentLogin(data.login);
+      setNewLogin(data.login);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setCredentialsSaved(true);
+      setTimeout(() => setCredentialsSaved(false), 1500);
+    } finally {
+      setCredentialsSaving(false);
     }
   }
 
@@ -190,6 +247,53 @@ export default function AdminSettingsPage() {
                 </div>
                 {testEmailStatus && <p className="text-caption-airbnb">{testEmailStatus}</p>}
               </div>
+            </div>
+          </SpringCard>
+
+          <SpringCard animate={false}>
+            <div className="mb-3 text-card-title">{t.admin.credentialsSectionTitle}</div>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="admin-login">{t.admin.loginFieldLabel}</Label>
+                <Input id="admin-login" value={newLogin} onChange={(e) => setNewLogin(e.target.value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="admin-new-password">{t.admin.newPasswordLabel}</Label>
+                  <Input
+                    id="admin-new-password"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder={t.admin.newPasswordPlaceholder}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="admin-confirm-password">{t.admin.confirmPasswordLabel}</Label>
+                  <Input
+                    id="admin-confirm-password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1 border-t border-border pt-3">
+                <Label htmlFor="admin-current-password">{t.admin.currentPasswordLabel}</Label>
+                <Input
+                  id="admin-current-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+              </div>
+              {credentialsError && <p className="text-sm text-destructive">{credentialsError}</p>}
+              <Button type="button" disabled={credentialsSaving || !currentPassword.trim()} onClick={saveCredentials}>
+                {credentialsSaving ? t.admin.testChecking : credentialsSaved ? t.common.saved : t.common.save}
+              </Button>
             </div>
           </SpringCard>
 

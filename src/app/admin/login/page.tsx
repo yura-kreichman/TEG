@@ -75,7 +75,7 @@ export default function AdminLoginPage() {
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <PressableScale>
-          <Button type="submit" disabled={loading} className="w-full">
+          <Button type="submit" disabled={loading} className="h-14 w-full text-base font-bold">
             {loading ? t.auth.loggingIn : t.auth.loginButton}
           </Button>
         </PressableScale>

@@ -143,7 +143,11 @@ export default function LoginPage() {
           <div className="flex flex-col gap-3">
             <p className="text-body-airbnb text-muted-foreground">{t.auth.deviceUnknownHint}</p>
             <PressableScale>
-              <Button type="button" onClick={() => switchMode("password")} className="w-full">
+              <Button
+                type="button"
+                onClick={() => switchMode("password")}
+                className="h-14 w-full text-base font-bold"
+              >
                 {t.auth.loginWithPassword}
               </Button>
             </PressableScale>
@@ -178,7 +182,7 @@ export default function LoginPage() {
             {error && <p className="text-sm text-destructive">{error}</p>}
 
             <PressableScale>
-              <Button type="submit" disabled={loading} className="w-full">
+              <Button type="submit" disabled={loading} className="h-14 w-full text-base font-bold">
                 {loading ? t.auth.loggingIn : t.auth.loginButton}
               </Button>
             </PressableScale>
