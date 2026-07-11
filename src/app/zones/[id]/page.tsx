@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Check, Pencil, Palette, Camera, ImagePlus, ListChecks, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, Pencil, Palette, Camera, ImagePlus, ListChecks, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconPicker, IconPickerSheet, AssetOrZoneIcon } from "@/components/icon-picker";
+import { EmojiPickerSheet } from "@/components/emoji-picker";
 import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
 import { StatusChip } from "@/components/status-chip";
 import { TileIcon } from "@/components/tile-icon";
@@ -41,6 +42,7 @@ interface ZoneDetail {
   id: string;
   name: string;
   iconKey: string | null;
+  telegramEmoji: string | null;
   accountingMode: ZoneAccountingMode;
   modeLocked: boolean;
   active: boolean;
@@ -62,6 +64,7 @@ export default function ZoneDetailPage() {
   const [checking, setChecking] = useState(true);
 
   const [zoneIconSheetOpen, setZoneIconSheetOpen] = useState(false);
+  const [zoneEmojiSheetOpen, setZoneEmojiSheetOpen] = useState(false);
   const [zoneKebabOpen, setZoneKebabOpen] = useState(false);
   const [zoneKebabView, setZoneKebabView] = useState<ZoneKebabView>("menu");
   const [renameZoneValue, setRenameZoneValue] = useState("");
@@ -115,6 +118,15 @@ export default function ZoneDetailPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ iconKey }),
+    });
+    await loadZone();
+  }
+
+  async function handleZoneEmojiChange(telegramEmoji: string | null) {
+    await fetch(`/api/zones/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ telegramEmoji }),
     });
     await loadZone();
   }
@@ -504,6 +516,13 @@ export default function ZoneDetailPage() {
         onChange={handleZoneIconChange}
       />
 
+      <EmojiPickerSheet
+        open={zoneEmojiSheetOpen}
+        onClose={() => setZoneEmojiSheetOpen(false)}
+        value={zone.telegramEmoji}
+        onChange={handleZoneEmojiChange}
+      />
+
       <BottomSheet open={zoneKebabOpen} onClose={() => setZoneKebabOpen(false)}>
         {zoneKebabView === "menu" && (
           <div className="pt-2">
@@ -519,6 +538,15 @@ export default function ZoneDetailPage() {
               }}
             >
               {t.common.changeIcon}
+            </ActionSheetItem>
+            <ActionSheetItem
+              icon={Smile}
+              onClick={() => {
+                setZoneKebabOpen(false);
+                setZoneEmojiSheetOpen(true);
+              }}
+            >
+              {t.emojiPicker.title}
             </ActionSheetItem>
             {!zone.modeLocked && (
               <ActionSheetItem icon={ListChecks} onClick={() => setZoneKebabView("mode")}>

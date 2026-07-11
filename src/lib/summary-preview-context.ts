@@ -3,6 +3,7 @@
 export interface SummaryPreviewContext {
   pointName: string | null;
   zoneName: string | null;
+  zoneEmoji: string | null;
   accountingMode: string | null;
   readingPairs: Array<{ assetName: string; tariffName: string }>;
   zoneNames: string[];

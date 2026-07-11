@@ -95,3 +95,20 @@ export const SHIFT_CLOSE_SUMMARY_DEFAULTS: ShiftCloseSummarySettingsData = {
   showTotal: true,
   compact: false,
 };
+
+// Какие типы сводок дублируются коротким Push-уведомлением на устройство(а)
+// владельца, если хотя бы одно активно подписано (фидбек пользователя
+// 2026-07-12). Не влияет на то, отправляется ли сама сводка по
+// Telegram/email — это отдельная развилка (см. *SummarySettingsData.enabled
+// того же типа сводки).
+export interface PushNotificationSettingsData {
+  zoneSummary: boolean;
+  dailyCashSummary: boolean;
+  shiftCloseSummary: boolean;
+}
+
+export const PUSH_NOTIFICATION_DEFAULTS: PushNotificationSettingsData = {
+  zoneSummary: true,
+  dailyCashSummary: true,
+  shiftCloseSummary: true,
+};

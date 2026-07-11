@@ -37,6 +37,20 @@
     "familyMaterial": "Material",
     "familyAvatars": "Аватари"
   },
+  "emojiPicker": {
+    "title": "Емодзі для Telegram",
+    "sub": "Показується в першому рядку зведення цієї зони",
+    "clear": "Прибрати емодзі",
+    "groups": {
+      "smileys": "Смайли",
+      "animals": "Тварини",
+      "food": "Їжа",
+      "activities": "Активності",
+      "travel": "Транспорт",
+      "objects": "Предмети",
+      "symbols": "Символи"
+    }
+  },
   "theme": {
     "toggleToLight": "Увімкнути світлу тему",
     "toggleToDark": "Увімкнути темну тему"
@@ -378,6 +392,27 @@
     "previewNoAsset": "Актив ще не створено",
     "previewNoTariff": "Тариф ще не створено",
     "previewNoOperator": "Оператора ще не створено"
+  },
+  "pushSettings": {
+    "title": "Push-сповіщення",
+    "sub": "Короткі сповіщення на цьому пристрої про нові зведення",
+    "deviceCardLabel": "Цей пристрій",
+    "compositionCardLabel": "Дублювати push-сповіщенням",
+    "enableButton": "Увімкнути push-сповіщення",
+    "disableButton": "Вимкнути на цьому пристрої",
+    "unsupported": "Цей браузер не підтримує push-сповіщення.",
+    "iosHint": "На iPhone/iPad push-сповіщення працюють лише після встановлення застосунку на головний екран (кнопка «Встановити» на екрані входу).",
+    "zoneLabel": "Зведення по зоні",
+    "zoneSub": "після кожної здачі підсумків",
+    "dailyCashLabel": "Каса за день",
+    "dailyCashSub": "підсумок по точці за бізнес-день",
+    "shiftCloseLabel": "Закриття зміни",
+    "shiftCloseSub": "коли оператор завершує роботу",
+    "errors": {
+      "notSupported": "Цей браузер не підтримує push-сповіщення.",
+      "permissionDenied": "Дозвіл на сповіщення відхилено в браузері — увімкніть його вручну в налаштуваннях сайту.",
+      "serverError": "Не вдалося увімкнути push-сповіщення. Спробуйте ще раз."
+    }
   },
   "home": {
     "welcomeTitle": "Ласкаво просимо",

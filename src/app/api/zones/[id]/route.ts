@@ -26,6 +26,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
     id: zone.id,
     name: zone.name,
     iconKey: zone.iconKey,
+    telegramEmoji: zone.telegramEmoji,
     accountingMode: zone.accountingMode,
     modeLocked: submissionCount > 0,
     active: zone.active,
@@ -48,8 +49,14 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
   }
 
-  const { name, iconKey, accountingMode, active } = await request.json();
-  const data: { name?: string; iconKey?: string | null; accountingMode?: string; active?: boolean } = {};
+  const { name, iconKey, telegramEmoji, accountingMode, active } = await request.json();
+  const data: {
+    name?: string;
+    iconKey?: string | null;
+    telegramEmoji?: string | null;
+    accountingMode?: string;
+    active?: boolean;
+  } = {};
 
   if (name !== undefined) {
     if (typeof name !== "string" || name.trim().length === 0) {
@@ -59,6 +66,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
   }
   if (iconKey !== undefined) {
     data.iconKey = typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null;
+  }
+  if (telegramEmoji !== undefined) {
+    data.telegramEmoji = typeof telegramEmoji === "string" && telegramEmoji.trim() ? telegramEmoji.trim() : null;
   }
   if (accountingMode !== undefined) {
     if (!isZoneAccountingMode(accountingMode)) {

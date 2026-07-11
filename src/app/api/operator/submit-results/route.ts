@@ -207,6 +207,7 @@ export async function POST(request: Request) {
         {
           pointName: point.name,
           zoneName: s.zoneName,
+          zoneEmoji: zone.telegramEmoji,
           accountingMode: zone.accountingMode as ZoneAccountingMode,
           occurredAt: submission.submittedAt,
           readings: s.readingLines,
@@ -216,6 +217,7 @@ export async function POST(request: Request) {
           difference: s.difference,
           returnsCount: s.returnsCount,
           operatorName: operator.name,
+          operatorColorTag: operator.colorTag,
         },
         zoneSummarySettings
       ).catch((err) => console.error("zone summary dispatch failed", err));

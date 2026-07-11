@@ -16,6 +16,10 @@ export interface ZoneAssetReadingLine {
 export interface ZoneSummaryData {
   pointName: string;
   zoneName: string;
+  // Zone.telegramEmoji — Unicode-эмодзи в заголовке Telegram-сводки, выбран
+  // владельцем отдельно от SVG-иконки (фидбек пользователя 2026-07-12).
+  // null — telegram-format.ts подставляет 🏁 по умолчанию.
+  zoneEmoji: string | null;
   accountingMode: ZoneAccountingMode;
   occurredAt: Date;
   readings: ZoneAssetReadingLine[];
@@ -25,6 +29,10 @@ export interface ZoneSummaryData {
   difference: number;
   returnsCount: number;
   operatorName: string;
+  // См. ShiftCloseSummaryData.operatorColorTag — тот же квадратный эмодзи
+  // рядом с именем оператора, здесь в первой строке сводки (фидбек
+  // пользователя 2026-07-12: "имя оператора должно быть в первой строке").
+  operatorColorTag: string | null;
 }
 
 export interface DailyCashZoneBreakdownLine {

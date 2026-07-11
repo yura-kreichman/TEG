@@ -37,6 +37,20 @@
     "familyMaterial": "Material",
     "familyAvatars": "Avatars"
   },
+  "emojiPicker": {
+    "title": "Telegram emoji",
+    "sub": "Shown on the first line of this zone's summary",
+    "clear": "Remove emoji",
+    "groups": {
+      "smileys": "Smileys",
+      "animals": "Animals",
+      "food": "Food",
+      "activities": "Activities",
+      "travel": "Travel",
+      "objects": "Objects",
+      "symbols": "Symbols"
+    }
+  },
   "theme": {
     "toggleToLight": "Switch to light theme",
     "toggleToDark": "Switch to dark theme"
@@ -378,6 +392,27 @@
     "previewNoAsset": "No asset created yet",
     "previewNoTariff": "No tariff created yet",
     "previewNoOperator": "No operator created yet"
+  },
+  "pushSettings": {
+    "title": "Push notifications",
+    "sub": "Short notifications on this device about new summaries",
+    "deviceCardLabel": "This device",
+    "compositionCardLabel": "Duplicate as a push notification",
+    "enableButton": "Enable push notifications",
+    "disableButton": "Disable on this device",
+    "unsupported": "This browser doesn't support push notifications.",
+    "iosHint": "On iPhone/iPad, push notifications only work after installing the app to the Home Screen (\"Install\" button on the login screen).",
+    "zoneLabel": "Zone summary",
+    "zoneSub": "after each results submission",
+    "dailyCashLabel": "Daily cash summary",
+    "dailyCashSub": "total for the point over the business day",
+    "shiftCloseLabel": "Shift close",
+    "shiftCloseSub": "when an operator ends their shift",
+    "errors": {
+      "notSupported": "This browser doesn't support push notifications.",
+      "permissionDenied": "Notification permission was denied in the browser — enable it manually in site settings.",
+      "serverError": "Couldn't enable push notifications. Please try again."
+    }
   },
   "home": {
     "welcomeTitle": "Welcome",

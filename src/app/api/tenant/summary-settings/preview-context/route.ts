@@ -57,6 +57,7 @@ export async function GET() {
   return NextResponse.json({
     pointName: point?.name ?? null,
     zoneName: zone?.name ?? null,
+    zoneEmoji: zone?.telegramEmoji ?? null,
     accountingMode: zone?.accountingMode ?? null,
     readingPairs,
     zoneNames,

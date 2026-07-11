@@ -141,6 +141,8 @@ model Tenant {
   shiftCloseSummarySettings ShiftCloseSummarySettings?
   dailyCashSummaryDeliveries DailyCashSummaryDelivery[]
   tasks Task[]
+  pushSubscriptions        PushSubscription[]
+  pushNotificationSettings PushNotificationSettings?
 }
 
 // ============================================================================
@@ -190,6 +192,49 @@ model User {
   balanceCarryovers OperatorBalanceCarryover[]
   createdTasks      Task[] @relation("TaskCreatedBy")
   assignedTasks     Task[] @relation("TaskAssignedUsers")
+  pushSubscriptions PushSubscription[]
+}
+
+// Одна запись на браузер/устройство, подписавшееся на Web Push (фидбек
+// пользователя 2026-07-12: "включи Push-уведомления для Владельца если
+// установлено PWA"). endpoint уникален — тот же браузер/устройство при
+// повторной подписке (например, после переустановки PWA) обновляет свою же
+// строку, а не плодит дубликаты. userId — Owner, а не tenantId напрямую:
+// подписка живёт в конкретном браузере конкретного залогиненного User,
+// один Owner может подписать несколько своих устройств.
+model PushSubscription {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  endpoint String @unique
+  p256dh   String
+  auth     String
+
+  createdAt DateTime @default(now())
+}
+
+// Какие типы сводок дублируются Push-уведомлением на устройство(а) Owner'а
+// (докс: фидбек пользователя 2026-07-12) — отдельная настройка от
+// ZoneSummarySettings/DailyCashSummarySettings/ShiftCloseSummarySettings.enabled
+// (те решают, отправлять ли сводку вообще — по Telegram/email); здесь только
+// "также продублировать push-уведомлением, если есть хоть одна активная
+// подписка". Одна запись на тенанта, а не одна на каждый из трёх типов
+// сводок — проще для одного экрана настроек, три отдельные миграции ради
+// этого не оправданы.
+model PushNotificationSettings {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  zoneSummary       Boolean @default(true)
+  dailyCashSummary  Boolean @default(true)
+  shiftCloseSummary Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Operator — создаётся и правится только Owner'ом. Нет email/пароля.
@@ -325,6 +370,14 @@ model Zone {
 
   name    String
   iconKey String? // ключ иконки lucide
+
+  // Эмодзи для заголовка Telegram-сводки этой зоны (фидбек пользователя
+  // 2026-07-12: "выбор emodji для сводки в телеграм") — отдельно от iconKey
+  // (SVG-иконка в UI владельца): Telegram не умеет отрисовать произвольный
+  // SVG инлайн, а Unicode-эмодзи — единственный способ дать зоне
+  // узнаваемый значок прямо в тексте сообщения. null — telegram-format.ts
+  // подставляет 🏁 по умолчанию.
+  telegramEmoji String?
 
   // Временная деактивация (докс: пользовательский фидбек 2026-07-09) — зона
   // на техобслуживании/сезонно не работает. Оператор не видит её в мастере

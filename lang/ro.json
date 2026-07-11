@@ -37,6 +37,20 @@
     "familyMaterial": "Material",
     "familyAvatars": "Avatare"
   },
+  "emojiPicker": {
+    "title": "Emoji pentru Telegram",
+    "sub": "Afișat pe primul rând al sumarului acestei zone",
+    "clear": "Elimină emoji",
+    "groups": {
+      "smileys": "Fețe",
+      "animals": "Animale",
+      "food": "Mâncare",
+      "activities": "Activități",
+      "travel": "Transport",
+      "objects": "Obiecte",
+      "symbols": "Simboluri"
+    }
+  },
   "theme": {
     "toggleToLight": "Comută la tema deschisă",
     "toggleToDark": "Comută la tema întunecată"
@@ -378,6 +392,27 @@
     "previewNoAsset": "Niciun activ creat încă",
     "previewNoTariff": "Niciun tarif creat încă",
     "previewNoOperator": "Niciun operator creat încă"
+  },
+  "pushSettings": {
+    "title": "Notificări push",
+    "sub": "Notificări scurte pe acest dispozitiv despre sumaruri noi",
+    "deviceCardLabel": "Acest dispozitiv",
+    "compositionCardLabel": "Dublează ca notificare push",
+    "enableButton": "Activează notificările push",
+    "disableButton": "Dezactivează pe acest dispozitiv",
+    "unsupported": "Acest browser nu suportă notificări push.",
+    "iosHint": "Pe iPhone/iPad, notificările push funcționează doar după instalarea aplicației pe ecranul principal (butonul „Instalează” din ecranul de autentificare).",
+    "zoneLabel": "Sumar pe zonă",
+    "zoneSub": "după fiecare predare de rezultate",
+    "dailyCashLabel": "Casă pe zi",
+    "dailyCashSub": "total pe punct pentru ziua de lucru",
+    "shiftCloseLabel": "Închidere tură",
+    "shiftCloseSub": "când un operator își încheie tura",
+    "errors": {
+      "notSupported": "Acest browser nu suportă notificări push.",
+      "permissionDenied": "Permisiunea pentru notificări a fost refuzată în browser — activați-o manual în setările site-ului.",
+      "serverError": "Nu s-au putut activa notificările push. Încercați din nou."
+    }
   },
   "home": {
     "welcomeTitle": "Bine ați venit",

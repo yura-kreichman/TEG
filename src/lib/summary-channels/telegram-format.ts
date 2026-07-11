@@ -20,25 +20,65 @@ function formatDate(d: Date): string {
 // принцип для ВСЕХ трёх сводок: никаких пустых строк-отступов между
 // секциями, всё что можно — на одну строку через короткий разделитель, а
 // списки переменной длины (показания по активам, разбивка по зонам) — в
-// 2 колонки с именем, обрезанным до 5 символов. Цель — сообщение целиком
+// колонки с именем, обрезанным до 5 символов. Цель — сообщение целиком
 // умещается по ширине экрана телефона, без переноса строк.
 const COMPACT_NAME_WIDTH = 5;
+const COMPACT_GRID_SEP = " | ";
+// Примерный бюджет ширины строки внутри <code>-блока на современном
+// телефоне (фидбек пользователя 2026-07-12: "столько значений, сколько
+// вмещается на экран") — не точный пиксельный расчёт (шрифт/ширина экрана
+// у Telegram варьируются), а безопасная эвристика: ~40-42 моноширинных
+// символа стабильно помещаются в один непереносимый ряд на большинстве
+// современных телефонов (390-430px CSS-ширина) при дефолтном размере шрифта
+// Telegram. Число колонок подбирается под эту ширину динамически — чем
+// длиннее значения (например, суммы с копейками), тем меньше колонок в ряд.
+const COMPACT_GRID_TARGET_WIDTH = 42;
 
 function formatCompactGrid(items: { label: string; value: string }[]): string {
+  if (items.length === 0) return "";
   const valueWidth = Math.max(4, ...items.map((it) => it.value.length));
+  const cellWidth = COMPACT_NAME_WIDTH + 2 + valueWidth; // +2 — ": "
+  const cols = Math.max(
+    1,
+    Math.min(
+      items.length,
+      Math.floor((COMPACT_GRID_TARGET_WIDTH + COMPACT_GRID_SEP.length) / (cellWidth + COMPACT_GRID_SEP.length))
+    )
+  );
   const cells = items.map(
     (it) => `${it.label.slice(0, COMPACT_NAME_WIDTH).padEnd(COMPACT_NAME_WIDTH)}: ${it.value.padStart(valueWidth)}`
   );
   const rows: string[] = [];
-  for (let i = 0; i < cells.length; i += 2) {
-    rows.push(cells[i + 1] ? `${cells[i]}  |  ${cells[i + 1]}` : cells[i]);
+  for (let i = 0; i < cells.length; i += cols) {
+    rows.push(cells.slice(i, i + cols).join(COMPACT_GRID_SEP));
   }
   return rows.join("\n");
 }
 
+// Разница считается "нормальной" только при 0 — зелёная галочка на
+// ненулевой разнице вводит в заблуждение (фидбек пользователя 2026-07-12:
+// "это не нормально, чтобы была зелёная галочка"). ⚠️ на любое ненулевое
+// значение, в любую сторону — и недостача, и избыток одинаково "не сошлось".
+function diffEmoji(difference: number): string {
+  return difference === 0 ? "✅" : "⚠️";
+}
+
+// Имя оператора — в первой строке сводки, рядом с зоной (фидбек пользователя
+// 2026-07-12: "должно быть в первой строке, где написано Машинки"), а не
+// отдельной строкой в конце, как раньше. Цветовой квадрат — см. ShiftCloseSummaryData.
+// zoneEmoji — Zone.telegramEmoji, выбирается владельцем отдельно от SVG-иконки
+// (Telegram не отрисует произвольный SVG инлайн); 🏁 — запасной вариант.
+function zoneHeader(data: ZoneSummaryData, showOperator: boolean): string {
+  const colorPrefix = colorTagToEmoji(data.operatorColorTag);
+  const operatorBit = showOperator
+    ? ` · ${colorPrefix ? `${colorPrefix} ` : ""}${data.operatorName}`
+    : "";
+  return `${data.zoneEmoji ?? "🏁"} <b>${data.zoneName.toUpperCase()}${operatorBit} · ${formatDate(data.occurredAt)}</b>`;
+}
+
 export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneSummarySettingsData): string {
   if (settings.compact) {
-    const parts: string[] = [`🏁 <b>${data.zoneName.toUpperCase()} · ${formatDate(data.occurredAt)}</b>`];
+    const parts: string[] = [zoneHeader(data, settings.showOperator)];
 
     if (data.accountingMode === "cash_only") {
       parts.push(`💵 Касса: <b>${data.cashAmount.toFixed(2)}</b>`);
@@ -60,7 +100,7 @@ export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneS
         const bits: string[] = [];
         if (settings.showDiff) {
           const sign = data.difference > 0 ? "+" : "";
-          bits.push(`✅ Разн.: <b>${sign}${data.difference.toFixed(2)}</b>`);
+          bits.push(`${diffEmoji(data.difference)} Разн.: <b>${sign}${data.difference.toFixed(2)}</b>`);
         }
         if (settings.showDiff && settings.showReturns) bits.push("—");
         if (settings.showReturns) bits.push(`🔄 Возвр.: <b>${data.returnsCount}</b>`);
@@ -68,12 +108,10 @@ export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneS
       }
     }
 
-    if (settings.showOperator) parts.push(`👤 ${data.operatorName}`);
-
     return parts.join("\n");
   }
 
-  const lines: string[] = [`🏁 <b>${data.zoneName.toUpperCase()} · ${formatDate(data.occurredAt)}</b>`];
+  const lines: string[] = [zoneHeader(data, settings.showOperator)];
 
   if (data.accountingMode === "cash_only") {
     lines.push("", `💵 Касса: <b>${data.cashAmount.toFixed(2)}</b>`);
@@ -107,14 +145,10 @@ export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneS
       if (settings.showCalc) lines.push(`🧮 По счётчику: <b>${data.calculatedRevenue.toFixed(2)}</b>`);
       if (settings.showDiff) {
         const sign = data.difference > 0 ? "+" : "";
-        lines.push(`⚖️ Разница: <b>${sign}${data.difference.toFixed(2)}</b>`);
+        lines.push(`${diffEmoji(data.difference)} Разница: <b>${sign}${data.difference.toFixed(2)}</b>`);
       }
       if (settings.showReturns) lines.push(`↩️ Возвраты/тест: <b>${data.returnsCount}</b>`);
     }
-  }
-
-  if (settings.showOperator) {
-    lines.push("", `👤 Оператор: ${data.operatorName}`);
   }
 
   return lines.join("\n");
@@ -194,11 +228,11 @@ export function formatShiftCloseSummaryTelegram(
     if (settings.showBonus && data.bonusAmount > 0) parts.push(`🏆 Прем.: ${data.bonusAmount.toFixed(2)}`);
     if (settings.showTotal) parts.push(`💰 Бал.: <b>${data.toPayOut.toFixed(2)}</b>`);
 
-    const header = `🕐 <b>${operatorLabel} · ${formatDate(data.startAt)}</b>`;
+    const header = `<b>${operatorLabel} · ${formatDate(data.startAt)}</b>`;
     return parts.length > 0 ? `${header}\n${parts.join(" · ")}` : header;
   }
 
-  const lines: string[] = [`🕐 <b>${operatorLabel} · смена ${formatDate(data.startAt)}</b>`, ""];
+  const lines: string[] = [`<b>${operatorLabel} · смена ${formatDate(data.startAt)}</b>`, ""];
 
   if (settings.showPeriod) lines.push(`🕐 Период: ${formatUtcTime(data.startAt)} – ${formatUtcTime(data.endAt)}`);
   if (settings.showHours) lines.push(`⏱ Отработано: ${formatDuration(data.minutes)}`);

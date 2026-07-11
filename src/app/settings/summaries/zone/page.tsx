@@ -40,6 +40,7 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): Zon
   return {
     pointName: ctx?.pointName ?? t.summaries.previewNoPoint,
     zoneName: ctx?.zoneName ?? t.summaries.previewNoZone,
+    zoneEmoji: ctx?.zoneEmoji ?? null,
     accountingMode: isZoneAccountingMode(ctx?.accountingMode) ? ctx.accountingMode : "counters",
     occurredAt: new Date(Date.UTC(2026, 6, 8, 22, 0)),
     readings,
@@ -49,6 +50,7 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): Zon
     difference: 0,
     returnsCount: 0,
     operatorName: ctx?.operatorName ?? t.summaries.previewNoOperator,
+    operatorColorTag: ctx?.operatorColorTag ?? null,
   };
 }
 
