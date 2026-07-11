@@ -1,34 +1,43 @@
 import nodemailer from "nodemailer";
 import type { ChannelSendResult } from "./types";
+import { getSystemSettingsConfig } from "@/lib/system-settings";
 
-// Обычный SMTP (пользователь подтвердил — настройка платформенная, через
-// .env, до появления реального Админ-модуля переезжать некуда). Те же env-
-// переменные, что и для Telegram-бота — секрет бэкенда, не в БД тенанта.
-function getConfig() {
-  const host = process.env.SMTP_HOST;
-  const port = process.env.SMTP_PORT;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const from = process.env.SMTP_FROM || user;
+// SMTP — платформенная настройка (docs/spec/06-super-admin.md, "Настройки" →
+// /admin/settings), не тенантная. БД (SystemSettings) первична; .env
+// (SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS/SMTP_FROM) остаётся тихим
+// фоллбэком для окружений, где ещё ничего не заполнено в /admin/settings —
+// раньше это было единственным источником, до появления реального Админ-модуля.
+async function getConfig() {
+  const { smtp } = await getSystemSettingsConfig();
+  const host = smtp.host || process.env.SMTP_HOST;
+  const port = smtp.port || process.env.SMTP_PORT;
+  const user = smtp.user || process.env.SMTP_USER;
+  const pass = smtp.password || process.env.SMTP_PASS;
+  const from = smtp.from || process.env.SMTP_FROM || user;
   if (!host || !port || !user || !pass || !from) return null;
   return { host, port: Number(port), user, pass, from };
 }
 
-export function isEmailConfigured(): boolean {
-  return getConfig() !== null;
+export async function isEmailConfigured(): Promise<boolean> {
+  return (await getConfig()) !== null;
 }
 
+// Кэш транспорта — по строке подключения, а не глобально одним значением:
+// настройки теперь могут поменяться в рантайме через /admin/settings без
+// рестарта процесса, старый закешированный транспорт на прежний хост иначе
+// продолжал бы использоваться до следующего деплоя.
+let cachedKey: string | null = null;
 let cachedTransport: ReturnType<typeof nodemailer.createTransport> | null = null;
-function getTransport() {
-  const config = getConfig();
-  if (!config) return null;
-  if (!cachedTransport) {
+async function getTransport(config: NonNullable<Awaited<ReturnType<typeof getConfig>>>) {
+  const key = `${config.host}:${config.port}:${config.user}`;
+  if (!cachedTransport || cachedKey !== key) {
     cachedTransport = nodemailer.createTransport({
       host: config.host,
       port: config.port,
       secure: config.port === 465,
       auth: { user: config.user, pass: config.pass },
     });
+    cachedKey = key;
   }
   return cachedTransport;
 }
@@ -38,11 +47,11 @@ export async function sendEmail(
   subject: string,
   html: string
 ): Promise<ChannelSendResult> {
-  const config = getConfig();
-  const transport = getTransport();
-  if (!config || !transport) return { ok: false, error: "SMTP не настроен" };
+  const config = await getConfig();
+  if (!config) return { ok: false, error: "SMTP не настроен" };
   if (addresses.length === 0) return { ok: false, error: "Нет адресов" };
 
+  const transport = await getTransport(config);
   try {
     await transport.sendMail({ from: config.from, to: addresses.join(", "), subject, html });
     return { ok: true };

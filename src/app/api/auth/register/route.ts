@@ -16,7 +16,6 @@ async function getDefaultPackage() {
   return prisma.package.create({
     data: {
       name: "Starter",
-      modules: ["counters", "money"],
       maxPoints: 5,
       maxZones: 10,
       maxAssets: 50,
@@ -26,8 +25,10 @@ async function getDefaultPackage() {
   });
 }
 
+const VALID_TIMEZONES = new Set(Intl.supportedValuesOf("timeZone"));
+
 export async function POST(request: Request) {
-  const { email, password, tenantName, captchaToken, captchaAnswer } = await request.json();
+  const { email, password, tenantName, captchaToken, captchaAnswer, timezone } = await request.json();
 
   if (!verifyCaptchaAnswer(captchaToken, captchaAnswer)) {
     return NextResponse.json({ error: "Неверный ответ на проверочный вопрос", captchaFailed: true }, { status: 400 });
@@ -68,6 +69,11 @@ export async function POST(request: Request) {
       name: tenantName.trim(),
       packageId: pkg.id,
       locale,
+      // Часовой пояс браузера при регистрации (docs/spec/00-architecture.md) —
+      // разумный дефолт вместо "UTC" вместо всегда-неверного значения по
+      // умолчанию; невалидное/отсутствующее значение молча игнорируется,
+      // схемный default "UTC" остаётся страховкой.
+      ...(typeof timezone === "string" && VALID_TIMEZONES.has(timezone) ? { timezone } : {}),
     },
   });
 

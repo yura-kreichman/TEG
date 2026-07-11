@@ -21,7 +21,7 @@ export async function GET() {
   const emailAddresses = channel?.emailAddresses ?? owner.user.email;
 
   return NextResponse.json({
-    smtpConfigured: isEmailConfigured(),
+    smtpConfigured: await isEmailConfigured(),
     enabled: channel?.enabled ?? false,
     emailAddresses,
   });

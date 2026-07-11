@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Info, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, MapPin, Pencil, Trash2 } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,7 @@ import { formatTime, pad } from "@/lib/datetime-format";
 interface PointOption {
   id: string;
   name: string;
+  iconKey: string | null;
 }
 
 interface DayAssetReading {
@@ -249,25 +251,52 @@ export default function ReadingsCalendarPage() {
             <p className="mt-4 text-body-airbnb text-muted-foreground">{t.readings.pointsEmptyHint}</p>
           ) : (
             <>
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {points.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => {
-                      setPointId(p.id);
+              {points.length > 1 ? (
+                <div className="mt-4">
+                  <Select
+                    value={pointId ?? undefined}
+                    onValueChange={(v) => {
+                      if (!v) return;
+                      setPointId(v);
                       setSelectedDate(null);
                       setCards(null);
                     }}
-                    className={cn(
-                      "rounded-full px-3 py-1.5 text-xs font-semibold",
-                      p.id === pointId ? "bg-primary/10 text-primary" : "bg-surface-0 text-muted-foreground"
-                    )}
+                    items={points.map((p) => ({ value: p.id, label: p.name }))}
                   >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        <span className="flex items-center gap-2">
+                          {(() => {
+                            const current = points.find((p) => p.id === pointId);
+                            return current?.iconKey ? (
+                              <AssetOrZoneIcon iconKey={current.iconKey} className="size-6 shrink-0" />
+                            ) : (
+                              <MapPin className="size-6 shrink-0 text-muted-foreground" />
+                            );
+                          })()}
+                          {points.find((p) => p.id === pointId)?.name}
+                        </span>
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {points.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <span className="flex items-center gap-2">
+                            {p.iconKey ? (
+                              <AssetOrZoneIcon iconKey={p.iconKey} className="size-6 shrink-0" />
+                            ) : (
+                              <MapPin className="size-6 shrink-0 text-muted-foreground" />
+                            )}
+                            {p.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <p className="mt-4 text-caption-airbnb">{points[0]?.name}</p>
+              )}
 
               <SpringCard hover={false} className="mt-3.5 flex flex-col gap-3">
                 <div className="flex items-center justify-between">

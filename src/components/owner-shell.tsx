@@ -9,9 +9,9 @@ import { useI18n } from "@/components/i18n-provider";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { BottomGlassNav, type BottomGlassNavItem } from "@/components/bottom-glass-nav";
+import { ImpersonationBanner } from "@/components/impersonation-banner";
 import { cn } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n";
-import type { ModuleKey } from "@/lib/module-keys";
 
 interface NavItemConfig {
   id: string;
@@ -19,29 +19,16 @@ interface NavItemConfig {
   icon: LucideIcon;
   label: (t: Dictionary) => string;
   // Приоритет заполнения слотов бара (docs/spec/00-architecture.md,
-  // "Навигация") — меньше число, выше приоритет. Первые 4 доступных
-  // (core или включённый модуль) занимают слоты бара, остальные — в "Ещё".
+  // "Навигация") — меньше число, выше приоритет. Первые 4 занимают слоты
+  // бара, остальные — в "Ещё". Модули больше не гейтятся (во всех пакетах
+  // работают все модули, разница только в числовых лимитах — фидбек
+  // пользователя 2026-07-12), поэтому все пункты ниже всегда доступны.
   priority: number;
-  // Отсутствует = ядро, всегда доступно. Задан = гейтится включённым
-  // модулем тенанта (см. /api/tenant/modules).
-  moduleKey?: ModuleKey;
   match: (pathname: string) => boolean;
 }
 
 const BAR_SLOTS = 4;
 
-// moduleKey намеренно не задан ни для "money", ни для "tasks", ни для
-// "reports" — хотя все три по спеке должны гейтиться модулями. Причина: НИ
-// ОДИН из реальных API-роутов /money, /tasks, /reports сегодня не проверяет
-// isModuleEnabled (в отличие от work_time — тот проверяется в каждом
-// work-time роуте). Реальный тенант, на котором идёт тестирование, вообще не
-// имеет "tasks" в пакете и без оверрайда — если бы здесь стоял
-// moduleKey: "tasks", пункт "Задачи" молча пропал бы из бара и "Ещё", хотя
-// сам /tasks остаётся полностью рабочим по прямой ссылке. Прятать вход в
-// рабочую функцию по флагу, который её не защищает — хуже, чем не прятать
-// вообще. Инфраструктура фильтрации (moduleKey ниже) оставлена рабочей и
-// готовой: как только на роуты добавят реальную проверку isModuleEnabled,
-// здесь достаточно дописать moduleKey: "money"/"tasks"/"reports".
 const PRIORITY_ITEMS: NavItemConfig[] = [
   { id: "home", href: "/", icon: Home, label: (t) => t.nav.home, priority: 1, match: (p) => p === "/" },
   { id: "money", href: "/money", icon: Wallet, label: (t) => t.nav.money, priority: 2, match: (p) => p === "/money" },
@@ -74,16 +61,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const t = useI18n();
   const [moreOpen, setMoreOpen] = useState(false);
-  const [enabledModules, setEnabledModules] = useState<Partial<Record<ModuleKey, boolean>>>({});
   const [pendingTasksCount, setPendingTasksCount] = useState(0);
-
-  useEffect(() => {
-    fetch("/api/tenant/modules")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data) setEnabledModules(data);
-      });
-  }, []);
 
   // Обновляем при каждой навигации — самый дешёвый способ не держать
   // отдельный стор ради одного badge-числа (список пунктов бара маленький,
@@ -96,9 +74,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
       });
   }, [pathname]);
 
-  const available = PRIORITY_ITEMS.filter((item) => !item.moduleKey || enabledModules[item.moduleKey]).sort(
-    (a, b) => a.priority - b.priority
-  );
+  const available = [...PRIORITY_ITEMS].sort((a, b) => a.priority - b.priority);
   const barItems = available.slice(0, BAR_SLOTS);
   const overflowItems = available.slice(BAR_SLOTS);
   const moreItems = [...overflowItems, SETTINGS_ITEM];
@@ -137,6 +113,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
+      <ImpersonationBanner />
       <aside className="hidden shrink-0 flex-col justify-between bg-surface-0 p-4 md:flex md:w-56">
         <nav className="flex flex-col gap-1">
           {barItems.map(sidebarLink)}

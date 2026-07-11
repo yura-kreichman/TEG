@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { Building2, LogOut, Package } from "lucide-react";
+import { Building2, LogOut, Package, Settings } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/components/i18n-provider";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -19,6 +19,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const NAV_ITEMS = [
     { href: "/admin", label: t.admin.navTenants, icon: Building2, match: (p: string) => p === "/admin" || p.startsWith("/admin/tenants") },
     { href: "/admin/packages", label: t.admin.navPackages, icon: Package, match: (p: string) => p.startsWith("/admin/packages") },
+    { href: "/admin/settings", label: t.admin.navSettings, icon: Settings, match: (p: string) => p.startsWith("/admin/settings") },
   ];
 
   async function handleLogout() {

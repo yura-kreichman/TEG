@@ -9,7 +9,7 @@ export async function POST() {
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
-  if (!isBotConfigured()) {
+  if (!(await isBotConfigured())) {
     return NextResponse.json({ error: "Бот не настроен" }, { status: 503 });
   }
 

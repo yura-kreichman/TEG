@@ -23,6 +23,7 @@ interface ZoneOption {
 interface PointOption {
   id: string;
   name: string;
+  iconKey: string | null;
 }
 
 interface OperatorTask {
@@ -61,7 +62,6 @@ export default function OperatorHomePage() {
   // длительности в bottom sheet завершения.
   const [now, setNow] = useState(() => new Date());
   const [roaming, setRoaming] = useState(false);
-  const [switchPointOpen, setSwitchPointOpen] = useState(false);
   const [points, setPoints] = useState<PointOption[]>([]);
 
   const [showCollection, setShowCollection] = useState(false);
@@ -123,6 +123,13 @@ export default function OperatorHomePage() {
     loadTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
+
+  useEffect(() => {
+    if (!roaming) return;
+    fetch("/api/operator/points")
+      .then((res) => res.json())
+      .then((data) => setPoints(data.points ?? []));
+  }, [roaming]);
 
   // Тикает раз в секунду, пока есть что показывать живым (текущее время до
   // check-in, счётчик/предпросмотр интервала после) — ничего не запрашивает
@@ -226,13 +233,6 @@ export default function OperatorHomePage() {
     router.refresh();
   }
 
-  function openSwitchPoint() {
-    setSwitchPointOpen(true);
-    fetch("/api/operator/points")
-      .then((res) => res.json())
-      .then((data) => setPoints(data.points ?? []));
-  }
-
   async function handleSwitchPoint(targetPointId: string) {
     const res = await fetch("/api/operator/switch-point", {
       method: "POST",
@@ -240,7 +240,6 @@ export default function OperatorHomePage() {
       body: JSON.stringify({ pointId: targetPointId }),
     });
     if (!res.ok) return;
-    setSwitchPointOpen(false);
     loadMe();
     loadZones();
     loadTasks();
@@ -297,39 +296,51 @@ export default function OperatorHomePage() {
           <h1 className="text-screen-title">
             {t.operatorApp.greeting} {operatorName}
           </h1>
-          <div className="flex items-center gap-2">
+          {roaming ? (
+            <div className="flex w-full items-center gap-2 text-left">
+              <p className="shrink-0 text-body-airbnb text-muted-foreground">{t.operatorApp.pointLabel}</p>
+              <div className="min-w-0 flex-1">
+                <Select
+                  value={pointId ?? undefined}
+                  onValueChange={(v) => v && handleSwitchPoint(v)}
+                  items={points.map((p) => ({ value: p.id, label: p.name }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>
+                      <span className="flex items-center gap-2">
+                        {(() => {
+                          const current = points.find((p) => p.id === pointId);
+                          return current?.iconKey ? (
+                            <AssetOrZoneIcon iconKey={current.iconKey} className="size-5 shrink-0" />
+                          ) : (
+                            <MapPin className="size-5 shrink-0 text-muted-foreground" />
+                          );
+                        })()}
+                        {pointName}
+                      </span>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {points.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <span className="flex items-center gap-2">
+                          {p.iconKey ? (
+                            <AssetOrZoneIcon iconKey={p.iconKey} className="size-5 shrink-0" />
+                          ) : (
+                            <MapPin className="size-5 shrink-0 text-muted-foreground" />
+                          )}
+                          {p.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ) : (
             <p className="text-body-airbnb text-muted-foreground">
               {t.operatorApp.pointLabel} <span className="font-semibold text-foreground">{pointName}</span>
             </p>
-            {roaming && (
-              <button
-                type="button"
-                className="flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground"
-                onClick={() => (switchPointOpen ? setSwitchPointOpen(false) : openSwitchPoint())}
-              >
-                <MapPin className="size-3.5" />
-                {t.operatorApp.switchPoint}
-              </button>
-            )}
-          </div>
-
-          {roaming && switchPointOpen && (
-            <div className="w-full rounded-control border border-border p-1 text-left">
-              <p className="px-2 py-1.5 text-caption-airbnb font-semibold">{t.operatorApp.choosePointTitle}</p>
-              <div className="flex flex-col">
-                {points.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => handleSwitchPoint(p.id)}
-                    className="flex items-center justify-between border-t border-border px-2 py-2.5 text-left text-body-airbnb first:border-t-0"
-                  >
-                    {p.name}
-                    {p.id === pointId && <Check className="size-4 shrink-0 text-primary" />}
-                  </button>
-                ))}
-              </div>
-            </div>
           )}
         </div>
 

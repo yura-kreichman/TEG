@@ -13,7 +13,7 @@ export async function GET() {
   const channel = await getTenantChannel(owner.tenantId, "telegram");
 
   return NextResponse.json({
-    botConfigured: isBotConfigured(),
+    botConfigured: await isBotConfigured(),
     connected: !!channel && channel.chatStatus === "active",
     enabled: channel?.enabled ?? false,
     chatTitle: channel?.chatTitle ?? null,

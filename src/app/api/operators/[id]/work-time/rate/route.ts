@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantOperator, requireOwner } from "@/lib/require-owner";
-import { isModuleEnabled } from "@/lib/modules";
 
 // История ставок (docs/spec/05-work-time.md, "СТАВКА") — GET отдаёт всю
 // историю (новые сверху), PATCH добавляет новую запись. Прошлые смены не
@@ -11,10 +10,6 @@ export async function GET(request: Request, ctx: RouteContext<"/api/operators/[i
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
-  if (!(await isModuleEnabled(owner.tenantId, "work_time"))) {
-    return NextResponse.json({ error: "Модуль не подключён" }, { status: 403 });
-  }
-
   const { id } = await ctx.params;
   const operator = await findTenantOperator(owner.tenantId, id);
   if (!operator) {
@@ -36,10 +31,6 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
-  if (!(await isModuleEnabled(owner.tenantId, "work_time"))) {
-    return NextResponse.json({ error: "Модуль не подключён" }, { status: 403 });
-  }
-
   const { id } = await ctx.params;
   const operator = await findTenantOperator(owner.tenantId, id);
   if (!operator) {

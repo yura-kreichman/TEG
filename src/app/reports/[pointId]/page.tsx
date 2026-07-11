@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
-import { AlertTriangle, ArrowDown, ArrowUp, Lightbulb } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Lightbulb, MapPin } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
@@ -65,6 +64,7 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
 
   const [checking, setChecking] = useState(true);
   const [pointName, setPointName] = useState("");
+  const [points, setPoints] = useState<{ id: string; name: string; iconKey: string | null }[]>([]);
   const [tab, setTab] = useState<Tab>("dynamics");
   const [granularity, setGranularity] = useState<Granularity>("week");
 
@@ -120,6 +120,23 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
     loadCalendar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pointId]);
+
+  // Список точек для дропдауна выбора — без отдельного экрана-пикера
+  // (фидбек пользователя 2026-07-13). Загружается один раз, не зависит от pointId.
+  useEffect(() => {
+    fetch("/api/points")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data)
+          setPoints(
+            (data.points ?? []).map((p: { id: string; name: string; iconKey: string | null }) => ({
+              id: p.id,
+              name: p.name,
+              iconKey: p.iconKey,
+            })),
+          );
+      });
+  }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   if (checking) return null;
@@ -135,11 +152,44 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl flex-col gap-1">
-          <Link href="/reports" className="mb-2 w-fit text-caption-airbnb font-semibold text-primary">
-            {t.reports.backToPoints}
-          </Link>
           <h1 className="text-screen-title">{t.reports.pickPointTitle}</h1>
-          <p className="mb-4 text-caption-airbnb">{pointName}</p>
+          {points.length > 1 ? (
+            <div className="mb-4">
+              <Select value={pointId} onValueChange={(v) => v && router.push(`/reports/${v}`)} items={points.map((p) => ({ value: p.id, label: p.name }))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    <span className="flex items-center gap-2">
+                      {(() => {
+                        const current = points.find((p) => p.id === pointId);
+                        return current?.iconKey ? (
+                          <AssetOrZoneIcon iconKey={current.iconKey} className="size-6 shrink-0" />
+                        ) : (
+                          <MapPin className="size-6 shrink-0 text-muted-foreground" />
+                        );
+                      })()}
+                      {pointName}
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {points.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      <span className="flex items-center gap-2">
+                        {p.iconKey ? (
+                          <AssetOrZoneIcon iconKey={p.iconKey} className="size-6 shrink-0" />
+                        ) : (
+                          <MapPin className="size-6 shrink-0 text-muted-foreground" />
+                        )}
+                        {p.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <p className="mb-4 text-caption-airbnb">{pointName}</p>
+          )}
 
           <div className="mb-4 flex flex-wrap gap-1.5">
             {TABS.map((tb) => (

@@ -53,6 +53,9 @@ export default function RegisterPage() {
           password,
           captchaToken,
           captchaAnswer: Number(captchaAnswer),
+          // Часовой пояс браузера (docs/spec/00-architecture.md) — сразу
+          // разумный дефолт вместо "UTC", владелец сможет сменить в Настройках.
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
       });
       const data = await res.json();

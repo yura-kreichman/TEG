@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
-import { isModuleEnabled } from "@/lib/modules";
 import {
   calcOperatorBalance,
   calcShiftAccrual,
@@ -24,10 +23,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
   const { operator, point } = ctx;
-
-  if (!(await isModuleEnabled(point.tenantId, "work_time"))) {
-    return NextResponse.json({ error: "Модуль не подключён" }, { status: 403 });
-  }
 
   const openShift = await getOpenShift(operator.id);
   if (!openShift) {

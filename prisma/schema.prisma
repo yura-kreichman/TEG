@@ -15,25 +15,28 @@ datasource db {
 // ============================================================================
 
 enum SubscriptionStatus {
-  trialing
   active
-  paused
+  paused    // сезонная пауза, инициирует Owner
+  suspended // Super Admin ставит вручную через /admin/tenants — проблемы с оплатой и т.п. Отдельного объекта-оверрайда нет (убран по фидбеку 2026-07-11) — статус выставляется напрямую и остаётся, пока его не сменит следующий вебхук FluentCart или сам админ.
   expired
 }
 
-// Пакет подписки — набор модулей + лимиты + цена. Управляется из админ-модуля,
-// не зашит в код (см. docs/spec/00-architecture.md).
+// Пакет подписки — лимиты + цена (docs/spec/00-architecture.md). Модули
+// больше не различаются по пакетам — во всех пакетах доступны все модули,
+// разница только в числовых лимитах (фидбек пользователя 2026-07-12).
 model Package {
   id        String   @id @default(cuid())
   name      String
-  // Модули, включённые в пакет по умолчанию. Ключи — свободные строки
-  // (список модулей открытый, ядро не должно знать о конкретных модулях).
-  modules   String[]
   maxPoints    Int
   maxZones     Int
   maxAssets    Int
   maxOperators Int
   priceMonthly Decimal @db.Decimal(10, 2)
+  // Привязка к продукту FluentCart (docs/spec/06-super-admin.md) — вебхук
+  // ищет Package по этому полю, чтобы понять, на какой план переключить
+  // тенанта. Не источник истины по цене (это priceMonthly) — просто ключ
+  // сопоставления с биллингом.
+  fluentcartProductId String? @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -49,11 +52,29 @@ model Tenant {
   packageId          String
   package            Package            @relation(fields: [packageId], references: [id])
   subscriptionStatus SubscriptionStatus @default(active)
-  // Управляется вручную из админ-модуля (нет реального биллинга — докс, шаг
-  // "план+лимиты без денег" 2026-07-10). Планировщик (summary-scheduler.ts)
-  // раз в минуту переводит active/trialing в expired, когда дата прошла.
+  // До интеграции с FluentCart (docs/spec/06-super-admin.md) управлялось
+  // вручную из админ-модуля. Планировщик (summary-scheduler.ts) раз в минуту
+  // переводит active в expired, когда дата прошла — актуально и сейчас как
+  // предохранитель независимо от вебхуков. Триала как отдельного статуса нет
+  // (фидбек пользователя 2026-07-11) — ограниченный бесплатный доступ даёт
+  // Free-пакет (Package с priceMonthly=0), а не time-boxed период.
   subscriptionExpiresAt DateTime?
-  trialEndsAt           DateTime?
+
+  // Интеграция с FluentCart (docs/spec/06-super-admin.md) — вебхук находит
+  // тенанта по этому полю (создаёт нового, если ещё не было).
+  fluentcartCustomerId String? @unique
+  // Чисто информационное "действует до" из subscriptions[].next_billing_date
+  // вебхука FluentCart (docs/fluentcart-webhook-schema.md §3) — FluentCart не
+  // отдаёт отдельного "access end date" поля, только дату следующего
+  // списания. НЕ источник правды для логики доступа (это subscriptionStatus)
+  // — только для отображения в кабинете владельца. Отдельно от
+  // subscriptionExpiresAt (тот — ручной/плановый жёсткий срок, выставляется
+  // Super Admin'ом напрямую или планировщиком, самостоятельный механизм).
+  currentPeriodEnd DateTime?
+  // Точечный оверрайд числовых лимитов пакета для конкретного тенанта —
+  // { maxPoints?, maxZones?, maxAssets?, maxOperators? } | null, поверх
+  // package.*. См. getTenantLimits() в src/lib/packages.ts.
+  limitOverrides Json?
 
   // Контакты тенанта для платформенной поддержки — заполняет Super Admin в
   // админ-модуле, не сам владелец (докс 2026-07-10, "полные настройки
@@ -109,7 +130,6 @@ model Tenant {
   users             User[]
   operators         Operator[]
   points            Point[]
-  moduleFlags       TenantModule[]
   moneyOps          MoneyOperation[]
   operatorRates     OperatorRate[]
   shifts            Shift[]
@@ -121,21 +141,6 @@ model Tenant {
   shiftCloseSummarySettings ShiftCloseSummarySettings?
   dailyCashSummaryDeliveries DailyCashSummaryDelivery[]
   tasks Task[]
-}
-
-// Ручное включение/отключение модуля конкретному тенанту (индивидуальные условия),
-// поверх набора модулей из пакета.
-model TenantModule {
-  id        String  @id @default(cuid())
-  tenantId  String
-  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  moduleKey String
-  enabled   Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([tenantId, moduleKey])
 }
 
 // ============================================================================
@@ -154,6 +159,13 @@ model User {
   email        String   @unique
   passwordHash String
   role         UserRole
+
+  // Вход Super Admin — логин, НЕ email (docs/spec/06-super-admin.md, п.1:
+  // "форма логина: логин + пароль (НЕ email)"). Owner всегда null — Owner
+  // входит по email, это поле не для него. email у Super Admin всё равно
+  // заполняется (плейсхолдер) при сидировании — колонка на всю таблицу
+  // NOT NULL, разводить её отдельно ради одной роли не стали.
+  login String? @unique
 
   tenantId String?
   tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -826,4 +838,39 @@ model Task {
   updatedAt DateTime @updatedAt
 
   @@index([pointId, status])
+}
+
+// ============================================================================
+// SUPER ADMIN: биллинг (docs/spec/06-super-admin.md)
+// ============================================================================
+
+// Сырой лог вебхуков FluentCart — пишется независимо от исхода обработки
+// (даже при ошибке/пропуске из-за manualStatusOverride), read-only в UI
+// карточки тенанта. Отдельного экрана "лог вебхуков с ресинком" нет
+// (см. "вне скоупа" в спеке) — это только для отладки синхронизации.
+model WebhookEvent {
+  id         String   @id @default(cuid())
+  provider   String   // "fluentcart"
+  eventType  String
+  payload    Json
+  status     String   // "processed" | "failed"
+  error      String?
+  receivedAt DateTime @default(now())
+
+  // Тенант, к которому удалось привязать событие (по fluentcartCustomerId) —
+  // null, если тенант не был найден/создан (см. sync до броска исключения в
+  // fluentcart-webhook.ts). Денормализовано ради истории биллинга в карточке
+  // тенанта (docs/spec/06-super-admin.md, п.4) — без FK на Tenant, чтобы
+  // удаление тенанта не тянуло/не блокировало удаление лога вебхуков.
+  tenantId String?
+
+  @@index([tenantId])
+}
+
+// Единственная запись (id всегда "singleton") — глобальные настройки
+// платформы: токен Telegram-бота, SMTP, дефолтные локаль/таймзона/валюта
+// для новых тенантов. Редактируется только в /admin/settings.
+model SystemSettings {
+  id     String @id @default("singleton")
+  config Json
 }

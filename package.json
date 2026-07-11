@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "admin:seed": "tsx scripts/admin-seed.ts",
+    "admin:reset-password": "tsx scripts/admin-reset-password.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -46,6 +48,7 @@
     "prisma": "^7.8.0",
     "shadcn": "^4.13.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.0",
     "typescript": "^5"
   }
 }

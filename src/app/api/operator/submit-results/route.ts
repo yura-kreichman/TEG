@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { calcSessions, calcZoneRevenue, type ZoneAccountingMode } from "@/lib/results-calc";
-import { isModuleEnabled } from "@/lib/modules";
 import { dispatchZoneSummary } from "@/lib/summary-channels/dispatch";
 import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { onResultsSubmission } from "@/lib/summary-channels/daily-cash-trigger";
@@ -231,19 +230,16 @@ export async function POST(request: Request) {
   );
 
   // Мягкое напоминание (docs/spec/05-work-time.md, "СВЯЗЬ СО СДАЧЕЙ ИТОГОВ") —
-  // после сдачи итогов, если модуль подключён и сегодня ещё не отмечен уход
-  // (нет смены с startAt сегодня — сама смена вводится целиком, "уход" не
-  // отдельное событие, поэтому это буквально "смена сегодня ещё не введена").
-  let remindMarkDeparture = false;
-  if (await isModuleEnabled(point.tenantId, "work_time")) {
-    const dayStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
-    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-    const todayShift = await prisma.shift.findFirst({
-      where: { operatorId: operator.id, startAt: { gte: dayStart, lt: dayEnd } },
-      select: { id: true },
-    });
-    remindMarkDeparture = !todayShift;
-  }
+  // после сдачи итогов, если сегодня ещё не отмечен уход (нет смены с
+  // startAt сегодня — сама смена вводится целиком, "уход" не отдельное
+  // событие, поэтому это буквально "смена сегодня ещё не введена").
+  const dayStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
+  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+  const todayShift = await prisma.shift.findFirst({
+    where: { operatorId: operator.id, startAt: { gte: dayStart, lt: dayEnd } },
+    select: { id: true },
+  });
+  const remindMarkDeparture = !todayShift;
 
   return NextResponse.json({ id: submission.id, summary, remindMarkDeparture });
 }

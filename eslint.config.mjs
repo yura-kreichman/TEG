@@ -12,9 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Reference-only vendor source (e.g. temp apps/fluent-cart-pro) — not part
-    // of this project, dropped in for integration research.
+    // Reference-only vendor source — not part of this project, dropped in
+    // for integration research.
     "temp apps/**",
+    "FluentCart/**",
   ]),
 ]);
 

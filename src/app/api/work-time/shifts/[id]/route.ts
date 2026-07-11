@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { isModuleEnabled } from "@/lib/modules";
 import { calcOperatorBalance, calcShiftAccrual, getRateForDate, hasOverlappingShift, validateShift } from "@/lib/work-time";
 
 interface ShiftCorrectionDiff {
@@ -31,10 +30,6 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
-  if (!(await isModuleEnabled(owner.tenantId, "work_time"))) {
-    return NextResponse.json({ error: "Модуль не подключён" }, { status: 403 });
-  }
-
   const { id } = await ctx.params;
   const shift = await loadShift(id, owner.tenantId);
   if (!shift) {
@@ -182,10 +177,6 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
-  if (!(await isModuleEnabled(owner.tenantId, "work_time"))) {
-    return NextResponse.json({ error: "Модуль не подключён" }, { status: 403 });
-  }
-
   const { id } = await ctx.params;
   const shift = await loadShift(id, owner.tenantId);
   if (!shift) {

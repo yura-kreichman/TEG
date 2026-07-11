@@ -32,6 +32,33 @@ export function verifyToken(token: string): string | null {
   return id;
 }
 
+// Обычный signToken/verifyToken не несёт срок действия вообще — "таймаут"
+// сессии обеспечивает только maxAge cookie в браузере, а перехваченное сырое
+// значение cookie остаётся валидным навсегда при прямом реплее (без
+// браузера). Для admin-сессии это реальное требование безопасности
+// (docs/spec/06-super-admin.md, "короткий таймаут сессии"), не просто
+// cookie-удобство — поэтому здесь срок действия зашит в подписываемое
+// значение и проверяется на сервере, а не только доверяется клиенту.
+export function signExpiringToken(id: string, expiresAtMs: number): string {
+  const payload = `${id}.${expiresAtMs}`;
+  return `${payload}.${sign(payload)}`;
+}
+
+export function verifyExpiringToken(token: string): string | null {
+  const [id, expiresAtStr, signature] = token.split(".");
+  if (!id || !expiresAtStr || !signature) return null;
+
+  const expiresAtMs = Number(expiresAtStr);
+  if (!Number.isFinite(expiresAtMs) || Date.now() > expiresAtMs) return null;
+
+  const expected = sign(`${id}.${expiresAtStr}`);
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
+  return id;
+}
+
 export function sessionCookieOptions(maxAge: number) {
   return {
     httpOnly: true,

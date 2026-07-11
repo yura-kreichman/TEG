@@ -20,6 +20,13 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/admin/pack
     return NextResponse.json({ error: "Некорректные данные пакета" }, { status: 400 });
   }
 
+  if (payload.fluentcartProductId) {
+    const conflict = await prisma.package.findUnique({ where: { fluentcartProductId: payload.fluentcartProductId } });
+    if (conflict && conflict.id !== id) {
+      return NextResponse.json({ error: "Этот product_id уже привязан к другому пакету" }, { status: 409 });
+    }
+  }
+
   await prisma.package.update({ where: { id }, data: payload });
   return NextResponse.json({ ok: true });
 }

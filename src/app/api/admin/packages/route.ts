@@ -18,12 +18,12 @@ export async function GET() {
     packages: packages.map((p) => ({
       id: p.id,
       name: p.name,
-      modules: p.modules,
       maxPoints: p.maxPoints,
       maxZones: p.maxZones,
       maxAssets: p.maxAssets,
       maxOperators: p.maxOperators,
       priceMonthly: p.priceMonthly.toString(),
+      fluentcartProductId: p.fluentcartProductId,
       tenantsCount: p._count.tenants,
     })),
   });
@@ -38,6 +38,13 @@ export async function POST(request: Request) {
   const payload = validatePackagePayload(await request.json());
   if (!payload) {
     return NextResponse.json({ error: "Некорректные данные пакета" }, { status: 400 });
+  }
+
+  if (payload.fluentcartProductId) {
+    const conflict = await prisma.package.findUnique({ where: { fluentcartProductId: payload.fluentcartProductId } });
+    if (conflict) {
+      return NextResponse.json({ error: "Этот product_id уже привязан к другому пакету" }, { status: 409 });
+    }
   }
 
   const pkg = await prisma.package.create({ data: payload });

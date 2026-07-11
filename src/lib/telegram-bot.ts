@@ -1,20 +1,24 @@
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
+import { getSystemSettingsConfig } from "@/lib/system-settings";
 
 // Единый платформенный бот на всех тенантов (docs/spec/telegram-summaries.md) —
 // НЕ путать со старым src/lib/telegram.ts (Tenant.telegramBotToken, бот на
 // тенанта), который остаётся рабочим до Шага 3/4, где точки отправки
 // переключаются на эту систему, а старая карта настроек в /settings убирается.
-function getBotToken(): string | null {
-  return process.env.TELEGRAM_BOT_TOKEN || null;
+// Токен — платформенная настройка (docs/spec/06-super-admin.md, /admin/settings),
+// БД первична, .env (TELEGRAM_BOT_TOKEN) — тихий фоллбэк на переходный период.
+async function getBotToken(): Promise<string | null> {
+  const { telegramBotToken } = await getSystemSettingsConfig();
+  return telegramBotToken || process.env.TELEGRAM_BOT_TOKEN || null;
 }
 
 export function getBotUsername(): string | null {
   return process.env.TELEGRAM_BOT_USERNAME || null;
 }
 
-export function isBotConfigured(): boolean {
-  return !!getBotToken();
+export async function isBotConfigured(): Promise<boolean> {
+  return !!(await getBotToken());
 }
 
 const BIND_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"; // без 0/O/1/I/L — не спутать при ручном вводе
@@ -42,7 +46,7 @@ interface TelegramApiResult {
 }
 
 async function callTelegramApi(method: string, body: Record<string, unknown>): Promise<TelegramApiResult> {
-  const token = getBotToken();
+  const token = await getBotToken();
   if (!token) return { ok: false, status: 0, description: "bot not configured" };
 
   const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {

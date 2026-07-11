@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
-import { isModuleEnabled } from "@/lib/modules";
 import { getOpenShift, hasNoResultsToday } from "@/lib/work-time";
 import { formatShiftStartWindow, isWithinShiftStartWindow } from "@/lib/business-day";
 
@@ -18,9 +17,6 @@ export async function POST() {
   }
   const { operator, point } = ctx;
 
-  if (!(await isModuleEnabled(point.tenantId, "work_time"))) {
-    return NextResponse.json({ error: "Модуль не подключён" }, { status: 403 });
-  }
   if (operator.timeTrackingMode !== "auto") {
     return NextResponse.json({ error: "Для этого оператора включён ручной учёт времени" }, { status: 403 });
   }

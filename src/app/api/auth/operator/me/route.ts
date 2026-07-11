@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getActivatedDevice, getOperatorSessionId } from "@/lib/operator-auth";
-import { isModuleEnabled } from "@/lib/modules";
 import { getOpenShift, isShiftTooLong } from "@/lib/work-time";
 
 export async function GET() {
@@ -18,9 +17,10 @@ export async function GET() {
     tenantName: tenant?.name ?? null,
     roaming: device.roaming,
   };
-  // Нижняя навигация PWA собирается динамически из включённых модулей
-  // (docs/spec/03-design-system.md) — пока единственный опциональный пункт.
-  const workTimeEnabled = await isModuleEnabled(point.tenantId, "work_time");
+  // Модуль Рабочее время всегда включён (docs/spec/00-architecture.md —
+  // модули больше не гейтятся, разница пакетов только в числовых лимитах);
+  // поле оставлено в ответе, чтобы не трогать клиентский код PWA оператора.
+  const workTimeEnabled = true;
 
   const operatorId = await getOperatorSessionId();
   if (!operatorId) {
@@ -35,7 +35,7 @@ export async function GET() {
   // Состояние check-in/check-out (docs/spec/05-work-time.md, "АВТО") нужно на
   // главном экране PWA сразу при загрузке — иначе кнопка "Начать/Закончить
   // смену" на миг мигала бы неверным состоянием после перезагрузки страницы.
-  const activeShift = workTimeEnabled ? await getOpenShift(operator.id) : null;
+  const activeShift = await getOpenShift(operator.id);
 
   return NextResponse.json({
     device: deviceInfo,

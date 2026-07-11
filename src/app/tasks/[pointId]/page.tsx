@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, ClipboardList, Wrench, CheckCircle2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ClipboardList, Wrench, CheckCircle2, MapPin } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
+import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 import { TASK_STATUSES, type TaskStatus } from "@/lib/tasks";
@@ -64,6 +65,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
 
   const [checking, setChecking] = useState(true);
   const [pointName, setPointName] = useState("");
+  const [points, setPoints] = useState<{ id: string; name: string; iconKey: string | null }[]>([]);
   const [tasks, setTasks] = useState<TaskInfo[]>([]);
   const [operators, setOperators] = useState<OperatorOption[]>([]);
   const [meId, setMeId] = useState<string | null>(null);
@@ -109,6 +111,23 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pointId]);
+
+  // Список точек для дропдауна выбора — без отдельного экрана-пикера
+  // (фидбек пользователя 2026-07-13). Загружается один раз, не зависит от pointId.
+  useEffect(() => {
+    fetch("/api/points")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data)
+          setPoints(
+            (data.points ?? []).map((p: { id: string; name: string; iconKey: string | null }) => ({
+              id: p.id,
+              name: p.name,
+              iconKey: p.iconKey,
+            })),
+          );
+      });
+  }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function openCreate() {
@@ -205,9 +224,6 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl flex-col gap-1">
-          <Link href="/tasks" className="mb-2 w-fit text-caption-airbnb font-semibold text-primary">
-            {t.tasks.backToPoints}
-          </Link>
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-screen-title">{t.tasks.pickPointTitle}</h1>
             <PressableScale>
@@ -217,7 +233,43 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
               </Button>
             </PressableScale>
           </div>
-          <p className="mb-4 text-caption-airbnb">{pointName}</p>
+          {points.length > 1 ? (
+            <div className="mb-4">
+              <Select value={pointId} onValueChange={(v) => v && router.push(`/tasks/${v}`)} items={points.map((p) => ({ value: p.id, label: p.name }))}>
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    <span className="flex items-center gap-2">
+                      {(() => {
+                        const current = points.find((p) => p.id === pointId);
+                        return current?.iconKey ? (
+                          <AssetOrZoneIcon iconKey={current.iconKey} className="size-6 shrink-0" />
+                        ) : (
+                          <MapPin className="size-6 shrink-0 text-muted-foreground" />
+                        );
+                      })()}
+                      {pointName}
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {points.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      <span className="flex items-center gap-2">
+                        {p.iconKey ? (
+                          <AssetOrZoneIcon iconKey={p.iconKey} className="size-6 shrink-0" />
+                        ) : (
+                          <MapPin className="size-6 shrink-0 text-muted-foreground" />
+                        )}
+                        {p.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <p className="mb-4 text-caption-airbnb">{pointName}</p>
+          )}
 
           <div className="mb-4 flex gap-1.5">
             {TASK_STATUSES.map((status) => {

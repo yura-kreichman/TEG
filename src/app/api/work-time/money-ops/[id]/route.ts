@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { isModuleEnabled } from "@/lib/modules";
 import { calcOperatorBalance } from "@/lib/work-time";
 
 // Правка суммы отдельного (не привязанного к смене) аванса/премии —
@@ -12,10 +11,6 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
-  if (!(await isModuleEnabled(owner.tenantId, "work_time"))) {
-    return NextResponse.json({ error: "Модуль не подключён" }, { status: 403 });
-  }
-
   const { id } = await ctx.params;
   const op = await prisma.moneyOperation.findUnique({ where: { id } });
   if (!op || op.tenantId !== owner.tenantId || (op.type !== "advance" && op.type !== "bonus_payout")) {
@@ -74,10 +69,6 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
-  if (!(await isModuleEnabled(owner.tenantId, "work_time"))) {
-    return NextResponse.json({ error: "Модуль не подключён" }, { status: 403 });
-  }
-
   const { id } = await ctx.params;
   const op = await prisma.moneyOperation.findUnique({ where: { id } });
   if (!op || op.tenantId !== owner.tenantId || (op.type !== "advance" && op.type !== "bonus_payout")) {

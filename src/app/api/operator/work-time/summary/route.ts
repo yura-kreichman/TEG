@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
-import { isModuleEnabled } from "@/lib/modules";
 import { getRateForDate, calcOperatorBalance } from "@/lib/work-time";
 
 // Баланс "К выдаче" + заработано/ставка/премии/авансы за период — только для
@@ -10,10 +9,6 @@ export async function GET(request: Request) {
   const ctx = await requireOperator();
   if (!ctx) {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
-  }
-
-  if (!(await isModuleEnabled(ctx.point.tenantId, "work_time"))) {
-    return NextResponse.json({ error: "Модуль не подключён" }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);

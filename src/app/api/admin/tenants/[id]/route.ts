@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
 import { requireSuperAdmin } from "@/lib/require-super-admin";
 
-const SUBSCRIPTION_STATUSES = ["trialing", "active", "paused", "expired"] as const;
-type SubscriptionStatusValue = (typeof SUBSCRIPTION_STATUSES)[number];
+const SUBSCRIPTION_STATUSES = ["active", "paused", "suspended", "expired"] as const;
+
+const LIMIT_OVERRIDE_KEYS = ["maxPoints", "maxZones", "maxAssets", "maxOperators"] as const;
+type LimitOverrideKey = (typeof LIMIT_OVERRIDE_KEYS)[number];
+type LimitOverrides = Partial<Record<LimitOverrideKey, number>>;
 
 function parseDateField(value: unknown): { ok: true; date: Date | null } | { ok: false } {
   if (value === null) return { ok: true, date: null };
@@ -24,7 +28,6 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/admin/tenan
     where: { id },
     include: {
       package: true,
-      moduleFlags: true,
       _count: { select: { operators: true } },
     },
   });
@@ -32,7 +35,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/admin/tenan
     return NextResponse.json({ error: "Владелец не найден" }, { status: 404 });
   }
 
-  const [pointsCount, assetsCount, zonesCount, history, owner] = await Promise.all([
+  const [pointsCount, assetsCount, zonesCount, history, owner, billingHistory] = await Promise.all([
     prisma.point.count({ where: { tenantId: id } }),
     prisma.asset.count({ where: { zone: { point: { tenantId: id } } } }),
     prisma.zone.count({ where: { point: { tenantId: id } } }),
@@ -43,6 +46,13 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/admin/tenan
       include: { correctedBy: { select: { email: true } } },
     }),
     prisma.user.findFirst({ where: { tenantId: id, role: "owner" }, select: { email: true }, orderBy: { createdAt: "asc" } }),
+    // История событий биллинга (docs/spec/06-super-admin.md, п.4) — только
+    // read-only лог, без ресинка/действий над записями.
+    prisma.webhookEvent.findMany({
+      where: { tenantId: id },
+      orderBy: { receivedAt: "desc" },
+      take: 20,
+    }),
   ]);
 
   return NextResponse.json({
@@ -50,13 +60,13 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/admin/tenan
     name: tenant.name,
     subscriptionStatus: tenant.subscriptionStatus,
     subscriptionExpiresAt: tenant.subscriptionExpiresAt,
-    trialEndsAt: tenant.trialEndsAt,
     contactPhone: tenant.contactPhone,
     adminNote: tenant.adminNote,
     ownerEmail: owner?.email ?? null,
     createdAt: tenant.createdAt,
     package: tenant.package,
-    moduleFlags: tenant.moduleFlags.map((m) => ({ moduleKey: m.moduleKey, enabled: m.enabled })),
+    fluentcartCustomerId: tenant.fluentcartCustomerId,
+    limitOverrides: (tenant.limitOverrides as LimitOverrides | null) ?? {},
     usage: {
       points: pointsCount,
       zones: zonesCount,
@@ -70,6 +80,13 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/admin/tenan
       before: h.beforeJson,
       after: h.afterJson,
       comment: h.comment,
+    })),
+    billingHistory: billingHistory.map((w) => ({
+      id: w.id,
+      eventType: w.eventType,
+      status: w.status,
+      error: w.error,
+      receivedAt: w.receivedAt,
     })),
   });
 }
@@ -86,16 +103,17 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/admin/tena
     return NextResponse.json({ error: "Владелец не найден" }, { status: 404 });
   }
 
-  const { subscriptionStatus, packageId, subscriptionExpiresAt, trialEndsAt, contactPhone, adminNote, comment } =
-    await request.json();
-  const data: {
-    subscriptionStatus?: SubscriptionStatusValue;
-    packageId?: string;
-    subscriptionExpiresAt?: Date | null;
-    trialEndsAt?: Date | null;
-    contactPhone?: string | null;
-    adminNote?: string | null;
-  } = {};
+  const {
+    subscriptionStatus,
+    packageId,
+    subscriptionExpiresAt,
+    contactPhone,
+    adminNote,
+    limitOverrides,
+    fluentcartCustomerId,
+    comment,
+  } = await request.json();
+  const data: Prisma.TenantUncheckedUpdateInput = {};
   const before: Record<string, unknown> = {};
   const after: Record<string, unknown> = {};
 
@@ -125,16 +143,6 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/admin/tena
     before.subscriptionExpiresAt = tenant.subscriptionExpiresAt;
     after.subscriptionExpiresAt = parsed.date;
   }
-  if (trialEndsAt !== undefined) {
-    const parsed = parseDateField(trialEndsAt);
-    if (!parsed.ok) {
-      return NextResponse.json({ error: "Некорректная дата окончания триала" }, { status: 400 });
-    }
-    data.trialEndsAt = parsed.date;
-    before.trialEndsAt = tenant.trialEndsAt;
-    after.trialEndsAt = parsed.date;
-  }
-
   if (contactPhone !== undefined) {
     if (contactPhone !== null && typeof contactPhone !== "string") {
       return NextResponse.json({ error: "Некорректный телефон" }, { status: 400 });
@@ -152,6 +160,49 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/admin/tena
     data.adminNote = value;
     before.adminNote = tenant.adminNote;
     after.adminNote = value;
+  }
+
+  // Ручная привязка/отвязка к FluentCart (доп. инструкция "связывание
+  // тенанта с FluentCart", 2026-07-12) — на случай, если тенант оплатил до
+  // того, как вебхук успел связать его по email, или email не совпал.
+  if (fluentcartCustomerId !== undefined) {
+    if (fluentcartCustomerId !== null && typeof fluentcartCustomerId !== "string") {
+      return NextResponse.json({ error: "Некорректный fluentcartCustomerId" }, { status: 400 });
+    }
+    const value = typeof fluentcartCustomerId === "string" && fluentcartCustomerId.trim() ? fluentcartCustomerId.trim() : null;
+    if (value) {
+      const conflict = await prisma.tenant.findUnique({ where: { fluentcartCustomerId: value } });
+      if (conflict && conflict.id !== id) {
+        return NextResponse.json({ error: "Этот customer_id уже привязан к другому тенанту" }, { status: 409 });
+      }
+    }
+    data.fluentcartCustomerId = value;
+    before.fluentcartCustomerId = tenant.fluentcartCustomerId;
+    after.fluentcartCustomerId = value;
+  }
+
+  if (limitOverrides !== undefined) {
+    if (limitOverrides === null) {
+      data.limitOverrides = Prisma.JsonNull;
+      before.limitOverrides = tenant.limitOverrides;
+      after.limitOverrides = null;
+    } else {
+      if (typeof limitOverrides !== "object") {
+        return NextResponse.json({ error: "Некорректные оверрайды лимитов" }, { status: 400 });
+      }
+      const parsed: LimitOverrides = {};
+      for (const key of LIMIT_OVERRIDE_KEYS) {
+        const value = limitOverrides[key];
+        if (value === undefined || value === null) continue;
+        if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+          return NextResponse.json({ error: `Некорректное значение лимита "${key}"` }, { status: 400 });
+        }
+        parsed[key] = value;
+      }
+      data.limitOverrides = JSON.parse(JSON.stringify(parsed));
+      before.limitOverrides = tenant.limitOverrides;
+      after.limitOverrides = parsed;
+    }
   }
 
   if (Object.keys(data).length === 0) {

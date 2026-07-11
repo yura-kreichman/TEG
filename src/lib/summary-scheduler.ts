@@ -24,10 +24,6 @@ let intervalHandle: ReturnType<typeof setInterval> | null = null;
 // когда она прошла. Один UPDATE ... WHERE на тик, без обхода тенантов в JS.
 async function expireSubscriptions(now: Date) {
   await prisma.tenant.updateMany({
-    where: { subscriptionStatus: "trialing", trialEndsAt: { lt: now } },
-    data: { subscriptionStatus: "expired" },
-  });
-  await prisma.tenant.updateMany({
     where: { subscriptionStatus: "active", subscriptionExpiresAt: { lt: now } },
     data: { subscriptionStatus: "expired" },
   });

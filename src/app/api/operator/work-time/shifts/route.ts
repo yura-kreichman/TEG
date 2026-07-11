@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
-import { isModuleEnabled } from "@/lib/modules";
 import {
   calcOperatorBalance,
   calcShiftAccrual,
@@ -21,10 +20,6 @@ export async function GET(request: Request) {
   if (!ctx) {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
-  if (!(await isModuleEnabled(ctx.point.tenantId, "work_time"))) {
-    return NextResponse.json({ error: "Модуль не подключён" }, { status: 403 });
-  }
-
   const { searchParams } = new URL(request.url);
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
@@ -48,9 +43,6 @@ export async function POST(request: Request) {
   }
   const { operator, point } = ctx;
 
-  if (!(await isModuleEnabled(point.tenantId, "work_time"))) {
-    return NextResponse.json({ error: "Модуль не подключён" }, { status: 403 });
-  }
   // Запрет на уровне API, не только UI (docs/spec/05-work-time.md, "РЕЖИМ
   // УЧЁТА ВРЕМЕНИ"): в авто-режиме время фиксируется только сервером через
   // check-in/check-out, ручной ввод произвольного времени недоступен даже

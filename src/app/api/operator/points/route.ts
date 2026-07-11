@@ -13,7 +13,7 @@ export async function GET() {
 
   const points = await prisma.point.findMany({
     where: { tenantId: ctx.point.tenantId },
-    select: { id: true, name: true },
+    select: { id: true, name: true, iconKey: true },
     orderBy: { createdAt: "asc" },
   });
 

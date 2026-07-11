@@ -8,7 +8,7 @@ export async function POST() {
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
-  if (!isEmailConfigured()) {
+  if (!(await isEmailConfigured())) {
     return NextResponse.json({ error: "Почта не настроена" }, { status: 503 });
   }
 

@@ -12,7 +12,7 @@ import { useI18n } from "@/components/i18n-provider";
 export default function AdminLoginPage() {
   const router = useRouter();
   const t = useI18n();
-  const [email, setEmail] = useState("");
+  const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -25,7 +25,7 @@ export default function AdminLoginPage() {
       const res = await fetch("/api/auth/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ login, password }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -48,15 +48,15 @@ export default function AdminLoginPage() {
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <Label htmlFor="email">{t.auth.emailLabel}</Label>
+          <Label htmlFor="login">{t.admin.loginFieldLabel}</Label>
           <Input
-            id="email"
-            type="email"
+            id="login"
+            type="text"
             required
             autoFocus
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="username"
+            value={login}
+            onChange={(e) => setLogin(e.target.value)}
           />
         </div>
 

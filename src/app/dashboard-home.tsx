@@ -73,13 +73,13 @@ interface Summary {
 
 interface Usage {
   packageName: string;
-  subscriptionStatus: "trialing" | "active" | "paused" | "expired";
+  subscriptionStatus: "active" | "paused" | "suspended" | "expired";
   subscriptionExpiresAt: string | null;
-  trialEndsAt: string | null;
-  points: { used: number; max: number };
-  operators: { used: number; max: number };
-  zones: { used: number; max: number };
-  assets: { used: number; max: number };
+  currentPeriodEnd: string | null;
+  points: { used: number; max: number; packageMax: number };
+  operators: { used: number; max: number; packageMax: number };
+  zones: { used: number; max: number; packageMax: number };
+  assets: { used: number; max: number; packageMax: number };
 }
 
 export function OwnerDashboardCard({
@@ -169,16 +169,20 @@ export function OwnerDashboardCard({
   }
 
   const planStatusLabel =
-    usage?.subscriptionStatus === "trialing"
-      ? t.home.planStatusTrialing
-      : usage?.subscriptionStatus === "paused"
-        ? t.home.planStatusPaused
-        : usage?.subscriptionStatus === "expired"
-          ? t.home.planStatusExpired
+    usage?.subscriptionStatus === "paused"
+      ? t.home.planStatusPaused
+      : usage?.subscriptionStatus === "expired"
+        ? t.home.planStatusExpired
+        : usage?.subscriptionStatus === "suspended"
+          ? t.home.planStatusSuspended
           : t.home.planStatusActive;
 
-  const planEndDate =
-    usage?.subscriptionStatus === "trialing" ? usage.trialEndsAt : usage?.subscriptionExpiresAt;
+  const planStatusIsWarning =
+    usage?.subscriptionStatus === "paused" ||
+    usage?.subscriptionStatus === "expired" ||
+    usage?.subscriptionStatus === "suspended";
+
+  const planEndDate = usage?.subscriptionExpiresAt;
 
   return (
     <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
@@ -286,32 +290,30 @@ export function OwnerDashboardCard({
                 <p className="text-section-title">{t.home.planCardLabel}</p>
                 <p className="text-card-title">{usage.packageName}</p>
               </div>
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
-                  usage.subscriptionStatus === "paused" || usage.subscriptionStatus === "expired"
-                    ? "bg-warning/15 text-warning"
-                    : "bg-primary/10 text-primary"
-                )}
-              >
+              <div className="flex flex-col items-end gap-1">
                 <span
                   className={cn(
-                    "size-1.5 rounded-full",
-                    usage.subscriptionStatus === "paused" || usage.subscriptionStatus === "expired"
-                      ? "bg-warning"
-                      : "bg-primary"
+                    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+                    planStatusIsWarning ? "bg-warning/15 text-warning" : "bg-primary/10 text-primary"
                   )}
-                />
-                {planStatusLabel}
-              </span>
+                >
+                  <span className={cn("size-1.5 rounded-full", planStatusIsWarning ? "bg-warning" : "bg-primary")} />
+                  {planStatusLabel}
+                </span>
+                {planEndDate ? (
+                  <p className="text-caption-airbnb whitespace-nowrap">
+                    {t.home.planExpiresPrefix} {new Date(planEndDate).toLocaleDateString()}
+                  </p>
+                ) : (
+                  usage.currentPeriodEnd &&
+                  usage.subscriptionStatus === "active" && (
+                    <p className="text-caption-airbnb whitespace-nowrap text-muted-foreground">
+                      {t.home.nextBillingPrefix} {new Date(usage.currentPeriodEnd).toLocaleDateString()}
+                    </p>
+                  )
+                )}
+              </div>
             </div>
-
-            {planEndDate && (
-              <p className="text-caption-airbnb">
-                {usage.subscriptionStatus === "trialing" ? t.home.trialEndsPrefix : t.home.planExpiresPrefix}{" "}
-                {new Date(planEndDate).toLocaleDateString()}
-              </p>
-            )}
 
             {(
               [
@@ -320,12 +322,13 @@ export function OwnerDashboardCard({
                 [t.home.limitZones, usage.zones],
                 [t.home.limitAssets, usage.assets],
               ] as const
-            ).map(([label, { used, max }]) => (
+            ).map(([label, { used, max, packageMax }]) => (
               <div key={label} className="mt-2.5 tabular-nums">
                 <div className="mb-1 flex justify-between text-caption-airbnb">
                   <span>{label}</span>
                   <span className="font-semibold text-foreground">
                     {used} {t.common.of} {max}
+                    {max > packageMax && <span className="text-primary"> (+{max - packageMax})</span>}
                   </span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-surface-0">

@@ -13,29 +13,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/components/i18n-provider";
-import { MODULE_KEYS } from "@/lib/module-keys";
-import { cn } from "@/lib/utils";
 
 interface PackageInfo {
   id: string;
   name: string;
-  modules: string[];
   maxPoints: number;
   maxZones: number;
   maxAssets: number;
   maxOperators: number;
   priceMonthly: string;
+  fluentcartProductId: string | null;
   tenantsCount: number;
 }
 
 const EMPTY_FORM = {
   name: "",
-  modules: new Set<string>(),
   maxPoints: "5",
   maxZones: "10",
   maxAssets: "50",
   maxOperators: "10",
   priceMonthly: "0",
+  fluentcartProductId: "",
 };
 
 export default function AdminPackagesPage() {
@@ -83,35 +81,26 @@ export default function AdminPackagesPage() {
     setEditingId(pkg.id);
     setForm({
       name: pkg.name,
-      modules: new Set(pkg.modules),
       maxPoints: String(pkg.maxPoints),
       maxZones: String(pkg.maxZones),
       maxAssets: String(pkg.maxAssets),
       maxOperators: String(pkg.maxOperators),
       priceMonthly: pkg.priceMonthly,
+      fluentcartProductId: pkg.fluentcartProductId ?? "",
     });
     setSaveError(null);
     setEditorOpen(true);
   }
 
-  function toggleModule(key: string) {
-    setForm((prev) => {
-      const next = new Set(prev.modules);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return { ...prev, modules: next };
-    });
-  }
-
   async function save() {
     const payload = {
       name: form.name.trim(),
-      modules: [...form.modules],
       maxPoints: Number(form.maxPoints),
       maxZones: Number(form.maxZones),
       maxAssets: Number(form.maxAssets),
       maxOperators: Number(form.maxOperators),
       priceMonthly: Number(form.priceMonthly),
+      fluentcartProductId: form.fluentcartProductId.trim() || null,
     };
     const res = await fetch(editingId ? `/api/admin/packages/${editingId}` : "/api/admin/packages", {
       method: editingId ? "PATCH" : "POST",
@@ -172,12 +161,8 @@ export default function AdminPackagesPage() {
                           {pkg.priceMonthly} · {pkg.maxPoints} {t.admin.usagePoints.toLowerCase()} · {pkg.maxOperators}{" "}
                           {t.admin.usageOperators.toLowerCase()} · {pkg.tenantsCount} {t.admin.tenantsCountSuffix}
                         </p>
-                        {pkg.modules.length > 0 && (
-                          <p className="mt-1 text-caption-airbnb">
-                            {pkg.modules
-                              .map((m) => t.admin.moduleNames[m as keyof typeof t.admin.moduleNames] ?? m)
-                              .join(" · ")}
-                          </p>
+                        {!pkg.fluentcartProductId && (
+                          <p className="mt-0.5 text-caption-airbnb text-warning">{t.admin.notLinkedChip}</p>
                         )}
                       </div>
                       <KebabButton
@@ -210,6 +195,16 @@ export default function AdminPackagesPage() {
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
             />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="pkg-fluentcart">{t.admin.productIdFieldLabel}</Label>
+            <Input
+              id="pkg-fluentcart"
+              placeholder={t.admin.productIdFieldPlaceholder}
+              value={form.fluentcartProductId}
+              onChange={(e) => setForm((p) => ({ ...p, fluentcartProductId: e.target.value }))}
+            />
+            <p className="text-caption-airbnb text-muted-foreground">{t.admin.productIdFieldHint}</p>
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor="pkg-price">{t.admin.priceFieldLabel}</Label>
@@ -261,29 +256,6 @@ export default function AdminPackagesPage() {
                 value={form.maxOperators}
                 onChange={(e) => setForm((p) => ({ ...p, maxOperators: e.target.value }))}
               />
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>{t.admin.modulesFieldLabel}</Label>
-            <div className="flex flex-wrap gap-2">
-              {MODULE_KEYS.map((key) => {
-                const selected = form.modules.has(key);
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => toggleModule(key)}
-                    className={cn(
-                      "rounded-full border-[1.5px] px-3 py-1.5 text-sm font-semibold",
-                      selected
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-card text-muted-foreground"
-                    )}
-                  >
-                    {t.admin.moduleNames[key as keyof typeof t.admin.moduleNames]}
-                  </button>
-                );
-              })}
             </div>
           </div>
           {saveError && <p className="text-sm text-destructive">{saveError}</p>}

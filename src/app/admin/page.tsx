@@ -10,17 +10,17 @@ import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { StatusChip } from "@/components/status-chip";
 import { useI18n } from "@/components/i18n-provider";
 
-type SubscriptionStatus = "trialing" | "active" | "paused" | "expired";
+type SubscriptionStatus = "active" | "paused" | "suspended" | "expired";
 
 interface TenantInfo {
   id: string;
   name: string;
   subscriptionStatus: SubscriptionStatus;
   subscriptionExpiresAt: string | null;
-  trialEndsAt: string | null;
   package: { id: string; name: string };
   pointsCount: number;
   operatorsCount: number;
+  fluentcartCustomerId: string | null;
 }
 
 const EXPIRING_SOON_DAYS = 7;
@@ -36,6 +36,7 @@ export default function AdminTenantsPage() {
   const t = useI18n();
   const [checking, setChecking] = useState(true);
   const [tenants, setTenants] = useState<TenantInfo[]>([]);
+  const [unmatchedWebhookCount, setUnmatchedWebhookCount] = useState(0);
 
   useEffect(() => {
     fetch("/api/admin/tenants")
@@ -49,6 +50,7 @@ export default function AdminTenantsPage() {
       .then((data) => {
         if (!data) return;
         setTenants(data.tenants ?? []);
+        setUnmatchedWebhookCount(data.unmatchedWebhookCount ?? 0);
         setChecking(false);
       });
   }, [router]);
@@ -56,15 +58,15 @@ export default function AdminTenantsPage() {
   if (checking) return null;
 
   const statusVariant: Record<SubscriptionStatus, "accent" | "warning" | "neutral"> = {
-    trialing: "accent",
     active: "accent",
     paused: "warning",
+    suspended: "warning",
     expired: "neutral",
   };
   const statusLabel: Record<SubscriptionStatus, string> = {
-    trialing: t.admin.statusTrialing,
     active: t.admin.statusActive,
     paused: t.admin.statusPaused,
+    suspended: t.admin.statusSuspended,
     expired: t.admin.statusExpired,
   };
 
@@ -74,6 +76,12 @@ export default function AdminTenantsPage() {
         <div className="flex w-full max-w-2xl flex-col gap-1">
           <h1 className="text-screen-title">{t.admin.tenantsTitle}</h1>
           <p className="mb-4 text-caption-airbnb">{t.admin.tenantsSub}</p>
+
+          {unmatchedWebhookCount > 0 && (
+            <p className="mb-3 text-caption-airbnb font-semibold text-warning">
+              {t.admin.unmatchedWebhooksLabel}: {unmatchedWebhookCount}
+            </p>
+          )}
 
           {tenants.length === 0 ? (
             <p className="text-body-airbnb text-muted-foreground">{t.admin.noTenants}</p>
@@ -89,8 +97,11 @@ export default function AdminTenantsPage() {
                           <StatusChip variant={statusVariant[tenant.subscriptionStatus]}>
                             {statusLabel[tenant.subscriptionStatus]}
                           </StatusChip>
-                          {(isExpiringSoon(tenant.subscriptionExpiresAt) || isExpiringSoon(tenant.trialEndsAt)) && (
+                          {isExpiringSoon(tenant.subscriptionExpiresAt) && (
                             <StatusChip variant="warning">{t.admin.expiringSoonChip}</StatusChip>
+                          )}
+                          {!tenant.fluentcartCustomerId && (
+                            <StatusChip variant="warning">{t.admin.notLinkedChip}</StatusChip>
                           )}
                         </div>
                         <p className="text-caption-airbnb">

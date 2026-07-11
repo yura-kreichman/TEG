@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { getTenantLimits } from "@/lib/packages";
 
 export async function GET() {
   const owner = await requireOwner();
@@ -16,6 +17,8 @@ export async function GET() {
     return NextResponse.json({ error: "Тенант не найден" }, { status: 404 });
   }
 
+  const limits = await getTenantLimits(owner.tenantId);
+
   const [pointsUsed, operatorsUsed, zonesUsed, assetsUsed] = await Promise.all([
     prisma.point.count({ where: { tenantId: owner.tenantId } }),
     prisma.operator.count({ where: { tenantId: owner.tenantId } }),
@@ -27,10 +30,20 @@ export async function GET() {
     packageName: tenant.package.name,
     subscriptionStatus: tenant.subscriptionStatus,
     subscriptionExpiresAt: tenant.subscriptionExpiresAt,
-    trialEndsAt: tenant.trialEndsAt,
-    points: { used: pointsUsed, max: tenant.package.maxPoints },
-    operators: { used: operatorsUsed, max: tenant.package.maxOperators },
-    zones: { used: zonesUsed, max: tenant.package.maxZones },
-    assets: { used: assetsUsed, max: tenant.package.maxAssets },
+    // Информационное, из вебхука FluentCart — см. Tenant.currentPeriodEnd в
+    // schema.prisma и docs/fluentcart-webhook-schema.md §3.
+    currentPeriodEnd: tenant.currentPeriodEnd,
+    // packageMax — значение пакета без оверрайда, чтобы владелец видел не
+    // только эффективный лимит (max), но и что часть сверх пакета выдал
+    // Super Admin вручную (docs/spec/06-super-admin.md, п.6) — та же дельта,
+    // что видна админу на /admin/tenants/[id].
+    points: { used: pointsUsed, max: limits?.maxPoints ?? tenant.package.maxPoints, packageMax: tenant.package.maxPoints },
+    operators: {
+      used: operatorsUsed,
+      max: limits?.maxOperators ?? tenant.package.maxOperators,
+      packageMax: tenant.package.maxOperators,
+    },
+    zones: { used: zonesUsed, max: limits?.maxZones ?? tenant.package.maxZones, packageMax: tenant.package.maxZones },
+    assets: { used: assetsUsed, max: limits?.maxAssets ?? tenant.package.maxAssets, packageMax: tenant.package.maxAssets },
   });
 }
