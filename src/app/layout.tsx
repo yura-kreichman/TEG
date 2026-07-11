@@ -19,10 +19,19 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "RentOS",
   description: "RentOS SaaS",
+  applicationName: "RentOS",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "RentOS",
+  },
+  // apple-touch-fullscreen — доп. iOS-тег полноэкранного режима, взят из
+  // сравнения с Progressify (Progressify/.../views/meta-tags.php). Не
+  // добавляем сюда mobile-web-app-capable — Next.js уже генерирует его сам
+  // из appleWebApp.capable (node_modules/next/dist/lib/metadata/metadata.js),
+  // ручное дублирование даёт два одинаковых <meta> тега.
+  other: {
+    "apple-touch-fullscreen": "yes",
   },
 };
 
