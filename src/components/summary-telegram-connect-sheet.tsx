@@ -8,11 +8,17 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
-type ConnState = "idle" | "wait" | "done";
+type ConnState = "loading" | "wait" | "done";
 
 // Прототип docs/design/prototype-telegram-summaries-v1.html, sheet-connect:
-// idle -> wait (poll .../status до chatStatus=active) -> done. Код привязки и
-// deepLink — POST .../bind (см. src/lib/telegram-bot.ts createBindCode).
+// loading (POST .../bind сразу при открытии шторки) -> wait (poll .../status
+// до chatStatus=active, ссылка "Открыть Telegram" — настоящий <a href>) ->
+// done. Раньше ссылка открывалась через window.open('', '_blank') с
+// подстановкой location.href после await — на Android это ненадёжно для
+// App Links (переход после await не всегда засчитывается как прямой отклик
+// на клик пользователя, из-за чего Telegram может не подхватить intent —
+// экран "мигал" и падал назад в ожидание). Убрано в пользу единственного
+// способа, который реально гарантирован документацией — прямой клик по <a>.
 export function TelegramConnectSheet({
   open,
   onClose,
@@ -24,7 +30,7 @@ export function TelegramConnectSheet({
 }) {
   const t = useI18n();
   const [botConfigured, setBotConfigured] = useState(true);
-  const [connState, setConnState] = useState<ConnState>("idle");
+  const [connState, setConnState] = useState<ConnState>("loading");
   const [chatTitle, setChatTitle] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [deepLink, setDeepLink] = useState<string | null>(null);
@@ -52,6 +58,22 @@ export function TelegramConnectSheet({
     return data;
   }
 
+  async function startBind() {
+    const res = await fetch("/api/tenant/summary-channels/telegram/bind", { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) {
+      setBotConfigured(false);
+      return;
+    }
+    setCode(data.code);
+    setDeepLink(data.deepLink ?? null);
+    setConnState("wait");
+    pollRef.current = setInterval(async () => {
+      const s = await loadStatus();
+      if (s?.connected) onChanged();
+    }, 2000);
+  }
+
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) {
@@ -59,53 +81,25 @@ export function TelegramConnectSheet({
       return;
     }
     setTestResult(null);
-    loadStatus();
+    setConnState("loading");
+    loadStatus().then((s) => {
+      if (!s?.connected && s?.botConfigured) startBind();
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => () => stopPolling(), []);
 
-  async function startBind() {
-    // Открываем окно СИНХРОННО, до await — иначе мобильные браузеры (в
-    // первую очередь iOS Safari) блокируют window.open как всплывающее,
-    // т.к. к моменту резолва fetch это уже не считается прямым откликом на
-    // клик пользователя. Пустое окно, location задаём после ответа сервера.
-    // На случай если и это заблокировано (или desktop-браузер вообще не
-    // открыл окно) — ниже в UI есть настоящая <a href> ссылка как гарантированный fallback.
-    const win = typeof window !== "undefined" ? window.open("", "_blank") : null;
-
-    const res = await fetch("/api/tenant/summary-channels/telegram/bind", { method: "POST" });
-    const data = await res.json();
-    if (!res.ok) {
-      win?.close();
-      setBotConfigured(false);
-      return;
-    }
-    setCode(data.code);
-    setDeepLink(data.deepLink ?? null);
-    setConnState("wait");
-    if (data.deepLink && win) {
-      win.location.href = data.deepLink;
-    } else {
-      win?.close();
-    }
-    pollRef.current = setInterval(async () => {
-      const s = await loadStatus();
-      if (s?.connected) onChanged();
-    }, 2000);
-  }
-
   function cancelBind() {
     stopPolling();
-    setConnState("idle");
-    setDeepLink(null);
+    onClose();
   }
 
   async function handleDisconnect() {
     await fetch("/api/tenant/summary-channels/telegram/disconnect", { method: "POST" });
     setChatTitle(null);
-    setConnState("idle");
+    setConnState("loading");
     onChanged();
   }
 
@@ -139,45 +133,38 @@ export function TelegramConnectSheet({
         <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.summaries.connectSheetTitle}</h2>
         <p className="mb-3 text-caption-airbnb">{t.summaries.connectSheetSub}</p>
 
-        {!botConfigured && connState === "idle" && (
+        {!botConfigured && (
           <p className="rounded-control bg-destructive/10 p-3 text-body-airbnb text-destructive">
             {t.summaries.connectBotNotConfigured}
           </p>
         )}
 
-        {botConfigured && connState === "idle" && (
-          <>
-            <PressableScale>
-              <Button type="button" className="w-full" onClick={startBind}>
-                {t.summaries.connectIdleButton}
-              </Button>
-            </PressableScale>
-            <p className="mt-2.5 text-caption-airbnb">{t.summaries.connectIdleHint}</p>
-          </>
+        {botConfigured && connState === "loading" && (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          </div>
         )}
 
         {connState === "wait" && (
           <>
-            <div className="flex items-start gap-2.5 rounded-control bg-muted/50 p-3 text-body-airbnb text-muted-foreground">
-              <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin" />
-              <span>
-                {t.summaries.connectWaitPrefix} <b className="tabular-nums text-foreground">{code}</b>{" "}
-                {t.summaries.connectWaitSuffix}
-              </span>
-            </div>
             {deepLink && (
-              <PressableScale className="mt-3">
+              <PressableScale>
                 <a
                   href={deepLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-transparent bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary),black_14%)] text-sm font-medium text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,.12),inset_0_1px_0_rgba(255,255,255,.16)]"
+                  className="flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-transparent bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary),black_14%)] text-sm font-medium text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,.12),inset_0_1px_0_rgba(255,255,255,.16)]"
                 >
                   <Send className="size-4" />
                   {t.summaries.connectOpenTelegramButton}
                 </a>
               </PressableScale>
             )}
+            <div className="mt-3 flex items-start gap-2.5 rounded-control bg-muted/50 p-3 text-body-airbnb text-muted-foreground">
+              <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin" />
+              <span>
+                {t.summaries.connectWaitPrefix} <b className="tabular-nums text-foreground">{code}</b>{" "}
+                {t.summaries.connectWaitSuffix}
+              </span>
+            </div>
             <PressableScale className="mt-3">
               <Button type="button" variant="outline" className="w-full" onClick={cancelBind}>
                 {t.summaries.connectCancelButton}
