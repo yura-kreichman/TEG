@@ -28,7 +28,7 @@ function iconSrc(family: IconFamily, name: string) {
 
 // Material-иконки в коллекции — залитые "fill=#FFFFFF" одноцветные силуэты
 // (белые на прозрачном), в отличие от Fluent (градиенты/несколько цветов —
-// см. icon-library/fluent/fluent-color--*.svg). <img src> не подхватывает
+// см. public/icon-library/fluent/fluent-color--*.svg). <img src> не подхватывает
 // currentColor из внешнего SVG-документа, поэтому для Material рендерим
 // через CSS mask-image + bg-current — сам SVG остаётся исходным файлом,
 // только его альфа-канал используется как маска, цвет берётся из темы
@@ -156,8 +156,8 @@ function IconGrid({
 
 /**
  * Searchable icon picker for Point/Zone/Asset (docs/spec/00-architecture.md).
- * Icons come from the personal SVG collection in icon-library/<family>/
- * (see icon-library/README.md), served via /api/icon-library — not bundled,
+ * Icons come from the personal SVG collection in public/icon-library/<family>/
+ * (see public/icon-library/README.md), served via /api/icon-library — not bundled,
  * not a static npm icon set. `iconKey` is stored as `"<family>:<name>"`.
  *
  * Self-contained trigger + sheet, for create-forms. For a kebab-menu-driven

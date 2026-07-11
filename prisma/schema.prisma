@@ -204,7 +204,7 @@ model Operator {
   pinHash   String
   active    Boolean @default(true)
   // Загруженное фото — как Asset.photoUrl. iconKey — аватар из личной
-  // коллекции (icon-library/avatars/), запасной вариант, если фото не
+  // коллекции (public/icon-library/avatars/), запасной вариант, если фото не
   // загружено (тот же приём, что Asset.iconKey — см. icon-picker.tsx).
   avatarUrl String?
   iconKey   String?

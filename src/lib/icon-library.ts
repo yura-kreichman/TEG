@@ -4,11 +4,13 @@ import { type IconFamily } from "@/lib/icon-families";
 
 export { ICON_FAMILIES, isIconFamily, type IconFamily } from "@/lib/icon-families";
 
-// Личная коллекция SVG-иконок в icon-library/<family>/ (см. icon-library/README.md)
-// заменяет прежний набор из lucide-react/dynamic. Плоские папки без манифеста —
-// имя файла (без .svg) и есть ключевые слова для поиска, файловая система сама
-// служит индексом. Server-only (fs/path) — не импортировать из клиентских
-// компонентов, для этого есть icon-families.ts.
+// Личная коллекция SVG-иконок в public/icon-library/<family>/ (см.
+// public/icon-library/README.md) заменяет прежний набор из lucide-react/dynamic.
+// Плоские папки без манифеста — имя файла (без .svg) и есть ключевые слова для
+// поиска, файловая система сама служит индексом. В public/, а не в корне
+// проекта — там же теперь и иконки PWA-манифеста (public/icon-library/pwa/),
+// чтобы все иконки проекта хранились в одном месте. Server-only (fs/path) —
+// не импортировать из клиентских компонентов, для этого есть icon-families.ts.
 //
 // Имя файла используется как один сегмент пути (join(dir, name + ".svg")) —
 // единственная реальная опасность это выход за пределы папки (".."/"."/слеши),
@@ -24,7 +26,7 @@ export function isIconName(value: string): boolean {
 }
 
 function libraryDir(family: IconFamily) {
-  return join(process.cwd(), "icon-library", family);
+  return join(process.cwd(), "public", "icon-library", family);
 }
 
 export function listIconNames(family: IconFamily, query?: string): string[] {
