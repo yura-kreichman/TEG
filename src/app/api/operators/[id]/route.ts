@@ -13,7 +13,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/operators/[
   const { id } = await ctx.params;
   const operator = await prisma.operator.findUnique({
     where: { id },
-    include: { allowedZones: { select: { id: true, name: true } } },
+    include: { allowedZones: { select: { id: true, name: true, pointId: true } } },
   });
   if (!operator || operator.tenantId !== owner.tenantId) {
     return NextResponse.json({ error: "Оператор не найден" }, { status: 404 });

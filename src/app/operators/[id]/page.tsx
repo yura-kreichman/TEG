@@ -34,7 +34,7 @@ interface Profile {
   iconKey: string | null;
   colorTag: string | null;
   allZonesAccess: boolean;
-  allowedZones: { id: string; name: string }[];
+  allowedZones: { id: string; name: string; pointId: string }[];
   timeTrackingMode: "manual" | "auto";
 }
 
@@ -229,10 +229,20 @@ export default function OperatorCardPage() {
     return code;
   }
 
+  // Точки, реально доступные этому оператору — не весь список точек
+  // тенанта (фидбек пользователя 2026-07-12: "почему спрашивается из
+  // какой точки аванс, даже если для оператора выбраны зоны только из
+  // одной точки"). allZonesAccess — доступны все точки тенанта, иначе
+  // только те, где есть хотя бы одна разрешённая зона.
+  const operatorPointIds = profile?.allZonesAccess
+    ? null
+    : new Set((profile?.allowedZones ?? []).map((z) => z.pointId));
+  const operatorPoints = operatorPointIds ? points.filter((p) => operatorPointIds.has(p.id)) : points;
+
   function openMoneyForm(kind: "advance" | "bonus") {
     setMoneyForm(kind);
     setMoneyAmount("");
-    setMoneyPointId(points[0]?.id ?? "");
+    setMoneyPointId(operatorPoints[0]?.id ?? "");
     setMoneyError(null);
   }
 
@@ -587,25 +597,27 @@ export default function OperatorCardPage() {
               onChange={(e) => setMoneyAmount(e.target.value)}
             />
           </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="moneyPoint">{t.operatorApp.workTime.pointLabel}</Label>
-            <Select
-              value={moneyPointId}
-              onValueChange={(v) => v && setMoneyPointId(v)}
-              items={points.map((p) => ({ value: p.id, label: p.name }))}
-            >
-              <SelectTrigger id="moneyPoint">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {points.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {operatorPoints.length > 1 && (
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="moneyPoint">{t.operatorApp.workTime.pointLabel}</Label>
+              <Select
+                value={moneyPointId}
+                onValueChange={(v) => v && setMoneyPointId(v)}
+                items={operatorPoints.map((p) => ({ value: p.id, label: p.name }))}
+              >
+                <SelectTrigger id="moneyPoint">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {operatorPoints.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           {moneyError && <p className="text-sm text-destructive">{moneyError}</p>}
           <PressableScale>
             <Button className="w-full" onClick={submitMoneyForm}>
