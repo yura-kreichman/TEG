@@ -30,12 +30,17 @@ interface NavItemConfig {
 const BAR_SLOTS = 4;
 
 const PRIORITY_ITEMS: NavItemConfig[] = [
+  // "/" не может быть startsWith (это дало бы true для абсолютно любого пути) —
+  // единственный пункт с точным совпадением. У остальных есть под-страницы
+  // (/money/readings, /reports/[pointId], /operators/[id], /points/[id]),
+  // поэтому startsWith — иначе активная подсветка пропадает на них, как и
+  // пропадала для "Отчёты" (найдено 2026-07-11).
   { id: "home", href: "/", icon: Home, label: (t) => t.nav.home, priority: 1, match: (p) => p === "/" },
-  { id: "money", href: "/money", icon: Wallet, label: (t) => t.nav.money, priority: 2, match: (p) => p === "/money" },
-  { id: "reports", href: "/reports", icon: BarChart3, label: (t) => t.nav.reports, priority: 3, match: (p) => p === "/reports" },
-  { id: "operators", href: "/operators", icon: Users, label: (t) => t.nav.operators, priority: 4, match: (p) => p === "/operators" },
+  { id: "money", href: "/money", icon: Wallet, label: (t) => t.nav.money, priority: 2, match: (p) => p.startsWith("/money") },
+  { id: "reports", href: "/reports", icon: BarChart3, label: (t) => t.nav.reports, priority: 3, match: (p) => p.startsWith("/reports") },
+  { id: "operators", href: "/operators", icon: Users, label: (t) => t.nav.operators, priority: 4, match: (p) => p.startsWith("/operators") },
   { id: "tasks", href: "/tasks", icon: ListChecks, label: (t) => t.nav.tasks, priority: 5, match: (p) => p.startsWith("/tasks") },
-  { id: "points", href: "/points", icon: MapPin, label: (t) => t.nav.points, priority: 6, match: (p) => p === "/points" },
+  { id: "points", href: "/points", icon: MapPin, label: (t) => t.nav.points, priority: 6, match: (p) => p.startsWith("/points") },
 ];
 
 // "Настройки" никогда не конкурирует за слот бара — всегда в "Ещё"
