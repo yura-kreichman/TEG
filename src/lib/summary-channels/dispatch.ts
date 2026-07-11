@@ -12,11 +12,14 @@ import {
   formatZoneSummaryTelegram,
 } from "./telegram-format";
 import type { DailyCashSummaryData, ShiftCloseSummaryData, ZoneSummaryData } from "./types";
-import type {
-  DailyCashSummarySettingsData,
-  ShiftCloseSummarySettingsData,
-  ZoneSummarySettingsData,
+import {
+  PUSH_NOTIFICATION_DEFAULTS,
+  type DailyCashSummarySettingsData,
+  type PushNotificationSettingsData,
+  type ShiftCloseSummarySettingsData,
+  type ZoneSummarySettingsData,
 } from "@/lib/summary-settings";
+import { sendPushToTenant } from "@/lib/push-notifications";
 
 // Оркестратор доставки — единственное место, где "структурированные данные +
 // настройки" превращаются в реальные отправки по включённым каналам тенанта
@@ -38,6 +41,19 @@ async function getEnabledChannels(tenantId: string) {
   return prisma.tenantSummaryChannel.findMany({
     where: { tenantId, pointId: null, enabled: true },
   });
+}
+
+// Push — не отдельная запись в TenantSummaryChannel (та таблица рассчитана
+// на ровно один chatId/список адресов на канал, а Push-подписок у тенанта
+// может быть много — по одной на устройство владельца, см. push-notifications.ts).
+// Дублируется коротким уведомлением независимо от того, настроен ли вообще
+// Telegram/email — единственное условие, которое здесь проверяется, это
+// PushNotificationSettings.<type>; сам dispatch вызывается только когда
+// settings.enabled для этого типа сводки уже true (см. вызовы в
+// submit-results/work-time-shifts/check-out), повторно это здесь не проверяем.
+async function pushEnabledFor(tenantId: string, key: keyof PushNotificationSettingsData): Promise<boolean> {
+  const settings = await prisma.pushNotificationSettings.findUnique({ where: { tenantId } });
+  return settings ? settings[key] : PUSH_NOTIFICATION_DEFAULTS[key];
 }
 
 // Отправка не бросает исключений на "чат не найден"/SMTP-ошибку — это
@@ -74,6 +90,15 @@ export async function dispatchZoneSummary(
     }
   }
 
+  if (await pushEnabledFor(tenantId, "zoneSummary")) {
+    const sign = data.difference > 0 ? "+" : "";
+    await sendPushToTenant(tenantId, {
+      title: `${data.zoneEmoji ?? "🏁"} ${data.zoneName}`,
+      body: `Касса: ${data.cashAmount.toFixed(2)} · Разн.: ${sign}${data.difference.toFixed(2)}`,
+      url: "/reports",
+    }).catch((err) => console.error("push dispatch failed", { kind: "zone", tenantId, err }));
+  }
+
   logFailures("zone", tenantId, results);
   return results;
 }
@@ -99,6 +124,14 @@ export async function dispatchShiftCloseSummary(
       const result = await sendEmail(addresses, subject, html);
       results.push({ channelType: "email", ok: result.ok, error: result.error });
     }
+  }
+
+  if (await pushEnabledFor(tenantId, "shiftCloseSummary")) {
+    await sendPushToTenant(tenantId, {
+      title: `${data.operatorName} · смена закрыта`,
+      body: `Баланс: ${data.toPayOut.toFixed(2)}`,
+      url: "/operators",
+    }).catch((err) => console.error("push dispatch failed", { kind: "shiftClose", tenantId, err }));
   }
 
   logFailures("shiftClose", tenantId, results);
@@ -140,6 +173,20 @@ export async function dispatchDailyCashSummary(
       const result = await sendEmail(addresses, subject, html);
       results.push({ channelType: "email", ok: result.ok, error: result.error });
     }
+  }
+
+  // Досдача редактирует уже отправленное сообщение (см. комментарий к
+  // функции) — push на каждое такое обновление превратился бы в спам
+  // уведомлениями на телефоне владельца, поэтому шлём только на самую
+  // первую отправку за business-day, не на editMessageText-обновления.
+  const isUpdate = !!existingMessageIds.telegram || !!existingMessageIds.email;
+  if (!isUpdate && (await pushEnabledFor(tenantId, "dailyCashSummary"))) {
+    const total = data.cashAmount + data.mobileAmount - data.expenses;
+    await sendPushToTenant(tenantId, {
+      title: `Касса за день · ${data.pointName}`,
+      body: `Итог: ${total.toFixed(2)}`,
+      url: "/money",
+    }).catch((err) => console.error("push dispatch failed", { kind: "dailyCash", tenantId, err }));
   }
 
   logFailures("dailyCash", tenantId, results);
