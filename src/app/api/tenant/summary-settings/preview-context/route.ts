@@ -20,7 +20,7 @@ export async function GET() {
     orderBy: { createdAt: "asc" },
     include: {
       point: true,
-      tariffs: { orderBy: { order: "asc" } },
+      tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" } },
       assets: { orderBy: { sortOrder: "asc" } },
     },
   });

@@ -14,13 +14,21 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
   }
 
-  const existingTariffs = await prisma.tariff.count({ where: { zoneId } });
-  if (existingTariffs >= 2) {
+  const activeTariffs = await prisma.tariff.findMany({
+    where: { zoneId, deletedAt: null },
+    select: { order: true },
+  });
+  if (activeTariffs.length >= 2) {
     return NextResponse.json(
       { error: "У зоны уже максимум 2 тарифа" },
       { status: 409 }
     );
   }
+  // @@unique([zoneId, order]) — после soft-delete тарифа с order=1 может
+  // остаться активный только с order=2, тогда новому нужен именно order=1,
+  // не "count+1" (это дало бы конфликт с уже занятым order=2).
+  const usedOrders = new Set(activeTariffs.map((t) => t.order));
+  const order = usedOrders.has(1) ? 2 : 1;
 
   const { name, price } = await request.json();
   if (typeof name !== "string" || name.trim().length === 0) {
@@ -36,7 +44,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
       zoneId,
       name: name.trim(),
       price: priceNumber,
-      order: existingTariffs + 1,
+      order,
     },
   });
 

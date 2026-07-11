@@ -366,10 +366,22 @@ model Tariff {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  // Soft-delete (docs/spec/01-counters.md): удаление тарифа не должно ломать
+  // Отчёты по прошлым сдачам — AssetReading.tariffId ссылается на этот тариф
+  // (без onDelete: Cascade/SetNull), поэтому строка остаётся в БД, просто
+  // помечается deletedAt и скрывается из владельческого UI/визарда оператора/
+  // лимита "до 2 тарифов". Отчёты (src/lib/reports.ts и др.) читают тарифы
+  // БЕЗ фильтра по deletedAt — им нужны и удалённые, чтобы посчитать выручку
+  // прошлых периодов.
+  deletedAt DateTime?
 
   assetReadings AssetReading[]
 
-  @@unique([zoneId, order])
+  // Не @@unique — уникальность (zoneId, order) нужна только среди активных
+  // тарифов (иначе освободившийся после soft-delete слот нельзя было бы
+  // переиспользовать, см. миграцию 20260711184500_tariff_order_partial_unique,
+  // которая заменяет это на partial unique index WHERE "deletedAt" IS NULL).
+  @@index([zoneId, order])
 }
 
 model Asset {

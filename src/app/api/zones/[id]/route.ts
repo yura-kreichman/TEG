@@ -16,7 +16,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
   }
 
   const [tariffs, assets] = await Promise.all([
-    prisma.tariff.findMany({ where: { zoneId: id }, orderBy: { order: "asc" } }),
+    prisma.tariff.findMany({ where: { zoneId: id, deletedAt: null }, orderBy: { order: "asc" } }),
     prisma.asset.findMany({ where: { zoneId: id }, orderBy: { sortOrder: "asc" } }),
   ]);
 

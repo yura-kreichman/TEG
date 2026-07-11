@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   const zoneIds = zoneSubmissions.map((z) => z.zoneId);
   const zones = await prisma.zone.findMany({
     where: { id: { in: zoneIds }, pointId: point.id },
-    include: { tariffs: true, assets: { orderBy: { sortOrder: "asc" } } },
+    include: { tariffs: { where: { deletedAt: null } }, assets: { orderBy: { sortOrder: "asc" } } },
   });
   const zoneById = new Map(zones.map((z) => [z.id, z]));
 

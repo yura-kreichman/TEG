@@ -77,6 +77,7 @@ export default function ZoneDetailPage() {
   const [editTariffName, setEditTariffName] = useState("");
   const [editTariffPrice, setEditTariffPrice] = useState("");
   const [editTariffError, setEditTariffError] = useState<string | null>(null);
+  const [deleteTariffError, setDeleteTariffError] = useState<string | null>(null);
 
   const [createAssetOpen, setCreateAssetOpen] = useState(false);
   const [assetName, setAssetName] = useState("");
@@ -201,6 +202,7 @@ export default function ZoneDetailPage() {
     setEditTariffName(tariff.name);
     setEditTariffPrice(tariff.price);
     setEditTariffError(null);
+    setDeleteTariffError(null);
   }
 
   async function confirmEditTariff() {
@@ -222,7 +224,13 @@ export default function ZoneDetailPage() {
 
   async function confirmDeleteTariff() {
     if (!tariffKebab) return;
-    await fetch(`/api/tariffs/${tariffKebab.id}`, { method: "DELETE" });
+    setDeleteTariffError(null);
+    const res = await fetch(`/api/tariffs/${tariffKebab.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setDeleteTariffError(data.error ?? "Не удалось удалить тариф");
+      return;
+    }
     setTariffKebab(null);
     await loadZone();
   }
@@ -674,6 +682,7 @@ export default function ZoneDetailPage() {
           <div className="flex flex-col gap-3 pt-2">
             <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.deleteTariffAction}</h2>
             <p className="text-body-airbnb">{t.zoneDetail.confirmDeleteTariff}</p>
+            {deleteTariffError && <p className="text-sm text-destructive">{deleteTariffError}</p>}
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setTariffKebabView("menu")}>
                 {t.common.cancel}

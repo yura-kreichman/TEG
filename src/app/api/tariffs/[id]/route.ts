@@ -59,6 +59,10 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/tariffs/
     return NextResponse.json({ error: "Тариф не найден" }, { status: 404 });
   }
 
-  await prisma.tariff.delete({ where: { id } });
+  // Soft-delete — AssetReading.tariffId ссылается на этот тариф без cascade,
+  // жёсткое удаление сломало бы FK-constraint для зон с историей сдач (и
+  // молча падало 500, фронт эту ошибку не проверял). Отчёты по-прежнему
+  // корректны — они читают тарифы зоны без фильтра deletedAt.
+  await prisma.tariff.update({ where: { id }, data: { deletedAt: new Date() } });
   return NextResponse.json({ ok: true });
 }

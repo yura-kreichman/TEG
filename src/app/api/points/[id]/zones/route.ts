@@ -18,7 +18,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]
 
   const zones = await prisma.zone.findMany({
     where: { pointId },
-    include: { tariffs: { orderBy: { order: "asc" } }, assets: { orderBy: { sortOrder: "asc" } } },
+    include: { tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" } }, assets: { orderBy: { sortOrder: "asc" } } },
     orderBy: { createdAt: "asc" },
   });
 
