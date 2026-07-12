@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { CalendarDays, ChevronRight, ImagePlus, KeyRound, LogOut, Pencil } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,9 +30,15 @@ function formatRelativeDay(dateStr: string, isToday: boolean, t: Dictionary): st
 
 export function WelcomeCard() {
   const t = useI18n();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setMounted(true), []);
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-surface-0 px-4">
+    <div className="relative flex flex-1 flex-col items-center justify-center gap-4 bg-surface-0 px-4 pb-16">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/icon-library/pwa/RentOS-icon.svg" alt="" className="size-16" />
       <div className="w-full max-w-sm">
         <SpringCard>
           <StaggerList className="flex flex-col gap-4">
@@ -57,6 +64,18 @@ export function WelcomeCard() {
           </StaggerList>
         </SpringCard>
       </div>
+      {mounted && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={
+            resolvedTheme === "dark"
+              ? "/icon-library/pwa/RentOS365-dark.svg"
+              : "/icon-library/pwa/RentOS365-light.svg"
+          }
+          alt="RentOS365"
+          className="absolute bottom-4 h-6 w-auto"
+        />
+      )}
     </div>
   );
 }
