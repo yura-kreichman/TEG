@@ -384,9 +384,24 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* App-like feel, not a web page (фидбек 2026-07-12): без этого долгий тап
+       на PWA открывает системное выделение текста + меню "Найти в Google"/
+       "Копировать", что выглядит как баг веб-страницы, а не приложения.
+       Инпуты/textarea/contenteditable ниже явно возвращают выделение —
+       иначе их нельзя редактировать нормально. */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
   html {
     @apply font-sans;
+  }
+  input,
+  textarea,
+  [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
   }
 }
 

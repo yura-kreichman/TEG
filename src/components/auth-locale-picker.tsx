@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
-
-const LOCALES = ["ru", "en", "ro", "uk"] as const;
-const LABELS: Record<string, string> = { ru: "RU", en: "EN", ro: "RO", uk: "UA" };
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { ALL_LOCALES, LOCALE_NAMES, type Locale } from "@/lib/locales";
 
 /**
  * Pre-auth language switch for the login/register/etc. screen group — no
@@ -13,6 +11,10 @@ const LABELS: Record<string, string> = { ru: "RU", en: "EN", ro: "RO", uk: "UA" 
  * this lets the visitor override it. Reads the active locale from <html lang>
  * (set server-side by RootLayout) rather than a new context, since useI18n()
  * only exposes the dictionary.
+ *
+ * A Select dropdown, not the old 4-pill row (2026-07-12) — with 14 languages
+ * a row of pills no longer fits a phone screen; same component LocalePicker
+ * already uses in Settings, for consistency.
  *
  * Uses a full page reload, not router.refresh() — found 2026-07-10 that
  * router.refresh() wasn't reliably re-running the root layout (which resolves
@@ -29,8 +31,8 @@ export function AuthLocalePicker() {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  async function select(locale: string) {
-    if (locale === current || saving) return;
+  async function select(locale: string | null) {
+    if (!locale || locale === current || saving) return;
     setSaving(true);
     await fetch("/api/locale", {
       method: "POST",
@@ -41,23 +43,17 @@ export function AuthLocalePicker() {
   }
 
   return (
-    <div className="flex justify-center gap-1.5">
-      {LOCALES.map((locale) => (
-        <button
-          key={locale}
-          type="button"
-          onClick={() => select(locale)}
-          disabled={saving}
-          className={cn(
-            "rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors",
-            locale === current
-              ? "border-primary bg-primary/10 text-primary"
-              : "border-border text-muted-foreground hover:bg-muted"
-          )}
-        >
-          {LABELS[locale]}
-        </button>
-      ))}
-    </div>
+    <Select value={current} onValueChange={select} disabled={saving}>
+      <SelectTrigger className="h-9 w-auto min-w-32 px-3 text-sm">
+        <SelectValue>{LOCALE_NAMES[current as Locale] ?? current}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {ALL_LOCALES.map((locale) => (
+          <SelectItem key={locale} value={locale}>
+            {LOCALE_NAMES[locale]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

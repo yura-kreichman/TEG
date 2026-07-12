@@ -2,10 +2,24 @@ import ru from "@lang/ru.json";
 import en from "@lang/en.json";
 import ro from "@lang/ro.json";
 import uk from "@lang/uk.json";
+import uz from "@lang/uz.json";
+import kk from "@lang/kk.json";
+import tg from "@lang/tg.json";
+import ky from "@lang/ky.json";
+import be from "@lang/be.json";
+import hy from "@lang/hy.json";
+import az from "@lang/az.json";
+import ka from "@lang/ka.json";
+import tr from "@lang/tr.json";
+import pl from "@lang/pl.json";
 import { cookies, headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getSessionUserId } from "@/lib/auth";
 import { getActivatedPoint, getOperatorSessionId } from "@/lib/operator-auth";
+import { type Locale, isLocale } from "@/lib/locales";
+
+export type { Locale };
+export { isLocale, LOCALE_NAMES, ALL_LOCALES } from "@/lib/locales";
 
 // Все строки UI — только из /lang/*.json, в коде — ключи (docs/spec/00-architecture.md).
 // ru.json — базовый язык разработки; остальные словари должны иметь тот же
@@ -13,13 +27,8 @@ import { getActivatedPoint, getOperatorSessionId } from "@/lib/operator-auth";
 // отдельного скрипта сверки ключей — если один словарь отстанет, tsc это не
 // поймает, только ручной аудит).
 export type Dictionary = typeof ru;
-export type Locale = "ru" | "en" | "ro" | "uk";
 
-const dictionaries: Record<Locale, Dictionary> = { ru, en, ro, uk };
-
-export function isLocale(value: string): value is Locale {
-  return value === "ru" || value === "en" || value === "ro" || value === "uk";
-}
+const dictionaries: Record<Locale, Dictionary> = { ru, en, uk, uz, kk, ro, tg, ky, be, hy, az, ka, tr, pl };
 
 export function getDictionary(locale: string): Dictionary {
   return isLocale(locale) ? dictionaries[locale] : dictionaries.ru;

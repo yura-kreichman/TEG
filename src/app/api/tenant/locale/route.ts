@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { isLocale } from "@/lib/i18n";
-
-const LOCALE_OPTIONS = ["ru", "en", "ro", "uk"] as const;
+import { isLocale, ALL_LOCALES } from "@/lib/i18n";
 
 export async function GET() {
   const owner = await requireOwner();
@@ -16,7 +14,7 @@ export async function GET() {
     select: { locale: true },
   });
 
-  return NextResponse.json({ locale: tenant?.locale ?? "ru", options: LOCALE_OPTIONS });
+  return NextResponse.json({ locale: tenant?.locale ?? "ru", options: ALL_LOCALES });
 }
 
 export async function POST(request: Request) {

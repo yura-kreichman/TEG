@@ -2,13 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-
-const LABELS: Record<string, string> = {
-  ru: "Русский",
-  en: "English",
-  ro: "Română",
-  uk: "Українська",
-};
+import { LOCALE_NAMES } from "@/lib/locales";
 
 /**
  * Tenant-wide default language — set only by the Owner (docs/spec/00-architecture.md).
@@ -47,12 +41,12 @@ export function LocalePicker() {
   return (
     <Select value={current} onValueChange={handleSelect} disabled={saving}>
       <SelectTrigger className="max-w-xs">
-        <SelectValue>{LABELS[current] ?? current}</SelectValue>
+        <SelectValue>{LOCALE_NAMES[current as keyof typeof LOCALE_NAMES] ?? current}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         {options.map((locale) => (
           <SelectItem key={locale} value={locale}>
-            {LABELS[locale] ?? locale}
+            {LOCALE_NAMES[locale as keyof typeof LOCALE_NAMES] ?? locale}
           </SelectItem>
         ))}
       </SelectContent>
