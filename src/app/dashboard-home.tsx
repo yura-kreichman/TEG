@@ -54,7 +54,7 @@ export function WelcomeCard() {
           }}
           initial={{ x: "-130%" }}
           animate={{ x: "130%" }}
-          transition={{ duration: 1.8, ease: "easeInOut", repeat: Infinity, repeatDelay: 2.6 }}
+          transition={{ duration: 1.8, ease: "easeInOut", repeat: Infinity, repeatDelay: 5.2 }}
         />
       </div>
       <div className="w-full max-w-sm">
