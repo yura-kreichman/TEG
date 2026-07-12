@@ -4,6 +4,7 @@ import "./globals.css";
 import InstallAppBanner from "./install-app-banner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeColorMeta } from "@/components/theme-color-meta";
+import { DisableContextMenu } from "@/components/disable-context-menu";
 import { I18nProvider } from "@/components/i18n-provider";
 import { getAccentCookie } from "@/lib/accent";
 import { getDictionary, resolveLocale } from "@/lib/i18n";
@@ -74,6 +75,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <DisableContextMenu />
         <I18nProvider dict={dict}>
           <ThemeProvider
             attribute="class"
