@@ -497,6 +497,20 @@
 .prose-instruction li {
   margin: 0.15em 0;
 }
+.prose-instruction blockquote {
+  margin: 0 0 0.6em;
+  padding: 0.2em 0 0.2em 0.9em;
+  border-left: 3px solid var(--border);
+  color: var(--muted-foreground);
+}
+.prose-instruction blockquote p {
+  margin-bottom: 0.3em;
+}
+.prose-instruction hr {
+  margin: 1em 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
 .prose-instruction h1:first-child,
 .prose-instruction h2:first-child,
 .prose-instruction p:first-child {

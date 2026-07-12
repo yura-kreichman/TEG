@@ -19,6 +19,8 @@ export const ALLOWED_CHILD_NODE_TYPES = new Set([
   "orderedList",
   "listItem",
   "hardBreak",
+  "blockquote",
+  "horizontalRule",
 ]);
 
 export const ALLOWED_MARK_TYPES = new Set(["bold", "italic", "underline"]);

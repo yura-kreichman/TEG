@@ -26,6 +26,11 @@ COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build /app/next.config.ts ./next.config.ts
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/src/generated ./src/generated
+# pdfkit не умеет грузить шрифты из webpack-бандла — читает TTF с диска по
+# рантайм-пути process.cwd()/src/lib/instructions/fonts (см. pdf.ts), поэтому
+# эту папку нужно скопировать явно, в отличие от остального src/, который
+# рантайму не нужен (уже скомпилирован в .next).
+COPY --from=build /app/src/lib/instructions/fonts ./src/lib/instructions/fonts
 RUN mkdir -p /app/public/uploads && chown -R rentos:rentos /app/public/uploads
 USER rentos
 EXPOSE 3000

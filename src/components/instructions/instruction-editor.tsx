@@ -2,29 +2,29 @@
 
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { Bold, Italic, List, ListOrdered, Underline as UnderlineIcon } from "lucide-react";
+import { Bold, Italic, List, ListOrdered, Minus, Quote, Underline as UnderlineIcon } from "lucide-react";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
 import type { PMNode } from "@/lib/instructions/content";
 
 // Редактор инструкций (docs/spec/07-instructions.md) — набор форматирования
-// НАМЕРЕННО ограничен: H1, H2, жирный, курсив, подчёркнутый, списки. StarterKit
-// по умолчанию включает blockquote/code/codeBlock/horizontalRule/strike/link
-// (И underline — в Tiptap v3, в отличие от v2, он уже встроен в StarterKit,
-// отдельный @tiptap/extension-underline не нужен и даёт варнинг "Duplicate
-// extension names" при совместной регистрации, найдено визуальной проверкой
-// Шага 4) — всё лишнее явно выключено ниже, иначе редактор мог бы произвести
-// JSON, который сервер (src/lib/instructions/content.ts, тот же белый
-// список) молча отклонит при сохранении — лучше не давать создать такой
-// контент вовсе, чем ловить ошибку постфактум.
+// НАМЕРЕННО ограничен: H1, H2, жирный, курсив, подчёркнутый, списки, цитата,
+// разделительная линия. StarterKit по умолчанию включает ещё code/codeBlock/
+// strike/link (И underline — в Tiptap v3, в отличие от v2, он уже встроен в
+// StarterKit, отдельный @tiptap/extension-underline не нужен и даёт варнинг
+// "Duplicate extension names" при совместной регистрации, найдено визуальной
+// проверкой Шага 4) — всё лишнее явно выключено ниже, иначе редактор мог бы
+// произвести JSON, который сервер (src/lib/instructions/content.ts, тот же
+// белый список) молча отклонит при сохранении — лучше не давать создать такой
+// контент вовсе, чем ловить ошибку постфактум. blockquote/horizontalRule
+// добавлены решением пользователя 2026-07-12 — оба уже есть в StarterKit
+// "бесплатно", ни одной новой npm-зависимости.
 const EXTENSIONS = [
   StarterKit.configure({
     heading: { levels: [1, 2] },
-    blockquote: false,
     code: false,
     codeBlock: false,
-    horizontalRule: false,
     strike: false,
     link: false,
   }),
@@ -104,6 +104,17 @@ function Toolbar({ editor }: { editor: Editor }) {
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
       >
         <ListOrdered className="size-4" />
+      </ToolbarButton>
+      <div className="mx-1 h-5 w-px bg-border" />
+      <ToolbarButton
+        label="Цитата"
+        active={editor.isActive("blockquote")}
+        onClick={() => editor.chain().focus().toggleBlockquote().run()}
+      >
+        <Quote className="size-4" />
+      </ToolbarButton>
+      <ToolbarButton label="Разделительная линия" active={false} onClick={() => editor.chain().focus().setHorizontalRule().run()}>
+        <Minus className="size-4" />
       </ToolbarButton>
     </div>
   );
