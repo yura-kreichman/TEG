@@ -296,7 +296,7 @@ export default function OperatorHomePage() {
           <h1 className="text-screen-title">
             {t.operatorApp.greeting} {operatorName}
           </h1>
-          {roaming ? (
+          {roaming && points.length > 1 ? (
             <div className="flex w-full items-center gap-2 text-left">
               <p className="shrink-0 text-body-airbnb text-muted-foreground">{t.operatorApp.pointLabel}</p>
               <div className="min-w-0 flex-1">

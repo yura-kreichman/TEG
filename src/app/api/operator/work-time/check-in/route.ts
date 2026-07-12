@@ -29,11 +29,17 @@ export async function POST() {
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: point.tenantId },
-    select: { defaultShiftStartTime: true, earlyToleranceMinutes: true, lateToleranceMinutes: true },
+    select: { defaultShiftStartTime: true, earlyToleranceMinutes: true, lateToleranceMinutes: true, timezone: true },
   });
   if (
     tenant &&
-    !isWithinShiftStartWindow(tenant.defaultShiftStartTime, tenant.earlyToleranceMinutes, tenant.lateToleranceMinutes, startAt)
+    !isWithinShiftStartWindow(
+      tenant.defaultShiftStartTime,
+      tenant.earlyToleranceMinutes,
+      tenant.lateToleranceMinutes,
+      startAt,
+      tenant.timezone
+    )
   ) {
     const window = formatShiftStartWindow(
       tenant.defaultShiftStartTime,

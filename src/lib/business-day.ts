@@ -40,11 +40,47 @@ export function isAtTimeMinute(timeStr: string, at: Date): boolean {
   return at.getUTCHours() === hours && at.getUTCMinutes() === minutes;
 }
 
+// Часы/минуты момента `at` в часовом поясе тенанта (Tenant.timezone,
+// заполняется при регистрации по браузеру — см. /api/tenant/timezone) —
+// без стороннего пакета, Intl.DateTimeFormat с timeZone умеет это сам.
+// Невалидная/пустая таймзона (не должно случаться, но defensively) —
+// откатываемся к UTC, прежнему поведению.
+function localMinutesOfDay(at: Date, timezone: string): number {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(at);
+    const hour = Number(parts.find((p) => p.type === "hour")?.value ?? at.getUTCHours());
+    const minute = Number(parts.find((p) => p.type === "minute")?.value ?? at.getUTCMinutes());
+    return hour * 60 + minute;
+  } catch {
+    return at.getUTCHours() * 60 + at.getUTCMinutes();
+  }
+}
+
 // Допуск начала смены (docs/spec/05-work-time.md, "РЕЖИМ УЧЁТА ВРЕМЕНИ") —
 // попадает ли момент `at` в окно [centerTime−earlyMinutes; centerTime+lateMinutes]
 // с учётом переноса через полночь (окно может начинаться накануне, если
 // centerTime близко к 00:00). Если суммарная ширина окна покрывает целые
 // сутки — ограничения фактически нет, разрешаем всегда.
+//
+// РЕАЛЬНЫЙ БАГ, найден 2026-07-12 (фидбек пользователя, скриншот: "смену
+// можно начать с 09:00 до 16:00", часы показывают 09:15, check-in всё равно
+// отклонён) — раньше здесь брались at.getUTCHours()/getUTCMinutes()
+// напрямую, а defaultShiftStartTime вводится Владельцем в часовом поясе
+// тенанта (Tenant.timezone), не в UTC. Для тенанта восточнее UTC (например,
+// Молдова/Румыния, UTC+2/+3) реальные 09:15 по месту — это 06:15-07:15 UTC,
+// что мимо окна "09:00±допуск" при сравнении в сырых UTC-минутах. Теперь
+// сравнение идёт в локальных минутах тенанта (localMinutesOfDay выше).
+//
+// Тот же класс бага, вероятно, есть и в getBusinessDayBounds/isAtBoundaryMinute/
+// isAtTimeMinute (используются в summary-scheduler.ts/daily-cash-trigger.ts
+// для планирования "Кассы за день") — сознательно НЕ трогаем их в этом
+// фиксе (кассовые триггеры — более широкий и рискованный кусок логики,
+// заслуживает отдельного внимания, не патча в 3 часа ночи).
 /** "HH:MM" границ окна допуска, только для отображения (сообщение об ошибке check-in). */
 export function formatShiftStartWindow(
   centerTime: string,
@@ -86,12 +122,13 @@ export function isWithinShiftStartWindow(
   centerTime: string,
   earlyMinutes: number,
   lateMinutes: number,
-  at: Date
+  at: Date,
+  timezone: string
 ): boolean {
   if (earlyMinutes + lateMinutes >= 24 * 60) return true;
   const { hours, minutes } = parseBoundary(centerTime);
   const centerMin = hours * 60 + minutes;
-  const nowMin = at.getUTCHours() * 60 + at.getUTCMinutes();
+  const nowMin = localMinutesOfDay(at, timezone);
   const lower = (((centerMin - earlyMinutes) % 1440) + 1440) % 1440;
   const upper = (((centerMin + lateMinutes) % 1440) + 1440) % 1440;
   return lower <= upper ? nowMin >= lower && nowMin <= upper : nowMin >= lower || nowMin <= upper;
