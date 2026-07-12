@@ -22,7 +22,11 @@ export async function GET(request: Request) {
   const monthEnd = new Date(Date.UTC(year, month, 1));
 
   const operations = await prisma.moneyOperation.findMany({
-    where: { tenantId: owner.tenantId, type: "revenue", occurredAt: { gte: monthStart, lt: monthEnd } },
+    where: {
+      tenantId: owner.tenantId,
+      type: { in: ["revenue", "revenue_cashless"] },
+      occurredAt: { gte: monthStart, lt: monthEnd },
+    },
     select: { amount: true, occurredAt: true },
   });
 

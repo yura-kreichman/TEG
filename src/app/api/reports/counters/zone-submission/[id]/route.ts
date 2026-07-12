@@ -132,6 +132,33 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/co
       await tx.moneyOperation.delete({ where: { id: revenueOp.id } });
     }
 
+    // Безнал — та же логика, отдельный тип revenue_cashless (см. submit-results/route.ts).
+    const revenueCashlessOp = await tx.moneyOperation.findFirst({
+      where: {
+        resultsSubmissionId: zoneSubmission.resultsSubmissionId,
+        zoneId: zoneSubmission.zoneId,
+        type: "revenue_cashless",
+      },
+    });
+    if (nextMobile > 0) {
+      if (revenueCashlessOp) {
+        await tx.moneyOperation.update({ where: { id: revenueCashlessOp.id }, data: { amount: nextMobile } });
+      } else {
+        await tx.moneyOperation.create({
+          data: {
+            tenantId: owner.tenantId,
+            zoneId: zoneSubmission.zoneId,
+            type: "revenue_cashless",
+            amount: nextMobile,
+            performedByUserId: owner.user.id,
+            resultsSubmissionId: zoneSubmission.resultsSubmissionId,
+          },
+        });
+      }
+    } else if (revenueCashlessOp) {
+      await tx.moneyOperation.delete({ where: { id: revenueCashlessOp.id } });
+    }
+
     const changed = JSON.stringify(before) !== JSON.stringify(after);
     if (changed) {
       await tx.correctionLog.create({

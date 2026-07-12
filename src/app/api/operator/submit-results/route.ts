@@ -189,6 +189,24 @@ export async function POST(request: Request) {
           },
         });
       }
+      // Безнал — тоже выручка, "учётно, без наличного остатка" (docs/spec/02-money.md) —
+      // отдельный тип, а не "revenue", чтобы отчёты Денег могли посчитать его
+      // в "Выручка"/"Прибыль" бизнеса, но НЕ добавлять в остаток физической
+      // кассы зоны ("сколько наличных должно быть на точке" — только про
+      // реальные бумажные деньги). Найдено аудитом 2026-07-12: раньше безнал
+      // нигде не журналировался, "Выручка" в Деньгах занижалась на его сумму.
+      if (zs.mobileAmount > 0) {
+        await tx.moneyOperation.create({
+          data: {
+            tenantId: point.tenantId,
+            zoneId: zs.zoneId,
+            type: "revenue_cashless",
+            amount: zs.mobileAmount,
+            performedByOperatorId: operator.id,
+            resultsSubmissionId: created.id,
+          },
+        });
+      }
     }
 
     return created;

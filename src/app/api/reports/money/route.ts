@@ -64,15 +64,23 @@ export async function GET(request: Request) {
 
   for (const op of operations) {
     const amount = Number(op.amount);
-    // Остаток — текущее состояние кассы, весь журнал, без периода.
-    if (op.zoneId) {
-      balanceByZone.set(op.zoneId, (balanceByZone.get(op.zoneId) ?? 0) + amount);
-    } else if (op.pointId) {
-      balanceByPoint.set(op.pointId, (balanceByPoint.get(op.pointId) ?? 0) + amount);
+    // Остаток — текущее состояние физической кассы (сколько наличных должно
+    // быть), весь журнал, без периода. revenue_cashless сюда не входит —
+    // безнал не лежит в кассе физически (docs/spec/02-money.md, "учётно,
+    // без наличного остатка").
+    if (op.type !== "revenue_cashless") {
+      if (op.zoneId) {
+        balanceByZone.set(op.zoneId, (balanceByZone.get(op.zoneId) ?? 0) + amount);
+      } else if (op.pointId) {
+        balanceByPoint.set(op.pointId, (balanceByPoint.get(op.pointId) ?? 0) + amount);
+      }
     }
 
     if (op.occurredAt < start || op.occurredAt >= end) continue;
-    if (op.type === "revenue") totalRevenue += amount;
+    // "Выручка" бизнес-карточки — наличная И безналичная (найдено аудитом
+    // 2026-07-12: раньше безнал не журналировался вовсе, выручка занижалась
+    // на его сумму).
+    if (op.type === "revenue" || op.type === "revenue_cashless") totalRevenue += amount;
     // Расходы бизнес-карточки: обычные expense + аванс/премия модуля Рабочее
     // время (docs/spec/05-work-time.md) — оба уменьшают кассу, оба реальные
     // траты бизнеса на персонал.
