@@ -467,7 +467,9 @@
     "limitOperators": "Operatori",
     "limitZones": "Zone",
     "limitAssets": "Active",
-    "manageSubscriptionLink": "Gestionează abonamentul"
+    "manageSubscriptionLink": "Gestionează abonamentul",
+    "subscriptionBlockedBanner": "Abonamentul este inactiv — acces doar în citire.",
+    "subscriptionBlockedBannerAction": "Plătește"
   },
   "auth": {
     "loginTitle": "Autentificare",

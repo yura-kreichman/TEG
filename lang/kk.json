@@ -467,7 +467,9 @@
     "limitOperators": "Операторлар",
     "limitZones": "Аймақтар",
     "limitAssets": "Активтер",
-    "manageSubscriptionLink": "Жазылымды басқару"
+    "manageSubscriptionLink": "Жазылымды басқару",
+    "subscriptionBlockedBanner": "Жазылым белсенді емес — тек оқу үшін қолжетімділік.",
+    "subscriptionBlockedBannerAction": "Төлеу"
   },
   "auth": {
     "loginTitle": "Кіру",

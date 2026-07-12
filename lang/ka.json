@@ -467,7 +467,9 @@
     "limitOperators": "ოპერატორები",
     "limitZones": "ზონები",
     "limitAssets": "აქტივები",
-    "manageSubscriptionLink": "გამოწერის მართვა"
+    "manageSubscriptionLink": "გამოწერის მართვა",
+    "subscriptionBlockedBanner": "გამოწერა არააქტიურია — მხოლოდ წაკითხვის წვდომა.",
+    "subscriptionBlockedBannerAction": "გადახდა"
   },
   "auth": {
     "loginTitle": "შესვლა",

@@ -467,7 +467,9 @@
     "limitOperators": "Операторҳо",
     "limitZones": "Минтақаҳо",
     "limitAssets": "Активҳо",
-    "manageSubscriptionLink": "Идоракунии обуна"
+    "manageSubscriptionLink": "Идоракунии обуна",
+    "subscriptionBlockedBanner": "Обуна фаъол нест — дастрасӣ танҳо барои хондан.",
+    "subscriptionBlockedBannerAction": "Пардохт"
   },
   "auth": {
     "loginTitle": "Воридшавӣ",

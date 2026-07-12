@@ -467,7 +467,9 @@
     "limitOperators": "Operators",
     "limitZones": "Zones",
     "limitAssets": "Assets",
-    "manageSubscriptionLink": "Manage subscription"
+    "manageSubscriptionLink": "Manage subscription",
+    "subscriptionBlockedBanner": "Subscription inactive — read-only access.",
+    "subscriptionBlockedBannerAction": "Pay now"
   },
   "auth": {
     "loginTitle": "Sign in",

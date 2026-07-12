@@ -467,7 +467,9 @@
     "limitOperators": "Operatörler",
     "limitZones": "Bölgeler",
     "limitAssets": "Varlıklar",
-    "manageSubscriptionLink": "Aboneliği yönet"
+    "manageSubscriptionLink": "Aboneliği yönet",
+    "subscriptionBlockedBanner": "Abonelik aktif değil — yalnızca okuma erişimi.",
+    "subscriptionBlockedBannerAction": "Öde"
   },
   "auth": {
     "loginTitle": "Giriş",

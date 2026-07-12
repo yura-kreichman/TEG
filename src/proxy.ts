@@ -1,4 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { verifyToken } from "@/lib/session-crypto";
+import { prisma } from "@/lib/prisma";
 
 // Marks pre-auth screens so resolveLocale() (src/lib/i18n.ts) ignores any
 // lingering session cookie for language purposes on these paths — found
@@ -10,6 +12,8 @@ import { NextResponse, type NextRequest } from "next/server";
 //
 // Named `proxy.ts` (not `middleware.ts`) — this Next.js version deprecated
 // and renamed the file convention, see node_modules/next/dist/docs/.../proxy.md.
+// Also defaults to the Node.js runtime (unlike the old Edge-only Middleware),
+// which is what makes the Prisma lookup below possible from here at all.
 const PRE_AUTH_PATHS = [
   "/login",
   "/register",
@@ -21,17 +25,63 @@ const PRE_AUTH_PATHS = [
   "/admin/login",
 ];
 
-export function proxy(request: NextRequest) {
-  const isPreAuthPage = PRE_AUTH_PATHS.some(
-    (path) => request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(`${path}/`)
-  );
-  if (!isPreAuthPage) return NextResponse.next();
+// Реальная блокировка биллинга (docs/spec/06-super-admin.md, доп. решение
+// 2026-07-12) — Owner с просроченной/приостановленной подпиской переходит в
+// режим "только чтение": любой мутирующий запрос к его API отклоняется
+// здесь, в одном центральном месте, а не правкой полусотни owner-роутов по
+// отдельности. Баннер, который об этом сообщает — SubscriptionBanner в
+// OwnerShell, читает статус отдельным GET (не блокируется этой же проверкой,
+// т.к. GET/HEAD никогда не проверяются). PWA Оператора НЕ затрагивается
+// (осознанное решение пользователя — операторы работают на точке весь день,
+// останавливать приём оплат/сдачу итогов из-за просрочки счёта нельзя): у
+// operator-сессий нет cookie "session" вообще (свой отдельный механизм), так
+// что эта проверка их запросы просто не увидит.
+const SUBSCRIPTION_BLOCKED_STATUSES = new Set(["expired", "suspended"]);
+// Пути, которые обязаны работать даже при заблокированной подписке — иначе
+// владелец не сможет ни выйти из аккаунта, ни (в будущем) оплатить. Admin
+// использует отдельную cookie (admin_session), эта проверка его и так не
+// затронет, но путь исключён явно — ради производительности, не корректности.
+const SUBSCRIPTION_GATE_EXEMPT_PREFIXES = ["/api/auth/", "/api/webhooks/", "/api/admin/"];
 
-  const headers = new Headers(request.headers);
-  headers.set("x-pre-auth-page", "1");
-  return NextResponse.next({ request: { headers } });
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (!pathname.startsWith("/api/")) {
+    const isPreAuthPage = PRE_AUTH_PATHS.some(
+      (path) => pathname === path || pathname.startsWith(`${path}/`)
+    );
+    if (!isPreAuthPage) return NextResponse.next();
+
+    const headers = new Headers(request.headers);
+    headers.set("x-pre-auth-page", "1");
+    return NextResponse.next({ request: { headers } });
+  }
+
+  const isMutating = request.method !== "GET" && request.method !== "HEAD";
+  const isExempt = SUBSCRIPTION_GATE_EXEMPT_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  if (isMutating && !isExempt) {
+    const token = request.cookies.get("session")?.value;
+    const userId = token ? verifyToken(token) : null;
+    if (userId) {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, tenantId: true } });
+      if (user?.role === "owner" && user.tenantId) {
+        const tenant = await prisma.tenant.findUnique({
+          where: { id: user.tenantId },
+          select: { subscriptionStatus: true },
+        });
+        if (tenant && SUBSCRIPTION_BLOCKED_STATUSES.has(tenant.subscriptionStatus)) {
+          return NextResponse.json(
+            { error: "Подписка не активна — доступ только на чтение. Оплатите тариф, чтобы продолжить." },
+            { status: 402 }
+          );
+        }
+      }
+    }
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

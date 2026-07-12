@@ -467,7 +467,9 @@
     "limitOperators": "Operatorzy",
     "limitZones": "Strefy",
     "limitAssets": "Zasoby",
-    "manageSubscriptionLink": "Zarządzaj subskrypcją"
+    "manageSubscriptionLink": "Zarządzaj subskrypcją",
+    "subscriptionBlockedBanner": "Subskrypcja jest nieaktywna — dostęp tylko do odczytu.",
+    "subscriptionBlockedBannerAction": "Zapłać"
   },
   "auth": {
     "loginTitle": "Logowanie",

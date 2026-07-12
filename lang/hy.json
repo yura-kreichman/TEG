@@ -467,7 +467,9 @@
     "limitOperators": "Օպերատորներ",
     "limitZones": "Գոտիներ",
     "limitAssets": "Ակտիվներ",
-    "manageSubscriptionLink": "Կառավարել բաժանորդագրությունը"
+    "manageSubscriptionLink": "Կառավարել բաժանորդագրությունը",
+    "subscriptionBlockedBanner": "Բաժանորդագրությունը ապաակտիվ է՝ հասանելիությունը միայն ընթերցման համար։",
+    "subscriptionBlockedBannerAction": "Վճարել"
   },
   "auth": {
     "loginTitle": "Մուտք",

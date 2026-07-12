@@ -467,7 +467,9 @@
     "limitOperators": "Операторы",
     "limitZones": "Зоны",
     "limitAssets": "Активы",
-    "manageSubscriptionLink": "Управлять подпиской"
+    "manageSubscriptionLink": "Управлять подпиской",
+    "subscriptionBlockedBanner": "Подписка не активна — доступ только для чтения.",
+    "subscriptionBlockedBannerAction": "Оплатить"
   },
   "auth": {
     "loginTitle": "Вход",

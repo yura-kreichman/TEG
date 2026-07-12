@@ -28,6 +28,7 @@ export interface ParsedFluentCartEvent {
   productIds: string[];
   customerId: string | null;
   customerEmail: string | null;
+  orderId: string | null;
   // subscriptions[0].next_billing_date — только для информационного
   // отображения "действует до" в кабинете, НЕ источник правды для логики
   // доступа (см. docs/fluentcart-webhook-schema.md §3 — "access end date"
@@ -77,6 +78,7 @@ export function parseFluentCartPayload(payload: unknown, eventType: string): Par
     ),
     customerId: firstString(customer.id, order.customer_id),
     customerEmail: firstString(customer.email),
+    orderId: firstString(order.id),
     nextBillingDate: firstString(subscription?.next_billing_date),
     upgradedFromSubId:
       subscriptionConfig.is_upgraded === "yes" ? firstString(subscriptionConfig.upgraded_from_sub_id) : null,
@@ -147,6 +149,10 @@ export async function syncTenantFromFluentCartEvent(parsed: ParsedFluentCartEven
   const nextBillingDate = parsed.nextBillingDate ? new Date(parsed.nextBillingDate) : null;
   const currentPeriodEnd = nextBillingDate && !Number.isNaN(nextBillingDate.getTime()) ? nextBillingDate : null;
 
+  let skippedReason = parsed.upgradedFromSubId
+    ? `upgrade from subscription ${parsed.upgradedFromSubId}`
+    : undefined;
+
   if (ACTIVATING_EVENTS.has(parsed.eventType)) {
     await prisma.tenant.update({
       where: { id: tenant.id },
@@ -161,18 +167,67 @@ export async function syncTenantFromFluentCartEvent(parsed: ParsedFluentCartEven
         // логика доступа по нему не принимает решений, только status (см.
         // docs/fluentcart-webhook-schema.md §3).
         currentPeriodEnd,
+        // Запоминаем, какой заказ сейчас "авторитетный" — см. проверку ниже
+        // и комментарий у поля в schema.prisma.
+        fluentcartOrderId: parsed.orderId,
       },
     });
   } else if (EXPIRING_EVENTS.has(parsed.eventType)) {
-    await prisma.tenant.update({
-      where: { id: tenant.id },
-      data: { subscriptionStatus: "expired", currentPeriodEnd: null },
-    });
+    // Событие относится к УЖЕ НЕактуальному заказу того же клиента (например,
+    // отменили/удалили старый дублирующий тестовый заказ, а более новый
+    // остаётся активным) — не трогаем статус, просто логируем событие как
+    // обработанное. Найдено 2026-07-12: без этой проверки такое событие
+    // слепо переводило тенанта в expired поверх реально активной подписки.
+    const isStaleOrder =
+      tenant.fluentcartOrderId !== null && parsed.orderId !== null && tenant.fluentcartOrderId !== parsed.orderId;
+
+    if (isStaleOrder) {
+      skippedReason = `stale event from order ${parsed.orderId}, tenant is currently on order ${tenant.fluentcartOrderId}`;
+    } else {
+      await prisma.tenant.update({
+        where: { id: tenant.id },
+        data: { subscriptionStatus: "expired", currentPeriodEnd: null },
+      });
+    }
   }
 
   return {
     matched: true,
     tenantId: tenant.id,
-    skippedReason: parsed.upgradedFromSubId ? `upgrade from subscription ${parsed.upgradedFromSubId}` : undefined,
+    skippedReason,
   };
+}
+
+// Клиент мог купить подписку в FluentCart ДО регистрации в RentOS — тогда
+// исходный вебхук не находит тенанта (matched:false, WebhookEvent.tenantId
+// остаётся null) и ничего не создаёт (см. комментарий выше — тенант должен
+// уже существовать). Вызывается сразу после регистрации нового Owner'а
+// (доп. решение пользователя 2026-07-12): реплеит все ещё непривязанные
+// события FluentCart для email этого владельца в хронологическом порядке —
+// та же самая syncTenantFromFluentCartEvent, что и обычный вебхук, только
+// путь поиска тенанта теперь находит его (он только что создан). Реплей по
+// порядку, а не только последнее событие — если человек успел и купить, и
+// отменить/сменить план ещё до регистрации, конечное состояние должно
+// остаться таким же, как если бы тенант существовал всё это время.
+export async function linkPendingFluentCartPurchases(email: string): Promise<number> {
+  const pending = await prisma.webhookEvent.findMany({
+    where: { provider: "fluentcart", tenantId: null },
+    orderBy: { receivedAt: "asc" },
+  });
+
+  let linked = 0;
+  for (const event of pending) {
+    const parsed = parseFluentCartPayload(event.payload, event.eventType);
+    if (parsed.customerEmail !== email) continue;
+
+    const result = await syncTenantFromFluentCartEvent(parsed);
+    if (result.matched) {
+      await prisma.webhookEvent.update({
+        where: { id: event.id },
+        data: { status: "processed", tenantId: result.tenantId, error: result.skippedReason ?? null },
+      });
+      linked++;
+    }
+  }
+  return linked;
 }

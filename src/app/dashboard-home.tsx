@@ -19,6 +19,7 @@ import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
 import { AuthLocalePicker } from "@/components/auth-locale-picker";
 import { cn } from "@/lib/utils";
 import { compressImageFile } from "@/lib/client-image";
+import { PRICING_URL } from "@/lib/billing";
 
 function formatRelativeDay(dateStr: string, isToday: boolean, t: Dictionary): string {
   if (isToday) return t.home.today;
@@ -379,9 +380,14 @@ export function OwnerDashboardCard({
               </div>
             ))}
 
-            <p className="mt-3 text-caption-airbnb font-semibold text-muted-foreground">
+            <a
+              href={PRICING_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 text-caption-airbnb font-semibold text-primary"
+            >
               {t.home.manageSubscriptionLink}
-            </p>
+            </a>
           </SpringCard>
         )}
       </div>

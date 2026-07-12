@@ -467,7 +467,9 @@
     "limitOperators": "Operatorlar",
     "limitZones": "Zonalar",
     "limitAssets": "Aktivlar",
-    "manageSubscriptionLink": "Obunani boshqarish"
+    "manageSubscriptionLink": "Obunani boshqarish",
+    "subscriptionBlockedBanner": "Obuna faol emas — faqat o‘qish uchun kirish.",
+    "subscriptionBlockedBannerAction": "To‘lash"
   },
   "auth": {
     "loginTitle": "Kirish",

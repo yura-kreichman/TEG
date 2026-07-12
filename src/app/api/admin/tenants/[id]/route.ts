@@ -60,6 +60,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/admin/tenan
     name: tenant.name,
     subscriptionStatus: tenant.subscriptionStatus,
     subscriptionExpiresAt: tenant.subscriptionExpiresAt,
+    currentPeriodEnd: tenant.currentPeriodEnd,
     contactPhone: tenant.contactPhone,
     adminNote: tenant.adminNote,
     ownerEmail: owner?.email ?? null,
@@ -107,6 +108,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/admin/tena
     subscriptionStatus,
     packageId,
     subscriptionExpiresAt,
+    currentPeriodEnd,
     contactPhone,
     adminNote,
     limitOverrides,
@@ -142,6 +144,18 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/admin/tena
     data.subscriptionExpiresAt = parsed.date;
     before.subscriptionExpiresAt = tenant.subscriptionExpiresAt;
     after.subscriptionExpiresAt = parsed.date;
+  }
+  // Информационная дата "действует до" (docs/fluentcart-webhook-schema.md
+  // §3) — обычно ставится вебхуком из next_billing_date, но админу иногда
+  // нужно поправить руками (например, после ручной коррекции статуса).
+  if (currentPeriodEnd !== undefined) {
+    const value = currentPeriodEnd === null ? null : new Date(currentPeriodEnd as string);
+    if (value !== null && Number.isNaN(value.getTime())) {
+      return NextResponse.json({ error: "Некорректная дата окончания периода" }, { status: 400 });
+    }
+    data.currentPeriodEnd = value;
+    before.currentPeriodEnd = tenant.currentPeriodEnd;
+    after.currentPeriodEnd = value;
   }
   if (contactPhone !== undefined) {
     if (contactPhone !== null && typeof contactPhone !== "string") {

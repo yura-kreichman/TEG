@@ -10,6 +10,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { BottomGlassNav, type BottomGlassNavItem } from "@/components/bottom-glass-nav";
 import { ImpersonationBanner } from "@/components/impersonation-banner";
+import { SubscriptionBanner } from "@/components/subscription-banner";
 import { cn } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n";
 
@@ -119,6 +120,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
       <ImpersonationBanner />
+      <SubscriptionBanner />
       <aside className="hidden shrink-0 flex-col justify-between bg-surface-0 p-4 md:flex md:w-56">
         <nav className="flex flex-col gap-1">
           {barItems.map(sidebarLink)}

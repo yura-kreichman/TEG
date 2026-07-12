@@ -467,7 +467,9 @@
     "limitOperators": "Operatorlar",
     "limitZones": "Zonalar",
     "limitAssets": "Aktivlər",
-    "manageSubscriptionLink": "Abunəni idarə et"
+    "manageSubscriptionLink": "Abunəni idarə et",
+    "subscriptionBlockedBanner": "Abunə aktiv deyil — yalnız oxumaq üçün giriş.",
+    "subscriptionBlockedBannerAction": "Ödə"
   },
   "auth": {
     "loginTitle": "Giriş",
