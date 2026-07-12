@@ -417,7 +417,7 @@
     "iosHint": "On iPhone/iPad, push notifications only work after installing the app to the Home Screen (\"Install\" button on the login screen).",
     "previewCardLabel": "What it will look like",
     "previewTitle": "🚗 CARS · Zhenya",
-    "previewBody": "Cash: 1345.00 · Diff.: +25.00",
+    "previewBody": "Cash: 1345.00 · Diff.: -370.00",
     "previewTime": "now",
     "zoneLabel": "Zone summary",
     "zoneSub": "after each results submission",
@@ -877,6 +877,7 @@
   "install": {
     "hint": "Install the app for quick access from your phone's home screen.",
     "installButton": "Install",
+    "dismiss": "Hide for 2 days",
     "manualHintIOSSafari": "1. Tap Share at the bottom of Safari.\n2. Choose \"Add to Home Screen\".\n3. Confirm by tapping \"Add\".",
     "manualHintIOSOther": "1. Tap the Share icon at the top of the screen.\n2. Tap \"More\" (three dots).\n3. Choose \"Add to Home Screen\" and confirm \"Add\".",
     "manualHintAndroidChrome": "1. Tap the menu icon (three dots) in the top-right corner.\n2. Choose \"Add to Home Screen\".\n3. Confirm by tapping \"Add\".",

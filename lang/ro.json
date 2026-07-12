@@ -417,7 +417,7 @@
     "iosHint": "Pe iPhone/iPad, notificările push funcționează doar după instalarea aplicației pe ecranul principal (butonul „Instalează” din ecranul de autentificare).",
     "previewCardLabel": "Cum va arăta",
     "previewTitle": "🚗 MAȘINI · Jenea",
-    "previewBody": "Casă: 1345.00 · Diferență: +25.00",
+    "previewBody": "Casă: 1345.00 · Diferență: -370.00",
     "previewTime": "acum",
     "zoneLabel": "Sumar pe zonă",
     "zoneSub": "după fiecare predare de rezultate",
@@ -877,6 +877,7 @@
   "install": {
     "hint": "Instalați aplicația pentru acces rapid de pe ecranul telefonului.",
     "installButton": "Instalează",
+    "dismiss": "Ascunde 2 zile",
     "manualHintIOSSafari": "1. Atingeți Partajare în partea de jos a Safari.\n2. Alegeți „Adaugă pe ecranul principal”.\n3. Confirmați atingând „Adaugă”.",
     "manualHintIOSOther": "1. Atingeți pictograma Partajare din partea de sus.\n2. Atingeți „Mai multe” (trei puncte).\n3. Alegeți „Adaugă pe ecranul principal” și confirmați „Adaugă”.",
     "manualHintAndroidChrome": "1. Atingeți meniul (trei puncte) din colțul din dreapta sus.\n2. Alegeți „Adaugă pe ecranul principal”.\n3. Confirmați atingând „Adaugă”.",

@@ -1,12 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { useI18n } from "@/components/i18n-provider";
 import { isAndroid, isIOS, isIOSSafari, getAndroidBrowser } from "@/lib/browser-detect";
 import type { Dictionary } from "@/lib/i18n";
+
+// Снуз, не полное скрытие (фидбек пользователя 2026-07-12: "добавь крестик
+// для скрытия, пусть баннер появляется раз в 2 суток, как напоминание") —
+// баннер и раньше был намеренно навязчивым (докс: "принудительный... без
+// кнопки закрытия", пользовательское требование от 2026-07-11), это прямое
+// смягчение того решения тем же пользователем, не отмена: крестик не
+// убирает баннер насовсем, только откладывает на 2 суток.
+const DISMISS_KEY = "rentos-install-banner-dismissed-until";
+const SNOOZE_MS = 2 * 24 * 60 * 60 * 1000;
+
+function isSnoozed(): boolean {
+  const until = Number(localStorage.getItem(DISMISS_KEY) ?? 0);
+  return Date.now() < until;
+}
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -31,7 +46,16 @@ function getManualHint(t: Dictionary): string {
       case "samsung":
         return t.install.manualHintAndroidSamsung;
       case "opera":
-        return t.install.manualHintAndroidOpera;
+        // Не свои пошаговые инструкции (manualHintAndroidOpera всё ещё
+        // существует в lang/*.json, но больше не используется здесь) — тот же
+        // путь, что для неизвестных браузеров: скопировать ссылку и открыть в
+        // Chrome. Фидбек пользователя 2026-07-12: "PWA хорошо устанавливается
+        // на Xiaomi через Chrome, в Opera не получается" — реальный тест на
+        // устройстве важнее предположения Progressify (у них те же шаги меню
+        // для Opera, что и мы предлагали раньше), что нативное меню Opera
+        // "Домашний экран"/"Установить" создаёт полноценный standalone-PWA —
+        // на практике (минимум на Xiaomi/MIUI) это не так.
+        return t.install.manualHintAndroidOther;
       case "edge":
         return t.install.manualHintAndroidEdge;
       case "firefox":
@@ -59,10 +83,12 @@ export default function InstallAppBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(true); // true до первой проверки — не мигаем баром на SSR/гидрации
   const [showHelp, setShowHelp] = useState(false);
+  const [dismissed, setDismissed] = useState(false); // снуз на 2 суток, см. DISMISS_KEY выше
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setInstalled(window.matchMedia("(display-mode: standalone)").matches);
+    setDismissed(isSnoozed());
 
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
@@ -86,8 +112,13 @@ export default function InstallAppBanner() {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  if (installed) {
+  if (installed || dismissed) {
     return null;
+  }
+
+  function handleDismiss() {
+    localStorage.setItem(DISMISS_KEY, String(Date.now() + SNOOZE_MS));
+    setDismissed(true);
   }
 
   async function handleInstall() {
@@ -109,8 +140,16 @@ export default function InstallAppBanner() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4 border-b border-border bg-muted/40 px-4 py-2 text-body-airbnb">
-        <span className="text-muted-foreground">{t.install.hint}</span>
+      <div className="flex items-center gap-3 border-b border-border bg-muted/40 px-4 py-2 text-body-airbnb">
+        <button
+          type="button"
+          onClick={handleDismiss}
+          aria-label={t.install.dismiss}
+          className="shrink-0 rounded-full p-1 text-muted-foreground hover:bg-muted"
+        >
+          <X className="size-4" />
+        </button>
+        <span className="min-w-0 flex-1 text-muted-foreground">{t.install.hint}</span>
         <PressableScale className="shrink-0">
           <Button type="button" size="sm" onClick={handleInstall}>
             {t.install.installButton}

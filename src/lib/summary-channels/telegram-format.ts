@@ -106,9 +106,17 @@ export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneS
       }
 
       if (settings.showCash || settings.showCalc) {
-        const cmp = data.cashAmount < data.calculatedRevenue ? "<" : data.cashAmount > data.calculatedRevenue ? ">" : "=";
+        // Нал.+Безнал вместе ("Касс"), не один cashAmount — иначе строка не
+        // сходится с Разн. (та считается от суммы обоих, как и на сервере,
+        // см. submit-results/route.ts: actualCash = cashAmount + mobileAmount).
+        // Фидбек пользователя 2026-07-12: "Касса 1345, а по счётчикам 1715 —
+        // разница должна быть -370", но показанная compact-строка сравнивала
+        // только cashAmount, без mobileAmount — расхождение было в отображении,
+        // не в расчёте разницы (та всегда считалась правильно).
+        const actualCash = data.cashAmount + data.mobileAmount;
+        const cmp = actualCash < data.calculatedRevenue ? "<" : actualCash > data.calculatedRevenue ? ">" : "=";
         const bits: string[] = [];
-        if (settings.showCash) bits.push(`💵 Касс: <b>${data.cashAmount.toFixed(2)}</b>`);
+        if (settings.showCash) bits.push(`💵 Касс: <b>${actualCash.toFixed(2)}</b>`);
         if (settings.showCash && settings.showCalc) bits.push(cmp);
         if (settings.showCalc) bits.push(`🧮 Счёт: <b>${data.calculatedRevenue.toFixed(2)}</b>`);
         parts.push(bits.join("  "));

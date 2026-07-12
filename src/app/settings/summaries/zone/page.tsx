@@ -44,15 +44,18 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): Zon
     accountingMode: isZoneAccountingMode(ctx?.accountingMode) ? ctx.accountingMode : "counters",
     occurredAt: new Date(Date.UTC(2026, 6, 8, 22, 0)),
     readings,
-    // Ненулевая разница в демо (было 0, при этом 1345+370=1715 — "сошлось"
-    // ровно случайно) — иначе индикатор ✅/⚠️ (telegram-format.ts,
-    // diffEmoji) выглядел статичным в предпросмотре, хотя на деле он
-    // зависит от реальных данных (фидбек пользователя 2026-07-12: "не
-    // видно, что иконка разницы динамическая").
+    // Демо-цифры согласованы с реальной формулой (submit-results/route.ts:
+    // difference = (cashAmount + mobileAmount) - calculatedRevenue) — раньше
+    // difference было отдельным произвольным числом (25), не совпадавшим с
+    // Касс/Счёт на экране, пользователь справедливо принял это за опечатку
+    // ("Касса 1345, по счётчикам 1715 — разница должна быть -370"). mobileAmount
+    // здесь 0 (не 370, как раньше) — иначе строка "Касс" в компактном виде
+    // (Нал.+Безнал вместе, см. telegram-format.ts) не совпала бы с "1345" из
+    // примера пользователя.
     cashAmount: 1345,
-    mobileAmount: 370,
+    mobileAmount: 0,
     calculatedRevenue: 1715,
-    difference: 25,
+    difference: 1345 + 0 - 1715,
     returnsCount: 0,
     operatorName: ctx?.operatorName ?? t.summaries.previewNoOperator,
     operatorColorTag: ctx?.operatorColorTag ?? null,
