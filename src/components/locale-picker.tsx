@@ -43,7 +43,7 @@ export function LocalePicker() {
       <SelectTrigger className="max-w-xs">
         <SelectValue>{LOCALE_NAMES[current as keyof typeof LOCALE_NAMES] ?? current}</SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="grid w-72 grid-cols-2 gap-1">
         {options.map((locale) => (
           <SelectItem key={locale} value={locale}>
             {LOCALE_NAMES[locale as keyof typeof LOCALE_NAMES] ?? locale}

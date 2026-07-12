@@ -47,7 +47,11 @@ export function AuthLocalePicker() {
       <SelectTrigger className="h-9 w-auto min-w-32 px-3 text-sm">
         <SelectValue>{LOCALE_NAMES[current as Locale] ?? current}</SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      {/* grid-cols-2 вместо длинного одноколоночного списка (фидбек
+          2026-07-12: 14 языков в один столбец — слишком длинный скролл).
+          w-72 переопределяет дефолтный w-(--anchor-width) (иначе попап не
+          шире триггера-кнопки и сетке некуда расти). */}
+      <SelectContent className="grid w-72 grid-cols-2 gap-1">
         {ALL_LOCALES.map((locale) => (
           <SelectItem key={locale} value={locale}>
             {LOCALE_NAMES[locale]}
