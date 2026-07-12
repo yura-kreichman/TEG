@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { ALL_LOCALES, LOCALE_NAMES, type Locale } from "@/lib/locales";
+import { ALL_LOCALES, LOCALE_NAMES, LOCALE_FLAGS, type Locale } from "@/lib/locales";
 
 /**
  * Pre-auth language switch for the login/register/etc. screen group — no
@@ -45,16 +45,19 @@ export function AuthLocalePicker() {
   return (
     <Select value={current} onValueChange={select} disabled={saving}>
       <SelectTrigger className="h-9 w-auto min-w-32 px-3 text-sm">
-        <SelectValue>{LOCALE_NAMES[current as Locale] ?? current}</SelectValue>
+        <SelectValue>
+          {LOCALE_FLAGS[current as Locale]} {LOCALE_NAMES[current as Locale] ?? current}
+        </SelectValue>
       </SelectTrigger>
-      {/* grid-cols-2 вместо длинного одноколоночного списка (фидбек
-          2026-07-12: 14 языков в один столбец — слишком длинный скролл).
-          w-72 переопределяет дефолтный w-(--anchor-width) (иначе попап не
-          шире триггера-кнопки и сетке некуда расти). */}
-      <SelectContent className="grid w-72 grid-cols-2 gap-1">
+      {/* grid-cols-3, ширина в vw с потолком — не 2 колонки фикс-ширины
+          (фидбек 2026-07-12: сделать в 3 ряда и адаптивно, чтобы не вылезал
+          за границы экрана). min(94vw,26rem) переопределяет дефолтный
+          w-(--anchor-width) (иначе попап не шире триггера-кнопки). */}
+      <SelectContent className="grid w-[min(94vw,26rem)] grid-cols-3 gap-1">
         {ALL_LOCALES.map((locale) => (
-          <SelectItem key={locale} value={locale}>
-            {LOCALE_NAMES[locale]}
+          <SelectItem key={locale} value={locale} className="gap-1.5 px-2">
+            <span className="shrink-0">{LOCALE_FLAGS[locale]}</span>
+            <span className="truncate">{LOCALE_NAMES[locale]}</span>
           </SelectItem>
         ))}
       </SelectContent>

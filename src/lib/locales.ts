@@ -28,6 +28,27 @@ export const LOCALE_NAMES: Record<Locale, string> = {
   pl: "Polski",
 };
 
+// Флаг страны, где язык основной/официальный — не претензия на "единственно
+// верный" диалект, просто визуальный якорь в переключателе (2026-07-12).
+// en → 🇬🇧, самый частый дефолт для "английский" в UI без региональной
+// привязки к конкретной стране бизнеса.
+export const LOCALE_FLAGS: Record<Locale, string> = {
+  ru: "🇷🇺",
+  en: "🇬🇧",
+  uk: "🇺🇦",
+  uz: "🇺🇿",
+  kk: "🇰🇿",
+  ro: "🇷🇴",
+  tg: "🇹🇯",
+  ky: "🇰🇬",
+  be: "🇧🇾",
+  hy: "🇦🇲",
+  az: "🇦🇿",
+  ka: "🇬🇪",
+  tr: "🇹🇷",
+  pl: "🇵🇱",
+};
+
 export const ALL_LOCALES = Object.keys(LOCALE_NAMES) as Locale[];
 
 export function isLocale(value: string): value is Locale {

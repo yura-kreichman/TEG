@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { LOCALE_NAMES } from "@/lib/locales";
+import { LOCALE_NAMES, LOCALE_FLAGS } from "@/lib/locales";
 
 /**
  * Tenant-wide default language — set only by the Owner (docs/spec/00-architecture.md).
@@ -41,12 +41,16 @@ export function LocalePicker() {
   return (
     <Select value={current} onValueChange={handleSelect} disabled={saving}>
       <SelectTrigger className="max-w-xs">
-        <SelectValue>{LOCALE_NAMES[current as keyof typeof LOCALE_NAMES] ?? current}</SelectValue>
+        <SelectValue>
+          {LOCALE_FLAGS[current as keyof typeof LOCALE_FLAGS]}{" "}
+          {LOCALE_NAMES[current as keyof typeof LOCALE_NAMES] ?? current}
+        </SelectValue>
       </SelectTrigger>
-      <SelectContent className="grid w-72 grid-cols-2 gap-1">
+      <SelectContent className="grid w-[min(94vw,26rem)] grid-cols-3 gap-1">
         {options.map((locale) => (
-          <SelectItem key={locale} value={locale}>
-            {LOCALE_NAMES[locale as keyof typeof LOCALE_NAMES] ?? locale}
+          <SelectItem key={locale} value={locale} className="gap-1.5 px-2">
+            <span className="shrink-0">{LOCALE_FLAGS[locale as keyof typeof LOCALE_FLAGS]}</span>
+            <span className="truncate">{LOCALE_NAMES[locale as keyof typeof LOCALE_NAMES] ?? locale}</span>
           </SelectItem>
         ))}
       </SelectContent>
