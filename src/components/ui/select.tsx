@@ -43,10 +43,17 @@ function SelectValue(props: React.ComponentProps<typeof SelectPrimitive.Value>) 
   return <SelectPrimitive.Value data-slot="select-value" className="min-w-0 truncate text-left" {...props} />;
 }
 
-function SelectContent({ className, children, ...props }: React.ComponentProps<typeof SelectPrimitive.Popup>) {
+function SelectContent({
+  className,
+  children,
+  align = "start",
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Popup> & {
+  align?: React.ComponentProps<typeof SelectPrimitive.Positioner>["align"];
+}) {
   return (
     <SelectPrimitive.Portal>
-      <SelectPrimitive.Positioner className="z-70 outline-none" sideOffset={6} align="start">
+      <SelectPrimitive.Positioner className="z-70 outline-none" sideOffset={6} align={align}>
         <SelectPrimitive.Popup
           data-slot="select-content"
           className={cn(

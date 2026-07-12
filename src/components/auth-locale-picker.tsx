@@ -46,17 +46,23 @@ export function AuthLocalePicker() {
     <Select value={current} onValueChange={select} disabled={saving}>
       <SelectTrigger className="h-9 w-auto min-w-32 px-3 text-sm">
         <SelectValue>
-          {LOCALE_FLAGS[current as Locale]} {LOCALE_NAMES[current as Locale] ?? current}
+          <span className="mr-1.5">{LOCALE_FLAGS[current as Locale]}</span>
+          {LOCALE_NAMES[current as Locale] ?? current}
         </SelectValue>
       </SelectTrigger>
       {/* grid-cols-3, ширина в vw с потолком — не 2 колонки фикс-ширины
           (фидбек 2026-07-12: сделать в 3 ряда и адаптивно, чтобы не вылезал
           за границы экрана). min(94vw,26rem) переопределяет дефолтный
-          w-(--anchor-width) (иначе попап не шире триггера-кнопки). */}
-      <SelectContent className="grid w-[min(94vw,26rem)] grid-cols-3 gap-1">
+          w-(--anchor-width) (иначе попап не шире триггера-кнопки).
+          align="center" — попап шире кнопки-триггера, по умолчанию (align
+          start) он рос вправо и выглядел смещённым от центра экрана. */}
+      <SelectContent align="center" className="grid w-[min(94vw,26rem)] grid-cols-3 gap-1">
         {ALL_LOCALES.map((locale) => (
           <SelectItem key={locale} value={locale} className="gap-1.5 px-2">
-            <span className="shrink-0">{LOCALE_FLAGS[locale]}</span>
+            {/* mr-1.5 не gap — flag/name лежат внутри ItemText (см.
+                ui/select.tsx), а не прямо в flex-контейнере SelectItem,
+                так что gap-* родителя на них не действует. */}
+            <span className="mr-1.5 shrink-0">{LOCALE_FLAGS[locale]}</span>
             <span className="truncate">{LOCALE_NAMES[locale]}</span>
           </SelectItem>
         ))}

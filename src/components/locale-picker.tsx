@@ -42,14 +42,14 @@ export function LocalePicker() {
     <Select value={current} onValueChange={handleSelect} disabled={saving}>
       <SelectTrigger className="max-w-xs">
         <SelectValue>
-          {LOCALE_FLAGS[current as keyof typeof LOCALE_FLAGS]}{" "}
+          <span className="mr-1.5">{LOCALE_FLAGS[current as keyof typeof LOCALE_FLAGS]}</span>
           {LOCALE_NAMES[current as keyof typeof LOCALE_NAMES] ?? current}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent className="grid w-[min(94vw,26rem)] grid-cols-3 gap-1">
+      <SelectContent align="center" className="grid w-[min(94vw,26rem)] grid-cols-3 gap-1">
         {options.map((locale) => (
           <SelectItem key={locale} value={locale} className="gap-1.5 px-2">
-            <span className="shrink-0">{LOCALE_FLAGS[locale as keyof typeof LOCALE_FLAGS]}</span>
+            <span className="mr-1.5 shrink-0">{LOCALE_FLAGS[locale as keyof typeof LOCALE_FLAGS]}</span>
             <span className="truncate">{LOCALE_NAMES[locale as keyof typeof LOCALE_NAMES] ?? locale}</span>
           </SelectItem>
         ))}
