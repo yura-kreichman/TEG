@@ -92,7 +92,8 @@
     "startWindowHint": "Operator standart vaqtdan qancha ertaroq yoki kechroq smenani boshlashi mumkin — avto va qoʻlda rejim uchun umumiy",
     "earlierLabel": "Ertaroq",
     "laterLabel": "Kechroq",
-    "startWindowBoundaryWarning": "Ruxsat oraligʻi ish kuni chegarasidan oʻtib ketadi — shu erta oynada boshlangan smena hisobotlarda oldingi ish kuniga tushadi"
+    "startWindowBoundaryWarning": "Ruxsat oraligʻi ish kuni chegarasidan oʻtib ketadi — shu erta oynada boshlangan smena hisobotlarda oldingi ish kuniga tushadi",
+    "timezoneAuto": "Avto"
   },
   "tasks": {
     "pickPointTitle": "Vazifalar",

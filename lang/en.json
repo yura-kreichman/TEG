@@ -92,7 +92,8 @@
     "startWindowHint": "How much earlier and later than the default time an operator can start a shift — shared between auto and manual mode",
     "earlierLabel": "Earlier",
     "laterLabel": "Later",
-    "startWindowBoundaryWarning": "The tolerance window crosses the business-day boundary — a shift started in that early window will land in the previous business day in reports"
+    "startWindowBoundaryWarning": "The tolerance window crosses the business-day boundary — a shift started in that early window will land in the previous business day in reports",
+    "timezoneAuto": "Auto"
   },
   "tasks": {
     "pickPointTitle": "Tasks",

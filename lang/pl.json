@@ -92,7 +92,8 @@
     "startWindowHint": "O ile wcześniej i później niż domyślny czas operator może rozpocząć zmianę — wspólne dla trybu auto i ręcznego",
     "earlierLabel": "Wcześniej",
     "laterLabel": "Później",
-    "startWindowBoundaryWarning": "Tolerancja przekracza granicę dnia roboczego — zmiana rozpoczęta w tym wczesnym oknie trafi do poprzedniego dnia roboczego w raportach"
+    "startWindowBoundaryWarning": "Tolerancja przekracza granicę dnia roboczego — zmiana rozpoczęta w tym wczesnym oknie trafi do poprzedniego dnia roboczego w raportach",
+    "timezoneAuto": "Auto"
   },
   "tasks": {
     "pickPointTitle": "Zadania",

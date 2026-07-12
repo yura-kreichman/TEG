@@ -92,7 +92,8 @@
     "startWindowHint": "Cu cât mai devreme și mai târziu decât ora implicită poate operatorul să înceapă tura — comun pentru modul automat și manual",
     "earlierLabel": "Mai devreme",
     "laterLabel": "Mai târziu",
-    "startWindowBoundaryWarning": "Toleranța traversează granița zilei de business — o tură începută în acea fereastră timpurie va apărea în ziua de business anterioară în rapoarte"
+    "startWindowBoundaryWarning": "Toleranța traversează granița zilei de business — o tură începută în acea fereastră timpurie va apărea în ziua de business anterioară în rapoarte",
+    "timezoneAuto": "Auto"
   },
   "tasks": {
     "pickPointTitle": "Sarcini",

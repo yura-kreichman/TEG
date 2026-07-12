@@ -92,7 +92,8 @@
     "startWindowHint": "Operator standart vaxtdan nə qədər əvvəl və ya sonra növbəyə başlaya bilər — avto və əl rejimi üçün ümumi",
     "earlierLabel": "Daha erkən",
     "laterLabel": "Daha gec",
-    "startWindowBoundaryWarning": "İcazə verilən aralıq biznes günün sərhədini keçir — bu erkən pəncərədə başlanan növbə hesabatlarda əvvəlki biznes gününə düşəcək"
+    "startWindowBoundaryWarning": "İcazə verilən aralıq biznes günün sərhədini keçir — bu erkən pəncərədə başlanan növbə hesabatlarda əvvəlki biznes gününə düşəcək",
+    "timezoneAuto": "Avto"
   },
   "tasks": {
     "pickPointTitle": "Tapşırıqlar",

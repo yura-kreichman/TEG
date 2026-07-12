@@ -24,17 +24,16 @@ function displayName(timeZone: string): string {
 
 /**
  * Часовой пояс тенанта (docs/spec/00-architecture.md) — общий для владельца
- * и всех его операторов, задаёт только владелец. Плоский Select с 400+
- * зонами оказался неюзабельным без поиска (фидбек пользователя 2026-07-12) —
- * заменено на bottom sheet с поиском, как IconPicker/AssetPicker. Если
- * тенант ещё ни разу не выбирал зону (хранится дефолт "UTC"), предлагаем
- * определить её по часовому поясу браузера, а не молча оставлять UTC.
+ * и всех его операторов, задаёт только владелец. Список ограничен странами
+ * языков RentOS (см. lib/locales.ts), а не всеми ~400 зонами IANA — bottom
+ * sheet с поиском вместо плоского Select, как IconPicker/AssetPicker.
+ * Кнопка "Авто" рядом с текущим значением всегда предлагает подставить
+ * часовой пояс браузера, не только при первой настройке.
  */
 export function TimezonePicker() {
   const t = useI18n();
   const [options] = useState<string[]>(() => getAllowedTimezones());
   const [current, setCurrent] = useState<string>("UTC");
-  const [everCustomized, setEverCustomized] = useState(true);
   const [saving, setSaving] = useState(false);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -44,7 +43,6 @@ export function TimezonePicker() {
       .then((res) => res.json())
       .then((data) => {
         setCurrent(data.timezone ?? "UTC");
-        setEverCustomized(data.timezone !== "UTC");
       });
   }, []);
 
@@ -55,11 +53,6 @@ export function TimezonePicker() {
       return null;
     }
   }, []);
-  // Не предлагаем определённую браузером зону, если она не входит в
-  // разрешённый список (страна языков RentOS) — иначе кнопка "применить"
-  // молча падала бы на серверной валидации без обратной связи пользователю.
-  const suggestDetected =
-    !everCustomized && detectedTimezone && detectedTimezone !== current && options.includes(detectedTimezone);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return options;
@@ -70,7 +63,6 @@ export function TimezonePicker() {
   async function applyTimezone(timezone: string) {
     setSaving(true);
     setCurrent(timezone);
-    setEverCustomized(true);
     setOpen(false);
     setQuery("");
     await fetch("/api/tenant/timezone", {
@@ -81,24 +73,41 @@ export function TimezonePicker() {
     setSaving(false);
   }
 
+  // Кнопка "Авто" скрыта, если определённая браузером зона не входит в
+  // разрешённый список (страна языков RentOS) — валидный кейс (браузер вне
+  // этих стран), не баг, просто нечего применять; иначе клик молча падал бы
+  // на серверной валидации без обратной связи пользователю.
+  const canAuto = Boolean(detectedTimezone && options.includes(detectedTimezone));
+
   return (
     <>
-      <Button type="button" variant="outline" disabled={saving} onClick={() => setOpen(true)} className="w-fit max-w-full justify-start gap-2">
-        <span className="truncate">
-          {displayName(current)} ({offsetLabel(current)})
-        </span>
-      </Button>
-
-      {suggestDetected && (
-        <button
+      {/* flex-1 на триггере (фидбек 2026-07-12: выровнять по ширине карточки,
+          как языковой Select) — вся строка растягивается до края карточки
+          вместо w-fit с пустым местом справа. */}
+      <div className="flex items-center gap-2">
+        <Button
           type="button"
-          onClick={() => applyTimezone(detectedTimezone!)}
-          className="flex w-fit items-center gap-1.5 text-caption-airbnb font-semibold text-primary"
+          variant="outline"
+          disabled={saving}
+          onClick={() => setOpen(true)}
+          className="flex-1 justify-start gap-2"
         >
-          {t.settings.timezoneDetectedPrefix} «{displayName(detectedTimezone!)} ({offsetLabel(detectedTimezone!)})» —{" "}
-          {t.settings.timezoneDetectedApply}
-        </button>
-      )}
+          <span className="truncate">
+            {displayName(current)} ({offsetLabel(current)})
+          </span>
+        </Button>
+        {canAuto && (
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            disabled={saving || detectedTimezone === current}
+            onClick={() => applyTimezone(detectedTimezone!)}
+          >
+            {t.settings.timezoneAuto}
+          </Button>
+        )}
+      </div>
 
       <BottomSheet open={open} onClose={() => setOpen(false)} className="max-h-[80vh]">
         <div className="flex flex-col gap-3 pt-2">
@@ -113,23 +122,30 @@ export function TimezonePicker() {
               className="pl-9"
             />
           </div>
-          <div className="flex flex-col overflow-y-auto">
+          {/* Компактнее и в 2 колонки (фидбек 2026-07-12): 47 зон помещаются
+              почти вдвое компактнее, чем в один столбец построчно. Без
+              border-t между строками (не выравнивался бы между колонками
+              на первой строке) — вместо этого rounded-control блоки с
+              hover/highlight фоном, как у языкового переключателя. */}
+          <div className="grid grid-cols-2 gap-1 overflow-y-auto">
             {filtered.map((tz) => (
               <button
                 key={tz}
                 type="button"
                 onClick={() => applyTimezone(tz)}
                 className={cn(
-                  "flex items-center justify-between gap-3 border-t border-border py-3 text-left text-body-airbnb first:border-t-0",
-                  tz === current && "font-bold text-primary"
+                  "flex items-center justify-between gap-2 rounded-control px-2 py-2 text-left text-caption-airbnb hover:bg-muted",
+                  tz === current && "bg-muted font-bold text-primary"
                 )}
               >
                 <span className="truncate">{displayName(tz)}</span>
-                <span className="shrink-0 text-caption-airbnb tabular-nums">{offsetLabel(tz)}</span>
+                <span className="shrink-0 tabular-nums">{offsetLabel(tz)}</span>
               </button>
             ))}
             {filtered.length === 0 && (
-              <p className="py-6 text-center text-body-airbnb text-muted-foreground">{t.settings.timezoneNoResults}</p>
+              <p className="col-span-2 py-6 text-center text-body-airbnb text-muted-foreground">
+                {t.settings.timezoneNoResults}
+              </p>
             )}
           </div>
         </div>

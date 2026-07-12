@@ -92,7 +92,8 @@
     "startWindowHint": "Operatörün varsayılan saatten ne kadar önce ve sonra vardiyaya başlayabileceği — otomatik ve manuel mod için ortaktır",
     "earlierLabel": "Daha erken",
     "laterLabel": "Daha geç",
-    "startWindowBoundaryWarning": "Tolerans iş günü sınırını aşıyor — bu erken pencerede başlayan vardiya raporlarda bir önceki iş gününe düşer"
+    "startWindowBoundaryWarning": "Tolerans iş günü sınırını aşıyor — bu erken pencerede başlayan vardiya raporlarda bir önceki iş gününe düşer",
+    "timezoneAuto": "Otomatik"
   },
   "tasks": {
     "pickPointTitle": "Görevler",

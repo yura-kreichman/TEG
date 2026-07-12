@@ -96,7 +96,7 @@ export const LOCALE_TIMEZONES: Record<Locale, string[]> = {
   uk: ["Europe/Kyiv", "Europe/Kiev", "Europe/Simferopol", "Europe/Uzhgorod", "Europe/Zaporozhye"],
   uz: ["Asia/Tashkent", "Asia/Samarkand"],
   kk: ["Asia/Almaty", "Asia/Aqtobe", "Asia/Aqtau", "Asia/Atyrau", "Asia/Oral", "Asia/Qyzylorda", "Asia/Qostanay"],
-  ro: ["Europe/Bucharest"],
+  ro: ["Europe/Bucharest", "Europe/Chisinau"],
   tg: ["Asia/Dushanbe"],
   ky: ["Asia/Bishkek"],
   be: ["Europe/Minsk"],
