@@ -25,7 +25,7 @@ interface DynamicsData {
 }
 
 interface ZonesData {
-  zoneRanking: { zoneId: string; zoneName: string; total: number; sharePercent: number }[];
+  zoneRanking: { zoneId: string; zoneName: string; iconKey: string | null; total: number; sharePercent: number }[];
   drillZoneId: string | null;
   drillZoneName: string | null;
   assetRanking: { assetId: string; assetName: string; colorTag: string; total: number; sharePercent: number }[];
@@ -390,25 +390,39 @@ function ZonesTab({
 
       {data.drillZoneId && (
         <>
-          <div className="flex items-center gap-2">
-            <span className="text-caption-airbnb">{t.reports.assetsTitle} ·</span>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-caption-airbnb">{t.reports.assetsTitle}</span>
             <Select
               value={data.drillZoneId}
               onValueChange={(v) => v && onDrillZoneChange(v)}
               items={data.zoneRanking.map((z) => ({ value: z.zoneId, label: z.zoneName }))}
             >
-              <SelectTrigger className="h-8 w-auto border-none bg-transparent p-0 font-semibold">
-                <SelectValue />
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  <span className="flex items-center gap-2">
+                    {(() => {
+                      const current = data.zoneRanking.find((z) => z.zoneId === data.drillZoneId);
+                      return current?.iconKey ? (
+                        <AssetOrZoneIcon iconKey={current.iconKey} className="size-6 shrink-0" />
+                      ) : (
+                        <MapPin className="size-6 shrink-0 text-muted-foreground" />
+                      );
+                    })()}
+                    {data.drillZoneName}
+                  </span>
+                </SelectValue>
               </SelectTrigger>
-              {/* Триггер здесь — короткая надпись (w-auto), а не полноширинное
-                  поле формы, как у остальных Select в приложении: попап,
-                  привязанный к --anchor-width, наследовал бы эту узкую ширину
-                  и обрезал названия зон длиннее выбранной сейчас. min-w
-                  переопределяет это именно для этого вызова. */}
-              <SelectContent className="min-w-40">
+              <SelectContent>
                 {data.zoneRanking.map((z) => (
                   <SelectItem key={z.zoneId} value={z.zoneId}>
-                    {z.zoneName}
+                    <span className="flex items-center gap-2">
+                      {z.iconKey ? (
+                        <AssetOrZoneIcon iconKey={z.iconKey} className="size-6 shrink-0" />
+                      ) : (
+                        <MapPin className="size-6 shrink-0 text-muted-foreground" />
+                      )}
+                      {z.zoneName}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>

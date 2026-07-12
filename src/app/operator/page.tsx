@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 interface ZoneOption {
   id: string;
   name: string;
+  iconKey: string | null;
 }
 
 interface PointOption {
@@ -104,7 +105,9 @@ export default function OperatorHomePage() {
   function loadZones() {
     fetch("/api/operator/submission-context")
       .then((res) => res.json())
-      .then((data) => setZones((data.zones ?? []).map((z: ZoneOption) => ({ id: z.id, name: z.name }))));
+      .then((data) =>
+        setZones((data.zones ?? []).map((z: ZoneOption) => ({ id: z.id, name: z.name, iconKey: z.iconKey })))
+      );
   }
 
   function loadTasks() {
@@ -536,12 +539,34 @@ export default function OperatorHomePage() {
                   items={zones.map((z) => ({ value: z.id, label: z.name }))}
                 >
                   <SelectTrigger id="collectionZone" className="h-14 border-2 text-base">
-                    <SelectValue placeholder={t.operatorApp.selectZone} />
+                    {(() => {
+                      const current = zones.find((z) => z.id === collectionZoneId);
+                      if (!current) return <SelectValue placeholder={t.operatorApp.selectZone} />;
+                      return (
+                        <SelectValue>
+                          <span className="flex items-center gap-2">
+                            {current.iconKey ? (
+                              <AssetOrZoneIcon iconKey={current.iconKey} className="size-5 shrink-0" />
+                            ) : (
+                              <MapPin className="size-5 shrink-0 text-muted-foreground" />
+                            )}
+                            {current.name}
+                          </span>
+                        </SelectValue>
+                      );
+                    })()}
                   </SelectTrigger>
                   <SelectContent>
                     {zones.map((z) => (
                       <SelectItem key={z.id} value={z.id}>
-                        {z.name}
+                        <span className="flex items-center gap-2">
+                          {z.iconKey ? (
+                            <AssetOrZoneIcon iconKey={z.iconKey} className="size-5 shrink-0" />
+                          ) : (
+                            <MapPin className="size-5 shrink-0 text-muted-foreground" />
+                          )}
+                          {z.name}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
