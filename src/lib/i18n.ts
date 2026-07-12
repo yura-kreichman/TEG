@@ -83,10 +83,16 @@ export async function resolveLocale(): Promise<Locale> {
     if (userId) {
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { locale: true, tenant: { select: { locale: true } } },
+        select: { role: true, locale: true, tenant: { select: { locale: true } } },
       });
+      // "/" сам не входит в PRE_AUTH_PATHS (может показать и настоящий
+      // дашборд), но для super_admin (или иной не-"owner" роли) он рендерит
+      // WelcomeCard — тот же анонимный экран, что /login. Без этой проверки
+      // их сессия молча перекрывала бы свежий выбор языка на переключателе
+      // welcome-экрана, тот же баг, что чинили для /login 2026-07-10 (см.
+      // комментарий выше), просто здесь роль решает, а не путь.
       const locale = user?.locale ?? user?.tenant?.locale;
-      if (locale && isLocale(locale)) return locale;
+      if (user?.role === "owner" && locale && isLocale(locale)) return locale;
     }
 
     const operatorId = await getOperatorSessionId();
