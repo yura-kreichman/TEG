@@ -20,6 +20,16 @@ export const metadata: Metadata = {
   title: "RentOS",
   description: "RentOS SaaS",
   applicationName: "RentOS",
+  icons: {
+    icon: [
+      { url: "/icon-library/pwa/favicon-pack/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icon-library/pwa/favicon-pack/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-library/pwa/favicon-pack/favicon-48.png", sizes: "48x48", type: "image/png" },
+      { url: "/icon-library/pwa/favicon-pack/favicon-96.png", sizes: "96x96", type: "image/png" },
+      { url: "/icon-library/pwa/favicon-pack/favicon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/icon-library/pwa/favicon-pack/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
