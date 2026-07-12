@@ -62,16 +62,12 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     return NextResponse.json({ pointName: point.name, operators: [] });
   }
 
-  const [operatorRows, rates, moneyOps] = await Promise.all([
+  const [operatorRows, rates] = await Promise.all([
     prisma.operator.findMany({
       where: { id: { in: [...operatorIds] } },
       select: { id: true, name: true, colorTag: true, avatarUrl: true, iconKey: true },
     }),
     prisma.operatorRate.findMany({ where: { operatorId: { in: [...operatorIds] } }, orderBy: { effectiveFrom: "asc" } }),
-    prisma.moneyOperation.findMany({
-      where: { pointId, type: { in: ["advance", "bonus_payout"] }, occurredAt: { gte: start, lt: end } },
-      select: { performedByOperatorId: true, beneficiaryOperatorId: true, amount: true },
-    }),
   ]);
 
   const ratesByOperator = new Map<string, { rate: number; effectiveFrom: Date }[]>();
@@ -89,13 +85,6 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     return best;
   }
 
-  const payoutsByOperator = new Map<string, number>();
-  for (const op of moneyOps) {
-    const opId = op.beneficiaryOperatorId ?? op.performedByOperatorId;
-    if (!opId) continue;
-    payoutsByOperator.set(opId, (payoutsByOperator.get(opId) ?? 0) + Math.abs(Number(op.amount)));
-  }
-
   const shiftsByOperator = new Map<string, typeof shifts>();
   for (const sh of shifts) {
     const list = shiftsByOperator.get(sh.operatorId) ?? [];
@@ -110,8 +99,6 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       (sum, sh) => sum + ((sh.endAt!.getTime() - sh.startAt.getTime()) / 3_600_000) * rateAt(op.id, sh.startAt),
       0
     );
-    const payouts = payoutsByOperator.get(op.id) ?? 0;
-
     const opSubmissions = submissionsByOperator.get(op.id) ?? [];
     const revenue = revenueByOperator.get(op.id) ?? 0;
     const differenceSum = opSubmissions.reduce((sum, s) => sum + s.difference, 0);
@@ -130,7 +117,13 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       totalHours: round2(totalHours),
       revenue: round2(revenue),
       revenuePerHour: totalHours > 0 ? round2(revenue / totalHours) : null,
-      accruedForPeriod: round2(accrued - payouts),
+      // "Начислено за период" — чистое начисление по ставке (часы × ставка),
+      // без вычета авансов/премий (docs/spec/05-work-time.md, тот же принцип,
+      // что и rateEarnedInPeriod в calcOperatorBalance/work-time.ts). Раньше
+      // здесь вычитались авансы+премии — путало "начислено" с "к выдаче" и
+      // premium-выплаты (не входящие в начисление по ставке вовсе) занижали
+      // цифру ниже реальной заработанной суммы. Найдено аудитом 2026-07-12.
+      accruedForPeriod: round2(accrued),
       differenceSum: round2(differenceSum),
       hasNegativeStreak,
       recentDifferences: hasNegativeStreak ? lastThree.map((s) => round2(s.difference)) : [],

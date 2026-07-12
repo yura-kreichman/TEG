@@ -1,50 +1,21 @@
 // Бизнес-день с произвольной границей (по умолчанию 06:00) — сдачи/смены до
 // этого часа относятся к предыдущему дню (docs/spec/telegram-summaries.md,
-// "Касса за день"). Считаем в UTC, как и весь день-математика в проекте
-// (см. business-day boundary в /api/reports/money, /api/reports/counters/day) —
-// тот же самый известный пробел: нет хранимого часового пояса тенанта, эта
-// граница по времени сервера, не по времени точки.
+// "Касса за день"). Граница вводится Владельцем в часовом поясе тенанта
+// (Tenant.timezone), поэтому вся арифметика ниже — в этом часовом поясе, не
+// в сыром UTC сервера (РЕАЛЬНЫЙ БАГ, найден 2026-07-12 при аудите перед
+// запуском — тот же класс, что уже чинили для isWithinShiftStartWindow
+// 2026-07-12 раньше; тогда сознательно не трогали getBusinessDayBounds/
+// isAtBoundaryMinute/isAtTimeMinute как "более рискованный кусок логики" —
+// аудит перед реальным запуском был поводом наконец это закрыть).
 
 function parseBoundary(boundaryTime: string): { hours: number; minutes: number } {
   const [hours, minutes] = boundaryTime.split(":").map(Number);
   return { hours, minutes };
 }
 
-/** Бизнес-день, которому принадлежит момент `at` при данной границе. */
-export function getBusinessDayBounds(boundaryTime: string, at: Date): { start: Date; end: Date } {
-  const { hours, minutes } = parseBoundary(boundaryTime);
-  const boundaryToday = new Date(
-    Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate(), hours, minutes)
-  );
-
-  const start = at >= boundaryToday ? boundaryToday : new Date(boundaryToday.getTime() - 24 * 60 * 60 * 1000);
-  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
-  return { start, end };
-}
-
-/** Дата (полночь UTC) для группировки/уникальности — "какой это бизнес-день". */
-export function businessDateKey(bounds: { start: Date }): Date {
-  return new Date(
-    Date.UTC(bounds.start.getUTCFullYear(), bounds.start.getUTCMonth(), bounds.start.getUTCDate())
-  );
-}
-
-/** Только что миновала ли граница дня в минуту `at` (для планировщика, тик раз в минуту). */
-export function isAtBoundaryMinute(boundaryTime: string, at: Date): boolean {
-  const { hours, minutes } = parseBoundary(boundaryTime);
-  return at.getUTCHours() === hours && at.getUTCMinutes() === minutes;
-}
-
-export function isAtTimeMinute(timeStr: string, at: Date): boolean {
-  const { hours, minutes } = parseBoundary(timeStr);
-  return at.getUTCHours() === hours && at.getUTCMinutes() === minutes;
-}
-
-// Часы/минуты момента `at` в часовом поясе тенанта (Tenant.timezone,
-// заполняется при регистрации по браузеру — см. /api/tenant/timezone) —
-// без стороннего пакета, Intl.DateTimeFormat с timeZone умеет это сам.
-// Невалидная/пустая таймзона (не должно случаться, но defensively) —
-// откатываемся к UTC, прежнему поведению.
+// Часы/минуты момента `at` в часовом поясе тенанта — без стороннего пакета,
+// Intl.DateTimeFormat с timeZone умеет это сам. Невалидная/пустая таймзона
+// (не должно случаться, но defensively) — откатываемся к UTC.
 function localMinutesOfDay(at: Date, timezone: string): number {
   try {
     const parts = new Intl.DateTimeFormat("en-US", {
@@ -59,6 +30,86 @@ function localMinutesOfDay(at: Date, timezone: string): number {
   } catch {
     return at.getUTCHours() * 60 + at.getUTCMinutes();
   }
+}
+
+// Y/M/D частей `at` в часовом поясе тенанта — календарная дата "по месту",
+// не по UTC (может отличаться от at.getUTC* около полуночи).
+function localDateParts(at: Date, timezone: string): { year: number; month: number; day: number } {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(at);
+    const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+    return { year: get("year"), month: get("month"), day: get("day") };
+  } catch {
+    return { year: at.getUTCFullYear(), month: at.getUTCMonth() + 1, day: at.getUTCDate() };
+  }
+}
+
+// Переводит "стенные часы" (год/месяц/день/час/минута) в часовом поясе
+// тенанта в точный момент UTC — стандартный приём "round-trip через Intl"
+// без сторонней библиотеки: сперва трактуем эти числа как UTC (guess), затем
+// смотрим, что Intl показывает в целевой таймзоне ДЛЯ ЭТОГО guess-момента, и
+// компенсируем разницу. Работает корректно и для дат около перехода на/с
+// летнего времени, потому что смещение берётся на сам guess-момент, а не
+// откуда-то ещё.
+function zonedWallTimeToUtc(
+  year: number,
+  month: number,
+  day: number,
+  hours: number,
+  minutes: number,
+  timezone: string
+): Date {
+  const guess = new Date(Date.UTC(year, month - 1, day, hours, minutes));
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(guess);
+    const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+    const asIfUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"));
+    return new Date(guess.getTime() + (guess.getTime() - asIfUtc));
+  } catch {
+    return guess;
+  }
+}
+
+/** Бизнес-день, которому принадлежит момент `at` при данной границе, в часовом поясе `timezone`. */
+export function getBusinessDayBounds(boundaryTime: string, at: Date, timezone: string): { start: Date; end: Date } {
+  const { hours, minutes } = parseBoundary(boundaryTime);
+  const { year, month, day } = localDateParts(at, timezone);
+  const boundaryToday = zonedWallTimeToUtc(year, month, day, hours, minutes, timezone);
+
+  const start = at >= boundaryToday ? boundaryToday : new Date(boundaryToday.getTime() - 24 * 60 * 60 * 1000);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return { start, end };
+}
+
+/** Дата (полночь UTC) для группировки/уникальности — "какой это бизнес-день". */
+export function businessDateKey(bounds: { start: Date }): Date {
+  return new Date(
+    Date.UTC(bounds.start.getUTCFullYear(), bounds.start.getUTCMonth(), bounds.start.getUTCDate())
+  );
+}
+
+/** Только что миновала ли граница дня в минуту `at` по часовому поясу тенанта (для планировщика, тик раз в минуту). */
+export function isAtBoundaryMinute(boundaryTime: string, at: Date, timezone: string): boolean {
+  const { hours, minutes } = parseBoundary(boundaryTime);
+  return localMinutesOfDay(at, timezone) === hours * 60 + minutes;
+}
+
+export function isAtTimeMinute(timeStr: string, at: Date, timezone: string): boolean {
+  const { hours, minutes } = parseBoundary(timeStr);
+  return localMinutesOfDay(at, timezone) === hours * 60 + minutes;
 }
 
 // Допуск начала смены (docs/spec/05-work-time.md, "РЕЖИМ УЧЁТА ВРЕМЕНИ") —

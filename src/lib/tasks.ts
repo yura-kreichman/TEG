@@ -14,6 +14,6 @@ export const TASK_SELECT = {
   note: true,
   status: true,
   createdAt: true,
-  assignedOperators: { select: { id: true, name: true, colorTag: true } },
+  assignedOperators: { select: { id: true, name: true, colorTag: true, avatarUrl: true, iconKey: true } },
   assignedUsers: { select: { id: true, email: true } },
 } as const;

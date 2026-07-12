@@ -883,7 +883,6 @@
     "manualHintIOSOther": "1. Naciśnij ikonę „Udostępnij” u góry ekranu.\n2. Naciśnij „Więcej” (trzy kropki).\n3. Wybierz „Dodaj do ekranu początkowego” i potwierdź „Dodaj”.",
     "manualHintAndroidChrome": "1. Naciśnij ikonę menu (trzy kropki) w prawym górnym rogu.\n2. Wybierz „Dodaj do ekranu głównego”.\n3. Potwierdź, naciskając „Dodaj”.",
     "manualHintAndroidSamsung": "1. Naciśnij ikonę menu (trzy kropki) na dole ekranu.\n2. Wybierz „Dodaj stronę do” → „Ekran główny”.\n3. Potwierdź, naciskając „Dodaj”.",
-    "manualHintAndroidOpera": "1. Naciśnij ikonę menu (trzy kropki).\n2. Wybierz „Ekran główny” / „Zainstaluj”.\n3. Potwierdź, naciskając „Dodaj”.",
     "manualHintAndroidEdge": "1. Naciśnij ikonę menu (≡) na dole po prawej.\n2. Wybierz „Dodaj do telefonu”.\n3. Potwierdź, naciskając „Zainstaluj”.",
     "manualHintAndroidFirefox": "1. Naciśnij ikonę menu (trzy kropki).\n2. Wybierz „Zainstaluj”.\n3. Potwierdź, naciskając „Dodaj do ekranu głównego”.",
     "manualHintAndroidOther": "Ta przeglądarka może nie obsługiwać bezpośredniej instalacji aplikacji. Skopiuj adres strony i otwórz go w Chrome — stamtąd instalacja zadziała.",

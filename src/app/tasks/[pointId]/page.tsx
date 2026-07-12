@@ -23,6 +23,8 @@ interface TaskOperator {
   id: string;
   name: string;
   colorTag: string | null;
+  avatarUrl: string | null;
+  iconKey: string | null;
 }
 
 interface TaskUser {
@@ -44,10 +46,37 @@ interface OperatorOption {
   id: string;
   name: string;
   colorTag: string | null;
+  avatarUrl: string | null;
+  iconKey: string | null;
   active: boolean;
 }
 
-function Avatar({ label, colorTag }: { label: string; colorTag: string | null }) {
+// Фото > SVG-аватар > буква имени — тот же приоритет, что и везде у
+// оператора (профиль/список/шапка PWA), просто в размере чипа (фидбек
+// 2026-07-12: тут была всегда только буква, хотя у оператора уже может
+// быть настоящий аватар).
+function Avatar({
+  label,
+  colorTag,
+  avatarUrl,
+  iconKey,
+}: {
+  label: string;
+  colorTag: string | null;
+  avatarUrl?: string | null;
+  iconKey?: string | null;
+}) {
+  if (avatarUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={avatarUrl} alt="" className="size-6.5 shrink-0 rounded-full object-cover" />;
+  }
+  if (iconKey) {
+    return (
+      <span className="flex size-6.5 shrink-0 items-center justify-center rounded-full bg-primary/10">
+        <AssetOrZoneIcon iconKey={iconKey} className="size-5" />
+      </span>
+    );
+  }
   return (
     <span
       className="flex size-6.5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
@@ -331,7 +360,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
                         ) : (
                           <>
                             {task.assignedOperators.map((op) => (
-                              <Avatar key={op.id} label={op.name} colorTag={op.colorTag} />
+                              <Avatar key={op.id} label={op.name} colorTag={op.colorTag} avatarUrl={op.avatarUrl} iconKey={op.iconKey} />
                             ))}
                             {task.assignedUsers.map((u) => (
                               <Avatar key={u.id} label={t.tasks.meLabel} colorTag={null} />
@@ -409,7 +438,12 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
                         : "border-border bg-card text-muted-foreground"
                     )}
                   >
-                    <Avatar label={op.name} colorTag={selected ? op.colorTag : "#9AA39F"} />
+                    <Avatar
+                      label={op.name}
+                      colorTag={selected ? op.colorTag : "#9AA39F"}
+                      avatarUrl={op.avatarUrl}
+                      iconKey={op.iconKey}
+                    />
                     {op.name}
                   </button>
                 );

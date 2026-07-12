@@ -372,7 +372,7 @@ export default function OperatorSettingsPage() {
               <img src={profile.avatarUrl} alt="" className="size-20 rounded-full object-cover" />
             ) : profile.iconKey ? (
               <div className="flex size-20 items-center justify-center rounded-full bg-primary/10">
-                <AssetOrZoneIcon iconKey={profile.iconKey} className="size-10" />
+                <AssetOrZoneIcon iconKey={profile.iconKey} className="size-18" />
               </div>
             ) : (
               <div className="flex size-20 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">

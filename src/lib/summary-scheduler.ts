@@ -52,15 +52,15 @@ async function tick() {
     } as DailyCashSummarySettingsData;
     if (!settings.enabled) continue;
 
-    const bounds = getBusinessDayBounds(settings.businessDayBoundary, now);
+    const bounds = getBusinessDayBounds(settings.businessDayBoundary, now, tenant.timezone);
 
     for (const point of tenant.points) {
       try {
-        if (settings.sendMode === "fixed" && isAtTimeMinute(settings.fixedTime, now)) {
+        if (settings.sendMode === "fixed" && isAtTimeMinute(settings.fixedTime, now, tenant.timezone)) {
           await maybeSendDailyCashSummary(point.id, tenant.id, settings, bounds, false);
         }
 
-        if (isAtBoundaryMinute(settings.businessDayBoundary, now)) {
+        if (isAtBoundaryMinute(settings.businessDayBoundary, now, tenant.timezone)) {
           const prevBounds = { start: new Date(bounds.start.getTime() - 24 * 60 * 60 * 1000), end: bounds.start };
           await maybeSendDailyCashSummary(point.id, tenant.id, settings, prevBounds, true);
         }

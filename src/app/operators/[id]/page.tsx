@@ -353,7 +353,7 @@ export default function OperatorCardPage() {
                   <img src={profile.avatarUrl} alt="" className="size-16 rounded-full object-cover" />
                 ) : profile.iconKey ? (
                   <div className="flex size-16 items-center justify-center rounded-full bg-primary/10">
-                    <AssetOrZoneIcon iconKey={profile.iconKey} className="size-9" />
+                    <AssetOrZoneIcon iconKey={profile.iconKey} className="size-14" />
                   </div>
                 ) : (
                   <div className="flex size-16 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">

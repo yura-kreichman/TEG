@@ -74,15 +74,26 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
   if (colorTag !== undefined) {
     data.colorTag = typeof colorTag === "string" && colorTag.trim() ? colorTag.trim() : null;
   }
+  // Фото и SVG-аватар взаимоисключающие (фидбек 2026-07-12: выбор иконки
+  // не заменял ранее загруженное фото — оба поля хранились независимо, а
+  // экран профиля показывает avatarUrl первым в приоритете, так что фото
+  // молча "побеждало" и оставалось видимым). Установка одного всегда
+  // очищает другое.
   if (avatarUrl !== undefined) {
     const nextAvatarUrl = typeof avatarUrl === "string" && avatarUrl.trim() ? avatarUrl.trim() : null;
     if (operator.avatarUrl && operator.avatarUrl !== nextAvatarUrl) {
       await deleteUploadedImage(operator.avatarUrl);
     }
     data.avatarUrl = nextAvatarUrl;
+    if (nextAvatarUrl) data.iconKey = null;
   }
   if (iconKey !== undefined) {
-    data.iconKey = typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null;
+    const nextIconKey = typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null;
+    data.iconKey = nextIconKey;
+    if (nextIconKey) {
+      if (operator.avatarUrl) await deleteUploadedImage(operator.avatarUrl);
+      data.avatarUrl = null;
+    }
   }
   if (active !== undefined) {
     if (typeof active !== "boolean") {

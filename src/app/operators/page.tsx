@@ -139,7 +139,7 @@ export default function OperatorsPage() {
                             <img src={operator.avatarUrl} alt="" className="size-12.5 rounded-full object-cover" />
                           ) : operator.iconKey ? (
                             <div className="flex size-12.5 items-center justify-center rounded-full bg-primary/10">
-                              <AssetOrZoneIcon iconKey={operator.iconKey} className="size-7" />
+                              <AssetOrZoneIcon iconKey={operator.iconKey} className="size-10" />
                             </div>
                           ) : (
                             <div className="flex size-12.5 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">

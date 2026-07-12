@@ -286,7 +286,7 @@ export default function OperatorHomePage() {
             <img src={operatorAvatarUrl} alt="" className="size-21 rounded-full object-cover" />
           ) : operatorIconKey ? (
             <div className="flex size-21 items-center justify-center rounded-full bg-primary/10">
-              <AssetOrZoneIcon iconKey={operatorIconKey} className="size-12" />
+              <AssetOrZoneIcon iconKey={operatorIconKey} className="size-18" />
             </div>
           ) : (
             <div className="flex size-21 items-center justify-center rounded-full bg-primary text-3xl font-bold text-primary-foreground">

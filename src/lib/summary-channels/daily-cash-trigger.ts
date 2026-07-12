@@ -110,7 +110,7 @@ async function getZoneCoverage(
 export async function onResultsSubmission(pointId: string, tenantId: string, at: Date): Promise<void> {
   const [settingsRow, tenant] = await Promise.all([
     prisma.dailyCashSummarySettings.findUnique({ where: { tenantId } }),
-    prisma.tenant.findUnique({ where: { id: tenantId }, select: { businessDayBoundary: true } }),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { businessDayBoundary: true, timezone: true } }),
   ]);
   const businessDayBoundary = tenant?.businessDayBoundary ?? DAILY_CASH_SUMMARY_DEFAULTS.businessDayBoundary;
   const settings = settingsRow
@@ -118,7 +118,7 @@ export async function onResultsSubmission(pointId: string, tenantId: string, at:
     : { ...DAILY_CASH_SUMMARY_DEFAULTS, businessDayBoundary };
   if (!settings.enabled) return;
 
-  const bounds = getBusinessDayBounds(settings.businessDayBoundary, at);
+  const bounds = getBusinessDayBounds(settings.businessDayBoundary, at, tenant?.timezone ?? "UTC");
   const businessDate = businessDateKey(bounds);
 
   const alreadySent = await prisma.dailyCashSummaryDelivery.findFirst({ where: { pointId, businessDate } });
@@ -145,12 +145,12 @@ export async function onResultsSubmission(pointId: string, tenantId: string, at:
 export async function notifyDailyCashLateSubmission(pointId: string, tenantId: string, at: Date): Promise<void> {
   const [settingsRow, tenant] = await Promise.all([
     prisma.dailyCashSummarySettings.findUnique({ where: { tenantId } }),
-    prisma.tenant.findUnique({ where: { id: tenantId }, select: { businessDayBoundary: true } }),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { businessDayBoundary: true, timezone: true } }),
   ]);
   if (!settingsRow?.enabled) return;
 
   const businessDayBoundary = tenant?.businessDayBoundary ?? DAILY_CASH_SUMMARY_DEFAULTS.businessDayBoundary;
-  const bounds = getBusinessDayBounds(businessDayBoundary, at);
+  const bounds = getBusinessDayBounds(businessDayBoundary, at, tenant?.timezone ?? "UTC");
   const businessDate = businessDateKey(bounds);
 
   const existingDeliveries = await prisma.dailyCashSummaryDelivery.findMany({
