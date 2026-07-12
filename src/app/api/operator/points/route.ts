@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 
-// Point list for the "Сменить точку" picker on roaming devices — only makes
-// sense to call from a roaming device, but any operator in the tenant can see
-// the tenant's own point names regardless (not sensitive data).
+// Point list for the "Сменить точку" picker on roaming devices. Не все точки
+// тенанта подряд — фидбек пользователя 2026-07-12 (тот же баг, что чинили в
+// /api/operators/[id] для формы Аванс/Премия, но здесь на стороне оператора):
+// если у оператора allZonesAccess=false, точка без единой разрешённой зоны
+// для него — тупик (переключится, а работать не с чем), поэтому список
+// сужается до точек, где у оператора есть хотя бы одна разрешённая зона.
 export async function GET() {
   const ctx = await requireOperator();
   if (!ctx) {
@@ -17,5 +20,15 @@ export async function GET() {
     orderBy: { createdAt: "asc" },
   });
 
-  return NextResponse.json({ points });
+  if (ctx.operator.allZonesAccess) {
+    return NextResponse.json({ points });
+  }
+
+  const withZones = await prisma.operator.findUnique({
+    where: { id: ctx.operator.id },
+    select: { allowedZones: { select: { pointId: true } } },
+  });
+  const allowedPointIds = new Set((withZones?.allowedZones ?? []).map((z) => z.pointId));
+
+  return NextResponse.json({ points: points.filter((p) => allowedPointIds.has(p.id)) });
 }
