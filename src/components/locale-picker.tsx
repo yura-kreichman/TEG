@@ -40,7 +40,7 @@ export function LocalePicker() {
 
   return (
     <Select value={current} onValueChange={handleSelect} disabled={saving}>
-      <SelectTrigger className="max-w-xs">
+      <SelectTrigger>
         <SelectValue>
           <span className="mr-1.5">{LOCALE_FLAGS[current as keyof typeof LOCALE_FLAGS]}</span>
           {LOCALE_NAMES[current as keyof typeof LOCALE_NAMES] ?? current}

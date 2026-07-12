@@ -242,7 +242,7 @@ export default function ReadingsCalendarPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl flex-col gap-1">
-          <Link href="/" className="mb-2 w-fit text-caption-airbnb font-semibold text-primary">
+          <Link href="/" className="mb-2 w-fit text-body-airbnb font-semibold text-primary">
             ← {t.readings.backToHome}
           </Link>
           <h1 className="text-screen-title">{t.readings.title}</h1>

@@ -341,7 +341,7 @@ export default function OperatorCardPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl flex-col gap-4">
-          <Link href="/operators" className="w-fit text-caption-airbnb font-semibold text-primary">
+          <Link href="/operators" className="w-fit text-body-airbnb font-semibold text-primary">
             ← {t.operators.title}
           </Link>
 

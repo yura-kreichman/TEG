@@ -384,7 +384,7 @@ export default function ZoneDetailPage() {
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl flex-col gap-6">
           <div>
-            <Link href={`/points/${zone.pointId}`} className="mb-2 block w-fit text-caption-airbnb font-semibold text-primary">
+            <Link href={`/points/${zone.pointId}`} className="mb-2 block w-fit text-body-airbnb font-semibold text-primary">
               ← {t.zonesList.title} · {zone.pointName}
             </Link>
             <div className="flex items-start justify-between gap-3">

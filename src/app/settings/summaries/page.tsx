@@ -126,7 +126,7 @@ export default function SummariesListPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-md flex-col gap-1">
-          <Link href="/settings" className="mb-2 w-fit text-caption-airbnb font-semibold text-primary">
+          <Link href="/settings" className="mb-2 w-fit text-body-airbnb font-semibold text-primary">
             {t.summaries.backToSettings}
           </Link>
           <h1 className="text-screen-title">{t.summaries.listTitle}</h1>

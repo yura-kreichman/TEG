@@ -96,7 +96,7 @@ export default function PointDetailPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl flex-col gap-1">
-          <Link href="/points" className="mb-2 w-fit text-caption-airbnb font-semibold text-primary">
+          <Link href="/points" className="mb-2 w-fit text-body-airbnb font-semibold text-primary">
             ← {t.zonesList.allPoints}
           </Link>
           <div className="flex items-start justify-between gap-3">
