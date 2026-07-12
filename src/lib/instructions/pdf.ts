@@ -49,9 +49,15 @@ function formatDateTime(d: Date): string {
 }
 
 // Один PDF на запись, две смысловые части (docs/spec/07-instructions.md,
-// "PDF"): страница "ЗАЯВЛЕНИЕ" с подписью, затем полный текст ИМЕННО ТОЙ
-// версии инструкции, которая была подписана — документ самодостаточен, не
-// ссылается на живое состояние инструкции в системе.
+// "PDF"): сначала полный текст ИМЕННО ТОЙ версии инструкции, которая была
+// подписана (документ самодостаточен, не ссылается на живое состояние
+// инструкции в системе), затем "ЗАЯВЛЕНИЕ" с подписью — как настоящая
+// подпись к прочитанному документу, а не отдельная справка перед ним
+// (решение пользователя 2026-07-12). Явного разрыва страницы перед
+// заявлением нет намеренно: если текст инструкции заканчивается не в самом
+// низу страницы, подпись естественно продолжает тот же лист, как в бумажном
+// документе; на длинных инструкциях pdfkit сам перенесёт её на новую
+// страницу, когда не останется места.
 export function generateAcknowledgmentPdf(input: AcknowledgmentPdfInput): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: 56, bufferPages: true });
@@ -65,8 +71,22 @@ export function generateAcknowledgmentPdf(input: AcknowledgmentPdfInput): Promis
     doc.registerFont("Inter-Italic", FONT_ITALIC);
     doc.registerFont("Inter-BoldItalic", FONT_BOLD_ITALIC);
 
-    doc.font("Inter-Bold").fontSize(18).text("ЗАЯВЛЕНИЕ", { align: "center" });
+    doc.font("Inter-Bold").fontSize(16).text(input.instructionTitle);
+    doc.moveDown(0.5);
+    for (const block of input.versionContent.content ?? []) {
+      renderBlock(doc, block);
+    }
+
     doc.moveDown(1.5);
+    // Без заголовка "ЗАЯВЛЕНИЕ" — просто разделительная линия и текст, как
+    // подпись в конце договора, а не отдельная официальная справка
+    // (решение пользователя 2026-07-12).
+    doc
+      .moveTo(doc.page.margins.left, doc.y)
+      .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+      .strokeColor("#cccccc")
+      .stroke();
+    doc.moveDown(1);
 
     const fullName = `${input.lastName} ${input.firstName}`.trim();
     const statement =
@@ -93,22 +113,67 @@ export function generateAcknowledgmentPdf(input: AcknowledgmentPdfInput): Promis
       doc.fillColor("#000000");
     }
 
-    doc.addPage();
-    doc.font("Inter-Bold").fontSize(16).text(input.instructionTitle);
-    doc.moveDown(0.5);
-    for (const block of input.versionContent.content ?? []) {
-      renderBlock(doc, block);
+    // Футер с подписью на каждой странице, как парафирование каждого листа
+    // договора (решение пользователя 2026-07-12) — уменьшенная подпись, не
+    // полноразмерная (иначе тяжело смотрится на длинных инструкциях), полная
+    // остаётся только в конце. Делается последним проходом по уже готовым
+    // страницам (bufferedPageRange), а не по ходу генерации — иначе число
+    // страниц ещё не известно.
+    for (const i of range(doc.bufferedPageRange())) {
+      doc.switchToPage(i);
+      drawFooter(doc, fullName, input.signaturePng);
     }
 
     doc.end();
   });
 }
 
-function renderBlock(doc: PDFKit.PDFDocument, node: PMNode, listPrefix?: string): void {
+function* range(pageRange: { start: number; count: number }): Generator<number> {
+  for (let i = pageRange.start; i < pageRange.start + pageRange.count; i++) yield i;
+}
+
+const FOOTER_SIGNATURE_WIDTH = 70;
+const FOOTER_SIGNATURE_HEIGHT = 26;
+
+function drawFooter(doc: PDFKit.PDFDocument, fullName: string, signaturePng: Buffer): void {
+  const { left, right, bottom } = doc.page.margins;
+  const pageWidth = doc.page.width;
+  const lineY = doc.page.height - 46;
+  const contentY = lineY + 8;
+
+  // Футер рисуется НИЖЕ обычного нижнего поля страницы — pdfkit иначе решает,
+  // что места не осталось, и молча вставляет лишнюю пустую страницу перед
+  // текстом (сравнивает целевой y с page.maxY() = height − margins.bottom).
+  // На время рисования футера снимаем нижнее поле, потом возвращаем как было.
+  doc.page.margins.bottom = 0;
+  doc.save();
+  doc.moveTo(left, lineY).lineTo(pageWidth - right, lineY).strokeColor("#dddddd").stroke();
+
+  try {
+    doc.image(signaturePng, left, contentY, { fit: [FOOTER_SIGNATURE_WIDTH, FOOTER_SIGNATURE_HEIGHT] });
+  } catch {
+    // Футер не критичен (полная подпись всё равно есть в конце документа) —
+    // молча пропускаем изображение, не портим страницу сообщением об ошибке.
+  }
+
+  doc
+    .font("Inter")
+    .fontSize(8)
+    .fillColor("#888888")
+    .text(fullName, left + FOOTER_SIGNATURE_WIDTH + 10, contentY + FOOTER_SIGNATURE_HEIGHT / 2 - 5, {
+      width: pageWidth - left - right - FOOTER_SIGNATURE_WIDTH - 10,
+      lineBreak: false,
+    });
+
+  doc.restore();
+  doc.page.margins.bottom = bottom;
+}
+
+function renderBlock(doc: PDFKit.PDFDocument, node: PMNode, listPrefix?: string, quoteIndent?: number): void {
   switch (node.type) {
     case "heading": {
       const level = (node.attrs?.level as number) ?? 1;
-      renderInline(doc, node, level === 1 ? 15 : 13, true);
+      renderInline(doc, node, level === 1 ? 15 : 13, true, undefined, quoteIndent);
       doc.moveDown(0.4);
       return;
     }
@@ -117,7 +182,7 @@ function renderBlock(doc: PDFKit.PDFDocument, node: PMNode, listPrefix?: string)
         doc.moveDown(0.5);
         return;
       }
-      renderInline(doc, node, 11, false, listPrefix);
+      renderInline(doc, node, 11, false, listPrefix, quoteIndent);
       doc.moveDown(0.5);
       return;
     }
@@ -127,10 +192,41 @@ function renderBlock(doc: PDFKit.PDFDocument, node: PMNode, listPrefix?: string)
       items.forEach((item, i) => {
         const prefix = node.type === "bulletList" ? "•  " : `${i + 1}.  `;
         for (const child of item.content ?? []) {
-          renderBlock(doc, child, prefix);
+          renderBlock(doc, child, prefix, quoteIndent);
         }
       });
       doc.moveDown(0.2);
+      return;
+    }
+    case "blockquote": {
+      // Левая полоска, как .prose-instruction blockquote в CSS — рисуется
+      // ПОСЛЕ текста, т.к. до рендера неизвестна итоговая высота блока.
+      // Отступ (quoteIndent) сдвигает сам текст вправо от полоски, иначе
+      // линия рисуется вплотную к буквам.
+      const startY = doc.y;
+      const startX = doc.page.margins.left;
+      doc.fillColor("#555555");
+      for (const child of node.content ?? []) {
+        renderBlock(doc, child, undefined, 14);
+      }
+      doc.fillColor("#000000");
+      doc
+        .moveTo(startX, startY)
+        .lineTo(startX, doc.y)
+        .strokeColor("#cccccc")
+        .lineWidth(2)
+        .stroke();
+      doc.lineWidth(1);
+      return;
+    }
+    case "horizontalRule": {
+      doc.moveDown(0.3);
+      doc
+        .moveTo(doc.page.margins.left, doc.y)
+        .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+        .strokeColor("#cccccc")
+        .stroke();
+      doc.moveDown(0.5);
       return;
     }
     default:
@@ -141,16 +237,23 @@ function renderBlock(doc: PDFKit.PDFDocument, node: PMNode, listPrefix?: string)
 // pdfkit не умеет смешивать начертания в одном .text() — эмулируем через
 // цепочку вызовов с { continued: true }, переключая шрифт перед каждым
 // сегментом текста, объединённым одним набором marks.
-function renderInline(doc: PDFKit.PDFDocument, node: PMNode, fontSize: number, forceBold: boolean, prefix?: string): void {
+function renderInline(
+  doc: PDFKit.PDFDocument,
+  node: PMNode,
+  fontSize: number,
+  forceBold: boolean,
+  prefix?: string,
+  indent?: number
+): void {
   const segments = node.content ?? [];
   doc.fontSize(fontSize);
 
   if (prefix) {
-    doc.font("Inter").text(prefix, { continued: true, indent: 12 });
+    doc.font("Inter").text(prefix, { continued: true, indent: indent ?? 12 });
   }
 
   if (segments.length === 0) {
-    doc.font("Inter").text("");
+    doc.font("Inter").text("", prefix ? undefined : { indent });
     return;
   }
 
@@ -161,6 +264,7 @@ function renderInline(doc: PDFKit.PDFDocument, node: PMNode, fontSize: number, f
     doc.font(fontFor(marks)).text(seg.text ?? "", {
       continued: i < segments.length - 1,
       underline,
+      ...(i === 0 && !prefix ? { indent } : {}),
     });
   });
 }
