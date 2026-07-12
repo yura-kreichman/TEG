@@ -16,6 +16,7 @@ import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { SpringCard } from "@/components/spring-card";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
+import { AuthLocalePicker } from "@/components/auth-locale-picker";
 import { cn } from "@/lib/utils";
 import { compressImageFile } from "@/lib/client-image";
 
@@ -57,6 +58,7 @@ export function WelcomeCard() {
           transition={{ duration: 1.8, ease: "easeInOut", repeat: Infinity, repeatDelay: 5.2 }}
         />
       </div>
+      <AuthLocalePicker />
       <div className="w-full max-w-sm">
         <SpringCard>
           <StaggerList className="flex flex-col gap-4">
