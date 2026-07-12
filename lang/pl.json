@@ -947,8 +947,6 @@
     "fieldBrowser": "Przeglądarka",
     "fieldVersion": "Wersja",
     "downloadPdfButton": "Pobierz PDF",
-    "requestReacknowledgmentButton": "Poproś o ponowne zapoznanie",
-    "reacknowledgmentRequested": "Poproszono o ponowne zapoznanie",
     "deleteRecordButton": "Usuń wpis",
     "deleteRecordConfirmTitle": "Usunąć wpis?",
     "deleteRecordConfirmHint": "PDF i podpis zostaną trwale usunięte. Fakt usunięcia pozostanie w dzienniku zmian.",

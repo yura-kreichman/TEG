@@ -947,8 +947,6 @@
     "fieldBrowser": "Браўзер",
     "fieldVersion": "Версія",
     "downloadPdfButton": "Спампаваць PDF",
-    "requestReacknowledgmentButton": "Запытаць паўторнае азнаямленне",
-    "reacknowledgmentRequested": "Паўторнае азнаямленне запытана",
     "deleteRecordButton": "Выдаліць запіс",
     "deleteRecordConfirmTitle": "Выдаліць запіс?",
     "deleteRecordConfirmHint": "PDF і подпіс будуць беззваротна выдалены. Факт выдалення застанецца ў журнале праўак.",

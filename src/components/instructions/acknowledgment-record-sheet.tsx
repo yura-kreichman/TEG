@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, RotateCcw } from "lucide-react";
+import { Download } from "lucide-react";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -38,21 +38,6 @@ export function AcknowledgmentRecordSheet({
   function downloadPdf() {
     if (!record) return;
     window.open(`/api/instructions/records/${record.id}/pdf`, "_blank");
-  }
-
-  async function requestReacknowledgment() {
-    if (!record) return;
-    setBusy(true);
-    try {
-      await fetch(`/api/instructions/records/${record.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requiresReacknowledgment: true }),
-      });
-      onChanged();
-    } finally {
-      setBusy(false);
-    }
   }
 
   async function confirmDelete() {
@@ -98,20 +83,6 @@ export function AcknowledgmentRecordSheet({
               <Button type="button" variant="outline" className="w-full gap-2" onClick={downloadPdf}>
                 <Download className="size-4" />
                 {t.instructions.downloadPdfButton}
-              </Button>
-            </PressableScale>
-            <PressableScale>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-2"
-                onClick={requestReacknowledgment}
-                disabled={busy || record.requiresReacknowledgment}
-              >
-                <RotateCcw className="size-4" />
-                {record.requiresReacknowledgment
-                  ? t.instructions.reacknowledgmentRequested
-                  : t.instructions.requestReacknowledgmentButton}
               </Button>
             </PressableScale>
             <button

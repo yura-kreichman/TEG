@@ -27,6 +27,5 @@ export interface AcknowledgmentRecordItem {
   versionNumber: number;
   isStale: boolean;
   isSuspiciouslyFast: boolean;
-  requiresReacknowledgment: boolean;
   createdAt: string;
 }

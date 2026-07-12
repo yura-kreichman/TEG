@@ -947,8 +947,6 @@
     "fieldBrowser": "Tarayıcı",
     "fieldVersion": "Sürüm",
     "downloadPdfButton": "PDF indir",
-    "requestReacknowledgmentButton": "Yeniden onay iste",
-    "reacknowledgmentRequested": "Yeniden onay istendi",
     "deleteRecordButton": "Kaydı sil",
     "deleteRecordConfirmTitle": "Kayıt silinsin mi?",
     "deleteRecordConfirmHint": "PDF ve imza geri döndürülemez şekilde silinecek. Silme işlemi değişiklik günlüğünde kalır.",

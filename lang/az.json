@@ -947,8 +947,6 @@
     "fieldBrowser": "Brauzer",
     "fieldVersion": "Versiya",
     "downloadPdfButton": "PDF yüklə",
-    "requestReacknowledgmentButton": "Təkrar tanışlıq tələb et",
-    "reacknowledgmentRequested": "Təkrar tanışlıq tələb olundu",
     "deleteRecordButton": "Qeydi sil",
     "deleteRecordConfirmTitle": "Qeydi silmək istəyirsiniz?",
     "deleteRecordConfirmHint": "PDF və imza bərpa olunmadan siliniəcək. Silinmə faktı düzəlişlər jurnalında qalacaq.",

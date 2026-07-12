@@ -1079,11 +1079,6 @@ model AcknowledgmentRecord {
   // visibilitychange.
   readingSeconds Int
 
-  // "Запросить повторное ознакомление" (действие владельца) — не создаёт
-  // новую запись сама по себе, только помечает эту как требующую обновления;
-  // новая запись появляется, когда человек подпишет заново.
-  requiresReacknowledgment Boolean @default(false)
-
   ip           String
   userAgent    String
   // Распарсенные из userAgent при сохранении (ua-parser-js, см. Шаг 2) —

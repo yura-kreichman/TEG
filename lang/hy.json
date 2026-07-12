@@ -947,8 +947,6 @@
     "fieldBrowser": "Դիտարկիչ",
     "fieldVersion": "Տարբերակ",
     "downloadPdfButton": "Ներբեռնել PDF",
-    "requestReacknowledgmentButton": "Պահանջել կրկնակի ծանոթացում",
-    "reacknowledgmentRequested": "Կրկնակի ծանոթացումը հայցվել է",
     "deleteRecordButton": "Ջնջել գրառումը",
     "deleteRecordConfirmTitle": "Ջնջե՞լ գրառումը։",
     "deleteRecordConfirmHint": "PDF-ը և ստորագրությունը կջնջվեն անդառնալիորեն։ Ջնջման փաստը կմնա փոփոխությունների մատյանում։",

@@ -61,7 +61,6 @@ export async function GET(request: Request) {
         versionNumber: r.version.versionNumber,
         isStale: r.version.versionNumber < r.instruction.currentVersionNumber,
         isSuspiciouslyFast,
-        requiresReacknowledgment: r.requiresReacknowledgment,
         createdAt: r.createdAt,
       };
     }),

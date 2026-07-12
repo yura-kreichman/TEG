@@ -947,8 +947,6 @@
     "fieldBrowser": "Браузер",
     "fieldVersion": "Версия",
     "downloadPdfButton": "Скачать PDF",
-    "requestReacknowledgmentButton": "Запросить повторное ознакомление",
-    "reacknowledgmentRequested": "Повторное ознакомление запрошено",
     "deleteRecordButton": "Удалить запись",
     "deleteRecordConfirmTitle": "Удалить запись?",
     "deleteRecordConfirmHint": "PDF и подпись будут удалены без возможности восстановления. Факт удаления останется в журнале правок.",

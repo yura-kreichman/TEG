@@ -947,8 +947,6 @@
     "fieldBrowser": "Браузер",
     "fieldVersion": "Нұсқа",
     "downloadPdfButton": "PDF жүктеп алу",
-    "requestReacknowledgmentButton": "Қайта танысуды сұрау",
-    "reacknowledgmentRequested": "Қайта танысу сұралды",
     "deleteRecordButton": "Жазбаны жою",
     "deleteRecordConfirmTitle": "Жазбаны жою керек пе?",
     "deleteRecordConfirmHint": "PDF және қолтаңба қайтарылмастай жойылады. Жою фактісі түзетулер журналында қалады.",

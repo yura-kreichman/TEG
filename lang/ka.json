@@ -947,8 +947,6 @@
     "fieldBrowser": "ბრაუზერი",
     "fieldVersion": "ვერსია",
     "downloadPdfButton": "PDF-ის ჩამოტვირთვა",
-    "requestReacknowledgmentButton": "ხელახალი გაცნობის მოთხოვნა",
-    "reacknowledgmentRequested": "ხელახალი გაცნობა მოთხოვნილია",
     "deleteRecordButton": "ჩანაწერის წაშლა",
     "deleteRecordConfirmTitle": "წავშალოთ ჩანაწერი?",
     "deleteRecordConfirmHint": "PDF და ხელმოწერა შეუქცევად წაიშლება. წაშლის ფაქტი დარჩება ცვლილებების ჟურნალში.",

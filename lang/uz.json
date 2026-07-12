@@ -947,8 +947,6 @@
     "fieldBrowser": "Brauzer",
     "fieldVersion": "Versiya",
     "downloadPdfButton": "PDF yuklab olish",
-    "requestReacknowledgmentButton": "Qayta tanishishni so'rash",
-    "reacknowledgmentRequested": "Qayta tanishish so'ralgan",
     "deleteRecordButton": "Yozuvni o'chirish",
     "deleteRecordConfirmTitle": "Yozuvni o'chirasizmi?",
     "deleteRecordConfirmHint": "PDF va imzo qaytarib bo'lmaydigan tarzda o'chiriladi. O'chirish fakti tahrirlar jurnalida qoladi.",

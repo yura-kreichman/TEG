@@ -947,8 +947,6 @@
     "fieldBrowser": "Browser",
     "fieldVersion": "Version",
     "downloadPdfButton": "Download PDF",
-    "requestReacknowledgmentButton": "Request re-acknowledgment",
-    "reacknowledgmentRequested": "Re-acknowledgment requested",
     "deleteRecordButton": "Delete record",
     "deleteRecordConfirmTitle": "Delete this record?",
     "deleteRecordConfirmHint": "The PDF and signature will be permanently deleted. The deletion itself stays in the audit log.",

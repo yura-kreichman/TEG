@@ -947,8 +947,6 @@
     "fieldBrowser": "Браузер",
     "fieldVersion": "Версия",
     "downloadPdfButton": "PDF жүктөп алуу",
-    "requestReacknowledgmentButton": "Кайра таанышууну суроо",
-    "reacknowledgmentRequested": "Кайра таанышуу суралды",
     "deleteRecordButton": "Жазууну өчүрүү",
     "deleteRecordConfirmTitle": "Жазууну өчүрөсүзбү?",
     "deleteRecordConfirmHint": "PDF жана кол тамга кайтарылгыс өчүрүлөт. Өчүрүү факты оңдоолор журналында калат.",
