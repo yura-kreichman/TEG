@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import InstallAppBanner from "./install-app-banner";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeColorMeta } from "@/components/theme-color-meta";
 import { I18nProvider } from "@/components/i18n-provider";
 import { getAccentCookie } from "@/lib/accent";
 import { getDictionary, resolveLocale } from "@/lib/i18n";
@@ -45,8 +46,15 @@ export const metadata: Metadata = {
   },
 };
 
+// Статический fallback до гидратации/ThemeColorMeta — совпадает с реальным
+// дефолтом кабинета владельца (defaultTheme="light" в ThemeProvider ниже,
+// без enableSystem, так что это не про prefers-color-scheme ОС). Раньше тут
+// был #18181b (тёмный) для всех — мимо для дефолтного светлого владельца,
+// системная область под .nav-glass-баром красилась в несочетающийся тёмный
+// без блюра (фидбек 2026-07-12). Оператор переопределяет своим значением
+// в operator/layout.tsx (у него свой дефолт — тёмный).
 export const viewport: Viewport = {
-  themeColor: "#18181b",
+  themeColor: "#ffffff",
 };
 
 export default async function RootLayout({
@@ -73,6 +81,7 @@ export default async function RootLayout({
             enableSystem={false}
             storageKey="teg-theme-owner"
           >
+            <ThemeColorMeta />
             <InstallAppBanner />
             {children}
           </ThemeProvider>

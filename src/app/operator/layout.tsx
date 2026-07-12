@@ -1,6 +1,14 @@
+import type { Viewport } from "next";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeColorMeta } from "@/components/theme-color-meta";
 import { OfflineSync } from "./offline-sync";
+
+// Переопределяет статический fallback из корневого layout.tsx (#ffffff,
+// подходит владельцу) — у оператора дефолт тёмный, а не светлый.
+export const viewport: Viewport = {
+  themeColor: "#141917",
+};
 
 // Тема — только локальная настройка устройства (next-themes localStorage,
 // storageKey отдельный от кабинета владельца), никакого тенантного дефолта
@@ -17,6 +25,7 @@ export default function OperatorLayout({ children }: { children: React.ReactNode
       storageKey="teg-theme-operator"
     >
       <div className="flex flex-1 flex-col">
+        <ThemeColorMeta />
         <OfflineSync />
         <div className="flex justify-end p-2">
           <ThemeToggle />
