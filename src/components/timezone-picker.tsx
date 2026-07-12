@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/i18n-provider";
+import { getAllowedTimezones } from "@/lib/locales";
 
 function offsetLabel(timeZone: string): string {
   try {
@@ -31,7 +32,7 @@ function displayName(timeZone: string): string {
  */
 export function TimezonePicker() {
   const t = useI18n();
-  const [options] = useState<string[]>(() => [...Intl.supportedValuesOf("timeZone")].sort());
+  const [options] = useState<string[]>(() => getAllowedTimezones());
   const [current, setCurrent] = useState<string>("UTC");
   const [everCustomized, setEverCustomized] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,7 +55,11 @@ export function TimezonePicker() {
       return null;
     }
   }, []);
-  const suggestDetected = !everCustomized && detectedTimezone && detectedTimezone !== current;
+  // Не предлагаем определённую браузером зону, если она не входит в
+  // разрешённый список (страна языков RentOS) — иначе кнопка "применить"
+  // молча падала бы на серверной валидации без обратной связи пользователю.
+  const suggestDetected =
+    !everCustomized && detectedTimezone && detectedTimezone !== current && options.includes(detectedTimezone);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return options;

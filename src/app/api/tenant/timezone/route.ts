@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { getAllowedTimezones } from "@/lib/locales";
 
-// Валидный список IANA-зон берём у самого Node (Intl.supportedValuesOf),
-// а не хардкодим — тот же приём, что и с открытым списком модулей: список
-// всегда актуален для той версии рантайма, что реально исполняет код.
-const VALID_TIMEZONES = new Set(Intl.supportedValuesOf("timeZone"));
+// Ограничено странами языков RentOS (фидбек 2026-07-12), а не всем списком
+// IANA-зон — см. LOCALE_TIMEZONES/getAllowedTimezones в lib/locales.ts.
+const VALID_TIMEZONES = new Set(getAllowedTimezones());
 
 // Часовой пояс — общий для владельца и ВСЕХ его операторов (докстрока в
 // Tenant.timezone, docs/spec/00-architecture.md) — задаёт только владелец,
