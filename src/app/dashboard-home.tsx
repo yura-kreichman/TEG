@@ -43,18 +43,18 @@ export function WelcomeCard() {
           Клип по rounded-[10%] повторяет скругление самого артворка
           (rx=55.01 на viewBox 546.99 в RentOS-icon.svg), чтобы блик не
           вылезал за силуэт иконки прямоугольными углами. */}
-      <div className="relative size-20 overflow-hidden rounded-[10%]">
+      <div className="relative size-24 overflow-hidden rounded-[10%]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/icon-library/pwa/RentOS-icon.svg" alt="" className="size-full" />
         <motion.div
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "linear-gradient(115deg, transparent 42%, rgba(255,255,255,0.75) 50%, transparent 58%)",
+              "linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.35) 50%, transparent 75%)",
           }}
           initial={{ x: "-130%" }}
           animate={{ x: "130%" }}
-          transition={{ duration: 1.3, ease: "easeInOut", repeat: Infinity, repeatDelay: 2.6 }}
+          transition={{ duration: 1.8, ease: "easeInOut", repeat: Infinity, repeatDelay: 2.6 }}
         />
       </div>
       <div className="w-full max-w-sm">
