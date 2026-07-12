@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { requireSuperAdmin } from "@/lib/require-super-admin";
+import { verifyPassword } from "@/lib/auth";
 
 const SUBSCRIPTION_STATUSES = ["active", "paused", "suspended", "expired"] as const;
 
@@ -236,6 +237,65 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/admin/tena
       },
     }),
   ]);
+
+  return NextResponse.json({ ok: true });
+}
+
+// Полное удаление Владельца (решение пользователя 2026-07-12) — необратимо,
+// каскадом уносит весь тенант (все relation'ы на Tenant.tenantId объявлены
+// с onDelete: Cascade, см. schema.prisma). Заблокировано при активной
+// FluentCart-подписке — иначе с клиента продолжат списывать деньги за
+// аккаунт, которого уже нет в RentOS, а отменить подписку можно только
+// вручную в самом FluentCart (в коде нет API для отмены). CorrectionLog не
+// каскадируется на Tenant (нет прямого FK, только entityId-строка) — запись
+// об удалении переживает сам тенант, это единственный оставшийся audit-след.
+export async function DELETE(request: Request, ctx: RouteContext<"/api/admin/tenants/[id]">) {
+  const admin = await requireSuperAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "Требуется вход администратора" }, { status: 401 });
+  }
+
+  const { id } = await ctx.params;
+  const tenant = await prisma.tenant.findUnique({ where: { id }, include: { package: true } });
+  if (!tenant) {
+    return NextResponse.json({ error: "Владелец не найден" }, { status: 404 });
+  }
+
+  const { password, confirmText } = await request.json();
+
+  if (typeof password !== "string" || !password) {
+    return NextResponse.json({ error: "Введите пароль" }, { status: 400 });
+  }
+  const passwordOk = await verifyPassword(password, admin.user.passwordHash);
+  if (!passwordOk) {
+    return NextResponse.json({ error: "Неверный пароль" }, { status: 401 });
+  }
+  if (typeof confirmText !== "string" || confirmText.trim() !== tenant.name) {
+    return NextResponse.json({ error: "Название компании введено неверно" }, { status: 400 });
+  }
+  // Free-пакет (priceMonthly = 0) не блокируем даже при болтающемся
+  // fluentcartCustomerId/active — реальных денег там нет, блокировка нужна
+  // только против удаления тенанта, за которого продолжат списывать оплату
+  // (решение пользователя 2026-07-12: "При подписке Free удалять").
+  const isPaidActive = Number(tenant.package.priceMonthly) > 0 && tenant.fluentcartCustomerId && tenant.subscriptionStatus === "active";
+  if (isPaidActive) {
+    return NextResponse.json(
+      { error: "У тенанта активная платная подписка FluentCart — сначала отмените её в FluentCart, затем повторите удаление" },
+      { status: 409 }
+    );
+  }
+
+  await prisma.correctionLog.create({
+    data: {
+      entityType: "Tenant",
+      entityId: id,
+      correctedByUserId: admin.user.id,
+      beforeJson: JSON.parse(JSON.stringify({ name: tenant.name, subscriptionStatus: tenant.subscriptionStatus })),
+      afterJson: { deleted: true },
+      comment: "Полное удаление владельца из админ-модуля",
+    },
+  });
+  await prisma.tenant.delete({ where: { id } });
 
   return NextResponse.json({ ok: true });
 }

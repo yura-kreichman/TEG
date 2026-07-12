@@ -86,6 +86,11 @@ function IconGrid({
     return () => clearTimeout(handle);
   }, [family, query]);
 
+  // Аватары — маленькая фиксированная коллекция без текстовых имён, где
+  // поиск не имеет смысла (фидбек пользователя 2026-07-12) — в отличие от
+  // Fluent/Material, там сотни иконок и поиск по названию нужен.
+  const showSearch = !(families.length === 1 && families[0] === "avatars");
+
   const familyLabels: Record<IconFamily, string> = useMemo(
     () => ({
       fluent: t.iconPicker.familyFluent,
@@ -119,16 +124,18 @@ function IconGrid({
           ))}
         </div>
       )}
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          autoFocus
-          placeholder={t.iconPicker.searchPlaceholder}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="pl-9"
-        />
-      </div>
+      {showSearch && (
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            autoFocus
+            placeholder={t.iconPicker.searchPlaceholder}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      )}
       <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
         {results.map((name) => (
           <button

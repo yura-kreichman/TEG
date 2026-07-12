@@ -457,3 +457,48 @@
     color: var(--nav-inactive-fg);
   }
 }
+
+/* Типографика текста инструкции (docs/spec/07-instructions.md, "Макеты и
+   вёрстка") — общий класс для редактора владельца (InstructionEditor) и
+   публичной страницы чтения: H1 17px/600, H2 15px/600, тело 14.5px/1.55.
+   Элементные селекторы, не Tailwind-утилиты (вывод Tiptap/ProseMirror —
+   голые h1/h2/p/ul/ol без классов), поэтому вне @layer utilities. */
+.prose-instruction h1 {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.1em 0 0.4em;
+}
+.prose-instruction h2 {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 1em 0 0.35em;
+}
+.prose-instruction p {
+  font-size: 14.5px;
+  line-height: 1.55;
+  margin: 0 0 0.6em;
+  color: var(--foreground);
+}
+.prose-instruction ul,
+.prose-instruction ol {
+  font-size: 14.5px;
+  line-height: 1.55;
+  margin: 0 0 0.6em;
+  padding-left: 1.4em;
+}
+.prose-instruction ul {
+  list-style: disc;
+}
+.prose-instruction ol {
+  list-style: decimal;
+}
+.prose-instruction li {
+  margin: 0.15em 0;
+}
+.prose-instruction h1:first-child,
+.prose-instruction h2:first-child,
+.prose-instruction p:first-child {
+  margin-top: 0;
+}

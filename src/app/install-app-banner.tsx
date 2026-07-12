@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -80,6 +81,7 @@ function getManualHint(t: Dictionary): string {
  */
 export default function InstallAppBanner() {
   const t = useI18n();
+  const pathname = usePathname();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(true); // true до первой проверки — не мигаем баром на SSR/гидрации
   const [showHelp, setShowHelp] = useState(false);
@@ -112,7 +114,10 @@ export default function InstallAppBanner() {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  if (installed || dismissed) {
+  // Публичная страница инструктажа (docs/spec/07-instructions.md) — читает
+  // и подписывает внешний человек, не пользователь RentOS; предлагать ему
+  // поставить приложение владельца/оператора неуместно и сбивает с толку.
+  if (installed || dismissed || pathname.startsWith("/i/")) {
     return null;
   }
 

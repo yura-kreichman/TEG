@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Trash2 } from "lucide-react";
 import { AdminShell } from "@/components/admin-shell";
 import { SpringCard } from "@/components/spring-card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { BottomSheet } from "@/components/motion/bottom-sheet";
+import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
@@ -79,6 +81,12 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
     maxOperators: "",
   });
   const [impersonateError, setImpersonateError] = useState<string | null>(null);
+
+  const [deleteSheetOpen, setDeleteSheetOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function load() {
     const [tenantRes, packagesRes] = await Promise.all([
@@ -180,7 +188,36 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
     window.location.href = "/";
   }
 
+  function openDeleteSheet() {
+    setDeletePassword("");
+    setDeleteConfirmText("");
+    setDeleteError(null);
+    setDeleteSheetOpen(true);
+  }
+
+  async function confirmDeleteTenant() {
+    setDeleteError(null);
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/tenants/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: deletePassword, confirmText: deleteConfirmText }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setDeleteError(data.error ?? t.admin.genericError);
+        return;
+      }
+      router.push("/admin");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   if (checking || !tenant) return null;
+
+  const canDelete = deletePassword.trim().length > 0 && deleteConfirmText.trim() === tenant.name;
 
   const statusOptions: { value: SubscriptionStatus; label: string }[] = [
     { value: "active", label: t.admin.statusActive },
@@ -420,8 +457,64 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
               </div>
             </SpringCard>
           )}
+
+          <SpringCard animate={false} hover={false} className="flex flex-col gap-3 border-destructive/40">
+            <div>
+              <div className="text-card-title text-destructive">{t.admin.deleteOwnerTitle}</div>
+              <p className="mt-1 text-caption-airbnb">{t.admin.deleteOwnerHint}</p>
+            </div>
+            <PressableScale className="self-start">
+              <Button type="button" variant="destructive" className="gap-2" onClick={openDeleteSheet}>
+                <Trash2 className="size-4" />
+                {t.admin.deleteOwnerButton}
+              </Button>
+            </PressableScale>
+          </SpringCard>
         </div>
       </div>
+
+      <BottomSheet open={deleteSheetOpen} onClose={() => setDeleteSheetOpen(false)}>
+        <div className="flex flex-col gap-4 pt-2">
+          <div>
+            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.admin.deleteOwnerConfirmSheetTitle}</h2>
+            <p className="mt-1 text-caption-airbnb">{tenant.name}</p>
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="deleteOwnerPassword">{t.admin.deleteOwnerConfirmPasswordLabel}</Label>
+            <Input
+              id="deleteOwnerPassword"
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="deleteOwnerConfirmText">
+              {t.admin.deleteOwnerConfirmNamePrefix} <span className="text-foreground">{tenant.name}</span>
+            </Label>
+            <Input
+              id="deleteOwnerConfirmText"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+            />
+            <span className="text-caption-airbnb">{t.admin.deleteOwnerConfirmNameHint}</span>
+          </div>
+          {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
+          <PressableScale>
+            <Button
+              type="button"
+              variant="destructive"
+              className="w-full gap-2"
+              disabled={!canDelete || deleting}
+              onClick={confirmDeleteTenant}
+            >
+              <Trash2 className="size-4" />
+              {t.admin.deleteOwnerConfirmButton}
+            </Button>
+          </PressableScale>
+        </div>
+      </BottomSheet>
     </AdminShell>
   );
 }

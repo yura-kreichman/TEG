@@ -96,6 +96,17 @@ export const SHIFT_CLOSE_SUMMARY_DEFAULTS: ShiftCloseSummarySettingsData = {
   compact: false,
 };
 
+// "Прохождение инструктажа" (docs/spec/07-instructions.md, доп. решение
+// 2026-07-12) — единственное поле, само сообщение не настраивается (одна
+// строка, не сводка-таблица), так что тип данных проще, чем у остальных трёх.
+export interface InstructionAckSummarySettingsData {
+  enabled: boolean;
+}
+
+export const INSTRUCTION_ACK_SUMMARY_DEFAULTS: InstructionAckSummarySettingsData = {
+  enabled: true,
+};
+
 // Какие типы сводок дублируются коротким Push-уведомлением на устройство(а)
 // владельца, если хотя бы одно активно подписано (фидбек пользователя
 // 2026-07-12). Не влияет на то, отправляется ли сама сводка по

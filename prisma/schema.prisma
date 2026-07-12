@@ -46,6 +46,13 @@ model Package {
 model Tenant {
   id                 String             @id @default(cuid())
   name               String
+  // Человекочитаемый идентификатор для публичной ссылки модуля Инструктажи
+  // (docs/spec/07-instructions.md, "/i/{tenant-slug}/{instruction-slug}") —
+  // единственный публичный потребитель, больше нигде не используется.
+  // Генерируется из name при регистрации (транслитерация + kebab-case,
+  // коллизии — числовой суффикс), у существующих тенантов бэкфиллится
+  // отдельным скриптом при миграции. Nullable до бэкфилла, затем NOT NULL.
+  slug               String?            @unique
   // Логотип на главной владельца и в отчётах — путь в /uploads/<tenantId>/...,
   // как Asset.photoUrl/Operator.avatarUrl (см. src/lib/uploads.ts).
   logoUrl            String?
@@ -147,10 +154,12 @@ model Tenant {
   zoneSummarySettings       ZoneSummarySettings?
   dailyCashSummarySettings  DailyCashSummarySettings?
   shiftCloseSummarySettings ShiftCloseSummarySettings?
+  instructionAckSummarySettings InstructionAckSummarySettings?
   dailyCashSummaryDeliveries DailyCashSummaryDelivery[]
   tasks Task[]
   pushSubscriptions        PushSubscription[]
   pushNotificationSettings PushNotificationSettings?
+  instructions             Instruction[]
 }
 
 // ============================================================================
@@ -867,6 +876,23 @@ model ShiftCloseSummarySettings {
   updatedAt DateTime @updatedAt
 }
 
+// Тумблер уведомления "Прохождение инструктажа" (docs/spec/07-instructions.md,
+// доп. решение 2026-07-12) — единственное поле, в отличие от Zone/DailyCash/
+// ShiftClose нет настроек состава сообщения (оно и так одна строка): "{Имя}
+// ознакомился с инструкцией «{Название}» за {время чтения}". Отдельная
+// модель, не поле на Instruction — это тенант-wide переключатель канала
+// уведомления, не свойство конкретной инструкции.
+model InstructionAckSummarySettings {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  enabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // Факт отправки "Кассы за день" на точку+бизнес-день+канал — источник
 // идемпотентности (не отправить дважды за один тик планировщика) и место для
 // externalMessageId, нужного editMessageText при досдаче ("обновлять при
@@ -956,4 +982,120 @@ model WebhookEvent {
 model SystemSettings {
   id     String @id @default("singleton")
   config Json
+}
+
+// ============================================================================
+// ИНСТРУКТАЖИ (docs/spec/07-instructions.md) — автономный модуль, без
+// зависимости на Point/Zone/Operator. Без feature-флага (решение пользователя
+// 2026-07-12, как остальные модули — см. раздел "Открытые вопросы" в спеке).
+// ============================================================================
+
+enum InstructionStatus {
+  draft
+  published
+  archived
+}
+
+// Instruction.title/content — ТЕКУЩИЙ РЕДАКТИРУЕМЫЙ черновик владельца, не
+// источник правды для публичной страницы. Публичная страница и PDF всегда
+// читают из InstructionVersion (immutable snapshot) — правка уже
+// опубликованной инструкции не меняет то, что прямо сейчас показывается и
+// подписывается, пока владелец не нажмёт "Опубликовать" снова.
+model Instruction {
+  id       String             @id @default(cuid())
+  tenantId String
+  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug     String
+  status   InstructionStatus  @default(draft)
+  // "Проверка честности" — кнопка "Готово" на публичной странице неактивна,
+  // пока страница не проскроллена до конца (порог ~95%).
+  honestyCheck Boolean @default(false)
+
+  title   String
+  // ProseMirror/Tiptap JSON (не HTML) — схема редактора ограничена набором
+  // { doc, paragraph, heading(1|2), text, bold, italic, underline, bulletList,
+  // orderedList, listItem } на уровне extensions самого Tiptap и повторно
+  // проверяется на сервере при сохранении (см. Шаг 2, обоснование формата).
+  // Структурная невозможность вставить произвольный HTML/script — это и есть
+  // защита от XSS, не сanitize-фильтр поверх свободного HTML.
+  content Json
+
+  // Денормализовано ради дешёвого сравнения "запись устарела?" в журнале
+  // (record.version.versionNumber < currentVersionNumber) без лишнего джойна
+  // по каждой строке журнала. Источник правды всё равно versions ниже.
+  currentVersionNumber Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versions InstructionVersion[]
+  records  AcknowledgmentRecord[]
+
+  @@unique([tenantId, slug])
+}
+
+// Immutable snapshot — создаётся при каждой публикации (первой или повторной
+// после правки уже опубликованной инструкции). Никогда не редактируется и не
+// удаляется после создания (кроме каскада при удалении самой Instruction).
+model InstructionVersion {
+  id            String      @id @default(cuid())
+  instructionId String
+  instruction   Instruction @relation(fields: [instructionId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  // Заголовок и контент на момент этой публикации — заголовок мог
+  // измениться в более поздней версии, снимок должен остаться дословным.
+  title         String
+  content       Json
+  publishedAt   DateTime    @default(now())
+
+  records AcknowledgmentRecord[]
+
+  @@unique([instructionId, versionNumber])
+}
+
+// Запись ознакомления — снимок введённых человеком данных + метаданные
+// подписания. Подписант — всегда внешнее лицо (нет FK на User/Operator, даже
+// если по факту это оператор тенанта, см. "Назначение" в спеке).
+model AcknowledgmentRecord {
+  id            String              @id @default(cuid())
+  instructionId String
+  instruction   Instruction         @relation(fields: [instructionId], references: [id], onDelete: Cascade)
+  versionId     String
+  version       InstructionVersion  @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  lastName  String
+  firstName String
+  phone     String
+  birthDate DateTime
+
+  // PNG подписи — BLOB в БД, не файл в /uploads (см. Шаг 2, обоснование):
+  // маленький размер (штриховой рисунок, не фото), нет собственного
+  // публичного URL по спеке ("не показывается в таблице — только в PDF"),
+  // атомарное удаление вместе со строкой/в одной транзакции с журналом правок.
+  signaturePng Bytes
+
+  // Вспомогательная метрика (спека explicitly: "защищать от манипуляций не
+  // нужно") — секунды от открытия страницы до отправки формы, с паузой на
+  // visibilitychange.
+  readingSeconds Int
+
+  // "Запросить повторное ознакомление" (действие владельца) — не создаёт
+  // новую запись сама по себе, только помечает эту как требующую обновления;
+  // новая запись появляется, когда человек подпишет заново.
+  requiresReacknowledgment Boolean @default(false)
+
+  ip           String
+  userAgent    String
+  // Распарсенные из userAgent при сохранении (ua-parser-js, см. Шаг 2) —
+  // денормализовано ради колонок журнала без парсинга на каждый рендер.
+  deviceLabel  String?
+  browserLabel String?
+
+  createdAt DateTime @default(now())
+
+  // [instructionId, ip, createdAt] — под rate limit на публичном эндпоинте
+  // подписания (Шаг 3): считаем недавние попытки с этого IP по этой
+  // инструкции без отдельной таблицы.
+  @@index([instructionId, createdAt])
+  @@index([instructionId, ip, createdAt])
 }

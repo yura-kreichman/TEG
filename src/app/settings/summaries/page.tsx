@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell, Clock, DollarSign, Mail, Send, Zap } from "lucide-react";
+import { Bell, Clock, DollarSign, FileText, Mail, Send, Zap } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
@@ -36,6 +36,7 @@ export default function SummariesListPage() {
   const [zoneEnabled, setZoneEnabled] = useState(false);
   const [dailyCashEnabled, setDailyCashEnabled] = useState(false);
   const [shiftCloseEnabled, setShiftCloseEnabled] = useState(false);
+  const [instructionAckEnabled, setInstructionAckEnabled] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
   const [emailSheetOpen, setEmailSheetOpen] = useState(false);
   // Push — не тенантный toggle как Telegram/email (нет единого "chatId"),
@@ -46,12 +47,13 @@ export default function SummariesListPage() {
   const [pushSubscribed, setPushSubscribed] = useState(false);
 
   async function loadAll() {
-    const [tgRes, emailRes, zoneRes, dcRes, scRes] = await Promise.all([
+    const [tgRes, emailRes, zoneRes, dcRes, scRes, iaRes] = await Promise.all([
       fetch("/api/tenant/summary-channels/telegram/status"),
       fetch("/api/tenant/summary-channels/email"),
       fetch("/api/tenant/summary-settings/zone"),
       fetch("/api/tenant/summary-settings/daily-cash"),
       fetch("/api/tenant/summary-settings/shift-close"),
+      fetch("/api/tenant/summary-settings/instruction-ack"),
     ]);
     if (tgRes.status === 401) {
       router.replace("/login");
@@ -62,6 +64,7 @@ export default function SummariesListPage() {
     setZoneEnabled((await zoneRes.json()).enabled);
     setDailyCashEnabled((await dcRes.json()).enabled);
     setShiftCloseEnabled((await scRes.json()).enabled);
+    setInstructionAckEnabled((await iaRes.json()).enabled);
     if (isPushSupported()) {
       setPushSubscribed(!!(await getPushSubscription()));
     }
@@ -114,6 +117,15 @@ export default function SummariesListPage() {
   async function toggleShiftClose(next: boolean) {
     setShiftCloseEnabled(next);
     await fetch("/api/tenant/summary-settings/shift-close", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: next }),
+    });
+  }
+
+  async function toggleInstructionAck(next: boolean) {
+    setInstructionAckEnabled(next);
+    await fetch("/api/tenant/summary-settings/instruction-ack", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ enabled: next }),
@@ -266,6 +278,22 @@ export default function SummariesListPage() {
                   </span>
                 </SpringCard>
               </PressableScale>
+            </StaggerItem>
+
+            {/* Единственное булево поле (docs/spec/07-instructions.md, доп.
+                решение 2026-07-12) — само сообщение не настраивается, поэтому
+                без перехода на отдельный экран, в отличие от карточек выше. */}
+            <StaggerItem>
+              <SpringCard animate={false} className="flex items-center gap-3.5">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <FileText className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-body-airbnb font-bold">{t.summaries.instructionAckCardTitle}</div>
+                  <div className="text-caption-airbnb">{t.summaries.instructionAckCardSub}</div>
+                </div>
+                <Switch checked={instructionAckEnabled} onCheckedChange={toggleInstructionAck} className="shrink-0" />
+              </SpringCard>
             </StaggerItem>
           </StaggerList>
         </div>

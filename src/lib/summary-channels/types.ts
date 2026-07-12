@@ -74,3 +74,13 @@ export interface ChannelSendResult {
   error?: string;
   externalMessageId?: string;
 }
+
+// Модуль Инструктажи (docs/spec/07-instructions.md, "Уведомления") — не
+// тип сводки как остальные (нет per-type ZoneSummarySettings-аналога, нет
+// компактного/детального режима) — одно простое сообщение на каждое
+// подписание, по всем включённым каналам без отдельного тумблера типа.
+export interface InstructionAckData {
+  fullName: string;
+  instructionTitle: string;
+  readingMinutes: number;
+}

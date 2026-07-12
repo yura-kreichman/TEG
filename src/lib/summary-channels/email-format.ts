@@ -1,5 +1,5 @@
 import type { ZoneSummarySettingsData, DailyCashSummarySettingsData, ShiftCloseSummarySettingsData } from "@/lib/summary-settings";
-import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData } from "./types";
+import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData, InstructionAckData } from "./types";
 import { formatDuration, formatSummaryDate, formatUtcTime } from "./format-shared";
 
 // Чистые функции построения HTML-писем — тот же принцип, что telegram-format.ts:
@@ -113,4 +113,13 @@ export function formatShiftCloseSummaryEmail(
   if (settings.showTotal) rows.push({ label: "К выдаче", value: data.toPayOut.toFixed(2), bold: true });
 
   return { subject, html: wrapEmail(companyName, `Смена · ${data.operatorName}`, formatDate(data.startAt), rows) };
+}
+
+export function formatInstructionAckEmail(data: InstructionAckData, companyName: string): { subject: string; html: string } {
+  const subject = `Ознакомление · ${data.instructionTitle}`;
+  const rows: EmailRow[] = [
+    { label: "Кто", value: data.fullName, bold: true },
+    { label: "Время чтения", value: `${data.readingMinutes} мин.` },
+  ];
+  return { subject, html: wrapEmail(companyName, data.instructionTitle, "Инструктаж пройден", rows) };
 }

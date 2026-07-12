@@ -3,15 +3,17 @@ import { editChatMessage, sendChatMessage } from "@/lib/telegram-bot";
 import { parseEmailAddresses, sendEmail } from "./email-channel";
 import {
   formatDailyCashSummaryEmail,
+  formatInstructionAckEmail,
   formatShiftCloseSummaryEmail,
   formatZoneSummaryEmail,
 } from "./email-format";
 import {
   formatDailyCashSummaryTelegram,
+  formatInstructionAckTelegram,
   formatShiftCloseSummaryTelegram,
   formatZoneSummaryTelegram,
 } from "./telegram-format";
-import type { DailyCashSummaryData, ShiftCloseSummaryData, ZoneSummaryData } from "./types";
+import type { DailyCashSummaryData, InstructionAckData, ShiftCloseSummaryData, ZoneSummaryData } from "./types";
 import {
   PUSH_NOTIFICATION_DEFAULTS,
   type DailyCashSummarySettingsData,
@@ -207,4 +209,37 @@ function toDispatchResult(
 
 function mapErrorDescription(description?: string): string {
   return description ?? "Не удалось отправить";
+}
+
+// Инструктажи (docs/spec/07-instructions.md, "Уведомления") — единственное
+// простое сообщение, без per-type Push-тумблера (в отличие от Zone/DailyCash/
+// ShiftClose): шлётся, если у тенанта вообще есть хоть одна активная
+// push-подписка, отдельного выключателя спека не просит.
+export async function dispatchInstructionAcknowledgment(tenantId: string, data: InstructionAckData): Promise<DispatchResult[]> {
+  const channels = await getEnabledChannels(tenantId);
+  const results: DispatchResult[] = [];
+
+  for (const channel of channels) {
+    if (channel.channelType === "telegram" && channel.chatStatus === "active" && channel.chatId) {
+      const text = formatInstructionAckTelegram(data);
+      const result = await sendChatMessage(channel.chatId, text);
+      results.push(toDispatchResult("telegram", result));
+    } else if (channel.channelType === "email") {
+      const addresses = parseEmailAddresses(channel.emailAddresses);
+      if (addresses.length === 0) continue;
+      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+      const { subject, html } = formatInstructionAckEmail(data, tenant?.name ?? "RentOS");
+      const result = await sendEmail(addresses, subject, html);
+      results.push({ channelType: "email", ok: result.ok, error: result.error });
+    }
+  }
+
+  await sendPushToTenant(tenantId, {
+    title: "Инструктаж пройден",
+    body: `${data.fullName} · «${data.instructionTitle}» · ${data.readingMinutes} мин.`,
+    url: "/settings/instructions",
+  }).catch((err) => console.error("push dispatch failed", { kind: "instructionAck", tenantId, err }));
+
+  logFailures("instructionAck", tenantId, results);
+  return results;
 }

@@ -1,7 +1,17 @@
 import type { ZoneSummarySettingsData, DailyCashSummarySettingsData, ShiftCloseSummarySettingsData } from "@/lib/summary-settings";
-import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData } from "./types";
+import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData, InstructionAckData } from "./types";
 import { formatDuration, formatSummaryDate, formatUtcTime } from "./format-shared";
 import { colorTagToEmoji } from "@/lib/color-tag";
+
+// fullName приходит с публичной страницы подписания (docs/spec/07-
+// instructions.md) — единственный текст во всём этом файле, полученный от
+// неаутентифицированного внешнего посетителя, а не введённый владельцем
+// внутри приложения. sendChatMessage шлёт с parse_mode "HTML" — без
+// экранирования "<"/"&" в имени сломанная разметка уронёт всю отправку 400-й
+// ошибкой Bot API (не XSS — Telegram не браузер — но реальный сбой уведомления).
+function escapeTelegramHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
 
 // Чистые функции построения текста Telegram-сводок — без сети, без БД, без
 // Bot API. Каждая — вход "данные + настройки", выход "готовый текст". Это то,
@@ -266,4 +276,10 @@ export function formatShiftCloseSummaryTelegram(
   if (settings.showTotal) lines.push(`💰 К выдаче: <b>${data.toPayOut.toFixed(2)}</b>`);
 
   return lines.join("\n");
+}
+
+export function formatInstructionAckTelegram(data: InstructionAckData): string {
+  const name = escapeTelegramHtml(data.fullName);
+  const title = escapeTelegramHtml(data.instructionTitle);
+  return `✅ <b>${name}</b> ознакомился с инструкцией «${title}» за ${data.readingMinutes} мин.`;
 }
