@@ -478,6 +478,26 @@
   line-height: 1.35;
   margin: 1em 0 0.35em;
 }
+/* .rt-h1/.rt-h2 — тот же визуал, что h1/h2 выше, но по классу, не по тегу.
+   Нужны Лендингу (src/components/landing/rich-text.tsx): страница уже имеет
+   свой единственный <h1> (название тенанта в Header), второй буквальный
+   <h1> внутри контента владельца — реальная SEO-ошибка ("H1 count: 2 tags",
+   найдено внешним SEO-отчётом 2026-07-14) — там H1/H2 из редактора рендерятся
+   как <h2 class="rt-h1">/<h3 class="rt-h2"> вместо <h1>/<h2>. Инструктажи
+   этой проблемы не имеют (документ не встроен в чужую h1-иерархию), поэтому
+   их вывод остаётся на настоящих h1/h2 выше, без изменений. */
+.prose-instruction .rt-h1 {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 1.1em 0 0.4em;
+}
+.prose-instruction .rt-h2 {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 1em 0 0.35em;
+}
 .prose-instruction p {
   font-size: 14.5px;
   line-height: 1.55;
@@ -516,6 +536,8 @@
 }
 .prose-instruction h1:first-child,
 .prose-instruction h2:first-child,
+.prose-instruction .rt-h1:first-child,
+.prose-instruction .rt-h2:first-child,
 .prose-instruction p:first-child {
   margin-top: 0;
 }

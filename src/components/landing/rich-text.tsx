@@ -31,10 +31,17 @@ function RichNode({ node }: { node: PMNode }) {
     case "paragraph":
       return <p>{renderChildren(node.content, "p")}</p>;
     case "heading":
+      // Сдвиг уровней на 1 (H1->h2.rt-h1, H2->h3.rt-h2), НЕ буквальные <h1>/<h2> —
+      // страница уже имеет свой единственный <h1> (название тенанта в Header),
+      // второй <h1> внутри контента владельца (owner мог применить "H1" в
+      // редакторе к тексту "О нас"/подписи зоны) — реальная SEO-ошибка,
+      // найдено внешним отчётом sitechecker.pro 2026-07-14 ("H1 count: 2 tags").
+      // Классы .rt-h1/.rt-h2 (globals.css) держат тот же визуальный размер,
+      // что и настоящие h1/h2 в .prose-instruction — только тег меняется.
       return node.attrs?.level === 1 ? (
-        <h1>{renderChildren(node.content, "h1")}</h1>
+        <h2 className="rt-h1">{renderChildren(node.content, "h1")}</h2>
       ) : (
-        <h2>{renderChildren(node.content, "h2")}</h2>
+        <h3 className="rt-h2">{renderChildren(node.content, "h2")}</h3>
       );
     case "bulletList":
       return <ul>{renderChildren(node.content, "ul")}</ul>;
