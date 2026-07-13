@@ -123,11 +123,24 @@ function Toolbar({ editor }: { editor: Editor }) {
 export function InstructionEditor({
   content,
   onChange,
+  onBlur,
   editable = true,
+  heightClassName = "h-[60vh] min-h-80",
 }: {
   content: PMNode;
   onChange?: (content: PMNode) => void;
+  // Типтап-редактор обновляет onChange на каждое нажатие клавиши — для полей
+  // с батч-сохранением по кнопке (аналог onChange у textarea) этого
+  // достаточно, но список, который сохраняет каждую запись по отдельности
+  // (подписи зон Лендинга — было onBlur у textarea), нужен явный колбэк
+  // потери фокуса с актуальным контентом на момент блюра.
+  onBlur?: (content: PMNode) => void;
   editable?: boolean;
+  // Инструкция — единственный контент на странице, фиксированная большая
+  // высота уместна. Переиспользование в Лендинге (описание зон, "О нас")
+  // — одно поле среди многих в форме настроек, где такая высота
+  // доминировала бы над страницей — вызывающий код может её переопределить.
+  heightClassName?: string;
 }) {
   const editor = useEditor({
     extensions: EXTENSIONS,
@@ -136,6 +149,9 @@ export function InstructionEditor({
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange?.(editor.getJSON() as PMNode);
+    },
+    onBlur: ({ editor }) => {
+      onBlur?.(editor.getJSON() as PMNode);
     },
     editorProps: {
       attributes: {
@@ -172,7 +188,7 @@ export function InstructionEditor({
     // Фиксированная высота + внутренний скролл (не растёт вместе с текстом) —
     // тулбар всегда виден и достижим без прокрутки страницы, независимо от
     // длины инструкции.
-    <div className="flex h-[60vh] min-h-80 flex-col overflow-hidden rounded-card border border-border bg-card">
+    <div className={cn("flex flex-col overflow-hidden rounded-card border border-border bg-card", heightClassName)}>
       <Toolbar editor={editor} />
       <div className="flex-1 overflow-y-auto">
         <EditorContent editor={editor} />

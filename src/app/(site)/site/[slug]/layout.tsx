@@ -50,9 +50,14 @@ export default async function LandingLayout({
       lang={tenant?.locale ?? "ru"}
       data-accent={tenant?.accentScheme ?? "green"}
       data-landing-theme={tenant?.landing?.theme ?? "modern"}
-      className={`${inter.variable} h-full antialiased`}
+      className={`${inter.variable} h-full overflow-x-hidden antialiased`}
     >
-      <body className="lt-page min-h-full">{children}</body>
+      {/* overflow-x на body одном не всегда подхватывается как корневой
+          скроллер мобильными браузерами (репорт: остаточный горизонтальный
+          скролл в Opera Mobile из-за full-bleed .lt-h2-bar на 100vw, хотя в
+          Chrome тот же .lt-page{overflow-x:hidden} уже чинил это, докс
+          2026-07-13) — html и body должны резать overflow оба. */}
+      <body className="lt-page min-h-full overflow-x-hidden">{children}</body>
     </html>
   );
 }

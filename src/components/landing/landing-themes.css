@@ -323,6 +323,7 @@
 
 .lt-slogan {
   color: var(--lt-muted);
+  font-weight: 600;
 }
 [data-landing-theme="classic"] .lt-slogan {
   font-style: italic;
@@ -385,6 +386,44 @@
 }
 .lt-muted-text {
   color: var(--lt-muted);
+}
+
+/* Обёртка для рендера ProseMirror-контента (описание зон, "О нас") тем же
+   .prose-instruction, что модуль Инструктажи (src/components/instructions/
+   instruction-editor.tsx) — размеры/отступы там доменно-нейтральны, но цвета
+   у .prose-instruction завязаны на --foreground/--muted-foreground (токены
+   кабинета владельца), а не на --lt-ink/--lt-muted текущей темы Лендинга.
+   Компаунд-селектор (два класса) бьёт .prose-instruction по специфичности
+   независимо от порядка импорта файлов (тот же приём, что раньше решил баг
+   с .lt-wrap, докс 2026-07-13). */
+.lt-prose.prose-instruction h1,
+.lt-prose.prose-instruction h2 {
+  color: var(--lt-ink);
+}
+.lt-prose.prose-instruction p,
+.lt-prose.prose-instruction ul,
+.lt-prose.prose-instruction ol {
+  color: var(--lt-ink);
+}
+.lt-prose.prose-instruction blockquote {
+  border-left-color: var(--lt-accent);
+  color: var(--lt-muted);
+}
+.lt-prose.prose-instruction hr {
+  border-top-color: var(--lt-muted);
+  opacity: 0.4;
+}
+/* "О нас" (AboutSection) — крупный центрированный текст (докс, п.1), а не
+   компактный масштаб чтения инструкции: .prose-instruction p сам задаёт
+   14.5px, перебивает text-lg/text-xl с обёртки — здесь возвращаем
+   наследование, чтобы Tailwind-утилиты снова работали. */
+.lt-about-prose.prose-instruction p {
+  font-size: inherit;
+  line-height: inherit;
+  margin: 0 0 0.3em;
+}
+.lt-about-prose.prose-instruction p:last-child {
+  margin-bottom: 0;
 }
 
 /* Цена/статус "сейчас открыто" — докс: акцент работает внутри любой темы.

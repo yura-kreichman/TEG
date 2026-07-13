@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
-import type { Prisma } from "@/generated/prisma/client";
+import { validateRichContent, extractPlainText, isRichContentEmpty } from "@/lib/rich-text";
+import { Prisma } from "@/generated/prisma/client";
 
 // Лендинг — 1:1 с тенантом (docs/spec/08-landing.md), но не создаётся при
 // регистрации тенанта (модуль подключён позже большинства тенантов) —
@@ -91,20 +92,30 @@ export async function PATCH(request: Request) {
     data.effect = effect as (typeof EFFECTS)[number];
   }
 
-  // Текстовые поля — plain text, санитизация происходит при выводе
-  // (экранирование React-узлов, докс: "БЕЗ rich-редактора"), здесь только
-  // ограничение длины против абьюза формы.
+  // tagline — plain text (санитизация при выводе, экранирование React-узлов),
+  // здесь только ограничение длины против абьюза формы.
   if (tagline !== undefined) {
     if (tagline !== null && (typeof tagline !== "string" || tagline.length > 200)) {
       return NextResponse.json({ error: "Слишком длинный слоган" }, { status: 400 });
     }
     data.tagline = tagline === null ? null : tagline.trim() || null;
   }
+  // aboutText — с 2026-07-13 ProseMirror/Tiptap JSON (тот же формат и
+  // белый список, что Instruction.content) — структурная защита от XSS,
+  // не санитайзер поверх HTML (см. src/lib/rich-text.ts). Лимит длины
+  // проверяется по плоскому тексту, не по размеру самого JSON.
   if (aboutText !== undefined) {
-    if (aboutText !== null && (typeof aboutText !== "string" || aboutText.length > 4000)) {
-      return NextResponse.json({ error: "Слишком длинный текст «О нас»" }, { status: 400 });
+    if (aboutText === null) {
+      data.aboutText = Prisma.DbNull;
+    } else {
+      if (!validateRichContent(aboutText)) {
+        return NextResponse.json({ error: "Некорректный формат текста «О нас»" }, { status: 400 });
+      }
+      if (extractPlainText(aboutText).length > 4000) {
+        return NextResponse.json({ error: "Слишком длинный текст «О нас»" }, { status: 400 });
+      }
+      data.aboutText = isRichContentEmpty(aboutText) ? Prisma.DbNull : (aboutText as unknown as Prisma.InputJsonValue);
     }
-    data.aboutText = aboutText === null ? null : aboutText.trim() || null;
   }
   if (galleryEnabled !== undefined) {
     if (typeof galleryEnabled !== "boolean") {

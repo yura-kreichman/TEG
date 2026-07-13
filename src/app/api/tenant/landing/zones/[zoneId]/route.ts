@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { findTenantZone, requireOwner } from "@/lib/require-owner";
 import { deleteUploadedImage } from "@/lib/uploads";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
+import { validateRichContent, extractPlainText, isRichContentEmpty } from "@/lib/rich-text";
+import { Prisma } from "@/generated/prisma/client";
 
 // "Витринное" фото/подпись зоны (docs/spec/08-landing.md — решение
 // 2026-07-13: у Zone нет собственного фото и не будет, только эта
@@ -28,8 +30,22 @@ export async function PUT(request: Request, ctx: RouteContext<"/api/tenant/landi
   if (photoUrl !== undefined && photoUrl !== null && typeof photoUrl === "string" && !photoUrl.startsWith(`/uploads/${owner.tenantId}/`)) {
     return NextResponse.json({ error: "Некорректный файл" }, { status: 400 });
   }
-  if (caption !== undefined && caption !== null && (typeof caption !== "string" || caption.length > 500)) {
-    return NextResponse.json({ error: "Слишком длинная подпись" }, { status: 400 });
+  // caption — с 2026-07-13 ProseMirror/Tiptap JSON, тот же формат/белый
+  // список, что aboutText (см. PATCH /api/tenant/landing) и Instruction.content
+  // — см. src/lib/rich-text.ts.
+  let captionValue: Prisma.NullableJsonNullValueInput | Prisma.InputJsonValue | undefined;
+  if (caption !== undefined) {
+    if (caption === null) {
+      captionValue = Prisma.DbNull;
+    } else {
+      if (!validateRichContent(caption)) {
+        return NextResponse.json({ error: "Некорректный формат подписи" }, { status: 400 });
+      }
+      if (extractPlainText(caption).length > 500) {
+        return NextResponse.json({ error: "Слишком длинная подпись" }, { status: 400 });
+      }
+      captionValue = isRichContentEmpty(caption) ? Prisma.DbNull : (caption as unknown as Prisma.InputJsonValue);
+    }
   }
 
   const existing = await prisma.landingZoneContent.findUnique({ where: { zoneId } });
@@ -43,11 +59,11 @@ export async function PUT(request: Request, ctx: RouteContext<"/api/tenant/landi
       landingId: landing.id,
       zoneId,
       photoUrl: photoUrl === undefined ? null : photoUrl,
-      caption: caption === undefined ? null : caption?.trim() || null,
+      caption: captionValue ?? Prisma.DbNull,
     },
     update: {
       ...(photoUrl !== undefined ? { photoUrl } : {}),
-      ...(caption !== undefined ? { caption: caption?.trim() || null } : {}),
+      ...(captionValue !== undefined ? { caption: captionValue } : {}),
     },
   });
 

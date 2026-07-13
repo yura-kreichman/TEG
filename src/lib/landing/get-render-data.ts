@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getDictionary } from "@/lib/i18n";
 import { hasConfiguredHours, isOpenNow, findNextOpen, type DayHours } from "@/lib/landing/opening-hours";
+import { isRichContentEmpty, plainTextToDoc, type PMNode } from "@/lib/rich-text";
 
 // Максимум активов в ленте внутри карточки зоны (докс, "Правила вёрстки",
 // п.5а) — дальше тайл "+N ещё" вместо показа всех.
@@ -27,7 +28,7 @@ export interface LandingRenderData {
   theme: "modern" | "classic" | "retro" | "festival" | "neon" | "pixel";
   effect: "none" | "snow" | "confetti" | "bubbles" | "leaves" | "sparks" | "petals" | "fireworks";
   tagline: string;
-  aboutText: string;
+  aboutText: PMNode;
   galleryEnabled: boolean;
   ourFleetEnabled: boolean;
   showPrices: boolean;
@@ -55,7 +56,7 @@ export interface LandingRenderData {
     name: string;
     iconKey: string | null;
     photoUrl: string | null;
-    caption: string | null;
+    caption: PMNode | null;
     tariffs: { id: string; name: string; price: number }[];
     assetsCount: number;
     fleetAssets: { id: string; name: string; photoUrl: string }[];
@@ -138,7 +139,8 @@ export async function getLandingRenderData(tenantId: string): Promise<LandingRen
       // ПРАВИЛО ПУСТОТЫ (докс, "Правила вёрстки", п.7): нет текста владельца
       // — нет строки вообще, автогенерируемую подпись "{zone} — N единиц"
       // больше не подставляем.
-      const caption = content?.caption?.trim() || null;
+      const captionDoc = (content?.caption as unknown as PMNode | null | undefined) ?? null;
+      const caption = captionDoc && !isRichContentEmpty(captionDoc) ? captionDoc : null;
 
       const assetsWithPhoto = landing.ourFleetEnabled
         ? zone.assets.filter((a): a is typeof a & { photoUrl: string } => !!a.photoUrl)
@@ -178,7 +180,9 @@ export async function getLandingRenderData(tenantId: string): Promise<LandingRen
   }
 
   const tagline = landing.tagline ?? fillTemplate(lp, "title", tenant.name, primaryCity);
-  const aboutText = landing.aboutText ?? fillTemplate(lp, "about", tenant.name, primaryCity);
+  const aboutTextDoc = (landing.aboutText as unknown as PMNode | null) ?? null;
+  const aboutText =
+    aboutTextDoc && !isRichContentEmpty(aboutTextDoc) ? aboutTextDoc : plainTextToDoc(fillTemplate(lp, "about", tenant.name, primaryCity));
 
   return {
     tenant: {

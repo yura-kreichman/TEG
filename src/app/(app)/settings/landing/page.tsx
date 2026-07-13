@@ -31,6 +31,8 @@ import { compressImageFile } from "@/lib/client-image";
 import { cn } from "@/lib/utils";
 import { EffectPreview } from "@/components/landing/effect-preview";
 import "@/components/landing/landing-themes.css";
+import { InstructionEditor } from "@/components/instructions/instruction-editor";
+import { EMPTY_DOC, type PMNode } from "@/lib/rich-text";
 
 const THEME_KEYS = ["modern", "classic", "retro", "festival", "neon", "pixel"] as const;
 type ThemeKey = (typeof THEME_KEYS)[number];
@@ -44,7 +46,7 @@ interface LandingData {
   theme: ThemeKey;
   effect: EffectKey;
   tagline: string | null;
-  aboutText: string | null;
+  aboutText: PMNode | null;
   galleryEnabled: boolean;
   ourFleetEnabled: boolean;
   showPrices: boolean;
@@ -67,7 +69,7 @@ interface LandingData {
   slug: string | null;
   tenantName: string;
   galleryPhotos: { id: string; url: string }[];
-  zoneContents: { zoneId: string; photoUrl: string | null; caption: string | null }[];
+  zoneContents: { zoneId: string; photoUrl: string | null; caption: PMNode | null }[];
 }
 
 interface ZoneOption {
@@ -347,7 +349,7 @@ export default function LandingSettingsPage() {
     await load();
   }
 
-  async function saveZoneCaption(zoneId: string, caption: string) {
+  async function saveZoneCaption(zoneId: string, caption: PMNode) {
     await fetch(`/api/tenant/landing/zones/${zoneId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -488,14 +490,11 @@ export default function LandingSettingsPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label htmlFor="about">{t.landing.aboutLabel}</Label>
-                  <textarea
-                    id="about"
-                    rows={4}
-                    placeholder={t.landing.aboutPlaceholder}
-                    value={landing.aboutText ?? ""}
-                    onChange={(e) => update("aboutText", e.target.value)}
-                    className="rounded-control border border-input bg-background px-3 py-2 text-body-airbnb"
+                  <Label>{t.landing.aboutLabel}</Label>
+                  <InstructionEditor
+                    content={landing.aboutText ?? EMPTY_DOC}
+                    onChange={(json) => update("aboutText", json)}
+                    heightClassName="h-64 min-h-0"
                   />
                 </div>
               </SpringCard>
@@ -642,12 +641,10 @@ export default function LandingSettingsPage() {
                       </div>
                       <div className="flex min-w-0 grow flex-col gap-1.5">
                         <p className="truncate text-sm font-semibold">{zone.name}</p>
-                        <textarea
-                          rows={2}
-                          placeholder={t.landing.zoneCaptionPlaceholder}
-                          defaultValue={content?.caption ?? ""}
-                          onBlur={(e) => saveZoneCaption(zone.id, e.target.value)}
-                          className="rounded-control border border-input bg-background px-2.5 py-1.5 text-sm"
+                        <InstructionEditor
+                          content={content?.caption ?? EMPTY_DOC}
+                          onBlur={(json) => saveZoneCaption(zone.id, json)}
+                          heightClassName="h-44 min-h-0"
                         />
                         <div className="flex items-center gap-2">
                           <FilePickerButton

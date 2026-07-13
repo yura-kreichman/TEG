@@ -1240,11 +1240,14 @@ model Landing {
   // постоянная и владелец открывает её из кабинета многократно.
   previewToken String @unique @default(cuid())
 
-  // Тексты — plain text с переносами строк (докс: "БЕЗ rich-редактора"),
-  // санитизация только при выводе (экранирование, не хранение HTML) — в
-  // отличие от Instruction.content (ProseMirror JSON), структура не нужна.
+  // tagline — короткий однострочный слоган, plain text (санитизация только
+  // при выводе). aboutText — с 2026-07-13 тот же формат, что Instruction.content
+  // (ProseMirror/Tiptap JSON, docs/spec/07-instructions.md, Шаг 2) — решение
+  // пользователя: "тот же примитвный редактор, как и в инструкциях" для
+  // текста "О нас" (раньше здесь был "БЕЗ rich-редактора" — докс устарел,
+  // обновить). Валидация тем же белым списком — src/lib/rich-text.ts.
   tagline   String?
-  aboutText String?
+  aboutText Json?
 
   galleryEnabled  Boolean @default(false)
   ourFleetEnabled Boolean @default(false) // "Наш парк" — сетка активов с фото
@@ -1336,7 +1339,10 @@ model LandingZoneContent {
   zone      Zone    @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
   photoUrl String? // /uploads/<tenantId>/... (src/lib/uploads.ts)
-  caption  String? // null → дефолтный шаблон из i18n при рендере (докс, "Тексты")
+  // ProseMirror/Tiptap JSON — тот же примитивный редактор, что у Instruction.content
+  // (решение пользователя 2026-07-13), валидация — src/lib/rich-text.ts.
+  // null → нет подписи, строка не рендерится (докс, "Правила вёрстки" п.7).
+  caption Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

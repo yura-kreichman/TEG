@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getLandingRenderData, type LandingRenderData } from "@/lib/landing/get-render-data";
 import { getDictionary } from "@/lib/i18n";
+import { extractPlainText } from "@/lib/rich-text";
 import { LandingJsonLd } from "@/components/landing/json-ld";
 import {
   Header,
@@ -37,7 +38,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const canonical = `${SITE_URL}/site/${data.slug}`;
   const title = data.metaTitleOverride ?? data.tagline;
-  const description = (data.metaDescriptionOverride ?? data.aboutText).slice(0, 160);
+  const description = (data.metaDescriptionOverride ?? extractPlainText(data.aboutText)).slice(0, 160);
   const ogImageRelative = data.galleryPhotos[0]?.url ?? data.zones.find((z) => z.photoUrl)?.photoUrl ?? null;
   const ogImage = ogImageRelative ? `${SITE_URL}${ogImageRelative}` : undefined;
 

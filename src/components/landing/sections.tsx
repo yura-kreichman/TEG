@@ -16,6 +16,8 @@ import {
 } from "@/components/landing/social-icons";
 import { MARKETING_SITE_URL } from "@/lib/billing";
 import type { Dictionary } from "@/lib/i18n";
+import { RichText } from "@/components/landing/rich-text";
+import { isRichContentEmpty } from "@/lib/rich-text";
 
 type LP = Dictionary["landingPublic"];
 
@@ -118,10 +120,10 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 // 2026-07-13 — раньше был мелкий левый текст, терялся рядом с видео; п.1
 // про левый край с этого момента на .about не распространяется).
 export function AboutSection({ data }: { data: LandingRenderData }) {
-  if (!data.aboutText) return null;
+  if (isRichContentEmpty(data.aboutText)) return null;
   return (
     <section className="lt-wrap landing-reveal py-5 text-center">
-      <p className="lt-body-text whitespace-pre-line text-lg leading-snug font-medium sm:text-xl">{data.aboutText}</p>
+      <RichText doc={data.aboutText} className="lt-about-prose text-lg leading-snug font-medium sm:text-xl" />
     </section>
   );
 }
@@ -345,7 +347,7 @@ export function RentalSection({ data, lp }: { data: LandingRenderData; lp: LP })
                   </div>
                   {zone.caption && (
                     <div className="p-5 pb-4">
-                      <p className="lt-body-text text-sm font-medium">{zone.caption}</p>
+                      <RichText doc={zone.caption} className="font-medium" />
                     </div>
                   )}
                   <ZoneFleetStrip zone={zone} tenantName={data.tenant.name} lp={lp} />
