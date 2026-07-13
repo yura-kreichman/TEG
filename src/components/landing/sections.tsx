@@ -18,6 +18,7 @@ import { MARKETING_SITE_URL } from "@/lib/billing";
 import type { Dictionary } from "@/lib/i18n";
 import { RichText } from "@/components/landing/rich-text";
 import { isRichContentEmpty } from "@/lib/rich-text";
+import { cn } from "@/lib/utils";
 
 type LP = Dictionary["landingPublic"];
 
@@ -70,8 +71,13 @@ function ZoneIconGlyph({ iconKey, className }: { iconKey: string | null; classNa
       />
     );
   }
+  // aspect-square — иконка всегда квадратная, а className варьируется по
+  // вызову (разные size-* у разных секций), так что фиксированные
+  // width/height-атрибуты не подходят; CSS aspect-ratio закрывает тот же
+  // Lighthouse-аудит "у изображений не заданы явным образом width/height"
+  // (найдено в отчёте PageSpeed Insights 2026-07-14) не хуже атрибутов.
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt="" aria-hidden className={className} />;
+  return <img src={src} alt="" aria-hidden className={cn("aspect-square", className)} />;
 }
 
 export function Header({ data, lp }: { data: LandingRenderData; lp: LP }) {

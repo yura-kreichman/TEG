@@ -61,16 +61,20 @@ export default async function PublicLandingPage({ params }: { params: Promise<{ 
         {/* Порядок секций (докс, "Правила вёрстки", п.3): герой → галерея →
             видео → "О нас" → Прокат → Контакты (точки + телефон/соцсети,
             без отдельного заголовка "Где нас найти" — решение пользователя
-            2026-07-13) → Правила → футер. */}
+            2026-07-13) → Правила → футер. <main> — Lighthouse Accessibility
+            "В документе нет ориентира main" (найдено в отчёте PageSpeed
+            Insights 2026-07-14); header/footer — свои landmark вне main. */}
         <Header data={data} lp={lp} />
-        <GallerySection data={data} />
-        <VideoSection data={data} lp={lp} />
-        <AboutSection data={data} />
-        <SectionDivider />
-        <RentalSection data={data} lp={lp} />
-        <SectionDivider />
-        <ContactsSection data={data} lp={lp} weekdayNames={weekdayNames} />
-        <RulesSection data={data} lp={lp} />
+        <main className="flex flex-col">
+          <GallerySection data={data} />
+          <VideoSection data={data} lp={lp} />
+          <AboutSection data={data} />
+          <SectionDivider />
+          <RentalSection data={data} lp={lp} />
+          <SectionDivider />
+          <ContactsSection data={data} lp={lp} weekdayNames={weekdayNames} />
+          <RulesSection data={data} lp={lp} />
+        </main>
         <LandingFooter data={data} lp={lp} />
       </div>
       {needsLightbox && <LightboxSkeleton lp={lp} />}

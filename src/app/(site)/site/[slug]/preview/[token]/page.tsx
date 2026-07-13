@@ -75,14 +75,16 @@ export default async function LandingPreviewPage({
       <LandingJsonLd data={data} baseUrl={SITE_URL} />
       <div className="flex flex-col">
         <Header data={data} lp={lp} />
-        <GallerySection data={data} />
-        <VideoSection data={data} lp={lp} />
-        <AboutSection data={data} />
-        <SectionDivider />
-        <RentalSection data={data} lp={lp} />
-        <SectionDivider />
-        <ContactsSection data={data} lp={lp} weekdayNames={weekdayNames} />
-        <RulesSection data={data} lp={lp} />
+        <main className="flex flex-col">
+          <GallerySection data={data} />
+          <VideoSection data={data} lp={lp} />
+          <AboutSection data={data} />
+          <SectionDivider />
+          <RentalSection data={data} lp={lp} />
+          <SectionDivider />
+          <ContactsSection data={data} lp={lp} weekdayNames={weekdayNames} />
+          <RulesSection data={data} lp={lp} />
+        </main>
         <LandingFooter data={data} lp={lp} />
       </div>
       {needsLightbox && <LightboxSkeleton lp={lp} />}
