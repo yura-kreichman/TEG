@@ -25,6 +25,12 @@ export function buildLandingMetadata(
     description,
     alternates: { canonical },
     robots,
+    // Логотип тенанта как favicon этой страницы — не платформенный RentOS,
+    // иначе делится бы одной иконкой из корня приложения (src/app/favicon.ico)
+    // на всех тенантов. Google и другие поисковики подставляют favicon рядом
+    // со сниппетом в выдаче (решение пользователя 2026-07-14: "добавь
+    // логотип компании в Google Preview и других поисковиков").
+    icons: data.tenant.logoUrl ? { icon: data.tenant.logoUrl } : undefined,
     openGraph: {
       type: "website",
       title,

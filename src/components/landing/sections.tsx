@@ -86,7 +86,14 @@ export function Header({ data, lp }: { data: LandingRenderData; lp: LP }) {
       <div className="flex items-center gap-3.5">
         {data.tenant.logoUrl ? (
           <div className="lt-card lt-logo relative size-20 shrink-0 overflow-hidden sm:size-24">
-            <Image src={data.tenant.logoUrl} alt={data.tenant.name} fill sizes="(max-width: 640px) 80px, 96px" className="object-cover" />
+            <Image
+              src={data.tenant.logoUrl}
+              alt={data.tenant.name}
+              title={data.tenant.name}
+              fill
+              sizes="(max-width: 640px) 80px, 96px"
+              className="object-cover"
+            />
           </div>
         ) : null}
         <div className="min-w-0 flex-1">
@@ -151,6 +158,7 @@ export function GallerySection({ data }: { data: LandingRenderData }) {
         <Image
           src={photo.url}
           alt={duplicate ? "" : `${data.tenant.name} — фото ${i + 1}`}
+          title={duplicate ? undefined : `${data.tenant.name} — фото ${i + 1}`}
           fill
           sizes="200px"
           className="object-cover"
@@ -193,6 +201,7 @@ export function VideoSection({ data, lp }: { data: LandingRenderData; lp: LP }) 
         <Image
           src={data.videoPoster}
           alt={`${data.tenant.name} — видео`}
+          title={`${data.tenant.name} — видео`}
           width={1280}
           height={720}
           sizes="(max-width: 640px) 100vw, 640px"
@@ -272,6 +281,7 @@ function ZoneFleetStrip({
               <Image
                 src={asset.photoUrl}
                 alt={duplicate ? "" : `${asset.name} — ${tenantName}`}
+                title={duplicate ? undefined : `${asset.name} — ${tenantName}`}
                 fill
                 sizes="96px"
                 loading="lazy"
@@ -300,13 +310,20 @@ function ZoneFleetStrip({
   );
 }
 
+function zonePhotoAltText(zone: LandingRenderData["zones"][number], tenantName: string): string {
+  return `${zone.name} — ${tenantName}${zone.pointCity ? `, ${zone.pointCity}` : ""}`;
+}
+
 export function RentalSection({ data, lp }: { data: LandingRenderData; lp: LP }) {
   const groups = groupByPoint(data.zones);
   // Подзаголовок с названием точки — только когда точек реально больше
   // одной; для единственной точки это был бы шум без смысла (докс, п.8).
   const showPointLabels = groups.length > 1;
   return (
-    <section className="lt-wrap landing-reveal py-7">
+    // id — якорь для прямых ссылок на раздел (#rental) и возможных
+    // sitelinks/jump-to-section в поиске (решение пользователя 2026-07-14:
+    // "сделай названия разделов якорями для лучшего SEO").
+    <section id="rental" className="lt-wrap landing-reveal py-7">
       <SectionHeading>{lp.rentalTitle}</SectionHeading>
       <div className="flex flex-col gap-7">
         {groups.map((group, i) => (
@@ -331,7 +348,8 @@ export function RentalSection({ data, lp }: { data: LandingRenderData; lp: LP })
                     {zone.photoUrl ? (
                       <Image
                         src={zone.photoUrl}
-                        alt={`${zone.name} — ${data.tenant.name}${zone.pointCity ? `, ${zone.pointCity}` : ""}`}
+                        alt={zonePhotoAltText(zone, data.tenant.name)}
+                        title={zonePhotoAltText(zone, data.tenant.name)}
                         fill
                         sizes="(max-width: 640px) 100vw, 640px"
                         className="object-cover"
@@ -422,7 +440,7 @@ export function ContactsSection({ data, lp, weekdayNames }: { data: LandingRende
   if (data.points.length === 0 && entries.length === 0) return null;
 
   return (
-    <section className="lt-wrap landing-reveal py-7">
+    <section id="contacts" className="lt-wrap landing-reveal py-7">
       <SectionHeading>{lp.contactsTitle}</SectionHeading>
       {data.points.length > 0 && (
         <div className="mb-6 flex flex-col gap-5">

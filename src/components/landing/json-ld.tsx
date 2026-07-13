@@ -12,14 +12,26 @@ export function LandingJsonLd({ data, baseUrl }: { data: LandingRenderData; base
   // указывать на собственную страницу бизнеса (найдено при аудите SEO
   // 2026-07-14, была ошибка: url: baseUrl без пути).
   const canonicalUrl = `${baseUrl}/site/${data.slug}`;
+  const logoUrl = data.tenant.logoUrl ? `${baseUrl}${data.tenant.logoUrl}` : null;
   const sameAs = (["telegram", "instagram", "facebook", "tiktok", "whatsapp", "viber"] as const)
     .map((kind) => (data.contacts[kind] ? contactHref(kind, data.contacts[kind]!) : null))
     .filter((v): v is string => !!v);
+
+  // Organization.logo — стандартный способ подсказать Google/другим
+  // поисковикам логотип компании для сниппета/Knowledge Panel (решение
+  // пользователя 2026-07-14: "добавь логотип компании в Google Preview").
+  // Само наличие этих данных не гарантирует показ — Google решает по
+  // многим факторам (включая доверие/возраст сайта, верификация через
+  // Search Console), но это необходимое структурное условие.
+  const organization = logoUrl
+    ? [{ "@type": "Organization", name: data.tenant.name, url: canonicalUrl, logo: logoUrl }]
+    : [];
 
   const localBusinesses = data.points.map((point) => ({
     "@type": "LocalBusiness",
     name: `${data.tenant.name} — ${point.name}`,
     url: canonicalUrl,
+    ...(logoUrl ? { image: logoUrl } : {}),
     ...(point.address ? { address: { "@type": "PostalAddress", streetAddress: point.address, addressLocality: point.city ?? undefined } } : {}),
     ...(point.latitude != null && point.longitude != null
       ? { geo: { "@type": "GeoCoordinates", latitude: point.latitude, longitude: point.longitude } }
@@ -49,7 +61,7 @@ export function LandingJsonLd({ data, baseUrl }: { data: LandingRenderData; base
       name: `${z.name} — ${data.tenant.name}`,
     }));
 
-  const jsonLd = { "@context": "https://schema.org", "@graph": [...localBusinesses, ...images] };
+  const jsonLd = { "@context": "https://schema.org", "@graph": [...organization, ...localBusinesses, ...images] };
 
   // JSON-LD, не HTML — значения либо структурные числа/URL, либо экранируются JSON.stringify.
   return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />;

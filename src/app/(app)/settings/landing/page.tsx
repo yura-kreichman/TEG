@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ImagePlus, ExternalLink, Copy, Check, MapPin, Phone } from "lucide-react";
+import { Plus, Trash2, ImagePlus, ExternalLink, Copy, Check, MapPin, Phone, CheckCircle2, AlertCircle } from "lucide-react";
 import {
   TelegramIcon,
   ViberIcon,
@@ -32,7 +32,66 @@ import { cn } from "@/lib/utils";
 import { EffectPreview } from "@/components/landing/effect-preview";
 import "@/components/landing/landing-themes.css";
 import { InstructionEditor } from "@/components/instructions/instruction-editor";
-import { EMPTY_DOC, type PMNode } from "@/lib/rich-text";
+import { EMPTY_DOC, isRichContentEmpty, type PMNode } from "@/lib/rich-text";
+
+// Рекомендованная длина мета-тегов (докс: не задокументировано отдельно,
+// пороги взяты из внешнего SEO-отчёта sitechecker.pro, найдено 2026-07-14
+// на реальном тенанте КидсБург — "Title length 23 симв., рекомендовано
+// 35-65"/"Description length 36 симв., рекомендовано 70-320").
+const TITLE_MIN = 35;
+const TITLE_MAX = 65;
+const DESCRIPTION_MIN = 70;
+const DESCRIPTION_MAX = 320;
+
+// Показывается вместо чеклиста, когда он полностью пройден (решение
+// пользователя 2026-07-14) — просто справочный список названий площадок,
+// куда ещё стоит добавить лендинг (карты/локальный поиск), БЕЗ ссылок —
+// не интеграция, докс: "Никаких внешних API в MVP".
+const SEO_RECOMMENDATION_NAMES = [
+  "seoRecommendationGoogleBusiness",
+  "seoRecommendationGoogleSearchConsole",
+  "seoRecommendationYandexBusiness",
+  "seoRecommendationYandexWebmaster",
+] as const;
+
+// Полоса "красный -> зелёный по мере набора текста, снова красный при
+// переборе" (решение пользователя 2026-07-14) — заливка растёт до max,
+// цвет отдельно: 0..min интерполируется red->green, min..max зелёный,
+// >max красный. Без i18n-текста внутри (только числа) — не нужно тащить
+// новые ключи в 14 языков ради самого счётчика.
+function SeoLengthMeter({ length, min, max }: { length: number; min: number; max: number }) {
+  const isOver = length > max;
+  const ratioToMin = min > 0 ? Math.min(1, length / min) : 1;
+  const hue = isOver ? 0 : ratioToMin * 120;
+  const fillPercent = isOver ? 100 : Math.min(100, (length / max) * 100);
+  const isGood = length >= min && length <= max;
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${length > 0 ? Math.max(4, fillPercent) : 0}%`, backgroundColor: `hsl(${hue} 70% 45%)` }}
+        />
+      </div>
+      <p className={cn("text-caption-airbnb tabular-nums", isOver && "text-destructive", isGood && "text-primary")}>
+        {length} / {min}–{max}
+      </p>
+    </div>
+  );
+}
+
+function SeoChecklistRow({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      {ok ? (
+        <CheckCircle2 className="size-4 shrink-0 text-primary" />
+      ) : (
+        <AlertCircle className="size-4 shrink-0 text-muted-foreground" />
+      )}
+      <p className={cn("text-caption-airbnb", !ok && "text-muted-foreground")}>{label}</p>
+    </div>
+  );
+}
 
 const THEME_KEYS = ["modern", "classic", "retro", "festival", "neon", "pixel"] as const;
 type ThemeKey = (typeof THEME_KEYS)[number];
@@ -726,30 +785,88 @@ export default function LandingSettingsPage() {
 
               <SpringCard hover={false} className="flex flex-col gap-3">
                 <p className="text-body-airbnb font-semibold">{t.landing.seoTitle}</p>
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1.5">
                   <Label htmlFor="metaTitle">{t.landing.metaTitleLabel}</Label>
-                  <Input
+                  <textarea
                     id="metaTitle"
+                    rows={2}
                     value={landing.metaTitleOverride ?? ""}
                     onChange={(e) => update("metaTitleOverride", e.target.value)}
+                    className="rounded-control border border-input bg-background px-3 py-2 text-body-airbnb"
                   />
+                  <SeoLengthMeter length={(landing.metaTitleOverride ?? "").length} min={TITLE_MIN} max={TITLE_MAX} />
                 </div>
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1.5">
                   <Label htmlFor="metaDescription">{t.landing.metaDescriptionLabel}</Label>
-                  <Input
+                  <textarea
                     id="metaDescription"
+                    rows={4}
                     value={landing.metaDescriptionOverride ?? ""}
                     onChange={(e) => update("metaDescriptionOverride", e.target.value)}
+                    className="rounded-control border border-input bg-background px-3 py-2 text-body-airbnb"
+                  />
+                  <SeoLengthMeter
+                    length={(landing.metaDescriptionOverride ?? "").length}
+                    min={DESCRIPTION_MIN}
+                    max={DESCRIPTION_MAX}
                   />
                 </div>
               </SpringCard>
 
               {error && <p className="text-sm text-destructive">{error}</p>}
-              <PressableScale className="w-fit self-end">
-                <Button type="button" variant="dark" disabled={saving} onClick={saveContent}>
-                  {savedToast ? t.landing.savedToast : t.landing.saveButton}
+              <PressableScale>
+                <Button type="button" className="w-full" disabled={saving} onClick={saveContent}>
+                  {savedToast ? t.common.saved : t.common.save}
                 </Button>
               </PressableScale>
+
+              {(() => {
+                // Каждая проверка читает РОВНО то же значение, что показано в
+                // метре над соответствующим полем (докс: баг, найден
+                // пользователем 2026-07-14 — заголовок 0 символов в поле, но
+                // чеклист зелёный из-за фоллбэка на tagline; убрали фоллбэк,
+                // чеклист теперь 1:1 с тем, что видно в textarea).
+                const titleLen = (landing.metaTitleOverride ?? "").trim().length;
+                const descriptionLen = (landing.metaDescriptionOverride ?? "").trim().length;
+                const checks = [
+                  { ok: titleLen >= TITLE_MIN && titleLen <= TITLE_MAX, label: t.landing.seoCheckTitleLength },
+                  {
+                    ok: descriptionLen >= DESCRIPTION_MIN && descriptionLen <= DESCRIPTION_MAX,
+                    label: t.landing.seoCheckDescriptionLength,
+                  },
+                  {
+                    ok: landing.galleryPhotos.length > 0 || !!landing.videoPoster || zones.some((z) => zoneContentByZoneId.get(z.id)?.photoUrl),
+                    label: t.landing.seoCheckOgImage,
+                  },
+                  { ok: !isRichContentEmpty(landing.aboutText), label: t.landing.seoCheckAboutText },
+                  {
+                    ok: CONTACT_FIELDS.some(({ key }) => !!(landing as unknown as Record<string, string | null>)[key]),
+                    label: t.landing.seoCheckContacts,
+                  },
+                  { ok: points.some((p) => !!p.address || p.hoursConfigured), label: t.landing.seoCheckLocation },
+                ];
+                const allOk = checks.every((c) => c.ok);
+                // Чеклист либо ОДНО, либо ДРУГОЕ на одном и том же месте
+                // (решение пользователя 2026-07-14: "когда чеклист пройден он
+                // должен исчезнуть, а рекомендации появляются компактно на
+                // его месте") — не список ссылок, просто справочные названия
+                // площадок текстом, без href/иконок.
+                return allOk ? (
+                  <SpringCard hover={false} className="flex flex-col gap-1">
+                    <p className="text-body-airbnb font-semibold">{t.landing.seoRecommendationsTitle}</p>
+                    <p className="text-caption-airbnb">
+                      {t.landing.seoRecommendationsHint}: {SEO_RECOMMENDATION_NAMES.map((k) => t.landing[k]).join(", ")}
+                    </p>
+                  </SpringCard>
+                ) : (
+                  <SpringCard hover={false} className="flex flex-col gap-2.5">
+                    <p className="text-body-airbnb font-semibold">{t.landing.seoChecklistTitle}</p>
+                    {checks.map((c) => (
+                      <SeoChecklistRow key={c.label} ok={c.ok} label={c.label} />
+                    ))}
+                  </SpringCard>
+                );
+              })()}
             </div>
           )}
 
