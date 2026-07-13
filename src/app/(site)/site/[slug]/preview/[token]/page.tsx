@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getLandingRenderData, type LandingRenderData } from "@/lib/landing/get-render-data";
 import { getDictionary } from "@/lib/i18n";
+import { buildLandingMetadata } from "@/lib/landing/metadata";
 import { LandingJsonLd } from "@/components/landing/json-ld";
 import {
   Header,
@@ -36,9 +37,20 @@ async function loadPreviewData(slug: string, token: string): Promise<LandingRend
   return getLandingRenderData(tenant.id);
 }
 
-// Всегда noindex + disallow (докс: "недоступна без токена", "превью — noindex").
-export async function generateMetadata(): Promise<Metadata> {
-  return { robots: { index: false, follow: false } };
+// Всегда noindex + disallow (докс: "недоступна без токена", "превью — noindex"),
+// но title/description/OG всё равно нужны — иначе вкладка браузера на
+// превью показывает голый URL вместо названия лендинга (найдено
+// пользователем 2026-07-14: SEO-заголовок из настроек не влиял на вкладку —
+// причина была именно в этом, generateMetadata раньше отдавал только robots).
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string; token: string }>;
+}): Promise<Metadata> {
+  const { slug, token } = await params;
+  const data = await loadPreviewData(slug, token);
+  if (!data) return { robots: { index: false, follow: false } };
+  return buildLandingMetadata(data, SITE_URL, { index: false, follow: false });
 }
 
 export default async function LandingPreviewPage({

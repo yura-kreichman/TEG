@@ -8,6 +8,10 @@ const WEEKDAY_EN = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Sat
 // ImageObject для витринных фото зон. Один <script type="application/ld+json">
 // с @graph — валиднее и легче парсить валидатору, чем несколько тегов.
 export function LandingJsonLd({ data, baseUrl }: { data: LandingRenderData; baseUrl: string }) {
+  // Канонический URL страницы, не корень домена — LocalBusiness.url должен
+  // указывать на собственную страницу бизнеса (найдено при аудите SEO
+  // 2026-07-14, была ошибка: url: baseUrl без пути).
+  const canonicalUrl = `${baseUrl}/site/${data.slug}`;
   const sameAs = (["telegram", "instagram", "facebook", "tiktok", "whatsapp", "viber"] as const)
     .map((kind) => (data.contacts[kind] ? contactHref(kind, data.contacts[kind]!) : null))
     .filter((v): v is string => !!v);
@@ -15,7 +19,7 @@ export function LandingJsonLd({ data, baseUrl }: { data: LandingRenderData; base
   const localBusinesses = data.points.map((point) => ({
     "@type": "LocalBusiness",
     name: `${data.tenant.name} — ${point.name}`,
-    url: baseUrl,
+    url: canonicalUrl,
     ...(point.address ? { address: { "@type": "PostalAddress", streetAddress: point.address, addressLocality: point.city ?? undefined } } : {}),
     ...(point.latitude != null && point.longitude != null
       ? { geo: { "@type": "GeoCoordinates", latitude: point.latitude, longitude: point.longitude } }

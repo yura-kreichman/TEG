@@ -425,6 +425,16 @@
 .lt-about-prose.prose-instruction p:last-child {
   margin-bottom: 0;
 }
+/* h1/h2 у .prose-instruction сами по себе МЕЛЬЧЕ (17px/15px), чем
+   унаследованный отсюда крупный текст "О нас" — заголовок оказывался
+   мельче обычного абзаца. em относительно унаследованного размера, не
+   фиксированный px, чтобы порядок (h1 > h2 > body) сохранялся и на sm:text-xl. */
+.lt-about-prose.prose-instruction h1 {
+  font-size: 1.3em;
+}
+.lt-about-prose.prose-instruction h2 {
+  font-size: 1.15em;
+}
 
 /* Цена/статус "сейчас открыто" — докс: акцент работает внутри любой темы.
    Неон: без text-shadow — это мелкий текст (< 16px), докс запрещает

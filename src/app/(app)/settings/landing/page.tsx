@@ -628,42 +628,44 @@ export default function LandingSettingsPage() {
                 {visibleZones.map((zone) => {
                   const content = zoneContentByZoneId.get(zone.id);
                   return (
-                    <div key={zone.id} className="flex gap-3 border-t border-border pt-3 first:border-t-0 first:pt-0">
-                      <div className="relative size-16 shrink-0 overflow-hidden rounded-control border border-border bg-muted">
-                        {content?.photoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={content.photoUrl} alt="" className="size-full object-cover" />
-                        ) : (
-                          <div className="flex size-full items-center justify-center text-muted-foreground">
-                            <ImagePlus className="size-5" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex min-w-0 grow flex-col gap-1.5">
-                        <p className="truncate text-sm font-semibold">{zone.name}</p>
-                        <InstructionEditor
-                          content={content?.caption ?? EMPTY_DOC}
-                          onBlur={(json) => saveZoneCaption(zone.id, json)}
-                          heightClassName="h-44 min-h-0"
-                        />
-                        <div className="flex items-center gap-2">
-                          <FilePickerButton
-                            accept="image/jpeg,image/png,image/webp"
-                            onFileSelected={(file) => setZonePhoto(zone.id, file)}
-                            hasFile={!!content?.photoUrl}
-                          />
-                          {content?.photoUrl && (
-                            <Button
-                              type="button"
-                              variant="link"
-                              className="h-auto p-0 text-xs text-destructive"
-                              onClick={() => removeZonePhoto(zone.id)}
-                            >
-                              {t.landing.removePhotoButton}
-                            </Button>
+                    <div key={zone.id} className="flex flex-col gap-2 border-t border-border pt-3 first:border-t-0 first:pt-0">
+                      <div className="flex gap-3">
+                        <div className="relative size-16 shrink-0 overflow-hidden rounded-control border border-border bg-muted">
+                          {content?.photoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={content.photoUrl} alt="" className="size-full object-cover" />
+                          ) : (
+                            <div className="flex size-full items-center justify-center text-muted-foreground">
+                              <ImagePlus className="size-5" />
+                            </div>
                           )}
                         </div>
+                        <div className="flex min-w-0 grow flex-col justify-center gap-1.5">
+                          <p className="truncate text-sm font-semibold">{zone.name}</p>
+                          <div className="flex items-center gap-2">
+                            <FilePickerButton
+                              accept="image/jpeg,image/png,image/webp"
+                              onFileSelected={(file) => setZonePhoto(zone.id, file)}
+                              hasFile={!!content?.photoUrl}
+                            />
+                            {content?.photoUrl && (
+                              <Button
+                                type="button"
+                                variant="link"
+                                className="h-auto p-0 text-xs text-destructive"
+                                onClick={() => removeZonePhoto(zone.id)}
+                              >
+                                {t.landing.removePhotoButton}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
+                      <InstructionEditor
+                        content={content?.caption ?? EMPTY_DOC}
+                        onBlur={(json) => saveZoneCaption(zone.id, json)}
+                        heightClassName="h-44 min-h-0"
+                      />
                     </div>
                   );
                 })}

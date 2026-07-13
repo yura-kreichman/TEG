@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getLandingRenderData, type LandingRenderData } from "@/lib/landing/get-render-data";
 import { getDictionary } from "@/lib/i18n";
-import { extractPlainText } from "@/lib/rich-text";
+import { buildLandingMetadata } from "@/lib/landing/metadata";
 import { LandingJsonLd } from "@/components/landing/json-ld";
 import {
   Header,
@@ -36,35 +36,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const data = await loadPublishedData(slug);
   if (!data) return {};
 
-  const canonical = `${SITE_URL}/site/${data.slug}`;
-  const title = data.metaTitleOverride ?? data.tagline;
-  const description = (data.metaDescriptionOverride ?? extractPlainText(data.aboutText)).slice(0, 160);
-  const ogImageRelative = data.galleryPhotos[0]?.url ?? data.zones.find((z) => z.photoUrl)?.photoUrl ?? null;
-  const ogImage = ogImageRelative ? `${SITE_URL}${ogImageRelative}` : undefined;
-
-  return {
-    title,
-    description,
-    alternates: { canonical },
-    // Опубликованный лендинг всегда индексируется, опции "скрыть из поиска"
-    // нет (докс, "Жизненный цикл") — явный robots:true, не полагаемся на
-    // дефолт (превью-роут ниже явно переопределяет на noindex).
-    robots: { index: true, follow: true },
-    openGraph: {
-      type: "website",
-      title,
-      description,
-      url: canonical,
-      locale: data.tenant.locale,
-      images: ogImage ? [{ url: ogImage, width: 1200, height: 630 }] : undefined,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: ogImage ? [ogImage] : undefined,
-    },
-  };
+  // Опубликованный лендинг всегда индексируется, опции "скрыть из поиска"
+  // нет (докс, "Жизненный цикл") — явный robots:true, не полагаемся на
+  // дефолт (превью-роут ниже явно переопределяет на noindex).
+  return buildLandingMetadata(data, SITE_URL, { index: true, follow: true });
 }
 
 export default async function PublicLandingPage({ params }: { params: Promise<{ slug: string }> }) {
