@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Download, FileText, Link2, Plus, Send } from "lucide-react";
+import { Download, FileText, Link2, Plus, Send, Trash2 } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import type { AcknowledgmentRecordItem, InstructionListItem } from "@/lib/instructions/client-types";
 
 type Tab = "instructions" | "log";
-type KebabView = "menu" | "confirm-archive";
+type KebabView = "menu" | "confirm-archive" | "confirm-delete";
 
 const STATUS_STYLES: Record<InstructionListItem["status"], string> = {
   draft: "bg-muted text-muted-foreground",
@@ -47,6 +47,7 @@ export default function InstructionsSettingsPage() {
 
   const [kebabTarget, setKebabTarget] = useState<InstructionListItem | null>(null);
   const [kebabView, setKebabView] = useState<KebabView>("menu");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [qrTarget, setQrTarget] = useState<InstructionListItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -120,6 +121,20 @@ export default function InstructionsSettingsPage() {
     setKebabTarget(null);
     setKebabView("menu");
     loadInstructions();
+  }
+
+  async function deleteInstruction() {
+    if (!kebabTarget) return;
+    setDeleteError(null);
+    const res = await fetch(`/api/instructions/${kebabTarget.id}`, { method: "DELETE" });
+    if (res.ok) {
+      setKebabTarget(null);
+      setKebabView("menu");
+      loadInstructions();
+      return;
+    }
+    const data = await res.json().catch(() => null);
+    setDeleteError(data?.error ?? t.instructions.deleteBlockedHint);
   }
 
   function publicUrl(item: InstructionListItem): string {
@@ -382,6 +397,7 @@ export default function InstructionsSettingsPage() {
         onClose={() => {
           setKebabTarget(null);
           setKebabView("menu");
+          setDeleteError(null);
         }}
       >
         {kebabTarget && kebabView === "menu" && (
@@ -413,6 +429,17 @@ export default function InstructionsSettingsPage() {
                 {t.instructions.archiveAction}
               </ActionSheetItem>
             )}
+            <ActionSheetItem
+              icon={Trash2}
+              destructive
+              disabled={kebabTarget.recordsCount > 0}
+              onClick={() => setKebabView("confirm-delete")}
+            >
+              {t.instructions.deleteAction}
+            </ActionSheetItem>
+            {kebabTarget.recordsCount > 0 && (
+              <p className="pt-1 text-caption-airbnb text-muted-foreground">{t.instructions.deleteBlockedHint}</p>
+            )}
           </div>
         )}
         {kebabTarget && kebabView === "confirm-archive" && (
@@ -426,6 +453,31 @@ export default function InstructionsSettingsPage() {
             </PressableScale>
             <PressableScale>
               <Button type="button" variant="outline" className="w-full" onClick={() => setKebabView("menu")}>
+                {t.common.cancel}
+              </Button>
+            </PressableScale>
+          </div>
+        )}
+        {kebabTarget && kebabView === "confirm-delete" && (
+          <div className="flex flex-col gap-3 pt-2">
+            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.instructions.deleteConfirmTitle}</h2>
+            <p className="text-body-airbnb text-muted-foreground">{t.instructions.deleteConfirmHint}</p>
+            {deleteError && <p className="text-caption-airbnb text-destructive">{deleteError}</p>}
+            <PressableScale>
+              <Button type="button" variant="destructive" className="w-full" onClick={deleteInstruction}>
+                {t.instructions.deleteAction}
+              </Button>
+            </PressableScale>
+            <PressableScale>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setKebabView("menu");
+                  setDeleteError(null);
+                }}
+              >
                 {t.common.cancel}
               </Button>
             </PressableScale>

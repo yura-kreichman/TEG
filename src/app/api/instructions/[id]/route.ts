@@ -76,3 +76,32 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/instructio
   await prisma.instruction.update({ where: { id }, data });
   return NextResponse.json({ ok: true });
 }
+
+// Полное удаление — только пока нет ни одной записи ознакомления (решение
+// пользователя 2026-07-13): AcknowledgmentRecord каскадируется на
+// Instruction (onDelete: Cascade), а это подписанные документы (ФИО, PNG-
+// подпись, IP) — терять их безвозвратно нельзя. Для уже подписанных
+// инструкций остаётся только архивация (см. /archive).
+export async function DELETE(_request: Request, ctx: RouteContext<"/api/instructions/[id]">) {
+  const owner = await requireOwner();
+  if (!owner) {
+    return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+
+  const { id } = await ctx.params;
+  const instruction = await loadInstruction(id, owner.tenantId);
+  if (!instruction) {
+    return NextResponse.json({ error: "Инструкция не найдена" }, { status: 404 });
+  }
+
+  const recordCount = await prisma.acknowledgmentRecord.count({ where: { instructionId: id } });
+  if (recordCount > 0) {
+    return NextResponse.json(
+      { error: "Инструкцию уже подписали сотрудники — удаление недоступно, используйте архивацию" },
+      { status: 409 }
+    );
+  }
+
+  await prisma.instruction.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}

@@ -31,7 +31,10 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
 
   const zones = await prisma.zone.findMany({
     where: { pointId },
-    include: { assets: true, tariffs: true },
+    include: {
+      assets: { orderBy: { sortOrder: "asc" } },
+      tariffs: { where: { deletedAt: null } },
+    },
     orderBy: { createdAt: "asc" },
   });
   const zoneIds = zones.map((z) => z.id);
@@ -77,18 +80,18 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     // the difference/calculatedRevenue distinction elsewhere in the app.
     const scale = rawTotal > 0 ? zoneActualTotal / rawTotal : 0;
 
-    assetRanking = drillZone.assets
-      .map((a) => {
-        const total = (perAssetRaw.get(a.id) ?? 0) * scale;
-        return {
-          assetId: a.id,
-          assetName: a.name,
-          colorTag: a.colorTag,
-          total: round2(total),
-          sharePercent: zoneActualTotal > 0 ? Math.round((total / zoneActualTotal) * 1000) / 10 : 0,
-        };
-      })
-      .sort((a, b) => b.total - a.total);
+    // Порядок — как у Владельца в /zones (Asset.sortOrder), а не по выручке:
+    // отчёт должен узнаваться, а не тасоваться при каждой смене периода.
+    assetRanking = drillZone.assets.map((a) => {
+      const total = (perAssetRaw.get(a.id) ?? 0) * scale;
+      return {
+        assetId: a.id,
+        assetName: a.name,
+        colorTag: a.colorTag,
+        total: round2(total),
+        sharePercent: zoneActualTotal > 0 ? Math.round((total / zoneActualTotal) * 1000) / 10 : 0,
+      };
+    });
 
     tariffBreakdown = drillZone.tariffs
       .map((t) => {

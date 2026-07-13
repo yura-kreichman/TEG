@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { rm } from "fs/promises";
+import path from "path";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { requireSuperAdmin } from "@/lib/require-super-admin";
@@ -296,6 +298,12 @@ export async function DELETE(request: Request, ctx: RouteContext<"/api/admin/ten
     },
   });
   await prisma.tenant.delete({ where: { id } });
+
+  // Загруженные файлы (public/uploads/<tenantId>/, см. src/lib/uploads.ts)
+  // лежат на диске, а не в БД — каскад Prisma их не трогает. Best-effort:
+  // тенант уже удалён, оставлять пустую/сиротскую папку хуже, чем не удалить
+  // её при редкой ошибке файловой системы.
+  await rm(path.join(process.cwd(), "public", "uploads", id), { recursive: true, force: true }).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }
