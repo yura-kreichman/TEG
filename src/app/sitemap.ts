@@ -3,11 +3,13 @@ import { prisma } from "@/lib/prisma";
 
 // Должен жить в ИСТИННОМ корне app/ (не в route group) — тот же файловый
 // конвеншен, что у favicon.ico/manifest.ts (Next.js резолвит sitemap.ts
-// только на корневом уровне, докс/spec/08-landing.md, Шаг 6). Кэшируется
-// час (ниже) + точечно ревалидируется при publish/unpublish (см.
-// src/app/api/tenant/landing/{publish,unpublish}/route.ts) — не критично
-// для мгновенной точности, поисковики и так не переобходят сайт мгновенно.
-export const revalidate = 3600;
+// только на корневом уровне, докс/spec/08-landing.md, Шаг 6).
+// force-dynamic, НЕ revalidate/ISR (найдено эмпирически 2026-07-13, реальный
+// баг: ISR пытается статически сгенерировать /sitemap.xml во время `next
+// build` в Docker-образе, а на этом этапе БД ещё недоступна — ECONNREFUSED,
+// вся сборка падает). force-dynamic считает список публикаций на каждый
+// запрос вместо кэша — для sitemap это приемлемо, краулеры заходят нечасто.
+export const dynamic = "force-dynamic";
 
 const SITE_URL = process.env.SITE_URL ?? "http://localhost:3000";
 
