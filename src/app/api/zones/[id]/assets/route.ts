@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkPackageLimit } from "@/lib/packages";
 import { findTenantZone, requireOwner } from "@/lib/require-owner";
+import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 
 const DEFAULT_COLOR_TAGS = [
   "#ef4444",
@@ -53,6 +54,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     },
   });
 
+  await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json(
     { id: asset.id, name: asset.name, colorTag: asset.colorTag, photoUrl: asset.photoUrl, iconKey: asset.iconKey },
     { status: 201 }

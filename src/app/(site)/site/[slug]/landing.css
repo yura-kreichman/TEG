@@ -1,0 +1,110 @@
+/* Появление секций при скролле (docs/spec/08-landing.md: "лёгкие, spring-
+   анимации... не мешающие чтению", "prefers-reduced-motion уважается") —
+   чистый CSS scroll-driven animation, БЕЗ JavaScript: контент по умолчанию
+   полностью видим (SEO/краулеры/no-JS всегда видят весь текст сразу), анимация
+   — исключительно прогрессивное усиление в браузерах, которые её понимают,
+   и полностью отключается вторым правилом ниже без единой JS-ветки. Framer
+   Motion (используется в кабинете владельца) здесь сознательно не подключаем
+   — не влезает в бюджет JS публичной страницы (<100KB, докс, Шаг 4). */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .landing-reveal {
+      animation: landing-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 25%;
+    }
+  }
+}
+
+@keyframes landing-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Лайтбокс (LightboxSkeleton в sections.tsx + public/landing-lightbox.js) —
+   полноэкранный просмотр фото галереи/активов. Тёмная подложка и белые
+   элементы управления НЕ зависят от --lt-* темы намеренно (тот же принцип,
+   что нейтральный чёрный border:0 у video-iframe) — это системный оверлей
+   поверх контента, а не карточка темы, пользователь ожидает привычный вид
+   просмотрщика фото независимо от акцента/темы лендинга. */
+/* Курсор через CSS-селектор по серверному атрибуту, не через JS
+   el.style.cursor — JS-мутация style/class сразу на defer-скрипте гонится с
+   React-гидрацией того же узла и однажды дала "attributes didn't match"
+   (найдено 2026-07-13 в реальном браузере пользователя). */
+[data-lightbox-group] {
+  cursor: zoom-in;
+}
+
+.lt-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.92);
+}
+.lt-lightbox.is-open {
+  display: flex;
+}
+.lt-lightbox-img {
+  max-width: min(92vw, 1100px);
+  max-height: 86vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.lt-lightbox-close,
+.lt-lightbox-nav {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  line-height: 1;
+}
+.lt-lightbox-close {
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+}
+.lt-lightbox-nav {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+}
+.lt-lightbox-prev {
+  left: 12px;
+}
+.lt-lightbox-next {
+  right: 12px;
+}
+.lt-lightbox-counter {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+@media (max-width: 640px) {
+  .lt-lightbox-nav {
+    width: 40px;
+    height: 40px;
+  }
+}

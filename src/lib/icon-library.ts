@@ -29,7 +29,7 @@ function libraryDir(family: IconFamily) {
   return join(process.cwd(), "public", "icon-library", family);
 }
 
-export function listIconNames(family: IconFamily, query?: string): string[] {
+export function listIconNames(family: IconFamily): string[] {
   let names: string[];
   try {
     names = readdirSync(libraryDir(family))
@@ -38,8 +38,6 @@ export function listIconNames(family: IconFamily, query?: string): string[] {
   } catch {
     return [];
   }
-  const q = query?.trim().toLowerCase();
-  if (q) names = names.filter((n) => n.includes(q));
   return names.sort();
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantZone, requireOwner } from "@/lib/require-owner";
+import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 
 export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/tariffs">) {
   const owner = await requireOwner();
@@ -48,6 +49,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     },
   });
 
+  await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json(
     { id: tariff.id, name: tariff.name, price: tariff.price, order: tariff.order },
     { status: 201 }

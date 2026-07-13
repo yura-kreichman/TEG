@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { mkdir, unlink, writeFile } from "fs/promises";
 import path from "path";
+import sharp from "sharp";
 
 // Uploaded images (asset photos, operator avatars) are saved to local disk under
 // public/uploads/<tenantId>/, scoped per tenant — not an arbitrary external URL
@@ -31,6 +32,25 @@ export async function saveUploadedImage(tenantId: string, file: File): Promise<s
 
   const buffer = Buffer.from(await file.arrayBuffer());
   await writeFile(path.join(tenantDir, filename), buffer);
+
+  return `/uploads/${tenantId}/${filename}`;
+}
+
+/**
+ * Сохраняет изображение, скачанное СЕРВЕРОМ (не форма владельца) — сейчас
+ * только обложка YouTube-видео (docs/spec/08-landing.md, "Секция видео").
+ * В отличие от saveUploadedImage — всегда перекодирует в WebP через sharp
+ * (докс требует WebP на выходе независимо от формата источника; обложки
+ * YouTube приходят JPEG). Тот же UPLOADS_ROOT/структура путей, что у обычных
+ * загрузок — deleteUploadedImage одинаково работает для обоих.
+ */
+export async function saveRemoteImageAsWebp(tenantId: string, buffer: Buffer): Promise<string> {
+  const webp = await sharp(buffer).webp({ quality: 82 }).toBuffer();
+
+  const filename = `${randomUUID()}.webp`;
+  const tenantDir = path.join(UPLOADS_ROOT, tenantId);
+  await mkdir(tenantDir, { recursive: true });
+  await writeFile(path.join(tenantDir, filename), webp);
 
   return `/uploads/${tenantId}/${filename}`;
 }

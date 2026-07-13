@@ -6,6 +6,7 @@ import { verifyCaptchaAnswer } from "@/lib/captcha";
 import { resolveLocale } from "@/lib/i18n";
 import { linkPendingFluentCartPurchases } from "@/lib/fluentcart-webhook";
 import { generateUniqueSlug } from "@/lib/instructions/slug";
+import { isReservedSlug, isSlugTaken } from "@/lib/landing/slug";
 
 // Новый тенант при регистрации всегда получает бесплатный пакет (пакеты
 // теперь управляются из Super Admin, docs/spec/06-super-admin.md) —
@@ -77,11 +78,15 @@ export async function POST(request: Request) {
 
   const pkg = await getDefaultPackage();
   const locale = await resolveLocale();
-  // Для публичной ссылки модуля Инструктажи (docs/spec/07-instructions.md,
-  // "Tenant.slug") — единственный публичный потребитель этого поля.
+  // Публичные ссылки Инструктажей (/i/{slug}/...) и Лендинга (/site/{slug},
+  // docs/spec/08-landing.md) — общее поле, редактируемое владельцем позже.
+  // checkExists учитывает и зарезервированные слова, и уже отработавшие
+  // старые слаги (isSlugTaken), не только текущие Tenant.slug — иначе
+  // свежезарегистрированный тенант мог бы случайно занять зарезервированное
+  // имя или "перехватить" чей-то старый адрес.
   const slug = await generateUniqueSlug(tenantName.trim(), async (candidate) => {
-    const conflict = await prisma.tenant.findUnique({ where: { slug: candidate } });
-    return !!conflict;
+    if (isReservedSlug(candidate)) return true;
+    return isSlugTaken(candidate);
   });
 
   const tenant = await prisma.tenant.create({

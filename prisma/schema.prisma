@@ -16,7 +16,7 @@ datasource db {
 
 enum SubscriptionStatus {
   active
-  paused    // сезонная пауза, инициирует Owner
+  paused // сезонная пауза, инициирует Owner
   suspended // Super Admin ставит вручную через /admin/tenants — проблемы с оплатой и т.п. Отдельного объекта-оверрайда нет (убран по фидбеку 2026-07-11) — статус выставляется напрямую и остаётся, пока его не сменит следующий вебхук FluentCart или сам админ.
   expired
 }
@@ -25,40 +25,43 @@ enum SubscriptionStatus {
 // больше не различаются по пакетам — во всех пакетах доступны все модули,
 // разница только в числовых лимитах (фидбек пользователя 2026-07-12).
 model Package {
-  id        String   @id @default(cuid())
-  name      String
-  maxPoints    Int
-  maxZones     Int
-  maxAssets    Int
-  maxOperators Int
-  priceMonthly Decimal @db.Decimal(10, 2)
+  id                  String   @id @default(cuid())
+  name                String
+  maxPoints           Int
+  maxZones            Int
+  maxAssets           Int
+  maxOperators        Int
+  priceMonthly        Decimal  @db.Decimal(10, 2)
   // Привязка к продукту FluentCart (docs/spec/06-super-admin.md) — вебхук
   // ищет Package по этому полю, чтобы понять, на какой план переключить
   // тенанта. Не источник истины по цене (это priceMonthly) — просто ключ
   // сопоставления с биллингом.
-  fluentcartProductId String? @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  fluentcartProductId String?  @unique
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   tenants Tenant[]
 }
 
 model Tenant {
-  id                 String             @id @default(cuid())
-  name               String
-  // Человекочитаемый идентификатор для публичной ссылки модуля Инструктажи
-  // (docs/spec/07-instructions.md, "/i/{tenant-slug}/{instruction-slug}") —
-  // единственный публичный потребитель, больше нигде не используется.
-  // Генерируется из name при регистрации (транслитерация + kebab-case,
-  // коллизии — числовой суффикс), у существующих тенантов бэкфиллится
-  // отдельным скриптом при миграции. Nullable до бэкфилла, затем NOT NULL.
-  slug               String?            @unique
+  id                    String             @id @default(cuid())
+  name                  String
+  // Человекочитаемый идентификатор, используемый в публичных ссылках двух
+  // модулей: Инструктажи (/i/{tenant-slug}/{instruction-slug}, docs/spec/
+  // 07-instructions.md) и Лендинг (/site/{tenant-slug}, docs/spec/
+  // 08-landing.md). Генерируется из name при регистрации (транслитерация +
+  // kebab-case, коллизии — числовой суффикс). РЕДАКТИРУЕМ владельцем
+  // (решение 2026-07-13 — отменяет более раннее "неизменяем публично" из
+  // 07-instructions.md) через раздел Лендинг; старое значение при смене
+  // уходит в TenantOldSlug для 301, который отрабатывает оба публичных
+  // роута. Nullable до бэкфилла существующих тенантов, затем NOT NULL.
+  slug                  String?            @unique
   // Логотип на главной владельца и в отчётах — путь в /uploads/<tenantId>/...,
   // как Asset.photoUrl/Operator.avatarUrl (см. src/lib/uploads.ts).
-  logoUrl            String?
-  packageId          String
-  package            Package            @relation(fields: [packageId], references: [id])
-  subscriptionStatus SubscriptionStatus @default(active)
+  logoUrl               String?
+  packageId             String
+  package               Package            @relation(fields: [packageId], references: [id])
+  subscriptionStatus    SubscriptionStatus @default(active)
   // До интеграции с FluentCart (docs/spec/06-super-admin.md) управлялось
   // вручную из админ-модуля. Планировщик (summary-scheduler.ts) раз в минуту
   // переводит active в expired, когда дата прошла — актуально и сейчас как
@@ -69,7 +72,7 @@ model Tenant {
 
   // Интеграция с FluentCart (docs/spec/06-super-admin.md) — вебхук находит
   // тенанта по этому полю (создаёт нового, если ещё не было).
-  fluentcartCustomerId String? @unique
+  fluentcartCustomerId String?   @unique
   // order.id заказа, который последним перевёл тенанта в active (см.
   // syncTenantFromFluentCartEvent). Нужен, чтобы отличать "истекающее"
   // событие от ТЕКУЩЕГО заказа/подписки от такого же события у старого,
@@ -77,7 +80,7 @@ model Tenant {
   // дублирующий тестовый заказ) — без этого поля любое "истекающее" событие
   // от любого чужого заказа клиента слепо переводило тенанта в expired,
   // даже если реальная активная подписка осталась (найдено 2026-07-12).
-  fluentcartOrderId String?
+  fluentcartOrderId    String?
   // Чисто информационное "действует до" из subscriptions[].next_billing_date
   // вебхука FluentCart (docs/fluentcart-webhook-schema.md §3) — FluentCart не
   // отдаёт отдельного "access end date" поля, только дату следующего
@@ -85,11 +88,11 @@ model Tenant {
   // — только для отображения в кабинете владельца. Отдельно от
   // subscriptionExpiresAt (тот — ручной/плановый жёсткий срок, выставляется
   // Super Admin'ом напрямую или планировщиком, самостоятельный механизм).
-  currentPeriodEnd DateTime?
+  currentPeriodEnd     DateTime?
   // Точечный оверрайд числовых лимитов пакета для конкретного тенанта —
   // { maxPoints?, maxZones?, maxAssets?, maxOperators? } | null, поверх
   // package.*. См. getTenantLimits() в src/lib/packages.ts.
-  limitOverrides Json?
+  limitOverrides       Json?
 
   // Контакты тенанта для платформенной поддержки — заполняет Super Admin в
   // админ-модуле, не сам владелец (докс 2026-07-10, "полные настройки
@@ -142,24 +145,26 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users             User[]
-  operators         Operator[]
-  points            Point[]
-  moneyOps          MoneyOperation[]
-  operatorRates     OperatorRate[]
-  shifts            Shift[]
-  balanceCarryovers OperatorBalanceCarryover[]
-  summaryChannels   TenantSummaryChannel[]
-  telegramBindCodes TelegramBindCode[]
-  zoneSummarySettings       ZoneSummarySettings?
-  dailyCashSummarySettings  DailyCashSummarySettings?
-  shiftCloseSummarySettings ShiftCloseSummarySettings?
+  users                         User[]
+  operators                     Operator[]
+  points                        Point[]
+  moneyOps                      MoneyOperation[]
+  operatorRates                 OperatorRate[]
+  shifts                        Shift[]
+  balanceCarryovers             OperatorBalanceCarryover[]
+  summaryChannels               TenantSummaryChannel[]
+  telegramBindCodes             TelegramBindCode[]
+  zoneSummarySettings           ZoneSummarySettings?
+  dailyCashSummarySettings      DailyCashSummarySettings?
+  shiftCloseSummarySettings     ShiftCloseSummarySettings?
   instructionAckSummarySettings InstructionAckSummarySettings?
-  dailyCashSummaryDeliveries DailyCashSummaryDelivery[]
-  tasks Task[]
-  pushSubscriptions        PushSubscription[]
-  pushNotificationSettings PushNotificationSettings?
-  instructions             Instruction[]
+  dailyCashSummaryDeliveries    DailyCashSummaryDelivery[]
+  tasks                         Task[]
+  pushSubscriptions             PushSubscription[]
+  pushNotificationSettings      PushNotificationSettings?
+  instructions                  Instruction[]
+  landing                       Landing?
+  oldSlugs                      TenantOldSlug[]
 }
 
 // ============================================================================
@@ -203,12 +208,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  createdOperators  Operator[] @relation("OperatorCreatedBy")
+  createdOperators  Operator[]                 @relation("OperatorCreatedBy")
   corrections       CorrectionLog[]
   moneyOps          MoneyOperation[]
   balanceCarryovers OperatorBalanceCarryover[]
-  createdTasks      Task[] @relation("TaskCreatedBy")
-  assignedTasks     Task[] @relation("TaskAssignedUsers")
+  createdTasks      Task[]                     @relation("TaskCreatedBy")
+  assignedTasks     Task[]                     @relation("TaskAssignedUsers")
   pushSubscriptions PushSubscription[]
 }
 
@@ -258,9 +263,9 @@ model PushNotificationSettings {
 // PIN уникален в рамках тенанта (проверяется bcrypt-перебором при входе —
 // до ~50 операторов на тенанта, см. решение в чате аудита).
 model Operator {
-  id       String  @id @default(cuid())
+  id       String @id @default(cuid())
   tenantId String
-  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   name      String
   pinHash   String
@@ -314,11 +319,11 @@ model Operator {
   resultsSubmissions ResultsSubmission[]
   moneyOps           MoneyOperation[]
   // Получатель аванса/премии — отдельно от "кто провёл" (moneyOps выше).
-  receivedMoneyOps   MoneyOperation[] @relation("MoneyOperationBeneficiary")
+  receivedMoneyOps   MoneyOperation[]           @relation("MoneyOperationBeneficiary")
   rateHistory        OperatorRate[]
   shifts             Shift[]
   balanceCarryovers  OperatorBalanceCarryover[]
-  assignedTasks      Task[] @relation("TaskAssignedOperators")
+  assignedTasks      Task[]                     @relation("TaskAssignedOperators")
 }
 
 // ============================================================================
@@ -331,22 +336,84 @@ model Point {
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   name    String
+  // Уже существовало; теперь также используется Лендингом (docs/spec/
+  // 08-landing.md). Найденный пробел (докс, "Открытые вопросы"): сейчас
+  // редактируется только в форме создания точки, кебаб-меню правки нет —
+  // добавляется на Шаге 5 вместе с новыми полями ниже.
   address String?
   iconKey String? // ключ иконки lucide (см. src/components/icon-picker.tsx)
+
+  // Поля docs/spec/08-landing.md, секция "Где нас найти" — все новые. city
+  // нужен для SEO (город должен быть в видимом тексте страницы, не только в
+  // мета), координаты — для JSON-LD geo (schema.org требует именно числа,
+  // ссылку туда не подставить). hoursNote — свободная текстовая приписка к
+  // часам ("в дождь не работаем"), не структурная.
+  city      String?
+  latitude  Float?
+  longitude Float?
+  hoursNote String?
+  // Готовая ссылка на карту (Google Maps, в т.ч. короткие вида
+  // maps.app.goo.gl/..., или Яндекс.Карты) — решение пользователя
+  // 2026-07-13: координаты не всегда ведут в точное место (может быть уже
+  // существующая метка заведения на карте с отзывами/фото), поэтому кнопка
+  // "Открыть в картах" использует ЭТУ ссылку напрямую, если она задана, и
+  // только при её отсутствии — синтезированную из latitude/longitude.
+  // Публичная страница НЕ резолвит короткую ссылку сама (докс: ноль внешних
+  // запросов) — просто <a href>, переход делает браузer посетителя.
+  mapsUrl String?
+
+  // Временная деактивация (докс: сезонность — решение пользователя
+  // 2026-07-13, "может быть связано с сезонным фактором работы точки"), тот
+  // же паттерн, что Zone.active (src/app/api/operator/submission-context) —
+  // Точка скрыта с Лендинга (карточка "Где нас найти", "Прокат" её зон,
+  // "Наш парк" её активов, "Сегодня работают") и из ростер-переключателя
+  // точки у роуминг-устройств оператора, но НЕ блокирует уже привязанное
+  // "домашнее" устройство точки — это отдельная, более рискованная гейтинг-
+  // задача, не запрошенная явно.
+  active Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  zones   Zone[]
-  devices PointDevice[]
-  resultsSubmissions ResultsSubmission[]
+  zones                      Zone[]
+  devices                    PointDevice[]
+  resultsSubmissions         ResultsSubmission[]
   // Операции advance/bonus_payout (docs/spec/05-work-time.md) — касса точки в
   // целом, не привязанная ни к одной конкретной зоне. См. MoneyOperation.pointId.
-  moneyOps MoneyOperation[]
-  shifts   Shift[]
-  summaryChannels TenantSummaryChannel[]
+  moneyOps                   MoneyOperation[]
+  shifts                     Shift[]
+  summaryChannels            TenantSummaryChannel[]
   dailyCashSummaryDeliveries DailyCashSummaryDelivery[]
-  tasks Task[]
+  tasks                      Task[]
+  openingHours               PointOpeningHours[]
+}
+
+// Часы работы точки, по одной строке на день недели (docs/spec/08-landing.md,
+// "Где нас найти") — не одно текстовое поле: нужно и для расчёта "сейчас
+// открыто/закрыто" (сравнение локального времени тенанта с opensAt/closesAt
+// конкретного weekday), и для JSON-LD openingHoursSpecification (schema.org
+// ждёт ровно такую форму: dayOfWeek + opens + closes на объект).
+// weekday: 0=понедельник..6=воскресенье — НЕ JS Date.getDay() (там
+// 0=воскресенье), конвертация явная в коде, не полагаемся на совпадение.
+// Отсутствие ВСЕХ 7 строк для точки = "часы не заполнены" (докс: "если
+// данных недостаточно — строка не рендерится") — форма настроек Точки
+// всегда сохраняет все 7 сразу, частичного набора не бывает. isOpen=false
+// (opensAt/closesAt null) = точка в этот день не работает; условие
+// проверяется в коде, не CHECK-констрейнтом, как и остальные подобные поля
+// в этой схеме. Оверночные интервалы (закрытие после полуночи) не
+// поддерживаются в MVP — closesAt позже opensAt в пределах одного дня,
+// для детского проката это ограничение принято.
+model PointOpeningHours {
+  id      String @id @default(cuid())
+  pointId String
+  point   Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  weekday  Int
+  isOpen   Boolean @default(false)
+  opensAt  String? // "HH:MM"
+  closesAt String? // "HH:MM"
+
+  @@unique([pointId, weekday])
 }
 
 // Устройство точки: активируется владельцем или через установочный QR/ссылку —
@@ -415,11 +482,12 @@ model Zone {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tariffs  Tariff[]
-  assets   Asset[]
-  operatorsWithAccess Operator[] @relation("OperatorAllowedZones")
-  zoneSubmissions ZoneSubmission[]
-  moneyOps MoneyOperation[]
+  tariffs             Tariff[]
+  assets              Asset[]
+  operatorsWithAccess Operator[]          @relation("OperatorAllowedZones")
+  zoneSubmissions     ZoneSubmission[]
+  moneyOps            MoneyOperation[]
+  landingContent      LandingZoneContent?
 }
 
 // 1 или 2 тарифа на зону: свободное название + цена за сеанс.
@@ -434,8 +502,8 @@ model Tariff {
   // счётчиков актива ему соответствует.
   order Int
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   // Soft-delete (docs/spec/01-counters.md): удаление тарифа не должно ломать
   // Отчёты по прошлым сдачам — AssetReading.tariffId ссылается на этот тариф
   // (без onDelete: Cascade/SetNull), поэтому строка остаётся в БД, просто
@@ -684,7 +752,7 @@ model Shift {
   // check-out. В режиме "manual" всегда заполнено сразу при создании. На
   // оператора может быть не больше одной открытой смены — обеспечено
   // частичным уникальным индексом на isOpen в миграции.
-  endAt DateTime?
+  endAt   DateTime?
 
   // Денормализованное зеркало "endAt === null" — заведено ТОЛЬКО потому, что
   // фильтрация nullable DateTime (endAt: null / {equals:null} / {not:null})
@@ -746,9 +814,9 @@ enum SummaryChannelType {
 // (enabled=false, chatStatus=inactive) и создаёт новую — так остаётся
 // история "куда раньше уходили сводки", как и везде в проекте (CorrectionLog).
 model TenantSummaryChannel {
-  id         String             @id @default(cuid())
-  tenantId   String
-  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id          String             @id @default(cuid())
+  tenantId    String
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   channelType SummaryChannelType
 
   pointId String?
@@ -959,10 +1027,10 @@ model Task {
 // (см. "вне скоупа" в спеке) — это только для отладки синхронизации.
 model WebhookEvent {
   id         String   @id @default(cuid())
-  provider   String   // "fluentcart"
+  provider   String // "fluentcart"
   eventType  String
   payload    Json
-  status     String   // "processed" | "failed"
+  status     String // "processed" | "failed"
   error      String?
   receivedAt DateTime @default(now())
 
@@ -1002,14 +1070,14 @@ enum InstructionStatus {
 // опубликованной инструкции не меняет то, что прямо сейчас показывается и
 // подписывается, пока владелец не нажмёт "Опубликовать" снова.
 model Instruction {
-  id       String             @id @default(cuid())
-  tenantId String
-  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  slug     String
-  status   InstructionStatus  @default(draft)
+  id           String            @id @default(cuid())
+  tenantId     String
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug         String
+  status       InstructionStatus @default(draft)
   // "Проверка честности" — кнопка "Готово" на публичной странице неактивна,
   // пока страница не проскроллена до конца (порог ~95%).
-  honestyCheck Boolean @default(false)
+  honestyCheck Boolean           @default(false)
 
   title   String
   // ProseMirror/Tiptap JSON (не HTML) — схема редактора ограничена набором
@@ -1028,8 +1096,12 @@ model Instruction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  versions InstructionVersion[]
-  records  AcknowledgmentRecord[]
+  versions     InstructionVersion[]
+  records      AcknowledgmentRecord[]
+  // Обратная связь для Landing.rulesInstructionId (docs/spec/08-landing.md,
+  // "Правила посещения") — опциональная ссылка лендинга на опубликованную
+  // инструкцию.
+  landingLinks Landing[]
 
   @@unique([tenantId, slug])
 }
@@ -1057,11 +1129,11 @@ model InstructionVersion {
 // подписания. Подписант — всегда внешнее лицо (нет FK на User/Operator, даже
 // если по факту это оператор тенанта, см. "Назначение" в спеке).
 model AcknowledgmentRecord {
-  id            String              @id @default(cuid())
+  id            String             @id @default(cuid())
   instructionId String
-  instruction   Instruction         @relation(fields: [instructionId], references: [id], onDelete: Cascade)
+  instruction   Instruction        @relation(fields: [instructionId], references: [id], onDelete: Cascade)
   versionId     String
-  version       InstructionVersion  @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  version       InstructionVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
 
   lastName  String
   firstName String
@@ -1093,4 +1165,235 @@ model AcknowledgmentRecord {
   // инструкции без отдельной таблицы.
   @@index([instructionId, createdAt])
   @@index([instructionId, ip, createdAt])
+}
+
+// ============================================================================
+// ЛЕНДИНГ (docs/spec/08-landing.md) — публичная витрина тенанта на
+// /site/{tenant-slug}. Без feature-флага, как остальные модули (решение
+// пользователя 2026-07-13). Один Landing на тенанта (tenantId @unique).
+// Переиспользует Tenant.slug (общий с Инструктажами) и src/lib/uploads.ts
+// для всех фото — второй механизм загрузки не заводится.
+// ============================================================================
+
+// Старые значения Tenant.slug — под 301. Общая для ОБОИХ публичных роутов,
+// резолвящихся по слагу (/i/... Инструктажей и /site/... Лендинга): резолвер
+// сначала пробует текущий Tenant.slug, при промахе — эту таблицу, и если
+// находит — отдаёт 301 на актуальный slug. Старое значение остаётся здесь
+// навсегда, не переиспользуется другим тенантом — иначе кто-то другой может
+// "перехватить" уже расклеенные QR-коды/визитки со старым адресом.
+model TenantOldSlug {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+enum LandingStatus {
+  draft
+  published
+}
+
+// docs/spec/08-landing.md, "Темы лендинга" — 6 фиксированных пресетов
+// design-токенов поверх единой вёрстки, без отдельных шаблонов на тему.
+enum LandingTheme {
+  modern
+  classic
+  retro
+  festival
+  neon
+  pixel
+}
+
+// docs/spec/08-landing.md, "Эффекты лендинга" — ровно один активный эффект
+// частиц или его отсутствие; "none" — реальное значение по умолчанию, не
+// просто null, чтобы форма владельца всегда имела выбранный чип.
+enum LandingEffect {
+  none
+  snow
+  confetti
+  bubbles
+  leaves
+  sparks
+  petals
+  fireworks
+}
+
+model Landing {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  status LandingStatus @default(draft)
+
+  // docs/spec/08-landing.md, "Темы лендинга"/"Эффекты лендинга" (2026-07-13).
+  theme  LandingTheme  @default(modern)
+  effect LandingEffect @default(none)
+
+  // Секретная ссылка превью (докс, "Жизненный цикл") — работает независимо
+  // от status, черновик можно показать клиенту до публикации. В открытую
+  // (plaintext), НЕ хэш — в отличие от PointDevice.installTokenHash (тот
+  // одноразовый, после активации показывать снова не нужно), эта ссылка
+  // постоянная и владелец открывает её из кабинета многократно.
+  previewToken String @unique @default(cuid())
+
+  // Тексты — plain text с переносами строк (докс: "БЕЗ rich-редактора"),
+  // санитизация только при выводе (экранирование, не хранение HTML) — в
+  // отличие от Instruction.content (ProseMirror JSON), структура не нужна.
+  tagline   String?
+  aboutText String?
+
+  galleryEnabled  Boolean @default(false)
+  ourFleetEnabled Boolean @default(false) // "Наш парк" — сетка активов с фото
+  // Цены тарифов на карточках зон (докс: "У нас работают") — отдельный
+  // переключатель владельца (решение пользователя 2026-07-13: цены могут
+  // отпугивать часть посетителей, дефолт true — сохраняет текущее поведение
+  // для уже опубликованных лендингов).
+  showPrices Boolean @default(true)
+
+  // Правила посещения — опциональная ссылка на ОПУБЛИКОВАННУЮ инструкцию.
+  // Статус Instruction не проверяется на уровне схемы (Prisma этого не
+  // умеет) — валидируется при сохранении и повторно на рендере: если
+  // инструкцию сняли с публикации после привязки, блок просто не рендерится
+  // (Шаг 3/4), а не 500-ит и не показывает мёртвую ссылку.
+  rulesInstructionId String?
+  rulesInstruction   Instruction? @relation(fields: [rulesInstructionId], references: [id], onDelete: SetNull)
+
+  contactPhone     String?
+  contactTelegram  String?
+  contactViber     String?
+  contactWhatsapp  String?
+  contactInstagram String?
+  contactFacebook  String?
+  contactTiktok    String?
+  contactVk        String? // ВКонтакте (решение пользователя 2026-07-13 — российские соцсети в Контактах)
+  contactOk        String? // Одноклассники
+  contactYoutube   String? // ссылка на канал (докс, "Секция видео" — добавлено в список соцсетей)
+
+  // docs/spec/08-landing.md, "Секция видео" (2026-07-13). ID видео — уже
+  // распарсенный YouTube ID (не сырая ссылка владельца, докс требует парсер
+  // на сохранении); videoPoster — обложка, скачанная сервером и сохранённая
+  // через тот же механизм, что остальные фото (src/lib/uploads.ts), а не
+  // прямая ссылка на img.youtube.com (докс: обложка валидирует существование
+  // ролика и на публичной странице отдаётся ТОЛЬКО из нашего хранилища).
+  // videoEnabled — отдельный флаг видимости (докс, Шаг 6: "переключатель
+  // секции" и "Удалить видео" — два разных элемента управления, значит
+  // выключение переключателем не должно стирать videoYoutubeId/videoPoster;
+  // тот же паттерн, что galleryEnabled/ourFleetEnabled выше). "Удалить
+  // видео" обнуляет все три поля разом.
+  videoEnabled   Boolean @default(false)
+  videoYoutubeId String?
+  videoPoster    String?
+
+  // Переопределение шаблонного title/description (докс, раздел SEO).
+  metaTitleOverride       String?
+  metaDescriptionOverride String?
+
+  publishedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  galleryPhotos LandingGalleryPhoto[]
+  zoneContents  LandingZoneContent[]
+  dailyStats    LandingDailyStat[]
+}
+
+// Фото галереи (докс: 5–10 шт., drag-and-drop порядок). url — путь вида
+// /uploads/<tenantId>/... через src/lib/uploads.ts, тот же механизм, что у
+// Asset.photoUrl/Operator.avatarUrl/Tenant.logoUrl — второй не заводится.
+model LandingGalleryPhoto {
+  id        String  @id @default(cuid())
+  landingId String
+  landing   Landing @relation(fields: [landingId], references: [id], onDelete: Cascade)
+
+  url       String
+  sortOrder Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([landingId, sortOrder])
+}
+
+// Одна строка на зону, получившую "витринное" фото и/или свою подпись в
+// разделе Лендинг (решение 2026-07-13: у Zone нет собственного фото и не
+// будет — ни дефолта, ни иконки как замены; без этой записи или с пустым
+// photoUrl карточка зоны на публичной странице рендерится без изображения).
+// Строка создаётся лениво — не для каждой зоны тенанта сразу, только когда
+// владелец что-то заполнил.
+model LandingZoneContent {
+  id        String  @id @default(cuid())
+  landingId String
+  landing   Landing @relation(fields: [landingId], references: [id], onDelete: Cascade)
+  // @unique, не просто индекс: зона принадлежит ровно одной точке ровно
+  // одного тенанта, а Landing — 1:1 с тенантом, значит у зоны не может быть
+  // больше одной записи "витринного" контента. Prisma также требует @unique
+  // на стороне FK для one-to-one связи Zone.landingContent.
+  zoneId    String  @unique
+  zone      Zone    @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  photoUrl String? // /uploads/<tenantId>/... (src/lib/uploads.ts)
+  caption  String? // null → дефолтный шаблон из i18n при рендере (докс, "Тексты")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([landingId])
+}
+
+// Дневные агрегаты статистики (докс: "Статистика посещений" — сырые события
+// не хранятся). date — календарный день ПО ТАЙМЗОНЕ ТЕНАНТА (Tenant.timezone,
+// тот же принцип, что для business-day boundary в src/lib/business-day.ts),
+// не UTC-день — иначе "сегодня" в кабинете разъедется с реальным днём
+// посетителя владельца.
+model LandingDailyStat {
+  id        String  @id @default(cuid())
+  landingId String
+  landing   Landing @relation(fields: [landingId], references: [id], onDelete: Cascade)
+
+  date DateTime @db.Date
+
+  visits         Int @default(0)
+  uniqueVisitors Int @default(0)
+
+  // По реферру (докс: "прямые/поиск/соцсети") — нераспознанный/пустой
+  // реферрер учитывается как "прямой", отдельного бакета "прочее" нет,
+  // ровно три категории, как в спеке.
+  sourceDirect Int @default(0)
+  sourceSearch Int @default(0)
+  sourceSocial Int @default(0)
+
+  deviceMobile  Int @default(0)
+  deviceDesktop Int @default(0)
+
+  // Гео (страна/город) сознательно НЕ собирается (решение пользователя
+  // 2026-07-13: "уходим от платных чужих сервисов вообще") — GeoLite2/
+  // MaxMind сама по себе бесплатна, но требует стороннего аккаунта и
+  // лицензионного ключа, от чего решили полностью отказаться. Было
+  // topCountries/topCities Json?, убрано вместе с src/lib/landing/geo.ts.
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([landingId, date])
+}
+
+// Суточный дедуп-набор анонимных хэшей (hash(IP+UA+соль дня), докс) — НЕ
+// "сырые события": здесь нет IP, нет точного времени визита, нет referrer,
+// только опознавательный хэш + день, нужен исключительно чтобы посчитать
+// uniqueVisitors ровно один раз за день без хранения состояния в памяти
+// процесса (несколько инстансов/рестарт не должны давать задвоение). Старые
+// дни подлежат периодической очистке (Шаг 3) — после того как день закрыт,
+// сам хэш больше не нужен, агрегат уже лежит в LandingDailyStat.
+model LandingVisitorSeen {
+  id          String   @id @default(cuid())
+  landingId   String
+  date        DateTime @db.Date
+  visitorHash String
+
+  @@unique([landingId, date, visitorHash])
+  @@index([date])
 }

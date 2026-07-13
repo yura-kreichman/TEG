@@ -14,8 +14,10 @@ export async function GET() {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
 
+  // Деактивированные (сезонно закрытые) точки не предлагаются роуминг-
+  // устройству для переключения — решение пользователя 2026-07-13.
   const points = await prisma.point.findMany({
-    where: { tenantId: ctx.point.tenantId },
+    where: { tenantId: ctx.point.tenantId, active: true },
     select: { id: true, name: true, iconKey: true },
     orderBy: { createdAt: "asc" },
   });

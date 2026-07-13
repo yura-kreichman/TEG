@@ -16,7 +16,11 @@ function parseBoundary(boundaryTime: string): { hours: number; minutes: number }
 // Часы/минуты момента `at` в часовом поясе тенанта — без стороннего пакета,
 // Intl.DateTimeFormat с timeZone умеет это сам. Невалидная/пустая таймзона
 // (не должно случаться, но defensively) — откатываемся к UTC.
-function localMinutesOfDay(at: Date, timezone: string): number {
+// Экспортируется отдельно от бизнес-дня — переиспользуется Лендингом
+// (docs/spec/08-landing.md: "сейчас открыто/закрыто", дневные агрегаты
+// статистики по календарному дню тенанта) тем же приёмом Intl, без
+// дублирования арифметики часовых поясов.
+export function localMinutesOfDay(at: Date, timezone: string): number {
   try {
     const parts = new Intl.DateTimeFormat("en-US", {
       timeZone: timezone,
@@ -34,7 +38,7 @@ function localMinutesOfDay(at: Date, timezone: string): number {
 
 // Y/M/D частей `at` в часовом поясе тенанта — календарная дата "по месту",
 // не по UTC (может отличаться от at.getUTC* около полуночи).
-function localDateParts(at: Date, timezone: string): { year: number; month: number; day: number } {
+export function localDateParts(at: Date, timezone: string): { year: number; month: number; day: number } {
   try {
     const parts = new Intl.DateTimeFormat("en-US", {
       timeZone: timezone,

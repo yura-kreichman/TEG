@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { deleteUploadedImage } from "@/lib/uploads";
+import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 
 async function findOwnedAsset(tenantId: string, id: string) {
   const asset = await prisma.asset.findUnique({
@@ -56,6 +57,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/assets/[id
   }
 
   await prisma.asset.update({ where: { id }, data });
+  await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ ok: true });
 }
 
@@ -73,5 +75,6 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/assets/[
 
   await prisma.asset.delete({ where: { id } });
   await deleteUploadedImage(asset.photoUrl);
+  await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ ok: true });
 }

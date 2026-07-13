@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { checkPackageLimit } from "@/lib/packages";
 import { requireOwner } from "@/lib/require-owner";
 import { isZoneAccountingMode } from "@/lib/results-calc";
+import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 
 export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]/zones">) {
   const owner = await requireOwner();
@@ -58,5 +59,6 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     },
   });
 
+  await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ id: zone.id, name: zone.name }, { status: 201 });
 }

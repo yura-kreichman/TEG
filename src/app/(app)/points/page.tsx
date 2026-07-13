@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus, Pencil, Trash2, Link2, ImagePlus, Check, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Link2, ImagePlus, Check, ChevronRight, MapPin, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
@@ -33,9 +34,39 @@ interface PointInfo {
   iconKey: string | null;
   zonesCount: number;
   devices: PointDeviceInfo[];
+  active: boolean;
 }
 
-type PointKebabView = "menu" | "rename" | "icon" | "confirm-delete";
+// docs/spec/08-landing.md, "Где нас найти" — редактируются в настройках
+// Точки (кебаб "Адрес и часы работы"), не в разделе Лендинг.
+interface DayHoursForm {
+  weekday: number;
+  isOpen: boolean;
+  opensAt: string;
+  closesAt: string;
+}
+
+const DEFAULT_HOURS: DayHoursForm[] = Array.from({ length: 7 }, (_, weekday) => ({
+  weekday,
+  isOpen: false,
+  opensAt: "09:00",
+  closesAt: "18:00",
+}));
+
+// weekday: 0=понедельник..6=воскресенье (docs/spec/08-landing.md, PointOpeningHours).
+function WEEKDAY_LABELS(t: ReturnType<typeof useI18n>): string[] {
+  return [
+    t.points.weekdayMon,
+    t.points.weekdayTue,
+    t.points.weekdayWed,
+    t.points.weekdayThu,
+    t.points.weekdayFri,
+    t.points.weekdaySat,
+    t.points.weekdaySun,
+  ];
+}
+
+type PointKebabView = "menu" | "rename" | "icon" | "location" | "confirm-delete";
 type DeviceKebabView = "menu" | "rename" | "confirm-delete";
 
 export default function PointsPage() {
@@ -61,6 +92,16 @@ export default function PointsPage() {
   const [pointKebabView, setPointKebabView] = useState<PointKebabView>("menu");
   const [renamePointValue, setRenamePointValue] = useState("");
   const [pointActionError, setPointActionError] = useState<string | null>(null);
+
+  const [locAddress, setLocAddress] = useState("");
+  const [locCity, setLocCity] = useState("");
+  const [locLatitude, setLocLatitude] = useState("");
+  const [locLongitude, setLocLongitude] = useState("");
+  const [locHoursNote, setLocHoursNote] = useState("");
+  const [locMapsUrl, setLocMapsUrl] = useState("");
+  const [locHours, setLocHours] = useState<DayHoursForm[]>(DEFAULT_HOURS);
+  const [locLoading, setLocLoading] = useState(false);
+  const [locSaving, setLocSaving] = useState(false);
 
   const [deviceKebab, setDeviceKebab] = useState<{ pointId: string; device: PointDeviceInfo } | null>(null);
   const [deviceKebabView, setDeviceKebabView] = useState<DeviceKebabView>("menu");
@@ -134,6 +175,71 @@ export default function PointsPage() {
     setPointActionError(null);
   }
 
+  async function openLocationView() {
+    if (!pointKebab) return;
+    setPointKebabView("location");
+    setLocLoading(true);
+    const [pointRes, hoursRes] = await Promise.all([
+      fetch(`/api/points/${pointKebab.id}`),
+      fetch(`/api/points/${pointKebab.id}/opening-hours`),
+    ]);
+    const pointData = await pointRes.json();
+    const hoursData = await hoursRes.json();
+    setLocAddress(pointData.address ?? "");
+    setLocCity(pointData.city ?? "");
+    setLocLatitude(pointData.latitude != null ? String(pointData.latitude) : "");
+    setLocLongitude(pointData.longitude != null ? String(pointData.longitude) : "");
+    setLocHoursNote(pointData.hoursNote ?? "");
+    setLocMapsUrl(pointData.mapsUrl ?? "");
+    const existingHours: DayHoursForm[] | undefined = hoursData.hours?.length
+      ? hoursData.hours.map((h: { weekday: number; isOpen: boolean; opensAt: string | null; closesAt: string | null }) => ({
+          weekday: h.weekday,
+          isOpen: h.isOpen,
+          opensAt: h.opensAt ?? "09:00",
+          closesAt: h.closesAt ?? "18:00",
+        }))
+      : undefined;
+    setLocHours(existingHours ?? DEFAULT_HOURS);
+    setLocLoading(false);
+  }
+
+  async function saveLocation() {
+    if (!pointKebab) return;
+    setLocSaving(true);
+    const latitude = locLatitude.trim() ? Number(locLatitude) : null;
+    const longitude = locLongitude.trim() ? Number(locLongitude) : null;
+    try {
+      await fetch(`/api/points/${pointKebab.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          address: locAddress,
+          city: locCity,
+          latitude,
+          longitude,
+          hoursNote: locHoursNote,
+          mapsUrl: locMapsUrl,
+        }),
+      });
+      await fetch(`/api/points/${pointKebab.id}/opening-hours`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          days: locHours.map((d) => ({
+            weekday: d.weekday,
+            isOpen: d.isOpen,
+            opensAt: d.isOpen ? d.opensAt : null,
+            closesAt: d.isOpen ? d.closesAt : null,
+          })),
+        }),
+      });
+      setPointKebab(null);
+      await loadPoints();
+    } finally {
+      setLocSaving(false);
+    }
+  }
+
   async function confirmRenamePoint() {
     if (!pointKebab || !renamePointValue.trim()) return;
     await fetch(`/api/points/${pointKebab.id}`, {
@@ -151,6 +257,17 @@ export default function PointsPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ iconKey: nextIconKey }),
+    });
+    setPointKebab(null);
+    await loadPoints();
+  }
+
+  async function togglePointActive() {
+    if (!pointKebab) return;
+    await fetch(`/api/points/${pointKebab.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: !pointKebab.active }),
     });
     setPointKebab(null);
     await loadPoints();
@@ -240,7 +357,10 @@ export default function PointsPage() {
                         >
                           <TileIcon iconKey={point.iconKey} />
                           <div className="min-w-0 grow">
-                            <div className="text-card-title">{point.name}</div>
+                            <div className="flex items-center gap-1.5">
+                              <div className="text-card-title">{point.name}</div>
+                              {!point.active && <StatusChip variant="neutral">{t.points.pointInactiveChip}</StatusChip>}
+                            </div>
                             <p className="text-caption-airbnb">
                               {point.zonesCount} {t.points.zonesSuffix}
                               {point.devices.length > 0 && (
@@ -384,9 +504,131 @@ export default function PointsPage() {
             <ActionSheetItem icon={ImagePlus} onClick={() => setPointKebabView("icon")}>
               {t.common.changeIcon}
             </ActionSheetItem>
+            <ActionSheetItem icon={MapPin} onClick={openLocationView}>
+              {t.points.editLocationAction}
+            </ActionSheetItem>
+            <ActionSheetItem icon={pointKebab.active ? Pause : Play} onClick={togglePointActive}>
+              {pointKebab.active ? t.points.deactivatePoint : t.points.activatePoint}
+            </ActionSheetItem>
             <ActionSheetItem icon={Trash2} destructive onClick={() => setPointKebabView("confirm-delete")}>
               {t.points.deletePoint}
             </ActionSheetItem>
+          </div>
+        )}
+        {pointKebab && pointKebabView === "location" && (
+          <div className="flex max-h-[75vh] flex-col gap-4 overflow-y-auto pt-2 pb-1">
+            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.points.editLocationTitle}</h2>
+            {locLoading ? (
+              <p className="text-body-airbnb text-muted-foreground">{t.common.loading}</p>
+            ) : (
+              <>
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="locAddress">{t.points.addressLabel}</Label>
+                  <Input id="locAddress" value={locAddress} onChange={(e) => setLocAddress(e.target.value)} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="locCity">{t.points.cityLabel}</Label>
+                  <Input id="locCity" value={locCity} onChange={(e) => setLocCity(e.target.value)} />
+                  <p className="text-caption-airbnb">{t.points.cityHint}</p>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="locMapsUrl">{t.points.mapsUrlLabel}</Label>
+                  <Input
+                    id="locMapsUrl"
+                    placeholder="https://maps.app.goo.gl/… или yandex.ru/maps/…"
+                    value={locMapsUrl}
+                    onChange={(e) => setLocMapsUrl(e.target.value)}
+                  />
+                  <p className="text-caption-airbnb">{t.points.mapsUrlHint}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="locLat">{t.points.latitudeLabel}</Label>
+                    <Input
+                      id="locLat"
+                      inputMode="decimal"
+                      value={locLatitude}
+                      onChange={(e) => setLocLatitude(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="locLng">{t.points.longitudeLabel}</Label>
+                    <Input
+                      id="locLng"
+                      inputMode="decimal"
+                      value={locLongitude}
+                      onChange={(e) => setLocLongitude(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <p className="text-caption-airbnb">{t.points.coordsHint}</p>
+
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="locHoursNote">{t.points.hoursNoteLabel}</Label>
+                  <Input
+                    id="locHoursNote"
+                    placeholder={t.points.hoursNotePlaceholder}
+                    value={locHoursNote}
+                    onChange={(e) => setLocHoursNote(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label>{t.points.openingHoursTitle}</Label>
+                  {locHours.map((day, i) => (
+                    <div key={day.weekday} className="rounded-control border border-border p-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-body-airbnb font-semibold">{WEEKDAY_LABELS(t)[day.weekday]}</span>
+                        <Switch
+                          checked={day.isOpen}
+                          onCheckedChange={(checked) =>
+                            setLocHours((prev) => prev.map((d, idx) => (idx === i ? { ...d, isOpen: checked } : d)))
+                          }
+                        />
+                      </div>
+                      {day.isOpen && (
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-caption-airbnb">{t.points.opensAtLabel}</Label>
+                            <Input
+                              type="time"
+                              value={day.opensAt}
+                              onChange={(e) =>
+                                setLocHours((prev) =>
+                                  prev.map((d, idx) => (idx === i ? { ...d, opensAt: e.target.value } : d))
+                                )
+                              }
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <Label className="text-caption-airbnb">{t.points.closesAtLabel}</Label>
+                            <Input
+                              type="time"
+                              value={day.closesAt}
+                              onChange={(e) =>
+                                setLocHours((prev) =>
+                                  prev.map((d, idx) => (idx === i ? { ...d, closesAt: e.target.value } : d))
+                                )
+                              }
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setPointKebabView("menu")}>
+                {t.common.cancel}
+              </Button>
+              <PressableScale className="flex-1">
+                <Button className="w-full" disabled={locSaving || locLoading} onClick={saveLocation}>
+                  {t.common.save}
+                </Button>
+              </PressableScale>
+            </div>
           </div>
         )}
         {pointKebab && pointKebabView === "rename" && (

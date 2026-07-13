@@ -1,6 +1,10 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server";
 import { verifyToken } from "@/lib/session-crypto";
 import { prisma } from "@/lib/prisma";
+import { resolveTenantBySlug } from "@/lib/landing/resolve-tenant";
+import { isBotUserAgent, recordLandingVisit, pruneOldVisitorHashes } from "@/lib/landing/stats";
+import { isRateLimited } from "@/lib/landing/rate-limit";
+import { getClientIp } from "@/lib/instructions/request-ip";
 
 // Marks pre-auth screens so resolveLocale() (src/lib/i18n.ts) ignores any
 // lingering session cookie for language purposes on these paths — found
@@ -49,8 +53,68 @@ const SUBSCRIPTION_BLOCKED_STATUSES = new Set(["expired", "suspended"]);
 // затронет, но путь исключён явно — ради производительности, не корректности.
 const SUBSCRIPTION_GATE_EXEMPT_PREFIXES = ["/api/auth/", "/api/webhooks/", "/api/admin/"];
 
-export async function proxy(request: NextRequest) {
+// /site/{slug} (Лендинг) и /i/{slug}/{instructionSlug} (Инструктажи) вместе:
+// docs/spec/08-landing.md — с 2026-07-13 Tenant.slug общий и редактируемый,
+// поэтому 301 на актуальный слаг при попадании в TenantOldSlug нужен обоим
+// путям (см. src/lib/landing/resolve-tenant.ts). Сбор статистики/rate limit
+// — только для /site/, GET, не превью, не боты.
+const SITE_PATH_RE = /^\/site\/([^/]+)\/?$/;
+const INSTRUCTION_PATH_RE = /^\/i\/([^/]+)\/([^/]+)\/?$/;
+
+export async function proxy(request: NextRequest, event: NextFetchEvent) {
   const { pathname } = request.nextUrl;
+
+  const siteMatch = SITE_PATH_RE.exec(pathname);
+  const instructionMatch = INSTRUCTION_PATH_RE.exec(pathname);
+  if (siteMatch || instructionMatch) {
+    const slug = (siteMatch ?? instructionMatch)![1]!;
+    const resolved = await resolveTenantBySlug(slug);
+
+    if (resolved.kind === "redirect") {
+      const url = request.nextUrl.clone();
+      url.pathname = siteMatch ? `/site/${resolved.currentSlug}` : `/i/${resolved.currentSlug}/${instructionMatch![2]}`;
+      return NextResponse.redirect(url, 301);
+    }
+
+    if (siteMatch && resolved.kind === "found" && request.method === "GET") {
+      const ip = getClientIp(request);
+      if (isRateLimited(ip)) {
+        return new NextResponse("Too Many Requests", { status: 429 });
+      }
+
+      const userAgent = request.headers.get("user-agent") ?? "";
+      const isPreview = request.nextUrl.searchParams.has("preview");
+      // Реальные визиты только: не превью-режим владельца, не бот, не выше
+      // rate limit (уже проверено выше), лендинг фактически опубликован —
+      // считаем в фоне через waitUntil, не задерживая ответ.
+      if (!isPreview && !isBotUserAgent(userAgent)) {
+        const tenantId = resolved.tenantId;
+        const referer = request.headers.get("referer");
+        const ownOrigin = request.nextUrl.hostname;
+        event.waitUntil(
+          (async () => {
+            const landing = await prisma.landing.findUnique({
+              where: { tenantId },
+              select: { id: true, status: true, tenant: { select: { timezone: true } } },
+            });
+            if (landing?.status !== "published") return;
+            await recordLandingVisit({
+              landingId: landing.id,
+              timezone: landing.tenant.timezone,
+              ip,
+              userAgent,
+              referer,
+              ownOrigin,
+            });
+            // Best-effort чистка старых хэшей (докс, LandingVisitorSeen) —
+            // не на каждый визит, вероятностно, отдельного крона не нужно
+            // в self-hosted single-container деплое.
+            if (Math.random() < 0.01) await pruneOldVisitorHashes();
+          })().catch((err) => console.error("landing stats failed", err))
+        );
+      }
+    }
+  }
 
   if (!pathname.startsWith("/api/")) {
     const isPreAuthPage = PRE_AUTH_PATHS.some(

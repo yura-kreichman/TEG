@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { PressableScale } from "@/components/motion/pressable-scale";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/i18n-provider";
 import { ICON_FAMILIES, GENERAL_ICON_FAMILIES, type IconFamily } from "@/lib/icon-families";
@@ -72,24 +71,16 @@ function IconGrid({
   const [family, setFamily] = useState<IconFamily>(
     parsedValue && families.includes(parsedValue.family) ? parsedValue.family : families[0]
   );
-  const [query, setQuery] = useState("");
   const [results, setResults] = useState<string[]>([]);
 
+  // Поиск по названию убран целиком (фидбек пользователя 2026-07-13:
+  // "нигде не нужен") — просто полный список коллекции по смене вкладки.
   useEffect(() => {
-    const handle = setTimeout(() => {
-      const params = new URLSearchParams({ family });
-      if (query.trim()) params.set("q", query.trim());
-      fetch(`/api/icon-library?${params}`)
-        .then((res) => res.json())
-        .then((data) => setResults(data.icons ?? []));
-    }, 200);
-    return () => clearTimeout(handle);
-  }, [family, query]);
-
-  // Аватары — маленькая фиксированная коллекция без текстовых имён, где
-  // поиск не имеет смысла (фидбек пользователя 2026-07-12) — в отличие от
-  // Fluent/Material, там сотни иконок и поиск по названию нужен.
-  const showSearch = !(families.length === 1 && families[0] === "avatars");
+    const params = new URLSearchParams({ family });
+    fetch(`/api/icon-library?${params}`)
+      .then((res) => res.json())
+      .then((data) => setResults(data.icons ?? []));
+  }, [family]);
 
   const familyLabels: Record<IconFamily, string> = useMemo(
     () => ({
@@ -122,18 +113,6 @@ function IconGrid({
               {familyLabels[f]}
             </button>
           ))}
-        </div>
-      )}
-      {showSearch && (
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            autoFocus
-            placeholder={t.iconPicker.searchPlaceholder}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pl-9"
-          />
         </div>
       )}
       <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">

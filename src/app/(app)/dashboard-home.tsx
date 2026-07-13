@@ -9,6 +9,7 @@ import { CalendarDays, ChevronRight, ImagePlus, KeyRound, LogOut, Pencil } from 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/components/i18n-provider";
 import type { Dictionary } from "@/lib/i18n";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -20,6 +21,7 @@ import { AuthLocalePicker } from "@/components/auth-locale-picker";
 import { cn } from "@/lib/utils";
 import { compressImageFile } from "@/lib/client-image";
 import { PRICING_URL } from "@/lib/billing";
+import { useSlugPreview } from "@/lib/use-slug-preview";
 
 function formatRelativeDay(dateStr: string, isToday: boolean, t: Dictionary): string {
   if (isToday) return t.home.today;
@@ -143,9 +145,19 @@ export function OwnerDashboardCard({
 
   const [accountView, setAccountView] = useState<"menu" | "rename" | null>(null);
   const [renameValue, setRenameValue] = useState(tenantName ?? "");
+  const [updateSlugOnRename, setUpdateSlugOnRename] = useState(false);
+  const [currentSlug, setCurrentSlug] = useState<string | null>(null);
   const [accountError, setAccountError] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const renameSlugPreview = useSlugPreview(renameValue);
+  const nameChanged = renameValue.trim() !== companyName.trim() && renameValue.trim().length > 0;
+
+  useEffect(() => {
+    fetch("/api/tenant/profile")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data?.slug && setCurrentSlug(data.slug));
+  }, []);
 
   useEffect(() => {
     fetch("/api/reports/home-summary")
@@ -159,6 +171,7 @@ export function OwnerDashboardCard({
   function openAccountMenu() {
     setAccountView("menu");
     setRenameValue(companyName);
+    setUpdateSlugOnRename(false);
     setAccountError(null);
   }
 
@@ -167,13 +180,15 @@ export function OwnerDashboardCard({
     const res = await fetch("/api/tenant/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: renameValue }),
+      body: JSON.stringify({ name: renameValue, updateSlug: nameChanged && updateSlugOnRename }),
     });
     if (!res.ok) {
       const data = await res.json();
       setAccountError(data.error ?? "Не удалось сохранить название");
       return;
     }
+    const data = await res.json();
+    if (data.slug) setCurrentSlug(data.slug);
     setCompanyName(renameValue.trim());
     setAccountView(null);
   }
@@ -428,7 +443,27 @@ export function OwnerDashboardCard({
           <div className="flex flex-col gap-1">
             <Label htmlFor="companyName">{t.auth.companyNameLabel}</Label>
             <Input id="companyName" autoFocus value={renameValue} onChange={(e) => setRenameValue(e.target.value)} />
+            {currentSlug && !nameChanged && (
+              <p className="text-caption-airbnb text-muted-foreground">
+                {t.auth.slugPreviewPrefix} my.rentos365.app/site/{currentSlug}
+              </p>
+            )}
           </div>
+          <p className="text-caption-airbnb text-muted-foreground">{t.home.renameCompanySlugWarning}</p>
+          {nameChanged && (
+            <div className="flex flex-col gap-2 rounded-control border border-border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-body-airbnb">{t.home.updateSlugCheckboxLabel}</span>
+                <Switch checked={updateSlugOnRename} onCheckedChange={setUpdateSlugOnRename} />
+              </div>
+              {updateSlugOnRename && renameSlugPreview && (
+                <p className="text-caption-airbnb text-muted-foreground">
+                  {t.auth.slugPreviewPrefix} my.rentos365.app/site/{renameSlugPreview}
+                </p>
+              )}
+              <p className="text-caption-airbnb text-muted-foreground">{t.home.updateSlugHint}</p>
+            </div>
+          )}
           {accountError && <p className="text-sm text-destructive">{accountError}</p>}
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => setAccountView("menu")}>

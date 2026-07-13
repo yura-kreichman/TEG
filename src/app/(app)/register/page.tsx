@@ -10,11 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/components/i18n-provider";
+import { useSlugPreview } from "@/lib/use-slug-preview";
 
 export default function RegisterPage() {
   const router = useRouter();
   const t = useI18n();
   const [tenantName, setTenantName] = useState("");
+  const slugPreview = useSlugPreview(tenantName);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +93,11 @@ export default function RegisterPage() {
             value={tenantName}
             onChange={(e) => setTenantName(e.target.value)}
           />
+          {slugPreview && (
+            <p className="text-caption-airbnb text-muted-foreground">
+              {t.auth.slugPreviewPrefix} my.rentos365.app/site/{slugPreview}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-1">

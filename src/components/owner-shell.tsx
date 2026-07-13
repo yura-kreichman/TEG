@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BarChart3, FileText, Home, ListChecks, MapPin, Settings, Users, Wallet, type LucideIcon } from "lucide-react";
+import { BarChart3, FileText, Globe, Home, ListChecks, MapPin, Settings, Users, Wallet, type LucideIcon } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/components/i18n-provider";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -52,6 +52,16 @@ const PRIORITY_ITEMS: NavItemConfig[] = [
     label: (t) => t.instructions.settingsTitle,
     priority: 7,
     match: (p) => p.startsWith("/settings/instructions"),
+  },
+  // Полноценный модуль (docs/spec/08-landing.md) — тот же паттерн, что у
+  // Инструктажей: в "Ещё", не в bottom nav.
+  {
+    id: "landing",
+    href: "/settings/landing",
+    icon: Globe,
+    label: (t) => t.landing.settingsTitle,
+    priority: 8,
+    match: (p) => p.startsWith("/settings/landing"),
   },
 ];
 

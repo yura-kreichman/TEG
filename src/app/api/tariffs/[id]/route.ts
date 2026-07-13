@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 
 async function findOwnedTariff(tenantId: string, id: string) {
   const tariff = await prisma.tariff.findUnique({
@@ -44,6 +45,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tariffs/[i
   }
 
   await prisma.tariff.update({ where: { id }, data });
+  await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ ok: true });
 }
 
@@ -64,5 +66,6 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/tariffs/
   // молча падало 500, фронт эту ошибку не проверял). Отчёты по-прежнему
   // корректны — они читают тарифы зоны без фильтра deletedAt.
   await prisma.tariff.update({ where: { id }, data: { deletedAt: new Date() } });
+  await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ ok: true });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkPackageLimit } from "@/lib/packages";
 import { requireOwner } from "@/lib/require-owner";
+import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 
 export async function GET() {
   const owner = await requireOwner();
@@ -11,12 +12,14 @@ export async function GET() {
 
   const points = await prisma.point.findMany({
     where: { tenantId: owner.tenantId },
-    include: { devices: true, _count: { select: { zones: true } } },
+    include: { devices: true, _count: { select: { zones: true, openingHours: true } } },
     orderBy: { createdAt: "asc" },
   });
 
   return NextResponse.json({
-    points: points.map((p) => ({ ...p, zonesCount: p._count.zones })),
+    // hoursConfigured: см. docs/spec/08-landing.md, PointOpeningHours — все 7
+    // строк разом или ни одной, поэтому "сколько есть" уже говорит "заполнены ли".
+    points: points.map((p) => ({ ...p, zonesCount: p._count.zones, hoursConfigured: p._count.openingHours === 7 })),
   });
 }
 
@@ -44,5 +47,6 @@ export async function POST(request: Request) {
     },
   });
 
+  await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ id: point.id, name: point.name }, { status: 201 });
 }

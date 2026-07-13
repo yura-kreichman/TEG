@@ -1,0 +1,727 @@
+/* Темы лендинга (docs/spec/08-landing.md, "Темы лендинга", 2026-07-13).
+   Референс значений и поведения: rentos-темы-и-эффекты.html (корень проекта)
+   — но НЕ копия: собственные CSS-переменные с префиксом --lt- (landing theme),
+   сознательно изолированные от токенов кабинета/PWA (--card, --radius-card и
+   т.п. в globals.css) — решение пользователя 2026-07-13, темы лендинга не
+   сверяются и не наследуются от кабинета, шкала полностью самостоятельная.
+   Шрифт — Inter (платформенный, не Noto Sans/Serif — см. "Открытые вопросы"
+   в 08-landing.md, решение после проверки реального glyph-покрытия), темы
+   различаются только весом/регистром/трекингом/курсивом, не семейством.
+   Файл лежит в src/components/landing/, а не рядом с (site)-роутом — с
+   Шага 6 его же подключает кабинет владельца (src/app/(app)/settings/landing)
+   для живого превью чипов темы, атрибут data-landing-theme работает на
+   любой глубине DOM, не только на <html>. */
+
+[data-landing-theme] {
+  /* Акцент тенанта — независимая ось поверх любой темы (докс): --primary/
+     --primary-foreground уже вычислены существующим механизмом
+     [data-accent="..."] в globals.css, темы лендинга только ЧИТАЮТ их. */
+  --lt-accent: var(--primary);
+  --lt-accent-ink: var(--primary-foreground);
+  --lt-accent-soft: color-mix(in oklab, var(--primary) 14%, white);
+
+  /* Фестиваль — дуотон-градиент из одного и того же акцента на двух
+     светлотах (не два хардкод-цвета демо-файла) — используется и в
+     заголовке, и в статусе, и в фоне кнопки/паттерна шапки. */
+  --lt-festival-gradient: linear-gradient(90deg, var(--primary), color-mix(in oklab, var(--primary) 55%, white 45%));
+
+  /* Неон — акцент пересчитан в "светящийся" вариант через color-mix (не
+     oklch(from ...) relative syntax — в проекте уже есть прецедент именно
+     color-mix для похожих задач, см. --nav-glass-bg в globals.css). Три
+     степени прозрачности — под разную силу свечения (текст/рамка/тень). */
+  --lt-neon-glow-1: color-mix(in oklab, var(--primary) 90%, transparent);
+  --lt-neon-glow-2: color-mix(in oklab, var(--primary) 45%, transparent);
+  --lt-neon-glow-3: color-mix(in oklab, var(--primary) 15%, transparent);
+
+  /* Эффект "Конфетти" — единственный из 6, привязанный к акцентной схеме
+     (докс, "Эффекты лендинга"); три оттенка одного акцента для визуального
+     разнообразия частиц, читает public/landing-effects.js через
+     getComputedStyle (см. комментарий в файле движка). Остальные 5 эффектов
+     используют свои фиксированные природные цвета (снег/листья/пузыри/
+     искры/лепестки), не акцент — так же, как эталонный файл. */
+  --lt-fx-color-1: var(--primary);
+  --lt-fx-color-2: color-mix(in oklab, var(--primary) 70%, white 30%);
+  --lt-fx-color-3: color-mix(in oklab, var(--primary) 70%, black 30%);
+
+  /* "Открыто" на карточке точки (докс, "Правила вёрстки", п.9) — семантический
+     цвет платформы (docs/spec/03-design-system.md: success не зависит от
+     акцентной схемы), не акцент темы. Светлые темы читают уже существующий
+     --success из globals.css (страница landing его импортирует); Неон —
+     единственная тёмная тема здесь, но НИКОГДА не добавляет класс .dark
+     (докс, "Темы лендинга"), поэтому светлый --success был бы тусклым на
+     его почти чёрном фоне — переопределяется ниже тем же hex, что уже есть
+     в globals.css/.dark, а не новым произвольным цветом. */
+  --lt-success: var(--success);
+
+  /* Лёгкая доработка широких экранов (решение пользователя 2026-07-13:
+     колонка остаётся 640px, без отдельного desktop-layout, но пустые поля
+     по бокам не должны читаться как недоделанная страница) — мягкое
+     свечение акцентом позади колонки, включается только от 640px, на
+     мобильном (основной сценарий — переход по QR) фон не трогаем. */
+  --lt-desktop-glow: none;
+}
+
+@media (min-width: 640px) {
+  [data-landing-theme] {
+    --lt-desktop-glow: radial-gradient(ellipse 1000px 560px at 50% -12%, var(--lt-accent-soft), transparent 70%);
+  }
+}
+
+/* ===== МОДЕРН (по умолчанию) ===== */
+[data-landing-theme="modern"] {
+  --lt-bg: #fbfbf9;
+  --lt-bg-pattern: none;
+  --lt-bg-pattern-size: auto;
+  --lt-ink: #1a1a18;
+  --lt-muted: #77776f;
+  --lt-card-bg: #ffffff;
+  --lt-card-border: none;
+  --lt-card-radius: 18px;
+  --lt-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 6px 18px rgba(0, 0, 0, 0.07);
+  --lt-photo-bg: #eaf3ee;
+  --lt-head-weight: 600;
+  --lt-head-transform: none;
+  --lt-head-spacing: 0em;
+  --lt-btn-radius: 12px;
+  --lt-btn-border: none;
+  --lt-btn-shadow: none;
+  --lt-status-bg: var(--lt-accent-soft);
+  --lt-status-ink: var(--lt-accent);
+  --lt-status-border: none;
+  --lt-status-radius: 999px;
+  --lt-status-shadow: none;
+  --lt-status-transform: none;
+  --lt-btn-primary-bg: var(--lt-accent);
+  --lt-btn-primary-ink: var(--lt-accent-ink);
+  --lt-btn-primary-border: none;
+}
+
+/* ===== КЛАССИК ===== */
+[data-landing-theme="classic"] {
+  --lt-bg: #ffffff;
+  --lt-bg-pattern: none;
+  --lt-bg-pattern-size: auto;
+  --lt-ink: #22211d;
+  --lt-muted: #6d6c65;
+  --lt-card-bg: #ffffff;
+  --lt-card-border: 1px solid #e3e2db;
+  --lt-card-radius: 4px;
+  --lt-card-shadow: none;
+  --lt-photo-bg: #f3f2ec;
+  --lt-head-weight: 700;
+  --lt-head-transform: none;
+  --lt-head-spacing: 0em;
+  --lt-btn-radius: 3px;
+  --lt-btn-border: 1px solid #c9c8bf;
+  --lt-btn-shadow: none;
+  --lt-status-bg: transparent;
+  --lt-status-ink: var(--lt-accent);
+  --lt-status-border: 1px solid var(--lt-accent);
+  --lt-status-radius: 0px;
+  --lt-status-shadow: none;
+  --lt-status-transform: none;
+  --lt-btn-primary-bg: var(--lt-accent);
+  --lt-btn-primary-ink: var(--lt-accent-ink);
+  --lt-btn-primary-border: none;
+}
+
+/* ===== РЕТРО ===== */
+[data-landing-theme="retro"] {
+  --lt-bg: #f6eedc;
+  --lt-bg-pattern: radial-gradient(rgba(120, 90, 40, 0.09) 1px, transparent 1.2px);
+  --lt-bg-pattern-size: 7px 7px;
+  --lt-ink: #4a3826;
+  --lt-muted: #8a7355;
+  --lt-card-bg: #fffdf5;
+  --lt-card-border: 2px solid #4a3826;
+  --lt-card-radius: 14px;
+  --lt-card-shadow: 4px 4px 0 rgba(74, 56, 38, 0.18);
+  --lt-photo-bg: #f3d9a4;
+  --lt-head-weight: 800;
+  --lt-head-transform: none;
+  --lt-head-spacing: 0em;
+  --lt-btn-radius: 999px;
+  --lt-btn-border: 2px solid #4a3826;
+  --lt-btn-shadow: 3px 3px 0 rgba(74, 56, 38, 0.25);
+  /* status/primary-кнопка — акцент вместо хардкод-охры демо-файла (докс:
+     акцентная схема работает внутри любой темы, включая статус/кнопку) */
+  --lt-status-bg: var(--lt-accent);
+  --lt-status-ink: var(--lt-accent-ink);
+  --lt-status-border: none;
+  --lt-status-radius: 6px;
+  --lt-status-shadow: 2px 2px 0 rgba(74, 56, 38, 0.25);
+  --lt-status-transform: none;
+  --lt-btn-primary-bg: var(--lt-accent);
+  --lt-btn-primary-ink: var(--lt-accent-ink);
+  --lt-btn-primary-border: 2px solid #4a3826;
+}
+
+/* ===== ФЕСТИВАЛЬ ===== */
+[data-landing-theme="festival"] {
+  --lt-bg: #fff9f2;
+  /* Конфетти-паттерн — три пятна одного и того же акцента на разной
+     прозрачности (не три хардкод-цвета демо-файла: докс требует, чтобы ВСЕ
+     градиенты темы пересчитывались от акцентной схемы тенанта). */
+  --lt-bg-pattern: radial-gradient(circle at 10% 6%, color-mix(in oklab, var(--primary) 35%, transparent) 0 60px, transparent 61px),
+    radial-gradient(circle at 90% 3%, color-mix(in oklab, var(--primary) 22%, transparent) 0 46px, transparent 47px),
+    radial-gradient(circle at 72% 12%, color-mix(in oklab, var(--primary) 28%, transparent) 0 34px, transparent 35px);
+  --lt-bg-pattern-size: auto;
+  --lt-ink: #241f33;
+  --lt-muted: #6d6580;
+  --lt-card-bg: #ffffff;
+  --lt-card-border: none;
+  --lt-card-radius: 22px;
+  --lt-card-shadow: 0 8px 24px rgba(46, 42, 80, 0.12);
+  --lt-photo-bg: linear-gradient(135deg, #ffe3b3, #ffd1dc);
+  --lt-head-weight: 900;
+  --lt-head-transform: none;
+  --lt-head-spacing: 0em;
+  --lt-btn-radius: 999px;
+  --lt-btn-border: none;
+  --lt-btn-shadow: 0 6px 16px color-mix(in oklab, var(--primary) 40%, transparent);
+  --lt-status-bg: var(--lt-festival-gradient);
+  --lt-status-ink: #fff;
+  --lt-status-border: none;
+  --lt-status-radius: 999px;
+  --lt-status-shadow: none;
+  --lt-status-transform: none;
+  --lt-btn-primary-bg: var(--lt-festival-gradient);
+  --lt-btn-primary-ink: #fff;
+  --lt-btn-primary-border: none;
+}
+
+/* ===== НЕОН (всегда тёмный — маршрут /site не реагирует на
+   prefers-color-scheme нигде, поэтому тема уже "всегда тёмная" по
+   построению, без отдельного отключения системной темы) ===== */
+[data-landing-theme="neon"] {
+  --lt-bg: #0c0e16;
+  --lt-bg-pattern: linear-gradient(color-mix(in oklab, var(--primary) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklab, var(--primary) 5%, transparent) 1px, transparent 1px);
+  --lt-bg-pattern-size: 26px 26px;
+  --lt-ink: #eaf7f2;
+  --lt-muted: #8fa8a0;
+  --lt-card-bg: #131722;
+  --lt-card-border: 1px solid color-mix(in oklab, var(--primary) 35%, transparent);
+  --lt-card-radius: 16px;
+  --lt-card-shadow: 0 0 18px var(--lt-neon-glow-3);
+  --lt-photo-bg: #0f1320;
+  --lt-head-weight: 300;
+  --lt-head-transform: none;
+  --lt-head-spacing: 0em;
+  --lt-btn-radius: 12px;
+  --lt-btn-border: 1px solid color-mix(in oklab, #eaf7f2 35%, transparent);
+  --lt-btn-shadow: 0 0 18px var(--lt-neon-glow-2);
+  --lt-status-bg: transparent;
+  --lt-status-ink: var(--lt-accent);
+  --lt-status-border: 1px solid var(--lt-accent);
+  --lt-status-radius: 999px;
+  --lt-status-shadow: 0 0 10px var(--lt-neon-glow-2);
+  --lt-status-transform: none;
+  --lt-btn-primary-bg: var(--lt-accent);
+  --lt-btn-primary-ink: var(--lt-accent-ink);
+  --lt-btn-primary-border: none;
+  /* Единственная тёмная тема здесь — светлый --success из globals.css был бы
+     тусклым на её фоне; тот же hex, что уже задан в globals.css/.dark. */
+  --lt-success: #3ecf8e;
+}
+
+/* ===== ПИКСЕЛЬНЫЙ ===== */
+[data-landing-theme="pixel"] {
+  --lt-bg: #f2f0e4;
+  --lt-bg-pattern: linear-gradient(rgba(40, 44, 52, 0.05) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(40, 44, 52, 0.05) 2px, transparent 2px);
+  --lt-bg-pattern-size: 12px 12px;
+  --lt-ink: #23262d;
+  --lt-muted: #5a5f6b;
+  --lt-card-bg: #ffffff;
+  --lt-card-border: 3px solid #23262d;
+  --lt-card-radius: 0px;
+  --lt-card-shadow: 6px 6px 0 #23262d;
+  --lt-photo-bg: #9ad65b;
+  --lt-head-weight: 800;
+  --lt-head-transform: none;
+  --lt-head-spacing: 0em;
+  --lt-btn-radius: 0px;
+  --lt-btn-border: 3px solid #23262d;
+  --lt-btn-shadow: 4px 4px 0 #23262d;
+  /* status — акцент вместо хардкод-жёлтого демо-файла (тот же принцип, что Ретро) */
+  --lt-status-bg: var(--lt-accent);
+  --lt-status-ink: var(--lt-accent-ink);
+  --lt-status-border: 3px solid #23262d;
+  --lt-status-radius: 0px;
+  --lt-status-shadow: 4px 4px 0 #23262d;
+  --lt-status-transform: none;
+  --lt-btn-primary-bg: var(--lt-accent);
+  --lt-btn-primary-ink: var(--lt-accent-ink);
+  --lt-btn-primary-border: 3px solid #23262d;
+}
+
+/* ===== КОМПОНЕНТЫ (общие для всех тем — читают только --lt-*, разметка
+   секций в src/components/landing/sections.tsx не меняется между темами) ===== */
+
+.lt-page {
+  background-color: var(--lt-bg);
+  background-image: var(--lt-desktop-glow), var(--lt-bg-pattern);
+  background-repeat: no-repeat, repeat;
+  background-size: auto, var(--lt-bg-pattern-size, auto);
+  color: var(--lt-ink);
+  /* .lt-h2-bar пробивает колонку через 100vw/calc(50%-50vw) — на десктопе с
+     видимой полосой прокрутки 100vw шире реальной ширины документа на её
+     толщину, из-за чего появлялась лишняя горизонтальная прокрутка (докс:
+     найдено и исправлено 2026-07-13). Здесь, а не на html — страница целиком
+     наша, внутренние ленты (галерея/активы) скроллятся своим overflow-x,
+     их это не затронет. */
+  overflow-x: hidden;
+}
+
+.lt-status {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  background: var(--lt-status-bg);
+  color: var(--lt-status-ink);
+  border: var(--lt-status-border, none);
+  border-radius: var(--lt-status-radius);
+  box-shadow: var(--lt-status-shadow);
+  text-transform: var(--lt-status-transform);
+}
+
+/* "Ближайшее открытие" — та же форма чипа (радиус/трансформ темы), но
+   нейтральные цвета вместо акцентных: докс требует показывать только
+   позитив, но это состояние менее выделено, чем реально открыто сейчас. */
+.lt-status-muted {
+  background: var(--lt-card-bg);
+  color: var(--lt-muted);
+  border: var(--lt-card-border);
+  box-shadow: none;
+}
+
+.lt-h1 {
+  font-weight: var(--lt-head-weight);
+  text-transform: var(--lt-head-transform);
+  letter-spacing: var(--lt-head-spacing);
+  color: var(--lt-ink);
+}
+[data-landing-theme="retro"] .lt-h1 {
+  color: #7b4a1e;
+  text-shadow: 2px 2px 0 color-mix(in oklab, var(--primary) 50%, transparent);
+}
+[data-landing-theme="festival"] .lt-h1 {
+  background: var(--lt-festival-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+[data-landing-theme="neon"] .lt-h1 {
+  color: #fff;
+  text-shadow: 0 0 12px var(--lt-neon-glow-1), 0 0 32px var(--lt-neon-glow-3);
+}
+[data-landing-theme="pixel"] .lt-h1 {
+  text-shadow: 3px 3px 0 var(--lt-photo-bg);
+}
+
+.lt-slogan {
+  color: var(--lt-muted);
+}
+[data-landing-theme="classic"] .lt-slogan {
+  font-style: italic;
+}
+
+.lt-h2 {
+  font-weight: var(--lt-head-weight);
+  text-transform: var(--lt-head-transform);
+  letter-spacing: var(--lt-head-spacing);
+  color: var(--lt-ink);
+}
+[data-landing-theme="neon"] .lt-h2 {
+  font-weight: 400;
+}
+
+/* Плашка заголовка секции (SectionHeading) — акцентный фон на всю ширину
+   экрана (докс: уточнено пользователем 2026-07-13, раньше была плашка-пилюля
+   по размеру текста — не то). "Пробивает" padding/max-width родительской
+   .lt-wrap-секции стандартным приёмом full-bleed через calc(50% - 50vw);
+   текст внутри остаётся в 640px-колонке через свой собственный класс lt-wrap. */
+.lt-h2-bar {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  background: var(--lt-accent);
+}
+.lt-h2-bar-text {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  color: var(--lt-accent-ink);
+}
+
+.lt-card {
+  background: var(--lt-card-bg);
+  border: var(--lt-card-border);
+  border-radius: var(--lt-card-radius);
+  box-shadow: var(--lt-card-shadow);
+}
+
+/* Заголовок ВНУТРИ карточки (название зоны/точки/актива) — фиксированный
+   вес 700, в отличие от .lt-h2 (заголовки секций), у которого вес меняется
+   по теме (докс/референс: .zname всегда font-weight: 700, не --head-weight;
+   у неё меняется только цвет — Ретро подсвечивает ink-акцентом). */
+.lt-card-title {
+  font-weight: 700;
+  color: var(--lt-ink);
+}
+[data-landing-theme="retro"] .lt-card-title {
+  color: #7b4a1e;
+}
+[data-landing-theme="retro"] .lt-card {
+  transform: rotate(-0.6deg);
+}
+[data-landing-theme="retro"] .lt-card:nth-of-type(2n) {
+  transform: rotate(0.5deg);
+}
+
+.lt-body-text {
+  color: var(--lt-ink);
+}
+.lt-muted-text {
+  color: var(--lt-muted);
+}
+
+/* Цена/статус "сейчас открыто" — докс: акцент работает внутри любой темы.
+   Неон: без text-shadow — это мелкий текст (< 16px), докс запрещает
+   свечение на элементах меньше 16px (сознательное отклонение от
+   демо-файла, который светит и на 14px-цене). */
+.lt-price,
+.lt-open-badge,
+.lt-accent-text {
+  color: var(--lt-accent);
+  font-weight: 700;
+}
+
+.lt-btn {
+  border-radius: var(--lt-btn-radius);
+  transition: transform 0.12s;
+}
+.lt-btn:active {
+  transform: scale(0.96);
+}
+.lt-btn-primary {
+  background: var(--lt-btn-primary-bg);
+  color: var(--lt-btn-primary-ink);
+  border: var(--lt-btn-primary-border, none);
+  box-shadow: var(--lt-btn-shadow);
+}
+.lt-btn-ghost {
+  background: var(--lt-card-bg);
+  color: var(--lt-ink);
+  border: var(--lt-btn-border);
+  box-shadow: var(--lt-card-shadow);
+}
+[data-landing-theme="neon"] .lt-btn-ghost {
+  background: transparent;
+  box-shadow: none;
+  border-color: color-mix(in oklab, #eaf7f2 35%, transparent);
+}
+.lt-foot {
+  color: var(--lt-muted);
+}
+
+/* ===== Правила вёрстки публичной страницы (docs/spec/08-landing.md,
+   "Правила вёрстки публичной страницы", 2026-07-13) — структурные классы,
+   одинаковые во всех 6 темах; меняются только токены. ===== */
+
+/* П.2 — контентная колонка, адаптивная (не фиксированная ширина). */
+.lt-wrap {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  /* ТОЛЬКО горизонтальный паддинг здесь (докс: найден и исправлен 2026-07-13
+     — реальный баг): шорткод "padding: 0 16px" неявно обнулял padding-top
+     и padding-bottom и, будучи скомпилированным ПОСЛЕ Tailwind-утилит (файл
+     подключается последним в layout.tsx), перебивал классы вида pt-N, pb-N,
+     py-N на любой секции с классом lt-wrap — вся "увеличенная" вертикальная
+     дистанция между секциями героя визуально не применялась никогда. */
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* П.3 — герой: логотип/название/слоган в строке + круглая кнопка "Поделиться". */
+.lt-logo {
+  border-radius: var(--lt-card-radius);
+}
+.lt-share-btn {
+  border-radius: 50%;
+  background: var(--lt-card-bg);
+  box-shadow: var(--lt-card-shadow);
+  border: var(--lt-card-border);
+}
+
+/* П.4 — галерея: горизонтальная CSS-лента, не сетка. Без scroll-snap (докс:
+   найдено эмпирически 2026-07-13) — snap периодически "захватывал" позицию
+   при одновременных classList-мутациях центр-детекта каждый кадр и резко
+   перескакивал вместо плавного хода; центрирование и так обеспечивает JS
+   (public/landing-lightbox.js). */
+.lt-gallery-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  /* perspective — под 3D coverflow ниже. */
+  perspective: 900px;
+  /* Центрирование (докс: уточнено пользователем 2026-07-13): боковые отступы
+     равны половине ширины итема, чтобы первое/последнее фото тоже могли
+     доехать до центра ленты, а не упирались в край. Вертикальный паддинг —
+     запас под scale() центрального фото (ниже), чтобы не обрезался. */
+  padding: 14px calc(50% - 95px);
+}
+.lt-gallery-strip::-webkit-scrollbar {
+  display: none;
+}
+/* Карточная рамка (докс: референс-скриншот пользователя 2026-07-13, стиль
+   "3D слайдер-карусель") — белая (card-bg) окантовка вокруг фото, а не фото
+   впритык к краям; padding здесь задаёт толщину рамки, next/image fill сам
+   вписывается в padding-box. */
+.lt-gallery-item {
+  flex: 0 0 190px;
+  height: 132px;
+  border-radius: 10px;
+  background: var(--lt-card-bg);
+  box-shadow: var(--lt-card-shadow);
+  padding: 6px;
+  transition: transform 0.35s ease, opacity 0.35s ease;
+  transform-style: preserve-3d;
+}
+/* 3D coverflow (докс: референс — эффект Swiper "Coverflow", уточнено
+   пользователем 2026-07-13 дважды — второй раз с явным скриншотом, угол
+   увеличен и промежуток между карточками сокращён для более выраженного
+   "веера") — public/landing-lightbox.js на каждый скролл вычисляет
+   ближайший к центру ленты элемент и раздаёт три класса: он сам —
+   is-centered (плоский, крупнее), всё, что левее по DOM — is-left
+   (развёрнуто навстречу вправо), всё правее — is-right (навстречу влево).
+   На prefers-reduced-motion transition CSS уже отключается общим правилом
+   в конце файла. */
+.lt-gallery-item.is-centered {
+  transform: scale(1.12) rotateY(0deg);
+  z-index: 2;
+}
+.lt-gallery-item.is-left {
+  transform: scale(0.82) rotateY(38deg);
+  opacity: 0.65;
+}
+.lt-gallery-item.is-right {
+  transform: scale(0.82) rotateY(-38deg);
+  opacity: 0.65;
+}
+@media (min-width: 640px) {
+  .lt-gallery-strip {
+    padding: 16px calc(50% - 130px);
+  }
+  .lt-gallery-item {
+    flex-basis: 260px;
+    height: 172px;
+  }
+}
+
+/* Точки-пагинация под галереей (докс: референс Swiper Coverflow, добавлено
+   2026-07-13) — активную точку выставляет public/landing-lightbox.js. */
+.lt-gallery-dots {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 10px;
+}
+.lt-gallery-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--lt-ink) 18%, transparent);
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+.lt-gallery-dot.is-active {
+  background: var(--lt-accent);
+  transform: scale(1.35);
+}
+
+/* Название зоны поверх фото-хедера (докс: уточнено пользователем 2026-07-13
+   — было в белой текстовой части карточки, теперь плашкой на самом фото,
+   значительно крупнее). Полупрозрачный акцент — color-mix с transparent, не
+   сплошной цвет, чтобы фото просвечивало; белый текст с тенью, а не токен
+   ink — плашка ложится на ПРОИЗВОЛЬНОЕ фото владельца, только белый+тень
+   гарантированно читаемы независимо от содержимого фото. */
+.lt-zone-name-overlay {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: color-mix(in oklab, var(--lt-accent) 62%, transparent);
+}
+.lt-zone-name-overlay h3 {
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* Цена поверх фото-хедера, правый верхний угол (докс: уточнено пользователем
+   2026-07-13 — переехала туда же, где название, крупнее прежнего чипа в
+   белой части карточки). Непрозрачнее плашки названия (82% против 62%) —
+   короткий текст без фонового фото под буквами хуже держит контраст. */
+.lt-zone-price-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: color-mix(in oklab, var(--lt-accent) 82%, transparent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 17px;
+  padding: 6px 14px;
+  border-radius: var(--lt-btn-radius);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* П.5 — плейсхолдер фото-хедера зоны (витринного фото нет вообще ни у одной
+   версии — accent-soft фон с иконкой зоны, "пустых белых хедеров не бывает"). */
+.lt-zone-photo-placeholder {
+  background: var(--lt-accent-soft);
+  color: var(--lt-accent);
+}
+
+/* П.5 — тариф-чип "{название} — {цена}". */
+.lt-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--lt-accent);
+  background: var(--lt-accent-soft);
+  border-radius: 8px;
+  padding: 5px 11px;
+}
+
+/* П.5а — лента активов внутри карточки зоны, чистый CSS-слайдер, только
+   бесконечная автопрокрутка (докс: уточнено пользователем 2026-07-13 —
+   увеличение/рамка/тень центрального тайла ОТМЕНЕНЫ, было лишним); mask-fade
+   тоже убран — он был для ленты с выравниванием по старту, здесь другая
+   логика (центр по позиции + бесконечный цикл). */
+.lt-fleet-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.lt-fleet-strip::-webkit-scrollbar {
+  display: none;
+}
+.lt-fleet-tile {
+  flex: 0 0 96px;
+  border-radius: 10px;
+}
+.lt-fleet-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 72px;
+  border-radius: 10px;
+  background: var(--lt-photo-bg);
+  color: var(--lt-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* П.8 — блок-метка точки (только при 2+ точках) — плашка с иконкой точки
+   вместо мелкой подписи+линии (докс: обновлено 2026-07-13, было слишком
+   мелко и прижато к карточкам; уточнено ещё раз 2026-07-13 — название
+   значительно крупнее и по центру, mx-auto в разметке). */
+.lt-point-label {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: var(--lt-accent-soft);
+}
+.lt-point-label .lt-point-label-icon {
+  display: flex;
+  color: var(--lt-accent);
+}
+.lt-point-label .lt-point-label-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--lt-accent);
+}
+
+/* Тонкий разделитель внутри карточки (напр. над лентой активов). */
+.lt-hairline-top {
+  border-top: 1px solid color-mix(in oklab, var(--lt-ink) 8%, transparent);
+}
+
+/* Разделитель МЕЖДУ секциями страницы (SectionDivider) — та же линия, что
+   .lt-hairline-top, но с собственными вертикальными отступами. */
+.lt-divider {
+  margin: 8px 0;
+  border: none;
+  border-top: 1px solid color-mix(in oklab, var(--lt-ink) 8%, transparent);
+}
+
+/* Разделитель МЕЖДУ точками внутри "Развлечения" (докс: уточнено пользователем
+   2026-07-13 — обычный .lt-divider был "еле заметен", нужно явное разделение,
+   чтобы посетитель считывал смену точки). Акцентный цвет и толще обычного
+   hairline — сознательно другой стиль, не путается с межсекционным. */
+.lt-point-divider {
+  height: 2px;
+  margin: 4px 0 20px;
+  border: none;
+  border-radius: 2px;
+  background: var(--lt-accent);
+  opacity: 0.4;
+}
+
+/* П.9 — статус-маркер точки: "Открыто" (success) / нейтральный. */
+.lt-status-dot-open {
+  color: var(--lt-success);
+}
+.lt-status-dot-open::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--lt-success);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.lt-status-dot-neutral {
+  color: var(--lt-muted);
+}
+.lt-status-dot-neutral::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--lt-muted);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* Карточка точки в "Контакты" (докс: уточнено пользователем 2026-07-13 —
+   "сливаются", плоские белые карточки на светлом фоне почти не отличались от
+   фона/друг друга) — акцентная полоска слева выделяет каждую точку как
+   отдельную сущность, не завися от того, есть ли у темы собственный border. */
+.lt-point-card {
+  border-left: 3px solid var(--lt-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lt-card,
+  .lt-btn,
+  .lt-gallery-item,
+  .lt-fleet-tile {
+    transition: none;
+  }
+}

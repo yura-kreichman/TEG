@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantZone, requireOwner } from "@/lib/require-owner";
 import { isZoneAccountingMode } from "@/lib/results-calc";
+import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 
 export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]">) {
   const owner = await requireOwner();
@@ -91,6 +92,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
   }
 
   await prisma.zone.update({ where: { id }, data });
+  await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ ok: true });
 }
 
@@ -121,5 +123,6 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/zones/[i
   }
 
   await prisma.zone.delete({ where: { id } });
+  await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ ok: true });
 }

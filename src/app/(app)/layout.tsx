@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import "./globals.css";
+import "../globals.css";
 import InstallAppBanner from "./install-app-banner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeColorMeta } from "@/components/theme-color-meta";
