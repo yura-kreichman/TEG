@@ -445,7 +445,7 @@ export function OwnerDashboardCard({
             <Input id="companyName" autoFocus value={renameValue} onChange={(e) => setRenameValue(e.target.value)} />
             {currentSlug && !nameChanged && (
               <p className="text-caption-airbnb text-muted-foreground">
-                {t.auth.slugPreviewPrefix} my.rentos365.app/site/{currentSlug}
+                {t.auth.slugPreviewPrefix} my.rentos365.app/s/{currentSlug}
               </p>
             )}
           </div>
@@ -458,7 +458,7 @@ export function OwnerDashboardCard({
               </div>
               {updateSlugOnRename && renameSlugPreview && (
                 <p className="text-caption-airbnb text-muted-foreground">
-                  {t.auth.slugPreviewPrefix} my.rentos365.app/site/{renameSlugPreview}
+                  {t.auth.slugPreviewPrefix} my.rentos365.app/s/{renameSlugPreview}
                 </p>
               )}
               <p className="text-caption-airbnb text-muted-foreground">{t.home.updateSlugHint}</p>

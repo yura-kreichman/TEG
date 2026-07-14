@@ -8,7 +8,7 @@ import type { NextConfig } from "next";
 // единственный легитимный внешний источник на всём проекте: YouTube-плеер
 // секции видео Лендинга (public/landing-video.js, youtube-nocookie.com,
 // создаётся по клику, не в разметке). Это делает CSP короткой и безопасной
-// для site-wide применения, а не только для /site/[slug].
+// для site-wide применения, а не только для /s/[slug].
 // 'unsafe-inline' в style-src ОБЯЗАТЕЛЕН: next/image сам расставляет inline
 // style на каждый <img> (position/aspect для fill), плюс собственный код
 // местами использует style={{...}} (например ZoneIconGlyph, mask-image) —
@@ -41,6 +41,21 @@ const nextConfig: NextConfig = {
   // заставляет грузить пакет через нативный require из настоящего node_modules.
   serverExternalPackages: ["pdfkit"],
   poweredByHeader: false,
+  // Публичный путь Лендинга перенесён с /site/[slug] на /s/[slug] (решение
+  // пользователя 2026-07-14, по аналогии с коротким префиксом Инструктажей
+  // /i/...). Старый префикс уже был проиндексирован/расшарен (JSON-LD,
+  // sitemap.xml, Google/Яндекс верификация настраивались в тот же день под
+  // /site/) — постоянный 301, не молчаливый 404, чтобы не терять накопленный
+  // SEO-вес и не ломать уже сохранённые ссылки. redirects() выполняется
+  // РАНЬШЕ Proxy (докс Next.js: "redirects runs before Proxy"), так что
+  // src/proxy.ts (который теперь матчит только /s/) старый путь не увидит
+  // вообще — редирект отработает до него.
+  async redirects() {
+    return [
+      { source: "/site/:slug/preview/:token", destination: "/s/:slug/preview/:token", permanent: true },
+      { source: "/site/:slug", destination: "/s/:slug", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

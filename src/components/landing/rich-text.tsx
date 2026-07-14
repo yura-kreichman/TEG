@@ -2,7 +2,7 @@ import type { PMNode } from "@/lib/rich-text";
 
 // Серверный рендер PMNode -> JSX для публичной страницы Лендинга. Отдельно
 // от InstructionEditor (src/components/instructions/instruction-editor.tsx,
-// "use client" на @tiptap/react) намеренно: /site/[slug] — не React Client
+// "use client" на @tiptap/react) намеренно: /s/[slug] — не React Client
 // Component маршрут (docs/spec/08-landing.md, "Правила вёрстки" — один
 // клиентский компонент тянет ~230КБ react-dom-хайдратации на весь маршрут,
 // бюджет ~200KB gzip в CLAUDE.md). Визуально идентично: та же CSS-типографика

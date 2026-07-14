@@ -3,18 +3,19 @@ import type { LandingRenderData } from "@/lib/landing/get-render-data";
 import { extractPlainText } from "@/lib/rich-text";
 
 // Общая сборка <title>/description/OG/Twitter для обеих публичных страниц
-// Лендинга (/site/[slug] и .../preview/[token]) — до 2026-07-14 превью-роут
+// Лендинга (/s/[slug] и .../preview/[token]) — до 2026-07-14 превью-роут
 // задавал только robots: {index:false}, без title/description вообще, из-за
 // чего вкладка браузера на превью показывала голый URL вместо названия
 // (найдено пользователем). canonical у обеих — всегда ОПУБЛИКОВАННЫЙ URL, не
 // секретная ссылка превью — превью не должно становиться каноническим
-// адресом даже случайно.
+// адресом даже случайно. Путь /s/ (не /site/) — решение пользователя
+// 2026-07-14, старый префикс редиректит 301 (next.config.ts redirects()).
 export function buildLandingMetadata(
   data: LandingRenderData,
   siteUrl: string,
   robots: { index: boolean; follow: boolean }
 ): Metadata {
-  const canonical = `${siteUrl}/site/${data.slug}`;
+  const canonical = `${siteUrl}/s/${data.slug}`;
   const title = data.metaTitleOverride ?? data.tagline;
   const description = (data.metaDescriptionOverride ?? extractPlainText(data.aboutText)).slice(0, 160);
   const ogImageRelative = data.galleryPhotos[0]?.url ?? data.zones.find((z) => z.photoUrl)?.photoUrl ?? null;

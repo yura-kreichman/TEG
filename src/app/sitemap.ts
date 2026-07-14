@@ -22,7 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return published
     .filter((l) => l.tenant.slug)
     .map((l) => ({
-      url: `${SITE_URL}/site/${l.tenant.slug}`,
+      url: `${SITE_URL}/s/${l.tenant.slug}`,
       lastModified: l.updatedAt,
       changeFrequency: "weekly" as const,
     }));

@@ -13,5 +13,5 @@ import { prisma } from "@/lib/prisma";
 export async function revalidateLandingForTenant(tenantId: string): Promise<void> {
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { slug: true } });
   if (!tenant?.slug) return;
-  revalidatePath(`/site/${tenant.slug}`);
+  revalidatePath(`/s/${tenant.slug}`);
 }

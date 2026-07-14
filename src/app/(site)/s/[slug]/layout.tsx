@@ -4,7 +4,9 @@ import "./landing.css";
 import "@/components/landing/landing-themes.css";
 import { prisma } from "@/lib/prisma";
 
-// Корневой layout ТОЛЬКО для /site/** (docs/spec/08-landing.md, Шаг 4) —
+// Корневой layout ТОЛЬКО для /s/** (docs/spec/08-landing.md, Шаг 4; путь
+// перенесён с /site/ на /s/ решением пользователя 2026-07-14, см. next.config.ts
+// redirects() для 301 со старого адреса) —
 // намеренно НЕ использует общий src/app/(app)/layout.tsx: тот читает cookies
 // (акцент/локаль владельца) в каждом рендере, что принудительно делает весь
 // поддерево динамическим в Next.js — здесь же нужен настоящий SSG/ISR
@@ -21,7 +23,7 @@ import { prisma } from "@/lib/prisma";
 // скрытый пробел — h1 уже рендерился font-extrabold (800), которого не было
 // в списке весов, браузер синтезировал жирность из 700. 500 убран — по
 // коду публичной страницы не используется нигде (font-medium не встречается
-// в src/app/(site)/site/[slug] и src/components/landing), докс требует
+// в src/app/(site)/s/[slug] и src/components/landing), докс требует
 // грузить только реально нужные веса. Курсив Классика — синтетический (CSS
 // font-style: italic поверх обычного начертания), не отдельный italic-файл:
 // используется только в одном месте одной темы, отдельный next/font-вызов

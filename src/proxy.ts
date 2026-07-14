@@ -53,12 +53,15 @@ const SUBSCRIPTION_BLOCKED_STATUSES = new Set(["expired", "suspended"]);
 // затронет, но путь исключён явно — ради производительности, не корректности.
 const SUBSCRIPTION_GATE_EXEMPT_PREFIXES = ["/api/auth/", "/api/webhooks/", "/api/admin/"];
 
-// /site/{slug} (Лендинг) и /i/{slug}/{instructionSlug} (Инструктажи) вместе:
+// /s/{slug} (Лендинг) и /i/{slug}/{instructionSlug} (Инструктажи) вместе:
 // docs/spec/08-landing.md — с 2026-07-13 Tenant.slug общий и редактируемый,
 // поэтому 301 на актуальный слаг при попадании в TenantOldSlug нужен обоим
 // путям (см. src/lib/landing/resolve-tenant.ts). Сбор статистики/rate limit
-// — только для /site/, GET, не превью, не боты.
-const SITE_PATH_RE = /^\/site\/([^/]+)\/?$/;
+// — только для /s/, GET, не превью, не боты. Префикс /s/ (не /site/) —
+// решение пользователя 2026-07-14; 301 со старого префикса живёт в
+// next.config.ts redirects() и срабатывает РАНЬШЕ этого файла (Next.js:
+// "redirects runs before Proxy"), так что здесь старый путь уже не встретится.
+const SITE_PATH_RE = /^\/s\/([^/]+)\/?$/;
 const INSTRUCTION_PATH_RE = /^\/i\/([^/]+)\/([^/]+)\/?$/;
 
 export async function proxy(request: NextRequest, event: NextFetchEvent) {
@@ -72,7 +75,7 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
 
     if (resolved.kind === "redirect") {
       const url = request.nextUrl.clone();
-      url.pathname = siteMatch ? `/site/${resolved.currentSlug}` : `/i/${resolved.currentSlug}/${instructionMatch![2]}`;
+      url.pathname = siteMatch ? `/s/${resolved.currentSlug}` : `/i/${resolved.currentSlug}/${instructionMatch![2]}`;
       return NextResponse.redirect(url, 301);
     }
 

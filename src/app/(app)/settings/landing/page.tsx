@@ -449,10 +449,10 @@ export default function LandingSettingsPage() {
 
   if (checking || !landing) return null;
 
-  const publicUrl = landing.slug && typeof window !== "undefined" ? `${window.location.origin}/site/${landing.slug}` : "";
+  const publicUrl = landing.slug && typeof window !== "undefined" ? `${window.location.origin}/s/${landing.slug}` : "";
   const previewUrl =
     landing.slug && typeof window !== "undefined"
-      ? `${window.location.origin}/site/${landing.slug}/preview/${landing.previewToken}`
+      ? `${window.location.origin}/s/${landing.slug}/preview/${landing.previewToken}`
       : "";
   const zoneContentByZoneId = new Map(landing.zoneContents.map((zc) => [zc.zoneId, zc]));
   const activeZonesPointId = zonesPointId ?? points[0]?.id ?? null;

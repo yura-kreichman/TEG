@@ -78,7 +78,7 @@ export async function POST(request: Request) {
 
   const pkg = await getDefaultPackage();
   const locale = await resolveLocale();
-  // Публичные ссылки Инструктажей (/i/{slug}/...) и Лендинга (/site/{slug},
+  // Публичные ссылки Инструктажей (/i/{slug}/...) и Лендинга (/s/{slug},
   // docs/spec/08-landing.md) — общее поле, редактируемое владельцем позже.
   // checkExists учитывает и зарезервированные слова, и уже отработавшие
   // старые слаги (isSlugTaken), не только текущие Tenant.slug — иначе

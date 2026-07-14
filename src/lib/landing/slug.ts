@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
 
-// Короткий список — публичный путь живёт под /site/{slug} (docs/spec/
+// Короткий список — публичный путь живёт под /s/{slug} (docs/spec/
 // 08-landing.md, решение пользователя 2026-07-13, снимает пересечение с
-// корневыми роутами приложения), поэтому список нужен только для гигиены,
-// не для защиты от коллизий с реальными маршрутами.
-export const RESERVED_TENANT_SLUGS = ["site", "api", "admin", "app", "www", "static"];
+// корневыми роутами приложения; путь был /site/{slug} до 2026-07-14, тот
+// префикс остаётся зарезервирован — он всё ещё реальный маршрут, 301
+// на /s/{slug}), поэтому список нужен только для гигиены, не для защиты
+// от коллизий с реальными маршрутами.
+export const RESERVED_TENANT_SLUGS = ["site", "s", "api", "admin", "app", "www", "static"];
 
 export function isReservedSlug(slug: string): boolean {
   return RESERVED_TENANT_SLUGS.includes(slug);

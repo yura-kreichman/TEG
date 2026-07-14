@@ -95,7 +95,7 @@ export default function RegisterPage() {
           />
           {slugPreview && (
             <p className="text-caption-airbnb text-muted-foreground">
-              {t.auth.slugPreviewPrefix} my.rentos365.app/site/{slugPreview}
+              {t.auth.slugPreviewPrefix} my.rentos365.app/s/{slugPreview}
             </p>
           )}
         </div>

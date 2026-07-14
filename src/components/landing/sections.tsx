@@ -545,7 +545,7 @@ export function RulesSection({ data, lp }: { data: LandingRenderData; lp: LP }) 
 // обычная <button> + ванильный public/landing-share.js. url необязателен —
 // без него скрипт берёт window.location.href (текущий адрес, включая
 // превью-токен — правильнее, чем передавать заранее вычисленный
-// канонический /site/{slug} и делиться неопубликованным превью не тем URL).
+// канонический /s/{slug} и делиться неопубликованным превью не тем URL).
 export function ShareButton({ title, url, lp }: { title: string; url?: string; lp: LP }) {
   return (
     <button

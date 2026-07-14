@@ -11,7 +11,7 @@ export function LandingJsonLd({ data, baseUrl }: { data: LandingRenderData; base
   // Канонический URL страницы, не корень домена — LocalBusiness.url должен
   // указывать на собственную страницу бизнеса (найдено при аудите SEO
   // 2026-07-14, была ошибка: url: baseUrl без пути).
-  const canonicalUrl = `${baseUrl}/site/${data.slug}`;
+  const canonicalUrl = `${baseUrl}/s/${data.slug}`;
   const logoUrl = data.tenant.logoUrl ? `${baseUrl}${data.tenant.logoUrl}` : null;
   const sameAs = (["telegram", "instagram", "facebook", "tiktok", "whatsapp", "viber"] as const)
     .map((kind) => (data.contacts[kind] ? contactHref(kind, data.contacts[kind]!) : null))

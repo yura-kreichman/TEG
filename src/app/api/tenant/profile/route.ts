@@ -20,7 +20,7 @@ export async function GET() {
   return NextResponse.json({ name: tenant?.name ?? "", logoUrl: tenant?.logoUrl ?? null, slug: tenant?.slug ?? null });
 }
 
-// Слаг (docs/spec/08-landing.md, "/i/" и "/site/") меняется ИМЕННО здесь —
+// Слаг (docs/spec/08-landing.md, "/i/" и "/s/") меняется ИМЕННО здесь —
 // вместе со сменой названия компании (решение пользователя 2026-07-13,
 // отменяет более раннее решение "редактируется в разделе Лендинг"), а не
 // отдельным полем в настройках Лендинга. Владелец явно включает updateSlug —
