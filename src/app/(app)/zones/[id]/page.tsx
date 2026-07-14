@@ -425,14 +425,19 @@ export default function ZoneDetailPage() {
               </div>
             ))}
 
-            <button
-              type="button"
-              disabled={tariffLimitReached}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-control border-[1.5px] border-dashed border-border py-2.5 text-body-airbnb font-semibold text-primary disabled:cursor-default disabled:text-muted-foreground"
-              onClick={() => setCreateTariffOpen(true)}
-            >
-              {tariffLimitReached ? t.zoneDetail.tariffLimitReached : t.zoneDetail.addTariffButton}
-            </button>
+            <PressableScale>
+              <Button
+                type="button"
+                variant="dark"
+                size="sm"
+                disabled={tariffLimitReached}
+                className="mt-3 w-full gap-1.5"
+                onClick={() => setCreateTariffOpen(true)}
+              >
+                <Plus />
+                {tariffLimitReached ? t.zoneDetail.tariffLimitReached : t.zoneDetail.addTariffButton}
+              </Button>
+            </PressableScale>
           </SpringCard>
 
           <SpringCard hover={false} className="flex flex-col gap-1">
@@ -496,10 +501,11 @@ export default function ZoneDetailPage() {
             <PressableScale>
               <Button
                 variant="dark"
-                className="mt-3 w-full gap-1.5 rounded-control"
+                size="sm"
+                className="mt-3 w-full gap-1.5"
                 onClick={() => setCreateAssetOpen(true)}
               >
-                <Plus className="size-4" />
+                <Plus />
                 {t.zoneDetail.addAssetButton}
               </Button>
             </PressableScale>
@@ -746,21 +752,21 @@ export default function ZoneDetailPage() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={assetPhotoUrl} alt="" className="size-12 rounded-control object-cover" />
               )}
-              <FilePickerButton
-                accept="image/jpeg,image/png,image/webp"
-                onFileSelected={handleUploadPhoto}
-                disabled={uploading}
-                hasFile={!!assetPhotoUrl}
-              />
+              <PressableScale>
+                <FilePickerButton
+                  accept="image/jpeg,image/png,image/webp"
+                  onFileSelected={handleUploadPhoto}
+                  disabled={uploading}
+                  hasFile={!!assetPhotoUrl}
+                />
+              </PressableScale>
               {assetPhotoUrl && (
-                <Button
-                  type="button"
-                  variant="link"
-                  className="h-auto p-0 text-xs text-destructive"
-                  onClick={() => setAssetPhotoUrl(null)}
-                >
-                  {t.zoneDetail.removePhoto}
-                </Button>
+                <PressableScale>
+                  <Button type="button" variant="destructive" size="sm" onClick={() => setAssetPhotoUrl(null)}>
+                    <Trash2 />
+                    {t.zoneDetail.removePhoto}
+                  </Button>
+                </PressableScale>
               )}
             </div>
             {uploading && <p className="text-caption-airbnb">{t.zoneDetail.uploading}</p>}
@@ -852,21 +858,21 @@ export default function ZoneDetailPage() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={editAssetPhotoUrl} alt="" className="size-12 rounded-control object-cover" />
               )}
-              <FilePickerButton
-                accept="image/jpeg,image/png,image/webp"
-                onFileSelected={handleEditUploadPhoto}
-                disabled={editUploading}
-                hasFile={!!editAssetPhotoUrl}
-              />
+              <PressableScale>
+                <FilePickerButton
+                  accept="image/jpeg,image/png,image/webp"
+                  onFileSelected={handleEditUploadPhoto}
+                  disabled={editUploading}
+                  hasFile={!!editAssetPhotoUrl}
+                />
+              </PressableScale>
               {editAssetPhotoUrl && (
-                <Button
-                  type="button"
-                  variant="link"
-                  className="h-auto p-0 text-xs text-destructive"
-                  onClick={() => setEditAssetPhotoUrl(null)}
-                >
-                  {t.zoneDetail.removePhoto}
-                </Button>
+                <PressableScale>
+                  <Button type="button" variant="destructive" size="sm" onClick={() => setEditAssetPhotoUrl(null)}>
+                    <Trash2 />
+                    {t.zoneDetail.removePhoto}
+                  </Button>
+                </PressableScale>
               )}
             </div>
             {editUploading && <p className="text-caption-airbnb">{t.zoneDetail.uploading}</p>}

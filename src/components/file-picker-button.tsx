@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, type ChangeEvent } from "react";
-import { Upload } from "lucide-react";
+import { ImagePlus, type LucideIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/i18n-provider";
-import { cn } from "@/lib/utils";
 
 interface FilePickerButtonProps {
   accept: string;
@@ -11,12 +11,20 @@ interface FilePickerButtonProps {
   disabled?: boolean;
   hasFile?: boolean;
   className?: string;
+  // Иконка по теме файла — по умолчанию ImagePlus (все 3 текущих места
+  // вызова принимают только фото), но задаётся снаружи на будущее, если
+  // появится пикер не для изображений (докс: единая кнопка-по-проекту,
+  // решение пользователя 2026-07-14 — "иконка по теме, для файла своя").
+  icon?: LucideIcon;
 }
 
 // Native <input type="file"> renders the OS's raw "Choose file / No file
-// chosen" chrome — replaced everywhere with this pill button matching the
-// operator app's light pill style (e.g. "Сменить точку").
-export function FilePickerButton({ accept, onFileSelected, disabled, hasFile, className }: FilePickerButtonProps) {
+// chosen" chrome — заменяется везде этой кнопкой. Общий компонент Button
+// (variant="outline" size="sm"), тот же стиль, что "Заменить видео" в
+// настройках Лендинга — раньше был бесповодный pill со своим CSS, из-за
+// чего кнопки выбора файла по проекту visually не совпадали с остальными
+// (решение пользователя 2026-07-14: "везде по проекту разные кнопки").
+export function FilePickerButton({ accept, onFileSelected, disabled, hasFile, className, icon: Icon = ImagePlus }: FilePickerButtonProps) {
   const t = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -29,18 +37,17 @@ export function FilePickerButton({ accept, onFileSelected, disabled, hasFile, cl
   return (
     <>
       <input ref={inputRef} type="file" accept={accept} onChange={handleChange} disabled={disabled} className="hidden" />
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         disabled={disabled}
         onClick={() => inputRef.current?.click()}
-        className={cn(
-          "flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-semibold text-muted-foreground disabled:opacity-50",
-          className
-        )}
+        className={className}
       >
-        <Upload className="size-3.5" />
+        <Icon />
         {hasFile ? t.common.changeFile : t.common.chooseFile}
-      </button>
+      </Button>
     </>
   );
 }

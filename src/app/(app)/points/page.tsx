@@ -444,17 +444,22 @@ export default function PointsPage() {
                         </div>
                       ))}
 
-                      <button
-                        type="button"
-                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-control border-[1.5px] border-dashed border-border py-2.5 text-body-airbnb font-semibold text-primary"
-                        onClick={() => {
-                          setDeviceSheetPointId(point.id);
-                          setDeviceLabel("");
-                          setDeviceRoaming(false);
-                        }}
-                      >
-                        {t.points.addDeviceButton}
-                      </button>
+                      <PressableScale>
+                        <Button
+                          type="button"
+                          variant="dark"
+                          size="sm"
+                          className="mt-3 w-full gap-1.5"
+                          onClick={() => {
+                            setDeviceSheetPointId(point.id);
+                            setDeviceLabel("");
+                            setDeviceRoaming(false);
+                          }}
+                        >
+                          <Plus />
+                          {t.points.addDeviceButton}
+                        </Button>
+                      </PressableScale>
                     </SpringCard>
                   </StaggerItem>
                 );

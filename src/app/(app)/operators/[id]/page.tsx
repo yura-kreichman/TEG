@@ -435,14 +435,14 @@ export default function OperatorCardPage() {
                 </div>
                 <div className="flex gap-2 border-t border-border pt-3.5">
                   <PressableScale className="flex-1">
-                    <Button variant="outline" className="w-full gap-1.5" onClick={() => openMoneyForm("advance")}>
-                      <Plus className="size-4" />
+                    <Button variant="dark" size="sm" className="w-full gap-1.5" onClick={() => openMoneyForm("advance")}>
+                      <Plus />
                       {t.operatorApp.workTime.advanceFieldLabel}
                     </Button>
                   </PressableScale>
                   <PressableScale className="flex-1">
-                    <Button variant="outline" className="w-full gap-1.5" onClick={() => openMoneyForm("bonus")}>
-                      <Plus className="size-4" />
+                    <Button variant="dark" size="sm" className="w-full gap-1.5" onClick={() => openMoneyForm("bonus")}>
+                      <Plus />
                       {t.operatorApp.workTime.bonusFieldLabel}
                     </Button>
                   </PressableScale>

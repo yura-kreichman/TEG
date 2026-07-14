@@ -187,8 +187,8 @@ export default function InstructionsSettingsPage() {
           {tab === "instructions" && (
             <>
               <PressableScale className="mb-3 w-fit self-end">
-                <Button type="button" variant="dark" className="gap-1.5" onClick={() => setCreateOpen(true)}>
-                  <Plus className="size-4" />
+                <Button type="button" variant="dark" size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
+                  <Plus />
                   {t.instructions.addButton}
                 </Button>
               </PressableScale>

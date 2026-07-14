@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ImagePlus, ExternalLink, Copy, Check, MapPin, Phone, CheckCircle2, AlertCircle } from "lucide-react";
+import { Plus, Trash2, ImagePlus, ExternalLink, Copy, Check, MapPin, Phone, CheckCircle2, AlertCircle, Video } from "lucide-react";
 import {
   TelegramIcon,
   ViberIcon,
@@ -658,12 +658,14 @@ export default function LandingSettingsPage() {
                 <div className="flex gap-2">
                   <PressableScale>
                     <Button type="button" variant="outline" size="sm" disabled={savingVideo} onClick={saveVideo}>
+                      <Video />
                       {landing.videoYoutubeId ? t.landing.videoReplaceButton : t.landing.videoAddButton}
                     </Button>
                   </PressableScale>
                   {landing.videoYoutubeId && (
                     <PressableScale>
                       <Button type="button" variant="destructive" size="sm" onClick={deleteVideo}>
+                        <Trash2 />
                         {t.landing.videoDeleteButton}
                       </Button>
                     </PressableScale>
@@ -738,20 +740,20 @@ export default function LandingSettingsPage() {
                         <div className="flex min-w-0 grow flex-col justify-center gap-1.5">
                           <p className="truncate text-sm font-semibold">{zone.name}</p>
                           <div className="flex items-center gap-2">
-                            <FilePickerButton
-                              accept="image/jpeg,image/png,image/webp"
-                              onFileSelected={(file) => setZonePhoto(zone.id, file)}
-                              hasFile={!!content?.photoUrl}
-                            />
+                            <PressableScale>
+                              <FilePickerButton
+                                accept="image/jpeg,image/png,image/webp"
+                                onFileSelected={(file) => setZonePhoto(zone.id, file)}
+                                hasFile={!!content?.photoUrl}
+                              />
+                            </PressableScale>
                             {content?.photoUrl && (
-                              <Button
-                                type="button"
-                                variant="link"
-                                className="h-auto p-0 text-xs text-destructive"
-                                onClick={() => removeZonePhoto(zone.id)}
-                              >
-                                {t.landing.removePhotoButton}
-                              </Button>
+                              <PressableScale>
+                                <Button type="button" variant="destructive" size="sm" onClick={() => removeZonePhoto(zone.id)}>
+                                  <Trash2 />
+                                  {t.landing.removePhotoButton}
+                                </Button>
+                              </PressableScale>
                             )}
                           </div>
                         </div>
