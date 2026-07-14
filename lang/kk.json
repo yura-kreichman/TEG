@@ -553,7 +553,7 @@
     "addressLabel": "Мекенжай (міндетті емес)",
     "iconLabel": "Иконка",
     "addButton": "Нүкте қосу",
-    "addDeviceButton": "+ Құрылғы/белсендіру сілтемесін жасау",
+    "addDeviceButton": "Құрылғы/белсендіру сілтемесін жасау",
     "deviceActivated": "Белсенді",
     "deviceAwaiting": "белсендіруді күтуде",
     "showQr": "QR-кодты көрсету",

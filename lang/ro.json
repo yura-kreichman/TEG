@@ -553,7 +553,7 @@
     "addressLabel": "Adresă (opțional)",
     "iconLabel": "Pictogramă",
     "addButton": "Adaugă punct",
-    "addDeviceButton": "+ Creează dispozitiv/link de activare",
+    "addDeviceButton": "Creează dispozitiv/link de activare",
     "deviceActivated": "Activ",
     "deviceAwaiting": "așteaptă activarea",
     "showQr": "Arată codul QR",

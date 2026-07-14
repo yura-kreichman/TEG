@@ -553,7 +553,7 @@
     "addressLabel": "Adres (isteğe bağlı)",
     "iconLabel": "Simge",
     "addButton": "Nokta ekle",
-    "addDeviceButton": "+ Cihaz/etkinleştirme bağlantısı oluştur",
+    "addDeviceButton": "Cihaz/etkinleştirme bağlantısı oluştur",
     "deviceActivated": "Etkin",
     "deviceAwaiting": "etkinleştirme bekleniyor",
     "showQr": "QR kodunu göster",

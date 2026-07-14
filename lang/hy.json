@@ -553,7 +553,7 @@
     "addressLabel": "Հասցե (ընտրովի)",
     "iconLabel": "Պատկերակ",
     "addButton": "Ավելացնել կետ",
-    "addDeviceButton": "+ Ստեղծել սարք/ակտիվացման հղում",
+    "addDeviceButton": "Ստեղծել սարք/ակտիվացման հղում",
     "deviceActivated": "Ակտիվ",
     "deviceAwaiting": "սպասում է ակտիվացման",
     "showQr": "Ցուցադրել QR-կոդը",

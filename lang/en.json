@@ -553,7 +553,7 @@
     "addressLabel": "Address (optional)",
     "iconLabel": "Icon",
     "addButton": "Add point",
-    "addDeviceButton": "+ Create device/activation link",
+    "addDeviceButton": "Create device/activation link",
     "deviceActivated": "Active",
     "deviceAwaiting": "awaiting activation",
     "showQr": "Show QR code",

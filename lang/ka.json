@@ -553,7 +553,7 @@
     "addressLabel": "მისამართი (არასავალდებულო)",
     "iconLabel": "ხატულა",
     "addButton": "წერტილის დამატება",
-    "addDeviceButton": "+ მოწყობილობის/აქტივაციის ბმულის შექმნა",
+    "addDeviceButton": "მოწყობილობის/აქტივაციის ბმულის შექმნა",
     "deviceActivated": "აქტიურია",
     "deviceAwaiting": "ელოდება აქტივაციას",
     "showQr": "QR-კოდის ჩვენება",

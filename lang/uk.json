@@ -553,7 +553,7 @@
     "addressLabel": "Адреса (необов'язково)",
     "iconLabel": "Іконка",
     "addButton": "Додати точку",
-    "addDeviceButton": "+ Створити пристрій/посилання активації",
+    "addDeviceButton": "Створити пристрій/посилання активації",
     "deviceActivated": "Активний",
     "deviceAwaiting": "очікує активації",
     "showQr": "Показати QR-код",

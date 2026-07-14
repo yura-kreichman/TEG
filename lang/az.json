@@ -553,7 +553,7 @@
     "addressLabel": "Ünvan (məcburi deyil)",
     "iconLabel": "Nişan",
     "addButton": "Nöqtə əlavə et",
-    "addDeviceButton": "+ Cihaz/aktivləşdirmə keçidi yarat",
+    "addDeviceButton": "Cihaz/aktivləşdirmə keçidi yarat",
     "deviceActivated": "Aktiv",
     "deviceAwaiting": "aktivləşdirməni gözləyir",
     "showQr": "QR-kodu göstər",
