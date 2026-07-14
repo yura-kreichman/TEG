@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { findTenantZone, requireOwner } from "@/lib/require-owner";
 import { isZoneAccountingMode } from "@/lib/results-calc";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
+import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 
 export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]">) {
   const owner = await requireOwner();
@@ -26,15 +27,31 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
   // "Начальное показание" (запрос пользователя 2026-07-14) теряет смысл для
   // актива, как только у него появляется хоть одна настоящая AssetReading —
   // пункт кебаб-меню должен исчезнуть, а не просто показывать
-  // предупреждение постфактум. Один groupBy на всю зону вместо N запросов.
-  const assetsWithReadings =
+  // предупреждение постфактум. Те же данные используются для последних
+  // показаний под названием актива в списке (запрос пользователя того же
+  // дня: вместо "фото загружено"/"без фото" — реальные цифры счётчика).
+  const allReadings =
     zone.accountingMode === "counters" && assets.length > 0
-      ? await prisma.assetReading.groupBy({
-          by: ["assetId"],
+      ? await prisma.assetReading.findMany({
           where: { assetId: { in: assets.map((a) => a.id) } },
+          orderBy: { createdAt: "desc" },
         })
       : [];
-  const hasReadingsByAssetId = new Set(assetsWithReadings.map((r) => r.assetId));
+  const hasReadingsByAssetId = new Set<string>();
+  const realReadingByKey = new Map<string, number>();
+  for (const r of allReadings) {
+    hasReadingsByAssetId.add(r.assetId);
+    const key = `${r.assetId}:${r.tariffId}`;
+    // allReadings отсортирован по убыванию createdAt — первое совпадение
+    // по ключу и есть самое свежее.
+    if (!realReadingByKey.has(key)) realReadingByKey.set(key, r.reading);
+  }
+
+  // Пока настоящих сдач ещё нет, "последнее показание" в списке — это
+  // калибровочное значение (запрос пользователя 2026-07-14: ввёл начальное
+  // показание, в списке ничего не появилось, потому что это разные таблицы).
+  const initialByKey = await getInitialReadingsMap(assets.map((a) => a.id));
+  const lastReadingByKey = new Map<string, number>([...initialByKey, ...realReadingByKey]);
 
   return NextResponse.json({
     id: zone.id,
@@ -47,7 +64,13 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
     pointId: zone.pointId,
     pointName: zone.point.name,
     tariffs,
-    assets: assets.map((a) => ({ ...a, hasCounterReadings: hasReadingsByAssetId.has(a.id) })),
+    assets: assets.map((a) => ({
+      ...a,
+      hasCounterReadings: hasReadingsByAssetId.has(a.id),
+      lastReadings: tariffs
+        .map((t) => ({ tariffId: t.id, reading: lastReadingByKey.get(`${a.id}:${t.id}`) }))
+        .filter((r): r is { tariffId: string; reading: number } => r.reading !== undefined),
+    })),
   });
 }
 

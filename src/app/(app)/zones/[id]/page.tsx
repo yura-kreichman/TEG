@@ -38,6 +38,7 @@ interface AssetInfo {
   photoUrl: string | null;
   iconKey: string | null;
   hasCounterReadings: boolean;
+  lastReadings: { tariffId: string; reading: number }[];
 }
 
 interface ZoneDetail {
@@ -509,13 +510,18 @@ export default function ZoneDetailPage() {
                   </div>
                   <div>
                     <div className="text-body-airbnb">{asset.name}</div>
-                    <p className="text-caption-airbnb">
-                      {asset.photoUrl
-                        ? t.zoneDetail.assetPhotoUploadedText
-                        : asset.iconKey
-                          ? t.zoneDetail.assetNoPhotoWithIconText
-                          : t.zoneDetail.assetNoPhotoText}
-                    </p>
+                    {zone.accountingMode === "counters" && asset.lastReadings.length > 0 && (
+                      <p className="text-caption-airbnb tabular-nums">
+                        {zone.tariffs.length > 1
+                          ? asset.lastReadings
+                              .map((r) => {
+                                const tariff = zone.tariffs.find((t) => t.id === r.tariffId);
+                                return `${tariff?.name ?? ""}: ${r.reading}`;
+                              })
+                              .join(" · ")
+                          : asset.lastReadings[0].reading}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
