@@ -1115,7 +1115,7 @@
     "metaTitleLabel": "Sahifa sarlavhasi (ixtiyoriy)",
     "metaDescriptionLabel": "Sahifa tavsifi (ixtiyoriy)",
     "seoVerificationTitle": "Sayt egaligini tasdiqlash",
-    "seoVerificationHint": "Faqat tasdiqlash tegidagi kodni joylashtiring (qolgan belgilashsiz) — uni Google Search Console yoki Yandex Webmaster'da \"HTML teg\" usuli orqali olishingiz mumkin.",
+    "seoVerificationHint": "Kodni yoki butun tasdiqlash tegini joylashtiring — ortiqchasini avtomatik olib tashlaymiz. Uni Google Search Console yoki Yandex Webmaster'da \"HTML teg\" usuli orqali olishingiz mumkin.",
     "googleVerificationLabel": "Google Search Console tasdiqlash kodi",
     "yandexVerificationLabel": "Yandex Webmaster tasdiqlash kodi",
     "seoChecklistTitle": "Lokal SEO tekshiruvi",

@@ -1115,7 +1115,7 @@
     "metaTitleLabel": "Page title (optional)",
     "metaDescriptionLabel": "Page description (optional)",
     "seoVerificationTitle": "Site ownership verification",
-    "seoVerificationHint": "Paste only the code from the verification tag (not the rest of the markup) — get it from Google Search Console or Yandex Webmaster, using the \"HTML tag\" verification method.",
+    "seoVerificationHint": "Paste the code or the whole verification tag — we'll strip anything extra automatically. Get it from Google Search Console or Yandex Webmaster, using the \"HTML tag\" verification method.",
     "googleVerificationLabel": "Google Search Console verification code",
     "yandexVerificationLabel": "Yandex Webmaster verification code",
     "seoChecklistTitle": "Local SEO check",

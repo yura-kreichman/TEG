@@ -1115,7 +1115,7 @@
     "metaTitleLabel": "Бет аталышы (милдеттүү эмес)",
     "metaDescriptionLabel": "Бет сүрөттөмөсү (милдеттүү эмес)",
     "seoVerificationTitle": "Сайттын ээлигин ырастоо",
-    "seoVerificationHint": "Ырастоо тегиндеги код гана коюңуз (калган белгилөөсүз) — аны Google Search Console же Yandex Webmaster'ден «HTML тег» ыкмасы менен алса болот.",
+    "seoVerificationHint": "Кодду же ырастоо тегин толугу менен коюңуз — ашыкчасын өзү тазалайбыз. Аны Google Search Console же Yandex Webmaster'ден «HTML тег» ыкмасы менен алса болот.",
     "googleVerificationLabel": "Google Search Console ырастоо коду",
     "yandexVerificationLabel": "Yandex Webmaster ырастоо коду",
     "seoChecklistTitle": "Жергиликтүү SEO текшерүүсү",

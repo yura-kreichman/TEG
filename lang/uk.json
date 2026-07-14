@@ -1115,7 +1115,7 @@
     "metaTitleLabel": "Заголовок сторінки (необов'язково)",
     "metaDescriptionLabel": "Опис сторінки (необов'язково)",
     "seoVerificationTitle": "Підтвердження власності на сайт",
-    "seoVerificationHint": "Вставте лише сам код із тега підтвердження (без решти розмітки) — отримати його можна в Google Search Console або Яндекс Вебмайстрі, спосіб підтвердження «HTML-тег».",
+    "seoVerificationHint": "Вставте код або весь тег підтвердження цілком — зайве приберемо автоматично. Отримати його можна в Google Search Console або Яндекс Вебмайстрі, спосіб підтвердження «HTML-тег».",
     "googleVerificationLabel": "Код підтвердження Google Search Console",
     "yandexVerificationLabel": "Код підтвердження Яндекс Вебмайстра",
     "seoChecklistTitle": "Локальна перевірка SEO",

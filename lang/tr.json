@@ -1115,7 +1115,7 @@
     "metaTitleLabel": "Sayfa başlığı (opsiyonel)",
     "metaDescriptionLabel": "Sayfa açıklaması (opsiyonel)",
     "seoVerificationTitle": "Site sahipliği doğrulaması",
-    "seoVerificationHint": "Yalnızca doğrulama etiketindeki kodu yapıştırın (kalan işaretleme olmadan) — Google Search Console veya Yandex Webmaster'dan \"HTML etiketi\" doğrulama yöntemiyle alabilirsiniz.",
+    "seoVerificationHint": "Kodu veya doğrulama etiketinin tamamını yapıştırın — fazlalıkları otomatik olarak temizleriz. Google Search Console veya Yandex Webmaster'dan \"HTML etiketi\" doğrulama yöntemiyle alabilirsiniz.",
     "googleVerificationLabel": "Google Search Console doğrulama kodu",
     "yandexVerificationLabel": "Yandex Webmaster doğrulama kodu",
     "seoChecklistTitle": "Yerel SEO kontrolü",

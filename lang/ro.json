@@ -1115,7 +1115,7 @@
     "metaTitleLabel": "Titlul paginii (opțional)",
     "metaDescriptionLabel": "Descrierea paginii (opțional)",
     "seoVerificationTitle": "Verificarea proprietății site-ului",
-    "seoVerificationHint": "Inserați doar codul din eticheta de verificare (fără restul marcajului) — îl obțineți din Google Search Console sau Yandex Webmaster, metoda de verificare „etichetă HTML”.",
+    "seoVerificationHint": "Inserați codul sau întreaga etichetă de verificare — eliminăm automat restul. Îl obțineți din Google Search Console sau Yandex Webmaster, metoda de verificare „etichetă HTML”.",
     "googleVerificationLabel": "Cod de verificare Google Search Console",
     "yandexVerificationLabel": "Cod de verificare Yandex Webmaster",
     "seoChecklistTitle": "Verificare SEO locală",

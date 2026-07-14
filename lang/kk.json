@@ -1115,7 +1115,7 @@
     "metaTitleLabel": "Бет тақырыбы (міндетті емес)",
     "metaDescriptionLabel": "Бет сипаттамасы (міндетті емес)",
     "seoVerificationTitle": "Сайт иелігін растау",
-    "seoVerificationHint": "Тек растау тегіндегі кодты ғана қойыңыз (қалған белгілеусіз) — оны Google Search Console немесе Яндекс Вебмастерден «HTML тег» әдісімен алуға болады.",
+    "seoVerificationHint": "Кодты немесе бүкіл растау тегін толығымен қойыңыз — артығын автоматты түрде аламыз. Оны Google Search Console немесе Яндекс Вебмастерден «HTML тег» әдісімен алуға болады.",
     "googleVerificationLabel": "Google Search Console растау коды",
     "yandexVerificationLabel": "Яндекс Вебмастер растау коды",
     "seoChecklistTitle": "Жергілікті SEO тексеруі",

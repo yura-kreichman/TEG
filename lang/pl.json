@@ -1115,7 +1115,7 @@
     "metaTitleLabel": "Tytuł strony (opcjonalnie)",
     "metaDescriptionLabel": "Opis strony (opcjonalnie)",
     "seoVerificationTitle": "Weryfikacja własności strony",
-    "seoVerificationHint": "Wklej tylko sam kod ze znacznika weryfikacyjnego (bez reszty znaczników) — uzyskasz go w Google Search Console lub Yandex Webmaster, metoda weryfikacji „znacznik HTML”.",
+    "seoVerificationHint": "Wklej kod lub cały znacznik weryfikacyjny — resztę usuniemy automatycznie. Uzyskasz go w Google Search Console lub Yandex Webmaster, metoda weryfikacji „znacznik HTML”.",
     "googleVerificationLabel": "Kod weryfikacyjny Google Search Console",
     "yandexVerificationLabel": "Kod weryfikacyjny Yandex Webmaster",
     "seoChecklistTitle": "Lokalna weryfikacja SEO",

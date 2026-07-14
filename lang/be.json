@@ -1115,7 +1115,7 @@
     "metaTitleLabel": "Загаловак старонкі (неабавязкова)",
     "metaDescriptionLabel": "Апісанне старонкі (неабавязкова)",
     "seoVerificationTitle": "Пацвярджэнне ўладання сайтам",
-    "seoVerificationHint": "Устаўце толькі сам код з тэга пацвярджэння (без астатняй разметкі) — атрымаць яго можна ў Google Search Console або Яндэкс Вэбмайстры, спосаб пацвярджэння «HTML-тэг».",
+    "seoVerificationHint": "Устаўце код або ўвесь тэг пацвярджэння цалкам — лішняе прыбярэм аўтаматычна. Атрымаць яго можна ў Google Search Console або Яндэкс Вэбмайстры, спосаб пацвярджэння «HTML-тэг».",
     "googleVerificationLabel": "Код пацвярджэння Google Search Console",
     "yandexVerificationLabel": "Код пацвярджэння Яндэкс Вэбмайстра",
     "seoChecklistTitle": "Лакальная праверка SEO",

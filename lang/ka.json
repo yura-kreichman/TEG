@@ -1115,7 +1115,7 @@
     "metaTitleLabel": "გვერდის სათაური (არასავალდებულო)",
     "metaDescriptionLabel": "გვერდის აღწერა (არასავალდებულო)",
     "seoVerificationTitle": "საიტის მფლობელობის დადასტურება",
-    "seoVerificationHint": "ჩასვით მხოლოდ დადასტურების ტეგიდან მიღებული კოდი (დანარჩენი მარკირების გარეშე) — მიიღეთ იგი Google Search Console-დან ან Yandex Webmaster-დან, დადასტურების მეთოდი „HTML ტეგი“.",
+    "seoVerificationHint": "ჩასვით კოდი ან მთლიანი დადასტურების ტეგი — ზედმეტს ავტომატურად წავშლით. მიიღეთ იგი Google Search Console-დან ან Yandex Webmaster-დან, დადასტურების მეთოდი „HTML ტეგი“.",
     "googleVerificationLabel": "Google Search Console-ის დადასტურების კოდი",
     "yandexVerificationLabel": "Yandex Webmaster-ის დადასტურების კოდი",
     "seoChecklistTitle": "ლოკალური SEO შემოწმება",

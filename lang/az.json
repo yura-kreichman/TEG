@@ -1115,7 +1115,7 @@
     "metaTitleLabel": "Səhifə başlığı (istəyə bağlı)",
     "metaDescriptionLabel": "Səhifə təsviri (istəyə bağlı)",
     "seoVerificationTitle": "Sayt sahibliyinin təsdiqi",
-    "seoVerificationHint": "Yalnız təsdiq teqindəki kodu daxil edin (qalan işarələmə olmadan) — onu Google Search Console və ya Yandex Webmaster-dən «HTML teq» üsulu ilə əldə edə bilərsiniz.",
+    "seoVerificationHint": "Kodu və ya bütün təsdiq teqini daxil edin — artıq olanları avtomatik silərik. Onu Google Search Console və ya Yandex Webmaster-dən «HTML teq» üsulu ilə əldə edə bilərsiniz.",
     "googleVerificationLabel": "Google Search Console təsdiq kodu",
     "yandexVerificationLabel": "Yandex Webmaster təsdiq kodu",
     "seoChecklistTitle": "Lokal SEO yoxlaması",

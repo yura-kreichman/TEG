@@ -1083,7 +1083,7 @@
     "metaTitleLabel": "Заголовок страницы (необязательно)",
     "metaDescriptionLabel": "Описание страницы (необязательно)",
     "seoVerificationTitle": "Подтверждение владения сайтом",
-    "seoVerificationHint": "Вставьте только сам код из тега подтверждения (без остальной разметки) — получить его можно в Google Search Console или Яндекс Вебмастере, способ подтверждения «HTML-тег».",
+    "seoVerificationHint": "Вставьте код или весь тег подтверждения целиком — лишнее уберём автоматически. Получить его можно в Google Search Console или Яндекс Вебмастере, способ подтверждения «HTML-тег».",
     "googleVerificationLabel": "Код подтверждения Google Search Console",
     "yandexVerificationLabel": "Код подтверждения Яндекс Вебмастера",
     "seoChecklistTitle": "Локальная проверка SEO",

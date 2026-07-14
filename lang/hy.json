@@ -1115,7 +1115,7 @@
     "metaTitleLabel": "Էջի վերնագիր (ոչ պարտադիր)",
     "metaDescriptionLabel": "Էջի նկարագրություն (ոչ պարտադիր)",
     "seoVerificationTitle": "Կայքի սեփականության հաստատում",
-    "seoVerificationHint": "Տեղադրեք միայն ստուգման թեգից ստացված կոդը (առանց մնացած մարկափի) — ստացեք այն Google Search Console-ից կամ Yandex Webmaster-ից՝ «HTML թեգ» ստուգման եղանակով։",
+    "seoVerificationHint": "Տեղադրեք կոդը կամ ամբողջ ստուգման թեգը՝ ավելորդը ինքնաբերաբար կհեռացնենք։ Ստացեք այն Google Search Console-ից կամ Yandex Webmaster-ից՝ «HTML թեգ» ստուգման եղանակով։",
     "googleVerificationLabel": "Google Search Console ստուգման կոդ",
     "yandexVerificationLabel": "Yandex Webmaster ստուգման կոդ",
     "seoChecklistTitle": "Տեղական SEO ստուգում",
