@@ -428,7 +428,12 @@ export default function PointsPage() {
                               label={t.points.renameDevice}
                             />
                           </div>
-                          {installLinks[device.id] && (
+                          {/* Ссылка/QR активации теряет смысл, как только устройство
+                              реально активировано (запрос пользователя 2026-07-14) —
+                              раньше сама картинка QR схлопывалась при активации
+                              (см. опрос выше), но сама ссылка-переключатель оставалась
+                              видимой, пока не обновится страница целиком. */}
+                          {installLinks[device.id] && !device.activated && (
                             <div className="flex flex-col gap-2">
                               <button
                                 type="button"

@@ -23,6 +23,19 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
 
   const submissionCount = await prisma.zoneSubmission.count({ where: { zoneId: id } });
 
+  // "Начальное показание" (запрос пользователя 2026-07-14) теряет смысл для
+  // актива, как только у него появляется хоть одна настоящая AssetReading —
+  // пункт кебаб-меню должен исчезнуть, а не просто показывать
+  // предупреждение постфактум. Один groupBy на всю зону вместо N запросов.
+  const assetsWithReadings =
+    zone.accountingMode === "counters" && assets.length > 0
+      ? await prisma.assetReading.groupBy({
+          by: ["assetId"],
+          where: { assetId: { in: assets.map((a) => a.id) } },
+        })
+      : [];
+  const hasReadingsByAssetId = new Set(assetsWithReadings.map((r) => r.assetId));
+
   return NextResponse.json({
     id: zone.id,
     name: zone.name,
@@ -34,7 +47,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
     pointId: zone.pointId,
     pointName: zone.point.name,
     tariffs,
-    assets,
+    assets: assets.map((a) => ({ ...a, hasCounterReadings: hasReadingsByAssetId.has(a.id) })),
   });
 }
 

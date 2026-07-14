@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { calcSessions, calcZoneRevenue } from "@/lib/results-calc";
+import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 
 interface CorrectionDiff {
   cashAmount: number;
@@ -81,7 +82,8 @@ export async function GET(request: Request) {
       })
     : [];
 
-  const runningPrevious = new Map<string, number>();
+  const initialByKey = await getInitialReadingsMap([...assetIds]);
+  const runningPrevious = new Map<string, number>(initialByKey);
   const previousById = new Map<string, number>();
   const sessionsById = new Map<string, number>();
   const lastReadingIdByKey = new Map<string, string>();

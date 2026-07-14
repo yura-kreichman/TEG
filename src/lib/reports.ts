@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { calcSessions, calcZoneRevenue } from "@/lib/results-calc";
+import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 
 export type ReportGranularity = "week" | "month";
 export type PeriodGranularity = "day" | "week" | "month" | "year";
@@ -104,8 +105,12 @@ export async function computeZoneSubmissionRevenues(
         orderBy: { createdAt: "asc" },
       })
     : [];
+  // Начальные (калибровочные) показания — сидируют "предыдущее" для самой
+  // ПЕРВОЙ настоящей сдачи каждой пары актив+тариф; дальше цепочка считается
+  // от реальных AssetReading как обычно (см. src/lib/asset-initial-readings.ts).
+  const initialByKey = await getInitialReadingsMap([...assetIds]);
 
-  const runningPrevious = new Map<string, number>();
+  const runningPrevious = new Map<string, number>(initialByKey);
   const sessionsById = new Map<string, number>();
   for (const r of allReadings) {
     const key = `${r.assetId}:${r.tariffId}`;

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Check, Pencil, Palette, Camera, ImagePlus, ListChecks, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp, Smile, X } from "lucide-react";
+import { Check, Pencil, Camera, ImagePlus, ListChecks, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp, Smile, X, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,7 @@ interface AssetInfo {
   colorTag: string;
   photoUrl: string | null;
   iconKey: string | null;
+  hasCounterReadings: boolean;
 }
 
 interface ZoneDetail {
@@ -55,7 +56,7 @@ interface ZoneDetail {
 
 type ZoneKebabView = "menu" | "rename" | "mode" | "confirm-delete";
 type TariffKebabView = "menu" | "edit" | "confirm-delete";
-type AssetKebabView = "menu" | "edit" | "photo" | "icon" | "confirm-delete";
+type AssetKebabView = "menu" | "edit" | "photo" | "icon" | "confirm-delete" | "initial-reading";
 
 export default function ZoneDetailPage() {
   const params = useParams<{ id: string }>();
@@ -98,6 +99,16 @@ export default function ZoneDetailPage() {
   const [editAssetPhotoUrl, setEditAssetPhotoUrl] = useState<string | null>(null);
   const [editAssetError, setEditAssetError] = useState<string | null>(null);
   const [editUploading, setEditUploading] = useState(false);
+
+  // Начальные (калибровочные) показания счётчика (запрос пользователя
+  // 2026-07-14: "начинаю реальный тест, нужно установить начальные значения") —
+  // для актива, который заводится в приложение уже не с нуля.
+  const [initialReadingTariffs, setInitialReadingTariffs] = useState<
+    { id: string; name: string; reading: number | null }[]
+  >([]);
+  const [initialReadingValues, setInitialReadingValues] = useState<Record<string, string>>({});
+  const [initialReadingHasReal, setInitialReadingHasReal] = useState(false);
+  const [initialReadingError, setInitialReadingError] = useState<string | null>(null);
 
   async function loadZone() {
     const res = await fetch(`/api/zones/${params.id}`);
@@ -311,6 +322,40 @@ export default function ZoneDetailPage() {
     setEditAssetColor(asset.colorTag);
     setEditAssetPhotoUrl(asset.photoUrl);
     setEditAssetError(null);
+  }
+
+  async function openInitialReading() {
+    if (!assetKebab) return;
+    setInitialReadingError(null);
+    const res = await fetch(`/api/assets/${assetKebab.id}/initial-readings`);
+    const data = await res.json();
+    if (!res.ok) {
+      setInitialReadingError(data.error ?? t.zoneDetail.initialReadingSaveError);
+      setAssetKebabView("initial-reading");
+      return;
+    }
+    setInitialReadingTariffs(data.tariffs);
+    setInitialReadingValues(
+      Object.fromEntries(data.tariffs.map((tf: { id: string; reading: number | null }) => [tf.id, tf.reading?.toString() ?? ""]))
+    );
+    setInitialReadingHasReal(data.hasRealReadings);
+    setAssetKebabView("initial-reading");
+  }
+
+  async function confirmInitialReading() {
+    if (!assetKebab) return;
+    setInitialReadingError(null);
+    const res = await fetch(`/api/assets/${assetKebab.id}/initial-readings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ readings: initialReadingValues }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      setInitialReadingError(data.error ?? t.zoneDetail.initialReadingSaveError);
+      return;
+    }
+    setAssetKebab(null);
   }
 
   async function handleEditUploadPhoto(file: File) {
@@ -742,10 +787,7 @@ export default function ZoneDetailPage() {
 
       <BottomSheet open={createAssetOpen} onClose={() => setCreateAssetOpen(false)}>
         <form onSubmit={handleAddAsset} className="flex flex-col gap-4 pt-2">
-          <div>
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.newAssetTitle}</h2>
-            <p className="text-caption-airbnb">{t.zoneDetail.newAssetSub}</p>
-          </div>
+          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.newAssetTitle}</h2>
           <div className="flex flex-col gap-1">
             <Label htmlFor="assetName">{t.zoneDetail.assetNameLabel}</Label>
             <Input id="assetName" value={assetName} onChange={(e) => setAssetName(e.target.value)} required />
@@ -756,7 +798,7 @@ export default function ZoneDetailPage() {
           </div>
           <div className="flex flex-col gap-2">
             <Label>{t.zoneDetail.assetPhotoLabel}</Label>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               {assetPhotoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={assetPhotoUrl} alt="" className="size-12 rounded-control object-cover" />
@@ -777,12 +819,9 @@ export default function ZoneDetailPage() {
                   </Button>
                 </PressableScale>
               )}
+              <IconPicker value={assetIconKey} onChange={setAssetIconKey} />
             </div>
             {uploading && <p className="text-caption-airbnb">{t.zoneDetail.uploading}</p>}
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label>{t.zoneDetail.assetIconLabel}</Label>
-            <IconPicker value={assetIconKey} onChange={setAssetIconKey} />
           </div>
           {assetError && <p className="text-sm text-destructive">{assetError}</p>}
           <PressableScale>
@@ -801,11 +840,13 @@ export default function ZoneDetailPage() {
           <div className="pt-2">
             <h2 className="mb-2 text-[19px] font-extrabold tracking-[-0.01em]">{assetKebab.name}</h2>
             <ActionSheetItem icon={Pencil} onClick={() => setAssetKebabView("edit")}>
-              {t.zoneDetail.renameAsset}
+              {t.zoneDetail.nameAndColorAction}
             </ActionSheetItem>
-            <ActionSheetItem icon={Palette} onClick={() => setAssetKebabView("edit")}>
-              {t.zoneDetail.changeColorTag}
-            </ActionSheetItem>
+            {zone.accountingMode === "counters" && !assetKebab.hasCounterReadings && (
+              <ActionSheetItem icon={Gauge} onClick={openInitialReading}>
+                {t.zoneDetail.initialReadingAction}
+              </ActionSheetItem>
+            )}
             <ActionSheetItem icon={Camera} onClick={() => setAssetKebabView("photo")}>
               {t.zoneDetail.replacePhoto}
             </ActionSheetItem>
@@ -819,7 +860,7 @@ export default function ZoneDetailPage() {
         )}
         {assetKebab && assetKebabView === "edit" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.renameAsset}</h2>
+            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.nameAndColorAction}</h2>
             <div className="flex flex-col gap-1">
               <Label htmlFor="editAssetName">{t.zoneDetail.assetNameLabel}</Label>
               <Input id="editAssetName" autoFocus value={editAssetName} onChange={(e) => setEditAssetName(e.target.value)} />
@@ -836,6 +877,42 @@ export default function ZoneDetailPage() {
               <PressableScale className="flex-1">
                 <SaveButton className="w-full" onClick={confirmEditAsset}>
                 {t.common.save}
+                </SaveButton>
+              </PressableScale>
+            </div>
+          </div>
+        )}
+        {assetKebab && assetKebabView === "initial-reading" && (
+          <div className="flex flex-col gap-3 pt-2">
+            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.initialReadingAction}</h2>
+            <p className="text-body-airbnb text-muted-foreground">{t.zoneDetail.initialReadingHint}</p>
+            {initialReadingHasReal && (
+              <p className="text-caption-airbnb text-warning">{t.zoneDetail.initialReadingWarning}</p>
+            )}
+            {initialReadingTariffs.map((tariff) => (
+              <div key={tariff.id} className="flex flex-col gap-1">
+                <Label htmlFor={`initialReading-${tariff.id}`}>{tariff.name}</Label>
+                <Input
+                  id={`initialReading-${tariff.id}`}
+                  inputMode="numeric"
+                  maxLength={4}
+                  placeholder="0–9999"
+                  className="h-14 text-lg tabular-nums"
+                  value={initialReadingValues[tariff.id] ?? ""}
+                  onChange={(e) =>
+                    setInitialReadingValues((prev) => ({ ...prev, [tariff.id]: e.target.value }))
+                  }
+                />
+              </div>
+            ))}
+            {initialReadingError && <p className="text-sm text-destructive">{initialReadingError}</p>}
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setAssetKebabView("menu")}>
+                {t.common.cancel}
+              </Button>
+              <PressableScale className="flex-1">
+                <SaveButton className="w-full" onClick={confirmInitialReading}>
+                  {t.common.save}
                 </SaveButton>
               </PressableScale>
             </div>

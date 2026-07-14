@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { calcSessions, calcZoneRevenue, type ZoneAccountingMode } from "@/lib/results-calc";
+import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { dispatchZoneSummary } from "@/lib/summary-channels/dispatch";
 import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { onResultsSubmission } from "@/lib/summary-channels/daily-cash-trigger";
@@ -70,6 +71,7 @@ export async function POST(request: Request) {
     const key = `${reading.assetId}:${reading.tariffId}`;
     if (!previousByKey.has(key)) previousByKey.set(key, reading.reading);
   }
+  const initialByKey = await getInitialReadingsMap(allAssetIds);
 
   const summary = zoneSubmissions.map((zs) => {
     const zone = zoneById.get(zs.zoneId)!;
@@ -77,7 +79,8 @@ export async function POST(request: Request) {
       const readingsForTariff = zs.readings.filter((r) => r.tariffId === tariff.id);
       const sessions = readingsForTariff.reduce((sum, r) => {
         if (zone.accountingMode === "launches") return sum + r.reading;
-        const previous = previousByKey.get(`${r.assetId}:${tariff.id}`) ?? 0;
+        const key = `${r.assetId}:${tariff.id}`;
+        const previous = previousByKey.get(key) ?? initialByKey.get(key) ?? 0;
         return sum + calcSessions(r.reading, previous);
       }, 0);
       return { tariffId: tariff.id, price: Number(tariff.price), sessions };
@@ -105,10 +108,11 @@ export async function POST(request: Request) {
         .map((tariff) => {
           const reading = zs.readings.find((r) => r.assetId === asset.id && r.tariffId === tariff.id);
           if (!reading) return null;
+          const key = `${asset.id}:${tariff.id}`;
           const delta =
             zone.accountingMode === "launches"
               ? reading.reading
-              : calcSessions(reading.reading, previousByKey.get(`${asset.id}:${tariff.id}`) ?? 0);
+              : calcSessions(reading.reading, previousByKey.get(key) ?? initialByKey.get(key) ?? 0);
           return { assetName: asset.name, tariffName: tariff.name, reading: reading.reading, delta };
         })
         .filter((r): r is NonNullable<typeof r> => r !== null)

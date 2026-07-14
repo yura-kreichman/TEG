@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Smile } from "lucide-react";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { Button } from "@/components/ui/button";
@@ -167,11 +167,11 @@ export function IconPicker({
   return (
     <>
       <PressableScale className="w-fit">
-        <Button type="button" variant="outline" className="w-fit gap-2" onClick={() => setOpen(true)}>
+        <Button type="button" variant="outline" size="sm" className="w-fit gap-2" onClick={() => setOpen(true)}>
           {parsed ? (
             <IconGlyph family={parsed.family} name={parsed.name} className="size-4" />
           ) : (
-            <Search className="size-4" />
+            <Smile className="size-4" />
           )}
           {parsed?.name ?? t.iconPicker.selectIcon}
         </Button>

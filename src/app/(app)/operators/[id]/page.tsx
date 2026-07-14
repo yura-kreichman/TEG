@@ -34,7 +34,6 @@ interface Profile {
   avatarUrl: string | null;
   iconKey: string | null;
   colorTag: string | null;
-  pin: string | null;
   allZonesAccess: boolean;
   allowedZones: { id: string; name: string; pointId: string }[];
   timeTrackingMode: "manual" | "auto";
@@ -92,6 +91,14 @@ export default function OperatorCardPage() {
   const [standaloneMoneyOps, setStandaloneMoneyOps] = useState<StandaloneMoneyOp[]>([]);
   const [carryoverTotal, setCarryoverTotal] = useState(0);
   const [points, setPoints] = useState<PointOption[]>([]);
+  // Ручной перенос баланса (docs/spec/05-work-time.md, "БАЛАНС") — API уже
+  // существовал (POST .../work-time/carryover), но нигде в интерфейсе не
+  // было кнопки его вызвать (запрос пользователя 2026-07-14: перенос остатка
+  // "к выдаче" из прошлой программы учёта при старте реального теста).
+  const [carryoverOpen, setCarryoverOpen] = useState(false);
+  const [carryoverAmount, setCarryoverAmount] = useState("");
+  const [carryoverComment, setCarryoverComment] = useState("");
+  const [carryoverError, setCarryoverError] = useState<string | null>(null);
 
   const [granularity, setGranularity] = useState<PeriodGranularity>("month");
   const [anchor, setAnchor] = useState(() => new Date());
@@ -265,6 +272,34 @@ export default function OperatorCardPage() {
     await loadAll();
   }
 
+  function openCarryover() {
+    setCarryoverAmount("");
+    setCarryoverComment("");
+    setCarryoverError(null);
+    setCarryoverOpen(true);
+  }
+
+  async function confirmCarryover() {
+    setCarryoverError(null);
+    const amountNumber = Number(carryoverAmount);
+    if (!Number.isFinite(amountNumber) || amountNumber === 0) {
+      setCarryoverError(t.operatorApp.workTime.saveError);
+      return;
+    }
+    const res = await fetch(`/api/operators/${params.id}/work-time/carryover`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: amountNumber, comment: carryoverComment }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      setCarryoverError(data.error ?? t.operatorApp.workTime.saveError);
+      return;
+    }
+    setCarryoverOpen(false);
+    await loadAll();
+  }
+
   function openShiftEdit(shift: ShiftRow) {
     setEditingShift(shift);
     setEditStartTime(timeInputValue(shift.startAt));
@@ -375,11 +410,6 @@ export default function OperatorCardPage() {
                   <StatusChip variant={profile.active ? "accent" : "warning"}>
                     {profile.active ? t.operators.active : t.operators.inactive}
                   </StatusChip>
-                  {profile.pin && (
-                    <StatusChip variant="neutral">
-                      {t.operators.pinRowLabel} · {profile.pin}
-                    </StatusChip>
-                  )}
                   {profile.allZonesAccess ? (
                     <StatusChip variant="accent">{t.operators.allZonesChip}</StatusChip>
                   ) : profile.allowedZones.length > 0 ? (
@@ -582,6 +612,12 @@ export default function OperatorCardPage() {
                     <span className="tabular-nums text-body-airbnb font-bold">{carryoverTotal.toFixed(2)}</span>
                   </div>
                 )}
+                <PressableScale className="border-t border-border pt-3">
+                  <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={openCarryover}>
+                    <Plus />
+                    {t.operatorApp.workTime.carryoverAddButton}
+                  </Button>
+                </PressableScale>
               </SpringCard>
             </>
           )}
@@ -629,6 +665,38 @@ export default function OperatorCardPage() {
           <PressableScale>
             <SaveButton className="w-full" onClick={submitMoneyForm}>
             {t.common.save}
+            </SaveButton>
+          </PressableScale>
+        </div>
+      </BottomSheet>
+
+      <BottomSheet open={carryoverOpen} onClose={() => setCarryoverOpen(false)}>
+        <div className="flex flex-col gap-4 pt-2">
+          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operatorApp.workTime.carryoverAddButton}</h2>
+          <p className="text-body-airbnb text-muted-foreground">{t.operatorApp.workTime.carryoverHint}</p>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="carryoverAmount">{t.money.amountLabel}</Label>
+            <Input
+              id="carryoverAmount"
+              autoFocus
+              inputMode="decimal"
+              className="h-14 text-lg tabular-nums"
+              value={carryoverAmount}
+              onChange={(e) => setCarryoverAmount(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="carryoverComment">{t.operatorApp.submit.commentPlaceholder}</Label>
+            <Input
+              id="carryoverComment"
+              value={carryoverComment}
+              onChange={(e) => setCarryoverComment(e.target.value)}
+            />
+          </div>
+          {carryoverError && <p className="text-sm text-destructive">{carryoverError}</p>}
+          <PressableScale>
+            <SaveButton className="w-full" onClick={confirmCarryover}>
+              {t.common.save}
             </SaveButton>
           </PressableScale>
         </div>

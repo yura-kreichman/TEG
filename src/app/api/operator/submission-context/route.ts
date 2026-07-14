@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
+import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 
 export async function GET() {
   const ctx = await requireOperator();
@@ -43,6 +44,7 @@ export async function GET() {
     const key = `${reading.assetId}:${reading.tariffId}`;
     if (!previousByKey.has(key)) previousByKey.set(key, reading.reading);
   }
+  const initialByKey = await getInitialReadingsMap(assetIds);
 
   const result = zones.map((zone) => ({
     id: zone.id,
@@ -57,7 +59,10 @@ export async function GET() {
       photoUrl: asset.photoUrl,
       iconKey: asset.iconKey,
       previousReadings: Object.fromEntries(
-        zone.tariffs.map((t) => [t.id, previousByKey.get(`${asset.id}:${t.id}`) ?? 0])
+        zone.tariffs.map((t) => {
+          const key = `${asset.id}:${t.id}`;
+          return [t.id, previousByKey.get(key) ?? initialByKey.get(key) ?? 0];
+        })
       ),
     })),
   }));

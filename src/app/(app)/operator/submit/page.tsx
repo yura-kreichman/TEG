@@ -736,7 +736,7 @@ export default function SubmitResultsPage() {
             </div>
             <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{activeAsset.name}</h2>
 
-            {activeZone.tariffs.map((tariff) => {
+            {activeZone.tariffs.map((tariff, index) => {
               const isLaunches = activeZone.accountingMode === "launches";
               const key = `${activeAsset.id}:${tariff.id}`;
               const value = activeForm.readings[key] ?? "";
@@ -745,6 +745,12 @@ export default function SubmitResultsPage() {
               const invalid = value.trim() !== "" && (!Number.isFinite(parsed) || parsed! < 0 || parsed! > 9999);
               const rollover = !isLaunches && !invalid && parsed !== null && parsed < previous;
               const sessions = !invalid && parsed !== null ? (isLaunches ? parsed : calcSessions(parsed, previous)) : null;
+              // Кнопка "Сохранить" — крупная, справа от поля ввода, не отдельной
+              // строкой ниже (запрос пользователя 2026-07-14) — на последнем
+              // тарифе актива (обычно единственном; 2 тарифа — редкий случай,
+              // но кнопка сохраняет ОБА показания разом, поэтому логично
+              // держать её у последнего поля, а не дублировать).
+              const isLast = index === activeZone.tariffs.length - 1;
 
               return (
                 <div key={tariff.id} className="flex flex-col gap-1">
@@ -756,15 +762,31 @@ export default function SubmitResultsPage() {
                       </span>
                     )}
                   </Label>
-                  <Input
-                    id={key}
-                    autoFocus
-                    inputMode="numeric"
-                    placeholder="0–9999"
-                    className="h-14 rounded-control bg-muted text-xl font-bold tabular-nums"
-                    value={value}
-                    onChange={(e) => updateReading(activeZone.id, key, e.target.value)}
-                  />
+                  <div className="flex items-stretch gap-2">
+                    <Input
+                      id={key}
+                      autoFocus
+                      inputMode="numeric"
+                      // Счётчики — 4 разряда (0-9999), см. AssetReading.reading в
+                      // schema.prisma — maxLength не даёт физически ввести 5-й
+                      // символ, а не только показывает предупреждение постфактум.
+                      maxLength={4}
+                      placeholder="0–9999"
+                      className="h-14 flex-1 rounded-control bg-muted text-xl font-bold tabular-nums"
+                      value={value}
+                      onChange={(e) => updateReading(activeZone.id, key, e.target.value)}
+                    />
+                    {isLast && (
+                      <PressableScale className="shrink-0">
+                        <SaveButton
+                          className="h-14 rounded-control px-5 font-bold"
+                          onClick={() => setCounterAssetId(null)}
+                        >
+                          {t.common.save}
+                        </SaveButton>
+                      </PressableScale>
+                    )}
+                  </div>
                   {value.trim() !== "" && (
                     <p
                       className={cn(
@@ -784,12 +806,6 @@ export default function SubmitResultsPage() {
                 </div>
               );
             })}
-
-            <PressableScale>
-              <SaveButton className="w-full rounded-control font-bold" onClick={() => setCounterAssetId(null)}>
-                {t.common.save}
-              </SaveButton>
-            </PressableScale>
           </div>
         )}
       </BottomSheet>

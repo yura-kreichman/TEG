@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { calcSessions, calcZoneRevenue } from "@/lib/results-calc";
+import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 
 // "Последние итоги" на главной владельца (docs/design/prototype-owner-home-v1.html):
 // сводка за последний день, когда была хоть одна сдача итогов — по всем точкам
@@ -60,7 +61,8 @@ export async function GET() {
         orderBy: { createdAt: "asc" },
       })
     : [];
-  const runningPrevious = new Map<string, number>();
+  const initialByKey = await getInitialReadingsMap([...assetIds]);
+  const runningPrevious = new Map<string, number>(initialByKey);
   const sessionsById = new Map<string, number>();
   for (const r of allReadings) {
     const key = `${r.assetId}:${r.tariffId}`;
