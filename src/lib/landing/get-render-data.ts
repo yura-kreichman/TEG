@@ -49,6 +49,8 @@ export interface LandingRenderData {
   };
   metaTitleOverride: string | null;
   metaDescriptionOverride: string | null;
+  googleSiteVerification: string | null;
+  yandexVerification: string | null;
   rulesInstruction: { slug: string; title: string } | null;
   galleryPhotos: { id: string; url: string }[];
   zones: Array<{
@@ -218,6 +220,8 @@ export async function getLandingRenderData(tenantId: string): Promise<LandingRen
     },
     metaTitleOverride: landing.metaTitleOverride,
     metaDescriptionOverride: landing.metaDescriptionOverride,
+    googleSiteVerification: landing.googleSiteVerification,
+    yandexVerification: landing.yandexVerification,
     rulesInstruction,
     galleryPhotos: galleryPhotos.map((p) => ({ id: p.id, url: p.url })),
     zones,

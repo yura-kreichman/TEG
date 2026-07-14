@@ -33,6 +33,7 @@ import { EffectPreview } from "@/components/landing/effect-preview";
 import "@/components/landing/landing-themes.css";
 import { InstructionEditor } from "@/components/instructions/instruction-editor";
 import { EMPTY_DOC, isRichContentEmpty, type PMNode } from "@/lib/rich-text";
+import { extractVerificationCode } from "@/lib/landing/verification-code";
 
 // Рекомендованная длина мета-тегов (докс: не задокументировано отдельно,
 // пороги взяты из внешнего SEO-отчёта sitechecker.pro, найдено 2026-07-14
@@ -46,12 +47,17 @@ const DESCRIPTION_MAX = 320;
 // Показывается вместо чеклиста, когда он полностью пройден (решение
 // пользователя 2026-07-14) — просто справочный список названий площадок,
 // куда ещё стоит добавить лендинг (карты/локальный поиск), БЕЗ ссылок —
-// не интеграция, докс: "Никаких внешних API в MVP".
+// не интеграция, докс: "Никаких внешних API в MVP". Search Console/Яндекс
+// Вебмастер снова в списке (сначала были убраны в тот же день — требуют
+// подтверждения владения URL, а поля для кода подтверждения не было; после
+// добавления googleSiteVerification/yandexVerification ниже верификация
+// реально проходима, площадки вернули).
 const SEO_RECOMMENDATION_NAMES = [
   "seoRecommendationGoogleBusiness",
   "seoRecommendationGoogleSearchConsole",
   "seoRecommendationYandexBusiness",
   "seoRecommendationYandexWebmaster",
+  "seoRecommendationSocialLinks",
 ] as const;
 
 // Полоса "красный -> зелёный по мере набора текста, снова красный при
@@ -125,6 +131,8 @@ interface LandingData {
   contactYoutube: string | null;
   metaTitleOverride: string | null;
   metaDescriptionOverride: string | null;
+  googleSiteVerification: string | null;
+  yandexVerification: string | null;
   slug: string | null;
   tenantName: string;
   galleryPhotos: { id: string; url: string }[];
@@ -246,6 +254,8 @@ export default function LandingSettingsPage() {
           contactYoutube: landing.contactYoutube,
           metaTitleOverride: landing.metaTitleOverride,
           metaDescriptionOverride: landing.metaDescriptionOverride,
+          googleSiteVerification: landing.googleSiteVerification,
+          yandexVerification: landing.yandexVerification,
         }),
       });
       const data = await res.json();
@@ -723,7 +733,7 @@ export default function LandingSettingsPage() {
                       <InstructionEditor
                         content={content?.caption ?? EMPTY_DOC}
                         onBlur={(json) => saveZoneCaption(zone.id, json)}
-                        heightClassName="h-44 min-h-0"
+                        heightClassName="h-64 min-h-0"
                       />
                     </div>
                   );
@@ -813,6 +823,31 @@ export default function LandingSettingsPage() {
                 </div>
               </SpringCard>
 
+              <SpringCard hover={false} className="flex flex-col gap-3">
+                <div>
+                  <p className="text-body-airbnb font-semibold">{t.landing.seoVerificationTitle}</p>
+                  <p className="text-caption-airbnb">{t.landing.seoVerificationHint}</p>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="googleVerification">{t.landing.googleVerificationLabel}</Label>
+                  <Input
+                    id="googleVerification"
+                    value={landing.googleSiteVerification ?? ""}
+                    onChange={(e) => update("googleSiteVerification", e.target.value)}
+                    onBlur={(e) => update("googleSiteVerification", extractVerificationCode(e.target.value) || null)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="yandexVerification">{t.landing.yandexVerificationLabel}</Label>
+                  <Input
+                    id="yandexVerification"
+                    value={landing.yandexVerification ?? ""}
+                    onChange={(e) => update("yandexVerification", e.target.value)}
+                    onBlur={(e) => update("yandexVerification", extractVerificationCode(e.target.value) || null)}
+                  />
+                </div>
+              </SpringCard>
+
               {error && <p className="text-sm text-destructive">{error}</p>}
               <PressableScale>
                 <Button type="button" className="w-full" disabled={saving} onClick={saveContent}>
@@ -828,11 +863,20 @@ export default function LandingSettingsPage() {
                 // чеклист теперь 1:1 с тем, что видно в textarea).
                 const titleLen = (landing.metaTitleOverride ?? "").trim().length;
                 const descriptionLen = (landing.metaDescriptionOverride ?? "").trim().length;
+                // Конкретные цифры прямо в тексте, не абстрактное "в
+                // рекомендованном диапазоне" — было неясно, что именно
+                // сделать (решение пользователя 2026-07-14: "лучше, чтобы
+                // было понятно что надо сделать").
                 const checks = [
-                  { ok: titleLen >= TITLE_MIN && titleLen <= TITLE_MAX, label: t.landing.seoCheckTitleLength },
+                  {
+                    ok: titleLen >= TITLE_MIN && titleLen <= TITLE_MAX,
+                    label: t.landing.seoCheckTitleLength.replace("{min}", String(TITLE_MIN)).replace("{max}", String(TITLE_MAX)),
+                  },
                   {
                     ok: descriptionLen >= DESCRIPTION_MIN && descriptionLen <= DESCRIPTION_MAX,
-                    label: t.landing.seoCheckDescriptionLength,
+                    label: t.landing.seoCheckDescriptionLength
+                      .replace("{min}", String(DESCRIPTION_MIN))
+                      .replace("{max}", String(DESCRIPTION_MAX)),
                   },
                   {
                     ok: landing.galleryPhotos.length > 0 || !!landing.videoPoster || zones.some((z) => zoneContentByZoneId.get(z.id)?.photoUrl),

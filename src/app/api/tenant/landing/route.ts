@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 import { validateRichContent, extractPlainText, isRichContentEmpty } from "@/lib/rich-text";
+import { extractVerificationCode } from "@/lib/landing/verification-code";
 import { Prisma } from "@/generated/prisma/client";
 
 // Лендинг — 1:1 с тенантом (docs/spec/08-landing.md), но не создаётся при
@@ -72,6 +73,8 @@ export async function PATCH(request: Request) {
     rulesInstructionId,
     metaTitleOverride,
     metaDescriptionOverride,
+    googleSiteVerification,
+    yandexVerification,
     ...rest
   } = body as Record<string, unknown>;
 
@@ -166,10 +169,38 @@ export async function PATCH(request: Request) {
     data.metaTitleOverride = metaTitleOverride === null ? null : metaTitleOverride.trim() || null;
   }
   if (metaDescriptionOverride !== undefined) {
-    if (metaDescriptionOverride !== null && (typeof metaDescriptionOverride !== "string" || metaDescriptionOverride.length > 200)) {
+    // 320, не 200 — верхняя граница рекомендованного диапазона в чеклисте
+    // /settings/landing (SeoLengthMeter/seoCheckDescriptionLength) была
+    // выше серверного лимита, сервер отклонял то, что UI считал "хорошим".
+    if (metaDescriptionOverride !== null && (typeof metaDescriptionOverride !== "string" || metaDescriptionOverride.length > 320)) {
       return NextResponse.json({ error: "Слишком длинное description" }, { status: 400 });
     }
     data.metaDescriptionOverride = metaDescriptionOverride === null ? null : metaDescriptionOverride.trim() || null;
+  }
+  // Коды подтверждения владения (Google Search Console/Яндекс Вебмастер) —
+  // владелец может вставить весь HTML-тег целиком, не только сам код
+  // (решение пользователя 2026-07-14) — extractVerificationCode сама
+  // разберётся; сервер — источник истины, клиент делает то же самое на
+  // blur только ради мгновенной обратной связи, не полагаемся на него.
+  if (googleSiteVerification !== undefined) {
+    if (googleSiteVerification !== null && typeof googleSiteVerification !== "string") {
+      return NextResponse.json({ error: "Некорректный код подтверждения Google" }, { status: 400 });
+    }
+    const code = googleSiteVerification === null ? null : extractVerificationCode(googleSiteVerification) || null;
+    if (code && code.length > 200) {
+      return NextResponse.json({ error: "Некорректный код подтверждения Google" }, { status: 400 });
+    }
+    data.googleSiteVerification = code;
+  }
+  if (yandexVerification !== undefined) {
+    if (yandexVerification !== null && typeof yandexVerification !== "string") {
+      return NextResponse.json({ error: "Некорректный код подтверждения Яндекса" }, { status: 400 });
+    }
+    const code = yandexVerification === null ? null : extractVerificationCode(yandexVerification) || null;
+    if (code && code.length > 200) {
+      return NextResponse.json({ error: "Некорректный код подтверждения Яндекса" }, { status: 400 });
+    }
+    data.yandexVerification = code;
   }
   if (rulesInstructionId !== undefined) {
     if (rulesInstructionId === null) {

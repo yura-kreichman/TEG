@@ -1295,6 +1295,19 @@ model Landing {
   metaTitleOverride       String?
   metaDescriptionOverride String?
 
+  // Коды подтверждения владения сайтом для Google Search Console / Яндекс
+  // Вебмастера (решение пользователя 2026-07-14) — рендерятся как
+  // <meta name="google-site-verification"/"yandex-verification" content="...">
+  // в <head> (Next.js Metadata API, поле verification в buildLandingMetadata,
+  // src/lib/landing/metadata.ts). Домен my.rentos365.app тенанту не
+  // принадлежит — DNS-верификация недоступна физически, но верификация по
+  // HTML-тегу для конкретного URL (/site/{slug}) работает и без владения
+  // доменом целиком, тот же паттерн, что у Wix/Squarespace/Shopify. Хранится
+  // только САМ КОД (значение content=), не вся строка тега — вставляется в
+  // разметку сервером, владелец не пишет HTML напрямую.
+  googleSiteVerification String?
+  yandexVerification     String?
+
   publishedAt DateTime?
 
   createdAt DateTime @default(now())
