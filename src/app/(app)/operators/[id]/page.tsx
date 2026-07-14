@@ -34,6 +34,7 @@ interface Profile {
   avatarUrl: string | null;
   iconKey: string | null;
   colorTag: string | null;
+  pin: string | null;
   allZonesAccess: boolean;
   allowedZones: { id: string; name: string; pointId: string }[];
   timeTrackingMode: "manual" | "auto";
@@ -374,6 +375,11 @@ export default function OperatorCardPage() {
                   <StatusChip variant={profile.active ? "accent" : "warning"}>
                     {profile.active ? t.operators.active : t.operators.inactive}
                   </StatusChip>
+                  {profile.pin && (
+                    <StatusChip variant="neutral">
+                      {t.operators.pinRowLabel} · {profile.pin}
+                    </StatusChip>
+                  )}
                   {profile.allZonesAccess ? (
                     <StatusChip variant="accent">{t.operators.allZonesChip}</StatusChip>
                   ) : profile.allowedZones.length > 0 ? (

@@ -137,7 +137,7 @@
      нейтральной поверхностью (см. :root выше) — реальный акцент тенанта это
      --primary/--ring (см. src/components/accent-picker.tsx), поэтому вычисляем
      из --primary. */
-  --nav-glass-bg: color-mix(in oklab, color-mix(in oklab, var(--primary) 14%, white) 73%, transparent);
+  --nav-glass-bg: color-mix(in oklab, color-mix(in oklab, var(--primary) 14%, white) 84%, transparent);
   --nav-glass-border: color-mix(in oklab, var(--primary) 14%, transparent);
   /* Fallback без backdrop-filter (@supports not (...) — старые WebView/слабые
      GPU): та же тонировка, но 96% непрозрачности, без блюра позади — иначе
@@ -209,7 +209,7 @@
      проекта нет отдельного surface-2 — ближайший эквивалент "поверхность на
      ступень светлее фона" здесь это --card (см. комментарий в начале .dark
      выше), от него и берём. */
-  --nav-glass-bg: color-mix(in oklab, color-mix(in oklab, var(--primary) 18%, var(--card)) 75%, transparent);
+  --nav-glass-bg: color-mix(in oklab, color-mix(in oklab, var(--primary) 18%, var(--card)) 86%, transparent);
   --nav-glass-border: color-mix(in oklab, var(--primary) 14%, transparent);
   --nav-glass-bg-solid: color-mix(in oklab, color-mix(in oklab, var(--primary) 18%, var(--card)) 96%, transparent);
 }
@@ -392,6 +392,13 @@
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
+    /* Реальный баг (найден пользователем 2026-07-14): переключение вкладки
+       "Статистика" в Лендинге на долю секунды показывало горизонтальный
+       скролл внизу — контент под ней ещё не обновил высоту/ширину, ничего не
+       страховало от временного переполнения. Нигде в проекте не было общего
+       overflow-x: hidden на body — один непойманный transient-оverflow в
+       любом месте (не только в Лендинге) мог дать тот же эффект. */
+    overflow-x: hidden;
   }
   html {
     @apply font-sans;
@@ -443,8 +450,19 @@
   .nav-glass {
     background: var(--nav-glass-bg);
     border-top: 0.5px solid var(--nav-glass-border);
-    backdrop-filter: blur(18px) saturate(170%);
-    -webkit-backdrop-filter: blur(18px) saturate(170%);
+    backdrop-filter: blur(20px) saturate(170%);
+    -webkit-backdrop-filter: blur(20px) saturate(170%);
+    /* Небольшая "глубина" (запрос пользователя 2026-07-14, тот же приём, что
+       у Button/Switch) — бар слегка "приподнят" над контентом: мягкая тень
+       сверху (бар fixed внизу, отбрасывает тень вверх на контент под собой)
+       + блик по верхней кромке, имитирующий грань стекла. Непрозрачность
+       поднята с 73%/75% до 84%/86% — на полной прозрачности blur() визуально
+       "терялся" на пёстром контенте под баром (правка пользователя,
+       "холодное стекло" не читалось), с более плотной заливкой blur снова
+       заметен как размытие, а не просто лёгкая тонировка. */
+    box-shadow:
+      0 -1px 8px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
   }
   @supports not (backdrop-filter: blur(1px)) {
     .nav-glass {

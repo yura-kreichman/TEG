@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
 import { AcknowledgmentRecordSheet } from "@/components/instructions/acknowledgment-record-sheet";
 import { useI18n } from "@/components/i18n-provider";
@@ -163,26 +164,15 @@ export default function InstructionsSettingsPage() {
           <h1 className="text-screen-title">{t.instructions.settingsTitle}</h1>
           <p className="mb-4 text-caption-airbnb">{t.instructions.settingsHint}</p>
 
-          <div className="mb-4 flex w-full gap-1.5">
-            {(
-              [
-                ["instructions", t.instructions.tabInstructions],
-                ["log", t.instructions.tabLog],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setTab(key)}
-                className={cn(
-                  "flex-1 rounded-full border px-3.5 py-1.5 text-center text-sm font-semibold",
-                  tab === key ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground"
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <SegmentedTabs
+            className="mb-4"
+            options={[
+              { key: "instructions", label: t.instructions.tabInstructions },
+              { key: "log", label: t.instructions.tabLog },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
 
           {tab === "instructions" && (
             <>

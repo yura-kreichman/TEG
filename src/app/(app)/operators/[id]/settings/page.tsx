@@ -444,14 +444,16 @@ export default function OperatorSettingsPage() {
             <div className="flex items-center gap-3 border-t border-border py-3.5">
               <Clock className="size-4 shrink-0 text-muted-foreground" />
               <span className="min-w-0 flex-1 text-body-airbnb">{t.operatorApp.workTime.timeTrackingModeLabel}</span>
-              <div className="flex shrink-0 overflow-hidden rounded-control border border-border">
+              <div className="flex shrink-0 overflow-hidden rounded-control border border-border bg-muted shadow-[inset_0_1px_2px_rgba(0,0,0,.08)]">
                 <button
                   type="button"
                   disabled={savingTimeTrackingMode}
                   onClick={() => setTimeTrackingMode("manual")}
                   className={cn(
-                    "px-3 py-1.5 text-caption-airbnb font-semibold transition-colors disabled:opacity-50",
-                    profile.timeTrackingMode === "manual" ? "bg-primary text-primary-foreground" : "bg-transparent"
+                    "px-3 py-1.5 text-caption-airbnb font-semibold transition-all disabled:opacity-50",
+                    profile.timeTrackingMode === "manual"
+                      ? "bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary),black_14%)] text-primary-foreground shadow-[inset_0_1px_2px_rgba(0,0,0,.18)]"
+                      : "bg-transparent"
                   )}
                 >
                   {t.operatorApp.workTime.timeTrackingModeManual}
@@ -461,8 +463,10 @@ export default function OperatorSettingsPage() {
                   disabled={savingTimeTrackingMode}
                   onClick={() => setTimeTrackingMode("auto")}
                   className={cn(
-                    "px-3 py-1.5 text-caption-airbnb font-semibold transition-colors disabled:opacity-50",
-                    profile.timeTrackingMode === "auto" ? "bg-primary text-primary-foreground" : "bg-transparent"
+                    "px-3 py-1.5 text-caption-airbnb font-semibold transition-all disabled:opacity-50",
+                    profile.timeTrackingMode === "auto"
+                      ? "bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary),black_14%)] text-primary-foreground shadow-[inset_0_1px_2px_rgba(0,0,0,.18)]"
+                      : "bg-transparent"
                   )}
                 >
                   {t.operatorApp.workTime.timeTrackingModeAuto}

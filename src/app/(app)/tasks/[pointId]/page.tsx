@@ -311,10 +311,10 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
                   type="button"
                   onClick={() => setCurSeg(status)}
                   className={cn(
-                    "flex flex-1 flex-col items-center gap-0.5 rounded-control border py-2 text-xs font-semibold",
+                    "flex flex-1 flex-col items-center gap-0.5 rounded-control border py-2 text-xs font-semibold transition-shadow",
                     active
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-card text-muted-foreground"
+                      ? "border-primary bg-primary/10 text-primary shadow-[inset_0_1px_3px_rgba(0,0,0,.12)]"
+                      : "border-border bg-card text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,.05),inset_0_1px_0_rgba(255,255,255,.5)]"
                   )}
                 >
                   <span className="text-[15px] font-extrabold">{count}</span>

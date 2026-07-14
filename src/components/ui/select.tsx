@@ -24,7 +24,11 @@ function SelectTrigger({ className, children, ...props }: React.ComponentProps<t
         data-slot="select-trigger"
         className={cn(
           "flex h-12 w-full min-w-0 items-center justify-between gap-2 rounded-control border border-input bg-background px-3 text-body-airbnb outline-none transition-colors",
-          "data-popup-open:border-ring data-popup-open:ring-3 data-popup-open:ring-ring/50",
+          // Небольшая "глубина" (запрос пользователя 2026-07-14, тот же приём,
+          // что у Switch/Button) — лёгкая внешняя тень + блик сверху, глубже
+          // при открытом попапе, будто утоплен под нажатием.
+          "shadow-[0_1px_2px_rgba(0,0,0,.05),inset_0_1px_0_rgba(255,255,255,.5)]",
+          "data-popup-open:border-ring data-popup-open:ring-3 data-popup-open:ring-ring/50 data-popup-open:shadow-[inset_0_1px_3px_rgba(0,0,0,.08)]",
           "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}

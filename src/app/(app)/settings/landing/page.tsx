@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ImagePlus, ExternalLink, Copy, Check, MapPin, Phone, CheckCircle2, AlertCircle, Video } from "lucide-react";
+import { Plus, Trash2, ImagePlus, ExternalLink, Copy, Check, MapPin, Phone, CheckCircle2, AlertCircle, Video, Eye, QrCode, EyeOff, Send } from "lucide-react";
 import {
   TelegramIcon,
   ViberIcon,
@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { FilePickerButton } from "@/components/file-picker-button";
 import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
@@ -518,25 +519,35 @@ export default function LandingSettingsPage() {
               <div className="flex flex-wrap gap-2">
                 <PressableScale>
                   <a href={previewUrl} target="_blank" rel="noreferrer">
-                    <Button type="button" variant="outline" size="sm">
+                    <Button type="button" variant="outline" size="sm" className="gap-1.5">
+                      <Eye className="size-3.5" />
                       {t.landing.previewButton}
                     </Button>
                   </a>
                 </PressableScale>
                 <PressableScale>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setQrOpen(true)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => setQrOpen(true)}
+                  >
+                    <QrCode className="size-3.5" />
                     {t.landing.qrButton}
                   </Button>
                 </PressableScale>
                 {landing.status === "published" ? (
                   <PressableScale>
-                    <Button type="button" variant="destructive" size="sm" onClick={unpublish}>
+                    <Button type="button" variant="destructive" size="sm" className="gap-1.5" onClick={unpublish}>
+                      <EyeOff className="size-3.5" />
                       {t.landing.unpublishButton}
                     </Button>
                   </PressableScale>
                 ) : (
                   <PressableScale>
-                    <Button type="button" variant="dark" size="sm" onClick={publish}>
+                    <Button type="button" variant="dark" size="sm" className="gap-1.5" onClick={publish}>
+                      <Send className="size-3.5" />
                       {t.landing.publishButton}
                     </Button>
                   </PressableScale>
@@ -545,27 +556,16 @@ export default function LandingSettingsPage() {
             </SpringCard>
           )}
 
-          <div className="mb-4 flex w-full gap-1.5">
-            {(
-              [
-                ["content", t.landing.tabContent],
-                ["design", t.landing.tabDesign],
-                ["stats", t.landing.tabStats],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setTab(key)}
-                className={cn(
-                  "flex-1 rounded-full border px-3.5 py-1.5 text-center text-sm font-semibold",
-                  tab === key ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground"
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <SegmentedTabs
+            className="mb-4"
+            options={[
+              { key: "content", label: t.landing.tabContent },
+              { key: "design", label: t.landing.tabDesign },
+              { key: "stats", label: t.landing.tabStats },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
 
           {tab === "content" && (
             <div className="flex flex-col gap-4">
@@ -1044,10 +1044,17 @@ function LandingStats() {
   const t = useI18n();
   const [range, setRange] = useState<"today" | "7d" | "30d">("7d");
   const [data, setData] = useState<StatsData | null>(null);
+  // Раньше без этого флага между переключением на вкладку "Статистика" и
+  // ответом сервера на долю секунды показывалась карточка "нет данных" —
+  // не только вводила в заблуждение (данные-то есть, просто ещё не пришли),
+  // но и сама смена высоты (короткая карточка -> полный грид) читалась как
+  // "прыжок" страницы (реальный баг, найден пользователем 2026-07-14).
+  const [loading, setLoading] = useState(true);
 
   const loadStats = useCallback(async () => {
     const res = await fetch(`/api/tenant/landing/stats?range=${range}`);
     if (res.ok) setData(await res.json());
+    setLoading(false);
   }, [range]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -1064,29 +1071,17 @@ function LandingStats() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-1.5">
-        {(
-          [
-            ["today", t.landing.statsRangeToday],
-            ["7d", t.landing.statsRange7d],
-            ["30d", t.landing.statsRange30d],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setRange(key)}
-            className={cn(
-              "flex-1 rounded-full border px-3 py-1.5 text-center text-sm font-semibold",
-              range === key ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground"
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs
+        options={[
+          { key: "today" as const, label: t.landing.statsRangeToday },
+          { key: "7d" as const, label: t.landing.statsRange7d },
+          { key: "30d" as const, label: t.landing.statsRange30d },
+        ]}
+        value={range}
+        onChange={setRange}
+      />
 
-      {!data || (data.summary.visits === 0 && data.series.length === 0) ? (
+      {loading ? null : !data || (data.summary.visits === 0 && data.series.length === 0) ? (
         <SpringCard hover={false}>
           <p className="text-body-airbnb text-muted-foreground">{t.landing.statsNoData}</p>
         </SpringCard>

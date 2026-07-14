@@ -18,8 +18,10 @@ function Checkbox({ className, ...props }: React.ComponentProps<typeof CheckboxP
         // для маленького 22px квадрата на светлом фоне этого недостаточно,
         // "вообще не видно" в живой проверке (нашёл пользователь). Ощутимо
         // темнее по foreground/тени, не хардкод-hex — токен, не отдельный цвет.
-        "flex size-5.5 shrink-0 items-center justify-center rounded-[7px] border-2 border-foreground/25 bg-background shadow-xs transition-colors outline-none",
-        "data-checked:border-primary data-checked:bg-primary",
+        "flex size-5.5 shrink-0 items-center justify-center rounded-[7px] border-2 border-foreground/25 bg-background shadow-[inset_0_1px_2px_rgba(0,0,0,.06)] transition-colors outline-none",
+        // Небольшая "глубина" в отмеченном состоянии — тот же приём, что у
+        // Switch (запрос пользователя 2026-07-14): градиент + inset-тень.
+        "data-checked:border-primary data-checked:bg-linear-to-b data-checked:from-primary data-checked:to-[color-mix(in_oklch,var(--primary),black_14%)] data-checked:shadow-[inset_0_1px_2px_rgba(0,0,0,.2)]",
         "data-focus-visible:ring-3 data-focus-visible:ring-ring/50",
         "data-disabled:pointer-events-none data-disabled:opacity-50",
         className

@@ -7,6 +7,7 @@ import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
@@ -191,40 +192,25 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
             <p className="mb-4 text-caption-airbnb">{pointName}</p>
           )}
 
-          <div className="mb-4 flex flex-wrap gap-1.5">
-            {TABS.map((tb) => (
-              <button
-                key={tb.key}
-                type="button"
-                onClick={() => setTab(tb.key)}
-                className={cn(
-                  "rounded-full border px-3.5 py-1.5 text-sm font-semibold",
-                  tab === tb.key ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground"
-                )}
-              >
-                {tb.label}
-              </button>
-            ))}
-          </div>
+          <SegmentedTabs
+            className="mb-4"
+            equalWidth={false}
+            options={TABS.map((tb) => ({ key: tb.key, label: tb.label }))}
+            value={tab}
+            onChange={setTab}
+          />
 
           {tab !== "calendar" && (
-            <div className="mb-4 flex gap-1.5">
-              {(["week", "month"] as Granularity[]).map((g) => (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => setGranularity(g)}
-                  className={cn(
-                    "flex-1 rounded-control border py-2 text-sm font-semibold",
-                    granularity === g
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-card text-muted-foreground"
-                  )}
-                >
-                  {g === "week" ? t.reports.periodWeek : t.reports.periodMonth}
-                </button>
-              ))}
-            </div>
+            <SegmentedTabs
+              className="mb-4"
+              shape="control"
+              options={[
+                { key: "week" as Granularity, label: t.reports.periodWeek },
+                { key: "month" as Granularity, label: t.reports.periodMonth },
+              ]}
+              value={granularity}
+              onChange={setGranularity}
+            />
           )}
 
           {loadError ? (
