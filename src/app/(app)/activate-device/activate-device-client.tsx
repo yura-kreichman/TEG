@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AuthCard } from "@/components/auth-card";
 import { useI18n } from "@/components/i18n-provider";
 
 export default function ActivateDeviceClient({ token }: { token: string }) {
   const t = useI18n();
+  const router = useRouter();
   const [status, setStatus] = useState<"activating" | "done" | "error">("activating");
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +40,16 @@ export default function ActivateDeviceClient({ token }: { token: string }) {
       cancelled = true;
     };
   }, [token]);
+
+  // Автопереход на вход Оператора вместо ручного клика по ссылке (найдено
+  // 2026-07-14 при разборе реального прод-бага с ПИН-кодом — не была
+  // причиной, но лишний ручной шаг здесь ничему не помогает; небольшая
+  // задержка — чтобы сообщение об успехе было видно, а не мигало).
+  useEffect(() => {
+    if (status !== "done") return;
+    const timer = setTimeout(() => router.push("/operator/login"), 1200);
+    return () => clearTimeout(timer);
+  }, [status, router]);
 
   return (
     <AuthCard className="flex flex-col gap-4">

@@ -1,12 +1,30 @@
 import type { MetadataRoute } from "next";
+import { getActivatedDevice } from "@/lib/operator-auth";
 
-export default function manifest(): MetadataRoute.Manifest {
+// Next.js допускает только ОДИН manifest.ts на весь ориджин — в корне app/,
+// без под-путевых переопределений (в отличие от icon.tsx/favicon.ico) —
+// поэтому start_url выбирается динамически по cookie активации устройства,
+// а не два отдельных файла для Владельца/Оператора. Реальный прод-баг
+// (найдено пользователем 2026-07-14): сотрудник ставил PWA с телефона,
+// уже активированного как устройство точки, но ярлык всегда открывал "/" —
+// экран входа ВЛАДЕЛЬЦА, а не Оператора. Из-за "запомненного устройства"
+// владельца на том же телефоне (после того как он там разово вошёл для
+// теста) ПИН Оператора затем сравнивался с ЛИЧНЫМ ПИН владельца и уходил
+// в блокировку — путаница была не в БД, а именно в том, куда вела иконка.
+// getActivatedDevice() не просто читает cookie, а проверяет в БД, что
+// устройство реально activated=true — устаревшая/чужая cookie не уведёт
+// на экран Оператора ошибочно.
+export const dynamic = "force-dynamic";
+
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const device = await getActivatedDevice();
+
   return {
     id: "/",
     name: "RentOS",
     short_name: "RentOS",
     description: "RentOS SaaS",
-    start_url: "/",
+    start_url: device ? "/operator/login" : "/",
     display: "standalone",
     background_color: "#18181b",
     theme_color: "#18181b",
