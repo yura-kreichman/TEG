@@ -175,7 +175,7 @@ export default function PointDetailPage() {
       <BottomSheet open={createOpen} onClose={() => setCreateOpen(false)}>
         <form onSubmit={handleCreate} className="flex flex-col gap-4 pt-2">
           <div>
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zonesList.newZoneTitle}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zonesList.newZoneTitle}</h2>
             <p className="text-caption-airbnb">{t.zonesList.newZoneSub}</p>
           </div>
           <div className="flex flex-col gap-1">

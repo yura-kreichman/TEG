@@ -80,7 +80,7 @@ function Avatar({
   }
   return (
     <span
-      className="flex size-6.5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
+      className="flex size-6.5 shrink-0 items-center justify-center rounded-full text-[0.6875rem] font-bold text-white"
       style={{ background: colorTag ?? "var(--color-primary)" }}
     >
       {label.slice(0, 1).toUpperCase()}
@@ -317,7 +317,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
                       : "border-border bg-card text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,.05),inset_0_1px_0_rgba(255,255,255,.5)]"
                   )}
                 >
-                  <span className="text-[15px] font-extrabold">{count}</span>
+                  <span className="text-[0.9375rem] font-extrabold">{count}</span>
                   {SEG_LABEL[status]}
                 </button>
               );
@@ -381,7 +381,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
       <BottomSheet open={editorOpen} onClose={() => setEditorOpen(false)}>
         <div className="flex flex-col gap-4 pt-2">
           <div>
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
               {editing ? t.tasks.editTaskTitle : t.tasks.newTaskTitle}
             </h2>
             <p className="text-caption-airbnb">{t.tasks.newTaskSub}</p>
@@ -466,7 +466,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
       >
         {actionsFor && (
           <div className="pt-2">
-            <h2 className="mb-2 text-[19px] font-extrabold tracking-[-0.01em]">{actionsFor.title}</h2>
+            <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">{actionsFor.title}</h2>
             <ActionSheetItem icon={Pencil} onClick={() => openEdit(actionsFor)}>
               {t.tasks.editAction}
             </ActionSheetItem>
@@ -494,7 +494,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
 
       <BottomSheet open={confirmDelete} onClose={() => setConfirmDelete(false)}>
         <div className="flex flex-col gap-3 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.tasks.confirmDeleteTitle}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.tasks.confirmDeleteTitle}</h2>
           <p className="text-body-airbnb">{t.tasks.confirmDeleteBody}</p>
           <div className="flex gap-2">
             <PressableScale className="flex-1">

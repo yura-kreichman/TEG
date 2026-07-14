@@ -349,7 +349,7 @@
     "dailyCashEditorSub": "Wynik całego punktu za dzień roboczy",
     "whenToSendCardLabel": "Kiedy wysyłać",
     "modeEventName": "Gdy zamkną się wszystkie strefy",
-    "modeEventSub": "Podsumowanie zostaje wysłane od razu, gdy dla każdej aktywnej strefy punktu jest co najmniej jedno rozliczenie za dziś. Jeśli jakaś strefa przez cały dzień nie zgłosiła wyniku — podsumowanie i tak zostanie wysłane na granicy dnia roboczego, z odpowiednią adnotacją. Dezaktywowane strefy nie są brane pod uwagę.",
+    "modeEventSub": "Podsumowanie zostaje wysłane od razu, gdy dla każdej aktywnej strefy punktu jest co najmniej jedno rozliczenie za dziś i nie zostały żadne otwarte zmiany. Jeśli którykolwiek z tych warunków nie zostanie spełniony przez cały dzień — podsumowanie i tak zostanie wysłane na granicy dnia roboczego, z odpowiednią adnotacją. Dezaktywowane strefy nie są brane pod uwagę.",
     "modeFixedName": "O stałej godzinie",
     "modeFixedSub": "Każdego dnia o wskazanej godzinie, niezależnie od zmian.",
     "skipIfNoSubmissionsLabel": "Nie wysyłaj bez rozliczeń",
@@ -712,7 +712,9 @@
     "activateOperatorButton": "Aktywuj pracownika",
     "deactivateOpenShiftWarning": "Pracownik ma obecnie otwartą zmianę — po dezaktywacji będzie można ją zamknąć z grafiku",
     "overdraftLabel": "Debet w zaliczkach",
-    "overdraftHint": "Zezwól temu pracownikowi na zaliczkę ponad saldo (wejdzie na minus)"
+    "overdraftHint": "Zezwól temu pracownikowi na zaliczkę ponad saldo (wejdzie na minus)",
+    "skipShiftStartWindowLabel": "Bez ograniczenia czasu rozpoczęcia zmiany",
+    "skipShiftStartWindowHint": "Na przykład dla pracownika z nietypowym grafikiem — wspólne okno tolerancji nie będzie go dotyczyć"
   },
   "money": {
     "title": "Finanse",
@@ -863,6 +865,8 @@
       "addShiftTitle": "Nowa zmiana",
       "arrivedLabel": "Przyszedł",
       "leftLabel": "Wyszedł",
+      "closeShiftToggleLabel": "Zamknij zmianę",
+      "closeShiftToggleHint": "Zmiana jest wciąż otwarta — włącz, jeśli chcesz zamknąć ją za pracownika",
       "advanceFieldLabel": "Zaliczka",
       "bonusFieldLabel": "Premia",
       "saveShiftButton": "Zapisz zmianę",

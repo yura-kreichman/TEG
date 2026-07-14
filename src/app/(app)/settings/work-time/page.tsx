@@ -7,9 +7,9 @@ import { useI18n } from "@/components/i18n-provider";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { SavedCheckmark } from "@/components/ui/saved-checkmark";
 import { WheelTimePicker } from "@/components/wheel-time-picker";
-import { TimeSelect } from "@/components/time-select";
 import { toleranceCrossesBusinessDayBoundary } from "@/lib/business-day";
 
 type ToleranceField = "earlyToleranceMinutes" | "lateToleranceMinutes";
@@ -123,30 +123,36 @@ export default function WorkTimeSettingsPage() {
 
           <SpringCard animate={false} hover={false} className="flex flex-col gap-3">
             <div>
-              <span className="mb-1 block text-[11px] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+              <span className="mb-1 block text-[0.6875rem] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
                 {t.settings.startWindowCardLabel}
               </span>
               <p className="text-caption-airbnb">{t.settings.startWindowHint}</p>
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
-              <Label>{t.settings.earlierLabel}</Label>
-              <TimeSelect
-                hour={Math.floor(earlyMinutes / 60)}
-                minute={earlyMinutes % 60}
-                maxHour={6}
-                minuteStep={10}
-                onChange={(v) => saveTolerance("earlyToleranceMinutes", v.hour, v.minute)}
+              <Label htmlFor="earlyTolerance">{t.settings.earlierLabel}</Label>
+              <Input
+                id="earlyTolerance"
+                type="time"
+                className="h-10 w-fit tabular-nums"
+                value={`${String(Math.floor(earlyMinutes / 60)).padStart(2, "0")}:${String(earlyMinutes % 60).padStart(2, "0")}`}
+                onChange={(e) => {
+                  const [h, m] = e.target.value.split(":").map(Number);
+                  if (Number.isFinite(h) && Number.isFinite(m)) saveTolerance("earlyToleranceMinutes", h, m);
+                }}
               />
             </div>
             <div className="flex items-center justify-between gap-3">
-              <Label>{t.settings.laterLabel}</Label>
-              <TimeSelect
-                hour={Math.floor(lateMinutes / 60)}
-                minute={lateMinutes % 60}
-                maxHour={6}
-                minuteStep={10}
-                onChange={(v) => saveTolerance("lateToleranceMinutes", v.hour, v.minute)}
+              <Label htmlFor="lateTolerance">{t.settings.laterLabel}</Label>
+              <Input
+                id="lateTolerance"
+                type="time"
+                className="h-10 w-fit tabular-nums"
+                value={`${String(Math.floor(lateMinutes / 60)).padStart(2, "0")}:${String(lateMinutes % 60).padStart(2, "0")}`}
+                onChange={(e) => {
+                  const [h, m] = e.target.value.split(":").map(Number);
+                  if (Number.isFinite(h) && Number.isFinite(m)) saveTolerance("lateToleranceMinutes", h, m);
+                }}
               />
             </div>
             <SavedCheckmark

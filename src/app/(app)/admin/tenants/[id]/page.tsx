@@ -373,7 +373,7 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
                 return (
                   <div key={label}>
                     <div className="text-caption-airbnb">{label}</div>
-                    <div className="text-[16px] font-bold">
+                    <div className="text-[1rem] font-bold">
                       {used} <span className="text-muted-foreground">/ {effectiveMax}</span>
                       {delta !== 0 && (
                         <span className="ml-1 text-caption-airbnb font-semibold text-primary">
@@ -476,7 +476,7 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
       <BottomSheet open={deleteSheetOpen} onClose={() => setDeleteSheetOpen(false)}>
         <div className="flex flex-col gap-4 pt-2">
           <div>
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.admin.deleteOwnerConfirmSheetTitle}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.admin.deleteOwnerConfirmSheetTitle}</h2>
             <p className="mt-1 text-caption-airbnb">{tenant.name}</p>
           </div>
           <div className="flex flex-col gap-1">

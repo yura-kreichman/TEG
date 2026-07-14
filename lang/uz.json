@@ -349,7 +349,7 @@
     "dailyCashEditorSub": "Butun nuqta boʻyicha ish kuni yakuni",
     "whenToSendCardLabel": "Qachon yuborish",
     "modeEventName": "Barcha zonalar yopilganda",
-    "modeEventSub": "Nuqtaning har bir faol zonasi boʻyicha bugungi kunga kamida bitta yakuniy topshiriq boʻlishi bilanoq xulosa darhol yuboriladi. Agar biror zona butun kun davomida hisobot bermagan boʻlsa — xulosa baribir ish kuni chegarasida, belgi bilan yuboriladi. Faolsizlantirilgan zonalar kutishga kiritilmaydi.",
+    "modeEventSub": "Nuqtaning har bir faol zonasi boʻyicha bugungi kunga kamida bitta yakuniy topshiriq boʻlishi va nuqtada ochiq smena qolmasligi bilanoq xulosa darhol yuboriladi. Ulardan biri butun kun davomida bajarilmasa — xulosa baribir ish kuni chegarasida, belgi bilan yuboriladi. Faolsizlantirilgan zonalar kutishga kiritilmaydi.",
     "modeFixedName": "Belgilangan vaqtda",
     "modeFixedSub": "Har kuni koʻrsatilgan soatda, smenalardan qat'i nazar.",
     "skipIfNoSubmissionsLabel": "Topshiriqsiz yubormaslik",
@@ -712,7 +712,9 @@
     "activateOperatorButton": "Xodimni faollashtirish",
     "deactivateOpenShiftWarning": "Xodimning hozir ochiq smenasi bor — faolsizlantirilgandan keyin uni tabeldan yopish mumkin boʻladi",
     "overdraftLabel": "Avanslar boʻyicha overdraft",
-    "overdraftHint": "Ushbu xodimga balansdan ortiqcha avans berishga ruxsat berish (minusga tushadi)"
+    "overdraftHint": "Ushbu xodimga balansdan ortiqcha avans berishga ruxsat berish (minusga tushadi)",
+    "skipShiftStartWindowLabel": "Smena boshlanish vaqtiga cheklov yoʻq",
+    "skipShiftStartWindowHint": "Masalan, notekis jadvalli xodim uchun — umumiy ruxsat etilgan oyna unga taalluqli boʻlmaydi"
   },
   "money": {
     "title": "Pul",
@@ -863,6 +865,8 @@
       "addShiftTitle": "Yangi smena",
       "arrivedLabel": "Keldi",
       "leftLabel": "Ketdi",
+      "closeShiftToggleLabel": "Smenani yopish",
+      "closeShiftToggleHint": "Smena hali ochiq — xodim nomidan yopish uchun yoqing",
       "advanceFieldLabel": "Avans",
       "bonusFieldLabel": "Mukofot",
       "saveShiftButton": "Smenani saqlash",

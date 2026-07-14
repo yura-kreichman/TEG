@@ -12,11 +12,11 @@ export function PushNotificationPreview({ title, body, time }: { title: string; 
         <img src="/icon-library/pwa/icon-192.png" alt="" className="mt-0.5 size-8 shrink-0 rounded-md object-cover" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">RentOS</span>
-            <span className="shrink-0 text-[10px] text-muted-foreground">{time}</span>
+            <span className="text-[0.6875rem] font-semibold tracking-wide text-muted-foreground uppercase">RentOS</span>
+            <span className="shrink-0 text-[0.625rem] text-muted-foreground">{time}</span>
           </div>
-          <div className="truncate text-[13.5px] font-bold text-foreground">{title}</div>
-          <div className="truncate text-[12.5px] text-muted-foreground">{body}</div>
+          <div className="truncate text-[0.84375rem] font-bold text-foreground">{title}</div>
+          <div className="truncate text-[0.78125rem] text-muted-foreground">{body}</div>
         </div>
       </div>
     </div>

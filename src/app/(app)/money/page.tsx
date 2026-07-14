@@ -185,8 +185,8 @@ export default function MoneyPage() {
                 date === selectedCalDate && active && "ring-2 ring-primary ring-offset-1 ring-offset-card"
               )}
             >
-              <span className="text-[12.5px] font-semibold">{day}</span>
-              {active && <span className="text-[9px] font-medium leading-none">{formatCellAmount(revenue)}</span>}
+              <span className="text-[0.78125rem] font-semibold">{day}</span>
+              {active && <span className="text-[0.5625rem] font-medium leading-none">{formatCellAmount(revenue)}</span>}
             </button>
           );
         })}
@@ -211,7 +211,7 @@ export default function MoneyPage() {
                   setMode("granularity");
                 }}
                 className={cn(
-                  "rounded-full px-1 py-1.5 text-center text-[11px] font-semibold sm:text-xs",
+                  "rounded-full px-1 py-1.5 text-center text-[0.6875rem] font-semibold sm:text-xs",
                   mode === "granularity" && g === granularity
                     ? "bg-primary/10 text-primary"
                     : "bg-surface-0 text-muted-foreground"
@@ -230,7 +230,7 @@ export default function MoneyPage() {
               type="button"
               onClick={() => setMode("custom")}
               className={cn(
-                "rounded-full px-1 py-1.5 text-center text-[11px] font-semibold sm:text-xs",
+                "rounded-full px-1 py-1.5 text-center text-[0.6875rem] font-semibold sm:text-xs",
                 mode === "custom" ? "bg-primary/10 text-primary" : "bg-surface-0 text-muted-foreground"
               )}
             >
@@ -297,7 +297,7 @@ export default function MoneyPage() {
           <SpringCard hover={false} className="flex flex-col gap-4">
             <h2 className="text-section-title">{t.money.businessTitle}</h2>
             <div className="flex items-baseline gap-2 tabular-nums">
-              <span className="text-[34px] font-extrabold tracking-[-0.02em]">
+              <span className="text-[2.125rem] font-extrabold tracking-[-0.02em]">
                 {report.business.profit.toFixed(2)}
               </span>
               <span className="text-body-airbnb text-muted-foreground">{t.money.profit}</span>
@@ -305,16 +305,16 @@ export default function MoneyPage() {
             <div className="flex border-t border-border pt-3.5 tabular-nums">
               <div className="flex-1">
                 <p className="text-caption-airbnb">{t.money.revenue}</p>
-                <p className="text-[17px] font-bold">{report.business.revenue.toFixed(2)}</p>
+                <p className="text-[1.0625rem] font-bold">{report.business.revenue.toFixed(2)}</p>
               </div>
               <div className="flex-1 border-l border-border pl-4">
                 <p className="text-caption-airbnb">{t.money.expense}</p>
-                <p className="text-[17px] font-bold">{report.business.expense.toFixed(2)}</p>
-                <p className="text-[10.5px] leading-tight text-muted-foreground">{t.money.expenseHint}</p>
+                <p className="text-[1.0625rem] font-bold">{report.business.expense.toFixed(2)}</p>
+                <p className="text-[0.65625rem] leading-tight text-muted-foreground">{t.money.expenseHint}</p>
               </div>
               <div className="flex-1 border-l border-border pl-4">
                 <p className="text-caption-airbnb">{t.money.profit}</p>
-                <p className="text-[17px] font-bold text-primary">+{report.business.profit.toFixed(2)}</p>
+                <p className="text-[1.0625rem] font-bold text-primary">+{report.business.profit.toFixed(2)}</p>
               </div>
             </div>
           </SpringCard>
@@ -368,7 +368,7 @@ export default function MoneyPage() {
 
       <BottomSheet open={pickDateOpen} onClose={() => setPickDateOpen(false)}>
         <div className="flex flex-col gap-3 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.money.pickDateTitle}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.money.pickDateTitle}</h2>
           <div className="flex items-center justify-between">
             <button
               type="button"

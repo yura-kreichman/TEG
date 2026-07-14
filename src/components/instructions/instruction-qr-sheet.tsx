@@ -65,7 +65,7 @@ export function InstructionQrSheet({
   return (
     <BottomSheet open={open} onClose={onClose}>
       <div className="flex flex-col items-center gap-4 pt-2 pb-1">
-        <h2 className="text-center text-[19px] font-extrabold tracking-[-0.01em]">{title}</h2>
+        <h2 className="text-center text-[1.1875rem] font-extrabold tracking-[-0.01em]">{title}</h2>
         <QrCode value={url} alt={title} size={220} />
         <p className="max-w-full break-all text-center text-caption-airbnb">{url}</p>
         <PressableScale className="w-full">

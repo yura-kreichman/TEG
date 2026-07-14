@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
@@ -111,6 +112,12 @@ export default function OperatorCardPage() {
   const [editingShift, setEditingShift] = useState<ShiftRow | null>(null);
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
+  // Открытая смена — по умолчанию правим только начало, не закрывая её
+  // (запрос пользователя 2026-07-14: "забыл начать смену, вспомнил через
+  // час" — раньше любая правка вынужденно закрывала смену). Владелец сам
+  // включает этот тумблер, если действительно хочет закрыть смену за
+  // оператора прямо сейчас.
+  const [closeShiftToo, setCloseShiftToo] = useState(false);
   const [editAdvance, setEditAdvance] = useState("");
   const [editBonus, setEditBonus] = useState("");
   const [editReason, setEditReason] = useState("");
@@ -304,8 +311,10 @@ export default function OperatorCardPage() {
     setEditingShift(shift);
     setEditStartTime(timeInputValue(shift.startAt));
     // Открытая смена (docs/spec/05-work-time.md) — endAt ещё не задан;
-    // подставляем текущее время как разумный дефолт для закрытия владельцем.
+    // подставляем текущее время как разумный дефолт, если владелец всё же
+    // решит её закрыть (см. closeShiftToo ниже).
     setEditEndTime(timeInputValue(shift.endAt ?? new Date().toISOString()));
+    setCloseShiftToo(!shift.open);
     setEditAdvance(shift.advanceAmount ? String(shift.advanceAmount) : "");
     setEditBonus(shift.bonusAmount ? String(shift.bonusAmount) : "");
     setEditReason("");
@@ -338,17 +347,26 @@ export default function OperatorCardPage() {
     const dateM = base.getMonth();
     const dateD = base.getDate();
     const [sh, sm] = editStartTime.split(":").map(Number);
-    const [eh, em] = editEndTime.split(":").map(Number);
     const startAt = new Date(dateY, dateM, dateD, sh, sm);
-    let endAt = new Date(dateY, dateM, dateD, eh, em);
-    if (endAt <= startAt) endAt = new Date(endAt.getTime() + 24 * 60 * 60 * 1000);
+
+    // Открытая смена, которую владелец НЕ решил закрыть сейчас — endAt в
+    // теле вообще не отправляем, правится только начало (см. PATCH-роут:
+    // отсутствие endAt для открытой смены оставляет её открытой).
+    const willClose = !editingShift.open || closeShiftToo;
+    let endAtIso: string | undefined;
+    if (willClose) {
+      const [eh, em] = editEndTime.split(":").map(Number);
+      let endAt = new Date(dateY, dateM, dateD, eh, em);
+      if (endAt <= startAt) endAt = new Date(endAt.getTime() + 24 * 60 * 60 * 1000);
+      endAtIso = endAt.toISOString();
+    }
 
     const res = await fetch(`/api/work-time/shifts/${editingShift.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         startAt: startAt.toISOString(),
-        endAt: endAt.toISOString(),
+        ...(endAtIso ? { endAt: endAtIso } : {}),
         advanceAmount: editAdvance ? Number(editAdvance) : 0,
         bonusAmount: editBonus ? Number(editBonus) : 0,
         reason: editReason || undefined,
@@ -422,7 +440,7 @@ export default function OperatorCardPage() {
               {moduleEnabled && balance && (
                 <div className="flex flex-col items-end gap-1">
                   <span className="text-caption-airbnb text-muted-foreground">{t.operatorApp.workTime.rateLabel}</span>
-                  <span className="text-[17px] font-bold tabular-nums text-muted-foreground">
+                  <span className="text-[1.0625rem] font-bold tabular-nums text-muted-foreground">
                     {balance.currentRate.toFixed(2)}
                   </span>
                 </div>
@@ -445,7 +463,7 @@ export default function OperatorCardPage() {
                   <p className="text-caption-airbnb">{t.operatorApp.workTime.toPayOutLabel}</p>
                   <p
                     className={cn(
-                      "text-[34px] font-extrabold tabular-nums tracking-[-0.02em]",
+                      "text-[2.125rem] font-extrabold tabular-nums tracking-[-0.02em]",
                       balance.toPayOut < 0 && "text-destructive"
                     )}
                   >
@@ -455,19 +473,19 @@ export default function OperatorCardPage() {
                 <div className="grid grid-cols-2 gap-3 border-t border-border pt-3.5 tabular-nums sm:grid-cols-4">
                   <div>
                     <p className="text-caption-airbnb">{t.operatorApp.workTime.earnedLabel}</p>
-                    <p className="text-[17px] font-bold">{balance.earnedInPeriod.toFixed(2)}</p>
+                    <p className="text-[1.0625rem] font-bold">{balance.earnedInPeriod.toFixed(2)}</p>
                   </div>
                   <div>
                     <p className="text-caption-airbnb">{t.operatorApp.workTime.rateAccruedLabel}</p>
-                    <p className="text-[17px] font-bold">{balance.rateEarnedInPeriod.toFixed(2)}</p>
+                    <p className="text-[1.0625rem] font-bold">{balance.rateEarnedInPeriod.toFixed(2)}</p>
                   </div>
                   <div>
                     <p className="text-caption-airbnb">{t.operatorApp.workTime.bonusesLabel}</p>
-                    <p className="text-[17px] font-bold">{balance.bonusesInPeriod.toFixed(2)}</p>
+                    <p className="text-[1.0625rem] font-bold">{balance.bonusesInPeriod.toFixed(2)}</p>
                   </div>
                   <div>
                     <p className="text-caption-airbnb">{t.operatorApp.workTime.advancesLabel}</p>
-                    <p className="text-[17px] font-bold">{balance.advancesInPeriod.toFixed(2)}</p>
+                    <p className="text-[1.0625rem] font-bold">{balance.advancesInPeriod.toFixed(2)}</p>
                   </div>
                 </div>
                 <div className="flex gap-2 border-t border-border pt-3.5">
@@ -626,7 +644,7 @@ export default function OperatorCardPage() {
 
       <BottomSheet open={moneyForm !== null} onClose={() => setMoneyForm(null)}>
         <div className="flex flex-col gap-4 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
             {moneyForm === "advance" ? t.operatorApp.workTime.advanceFieldLabel : t.operatorApp.workTime.bonusFieldLabel}
           </h2>
           <div className="flex flex-col gap-1">
@@ -672,7 +690,7 @@ export default function OperatorCardPage() {
 
       <BottomSheet open={carryoverOpen} onClose={() => setCarryoverOpen(false)}>
         <div className="flex flex-col gap-4 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operatorApp.workTime.carryoverAddButton}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.workTime.carryoverAddButton}</h2>
           <p className="text-body-airbnb text-muted-foreground">{t.operatorApp.workTime.carryoverHint}</p>
           <div className="flex flex-col gap-1">
             <Label htmlFor="carryoverAmount">{t.money.amountLabel}</Label>
@@ -705,7 +723,7 @@ export default function OperatorCardPage() {
       <BottomSheet open={editingShift !== null} onClose={() => setEditingShift(null)}>
         {editingShift && (
           <div className="flex flex-col gap-4 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.readings.editSheetTitle}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.readings.editSheetTitle}</h2>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1">
                 <Label htmlFor="editStart">{t.operatorApp.workTime.arrivedLabel}</Label>
@@ -723,11 +741,21 @@ export default function OperatorCardPage() {
                   id="editEnd"
                   type="time"
                   className="h-12 tabular-nums"
+                  disabled={editingShift.open && !closeShiftToo}
                   value={editEndTime}
                   onChange={(e) => setEditEndTime(e.target.value)}
                 />
               </div>
             </div>
+            {editingShift.open && (
+              <div className="flex items-center justify-between gap-3 rounded-control border border-border px-3 py-2.5">
+                <div className="min-w-0">
+                  <div className="text-body-airbnb">{t.operatorApp.workTime.closeShiftToggleLabel}</div>
+                  <div className="text-caption-airbnb">{t.operatorApp.workTime.closeShiftToggleHint}</div>
+                </div>
+                <Switch checked={closeShiftToo} onCheckedChange={setCloseShiftToo} className="shrink-0" />
+              </div>
+            )}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1">
                 <Label htmlFor="editAdvance">{t.operatorApp.workTime.advanceFieldLabel}</Label>
@@ -810,7 +838,7 @@ export default function OperatorCardPage() {
       <BottomSheet open={editingMoneyOp !== null} onClose={() => setEditingMoneyOp(null)}>
         {editingMoneyOp && (
           <div className="flex flex-col gap-4 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
               {editingMoneyOp.type === "advance" ? t.operatorApp.workTime.advanceFieldLabel : t.operatorApp.workTime.bonusFieldLabel}
             </h2>
             <div className="flex flex-col gap-1">

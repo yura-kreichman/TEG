@@ -44,6 +44,40 @@ const COMPACT_GRID_SEP = " | ";
 // длиннее значения (например, суммы с копейками), тем меньше колонок в ряд.
 const COMPACT_GRID_TARGET_WIDTH = 42;
 
+// Обрезка "4 первых символа + 1 последний" (запрос пользователя 2026-07-14,
+// скриншот: "Гоночная 1"/"Гоночная 2" обе обрезались до "Гоноч" — разница
+// была ровно за пределами первых 5 символов, показания читались как один
+// и тот же актив). Последний символ имени почти всегда и есть отличающая
+// часть в реальных названиях ("Гоночная 1"/"Гоночная 2", "Картинг 1"/
+// "Картинг 2") — простой slice(0,5) этого не видит, а 4+1 видит.
+function truncateLabel(name: string): string {
+  if (name.length <= COMPACT_NAME_WIDTH) return name;
+  return `${name.slice(0, COMPACT_NAME_WIDTH - 1)}${name.slice(-1)}`;
+}
+
+// В цитате (blockquote) — не больше 2 значений в строке (запрос пользователя
+// 2026-07-14), даже если по ширине формально влезло бы больше — короткие
+// суммы/показания раньше паковались по 3, из-за чего колонки визуально не
+// выравнивались со строкой ниже (та же сетка, но с другим количеством
+// значений). Меньше колонок — предсказуемее выравнивание, чем чуть плотнее
+// упаковка.
+const COMPACT_GRID_MAX_COLS = 2;
+
+// Заголовок "Кассы за день" — единственное место, где рядом с названием
+// точки ещё стоят "💰 КАССА · " и дата (запрос пользователя 2026-07-14,
+// скриншот реального чата: длинное название точки ("Парк Екатерининский")
+// само по себе укладывалось, но целиком с датой строка переносилась, и
+// день недели "(Ср)" утекал на вторую строку). В отличие от truncateLabel
+// (обрезка активов в сетке, где различающий символ почти всегда последний)
+// названия точек — произвольный текст без такого паттерна, поэтому здесь
+// обычное усечение с многоточием, не "4+1".
+const POINT_NAME_MAX_WIDTH = 14;
+
+function truncatePointName(name: string): string {
+  if (name.length <= POINT_NAME_MAX_WIDTH) return name;
+  return `${name.slice(0, POINT_NAME_MAX_WIDTH - 1)}…`;
+}
+
 function formatCompactGrid(items: { label: string; value: string }[]): string {
   if (items.length === 0) return "";
   const valueWidth = Math.max(4, ...items.map((it) => it.value.length));
@@ -51,12 +85,13 @@ function formatCompactGrid(items: { label: string; value: string }[]): string {
   const cols = Math.max(
     1,
     Math.min(
+      COMPACT_GRID_MAX_COLS,
       items.length,
       Math.floor((COMPACT_GRID_TARGET_WIDTH + COMPACT_GRID_SEP.length) / (cellWidth + COMPACT_GRID_SEP.length))
     )
   );
   const cells = items.map(
-    (it) => `${it.label.slice(0, COMPACT_NAME_WIDTH).padEnd(COMPACT_NAME_WIDTH)}: ${it.value.padStart(valueWidth)}`
+    (it) => `${truncateLabel(it.label).padEnd(COMPACT_NAME_WIDTH)}: ${it.value.padStart(valueWidth)}`
   );
   const rows: string[] = [];
   for (let i = 0; i < cells.length; i += cols) {
@@ -69,9 +104,10 @@ function formatCompactGrid(items: { label: string; value: string }[]): string {
 // соответствует несколько строк подряд с одинаковым assetName — голое
 // имя актива для обеих было бы неразличимо ("Форму: 3132 | Форму: 429").
 // Фидбек пользователя 2026-07-12: различать суффиксом-номером тарифа
-// ("Форм1"/"Форм2"), обрезая имя актива до 4 символов + 1 цифра = 5 (лимит
-// компактной колонки), а не полным/частичным именем тарифа. Один тариф на
-// актив — суффикс не нужен, имя обрезается как обычно до 5 символов.
+// ("Форм1"/"Форм2"). Обрезка НЕ через truncateLabel здесь: имена совпадают
+// дословно (это один и тот же актив, две строки — по тарифу на строку),
+// 4+1 от одинаковой строки дал бы одинаковый результат для обеих — нужен
+// именно номер вхождения, а не последний символ имени.
 function compactAssetLabel(readings: ZoneSummaryData["readings"], index: number): string {
   const assetName = readings[index].assetName;
   const sameAsset = readings.filter((r) => r.assetName === assetName);
@@ -189,6 +225,17 @@ export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneS
   return lines.join("\n");
 }
 
+// Разбивка по зонам — полными именами, по одной зоне в строке, без "|"
+// (запрос пользователя 2026-07-14: "названия зон не сокращай и пиши их в
+// ряд, без символа разделения, как в обычном режиме") — в отличие от
+// показаний по активам (formatCompactGrid), зон на точке обычно немного и
+// имена короче, обрезка/упаковка в колонки тут не нужна даже в compact;
+// теперь этот блок буквально одинаков в обоих режимах.
+function formatZoneBreakdownRows(zoneBreakdown: DailyCashSummaryData["zoneBreakdown"]): string {
+  const labelWidth = Math.max(...zoneBreakdown.map((z) => `${z.zoneName}:`.length));
+  return zoneBreakdown.map((z) => `${z.zoneName}:`.padEnd(labelWidth + 1) + z.revenue.toFixed(2)).join("\n");
+}
+
 export function formatDailyCashSummaryTelegram(
   data: DailyCashSummaryData,
   settings: DailyCashSummarySettingsData
@@ -196,7 +243,7 @@ export function formatDailyCashSummaryTelegram(
   const total = data.cashAmount + data.mobileAmount - data.expenses;
 
   if (settings.compact) {
-    const parts: string[] = [`💰 <b>КАССА · ${data.pointName} · ${formatDate(data.businessDate)}</b>`];
+    const parts: string[] = [`💰 <b>КАССА · ${truncatePointName(data.pointName)} · ${formatDate(data.businessDate)}</b>`];
 
     if (data.forcedIncomplete) parts.push("⚠️ Принудительно — не все данные могли поступить");
 
@@ -204,19 +251,22 @@ export function formatDailyCashSummaryTelegram(
       parts.push(`💵 Нал.: <b>${data.cashAmount.toFixed(2)}</b>  📱 Безнал.: <b>${data.mobileAmount.toFixed(2)}</b>`);
     }
     if (settings.showExpenses) parts.push(`🧾 Расх.: ${data.expenses.toFixed(2)}`);
-    parts.push(`Σ Итог: <b>${total.toFixed(2)}</b>`);
+
+    // Остаток на точке — рядом с Итогом, тем же разделителем " · ", что и
+    // везде в compact-режиме (запрос пользователя 2026-07-14: раньше был
+    // отдельной строкой в самом низу).
+    const totalBits = [`🟰 Итог: <b>${total.toFixed(2)}</b>`];
+    if (settings.showCashOnHand) totalBits.push(`📦 Ост.: ${data.cashOnHand.toFixed(2)}`);
+    parts.push(totalBits.join(" · "));
 
     if (settings.showZoneBreakdown && data.zoneBreakdown.length > 0) {
-      const grid = formatCompactGrid(data.zoneBreakdown.map((z) => ({ label: z.zoneName, value: z.revenue.toFixed(2) })));
-      parts.push(`<blockquote><code>${grid}</code></blockquote>`);
+      parts.push(`<blockquote><code>${formatZoneBreakdownRows(data.zoneBreakdown)}</code></blockquote>`);
     }
-
-    if (settings.showCashOnHand) parts.push(`📦 Ост.: ${data.cashOnHand.toFixed(2)}`);
 
     return parts.join("\n");
   }
 
-  const lines: string[] = [`💰 <b>КАССА · ${data.pointName} · ${formatDate(data.businessDate)}</b>`];
+  const lines: string[] = [`💰 <b>КАССА · ${truncatePointName(data.pointName)} · ${formatDate(data.businessDate)}</b>`];
 
   if (data.forcedIncomplete) {
     lines.push("", "⚠️ Отправлено принудительно по границе дня — не все данные могли поступить.");
@@ -227,12 +277,10 @@ export function formatDailyCashSummaryTelegram(
     lines.push(`💵 Нал.: <b>${data.cashAmount.toFixed(2)}</b> · 📱 Безнал.: <b>${data.mobileAmount.toFixed(2)}</b>`);
   }
   if (settings.showExpenses) lines.push(`🧾 Расходы: ${data.expenses.toFixed(2)}`);
-  lines.push(`Σ Итого за день: <b>${total.toFixed(2)}</b>`);
+  lines.push(`🟰 Итого за день: <b>${total.toFixed(2)}</b>`);
 
   if (settings.showZoneBreakdown && data.zoneBreakdown.length > 0) {
-    const labelWidth = Math.max(...data.zoneBreakdown.map((z) => `${z.zoneName}:`.length));
-    const breakdownRows = data.zoneBreakdown.map((z) => `${z.zoneName}:`.padEnd(labelWidth + 1) + z.revenue.toFixed(2));
-    lines.push("", `<blockquote><code>${breakdownRows.join("\n")}</code></blockquote>`);
+    lines.push("", `<blockquote><code>${formatZoneBreakdownRows(data.zoneBreakdown)}</code></blockquote>`);
   }
 
   if (settings.showCashOnHand) {
@@ -252,19 +300,28 @@ export function formatShiftCloseSummaryTelegram(
   const operatorLabel = colorPrefix ? `${colorPrefix} ${data.operatorName}` : data.operatorName;
 
   if (settings.compact) {
-    // Все включённые поля сводятся на одну строку через " · " вместо
-    // одной строки на поле — та же цель, что у compact в Zone/Daily Cash
-    // Summary: сообщение целиком в ширину экрана. "Итог" сокращён до
-    // "Бал." (баланс) — фидбек пользователя 2026-07-12.
+    // Не более 2 полей в строке (запрос пользователя 2026-07-14) — раньше
+    // все поля шли в одну строку через " · " и переносились по ширине
+    // экрана как попало (естественный перенос текста, не по смыслу полей);
+    // теперь строки собираются явно, по 2 поля, тем же приёмом, что у
+    // Zone/Daily Cash Summary (formatCompactGrid, COMPACT_GRID_MAX_COLS).
+    // "Итог" сокращали до "Бал." из-за нехватки места в одну строку (фидбек
+    // 2026-07-12) — после перехода на явные строки по 2 поля (2026-07-14,
+    // выше) место больше не в дефиците, "Баланс" снова пишется полностью
+    // (фидбек 2026-07-14: "здесь это не мешает").
     const parts: string[] = [];
     if (settings.showPeriod) parts.push(`🕐 ${formatUtcTime(data.startAt)}–${formatUtcTime(data.endAt)}`);
     if (settings.showHours) parts.push(`⏱ ${formatDuration(data.minutes)}`);
     if (settings.showAdvance && data.advanceAmount > 0) parts.push(`💸 Аванс: ${data.advanceAmount.toFixed(2)}`);
     if (settings.showBonus && data.bonusAmount > 0) parts.push(`🏆 Прем.: ${data.bonusAmount.toFixed(2)}`);
-    if (settings.showTotal) parts.push(`💰 Бал.: <b>${data.toPayOut.toFixed(2)}</b>`);
+    if (settings.showTotal) parts.push(`💰 Баланс: <b>${data.toPayOut.toFixed(2)}</b>`);
 
     const header = `<b>${operatorLabel} · ${formatDate(data.startAt)}</b>`;
-    return parts.length > 0 ? `${header}\n${parts.join(" · ")}` : header;
+    const rows: string[] = [];
+    for (let i = 0; i < parts.length; i += 2) {
+      rows.push(parts.slice(i, i + 2).join(" · "));
+    }
+    return [header, ...rows].join("\n");
   }
 
   const lines: string[] = [`<b>${operatorLabel} · смена ${formatDate(data.startAt)}</b>`, ""];

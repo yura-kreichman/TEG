@@ -119,7 +119,7 @@ export default function InstructionReaderClient({
   if (step === "thanks") {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-2 bg-surface-0 px-4 text-center">
-        <h1 className="text-[22px] font-semibold">{t.instructionsPublic.thanksTitle}</h1>
+        <h1 className="text-[1.375rem] font-semibold">{t.instructionsPublic.thanksTitle}</h1>
         <p className="text-body-airbnb text-muted-foreground">{t.instructionsPublic.thanksHint}</p>
       </div>
     );
@@ -171,7 +171,7 @@ export default function InstructionReaderClient({
           </span>
         </div>
 
-        <h1 className="text-[24px] leading-tight font-semibold">{data.title}</h1>
+        <h1 className="text-[1.5rem] leading-tight font-semibold">{data.title}</h1>
 
         <div className="flex items-center gap-1.5 text-caption-airbnb text-muted-foreground">
           <Clock className="size-3.5" />

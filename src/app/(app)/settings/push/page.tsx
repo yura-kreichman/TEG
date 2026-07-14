@@ -114,7 +114,7 @@ export default function PushSettingsPage() {
           <StaggerList className="flex flex-col gap-3">
             <StaggerItem>
               <SpringCard animate={false} hover={false} className="flex flex-col gap-3">
-                <span className="text-[11px] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+                <span className="text-[0.6875rem] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
                   {t.pushSettings.deviceCardLabel}
                 </span>
 
@@ -157,7 +157,7 @@ export default function PushSettingsPage() {
 
             <StaggerItem>
               <SpringCard animate={false} hover={false} className="flex flex-col gap-3">
-                <span className="text-[11px] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+                <span className="text-[0.6875rem] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
                   {t.pushSettings.previewCardLabel}
                 </span>
                 <PushNotificationPreview
@@ -170,7 +170,7 @@ export default function PushSettingsPage() {
 
             <StaggerItem>
               <SpringCard animate={false} hover={false} className="flex flex-col">
-                <span className="mb-1 text-[11px] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+                <span className="mb-1 text-[0.6875rem] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
                   {t.pushSettings.compositionCardLabel}
                 </span>
                 {rows.map((row) => (

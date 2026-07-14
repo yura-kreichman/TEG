@@ -143,7 +143,7 @@ export default function DataCleanupPage() {
       <BottomSheet open={target !== null} onClose={() => setTarget(null)}>
         <div className="flex flex-col gap-4 pt-2">
           <div>
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.dataCleanup.confirmSheetTitle}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.dataCleanup.confirmSheetTitle}</h2>
             <p className="mt-1 text-caption-airbnb">{targetTitle}</p>
           </div>
 

@@ -111,7 +111,7 @@ export function TimezonePicker() {
 
       <BottomSheet open={open} onClose={() => setOpen(false)} className="max-h-[80vh]">
         <div className="flex flex-col gap-3 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.settings.timezoneTitle}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.settings.timezoneTitle}</h2>
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input

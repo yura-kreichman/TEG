@@ -31,8 +31,13 @@ export async function POST() {
     where: { id: point.tenantId },
     select: { defaultShiftStartTime: true, earlyToleranceMinutes: true, lateToleranceMinutes: true, timezone: true },
   });
+  // Персональное исключение (запрос пользователя 2026-07-14) — например,
+  // студент, который выходит на пару часов вечером: общее тенантное окно
+  // на него не рассчитано, владелец включает флаг в "Настройки оператора",
+  // и проверка для этого оператора не выполняется вовсе.
   if (
     tenant &&
+    !operator.skipShiftStartWindow &&
     !isWithinShiftStartWindow(
       tenant.defaultShiftStartTime,
       tenant.earlyToleranceMinutes,

@@ -185,7 +185,7 @@ export default function AdminPackagesPage() {
 
       <BottomSheet open={editorOpen} onClose={() => setEditorOpen(false)}>
         <div className="flex flex-col gap-4 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
             {editingId ? t.admin.editPackageTitle : t.admin.newPackageTitle}
           </h2>
           <div className="flex flex-col gap-1">
@@ -271,7 +271,7 @@ export default function AdminPackagesPage() {
       <BottomSheet open={kebab !== null && !confirmDelete} onClose={() => setKebab(null)}>
         {kebab && (
           <div className="pt-2">
-            <h2 className="mb-2 text-[19px] font-extrabold tracking-[-0.01em]">{kebab.name}</h2>
+            <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">{kebab.name}</h2>
             <ActionSheetItem icon={Pencil} onClick={() => openEdit(kebab)}>
               {t.admin.editPackage}
             </ActionSheetItem>
@@ -284,7 +284,7 @@ export default function AdminPackagesPage() {
 
       <BottomSheet open={confirmDelete} onClose={() => setConfirmDelete(false)}>
         <div className="flex flex-col gap-3 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.admin.confirmDeletePackageTitle}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.admin.confirmDeletePackageTitle}</h2>
           <p className="text-body-airbnb">{t.admin.confirmDeletePackageBody}</p>
           {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
           <div className="flex gap-2">

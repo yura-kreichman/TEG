@@ -199,7 +199,7 @@ export default function InstructionsSettingsPage() {
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-body-airbnb font-bold">{item.title}</div>
                         <div className="mt-1 flex flex-wrap items-center gap-1.5 text-caption-airbnb">
-                          <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", STATUS_STYLES[item.status])}>
+                          <span className={cn("rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold", STATUS_STYLES[item.status])}>
                             {statusLabel[item.status]}
                           </span>
                           {item.currentVersionNumber > 0 && <span>v{item.currentVersionNumber}</span>}
@@ -307,7 +307,7 @@ export default function InstructionsSettingsPage() {
               {/* Десктопная раскладка — полная таблица */}
               <div className="hidden overflow-x-auto rounded-card border border-border md:block">
                 <table className="w-full text-left text-caption-airbnb">
-                  <thead className="border-b border-border bg-muted/40 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                  <thead className="border-b border-border bg-muted/40 text-[0.6875rem] font-semibold tracking-wide text-muted-foreground uppercase">
                     <tr>
                       {[
                         t.instructions.colDate,
@@ -363,7 +363,7 @@ export default function InstructionsSettingsPage() {
 
       <BottomSheet open={createOpen} onClose={() => setCreateOpen(false)}>
         <div className="flex flex-col gap-3 pt-2 pb-1">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.instructions.createSheetTitle}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.instructions.createSheetTitle}</h2>
           <div className="flex flex-col gap-1">
             <Label htmlFor="instructionTitle">{t.instructions.titleLabel}</Label>
             <Input
@@ -392,7 +392,7 @@ export default function InstructionsSettingsPage() {
       >
         {kebabTarget && kebabView === "menu" && (
           <div className="pt-2">
-            <h2 className="mb-2 text-[19px] font-extrabold tracking-[-0.01em]">{kebabTarget.title}</h2>
+            <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">{kebabTarget.title}</h2>
             <ActionSheetItem
               icon={FileText}
               onClick={() => {
@@ -434,7 +434,7 @@ export default function InstructionsSettingsPage() {
         )}
         {kebabTarget && kebabView === "confirm-archive" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.instructions.archiveConfirmTitle}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.instructions.archiveConfirmTitle}</h2>
             <p className="text-body-airbnb text-muted-foreground">{t.instructions.archiveConfirmHint}</p>
             <PressableScale>
               <Button type="button" variant="destructive" className="w-full" onClick={archiveInstruction}>
@@ -450,7 +450,7 @@ export default function InstructionsSettingsPage() {
         )}
         {kebabTarget && kebabView === "confirm-delete" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.instructions.deleteConfirmTitle}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.instructions.deleteConfirmTitle}</h2>
             <p className="text-body-airbnb text-muted-foreground">{t.instructions.deleteConfirmHint}</p>
             {deleteError && <p className="text-caption-airbnb text-destructive">{deleteError}</p>}
             <PressableScale>

@@ -259,18 +259,18 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
     <div className="flex flex-col gap-3">
       <SpringCard animate={false}>
         <div className="flex flex-wrap items-baseline gap-2.5">
-          <span className="text-[32px] font-extrabold tracking-[-0.02em] tabular-nums">{data.total}</span>
+          <span className="text-[2rem] font-extrabold tracking-[-0.02em] tabular-nums">{data.total}</span>
           <Delta percent={data.deltaPercent} t={t} />
         </div>
         <div className="mt-4 flex h-[110px] items-end gap-1.5">
           {data.bars.map((b) => (
             <div key={b.date} className="flex flex-1 flex-col items-center justify-end gap-1">
-              <span className="text-[9px] font-bold text-muted-foreground tabular-nums">{b.total || ""}</span>
+              <span className="text-[0.5625rem] font-bold text-muted-foreground tabular-nums">{b.total || ""}</span>
               <div
                 className="w-full rounded-t-md bg-primary/80"
                 style={{ height: `${Math.max(4, (b.total / maxBar) * 100)}%` }}
               />
-              <span className="text-[10px] font-semibold text-muted-foreground">
+              <span className="text-[0.625rem] font-semibold text-muted-foreground">
                 {new Date(b.date).toLocaleDateString(undefined, { weekday: "short" })}
               </span>
             </div>
@@ -279,21 +279,21 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
         <div className="mt-3.5 grid grid-cols-3 gap-3 border-t border-border pt-3.5 tabular-nums">
           <div>
             <div className="text-caption-airbnb">{t.reports.cashLabel}</div>
-            <div className="text-[16px] font-bold">{data.cash}</div>
+            <div className="text-[1rem] font-bold">{data.cash}</div>
           </div>
           <div>
             <div className="text-caption-airbnb">{t.reports.mobileLabel}</div>
-            <div className="text-[16px] font-bold">{data.mobile}</div>
+            <div className="text-[1rem] font-bold">{data.mobile}</div>
           </div>
           <div>
             <div className="text-caption-airbnb">{t.reports.submissionsLabel}</div>
-            <div className="text-[16px] font-bold">{data.submissionsCount}</div>
+            <div className="text-[1rem] font-bold">{data.submissionsCount}</div>
           </div>
         </div>
       </SpringCard>
 
       <SpringCard animate={false}>
-        <div className="mb-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+        <div className="mb-3 text-[0.6875rem] font-bold uppercase tracking-wider text-muted-foreground">
           {t.reports.plTitle}
         </div>
         <div className="flex flex-col tabular-nums">
@@ -311,7 +311,7 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
           </div>
           <div className="flex justify-between border-t border-border pt-3 text-body-airbnb">
             <span className="font-bold">= {t.reports.profitLabel}</span>
-            <span className="text-[15px] font-extrabold text-primary">{data.profitAndLoss.profit}</span>
+            <span className="text-[0.9375rem] font-extrabold text-primary">{data.profitAndLoss.profit}</span>
           </div>
         </div>
       </SpringCard>
@@ -366,7 +366,7 @@ function ZonesTab({
   return (
     <div className="flex flex-col gap-3">
       <SpringCard animate={false}>
-        <div className="mb-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+        <div className="mb-3 text-[0.6875rem] font-bold uppercase tracking-wider text-muted-foreground">
           {t.reports.revenueByZoneTitle}
         </div>
         {data.zoneRanking.map((z) => (
@@ -432,7 +432,7 @@ function ZonesTab({
 
           {data.tariffBreakdown.length > 0 && (
             <SpringCard animate={false}>
-              <div className="mb-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              <div className="mb-3 text-[0.6875rem] font-bold uppercase tracking-wider text-muted-foreground">
                 {t.reports.tariffsTitle}
               </div>
               {data.tariffBreakdown.map((tr) => (
@@ -485,15 +485,15 @@ function OperatorsTab({ operators, t }: { operators: OperatorRow[]; t: ReturnTyp
           <div className="grid grid-cols-3 gap-3 border-t border-border pt-3 tabular-nums">
             <div>
               <div className="text-caption-airbnb">{t.reports.revenuePerHourLabel}</div>
-              <div className="text-[16px] font-bold">{op.revenuePerHour ?? "—"}</div>
+              <div className="text-[1rem] font-bold">{op.revenuePerHour ?? "—"}</div>
             </div>
             <div>
               <div className="text-caption-airbnb">{t.reports.accruedLabel}</div>
-              <div className="text-[16px] font-bold">{op.accruedForPeriod}</div>
+              <div className="text-[1rem] font-bold">{op.accruedForPeriod}</div>
             </div>
             <div>
               <div className="text-caption-airbnb">{t.reports.differenceLabel}</div>
-              <div className={cn("text-[16px] font-bold", op.differenceSum >= 0 ? "text-primary" : "text-destructive")}>
+              <div className={cn("text-[1rem] font-bold", op.differenceSum >= 0 ? "text-primary" : "text-destructive")}>
                 {op.differenceSum >= 0 ? "+" : ""}
                 {op.differenceSum}
               </div>
@@ -511,12 +511,12 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
   return (
     <div className="flex flex-col gap-3">
       <SpringCard animate={false}>
-        <div className="mb-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+        <div className="mb-3 text-[0.6875rem] font-bold uppercase tracking-wider text-muted-foreground">
           {t.reports.revenueByWeekdayTitle} · {data.weeks.length} {t.reports.weeksSuffix}
         </div>
         <div className="grid grid-cols-7 gap-1.5">
           {t.readings.weekdays.map((label) => (
-            <div key={label} className="text-center text-[10.5px] font-semibold text-muted-foreground">
+            <div key={label} className="text-center text-[0.65625rem] font-semibold text-muted-foreground">
               {label}
             </div>
           ))}
@@ -527,7 +527,7 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
               <div
                 key={d.date}
                 className={cn(
-                  "flex aspect-square items-center justify-center rounded-lg text-[9px] font-bold text-white",
+                  "flex aspect-square items-center justify-center rounded-lg text-[0.5625rem] font-bold text-white",
                   !d.hasData && "bg-muted text-muted-foreground"
                 )}
                 style={d.hasData ? { background: "var(--color-primary)", opacity: 0.25 + (d.total / maxVal) * 0.75 } : undefined}

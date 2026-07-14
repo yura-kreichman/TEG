@@ -95,7 +95,7 @@ function WheelColumn({
             // перетаскивания вообще (работает при любом вводе).
             onClick={() => onChange(v)}
             className={cn(
-              "flex w-full snap-center items-center justify-center text-[22px] font-bold tabular-nums transition-colors",
+              "flex w-full snap-center items-center justify-center text-[1.375rem] font-bold tabular-nums transition-colors",
               v === value ? "text-foreground" : "text-muted-foreground/40"
             )}
             style={{ height: ITEM_HEIGHT }}
@@ -197,7 +197,7 @@ export function WheelTimePicker({
     <div className="flex items-center gap-1">
       <WheelColumnWithSteppers values={hoursList} value={snappedHour} onChange={(h) => onChange({ hour: h, minute: snappedMinute })} />
       <div className="flex items-center justify-center" style={{ height: COLUMN_HEIGHT }}>
-        <span className="text-[22px] font-bold text-muted-foreground">:</span>
+        <span className="text-[1.375rem] font-bold text-muted-foreground">:</span>
       </div>
       <WheelColumnWithSteppers values={minuteValues} value={snappedMinute} onChange={(m) => onChange({ hour: snappedHour, minute: m })} />
     </div>

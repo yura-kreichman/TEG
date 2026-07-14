@@ -339,7 +339,7 @@ export default function ReadingsCalendarPage() {
                         disabled={!active}
                         onClick={() => openDay(date)}
                         className={cn(
-                          "relative flex aspect-square items-center justify-center rounded-control text-[13.5px] font-semibold tabular-nums",
+                          "relative flex aspect-square items-center justify-center rounded-control text-[0.84375rem] font-semibold tabular-nums",
                           active ? "bg-primary text-primary-foreground" : "text-muted-foreground/70",
                           date === todayKey && !active && "text-foreground",
                           date === selectedDate && active && "ring-2 ring-primary ring-offset-2 ring-offset-card"
@@ -491,7 +491,7 @@ export default function ReadingsCalendarPage() {
       <BottomSheet open={actionsFor !== null && actionsView === "menu"} onClose={() => setActionsFor(null)}>
         {actionsFor && (
           <div className="pt-2">
-            <h2 className="mb-2 text-[19px] font-extrabold tracking-[-0.01em]">
+            <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">
               {t.readings.actionsSheetPrefix} {formatTime(actionsFor.submittedAt)}
             </h2>
             {!actionsFor.editable && (
@@ -519,7 +519,7 @@ export default function ReadingsCalendarPage() {
         {actionsFor && (
           <div className="flex flex-col gap-4 pt-2">
             <div>
-              <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.readings.editSheetTitle}</h2>
+              <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.readings.editSheetTitle}</h2>
               <p className="text-caption-airbnb">{t.readings.autoRecalcHint}</p>
             </div>
 
@@ -636,7 +636,7 @@ export default function ReadingsCalendarPage() {
       <BottomSheet open={actionsFor !== null && actionsView === "confirm-delete"} onClose={() => setActionsFor(null)}>
         {actionsFor && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.readings.deleteConfirmTitle}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.readings.deleteConfirmTitle}</h2>
             <p className="text-body-airbnb">{t.readings.deleteConfirmBody}</p>
             {actionError && <p className="text-sm text-destructive">{actionError}</p>}
             <div className="flex gap-2">

@@ -91,7 +91,7 @@ export function EmailChannelSheet({
   return (
     <BottomSheet open={open} onClose={onClose}>
       <div className="flex flex-col gap-1 pt-2 pb-1">
-        <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.summaries.emailSheetTitle}</h2>
+        <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.summaries.emailSheetTitle}</h2>
         <p className="mb-3 text-caption-airbnb">{t.summaries.emailSheetSub}</p>
 
         {!smtpConfigured && (

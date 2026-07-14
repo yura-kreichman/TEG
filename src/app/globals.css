@@ -416,22 +416,32 @@
    scale instead of repeating arbitrary text-[Npx] values per page. Updated
    2026-07-07 to match docs/design/prototype-owner-v2.html (.page-title/
    .card-label/.row-title/.row-sub) — supersedes the earlier Airbnb-referenced
-   sizes (28px/600, 18px/600, 15px, 13px). */
+   sizes (28px/600, 18px/600, 15px, 13px). Switched px -> rem 2026-07-14
+   (user question: does the phone's OS-level "larger text" accessibility
+   setting do anything here — it didn't, px is immune to it by design; rem is
+   relative to the root font-size, which the OS setting actually scales,
+   confirmed no hardcoded `html { font-size }` override exists in this file
+   that would neutralize it). Values are the same design sizes, just expressed
+   as px/16 — 100% OS text scale still renders pixel-identical to before.
+   Also swept literal text-[Npx] arbitrary values project-wide to text-[Nrem]
+   for the same reason — see individual files for any left deliberately in px
+   (fixed-size icons/badges where the design intent is a constant size, not
+   flowing body text). */
 @layer utilities {
   .text-screen-title {
-    @apply text-[26px] font-extrabold leading-tight tracking-[-0.02em];
+    @apply text-[1.625rem] font-extrabold leading-tight tracking-[-0.02em];
   }
   .text-card-title {
-    @apply text-[17.5px] font-bold leading-snug tracking-[-0.01em];
+    @apply text-[1.09375rem] font-bold leading-snug tracking-[-0.01em];
   }
   .text-section-title {
-    @apply text-[11px] font-bold uppercase leading-snug tracking-[0.08em] text-muted-foreground;
+    @apply text-[0.6875rem] font-bold uppercase leading-snug tracking-[0.08em] text-muted-foreground;
   }
   .text-body-airbnb {
-    @apply text-[14.5px] font-medium leading-snug;
+    @apply text-[0.90625rem] font-medium leading-snug;
   }
   .text-caption-airbnb {
-    @apply text-[12.5px] leading-snug text-muted-foreground;
+    @apply text-[0.78125rem] leading-snug text-muted-foreground;
   }
   /* Колёсико выбора времени (WheelTimePicker) — скролл без видимого скроллбара. */
   .scrollbar-none {
@@ -485,13 +495,13 @@
    обычного текста интерфейса вокруг (жалоба пользователя 2026-07-13:
    "H1 и H2 отображаются мельче обычного текста"), увеличено. */
 .prose-instruction h1 {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
   line-height: 1.3;
   margin: 1.1em 0 0.4em;
 }
 .prose-instruction h2 {
-  font-size: 17px;
+  font-size: 1.0625rem;
   font-weight: 700;
   line-height: 1.35;
   margin: 1em 0 0.35em;
@@ -505,26 +515,26 @@
    этой проблемы не имеют (документ не встроен в чужую h1-иерархию), поэтому
    их вывод остаётся на настоящих h1/h2 выше, без изменений. */
 .prose-instruction .rt-h1 {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
   line-height: 1.3;
   margin: 1.1em 0 0.4em;
 }
 .prose-instruction .rt-h2 {
-  font-size: 17px;
+  font-size: 1.0625rem;
   font-weight: 700;
   line-height: 1.35;
   margin: 1em 0 0.35em;
 }
 .prose-instruction p {
-  font-size: 14.5px;
+  font-size: 0.90625rem;
   line-height: 1.55;
   margin: 0 0 0.6em;
   color: var(--foreground);
 }
 .prose-instruction ul,
 .prose-instruction ol {
-  font-size: 14.5px;
+  font-size: 0.90625rem;
   line-height: 1.55;
   margin: 0 0 0.6em;
   padding-left: 1.4em;

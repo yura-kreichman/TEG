@@ -69,7 +69,7 @@ export function AcknowledgmentRecordSheet({
     <BottomSheet open={record !== null} onClose={handleClose}>
       {record && view === "details" && (
         <div className="flex flex-col gap-1 pt-2 pb-1">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{record.instructionTitle}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{record.instructionTitle}</h2>
           <div className="mt-2 flex flex-col">
             {rows.map(([label, value]) => (
               <div key={label} className="flex items-center justify-between gap-3 border-t border-border py-2.5 first:border-t-0">
@@ -97,7 +97,7 @@ export function AcknowledgmentRecordSheet({
       )}
       {record && view === "confirm-delete" && (
         <div className="flex flex-col gap-3 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.instructions.deleteRecordConfirmTitle}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.instructions.deleteRecordConfirmTitle}</h2>
           <p className="text-body-airbnb text-muted-foreground">{t.instructions.deleteRecordConfirmHint}</p>
           <PressableScale>
             <Button type="button" variant="destructive" className="w-full" onClick={confirmDelete} disabled={busy}>

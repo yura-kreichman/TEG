@@ -249,7 +249,7 @@ export default function WorkTimePage() {
         <Link href="/operator" className="w-fit text-caption-airbnb font-semibold text-primary">
           ← {t.common.back}
         </Link>
-        <h1 className="text-[24px] font-extrabold tracking-[-0.02em]">{t.operatorApp.workTime.title}</h1>
+        <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.operatorApp.workTime.title}</h1>
 
         {notice && (
           <div className="flex flex-col gap-1.5 rounded-control bg-warning/15 p-3">
@@ -277,7 +277,7 @@ export default function WorkTimePage() {
             <p className="text-caption-airbnb">{t.operatorApp.workTime.toPayOutLabel}</p>
             <p
               className={cn(
-                "text-[34px] font-extrabold tabular-nums tracking-[-0.02em]",
+                "text-[2.125rem] font-extrabold tabular-nums tracking-[-0.02em]",
                 balance.toPayOut < 0 && "text-destructive"
               )}
             >
@@ -287,19 +287,19 @@ export default function WorkTimePage() {
           <div className="grid grid-cols-2 gap-3 border-t border-border pt-3.5 tabular-nums">
             <div>
               <p className="text-caption-airbnb">{t.operatorApp.workTime.earnedLabel}</p>
-              <p className="text-[17px] font-bold">{balance.earnedInPeriod.toFixed(2)}</p>
+              <p className="text-[1.0625rem] font-bold">{balance.earnedInPeriod.toFixed(2)}</p>
             </div>
             <div>
               <p className="text-caption-airbnb">{t.operatorApp.workTime.rateAccruedLabel}</p>
-              <p className="text-[17px] font-bold">{balance.rateEarnedInPeriod.toFixed(2)}</p>
+              <p className="text-[1.0625rem] font-bold">{balance.rateEarnedInPeriod.toFixed(2)}</p>
             </div>
             <div>
               <p className="text-caption-airbnb">{t.operatorApp.workTime.bonusesLabel}</p>
-              <p className="text-[17px] font-bold">{balance.bonusesInPeriod.toFixed(2)}</p>
+              <p className="text-[1.0625rem] font-bold">{balance.bonusesInPeriod.toFixed(2)}</p>
             </div>
             <div>
               <p className="text-caption-airbnb">{t.operatorApp.workTime.advancesLabel}</p>
-              <p className="text-[17px] font-bold">{balance.advancesInPeriod.toFixed(2)}</p>
+              <p className="text-[1.0625rem] font-bold">{balance.advancesInPeriod.toFixed(2)}</p>
             </div>
           </div>
         </SpringCard>
@@ -404,7 +404,7 @@ export default function WorkTimePage() {
 
       <BottomSheet open={formOpen} onClose={() => setFormOpen(false)}>
         <div className="flex flex-col gap-4 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operatorApp.workTime.addShiftTitle}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.workTime.addShiftTitle}</h2>
 
           <div className="flex items-center justify-around gap-4">
             <div className="flex flex-col items-center gap-1.5">

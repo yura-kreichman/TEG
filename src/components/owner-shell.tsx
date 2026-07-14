@@ -163,7 +163,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
 
       <BottomSheet open={moreOpen} onClose={() => setMoreOpen(false)}>
         <div className="flex flex-col pt-2">
-          <h2 className="mb-2 text-[19px] font-extrabold tracking-[-0.01em]">{t.nav.more}</h2>
+          <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.nav.more}</h2>
           {moreItems.map((item) => {
             const Icon = item.icon;
             return (

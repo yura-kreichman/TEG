@@ -96,18 +96,22 @@ async function getZoneCoverage(
   return { activeZones, coveredZones: coveredRows.length };
 }
 
-/**
- * Реактивный хук из submit-results (не из планировщика): вызывается после
- * КАЖДОЙ сдачи итогов. Две разные ветки:
- * — если по точке+бизнес-дню сводка ещё не уходила и режим "event" — проверяет
- *   покрытие зон (getZoneCoverage) и отправляет сразу, как только все активные
- *   зоны точки отчитались хотя бы раз за сегодня;
- * — если уже уходила — это досдача (notifyDailyCashLateSubmission), независимо
- *   от режима отправки (fixed тоже должен обновляться при досдаче).
- * Предохранитель на границе бизнес-дня (планировщик, forcedIncomplete) остаётся
- * единственной сетью для случая "зона за весь день так и не отчиталась".
- */
-export async function onResultsSubmission(pointId: string, tenantId: string, at: Date): Promise<void> {
+// "Все зоны отчитались" само по себе не значит "день закончился" — оператор
+// мог сдать итоги по каждой зоне рано и продолжать работать (запрос
+// пользователя 2026-07-14: не отправлять "итог дня", пока он ещё не закончен).
+// Модуль "Рабочее время" не фича-флаг (больше не отключается по тенантам) —
+// если у точки вообще никогда не было смен (никто не пользуется Авто-режимом
+// на этой точке), Shift.findFirst просто ничего не найдёт и это условие
+// пройдёт само собой, ничего искусственно обходить не нужно.
+async function hasOpenShiftsAtPoint(pointId: string): Promise<boolean> {
+  const openShift = await prisma.shift.findFirst({ where: { pointId, isOpen: true }, select: { id: true } });
+  return openShift !== null;
+}
+
+async function loadSettingsAndBounds(
+  tenantId: string,
+  at: Date
+): Promise<{ settings: DailyCashSummarySettingsData; bounds: { start: Date; end: Date } }> {
   const [settingsRow, tenant] = await Promise.all([
     prisma.dailyCashSummarySettings.findUnique({ where: { tenantId } }),
     prisma.tenant.findUnique({ where: { id: tenantId }, select: { businessDayBoundary: true, timezone: true } }),
@@ -116,23 +120,79 @@ export async function onResultsSubmission(pointId: string, tenantId: string, at:
   const settings = settingsRow
     ? toSettingsData(settingsRow, businessDayBoundary)
     : { ...DAILY_CASH_SUMMARY_DEFAULTS, businessDayBoundary };
+  const bounds = getBusinessDayBounds(settings.businessDayBoundary, at, tenant?.timezone ?? "UTC");
+  return { settings, bounds };
+}
+
+/**
+ * Общая проверка "пора ли отправить сегодняшнюю Кассу за день впервые" —
+ * общая для двух реактивных хуков ниже (onResultsSubmission/onShiftClosed).
+ * Условие двойное (запрос пользователя 2026-07-14): все активные зоны
+ * отчитались за сегодня И на точке не осталось ни одной открытой смены —
+ * раньше проверялось только первое, из-за чего сводка могла уйти, пока
+ * оператор ещё физически работает (успел один раз сдать итоги по каждой
+ * зоне, но день ещё не закончен).
+ */
+async function maybeSendOnEvent(
+  pointId: string,
+  tenantId: string,
+  settings: DailyCashSummarySettingsData,
+  bounds: { start: Date; end: Date }
+): Promise<void> {
+  if (settings.sendMode !== "event") return; // fixed — ждёт своего часа у планировщика
+
+  const [{ activeZones, coveredZones }, openShifts] = await Promise.all([
+    getZoneCoverage(pointId, bounds),
+    hasOpenShiftsAtPoint(pointId),
+  ]);
+  if (activeZones === 0 || coveredZones < activeZones || openShifts) return;
+
+  await maybeSendDailyCashSummary(pointId, tenantId, settings, bounds, false);
+}
+
+/**
+ * Реактивный хук из submit-results (не из планировщика): вызывается после
+ * КАЖДОЙ сдачи итогов. Две разные ветки:
+ * — если по точке+бизнес-дню сводка ещё не уходила — проверяет через
+ *   maybeSendOnEvent, пора ли отправлять (зоны + смены);
+ * — если уже уходила — это досдача (notifyDailyCashLateSubmission), независимо
+ *   от режима отправки (fixed тоже должен обновляться при досдаче).
+ * Предохранитель на границе бизнес-дня (планировщик, forcedIncomplete) остаётся
+ * единственной сетью для случая "зона/смена за весь день так и не закрылась".
+ */
+export async function onResultsSubmission(pointId: string, tenantId: string, at: Date): Promise<void> {
+  const { settings, bounds } = await loadSettingsAndBounds(tenantId, at);
   if (!settings.enabled) return;
 
-  const bounds = getBusinessDayBounds(settings.businessDayBoundary, at, tenant?.timezone ?? "UTC");
   const businessDate = businessDateKey(bounds);
-
   const alreadySent = await prisma.dailyCashSummaryDelivery.findFirst({ where: { pointId, businessDate } });
   if (alreadySent) {
     await notifyDailyCashLateSubmission(pointId, tenantId, at);
     return;
   }
 
-  if (settings.sendMode !== "event") return; // fixed — ждёт своего часа у планировщика
+  await maybeSendOnEvent(pointId, tenantId, settings, bounds);
+}
 
-  const { activeZones, coveredZones } = await getZoneCoverage(pointId, bounds);
-  if (activeZones === 0 || coveredZones < activeZones) return; // ещё не все активные зоны отчитались
+/**
+ * Реактивный хук из check-out (запрос пользователя 2026-07-14) — симметричен
+ * onResultsSubmission, но с другой стороны: если все зоны уже отчитались, а
+ * последнее, чего не хватало для отправки — закрытия смен, именно закрытие
+ * последней открытой смены и должно запустить первую отправку. Если сводка
+ * уже уходила сегодня — не досдача (закрытие смены само по себе кассу не
+ * меняет, в отличие от привязанного к ней аванса/премии) — этим по-прежнему
+ * занимается check-out/route.ts напрямую через notifyDailyCashLateSubmission,
+ * только когда реально есть аванс/премия.
+ */
+export async function onShiftClosed(pointId: string, tenantId: string, at: Date): Promise<void> {
+  const { settings, bounds } = await loadSettingsAndBounds(tenantId, at);
+  if (!settings.enabled) return;
 
-  await maybeSendDailyCashSummary(pointId, tenantId, settings, bounds, false);
+  const businessDate = businessDateKey(bounds);
+  const alreadySent = await prisma.dailyCashSummaryDelivery.findFirst({ where: { pointId, businessDate } });
+  if (alreadySent) return;
+
+  await maybeSendOnEvent(pointId, tenantId, settings, bounds);
 }
 
 /**

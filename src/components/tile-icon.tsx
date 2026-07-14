@@ -42,7 +42,7 @@ export function TileIcon({
         <span
           className={cn(
             "absolute -bottom-1 -right-1 flex items-center justify-center rounded-full bg-card text-center leading-none ring-2 ring-card",
-            size === "lg" ? "size-6 text-[15px]" : "size-5 text-[13px]"
+            size === "lg" ? "size-6 text-[0.9375rem]" : "size-5 text-[0.8125rem]"
           )}
         >
           {emoji}

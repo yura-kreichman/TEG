@@ -97,7 +97,7 @@ function IconGrid({
 
   return (
     <div className="flex flex-col gap-3 pt-2">
-      <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.iconPicker.title}</h2>
+      <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.iconPicker.title}</h2>
       {families.length > 1 && (
         <div className="grid grid-cols-2 gap-1">
           {families.map((f) => (

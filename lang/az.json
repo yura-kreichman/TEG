@@ -349,7 +349,7 @@
     "dailyCashEditorSub": "Bütün nöqtə üzrə biznes günün yekunu",
     "whenToSendCardLabel": "Nə vaxt göndərilsin",
     "modeEventName": "Bütün zonalar bağlananda",
-    "modeEventSub": "Nöqtənin hər aktiv zonası üzrə bu gün üçün ən azı bir hesabat olduqda xülasə dərhal göndərilir. Əgər hər hansı zona bütün gün ərzində heç hesabat verməyibsə — xülasə yenə də biznes günün sərhədində, qeydlə göndəriləcək. Deaktiv edilmiş zonalar gözləməyə daxil edilmir.",
+    "modeEventSub": "Nöqtənin hər aktiv zonası üzrə bu gün üçün ən azı bir hesabat olduqda və nöqtədə açıq növbə qalmadıqda xülasə dərhal göndərilir. Bunlardan biri bütün gün ərzində yerinə yetirilməzsə — xülasə yenə də biznes günün sərhədində, qeydlə göndəriləcək. Deaktiv edilmiş zonalar gözləməyə daxil edilmir.",
     "modeFixedName": "Sabit vaxtda",
     "modeFixedSub": "Növbələrdən asılı olmayaraq hər gün göstərilən saatda.",
     "skipIfNoSubmissionsLabel": "Hesabat yoxdursa göndərmə",
@@ -712,7 +712,9 @@
     "activateOperatorButton": "İşçini aktivləşdir",
     "deactivateOpenShiftWarning": "İşçinin hazırda açıq növbəsi var — deaktivasiyadan sonra onu təbeldən bağlamaq mümkün olacaq",
     "overdraftLabel": "Avanslar üzrə overdraft",
-    "overdraftHint": "Bu işçiyə balansdan artıq avans verməyə icazə ver (mənfiyə düşəcək)"
+    "overdraftHint": "Bu işçiyə balansdan artıq avans verməyə icazə ver (mənfiyə düşəcək)",
+    "skipShiftStartWindowLabel": "Növbənin başlama vaxtına məhdudiyyət yoxdur",
+    "skipShiftStartWindowHint": "Məsələn, qeyri-standart qrafikli işçi üçün — ümumi növbə başlanğıcı diapazonu ona tətbiq olunmayacaq"
   },
   "money": {
     "title": "Pul",
@@ -863,6 +865,8 @@
       "addShiftTitle": "Yeni növbə",
       "arrivedLabel": "Gəldi",
       "leftLabel": "Getdi",
+      "closeShiftToggleLabel": "Növbəni bağla",
+      "closeShiftToggleHint": "Növbə hələ açıqdır — əməkdaş adından bağlamaq üçün aktivləşdirin",
       "advanceFieldLabel": "Avans",
       "bonusFieldLabel": "Mükafat",
       "saveShiftButton": "Növbəni yadda saxla",

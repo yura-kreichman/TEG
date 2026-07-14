@@ -438,7 +438,7 @@ export default function ZoneDetailPage() {
               <div className="flex items-center gap-3.5">
                 <TileIcon iconKey={zone.iconKey} emoji={zone.telegramEmoji} size="lg" />
                 <div>
-                  <h1 className="text-[24px] font-extrabold tracking-[-0.02em]">{zone.name}</h1>
+                  <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{zone.name}</h1>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <StatusChip>{t.zonesList.modeChip[zone.accountingMode]}</StatusChip>
                     {!zone.active && (
@@ -466,7 +466,7 @@ export default function ZoneDetailPage() {
               <div key={tariff.id} className="flex items-center justify-between border-t border-border py-3 first:border-t-0">
                 <div className="text-body-airbnb">{tariff.name}</div>
                 <div className="flex items-center gap-3.5">
-                  <span className="text-[15.5px] font-bold tabular-nums">{tariff.price}</span>
+                  <span className="text-[0.96875rem] font-bold tabular-nums">{tariff.price}</span>
                   <KebabButton onClick={() => openTariffKebab(tariff)} label={t.zoneDetail.tariffActionsLabel} />
                 </div>
               </div>
@@ -499,19 +499,24 @@ export default function ZoneDetailPage() {
                 style={{ background: colorTagGradient(asset.colorTag) }}
               >
                 <div className="flex items-center gap-3">
-                  <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: asset.colorTag }} />
-                  <div className="flex size-9.5 shrink-0 items-center justify-center rounded-control bg-muted">
-                    {asset.photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={asset.photoUrl} alt="" className="size-full rounded-control object-cover" />
-                    ) : (
-                      <AssetOrZoneIcon iconKey={asset.iconKey} className="size-4.5 text-muted-foreground" />
-                    )}
+                  <div className="relative shrink-0">
+                    <div className="flex size-16 items-center justify-center rounded-control bg-muted">
+                      {asset.photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={asset.photoUrl} alt="" className="size-full rounded-control object-cover" />
+                      ) : (
+                        <AssetOrZoneIcon iconKey={asset.iconKey} className="size-8 text-muted-foreground" />
+                      )}
+                    </div>
+                    <span
+                      className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full ring-2 ring-card"
+                      style={{ backgroundColor: asset.colorTag }}
+                    />
                   </div>
                   <div>
-                    <div className="text-body-airbnb">{asset.name}</div>
+                    <div className="text-card-title">{asset.name}</div>
                     {zone.accountingMode === "counters" && asset.lastReadings.length > 0 && (
-                      <p className="text-caption-airbnb tabular-nums">
+                      <p className="text-body-airbnb tabular-nums">
                         {zone.tariffs.length > 1
                           ? asset.lastReadings
                               .map((r) => {
@@ -584,7 +589,7 @@ export default function ZoneDetailPage() {
       <BottomSheet open={zoneKebabOpen} onClose={() => setZoneKebabOpen(false)}>
         {zoneKebabView === "menu" && (
           <div className="pt-2">
-            <h2 className="mb-2 text-[19px] font-extrabold tracking-[-0.01em]">{zone.name}</h2>
+            <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">{zone.name}</h2>
             <ActionSheetItem icon={Pencil} onClick={() => setZoneKebabView("rename")}>
               {t.zoneDetail.renameZone}
             </ActionSheetItem>
@@ -621,7 +626,7 @@ export default function ZoneDetailPage() {
         )}
         {zoneKebabView === "mode" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
               {t.zoneDetail.changeAccountingModeAction}
             </h2>
             <div className="rounded-control border border-border">
@@ -660,7 +665,7 @@ export default function ZoneDetailPage() {
         )}
         {zoneKebabView === "rename" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.renameZone}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.renameZone}</h2>
             <Input autoFocus value={renameZoneValue} onChange={(e) => setRenameZoneValue(e.target.value)} />
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setZoneKebabView("menu")}>
@@ -676,7 +681,7 @@ export default function ZoneDetailPage() {
         )}
         {zoneKebabView === "confirm-delete" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.deleteZone}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.deleteZone}</h2>
             <p className="text-body-airbnb">{t.zoneDetail.confirmDeleteZone}</p>
             {zoneActionError && <p className="text-sm text-destructive">{zoneActionError}</p>}
             <div className="flex gap-2">
@@ -699,7 +704,7 @@ export default function ZoneDetailPage() {
 
       <BottomSheet open={createTariffOpen} onClose={() => setCreateTariffOpen(false)}>
         <form onSubmit={handleAddTariff} className="flex flex-col gap-4 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.newTariffTitle}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.newTariffTitle}</h2>
           <div className="flex flex-col gap-1">
             <Label htmlFor="tariffName">{t.zoneDetail.tariffNameLabel}</Label>
             <Input id="tariffName" value={tariffName} onChange={(e) => setTariffName(e.target.value)} required />
@@ -728,7 +733,7 @@ export default function ZoneDetailPage() {
       <BottomSheet open={tariffKebab !== null} onClose={() => setTariffKebab(null)}>
         {tariffKebab && tariffKebabView === "menu" && (
           <div className="pt-2">
-            <h2 className="mb-2 text-[19px] font-extrabold tracking-[-0.01em]">{tariffKebab.name}</h2>
+            <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">{tariffKebab.name}</h2>
             <ActionSheetItem icon={Pencil} onClick={() => setTariffKebabView("edit")}>
               {t.zoneDetail.editTariff}
             </ActionSheetItem>
@@ -739,7 +744,7 @@ export default function ZoneDetailPage() {
         )}
         {tariffKebab && tariffKebabView === "edit" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.editTariff}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.editTariff}</h2>
             <div className="flex flex-col gap-1">
               <Label htmlFor="editTariffName">{t.zoneDetail.tariffNameLabel}</Label>
               <Input id="editTariffName" autoFocus value={editTariffName} onChange={(e) => setEditTariffName(e.target.value)} />
@@ -770,7 +775,7 @@ export default function ZoneDetailPage() {
         )}
         {tariffKebab && tariffKebabView === "confirm-delete" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.deleteTariffAction}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.deleteTariffAction}</h2>
             <p className="text-body-airbnb">{t.zoneDetail.confirmDeleteTariff}</p>
             {deleteTariffError && <p className="text-sm text-destructive">{deleteTariffError}</p>}
             <div className="flex gap-2">
@@ -793,7 +798,7 @@ export default function ZoneDetailPage() {
 
       <BottomSheet open={createAssetOpen} onClose={() => setCreateAssetOpen(false)}>
         <form onSubmit={handleAddAsset} className="flex flex-col gap-4 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.newAssetTitle}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.newAssetTitle}</h2>
           <div className="flex flex-col gap-1">
             <Label htmlFor="assetName">{t.zoneDetail.assetNameLabel}</Label>
             <Input id="assetName" value={assetName} onChange={(e) => setAssetName(e.target.value)} required />
@@ -844,7 +849,7 @@ export default function ZoneDetailPage() {
       >
         {assetKebab && assetKebabView === "menu" && (
           <div className="pt-2">
-            <h2 className="mb-2 text-[19px] font-extrabold tracking-[-0.01em]">{assetKebab.name}</h2>
+            <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">{assetKebab.name}</h2>
             <ActionSheetItem icon={Pencil} onClick={() => setAssetKebabView("edit")}>
               {t.zoneDetail.nameAndColorAction}
             </ActionSheetItem>
@@ -866,7 +871,7 @@ export default function ZoneDetailPage() {
         )}
         {assetKebab && assetKebabView === "edit" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.nameAndColorAction}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.nameAndColorAction}</h2>
             <div className="flex flex-col gap-1">
               <Label htmlFor="editAssetName">{t.zoneDetail.assetNameLabel}</Label>
               <Input id="editAssetName" autoFocus value={editAssetName} onChange={(e) => setEditAssetName(e.target.value)} />
@@ -890,7 +895,7 @@ export default function ZoneDetailPage() {
         )}
         {assetKebab && assetKebabView === "initial-reading" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.initialReadingAction}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.initialReadingAction}</h2>
             <p className="text-body-airbnb text-muted-foreground">{t.zoneDetail.initialReadingHint}</p>
             {initialReadingHasReal && (
               <p className="text-caption-airbnb text-warning">{t.zoneDetail.initialReadingWarning}</p>
@@ -926,7 +931,7 @@ export default function ZoneDetailPage() {
         )}
         {assetKebab && assetKebabView === "confirm-delete" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.deleteAssetAction}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.deleteAssetAction}</h2>
             <p className="text-body-airbnb">{t.zoneDetail.confirmDeleteAsset}</p>
             <div className="flex gap-2">
               <PressableScale className="flex-1">
@@ -948,7 +953,7 @@ export default function ZoneDetailPage() {
       {assetKebab && (
         <BottomSheet open={assetKebabView === "photo"} onClose={() => setAssetKebabView("menu")}>
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.replacePhoto}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.replacePhoto}</h2>
             <div className="flex items-center gap-3">
               {editAssetPhotoUrl && (
                 // eslint-disable-next-line @next/next/no-img-element

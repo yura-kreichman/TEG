@@ -249,7 +249,7 @@ export default function OperatorsPage() {
       <BottomSheet open={createOpen} onClose={() => setCreateOpen(false)}>
         <form onSubmit={handleCreate} className="flex flex-col gap-4 pt-2">
           <div>
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operators.newOperatorTitle}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operators.newOperatorTitle}</h2>
             <p className="text-caption-airbnb">{t.operators.newOperatorSub}</p>
           </div>
           <div className="flex flex-col gap-1">

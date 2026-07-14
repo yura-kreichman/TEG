@@ -97,7 +97,7 @@ export function Header({ data, lp }: { data: LandingRenderData; lp: LP }) {
           </div>
         ) : null}
         <div className="min-w-0 flex-1">
-          <h1 className="lt-h1 text-2xl sm:text-[28px]">{data.tenant.name}</h1>
+          <h1 className="lt-h1 text-2xl sm:text-[1.75rem]">{data.tenant.name}</h1>
           {data.tagline && <p className="lt-slogan mt-0.5 text-sm sm:text-base">{data.tagline}</p>}
         </div>
         <ShareButton title={data.tenant.name} lp={lp} />
@@ -467,11 +467,11 @@ export function ContactsSection({ data, lp, weekdayNames }: { data: LandingRende
                     ))}
                   </div>
                 )}
-                {point.hoursNote && <p className="lt-muted-text mt-2 text-[13px]">{point.hoursNote}</p>}
+                {point.hoursNote && <p className="lt-muted-text mt-2 text-[0.8125rem]">{point.hoursNote}</p>}
                 {(point.address || mapsUrl) && (
                   <div className="mt-3 flex items-center justify-between gap-2">
                     {point.address ? (
-                      <p className="lt-muted-text flex min-w-0 items-start gap-1.5 text-[13px]">
+                      <p className="lt-muted-text flex min-w-0 items-start gap-1.5 text-[0.8125rem]">
                         <MapPin className="mt-0.5 size-3.5 shrink-0" />
                         <span className="truncate">{point.address}</span>
                       </p>

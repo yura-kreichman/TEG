@@ -24,7 +24,7 @@ export default function LanguageSettingsPage() {
           <StaggerList className="flex flex-col gap-3">
             <StaggerItem>
               <SpringCard animate={false} hover={false} className="flex flex-col gap-2">
-                <span className="text-[11px] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+                <span className="text-[0.6875rem] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
                   {t.settings.languageSectionLabel}
                 </span>
                 <LocalePicker />
@@ -32,7 +32,7 @@ export default function LanguageSettingsPage() {
             </StaggerItem>
             <StaggerItem>
               <SpringCard animate={false} hover={false} className="flex flex-col gap-2">
-                <span className="text-[11px] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+                <span className="text-[0.6875rem] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
                   {t.settings.timezoneTitle}
                 </span>
                 <TimezonePicker />

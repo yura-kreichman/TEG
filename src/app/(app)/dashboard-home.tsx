@@ -283,7 +283,7 @@ export function OwnerDashboardCard({
               </Link>
             </div>
             <div className="flex items-baseline gap-2 tabular-nums">
-              <span className="text-[32px] font-extrabold tracking-[-0.02em]">
+              <span className="text-[2rem] font-extrabold tracking-[-0.02em]">
                 {summary.revenue!.toFixed(2)}
               </span>
               <span className="text-caption-airbnb">{t.home.revenueUnit}</span>
@@ -291,18 +291,18 @@ export function OwnerDashboardCard({
             <div className="flex border-t border-border pt-3 tabular-nums">
               <div className="flex-1">
                 <p className="text-caption-airbnb">{t.money.profit}</p>
-                <p className="text-[16px] font-bold text-primary">
+                <p className="text-[1rem] font-bold text-primary">
                   {summary.profit! > 0 ? "+" : ""}
                   {summary.profit!.toFixed(2)}
                 </p>
               </div>
               <div className="flex-1 border-l border-border pl-4">
                 <p className="text-caption-airbnb">{t.home.submissionsCountLabel}</p>
-                <p className="text-[16px] font-bold">{summary.submissionsCount}</p>
+                <p className="text-[1rem] font-bold">{summary.submissionsCount}</p>
               </div>
               <div className="flex-1 border-l border-border pl-4">
                 <p className="text-caption-airbnb">{t.home.differenceLabel}</p>
-                <p className="text-[16px] font-bold text-primary">
+                <p className="text-[1rem] font-bold text-primary">
                   {summary.difference! > 0 ? "+" : ""}
                   {summary.difference!.toFixed(2)}
                 </p>
@@ -418,7 +418,7 @@ export function OwnerDashboardCard({
 
       <BottomSheet open={accountView === "menu"} onClose={() => setAccountView(null)}>
         <div className="pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{companyName}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{companyName}</h2>
           <p className="mb-2 text-caption-airbnb">{email}</p>
           <ActionSheetItem icon={Pencil} onClick={() => setAccountView("rename")}>
             {t.home.renameCompanyAction}
@@ -438,7 +438,7 @@ export function OwnerDashboardCard({
       <BottomSheet open={accountView === "rename"} onClose={() => setAccountView(null)}>
         <div className="flex flex-col gap-3 pt-2">
           <div>
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.home.renameCompanyTitle}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.home.renameCompanyTitle}</h2>
             <p className="text-caption-airbnb">{t.home.renameCompanyHint}</p>
           </div>
           <div className="flex flex-col gap-1">

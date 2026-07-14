@@ -107,7 +107,7 @@ export default function InstructionEditorPage() {
             </div>
             <span
               className={cn(
-                "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                "shrink-0 rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold",
                 instruction.status === "published" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
               )}
             >

@@ -133,7 +133,7 @@ function EmojiGrid({ value, onChange }: { value: string | null | undefined; onCh
 
   return (
     <div className="flex flex-col gap-3 pt-2">
-      <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.emojiPicker.title}</h2>
+      <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.emojiPicker.title}</h2>
       <p className="text-caption-airbnb text-muted-foreground">{t.emojiPicker.sub}</p>
 
       <div className="flex gap-1 overflow-x-auto pb-1">
@@ -159,7 +159,7 @@ function EmojiGrid({ value, onChange }: { value: string | null | undefined; onCh
             type="button"
             onClick={() => onChange(emoji)}
             className={cn(
-              "flex aspect-square items-center justify-center rounded-control border border-border text-[20px] transition-colors hover:bg-muted",
+              "flex aspect-square items-center justify-center rounded-control border border-border text-[1.25rem] transition-colors hover:bg-muted",
               value === emoji && "border-primary bg-primary/10"
             )}
           >

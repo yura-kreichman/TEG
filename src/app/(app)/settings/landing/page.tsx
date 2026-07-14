@@ -967,8 +967,8 @@ export default function LandingSettingsPage() {
                               <Check className="size-3" />
                             </span>
                           )}
-                          <span className="lt-status text-[9px] leading-none">Aa</span>
-                          <span className="lt-h2 text-[11px] leading-tight">{t.landing.themeNames[key]}</span>
+                          <span className="lt-status text-[0.5625rem] leading-none">Aa</span>
+                          <span className="lt-h2 text-[0.6875rem] leading-tight">{t.landing.themeNames[key]}</span>
                         </button>
                       </PressableScale>
                     );
@@ -1002,7 +1002,7 @@ export default function LandingSettingsPage() {
                           <span className="flex h-10 w-16 items-center justify-center overflow-hidden rounded-lg bg-muted">
                             <EffectPreview mode={key} />
                           </span>
-                          <span className="text-[11px] leading-tight text-muted-foreground">{t.landing.effectNames[key]}</span>
+                          <span className="text-[0.6875rem] leading-tight text-muted-foreground">{t.landing.effectNames[key]}</span>
                         </button>
                       </PressableScale>
                     );

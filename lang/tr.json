@@ -349,7 +349,7 @@
     "dailyCashEditorSub": "İş günü için tüm nokta toplamı",
     "whenToSendCardLabel": "Ne zaman gönderilecek",
     "modeEventName": "Tüm bölgeler kapandığında",
-    "modeEventSub": "Noktanın her aktif bölgesi için bugün en az bir sonuç teslimi olur olmaz özet hemen gönderilir. Bir bölge tüm gün rapor vermezse, özet yine de iş günü sınırında bir not ile gönderilir. Devre dışı bölgeler beklemeye dahil edilmez.",
+    "modeEventSub": "Noktanın her aktif bölgesi için bugün en az bir sonuç teslimi olduğunda ve noktada açık vardiya kalmadığında özet hemen gönderilir. Bunlardan biri tüm gün gerçekleşmezse, özet yine de iş günü sınırında bir not ile gönderilir. Devre dışı bölgeler beklemeye dahil edilmez.",
     "modeFixedName": "Sabit saatte",
     "modeFixedSub": "Vardiyalardan bağımsız olarak her gün belirtilen saatte.",
     "skipIfNoSubmissionsLabel": "Teslim yoksa gönderme",
@@ -712,7 +712,9 @@
     "activateOperatorButton": "Çalışanı etkinleştir",
     "deactivateOpenShiftWarning": "Çalışanın şu anda açık bir vardiyası var — devre dışı bırakıldıktan sonra puantajdan kapatılabilir",
     "overdraftLabel": "Avans açığı",
-    "overdraftHint": "Bu çalışanın bakiyesinin üzerinde avans almasına izin ver (eksiye düşebilir)"
+    "overdraftHint": "Bu çalışanın bakiyesinin üzerinde avans almasına izin ver (eksiye düşebilir)",
+    "skipShiftStartWindowLabel": "Vardiya başlangıç saatinde kısıtlama yok",
+    "skipShiftStartWindowHint": "Örneğin, düzensiz çalışma saatleri olan bir çalışan için — ortak izin verilen aralık ona uygulanmaz"
   },
   "money": {
     "title": "Para",
@@ -863,6 +865,8 @@
       "addShiftTitle": "Yeni vardiya",
       "arrivedLabel": "Geldi",
       "leftLabel": "Ayrıldı",
+      "closeShiftToggleLabel": "Vardiyayı kapat",
+      "closeShiftToggleHint": "Vardiya hâlâ açık — çalışan adına kapatmak için açın",
       "advanceFieldLabel": "Avans",
       "bonusFieldLabel": "Prim",
       "saveShiftButton": "Vardiyayı kaydet",

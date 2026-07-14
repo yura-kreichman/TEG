@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { calcOperatorBalance, calcShiftAccrual, getRateForDate, hasOverlappingShift, validateShift } from "@/lib/work-time";
+import { sendPushToOperators } from "@/lib/push-notifications";
 
 interface ShiftCorrectionDiff {
   startAt: string;
@@ -51,20 +52,28 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
     };
 
   // Открытая смена (docs/spec/05-work-time.md, "АВТО") — endAt ещё null, пока
-  // оператор не нажал "Закончить смену". Владелец может её закрыть за
-  // оператора, указав endAt явно (например, если тот забыл), но не может
-  // сохранить правку без endAt вообще — редактировать здесь нечего.
-  if (shift.endAt === null && endAtInput === undefined) {
-    return NextResponse.json({ error: "Смена ещё не завершена — укажите время окончания" }, { status: 400 });
-  }
+  // оператор не нажал "Закончить смену". Раньше правка ВСЕГДА требовала и
+  // задавала endAt, то есть попутно закрывала смену — не было способа
+  // поправить только время начала (например, оператор забыл начать смену
+  // и вспомнил через час), оставив её открытой (запрос пользователя
+  // 2026-07-14). Теперь: явный endAt в теле — закрыть смену (или подправить
+  // уже закрытую); endAt не передан и смена ещё открыта — остаётся открытой,
+  // правится только startAt.
+  const staysOpen = shift.endAt === null && endAtInput === undefined;
 
   const nextStartAt = startAtInput !== undefined ? new Date(startAtInput) : shift.startAt;
-  const nextEndAt = endAtInput !== undefined ? new Date(endAtInput) : shift.endAt!;
-  if (Number.isNaN(nextStartAt.getTime()) || Number.isNaN(nextEndAt.getTime()) || nextEndAt <= nextStartAt) {
+  const nextEndAt = staysOpen ? null : endAtInput !== undefined ? new Date(endAtInput) : shift.endAt!;
+  if (
+    Number.isNaN(nextStartAt.getTime()) ||
+    (nextEndAt !== null && (Number.isNaN(nextEndAt.getTime()) || nextEndAt <= nextStartAt))
+  ) {
     return NextResponse.json({ error: "Некорректное время смены" }, { status: 400 });
   }
 
-  if (await hasOverlappingShift(shift.operatorId, nextStartAt, nextEndAt, shift.id)) {
+  // Для проверки пересечения открытой смене нужна хоть какая-то верхняя
+  // граница — "сейчас" (текущий, ещё не завершённый отрезок), не
+  // предполагаемое время окончания, которого пока не существует.
+  if (await hasOverlappingShift(shift.operatorId, nextStartAt, nextEndAt ?? new Date(), shift.id)) {
     return NextResponse.json({ error: "Смена пересекается с другой сменой этого оператора" }, { status: 409 });
   }
 
@@ -91,7 +100,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
     }
   }
 
-  const warnings = validateShift(nextStartAt, nextEndAt);
+  const warnings = nextEndAt !== null ? validateShift(nextStartAt, nextEndAt) : [];
 
   const before: ShiftCorrectionDiff = {
     startAt: shift.startAt.toISOString(),
@@ -101,7 +110,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   };
   const after: ShiftCorrectionDiff = {
     startAt: nextStartAt.toISOString(),
-    endAt: nextEndAt.toISOString(),
+    endAt: nextEndAt?.toISOString() ?? null,
     advanceAmount: nextAdvance,
     bonusAmount: nextBonus,
   };
@@ -114,9 +123,13 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   const shiftOperatorId = shift.operatorId;
 
   await prisma.$transaction(async (tx) => {
-    // isOpen держим синхронно с endAt (см. Shift.isOpen в schema.prisma) — эта
-    // правка всегда задаёт endAt (см. проверку выше), значит смена закрыта.
-    await tx.shift.update({ where: { id }, data: { startAt: nextStartAt, endAt: nextEndAt, isOpen: false } });
+    // isOpen держим синхронно с endAt (см. Shift.isOpen в schema.prisma).
+    await tx.shift.update({
+      where: { id },
+      data: staysOpen
+        ? { startAt: nextStartAt }
+        : { startAt: nextStartAt, endAt: nextEndAt, isOpen: false },
+    });
 
     const syncLinkedOp = async (type: "advance" | "bonus_payout", amount: number) => {
       const existing = linkedOps.find((o) => o.type === type);
@@ -158,8 +171,24 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
     }
   });
 
+  // Открытая смена, оставшаяся открытой (правили только начало) — оператор
+  // мог всё это время держать приложение открытым, где счётчик отработанного
+  // времени тикает от старого startAt, полученного один раз при заходе на
+  // экран (запрос пользователя 2026-07-14). Push будит открытую вкладку
+  // (postMessage от Service Worker, см. src/app/(app)/operator/page.tsx) —
+  // она перезапросит своё состояние и подхватит новое время сразу же.
+  if (staysOpen && changed) {
+    await sendPushToOperators([shift.operatorId], {
+      title: "Время смены обновлено",
+      body: "Владелец поправил время начала вашей смены.",
+      url: "/operator",
+    });
+  }
+
   const rate = await getRateForDate(shift.operatorId, nextStartAt);
-  const { minutes, accrued } = calcShiftAccrual(nextStartAt, nextEndAt, rate);
+  // Открытая смена — итоговых минут/начисления ещё не существует (конец
+  // неизвестен), не считаем их задним числом от "сейчас".
+  const { minutes, accrued } = nextEndAt !== null ? calcShiftAccrual(nextStartAt, nextEndAt, rate) : { minutes: null, accrued: null };
 
   return NextResponse.json({
     shift: { id, startAt: nextStartAt, endAt: nextEndAt, minutes, rate, accrued, advanceAmount: nextAdvance, bonusAmount: nextBonus },

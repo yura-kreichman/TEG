@@ -127,25 +127,32 @@ export default function OperatorHomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
-  // Список задач должен обновляться "сразу" (запрос пользователя 2026-07-14),
-  // не только при заходе на экран. Два независимых механизма:
-  // 1) push от сервера при создании задачи будит Service Worker, который
-  //    рассылает postMessage открытым вкладкам (public/sw.js) — сработает
-  //    мгновенно, пока экран открыт, без ожидания уведомления/клика.
+  // Список задач и своё состояние (смена/баланс) должны обновляться "сразу"
+  // (запрос пользователя 2026-07-14 — сначала для задач, затем и для правки
+  // времени начала смены владельцем), не только при заходе на экран. Два
+  // независимых механизма:
+  // 1) push от сервера будит Service Worker, который рассылает postMessage
+  //    открытым вкладкам (public/sw.js) — сработает мгновенно, пока экран
+  //    открыт, без ожидания уведомления/клика.
   // 2) резервный опрос раз в 25с — если у Оператора push не разрешён (или
-  //    временно недоступен), список всё равно не "зависнет" навсегда.
+  //    временно недоступен), состояние всё равно не "зависнет" навсегда.
   useEffect(() => {
+    function refresh() {
+      loadTasks();
+      loadMe();
+    }
     function handleMessage(event: MessageEvent) {
-      if (event.data?.type === "push-received") loadTasks();
+      if (event.data?.type === "push-received") refresh();
     }
     navigator.serviceWorker?.addEventListener("message", handleMessage);
 
-    const interval = setInterval(loadTasks, 25000);
+    const interval = setInterval(refresh, 25000);
 
     return () => {
       navigator.serviceWorker?.removeEventListener("message", handleMessage);
       clearInterval(interval);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -379,7 +386,7 @@ export default function OperatorHomePage() {
                 <span className="block text-caption-airbnb text-muted-foreground">
                   {t.operatorApp.workTime.toPayOutLabel}
                 </span>
-                <span className="block text-[19px] font-extrabold tabular-nums">{toPayOut.toFixed(2)}</span>
+                <span className="block text-[1.1875rem] font-extrabold tabular-nums">{toPayOut.toFixed(2)}</span>
               </span>
               <span className="flex items-center gap-1 text-caption-airbnb font-semibold text-primary">
                 {t.operatorApp.workTime.viewAllLink}
@@ -424,8 +431,8 @@ export default function OperatorHomePage() {
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/api/icon-library/app-icons/stop_squared.svg" alt="" className="size-5" />
-                <span className="text-[11px] leading-tight font-bold">{t.operatorApp.workTime.checkoutButton}</span>
-                <span className="text-[11px] font-bold tabular-nums text-muted-foreground">{elapsedLabel}</span>
+                <span className="text-[0.6875rem] leading-tight font-bold">{t.operatorApp.workTime.checkoutButton}</span>
+                <span className="text-[0.6875rem] font-bold tabular-nums text-muted-foreground">{elapsedLabel}</span>
               </SweepButton>
             </PressableScale>
           )}
@@ -441,7 +448,7 @@ export default function OperatorHomePage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/api/icon-library/app-icons/Square%20Play%20Button.svg" alt="" className="size-6" />
                 <span className="leading-tight">{t.operatorApp.workTime.checkinButton}</span>
-                <span className="text-[11px] font-bold tabular-nums text-muted-foreground">{formatClock(now)}</span>
+                <span className="text-[0.6875rem] font-bold tabular-nums text-muted-foreground">{formatClock(now)}</span>
               </Button>
             </PressableScale>
           )}
@@ -482,7 +489,7 @@ export default function OperatorHomePage() {
 
       <SpringCard hover={false} className="mt-4 w-full max-w-sm text-left">
         <div className="mb-1.5 flex items-baseline justify-between">
-          <h2 className="text-[14px] font-extrabold tracking-[-0.01em]">{t.operatorApp.tasks.title}</h2>
+          <h2 className="text-[0.875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.tasks.title}</h2>
           <span className="text-caption-airbnb">
             {tasks.length > 0
               ? `${tasks.length} ${t.operatorApp.tasks.activeCountSuffix}`
@@ -530,7 +537,7 @@ export default function OperatorHomePage() {
       <BottomSheet open={openTask !== null} onClose={() => setOpenTask(null)}>
         {openTask && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{openTask.title}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{openTask.title}</h2>
             <p className="text-body-airbnb text-muted-foreground">{openTask.note || t.operatorApp.tasks.noNote}</p>
             <PressableScale>
               <Button
@@ -547,7 +554,7 @@ export default function OperatorHomePage() {
 
       <BottomSheet open={showCollection} onClose={() => setShowCollection(false)}>
         <form onSubmit={handleCollection} className="flex flex-col gap-4 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operatorApp.collection}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.collection}</h2>
           {collectionDone ? (
             <p className="text-body-airbnb text-success">{t.operatorApp.collectionDone}</p>
           ) : (
@@ -618,7 +625,7 @@ export default function OperatorHomePage() {
 
       <BottomSheet open={checkoutSheetOpen} onClose={() => !checkInOutBusy && setCheckoutSheetOpen(false)}>
         <div className="flex flex-col gap-4 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operatorApp.workTime.checkoutButton}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.workTime.checkoutButton}</h2>
 
           {activeShiftStartAt && (
             <div className="rounded-control bg-muted/40 p-3 text-center">

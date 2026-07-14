@@ -36,6 +36,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/operators/[
     allowedZones: operator.allowedZones,
     timeTrackingMode: operator.timeTrackingMode,
     overdraftAllowed: operator.overdraftAllowed,
+    skipShiftStartWindow: operator.skipShiftStartWindow,
     hasOpenShift,
   });
 }
@@ -52,8 +53,18 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
     return NextResponse.json({ error: "Оператор не найден" }, { status: 404 });
   }
 
-  const { name, avatarUrl, iconKey, active, allZonesAccess, zoneIds, colorTag, timeTrackingMode, overdraftAllowed } =
-    await request.json();
+  const {
+    name,
+    avatarUrl,
+    iconKey,
+    active,
+    allZonesAccess,
+    zoneIds,
+    colorTag,
+    timeTrackingMode,
+    overdraftAllowed,
+    skipShiftStartWindow,
+  } = await request.json();
   const data: {
     name?: string;
     avatarUrl?: string | null;
@@ -64,6 +75,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
     colorTag?: string | null;
     timeTrackingMode?: string;
     overdraftAllowed?: boolean;
+    skipShiftStartWindow?: boolean;
   } = {};
 
   if (name !== undefined) {
@@ -139,6 +151,12 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
       return NextResponse.json({ error: "Некорректное значение overdraftAllowed" }, { status: 400 });
     }
     data.overdraftAllowed = overdraftAllowed;
+  }
+  if (skipShiftStartWindow !== undefined) {
+    if (typeof skipShiftStartWindow !== "boolean") {
+      return NextResponse.json({ error: "Некорректное значение skipShiftStartWindow" }, { status: 400 });
+    }
+    data.skipShiftStartWindow = skipShiftStartWindow;
   }
 
   await prisma.operator.update({ where: { id }, data });

@@ -192,7 +192,7 @@ export default function InstallAppBanner() {
 
       <BottomSheet open={showHelp} onClose={() => setShowHelp(false)}>
         <div className="flex flex-col gap-3 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.install.installButton}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.install.installButton}</h2>
           <p className="whitespace-pre-line text-body-airbnb text-muted-foreground">{getManualHint(t)}</p>
           <PressableScale>
             <Button type="button" className="w-full" onClick={() => setShowHelp(false)}>

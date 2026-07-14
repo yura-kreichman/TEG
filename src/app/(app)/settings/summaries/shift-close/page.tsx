@@ -96,7 +96,7 @@ export default function ShiftCloseSummaryEditorPage() {
           <StaggerList className="flex flex-col gap-3">
             <StaggerItem>
               <SpringCard animate={false} hover={false} className="flex flex-col">
-                <span className="mb-1 text-[11px] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+                <span className="mb-1 text-[0.6875rem] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
                   {t.summaries.compositionCardLabel}
                 </span>
                 {rows.map((row) => (
@@ -117,7 +117,7 @@ export default function ShiftCloseSummaryEditorPage() {
 
             <StaggerItem>
               <SpringCard animate={false} hover={false} className="flex flex-col">
-                <span className="mb-3 text-[11px] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+                <span className="mb-3 text-[0.6875rem] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
                   {t.summaries.previewCardLabel}
                 </span>
                 <TelegramPreviewBubble text={previewText} time="22:12" />

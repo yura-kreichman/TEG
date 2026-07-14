@@ -12,11 +12,11 @@ export function TelegramPreviewBubble({ text, time }: { text: string; time: stri
           RentOS Бот
         </div>
         <div
-          className="text-[12.5px] leading-relaxed whitespace-pre-wrap tabular-nums [&_blockquote]:my-1 [&_blockquote]:rounded-[4px] [&_blockquote]:border-l-[3px] [&_blockquote]:border-[#6AB2F2] [&_blockquote]:bg-white/4 [&_blockquote]:py-0.5 [&_blockquote]:pl-2 [&_blockquote]:whitespace-pre-wrap [&_code]:font-mono [&_code]:text-[12px]"
+          className="text-[0.78125rem] leading-relaxed whitespace-pre-wrap tabular-nums [&_blockquote]:my-1 [&_blockquote]:rounded-[4px] [&_blockquote]:border-l-[3px] [&_blockquote]:border-[#6AB2F2] [&_blockquote]:bg-white/4 [&_blockquote]:py-0.5 [&_blockquote]:pl-2 [&_blockquote]:whitespace-pre-wrap [&_code]:font-mono [&_code]:text-[0.75rem]"
           style={{ color: "#E9EEF4" }}
           dangerouslySetInnerHTML={{ __html: text }}
         />
-        <div className="mt-1 text-right text-[10.5px]" style={{ color: "#6C7883" }}>
+        <div className="mt-1 text-right text-[0.65625rem]" style={{ color: "#6C7883" }}>
           {time}
         </div>
       </div>

@@ -349,7 +349,7 @@
     "dailyCashEditorSub": "Total for the whole point over the business day",
     "whenToSendCardLabel": "When to send",
     "modeEventName": "When all zones report in",
-    "modeEventSub": "The summary goes out as soon as every active zone at the point has at least one results submission for today. If a zone never reports for the whole day, the summary still goes out at the business-day boundary, flagged. Deactivated zones aren't part of the wait.",
+    "modeEventSub": "The summary goes out as soon as every active zone at the point has at least one results submission for today and no shifts remain open at the point. If either condition is never met for the whole day, the summary still goes out at the business-day boundary, flagged. Deactivated zones aren't part of the wait.",
     "modeFixedName": "At a fixed time",
     "modeFixedSub": "Every day at the given hour, regardless of shifts.",
     "skipIfNoSubmissionsLabel": "Skip if no submissions",
@@ -712,7 +712,9 @@
     "activateOperatorButton": "Activate employee",
     "deactivateOpenShiftWarning": "This employee has an open shift — after deactivating, you can close it from the timesheet",
     "overdraftLabel": "Advance overdraft",
-    "overdraftHint": "Allow this employee an advance beyond their balance (it goes negative)"
+    "overdraftHint": "Allow this employee an advance beyond their balance (it goes negative)",
+    "skipShiftStartWindowLabel": "No shift-start time restriction",
+    "skipShiftStartWindowHint": "For example, for an employee with an irregular schedule — the shared shift-start window won't apply to them"
   },
   "money": {
     "title": "Money",
@@ -863,6 +865,8 @@
       "addShiftTitle": "New shift",
       "arrivedLabel": "Arrived",
       "leftLabel": "Left",
+      "closeShiftToggleLabel": "Close the shift",
+      "closeShiftToggleHint": "Shift is still open — turn this on to close it on the employee's behalf",
       "advanceFieldLabel": "Advance",
       "bonusFieldLabel": "Bonus",
       "saveShiftButton": "Save shift",

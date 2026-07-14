@@ -373,10 +373,10 @@ export default function SubmitResultsPage() {
         {currentStep.kind === "select" && (
           <div className="flex flex-col gap-4">
             <div>
-              <h1 className="text-[24px] font-extrabold tracking-[-0.02em]">
+              <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">
                 {t.operatorApp.submit.selectZonesTitle}
               </h1>
-              <p className="mt-1 text-[13.5px] text-muted-foreground">{t.operatorApp.submit.selectZonesSub}</p>
+              <p className="mt-1 text-[0.84375rem] text-muted-foreground">{t.operatorApp.submit.selectZonesSub}</p>
             </div>
 
             {zones.length === 0 ? (
@@ -414,7 +414,7 @@ export default function SubmitResultsPage() {
                         </div>
                         <span
                           className={cn(
-                            "text-[14.5px] font-semibold",
+                            "text-[0.90625rem] font-semibold",
                             selected ? "text-foreground" : "text-muted-foreground"
                           )}
                         >
@@ -432,8 +432,8 @@ export default function SubmitResultsPage() {
         {currentStep.kind === "zone" && activeZone && activeForm && (
           <div className="flex flex-col gap-5">
             <div>
-              <h1 className="text-[24px] font-extrabold tracking-[-0.02em]">{activeZone.name}</h1>
-              <p className="mt-1 text-[13.5px] text-muted-foreground">
+              <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{activeZone.name}</h1>
+              <p className="mt-1 text-[0.84375rem] text-muted-foreground">
                 {activeZone.accountingMode === "cash_only"
                   ? t.operatorApp.submit.cashOnlySub
                   : t.operatorApp.submit.enterReadingsSub}
@@ -484,7 +484,7 @@ export default function SubmitResultsPage() {
                         )}
                       </div>
                       <div className="flex flex-col gap-1 p-3">
-                        <span className="text-[14.5px] font-bold tracking-[-0.01em]">{asset.name}</span>
+                        <span className="text-[0.90625rem] font-bold tracking-[-0.01em]">{asset.name}</span>
                         <span className="text-xs leading-snug text-muted-foreground">
                           {filled
                             ? activeZone.tariffs
@@ -522,7 +522,7 @@ export default function SubmitResultsPage() {
                 >
                   <Minus className="size-4" />
                 </button>
-                <span className="w-11 text-center text-[15px] font-bold tabular-nums">
+                <span className="w-11 text-center text-[0.9375rem] font-bold tabular-nums">
                   {activeForm.returnsCount || 0}
                 </span>
                 <button
@@ -578,7 +578,7 @@ export default function SubmitResultsPage() {
 
         {currentStep.kind === "expenses" && (
           <div className="flex flex-col gap-4">
-            <h1 className="text-[24px] font-extrabold tracking-[-0.02em]">{t.operatorApp.submit.expensesTitle}</h1>
+            <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.operatorApp.submit.expensesTitle}</h1>
             {expenses.map((expense, index) => (
               <div key={index} className="flex flex-col gap-2 rounded-card border border-border bg-card p-3">
                 {selectedZoneIds.length > 1 && (
@@ -636,7 +636,7 @@ export default function SubmitResultsPage() {
 
         {currentStep.kind === "review" && (
           <div className="flex flex-col gap-3">
-            <h1 className="text-[24px] font-extrabold tracking-[-0.02em]">{t.operatorApp.submit.reviewTitle}</h1>
+            <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.operatorApp.submit.reviewTitle}</h1>
             {selectedZoneIds.map((zoneId) => {
               const zone = zones.find((z) => z.id === zoneId)!;
               const preview = previewFor(zoneId);
@@ -734,7 +734,7 @@ export default function SubmitResultsPage() {
                 style={{ backgroundColor: activeAsset.colorTag }}
               />
             </div>
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{activeAsset.name}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{activeAsset.name}</h2>
 
             {activeZone.tariffs.map((tariff, index) => {
               const isLaunches = activeZone.accountingMode === "launches";

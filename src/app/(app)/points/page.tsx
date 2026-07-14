@@ -478,7 +478,7 @@ export default function PointsPage() {
       <BottomSheet open={createOpen} onClose={() => setCreateOpen(false)}>
         <form onSubmit={handleCreate} className="flex flex-col gap-4 pt-2">
           <div>
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.points.newPointTitle}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.newPointTitle}</h2>
             <p className="text-caption-airbnb">{t.points.newPointSub}</p>
           </div>
           <div className="flex flex-col gap-1">
@@ -505,7 +505,7 @@ export default function PointsPage() {
       <BottomSheet open={deviceSheetPointId !== null} onClose={() => setDeviceSheetPointId(null)}>
         <form onSubmit={handleCreateDevice} className="flex flex-col gap-4 pt-2">
           <div>
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.points.newDeviceTitle}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.newDeviceTitle}</h2>
             <p className="text-caption-airbnb">{t.points.newDeviceSub}</p>
           </div>
           <div className="flex flex-col gap-1">
@@ -537,7 +537,7 @@ export default function PointsPage() {
       <BottomSheet open={pointKebab !== null && pointKebabView !== "icon"} onClose={() => setPointKebab(null)}>
         {pointKebab && pointKebabView === "menu" && (
           <div className="pt-2">
-            <h2 className="mb-2 text-[19px] font-extrabold tracking-[-0.01em]">{pointKebab.name}</h2>
+            <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">{pointKebab.name}</h2>
             <ActionSheetItem icon={Pencil} onClick={() => setPointKebabView("rename")}>
               {t.points.renamePoint}
             </ActionSheetItem>
@@ -557,7 +557,7 @@ export default function PointsPage() {
         )}
         {pointKebab && pointKebabView === "location" && (
           <div className="flex max-h-[75vh] flex-col gap-4 overflow-y-auto pt-2 pb-1">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.points.editLocationTitle}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.editLocationTitle}</h2>
             {locLoading ? (
               <p className="text-body-airbnb text-muted-foreground">{t.common.loading}</p>
             ) : (
@@ -673,7 +673,7 @@ export default function PointsPage() {
         )}
         {pointKebab && pointKebabView === "rename" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.points.renamePoint}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.renamePoint}</h2>
             <Input autoFocus value={renamePointValue} onChange={(e) => setRenamePointValue(e.target.value)} />
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setPointKebabView("menu")}>
@@ -689,7 +689,7 @@ export default function PointsPage() {
         )}
         {pointKebab && pointKebabView === "confirm-delete" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.points.deletePoint}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.deletePoint}</h2>
             <p className="text-body-airbnb">{t.points.confirmDeletePoint}</p>
             {pointActionError && <p className="text-sm text-destructive">{pointActionError}</p>}
             <div className="flex gap-2">
@@ -721,7 +721,7 @@ export default function PointsPage() {
       <BottomSheet open={deviceKebab !== null} onClose={() => setDeviceKebab(null)}>
         {deviceKebab && deviceKebabView === "menu" && (
           <div className="pt-2">
-            <h2 className="mb-2 text-[19px] font-extrabold tracking-[-0.01em]">
+            <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">
               {deviceKebab.device.label ?? t.points.unnamedDevice}
             </h2>
             <ActionSheetItem icon={Pencil} onClick={() => setDeviceKebabView("rename")}>
@@ -739,7 +739,7 @@ export default function PointsPage() {
         )}
         {deviceKebab && deviceKebabView === "rename" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.points.renameDevice}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.renameDevice}</h2>
             <Input
               autoFocus
               placeholder={t.points.deviceLabelPlaceholder}
@@ -760,7 +760,7 @@ export default function PointsPage() {
         )}
         {deviceKebab && deviceKebabView === "confirm-delete" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.points.deleteDevice}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.deleteDevice}</h2>
             <p className="text-body-airbnb">{t.points.confirmDeleteDevice}</p>
             <div className="flex gap-2">
               <PressableScale className="flex-1">

@@ -20,6 +20,7 @@ import {
   PowerOff,
   Trash2,
   X,
+  AlarmClockOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -50,6 +51,7 @@ interface Profile {
   allowedZones: { id: string; name: string }[];
   timeTrackingMode: "manual" | "auto";
   overdraftAllowed: boolean;
+  skipShiftStartWindow: boolean;
   hasOpenShift: boolean;
 }
 
@@ -282,6 +284,16 @@ export default function OperatorSettingsPage() {
     });
   }
 
+  async function toggleSkipShiftStartWindow(value: boolean) {
+    if (!profile) return;
+    setProfile({ ...profile, skipShiftStartWindow: value });
+    await fetch(`/api/operators/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ skipShiftStartWindow: value }),
+    });
+  }
+
   function openColor() {
     if (!profile) return;
     setColorValue(profile.colorTag ?? "#22c55e");
@@ -399,7 +411,7 @@ export default function OperatorSettingsPage() {
         </SpringCard>
 
         <SpringCard hover={false} className="flex flex-col">
-          <span className="mb-1 text-[11px] font-bold uppercase tracking-[.08em] text-muted-foreground/70">
+          <span className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[.08em] text-muted-foreground/70">
             {t.operators.accessGroupLabel}
           </span>
           <SettingsRow
@@ -432,7 +444,7 @@ export default function OperatorSettingsPage() {
 
         {moduleEnabled && (
           <SpringCard hover={false} className="flex flex-col">
-            <span className="mb-1 text-[11px] font-bold uppercase tracking-[.08em] text-muted-foreground/70">
+            <span className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[.08em] text-muted-foreground/70">
               {t.operators.workGroupLabel}
             </span>
             <SettingsRow
@@ -481,6 +493,20 @@ export default function OperatorSettingsPage() {
               </div>
               <Switch checked={profile.overdraftAllowed} onCheckedChange={toggleOverdraft} className="shrink-0" />
             </div>
+            {profile.timeTrackingMode === "auto" && (
+              <div className="flex items-center gap-3 border-t border-border py-3.5">
+                <AlarmClockOff className="size-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-body-airbnb">{t.operators.skipShiftStartWindowLabel}</div>
+                  <div className="text-caption-airbnb">{t.operators.skipShiftStartWindowHint}</div>
+                </div>
+                <Switch
+                  checked={profile.skipShiftStartWindow}
+                  onCheckedChange={toggleSkipShiftStartWindow}
+                  className="shrink-0"
+                />
+              </div>
+            )}
             <SettingsRow
               icon={Palette}
               label={t.operators.colorTagAction}
@@ -497,7 +523,7 @@ export default function OperatorSettingsPage() {
 
         {!moduleEnabled && (
           <SpringCard hover={false} className="flex flex-col">
-            <span className="mb-1 text-[11px] font-bold uppercase tracking-[.08em] text-muted-foreground/70">
+            <span className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[.08em] text-muted-foreground/70">
               {t.operators.workGroupLabel}
             </span>
             <SettingsRow
@@ -577,7 +603,7 @@ export default function OperatorSettingsPage() {
 
       <BottomSheet open={renameOpen} onClose={() => setRenameOpen(false)}>
         <div className="flex flex-col gap-3 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operators.rename}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operators.rename}</h2>
           <Input autoFocus value={renameValue} onChange={(e) => setRenameValue(e.target.value)} />
           <PressableScale>
             <SaveButton className="w-full" onClick={confirmRename}>
@@ -589,7 +615,7 @@ export default function OperatorSettingsPage() {
 
       <BottomSheet open={pinOpen} onClose={() => setPinOpen(false)}>
         <div className="flex flex-col gap-3 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operators.resetPin}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operators.resetPin}</h2>
           <div className="flex flex-col gap-1">
             <Label htmlFor="pinValue">{t.operators.resetPinPrompt}</Label>
             <Input
@@ -613,7 +639,7 @@ export default function OperatorSettingsPage() {
 
       <BottomSheet open={zonesOpen} onClose={() => setZonesOpen(false)}>
         <div className="flex flex-col gap-3 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operators.zoneAccessTitle}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operators.zoneAccessTitle}</h2>
           <div className="flex w-full items-center justify-between border-t border-border py-3.5 text-body-airbnb first:border-t-0">
             {t.operators.allZonesLabel}
             <Switch checked={zoneAccessAll} onCheckedChange={handleZoneAccessAllChange} />
@@ -650,7 +676,7 @@ export default function OperatorSettingsPage() {
 
       <BottomSheet open={rateOpen} onClose={() => setRateOpen(false)}>
         <div className="flex flex-col gap-4 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operatorApp.workTime.changeRateTitle}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.workTime.changeRateTitle}</h2>
           <div className="flex flex-col gap-1">
             <Label htmlFor="rateValue">{t.operatorApp.workTime.rateLabel}</Label>
             <Input
@@ -673,7 +699,7 @@ export default function OperatorSettingsPage() {
 
       <BottomSheet open={colorOpen} onClose={() => setColorOpen(false)}>
         <div className="flex flex-col gap-3 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operators.colorTagAction}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operators.colorTagAction}</h2>
           <ColorTagPicker value={colorValue} onChange={setColorValue} />
           <span className="text-caption-airbnb">{t.operators.colorTagHint}</span>
           <PressableScale>
@@ -686,7 +712,7 @@ export default function OperatorSettingsPage() {
 
       <BottomSheet open={confirmDeleteOpen} onClose={() => setConfirmDeleteOpen(false)}>
         <div className="flex flex-col gap-3 pt-2">
-          <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operators.deleteButton}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operators.deleteButton}</h2>
           <p className="text-body-airbnb">{t.operators.confirmDelete}</p>
           {actionError && <p className="text-sm text-destructive">{actionError}</p>}
           <div className="flex gap-2">

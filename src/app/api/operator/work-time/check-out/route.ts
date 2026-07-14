@@ -11,7 +11,7 @@ import {
 } from "@/lib/work-time";
 import { dispatchShiftCloseSummary } from "@/lib/summary-channels/dispatch";
 import { SHIFT_CLOSE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
-import { notifyDailyCashLateSubmission } from "@/lib/summary-channels/daily-cash-trigger";
+import { notifyDailyCashLateSubmission, onShiftClosed } from "@/lib/summary-channels/daily-cash-trigger";
 
 // Check-out (docs/spec/05-work-time.md, "АВТО") — закрывает открытую смену
 // (endAt=now). Аванс/премия — тот же bottom sheet, что подтверждает check-out
@@ -118,6 +118,16 @@ export async function POST(request: Request) {
       console.error("daily cash late-submission notify failed", err)
     );
   }
+
+  // Закрытие смены само по себе не меняет кассу, но может быть последним,
+  // чего не хватало для ПЕРВОЙ отправки (запрос пользователя 2026-07-14: все
+  // зоны уже отчитались, а этот оператор был последним с открытой сменой) —
+  // всегда, не только при авансе/премии. startAt, не endAt — чтобы совпадать
+  // с business-day, к которому notifyDailyCashLateSubmission выше уже
+  // отнёс эту же смену.
+  onShiftClosed(point.id, point.tenantId, startAt).catch((err) =>
+    console.error("daily cash on-shift-closed notify failed", err)
+  );
 
   const shiftRow = { id: openShift.id, startAt, endAt, minutes, rate, accrued, advanceAmount, bonusAmount };
   return NextResponse.json({ shift: shiftRow, warnings, noResultsToday, balance });

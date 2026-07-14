@@ -147,7 +147,7 @@ export default function SummariesListPage() {
           <StaggerList className="flex flex-col gap-3">
             <StaggerItem>
               <SpringCard animate={false} hover={false} className="flex flex-col">
-                <span className="mb-3 text-[11px] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+                <span className="mb-3 text-[0.6875rem] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
                   {t.summaries.channelsCardLabel}
                 </span>
 
