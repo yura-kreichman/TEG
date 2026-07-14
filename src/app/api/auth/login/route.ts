@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  PIN_LOCK_DURATION_MS,
-  PIN_LOCK_THRESHOLD,
   createSession,
   getOwnerDeviceUserId,
   forgetOwnerDevice,
@@ -49,41 +47,11 @@ export async function POST(request: Request) {
       );
     }
 
-    if (user.pinLockedUntil && user.pinLockedUntil > new Date()) {
-      return NextResponse.json(
-        {
-          error:
-            "Слишком много неверных попыток ввода ПИН-кода. Попробуйте позже или войдите с логином и паролем.",
-        },
-        { status: 429 }
-      );
-    }
-
     const ok = await verifyPin(pin, user.pinHash);
     if (!ok) {
-      const failedPinAttempts = user.failedPinAttempts + 1;
-      const locked = failedPinAttempts >= PIN_LOCK_THRESHOLD;
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          failedPinAttempts,
-          pinLockedUntil: locked ? new Date(Date.now() + PIN_LOCK_DURATION_MS) : null,
-        },
-      });
-      return NextResponse.json(
-        {
-          error: locked
-            ? "Слишком много неверных попыток. ПИН-код временно заблокирован, войдите с логином и паролем."
-            : "Неверный ПИН-код",
-        },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Неверный ПИН-код" }, { status: 401 });
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { failedPinAttempts: 0, pinLockedUntil: null },
-    });
     await createSession(user.id);
     await rememberOwnerDevice(user.id);
     await syncAccentCookie(user.tenantId);
@@ -114,10 +82,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Неверные учётные данные" }, { status: 401 });
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { failedPinAttempts: 0, pinLockedUntil: null },
-  });
   await createSession(user.id);
   await rememberOwnerDevice(user.id);
   await syncAccentCookie(user.tenantId);

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell, Clock, DollarSign, FileText, Mail, Send, Zap } from "lucide-react";
+import { Bell, ChevronRight, Clock, DollarSign, FileText, Mail, Send, Zap } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
@@ -231,6 +231,7 @@ export default function SummariesListPage() {
                     <div className="text-body-airbnb font-bold">{t.summaries.zoneCardTitle}</div>
                     <div className="text-caption-airbnb">{t.summaries.zoneCardSub}</div>
                   </div>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" />
                   <span onClick={(e) => e.stopPropagation()} className="shrink-0">
                     <Switch checked={zoneEnabled} onCheckedChange={toggleZone} />
                   </span>
@@ -252,6 +253,7 @@ export default function SummariesListPage() {
                     <div className="text-body-airbnb font-bold">{t.summaries.dailyCashCardTitle}</div>
                     <div className="text-caption-airbnb">{t.summaries.dailyCashCardSub}</div>
                   </div>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" />
                   <span onClick={(e) => e.stopPropagation()} className="shrink-0">
                     <Switch checked={dailyCashEnabled} onCheckedChange={toggleDailyCash} />
                   </span>
@@ -273,6 +275,7 @@ export default function SummariesListPage() {
                     <div className="text-body-airbnb font-bold">{t.summaries.shiftCloseCardTitle}</div>
                     <div className="text-caption-airbnb">{t.summaries.shiftCloseCardSub}</div>
                   </div>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" />
                   <span onClick={(e) => e.stopPropagation()} className="shrink-0">
                     <Switch checked={shiftCloseEnabled} onCheckedChange={toggleShiftClose} />
                   </span>

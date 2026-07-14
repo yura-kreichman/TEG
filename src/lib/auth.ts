@@ -32,8 +32,6 @@ const OWNER_DEVICE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 // Тот же maxAge, что у обычной Owner-сессии — истекает вместе с ней.
 const IMPERSONATION_COOKIE = "impersonation";
 
-export const PIN_LOCK_THRESHOLD = 5;
-export const PIN_LOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 export const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export function hashPassword(password: string) {

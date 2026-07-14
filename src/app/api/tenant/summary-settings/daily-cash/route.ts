@@ -33,6 +33,7 @@ const BOOLEAN_FIELDS = [
   "showExpenses",
   "showZoneBreakdown",
   "showCashOnHand",
+  "compact",
 ] as const satisfies readonly (keyof DailyCashSummarySettingsData)[];
 
 export async function PATCH(request: Request) {

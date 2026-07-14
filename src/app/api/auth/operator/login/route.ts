@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { PIN_LOCK_DURATION_MS, PIN_LOCK_THRESHOLD } from "@/lib/auth";
 import {
   createOperatorSession,
   findOperatorByPin,
@@ -8,6 +6,7 @@ import {
 } from "@/lib/operator-auth";
 import { setAccentCookie } from "@/lib/accent";
 import { getPreAuthLocaleCookie } from "@/lib/i18n";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
   const device = await getActivatedDevice();
@@ -18,13 +17,6 @@ export async function POST(request: Request) {
     );
   }
 
-  if (device.pinLockedUntil && device.pinLockedUntil > new Date()) {
-    return NextResponse.json(
-      { error: "Слишком много неверных попыток. Попробуйте позже." },
-      { status: 429 }
-    );
-  }
-
   const { pin } = await request.json();
   if (typeof pin !== "string" || !/^\d{4,6}$/.test(pin)) {
     return NextResponse.json({ error: "Введите ПИН-код" }, { status: 400 });
@@ -32,29 +24,9 @@ export async function POST(request: Request) {
 
   const operator = await findOperatorByPin(device.point.tenantId, pin);
   if (!operator) {
-    const failedPinAttempts = device.failedPinAttempts + 1;
-    const locked = failedPinAttempts >= PIN_LOCK_THRESHOLD;
-    await prisma.pointDevice.update({
-      where: { id: device.id },
-      data: {
-        failedPinAttempts,
-        pinLockedUntil: locked ? new Date(Date.now() + PIN_LOCK_DURATION_MS) : null,
-      },
-    });
-    return NextResponse.json(
-      {
-        error: locked
-          ? "Слишком много неверных попыток. Устройство временно заблокировано."
-          : "Неверный ПИН-код",
-      },
-      { status: locked ? 429 : 401 }
-    );
+    return NextResponse.json({ error: "Неверный ПИН-код" }, { status: 401 });
   }
 
-  await prisma.pointDevice.update({
-    where: { id: device.id },
-    data: { failedPinAttempts: 0, pinLockedUntil: null },
-  });
   await createOperatorSession(operator.id);
 
   // Whatever language the operator picked on the login screen (see
