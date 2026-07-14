@@ -125,6 +125,39 @@ export default function PointsPage() {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // Пока владелец держит открытым QR конкретного устройства (ждёт, пока
+  // сотрудник отсканирует и активирует), опрашиваем список точек — как
+  // только устройство становится activated, QR сам скрывается и список
+  // обновляется, без ручного обновления страницы (решение пользователя
+  // 2026-07-14, реальный кейс: после фикса бага с манифестом PWA владелец
+  // тестировал активацию заново и ожидал видеть результат сразу). Опрос
+  // ограничен по времени (10 минут) — если QR оставили открытым и забыли,
+  // не долбим сервер бесконечно.
+  useEffect(() => {
+    if (!qrOpenFor) return;
+    const deviceId = qrOpenFor;
+    const startedAt = Date.now();
+    const MAX_POLL_MS = 10 * 60 * 1000;
+
+    const interval = setInterval(async () => {
+      if (Date.now() - startedAt > MAX_POLL_MS) {
+        clearInterval(interval);
+        return;
+      }
+      const res = await fetch("/api/points");
+      if (!res.ok) return;
+      const data = await res.json();
+      const nextPoints: PointInfo[] = data.points ?? [];
+      setPoints(nextPoints);
+      const device = nextPoints.flatMap((p) => p.devices).find((d) => d.id === deviceId);
+      if (device?.activated) {
+        setQrOpenFor(null);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [qrOpenFor]);
+
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
     setError(null);
