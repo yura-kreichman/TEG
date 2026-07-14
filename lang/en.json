@@ -1100,7 +1100,6 @@
     "videoDeleteButton": "Delete video",
     "zonePhotoLabel": "Showcase photo",
     "changePhotoButton": "Change photo",
-    "removePhotoButton": "Remove photo",
     "ourFleetToggleLabel": "Show assets with photos",
     "ourFleetHint": "Grid of assets with photos — only assets that have a photo uploaded",
     "ourFleetDisabledHint": "No assets have a photo yet — upload a photo for at least one asset first",

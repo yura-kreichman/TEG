@@ -1068,7 +1068,6 @@
     "videoDeleteButton": "Удалить видео",
     "zonePhotoLabel": "Витринное фото",
     "changePhotoButton": "Сменить фото",
-    "removePhotoButton": "Удалить фото",
     "ourFleetToggleLabel": "Показывать активы с фото",
     "ourFleetHint": "Сетка активов с фото — только активы, у которых загружено фото",
     "ourFleetDisabledHint": "Нет ни одного актива с фото — сначала загрузите фото хотя бы одного актива",

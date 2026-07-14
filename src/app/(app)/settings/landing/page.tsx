@@ -752,7 +752,7 @@ export default function LandingSettingsPage() {
                               <PressableScale>
                                 <Button type="button" variant="destructive" size="sm" onClick={() => removeZonePhoto(zone.id)}>
                                   <Trash2 />
-                                  {t.landing.removePhotoButton}
+                                  {t.common.delete}
                                 </Button>
                               </PressableScale>
                             )}
