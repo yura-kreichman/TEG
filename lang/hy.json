@@ -1122,7 +1122,7 @@
     "seoCheckTitleLength": "Էջի վերնագիր — {min}–{max} նիշ",
     "seoCheckDescriptionLength": "Էջի նկարագրություն — {min}–{max} նիշ",
     "seoCheckOgImage": "Կա նկար սոցիալական ցանցերում նախադիտման համար",
-    "seoCheckAboutText": "«Մեր մասին» լրացված է",
+    "seoCheckAboutText": "«Մեր մասին» — առնվազն {min} նիշ",
     "seoCheckContacts": "Նշված է կապի առնվազն մեկ եղանակ",
     "seoCheckLocation": "Առնվազն մեկ կետում նշված է հասցե կամ աշխատանքային ժամեր",
     "seoRecommendationsTitle": "Ստուգաթերթը լրացված է — էջն էլ որտե՞ղ ավելացնել",

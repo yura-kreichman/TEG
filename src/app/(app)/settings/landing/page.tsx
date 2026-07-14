@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 import { EffectPreview } from "@/components/landing/effect-preview";
 import "@/components/landing/landing-themes.css";
 import { InstructionEditor } from "@/components/instructions/instruction-editor";
-import { EMPTY_DOC, isRichContentEmpty, type PMNode } from "@/lib/rich-text";
+import { EMPTY_DOC, extractPlainText, type PMNode } from "@/lib/rich-text";
 import { extractVerificationCode } from "@/lib/landing/verification-code";
 
 // Рекомендованная длина мета-тегов (докс: не задокументировано отдельно,
@@ -43,6 +43,12 @@ const TITLE_MIN = 35;
 const TITLE_MAX = 65;
 const DESCRIPTION_MIN = 70;
 const DESCRIPTION_MAX = 320;
+// "О нас" — по аналогии с Title/Description (решение пользователя
+// 2026-07-14), но без верхнего "плохо": 300 здесь просто "уже достаточно
+// подробно" для метра, не техническое ограничение (реальный серверный
+// потолок — 4000 симв., см. PATCH /api/tenant/landing).
+const ABOUT_MIN = 100;
+const ABOUT_GOOD = 300;
 
 // Показывается вместо чеклиста, когда он полностью пройден (решение
 // пользователя 2026-07-14) — просто справочный список названий площадок,
@@ -65,12 +71,26 @@ const SEO_RECOMMENDATION_NAMES = [
 // цвет отдельно: 0..min интерполируется red->green, min..max зелёный,
 // >max красный. Без i18n-текста внутри (только числа) — не нужно тащить
 // новые ключи в 14 языков ради самого счётчика.
-function SeoLengthMeter({ length, min, max }: { length: number; min: number; max: number }) {
-  const isOver = length > max;
+// warnOnOver=false — для полей БЕЗ реального технического потолка (в
+// отличие от Title/Description, которые Google обрезает в сниппете, у
+// "О нас" превышение max не вредит — max здесь просто "уже достаточно
+// подробно", а не лимит, поэтому переполнение НЕ красное, остаётся зелёным).
+function SeoLengthMeter({
+  length,
+  min,
+  max,
+  warnOnOver = true,
+}: {
+  length: number;
+  min: number;
+  max: number;
+  warnOnOver?: boolean;
+}) {
+  const isOver = warnOnOver && length > max;
   const ratioToMin = min > 0 ? Math.min(1, length / min) : 1;
   const hue = isOver ? 0 : ratioToMin * 120;
   const fillPercent = isOver ? 100 : Math.min(100, (length / max) * 100);
-  const isGood = length >= min && length <= max;
+  const isGood = length >= min && (warnOnOver ? length <= max : true);
   return (
     <div className="flex flex-col gap-1">
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -565,6 +585,12 @@ export default function LandingSettingsPage() {
                     onChange={(json) => update("aboutText", json)}
                     heightClassName="h-64 min-h-0"
                   />
+                  <SeoLengthMeter
+                    length={extractPlainText(landing.aboutText ?? EMPTY_DOC).length}
+                    min={ABOUT_MIN}
+                    max={ABOUT_GOOD}
+                    warnOnOver={false}
+                  />
                 </div>
               </SpringCard>
 
@@ -863,6 +889,7 @@ export default function LandingSettingsPage() {
                 // чеклист теперь 1:1 с тем, что видно в textarea).
                 const titleLen = (landing.metaTitleOverride ?? "").trim().length;
                 const descriptionLen = (landing.metaDescriptionOverride ?? "").trim().length;
+                const aboutLen = extractPlainText(landing.aboutText ?? EMPTY_DOC).length;
                 // Конкретные цифры прямо в тексте, не абстрактное "в
                 // рекомендованном диапазоне" — было неясно, что именно
                 // сделать (решение пользователя 2026-07-14: "лучше, чтобы
@@ -882,7 +909,7 @@ export default function LandingSettingsPage() {
                     ok: landing.galleryPhotos.length > 0 || !!landing.videoPoster || zones.some((z) => zoneContentByZoneId.get(z.id)?.photoUrl),
                     label: t.landing.seoCheckOgImage,
                   },
-                  { ok: !isRichContentEmpty(landing.aboutText), label: t.landing.seoCheckAboutText },
+                  { ok: aboutLen >= ABOUT_MIN, label: t.landing.seoCheckAboutText.replace("{min}", String(ABOUT_MIN)) },
                   {
                     ok: CONTACT_FIELDS.some(({ key }) => !!(landing as unknown as Record<string, string | null>)[key]),
                     label: t.landing.seoCheckContacts,

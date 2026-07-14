@@ -1122,7 +1122,7 @@
     "seoCheckTitleLength": "Sayfa başlığı — {min}–{max} karakter",
     "seoCheckDescriptionLength": "Sayfa açıklaması — {min}–{max} karakter",
     "seoCheckOgImage": "Sosyal medya önizlemesi için bir fotoğraf var",
-    "seoCheckAboutText": "\"Hakkımızda\" dolduruldu",
+    "seoCheckAboutText": "\"Hakkımızda\" — en az {min} karakter",
     "seoCheckContacts": "En az bir iletişim yöntemi belirtildi",
     "seoCheckLocation": "En az bir noktada adres veya çalışma saatleri belirtildi",
     "seoRecommendationsTitle": "Kontrol listesi tamamlandı — sayfa başka nereye eklenebilir",

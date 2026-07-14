@@ -1122,7 +1122,7 @@
     "seoCheckTitleLength": "Səhifə başlığı — {min}–{max} simvol",
     "seoCheckDescriptionLength": "Səhifə təsviri — {min}–{max} simvol",
     "seoCheckOgImage": "Sosial şəbəkələr üçün önizləmə şəkli var",
-    "seoCheckAboutText": "«Haqqımızda» doldurulub",
+    "seoCheckAboutText": "«Haqqımızda» — ən azı {min} simvol",
     "seoCheckContacts": "Ən azı bir əlaqə üsulu göstərilib",
     "seoCheckLocation": "Ən azı bir nöqtədə ünvan və ya iş saatları göstərilib",
     "seoRecommendationsTitle": "Siyahı tamamlandı — səhifəni daha haraya əlavə etmək olar",

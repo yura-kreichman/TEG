@@ -1122,7 +1122,7 @@
     "seoCheckTitleLength": "Tytuł strony — {min}–{max} znaków",
     "seoCheckDescriptionLength": "Opis strony — {min}–{max} znaków",
     "seoCheckOgImage": "Jest zdjęcie do podglądu w mediach społecznościowych",
-    "seoCheckAboutText": "Sekcja „O nas” jest uzupełniona",
+    "seoCheckAboutText": "„O nas” — co najmniej {min} znaków",
     "seoCheckContacts": "Podano co najmniej jeden sposób kontaktu",
     "seoCheckLocation": "Co najmniej jeden punkt ma adres lub godziny pracy",
     "seoRecommendationsTitle": "Lista kontrolna ukończona — gdzie jeszcze dodać stronę",

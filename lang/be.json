@@ -1122,7 +1122,7 @@
     "seoCheckTitleLength": "Загаловак старонкі — {min}–{max} сімвалаў",
     "seoCheckDescriptionLength": "Апісанне старонкі — {min}–{max} сімвалаў",
     "seoCheckOgImage": "Ёсць фота для прэв'ю ў сацсетках",
-    "seoCheckAboutText": "Запоўнена «Пра нас»",
+    "seoCheckAboutText": "«Пра нас» — не карацей за {min} сімвалаў",
     "seoCheckContacts": "Указаны хаця б адзін спосаб сувязі",
     "seoCheckLocation": "Указаны адрас або гадзіны працы хаця б аднаго пункта",
     "seoRecommendationsTitle": "Чэклісt пройдзены — куды яшчэ дадаць лендынг",

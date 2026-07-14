@@ -1122,7 +1122,7 @@
     "seoCheckTitleLength": "Sahifa sarlavhasi — {min}–{max} belgi",
     "seoCheckDescriptionLength": "Sahifa tavsifi — {min}–{max} belgi",
     "seoCheckOgImage": "Ijtimoiy tarmoqlar uchun rasm mavjud",
-    "seoCheckAboutText": "\"Biz haqimizda\" to'ldirilgan",
+    "seoCheckAboutText": "\"Biz haqimizda\" — kamida {min} belgi",
     "seoCheckContacts": "Kamida bitta aloqa usuli ko'rsatilgan",
     "seoCheckLocation": "Kamida bitta nuqtada manzil yoki ish vaqti ko'rsatilgan",
     "seoRecommendationsTitle": "Ro'yxat bajarildi — sahifani yana qayerga qo'shish mumkin",

@@ -1122,7 +1122,7 @@
     "seoCheckTitleLength": "Сарлавҳаи саҳифа — {min}–{max} аломат",
     "seoCheckDescriptionLength": "Тавсифи саҳифа — {min}–{max} аломат",
     "seoCheckOgImage": "Барои пешнамоиш дар шабакаҳои иҷтимоӣ акс мавҷуд аст",
-    "seoCheckAboutText": "Қисми «Дар бораи мо» пур карда шудааст",
+    "seoCheckAboutText": "«Дар бораи мо» — на кӯтоҳтар аз {min} аломат",
     "seoCheckContacts": "Ҳадди ақал як роҳи алоқа нишон дода шудааст",
     "seoCheckLocation": "Ҳадди ақал дар як нуқта суроға ё соатҳои корӣ нишон дода шудааст",
     "seoRecommendationsTitle": "Рӯйхат иҷро шуд — саҳифаро боз дар куҷо илова кардан мумкин",

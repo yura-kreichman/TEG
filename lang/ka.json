@@ -1122,7 +1122,7 @@
     "seoCheckTitleLength": "გვერდის სათაური — {min}–{max} სიმბოლო",
     "seoCheckDescriptionLength": "გვერდის აღწერა — {min}–{max} სიმბოლო",
     "seoCheckOgImage": "არის ფოტო სოციალურ ქსელებში გადახედვისთვის",
-    "seoCheckAboutText": "შევსებულია „ჩვენ შესახებ“",
+    "seoCheckAboutText": "„ჩვენ შესახებ“ — მინიმუმ {min} სიმბოლო",
     "seoCheckContacts": "მითითებულია მინიმუმ ერთი საკონტაქტო საშუალება",
     "seoCheckLocation": "მინიმუმ ერთ წერტილს აქვს მისამართი ან სამუშაო საათები",
     "seoRecommendationsTitle": "ჩეკლისტი შესრულებულია — სად კიდევ დაამატოთ გვერდი",

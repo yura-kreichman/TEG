@@ -1122,7 +1122,7 @@
     "seoCheckTitleLength": "Бет тақырыбы — {min}–{max} таңба",
     "seoCheckDescriptionLength": "Бет сипаттамасы — {min}–{max} таңба",
     "seoCheckOgImage": "Әлеуметтік желілер алдын ала қарауы үшін фото бар",
-    "seoCheckAboutText": "«Біз туралы» толтырылған",
+    "seoCheckAboutText": "«Біз туралы» — кемінде {min} таңба",
     "seoCheckContacts": "Кемінде бір байланыс тәсілі көрсетілген",
     "seoCheckLocation": "Кемінде бір нүктеде мекенжай немесе жұмыс уақыты көрсетілген",
     "seoRecommendationsTitle": "Тізім орындалды — бетті тағы қайда қосуға болады",

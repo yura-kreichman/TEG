@@ -1122,7 +1122,7 @@
     "seoCheckTitleLength": "Заголовок сторінки — {min}–{max} символів",
     "seoCheckDescriptionLength": "Опис сторінки — {min}–{max} символів",
     "seoCheckOgImage": "Є фото для перегляду в соцмережах",
-    "seoCheckAboutText": "Заповнено «Про нас»",
+    "seoCheckAboutText": "«Про нас» — не коротше {min} символів",
     "seoCheckContacts": "Вказано хоча б один спосіб зв'язку",
     "seoCheckLocation": "Вказано адресу або години роботи хоча б однієї точки",
     "seoRecommendationsTitle": "Чеклист пройдено — куди ще додати лендинг",
