@@ -8,6 +8,7 @@ import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -128,9 +129,16 @@ export default function InstructionEditorPage() {
           {instruction.status !== "archived" && (
             <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <PressableScale className="flex-1">
-                <Button type="button" variant="outline" className="w-full" onClick={saveDraft} disabled={saving || publishing}>
-                  {saved ? t.common.saved : t.common.save}
-                </Button>
+                <SaveButton
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={saveDraft}
+                  disabled={saving || publishing}
+                  saved={saved}
+                >
+                  {t.common.save}
+                </SaveButton>
               </PressableScale>
               <PressableScale className="flex-1">
                 <Button type="button" className="w-full gap-2" onClick={publish} disabled={saving || publishing}>

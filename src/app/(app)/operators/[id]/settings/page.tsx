@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
-  Check,
   Camera,
   ImagePlus,
   Smile,
@@ -17,13 +16,19 @@ import {
   Clock,
   Palette,
   Wallet,
+  Power,
+  PowerOff,
+  Trash2,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
+import { StatusChip } from "@/components/status-chip";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { ActionSheetItem } from "@/components/kebab-menu";
@@ -40,6 +45,7 @@ interface Profile {
   avatarUrl: string | null;
   iconKey: string | null;
   colorTag: string | null;
+  pin: string | null;
   allZonesAccess: boolean;
   allowedZones: { id: string; name: string }[];
   timeTrackingMode: "manual" | "auto";
@@ -191,22 +197,15 @@ export default function OperatorSettingsPage() {
     setZonesOpen(true);
   }
 
-  function toggleZoneSelected(zoneId: string) {
-    setZoneAccessSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(zoneId)) next.delete(zoneId);
-      else next.add(zoneId);
-      return next;
-    });
-  }
-
-  async function confirmZoneAccess() {
+  // Сохранение налету (фидбек 2026-07-14) — каждый переключатель сразу
+  // отправляет PATCH, отдельной кнопки "Сохранить" в этом bottom sheet нет.
+  async function saveZoneAccess(nextAll: boolean, nextSelected: Set<string>) {
     const res = await fetch(`/api/operators/${params.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        allZonesAccess: zoneAccessAll,
-        zoneIds: zoneAccessAll ? [] : [...zoneAccessSelected],
+        allZonesAccess: nextAll,
+        zoneIds: nextAll ? [] : [...nextSelected],
       }),
     });
     if (!res.ok) {
@@ -214,8 +213,21 @@ export default function OperatorSettingsPage() {
       setActionError(data.error ?? "Не удалось сохранить доступ к зонам");
       return;
     }
-    setZonesOpen(false);
+    setActionError(null);
     await loadAll();
+  }
+
+  function handleZoneAccessAllChange(value: boolean) {
+    setZoneAccessAll(value);
+    saveZoneAccess(value, zoneAccessSelected);
+  }
+
+  function toggleZoneSelected(zoneId: string) {
+    const next = new Set(zoneAccessSelected);
+    if (next.has(zoneId)) next.delete(zoneId);
+    else next.add(zoneId);
+    setZoneAccessSelected(next);
+    saveZoneAccess(zoneAccessAll, next);
   }
 
   function openRate() {
@@ -345,12 +357,6 @@ export default function OperatorSettingsPage() {
 
   if (checking || !profile) return null;
 
-  const zoneAccessValue = profile.allZonesAccess
-    ? t.operators.allZonesLabel
-    : profile.allowedZones.length > 0
-      ? profile.allowedZones.map((z) => z.name).join(", ")
-      : t.operators.noZoneAccessChip;
-
   return (
     <OwnerShell>
     <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
@@ -396,8 +402,32 @@ export default function OperatorSettingsPage() {
           <span className="mb-1 text-[11px] font-bold uppercase tracking-[.08em] text-muted-foreground/70">
             {t.operators.accessGroupLabel}
           </span>
-          <SettingsRow icon={KeyRound} label={t.operators.pinRowLabel} value="••••" onClick={openPin} />
-          <SettingsRow icon={MapPin} label={t.operators.zoneAccess} value={zoneAccessValue} onClick={openZones} />
+          <SettingsRow
+            icon={KeyRound}
+            label={t.operators.pinRowLabel}
+            value={profile.pin ?? "••••"}
+            onClick={openPin}
+          />
+          <button
+            type="button"
+            onClick={openZones}
+            className="flex w-full flex-col gap-2 border-t border-border py-3.5 text-left"
+          >
+            <span className="flex items-center gap-3">
+              <MapPin className="size-4 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1 text-body-airbnb">{t.operators.zoneAccess}</span>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            </span>
+            <span className="pl-7">
+              {profile.allZonesAccess ? (
+                <StatusChip variant="accent">{t.operators.allZonesChip}</StatusChip>
+              ) : profile.allowedZones.length > 0 ? (
+                <StatusChip variant="accent">{profile.allowedZones.map((z) => z.name).join(", ")}</StatusChip>
+              ) : (
+                <StatusChip variant="warning">{t.operators.noZoneAccessChip}</StatusChip>
+              )}
+            </span>
+          </button>
         </SpringCard>
 
         {moduleEnabled && (
@@ -486,21 +516,31 @@ export default function OperatorSettingsPage() {
           <p className="text-center text-caption-airbnb text-warning">{t.operators.deactivateOpenShiftWarning}</p>
         )}
 
-        <div className="mt-2 flex flex-col items-center gap-3">
-          <button
-            type="button"
-            onClick={handleToggleActive}
-            className={cn("text-body-airbnb font-semibold", profile.active ? "text-destructive" : "text-primary")}
-          >
-            {profile.active ? t.operators.deactivateOperatorButton : t.operators.activateOperatorButton}
-          </button>
-          <button
-            type="button"
-            onClick={() => setConfirmDeleteOpen(true)}
-            className="text-caption-airbnb text-muted-foreground"
-          >
-            {t.operators.deleteButton}
-          </button>
+        <div className="mt-2 flex gap-2">
+          <PressableScale className="flex-1">
+            <Button
+              type="button"
+              variant={profile.active ? "destructive" : "default"}
+              size="sm"
+              className="w-full gap-1.5"
+              onClick={handleToggleActive}
+            >
+              {profile.active ? <PowerOff className="size-4" /> : <Power className="size-4" />}
+              {profile.active ? t.operators.deactivateOperatorButton : t.operators.activateOperatorButton}
+            </Button>
+          </PressableScale>
+          <PressableScale className="flex-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full gap-1.5"
+              onClick={() => setConfirmDeleteOpen(true)}
+            >
+              <Trash2 className="size-4" />
+              {t.operators.deleteButton}
+            </Button>
+          </PressableScale>
         </div>
       </div>
 
@@ -536,9 +576,9 @@ export default function OperatorSettingsPage() {
           <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operators.rename}</h2>
           <Input autoFocus value={renameValue} onChange={(e) => setRenameValue(e.target.value)} />
           <PressableScale>
-            <Button className="w-full" onClick={confirmRename}>
+            <SaveButton className="w-full" onClick={confirmRename}>
               {t.common.save}
-            </Button>
+            </SaveButton>
           </PressableScale>
         </div>
       </BottomSheet>
@@ -560,9 +600,9 @@ export default function OperatorSettingsPage() {
           </div>
           {actionError && <p className="text-sm text-destructive">{actionError}</p>}
           <PressableScale>
-            <Button className="w-full" onClick={confirmResetPin}>
+            <SaveButton className="w-full" onClick={confirmResetPin}>
               {t.common.save}
-            </Button>
+            </SaveButton>
           </PressableScale>
         </div>
       </BottomSheet>
@@ -570,14 +610,10 @@ export default function OperatorSettingsPage() {
       <BottomSheet open={zonesOpen} onClose={() => setZonesOpen(false)}>
         <div className="flex flex-col gap-3 pt-2">
           <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.operators.zoneAccessTitle}</h2>
-          <button
-            type="button"
-            onClick={() => setZoneAccessAll((prev) => !prev)}
-            className="flex w-full items-center justify-between border-t border-border py-3.5 text-left text-body-airbnb first:border-t-0"
-          >
+          <div className="flex w-full items-center justify-between border-t border-border py-3.5 text-body-airbnb first:border-t-0">
             {t.operators.allZonesLabel}
-            {zoneAccessAll && <Check className="size-4 shrink-0 text-primary" />}
-          </button>
+            <Switch checked={zoneAccessAll} onCheckedChange={handleZoneAccessAllChange} />
+          </div>
           {!zoneAccessAll && (
             <div className="-mt-1 max-h-72 overflow-y-auto">
               {Object.entries(
@@ -589,26 +625,22 @@ export default function OperatorSettingsPage() {
                 <div key={pointName}>
                   <p className="pt-2 text-section-title">{pointName}</p>
                   {zones.map((zone) => (
-                    <button
+                    <div
                       key={zone.id}
-                      type="button"
-                      onClick={() => toggleZoneSelected(zone.id)}
-                      className="flex w-full items-center justify-between border-t border-border py-3.5 text-left text-body-airbnb first:border-t-0"
+                      className="flex w-full items-center justify-between border-t border-border py-3.5 text-body-airbnb first:border-t-0"
                     >
                       {zone.name}
-                      {zoneAccessSelected.has(zone.id) && <Check className="size-4 shrink-0 text-primary" />}
-                    </button>
+                      <Switch
+                        checked={zoneAccessSelected.has(zone.id)}
+                        onCheckedChange={() => toggleZoneSelected(zone.id)}
+                      />
+                    </div>
                   ))}
                 </div>
               ))}
             </div>
           )}
           {actionError && <p className="text-sm text-destructive">{actionError}</p>}
-          <PressableScale>
-            <Button className="w-full" onClick={confirmZoneAccess}>
-              {t.common.save}
-            </Button>
-          </PressableScale>
         </div>
       </BottomSheet>
 
@@ -628,9 +660,9 @@ export default function OperatorSettingsPage() {
           </div>
           {actionError && <p className="text-sm text-destructive">{actionError}</p>}
           <PressableScale>
-            <Button className="w-full" onClick={confirmRate}>
+            <SaveButton className="w-full" onClick={confirmRate}>
               {t.common.save}
-            </Button>
+            </SaveButton>
           </PressableScale>
         </div>
       </BottomSheet>
@@ -641,9 +673,9 @@ export default function OperatorSettingsPage() {
           <ColorTagPicker value={colorValue} onChange={setColorValue} />
           <span className="text-caption-airbnb">{t.operators.colorTagHint}</span>
           <PressableScale>
-            <Button className="w-full" onClick={confirmColor}>
+            <SaveButton className="w-full" onClick={confirmColor}>
               {t.common.save}
-            </Button>
+            </SaveButton>
           </PressableScale>
         </div>
       </BottomSheet>
@@ -654,11 +686,15 @@ export default function OperatorSettingsPage() {
           <p className="text-body-airbnb">{t.operators.confirmDelete}</p>
           {actionError && <p className="text-sm text-destructive">{actionError}</p>}
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setConfirmDeleteOpen(false)}>
-              {t.common.cancel}
-            </Button>
             <PressableScale className="flex-1">
-              <Button variant="destructive" className="w-full" onClick={confirmDelete}>
+              <Button variant="outline" className="w-full gap-1.5" onClick={() => setConfirmDeleteOpen(false)}>
+                <X className="size-4" />
+                {t.common.cancel}
+              </Button>
+            </PressableScale>
+            <PressableScale className="flex-1">
+              <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDelete}>
+                <Trash2 className="size-4" />
                 {t.common.delete}
               </Button>
             </PressableScale>

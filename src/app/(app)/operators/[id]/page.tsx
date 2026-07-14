@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Pencil, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -620,9 +621,9 @@ export default function OperatorCardPage() {
           )}
           {moneyError && <p className="text-sm text-destructive">{moneyError}</p>}
           <PressableScale>
-            <Button className="w-full" onClick={submitMoneyForm}>
-              {t.common.save}
-            </Button>
+            <SaveButton className="w-full" onClick={submitMoneyForm}>
+            {t.common.save}
+            </SaveButton>
           </PressableScale>
         </div>
       </BottomSheet>
@@ -690,9 +691,9 @@ export default function OperatorCardPage() {
             ))}
             {editError && <p className="text-sm text-destructive">{editError}</p>}
             <PressableScale>
-              <Button className="w-full" onClick={submitShiftEdit}>
-                {t.common.save}
-              </Button>
+              <SaveButton className="w-full" onClick={submitShiftEdit}>
+              {t.common.save}
+              </SaveButton>
             </PressableScale>
 
             {shifts[0]?.id === editingShift.id &&
@@ -700,16 +701,20 @@ export default function OperatorCardPage() {
                 <div className="flex flex-col gap-2 border-t border-border pt-4">
                   <p className="text-body-airbnb">{t.operatorApp.workTime.deleteShiftConfirm}</p>
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => setConfirmDeleteShift(false)}>
-                      {t.common.cancel}
-                    </Button>
+                    <PressableScale className="flex-1">
+                      <Button variant="outline" className="w-full gap-1.5" onClick={() => setConfirmDeleteShift(false)}>
+                        <X className="size-4" />
+                        {t.common.cancel}
+                      </Button>
+                    </PressableScale>
                     <PressableScale className="flex-1">
                       <Button
                         variant="destructive"
-                        className="w-full"
+                        className="w-full gap-1.5"
                         disabled={deletingShift}
                         onClick={deleteShift}
                       >
+                        <Trash2 className="size-4" />
                         {t.common.delete}
                       </Button>
                     </PressableScale>
@@ -747,25 +752,29 @@ export default function OperatorCardPage() {
             </div>
             {editMoneyOpError && <p className="text-sm text-destructive">{editMoneyOpError}</p>}
             <PressableScale>
-              <Button className="w-full" onClick={submitMoneyOpEdit}>
-                {t.common.save}
-              </Button>
+              <SaveButton className="w-full" onClick={submitMoneyOpEdit}>
+              {t.common.save}
+              </SaveButton>
             </PressableScale>
 
             {confirmDeleteMoneyOp ? (
               <div className="flex flex-col gap-2 border-t border-border pt-4">
                 <p className="text-body-airbnb">{t.operatorApp.workTime.deleteMoneyOpConfirm}</p>
                 <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1" onClick={() => setConfirmDeleteMoneyOp(false)}>
-                    {t.common.cancel}
-                  </Button>
+                  <PressableScale className="flex-1">
+                    <Button variant="outline" className="w-full gap-1.5" onClick={() => setConfirmDeleteMoneyOp(false)}>
+                      <X className="size-4" />
+                      {t.common.cancel}
+                    </Button>
+                  </PressableScale>
                   <PressableScale className="flex-1">
                     <Button
                       variant="destructive"
-                      className="w-full"
+                      className="w-full gap-1.5"
                       disabled={deletingMoneyOp}
                       onClick={deleteMoneyOp}
                     >
+                      <Trash2 className="size-4" />
                       {t.common.delete}
                     </Button>
                   </PressableScale>

@@ -63,6 +63,7 @@ export async function POST(request: Request) {
     data: {
       tenantId: owner.tenantId,
       name: name.trim(),
+      pin,
       pinHash: await hashPin(pin),
       createdByUserId: owner.user.id,
       // Новый оператор — в конец списка, не перед существующими.

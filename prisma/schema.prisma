@@ -221,15 +221,21 @@ model User {
 // пользователя 2026-07-12: "включи Push-уведомления для Владельца если
 // установлено PWA"). endpoint уникален — тот же браузер/устройство при
 // повторной подписке (например, после переустановки PWA) обновляет свою же
-// строку, а не плодит дубликаты. userId — Owner, а не tenantId напрямую:
-// подписка живёт в конкретном браузере конкретного залогиненного User,
-// один Owner может подписать несколько своих устройств.
+// строку, а не плодит дубликаты. userId — Owner, подписка живёт в конкретном
+// браузере конкретного залогиненного User, один Owner может подписать
+// несколько своих устройств. operatorId — то же самое для Оператора
+// (добавлено 2026-07-14 для пуш-уведомлений о новых Задачах): ровно одно из
+// userId/operatorId заполнено, второе null — проверяется в коде роутов
+// подписки, не на уровне БД (как и остальные взаимоисключающие пары полей
+// в проекте, см. Asset.photoUrl/iconKey).
 model PushSubscription {
   id       String @id @default(cuid())
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userId   String
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String?
+  user     User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  operatorId String?
+  operator   Operator? @relation(fields: [operatorId], references: [id], onDelete: Cascade)
 
   endpoint String @unique
   p256dh   String
@@ -269,6 +275,13 @@ model Operator {
 
   name      String
   pinHash   String
+  // Открытым текстом рядом с хешем — чтобы Владелец мог посмотреть ПИН
+  // оператора повторно (запрос 2026-07-14), не только задать его через сброс.
+  // Не секрет для Владельца по конструкции: PIN назначает и меняет только
+  // он сам (00-architecture.md), это код точки/устройства, а не пароль
+  // аккаунта — вход всё равно проверяется по pinHash, это поле только для
+  // отображения в кабинете Владельца.
+  pin       String?
   active    Boolean @default(true)
   // Загруженное фото — как Asset.photoUrl. iconKey — аватар из личной
   // коллекции (public/icon-library/avatars/), запасной вариант, если фото не
@@ -324,6 +337,7 @@ model Operator {
   shifts             Shift[]
   balanceCarryovers  OperatorBalanceCarryover[]
   assignedTasks      Task[]                     @relation("TaskAssignedOperators")
+  pushSubscriptions  PushSubscription[]
 }
 
 // ============================================================================

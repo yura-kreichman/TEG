@@ -3,8 +3,10 @@
 // Клиентская часть Web Push (фидбек пользователя 2026-07-12) — подписка на
 // push через Service Worker (public/sw.js уже зарегистрирован в
 // install-app-banner.tsx). Публичный VAPID-ключ берём с сервера
-// (/api/tenant/push/vapid-public-key), а не из NEXT_PUBLIC_* — см. комментарий
-// в самом роуте, почему.
+// (/api/push/vapid-public-key), а не из NEXT_PUBLIC_* — см. комментарий
+// в самом роуте, почему. Роуты /api/push/* — общие для Владельца и Оператора
+// (см. src/lib/push-identity.ts, добавлено 2026-07-14 для уведомлений о
+// новых Задачах) — этот модуль не должен сам знать, кто сейчас залогинен.
 
 // Стандартное преобразование base64url VAPID-ключа в Uint8Array, которого
 // требует PushManager.subscribe() — единственный способ передать
@@ -33,7 +35,7 @@ export type SubscribeResult = { ok: true } | { ok: false; error: "notSupported" 
 export async function subscribeToPush(): Promise<SubscribeResult> {
   if (!isPushSupported()) return { ok: false, error: "notSupported" };
 
-  const keyRes = await fetch("/api/tenant/push/vapid-public-key");
+  const keyRes = await fetch("/api/push/vapid-public-key");
   if (!keyRes.ok) return { ok: false, error: "serverError" };
   const { publicKey } = await keyRes.json();
 
@@ -48,7 +50,7 @@ export async function subscribeToPush(): Promise<SubscribeResult> {
       applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
     });
 
-    const subscribeRes = await fetch("/api/tenant/push/subscribe", {
+    const subscribeRes = await fetch("/api/push/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(subscription.toJSON()),
@@ -69,7 +71,7 @@ export async function unsubscribeFromPush(): Promise<void> {
   if (!subscription) return;
   const endpoint = subscription.endpoint;
   await subscription.unsubscribe();
-  await fetch("/api/tenant/push/unsubscribe", {
+  await fetch("/api/push/unsubscribe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ endpoint }),

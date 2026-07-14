@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
 import { TASK_SELECT, isTaskStatus } from "@/lib/tasks";
+import { sendPushToOperators } from "@/lib/push-notifications";
 
 export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]/tasks">) {
   const owner = await requireOwner();
@@ -75,5 +76,41 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     select: TASK_SELECT,
   });
 
+  await notifyOperatorsOfNewTask(owner.tenantId, pointId, operatorIds, task.title);
+
   return NextResponse.json(task, { status: 201 });
+}
+
+// Push-уведомление о новой Задаче (фидбек пользователя 2026-07-14). Кому
+// именно слать зависит от назначения — совпадает с правилом видимости
+// задачи для Оператора (src/app/api/operator/tasks/route.ts): назначена
+// конкретным операторам — только им; иначе ("пусто = видят все операторы")
+// адресатов как таковых нет — операторы не привязаны к точке напрямую
+// (заходят через устройство точки), поэтому в этом случае уведомляем всех
+// активных операторов тенанта с доступом к зонам этой точки (allZonesAccess
+// или явный allowedZones на зону точки) — тот же критерий, что уже решает,
+// кто "работает" эту точку, для доступа к зонам (операторы/[id]/settings).
+async function notifyOperatorsOfNewTask(
+  tenantId: string,
+  pointId: string,
+  assignedOperatorIds: string[],
+  taskTitle: string
+): Promise<void> {
+  let targetOperatorIds = assignedOperatorIds;
+  if (targetOperatorIds.length === 0) {
+    const operators = await prisma.operator.findMany({
+      where: {
+        tenantId,
+        active: true,
+        OR: [{ allZonesAccess: true }, { allowedZones: { some: { pointId } } }],
+      },
+      select: { id: true },
+    });
+    targetOperatorIds = operators.map((o) => o.id);
+  }
+  await sendPushToOperators(targetOperatorIds, {
+    title: "🗒️ Новая задача",
+    body: taskTitle,
+    url: "/operator",
+  });
 }

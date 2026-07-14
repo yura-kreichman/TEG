@@ -38,6 +38,7 @@ export async function POST(
   await prisma.operator.update({
     where: { id },
     data: {
+      pin,
       pinHash: await hashPin(pin),
     },
   });

@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Check, Pencil, Palette, Camera, ImagePlus, ListChecks, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp, Smile } from "lucide-react";
+import { Check, Pencil, Palette, Camera, ImagePlus, ListChecks, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp, Smile, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OwnerShell } from "@/components/owner-shell";
@@ -615,9 +616,9 @@ export default function ZoneDetailPage() {
                 {t.common.cancel}
               </Button>
               <PressableScale className="flex-1">
-                <Button className="w-full" onClick={confirmRenameZone}>
-                  {t.common.save}
-                </Button>
+                <SaveButton className="w-full" onClick={confirmRenameZone}>
+                {t.common.save}
+                </SaveButton>
               </PressableScale>
             </div>
           </div>
@@ -628,11 +629,15 @@ export default function ZoneDetailPage() {
             <p className="text-body-airbnb">{t.zoneDetail.confirmDeleteZone}</p>
             {zoneActionError && <p className="text-sm text-destructive">{zoneActionError}</p>}
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setZoneKebabView("menu")}>
-                {t.common.cancel}
-              </Button>
               <PressableScale className="flex-1">
-                <Button variant="destructive" className="w-full" onClick={confirmDeleteZone}>
+                <Button variant="outline" className="w-full gap-1.5" onClick={() => setZoneKebabView("menu")}>
+                  <X className="size-4" />
+                  {t.common.cancel}
+                </Button>
+              </PressableScale>
+              <PressableScale className="flex-1">
+                <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDeleteZone}>
+                  <Trash2 className="size-4" />
                   {t.common.delete}
                 </Button>
               </PressableScale>
@@ -705,9 +710,9 @@ export default function ZoneDetailPage() {
                 {t.common.cancel}
               </Button>
               <PressableScale className="flex-1">
-                <Button className="w-full" onClick={confirmEditTariff}>
-                  {t.common.save}
-                </Button>
+                <SaveButton className="w-full" onClick={confirmEditTariff}>
+                {t.common.save}
+                </SaveButton>
               </PressableScale>
             </div>
           </div>
@@ -718,11 +723,15 @@ export default function ZoneDetailPage() {
             <p className="text-body-airbnb">{t.zoneDetail.confirmDeleteTariff}</p>
             {deleteTariffError && <p className="text-sm text-destructive">{deleteTariffError}</p>}
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setTariffKebabView("menu")}>
-                {t.common.cancel}
-              </Button>
               <PressableScale className="flex-1">
-                <Button variant="destructive" className="w-full" onClick={confirmDeleteTariff}>
+                <Button variant="outline" className="w-full gap-1.5" onClick={() => setTariffKebabView("menu")}>
+                  <X className="size-4" />
+                  {t.common.cancel}
+                </Button>
+              </PressableScale>
+              <PressableScale className="flex-1">
+                <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDeleteTariff}>
+                  <Trash2 className="size-4" />
                   {t.common.delete}
                 </Button>
               </PressableScale>
@@ -825,9 +834,9 @@ export default function ZoneDetailPage() {
                 {t.common.cancel}
               </Button>
               <PressableScale className="flex-1">
-                <Button className="w-full" onClick={confirmEditAsset}>
-                  {t.common.save}
-                </Button>
+                <SaveButton className="w-full" onClick={confirmEditAsset}>
+                {t.common.save}
+                </SaveButton>
               </PressableScale>
             </div>
           </div>
@@ -837,11 +846,15 @@ export default function ZoneDetailPage() {
             <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.zoneDetail.deleteAssetAction}</h2>
             <p className="text-body-airbnb">{t.zoneDetail.confirmDeleteAsset}</p>
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setAssetKebabView("menu")}>
-                {t.common.cancel}
-              </Button>
               <PressableScale className="flex-1">
-                <Button variant="destructive" className="w-full" onClick={confirmDeleteAsset}>
+                <Button variant="outline" className="w-full gap-1.5" onClick={() => setAssetKebabView("menu")}>
+                  <X className="size-4" />
+                  {t.common.cancel}
+                </Button>
+              </PressableScale>
+              <PressableScale className="flex-1">
+                <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDeleteAsset}>
+                  <Trash2 className="size-4" />
                   {t.common.delete}
                 </Button>
               </PressableScale>
@@ -878,9 +891,9 @@ export default function ZoneDetailPage() {
             {editUploading && <p className="text-caption-airbnb">{t.zoneDetail.uploading}</p>}
             {editAssetError && <p className="text-sm text-destructive">{editAssetError}</p>}
             <PressableScale>
-              <Button className="w-full" onClick={confirmEditAsset}>
-                {t.common.save}
-              </Button>
+              <SaveButton className="w-full" onClick={confirmEditAsset}>
+              {t.common.save}
+              </SaveButton>
             </PressableScale>
           </div>
         </BottomSheet>

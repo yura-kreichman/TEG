@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/admin-shell";
 import { SpringCard } from "@/components/spring-card";
 import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/components/i18n-provider";
@@ -354,16 +355,21 @@ export default function AdminSettingsPage() {
                 />
               </div>
               {credentialsError && <p className="text-sm text-destructive">{credentialsError}</p>}
-              <Button type="button" disabled={credentialsSaving || !currentPassword.trim()} onClick={saveCredentials}>
-                {credentialsSaving ? t.admin.testChecking : credentialsSaved ? t.common.saved : t.common.save}
-              </Button>
+              <SaveButton
+                type="button"
+                disabled={credentialsSaving || !currentPassword.trim()}
+                onClick={saveCredentials}
+                saved={credentialsSaved}
+              >
+                {credentialsSaving ? t.admin.testChecking : t.common.save}
+              </SaveButton>
             </div>
           </SpringCard>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="button" onClick={save}>
-            {saved ? t.common.saved : t.common.save}
-          </Button>
+          <SaveButton type="button" onClick={save} saved={saved}>
+            {t.common.save}
+          </SaveButton>
         </div>
       </div>
     </AdminShell>

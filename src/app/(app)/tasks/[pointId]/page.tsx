@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, ClipboardList, Wrench, CheckCircle2, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, ClipboardList, Wrench, CheckCircle2, MapPin, X } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { SpringCard } from "@/components/spring-card";
@@ -11,6 +11,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { ActionSheetItem } from "@/components/kebab-menu";
 import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -452,9 +453,9 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
           </div>
           {saveError && <p className="text-sm text-destructive">{saveError}</p>}
           <PressableScale>
-            <Button type="button" className="w-full" onClick={saveTask} disabled={!title.trim()}>
+            <SaveButton type="button" className="w-full" onClick={saveTask} disabled={!title.trim()}>
               {t.common.save}
-            </Button>
+            </SaveButton>
           </PressableScale>
         </div>
       </BottomSheet>
@@ -496,11 +497,15 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
           <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.tasks.confirmDeleteTitle}</h2>
           <p className="text-body-airbnb">{t.tasks.confirmDeleteBody}</p>
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setConfirmDelete(false)}>
-              {t.common.cancel}
-            </Button>
             <PressableScale className="flex-1">
-              <Button variant="destructive" className="w-full" onClick={deleteTask}>
+              <Button variant="outline" className="w-full gap-1.5" onClick={() => setConfirmDelete(false)}>
+                <X className="size-4" />
+                {t.common.cancel}
+              </Button>
+            </PressableScale>
+            <PressableScale className="flex-1">
+              <Button variant="destructive" className="w-full gap-1.5" onClick={deleteTask}>
+                <Trash2 className="size-4" />
                 {t.common.delete}
               </Button>
             </PressableScale>

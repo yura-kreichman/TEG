@@ -7,6 +7,7 @@ import { useI18n } from "@/components/i18n-provider";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { Label } from "@/components/ui/label";
+import { SavedCheckmark } from "@/components/ui/saved-checkmark";
 import { WheelTimePicker } from "@/components/wheel-time-picker";
 import { TimeSelect } from "@/components/time-select";
 import { toleranceCrossesBusinessDayBoundary } from "@/lib/business-day";
@@ -115,9 +116,9 @@ export default function WorkTimeSettingsPage() {
                 <span className="text-caption-airbnb">{t.settings.businessDayBoundaryHint}</span>
               </div>
             </div>
-            {(savedField === "defaultShiftStartTime" || savedField === "businessDayBoundary") && (
-              <p className="text-center text-body-airbnb text-success">{t.common.saved}</p>
-            )}
+            <SavedCheckmark
+              show={savedField === "defaultShiftStartTime" || savedField === "businessDayBoundary"}
+            />
           </SpringCard>
 
           <SpringCard animate={false} hover={false} className="flex flex-col gap-3">
@@ -148,9 +149,9 @@ export default function WorkTimeSettingsPage() {
                 onChange={(v) => saveTolerance("lateToleranceMinutes", v.hour, v.minute)}
               />
             </div>
-            {(savedField === "earlyToleranceMinutes" || savedField === "lateToleranceMinutes") && (
-              <p className="text-center text-body-airbnb text-success">{t.common.saved}</p>
-            )}
+            <SavedCheckmark
+              show={savedField === "earlyToleranceMinutes" || savedField === "lateToleranceMinutes"}
+            />
             {crossesBoundary && (
               <div className="flex items-start gap-2 rounded-control bg-warning/10 p-3 text-caption-airbnb text-warning">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" />

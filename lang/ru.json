@@ -696,6 +696,7 @@
     "allZonesLabel": "Все зоны",
     "allZonesChip": "Все зоны",
     "noZoneAccessChip": "Нет доступа к зонам",
+    "inactiveSectionLabel": "Неактивные",
     "colorTagAction": "Цветовая метка",
     "colorTagHint": "Используется в сводках, табеле и отчётах",
     "settingsTitle": "Настройки",

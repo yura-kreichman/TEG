@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, X } from "lucide-react";
 import { AdminShell } from "@/components/admin-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
@@ -10,6 +10,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { ActionSheetItem, KebabButton } from "@/components/kebab-menu";
 import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/components/i18n-provider";
@@ -260,9 +261,9 @@ export default function AdminPackagesPage() {
           </div>
           {saveError && <p className="text-sm text-destructive">{saveError}</p>}
           <PressableScale>
-            <Button type="button" className="w-full" onClick={save} disabled={!form.name.trim()}>
+            <SaveButton type="button" className="w-full" onClick={save} disabled={!form.name.trim()}>
               {t.common.save}
-            </Button>
+            </SaveButton>
           </PressableScale>
         </div>
       </BottomSheet>
@@ -287,11 +288,15 @@ export default function AdminPackagesPage() {
           <p className="text-body-airbnb">{t.admin.confirmDeletePackageBody}</p>
           {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setConfirmDelete(false)}>
-              {t.common.cancel}
-            </Button>
             <PressableScale className="flex-1">
-              <Button variant="destructive" className="w-full" onClick={deletePackage}>
+              <Button variant="outline" className="w-full gap-1.5" onClick={() => setConfirmDelete(false)}>
+                <X className="size-4" />
+                {t.common.cancel}
+              </Button>
+            </PressableScale>
+            <PressableScale className="flex-1">
+              <Button variant="destructive" className="w-full gap-1.5" onClick={deletePackage}>
+                <Trash2 className="size-4" />
                 {t.common.delete}
               </Button>
             </PressableScale>

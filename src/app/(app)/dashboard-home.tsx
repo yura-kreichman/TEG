@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
 import { CalendarDays, ChevronRight, ImagePlus, KeyRound, LogOut, Pencil } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -470,9 +471,9 @@ export function OwnerDashboardCard({
               {t.common.cancel}
             </Button>
             <PressableScale className="flex-1">
-              <Button className="w-full" onClick={confirmRename}>
-                {t.common.save}
-              </Button>
+              <SaveButton className="w-full" onClick={confirmRename}>
+              {t.common.save}
+              </SaveButton>
             </PressableScale>
           </div>
         </div>

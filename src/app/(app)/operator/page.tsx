@@ -127,6 +127,27 @@ export default function OperatorHomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
+  // Список задач должен обновляться "сразу" (запрос пользователя 2026-07-14),
+  // не только при заходе на экран. Два независимых механизма:
+  // 1) push от сервера при создании задачи будит Service Worker, который
+  //    рассылает postMessage открытым вкладкам (public/sw.js) — сработает
+  //    мгновенно, пока экран открыт, без ожидания уведомления/клика.
+  // 2) резервный опрос раз в 25с — если у Оператора push не разрешён (или
+  //    временно недоступен), список всё равно не "зависнет" навсегда.
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.data?.type === "push-received") loadTasks();
+    }
+    navigator.serviceWorker?.addEventListener("message", handleMessage);
+
+    const interval = setInterval(loadTasks, 25000);
+
+    return () => {
+      navigator.serviceWorker?.removeEventListener("message", handleMessage);
+      clearInterval(interval);
+    };
+  }, []);
+
   useEffect(() => {
     if (!roaming) return;
     fetch("/api/operator/points")

@@ -8,10 +8,7 @@ import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { PressableScale } from "@/components/motion/pressable-scale";
-// Тест нового стиля тумблера ТОЛЬКО на этой странице (решение пользователя
-// 2026-07-14) — алиас на SwitchDepth вместо обычного Switch, единственная
-// строка, которую нужно откатить, если тест не понравится.
-import { SwitchDepth as Switch } from "@/components/ui/switch-depth";
+import { Switch } from "@/components/ui/switch";
 import { TelegramConnectSheet } from "@/components/summary-telegram-connect-sheet";
 import { EmailChannelSheet } from "@/components/summary-email-sheet";
 import { useI18n } from "@/components/i18n-provider";

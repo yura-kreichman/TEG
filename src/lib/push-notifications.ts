@@ -83,6 +83,22 @@ export async function sendPushToTenant(tenantId: string, payload: PushPayload): 
   await sendToSubscriptions(subscriptions, payload);
 }
 
+// Уведомление о новой/назначенной Задаче (фидбек пользователя 2026-07-14) —
+// целевые операторы решает вызывающий код (src/app/api/points/[id]/tasks/route.ts),
+// эта функция просто рассылает по их подпискам. Отдельно от sendPushToTenant —
+// та шлёт ВСЕМ устройствам Owner'ов тенанта (сводки/инструктажи), здесь
+// адресат — конкретный список операторов.
+export async function sendPushToOperators(operatorIds: string[], payload: PushPayload): Promise<void> {
+  if (operatorIds.length === 0) return;
+  const config = await loadVapidConfig();
+  if (!config) return;
+  webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
+
+  const subscriptions = await prisma.pushSubscription.findMany({ where: { operatorId: { in: operatorIds } } });
+  if (subscriptions.length === 0) return;
+  await sendToSubscriptions(subscriptions, payload);
+}
+
 export type SendTestPushResult =
   | { ok: true; sent: number }
   | { ok: false; error: "notConfigured" | "noSubscriptions" | "allFailed" };

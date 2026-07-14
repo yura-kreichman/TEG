@@ -8,6 +8,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { useI18n } from "@/components/i18n-provider";
 import { isAndroid, isIOS, isIOSSafari, getAndroidBrowser } from "@/lib/browser-detect";
+import { isPushSupported, getPushSubscription, subscribeToPush } from "@/lib/push-client";
 import type { Dictionary } from "@/lib/i18n";
 
 // Снуз, не полное скрытие (фидбек пользователя 2026-07-12: "добавь крестик
@@ -22,6 +23,19 @@ const SNOOZE_MS = 2 * 24 * 60 * 60 * 1000;
 function isSnoozed(): boolean {
   const until = Number(localStorage.getItem(DISMISS_KEY) ?? 0);
   return Date.now() < until;
+}
+
+// Best-effort автоподписка на push (см. вызовы ниже) — только в standalone
+// (реально установленное PWA, не обычная вкладка браузера) и только если
+// браузер ещё не отказывал явно (permission === "denied" второй раз спросить
+// нельзя — браузер просто не покажет диалог) и подписки на этом устройстве
+// ещё нет.
+async function ensurePushSubscribed(standalone: boolean): Promise<void> {
+  if (!standalone || !isPushSupported()) return;
+  if (typeof Notification !== "undefined" && Notification.permission === "denied") return;
+  const existing = await getPushSubscription();
+  if (existing) return;
+  await subscribeToPush().catch(() => {});
 }
 
 interface BeforeInstallPromptEvent extends Event {
@@ -89,12 +103,25 @@ export default function InstallAppBanner() {
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    setInstalled(window.matchMedia("(display-mode: standalone)").matches);
+    const standalone = window.matchMedia("(display-mode: standalone)").matches;
+    setInstalled(standalone);
     setDismissed(isSnoozed());
 
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     }
+
+    // По умолчанию запрашиваем разрешение на push (запрос пользователя
+    // 2026-07-14: "в PWA всегда должен быть по умолчанию запрос на
+    // Push-уведомления") — без этого Оператор не узнаёт о новой Задаче, пока
+    // сам не откроет приложение. subscribeToPush() бьёт в единый роут
+    // /api/push/subscribe (src/lib/push-identity.ts), который сам понимает,
+    // Владелец сейчас или Оператор — этому компоненту роль знать не нужно.
+    // Молча проглатываем отказ (permissionDenied) — Владелец всегда может
+    // включить вручную позже на /settings/push, если случайно отклонил здесь;
+    // у Оператора отдельного экрана настроек push нет, но повторный показ
+    // системного диалога браузер всё равно не даст — тут только один шанс.
+    ensurePushSubscribed(standalone);
 
     function handleBeforeInstallPrompt(event: Event) {
       event.preventDefault();
@@ -103,6 +130,7 @@ export default function InstallAppBanner() {
     function handleAppInstalled() {
       setInstalled(true);
       setDeferredPrompt(null);
+      ensurePushSubscribed(true);
     }
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);

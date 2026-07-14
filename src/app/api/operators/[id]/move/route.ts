@@ -24,8 +24,14 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operators/[
     return NextResponse.json({ error: "Некорректное направление" }, { status: 400 });
   }
 
+  // active operator.active — не все операторы тенанта: список владельца
+  // делит активных/неактивных на две группы (см. operators/page.tsx,
+  // 2026-07-14), у каждой свой порядок. Без этого фильтра сосед по
+  // sortOrder мог оказаться скрытым неактивным оператором — стрелка
+  // "вверх/вниз" молча меняла бы sortOrder с невидимой строкой, а на экране
+  // ничего не двигалось бы.
   const siblings = await prisma.operator.findMany({
-    where: { tenantId: owner.tenantId },
+    where: { tenantId: owner.tenantId, active: operator.active },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     select: { id: true, sortOrder: true },
   });

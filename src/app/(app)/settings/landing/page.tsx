@@ -17,6 +17,7 @@ import {
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -878,9 +879,9 @@ export default function LandingSettingsPage() {
 
               {error && <p className="text-sm text-destructive">{error}</p>}
               <PressableScale>
-                <Button type="button" className="w-full" disabled={saving} onClick={saveContent}>
-                  {savedToast ? t.common.saved : t.common.save}
-                </Button>
+                <SaveButton type="button" className="w-full" disabled={saving} onClick={saveContent} saved={savedToast}>
+                  {t.common.save}
+                </SaveButton>
               </PressableScale>
 
               {(() => {

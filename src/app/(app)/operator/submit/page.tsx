@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Home, MapPin, Minus, Plus, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -785,9 +786,9 @@ export default function SubmitResultsPage() {
             })}
 
             <PressableScale>
-              <Button className="w-full rounded-control font-bold" onClick={() => setCounterAssetId(null)}>
+              <SaveButton className="w-full rounded-control font-bold" onClick={() => setCounterAssetId(null)}>
                 {t.common.save}
-              </Button>
+              </SaveButton>
             </PressableScale>
           </div>
         )}

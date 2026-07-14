@@ -31,6 +31,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/operators/[
     avatarUrl: operator.avatarUrl,
     iconKey: operator.iconKey,
     colorTag: operator.colorTag,
+    pin: operator.pin,
     allZonesAccess: operator.allZonesAccess,
     allowedZones: operator.allowedZones,
     timeTrackingMode: operator.timeTrackingMode,
@@ -156,19 +157,38 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/operator
     return NextResponse.json({ error: "Оператор не найден" }, { status: 404 });
   }
 
-  // Operators referenced by historical records (results submissions / money
-  // operations) can't be hard-deleted without orphaning that history — deactivate
-  // instead (see /api/operators/[id]/deactivate). Only a never-used operator can
-  // actually be removed.
-  const [submissionCount, moneyOpCount] = await Promise.all([
-    prisma.resultsSubmission.count({ where: { operatorId: id } }),
-    prisma.moneyOperation.count({ where: { performedByOperatorId: id } }),
-  ]);
-  if (submissionCount > 0 || moneyOpCount > 0) {
+  // Operators referenced by historical records can't be hard-deleted without
+  // orphaning/losing that history — deactivate instead (see
+  // /api/operators/[id]/deactivate). Only a never-used operator can actually
+  // be removed. Изначально (до 2026-07-14) здесь проверялись только
+  // resultsSubmission и MoneyOperation.performedByOperatorId — реальная дыра:
+  // Shift.operatorId и OperatorBalanceCarryover.operatorId в schema.prisma
+  // объявлены с onDelete: Cascade (см. migration.sql
+  // 20260708100600_add_work_time_module), то есть удаление оператора молча
+  // стирало весь табель и перенос баланса, если у него не было ни одной
+  // сдачи итогов и он сам не проводил операции. MoneyOperation.beneficiaryOperatorId
+  // (аванс/премия ПОЛУЧЕНЫ этим оператором, а не проведены им) — onDelete:
+  // SetNull, тоже не ловилось прежней проверкой: операция в журнале
+  // оставалась, но обезличивалась (терялось "кому").
+  const [submissionCount, moneyOpCount, beneficiaryMoneyOpCount, shiftCount, balanceCarryoverCount] =
+    await Promise.all([
+      prisma.resultsSubmission.count({ where: { operatorId: id } }),
+      prisma.moneyOperation.count({ where: { performedByOperatorId: id } }),
+      prisma.moneyOperation.count({ where: { beneficiaryOperatorId: id } }),
+      prisma.shift.count({ where: { operatorId: id } }),
+      prisma.operatorBalanceCarryover.count({ where: { operatorId: id } }),
+    ]);
+  if (
+    submissionCount > 0 ||
+    moneyOpCount > 0 ||
+    beneficiaryMoneyOpCount > 0 ||
+    shiftCount > 0 ||
+    balanceCarryoverCount > 0
+  ) {
     return NextResponse.json(
       {
         error:
-          "У этого оператора есть история сдач итогов/операций — его нельзя удалить безвозвратно, только деактивировать.",
+          "У этого оператора есть история сдач итогов, табеля или денежных операций (включая авансы/премии) — его нельзя удалить безвозвратно, только деактивировать.",
       },
       { status: 409 }
     );

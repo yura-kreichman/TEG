@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus, Pencil, Trash2, Link2, ImagePlus, Check, ChevronRight, MapPin, Pause, Play } from "lucide-react";
+import { Plus, Pencil, Trash2, Link2, ImagePlus, ChevronRight, MapPin, Pause, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -513,17 +514,13 @@ export default function PointsPage() {
               onChange={(e) => setDeviceLabel(e.target.value)}
             />
           </div>
-          <button
-            type="button"
-            onClick={() => setDeviceRoaming((prev) => !prev)}
-            className="flex items-center justify-between rounded-control border border-border p-3 text-left"
-          >
+          <div className="flex items-center justify-between rounded-control border border-border p-3">
             <span>
               <span className="block text-body-airbnb">{t.points.roamingLabel}</span>
               <span className="mt-0.5 block text-caption-airbnb">{t.points.roamingHint}</span>
             </span>
-            {deviceRoaming && <Check className="size-4 shrink-0 text-primary" />}
-          </button>
+            <Switch checked={deviceRoaming} onCheckedChange={setDeviceRoaming} className="shrink-0" />
+          </div>
           <PressableScale>
             <Button type="submit" className="w-full">
               {t.points.createDeviceLinkButton}
@@ -662,9 +659,9 @@ export default function PointsPage() {
                 {t.common.cancel}
               </Button>
               <PressableScale className="flex-1">
-                <Button className="w-full" disabled={locSaving || locLoading} onClick={saveLocation}>
-                  {t.common.save}
-                </Button>
+                <SaveButton className="w-full" disabled={locSaving || locLoading} onClick={saveLocation}>
+                {t.common.save}
+                </SaveButton>
               </PressableScale>
             </div>
           </div>
@@ -678,9 +675,9 @@ export default function PointsPage() {
                 {t.common.cancel}
               </Button>
               <PressableScale className="flex-1">
-                <Button className="w-full" onClick={confirmRenamePoint}>
-                  {t.common.save}
-                </Button>
+                <SaveButton className="w-full" onClick={confirmRenamePoint}>
+                {t.common.save}
+                </SaveButton>
               </PressableScale>
             </div>
           </div>
@@ -691,11 +688,15 @@ export default function PointsPage() {
             <p className="text-body-airbnb">{t.points.confirmDeletePoint}</p>
             {pointActionError && <p className="text-sm text-destructive">{pointActionError}</p>}
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setPointKebabView("menu")}>
-                {t.common.cancel}
-              </Button>
               <PressableScale className="flex-1">
-                <Button variant="destructive" className="w-full" onClick={confirmDeletePoint}>
+                <Button variant="outline" className="w-full gap-1.5" onClick={() => setPointKebabView("menu")}>
+                  <X className="size-4" />
+                  {t.common.cancel}
+                </Button>
+              </PressableScale>
+              <PressableScale className="flex-1">
+                <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDeletePoint}>
+                  <Trash2 className="size-4" />
                   {t.common.delete}
                 </Button>
               </PressableScale>
@@ -745,9 +746,9 @@ export default function PointsPage() {
                 {t.common.cancel}
               </Button>
               <PressableScale className="flex-1">
-                <Button className="w-full" onClick={confirmRenameDevice}>
-                  {t.common.save}
-                </Button>
+                <SaveButton className="w-full" onClick={confirmRenameDevice}>
+                {t.common.save}
+                </SaveButton>
               </PressableScale>
             </div>
           </div>
@@ -757,11 +758,15 @@ export default function PointsPage() {
             <h2 className="text-[19px] font-extrabold tracking-[-0.01em]">{t.points.deleteDevice}</h2>
             <p className="text-body-airbnb">{t.points.confirmDeleteDevice}</p>
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setDeviceKebabView("menu")}>
-                {t.common.cancel}
-              </Button>
               <PressableScale className="flex-1">
-                <Button variant="destructive" className="w-full" onClick={confirmDeleteDevice}>
+                <Button variant="outline" className="w-full gap-1.5" onClick={() => setDeviceKebabView("menu")}>
+                  <X className="size-4" />
+                  {t.common.cancel}
+                </Button>
+              </PressableScale>
+              <PressableScale className="flex-1">
+                <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDeleteDevice}>
+                  <Trash2 className="size-4" />
                   {t.common.delete}
                 </Button>
               </PressableScale>
