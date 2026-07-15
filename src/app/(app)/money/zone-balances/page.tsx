@@ -417,14 +417,18 @@ export default function ZoneBalancesPage() {
                           </span>
                           <span className="flex shrink-0 items-center gap-1">
                             <span className="text-xs font-bold tabular-nums"><Money value={c.amount} /></span>
-                            <button
-                              type="button"
-                              onClick={() => openCollectionEdit(c)}
-                              aria-label={t.money.editCollectionAction}
-                              className="flex size-6 items-center justify-center rounded-control text-muted-foreground"
-                            >
-                              <Pencil className="size-3.5" />
-                            </button>
+                            <PressableScale>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-xs"
+                                onClick={() => openCollectionEdit(c)}
+                                aria-label={t.money.editCollectionAction}
+                                className="text-muted-foreground"
+                              >
+                                <Pencil className="size-3.5" />
+                              </Button>
+                            </PressableScale>
                           </span>
                         </div>
                       ))}
