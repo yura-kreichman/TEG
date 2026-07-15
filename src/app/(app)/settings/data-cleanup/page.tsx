@@ -26,7 +26,6 @@ export default function DataCleanupPage() {
   const [password, setPassword] = useState("");
   const [confirmText, setConfirmText] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -55,7 +54,6 @@ export default function DataCleanupPage() {
     setPassword("");
     setConfirmText("");
     setError(null);
-    setDone(false);
   }
 
   async function handleConfirm() {
@@ -73,7 +71,7 @@ export default function DataCleanupPage() {
         setError(data.error ?? t.dataCleanup.genericError);
         return;
       }
-      setDone(true);
+      setTarget(null);
     } finally {
       setLoading(false);
     }
@@ -147,52 +145,35 @@ export default function DataCleanupPage() {
             <p className="mt-1 text-caption-airbnb">{targetTitle}</p>
           </div>
 
-          {done ? (
-            <>
-              <p className="text-body-airbnb text-success">{t.dataCleanup.doneMessage}</p>
-              <PressableScale>
-                <Button className="w-full" onClick={() => setTarget(null)}>
-                  {t.common.close}
-                </Button>
-              </PressableScale>
-            </>
-          ) : (
-            <>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="cleanupPassword">{t.dataCleanup.confirmPasswordLabel}</Label>
-                <Input
-                  id="cleanupPassword"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoFocus
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="cleanupConfirmText">
-                  {t.dataCleanup.confirmNamePrefix} <span className="text-foreground">{tenantName}</span>
-                </Label>
-                <Input
-                  id="cleanupConfirmText"
-                  value={confirmText}
-                  onChange={(e) => setConfirmText(e.target.value)}
-                />
-                <span className="text-caption-airbnb">{t.dataCleanup.confirmNameHint}</span>
-              </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <PressableScale>
-                <Button
-                  variant="destructive"
-                  className="w-full gap-2"
-                  disabled={!canSubmit || loading}
-                  onClick={handleConfirm}
-                >
-                  <Trash2 className="size-4" />
-                  {t.dataCleanup.confirmButton}
-                </Button>
-              </PressableScale>
-            </>
-          )}
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="cleanupPassword">{t.dataCleanup.confirmPasswordLabel}</Label>
+            <Input
+              id="cleanupPassword"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="cleanupConfirmText">
+              {t.dataCleanup.confirmNamePrefix} <span className="text-foreground">{tenantName}</span>
+            </Label>
+            <Input id="cleanupConfirmText" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} />
+            <span className="text-caption-airbnb">{t.dataCleanup.confirmNameHint}</span>
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <PressableScale>
+            <Button
+              variant="destructive"
+              className="w-full gap-2"
+              disabled={!canSubmit || loading}
+              onClick={handleConfirm}
+            >
+              <Trash2 className="size-4" />
+              {t.dataCleanup.confirmButton}
+            </Button>
+          </PressableScale>
         </div>
       </BottomSheet>
     </OwnerShell>

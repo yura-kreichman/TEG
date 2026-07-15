@@ -28,6 +28,10 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   const before = Math.abs(Number(op.amount));
 
   if (op.type === "advance" && amountNumber > before && op.beneficiaryOperatorId) {
+    // Отдельный (не привязанный к смене) аванс/премия — всегда вносится
+    // владельцем вручную (docs/spec/05-work-time.md), не забор из кассы
+    // точки (решение пользователя 2026-07-15) — проверка по личному балансу
+    // "к выдаче" + овердрафт, как и при создании.
     const beneficiary = await prisma.operator.findUnique({
       where: { id: op.beneficiaryOperatorId },
       select: { overdraftAllowed: true },

@@ -12,7 +12,6 @@
   "common": {
     "save": "Պահպանել",
     "saved": "Պահպանված է",
-    "cancel": "Չեղարկել",
     "logout": "Ելք",
     "delete": "Ջնջել",
     "edit": "Փոփոխել",
@@ -319,7 +318,6 @@
     "confirmNamePrefix": "Հաստատելու համար մուտքագրեք ընկերության անվանումը.",
     "confirmNameHint": "Պետք է ճշգրիտ համընկնի",
     "confirmButton": "Ջնջել անդառնալիորեն",
-    "doneMessage": "Տվյալները ջնջված են.",
     "genericError": "Չհաջողվեց կատարել մաքրումը"
   },
   "summaries": {
@@ -569,7 +567,6 @@
     "nameLabel": "Կետի անվանում",
     "addressLabel": "Հասցե (ընտրովի)",
     "iconLabel": "Պատկերակ",
-    "addButton": "Ավելացնել կետ",
     "addDeviceButton": "Ստեղծել սարք/ակտիվացման հղում",
     "deviceActivated": "Ակտիվ",
     "deviceAwaiting": "սպասում է ակտիվացման",
@@ -628,7 +625,6 @@
     "allPoints": "Բոլոր կետերը",
     "nameLabel": "Գոտու անվանում",
     "iconLabel": "Պատկերակ",
-    "addButton": "Ավելացնել գոտի",
     "noTariffs": "Սակագներ սահմանված չեն",
     "assetsCount": "ակտիվ(ներ)",
     "noZones": "Դեռ ոչ մի գոտի չկա — ավելացրեք առաջինը ստորև.",
@@ -691,7 +687,6 @@
     "nameLabel": "Աշխատակցի անուն",
     "pinLabel": "PIN-կոդ (4-6 թվանշան)",
     "pinFormatError": "PIN-կոդը պետք է բաղկացած լինի 4-6 թվանշանից",
-    "addButton": "Ավելացնել աշխատակից",
     "active": "Ակտիվ",
     "inactive": "Ապաակտիվացված",
     "resetPin": "Փոխել PIN-ը",
@@ -768,7 +763,12 @@
     "expenseCategoriesTitle": "Ծախսերի կատեգորիաներ",
     "noExpenseCategories": "Կատեգորիաներ դեռ չկան",
     "newCategoryPlaceholder": "Նոր կատեգորիա",
-    "categorySaveError": "Չհաջողվեց պահպանել կատեգորիան"
+    "categorySaveError": "Չհաջողվեց պահպանել կատեգորիան",
+    "editCollectionAction": "Փոփոխել",
+    "collectionSaveError": "Չհաջողվեց պահպանել փոփոխությունները",
+    "deleteCollectionAction": "Ջնջել ինկասացիան",
+    "deleteCollectionConfirm": "Ջնջե՞լ այս ինկասացիան։ Գոտու մնացորդը կվերահաշվարկվի։ Հնարավոր չէ չեղարկել։",
+    "deleteCollectionError": "Չհաջողվեց ջնջել ինկասացիան"
   },
   "readings": {
     "title": "Ցուցմունքներ ըստ օրերի",
@@ -849,7 +849,6 @@
     "pointLabel": "Կետ.",
     "submitResults": "Հանձնել արդյունքները",
     "collection": "Ինկասացիա",
-    "collectionDone": "Ինկասացիան գրանցված է.",
     "collectionModeZone": "Ըստ գոտիների",
     "collectionModeGeneral": "Ընդհանուր",
     "collectionGeneralHint": "Գումարը ավտոմատ կբաշխվի կետի գոտիների միջև՝ համամասնորեն դրանց դրամարկղերի մնացորդին։",
@@ -912,9 +911,7 @@
       "carryoverAddButton": "Մնացորդի փոխանցում",
       "carryoverHint": "Մեկանգամյա մնացորդի ուղղում — օրինակ՝ նախորդ հաշվառման համակարգից մնացորդի փոխանցում. Կարող է լինել բացասական.",
       "moduleDisabledNote": "«Աշխատանքային ժամանակ» մոդուլը միացված չէ ձեր ընկերության համար",
-      "deleteShiftAction": "Ջնջել հերթափոխը",
       "deleteShiftConfirm": "Ջնջե՞լ այս հերթափոխը. Գործողությունն անշրջելի է. Ջնջել կարելի է միայն աշխատակցի վերջին հերթափոխը.",
-      "deleteMoneyOpAction": "Ջնջել գրառումը",
       "deleteMoneyOpConfirm": "Ջնջե՞լ այս գրառումը. Գործողությունն անշրջելի է."
     },
     "submit": {
@@ -1016,7 +1013,6 @@
     "fieldBrowser": "Դիտարկիչ",
     "fieldVersion": "Տարբերակ",
     "downloadPdfButton": "Ներբեռնել PDF",
-    "deleteRecordButton": "Ջնջել գրառումը",
     "deleteRecordConfirmTitle": "Ջնջե՞լ գրառումը։",
     "deleteRecordConfirmHint": "PDF-ը և ստորագրությունը կջնջվեն անդառնալիորեն։ Ջնջման փաստը կմնա փոփոխությունների մատյանում։",
     "honestyCheckLabel": "Ազնվության ստուգում",

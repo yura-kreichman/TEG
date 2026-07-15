@@ -11,6 +11,7 @@ import {
   listStandaloneMoneyOps,
   validateShift,
 } from "@/lib/work-time";
+import { getPointCashBalance } from "@/lib/zone-balance";
 import { dispatchShiftCloseSummary } from "@/lib/summary-channels/dispatch";
 import { SHIFT_CLOSE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { resolveLocale } from "@/lib/i18n";
@@ -70,16 +71,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Смена пересекается с другой вашей сменой" }, { status: 409 });
   }
 
+  if (advanceAmount > 0 || bonusAmount > 0) {
+    // Аванс И премия, которые сотрудник вводит САМ, — физически из кассы
+    // точки, обе ограничены её остатком, БЕЗ исключений (решение пользователя
+    // 2026-07-15) — жёсткий кап даже с овердрафтом.
+    const pointBalance = await getPointCashBalance(point.id);
+    if (advanceAmount + bonusAmount > pointBalance) {
+      const locale = await resolveLocale();
+      return NextResponse.json(
+        { error: `Сумма превышает остаток кассы точки (${formatMoney(pointBalance, locale)})` },
+        { status: 400 }
+      );
+    }
+  }
+
   if (advanceAmount > 0) {
+    // Вторая, независимая проверка — только для аванса: личный баланс "к
+    // выдаче" + овердрафт (решение пользователя 2026-07-15) — обе проверки
+    // должны пройти.
     const balance = await calcOperatorBalance(operator.id);
     // Аванс вводится в той же форме, что и сама смена — доступный баланс
     // должен уже учитывать начисление ЗА ЭТУ смену, иначе самый первый аванс
-    // на самой первой смене оператора всегда бы блокировался (баланс = 0 до
-    // того, как смена вообще создана).
+    // на самой первой смене оператора всегда бы блокировался.
     const rate = await getRateForDate(operator.id, startAt);
     const { accrued } = calcShiftAccrual(startAt, endAt, rate);
     const projectedToPayOut = balance.toPayOut + accrued;
-    // overdraftAllowed — персональная настройка оператора (docs/spec/05-work-time.md), не тенанта.
     if (!operator.overdraftAllowed && advanceAmount > projectedToPayOut) {
       const locale = await resolveLocale();
       return NextResponse.json(

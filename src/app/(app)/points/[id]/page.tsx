@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Check, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OwnerShell } from "@/components/owner-shell";
@@ -219,9 +220,9 @@ export default function PointDetailPage() {
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <PressableScale>
-            <Button type="submit" disabled={loading} className="w-full">
-              {t.zonesList.addButton}
-            </Button>
+            <SaveButton type="submit" disabled={loading} className="w-full">
+              {t.common.add}
+            </SaveButton>
           </PressableScale>
         </form>
       </BottomSheet>

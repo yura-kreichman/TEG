@@ -16,7 +16,7 @@ import { Money } from "@/components/money";
 type Granularity = "day" | "week" | "month" | "year";
 
 interface Report {
-  business: { revenue: number; expense: number; profit: number; difference: number };
+  business: { revenue: number; cash: number; mobile: number; expense: number; profit: number; difference: number };
 }
 
 export default function MoneyPage() {
@@ -315,11 +315,21 @@ export default function MoneyPage() {
 
           <SpringCard hover={false} className="flex flex-col gap-4">
             <h2 className="text-section-title">{t.money.businessTitle}</h2>
-            <div className="flex items-baseline gap-2 tabular-nums">
-              <span className="text-[2.125rem] font-extrabold tracking-[-0.02em]">
-                <Money value={report.business.profit} size="display" />
-              </span>
-              <span className="text-body-airbnb text-muted-foreground">{t.money.profit}</span>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-baseline gap-2 tabular-nums">
+                <span className="text-[2.125rem] font-extrabold tracking-[-0.02em]">
+                  <Money value={report.business.profit} size="display" />
+                </span>
+                <span className="text-body-airbnb text-muted-foreground">{t.money.profit}</span>
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-0.5 pt-1 text-right text-caption-airbnb tabular-nums">
+                <span>
+                  {t.reports.cashLabel}: <span className="font-bold text-foreground"><Money value={report.business.cash} /></span>
+                </span>
+                <span>
+                  {t.reports.mobileLabel}: <span className="font-bold text-foreground"><Money value={report.business.mobile} /></span>
+                </span>
+              </div>
             </div>
             <div className="flex border-t border-border pt-3.5 tabular-nums">
               <div className="flex-1">

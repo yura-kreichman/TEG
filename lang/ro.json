@@ -12,7 +12,6 @@
   "common": {
     "save": "Salvează",
     "saved": "Salvat",
-    "cancel": "Anulează",
     "logout": "Ieșire",
     "delete": "Șterge",
     "edit": "Editează",
@@ -319,7 +318,6 @@
     "confirmNamePrefix": "Introduceți numele companiei pentru a confirma:",
     "confirmNameHint": "Trebuie să coincidă exact",
     "confirmButton": "Șterge definitiv",
-    "doneMessage": "Datele au fost șterse.",
     "genericError": "Curățarea nu a putut fi finalizată"
   },
   "summaries": {
@@ -569,7 +567,6 @@
     "nameLabel": "Numele punctului",
     "addressLabel": "Adresă (opțional)",
     "iconLabel": "Pictogramă",
-    "addButton": "Adaugă punct",
     "addDeviceButton": "Creează dispozitiv/link de activare",
     "deviceActivated": "Activ",
     "deviceAwaiting": "așteaptă activarea",
@@ -628,7 +625,6 @@
     "allPoints": "Toate punctele",
     "nameLabel": "Numele zonei",
     "iconLabel": "Pictogramă",
-    "addButton": "Adaugă zonă",
     "noTariffs": "Niciun tarif setat",
     "assetsCount": "activ(e)",
     "noZones": "Nicio zonă încă — adăugați prima mai jos.",
@@ -691,7 +687,6 @@
     "nameLabel": "Numele angajatului",
     "pinLabel": "PIN (4-6 cifre)",
     "pinFormatError": "PIN-ul trebuie să aibă 4-6 cifre",
-    "addButton": "Adaugă angajat",
     "active": "Activ",
     "inactive": "Dezactivat",
     "resetPin": "Schimbă PIN-ul",
@@ -768,7 +763,12 @@
     "expenseCategoriesTitle": "Categorii de cheltuieli",
     "noExpenseCategories": "Încă nu există categorii",
     "newCategoryPlaceholder": "Categorie nouă",
-    "categorySaveError": "Nu s-a putut salva categoria"
+    "categorySaveError": "Nu s-a putut salva categoria",
+    "editCollectionAction": "Editează",
+    "collectionSaveError": "Nu s-au putut salva modificările",
+    "deleteCollectionAction": "Șterge colectarea",
+    "deleteCollectionConfirm": "Ștergi această colectare? Soldul zonei se va recalcula. Nu poate fi anulat.",
+    "deleteCollectionError": "Nu s-a putut șterge colectarea"
   },
   "readings": {
     "title": "Citiri zilnice",
@@ -849,7 +849,6 @@
     "pointLabel": "Punct:",
     "submitResults": "Predă rezultatele",
     "collection": "Colectare",
-    "collectionDone": "Colectare înregistrată.",
     "collectionModeZone": "Pe zone",
     "collectionModeGeneral": "General",
     "collectionGeneralHint": "Suma se va împărți automat între zonele punctului, proporțional cu soldul caselor lor.",
@@ -912,9 +911,7 @@
       "carryoverAddButton": "Report sold",
       "carryoverHint": "Ajustare unică a soldului — de exemplu, reportul soldului dintr-un sistem anterior. Poate fi negativ.",
       "moduleDisabledNote": "Modulul „Timp de lucru” nu este activat pentru compania dvs.",
-      "deleteShiftAction": "Șterge tura",
       "deleteShiftConfirm": "Ștergeți această tură? Acțiunea este ireversibilă. Se poate șterge doar ultima tură a angajatului.",
-      "deleteMoneyOpAction": "Șterge înregistrarea",
       "deleteMoneyOpConfirm": "Ștergeți această înregistrare? Acțiunea este ireversibilă."
     },
     "submit": {
@@ -1016,7 +1013,6 @@
     "fieldBrowser": "Browser",
     "fieldVersion": "Versiune",
     "downloadPdfButton": "Descarcă PDF",
-    "deleteRecordButton": "Șterge înregistrarea",
     "deleteRecordConfirmTitle": "Ștergi înregistrarea?",
     "deleteRecordConfirmHint": "PDF-ul și semnătura vor fi șterse definitiv. Faptul ștergerii rămâne în jurnalul de modificări.",
     "honestyCheckLabel": "Verificare a onestității",

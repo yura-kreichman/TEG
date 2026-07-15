@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus, Pencil, Trash2, Link2, ImagePlus, ChevronRight, MapPin, Pause, Play, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Link2, ImagePlus, ChevronRight, MapPin, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
@@ -495,9 +495,9 @@ export default function PointsPage() {
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <PressableScale>
-            <Button type="submit" disabled={loading} className="w-full">
-              {t.points.addButton}
-            </Button>
+            <SaveButton type="submit" disabled={loading} className="w-full">
+              {t.common.add}
+            </SaveButton>
           </PressableScale>
         </form>
       </BottomSheet>
@@ -659,32 +659,22 @@ export default function PointsPage() {
                 </div>
               </>
             )}
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setPointKebabView("menu")}>
-                {t.common.cancel}
-              </Button>
-              <PressableScale className="flex-1">
-                <SaveButton className="w-full" disabled={locSaving || locLoading} onClick={saveLocation}>
+            <PressableScale>
+              <SaveButton className="w-full" disabled={locSaving || locLoading} onClick={saveLocation}>
                 {t.common.save}
-                </SaveButton>
-              </PressableScale>
-            </div>
+              </SaveButton>
+            </PressableScale>
           </div>
         )}
         {pointKebab && pointKebabView === "rename" && (
           <div className="flex flex-col gap-3 pt-2">
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.renamePoint}</h2>
             <Input autoFocus value={renamePointValue} onChange={(e) => setRenamePointValue(e.target.value)} />
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setPointKebabView("menu")}>
-                {t.common.cancel}
-              </Button>
-              <PressableScale className="flex-1">
-                <SaveButton className="w-full" onClick={confirmRenamePoint}>
+            <PressableScale>
+              <SaveButton className="w-full" onClick={confirmRenamePoint}>
                 {t.common.save}
-                </SaveButton>
-              </PressableScale>
-            </div>
+              </SaveButton>
+            </PressableScale>
           </div>
         )}
         {pointKebab && pointKebabView === "confirm-delete" && (
@@ -692,20 +682,12 @@ export default function PointsPage() {
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.deletePoint}</h2>
             <p className="text-body-airbnb">{t.points.confirmDeletePoint}</p>
             {pointActionError && <p className="text-sm text-destructive">{pointActionError}</p>}
-            <div className="flex gap-2">
-              <PressableScale className="flex-1">
-                <Button variant="outline" className="w-full gap-1.5" onClick={() => setPointKebabView("menu")}>
-                  <X className="size-4" />
-                  {t.common.cancel}
-                </Button>
-              </PressableScale>
-              <PressableScale className="flex-1">
-                <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDeletePoint}>
-                  <Trash2 className="size-4" />
-                  {t.common.delete}
-                </Button>
-              </PressableScale>
-            </div>
+            <PressableScale>
+              <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDeletePoint}>
+                <Trash2 className="size-4" />
+                {t.common.delete}
+              </Button>
+            </PressableScale>
           </div>
         )}
       </BottomSheet>
@@ -746,36 +728,23 @@ export default function PointsPage() {
               value={renameDeviceValue}
               onChange={(e) => setRenameDeviceValue(e.target.value)}
             />
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setDeviceKebabView("menu")}>
-                {t.common.cancel}
-              </Button>
-              <PressableScale className="flex-1">
-                <SaveButton className="w-full" onClick={confirmRenameDevice}>
+            <PressableScale>
+              <SaveButton className="w-full" onClick={confirmRenameDevice}>
                 {t.common.save}
-                </SaveButton>
-              </PressableScale>
-            </div>
+              </SaveButton>
+            </PressableScale>
           </div>
         )}
         {deviceKebab && deviceKebabView === "confirm-delete" && (
           <div className="flex flex-col gap-3 pt-2">
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.deleteDevice}</h2>
             <p className="text-body-airbnb">{t.points.confirmDeleteDevice}</p>
-            <div className="flex gap-2">
-              <PressableScale className="flex-1">
-                <Button variant="outline" className="w-full gap-1.5" onClick={() => setDeviceKebabView("menu")}>
-                  <X className="size-4" />
-                  {t.common.cancel}
-                </Button>
-              </PressableScale>
-              <PressableScale className="flex-1">
-                <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDeleteDevice}>
-                  <Trash2 className="size-4" />
-                  {t.common.delete}
-                </Button>
-              </PressableScale>
-            </div>
+            <PressableScale>
+              <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDeleteDevice}>
+                <Trash2 className="size-4" />
+                {t.common.delete}
+              </Button>
+            </PressableScale>
           </div>
         )}
       </BottomSheet>

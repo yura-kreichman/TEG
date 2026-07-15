@@ -12,7 +12,6 @@
   "common": {
     "save": "Saqlash",
     "saved": "Saqlandi",
-    "cancel": "Bekor qilish",
     "logout": "Chiqish",
     "delete": "Oʻchirish",
     "edit": "Oʻzgartirish",
@@ -319,7 +318,6 @@
     "confirmNamePrefix": "Tasdiqlash uchun kompaniya nomini kiriting:",
     "confirmNameHint": "Aniq mos kelishi kerak",
     "confirmButton": "Qaytarib boʻlmas tarzda oʻchirish",
-    "doneMessage": "Ma'lumotlar oʻchirildi.",
     "genericError": "Tozalashni bajarib boʻlmadi"
   },
   "summaries": {
@@ -569,7 +567,6 @@
     "nameLabel": "Nuqta nomi",
     "addressLabel": "Manzil (ixtiyoriy)",
     "iconLabel": "Belgi",
-    "addButton": "Nuqta qoʻshish",
     "addDeviceButton": "Qurilma/faollashtirish havolasini yaratish",
     "deviceActivated": "Faol",
     "deviceAwaiting": "faollashtirish kutilmoqda",
@@ -628,7 +625,6 @@
     "allPoints": "Barcha nuqtalar",
     "nameLabel": "Zona nomi",
     "iconLabel": "Belgi",
-    "addButton": "Zona qoʻshish",
     "noTariffs": "Tariflar belgilanmagan",
     "assetsCount": "aktiv(lar)",
     "noZones": "Hali birorta ham zona yoʻq — pastda birinchisini qoʻshing.",
@@ -691,7 +687,6 @@
     "nameLabel": "Xodim ismi",
     "pinLabel": "PIN-kod (4-6 raqam)",
     "pinFormatError": "PIN-kod 4-6 ta raqamdan iborat boʻlishi kerak",
-    "addButton": "Xodim qoʻshish",
     "active": "Faol",
     "inactive": "Faolsizlantirilgan",
     "resetPin": "PIN-kodni oʻzgartirish",
@@ -768,7 +763,12 @@
     "expenseCategoriesTitle": "Xarajat kategoriyalari",
     "noExpenseCategories": "Hozircha kategoriya yo'q",
     "newCategoryPlaceholder": "Yangi kategoriya",
-    "categorySaveError": "Kategoriyani saqlab bo'lmadi"
+    "categorySaveError": "Kategoriyani saqlab bo'lmadi",
+    "editCollectionAction": "Tahrirlash",
+    "collectionSaveError": "O'zgarishlarni saqlab bo'lmadi",
+    "deleteCollectionAction": "Inkassatsiyani oʻchirish",
+    "deleteCollectionConfirm": "Ushbu inkassatsiyani oʻchirasizmi? Zona qoldigʻi qayta hisoblanadi. Bekor qilib boʻlmaydi.",
+    "deleteCollectionError": "Inkassatsiyani oʻchirib bo'lmadi"
   },
   "readings": {
     "title": "Kunlik koʻrsatkichlar",
@@ -849,7 +849,6 @@
     "pointLabel": "Nuqta:",
     "submitResults": "Natijalarni topshirish",
     "collection": "Inkassatsiya",
-    "collectionDone": "Inkassatsiya qayd etildi.",
     "collectionModeZone": "Zonalar bo'yicha",
     "collectionModeGeneral": "Umumiy",
     "collectionGeneralHint": "Summa nuqtaning zonalari o'rtasida ularning kassa qoldig'iga proporsional avtomatik taqsimlanadi.",
@@ -912,9 +911,7 @@
       "carryoverAddButton": "Balans koʻchirmasi",
       "carryoverHint": "Balansning bir martalik tuzatilishi — masalan, oldingi hisob tizimidan qoldiqni koʻchirish. Manfiy boʻlishi mumkin.",
       "moduleDisabledNote": "«Ish vaqti» moduli kompaniyangiz uchun ulanmagan",
-      "deleteShiftAction": "Smenani oʻchirish",
       "deleteShiftConfirm": "Ushbu smenani oʻchirasizmi? Amalni bekor qilib boʻlmaydi. Faqat xodimning oxirgi smenasini oʻchirish mumkin.",
-      "deleteMoneyOpAction": "Yozuvni oʻchirish",
       "deleteMoneyOpConfirm": "Ushbu yozuvni oʻchirasizmi? Amalni bekor qilib boʻlmaydi."
     },
     "submit": {
@@ -1016,7 +1013,6 @@
     "fieldBrowser": "Brauzer",
     "fieldVersion": "Versiya",
     "downloadPdfButton": "PDF yuklab olish",
-    "deleteRecordButton": "Yozuvni o'chirish",
     "deleteRecordConfirmTitle": "Yozuvni o'chirasizmi?",
     "deleteRecordConfirmHint": "PDF va imzo qaytarib bo'lmaydigan tarzda o'chiriladi. O'chirish fakti tahrirlar jurnalida qoladi.",
     "honestyCheckLabel": "Halollik tekshiruvi",

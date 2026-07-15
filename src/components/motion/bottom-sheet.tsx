@@ -2,6 +2,9 @@
 
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
 interface BottomSheetProps {
@@ -20,6 +23,7 @@ interface BottomSheetProps {
  * not as part of this infra step.
  */
 export function BottomSheet({ open, onClose, children, className }: BottomSheetProps) {
+  const t = useI18n();
   useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
@@ -60,7 +64,17 @@ export function BottomSheet({ open, onClose, children, className }: BottomSheetP
             }}
           >
             <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-muted-foreground/30" />
-            <div className="overflow-y-auto px-4 pb-4">{children}</div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={onClose}
+              aria-label={t.common.close}
+              className="absolute top-3 right-3 z-10 size-10 shrink-0 rounded-full border-border"
+            >
+              <X className="size-5" />
+            </Button>
+            <div className="overflow-y-auto py-1 pr-12 pb-4 pl-4">{children}</div>
           </motion.div>
         </>
       )}

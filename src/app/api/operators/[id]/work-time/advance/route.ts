@@ -31,6 +31,13 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operators/[
     return NextResponse.json({ error: "Точка не найдена" }, { status: 400 });
   }
 
+  // Владелец вносит аванс вручную — деньги не из кассы точки (решение
+  // пользователя 2026-07-15: уже забраны инкассацией, или переданы отдельно,
+  // например переводом на карту), поэтому кассу точки эта операция не
+  // затрагивает и не проверяется по её остатку. Проверка — как раньше, по
+  // личному балансу сотрудника "к выдаче" + овердрафт. У самого сотрудника
+  // (self-service в PWA) наоборот: без овердрафта, но по остатку кассы точки —
+  // см. /api/operator/work-time/check-out и .../shifts.
   const balance = await calcOperatorBalance(operator.id);
   if (!operator.overdraftAllowed && amountNumber > balance.toPayOut) {
     const locale = await resolveLocale();

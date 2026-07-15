@@ -441,11 +441,6 @@ export default function InstructionsSettingsPage() {
                 {t.instructions.archiveAction}
               </Button>
             </PressableScale>
-            <PressableScale>
-              <Button type="button" variant="outline" className="w-full" onClick={() => setKebabView("menu")}>
-                {t.common.cancel}
-              </Button>
-            </PressableScale>
           </div>
         )}
         {kebabTarget && kebabView === "confirm-delete" && (
@@ -456,19 +451,6 @@ export default function InstructionsSettingsPage() {
             <PressableScale>
               <Button type="button" variant="destructive" className="w-full" onClick={deleteInstruction}>
                 {t.instructions.deleteAction}
-              </Button>
-            </PressableScale>
-            <PressableScale>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  setKebabView("menu");
-                  setDeleteError(null);
-                }}
-              >
-                {t.common.cancel}
               </Button>
             </PressableScale>
           </div>

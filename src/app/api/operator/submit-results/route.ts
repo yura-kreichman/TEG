@@ -235,28 +235,42 @@ export async function POST(request: Request) {
   const zoneSummarySettings =
     (await prisma.zoneSummarySettings.findUnique({ where: { tenantId: point.tenantId } })) ?? ZONE_SUMMARY_DEFAULTS;
   if (zoneSummarySettings.enabled) {
-    for (const s of summary) {
-      const zone = zoneById.get(s.zoneId)!;
-      dispatchZoneSummary(
-        point.tenantId,
-        {
-          pointName: point.name,
-          zoneName: s.zoneName,
-          zoneEmoji: zone.telegramEmoji,
-          accountingMode: zone.accountingMode as ZoneAccountingMode,
-          occurredAt: submission.submittedAt,
-          readings: s.readingLines,
-          cashAmount: s.cashAmount,
-          mobileAmount: s.mobileAmount,
-          calculatedRevenue: s.calculatedRevenue,
-          difference: s.difference,
-          returnsCount: s.returnsCount,
-          operatorName: operator.name,
-          operatorColorTag: operator.colorTag,
-        },
-        zoneSummarySettings
-      ).catch((err) => console.error("zone summary dispatch failed", err));
-    }
+    // Одна сдача может закрывать сразу несколько зон — отправляем сводки
+    // последовательно (await внутри своего же async IIFE, не блокируя ответ
+    // оператору), а не все разом: параллельные sendChatMessage в один и тот
+    // же Telegram-чат упирались в его rate-limit (~1 сообщение/сек), и
+    // сообщение, отправленное последним, получало 429 и терялось без повтора
+    // (реальный баг 2026-07-15 — "Машинки" пропали из сводки, хотя в БД
+    // записались, потому что запись в БД идёт отдельной атомарной транзакцией
+    // до этого блока).
+    (async () => {
+      for (const s of summary) {
+        const zone = zoneById.get(s.zoneId)!;
+        try {
+          await dispatchZoneSummary(
+            point.tenantId,
+            {
+              pointName: point.name,
+              zoneName: s.zoneName,
+              zoneEmoji: zone.telegramEmoji,
+              accountingMode: zone.accountingMode as ZoneAccountingMode,
+              occurredAt: submission.submittedAt,
+              readings: s.readingLines,
+              cashAmount: s.cashAmount,
+              mobileAmount: s.mobileAmount,
+              calculatedRevenue: s.calculatedRevenue,
+              difference: s.difference,
+              returnsCount: s.returnsCount,
+              operatorName: operator.name,
+              operatorColorTag: operator.colorTag,
+            },
+            zoneSummarySettings
+          );
+        } catch (err) {
+          console.error("zone summary dispatch failed", err);
+        }
+      }
+    })();
   }
 
   // "Касса за день": в режиме event — отправить сразу, как только все активные

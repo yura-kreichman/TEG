@@ -12,7 +12,6 @@
   "common": {
     "save": "Захаваць",
     "saved": "Захавана",
-    "cancel": "Скасаваць",
     "logout": "Выйсці",
     "delete": "Выдаліць",
     "edit": "Змяніць",
@@ -319,7 +318,6 @@
     "confirmNamePrefix": "Увядзіце назву кампаніі, каб пацвердзіць:",
     "confirmNameHint": "Павінна супадаць дакладна",
     "confirmButton": "Выдаліць незваротна",
-    "doneMessage": "Дадзеныя выдалены.",
     "genericError": "Не ўдалося выканаць ачыстку"
   },
   "summaries": {
@@ -569,7 +567,6 @@
     "nameLabel": "Назва кропкі",
     "addressLabel": "Адрас (неабавязкова)",
     "iconLabel": "Іконка",
-    "addButton": "Дадаць кропку",
     "addDeviceButton": "Стварыць прыладу/спасылку актывацыі",
     "deviceActivated": "Актыўна",
     "deviceAwaiting": "чакае актывацыі",
@@ -628,7 +625,6 @@
     "allPoints": "Усе кропкі",
     "nameLabel": "Назва зоны",
     "iconLabel": "Іконка",
-    "addButton": "Дадаць зону",
     "noTariffs": "Тарыфы не зададзены",
     "assetsCount": "актыў(аў)",
     "noZones": "Пакуль няма ніводнай зоны — дадайце першую ніжэй.",
@@ -691,7 +687,6 @@
     "nameLabel": "Імя супрацоўніка",
     "pinLabel": "ПІН-код (4-6 лічбаў)",
     "pinFormatError": "ПІН-код павінен складацца з 4-6 лічбаў",
-    "addButton": "Дадаць супрацоўніка",
     "active": "Актыўны",
     "inactive": "Дэактываваны",
     "resetPin": "Змяніць ПІН",
@@ -768,7 +763,12 @@
     "expenseCategoriesTitle": "Катэгорыі выдаткаў",
     "noExpenseCategories": "Катэгорый пакуль няма",
     "newCategoryPlaceholder": "Новая катэгорыя",
-    "categorySaveError": "Не ўдалося захаваць катэгорыю"
+    "categorySaveError": "Не ўдалося захаваць катэгорыю",
+    "editCollectionAction": "Змяніць",
+    "collectionSaveError": "Не ўдалося захаваць змены",
+    "deleteCollectionAction": "Выдаліць інкасацыю",
+    "deleteCollectionConfirm": "Выдаліць гэту інкасацыю? Астатак па зоне пералічыцца. Адмяніць нельга.",
+    "deleteCollectionError": "Не ўдалося выдаліць інкасацыю"
   },
   "readings": {
     "title": "Паказанні па днях",
@@ -849,7 +849,6 @@
     "pointLabel": "Кропка:",
     "submitResults": "Здаць вынікі",
     "collection": "Інкасацыя",
-    "collectionDone": "Інкасацыя запісана.",
     "collectionModeZone": "Па зонах",
     "collectionModeGeneral": "Агульная",
     "collectionGeneralHint": "Сума аўтаматычна падзеліцца паміж зонамі кропкі прапарцыйна астаткам іх кас.",
@@ -912,9 +911,7 @@
       "carryoverAddButton": "Перанос балансу",
       "carryoverHint": "Аднаразовая карэкціроўка балансу — напрыклад, перанос астатку з папярэдняй сістэмы ўліку. Можа быць адмоўным.",
       "moduleDisabledNote": "Модуль «Рабочы час» не падключаны для вашай кампаніі",
-      "deleteShiftAction": "Выдаліць змену",
       "deleteShiftConfirm": "Выдаліць гэтую змену? Дзеянне незваротнае. Выдаліць можна толькі апошнюю змену супрацоўніка.",
-      "deleteMoneyOpAction": "Выдаліць запіс",
       "deleteMoneyOpConfirm": "Выдаліць гэты запіс? Дзеянне незваротнае."
     },
     "submit": {
@@ -1016,7 +1013,6 @@
     "fieldBrowser": "Браўзер",
     "fieldVersion": "Версія",
     "downloadPdfButton": "Спампаваць PDF",
-    "deleteRecordButton": "Выдаліць запіс",
     "deleteRecordConfirmTitle": "Выдаліць запіс?",
     "deleteRecordConfirmHint": "PDF і подпіс будуць беззваротна выдалены. Факт выдалення застанецца ў журнале праўак.",
     "honestyCheckLabel": "Праверка сумленнасці",

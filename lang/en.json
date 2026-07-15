@@ -12,7 +12,6 @@
   "common": {
     "save": "Save",
     "saved": "Saved",
-    "cancel": "Cancel",
     "logout": "Log out",
     "delete": "Delete",
     "edit": "Edit",
@@ -319,7 +318,6 @@
     "confirmNamePrefix": "Type the company name to confirm:",
     "confirmNameHint": "Must match exactly",
     "confirmButton": "Delete permanently",
-    "doneMessage": "Data deleted.",
     "genericError": "Couldn't complete the cleanup"
   },
   "summaries": {
@@ -569,7 +567,6 @@
     "nameLabel": "Point name",
     "addressLabel": "Address (optional)",
     "iconLabel": "Icon",
-    "addButton": "Add point",
     "addDeviceButton": "Create device/activation link",
     "deviceActivated": "Active",
     "deviceAwaiting": "awaiting activation",
@@ -628,7 +625,6 @@
     "allPoints": "All points",
     "nameLabel": "Zone name",
     "iconLabel": "Icon",
-    "addButton": "Add zone",
     "noTariffs": "No tariffs set",
     "assetsCount": "asset(s)",
     "noZones": "No zones yet — add the first one below.",
@@ -691,7 +687,6 @@
     "nameLabel": "Employee name",
     "pinLabel": "PIN (4-6 digits)",
     "pinFormatError": "PIN must be 4-6 digits",
-    "addButton": "Add employee",
     "active": "Active",
     "inactive": "Deactivated",
     "resetPin": "Change PIN",
@@ -768,7 +763,12 @@
     "expenseCategoriesTitle": "Expense categories",
     "noExpenseCategories": "No categories yet",
     "newCategoryPlaceholder": "New category",
-    "categorySaveError": "Failed to save the category"
+    "categorySaveError": "Failed to save the category",
+    "editCollectionAction": "Edit",
+    "collectionSaveError": "Failed to save changes",
+    "deleteCollectionAction": "Delete collection",
+    "deleteCollectionConfirm": "Delete this collection? The zone balance will be recalculated. This cannot be undone.",
+    "deleteCollectionError": "Failed to delete the collection"
   },
   "readings": {
     "title": "Daily readings",
@@ -849,7 +849,6 @@
     "pointLabel": "Point:",
     "submitResults": "Submit results",
     "collection": "Collection",
-    "collectionDone": "Collection recorded.",
     "collectionModeZone": "By zone",
     "collectionModeGeneral": "General",
     "collectionGeneralHint": "The amount will be split across the point's zones automatically, proportional to each till's balance.",
@@ -912,9 +911,7 @@
       "carryoverAddButton": "Balance carryover",
       "carryoverHint": "A one-off balance adjustment — e.g. carrying over a starting balance from a previous system. Can be negative.",
       "moduleDisabledNote": "The Work Time module isn't enabled for your company",
-      "deleteShiftAction": "Delete shift",
       "deleteShiftConfirm": "Delete this shift? This can't be undone. Only the employee's most recent shift can be deleted.",
-      "deleteMoneyOpAction": "Delete entry",
       "deleteMoneyOpConfirm": "Delete this entry? This can't be undone."
     },
     "submit": {
@@ -1016,7 +1013,6 @@
     "fieldBrowser": "Browser",
     "fieldVersion": "Version",
     "downloadPdfButton": "Download PDF",
-    "deleteRecordButton": "Delete record",
     "deleteRecordConfirmTitle": "Delete this record?",
     "deleteRecordConfirmHint": "The PDF and signature will be permanently deleted. The deletion itself stays in the audit log.",
     "honestyCheckLabel": "Honesty check",

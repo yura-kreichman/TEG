@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { AdminShell } from "@/components/admin-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
@@ -287,20 +287,12 @@ export default function AdminPackagesPage() {
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.admin.confirmDeletePackageTitle}</h2>
           <p className="text-body-airbnb">{t.admin.confirmDeletePackageBody}</p>
           {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
-          <div className="flex gap-2">
-            <PressableScale className="flex-1">
-              <Button variant="outline" className="w-full gap-1.5" onClick={() => setConfirmDelete(false)}>
-                <X className="size-4" />
-                {t.common.cancel}
-              </Button>
-            </PressableScale>
-            <PressableScale className="flex-1">
-              <Button variant="destructive" className="w-full gap-1.5" onClick={deletePackage}>
-                <Trash2 className="size-4" />
-                {t.common.delete}
-              </Button>
-            </PressableScale>
-          </div>
+          <PressableScale>
+            <Button variant="destructive" className="w-full gap-1.5" onClick={deletePackage}>
+              <Trash2 className="size-4" />
+              {t.common.delete}
+            </Button>
+          </PressableScale>
         </div>
       </BottomSheet>
     </AdminShell>

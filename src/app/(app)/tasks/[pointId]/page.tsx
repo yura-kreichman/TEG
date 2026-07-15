@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, ClipboardList, Wrench, CheckCircle2, MapPin, X } from "lucide-react";
+import { Plus, Pencil, Trash2, ClipboardList, Wrench, CheckCircle2, MapPin } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { SpringCard } from "@/components/spring-card";
@@ -496,20 +496,12 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
         <div className="flex flex-col gap-3 pt-2">
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.tasks.confirmDeleteTitle}</h2>
           <p className="text-body-airbnb">{t.tasks.confirmDeleteBody}</p>
-          <div className="flex gap-2">
-            <PressableScale className="flex-1">
-              <Button variant="outline" className="w-full gap-1.5" onClick={() => setConfirmDelete(false)}>
-                <X className="size-4" />
-                {t.common.cancel}
-              </Button>
-            </PressableScale>
-            <PressableScale className="flex-1">
-              <Button variant="destructive" className="w-full gap-1.5" onClick={deleteTask}>
-                <Trash2 className="size-4" />
-                {t.common.delete}
-              </Button>
-            </PressableScale>
-          </div>
+          <PressableScale>
+            <Button variant="destructive" className="w-full gap-1.5" onClick={deleteTask}>
+              <Trash2 className="size-4" />
+              {t.common.delete}
+            </Button>
+          </PressableScale>
         </div>
       </BottomSheet>
     </OwnerShell>

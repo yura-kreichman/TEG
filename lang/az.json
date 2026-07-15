@@ -12,7 +12,6 @@
   "common": {
     "save": "Yadda saxla",
     "saved": "Yadda saxlanıldı",
-    "cancel": "Ləğv et",
     "logout": "Çıxış",
     "delete": "Sil",
     "edit": "Dəyiş",
@@ -319,7 +318,6 @@
     "confirmNamePrefix": "Təsdiq üçün şirkətin adını daxil edin:",
     "confirmNameHint": "Dəqiq uyğun gəlməlidir",
     "confirmButton": "Geri qaytarılmadan sil",
-    "doneMessage": "Məlumatlar silindi.",
     "genericError": "Təmizləməni yerinə yetirmək mümkün olmadı"
   },
   "summaries": {
@@ -569,7 +567,6 @@
     "nameLabel": "Nöqtənin adı",
     "addressLabel": "Ünvan (məcburi deyil)",
     "iconLabel": "Nişan",
-    "addButton": "Nöqtə əlavə et",
     "addDeviceButton": "Cihaz/aktivləşdirmə keçidi yarat",
     "deviceActivated": "Aktiv",
     "deviceAwaiting": "aktivləşdirməni gözləyir",
@@ -628,7 +625,6 @@
     "allPoints": "Bütün nöqtələr",
     "nameLabel": "Zonanın adı",
     "iconLabel": "Nişan",
-    "addButton": "Zona əlavə et",
     "noTariffs": "Tariflər təyin edilməyib",
     "assetsCount": "aktiv",
     "noZones": "Hələ heç bir zona yoxdur — aşağıda birincisini əlavə edin.",
@@ -691,7 +687,6 @@
     "nameLabel": "İşçinin adı",
     "pinLabel": "PIN-kod (4-6 rəqəm)",
     "pinFormatError": "PIN-kod 4-6 rəqəmdən ibarət olmalıdır",
-    "addButton": "İşçi əlavə et",
     "active": "Aktiv",
     "inactive": "Deaktiv edilib",
     "resetPin": "PIN-i dəyiş",
@@ -768,7 +763,12 @@
     "expenseCategoriesTitle": "Xərc kateqoriyaları",
     "noExpenseCategories": "Hələ kateqoriya yoxdur",
     "newCategoryPlaceholder": "Yeni kateqoriya",
-    "categorySaveError": "Kateqoriyanı yadda saxlamaq mümkün olmadı"
+    "categorySaveError": "Kateqoriyanı yadda saxlamaq mümkün olmadı",
+    "editCollectionAction": "Dəyişdir",
+    "collectionSaveError": "Dəyişikliklər saxlanıla bilmədi",
+    "deleteCollectionAction": "İnkassasiyanı sil",
+    "deleteCollectionConfirm": "Bu inkassasiyanı silmək istəyirsiniz? Zona qalığı yenidən hesablanacaq. Geri qaytarıla bilməz.",
+    "deleteCollectionError": "İnkassasiyanı silmək mümkün olmadı"
   },
   "readings": {
     "title": "Günlər üzrə göstəricilər",
@@ -849,7 +849,6 @@
     "pointLabel": "Nöqtə:",
     "submitResults": "Nəticələri təhvil ver",
     "collection": "İnkassasiya",
-    "collectionDone": "İnkassasiya qeydə alındı.",
     "collectionModeZone": "Zonalar üzrə",
     "collectionModeGeneral": "Ümumi",
     "collectionGeneralHint": "Məbləğ obyektin zonaları arasında avtomatik, kassalarının qalığına mütənasib bölünəcək.",
@@ -912,9 +911,7 @@
       "carryoverAddButton": "Balans köçürməsi",
       "carryoverHint": "Balansın birdəfəlik korreksiyası — məsələn, əvvəlki uçot sistemindən qalıq balansın köçürülməsi. Mənfi ola bilər.",
       "moduleDisabledNote": "«İş vaxtı» modulu şirkətiniz üçün qoşulmayıb",
-      "deleteShiftAction": "Növbəni sil",
       "deleteShiftConfirm": "Bu növbə silinsin? Əməliyyat geri qaytarıla bilməz. Yalnız işçinin son növbəsini silmək mümkündür.",
-      "deleteMoneyOpAction": "Yazını sil",
       "deleteMoneyOpConfirm": "Bu yazı silinsin? Əməliyyat geri qaytarıla bilməz."
     },
     "submit": {
@@ -1016,7 +1013,6 @@
     "fieldBrowser": "Brauzer",
     "fieldVersion": "Versiya",
     "downloadPdfButton": "PDF yüklə",
-    "deleteRecordButton": "Qeydi sil",
     "deleteRecordConfirmTitle": "Qeydi silmək istəyirsiniz?",
     "deleteRecordConfirmHint": "PDF və imza bərpa olunmadan siliniəcək. Silinmə faktı düzəlişlər jurnalında qalacaq.",
     "honestyCheckLabel": "Dürüstlük yoxlaması",

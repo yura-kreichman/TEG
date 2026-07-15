@@ -86,6 +86,10 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   }
 
   if (nextAdvance > currentAdvance) {
+    // Правку суммы вносит владелец — как и ручной аванс из карточки
+    // сотрудника, это не забор денег из кассы точки (решение пользователя
+    // 2026-07-15), проверка по личному балансу "к выдаче" + овердрафт, а не
+    // по остатку кассы.
     const shiftOperator = await prisma.operator.findUnique({
       where: { id: shift.operatorId },
       select: { overdraftAllowed: true },

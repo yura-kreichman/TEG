@@ -12,7 +12,6 @@
   "common": {
     "save": "Kaydet",
     "saved": "Kaydedildi",
-    "cancel": "İptal",
     "logout": "Çıkış Yap",
     "delete": "Sil",
     "edit": "Düzenle",
@@ -319,7 +318,6 @@
     "confirmNamePrefix": "Onaylamak için şirket adını girin:",
     "confirmNameHint": "Tam olarak eşleşmelidir",
     "confirmButton": "Kalıcı olarak sil",
-    "doneMessage": "Veriler silindi.",
     "genericError": "Temizlik gerçekleştirilemedi"
   },
   "summaries": {
@@ -569,7 +567,6 @@
     "nameLabel": "Nokta adı",
     "addressLabel": "Adres (isteğe bağlı)",
     "iconLabel": "Simge",
-    "addButton": "Nokta ekle",
     "addDeviceButton": "Cihaz/etkinleştirme bağlantısı oluştur",
     "deviceActivated": "Etkin",
     "deviceAwaiting": "etkinleştirme bekleniyor",
@@ -628,7 +625,6 @@
     "allPoints": "Tüm noktalar",
     "nameLabel": "Bölge adı",
     "iconLabel": "Simge",
-    "addButton": "Bölge ekle",
     "noTariffs": "Tarife belirlenmedi",
     "assetsCount": "varlık",
     "noZones": "Henüz hiç bölge yok — aşağıdan ilkini ekleyin.",
@@ -691,7 +687,6 @@
     "nameLabel": "Çalışan adı",
     "pinLabel": "PIN kodu (4-6 hane)",
     "pinFormatError": "PIN kodu 4-6 haneli olmalıdır",
-    "addButton": "Çalışan ekle",
     "active": "Aktif",
     "inactive": "Devre dışı",
     "resetPin": "PIN'i değiştir",
@@ -768,7 +763,12 @@
     "expenseCategoriesTitle": "Gider kategorileri",
     "noExpenseCategories": "Henüz kategori yok",
     "newCategoryPlaceholder": "Yeni kategori",
-    "categorySaveError": "Kategori kaydedilemedi"
+    "categorySaveError": "Kategori kaydedilemedi",
+    "editCollectionAction": "Düzenle",
+    "collectionSaveError": "Değişiklikler kaydedilemedi",
+    "deleteCollectionAction": "Tahsilatı sil",
+    "deleteCollectionConfirm": "Bu tahsilat silinsin mi? Bölge bakiyesi yeniden hesaplanacak. Geri alınamaz.",
+    "deleteCollectionError": "Tahsilat silinemedi"
   },
   "readings": {
     "title": "Günlük okumalar",
@@ -849,7 +849,6 @@
     "pointLabel": "Nokta:",
     "submitResults": "Sonuçları teslim et",
     "collection": "Tahsilat",
-    "collectionDone": "Tahsilat kaydedildi.",
     "collectionModeZone": "Bölgelere göre",
     "collectionModeGeneral": "Genel",
     "collectionGeneralHint": "Tutar, noktanın bölgeleri arasında kasalarının bakiyesiyle orantılı olarak otomatik bölüştürülür.",
@@ -912,9 +911,7 @@
       "carryoverAddButton": "Bakiye devri",
       "carryoverHint": "Bakiyede tek seferlik düzeltme — örneğin önceki sistemden devreden bakiyenin aktarılması. Negatif olabilir.",
       "moduleDisabledNote": "«Çalışma süresi» modülü şirketiniz için etkinleştirilmedi",
-      "deleteShiftAction": "Vardiyayı sil",
       "deleteShiftConfirm": "Bu vardiya silinsin mi? Bu işlem geri alınamaz. Yalnızca çalışanın son vardiyası silinebilir.",
-      "deleteMoneyOpAction": "Kaydı sil",
       "deleteMoneyOpConfirm": "Bu kayıt silinsin mi? Bu işlem geri alınamaz."
     },
     "submit": {
@@ -1016,7 +1013,6 @@
     "fieldBrowser": "Tarayıcı",
     "fieldVersion": "Sürüm",
     "downloadPdfButton": "PDF indir",
-    "deleteRecordButton": "Kaydı sil",
     "deleteRecordConfirmTitle": "Kayıt silinsin mi?",
     "deleteRecordConfirmHint": "PDF ve imza geri döndürülemez şekilde silinecek. Silme işlemi değişiklik günlüğünde kalır.",
     "honestyCheckLabel": "Dürüstlük kontrolü",

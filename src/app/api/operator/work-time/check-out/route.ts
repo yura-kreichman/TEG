@@ -9,6 +9,7 @@ import {
   hasNoResultsToday,
   validateShift,
 } from "@/lib/work-time";
+import { getPointCashBalance } from "@/lib/zone-balance";
 import { dispatchShiftCloseSummary } from "@/lib/summary-channels/dispatch";
 import { SHIFT_CLOSE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { notifyDailyCashLateSubmission, onShiftClosed } from "@/lib/summary-channels/daily-cash-trigger";
@@ -44,12 +45,32 @@ export async function POST(request: Request) {
   const rate = await getRateForDate(operator.id, startAt);
   const { minutes, accrued } = calcShiftAccrual(startAt, endAt, rate);
 
+  if (advanceAmount > 0 || bonusAmount > 0) {
+    // Аванс И премия, которые сотрудник вводит САМ (без владельца рядом), —
+    // физически берутся из кассы точки, обе ограничены её остатком, БЕЗ
+    // исключений (решение пользователя 2026-07-15) — этот кап всегда жёсткий,
+    // даже с овердрафтом. У владельца наоборот: деньги не из кассы точки,
+    // проверка по личному балансу сотрудника + овердрафт — см.
+    // /api/operators/[id]/work-time/advance и .../bonus.
+    const pointBalance = await getPointCashBalance(point.id);
+    if (advanceAmount + bonusAmount > pointBalance) {
+      const locale = await resolveLocale();
+      return NextResponse.json(
+        { error: `Сумма превышает остаток кассы точки (${formatMoney(pointBalance, locale)})` },
+        { status: 400 }
+      );
+    }
+  }
+
   if (advanceAmount > 0) {
+    // Вторая, независимая проверка — только для аванса: даже если в кассе
+    // точки денег хватает, аванс дополнительно не может превышать личный
+    // баланс сотрудника "к выдаче", если только у него не разрешён овердрафт
+    // (решение пользователя 2026-07-15) — обе проверки должны пройти.
     const balance = await calcOperatorBalance(operator.id);
     // Баланс без учёта начисления ЗА ЭТУ смену ещё не включает её — прибавляем,
     // иначе аванс на первой же смене оператора всегда бы блокировался.
     const projectedToPayOut = balance.toPayOut + accrued;
-    // overdraftAllowed — персональная настройка оператора (docs/spec/05-work-time.md), не тенанта.
     if (!operator.overdraftAllowed && advanceAmount > projectedToPayOut) {
       const locale = await resolveLocale();
       return NextResponse.json(

@@ -4,8 +4,12 @@ import { findTenantOperator, requireOwner } from "@/lib/require-owner";
 import { calcOperatorBalance } from "@/lib/work-time";
 
 // Ручная премия из карточки оператора (docs/spec/05-work-time.md) — не
-// привязана к смене, комментарий не требуется. Не проверяет овердрафт —
-// премия не входит в "к выдаче" (уже выдана), только в "заработано".
+// привязана к смене, комментарий не требуется. Не проверяет ни овердрафт, ни
+// остаток кассы точки — премия не входит в "к выдаче" (уже выдана), только в
+// "заработано"; деньги на неё не из кассы точки (решение пользователя
+// 2026-07-15: уже забраны инкассацией, или переданы отдельно) —
+// performedByUserId ниже исключает эту операцию из расчёта остатка кассы
+// (см. getPointCashBalance в lib/zone-balance.ts).
 export async function POST(request: Request, ctx: RouteContext<"/api/operators/[id]/work-time/bonus">) {
   const owner = await requireOwner();
   if (!owner) {

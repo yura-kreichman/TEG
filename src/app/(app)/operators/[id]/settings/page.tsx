@@ -19,7 +19,6 @@ import {
   Power,
   PowerOff,
   Trash2,
-  X,
   AlarmClockOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -735,20 +734,12 @@ export default function OperatorSettingsPage() {
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operators.deleteButton}</h2>
           <p className="text-body-airbnb">{t.operators.confirmDelete}</p>
           {actionError && <p className="text-sm text-destructive">{actionError}</p>}
-          <div className="flex gap-2">
-            <PressableScale className="flex-1">
-              <Button variant="outline" className="w-full gap-1.5" onClick={() => setConfirmDeleteOpen(false)}>
-                <X className="size-4" />
-                {t.common.cancel}
-              </Button>
-            </PressableScale>
-            <PressableScale className="flex-1">
-              <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDelete}>
-                <Trash2 className="size-4" />
-                {t.common.delete}
-              </Button>
-            </PressableScale>
-          </div>
+          <PressableScale>
+            <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDelete}>
+              <Trash2 className="size-4" />
+              {t.common.delete}
+            </Button>
+          </PressableScale>
         </div>
       </BottomSheet>
     </div>

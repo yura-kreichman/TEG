@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
 import { Building2, CalendarDays, ChevronRight, ImagePlus, KeyRound, ListChecks, LogOut, Pencil } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -398,16 +398,11 @@ export function OwnerDashboardCard({
             </div>
           )}
           {accountError && <p className="text-sm text-destructive">{accountError}</p>}
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setAccountView("menu")}>
-              {t.common.cancel}
-            </Button>
-            <PressableScale className="flex-1">
-              <SaveButton className="w-full" onClick={confirmRename}>
+          <PressableScale>
+            <SaveButton className="w-full" onClick={confirmRename}>
               {t.common.save}
-              </SaveButton>
-            </PressableScale>
-          </div>
+            </SaveButton>
+          </PressableScale>
         </div>
       </BottomSheet>
     </div>

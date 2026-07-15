@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SaveButton } from "@/components/ui/save-button";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
@@ -273,13 +274,14 @@ export default function OperatorsPage() {
               value={pin}
               onChange={(e) => setPin(e.target.value)}
               required
+              className="w-28"
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <PressableScale>
-            <Button type="submit" disabled={loading} className="w-full">
-              {t.operators.addButton}
-            </Button>
+            <SaveButton type="submit" disabled={loading} className="w-full">
+              {t.common.add}
+            </SaveButton>
           </PressableScale>
         </form>
       </BottomSheet>

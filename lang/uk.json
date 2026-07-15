@@ -12,7 +12,6 @@
   "common": {
     "save": "Зберегти",
     "saved": "Збережено",
-    "cancel": "Скасувати",
     "logout": "Вийти",
     "delete": "Видалити",
     "edit": "Змінити",
@@ -319,7 +318,6 @@
     "confirmNamePrefix": "Введіть назву компанії, щоб підтвердити:",
     "confirmNameHint": "Має збігатися точно",
     "confirmButton": "Видалити безповоротно",
-    "doneMessage": "Дані видалено.",
     "genericError": "Не вдалося виконати очищення"
   },
   "summaries": {
@@ -569,7 +567,6 @@
     "nameLabel": "Назва точки",
     "addressLabel": "Адреса (необов'язково)",
     "iconLabel": "Іконка",
-    "addButton": "Додати точку",
     "addDeviceButton": "Створити пристрій/посилання активації",
     "deviceActivated": "Активний",
     "deviceAwaiting": "очікує активації",
@@ -628,7 +625,6 @@
     "allPoints": "Усі точки",
     "nameLabel": "Назва зони",
     "iconLabel": "Іконка",
-    "addButton": "Додати зону",
     "noTariffs": "Тарифи не задані",
     "assetsCount": "актив(ів)",
     "noZones": "Поки немає жодної зони — додайте першу нижче.",
@@ -691,7 +687,6 @@
     "nameLabel": "Ім'я співробітника",
     "pinLabel": "PIN-код (4-6 цифр)",
     "pinFormatError": "PIN-код має складатися з 4-6 цифр",
-    "addButton": "Додати співробітника",
     "active": "Активний",
     "inactive": "Деактивовано",
     "resetPin": "Змінити PIN",
@@ -768,7 +763,12 @@
     "expenseCategoriesTitle": "Категорії витрат",
     "noExpenseCategories": "Категорій поки немає",
     "newCategoryPlaceholder": "Нова категорія",
-    "categorySaveError": "Не вдалося зберегти категорію"
+    "categorySaveError": "Не вдалося зберегти категорію",
+    "editCollectionAction": "Змінити",
+    "collectionSaveError": "Не вдалося зберегти зміни",
+    "deleteCollectionAction": "Видалити інкасацію",
+    "deleteCollectionConfirm": "Видалити цю інкасацію? Залишок по зоні перерахується. Скасувати не можна.",
+    "deleteCollectionError": "Не вдалося видалити інкасацію"
   },
   "readings": {
     "title": "Показання за днями",
@@ -849,7 +849,6 @@
     "pointLabel": "Точка:",
     "submitResults": "Здати підсумки",
     "collection": "Інкасація",
-    "collectionDone": "Інкасацію записано.",
     "collectionModeZone": "За зонами",
     "collectionModeGeneral": "Загальна",
     "collectionGeneralHint": "Сума автоматично розподілиться між зонами точки пропорційно залишкам їхніх кас.",
@@ -912,9 +911,7 @@
       "carryoverAddButton": "Перенесення балансу",
       "carryoverHint": "Одноразове коригування балансу — наприклад, перенесення залишку з попередньої системи обліку. Може бути від'ємним.",
       "moduleDisabledNote": "Модуль «Робочий час» не підключено для вашої компанії",
-      "deleteShiftAction": "Видалити зміну",
       "deleteShiftConfirm": "Видалити цю зміну? Дію не можна скасувати. Видалити можна лише останню зміну співробітника.",
-      "deleteMoneyOpAction": "Видалити запис",
       "deleteMoneyOpConfirm": "Видалити цей запис? Дію не можна скасувати."
     },
     "submit": {
@@ -1016,7 +1013,6 @@
     "fieldBrowser": "Браузер",
     "fieldVersion": "Версія",
     "downloadPdfButton": "Завантажити PDF",
-    "deleteRecordButton": "Видалити запис",
     "deleteRecordConfirmTitle": "Видалити запис?",
     "deleteRecordConfirmHint": "PDF і підпис буде видалено без можливості відновлення. Факт видалення залишиться в журналі правок.",
     "honestyCheckLabel": "Перевірка чесності",

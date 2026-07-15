@@ -459,6 +459,20 @@ html:has(.app-bg[data-bg-style]) {
     radial-gradient(90% 55% at 85% 0%, var(--bg-a08), transparent 65%);
 }
 
+/* Значок "смена открыта" (src/components/open-shift-badge.tsx) — стандартный
+   animate-pulse гаснет только до 50% непрозрачности, на глаз читалось как
+   слишком слабое мигание (фидбек пользователя 2026-07-15); свой keyframe с
+   более глубоким перепадом. */
+@keyframes open-shift-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

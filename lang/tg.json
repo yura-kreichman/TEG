@@ -12,7 +12,6 @@
   "common": {
     "save": "Нигоҳ доштан",
     "saved": "Нигоҳ дошта шуд",
-    "cancel": "Бекор кардан",
     "logout": "Баромадан",
     "delete": "Нест кардан",
     "edit": "Тағйир додан",
@@ -319,7 +318,6 @@
     "confirmNamePrefix": "Барои тасдиқ номи ширкатро ворид кунед:",
     "confirmNameHint": "Бояд ба таври дақиқ мувофиқат кунад",
     "confirmButton": "Бебозгашт нест кардан",
-    "doneMessage": "Маълумот нест карда шуд.",
     "genericError": "Тозакунӣ иҷро нашуд"
   },
   "summaries": {
@@ -569,7 +567,6 @@
     "nameLabel": "Номи нуқта",
     "addressLabel": "Суроға (ихтиёрӣ)",
     "iconLabel": "Иконка",
-    "addButton": "Нуқта илова кардан",
     "addDeviceButton": "Дастгоҳ/истиноди фаъолсозӣ эҷод кардан",
     "deviceActivated": "Фаъол",
     "deviceAwaiting": "интизори фаъолсозӣ",
@@ -628,7 +625,6 @@
     "allPoints": "Ҳамаи нуқтаҳо",
     "nameLabel": "Номи минтақа",
     "iconLabel": "Иконка",
-    "addButton": "Минтақа илова кардан",
     "noTariffs": "Тарифҳо муайян нашудаанд",
     "assetsCount": "актив(ҳо)",
     "noZones": "То ҳол ягон минтақа нест — якумашро дар поён илова кунед.",
@@ -691,7 +687,6 @@
     "nameLabel": "Номи корманд",
     "pinLabel": "Коди ПИН (4-6 рақам)",
     "pinFormatError": "Коди ПИН бояд аз 4-6 рақам иборат бошад",
-    "addButton": "Корманд илова кардан",
     "active": "Фаъол",
     "inactive": "Ғайрифаъол карда шуд",
     "resetPin": "ПИН-ро иваз кардан",
@@ -768,7 +763,12 @@
     "expenseCategoriesTitle": "Категорияҳои хароҷот",
     "noExpenseCategories": "Ҳанӯз категория нест",
     "newCategoryPlaceholder": "Категорияи нав",
-    "categorySaveError": "Нигоҳ доштани категория муяссар нашуд"
+    "categorySaveError": "Нигоҳ доштани категория муяссар нашуд",
+    "editCollectionAction": "Тағйир додан",
+    "collectionSaveError": "Тағйиротро захира кардан ғайриимкон аст",
+    "deleteCollectionAction": "Нест кардани инкассатсия",
+    "deleteCollectionConfirm": "Ин инкассатсияро нест мекунед? Бақияи минтақа аз нав ҳисоб карда мешавад. Бекор кардан ғайриимкон аст.",
+    "deleteCollectionError": "Инкассатсияро нест кардан ғайриимкон аст"
   },
   "readings": {
     "title": "Нишондиҳандаҳо аз рӯи рӯзҳо",
@@ -849,7 +849,6 @@
     "pointLabel": "Нуқта:",
     "submitResults": "Натиҷаҳоро супоридан",
     "collection": "Инкассатсия",
-    "collectionDone": "Инкассатсия сабт шуд.",
     "collectionModeZone": "Аз рӯи минтақаҳо",
     "collectionModeGeneral": "Умумӣ",
     "collectionGeneralHint": "Маблағ ба таври худкор байни минтақаҳои нуқта мутаносибан ба монданги кассаҳояшон тақсим мешавад.",
@@ -912,9 +911,7 @@
       "carryoverAddButton": "Интиқоли баланс",
       "carryoverHint": "Ислоҳи якдафъаинаи баланс — масалан, интиқоли монда аз системаи қаблии ҳисобдорӣ. Метавонад манфӣ бошад.",
       "moduleDisabledNote": "Модули «Вақти корӣ» барои ширкати шумо пайваст нашудааст",
-      "deleteShiftAction": "Сменаро нест кардан",
       "deleteShiftConfirm": "Ин смена нест карда шавад? Амал баргарданашаванда аст. Нест кардан танҳо сменаи охирини кормандро мумкин аст.",
-      "deleteMoneyOpAction": "Сабтро нест кардан",
       "deleteMoneyOpConfirm": "Ин сабт нест карда шавад? Амал баргарданашаванда аст."
     },
     "submit": {
@@ -1016,7 +1013,6 @@
     "fieldBrowser": "Браузер",
     "fieldVersion": "Версия",
     "downloadPdfButton": "Боргирии PDF",
-    "deleteRecordButton": "Нест кардани сабт",
     "deleteRecordConfirmTitle": "Сабтро нест кунем?",
     "deleteRecordConfirmHint": "PDF ва имзо бебозгашт нест карда мешаванд. Далели несткунӣ дар рӯзномаи ислоҳот мемонад.",
     "honestyCheckLabel": "Санҷиши ростқавлӣ",

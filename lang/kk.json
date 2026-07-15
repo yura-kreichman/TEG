@@ -12,7 +12,6 @@
   "common": {
     "save": "Сақтау",
     "saved": "Сақталды",
-    "cancel": "Бас тарту",
     "logout": "Шығу",
     "delete": "Жою",
     "edit": "Өзгерту",
@@ -319,7 +318,6 @@
     "confirmNamePrefix": "Растау үшін компания атауын енгізіңіз:",
     "confirmNameHint": "Дәл сәйкес келуі керек",
     "confirmButton": "Қайтарылмастай жою",
-    "doneMessage": "Деректер жойылды.",
     "genericError": "Тазалауды орындау мүмкін болмады"
   },
   "summaries": {
@@ -569,7 +567,6 @@
     "nameLabel": "Нүкте атауы",
     "addressLabel": "Мекенжай (міндетті емес)",
     "iconLabel": "Иконка",
-    "addButton": "Нүкте қосу",
     "addDeviceButton": "Құрылғы/белсендіру сілтемесін жасау",
     "deviceActivated": "Белсенді",
     "deviceAwaiting": "белсендіруді күтуде",
@@ -628,7 +625,6 @@
     "allPoints": "Барлық нүктелер",
     "nameLabel": "Аймақ атауы",
     "iconLabel": "Иконка",
-    "addButton": "Аймақ қосу",
     "noTariffs": "Тарифтер белгіленбеген",
     "assetsCount": "актив",
     "noZones": "Әзірге бірде-бір аймақ жоқ — төменнен біріншісін қосыңыз.",
@@ -691,7 +687,6 @@
     "nameLabel": "Қызметкер аты",
     "pinLabel": "ПИН-код (4-6 сан)",
     "pinFormatError": "ПИН-код 4-6 саннан тұруы керек",
-    "addButton": "Қызметкер қосу",
     "active": "Белсенді",
     "inactive": "Деактивтелген",
     "resetPin": "ПИН-кодты ауыстыру",
@@ -768,7 +763,12 @@
     "expenseCategoriesTitle": "Шығыс санаттары",
     "noExpenseCategories": "Әзірге санаттар жоқ",
     "newCategoryPlaceholder": "Жаңа санат",
-    "categorySaveError": "Санатты сақтау мүмкін болмады"
+    "categorySaveError": "Санатты сақтау мүмкін болмады",
+    "editCollectionAction": "Өзгерту",
+    "collectionSaveError": "Өзгерістерді сақтау мүмкін болмады",
+    "deleteCollectionAction": "Инкассацияны жою",
+    "deleteCollectionConfirm": "Осы инкассацияны жоюсыз ба? Аймақ қалдығы қайта есептеледі. Болдырмау мүмкін емес.",
+    "deleteCollectionError": "Инкассацияны жою мүмкін болмады"
   },
   "readings": {
     "title": "Күндер бойынша көрсеткіштер",
@@ -849,7 +849,6 @@
     "pointLabel": "Нүкте:",
     "submitResults": "Қорытынды тапсыру",
     "collection": "Инкассация",
-    "collectionDone": "Инкассация жазылды.",
     "collectionModeZone": "Аймақтар бойынша",
     "collectionModeGeneral": "Жалпы",
     "collectionGeneralHint": "Сома нүктенің аймақтары арасында автоматты түрде, олардың кассасының қалдығына пропорционалды бөлінеді.",
@@ -912,9 +911,7 @@
       "carryoverAddButton": "Баланс ауыстыру",
       "carryoverHint": "Балансты бір реттік түзету — мысалы, алдыңғы есеп жүйесінен қалдықты ауыстыру. Теріс болуы мүмкін.",
       "moduleDisabledNote": "«Жұмыс уақыты» модулі сіздің компанияңыз үшін қосылмаған",
-      "deleteShiftAction": "Ауысымды жою",
       "deleteShiftConfirm": "Бұл ауысымды жою керек пе? Әрекетті болдырмау мүмкін емес. Тек қызметкердің соңғы ауысымын жоюға болады.",
-      "deleteMoneyOpAction": "Жазбаны жою",
       "deleteMoneyOpConfirm": "Бұл жазбаны жою керек пе? Әрекетті болдырмау мүмкін емес."
     },
     "submit": {
@@ -1016,7 +1013,6 @@
     "fieldBrowser": "Браузер",
     "fieldVersion": "Нұсқа",
     "downloadPdfButton": "PDF жүктеп алу",
-    "deleteRecordButton": "Жазбаны жою",
     "deleteRecordConfirmTitle": "Жазбаны жою керек пе?",
     "deleteRecordConfirmHint": "PDF және қолтаңба қайтарылмастай жойылады. Жою фактісі түзетулер журналында қалады.",
     "honestyCheckLabel": "Адалдықты тексеру",

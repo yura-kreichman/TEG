@@ -9,7 +9,10 @@ export function OpenShiftBadge({ className }: { className?: string }) {
   return (
     <Play
       aria-hidden
-      className={cn("absolute -right-0.5 -top-0.5 size-4 fill-success text-success motion-safe:animate-pulse", className)}
+      className={cn(
+        "absolute -right-0.5 -top-0.5 size-4 fill-success text-success motion-safe:animate-[open-shift-blink_1.1s_ease-in-out_infinite]",
+        className
+      )}
     />
   );
 }

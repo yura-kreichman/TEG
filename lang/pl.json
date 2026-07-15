@@ -12,7 +12,6 @@
   "common": {
     "save": "Zapisz",
     "saved": "Zapisano",
-    "cancel": "Anuluj",
     "logout": "Wyloguj",
     "delete": "Usuń",
     "edit": "Edytuj",
@@ -319,7 +318,6 @@
     "confirmNamePrefix": "Wpisz nazwę firmy, aby potwierdzić:",
     "confirmNameHint": "Musi być zgodna dokładnie",
     "confirmButton": "Usuń bezpowrotnie",
-    "doneMessage": "Dane zostały usunięte.",
     "genericError": "Nie udało się wykonać czyszczenia"
   },
   "summaries": {
@@ -569,7 +567,6 @@
     "nameLabel": "Nazwa punktu",
     "addressLabel": "Adres (opcjonalnie)",
     "iconLabel": "Ikona",
-    "addButton": "Dodaj punkt",
     "addDeviceButton": "Utwórz urządzenie/link aktywacyjny",
     "deviceActivated": "Aktywne",
     "deviceAwaiting": "oczekuje na aktywację",
@@ -628,7 +625,6 @@
     "allPoints": "Wszystkie punkty",
     "nameLabel": "Nazwa strefy",
     "iconLabel": "Ikona",
-    "addButton": "Dodaj strefę",
     "noTariffs": "Taryfy nie ustawione",
     "assetsCount": "zasób(ów)",
     "noZones": "Nie ma jeszcze żadnej strefy — dodaj pierwszą poniżej.",
@@ -691,7 +687,6 @@
     "nameLabel": "Imię pracownika",
     "pinLabel": "Kod PIN (4-6 cyfr)",
     "pinFormatError": "Kod PIN musi składać się z 4-6 cyfr",
-    "addButton": "Dodaj pracownika",
     "active": "Aktywny",
     "inactive": "Dezaktywowany",
     "resetPin": "Zmień PIN",
@@ -768,7 +763,12 @@
     "expenseCategoriesTitle": "Kategorie wydatków",
     "noExpenseCategories": "Jeszcze nie ma kategorii",
     "newCategoryPlaceholder": "Nowa kategoria",
-    "categorySaveError": "Nie udało się zapisać kategorii"
+    "categorySaveError": "Nie udało się zapisać kategorii",
+    "editCollectionAction": "Edytuj",
+    "collectionSaveError": "Nie udało się zapisać zmian",
+    "deleteCollectionAction": "Usuń inkasację",
+    "deleteCollectionConfirm": "Usunąć tę inkasację? Saldo strefy zostanie przeliczone. Nie można cofnąć.",
+    "deleteCollectionError": "Nie udało się usunąć inkasacji"
   },
   "readings": {
     "title": "Odczyty dzienne",
@@ -849,7 +849,6 @@
     "pointLabel": "Punkt:",
     "submitResults": "Zdaj wyniki",
     "collection": "Inkaso",
-    "collectionDone": "Inkaso zapisane.",
     "collectionModeZone": "Wg stref",
     "collectionModeGeneral": "Ogólne",
     "collectionGeneralHint": "Kwota zostanie automatycznie podzielona między strefy punktu, proporcjonalnie do stanu ich kas.",
@@ -912,9 +911,7 @@
       "carryoverAddButton": "Przeniesienie salda",
       "carryoverHint": "Jednorazowa korekta salda — np. przeniesienie salda początkowego z poprzedniego systemu. Może być ujemna.",
       "moduleDisabledNote": "Moduł „Czas pracy” nie jest podłączony dla Twojej firmy",
-      "deleteShiftAction": "Usuń zmianę",
       "deleteShiftConfirm": "Usunąć tę zmianę? Czynności nie można cofnąć. Usunąć można tylko ostatnią zmianę pracownika.",
-      "deleteMoneyOpAction": "Usuń wpis",
       "deleteMoneyOpConfirm": "Usunąć ten wpis? Czynności nie można cofnąć."
     },
     "submit": {
@@ -1016,7 +1013,6 @@
     "fieldBrowser": "Przeglądarka",
     "fieldVersion": "Wersja",
     "downloadPdfButton": "Pobierz PDF",
-    "deleteRecordButton": "Usuń wpis",
     "deleteRecordConfirmTitle": "Usunąć wpis?",
     "deleteRecordConfirmHint": "PDF i podpis zostaną trwale usunięte. Fakt usunięcia pozostanie w dzienniku zmian.",
     "honestyCheckLabel": "Sprawdzanie uczciwości",

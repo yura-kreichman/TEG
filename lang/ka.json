@@ -12,7 +12,6 @@
   "common": {
     "save": "შენახვა",
     "saved": "შენახულია",
-    "cancel": "გაუქმება",
     "logout": "გასვლა",
     "delete": "წაშლა",
     "edit": "შეცვლა",
@@ -319,7 +318,6 @@
     "confirmNamePrefix": "შეიყვანეთ კომპანიის სახელი დასადასტურებლად:",
     "confirmNameHint": "უნდა ემთხვეოდეს ზუსტად",
     "confirmButton": "შეუქცევადად წაშლა",
-    "doneMessage": "მონაცემები წაშლილია.",
     "genericError": "გასუფთავება ვერ მოხერხდა"
   },
   "summaries": {
@@ -569,7 +567,6 @@
     "nameLabel": "წერტილის სახელი",
     "addressLabel": "მისამართი (არასავალდებულო)",
     "iconLabel": "ხატულა",
-    "addButton": "წერტილის დამატება",
     "addDeviceButton": "მოწყობილობის/აქტივაციის ბმულის შექმნა",
     "deviceActivated": "აქტიურია",
     "deviceAwaiting": "ელოდება აქტივაციას",
@@ -628,7 +625,6 @@
     "allPoints": "ყველა წერტილი",
     "nameLabel": "ზონის სახელი",
     "iconLabel": "ხატულა",
-    "addButton": "ზონის დამატება",
     "noTariffs": "ტარიფები არ არის მითითებული",
     "assetsCount": "აქტივი",
     "noZones": "ჯერ არცერთი ზონა არ არის — დაამატეთ პირველი ქვემოთ.",
@@ -691,7 +687,6 @@
     "nameLabel": "თანამშრომლის სახელი",
     "pinLabel": "PIN-კოდი (4-6 ციფრი)",
     "pinFormatError": "PIN-კოდი უნდა შედგებოდეს 4-6 ციფრისგან",
-    "addButton": "თანამშრომლის დამატება",
     "active": "აქტიური",
     "inactive": "დეაქტივირებული",
     "resetPin": "PIN-ის შეცვლა",
@@ -768,7 +763,12 @@
     "expenseCategoriesTitle": "ხარჯების კატეგორიები",
     "noExpenseCategories": "კატეგორიები ჯერ არ არის",
     "newCategoryPlaceholder": "ახალი კატეგორია",
-    "categorySaveError": "კატეგორიის შენახვა ვერ მოხერხდა"
+    "categorySaveError": "კატეგორიის შენახვა ვერ მოხერხდა",
+    "editCollectionAction": "შეცვლა",
+    "collectionSaveError": "ცვლილებების შენახვა ვერ მოხერხდა",
+    "deleteCollectionAction": "ინკასაციის წაშლა",
+    "deleteCollectionConfirm": "წავშალოთ ეს ინკასაცია? ზონის ნაშთი ხელახლა გამოითვლება. გაუქმება შეუძლებელია.",
+    "deleteCollectionError": "ინკასაციის წაშლა ვერ მოხერხდა"
   },
   "readings": {
     "title": "ჩვენებები დღეების მიხედვით",
@@ -849,7 +849,6 @@
     "pointLabel": "წერტილი:",
     "submitResults": "შედეგების ჩაბარება",
     "collection": "ინკასაცია",
-    "collectionDone": "ინკასაცია ჩაწერილია.",
     "collectionModeZone": "ზონების მიხედვით",
     "collectionModeGeneral": "საერთო",
     "collectionGeneralHint": "თანხა ავტომატურად გადანაწილდება წერტილის ზონებს შორის, მათი სალაროს ნაშთის პროპორციულად.",
@@ -912,9 +911,7 @@
       "carryoverAddButton": "ბალანსის გადატანა",
       "carryoverHint": "ბალანსის ერთჯერადი კორექტირება — მაგალითად, წინა სააღრიცხვო სისტემიდან ნაშთის გადატანა. შეიძლება იყოს უარყოფითი.",
       "moduleDisabledNote": "მოდული «სამუშაო დრო» თქვენი კომპანიისთვის მიერთებული არ არის",
-      "deleteShiftAction": "ცვლის წაშლა",
       "deleteShiftConfirm": "წავშალოთ ეს ცვლა? მოქმედება შეუქცევადია. წაშლა შესაძლებელია მხოლოდ თანამშრომლის ბოლო ცვლისთვის.",
-      "deleteMoneyOpAction": "ჩანაწერის წაშლა",
       "deleteMoneyOpConfirm": "წავშალოთ ეს ჩანაწერი? მოქმედება შეუქცევადია."
     },
     "submit": {
@@ -1016,7 +1013,6 @@
     "fieldBrowser": "ბრაუზერი",
     "fieldVersion": "ვერსია",
     "downloadPdfButton": "PDF-ის ჩამოტვირთვა",
-    "deleteRecordButton": "ჩანაწერის წაშლა",
     "deleteRecordConfirmTitle": "წავშალოთ ჩანაწერი?",
     "deleteRecordConfirmHint": "PDF და ხელმოწერა შეუქცევად წაიშლება. წაშლის ფაქტი დარჩება ცვლილებების ჟურნალში.",
     "honestyCheckLabel": "პატიოსნების შემოწმება",

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Banknote, ChevronLeft, ChevronRight, MapPin, Plus } from "lucide-react";
+import { Banknote, ChevronLeft, ChevronRight, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { MoneyInput } from "@/components/money-input";
@@ -19,6 +19,7 @@ import { useI18n } from "@/components/i18n-provider";
 import { formatTime } from "@/lib/datetime-format";
 import { cn } from "@/lib/utils";
 import { Money } from "@/components/money";
+import { distributeCollectionWhole } from "@/lib/collection-split";
 
 interface ZoneBalance {
   zoneId: string;
@@ -27,6 +28,12 @@ interface ZoneBalance {
   pointId: string;
   pointName: string;
   balance: number;
+}
+
+interface PointTotal {
+  pointId: string;
+  pointName: string;
+  total: number;
 }
 
 interface CollectionEntry {
@@ -44,6 +51,7 @@ export default function ZoneBalancesPage() {
   const t = useI18n();
   const [checking, setChecking] = useState(true);
   const [zoneBalances, setZoneBalances] = useState<ZoneBalance[]>([]);
+  const [pointTotals, setPointTotals] = useState<PointTotal[]>([]);
   const [showPointName, setShowPointName] = useState(false);
   const [changeFundZoneId, setChangeFundZoneId] = useState<string | null>(null);
   const [changeFundAmount, setChangeFundAmount] = useState("");
@@ -60,13 +68,61 @@ export default function ZoneBalancesPage() {
   const [collectionZoneId, setCollectionZoneId] = useState("");
   const [collectionAmount, setCollectionAmount] = useState("");
   const [collectionError, setCollectionError] = useState<string | null>(null);
-  const [collectionDone, setCollectionDone] = useState(false);
 
   // Реестр инкассаций — перенесён сюда с отдельного экрана /money/collections
   // (запрос пользователя 2026-07-15: "весь раздел Инкассации переносим в
   // 'Остаток наличных по зонам'").
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [collections, setCollections] = useState<CollectionEntry[]>([]);
+
+  // Правка/удаление ошибочно внесённой инкассации (запрос пользователя
+  // 2026-07-15) — тот же паттерн, что у авансов/премий сотрудника
+  // (operators/[id]/page.tsx: editingMoneyOp).
+  const [editingCollection, setEditingCollection] = useState<CollectionEntry | null>(null);
+  const [editCollectionAmount, setEditCollectionAmount] = useState("");
+  const [editCollectionError, setEditCollectionError] = useState<string | null>(null);
+  const [confirmDeleteCollection, setConfirmDeleteCollection] = useState(false);
+  const [deletingCollection, setDeletingCollection] = useState(false);
+
+  function openCollectionEdit(c: CollectionEntry) {
+    setEditingCollection(c);
+    setEditCollectionAmount(String(c.amount));
+    setEditCollectionError(null);
+    setConfirmDeleteCollection(false);
+  }
+
+  async function submitCollectionEdit() {
+    if (!editingCollection) return;
+    setEditCollectionError(null);
+    const res = await fetch(`/api/money/collections/${editingCollection.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: Number(editCollectionAmount) }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setEditCollectionError(data.error ?? t.money.collectionSaveError);
+      return;
+    }
+    setEditingCollection(null);
+    await Promise.all([loadReport(), loadCollections()]);
+  }
+
+  async function deleteCollection() {
+    if (!editingCollection) return;
+    setDeletingCollection(true);
+    setEditCollectionError(null);
+    const res = await fetch(`/api/money/collections/${editingCollection.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json();
+      setEditCollectionError(data.error ?? t.money.deleteCollectionError);
+      setDeletingCollection(false);
+      return;
+    }
+    setDeletingCollection(false);
+    setEditingCollection(null);
+    await Promise.all([loadReport(), loadCollections()]);
+  }
 
   async function loadReport() {
     const res = await fetch("/api/reports/money");
@@ -76,6 +132,7 @@ export default function ZoneBalancesPage() {
     }
     const data = await res.json();
     setZoneBalances(data.zoneBalances ?? []);
+    setPointTotals(data.pointTotals ?? []);
     setShowPointName(!!data.showPointName);
     setChecking(false);
   }
@@ -129,11 +186,10 @@ export default function ZoneBalancesPage() {
 
   function openCollection() {
     setCollectionPointId(points[0]?.id ?? "");
-    setCollectionMode("general");
+    setCollectionMode("zone");
     setCollectionZoneId("");
     setCollectionAmount("");
     setCollectionError(null);
-    setCollectionDone(false);
     setCollectionOpen(true);
   }
 
@@ -166,7 +222,7 @@ export default function ZoneBalancesPage() {
       setCollectionError(data.error ?? "Не удалось провести инкассацию");
       return;
     }
-    setCollectionDone(true);
+    setCollectionOpen(false);
     setCollectionAmount("");
     await Promise.all([loadReport(), loadCollections()]);
   }
@@ -232,12 +288,36 @@ export default function ZoneBalancesPage() {
                 (acc[zb.pointId] ??= { pointName: zb.pointName, zones: [] }).zones.push(zb);
                 return acc;
               }, {})
-            ).map(([pointId, group]) => (
+            ).map(([pointId, group]) => {
+              // Аванс/премия, которые сотрудник забрал сам с момента последней
+              // инкассации (getPointCashBalance в lib/zone-balance.ts), физически
+              // выходят из касс конкретных зон, просто система не знает, из
+              // какой именно — поэтому на экране распределяем это списание по
+              // зонам пропорционально их текущим остаткам, тем же алгоритмом,
+              // что и разбивка "общей" инкассации (запрос пользователя
+              // 2026-07-16: "после того, как Женя забрал остатки, по точке
+              // должны быть 0" — должны обнулиться сами цифры зон, а не только
+              // невидимый общий итог).
+              const pointTotal = pointTotals.find((p) => p.pointId === pointId);
+              const zonesRawSum = group.zones.reduce((sum, z) => sum + z.balance, 0);
+              const pool = pointTotal ? Math.round((pointTotal.total - zonesRawSum) * 100) / 100 : 0;
+              const allocation =
+                pool !== 0
+                  ? distributeCollectionWhole(
+                      Math.abs(pool),
+                      group.zones.map((z) => z.balance)
+                    )
+                  : group.zones.map(() => 0);
+              const poolSign = Math.sign(pool);
+
+              return (
               <div key={pointId}>
                 {showPointName && (
                   <p className="pt-3 text-caption-airbnb font-semibold text-foreground">{group.pointName}</p>
                 )}
-                {group.zones.map((zb) => (
+                {group.zones.map((zb, i) => {
+                  const displayBalance = Math.round((zb.balance + poolSign * allocation[i]) * 100) / 100;
+                  return (
                   <div
                     key={zb.zoneId}
                     className="flex items-center justify-between border-t border-border py-3 pl-1 first:border-t-0"
@@ -247,10 +327,10 @@ export default function ZoneBalancesPage() {
                       <span
                         className={cn(
                           "text-[0.96875rem] font-bold tabular-nums",
-                          zb.balance === 0 && "font-medium text-muted-foreground"
+                          displayBalance === 0 && "font-medium text-muted-foreground"
                         )}
                       >
-                        <Money value={zb.balance} />
+                        <Money value={displayBalance} />
                       </span>
                       <button
                         type="button"
@@ -266,9 +346,11 @@ export default function ZoneBalancesPage() {
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
-            ))}
+              );
+            })}
           </SpringCard>
 
           <SpringCard hover={false} className="flex flex-col gap-3">
@@ -316,7 +398,17 @@ export default function ZoneBalancesPage() {
                             {formatTime(c.occurredAt)} · {c.zoneName}
                             {showPointName ? ` (${c.pointName})` : ""}
                           </span>
-                          <span className="shrink-0 text-xs font-bold tabular-nums"><Money value={c.amount} /></span>
+                          <span className="flex shrink-0 items-center gap-1">
+                            <span className="text-xs font-bold tabular-nums"><Money value={c.amount} /></span>
+                            <button
+                              type="button"
+                              onClick={() => openCollectionEdit(c)}
+                              aria-label={t.money.editCollectionAction}
+                              className="flex size-6 items-center justify-center rounded-control text-muted-foreground"
+                            >
+                              <Pencil className="size-3.5" />
+                            </button>
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -358,11 +450,7 @@ export default function ZoneBalancesPage() {
       <BottomSheet open={collectionOpen} onClose={() => setCollectionOpen(false)}>
         <form onSubmit={handleCollection} className="flex flex-col gap-4 pt-2">
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.collection}</h2>
-          {collectionDone ? (
-            <p className="text-body-airbnb text-success">{t.operatorApp.collectionDone}</p>
-          ) : (
-            <>
-              {points.length > 1 && (
+          {points.length > 1 && (
                 <div className="flex flex-col gap-1">
                   <Label htmlFor="collectionPoint">{t.money.pointLabel}</Label>
                   <Select
@@ -466,9 +554,60 @@ export default function ZoneBalancesPage() {
                 </div>
               </div>
               {collectionError && <p className="text-sm text-destructive">{collectionError}</p>}
-            </>
-          )}
         </form>
+      </BottomSheet>
+
+      <BottomSheet open={editingCollection !== null} onClose={() => setEditingCollection(null)}>
+        {editingCollection && (
+          <div className="flex flex-col gap-4 pt-2">
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.collection}</h2>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="editCollectionAmount">{t.money.amountLabel}</Label>
+              <div className="flex items-center gap-2">
+                <MoneyInput
+                  id="editCollectionAmount"
+                  autoFocus
+                  scale="lg"
+                  className="h-14 flex-1 text-lg"
+                  value={editCollectionAmount}
+                  onChange={(e) => setEditCollectionAmount(e.target.value)}
+                />
+                <PressableScale>
+                  <SaveButton className="h-14" onClick={submitCollectionEdit}>
+                    {t.common.save}
+                  </SaveButton>
+                </PressableScale>
+              </div>
+            </div>
+            {editCollectionError && <p className="text-sm text-destructive">{editCollectionError}</p>}
+
+            {confirmDeleteCollection ? (
+              <div className="flex flex-col gap-2 border-t border-border pt-4">
+                <p className="text-body-airbnb">{t.money.deleteCollectionConfirm}</p>
+                <PressableScale>
+                  <Button
+                    variant="destructive"
+                    className="w-full gap-1.5"
+                    disabled={deletingCollection}
+                    onClick={deleteCollection}
+                  >
+                    <Trash2 className="size-4" />
+                    {t.common.delete}
+                  </Button>
+                </PressableScale>
+              </div>
+            ) : (
+              <div className="border-t border-border pt-4">
+                <PressableScale>
+                  <Button variant="destructive" className="w-full gap-1.5" onClick={() => setConfirmDeleteCollection(true)}>
+                    <Trash2 className="size-4" />
+                    {t.common.delete}
+                  </Button>
+                </PressableScale>
+              </div>
+            )}
+          </div>
+        )}
       </BottomSheet>
     </OwnerShell>
   );

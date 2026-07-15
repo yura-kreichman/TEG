@@ -73,7 +73,6 @@ export default function OperatorHomePage() {
   const [collectionZoneId, setCollectionZoneId] = useState("");
   const [collectionAmount, setCollectionAmount] = useState("");
   const [collectionError, setCollectionError] = useState<string | null>(null);
-  const [collectionDone, setCollectionDone] = useState(false);
 
   const [tasks, setTasks] = useState<OperatorTask[]>([]);
   const [doneToday, setDoneToday] = useState(0);
@@ -309,16 +308,15 @@ export default function OperatorHomePage() {
       setCollectionError(data.error ?? "Не удалось провести инкассацию");
       return;
     }
-    setCollectionDone(true);
+    setShowCollection(false);
     setCollectionAmount("");
   }
 
   function openCollection() {
-    setCollectionMode("general");
+    setCollectionMode("zone");
     setCollectionZoneId("");
     setCollectionAmount("");
     setCollectionError(null);
-    setCollectionDone(false);
     setShowCollection(true);
   }
 
@@ -571,11 +569,7 @@ export default function OperatorHomePage() {
       <BottomSheet open={showCollection} onClose={() => setShowCollection(false)}>
         <form onSubmit={handleCollection} className="flex flex-col gap-4 pt-2">
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.collection}</h2>
-          {collectionDone ? (
-            <p className="text-body-airbnb text-success">{t.operatorApp.collectionDone}</p>
-          ) : (
-            <>
-              {zones.length > 1 && (
+          {zones.length > 1 && (
                 <SegmentedTabs
                   shape="control"
                   options={[
@@ -654,8 +648,6 @@ export default function OperatorHomePage() {
                 </div>
               </div>
               {collectionError && <p className="text-sm text-destructive">{collectionError}</p>}
-            </>
-          )}
         </form>
       </BottomSheet>
 

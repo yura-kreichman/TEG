@@ -12,7 +12,6 @@
   "common": {
     "save": "Сактоо",
     "saved": "Сакталды",
-    "cancel": "Жокко чыгаруу",
     "logout": "Чыгуу",
     "delete": "Өчүрүү",
     "edit": "Өзгөртүү",
@@ -319,7 +318,6 @@
     "confirmNamePrefix": "Ырастоо үчүн компаниянын атын киргизиңиз:",
     "confirmNameHint": "Так дал келиши керек",
     "confirmButton": "Кайтарылгыс өчүрүү",
-    "doneMessage": "Маалыматтар өчүрүлдү.",
     "genericError": "Тазалоону аткаруу мүмкүн болгон жок"
   },
   "summaries": {
@@ -569,7 +567,6 @@
     "nameLabel": "Чекиттин аты",
     "addressLabel": "Дарек (милдеттүү эмес)",
     "iconLabel": "Сүрөтчө",
-    "addButton": "Чекит кошуу",
     "addDeviceButton": "Түзмөк/активдештирүү шилтемесин түзүү",
     "deviceActivated": "Активдүү",
     "deviceAwaiting": "активдештирүүнү күтүүдө",
@@ -628,7 +625,6 @@
     "allPoints": "Бардык чекиттер",
     "nameLabel": "Аймактын аты",
     "iconLabel": "Сүрөтчө",
-    "addButton": "Аймак кошуу",
     "noTariffs": "Тарифтер белгиленген эмес",
     "assetsCount": "актив",
     "noZones": "Азырынча бир да аймак жок — төмөндө биринчисин кошуңуз.",
@@ -691,7 +687,6 @@
     "nameLabel": "Кызматкердин аты",
     "pinLabel": "ПИН-код (4-6 сан)",
     "pinFormatError": "ПИН-код 4-6 сандан турушу керек",
-    "addButton": "Кызматкер кошуу",
     "active": "Активдүү",
     "inactive": "Деактивдештирилген",
     "resetPin": "ПИН-ди алмаштыруу",
@@ -768,7 +763,12 @@
     "expenseCategoriesTitle": "Чыгаша категориялары",
     "noExpenseCategories": "Азырынча категория жок",
     "newCategoryPlaceholder": "Жаңы категория",
-    "categorySaveError": "Категорияны сактоо мүмкүн болгон жок"
+    "categorySaveError": "Категорияны сактоо мүмкүн болгон жок",
+    "editCollectionAction": "Өзгөртүү",
+    "collectionSaveError": "Өзгөртүүлөрдү сактоо мүмкүн болгон жок",
+    "deleteCollectionAction": "Инкассацияны өчүрүү",
+    "deleteCollectionConfirm": "Бул инкассацияны өчүрөсүзбү? Зонанын калдыгы кайра эсептелет. Жокко чыгарылбайт.",
+    "deleteCollectionError": "Инкассацияны өчүрүү мүмкүн болгон жок"
   },
   "readings": {
     "title": "Күндөр боюнча көрсөткүчтөр",
@@ -849,7 +849,6 @@
     "pointLabel": "Чекит:",
     "submitResults": "Жыйынтык тапшыруу",
     "collection": "Инкассация",
-    "collectionDone": "Инкассация жазылды.",
     "collectionModeZone": "Аймактар боюнча",
     "collectionModeGeneral": "Жалпы",
     "collectionGeneralHint": "Сумма чекиттин аймактарына автоматтык түрдө, алардын кассаларынын калдыгына пропорционалдуу бөлүштүрүлөт.",
@@ -912,9 +911,7 @@
       "carryoverAddButton": "Баланс которуу",
       "carryoverHint": "Балансты бир жолку түзөтүү — мисалы, мурунку эсепке алуу системасынан калдыкты которуу. Терс болушу мүмкүн.",
       "moduleDisabledNote": "«Жумуш убактысы» модулу сиздин компания үчүн туташтырылган эмес",
-      "deleteShiftAction": "Сменаны өчүрүү",
       "deleteShiftConfirm": "Бул смена өчүрүлсүнбү? Аракетти артка кайтарууга болбойт. Тек кызматкердин акыркы сменасын гана өчүрүүгө болот.",
-      "deleteMoneyOpAction": "Жазууну өчүрүү",
       "deleteMoneyOpConfirm": "Бул жазуу өчүрүлсүнбү? Аракетти артка кайтарууга болбойт."
     },
     "submit": {
@@ -1016,7 +1013,6 @@
     "fieldBrowser": "Браузер",
     "fieldVersion": "Версия",
     "downloadPdfButton": "PDF жүктөп алуу",
-    "deleteRecordButton": "Жазууну өчүрүү",
     "deleteRecordConfirmTitle": "Жазууну өчүрөсүзбү?",
     "deleteRecordConfirmHint": "PDF жана кол тамга кайтарылгыс өчүрүлөт. Өчүрүү факты оңдоолор журналында калат.",
     "honestyCheckLabel": "Чынчылдыкты текшерүү",

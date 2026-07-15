@@ -714,16 +714,11 @@ export default function ReadingsCalendarPage() {
             </div>
 
             {actionError && <p className="text-sm text-destructive">{actionError}</p>}
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setActionsFor(null)}>
-                {t.common.cancel}
+            <PressableScale>
+              <Button className="w-full" onClick={confirmEdit}>
+                {t.readings.saveChangesButton}
               </Button>
-              <PressableScale className="flex-1">
-                <Button className="w-full" onClick={confirmEdit}>
-                  {t.readings.saveChangesButton}
-                </Button>
-              </PressableScale>
-            </div>
+            </PressableScale>
           </div>
         )}
       </BottomSheet>
@@ -734,16 +729,11 @@ export default function ReadingsCalendarPage() {
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.readings.deleteConfirmTitle}</h2>
             <p className="text-body-airbnb">{t.readings.deleteConfirmBody}</p>
             {actionError && <p className="text-sm text-destructive">{actionError}</p>}
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" disabled={deleting} onClick={() => setActionsView("menu")}>
-                {t.common.cancel}
+            <PressableScale>
+              <Button variant="destructive" className="w-full" disabled={deleting} onClick={confirmDelete}>
+                {t.readings.deleteAction}
               </Button>
-              <PressableScale className="flex-1">
-                <Button variant="destructive" className="w-full" disabled={deleting} onClick={confirmDelete}>
-                  {t.readings.deleteAction}
-                </Button>
-              </PressableScale>
-            </div>
+            </PressableScale>
           </div>
         )}
       </BottomSheet>

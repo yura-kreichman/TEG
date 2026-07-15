@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -85,13 +85,17 @@ export function AcknowledgmentRecordSheet({
                 {t.instructions.downloadPdfButton}
               </Button>
             </PressableScale>
-            <button
-              type="button"
-              onClick={() => setView("confirm-delete")}
-              className="mx-auto mt-1 text-caption-airbnb font-semibold text-destructive"
-            >
-              {t.instructions.deleteRecordButton}
-            </button>
+            <PressableScale>
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full gap-2"
+                onClick={() => setView("confirm-delete")}
+              >
+                <Trash2 className="size-4" />
+                {t.common.delete}
+              </Button>
+            </PressableScale>
           </div>
         </div>
       )}
@@ -100,13 +104,9 @@ export function AcknowledgmentRecordSheet({
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.instructions.deleteRecordConfirmTitle}</h2>
           <p className="text-body-airbnb text-muted-foreground">{t.instructions.deleteRecordConfirmHint}</p>
           <PressableScale>
-            <Button type="button" variant="destructive" className="w-full" onClick={confirmDelete} disabled={busy}>
-              {t.instructions.deleteRecordButton}
-            </Button>
-          </PressableScale>
-          <PressableScale>
-            <Button type="button" variant="outline" className="w-full" onClick={() => setView("details")}>
-              {t.common.cancel}
+            <Button type="button" variant="destructive" className="w-full gap-2" onClick={confirmDelete} disabled={busy}>
+              <Trash2 className="size-4" />
+              {t.common.delete}
             </Button>
           </PressableScale>
         </div>
