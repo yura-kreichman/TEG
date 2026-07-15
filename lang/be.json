@@ -659,7 +659,7 @@
     "confirmDeleteAsset": "Выдаліць гэты актыў?",
     "initialReadingAction": "Пачатковае паказанне",
     "initialReadingHint": "Задайце бягучае значэнне лічыльніка, калі актыў ужо выкарыстоўваўся да падключэння прыкладання — з наступнай здачы заезды палічацца ад гэтага ліку, а не з нуля.",
-    "initialReadingWarning": "У актыву ўжо ёсць сапраўдныя здачы — змяненне тут больш не паўплывае на разлікі.",
+    "initialReadingWarning": "У актыву ўжо ёсць сапраўдныя здачы — праўка пералічыць выручку самай першай з іх (выкарыстоўваецца як пункт адліку), на больш познія здачы не паўплывае.",
     "initialReadingSaveError": "Не ўдалося захаваць пачатковае паказанне",
     "newAssetTitle": "Новы актыў",
     "newAssetSub": "Канкрэтная машынка, батут або шлем",
@@ -721,7 +721,7 @@
     "businessTitle": "Бізнес: расходы і прыбытак",
     "revenue": "Выручка",
     "expense": "Расходы",
-    "expenseHint": "Закупкі, авансы, прэміі",
+    "expenseHint": "Закупкі і іншыя выдаткі",
     "profit": "Прыбытак",
     "changeFund": "Размен",
     "changeFundAmountFor": "Размен для",
@@ -746,7 +746,18 @@
     "collectionsRegisterTitle": "Рэестр інкасацый",
     "noCollections": "У гэтым месяцы інкасацый не было",
     "advancesBonusesRegisterTitle": "Авансы і прэміі",
-    "noAdvancesBonuses": "У гэтым месяцы авансаў і прэмій не было"
+    "noAdvancesBonuses": "У гэтым месяцы авансаў і прэмій не было",
+    "difference": "Розніца",
+    "differenceHint": "Факт мінус разлік па лічыльніках",
+    "expensesLink": "Выдаткі",
+    "expensesLinkHint": "Рэестр па катэгорыях",
+    "expensesRegisterTitle": "Рэестр выдаткаў",
+    "noExpenses": "У гэтым месяцы выдаткаў не было",
+    "expenseCategoriesButton": "Катэгорыі",
+    "expenseCategoriesTitle": "Катэгорыі выдаткаў",
+    "noExpenseCategories": "Катэгорый пакуль няма",
+    "newCategoryPlaceholder": "Новая катэгорыя",
+    "categorySaveError": "Не ўдалося захаваць катэгорыю"
   },
   "readings": {
     "title": "Паказанні па днях",
@@ -924,7 +935,8 @@
       "acceptedTitle": "Здача вынікаў прынята",
       "queuedTitle": "Захавана, адправім пры сувязі",
       "queuedHint": "Інтэрнэту зараз няма — дадзеныя захаваны на прыладзе і сыдуць на сервер аўтаматычна, як толькі з'явіцца сувязь.",
-      "homeButton": "На галоўную"
+      "homeButton": "На галоўную",
+      "categoryPlaceholder": "Катэгорыя (неабавязкова)"
     },
     "offlineQueueHint": "Чакаюць адпраўкі: {count} здач(ы) — сыдуць аўтаматычна пры сувязі"
   },

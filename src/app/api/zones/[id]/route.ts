@@ -24,12 +24,14 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
 
   const submissionCount = await prisma.zoneSubmission.count({ where: { zoneId: id } });
 
-  // "Начальное показание" (запрос пользователя 2026-07-14) теряет смысл для
-  // актива, как только у него появляется хоть одна настоящая AssetReading —
-  // пункт кебаб-меню должен исчезнуть, а не просто показывать
-  // предупреждение постфактум. Те же данные используются для последних
-  // показаний под названием актива в списке (запрос пользователя того же
-  // дня: вместо "фото загружено"/"без фото" — реальные цифры счётчика).
+  // Последние показания под названием актива в списке (запрос пользователя
+  // 2026-07-14: вместо "фото загружено"/"без фото" — реальные цифры
+  // счётчика). "Начальное показание" в кебаб-меню остаётся доступным даже
+  // после первых сдач (запрос пользователя того же дня, реальный кейс:
+  // опечатка в перенесённом калибровочном значении обнаружилась только
+  // после первой сдачи, а расчёт выручки первой сдачи цепочки берёт
+  // "предыдущее" именно из калибровки и пересчитывается заново при каждом
+  // показе — исправление здесь заднем числом реально чинит эту сдачу).
   const allReadings =
     zone.accountingMode === "counters" && assets.length > 0
       ? await prisma.assetReading.findMany({
@@ -37,10 +39,8 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
           orderBy: { createdAt: "desc" },
         })
       : [];
-  const hasReadingsByAssetId = new Set<string>();
   const realReadingByKey = new Map<string, number>();
   for (const r of allReadings) {
-    hasReadingsByAssetId.add(r.assetId);
     const key = `${r.assetId}:${r.tariffId}`;
     // allReadings отсортирован по убыванию createdAt — первое совпадение
     // по ключу и есть самое свежее.
@@ -66,7 +66,6 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
     tariffs,
     assets: assets.map((a) => ({
       ...a,
-      hasCounterReadings: hasReadingsByAssetId.has(a.id),
       lastReadings: tariffs
         .map((t) => ({ tariffId: t.id, reading: lastReadingByKey.get(`${a.id}:${t.id}`) }))
         .filter((r): r is { tariffId: string; reading: number } => r.reading !== undefined),

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { getPeriodRange, isPeriodGranularity, type PeriodGranularity } from "@/lib/reports";
+import { computeZoneSubmissionRevenues, getPeriodRange, isPeriodGranularity, type PeriodGranularity } from "@/lib/reports";
 
 // "Бизнес: расходы и прибыль" (за выбранный период) и текущий остаток "сколько
 // наличных должно быть на точке" (docs/spec/02-money.md, всегда весь журнал —
@@ -81,11 +81,21 @@ export async function GET(request: Request) {
     // 2026-07-12: раньше безнал не журналировался вовсе, выручка занижалась
     // на его сумму).
     if (op.type === "revenue" || op.type === "revenue_cashless") totalRevenue += amount;
-    // Расходы бизнес-карточки: обычные expense + аванс/премия модуля Рабочее
-    // время (docs/spec/05-work-time.md) — оба уменьшают кассу, оба реальные
-    // траты бизнеса на персонал.
-    if (op.type === "expense" || op.type === "advance" || op.type === "bonus_payout") totalExpense += amount;
+    // Расходы бизнес-карточки — только обычные expense (запрос пользователя
+    // 2026-07-14: авансы/премии больше не считаются здесь расходом — это
+    // выплата уже заработанного персоналу, не трата бизнеса; отдельно видны
+    // в /money/advances-bonuses).
+    if (op.type === "expense") totalExpense += amount;
   }
+
+  // Разница (недостача/излишек) бизнес-карточки — сумма "факт минус расчёт
+  // по счётчику" по всем сдачам периода (запрос пользователя 2026-07-14).
+  // Только зоны "По счётчикам"/"По пускам" — у "Только касса" нет счётчика,
+  // с которым сверяться, calculatedRevenue там был бы всегда 0, и вся её
+  // выручка ложно выглядела бы как 100% расхождение.
+  const reconcilableZoneIds = zones.filter((z) => z.accountingMode !== "cash_only").map((z) => z.id);
+  const revenueEntries = await computeZoneSubmissionRevenues(reconcilableZoneIds, start, end);
+  const totalDifference = revenueEntries.reduce((sum, e) => sum + e.difference, 0);
 
   const zoneBalances = zones.map((zone) => ({
     zoneId: zone.id,
@@ -113,11 +123,15 @@ export async function GET(request: Request) {
   return NextResponse.json({
     zoneBalances,
     pointTotals,
+    // Название точки в группировке имеет смысл, только если точек больше
+    // одной (запрос пользователя 2026-07-14 — и так ясно, если она одна).
+    showPointName: points.length > 1,
     period: { granularity, start: start.toISOString(), end: end.toISOString() },
     business: {
       revenue: Math.round(totalRevenue * 100) / 100,
       expense: Math.round(totalExpense * 100) / 100,
       profit: Math.round((totalRevenue + totalExpense) * 100) / 100,
+      difference: Math.round(totalDifference * 100) / 100,
     },
   });
 }

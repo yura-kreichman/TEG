@@ -1,6 +1,6 @@
 import type { ZoneSummarySettingsData, DailyCashSummarySettingsData, ShiftCloseSummarySettingsData } from "@/lib/summary-settings";
 import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData, InstructionAckData } from "./types";
-import { formatDuration, formatSummaryDate, formatUtcTime } from "./format-shared";
+import { formatAmount, formatDuration, formatSummaryDate, formatUtcTime } from "./format-shared";
 
 // Чистые функции построения HTML-писем — тот же принцип, что telegram-format.ts:
 // данные + настройки → готовый {subject, html}, без SMTP, без сети.
@@ -55,7 +55,7 @@ export function formatZoneSummaryEmail(
   const rows: EmailRow[] = [];
 
   if (data.accountingMode === "cash_only") {
-    rows.push({ label: "Касса", value: data.cashAmount.toFixed(2), bold: true });
+    rows.push({ label: "Касса", value: formatAmount(data.cashAmount), bold: true });
   } else {
     if (settings.showReadings || settings.showDelta) {
       for (const r of data.readings) {
@@ -68,9 +68,9 @@ export function formatZoneSummaryEmail(
         rows.push({ label: `${r.assetName} · ${r.tariffName}`, value });
       }
     }
-    if (settings.showCash) rows.push({ label: "Наличные / Безнал", value: `${data.cashAmount.toFixed(2)} / ${data.mobileAmount.toFixed(2)}` });
-    if (settings.showCalc) rows.push({ label: "По счётчику", value: data.calculatedRevenue.toFixed(2) });
-    if (settings.showDiff) rows.push({ label: "Разница", value: `${data.difference > 0 ? "+" : ""}${data.difference.toFixed(2)}`, bold: true });
+    if (settings.showCash) rows.push({ label: "Наличные / Безнал", value: `${formatAmount(data.cashAmount)} / ${formatAmount(data.mobileAmount)}` });
+    if (settings.showCalc) rows.push({ label: "По счётчику", value: formatAmount(data.calculatedRevenue) });
+    if (settings.showDiff) rows.push({ label: "Разница", value: `${data.difference > 0 ? "+" : ""}${formatAmount(data.difference)}`, bold: true });
     if (settings.showReturns) rows.push({ label: "Возвраты/тест", value: String(data.returnsCount) });
   }
   if (settings.showOperator) rows.push({ label: "Оператор", value: data.operatorName });
@@ -87,13 +87,13 @@ export function formatDailyCashSummaryEmail(
   const total = data.cashAmount + data.mobileAmount - data.expenses;
   const rows: EmailRow[] = [];
 
-  if (settings.showCash) rows.push({ label: "Наличные / Безнал", value: `${data.cashAmount.toFixed(2)} / ${data.mobileAmount.toFixed(2)}` });
-  if (settings.showExpenses) rows.push({ label: "Расходы", value: data.expenses.toFixed(2) });
-  rows.push({ label: "Итого за день", value: total.toFixed(2), bold: true });
+  if (settings.showCash) rows.push({ label: "Наличные / Безнал", value: `${formatAmount(data.cashAmount)} / ${formatAmount(data.mobileAmount)}` });
+  if (settings.showExpenses) rows.push({ label: "Расходы", value: formatAmount(data.expenses) });
+  rows.push({ label: "Итого за день", value: formatAmount(total), bold: true });
   if (settings.showZoneBreakdown) {
-    for (const z of data.zoneBreakdown) rows.push({ label: z.zoneName, value: z.revenue.toFixed(2) });
+    for (const z of data.zoneBreakdown) rows.push({ label: z.zoneName, value: formatAmount(z.revenue) });
   }
-  if (settings.showCashOnHand) rows.push({ label: "Остаток на точке", value: data.cashOnHand.toFixed(2) });
+  if (settings.showCashOnHand) rows.push({ label: "Остаток на точке", value: formatAmount(data.cashOnHand) });
 
   return { subject, html: wrapEmail(companyName, `Касса за день · ${data.pointName}`, formatDate(data.businessDate), rows) };
 }
@@ -108,9 +108,9 @@ export function formatShiftCloseSummaryEmail(
 
   if (settings.showPeriod) rows.push({ label: "Период", value: `${formatUtcTime(data.startAt)} – ${formatUtcTime(data.endAt)}` });
   if (settings.showHours) rows.push({ label: "Отработано", value: formatDuration(data.minutes) });
-  if (settings.showAdvance && data.advanceAmount > 0) rows.push({ label: "Аванс", value: data.advanceAmount.toFixed(2) });
-  if (settings.showBonus && data.bonusAmount > 0) rows.push({ label: "Премия", value: data.bonusAmount.toFixed(2) });
-  if (settings.showTotal) rows.push({ label: "К выдаче", value: data.toPayOut.toFixed(2), bold: true });
+  if (settings.showAdvance && data.advanceAmount > 0) rows.push({ label: "Аванс", value: formatAmount(data.advanceAmount) });
+  if (settings.showBonus && data.bonusAmount > 0) rows.push({ label: "Премия", value: formatAmount(data.bonusAmount) });
+  if (settings.showTotal) rows.push({ label: "К выдаче", value: formatAmount(data.toPayOut), bold: true });
 
   return { subject, html: wrapEmail(companyName, `Смена · ${data.operatorName}`, formatDate(data.startAt), rows) };
 }

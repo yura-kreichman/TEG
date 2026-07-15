@@ -659,7 +659,7 @@
     "confirmDeleteAsset": "Usunąć ten zasób?",
     "initialReadingAction": "Odczyt początkowy",
     "initialReadingHint": "Ustaw aktualną wartość licznika, jeśli zasób był już używany przed podłączeniem aplikacji — od kolejnego rozliczenia przejazdy będą liczone od tej liczby, a nie od zera.",
-    "initialReadingWarning": "Ten zasób ma już rzeczywiste rozliczenia — zmiana tutaj nie wpłynie już na obliczenia.",
+    "initialReadingWarning": "Ten zasób ma już rzeczywiste rozliczenia — ta zmiana przeliczy przychód pierwszego z nich (używanego jako punkt odniesienia), nie wpłynie na późniejsze rozliczenia.",
     "initialReadingSaveError": "Nie udało się zapisać odczytu początkowego",
     "newAssetTitle": "Nowy zasób",
     "newAssetSub": "Konkretny samochodzik, batut lub gogle VR",
@@ -721,7 +721,7 @@
     "businessTitle": "Biznes: wydatki i zysk",
     "revenue": "Przychód",
     "expense": "Wydatki",
-    "expenseHint": "Zakupy, zaliczki, premie",
+    "expenseHint": "Zakupy i inne wydatki",
     "profit": "Zysk",
     "changeFund": "Fundusz rozmienny",
     "changeFundAmountFor": "Fundusz rozmienny dla",
@@ -746,7 +746,18 @@
     "collectionsRegisterTitle": "Rejestr inkas",
     "noCollections": "W tym miesiącu nie było inkas",
     "advancesBonusesRegisterTitle": "Zaliczki i premie",
-    "noAdvancesBonuses": "W tym miesiącu nie było zaliczek ani premii"
+    "noAdvancesBonuses": "W tym miesiącu nie było zaliczek ani premii",
+    "difference": "Różnica",
+    "differenceHint": "Fakt minus obliczenie z liczników",
+    "expensesLink": "Wydatki",
+    "expensesLinkHint": "Rejestr według kategorii",
+    "expensesRegisterTitle": "Rejestr wydatków",
+    "noExpenses": "W tym miesiącu nie było wydatków",
+    "expenseCategoriesButton": "Kategorie",
+    "expenseCategoriesTitle": "Kategorie wydatków",
+    "noExpenseCategories": "Jeszcze nie ma kategorii",
+    "newCategoryPlaceholder": "Nowa kategoria",
+    "categorySaveError": "Nie udało się zapisać kategorii"
   },
   "readings": {
     "title": "Odczyty dzienne",
@@ -924,7 +935,8 @@
       "acceptedTitle": "Rozliczenie przyjęte",
       "queuedTitle": "Zapisano, wyślemy przy połączeniu",
       "queuedHint": "Obecnie brak internetu — dane zostały zapisane na urządzeniu i zostaną wysłane na serwer automatycznie, gdy tylko pojawi się połączenie.",
-      "homeButton": "Do strony głównej"
+      "homeButton": "Do strony głównej",
+      "categoryPlaceholder": "Kategoria (opcjonalnie)"
     },
     "offlineQueueHint": "Oczekują na wysłanie: {count} rozliczeń — zostaną wysłane automatycznie po połączeniu"
   },

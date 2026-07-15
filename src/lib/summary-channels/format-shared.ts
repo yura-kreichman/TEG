@@ -20,3 +20,9 @@ export function formatSummaryDate(d: Date, separator: "/" | "."): string {
 export function formatUtcTime(d: Date): string {
   return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
 }
+
+// Суммы в сводках — только целые числа (запрос пользователя 2026-07-14: копейки
+// не нужны, только целые), округление обычное (не отбрасывание дробной части).
+export function formatAmount(n: number): string {
+  return String(Math.round(n));
+}

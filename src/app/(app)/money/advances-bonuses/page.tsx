@@ -25,6 +25,7 @@ export default function AdvancesBonusesRegisterPage() {
   const [checking, setChecking] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [advancesBonuses, setAdvancesBonuses] = useState<AdvanceBonusEntry[]>([]);
+  const [showPointName, setShowPointName] = useState(false);
 
   async function loadAdvancesBonuses() {
     const year = calendarMonth.getUTCFullYear();
@@ -36,6 +37,7 @@ export default function AdvancesBonusesRegisterPage() {
     }
     const data = await res.json();
     setAdvancesBonuses(data.entries ?? []);
+    setShowPointName(!!data.showPointName);
     setChecking(false);
   }
 
@@ -131,7 +133,8 @@ export default function AdvancesBonusesRegisterPage() {
                             {op.type === "advance"
                               ? t.operatorApp.workTime.advanceFieldLabel
                               : t.operatorApp.workTime.bonusFieldLabel}
-                            {op.operatorName ? ` · ${op.operatorName}` : ""} ({op.pointName})
+                            {op.operatorName ? ` · ${op.operatorName}` : ""}
+                            {showPointName ? ` (${op.pointName})` : ""}
                           </span>
                           <span
                             className={cn(

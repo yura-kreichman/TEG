@@ -28,6 +28,7 @@ export async function GET() {
   const point =
     zone?.point ??
     (await prisma.point.findFirst({ where: { tenantId: owner.tenantId }, orderBy: { createdAt: "asc" } }));
+  const pointCount = await prisma.point.count({ where: { tenantId: owner.tenantId } });
 
   const operator = await prisma.operator.findFirst({
     where: { tenantId: owner.tenantId },
@@ -56,6 +57,7 @@ export async function GET() {
 
   return NextResponse.json({
     pointName: point?.name ?? null,
+    pointCount,
     zoneName: zone?.name ?? null,
     zoneEmoji: zone?.telegramEmoji ?? null,
     accountingMode: zone?.accountingMode ?? null,

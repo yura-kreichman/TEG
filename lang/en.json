@@ -659,7 +659,7 @@
     "confirmDeleteAsset": "Delete this asset?",
     "initialReadingAction": "Starting reading",
     "initialReadingHint": "Set the counter's current value if this asset was already in use before the app started tracking it — the next submission will count from this number instead of zero.",
-    "initialReadingWarning": "This asset already has real submissions — changing this here no longer affects calculations.",
+    "initialReadingWarning": "This asset already has real submissions — editing this recalculates the revenue of the very first one (used as the starting point); later submissions are unaffected.",
     "initialReadingSaveError": "Couldn't save the starting reading",
     "newAssetTitle": "New asset",
     "newAssetSub": "A specific car, trampoline, or headset",
@@ -721,7 +721,7 @@
     "businessTitle": "Business: expenses and profit",
     "revenue": "Revenue",
     "expense": "Expenses",
-    "expenseHint": "Purchases, advances, bonuses",
+    "expenseHint": "Purchases and other expenses",
     "profit": "Profit",
     "changeFund": "Change fund",
     "changeFundAmountFor": "Change fund for",
@@ -746,7 +746,18 @@
     "collectionsRegisterTitle": "Collections register",
     "noCollections": "No collections this month",
     "advancesBonusesRegisterTitle": "Advances and bonuses",
-    "noAdvancesBonuses": "No advances or bonuses this month"
+    "noAdvancesBonuses": "No advances or bonuses this month",
+    "difference": "Difference",
+    "differenceHint": "Actual minus counter-calculated",
+    "expensesLink": "Expenses",
+    "expensesLinkHint": "Register by category",
+    "expensesRegisterTitle": "Expense register",
+    "noExpenses": "No expenses this month",
+    "expenseCategoriesButton": "Categories",
+    "expenseCategoriesTitle": "Expense categories",
+    "noExpenseCategories": "No categories yet",
+    "newCategoryPlaceholder": "New category",
+    "categorySaveError": "Failed to save the category"
   },
   "readings": {
     "title": "Daily readings",
@@ -924,7 +935,8 @@
       "acceptedTitle": "Results submission accepted",
       "queuedTitle": "Saved, will send once online",
       "queuedHint": "No internet right now — data is saved on this device and will be sent automatically once the connection is back.",
-      "homeButton": "Go home"
+      "homeButton": "Go home",
+      "categoryPlaceholder": "Category (optional)"
     },
     "offlineQueueHint": "Waiting to send: {count} submission(s) — will send automatically once online"
   },

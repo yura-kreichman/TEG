@@ -659,7 +659,7 @@
     "confirmDeleteAsset": "Bu varlık silinsin mi?",
     "initialReadingAction": "Başlangıç okuması",
     "initialReadingHint": "Varlık uygulamaya bağlanmadan önce zaten kullanılmışsa sayacın güncel değerini girin — bir sonraki teslimattan itibaren hesaplama sıfırdan değil bu sayıdan başlar.",
-    "initialReadingWarning": "Bu varlığın zaten gerçek teslimatları var — buradaki değişiklik artık hesaplamaları etkilemez.",
+    "initialReadingWarning": "Bu varlığın zaten gerçek teslimatları var — buradaki değişiklik bunlardan ilkinin gelirini yeniden hesaplar (başlangıç noktası olarak kullanılır), sonraki teslimatları etkilemez.",
     "initialReadingSaveError": "Başlangıç okuması kaydedilemedi",
     "newAssetTitle": "Yeni varlık",
     "newAssetSub": "Belirli bir araba, trambolin veya kask",
@@ -721,7 +721,7 @@
     "businessTitle": "İşletme: giderler ve kâr",
     "revenue": "Gelir",
     "expense": "Giderler",
-    "expenseHint": "Satın almalar, avanslar, primler",
+    "expenseHint": "Satın almalar ve diğer giderler",
     "profit": "Kâr",
     "changeFund": "Bozuk para",
     "changeFundAmountFor": "Şunun için bozuk para:",
@@ -746,7 +746,18 @@
     "collectionsRegisterTitle": "Tahsilat kayıtları",
     "noCollections": "Bu ay tahsilat yapılmadı",
     "advancesBonusesRegisterTitle": "Avanslar ve primler",
-    "noAdvancesBonuses": "Bu ay avans veya prim verilmedi"
+    "noAdvancesBonuses": "Bu ay avans veya prim verilmedi",
+    "difference": "Fark",
+    "differenceHint": "Gerçek eksi sayaç hesabı",
+    "expensesLink": "Giderler",
+    "expensesLinkHint": "Kategoriye göre kayıt",
+    "expensesRegisterTitle": "Gider kaydı",
+    "noExpenses": "Bu ay gider yok",
+    "expenseCategoriesButton": "Kategoriler",
+    "expenseCategoriesTitle": "Gider kategorileri",
+    "noExpenseCategories": "Henüz kategori yok",
+    "newCategoryPlaceholder": "Yeni kategori",
+    "categorySaveError": "Kategori kaydedilemedi"
   },
   "readings": {
     "title": "Günlük okumalar",
@@ -924,7 +935,8 @@
       "acceptedTitle": "Sonuç teslimi kabul edildi",
       "queuedTitle": "Kaydedildi, bağlantı olduğunda gönderilecek",
       "queuedHint": "Şu anda internet yok — veriler cihazda kaydedildi ve bağlantı gelir gelmez otomatik olarak sunucuya gönderilecek.",
-      "homeButton": "Ana sayfa"
+      "homeButton": "Ana sayfa",
+      "categoryPlaceholder": "Kategori (isteğe bağlı)"
     },
     "offlineQueueHint": "Gönderim bekleyen: {count} teslim — bağlantı gelince otomatik gönderilecek"
   },

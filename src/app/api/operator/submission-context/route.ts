@@ -46,6 +46,14 @@ export async function GET() {
   }
   const initialByKey = await getInitialReadingsMap(assetIds);
 
+  // Категории расходов тенанта (запрос пользователя 2026-07-14) — для выбора
+  // при вводе расхода на шаге "Расходы" мастера сдачи итогов.
+  const expenseCategories = await prisma.expenseCategory.findMany({
+    where: { tenantId: point.tenantId },
+    orderBy: { sortOrder: "asc" },
+    select: { id: true, name: true },
+  });
+
   const result = zones.map((zone) => ({
     id: zone.id,
     name: zone.name,
@@ -67,5 +75,10 @@ export async function GET() {
     })),
   }));
 
-  return NextResponse.json({ operatorName: operator.name, pointName: point.name, zones: result });
+  return NextResponse.json({
+    operatorName: operator.name,
+    pointName: point.name,
+    zones: result,
+    expenseCategories,
+  });
 }

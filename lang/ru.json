@@ -659,7 +659,7 @@
     "confirmDeleteAsset": "Удалить этот актив?",
     "initialReadingAction": "Начальное показание",
     "initialReadingHint": "Задайте текущее значение счётчика, если актив уже использовался до подключения приложения — со следующей сдачи заезды посчитаются от этого числа, а не от нуля.",
-    "initialReadingWarning": "У актива уже есть настоящие сдачи — изменение здесь больше не повлияет на расчёты.",
+    "initialReadingWarning": "У актива уже есть настоящие сдачи — правка пересчитает выручку самой первой из них (используется как точка отсчёта), на более поздние сдачи не повлияет.",
     "initialReadingSaveError": "Не удалось сохранить начальное показание",
     "newAssetTitle": "Новый актив",
     "newAssetSub": "Конкретная машинка, батут или шлем",
@@ -721,7 +721,7 @@
     "businessTitle": "Бизнес: расходы и прибыль",
     "revenue": "Выручка",
     "expense": "Расходы",
-    "expenseHint": "Закупки, авансы, премии",
+    "expenseHint": "Закупки и другие расходы",
     "profit": "Прибыль",
     "changeFund": "Размен",
     "changeFundAmountFor": "Размен для",
@@ -746,7 +746,18 @@
     "collectionsRegisterTitle": "Реестр инкассаций",
     "noCollections": "В этом месяце инкассаций не было",
     "advancesBonusesRegisterTitle": "Авансы и премии",
-    "noAdvancesBonuses": "В этом месяце авансов и премий не было"
+    "noAdvancesBonuses": "В этом месяце авансов и премий не было",
+    "difference": "Разница",
+    "differenceHint": "Факт минус расчёт по счётчикам",
+    "expensesLink": "Расходы",
+    "expensesLinkHint": "Реестр по категориям",
+    "expensesRegisterTitle": "Реестр расходов",
+    "noExpenses": "В этом месяце расходов не было",
+    "expenseCategoriesButton": "Категории",
+    "expenseCategoriesTitle": "Категории расходов",
+    "noExpenseCategories": "Категорий пока нет",
+    "newCategoryPlaceholder": "Новая категория",
+    "categorySaveError": "Не удалось сохранить категорию"
   },
   "readings": {
     "title": "Показания по дням",
@@ -924,7 +935,8 @@
       "acceptedTitle": "Сдача итогов принята",
       "queuedTitle": "Сохранено, отправим при связи",
       "queuedHint": "Интернета сейчас нет — данные сохранены на устройстве и уйдут на сервер автоматически, как только связь появится.",
-      "homeButton": "На главную"
+      "homeButton": "На главную",
+      "categoryPlaceholder": "Категория (необязательно)"
     },
     "offlineQueueHint": "Ждут отправки: {count} сдач(и) — уйдут автоматически при связи"
   },

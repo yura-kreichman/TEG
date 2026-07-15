@@ -149,6 +149,7 @@ model Tenant {
   operators                     Operator[]
   points                        Point[]
   moneyOps                      MoneyOperation[]
+  expenseCategories             ExpenseCategory[]
   operatorRates                 OperatorRate[]
   shifts                        Shift[]
   balanceCarryovers             OperatorBalanceCarryover[]
@@ -665,15 +666,40 @@ model AssetReading {
   @@index([assetId, tariffId, createdAt])
 }
 
+// Категории расходов (запрос пользователя 2026-07-14) — Владелец сам
+// заводит/переименовывает/удаляет; удаление не трогает уже сделанные записи
+// расхода (categoryId просто становится null, "без категории") — категория
+// это ярлык для отчётности, а не часть финансового расчёта, поэтому soft-delete
+// как у Tariff здесь избыточен.
+model ExpenseCategory {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name      String
+  sortOrder Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  expenseEntries ExpenseEntry[]
+
+  @@index([tenantId])
+}
+
 model ExpenseEntry {
   id               String         @id @default(cuid())
   zoneSubmissionId String
   zoneSubmission   ZoneSubmission @relation(fields: [zoneSubmissionId], references: [id], onDelete: Cascade)
 
+  categoryId String?
+  category   ExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   amount  Decimal @db.Decimal(10, 2)
   comment String?
 
   createdAt DateTime @default(now())
+
+  @@index([categoryId])
 }
 
 // Правки записей — только владелец. Журнал: кто, когда, было → стало.

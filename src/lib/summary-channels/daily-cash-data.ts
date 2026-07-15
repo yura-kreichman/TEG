@@ -29,6 +29,8 @@ export async function buildDailyCashSummaryData(
   const point = await prisma.point.findUnique({ where: { id: pointId } });
   if (!point) return null;
 
+  const pointCount = await prisma.point.count({ where: { tenantId: point.tenantId } });
+
   const submissions = await prisma.resultsSubmission.findMany({
     where: { pointId, submittedAt: { gte: bounds.start, lt: bounds.end } },
     include: { zoneSubmissions: { include: { zone: true } } },
@@ -69,6 +71,7 @@ export async function buildDailyCashSummaryData(
 
   return {
     pointName: point.name,
+    showPointName: pointCount > 1,
     businessDate: bounds.start,
     cashAmount: round2(cashAmount),
     mobileAmount: round2(mobileAmount),

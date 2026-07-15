@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Building2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Gift, Wallet } from "lucide-react";
+import { Building2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Gift, Receipt, Wallet } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -15,7 +15,7 @@ import { pad, toDateStr } from "@/lib/datetime-format";
 type Granularity = "day" | "week" | "month" | "year";
 
 interface Report {
-  business: { revenue: number; expense: number; profit: number };
+  business: { revenue: number; expense: number; profit: number; difference: number };
 }
 
 export default function MoneyPage() {
@@ -25,8 +25,14 @@ export default function MoneyPage() {
   const [report, setReport] = useState<Report | null>(null);
 
   const [mode, setMode] = useState<"granularity" | "custom">("granularity");
-  const [granularity, setGranularity] = useState<Granularity>("month");
+  const [granularity, setGranularity] = useState<Granularity>("day");
   const [anchor, setAnchor] = useState(() => new Date());
+  // По умолчанию — День последней сдачи (запрос пользователя 2026-07-14):
+  // если сегодня ещё ничего не сдавали, открывать не пустой сегодняшний
+  // день, а последний день с реальной выручкой. Резолвится один раз при
+  // монтировании, до первой загрузки отчёта — иначе был бы виден "прыжок"
+  // с сегодняшнего пустого дня на предыдущий.
+  const [anchorReady, setAnchorReady] = useState(false);
   const [customFrom, setCustomFrom] = useState(() => toDateStr(new Date()));
   const [customTo, setCustomTo] = useState(() => toDateStr(new Date()));
 
@@ -90,9 +96,21 @@ export default function MoneyPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
+    fetch("/api/reports/money/last-submission-date")
+      .then((res) => res.json())
+      .then((data: { date: string | null }) => {
+        if (data.date && data.date !== toDateStr(new Date())) {
+          setAnchor(new Date(`${data.date}T00:00:00.000Z`));
+        }
+        setAnchorReady(true);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!anchorReady) return;
     loadReport();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, granularity, anchor, customFrom, customTo]);
+  }, [anchorReady, mode, granularity, anchor, customFrom, customTo]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function isCurrentPeriod() {
@@ -312,10 +330,16 @@ export default function MoneyPage() {
                 <p className="text-[1.0625rem] font-bold">{report.business.expense.toFixed(2)}</p>
                 <p className="text-[0.65625rem] leading-tight text-muted-foreground">{t.money.expenseHint}</p>
               </div>
-              <div className="flex-1 border-l border-border pl-4">
-                <p className="text-caption-airbnb">{t.money.profit}</p>
-                <p className="text-[1.0625rem] font-bold text-primary">+{report.business.profit.toFixed(2)}</p>
-              </div>
+              {report.business.difference !== 0 && (
+                <div className="flex-1 border-l border-border pl-4">
+                  <p className="text-caption-airbnb">{t.money.difference}</p>
+                  <p className={cn("text-[1.0625rem] font-bold", report.business.difference >= 0 ? "text-primary" : "text-destructive")}>
+                    {report.business.difference >= 0 ? "+" : ""}
+                    {report.business.difference.toFixed(2)}
+                  </p>
+                  <p className="text-[0.65625rem] leading-tight text-muted-foreground">{t.money.differenceHint}</p>
+                </div>
+              )}
             </div>
           </SpringCard>
 
@@ -343,6 +367,21 @@ export default function MoneyPage() {
                 <div className="min-w-0 grow">
                   <p className="text-card-title">{t.money.collectionsLink}</p>
                   <p className="text-caption-airbnb">{t.money.collectionsLinkHint}</p>
+                </div>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              </SpringCard>
+            </Link>
+          </PressableScale>
+
+          <PressableScale>
+            <Link href="/money/expenses">
+              <SpringCard className="flex items-center gap-3">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                  <Receipt className="size-5" />
+                </div>
+                <div className="min-w-0 grow">
+                  <p className="text-card-title">{t.money.expensesLink}</p>
+                  <p className="text-caption-airbnb">{t.money.expensesLinkHint}</p>
                 </div>
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
               </SpringCard>

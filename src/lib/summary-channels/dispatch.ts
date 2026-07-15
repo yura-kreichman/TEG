@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { editChatMessage, sendChatMessage } from "@/lib/telegram-bot";
 import { parseEmailAddresses, sendEmail } from "./email-channel";
+import { formatAmount } from "./format-shared";
 import {
   formatDailyCashSummaryEmail,
   formatInstructionAckEmail,
@@ -96,7 +97,7 @@ export async function dispatchZoneSummary(
     const sign = data.difference > 0 ? "+" : "";
     await sendPushToTenant(tenantId, {
       title: `${data.zoneEmoji ?? "🏁"} ${data.zoneName}`,
-      body: `Касса: ${data.cashAmount.toFixed(2)} · Разн.: ${sign}${data.difference.toFixed(2)}`,
+      body: `Касса: ${formatAmount(data.cashAmount)} · Разн.: ${sign}${formatAmount(data.difference)}`,
       url: "/reports",
     }).catch((err) => console.error("push dispatch failed", { kind: "zone", tenantId, err }));
   }
@@ -131,7 +132,7 @@ export async function dispatchShiftCloseSummary(
   if (await pushEnabledFor(tenantId, "shiftCloseSummary")) {
     await sendPushToTenant(tenantId, {
       title: `${data.operatorName} · смена закрыта`,
-      body: `Баланс: ${data.toPayOut.toFixed(2)}`,
+      body: `Баланс: ${formatAmount(data.toPayOut)}`,
       url: "/operators",
     }).catch((err) => console.error("push dispatch failed", { kind: "shiftClose", tenantId, err }));
   }
@@ -185,8 +186,8 @@ export async function dispatchDailyCashSummary(
   if (!isUpdate && (await pushEnabledFor(tenantId, "dailyCashSummary"))) {
     const total = data.cashAmount + data.mobileAmount - data.expenses;
     await sendPushToTenant(tenantId, {
-      title: `Касса за день · ${data.pointName}`,
-      body: `Итог: ${total.toFixed(2)}`,
+      title: data.showPointName ? `Касса за день · ${data.pointName}` : "Касса за день",
+      body: `Итог: ${formatAmount(total)}`,
       url: "/money",
     }).catch((err) => console.error("push dispatch failed", { kind: "dailyCash", tenantId, err }));
   }

@@ -2,6 +2,7 @@
 // для клиентских редакторов /settings/summaries/* (живой предпросмотр).
 export interface SummaryPreviewContext {
   pointName: string | null;
+  pointCount: number;
   zoneName: string | null;
   zoneEmoji: string | null;
   accountingMode: string | null;

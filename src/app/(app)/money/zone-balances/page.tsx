@@ -27,6 +27,7 @@ export default function ZoneBalancesPage() {
   const t = useI18n();
   const [checking, setChecking] = useState(true);
   const [zoneBalances, setZoneBalances] = useState<ZoneBalance[]>([]);
+  const [showPointName, setShowPointName] = useState(false);
   const [changeFundZoneId, setChangeFundZoneId] = useState<string | null>(null);
   const [changeFundAmount, setChangeFundAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +40,7 @@ export default function ZoneBalancesPage() {
     }
     const data = await res.json();
     setZoneBalances(data.zoneBalances ?? []);
+    setShowPointName(!!data.showPointName);
     setChecking(false);
   }
 
@@ -90,7 +92,9 @@ export default function ZoneBalancesPage() {
               }, {})
             ).map(([pointId, group]) => (
               <div key={pointId}>
-                <p className="pt-3 text-caption-airbnb font-semibold text-foreground">{group.pointName}</p>
+                {showPointName && (
+                  <p className="pt-3 text-caption-airbnb font-semibold text-foreground">{group.pointName}</p>
+                )}
                 {group.zones.map((zb) => (
                   <div
                     key={zb.zoneId}

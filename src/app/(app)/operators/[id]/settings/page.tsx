@@ -369,6 +369,11 @@ export default function OperatorSettingsPage() {
 
   if (checking || !profile) return null;
 
+  // Заголовок с названием точки над списком зон имеет смысл, только если
+  // точек больше одной (запрос пользователя 2026-07-14 — и так ясно, если
+  // она одна).
+  const showPointName = new Set(allZones.map((zone) => zone.pointId)).size > 1;
+
   return (
     <OwnerShell>
     <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
@@ -653,7 +658,7 @@ export default function OperatorSettingsPage() {
                 }, {})
               ).map(([pointName, zones]) => (
                 <div key={pointName}>
-                  <p className="pt-2 text-section-title">{pointName}</p>
+                  {showPointName && <p className="pt-2 text-section-title">{pointName}</p>}
                   {zones.map((zone) => (
                     <div
                       key={zone.id}

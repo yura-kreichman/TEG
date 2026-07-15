@@ -1,6 +1,6 @@
 import type { ZoneSummarySettingsData, DailyCashSummarySettingsData, ShiftCloseSummarySettingsData } from "@/lib/summary-settings";
 import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData, InstructionAckData } from "./types";
-import { formatDuration, formatSummaryDate, formatUtcTime } from "./format-shared";
+import { formatAmount, formatDuration, formatSummaryDate, formatUtcTime } from "./format-shared";
 import { colorTagToEmoji } from "@/lib/color-tag";
 
 // fullName приходит с публичной страницы подписания (docs/spec/07-
@@ -19,7 +19,8 @@ function escapeTelegramHtml(text: string): string {
 // сообщений в Telegram (см. верификацию Telegram-сводки модуля Смен).
 //
 // Валюта — никогда не хардкодим символ (feedback_no_hardcoded_currency):
-// голые .toFixed(2). День/время — UTC, как и весь остальной server-side
+// голые числа. Суммы — целые (formatAmount, без копеек, запрос пользователя
+// 2026-07-14). День/время — UTC, как и весь остальной server-side
 // day-boundary код в проекте (см. business-day.ts).
 
 function formatDate(d: Date): string {
@@ -33,7 +34,7 @@ function formatDate(d: Date): string {
 // колонки с именем, обрезанным до 5 символов. Цель — сообщение целиком
 // умещается по ширине экрана телефона, без переноса строк.
 const COMPACT_NAME_WIDTH = 5;
-const COMPACT_GRID_SEP = " | ";
+const COMPACT_GRID_SEP = " │ ";
 // Примерный бюджет ширины строки внутри <code>-блока на современном
 // телефоне (фидбек пользователя 2026-07-12: "столько значений, сколько
 // вмещается на экран") — не точный пиксельный расчёт (шрифт/ширина экрана
@@ -63,19 +64,18 @@ function truncateLabel(name: string): string {
 // упаковка.
 const COMPACT_GRID_MAX_COLS = 2;
 
-// Заголовок "Кассы за день" — единственное место, где рядом с названием
-// точки ещё стоят "💰 КАССА · " и дата (запрос пользователя 2026-07-14,
-// скриншот реального чата: длинное название точки ("Парк Екатерининский")
-// само по себе укладывалось, но целиком с датой строка переносилась, и
-// день недели "(Ср)" утекал на вторую строку). В отличие от truncateLabel
-// (обрезка активов в сетке, где различающий символ почти всегда последний)
-// названия точек — произвольный текст без такого паттерна, поэтому здесь
-// обычное усечение с многоточием, не "4+1".
-const POINT_NAME_MAX_WIDTH = 14;
-
-function truncatePointName(name: string): string {
-  if (name.length <= POINT_NAME_MAX_WIDTH) return name;
-  return `${name.slice(0, POINT_NAME_MAX_WIDTH - 1)}…`;
+// Заголовок "Кассы за день" — название точки своей отдельной первой строкой,
+// без обрезки (запрос пользователя 2026-07-14: раньше точка делила строку с
+// "КАССА" и датой и обрезалась до 14 символов, чтобы уместиться — теперь она
+// просто на отдельной строке, места сколько угодно). Если у тенанта всего
+// одна точка — строка вообще не показывается (data.showPointName, считается
+// в daily-cash-data.ts по количеству точек тенанта) — само собой разумеется,
+// какая это точка, называть её незачем.
+function dailyCashHeaderLines(data: DailyCashSummaryData): string[] {
+  const lines: string[] = [];
+  if (data.showPointName) lines.push(`<b>${data.pointName}</b>`);
+  lines.push(`💰 <b>КАССА · ${formatDate(data.businessDate)}</b>`);
+  return lines;
 }
 
 function formatCompactGrid(items: { label: string; value: string }[]): string {
@@ -142,7 +142,7 @@ export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneS
     const parts: string[] = [zoneHeader(data, settings.showOperator)];
 
     if (data.accountingMode === "cash_only") {
-      parts.push(`💵 Касса: <b>${data.cashAmount.toFixed(2)}</b>`);
+      parts.push(`💵 Касса: <b>${formatAmount(data.cashAmount)}</b>`);
     } else {
       if (settings.showReadings && data.readings.length > 0) {
         const grid = formatCompactGrid(
@@ -162,16 +162,16 @@ export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneS
         const actualCash = data.cashAmount + data.mobileAmount;
         const cmp = actualCash < data.calculatedRevenue ? "<" : actualCash > data.calculatedRevenue ? ">" : "=";
         const bits: string[] = [];
-        if (settings.showCash) bits.push(`💵 Касс: <b>${actualCash.toFixed(2)}</b>`);
+        if (settings.showCash) bits.push(`💵 Касс: <b>${formatAmount(actualCash)}</b>`);
         if (settings.showCash && settings.showCalc) bits.push(cmp);
-        if (settings.showCalc) bits.push(`🧮 Счёт: <b>${data.calculatedRevenue.toFixed(2)}</b>`);
+        if (settings.showCalc) bits.push(`🧮 Счёт: <b>${formatAmount(data.calculatedRevenue)}</b>`);
         parts.push(bits.join("  "));
       }
       if (settings.showDiff || settings.showReturns) {
         const bits: string[] = [];
         if (settings.showDiff) {
           const sign = data.difference > 0 ? "+" : "";
-          bits.push(`${diffEmoji(data.difference)} Разн.: <b>${sign}${data.difference.toFixed(2)}</b>`);
+          bits.push(`${diffEmoji(data.difference)} Разн.: <b>${sign}${formatAmount(data.difference)}</b>`);
         }
         if (settings.showDiff && settings.showReturns) bits.push("—");
         if (settings.showReturns) bits.push(`🔄 Возвр.: <b>${data.returnsCount}</b>`);
@@ -185,7 +185,7 @@ export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneS
   const lines: string[] = [zoneHeader(data, settings.showOperator)];
 
   if (data.accountingMode === "cash_only") {
-    lines.push("", `💵 Касса: <b>${data.cashAmount.toFixed(2)}</b>`);
+    lines.push("", `💵 Касса: <b>${formatAmount(data.cashAmount)}</b>`);
   } else {
     if (settings.showReadings || settings.showDelta) {
       // Выровнено в столбик (фидбек пользователя 2026-07-09) — внутри <code>
@@ -210,13 +210,13 @@ export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneS
       lines.push("");
       if (settings.showCash) {
         lines.push(
-          `💵 Нал.: <b>${data.cashAmount.toFixed(2)}</b> · 📱 Безнал.: <b>${data.mobileAmount.toFixed(2)}</b>`
+          `💵 Нал.: <b>${formatAmount(data.cashAmount)}</b> · 📱 Безнал.: <b>${formatAmount(data.mobileAmount)}</b>`
         );
       }
-      if (settings.showCalc) lines.push(`🧮 По счётчику: <b>${data.calculatedRevenue.toFixed(2)}</b>`);
+      if (settings.showCalc) lines.push(`🧮 По счётчику: <b>${formatAmount(data.calculatedRevenue)}</b>`);
       if (settings.showDiff) {
         const sign = data.difference > 0 ? "+" : "";
-        lines.push(`${diffEmoji(data.difference)} Разница: <b>${sign}${data.difference.toFixed(2)}</b>`);
+        lines.push(`${diffEmoji(data.difference)} Разница: <b>${sign}${formatAmount(data.difference)}</b>`);
       }
       if (settings.showReturns) lines.push(`↩️ Возвраты/тест: <b>${data.returnsCount}</b>`);
     }
@@ -233,7 +233,7 @@ export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneS
 // теперь этот блок буквально одинаков в обоих режимах.
 function formatZoneBreakdownRows(zoneBreakdown: DailyCashSummaryData["zoneBreakdown"]): string {
   const labelWidth = Math.max(...zoneBreakdown.map((z) => `${z.zoneName}:`.length));
-  return zoneBreakdown.map((z) => `${z.zoneName}:`.padEnd(labelWidth + 1) + z.revenue.toFixed(2)).join("\n");
+  return zoneBreakdown.map((z) => `${z.zoneName}:`.padEnd(labelWidth + 1) + formatAmount(z.revenue)).join("\n");
 }
 
 export function formatDailyCashSummaryTelegram(
@@ -243,20 +243,20 @@ export function formatDailyCashSummaryTelegram(
   const total = data.cashAmount + data.mobileAmount - data.expenses;
 
   if (settings.compact) {
-    const parts: string[] = [`💰 <b>КАССА · ${truncatePointName(data.pointName)} · ${formatDate(data.businessDate)}</b>`];
+    const parts: string[] = dailyCashHeaderLines(data);
 
     if (data.forcedIncomplete) parts.push("⚠️ Принудительно — не все данные могли поступить");
 
     if (settings.showCash) {
-      parts.push(`💵 Нал.: <b>${data.cashAmount.toFixed(2)}</b>  📱 Безнал.: <b>${data.mobileAmount.toFixed(2)}</b>`);
+      parts.push(`💵 Нал.: <b>${formatAmount(data.cashAmount)}</b>  📱 Безнал.: <b>${formatAmount(data.mobileAmount)}</b>`);
     }
-    if (settings.showExpenses) parts.push(`🧾 Расх.: ${data.expenses.toFixed(2)}`);
+    if (settings.showExpenses) parts.push(`🧾 Расх.: ${formatAmount(data.expenses)}`);
 
     // Остаток на точке — рядом с Итогом, тем же разделителем " · ", что и
     // везде в compact-режиме (запрос пользователя 2026-07-14: раньше был
     // отдельной строкой в самом низу).
-    const totalBits = [`🟰 Итог: <b>${total.toFixed(2)}</b>`];
-    if (settings.showCashOnHand) totalBits.push(`📦 Ост.: ${data.cashOnHand.toFixed(2)}`);
+    const totalBits = [`🟰 Итог: <b>${formatAmount(total)}</b>`];
+    if (settings.showCashOnHand) totalBits.push(`📦 Ост.: ${formatAmount(data.cashOnHand)}`);
     parts.push(totalBits.join(" · "));
 
     if (settings.showZoneBreakdown && data.zoneBreakdown.length > 0) {
@@ -266,7 +266,7 @@ export function formatDailyCashSummaryTelegram(
     return parts.join("\n");
   }
 
-  const lines: string[] = [`💰 <b>КАССА · ${truncatePointName(data.pointName)} · ${formatDate(data.businessDate)}</b>`];
+  const lines: string[] = dailyCashHeaderLines(data);
 
   if (data.forcedIncomplete) {
     lines.push("", "⚠️ Отправлено принудительно по границе дня — не все данные могли поступить.");
@@ -274,17 +274,17 @@ export function formatDailyCashSummaryTelegram(
 
   lines.push("");
   if (settings.showCash) {
-    lines.push(`💵 Нал.: <b>${data.cashAmount.toFixed(2)}</b> · 📱 Безнал.: <b>${data.mobileAmount.toFixed(2)}</b>`);
+    lines.push(`💵 Нал.: <b>${formatAmount(data.cashAmount)}</b> · 📱 Безнал.: <b>${formatAmount(data.mobileAmount)}</b>`);
   }
-  if (settings.showExpenses) lines.push(`🧾 Расходы: ${data.expenses.toFixed(2)}`);
-  lines.push(`🟰 Итого за день: <b>${total.toFixed(2)}</b>`);
+  if (settings.showExpenses) lines.push(`🧾 Расходы: ${formatAmount(data.expenses)}`);
+  lines.push(`🟰 Итого за день: <b>${formatAmount(total)}</b>`);
 
   if (settings.showZoneBreakdown && data.zoneBreakdown.length > 0) {
     lines.push("", `<blockquote><code>${formatZoneBreakdownRows(data.zoneBreakdown)}</code></blockquote>`);
   }
 
   if (settings.showCashOnHand) {
-    lines.push("", `📦 Остаток на точке: ${data.cashOnHand.toFixed(2)}`);
+    lines.push("", `📦 Остаток на точке: ${formatAmount(data.cashOnHand)}`);
   }
 
   return lines.join("\n");
@@ -312,9 +312,9 @@ export function formatShiftCloseSummaryTelegram(
     const parts: string[] = [];
     if (settings.showPeriod) parts.push(`🕐 ${formatUtcTime(data.startAt)}–${formatUtcTime(data.endAt)}`);
     if (settings.showHours) parts.push(`⏱ ${formatDuration(data.minutes)}`);
-    if (settings.showAdvance && data.advanceAmount > 0) parts.push(`💸 Аванс: ${data.advanceAmount.toFixed(2)}`);
-    if (settings.showBonus && data.bonusAmount > 0) parts.push(`🏆 Прем.: ${data.bonusAmount.toFixed(2)}`);
-    if (settings.showTotal) parts.push(`💰 Баланс: <b>${data.toPayOut.toFixed(2)}</b>`);
+    if (settings.showAdvance && data.advanceAmount > 0) parts.push(`💸 Аванс: ${formatAmount(data.advanceAmount)}`);
+    if (settings.showBonus && data.bonusAmount > 0) parts.push(`🏆 Прем.: ${formatAmount(data.bonusAmount)}`);
+    if (settings.showTotal) parts.push(`💰 Баланс: <b>${formatAmount(data.toPayOut)}</b>`);
 
     const header = `<b>${operatorLabel} · ${formatDate(data.startAt)}</b>`;
     const rows: string[] = [];
@@ -328,9 +328,9 @@ export function formatShiftCloseSummaryTelegram(
 
   if (settings.showPeriod) lines.push(`🕐 Период: ${formatUtcTime(data.startAt)} – ${formatUtcTime(data.endAt)}`);
   if (settings.showHours) lines.push(`⏱ Отработано: ${formatDuration(data.minutes)}`);
-  if (settings.showAdvance && data.advanceAmount > 0) lines.push(`💸 Аванс: ${data.advanceAmount.toFixed(2)}`);
-  if (settings.showBonus && data.bonusAmount > 0) lines.push(`🏆 Премия: ${data.bonusAmount.toFixed(2)}`);
-  if (settings.showTotal) lines.push(`💰 К выдаче: <b>${data.toPayOut.toFixed(2)}</b>`);
+  if (settings.showAdvance && data.advanceAmount > 0) lines.push(`💸 Аванс: ${formatAmount(data.advanceAmount)}`);
+  if (settings.showBonus && data.bonusAmount > 0) lines.push(`🏆 Премия: ${formatAmount(data.bonusAmount)}`);
+  if (settings.showTotal) lines.push(`💰 К выдаче: <b>${formatAmount(data.toPayOut)}</b>`);
 
   return lines.join("\n");
 }

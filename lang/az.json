@@ -659,7 +659,7 @@
     "confirmDeleteAsset": "Bu aktiv silinsin?",
     "initialReadingAction": "Başlanğıc göstərici",
     "initialReadingHint": "Aktiv tətbiqə qoşulmazdan əvvəl artıq istifadə olunubsa, sayğacın cari dəyərini təyin edin — növbəti hesabatda sıfırdan deyil, bu rəqəmdən hesablanacaq.",
-    "initialReadingWarning": "Bu aktivin artıq həqiqi hesabatları var — buradakı dəyişiklik artıq hesablamalara təsir etmir.",
+    "initialReadingWarning": "Bu aktivin artıq həqiqi hesabatları var — buradakı dəyişiklik onlardan ilkinin gəlirini yenidən hesablayacaq (başlanğıc nöqtəsi kimi istifadə olunur), sonrakı hesabatlara təsir etməyəcək.",
     "initialReadingSaveError": "Başlanğıc göstəricini saxlamaq mümkün olmadı",
     "newAssetTitle": "Yeni aktiv",
     "newAssetSub": "Konkret maşın, batut və ya dəbilqə",
@@ -721,7 +721,7 @@
     "businessTitle": "Biznes: xərclər və mənfəət",
     "revenue": "Gəlir",
     "expense": "Xərclər",
-    "expenseHint": "Alışlar, avanslar, mükafatlar",
+    "expenseHint": "Alışlar və digər xərclər",
     "profit": "Mənfəət",
     "changeFund": "Xırda pul",
     "changeFundAmountFor": "Xırda pul üçün",
@@ -746,7 +746,18 @@
     "collectionsRegisterTitle": "İnkassasiyalar reyestri",
     "noCollections": "Bu ay inkassasiya olmayıb",
     "advancesBonusesRegisterTitle": "Avanslar və mükafatlar",
-    "noAdvancesBonuses": "Bu ay avans və mükafat olmayıb"
+    "noAdvancesBonuses": "Bu ay avans və mükafat olmayıb",
+    "difference": "Fərq",
+    "differenceHint": "Faktiki mənfi sayğac hesablaması",
+    "expensesLink": "Xərclər",
+    "expensesLinkHint": "Kateqoriya üzrə reyestr",
+    "expensesRegisterTitle": "Xərclər reyestri",
+    "noExpenses": "Bu ay xərc olmayıb",
+    "expenseCategoriesButton": "Kateqoriyalar",
+    "expenseCategoriesTitle": "Xərc kateqoriyaları",
+    "noExpenseCategories": "Hələ kateqoriya yoxdur",
+    "newCategoryPlaceholder": "Yeni kateqoriya",
+    "categorySaveError": "Kateqoriyanı yadda saxlamaq mümkün olmadı"
   },
   "readings": {
     "title": "Günlər üzrə göstəricilər",
@@ -924,7 +935,8 @@
       "acceptedTitle": "Hesabat qəbul edildi",
       "queuedTitle": "Yadda saxlanıldı, əlaqə olan kimi göndəriləcək",
       "queuedHint": "Hazırda internet yoxdur — məlumatlar cihazda saxlanıldı və əlaqə yaranan kimi avtomatik serverə göndəriləcək.",
-      "homeButton": "Ana səhifəyə"
+      "homeButton": "Ana səhifəyə",
+      "categoryPlaceholder": "Kateqoriya (istəyə bağlı)"
     },
     "offlineQueueHint": "Göndərilməni gözləyir: {count} hesabat — əlaqə olduqda avtomatik göndəriləcək"
   },

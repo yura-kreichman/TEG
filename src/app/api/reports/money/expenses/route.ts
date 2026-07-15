@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 
-// Тенант-wide реестр авансов/премий (docs/spec/05-work-time.md) за месяц —
-// без него эти операции нигде не видны на странице Деньги, только влияют на
-// "Расходы" бизнес-карточки. Точечные операции (pointId), не привязаны к зоне.
+// Тенант-wide реестр расходов (ExpenseEntry) за месяц — список отдельных
+// записей с категорией и комментарием (запрос пользователя 2026-07-14),
+// в отличие от бизнес-карточки "Деньги", которая показывает только сумму.
 export async function GET(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
@@ -22,30 +22,28 @@ export async function GET(request: Request) {
   const monthStart = new Date(Date.UTC(year, month - 1, 1));
   const monthEnd = new Date(Date.UTC(year, month, 1));
 
-  const operations = await prisma.moneyOperation.findMany({
+  const entries = await prisma.expenseEntry.findMany({
     where: {
-      tenantId: owner.tenantId,
-      type: { in: ["advance", "bonus_payout"] },
-      occurredAt: { gte: monthStart, lt: monthEnd },
+      zoneSubmission: { zone: { point: { tenantId: owner.tenantId } } },
+      createdAt: { gte: monthStart, lt: monthEnd },
     },
-    include: { point: true, beneficiaryOperator: true },
-    orderBy: { occurredAt: "desc" },
+    include: { category: true, zoneSubmission: { include: { zone: { include: { point: true } } } } },
+    orderBy: { createdAt: "desc" },
   });
 
-  const entries = operations
-    .filter((op) => op.point !== null)
-    .map((op) => ({
-      id: op.id,
-      occurredAt: op.occurredAt.toISOString(),
-      type: op.type as "advance" | "bonus_payout",
-      amount: Math.abs(Number(op.amount)),
-      pointName: op.point!.name,
-      operatorName: op.beneficiaryOperator?.name ?? null,
-    }));
+  const expenses = entries.map((e) => ({
+    id: e.id,
+    occurredAt: e.createdAt.toISOString(),
+    zoneName: e.zoneSubmission.zone.name,
+    pointName: e.zoneSubmission.zone.point.name,
+    categoryName: e.category?.name ?? null,
+    comment: e.comment,
+    amount: Math.abs(Number(e.amount)),
+  }));
 
   // Название точки в строке имеет смысл, только если точек больше одной
   // (запрос пользователя 2026-07-14 — и так ясно, если она одна).
   const pointCount = await prisma.point.count({ where: { tenantId: owner.tenantId } });
 
-  return NextResponse.json({ entries, showPointName: pointCount > 1 });
+  return NextResponse.json({ expenses, showPointName: pointCount > 1 });
 }

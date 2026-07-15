@@ -40,5 +40,9 @@ export async function GET(request: Request) {
       amount: Math.abs(Number(op.amount)),
     }));
 
-  return NextResponse.json({ collections });
+  // Название точки в строке имеет смысл, только если точек больше одной
+  // (запрос пользователя 2026-07-14 — и так ясно, если она одна).
+  const pointCount = await prisma.point.count({ where: { tenantId: owner.tenantId } });
+
+  return NextResponse.json({ collections, showPointName: pointCount > 1 });
 }

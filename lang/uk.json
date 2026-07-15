@@ -659,7 +659,7 @@
     "confirmDeleteAsset": "Видалити цей актив?",
     "initialReadingAction": "Початкове показання",
     "initialReadingHint": "Задайте поточне значення лічильника, якщо актив уже використовувався до підключення застосунку — з наступної здачі заїзди рахуватимуться від цього числа, а не з нуля.",
-    "initialReadingWarning": "У цього активу вже є реальні здачі — зміна тут більше не впливає на розрахунки.",
+    "initialReadingWarning": "У цього активу вже є реальні здачі — правка перерахує виручку найпершої з них (використовується як точка відліку), на пізніші здачі не вплине.",
     "initialReadingSaveError": "Не вдалося зберегти початкове показання",
     "newAssetTitle": "Новий актив",
     "newAssetSub": "Конкретна машинка, батут або шолом",
@@ -721,7 +721,7 @@
     "businessTitle": "Бізнес: витрати і прибуток",
     "revenue": "Виручка",
     "expense": "Витрати",
-    "expenseHint": "Закупівлі, аванси, премії",
+    "expenseHint": "Закупівлі та інші витрати",
     "profit": "Прибуток",
     "changeFund": "Розмін",
     "changeFundAmountFor": "Розмін для",
@@ -746,7 +746,18 @@
     "collectionsRegisterTitle": "Реєстр інкасацій",
     "noCollections": "Цього місяця інкасацій не було",
     "advancesBonusesRegisterTitle": "Аванси і премії",
-    "noAdvancesBonuses": "Цього місяця авансів і премій не було"
+    "noAdvancesBonuses": "Цього місяця авансів і премій не було",
+    "difference": "Різниця",
+    "differenceHint": "Факт мінус розрахунок за лічильниками",
+    "expensesLink": "Витрати",
+    "expensesLinkHint": "Реєстр за категоріями",
+    "expensesRegisterTitle": "Реєстр витрат",
+    "noExpenses": "Цього місяця витрат не було",
+    "expenseCategoriesButton": "Категорії",
+    "expenseCategoriesTitle": "Категорії витрат",
+    "noExpenseCategories": "Категорій поки немає",
+    "newCategoryPlaceholder": "Нова категорія",
+    "categorySaveError": "Не вдалося зберегти категорію"
   },
   "readings": {
     "title": "Показання за днями",
@@ -924,7 +935,8 @@
       "acceptedTitle": "Здачу підсумків прийнято",
       "queuedTitle": "Збережено, надішлемо при з'вязку",
       "queuedHint": "Зараз немає інтернету — дані збережено на пристрої і вони підуть на сервер автоматично, щойно з'явиться зв'язок.",
-      "homeButton": "На головну"
+      "homeButton": "На головну",
+      "categoryPlaceholder": "Категорія (необов'язково)"
     },
     "offlineQueueHint": "Очікують відправки: {count} здач — підуть автоматично при з'вязку"
   },

@@ -42,6 +42,11 @@ export interface DailyCashZoneBreakdownLine {
 
 export interface DailyCashSummaryData {
   pointName: string;
+  // У тенанта больше одной точки — тогда название точки имеет смысл
+  // показывать (запрос пользователя 2026-07-14: "если точка одна, не надо
+  // писать её название вообще" — иначе это лишняя, ничего не говорящая
+  // строка). Считается в daily-cash-data.ts по факту, не настройка.
+  showPointName: boolean;
   businessDate: Date; // полночь UTC начала бизнес-дня
   cashAmount: number;
   mobileAmount: number;

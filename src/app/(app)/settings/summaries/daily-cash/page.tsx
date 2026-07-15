@@ -32,6 +32,7 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): Dai
 
   return {
     pointName: ctx?.pointName ?? t.summaries.previewNoPoint,
+    showPointName: (ctx?.pointCount ?? 0) > 1,
     businessDate: new Date(Date.UTC(2026, 6, 8)),
     cashAmount: 1345,
     mobileAmount: 805,

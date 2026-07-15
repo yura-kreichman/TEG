@@ -52,6 +52,12 @@ interface ExpenseRow {
   zoneId: string;
   amount: string;
   comment: string;
+  categoryId: string;
+}
+
+interface ExpenseCategoryCtx {
+  id: string;
+  name: string;
 }
 
 type Step = { kind: "select" } | { kind: "zone"; zoneId: string } | { kind: "expenses" } | { kind: "review" };
@@ -61,6 +67,7 @@ export default function SubmitResultsPage() {
   const t = useI18n();
   const [loading, setLoading] = useState(true);
   const [zones, setZones] = useState<ZoneCtx[]>([]);
+  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategoryCtx[]>([]);
   const [selectedZoneIds, setSelectedZoneIds] = useState<string[]>([]);
   const [zoneForms, setZoneForms] = useState<Record<string, ZoneFormState>>({});
   const [expenses, setExpenses] = useState<ExpenseRow[]>([]);
@@ -86,6 +93,7 @@ export default function SubmitResultsPage() {
         }
         const data = await res.json();
         setZones(data.zones ?? []);
+        setExpenseCategories(data.expenseCategories ?? []);
         setLoading(false);
       });
   }, [router]);
@@ -144,7 +152,7 @@ export default function SubmitResultsPage() {
   function addExpense() {
     setExpenses((prev) => [
       ...prev,
-      { zoneId: selectedZoneIds[0] ?? "", amount: "", comment: "" },
+      { zoneId: selectedZoneIds[0] ?? "", amount: "", comment: "", categoryId: "" },
     ]);
   }
 
@@ -229,7 +237,12 @@ export default function SubmitResultsPage() {
       zoneSubmissions,
       expenses: expenses
         .filter((e) => e.amount)
-        .map((e) => ({ zoneId: e.zoneId, amount: Number(e.amount), comment: e.comment })),
+        .map((e) => ({
+          zoneId: e.zoneId,
+          amount: Number(e.amount),
+          comment: e.comment,
+          categoryId: e.categoryId || null,
+        })),
     };
 
     // Клиентский предпросмотр (та же previewFor, что и на шаге "Проверка") —
@@ -609,6 +622,24 @@ export default function SubmitResultsPage() {
                   value={expense.amount}
                   onChange={(e) => updateExpense(index, "amount", e.target.value)}
                 />
+                {expenseCategories.length > 0 && (
+                  <Select
+                    value={expense.categoryId}
+                    onValueChange={(v) => v && updateExpense(index, "categoryId", v)}
+                    items={expenseCategories.map((c) => ({ value: c.id, label: c.name }))}
+                  >
+                    <SelectTrigger className="h-10 bg-muted text-sm">
+                      <SelectValue placeholder={t.operatorApp.submit.categoryPlaceholder} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {expenseCategories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 <Input
                   placeholder={t.operatorApp.submit.commentPlaceholder}
                   className="rounded-control bg-muted"

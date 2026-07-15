@@ -659,7 +659,7 @@
     "confirmDeleteAsset": "Ștergeți acest activ?",
     "initialReadingAction": "Citire inițială",
     "initialReadingHint": "Setați valoarea curentă a contorului dacă activul a fost deja folosit înainte de a începe urmărirea în aplicație — de la următoarea predare, calculul va porni de la acest număr, nu de la zero.",
-    "initialReadingWarning": "Acest activ are deja predări reale — modificarea de aici nu mai afectează calculele.",
+    "initialReadingWarning": "Acest activ are deja predări reale — modificarea de aici recalculează venitul primei dintre ele (folosită ca punct de plecare), nu afectează predările ulterioare.",
     "initialReadingSaveError": "Nu s-a putut salva citirea inițială",
     "newAssetTitle": "Activ nou",
     "newAssetSub": "O mașinuță, trambulină sau cască anume",
@@ -721,7 +721,7 @@
     "businessTitle": "Afacere: cheltuieli și profit",
     "revenue": "Venituri",
     "expense": "Cheltuieli",
-    "expenseHint": "Achiziții, avansuri, prime",
+    "expenseHint": "Achiziții și alte cheltuieli",
     "profit": "Profit",
     "changeFund": "Schimb valutar",
     "changeFundAmountFor": "Schimb pentru",
@@ -746,7 +746,18 @@
     "collectionsRegisterTitle": "Registru de încasări",
     "noCollections": "Nicio încasare în această lună",
     "advancesBonusesRegisterTitle": "Avansuri și prime",
-    "noAdvancesBonuses": "Niciun avans sau primă în această lună"
+    "noAdvancesBonuses": "Niciun avans sau primă în această lună",
+    "difference": "Diferență",
+    "differenceHint": "Real minus calculul după contoare",
+    "expensesLink": "Cheltuieli",
+    "expensesLinkHint": "Registru pe categorii",
+    "expensesRegisterTitle": "Registrul cheltuielilor",
+    "noExpenses": "Luna aceasta nu au fost cheltuieli",
+    "expenseCategoriesButton": "Categorii",
+    "expenseCategoriesTitle": "Categorii de cheltuieli",
+    "noExpenseCategories": "Încă nu există categorii",
+    "newCategoryPlaceholder": "Categorie nouă",
+    "categorySaveError": "Nu s-a putut salva categoria"
   },
   "readings": {
     "title": "Citiri zilnice",
@@ -924,7 +935,8 @@
       "acceptedTitle": "Predarea rezultatelor a fost acceptată",
       "queuedTitle": "Salvat, se va trimite când apare conexiunea",
       "queuedHint": "Momentan nu există internet — datele sunt salvate pe acest dispozitiv și vor fi trimise automat imediat ce conexiunea revine.",
-      "homeButton": "Acasă"
+      "homeButton": "Acasă",
+      "categoryPlaceholder": "Categorie (opțional)"
     },
     "offlineQueueHint": "În așteptare: {count} predări — se trimit automat la reconectare"
   },

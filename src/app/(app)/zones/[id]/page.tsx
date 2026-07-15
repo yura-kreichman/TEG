@@ -37,7 +37,6 @@ interface AssetInfo {
   colorTag: string;
   photoUrl: string | null;
   iconKey: string | null;
-  hasCounterReadings: boolean;
   lastReadings: { tariffId: string; reading: number }[];
 }
 
@@ -853,7 +852,7 @@ export default function ZoneDetailPage() {
             <ActionSheetItem icon={Pencil} onClick={() => setAssetKebabView("edit")}>
               {t.zoneDetail.nameAndColorAction}
             </ActionSheetItem>
-            {zone.accountingMode === "counters" && !assetKebab.hasCounterReadings && (
+            {zone.accountingMode === "counters" && (
               <ActionSheetItem icon={Gauge} onClick={openInitialReading}>
                 {t.zoneDetail.initialReadingAction}
               </ActionSheetItem>

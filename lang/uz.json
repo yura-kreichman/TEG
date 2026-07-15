@@ -659,7 +659,7 @@
     "confirmDeleteAsset": "Ushbu aktivni oʻchirasizmi?",
     "initialReadingAction": "Boshlangʻich koʻrsatkich",
     "initialReadingHint": "Agar aktiv ilovaga ulanishdan oldin allaqachon ishlatilgan boʻlsa, hisoblagichning joriy qiymatini kiriting — keyingi topshiriqdan hisob nol emas, shu raqamdan boshlanadi.",
-    "initialReadingWarning": "Bu aktivda allaqachon haqiqiy topshiriqlar bor — bu yerdagi oʻzgarish endi hisob-kitoblarga taʼsir qilmaydi.",
+    "initialReadingWarning": "Bu aktivda allaqachon haqiqiy topshiriqlar bor — bu yerdagi o'zgarish ulardan birinchisining daromadini qayta hisoblaydi (boshlang'ich nuqta sifatida ishlatiladi), keyingi topshiriqlarga ta'sir qilmaydi.",
     "initialReadingSaveError": "Boshlangʻich koʻrsatkichni saqlab boʻlmadi",
     "newAssetTitle": "Yangi aktiv",
     "newAssetSub": "Aniq mashina, batut yoki shlem",
@@ -721,7 +721,7 @@
     "businessTitle": "Biznes: xarajatlar va foyda",
     "revenue": "Tushum",
     "expense": "Xarajatlar",
-    "expenseHint": "Xaridlar, avanslar, mukofotlar",
+    "expenseHint": "Xaridlar va boshqa xarajatlar",
     "profit": "Foyda",
     "changeFund": "Mayda pul",
     "changeFundAmountFor": "Mayda pul kimga",
@@ -746,7 +746,18 @@
     "collectionsRegisterTitle": "Inkassatsiyalar reestri",
     "noCollections": "Bu oyda inkassatsiyalar boʻlmagan",
     "advancesBonusesRegisterTitle": "Avanslar va mukofotlar",
-    "noAdvancesBonuses": "Bu oyda avans va mukofotlar boʻlmagan"
+    "noAdvancesBonuses": "Bu oyda avans va mukofotlar boʻlmagan",
+    "difference": "Farq",
+    "differenceHint": "Haqiqiy minus hisoblagich bo'yicha hisob",
+    "expensesLink": "Xarajatlar",
+    "expensesLinkHint": "Kategoriya bo'yicha reyestr",
+    "expensesRegisterTitle": "Xarajatlar reyestri",
+    "noExpenses": "Bu oyda xarajat bo'lmadi",
+    "expenseCategoriesButton": "Kategoriyalar",
+    "expenseCategoriesTitle": "Xarajat kategoriyalari",
+    "noExpenseCategories": "Hozircha kategoriya yo'q",
+    "newCategoryPlaceholder": "Yangi kategoriya",
+    "categorySaveError": "Kategoriyani saqlab bo'lmadi"
   },
   "readings": {
     "title": "Kunlik koʻrsatkichlar",
@@ -924,7 +935,8 @@
       "acceptedTitle": "Yakuniy topshiriq qabul qilindi",
       "queuedTitle": "Saqlandi, aloqa boʻlganda yuboriladi",
       "queuedHint": "Hozir internet yoʻq — ma'lumotlar qurilmada saqlandi va aloqa paydo boʻlishi bilan avtomatik serverga yuboriladi.",
-      "homeButton": "Bosh sahifaga"
+      "homeButton": "Bosh sahifaga",
+      "categoryPlaceholder": "Kategoriya (ixtiyoriy)"
     },
     "offlineQueueHint": "Yuborilishini kutmoqda: {count} ta topshiriq — aloqa boʻlganda avtomatik yuboriladi"
   },

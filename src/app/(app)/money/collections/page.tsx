@@ -23,6 +23,7 @@ export default function CollectionsRegisterPage() {
   const [checking, setChecking] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [collections, setCollections] = useState<CollectionEntry[]>([]);
+  const [showPointName, setShowPointName] = useState(false);
 
   async function loadCollections() {
     const year = calendarMonth.getUTCFullYear();
@@ -34,6 +35,7 @@ export default function CollectionsRegisterPage() {
     }
     const data = await res.json();
     setCollections(data.collections ?? []);
+    setShowPointName(!!data.showPointName);
     setChecking(false);
   }
 
@@ -124,7 +126,8 @@ export default function CollectionsRegisterPage() {
                           className="flex items-center justify-between gap-2 border-t border-border py-1.5 first:border-t-0"
                         >
                           <span className="min-w-0 truncate text-xs text-muted-foreground">
-                            {formatTime(c.occurredAt)} · {c.zoneName} ({c.pointName})
+                            {formatTime(c.occurredAt)} · {c.zoneName}
+                            {showPointName ? ` (${c.pointName})` : ""}
                           </span>
                           <span className="shrink-0 text-xs font-bold tabular-nums">{c.amount.toFixed(2)}</span>
                         </div>

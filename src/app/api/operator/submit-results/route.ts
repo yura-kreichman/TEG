@@ -25,6 +25,7 @@ interface ExpenseInput {
   zoneId: string;
   amount: number;
   comment?: string;
+  categoryId?: string | null;
 }
 
 export async function POST(request: Request) {
@@ -54,6 +55,15 @@ export async function POST(request: Request) {
   if (zones.length !== zoneIds.length) {
     return NextResponse.json({ error: "Одна из зон не найдена" }, { status: 400 });
   }
+
+  // Категория расхода — не доверяем сырому categoryId от клиента, только
+  // сверенный список категорий этого тенанта (иначе можно было бы подсунуть
+  // чужой id и получить FK-ошибку транзакции целиком).
+  const validCategoryIds = new Set(
+    (await prisma.expenseCategory.findMany({ where: { tenantId: point.tenantId }, select: { id: true } })).map(
+      (c) => c.id
+    )
+  );
 
   // "Previous reading" only means anything in "counters" mode (running meter) —
   // "launches" readings are already the finished count for this submission.
@@ -161,9 +171,12 @@ export async function POST(request: Request) {
 
       const zoneExpenses = expenses.filter((e) => e.zoneId === zs.zoneId);
       for (const expense of zoneExpenses) {
+        const categoryId =
+          expense.categoryId && validCategoryIds.has(expense.categoryId) ? expense.categoryId : null;
         await tx.expenseEntry.create({
           data: {
             zoneSubmissionId: zoneSubmission.id,
+            categoryId,
             amount: expense.amount,
             comment: expense.comment || null,
           },
