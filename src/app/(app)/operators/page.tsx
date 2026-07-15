@@ -18,6 +18,7 @@ import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { OpenShiftBadge } from "@/components/open-shift-badge";
 import { useI18n } from "@/components/i18n-provider";
 import { colorTagGradient } from "@/lib/utils";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface OperatorInfo {
   id: string;
@@ -43,6 +44,7 @@ export default function OperatorsPage() {
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { saved: createSaved, pulse: createPulse } = useSavePulse();
   // Уволенных/деактивированных сотрудников не выкидываем из списка (нужны
   // истории/отчётам, docs/spec/05-work-time.md: "Деактивированный сохраняется
   // в истории и отчётах") — но и не мешаем ими рабочий список: сворачиваем
@@ -107,10 +109,12 @@ export default function OperatorsPage() {
         return;
       }
 
-      setName("");
-      setPin("");
-      setCreateOpen(false);
       await loadOperators();
+      createPulse(() => {
+        setName("");
+        setPin("");
+        setCreateOpen(false);
+      });
     } finally {
       setLoading(false);
     }
@@ -279,9 +283,7 @@ export default function OperatorsPage() {
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <PressableScale>
-            <SaveButton type="submit" disabled={loading} className="w-full">
-              {t.common.add}
-            </SaveButton>
+            <SaveButton type="submit" disabled={loading} className="h-12 w-full" saved={createSaved} />
           </PressableScale>
         </form>
       </BottomSheet>

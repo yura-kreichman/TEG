@@ -18,6 +18,7 @@ import { StatusChip } from "@/components/status-chip";
 import { TileIcon } from "@/components/tile-icon";
 import { useI18n } from "@/components/i18n-provider";
 import { ZONE_ACCOUNTING_MODES, type ZoneAccountingMode } from "@/lib/results-calc";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface ZoneInfo {
   id: string;
@@ -43,6 +44,7 @@ export default function PointDetailPage() {
   const [accountingMode, setAccountingMode] = useState<ZoneAccountingMode>("counters");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { saved: createSaved, pulse: createPulse } = useSavePulse();
 
   async function loadZones() {
     const res = await fetch(`/api/points/${params.id}/zones`);
@@ -81,11 +83,13 @@ export default function PointDetailPage() {
         return;
       }
 
-      setName("");
-      setIconKey(null);
-      setAccountingMode("counters");
-      setCreateOpen(false);
       await loadZones();
+      createPulse(() => {
+        setName("");
+        setIconKey(null);
+        setAccountingMode("counters");
+        setCreateOpen(false);
+      });
     } finally {
       setLoading(false);
     }
@@ -220,9 +224,7 @@ export default function PointDetailPage() {
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <PressableScale>
-            <SaveButton type="submit" disabled={loading} className="w-full">
-              {t.common.add}
-            </SaveButton>
+            <SaveButton type="submit" disabled={loading} className="h-12 w-full" saved={createSaved} />
           </PressableScale>
         </form>
       </BottomSheet>

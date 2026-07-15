@@ -40,6 +40,7 @@ import { useI18n } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { compressImageFile } from "@/lib/client-image";
 import { cn } from "@/lib/utils";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface Profile {
   id: string;
@@ -109,15 +110,19 @@ export default function OperatorSettingsPage() {
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
+  const { saved: renameSaved, pulse: renamePulse } = useSavePulse();
   const [pinOpen, setPinOpen] = useState(false);
   const [pinValue, setPinValue] = useState("");
+  const { saved: pinSaved, pulse: pinPulse } = useSavePulse();
   const [zonesOpen, setZonesOpen] = useState(false);
   const [zoneAccessAll, setZoneAccessAll] = useState(true);
   const [zoneAccessSelected, setZoneAccessSelected] = useState<Set<string>>(new Set());
   const [rateOpen, setRateOpen] = useState(false);
   const [rateValue, setRateValue] = useState("");
+  const { saved: rateSaved, pulse: ratePulse } = useSavePulse();
   const [colorOpen, setColorOpen] = useState(false);
   const [colorValue, setColorValue] = useState("#22c55e");
+  const { saved: colorSaved, pulse: colorPulse } = useSavePulse();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [savingTimeTrackingMode, setSavingTimeTrackingMode] = useState(false);
   const [timeTrackingError, setTimeTrackingError] = useState<string | null>(null);
@@ -166,8 +171,8 @@ export default function OperatorSettingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: renameValue }),
     });
-    setRenameOpen(false);
     await loadAll();
+    renamePulse(() => setRenameOpen(false));
   }
 
   function openPin() {
@@ -191,7 +196,7 @@ export default function OperatorSettingsPage() {
       setActionError(data.error ?? t.operators.pinFormatError);
       return;
     }
-    setPinOpen(false);
+    pinPulse(() => setPinOpen(false));
   }
 
   function openZones() {
@@ -252,8 +257,8 @@ export default function OperatorSettingsPage() {
       setActionError(data.error ?? t.operatorApp.workTime.saveError);
       return;
     }
-    setRateOpen(false);
     await loadAll();
+    ratePulse(() => setRateOpen(false));
   }
 
   async function setTimeTrackingMode(mode: "manual" | "auto") {
@@ -309,8 +314,8 @@ export default function OperatorSettingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ colorTag: colorValue }),
     });
-    setColorOpen(false);
     await loadAll();
+    colorPulse(() => setColorOpen(false));
   }
 
   async function handleToggleActive() {
@@ -623,9 +628,7 @@ export default function OperatorSettingsPage() {
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operators.rename}</h2>
           <Input autoFocus value={renameValue} onChange={(e) => setRenameValue(e.target.value)} />
           <PressableScale>
-            <SaveButton className="w-full" onClick={confirmRename}>
-              {t.common.save}
-            </SaveButton>
+            <SaveButton className="h-12 w-full" onClick={confirmRename} saved={renameSaved} />
           </PressableScale>
         </div>
       </BottomSheet>
@@ -647,9 +650,7 @@ export default function OperatorSettingsPage() {
           </div>
           {actionError && <p className="text-sm text-destructive">{actionError}</p>}
           <PressableScale>
-            <SaveButton className="w-full" onClick={confirmResetPin}>
-              {t.common.save}
-            </SaveButton>
+            <SaveButton className="h-12 w-full" onClick={confirmResetPin} saved={pinSaved} />
           </PressableScale>
         </div>
       </BottomSheet>
@@ -706,9 +707,7 @@ export default function OperatorSettingsPage() {
                 onChange={(e) => setRateValue(e.target.value)}
               />
               <PressableScale>
-                <SaveButton className="h-14" onClick={confirmRate}>
-                  {t.common.save}
-                </SaveButton>
+                <SaveButton className="h-14" onClick={confirmRate} saved={rateSaved} />
               </PressableScale>
             </div>
           </div>
@@ -722,9 +721,7 @@ export default function OperatorSettingsPage() {
           <ColorTagPicker value={colorValue} onChange={setColorValue} />
           <span className="text-caption-airbnb">{t.operators.colorTagHint}</span>
           <PressableScale>
-            <SaveButton className="w-full" onClick={confirmColor}>
-              {t.common.save}
-            </SaveButton>
+            <SaveButton className="h-12 w-full" onClick={confirmColor} saved={colorSaved} />
           </PressableScale>
         </div>
       </BottomSheet>
@@ -735,7 +732,7 @@ export default function OperatorSettingsPage() {
           <p className="text-body-airbnb">{t.operators.confirmDelete}</p>
           {actionError && <p className="text-sm text-destructive">{actionError}</p>}
           <PressableScale>
-            <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDelete}>
+            <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={confirmDelete}>
               <Trash2 className="size-4" />
               {t.common.delete}
             </Button>

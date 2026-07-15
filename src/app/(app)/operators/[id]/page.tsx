@@ -29,6 +29,7 @@ import {
   steppedAnchor,
   type PeriodGranularity,
 } from "@/lib/period-nav";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface Profile {
   id: string;
@@ -102,6 +103,7 @@ export default function OperatorCardPage() {
   const [carryoverAmount, setCarryoverAmount] = useState("");
   const [carryoverComment, setCarryoverComment] = useState("");
   const [carryoverError, setCarryoverError] = useState<string | null>(null);
+  const { saved: carryoverSaved, pulse: carryoverPulse } = useSavePulse();
 
   const [granularity, setGranularity] = useState<PeriodGranularity>("month");
   const [anchor, setAnchor] = useState(() => new Date());
@@ -110,6 +112,7 @@ export default function OperatorCardPage() {
   const [moneyAmount, setMoneyAmount] = useState("");
   const [moneyPointId, setMoneyPointId] = useState("");
   const [moneyError, setMoneyError] = useState<string | null>(null);
+  const { saved: moneyFormSaved, pulse: moneyFormPulse } = useSavePulse();
 
   const [editingShift, setEditingShift] = useState<ShiftRow | null>(null);
   const [editStartTime, setEditStartTime] = useState("");
@@ -127,12 +130,14 @@ export default function OperatorCardPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [confirmDeleteShift, setConfirmDeleteShift] = useState(false);
   const [deletingShift, setDeletingShift] = useState(false);
+  const { saved: shiftSaved, pulse: shiftPulse } = useSavePulse();
 
   const [editingMoneyOp, setEditingMoneyOp] = useState<StandaloneMoneyOp | null>(null);
   const [editMoneyOpAmount, setEditMoneyOpAmount] = useState("");
   const [editMoneyOpError, setEditMoneyOpError] = useState<string | null>(null);
   const [confirmDeleteMoneyOp, setConfirmDeleteMoneyOp] = useState(false);
   const [deletingMoneyOp, setDeletingMoneyOp] = useState(false);
+  const { saved: moneyOpSaved, pulse: moneyOpPulse } = useSavePulse();
 
   function openMoneyOpEdit(op: StandaloneMoneyOp) {
     setEditingMoneyOp(op);
@@ -154,8 +159,8 @@ export default function OperatorCardPage() {
       setEditMoneyOpError(data.error ?? t.operatorApp.workTime.saveError);
       return;
     }
-    setEditingMoneyOp(null);
     await loadAll();
+    moneyOpPulse(() => setEditingMoneyOp(null));
   }
 
   async function deleteMoneyOp() {
@@ -277,8 +282,8 @@ export default function OperatorCardPage() {
       setMoneyError(data.error ?? t.operatorApp.workTime.saveError);
       return;
     }
-    setMoneyForm(null);
     await loadAll();
+    moneyFormPulse(() => setMoneyForm(null));
   }
 
   function openCarryover() {
@@ -305,8 +310,8 @@ export default function OperatorCardPage() {
       setCarryoverError(data.error ?? t.operatorApp.workTime.saveError);
       return;
     }
-    setCarryoverOpen(false);
     await loadAll();
+    carryoverPulse(() => setCarryoverOpen(false));
   }
 
   function openShiftEdit(shift: ShiftRow) {
@@ -381,7 +386,9 @@ export default function OperatorCardPage() {
     }
     setEditWarnings(data.warnings ?? []);
     await loadAll();
-    if (!data.warnings?.length) setEditingShift(null);
+    shiftPulse(() => {
+      if (!data.warnings?.length) setEditingShift(null);
+    });
   }
 
   if (checking || !profile) return null;
@@ -668,9 +675,7 @@ export default function OperatorCardPage() {
               />
               {operatorPoints.length <= 1 && (
                 <PressableScale>
-                  <SaveButton className="h-14" onClick={submitMoneyForm}>
-                    {t.common.save}
-                  </SaveButton>
+                  <SaveButton className="h-14" onClick={submitMoneyForm} saved={moneyFormSaved} />
                 </PressableScale>
               )}
             </div>
@@ -699,9 +704,7 @@ export default function OperatorCardPage() {
           {moneyError && <p className="text-sm text-destructive">{moneyError}</p>}
           {operatorPoints.length > 1 && (
             <PressableScale>
-              <SaveButton className="w-full" onClick={submitMoneyForm}>
-                {t.common.save}
-              </SaveButton>
+              <SaveButton className="h-12 w-full" onClick={submitMoneyForm} saved={moneyFormSaved} />
             </PressableScale>
           )}
         </div>
@@ -732,9 +735,7 @@ export default function OperatorCardPage() {
           </div>
           {carryoverError && <p className="text-sm text-destructive">{carryoverError}</p>}
           <PressableScale>
-            <SaveButton className="w-full" onClick={confirmCarryover}>
-              {t.common.save}
-            </SaveButton>
+            <SaveButton className="h-12 w-full" onClick={confirmCarryover} saved={carryoverSaved} />
           </PressableScale>
         </div>
       </BottomSheet>
@@ -810,9 +811,7 @@ export default function OperatorCardPage() {
             ))}
             {editError && <p className="text-sm text-destructive">{editError}</p>}
             <PressableScale>
-              <SaveButton className="w-full" onClick={submitShiftEdit}>
-              {t.common.save}
-              </SaveButton>
+              <SaveButton className="h-12 w-full" onClick={submitShiftEdit} saved={shiftSaved} />
             </PressableScale>
 
             {shifts[0]?.id === editingShift.id &&
@@ -822,7 +821,7 @@ export default function OperatorCardPage() {
                   <PressableScale>
                     <Button
                       variant="destructive"
-                      className="w-full gap-1.5"
+                      className="h-12 w-full gap-1.5"
                       disabled={deletingShift}
                       onClick={deleteShift}
                     >
@@ -863,9 +862,7 @@ export default function OperatorCardPage() {
                   onChange={(e) => setEditMoneyOpAmount(e.target.value)}
                 />
                 <PressableScale>
-                  <SaveButton className="h-14" onClick={submitMoneyOpEdit}>
-                    {t.common.save}
-                  </SaveButton>
+                  <SaveButton className="h-14" onClick={submitMoneyOpEdit} saved={moneyOpSaved} />
                 </PressableScale>
               </div>
             </div>
@@ -877,7 +874,7 @@ export default function OperatorCardPage() {
                 <PressableScale>
                   <Button
                     variant="destructive"
-                    className="w-full gap-1.5"
+                    className="h-12 w-full gap-1.5"
                     disabled={deletingMoneyOp}
                     onClick={deleteMoneyOp}
                   >

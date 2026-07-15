@@ -23,6 +23,7 @@ import { AuthLocalePicker } from "@/components/auth-locale-picker";
 import { cn } from "@/lib/utils";
 import { compressImageFile } from "@/lib/client-image";
 import { useSlugPreview } from "@/lib/use-slug-preview";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 function formatRelativeDay(dateStr: string, isToday: boolean, t: Dictionary): string {
   if (isToday) return t.home.today;
@@ -137,6 +138,7 @@ export function OwnerDashboardCard({
   const [updateSlugOnRename, setUpdateSlugOnRename] = useState(false);
   const [currentSlug, setCurrentSlug] = useState<string | null>(null);
   const [accountError, setAccountError] = useState<string | null>(null);
+  const { saved: renameSaved, pulse: renamePulse } = useSavePulse();
   const [logoUploading, setLogoUploading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const renameSlugPreview = useSlugPreview(renameValue);
@@ -176,7 +178,7 @@ export function OwnerDashboardCard({
     const data = await res.json();
     if (data.slug) setCurrentSlug(data.slug);
     setCompanyName(renameValue.trim());
-    setAccountView(null);
+    renamePulse(() => setAccountView(null));
   }
 
   async function handleUploadLogo(event: React.ChangeEvent<HTMLInputElement>) {
@@ -399,9 +401,7 @@ export function OwnerDashboardCard({
           )}
           {accountError && <p className="text-sm text-destructive">{accountError}</p>}
           <PressableScale>
-            <SaveButton className="w-full" onClick={confirmRename}>
-              {t.common.save}
-            </SaveButton>
+            <SaveButton className="h-12 w-full" onClick={confirmRename} saved={renameSaved} />
           </PressableScale>
         </div>
       </BottomSheet>

@@ -14,6 +14,7 @@ import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/components/i18n-provider";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface PackageInfo {
   id: string;
@@ -47,6 +48,7 @@ export default function AdminPackagesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const { saved, pulse } = useSavePulse();
 
   const [kebab, setKebab] = useState<PackageInfo | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -113,8 +115,8 @@ export default function AdminPackagesPage() {
       setSaveError(data.error ?? t.admin.genericError);
       return;
     }
-    setEditorOpen(false);
     await load();
+    pulse(() => setEditorOpen(false));
   }
 
   async function deletePackage() {
@@ -261,9 +263,7 @@ export default function AdminPackagesPage() {
           </div>
           {saveError && <p className="text-sm text-destructive">{saveError}</p>}
           <PressableScale>
-            <SaveButton type="button" className="w-full" onClick={save} disabled={!form.name.trim()}>
-              {t.common.save}
-            </SaveButton>
+            <SaveButton type="button" className="h-12 w-full" onClick={save} disabled={!form.name.trim()} saved={saved} />
           </PressableScale>
         </div>
       </BottomSheet>
@@ -288,7 +288,7 @@ export default function AdminPackagesPage() {
           <p className="text-body-airbnb">{t.admin.confirmDeletePackageBody}</p>
           {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
           <PressableScale>
-            <Button variant="destructive" className="w-full gap-1.5" onClick={deletePackage}>
+            <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={deletePackage}>
               <Trash2 className="size-4" />
               {t.common.delete}
             </Button>

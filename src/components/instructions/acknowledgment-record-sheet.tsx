@@ -104,7 +104,7 @@ export function AcknowledgmentRecordSheet({
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.instructions.deleteRecordConfirmTitle}</h2>
           <p className="text-body-airbnb text-muted-foreground">{t.instructions.deleteRecordConfirmHint}</p>
           <PressableScale>
-            <Button type="button" variant="destructive" className="w-full gap-2" onClick={confirmDelete} disabled={busy}>
+            <Button type="button" variant="destructive" className="h-12 w-full gap-2" onClick={confirmDelete} disabled={busy}>
               <Trash2 className="size-4" />
               {t.common.delete}
             </Button>

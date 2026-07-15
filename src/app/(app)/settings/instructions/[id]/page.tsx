@@ -16,6 +16,7 @@ import { InstructionEditor } from "@/components/instructions/instruction-editor"
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 import type { PMNode } from "@/lib/instructions/content";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 const EMPTY_DOC: PMNode = { type: "doc", content: [] };
 
@@ -40,7 +41,7 @@ export default function InstructionEditorPage() {
   const [honestyCheck, setHonestyCheck] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const { saved, pulse: savePulse } = useSavePulse(1500);
 
   useEffect(() => {
     fetch(`/api/instructions/${id}`)
@@ -57,14 +58,13 @@ export default function InstructionEditorPage() {
 
   async function saveDraft() {
     setSaving(true);
-    setSaved(false);
     try {
       const res = await fetch(`/api/instructions/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, content, honestyCheck }),
       });
-      if (res.ok) setSaved(true);
+      if (res.ok) savePulse();
     } finally {
       setSaving(false);
     }
@@ -135,10 +135,7 @@ export default function InstructionEditorPage() {
                   className="w-full"
                   onClick={saveDraft}
                   disabled={saving || publishing}
-                  saved={saved}
-                >
-                  {t.common.save}
-                </SaveButton>
+                  saved={saved} />
               </PressableScale>
               <PressableScale className="flex-1">
                 <Button type="button" className="w-full gap-2" onClick={publish} disabled={saving || publishing}>

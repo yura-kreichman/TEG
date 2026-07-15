@@ -367,9 +367,7 @@ export default function AdminSettingsPage() {
           </SpringCard>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <SaveButton type="button" onClick={save} saved={saved}>
-            {t.common.save}
-          </SaveButton>
+          <SaveButton type="button" onClick={save} saved={saved} />
         </div>
       </div>
     </AdminShell>

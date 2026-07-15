@@ -166,7 +166,7 @@ export default function DataCleanupPage() {
           <PressableScale>
             <Button
               variant="destructive"
-              className="w-full gap-2"
+              className="h-12 w-full gap-2"
               disabled={!canSubmit || loading}
               onClick={handleConfirm}
             >

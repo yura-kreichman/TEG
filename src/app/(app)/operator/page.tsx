@@ -17,6 +17,7 @@ import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { cn } from "@/lib/utils";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface ZoneOption {
   id: string;
@@ -73,6 +74,11 @@ export default function OperatorHomePage() {
   const [collectionZoneId, setCollectionZoneId] = useState("");
   const [collectionAmount, setCollectionAmount] = useState("");
   const [collectionError, setCollectionError] = useState<string | null>(null);
+  // Уведомление, если инкассация довзыскала "пул" — аванс/премию, которые
+  // сам оператор уже забрал с точки после прошлой инкассации
+  // (lib/zone-balance.ts, найдено на реальных данных 2026-07-16).
+  const [poolSettledToast, setPoolSettledToast] = useState<number | null>(null);
+  const { saved: collectionSaved, pulse: collectionPulse } = useSavePulse();
 
   const [tasks, setTasks] = useState<OperatorTask[]>([]);
   const [doneToday, setDoneToday] = useState(0);
@@ -308,8 +314,14 @@ export default function OperatorHomePage() {
       setCollectionError(data.error ?? "Не удалось провести инкассацию");
       return;
     }
-    setShowCollection(false);
-    setCollectionAmount("");
+    if (data.settledPool > 0) {
+      setPoolSettledToast(data.settledPool);
+      setTimeout(() => setPoolSettledToast(null), 3000);
+    }
+    collectionPulse(() => {
+      setShowCollection(false);
+      setCollectionAmount("");
+    });
   }
 
   function openCollection() {
@@ -641,9 +653,7 @@ export default function OperatorHomePage() {
                     required
                   />
                   <PressableScale>
-                    <SaveButton type="submit" className="h-14 text-base font-bold">
-                      {t.common.save}
-                    </SaveButton>
+                    <SaveButton type="submit" className="h-14 text-base font-bold" saved={collectionSaved} />
                   </PressableScale>
                 </div>
               </div>
@@ -706,6 +716,12 @@ export default function OperatorHomePage() {
         <ArrowRightLeft className="size-3.5" />
         {t.operatorApp.switchOperator}
       </button>
+
+      {poolSettledToast !== null && (
+        <div className="fixed bottom-24 left-1/2 z-70 -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-caption-airbnb font-semibold text-background shadow-lg">
+          {t.operatorApp.collectionPoolSettledPrefix} <Money value={poolSettledToast} /> {t.operatorApp.collectionPoolSettledSuffix}
+        </div>
+      )}
     </div>
   );
 }

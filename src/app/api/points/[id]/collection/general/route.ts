@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
-import { getZoneBalances } from "@/lib/zone-balance";
+import { getPointPoolDeficit, getZoneBalances } from "@/lib/zone-balance";
 import { distributeCollectionWhole } from "@/lib/collection-split";
 
 // Общая инкассация точки, но вносит владелец (запрос пользователя
 // 2026-07-15: "как и у Сотрудника") — тот же принцип, что у оператора
 // (/api/operator/collection/general): один общий итог, сервер сам делит его
 // между зонами точки пропорционально их текущему остатку и пишет обычные
-// zone-level операции collection.
+// zone-level операции collection. К введённой сумме автоматически
+// прибавляется "пул" — аванс/премия, которые сотрудник уже забрал с точки
+// после прошлой инкассации (lib/zone-balance.ts, getPointPoolDeficit) —
+// иначе эти деньги зависают в журнале зон навсегда (решение пользователя
+// 2026-07-16).
 export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]/collection/general">) {
   const owner = await requireOwner();
   if (!owner) {
@@ -34,7 +38,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
 
   const balanceByZone = await getZoneBalances(zones.map((z) => z.id));
   const weights = zones.map((z) => balanceByZone.get(z.id) ?? 0);
-  const shares = distributeCollectionWhole(amountNumber, weights);
+  const poolDeficit = await getPointPoolDeficit(pointId);
+  const shares = distributeCollectionWhole(amountNumber + poolDeficit, weights);
 
   const rows = zones
     .map((zone, i) => ({
@@ -50,5 +55,5 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     await prisma.moneyOperation.createMany({ data: rows });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, settledPool: poolDeficit });
 }

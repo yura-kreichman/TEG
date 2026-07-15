@@ -24,6 +24,7 @@ import { compressImageFile } from "@/lib/client-image";
 import { ZONE_ACCOUNTING_MODES, type ZoneAccountingMode } from "@/lib/results-calc";
 import { colorTagGradient } from "@/lib/utils";
 import { ColorTagPicker } from "@/components/color-tag-picker";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface TariffInfo {
   id: string;
@@ -71,10 +72,12 @@ export default function ZoneDetailPage() {
   const [zoneKebabOpen, setZoneKebabOpen] = useState(false);
   const [zoneKebabView, setZoneKebabView] = useState<ZoneKebabView>("menu");
   const [renameZoneValue, setRenameZoneValue] = useState("");
+  const { saved: renameZoneSaved, pulse: renameZonePulse } = useSavePulse();
   const [zoneActionError, setZoneActionError] = useState<string | null>(null);
 
   const [createTariffOpen, setCreateTariffOpen] = useState(false);
   const [tariffName, setTariffName] = useState("");
+  const { saved: addTariffSaved, pulse: addTariffPulse } = useSavePulse();
   const [tariffPrice, setTariffPrice] = useState("");
   const [tariffError, setTariffError] = useState<string | null>(null);
 
@@ -82,11 +85,13 @@ export default function ZoneDetailPage() {
   const [tariffKebabView, setTariffKebabView] = useState<TariffKebabView>("menu");
   const [editTariffName, setEditTariffName] = useState("");
   const [editTariffPrice, setEditTariffPrice] = useState("");
+  const { saved: editTariffSaved, pulse: editTariffPulse } = useSavePulse();
   const [editTariffError, setEditTariffError] = useState<string | null>(null);
   const [deleteTariffError, setDeleteTariffError] = useState<string | null>(null);
 
   const [createAssetOpen, setCreateAssetOpen] = useState(false);
   const [assetName, setAssetName] = useState("");
+  const { saved: addAssetSaved, pulse: addAssetPulse } = useSavePulse();
   const [assetColor, setAssetColor] = useState("#22c55e");
   const [assetPhotoUrl, setAssetPhotoUrl] = useState<string | null>(null);
   const [assetIconKey, setAssetIconKey] = useState<string | null>(null);
@@ -97,6 +102,7 @@ export default function ZoneDetailPage() {
   const [assetKebabView, setAssetKebabView] = useState<AssetKebabView>("menu");
   const [editAssetName, setEditAssetName] = useState("");
   const [editAssetColor, setEditAssetColor] = useState("#22c55e");
+  const { saved: editAssetSaved, pulse: editAssetPulse } = useSavePulse();
   const [editAssetPhotoUrl, setEditAssetPhotoUrl] = useState<string | null>(null);
   const [editAssetError, setEditAssetError] = useState<string | null>(null);
   const [editUploading, setEditUploading] = useState(false);
@@ -110,6 +116,7 @@ export default function ZoneDetailPage() {
   const [initialReadingValues, setInitialReadingValues] = useState<Record<string, string>>({});
   const [initialReadingHasReal, setInitialReadingHasReal] = useState(false);
   const [initialReadingError, setInitialReadingError] = useState<string | null>(null);
+  const { saved: initialReadingSaved, pulse: initialReadingPulse } = useSavePulse();
 
   async function loadZone() {
     const res = await fetch(`/api/zones/${params.id}`);
@@ -159,8 +166,8 @@ export default function ZoneDetailPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: renameZoneValue }),
     });
-    setZoneKebabOpen(false);
     await loadZone();
+    renameZonePulse(() => setZoneKebabOpen(false));
   }
 
   async function toggleZoneActive() {
@@ -215,10 +222,12 @@ export default function ZoneDetailPage() {
       setTariffError(data.error ?? "Не удалось добавить тариф");
       return;
     }
-    setTariffName("");
-    setTariffPrice("");
-    setCreateTariffOpen(false);
     await loadZone();
+    addTariffPulse(() => {
+      setTariffName("");
+      setTariffPrice("");
+      setCreateTariffOpen(false);
+    });
   }
 
   function openTariffKebab(tariff: TariffInfo) {
@@ -243,8 +252,8 @@ export default function ZoneDetailPage() {
       setEditTariffError(data.error ?? "Не удалось сохранить тариф");
       return;
     }
-    setTariffKebab(null);
     await loadZone();
+    editTariffPulse(() => setTariffKebab(null));
   }
 
   async function confirmDeleteTariff() {
@@ -298,11 +307,13 @@ export default function ZoneDetailPage() {
       setAssetError(data.error ?? "Не удалось добавить актив");
       return;
     }
-    setAssetName("");
-    setAssetPhotoUrl(null);
-    setAssetIconKey(null);
-    setCreateAssetOpen(false);
     await loadZone();
+    addAssetPulse(() => {
+      setAssetName("");
+      setAssetPhotoUrl(null);
+      setAssetIconKey(null);
+      setCreateAssetOpen(false);
+    });
   }
 
   // Порядок активов внутри зоны — ручной, задаёт владелец (фидбек
@@ -356,7 +367,7 @@ export default function ZoneDetailPage() {
       setInitialReadingError(data.error ?? t.zoneDetail.initialReadingSaveError);
       return;
     }
-    setAssetKebab(null);
+    initialReadingPulse(() => setAssetKebab(null));
   }
 
   async function handleEditUploadPhoto(file: File) {
@@ -391,8 +402,8 @@ export default function ZoneDetailPage() {
       setEditAssetError(data.error ?? "Не удалось сохранить актив");
       return;
     }
-    setAssetKebab(null);
     await loadZone();
+    editAssetPulse(() => setAssetKebab(null));
   }
 
   async function confirmDeleteAsset() {
@@ -665,9 +676,7 @@ export default function ZoneDetailPage() {
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.renameZone}</h2>
             <Input autoFocus value={renameZoneValue} onChange={(e) => setRenameZoneValue(e.target.value)} />
             <PressableScale>
-              <SaveButton className="w-full" onClick={confirmRenameZone}>
-                {t.common.save}
-              </SaveButton>
+              <SaveButton className="h-12 w-full" onClick={confirmRenameZone} saved={renameZoneSaved} />
             </PressableScale>
           </div>
         )}
@@ -677,7 +686,7 @@ export default function ZoneDetailPage() {
             <p className="text-body-airbnb">{t.zoneDetail.confirmDeleteZone}</p>
             {zoneActionError && <p className="text-sm text-destructive">{zoneActionError}</p>}
             <PressableScale>
-              <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDeleteZone}>
+              <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={confirmDeleteZone}>
                 <Trash2 className="size-4" />
                 {t.common.delete}
               </Button>
@@ -707,9 +716,7 @@ export default function ZoneDetailPage() {
           </div>
           {tariffError && <p className="text-sm text-destructive">{tariffError}</p>}
           <PressableScale>
-            <Button type="submit" className="w-full">
-              {t.zoneDetail.addTariffButton}
-            </Button>
+            <SaveButton type="submit" className="h-12 w-full" saved={addTariffSaved} />
           </PressableScale>
         </form>
       </BottomSheet>
@@ -746,9 +753,7 @@ export default function ZoneDetailPage() {
                   onChange={(e) => setEditTariffPrice(e.target.value)}
                 />
                 <PressableScale>
-                  <SaveButton className="h-12" onClick={confirmEditTariff}>
-                    {t.common.save}
-                  </SaveButton>
+                  <SaveButton className="h-12" onClick={confirmEditTariff} saved={editTariffSaved} />
                 </PressableScale>
               </div>
             </div>
@@ -761,7 +766,7 @@ export default function ZoneDetailPage() {
             <p className="text-body-airbnb">{t.zoneDetail.confirmDeleteTariff}</p>
             {deleteTariffError && <p className="text-sm text-destructive">{deleteTariffError}</p>}
             <PressableScale>
-              <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDeleteTariff}>
+              <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={confirmDeleteTariff}>
                 <Trash2 className="size-4" />
                 {t.common.delete}
               </Button>
@@ -810,9 +815,7 @@ export default function ZoneDetailPage() {
           </div>
           {assetError && <p className="text-sm text-destructive">{assetError}</p>}
           <PressableScale>
-            <Button type="submit" className="w-full">
-              {t.zoneDetail.addAssetButton}
-            </Button>
+            <SaveButton type="submit" className="h-12 w-full" saved={addAssetSaved} />
           </PressableScale>
         </form>
       </BottomSheet>
@@ -856,9 +859,7 @@ export default function ZoneDetailPage() {
             </div>
             {editAssetError && <p className="text-sm text-destructive">{editAssetError}</p>}
             <PressableScale>
-              <SaveButton className="w-full" onClick={confirmEditAsset}>
-                {t.common.save}
-              </SaveButton>
+              <SaveButton className="h-12 w-full" onClick={confirmEditAsset} saved={editAssetSaved} />
             </PressableScale>
           </div>
         )}
@@ -887,9 +888,7 @@ export default function ZoneDetailPage() {
             ))}
             {initialReadingError && <p className="text-sm text-destructive">{initialReadingError}</p>}
             <PressableScale>
-              <SaveButton className="w-full" onClick={confirmInitialReading}>
-                {t.common.save}
-              </SaveButton>
+              <SaveButton className="h-12 w-full" onClick={confirmInitialReading} saved={initialReadingSaved} />
             </PressableScale>
           </div>
         )}
@@ -898,7 +897,7 @@ export default function ZoneDetailPage() {
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.deleteAssetAction}</h2>
             <p className="text-body-airbnb">{t.zoneDetail.confirmDeleteAsset}</p>
             <PressableScale>
-              <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDeleteAsset}>
+              <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={confirmDeleteAsset}>
                 <Trash2 className="size-4" />
                 {t.common.delete}
               </Button>
@@ -935,9 +934,7 @@ export default function ZoneDetailPage() {
             {editUploading && <p className="text-caption-airbnb">{t.zoneDetail.uploading}</p>}
             {editAssetError && <p className="text-sm text-destructive">{editAssetError}</p>}
             <PressableScale>
-              <SaveButton className="w-full" onClick={confirmEditAsset}>
-              {t.common.save}
-              </SaveButton>
+              <SaveButton className="h-12 w-full" onClick={confirmEditAsset} saved={editAssetSaved} />
             </PressableScale>
           </div>
         </BottomSheet>

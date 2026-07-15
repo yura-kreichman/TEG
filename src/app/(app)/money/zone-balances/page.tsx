@@ -20,6 +20,7 @@ import { formatTime } from "@/lib/datetime-format";
 import { cn } from "@/lib/utils";
 import { Money } from "@/components/money";
 import { distributeCollectionWhole } from "@/lib/collection-split";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface ZoneBalance {
   zoneId: string;
@@ -56,6 +57,9 @@ export default function ZoneBalancesPage() {
   const [changeFundZoneId, setChangeFundZoneId] = useState<string | null>(null);
   const [changeFundAmount, setChangeFundAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const { saved: changeFundSaved, pulse: changeFundPulse } = useSavePulse();
+  const { saved: collectionSaved, pulse: collectionPulse } = useSavePulse();
+  const { saved: editCollectionSaved, pulse: editCollectionPulse } = useSavePulse();
 
   // Инкассация владельцем (запрос пользователя 2026-07-15: "как и у
   // Сотрудника") — тот же выбор "по зонам"/"общая", что в PWA оператора
@@ -68,6 +72,11 @@ export default function ZoneBalancesPage() {
   const [collectionZoneId, setCollectionZoneId] = useState("");
   const [collectionAmount, setCollectionAmount] = useState("");
   const [collectionError, setCollectionError] = useState<string | null>(null);
+  // Уведомление, если инкассация довзыскала "пул" — аванс/премию, которые
+  // сотрудник уже забрал с точки после прошлой инкассации (lib/zone-balance.ts,
+  // найдено на реальных данных 2026-07-16: без этого владелец не понимал бы,
+  // почему по зонам списалось больше введённой суммы).
+  const [poolSettledToast, setPoolSettledToast] = useState<number | null>(null);
 
   // Реестр инкассаций — перенесён сюда с отдельного экрана /money/collections
   // (запрос пользователя 2026-07-15: "весь раздел Инкассации переносим в
@@ -104,8 +113,8 @@ export default function ZoneBalancesPage() {
       setEditCollectionError(data.error ?? t.money.collectionSaveError);
       return;
     }
-    setEditingCollection(null);
     await Promise.all([loadReport(), loadCollections()]);
+    editCollectionPulse(() => setEditingCollection(null));
   }
 
   async function deleteCollection() {
@@ -174,9 +183,11 @@ export default function ZoneBalancesPage() {
       setError(data.error ?? "Не удалось провести размен");
       return;
     }
-    setChangeFundAmount("");
-    setChangeFundZoneId(null);
     await loadReport();
+    changeFundPulse(() => {
+      setChangeFundAmount("");
+      setChangeFundZoneId(null);
+    });
   }
 
   const points = Array.from(new Map(zoneBalances.map((z) => [z.pointId, z.pointName])).entries()).map(
@@ -222,9 +233,15 @@ export default function ZoneBalancesPage() {
       setCollectionError(data.error ?? "Не удалось провести инкассацию");
       return;
     }
-    setCollectionOpen(false);
-    setCollectionAmount("");
+    if (data.settledPool > 0) {
+      setPoolSettledToast(data.settledPool);
+      setTimeout(() => setPoolSettledToast(null), 3000);
+    }
     await Promise.all([loadReport(), loadCollections()]);
+    collectionPulse(() => {
+      setCollectionOpen(false);
+      setCollectionAmount("");
+    });
   }
 
   function isCalendarCurrentMonth() {
@@ -437,9 +454,7 @@ export default function ZoneBalancesPage() {
                 required
               />
               <PressableScale>
-                <SaveButton type="submit" className="h-12">
-                  {t.common.save}
-                </SaveButton>
+                <SaveButton type="submit" className="h-12" saved={changeFundSaved} />
               </PressableScale>
             </div>
           </div>
@@ -547,9 +562,7 @@ export default function ZoneBalancesPage() {
                     required
                   />
                   <PressableScale>
-                    <SaveButton type="submit" className="h-12">
-                      {t.common.save}
-                    </SaveButton>
+                    <SaveButton type="submit" className="h-12" saved={collectionSaved} />
                   </PressableScale>
                 </div>
               </div>
@@ -573,9 +586,7 @@ export default function ZoneBalancesPage() {
                   onChange={(e) => setEditCollectionAmount(e.target.value)}
                 />
                 <PressableScale>
-                  <SaveButton className="h-14" onClick={submitCollectionEdit}>
-                    {t.common.save}
-                  </SaveButton>
+                  <SaveButton className="h-14" onClick={submitCollectionEdit} saved={editCollectionSaved} />
                 </PressableScale>
               </div>
             </div>
@@ -587,7 +598,7 @@ export default function ZoneBalancesPage() {
                 <PressableScale>
                   <Button
                     variant="destructive"
-                    className="w-full gap-1.5"
+                    className="h-12 w-full gap-1.5"
                     disabled={deletingCollection}
                     onClick={deleteCollection}
                   >
@@ -609,6 +620,12 @@ export default function ZoneBalancesPage() {
           </div>
         )}
       </BottomSheet>
+
+      {poolSettledToast !== null && (
+        <div className="fixed bottom-24 left-1/2 z-70 -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-caption-airbnb font-semibold text-background shadow-lg">
+          {t.money.collectionPoolSettledPrefix} <Money value={poolSettledToast} /> {t.money.collectionPoolSettledSuffix}
+        </div>
+      )}
     </OwnerShell>
   );
 }

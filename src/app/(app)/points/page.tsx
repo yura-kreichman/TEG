@@ -20,6 +20,7 @@ import { StatusChip } from "@/components/status-chip";
 import { TileIcon } from "@/components/tile-icon";
 import { QrCode } from "@/components/qr-code";
 import { useI18n } from "@/components/i18n-provider";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface PointDeviceInfo {
   id: string;
@@ -82,8 +83,10 @@ export default function PointsPage() {
   const [iconKey, setIconKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { saved: createSaved, pulse: createPulse } = useSavePulse();
 
   const [deviceSheetPointId, setDeviceSheetPointId] = useState<string | null>(null);
+  const { saved: createDeviceSaved, pulse: createDevicePulse } = useSavePulse();
   const [deviceLabel, setDeviceLabel] = useState("");
   const [deviceRoaming, setDeviceRoaming] = useState(false);
   const [installLinks, setInstallLinks] = useState<Record<string, string>>({});
@@ -92,6 +95,7 @@ export default function PointsPage() {
   const [pointKebab, setPointKebab] = useState<PointInfo | null>(null);
   const [pointKebabView, setPointKebabView] = useState<PointKebabView>("menu");
   const [renamePointValue, setRenamePointValue] = useState("");
+  const { saved: renamePointSaved, pulse: renamePointPulse } = useSavePulse();
   const [pointActionError, setPointActionError] = useState<string | null>(null);
 
   const [locAddress, setLocAddress] = useState("");
@@ -103,10 +107,12 @@ export default function PointsPage() {
   const [locHours, setLocHours] = useState<DayHoursForm[]>(DEFAULT_HOURS);
   const [locLoading, setLocLoading] = useState(false);
   const [locSaving, setLocSaving] = useState(false);
+  const { saved: locSaved, pulse: locPulse } = useSavePulse();
 
   const [deviceKebab, setDeviceKebab] = useState<{ pointId: string; device: PointDeviceInfo } | null>(null);
   const [deviceKebabView, setDeviceKebabView] = useState<DeviceKebabView>("menu");
   const [renameDeviceValue, setRenameDeviceValue] = useState("");
+  const { saved: renameDeviceSaved, pulse: renameDevicePulse } = useSavePulse();
 
   async function loadPoints() {
     const res = await fetch("/api/points");
@@ -174,11 +180,13 @@ export default function PointsPage() {
         setError(data.error ?? "Не удалось создать точку");
         return;
       }
-      setName("");
-      setAddress("");
-      setIconKey(null);
-      setCreateOpen(false);
       await loadPoints();
+      createPulse(() => {
+        setName("");
+        setAddress("");
+        setIconKey(null);
+        setCreateOpen(false);
+      });
     } finally {
       setLoading(false);
     }
@@ -195,10 +203,12 @@ export default function PointsPage() {
     const data = await res.json();
     if (res.ok) {
       setInstallLinks((prev) => ({ ...prev, [data.id]: data.installLink }));
-      setDeviceLabel("");
-      setDeviceRoaming(false);
-      setDeviceSheetPointId(null);
       await loadPoints();
+      createDevicePulse(() => {
+        setDeviceLabel("");
+        setDeviceRoaming(false);
+        setDeviceSheetPointId(null);
+      });
     }
   }
 
@@ -267,8 +277,8 @@ export default function PointsPage() {
           })),
         }),
       });
-      setPointKebab(null);
       await loadPoints();
+      locPulse(() => setPointKebab(null));
     } finally {
       setLocSaving(false);
     }
@@ -281,8 +291,8 @@ export default function PointsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: renamePointValue }),
     });
-    setPointKebab(null);
     await loadPoints();
+    renamePointPulse(() => setPointKebab(null));
   }
 
   async function handlePointIconChange(nextIconKey: string) {
@@ -332,8 +342,8 @@ export default function PointsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ label: renameDeviceValue }),
     });
-    setDeviceKebab(null);
     await loadPoints();
+    renameDevicePulse(() => setDeviceKebab(null));
   }
 
   async function copyActivationLink() {
@@ -495,9 +505,7 @@ export default function PointsPage() {
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <PressableScale>
-            <SaveButton type="submit" disabled={loading} className="w-full">
-              {t.common.add}
-            </SaveButton>
+            <SaveButton type="submit" disabled={loading} className="h-12 w-full" saved={createSaved} />
           </PressableScale>
         </form>
       </BottomSheet>
@@ -527,9 +535,7 @@ export default function PointsPage() {
             <Switch checked={deviceRoaming} onCheckedChange={setDeviceRoaming} className="shrink-0" />
           </div>
           <PressableScale>
-            <Button type="submit" className="w-full">
-              {t.points.createDeviceLinkButton}
-            </Button>
+            <SaveButton type="submit" className="h-12 w-full" saved={createDeviceSaved} />
           </PressableScale>
         </form>
       </BottomSheet>
@@ -660,9 +666,7 @@ export default function PointsPage() {
               </>
             )}
             <PressableScale>
-              <SaveButton className="w-full" disabled={locSaving || locLoading} onClick={saveLocation}>
-                {t.common.save}
-              </SaveButton>
+              <SaveButton className="h-12 w-full" disabled={locSaving || locLoading} onClick={saveLocation} saved={locSaved} />
             </PressableScale>
           </div>
         )}
@@ -671,9 +675,7 @@ export default function PointsPage() {
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.renamePoint}</h2>
             <Input autoFocus value={renamePointValue} onChange={(e) => setRenamePointValue(e.target.value)} />
             <PressableScale>
-              <SaveButton className="w-full" onClick={confirmRenamePoint}>
-                {t.common.save}
-              </SaveButton>
+              <SaveButton className="h-12 w-full" onClick={confirmRenamePoint} saved={renamePointSaved} />
             </PressableScale>
           </div>
         )}
@@ -683,7 +685,7 @@ export default function PointsPage() {
             <p className="text-body-airbnb">{t.points.confirmDeletePoint}</p>
             {pointActionError && <p className="text-sm text-destructive">{pointActionError}</p>}
             <PressableScale>
-              <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDeletePoint}>
+              <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={confirmDeletePoint}>
                 <Trash2 className="size-4" />
                 {t.common.delete}
               </Button>
@@ -729,9 +731,7 @@ export default function PointsPage() {
               onChange={(e) => setRenameDeviceValue(e.target.value)}
             />
             <PressableScale>
-              <SaveButton className="w-full" onClick={confirmRenameDevice}>
-                {t.common.save}
-              </SaveButton>
+              <SaveButton className="h-12 w-full" onClick={confirmRenameDevice} saved={renameDeviceSaved} />
             </PressableScale>
           </div>
         )}
@@ -740,7 +740,7 @@ export default function PointsPage() {
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.deleteDevice}</h2>
             <p className="text-body-airbnb">{t.points.confirmDeleteDevice}</p>
             <PressableScale>
-              <Button variant="destructive" className="w-full gap-1.5" onClick={confirmDeleteDevice}>
+              <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={confirmDeleteDevice}>
                 <Trash2 className="size-4" />
                 {t.common.delete}
               </Button>

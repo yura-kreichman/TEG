@@ -14,6 +14,7 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { useI18n } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { formatTime } from "@/lib/datetime-format";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface ExpenseEntry {
   id: string;
@@ -42,6 +43,7 @@ export default function ExpensesRegisterPage() {
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
+  const { saved: categorySaved, pulse: categoryPulse } = useSavePulse();
   const [newCategoryName, setNewCategoryName] = useState("");
   const [categoryError, setCategoryError] = useState<string | null>(null);
 
@@ -121,8 +123,8 @@ export default function ExpensesRegisterPage() {
       setCategoryError((await res.json()).error ?? t.money.categorySaveError);
       return;
     }
-    setEditingCategoryId(null);
     await loadCategories();
+    categoryPulse(() => setEditingCategoryId(null));
     await loadExpenses();
   }
 
@@ -261,9 +263,7 @@ export default function ExpensesRegisterPage() {
                         className="h-9 flex-1"
                       />
                       <PressableScale>
-                        <SaveButton size="sm" onClick={confirmRenameCategory}>
-                          {t.common.save}
-                        </SaveButton>
+                        <SaveButton size="sm" onClick={confirmRenameCategory} saved={categorySaved} />
                       </PressableScale>
                       <button
                         type="button"

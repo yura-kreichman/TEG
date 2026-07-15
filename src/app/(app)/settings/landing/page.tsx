@@ -879,9 +879,7 @@ export default function LandingSettingsPage() {
 
               {error && <p className="text-sm text-destructive">{error}</p>}
               <PressableScale>
-                <SaveButton type="button" className="w-full" disabled={saving} onClick={saveContent} saved={savedToast}>
-                  {t.common.save}
-                </SaveButton>
+                <SaveButton type="button" className="w-full" disabled={saving} onClick={saveContent} saved={savedToast} />
               </PressableScale>
 
               {(() => {

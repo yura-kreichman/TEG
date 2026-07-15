@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { distributeCollectionWhole } from "@/lib/collection-split";
 
 // Текущий остаток кассы каждой зоны — весь журнал MoneyOperation, без
 // периода (docs/spec/02-money.md: "остаток зоны = сумма журнала"), кроме
@@ -67,4 +68,44 @@ export async function getPointCashBalance(pointId: string): Promise<number> {
     total += Number(op.amount);
   }
   return total;
+}
+
+// "Пул" — деньги, которые сотрудник уже физически забрал с точки (аванс/
+// премия после последней инкассации, см. getPointCashBalance выше), но
+// которые ещё не списаны из журнала конкретных зон (он не знает, из какой
+// зоны физически взяли). Найдено на реальных данных 2026-07-16: если просто
+// показывать эту сумму вычтенной только на экране (как раньше), а инкассация
+// продолжает списывать с зон полную "сырую" сумму — при следующей инкассации
+// реально спишется меньше, чем нужно, и разница зависает в журнале зон
+// навсегда (инкассация "поглощает" аванс/премию как понятие для
+// getPointCashBalance, но не как цифру для самих зон). Поэтому любая
+// инкассация (по зоне или общая, владельцем или оператором) должна
+// довзыскивать этот пул одновременно с введённой суммой — см. использование
+// в /api/*/collection*.
+async function computeZonePool(pointId: string): Promise<{ zoneIds: string[]; weights: number[]; deficit: number }> {
+  const zones = await prisma.zone.findMany({ where: { pointId }, select: { id: true } });
+  const zoneIds = zones.map((z) => z.id);
+  const [balances, pointTotal] = await Promise.all([getZoneBalances(zoneIds), getPointCashBalance(pointId)]);
+  const weights = zoneIds.map((id) => balances.get(id) ?? 0);
+  const zonesRawSum = weights.reduce((a, b) => a + b, 0);
+  const deficit = Math.max(0, Math.round((zonesRawSum - pointTotal) * 100) / 100);
+  return { zoneIds, weights, deficit };
+}
+
+// Суммарный пул точки — для общей инкассации: прибавляется к введённой сумме
+// перед пропорциональной разбивкой по зонам (distributeCollectionWhole),
+// чтобы полная инкассация всех зон реально обнуляла их журнал, а не только
+// экран.
+export async function getPointPoolDeficit(pointId: string): Promise<number> {
+  return (await computeZonePool(pointId)).deficit;
+}
+
+// Доля пула конкретной зоны — для инкассации ОДНОЙ зоны: та же пропорция,
+// что и в общей разбивке, но нужна только сумма для этой зоны.
+export async function getZonePoolShare(pointId: string, zoneId: string): Promise<number> {
+  const { zoneIds, weights, deficit } = await computeZonePool(pointId);
+  if (deficit === 0) return 0;
+  const shares = distributeCollectionWhole(deficit, weights);
+  const idx = zoneIds.indexOf(zoneId);
+  return idx === -1 ? 0 : shares[idx];
 }

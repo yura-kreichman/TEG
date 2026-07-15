@@ -730,7 +730,7 @@ export default function ReadingsCalendarPage() {
             <p className="text-body-airbnb">{t.readings.deleteConfirmBody}</p>
             {actionError && <p className="text-sm text-destructive">{actionError}</p>}
             <PressableScale>
-              <Button variant="destructive" className="w-full" disabled={deleting} onClick={confirmDelete}>
+              <Button variant="destructive" className="h-12 w-full" disabled={deleting} onClick={confirmDelete}>
                 {t.readings.deleteAction}
               </Button>
             </PressableScale>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
-import { getZoneBalances } from "@/lib/zone-balance";
+import { getPointPoolDeficit, getZoneBalances } from "@/lib/zone-balance";
 import { distributeCollectionWhole } from "@/lib/collection-split";
 
 // Общая инкассация (запрос пользователя 2026-07-15): к моменту, когда
@@ -33,7 +33,11 @@ export async function POST(request: Request) {
 
   const balanceByZone = await getZoneBalances(zones.map((z) => z.id));
   const weights = zones.map((z) => balanceByZone.get(z.id) ?? 0);
-  const shares = distributeCollectionWhole(amountNumber, weights);
+  // Довзыскиваем пул — аванс/премия, уже забранные с точки после прошлой
+  // инкассации (см. owner-версию /api/points/[id]/collection/general для
+  // причины: иначе эти деньги зависают в журнале зон навсегда).
+  const poolDeficit = await getPointPoolDeficit(ctx.point.id);
+  const shares = distributeCollectionWhole(amountNumber + poolDeficit, weights);
 
   const rows = zones
     .map((zone, i) => ({
@@ -49,5 +53,5 @@ export async function POST(request: Request) {
     await prisma.moneyOperation.createMany({ data: rows });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, settledPool: poolDeficit });
 }

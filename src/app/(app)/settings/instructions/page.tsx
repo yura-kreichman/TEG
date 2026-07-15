@@ -437,7 +437,7 @@ export default function InstructionsSettingsPage() {
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.instructions.archiveConfirmTitle}</h2>
             <p className="text-body-airbnb text-muted-foreground">{t.instructions.archiveConfirmHint}</p>
             <PressableScale>
-              <Button type="button" variant="destructive" className="w-full" onClick={archiveInstruction}>
+              <Button type="button" variant="destructive" className="h-12 w-full" onClick={archiveInstruction}>
                 {t.instructions.archiveAction}
               </Button>
             </PressableScale>
@@ -449,7 +449,7 @@ export default function InstructionsSettingsPage() {
             <p className="text-body-airbnb text-muted-foreground">{t.instructions.deleteConfirmHint}</p>
             {deleteError && <p className="text-caption-airbnb text-destructive">{deleteError}</p>}
             <PressableScale>
-              <Button type="button" variant="destructive" className="w-full" onClick={deleteInstruction}>
+              <Button type="button" variant="destructive" className="h-12 w-full" onClick={deleteInstruction}>
                 {t.instructions.deleteAction}
               </Button>
             </PressableScale>

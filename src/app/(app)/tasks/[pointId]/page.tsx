@@ -19,6 +19,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 import { TASK_STATUSES, type TaskStatus } from "@/lib/tasks";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface TaskOperator {
   id: string;
@@ -102,6 +103,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
   const [curSeg, setCurSeg] = useState<TaskStatus>("todo");
 
   const [editorOpen, setEditorOpen] = useState(false);
+  const { saved: taskSaved, pulse: taskPulse } = useSavePulse();
   const [editing, setEditing] = useState<TaskInfo | null>(null);
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
@@ -212,8 +214,8 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
       setSaveError(data.error ?? t.tasks.genericError);
       return;
     }
-    setEditorOpen(false);
     await loadAll();
+    taskPulse(() => setEditorOpen(false));
   }
 
   async function moveTask(status: TaskStatus) {
@@ -453,9 +455,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
           </div>
           {saveError && <p className="text-sm text-destructive">{saveError}</p>}
           <PressableScale>
-            <SaveButton type="button" className="w-full" onClick={saveTask} disabled={!title.trim()}>
-              {t.common.save}
-            </SaveButton>
+            <SaveButton type="button" className="h-12 w-full" onClick={saveTask} disabled={!title.trim()} saved={taskSaved} />
           </PressableScale>
         </div>
       </BottomSheet>
@@ -497,7 +497,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.tasks.confirmDeleteTitle}</h2>
           <p className="text-body-airbnb">{t.tasks.confirmDeleteBody}</p>
           <PressableScale>
-            <Button variant="destructive" className="w-full gap-1.5" onClick={deleteTask}>
+            <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={deleteTask}>
               <Trash2 className="size-4" />
               {t.common.delete}
             </Button>

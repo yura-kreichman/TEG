@@ -505,7 +505,7 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
             <Button
               type="button"
               variant="destructive"
-              className="w-full gap-2"
+              className="h-12 w-full gap-2"
               disabled={!canDelete || deleting}
               onClick={confirmDeleteTenant}
             >

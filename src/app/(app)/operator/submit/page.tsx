@@ -813,9 +813,7 @@ export default function SubmitResultsPage() {
                         <SaveButton
                           className="h-14 rounded-control px-5 font-bold"
                           onClick={() => setCounterAssetId(null)}
-                        >
-                          {t.common.save}
-                        </SaveButton>
+                        />
                       </PressableScale>
                     )}
                   </div>
