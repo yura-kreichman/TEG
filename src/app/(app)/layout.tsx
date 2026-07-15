@@ -6,8 +6,10 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeColorMeta } from "@/components/theme-color-meta";
 import { DisableContextMenu } from "@/components/disable-context-menu";
 import { I18nProvider } from "@/components/i18n-provider";
+import { TextScaleProvider } from "@/components/text-scale-provider";
 import { getAccentCookie } from "@/lib/accent";
 import { getDictionary, resolveLocale } from "@/lib/i18n";
+import { resolveTenantCurrency } from "@/lib/currency-resolve";
 
 // Per docs/design/prototype-owner-v2.html (approved 2026-07-07, supersedes the
 // prior Onest choice from the Airbnb-referenced pass): Inter with full Cyrillic
@@ -66,6 +68,7 @@ export default async function RootLayout({
   const accent = await getAccentCookie();
   const locale = await resolveLocale();
   const dict = getDictionary(locale);
+  const currency = await resolveTenantCurrency();
 
   return (
     <html
@@ -76,7 +79,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <DisableContextMenu />
-        <I18nProvider dict={dict}>
+        <I18nProvider dict={dict} locale={locale} currency={currency}>
           <ThemeProvider
             attribute="class"
             defaultTheme="light"
@@ -85,7 +88,7 @@ export default async function RootLayout({
           >
             <ThemeColorMeta />
             <InstallAppBanner />
-            {children}
+            <TextScaleProvider>{children}</TextScaleProvider>
           </ThemeProvider>
         </I18nProvider>
       </body>

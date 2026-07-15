@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantOperator, requireOwner } from "@/lib/require-owner";
 import { calcOperatorBalance } from "@/lib/work-time";
+import { resolveLocale } from "@/lib/i18n";
+import { formatMoney } from "@/lib/format";
 
 // Ручной аванс из карточки оператора (docs/spec/05-work-time.md,
 // "ИНТЕРФЕЙС ВЛАДЕЛЬЦА") — не привязан к смене (shiftId остаётся null).
@@ -31,8 +33,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operators/[
 
   const balance = await calcOperatorBalance(operator.id);
   if (!operator.overdraftAllowed && amountNumber > balance.toPayOut) {
+    const locale = await resolveLocale();
     return NextResponse.json(
-      { error: `Аванс превышает доступный баланс к выдаче (${balance.toPayOut.toFixed(2)})` },
+      { error: `Аванс превышает доступный баланс к выдаче (${formatMoney(balance.toPayOut, locale)})` },
       { status: 400 }
     );
   }

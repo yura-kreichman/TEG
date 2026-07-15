@@ -12,6 +12,8 @@ import {
 import { dispatchShiftCloseSummary } from "@/lib/summary-channels/dispatch";
 import { SHIFT_CLOSE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { notifyDailyCashLateSubmission, onShiftClosed } from "@/lib/summary-channels/daily-cash-trigger";
+import { resolveLocale } from "@/lib/i18n";
+import { formatMoney } from "@/lib/format";
 
 // Check-out (docs/spec/05-work-time.md, "АВТО") — закрывает открытую смену
 // (endAt=now). Аванс/премия — тот же bottom sheet, что подтверждает check-out
@@ -49,8 +51,9 @@ export async function POST(request: Request) {
     const projectedToPayOut = balance.toPayOut + accrued;
     // overdraftAllowed — персональная настройка оператора (docs/spec/05-work-time.md), не тенанта.
     if (!operator.overdraftAllowed && advanceAmount > projectedToPayOut) {
+      const locale = await resolveLocale();
       return NextResponse.json(
-        { error: `Аванс превышает доступный баланс к выдаче (${projectedToPayOut.toFixed(2)})` },
+        { error: `Аванс превышает доступный баланс к выдаче (${formatMoney(projectedToPayOut, locale)})` },
         { status: 400 }
       );
     }

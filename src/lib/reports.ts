@@ -2,11 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { calcSessions, calcZoneRevenue } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 
-export type ReportGranularity = "week" | "month";
+export type ReportGranularity = "week" | "month" | "year";
 export type PeriodGranularity = "day" | "week" | "month" | "year";
 
 export function isReportGranularity(value: unknown): value is ReportGranularity {
-  return value === "week" || value === "month";
+  return value === "week" || value === "month" || value === "year";
 }
 
 export function isPeriodGranularity(value: unknown): value is PeriodGranularity {
@@ -45,6 +45,10 @@ export function getPeriodRange(granularity: PeriodGranularity, anchor: Date, tod
 export function getPreviousPeriodRange(granularity: ReportGranularity, start: Date) {
   if (granularity === "week") {
     return { start: new Date(start.getTime() - 7 * 24 * 60 * 60 * 1000), end: start };
+  }
+  if (granularity === "year") {
+    const prevYearStart = new Date(Date.UTC(start.getUTCFullYear() - 1, 0, 1));
+    return { start: prevYearStart, end: start };
   }
   const prevMonthStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() - 1, 1));
   return { start: prevMonthStart, end: start };

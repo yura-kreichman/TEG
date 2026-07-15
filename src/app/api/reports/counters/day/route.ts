@@ -177,6 +177,10 @@ export async function GET(request: Request) {
         returnsCount: zs.returnsCount,
         calculatedRevenue,
         difference,
+        // Цены тарифов — чтобы владелец видел пересчитанные Расчёт/Разница
+        // живьём при редактировании показаний (запрос пользователя
+        // 2026-07-15), не только после сохранения.
+        tariffs: zs.zone.tariffs.map((t) => ({ tariffId: t.id, price: Number(t.price) })),
         assets,
       };
     })

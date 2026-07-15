@@ -20,6 +20,7 @@ export function SegmentedTabs<T extends string>({
   onChange,
   equalWidth = true,
   shape = "pill",
+  size = "md",
   className,
 }: {
   options: readonly SegmentedTabOption<T>[];
@@ -32,6 +33,9 @@ export function SegmentedTabs<T extends string>({
   // Неделя/Месяц, фильтр статусов Задач) — та же логика активного/неактивного
   // состояния, просто другой радиус скругления по месту использования.
   shape?: "pill" | "control";
+  // "sm" — компактнее (Отчёты точки: 4 таба-раздела, запрос пользователя
+  // 2026-07-15 "написать немного мельче").
+  size?: "sm" | "md";
   className?: string;
 }) {
   return (
@@ -42,7 +46,8 @@ export function SegmentedTabs<T extends string>({
           type="button"
           onClick={() => onChange(option.key)}
           className={cn(
-            "border px-3.5 py-1.5 text-sm font-semibold transition-shadow",
+            "border font-semibold transition-shadow",
+            size === "sm" ? "px-2.5 py-1 text-xs" : "px-3.5 py-1.5 text-sm",
             shape === "pill" ? "rounded-full" : "rounded-control",
             equalWidth && "flex-1 text-center",
             value === option.key

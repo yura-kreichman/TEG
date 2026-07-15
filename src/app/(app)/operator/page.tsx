@@ -4,15 +4,18 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { ArrowRightLeft, Check, ChevronRight, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SaveButton } from "@/components/ui/save-button";
+import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { SweepButton } from "@/components/motion/SweepButton";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n } from "@/components/i18n-provider";
+import { Money } from "@/components/money";
 import { cn } from "@/lib/utils";
 
 interface ZoneOption {
@@ -66,6 +69,7 @@ export default function OperatorHomePage() {
   const [points, setPoints] = useState<PointOption[]>([]);
 
   const [showCollection, setShowCollection] = useState(false);
+  const [collectionMode, setCollectionMode] = useState<"zone" | "general">("general");
   const [collectionZoneId, setCollectionZoneId] = useState("");
   const [collectionAmount, setCollectionAmount] = useState("");
   const [collectionError, setCollectionError] = useState<string | null>(null);
@@ -279,16 +283,27 @@ export default function OperatorHomePage() {
   async function handleCollection(event: FormEvent) {
     event.preventDefault();
     setCollectionError(null);
-    if (!collectionZoneId) {
-      setCollectionError(t.operatorApp.selectZone);
-      return;
-    }
 
-    const res = await fetch("/api/operator/collection", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ zoneId: collectionZoneId, amount: collectionAmount }),
-    });
+    const res =
+      collectionMode === "general"
+        ? await fetch("/api/operator/collection/general", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount: collectionAmount }),
+          })
+        : await (async () => {
+            if (!collectionZoneId) {
+              setCollectionError(t.operatorApp.selectZone);
+              return null;
+            }
+            return fetch("/api/operator/collection", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ zoneId: collectionZoneId, amount: collectionAmount }),
+            });
+          })();
+    if (!res) return;
+
     const data = await res.json();
     if (!res.ok) {
       setCollectionError(data.error ?? "Не удалось провести инкассацию");
@@ -299,6 +314,7 @@ export default function OperatorHomePage() {
   }
 
   function openCollection() {
+    setCollectionMode("general");
     setCollectionZoneId("");
     setCollectionAmount("");
     setCollectionError(null);
@@ -386,7 +402,7 @@ export default function OperatorHomePage() {
                 <span className="block text-caption-airbnb text-muted-foreground">
                   {t.operatorApp.workTime.toPayOutLabel}
                 </span>
-                <span className="block text-[1.1875rem] font-extrabold tabular-nums">{toPayOut.toFixed(2)}</span>
+                <span className="block text-[1.1875rem] font-extrabold tabular-nums"><Money value={toPayOut} size="display" /></span>
               </span>
               <span className="flex items-center gap-1 text-caption-airbnb font-semibold text-primary">
                 {t.operatorApp.workTime.viewAllLink}
@@ -559,65 +575,85 @@ export default function OperatorHomePage() {
             <p className="text-body-airbnb text-success">{t.operatorApp.collectionDone}</p>
           ) : (
             <>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="collectionZone">{t.operatorApp.zoneLabel}</Label>
-                <Select
-                  value={collectionZoneId || null}
-                  onValueChange={(v) => setCollectionZoneId(v ?? "")}
-                  items={zones.map((z) => ({ value: z.id, label: z.name }))}
-                >
-                  <SelectTrigger id="collectionZone" className="h-14 border-2 text-base">
-                    {(() => {
-                      const current = zones.find((z) => z.id === collectionZoneId);
-                      if (!current) return <SelectValue placeholder={t.operatorApp.selectZone} />;
-                      return (
-                        <SelectValue>
+              {zones.length > 1 && (
+                <SegmentedTabs
+                  shape="control"
+                  options={[
+                    { key: "zone" as const, label: t.operatorApp.collectionModeZone },
+                    { key: "general" as const, label: t.operatorApp.collectionModeGeneral },
+                  ]}
+                  value={collectionMode}
+                  onChange={setCollectionMode}
+                />
+              )}
+
+              {collectionMode === "zone" ? (
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="collectionZone">{t.operatorApp.zoneLabel}</Label>
+                  <Select
+                    value={collectionZoneId || null}
+                    onValueChange={(v) => setCollectionZoneId(v ?? "")}
+                    items={zones.map((z) => ({ value: z.id, label: z.name }))}
+                  >
+                    <SelectTrigger id="collectionZone" className="h-14 border-2 text-base">
+                      {(() => {
+                        const current = zones.find((z) => z.id === collectionZoneId);
+                        if (!current) return <SelectValue placeholder={t.operatorApp.selectZone} />;
+                        return (
+                          <SelectValue>
+                            <span className="flex items-center gap-2">
+                              {current.iconKey ? (
+                                <AssetOrZoneIcon iconKey={current.iconKey} className="size-5 shrink-0" />
+                              ) : (
+                                <MapPin className="size-5 shrink-0 text-muted-foreground" />
+                              )}
+                              {current.name}
+                            </span>
+                          </SelectValue>
+                        );
+                      })()}
+                    </SelectTrigger>
+                    <SelectContent>
+                      {zones.map((z) => (
+                        <SelectItem key={z.id} value={z.id}>
                           <span className="flex items-center gap-2">
-                            {current.iconKey ? (
-                              <AssetOrZoneIcon iconKey={current.iconKey} className="size-5 shrink-0" />
+                            {z.iconKey ? (
+                              <AssetOrZoneIcon iconKey={z.iconKey} className="size-5 shrink-0" />
                             ) : (
                               <MapPin className="size-5 shrink-0 text-muted-foreground" />
                             )}
-                            {current.name}
+                            {z.name}
                           </span>
-                        </SelectValue>
-                      );
-                    })()}
-                  </SelectTrigger>
-                  <SelectContent>
-                    {zones.map((z) => (
-                      <SelectItem key={z.id} value={z.id}>
-                        <span className="flex items-center gap-2">
-                          {z.iconKey ? (
-                            <AssetOrZoneIcon iconKey={z.iconKey} className="size-5 shrink-0" />
-                          ) : (
-                            <MapPin className="size-5 shrink-0 text-muted-foreground" />
-                          )}
-                          {z.name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <p className="text-caption-airbnb">{t.operatorApp.collectionGeneralHint}</p>
+              )}
+
               <div className="flex flex-col gap-1">
-                <Label htmlFor="collectionAmount">{t.operatorApp.collectionAmountLabel}</Label>
-                <Input
-                  id="collectionAmount"
-                  inputMode="numeric"
-                  className="h-14 border-2 text-lg tabular-nums"
-                  value={collectionAmount}
-                  onChange={(e) => setCollectionAmount(e.target.value)}
-                  required
-                />
+                <Label htmlFor="collectionAmount">
+                  {collectionMode === "general" ? t.operatorApp.collectionGeneralAmountLabel : t.operatorApp.collectionAmountLabel}
+                </Label>
+                <div className="flex items-center gap-2">
+                  <MoneyInput
+                    id="collectionAmount"
+                    scale="lg"
+                    className="h-14 flex-1 border-2 text-lg"
+                    value={collectionAmount}
+                    onChange={(e) => setCollectionAmount(e.target.value)}
+                    required
+                  />
+                  <PressableScale>
+                    <SaveButton type="submit" className="h-14 text-base font-bold">
+                      {t.common.save}
+                    </SaveButton>
+                  </PressableScale>
+                </div>
               </div>
               {collectionError && <p className="text-sm text-destructive">{collectionError}</p>}
-              <PressableScale>
-                <Button type="submit" className="h-14 w-full gap-2 text-base font-bold">
-                  <Check className="size-4" />
-                  {t.operatorApp.recordCollection}
-                </Button>
-              </PressableScale>
             </>
           )}
         </form>
@@ -641,10 +677,10 @@ export default function OperatorHomePage() {
 
           <div className="flex flex-col gap-1">
             <Label htmlFor="checkoutAdvance">{t.operatorApp.workTime.advanceFieldLabel}</Label>
-            <Input
+            <MoneyInput
               id="checkoutAdvance"
-              inputMode="decimal"
-              className="h-14 text-lg tabular-nums"
+              scale="lg"
+              className="h-14 text-lg"
               value={checkoutAdvance}
               onChange={(e) => setCheckoutAdvance(e.target.value)}
               placeholder="0"
@@ -652,10 +688,10 @@ export default function OperatorHomePage() {
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor="checkoutBonus">{t.operatorApp.workTime.bonusFieldLabel}</Label>
-            <Input
+            <MoneyInput
               id="checkoutBonus"
-              inputMode="decimal"
-              className="h-14 text-lg tabular-nums"
+              scale="lg"
+              className="h-14 text-lg"
               value={checkoutBonus}
               onChange={(e) => setCheckoutBonus(e.target.value)}
               placeholder="0"

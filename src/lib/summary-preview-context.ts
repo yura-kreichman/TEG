@@ -3,6 +3,7 @@
 export interface SummaryPreviewContext {
   pointName: string | null;
   pointCount: number;
+  timezone: string;
   zoneName: string | null;
   zoneEmoji: string | null;
   accountingMode: string | null;

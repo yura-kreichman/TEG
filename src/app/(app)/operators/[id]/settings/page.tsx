@@ -25,6 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { OwnerShell } from "@/components/owner-shell";
@@ -36,6 +37,7 @@ import { ActionSheetItem } from "@/components/kebab-menu";
 import { IconPickerSheet, AssetOrZoneIcon } from "@/components/icon-picker";
 import { ColorTagPicker } from "@/components/color-tag-picker";
 import { useI18n } from "@/components/i18n-provider";
+import { Money } from "@/components/money";
 import { compressImageFile } from "@/lib/client-image";
 import { cn } from "@/lib/utils";
 
@@ -455,7 +457,7 @@ export default function OperatorSettingsPage() {
             <SettingsRow
               icon={DollarSign}
               label={t.operatorApp.workTime.rateLabel}
-              value={currentRate !== null ? currentRate.toFixed(2) : "—"}
+              value={currentRate !== null ? <Money value={currentRate} /> : "—"}
               onClick={openRate}
             />
             <div className="flex items-center gap-3 border-t border-border py-3.5">
@@ -684,21 +686,23 @@ export default function OperatorSettingsPage() {
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.workTime.changeRateTitle}</h2>
           <div className="flex flex-col gap-1">
             <Label htmlFor="rateValue">{t.operatorApp.workTime.rateLabel}</Label>
-            <Input
-              id="rateValue"
-              autoFocus
-              inputMode="decimal"
-              className="h-14 text-lg tabular-nums"
-              value={rateValue}
-              onChange={(e) => setRateValue(e.target.value)}
-            />
+            <div className="flex items-center gap-2">
+              <MoneyInput
+                id="rateValue"
+                autoFocus
+                scale="lg"
+                className="h-14 flex-1 text-lg"
+                value={rateValue}
+                onChange={(e) => setRateValue(e.target.value)}
+              />
+              <PressableScale>
+                <SaveButton className="h-14" onClick={confirmRate}>
+                  {t.common.save}
+                </SaveButton>
+              </PressableScale>
+            </div>
           </div>
           {actionError && <p className="text-sm text-destructive">{actionError}</p>}
-          <PressableScale>
-            <SaveButton className="w-full" onClick={confirmRate}>
-              {t.common.save}
-            </SaveButton>
-          </PressableScale>
         </div>
       </BottomSheet>
 

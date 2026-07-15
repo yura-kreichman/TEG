@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "admin:seed": "tsx scripts/admin-seed.ts",
     "admin:reset-password": "tsx scripts/admin-reset-password.ts"
   },
@@ -59,6 +60,7 @@
     "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "tsx": "^4.23.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

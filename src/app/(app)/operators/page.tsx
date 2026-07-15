@@ -127,71 +127,73 @@ export default function OperatorsPage() {
             onClick={() => router.push(`/operators/${operator.id}`)}
             style={{ background: colorTagGradient(operator.colorTag) }}
           >
-            <div className="flex items-center gap-3">
-              <div className="relative shrink-0">
-                {operator.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={operator.avatarUrl} alt="" className="size-12.5 rounded-full object-cover" />
-                ) : operator.iconKey ? (
-                  <div className="flex size-12.5 items-center justify-center rounded-full bg-primary/10">
-                    <AssetOrZoneIcon iconKey={operator.iconKey} className="size-10" />
-                  </div>
-                ) : (
-                  <div className="flex size-12.5 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
-                    {operator.name.slice(0, 1).toUpperCase()}
-                  </div>
-                )}
-                {operator.colorTag && (
-                  <span
-                    className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full ring-2 ring-card"
-                    style={{ backgroundColor: operator.colorTag }}
-                  />
-                )}
-              </div>
-              <div className="min-w-0 grow">
-                <div className="text-card-title">{operator.name}</div>
-                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <div className="relative shrink-0">
+                  {operator.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={operator.avatarUrl} alt="" className="size-12.5 rounded-full object-cover" />
+                  ) : operator.iconKey ? (
+                    <div className="flex size-12.5 items-center justify-center rounded-full bg-primary/10">
+                      <AssetOrZoneIcon iconKey={operator.iconKey} className="size-10" />
+                    </div>
+                  ) : (
+                    <div className="flex size-12.5 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
+                      {operator.name.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  {operator.colorTag && (
+                    <span
+                      className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full ring-2 ring-card"
+                      style={{ backgroundColor: operator.colorTag }}
+                    />
+                  )}
+                </div>
+                <div className="flex min-w-0 grow flex-wrap items-center gap-1.5">
+                  <span className="text-card-title">{operator.name}</span>
                   <StatusChip variant={operator.active ? "accent" : "warning"}>
                     {operator.active ? t.operators.active : t.operators.inactive}
                   </StatusChip>
-                  {operator.allZonesAccess ? (
-                    <StatusChip variant="accent">{t.operators.allZonesChip}</StatusChip>
-                  ) : operator.allowedZones.length > 0 ? (
-                    <StatusChip variant="accent">
-                      {operator.allowedZones.map((z) => z.name).join(", ")}
-                    </StatusChip>
-                  ) : (
-                    <StatusChip variant="warning">{t.operators.noZoneAccessChip}</StatusChip>
-                  )}
+                </div>
+                {showMove && (
+                  <div className="flex shrink-0 flex-col" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      disabled={disableUp}
+                      onClick={() => moveOperator(operator.id, "up")}
+                      aria-label={t.common.moveUp}
+                      className="flex size-6 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
+                    >
+                      <ChevronUp className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={disableDown}
+                      onClick={() => moveOperator(operator.id, "down")}
+                      aria-label={t.common.moveDown}
+                      className="flex size-6 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
+                    >
+                      <ChevronDown className="size-4" />
+                    </button>
+                  </div>
+                )}
+                <div onClick={(e) => e.stopPropagation()}>
+                  <KebabButton
+                    onClick={() => router.push(`/operators/${operator.id}/settings`)}
+                    label={t.operators.actionsLabel}
+                  />
                 </div>
               </div>
-              {showMove && (
-                <div className="flex shrink-0 flex-col" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    disabled={disableUp}
-                    onClick={() => moveOperator(operator.id, "up")}
-                    aria-label={t.common.moveUp}
-                    className="flex size-6 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
-                  >
-                    <ChevronUp className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={disableDown}
-                    onClick={() => moveOperator(operator.id, "down")}
-                    aria-label={t.common.moveDown}
-                    className="flex size-6 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
-                  >
-                    <ChevronDown className="size-4" />
-                  </button>
-                </div>
-              )}
-              <div onClick={(e) => e.stopPropagation()}>
-                <KebabButton
-                  onClick={() => router.push(`/operators/${operator.id}/settings`)}
-                  label={t.operators.actionsLabel}
-                />
+              <div className="flex flex-wrap items-center gap-1.5">
+                {operator.allZonesAccess ? (
+                  <StatusChip variant="accent">{t.operators.allZonesChip}</StatusChip>
+                ) : operator.allowedZones.length > 0 ? (
+                  <StatusChip variant="accent">
+                    {operator.allowedZones.map((z) => z.name).join(", ")}
+                  </StatusChip>
+                ) : (
+                  <StatusChip variant="warning">{t.operators.noZoneAccessChip}</StatusChip>
+                )}
               </div>
             </div>
           </SpringCard>

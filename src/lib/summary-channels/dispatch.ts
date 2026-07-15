@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { editChatMessage, sendChatMessage } from "@/lib/telegram-bot";
 import { parseEmailAddresses, sendEmail } from "./email-channel";
-import { formatAmount } from "./format-shared";
+import { formatMoney } from "@/lib/format";
+import { isLocale, type Locale } from "@/lib/locales";
 import {
   formatDailyCashSummaryEmail,
   formatInstructionAckEmail,
@@ -46,6 +47,23 @@ async function getEnabledChannels(tenantId: string) {
   });
 }
 
+// Имя тенанта (для email), локаль (для formatMoney, docs/spec/03-design-
+// system.md "Числа и деньги") и часовой пояс (для дат/времени в тексте
+// сводок — реальный баг, найден 2026-07-15: время смены показывалось в
+// сыром UTC сервера, а не в поясе тенанта, см. format-shared.ts) — всё
+// нужно почти в каждой из функций ниже, один запрос вместо нескольких.
+async function getTenantInfo(tenantId: string): Promise<{ name: string; locale: Locale; timezone: string }> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { name: true, locale: true, timezone: true },
+  });
+  return {
+    name: tenant?.name ?? "RentOS",
+    locale: tenant?.locale && isLocale(tenant.locale) ? tenant.locale : "ru",
+    timezone: tenant?.timezone ?? "UTC",
+  };
+}
+
 // Push — не отдельная запись в TenantSummaryChannel (та таблица рассчитана
 // на ровно один chatId/список адресов на канал, а Push-подписок у тенанта
 // может быть много — по одной на устройство владельца, см. push-notifications.ts).
@@ -77,17 +95,17 @@ export async function dispatchZoneSummary(
 ): Promise<DispatchResult[]> {
   const channels = await getEnabledChannels(tenantId);
   const results: DispatchResult[] = [];
+  const tenant = await getTenantInfo(tenantId);
 
   for (const channel of channels) {
     if (channel.channelType === "telegram" && channel.chatStatus === "active" && channel.chatId) {
-      const text = formatZoneSummaryTelegram(data, settings);
+      const text = formatZoneSummaryTelegram(data, settings, tenant.locale, tenant.timezone);
       const result = await sendChatMessage(channel.chatId, text);
       results.push(toDispatchResult("telegram", result));
     } else if (channel.channelType === "email") {
       const addresses = parseEmailAddresses(channel.emailAddresses);
       if (addresses.length === 0) continue;
-      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
-      const { subject, html } = formatZoneSummaryEmail(data, settings, tenant?.name ?? "RentOS");
+      const { subject, html } = formatZoneSummaryEmail(data, settings, tenant.name, tenant.locale, tenant.timezone);
       const result = await sendEmail(addresses, subject, html);
       results.push({ channelType: "email", ok: result.ok, error: result.error });
     }
@@ -97,7 +115,7 @@ export async function dispatchZoneSummary(
     const sign = data.difference > 0 ? "+" : "";
     await sendPushToTenant(tenantId, {
       title: `${data.zoneEmoji ?? "🏁"} ${data.zoneName}`,
-      body: `Касса: ${formatAmount(data.cashAmount)} · Разн.: ${sign}${formatAmount(data.difference)}`,
+      body: `Касса: ${formatMoney(data.cashAmount, tenant.locale)} · Разн.: ${sign}${formatMoney(data.difference, tenant.locale)}`,
       url: "/reports",
     }).catch((err) => console.error("push dispatch failed", { kind: "zone", tenantId, err }));
   }
@@ -113,17 +131,17 @@ export async function dispatchShiftCloseSummary(
 ): Promise<DispatchResult[]> {
   const channels = await getEnabledChannels(tenantId);
   const results: DispatchResult[] = [];
+  const tenant = await getTenantInfo(tenantId);
 
   for (const channel of channels) {
     if (channel.channelType === "telegram" && channel.chatStatus === "active" && channel.chatId) {
-      const text = formatShiftCloseSummaryTelegram(data, settings);
+      const text = formatShiftCloseSummaryTelegram(data, settings, tenant.locale, tenant.timezone);
       const result = await sendChatMessage(channel.chatId, text);
       results.push(toDispatchResult("telegram", result));
     } else if (channel.channelType === "email") {
       const addresses = parseEmailAddresses(channel.emailAddresses);
       if (addresses.length === 0) continue;
-      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
-      const { subject, html } = formatShiftCloseSummaryEmail(data, settings, tenant?.name ?? "RentOS");
+      const { subject, html } = formatShiftCloseSummaryEmail(data, settings, tenant.name, tenant.locale, tenant.timezone);
       const result = await sendEmail(addresses, subject, html);
       results.push({ channelType: "email", ok: result.ok, error: result.error });
     }
@@ -132,7 +150,7 @@ export async function dispatchShiftCloseSummary(
   if (await pushEnabledFor(tenantId, "shiftCloseSummary")) {
     await sendPushToTenant(tenantId, {
       title: `${data.operatorName} · смена закрыта`,
-      body: `Баланс: ${formatAmount(data.toPayOut)}`,
+      body: `Баланс: ${formatMoney(data.toPayOut, tenant.locale)}`,
       url: "/operators",
     }).catch((err) => console.error("push dispatch failed", { kind: "shiftClose", tenantId, err }));
   }
@@ -153,10 +171,11 @@ export async function dispatchDailyCashSummary(
 ): Promise<DispatchResult[]> {
   const channels = await getEnabledChannels(tenantId);
   const results: DispatchResult[] = [];
+  const tenant = await getTenantInfo(tenantId);
 
   for (const channel of channels) {
     if (channel.channelType === "telegram" && channel.chatStatus === "active" && channel.chatId) {
-      const text = formatDailyCashSummaryTelegram(data, settings);
+      const text = formatDailyCashSummaryTelegram(data, settings, tenant.locale, tenant.timezone);
       const existingId = existingMessageIds.telegram;
       const isEdit = !!existingId && settings.updateOnLateSubmission;
       const result = isEdit
@@ -171,8 +190,7 @@ export async function dispatchDailyCashSummary(
     } else if (channel.channelType === "email") {
       const addresses = parseEmailAddresses(channel.emailAddresses);
       if (addresses.length === 0) continue;
-      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
-      const { subject, html } = formatDailyCashSummaryEmail(data, settings, tenant?.name ?? "RentOS");
+      const { subject, html } = formatDailyCashSummaryEmail(data, settings, tenant.name, tenant.locale, tenant.timezone);
       const result = await sendEmail(addresses, subject, html);
       results.push({ channelType: "email", ok: result.ok, error: result.error });
     }
@@ -187,7 +205,7 @@ export async function dispatchDailyCashSummary(
     const total = data.cashAmount + data.mobileAmount - data.expenses;
     await sendPushToTenant(tenantId, {
       title: data.showPointName ? `Касса за день · ${data.pointName}` : "Касса за день",
-      body: `Итог: ${formatAmount(total)}`,
+      body: `Итог: ${formatMoney(total, tenant.locale)}`,
       url: "/money",
     }).catch((err) => console.error("push dispatch failed", { kind: "dailyCash", tenantId, err }));
   }

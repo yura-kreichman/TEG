@@ -16,6 +16,8 @@ import {
 } from "@/components/landing/social-icons";
 import { MARKETING_SITE_URL } from "@/lib/billing";
 import type { Dictionary } from "@/lib/i18n";
+import { isLocale, type Locale } from "@/lib/locales";
+import { formatMoney } from "@/lib/format";
 import { RichText } from "@/components/landing/rich-text";
 import { isRichContentEmpty } from "@/lib/rich-text";
 import { cn } from "@/lib/utils";
@@ -230,9 +232,9 @@ export function VideoSection({ data, lp }: { data: LandingRenderData; lp: LP }) 
 // из эталонного файла дизайн-фикса: тот пункт эталона явно отменён
 // пользователем в тот же день, формат остаётся прежним). Лимит тарифов на
 // зону — 2 (докс 02-money.md), но join написан общим случаем на N значений.
-function formatPriceLine(tariffs: { price: number }[], lp: LP): string {
+function formatPriceLine(tariffs: { price: number }[], lp: LP, locale: Locale): string {
   const label = tariffs.length === 1 ? lp.priceSingleLabel : lp.pricesMultipleLabel;
-  const values = tariffs.map((t) => String(t.price));
+  const values = tariffs.map((t) => formatMoney(t.price, locale));
   const joined = values.length <= 1 ? values.join("") : `${values.slice(0, -1).join(", ")} ${lp.pricesJoiner} ${values[values.length - 1]}`;
   return `${label}: ${joined}`;
 }
@@ -360,7 +362,9 @@ export function RentalSection({ data, lp }: { data: LandingRenderData; lp: LP })
                       <ZoneIconGlyph iconKey={zone.iconKey} className="size-11" />
                     )}
                     {data.showPrices && zone.tariffs.length > 0 && (
-                      <span className="lt-zone-price-overlay tabular-nums">{formatPriceLine(zone.tariffs, lp)}</span>
+                      <span className="lt-zone-price-overlay tabular-nums">
+                        {formatPriceLine(zone.tariffs, lp, isLocale(data.tenant.locale) ? data.tenant.locale : "ru")}
+                      </span>
                     )}
                     <div className="lt-zone-name-overlay flex items-center gap-2.5 px-4 py-3.5">
                       {isValidIconKey(zone.iconKey) && (

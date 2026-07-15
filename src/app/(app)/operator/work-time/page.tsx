@@ -5,13 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { WheelTimePicker } from "@/components/wheel-time-picker";
 import { useI18n } from "@/components/i18n-provider";
+import { Money } from "@/components/money";
 import { cn } from "@/lib/utils";
 import { formatDuration as formatDurationBase, formatTime } from "@/lib/datetime-format";
 import {
@@ -281,25 +282,25 @@ export default function WorkTimePage() {
                 balance.toPayOut < 0 && "text-destructive"
               )}
             >
-              {balance.toPayOut.toFixed(2)}
+              <Money value={balance.toPayOut} size="display" />
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 border-t border-border pt-3.5 tabular-nums">
             <div>
               <p className="text-caption-airbnb">{t.operatorApp.workTime.earnedLabel}</p>
-              <p className="text-[1.0625rem] font-bold">{balance.earnedInPeriod.toFixed(2)}</p>
+              <p className="text-[1.0625rem] font-bold text-primary"><Money value={balance.earnedInPeriod} /></p>
             </div>
             <div>
               <p className="text-caption-airbnb">{t.operatorApp.workTime.rateAccruedLabel}</p>
-              <p className="text-[1.0625rem] font-bold">{balance.rateEarnedInPeriod.toFixed(2)}</p>
+              <p className="text-[1.0625rem] font-bold"><Money value={balance.rateEarnedInPeriod} /></p>
             </div>
             <div>
               <p className="text-caption-airbnb">{t.operatorApp.workTime.bonusesLabel}</p>
-              <p className="text-[1.0625rem] font-bold">{balance.bonusesInPeriod.toFixed(2)}</p>
+              <p className="text-[1.0625rem] font-bold"><Money value={balance.bonusesInPeriod} /></p>
             </div>
             <div>
               <p className="text-caption-airbnb">{t.operatorApp.workTime.advancesLabel}</p>
-              <p className="text-[1.0625rem] font-bold">{balance.advancesInPeriod.toFixed(2)}</p>
+              <p className="text-[1.0625rem] font-bold"><Money value={balance.advancesInPeriod} /></p>
             </div>
           </div>
         </SpringCard>
@@ -361,7 +362,7 @@ export default function WorkTimePage() {
                 <SpringCard key={`shift-${item.shift.id}`} hover={false} className="flex flex-col gap-1">
                   <div className="flex items-center justify-between">
                     <span className="text-body-airbnb font-bold">{formatShiftDate(item.shift.startAt)}</span>
-                    <span className="text-body-airbnb font-bold tabular-nums">{item.shift.accrued.toFixed(2)}</span>
+                    <span className="text-body-airbnb font-bold tabular-nums"><Money value={item.shift.accrued} /></span>
                   </div>
                   <span className="tabular-nums text-caption-airbnb">
                     {formatTime(item.shift.startAt)}–{formatTime(item.shift.endAt)} · {formatDuration(item.shift.minutes)}
@@ -370,12 +371,12 @@ export default function WorkTimePage() {
                     <div className="flex gap-3 text-xs tabular-nums">
                       {item.shift.advanceAmount > 0 && (
                         <span className="text-warning">
-                          {t.operatorApp.workTime.advanceInline} {item.shift.advanceAmount.toFixed(2)}
+                          {t.operatorApp.workTime.advanceInline} <Money value={item.shift.advanceAmount} />
                         </span>
                       )}
                       {item.shift.bonusAmount > 0 && (
                         <span className="text-success">
-                          {t.operatorApp.workTime.bonusInline} {item.shift.bonusAmount.toFixed(2)}
+                          {t.operatorApp.workTime.bonusInline} <Money value={item.shift.bonusAmount} />
                         </span>
                       )}
                     </div>
@@ -393,7 +394,7 @@ export default function WorkTimePage() {
                       item.op.type === "advance" ? "text-warning" : "text-success"
                     )}
                   >
-                    {item.op.amount.toFixed(2)}
+                    <Money value={item.op.amount} />
                   </span>
                 </SpringCard>
               )
@@ -434,10 +435,10 @@ export default function WorkTimePage() {
 
           <div className="flex flex-col gap-1">
             <Label htmlFor="advanceInput">{t.operatorApp.workTime.advanceFieldLabel}</Label>
-            <Input
+            <MoneyInput
               id="advanceInput"
-              inputMode="decimal"
-              className="h-14 text-lg tabular-nums"
+              scale="lg"
+              className="h-14 text-lg"
               value={advanceAmount}
               onChange={(e) => setAdvanceAmount(e.target.value)}
               placeholder="0"
@@ -445,10 +446,10 @@ export default function WorkTimePage() {
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor="bonusInput">{t.operatorApp.workTime.bonusFieldLabel}</Label>
-            <Input
+            <MoneyInput
               id="bonusInput"
-              inputMode="decimal"
-              className="h-14 text-lg tabular-nums"
+              scale="lg"
+              className="h-14 text-lg"
               value={bonusAmount}
               onChange={(e) => setBonusAmount(e.target.value)}
               placeholder="0"

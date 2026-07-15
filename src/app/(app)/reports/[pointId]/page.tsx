@@ -9,13 +9,15 @@ import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useI18n } from "@/components/i18n-provider";
+import { Money } from "@/components/money";
 import { cn } from "@/lib/utils";
 
 type Tab = "dynamics" | "zones" | "operators" | "calendar";
-type Granularity = "week" | "month";
+type Granularity = "week" | "month" | "year";
 
 interface DynamicsData {
   pointName: string;
+  period: { granularity: Granularity };
   total: number;
   cash: number;
   mobile: number;
@@ -193,8 +195,9 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
           )}
 
           <SegmentedTabs
-            className="mb-4"
-            equalWidth={false}
+            className="mb-4 grid grid-cols-2"
+            equalWidth
+            size="sm"
             options={TABS.map((tb) => ({ key: tb.key, label: tb.label }))}
             value={tab}
             onChange={setTab}
@@ -207,6 +210,7 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
               options={[
                 { key: "week" as Granularity, label: t.reports.periodWeek },
                 { key: "month" as Granularity, label: t.reports.periodMonth },
+                { key: "year" as Granularity, label: t.reports.periodYear },
               ]}
               value={granularity}
               onChange={setGranularity}
@@ -259,19 +263,26 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
     <div className="flex flex-col gap-3">
       <SpringCard animate={false}>
         <div className="flex flex-wrap items-baseline gap-2.5">
-          <span className="text-[2rem] font-extrabold tracking-[-0.02em] tabular-nums">{data.total}</span>
+          <span className="text-[2rem] font-extrabold tracking-[-0.02em] tabular-nums">
+            <Money value={data.total} size="display" />
+          </span>
           <Delta percent={data.deltaPercent} t={t} />
         </div>
         <div className="mt-4 flex h-[110px] items-end gap-1.5">
           {data.bars.map((b) => (
             <div key={b.date} className="flex flex-1 flex-col items-center justify-end gap-1">
-              <span className="text-[0.5625rem] font-bold text-muted-foreground tabular-nums">{b.total || ""}</span>
+              <span className="text-[0.5625rem] font-bold text-muted-foreground tabular-nums">
+                {b.total > 0 ? <Money value={b.total} /> : ""}
+              </span>
               <div
                 className="w-full rounded-t-md bg-primary/80"
                 style={{ height: `${Math.max(4, (b.total / maxBar) * 100)}%` }}
               />
               <span className="text-[0.625rem] font-semibold text-muted-foreground">
-                {new Date(b.date).toLocaleDateString(undefined, { weekday: "short" })}
+                {new Date(b.date).toLocaleDateString(
+                  undefined,
+                  data.period.granularity === "year" ? { month: "short" } : { weekday: "short" }
+                )}
               </span>
             </div>
           ))}
@@ -279,11 +290,11 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
         <div className="mt-3.5 grid grid-cols-3 gap-3 border-t border-border pt-3.5 tabular-nums">
           <div>
             <div className="text-caption-airbnb">{t.reports.cashLabel}</div>
-            <div className="text-[1rem] font-bold">{data.cash}</div>
+            <div className="text-[1rem] font-bold"><Money value={data.cash} /></div>
           </div>
           <div>
             <div className="text-caption-airbnb">{t.reports.mobileLabel}</div>
-            <div className="text-[1rem] font-bold">{data.mobile}</div>
+            <div className="text-[1rem] font-bold"><Money value={data.mobile} /></div>
           </div>
           <div>
             <div className="text-caption-airbnb">{t.reports.submissionsLabel}</div>
@@ -299,19 +310,19 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
         <div className="flex flex-col tabular-nums">
           <div className="flex justify-between py-2 text-body-airbnb">
             <span className="text-muted-foreground">{t.reports.revenueLabel}</span>
-            <span className="font-semibold">{data.profitAndLoss.revenue}</span>
+            <span className="font-semibold"><Money value={data.profitAndLoss.revenue} /></span>
           </div>
           <div className="flex justify-between py-2 text-body-airbnb">
             <span className="text-muted-foreground">− {t.reports.expensesLabel}</span>
-            <span className="font-semibold">{data.profitAndLoss.expenses}</span>
+            <span className="font-semibold"><Money value={data.profitAndLoss.expenses} /></span>
           </div>
           <div className="flex justify-between py-2 text-body-airbnb">
             <span className="text-muted-foreground">− {t.reports.payoutsLabel}</span>
-            <span className="font-semibold">{data.profitAndLoss.payouts}</span>
+            <span className="font-semibold"><Money value={data.profitAndLoss.payouts} /></span>
           </div>
           <div className="flex justify-between border-t border-border pt-3 text-body-airbnb">
             <span className="font-bold">= {t.reports.profitLabel}</span>
-            <span className="text-[0.9375rem] font-extrabold text-primary">{data.profitAndLoss.profit}</span>
+            <span className="text-[0.9375rem] font-extrabold text-primary"><Money value={data.profitAndLoss.profit} /></span>
           </div>
         </div>
       </SpringCard>
@@ -322,10 +333,15 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
 function RankBar({ label, total, sharePercent, suffix }: { label: string; total: number; sharePercent: number; suffix?: string }) {
   return (
     <div className="mb-1">
-      <div className="mb-1 flex items-baseline justify-between">
-        <span className="text-body-airbnb font-semibold">{label}</span>
-        <span className="text-body-airbnb font-bold tabular-nums">
-          {total} <span className="text-caption-airbnb">{suffix ?? `${sharePercent}%`}</span>
+      <div className="mb-1 flex items-baseline justify-between gap-2">
+        <span className="min-w-0 truncate text-body-airbnb font-semibold">{label}</span>
+        <span className="flex shrink-0 items-baseline gap-1.5">
+          <span className="min-w-[4.5rem] text-right text-body-airbnb font-bold tabular-nums">
+            <Money value={total} />
+          </span>
+          <span className="min-w-[2.75rem] text-right text-caption-airbnb tabular-nums">
+            {suffix ?? `${sharePercent}%`}
+          </span>
         </span>
       </div>
       <div className="mb-3 h-2 overflow-hidden rounded-full bg-muted">
@@ -485,17 +501,19 @@ function OperatorsTab({ operators, t }: { operators: OperatorRow[]; t: ReturnTyp
           <div className="grid grid-cols-3 gap-3 border-t border-border pt-3 tabular-nums">
             <div>
               <div className="text-caption-airbnb">{t.reports.revenuePerHourLabel}</div>
-              <div className="text-[1rem] font-bold">{op.revenuePerHour ?? "—"}</div>
+              <div className="text-[1rem] font-bold">
+                {op.revenuePerHour !== null ? <Money value={op.revenuePerHour} /> : "—"}
+              </div>
             </div>
             <div>
               <div className="text-caption-airbnb">{t.reports.accruedLabel}</div>
-              <div className="text-[1rem] font-bold">{op.accruedForPeriod}</div>
+              <div className="text-[1rem] font-bold"><Money value={op.accruedForPeriod} /></div>
             </div>
             <div>
               <div className="text-caption-airbnb">{t.reports.differenceLabel}</div>
               <div className={cn("text-[1rem] font-bold", op.differenceSum >= 0 ? "text-primary" : "text-destructive")}>
                 {op.differenceSum >= 0 ? "+" : ""}
-                {op.differenceSum}
+                <Money value={op.differenceSum} />
               </div>
             </div>
           </div>
@@ -551,13 +569,13 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
       {data.weakestDow !== null && (
         <Insight>
           {t.reports.weakestDayLabel}: {t.readings.weekdaysFull[data.weakestDow]} ·{" "}
-          {data.dowAverages[data.weakestDow]}
+          <Money value={data.dowAverages[data.weakestDow]} />
         </Insight>
       )}
       {data.overloadedDow !== null && (
         <Insight tone="good">
           {t.reports.strongestDayLabel}: {t.readings.weekdaysFull[data.overloadedDow]} ·{" "}
-          {data.dowAverages[data.overloadedDow]} ({data.overloadRatio}
+          <Money value={data.dowAverages[data.overloadedDow]} /> ({data.overloadRatio}
           {t.reports.overloadSuffix})
         </Insight>
       )}

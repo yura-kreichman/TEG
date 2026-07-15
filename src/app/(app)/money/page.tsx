@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Building2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Gift, Receipt, Wallet } from "lucide-react";
+import { Building2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Gift, Receipt } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -11,6 +11,7 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 import { pad, toDateStr } from "@/lib/datetime-format";
+import { Money } from "@/components/money";
 
 type Granularity = "day" | "week" | "month" | "year";
 
@@ -316,18 +317,18 @@ export default function MoneyPage() {
             <h2 className="text-section-title">{t.money.businessTitle}</h2>
             <div className="flex items-baseline gap-2 tabular-nums">
               <span className="text-[2.125rem] font-extrabold tracking-[-0.02em]">
-                {report.business.profit.toFixed(2)}
+                <Money value={report.business.profit} size="display" />
               </span>
               <span className="text-body-airbnb text-muted-foreground">{t.money.profit}</span>
             </div>
             <div className="flex border-t border-border pt-3.5 tabular-nums">
               <div className="flex-1">
                 <p className="text-caption-airbnb">{t.money.revenue}</p>
-                <p className="text-[1.0625rem] font-bold">{report.business.revenue.toFixed(2)}</p>
+                <p className="text-[1.0625rem] font-bold"><Money value={report.business.revenue} /></p>
               </div>
               <div className="flex-1 border-l border-border pl-4">
                 <p className="text-caption-airbnb">{t.money.expense}</p>
-                <p className="text-[1.0625rem] font-bold">{report.business.expense.toFixed(2)}</p>
+                <p className="text-[1.0625rem] font-bold"><Money value={report.business.expense} /></p>
                 <p className="text-[0.65625rem] leading-tight text-muted-foreground">{t.money.expenseHint}</p>
               </div>
               {report.business.difference !== 0 && (
@@ -335,7 +336,7 @@ export default function MoneyPage() {
                   <p className="text-caption-airbnb">{t.money.difference}</p>
                   <p className={cn("text-[1.0625rem] font-bold", report.business.difference >= 0 ? "text-primary" : "text-destructive")}>
                     {report.business.difference >= 0 ? "+" : ""}
-                    {report.business.difference.toFixed(2)}
+                    <Money value={report.business.difference} />
                   </p>
                   <p className="text-[0.65625rem] leading-tight text-muted-foreground">{t.money.differenceHint}</p>
                 </div>
@@ -352,21 +353,6 @@ export default function MoneyPage() {
                 <div className="min-w-0 grow">
                   <p className="text-card-title">{t.money.zoneBalancesLink}</p>
                   <p className="text-caption-airbnb">{t.money.zoneBalancesLinkHint}</p>
-                </div>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-              </SpringCard>
-            </Link>
-          </PressableScale>
-
-          <PressableScale>
-            <Link href="/money/collections">
-              <SpringCard className="flex items-center gap-3">
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
-                  <Wallet className="size-5" />
-                </div>
-                <div className="min-w-0 grow">
-                  <p className="text-card-title">{t.money.collectionsLink}</p>
-                  <p className="text-caption-airbnb">{t.money.collectionsLinkHint}</p>
                 </div>
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
               </SpringCard>

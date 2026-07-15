@@ -7,6 +7,7 @@ import { Check, Pencil, Camera, ImagePlus, ListChecks, Trash2, Plus, Pause, Play
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
@@ -710,7 +711,7 @@ export default function ZoneDetailPage() {
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor="tariffPrice">{t.zoneDetail.tariffPriceLabel}</Label>
-            <Input
+            <MoneyInput
               id="tariffPrice"
               type="number"
               min="0"
@@ -750,7 +751,7 @@ export default function ZoneDetailPage() {
             </div>
             <div className="flex flex-col gap-1">
               <Label htmlFor="editTariffPrice">{t.zoneDetail.tariffPriceLabel}</Label>
-              <Input
+              <MoneyInput
                 id="editTariffPrice"
                 type="number"
                 min="0"

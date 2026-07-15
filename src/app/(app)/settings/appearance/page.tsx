@@ -7,6 +7,7 @@ import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { AccentPicker } from "@/components/accent-picker";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { TextSizeSlider } from "@/components/text-size-slider";
 
 export default function AppearanceSettingsPage() {
   const t = useI18n();
@@ -31,6 +32,11 @@ export default function AppearanceSettingsPage() {
                 <div className="flex items-center justify-between rounded-control bg-muted/40 p-3">
                   <span className="text-body-airbnb">{t.settings.localDeviceThemeLabel}</span>
                   <ThemeToggle />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <span className="text-body-airbnb">{t.settings.textSizeLabel}</span>
+                  <TextSizeSlider />
+                  <p className="text-caption-airbnb">{t.settings.textSizeHint}</p>
                 </div>
               </SpringCard>
             </StaggerItem>

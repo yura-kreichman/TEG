@@ -12,6 +12,7 @@ import { SaveButton } from "@/components/ui/save-button";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { useI18n } from "@/components/i18n-provider";
+import { Money } from "@/components/money";
 import { formatTime } from "@/lib/datetime-format";
 
 interface ExpenseEntry {
@@ -227,7 +228,7 @@ export default function ExpensesRegisterPage() {
                               </span>
                             )}
                           </span>
-                          <span className="shrink-0 text-xs font-bold tabular-nums">{e.amount.toFixed(2)}</span>
+                          <span className="shrink-0 text-xs font-bold tabular-nums"><Money value={e.amount} /></span>
                         </div>
                       ))}
                     </div>

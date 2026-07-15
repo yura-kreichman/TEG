@@ -11,6 +11,7 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { BottomGlassNav, type BottomGlassNavItem } from "@/components/bottom-glass-nav";
 import { ImpersonationBanner } from "@/components/impersonation-banner";
 import { SubscriptionBanner } from "@/components/subscription-banner";
+import { useTextScale, textScaleZoom } from "@/components/text-scale-provider";
 import { cn } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n";
 
@@ -87,6 +88,7 @@ const SETTINGS_ITEM: NavItemConfig = {
 export function OwnerShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const t = useI18n();
+  const { scale } = useTextScale();
   const [moreOpen, setMoreOpen] = useState(false);
   const [pendingTasksCount, setPendingTasksCount] = useState(0);
 
@@ -139,7 +141,11 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
   }));
 
   return (
-    <div className="flex min-h-full flex-1 flex-col md:flex-row">
+    // zoom, не transform: scale() — transform создаёт новый containing
+    // block для position: fixed, из-за чего bottom-sheet/bottom-nav (fixed
+    // относительно вьюпорта) съехали бы вместе с масштабированным деревом.
+    // zoom ведёт себя как настоящий зум браузера и сохраняет fixed-позиционирование.
+    <div className="flex min-h-full flex-1 flex-col md:flex-row" style={{ zoom: textScaleZoom(scale) }}>
       <ImpersonationBanner />
       <SubscriptionBanner />
       <aside className="hidden shrink-0 flex-col justify-between bg-surface-0 p-4 md:flex md:w-56">

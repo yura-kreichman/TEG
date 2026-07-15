@@ -8,7 +8,7 @@ import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { Switch } from "@/components/ui/switch";
 import { TimeSelect } from "@/components/time-select";
 import { TelegramPreviewBubble } from "@/components/telegram-preview-bubble";
-import { useI18n } from "@/components/i18n-provider";
+import { useI18n, useLocale } from "@/components/i18n-provider";
 import { OwnerShell } from "@/components/owner-shell";
 import { cn } from "@/lib/utils";
 import { formatDailyCashSummaryTelegram } from "@/lib/summary-channels/telegram-format";
@@ -55,6 +55,7 @@ function formatTime(hour: number, minute: number): string {
 export default function DailyCashSummaryEditorPage() {
   const router = useRouter();
   const t = useI18n();
+  const locale = useLocale();
   const [checking, setChecking] = useState(true);
   const [settings, setSettings] = useState<DailyCashSummarySettingsData>(DAILY_CASH_SUMMARY_DEFAULTS);
   const [previewContext, setPreviewContext] = useState<SummaryPreviewContext | null>(null);
@@ -85,8 +86,8 @@ export default function DailyCashSummaryEditorPage() {
   }
 
   const previewText = useMemo(
-    () => formatDailyCashSummaryTelegram(buildPreviewData(previewContext, t), settings),
-    [settings, previewContext, t]
+    () => formatDailyCashSummaryTelegram(buildPreviewData(previewContext, t), settings, locale, previewContext?.timezone ?? "UTC"),
+    [settings, previewContext, t, locale]
   );
 
   const toggleRows: Array<{ key: keyof DailyCashSummarySettingsData; label: string; sub: string }> = [

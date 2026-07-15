@@ -7,7 +7,7 @@ import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { Switch } from "@/components/ui/switch";
 import { TelegramPreviewBubble } from "@/components/telegram-preview-bubble";
-import { useI18n } from "@/components/i18n-provider";
+import { useI18n, useLocale } from "@/components/i18n-provider";
 import { OwnerShell } from "@/components/owner-shell";
 import { formatShiftCloseSummaryTelegram } from "@/lib/summary-channels/telegram-format";
 import type { ShiftCloseSummaryData } from "@/lib/summary-channels/types";
@@ -38,6 +38,7 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): Shi
 export default function ShiftCloseSummaryEditorPage() {
   const router = useRouter();
   const t = useI18n();
+  const locale = useLocale();
   const [checking, setChecking] = useState(true);
   const [settings, setSettings] = useState<ShiftCloseSummarySettingsData>(SHIFT_CLOSE_SUMMARY_DEFAULTS);
   const [previewContext, setPreviewContext] = useState<SummaryPreviewContext | null>(null);
@@ -68,8 +69,8 @@ export default function ShiftCloseSummaryEditorPage() {
   }
 
   const previewText = useMemo(
-    () => formatShiftCloseSummaryTelegram(buildPreviewData(previewContext, t), settings),
-    [settings, previewContext, t]
+    () => formatShiftCloseSummaryTelegram(buildPreviewData(previewContext, t), settings, locale, previewContext?.timezone ?? "UTC"),
+    [settings, previewContext, t, locale]
   );
 
   const rows: Array<{ key: keyof ShiftCloseSummarySettingsData; label: string; sub: string }> = [

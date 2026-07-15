@@ -5,6 +5,7 @@ import { ChevronRight, Clock, Languages, Palette, Send, Trash2 } from "lucide-re
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
+import { PlanCard } from "@/components/plan-card";
 import { useI18n } from "@/components/i18n-provider";
 
 export default function SettingsPage() {
@@ -67,6 +68,8 @@ export default function SettingsPage() {
               </StaggerItem>
             ))}
           </StaggerList>
+
+          <PlanCard />
         </div>
       </div>
     </OwnerShell>

@@ -1,7 +1,9 @@
 import type { ZoneSummarySettingsData, DailyCashSummarySettingsData, ShiftCloseSummarySettingsData } from "@/lib/summary-settings";
 import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData, InstructionAckData } from "./types";
-import { formatAmount, formatDuration, formatSummaryDate, formatUtcTime } from "./format-shared";
+import { formatDuration, formatLocalTime, formatSummaryDate } from "./format-shared";
 import { colorTagToEmoji } from "@/lib/color-tag";
+import { formatMoney } from "@/lib/format";
+import type { Locale } from "@/lib/locales";
 
 // fullName приходит с публичной страницы подписания (docs/spec/07-
 // instructions.md) — единственный текст во всём этом файле, полученный от
@@ -19,12 +21,14 @@ function escapeTelegramHtml(text: string): string {
 // сообщений в Telegram (см. верификацию Telegram-сводки модуля Смен).
 //
 // Валюта — никогда не хардкодим символ (feedback_no_hardcoded_currency):
-// голые числа. Суммы — целые (formatAmount, без копеек, запрос пользователя
-// 2026-07-14). День/время — UTC, как и весь остальной server-side
-// day-boundary код в проекте (см. business-day.ts).
+// голые числа через formatMoney (docs/spec/03-design-system.md, "Числа и
+// деньги") — единый форматтер на весь проект, тот же, что в кабинете/PWA/
+// лендинге, не отдельная логика для сводок. День/время — в часовом поясе
+// тенанта (Tenant.timezone), не в сыром UTC сервера (реальный баг, найден
+// 2026-07-15 по скриншоту: сдвиг ровно на разницу с UTC — см. format-shared.ts).
 
-function formatDate(d: Date): string {
-  return formatSummaryDate(d, "/");
+function formatDate(d: Date, timezone: string): string {
+  return formatSummaryDate(d, "/", timezone);
 }
 
 // compact (фидбек пользователя 2026-07-12, скриншот с примером) — общий
@@ -71,10 +75,10 @@ const COMPACT_GRID_MAX_COLS = 2;
 // одна точка — строка вообще не показывается (data.showPointName, считается
 // в daily-cash-data.ts по количеству точек тенанта) — само собой разумеется,
 // какая это точка, называть её незачем.
-function dailyCashHeaderLines(data: DailyCashSummaryData): string[] {
+function dailyCashHeaderLines(data: DailyCashSummaryData, timezone: string): string[] {
   const lines: string[] = [];
   if (data.showPointName) lines.push(`<b>${data.pointName}</b>`);
-  lines.push(`💰 <b>КАССА · ${formatDate(data.businessDate)}</b>`);
+  lines.push(`💰 <b>КАССА · ${formatDate(data.businessDate, timezone)}</b>`);
   return lines;
 }
 
@@ -129,20 +133,29 @@ function diffEmoji(difference: number): string {
 // отдельной строкой в конце, как раньше. Цветовой квадрат — см. ShiftCloseSummaryData.
 // zoneEmoji — Zone.telegramEmoji, выбирается владельцем отдельно от SVG-иконки
 // (Telegram не отрисует произвольный SVG инлайн); 🏁 — запасной вариант.
-function zoneHeader(data: ZoneSummaryData, showOperator: boolean): string {
+// Без дня недели (запрос пользователя 2026-07-15: "Из всех сводок по зонам в
+// Телеграм убери название дня недели") — только у зон, Касса за день и
+// Закрытие смены день недели по-прежнему показывают через formatDate().
+function zoneHeader(data: ZoneSummaryData, showOperator: boolean, timezone: string): string {
   const colorPrefix = colorTagToEmoji(data.operatorColorTag);
   const operatorBit = showOperator
     ? ` · ${colorPrefix ? `${colorPrefix} ` : ""}${data.operatorName}`
     : "";
-  return `${data.zoneEmoji ?? "🏁"} <b>${data.zoneName.toUpperCase()}${operatorBit} · ${formatDate(data.occurredAt)}</b>`;
+  const date = formatSummaryDate(data.occurredAt, "/", timezone, false);
+  return `${data.zoneEmoji ?? "🏁"} <b>${data.zoneName.toUpperCase()}${operatorBit} · ${date}</b>`;
 }
 
-export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneSummarySettingsData): string {
+export function formatZoneSummaryTelegram(
+  data: ZoneSummaryData,
+  settings: ZoneSummarySettingsData,
+  locale: Locale,
+  timezone: string
+): string {
   if (settings.compact) {
-    const parts: string[] = [zoneHeader(data, settings.showOperator)];
+    const parts: string[] = [zoneHeader(data, settings.showOperator, timezone)];
 
     if (data.accountingMode === "cash_only") {
-      parts.push(`💵 Касса: <b>${formatAmount(data.cashAmount)}</b>`);
+      parts.push(`💵 Касса: <b>${formatMoney(data.cashAmount, locale)}</b>`);
     } else {
       if (settings.showReadings && data.readings.length > 0) {
         const grid = formatCompactGrid(
@@ -162,16 +175,16 @@ export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneS
         const actualCash = data.cashAmount + data.mobileAmount;
         const cmp = actualCash < data.calculatedRevenue ? "<" : actualCash > data.calculatedRevenue ? ">" : "=";
         const bits: string[] = [];
-        if (settings.showCash) bits.push(`💵 Касс: <b>${formatAmount(actualCash)}</b>`);
+        if (settings.showCash) bits.push(`💵 Касс: <b>${formatMoney(actualCash, locale)}</b>`);
         if (settings.showCash && settings.showCalc) bits.push(cmp);
-        if (settings.showCalc) bits.push(`🧮 Счёт: <b>${formatAmount(data.calculatedRevenue)}</b>`);
+        if (settings.showCalc) bits.push(`🧮 Счёт: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
         parts.push(bits.join("  "));
       }
       if (settings.showDiff || settings.showReturns) {
         const bits: string[] = [];
         if (settings.showDiff) {
           const sign = data.difference > 0 ? "+" : "";
-          bits.push(`${diffEmoji(data.difference)} Разн.: <b>${sign}${formatAmount(data.difference)}</b>`);
+          bits.push(`${diffEmoji(data.difference)} Разн.: <b>${sign}${formatMoney(data.difference, locale)}</b>`);
         }
         if (settings.showDiff && settings.showReturns) bits.push("—");
         if (settings.showReturns) bits.push(`🔄 Возвр.: <b>${data.returnsCount}</b>`);
@@ -182,10 +195,10 @@ export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneS
     return parts.join("\n");
   }
 
-  const lines: string[] = [zoneHeader(data, settings.showOperator)];
+  const lines: string[] = [zoneHeader(data, settings.showOperator, timezone)];
 
   if (data.accountingMode === "cash_only") {
-    lines.push("", `💵 Касса: <b>${formatAmount(data.cashAmount)}</b>`);
+    lines.push("", `💵 Касса: <b>${formatMoney(data.cashAmount, locale)}</b>`);
   } else {
     if (settings.showReadings || settings.showDelta) {
       // Выровнено в столбик (фидбек пользователя 2026-07-09) — внутри <code>
@@ -210,13 +223,13 @@ export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneS
       lines.push("");
       if (settings.showCash) {
         lines.push(
-          `💵 Нал.: <b>${formatAmount(data.cashAmount)}</b> · 📱 Безнал.: <b>${formatAmount(data.mobileAmount)}</b>`
+          `💵 Нал.: <b>${formatMoney(data.cashAmount, locale)}</b> · 📱 Безнал.: <b>${formatMoney(data.mobileAmount, locale)}</b>`
         );
       }
-      if (settings.showCalc) lines.push(`🧮 По счётчику: <b>${formatAmount(data.calculatedRevenue)}</b>`);
+      if (settings.showCalc) lines.push(`🧮 По счётчику: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
       if (settings.showDiff) {
         const sign = data.difference > 0 ? "+" : "";
-        lines.push(`${diffEmoji(data.difference)} Разница: <b>${sign}${formatAmount(data.difference)}</b>`);
+        lines.push(`${diffEmoji(data.difference)} Разница: <b>${sign}${formatMoney(data.difference, locale)}</b>`);
       }
       if (settings.showReturns) lines.push(`↩️ Возвраты/тест: <b>${data.returnsCount}</b>`);
     }
@@ -231,42 +244,46 @@ export function formatZoneSummaryTelegram(data: ZoneSummaryData, settings: ZoneS
 // показаний по активам (formatCompactGrid), зон на точке обычно немного и
 // имена короче, обрезка/упаковка в колонки тут не нужна даже в compact;
 // теперь этот блок буквально одинаков в обоих режимах.
-function formatZoneBreakdownRows(zoneBreakdown: DailyCashSummaryData["zoneBreakdown"]): string {
+function formatZoneBreakdownRows(zoneBreakdown: DailyCashSummaryData["zoneBreakdown"], locale: Locale): string {
   const labelWidth = Math.max(...zoneBreakdown.map((z) => `${z.zoneName}:`.length));
-  return zoneBreakdown.map((z) => `${z.zoneName}:`.padEnd(labelWidth + 1) + formatAmount(z.revenue)).join("\n");
+  return zoneBreakdown.map((z) => `${z.zoneName}:`.padEnd(labelWidth + 1) + formatMoney(z.revenue, locale)).join("\n");
 }
 
 export function formatDailyCashSummaryTelegram(
   data: DailyCashSummaryData,
-  settings: DailyCashSummarySettingsData
+  settings: DailyCashSummarySettingsData,
+  locale: Locale,
+  timezone: string
 ): string {
   const total = data.cashAmount + data.mobileAmount - data.expenses;
 
   if (settings.compact) {
-    const parts: string[] = dailyCashHeaderLines(data);
+    const parts: string[] = dailyCashHeaderLines(data, timezone);
 
     if (data.forcedIncomplete) parts.push("⚠️ Принудительно — не все данные могли поступить");
 
     if (settings.showCash) {
-      parts.push(`💵 Нал.: <b>${formatAmount(data.cashAmount)}</b>  📱 Безнал.: <b>${formatAmount(data.mobileAmount)}</b>`);
+      parts.push(
+        `💵 Нал.: <b>${formatMoney(data.cashAmount, locale)}</b>  📱 Безнал.: <b>${formatMoney(data.mobileAmount, locale)}</b>`
+      );
     }
-    if (settings.showExpenses) parts.push(`🧾 Расх.: ${formatAmount(data.expenses)}`);
+    if (settings.showExpenses) parts.push(`🧾 Расх.: ${formatMoney(data.expenses, locale)}`);
 
     // Остаток на точке — рядом с Итогом, тем же разделителем " · ", что и
     // везде в compact-режиме (запрос пользователя 2026-07-14: раньше был
     // отдельной строкой в самом низу).
-    const totalBits = [`🟰 Итог: <b>${formatAmount(total)}</b>`];
-    if (settings.showCashOnHand) totalBits.push(`📦 Ост.: ${formatAmount(data.cashOnHand)}`);
+    const totalBits = [`🟰 Итог: <b>${formatMoney(total, locale)}</b>`];
+    if (settings.showCashOnHand) totalBits.push(`📦 Ост.: ${formatMoney(data.cashOnHand, locale)}`);
     parts.push(totalBits.join(" · "));
 
     if (settings.showZoneBreakdown && data.zoneBreakdown.length > 0) {
-      parts.push(`<blockquote><code>${formatZoneBreakdownRows(data.zoneBreakdown)}</code></blockquote>`);
+      parts.push(`<blockquote><code>${formatZoneBreakdownRows(data.zoneBreakdown, locale)}</code></blockquote>`);
     }
 
     return parts.join("\n");
   }
 
-  const lines: string[] = dailyCashHeaderLines(data);
+  const lines: string[] = dailyCashHeaderLines(data, timezone);
 
   if (data.forcedIncomplete) {
     lines.push("", "⚠️ Отправлено принудительно по границе дня — не все данные могли поступить.");
@@ -274,17 +291,19 @@ export function formatDailyCashSummaryTelegram(
 
   lines.push("");
   if (settings.showCash) {
-    lines.push(`💵 Нал.: <b>${formatAmount(data.cashAmount)}</b> · 📱 Безнал.: <b>${formatAmount(data.mobileAmount)}</b>`);
+    lines.push(
+      `💵 Нал.: <b>${formatMoney(data.cashAmount, locale)}</b> · 📱 Безнал.: <b>${formatMoney(data.mobileAmount, locale)}</b>`
+    );
   }
-  if (settings.showExpenses) lines.push(`🧾 Расходы: ${formatAmount(data.expenses)}`);
-  lines.push(`🟰 Итого за день: <b>${formatAmount(total)}</b>`);
+  if (settings.showExpenses) lines.push(`🧾 Расходы: ${formatMoney(data.expenses, locale)}`);
+  lines.push(`🟰 Итого за день: <b>${formatMoney(total, locale)}</b>`);
 
   if (settings.showZoneBreakdown && data.zoneBreakdown.length > 0) {
-    lines.push("", `<blockquote><code>${formatZoneBreakdownRows(data.zoneBreakdown)}</code></blockquote>`);
+    lines.push("", `<blockquote><code>${formatZoneBreakdownRows(data.zoneBreakdown, locale)}</code></blockquote>`);
   }
 
   if (settings.showCashOnHand) {
-    lines.push("", `📦 Остаток на точке: ${formatAmount(data.cashOnHand)}`);
+    lines.push("", `📦 Остаток на точке: ${formatMoney(data.cashOnHand, locale)}`);
   }
 
   return lines.join("\n");
@@ -292,7 +311,9 @@ export function formatDailyCashSummaryTelegram(
 
 export function formatShiftCloseSummaryTelegram(
   data: ShiftCloseSummaryData,
-  settings: ShiftCloseSummarySettingsData
+  settings: ShiftCloseSummarySettingsData,
+  locale: Locale,
+  timezone: string
 ): string {
   // Цветовой квадрат перед именем оператора (фидбек пользователя 2026-07-12) —
   // и в компактном, и в обычном виде; null (метка не задана) — без эмодзи.
@@ -310,13 +331,13 @@ export function formatShiftCloseSummaryTelegram(
     // выше) место больше не в дефиците, "Баланс" снова пишется полностью
     // (фидбек 2026-07-14: "здесь это не мешает").
     const parts: string[] = [];
-    if (settings.showPeriod) parts.push(`🕐 ${formatUtcTime(data.startAt)}–${formatUtcTime(data.endAt)}`);
+    if (settings.showPeriod) parts.push(`🕐 ${formatLocalTime(data.startAt, timezone)}–${formatLocalTime(data.endAt, timezone)}`);
     if (settings.showHours) parts.push(`⏱ ${formatDuration(data.minutes)}`);
-    if (settings.showAdvance && data.advanceAmount > 0) parts.push(`💸 Аванс: ${formatAmount(data.advanceAmount)}`);
-    if (settings.showBonus && data.bonusAmount > 0) parts.push(`🏆 Прем.: ${formatAmount(data.bonusAmount)}`);
-    if (settings.showTotal) parts.push(`💰 Баланс: <b>${formatAmount(data.toPayOut)}</b>`);
+    if (settings.showAdvance && data.advanceAmount > 0) parts.push(`💸 Аванс: ${formatMoney(data.advanceAmount, locale)}`);
+    if (settings.showBonus && data.bonusAmount > 0) parts.push(`🏆 Прем.: ${formatMoney(data.bonusAmount, locale)}`);
+    if (settings.showTotal) parts.push(`💰 Баланс: <b>${formatMoney(data.toPayOut, locale)}</b>`);
 
-    const header = `<b>${operatorLabel} · ${formatDate(data.startAt)}</b>`;
+    const header = `<b>${operatorLabel} · ${formatDate(data.startAt, timezone)}</b>`;
     const rows: string[] = [];
     for (let i = 0; i < parts.length; i += 2) {
       rows.push(parts.slice(i, i + 2).join(" · "));
@@ -324,13 +345,13 @@ export function formatShiftCloseSummaryTelegram(
     return [header, ...rows].join("\n");
   }
 
-  const lines: string[] = [`<b>${operatorLabel} · смена ${formatDate(data.startAt)}</b>`, ""];
+  const lines: string[] = [`<b>${operatorLabel} · смена ${formatDate(data.startAt, timezone)}</b>`, ""];
 
-  if (settings.showPeriod) lines.push(`🕐 Период: ${formatUtcTime(data.startAt)} – ${formatUtcTime(data.endAt)}`);
+  if (settings.showPeriod) lines.push(`🕐 Период: ${formatLocalTime(data.startAt, timezone)} – ${formatLocalTime(data.endAt, timezone)}`);
   if (settings.showHours) lines.push(`⏱ Отработано: ${formatDuration(data.minutes)}`);
-  if (settings.showAdvance && data.advanceAmount > 0) lines.push(`💸 Аванс: ${formatAmount(data.advanceAmount)}`);
-  if (settings.showBonus && data.bonusAmount > 0) lines.push(`🏆 Премия: ${formatAmount(data.bonusAmount)}`);
-  if (settings.showTotal) lines.push(`💰 К выдаче: <b>${formatAmount(data.toPayOut)}</b>`);
+  if (settings.showAdvance && data.advanceAmount > 0) lines.push(`💸 Аванс: ${formatMoney(data.advanceAmount, locale)}`);
+  if (settings.showBonus && data.bonusAmount > 0) lines.push(`🏆 Премия: ${formatMoney(data.bonusAmount, locale)}`);
+  if (settings.showTotal) lines.push(`💰 К выдаче: <b>${formatMoney(data.toPayOut, locale)}</b>`);
 
   return lines.join("\n");
 }

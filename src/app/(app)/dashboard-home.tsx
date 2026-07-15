@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
-import { CalendarDays, ChevronRight, ImagePlus, KeyRound, LogOut, Pencil } from "lucide-react";
+import { Building2, CalendarDays, ChevronRight, ImagePlus, KeyRound, LogOut, Pencil } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/components/i18n-provider";
 import type { Dictionary } from "@/lib/i18n";
+import { Money } from "@/components/money";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { SpringCard } from "@/components/spring-card";
@@ -21,7 +22,6 @@ import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
 import { AuthLocalePicker } from "@/components/auth-locale-picker";
 import { cn } from "@/lib/utils";
 import { compressImageFile } from "@/lib/client-image";
-import { PRICING_URL } from "@/lib/billing";
 import { useSlugPreview } from "@/lib/use-slug-preview";
 
 function formatRelativeDay(dateStr: string, isToday: boolean, t: Dictionary): string {
@@ -114,17 +114,6 @@ interface Summary {
   difference?: number;
 }
 
-interface Usage {
-  packageName: string;
-  subscriptionStatus: "active" | "paused" | "suspended" | "expired";
-  subscriptionExpiresAt: string | null;
-  currentPeriodEnd: string | null;
-  points: { used: number; max: number; packageMax: number };
-  operators: { used: number; max: number; packageMax: number };
-  zones: { used: number; max: number; packageMax: number };
-  assets: { used: number; max: number; packageMax: number };
-}
-
 export function OwnerDashboardCard({
   email,
   tenantName,
@@ -142,7 +131,6 @@ export function OwnerDashboardCard({
   const [companyName, setCompanyName] = useState(tenantName ?? "");
   const [logoUrl, setLogoUrl] = useState(tenantLogoUrl);
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [usage, setUsage] = useState<Usage | null>(null);
 
   const [accountView, setAccountView] = useState<"menu" | "rename" | null>(null);
   const [renameValue, setRenameValue] = useState(tenantName ?? "");
@@ -164,9 +152,6 @@ export function OwnerDashboardCard({
     fetch("/api/reports/home-summary")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data && setSummary(data));
-    fetch("/api/tenant/usage")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => data && setUsage(data));
   }, []);
 
   function openAccountMenu() {
@@ -224,22 +209,6 @@ export function OwnerDashboardCard({
     router.refresh();
   }
 
-  const planStatusLabel =
-    usage?.subscriptionStatus === "paused"
-      ? t.home.planStatusPaused
-      : usage?.subscriptionStatus === "expired"
-        ? t.home.planStatusExpired
-        : usage?.subscriptionStatus === "suspended"
-          ? t.home.planStatusSuspended
-          : t.home.planStatusActive;
-
-  const planStatusIsWarning =
-    usage?.subscriptionStatus === "paused" ||
-    usage?.subscriptionStatus === "expired" ||
-    usage?.subscriptionStatus === "suspended";
-
-  const planEndDate = usage?.subscriptionExpiresAt;
-
   return (
     <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
       <div className="flex w-full max-w-md flex-col gap-3.5">
@@ -284,7 +253,7 @@ export function OwnerDashboardCard({
             </div>
             <div className="flex items-baseline gap-2 tabular-nums">
               <span className="text-[2rem] font-extrabold tracking-[-0.02em]">
-                {summary.revenue!.toFixed(2)}
+                <Money value={summary.revenue!} size="display" />
               </span>
               <span className="text-caption-airbnb">{t.home.revenueUnit}</span>
             </div>
@@ -293,7 +262,7 @@ export function OwnerDashboardCard({
                 <p className="text-caption-airbnb">{t.money.profit}</p>
                 <p className="text-[1rem] font-bold text-primary">
                   {summary.profit! > 0 ? "+" : ""}
-                  {summary.profit!.toFixed(2)}
+                  <Money value={summary.profit!} />
                 </p>
               </div>
               <div className="flex-1 border-l border-border pl-4">
@@ -304,7 +273,7 @@ export function OwnerDashboardCard({
                 <p className="text-caption-airbnb">{t.home.differenceLabel}</p>
                 <p className="text-[1rem] font-bold text-primary">
                   {summary.difference! > 0 ? "+" : ""}
-                  {summary.difference!.toFixed(2)}
+                  <Money value={summary.difference!} />
                 </p>
               </div>
             </div>
@@ -338,74 +307,21 @@ export function OwnerDashboardCard({
           </Link>
         </PressableScale>
 
-        {/* Тариф */}
-        {usage && (
-          <SpringCard hover={false} className="flex flex-col gap-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-section-title">{t.home.planCardLabel}</p>
-                <p className="text-card-title">{usage.packageName}</p>
+        <PressableScale>
+          <Link href="/money/zone-balances">
+            <SpringCard className="flex items-center gap-3">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                <Building2 className="size-5" />
               </div>
-              <div className="flex flex-col items-end gap-1">
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
-                    planStatusIsWarning ? "bg-warning/15 text-warning" : "bg-primary/10 text-primary"
-                  )}
-                >
-                  <span className={cn("size-1.5 rounded-full", planStatusIsWarning ? "bg-warning" : "bg-primary")} />
-                  {planStatusLabel}
-                </span>
-                {planEndDate ? (
-                  <p className="text-caption-airbnb whitespace-nowrap">
-                    {t.home.planExpiresPrefix} {new Date(planEndDate).toLocaleDateString()}
-                  </p>
-                ) : (
-                  usage.currentPeriodEnd &&
-                  usage.subscriptionStatus === "active" && (
-                    <p className="text-caption-airbnb whitespace-nowrap text-muted-foreground">
-                      {t.home.nextBillingPrefix} {new Date(usage.currentPeriodEnd).toLocaleDateString()}
-                    </p>
-                  )
-                )}
+              <div className="min-w-0 grow">
+                <p className="text-card-title">{t.money.zoneBalancesLink}</p>
+                <p className="text-caption-airbnb">{t.money.zoneBalancesLinkHint}</p>
               </div>
-            </div>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            </SpringCard>
+          </Link>
+        </PressableScale>
 
-            {(
-              [
-                [t.home.limitPoints, usage.points],
-                [t.home.limitOperators, usage.operators],
-                [t.home.limitZones, usage.zones],
-                [t.home.limitAssets, usage.assets],
-              ] as const
-            ).map(([label, { used, max, packageMax }]) => (
-              <div key={label} className="mt-2.5 tabular-nums">
-                <div className="mb-1 flex justify-between text-caption-airbnb">
-                  <span>{label}</span>
-                  <span className="font-semibold text-foreground">
-                    {used} {t.common.of} {max}
-                    {max > packageMax && <span className="text-primary"> (+{max - packageMax})</span>}
-                  </span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-surface-0">
-                  <div
-                    className="h-full rounded-full bg-primary"
-                    style={{ width: `${Math.min(100, (used / Math.max(max, 1)) * 100)}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-
-            <a
-              href={PRICING_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 text-caption-airbnb font-semibold text-primary"
-            >
-              {t.home.manageSubscriptionLink}
-            </a>
-          </SpringCard>
-        )}
       </div>
 
       <input

@@ -16,6 +16,8 @@ import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { calcSessions, calcZoneRevenue, type ZoneAccountingMode } from "@/lib/results-calc";
 import { queueSubmission } from "@/lib/offline-submissions";
 import { useI18n } from "@/components/i18n-provider";
+import { Money } from "@/components/money";
+import { MoneyInput } from "@/components/money-input";
 import { cn } from "@/lib/utils";
 
 interface TariffCtx {
@@ -321,14 +323,14 @@ export default function SubmitResultsPage() {
               >
                 <span className="font-semibold">{s.zoneName}</span>
                 <span className="tabular-nums text-muted-foreground">
-                  {t.operatorApp.submit.calculatedRevenue} {s.calculatedRevenue.toFixed(2)}
+                  {t.operatorApp.submit.calculatedRevenue} <Money value={s.calculatedRevenue} />
                 </span>
                 <span className="tabular-nums text-muted-foreground">
-                  {t.operatorApp.submit.actualCash} {s.actualCash.toFixed(2)}
+                  {t.operatorApp.submit.actualCash} <Money value={s.actualCash} />
                 </span>
                 <span className="tabular-nums font-semibold">
                   {t.operatorApp.submit.difference} {s.difference > 0 ? "+" : ""}
-                  {s.difference.toFixed(2)}
+                  <Money value={s.difference} />
                 </span>
               </div>
             ))}
@@ -517,10 +519,7 @@ export default function SubmitResultsPage() {
             </div>
 
             <div className="flex items-center justify-between gap-3 rounded-card border border-border bg-card p-3.5">
-              <div>
-                <p className="text-body-airbnb font-semibold">{t.operatorApp.submit.returnsLabel}</p>
-                <p className="mt-0.5 text-caption-airbnb">{t.operatorApp.submit.extrasHint}</p>
-              </div>
+              <p className="text-body-airbnb font-semibold">{t.operatorApp.submit.returnsLabel}</p>
               <div className="flex items-center overflow-hidden rounded-control border border-border">
                 <button
                   type="button"
@@ -554,20 +553,22 @@ export default function SubmitResultsPage() {
 
             <div className="flex flex-col gap-1">
               <Label htmlFor="cash">{t.operatorApp.submit.cashLabel}</Label>
-              <Input
+              <MoneyInput
                 id="cash"
+                scale="lg"
                 inputMode="numeric"
-                className="h-14 rounded-control bg-muted text-lg font-bold tabular-nums"
+                className="h-14 rounded-control bg-muted text-lg font-bold"
                 value={activeForm.cashAmount}
                 onChange={(e) => updateZoneField(activeZone.id, "cashAmount", e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-1">
               <Label htmlFor="mobile">{t.operatorApp.submit.mobileLabel}</Label>
-              <Input
+              <MoneyInput
                 id="mobile"
+                scale="lg"
                 inputMode="numeric"
-                className="h-14 rounded-control bg-muted text-lg font-bold tabular-nums"
+                className="h-14 rounded-control bg-muted text-lg font-bold"
                 value={activeForm.mobileAmount}
                 onChange={(e) => updateZoneField(activeZone.id, "mobileAmount", e.target.value)}
               />
@@ -579,9 +580,9 @@ export default function SubmitResultsPage() {
                 return (
                   preview && (
                     <p className="text-caption-airbnb tabular-nums">
-                      {t.operatorApp.submit.calculatedRevenue} {preview.calculatedRevenue.toFixed(2)} ·{" "}
+                      {t.operatorApp.submit.calculatedRevenue} <Money value={preview.calculatedRevenue} /> ·{" "}
                       {t.operatorApp.submit.difference} {preview.difference > 0 ? "+" : ""}
-                      {preview.difference.toFixed(2)}
+                      <Money value={preview.difference} />
                     </p>
                   )
                 );
@@ -615,10 +616,10 @@ export default function SubmitResultsPage() {
                     </SelectContent>
                   </Select>
                 )}
-                <Input
-                  inputMode="numeric"
+                <MoneyInput
+                  scale="lg"
                   placeholder={t.operatorApp.submit.amountPlaceholder}
-                  className="h-14 rounded-control bg-muted text-lg font-bold tabular-nums"
+                  className="h-14 rounded-control bg-muted text-lg font-bold"
                   value={expense.amount}
                   onChange={(e) => updateExpense(index, "amount", e.target.value)}
                 />
@@ -679,20 +680,20 @@ export default function SubmitResultsPage() {
                   <span className="font-semibold">{zone.name}</span>
                   {preview && zone.accountingMode === "cash_only" && (
                     <span className="tabular-nums text-muted-foreground">
-                      {t.operatorApp.submit.actualCash} {preview.actualCash.toFixed(2)}
+                      {t.operatorApp.submit.actualCash} <Money value={preview.actualCash} />
                     </span>
                   )}
                   {preview && zone.accountingMode !== "cash_only" && (
                     <>
                       <span className="tabular-nums text-muted-foreground">
-                        {t.operatorApp.submit.calculatedRevenue} {preview.calculatedRevenue.toFixed(2)}
+                        {t.operatorApp.submit.calculatedRevenue} <Money value={preview.calculatedRevenue} />
                       </span>
                       <span className="tabular-nums text-muted-foreground">
-                        {t.operatorApp.submit.actualCash} {preview.actualCash.toFixed(2)}
+                        {t.operatorApp.submit.actualCash} <Money value={preview.actualCash} />
                       </span>
                       <span className="tabular-nums font-semibold">
                         {t.operatorApp.submit.difference} {preview.difference > 0 ? "+" : ""}
-                        {preview.difference.toFixed(2)}
+                        <Money value={preview.difference} />
                       </span>
                     </>
                   )}

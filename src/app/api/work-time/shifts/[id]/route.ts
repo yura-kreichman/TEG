@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { calcOperatorBalance, calcShiftAccrual, getRateForDate, hasOverlappingShift, validateShift } from "@/lib/work-time";
 import { sendPushToOperators } from "@/lib/push-notifications";
+import { resolveLocale } from "@/lib/i18n";
+import { formatMoney } from "@/lib/format";
 
 interface ShiftCorrectionDiff {
   startAt: string;
@@ -93,8 +95,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
     const balance = await calcOperatorBalance(shift.operatorId);
     const availableExcludingThisShift = balance.toPayOut + currentAdvance;
     if (!shiftOperator?.overdraftAllowed && nextAdvance > availableExcludingThisShift) {
+      const locale = await resolveLocale();
       return NextResponse.json(
-        { error: `Аванс превышает доступный баланс к выдаче (${availableExcludingThisShift.toFixed(2)})` },
+        { error: `Аванс превышает доступный баланс к выдаче (${formatMoney(availableExcludingThisShift, locale)})` },
         { status: 400 }
       );
     }

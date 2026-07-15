@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Info, MapPin, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, MapPin, Minus, Pencil, Plus, Trash2 } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
@@ -14,9 +14,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PressableScale } from "@/components/motion/pressable-scale";
-import { useI18n } from "@/components/i18n-provider";
+import { useI18n, useLocale } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
-import type { ZoneAccountingMode } from "@/lib/results-calc";
+import { calcSessions, calcZoneRevenue, type ZoneAccountingMode } from "@/lib/results-calc";
+import { formatMoney } from "@/lib/format";
+import { Money } from "@/components/money";
+import { MoneyInput } from "@/components/money-input";
 import { formatTime, pad } from "@/lib/datetime-format";
 
 interface PointOption {
@@ -49,6 +52,7 @@ interface DayCard {
   returnsCount: number;
   calculatedRevenue: number;
   difference: number;
+  tariffs: { tariffId: string; price: number }[];
   assets: {
     assetId: string;
     assetName: string;
@@ -65,6 +69,7 @@ type ActionsView = "menu" | "edit" | "confirm-delete";
 export default function ReadingsCalendarPage() {
   const router = useRouter();
   const t = useI18n();
+  const locale = useLocale();
   const [checking, setChecking] = useState(true);
   const [points, setPoints] = useState<PointOption[]>([]);
   const [pointId, setPointId] = useState<string | null>(null);
@@ -76,6 +81,15 @@ export default function ReadingsCalendarPage() {
   const [activeDates, setActiveDates] = useState<Set<string>>(new Set());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [cards, setCards] = useState<DayCard[] | null>(null);
+  // День последней сдачи итогов — открывается по умолчанию (запрос
+  // пользователя 2026-07-15), а не сегодняшний пустой день. Резолвится один
+  // раз на каждую смену точки, до первой загрузки календаря — иначе был бы
+  // виден "прыжок" с текущего месяца на месяц последней сдачи (тот же приём,
+  // что уже есть на /money). Сравнение с pointId, а не отдельный boolean —
+  // иначе между сменой pointId и срабатыванием эффекта был бы один рендер
+  // со старым dateReady=true и ещё не сброшенными year/month/selectedDate.
+  const [dateReadyForPointId, setDateReadyForPointId] = useState<string | null | undefined>(undefined);
+  const dateReady = dateReadyForPointId === pointId;
 
   const [actionsFor, setActionsFor] = useState<DayCard | null>(null);
   const [actionsView, setActionsView] = useState<ActionsView>("menu");
@@ -123,9 +137,31 @@ export default function ReadingsCalendarPage() {
   }, []);
 
   useEffect(() => {
+    if (!pointId) {
+      setDateReadyForPointId(null);
+      return;
+    }
+    fetch(`/api/reports/counters/last-submission-date?pointId=${pointId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { date: string | null } | null) => {
+        if (data?.date) {
+          const d = new Date(`${data.date}T00:00:00Z`);
+          setYear(d.getUTCFullYear());
+          setMonth(d.getUTCMonth() + 1);
+          setSelectedDate(data.date);
+          setCards(null);
+          loadDay(data.date);
+        }
+        setDateReadyForPointId(pointId);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pointId]);
+
+  useEffect(() => {
+    if (!dateReady) return;
     loadCalendar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pointId, year, month]);
+  }, [dateReady, pointId, year, month]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function openDay(date: string) {
@@ -212,7 +248,7 @@ export default function ReadingsCalendarPage() {
     }
   }
 
-  if (checking) return null;
+  if (checking || !dateReady) return null;
 
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const firstWeekdayIndex = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7; // 0=Mon
@@ -236,6 +272,35 @@ export default function ReadingsCalendarPage() {
     const monthName = t.readings.monthsGenitive[d.getUTCMonth()];
     const weekday = t.readings.weekdaysFull[(d.getUTCDay() + 6) % 7];
     return `${day} ${monthName} (${weekday})`;
+  }
+
+  // Живой пересчёт Расчёта/Разницы в форме редактирования (запрос
+  // пользователя 2026-07-15) — та же формула, что на сервере
+  // (submit-results/route.ts), просто на драфте editReadings, не на
+  // сохранённых значениях. "launches" — показание уже готовое число
+  // заездов (не диапазон от предыдущего), "counters" — calcSessions с
+  // переполнением через 9999.
+  function computeEditPreview(card: DayCard) {
+    const isLaunches = card.accountingMode === "launches";
+    const sessionsByTariff = new Map<string, number>();
+    for (const asset of card.assets) {
+      for (const r of asset.readings) {
+        const key = `${asset.assetId}:${r.tariffId}`;
+        const raw = editReadings[key];
+        const current = raw !== undefined && raw !== "" ? Number(raw) : r.value;
+        const sessions = isLaunches ? current : calcSessions(current, r.previousValue ?? 0);
+        sessionsByTariff.set(r.tariffId, (sessionsByTariff.get(r.tariffId) ?? 0) + sessions);
+      }
+    }
+    const tariffCalc = card.tariffs.map((t) => ({
+      tariffId: t.tariffId,
+      price: t.price,
+      sessions: sessionsByTariff.get(t.tariffId) ?? 0,
+    }));
+    const calculatedRevenue = calcZoneRevenue(tariffCalc, Number(editReturns || 0));
+    const actualCash = Number(editCash || 0) + Number(editMobile || 0);
+    const difference = Math.round((actualCash - calculatedRevenue) * 100) / 100;
+    return { calculatedRevenue, difference };
   }
 
   return (
@@ -386,40 +451,50 @@ export default function ReadingsCalendarPage() {
                           <p className="text-caption-airbnb font-bold">{card.zoneName}</p>
                           {card.accountingMode !== "cash_only" &&
                             card.assets.map((asset) => (
-                              <div key={asset.assetId} className="mt-2">
-                                <div className="flex items-center gap-1.5">
+                              <div key={asset.assetId} className="mt-1.5 flex items-center gap-2">
+                                <div className="relative shrink-0">
+                                  <div className="flex size-16 items-center justify-center overflow-hidden rounded-control bg-muted">
+                                    {asset.photoUrl ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img src={asset.photoUrl} alt="" className="size-full object-contain object-center" />
+                                    ) : asset.iconKey ? (
+                                      <AssetOrZoneIcon iconKey={asset.iconKey} className="size-8 text-muted-foreground" />
+                                    ) : null}
+                                  </div>
                                   <span
-                                    className="size-2.5 shrink-0 rounded-full"
+                                    className="absolute -bottom-0.5 -right-0.5 size-4 rounded-full ring-2 ring-card"
                                     style={{ backgroundColor: asset.colorTag }}
                                   />
+                                </div>
+                                <div className="min-w-0 flex-1">
                                   <span className="text-caption-airbnb font-semibold text-foreground">
                                     {asset.assetName}
                                   </span>
-                                </div>
-                                {asset.readings.map((r) => (
-                                  <div
-                                    key={r.tariffId}
-                                    className="flex items-center justify-between py-1 pl-4 text-caption-airbnb"
-                                  >
-                                    <span>{r.tariffName}</span>
-                                    <span className="flex items-center gap-1.5 tabular-nums">
-                                      {r.editedBefore !== null && (
-                                        <Info
-                                          className="size-3.5 shrink-0 text-warning"
-                                          aria-label={`${t.readings.editedByOwner} · ${t.readings.wasLabel}: ${r.editedBefore}`}
-                                        />
-                                      )}
-                                      {r.previousValue !== null && (
-                                        <span className="text-muted-foreground">
-                                          {r.previousValue} → <b className="text-foreground">{r.value}</b>
+                                  {asset.readings.map((r) => (
+                                    <div
+                                      key={r.tariffId}
+                                      className="flex items-center justify-between py-0.5 text-caption-airbnb"
+                                    >
+                                      <span>{r.tariffName}</span>
+                                      <span className="flex items-center gap-1.5 tabular-nums">
+                                        {r.editedBefore !== null && (
+                                          <Info
+                                            className="size-3.5 shrink-0 text-warning"
+                                            aria-label={`${t.readings.editedByOwner} · ${t.readings.wasLabel}: ${r.editedBefore}`}
+                                          />
+                                        )}
+                                        {r.previousValue !== null && (
+                                          <span className="text-muted-foreground">
+                                            {r.previousValue} → <b className="text-foreground">{r.value}</b>
+                                          </span>
+                                        )}
+                                        <span className="min-w-10 text-right font-bold text-primary">
+                                          +{r.sessions}
                                         </span>
-                                      )}
-                                      <span className="min-w-10 text-right font-bold text-primary">
-                                        +{r.sessions}
-                                      </span>
                                     </span>
                                   </div>
                                 ))}
+                                </div>
                               </div>
                             ))}
                         </div>
@@ -431,15 +506,15 @@ export default function ReadingsCalendarPage() {
                               {card.cashEditedBefore !== null && (
                                 <Info
                                   className="size-3.5 shrink-0 text-warning"
-                                  aria-label={`${t.readings.editedByOwner} · ${t.readings.wasLabel}: ${card.cashEditedBefore.toFixed(2)}`}
+                                  aria-label={`${t.readings.editedByOwner} · ${t.readings.wasLabel}: ${formatMoney(card.cashEditedBefore, locale)}`}
                                 />
                               )}
                             </span>
-                            <span className="text-foreground">{card.cashAmount.toFixed(2)}</span>
+                            <span className="text-foreground"><Money value={card.cashAmount} /></span>
                           </div>
                           <div className="flex items-center justify-between text-caption-airbnb">
                             <span>{t.operatorApp.submit.mobileLabel}</span>
-                            <span className="text-foreground">{card.mobileAmount.toFixed(2)}</span>
+                            <span className="text-foreground"><Money value={card.mobileAmount} /></span>
                           </div>
                           {card.accountingMode !== "cash_only" && (
                           <div className="flex items-center justify-between text-caption-airbnb">
@@ -451,7 +526,7 @@ export default function ReadingsCalendarPage() {
                           <>
                           <div className="flex items-center justify-between border-t border-border pt-1.5 text-caption-airbnb font-semibold">
                             <span className="text-foreground">{t.operatorApp.submit.calculatedRevenue}</span>
-                            <span className="text-foreground">{card.calculatedRevenue.toFixed(2)}</span>
+                            <span className="text-foreground"><Money value={card.calculatedRevenue} /></span>
                           </div>
                           <div className="flex items-center justify-between text-caption-airbnb">
                             <span>{t.operatorApp.submit.difference}</span>
@@ -466,7 +541,7 @@ export default function ReadingsCalendarPage() {
                               )}
                             >
                               {card.difference > 0 ? "+" : ""}
-                              {card.difference.toFixed(2)}
+                              <Money value={card.difference} />
                             </span>
                           </div>
                           </>
@@ -517,46 +592,45 @@ export default function ReadingsCalendarPage() {
 
       <BottomSheet open={actionsFor !== null && actionsView === "edit"} onClose={() => setActionsFor(null)}>
         {actionsFor && (
-          <div className="flex flex-col gap-4 pt-2">
+          <div className="flex flex-col gap-3 pt-2">
             <div>
               <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.readings.editSheetTitle}</h2>
               <p className="text-caption-airbnb">{t.readings.autoRecalcHint}</p>
             </div>
 
             {actionsFor.assets.map((asset) => (
-              <div key={asset.assetId} className="flex flex-col gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-control bg-muted">
+              <div key={asset.assetId} className="flex items-center gap-3">
+                <div className="relative shrink-0">
+                  <div className="flex size-16 items-center justify-center overflow-hidden rounded-control bg-muted">
                     {asset.photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={asset.photoUrl} alt="" className="size-full object-contain object-center" />
                     ) : asset.iconKey ? (
-                      <AssetOrZoneIcon iconKey={asset.iconKey} className="size-4.5 text-muted-foreground" />
+                      <AssetOrZoneIcon iconKey={asset.iconKey} className="size-8 text-muted-foreground" />
                     ) : null}
-                    <span
-                      className="absolute left-1 top-1 size-2.5 rounded-full ring-2 ring-card"
-                      style={{ backgroundColor: asset.colorTag }}
-                    />
                   </div>
-                  <p className="text-section-title">
-                    {asset.assetName} · {t.readings.readingsSectionSuffix}
-                  </p>
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 size-4 rounded-full ring-2 ring-card"
+                    style={{ backgroundColor: asset.colorTag }}
+                  />
                 </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <p className="text-card-title leading-tight">{asset.assetName}</p>
                   {asset.readings.map((r) => {
                     const key = `${asset.assetId}:${r.tariffId}`;
                     return (
-                      <div key={r.tariffId} className="flex flex-col gap-1">
-                        <Label htmlFor={key} className="flex-col items-start gap-0.5">
+                      <div key={r.tariffId} className="flex items-center justify-between gap-2">
+                        <Label htmlFor={key} className="gap-1.5">
                           <span>{r.tariffName}</span>
                           <span className="text-xs font-normal text-muted-foreground">
-                            {t.operatorApp.submit.previousReading} {r.previousValue}
+                            {t.operatorApp.submit.previousReading}{" "}
+                            <span className="font-bold text-foreground">{r.previousValue}</span>
                           </span>
                         </Label>
                         <Input
                           id={key}
                           inputMode="numeric"
-                          className="tabular-nums"
+                          className="h-7 w-20 shrink-0 text-right tabular-nums"
                           value={editReadings[key] ?? ""}
                           onChange={(e) => setEditReadings((prev) => ({ ...prev, [key]: e.target.value }))}
                         />
@@ -569,40 +643,61 @@ export default function ReadingsCalendarPage() {
 
             <div className="flex flex-col gap-2">
               <p className="text-section-title">{t.readings.moneySection}</p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="editCash">{t.operatorApp.submit.cashLabel}</Label>
-                  <Input
-                    id="editCash"
-                    inputMode="decimal"
-                    className="tabular-nums"
-                    value={editCash}
-                    onChange={(e) => setEditCash(e.target.value)}
-                  />
+              <div className="flex flex-col gap-3 rounded-card border border-border bg-card p-3.5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="editCash">{t.operatorApp.submit.cashLabel}</Label>
+                    <MoneyInput
+                      id="editCash"
+                      value={editCash}
+                      onChange={(e) => setEditCash(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="editMobile">{t.operatorApp.submit.mobileLabel}</Label>
+                    <MoneyInput
+                      id="editMobile"
+                      value={editMobile}
+                      onChange={(e) => setEditMobile(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="editMobile">{t.operatorApp.submit.mobileLabel}</Label>
-                  <Input
-                    id="editMobile"
-                    inputMode="decimal"
-                    className="tabular-nums"
-                    value={editMobile}
-                    onChange={(e) => setEditMobile(e.target.value)}
-                  />
-                </div>
+                {actionsFor.accountingMode !== "cash_only" && (
+                  <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
+                    <p className="text-body-airbnb font-semibold">{t.operatorApp.submit.returnsLabel}</p>
+                    <div className="flex items-center overflow-hidden rounded-control border border-border">
+                      <button
+                        type="button"
+                        className="flex size-10 items-center justify-center bg-muted"
+                        onClick={() => setEditReturns(String(Math.max(0, Number(editReturns || 0) - 1)))}
+                      >
+                        <Minus className="size-4" />
+                      </button>
+                      <span className="w-11 text-center text-[0.9375rem] font-bold tabular-nums">
+                        {editReturns || 0}
+                      </span>
+                      <button
+                        type="button"
+                        className="flex size-10 items-center justify-center bg-muted"
+                        onClick={() => setEditReturns(String(Number(editReturns || 0) + 1))}
+                      >
+                        <Plus className="size-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-              {actionsFor.accountingMode !== "cash_only" && (
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="editReturns">{t.operatorApp.submit.returnsLabel}</Label>
-                  <Input
-                    id="editReturns"
-                    inputMode="numeric"
-                    className="tabular-nums"
-                    value={editReturns}
-                    onChange={(e) => setEditReturns(e.target.value)}
-                  />
-                </div>
-              )}
+              {actionsFor.accountingMode !== "cash_only" &&
+                (() => {
+                  const preview = computeEditPreview(actionsFor);
+                  return (
+                    <p className="text-caption-airbnb tabular-nums">
+                      {t.operatorApp.submit.calculatedRevenue} <Money value={preview.calculatedRevenue} /> ·{" "}
+                      {t.operatorApp.submit.difference} {preview.difference > 0 ? "+" : ""}
+                      <Money value={preview.difference} />
+                    </p>
+                  );
+                })()}
             </div>
 
             <div className="flex flex-col gap-1">

@@ -70,37 +70,36 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
 
   if (drillZone) {
     const zoneEntries = entries.filter((e) => e.zoneId === drillZone.id);
-    const zoneActualTotal = actualByZone.get(drillZone.id) ?? 0;
     const perAssetRaw = sumByKey(zoneEntries, "perAsset");
     const perTariffRaw = sumByKey(zoneEntries, "perTariff");
     const rawTotal = [...perAssetRaw.values()].reduce((sum, v) => sum + v, 0);
-    // Scale the calculated (session×price) split so it sums exactly to the zone's
-    // real reported total (cash+mobile) rather than the theoretical figure —
-    // same "actual is ground truth, calculated is only for splitting" idea as
-    // the difference/calculatedRevenue distinction elsewhere in the app.
-    const scale = rawTotal > 0 ? zoneActualTotal / rawTotal : 0;
-
-    // Порядок — как у Владельца в /zones (Asset.sortOrder), а не по выручке:
-    // отчёт должен узнаваться, а не тасоваться при каждой смене периода.
+    // Чистая теоретическая сумма (сеансы × цена тарифа), без подгонки под
+    // реально сданные деньги по зоне — раньше домножали на
+    // (реально сдано / теоретическая сумма), из-за чего целые цены тарифов
+    // превращались в копейки, а пользователь не мог узнать в отчёте свои же
+    // целые тарифы (фидбек пользователя 2026-07-15). Сумма активов теперь
+    // может не совпадать точь-в-точь с фактически сданной суммой по зоне,
+    // если по факту была недостача/излишек — это ожидаемо, "Разница" по
+    // зоне уже показана отдельно на вкладке Динамика/Деньги.
     assetRanking = drillZone.assets.map((a) => {
-      const total = (perAssetRaw.get(a.id) ?? 0) * scale;
+      const total = perAssetRaw.get(a.id) ?? 0;
       return {
         assetId: a.id,
         assetName: a.name,
         colorTag: a.colorTag,
         total: round2(total),
-        sharePercent: zoneActualTotal > 0 ? Math.round((total / zoneActualTotal) * 1000) / 10 : 0,
+        sharePercent: rawTotal > 0 ? Math.round((total / rawTotal) * 1000) / 10 : 0,
       };
     });
 
     tariffBreakdown = drillZone.tariffs
       .map((t) => {
-        const total = (perTariffRaw.get(t.id) ?? 0) * scale;
+        const total = perTariffRaw.get(t.id) ?? 0;
         return {
           tariffId: t.id,
           tariffName: t.name,
           total: round2(total),
-          sharePercent: zoneActualTotal > 0 ? Math.round((total / zoneActualTotal) * 1000) / 10 : 0,
+          sharePercent: rawTotal > 0 ? Math.round((total / rawTotal) * 1000) / 10 : 0,
         };
       })
       .sort((a, b) => b.total - a.total);

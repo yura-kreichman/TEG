@@ -1,12 +1,16 @@
 import type { ZoneSummarySettingsData, DailyCashSummarySettingsData, ShiftCloseSummarySettingsData } from "@/lib/summary-settings";
 import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData, InstructionAckData } from "./types";
-import { formatAmount, formatDuration, formatSummaryDate, formatUtcTime } from "./format-shared";
+import { formatDuration, formatLocalTime, formatSummaryDate } from "./format-shared";
+import { formatMoney } from "@/lib/format";
+import type { Locale } from "@/lib/locales";
 
 // Чистые функции построения HTML-писем — тот же принцип, что telegram-format.ts:
 // данные + настройки → готовый {subject, html}, без SMTP, без сети.
+// День/время — в часовом поясе тенанта, не в сыром UTC (тот же баг, что в
+// telegram-format.ts, см. format-shared.ts).
 
-function formatDate(d: Date): string {
-  return formatSummaryDate(d, ".");
+function formatDate(d: Date, timezone: string): string {
+  return formatSummaryDate(d, ".", timezone);
 }
 
 function escapeHtml(s: string): string {
@@ -49,13 +53,15 @@ function wrapEmail(companyName: string, title: string, subtitle: string, rows: E
 export function formatZoneSummaryEmail(
   data: ZoneSummaryData,
   settings: ZoneSummarySettingsData,
-  companyName: string
+  companyName: string,
+  locale: Locale,
+  timezone: string
 ): { subject: string; html: string } {
-  const subject = `Сводка по зоне · ${data.zoneName} · ${formatDate(data.occurredAt)}`;
+  const subject = `Сводка по зоне · ${data.zoneName} · ${formatDate(data.occurredAt, timezone)}`;
   const rows: EmailRow[] = [];
 
   if (data.accountingMode === "cash_only") {
-    rows.push({ label: "Касса", value: formatAmount(data.cashAmount), bold: true });
+    rows.push({ label: "Касса", value: formatMoney(data.cashAmount, locale), bold: true });
   } else {
     if (settings.showReadings || settings.showDelta) {
       for (const r of data.readings) {
@@ -68,51 +74,71 @@ export function formatZoneSummaryEmail(
         rows.push({ label: `${r.assetName} · ${r.tariffName}`, value });
       }
     }
-    if (settings.showCash) rows.push({ label: "Наличные / Безнал", value: `${formatAmount(data.cashAmount)} / ${formatAmount(data.mobileAmount)}` });
-    if (settings.showCalc) rows.push({ label: "По счётчику", value: formatAmount(data.calculatedRevenue) });
-    if (settings.showDiff) rows.push({ label: "Разница", value: `${data.difference > 0 ? "+" : ""}${formatAmount(data.difference)}`, bold: true });
+    if (settings.showCash) {
+      rows.push({
+        label: "Наличные / Безнал",
+        value: `${formatMoney(data.cashAmount, locale)} / ${formatMoney(data.mobileAmount, locale)}`,
+      });
+    }
+    if (settings.showCalc) rows.push({ label: "По счётчику", value: formatMoney(data.calculatedRevenue, locale) });
+    if (settings.showDiff) {
+      rows.push({
+        label: "Разница",
+        value: `${data.difference > 0 ? "+" : ""}${formatMoney(data.difference, locale)}`,
+        bold: true,
+      });
+    }
     if (settings.showReturns) rows.push({ label: "Возвраты/тест", value: String(data.returnsCount) });
   }
   if (settings.showOperator) rows.push({ label: "Оператор", value: data.operatorName });
 
-  return { subject, html: wrapEmail(companyName, `Сводка по зоне «${data.zoneName}»`, formatDate(data.occurredAt), rows) };
+  return { subject, html: wrapEmail(companyName, `Сводка по зоне «${data.zoneName}»`, formatDate(data.occurredAt, timezone), rows) };
 }
 
 export function formatDailyCashSummaryEmail(
   data: DailyCashSummaryData,
   settings: DailyCashSummarySettingsData,
-  companyName: string
+  companyName: string,
+  locale: Locale,
+  timezone: string
 ): { subject: string; html: string } {
-  const subject = `Касса за день · ${data.pointName} · ${formatDate(data.businessDate)}`;
+  const subject = `Касса за день · ${data.pointName} · ${formatDate(data.businessDate, timezone)}`;
   const total = data.cashAmount + data.mobileAmount - data.expenses;
   const rows: EmailRow[] = [];
 
-  if (settings.showCash) rows.push({ label: "Наличные / Безнал", value: `${formatAmount(data.cashAmount)} / ${formatAmount(data.mobileAmount)}` });
-  if (settings.showExpenses) rows.push({ label: "Расходы", value: formatAmount(data.expenses) });
-  rows.push({ label: "Итого за день", value: formatAmount(total), bold: true });
-  if (settings.showZoneBreakdown) {
-    for (const z of data.zoneBreakdown) rows.push({ label: z.zoneName, value: formatAmount(z.revenue) });
+  if (settings.showCash) {
+    rows.push({
+      label: "Наличные / Безнал",
+      value: `${formatMoney(data.cashAmount, locale)} / ${formatMoney(data.mobileAmount, locale)}`,
+    });
   }
-  if (settings.showCashOnHand) rows.push({ label: "Остаток на точке", value: formatAmount(data.cashOnHand) });
+  if (settings.showExpenses) rows.push({ label: "Расходы", value: formatMoney(data.expenses, locale) });
+  rows.push({ label: "Итого за день", value: formatMoney(total, locale), bold: true });
+  if (settings.showZoneBreakdown) {
+    for (const z of data.zoneBreakdown) rows.push({ label: z.zoneName, value: formatMoney(z.revenue, locale) });
+  }
+  if (settings.showCashOnHand) rows.push({ label: "Остаток на точке", value: formatMoney(data.cashOnHand, locale) });
 
-  return { subject, html: wrapEmail(companyName, `Касса за день · ${data.pointName}`, formatDate(data.businessDate), rows) };
+  return { subject, html: wrapEmail(companyName, `Касса за день · ${data.pointName}`, formatDate(data.businessDate, timezone), rows) };
 }
 
 export function formatShiftCloseSummaryEmail(
   data: ShiftCloseSummaryData,
   settings: ShiftCloseSummarySettingsData,
-  companyName: string
+  companyName: string,
+  locale: Locale,
+  timezone: string
 ): { subject: string; html: string } {
-  const subject = `Закрытие смены · ${data.operatorName} · ${formatDate(data.startAt)}`;
+  const subject = `Закрытие смены · ${data.operatorName} · ${formatDate(data.startAt, timezone)}`;
   const rows: EmailRow[] = [];
 
-  if (settings.showPeriod) rows.push({ label: "Период", value: `${formatUtcTime(data.startAt)} – ${formatUtcTime(data.endAt)}` });
+  if (settings.showPeriod) rows.push({ label: "Период", value: `${formatLocalTime(data.startAt, timezone)} – ${formatLocalTime(data.endAt, timezone)}` });
   if (settings.showHours) rows.push({ label: "Отработано", value: formatDuration(data.minutes) });
-  if (settings.showAdvance && data.advanceAmount > 0) rows.push({ label: "Аванс", value: formatAmount(data.advanceAmount) });
-  if (settings.showBonus && data.bonusAmount > 0) rows.push({ label: "Премия", value: formatAmount(data.bonusAmount) });
-  if (settings.showTotal) rows.push({ label: "К выдаче", value: formatAmount(data.toPayOut), bold: true });
+  if (settings.showAdvance && data.advanceAmount > 0) rows.push({ label: "Аванс", value: formatMoney(data.advanceAmount, locale) });
+  if (settings.showBonus && data.bonusAmount > 0) rows.push({ label: "Премия", value: formatMoney(data.bonusAmount, locale) });
+  if (settings.showTotal) rows.push({ label: "К выдаче", value: formatMoney(data.toPayOut, locale), bold: true });
 
-  return { subject, html: wrapEmail(companyName, `Смена · ${data.operatorName}`, formatDate(data.startAt), rows) };
+  return { subject, html: wrapEmail(companyName, `Смена · ${data.operatorName}`, formatDate(data.startAt, timezone), rows) };
 }
 
 export function formatInstructionAckEmail(data: InstructionAckData, companyName: string): { subject: string; html: string } {

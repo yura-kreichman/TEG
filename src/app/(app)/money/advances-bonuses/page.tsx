@@ -9,6 +9,7 @@ import { SpringCard } from "@/components/spring-card";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/datetime-format";
+import { Money } from "@/components/money";
 
 interface AdvanceBonusEntry {
   id: string;
@@ -142,7 +143,7 @@ export default function AdvancesBonusesRegisterPage() {
                               op.type === "advance" ? "text-warning" : "text-success"
                             )}
                           >
-                            {op.amount.toFixed(2)}
+                            <Money value={op.amount} />
                           </span>
                         </div>
                       ))}

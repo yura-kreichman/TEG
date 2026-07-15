@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2, X } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -18,6 +19,7 @@ import { KebabButton } from "@/components/kebab-menu";
 import { StatusChip } from "@/components/status-chip";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n } from "@/components/i18n-provider";
+import { Money } from "@/components/money";
 import { cn } from "@/lib/utils";
 import { formatDuration as formatDurationBase, formatTime } from "@/lib/datetime-format";
 import {
@@ -428,20 +430,13 @@ export default function OperatorCardPage() {
                   <StatusChip variant={profile.active ? "accent" : "warning"}>
                     {profile.active ? t.operators.active : t.operators.inactive}
                   </StatusChip>
-                  {profile.allZonesAccess ? (
-                    <StatusChip variant="accent">{t.operators.allZonesChip}</StatusChip>
-                  ) : profile.allowedZones.length > 0 ? (
-                    <StatusChip variant="accent">{profile.allowedZones.map((z) => z.name).join(", ")}</StatusChip>
-                  ) : (
-                    <StatusChip variant="warning">{t.operators.noZoneAccessChip}</StatusChip>
-                  )}
                 </div>
               </div>
               {moduleEnabled && balance && (
                 <div className="flex flex-col items-end gap-1">
                   <span className="text-caption-airbnb text-muted-foreground">{t.operatorApp.workTime.rateLabel}</span>
                   <span className="text-[1.0625rem] font-bold tabular-nums text-muted-foreground">
-                    {balance.currentRate.toFixed(2)}
+                    <Money value={balance.currentRate} />
                   </span>
                 </div>
               )}
@@ -467,25 +462,25 @@ export default function OperatorCardPage() {
                       balance.toPayOut < 0 && "text-destructive"
                     )}
                   >
-                    {balance.toPayOut.toFixed(2)}
+                    <Money value={balance.toPayOut} size="display" />
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-3 border-t border-border pt-3.5 tabular-nums sm:grid-cols-4">
                   <div>
                     <p className="text-caption-airbnb">{t.operatorApp.workTime.earnedLabel}</p>
-                    <p className="text-[1.0625rem] font-bold">{balance.earnedInPeriod.toFixed(2)}</p>
+                    <p className="text-[1.0625rem] font-bold text-primary"><Money value={balance.earnedInPeriod} /></p>
                   </div>
                   <div>
                     <p className="text-caption-airbnb">{t.operatorApp.workTime.rateAccruedLabel}</p>
-                    <p className="text-[1.0625rem] font-bold">{balance.rateEarnedInPeriod.toFixed(2)}</p>
+                    <p className="text-[1.0625rem] font-bold"><Money value={balance.rateEarnedInPeriod} /></p>
                   </div>
                   <div>
                     <p className="text-caption-airbnb">{t.operatorApp.workTime.bonusesLabel}</p>
-                    <p className="text-[1.0625rem] font-bold">{balance.bonusesInPeriod.toFixed(2)}</p>
+                    <p className="text-[1.0625rem] font-bold"><Money value={balance.bonusesInPeriod} /></p>
                   </div>
                   <div>
                     <p className="text-caption-airbnb">{t.operatorApp.workTime.advancesLabel}</p>
-                    <p className="text-[1.0625rem] font-bold">{balance.advancesInPeriod.toFixed(2)}</p>
+                    <p className="text-[1.0625rem] font-bold"><Money value={balance.advancesInPeriod} /></p>
                   </div>
                 </div>
                 <div className="flex gap-2 border-t border-border pt-3.5">
@@ -573,7 +568,7 @@ export default function OperatorCardPage() {
                               )}
                             </span>
                             <span className="tabular-nums text-body-airbnb font-bold">
-                              {item.shift.open ? t.operatorApp.workTime.shiftInProgress : item.shift.accrued!.toFixed(2)}
+                              {item.shift.open ? t.operatorApp.workTime.shiftInProgress : <Money value={item.shift.accrued!} />}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
@@ -586,12 +581,12 @@ export default function OperatorCardPage() {
                               <span className="flex gap-2 text-xs tabular-nums">
                                 {item.shift.advanceAmount > 0 && (
                                   <span className="text-warning">
-                                    {t.operatorApp.workTime.advanceInline} {item.shift.advanceAmount.toFixed(2)}
+                                    {t.operatorApp.workTime.advanceInline} <Money value={item.shift.advanceAmount} />
                                   </span>
                                 )}
                                 {item.shift.bonusAmount > 0 && (
                                   <span className="text-success">
-                                    {t.operatorApp.workTime.bonusInline} {item.shift.bonusAmount.toFixed(2)}
+                                    {t.operatorApp.workTime.bonusInline} <Money value={item.shift.bonusAmount} />
                                   </span>
                                 )}
                               </span>
@@ -616,7 +611,7 @@ export default function OperatorCardPage() {
                               item.op.type === "advance" ? "text-warning" : "text-success"
                             )}
                           >
-                            {item.op.amount.toFixed(2)}
+                            <Money value={item.op.amount} />
                           </span>
                         </div>
                         <KebabButton onClick={() => openMoneyOpEdit(item.op)} label={t.common.edit} />
@@ -627,7 +622,7 @@ export default function OperatorCardPage() {
                 {carryoverTotal !== 0 && (
                   <div className="flex items-center justify-between border-t border-border py-3">
                     <span className="text-body-airbnb font-semibold">{t.operatorApp.workTime.carryoverLabel}</span>
-                    <span className="tabular-nums text-body-airbnb font-bold">{carryoverTotal.toFixed(2)}</span>
+                    <span className="tabular-nums text-body-airbnb font-bold"><Money value={carryoverTotal} /></span>
                   </div>
                 )}
                 <PressableScale className="border-t border-border pt-3">
@@ -649,14 +644,23 @@ export default function OperatorCardPage() {
           </h2>
           <div className="flex flex-col gap-1">
             <Label htmlFor="moneyAmount">{t.money.amountLabel}</Label>
-            <Input
-              id="moneyAmount"
-              autoFocus
-              inputMode="decimal"
-              className="h-14 text-lg tabular-nums"
-              value={moneyAmount}
-              onChange={(e) => setMoneyAmount(e.target.value)}
-            />
+            <div className="flex items-center gap-2">
+              <MoneyInput
+                id="moneyAmount"
+                autoFocus
+                scale="lg"
+                className="h-14 flex-1 text-lg"
+                value={moneyAmount}
+                onChange={(e) => setMoneyAmount(e.target.value)}
+              />
+              {operatorPoints.length <= 1 && (
+                <PressableScale>
+                  <SaveButton className="h-14" onClick={submitMoneyForm}>
+                    {t.common.save}
+                  </SaveButton>
+                </PressableScale>
+              )}
+            </div>
           </div>
           {operatorPoints.length > 1 && (
             <div className="flex flex-col gap-1">
@@ -680,11 +684,13 @@ export default function OperatorCardPage() {
             </div>
           )}
           {moneyError && <p className="text-sm text-destructive">{moneyError}</p>}
-          <PressableScale>
-            <SaveButton className="w-full" onClick={submitMoneyForm}>
-            {t.common.save}
-            </SaveButton>
-          </PressableScale>
+          {operatorPoints.length > 1 && (
+            <PressableScale>
+              <SaveButton className="w-full" onClick={submitMoneyForm}>
+                {t.common.save}
+              </SaveButton>
+            </PressableScale>
+          )}
         </div>
       </BottomSheet>
 
@@ -694,11 +700,11 @@ export default function OperatorCardPage() {
           <p className="text-body-airbnb text-muted-foreground">{t.operatorApp.workTime.carryoverHint}</p>
           <div className="flex flex-col gap-1">
             <Label htmlFor="carryoverAmount">{t.money.amountLabel}</Label>
-            <Input
+            <MoneyInput
               id="carryoverAmount"
               autoFocus
-              inputMode="decimal"
-              className="h-14 text-lg tabular-nums"
+              scale="lg"
+              className="h-14 text-lg"
               value={carryoverAmount}
               onChange={(e) => setCarryoverAmount(e.target.value)}
             />
@@ -759,10 +765,9 @@ export default function OperatorCardPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1">
                 <Label htmlFor="editAdvance">{t.operatorApp.workTime.advanceFieldLabel}</Label>
-                <Input
+                <MoneyInput
                   id="editAdvance"
-                  inputMode="decimal"
-                  className="h-12 tabular-nums"
+                  className="h-12"
                   value={editAdvance}
                   onChange={(e) => setEditAdvance(e.target.value)}
                   placeholder="0"
@@ -770,10 +775,9 @@ export default function OperatorCardPage() {
               </div>
               <div className="flex flex-col gap-1">
                 <Label htmlFor="editBonus">{t.operatorApp.workTime.bonusFieldLabel}</Label>
-                <Input
+                <MoneyInput
                   id="editBonus"
-                  inputMode="decimal"
-                  className="h-12 tabular-nums"
+                  className="h-12"
                   value={editBonus}
                   onChange={(e) => setEditBonus(e.target.value)}
                   placeholder="0"
@@ -843,21 +847,23 @@ export default function OperatorCardPage() {
             </h2>
             <div className="flex flex-col gap-1">
               <Label htmlFor="editMoneyOpAmount">{t.money.amountLabel}</Label>
-              <Input
-                id="editMoneyOpAmount"
-                autoFocus
-                inputMode="decimal"
-                className="h-14 text-lg tabular-nums"
-                value={editMoneyOpAmount}
-                onChange={(e) => setEditMoneyOpAmount(e.target.value)}
-              />
+              <div className="flex items-center gap-2">
+                <MoneyInput
+                  id="editMoneyOpAmount"
+                  autoFocus
+                  scale="lg"
+                  className="h-14 flex-1 text-lg"
+                  value={editMoneyOpAmount}
+                  onChange={(e) => setEditMoneyOpAmount(e.target.value)}
+                />
+                <PressableScale>
+                  <SaveButton className="h-14" onClick={submitMoneyOpEdit}>
+                    {t.common.save}
+                  </SaveButton>
+                </PressableScale>
+              </div>
             </div>
             {editMoneyOpError && <p className="text-sm text-destructive">{editMoneyOpError}</p>}
-            <PressableScale>
-              <SaveButton className="w-full" onClick={submitMoneyOpEdit}>
-              {t.common.save}
-              </SaveButton>
-            </PressableScale>
 
             {confirmDeleteMoneyOp ? (
               <div className="flex flex-col gap-2 border-t border-border pt-4">

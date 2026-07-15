@@ -100,6 +100,7 @@ export async function GET(request: Request) {
   const zoneBalances = zones.map((zone) => ({
     zoneId: zone.id,
     zoneName: zone.name,
+    zoneIconKey: zone.iconKey,
     pointId: zone.pointId,
     pointName: zone.point.name,
     balance: Math.round((balanceByZone.get(zone.id) ?? 0) * 100) / 100,

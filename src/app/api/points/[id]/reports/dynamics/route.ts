@@ -85,10 +85,24 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     if (op.type === "advance" || op.type === "bonus_payout") payouts += amount;
   }
 
+  // За год — 365 ежедневных столбцов на графике нечитаемы, агрегируем по
+  // месяцам (12 столбцов), как и с "Неделя"/"Месяц" — по дням.
   const bars: { date: string; total: number }[] = [];
-  for (let d = new Date(start); d < end; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
-    const key = d.toISOString().slice(0, 10);
-    bars.push({ date: key, total: round2(byDay.get(key) ?? 0) });
+  if (granularity === "year") {
+    const byMonth = new Map<string, number>();
+    for (const [dayKey, value] of byDay) {
+      const monthKey = dayKey.slice(0, 7);
+      byMonth.set(monthKey, (byMonth.get(monthKey) ?? 0) + value);
+    }
+    for (let m = new Date(start); m < end; m = new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() + 1, 1))) {
+      const key = `${m.getUTCFullYear()}-${String(m.getUTCMonth() + 1).padStart(2, "0")}`;
+      bars.push({ date: `${key}-01`, total: round2(byMonth.get(key) ?? 0) });
+    }
+  } else {
+    for (let d = new Date(start); d < end; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
+      const key = d.toISOString().slice(0, 10);
+      bars.push({ date: key, total: round2(byDay.get(key) ?? 0) });
+    }
   }
 
   return NextResponse.json({

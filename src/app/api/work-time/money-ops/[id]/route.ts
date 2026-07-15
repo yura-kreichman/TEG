@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { calcOperatorBalance } from "@/lib/work-time";
+import { resolveLocale } from "@/lib/i18n";
+import { formatMoney } from "@/lib/format";
 
 // Правка суммы отдельного (не привязанного к смене) аванса/премии —
 // docs/spec/05-work-time.md, "АВАНС"/"ПРЕМИЯ": "владелец может редактировать".
@@ -33,8 +35,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
     const balance = await calcOperatorBalance(op.beneficiaryOperatorId);
     const availableExcludingThis = balance.toPayOut + before;
     if (!beneficiary?.overdraftAllowed && amountNumber > availableExcludingThis) {
+      const locale = await resolveLocale();
       return NextResponse.json(
-        { error: `Аванс превышает доступный баланс к выдаче (${availableExcludingThis.toFixed(2)})` },
+        { error: `Аванс превышает доступный баланс к выдаче (${formatMoney(availableExcludingThis, locale)})` },
         { status: 400 }
       );
     }

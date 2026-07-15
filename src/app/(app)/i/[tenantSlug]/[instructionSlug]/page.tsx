@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getDictionary } from "@/lib/i18n";
+import { isLocale } from "@/lib/locales";
 import { I18nProvider } from "@/components/i18n-provider";
 import InstructionReaderClient from "./instruction-reader-client";
 
@@ -23,10 +24,11 @@ export default async function PublicInstructionPage({
 }) {
   const { tenantSlug, instructionSlug } = await params;
   const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug }, select: { locale: true } });
-  const dict = getDictionary(tenant?.locale ?? "ru");
+  const locale = tenant?.locale && isLocale(tenant.locale) ? tenant.locale : "ru";
+  const dict = getDictionary(locale);
 
   return (
-    <I18nProvider dict={dict}>
+    <I18nProvider dict={dict} locale={locale}>
       <InstructionReaderClient tenantSlug={tenantSlug} instructionSlug={instructionSlug} />
     </I18nProvider>
   );

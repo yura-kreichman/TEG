@@ -29,6 +29,7 @@ export async function GET() {
     zone?.point ??
     (await prisma.point.findFirst({ where: { tenantId: owner.tenantId }, orderBy: { createdAt: "asc" } }));
   const pointCount = await prisma.point.count({ where: { tenantId: owner.tenantId } });
+  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });
 
   const operator = await prisma.operator.findFirst({
     where: { tenantId: owner.tenantId },
@@ -58,6 +59,7 @@ export async function GET() {
   return NextResponse.json({
     pointName: point?.name ?? null,
     pointCount,
+    timezone: tenant?.timezone ?? "UTC",
     zoneName: zone?.name ?? null,
     zoneEmoji: zone?.telegramEmoji ?? null,
     accountingMode: zone?.accountingMode ?? null,
