@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSession, hashPassword, hashResetToken, rememberOwnerDevice } from "@/lib/auth";
 import { setAccentCookie } from "@/lib/accent";
+import { setBgStyleCookie } from "@/lib/bg-style";
 
 export async function POST(request: Request) {
   const { token, password } = await request.json();
@@ -45,10 +46,11 @@ export async function POST(request: Request) {
   if (user.tenantId) {
     const tenant = await prisma.tenant.findUnique({
       where: { id: user.tenantId },
-      select: { accentScheme: true },
+      select: { accentScheme: true, bgStyle: true },
     });
     if (tenant) {
       await setAccentCookie(tenant.accentScheme);
+      await setBgStyleCookie(tenant.bgStyle);
     }
   }
 

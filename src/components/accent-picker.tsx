@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/i18n-provider";
 
@@ -38,11 +39,16 @@ function SchemeSwatch({
       aria-pressed={selected}
       data-accent={scheme}
       className={cn(
-        "flex flex-col gap-1.5 rounded-control border p-1.5 text-left transition-colors",
+        "relative flex flex-col gap-1.5 rounded-control border p-1.5 text-left transition-colors",
         selected ? "border-foreground" : "border-border hover:border-foreground/30",
         dark && "dark"
       )}
     >
+      {selected && (
+        <span className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-background">
+          <Check className="size-3" />
+        </span>
+      )}
       <span className="flex h-9 overflow-hidden rounded-[10px]">
         <span className="flex-1" style={{ background: "color-mix(in oklch, var(--primary), white 45%)" }} />
         <span className="flex-1" style={{ background: "var(--primary)" }} />

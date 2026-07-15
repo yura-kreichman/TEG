@@ -108,6 +108,12 @@ model Tenant {
   locale       String @default("ru")
   accentScheme String @default("green")
 
+  // Фон приложения (docs/spec/03-design-system.md, "Фон приложения") —
+  // только кабинет владельца, тот же оптимистичный save-механизм, что у
+  // accentScheme выше. "none" = "Без фона" (текущее поведение), тот же
+  // приём default-значения, что у accentScheme.
+  bgStyle String @default("none")
+
   // Валюта — чисто визуальная настройка (docs/spec/03-design-system.md,
   // "Числа и деньги" → "Валюта"): суперскрипт-знак у денежных сумм.
   // null = "не указана" (по умолчанию, спека) — сумма выводится без знака,

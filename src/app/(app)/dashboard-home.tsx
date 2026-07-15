@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
-import { Building2, CalendarDays, ChevronRight, ImagePlus, KeyRound, LogOut, Pencil } from "lucide-react";
+import { Building2, CalendarDays, ChevronRight, ImagePlus, KeyRound, ListChecks, LogOut, Pencil } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
@@ -316,6 +316,21 @@ export function OwnerDashboardCard({
               <div className="min-w-0 grow">
                 <p className="text-card-title">{t.money.zoneBalancesLink}</p>
                 <p className="text-caption-airbnb">{t.money.zoneBalancesLinkHint}</p>
+              </div>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            </SpringCard>
+          </Link>
+        </PressableScale>
+
+        <PressableScale>
+          <Link href="/tasks">
+            <SpringCard className="flex items-center gap-3">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                <ListChecks className="size-5" />
+              </div>
+              <div className="min-w-0 grow">
+                <p className="text-card-title">{t.home.tasksLink}</p>
+                <p className="text-caption-airbnb">{t.home.tasksLinkHint}</p>
               </div>
               <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
             </SpringCard>

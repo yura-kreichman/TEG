@@ -8,6 +8,8 @@ import { DisableContextMenu } from "@/components/disable-context-menu";
 import { I18nProvider } from "@/components/i18n-provider";
 import { TextScaleProvider } from "@/components/text-scale-provider";
 import { getAccentCookie } from "@/lib/accent";
+import { getBgStyleCookie } from "@/lib/bg-style";
+import { AppBackground } from "@/components/app-background";
 import { getDictionary, resolveLocale } from "@/lib/i18n";
 import { resolveTenantCurrency } from "@/lib/currency-resolve";
 
@@ -66,6 +68,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const accent = await getAccentCookie();
+  const bgStyle = await getBgStyleCookie();
   const locale = await resolveLocale();
   const dict = getDictionary(locale);
   const currency = await resolveTenantCurrency();
@@ -78,6 +81,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <AppBackground style={bgStyle} />
         <DisableContextMenu />
         <I18nProvider dict={dict} locale={locale} currency={currency}>
           <ThemeProvider

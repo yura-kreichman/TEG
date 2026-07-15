@@ -14,6 +14,7 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { KebabButton } from "@/components/kebab-menu";
 import { StatusChip } from "@/components/status-chip";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
+import { OpenShiftBadge } from "@/components/open-shift-badge";
 import { useI18n } from "@/components/i18n-provider";
 import { colorTagGradient } from "@/lib/utils";
 
@@ -26,6 +27,8 @@ interface OperatorInfo {
   colorTag: string | null;
   allZonesAccess: boolean;
   allowedZones: { id: string; name: string }[];
+  timeTrackingMode: "manual" | "auto";
+  hasOpenShift: boolean;
 }
 
 export default function OperatorsPage() {
@@ -184,7 +187,7 @@ export default function OperatorsPage() {
                   />
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="relative flex flex-wrap items-center gap-1.5 pr-6">
                 {operator.allZonesAccess ? (
                   <StatusChip variant="accent">{t.operators.allZonesChip}</StatusChip>
                 ) : operator.allowedZones.length > 0 ? (
@@ -193,6 +196,9 @@ export default function OperatorsPage() {
                   </StatusChip>
                 ) : (
                   <StatusChip variant="warning">{t.operators.noZoneAccessChip}</StatusChip>
+                )}
+                {operator.hasOpenShift && operator.timeTrackingMode === "auto" && (
+                  <OpenShiftBadge className="top-1/2 right-0 bottom-auto -translate-y-1/2" />
                 )}
               </div>
             </div>

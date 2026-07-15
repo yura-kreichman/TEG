@@ -36,6 +36,7 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { ActionSheetItem } from "@/components/kebab-menu";
 import { IconPickerSheet, AssetOrZoneIcon } from "@/components/icon-picker";
 import { ColorTagPicker } from "@/components/color-tag-picker";
+import { OpenShiftBadge } from "@/components/open-shift-badge";
 import { useI18n } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { compressImageFile } from "@/lib/client-image";
@@ -120,6 +121,7 @@ export default function OperatorSettingsPage() {
   const [colorValue, setColorValue] = useState("#22c55e");
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [savingTimeTrackingMode, setSavingTimeTrackingMode] = useState(false);
+  const [timeTrackingError, setTimeTrackingError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   async function loadAll() {
@@ -257,7 +259,7 @@ export default function OperatorSettingsPage() {
 
   async function setTimeTrackingMode(mode: "manual" | "auto") {
     if (!profile || profile.timeTrackingMode === mode) return;
-    setActionError(null);
+    setTimeTrackingError(null);
     setSavingTimeTrackingMode(true);
     try {
       const res = await fetch(`/api/operators/${params.id}`, {
@@ -267,7 +269,7 @@ export default function OperatorSettingsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setActionError(data.error ?? t.operatorApp.workTime.saveError);
+        setTimeTrackingError(data.error ?? t.operatorApp.workTime.saveError);
         return;
       }
       setProfile({ ...profile, timeTrackingMode: mode });
@@ -390,7 +392,10 @@ export default function OperatorSettingsPage() {
           <h1 className="text-screen-title">{t.operators.settingsTitle}</h1>
         </div>
 
-        <SpringCard hover={false} className="flex flex-col items-center gap-2 text-center">
+        <SpringCard hover={false} className="relative flex flex-col items-center gap-2 text-center">
+          {profile.hasOpenShift && profile.timeTrackingMode === "auto" && (
+            <OpenShiftBadge className="top-3 right-3 bottom-auto" />
+          )}
           <button type="button" onClick={() => setAvatarSheetOpen(true)} className="relative">
             {profile.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -462,7 +467,10 @@ export default function OperatorSettingsPage() {
             />
             <div className="flex items-center gap-3 border-t border-border py-3.5">
               <Clock className="size-4 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 text-body-airbnb">{t.operatorApp.workTime.timeTrackingModeLabel}</span>
+              <div className="min-w-0 flex-1">
+                <div className="text-body-airbnb">{t.operatorApp.workTime.timeTrackingModeLabel}</div>
+                <div className="text-caption-airbnb">{t.operators.timeTrackingModeHint}</div>
+              </div>
               <div className="flex shrink-0 overflow-hidden rounded-control border border-border bg-muted shadow-[inset_0_1px_2px_rgba(0,0,0,.08)]">
                 <button
                   type="button"
@@ -492,6 +500,9 @@ export default function OperatorSettingsPage() {
                 </button>
               </div>
             </div>
+            {timeTrackingError && (
+              <p className="border-t border-border py-2 text-caption-airbnb text-destructive">{timeTrackingError}</p>
+            )}
             <div className="flex items-center gap-3 border-t border-border py-3.5">
               <Wallet className="size-4 shrink-0 text-muted-foreground" />
               <div className="min-w-0 flex-1">

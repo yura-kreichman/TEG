@@ -214,8 +214,13 @@ export default function ZoneBalancesPage() {
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-screen-title">{t.money.zoneBalancesLink}</h1>
             <PressableScale>
-              <Button variant="dark" size="sm" className="gap-1.5" onClick={openCollection}>
-                <Plus className="size-4" />
+              <Button
+                variant="dark"
+                size="sm"
+                className="h-auto min-w-0 shrink items-start gap-1.5 whitespace-normal px-2.5 py-1.5 text-left leading-tight"
+                onClick={openCollection}
+              >
+                <Plus className="size-4 shrink-0" />
                 {t.money.recordCollectionButton}
               </Button>
             </PressableScale>

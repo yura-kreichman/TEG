@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSession, hashPassword, rememberOwnerDevice } from "@/lib/auth";
 import { setAccentCookie } from "@/lib/accent";
+import { setBgStyleCookie } from "@/lib/bg-style";
 import { verifyCaptchaAnswer } from "@/lib/captcha";
 import { resolveLocale } from "@/lib/i18n";
 import { linkPendingFluentCartPurchases } from "@/lib/fluentcart-webhook";
@@ -122,6 +123,7 @@ export async function POST(request: Request) {
   await createSession(user.id);
   await rememberOwnerDevice(user.id);
   await setAccentCookie(tenant.accentScheme);
+  await setBgStyleCookie(tenant.bgStyle);
 
   return NextResponse.json(
     { id: user.id, email: user.email, tenantId: tenant.id },

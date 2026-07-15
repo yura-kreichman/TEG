@@ -148,6 +148,16 @@
      var(--foreground)/var(--primary) сами уже разные в .dark, пересчитывать
      отдельно не нужно. */
   --nav-inactive-fg: color-mix(in oklab, var(--foreground) 80%, var(--primary) 20%);
+
+  /* Фон приложения (docs/spec/03-design-system.md, "Фон приложения") —
+     альфа-лестница из --primary, единственный источник цвета для всех 5
+     вариантов ниже. --bg-highlight — белый засвет для светлой темы, в .dark
+     переопределяется на осветление поверхности вместо белого (см. там же). */
+  --bg-a04: color-mix(in oklab, var(--primary) 10%, transparent);
+  --bg-a08: color-mix(in oklab, var(--primary) 18%, transparent);
+  --bg-a12: color-mix(in oklab, var(--primary) 26%, transparent);
+  --bg-a16: color-mix(in oklab, var(--primary) 34%, transparent);
+  --bg-highlight: rgba(255, 255, 255, 0.85);
 }
 
 .dark {
@@ -212,6 +222,15 @@
   --nav-glass-bg: color-mix(in oklab, color-mix(in oklab, var(--primary) 18%, var(--card)) 86%, transparent);
   --nav-glass-border: color-mix(in oklab, var(--primary) 14%, transparent);
   --nav-glass-bg-solid: color-mix(in oklab, color-mix(in oklab, var(--primary) 18%, var(--card)) 96%, transparent);
+
+  /* Фон приложения — та же лестница из --primary, альфы выше на ~2 п.п.
+     (тёмная поверхность "съедает" низкоконтрастный тон сильнее светлой),
+     засвет заменён на осветление --card вместо белого. */
+  --bg-a04: color-mix(in oklab, var(--primary) 12%, transparent);
+  --bg-a08: color-mix(in oklab, var(--primary) 20%, transparent);
+  --bg-a12: color-mix(in oklab, var(--primary) 28%, transparent);
+  --bg-a16: color-mix(in oklab, var(--primary) 36%, transparent);
+  --bg-highlight: color-mix(in oklab, var(--card) 78%, white 22%);
 }
 
 /*
@@ -376,6 +395,68 @@
   --sidebar-primary: oklch(0.8 0.13 85);
   --sidebar-primary-foreground: oklch(0.2 0.02 85);
   --sidebar-ring: oklch(0.8 0.13 85);
+}
+
+/*
+ * Фон приложения (docs/spec/03-design-system.md, "Фон приложения") — только
+ * кабинет владельца (см. src/components/app-background.tsx, рендерится из
+ * src/app/(app)/layout.tsx, у PWA оператора этого компонента в дереве нет).
+ * Один fixed-слой позади контента, z-index: -1 — это НЕ background-attachment:
+ * fixed (известная причина скролл-джанка на мобильных), а обычный fixed div,
+ * который стоит на месте пока скроллится контент поверх него. "none" не
+ * рендерит div вовсе (см. компонент) — без него страница выглядит как раньше.
+ */
+.app-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Каждая страница кабинета оборачивает контент в непрозрачный bg-surface-0
+   (per-page canvas div поверх .app-bg в потоке документа) — без этого
+   правила слой .app-bg был бы физически невидим на любой странице, не
+   только в "воздухе" между карточками. Правило срабатывает только когда
+   .app-bg реально несёт data-bg-style (т.е. выбран не "Без фона") — :has()
+   вместо второго JS-атрибута на <html>, один источник истины на стороне
+   компонента (src/components/bg-style-picker.tsx). Карточки (--card) не
+   затронуты — остаются полностью непрозрачными, по спеке. */
+html:has(.app-bg[data-bg-style]) {
+  --surface-0: color-mix(in oklab, var(--background), transparent 92%);
+}
+
+[data-bg-style="shine"] {
+  background:
+    radial-gradient(120% 55% at 50% -12%, var(--bg-a16), transparent 60%),
+    radial-gradient(75% 50% at 100% 100%, var(--bg-a08), transparent 70%);
+}
+
+[data-bg-style="haze"] {
+  background:
+    radial-gradient(55% 38% at 18% 8%, var(--bg-highlight), transparent 70%),
+    radial-gradient(65% 48% at 92% 28%, var(--bg-a08), transparent 75%),
+    radial-gradient(60% 50% at 38% 100%, var(--bg-a04), transparent 80%);
+}
+
+[data-bg-style="silk"] {
+  background: linear-gradient(
+    135deg,
+    var(--bg-a04) 0%,
+    transparent 22%,
+    var(--bg-a08) 48%,
+    transparent 74%,
+    var(--bg-a04) 100%
+  );
+}
+
+[data-bg-style="halftone"] {
+  background: linear-gradient(180deg, var(--bg-a12) 0%, var(--bg-a04) 48%, var(--bg-highlight) 100%);
+}
+
+[data-bg-style="ribbons"] {
+  background:
+    repeating-linear-gradient(115deg, var(--bg-a08) 0%, transparent 14%, var(--bg-a04) 26%, transparent 40%),
+    radial-gradient(90% 55% at 85% 0%, var(--bg-a08), transparent 65%);
 }
 
 @layer base {

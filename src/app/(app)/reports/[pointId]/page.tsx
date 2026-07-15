@@ -8,8 +8,10 @@ import { SpringCard } from "@/components/spring-card";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
-import { useI18n } from "@/components/i18n-provider";
+import { useI18n, useLocale, useCurrency } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
+import { formatMoneyCompact } from "@/lib/format";
+import { getCurrencySign } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
 type Tab = "dynamics" | "zones" | "operators" | "calendar";
@@ -58,6 +60,11 @@ interface CalendarData {
   strongestDow: number | null;
   overloadedDow: number | null;
   overloadRatio: number | null;
+  months: { month: number; total: number; hasData: boolean }[] | null;
+  weakestMonth: number | null;
+  strongestMonth: number | null;
+  overloadedMonth: number | null;
+  monthOverloadRatio: number | null;
 }
 
 export default function ReportsDashboardPage({ params }: { params: Promise<{ pointId: string }> }) {
@@ -109,7 +116,7 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   }
 
   async function loadCalendar() {
-    const res = await fetch(`/api/points/${pointId}/reports/calendar`);
+    const res = await fetch(`/api/points/${pointId}/reports/calendar?granularity=${granularity}`);
     if (res.ok) setCalendar(await res.json());
   }
 
@@ -122,7 +129,7 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   useEffect(() => {
     loadCalendar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pointId]);
+  }, [pointId, granularity]);
 
   // Список точек для дропдауна выбора — без отдельного экрана-пикера
   // (фидбек пользователя 2026-07-13). Загружается один раз, не зависит от pointId.
@@ -203,19 +210,17 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
             onChange={setTab}
           />
 
-          {tab !== "calendar" && (
-            <SegmentedTabs
-              className="mb-4"
-              shape="control"
-              options={[
-                { key: "week" as Granularity, label: t.reports.periodWeek },
-                { key: "month" as Granularity, label: t.reports.periodMonth },
-                { key: "year" as Granularity, label: t.reports.periodYear },
-              ]}
-              value={granularity}
-              onChange={setGranularity}
-            />
-          )}
+          <SegmentedTabs
+            className="mb-4"
+            shape="control"
+            options={[
+              { key: "week" as Granularity, label: t.reports.periodWeek },
+              { key: "month" as Granularity, label: t.reports.periodMonth },
+              { key: "year" as Granularity, label: t.reports.periodYear },
+            ]}
+            value={granularity}
+            onChange={setGranularity}
+          />
 
           {loadError ? (
             <p className="text-body-airbnb text-destructive">{t.reports.genericError}</p>
@@ -477,7 +482,7 @@ function OperatorsTab({ operators, t }: { operators: OperatorRow[]; t: ReturnTyp
                 <img src={op.avatarUrl} alt="" className="size-11 rounded-full object-cover" />
               ) : op.iconKey ? (
                 <div className="flex size-11 items-center justify-center rounded-full bg-primary/10">
-                  <AssetOrZoneIcon iconKey={op.iconKey} className="size-6" />
+                  <AssetOrZoneIcon iconKey={op.iconKey} className="size-9" />
                 </div>
               ) : (
                 <div className="flex size-11 items-center justify-center rounded-full bg-primary text-base font-bold text-primary-foreground">
@@ -512,7 +517,7 @@ function OperatorsTab({ operators, t }: { operators: OperatorRow[]; t: ReturnTyp
             <div>
               <div className="text-caption-airbnb">{t.reports.differenceLabel}</div>
               <div className={cn("text-[1rem] font-bold", op.differenceSum >= 0 ? "text-primary" : "text-destructive")}>
-                {op.differenceSum >= 0 ? "+" : ""}
+                {op.differenceSum > 0 ? "+" : ""}
                 <Money value={op.differenceSum} />
               </div>
             </div>
@@ -525,6 +530,10 @@ function OperatorsTab({ operators, t }: { operators: OperatorRow[]; t: ReturnTyp
 }
 
 function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof useI18n> }) {
+  if (data.months !== null) {
+    return <CalendarMonthsTab months={data.months} data={data} t={t} />;
+  }
+
   const maxVal = Math.max(1, ...data.weeks.flatMap((w) => w.days.map((d) => d.total)));
   return (
     <div className="flex flex-col gap-3">
@@ -545,10 +554,14 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
               <div
                 key={d.date}
                 className={cn(
-                  "flex aspect-square items-center justify-center rounded-lg text-[0.5625rem] font-bold text-white",
-                  !d.hasData && "bg-muted text-muted-foreground"
+                  "flex aspect-square items-center justify-center rounded-lg text-[0.75rem] font-bold text-white",
+                  (!d.hasData || d.total === 0) && "bg-muted text-muted-foreground"
                 )}
-                style={d.hasData ? { background: "var(--color-primary)", opacity: 0.25 + (d.total / maxVal) * 0.75 } : undefined}
+                style={
+                  d.hasData && d.total > 0
+                    ? { background: "var(--color-primary)", opacity: 0.25 + (d.total / maxVal) * 0.75 }
+                    : undefined
+                }
                 title={d.date}
               >
                 {d.total > 0 ? Math.round(d.total / 100) / 10 + "к" : ""}
@@ -577,6 +590,86 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
           {t.reports.strongestDayLabel}: {t.readings.weekdaysFull[data.overloadedDow]} ·{" "}
           <Money value={data.dowAverages[data.overloadedDow]} /> ({data.overloadRatio}
           {t.reports.overloadSuffix})
+        </Insight>
+      )}
+    </div>
+  );
+}
+
+// "Год" — 12 месяцев вместо сетки дней недели: 52 строки нечитаемы на
+// телефоне, сезонность за год показательнее по месяцам (запрос пользователя
+// 2026-07-15).
+function CalendarMonthsTab({
+  months,
+  data,
+  t,
+}: {
+  months: { month: number; total: number; hasData: boolean }[];
+  data: CalendarData;
+  t: ReturnType<typeof useI18n>;
+}) {
+  const maxVal = Math.max(1, ...months.map((mo) => mo.total));
+  const locale = useLocale();
+  const sign = getCurrencySign(useCurrency());
+  return (
+    <div className="flex flex-col gap-3">
+      <SpringCard animate={false}>
+        <div className="mb-3 text-[0.6875rem] font-bold uppercase tracking-wider text-muted-foreground">
+          {t.reports.revenueByMonthTitle}
+        </div>
+        <div className="grid grid-cols-4 gap-1.5">
+          {months.map((mo) => (
+            <div
+              key={mo.month}
+              className={cn(
+                "flex h-16 flex-col items-center justify-center gap-1 rounded-lg p-1 text-center font-bold text-white",
+                (!mo.hasData || mo.total === 0) && "bg-muted text-muted-foreground"
+              )}
+              style={
+                mo.hasData && mo.total > 0
+                  ? { background: "var(--color-primary)", opacity: 0.25 + (mo.total / maxVal) * 0.75 }
+                  : undefined
+              }
+            >
+              <span className="text-[0.6875rem] leading-tight font-semibold">{t.readings.months[mo.month]}</span>
+              <span className="text-[0.8125rem] leading-tight tabular-nums">
+                {mo.total > 0 ? (
+                  mo.total < 100_000 ? (
+                    <Money value={mo.total} />
+                  ) : (
+                    <>
+                      {formatMoneyCompact(mo.total, locale, t.reports.compactThousandSuffix, t.reports.compactMillionSuffix)}
+                      {sign && <span className="ml-[0.12em] text-[0.7em] opacity-70">{sign}</span>}
+                    </>
+                  )
+                ) : (
+                  ""
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 flex items-center gap-1.5 text-caption-airbnb">
+          <span>{t.reports.legendLess}</span>
+          <span className="size-3.5 rounded bg-muted" />
+          <span className="size-3.5 rounded bg-primary/30" />
+          <span className="size-3.5 rounded bg-primary/60" />
+          <span className="size-3.5 rounded bg-primary" />
+          <span>{t.reports.legendMore}</span>
+        </div>
+      </SpringCard>
+
+      {data.weakestMonth !== null && (
+        <Insight>
+          {t.reports.weakestDayLabel}: {t.readings.months[data.weakestMonth]} ·{" "}
+          <Money value={months[data.weakestMonth].total} />
+        </Insight>
+      )}
+      {data.overloadedMonth !== null && (
+        <Insight tone="good">
+          {t.reports.strongestDayLabel}: {t.readings.months[data.overloadedMonth]} ·{" "}
+          <Money value={months[data.overloadedMonth].total} /> ({data.monthOverloadRatio}
+          {t.reports.overloadMonthSuffix})
         </Insight>
       )}
     </div>

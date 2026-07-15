@@ -571,25 +571,38 @@ export default function OperatorCardPage() {
                               {item.shift.open ? t.operatorApp.workTime.shiftInProgress : <Money value={item.shift.accrued!} />}
                             </span>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span className="tabular-nums text-caption-airbnb">
-                              {item.shift.open
-                                ? `${formatTime(item.shift.startAt)} – …`
-                                : `${formatTime(item.shift.startAt)}–${formatTime(item.shift.endAt!)} · ${formatDuration(item.shift.minutes!)}`}
-                            </span>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="tabular-nums text-caption-airbnb">
+                                {item.shift.open
+                                  ? `${formatTime(item.shift.startAt)} – …`
+                                  : `${formatTime(item.shift.startAt)}–${formatTime(item.shift.endAt!)}`}
+                              </span>
+                              {!item.shift.open && (
+                                <span className="tabular-nums text-caption-airbnb">
+                                  {formatDuration(item.shift.minutes!)}
+                                </span>
+                              )}
+                            </div>
                             {(item.shift.advanceAmount > 0 || item.shift.bonusAmount > 0) && (
-                              <span className="flex gap-2 text-xs tabular-nums">
+                              <div className="flex flex-col items-end gap-0.5 text-xs tabular-nums">
                                 {item.shift.advanceAmount > 0 && (
                                   <span className="text-warning">
-                                    {t.operatorApp.workTime.advanceInline} <Money value={item.shift.advanceAmount} />
+                                    {t.operatorApp.workTime.advanceInline}{" "}
+                                    <span className="font-bold">
+                                      <Money value={item.shift.advanceAmount} />
+                                    </span>
                                   </span>
                                 )}
                                 {item.shift.bonusAmount > 0 && (
                                   <span className="text-success">
-                                    {t.operatorApp.workTime.bonusInline} <Money value={item.shift.bonusAmount} />
+                                    {t.operatorApp.workTime.bonusInline}{" "}
+                                    <span className="font-bold">
+                                      <Money value={item.shift.bonusAmount} />
+                                    </span>
                                   </span>
                                 )}
-                              </span>
+                              </div>
                             )}
                           </div>
                         </div>

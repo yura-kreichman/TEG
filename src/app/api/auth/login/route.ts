@@ -9,15 +9,17 @@ import {
   verifyPin,
 } from "@/lib/auth";
 import { setAccentCookie } from "@/lib/accent";
+import { setBgStyleCookie } from "@/lib/bg-style";
 
 async function syncAccentCookie(tenantId: string | null) {
   if (!tenantId) return;
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
-    select: { accentScheme: true },
+    select: { accentScheme: true, bgStyle: true },
   });
   if (tenant) {
     await setAccentCookie(tenant.accentScheme);
+    await setBgStyleCookie(tenant.bgStyle);
   }
 }
 

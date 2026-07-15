@@ -22,12 +22,24 @@ export async function GET() {
       colorTag: true,
       allZonesAccess: true,
       allowedZones: { select: { id: true, name: true } },
+      timeTrackingMode: true,
       createdAt: true,
     },
     orderBy: { sortOrder: "asc" },
   });
 
-  return NextResponse.json({ operators });
+  // Для мигающего значка "открыта смена" в авто-режиме (docs/spec/05-work-time.md)
+  // — один запрос на весь список вместо N+1 (getOpenShift() из lib/work-time
+  // рассчитан на одного оператора, здесь список).
+  const openShifts = await prisma.shift.findMany({
+    where: { operatorId: { in: operators.map((o) => o.id) }, isOpen: true },
+    select: { operatorId: true },
+  });
+  const openShiftOperatorIds = new Set(openShifts.map((s) => s.operatorId));
+
+  return NextResponse.json({
+    operators: operators.map((o) => ({ ...o, hasOpenShift: openShiftOperatorIds.has(o.id) })),
+  });
 }
 
 export async function POST(request: Request) {

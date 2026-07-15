@@ -26,10 +26,6 @@ async function loadVapidConfig(): Promise<VapidConfig | null> {
   return { publicKey, privateKey, subject };
 }
 
-export async function isPushConfigured(): Promise<boolean> {
-  return (await loadVapidConfig()) !== null;
-}
-
 export async function getVapidPublicKey(): Promise<string | null> {
   const config = await loadVapidConfig();
   return config?.publicKey ?? null;

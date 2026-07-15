@@ -36,3 +36,27 @@ export function formatMoney(value: number, locale: Locale = "ru"): string {
     maximumFractionDigits: 2,
   }).format(rounded);
 }
+
+// Сокращённая форма для тесных ячеек (напр. тепловая карта отчётов, docs/spec
+// не регламентирует — локальное решение для компактных виджетов, не общий
+// денежный формат): тысячи/миллионы с одной цифрой после запятой, суффиксы —
+// строки i18n от вызывающей стороны (спека запрещает захардкоженные строки UI
+// вне /lang/*.json, поэтому не хардкодим "к"/"М" здесь).
+export function formatMoneyCompact(
+  value: number,
+  locale: Locale,
+  thousandSuffix: string,
+  millionSuffix: string
+): string {
+  const abs = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+  const unit = abs >= 1_000_000 ? 1_000_000 : 1_000;
+  const suffix = abs >= 1_000_000 ? millionSuffix : thousandSuffix;
+  const scaled = Math.round((abs / unit) * 10) / 10;
+  const hasFraction = scaled % 1 !== 0;
+  const formatted = new Intl.NumberFormat(LOCALE_TO_INTL[locale], {
+    minimumFractionDigits: hasFraction ? 1 : 0,
+    maximumFractionDigits: 1,
+  }).format(scaled);
+  return sign + formatted + suffix;
+}
