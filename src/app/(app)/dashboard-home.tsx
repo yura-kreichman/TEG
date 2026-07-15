@@ -242,11 +242,11 @@ export function OwnerDashboardCard({
         {/* Последние итоги */}
         {summary?.hasData && (
           <SpringCard hover={false} className="flex flex-col gap-1">
-            <div className="flex items-baseline justify-between">
-              <p className="text-section-title">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+              <p className="text-section-title whitespace-nowrap">
                 {t.home.latestResultsLabel} · {formatRelativeDay(summary.date!, summary.isToday!, t)}
               </p>
-              <Link href="/money" className="flex items-center gap-0.5 text-caption-airbnb font-semibold text-primary">
+              <Link href="/money" className="flex shrink-0 items-center gap-0.5 text-caption-airbnb font-semibold text-primary">
                 {t.home.toMoneyLink}
                 <ChevronRight className="size-3.5" />
               </Link>
