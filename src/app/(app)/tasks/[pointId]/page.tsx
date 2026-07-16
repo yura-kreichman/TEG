@@ -101,6 +101,11 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
   const [tasks, setTasks] = useState<TaskInfo[]>([]);
   const [operators, setOperators] = useState<OperatorOption[]>([]);
   const [meId, setMeId] = useState<string | null>(null);
+  // Канбан из трёх колонок-вкладок (запрос пользователя 2026-07-17: "исчез
+  // Канбан, процессы выполнения задач — это неправильно") — владелец должен
+  // видеть, какие задачи ещё не начаты, какие в работе, какие сделаны, не
+  // только "в работе/не в работе" одним плоским списком.
+  const [curSeg, setCurSeg] = useState<TaskStatus>("todo");
 
   const [editorOpen, setEditorOpen] = useState(false);
   const { saved: taskSaved, pulse: taskPulse } = useSavePulse();
@@ -227,6 +232,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
       body: JSON.stringify({ status }),
     });
     setActionsFor(null);
+    setCurSeg(status);
     await loadAll();
   }
 
@@ -247,10 +253,12 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
     doing: Wrench,
     done: CheckCircle2,
   };
-  // Единый список, без вкладок (решение пользователя 2026-07-16, тот же
-  // паттерн, что у Оператора на Главной): "В процессе" — зелёная точка,
-  // "Выполнено" вообще не показывается — задача просто исчезает из списка.
-  const visibleTasks = tasks.filter((task) => task.status !== "done");
+  const SEG_LABEL: Record<TaskStatus, string> = {
+    todo: t.tasks.statusTodo,
+    doing: t.tasks.statusDoing,
+    done: t.tasks.statusDone,
+  };
+  const visibleTasks = tasks.filter((task) => task.status === curSeg);
 
   return (
     <OwnerShell>
@@ -303,6 +311,29 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
             <p className="mb-4 text-caption-airbnb">{pointName}</p>
           )}
 
+          <div className="mb-4 flex gap-1.5">
+            {TASK_STATUSES.map((status) => {
+              const count = tasks.filter((task) => task.status === status).length;
+              const active = curSeg === status;
+              return (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setCurSeg(status)}
+                  className={cn(
+                    "flex flex-1 flex-col items-center gap-0.5 rounded-control border py-2 text-xs font-semibold transition-shadow",
+                    active
+                      ? "border-primary bg-primary/10 text-primary shadow-[inset_0_1px_3px_rgba(0,0,0,.12)]"
+                      : "border-border bg-card text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,.05),inset_0_1px_0_rgba(255,255,255,.5)]"
+                  )}
+                >
+                  <span className="text-[0.9375rem] font-extrabold">{count}</span>
+                  {SEG_LABEL[status]}
+                </button>
+              );
+            })}
+          </div>
+
           {visibleTasks.length === 0 ? (
             <p className="rounded-block border-[1.5px] border-dashed border-border py-8 text-center text-body-airbnb text-muted-foreground">
               {t.tasks.emptyColumn}
@@ -313,19 +344,16 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
                 <StaggerItem key={task.id}>
                   <SpringCard animate={false}>
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 grow items-start gap-2.5">
-                        <span
+                      <div className="min-w-0 grow">
+                        <div
                           className={cn(
-                            "mt-0.5 flex size-5.5 shrink-0 items-center justify-center rounded-full border-2",
-                            task.status === "doing" ? "border-success bg-success/15" : "border-muted-foreground/40"
+                            "text-card-title",
+                            task.status === "done" && "text-muted-foreground line-through"
                           )}
                         >
-                          {task.status === "doing" && <span className="size-2 rounded-full bg-success" />}
-                        </span>
-                        <div className="min-w-0">
-                          <div className="text-card-title">{task.title}</div>
-                          {task.note && <p className="mt-1 text-caption-airbnb">{task.note}</p>}
+                          {task.title}
                         </div>
+                        {task.note && <p className="mt-1 text-caption-airbnb">{task.note}</p>}
                       </div>
                       <button
                         type="button"

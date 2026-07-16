@@ -90,7 +90,8 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
   const t = useI18n();
   const { scale } = useTextScale();
   const [moreOpen, setMoreOpen] = useState(false);
-  const [pendingTasksCount, setPendingTasksCount] = useState(0);
+  const [pendingTodoCount, setPendingTodoCount] = useState(0);
+  const [pendingDoingCount, setPendingDoingCount] = useState(0);
 
   // Обновляем при каждой навигации — самый дешёвый способ не держать
   // отдельный стор ради одного badge-числа (список пунктов бара маленький,
@@ -99,7 +100,10 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
     fetch("/api/tasks/pending-count")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data) setPendingTasksCount(data.count ?? 0);
+        if (data) {
+          setPendingTodoCount(data.todoCount ?? 0);
+          setPendingDoingCount(data.doingCount ?? 0);
+        }
       });
   }, [pathname]);
 
@@ -111,8 +115,17 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
   // Badge на "Ещё" — только если что-то реально требующее внимания лежит
   // ИМЕННО внутри "Ещё" сейчас (docs/spec/03-design-system.md): если "Задачи"
   // поместились в сам бар, badge не показываем — там уже видно активную
-  // вкладку без надобности через "Ещё".
-  const moreBadge = overflowItems.some((item) => item.id === "tasks") && pendingTasksCount > 0;
+  // вкладку без надобности через "Ещё". Цвет (запрос пользователя
+  // 2026-07-17): красная — есть новая (todo) задача, зелёная — есть только
+  // "в работе" (doing), нет вовсе — все задачи выполнены.
+  const tasksInMore = overflowItems.some((item) => item.id === "tasks");
+  const moreBadge: "red" | "green" | null = !tasksInMore
+    ? null
+    : pendingTodoCount > 0
+      ? "red"
+      : pendingDoingCount > 0
+        ? "green"
+        : null;
 
   const sidebarLink = (item: NavItemConfig) => {
     const Icon = item.icon;
@@ -181,8 +194,13 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
               >
                 <Icon className="size-4 shrink-0" />
                 {item.label(t)}
-                {item.id === "tasks" && pendingTasksCount > 0 && (
-                  <span className="ml-auto size-2 shrink-0 rounded-full bg-destructive" />
+                {item.id === "tasks" && moreBadge && (
+                  <span
+                    className={cn(
+                      "ml-auto size-2 shrink-0 rounded-full",
+                      moreBadge === "red" ? "bg-destructive" : "bg-success"
+                    )}
+                  />
                 )}
               </Link>
             );

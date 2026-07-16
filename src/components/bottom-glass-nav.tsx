@@ -30,7 +30,7 @@ export function BottomGlassNav({
   items: BottomGlassNavItem[];
   moreLabel: string;
   moreActive: boolean;
-  moreBadge: boolean;
+  moreBadge: "red" | "green" | null;
   onMoreClick: () => void;
 }) {
   return (
@@ -65,7 +65,10 @@ export function BottomGlassNav({
             <MoreHorizontal className="size-5" />
             {moreBadge && (
               <span
-                className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-destructive"
+                className={cn(
+                  "absolute -right-0.5 -top-0.5 size-2 rounded-full",
+                  moreBadge === "red" ? "bg-destructive" : "bg-success"
+                )}
                 style={{ boxShadow: "0 0 0 2px var(--nav-glass-bg)" }}
               />
             )}
