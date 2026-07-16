@@ -186,17 +186,17 @@ export function formatZoneSummaryTelegram(
         const bits: string[] = [];
         if (settings.showCash) bits.push(`💵 ${st.cashOnly}: <b>${formatMoney(actualCash, locale)}</b>`);
         if (settings.showCash && settings.showCalc) bits.push(cmp);
-        if (settings.showCalc) bits.push(`🧮 ${st.calculated}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
+        if (settings.showCalc) bits.push(`🧮 ${st.calculatedCompact}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
         parts.push(bits.join("  "));
       }
       if (settings.showDiff || settings.showReturns) {
         const bits: string[] = [];
         if (settings.showDiff) {
           const sign = data.difference > 0 ? "+" : "";
-          bits.push(`${diffEmoji(data.difference)} ${st.difference}: <b>${sign}${formatMoney(data.difference, locale)}</b>`);
+          bits.push(`${diffEmoji(data.difference)} ${st.differenceCompact}: <b>${sign}${formatMoney(data.difference, locale)}</b>`);
         }
-        if (settings.showDiff && settings.showReturns) bits.push("—");
-        if (settings.showReturns) bits.push(`🔄 ${st.returns}: <b>${data.returnsCount}</b>`);
+        if (settings.showDiff && settings.showReturns) bits.push("·");
+        if (settings.showReturns) bits.push(`🔄 ${st.returnsCompact}: <b>${data.returnsCount}</b>`);
         parts.push(bits.join("  "));
       }
     }
@@ -291,7 +291,7 @@ export function formatDailyCashSummaryTelegram(
     // везде в compact-режиме (запрос пользователя 2026-07-14: раньше был
     // отдельной строкой в самом низу).
     const totalBits = [`🟰 ${st.totalCompact}: <b>${formatMoney(total, locale)}</b>`];
-    if (settings.showCashOnHand) totalBits.push(`📦 ${st.cashOnHand}: ${formatMoney(data.cashOnHand, locale)}`);
+    if (settings.showCashOnHand) totalBits.push(`📦 ${st.cashOnHandCompact}: ${formatMoney(data.cashOnHand, locale)}`);
     parts.push(totalBits.join(" · "));
 
     return parts.join("\n");
@@ -349,7 +349,7 @@ export function formatShiftCloseSummaryTelegram(
     if (settings.showPeriod) parts.push(`🕐 ${formatLocalTime(data.startAt, timezone)}–${formatLocalTime(data.endAt, timezone)}`);
     if (settings.showHours) parts.push(`⏱ ${formatDuration(data.minutes)}`);
     if (settings.showAdvance && data.advanceAmount > 0) parts.push(`💸 ${st.advance}: ${formatMoney(data.advanceAmount, locale)}`);
-    if (settings.showBonus && data.bonusAmount > 0) parts.push(`🏆 ${st.bonus}: ${formatMoney(data.bonusAmount, locale)}`);
+    if (settings.showBonus && data.bonusAmount > 0) parts.push(`🏆 ${st.bonusCompact}: ${formatMoney(data.bonusAmount, locale)}`);
     if (settings.showTotal) parts.push(`💰 ${st.toPayOutCompact}: <b>${formatMoney(data.toPayOut, locale)}</b>`);
 
     const header = `<b>${operatorLabel} · ${formatDate(data.startAt, timezone)}</b>`;
