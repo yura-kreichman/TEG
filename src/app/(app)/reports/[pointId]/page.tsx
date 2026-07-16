@@ -320,9 +320,7 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
 }
 
 function Delta({ percent, t }: { percent: number | null; t: ReturnType<typeof useI18n> }) {
-  if (percent === null) {
-    return <span className="text-caption-airbnb text-muted-foreground">{t.reports.noPreviousPeriodData}</span>;
-  }
+  if (percent === null) return null;
   const up = percent >= 0;
   return (
     <span
