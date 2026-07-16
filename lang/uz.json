@@ -1232,6 +1232,7 @@
   },
   "summaryText": {
     "cash": "Naqd pul",
+    "cashCompact": "Naqd",
     "mobile": "Naqdsiz",
     "expenses": "Xarajatlar",
     "advance": "Avans",
@@ -1250,7 +1251,7 @@
     "totalCompact": "Jami",
     "totalFull": "Kun uchun jami",
     "cashOnHand": "Nuqtadagi naqd pul qoldig'i",
-    "cashOnHandCompact": "Qoldiq",
+    "cashOnHandCompact": "Qold.",
     "period": "Davr",
     "hoursWorked": "Ishlangan",
     "operatorLabel": "Xodim",

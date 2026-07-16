@@ -1232,6 +1232,7 @@
   },
   "summaryText": {
     "cash": "Наличные",
+    "cashCompact": "Налич.",
     "mobile": "Безнал",
     "expenses": "Расходы",
     "advance": "Аванс",
@@ -1250,7 +1251,7 @@
     "totalCompact": "Итог",
     "totalFull": "Итого за день",
     "cashOnHand": "Остаток на точке",
-    "cashOnHandCompact": "Остаток",
+    "cashOnHandCompact": "Остат.",
     "period": "Период",
     "hoursWorked": "Отработано",
     "operatorLabel": "Сотрудник",

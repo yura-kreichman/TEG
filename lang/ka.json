@@ -1232,6 +1232,7 @@
   },
   "summaryText": {
     "cash": "ნაღდი",
+    "cashCompact": "ნაღდ.",
     "mobile": "უნაღდო",
     "expenses": "ხარჯები",
     "advance": "ავანსი",
@@ -1250,7 +1251,7 @@
     "totalCompact": "სულ",
     "totalFull": "დღის ჯამი",
     "cashOnHand": "ნაღდი ფული წერტილში",
-    "cashOnHandCompact": "ნაშთი",
+    "cashOnHandCompact": "ნაშთ.",
     "period": "პერიოდი",
     "hoursWorked": "ნამუშევარი",
     "operatorLabel": "თანამშრომელი",

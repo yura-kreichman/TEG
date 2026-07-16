@@ -296,7 +296,7 @@ export function formatDailyCashSummaryTelegram(
 
     if (settings.showCash) {
       parts.push(
-        `💵 ${st.cash}: <b>${formatMoney(data.cashAmount, locale)}</b>  📱 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`
+        `💵 ${st.cashCompact}: <b>${formatMoney(data.cashAmount, locale)}</b>  📱 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`
       );
     }
     if (settings.showExpenses) parts.push(`🧾 ${st.expenses}: ${formatMoney(data.expenses, locale)}`);

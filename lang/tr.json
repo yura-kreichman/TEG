@@ -1232,6 +1232,7 @@
   },
   "summaryText": {
     "cash": "Nakit",
+    "cashCompact": "Nakit",
     "mobile": "Kartlı",
     "expenses": "Giderler",
     "advance": "Avans",

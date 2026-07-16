@@ -1232,6 +1232,7 @@
   },
   "summaryText": {
     "cash": "Готівка",
+    "cashCompact": "Гот.",
     "mobile": "Безнал",
     "expenses": "Витрати",
     "advance": "Аванс",
@@ -1250,7 +1251,7 @@
     "totalCompact": "Підсумок",
     "totalFull": "Підсумок за день",
     "cashOnHand": "Залишок на точці",
-    "cashOnHandCompact": "Залишок",
+    "cashOnHandCompact": "Залиш.",
     "period": "Період",
     "hoursWorked": "Відпрацьовано",
     "operatorLabel": "Співробітник",

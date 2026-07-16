@@ -1232,6 +1232,7 @@
   },
   "summaryText": {
     "cash": "Накталай",
+    "cashCompact": "Накт.",
     "mobile": "Накталай эмес",
     "expenses": "Чыгашалар",
     "advance": "Аванс",
@@ -1250,7 +1251,7 @@
     "totalCompact": "Жыйынтык",
     "totalFull": "Күн боюнча жыйынтык",
     "cashOnHand": "Пункттагы накталай калдык",
-    "cashOnHandCompact": "Калдык",
+    "cashOnHandCompact": "Калд.",
     "period": "Мезгил",
     "hoursWorked": "Иштелди",
     "operatorLabel": "Кызматкер",

@@ -1232,6 +1232,7 @@
   },
   "summaryText": {
     "cash": "Наяўныя",
+    "cashCompact": "Наяўн.",
     "mobile": "Безнаяўныя",
     "expenses": "Расходы",
     "advance": "Аванс",
@@ -1250,7 +1251,7 @@
     "totalCompact": "Вынік",
     "totalFull": "Вынік за дзень",
     "cashOnHand": "Астатак на кропцы",
-    "cashOnHandCompact": "Астатак",
+    "cashOnHandCompact": "Астат.",
     "period": "Перыяд",
     "hoursWorked": "Адпрацавана",
     "operatorLabel": "Супрацоўнік",

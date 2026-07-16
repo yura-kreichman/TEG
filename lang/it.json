@@ -1232,6 +1232,7 @@
   },
   "summaryText": {
     "cash": "Contanti",
+    "cashCompact": "Cont.",
     "mobile": "Non in contanti",
     "expenses": "Spese",
     "advance": "Anticipo",
@@ -1250,7 +1251,7 @@
     "totalCompact": "Totale",
     "totalFull": "Totale del giorno",
     "cashOnHand": "Contanti in cassa nel punto",
-    "cashOnHandCompact": "Contanti",
+    "cashOnHandCompact": "Saldo",
     "period": "Periodo",
     "hoursWorked": "Ore lavorate",
     "operatorLabel": "Dipendente",

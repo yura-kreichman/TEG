@@ -1232,6 +1232,7 @@
   },
   "summaryText": {
     "cash": "Gotówka",
+    "cashCompact": "Got.",
     "mobile": "Bezgotówkowo",
     "expenses": "Wydatki",
     "advance": "Zaliczka",
@@ -1250,7 +1251,7 @@
     "totalCompact": "Razem",
     "totalFull": "Razem za dzień",
     "cashOnHand": "Gotówka w punkcie",
-    "cashOnHandCompact": "Gotówka",
+    "cashOnHandCompact": "Saldo",
     "period": "Okres",
     "hoursWorked": "Przepracowano",
     "operatorLabel": "Pracownik",

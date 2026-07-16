@@ -1232,6 +1232,7 @@
   },
   "summaryText": {
     "cash": "Нақдина",
+    "cashCompact": "Нақд.",
     "mobile": "Ғайринақдӣ",
     "expenses": "Хароҷот",
     "advance": "Пешпардохт",
@@ -1250,7 +1251,7 @@
     "totalCompact": "Ҷамъбаст",
     "totalFull": "Ҷамъбасти рӯз",
     "cashOnHand": "Мондаи нақдина дар нуқта",
-    "cashOnHandCompact": "Монда",
+    "cashOnHandCompact": "Монд.",
     "period": "Давра",
     "hoursWorked": "Кор карда шуд",
     "operatorLabel": "Корманд",

@@ -1232,6 +1232,7 @@
   },
   "summaryText": {
     "cash": "Қолма-қол",
+    "cashCompact": "Қолма-қол",
     "mobile": "Қолма-қолсыз",
     "expenses": "Шығыстар",
     "advance": "Аванс",
@@ -1250,7 +1251,7 @@
     "totalCompact": "Қорытынды",
     "totalFull": "Күн бойынша қорытынды",
     "cashOnHand": "Нүктедегі қолма-қол қалдық",
-    "cashOnHandCompact": "Қалдық",
+    "cashOnHandCompact": "Қалд.",
     "period": "Кезең",
     "hoursWorked": "Істелген",
     "operatorLabel": "Қызметкер",
