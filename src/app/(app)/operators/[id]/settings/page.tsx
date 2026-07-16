@@ -20,6 +20,8 @@ import {
   PowerOff,
   Trash2,
   AlarmClockOff,
+  PenLine,
+  Fingerprint,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -483,12 +485,13 @@ export default function OperatorSettingsPage() {
                   disabled={savingTimeTrackingMode}
                   onClick={() => setTimeTrackingMode("manual")}
                   className={cn(
-                    "px-3 py-1.5 text-caption-airbnb font-semibold transition-all disabled:opacity-50",
+                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-all disabled:opacity-50",
                     profile.timeTrackingMode === "manual"
                       ? "bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary),black_14%)] text-primary-foreground shadow-[inset_0_1px_2px_rgba(0,0,0,.18)]"
                       : "bg-transparent"
                   )}
                 >
+                  <PenLine className="size-3.5 shrink-0" />
                   {t.operatorApp.workTime.timeTrackingModeManual}
                 </button>
                 <button
@@ -496,12 +499,13 @@ export default function OperatorSettingsPage() {
                   disabled={savingTimeTrackingMode}
                   onClick={() => setTimeTrackingMode("auto")}
                   className={cn(
-                    "px-3 py-1.5 text-caption-airbnb font-semibold transition-all disabled:opacity-50",
+                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-all disabled:opacity-50",
                     profile.timeTrackingMode === "auto"
                       ? "bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary),black_14%)] text-primary-foreground shadow-[inset_0_1px_2px_rgba(0,0,0,.18)]"
                       : "bg-transparent"
                   )}
                 >
+                  <Fingerprint className="size-3.5 shrink-0" />
                   {t.operatorApp.workTime.timeTrackingModeAuto}
                 </button>
               </div>

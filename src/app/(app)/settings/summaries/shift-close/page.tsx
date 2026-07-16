@@ -69,7 +69,14 @@ export default function ShiftCloseSummaryEditorPage() {
   }
 
   const previewText = useMemo(
-    () => formatShiftCloseSummaryTelegram(buildPreviewData(previewContext, t), settings, locale, previewContext?.timezone ?? "UTC"),
+    () =>
+      formatShiftCloseSummaryTelegram(
+        buildPreviewData(previewContext, t),
+        settings,
+        locale,
+        previewContext?.timezone ?? "UTC",
+        t.summaryText
+      ),
     [settings, previewContext, t, locale]
   );
 

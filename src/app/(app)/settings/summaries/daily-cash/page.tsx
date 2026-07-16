@@ -86,7 +86,14 @@ export default function DailyCashSummaryEditorPage() {
   }
 
   const previewText = useMemo(
-    () => formatDailyCashSummaryTelegram(buildPreviewData(previewContext, t), settings, locale, previewContext?.timezone ?? "UTC"),
+    () =>
+      formatDailyCashSummaryTelegram(
+        buildPreviewData(previewContext, t),
+        settings,
+        locale,
+        previewContext?.timezone ?? "UTC",
+        t.summaryText
+      ),
     [settings, previewContext, t, locale]
   );
 

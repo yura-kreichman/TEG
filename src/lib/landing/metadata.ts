@@ -32,16 +32,15 @@ export function buildLandingMetadata(
     // со сниппетом в выдаче (решение пользователя 2026-07-14: "добавь
     // логотип компании в Google Preview и других поисковиков").
     icons: data.tenant.logoUrl ? { icon: data.tenant.logoUrl } : undefined,
-    // Коды подтверждения владения сайтом — Next.js сам рендерит
-    // <meta name="google-site-verification"/"yandex-verification" content="...">
-    // (решение пользователя 2026-07-14: домен my.rentos365.app тенанту не
+    // Код подтверждения владения сайтом — Next.js сам рендерит
+    // <meta name="google-site-verification" content="..."> (решение
+    // пользователя 2026-07-14: домен my.rentos365.app тенанту не
     // принадлежит, DNS-верификация недоступна, но верификация ПО URL через
     // HTML-тег в <head> работает и без владения доменом целиком — тот же
-    // паттерн, что у Wix/Squarespace/Shopify).
-    verification:
-      data.googleSiteVerification || data.yandexVerification
-        ? { google: data.googleSiteVerification ?? undefined, yandex: data.yandexVerification ?? undefined }
-        : undefined,
+    // паттерн, что у Wix/Squarespace/Shopify). Яндекс.Вебмастер убран
+    // 2026-07-16 — не поддерживает верификацию по HTML-тегу для сайта в
+    // подпапке, только Google Search Console.
+    verification: data.googleSiteVerification ? { google: data.googleSiteVerification } : undefined,
     openGraph: {
       type: "website",
       title,

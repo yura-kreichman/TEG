@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CURRENCIES, type CurrencyCode } from "@/lib/currency";
 import { useI18n } from "@/components/i18n-provider";
@@ -9,7 +10,9 @@ import { useI18n } from "@/components/i18n-provider";
 // "Настройка") — тот же приём выбора, что у пресетов акцента (AccentPicker):
 // сразу видимая сетка кнопок, не скрытая в выпадающем списке, рамка
 // акцентным цветом у выбранного тайла. Первый тайл — "Без валюты" (null,
-// прочерк вместо знака) — значение по умолчанию.
+// прочерк вместо знака) — значение по умолчанию. Галочка на выбранном —
+// тот же бейдж, что у AccentPicker/BgStylePicker (запрос пользователя
+// 2026-07-16, "для единообразия интерфейса"), не свой собственный вариант.
 function CurrencyTile({
   sign,
   code,
@@ -30,10 +33,15 @@ function CurrencyTile({
       onClick={onClick}
       aria-pressed={selected}
       className={cn(
-        "flex size-18 shrink-0 flex-col items-center justify-center gap-0.5 rounded-control border p-1 text-center transition-colors",
+        "relative flex size-18 shrink-0 flex-col items-center justify-center gap-0.5 rounded-control border p-1 text-center transition-colors",
         selected ? "border-primary bg-primary/5" : "border-border hover:border-foreground/30"
       )}
     >
+      {selected && (
+        <span className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-background">
+          <Check className="size-3" />
+        </span>
+      )}
       <span className="text-[1.5rem] font-semibold leading-none text-foreground">{sign}</span>
       <span className="text-[0.6875rem] font-medium leading-tight text-muted-foreground">{code}</span>
     </button>

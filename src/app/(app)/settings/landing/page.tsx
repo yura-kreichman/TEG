@@ -55,16 +55,13 @@ const ABOUT_GOOD = 300;
 // Показывается вместо чеклиста, когда он полностью пройден (решение
 // пользователя 2026-07-14) — просто справочный список названий площадок,
 // куда ещё стоит добавить лендинг (карты/локальный поиск), БЕЗ ссылок —
-// не интеграция, докс: "Никаких внешних API в MVP". Search Console/Яндекс
-// Вебмастер снова в списке (сначала были убраны в тот же день — требуют
-// подтверждения владения URL, а поля для кода подтверждения не было; после
-// добавления googleSiteVerification/yandexVerification ниже верификация
-// реально проходима, площадки вернули).
+// не интеграция, докс: "Никаких внешних API в MVP". Яндекс.Бизнес/Вебмастер
+// убраны из списка (запрос пользователя 2026-07-16, "убери любое упоминание
+// яндекса") — Вебмастер к тому же не поддерживает верификацию по HTML-тегу
+// для сайта в подпапке (/s/{slug} на общем домене), только Google Search Console.
 const SEO_RECOMMENDATION_NAMES = [
   "seoRecommendationGoogleBusiness",
   "seoRecommendationGoogleSearchConsole",
-  "seoRecommendationYandexBusiness",
-  "seoRecommendationYandexWebmaster",
   "seoRecommendationSocialLinks",
 ] as const;
 
@@ -154,7 +151,6 @@ interface LandingData {
   metaTitleOverride: string | null;
   metaDescriptionOverride: string | null;
   googleSiteVerification: string | null;
-  yandexVerification: string | null;
   slug: string | null;
   tenantName: string;
   galleryPhotos: { id: string; url: string }[];
@@ -277,7 +273,6 @@ export default function LandingSettingsPage() {
           metaTitleOverride: landing.metaTitleOverride,
           metaDescriptionOverride: landing.metaDescriptionOverride,
           googleSiteVerification: landing.googleSiteVerification,
-          yandexVerification: landing.yandexVerification,
         }),
       });
       const data = await res.json();
@@ -864,15 +859,6 @@ export default function LandingSettingsPage() {
                     value={landing.googleSiteVerification ?? ""}
                     onChange={(e) => update("googleSiteVerification", e.target.value)}
                     onBlur={(e) => update("googleSiteVerification", extractVerificationCode(e.target.value) || null)}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="yandexVerification">{t.landing.yandexVerificationLabel}</Label>
-                  <Input
-                    id="yandexVerification"
-                    value={landing.yandexVerification ?? ""}
-                    onChange={(e) => update("yandexVerification", e.target.value)}
-                    onBlur={(e) => update("yandexVerification", extractVerificationCode(e.target.value) || null)}
                   />
                 </div>
               </SpringCard>

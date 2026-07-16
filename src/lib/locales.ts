@@ -6,26 +6,30 @@
 // next/headers... in the Pages Router" — a red herring path in the error,
 // the real cause was the client/server import boundary). This file has zero
 // server-only imports, safe for both sides.
-export type Locale = "ru" | "en" | "uk" | "uz" | "kk" | "ro" | "tg" | "ky" | "be" | "hy" | "az" | "ka" | "tr" | "pl";
+export type Locale = "ru" | "en" | "uk" | "ro" | "be" | "pl" | "it" | "uz" | "kk" | "tg" | "ky" | "hy" | "az" | "ka" | "tr";
 
-// Порядок — как задал пользователь 2026-07-12 (ru/en/uk уже были, ro тоже;
-// остальные 10 добавлены разом). Нативные названия — то, что видит сам
-// носитель языка в переключателе, не английские названия языков.
+// Порядок — сначала европейские языки (включая русский), потом остальные
+// (запрос пользователя 2026-07-16: "Сначала Европейские, включая русский,
+// потом все остальные"; до этого порядок был как их добавляли — ru/en/uk
+// сразу, ro тоже, остальные 10 разом 2026-07-12). it добавлен тем же днём.
+// Нативные названия — то, что видит сам носитель языка в переключателе, не
+// английские названия языков.
 export const LOCALE_NAMES: Record<Locale, string> = {
   ru: "Русский",
   en: "English",
   uk: "Українська",
+  ro: "Română",
+  be: "Беларуская",
+  pl: "Polski",
+  it: "Italiano",
   uz: "Oʻzbekcha",
   kk: "Қазақша",
-  ro: "Română",
   tg: "Тоҷикӣ",
   ky: "Кыргызча",
-  be: "Беларуская",
   hy: "Հայերեն",
   az: "Azərbaycanca",
   ka: "ქართული",
   tr: "Türkçe",
-  pl: "Polski",
 };
 
 // Флаг страны, где язык основной/официальный — не претензия на "единственно
@@ -36,17 +40,18 @@ export const LOCALE_FLAGS: Record<Locale, string> = {
   ru: "🇷🇺",
   en: "🇬🇧",
   uk: "🇺🇦",
+  ro: "🇷🇴",
+  be: "🇧🇾",
+  pl: "🇵🇱",
+  it: "🇮🇹",
   uz: "🇺🇿",
   kk: "🇰🇿",
-  ro: "🇷🇴",
   tg: "🇹🇯",
   ky: "🇰🇬",
-  be: "🇧🇾",
   hy: "🇦🇲",
   az: "🇦🇿",
   ka: "🇬🇪",
   tr: "🇹🇷",
-  pl: "🇵🇱",
 };
 
 export const ALL_LOCALES = Object.keys(LOCALE_NAMES) as Locale[];
@@ -94,17 +99,18 @@ export const LOCALE_TIMEZONES: Record<Locale, string[]> = {
   ],
   en: ["Europe/London"],
   uk: ["Europe/Kyiv", "Europe/Kiev", "Europe/Simferopol", "Europe/Uzhgorod", "Europe/Zaporozhye"],
+  ro: ["Europe/Bucharest", "Europe/Chisinau"],
+  be: ["Europe/Minsk"],
+  pl: ["Europe/Warsaw"],
+  it: ["Europe/Rome"],
   uz: ["Asia/Tashkent", "Asia/Samarkand"],
   kk: ["Asia/Almaty", "Asia/Aqtobe", "Asia/Aqtau", "Asia/Atyrau", "Asia/Oral", "Asia/Qyzylorda", "Asia/Qostanay"],
-  ro: ["Europe/Bucharest", "Europe/Chisinau"],
   tg: ["Asia/Dushanbe"],
   ky: ["Asia/Bishkek"],
-  be: ["Europe/Minsk"],
   hy: ["Asia/Yerevan"],
   az: ["Asia/Baku"],
   ka: ["Asia/Tbilisi"],
   tr: ["Europe/Istanbul", "Asia/Istanbul"],
-  pl: ["Europe/Warsaw"],
 };
 
 /** Плоский дедуплицированный список зон-кандидатов, отфильтрованный по тому, что реально знает текущий рантайм. */

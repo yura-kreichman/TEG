@@ -3,6 +3,7 @@ import { editChatMessage, sendChatMessage } from "@/lib/telegram-bot";
 import { parseEmailAddresses, sendEmail } from "./email-channel";
 import { formatMoney } from "@/lib/format";
 import { isLocale, type Locale } from "@/lib/locales";
+import { getDictionary, type Dictionary } from "@/lib/i18n";
 import {
   formatDailyCashSummaryEmail,
   formatInstructionAckEmail,
@@ -47,20 +48,24 @@ async function getEnabledChannels(tenantId: string) {
   });
 }
 
-// Имя тенанта (для email), локаль (для formatMoney, docs/spec/03-design-
-// system.md "Числа и деньги") и часовой пояс (для дат/времени в тексте
-// сводок — реальный баг, найден 2026-07-15: время смены показывалось в
-// сыром UTC сервера, а не в поясе тенанта, см. format-shared.ts) — всё
-// нужно почти в каждой из функций ниже, один запрос вместо нескольких.
-async function getTenantInfo(tenantId: string): Promise<{ name: string; locale: Locale; timezone: string }> {
+// Имя тенанта (для email), локаль (для formatMoney и для словаря ярлыков —
+// запрос пользователя 2026-07-16: "переводы сводок надо сделать обязательно",
+// раньше все ярлыки сводок были захардкожены на русском независимо от языка
+// тенанта) и часовой пояс (для дат/времени в тексте сводок — реальный баг,
+// найден 2026-07-15: время смены показывалось в сыром UTC сервера, а не в
+// поясе тенанта, см. format-shared.ts) — всё нужно почти в каждой из функций
+// ниже, один запрос вместо нескольких.
+async function getTenantInfo(tenantId: string): Promise<{ name: string; locale: Locale; timezone: string; t: Dictionary }> {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
     select: { name: true, locale: true, timezone: true },
   });
+  const locale = tenant?.locale && isLocale(tenant.locale) ? tenant.locale : "ru";
   return {
     name: tenant?.name ?? "RentOS",
-    locale: tenant?.locale && isLocale(tenant.locale) ? tenant.locale : "ru",
+    locale,
     timezone: tenant?.timezone ?? "UTC",
+    t: getDictionary(locale),
   };
 }
 
@@ -96,16 +101,17 @@ export async function dispatchZoneSummary(
   const channels = await getEnabledChannels(tenantId);
   const results: DispatchResult[] = [];
   const tenant = await getTenantInfo(tenantId);
+  const st = tenant.t.summaryText;
 
   for (const channel of channels) {
     if (channel.channelType === "telegram" && channel.chatStatus === "active" && channel.chatId) {
-      const text = formatZoneSummaryTelegram(data, settings, tenant.locale, tenant.timezone);
+      const text = formatZoneSummaryTelegram(data, settings, tenant.locale, tenant.timezone, st);
       const result = await sendChatMessage(channel.chatId, text);
       results.push(toDispatchResult("telegram", result));
     } else if (channel.channelType === "email") {
       const addresses = parseEmailAddresses(channel.emailAddresses);
       if (addresses.length === 0) continue;
-      const { subject, html } = formatZoneSummaryEmail(data, settings, tenant.name, tenant.locale, tenant.timezone);
+      const { subject, html } = formatZoneSummaryEmail(data, settings, tenant.name, tenant.locale, tenant.timezone, st);
       const result = await sendEmail(addresses, subject, html);
       results.push({ channelType: "email", ok: result.ok, error: result.error });
     }
@@ -115,7 +121,7 @@ export async function dispatchZoneSummary(
     const sign = data.difference > 0 ? "+" : "";
     await sendPushToTenant(tenantId, {
       title: `${data.zoneEmoji ?? "🏁"} ${data.zoneName}`,
-      body: `Касса: ${formatMoney(data.cashAmount, tenant.locale)} · Разн.: ${sign}${formatMoney(data.difference, tenant.locale)}`,
+      body: `${st.cashOnly}: ${formatMoney(data.cashAmount, tenant.locale)} · ${st.difference}: ${sign}${formatMoney(data.difference, tenant.locale)}`,
       url: "/reports",
     }).catch((err) => console.error("push dispatch failed", { kind: "zone", tenantId, err }));
   }
@@ -132,16 +138,17 @@ export async function dispatchShiftCloseSummary(
   const channels = await getEnabledChannels(tenantId);
   const results: DispatchResult[] = [];
   const tenant = await getTenantInfo(tenantId);
+  const st = tenant.t.summaryText;
 
   for (const channel of channels) {
     if (channel.channelType === "telegram" && channel.chatStatus === "active" && channel.chatId) {
-      const text = formatShiftCloseSummaryTelegram(data, settings, tenant.locale, tenant.timezone);
+      const text = formatShiftCloseSummaryTelegram(data, settings, tenant.locale, tenant.timezone, st);
       const result = await sendChatMessage(channel.chatId, text);
       results.push(toDispatchResult("telegram", result));
     } else if (channel.channelType === "email") {
       const addresses = parseEmailAddresses(channel.emailAddresses);
       if (addresses.length === 0) continue;
-      const { subject, html } = formatShiftCloseSummaryEmail(data, settings, tenant.name, tenant.locale, tenant.timezone);
+      const { subject, html } = formatShiftCloseSummaryEmail(data, settings, tenant.name, tenant.locale, tenant.timezone, st);
       const result = await sendEmail(addresses, subject, html);
       results.push({ channelType: "email", ok: result.ok, error: result.error });
     }
@@ -149,8 +156,8 @@ export async function dispatchShiftCloseSummary(
 
   if (await pushEnabledFor(tenantId, "shiftCloseSummary")) {
     await sendPushToTenant(tenantId, {
-      title: `${data.operatorName} · смена закрыта`,
-      body: `Баланс: ${formatMoney(data.toPayOut, tenant.locale)}`,
+      title: `${data.operatorName} · ${st.shiftClosedSuffix}`,
+      body: `${st.toPayOutCompact}: ${formatMoney(data.toPayOut, tenant.locale)}`,
       url: "/operators",
     }).catch((err) => console.error("push dispatch failed", { kind: "shiftClose", tenantId, err }));
   }
@@ -172,10 +179,11 @@ export async function dispatchDailyCashSummary(
   const channels = await getEnabledChannels(tenantId);
   const results: DispatchResult[] = [];
   const tenant = await getTenantInfo(tenantId);
+  const st = tenant.t.summaryText;
 
   for (const channel of channels) {
     if (channel.channelType === "telegram" && channel.chatStatus === "active" && channel.chatId) {
-      const text = formatDailyCashSummaryTelegram(data, settings, tenant.locale, tenant.timezone);
+      const text = formatDailyCashSummaryTelegram(data, settings, tenant.locale, tenant.timezone, st);
       const existingId = existingMessageIds.telegram;
       const isEdit = !!existingId && settings.updateOnLateSubmission;
       const result = isEdit
@@ -190,7 +198,7 @@ export async function dispatchDailyCashSummary(
     } else if (channel.channelType === "email") {
       const addresses = parseEmailAddresses(channel.emailAddresses);
       if (addresses.length === 0) continue;
-      const { subject, html } = formatDailyCashSummaryEmail(data, settings, tenant.name, tenant.locale, tenant.timezone);
+      const { subject, html } = formatDailyCashSummaryEmail(data, settings, tenant.name, tenant.locale, tenant.timezone, st);
       const result = await sendEmail(addresses, subject, html);
       results.push({ channelType: "email", ok: result.ok, error: result.error });
     }
@@ -204,8 +212,8 @@ export async function dispatchDailyCashSummary(
   if (!isUpdate && (await pushEnabledFor(tenantId, "dailyCashSummary"))) {
     const total = data.cashAmount + data.mobileAmount - data.expenses;
     await sendPushToTenant(tenantId, {
-      title: data.showPointName ? `Касса за день · ${data.pointName}` : "Касса за день",
-      body: `Итог: ${formatMoney(total, tenant.locale)}`,
+      title: data.showPointName ? `${st.dailyCashSubject} · ${data.pointName}` : st.dailyCashSubject,
+      body: `${st.totalCompact}: ${formatMoney(total, tenant.locale)}`,
       url: "/money",
     }).catch((err) => console.error("push dispatch failed", { kind: "dailyCash", tenantId, err }));
   }
@@ -230,35 +238,61 @@ function mapErrorDescription(description?: string): string {
   return description ?? "Не удалось отправить";
 }
 
-// Инструктажи (docs/spec/07-instructions.md, "Уведомления") — единственное
-// простое сообщение, без per-type Push-тумблера (в отличие от Zone/DailyCash/
-// ShiftClose): шлётся, если у тенанта вообще есть хоть одна активная
-// push-подписка, отдельного выключателя спека не просит.
+// Инструктажи (docs/spec/07-instructions.md, "Уведомления") — Push раньше
+// слался безусловно (единственный тип без per-type тумблера); теперь тоже
+// за pushEnabledFor, как Zone/DailyCash/ShiftClose (запрос пользователя
+// 2026-07-16: "вдруг Владелец не хочет получать такие уведомления").
 export async function dispatchInstructionAcknowledgment(tenantId: string, data: InstructionAckData): Promise<DispatchResult[]> {
   const channels = await getEnabledChannels(tenantId);
   const results: DispatchResult[] = [];
+  const tenant = await getTenantInfo(tenantId);
+  const st = tenant.t.summaryText;
 
   for (const channel of channels) {
     if (channel.channelType === "telegram" && channel.chatStatus === "active" && channel.chatId) {
-      const text = formatInstructionAckTelegram(data);
+      const text = formatInstructionAckTelegram(data, st, tenant.t.instructions.minutesShort);
       const result = await sendChatMessage(channel.chatId, text);
       results.push(toDispatchResult("telegram", result));
     } else if (channel.channelType === "email") {
       const addresses = parseEmailAddresses(channel.emailAddresses);
       if (addresses.length === 0) continue;
-      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
-      const { subject, html } = formatInstructionAckEmail(data, tenant?.name ?? "RentOS");
+      const { subject, html } = formatInstructionAckEmail(
+        data,
+        tenant.name,
+        tenant.locale,
+        st,
+        tenant.t.instructions.fieldReadingTime,
+        tenant.t.instructions.minutesShort,
+        tenant.t.pushSettings.instructionAckLabel
+      );
       const result = await sendEmail(addresses, subject, html);
       results.push({ channelType: "email", ok: result.ok, error: result.error });
     }
   }
 
-  await sendPushToTenant(tenantId, {
-    title: "Инструктаж пройден",
-    body: `${data.fullName} · «${data.instructionTitle}» · ${data.readingMinutes} мин.`,
-    url: "/settings/instructions",
-  }).catch((err) => console.error("push dispatch failed", { kind: "instructionAck", tenantId, err }));
+  if (await pushEnabledFor(tenantId, "instructionAck")) {
+    await sendPushToTenant(tenantId, {
+      title: tenant.t.pushSettings.instructionAckLabel,
+      body: `${data.fullName} · «${data.instructionTitle}» · ${data.readingMinutes} ${tenant.t.instructions.minutesShort}`,
+      url: "/settings/instructions",
+    }).catch((err) => console.error("push dispatch failed", { kind: "instructionAck", tenantId, err }));
+  }
 
   logFailures("instructionAck", tenantId, results);
   return results;
+}
+
+// Начало смены в Авто-режиме учёта времени (запрос пользователя 2026-07-16:
+// "Женя начал работать, а у Владельца сразу приходит Push") — только Push,
+// без Telegram/email: это не "сводка" с настраиваемым составом, а короткое
+// мгновенное уведомление, тот же принцип, что у InstructionAck, но ещё проще
+// (сам вызывающий код — check-in route — уже гарантирует Авто-режим).
+export async function dispatchShiftCheckin(tenantId: string, operatorName: string, pointName: string, operatorId: string): Promise<void> {
+  if (!(await pushEnabledFor(tenantId, "shiftCheckin"))) return;
+  const tenant = await getTenantInfo(tenantId);
+  await sendPushToTenant(tenantId, {
+    title: tenant.t.pushSettings.shiftCheckinLabel,
+    body: `${operatorName} · ${pointName}`,
+    url: `/operators/${operatorId}`,
+  }).catch((err) => console.error("push dispatch failed", { kind: "shiftCheckin", tenantId, err }));
 }

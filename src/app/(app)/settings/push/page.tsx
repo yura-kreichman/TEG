@@ -97,6 +97,8 @@ export default function PushSettingsPage() {
     { key: "zoneSummary", label: t.pushSettings.zoneLabel, sub: t.pushSettings.zoneSub },
     { key: "dailyCashSummary", label: t.pushSettings.dailyCashLabel, sub: t.pushSettings.dailyCashSub },
     { key: "shiftCloseSummary", label: t.pushSettings.shiftCloseLabel, sub: t.pushSettings.shiftCloseSub },
+    { key: "shiftCheckin", label: t.pushSettings.shiftCheckinLabel, sub: t.pushSettings.shiftCheckinSub },
+    { key: "instructionAck", label: t.pushSettings.instructionAckLabel, sub: t.pushSettings.instructionAckSub },
   ];
 
   if (checking) return null;

@@ -116,10 +116,14 @@ export interface PushNotificationSettingsData {
   zoneSummary: boolean;
   dailyCashSummary: boolean;
   shiftCloseSummary: boolean;
+  shiftCheckin: boolean;
+  instructionAck: boolean;
 }
 
 export const PUSH_NOTIFICATION_DEFAULTS: PushNotificationSettingsData = {
   zoneSummary: true,
   dailyCashSummary: true,
   shiftCloseSummary: true,
+  shiftCheckin: true,
+  instructionAck: true,
 };

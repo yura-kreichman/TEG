@@ -213,6 +213,7 @@ export default function SummariesListPage() {
                       </div>
                     </div>
                   </div>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" />
                 </div>
               </SpringCard>
             </StaggerItem>

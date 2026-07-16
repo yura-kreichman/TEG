@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getDictionary } from "@/lib/i18n";
-import { hasConfiguredHours, isOpenNow, findNextOpen, type DayHours } from "@/lib/landing/opening-hours";
+import { hasConfiguredHours, isOpenNow, findNextOpen, getTodayHours, type DayHours } from "@/lib/landing/opening-hours";
 import { isRichContentEmpty, plainTextToDoc, type PMNode } from "@/lib/rich-text";
 
 // Максимум активов в ленте внутри карточки зоны (докс, "Правила вёрстки",
@@ -50,7 +50,6 @@ export interface LandingRenderData {
   metaTitleOverride: string | null;
   metaDescriptionOverride: string | null;
   googleSiteVerification: string | null;
-  yandexVerification: string | null;
   rulesInstruction: { slug: string; title: string } | null;
   galleryPhotos: { id: string; url: string }[];
   zones: Array<{
@@ -221,7 +220,6 @@ export async function getLandingRenderData(tenantId: string): Promise<LandingRen
     metaTitleOverride: landing.metaTitleOverride,
     metaDescriptionOverride: landing.metaDescriptionOverride,
     googleSiteVerification: landing.googleSiteVerification,
-    yandexVerification: landing.yandexVerification,
     rulesInstruction,
     galleryPhotos: galleryPhotos.map((p) => ({ id: p.id, url: p.url })),
     zones,
@@ -232,7 +230,10 @@ export async function getLandingRenderData(tenantId: string): Promise<LandingRen
       const open = isOpenNow(p.openingHours, tenant.timezone);
       let openStatus: LandingZonePointStatus | null = null;
       if (open === true) {
-        openStatus = { kind: "open" };
+        // Запрос пользователя 2026-07-16: рядом с "Открыто" показывать "до
+        // {время закрытия}" — до этого статус "открыто" не нёс времени вовсе.
+        const today = getTodayHours(p.openingHours, tenant.timezone);
+        openStatus = { kind: "open", time: today?.closesAt ?? undefined };
       } else if (open === false) {
         const next = findNextOpen(p.openingHours, tenant.timezone);
         if (next) {

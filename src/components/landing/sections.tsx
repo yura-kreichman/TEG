@@ -393,7 +393,8 @@ export function RentalSection({ data, lp }: { data: LandingRenderData; lp: LP })
 // "Открыто" (success-маркер) / "Откроется завтра в {время}" (нейтральный).
 function PointOpenStatus({ status, lp, weekdayNames }: { status: LandingZonePointStatus; lp: LP; weekdayNames: string[] }) {
   if (status.kind === "open") {
-    return <span className="lt-status-dot-open text-xs font-semibold">{lp.openNowBadge}</span>;
+    const label = status.time ? lp.openUntil.replace("{time}", status.time) : lp.openNowBadge;
+    return <span className="lt-status-dot-open text-xs font-semibold">{label}</span>;
   }
   const time = status.time ?? "";
   const label =

@@ -96,7 +96,14 @@ export default function ZoneSummaryEditorPage() {
   }
 
   const previewText = useMemo(
-    () => formatZoneSummaryTelegram(buildPreviewData(previewContext, t), settings, locale, previewContext?.timezone ?? "UTC"),
+    () =>
+      formatZoneSummaryTelegram(
+        buildPreviewData(previewContext, t),
+        settings,
+        locale,
+        previewContext?.timezone ?? "UTC",
+        t.summaryText
+      ),
     [settings, previewContext, t, locale]
   );
 

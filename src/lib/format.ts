@@ -8,17 +8,18 @@ const LOCALE_TO_INTL: Record<Locale, string> = {
   ru: "ru-RU",
   en: "en-GB",
   uk: "uk-UA",
+  ro: "ro-RO",
+  be: "be-BY",
+  pl: "pl-PL",
+  it: "it-IT",
   uz: "uz-UZ",
   kk: "kk-KZ",
-  ro: "ro-RO",
   tg: "tg-TJ",
   ky: "ky-KG",
-  be: "be-BY",
   hy: "hy-AM",
   az: "az-AZ",
   ka: "ka-GE",
   tr: "tr-TR",
-  pl: "pl-PL",
 };
 
 // Единый форматтер денежных сумм (docs/spec/03-design-system.md, "Числа и

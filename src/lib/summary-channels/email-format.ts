@@ -3,6 +3,11 @@ import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData, Inst
 import { formatDuration, formatLocalTime, formatSummaryDate } from "./format-shared";
 import { formatMoney } from "@/lib/format";
 import type { Locale } from "@/lib/locales";
+import type { Dictionary } from "@/lib/i18n";
+
+// Ярлыки строк письма — из словаря тенанта, тот же принцип, что в
+// telegram-format.ts (запрос пользователя 2026-07-16).
+type SummaryText = Dictionary["summaryText"];
 
 // Чистые функции построения HTML-писем — тот же принцип, что telegram-format.ts:
 // данные + настройки → готовый {subject, html}, без SMTP, без сети.
@@ -23,7 +28,7 @@ interface EmailRow {
   bold?: boolean;
 }
 
-function wrapEmail(companyName: string, title: string, subtitle: string, rows: EmailRow[]): string {
+function wrapEmail(companyName: string, title: string, subtitle: string, rows: EmailRow[], locale: Locale): string {
   const rowsHtml = rows
     .map(
       (r) => `
@@ -35,7 +40,7 @@ function wrapEmail(companyName: string, title: string, subtitle: string, rows: E
     .join("");
 
   return `<!DOCTYPE html>
-<html lang="ru">
+<html lang="${locale}">
 <head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:24px;background:#F6F7F5;font-family:system-ui,sans-serif;color:#1B1F1D;">
   <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:20px;padding:24px;">
@@ -55,13 +60,14 @@ export function formatZoneSummaryEmail(
   settings: ZoneSummarySettingsData,
   companyName: string,
   locale: Locale,
-  timezone: string
+  timezone: string,
+  st: SummaryText
 ): { subject: string; html: string } {
-  const subject = `Сводка по зоне · ${data.zoneName} · ${formatDate(data.occurredAt, timezone)}`;
+  const subject = `${st.zoneSummarySubject} · ${data.zoneName} · ${formatDate(data.occurredAt, timezone)}`;
   const rows: EmailRow[] = [];
 
   if (data.accountingMode === "cash_only") {
-    rows.push({ label: "Касса", value: formatMoney(data.cashAmount, locale), bold: true });
+    rows.push({ label: st.cashOnly, value: formatMoney(data.cashAmount, locale), bold: true });
   } else {
     if (settings.showReadings || settings.showDelta) {
       for (const r of data.readings) {
@@ -76,23 +82,26 @@ export function formatZoneSummaryEmail(
     }
     if (settings.showCash) {
       rows.push({
-        label: "Наличные / Безнал",
+        label: `${st.cash} / ${st.mobile}`,
         value: `${formatMoney(data.cashAmount, locale)} / ${formatMoney(data.mobileAmount, locale)}`,
       });
     }
-    if (settings.showCalc) rows.push({ label: "По счётчику", value: formatMoney(data.calculatedRevenue, locale) });
+    if (settings.showCalc) rows.push({ label: st.calculated, value: formatMoney(data.calculatedRevenue, locale) });
     if (settings.showDiff) {
       rows.push({
-        label: "Разница",
+        label: st.difference,
         value: `${data.difference > 0 ? "+" : ""}${formatMoney(data.difference, locale)}`,
         bold: true,
       });
     }
-    if (settings.showReturns) rows.push({ label: "Возвраты/тест", value: String(data.returnsCount) });
+    if (settings.showReturns) rows.push({ label: st.returns, value: String(data.returnsCount) });
   }
-  if (settings.showOperator) rows.push({ label: "Оператор", value: data.operatorName });
+  if (settings.showOperator) rows.push({ label: st.operatorLabel, value: data.operatorName });
 
-  return { subject, html: wrapEmail(companyName, `Сводка по зоне «${data.zoneName}»`, formatDate(data.occurredAt, timezone), rows) };
+  return {
+    subject,
+    html: wrapEmail(companyName, `${st.zoneSummarySubject} «${data.zoneName}»`, formatDate(data.occurredAt, timezone), rows, locale),
+  };
 }
 
 export function formatDailyCashSummaryEmail(
@@ -100,26 +109,30 @@ export function formatDailyCashSummaryEmail(
   settings: DailyCashSummarySettingsData,
   companyName: string,
   locale: Locale,
-  timezone: string
+  timezone: string,
+  st: SummaryText
 ): { subject: string; html: string } {
-  const subject = `Касса за день · ${data.pointName} · ${formatDate(data.businessDate, timezone)}`;
+  const subject = `${st.dailyCashSubject} · ${data.pointName} · ${formatDate(data.businessDate, timezone)}`;
   const total = data.cashAmount + data.mobileAmount - data.expenses;
   const rows: EmailRow[] = [];
 
   if (settings.showCash) {
     rows.push({
-      label: "Наличные / Безнал",
+      label: `${st.cash} / ${st.mobile}`,
       value: `${formatMoney(data.cashAmount, locale)} / ${formatMoney(data.mobileAmount, locale)}`,
     });
   }
-  if (settings.showExpenses) rows.push({ label: "Расходы", value: formatMoney(data.expenses, locale) });
-  rows.push({ label: "Итого за день", value: formatMoney(total, locale), bold: true });
+  if (settings.showExpenses) rows.push({ label: st.expenses, value: formatMoney(data.expenses, locale) });
+  rows.push({ label: st.totalFull, value: formatMoney(total, locale), bold: true });
   if (settings.showZoneBreakdown) {
     for (const z of data.zoneBreakdown) rows.push({ label: z.zoneName, value: formatMoney(z.revenue, locale) });
   }
-  if (settings.showCashOnHand) rows.push({ label: "Остаток на точке", value: formatMoney(data.cashOnHand, locale) });
+  if (settings.showCashOnHand) rows.push({ label: st.cashOnHand, value: formatMoney(data.cashOnHand, locale) });
 
-  return { subject, html: wrapEmail(companyName, `Касса за день · ${data.pointName}`, formatDate(data.businessDate, timezone), rows) };
+  return {
+    subject,
+    html: wrapEmail(companyName, `${st.dailyCashSubject} · ${data.pointName}`, formatDate(data.businessDate, timezone), rows, locale),
+  };
 }
 
 export function formatShiftCloseSummaryEmail(
@@ -127,25 +140,37 @@ export function formatShiftCloseSummaryEmail(
   settings: ShiftCloseSummarySettingsData,
   companyName: string,
   locale: Locale,
-  timezone: string
+  timezone: string,
+  st: SummaryText
 ): { subject: string; html: string } {
-  const subject = `Закрытие смены · ${data.operatorName} · ${formatDate(data.startAt, timezone)}`;
+  const subject = `${st.shiftCloseSubject} · ${data.operatorName} · ${formatDate(data.startAt, timezone)}`;
   const rows: EmailRow[] = [];
 
-  if (settings.showPeriod) rows.push({ label: "Период", value: `${formatLocalTime(data.startAt, timezone)} – ${formatLocalTime(data.endAt, timezone)}` });
-  if (settings.showHours) rows.push({ label: "Отработано", value: formatDuration(data.minutes) });
-  if (settings.showAdvance && data.advanceAmount > 0) rows.push({ label: "Аванс", value: formatMoney(data.advanceAmount, locale) });
-  if (settings.showBonus && data.bonusAmount > 0) rows.push({ label: "Премия", value: formatMoney(data.bonusAmount, locale) });
-  if (settings.showTotal) rows.push({ label: "К выдаче", value: formatMoney(data.toPayOut, locale), bold: true });
+  if (settings.showPeriod) rows.push({ label: st.period, value: `${formatLocalTime(data.startAt, timezone)} – ${formatLocalTime(data.endAt, timezone)}` });
+  if (settings.showHours) rows.push({ label: st.hoursWorked, value: formatDuration(data.minutes) });
+  if (settings.showAdvance && data.advanceAmount > 0) rows.push({ label: st.advance, value: formatMoney(data.advanceAmount, locale) });
+  if (settings.showBonus && data.bonusAmount > 0) rows.push({ label: st.bonus, value: formatMoney(data.bonusAmount, locale) });
+  if (settings.showTotal) rows.push({ label: st.toPayOutFull, value: formatMoney(data.toPayOut, locale), bold: true });
 
-  return { subject, html: wrapEmail(companyName, `Смена · ${data.operatorName}`, formatDate(data.startAt, timezone), rows) };
+  return {
+    subject,
+    html: wrapEmail(companyName, `${st.shiftWordCap} · ${data.operatorName}`, formatDate(data.startAt, timezone), rows, locale),
+  };
 }
 
-export function formatInstructionAckEmail(data: InstructionAckData, companyName: string): { subject: string; html: string } {
-  const subject = `Ознакомление · ${data.instructionTitle}`;
+export function formatInstructionAckEmail(
+  data: InstructionAckData,
+  companyName: string,
+  locale: Locale,
+  st: SummaryText,
+  readingTimeLabel: string,
+  minutesShort: string,
+  instructionAckTitle: string
+): { subject: string; html: string } {
+  const subject = `${st.instructionAckSubject} · ${data.instructionTitle}`;
   const rows: EmailRow[] = [
-    { label: "Кто", value: data.fullName, bold: true },
-    { label: "Время чтения", value: `${data.readingMinutes} мин.` },
+    { label: st.instructionAckEmailWho, value: data.fullName, bold: true },
+    { label: readingTimeLabel, value: `${data.readingMinutes} ${minutesShort}` },
   ];
-  return { subject, html: wrapEmail(companyName, data.instructionTitle, "Инструктаж пройден", rows) };
+  return { subject, html: wrapEmail(companyName, data.instructionTitle, instructionAckTitle, rows, locale) };
 }

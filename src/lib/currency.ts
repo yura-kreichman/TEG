@@ -6,7 +6,11 @@
 // aria-label/подсказок, сам справочник не переводится по локали интерфейса
 // (тот же принцип, что LOCALE_NAMES в lib/locales.ts — фиксированные
 // названия, а не запись в словаре).
+// Доллар и евро первыми (запрос пользователя 2026-07-16) — самые
+// узнаваемые/частые валюты, остальные дальше в прежнем порядке.
 export const CURRENCIES = [
+  { code: "USD", sign: "$", label: "Доллар США" },
+  { code: "EUR", sign: "€", label: "Евро" },
   { code: "RUB", sign: "₽", label: "Российский рубль" },
   { code: "MDL", sign: "L", label: "Молдавский лей" },
   { code: "RON", sign: "lei", label: "Румынский лей" },
@@ -21,8 +25,6 @@ export const CURRENCIES = [
   { code: "GEL", sign: "₾", label: "Грузинский лари" },
   { code: "TRY", sign: "₺", label: "Турецкая лира" },
   { code: "PLN", sign: "zł", label: "Польский злотый" },
-  { code: "EUR", sign: "€", label: "Евро" },
-  { code: "USD", sign: "$", label: "Доллар США" },
 ] as const;
 
 export type CurrencyCode = (typeof CURRENCIES)[number]["code"];

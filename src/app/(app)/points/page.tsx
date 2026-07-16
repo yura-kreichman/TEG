@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus, Pencil, Trash2, Link2, ImagePlus, ChevronRight, MapPin, Pause, Play } from "lucide-react";
+import { Plus, Pencil, Trash2, Link2, ImagePlus, ChevronRight, MapPin, Pause, Play, TabletSmartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -395,7 +395,6 @@ export default function PointsPage() {
           ) : (
             <StaggerList className="flex flex-col gap-3.5">
               {points.map((point) => {
-                const activatedCount = point.devices.filter((d) => d.activated).length;
                 return (
                   <StaggerItem key={point.id}>
                     <SpringCard animate={false} className={cn(!point.active && "grayscale")}>
@@ -406,21 +405,21 @@ export default function PointsPage() {
                         >
                           <TileIcon iconKey={point.iconKey} />
                           <div className="min-w-0 grow">
-                            <div className="flex items-center gap-1.5">
-                              <div className="text-card-title">{point.name}</div>
+                            <div className="text-card-title">{point.name}</div>
+                            {/* Без "N устройство(а) активировано" (запрос пользователя
+                                2026-07-16: "не надо, так как итак видно эти
+                                устройства" — список устройств уже показан ниже).
+                                Чип статуса — в одном ряду с подписью зон, не с
+                                названием — длинное название точки иначе
+                                сжималось из-за соседнего чипа. */}
+                            <p className="flex flex-wrap items-center gap-1.5 text-caption-airbnb">
+                              <span>
+                                {point.zonesCount} {t.points.zonesSuffix}
+                              </span>
                               {point.active ? (
                                 <StatusChip>{t.points.pointActiveChip}</StatusChip>
                               ) : (
                                 <StatusChip variant="neutral">{t.points.pointInactiveChip}</StatusChip>
-                              )}
-                            </div>
-                            <p className="text-caption-airbnb">
-                              {point.zonesCount} {t.points.zonesSuffix}
-                              {point.devices.length > 0 && (
-                                <>
-                                  {" · "}
-                                  {activatedCount} {t.points.devicesActivatedText}
-                                </>
                               )}
                             </p>
                           </div>
@@ -429,45 +428,50 @@ export default function PointsPage() {
                         <KebabButton onClick={() => openPointKebab(point)} label={t.points.renamePoint} />
                       </div>
 
-                      {point.devices.map((device) => (
-                        <div key={device.id} className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
-                          <div className="flex items-center justify-between gap-2">
-                            <div>
-                              <div className="flex items-center gap-1.5 text-body-airbnb">
-                                {device.label ?? t.points.unnamedDevice}
-                                {device.activated && <StatusChip>{t.points.deviceActivated}</StatusChip>}
-                                {device.roaming && <StatusChip variant="warning">{t.points.roamingChip}</StatusChip>}
+                      {point.devices.length > 0 && (
+                        <div className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3">
+                          {point.devices.map((device) => (
+                            <div key={device.id} className="flex flex-col gap-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 text-body-airbnb">
+                                    <TabletSmartphone className="size-6 shrink-0 text-muted-foreground" />
+                                    {device.label ?? t.points.unnamedDevice}
+                                    {device.activated && <StatusChip>{t.points.deviceActivated}</StatusChip>}
+                                    {device.roaming && <StatusChip variant="warning">{t.points.roamingChip}</StatusChip>}
+                                  </div>
+                                  {!device.activated && (
+                                    <p className="text-caption-airbnb">{t.points.deviceAwaiting}</p>
+                                  )}
+                                </div>
+                                <KebabButton
+                                  onClick={() => openDeviceKebab(point.id, device)}
+                                  label={t.points.renameDevice}
+                                />
                               </div>
-                              {!device.activated && (
-                                <p className="text-caption-airbnb">{t.points.deviceAwaiting}</p>
+                              {/* Ссылка/QR активации теряет смысл, как только устройство
+                                  реально активировано (запрос пользователя 2026-07-14) —
+                                  раньше сама картинка QR схлопывалась при активации
+                                  (см. опрос выше), но сама ссылка-переключатель оставалась
+                                  видимой, пока не обновится страница целиком. */}
+                              {installLinks[device.id] && !device.activated && (
+                                <div className="flex flex-col gap-2">
+                                  <button
+                                    type="button"
+                                    className="w-fit text-caption-airbnb font-semibold text-primary underline underline-offset-2"
+                                    onClick={() => setQrOpenFor(qrOpenFor === device.id ? null : device.id)}
+                                  >
+                                    {qrOpenFor === device.id ? t.points.hideQr : t.points.showQr}
+                                  </button>
+                                  {qrOpenFor === device.id && (
+                                    <QrCode value={installLinks[device.id]} alt={t.points.qrAlt} />
+                                  )}
+                                </div>
                               )}
                             </div>
-                            <KebabButton
-                              onClick={() => openDeviceKebab(point.id, device)}
-                              label={t.points.renameDevice}
-                            />
-                          </div>
-                          {/* Ссылка/QR активации теряет смысл, как только устройство
-                              реально активировано (запрос пользователя 2026-07-14) —
-                              раньше сама картинка QR схлопывалась при активации
-                              (см. опрос выше), но сама ссылка-переключатель оставалась
-                              видимой, пока не обновится страница целиком. */}
-                          {installLinks[device.id] && !device.activated && (
-                            <div className="flex flex-col gap-2">
-                              <button
-                                type="button"
-                                className="w-fit text-caption-airbnb font-semibold text-primary underline underline-offset-2"
-                                onClick={() => setQrOpenFor(qrOpenFor === device.id ? null : device.id)}
-                              >
-                                {qrOpenFor === device.id ? t.points.hideQr : t.points.showQr}
-                              </button>
-                              {qrOpenFor === device.id && (
-                                <QrCode value={installLinks[device.id]} alt={t.points.qrAlt} />
-                              )}
-                            </div>
-                          )}
+                          ))}
                         </div>
-                      ))}
+                      )}
 
                       <PressableScale>
                         <Button

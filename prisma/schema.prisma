@@ -276,6 +276,13 @@ model PushNotificationSettings {
   zoneSummary       Boolean @default(true)
   dailyCashSummary  Boolean @default(true)
   shiftCloseSummary Boolean @default(true)
+  // Начало смены (Авто-режим учёта времени) и подписание Инструктажа —
+  // раньше инструктаж слался push'ем безусловно, начало смены не слалось
+  // вовсе (запрос пользователя 2026-07-16: "Владелец должен получать Push
+  // когда сотрудник начал работать... вдруг Владелец не хочет получать
+  // такие уведомления" — оба теперь тумблеры, как остальные три).
+  shiftCheckin   Boolean @default(true)
+  instructionAck Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1398,18 +1405,19 @@ model Landing {
   metaTitleOverride       String?
   metaDescriptionOverride String?
 
-  // Коды подтверждения владения сайтом для Google Search Console / Яндекс
-  // Вебмастера (решение пользователя 2026-07-14) — рендерятся как
-  // <meta name="google-site-verification"/"yandex-verification" content="...">
-  // в <head> (Next.js Metadata API, поле verification в buildLandingMetadata,
+  // Код подтверждения владения сайтом для Google Search Console (решение
+  // пользователя 2026-07-14, Яндекс.Вебмастер убран 2026-07-16 — не
+  // поддерживает верификацию по HTML-тегу для сайта в подпапке, как
+  // /s/{slug} на общем домене my.rentos365.app) — рендерится как
+  // <meta name="google-site-verification" content="..."> в <head> (Next.js
+  // Metadata API, поле verification в buildLandingMetadata,
   // src/lib/landing/metadata.ts). Домен my.rentos365.app тенанту не
   // принадлежит — DNS-верификация недоступна физически, но верификация по
-  // HTML-тегу для конкретного URL (/s/{slug}) работает и без владения
-  // доменом целиком, тот же паттерн, что у Wix/Squarespace/Shopify. Хранится
-  // только САМ КОД (значение content=), не вся строка тега — вставляется в
-  // разметку сервером, владелец не пишет HTML напрямую.
+  // HTML-тегу для конкретного URL работает и без владения доменом целиком,
+  // тот же паттерн, что у Wix/Squarespace/Shopify. Хранится только САМ КОД
+  // (значение content=), не вся строка тега — вставляется в разметку
+  // сервером, владелец не пишет HTML напрямую.
   googleSiteVerification String?
-  yandexVerification     String?
 
   publishedAt DateTime?
 

@@ -1,17 +1,18 @@
 import ru from "@lang/ru.json";
 import en from "@lang/en.json";
-import ro from "@lang/ro.json";
 import uk from "@lang/uk.json";
+import ro from "@lang/ro.json";
+import be from "@lang/be.json";
+import pl from "@lang/pl.json";
+import it from "@lang/it.json";
 import uz from "@lang/uz.json";
 import kk from "@lang/kk.json";
 import tg from "@lang/tg.json";
 import ky from "@lang/ky.json";
-import be from "@lang/be.json";
 import hy from "@lang/hy.json";
 import az from "@lang/az.json";
 import ka from "@lang/ka.json";
 import tr from "@lang/tr.json";
-import pl from "@lang/pl.json";
 import { cookies, headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getSessionUserId } from "@/lib/auth";
@@ -28,7 +29,7 @@ export { isLocale, LOCALE_NAMES, ALL_LOCALES } from "@/lib/locales";
 // поймает, только ручной аудит).
 export type Dictionary = typeof ru;
 
-const dictionaries: Record<Locale, Dictionary> = { ru, en, uk, uz, kk, ro, tg, ky, be, hy, az, ka, tr, pl };
+const dictionaries: Record<Locale, Dictionary> = { ru, en, uk, ro, be, pl, it, uz, kk, tg, ky, hy, az, ka, tr };
 
 export function getDictionary(locale: string): Dictionary {
   return isLocale(locale) ? dictionaries[locale] : dictionaries.ru;

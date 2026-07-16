@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { getOpenShift, hasNoResultsToday } from "@/lib/work-time";
 import { formatShiftStartWindow, isWithinShiftStartWindow } from "@/lib/business-day";
+import { dispatchShiftCheckin } from "@/lib/summary-channels/dispatch";
 
 // Check-in (docs/spec/05-work-time.md, "РЕЖИМ УЧЁТА ВРЕМЕНИ") — создаёт
 // открытую смену (endAt=null), закрывается позже через
@@ -61,6 +62,10 @@ export async function POST() {
     data: { tenantId: point.tenantId, operatorId: operator.id, pointId: point.id, startAt, endAt: null, isOpen: true },
   });
   const noResultsToday = await hasNoResultsToday(point, operator, startAt);
+
+  dispatchShiftCheckin(point.tenantId, operator.name, point.name, operator.id).catch((err) =>
+    console.error("shift checkin push dispatch failed", err)
+  );
 
   return NextResponse.json({ shift: { id: shift.id, startAt: shift.startAt }, noResultsToday });
 }

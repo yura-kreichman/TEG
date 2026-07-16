@@ -43,6 +43,13 @@ function toMinutes(hhmm: string): number {
   return (h ?? 0) * 60 + (m ?? 0);
 }
 
+/** Часы работы точки на сегодня (по локальному дню недели тенанта) — null, если часы не заполнены. */
+export function getTodayHours(hours: DayHours[], timezone: string, at: Date = new Date()): DayHours | null {
+  if (!hasConfiguredHours(hours)) return null;
+  const weekday = localWeekday(at, timezone);
+  return hours.find((h) => h.weekday === weekday) ?? null;
+}
+
 /** null = недостаточно данных (часы не заполнены), не рендерить статус (докс). */
 export function isOpenNow(hours: DayHours[], timezone: string, at: Date = new Date()): boolean | null {
   if (!hasConfiguredHours(hours)) return null;
