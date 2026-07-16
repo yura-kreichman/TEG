@@ -38,6 +38,7 @@ export default function LaunchesListPage() {
   const searchParams = useSearchParams();
   const t = useI18n();
   const zoneId = searchParams.get("zoneId");
+  const assetId = searchParams.get("assetId");
 
   const [checking, setChecking] = useState(true);
   const [month, setMonth] = useState(() => new Date());
@@ -70,6 +71,7 @@ export default function LaunchesListPage() {
     const m = month.getUTCMonth() + 1;
     const query = new URLSearchParams({ year: String(year), month: String(m) });
     if (zoneId) query.set("zoneId", zoneId);
+    if (assetId) query.set("assetId", assetId);
     fetch(`/api/launches?${query}`)
       .then((res) => (res.status === 401 ? null : res.ok ? res.json() : { launches: [] }))
       .then((data) => {
@@ -86,7 +88,7 @@ export default function LaunchesListPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, zoneId]);
+  }, [month, zoneId, assetId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function formatGroupDate(dateStr: string) {
@@ -160,8 +162,8 @@ export default function LaunchesListPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-3.5">
-          <Link href="/" className="w-fit text-body-airbnb font-semibold text-primary">
-            ← {t.nav.home}
+          <Link href="/money" className="w-fit text-body-airbnb font-semibold text-primary">
+            ← {t.money.title}
           </Link>
           <h1 className="text-screen-title">{t.zoneDetail.gameRoomLaunchesListLink}</h1>
 

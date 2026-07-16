@@ -554,7 +554,6 @@ model Zone {
   moneyOps            MoneyOperation[]
   landingContent      LandingZoneContent?
   launches            Launch[]
-  launchPricing       LaunchPricing[]
 }
 
 // 1 или 2 тарифа на зону: свободное название + цена за сеанс.
@@ -619,6 +618,7 @@ model Asset {
   readings         AssetReading[]
   initialReadings  AssetInitialReading[]
   launches         Launch[]
+  launchPricing    LaunchPricing[]
 }
 
 // Калибровочное показание счётчика (запрос пользователя 2026-07-14: "начинаю
@@ -789,10 +789,14 @@ model CorrectionLog {
 // меняться, если владелец в середине дня поменял цену (см. Launch.*Snapshot
 // ниже — стоимость фиксируется по тарифу на момент СТАРТА пуска, не на
 // момент чтения).
+// Тариф — свойство АКТИВА, не зоны (запрос пользователя 2026-07-16: "на
+// территории парка 2 игровые комнаты — это активы", у каждой своя цена, зона
+// лишь владеет режимом/порогом долгого пуска). Один актив = одна игровая
+// комната/аттракцион.
 model LaunchPricing {
-  id     String @id @default(cuid())
-  zoneId String
-  zone   Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   // "fixed" (цена за пуск, опционально durationMinutes) | "per_minute"
   // (тариф за минуту, roundingMode + minAmount).
@@ -800,13 +804,13 @@ model LaunchPricing {
 
   price           Decimal @db.Decimal(10, 2)
   durationMinutes Int? // только fixed, опционально — обратный отсчёт
-  roundingMode    String? // только per_minute: "up" | "down" | "nearest"
-  minAmount       Decimal? @db.Decimal(10, 2) // только per_minute
+  roundingMode    String? // только per_minute — всегда "up" (докс)
+  minAmount       Decimal? @db.Decimal(10, 2) // только per_minute, обязательное
 
   effectiveFrom DateTime @default(now())
   createdAt     DateTime @default(now())
 
-  @@index([zoneId, effectiveFrom])
+  @@index([assetId, effectiveFrom])
 }
 
 // Один пуск — от старта до стопа, источник времени сервер (тот же паттерн,

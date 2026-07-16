@@ -699,10 +699,6 @@
     "gameRoomRateLabel": "Tarif pe minut",
     "gameRoomDurationLabel": "Durată, min",
     "gameRoomDurationPlaceholder": "Fără limită",
-    "gameRoomRoundingLabel": "Rotunjirea duratei",
-    "gameRoomRoundingUp": "În sus",
-    "gameRoomRoundingNearest": "Matematic",
-    "gameRoomRoundingDown": "În jos",
     "gameRoomMinAmountLabel": "Suma minimă a lansării",
     "gameRoomThresholdLabel": "Prag lansare lungă",
     "gameRoomThresholdHint": "O lansare mai lungă decât acest timp este marcată ca necesitând atenție",
@@ -710,7 +706,10 @@
     "gameRoomLiveLink": "Acum la punct",
     "gameRoomLaunchesListLink": "Lista lansărilor",
     "gameRoomPricingHistoryLabel": "Istoricul tarifului",
-    "gameRoomPricingActiveChip": "Activ"
+    "gameRoomPricingActiveChip": "Activ",
+    "gameRoomPricingHistoryActionsLabel": "Acțiuni pentru înregistrarea tarifului",
+    "gameRoomPricingHistoryDeleteConfirm": "Ștergi această înregistrare din istoricul tarifului? Lansările deja calculate nu se vor schimba.",
+    "gameRoomRoundingUpNote": "Durata se rotunjește în sus la minutul întreg — punctul nu pierde la minutele incomplete."
   },
   "operators": {
     "title": "Angajați",
@@ -970,6 +969,7 @@
       "cashLabel": "Numerar",
       "mobileLabel": "Fără numerar",
       "calculatedRevenue": "Venit calculat:",
+      "grossRevenue": "Brut (după contoare):",
       "difference": "Diferență:",
       "expensesTitle": "Cheltuieli",
       "amountPlaceholder": "Sumă",
@@ -994,6 +994,7 @@
     "offlineQueueHint": "În așteptare: {count} predări — se trimit automat la reconectare",
     "gameRoom": {
       "pickAssetHint": "Atinge un activ pentru a începe o lansare",
+      "noAssetsYet": "Proprietarul nu a adăugat încă active în această zonă",
       "labelSheetTitle": "Eticheta lansării",
       "labelPlaceholder": "de ex. brățara nr. 5",
       "labelStartButton": "Începe",
@@ -1244,6 +1245,8 @@
     "differenceCompact": "Dif.",
     "calculated": "Venit calculat",
     "calculatedCompact": "Cit.",
+    "gross": "Venit brut (după contoare)",
+    "grossCompact": "Brut",
     "cashOnly": "Casă",
     "forcedIncompleteCompact": "Forțat — datele pot fi incomplete",
     "forcedIncompleteFull": "Trimis forțat la limita zilei — datele pot fi incomplete.",

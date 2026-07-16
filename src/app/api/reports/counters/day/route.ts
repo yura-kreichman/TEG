@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { calcSessions, calcZoneRevenue } from "@/lib/results-calc";
+import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 
 interface CorrectionDiff {
@@ -123,6 +123,7 @@ export async function GET(request: Request) {
       }));
 
       const calculatedRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
+      const grossRevenue = zs.returnsCount > 0 ? calcZoneGrossRevenue(tariffCalc) : null;
       const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
       const difference = Math.round((actualCash - calculatedRevenue) * 100) / 100;
 
@@ -176,6 +177,7 @@ export async function GET(request: Request) {
         mobileAmount: Number(zs.mobileAmount),
         returnsCount: zs.returnsCount,
         calculatedRevenue,
+        grossRevenue,
         difference,
         // Цены тарифов — чтобы владелец видел пересчитанные Расчёт/Разница
         // живьём при редактировании показаний (запрос пользователя

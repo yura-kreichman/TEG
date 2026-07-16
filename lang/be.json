@@ -699,10 +699,6 @@
     "gameRoomRateLabel": "Тарыф за хвіліну",
     "gameRoomDurationLabel": "Працягласць, хв",
     "gameRoomDurationPlaceholder": "Без абмежавання",
-    "gameRoomRoundingLabel": "Акругленне працягласці",
-    "gameRoomRoundingUp": "Уверх",
-    "gameRoomRoundingNearest": "Матэматычна",
-    "gameRoomRoundingDown": "Уніз",
     "gameRoomMinAmountLabel": "Мінімальная сума пуску",
     "gameRoomThresholdLabel": "Парог доўгага пуску",
     "gameRoomThresholdHint": "Пуск даўжэйшы за гэты час пазначаецца як такі, што патрабуе ўвагі",
@@ -710,7 +706,10 @@
     "gameRoomLiveLink": "Зараз на кропцы",
     "gameRoomLaunchesListLink": "Спіс пускаў",
     "gameRoomPricingHistoryLabel": "Гісторыя тарыфу",
-    "gameRoomPricingActiveChip": "Дзейнічае"
+    "gameRoomPricingActiveChip": "Дзейнічае",
+    "gameRoomPricingHistoryActionsLabel": "Дзеянні з запісам тарыфу",
+    "gameRoomPricingHistoryDeleteConfirm": "Выдаліць гэты запіс гісторыі тарыфу? Ужо палічаныя пускі гэта не зменіць.",
+    "gameRoomRoundingUpNote": "Працягласць акругляецца ўверх да поўнай хвіліны — кропка не губляе на няпоўных хвілінах."
   },
   "operators": {
     "title": "Супрацоўнікі",
@@ -970,6 +969,7 @@
       "cashLabel": "Наяўныя",
       "mobileLabel": "Безнаяўныя",
       "calculatedRevenue": "Разліковая выручка:",
+      "grossRevenue": "Валавая (па лічыльніках):",
       "difference": "Розніца:",
       "expensesTitle": "Расходы",
       "amountPlaceholder": "Сума",
@@ -994,6 +994,7 @@
     "offlineQueueHint": "Чакаюць адпраўкі: {count} здач(ы) — сыдуць аўтаматычна пры сувязі",
     "gameRoom": {
       "pickAssetHint": "Націсніце на актыў, каб пачаць пуск",
+      "noAssetsYet": "Уладальнік яшчэ не дадаў актывы ў гэтую зону",
       "labelSheetTitle": "Метка пуску",
       "labelPlaceholder": "Напрыклад, бранзалет №5",
       "labelStartButton": "Пачаць",
@@ -1244,6 +1245,8 @@
     "differenceCompact": "Розн.",
     "calculated": "Разліковая выручка",
     "calculatedCompact": "Паказ.",
+    "gross": "Валавая выручка (па лічыльніках)",
+    "grossCompact": "Вал.",
     "cashOnly": "Каса",
     "forcedIncompleteCompact": "Прымусова — не ўсе дадзеныя маглі паступіць",
     "forcedIncompleteFull": "Адпраўлена прымусова на мяжы дня — не ўсе дадзеныя маглі паступіць.",

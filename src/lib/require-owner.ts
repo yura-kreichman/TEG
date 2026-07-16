@@ -39,3 +39,13 @@ export async function findTenantPoint(tenantId: string, pointId: string) {
   if (!point || point.tenantId !== tenantId) return null;
   return point;
 }
+
+/** Loads an Asset and verifies it belongs to the given tenant (via its Zone → Point). */
+export async function findTenantAsset(tenantId: string, assetId: string) {
+  const asset = await prisma.asset.findUnique({
+    where: { id: assetId },
+    include: { zone: { include: { point: true } } },
+  });
+  if (!asset || asset.zone.point.tenantId !== tenantId) return null;
+  return asset;
+}

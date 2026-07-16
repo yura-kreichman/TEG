@@ -699,10 +699,6 @@
     "gameRoomRateLabel": "Սակագին րոպեում",
     "gameRoomDurationLabel": "Տևողություն, րոպե",
     "gameRoomDurationPlaceholder": "Առանց սահմանափակման",
-    "gameRoomRoundingLabel": "Տևողության կլորացում",
-    "gameRoomRoundingUp": "Վերև",
-    "gameRoomRoundingNearest": "Մաթեմատիկորեն",
-    "gameRoomRoundingDown": "Ներքև",
     "gameRoomMinAmountLabel": "Մեկնարկի նվազագույն գումարը",
     "gameRoomThresholdLabel": "Երկար մեկնարկի շեմ",
     "gameRoomThresholdHint": "Այս ժամանակից երկար մեկնարկը նշվում է որպես ուշադրություն պահանջող",
@@ -710,7 +706,10 @@
     "gameRoomLiveLink": "Հիմա կետում",
     "gameRoomLaunchesListLink": "Մեկնարկների ցանկ",
     "gameRoomPricingHistoryLabel": "Սակագնի պատմություն",
-    "gameRoomPricingActiveChip": "Գործում է"
+    "gameRoomPricingActiveChip": "Գործում է",
+    "gameRoomPricingHistoryActionsLabel": "Գործողություններ սակագնի գրառման հետ",
+    "gameRoomPricingHistoryDeleteConfirm": "Ջնջե՞լ սակագնի պատմության այս գրառումը։ Դա չի փոխի արդեն հաշվարկված մեկնարկները։",
+    "gameRoomRoundingUpNote": "Տևողությունը կլորացվում է վերև՝ ամբողջ րոպեի, կետը չի կորցնում թերի րոպեների վրա։"
   },
   "operators": {
     "title": "Աշխատակիցներ",
@@ -970,6 +969,7 @@
       "cashLabel": "Կանխիկ",
       "mobileLabel": "Անկանխիկ",
       "calculatedRevenue": "Հաշվարկային եկամուտ.",
+      "grossRevenue": "Համախառն (հաշվիչներով).",
       "difference": "Տարբերություն.",
       "expensesTitle": "Ծախսեր",
       "amountPlaceholder": "Գումար",
@@ -994,6 +994,7 @@
     "offlineQueueHint": "Սպասում են ուղարկման. {count} հանձնում(ներ) — կուղարկվեն ավտոմատ կապի առկայության դեպքում",
     "gameRoom": {
       "pickAssetHint": "Հպեք ակտիվին՝ մեկնարկը սկսելու համար",
+      "noAssetsYet": "Սեփականատերը դեռ այս գոտում ակտիվներ չի ավելացրել",
       "labelSheetTitle": "Մեկնարկի պիտակ",
       "labelPlaceholder": "օրինակ՝ apարմիկ №5",
       "labelStartButton": "Սկսել",
@@ -1244,6 +1245,8 @@
     "differenceCompact": "Տարբ.",
     "calculated": "Հաշվարկային եկամուտ.",
     "calculatedCompact": "Ցուցմ.",
+    "gross": "Համախառն եկամուտ (հաշվիչներով)",
+    "grossCompact": "Համ.",
     "cashOnly": "Դրամարկղ",
     "forcedIncompleteCompact": "Հարկադիր — բոլոր տվյալները կարող են չհասնել",
     "forcedIncompleteFull": "Ուղարկվել է հարկադրաբար օրվա սահմանին — բոլոր տվյալները կարող են չհասնել։",

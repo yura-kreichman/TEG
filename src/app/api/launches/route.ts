@@ -12,6 +12,9 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const zoneId = searchParams.get("zoneId");
+  // Фильтр по активу (запрос пользователя 2026-07-16: "актуально для актива,
+  // не для зоны") — независим от zoneId, можно передать любой из двух или оба.
+  const assetId = searchParams.get("assetId");
   const year = Number(searchParams.get("year"));
   const month = Number(searchParams.get("month")); // 1-12
 
@@ -29,7 +32,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ launches: [] });
   }
 
-  const where: { zoneId: { in: string[] }; startedAt?: { gte: Date; lt: Date } } = { zoneId: { in: zoneIds } };
+  const where: { zoneId: { in: string[] }; assetId?: string; startedAt?: { gte: Date; lt: Date } } = {
+    zoneId: { in: zoneIds },
+  };
+  if (assetId) where.assetId = assetId;
   if (Number.isFinite(year) && Number.isFinite(month) && month >= 1 && month <= 12) {
     where.startedAt = { gte: new Date(Date.UTC(year, month - 1, 1)), lt: new Date(Date.UTC(year, month, 1)) };
   }

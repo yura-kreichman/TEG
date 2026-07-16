@@ -699,10 +699,6 @@
     "gameRoomRateLabel": "Stawka za minutę",
     "gameRoomDurationLabel": "Czas trwania, min",
     "gameRoomDurationPlaceholder": "Bez limitu",
-    "gameRoomRoundingLabel": "Zaokrąglanie czasu",
-    "gameRoomRoundingUp": "W górę",
-    "gameRoomRoundingNearest": "Matematycznie",
-    "gameRoomRoundingDown": "W dół",
     "gameRoomMinAmountLabel": "Minimalna kwota uruchomienia",
     "gameRoomThresholdLabel": "Próg długiego uruchomienia",
     "gameRoomThresholdHint": "Uruchomienie trwające dłużej niż ten czas jest oznaczane jako wymagające uwagi",
@@ -710,7 +706,10 @@
     "gameRoomLiveLink": "Teraz w punkcie",
     "gameRoomLaunchesListLink": "Lista uruchomień",
     "gameRoomPricingHistoryLabel": "Historia taryfy",
-    "gameRoomPricingActiveChip": "Obowiązuje"
+    "gameRoomPricingActiveChip": "Obowiązuje",
+    "gameRoomPricingHistoryActionsLabel": "Działania z wpisem taryfy",
+    "gameRoomPricingHistoryDeleteConfirm": "Usunąć ten wpis historii taryfy? Już obliczone uruchomienia się nie zmienią.",
+    "gameRoomRoundingUpNote": "Czas trwania jest zaokrąglany w górę do pełnej minuty — punkt nie traci na niepełnych minutach."
   },
   "operators": {
     "title": "Pracownicy",
@@ -970,6 +969,7 @@
       "cashLabel": "Gotówka",
       "mobileLabel": "Bezgotówkowo",
       "calculatedRevenue": "Obliczony przychód:",
+      "grossRevenue": "Brutto (wg liczników):",
       "difference": "Różnica:",
       "expensesTitle": "Wydatki",
       "amountPlaceholder": "Kwota",
@@ -994,6 +994,7 @@
     "offlineQueueHint": "Oczekują na wysłanie: {count} rozliczeń — zostaną wysłane automatycznie po połączeniu",
     "gameRoom": {
       "pickAssetHint": "Dotknij zasobu, aby rozpocząć uruchomienie",
+      "noAssetsYet": "Właściciel nie dodał jeszcze żadnych zasobów do tej strefy",
       "labelSheetTitle": "Etykieta uruchomienia",
       "labelPlaceholder": "np. opaska nr 5",
       "labelStartButton": "Start",
@@ -1244,6 +1245,8 @@
     "differenceCompact": "Różn.",
     "calculated": "Obliczony przychód",
     "calculatedCompact": "Odcz.",
+    "gross": "Przychód brutto (wg liczników)",
+    "grossCompact": "Brutto",
     "cashOnly": "Kasa",
     "forcedIncompleteCompact": "Wymuszone — nie wszystkie dane mogły dotrzeć",
     "forcedIncompleteFull": "Wysłano wymuszenie na granicy dnia — nie wszystkie dane mogły dotrzeć.",

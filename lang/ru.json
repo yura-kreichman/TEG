@@ -699,10 +699,6 @@
     "gameRoomRateLabel": "Тариф за минуту",
     "gameRoomDurationLabel": "Длительность, мин",
     "gameRoomDurationPlaceholder": "Без ограничения",
-    "gameRoomRoundingLabel": "Округление длительности",
-    "gameRoomRoundingUp": "Вверх",
-    "gameRoomRoundingNearest": "Математически",
-    "gameRoomRoundingDown": "Вниз",
     "gameRoomMinAmountLabel": "Минимальная сумма пуска",
     "gameRoomThresholdLabel": "Порог долгого пуска",
     "gameRoomThresholdHint": "Пуск дольше этого времени помечается как требующий внимания",
@@ -710,7 +706,10 @@
     "gameRoomLiveLink": "Сейчас на точке",
     "gameRoomLaunchesListLink": "Список пусков",
     "gameRoomPricingHistoryLabel": "История тарифа",
-    "gameRoomPricingActiveChip": "Действует"
+    "gameRoomPricingActiveChip": "Действует",
+    "gameRoomPricingHistoryActionsLabel": "Действия с записью тарифа",
+    "gameRoomPricingHistoryDeleteConfirm": "Удалить эту запись истории тарифа? Уже посчитанные пуски это не изменит.",
+    "gameRoomRoundingUpNote": "Длительность округляется вверх до полной минуты — точка не теряет на неполных минутах."
   },
   "operators": {
     "title": "Сотрудники",
@@ -970,6 +969,7 @@
       "cashLabel": "Наличные",
       "mobileLabel": "Безнал",
       "calculatedRevenue": "Расчётная выручка:",
+      "grossRevenue": "Валовая (по счётчикам):",
       "difference": "Разница:",
       "expensesTitle": "Расходы",
       "amountPlaceholder": "Сумма",
@@ -994,6 +994,7 @@
     "offlineQueueHint": "Ждут отправки: {count} сдач(и) — уйдут автоматически при связи",
     "gameRoom": {
       "pickAssetHint": "Нажмите на актив, чтобы начать пуск",
+      "noAssetsYet": "Владелец ещё не добавил активы в эту зону",
       "labelSheetTitle": "Метка пуска",
       "labelPlaceholder": "Например, браслет №5",
       "labelStartButton": "Начать",
@@ -1244,6 +1245,8 @@
     "differenceCompact": "Разн.",
     "calculated": "Расчётная выручка",
     "calculatedCompact": "Счёт.",
+    "gross": "Валовая выручка (по счётчикам)",
+    "grossCompact": "Вал.",
     "cashOnly": "Касса",
     "forcedIncompleteCompact": "Принудительно — не все данные могли поступить",
     "forcedIncompleteFull": "Отправлено принудительно по границе дня — не все данные могли поступить.",

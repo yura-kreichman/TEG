@@ -699,10 +699,6 @@
     "gameRoomRateLabel": "Мүнөттүк тариф",
     "gameRoomDurationLabel": "Узактыгы, мүн",
     "gameRoomDurationPlaceholder": "Чектөөсүз",
-    "gameRoomRoundingLabel": "Узактыкты тегеректөө",
-    "gameRoomRoundingUp": "Жогору",
-    "gameRoomRoundingNearest": "Математикалык",
-    "gameRoomRoundingDown": "Төмөн",
     "gameRoomMinAmountLabel": "Пуcктун эң аз суммасы",
     "gameRoomThresholdLabel": "Узун пуcк чеги",
     "gameRoomThresholdHint": "Бул убакыттан узун пуcк көңүл бурууну талап кылат деп белгиленет",
@@ -710,7 +706,10 @@
     "gameRoomLiveLink": "Азыр пунктта",
     "gameRoomLaunchesListLink": "Пуcктер тизмеси",
     "gameRoomPricingHistoryLabel": "Тариф тарыхы",
-    "gameRoomPricingActiveChip": "Колдонууда"
+    "gameRoomPricingActiveChip": "Колдонууда",
+    "gameRoomPricingHistoryActionsLabel": "Тариф жазуусу менен аракеттер",
+    "gameRoomPricingHistoryDeleteConfirm": "Тариф тарыхынын бул жазуусун өчүрөсүзбү? Бул мурда эсептелген пуcктерди өзгөртпөйт.",
+    "gameRoomRoundingUpNote": "Узактыгы толук мүнөткө чейин жогору тегеректелет — пункт толук эмес мүнөттөрдө утулбайт."
   },
   "operators": {
     "title": "Кызматкерлер",
@@ -970,6 +969,7 @@
       "cashLabel": "Накталай",
       "mobileLabel": "Накталай эмес",
       "calculatedRevenue": "Эсептелген түшүм:",
+      "grossRevenue": "Жалпы (эсептегичтер боюнча):",
       "difference": "Айырма:",
       "expensesTitle": "Чыгашалар",
       "amountPlaceholder": "Сумма",
@@ -994,6 +994,7 @@
     "offlineQueueHint": "Жөнөтүүнү күтүүдө: {count} тапшыруу — байланыш болгондо автоматтык түрдө жөнөтүлөт",
     "gameRoom": {
       "pickAssetHint": "Пуcктu баштоо үчүн активге басыңыз",
+      "noAssetsYet": "Ээси бул зонага азырынча активдерди кошо элек",
       "labelSheetTitle": "Пуcк белгиси",
       "labelPlaceholder": "Мисалы, билериктик №5",
       "labelStartButton": "Баштоо",
@@ -1244,6 +1245,8 @@
     "differenceCompact": "Айырм.",
     "calculated": "Эсептелген түшүм",
     "calculatedCompact": "Көрс.",
+    "gross": "Жалпы түшүм (эсептегичтер боюнча)",
+    "grossCompact": "Жалпы",
     "cashOnly": "Касса",
     "forcedIncompleteCompact": "Мажбурлап — бардык маалымат келбеши мүмкүн",
     "forcedIncompleteFull": "Күндүн чегинде мажбурлап жөнөтүлдү — бардык маалымат келбеши мүмкүн.",

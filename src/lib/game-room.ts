@@ -31,38 +31,38 @@ export interface LaunchPricingSnapshot {
 }
 
 /**
- * Действующий тариф зоны на момент времени `at` — запись LaunchPricing с
+ * Действующий тариф АКТИВА на момент времени `at` — запись LaunchPricing с
  * максимальным effectiveFrom <= at (тот же паттерн, что действующая ставка
- * оператора в 05-work-time.md). null, если владелец ещё не задал тариф.
+ * оператора в 05-work-time.md). Тариф принадлежит активу, не зоне (запрос
+ * пользователя 2026-07-16: "2 игровые комнаты — это активы", у каждой своя
+ * цена). null, если владелец ещё не задал тариф для этого актива.
  */
-export async function getLaunchPricingAt(zoneId: string, at: Date, tx: Tx | typeof prisma = prisma) {
+export async function getLaunchPricingAt(assetId: string, at: Date, tx: Tx | typeof prisma = prisma) {
   return tx.launchPricing.findFirst({
-    where: { zoneId, effectiveFrom: { lte: at } },
+    where: { assetId, effectiveFrom: { lte: at } },
     orderBy: { effectiveFrom: "desc" },
   });
 }
 
 /**
- * Следующий номер пуска в рамках (zoneId, assetId) — атомарно через
- * advisory-lock транзакции (не через @@unique — assetId nullable, а Postgres
- * не считает NULL=NULL для уникальности, так что unique-констрейнт не
- * защитил бы зону без активов). Лок держится до конца транзакции tx и сам
- * снимается коммитом/роллбэком — вызывающий код обязан вызывать это внутри
+ * Следующий номер пуска в рамках актива — атомарно через advisory-lock
+ * транзакции (не через @@unique — Launch.assetId используется как lock key
+ * напрямую, без зоны). Лок держится до конца транзакции tx и сам снимается
+ * коммитом/роллбэком — вызывающий код обязан вызывать это внутри
  * prisma.$transaction.
  */
-export async function nextLaunchNumber(tx: Tx, zoneId: string, assetId: string | null): Promise<number> {
-  const lockKey = `${zoneId}:${assetId ?? "zone"}`;
-  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
+export async function nextLaunchNumber(tx: Tx, assetId: string): Promise<number> {
+  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${assetId}))`;
   const last = await tx.launch.findFirst({
-    where: { zoneId, assetId },
+    where: { assetId },
     orderBy: { number: "desc" },
     select: { number: true },
   });
   return (last?.number ?? 0) + 1;
 }
 
-export async function countOpenLaunches(zoneId: string, assetId: string | null, tx: Tx | typeof prisma = prisma) {
-  return tx.launch.count({ where: { zoneId, assetId, isOpen: true } });
+export async function countOpenLaunches(assetId: string, tx: Tx | typeof prisma = prisma) {
+  return tx.launch.count({ where: { assetId, isOpen: true } });
 }
 
 /**
@@ -115,8 +115,11 @@ export function computeLaunchAmount(
     return Number(pricing.priceSnapshot);
   }
 
+  // Округление — всегда вверх (запрос пользователя 2026-07-16: округление
+  // вниз/математически недодаёт точке выручку за фактически занятое время);
+  // fallback на случай null в старых записях, не сам выбор.
   const rawMinutes = Math.max(0, (endedAt.getTime() - startedAt.getTime()) / 60000);
-  const mode = pricing.roundingModeSnapshot ?? "nearest";
+  const mode = pricing.roundingModeSnapshot ?? "up";
   const minutes = roundMinutes(rawMinutes, mode);
   const amount = minutes * Number(pricing.priceSnapshot);
   const minAmount = pricing.minAmountSnapshot != null ? Number(pricing.minAmountSnapshot) : 0;

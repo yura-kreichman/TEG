@@ -699,10 +699,6 @@
     "gameRoomRateLabel": "Rate per minute",
     "gameRoomDurationLabel": "Duration, min",
     "gameRoomDurationPlaceholder": "No limit",
-    "gameRoomRoundingLabel": "Duration rounding",
-    "gameRoomRoundingUp": "Up",
-    "gameRoomRoundingNearest": "Nearest",
-    "gameRoomRoundingDown": "Down",
     "gameRoomMinAmountLabel": "Minimum launch amount",
     "gameRoomThresholdLabel": "Long launch threshold",
     "gameRoomThresholdHint": "A launch running longer than this is flagged as needing attention",
@@ -710,7 +706,10 @@
     "gameRoomLiveLink": "Live at the point",
     "gameRoomLaunchesListLink": "Launch list",
     "gameRoomPricingHistoryLabel": "Tariff history",
-    "gameRoomPricingActiveChip": "Active"
+    "gameRoomPricingActiveChip": "Active",
+    "gameRoomPricingHistoryActionsLabel": "Tariff entry actions",
+    "gameRoomPricingHistoryDeleteConfirm": "Delete this tariff history entry? It won't change already-calculated launches.",
+    "gameRoomRoundingUpNote": "Duration is rounded up to the full minute — the point never loses money on partial minutes."
   },
   "operators": {
     "title": "Employees",
@@ -970,6 +969,7 @@
       "cashLabel": "Cash",
       "mobileLabel": "Cashless",
       "calculatedRevenue": "Calculated revenue:",
+      "grossRevenue": "Gross (by meters):",
       "difference": "Difference:",
       "expensesTitle": "Expenses",
       "amountPlaceholder": "Amount",
@@ -994,6 +994,7 @@
     "offlineQueueHint": "Waiting to send: {count} submission(s) — will send automatically once online",
     "gameRoom": {
       "pickAssetHint": "Tap an asset to start a launch",
+      "noAssetsYet": "The owner hasn't added any assets to this zone yet",
       "labelSheetTitle": "Launch label",
       "labelPlaceholder": "e.g. wristband #5",
       "labelStartButton": "Start",
@@ -1244,6 +1245,8 @@
     "differenceCompact": "Diff.",
     "calculated": "Calculated revenue",
     "calculatedCompact": "Read.",
+    "gross": "Gross revenue (by meters)",
+    "grossCompact": "Gross",
     "cashOnly": "Till",
     "forcedIncompleteCompact": "Forced — not all data may have arrived",
     "forcedIncompleteFull": "Sent forcibly at the day boundary — not all data may have arrived.",

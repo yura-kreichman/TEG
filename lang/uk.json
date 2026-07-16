@@ -699,10 +699,6 @@
     "gameRoomRateLabel": "Тариф за хвилину",
     "gameRoomDurationLabel": "Тривалість, хв",
     "gameRoomDurationPlaceholder": "Без обмеження",
-    "gameRoomRoundingLabel": "Округлення тривалості",
-    "gameRoomRoundingUp": "Вгору",
-    "gameRoomRoundingNearest": "Математично",
-    "gameRoomRoundingDown": "Вниз",
     "gameRoomMinAmountLabel": "Мінімальна сума пуску",
     "gameRoomThresholdLabel": "Поріг довгого пуску",
     "gameRoomThresholdHint": "Пуск довший за цей час позначається як такий, що потребує уваги",
@@ -710,7 +706,10 @@
     "gameRoomLiveLink": "Зараз на точці",
     "gameRoomLaunchesListLink": "Список пусків",
     "gameRoomPricingHistoryLabel": "Історія тарифу",
-    "gameRoomPricingActiveChip": "Діє"
+    "gameRoomPricingActiveChip": "Діє",
+    "gameRoomPricingHistoryActionsLabel": "Дії із записом тарифу",
+    "gameRoomPricingHistoryDeleteConfirm": "Видалити цей запис історії тарифу? Це не змінить уже пораховані пуски.",
+    "gameRoomRoundingUpNote": "Тривалість округляється вгору до повної хвилини — точка не втрачає на неповних хвилинах."
   },
   "operators": {
     "title": "Співробітники",
@@ -970,6 +969,7 @@
       "cashLabel": "Готівка",
       "mobileLabel": "Безнал",
       "calculatedRevenue": "Розрахункова виручка:",
+      "grossRevenue": "Валова (за лічильниками):",
       "difference": "Різниця:",
       "expensesTitle": "Витрати",
       "amountPlaceholder": "Сума",
@@ -994,6 +994,7 @@
     "offlineQueueHint": "Очікують відправки: {count} здач — підуть автоматично при з'вязку",
     "gameRoom": {
       "pickAssetHint": "Натисніть на актив, щоб почати пуск",
+      "noAssetsYet": "Власник ще не додав активи до цієї зони",
       "labelSheetTitle": "Мітка пуску",
       "labelPlaceholder": "Наприклад, браслет №5",
       "labelStartButton": "Почати",
@@ -1244,6 +1245,8 @@
     "differenceCompact": "Різн.",
     "calculated": "Розрахункова виручка",
     "calculatedCompact": "Показ.",
+    "gross": "Валова виручка (за лічильниками)",
+    "grossCompact": "Вал.",
     "cashOnly": "Каса",
     "forcedIncompleteCompact": "Примусово — не всі дані могли надійти",
     "forcedIncompleteFull": "Надіслано примусово на межі дня — не всі дані могли надійти.",

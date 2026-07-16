@@ -24,6 +24,7 @@ interface AssetCtx {
   colorTag: string;
   photoUrl: string | null;
   iconKey: string | null;
+  active: boolean;
 }
 
 interface ZoneCtx {
@@ -206,10 +207,29 @@ export default function GameRoomZonePage() {
 
   if (loading || !zone) return null;
 
-  const tiles: { key: string; assetId: string | null; name: string; iconKey: string | null; colorTag: string | null }[] =
-    zone.assets.length > 0
-      ? zone.assets.map((a) => ({ key: a.id, assetId: a.id, name: a.name, iconKey: a.iconKey, colorTag: a.colorTag }))
-      : [{ key: "zone", assetId: null, name: zone.name, iconKey: zone.iconKey, colorTag: null }];
+  // Тайл активов — та же карточка, что в мастере сдачи итогов (счётчики):
+  // фото/иконка + цветная метка + подпись снизу (запрос пользователя
+  // 2026-07-16: "как в других зонах", единый визуальный язык). Тариф —
+  // свойство актива (2026-07-16: "игровые комнаты — это активы, у каждой
+  // своя цена"), поэтому зона без активов не может ничего запустить — нет
+  // псевдо-тайла на всю зону, вместо него пустое состояние ниже.
+  const tiles: {
+    key: string;
+    assetId: string | null;
+    name: string;
+    iconKey: string | null;
+    photoUrl: string | null;
+    colorTag: string | null;
+    active: boolean;
+  }[] = zone.assets.map((a) => ({
+    key: a.id,
+    assetId: a.id,
+    name: a.name,
+    iconKey: a.iconKey,
+    photoUrl: a.photoUrl,
+    colorTag: a.colorTag,
+    active: a.active,
+  }));
 
   const listLaunches = listSheetFor ? launchesByAsset.get(listSheetFor) ?? [] : [];
 
@@ -234,8 +254,12 @@ export default function GameRoomZonePage() {
           <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{zone.name}</h1>
         </div>
 
-        {launches.length === 0 && zone.assets.length === 0 ? null : null}
-
+        {tiles.length === 0 ? (
+          <p className="py-4 text-center text-body-airbnb text-muted-foreground">
+            {t.operatorApp.gameRoom.noAssetsYet}
+          </p>
+        ) : (
+          <>
         <p className="mb-3 text-[0.84375rem] text-muted-foreground">{t.operatorApp.gameRoom.pickAssetHint}</p>
 
         <div className="grid grid-cols-2 gap-3">
@@ -251,23 +275,35 @@ export default function GameRoomZonePage() {
               <PressableScale key={tile.key}>
                 <button
                   type="button"
-                  onClick={() => (openCount > 0 ? setListSheetFor(tile.key) : startLaunch(tile.assetId, null))}
-                  disabled={starting}
+                  onClick={() =>
+                    openCount > 0
+                      ? setListSheetFor(tile.key)
+                      : tile.active && startLaunch(tile.assetId, null)
+                  }
+                  disabled={starting || (!tile.active && openCount === 0)}
                   className={cn(
-                    "relative flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card p-3 text-left",
+                    "relative flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card text-left",
                     openCount > 0 ? "border-primary" : "border-border",
+                    !tile.active && "grayscale",
                     anyExpired && "border-destructive motion-safe:animate-pulse"
                   )}
                 >
-                  <div className="mb-2 flex items-center justify-between">
-                    <div className="flex size-9 items-center justify-center rounded-control bg-muted">
-                      {tile.iconKey ? (
-                        <AssetOrZoneIcon iconKey={tile.iconKey} className="size-5" />
-                      ) : (
-                        <MapPin className="size-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    {tile.assetId !== undefined && (
+                  <div className="relative flex h-24 w-full shrink-0 items-center justify-center overflow-hidden bg-muted">
+                    {tile.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={tile.photoUrl} alt="" className="size-full object-contain object-center" />
+                    ) : tile.iconKey ? (
+                      <AssetOrZoneIcon iconKey={tile.iconKey} className="size-12 text-muted-foreground" />
+                    ) : (
+                      <MapPin className="size-10 text-muted-foreground" />
+                    )}
+                    {tile.colorTag && (
+                      <span
+                        className="absolute left-2.5 top-2.5 size-4 rounded-full ring-[2.5px] ring-card"
+                        style={{ backgroundColor: tile.colorTag }}
+                      />
+                    )}
+                    {tile.active && (
                       <PressableScale>
                         <span
                           role="button"
@@ -277,34 +313,38 @@ export default function GameRoomZonePage() {
                             setLabelValue("");
                             setLabelSheetFor(tile.key === "zone" ? "zone" : tile.assetId);
                           }}
-                          className="flex size-7 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground"
+                          className="absolute right-2.5 top-2.5 flex size-7 items-center justify-center rounded-full bg-card/90 text-muted-foreground shadow-sm"
                         >
                           <Tag className="size-3.5" />
                         </span>
                       </PressableScale>
                     )}
                   </div>
-                  <span className="text-[0.90625rem] font-bold tracking-[-0.01em]">{tile.name}</span>
-                  {openCount > 0 ? (
-                    <span className="mt-0.5 flex items-center gap-1 text-xs font-semibold tabular-nums text-primary">
-                      {openCount} {t.operatorApp.gameRoom.openCountSuffix}
-                      {nearest && (
-                        <span className="text-muted-foreground">
-                          · {formatMMSS(now.getTime() - new Date(nearest.startedAt).getTime())}
-                        </span>
-                      )}
-                    </span>
-                  ) : (
-                    <span className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                      <Plus className="size-3" />
-                      {t.operatorApp.gameRoom.labelStartButton}
-                    </span>
-                  )}
+                  <div className="flex flex-col gap-1 p-3">
+                    <span className="text-[0.90625rem] font-bold tracking-[-0.01em]">{tile.name}</span>
+                    {openCount > 0 ? (
+                      <span className="flex items-center gap-1 text-xs font-semibold tabular-nums text-primary">
+                        {openCount} {t.operatorApp.gameRoom.openCountSuffix}
+                        {nearest && (
+                          <span className="text-muted-foreground">
+                            · {formatMMSS(now.getTime() - new Date(nearest.startedAt).getTime())}
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs leading-snug text-muted-foreground">
+                        <Plus className="size-3 shrink-0" />
+                        {t.operatorApp.gameRoom.labelStartButton}
+                      </span>
+                    )}
+                  </div>
                 </button>
               </PressableScale>
             );
           })}
         </div>
+          </>
+        )}
 
         {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
       </div>

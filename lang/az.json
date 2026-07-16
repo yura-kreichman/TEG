@@ -699,10 +699,6 @@
     "gameRoomRateLabel": "Dəqiqəlik tarif",
     "gameRoomDurationLabel": "Müddət, dəq",
     "gameRoomDurationPlaceholder": "Məhdudiyyətsiz",
-    "gameRoomRoundingLabel": "Müddətin yuvarlaqlaşdırılması",
-    "gameRoomRoundingUp": "Yuxarı",
-    "gameRoomRoundingNearest": "Riyazi",
-    "gameRoomRoundingDown": "Aşağı",
     "gameRoomMinAmountLabel": "Minimal başlanğıc məbləği",
     "gameRoomThresholdLabel": "Uzun başlanğıc həddi",
     "gameRoomThresholdHint": "Bu vaxtdan uzun davam edən başlanğıc diqqət tələb edən kimi qeyd olunur",
@@ -710,7 +706,10 @@
     "gameRoomLiveLink": "İndi nöqtədə",
     "gameRoomLaunchesListLink": "Başlanğıclar siyahısı",
     "gameRoomPricingHistoryLabel": "Tarif tarixçəsi",
-    "gameRoomPricingActiveChip": "Aktivdir"
+    "gameRoomPricingActiveChip": "Aktivdir",
+    "gameRoomPricingHistoryActionsLabel": "Tarif qeydi ilə əməliyyatlar",
+    "gameRoomPricingHistoryDeleteConfirm": "Tarif tarixçəsinin bu qeydini silmək? Bu artıq hesablanmış başlanğıcları dəyişməyəcək.",
+    "gameRoomRoundingUpNote": "Müddət tam dəqiqəyə qədər yuxarı yuvarlaqlaşdırılır — nöqtə natamam dəqiqələrdə itirmir."
   },
   "operators": {
     "title": "İşçilər",
@@ -970,6 +969,7 @@
       "cashLabel": "Nağd",
       "mobileLabel": "Nağdsız",
       "calculatedRevenue": "Hesablanmış gəlir:",
+      "grossRevenue": "Ümumi (sayğaclara görə):",
       "difference": "Fərq:",
       "expensesTitle": "Xərclər",
       "amountPlaceholder": "Məbləğ",
@@ -994,6 +994,7 @@
     "offlineQueueHint": "Göndərilməni gözləyir: {count} hesabat — əlaqə olduqda avtomatik göndəriləcək",
     "gameRoom": {
       "pickAssetHint": "Başlanğıcı başlamaq üçün aktivə toxunun",
+      "noAssetsYet": "Sahibkar hələ bu zonaya aktiv əlavə etməyib",
       "labelSheetTitle": "Başlanğıc etiketi",
       "labelPlaceholder": "məsələn, bilərzik №5",
       "labelStartButton": "Başla",
@@ -1244,6 +1245,8 @@
     "differenceCompact": "Fərq",
     "calculated": "Hesablanmış gəlir",
     "calculatedCompact": "Göst.",
+    "gross": "Ümumi gəlir (sayğaclara görə)",
+    "grossCompact": "Üm.",
     "cashOnly": "Kassa",
     "forcedIncompleteCompact": "Məcburi — bütün məlumatlar gəlməmiş ola bilər",
     "forcedIncompleteFull": "Gün sərhədində məcburi göndərildi — bütün məlumatlar gəlməmiş ola bilər.",

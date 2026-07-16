@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
-import { calcSessions, calcZoneRevenue, isGameRoomZone, type ZoneAccountingMode } from "@/lib/results-calc";
+import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, isGameRoomZone, type ZoneAccountingMode } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateGameRoomLaunches, countOpenLaunchesInZone, previousSubmissionBoundary } from "@/lib/game-room";
 import { dispatchZoneSummary } from "@/lib/summary-channels/dispatch";
@@ -153,6 +153,7 @@ export async function POST(request: Request) {
         zoneId: zs.zoneId,
         zoneName: zone.name,
         calculatedRevenue,
+        grossRevenue: null as number | null,
         actualCash,
         difference,
         readingsText: "",
@@ -177,6 +178,9 @@ export async function POST(request: Request) {
     });
 
     const calculatedRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
+    // Только когда есть что вычитать (запрос пользователя 2026-07-16) —
+    // иначе валовая совпадает с net один-в-один, лишняя строка в сводке.
+    const grossRevenue = zs.returnsCount > 0 ? calcZoneGrossRevenue(tariffCalc) : null;
     const actualCash = zs.cashAmount + zs.mobileAmount;
     const difference = Math.round((actualCash - calculatedRevenue) * 100) / 100;
 
@@ -212,6 +216,7 @@ export async function POST(request: Request) {
       zoneId: zs.zoneId,
       zoneName: zone.name,
       calculatedRevenue,
+      grossRevenue,
       actualCash,
       difference,
       readingsText,
@@ -362,6 +367,7 @@ export async function POST(request: Request) {
               cashAmount: s.cashAmount,
               mobileAmount: s.mobileAmount,
               calculatedRevenue: s.calculatedRevenue,
+              grossRevenue: s.grossRevenue,
               difference: s.difference,
               returnsCount: s.returnsCount,
               operatorName: operator.name,

@@ -13,7 +13,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { ImageLightbox } from "@/components/motion/image-lightbox";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
-import { calcSessions, calcZoneRevenue, isGameRoomZone, type LaunchMode, type ZoneAccountingMode } from "@/lib/results-calc";
+import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, isGameRoomZone, type LaunchMode, type ZoneAccountingMode } from "@/lib/results-calc";
 import { queueSubmission } from "@/lib/offline-submissions";
 import { useI18n } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
@@ -91,7 +91,14 @@ export default function SubmitResultsPage() {
   // сколько пусков ещё открыто в этой зоне, проверяется при входе на её шаг.
   const [gameRoomOpenCount, setGameRoomOpenCount] = useState<number | null>(null);
   const [result, setResult] = useState<{
-    summary: { zoneId: string; zoneName: string; calculatedRevenue: number; actualCash: number; difference: number }[];
+    summary: {
+      zoneId: string;
+      zoneName: string;
+      calculatedRevenue: number;
+      grossRevenue: number | null;
+      actualCash: number;
+      difference: number;
+    }[];
     remindMarkDeparture?: boolean;
   } | null>(null);
 
@@ -230,9 +237,10 @@ export default function SubmitResultsPage() {
     });
 
     const calculatedRevenue = calcZoneRevenue(tariffCalc, Number(form.returnsCount || 0));
+    const grossRevenue = Number(form.returnsCount || 0) > 0 ? calcZoneGrossRevenue(tariffCalc) : null;
     const actualCash = Number(form.cashAmount || 0) + Number(form.mobileAmount || 0);
     const difference = Math.round((actualCash - calculatedRevenue) * 100) / 100;
-    return { calculatedRevenue, actualCash, difference };
+    return { calculatedRevenue, grossRevenue, actualCash, difference };
   }
 
   // Актив "заполнен", если хотя бы один тариф введён — не обязательно все
@@ -291,6 +299,7 @@ export default function SubmitResultsPage() {
         zoneId,
         zoneName: zone.name,
         calculatedRevenue: preview?.calculatedRevenue ?? 0,
+        grossRevenue: preview?.grossRevenue ?? null,
         actualCash: preview?.actualCash ?? 0,
         difference: preview?.difference ?? 0,
       };
@@ -358,6 +367,11 @@ export default function SubmitResultsPage() {
                 <span className="tabular-nums text-muted-foreground">
                   {t.operatorApp.submit.calculatedRevenue} <Money value={s.calculatedRevenue} />
                 </span>
+                {s.grossRevenue != null && (
+                  <span className="tabular-nums text-muted-foreground">
+                    {t.operatorApp.submit.grossRevenue} <Money value={s.grossRevenue} />
+                  </span>
+                )}
                 <span className="tabular-nums text-muted-foreground">
                   {t.operatorApp.submit.actualCash} <Money value={s.actualCash} />
                 </span>
@@ -748,6 +762,11 @@ export default function SubmitResultsPage() {
                       <span className="tabular-nums text-muted-foreground">
                         {t.operatorApp.submit.calculatedRevenue} <Money value={preview.calculatedRevenue} />
                       </span>
+                      {preview.grossRevenue != null && (
+                        <span className="tabular-nums text-muted-foreground">
+                          {t.operatorApp.submit.grossRevenue} <Money value={preview.grossRevenue} />
+                        </span>
+                      )}
                       <span className="tabular-nums text-muted-foreground">
                         {t.operatorApp.submit.actualCash} <Money value={preview.actualCash} />
                       </span>

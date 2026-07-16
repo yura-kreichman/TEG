@@ -699,10 +699,6 @@
     "gameRoomRateLabel": "Bir daqiqalik tarif",
     "gameRoomDurationLabel": "Davomiyligi, daq",
     "gameRoomDurationPlaceholder": "Cheklovsiz",
-    "gameRoomRoundingLabel": "Davomiylikni yaxlitlash",
-    "gameRoomRoundingUp": "Yuqoriga",
-    "gameRoomRoundingNearest": "Matematik",
-    "gameRoomRoundingDown": "Pastga",
     "gameRoomMinAmountLabel": "Puskning eng kam summasi",
     "gameRoomThresholdLabel": "Uzoq pusk chegarasi",
     "gameRoomThresholdHint": "Bu vaqtdan uzoqroq davom etgan pusk eʼtibor talab qiladigan deb belgilanadi",
@@ -710,7 +706,10 @@
     "gameRoomLiveLink": "Hozir nuqtada",
     "gameRoomLaunchesListLink": "Pusklar roʻyxati",
     "gameRoomPricingHistoryLabel": "Tarif tarixi",
-    "gameRoomPricingActiveChip": "Amalda"
+    "gameRoomPricingActiveChip": "Amalda",
+    "gameRoomPricingHistoryActionsLabel": "Tarif yozuvi bilan amallar",
+    "gameRoomPricingHistoryDeleteConfirm": "Tarif tarixidagi bu yozuv oʻchirilsinmi? Bu allaqachon hisoblangan pusklarni oʻzgartirmaydi.",
+    "gameRoomRoundingUpNote": "Davomiyligi toʻliq daqiqagacha yuqoriga yaxlitlanadi — nuqta toʻliq boʻlmagan daqiqalarda yoʻqotmaydi."
   },
   "operators": {
     "title": "Xodimlar",
@@ -970,6 +969,7 @@
       "cashLabel": "Naqd pul",
       "mobileLabel": "Naqdsiz",
       "calculatedRevenue": "Hisoblangan tushum:",
+      "grossRevenue": "Yalpi (hisoblagichlar boʻyicha):",
       "difference": "Farq:",
       "expensesTitle": "Xarajatlar",
       "amountPlaceholder": "Summa",
@@ -994,6 +994,7 @@
     "offlineQueueHint": "Yuborilishini kutmoqda: {count} ta topshiriq — aloqa boʻlganda avtomatik yuboriladi",
     "gameRoom": {
       "pickAssetHint": "Ishga tushirishni boshlash uchun aktivga bosing",
+      "noAssetsYet": "Egasi bu zonaga hali aktivlar qo'shmagan",
       "labelSheetTitle": "Pusk yorlig'i",
       "labelPlaceholder": "masalan, bilaguzuk №5",
       "labelStartButton": "Boshlash",
@@ -1244,6 +1245,8 @@
     "differenceCompact": "Farq",
     "calculated": "Hisoblangan tushum",
     "calculatedCompact": "Koʻrs.",
+    "gross": "Yalpi tushum (hisoblagichlar boʻyicha)",
+    "grossCompact": "Yalpi",
     "cashOnly": "Kassa",
     "forcedIncompleteCompact": "Majburiy — barcha ma'lumotlar kelmagan bo'lishi mumkin",
     "forcedIncompleteFull": "Kun chegarasida majburiy yuborildi — barcha ma'lumotlar kelmagan bo'lishi mumkin.",

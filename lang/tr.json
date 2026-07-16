@@ -699,10 +699,6 @@
     "gameRoomRateLabel": "Dakika başına ücret",
     "gameRoomDurationLabel": "Süre, dk",
     "gameRoomDurationPlaceholder": "Sınırsız",
-    "gameRoomRoundingLabel": "Süre yuvarlama",
-    "gameRoomRoundingUp": "Yukarı",
-    "gameRoomRoundingNearest": "Matematiksel",
-    "gameRoomRoundingDown": "Aşağı",
     "gameRoomMinAmountLabel": "Minimum başlatma tutarı",
     "gameRoomThresholdLabel": "Uzun başlatma eşiği",
     "gameRoomThresholdHint": "Bu süreden uzun süren başlatma dikkat gerektiren olarak işaretlenir",
@@ -710,7 +706,10 @@
     "gameRoomLiveLink": "Şu anda noktada",
     "gameRoomLaunchesListLink": "Başlatma listesi",
     "gameRoomPricingHistoryLabel": "Tarife geçmişi",
-    "gameRoomPricingActiveChip": "Etkin"
+    "gameRoomPricingActiveChip": "Etkin",
+    "gameRoomPricingHistoryActionsLabel": "Tarife kaydı işlemleri",
+    "gameRoomPricingHistoryDeleteConfirm": "Bu tarife geçmişi kaydı silinsin mi? Zaten hesaplanmış başlatmaları değiştirmez.",
+    "gameRoomRoundingUpNote": "Süre tam dakikaya yukarı yuvarlanır — nokta eksik dakikalarda kaybetmez."
   },
   "operators": {
     "title": "Çalışanlar",
@@ -970,6 +969,7 @@
       "cashLabel": "Nakit",
       "mobileLabel": "Kartlı",
       "calculatedRevenue": "Hesaplanan gelir:",
+      "grossRevenue": "Brüt (sayaçlara göre):",
       "difference": "Fark:",
       "expensesTitle": "Giderler",
       "amountPlaceholder": "Tutar",
@@ -994,6 +994,7 @@
     "offlineQueueHint": "Gönderim bekleyen: {count} teslim — bağlantı gelince otomatik gönderilecek",
     "gameRoom": {
       "pickAssetHint": "Başlatmayı başlatmak için bir varlığa dokunun",
+      "noAssetsYet": "Sahip bu bölgeye henüz varlık eklemedi",
       "labelSheetTitle": "Başlatma etiketi",
       "labelPlaceholder": "ör. bileklik №5",
       "labelStartButton": "Başlat",
@@ -1244,6 +1245,8 @@
     "differenceCompact": "Fark",
     "calculated": "Hesaplanan gelir",
     "calculatedCompact": "Okuma",
+    "gross": "Brüt gelir (sayaçlara göre)",
+    "grossCompact": "Brüt",
     "cashOnly": "Kasa",
     "forcedIncompleteCompact": "Zorunlu — tüm veriler gelmemiş olabilir",
     "forcedIncompleteFull": "Gün sınırında zorunlu olarak gönderildi — tüm veriler gelmemiş olabilir.",

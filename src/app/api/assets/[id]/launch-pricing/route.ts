@@ -1,27 +1,28 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { findTenantZone, requireOwner } from "@/lib/require-owner";
-import { getLaunchPricingAt, LAUNCH_PRICING_MODES, LAUNCH_ROUNDING_MODES } from "@/lib/game-room";
+import { findTenantAsset, requireOwner } from "@/lib/require-owner";
+import { getLaunchPricingAt, LAUNCH_PRICING_MODES } from "@/lib/game-room";
 
-// Тариф зоны "Игровой комнаты" (docs/spec/04-game-room.md) — история,
-// append-only (см. LaunchPricing в schema.prisma), тот же паттерн, что
+// Тариф АКТИВА "Игровой комнаты" (docs/spec/04-game-room.md) — не зоны:
+// у каждой игровой комнаты/аттракциона своя цена (запрос пользователя
+// 2026-07-16). История — append-only (LaunchPricing), тот же паттерн, что
 // история ставок оператора (05-work-time.md). GET отдаёт действующий тариф
 // "на сейчас", POST добавляет новую запись (не редактирует старую).
 
-export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]/launch-pricing">) {
+export async function GET(_request: Request, ctx: RouteContext<"/api/assets/[id]/launch-pricing">) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
-  const { id: zoneId } = await ctx.params;
-  const zone = await findTenantZone(owner.tenantId, zoneId);
-  if (!zone) {
-    return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
+  const { id: assetId } = await ctx.params;
+  const asset = await findTenantAsset(owner.tenantId, assetId);
+  if (!asset) {
+    return NextResponse.json({ error: "Актив не найден" }, { status: 404 });
   }
 
   const [pricing, historyRows] = await Promise.all([
-    getLaunchPricingAt(zoneId, new Date()),
-    prisma.launchPricing.findMany({ where: { zoneId }, orderBy: { effectiveFrom: "desc" }, take: 20 }),
+    getLaunchPricingAt(assetId, new Date()),
+    prisma.launchPricing.findMany({ where: { assetId }, orderBy: { effectiveFrom: "desc" }, take: 20 }),
   ]);
 
   const history = historyRows.map((p) => ({
@@ -49,18 +50,18 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]/
   });
 }
 
-export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/launch-pricing">) {
+export async function POST(request: Request, ctx: RouteContext<"/api/assets/[id]/launch-pricing">) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
-  const { id: zoneId } = await ctx.params;
-  const zone = await findTenantZone(owner.tenantId, zoneId);
-  if (!zone) {
-    return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
+  const { id: assetId } = await ctx.params;
+  const asset = await findTenantAsset(owner.tenantId, assetId);
+  if (!asset) {
+    return NextResponse.json({ error: "Актив не найден" }, { status: 404 });
   }
 
-  const { pricingMode, price, durationMinutes, roundingMode, minAmount } = await request.json();
+  const { pricingMode, price, durationMinutes, minAmount } = await request.json();
 
   if (!(LAUNCH_PRICING_MODES as readonly string[]).includes(pricingMode)) {
     return NextResponse.json({ error: "Некорректный тип тарифа" }, { status: 400 });
@@ -83,22 +84,19 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
       durationMinutesValue = Math.round(d);
     }
   } else {
-    if (!(LAUNCH_ROUNDING_MODES as readonly string[]).includes(roundingMode)) {
-      return NextResponse.json({ error: "Некорректное округление" }, { status: 400 });
+    // Округление длительности — всегда вверх (запрос пользователя
+    // 2026-07-16), выбора у владельца нет — клиентский roundingMode не принимается.
+    roundingModeValue = "up";
+    const m = Number(minAmount);
+    if (!Number.isFinite(m) || m <= 0) {
+      return NextResponse.json({ error: "Минимальная сумма пуска обязательна" }, { status: 400 });
     }
-    roundingModeValue = roundingMode;
-    if (minAmount !== undefined && minAmount !== null && minAmount !== "") {
-      const m = Number(minAmount);
-      if (!Number.isFinite(m) || m < 0) {
-        return NextResponse.json({ error: "Некорректная минимальная сумма" }, { status: 400 });
-      }
-      minAmountValue = m;
-    }
+    minAmountValue = m;
   }
 
   const created = await prisma.launchPricing.create({
     data: {
-      zoneId,
+      assetId,
       pricingMode,
       price: priceNumber,
       durationMinutes: durationMinutesValue,

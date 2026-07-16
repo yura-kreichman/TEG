@@ -61,21 +61,21 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   const label: string | null =
     typeof body.label === "string" && body.label.trim() ? body.label.trim().slice(0, 60) : null;
 
-  if (assetId && !zone.assets.some((a) => a.id === assetId)) {
-    return NextResponse.json({ error: "Актив не найден" }, { status: 400 });
-  }
-  // Зона без активов — пуск на всю зону целиком (assetId остаётся null).
-  if (!assetId && zone.assets.length > 0) {
+  // Тариф — свойство актива (запрос пользователя 2026-07-16: "2 игровые
+  // комнаты — это активы", у каждой своя цена), поэтому пуск без актива
+  // невозможен в принципе — не откуда взять тариф. Зона без активов не может
+  // работать в режиме "Игровая комната" (владелец сначала заводит хотя бы один).
+  if (!assetId || !zone.assets.some((a) => a.id === assetId)) {
     return NextResponse.json({ error: "Выберите актив" }, { status: 400 });
   }
 
   const now = new Date();
-  const pricing = await getLaunchPricingAt(zone.id, now);
+  const pricing = await getLaunchPricingAt(assetId, now);
   if (!pricing) {
-    return NextResponse.json({ error: "Тариф зоны ещё не задан владельцем" }, { status: 400 });
+    return NextResponse.json({ error: "Тариф этого актива ещё не задан владельцем" }, { status: 400 });
   }
 
-  const openCount = await countOpenLaunches(zone.id, assetId);
+  const openCount = await countOpenLaunches(assetId);
   if (openCount >= MAX_PARALLEL_LAUNCHES) {
     return NextResponse.json(
       { error: `Слишком много одновременных пусков (максимум ${MAX_PARALLEL_LAUNCHES})` },
@@ -84,7 +84,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   }
 
   const launch = await prisma.$transaction(async (tx) => {
-    const number = await nextLaunchNumber(tx, zone.id, assetId);
+    const number = await nextLaunchNumber(tx, assetId);
     return tx.launch.create({
       data: {
         zoneId: zone.id,

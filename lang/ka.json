@@ -699,10 +699,6 @@
     "gameRoomRateLabel": "წუთის ტარიფი",
     "gameRoomDurationLabel": "ხანგრძლივობა, წთ",
     "gameRoomDurationPlaceholder": "შეუზღუდავი",
-    "gameRoomRoundingLabel": "ხანგრძლივობის დამრგვალება",
-    "gameRoomRoundingUp": "ზემოთ",
-    "gameRoomRoundingNearest": "მათემატიკურად",
-    "gameRoomRoundingDown": "ქვემოთ",
     "gameRoomMinAmountLabel": "გაშვების მინიმალური თანხა",
     "gameRoomThresholdLabel": "ხანგრძლივი გაშვების ზღვარი",
     "gameRoomThresholdHint": "ამ დროზე გრძელი გაშვება აღინიშნება, როგორც ყურადღების საჭირო",
@@ -710,7 +706,10 @@
     "gameRoomLiveLink": "ახლა წერტილში",
     "gameRoomLaunchesListLink": "გაშვებების სია",
     "gameRoomPricingHistoryLabel": "ტარიფის ისტორია",
-    "gameRoomPricingActiveChip": "მოქმედებს"
+    "gameRoomPricingActiveChip": "მოქმედებს",
+    "gameRoomPricingHistoryActionsLabel": "მოქმედებები ტარიფის ჩანაწერთან",
+    "gameRoomPricingHistoryDeleteConfirm": "წავშალოთ ტარიფის ისტორიის ეს ჩანაწერი? ეს არ შეცვლის უკვე გამოთვლილ გაშვებებს.",
+    "gameRoomRoundingUpNote": "ხანგრძლივობა მრგვალდება ზემოთ სრულ წუთამდე — წერტილი არ კარგავს არასრულ წუთებზე."
   },
   "operators": {
     "title": "თანამშრომლები",
@@ -970,6 +969,7 @@
       "cashLabel": "ნაღდი",
       "mobileLabel": "უნაღდო",
       "calculatedRevenue": "გაანგარიშებული შემოსავალი:",
+      "grossRevenue": "საერთო (მრიცხველების მიხედვით):",
       "difference": "სხვაობა:",
       "expensesTitle": "ხარჯები",
       "amountPlaceholder": "თანხა",
@@ -994,6 +994,7 @@
     "offlineQueueHint": "ელოდება გაგზავნას: {count} ჩაბარება — ავტომატურად წავა კავშირის აღდგენისას",
     "gameRoom": {
       "pickAssetHint": "შეეხეთ აქტივს გაშვების დასაწყებად",
+      "noAssetsYet": "მფლობელს ჯერ არ დაუმატებია აქტივები ამ ზონაში",
       "labelSheetTitle": "გაშვების ნიშნული",
       "labelPlaceholder": "მაგ. სამაჯური №5",
       "labelStartButton": "დაწყება",
@@ -1244,6 +1245,8 @@
     "differenceCompact": "სხვ.",
     "calculated": "გაანგარიშებული შემოსავალი",
     "calculatedCompact": "ჩვენ.",
+    "gross": "საერთო შემოსავალი (მრიცხველების მიხედვით)",
+    "grossCompact": "სულ",
     "cashOnly": "სალარო",
     "forcedIncompleteCompact": "იძულებით — შესაძლოა ყველა მონაცემი არ მოსულა",
     "forcedIncompleteFull": "გაიგზავნა იძულებით დღის ზღვარზე — შესაძლოა ყველა მონაცემი არ მოსულა.",

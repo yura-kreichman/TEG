@@ -211,6 +211,12 @@ export function formatZoneSummaryTelegram(
         if (settings.showReturns) bits.push(`🔄 ${st.returnsCompact}: <b>${data.returnsCount}</b>`);
         parts.push(bits.join("  "));
       }
+      // Валовая (по счётчикам, до вычета тестов) — только когда есть тесты и
+      // показаны и Счёт, и Тест (иначе цифра не с чем сопоставить; запрос
+      // пользователя 2026-07-16: "по счётчикам должно быть больше").
+      if (settings.showCalc && settings.showReturns && data.grossRevenue != null) {
+        parts.push(`📟 ${st.grossCompact}: <b>${formatMoney(data.grossRevenue, locale)}</b>`);
+      }
     }
 
     return parts.join("\n");
@@ -255,6 +261,9 @@ export function formatZoneSummaryTelegram(
         lines.push(`${diffEmoji(data.difference)} ${st.difference}: <b>${sign}${formatMoney(data.difference, locale)}</b>`);
       }
       if (settings.showReturns) lines.push(`↩️ ${st.returns}: <b>${data.returnsCount}</b>`);
+      if (settings.showCalc && settings.showReturns && data.grossRevenue != null) {
+        lines.push(`📟 ${st.gross}: <b>${formatMoney(data.grossRevenue, locale)}</b>`);
+      }
     }
   }
 

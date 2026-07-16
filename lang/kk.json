@@ -699,10 +699,6 @@
     "gameRoomRateLabel": "Минуттық тариф",
     "gameRoomDurationLabel": "Ұзақтығы, мин",
     "gameRoomDurationPlaceholder": "Шектеусіз",
-    "gameRoomRoundingLabel": "Ұзақтықты дөңгелектеу",
-    "gameRoomRoundingUp": "Жоғары",
-    "gameRoomRoundingNearest": "Математикалық",
-    "gameRoomRoundingDown": "Төмен",
     "gameRoomMinAmountLabel": "Пуcктың ең аз сомасы",
     "gameRoomThresholdLabel": "Ұзақ пуcк шегі",
     "gameRoomThresholdHint": "Осы уақыттан ұзақ пуcк назар аударуды қажет етеді деп белгіленеді",
@@ -710,7 +706,10 @@
     "gameRoomLiveLink": "Қазір нүктеде",
     "gameRoomLaunchesListLink": "Пуcктер тізімі",
     "gameRoomPricingHistoryLabel": "Тариф тарихы",
-    "gameRoomPricingActiveChip": "Қолданыста"
+    "gameRoomPricingActiveChip": "Қолданыста",
+    "gameRoomPricingHistoryActionsLabel": "Тариф жазбасымен әрекеттер",
+    "gameRoomPricingHistoryDeleteConfirm": "Тариф тарихының бұл жазбасын жоясыз ба? Бұл бұрын есептелген пуcктерді өзгертпейді.",
+    "gameRoomRoundingUpNote": "Ұзақтық толық минутқа дейін жоғары дөңгелектенеді — нүкте толық емес минуттарда ұтылмайды."
   },
   "operators": {
     "title": "Қызметкерлер",
@@ -970,6 +969,7 @@
       "cashLabel": "Қолма-қол",
       "mobileLabel": "Қолма-қолсыз",
       "calculatedRevenue": "Есептік түсім:",
+      "grossRevenue": "Жалпы (есептегіштер бойынша):",
       "difference": "Айырма:",
       "expensesTitle": "Шығыстар",
       "amountPlaceholder": "Сома",
@@ -994,6 +994,7 @@
     "offlineQueueHint": "Жіберілуді күтуде: {count} тапсыру — байланыс болғанда автоматты түрде кетеді",
     "gameRoom": {
       "pickAssetHint": "Пуcкті бастау үшін активке басыңыз",
+      "noAssetsYet": "Иесі бұл аймаққа әлі активтер қоспаған",
       "labelSheetTitle": "Пуcк белгісі",
       "labelPlaceholder": "Мысалы, білезік №5",
       "labelStartButton": "Бастау",
@@ -1244,6 +1245,8 @@
     "differenceCompact": "Айырм.",
     "calculated": "Есептік түсім",
     "calculatedCompact": "Көрс.",
+    "gross": "Жалпы түсім (есептегіштер бойынша)",
+    "grossCompact": "Жалпы",
     "cashOnly": "Касса",
     "forcedIncompleteCompact": "Мәжбүрлі — барлық деректер келмеген болуы мүмкін",
     "forcedIncompleteFull": "Күн шекарасында мәжбүрлі жіберілді — барлық деректер келмеген болуы мүмкін.",

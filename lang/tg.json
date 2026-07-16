@@ -699,10 +699,6 @@
     "gameRoomRateLabel": "Тарифи як дақиқа",
     "gameRoomDurationLabel": "Давомнокӣ, дақ",
     "gameRoomDurationPlaceholder": "Бе маҳдудият",
-    "gameRoomRoundingLabel": "Мудаввар кардани давомнокӣ",
-    "gameRoomRoundingUp": "Ба боло",
-    "gameRoomRoundingNearest": "Математикӣ",
-    "gameRoomRoundingDown": "Ба поён",
     "gameRoomMinAmountLabel": "Маблағи ҳадди ақали пуск",
     "gameRoomThresholdLabel": "Ҳадди пуски дароз",
     "gameRoomThresholdHint": "Пуски аз ин вақт дарозтар ҳамчун ниёзманди таваҷҷуҳ қайд мешавад",
@@ -710,7 +706,10 @@
     "gameRoomLiveLink": "Ҳозир дар нуқта",
     "gameRoomLaunchesListLink": "Рӯйхати пускҳо",
     "gameRoomPricingHistoryLabel": "Таърихи тариф",
-    "gameRoomPricingActiveChip": "Амалкунанда"
+    "gameRoomPricingActiveChip": "Амалкунанда",
+    "gameRoomPricingHistoryActionsLabel": "Амалҳо бо сабти тариф",
+    "gameRoomPricingHistoryDeleteConfirm": "Ин сабти таърихи тариф нест карда шавад? Ин пускҳои аллакай ҳисобшударо тағйир намедиҳад.",
+    "gameRoomRoundingUpNote": "Давомнокӣ то дақиқаи пурра ба боло мудаввар мешавад — нуқта дар дақиқаҳои нопурра гум намекунад."
   },
   "operators": {
     "title": "Кормандон",
@@ -970,6 +969,7 @@
       "cashLabel": "Нақдина",
       "mobileLabel": "Ғайринақдӣ",
       "calculatedRevenue": "Даромади ҳисобшуда:",
+      "grossRevenue": "Умумӣ (аз рӯи ҳисобкунакҳо):",
       "difference": "Фарқият:",
       "expensesTitle": "Хароҷот",
       "amountPlaceholder": "Маблағ",
@@ -994,6 +994,7 @@
     "offlineQueueHint": "Мунтазири фиристодан: {count} супориш(ҳо) — ба таври худкор ҳангоми алоқа мефиристанд",
     "gameRoom": {
       "pickAssetHint": "Барои сар кардани пуcк ба дороӣ зер кунед",
+      "noAssetsYet": "Соҳиб то ҳол ба ин минтақа дороиҳо илова накардааст",
       "labelSheetTitle": "Тамғаи пуcк",
       "labelPlaceholder": "масалан, дастбанди №5",
       "labelStartButton": "Сар кардан",
@@ -1244,6 +1245,8 @@
     "differenceCompact": "Фарқ",
     "calculated": "Даромади ҳисобшуда",
     "calculatedCompact": "Нишон.",
+    "gross": "Даромади умумӣ (аз рӯи ҳисобкунакҳо)",
+    "grossCompact": "Умумӣ",
     "cashOnly": "Касса",
     "forcedIncompleteCompact": "Маҷбурӣ — на ҳама маълумот омада бошад",
     "forcedIncompleteFull": "Дар марзи рӯз маҷбуран фиристода шуд — на ҳама маълумот омада бошад.",

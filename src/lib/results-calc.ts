@@ -32,6 +32,18 @@ export interface TariffCalcInput {
   sessions: number;
 }
 
+/**
+ * Валовая выручка зоны по счётчикам = Σ по тарифам: сеансы × цена, БЕЗ вычета
+ * возвратов/тестов (запрос пользователя 2026-07-16: "по счётчикам должно
+ * быть больше" — иначе непонятно, откуда взялась разница в 0 при ненулевых
+ * тестах). Только для отображения рядом с calcZoneRevenue — в сравнении с
+ * кассой участвует по-прежнему только net-выручка (calcZoneRevenue).
+ */
+export function calcZoneGrossRevenue(tariffs: TariffCalcInput[]): number {
+  const total = tariffs.reduce((sum, t) => sum + t.sessions * t.price, 0);
+  return Math.round(total * 100) / 100;
+}
+
 /** Расчётная выручка зоны = Σ по тарифам: (сеансы − возвраты/тесты) × цена. */
 export function calcZoneRevenue(tariffs: TariffCalcInput[], returnsCount: number): number {
   // Возвраты/тесты — общее число на зону, а не на тариф; вычитаем один раз из

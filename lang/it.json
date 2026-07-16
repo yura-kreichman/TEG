@@ -699,10 +699,6 @@
     "gameRoomRateLabel": "Tariffa al minuto",
     "gameRoomDurationLabel": "Durata, min",
     "gameRoomDurationPlaceholder": "Nessun limite",
-    "gameRoomRoundingLabel": "Arrotondamento durata",
-    "gameRoomRoundingUp": "Per eccesso",
-    "gameRoomRoundingNearest": "Matematico",
-    "gameRoomRoundingDown": "Per difetto",
     "gameRoomMinAmountLabel": "Importo minimo avvio",
     "gameRoomThresholdLabel": "Soglia avvio lungo",
     "gameRoomThresholdHint": "Un avvio più lungo di questo tempo viene segnalato come da controllare",
@@ -710,7 +706,10 @@
     "gameRoomLiveLink": "Ora nel punto",
     "gameRoomLaunchesListLink": "Elenco avvii",
     "gameRoomPricingHistoryLabel": "Cronologia tariffa",
-    "gameRoomPricingActiveChip": "Attiva"
+    "gameRoomPricingActiveChip": "Attiva",
+    "gameRoomPricingHistoryActionsLabel": "Azioni sulla voce di tariffa",
+    "gameRoomPricingHistoryDeleteConfirm": "Eliminare questa voce della cronologia tariffe? Gli avvii già calcolati non cambieranno.",
+    "gameRoomRoundingUpNote": "La durata viene arrotondata per eccesso al minuto intero — il punto non perde sui minuti parziali."
   },
   "operators": {
     "title": "Dipendenti",
@@ -970,6 +969,7 @@
       "cashLabel": "Contanti",
       "mobileLabel": "Non in contanti",
       "calculatedRevenue": "Incasso calcolato:",
+      "grossRevenue": "Lordo (per contatori):",
       "difference": "Differenza:",
       "expensesTitle": "Spese",
       "amountPlaceholder": "Importo",
@@ -994,6 +994,7 @@
     "offlineQueueHint": "In attesa di invio: {count} chiusura/e — verranno inviate automaticamente non appena online",
     "gameRoom": {
       "pickAssetHint": "Tocca un elemento per avviare un avvio",
+      "noAssetsYet": "Il proprietario non ha ancora aggiunto elementi a questa zona",
       "labelSheetTitle": "Etichetta avvio",
       "labelPlaceholder": "es. braccialetto n. 5",
       "labelStartButton": "Avvia",
@@ -1244,6 +1245,8 @@
     "differenceCompact": "Diff.",
     "calculated": "Incasso calcolato",
     "calculatedCompact": "Lett.",
+    "gross": "Ricavo lordo (per contatori)",
+    "grossCompact": "Lordo",
     "cashOnly": "Cassa",
     "forcedIncompleteCompact": "Forzato — i dati potrebbero non essere completi",
     "forcedIncompleteFull": "Inviato forzatamente al limite del giorno — i dati potrebbero non essere completi.",

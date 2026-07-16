@@ -22,7 +22,7 @@ export function estimateLiveAmount(
 ): number {
   if (pricingMode === "fixed") return priceSnapshot;
   const rawMinutes = Math.max(0, (now.getTime() - startedAt.getTime()) / 60000);
-  const minutes = roundMinutes(rawMinutes, roundingModeSnapshot ?? "nearest");
+  const minutes = roundMinutes(rawMinutes, roundingModeSnapshot ?? "up");
   const amount = minutes * priceSnapshot;
   return Math.max(amount, minAmountSnapshot ?? 0);
 }

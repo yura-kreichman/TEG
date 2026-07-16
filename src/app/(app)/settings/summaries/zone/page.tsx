@@ -58,6 +58,7 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): Zon
     cashAmount: 1345,
     mobileAmount: 0,
     calculatedRevenue: 1715,
+    grossRevenue: null,
     difference: 1345 + 0 - 1715,
     returnsCount: 0,
     operatorName: ctx?.operatorName ?? t.summaries.previewNoOperator,
