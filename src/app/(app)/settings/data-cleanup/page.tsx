@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AlertTriangle, Banknote, ClipboardList, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DeleteButton } from "@/components/ui/delete-button";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OwnerShell } from "@/components/owner-shell";
@@ -27,6 +29,7 @@ export default function DataCleanupPage() {
   const [confirmText, setConfirmText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { saved: cleanupDeleted, pulse: cleanupDeletePulse } = useSavePulse();
 
   useEffect(() => {
     fetch("/api/tenant/data-cleanup")
@@ -71,7 +74,7 @@ export default function DataCleanupPage() {
         setError(data.error ?? t.dataCleanup.genericError);
         return;
       }
-      setTarget(null);
+      cleanupDeletePulse(() => setTarget(null));
     } finally {
       setLoading(false);
     }
@@ -164,15 +167,14 @@ export default function DataCleanupPage() {
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <PressableScale>
-            <Button
-              variant="destructive"
-              className="h-12 w-full gap-2"
+            <DeleteButton
+              className="h-12 w-full"
               disabled={!canSubmit || loading}
               onClick={handleConfirm}
+              deleted={cleanupDeleted}
             >
-              <Trash2 className="size-4" />
               {t.dataCleanup.confirmButton}
-            </Button>
+            </DeleteButton>
           </PressableScale>
         </div>
       </BottomSheet>

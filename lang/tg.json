@@ -617,6 +617,7 @@
     "mapsUrlHint": "Google Maps (аз ҷумла истинодҳои кӯтоҳи maps.app.goo.gl/…) ё Яндекс.Карты — агар нишон дода шуда бошад, ба ҷои координатҳо барои тугмаи «Дар харита кушоед» истифода мешавад",
     "deactivatePoint": "Ғайрифаъол кардани нуқта",
     "activatePoint": "Фаъол кардани нуқта",
+    "pointActiveChip": "Фаъол",
     "pointInactiveChip": "Ғайрифаъол"
   },
   "zonesList": {
@@ -641,6 +642,7 @@
       "launches": "Оғозҳо",
       "cash_only": "Танҳо касса"
     },
+    "zoneActiveChip": "Фаъол",
     "zoneInactiveChip": "Ғайрифаъол"
   },
   "zoneDetail": {
@@ -679,6 +681,9 @@
     "changeAccountingModeAction": "Реҷаи баҳисобгириро тағйир додан",
     "deactivateZone": "Минтақаро ғайрифаъол кардан",
     "activateZone": "Минтақаро фаъол кардан",
+    "deactivateAsset": "Активро ғайрифаъол кардан",
+    "activateAsset": "Активро фаъол кардан",
+    "assetInactiveChip": "Ғайрифаъол",
     "cashOnlyNote": "Реҷаи «Танҳо касса»: ба ин минтақа тарифҳо ва активҳо лозим нестанд — корманд танҳо маблағро месупорад."
   },
   "operators": {
@@ -927,6 +932,7 @@
       "cashOnlySub": "Кассаро барои ин супориш ворид кунед",
       "assetNotFilled": "Пур карда нашудааст",
       "previousReading": "буд:",
+      "assetInactiveHint": "Актив дар таъмир аст — нишондиҳандаро тағйир додан мумкин нест, арзиши охирин нигоҳ дошта мешавад",
       "sessionsLabel": "Даромадҳо:",
       "rolloverWarning": "гузариши ҳисобкунак аз 9999 — тафтиш кунед",
       "invalidNumberWarning": "Рақами 0–9999-ро ворид кунед",

@@ -617,6 +617,7 @@
     "mapsUrlHint": "Google Maps (მოკლე maps.app.goo.gl/… ბმულების ჩათვლით) ან Yandex რუკები — თუ მითითებულია, გამოიყენება კოორდინატების ნაცვლად „რუკაზე გახსნა“ ღილაკისთვის",
     "deactivatePoint": "წერტილის დეაქტივაცია",
     "activatePoint": "წერტილის აქტივაცია",
+    "pointActiveChip": "აქტიური",
     "pointInactiveChip": "არააქტიური"
   },
   "zonesList": {
@@ -641,6 +642,7 @@
       "launches": "გაშვებები",
       "cash_only": "მხოლოდ სალარო"
     },
+    "zoneActiveChip": "აქტიური",
     "zoneInactiveChip": "არააქტიური"
   },
   "zoneDetail": {
@@ -679,6 +681,9 @@
     "changeAccountingModeAction": "აღრიცხვის რეჟიმის შეცვლა",
     "deactivateZone": "ზონის დეაქტივაცია",
     "activateZone": "ზონის აქტივაცია",
+    "deactivateAsset": "აქტივის დეაქტივაცია",
+    "activateAsset": "აქტივის გააქტიურება",
+    "assetInactiveChip": "არააქტიური",
     "cashOnlyNote": "რეჟიმი «მხოლოდ სალარო»: ამ ზონას ტარიფები და აქტივები არ სჭირდება — თანამშრომელი ჩააბარებს მხოლოდ თანხას."
   },
   "operators": {
@@ -927,6 +932,7 @@
       "cashOnlySub": "შეიყვანეთ სალარო ამ ჩაბარებისთვის",
       "assetNotFilled": "არ არის შევსებული",
       "previousReading": "იყო:",
+      "assetInactiveHint": "აქტივი შეკეთებაშია — მაჩვენებლის შეცვლა შეუძლებელია, ინახება ბოლო მნიშვნელობა",
       "sessionsLabel": "გარბენები:",
       "rolloverWarning": "მრიცხველის გადასვლა 9999-ის გავლით — გადაამოწმეთ",
       "invalidNumberWarning": "შეიყვანეთ რიცხვი 0–9999",

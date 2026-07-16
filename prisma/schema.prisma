@@ -578,6 +578,14 @@ model Asset {
   // отчёты, сводки (фидбек пользователя 2026-07-11).
   sortOrder Int @default(0)
 
+  // Временная деактивация (запрос пользователя 2026-07-16: конкретный актив
+  // на ремонте) — в отличие от Zone.active, оператор ПРОДОЛЖАЕТ видеть
+  // деактивированный актив в мастере сдачи итогов (не скрывается), но не
+  // может ввести новое показание — поле показания становится read-only с
+  // последним известным значением (см. /api/operator/submission-context,
+  // src/app/(app)/operator/submit/page.tsx).
+  active Boolean @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

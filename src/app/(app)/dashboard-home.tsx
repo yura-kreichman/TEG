@@ -113,6 +113,7 @@ interface Summary {
   profit?: number;
   submissionsCount?: number;
   difference?: number;
+  expenses?: number;
 }
 
 export function OwnerDashboardCard({
@@ -243,50 +244,69 @@ export function OwnerDashboardCard({
 
         {/* Последние итоги */}
         {summary?.hasData && (
-          <SpringCard hover={false} className="flex flex-col gap-1">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex flex-col">
-                <p className="text-section-title">{t.home.latestResultsLabel}</p>
-                <p className="text-section-title">{formatRelativeDay(summary.date!, summary.isToday!, t)}</p>
-              </div>
-              <Link href="/money" className="flex shrink-0 items-center gap-0.5 text-caption-airbnb font-semibold text-primary">
-                {t.home.toMoneyLink}
-                <ChevronRight className="size-3.5" />
-              </Link>
-            </div>
-            <div className="flex items-baseline gap-2 tabular-nums">
-              <span className="text-[2rem] font-extrabold tracking-[-0.02em]">
-                <Money value={summary.revenue!} size="display" />
-              </span>
-              <span className="text-caption-airbnb">{t.home.revenueUnit}</span>
-            </div>
-            <div className="flex border-t border-border pt-3 tabular-nums">
-              <div className="flex-1">
-                <p className="text-caption-airbnb">{t.money.profit}</p>
-                <p className="text-[1rem] font-bold text-primary">
-                  {summary.profit! > 0 ? "+" : ""}
-                  <Money value={summary.profit!} />
-                </p>
-              </div>
-              <div className="flex-1 border-l border-border pl-4">
-                <p className="text-caption-airbnb">{t.home.submissionsCountLabel}</p>
-                <p className="text-[1rem] font-bold">{summary.submissionsCount}</p>
-              </div>
-              <div className="flex-1 border-l border-border pl-4">
-                <p className="text-caption-airbnb">{t.home.differenceLabel}</p>
-                <p className="text-[1rem] font-bold text-primary">
-                  {summary.difference! > 0 ? "+" : ""}
-                  <Money value={summary.difference!} />
-                </p>
-              </div>
-            </div>
-            {!summary.isToday && (
-              <p className="mt-3 flex items-center gap-1.5 border-t border-border pt-3 text-caption-airbnb">
-                <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
-                {t.home.noSubmissionsTodayNote}
-              </p>
-            )}
-          </SpringCard>
+          <PressableScale>
+            <Link href="/money">
+              <SpringCard className="flex flex-col gap-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-col">
+                    <p className="text-section-title">{t.home.latestResultsLabel}</p>
+                    <p className="text-section-title">{formatRelativeDay(summary.date!, summary.isToday!, t)}</p>
+                  </div>
+                  <span className="flex shrink-0 items-center gap-0.5 text-caption-airbnb font-semibold text-primary">
+                    {t.home.toMoneyLink}
+                    <ChevronRight className="size-3.5" />
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2 tabular-nums">
+                  <span className="text-[2rem] font-extrabold tracking-[-0.02em]">
+                    <Money value={summary.revenue!} size="display" />
+                  </span>
+                  <span className="text-caption-airbnb">{t.home.revenueUnit}</span>
+                </div>
+                <div className="flex border-t border-border pt-3 tabular-nums">
+                  <div className="flex-1">
+                    <p className="text-caption-airbnb">{t.money.profit}</p>
+                    <p className="text-[1rem] font-bold text-primary">
+                      {summary.profit! > 0 ? "+" : ""}
+                      <Money value={summary.profit!} />
+                    </p>
+                  </div>
+                  <div className="flex-1 border-l border-border pl-4">
+                    <p className="text-caption-airbnb">{t.home.submissionsCountLabel}</p>
+                    <p className="text-[1rem] font-bold">{summary.submissionsCount}</p>
+                  </div>
+                  {/* Отдельный переход на /money/expenses, а не общий /money
+                      карточки (запрос пользователя 2026-07-16) — div с
+                      preventDefault/stopPropagation, не вложенный <a>,
+                      чтобы не ломать HTML внутри уже кликабельной карточки. */}
+                  <div
+                    role="link"
+                    tabIndex={0}
+                    className="flex-1 border-l border-border pl-4"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push("/money/expenses");
+                    }}
+                  >
+                    <p className="flex items-center justify-between gap-0.5 text-caption-airbnb">
+                      <span>{t.money.expensesLink}</span>
+                      <ChevronRight className="size-3 shrink-0" />
+                    </p>
+                    <p className="text-[1rem] font-bold">
+                      <Money value={summary.expenses!} />
+                    </p>
+                  </div>
+                </div>
+                {!summary.isToday && (
+                  <p className="mt-3 flex items-center gap-1.5 border-t border-border pt-3 text-caption-airbnb">
+                    <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
+                    {t.home.noSubmissionsTodayNote}
+                  </p>
+                )}
+              </SpringCard>
+            </Link>
+          </PressableScale>
         )}
         {summary && !summary.hasData && (
           <SpringCard hover={false}>

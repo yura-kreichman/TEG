@@ -17,6 +17,7 @@ import { IconPicker } from "@/components/icon-picker";
 import { StatusChip } from "@/components/status-chip";
 import { TileIcon } from "@/components/tile-icon";
 import { useI18n } from "@/components/i18n-provider";
+import { cn } from "@/lib/utils";
 import { ZONE_ACCOUNTING_MODES, type ZoneAccountingMode } from "@/lib/results-calc";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 
@@ -38,6 +39,11 @@ export default function PointDetailPage() {
   const [checking, setChecking] = useState(true);
   const [zones, setZones] = useState<ZoneInfo[]>([]);
   const [pointName, setPointName] = useState("");
+  // Иерархия деактивации: точка → зона → актив (запрос пользователя
+  // 2026-07-16) — если сама точка деактивирована, все её зоны визуально
+  // тоже "серые", даже если у каждой отдельно zone.active === true; и
+  // оператору такие зоны в любом случае не попадут (см. requireOperator).
+  const [pointActive, setPointActive] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const [iconKey, setIconKey] = useState<string | null>(null);
@@ -55,6 +61,7 @@ export default function PointDetailPage() {
     const data = await res.json();
     setZones(data.zones ?? []);
     setPointName(data.pointName ?? "");
+    setPointActive(data.pointActive ?? true);
     setChecking(false);
   }
 
@@ -131,13 +138,15 @@ export default function PointDetailPage() {
                 <StaggerItem key={zone.id}>
                   <PressableScale>
                     <Link href={`/zones/${zone.id}`} className="block">
-                      <SpringCard animate={false}>
+                      <SpringCard animate={false} className={cn((!pointActive || !zone.active) && "grayscale")}>
                         <div className="flex items-center gap-3">
                           <TileIcon iconKey={zone.iconKey} emoji={zone.telegramEmoji} />
                           <div className="min-w-0 grow">
                             <div className="flex items-center gap-1.5">
                               <div className="text-card-title">{zone.name}</div>
-                              {!zone.active && (
+                              {pointActive && zone.active ? (
+                                <StatusChip>{t.zonesList.zoneActiveChip}</StatusChip>
+                              ) : (
                                 <StatusChip variant="neutral">{t.zonesList.zoneInactiveChip}</StatusChip>
                               )}
                             </div>

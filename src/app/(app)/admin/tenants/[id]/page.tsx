@@ -14,6 +14,8 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
+import { DeleteButton } from "@/components/ui/delete-button";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 type SubscriptionStatus = "active" | "paused" | "suspended" | "expired";
 
@@ -87,6 +89,7 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const { saved: tenantDeleted, pulse: tenantDeletePulse } = useSavePulse();
 
   async function load() {
     const [tenantRes, packagesRes] = await Promise.all([
@@ -209,7 +212,7 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
         setDeleteError(data.error ?? t.admin.genericError);
         return;
       }
-      router.push("/admin");
+      tenantDeletePulse(() => router.push("/admin"));
     } finally {
       setDeleting(false);
     }
@@ -502,16 +505,14 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
           </div>
           {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
           <PressableScale>
-            <Button
-              type="button"
-              variant="destructive"
-              className="h-12 w-full gap-2"
+            <DeleteButton
+              className="h-12 w-full"
               disabled={!canDelete || deleting}
               onClick={confirmDeleteTenant}
+              deleted={tenantDeleted}
             >
-              <Trash2 className="size-4" />
               {t.admin.deleteOwnerConfirmButton}
-            </Button>
+            </DeleteButton>
           </PressableScale>
         </div>
       </BottomSheet>

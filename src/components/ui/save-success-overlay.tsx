@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Крупная галочка, "улетающая" в центр экрана при успешном сохранении
 // (запрос пользователя 2026-07-16) — дополняет, а не заменяет галочку на
@@ -11,15 +12,27 @@ import { Check } from "lucide-react";
 // прошло. SaveButton сам сообщает координаты своего центра через кастомное
 // событие "save-success-fly" (см. save-button.tsx) — здесь только приём и
 // анимация, единственный монтаж на всё приложение (см. (app)/layout.tsx).
+//
+// Три фазы (решение пользователя 2026-07-16: "не просто вылетать в центр, а
+// становиться зелёной, и только потом при zoom-in исчезать"):
+// 1) flying — летит от кнопки к центру, цвет нейтральный (bg-foreground);
+// 2) green — уже в центре, цвет переключается на success (CSS-переход, не
+//    трогает framer-motion — интерполировать CSS-переменные темы через
+//    framer-motion ненадёжно, обычный transition-colors работает всегда);
+// 3) zoomOut — растёт и тает, зелёная.
 const SIZE = 40;
 const FLY_MS = 450;
-const HOLD_MS = 350;
-const EXIT_MS = 250;
+const GREEN_HOLD_MS = 300;
+const ZOOM_OUT_MS = 300;
+const TOTAL_MS = FLY_MS + GREEN_HOLD_MS + ZOOM_OUT_MS;
+
+type Phase = "flying" | "green" | "zoomOut";
 
 interface FlyEvent {
   id: number;
   x: number;
   y: number;
+  phase: Phase;
 }
 
 let nextId = 0;
@@ -28,14 +41,20 @@ export function SaveSuccessOverlay() {
   const [events, setEvents] = useState<FlyEvent[]>([]);
 
   useEffect(() => {
+    function setPhase(id: number, phase: Phase) {
+      setEvents((prev) => prev.map((ev) => (ev.id === id ? { ...ev, phase } : ev)));
+    }
+
     function handler(e: Event) {
       const detail = (e as CustomEvent<{ x: number; y: number }>).detail;
       if (!detail) return;
       const id = ++nextId;
-      setEvents((prev) => [...prev, { id, x: detail.x, y: detail.y }]);
+      setEvents((prev) => [...prev, { id, x: detail.x, y: detail.y, phase: "flying" }]);
+      setTimeout(() => setPhase(id, "green"), FLY_MS);
+      setTimeout(() => setPhase(id, "zoomOut"), FLY_MS + GREEN_HOLD_MS);
       setTimeout(() => {
         setEvents((prev) => prev.filter((ev) => ev.id !== id));
-      }, FLY_MS + HOLD_MS);
+      }, TOTAL_MS);
     }
     window.addEventListener("save-success-fly", handler);
     return () => window.removeEventListener("save-success-fly", handler);
@@ -48,25 +67,29 @@ export function SaveSuccessOverlay() {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-100">
-      <AnimatePresence>
-        {events.map((ev) => (
-          <motion.div
-            key={ev.id}
-            className="fixed top-0 left-0 grid place-items-center rounded-full bg-foreground text-background shadow-2xl"
-            style={{ width: SIZE, height: SIZE }}
-            initial={{ x: ev.x - SIZE / 2, y: ev.y - SIZE / 2, scale: 0.6, opacity: 1 }}
-            animate={{
-              x: centerX - SIZE / 2,
-              y: centerY - SIZE / 2,
-              scale: 1.7,
-              transition: { duration: FLY_MS / 1000, ease: [0.16, 1, 0.3, 1] },
-            }}
-            exit={{ opacity: 0, scale: 1.4, transition: { duration: EXIT_MS / 1000 } }}
-          >
-            <Check className="size-5" />
-          </motion.div>
-        ))}
-      </AnimatePresence>
+      {events.map((ev) => (
+        <motion.div
+          key={ev.id}
+          className={cn(
+            "fixed top-0 left-0 grid place-items-center rounded-full shadow-2xl transition-colors duration-200",
+            ev.phase === "flying" ? "bg-foreground text-background" : "bg-success text-success-foreground"
+          )}
+          style={{ width: SIZE, height: SIZE }}
+          initial={{ x: ev.x - SIZE / 2, y: ev.y - SIZE / 2, scale: 0.6, opacity: 1 }}
+          animate={
+            ev.phase === "zoomOut"
+              ? { scale: 1.9, opacity: 0, transition: { duration: ZOOM_OUT_MS / 1000, ease: "easeIn" } }
+              : {
+                  x: centerX - SIZE / 2,
+                  y: centerY - SIZE / 2,
+                  scale: 1.3,
+                  transition: { duration: FLY_MS / 1000, ease: [0.16, 1, 0.3, 1] },
+                }
+          }
+        >
+          <Check className="size-5" />
+        </motion.div>
+      ))}
     </div>
   );
 }

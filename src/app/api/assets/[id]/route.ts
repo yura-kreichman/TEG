@@ -25,12 +25,13 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/assets/[id
     return NextResponse.json({ error: "Актив не найден" }, { status: 404 });
   }
 
-  const { name, photoUrl, iconKey, colorTag } = await request.json();
+  const { name, photoUrl, iconKey, colorTag, active } = await request.json();
   const data: {
     name?: string;
     photoUrl?: string | null;
     iconKey?: string | null;
     colorTag?: string;
+    active?: boolean;
   } = {};
 
   if (name !== undefined) {
@@ -54,6 +55,12 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/assets/[id
       return NextResponse.json({ error: "Цвет обязателен" }, { status: 400 });
     }
     data.colorTag = colorTag.trim();
+  }
+  if (active !== undefined) {
+    if (typeof active !== "boolean") {
+      return NextResponse.json({ error: "Некорректное значение active" }, { status: 400 });
+    }
+    data.active = active;
   }
 
   await prisma.asset.update({ where: { id }, data });

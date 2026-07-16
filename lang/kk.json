@@ -617,6 +617,7 @@
     "mapsUrlHint": "Google Maps (қысқа maps.app.goo.gl/… сілтемелерін қоса) немесе Яндекс Карталар — көрсетілсе, «Картада ашу» батырмасы үшін координаттардың орнына қолданылады",
     "deactivatePoint": "Нүктені белсенді емес ету",
     "activatePoint": "Нүктені белсендіру",
+    "pointActiveChip": "Белсенді",
     "pointInactiveChip": "Белсенді емес"
   },
   "zonesList": {
@@ -641,6 +642,7 @@
       "launches": "Жүрістер",
       "cash_only": "Тек касса"
     },
+    "zoneActiveChip": "Белсенді",
     "zoneInactiveChip": "Белсенді емес"
   },
   "zoneDetail": {
@@ -679,6 +681,9 @@
     "changeAccountingModeAction": "Есеп режимін өзгерту",
     "deactivateZone": "Аймақты деактивтеу",
     "activateZone": "Аймақты белсендіру",
+    "deactivateAsset": "Активті өшіру",
+    "activateAsset": "Активті іске қосу",
+    "assetInactiveChip": "Белсенді емес",
     "cashOnlyNote": "«Тек касса» режимі: бұл аймаққа тарифтер мен активтер қажет емес — қызметкер тек соманы тапсырады."
   },
   "operators": {
@@ -927,6 +932,7 @@
       "cashOnlySub": "Осы тапсыру үшін кассаны енгізіңіз",
       "assetNotFilled": "Толтырылмаған",
       "previousReading": "болды:",
+      "assetInactiveHint": "Актив жөндеуде — көрсеткішті өзгертуге болмайды, соңғы мән сақталады",
       "sessionsLabel": "Жүрістер:",
       "rolloverWarning": "есептегіш 9999 арқылы аунды — тексеріңіз",
       "invalidNumberWarning": "0–9999 аралығында сан енгізіңіз",

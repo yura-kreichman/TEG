@@ -6,6 +6,8 @@ import { Save, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/components/i18n-provider";
+import { useFlyOnShow } from "@/hooks/use-fly-on-show";
+import { checkPopAnimate, checkPopTransition } from "@/components/ui/check-pop-animation";
 
 // Более выраженный "объёмный" bevel, чем у обычной кнопки variant="default"
 // (референс — тот же UI kit mikedonovandesign.com, что и у Switch, решение
@@ -31,13 +33,14 @@ import { useI18n } from "@/components/i18n-provider";
 //
 // При переходе saved false→true кнопка сама шлёт координаты своего центра
 // событием "save-success-fly" (запрос пользователя 2026-07-16: "чтобы
-// галочка улетала в центр экрана") — единственный слушатель этого события,
-// SaveSuccessOverlay, смонтирован один раз в (app)/layout.tsx и рисует
-// увеличенную галочку, летящую от кнопки к центру экрана. Якорь для
-// координат — отдельный span на всю кнопку, а не сама Button/её DOM-узел
-// (ButtonPrimitive не даёт гарантий по forwardRef) и не сам чек-span
-// (у него в моменте анимируется transform: scale, getBoundingClientRect
-// поймал бы кнопку в процессе анимации, а не стабильную позицию).
+// галочка улетала в центр экрана", хук useFlyOnShow, общий с SavedCheckmark) —
+// единственный слушатель этого события, SaveSuccessOverlay, смонтирован один
+// раз в (app)/layout.tsx и рисует увеличенную галочку, летящую от кнопки к
+// центру экрана. Якорь для координат — отдельный span на всю кнопку, а не
+// сама Button/её DOM-узел (ButtonPrimitive не даёт гарантий по forwardRef) и
+// не сам чек-span (у него в моменте анимируется transform: scale,
+// getBoundingClientRect поймал бы кнопку в процессе анимации, а не
+// стабильную позицию).
 export interface SaveButtonProps extends Omit<React.ComponentProps<typeof Button>, "children"> {
   children?: React.ReactNode;
   saved?: boolean;
@@ -45,20 +48,7 @@ export interface SaveButtonProps extends Omit<React.ComponentProps<typeof Button
 
 function SaveButton({ children, saved, className, ...props }: SaveButtonProps) {
   const t = useI18n();
-  const anchorRef = React.useRef<HTMLSpanElement>(null);
-  const wasSaved = React.useRef(false);
-
-  React.useEffect(() => {
-    if (saved && !wasSaved.current && anchorRef.current) {
-      const rect = anchorRef.current.getBoundingClientRect();
-      window.dispatchEvent(
-        new CustomEvent("save-success-fly", {
-          detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
-        })
-      );
-    }
-    wasSaved.current = !!saved;
-  }, [saved]);
+  const anchorRef = useFlyOnShow<HTMLSpanElement>(!!saved, "save-success-fly");
 
   return (
     <Button
@@ -78,8 +68,8 @@ function SaveButton({ children, saved, className, ...props }: SaveButtonProps) {
         aria-hidden
         className="grid size-4 shrink-0 place-items-center"
         initial={false}
-        animate={{ scale: saved ? [0, 1.6, 1] : 0 }}
-        transition={saved ? { duration: 0.45, times: [0, 0.55, 1], ease: "easeOut" } : { duration: 0.15, ease: "easeIn" }}
+        animate={checkPopAnimate(!!saved)}
+        transition={checkPopTransition(!!saved)}
       >
         <Check className="size-4" />
       </motion.span>

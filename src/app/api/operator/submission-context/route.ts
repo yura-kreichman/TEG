@@ -66,6 +66,10 @@ export async function GET() {
       colorTag: asset.colorTag,
       photoUrl: asset.photoUrl,
       iconKey: asset.iconKey,
+      // Деактивированный актив (на ремонте) остаётся видимым оператору, но
+      // read-only — в отличие от Zone.active, который скрывает зону целиком
+      // (запрос пользователя 2026-07-16).
+      active: asset.active,
       previousReadings: Object.fromEntries(
         zone.tariffs.map((t) => {
           const key = `${asset.id}:${t.id}`;

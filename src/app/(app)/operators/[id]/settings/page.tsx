@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
+import { DeleteButton } from "@/components/ui/delete-button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
@@ -123,6 +124,7 @@ export default function OperatorSettingsPage() {
   const [colorOpen, setColorOpen] = useState(false);
   const [colorValue, setColorValue] = useState("#22c55e");
   const { saved: colorSaved, pulse: colorPulse } = useSavePulse();
+  const { saved: operatorDeleted, pulse: operatorDeletePulse } = useSavePulse();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [savingTimeTrackingMode, setSavingTimeTrackingMode] = useState(false);
   const [timeTrackingError, setTimeTrackingError] = useState<string | null>(null);
@@ -339,7 +341,7 @@ export default function OperatorSettingsPage() {
       setActionError(data.error ?? "Не удалось удалить оператора");
       return;
     }
-    router.replace("/operators");
+    operatorDeletePulse(() => router.replace("/operators"));
   }
 
   async function handleUploadAvatar(event: React.ChangeEvent<HTMLInputElement>) {
@@ -638,20 +640,22 @@ export default function OperatorSettingsPage() {
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operators.resetPin}</h2>
           <div className="flex flex-col gap-1">
             <Label htmlFor="pinValue">{t.operators.resetPinPrompt}</Label>
-            <Input
-              id="pinValue"
-              autoFocus
-              inputMode="numeric"
-              pattern="\d{4,6}"
-              value={pinValue}
-              onChange={(e) => setPinValue(e.target.value)}
-              className="h-14 text-lg tabular-nums"
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                id="pinValue"
+                autoFocus
+                inputMode="numeric"
+                pattern="\d{4,6}"
+                value={pinValue}
+                onChange={(e) => setPinValue(e.target.value)}
+                className="h-14 flex-1 text-lg tabular-nums"
+              />
+              <PressableScale>
+                <SaveButton className="h-14" onClick={confirmResetPin} saved={pinSaved} />
+              </PressableScale>
+            </div>
           </div>
           {actionError && <p className="text-sm text-destructive">{actionError}</p>}
-          <PressableScale>
-            <SaveButton className="h-12 w-full" onClick={confirmResetPin} saved={pinSaved} />
-          </PressableScale>
         </div>
       </BottomSheet>
 
@@ -732,10 +736,7 @@ export default function OperatorSettingsPage() {
           <p className="text-body-airbnb">{t.operators.confirmDelete}</p>
           {actionError && <p className="text-sm text-destructive">{actionError}</p>}
           <PressableScale>
-            <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={confirmDelete}>
-              <Trash2 className="size-4" />
-              {t.common.delete}
-            </Button>
+            <DeleteButton className="h-12 w-full" onClick={confirmDelete} deleted={operatorDeleted} />
           </PressableScale>
         </div>
       </BottomSheet>

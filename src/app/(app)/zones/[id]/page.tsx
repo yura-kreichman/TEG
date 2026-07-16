@@ -6,6 +6,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Check, Pencil, Camera, ImagePlus, ListChecks, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp, Smile, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
+import { DeleteButton } from "@/components/ui/delete-button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +23,7 @@ import { FilePickerButton } from "@/components/file-picker-button";
 import { useI18n } from "@/components/i18n-provider";
 import { compressImageFile } from "@/lib/client-image";
 import { ZONE_ACCOUNTING_MODES, type ZoneAccountingMode } from "@/lib/results-calc";
-import { colorTagGradient } from "@/lib/utils";
+import { cn, colorTagGradient } from "@/lib/utils";
 import { ColorTagPicker } from "@/components/color-tag-picker";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 
@@ -39,6 +40,7 @@ interface AssetInfo {
   colorTag: string;
   photoUrl: string | null;
   iconKey: string | null;
+  active: boolean;
   lastReadings: { tariffId: string; reading: number }[];
 }
 
@@ -74,6 +76,7 @@ export default function ZoneDetailPage() {
   const [renameZoneValue, setRenameZoneValue] = useState("");
   const { saved: renameZoneSaved, pulse: renameZonePulse } = useSavePulse();
   const [zoneActionError, setZoneActionError] = useState<string | null>(null);
+  const { saved: zoneDeleted, pulse: zoneDeletePulse } = useSavePulse();
 
   const [createTariffOpen, setCreateTariffOpen] = useState(false);
   const [tariffName, setTariffName] = useState("");
@@ -88,6 +91,7 @@ export default function ZoneDetailPage() {
   const { saved: editTariffSaved, pulse: editTariffPulse } = useSavePulse();
   const [editTariffError, setEditTariffError] = useState<string | null>(null);
   const [deleteTariffError, setDeleteTariffError] = useState<string | null>(null);
+  const { saved: tariffDeleted, pulse: tariffDeletePulse } = useSavePulse();
 
   const [createAssetOpen, setCreateAssetOpen] = useState(false);
   const [assetName, setAssetName] = useState("");
@@ -105,6 +109,7 @@ export default function ZoneDetailPage() {
   const { saved: editAssetSaved, pulse: editAssetPulse } = useSavePulse();
   const [editAssetPhotoUrl, setEditAssetPhotoUrl] = useState<string | null>(null);
   const [editAssetError, setEditAssetError] = useState<string | null>(null);
+  const { saved: assetDeleted, pulse: assetDeletePulse } = useSavePulse();
   const [editUploading, setEditUploading] = useState(false);
 
   // Начальные (калибровочные) показания счётчика (запрос пользователя
@@ -205,7 +210,7 @@ export default function ZoneDetailPage() {
       setZoneActionError(data.error ?? "Не удалось удалить зону");
       return;
     }
-    router.push(`/points/${zone.pointId}`);
+    zoneDeletePulse(() => router.push(`/points/${zone.pointId}`));
   }
 
   async function handleAddTariff(event: FormEvent) {
@@ -265,8 +270,8 @@ export default function ZoneDetailPage() {
       setDeleteTariffError(data.error ?? "Не удалось удалить тариф");
       return;
     }
-    setTariffKebab(null);
     await loadZone();
+    tariffDeletePulse(() => setTariffKebab(null));
   }
 
   async function handleUploadPhoto(file: File) {
@@ -409,8 +414,8 @@ export default function ZoneDetailPage() {
   async function confirmDeleteAsset() {
     if (!assetKebab) return;
     await fetch(`/api/assets/${assetKebab.id}`, { method: "DELETE" });
-    setAssetKebab(null);
     await loadZone();
+    assetDeletePulse(() => setAssetKebab(null));
   }
 
   async function handleAssetIconChange(nextIconKey: string) {
@@ -419,6 +424,20 @@ export default function ZoneDetailPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ iconKey: nextIconKey }),
+    });
+    setAssetKebab(null);
+    await loadZone();
+  }
+
+  // Временная деактивация актива (запрос пользователя 2026-07-16: конкретный
+  // актив на ремонте) — в отличие от зоны/точки, актив не скрывается у
+  // оператора, а становится read-only (см. operator/submit/page.tsx).
+  async function toggleAssetActive() {
+    if (!assetKebab) return;
+    await fetch(`/api/assets/${assetKebab.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: !assetKebab.active }),
     });
     setAssetKebab(null);
     await loadZone();
@@ -506,7 +525,10 @@ export default function ZoneDetailPage() {
             {zone.assets.map((asset, index) => (
               <div
                 key={asset.id}
-                className="-mx-2 flex items-center justify-between rounded-control border-t border-border px-2 py-3 first:border-t-0"
+                className={cn(
+                  "-mx-2 flex items-center justify-between rounded-control border-t border-border px-2 py-3 first:border-t-0",
+                  (!zone.active || !asset.active) && "grayscale"
+                )}
                 style={{ background: colorTagGradient(asset.colorTag) }}
               >
                 <div className="flex items-center gap-3">
@@ -525,7 +547,12 @@ export default function ZoneDetailPage() {
                     />
                   </div>
                   <div>
-                    <div className="text-card-title">{asset.name}</div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="text-card-title">{asset.name}</div>
+                      {(!zone.active || !asset.active) && (
+                        <StatusChip variant="neutral">{t.zoneDetail.assetInactiveChip}</StatusChip>
+                      )}
+                    </div>
                     {zone.accountingMode === "counters" && asset.lastReadings.length > 0 && (
                       <p className="text-body-airbnb tabular-nums">
                         {zone.tariffs.length > 1
@@ -686,10 +713,7 @@ export default function ZoneDetailPage() {
             <p className="text-body-airbnb">{t.zoneDetail.confirmDeleteZone}</p>
             {zoneActionError && <p className="text-sm text-destructive">{zoneActionError}</p>}
             <PressableScale>
-              <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={confirmDeleteZone}>
-                <Trash2 className="size-4" />
-                {t.common.delete}
-              </Button>
+              <DeleteButton className="h-12 w-full" onClick={confirmDeleteZone} deleted={zoneDeleted} />
             </PressableScale>
           </div>
         )}
@@ -766,10 +790,7 @@ export default function ZoneDetailPage() {
             <p className="text-body-airbnb">{t.zoneDetail.confirmDeleteTariff}</p>
             {deleteTariffError && <p className="text-sm text-destructive">{deleteTariffError}</p>}
             <PressableScale>
-              <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={confirmDeleteTariff}>
-                <Trash2 className="size-4" />
-                {t.common.delete}
-              </Button>
+              <DeleteButton className="h-12 w-full" onClick={confirmDeleteTariff} deleted={tariffDeleted} />
             </PressableScale>
           </div>
         )}
@@ -841,6 +862,9 @@ export default function ZoneDetailPage() {
             <ActionSheetItem icon={ImagePlus} onClick={() => setAssetKebabView("icon")}>
               {t.common.changeIcon}
             </ActionSheetItem>
+            <ActionSheetItem icon={assetKebab.active ? Pause : Play} onClick={toggleAssetActive}>
+              {assetKebab.active ? t.zoneDetail.deactivateAsset : t.zoneDetail.activateAsset}
+            </ActionSheetItem>
             <ActionSheetItem icon={Trash2} destructive onClick={() => setAssetKebabView("confirm-delete")}>
               {t.zoneDetail.deleteAssetAction}
             </ActionSheetItem>
@@ -897,10 +921,7 @@ export default function ZoneDetailPage() {
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.deleteAssetAction}</h2>
             <p className="text-body-airbnb">{t.zoneDetail.confirmDeleteAsset}</p>
             <PressableScale>
-              <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={confirmDeleteAsset}>
-                <Trash2 className="size-4" />
-                {t.common.delete}
-              </Button>
+              <DeleteButton className="h-12 w-full" onClick={confirmDeleteAsset} deleted={assetDeleted} />
             </PressableScale>
           </div>
         )}

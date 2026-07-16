@@ -11,6 +11,7 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { ActionSheetItem, KebabButton } from "@/components/kebab-menu";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
+import { DeleteButton } from "@/components/ui/delete-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/components/i18n-provider";
@@ -49,6 +50,7 @@ export default function AdminPackagesPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saveError, setSaveError] = useState<string | null>(null);
   const { saved, pulse } = useSavePulse();
+  const { saved: packageDeleted, pulse: packageDeletePulse } = useSavePulse();
 
   const [kebab, setKebab] = useState<PackageInfo | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -128,9 +130,11 @@ export default function AdminPackagesPage() {
       setDeleteError(data.error ?? t.admin.genericError);
       return;
     }
-    setKebab(null);
-    setConfirmDelete(false);
     await load();
+    packageDeletePulse(() => {
+      setKebab(null);
+      setConfirmDelete(false);
+    });
   }
 
   if (checking) return null;
@@ -288,10 +292,7 @@ export default function AdminPackagesPage() {
           <p className="text-body-airbnb">{t.admin.confirmDeletePackageBody}</p>
           {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
           <PressableScale>
-            <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={deletePackage}>
-              <Trash2 className="size-4" />
-              {t.common.delete}
-            </Button>
+            <DeleteButton className="h-12 w-full" onClick={deletePackage} deleted={packageDeleted} />
           </PressableScale>
         </div>
       </BottomSheet>

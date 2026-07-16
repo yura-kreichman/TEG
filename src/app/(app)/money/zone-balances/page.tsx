@@ -6,6 +6,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Banknote, ChevronLeft, ChevronRight, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
+import { DeleteButton } from "@/components/ui/delete-button";
 import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -92,6 +93,7 @@ export default function ZoneBalancesPage() {
   const [editCollectionError, setEditCollectionError] = useState<string | null>(null);
   const [confirmDeleteCollection, setConfirmDeleteCollection] = useState(false);
   const [deletingCollection, setDeletingCollection] = useState(false);
+  const { saved: deletedCollection, pulse: deleteCollectionPulse } = useSavePulse();
 
   function openCollectionEdit(c: CollectionEntry) {
     setEditingCollection(c);
@@ -129,8 +131,8 @@ export default function ZoneBalancesPage() {
       return;
     }
     setDeletingCollection(false);
-    setEditingCollection(null);
     await Promise.all([loadReport(), loadCollections()]);
+    deleteCollectionPulse(() => setEditingCollection(null));
   }
 
   async function loadReport() {
@@ -600,15 +602,12 @@ export default function ZoneBalancesPage() {
               <div className="flex flex-col gap-2 border-t border-border pt-4">
                 <p className="text-body-airbnb">{t.money.deleteCollectionConfirm}</p>
                 <PressableScale>
-                  <Button
-                    variant="destructive"
-                    className="h-12 w-full gap-1.5"
+                  <DeleteButton
+                    className="h-12 w-full"
                     disabled={deletingCollection}
                     onClick={deleteCollection}
-                  >
-                    <Trash2 className="size-4" />
-                    {t.common.delete}
-                  </Button>
+                    deleted={deletedCollection}
+                  />
                 </PressableScale>
               </div>
             ) : (

@@ -617,6 +617,7 @@
     "mapsUrlHint": "Google Maps (w tym krótkie linki maps.app.goo.gl/…) lub Mapy Yandex — jeśli podano, używany zamiast współrzędnych dla przycisku „Otwórz w mapach”",
     "deactivatePoint": "Dezaktywuj punkt",
     "activatePoint": "Aktywuj punkt",
+    "pointActiveChip": "Aktywny",
     "pointInactiveChip": "Nieaktywny"
   },
   "zonesList": {
@@ -641,6 +642,7 @@
       "launches": "Uruchomienia",
       "cash_only": "Tylko kasa"
     },
+    "zoneActiveChip": "Aktywny",
     "zoneInactiveChip": "Nieaktywna"
   },
   "zoneDetail": {
@@ -679,6 +681,9 @@
     "changeAccountingModeAction": "Zmień tryb rozliczania",
     "deactivateZone": "Dezaktywuj strefę",
     "activateZone": "Aktywuj strefę",
+    "deactivateAsset": "Dezaktywuj zasób",
+    "activateAsset": "Aktywuj zasób",
+    "assetInactiveChip": "Nieaktywny",
     "cashOnlyNote": "Tryb „Tylko kasa”: ta strefa nie potrzebuje taryf ani zasobów — pracownik zdaje tylko sumę."
   },
   "operators": {
@@ -927,6 +932,7 @@
       "cashOnlySub": "Wpisz kasę za to rozliczenie",
       "assetNotFilled": "Niewypełnione",
       "previousReading": "było:",
+      "assetInactiveHint": "Zasób w naprawie — odczytu nie można zmienić, zachowana zostaje ostatnia wartość",
       "sessionsLabel": "Przejazdów:",
       "rolloverWarning": "przekroczenie licznika przez 9999 — sprawdź",
       "invalidNumberWarning": "Wpisz liczbę 0–9999",

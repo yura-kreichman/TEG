@@ -6,7 +6,9 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
+import { DeleteButton } from "@/components/ui/delete-button";
 import { Input } from "@/components/ui/input";
+import { TimeInput } from "@/components/time-input";
 import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -130,6 +132,7 @@ export default function OperatorCardPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [confirmDeleteShift, setConfirmDeleteShift] = useState(false);
   const [deletingShift, setDeletingShift] = useState(false);
+  const { saved: shiftDeleted, pulse: shiftDeletePulse } = useSavePulse();
   const { saved: shiftSaved, pulse: shiftPulse } = useSavePulse();
 
   const [editingMoneyOp, setEditingMoneyOp] = useState<StandaloneMoneyOp | null>(null);
@@ -137,6 +140,7 @@ export default function OperatorCardPage() {
   const [editMoneyOpError, setEditMoneyOpError] = useState<string | null>(null);
   const [confirmDeleteMoneyOp, setConfirmDeleteMoneyOp] = useState(false);
   const [deletingMoneyOp, setDeletingMoneyOp] = useState(false);
+  const { saved: moneyOpDeleted, pulse: moneyOpDeletePulse } = useSavePulse();
   const { saved: moneyOpSaved, pulse: moneyOpPulse } = useSavePulse();
 
   function openMoneyOpEdit(op: StandaloneMoneyOp) {
@@ -175,8 +179,8 @@ export default function OperatorCardPage() {
       return;
     }
     setDeletingMoneyOp(false);
-    setEditingMoneyOp(null);
     await loadAll();
+    moneyOpDeletePulse(() => setEditingMoneyOp(null));
   }
 
   async function loadAll() {
@@ -342,8 +346,8 @@ export default function OperatorCardPage() {
       return;
     }
     setDeletingShift(false);
-    setEditingShift(null);
     await loadAll();
+    shiftDeletePulse(() => setEditingShift(null));
   }
 
   async function submitShiftEdit() {
@@ -744,23 +748,21 @@ export default function OperatorCardPage() {
         {editingShift && (
           <div className="flex flex-col gap-4 pt-2">
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.readings.editSheetTitle}</h2>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
                 <Label htmlFor="editStart">{t.operatorApp.workTime.arrivedLabel}</Label>
-                <Input
+                <TimeInput
                   id="editStart"
-                  type="time"
-                  className="h-12 tabular-nums"
+                  className="h-12"
                   value={editStartTime}
                   onChange={(e) => setEditStartTime(e.target.value)}
                 />
               </div>
               <div className="flex flex-col gap-1">
                 <Label htmlFor="editEnd">{t.operatorApp.workTime.leftLabel}</Label>
-                <Input
+                <TimeInput
                   id="editEnd"
-                  type="time"
-                  className="h-12 tabular-nums"
+                  className="h-12"
                   disabled={editingShift.open && !closeShiftToo}
                   value={editEndTime}
                   onChange={(e) => setEditEndTime(e.target.value)}
@@ -776,7 +778,7 @@ export default function OperatorCardPage() {
                 <Switch checked={closeShiftToo} onCheckedChange={setCloseShiftToo} className="shrink-0" />
               </div>
             )}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
                 <Label htmlFor="editAdvance">{t.operatorApp.workTime.advanceFieldLabel}</Label>
                 <MoneyInput
@@ -810,36 +812,39 @@ export default function OperatorCardPage() {
               </p>
             ))}
             {editError && <p className="text-sm text-destructive">{editError}</p>}
-            <PressableScale>
-              <SaveButton className="h-12 w-full" onClick={submitShiftEdit} saved={shiftSaved} />
-            </PressableScale>
 
-            {shifts[0]?.id === editingShift.id &&
-              (confirmDeleteShift ? (
-                <div className="flex flex-col gap-2 border-t border-border pt-4">
-                  <p className="text-body-airbnb">{t.operatorApp.workTime.deleteShiftConfirm}</p>
+            {confirmDeleteShift && shifts[0]?.id === editingShift.id ? (
+              <div className="flex flex-col gap-2 border-t border-border pt-4">
+                <p className="text-body-airbnb">{t.operatorApp.workTime.deleteShiftConfirm}</p>
+                <PressableScale>
+                  <DeleteButton
+                    className="h-12 w-full"
+                    disabled={deletingShift}
+                    onClick={deleteShift}
+                    deleted={shiftDeleted}
+                  />
+                </PressableScale>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                {shifts[0]?.id === editingShift.id && (
                   <PressableScale>
                     <Button
+                      type="button"
                       variant="destructive"
-                      className="h-12 w-full gap-1.5"
-                      disabled={deletingShift}
-                      onClick={deleteShift}
+                      className="h-12 shrink-0 gap-1.5 px-4"
+                      onClick={() => setConfirmDeleteShift(true)}
                     >
                       <Trash2 className="size-4" />
                       {t.common.delete}
                     </Button>
                   </PressableScale>
-                </div>
-              ) : (
-                <div className="border-t border-border pt-4">
-                  <PressableScale>
-                    <Button variant="destructive" className="w-full gap-1.5" onClick={() => setConfirmDeleteShift(true)}>
-                      <Trash2 className="size-4" />
-                      {t.common.delete}
-                    </Button>
-                  </PressableScale>
-                </div>
-              ))}
+                )}
+                <PressableScale className="min-w-0 flex-1">
+                  <SaveButton className="h-12 w-full" onClick={submitShiftEdit} saved={shiftSaved} />
+                </PressableScale>
+              </div>
+            )}
           </div>
         )}
       </BottomSheet>
@@ -872,15 +877,12 @@ export default function OperatorCardPage() {
               <div className="flex flex-col gap-2 border-t border-border pt-4">
                 <p className="text-body-airbnb">{t.operatorApp.workTime.deleteMoneyOpConfirm}</p>
                 <PressableScale>
-                  <Button
-                    variant="destructive"
-                    className="h-12 w-full gap-1.5"
+                  <DeleteButton
+                    className="h-12 w-full"
                     disabled={deletingMoneyOp}
                     onClick={deleteMoneyOp}
-                  >
-                    <Trash2 className="size-4" />
-                    {t.common.delete}
-                  </Button>
+                    deleted={moneyOpDeleted}
+                  />
                 </PressableScale>
               </div>
             ) : (

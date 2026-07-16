@@ -11,6 +11,7 @@ import { getAccentCookie } from "@/lib/accent";
 import { getBgStyleCookie } from "@/lib/bg-style";
 import { AppBackground } from "@/components/app-background";
 import { SaveSuccessOverlay } from "@/components/ui/save-success-overlay";
+import { DeleteSuccessOverlay } from "@/components/ui/delete-success-overlay";
 import { getDictionary, resolveLocale } from "@/lib/i18n";
 import { resolveTenantCurrency } from "@/lib/currency-resolve";
 
@@ -94,6 +95,7 @@ export default async function RootLayout({
             <ThemeColorMeta />
             <InstallAppBanner />
             <SaveSuccessOverlay />
+            <DeleteSuccessOverlay />
             <TextScaleProvider>{children}</TextScaleProvider>
           </ThemeProvider>
         </I18nProvider>

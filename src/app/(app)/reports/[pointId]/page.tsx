@@ -273,24 +273,63 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
           </span>
           <Delta percent={data.deltaPercent} t={t} />
         </div>
-        <div className="mt-4 flex h-[110px] items-end gap-1.5">
-          {data.bars.map((b) => (
-            <div key={b.date} className="flex flex-1 flex-col items-center justify-end gap-1">
-              <span className="text-[0.5625rem] font-bold text-muted-foreground tabular-nums">
+        <div className="mt-4 flex flex-col gap-1">
+          <div className="flex gap-1.5">
+            {data.bars.map((b) => (
+              <div key={b.date} className="flex-1 text-center text-[0.5625rem] font-bold text-muted-foreground tabular-nums">
                 {b.total > 0 ? <Money value={b.total} /> : ""}
-              </span>
-              <div
-                className="w-full rounded-t-md bg-primary/80"
-                style={{ height: `${Math.max(4, (b.total / maxBar) * 100)}%` }}
-              />
-              <span className="text-[0.625rem] font-semibold text-muted-foreground">
+              </div>
+            ))}
+          </div>
+          {/* Столбцы + линия тренда поверх (запрос пользователя 2026-07-16:
+              "не видно графика, ходящего между двумя точками" — раньше была
+              только столбчатая диаграмма без соединяющей линии). Точки линии
+              считаются в процентах общей высоты этого ряда (viewBox 0..100),
+              как и высота самих столбцов — единая система координат для
+              обоих, растягивается вместе с контейнером без пересчёта в JS. */}
+          <div className="relative flex h-[70px] items-end gap-1.5">
+            {data.bars.map((b) => (
+              <div key={b.date} className="flex flex-1 items-end">
+                <div
+                  className="w-full rounded-t-md bg-primary/80"
+                  style={{ height: `${Math.max(4, (b.total / maxBar) * 100)}%` }}
+                />
+              </div>
+            ))}
+            {data.bars.length > 1 && (
+              <svg
+                className="pointer-events-none absolute inset-0 size-full overflow-visible text-primary"
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+              >
+                <polyline
+                  points={data.bars
+                    .map((b, i) => {
+                      const x = ((i + 0.5) / data.bars.length) * 100;
+                      const y = 100 - Math.max(4, (b.total / maxBar) * 100);
+                      return `${x},${y}`;
+                    })
+                    .join(" ")}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+            )}
+          </div>
+          <div className="flex gap-1.5">
+            {data.bars.map((b) => (
+              <div key={b.date} className="flex-1 text-center text-[0.625rem] font-semibold text-muted-foreground">
                 {new Date(b.date).toLocaleDateString(
                   undefined,
                   data.period.granularity === "year" ? { month: "short" } : { weekday: "short" }
                 )}
-              </span>
-            </div>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
         <div className="mt-3.5 grid grid-cols-3 gap-3 border-t border-border pt-3.5 tabular-nums">
           <div>

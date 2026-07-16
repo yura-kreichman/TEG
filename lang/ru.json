@@ -617,6 +617,7 @@
     "mapsUrlHint": "Google Maps (в т.ч. короткая maps.app.goo.gl/…) или Яндекс.Карты — если указана, используется вместо координат для кнопки «Открыть в картах»",
     "deactivatePoint": "Деактивировать точку",
     "activatePoint": "Активировать точку",
+    "pointActiveChip": "Активна",
     "pointInactiveChip": "Неактивна"
   },
   "zonesList": {
@@ -641,6 +642,7 @@
       "launches": "Пуски",
       "cash_only": "Только касса"
     },
+    "zoneActiveChip": "Активна",
     "zoneInactiveChip": "Неактивна"
   },
   "zoneDetail": {
@@ -679,6 +681,9 @@
     "changeAccountingModeAction": "Изменить режим учёта",
     "deactivateZone": "Деактивировать зону",
     "activateZone": "Активировать зону",
+    "deactivateAsset": "Деактивировать актив",
+    "activateAsset": "Активировать актив",
+    "assetInactiveChip": "Неактивен",
     "cashOnlyNote": "Режим «Только касса»: этой зоне не нужны тарифы и активы — сотрудник сдаёт только сумму."
   },
   "operators": {
@@ -927,6 +932,7 @@
       "cashOnlySub": "Введите кассу за эту сдачу",
       "assetNotFilled": "Не заполнено",
       "previousReading": "было:",
+      "assetInactiveHint": "Актив на ремонте — показание изменить нельзя, сохраняется последнее значение",
       "sessionsLabel": "Заездов:",
       "rolloverWarning": "переход счётчика через 9999 — проверьте",
       "invalidNumberWarning": "Введите число 0–9999",

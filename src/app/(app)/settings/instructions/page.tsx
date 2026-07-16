@@ -10,6 +10,8 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
 import { Button } from "@/components/ui/button";
+import { DeleteButton } from "@/components/ui/delete-button";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -47,6 +49,7 @@ export default function InstructionsSettingsPage() {
   const [creating, setCreating] = useState(false);
 
   const [kebabTarget, setKebabTarget] = useState<InstructionListItem | null>(null);
+  const { saved: instructionDeleted, pulse: instructionDeletePulse } = useSavePulse();
   const [kebabView, setKebabView] = useState<KebabView>("menu");
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [qrTarget, setQrTarget] = useState<InstructionListItem | null>(null);
@@ -129,9 +132,11 @@ export default function InstructionsSettingsPage() {
     setDeleteError(null);
     const res = await fetch(`/api/instructions/${kebabTarget.id}`, { method: "DELETE" });
     if (res.ok) {
-      setKebabTarget(null);
-      setKebabView("menu");
       loadInstructions();
+      instructionDeletePulse(() => {
+        setKebabTarget(null);
+        setKebabView("menu");
+      });
       return;
     }
     const data = await res.json().catch(() => null);
@@ -449,9 +454,9 @@ export default function InstructionsSettingsPage() {
             <p className="text-body-airbnb text-muted-foreground">{t.instructions.deleteConfirmHint}</p>
             {deleteError && <p className="text-caption-airbnb text-destructive">{deleteError}</p>}
             <PressableScale>
-              <Button type="button" variant="destructive" className="h-12 w-full" onClick={deleteInstruction}>
+              <DeleteButton className="h-12 w-full" onClick={deleteInstruction} deleted={instructionDeleted}>
                 {t.instructions.deleteAction}
-              </Button>
+              </DeleteButton>
             </PressableScale>
           </div>
         )}

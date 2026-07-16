@@ -11,6 +11,8 @@ import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { DeleteButton } from "@/components/ui/delete-button";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -100,6 +102,7 @@ export default function ReadingsCalendarPage() {
   const [editReason, setEditReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const { saved: readingDeleted, pulse: readingDeletePulse } = useSavePulse();
 
   async function loadPoints() {
     const res = await fetch("/api/points");
@@ -240,9 +243,9 @@ export default function ReadingsCalendarPage() {
         setActionError(data?.error ?? t.readings.deleteError);
         return;
       }
-      setActionsFor(null);
       if (selectedDate) await loadDay(selectedDate);
       await loadCalendar();
+      readingDeletePulse(() => setActionsFor(null));
     } finally {
       setDeleting(false);
     }
@@ -404,7 +407,7 @@ export default function ReadingsCalendarPage() {
                         disabled={!active}
                         onClick={() => openDay(date)}
                         className={cn(
-                          "relative flex aspect-square items-center justify-center rounded-control text-[0.84375rem] font-semibold tabular-nums",
+                          "relative flex aspect-square items-center justify-center rounded-control text-base font-bold tabular-nums",
                           active ? "bg-primary text-primary-foreground" : "text-muted-foreground/70",
                           date === todayKey && !active && "text-foreground",
                           date === selectedDate && active && "ring-2 ring-primary ring-offset-2 ring-offset-card"
@@ -730,9 +733,9 @@ export default function ReadingsCalendarPage() {
             <p className="text-body-airbnb">{t.readings.deleteConfirmBody}</p>
             {actionError && <p className="text-sm text-destructive">{actionError}</p>}
             <PressableScale>
-              <Button variant="destructive" className="h-12 w-full" disabled={deleting} onClick={confirmDelete}>
+              <DeleteButton className="h-12 w-full" disabled={deleting} onClick={confirmDelete} deleted={readingDeleted}>
                 {t.readings.deleteAction}
-              </Button>
+              </DeleteButton>
             </PressableScale>
           </div>
         )}

@@ -108,5 +108,6 @@ export async function GET() {
     profit: Math.round((revenue + expense) * 100) / 100,
     submissionsCount: submissions.length,
     difference: Math.round(totalDifference * 100) / 100,
+    expenses: Math.round(expense * 100) / 100,
   });
 }

@@ -32,6 +32,11 @@ interface AssetCtx {
   colorTag: string;
   photoUrl: string | null;
   iconKey: string | null;
+  // Актив на ремонте (запрос пользователя 2026-07-16) — в отличие от зоны,
+  // не скрывается: оператор видит его, но не может ввести новое показание,
+  // поле read-only с последним известным значением (см. isAssetFilled,
+  // сама форма ниже).
+  active: boolean;
   previousReadings: Record<string, number>;
 }
 interface ZoneCtx {
@@ -209,6 +214,9 @@ export default function SubmitResultsPage() {
   // (например, "Вторая скорость" сегодня не использовалась). Незаполненные
   // тарифы этого актива посчитаются как 0 заездов через resolveReading выше.
   function isAssetFilled(zone: ZoneCtx, asset: AssetCtx, form: ZoneFormState) {
+    // Актив на ремонте всегда "заполнен" — показание read-only, новый ввод
+    // не требуется (запрос пользователя 2026-07-16).
+    if (!asset.active) return true;
     return zone.tariffs.some((tariff) => (form.readings[`${asset.id}:${tariff.id}`] ?? "") !== "");
   }
 
@@ -467,7 +475,8 @@ export default function SubmitResultsPage() {
                       onClick={() => setCounterAssetId(asset.id)}
                       className={cn(
                         "relative flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card text-left",
-                        filled ? "border-success" : "border-border"
+                        filled ? "border-success" : "border-border",
+                        !asset.active && "grayscale"
                       )}
                     >
                       <div
@@ -767,6 +776,11 @@ export default function SubmitResultsPage() {
               />
             </div>
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{activeAsset.name}</h2>
+            {!activeAsset.active && (
+              <p className="rounded-control bg-muted px-3 py-2 text-caption-airbnb text-muted-foreground">
+                {t.operatorApp.submit.assetInactiveHint}
+              </p>
+            )}
 
             {activeZone.tariffs.map((tariff, index) => {
               const isLaunches = activeZone.accountingMode === "launches";
@@ -797,7 +811,8 @@ export default function SubmitResultsPage() {
                   <div className="flex items-stretch gap-2">
                     <Input
                       id={key}
-                      autoFocus
+                      autoFocus={activeAsset.active}
+                      disabled={!activeAsset.active}
                       inputMode="numeric"
                       // Счётчики — 4 разряда (0-9999), см. AssetReading.reading в
                       // schema.prisma — maxLength не даёт физически ввести 5-й
@@ -805,7 +820,7 @@ export default function SubmitResultsPage() {
                       maxLength={4}
                       placeholder="0–9999"
                       className="h-14 flex-1 rounded-control bg-muted text-xl font-bold tabular-nums"
-                      value={value}
+                      value={activeAsset.active ? value : String(previous)}
                       onChange={(e) => updateReading(activeZone.id, key, e.target.value)}
                     />
                     {isLast && (

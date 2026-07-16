@@ -23,7 +23,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]
     orderBy: { createdAt: "asc" },
   });
 
-  return NextResponse.json({ zones, pointName: point.name });
+  return NextResponse.json({ zones, pointName: point.name, pointActive: point.active });
 }
 
 export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]/zones">) {

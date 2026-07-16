@@ -262,6 +262,14 @@ export function formatDailyCashSummaryTelegram(
 
     if (data.forcedIncomplete) parts.push("⚠️ Принудительно — не все данные могли поступить");
 
+    // Разбивка по зонам — сразу под заголовком "КАССА" (запрос пользователя
+    // 2026-07-16: "подними выше эти данные"), а не в самом низу под итогом —
+    // это детализация того, из чего сложилась касса, логичнее видеть её
+    // раньше сводных сумм, а не после них.
+    if (settings.showZoneBreakdown && data.zoneBreakdown.length > 0) {
+      parts.push(`<blockquote><code>${formatZoneBreakdownRows(data.zoneBreakdown, locale)}</code></blockquote>`);
+    }
+
     if (settings.showCash) {
       parts.push(
         `💵 Нал.: <b>${formatMoney(data.cashAmount, locale)}</b>  📱 Безнал.: <b>${formatMoney(data.mobileAmount, locale)}</b>`
@@ -276,10 +284,6 @@ export function formatDailyCashSummaryTelegram(
     if (settings.showCashOnHand) totalBits.push(`📦 Ост.: ${formatMoney(data.cashOnHand, locale)}`);
     parts.push(totalBits.join(" · "));
 
-    if (settings.showZoneBreakdown && data.zoneBreakdown.length > 0) {
-      parts.push(`<blockquote><code>${formatZoneBreakdownRows(data.zoneBreakdown, locale)}</code></blockquote>`);
-    }
-
     return parts.join("\n");
   }
 
@@ -287,6 +291,10 @@ export function formatDailyCashSummaryTelegram(
 
   if (data.forcedIncomplete) {
     lines.push("", "⚠️ Отправлено принудительно по границе дня — не все данные могли поступить.");
+  }
+
+  if (settings.showZoneBreakdown && data.zoneBreakdown.length > 0) {
+    lines.push("", `<blockquote><code>${formatZoneBreakdownRows(data.zoneBreakdown, locale)}</code></blockquote>`);
   }
 
   lines.push("");
@@ -297,10 +305,6 @@ export function formatDailyCashSummaryTelegram(
   }
   if (settings.showExpenses) lines.push(`🧾 Расходы: ${formatMoney(data.expenses, locale)}`);
   lines.push(`🟰 Итого за день: <b>${formatMoney(total, locale)}</b>`);
-
-  if (settings.showZoneBreakdown && data.zoneBreakdown.length > 0) {
-    lines.push("", `<blockquote><code>${formatZoneBreakdownRows(data.zoneBreakdown, locale)}</code></blockquote>`);
-  }
 
   if (settings.showCashOnHand) {
     lines.push("", `📦 Остаток на точке: ${formatMoney(data.cashOnHand, locale)}`);

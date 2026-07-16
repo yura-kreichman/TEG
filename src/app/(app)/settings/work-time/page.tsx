@@ -7,7 +7,7 @@ import { useI18n } from "@/components/i18n-provider";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { TimeInput } from "@/components/time-input";
 import { SavedCheckmark } from "@/components/ui/saved-checkmark";
 import { WheelTimePicker } from "@/components/wheel-time-picker";
 import { toleranceCrossesBusinessDayBoundary } from "@/lib/business-day";
@@ -131,10 +131,9 @@ export default function WorkTimeSettingsPage() {
 
             <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
               <Label htmlFor="earlyTolerance">{t.settings.earlierLabel}</Label>
-              <Input
+              <TimeInput
                 id="earlyTolerance"
-                type="time"
-                className="h-10 w-fit tabular-nums"
+                className="h-10 w-fit"
                 value={`${String(Math.floor(earlyMinutes / 60)).padStart(2, "0")}:${String(earlyMinutes % 60).padStart(2, "0")}`}
                 onChange={(e) => {
                   const [h, m] = e.target.value.split(":").map(Number);
@@ -144,10 +143,9 @@ export default function WorkTimeSettingsPage() {
             </div>
             <div className="flex items-center justify-between gap-3">
               <Label htmlFor="lateTolerance">{t.settings.laterLabel}</Label>
-              <Input
+              <TimeInput
                 id="lateTolerance"
-                type="time"
-                className="h-10 w-fit tabular-nums"
+                className="h-10 w-fit"
                 value={`${String(Math.floor(lateMinutes / 60)).padStart(2, "0")}:${String(lateMinutes % 60).padStart(2, "0")}`}
                 onChange={(e) => {
                   const [h, m] = e.target.value.split(":").map(Number);

@@ -617,6 +617,7 @@
     "mapsUrlHint": "Google Maps (այդ թվում կարճ maps.app.goo.gl/… հղումներ) կամ Яндекс.Карты — եթե նշված է, օգտագործվում է կոորդինատների փոխարեն «Բացել քարտեզում» կոճակի համար",
     "deactivatePoint": "Անջատել կետը",
     "activatePoint": "Ակտիվացնել կետը",
+    "pointActiveChip": "Ակտիվ",
     "pointInactiveChip": "Ապաակտիվ"
   },
   "zonesList": {
@@ -641,6 +642,7 @@
       "launches": "Երթեր",
       "cash_only": "Միայն դրամարկղ"
     },
+    "zoneActiveChip": "Ակտիվ",
     "zoneInactiveChip": "Ապաակտիվ"
   },
   "zoneDetail": {
@@ -679,6 +681,9 @@
     "changeAccountingModeAction": "Փոխել հաշվառման ռեժիմը",
     "deactivateZone": "Ապաակտիվացնել գոտին",
     "activateZone": "Ակտիվացնել գոտին",
+    "deactivateAsset": "Անջատել ակտիվը",
+    "activateAsset": "Ակտիվացնել ակտիվը",
+    "assetInactiveChip": "Ապաակտիվ",
     "cashOnlyNote": "«Միայն դրամարկղ» ռեժիմ. այս գոտուն սակագներ և ակտիվներ պետք չեն — աշխատակիցը հանձնում է միայն գումարը."
   },
   "operators": {
@@ -927,6 +932,7 @@
       "cashOnlySub": "Մուտքագրեք դրամարկղը այս հանձնման համար",
       "assetNotFilled": "Չլրացված",
       "previousReading": "եղել է.",
+      "assetInactiveHint": "Ակտիվը վերանորոգման մեջ է — ցուցմունքը հնարավոր չէ փոխել, պահպանվում է վերջին արժեքը",
       "sessionsLabel": "Երթեր.",
       "rolloverWarning": "հաշվիչի անցում 9999-ից — ստուգեք",
       "invalidNumberWarning": "Մուտքագրեք 0–9999 թիվ",

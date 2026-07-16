@@ -6,7 +6,9 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Plus, Pencil, Trash2, Link2, ImagePlus, ChevronRight, MapPin, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
+import { DeleteButton } from "@/components/ui/delete-button";
 import { Input } from "@/components/ui/input";
+import { TimeInput } from "@/components/time-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { OwnerShell } from "@/components/owner-shell";
@@ -20,6 +22,7 @@ import { StatusChip } from "@/components/status-chip";
 import { TileIcon } from "@/components/tile-icon";
 import { QrCode } from "@/components/qr-code";
 import { useI18n } from "@/components/i18n-provider";
+import { cn } from "@/lib/utils";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface PointDeviceInfo {
@@ -97,6 +100,7 @@ export default function PointsPage() {
   const [renamePointValue, setRenamePointValue] = useState("");
   const { saved: renamePointSaved, pulse: renamePointPulse } = useSavePulse();
   const [pointActionError, setPointActionError] = useState<string | null>(null);
+  const { saved: pointDeleted, pulse: pointDeletePulse } = useSavePulse();
 
   const [locAddress, setLocAddress] = useState("");
   const [locCity, setLocCity] = useState("");
@@ -110,6 +114,7 @@ export default function PointsPage() {
   const { saved: locSaved, pulse: locPulse } = useSavePulse();
 
   const [deviceKebab, setDeviceKebab] = useState<{ pointId: string; device: PointDeviceInfo } | null>(null);
+  const { saved: deviceDeleted, pulse: deviceDeletePulse } = useSavePulse();
   const [deviceKebabView, setDeviceKebabView] = useState<DeviceKebabView>("menu");
   const [renameDeviceValue, setRenameDeviceValue] = useState("");
   const { saved: renameDeviceSaved, pulse: renameDevicePulse } = useSavePulse();
@@ -325,8 +330,8 @@ export default function PointsPage() {
       setPointActionError(data.error ?? "Не удалось удалить точку");
       return;
     }
-    setPointKebab(null);
     await loadPoints();
+    pointDeletePulse(() => setPointKebab(null));
   }
 
   function openDeviceKebab(pointId: string, device: PointDeviceInfo) {
@@ -364,8 +369,8 @@ export default function PointsPage() {
       return next;
     });
     if (qrOpenFor === device.id) setQrOpenFor(null);
-    setDeviceKebab(null);
     await loadPoints();
+    deviceDeletePulse(() => setDeviceKebab(null));
   }
 
   if (checking) return null;
@@ -393,7 +398,7 @@ export default function PointsPage() {
                 const activatedCount = point.devices.filter((d) => d.activated).length;
                 return (
                   <StaggerItem key={point.id}>
-                    <SpringCard animate={false}>
+                    <SpringCard animate={false} className={cn(!point.active && "grayscale")}>
                       <div className="flex items-center gap-3">
                         <Link
                           href={`/points/${point.id}`}
@@ -403,7 +408,11 @@ export default function PointsPage() {
                           <div className="min-w-0 grow">
                             <div className="flex items-center gap-1.5">
                               <div className="text-card-title">{point.name}</div>
-                              {!point.active && <StatusChip variant="neutral">{t.points.pointInactiveChip}</StatusChip>}
+                              {point.active ? (
+                                <StatusChip>{t.points.pointActiveChip}</StatusChip>
+                              ) : (
+                                <StatusChip variant="neutral">{t.points.pointInactiveChip}</StatusChip>
+                              )}
                             </div>
                             <p className="text-caption-airbnb">
                               {point.zonesCount} {t.points.zonesSuffix}
@@ -636,8 +645,7 @@ export default function PointsPage() {
                         <div className="mt-2 grid grid-cols-2 gap-2">
                           <div className="flex flex-col gap-1">
                             <Label className="text-caption-airbnb">{t.points.opensAtLabel}</Label>
-                            <Input
-                              type="time"
+                            <TimeInput
                               value={day.opensAt}
                               onChange={(e) =>
                                 setLocHours((prev) =>
@@ -648,8 +656,7 @@ export default function PointsPage() {
                           </div>
                           <div className="flex flex-col gap-1">
                             <Label className="text-caption-airbnb">{t.points.closesAtLabel}</Label>
-                            <Input
-                              type="time"
+                            <TimeInput
                               value={day.closesAt}
                               onChange={(e) =>
                                 setLocHours((prev) =>
@@ -685,10 +692,7 @@ export default function PointsPage() {
             <p className="text-body-airbnb">{t.points.confirmDeletePoint}</p>
             {pointActionError && <p className="text-sm text-destructive">{pointActionError}</p>}
             <PressableScale>
-              <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={confirmDeletePoint}>
-                <Trash2 className="size-4" />
-                {t.common.delete}
-              </Button>
+              <DeleteButton className="h-12 w-full" onClick={confirmDeletePoint} deleted={pointDeleted} />
             </PressableScale>
           </div>
         )}
@@ -740,10 +744,7 @@ export default function PointsPage() {
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.deleteDevice}</h2>
             <p className="text-body-airbnb">{t.points.confirmDeleteDevice}</p>
             <PressableScale>
-              <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={confirmDeleteDevice}>
-                <Trash2 className="size-4" />
-                {t.common.delete}
-              </Button>
+              <DeleteButton className="h-12 w-full" onClick={confirmDeleteDevice} deleted={deviceDeleted} />
             </PressableScale>
           </div>
         )}

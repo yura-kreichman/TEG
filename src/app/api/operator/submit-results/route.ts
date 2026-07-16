@@ -46,8 +46,11 @@ export async function POST(request: Request) {
   // Re-derive everything server-side from the DB rather than trusting any
   // client-computed totals — the client only sends raw entered numbers.
   const zoneIds = zoneSubmissions.map((z) => z.zoneId);
+  // active: true — деактивированная зона не должна принять сдачу итогов,
+  // даже если запрос как-то обошёл список на клиенте (тот же список берётся
+  // из /api/operator/submission-context, который уже её не отдаёт).
   const zones = await prisma.zone.findMany({
-    where: { id: { in: zoneIds }, pointId: point.id },
+    where: { id: { in: zoneIds }, pointId: point.id, active: true },
     include: { tariffs: { where: { deletedAt: null } }, assets: { orderBy: { sortOrder: "asc" } } },
   });
   const zoneById = new Map(zones.map((z) => [z.id, z]));
@@ -82,6 +85,23 @@ export async function POST(request: Request) {
     if (!previousByKey.has(key)) previousByKey.set(key, reading.reading);
   }
   const initialByKey = await getInitialReadingsMap(allAssetIds);
+
+  // Актив на ремонте (Asset.active=false) — read-only и на сервере, не
+  // только в форме: что бы ни прислал клиент, показание принудительно
+  // остаётся последним известным (запрос пользователя 2026-07-16: "сотрудник
+  // не может проводить никакие операции с деактивированными сущностями").
+  // Мутируем сам объект — обе последующие стадии (расчёт выручки ниже и
+  // запись AssetReading дальше по файлу) используют один и тот же массив.
+  const assetById = new Map(zones.flatMap((z) => z.assets.map((a) => [a.id, a])));
+  for (const zs of zoneSubmissions) {
+    for (const r of zs.readings) {
+      const asset = assetById.get(r.assetId);
+      if (asset && !asset.active) {
+        const key = `${r.assetId}:${r.tariffId}`;
+        r.reading = previousByKey.get(key) ?? initialByKey.get(key) ?? 0;
+      }
+    }
+  }
 
   const summary = zoneSubmissions.map((zs) => {
     const zone = zoneById.get(zs.zoneId)!;

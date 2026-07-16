@@ -617,6 +617,7 @@
     "mapsUrlHint": "Google Maps (у т.л. кароткая maps.app.goo.gl/…) або Яндэкс.Карты — калі паказана, выкарыстоўваецца замест каардынат для кнопкі «Адкрыць на карце»",
     "deactivatePoint": "Дэактываваць кропку",
     "activatePoint": "Актываваць кропку",
+    "pointActiveChip": "Актыўная",
     "pointInactiveChip": "Неактыўная"
   },
   "zonesList": {
@@ -641,6 +642,7 @@
       "launches": "Пускі",
       "cash_only": "Толькі каса"
     },
+    "zoneActiveChip": "Актыўная",
     "zoneInactiveChip": "Неактыўная"
   },
   "zoneDetail": {
@@ -679,6 +681,9 @@
     "changeAccountingModeAction": "Змяніць рэжым уліку",
     "deactivateZone": "Дэактываваць зону",
     "activateZone": "Актываваць зону",
+    "deactivateAsset": "Дэактываваць актыў",
+    "activateAsset": "Актываваць актыў",
+    "assetInactiveChip": "Неактыўны",
     "cashOnlyNote": "Рэжым «Толькі каса»: гэтай зоне не патрэбны тарыфы і актывы — супрацоўнік здае толькі суму."
   },
   "operators": {
@@ -927,6 +932,7 @@
       "cashOnlySub": "Увядзіце касу за гэту здачу",
       "assetNotFilled": "Не запоўнена",
       "previousReading": "было:",
+      "assetInactiveHint": "Актыў на рамонце — паказанне нельга змяніць, захоўваецца апошняе значэнне",
       "sessionsLabel": "Заездаў:",
       "rolloverWarning": "пераход лічыльніка праз 9999 — праверце",
       "invalidNumberWarning": "Увядзіце лік 0–9999",

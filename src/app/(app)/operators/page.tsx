@@ -271,20 +271,22 @@ export default function OperatorsPage() {
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor="pin">{t.operators.pinLabel}</Label>
-            <Input
-              id="pin"
-              inputMode="numeric"
-              pattern="\d{4,6}"
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              required
-              className="w-28"
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                id="pin"
+                inputMode="numeric"
+                pattern="\d{4,6}"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                required
+                className="h-12 flex-1"
+              />
+              <PressableScale>
+                <SaveButton type="submit" disabled={loading} className="h-12" saved={createSaved} />
+              </PressableScale>
+            </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <PressableScale>
-            <SaveButton type="submit" disabled={loading} className="h-12 w-full" saved={createSaved} />
-          </PressableScale>
         </form>
       </BottomSheet>
     </OwnerShell>

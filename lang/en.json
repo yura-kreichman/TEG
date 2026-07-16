@@ -617,6 +617,7 @@
     "mapsUrlHint": "Google Maps (including short maps.app.goo.gl/… links) or Yandex Maps — if set, used instead of coordinates for the \"Open in Maps\" button",
     "deactivatePoint": "Deactivate point",
     "activatePoint": "Activate point",
+    "pointActiveChip": "Active",
     "pointInactiveChip": "Inactive"
   },
   "zonesList": {
@@ -641,6 +642,7 @@
       "launches": "Launches",
       "cash_only": "Cash only"
     },
+    "zoneActiveChip": "Active",
     "zoneInactiveChip": "Inactive"
   },
   "zoneDetail": {
@@ -679,6 +681,9 @@
     "changeAccountingModeAction": "Change accounting mode",
     "deactivateZone": "Deactivate zone",
     "activateZone": "Activate zone",
+    "deactivateAsset": "Deactivate asset",
+    "activateAsset": "Activate asset",
+    "assetInactiveChip": "Inactive",
     "cashOnlyNote": "\"Cash only\" mode: this zone doesn't need tariffs or assets — the employee just submits an amount."
   },
   "operators": {
@@ -927,6 +932,7 @@
       "cashOnlySub": "Enter the cash for this submission",
       "assetNotFilled": "Not filled in",
       "previousReading": "was:",
+      "assetInactiveHint": "Asset under repair — the reading can't be changed, the last known value is kept",
       "sessionsLabel": "Sessions:",
       "rolloverWarning": "counter rolled over past 9999 — please check",
       "invalidNumberWarning": "Enter a number 0–9999",

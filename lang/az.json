@@ -617,6 +617,7 @@
     "mapsUrlHint": "Google Maps (qısa maps.app.goo.gl/… keçidləri daxil) və ya Yandex Xəritələr — göstərilibsə, «Xəritədə açın» düyməsi üçün koordinatlar əvəzinə istifadə olunur",
     "deactivatePoint": "Nöqtəni deaktiv et",
     "activatePoint": "Nöqtəni aktivləşdir",
+    "pointActiveChip": "Aktiv",
     "pointInactiveChip": "Deaktiv"
   },
   "zonesList": {
@@ -641,6 +642,7 @@
       "launches": "Buraxılışlar",
       "cash_only": "Yalnız kassa"
     },
+    "zoneActiveChip": "Aktiv",
     "zoneInactiveChip": "Qeyri-aktiv"
   },
   "zoneDetail": {
@@ -679,6 +681,9 @@
     "changeAccountingModeAction": "Uçot rejimini dəyiş",
     "deactivateZone": "Zonanı deaktiv et",
     "activateZone": "Zonanı aktivləşdir",
+    "deactivateAsset": "Aktivi deaktiv et",
+    "activateAsset": "Aktivi aktivləşdir",
+    "assetInactiveChip": "Deaktiv",
     "cashOnlyNote": "«Yalnız kassa» rejimi: bu zona üçün tarif və aktiv lazım deyil — işçi yalnız məbləği təhvil verir."
   },
   "operators": {
@@ -927,6 +932,7 @@
       "cashOnlySub": "Bu hesabat üçün kassanı daxil edin",
       "assetNotFilled": "Doldurulmayıb",
       "previousReading": "əvvəl:",
+      "assetInactiveHint": "Aktiv təmirdə — göstərici dəyişdirilə bilməz, sonuncu qeyd olunan dəyər saxlanılır",
       "sessionsLabel": "Gedişlər:",
       "rolloverWarning": "sayğac 9999-u keçib — yoxlayın",
       "invalidNumberWarning": "0–9999 aralığında ədəd daxil edin",

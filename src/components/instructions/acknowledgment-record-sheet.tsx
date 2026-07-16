@@ -4,8 +4,10 @@ import { useState } from "react";
 import { Download, Trash2 } from "lucide-react";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { Button } from "@/components/ui/button";
+import { DeleteButton } from "@/components/ui/delete-button";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n } from "@/components/i18n-provider";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 import type { AcknowledgmentRecordItem } from "@/lib/instructions/client-types";
 
 function formatDuration(seconds: number, minutesLabel: string, secondsLabel: string): string {
@@ -29,6 +31,7 @@ export function AcknowledgmentRecordSheet({
   const t = useI18n();
   const [view, setView] = useState<"details" | "confirm-delete">("details");
   const [busy, setBusy] = useState(false);
+  const { saved: deleted, pulse: deletePulse } = useSavePulse();
 
   function handleClose() {
     setView("details");
@@ -45,8 +48,8 @@ export function AcknowledgmentRecordSheet({
     setBusy(true);
     try {
       await fetch(`/api/instructions/records/${record.id}`, { method: "DELETE" });
-      handleClose();
       onChanged();
+      deletePulse(handleClose);
     } finally {
       setBusy(false);
     }
@@ -104,10 +107,7 @@ export function AcknowledgmentRecordSheet({
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.instructions.deleteRecordConfirmTitle}</h2>
           <p className="text-body-airbnb text-muted-foreground">{t.instructions.deleteRecordConfirmHint}</p>
           <PressableScale>
-            <Button type="button" variant="destructive" className="h-12 w-full gap-2" onClick={confirmDelete} disabled={busy}>
-              <Trash2 className="size-4" />
-              {t.common.delete}
-            </Button>
+            <DeleteButton className="h-12 w-full" onClick={confirmDelete} disabled={busy} deleted={deleted} />
           </PressableScale>
         </div>
       )}

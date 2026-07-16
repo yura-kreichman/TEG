@@ -617,6 +617,7 @@
     "mapsUrlHint": "Google Haritalar (kısa maps.app.goo.gl/… bağlantıları dahil) veya Yandex Haritalar — belirtilirse, \"Haritada aç\" düğmesi için koordinatlar yerine kullanılır",
     "deactivatePoint": "Noktayı devre dışı bırak",
     "activatePoint": "Noktayı etkinleştir",
+    "pointActiveChip": "Aktif",
     "pointInactiveChip": "Devre dışı"
   },
   "zonesList": {
@@ -641,6 +642,7 @@
       "launches": "Turlar",
       "cash_only": "Yalnızca kasa"
     },
+    "zoneActiveChip": "Aktif",
     "zoneInactiveChip": "Etkin değil"
   },
   "zoneDetail": {
@@ -679,6 +681,9 @@
     "changeAccountingModeAction": "Muhasebe modunu değiştir",
     "deactivateZone": "Bölgeyi devre dışı bırak",
     "activateZone": "Bölgeyi etkinleştir",
+    "deactivateAsset": "Varlığı devre dışı bırak",
+    "activateAsset": "Varlığı etkinleştir",
+    "assetInactiveChip": "Devre dışı",
     "cashOnlyNote": "«Yalnızca kasa» modu: bu bölge için tarife ve varlık gerekmez — çalışan yalnızca tutarı teslim eder."
   },
   "operators": {
@@ -927,6 +932,7 @@
       "cashOnlySub": "Bu teslim için kasayı girin",
       "assetNotFilled": "Doldurulmadı",
       "previousReading": "önceki:",
+      "assetInactiveHint": "Varlık tamirde — okuma değiştirilemez, son değer korunur",
       "sessionsLabel": "Tur sayısı:",
       "rolloverWarning": "sayaç 9999'u geçti — kontrol edin",
       "invalidNumberWarning": "0-9999 arasında bir sayı girin",

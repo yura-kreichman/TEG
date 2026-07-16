@@ -617,6 +617,7 @@
     "mapsUrlHint": "Google Maps (кыска maps.app.goo.gl/… шилтемелерин кошо) же Яндекс Карталар — көрсөтүлсө, «Картада ачуу» баскычы үчүн координаттардын ордуна колдонулат",
     "deactivatePoint": "Чекитти өчүрүү",
     "activatePoint": "Чекитти иштетүү",
+    "pointActiveChip": "Активдүү",
     "pointInactiveChip": "Активдүү эмес"
   },
   "zonesList": {
@@ -641,6 +642,7 @@
       "launches": "Иштетүүлөр",
       "cash_only": "Тек касса"
     },
+    "zoneActiveChip": "Активдүү",
     "zoneInactiveChip": "Активдүү эмес"
   },
   "zoneDetail": {
@@ -679,6 +681,9 @@
     "changeAccountingModeAction": "Эсепке алуу режимин өзгөртүү",
     "deactivateZone": "Аймакты деактивдештирүү",
     "activateZone": "Аймакты активдештирүү",
+    "deactivateAsset": "Активди өчүрүү",
+    "activateAsset": "Активди иштетүү",
+    "assetInactiveChip": "Активдүү эмес",
     "cashOnlyNote": "«Тек касса» режими: бул аймакка тарифтер жана активдер керек эмес — кызматкер тек сумманы тапшырат."
   },
   "operators": {
@@ -927,6 +932,7 @@
       "cashOnlySub": "Бул тапшыруу үчүн кассаны киргизиңиз",
       "assetNotFilled": "Толтурулган эмес",
       "previousReading": "болгон:",
+      "assetInactiveHint": "Актив оңдоодо — көрсөткүчтү өзгөртүүгө болбойт, акыркы мааниси сакталат",
       "sessionsLabel": "Айдоолор:",
       "rolloverWarning": "эсептегич 9999дон ашты — текшериңиз",
       "invalidNumberWarning": "0–9999 аралыгында сан киргизиңиз",

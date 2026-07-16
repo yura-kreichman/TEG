@@ -617,6 +617,7 @@
     "mapsUrlHint": "Google Maps (зокрема короткі maps.app.goo.gl/… посилання) або Яндекс.Карти — якщо вказано, використовується замість координат для кнопки «Відкрити на карті»",
     "deactivatePoint": "Деактивувати точку",
     "activatePoint": "Активувати точку",
+    "pointActiveChip": "Активна",
     "pointInactiveChip": "Неактивна"
   },
   "zonesList": {
@@ -641,6 +642,7 @@
       "launches": "Заїзди",
       "cash_only": "Лише каса"
     },
+    "zoneActiveChip": "Активна",
     "zoneInactiveChip": "Неактивна"
   },
   "zoneDetail": {
@@ -679,6 +681,9 @@
     "changeAccountingModeAction": "Змінити режим обліку",
     "deactivateZone": "Деактивувати зону",
     "activateZone": "Активувати зону",
+    "deactivateAsset": "Деактивувати актив",
+    "activateAsset": "Активувати актив",
+    "assetInactiveChip": "Неактивний",
     "cashOnlyNote": "Режим «Лише каса»: цій зоні не потрібні тарифи й активи — співробітник здає лише суму."
   },
   "operators": {
@@ -927,6 +932,7 @@
       "cashOnlySub": "Введіть касу за цю здачу",
       "assetNotFilled": "Не заповнено",
       "previousReading": "було:",
+      "assetInactiveHint": "Актив на ремонті — показання не можна змінити, зберігається останнє значення",
       "sessionsLabel": "Заїздів:",
       "rolloverWarning": "перехід лічильника через 9999 — перевірте",
       "invalidNumberWarning": "Введіть число 0–9999",

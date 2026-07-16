@@ -617,6 +617,7 @@
     "mapsUrlHint": "Google Maps (inclusiv linkuri scurte maps.app.goo.gl/…) sau Yandex Maps — dacă e setat, folosit în locul coordonatelor pentru butonul „Deschide în Hărți”",
     "deactivatePoint": "Dezactivează punctul",
     "activatePoint": "Activează punctul",
+    "pointActiveChip": "Activ",
     "pointInactiveChip": "Inactiv"
   },
   "zonesList": {
@@ -641,6 +642,7 @@
       "launches": "Curse",
       "cash_only": "Doar numerar"
     },
+    "zoneActiveChip": "Activ",
     "zoneInactiveChip": "Inactivă"
   },
   "zoneDetail": {
@@ -679,6 +681,9 @@
     "changeAccountingModeAction": "Schimbă modul de evidență",
     "deactivateZone": "Dezactivează zona",
     "activateZone": "Activează zona",
+    "deactivateAsset": "Dezactivează activul",
+    "activateAsset": "Activează activul",
+    "assetInactiveChip": "Inactiv",
     "cashOnlyNote": "Modul „Doar numerar”: această zonă nu are nevoie de tarife sau active — angajatul predă doar suma."
   },
   "operators": {
@@ -927,6 +932,7 @@
       "cashOnlySub": "Introduceți numerarul pentru această predare",
       "assetNotFilled": "Necompletat",
       "previousReading": "a fost:",
+      "assetInactiveHint": "Activul este în reparație — citirea nu poate fi modificată, se păstrează ultima valoare",
       "sessionsLabel": "Curse:",
       "rolloverWarning": "contorul a trecut peste 9999 — verificați",
       "invalidNumberWarning": "Introduceți un număr 0–9999",

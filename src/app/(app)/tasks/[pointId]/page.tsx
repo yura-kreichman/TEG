@@ -12,6 +12,7 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { ActionSheetItem } from "@/components/kebab-menu";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
+import { DeleteButton } from "@/components/ui/delete-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -104,6 +105,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
 
   const [editorOpen, setEditorOpen] = useState(false);
   const { saved: taskSaved, pulse: taskPulse } = useSavePulse();
+  const { saved: taskDeleted, pulse: taskDeletePulse } = useSavePulse();
   const [editing, setEditing] = useState<TaskInfo | null>(null);
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
@@ -233,9 +235,11 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
   async function deleteTask() {
     if (!actionsFor) return;
     await fetch(`/api/tasks/${actionsFor.id}`, { method: "DELETE" });
-    setActionsFor(null);
-    setConfirmDelete(false);
     await loadAll();
+    taskDeletePulse(() => {
+      setActionsFor(null);
+      setConfirmDelete(false);
+    });
   }
 
   if (checking) return null;
@@ -497,10 +501,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.tasks.confirmDeleteTitle}</h2>
           <p className="text-body-airbnb">{t.tasks.confirmDeleteBody}</p>
           <PressableScale>
-            <Button variant="destructive" className="h-12 w-full gap-1.5" onClick={deleteTask}>
-              <Trash2 className="size-4" />
-              {t.common.delete}
-            </Button>
+            <DeleteButton className="h-12 w-full" onClick={deleteTask} deleted={taskDeleted} />
           </PressableScale>
         </div>
       </BottomSheet>

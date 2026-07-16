@@ -617,6 +617,7 @@
     "mapsUrlHint": "Google Xaritalar (qisqa maps.app.goo.gl/… havolalari bilan) yoki Yandex Xaritalar — ko'rsatilgan bo'lsa, «Xaritada ochish» tugmasi uchun koordinatalar o'rniga ishlatiladi",
     "deactivatePoint": "Nuqtani faolsizlantirish",
     "activatePoint": "Nuqtani faollashtirish",
+    "pointActiveChip": "Faol",
     "pointInactiveChip": "Faol emas"
   },
   "zonesList": {
@@ -641,6 +642,7 @@
       "launches": "Yurishlar",
       "cash_only": "Faqat kassa"
     },
+    "zoneActiveChip": "Faol",
     "zoneInactiveChip": "Nofaol"
   },
   "zoneDetail": {
@@ -679,6 +681,9 @@
     "changeAccountingModeAction": "Hisob rejimini oʻzgartirish",
     "deactivateZone": "Zonani faolsizlantirish",
     "activateZone": "Zonani faollashtirish",
+    "deactivateAsset": "Aktivni faolsizlantirish",
+    "activateAsset": "Aktivni faollashtirish",
+    "assetInactiveChip": "Faol emas",
     "cashOnlyNote": "«Faqat kassa» rejimi: bu zonaga tarif va aktivlar kerak emas — xodim faqat summani topshiradi."
   },
   "operators": {
@@ -927,6 +932,7 @@
       "cashOnlySub": "Ushbu topshiriq uchun kassani kiriting",
       "assetNotFilled": "Toʻldirilmagan",
       "previousReading": "avval:",
+      "assetInactiveHint": "Aktiv ta'mirda — ko'rsatkichni o'zgartirib bo'lmaydi, oxirgi qiymat saqlanadi",
       "sessionsLabel": "Yurishlar:",
       "rolloverWarning": "hisoblagich 9999 dan oʻtdi — tekshiring",
       "invalidNumberWarning": "0–9999 oralig'ida son kiriting",
