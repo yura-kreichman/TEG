@@ -387,7 +387,7 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
 
   return (
     <div className="flex flex-col gap-3">
-      <SpringCard animate={false}>
+      <SpringCard animate={false} hover={false}>
         <div className="flex flex-wrap items-start gap-2.5">
           <div className="flex flex-col">
             <span className="text-caption-airbnb text-muted-foreground">{t.reports.revenueLabel}</span>
@@ -548,7 +548,7 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
         </div>
       </SpringCard>
 
-      <SpringCard animate={false}>
+      <SpringCard animate={false} hover={false}>
         <div className="mb-3 text-[0.6875rem] font-bold uppercase tracking-wider text-muted-foreground">
           {t.reports.plTitle}
         </div>
@@ -675,7 +675,7 @@ function ZonesTab({
 
   return (
     <div className="flex flex-col gap-3">
-      <SpringCard animate={false}>
+      <SpringCard animate={false} hover={false}>
         <div className="mb-3 text-[0.6875rem] font-bold uppercase tracking-wider text-muted-foreground">
           {t.reports.revenueByZoneTitle}
         </div>
@@ -733,7 +733,7 @@ function ZonesTab({
           )}
 
           {data.assetRanking.length > 0 && (
-            <SpringCard animate={false}>
+            <SpringCard animate={false} hover={false}>
               {data.assetRanking.map((a) => (
                 <RankBar key={a.assetId} label={a.assetName} total={a.total} sharePercent={a.sharePercent} />
               ))}
@@ -741,7 +741,7 @@ function ZonesTab({
           )}
 
           {data.tariffBreakdown.length > 0 && (
-            <SpringCard animate={false}>
+            <SpringCard animate={false} hover={false}>
               <div className="mb-3 text-[0.6875rem] font-bold uppercase tracking-wider text-muted-foreground">
                 {t.reports.tariffsTitle}
               </div>
@@ -763,7 +763,7 @@ function OperatorsTab({ operators, t }: { operators: OperatorRow[]; t: ReturnTyp
   return (
     <div className="flex flex-col gap-3">
       {operators.map((op) => (
-        <SpringCard key={op.operatorId} animate={false}>
+        <SpringCard key={op.operatorId} animate={false} hover={false}>
           <div className="mb-3 flex items-center gap-3">
             <div className="relative shrink-0">
               {op.avatarUrl ? (
@@ -840,7 +840,7 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
   return (
     <div className="flex flex-col gap-3">
       {activeDate && <div className="fixed inset-0 z-30" onClick={() => setActiveDate(null)} />}
-      <SpringCard animate={false}>
+      <SpringCard animate={false} hover={false}>
         <div className="mb-3 text-[0.6875rem] font-bold uppercase tracking-wider text-muted-foreground">
           {t.reports.revenueByWeekdayTitle} · {data.weeks.length} {t.reports.weeksSuffix}
         </div>
@@ -925,7 +925,7 @@ function CalendarMonthsTab({
   return (
     <div className="flex flex-col gap-3">
       {activeMonth !== null && <div className="fixed inset-0 z-30" onClick={() => setActiveMonth(null)} />}
-      <SpringCard animate={false}>
+      <SpringCard animate={false} hover={false}>
         <div className="mb-3 text-[0.6875rem] font-bold uppercase tracking-wider text-muted-foreground">
           {t.reports.revenueByMonthTitle}
         </div>
