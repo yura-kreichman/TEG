@@ -577,6 +577,7 @@
     "deleteDevice": "Oʻchirish",
     "confirmDeleteDevice": "Ushbu qurilmani oʻchirasizmi? Xodim undan endi kira olmaydi.",
     "deviceLabelPlaceholder": "Qurilma nomi (masalan, «Kirishdagi planshet»)",
+    "devicesTitle": "Qurilmalar",
     "unnamedDevice": "Nomsiz",
     "qrAlt": "Faollashtirish QR-kodi",
     "renamePoint": "Nomini oʻzgartirish",

@@ -577,6 +577,7 @@
     "deleteDevice": "Нест кардан",
     "confirmDeleteDevice": "Ин дастгоҳ нест карда шавад? Корманд дигар аз он ворид шуда наметавонад.",
     "deviceLabelPlaceholder": "Номи дастгоҳ (масалан, «Планшет назди дар»)",
+    "devicesTitle": "Дастгоҳҳо",
     "unnamedDevice": "Бе ном",
     "qrAlt": "QR-коди фаъолсозӣ",
     "renamePoint": "Номро иваз кардан",

@@ -577,6 +577,7 @@
     "deleteDevice": "Usuń",
     "confirmDeleteDevice": "Usunąć to urządzenie? Pracownik nie będzie mógł się z niego już zalogować.",
     "deviceLabelPlaceholder": "Nazwa urządzenia (np. „Tablet przy wejściu”)",
+    "devicesTitle": "Urządzenia",
     "unnamedDevice": "Bez nazwy",
     "qrAlt": "Kod QR aktywacji",
     "renamePoint": "Zmień nazwę",

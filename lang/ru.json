@@ -577,6 +577,7 @@
     "deleteDevice": "Удалить",
     "confirmDeleteDevice": "Удалить это устройство? Сотрудник больше не сможет входить с него.",
     "deviceLabelPlaceholder": "Название устройства (например, «Планшет у входа»)",
+    "devicesTitle": "Устройства",
     "unnamedDevice": "Без названия",
     "qrAlt": "QR-код активации",
     "renamePoint": "Переименовать",

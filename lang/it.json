@@ -577,6 +577,7 @@
     "deleteDevice": "Elimina",
     "confirmDeleteDevice": "Eliminare questo dispositivo? Il dipendente non potrà più accedervi.",
     "deviceLabelPlaceholder": "Nome dispositivo (es. \"Tablet all'ingresso\")",
+    "devicesTitle": "Dispositivi",
     "unnamedDevice": "Senza nome",
     "qrAlt": "Codice QR di attivazione",
     "renamePoint": "Rinomina",

@@ -577,6 +577,7 @@
     "deleteDevice": "Выдаліць",
     "confirmDeleteDevice": "Выдаліць гэтую прыладу? Супрацоўнік больш не зможа ўваходзіць з яе.",
     "deviceLabelPlaceholder": "Назва прылады (напрыклад, «Планшэт каля ўвахода»)",
+    "devicesTitle": "Прылады",
     "unnamedDevice": "Без назвы",
     "qrAlt": "QR-код актывацыі",
     "renamePoint": "Перайменаваць",

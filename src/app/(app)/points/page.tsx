@@ -430,6 +430,9 @@ export default function PointsPage() {
 
                       {point.devices.length > 0 && (
                         <div className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3">
+                          <span className="text-[0.6875rem] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+                            {t.points.devicesTitle}
+                          </span>
                           {point.devices.map((device) => (
                             <div key={device.id} className="flex flex-col gap-1">
                               <div className="flex items-center justify-between gap-2">

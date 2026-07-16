@@ -577,6 +577,7 @@
     "deleteDevice": "Ջնջել",
     "confirmDeleteDevice": "Ջնջե՞լ այս սարքը. Աշխատակիցն այլևս չի կարողանա մուտք գործել դրանով.",
     "deviceLabelPlaceholder": "Սարքի անվանում (օրինակ՝ «Պլանշետ մուտքի մոտ»)",
+    "devicesTitle": "Սարքեր",
     "unnamedDevice": "Առանց անվանման",
     "qrAlt": "Ակտիվացման QR-կոդ",
     "renamePoint": "Վերանվանել",

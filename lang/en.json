@@ -577,6 +577,7 @@
     "deleteDevice": "Delete",
     "confirmDeleteDevice": "Delete this device? The employee will no longer be able to sign in on it.",
     "deviceLabelPlaceholder": "Device name (e.g. \"Tablet at entrance\")",
+    "devicesTitle": "Devices",
     "unnamedDevice": "Unnamed",
     "qrAlt": "Activation QR code",
     "renamePoint": "Rename",

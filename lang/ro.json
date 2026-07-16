@@ -577,6 +577,7 @@
     "deleteDevice": "Șterge",
     "confirmDeleteDevice": "Ștergeți acest dispozitiv? Angajatul nu se va mai putea autentifica pe el.",
     "deviceLabelPlaceholder": "Numele dispozitivului (ex. „Tabletă la intrare”)",
+    "devicesTitle": "Dispozitive",
     "unnamedDevice": "Fără nume",
     "qrAlt": "Cod QR de activare",
     "renamePoint": "Redenumește",

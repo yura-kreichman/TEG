@@ -577,6 +577,7 @@
     "deleteDevice": "Өчүрүү",
     "confirmDeleteDevice": "Бул түзмөк өчүрүлсүнбү? Кызматкер андан ары ага кире албайт.",
     "deviceLabelPlaceholder": "Түзмөктүн аты (мисалы, «Кире беришиндеги планшет»)",
+    "devicesTitle": "Түзмөктөр",
     "unnamedDevice": "Аты жок",
     "qrAlt": "Активдештирүү QR-коду",
     "renamePoint": "Атын өзгөртүү",

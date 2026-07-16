@@ -577,6 +577,7 @@
     "deleteDevice": "Жою",
     "confirmDeleteDevice": "Бұл құрылғыны жою керек пе? Қызметкер одан бұдан былай кіре алмайды.",
     "deviceLabelPlaceholder": "Құрылғы атауы (мысалы, «Кіреберістегі планшет»)",
+    "devicesTitle": "Құрылғылар",
     "unnamedDevice": "Атаусыз",
     "qrAlt": "Белсендіру QR-коды",
     "renamePoint": "Атын өзгерту",

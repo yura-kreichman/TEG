@@ -577,6 +577,7 @@
     "deleteDevice": "Sil",
     "confirmDeleteDevice": "Bu cihaz silinsin mi? Çalışan artık buradan giriş yapamayacak.",
     "deviceLabelPlaceholder": "Cihaz adı (örn. «Girişteki tablet»)",
+    "devicesTitle": "Cihazlar",
     "unnamedDevice": "Adsız",
     "qrAlt": "Etkinleştirme QR kodu",
     "renamePoint": "Yeniden adlandır",
