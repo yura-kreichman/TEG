@@ -10,9 +10,14 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   }
 
   const { id: pointId } = await ctx.params;
-  const point = await findTenantPoint(owner.tenantId, pointId);
-  if (!point) {
-    return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
+  const isAllPoints = pointId === "all";
+  let pointName: string | null = null;
+  if (!isAllPoints) {
+    const point = await findTenantPoint(owner.tenantId, pointId);
+    if (!point) {
+      return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
+    }
+    pointName = point.name;
   }
 
   // Тот же переключатель Неделя/Месяц/Год и тот же getPeriodRange, что у
@@ -22,11 +27,17 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   const { searchParams } = new URL(request.url);
   const granularityParam = searchParams.get("granularity");
   const granularity = isReportGranularity(granularityParam) ? granularityParam : "week";
+  const anchorParam = searchParams.get("anchor");
   const today = new Date();
   const todayStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-  const { start, end } = getPeriodRange(granularity, todayStart, todayStart);
+  const anchor =
+    anchorParam && /^\d{4}-\d{2}-\d{2}$/.test(anchorParam) ? new Date(`${anchorParam}T00:00:00.000Z`) : todayStart;
+  const { start, end } = getPeriodRange(granularity, anchor, todayStart);
 
-  const zones = await prisma.zone.findMany({ where: { pointId }, select: { id: true } });
+  const zones = await prisma.zone.findMany({
+    where: isAllPoints ? { point: { tenantId: owner.tenantId } } : { pointId },
+    select: { id: true },
+  });
   const zoneIds = zones.map((z) => z.id);
 
   const submissions = zoneIds.length
@@ -58,34 +69,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       return { month: m, total: round2(hasData ? monthTotals[m] : 0), hasData };
     });
 
-    let weakestMonth: number | null = null;
-    let strongestMonth: number | null = null;
-    months.forEach((mo) => {
-      if (!mo.hasData) return;
-      if (weakestMonth === null || mo.total < months[weakestMonth].total) weakestMonth = mo.month;
-      if (strongestMonth === null || mo.total > months[strongestMonth].total) strongestMonth = mo.month;
-    });
-    const withData = months.filter((mo) => mo.hasData);
-    const overallMonthAverage = withData.length ? withData.reduce((sum, mo) => sum + mo.total, 0) / withData.length : 0;
-    const overloadedMonth =
-      strongestMonth !== null && overallMonthAverage > 0 && months[strongestMonth].total >= overallMonthAverage * 1.8
-        ? strongestMonth
-        : null;
-
-    return NextResponse.json({
-      pointName: point.name,
-      weeks: [],
-      dowAverages: [],
-      weakestDow: null,
-      strongestDow: null,
-      overloadedDow: null,
-      overloadRatio: null,
-      months,
-      weakestMonth,
-      strongestMonth,
-      overloadedMonth,
-      monthOverloadRatio: overloadedMonth !== null ? round2(months[overloadedMonth].total / overallMonthAverage) : null,
-    });
+    return NextResponse.json({ pointName, weeks: [], months });
   }
 
   // Неделя/Месяц — сетка строится полными неделями Пн–Вс, покрывающими
@@ -99,7 +83,6 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   const weeksCount = Math.round((gridEnd.getTime() - gridStart.getTime()) / (7 * 24 * 60 * 60 * 1000));
 
   const weeks: { weekStart: string; days: { date: string; dayOfWeek: number; total: number; hasData: boolean }[] }[] = [];
-  const totalsByDow: number[][] = Array.from({ length: 7 }, () => []);
 
   for (let w = 0; w < weeksCount; w++) {
     const weekStart = new Date(gridStart.getTime() + w * 7 * 24 * 60 * 60 * 1000);
@@ -109,42 +92,10 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       const key = date.toISOString().slice(0, 10);
       const hasData = date >= start && date < end;
       const total = hasData ? (byDay.get(key) ?? 0) : 0;
-      if (hasData) totalsByDow[d].push(total);
       days.push({ date: key, dayOfWeek: d, total: round2(total), hasData });
     }
     weeks.push({ weekStart: weekStart.toISOString().slice(0, 10), days });
   }
 
-  const dowAverages = totalsByDow.map((values) =>
-    values.length ? round2(values.reduce((sum, v) => sum + v, 0) / values.length) : 0
-  );
-  const overallAverage = dowAverages.length ? dowAverages.reduce((sum, v) => sum + v, 0) / dowAverages.length : 0;
-
-  let weakestDow: number | null = null;
-  let strongestDow: number | null = null;
-  dowAverages.forEach((avg, i) => {
-    if (totalsByDow[i].length === 0) return;
-    if (weakestDow === null || avg < dowAverages[weakestDow]) weakestDow = i;
-    if (strongestDow === null || avg > dowAverages[strongestDow]) strongestDow = i;
-  });
-
-  // Generic overload flag — any day averaging notably above the rest, not a
-  // hardcoded "Saturday" assumption (docs feedback: insights must be honest).
-  const overloadedDow =
-    strongestDow !== null && overallAverage > 0 && dowAverages[strongestDow] >= overallAverage * 1.8 ? strongestDow : null;
-
-  return NextResponse.json({
-    pointName: point.name,
-    weeks,
-    dowAverages,
-    weakestDow,
-    strongestDow,
-    overloadedDow,
-    overloadRatio: overloadedDow !== null ? round2(dowAverages[overloadedDow] / overallAverage) : null,
-    months: null,
-    weakestMonth: null,
-    strongestMonth: null,
-    overloadedMonth: null,
-    monthOverloadRatio: null,
-  });
+  return NextResponse.json({ pointName, weeks, months: null });
 }

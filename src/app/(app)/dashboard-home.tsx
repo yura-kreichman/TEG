@@ -5,12 +5,14 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
-import { Building2, CalendarDays, ChevronRight, ImagePlus, KeyRound, ListChecks, LogOut, Pencil } from "lucide-react";
+import { Building2, CalendarDays, ChevronRight, ImagePlus, KeyRound, ListChecks, LogOut, MapPin, Pencil } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n } from "@/components/i18n-provider";
 import type { Dictionary } from "@/lib/i18n";
 import { Money } from "@/components/money";
@@ -134,6 +136,15 @@ export function OwnerDashboardCard({
   const [logoUrl, setLogoUrl] = useState(tenantLogoUrl);
   const [summary, setSummary] = useState<Summary | null>(null);
 
+  // Фильтр по точке для "Последних итогов" (запрос пользователя 2026-07-16)
+  // — по умолчанию null = "Все точки", как и было раньше. Дропдаун виден,
+  // только если точек больше одной.
+  const [points, setPoints] = useState<{ id: string; name: string; iconKey: string | null }[]>([]);
+  const [pointId, setPointId] = useState<string | null>(null);
+  // Пробрасывается в ссылки "В Деньги"/"Показания по дням"/"Задачи" ниже,
+  // чтобы выбор точки наследовался при переходе (запрос пользователя 2026-07-16).
+  const pointQuery = pointId ? `?pointId=${pointId}` : "";
+
   const [accountView, setAccountView] = useState<"menu" | "rename" | null>(null);
   const [renameValue, setRenameValue] = useState(tenantName ?? "");
   const [updateSlugOnRename, setUpdateSlugOnRename] = useState(false);
@@ -152,10 +163,28 @@ export function OwnerDashboardCard({
   }, []);
 
   useEffect(() => {
-    fetch("/api/reports/home-summary")
+    fetch("/api/points")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data)
+          setPoints(
+            (data.points ?? []).map((p: { id: string; name: string; iconKey: string | null }) => ({
+              id: p.id,
+              name: p.name,
+              iconKey: p.iconKey,
+            }))
+          );
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const pointParam = pointId ? `?pointId=${pointId}` : "";
+    fetch(`/api/reports/home-summary${pointParam}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data && setSummary(data));
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pointId]);
 
   function openAccountMenu() {
     setAccountView("menu");
@@ -242,81 +271,134 @@ export function OwnerDashboardCard({
           </div>
         )}
 
-        {/* Последние итоги */}
-        {summary?.hasData && (
-          <PressableScale>
-            <Link href="/money">
-              <SpringCard className="flex flex-col gap-1">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex flex-col">
-                    <p className="text-section-title">{t.home.latestResultsLabel}</p>
-                    <p className="text-section-title">{formatRelativeDay(summary.date!, summary.isToday!, t)}</p>
+        {/* Последние итоги — дропдаун точки живёт в той же плашке (запрос
+            пользователя 2026-07-16), но вне PressableScale/Link тела карточки:
+            SelectContent рендерится в портал, и клик по пункту списка иначе
+            всплыл бы до родительского Link и увёл на /money. Выбор
+            пробрасывается в ссылки ниже через pointQuery. */}
+        {(points.length > 1 || summary) && (
+          <SpringCard className="flex flex-col gap-1" hover={!!summary?.hasData}>
+            {points.length > 1 && (
+              <div className={cn("pb-3", summary && "mb-1 border-b border-border")}>
+                <Select
+                  value={pointId ?? "all"}
+                  onValueChange={(v) => setPointId(v === "all" || !v ? null : v)}
+                  items={[
+                    { value: "all", label: t.money.allPoints },
+                    ...points.map((p) => ({ value: p.id, label: p.name })),
+                  ]}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>
+                      <span className="flex items-center gap-2">
+                        {(() => {
+                          const current = pointId ? points.find((p) => p.id === pointId) : null;
+                          if (!current) return <Building2 className="size-6 shrink-0 text-muted-foreground" />;
+                          return current.iconKey ? (
+                            <AssetOrZoneIcon iconKey={current.iconKey} className="size-6 shrink-0" />
+                          ) : (
+                            <MapPin className="size-6 shrink-0 text-muted-foreground" />
+                          );
+                        })()}
+                        {pointId ? points.find((p) => p.id === pointId)?.name : t.money.allPoints}
+                      </span>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      <span className="flex items-center gap-2">
+                        <Building2 className="size-6 shrink-0 text-muted-foreground" />
+                        {t.money.allPoints}
+                      </span>
+                    </SelectItem>
+                    {points.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <span className="flex items-center gap-2">
+                          {p.iconKey ? (
+                            <AssetOrZoneIcon iconKey={p.iconKey} className="size-6 shrink-0" />
+                          ) : (
+                            <MapPin className="size-6 shrink-0 text-muted-foreground" />
+                          )}
+                          {p.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {summary?.hasData && (
+              <PressableScale>
+                <Link href={`/money${pointQuery}`}>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex flex-col">
+                        <p className="text-section-title">{t.home.latestResultsLabel}</p>
+                        <p className="text-section-title">{formatRelativeDay(summary.date!, summary.isToday!, t)}</p>
+                      </div>
+                      <span className="flex shrink-0 items-center gap-0.5 text-caption-airbnb font-semibold text-primary">
+                        {t.home.toMoneyLink}
+                        <ChevronRight className="size-3.5" />
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-2 tabular-nums">
+                      <span className="text-[2rem] font-extrabold tracking-[-0.02em]">
+                        <Money value={summary.revenue!} size="display" />
+                      </span>
+                      <span className="text-caption-airbnb">{t.home.revenueUnit}</span>
+                    </div>
+                    <div className="flex border-t border-border pt-3 tabular-nums">
+                      <div className="flex-1">
+                        <p className="text-caption-airbnb">{t.money.profit}</p>
+                        <p className="text-[1rem] font-bold text-primary">
+                          {summary.profit! > 0 ? "+" : ""}
+                          <Money value={summary.profit!} />
+                        </p>
+                      </div>
+                      <div className="flex-1 border-l border-border pl-4">
+                        <p className="text-caption-airbnb">{t.home.submissionsCountLabel}</p>
+                        <p className="text-[1rem] font-bold">{summary.submissionsCount}</p>
+                      </div>
+                      {/* Отдельный переход на /money/expenses, а не общий /money
+                          карточки (запрос пользователя 2026-07-16) — div с
+                          preventDefault/stopPropagation, не вложенный <a>,
+                          чтобы не ломать HTML внутри уже кликабельной карточки. */}
+                      <div
+                        role="link"
+                        tabIndex={0}
+                        className="flex-1 border-l border-border pl-4"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/money/expenses${pointQuery}`);
+                        }}
+                      >
+                        <p className="flex items-center justify-between gap-0.5 text-caption-airbnb">
+                          <span>{t.money.expensesLink}</span>
+                          <ChevronRight className="size-3 shrink-0" />
+                        </p>
+                        <p className="text-[1rem] font-bold">
+                          <Money value={summary.expenses!} />
+                        </p>
+                      </div>
+                    </div>
+                    {!summary.isToday && (
+                      <p className="mt-3 flex items-center gap-1.5 border-t border-border pt-3 text-caption-airbnb">
+                        <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
+                        {t.home.noSubmissionsTodayNote}
+                      </p>
+                    )}
                   </div>
-                  <span className="flex shrink-0 items-center gap-0.5 text-caption-airbnb font-semibold text-primary">
-                    {t.home.toMoneyLink}
-                    <ChevronRight className="size-3.5" />
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-2 tabular-nums">
-                  <span className="text-[2rem] font-extrabold tracking-[-0.02em]">
-                    <Money value={summary.revenue!} size="display" />
-                  </span>
-                  <span className="text-caption-airbnb">{t.home.revenueUnit}</span>
-                </div>
-                <div className="flex border-t border-border pt-3 tabular-nums">
-                  <div className="flex-1">
-                    <p className="text-caption-airbnb">{t.money.profit}</p>
-                    <p className="text-[1rem] font-bold text-primary">
-                      {summary.profit! > 0 ? "+" : ""}
-                      <Money value={summary.profit!} />
-                    </p>
-                  </div>
-                  <div className="flex-1 border-l border-border pl-4">
-                    <p className="text-caption-airbnb">{t.home.submissionsCountLabel}</p>
-                    <p className="text-[1rem] font-bold">{summary.submissionsCount}</p>
-                  </div>
-                  {/* Отдельный переход на /money/expenses, а не общий /money
-                      карточки (запрос пользователя 2026-07-16) — div с
-                      preventDefault/stopPropagation, не вложенный <a>,
-                      чтобы не ломать HTML внутри уже кликабельной карточки. */}
-                  <div
-                    role="link"
-                    tabIndex={0}
-                    className="flex-1 border-l border-border pl-4"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      router.push("/money/expenses");
-                    }}
-                  >
-                    <p className="flex items-center justify-between gap-0.5 text-caption-airbnb">
-                      <span>{t.money.expensesLink}</span>
-                      <ChevronRight className="size-3 shrink-0" />
-                    </p>
-                    <p className="text-[1rem] font-bold">
-                      <Money value={summary.expenses!} />
-                    </p>
-                  </div>
-                </div>
-                {!summary.isToday && (
-                  <p className="mt-3 flex items-center gap-1.5 border-t border-border pt-3 text-caption-airbnb">
-                    <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
-                    {t.home.noSubmissionsTodayNote}
-                  </p>
-                )}
-              </SpringCard>
-            </Link>
-          </PressableScale>
-        )}
-        {summary && !summary.hasData && (
-          <SpringCard hover={false}>
-            <p className="text-body-airbnb text-muted-foreground">{t.home.noDataYet}</p>
+                </Link>
+              </PressableScale>
+            )}
+            {summary && !summary.hasData && <p className="text-body-airbnb text-muted-foreground">{t.home.noDataYet}</p>}
           </SpringCard>
         )}
 
         {/* Навигация */}
         <PressableScale>
-          <Link href="/money/readings">
+          <Link href={`/money/readings${pointQuery}`}>
             <SpringCard className="flex items-center gap-3">
               <div className="flex size-11 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
                 <CalendarDays className="size-5" />
@@ -346,7 +428,7 @@ export function OwnerDashboardCard({
         </PressableScale>
 
         <PressableScale>
-          <Link href="/tasks">
+          <Link href={pointId ? `/tasks/${pointId}` : "/tasks"}>
             <SpringCard className="flex items-center gap-3">
               <div className="flex size-11 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
                 <ListChecks className="size-5" />

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Info, MapPin, Minus, Pencil, Plus, Trash2 } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
@@ -70,11 +70,14 @@ type ActionsView = "menu" | "edit" | "confirm-delete";
 
 export default function ReadingsCalendarPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useI18n();
   const locale = useLocale();
   const [checking, setChecking] = useState(true);
   const [points, setPoints] = useState<PointOption[]>([]);
-  const [pointId, setPointId] = useState<string | null>(null);
+  // Наследует выбор с главного экрана через ?pointId= (запрос пользователя
+  // 2026-07-16), иначе — первая точка, как и раньше.
+  const [pointId, setPointId] = useState<string | null>(() => searchParams.get("pointId"));
 
   const today = new Date();
   const [year, setYear] = useState(today.getUTCFullYear());

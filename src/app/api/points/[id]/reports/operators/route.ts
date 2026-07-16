@@ -10,9 +10,14 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   }
 
   const { id: pointId } = await ctx.params;
-  const point = await findTenantPoint(owner.tenantId, pointId);
-  if (!point) {
-    return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
+  const isAllPoints = pointId === "all";
+  let pointName: string | null = null;
+  if (!isAllPoints) {
+    const point = await findTenantPoint(owner.tenantId, pointId);
+    if (!point) {
+      return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
+    }
+    pointName = point.name;
   }
 
   const { searchParams } = new URL(request.url);
@@ -23,7 +28,10 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   const anchor = anchorParam && /^\d{4}-\d{2}-\d{2}$/.test(anchorParam) ? new Date(`${anchorParam}T00:00:00.000Z`) : today;
   const { start, end } = getPeriodRange(granularity, anchor, today);
 
-  const zones = await prisma.zone.findMany({ where: { pointId }, select: { id: true } });
+  const zones = await prisma.zone.findMany({
+    where: isAllPoints ? { point: { tenantId: owner.tenantId } } : { pointId },
+    select: { id: true },
+  });
   const zoneIds = zones.map((z) => z.id);
 
   const [entries, submissions, shifts] = await Promise.all([
@@ -37,7 +45,9 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     prisma.shift.findMany({
       // isOpen: открытая смена (docs/spec/05-work-time.md, "АВТО"), ещё
       // не начислена, не учитывается в отчёте до check-out.
-      where: { pointId, startAt: { gte: start, lt: end }, isOpen: false },
+      where: isAllPoints
+        ? { point: { tenantId: owner.tenantId }, startAt: { gte: start, lt: end }, isOpen: false }
+        : { pointId, startAt: { gte: start, lt: end }, isOpen: false },
       select: { id: true, operatorId: true, startAt: true, endAt: true },
     }),
   ]);
@@ -59,7 +69,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   for (const sh of shifts) operatorIds.add(sh.operatorId);
 
   if (operatorIds.size === 0) {
-    return NextResponse.json({ pointName: point.name, operators: [] });
+    return NextResponse.json({ pointName, operators: [] });
   }
 
   const [operatorRows, rates] = await Promise.all([
@@ -132,5 +142,5 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
 
   operators.sort((a, b) => b.revenue - a.revenue);
 
-  return NextResponse.json({ pointName: point.name, operators });
+  return NextResponse.json({ pointName, operators });
 }

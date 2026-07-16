@@ -15,10 +15,19 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
 
+  // "all" — псевдо-ID для опции "Все точки" в дропдауне (запрос пользователя
+  // 2026-07-16): агрегация по всему тенанту вместо одной точки, тот же
+  // приём, что уже был на /money (там — просто отсутствие pointId вовсе,
+  // здесь — отдельный URL-сегмент, т.к. маршрут /reports/[pointId] требует id).
   const { id: pointId } = await ctx.params;
-  const point = await findTenantPoint(owner.tenantId, pointId);
-  if (!point) {
-    return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
+  const isAllPoints = pointId === "all";
+  let pointName: string | null = null;
+  if (!isAllPoints) {
+    const point = await findTenantPoint(owner.tenantId, pointId);
+    if (!point) {
+      return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
+    }
+    pointName = point.name;
   }
 
   const { searchParams } = new URL(request.url);
@@ -31,7 +40,10 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   const { start, end } = getPeriodRange(granularity, anchor, today);
   const { start: prevStart, end: prevEnd } = getPreviousPeriodRange(granularity, start);
 
-  const zones = await prisma.zone.findMany({ where: { pointId }, select: { id: true } });
+  const zones = await prisma.zone.findMany({
+    where: isAllPoints ? { point: { tenantId: owner.tenantId } } : { pointId },
+    select: { id: true },
+  });
   const zoneIds = zones.map((z) => z.id);
 
   const entries = await computeZoneSubmissionRevenues(zoneIds, start, end);
@@ -73,7 +85,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     where: {
       tenantId: owner.tenantId,
       occurredAt: { gte: start, lt: end },
-      OR: [{ zone: { pointId } }, { pointId }],
+      ...(isAllPoints ? {} : { OR: [{ zone: { pointId } }, { pointId }] }),
     },
     select: { type: true, amount: true },
   });
@@ -106,7 +118,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   }
 
   return NextResponse.json({
-    pointName: point.name,
+    pointName,
     period: { granularity, start: start.toISOString(), end: end.toISOString() },
     total: round2(total),
     cash: round2(totalCash),

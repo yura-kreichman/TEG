@@ -47,7 +47,7 @@ export function SegmentedTabs<T extends string>({
           onClick={() => onChange(option.key)}
           className={cn(
             "border font-semibold transition-shadow",
-            size === "sm" ? "px-2.5 py-1 text-xs" : "px-3.5 py-1.5 text-sm",
+            size === "sm" ? "px-2.5 py-1 text-sm" : "px-3.5 py-1.5 text-sm",
             shape === "pill" ? "rounded-full" : "rounded-control",
             equalWidth && "flex-1 text-center",
             value === option.key

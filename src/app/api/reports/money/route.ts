@@ -43,17 +43,29 @@ export async function GET(request: Request) {
     ({ start, end } = getPeriodRange(granularity, anchor, today));
   }
 
+  // Фильтр по точке — опциональный (запрос пользователя 2026-07-16: "по
+  // умолчанию все точки"), отдельный параметр поверх period/granularity,
+  // не завязан на них. Без него страница остаётся тем, чем была изначально —
+  // сводкой по всему бизнесу тенанта сразу.
+  const pointIdParam = searchParams.get("pointId");
+
   const [zones, points] = await Promise.all([
     prisma.zone.findMany({
-      where: { point: { tenantId: owner.tenantId } },
+      where: { point: { tenantId: owner.tenantId, ...(pointIdParam ? { id: pointIdParam } : {}) } },
       include: { point: true },
       orderBy: [{ point: { createdAt: "asc" } }, { createdAt: "asc" }],
     }),
-    prisma.point.findMany({ where: { tenantId: owner.tenantId }, orderBy: { createdAt: "asc" } }),
+    prisma.point.findMany({
+      where: { tenantId: owner.tenantId, ...(pointIdParam ? { id: pointIdParam } : {}) },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
 
   const operations = await prisma.moneyOperation.findMany({
-    where: { tenantId: owner.tenantId },
+    where: {
+      tenantId: owner.tenantId,
+      ...(pointIdParam ? { OR: [{ zone: { pointId: pointIdParam } }, { pointId: pointIdParam }] } : {}),
+    },
   });
 
   const balanceByZone = new Map<string, number>();

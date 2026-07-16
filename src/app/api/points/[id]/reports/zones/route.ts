@@ -16,9 +16,14 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   }
 
   const { id: pointId } = await ctx.params;
-  const point = await findTenantPoint(owner.tenantId, pointId);
-  if (!point) {
-    return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
+  const isAllPoints = pointId === "all";
+  let pointName: string | null = null;
+  if (!isAllPoints) {
+    const point = await findTenantPoint(owner.tenantId, pointId);
+    if (!point) {
+      return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
+    }
+    pointName = point.name;
   }
 
   const { searchParams } = new URL(request.url);
@@ -30,10 +35,14 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   const { start, end } = getPeriodRange(granularity, anchor, today);
 
   const zones = await prisma.zone.findMany({
-    where: { pointId },
+    where: isAllPoints ? { point: { tenantId: owner.tenantId } } : { pointId },
     include: {
       assets: { orderBy: { sortOrder: "asc" } },
       tariffs: { where: { deletedAt: null } },
+      // Имя точки — нужно только в режиме "Все точки", чтобы отличать
+      // одноимённые зоны разных точек в списке (запрос пользователя
+      // 2026-07-16), но проще всегда включать, чем городить условный тип include.
+      point: { select: { name: true } },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -51,7 +60,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       const total = actualByZone.get(z.id) ?? 0;
       return {
         zoneId: z.id,
-        zoneName: z.name,
+        zoneName: isAllPoints ? `${z.name} · ${z.point.name}` : z.name,
         iconKey: z.iconKey,
         total: round2(total),
         sharePercent: pointTotal > 0 ? Math.round((total / pointTotal) * 1000) / 10 : 0,
@@ -122,11 +131,11 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   }
 
   return NextResponse.json({
-    pointName: point.name,
+    pointName,
     period: { granularity, start: start.toISOString(), end: end.toISOString() },
     zoneRanking,
     drillZoneId: drillZone?.id ?? null,
-    drillZoneName: drillZone?.name ?? null,
+    drillZoneName: drillZone ? (isAllPoints ? `${drillZone.name} · ${drillZone.point.name}` : drillZone.name) : null,
     assetRanking,
     tariffBreakdown,
     insight,

@@ -10,14 +10,19 @@ import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 // если нет — берём последний прошедший день с активностью и отдельно говорим
 // клиенту, что это не сегодня (isToday=false), чтобы карточка могла показать
 // поясняющую заметку вместо того, чтобы выглядеть как "сегодняшний" итог.
-export async function GET() {
+export async function GET(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
 
+  // Фильтр по точке — опциональный (запрос пользователя 2026-07-16), по
+  // умолчанию отсутствует = весь тенант сразу, как и было раньше.
+  const { searchParams } = new URL(request.url);
+  const pointIdParam = searchParams.get("pointId");
+
   const latest = await prisma.resultsSubmission.findFirst({
-    where: { tenantId: owner.tenantId },
+    where: { tenantId: owner.tenantId, ...(pointIdParam ? { pointId: pointIdParam } : {}) },
     orderBy: { submittedAt: "desc" },
     select: { submittedAt: true },
   });
@@ -36,7 +41,11 @@ export async function GET() {
   const isToday = dayStart.getTime() === todayStart.getTime();
 
   const submissions = await prisma.resultsSubmission.findMany({
-    where: { tenantId: owner.tenantId, submittedAt: { gte: dayStart, lt: dayEnd } },
+    where: {
+      tenantId: owner.tenantId,
+      submittedAt: { gte: dayStart, lt: dayEnd },
+      ...(pointIdParam ? { pointId: pointIdParam } : {}),
+    },
     include: {
       zoneSubmissions: {
         include: { zone: { include: { tariffs: true } }, assetReadings: true },
@@ -90,7 +99,11 @@ export async function GET() {
   }
 
   const operations = await prisma.moneyOperation.findMany({
-    where: { tenantId: owner.tenantId, occurredAt: { gte: dayStart, lt: dayEnd } },
+    where: {
+      tenantId: owner.tenantId,
+      occurredAt: { gte: dayStart, lt: dayEnd },
+      ...(pointIdParam ? { OR: [{ zone: { pointId: pointIdParam } }, { pointId: pointIdParam }] } : {}),
+    },
   });
   let revenue = 0;
   let expense = 0;

@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Building2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Gift, Receipt } from "lucide-react";
+import { Building2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Gift, MapPin, Receipt } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 import { pad, toDateStr } from "@/lib/datetime-format";
@@ -21,6 +23,7 @@ interface Report {
 
 export default function MoneyPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useI18n();
   const [checking, setChecking] = useState(true);
   const [report, setReport] = useState<Report | null>(null);
@@ -41,10 +44,37 @@ export default function MoneyPage() {
   const [dayRevenue, setDayRevenue] = useState<Record<string, number>>({});
   const [pickDateOpen, setPickDateOpen] = useState(false);
 
+  // Фильтр по точке (запрос пользователя 2026-07-16) — по умолчанию null =
+  // "Все точки", весь бизнес тенанта сразу, как и было раньше. Дропдаун
+  // показывается только если точек больше одной (тот же приём, что на
+  // /reports/[pointId]) — с одной точкой фильтр не имеет смысла.
+  const [points, setPoints] = useState<{ id: string; name: string; iconKey: string | null }[]>([]);
+  // Наследует выбор с главного экрана через ?pointId= (запрос пользователя
+  // 2026-07-16) — ссылка "В Деньги" в карточке "Последние итоги" пробрасывает
+  // выбранную там точку сюда же.
+  const [pointId, setPointId] = useState<string | null>(() => searchParams.get("pointId"));
+
+  useEffect(() => {
+    fetch("/api/points")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data)
+          setPoints(
+            (data.points ?? []).map((p: { id: string; name: string; iconKey: string | null }) => ({
+              id: p.id,
+              name: p.name,
+              iconKey: p.iconKey,
+            }))
+          );
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function loadCalendar() {
     const year = calendarMonth.getUTCFullYear();
     const month = calendarMonth.getUTCMonth() + 1;
-    const res = await fetch(`/api/reports/money/calendar?year=${year}&month=${month}`);
+    const pointParam = pointId ? `&pointId=${pointId}` : "";
+    const res = await fetch(`/api/reports/money/calendar?year=${year}&month=${month}${pointParam}`);
     if (res.status === 401) {
       router.replace("/login");
       return;
@@ -57,7 +87,7 @@ export default function MoneyPage() {
   useEffect(() => {
     loadCalendar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calendarMonth]);
+  }, [calendarMonth, pointId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function isCalendarCurrentMonth() {
@@ -82,10 +112,11 @@ export default function MoneyPage() {
   }
 
   async function loadReport() {
+    const pointParam = pointId ? `&pointId=${pointId}` : "";
     const url =
       mode === "custom"
-        ? `/api/reports/money?from=${customFrom}&to=${customTo}`
-        : `/api/reports/money?granularity=${granularity}&anchor=${toDateStr(anchor)}`;
+        ? `/api/reports/money?from=${customFrom}&to=${customTo}${pointParam}`
+        : `/api/reports/money?granularity=${granularity}&anchor=${toDateStr(anchor)}${pointParam}`;
     const res = await fetch(url);
     if (res.status === 401) {
       router.replace("/login");
@@ -111,7 +142,7 @@ export default function MoneyPage() {
     if (!anchorReady) return;
     loadReport();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anchorReady, mode, granularity, anchor, customFrom, customTo]);
+  }, [anchorReady, mode, granularity, anchor, customFrom, customTo, pointId]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function isCurrentPeriod() {
@@ -218,6 +249,54 @@ export default function MoneyPage() {
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl flex-col gap-3.5">
           <h1 className="text-screen-title">{t.money.title}</h1>
+
+          {points.length > 1 && (
+            <Select
+              value={pointId ?? "all"}
+              onValueChange={(v) => setPointId(v === "all" || !v ? null : v)}
+              items={[
+                { value: "all", label: t.money.allPoints },
+                ...points.map((p) => ({ value: p.id, label: p.name })),
+              ]}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  <span className="flex items-center gap-2">
+                    {(() => {
+                      const current = pointId ? points.find((p) => p.id === pointId) : null;
+                      if (!current) return <Building2 className="size-6 shrink-0 text-muted-foreground" />;
+                      return current.iconKey ? (
+                        <AssetOrZoneIcon iconKey={current.iconKey} className="size-6 shrink-0" />
+                      ) : (
+                        <MapPin className="size-6 shrink-0 text-muted-foreground" />
+                      );
+                    })()}
+                    {pointId ? points.find((p) => p.id === pointId)?.name : t.money.allPoints}
+                  </span>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  <span className="flex items-center gap-2">
+                    <Building2 className="size-6 shrink-0 text-muted-foreground" />
+                    {t.money.allPoints}
+                  </span>
+                </SelectItem>
+                {points.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    <span className="flex items-center gap-2">
+                      {p.iconKey ? (
+                        <AssetOrZoneIcon iconKey={p.iconKey} className="size-6 shrink-0" />
+                      ) : (
+                        <MapPin className="size-6 shrink-0 text-muted-foreground" />
+                      )}
+                      {p.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <div className="grid grid-cols-5 gap-1">
             {(["day", "week", "month", "year"] as const).map((g) => (

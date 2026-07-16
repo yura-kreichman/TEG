@@ -1,8 +1,22 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { use, useEffect, useState } from "react";
-import { AlertTriangle, ArrowDown, ArrowUp, Lightbulb, MapPin } from "lucide-react";
+import { use, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  Frown,
+  Laugh,
+  Lightbulb,
+  MapPin,
+  Meh,
+  Smile,
+} from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
@@ -12,6 +26,7 @@ import { useI18n, useLocale, useCurrency } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { formatMoneyCompact } from "@/lib/format";
 import { getCurrencySign } from "@/lib/currency";
+import { toDateStr } from "@/lib/datetime-format";
 import { cn } from "@/lib/utils";
 
 type Tab = "dynamics" | "zones" | "operators" | "calendar";
@@ -55,16 +70,7 @@ interface OperatorRow {
 
 interface CalendarData {
   weeks: { weekStart: string; days: { date: string; dayOfWeek: number; total: number; hasData: boolean }[] }[];
-  dowAverages: number[];
-  weakestDow: number | null;
-  strongestDow: number | null;
-  overloadedDow: number | null;
-  overloadRatio: number | null;
   months: { month: number; total: number; hasData: boolean }[] | null;
-  weakestMonth: number | null;
-  strongestMonth: number | null;
-  overloadedMonth: number | null;
-  monthOverloadRatio: number | null;
 }
 
 export default function ReportsDashboardPage({ params }: { params: Promise<{ pointId: string }> }) {
@@ -77,6 +83,7 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   const [points, setPoints] = useState<{ id: string; name: string; iconKey: string | null }[]>([]);
   const [tab, setTab] = useState<Tab>("dynamics");
   const [granularity, setGranularity] = useState<Granularity>("week");
+  const [anchor, setAnchor] = useState(() => new Date());
 
   const [dynamics, setDynamics] = useState<DynamicsData | null>(null);
   const [zones, setZones] = useState<ZonesData | null>(null);
@@ -88,10 +95,11 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   async function loadPeriodData() {
     setLoadError(false);
     const zoneParam = zoneIdOverride ? `&zoneId=${zoneIdOverride}` : "";
+    const anchorParam = `&anchor=${toDateStr(anchor)}`;
     const [dynRes, zonesRes, opsRes] = await Promise.all([
-      fetch(`/api/points/${pointId}/reports/dynamics?granularity=${granularity}`),
-      fetch(`/api/points/${pointId}/reports/zones?granularity=${granularity}${zoneParam}`),
-      fetch(`/api/points/${pointId}/reports/operators?granularity=${granularity}`),
+      fetch(`/api/points/${pointId}/reports/dynamics?granularity=${granularity}${anchorParam}`),
+      fetch(`/api/points/${pointId}/reports/zones?granularity=${granularity}${anchorParam}${zoneParam}`),
+      fetch(`/api/points/${pointId}/reports/operators?granularity=${granularity}${anchorParam}`),
     ]);
     if (dynRes.status === 401) {
       router.replace("/login");
@@ -108,7 +116,7 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
     }
     const dynData = await dynRes.json();
     setDynamics(dynData);
-    setPointName(dynData.pointName);
+    setPointName(dynData.pointName ?? t.money.allPoints);
     setZones(await zonesRes.json());
     const opsData = await opsRes.json();
     setOperators(opsData.operators ?? []);
@@ -116,7 +124,7 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   }
 
   async function loadCalendar() {
-    const res = await fetch(`/api/points/${pointId}/reports/calendar?granularity=${granularity}`);
+    const res = await fetch(`/api/points/${pointId}/reports/calendar?granularity=${granularity}&anchor=${toDateStr(anchor)}`);
     if (res.ok) setCalendar(await res.json());
   }
 
@@ -124,12 +132,12 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   useEffect(() => {
     loadPeriodData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pointId, granularity, zoneIdOverride]);
+  }, [pointId, granularity, anchor, zoneIdOverride]);
 
   useEffect(() => {
     loadCalendar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pointId, granularity]);
+  }, [pointId, granularity, anchor]);
 
   // Список точек для дропдауна выбора — без отдельного экрана-пикера
   // (фидбек пользователя 2026-07-13). Загружается один раз, не зависит от pointId.
@@ -149,6 +157,43 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // Перелистывание периода стрелками — тот же приём, что на /money (anchor +
+  // stepPeriod/isCurrentPeriod), запрос пользователя 2026-07-16. Здесь только
+  // week/month/year (нет "день", в отличие от /money), поэтому веток меньше.
+  function isCurrentPeriod() {
+    const today = new Date();
+    if (granularity === "year") return anchor.getUTCFullYear() === today.getUTCFullYear();
+    if (granularity === "month") {
+      return anchor.getUTCFullYear() === today.getUTCFullYear() && anchor.getUTCMonth() === today.getUTCMonth();
+    }
+    const weekStart = (d: Date) => {
+      const day = (d.getUTCDay() + 6) % 7;
+      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day);
+    };
+    return weekStart(anchor) === weekStart(today);
+  }
+
+  function stepPeriod(delta: number) {
+    if (delta > 0 && isCurrentPeriod()) return;
+    const next = new Date(anchor);
+    if (granularity === "week") next.setUTCDate(next.getUTCDate() + delta * 7);
+    else if (granularity === "month") next.setUTCMonth(next.getUTCMonth() + delta);
+    else next.setUTCFullYear(next.getUTCFullYear() + delta);
+    setAnchor(next);
+  }
+
+  function formatPeriodLabel() {
+    if (granularity === "year") return String(anchor.getUTCFullYear());
+    if (granularity === "month") return `${t.readings.months[anchor.getUTCMonth()]} ${anchor.getUTCFullYear()}`;
+    const day = (anchor.getUTCDay() + 6) % 7;
+    const start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate() - day));
+    const end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
+    const sameMonth = start.getUTCMonth() === end.getUTCMonth();
+    return sameMonth
+      ? `${start.getUTCDate()}–${end.getUTCDate()} ${t.readings.monthsGenitive[start.getUTCMonth()]}`
+      : `${start.getUTCDate()} ${t.readings.monthsGenitive[start.getUTCMonth()]} – ${end.getUTCDate()} ${t.readings.monthsGenitive[end.getUTCMonth()]}`;
+  }
+
   if (checking) return null;
 
   const TABS: { key: Tab; label: string }[] = [
@@ -165,11 +210,19 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
           <h1 className="text-screen-title">{t.reports.pickPointTitle}</h1>
           {points.length > 1 ? (
             <div className="mb-4">
-              <Select value={pointId} onValueChange={(v) => v && router.push(`/reports/${v}`)} items={points.map((p) => ({ value: p.id, label: p.name }))}>
+              <Select
+                value={pointId}
+                onValueChange={(v) => v && router.push(`/reports/${v}`)}
+                items={[
+                  { value: "all", label: t.money.allPoints },
+                  ...points.map((p) => ({ value: p.id, label: p.name })),
+                ]}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue>
                     <span className="flex items-center gap-2">
                       {(() => {
+                        if (pointId === "all") return <Building2 className="size-6 shrink-0 text-muted-foreground" />;
                         const current = points.find((p) => p.id === pointId);
                         return current?.iconKey ? (
                           <AssetOrZoneIcon iconKey={current.iconKey} className="size-6 shrink-0" />
@@ -182,6 +235,12 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">
+                    <span className="flex items-center gap-2">
+                      <Building2 className="size-6 shrink-0 text-muted-foreground" />
+                      {t.money.allPoints}
+                    </span>
+                  </SelectItem>
                   {points.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       <span className="flex items-center gap-2">
@@ -221,6 +280,27 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
             value={granularity}
             onChange={setGranularity}
           />
+
+          <div className="mb-4 flex items-center justify-between">
+            <button
+              type="button"
+              aria-label={t.money.prevPeriod}
+              onClick={() => stepPeriod(-1)}
+              className="flex size-8 items-center justify-center rounded-control text-muted-foreground"
+            >
+              <ChevronLeft className="size-4.5" />
+            </button>
+            <p className="text-caption-airbnb font-semibold text-foreground">{formatPeriodLabel()}</p>
+            <button
+              type="button"
+              aria-label={t.money.nextPeriod}
+              onClick={() => stepPeriod(1)}
+              disabled={isCurrentPeriod()}
+              className="flex size-8 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
+            >
+              <ChevronRight className="size-4.5" />
+            </button>
+          </div>
 
           {loadError ? (
             <p className="text-body-airbnb text-destructive">{t.reports.genericError}</p>
@@ -392,6 +472,53 @@ function RankBar({ label, total, sharePercent, suffix }: { label: string; total:
         <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, sharePercent)}%` }} />
       </div>
     </div>
+  );
+}
+
+// Точная сумма по тапу на ячейку теплокарты (запрос пользователя 2026-07-16) —
+// в самой ячейке текст сокращён/подогнан под размер экрана и может быть
+// неточным ("2.7к"), тултип поверх ячейки всегда показывает копейка в
+// копейку, крупным текстом (фидбек: "значительно крупнее" — мелкая подпись
+// была не заметна). Две строки: смайлик по уровню сверху, точная сумма
+// снизу. Сам гаснет через 2с (setTimeout у вызывающего компонента) —
+// fade-out, не резкое исчезновение, отсюда AnimatePresence. Клик вне ячеек
+// (invisible overlay) закрывает раньше.
+// 4 уровня — общие для цвета ячейки и для смайлика в тултипе. Раньше цвет
+// был непрерывным градиентом (opacity плавно от 0.25 до 1), а смайлик грубым
+// квартилем ratio<0.25/0.5/0.75 — из-за этого у двух заметно разных по цвету
+// ячеек мог оказаться один и тот же смайлик (нашёл пользователь 2026-07-16:
+// "они разного цвета, а почему смайлик одинаковый?"). Теперь оба берут один
+// и тот же moodLevel на тех же порогах, глазами это ровно 4 ступени.
+function moodLevel(ratio: number): 0 | 1 | 2 | 3 {
+  if (ratio < 0.25) return 0;
+  if (ratio < 0.5) return 1;
+  if (ratio < 0.75) return 2;
+  return 3;
+}
+const CELL_OPACITY: Record<0 | 1 | 2 | 3, number> = { 0: 0.35, 1: 0.55, 2: 0.8, 3: 1 };
+
+function CellTooltip({ value, maxVal }: { value: number; maxVal: number }) {
+  const level = moodLevel(maxVal > 0 ? value / maxVal : 0);
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="absolute bottom-full left-1/2 z-50 mb-2 flex -translate-x-1/2 flex-col items-center gap-0.5 whitespace-nowrap rounded-control bg-foreground px-3.5 py-2 text-lg font-bold text-background shadow-lg"
+    >
+      {level === 0 ? (
+        <Frown className="size-5" />
+      ) : level === 1 ? (
+        <Meh className="size-5" />
+      ) : level === 2 ? (
+        <Smile className="size-5" />
+      ) : (
+        <Laugh className="size-5" />
+      )}
+      <Money value={value} />
+      <span className="absolute left-1/2 top-full -translate-x-1/2 border-[6px] border-transparent border-t-foreground" />
+    </motion.div>
   );
 }
 
@@ -569,13 +696,25 @@ function OperatorsTab({ operators, t }: { operators: OperatorRow[]; t: ReturnTyp
 }
 
 function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof useI18n> }) {
+  const [activeDate, setActiveDate] = useState<string | null>(null);
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function openTooltip(date: string) {
+    if (tooltipTimeoutRef.current) clearTimeout(tooltipTimeoutRef.current);
+    if (activeDate === date) {
+      setActiveDate(null);
+      return;
+    }
+    setActiveDate(date);
+    tooltipTimeoutRef.current = setTimeout(() => setActiveDate(null), 2000);
+  }
   if (data.months !== null) {
-    return <CalendarMonthsTab months={data.months} data={data} t={t} />;
+    return <CalendarMonthsTab months={data.months} t={t} />;
   }
 
   const maxVal = Math.max(1, ...data.weeks.flatMap((w) => w.days.map((d) => d.total)));
   return (
     <div className="flex flex-col gap-3">
+      {activeDate && <div className="fixed inset-0 z-30" onClick={() => setActiveDate(null)} />}
       <SpringCard animate={false}>
         <div className="mb-3 text-[0.6875rem] font-bold uppercase tracking-wider text-muted-foreground">
           {t.reports.revenueByWeekdayTitle} · {data.weeks.length} {t.reports.weeksSuffix}
@@ -593,17 +732,18 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
               <div
                 key={d.date}
                 className={cn(
-                  "flex aspect-square items-center justify-center rounded-lg text-[0.75rem] font-bold text-white",
+                  "relative z-40 flex aspect-square items-center justify-center rounded-lg text-[clamp(0.5rem,2.6vw,0.75rem)] font-bold text-white",
                   (!d.hasData || d.total === 0) && "bg-muted text-muted-foreground"
                 )}
                 style={
                   d.hasData && d.total > 0
-                    ? { background: "var(--color-primary)", opacity: 0.25 + (d.total / maxVal) * 0.75 }
+                    ? { background: "var(--color-primary)", opacity: CELL_OPACITY[moodLevel(d.total / maxVal)] }
                     : undefined
                 }
-                title={d.date}
+                onClick={() => d.total > 0 && openTooltip(d.date)}
               >
                 {d.total > 0 ? Math.round(d.total / 100) / 10 + "к" : ""}
+                <AnimatePresence>{activeDate === d.date && <CellTooltip value={d.total} maxVal={maxVal} />}</AnimatePresence>
               </div>
             ))}
           </div>
@@ -611,26 +751,13 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
         <div className="mt-3 flex items-center gap-1.5 text-caption-airbnb">
           <span>{t.reports.legendLess}</span>
           <span className="size-3.5 rounded bg-muted" />
-          <span className="size-3.5 rounded bg-primary/30" />
-          <span className="size-3.5 rounded bg-primary/60" />
+          <span className="size-3.5 rounded bg-primary/35" />
+          <span className="size-3.5 rounded bg-primary/55" />
+          <span className="size-3.5 rounded bg-primary/80" />
           <span className="size-3.5 rounded bg-primary" />
           <span>{t.reports.legendMore}</span>
         </div>
       </SpringCard>
-
-      {data.weakestDow !== null && (
-        <Insight>
-          {t.reports.weakestDayLabel}: {t.readings.weekdaysFull[data.weakestDow]} ·{" "}
-          <Money value={data.dowAverages[data.weakestDow]} />
-        </Insight>
-      )}
-      {data.overloadedDow !== null && (
-        <Insight tone="good">
-          {t.reports.strongestDayLabel}: {t.readings.weekdaysFull[data.overloadedDow]} ·{" "}
-          <Money value={data.dowAverages[data.overloadedDow]} /> ({data.overloadRatio}
-          {t.reports.overloadSuffix})
-        </Insight>
-      )}
     </div>
   );
 }
@@ -640,18 +767,28 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
 // 2026-07-15).
 function CalendarMonthsTab({
   months,
-  data,
   t,
 }: {
   months: { month: number; total: number; hasData: boolean }[];
-  data: CalendarData;
   t: ReturnType<typeof useI18n>;
 }) {
   const maxVal = Math.max(1, ...months.map((mo) => mo.total));
   const locale = useLocale();
   const sign = getCurrencySign(useCurrency());
+  const [activeMonth, setActiveMonth] = useState<number | null>(null);
+  const tooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function openTooltip(month: number) {
+    if (tooltipTimeoutRef.current) clearTimeout(tooltipTimeoutRef.current);
+    if (activeMonth === month) {
+      setActiveMonth(null);
+      return;
+    }
+    setActiveMonth(month);
+    tooltipTimeoutRef.current = setTimeout(() => setActiveMonth(null), 2000);
+  }
   return (
     <div className="flex flex-col gap-3">
+      {activeMonth !== null && <div className="fixed inset-0 z-30" onClick={() => setActiveMonth(null)} />}
       <SpringCard animate={false}>
         <div className="mb-3 text-[0.6875rem] font-bold uppercase tracking-wider text-muted-foreground">
           {t.reports.revenueByMonthTitle}
@@ -661,17 +798,18 @@ function CalendarMonthsTab({
             <div
               key={mo.month}
               className={cn(
-                "flex h-16 flex-col items-center justify-center gap-1 rounded-lg p-1 text-center font-bold text-white",
+                "relative z-40 flex h-16 flex-col items-center justify-center gap-1 rounded-lg p-1 text-center font-bold text-white",
                 (!mo.hasData || mo.total === 0) && "bg-muted text-muted-foreground"
               )}
               style={
                 mo.hasData && mo.total > 0
-                  ? { background: "var(--color-primary)", opacity: 0.25 + (mo.total / maxVal) * 0.75 }
+                  ? { background: "var(--color-primary)", opacity: CELL_OPACITY[moodLevel(mo.total / maxVal)] }
                   : undefined
               }
+              onClick={() => mo.total > 0 && openTooltip(mo.month)}
             >
               <span className="text-[0.6875rem] leading-tight font-semibold">{t.readings.months[mo.month]}</span>
-              <span className="text-[0.8125rem] leading-tight tabular-nums">
+              <span className="text-[clamp(0.5625rem,3.2vw,0.8125rem)] leading-tight tabular-nums">
                 {mo.total > 0 ? (
                   mo.total < 100_000 ? (
                     <Money value={mo.total} />
@@ -685,32 +823,20 @@ function CalendarMonthsTab({
                   ""
                 )}
               </span>
+              <AnimatePresence>{activeMonth === mo.month && <CellTooltip value={mo.total} maxVal={maxVal} />}</AnimatePresence>
             </div>
           ))}
         </div>
         <div className="mt-3 flex items-center gap-1.5 text-caption-airbnb">
           <span>{t.reports.legendLess}</span>
           <span className="size-3.5 rounded bg-muted" />
-          <span className="size-3.5 rounded bg-primary/30" />
-          <span className="size-3.5 rounded bg-primary/60" />
+          <span className="size-3.5 rounded bg-primary/35" />
+          <span className="size-3.5 rounded bg-primary/55" />
+          <span className="size-3.5 rounded bg-primary/80" />
           <span className="size-3.5 rounded bg-primary" />
           <span>{t.reports.legendMore}</span>
         </div>
       </SpringCard>
-
-      {data.weakestMonth !== null && (
-        <Insight>
-          {t.reports.weakestDayLabel}: {t.readings.months[data.weakestMonth]} ·{" "}
-          <Money value={months[data.weakestMonth].total} />
-        </Insight>
-      )}
-      {data.overloadedMonth !== null && (
-        <Insight tone="good">
-          {t.reports.strongestDayLabel}: {t.readings.months[data.overloadedMonth]} ·{" "}
-          <Money value={months[data.overloadedMonth].total} /> ({data.monthOverloadRatio}
-          {t.reports.overloadMonthSuffix})
-        </Insight>
-      )}
     </div>
   );
 }
