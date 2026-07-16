@@ -176,6 +176,8 @@
     "revenueByMonthTitle": "Încasări pe luni",
     "compactThousandSuffix": "k",
     "compactMillionSuffix": "M",
+    "chartScrollLeft": "Derulare la stânga",
+    "chartScrollRight": "Derulare la dreapta",
     "genericError": "Raportul nu a putut fi încărcat"
   },
   "admin": {

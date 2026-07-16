@@ -176,6 +176,8 @@
     "revenueByMonthTitle": "Түсім айлар бойынша",
     "compactThousandSuffix": "k",
     "compactMillionSuffix": "M",
+    "chartScrollLeft": "Солға айналдыру",
+    "chartScrollRight": "Оңға айналдыру",
     "genericError": "Есепті жүктеу мүмкін болмады"
   },
   "admin": {

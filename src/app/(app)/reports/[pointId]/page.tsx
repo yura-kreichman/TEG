@@ -39,7 +39,7 @@ interface DynamicsData {
   mobile: number;
   submissionsCount: number;
   deltaPercent: number | null;
-  bars: { date: string; total: number }[];
+  bars: { date: string; total: number; profit: number }[];
   profitAndLoss: { revenue: number; expenses: number; payouts: number; profit: number };
 }
 
@@ -336,76 +336,200 @@ function Delta({ percent, t }: { percent: number | null; t: ReturnType<typeof us
   );
 }
 
+// Минимальная ширина колонки графика (px) — при "Неделя"/"Год" (≤12 колонок)
+// не задействуется, flex растягивает их на всю ширину плашки как раньше; при
+// "Месяц" (до 31) колонки упираются в этот минимум и контейнер начинает
+// скроллиться по горизонтали, а не сжимать столбцы до нечитаемости (запрос
+// пользователя 2026-07-16: "у тебя будет 31 день в этом графике").
+const CHART_COLUMN_MIN_WIDTH = 36;
+
 function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof useI18n> }) {
-  const maxBar = Math.max(1, ...data.bars.map((b) => b.total));
+  const locale = useLocale();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  function updateScrollState() {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+  }
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    // По умолчанию скролл сразу в конец периода — там последние (обычно
+    // единственные заполненные) дни, а не в начало пустого месяца (запрос
+    // пользователя 2026-07-16). Мгновенно, без behavior:"smooth" — это
+    // начальная позиция, а не пользовательское действие.
+    const el = scrollRef.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+    updateScrollState();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.bars]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  function scrollChart(direction: 1 | -1) {
+    scrollRef.current?.scrollBy({ left: direction * 150, behavior: "smooth" });
+  }
+
   if (data.submissionsCount === 0) {
     return <p className="text-body-airbnb text-muted-foreground">{t.reports.noDataForPeriod}</p>;
   }
+
+  // Единая система координат для обеих линий (запрос пользователя
+  // 2026-07-16: "и Выручку, и Прибыль двумя разными цветами") — прибыль за
+  // отдельный день теоретически может уйти в минус (расходы/выплаты больше
+  // выручки за день), поэтому домен считается по обеим сериям.
+  const minVal = Math.min(0, ...data.bars.map((b) => b.profit));
+  const maxVal = Math.max(1, ...data.bars.flatMap((b) => [b.total, b.profit]));
+  const yFor = (v: number) => 100 - ((v - minVal) / (maxVal - minVal)) * 100;
+
   return (
     <div className="flex flex-col gap-3">
       <SpringCard animate={false}>
-        <div className="flex flex-wrap items-baseline gap-2.5">
-          <span className="text-[2rem] font-extrabold tracking-[-0.02em] tabular-nums">
-            <Money value={data.total} size="display" />
-          </span>
-          <Delta percent={data.deltaPercent} t={t} />
+        <div className="flex flex-wrap items-start gap-2.5">
+          <div className="flex flex-col">
+            <span className="text-caption-airbnb text-muted-foreground">{t.reports.revenueLabel}</span>
+            <span className="text-[2rem] font-extrabold leading-none tracking-[-0.02em] tabular-nums">
+              <Money value={data.total} size="display" />
+            </span>
+          </div>
+          {/* Прибыль — ощутимо дальше от выручки, ближе к середине плашки,
+              не сразу вплотную (запрос пользователя 2026-07-16), поэтому
+              gap-10, а не gap-4. Delta прижата вправо через ml-auto —
+              независимо от того, есть ли она вообще (percent===null → null),
+              позиция Прибыли от этого не зависит. */}
+          <div className="ml-10 flex flex-col">
+            <span className="text-caption-airbnb text-muted-foreground">{t.reports.profitLabel}</span>
+            <span className="text-[2rem] font-extrabold leading-none tracking-[-0.02em] tabular-nums">
+              <Money value={data.profitAndLoss.profit} size="display" />
+            </span>
+          </div>
+          <div className="ml-auto">
+            <Delta percent={data.deltaPercent} t={t} />
+          </div>
         </div>
-        <div className="mt-4 flex flex-col gap-1">
-          <div className="flex gap-1.5">
-            {data.bars.map((b) => (
-              <div key={b.date} className="flex-1 text-center text-[0.5625rem] font-bold text-muted-foreground tabular-nums">
-                {b.total > 0 ? <Money value={b.total} /> : ""}
-              </div>
-            ))}
-          </div>
-          {/* Столбцы + линия тренда поверх (запрос пользователя 2026-07-16:
-              "не видно графика, ходящего между двумя точками" — раньше была
-              только столбчатая диаграмма без соединяющей линии). Точки линии
-              считаются в процентах общей высоты этого ряда (viewBox 0..100),
-              как и высота самих столбцов — единая система координат для
-              обоих, растягивается вместе с контейнером без пересчёта в JS. */}
-          <div className="relative flex h-[70px] items-end gap-1.5">
-            {data.bars.map((b) => (
-              <div key={b.date} className="flex flex-1 items-end">
-                <div
-                  className="w-full rounded-t-md bg-primary/80"
-                  style={{ height: `${Math.max(4, (b.total / maxBar) * 100)}%` }}
-                />
-              </div>
-            ))}
-            {data.bars.length > 1 && (
-              <svg
-                className="pointer-events-none absolute inset-0 size-full overflow-visible text-primary"
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-              >
-                <polyline
-                  points={data.bars
-                    .map((b, i) => {
-                      const x = ((i + 0.5) / data.bars.length) * 100;
-                      const y = 100 - Math.max(4, (b.total / maxBar) * 100);
-                      return `${x},${y}`;
-                    })
-                    .join(" ")}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </svg>
-            )}
-          </div>
-          <div className="flex gap-1.5">
-            {data.bars.map((b) => (
-              <div key={b.date} className="flex-1 text-center text-[0.625rem] font-semibold text-muted-foreground">
-                {new Date(b.date).toLocaleDateString(
-                  undefined,
-                  data.period.granularity === "year" ? { month: "short" } : { weekday: "short" }
+
+        <div className="mt-2 flex items-center gap-3 text-caption-airbnb text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span className="size-2 shrink-0 rounded-full bg-primary" />
+            {t.reports.revenueLabel}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="size-2 shrink-0 rounded-full bg-success" />
+            {t.reports.profitLabel}
+          </span>
+        </div>
+
+        <div className="relative mt-4">
+          {canScrollLeft && (
+            <button
+              type="button"
+              onClick={() => scrollChart(-1)}
+              aria-label={t.reports.chartScrollLeft}
+              className="absolute -left-2 top-1/2 z-30 flex size-8 -translate-y-1/2 items-center justify-center rounded-control bg-card text-muted-foreground"
+            >
+              <ChevronLeft className="size-4.5" />
+            </button>
+          )}
+          {canScrollRight && (
+            <button
+              type="button"
+              onClick={() => scrollChart(1)}
+              aria-label={t.reports.chartScrollRight}
+              className="absolute -right-2 top-1/2 z-30 flex size-8 -translate-y-1/2 items-center justify-center rounded-control bg-card text-muted-foreground"
+            >
+              <ChevronRight className="size-4.5" />
+            </button>
+          )}
+          <div ref={scrollRef} onScroll={updateScrollState} className="overflow-x-auto scrollbar-none">
+            {/* CSS grid, не flex — общий gridTemplateColumns гарантирует, что
+                колонки во всех трёх рядах (суммы/график/дни недели) сидят
+                РОВНО на одних и тех же границах. С flex-1 колонка с текстом,
+                который не помещается в CHART_COLUMN_MIN_WIDTH, растягивалась
+                шире соседних (браузер не сжимает flex-item ниже контента без
+                overflow-hidden — тот же трюк не до конца спасал), и сетка
+                этого ряда расходилась с сеткой графика ниже — то самое
+                смещение подписей в "Месяц", что нашёл пользователь
+                2026-07-16 ("значения вершин так и остались где-то далеко").
+                Grid считает треки один раз для всех ячеек, а не независимо
+                на каждый ряд — расхождению просто неоткуда взяться. */}
+            <div
+              className="grid gap-1"
+              style={{ gridTemplateColumns: `repeat(${data.bars.length}, minmax(${CHART_COLUMN_MIN_WIDTH}px, 1fr))` }}
+            >
+              {/* Суммы Выручки и Прибыли рядом друг с другом, каждая своим
+                  цветом (запрос пользователя 2026-07-16: "надо отображать
+                  суммы прибыли, как и выручки, рядом"). */}
+              {data.bars.map((b) => (
+                <div key={`values-${b.date}`} className="overflow-hidden text-center text-[0.5rem] font-bold tabular-nums">
+                  {b.total > 0 && <div className="truncate text-primary">{formatMoneyCompact(b.total, locale, t.reports.compactThousandSuffix, t.reports.compactMillionSuffix)}</div>}
+                  {b.profit !== 0 && <div className="truncate text-success">{formatMoneyCompact(b.profit, locale, t.reports.compactThousandSuffix, t.reports.compactMillionSuffix)}</div>}
+                </div>
+              ))}
+              {/* Только две линии тренда + точки на вершинах, без столбцов
+                  (запрос пользователя 2026-07-16: "какие-то бары появились,
+                  они не нужны" — с двумя цветными линиями столбцы читались
+                  как лишний слой). Маркеры — обычные div'ы поверх svg, не
+                  svg-circle: при preserveAspectRatio="none" (разный масштаб
+                  по x/y) svg-круг растянулся бы в эллипс. Без tooltip'ов
+                  (запрос пользователя 2026-07-16: "убери все тултипы везде в
+                  этих графиках") — только статичные подписи выше/ниже. */}
+              <div className="relative col-span-full" style={{ height: 70 }}>
+                {data.bars.length > 1 && (
+                  <svg
+                    className="pointer-events-none absolute inset-0 size-full overflow-visible"
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                  >
+                    <polyline
+                      points={data.bars.map((b, i) => `${((i + 0.5) / data.bars.length) * 100},${yFor(b.total)}`).join(" ")}
+                      fill="none"
+                      className="text-primary"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                    <polyline
+                      points={data.bars.map((b, i) => `${((i + 0.5) / data.bars.length) * 100},${yFor(b.profit)}`).join(" ")}
+                      fill="none"
+                      className="text-success"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </svg>
                 )}
+                {data.bars.map((b, i) => {
+                  const x = ((i + 0.5) / data.bars.length) * 100;
+                  return (
+                    <div key={`markers-${b.date}`} className="pointer-events-none absolute inset-0 size-full">
+                      <div
+                        className="absolute size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary ring-2 ring-card"
+                        style={{ left: `${x}%`, top: `${yFor(b.total)}%` }}
+                      />
+                      <div
+                        className="absolute size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-success ring-2 ring-card"
+                        style={{ left: `${x}%`, top: `${yFor(b.profit)}%` }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+              {data.bars.map((b) => (
+                <div key={`weekday-${b.date}`} className="overflow-hidden truncate text-center text-[0.625rem] font-semibold text-muted-foreground">
+                  {new Date(b.date).toLocaleDateString(
+                    undefined,
+                    data.period.granularity === "year" ? { month: "short" } : { weekday: "short" }
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         <div className="mt-3.5 grid grid-cols-3 gap-3 border-t border-border pt-3.5 tabular-nums">

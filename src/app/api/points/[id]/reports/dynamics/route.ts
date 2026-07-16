@@ -87,33 +87,50 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       occurredAt: { gte: start, lt: end },
       ...(isAllPoints ? {} : { OR: [{ zone: { pointId } }, { pointId }] }),
     },
-    select: { type: true, amount: true },
+    select: { type: true, amount: true, occurredAt: true },
   });
   let expenses = 0;
   let payouts = 0;
+  // По дням — для линии "Прибыль" на графике (запрос пользователя 2026-07-16:
+  // "и Выручку, и Прибыль двумя разными цветами"), тот же принцип, что byDay
+  // для выручки выше.
+  const deductionsByDay = new Map<string, number>();
   for (const op of moneyOps) {
     const amount = Math.abs(Number(op.amount));
     if (op.type === "expense") expenses += amount;
     if (op.type === "advance" || op.type === "bonus_payout") payouts += amount;
+    if (op.type === "expense" || op.type === "advance" || op.type === "bonus_payout") {
+      const key = op.occurredAt.toISOString().slice(0, 10);
+      deductionsByDay.set(key, (deductionsByDay.get(key) ?? 0) + amount);
+    }
   }
 
   // За год — 365 ежедневных столбцов на графике нечитаемы, агрегируем по
   // месяцам (12 столбцов), как и с "Неделя"/"Месяц" — по дням.
-  const bars: { date: string; total: number }[] = [];
+  const bars: { date: string; total: number; profit: number }[] = [];
   if (granularity === "year") {
     const byMonth = new Map<string, number>();
+    const deductionsByMonth = new Map<string, number>();
     for (const [dayKey, value] of byDay) {
       const monthKey = dayKey.slice(0, 7);
       byMonth.set(monthKey, (byMonth.get(monthKey) ?? 0) + value);
     }
+    for (const [dayKey, value] of deductionsByDay) {
+      const monthKey = dayKey.slice(0, 7);
+      deductionsByMonth.set(monthKey, (deductionsByMonth.get(monthKey) ?? 0) + value);
+    }
     for (let m = new Date(start); m < end; m = new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() + 1, 1))) {
       const key = `${m.getUTCFullYear()}-${String(m.getUTCMonth() + 1).padStart(2, "0")}`;
-      bars.push({ date: `${key}-01`, total: round2(byMonth.get(key) ?? 0) });
+      const revenueForBar = byMonth.get(key) ?? 0;
+      const deductionsForBar = deductionsByMonth.get(key) ?? 0;
+      bars.push({ date: `${key}-01`, total: round2(revenueForBar), profit: round2(revenueForBar - deductionsForBar) });
     }
   } else {
     for (let d = new Date(start); d < end; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
       const key = d.toISOString().slice(0, 10);
-      bars.push({ date: key, total: round2(byDay.get(key) ?? 0) });
+      const revenueForBar = byDay.get(key) ?? 0;
+      const deductionsForBar = deductionsByDay.get(key) ?? 0;
+      bars.push({ date: key, total: round2(revenueForBar), profit: round2(revenueForBar - deductionsForBar) });
     }
   }
 

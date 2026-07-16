@@ -176,6 +176,8 @@
     "revenueByMonthTitle": "Даромад аз рӯи моҳҳо",
     "compactThousandSuffix": "k",
     "compactMillionSuffix": "M",
+    "chartScrollLeft": "Ба чап ҳаракат",
+    "chartScrollRight": "Ба рост ҳаракат",
     "genericError": "Ҳисоботро бор карда нашуд"
   },
   "admin": {

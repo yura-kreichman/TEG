@@ -176,6 +176,8 @@
     "revenueByMonthTitle": "Aylar üzrə gəlir",
     "compactThousandSuffix": "k",
     "compactMillionSuffix": "M",
+    "chartScrollLeft": "Sola sürüşdür",
+    "chartScrollRight": "Sağa sürüşdür",
     "genericError": "Hesabatı yükləmək mümkün olmadı"
   },
   "admin": {

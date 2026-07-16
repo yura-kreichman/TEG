@@ -176,6 +176,8 @@
     "revenueByMonthTitle": "Revenue by month",
     "compactThousandSuffix": "k",
     "compactMillionSuffix": "M",
+    "chartScrollLeft": "Scroll left",
+    "chartScrollRight": "Scroll right",
     "genericError": "Couldn't load the report"
   },
   "admin": {

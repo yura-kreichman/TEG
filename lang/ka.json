@@ -176,6 +176,8 @@
     "revenueByMonthTitle": "შემოსავალი თვეების მიხედვით",
     "compactThousandSuffix": "k",
     "compactMillionSuffix": "M",
+    "chartScrollLeft": "გადაახვიეთ მარცხნივ",
+    "chartScrollRight": "გადაახვიეთ მარჯვნივ",
     "genericError": "ანგარიშის ჩატვირთვა ვერ მოხერხდა"
   },
   "admin": {

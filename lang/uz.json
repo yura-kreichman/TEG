@@ -176,6 +176,8 @@
     "revenueByMonthTitle": "Oylar bo'yicha tushum",
     "compactThousandSuffix": "k",
     "compactMillionSuffix": "mln",
+    "chartScrollLeft": "Chapga aylantirish",
+    "chartScrollRight": "O'ngga aylantirish",
     "genericError": "Hisobotni yuklab boʻlmadi"
   },
   "admin": {

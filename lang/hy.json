@@ -176,6 +176,8 @@
     "revenueByMonthTitle": "Եկամուտ ըստ ամիսների",
     "compactThousandSuffix": "k",
     "compactMillionSuffix": "M",
+    "chartScrollLeft": "Ոլորել ձախ",
+    "chartScrollRight": "Ոլորել աջ",
     "genericError": "Չհաջողվեց բեռնել հաշվետվությունը"
   },
   "admin": {

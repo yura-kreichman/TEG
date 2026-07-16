@@ -176,6 +176,8 @@
     "revenueByMonthTitle": "Выручка па месяцах",
     "compactThousandSuffix": "тыс",
     "compactMillionSuffix": "млн",
+    "chartScrollLeft": "Пракруціць улева",
+    "chartScrollRight": "Пракруціць управа",
     "genericError": "Не ўдалося загрузіць справаздачу"
   },
   "admin": {

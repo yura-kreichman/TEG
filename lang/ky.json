@@ -176,6 +176,8 @@
     "revenueByMonthTitle": "Түшүм айлар боюнча",
     "compactThousandSuffix": "k",
     "compactMillionSuffix": "M",
+    "chartScrollLeft": "Солго жылдыруу",
+    "chartScrollRight": "Оңго жылдыруу",
     "genericError": "Отчётту жүктөө мүмкүн болгон жок"
   },
   "admin": {
