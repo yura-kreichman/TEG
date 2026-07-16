@@ -91,14 +91,7 @@ export default function SubmitResultsPage() {
   // сколько пусков ещё открыто в этой зоне, проверяется при входе на её шаг.
   const [gameRoomOpenCount, setGameRoomOpenCount] = useState<number | null>(null);
   const [result, setResult] = useState<{
-    summary: {
-      zoneId: string;
-      zoneName: string;
-      calculatedRevenue: number;
-      grossRevenue: number | null;
-      actualCash: number;
-      difference: number;
-    }[];
+    summary: { zoneId: string; zoneName: string; calculatedRevenue: number; actualCash: number; difference: number }[];
     remindMarkDeparture?: boolean;
   } | null>(null);
 
@@ -236,11 +229,14 @@ export default function SubmitResultsPage() {
       return { tariffId: tariff.id, price: Number(tariff.price), sessions };
     });
 
-    const calculatedRevenue = calcZoneRevenue(tariffCalc, Number(form.returnsCount || 0));
-    const grossRevenue = Number(form.returnsCount || 0) > 0 ? calcZoneGrossRevenue(tariffCalc) : null;
+    // "Счёт." — всегда валовая выручка по счётчикам, ФАКТ (запрос пользователя
+    // 2026-07-16). Разница считается от net (за вычетом тестов) — это
+    // остаётся тем числом, по которому оператор/владелец решает "сошлось".
+    const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
+    const netRevenue = calcZoneRevenue(tariffCalc, Number(form.returnsCount || 0));
     const actualCash = Number(form.cashAmount || 0) + Number(form.mobileAmount || 0);
-    const difference = Math.round((actualCash - calculatedRevenue) * 100) / 100;
-    return { calculatedRevenue, grossRevenue, actualCash, difference };
+    const difference = Math.round((actualCash - netRevenue) * 100) / 100;
+    return { calculatedRevenue, actualCash, difference };
   }
 
   // Актив "заполнен", если хотя бы один тариф введён — не обязательно все
@@ -299,7 +295,6 @@ export default function SubmitResultsPage() {
         zoneId,
         zoneName: zone.name,
         calculatedRevenue: preview?.calculatedRevenue ?? 0,
-        grossRevenue: preview?.grossRevenue ?? null,
         actualCash: preview?.actualCash ?? 0,
         difference: preview?.difference ?? 0,
       };
@@ -367,11 +362,6 @@ export default function SubmitResultsPage() {
                 <span className="tabular-nums text-muted-foreground">
                   {t.operatorApp.submit.calculatedRevenue} <Money value={s.calculatedRevenue} />
                 </span>
-                {s.grossRevenue != null && (
-                  <span className="tabular-nums text-muted-foreground">
-                    {t.operatorApp.submit.grossRevenue} <Money value={s.grossRevenue} />
-                  </span>
-                )}
                 <span className="tabular-nums text-muted-foreground">
                   {t.operatorApp.submit.actualCash} <Money value={s.actualCash} />
                 </span>
@@ -762,11 +752,6 @@ export default function SubmitResultsPage() {
                       <span className="tabular-nums text-muted-foreground">
                         {t.operatorApp.submit.calculatedRevenue} <Money value={preview.calculatedRevenue} />
                       </span>
-                      {preview.grossRevenue != null && (
-                        <span className="tabular-nums text-muted-foreground">
-                          {t.operatorApp.submit.grossRevenue} <Money value={preview.grossRevenue} />
-                        </span>
-                      )}
                       <span className="tabular-nums text-muted-foreground">
                         {t.operatorApp.submit.actualCash} <Money value={preview.actualCash} />
                       </span>

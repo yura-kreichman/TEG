@@ -53,7 +53,6 @@ interface DayCard {
   mobileAmount: number;
   returnsCount: number;
   calculatedRevenue: number;
-  grossRevenue: number | null;
   difference: number;
   tariffs: { tariffId: string; price: number }[];
   assets: {
@@ -304,11 +303,13 @@ export default function ReadingsCalendarPage() {
       price: t.price,
       sessions: sessionsByTariff.get(t.tariffId) ?? 0,
     }));
-    const calculatedRevenue = calcZoneRevenue(tariffCalc, Number(editReturns || 0));
-    const grossRevenue = Number(editReturns || 0) > 0 ? calcZoneGrossRevenue(tariffCalc) : null;
+    // "Счёт." — всегда валовая выручка по счётчикам, ФАКТ (запрос пользователя
+    // 2026-07-16). Разница считается от net (за вычетом тестов).
+    const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
+    const netRevenue = calcZoneRevenue(tariffCalc, Number(editReturns || 0));
     const actualCash = Number(editCash || 0) + Number(editMobile || 0);
-    const difference = Math.round((actualCash - calculatedRevenue) * 100) / 100;
-    return { calculatedRevenue, grossRevenue, difference };
+    const difference = Math.round((actualCash - netRevenue) * 100) / 100;
+    return { calculatedRevenue, difference };
   }
 
   return (
@@ -536,12 +537,6 @@ export default function ReadingsCalendarPage() {
                             <span className="text-foreground">{t.operatorApp.submit.calculatedRevenue}</span>
                             <span className="text-foreground"><Money value={card.calculatedRevenue} /></span>
                           </div>
-                          {card.grossRevenue != null && (
-                          <div className="flex items-center justify-between text-caption-airbnb">
-                            <span>{t.operatorApp.submit.grossRevenue}</span>
-                            <span className="text-foreground"><Money value={card.grossRevenue} /></span>
-                          </div>
-                          )}
                           <div className="flex items-center justify-between text-caption-airbnb">
                             <span>{t.operatorApp.submit.difference}</span>
                             <span
@@ -706,13 +701,8 @@ export default function ReadingsCalendarPage() {
                   const preview = computeEditPreview(actionsFor);
                   return (
                     <p className="text-caption-airbnb tabular-nums">
-                      {t.operatorApp.submit.calculatedRevenue} <Money value={preview.calculatedRevenue} />
-                      {preview.grossRevenue != null && (
-                        <>
-                          {" "}· {t.operatorApp.submit.grossRevenue} <Money value={preview.grossRevenue} />
-                        </>
-                      )}{" "}
-                      · {t.operatorApp.submit.difference} {preview.difference > 0 ? "+" : ""}
+                      {t.operatorApp.submit.calculatedRevenue} <Money value={preview.calculatedRevenue} /> ·{" "}
+                      {t.operatorApp.submit.difference} {preview.difference > 0 ? "+" : ""}
                       <Money value={preview.difference} />
                     </p>
                   );

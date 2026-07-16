@@ -153,7 +153,6 @@ export async function POST(request: Request) {
         zoneId: zs.zoneId,
         zoneName: zone.name,
         calculatedRevenue,
-        grossRevenue: null as number | null,
         actualCash,
         difference,
         readingsText: "",
@@ -177,12 +176,16 @@ export async function POST(request: Request) {
       return { tariffId: tariff.id, price: Number(tariff.price), sessions };
     });
 
-    const calculatedRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
-    // Только когда есть что вычитать (запрос пользователя 2026-07-16) —
-    // иначе валовая совпадает с net один-в-один, лишняя строка в сводке.
-    const grossRevenue = zs.returnsCount > 0 ? calcZoneGrossRevenue(tariffCalc) : null;
+    // "Счёт." — всегда валовая выручка по счётчикам, ФАКТ (запрос пользователя
+    // 2026-07-16: "счётчики должны показывать всегда факт", без отдельной
+    // строки "Валовая"). Разница — по-прежнему от net (за вычетом тестов):
+    // это то число, по которому владелец реально принимает решение "сошлось/
+    // не сошлось", и оно должно оставаться 0, когда тесты объясняют весь
+    // разрыв, даже если "Счёт." теперь визуально не равен кассе.
+    const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
+    const netRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
     const actualCash = zs.cashAmount + zs.mobileAmount;
-    const difference = Math.round((actualCash - calculatedRevenue) * 100) / 100;
+    const difference = Math.round((actualCash - netRevenue) * 100) / 100;
 
     const readingsText = zone.assets
       .map((asset) => {
@@ -216,7 +219,6 @@ export async function POST(request: Request) {
       zoneId: zs.zoneId,
       zoneName: zone.name,
       calculatedRevenue,
-      grossRevenue,
       actualCash,
       difference,
       readingsText,
@@ -367,7 +369,6 @@ export async function POST(request: Request) {
               cashAmount: s.cashAmount,
               mobileAmount: s.mobileAmount,
               calculatedRevenue: s.calculatedRevenue,
-              grossRevenue: s.grossRevenue,
               difference: s.difference,
               returnsCount: s.returnsCount,
               operatorName: operator.name,

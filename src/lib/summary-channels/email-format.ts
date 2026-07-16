@@ -100,9 +100,6 @@ export function formatZoneSummaryEmail(
       });
     }
     if (settings.showReturns) rows.push({ label: st.returns, value: String(data.returnsCount) });
-    if (settings.showCalc && settings.showReturns && data.grossRevenue != null) {
-      rows.push({ label: st.gross, value: formatMoney(data.grossRevenue, locale) });
-    }
   }
   if (settings.showOperator) rows.push({ label: st.operatorLabel, value: data.operatorName });
 

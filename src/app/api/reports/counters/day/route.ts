@@ -122,10 +122,12 @@ export async function GET(request: Request) {
           .reduce((sum, r) => sum + readingSessions(r), 0),
       }));
 
-      const calculatedRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
-      const grossRevenue = zs.returnsCount > 0 ? calcZoneGrossRevenue(tariffCalc) : null;
+      // "Счёт." — всегда валовая выручка по счётчикам, ФАКТ (запрос
+      // пользователя 2026-07-16). Разница считается от net (за вычетом тестов).
+      const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
+      const netRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
       const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
-      const difference = Math.round((actualCash - calculatedRevenue) * 100) / 100;
+      const difference = Math.round((actualCash - netRevenue) * 100) / 100;
 
       const editable =
         zs.zone.accountingMode !== "counters" ||
@@ -177,7 +179,6 @@ export async function GET(request: Request) {
         mobileAmount: Number(zs.mobileAmount),
         returnsCount: zs.returnsCount,
         calculatedRevenue,
-        grossRevenue,
         difference,
         // Цены тарифов — чтобы владелец видел пересчитанные Расчёт/Разница
         // живьём при редактировании показаний (запрос пользователя

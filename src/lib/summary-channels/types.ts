@@ -32,13 +32,12 @@ export interface ZoneSummaryData {
   readings: ZoneAssetReadingLine[];
   cashAmount: number;
   mobileAmount: number; // "безнал" — см. feedback_no_hardcoded_currency
+  // Всегда валовая выручка по счётчикам (запрос пользователя 2026-07-16:
+  // "счётчики должны показывать всегда факт") — сеансы × цена, БЕЗ вычета
+  // возвратов/тестов. Разница (difference) при этом по-прежнему считается
+  // от net-выручки, так что может быть 0 даже когда calculatedRevenue
+  // визуально не равен кассе — тесты объясняют разрыв, см. returnsCount.
   calculatedRevenue: number;
-  // Валовая выручка по счётчикам ДО вычета возвратов/тестов (запрос
-  // пользователя 2026-07-16, реальный кейс: 33 сеанса по счётчикам, 8 тестов,
-  // calculatedRevenue уже net — без этого поля непонятно, откуда взялась
-  // разница в 0 при ненулевых тестах). null для cash_only/game_room, где
-  // валовой цифры по счётчикам не существует.
-  grossRevenue: number | null;
   difference: number;
   returnsCount: number;
   operatorName: string;
