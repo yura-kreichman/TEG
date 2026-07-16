@@ -39,7 +39,7 @@ export default function TasksRedirectPage() {
   return (
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
-        <div className="flex w-full max-w-2xl flex-col gap-1">
+        <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-1">
           <h1 className="text-screen-title">{t.tasks.pickPointTitle}</h1>
           <p className="text-body-airbnb text-muted-foreground">{t.tasks.noPoints}</p>
         </div>

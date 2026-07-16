@@ -498,7 +498,8 @@
     "subscriptionBlockedBannerAction": "Paga ora",
     "renameCompanySlugWarning": "Il nome dell'azienda viene usato anche per l'indirizzo dei link permanenti (Istruzioni, Landing).",
     "updateSlugCheckboxLabel": "Aggiorna anche l'indirizzo del link",
-    "updateSlugHint": "Il vecchio indirizzo smette di funzionare direttamente (i visitatori vengono reindirizzati) — sostituiscilo ovunque lo hai condiviso: codice QR nel locale, social media, ecc."
+    "updateSlugHint": "Il vecchio indirizzo smette di funzionare direttamente (i visitatori vengono reindirizzati) — sostituiscilo ovunque lo hai condiviso: codice QR nel locale, social media, ecc.",
+    "gameRoomLiveLinkHint": "Avvii dal vivo e attività di oggi"
   },
   "auth": {
     "loginTitle": "Accedi",
@@ -638,13 +639,18 @@
     "accountingModeLaunchesHint": "Un numero di corse pronte per chiusura",
     "accountingModeCashOnly": "Solo contanti",
     "accountingModeCashOnlyHint": "Nessuna tariffa o bene — solo l'importo",
+    "launchVariantManual": "Manuale",
+    "accountingModeGameRoom": "Sala giochi",
+    "accountingModeGameRoomHint": "Avvio/stop degli avvii in tempo reale",
     "modeChip": {
       "counters": "A contatori",
       "launches": "Avvii",
-      "cash_only": "Solo contanti"
+      "cash_only": "Solo contanti",
+      "game_room": "Sala giochi"
     },
     "zoneActiveChip": "Attiva",
-    "zoneInactiveChip": "Inattiva"
+    "zoneInactiveChip": "Inattiva",
+    "launchesTodaySuffix": "avvii oggi"
   },
   "zoneDetail": {
     "notFound": "Zona non trovata.",
@@ -685,7 +691,26 @@
     "deactivateAsset": "Disattiva bene",
     "activateAsset": "Attiva bene",
     "assetInactiveChip": "Inattivo",
-    "cashOnlyNote": "Modalità \"Solo contanti\": questa zona non ha bisogno di tariffe o beni — il dipendente inserisce solo un importo."
+    "cashOnlyNote": "Modalità \"Solo contanti\": questa zona non ha bisogno di tariffe o beni — il dipendente inserisce solo un importo.",
+    "gameRoomPricingCardLabel": "Tariffa avvii",
+    "gameRoomPricingModeFixed": "Fissa",
+    "gameRoomPricingModePerMinute": "A tempo",
+    "gameRoomPriceLabel": "Prezzo per avvio",
+    "gameRoomRateLabel": "Tariffa al minuto",
+    "gameRoomDurationLabel": "Durata, min",
+    "gameRoomDurationPlaceholder": "Nessun limite",
+    "gameRoomRoundingLabel": "Arrotondamento durata",
+    "gameRoomRoundingUp": "Per eccesso",
+    "gameRoomRoundingNearest": "Matematico",
+    "gameRoomRoundingDown": "Per difetto",
+    "gameRoomMinAmountLabel": "Importo minimo avvio",
+    "gameRoomThresholdLabel": "Soglia avvio lungo",
+    "gameRoomThresholdHint": "Un avvio più lungo di questo tempo viene segnalato come da controllare",
+    "gameRoomSaveError": "Salvataggio non riuscito",
+    "gameRoomLiveLink": "Ora nel punto",
+    "gameRoomLaunchesListLink": "Elenco avvii",
+    "gameRoomPricingHistoryLabel": "Cronologia tariffa",
+    "gameRoomPricingActiveChip": "Attiva"
   },
   "operators": {
     "title": "Dipendenti",
@@ -776,7 +801,10 @@
     "collectionSaveError": "Salvataggio delle modifiche non riuscito",
     "deleteCollectionAction": "Elimina incasso",
     "deleteCollectionConfirm": "Eliminare questo incasso? Il saldo della zona verrà ricalcolato. Non può essere annullato.",
-    "deleteCollectionError": "Eliminazione dell'incasso non riuscita"
+    "deleteCollectionError": "Eliminazione dell'incasso non riuscita",
+    "voidedChip": "Annullato",
+    "voidAction": "Annulla",
+    "voidConfirm": "Annullare questo avvio? Sarà escluso dall'incasso calcolato."
   },
   "readings": {
     "title": "Letture giornaliere",
@@ -956,9 +984,38 @@
       "queuedTitle": "Salvato, verrà inviato appena online",
       "queuedHint": "Al momento non c'è connessione — i dati sono salvati su questo dispositivo e verranno inviati automaticamente non appena tornerà la connessione.",
       "homeButton": "Torna alla home",
-      "categoryPlaceholder": "Categoria (facoltativo)"
+      "categoryPlaceholder": "Categoria (facoltativo)",
+      "gameRoomSub": "Le letture non servono — l'incasso è calcolato dagli avvii",
+      "gameRoomBlockedPrefix": "Termina",
+      "gameRoomBlockedSuffix": "avvii attivi in questa zona",
+      "gameRoomGoToZoneButton": "Vai alla zona",
+      "gameRoomRevenueNote": "L'incasso sarà calcolato automaticamente dagli avvii completati"
     },
-    "offlineQueueHint": "In attesa di invio: {count} chiusura/e — verranno inviate automaticamente non appena online"
+    "offlineQueueHint": "In attesa di invio: {count} chiusura/e — verranno inviate automaticamente non appena online",
+    "gameRoom": {
+      "pickAssetHint": "Tocca un elemento per avviare un avvio",
+      "labelSheetTitle": "Etichetta avvio",
+      "labelPlaceholder": "es. braccialetto n. 5",
+      "labelStartButton": "Avvia",
+      "openCountSuffix": "attivi",
+      "stopButton": "Stop",
+      "stopSheetTitle": "Termina avvio",
+      "stopDurationLabel": "Durata",
+      "stopAmountLabel": "Importo",
+      "stopConfirmButton": "Termina",
+      "currentAmountLabel": "Ora",
+      "remainingLabel": "Rimasto",
+      "expiredLabel": "Tempo scaduto",
+      "soundHintBody": "Suono e vibrazione scatteranno quando il tempo dell'avvio scade — tieni l'app aperta",
+      "noPricingError": "La tariffa della zona non è ancora stata impostata dal proprietario",
+      "emptyState": "Nessun avvio attivo",
+      "launchNumberPrefix": "Avvio",
+      "entryTitle": "Sala giochi",
+      "launchActionsLabel": "Azioni avvio",
+      "startTimeLabel": "Inizio",
+      "endTimeLabel": "Fine",
+      "networkError": "Nessuna connessione al server — l'avvio non è andato perso, riprova"
+    }
   },
   "install": {
     "hint": "Installa l'app per un accesso rapido dalla schermata Home del telefono.",
@@ -1206,6 +1263,8 @@
     "instructionAckEmailWho": "Chi",
     "shiftClosedSuffix": "turno chiuso",
     "shiftWord": "turno",
-    "shiftWordCap": "Turno"
+    "shiftWordCap": "Turno",
+    "launchesCountLabel": "Avvii",
+    "launchesTimeLabel": "tempo"
   }
 }

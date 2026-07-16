@@ -371,6 +371,9 @@ model Operator {
   balanceCarryovers  OperatorBalanceCarryover[]
   assignedTasks      Task[]                     @relation("TaskAssignedOperators")
   pushSubscriptions  PushSubscription[]
+  // Игровая комната (docs/spec/04-game-room.md) — старт/стоп пусков.
+  launchesStarted    Launch[]                   @relation("LaunchStartedBy")
+  launchesEnded      Launch[]                   @relation("LaunchEndedBy")
 }
 
 // ============================================================================
@@ -526,6 +529,21 @@ model Zone {
   // не в том смысле, что был задуман изначально.
   accountingMode String @default("counters")
 
+  // Вариант режима "launches" (docs/spec/04-game-room.md) — "manual" (по
+  // умолчанию, ручной ввод готового итога заездов, как описано выше) |
+  // "game_room" (Игровая комната — старт/стоп пусков в реальном времени,
+  // Launch/LaunchPricing ниже). НЕ отдельное значение accountingMode —
+  // Игровая комната это суб-режим Пусков, не рядоположный режим (решение
+  // пользователя 2026-07-16). Бессмысленно при accountingMode !== "launches",
+  // но отдельное явное поле, не выводится из accountingMode.
+  launchMode String @default("manual")
+
+  // Игровая комната (docs/spec/04-game-room.md, launchMode="game_room") —
+  // порог долгого пуска для UI-маркеров "требует правки"; не тарифная
+  // настройка (тариф — LaunchPricing, историзирован отдельно, см. ниже) и не
+  // участвует в расчёте стоимости, поэтому просто поле зоны, без истории.
+  longLaunchThresholdMinutes Int @default(60)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -535,6 +553,8 @@ model Zone {
   zoneSubmissions     ZoneSubmission[]
   moneyOps            MoneyOperation[]
   landingContent      LandingZoneContent?
+  launches            Launch[]
+  launchPricing       LaunchPricing[]
 }
 
 // 1 или 2 тарифа на зону: свободное название + цена за сеанс.
@@ -598,6 +618,7 @@ model Asset {
 
   readings         AssetReading[]
   initialReadings  AssetInitialReading[]
+  launches         Launch[]
 }
 
 // Калибровочное показание счётчика (запрос пользователя 2026-07-14: "начинаю
@@ -669,6 +690,9 @@ model ZoneSubmission {
 
   assetReadings AssetReading[]
   expenses      ExpenseEntry[]
+  // Пуски "Игровой комнаты", вошедшие в агрегат этой сдачи (docs/spec/
+  // 04-game-room.md) — заполняется только у зон launchMode="game_room".
+  launches      Launch[]
 }
 
 // Показание одного актива по одному тарифу в рамках сдачи итогов зоны.
@@ -748,6 +772,113 @@ model CorrectionLog {
   comment    String?
 
   correctedAt DateTime @default(now())
+}
+
+// ============================================================================
+// ИГРОВАЯ КОМНАТА (см. docs/spec/04-game-room.md) — Zone.launchMode="game_room"
+// (суб-режим accountingMode="launches", не отдельное значение). Отдельно от
+// Tariff/AssetReading (те принадлежат counters/launches-manual): у Игровой
+// комнаты один тариф на зону, не до двух именованных, и вместо показания —
+// реальные старт/стоп.
+// ============================================================================
+
+// История тарифа зоны в режиме "Игровая комната" — append-only, тот же
+// паттерн, что OperatorRate (05-work-time.md): действующий тариф на дату X =
+// запись с максимальным effectiveFrom <= X. Нужна история (не просто поля на
+// Zone), потому что стоимость уже идущего пуска не должна задним числом
+// меняться, если владелец в середине дня поменял цену (см. Launch.*Snapshot
+// ниже — стоимость фиксируется по тарифу на момент СТАРТА пуска, не на
+// момент чтения).
+model LaunchPricing {
+  id     String @id @default(cuid())
+  zoneId String
+  zone   Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  // "fixed" (цена за пуск, опционально durationMinutes) | "per_minute"
+  // (тариф за минуту, roundingMode + minAmount).
+  pricingMode String
+
+  price           Decimal @db.Decimal(10, 2)
+  durationMinutes Int? // только fixed, опционально — обратный отсчёт
+  roundingMode    String? // только per_minute: "up" | "down" | "nearest"
+  minAmount       Decimal? @db.Decimal(10, 2) // только per_minute
+
+  effectiveFrom DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([zoneId, effectiveFrom])
+}
+
+// Один пуск — от старта до стопа, источник времени сервер (тот же паттерн,
+// что Shift открытой авто-смены, 05-work-time.md): startedAt/endedAt ставит
+// сервер, клиент только отображает отсчёт от startedAt.
+model Launch {
+  id     String @id @default(cuid())
+  zoneId String
+  zone   Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  // Если у зоны нет активов — null, пуск принадлежит зоне целиком.
+  assetId String?
+  asset   Asset?  @relation(fields: [assetId], references: [id])
+
+  // Автонумерация в рамках (zoneId, assetId) — присваивается сервером
+  // атомарно (см. docs/spec/04-game-room.md, "Пуск"): два одновременных
+  // старта с разных устройств не должны получить один номер.
+  number Int
+
+  // Опциональная короткая метка при старте (номер браслета и т.п.) —
+  // пользовательский ввод, не переводится (00-architecture.md, "Мультиязычность").
+  label String?
+
+  startedAt DateTime  @default(now())
+  endedAt   DateTime? // null = ещё открыт
+
+  // Денормализованное зеркало endedAt===null — тот же приём и та же причина,
+  // что Shift.isOpen (nullable DateTime фильтр ломается в Prisma Client
+  // 7.8.0 + adapter-pg), синхронизируется тем же кодом, что пишет endedAt.
+  isOpen Boolean @default(true)
+
+  // Аннулирование — только владелец (docs/spec/04-game-room.md,
+  // "Жизненный цикл"); аннулированный пуск исключается из агрегата выручки
+  // целиком. Кто/когда/почему — как везде, через CorrectionLog
+  // (entityType="Launch"), не отдельными полями здесь.
+  voidedAt DateTime?
+
+  // Снапшот тарифа на момент СТАРТА (не FK на LaunchPricing — цена не должна
+  // задним числом меняться, если владелец поменял тариф зоны, пока пуск шёл).
+  pricingMode     String
+  priceSnapshot   Decimal  @db.Decimal(10, 2)
+  durationMinutesSnapshot Int?
+  roundingModeSnapshot    String?
+  minAmountSnapshot       Decimal? @db.Decimal(10, 2)
+
+  // Итоговая стоимость — считается один раз при закрытии и сохраняется (тот
+  // же принцип, что AssetReading фиксирует показание раз и навсегда), не
+  // пересчитывается на каждое чтение. null, пока пуск открыт.
+  amount Decimal? @db.Decimal(10, 2)
+
+  startedByOperatorId String?
+  startedByOperator   Operator? @relation("LaunchStartedBy", fields: [startedByOperatorId], references: [id])
+  endedByOperatorId   String?
+  endedByOperator     Operator? @relation("LaunchEndedBy", fields: [endedByOperatorId], references: [id])
+
+  // Заполняется, когда пуск попал в агрегат конкретной сдачи итогов (по
+  // времени стопа) — свободная ссылка без формального @relation, тот же
+  // приём, что MoneyOperation.resultsSubmissionId.
+  zoneSubmissionId String?
+  zoneSubmission   ZoneSubmission? @relation(fields: [zoneSubmissionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // "Сейчас на точке" и восстановление таймеров после перезапуска PWA —
+  // горячий путь чтения открытых пусков зоны.
+  @@index([zoneId, isOpen])
+  // Автонумерация в рамках актива/зоны — MAX(number) по этой паре.
+  @@index([zoneId, assetId, number])
+  // Агрегат для сдачи итогов — завершённые пуски зоны за период.
+  @@index([zoneId, endedAt])
+  @@index([zoneSubmissionId])
 }
 
 // ============================================================================

@@ -498,7 +498,8 @@
     "subscriptionBlockedBannerAction": "Оплатити",
     "renameCompanySlugWarning": "Назва компанії також використовується для адреси постійних посилань (Інструктажі, Лендинг).",
     "updateSlugCheckboxLabel": "Оновити й адресу посилань",
-    "updateSlugHint": "Стара адреса перестане працювати напряму (відвідувачів переспрямують) — оновіть її всюди, де поширювали."
+    "updateSlugHint": "Стара адреса перестане працювати напряму (відвідувачів переспрямують) — оновіть її всюди, де поширювали.",
+    "gameRoomLiveLinkHint": "Живі пуски та активність за сьогодні"
   },
   "auth": {
     "loginTitle": "Вхід",
@@ -638,13 +639,18 @@
     "accountingModeLaunchesHint": "Готове число заїздів за здачу",
     "accountingModeCashOnly": "Лише каса",
     "accountingModeCashOnlyHint": "Без тарифів і активів — лише сума",
+    "launchVariantManual": "Вручну",
+    "accountingModeGameRoom": "Ігрова кімната",
+    "accountingModeGameRoomHint": "Старт і стоп пусків у реальному часі",
     "modeChip": {
       "counters": "За лічильниками",
       "launches": "Заїзди",
-      "cash_only": "Лише каса"
+      "cash_only": "Лише каса",
+      "game_room": "Ігрова кімната"
     },
     "zoneActiveChip": "Активна",
-    "zoneInactiveChip": "Неактивна"
+    "zoneInactiveChip": "Неактивна",
+    "launchesTodaySuffix": "пусків сьогодні"
   },
   "zoneDetail": {
     "notFound": "Зону не знайдено.",
@@ -685,7 +691,26 @@
     "deactivateAsset": "Деактивувати актив",
     "activateAsset": "Активувати актив",
     "assetInactiveChip": "Неактивний",
-    "cashOnlyNote": "Режим «Лише каса»: цій зоні не потрібні тарифи й активи — співробітник здає лише суму."
+    "cashOnlyNote": "Режим «Лише каса»: цій зоні не потрібні тарифи й активи — співробітник здає лише суму.",
+    "gameRoomPricingCardLabel": "Тариф пусків",
+    "gameRoomPricingModeFixed": "Фіксований",
+    "gameRoomPricingModePerMinute": "За часом",
+    "gameRoomPriceLabel": "Ціна за пуск",
+    "gameRoomRateLabel": "Тариф за хвилину",
+    "gameRoomDurationLabel": "Тривалість, хв",
+    "gameRoomDurationPlaceholder": "Без обмеження",
+    "gameRoomRoundingLabel": "Округлення тривалості",
+    "gameRoomRoundingUp": "Вгору",
+    "gameRoomRoundingNearest": "Математично",
+    "gameRoomRoundingDown": "Вниз",
+    "gameRoomMinAmountLabel": "Мінімальна сума пуску",
+    "gameRoomThresholdLabel": "Поріг довгого пуску",
+    "gameRoomThresholdHint": "Пуск довший за цей час позначається як такий, що потребує уваги",
+    "gameRoomSaveError": "Не вдалося зберегти",
+    "gameRoomLiveLink": "Зараз на точці",
+    "gameRoomLaunchesListLink": "Список пусків",
+    "gameRoomPricingHistoryLabel": "Історія тарифу",
+    "gameRoomPricingActiveChip": "Діє"
   },
   "operators": {
     "title": "Співробітники",
@@ -776,7 +801,10 @@
     "collectionSaveError": "Не вдалося зберегти зміни",
     "deleteCollectionAction": "Видалити інкасацію",
     "deleteCollectionConfirm": "Видалити цю інкасацію? Залишок по зоні перерахується. Скасувати не можна.",
-    "deleteCollectionError": "Не вдалося видалити інкасацію"
+    "deleteCollectionError": "Не вдалося видалити інкасацію",
+    "voidedChip": "Анульовано",
+    "voidAction": "Анулювати",
+    "voidConfirm": "Анулювати цей пуск? Він буде виключений з розрахункової виручки."
   },
   "readings": {
     "title": "Показання за днями",
@@ -956,9 +984,38 @@
       "queuedTitle": "Збережено, надішлемо при з'вязку",
       "queuedHint": "Зараз немає інтернету — дані збережено на пристрої і вони підуть на сервер автоматично, щойно з'явиться зв'язок.",
       "homeButton": "На головну",
-      "categoryPlaceholder": "Категорія (необов'язково)"
+      "categoryPlaceholder": "Категорія (необов'язково)",
+      "gameRoomSub": "Показання не потрібні — виручка рахується за пусками",
+      "gameRoomBlockedPrefix": "Заверши",
+      "gameRoomBlockedSuffix": "активних пусків у цій зоні",
+      "gameRoomGoToZoneButton": "Перейти до зони",
+      "gameRoomRevenueNote": "Виручка порахується автоматично за завершеними пусками"
     },
-    "offlineQueueHint": "Очікують відправки: {count} здач — підуть автоматично при з'вязку"
+    "offlineQueueHint": "Очікують відправки: {count} здач — підуть автоматично при з'вязку",
+    "gameRoom": {
+      "pickAssetHint": "Натисніть на актив, щоб почати пуск",
+      "labelSheetTitle": "Мітка пуску",
+      "labelPlaceholder": "Наприклад, браслет №5",
+      "labelStartButton": "Почати",
+      "openCountSuffix": "активних",
+      "stopButton": "Стоп",
+      "stopSheetTitle": "Завершити пуск",
+      "stopDurationLabel": "Тривалість",
+      "stopAmountLabel": "Сума",
+      "stopConfirmButton": "Завершити",
+      "currentAmountLabel": "Зараз",
+      "remainingLabel": "Залишилось",
+      "expiredLabel": "Час вийшов",
+      "soundHintBody": "Звук і вібрація спрацюють, коли час пуску закінчиться — тримайте застосунок відкритим",
+      "noPricingError": "Тариф зони ще не заданий власником",
+      "emptyState": "Немає активних пусків",
+      "launchNumberPrefix": "Пуск",
+      "entryTitle": "Ігрова кімната",
+      "launchActionsLabel": "Дії з пуском",
+      "startTimeLabel": "Початок",
+      "endTimeLabel": "Кінець",
+      "networkError": "Немає звʼязку з сервером — пуск не втрачено, спробуйте ще раз"
+    }
   },
   "install": {
     "hint": "Встановіть застосунок для швидкого доступу з екрана телефону.",
@@ -1206,6 +1263,8 @@
     "instructionAckEmailWho": "Хто",
     "shiftClosedSuffix": "зміну закрито",
     "shiftWord": "зміна",
-    "shiftWordCap": "Зміна"
+    "shiftWordCap": "Зміна",
+    "launchesCountLabel": "Пусків",
+    "launchesTimeLabel": "час"
   }
 }

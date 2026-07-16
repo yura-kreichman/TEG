@@ -389,7 +389,7 @@ export default function OperatorSettingsPage() {
   return (
     <OwnerShell>
     <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
-      <div className="flex w-full max-w-md flex-col gap-4">
+      <div className="flex w-full max-w-md md:max-w-xl lg:max-w-2xl flex-col gap-4">
         <div className="flex items-center gap-2">
           <Link
             href={`/operators/${params.id}`}

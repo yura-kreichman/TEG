@@ -498,7 +498,8 @@
     "subscriptionBlockedBanner": "Подписка не активна — доступ только для чтения.",
     "subscriptionBlockedBannerAction": "Оплатить",
     "updateSlugCheckboxLabel": "Обновить и адрес ссылок",
-    "updateSlugHint": "Старый адрес перестанет работать напрямую (посетители будут переадресованы) — обновите его везде, где раздавали: QR-код на точке, соцсети и т.п."
+    "updateSlugHint": "Старый адрес перестанет работать напрямую (посетители будут переадресованы) — обновите его везде, где раздавали: QR-код на точке, соцсети и т.п.",
+    "gameRoomLiveLinkHint": "Живые пуски и активность за сегодня"
   },
   "auth": {
     "loginTitle": "Вход",
@@ -638,13 +639,18 @@
     "accountingModeLaunchesHint": "Готовое число заездов за сдачу",
     "accountingModeCashOnly": "Только касса",
     "accountingModeCashOnlyHint": "Без тарифов и активов — только сумма",
+    "launchVariantManual": "Вручную",
+    "accountingModeGameRoom": "Игровая комната",
+    "accountingModeGameRoomHint": "Старт и стоп пусков в реальном времени",
     "modeChip": {
       "counters": "По счётчикам",
       "launches": "Пуски",
-      "cash_only": "Только касса"
+      "cash_only": "Только касса",
+      "game_room": "Игровая комната"
     },
     "zoneActiveChip": "Активна",
-    "zoneInactiveChip": "Неактивна"
+    "zoneInactiveChip": "Неактивна",
+    "launchesTodaySuffix": "пусков сегодня"
   },
   "zoneDetail": {
     "notFound": "Зона не найдена.",
@@ -685,7 +691,26 @@
     "deactivateAsset": "Деактивировать актив",
     "activateAsset": "Активировать актив",
     "assetInactiveChip": "Неактивен",
-    "cashOnlyNote": "Режим «Только касса»: этой зоне не нужны тарифы и активы — сотрудник сдаёт только сумму."
+    "cashOnlyNote": "Режим «Только касса»: этой зоне не нужны тарифы и активы — сотрудник сдаёт только сумму.",
+    "gameRoomPricingCardLabel": "Тариф пусков",
+    "gameRoomPricingModeFixed": "Фиксированный",
+    "gameRoomPricingModePerMinute": "По времени",
+    "gameRoomPriceLabel": "Цена за пуск",
+    "gameRoomRateLabel": "Тариф за минуту",
+    "gameRoomDurationLabel": "Длительность, мин",
+    "gameRoomDurationPlaceholder": "Без ограничения",
+    "gameRoomRoundingLabel": "Округление длительности",
+    "gameRoomRoundingUp": "Вверх",
+    "gameRoomRoundingNearest": "Математически",
+    "gameRoomRoundingDown": "Вниз",
+    "gameRoomMinAmountLabel": "Минимальная сумма пуска",
+    "gameRoomThresholdLabel": "Порог долгого пуска",
+    "gameRoomThresholdHint": "Пуск дольше этого времени помечается как требующий внимания",
+    "gameRoomSaveError": "Не удалось сохранить",
+    "gameRoomLiveLink": "Сейчас на точке",
+    "gameRoomLaunchesListLink": "Список пусков",
+    "gameRoomPricingHistoryLabel": "История тарифа",
+    "gameRoomPricingActiveChip": "Действует"
   },
   "operators": {
     "title": "Сотрудники",
@@ -776,7 +801,10 @@
     "expenseCategoriesTitle": "Категории расходов",
     "noExpenseCategories": "Категорий пока нет",
     "newCategoryPlaceholder": "Новая категория",
-    "categorySaveError": "Не удалось сохранить категорию"
+    "categorySaveError": "Не удалось сохранить категорию",
+    "voidedChip": "Аннулирован",
+    "voidAction": "Аннулировать",
+    "voidConfirm": "Аннулировать этот пуск? Он будет исключён из расчётной выручки."
   },
   "readings": {
     "title": "Показания по дням",
@@ -956,9 +984,38 @@
       "queuedTitle": "Сохранено, отправим при связи",
       "queuedHint": "Интернета сейчас нет — данные сохранены на устройстве и уйдут на сервер автоматически, как только связь появится.",
       "homeButton": "На главную",
-      "categoryPlaceholder": "Категория (необязательно)"
+      "categoryPlaceholder": "Категория (необязательно)",
+      "gameRoomSub": "Показания не нужны — выручка считается по пускам",
+      "gameRoomBlockedPrefix": "Заверши",
+      "gameRoomBlockedSuffix": "активных пусков в этой зоне",
+      "gameRoomGoToZoneButton": "Перейти к зоне",
+      "gameRoomRevenueNote": "Выручка посчитается автоматически по завершённым пускам"
     },
-    "offlineQueueHint": "Ждут отправки: {count} сдач(и) — уйдут автоматически при связи"
+    "offlineQueueHint": "Ждут отправки: {count} сдач(и) — уйдут автоматически при связи",
+    "gameRoom": {
+      "pickAssetHint": "Нажмите на актив, чтобы начать пуск",
+      "labelSheetTitle": "Метка пуска",
+      "labelPlaceholder": "Например, браслет №5",
+      "labelStartButton": "Начать",
+      "openCountSuffix": "активных",
+      "stopButton": "Стоп",
+      "stopSheetTitle": "Завершить пуск",
+      "stopDurationLabel": "Длительность",
+      "stopAmountLabel": "Сумма",
+      "stopConfirmButton": "Завершить",
+      "currentAmountLabel": "Сейчас",
+      "remainingLabel": "Осталось",
+      "expiredLabel": "Время вышло",
+      "soundHintBody": "Звук и вибрация сработают, когда время пуска истечёт — держите приложение открытым",
+      "noPricingError": "Тариф зоны ещё не задан владельцем",
+      "emptyState": "Нет активных пусков",
+      "launchNumberPrefix": "Пуск",
+      "entryTitle": "Игровая комната",
+      "launchActionsLabel": "Действия с пуском",
+      "startTimeLabel": "Начало",
+      "endTimeLabel": "Окончание",
+      "networkError": "Нет связи с сервером — пуск не потерян, попробуйте ещё раз"
+    }
   },
   "install": {
     "hint": "Установите приложение для быстрого доступа с экрана телефона.",
@@ -1206,6 +1263,8 @@
     "instructionAckEmailWho": "Кто",
     "shiftClosedSuffix": "смена закрыта",
     "shiftWord": "смена",
-    "shiftWordCap": "Смена"
+    "shiftWordCap": "Смена",
+    "launchesCountLabel": "Пусков",
+    "launchesTimeLabel": "время"
   }
 }

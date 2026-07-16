@@ -498,7 +498,8 @@
     "subscriptionBlockedBannerAction": "გადახდა",
     "renameCompanySlugWarning": "კომპანიის სახელი ასევე გამოიყენება მუდმივი ბმულების (ინსტრუქციები, ლენდინგი) მისამართისთვის.",
     "updateSlugCheckboxLabel": "ბმულების მისამართიც განახლდეს",
-    "updateSlugHint": "ძველი მისამართი აღარ იმუშავებს პირდაპირ (ვიზიტორები გადამისამართდებიან) — განაახლეთ ის ყველგან, სადაც გავრცელდა."
+    "updateSlugHint": "ძველი მისამართი აღარ იმუშავებს პირდაპირ (ვიზიტორები გადამისამართდებიან) — განაახლეთ ის ყველგან, სადაც გავრცელდა.",
+    "gameRoomLiveLinkHint": "ცოცხალი გაშვებები და დღევანდელი აქტივობა"
   },
   "auth": {
     "loginTitle": "შესვლა",
@@ -638,13 +639,18 @@
     "accountingModeLaunchesHint": "მზა რიცხვი გარბენებისთვის ჩაბარებაზე",
     "accountingModeCashOnly": "მხოლოდ სალარო",
     "accountingModeCashOnlyHint": "ტარიფებისა და აქტივების გარეშე — მხოლოდ თანხა",
+    "launchVariantManual": "ხელით",
+    "accountingModeGameRoom": "სათამაშო ოთახი",
+    "accountingModeGameRoomHint": "გაშვებების დაწყება/გაჩერება რეალურ დროში",
     "modeChip": {
       "counters": "მრიცხველებით",
       "launches": "გაშვებები",
-      "cash_only": "მხოლოდ სალარო"
+      "cash_only": "მხოლოდ სალარო",
+      "game_room": "სათამაშო ოთახი"
     },
     "zoneActiveChip": "აქტიური",
-    "zoneInactiveChip": "არააქტიური"
+    "zoneInactiveChip": "არააქტიური",
+    "launchesTodaySuffix": "გაშვება დღეს"
   },
   "zoneDetail": {
     "notFound": "ზონა ვერ მოიძებნა.",
@@ -685,7 +691,26 @@
     "deactivateAsset": "აქტივის დეაქტივაცია",
     "activateAsset": "აქტივის გააქტიურება",
     "assetInactiveChip": "არააქტიური",
-    "cashOnlyNote": "რეჟიმი «მხოლოდ სალარო»: ამ ზონას ტარიფები და აქტივები არ სჭირდება — თანამშრომელი ჩააბარებს მხოლოდ თანხას."
+    "cashOnlyNote": "რეჟიმი «მხოლოდ სალარო»: ამ ზონას ტარიფები და აქტივები არ სჭირდება — თანამშრომელი ჩააბარებს მხოლოდ თანხას.",
+    "gameRoomPricingCardLabel": "გაშვებების ტარიფი",
+    "gameRoomPricingModeFixed": "ფიქსირებული",
+    "gameRoomPricingModePerMinute": "დროის მიხედვით",
+    "gameRoomPriceLabel": "ფასი გაშვებაზე",
+    "gameRoomRateLabel": "წუთის ტარიფი",
+    "gameRoomDurationLabel": "ხანგრძლივობა, წთ",
+    "gameRoomDurationPlaceholder": "შეუზღუდავი",
+    "gameRoomRoundingLabel": "ხანგრძლივობის დამრგვალება",
+    "gameRoomRoundingUp": "ზემოთ",
+    "gameRoomRoundingNearest": "მათემატიკურად",
+    "gameRoomRoundingDown": "ქვემოთ",
+    "gameRoomMinAmountLabel": "გაშვების მინიმალური თანხა",
+    "gameRoomThresholdLabel": "ხანგრძლივი გაშვების ზღვარი",
+    "gameRoomThresholdHint": "ამ დროზე გრძელი გაშვება აღინიშნება, როგორც ყურადღების საჭირო",
+    "gameRoomSaveError": "ვერ შეინახა",
+    "gameRoomLiveLink": "ახლა წერტილში",
+    "gameRoomLaunchesListLink": "გაშვებების სია",
+    "gameRoomPricingHistoryLabel": "ტარიფის ისტორია",
+    "gameRoomPricingActiveChip": "მოქმედებს"
   },
   "operators": {
     "title": "თანამშრომლები",
@@ -776,7 +801,10 @@
     "collectionSaveError": "ცვლილებების შენახვა ვერ მოხერხდა",
     "deleteCollectionAction": "ინკასაციის წაშლა",
     "deleteCollectionConfirm": "წავშალოთ ეს ინკასაცია? ზონის ნაშთი ხელახლა გამოითვლება. გაუქმება შეუძლებელია.",
-    "deleteCollectionError": "ინკასაციის წაშლა ვერ მოხერხდა"
+    "deleteCollectionError": "ინკასაციის წაშლა ვერ მოხერხდა",
+    "voidedChip": "გაუქმებულია",
+    "voidAction": "გაუქმება",
+    "voidConfirm": "გავაუქმოთ ეს გაშვება? ის გამოირიცხება გაანგარიშებული შემოსავლიდან."
   },
   "readings": {
     "title": "ჩვენებები დღეების მიხედვით",
@@ -956,9 +984,38 @@
       "queuedTitle": "შენახულია, გავაგზავნით კავშირის აღდგენისას",
       "queuedHint": "ინტერნეტი ამჟამად არ არის — მონაცემები შენახულია მოწყობილობაზე და სერვერზე ავტომატურად წავა, როგორც კი კავშირი გამოჩნდება.",
       "homeButton": "მთავარზე",
-      "categoryPlaceholder": "კატეგორია (არასავალდებულო)"
+      "categoryPlaceholder": "კატეგორია (არასავალდებულო)",
+      "gameRoomSub": "ჩვენებები საჭირო არ არის — შემოსავალი გამოითვლება გაშვებების მიხედვით",
+      "gameRoomBlockedPrefix": "დაასრულე",
+      "gameRoomBlockedSuffix": "აქტიური გაშვება ამ ზონაში",
+      "gameRoomGoToZoneButton": "ზონაზე გადასვლა",
+      "gameRoomRevenueNote": "შემოსავალი ავტომატურად გამოითვლება დასრულებული გაშვებების მიხედვით"
     },
-    "offlineQueueHint": "ელოდება გაგზავნას: {count} ჩაბარება — ავტომატურად წავა კავშირის აღდგენისას"
+    "offlineQueueHint": "ელოდება გაგზავნას: {count} ჩაბარება — ავტომატურად წავა კავშირის აღდგენისას",
+    "gameRoom": {
+      "pickAssetHint": "შეეხეთ აქტივს გაშვების დასაწყებად",
+      "labelSheetTitle": "გაშვების ნიშნული",
+      "labelPlaceholder": "მაგ. სამაჯური №5",
+      "labelStartButton": "დაწყება",
+      "openCountSuffix": "აქტიური",
+      "stopButton": "სტოპ",
+      "stopSheetTitle": "გაშვების დასრულება",
+      "stopDurationLabel": "ხანგრძლივობა",
+      "stopAmountLabel": "თანხა",
+      "stopConfirmButton": "დასრულება",
+      "currentAmountLabel": "ახლა",
+      "remainingLabel": "დარჩა",
+      "expiredLabel": "დრო ამოიწურა",
+      "soundHintBody": "ხმა და ვიბრაცია ჩაირთვება, როცა გაშვების დრო ამოიწურება — აპლიკაცია ღია დატოვეთ",
+      "noPricingError": "ზონის ტარიფი ჯერ არ არის დაყენებული მფლობელის მიერ",
+      "emptyState": "აქტიური გაშვებები არ არის",
+      "launchNumberPrefix": "გაშვება",
+      "entryTitle": "სათამაშო ოთახი",
+      "launchActionsLabel": "მოქმედებები გაშვებასთან",
+      "startTimeLabel": "დაწყება",
+      "endTimeLabel": "დასრულება",
+      "networkError": "სერვერთან კავშირი არ არის — გაშვება არ დაკარგულა, კიდევ სცადეთ"
+    }
   },
   "install": {
     "hint": "დააყენეთ აპლიკაცია სწრაფი წვდომისთვის ტელეფონის ეკრანიდან.",
@@ -1206,6 +1263,8 @@
     "instructionAckEmailWho": "ვინ",
     "shiftClosedSuffix": "ცვლა დახურულია",
     "shiftWord": "ცვლა",
-    "shiftWordCap": "ცვლა"
+    "shiftWordCap": "ცვლა",
+    "launchesCountLabel": "გაშვებები",
+    "launchesTimeLabel": "დრო"
   }
 }

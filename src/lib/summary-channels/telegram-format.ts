@@ -153,6 +153,16 @@ function zoneHeader(data: ZoneSummaryData, showOperator: boolean, timezone: stri
   return `${data.zoneEmoji ?? "🏁"} <b>${data.zoneName.toUpperCase()}${operatorBit} · ${date}</b>`;
 }
 
+// "Пусков: N · время: Xч Yм" — вместо блока показаний для зон с
+// launchMode="game_room" (docs/spec/04-game-room.md, "Деньги и сдача
+// итогов": "Telegram/email-уведомлений по каждому отдельному пуску нет —
+// только агрегат в сводке сдачи итогов").
+function formatGameRoomLine(data: ZoneSummaryData, st: SummaryText): string {
+  const count = data.gameRoomLaunchCount ?? 0;
+  const minutes = data.gameRoomTotalMinutes ?? 0;
+  return `🎮 ${st.launchesCountLabel}: <b>${count}</b> · ${st.launchesTimeLabel}: <b>${formatDuration(minutes)}</b>`;
+}
+
 export function formatZoneSummaryTelegram(
   data: ZoneSummaryData,
   settings: ZoneSummarySettingsData,
@@ -166,7 +176,9 @@ export function formatZoneSummaryTelegram(
     if (data.accountingMode === "cash_only") {
       parts.push(`💵 ${st.cashOnly}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
     } else {
-      if (settings.showReadings && data.readings.length > 0) {
+      if (data.isGameRoom) {
+        if (settings.showReadings) parts.push(formatGameRoomLine(data, st));
+      } else if (settings.showReadings && data.readings.length > 0) {
         const grid = formatCompactGrid(
           data.readings.map((r, i) => ({ label: compactAssetLabel(data.readings, i), value: String(r.reading) }))
         );
@@ -209,7 +221,9 @@ export function formatZoneSummaryTelegram(
   if (data.accountingMode === "cash_only") {
     lines.push("", `💵 ${st.cashOnly}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
   } else {
-    if (settings.showReadings || settings.showDelta) {
+    if (data.isGameRoom) {
+      if (settings.showReadings) lines.push("", formatGameRoomLine(data, st));
+    } else if (settings.showReadings || settings.showDelta) {
       // Выровнено в столбик (фидбек пользователя 2026-07-09) — внутри <code>
       // моноширинный шрифт, поэтому паддинг пробелами реально работает как
       // колонки. Подпись дополняется пробелами до общей ширины, показание —

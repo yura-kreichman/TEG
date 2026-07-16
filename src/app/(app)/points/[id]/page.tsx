@@ -16,9 +16,10 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconPicker } from "@/components/icon-picker";
 import { StatusChip } from "@/components/status-chip";
 import { TileIcon } from "@/components/tile-icon";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
-import { ZONE_ACCOUNTING_MODES, type ZoneAccountingMode } from "@/lib/results-calc";
+import { ZONE_ACCOUNTING_MODES, isGameRoomZone, type LaunchMode, type ZoneAccountingMode } from "@/lib/results-calc";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface ZoneInfo {
@@ -27,6 +28,7 @@ interface ZoneInfo {
   iconKey: string | null;
   telegramEmoji: string | null;
   accountingMode: ZoneAccountingMode;
+  launchMode: LaunchMode;
   active: boolean;
   tariffs: { id: string; name: string; price: string }[];
   assets: { id: string }[];
@@ -48,6 +50,9 @@ export default function PointDetailPage() {
   const [name, setName] = useState("");
   const [iconKey, setIconKey] = useState<string | null>(null);
   const [accountingMode, setAccountingMode] = useState<ZoneAccountingMode>("counters");
+  // Игровая комната — суб-режим "launches" (docs/spec/04-game-room.md), не
+  // отдельный пункт верхнего списка (решение пользователя 2026-07-16).
+  const [launchMode, setLaunchMode] = useState<LaunchMode>("manual");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { saved: createSaved, pulse: createPulse } = useSavePulse();
@@ -81,7 +86,7 @@ export default function PointDetailPage() {
       const res = await fetch(`/api/points/${params.id}/zones`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, iconKey, accountingMode }),
+        body: JSON.stringify({ name, iconKey, accountingMode, launchMode }),
       });
       const data = await res.json();
 
@@ -95,6 +100,7 @@ export default function PointDetailPage() {
         setName("");
         setIconKey(null);
         setAccountingMode("counters");
+        setLaunchMode("manual");
         setCreateOpen(false);
       });
     } finally {
@@ -107,7 +113,7 @@ export default function PointDetailPage() {
   return (
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
-        <div className="flex w-full max-w-2xl flex-col gap-1">
+        <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-1">
           <Link href="/points" className="mb-2 w-fit text-body-airbnb font-semibold text-primary">
             ← {t.zonesList.allPoints}
           </Link>
@@ -155,12 +161,12 @@ export default function PointDetailPage() {
                                 ? t.zonesList.modeChip.cash_only
                                 : `${zone.assets.length} ${t.zonesList.assetsCount}`}
                               {zone.accountingMode !== "cash_only" &&
-                                ` · ${t.zonesList.modeChip[zone.accountingMode]}`}
+                                ` · ${isGameRoomZone(zone) ? t.zonesList.modeChip.game_room : t.zonesList.modeChip[zone.accountingMode]}`}
                             </p>
                           </div>
                           <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
                         </div>
-                        {zone.accountingMode !== "cash_only" && (
+                        {zone.accountingMode !== "cash_only" && !isGameRoomZone(zone) && (
                           <div className="mt-3 flex flex-wrap gap-1.5">
                             {zone.tariffs.length === 0 ? (
                               <StatusChip variant="warning">{t.zonesList.noTariffs}</StatusChip>
@@ -230,6 +236,26 @@ export default function PointDetailPage() {
                 </button>
               ))}
             </div>
+            {/* Игровая комната — суб-режим "Пусков" (docs/spec/04-game-room.md,
+                решение пользователя 2026-07-16: не отдельный пункт списка выше). */}
+            {accountingMode === "launches" && (
+              <div className="mt-2">
+                <SegmentedTabs
+                  shape="control"
+                  options={[
+                    { key: "manual" as const, label: t.zonesList.launchVariantManual },
+                    { key: "game_room" as const, label: t.zonesList.accountingModeGameRoom },
+                  ]}
+                  value={launchMode}
+                  onChange={setLaunchMode}
+                />
+                <p className="mt-1 text-caption-airbnb">
+                  {launchMode === "game_room"
+                    ? t.zonesList.accountingModeGameRoomHint
+                    : t.zonesList.accountingModeLaunchesHint}
+                </p>
+              </div>
+            )}
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <PressableScale>

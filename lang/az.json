@@ -498,7 +498,8 @@
     "subscriptionBlockedBannerAction": "Ödə",
     "renameCompanySlugWarning": "Şirkət adı daimi keçidlərin (Təlimatlar, Lendinq) ünvanı üçün də istifadə olunur.",
     "updateSlugCheckboxLabel": "Keçidlərin ünvanını da yenilə",
-    "updateSlugHint": "Köhnə ünvan birbaşa işləməyi dayandıracaq (ziyarətçilər yönləndiriləcək) — onu paylaşdığınız hər yerdə yeniləyin: nöqtədəki QR-kod, sosial şəbəkələr və s."
+    "updateSlugHint": "Köhnə ünvan birbaşa işləməyi dayandıracaq (ziyarətçilər yönləndiriləcək) — onu paylaşdığınız hər yerdə yeniləyin: nöqtədəki QR-kod, sosial şəbəkələr və s.",
+    "gameRoomLiveLinkHint": "Canlı başlanğıclar və bugünkü fəaliyyət"
   },
   "auth": {
     "loginTitle": "Giriş",
@@ -638,13 +639,18 @@
     "accountingModeLaunchesHint": "Hesabat üçün hazır gediş sayı",
     "accountingModeCashOnly": "Yalnız kassa",
     "accountingModeCashOnlyHint": "Tarif və aktivlər olmadan — yalnız məbləğ",
+    "launchVariantManual": "Əl ilə",
+    "accountingModeGameRoom": "Oyun otağı",
+    "accountingModeGameRoomHint": "Başlanğıcların real vaxtda başladılması/dayandırılması",
     "modeChip": {
       "counters": "Sayğaclar üzrə",
       "launches": "Buraxılışlar",
-      "cash_only": "Yalnız kassa"
+      "cash_only": "Yalnız kassa",
+      "game_room": "Oyun otağı"
     },
     "zoneActiveChip": "Aktiv",
-    "zoneInactiveChip": "Qeyri-aktiv"
+    "zoneInactiveChip": "Qeyri-aktiv",
+    "launchesTodaySuffix": "bugünkü başlanğıc"
   },
   "zoneDetail": {
     "notFound": "Zona tapılmadı.",
@@ -685,7 +691,26 @@
     "deactivateAsset": "Aktivi deaktiv et",
     "activateAsset": "Aktivi aktivləşdir",
     "assetInactiveChip": "Deaktiv",
-    "cashOnlyNote": "«Yalnız kassa» rejimi: bu zona üçün tarif və aktiv lazım deyil — işçi yalnız məbləği təhvil verir."
+    "cashOnlyNote": "«Yalnız kassa» rejimi: bu zona üçün tarif və aktiv lazım deyil — işçi yalnız məbləği təhvil verir.",
+    "gameRoomPricingCardLabel": "Başlanğıc tarifi",
+    "gameRoomPricingModeFixed": "Sabit",
+    "gameRoomPricingModePerMinute": "Vaxta görə",
+    "gameRoomPriceLabel": "Başlanğıc üçün qiymət",
+    "gameRoomRateLabel": "Dəqiqəlik tarif",
+    "gameRoomDurationLabel": "Müddət, dəq",
+    "gameRoomDurationPlaceholder": "Məhdudiyyətsiz",
+    "gameRoomRoundingLabel": "Müddətin yuvarlaqlaşdırılması",
+    "gameRoomRoundingUp": "Yuxarı",
+    "gameRoomRoundingNearest": "Riyazi",
+    "gameRoomRoundingDown": "Aşağı",
+    "gameRoomMinAmountLabel": "Minimal başlanğıc məbləği",
+    "gameRoomThresholdLabel": "Uzun başlanğıc həddi",
+    "gameRoomThresholdHint": "Bu vaxtdan uzun davam edən başlanğıc diqqət tələb edən kimi qeyd olunur",
+    "gameRoomSaveError": "Saxlanılmadı",
+    "gameRoomLiveLink": "İndi nöqtədə",
+    "gameRoomLaunchesListLink": "Başlanğıclar siyahısı",
+    "gameRoomPricingHistoryLabel": "Tarif tarixçəsi",
+    "gameRoomPricingActiveChip": "Aktivdir"
   },
   "operators": {
     "title": "İşçilər",
@@ -776,7 +801,10 @@
     "collectionSaveError": "Dəyişikliklər saxlanıla bilmədi",
     "deleteCollectionAction": "İnkassasiyanı sil",
     "deleteCollectionConfirm": "Bu inkassasiyanı silmək istəyirsiniz? Zona qalığı yenidən hesablanacaq. Geri qaytarıla bilməz.",
-    "deleteCollectionError": "İnkassasiyanı silmək mümkün olmadı"
+    "deleteCollectionError": "İnkassasiyanı silmək mümkün olmadı",
+    "voidedChip": "Ləğv edilib",
+    "voidAction": "Ləğv et",
+    "voidConfirm": "Bu başlanğıc ləğv edilsin? O, hesablanmış gəlirdən çıxarılacaq."
   },
   "readings": {
     "title": "Günlər üzrə göstəricilər",
@@ -956,9 +984,38 @@
       "queuedTitle": "Yadda saxlanıldı, əlaqə olan kimi göndəriləcək",
       "queuedHint": "Hazırda internet yoxdur — məlumatlar cihazda saxlanıldı və əlaqə yaranan kimi avtomatik serverə göndəriləcək.",
       "homeButton": "Ana səhifəyə",
-      "categoryPlaceholder": "Kateqoriya (istəyə bağlı)"
+      "categoryPlaceholder": "Kateqoriya (istəyə bağlı)",
+      "gameRoomSub": "Göstəricilər lazım deyil — gəlir başlanğıclara görə hesablanır",
+      "gameRoomBlockedPrefix": "Bitir",
+      "gameRoomBlockedSuffix": "bu zonadakı aktiv başlanğıcları",
+      "gameRoomGoToZoneButton": "Zonaya keç",
+      "gameRoomRevenueNote": "Gəlir tamamlanmış başlanğıclara görə avtomatik hesablanacaq"
     },
-    "offlineQueueHint": "Göndərilməni gözləyir: {count} hesabat — əlaqə olduqda avtomatik göndəriləcək"
+    "offlineQueueHint": "Göndərilməni gözləyir: {count} hesabat — əlaqə olduqda avtomatik göndəriləcək",
+    "gameRoom": {
+      "pickAssetHint": "Başlanğıcı başlamaq üçün aktivə toxunun",
+      "labelSheetTitle": "Başlanğıc etiketi",
+      "labelPlaceholder": "məsələn, bilərzik №5",
+      "labelStartButton": "Başla",
+      "openCountSuffix": "aktiv",
+      "stopButton": "Dayan",
+      "stopSheetTitle": "Başlanğıcı bitir",
+      "stopDurationLabel": "Müddət",
+      "stopAmountLabel": "Məbləğ",
+      "stopConfirmButton": "Bitir",
+      "currentAmountLabel": "İndi",
+      "remainingLabel": "Qalıb",
+      "expiredLabel": "Vaxt bitdi",
+      "soundHintBody": "Başlanğıcın vaxtı bitəndə səs və titrəyiş işə düşəcək — tətbiqi açıq saxlayın",
+      "noPricingError": "Zona tarifi hələ sahibi tərəfindən təyin edilməyib",
+      "emptyState": "Aktiv başlanğıc yoxdur",
+      "launchNumberPrefix": "Başlanğıc",
+      "entryTitle": "Oyun otağı",
+      "launchActionsLabel": "Başlanğıcla əməliyyatlar",
+      "startTimeLabel": "Başlanğıc",
+      "endTimeLabel": "Bitmə",
+      "networkError": "Serverlə əlaqə yoxdur — başlanğıc itmədi, yenidən cəhd edin"
+    }
   },
   "install": {
     "hint": "Telefon ekranından sürətli giriş üçün tətbiqi quraşdırın.",
@@ -1206,6 +1263,8 @@
     "instructionAckEmailWho": "Kim",
     "shiftClosedSuffix": "növbə bağlandı",
     "shiftWord": "növbə",
-    "shiftWordCap": "Növbə"
+    "shiftWordCap": "Növbə",
+    "launchesCountLabel": "Başlanğıclar",
+    "launchesTimeLabel": "vaxt"
   }
 }

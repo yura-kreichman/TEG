@@ -22,7 +22,10 @@ import { TileIcon } from "@/components/tile-icon";
 import { FilePickerButton } from "@/components/file-picker-button";
 import { useI18n } from "@/components/i18n-provider";
 import { compressImageFile } from "@/lib/client-image";
-import { ZONE_ACCOUNTING_MODES, type ZoneAccountingMode } from "@/lib/results-calc";
+import { ZONE_ACCOUNTING_MODES, isGameRoomZone, type LaunchMode, type ZoneAccountingMode } from "@/lib/results-calc";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { formatTime } from "@/lib/datetime-format";
+import { Money } from "@/components/money";
 import { cn, colorTagGradient } from "@/lib/utils";
 import { ColorTagPicker } from "@/components/color-tag-picker";
 import { useSavePulse } from "@/hooks/use-save-pulse";
@@ -50,6 +53,8 @@ interface ZoneDetail {
   iconKey: string | null;
   telegramEmoji: string | null;
   accountingMode: ZoneAccountingMode;
+  launchMode: LaunchMode;
+  longLaunchThresholdMinutes: number;
   modeLocked: boolean;
   active: boolean;
   pointId: string;
@@ -77,6 +82,30 @@ export default function ZoneDetailPage() {
   const { saved: renameZoneSaved, pulse: renameZonePulse } = useSavePulse();
   const [zoneActionError, setZoneActionError] = useState<string | null>(null);
   const { saved: zoneDeleted, pulse: zoneDeletePulse } = useSavePulse();
+
+  // Тариф "Игровой комнаты" (docs/spec/04-game-room.md) — история
+  // (LaunchPricing), форма всегда показывает/добавляет только "действующий
+  // сейчас" тариф, старые записи не редактируются.
+  const [pricingMode, setPricingMode] = useState<"fixed" | "per_minute">("fixed");
+  const [priceValue, setPriceValue] = useState("");
+  const [durationValue, setDurationValue] = useState("");
+  const [roundingValue, setRoundingValue] = useState<"up" | "down" | "nearest">("nearest");
+  const [minAmountValue, setMinAmountValue] = useState("");
+  const [pricingError, setPricingError] = useState<string | null>(null);
+  const { saved: pricingSaved, pulse: pricingPulse } = useSavePulse();
+  const [pricingHistory, setPricingHistory] = useState<
+    {
+      id: string;
+      pricingMode: "fixed" | "per_minute";
+      price: number;
+      durationMinutes: number | null;
+      roundingMode: "up" | "down" | "nearest" | null;
+      minAmount: number | null;
+      effectiveFrom: string;
+    }[]
+  >([]);
+  const [thresholdValue, setThresholdValue] = useState("60");
+  const { saved: thresholdSaved, pulse: thresholdPulse } = useSavePulse();
 
   const [createTariffOpen, setCreateTariffOpen] = useState(false);
   const [tariffName, setTariffName] = useState("");
@@ -136,7 +165,89 @@ export default function ZoneDetailPage() {
     loadZone();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
+
+  function loadPricing(zoneId: string) {
+    fetch(`/api/zones/${zoneId}/launch-pricing`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.pricing) {
+          setPricingMode(data.pricing.pricingMode);
+          setPriceValue(String(data.pricing.price));
+          setDurationValue(data.pricing.durationMinutes != null ? String(data.pricing.durationMinutes) : "");
+          setRoundingValue(data.pricing.roundingMode ?? "nearest");
+          setMinAmountValue(data.pricing.minAmount != null ? String(data.pricing.minAmount) : "");
+        }
+        setPricingHistory(data?.history ?? []);
+      });
+  }
+
+  useEffect(() => {
+    if (!zone) return;
+    setThresholdValue(String(zone.longLaunchThresholdMinutes));
+    if (!isGameRoomZone(zone)) return;
+    loadPricing(zone.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zone?.id, zone?.launchMode, zone?.accountingMode]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  async function savePricing() {
+    if (!zone) return;
+    setPricingError(null);
+    const res = await fetch(`/api/zones/${zone.id}/launch-pricing`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        pricingMode,
+        price: priceValue,
+        durationMinutes: pricingMode === "fixed" ? durationValue || null : null,
+        roundingMode: pricingMode === "per_minute" ? roundingValue : null,
+        minAmount: pricingMode === "per_minute" ? minAmountValue || null : null,
+      }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      setPricingError(data.error ?? t.zoneDetail.gameRoomSaveError);
+      return;
+    }
+    loadPricing(zone.id);
+    pricingPulse(() => {});
+  }
+
+  function formatPricingDate(iso: string) {
+    const d = new Date(iso);
+    return `${d.getUTCDate()} ${t.readings.monthsGenitive[d.getUTCMonth()]} · ${formatTime(iso)}`;
+  }
+
+  function formatPricingModeLabel(p: (typeof pricingHistory)[number]) {
+    if (p.pricingMode === "fixed") {
+      return p.durationMinutes
+        ? `${t.zoneDetail.gameRoomPricingModeFixed} · ${p.durationMinutes} ${t.operatorApp.workTime.minutesShort}`
+        : t.zoneDetail.gameRoomPricingModeFixed;
+    }
+    const roundingLabel =
+      p.roundingMode === "up"
+        ? t.zoneDetail.gameRoomRoundingUp
+        : p.roundingMode === "down"
+          ? t.zoneDetail.gameRoomRoundingDown
+          : t.zoneDetail.gameRoomRoundingNearest;
+    return `${t.zoneDetail.gameRoomPricingModePerMinute} · ${roundingLabel}`;
+  }
+
+  async function saveThreshold() {
+    if (!zone) return;
+    setPricingError(null);
+    const res = await fetch(`/api/zones/${zone.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ longLaunchThresholdMinutes: thresholdValue }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      setPricingError(data.error ?? t.zoneDetail.gameRoomSaveError);
+      return;
+    }
+    thresholdPulse(() => {});
+  }
 
   async function handleZoneIconChange(iconKey: string) {
     await fetch(`/api/zones/${params.id}`, {
@@ -186,12 +297,12 @@ export default function ZoneDetailPage() {
     await loadZone();
   }
 
-  async function changeAccountingMode(mode: ZoneAccountingMode) {
+  async function changeAccountingMode(mode: ZoneAccountingMode, nextLaunchMode: LaunchMode = "manual") {
     setZoneActionError(null);
     const res = await fetch(`/api/zones/${params.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accountingMode: mode }),
+      body: JSON.stringify({ accountingMode: mode, launchMode: nextLaunchMode }),
     });
     if (!res.ok) {
       const data = await res.json();
@@ -459,7 +570,7 @@ export default function ZoneDetailPage() {
   return (
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
-        <div className="flex w-full max-w-2xl flex-col gap-6">
+        <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-6">
           <div>
             <Link href={`/points/${zone.pointId}`} className="mb-2 block w-fit text-body-airbnb font-semibold text-primary">
               ← {t.zonesList.title} · {zone.pointName}
@@ -470,7 +581,9 @@ export default function ZoneDetailPage() {
                 <div>
                   <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{zone.name}</h1>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <StatusChip>{t.zonesList.modeChip[zone.accountingMode]}</StatusChip>
+                    <StatusChip>
+                      {isGameRoomZone(zone) ? t.zonesList.modeChip.game_room : t.zonesList.modeChip[zone.accountingMode]}
+                    </StatusChip>
                     {!zone.active && (
                       <StatusChip variant="neutral">{t.zonesList.zoneInactiveChip}</StatusChip>
                     )}
@@ -487,7 +600,145 @@ export default function ZoneDetailPage() {
             </SpringCard>
           )}
 
-          {zone.accountingMode !== "cash_only" && (
+          {/* Тариф "Игровой комнаты" (LaunchPricing, не Tariff) — история,
+              форма всегда правит "действующий сейчас" (docs/spec/04-game-room.md,
+              "Кабинет владельца"). Список пусков и "Сейчас на точке" — на
+              отдельных экранах, ссылки ниже. */}
+          {isGameRoomZone(zone) && (
+            <>
+            <SpringCard hover={false} className="flex flex-col gap-3">
+              <span className="text-section-title">{t.zoneDetail.gameRoomPricingCardLabel}</span>
+              <SegmentedTabs
+                shape="control"
+                options={[
+                  { key: "fixed" as const, label: t.zoneDetail.gameRoomPricingModeFixed },
+                  { key: "per_minute" as const, label: t.zoneDetail.gameRoomPricingModePerMinute },
+                ]}
+                value={pricingMode}
+                onChange={setPricingMode}
+              />
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="gameRoomPrice">
+                  {pricingMode === "fixed" ? t.zoneDetail.gameRoomPriceLabel : t.zoneDetail.gameRoomRateLabel}
+                </Label>
+                <MoneyInput
+                  id="gameRoomPrice"
+                  value={priceValue}
+                  onChange={(e) => setPriceValue(e.target.value)}
+                />
+              </div>
+              {pricingMode === "fixed" ? (
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="gameRoomDuration">
+                    {t.zoneDetail.gameRoomDurationLabel} <span className="font-normal text-muted-foreground">({t.common.optional})</span>
+                  </Label>
+                  <Input
+                    id="gameRoomDuration"
+                    type="number"
+                    inputMode="numeric"
+                    placeholder={t.zoneDetail.gameRoomDurationPlaceholder}
+                    value={durationValue}
+                    onChange={(e) => setDurationValue(e.target.value)}
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-1">
+                    <Label>{t.zoneDetail.gameRoomRoundingLabel}</Label>
+                    <SegmentedTabs
+                      shape="control"
+                      options={[
+                        { key: "up" as const, label: t.zoneDetail.gameRoomRoundingUp },
+                        { key: "nearest" as const, label: t.zoneDetail.gameRoomRoundingNearest },
+                        { key: "down" as const, label: t.zoneDetail.gameRoomRoundingDown },
+                      ]}
+                      value={roundingValue}
+                      onChange={setRoundingValue}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="gameRoomMinAmount">
+                      {t.zoneDetail.gameRoomMinAmountLabel} <span className="font-normal text-muted-foreground">({t.common.optional})</span>
+                    </Label>
+                    <MoneyInput
+                      id="gameRoomMinAmount"
+                      value={minAmountValue}
+                      onChange={(e) => setMinAmountValue(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+              {pricingError && <p className="text-sm text-destructive">{pricingError}</p>}
+              <PressableScale>
+                <SaveButton className="h-11" onClick={savePricing} saved={pricingSaved} />
+              </PressableScale>
+
+              {pricingHistory.length > 0 && (
+                <div className="mt-1 flex flex-col gap-1 border-t border-border pt-3">
+                  <span className="text-[0.6875rem] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+                    {t.zoneDetail.gameRoomPricingHistoryLabel}
+                  </span>
+                  {pricingHistory.map((p, i) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between gap-2 border-t border-border py-2 text-caption-airbnb first:border-t-0"
+                    >
+                      <span className="min-w-0 truncate text-muted-foreground">
+                        {formatPricingDate(p.effectiveFrom)}
+                        {i === 0 && (
+                          <span className="ml-1.5">
+                            <StatusChip>{t.zoneDetail.gameRoomPricingActiveChip}</StatusChip>
+                          </span>
+                        )}
+                      </span>
+                      <span className="shrink-0 font-semibold tabular-nums">
+                        {formatPricingModeLabel(p)} · <Money value={p.price} />
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SpringCard>
+
+            <SpringCard hover={false} className="flex flex-col gap-2">
+              <span className="text-section-title">{t.zoneDetail.gameRoomThresholdLabel}</span>
+              <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomThresholdHint}</p>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  className="h-11 max-w-32"
+                  value={thresholdValue}
+                  onChange={(e) => setThresholdValue(e.target.value)}
+                />
+                <PressableScale>
+                  <SaveButton className="h-11" onClick={saveThreshold} saved={thresholdSaved} />
+                </PressableScale>
+              </div>
+            </SpringCard>
+
+            <div className="grid grid-cols-2 gap-3">
+              <PressableScale>
+                <Link
+                  href={`/money/game-room?pointId=${zone.pointId}`}
+                  className="flex h-full flex-col justify-center rounded-card border border-border bg-card p-3.5 text-center text-body-airbnb font-semibold"
+                >
+                  {t.zoneDetail.gameRoomLiveLink}
+                </Link>
+              </PressableScale>
+              <PressableScale>
+                <Link
+                  href={`/money/launches?zoneId=${zone.id}`}
+                  className="flex h-full flex-col justify-center rounded-card border border-border bg-card p-3.5 text-center text-body-airbnb font-semibold"
+                >
+                  {t.zoneDetail.gameRoomLaunchesListLink}
+                </Link>
+              </PressableScale>
+            </div>
+            </>
+          )}
+
+          {zone.accountingMode !== "cash_only" && !isGameRoomZone(zone) && (
           <>
           <SpringCard hover={false} className="flex flex-col gap-1">
             <h2 className="text-section-title">{t.zoneDetail.tariffsCardLabel}</h2>
@@ -672,7 +923,12 @@ export default function ZoneDetailPage() {
                 <button
                   key={mode}
                   type="button"
-                  onClick={() => changeAccountingMode(mode)}
+                  onClick={() =>
+                    changeAccountingMode(
+                      mode,
+                      mode === "launches" && zone.accountingMode === "launches" ? zone.launchMode : "manual"
+                    )
+                  }
                   className="flex w-full items-center justify-between border-t border-border px-3 py-2.5 text-left first:border-t-0"
                 >
                   <span>
@@ -695,6 +951,22 @@ export default function ZoneDetailPage() {
                 </button>
               ))}
             </div>
+            {/* Игровая комната — суб-режим "Пусков" (docs/spec/04-game-room.md,
+                решение пользователя 2026-07-16), переключается отдельно, тем же
+                тап-и-применилось паттерном, что и список выше. */}
+            {zone.accountingMode === "launches" && (
+              <div>
+                <SegmentedTabs
+                  shape="control"
+                  options={[
+                    { key: "manual" as const, label: t.zonesList.launchVariantManual },
+                    { key: "game_room" as const, label: t.zonesList.accountingModeGameRoom },
+                  ]}
+                  value={zone.launchMode}
+                  onChange={(v) => changeAccountingMode("launches", v)}
+                />
+              </div>
+            )}
             {zoneActionError && <p className="text-sm text-destructive">{zoneActionError}</p>}
           </div>
         )}

@@ -498,7 +498,8 @@
     "subscriptionBlockedBannerAction": "Plătește",
     "renameCompanySlugWarning": "Numele companiei este folosit și pentru adresa linkurilor permanente (Instrucțiuni, Landing).",
     "updateSlugCheckboxLabel": "Actualizează și adresa linkurilor",
-    "updateSlugHint": "Adresa veche nu va mai funcționa direct (vizitatorii vor fi redirecționați) — înlocuiește-o peste tot unde ai distribuit-o."
+    "updateSlugHint": "Adresa veche nu va mai funcționa direct (vizitatorii vor fi redirecționați) — înlocuiește-o peste tot unde ai distribuit-o.",
+    "gameRoomLiveLinkHint": "Lansări live și activitate de azi"
   },
   "auth": {
     "loginTitle": "Autentificare",
@@ -638,13 +639,18 @@
     "accountingModeLaunchesHint": "Un număr gata de curse per predare",
     "accountingModeCashOnly": "Doar numerar",
     "accountingModeCashOnlyHint": "Fără tarife sau active — doar suma",
+    "launchVariantManual": "Manual",
+    "accountingModeGameRoom": "Camera de joacă",
+    "accountingModeGameRoomHint": "Start/stop lansări în timp real",
     "modeChip": {
       "counters": "După contoare",
       "launches": "Curse",
-      "cash_only": "Doar numerar"
+      "cash_only": "Doar numerar",
+      "game_room": "Camera de joacă"
     },
     "zoneActiveChip": "Activ",
-    "zoneInactiveChip": "Inactivă"
+    "zoneInactiveChip": "Inactivă",
+    "launchesTodaySuffix": "lansări azi"
   },
   "zoneDetail": {
     "notFound": "Zona nu a fost găsită.",
@@ -685,7 +691,26 @@
     "deactivateAsset": "Dezactivează activul",
     "activateAsset": "Activează activul",
     "assetInactiveChip": "Inactiv",
-    "cashOnlyNote": "Modul „Doar numerar”: această zonă nu are nevoie de tarife sau active — angajatul predă doar suma."
+    "cashOnlyNote": "Modul „Doar numerar”: această zonă nu are nevoie de tarife sau active — angajatul predă doar suma.",
+    "gameRoomPricingCardLabel": "Tarif lansări",
+    "gameRoomPricingModeFixed": "Fix",
+    "gameRoomPricingModePerMinute": "Pe minut",
+    "gameRoomPriceLabel": "Preț per lansare",
+    "gameRoomRateLabel": "Tarif pe minut",
+    "gameRoomDurationLabel": "Durată, min",
+    "gameRoomDurationPlaceholder": "Fără limită",
+    "gameRoomRoundingLabel": "Rotunjirea duratei",
+    "gameRoomRoundingUp": "În sus",
+    "gameRoomRoundingNearest": "Matematic",
+    "gameRoomRoundingDown": "În jos",
+    "gameRoomMinAmountLabel": "Suma minimă a lansării",
+    "gameRoomThresholdLabel": "Prag lansare lungă",
+    "gameRoomThresholdHint": "O lansare mai lungă decât acest timp este marcată ca necesitând atenție",
+    "gameRoomSaveError": "Nu s-a putut salva",
+    "gameRoomLiveLink": "Acum la punct",
+    "gameRoomLaunchesListLink": "Lista lansărilor",
+    "gameRoomPricingHistoryLabel": "Istoricul tarifului",
+    "gameRoomPricingActiveChip": "Activ"
   },
   "operators": {
     "title": "Angajați",
@@ -776,7 +801,10 @@
     "collectionSaveError": "Nu s-au putut salva modificările",
     "deleteCollectionAction": "Șterge colectarea",
     "deleteCollectionConfirm": "Ștergi această colectare? Soldul zonei se va recalcula. Nu poate fi anulat.",
-    "deleteCollectionError": "Nu s-a putut șterge colectarea"
+    "deleteCollectionError": "Nu s-a putut șterge colectarea",
+    "voidedChip": "Anulată",
+    "voidAction": "Anulează",
+    "voidConfirm": "Anulezi această lansare? Va fi exclusă din venitul calculat."
   },
   "readings": {
     "title": "Citiri zilnice",
@@ -956,9 +984,38 @@
       "queuedTitle": "Salvat, se va trimite când apare conexiunea",
       "queuedHint": "Momentan nu există internet — datele sunt salvate pe acest dispozitiv și vor fi trimise automat imediat ce conexiunea revine.",
       "homeButton": "Acasă",
-      "categoryPlaceholder": "Categorie (opțional)"
+      "categoryPlaceholder": "Categorie (opțional)",
+      "gameRoomSub": "Nu sunt necesare citiri — venitul se calculează din lansări",
+      "gameRoomBlockedPrefix": "Finalizează",
+      "gameRoomBlockedSuffix": "lansări active în această zonă",
+      "gameRoomGoToZoneButton": "Mergi la zonă",
+      "gameRoomRevenueNote": "Venitul se va calcula automat din lansările finalizate"
     },
-    "offlineQueueHint": "În așteptare: {count} predări — se trimit automat la reconectare"
+    "offlineQueueHint": "În așteptare: {count} predări — se trimit automat la reconectare",
+    "gameRoom": {
+      "pickAssetHint": "Atinge un activ pentru a începe o lansare",
+      "labelSheetTitle": "Eticheta lansării",
+      "labelPlaceholder": "de ex. brățara nr. 5",
+      "labelStartButton": "Începe",
+      "openCountSuffix": "active",
+      "stopButton": "Stop",
+      "stopSheetTitle": "Finalizează lansarea",
+      "stopDurationLabel": "Durata",
+      "stopAmountLabel": "Sumă",
+      "stopConfirmButton": "Finalizează",
+      "currentAmountLabel": "Acum",
+      "remainingLabel": "Rămas",
+      "expiredLabel": "Timpul a expirat",
+      "soundHintBody": "Sunetul și vibrația se declanșează când timpul lansării expiră — ține aplicația deschisă",
+      "noPricingError": "Tariful zonei nu a fost încă setat de proprietar",
+      "emptyState": "Nicio lansare activă",
+      "launchNumberPrefix": "Lansare",
+      "entryTitle": "Camera de joacă",
+      "launchActionsLabel": "Acțiuni lansare",
+      "startTimeLabel": "Început",
+      "endTimeLabel": "Sfârșit",
+      "networkError": "Fără conexiune la server — lansarea nu este pierdută, încearcă din nou"
+    }
   },
   "install": {
     "hint": "Instalați aplicația pentru acces rapid de pe ecranul telefonului.",
@@ -1206,6 +1263,8 @@
     "instructionAckEmailWho": "Cine",
     "shiftClosedSuffix": "tură închisă",
     "shiftWord": "tură",
-    "shiftWordCap": "Tură"
+    "shiftWordCap": "Tură",
+    "launchesCountLabel": "Lansări",
+    "launchesTimeLabel": "timp"
   }
 }

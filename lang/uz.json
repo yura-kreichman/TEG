@@ -498,7 +498,8 @@
     "subscriptionBlockedBannerAction": "To‘lash",
     "renameCompanySlugWarning": "Kompaniya nomi doimiy havolalar (Yo'riqnomalar, Landing) manzili uchun ham ishlatiladi.",
     "updateSlugCheckboxLabel": "Havolalar manzilini ham yangilash",
-    "updateSlugHint": "Eski manzil to'g'ridan-to'g'ri ishlamay qoladi (tashrif buyuruvchilar yo'naltiriladi) — uni tarqatgan barcha joyda yangilang."
+    "updateSlugHint": "Eski manzil to'g'ridan-to'g'ri ishlamay qoladi (tashrif buyuruvchilar yo'naltiriladi) — uni tarqatgan barcha joyda yangilang.",
+    "gameRoomLiveLinkHint": "Jonli pusklar va bugungi faollik"
   },
   "auth": {
     "loginTitle": "Kirish",
@@ -638,13 +639,18 @@
     "accountingModeLaunchesHint": "Topshiriq uchun tayyor yurishlar soni",
     "accountingModeCashOnly": "Faqat kassa",
     "accountingModeCashOnlyHint": "Tarif va aktivlarsiz — faqat summa",
+    "launchVariantManual": "Qoʻlda",
+    "accountingModeGameRoom": "O'yin xonasi",
+    "accountingModeGameRoomHint": "Pusklarni real vaqtda boshlash/toʻxtatish",
     "modeChip": {
       "counters": "Hisoblagichlar boʻyicha",
       "launches": "Yurishlar",
-      "cash_only": "Faqat kassa"
+      "cash_only": "Faqat kassa",
+      "game_room": "O'yin xonasi"
     },
     "zoneActiveChip": "Faol",
-    "zoneInactiveChip": "Nofaol"
+    "zoneInactiveChip": "Nofaol",
+    "launchesTodaySuffix": "bugungi pusklar"
   },
   "zoneDetail": {
     "notFound": "Zona topilmadi.",
@@ -685,7 +691,26 @@
     "deactivateAsset": "Aktivni faolsizlantirish",
     "activateAsset": "Aktivni faollashtirish",
     "assetInactiveChip": "Faol emas",
-    "cashOnlyNote": "«Faqat kassa» rejimi: bu zonaga tarif va aktivlar kerak emas — xodim faqat summani topshiradi."
+    "cashOnlyNote": "«Faqat kassa» rejimi: bu zonaga tarif va aktivlar kerak emas — xodim faqat summani topshiradi.",
+    "gameRoomPricingCardLabel": "Pusklar tarifi",
+    "gameRoomPricingModeFixed": "Belgilangan",
+    "gameRoomPricingModePerMinute": "Vaqt boʻyicha",
+    "gameRoomPriceLabel": "Pusk narxi",
+    "gameRoomRateLabel": "Bir daqiqalik tarif",
+    "gameRoomDurationLabel": "Davomiyligi, daq",
+    "gameRoomDurationPlaceholder": "Cheklovsiz",
+    "gameRoomRoundingLabel": "Davomiylikni yaxlitlash",
+    "gameRoomRoundingUp": "Yuqoriga",
+    "gameRoomRoundingNearest": "Matematik",
+    "gameRoomRoundingDown": "Pastga",
+    "gameRoomMinAmountLabel": "Puskning eng kam summasi",
+    "gameRoomThresholdLabel": "Uzoq pusk chegarasi",
+    "gameRoomThresholdHint": "Bu vaqtdan uzoqroq davom etgan pusk eʼtibor talab qiladigan deb belgilanadi",
+    "gameRoomSaveError": "Saqlab boʻlmadi",
+    "gameRoomLiveLink": "Hozir nuqtada",
+    "gameRoomLaunchesListLink": "Pusklar roʻyxati",
+    "gameRoomPricingHistoryLabel": "Tarif tarixi",
+    "gameRoomPricingActiveChip": "Amalda"
   },
   "operators": {
     "title": "Xodimlar",
@@ -776,7 +801,10 @@
     "collectionSaveError": "O'zgarishlarni saqlab bo'lmadi",
     "deleteCollectionAction": "Inkassatsiyani oʻchirish",
     "deleteCollectionConfirm": "Ushbu inkassatsiyani oʻchirasizmi? Zona qoldigʻi qayta hisoblanadi. Bekor qilib boʻlmaydi.",
-    "deleteCollectionError": "Inkassatsiyani oʻchirib bo'lmadi"
+    "deleteCollectionError": "Inkassatsiyani oʻchirib bo'lmadi",
+    "voidedChip": "Bekor qilingan",
+    "voidAction": "Bekor qilish",
+    "voidConfirm": "Bu pusk bekor qilinsinmi? U hisoblangan tushumdan chiqarib tashlanadi."
   },
   "readings": {
     "title": "Kunlik koʻrsatkichlar",
@@ -956,9 +984,38 @@
       "queuedTitle": "Saqlandi, aloqa boʻlganda yuboriladi",
       "queuedHint": "Hozir internet yoʻq — ma'lumotlar qurilmada saqlandi va aloqa paydo boʻlishi bilan avtomatik serverga yuboriladi.",
       "homeButton": "Bosh sahifaga",
-      "categoryPlaceholder": "Kategoriya (ixtiyoriy)"
+      "categoryPlaceholder": "Kategoriya (ixtiyoriy)",
+      "gameRoomSub": "Koʻrsatkichlar shart emas — tushum ishga tushirishlar boʻyicha hisoblanadi",
+      "gameRoomBlockedPrefix": "Tugating",
+      "gameRoomBlockedSuffix": "shu zonadagi faol ishga tushirishlarni",
+      "gameRoomGoToZoneButton": "Zonaga oʻtish",
+      "gameRoomRevenueNote": "Tushum yakunlangan ishga tushirishlar boʻyicha avtomatik hisoblanadi"
     },
-    "offlineQueueHint": "Yuborilishini kutmoqda: {count} ta topshiriq — aloqa boʻlganda avtomatik yuboriladi"
+    "offlineQueueHint": "Yuborilishini kutmoqda: {count} ta topshiriq — aloqa boʻlganda avtomatik yuboriladi",
+    "gameRoom": {
+      "pickAssetHint": "Ishga tushirishni boshlash uchun aktivga bosing",
+      "labelSheetTitle": "Pusk yorlig'i",
+      "labelPlaceholder": "masalan, bilaguzuk №5",
+      "labelStartButton": "Boshlash",
+      "openCountSuffix": "faol",
+      "stopButton": "Stop",
+      "stopSheetTitle": "Pускni yakunlash",
+      "stopDurationLabel": "Davomiyligi",
+      "stopAmountLabel": "Summa",
+      "stopConfirmButton": "Yakunlash",
+      "currentAmountLabel": "Hozir",
+      "remainingLabel": "Qoldi",
+      "expiredLabel": "Vaqt tugadi",
+      "soundHintBody": "Pusk vaqti tugaganda tovush va tebranish ishlaydi — ilovani ochiq tuting",
+      "noPricingError": "Zona tarifi hali egasi tomonidan belgilanmagan",
+      "emptyState": "Faol pusklar yoʻq",
+      "launchNumberPrefix": "Pusk",
+      "entryTitle": "O'yin xonasi",
+      "launchActionsLabel": "Pusk bilan amallar",
+      "startTimeLabel": "Boshlanishi",
+      "endTimeLabel": "Tugashi",
+      "networkError": "Server bilan aloqa yoʻq — pusk yoʻqolmadi, qayta urinib koʻring"
+    }
   },
   "install": {
     "hint": "Telefon ekranidan tezkor kirish uchun ilovani oʻrnating.",
@@ -1206,6 +1263,8 @@
     "instructionAckEmailWho": "Kim",
     "shiftClosedSuffix": "smena yakunlandi",
     "shiftWord": "smena",
-    "shiftWordCap": "Smena"
+    "shiftWordCap": "Smena",
+    "launchesCountLabel": "Pusklar",
+    "launchesTimeLabel": "vaqt"
   }
 }

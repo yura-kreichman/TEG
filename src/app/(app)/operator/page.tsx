@@ -17,12 +17,15 @@ import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { cn } from "@/lib/utils";
+import { isGameRoomZone } from "@/lib/results-calc";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface ZoneOption {
   id: string;
   name: string;
   iconKey: string | null;
+  accountingMode: string;
+  launchMode: string;
 }
 
 interface PointOption {
@@ -115,7 +118,15 @@ export default function OperatorHomePage() {
     fetch("/api/operator/submission-context")
       .then((res) => res.json())
       .then((data) =>
-        setZones((data.zones ?? []).map((z: ZoneOption) => ({ id: z.id, name: z.name, iconKey: z.iconKey })))
+        setZones(
+          (data.zones ?? []).map((z: ZoneOption) => ({
+            id: z.id,
+            name: z.name,
+            iconKey: z.iconKey,
+            accountingMode: z.accountingMode,
+            launchMode: z.launchMode,
+          }))
+        )
       );
   }
 
@@ -191,6 +202,7 @@ export default function OperatorHomePage() {
   }
 
   const elapsedLabel = activeShiftStartAt ? formatElapsed(activeShiftStartAt, now) : "00:00";
+  const gameRoomZones = zones.filter((z) => isGameRoomZone(z));
   const shiftTooLong = activeShiftStartAt ? now.getTime() - new Date(activeShiftStartAt).getTime() > 16 * 60 * 60 * 1000 : false;
 
   async function handleCheckIn() {
@@ -513,6 +525,33 @@ export default function OperatorHomePage() {
         )}
       </SpringCard>
 
+      {gameRoomZones.length > 0 && (
+        <SpringCard hover={false} className="mt-4 w-full max-w-sm text-left">
+          <h2 className="mb-1.5 text-[0.875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.gameRoom.entryTitle}</h2>
+          <div className="flex flex-col">
+            {gameRoomZones.map((zone) => (
+              <PressableScale key={zone.id}>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/operator/game-room/${zone.id}`)}
+                  className="flex w-full items-center gap-2.5 border-t border-border py-3 text-left first:border-t-0"
+                >
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                    {zone.iconKey ? (
+                      <AssetOrZoneIcon iconKey={zone.iconKey} className="size-5" />
+                    ) : (
+                      <MapPin className="size-5" />
+                    )}
+                  </div>
+                  <span className="min-w-0 grow text-body-airbnb font-semibold">{zone.name}</span>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                </button>
+              </PressableScale>
+            ))}
+          </div>
+        </SpringCard>
+      )}
+
       <SpringCard hover={false} className="mt-4 w-full max-w-sm text-left">
         <div className="mb-1.5 flex items-baseline justify-between">
           <h2 className="text-[0.875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.tasks.title}</h2>
@@ -535,10 +574,10 @@ export default function OperatorHomePage() {
               <span
                 className={cn(
                   "flex size-5.5 shrink-0 items-center justify-center rounded-full border-2",
-                  task.status === "doing" ? "border-warning bg-warning/15" : "border-muted-foreground/40"
+                  task.status === "doing" ? "border-success bg-success/15" : "border-muted-foreground/40"
                 )}
               >
-                {task.status === "doing" && <span className="size-2 rounded-full bg-warning" />}
+                {task.status === "doing" && <span className="size-2 rounded-full bg-success" />}
               </span>
               <span className="min-w-0 grow">
                 <span className="block text-body-airbnb font-semibold leading-snug">{task.title}</span>

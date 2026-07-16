@@ -13,7 +13,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { ImageLightbox } from "@/components/motion/image-lightbox";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
-import { calcSessions, calcZoneRevenue, type ZoneAccountingMode } from "@/lib/results-calc";
+import { calcSessions, calcZoneRevenue, isGameRoomZone, type LaunchMode, type ZoneAccountingMode } from "@/lib/results-calc";
 import { queueSubmission } from "@/lib/offline-submissions";
 import { useI18n } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
@@ -44,6 +44,7 @@ interface ZoneCtx {
   name: string;
   iconKey: string | null;
   accountingMode: ZoneAccountingMode;
+  launchMode: LaunchMode;
   tariffs: TariffCtx[];
   assets: AssetCtx[];
 }
@@ -86,6 +87,9 @@ export default function SubmitResultsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [queued, setQueued] = useState(false);
+  // Мягкая блокировка сдачи для Игровой комнаты (docs/spec/04-game-room.md) —
+  // сколько пусков ещё открыто в этой зоне, проверяется при входе на её шаг.
+  const [gameRoomOpenCount, setGameRoomOpenCount] = useState<number | null>(null);
   const [result, setResult] = useState<{
     summary: { zoneId: string; zoneName: string; calculatedRevenue: number; actualCash: number; difference: number }[];
     remindMarkDeparture?: boolean;
@@ -113,6 +117,27 @@ export default function SubmitResultsPage() {
   }, [selectedZoneIds]);
 
   const currentStep = steps[stepIndex] ?? steps[0];
+
+  // Мягкая блокировка (docs/spec/04-game-room.md) — при входе на шаг зоны
+  // Игровой комнаты проверяем, не остались ли открытые пуски.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (currentStep.kind !== "zone") {
+      setGameRoomOpenCount(null);
+      return;
+    }
+    const zone = zones.find((z) => z.id === currentStep.zoneId);
+    if (!zone || !isGameRoomZone(zone)) {
+      setGameRoomOpenCount(null);
+      return;
+    }
+    setGameRoomOpenCount(null);
+    fetch(`/api/zones/${zone.id}/launches`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setGameRoomOpenCount(data ? (data.launches?.length ?? 0) : 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, zones]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function toggleZone(zoneId: string) {
     setSelectedZoneIds((prev) =>
@@ -459,11 +484,33 @@ export default function SubmitResultsPage() {
               <p className="mt-1 text-[0.84375rem] text-muted-foreground">
                 {activeZone.accountingMode === "cash_only"
                   ? t.operatorApp.submit.cashOnlySub
-                  : t.operatorApp.submit.enterReadingsSub}
+                  : isGameRoomZone(activeZone)
+                    ? t.operatorApp.submit.gameRoomSub
+                    : t.operatorApp.submit.enterReadingsSub}
               </p>
             </div>
 
-            {activeZone.accountingMode !== "cash_only" && (
+            {isGameRoomZone(activeZone) && (gameRoomOpenCount ?? 0) > 0 && (
+              <div className="rounded-card border border-warning/40 bg-warning/10 p-3.5">
+                <p className="text-body-airbnb font-semibold text-warning">
+                  {t.operatorApp.submit.gameRoomBlockedPrefix} {gameRoomOpenCount}{" "}
+                  {t.operatorApp.submit.gameRoomBlockedSuffix}
+                </p>
+                <PressableScale className="mt-2 inline-block">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 gap-1.5 rounded-control border-warning/40 text-warning"
+                    onClick={() => router.push(`/operator/game-room/${activeZone.id}`)}
+                  >
+                    {t.operatorApp.submit.gameRoomGoToZoneButton}
+                    <ChevronRight className="size-4" />
+                  </Button>
+                </PressableScale>
+              </div>
+            )}
+
+            {activeZone.accountingMode !== "cash_only" && !isGameRoomZone(activeZone) && (
             <>
             <div className="grid grid-cols-2 gap-3">
               {activeZone.assets.map((asset) => {
@@ -583,7 +630,10 @@ export default function SubmitResultsPage() {
               />
             </div>
 
-            {activeZone.accountingMode !== "cash_only" &&
+            {isGameRoomZone(activeZone) ? (
+              <p className="text-caption-airbnb">{t.operatorApp.submit.gameRoomRevenueNote}</p>
+            ) : (
+              activeZone.accountingMode !== "cash_only" &&
               (() => {
                 const preview = previewFor(activeZone.id);
                 return (
@@ -595,7 +645,8 @@ export default function SubmitResultsPage() {
                     </p>
                   )
                 );
-              })()}
+              })()
+            )}
           </div>
         )}
 
@@ -687,12 +738,12 @@ export default function SubmitResultsPage() {
                   className="flex flex-col gap-1 rounded-card border border-border bg-card p-3 text-body-airbnb"
                 >
                   <span className="font-semibold">{zone.name}</span>
-                  {preview && zone.accountingMode === "cash_only" && (
+                  {preview && (zone.accountingMode === "cash_only" || isGameRoomZone(zone)) && (
                     <span className="tabular-nums text-muted-foreground">
                       {t.operatorApp.submit.actualCash} <Money value={preview.actualCash} />
                     </span>
                   )}
-                  {preview && zone.accountingMode !== "cash_only" && (
+                  {preview && zone.accountingMode !== "cash_only" && !isGameRoomZone(zone) && (
                     <>
                       <span className="tabular-nums text-muted-foreground">
                         {t.operatorApp.submit.calculatedRevenue} <Money value={preview.calculatedRevenue} />
@@ -706,7 +757,7 @@ export default function SubmitResultsPage() {
                       </span>
                     </>
                   )}
-                  {preview && preview.calculatedRevenue === 0 && preview.actualCash === 0 && (
+                  {preview && !isGameRoomZone(zone) && preview.calculatedRevenue === 0 && preview.actualCash === 0 && (
                     <span className="mt-1 text-caption-airbnb text-warning">{t.operatorApp.submit.allZeroWarning}</span>
                   )}
                 </div>
@@ -745,10 +796,19 @@ export default function SubmitResultsPage() {
               <Button
                 className="h-14 w-full gap-2 rounded-control font-bold"
                 onClick={goNext}
-                disabled={currentStep.kind === "select" && selectedZoneIds.length === 0}
+                disabled={
+                  (currentStep.kind === "select" && selectedZoneIds.length === 0) ||
+                  (currentStep.kind === "zone" &&
+                    !!activeZone &&
+                    isGameRoomZone(activeZone) &&
+                    (gameRoomOpenCount ?? 0) > 0)
+                }
               >
                 {t.common.next}
-                {currentStep.kind === "zone" && activeZone?.accountingMode !== "cash_only" && (
+                {currentStep.kind === "zone" &&
+                  !!activeZone &&
+                  activeZone.accountingMode !== "cash_only" &&
+                  !isGameRoomZone(activeZone) && (
                   <span className="text-xs font-semibold tabular-nums opacity-75">
                     {filledCount}/{activeZone?.assets.length ?? 0}
                   </span>

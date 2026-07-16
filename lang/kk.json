@@ -498,7 +498,8 @@
     "subscriptionBlockedBannerAction": "Төлеу",
     "renameCompanySlugWarning": "Компания атауы тұрақты сілтемелердің (Нұсқаулықтар, Лендинг) мекенжайы үшін де қолданылады.",
     "updateSlugCheckboxLabel": "Сілтемелер мекенжайын да жаңарту",
-    "updateSlugHint": "Ескі мекенжай тікелей істемей қалады (қонақтар қайта бағытталады) — оны таратқан барлық жерде жаңартыңыз."
+    "updateSlugHint": "Ескі мекенжай тікелей істемей қалады (қонақтар қайта бағытталады) — оны таратқан барлық жерде жаңартыңыз.",
+    "gameRoomLiveLinkHint": "Тірі пуcктер және бүгінгі белсенділік"
   },
   "auth": {
     "loginTitle": "Кіру",
@@ -638,13 +639,18 @@
     "accountingModeLaunchesHint": "Тапсыру кезіндегі дайын жүрістер саны",
     "accountingModeCashOnly": "Тек касса",
     "accountingModeCashOnlyHint": "Тарифтер мен активтерсіз — тек сома",
+    "launchVariantManual": "Қолмен",
+    "accountingModeGameRoom": "Ойын бөлмесі",
+    "accountingModeGameRoomHint": "Пуcктерді нақты уақытта бастау/тоқтату",
     "modeChip": {
       "counters": "Есептегіштер бойынша",
       "launches": "Жүрістер",
-      "cash_only": "Тек касса"
+      "cash_only": "Тек касса",
+      "game_room": "Ойын бөлмесі"
     },
     "zoneActiveChip": "Белсенді",
-    "zoneInactiveChip": "Белсенді емес"
+    "zoneInactiveChip": "Белсенді емес",
+    "launchesTodaySuffix": "бүгінгі пуcктер"
   },
   "zoneDetail": {
     "notFound": "Аймақ табылмады.",
@@ -685,7 +691,26 @@
     "deactivateAsset": "Активті өшіру",
     "activateAsset": "Активті іске қосу",
     "assetInactiveChip": "Белсенді емес",
-    "cashOnlyNote": "«Тек касса» режимі: бұл аймаққа тарифтер мен активтер қажет емес — қызметкер тек соманы тапсырады."
+    "cashOnlyNote": "«Тек касса» режимі: бұл аймаққа тарифтер мен активтер қажет емес — қызметкер тек соманы тапсырады.",
+    "gameRoomPricingCardLabel": "Пуcк тарифі",
+    "gameRoomPricingModeFixed": "Тұрақты",
+    "gameRoomPricingModePerMinute": "Уақыт бойынша",
+    "gameRoomPriceLabel": "Пуcк бағасы",
+    "gameRoomRateLabel": "Минуттық тариф",
+    "gameRoomDurationLabel": "Ұзақтығы, мин",
+    "gameRoomDurationPlaceholder": "Шектеусіз",
+    "gameRoomRoundingLabel": "Ұзақтықты дөңгелектеу",
+    "gameRoomRoundingUp": "Жоғары",
+    "gameRoomRoundingNearest": "Математикалық",
+    "gameRoomRoundingDown": "Төмен",
+    "gameRoomMinAmountLabel": "Пуcктың ең аз сомасы",
+    "gameRoomThresholdLabel": "Ұзақ пуcк шегі",
+    "gameRoomThresholdHint": "Осы уақыттан ұзақ пуcк назар аударуды қажет етеді деп белгіленеді",
+    "gameRoomSaveError": "Сақталмады",
+    "gameRoomLiveLink": "Қазір нүктеде",
+    "gameRoomLaunchesListLink": "Пуcктер тізімі",
+    "gameRoomPricingHistoryLabel": "Тариф тарихы",
+    "gameRoomPricingActiveChip": "Қолданыста"
   },
   "operators": {
     "title": "Қызметкерлер",
@@ -776,7 +801,10 @@
     "collectionSaveError": "Өзгерістерді сақтау мүмкін болмады",
     "deleteCollectionAction": "Инкассацияны жою",
     "deleteCollectionConfirm": "Осы инкассацияны жоюсыз ба? Аймақ қалдығы қайта есептеледі. Болдырмау мүмкін емес.",
-    "deleteCollectionError": "Инкассацияны жою мүмкін болмады"
+    "deleteCollectionError": "Инкассацияны жою мүмкін болмады",
+    "voidedChip": "Жойылды",
+    "voidAction": "Жою",
+    "voidConfirm": "Бұл пуcк жойылсын ба? Ол есептік түсімнен алынып тасталады."
   },
   "readings": {
     "title": "Күндер бойынша көрсеткіштер",
@@ -956,9 +984,38 @@
       "queuedTitle": "Сақталды, байланыс болғанда жібереміз",
       "queuedHint": "Қазір интернет жоқ — деректер құрылғыда сақталды, байланыс пайда болысымен серверге автоматты түрде кетеді.",
       "homeButton": "Басты бетке",
-      "categoryPlaceholder": "Санат (міндетті емес)"
+      "categoryPlaceholder": "Санат (міндетті емес)",
+      "gameRoomSub": "Көрсеткіштер қажет емес — түсім пуcктер бойынша есептеледі",
+      "gameRoomBlockedPrefix": "Аяқта",
+      "gameRoomBlockedSuffix": "осы аймақтағы белсенді пуcктерді",
+      "gameRoomGoToZoneButton": "Аймаққа өту",
+      "gameRoomRevenueNote": "Түсім аяқталған пуcктер бойынша автоматты түрде есептеледі"
     },
-    "offlineQueueHint": "Жіберілуді күтуде: {count} тапсыру — байланыс болғанда автоматты түрде кетеді"
+    "offlineQueueHint": "Жіберілуді күтуде: {count} тапсыру — байланыс болғанда автоматты түрде кетеді",
+    "gameRoom": {
+      "pickAssetHint": "Пуcкті бастау үшін активке басыңыз",
+      "labelSheetTitle": "Пуcк белгісі",
+      "labelPlaceholder": "Мысалы, білезік №5",
+      "labelStartButton": "Бастау",
+      "openCountSuffix": "белсенді",
+      "stopButton": "Тоқтату",
+      "stopSheetTitle": "Пуcкті аяқтау",
+      "stopDurationLabel": "Ұзақтығы",
+      "stopAmountLabel": "Сома",
+      "stopConfirmButton": "Аяқтау",
+      "currentAmountLabel": "Қазір",
+      "remainingLabel": "Қалды",
+      "expiredLabel": "Уақыт бітті",
+      "soundHintBody": "Пуcк уақыты біткенде дыбыс пен дірілдеу қосылады — қолданбаны ашық ұстаңыз",
+      "noPricingError": "Аймақ тарифін иесі әлі белгілеген жоқ",
+      "emptyState": "Белсенді пуcктер жоқ",
+      "launchNumberPrefix": "Пуcк",
+      "entryTitle": "Ойын бөлмесі",
+      "launchActionsLabel": "Пуcкпен әрекеттер",
+      "startTimeLabel": "Басталуы",
+      "endTimeLabel": "Аяқталуы",
+      "networkError": "Сервермен байланыс жоқ — пуcк жоғалған жоқ, қайта көріңіз"
+    }
   },
   "install": {
     "hint": "Телефон экранынан жылдам қатынасу үшін қосымшаны орнатыңыз.",
@@ -1206,6 +1263,8 @@
     "instructionAckEmailWho": "Кім",
     "shiftClosedSuffix": "ауысым жабылды",
     "shiftWord": "ауысым",
-    "shiftWordCap": "Ауысым"
+    "shiftWordCap": "Ауысым",
+    "launchesCountLabel": "Пуcктер",
+    "launchesTimeLabel": "уақыт"
   }
 }

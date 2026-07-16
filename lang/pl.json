@@ -498,7 +498,8 @@
     "subscriptionBlockedBannerAction": "Zapłać",
     "renameCompanySlugWarning": "Nazwa firmy jest też używana w adresie stałych linków (Instrukcje, Landing).",
     "updateSlugCheckboxLabel": "Zaktualizuj też adres linków",
-    "updateSlugHint": "Stary adres przestanie działać bezpośrednio (odwiedzający będą przekierowani) — zamień go wszędzie, gdzie był udostępniony."
+    "updateSlugHint": "Stary adres przestanie działać bezpośrednio (odwiedzający będą przekierowani) — zamień go wszędzie, gdzie był udostępniony.",
+    "gameRoomLiveLinkHint": "Aktywne uruchomienia i dzisiejsza aktywność"
   },
   "auth": {
     "loginTitle": "Logowanie",
@@ -638,13 +639,18 @@
     "accountingModeLaunchesHint": "Gotowa liczba przejazdów za rozliczenie",
     "accountingModeCashOnly": "Tylko kasa",
     "accountingModeCashOnlyHint": "Bez taryf i zasobów — tylko suma",
+    "launchVariantManual": "Ręcznie",
+    "accountingModeGameRoom": "Sala zabaw",
+    "accountingModeGameRoomHint": "Start/stop uruchomień w czasie rzeczywistym",
     "modeChip": {
       "counters": "Wg liczników",
       "launches": "Uruchomienia",
-      "cash_only": "Tylko kasa"
+      "cash_only": "Tylko kasa",
+      "game_room": "Sala zabaw"
     },
     "zoneActiveChip": "Aktywny",
-    "zoneInactiveChip": "Nieaktywna"
+    "zoneInactiveChip": "Nieaktywna",
+    "launchesTodaySuffix": "uruchomień dzisiaj"
   },
   "zoneDetail": {
     "notFound": "Strefa nie znaleziona.",
@@ -685,7 +691,26 @@
     "deactivateAsset": "Dezaktywuj zasób",
     "activateAsset": "Aktywuj zasób",
     "assetInactiveChip": "Nieaktywny",
-    "cashOnlyNote": "Tryb „Tylko kasa”: ta strefa nie potrzebuje taryf ani zasobów — pracownik zdaje tylko sumę."
+    "cashOnlyNote": "Tryb „Tylko kasa”: ta strefa nie potrzebuje taryf ani zasobów — pracownik zdaje tylko sumę.",
+    "gameRoomPricingCardLabel": "Taryfa uruchomień",
+    "gameRoomPricingModeFixed": "Stała",
+    "gameRoomPricingModePerMinute": "Za czas",
+    "gameRoomPriceLabel": "Cena za uruchomienie",
+    "gameRoomRateLabel": "Stawka za minutę",
+    "gameRoomDurationLabel": "Czas trwania, min",
+    "gameRoomDurationPlaceholder": "Bez limitu",
+    "gameRoomRoundingLabel": "Zaokrąglanie czasu",
+    "gameRoomRoundingUp": "W górę",
+    "gameRoomRoundingNearest": "Matematycznie",
+    "gameRoomRoundingDown": "W dół",
+    "gameRoomMinAmountLabel": "Minimalna kwota uruchomienia",
+    "gameRoomThresholdLabel": "Próg długiego uruchomienia",
+    "gameRoomThresholdHint": "Uruchomienie trwające dłużej niż ten czas jest oznaczane jako wymagające uwagi",
+    "gameRoomSaveError": "Nie udało się zapisać",
+    "gameRoomLiveLink": "Teraz w punkcie",
+    "gameRoomLaunchesListLink": "Lista uruchomień",
+    "gameRoomPricingHistoryLabel": "Historia taryfy",
+    "gameRoomPricingActiveChip": "Obowiązuje"
   },
   "operators": {
     "title": "Pracownicy",
@@ -776,7 +801,10 @@
     "collectionSaveError": "Nie udało się zapisać zmian",
     "deleteCollectionAction": "Usuń inkasację",
     "deleteCollectionConfirm": "Usunąć tę inkasację? Saldo strefy zostanie przeliczone. Nie można cofnąć.",
-    "deleteCollectionError": "Nie udało się usunąć inkasacji"
+    "deleteCollectionError": "Nie udało się usunąć inkasacji",
+    "voidedChip": "Anulowano",
+    "voidAction": "Anuluj",
+    "voidConfirm": "Anulować to uruchomienie? Zostanie wykluczone z obliczonego przychodu."
   },
   "readings": {
     "title": "Odczyty dzienne",
@@ -956,9 +984,38 @@
       "queuedTitle": "Zapisano, wyślemy przy połączeniu",
       "queuedHint": "Obecnie brak internetu — dane zostały zapisane na urządzeniu i zostaną wysłane na serwer automatycznie, gdy tylko pojawi się połączenie.",
       "homeButton": "Do strony głównej",
-      "categoryPlaceholder": "Kategoria (opcjonalnie)"
+      "categoryPlaceholder": "Kategoria (opcjonalnie)",
+      "gameRoomSub": "Odczyty nie są potrzebne — przychód liczony jest z uruchomień",
+      "gameRoomBlockedPrefix": "Zakończ",
+      "gameRoomBlockedSuffix": "aktywnych uruchomień w tej strefie",
+      "gameRoomGoToZoneButton": "Przejdź do strefy",
+      "gameRoomRevenueNote": "Przychód zostanie obliczony automatycznie na podstawie zakończonych uruchomień"
     },
-    "offlineQueueHint": "Oczekują na wysłanie: {count} rozliczeń — zostaną wysłane automatycznie po połączeniu"
+    "offlineQueueHint": "Oczekują na wysłanie: {count} rozliczeń — zostaną wysłane automatycznie po połączeniu",
+    "gameRoom": {
+      "pickAssetHint": "Dotknij zasobu, aby rozpocząć uruchomienie",
+      "labelSheetTitle": "Etykieta uruchomienia",
+      "labelPlaceholder": "np. opaska nr 5",
+      "labelStartButton": "Start",
+      "openCountSuffix": "aktywnych",
+      "stopButton": "Stop",
+      "stopSheetTitle": "Zakończ uruchomienie",
+      "stopDurationLabel": "Czas trwania",
+      "stopAmountLabel": "Kwota",
+      "stopConfirmButton": "Zakończ",
+      "currentAmountLabel": "Teraz",
+      "remainingLabel": "Zostało",
+      "expiredLabel": "Czas minął",
+      "soundHintBody": "Dźwięk i wibracja włączą się, gdy czas uruchomienia się skończy — trzymaj aplikację otwartą",
+      "noPricingError": "Taryfa strefy nie została jeszcze ustawiona przez właściciela",
+      "emptyState": "Brak aktywnych uruchomień",
+      "launchNumberPrefix": "Uruchomienie",
+      "entryTitle": "Sala zabaw",
+      "launchActionsLabel": "Działania z uruchomieniem",
+      "startTimeLabel": "Początek",
+      "endTimeLabel": "Koniec",
+      "networkError": "Brak połączenia z serwerem — uruchomienie nie zostało utracone, spróbuj ponownie"
+    }
   },
   "install": {
     "hint": "Zainstaluj aplikację, aby uzyskać szybki dostęp z ekranu telefonu.",
@@ -1206,6 +1263,8 @@
     "instructionAckEmailWho": "Kto",
     "shiftClosedSuffix": "zmiana zamknięta",
     "shiftWord": "zmiana",
-    "shiftWordCap": "Zmiana"
+    "shiftWordCap": "Zmiana",
+    "launchesCountLabel": "Uruchomień",
+    "launchesTimeLabel": "czas"
   }
 }

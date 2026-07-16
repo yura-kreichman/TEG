@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkPackageLimit } from "@/lib/packages";
 import { requireOwner } from "@/lib/require-owner";
-import { isZoneAccountingMode } from "@/lib/results-calc";
+import { isZoneAccountingMode, LAUNCH_MODES } from "@/lib/results-calc";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 
 export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]/zones">) {
@@ -38,24 +38,31 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
   }
 
-  const { name, iconKey, accountingMode } = await request.json();
+  const { name, iconKey, accountingMode, launchMode } = await request.json();
   if (typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ error: "Название зоны обязательно" }, { status: 400 });
   }
   if (accountingMode !== undefined && !isZoneAccountingMode(accountingMode)) {
     return NextResponse.json({ error: "Некорректный режим учёта" }, { status: 400 });
   }
+  // Игровая комната — суб-режим "launches" (docs/spec/04-game-room.md), не
+  // отдельный accountingMode — launchMode осмыслен только вместе с ним.
+  if (launchMode !== undefined && !(LAUNCH_MODES as readonly string[]).includes(launchMode)) {
+    return NextResponse.json({ error: "Некорректный вариант режима пусков" }, { status: 400 });
+  }
 
   const zoneCount = await prisma.zone.count({ where: { point: { tenantId: owner.tenantId } } });
   const limitError = await checkPackageLimit(owner.tenantId, "maxZones", zoneCount);
   if (limitError) return limitError;
 
+  const resolvedAccountingMode = isZoneAccountingMode(accountingMode) ? accountingMode : "counters";
   const zone = await prisma.zone.create({
     data: {
       pointId,
       name: name.trim(),
       iconKey: typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null,
-      accountingMode: isZoneAccountingMode(accountingMode) ? accountingMode : "counters",
+      accountingMode: resolvedAccountingMode,
+      launchMode: resolvedAccountingMode === "launches" && launchMode === "game_room" ? "game_room" : "manual",
     },
   });
 

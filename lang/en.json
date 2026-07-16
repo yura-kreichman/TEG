@@ -498,7 +498,8 @@
     "subscriptionBlockedBannerAction": "Pay now",
     "renameCompanySlugWarning": "The company name is also used for the address of permanent links (Instructions, Landing).",
     "updateSlugCheckboxLabel": "Also update the link address",
-    "updateSlugHint": "The old address stops working directly (visitors get redirected) — replace it everywhere you shared it: QR code at the venue, social media, etc."
+    "updateSlugHint": "The old address stops working directly (visitors get redirected) — replace it everywhere you shared it: QR code at the venue, social media, etc.",
+    "gameRoomLiveLinkHint": "Live launches and today's activity"
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -638,13 +639,18 @@
     "accountingModeLaunchesHint": "A ready ride count per submission",
     "accountingModeCashOnly": "Cash only",
     "accountingModeCashOnlyHint": "No tariffs or assets — just the amount",
+    "launchVariantManual": "Manual",
+    "accountingModeGameRoom": "Game room",
+    "accountingModeGameRoomHint": "Start/stop launches in real time",
     "modeChip": {
       "counters": "By counters",
       "launches": "Launches",
-      "cash_only": "Cash only"
+      "cash_only": "Cash only",
+      "game_room": "Game room"
     },
     "zoneActiveChip": "Active",
-    "zoneInactiveChip": "Inactive"
+    "zoneInactiveChip": "Inactive",
+    "launchesTodaySuffix": "launches today"
   },
   "zoneDetail": {
     "notFound": "Zone not found.",
@@ -685,7 +691,26 @@
     "deactivateAsset": "Deactivate asset",
     "activateAsset": "Activate asset",
     "assetInactiveChip": "Inactive",
-    "cashOnlyNote": "\"Cash only\" mode: this zone doesn't need tariffs or assets — the employee just submits an amount."
+    "cashOnlyNote": "\"Cash only\" mode: this zone doesn't need tariffs or assets — the employee just submits an amount.",
+    "gameRoomPricingCardLabel": "Launch tariff",
+    "gameRoomPricingModeFixed": "Fixed",
+    "gameRoomPricingModePerMinute": "Per minute",
+    "gameRoomPriceLabel": "Price per launch",
+    "gameRoomRateLabel": "Rate per minute",
+    "gameRoomDurationLabel": "Duration, min",
+    "gameRoomDurationPlaceholder": "No limit",
+    "gameRoomRoundingLabel": "Duration rounding",
+    "gameRoomRoundingUp": "Up",
+    "gameRoomRoundingNearest": "Nearest",
+    "gameRoomRoundingDown": "Down",
+    "gameRoomMinAmountLabel": "Minimum launch amount",
+    "gameRoomThresholdLabel": "Long launch threshold",
+    "gameRoomThresholdHint": "A launch running longer than this is flagged as needing attention",
+    "gameRoomSaveError": "Couldn't save",
+    "gameRoomLiveLink": "Live at the point",
+    "gameRoomLaunchesListLink": "Launch list",
+    "gameRoomPricingHistoryLabel": "Tariff history",
+    "gameRoomPricingActiveChip": "Active"
   },
   "operators": {
     "title": "Employees",
@@ -776,7 +801,10 @@
     "collectionSaveError": "Failed to save changes",
     "deleteCollectionAction": "Delete collection",
     "deleteCollectionConfirm": "Delete this collection? The zone balance will be recalculated. This cannot be undone.",
-    "deleteCollectionError": "Failed to delete the collection"
+    "deleteCollectionError": "Failed to delete the collection",
+    "voidedChip": "Voided",
+    "voidAction": "Void",
+    "voidConfirm": "Void this launch? It will be excluded from calculated revenue."
   },
   "readings": {
     "title": "Daily readings",
@@ -956,9 +984,38 @@
       "queuedTitle": "Saved, will send once online",
       "queuedHint": "No internet right now — data is saved on this device and will be sent automatically once the connection is back.",
       "homeButton": "Go home",
-      "categoryPlaceholder": "Category (optional)"
+      "categoryPlaceholder": "Category (optional)",
+      "gameRoomSub": "No readings needed — revenue is calculated from launches",
+      "gameRoomBlockedPrefix": "Finish",
+      "gameRoomBlockedSuffix": "active launches in this zone",
+      "gameRoomGoToZoneButton": "Go to zone",
+      "gameRoomRevenueNote": "Revenue will be calculated automatically from finished launches"
     },
-    "offlineQueueHint": "Waiting to send: {count} submission(s) — will send automatically once online"
+    "offlineQueueHint": "Waiting to send: {count} submission(s) — will send automatically once online",
+    "gameRoom": {
+      "pickAssetHint": "Tap an asset to start a launch",
+      "labelSheetTitle": "Launch label",
+      "labelPlaceholder": "e.g. wristband #5",
+      "labelStartButton": "Start",
+      "openCountSuffix": "active",
+      "stopButton": "Stop",
+      "stopSheetTitle": "Finish launch",
+      "stopDurationLabel": "Duration",
+      "stopAmountLabel": "Amount",
+      "stopConfirmButton": "Finish",
+      "currentAmountLabel": "Now",
+      "remainingLabel": "Left",
+      "expiredLabel": "Time's up",
+      "soundHintBody": "Sound and vibration fire when a launch's time runs out — keep the app open",
+      "noPricingError": "The zone's tariff hasn't been set by the owner yet",
+      "emptyState": "No active launches",
+      "launchNumberPrefix": "Launch",
+      "entryTitle": "Game room",
+      "launchActionsLabel": "Launch actions",
+      "startTimeLabel": "Start",
+      "endTimeLabel": "End",
+      "networkError": "No connection to the server — the launch is not lost, try again"
+    }
   },
   "install": {
     "hint": "Install the app for quick access from your phone's home screen.",
@@ -1206,6 +1263,8 @@
     "instructionAckEmailWho": "Who",
     "shiftClosedSuffix": "shift closed",
     "shiftWord": "shift",
-    "shiftWordCap": "Shift"
+    "shiftWordCap": "Shift",
+    "launchesCountLabel": "Launches",
+    "launchesTimeLabel": "time"
   }
 }

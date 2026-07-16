@@ -498,7 +498,8 @@
     "subscriptionBlockedBannerAction": "Վճարել",
     "renameCompanySlugWarning": "Ընկերության անունը նաև օգտագործվում է մշտական հղումների (Հրահանգներ, Լենդինգ) հասցեի համար։",
     "updateSlugCheckboxLabel": "Թարմացնել նաև հղումների հասցեն",
-    "updateSlugHint": "Հին հասցեն այլևս ուղղակիորեն չի աշխատի (այցելուները կվերահղվեն) — թարմացրեք այն ամենուր, որտեղ տարածել եք։"
+    "updateSlugHint": "Հին հասցեն այլևս ուղղակիորեն չի աշխատի (այցելուները կվերահղվեն) — թարմացրեք այն ամենուր, որտեղ տարածել եք։",
+    "gameRoomLiveLinkHint": "Կենդանի մեկնարկներ և այսօրվա ակտիվությունը"
   },
   "auth": {
     "loginTitle": "Մուտք",
@@ -638,13 +639,18 @@
     "accountingModeLaunchesHint": "Հանձնման ընթացքում երթերի պատրաստի քանակ",
     "accountingModeCashOnly": "Միայն դրամարկղ",
     "accountingModeCashOnlyHint": "Առանց սակագների և ակտիվների — միայն գումար",
+    "launchVariantManual": "Ձեռքով",
+    "accountingModeGameRoom": "Խաղասենյակ",
+    "accountingModeGameRoomHint": "Մեկնարկների սկիզբ/կանգ իրական ժամանակում",
     "modeChip": {
       "counters": "Ըստ հաշվիչների",
       "launches": "Երթեր",
-      "cash_only": "Միայն դրամարկղ"
+      "cash_only": "Միայն դրամարկղ",
+      "game_room": "Խաղասենյակ"
     },
     "zoneActiveChip": "Ակտիվ",
-    "zoneInactiveChip": "Ապաակտիվ"
+    "zoneInactiveChip": "Ապաակտիվ",
+    "launchesTodaySuffix": "մեկնարկ այսօր"
   },
   "zoneDetail": {
     "notFound": "Գոտին չի գտնվել.",
@@ -685,7 +691,26 @@
     "deactivateAsset": "Անջատել ակտիվը",
     "activateAsset": "Ակտիվացնել ակտիվը",
     "assetInactiveChip": "Ապաակտիվ",
-    "cashOnlyNote": "«Միայն դրամարկղ» ռեժիմ. այս գոտուն սակագներ և ակտիվներ պետք չեն — աշխատակիցը հանձնում է միայն գումարը."
+    "cashOnlyNote": "«Միայն դրամարկղ» ռեժիմ. այս գոտուն սակագներ և ակտիվներ պետք չեն — աշխատակիցը հանձնում է միայն գումարը.",
+    "gameRoomPricingCardLabel": "Մեկնարկների սակագին",
+    "gameRoomPricingModeFixed": "Ֆիքսված",
+    "gameRoomPricingModePerMinute": "Ըստ ժամանակի",
+    "gameRoomPriceLabel": "Գին մեկ մեկնարկի համար",
+    "gameRoomRateLabel": "Սակագին րոպեում",
+    "gameRoomDurationLabel": "Տևողություն, րոպե",
+    "gameRoomDurationPlaceholder": "Առանց սահմանափակման",
+    "gameRoomRoundingLabel": "Տևողության կլորացում",
+    "gameRoomRoundingUp": "Վերև",
+    "gameRoomRoundingNearest": "Մաթեմատիկորեն",
+    "gameRoomRoundingDown": "Ներքև",
+    "gameRoomMinAmountLabel": "Մեկնարկի նվազագույն գումարը",
+    "gameRoomThresholdLabel": "Երկար մեկնարկի շեմ",
+    "gameRoomThresholdHint": "Այս ժամանակից երկար մեկնարկը նշվում է որպես ուշադրություն պահանջող",
+    "gameRoomSaveError": "Չհաջողվեց պահպանել",
+    "gameRoomLiveLink": "Հիմա կետում",
+    "gameRoomLaunchesListLink": "Մեկնարկների ցանկ",
+    "gameRoomPricingHistoryLabel": "Սակագնի պատմություն",
+    "gameRoomPricingActiveChip": "Գործում է"
   },
   "operators": {
     "title": "Աշխատակիցներ",
@@ -776,7 +801,10 @@
     "collectionSaveError": "Չհաջողվեց պահպանել փոփոխությունները",
     "deleteCollectionAction": "Ջնջել ինկասացիան",
     "deleteCollectionConfirm": "Ջնջե՞լ այս ինկասացիան։ Գոտու մնացորդը կվերահաշվարկվի։ Հնարավոր չէ չեղարկել։",
-    "deleteCollectionError": "Չհաջողվեց ջնջել ինկասացիան"
+    "deleteCollectionError": "Չհաջողվեց ջնջել ինկասացիան",
+    "voidedChip": "Չեղարկված",
+    "voidAction": "Չեղարկել",
+    "voidConfirm": "Չեղարկե՞լ այս մեկնարկը։ Այն կբացառվի հաշվարկային եկամուտից։"
   },
   "readings": {
     "title": "Ցուցմունքներ ըստ օրերի",
@@ -956,9 +984,38 @@
       "queuedTitle": "Պահպանված է, կուղարկվի կապի առկայության դեպքում",
       "queuedHint": "Ինտերնետ կապ այժմ չկա — տվյալները պահպանված են սարքում և ավտոմատ կուղարկվեն սերվեր, հենց կապն առաջանա.",
       "homeButton": "Գլխավոր",
-      "categoryPlaceholder": "Կատեգորիա (ըստ ցանկության)"
+      "categoryPlaceholder": "Կատեգորիա (ըստ ցանկության)",
+      "gameRoomSub": "Ցուցմունքներ պետք չեն․ եկամուտը հաշվարկվում է մեկնարկներով",
+      "gameRoomBlockedPrefix": "Ավարտիր",
+      "gameRoomBlockedSuffix": "այս գոտու ակտիվ մեկնարկները",
+      "gameRoomGoToZoneButton": "Անցնել գոտի",
+      "gameRoomRevenueNote": "Եկամուտը ավտոմատ կհաշվարկվի ավարտված մեկնարկներով"
     },
-    "offlineQueueHint": "Սպասում են ուղարկման. {count} հանձնում(ներ) — կուղարկվեն ավտոմատ կապի առկայության դեպքում"
+    "offlineQueueHint": "Սպասում են ուղարկման. {count} հանձնում(ներ) — կուղարկվեն ավտոմատ կապի առկայության դեպքում",
+    "gameRoom": {
+      "pickAssetHint": "Հպեք ակտիվին՝ մեկնարկը սկսելու համար",
+      "labelSheetTitle": "Մեկնարկի պիտակ",
+      "labelPlaceholder": "օրինակ՝ apարմիկ №5",
+      "labelStartButton": "Սկսել",
+      "openCountSuffix": "ակտիվ",
+      "stopButton": "Կանգ",
+      "stopSheetTitle": "Ավարտել մեկնարկը",
+      "stopDurationLabel": "Տևողություն",
+      "stopAmountLabel": "Գումար",
+      "stopConfirmButton": "Ավարտել",
+      "currentAmountLabel": "Հիմա",
+      "remainingLabel": "Մնացել է",
+      "expiredLabel": "Ժամանակը սպառվեց",
+      "soundHintBody": "Ձայնը և թրթռումը կաշխատեն, երբ մեկնարկի ժամանակը սպառվի․ հավելվածը բաց պահեք",
+      "noPricingError": "Գոտու սակագինը դեռ սահմանված չէ սեփականատիրոջ կողմից",
+      "emptyState": "Ակտիվ մեկնարկներ չկան",
+      "launchNumberPrefix": "Մեկնարկ",
+      "entryTitle": "Խաղասենյակ",
+      "launchActionsLabel": "Գործողություններ մեկնարկի հետ",
+      "startTimeLabel": "Սկիզբ",
+      "endTimeLabel": "Ավարտ",
+      "networkError": "Կապ չկա սերվերի հետ․ մեկնարկը կորած չէ, փորձեք կրկին"
+    }
   },
   "install": {
     "hint": "Տեղադրեք հավելվածը հեռախոսի էկրանից արագ մուտքի համար.",
@@ -1206,6 +1263,8 @@
     "instructionAckEmailWho": "Ով",
     "shiftClosedSuffix": "հերթափոխը փակված է",
     "shiftWord": "հերթափոխ",
-    "shiftWordCap": "Հերթափոխ"
+    "shiftWordCap": "Հերթափոխ",
+    "launchesCountLabel": "Մեկնարկներ",
+    "launchesTimeLabel": "ժամանակ"
   }
 }

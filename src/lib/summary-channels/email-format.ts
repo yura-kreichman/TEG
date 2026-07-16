@@ -69,7 +69,12 @@ export function formatZoneSummaryEmail(
   if (data.accountingMode === "cash_only") {
     rows.push({ label: st.cashOnly, value: formatMoney(data.cashAmount, locale), bold: true });
   } else {
-    if (settings.showReadings || settings.showDelta) {
+    if (data.isGameRoom) {
+      if (settings.showReadings) {
+        rows.push({ label: st.launchesCountLabel, value: String(data.gameRoomLaunchCount ?? 0) });
+        rows.push({ label: st.launchesTimeLabel, value: formatDuration(data.gameRoomTotalMinutes ?? 0) });
+      }
+    } else if (settings.showReadings || settings.showDelta) {
       for (const r of data.readings) {
         const value = [
           settings.showReadings ? String(r.reading) : null,

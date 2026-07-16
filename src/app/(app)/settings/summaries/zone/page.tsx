@@ -42,6 +42,9 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): Zon
     zoneName: ctx?.zoneName ?? t.summaries.previewNoZone,
     zoneEmoji: ctx?.zoneEmoji ?? null,
     accountingMode: isZoneAccountingMode(ctx?.accountingMode) ? ctx.accountingMode : "counters",
+    isGameRoom: false,
+    gameRoomLaunchCount: null,
+    gameRoomTotalMinutes: null,
     occurredAt: new Date(Date.UTC(2026, 6, 8, 22, 0)),
     readings,
     // Демо-цифры согласованы с реальной формулой (submit-results/route.ts:
@@ -127,7 +130,7 @@ export default function ZoneSummaryEditorPage() {
   return (
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
-        <div className="flex w-full max-w-md flex-col gap-1">
+        <div className="flex w-full max-w-md md:max-w-xl lg:max-w-2xl flex-col gap-1">
           <Link href="/settings/summaries" className="mb-2 w-fit text-body-airbnb font-semibold text-primary">
             ← {t.summaries.listTitle}
           </Link>

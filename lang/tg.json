@@ -498,7 +498,8 @@
     "subscriptionBlockedBannerAction": "Пардохт",
     "renameCompanySlugWarning": "Номи ширкат инчунин барои суроғаи истинодҳои доимӣ (Дастурамалҳо, Лендинг) истифода мешавад.",
     "updateSlugCheckboxLabel": "Суроғаи истинодҳоро низ навсозӣ кунед",
-    "updateSlugHint": "Суроғаи кӯҳна мустақиман кор намекунад (меҳмонон равона мешаванд) — онро дар ҳама ҷое, ки паҳн кардаед, навсозӣ кунед."
+    "updateSlugHint": "Суроғаи кӯҳна мустақиман кор намекунад (меҳмонон равона мешаванд) — онро дар ҳама ҷое, ки паҳн кардаед, навсозӣ кунед.",
+    "gameRoomLiveLinkHint": "Пускҳои зинда ва фаъолияти имрӯз"
   },
   "auth": {
     "loginTitle": "Воридшавӣ",
@@ -638,13 +639,18 @@
     "accountingModeLaunchesHint": "Шумораи тайёри даромадҳо барои як супориш",
     "accountingModeCashOnly": "Танҳо касса",
     "accountingModeCashOnlyHint": "Бе тарифҳо ва активҳо — танҳо маблағ",
+    "launchVariantManual": "Дастӣ",
+    "accountingModeGameRoom": "Утоқи бозӣ",
+    "accountingModeGameRoomHint": "Оғоз/қатъи пускҳо дар вақти воқеӣ",
     "modeChip": {
       "counters": "Аз рӯи ҳисобкунакҳо",
       "launches": "Оғозҳо",
-      "cash_only": "Танҳо касса"
+      "cash_only": "Танҳо касса",
+      "game_room": "Утоқи бозӣ"
     },
     "zoneActiveChip": "Фаъол",
-    "zoneInactiveChip": "Ғайрифаъол"
+    "zoneInactiveChip": "Ғайрифаъол",
+    "launchesTodaySuffix": "пускҳои имрӯз"
   },
   "zoneDetail": {
     "notFound": "Минтақа ёфт нашуд.",
@@ -685,7 +691,26 @@
     "deactivateAsset": "Активро ғайрифаъол кардан",
     "activateAsset": "Активро фаъол кардан",
     "assetInactiveChip": "Ғайрифаъол",
-    "cashOnlyNote": "Реҷаи «Танҳо касса»: ба ин минтақа тарифҳо ва активҳо лозим нестанд — корманд танҳо маблағро месупорад."
+    "cashOnlyNote": "Реҷаи «Танҳо касса»: ба ин минтақа тарифҳо ва активҳо лозим нестанд — корманд танҳо маблағро месупорад.",
+    "gameRoomPricingCardLabel": "Тарифи пускҳо",
+    "gameRoomPricingModeFixed": "Собит",
+    "gameRoomPricingModePerMinute": "Аз рӯи вақт",
+    "gameRoomPriceLabel": "Нархи як пуск",
+    "gameRoomRateLabel": "Тарифи як дақиқа",
+    "gameRoomDurationLabel": "Давомнокӣ, дақ",
+    "gameRoomDurationPlaceholder": "Бе маҳдудият",
+    "gameRoomRoundingLabel": "Мудаввар кардани давомнокӣ",
+    "gameRoomRoundingUp": "Ба боло",
+    "gameRoomRoundingNearest": "Математикӣ",
+    "gameRoomRoundingDown": "Ба поён",
+    "gameRoomMinAmountLabel": "Маблағи ҳадди ақали пуск",
+    "gameRoomThresholdLabel": "Ҳадди пуски дароз",
+    "gameRoomThresholdHint": "Пуски аз ин вақт дарозтар ҳамчун ниёзманди таваҷҷуҳ қайд мешавад",
+    "gameRoomSaveError": "Захира нашуд",
+    "gameRoomLiveLink": "Ҳозир дар нуқта",
+    "gameRoomLaunchesListLink": "Рӯйхати пускҳо",
+    "gameRoomPricingHistoryLabel": "Таърихи тариф",
+    "gameRoomPricingActiveChip": "Амалкунанда"
   },
   "operators": {
     "title": "Кормандон",
@@ -776,7 +801,10 @@
     "collectionSaveError": "Тағйиротро захира кардан ғайриимкон аст",
     "deleteCollectionAction": "Нест кардани инкассатсия",
     "deleteCollectionConfirm": "Ин инкассатсияро нест мекунед? Бақияи минтақа аз нав ҳисоб карда мешавад. Бекор кардан ғайриимкон аст.",
-    "deleteCollectionError": "Инкассатсияро нест кардан ғайриимкон аст"
+    "deleteCollectionError": "Инкассатсияро нест кардан ғайриимкон аст",
+    "voidedChip": "Бекор карда шуд",
+    "voidAction": "Бекор кардан",
+    "voidConfirm": "Ин пуск бекор карда шавад? Он аз даромади ҳисобшуда хориҷ карда мешавад."
   },
   "readings": {
     "title": "Нишондиҳандаҳо аз рӯи рӯзҳо",
@@ -956,9 +984,38 @@
       "queuedTitle": "Нигоҳ дошта шуд, ҳангоми пайвастшавӣ мефиристем",
       "queuedHint": "Ҳозир интернет нест — маълумот дар дастгоҳ нигоҳ дошта шуд ва ба таври худкор ба сервер мефиристад, ҳамин ки алоқа пайдо шавад.",
       "homeButton": "Ба саҳифаи асосӣ",
-      "categoryPlaceholder": "Категория (ихтиёрӣ)"
+      "categoryPlaceholder": "Категория (ихтиёрӣ)",
+      "gameRoomSub": "Нишондиҳандаҳо лозим нестанд — даромад аз рӯи пускҳо ҳисоб мешавад",
+      "gameRoomBlockedPrefix": "Ба итмом расон",
+      "gameRoomBlockedSuffix": "пускҳои фаъол дар ин минтақа",
+      "gameRoomGoToZoneButton": "Гузариш ба минтақа",
+      "gameRoomRevenueNote": "Даромад аз рӯи пускҳои анҷомёфта ба таври худкор ҳисоб карда мешавад"
     },
-    "offlineQueueHint": "Мунтазири фиристодан: {count} супориш(ҳо) — ба таври худкор ҳангоми алоқа мефиристанд"
+    "offlineQueueHint": "Мунтазири фиристодан: {count} супориш(ҳо) — ба таври худкор ҳангоми алоқа мефиристанд",
+    "gameRoom": {
+      "pickAssetHint": "Барои сар кардани пуcк ба дороӣ зер кунед",
+      "labelSheetTitle": "Тамғаи пуcк",
+      "labelPlaceholder": "масалан, дастбанди №5",
+      "labelStartButton": "Сар кардан",
+      "openCountSuffix": "фаъол",
+      "stopButton": "Истодан",
+      "stopSheetTitle": "Ба итмом расонидани пуcк",
+      "stopDurationLabel": "Давомнокӣ",
+      "stopAmountLabel": "Маблағ",
+      "stopConfirmButton": "Ба итмом расонидан",
+      "currentAmountLabel": "Ҳозир",
+      "remainingLabel": "Монд",
+      "expiredLabel": "Вақт тамом шуд",
+      "soundHintBody": "Вақте ки вақти пуcк тамом мешавад, садо ва ларзиш кор мекунад — барномаро кушода нигоҳ доред",
+      "noPricingError": "Тарифи минтақа ҳанӯз аз ҷониби соҳиб таъин нашудааст",
+      "emptyState": "Пускҳои фаъол нест",
+      "launchNumberPrefix": "Пуск",
+      "entryTitle": "Утоқи бозӣ",
+      "launchActionsLabel": "Амалҳо бо пуск",
+      "startTimeLabel": "Оғоз",
+      "endTimeLabel": "Анҷом",
+      "networkError": "Бо сервер алоқа нест — пуск гум нашудааст, бори дигар кӯшиш кунед"
+    }
   },
   "install": {
     "hint": "Барои дастрасии зуд аз экрани телефон замимаро насб кунед.",
@@ -1206,6 +1263,8 @@
     "instructionAckEmailWho": "Кӣ",
     "shiftClosedSuffix": "смена хотима ёфт",
     "shiftWord": "смена",
-    "shiftWordCap": "Смена"
+    "shiftWordCap": "Смена",
+    "launchesCountLabel": "Пускҳо",
+    "launchesTimeLabel": "вақт"
   }
 }

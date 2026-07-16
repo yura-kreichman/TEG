@@ -47,7 +47,7 @@ export default function SettingsPage() {
   return (
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
-        <div className="flex w-full max-w-md flex-col gap-6">
+        <div className="flex w-full max-w-md md:max-w-xl lg:max-w-2xl flex-col gap-6">
           <h1 className="text-screen-title">{t.settings.title}</h1>
 
           <StaggerList className="flex flex-col gap-3">

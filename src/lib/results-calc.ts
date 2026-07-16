@@ -9,6 +9,16 @@ export function isZoneAccountingMode(value: unknown): value is ZoneAccountingMod
   return typeof value === "string" && (ZONE_ACCOUNTING_MODES as readonly string[]).includes(value);
 }
 
+// Вариант режима "launches" (docs/spec/04-game-room.md) — Игровая комната это
+// суб-режим Пусков, не отдельный ZoneAccountingMode (решение пользователя
+// 2026-07-16). Бессмысленно при accountingMode !== "launches".
+export const LAUNCH_MODES = ["manual", "game_room"] as const;
+export type LaunchMode = (typeof LAUNCH_MODES)[number];
+
+export function isGameRoomZone(zone: { accountingMode: string; launchMode?: string | null }): boolean {
+  return zone.accountingMode === "launches" && zone.launchMode === "game_room";
+}
+
 // Счётчики 4-разрядные (0-9999), переполнение 9999→0 — разница считается по модулю 10000.
 export const COUNTER_MOD = 10000;
 

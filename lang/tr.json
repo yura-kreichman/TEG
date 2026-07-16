@@ -498,7 +498,8 @@
     "subscriptionBlockedBannerAction": "Öde",
     "renameCompanySlugWarning": "Şirket adı, kalıcı bağlantıların (Yönergeler, Landing) adresi için de kullanılır.",
     "updateSlugCheckboxLabel": "Bağlantı adresini de güncelle",
-    "updateSlugHint": "Eski adres doğrudan çalışmayı durdurur (ziyaretçiler yönlendirilir) — paylaştığınız her yerde güncelleyin."
+    "updateSlugHint": "Eski adres doğrudan çalışmayı durdurur (ziyaretçiler yönlendirilir) — paylaştığınız her yerde güncelleyin.",
+    "gameRoomLiveLinkHint": "Canlı başlatmalar ve bugünkü etkinlik"
   },
   "auth": {
     "loginTitle": "Giriş",
@@ -638,13 +639,18 @@
     "accountingModeLaunchesHint": "Teslim başına hazır tur sayısı",
     "accountingModeCashOnly": "Yalnızca kasa",
     "accountingModeCashOnlyHint": "Tarife ve varlık yok — yalnızca tutar",
+    "launchVariantManual": "Manuel",
+    "accountingModeGameRoom": "Oyun odası",
+    "accountingModeGameRoomHint": "Başlatmaları gerçek zamanlı başlat/durdur",
     "modeChip": {
       "counters": "Sayaçlara göre",
       "launches": "Turlar",
-      "cash_only": "Yalnızca kasa"
+      "cash_only": "Yalnızca kasa",
+      "game_room": "Oyun odası"
     },
     "zoneActiveChip": "Aktif",
-    "zoneInactiveChip": "Etkin değil"
+    "zoneInactiveChip": "Etkin değil",
+    "launchesTodaySuffix": "bugünkü başlatma"
   },
   "zoneDetail": {
     "notFound": "Bölge bulunamadı.",
@@ -685,7 +691,26 @@
     "deactivateAsset": "Varlığı devre dışı bırak",
     "activateAsset": "Varlığı etkinleştir",
     "assetInactiveChip": "Devre dışı",
-    "cashOnlyNote": "«Yalnızca kasa» modu: bu bölge için tarife ve varlık gerekmez — çalışan yalnızca tutarı teslim eder."
+    "cashOnlyNote": "«Yalnızca kasa» modu: bu bölge için tarife ve varlık gerekmez — çalışan yalnızca tutarı teslim eder.",
+    "gameRoomPricingCardLabel": "Başlatma tarifesi",
+    "gameRoomPricingModeFixed": "Sabit",
+    "gameRoomPricingModePerMinute": "Süreye göre",
+    "gameRoomPriceLabel": "Başlatma başına fiyat",
+    "gameRoomRateLabel": "Dakika başına ücret",
+    "gameRoomDurationLabel": "Süre, dk",
+    "gameRoomDurationPlaceholder": "Sınırsız",
+    "gameRoomRoundingLabel": "Süre yuvarlama",
+    "gameRoomRoundingUp": "Yukarı",
+    "gameRoomRoundingNearest": "Matematiksel",
+    "gameRoomRoundingDown": "Aşağı",
+    "gameRoomMinAmountLabel": "Minimum başlatma tutarı",
+    "gameRoomThresholdLabel": "Uzun başlatma eşiği",
+    "gameRoomThresholdHint": "Bu süreden uzun süren başlatma dikkat gerektiren olarak işaretlenir",
+    "gameRoomSaveError": "Kaydedilemedi",
+    "gameRoomLiveLink": "Şu anda noktada",
+    "gameRoomLaunchesListLink": "Başlatma listesi",
+    "gameRoomPricingHistoryLabel": "Tarife geçmişi",
+    "gameRoomPricingActiveChip": "Etkin"
   },
   "operators": {
     "title": "Çalışanlar",
@@ -776,7 +801,10 @@
     "collectionSaveError": "Değişiklikler kaydedilemedi",
     "deleteCollectionAction": "Tahsilatı sil",
     "deleteCollectionConfirm": "Bu tahsilat silinsin mi? Bölge bakiyesi yeniden hesaplanacak. Geri alınamaz.",
-    "deleteCollectionError": "Tahsilat silinemedi"
+    "deleteCollectionError": "Tahsilat silinemedi",
+    "voidedChip": "İptal edildi",
+    "voidAction": "İptal et",
+    "voidConfirm": "Bu başlatma iptal edilsin mi? Hesaplanan gelirden hariç tutulacak."
   },
   "readings": {
     "title": "Günlük okumalar",
@@ -956,9 +984,38 @@
       "queuedTitle": "Kaydedildi, bağlantı olduğunda gönderilecek",
       "queuedHint": "Şu anda internet yok — veriler cihazda kaydedildi ve bağlantı gelir gelmez otomatik olarak sunucuya gönderilecek.",
       "homeButton": "Ana sayfa",
-      "categoryPlaceholder": "Kategori (isteğe bağlı)"
+      "categoryPlaceholder": "Kategori (isteğe bağlı)",
+      "gameRoomSub": "Okuma girmeye gerek yok — gelir başlatmalardan hesaplanır",
+      "gameRoomBlockedPrefix": "Tamamla",
+      "gameRoomBlockedSuffix": "bu bölgedeki aktif başlatmayı",
+      "gameRoomGoToZoneButton": "Bölgeye git",
+      "gameRoomRevenueNote": "Gelir, tamamlanan başlatmalardan otomatik hesaplanacaktır"
     },
-    "offlineQueueHint": "Gönderim bekleyen: {count} teslim — bağlantı gelince otomatik gönderilecek"
+    "offlineQueueHint": "Gönderim bekleyen: {count} teslim — bağlantı gelince otomatik gönderilecek",
+    "gameRoom": {
+      "pickAssetHint": "Başlatmayı başlatmak için bir varlığa dokunun",
+      "labelSheetTitle": "Başlatma etiketi",
+      "labelPlaceholder": "ör. bileklik №5",
+      "labelStartButton": "Başlat",
+      "openCountSuffix": "aktif",
+      "stopButton": "Dur",
+      "stopSheetTitle": "Başlatmayı bitir",
+      "stopDurationLabel": "Süre",
+      "stopAmountLabel": "Tutar",
+      "stopConfirmButton": "Bitir",
+      "currentAmountLabel": "Şimdi",
+      "remainingLabel": "Kaldı",
+      "expiredLabel": "Süre doldu",
+      "soundHintBody": "Başlatmanın süresi dolduğunda ses ve titreşim çalışır — uygulamayı açık tutun",
+      "noPricingError": "Bölge tarifesi henüz sahibi tarafından ayarlanmadı",
+      "emptyState": "Aktif başlatma yok",
+      "launchNumberPrefix": "Başlatma",
+      "entryTitle": "Oyun odası",
+      "launchActionsLabel": "Başlatma işlemleri",
+      "startTimeLabel": "Başlangıç",
+      "endTimeLabel": "Bitiş",
+      "networkError": "Sunucuyla bağlantı yok — başlatma kaybolmadı, tekrar deneyin"
+    }
   },
   "install": {
     "hint": "Telefon ekranından hızlı erişim için uygulamayı yükleyin.",
@@ -1206,6 +1263,8 @@
     "instructionAckEmailWho": "Kim",
     "shiftClosedSuffix": "vardiya kapatıldı",
     "shiftWord": "vardiya",
-    "shiftWordCap": "Vardiya"
+    "shiftWordCap": "Vardiya",
+    "launchesCountLabel": "Başlatmalar",
+    "launchesTimeLabel": "süre"
   }
 }
