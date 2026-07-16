@@ -738,17 +738,22 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
                   "relative z-40 flex aspect-square items-center justify-center rounded-lg text-[clamp(0.5rem,2.6vw,0.75rem)] font-bold text-white",
                   (!d.hasData || d.total === 0) && "bg-muted text-muted-foreground"
                 )}
-                style={
-                  d.hasData && d.total > 0
-                    ? {
-                        background: "var(--color-primary)",
-                        opacity: CELL_OPACITY[moodLevel(normalizedRatio(d.total, minVal, maxVal))],
-                      }
-                    : undefined
-                }
                 onClick={() => d.total > 0 && openTooltip(d.date)}
               >
-                {d.total > 0 ? Math.round(d.total / 100) / 10 + "к" : ""}
+                {/* Заливка — отдельный слой под текстом/tooltip (не opacity
+                    самой ячейки): opacity композитит весь поддерево включая
+                    детей, и tooltip-потомок "наследовал" бы прозрачность
+                    ячейки (нашёл пользователь 2026-07-16). */}
+                {d.hasData && d.total > 0 && (
+                  <div
+                    className="absolute inset-0 rounded-lg"
+                    style={{
+                      background: "var(--color-primary)",
+                      opacity: CELL_OPACITY[moodLevel(normalizedRatio(d.total, minVal, maxVal))],
+                    }}
+                  />
+                )}
+                <span className="relative">{d.total > 0 ? Math.round(d.total / 100) / 10 + "к" : ""}</span>
                 <AnimatePresence>
                   {activeDate === d.date && <CellTooltip value={d.total} minVal={minVal} maxVal={maxVal} />}
                 </AnimatePresence>
@@ -810,18 +815,21 @@ function CalendarMonthsTab({
                 "relative z-40 flex h-16 flex-col items-center justify-center gap-1 rounded-lg p-1 text-center font-bold text-white",
                 (!mo.hasData || mo.total === 0) && "bg-muted text-muted-foreground"
               )}
-              style={
-                mo.hasData && mo.total > 0
-                  ? {
-                      background: "var(--color-primary)",
-                      opacity: CELL_OPACITY[moodLevel(normalizedRatio(mo.total, minVal, maxVal))],
-                    }
-                  : undefined
-              }
               onClick={() => mo.total > 0 && openTooltip(mo.month)}
             >
-              <span className="text-[0.6875rem] leading-tight font-semibold">{t.readings.months[mo.month]}</span>
-              <span className="text-[clamp(0.5625rem,3.2vw,0.8125rem)] leading-tight tabular-nums">
+              {/* Заливка — отдельный слой под текстом/tooltip, см. тот же
+                  приём и комментарий в CalendarTab выше. */}
+              {mo.hasData && mo.total > 0 && (
+                <div
+                  className="absolute inset-0 rounded-lg"
+                  style={{
+                    background: "var(--color-primary)",
+                    opacity: CELL_OPACITY[moodLevel(normalizedRatio(mo.total, minVal, maxVal))],
+                  }}
+                />
+              )}
+              <span className="relative text-[0.6875rem] leading-tight font-semibold">{t.readings.months[mo.month]}</span>
+              <span className="relative text-[clamp(0.5625rem,3.2vw,0.8125rem)] leading-tight tabular-nums">
                 {mo.total > 0 ? (
                   mo.total < 100_000 ? (
                     <Money value={mo.total} />
