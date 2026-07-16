@@ -11,7 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Frown,
-  Laugh,
   Lightbulb,
   MapPin,
   Meh,
@@ -483,41 +482,43 @@ function RankBar({ label, total, sharePercent, suffix }: { label: string; total:
 // снизу. Сам гаснет через 2с (setTimeout у вызывающего компонента) —
 // fade-out, не резкое исчезновение, отсюда AnimatePresence. Клик вне ячеек
 // (invisible overlay) закрывает раньше.
-// 4 уровня — общие для цвета ячейки и для смайлика в тултипе. Раньше цвет
-// был непрерывным градиентом (opacity плавно от 0.25 до 1), а смайлик грубым
-// квартилем ratio<0.25/0.5/0.75 — из-за этого у двух заметно разных по цвету
-// ячеек мог оказаться один и тот же смайлик (нашёл пользователь 2026-07-16:
-// "они разного цвета, а почему смайлик одинаковый?"). Теперь оба берут один
-// и тот же moodLevel на тех же порогах, глазами это ровно 4 ступени.
-function moodLevel(ratio: number): 0 | 1 | 2 | 3 {
-  if (ratio < 0.25) return 0;
-  if (ratio < 0.5) return 1;
-  if (ratio < 0.75) return 2;
-  return 3;
+// 3 уровня (запрос пользователя 2026-07-16: "по факту три фазы смайлов,
+// широкую улыбку не надо") — общие для цвета ячейки и для смайлика в
+// тултипе. Нормализация — позиция значения МЕЖДУ реальными min и max
+// введённых сумм (только ячейки с hasData && total>0), а не value/maxVal
+// сетки: раньше вторник (2700, максимум) и среда (2300, ~85% от максимума)
+// оба попадали в верхний уровень и красились одинаково, хотя среда явно
+// "хуже" вторника при текущих данных. Так самый слабый из уже сданных дней
+// всегда внизу шкалы, самый сильный — наверху, а по мере появления новых
+// дней шкала естественно пересчитывается (тот же принцип, что и у любой
+// относительной тепловой карты).
+function moodLevel(ratio: number): 0 | 1 | 2 {
+  if (ratio < 1 / 3) return 0;
+  if (ratio < 2 / 3) return 1;
+  return 2;
 }
-const CELL_OPACITY: Record<0 | 1 | 2 | 3, number> = { 0: 0.35, 1: 0.55, 2: 0.8, 3: 1 };
+const CELL_OPACITY: Record<0 | 1 | 2, number> = { 0: 0.4, 1: 0.7, 2: 1 };
 
-function CellTooltip({ value, maxVal }: { value: number; maxVal: number }) {
-  const level = moodLevel(maxVal > 0 ? value / maxVal : 0);
+function normalizedRatio(value: number, minVal: number, maxVal: number) {
+  return maxVal > minVal ? (value - minVal) / (maxVal - minVal) : 1;
+}
+
+function CellTooltip({ value, minVal, maxVal }: { value: number; minVal: number; maxVal: number }) {
+  const level = moodLevel(normalizedRatio(value, minVal, maxVal));
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="absolute bottom-full left-1/2 z-50 mb-2 flex -translate-x-1/2 flex-col items-center gap-0.5 whitespace-nowrap rounded-control bg-foreground px-3.5 py-2 text-lg font-bold text-background shadow-lg"
+      // Всегда сплошной акцентный цвет (запрос пользователя 2026-07-16:
+      // "прозрачность ячейки не должна влиять на прозрачность tooltip") —
+      // никакой связи с CELL_OPACITY ячейки, только сам уровень смайлика.
+      className="absolute bottom-full left-1/2 z-50 mb-2 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-col items-center gap-0.5 whitespace-nowrap rounded-control bg-primary px-3.5 py-2 text-lg font-bold text-primary-foreground shadow-lg"
     >
-      {level === 0 ? (
-        <Frown className="size-5" />
-      ) : level === 1 ? (
-        <Meh className="size-5" />
-      ) : level === 2 ? (
-        <Smile className="size-5" />
-      ) : (
-        <Laugh className="size-5" />
-      )}
+      {level === 0 ? <Frown className="size-5" /> : level === 1 ? <Meh className="size-5" /> : <Smile className="size-5" />}
       <Money value={value} />
-      <span className="absolute left-1/2 top-full -translate-x-1/2 border-[6px] border-transparent border-t-foreground" />
+      <span className="absolute left-1/2 top-full -translate-x-1/2 border-[6px] border-transparent border-t-primary" />
     </motion.div>
   );
 }
@@ -711,7 +712,9 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
     return <CalendarMonthsTab months={data.months} t={t} />;
   }
 
-  const maxVal = Math.max(1, ...data.weeks.flatMap((w) => w.days.map((d) => d.total)));
+  const presentValues = data.weeks.flatMap((w) => w.days.filter((d) => d.hasData && d.total > 0).map((d) => d.total));
+  const maxVal = presentValues.length ? Math.max(...presentValues) : 1;
+  const minVal = presentValues.length ? Math.min(...presentValues) : 0;
   return (
     <div className="flex flex-col gap-3">
       {activeDate && <div className="fixed inset-0 z-30" onClick={() => setActiveDate(null)} />}
@@ -737,13 +740,18 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
                 )}
                 style={
                   d.hasData && d.total > 0
-                    ? { background: "var(--color-primary)", opacity: CELL_OPACITY[moodLevel(d.total / maxVal)] }
+                    ? {
+                        background: "var(--color-primary)",
+                        opacity: CELL_OPACITY[moodLevel(normalizedRatio(d.total, minVal, maxVal))],
+                      }
                     : undefined
                 }
                 onClick={() => d.total > 0 && openTooltip(d.date)}
               >
                 {d.total > 0 ? Math.round(d.total / 100) / 10 + "к" : ""}
-                <AnimatePresence>{activeDate === d.date && <CellTooltip value={d.total} maxVal={maxVal} />}</AnimatePresence>
+                <AnimatePresence>
+                  {activeDate === d.date && <CellTooltip value={d.total} minVal={minVal} maxVal={maxVal} />}
+                </AnimatePresence>
               </div>
             ))}
           </div>
@@ -751,9 +759,8 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
         <div className="mt-3 flex items-center gap-1.5 text-caption-airbnb">
           <span>{t.reports.legendLess}</span>
           <span className="size-3.5 rounded bg-muted" />
-          <span className="size-3.5 rounded bg-primary/35" />
-          <span className="size-3.5 rounded bg-primary/55" />
-          <span className="size-3.5 rounded bg-primary/80" />
+          <span className="size-3.5 rounded bg-primary/40" />
+          <span className="size-3.5 rounded bg-primary/70" />
           <span className="size-3.5 rounded bg-primary" />
           <span>{t.reports.legendMore}</span>
         </div>
@@ -772,7 +779,9 @@ function CalendarMonthsTab({
   months: { month: number; total: number; hasData: boolean }[];
   t: ReturnType<typeof useI18n>;
 }) {
-  const maxVal = Math.max(1, ...months.map((mo) => mo.total));
+  const presentMonthValues = months.filter((mo) => mo.hasData && mo.total > 0).map((mo) => mo.total);
+  const maxVal = presentMonthValues.length ? Math.max(...presentMonthValues) : 1;
+  const minVal = presentMonthValues.length ? Math.min(...presentMonthValues) : 0;
   const locale = useLocale();
   const sign = getCurrencySign(useCurrency());
   const [activeMonth, setActiveMonth] = useState<number | null>(null);
@@ -803,7 +812,10 @@ function CalendarMonthsTab({
               )}
               style={
                 mo.hasData && mo.total > 0
-                  ? { background: "var(--color-primary)", opacity: CELL_OPACITY[moodLevel(mo.total / maxVal)] }
+                  ? {
+                      background: "var(--color-primary)",
+                      opacity: CELL_OPACITY[moodLevel(normalizedRatio(mo.total, minVal, maxVal))],
+                    }
                   : undefined
               }
               onClick={() => mo.total > 0 && openTooltip(mo.month)}
@@ -823,16 +835,17 @@ function CalendarMonthsTab({
                   ""
                 )}
               </span>
-              <AnimatePresence>{activeMonth === mo.month && <CellTooltip value={mo.total} maxVal={maxVal} />}</AnimatePresence>
+              <AnimatePresence>
+                {activeMonth === mo.month && <CellTooltip value={mo.total} minVal={minVal} maxVal={maxVal} />}
+              </AnimatePresence>
             </div>
           ))}
         </div>
         <div className="mt-3 flex items-center gap-1.5 text-caption-airbnb">
           <span>{t.reports.legendLess}</span>
           <span className="size-3.5 rounded bg-muted" />
-          <span className="size-3.5 rounded bg-primary/35" />
-          <span className="size-3.5 rounded bg-primary/55" />
-          <span className="size-3.5 rounded bg-primary/80" />
+          <span className="size-3.5 rounded bg-primary/40" />
+          <span className="size-3.5 rounded bg-primary/70" />
           <span className="size-3.5 rounded bg-primary" />
           <span>{t.reports.legendMore}</span>
         </div>
