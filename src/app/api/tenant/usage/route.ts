@@ -33,17 +33,34 @@ export async function GET() {
     // Информационное, из вебхука FluentCart — см. Tenant.currentPeriodEnd в
     // schema.prisma и docs/fluentcart-webhook-schema.md §3.
     currentPeriodEnd: tenant.currentPeriodEnd,
+    // Ручной оверрайд Super Admin'а (запрос пользователя 2026-07-17) —
+    // отдельным флагом, не через числовой max: Infinity не переживает
+    // JSON.stringify (стал бы null), max ниже в этом случае лишь запасное
+    // значение на случай старого клиента, реальный источник — этот флаг.
+    unlimited: tenant.unlimited,
     // packageMax — значение пакета без оверрайда, чтобы владелец видел не
     // только эффективный лимит (max), но и что часть сверх пакета выдал
     // Super Admin вручную (docs/spec/06-super-admin.md, п.6) — та же дельта,
     // что видна админу на /admin/tenants/[id].
-    points: { used: pointsUsed, max: limits?.maxPoints ?? tenant.package.maxPoints, packageMax: tenant.package.maxPoints },
+    points: {
+      used: pointsUsed,
+      max: tenant.unlimited ? pointsUsed : (limits?.maxPoints ?? tenant.package.maxPoints),
+      packageMax: tenant.package.maxPoints,
+    },
     operators: {
       used: operatorsUsed,
-      max: limits?.maxOperators ?? tenant.package.maxOperators,
+      max: tenant.unlimited ? operatorsUsed : (limits?.maxOperators ?? tenant.package.maxOperators),
       packageMax: tenant.package.maxOperators,
     },
-    zones: { used: zonesUsed, max: limits?.maxZones ?? tenant.package.maxZones, packageMax: tenant.package.maxZones },
-    assets: { used: assetsUsed, max: limits?.maxAssets ?? tenant.package.maxAssets, packageMax: tenant.package.maxAssets },
+    zones: {
+      used: zonesUsed,
+      max: tenant.unlimited ? zonesUsed : (limits?.maxZones ?? tenant.package.maxZones),
+      packageMax: tenant.package.maxZones,
+    },
+    assets: {
+      used: assetsUsed,
+      max: tenant.unlimited ? assetsUsed : (limits?.maxAssets ?? tenant.package.maxAssets),
+      packageMax: tenant.package.maxAssets,
+    },
   });
 }

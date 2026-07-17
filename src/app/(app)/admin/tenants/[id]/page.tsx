@@ -10,6 +10,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n } from "@/components/i18n-provider";
@@ -57,6 +58,7 @@ interface TenantDetail {
   ownerEmail: string | null;
   package: PackageOption;
   fluentcartCustomerId: string | null;
+  unlimited: boolean;
   limitOverrides: Partial<Record<LimitKey, number>>;
   usage: { points: number; zones: number; assets: number; operators: number };
   history: HistoryEntry[];
@@ -142,6 +144,10 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
 
   async function updatePackage(packageId: string) {
     await patch({ packageId });
+  }
+
+  async function toggleUnlimited(unlimited: boolean) {
+    await patch({ unlimited });
   }
 
   async function updateSubscriptionExpiresAt(value: string) {
@@ -377,8 +383,11 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
                   <div key={label}>
                     <div className="text-caption-airbnb">{label}</div>
                     <div className="text-[1rem] font-bold">
-                      {used} <span className="text-muted-foreground">/ {effectiveMax}</span>
-                      {delta !== 0 && (
+                      {used}{" "}
+                      <span className="text-muted-foreground">
+                        / {tenant.unlimited ? <span className="text-2xl font-normal align-middle leading-none">∞</span> : effectiveMax}
+                      </span>
+                      {!tenant.unlimited && delta !== 0 && (
                         <span className="ml-1 text-caption-airbnb font-semibold text-primary">
                           ({delta > 0 ? "+" : ""}
                           {delta})
@@ -394,7 +403,14 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
           <SpringCard animate={false}>
             <div className="mb-1 text-card-title">{t.admin.limitOverridesTitle}</div>
             <p className="mb-3 text-caption-airbnb">{t.admin.limitOverridesHint}</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+              <div className="min-w-0 flex-1">
+                <div className="text-body-airbnb">{t.admin.unlimitedLabel}</div>
+                <div className="text-caption-airbnb">{t.admin.unlimitedHint}</div>
+              </div>
+              <Switch checked={tenant.unlimited} onCheckedChange={toggleUnlimited} className="shrink-0" />
+            </div>
+            <div className={cn("grid grid-cols-2 gap-3 pt-3", tenant.unlimited && "pointer-events-none opacity-40")}>
               {(
                 [
                   ["maxPoints", t.admin.maxPointsLabel, tenant.package.maxPoints],
@@ -411,6 +427,7 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
                     className="tabular-nums"
                     placeholder={String(packageDefault)}
                     value={limitForm[key]}
+                    disabled={tenant.unlimited}
                     onChange={(e) => setLimitForm((prev) => ({ ...prev, [key]: e.target.value }))}
                     onBlur={(e) => updateLimitField(key, e.target.value)}
                   />

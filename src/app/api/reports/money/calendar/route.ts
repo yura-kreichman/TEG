@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   const operations = await prisma.moneyOperation.findMany({
     where: {
       tenantId: owner.tenantId,
-      type: { in: ["revenue", "revenue_cashless"] },
+      type: { in: ["revenue", "revenue_cashless", "revenue_abonement"] },
       occurredAt: { gte: monthStart, lt: monthEnd },
       ...(pointIdParam ? { zone: { pointId: pointIdParam } } : {}),
     },

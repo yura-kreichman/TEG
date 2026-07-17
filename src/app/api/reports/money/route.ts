@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { computeZoneSubmissionRevenues, getPeriodRange, isPeriodGranularity, type PeriodGranularity } from "@/lib/reports";
-import { getPointCashBalance } from "@/lib/zone-balance";
+import { affectsCashOnHand, getPointCashBalance } from "@/lib/zone-balance";
 
 // "Бизнес: расходы и прибыль" (за выбранный период) и текущий остаток "сколько
 // наличных должно быть на точке" (docs/spec/02-money.md, всегда весь журнал —
@@ -71,17 +71,22 @@ export async function GET(request: Request) {
   const balanceByZone = new Map<string, number>();
   let totalRevenueCash = 0;
   let totalRevenueMobile = 0;
+  // Абонементы (запрос пользователя 2026-07-17) — "Выручка" признаётся в
+  // момент ТРАТЫ (revenue_abonement), не пополнения (abonement_topup*,
+  // авансовые деньги клиента, ещё не заработаны бизнесом).
+  let totalRevenueAbonement = 0;
   let totalExpense = 0;
 
   for (const op of operations) {
     const amount = Number(op.amount);
     // Остаток по зоне — текущее состояние физической кассы, весь журнал, без
-    // периода. revenue_cashless сюда не входит — безнал не лежит в кассе
+    // периода. Типы из CASH_EXCLUDED_TYPES (zone-balance.ts) сюда не входят —
+    // безнал/абонементные пополнение-безналом/трата не лежат в кассе
     // физически (docs/spec/02-money.md). Остаток по точке в целом (с учётом
     // аванса/премии) считается отдельно через getPointCashBalance ниже —
     // там же учитывается более сложное правило (кто внёс + с какого момента
     // после инкассации), не подходящее для простого прохода по зонам здесь.
-    if (op.type !== "revenue_cashless" && op.zoneId) {
+    if (affectsCashOnHand(op.type) && op.zoneId) {
       balanceByZone.set(op.zoneId, (balanceByZone.get(op.zoneId) ?? 0) + amount);
     }
 
@@ -92,6 +97,7 @@ export async function GET(request: Request) {
     // пользователя 2026-07-15: "не видна разбивка по наличным и безналичным").
     if (op.type === "revenue") totalRevenueCash += amount;
     if (op.type === "revenue_cashless") totalRevenueMobile += amount;
+    if (op.type === "revenue_abonement") totalRevenueAbonement += amount;
     // Расходы бизнес-карточки — только обычные expense (запрос пользователя
     // 2026-07-14: авансы/премии больше не считаются здесь расходом — это
     // выплата уже заработанного персоналу, не трата бизнеса; отдельно видны
@@ -136,11 +142,12 @@ export async function GET(request: Request) {
     showPointName: points.length > 1,
     period: { granularity, start: start.toISOString(), end: end.toISOString() },
     business: {
-      revenue: Math.round((totalRevenueCash + totalRevenueMobile) * 100) / 100,
+      revenue: Math.round((totalRevenueCash + totalRevenueMobile + totalRevenueAbonement) * 100) / 100,
       cash: Math.round(totalRevenueCash * 100) / 100,
       mobile: Math.round(totalRevenueMobile * 100) / 100,
+      abonement: Math.round(totalRevenueAbonement * 100) / 100,
       expense: Math.round(totalExpense * 100) / 100,
-      profit: Math.round((totalRevenueCash + totalRevenueMobile + totalExpense) * 100) / 100,
+      profit: Math.round((totalRevenueCash + totalRevenueMobile + totalRevenueAbonement + totalExpense) * 100) / 100,
       difference: Math.round(totalDifference * 100) / 100,
     },
   });

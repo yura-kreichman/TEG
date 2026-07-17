@@ -96,6 +96,12 @@ export function formatZoneSummaryEmail(
         label: `${st.cash} / ${st.mobile}`,
         value: `${formatMoney(data.cashAmount, locale)} / ${formatMoney(data.mobileAmount, locale)}`,
       });
+      // Справочно, НЕ в кассе выше — уже получена раньше, при пополнении
+      // абонемента (запрос пользователя 2026-07-17: "во всех отчётах и
+      // сводках должны быть правильные цифры", "добавить Абонемент").
+      if (data.abonementAmount > 0) {
+        rows.push({ label: st.abonement, value: formatMoney(data.abonementAmount, locale) });
+      }
     }
     if (settings.showCalc) rows.push({ label: st.calculated, value: formatMoney(data.calculatedRevenue, locale) });
     if (settings.showDiff) {
@@ -132,11 +138,26 @@ export function formatDailyCashSummaryEmail(
       label: `${st.cash} / ${st.mobile}`,
       value: `${formatMoney(data.cashAmount, locale)} / ${formatMoney(data.mobileAmount, locale)}`,
     });
+    if (data.abonementAmount > 0) {
+      rows.push({ label: st.abonement, value: formatMoney(data.abonementAmount, locale) });
+    }
   }
-  if (settings.showExpenses) rows.push({ label: st.expenses, value: formatMoney(data.expenses, locale) });
+  if (settings.showExpenses) {
+    rows.push({ label: st.expenses, value: formatMoney(data.expenses, locale) });
+    // Сразу после Расходов (запрос пользователя 2026-07-17), тот же
+    // тумблер — обе строки об одном: деньги, ушедшие из кассы за день, но
+    // не Расход бизнеса в бухгалтерском смысле.
+    rows.push({ label: st.bonusesAndAdvances, value: formatMoney(data.bonusesAndAdvances, locale) });
+  }
   rows.push({ label: st.totalFull, value: formatMoney(total, locale), bold: true });
   if (settings.showZoneBreakdown) {
-    for (const z of data.zoneBreakdown) rows.push({ label: z.zoneName, value: formatMoney(z.revenue, locale) });
+    for (const z of data.zoneBreakdown) {
+      const value =
+        z.abonementAmount > 0
+          ? `${formatMoney(z.revenue, locale)} (+${formatMoney(z.abonementAmount, locale)})`
+          : formatMoney(z.revenue, locale);
+      rows.push({ label: z.zoneName, value });
+    }
   }
   if (settings.showCashOnHand) rows.push({ label: st.cashOnHand, value: formatMoney(data.cashOnHand, locale) });
 

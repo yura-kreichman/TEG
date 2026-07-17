@@ -28,7 +28,7 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): Dai
   const zoneNames = ctx && ctx.zoneNames.length > 0 ? ctx.zoneNames : [t.summaries.previewNoZone];
   const zoneBreakdown = zoneNames
     .slice(0, 3)
-    .map((zoneName, i) => ({ zoneName, revenue: SAMPLE_ZONE_REVENUE[i] ?? 0 }));
+    .map((zoneName, i) => ({ zoneName, revenue: SAMPLE_ZONE_REVENUE[i] ?? 0, abonementAmount: 0 }));
 
   return {
     pointName: ctx?.pointName ?? t.summaries.previewNoPoint,
@@ -36,7 +36,14 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): Dai
     businessDate: new Date(Date.UTC(2026, 6, 8)),
     cashAmount: 1345,
     mobileAmount: 805,
+    // Демо не показывает абонементную строку (0) — тот же принцип, что и в
+    // предпросмотре "Сводки по зоне" (см. zone/page.tsx): предпросмотр
+    // условный, показывает форму, а не гарантированно все возможные строки.
+    abonementAmount: 0,
     expenses: 120,
+    // Демо не показывает строку "Премии и Авансы" (0) — тот же принцип, что
+    // и у abonementAmount выше.
+    bonusesAndAdvances: 0,
     zoneBreakdown,
     cashOnHand: 620,
     forcedIncomplete: false,

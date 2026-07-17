@@ -139,7 +139,7 @@ export async function POST(request: Request) {
   const now = new Date();
   const gameRoomAggregateByZone = new Map<
     string,
-    { calculatedRevenue: number; count: number; totalMinutes: number; launchIds: string[] }
+    { calculatedRevenue: number; count: number; totalMinutes: number; launchIds: string[]; abonementAmount: number }
   >();
   for (const zs of zoneSubmissions) {
     const zone = zoneById.get(zs.zoneId)!;
@@ -151,6 +151,7 @@ export async function POST(request: Request) {
       count: agg.count,
       totalMinutes: agg.totalMinutes,
       launchIds: agg.launchIds,
+      abonementAmount: agg.abonementAmount,
     });
   }
 
@@ -173,6 +174,10 @@ export async function POST(request: Request) {
         returnsCount: 0,
         cashAmount: zs.cashAmount,
         mobileAmount: zs.mobileAmount,
+        // Справочно, в кассу НЕ входит — уже получена раньше, при пополнении
+        // абонемента (запрос пользователя 2026-07-17: "во всех отчётах и
+        // сводках... правильные цифры", "добавить Абонемент").
+        abonementAmount: agg.abonementAmount,
         gameRoomLaunchCount: agg.count,
         gameRoomTotalMinutes: agg.totalMinutes,
       };
@@ -239,6 +244,7 @@ export async function POST(request: Request) {
       returnsCount: zs.returnsCount,
       cashAmount: zs.cashAmount,
       mobileAmount: zs.mobileAmount,
+      abonementAmount: 0, // Счётчики — абонемент как способ оплаты не применим (docs/spec/01-counters.md).
       gameRoomLaunchCount: null as number | null,
       gameRoomTotalMinutes: null as number | null,
     };
@@ -387,6 +393,7 @@ export async function POST(request: Request) {
               readings: s.readingLines,
               cashAmount: s.cashAmount,
               mobileAmount: s.mobileAmount,
+              abonementAmount: s.abonementAmount,
               calculatedRevenue: s.calculatedRevenue,
               difference: s.difference,
               returnsCount: s.returnsCount,

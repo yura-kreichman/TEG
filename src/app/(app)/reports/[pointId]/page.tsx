@@ -619,10 +619,21 @@ function moodLevel(ratio: number): 0 | 1 | 2 {
   if (ratio < 2 / 3) return 1;
   return 2;
 }
-const CELL_OPACITY: Record<0 | 1 | 2, number> = { 0: 0.4, 1: 0.7, 2: 1 };
 
 function normalizedRatio(value: number, minVal: number, maxVal: number) {
   return maxVal > minVal ? (value - minVal) / (maxVal - minVal) : 1;
+}
+
+// Заливка ячейки — непрерывная функция ratio, НЕ через 3-уровневый
+// moodLevel (тот остаётся дискретным только для смайлика в тултипе, у
+// эмоции и должно быть всего 3 фазы — запрос пользователя 2026-07-16). Баг
+// найден пользователем 2026-07-17: среда (2300, ~85% диапазона между
+// реальными min/max) и вторник (2700, максимум) оба попадали в верхнюю
+// треть уровней moodLevel и красились одинаковым сплошным цветом, хотя
+// среда явно слабее — по ratio ячейка должна быть "серединкой" между ними,
+// а с 3 бакетами такого разрешения физически нет.
+function cellOpacity(ratio: number) {
+  return 0.35 + ratio * 0.65;
 }
 
 function CellTooltip({ value, minVal, maxVal }: { value: number; minVal: number; maxVal: number }) {
@@ -871,7 +882,7 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
                     className="absolute inset-0 rounded-lg"
                     style={{
                       background: "var(--color-primary)",
-                      opacity: CELL_OPACITY[moodLevel(normalizedRatio(d.total, minVal, maxVal))],
+                      opacity: cellOpacity(normalizedRatio(d.total, minVal, maxVal)),
                     }}
                   />
                 )}
@@ -946,7 +957,7 @@ function CalendarMonthsTab({
                   className="absolute inset-0 rounded-lg"
                   style={{
                     background: "var(--color-primary)",
-                    opacity: CELL_OPACITY[moodLevel(normalizedRatio(mo.total, minVal, maxVal))],
+                    opacity: cellOpacity(normalizedRatio(mo.total, minVal, maxVal)),
                   }}
                 />
               )}

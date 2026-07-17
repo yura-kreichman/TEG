@@ -11,6 +11,10 @@ interface Usage {
   subscriptionStatus: "active" | "paused" | "suspended" | "expired";
   subscriptionExpiresAt: string | null;
   currentPeriodEnd: string | null;
+  // Ручной оверрайд Super Admin'а (запрос пользователя 2026-07-17) — снимает
+  // все 4 лимита разом, значения max/packageMax ниже в этом случае не несут
+  // смысла (см. /api/tenant/usage), рендерим "∞" напрямую по этому флагу.
+  unlimited: boolean;
   points: { used: number; max: number; packageMax: number };
   operators: { used: number; max: number; packageMax: number };
   zones: { used: number; max: number; packageMax: number };
@@ -53,7 +57,11 @@ export function PlanCard() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-section-title">{t.home.planCardLabel}</p>
-          <p className="text-card-title">{usage.packageName}</p>
+          {/* Ручной оверрайд Super Admin'а — название пакета ("Max" и т.п.)
+              тут вводит в заблуждение вместе с "2 из 2" ниже (выглядит как
+              упор в лимит, хотя лимитов как раз нет — нашёл пользователь
+              2026-07-17), поэтому имя плана тоже подменяется на "Безлимит". */}
+          <p className="text-card-title">{usage.unlimited ? t.home.unlimitedPlanLabel : usage.packageName}</p>
         </div>
         <div className="flex flex-col items-end gap-1">
           <span
@@ -92,14 +100,25 @@ export function PlanCard() {
           <div className="mb-1 flex justify-between text-caption-airbnb">
             <span>{label}</span>
             <span className="font-semibold text-foreground">
-              {used} {t.common.of} {max}
-              {max > packageMax && <span className="text-primary"> (+{max - packageMax})</span>}
+              {used} {t.common.of}{" "}
+              {usage.unlimited ? (
+                // Глиф "∞" визуально мельче цифр того же font-size (особенности
+                // рисунка символа) — при обычном размере почти терялся рядом с
+                // "used" (нашёл пользователь 2026-07-17: "слишком мелкий",
+                // затем ещё раз крупнее: "ещё больше... не обязательно
+                // жирным" — font-normal, унаследованный font-semibold родителя
+                // тут явно снят).
+                <span className="text-2xl font-normal align-middle leading-none">∞</span>
+              ) : (
+                max
+              )}
+              {!usage.unlimited && max > packageMax && <span className="text-primary"> (+{max - packageMax})</span>}
             </span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-surface-0">
             <div
-              className="h-full rounded-full bg-primary"
-              style={{ width: `${Math.min(100, (used / Math.max(max, 1)) * 100)}%` }}
+              className={cn("h-full rounded-full", usage.unlimited ? "bg-muted-foreground/30" : "bg-primary")}
+              style={{ width: usage.unlimited ? "100%" : `${Math.min(100, (used / Math.max(max, 1)) * 100)}%` }}
             />
           </div>
         </div>

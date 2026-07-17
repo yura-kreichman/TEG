@@ -8,6 +8,7 @@ import {
   launchesRevenueByAssetAndTariff,
   previousSubmissionBoundary,
 } from "@/lib/game-room";
+import { InsufficientBalanceError, spendWalletTx } from "@/lib/abonement";
 
 // "Пуски" (accountingMode="launches", запрос пользователя 2026-07-17:
 // "тапали по активам и пуски учитывались" — цифровая замена бумажной
@@ -73,29 +74,58 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
   }
   const paymentMethod: string = body.paymentMethod;
+  const abonementWalletId: string | null =
+    typeof body.abonementWalletId === "string" && body.abonementWalletId ? body.abonementWalletId : null;
+  if (paymentMethod === "abonement" && !abonementWalletId) {
+    return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
+  }
 
   const now = new Date();
-  const launch = await prisma.launch.create({
-    data: {
-      zoneId: zone.id,
-      assetId,
-      tariffId: tariff.id,
-      // Число не показывается оператору в этом режиме (тап мгновенный, нет
-      // "текущего браслета/пуска" на экране) — 1 у каждой записи, реальный
-      // счётчик считается агрегатом (launchesRevenueByAssetAndTariff), не
-      // этим полем.
-      number: 1,
-      startedAt: now,
-      endedAt: now,
-      isOpen: false,
-      pricingMode: "fixed",
-      priceSnapshot: tariff.price,
-      amount: tariff.price,
-      paymentMethod,
-      startedByOperatorId: operator.id,
-      endedByOperatorId: operator.id,
-    },
-  });
+  let launch;
+  try {
+    launch = await prisma.$transaction(async (tx) => {
+      const created = await tx.launch.create({
+        data: {
+          zoneId: zone.id,
+          assetId,
+          tariffId: tariff.id,
+          // Число не показывается оператору в этом режиме (тап мгновенный, нет
+          // "текущего браслета/пуска" на экране) — 1 у каждой записи, реальный
+          // счётчик считается агрегатом (launchesRevenueByAssetAndTariff), не
+          // этим полем.
+          number: 1,
+          startedAt: now,
+          endedAt: now,
+          isOpen: false,
+          pricingMode: "fixed",
+          priceSnapshot: tariff.price,
+          amount: tariff.price,
+          paymentMethod,
+          abonementWalletId: paymentMethod === "abonement" ? abonementWalletId : null,
+          startedByOperatorId: operator.id,
+          endedByOperatorId: operator.id,
+        },
+      });
+
+      if (paymentMethod === "abonement" && abonementWalletId) {
+        await spendWalletTx(tx, abonementWalletId, {
+          tenantId: point.tenantId,
+          zoneId: zone.id,
+          launchId: created.id,
+          pointId: point.id,
+          operatorId: operator.id,
+          amount: Number(created.priceSnapshot),
+        });
+      }
+
+      return created;
+    });
+  } catch (err) {
+    if (err instanceof InsufficientBalanceError) {
+      return NextResponse.json({ error: "Недостаточно средств на абонементе" }, { status: 400 });
+    }
+    throw err;
+  }
 
   return NextResponse.json(
     {

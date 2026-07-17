@@ -65,6 +65,18 @@ export async function getTenantLimits(tenantId: string): Promise<TenantLimits | 
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { package: true } });
   if (!tenant) return null;
 
+  // Tenant.unlimited — ручной рубильник Super Admin'а (запрос пользователя
+  // 2026-07-17: "пакет Unlimited без ограничений, которого нет в пакетах"),
+  // проверяется РАНЬШЕ limitOverrides — снимает все 4 лимита разом, вместо
+  // того чтобы Super Admin вручную вбивал огромные числа в оверрайды.
+  // Infinity живёт только на сервере (checkPackageLimit ниже) — наружу через
+  // JSON.stringify не уходит (превратилось бы в null), поэтому API-роуты,
+  // отдающие лимиты наружу, читают tenant.unlimited отдельно и сами решают,
+  // что показать (см. /api/tenant/usage, /api/admin/tenants/[id]).
+  if (tenant.unlimited) {
+    return { maxPoints: Infinity, maxZones: Infinity, maxAssets: Infinity, maxOperators: Infinity };
+  }
+
   const overrides = (tenant.limitOverrides as Partial<TenantLimits> | null) ?? {};
   return {
     maxPoints: overrides.maxPoints ?? tenant.package.maxPoints,

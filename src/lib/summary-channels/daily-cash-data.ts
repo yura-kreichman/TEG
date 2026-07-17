@@ -64,10 +64,55 @@ export async function buildDailyCashSummaryData(
   });
   const expenses = expenseOps.reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0);
 
+  // Абонементная выручка (revenue_abonement) не привязана к ZoneSubmission —
+  // признаётся сразу при трате, не при сдаче итогов (запрос пользователя
+  // 2026-07-17), поэтому её нет в zs.cashAmount/mobileAmount выше. Для
+  // фиксированного окна бизнес-дня (в отличие от цепочки сдач в
+  // /api/reports/counters/day) достаточно просто просуммировать за bounds —
+  // без per-submission "предыдущая сдача" привязки.
+  const abonementOps = await prisma.moneyOperation.findMany({
+    where: { type: "revenue_abonement", occurredAt: { gte: bounds.start, lt: bounds.end }, zone: { pointId } },
+    select: { zoneId: true, amount: true, zone: { select: { name: true } } },
+  });
+  let abonementAmount = 0;
+  const zoneAbonementById = new Map<string, number>();
+  for (const op of abonementOps) {
+    const amount = Number(op.amount);
+    abonementAmount += amount;
+    if (!op.zoneId) continue;
+    zoneAbonementById.set(op.zoneId, (zoneAbonementById.get(op.zoneId) ?? 0) + amount);
+    // Абонементом могли оплатить пуск в зоне, где сегодня ещё не было сдачи
+    // итогов (список breakdown иначе строился бы только из ZoneSubmission) —
+    // добавляем такую зону в разбивку сразу с нулевой "кассовой" выручкой.
+    if (!zoneRevenueById.has(op.zoneId)) {
+      zoneRevenueById.set(op.zoneId, { zoneName: op.zone?.name ?? "", revenue: 0 });
+    }
+  }
+
+  // Премии/авансы, которые сотрудник взял САМ из кассы точки (запрос
+  // пользователя 2026-07-17: "Премии+Авансы, которые взял Сотрудник") —
+  // только performedByOperatorId (самообслуживание), НЕ владельческие
+  // (performedByUserId — те выданы не из кассы точки, см. getPointCashBalance
+  // в lib/zone-balance.ts). Справочная строка "откуда взялась" разница между
+  // Итогом и Остатком — сама сумма и так уже учтена в Остатке ниже, тут не
+  // прибавляется и не вычитается повторно.
+  const bonusAdvanceOps = await prisma.moneyOperation.findMany({
+    where: {
+      type: { in: ["advance", "bonus_payout"] },
+      pointId,
+      performedByOperatorId: { not: null },
+      occurredAt: { gte: bounds.start, lt: bounds.end },
+    },
+  });
+  const bonusesAndAdvances = bonusAdvanceOps.reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0);
+
   // getPointCashBalance — тот же расчёт остатка, что на "Остатки и
   // инкассации" (lib/zone-balance.ts): исключает revenue_cashless (безнал
-  // физически не в кассе) и bonus_payout (премия выдаётся из уже
-  // инкассированных денег, кассы точки не касается).
+  // физически не в кассе), abonement_topup_cashless и revenue_abonement (см.
+  // affectsCashOnHand); advance/bonus_payout НЕ исключены — сотрудник
+  // физически берёт их из кассы точки (если сам, после последней
+  // инкассации), это отражено в Остатке ниже, комментарий тут раньше
+  // ошибочно утверждал обратное.
   const cashOnHand = await getPointCashBalance(pointId);
 
   return {
@@ -76,8 +121,18 @@ export async function buildDailyCashSummaryData(
     businessDate: bounds.start,
     cashAmount: round2(cashAmount),
     mobileAmount: round2(mobileAmount),
+    // Справочно — НЕ входит в cashAmount/mobileAmount/итог выше (уже получена
+    // раньше, при пополнении абонемента, кассы точки сегодня не касается),
+    // см. комментарий у abonementOps выше (запрос пользователя 2026-07-17:
+    // "во всех отчётах и сводках должны быть правильные цифры").
+    abonementAmount: round2(abonementAmount),
     expenses: round2(expenses),
-    zoneBreakdown: [...zoneRevenueById.values()].map((z) => ({ zoneName: z.zoneName, revenue: round2(z.revenue) })),
+    bonusesAndAdvances: round2(bonusesAndAdvances),
+    zoneBreakdown: [...zoneRevenueById.entries()].map(([zoneId, z]) => ({
+      zoneName: z.zoneName,
+      revenue: round2(z.revenue),
+      abonementAmount: round2(zoneAbonementById.get(zoneId) ?? 0),
+    })),
     cashOnHand: round2(cashOnHand),
     forcedIncomplete,
   };

@@ -117,7 +117,7 @@ export default function SubmitResultsPage() {
   // выбранного способа оплаты браслетов), настоящая реальная сумма — в
   // activeForm.assetCash, вводится сотрудником вручную.
   const [gameRoomRevenueByAsset, setGameRoomRevenueByAsset] = useState<
-    { assetId: string; calculatedAmount: number; cashAmount: number; mobileAmount: number }[]
+    { assetId: string; calculatedAmount: number; cashAmount: number; mobileAmount: number; abonementAmount: number }[]
   >([]);
   const [result, setResult] = useState<{
     summary: { zoneId: string; zoneName: string; calculatedRevenue: number; actualCash: number; difference: number }[];
@@ -697,14 +697,22 @@ export default function SubmitResultsPage() {
                   const entry = activeForm.assetCash[asset.id];
                   const filled = !!entry && (entry.cash.trim() !== "" || entry.mobile.trim() !== "");
                   const revenue = gameRoomRevenueByAsset.find((r) => r.assetId === asset.id);
+                  // Пока по активу есть незакрытые пуски, реальную кассу
+                  // сдавать нельзя — счёт ещё не окончателен (запрос
+                  // пользователя 2026-07-17: "не должно быть возможности
+                  // кликнуть по Активу... они должны быть серыми/не
+                  // активными"), баннер выше уже даёт переход завершить их.
+                  const blocked = (gameRoomOpenByAsset.find((o) => o.assetId === asset.id)?.count ?? 0) > 0;
                   return (
                     <PressableScale key={asset.id}>
                       <button
                         type="button"
                         onClick={() => setAssetSheetId(asset.id)}
+                        disabled={blocked}
                         className={cn(
                           "relative flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card text-left",
-                          filled ? "border-success" : "border-border"
+                          filled ? "border-success" : "border-border",
+                          "disabled:pointer-events-none disabled:grayscale disabled:opacity-40"
                         )}
                       >
                         <div
@@ -940,11 +948,10 @@ export default function SubmitResultsPage() {
             <Button
               variant="outline"
               className="h-14 w-full gap-2 rounded-control border-border"
-              onClick={goBack}
-              disabled={stepIndex === 0}
+              onClick={stepIndex === 0 ? () => router.push("/operator") : goBack}
             >
               <ChevronLeft className="size-5" />
-              {t.common.back}
+              {stepIndex === 0 ? t.operatorApp.submit.cancelWizard : t.common.back}
             </Button>
           </PressableScale>
           {currentStep.kind !== "review" && (
@@ -1018,6 +1025,18 @@ export default function SubmitResultsPage() {
                             <Money value={revenue.mobileAmount} />
                           </span>
                         </span>
+                        {/* Третий способ оплаты — показывается только когда
+                            есть чем (запрос пользователя 2026-07-17), в
+                            отличие от наличных/безнала не захламляет sheet
+                            у зон, где абонементом ещё не пользовались. */}
+                        {revenue.abonementAmount > 0 && (
+                          <span>
+                            {t.operatorApp.abonement.paymentLabel}:{" "}
+                            <span className="font-bold text-foreground">
+                              <Money value={revenue.abonementAmount} />
+                            </span>
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>

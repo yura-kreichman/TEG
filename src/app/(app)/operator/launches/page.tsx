@@ -12,6 +12,7 @@ import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { isLaunchesZone } from "@/lib/results-calc";
+import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
 import { cn } from "@/lib/utils";
 
 interface TariffCtx {
@@ -78,6 +79,13 @@ export default function LaunchesZonePage() {
   // (tariffId проставляется сразу), см. handleTileTap. zoneId нужен явно —
   // активы разных зон смешаны в одном гриде.
   const [tapFlow, setTapFlow] = useState<{ zoneId: string; assetId: string; tariffId?: string } | null>(null);
+
+  // Оплата абонементом (запрос пользователя 2026-07-17) — третий способ
+  // наравне с наличными/безналом, открывается ПОВЕРХ tapFlow (закрывается в
+  // момент тапа "Абонемент"), amount — цена выбранного тарифа.
+  const [abonementTarget, setAbonementTarget] = useState<
+    { zoneId: string; assetId: string; tariffId: string; amount: number } | null
+  >(null);
 
   function loadZones() {
     fetch("/api/operator/submission-context")
@@ -159,14 +167,20 @@ export default function LaunchesZonePage() {
     );
   }
 
-  async function logTap(zoneId: string, assetId: string, tariffId: string, paymentMethod: "cash" | "mobile") {
+  async function logTap(
+    zoneId: string,
+    assetId: string,
+    tariffId: string,
+    paymentMethod: "cash" | "mobile" | "abonement",
+    abonementWalletId?: string
+  ) {
     setSubmitting(true);
     setError(null);
     try {
       const res = await fetch(`/api/zones/${zoneId}/tally`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assetId, tariffId, paymentMethod }),
+        body: JSON.stringify({ assetId, tariffId, paymentMethod, abonementWalletId }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -174,6 +188,7 @@ export default function LaunchesZonePage() {
         return;
       }
       setTapFlow(null);
+      setAbonementTarget(null);
       loadTallies(zones);
     } catch {
       // Сетевая ошибка — пуск на сервере не создан (тот же принцип, что и у
@@ -353,10 +368,35 @@ export default function LaunchesZonePage() {
                   {t.operatorApp.submit.mobileLabel}
                 </Button>
               </PressableScale>
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full font-semibold"
+                  disabled={submitting}
+                  onClick={() => {
+                    const target = { zoneId: tapFlow.zoneId, assetId: tapFlow.assetId, tariffId: tapFlow.tariffId!, amount: tapTariff.price };
+                    setTapFlow(null);
+                    setAbonementTarget(target);
+                  }}
+                >
+                  {t.operatorApp.abonement.paymentLabel}
+                </Button>
+              </PressableScale>
             </div>
           </div>
         )}
       </BottomSheet>
+
+      <AbonementPaymentSheet
+        open={abonementTarget !== null}
+        onClose={() => setAbonementTarget(null)}
+        amount={abonementTarget?.amount ?? 0}
+        onConfirm={(walletId) => {
+          if (!abonementTarget) return;
+          logTap(abonementTarget.zoneId, abonementTarget.assetId, abonementTarget.tariffId, "abonement", walletId);
+        }}
+      />
     </div>
   );
 }

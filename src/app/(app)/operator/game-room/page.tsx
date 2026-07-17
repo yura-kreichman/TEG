@@ -15,6 +15,7 @@ import { useLiveNow } from "@/hooks/use-live-now";
 import { isStaysZone } from "@/lib/results-calc";
 import { estimateLiveAmount, formatMMSS, type LaunchPricingMode, type LaunchRoundingMode } from "@/lib/game-room-client";
 import { unlockBeep, playBeep } from "@/lib/beep";
+import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
 import { cn } from "@/lib/utils";
 
 interface AssetTariffOption {
@@ -109,6 +110,15 @@ export default function StaysZonePage() {
   const [interacting, setInteracting] = useState<string | null>(null);
   const [stopPaymentTarget, setStopPaymentTarget] = useState<OpenLaunch | null>(null);
   const [stopping, setStopping] = useState(false);
+
+  // Оплата абонементом (запрос пользователя 2026-07-17) — третий способ
+  // наравне с наличными/безналом, отдельный sheet (поиск/создание/
+  // пополнение кошелька), открывается ПОВЕРХ addFlow/stopPaymentTarget
+  // (те закрываются в момент тапа "Абонемент"), amount известен сразу —
+  // либо цена выбранного варианта "За вход", либо живая сумма "По факту".
+  const [abonementTarget, setAbonementTarget] = useState<
+    { kind: "start"; optionId?: string; amount: number } | { kind: "stop"; launch: OpenLaunch; amount: number } | null
+  >(null);
 
   const [soundHintOpen, setSoundHintOpen] = useState(false);
   const alertedRef = useRef<Set<string>>(new Set());
@@ -248,7 +258,11 @@ export default function StaysZonePage() {
     return tariff?.pricingMode === "fixed" ? tariff.options : [];
   }
 
-  async function startLaunch(optionId?: string, paymentMethod?: "cash" | "mobile") {
+  async function startLaunch(
+    optionId?: string,
+    paymentMethod?: "cash" | "mobile" | "abonement",
+    abonementWalletId?: string
+  ) {
     if (!selectedAssetId || !selectedZoneId) return;
     setStarting(true);
     setError(null);
@@ -257,7 +271,7 @@ export default function StaysZonePage() {
       const res = await fetch(`/api/zones/${selectedZoneId}/launches`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assetId: selectedAssetId, optionId, paymentMethod }),
+        body: JSON.stringify({ assetId: selectedAssetId, optionId, paymentMethod, abonementWalletId }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -266,6 +280,7 @@ export default function StaysZonePage() {
       }
       loadLaunches(selectedZoneId);
       setAddFlow(null);
+      setAbonementTarget(null);
     } catch {
       // Сетевая ошибка (не HTTP-ошибка от сервера) — docs/spec/04-game-room.md,
       // Шаг 6: "стоп даёт внятную ошибку и не теряет пуск" — то же верно и для
@@ -276,14 +291,18 @@ export default function StaysZonePage() {
     }
   }
 
-  async function stopLaunch(launchId: string, paymentMethod?: "cash" | "mobile") {
+  async function stopLaunch(
+    launchId: string,
+    paymentMethod?: "cash" | "mobile" | "abonement",
+    abonementWalletId?: string
+  ) {
     setStopping(true);
     setError(null);
     try {
       const res = await fetch(`/api/launches/${launchId}/stop`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentMethod }),
+        body: JSON.stringify({ paymentMethod, abonementWalletId }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -292,6 +311,7 @@ export default function StaysZonePage() {
       }
       setInteracting(null);
       setStopPaymentTarget(null);
+      setAbonementTarget(null);
       loadLaunches(selectedZoneId);
     } catch {
       // Пуск на сервере не потерян (запрос мог не дойти или ответ не
@@ -603,6 +623,21 @@ export default function StaysZonePage() {
                   {t.operatorApp.submit.mobileLabel}
                 </Button>
               </PressableScale>
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full font-semibold"
+                  disabled={starting}
+                  onClick={() => {
+                    const amount = selectedOptions.find((o) => o.id === addFlow.optionId)?.price ?? 0;
+                    setAddFlow(null);
+                    setAbonementTarget({ kind: "start", optionId: addFlow.optionId, amount });
+                  }}
+                >
+                  {t.operatorApp.abonement.paymentLabel}
+                </Button>
+              </PressableScale>
             </div>
           </div>
         )}
@@ -654,10 +689,44 @@ export default function StaysZonePage() {
                   {t.operatorApp.submit.mobileLabel}
                 </Button>
               </PressableScale>
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full font-semibold"
+                  disabled={stopping}
+                  onClick={() => {
+                    const amount = estimateLiveAmount(
+                      stopPaymentTarget.pricingMode,
+                      stopPaymentTarget.priceSnapshot,
+                      stopPaymentTarget.roundingModeSnapshot,
+                      stopPaymentTarget.minAmountSnapshot,
+                      new Date(stopPaymentTarget.startedAt),
+                      now
+                    );
+                    const launch = stopPaymentTarget;
+                    setStopPaymentTarget(null);
+                    setAbonementTarget({ kind: "stop", launch, amount });
+                  }}
+                >
+                  {t.operatorApp.abonement.paymentLabel}
+                </Button>
+              </PressableScale>
             </div>
           </div>
         )}
       </BottomSheet>
+
+      <AbonementPaymentSheet
+        open={abonementTarget !== null}
+        onClose={() => setAbonementTarget(null)}
+        amount={abonementTarget?.amount ?? 0}
+        onConfirm={(walletId) => {
+          if (!abonementTarget) return;
+          if (abonementTarget.kind === "start") startLaunch(abonementTarget.optionId, "abonement", walletId);
+          else stopLaunch(abonementTarget.launch.id, "abonement", walletId);
+        }}
+      />
 
       <BottomSheet open={soundHintOpen} onClose={dismissSoundHint}>
         <div className="flex flex-col gap-3 pt-2">

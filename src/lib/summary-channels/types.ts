@@ -31,6 +31,13 @@ export interface ZoneSummaryData {
   readings: ZoneAssetReadingLine[];
   cashAmount: number;
   mobileAmount: number; // "безнал" — см. feedback_no_hardcoded_currency
+  // Абонемент как способ оплаты пуска (docs/spec/04-game-room.md) — НЕ входит
+  // в cashAmount/mobileAmount выше (касса уже получила эту сумму раньше, при
+  // пополнении абонемента, а не сейчас), поэтому отдельное поле, не третье
+  // слагаемое кассы (запрос пользователя 2026-07-17: "во всех отчётах и
+  // сводках должны быть правильные цифры", "добавить Абонемент"). 0 у
+  // "counters"/"cash_only" — там абонемент как способ оплаты не применим.
+  abonementAmount: number;
   // Всегда валовая выручка по счётчикам (запрос пользователя 2026-07-16:
   // "счётчики должны показывать всегда факт") — сеансы × цена, БЕЗ вычета
   // возвратов/тестов. Разница (difference) при этом по-прежнему считается
@@ -49,6 +56,9 @@ export interface ZoneSummaryData {
 export interface DailyCashZoneBreakdownLine {
   zoneName: string;
   revenue: number;
+  // Справочно, не входит в revenue выше (запрос пользователя 2026-07-17—
+  // см. abonementAmount в DailyCashSummaryData ниже).
+  abonementAmount: number;
 }
 
 export interface DailyCashSummaryData {
@@ -61,7 +71,17 @@ export interface DailyCashSummaryData {
   businessDate: Date; // полночь UTC начала бизнес-дня
   cashAmount: number;
   mobileAmount: number;
+  // Абонемент как способ оплаты пуска — НЕ входит в cashAmount/mobileAmount
+  // (касса точки уже получила эту сумму раньше, при пополнении абонемента,
+  // не сегодня) — запрос пользователя 2026-07-17: "во всех отчётах и
+  // сводках должны быть правильные цифры", "добавить Абонемент".
+  abonementAmount: number;
   expenses: number;
+  // Премии/авансы, которые сотрудник САМ взял из кассы точки за день (запрос
+  // пользователя 2026-07-17: "Премии+Авансы, которые взял Сотрудник") — не
+  // "Расходы" бизнеса (то же разделение, что и в /api/reports/money), но
+  // объясняет разницу между Итогом и Остатком, когда она есть.
+  bonusesAndAdvances: number;
   zoneBreakdown: DailyCashZoneBreakdownLine[];
   cashOnHand: number;
   // Предохранитель: смены/операторы, чья активность не укладывается в

@@ -57,6 +57,10 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): Zon
     // примера пользователя.
     cashAmount: 1345,
     mobileAmount: 0,
+    // Этот предпросмотр — настройки "Счётчиков" (accountingMode всегда
+    // "counters" выше), абонемент как способ оплаты там не применим
+    // (docs/spec/01-counters.md).
+    abonementAmount: 0,
     calculatedRevenue: 1715,
     difference: 1345 + 0 - 1715,
     returnsCount: 0,

@@ -93,6 +93,14 @@ model Tenant {
   // { maxPoints?, maxZones?, maxAssets?, maxOperators? } | null, поверх
   // package.*. См. getTenantLimits() в src/lib/packages.ts.
   limitOverrides       Json?
+  // Ручной оверрайд Super Admin'ом (запрос пользователя 2026-07-17: "опция
+  // установить владельцу пакет Unlimited без ограничений, которого нет в
+  // пакетах") — снимает ВСЕ 4 лимита разом, полностью байпасит и package.*,
+  // и limitOverrides (getTenantLimits проверяет unlimited раньше обоих).
+  // Отдельное поле, а не строка в списке Package: намеренно НЕ покупаемый,
+  // не создаваемый через FluentCart пакет — только ручной рубильник в
+  // /admin/tenants/[id], как limitOverrides.
+  unlimited            Boolean            @default(false)
 
   // Контакты тенанта для платформенной поддержки — заполняет Super Admin в
   // админ-модуле, не сам владелец (докс 2026-07-10, "полные настройки
@@ -165,6 +173,8 @@ model Tenant {
   points                        Point[]
   moneyOps                      MoneyOperation[]
   expenseCategories             ExpenseCategory[]
+  abonements                    Abonement[]
+  abonementWallets              AbonementWallet[]
   operatorRates                 OperatorRate[]
   shifts                        Shift[]
   balanceCarryovers             OperatorBalanceCarryover[]
@@ -231,6 +241,7 @@ model User {
   createdTasks      Task[]                     @relation("TaskCreatedBy")
   assignedTasks     Task[]                     @relation("TaskAssignedUsers")
   pushSubscriptions PushSubscription[]
+  abonementTransactions AbonementTransaction[]
 }
 
 // Одна запись на браузер/устройство, подписавшееся на Web Push (фидбек
@@ -378,6 +389,7 @@ model Operator {
   // Игровая комната (docs/spec/04-game-room.md) — старт/стоп пусков.
   launchesStarted    Launch[]                   @relation("LaunchStartedBy")
   launchesEnded      Launch[]                   @relation("LaunchEndedBy")
+  abonementTransactions AbonementTransaction[]
 }
 
 // ============================================================================
@@ -440,6 +452,8 @@ model Point {
   dailyCashSummaryDeliveries DailyCashSummaryDelivery[]
   tasks                      Task[]
   openingHours               PointOpeningHours[]
+  abonementTransactions      AbonementTransaction[]
+  abonements                 Abonement[]                 @relation("AbonementPoints")
 }
 
 // Часы работы точки, по одной строке на день недели (docs/spec/08-landing.md,
@@ -640,6 +654,126 @@ model TariffOption {
   updatedAt DateTime @updatedAt
 
   @@index([tariffId, order])
+}
+
+// ============================================================================
+// АБОНЕМЕНТЫ (докс появится позже) — внутренний "кошелёк" клиента,
+// пополняемый с бонусом (владелец создаёт пакеты "заплатить X → зачислить
+// Y", запрос пользователя 2026-07-17), доступный как способ оплаты пуска на
+// "Прибываниях"/"Пусках" наравне с наличными/безналом. Идентификатор —
+// номер телефона, баланс ОБЩИЙ на весь тенант (не привязан к точке —
+// решение пользователя того же дня: "один номер работает на любой точке
+// компании"). Уйти в минус нельзя — списание блокируется на недостающую
+// сумму, тот же принцип, что и лимиты подписки.
+// ============================================================================
+
+// Абонемент — тариф-план, создаёт владелец (до N штук) — "заплатить price →
+// зачислить creditAmount", разница является маркетинговым бонусом, не
+// настоящими деньгами (см. AbonementTransaction ниже про раздельный учёт
+// кассы/выручки). БЕЗ привязки к конкретному клиенту — план переиспользуется
+// любым числом разных кошельков (AbonementWallet ниже). Переименовано из
+// AbonementPackage (запрос пользователя 2026-07-17: владелец воспринимает
+// именно ЭТО как "абонемент" — план/тариф, а не кошелёк с балансом).
+model Abonement {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name         String?
+  price        Decimal @db.Decimal(10, 2)
+  creditAmount Decimal @db.Decimal(10, 2)
+  order        Int     @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  // Soft-delete (тот же принцип, что Tariff) — прошлые AbonementTransaction
+  // должны продолжать ссылаться на абонемент, которым когда-то пополнили.
+  deletedAt DateTime?
+
+  transactions AbonementTransaction[]
+
+  // Точки, где абонемент можно продать/пополнить — пусто = действует на
+  // ВСЕХ точках тенанта (тот же приём, что Task.assignedOperators/
+  // assignedUsers: "пусто в обоих списках = видят все"). Запрос пользователя
+  // 2026-07-17: "выбор действует ли он на все точки клиента или нет".
+  points Point[] @relation("AbonementPoints")
+
+  @@index([tenantId])
+}
+
+// Кошелёк клиента — появляется ТОЛЬКО как побочный эффект покупки
+// какого-то Abonement (плана), оператором прямо в момент первой оплаты
+// (запрос пользователя 2026-07-17: "оператор, прямо в момент оплаты") —
+// вводит телефон, выбирает абонемент, кошелёк и первая транзакция создаются
+// атомарно. Владелец НЕ создаёт/редактирует кошельки вручную (нет
+// бухгалтерской логики за произвольным числом баланса — запрос пользователя
+// того же дня); переименовано из Abonement, чтобы имя "Абонемент" осталось
+// за планом (см. выше), а не за этой сущностью.
+model AbonementWallet {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  phone String
+  // Необязательное имя — для будущего поиска по имени (запрос пользователя
+  // 2026-07-17: "это потом"), пока просто отображается рядом с телефоном.
+  name String?
+
+  balance Decimal @default(0) @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions AbonementTransaction[]
+  launches     Launch[]
+
+  // Один кошелёк на номер в рамках тенанта — общий на все точки.
+  @@unique([tenantId, phone])
+  @@index([tenantId])
+}
+
+// Журнал операций кошелька — и пополнение, и списание, раздельно от
+// MoneyOperation (которая фиксирует денежный СЛЕД операции — кассу точки при
+// пополнении, выручку зоны при списании, см. src/lib/abonement.ts), эта
+// таблица про сам БАЛАНС кошелька: история для клиента/оператора и опора
+// для будущего "поиска по имени".
+model AbonementTransaction {
+  id       String          @id @default(cuid())
+  walletId String
+  wallet   AbonementWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  // "topup" | "spend" — сумма всегда положительная, знак определяется type.
+  type   String
+  amount Decimal @db.Decimal(10, 2)
+
+  // Только "topup" — каким абонементом (планом) и как оплатили пополнение
+  // (наличные/безнал — те же значения, что у Launch.paymentMethod).
+  abonementId   String?
+  abonement     Abonement? @relation(fields: [abonementId], references: [id], onDelete: SetNull)
+  paymentMethod String?
+
+  // Только "spend" — какой пуск оплачен списанием с баланса.
+  launchId String?
+  launch   Launch? @relation(fields: [launchId], references: [id], onDelete: SetNull)
+
+  pointId    String?
+  point      Point?    @relation(fields: [pointId], references: [id])
+  // "Кто провёл" операцию — оператор ИЛИ владелец (тот же приём, что
+  // MoneyOperation.performedByUserId/performedByOperatorId), ровно одно из
+  // двух заполнено. Владелец получил возможность продавать/пополнять
+  // абонементы прямо из кабинета (запрос пользователя 2026-07-17: "это
+  // может делать как Владелец, так и Сотрудник") — до этого поля тут не
+  // было, топ-ап был возможен только от лица оператора.
+  operatorId String?
+  operator   Operator? @relation(fields: [operatorId], references: [id])
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id])
+
+  occurredAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([walletId, occurredAt])
+  @@index([launchId])
 }
 
 model Asset {
@@ -910,14 +1044,21 @@ model Launch {
 
   // Способ оплаты — только у "per_minute"/"По факту" (запрос пользователя
   // 2026-07-17: "это только касается тарифа По факту"), спрашивается у
-  // оператора при остановке. "cash"/"mobile" — те же значения, что
-  // ZoneSubmission.cashAmount/mobileAmount. Только СПРАВОЧНАЯ разбивка
-  // расчётной выручки (aggregateGameRoomLaunches) — НЕ подставляется
-  // автоматически в поля кассы шага 4 мастера сдачи итогов: та сверка
-  // физического пересчёта с расчётом ловит недостачи, и подстановка стёрла
-  // бы этот контроль для пусков "По факту" (решение пользователя того же
-  // дня). null у "fixed"/"За вход" и у пусков, которые ещё не остановлены.
+  // оператора при остановке. "cash"/"mobile"/"abonement" — те же значения,
+  // что ZoneSubmission.cashAmount/mobileAmount (плюс абонемент). Только
+  // СПРАВОЧНАЯ разбивка расчётной выручки (aggregateGameRoomLaunches) — НЕ
+  // подставляется автоматически в поля кассы шага 4 мастера сдачи итогов: та
+  // сверка физического пересчёта с расчётом ловит недостачи, и подстановка
+  // стёрла бы этот контроль для пусков "По факту" (решение пользователя того
+  // же дня). null у "fixed"/"За вход" и у пусков, которые ещё не остановлены.
   paymentMethod String?
+
+  // Только paymentMethod="abonement" — какой кошелёк списан (запрос
+  // пользователя 2026-07-17). Списание и MoneyOperation "revenue_abonement"
+  // создаются сразу при выборе способа оплаты, не откладываются до сдачи
+  // итогов — см. src/lib/abonement.ts.
+  abonementWalletId String?
+  abonementWallet   AbonementWallet? @relation(fields: [abonementWalletId], references: [id], onDelete: SetNull)
 
   startedByOperatorId String?
   startedByOperator   Operator? @relation("LaunchStartedBy", fields: [startedByOperatorId], references: [id])
@@ -929,6 +1070,8 @@ model Launch {
   // приём, что MoneyOperation.resultsSubmissionId.
   zoneSubmissionId String?
   zoneSubmission   ZoneSubmission? @relation(fields: [zoneSubmissionId], references: [id])
+
+  abonementTransactions AbonementTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

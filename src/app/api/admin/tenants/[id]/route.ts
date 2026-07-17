@@ -70,6 +70,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/admin/tenan
     createdAt: tenant.createdAt,
     package: tenant.package,
     fluentcartCustomerId: tenant.fluentcartCustomerId,
+    unlimited: tenant.unlimited,
     limitOverrides: (tenant.limitOverrides as LimitOverrides | null) ?? {},
     usage: {
       points: pointsCount,
@@ -115,6 +116,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/admin/tena
     contactPhone,
     adminNote,
     limitOverrides,
+    unlimited,
     fluentcartCustomerId,
     comment,
   } = await request.json();
@@ -198,6 +200,14 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/admin/tena
     after.fluentcartCustomerId = value;
   }
 
+  if (unlimited !== undefined) {
+    if (typeof unlimited !== "boolean") {
+      return NextResponse.json({ error: "Некорректное значение unlimited" }, { status: 400 });
+    }
+    data.unlimited = unlimited;
+    before.unlimited = tenant.unlimited;
+    after.unlimited = unlimited;
+  }
   if (limitOverrides !== undefined) {
     if (limitOverrides === null) {
       data.limitOverrides = Prisma.JsonNull;

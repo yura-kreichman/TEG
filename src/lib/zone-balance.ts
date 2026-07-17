@@ -1,12 +1,26 @@
 import { prisma } from "@/lib/prisma";
 import { distributeCollectionWhole } from "@/lib/collection-split";
 
+// Типы операций, которые НЕ лежат физически в кассе (docs/spec/02-money.md) —
+// revenue_cashless (безнал), а с абонементами (запрос пользователя
+// 2026-07-17) ещё два: abonement_topup_cashless (пополнение безналом — та же
+// причина, что у revenue_cashless) и revenue_abonement (трата с баланса —
+// реальных денег в этот момент не приходит, они пришли раньше, при
+// пополнении). abonement_topup (пополнение НАЛИЧНЫМИ) в списке нет
+// специально — это реальные деньги в кассе точки прямо сейчас, ровно как
+// revenue.
+const CASH_EXCLUDED_TYPES = new Set(["revenue_cashless", "abonement_topup_cashless", "revenue_abonement"]);
+
+export function affectsCashOnHand(type: string): boolean {
+  return !CASH_EXCLUDED_TYPES.has(type);
+}
+
 // Текущий остаток кассы каждой зоны — весь журнал MoneyOperation, без
 // периода (docs/spec/02-money.md: "остаток зоны = сумма журнала"), кроме
-// revenue_cashless (безнал не лежит в кассе физически). Тот же расчёт, что в
-// /api/reports/money — общий для owner- и operator-инкассации, чтобы
-// пропорциональная разбивка "общей" инкассации всегда опиралась на одни и те
-// же цифры, что видны на экране "Остатки по зонам".
+// типов из CASH_EXCLUDED_TYPES выше. Тот же расчёт, что в /api/reports/money —
+// общий для owner- и operator-инкассации, чтобы пропорциональная разбивка
+// "общей" инкассации всегда опиралась на одни и те же цифры, что видны на
+// экране "Остатки по зонам".
 export async function getZoneBalances(zoneIds: string[]): Promise<Map<string, number>> {
   if (zoneIds.length === 0) return new Map();
 
@@ -16,7 +30,7 @@ export async function getZoneBalances(zoneIds: string[]): Promise<Map<string, nu
 
   const balanceByZone = new Map<string, number>();
   for (const op of operations) {
-    if (op.type === "revenue_cashless" || !op.zoneId) continue;
+    if (!affectsCashOnHand(op.type) || !op.zoneId) continue;
     balanceByZone.set(op.zoneId, (balanceByZone.get(op.zoneId) ?? 0) + Number(op.amount));
   }
   return balanceByZone;
@@ -53,14 +67,14 @@ export async function getPointCashBalance(pointId: string): Promise<number> {
   let total = 0;
   let lastCollectionAt: Date | null = null;
   for (const op of zoneOps) {
-    if (op.type === "revenue_cashless") continue;
+    if (!affectsCashOnHand(op.type)) continue;
     total += Number(op.amount);
     if (op.type === "collection" && (!lastCollectionAt || op.occurredAt > lastCollectionAt)) {
       lastCollectionAt = op.occurredAt;
     }
   }
   for (const op of pointOps) {
-    if (op.type === "revenue_cashless") continue;
+    if (!affectsCashOnHand(op.type)) continue;
     if (op.type === "advance" || op.type === "bonus_payout") {
       if (op.performedByUserId) continue;
       if (lastCollectionAt && op.occurredAt <= lastCollectionAt) continue;

@@ -1,0 +1,264 @@
+"use client";
+
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
+import { DeleteButton } from "@/components/ui/delete-button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { OwnerShell } from "@/components/owner-shell";
+import { SpringCard } from "@/components/spring-card";
+import { PressableScale } from "@/components/motion/pressable-scale";
+import { BottomSheet } from "@/components/motion/bottom-sheet";
+import { Money } from "@/components/money";
+import { PhoneInput } from "@/components/phone-input";
+import { AbonementTopupFlow } from "@/components/abonement-topup-flow";
+import { useI18n } from "@/components/i18n-provider";
+import { useSavePulse } from "@/hooks/use-save-pulse";
+import { cn } from "@/lib/utils";
+
+interface AbonementInfo {
+  id: string;
+  name: string | null;
+  price: number;
+  creditAmount: number;
+  pointIds: string[];
+}
+
+interface PointOption {
+  id: string;
+  name: string;
+}
+
+interface WalletHistoryEntry {
+  id: string;
+  type: string;
+  amount: number;
+  occurredAt: string;
+  planName: string | null;
+  paymentMethod: string | null;
+  pointName: string | null;
+  performedBy: string | null;
+}
+
+interface WalletDetail {
+  id: string;
+  phone: string;
+  name: string | null;
+  balance: number;
+  history: WalletHistoryEntry[];
+}
+
+/**
+ * Отдельная страница абонента (запрос пользователя 2026-07-17: "стоит
+ * сделать 'вход' в абонента и там управлять его настройками, пополнениями и
+ * др.") — раньше всё это (правка имени/телефона, продажа/пополнение с
+ * пикером точки и списком планов, произвольная сумма, полная история) было
+ * впихнуто в один BottomSheet поверх списка "Абоненты" и криво отображалось
+ * при таком объёме контента; теперь обычная страница с прокруткой, тот же
+ * паттерн, что /operators/[id].
+ */
+export default function AbonementWalletPage() {
+  const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const t = useI18n();
+
+  const [checking, setChecking] = useState(true);
+  const [wallet, setWallet] = useState<WalletDetail | null>(null);
+  const [form, setForm] = useState({ name: "", phone: "" });
+  const [error, setError] = useState<string | null>(null);
+  const { saved, pulse } = useSavePulse();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const { saved: deleted, pulse: deletePulse } = useSavePulse();
+
+  const [plans, setPlans] = useState<AbonementInfo[]>([]);
+  const [points, setPoints] = useState<PointOption[]>([]);
+  const [topupPointId, setTopupPointId] = useState<string | null>(null);
+
+  async function loadWallet() {
+    const res = await fetch(`/api/abonement-wallets/${params.id}`);
+    if (res.status === 404) {
+      router.replace("/abonements");
+      return;
+    }
+    const data = await res.json();
+    setWallet(data);
+    setForm({ name: data.name ?? "", phone: data.phone });
+  }
+
+  async function loadPlans() {
+    const res = await fetch("/api/abonements");
+    const data = await res.json();
+    setPlans(data.abonements ?? []);
+  }
+
+  async function loadPoints() {
+    const res = await fetch("/api/points");
+    const data = await res.json();
+    const list = (data.points ?? []).map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }));
+    setPoints(list);
+    if (list.length > 0) setTopupPointId(list[0].id);
+  }
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    Promise.all([loadWallet(), loadPlans(), loadPoints()]).then(() => setChecking(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  async function save() {
+    if (!wallet) return;
+    setError(null);
+    const res = await fetch(`/api/abonement-wallets/${wallet.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: form.name.trim() || null, phone: form.phone }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error ?? "Не удалось сохранить");
+      return;
+    }
+    await loadWallet();
+    pulse();
+  }
+
+  async function remove() {
+    if (!wallet) return;
+    await fetch(`/api/abonement-wallets/${wallet.id}`, { method: "DELETE" });
+    deletePulse(() => router.push("/abonements"));
+  }
+
+  // План виден в точке, если он "на всех точках" (пустой pointIds) или явно
+  // включает выбранную — тот же принцип, что на /abonements.
+  const plansAtTopupPoint = plans.filter(
+    (a) => a.pointIds.length === 0 || (topupPointId ? a.pointIds.includes(topupPointId) : false)
+  );
+
+  if (checking || !wallet) return null;
+
+  return (
+    <OwnerShell>
+      <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
+        <div className="flex w-full max-w-2xl flex-col gap-4">
+          <Link href="/abonements" className="w-fit text-body-airbnb font-semibold text-primary">
+            ← {t.abonements.title}
+          </Link>
+
+          <SpringCard hover={false} className="flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-3">
+              <h1 className="text-screen-title">{wallet.name || wallet.phone}</h1>
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-10 shrink-0 rounded-full border-border text-destructive"
+                  onClick={() => setConfirmDelete(true)}
+                  aria-label={t.abonements.deleteWallet}
+                >
+                  <Trash2 className="size-4.5" />
+                </Button>
+              </PressableScale>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="wPhone">{t.abonements.phoneLabel}</Label>
+              <PhoneInput
+                id="wPhone"
+                timezoneEndpoint="/api/tenant/timezone"
+                value={form.phone}
+                onChange={(phone) => setForm((p) => ({ ...p, phone }))}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="wName">{t.abonements.nameLabel}</Label>
+              <Input id="wName" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+            </div>
+            <div className="flex items-center justify-between rounded-control bg-muted p-3.5">
+              <span className="text-caption-airbnb text-muted-foreground">{t.abonements.balanceLabel}</span>
+              <span className="text-xl font-extrabold tracking-[-0.02em]">
+                <Money value={wallet.balance} />
+              </span>
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <PressableScale>
+              <SaveButton type="button" className="h-12 w-full" saved={saved} onClick={save} />
+            </PressableScale>
+          </SpringCard>
+
+          <SpringCard hover={false}>
+            <p className="mb-2 text-card-title">{t.abonements.topupSheetTitle}</p>
+            <AbonementTopupFlow
+              key={wallet.id}
+              initialWallet={{ id: wallet.id, phone: wallet.phone, name: wallet.name, balance: wallet.balance }}
+              plans={plansAtTopupPoint}
+              searchEndpoint="/api/abonement-wallets"
+              createEndpoint="/api/abonement-wallets"
+              topupEndpointFor={(walletId) => `/api/abonement-wallets/${walletId}/topup`}
+              extraBody={topupPointId ? { pointId: topupPointId } : undefined}
+              pointPicker={{ options: points, value: topupPointId, onChange: setTopupPointId }}
+              allowArbitraryAmount
+              onSuccess={loadWallet}
+            />
+          </SpringCard>
+
+          <SpringCard hover={false}>
+            <p className="mb-2 text-card-title">{t.abonements.historyTitle}</p>
+            {wallet.history.length === 0 ? (
+              <p className="text-caption-airbnb text-muted-foreground">{t.abonements.noHistory}</p>
+            ) : (
+              <div className="flex flex-col">
+                {wallet.history.map((h) => (
+                  <div
+                    key={h.id}
+                    className="flex items-center justify-between gap-2 border-t border-border py-2.5 first:border-t-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-body-airbnb font-semibold">
+                        {h.type === "topup"
+                          ? t.abonements.historyTopup
+                          : h.type === "spend"
+                            ? t.abonements.historySpend
+                            : t.abonements.historyAdjustment}
+                        {h.planName ? ` · ${h.planName}` : ""}
+                      </p>
+                      <p className="text-caption-airbnb text-muted-foreground">
+                        {new Date(h.occurredAt).toLocaleString()}
+                        {h.pointName ? ` · ${h.pointName}` : ""}
+                        {h.performedBy ? ` · ${h.performedBy}` : ""}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        "shrink-0 tabular-nums font-semibold",
+                        h.type === "spend" ? "text-destructive" : "text-success"
+                      )}
+                    >
+                      {h.type === "spend" ? "−" : "+"}
+                      <Money value={h.amount} />
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </SpringCard>
+        </div>
+      </div>
+
+      <BottomSheet open={confirmDelete} onClose={() => setConfirmDelete(false)}>
+        <div className="flex flex-col gap-3 pt-2">
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.abonements.deleteWallet}</h2>
+          <p className="text-body-airbnb">{t.abonements.confirmDeleteWallet}</p>
+          <PressableScale>
+            <DeleteButton className="h-12 w-full" onClick={remove} deleted={deleted} />
+          </PressableScale>
+        </div>
+      </BottomSheet>
+    </OwnerShell>
+  );
+}

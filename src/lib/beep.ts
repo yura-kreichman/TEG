@@ -22,13 +22,15 @@ export function playBeep() {
 
   const now = ctx.currentTime;
   // Два коротких тона — заметнее одиночного писка, не сливается с фоновым шумом игровой комнаты.
+  // Громкость на максимуме (запрос пользователя 2026-07-17: "сделай
+  // максимальную") — 1.0, unity gain, предел перед клиппингом синусоиды.
   for (const offset of [0, 0.22]) {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "sine";
     osc.frequency.value = 880;
     gain.gain.setValueAtTime(0.0001, now + offset);
-    gain.gain.exponentialRampToValueAtTime(0.3, now + offset + 0.02);
+    gain.gain.exponentialRampToValueAtTime(1, now + offset + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.18);
     osc.connect(gain);
     gain.connect(ctx.destination);

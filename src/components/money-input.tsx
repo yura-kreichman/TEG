@@ -32,7 +32,15 @@ export function MoneyInput({
   const sign = getCurrencySign(useCurrency());
 
   return (
-    <div className="relative">
+    // flex-1 min-w-0 тут, не только в className на Input ниже — className
+    // приходит на сам <input>, а ширину в строке (flex-row рядом с кнопкой,
+    // как "Произвольная сумма" + "Начислить") определяет именно ЭТОТ div:
+    // без явного flex-1 он не растягивался, оставался узким, и знак валюты
+    // (absolute справа ВНУТРИ него) съезжал за пределы поля — криво висел
+    // между полем и кнопкой (нашёл пользователь 2026-07-17). Вне flex-контекста
+    // flex-1 ни на что не влияет, так что старым местам использования это
+    // ничего не меняет.
+    <div className="relative min-w-0 flex-1">
       <Input
         inputMode="decimal"
         {...props}

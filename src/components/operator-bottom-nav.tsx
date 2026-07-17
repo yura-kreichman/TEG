@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
-import { Home, ListChecks, Watch } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { AlertTriangle, CreditCard, Home, ListChecks, Watch } from "lucide-react";
 import { BottomGlassNav, type BottomGlassNavItem } from "@/components/bottom-glass-nav";
+import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n } from "@/components/i18n-provider";
 import { isLaunchesZone, isStaysZone } from "@/lib/results-calc";
+import { unlockBeep, playBeep } from "@/lib/beep";
 import { cn } from "@/lib/utils";
+
+const EXPIRY_POLL_MS = 6000;
+// Повторяющийся сигнал, пока хоть один пуск "За вход" не закрыт (запрос
+// пользователя 2026-07-17: "звукового непрерывного уведомления", позже
+// "должно быть громче и чаще" — было 20000, слишком редко на реальной точке).
+const EXPIRY_ALERT_REPEAT_MS = 8000;
 
 /**
  * Нижний бар PWA оператора (docs/spec/03-design-system.md, "Навигация":
@@ -27,6 +35,7 @@ import { cn } from "@/lib/utils";
  */
 export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const t = useI18n();
   const [hasStays, setHasStays] = useState(false);
   const [hasLaunches, setHasLaunches] = useState(false);
@@ -46,6 +55,60 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const hidden = pathname === "/operator/login" || pathname.startsWith("/operator/submit");
+
+  // Глобальное напоминание о пусках "За вход", у которых истекает/истёк
+  // таймер (запрос пользователя 2026-07-17) — опрашивается независимо от
+  // текущего экрана, пока нижний бар вообще виден (скрыт только на входе и
+  // в мастере сдачи итогов, там и так не до напоминаний).
+  const [expiredCount, setExpiredCount] = useState(0);
+  const [expiredAssetId, setExpiredAssetId] = useState<string | null>(null);
+  const alertTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (hidden || !hasStays) {
+      setExpiredCount(0);
+      setExpiredAssetId(null);
+      return;
+    }
+    function checkExpired() {
+      fetch("/api/operator/expired-launches")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!data) return;
+          setExpiredCount(data.count ?? 0);
+          setExpiredAssetId(data.firstAssetId ?? null);
+        })
+        .catch(() => {});
+    }
+    checkExpired();
+    const interval = setInterval(checkExpired, EXPIRY_POLL_MS);
+    return () => clearInterval(interval);
+  }, [hidden, hasStays]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Звук+вибрация сразу при обнаружении, затем повтор, пока не закрыты —
+  // завязано на переход 0 -> >0 (не на каждое изменение count), чтобы не
+  // перезапускать таймер повтора при появлении/уходе других пусков.
+  useEffect(() => {
+    if (expiredCount === 0) {
+      if (alertTimerRef.current) {
+        clearInterval(alertTimerRef.current);
+        alertTimerRef.current = null;
+      }
+      return;
+    }
+    playBeep();
+    if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+    alertTimerRef.current = setInterval(() => {
+      playBeep();
+      if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+    }, EXPIRY_ALERT_REPEAT_MS);
+    return () => {
+      if (alertTimerRef.current) clearInterval(alertTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expiredCount > 0]);
 
   const items: BottomGlassNavItem[] = [
     {
@@ -74,13 +137,56 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
           },
         ]
       : []),
+    // "Абонементы" — только если у оператора есть хоть одна зона режима
+    // "Прибывания"/"Пуски" (запрос пользователя 2026-07-17: "если у него
+    // активные зоны, где абонимент применяется") — только там абонемент
+    // вообще применим как способ оплаты (см. LAUNCH_PAYMENT_METHODS).
+    ...(hasStays || hasLaunches
+      ? [
+          {
+            href: "/operator/abonements",
+            label: t.nav.abonements,
+            icon: CreditCard,
+            active: pathname.startsWith("/operator/abonements"),
+          },
+        ]
+      : []),
   ];
 
   return (
-    <>
-      <div className={cn("flex flex-1 flex-col", !hidden && "pb-[calc(4rem+env(safe-area-inset-bottom))]")}>
+    <div
+      className="flex flex-1 flex-col"
+      onPointerDownCapture={() => unlockBeep()}
+    >
+      <div
+        className={cn(
+          "flex flex-1 flex-col",
+          !hidden && "pb-[calc(4rem+env(safe-area-inset-bottom))]",
+          !hidden && expiredCount > 0 && "pb-[calc(6.75rem+env(safe-area-inset-bottom))]"
+        )}
+      >
         {children}
       </div>
+      {!hidden && expiredCount > 0 && (
+        <PressableScale
+          className="fixed inset-x-0 z-40 px-3"
+          style={{ bottom: "calc(4.75rem + env(safe-area-inset-bottom))" }}
+        >
+          <button
+            type="button"
+            onClick={() => router.push(`/operator/game-room${expiredAssetId ? `?assetId=${expiredAssetId}` : ""}`)}
+            className="mx-auto flex w-full max-w-md items-center gap-2 rounded-control border border-destructive/40 bg-destructive/10 px-3.5 py-2.5 text-left shadow-floating motion-safe:animate-pulse"
+          >
+            <AlertTriangle className="size-4 shrink-0 text-destructive" />
+            <span className="flex-1 truncate text-caption-airbnb font-bold text-destructive">
+              {t.operatorApp.gameRoom.expiredBannerLabel}
+            </span>
+            <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-destructive text-[0.6875rem] font-bold text-white tabular-nums">
+              {expiredCount}
+            </span>
+          </button>
+        </PressableScale>
+      )}
       {!hidden && (
         <BottomGlassNav
           items={items}
@@ -91,6 +197,6 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
           showMore={false}
         />
       )}
-    </>
+    </div>
   );
 }

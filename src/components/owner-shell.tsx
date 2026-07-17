@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BarChart3, FileText, Globe, Home, ListChecks, MapPin, Settings, Users, Wallet, type LucideIcon } from "lucide-react";
+import { BarChart3, CreditCard, FileText, Globe, Home, ListChecks, MapPin, Settings, Users, Wallet, type LucideIcon } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/components/i18n-provider";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -42,7 +42,20 @@ const PRIORITY_ITEMS: NavItemConfig[] = [
   { id: "reports", href: "/reports", icon: BarChart3, label: (t) => t.nav.reports, priority: 3, match: (p) => p.startsWith("/reports") },
   { id: "operators", href: "/operators", icon: Users, label: (t) => t.nav.operators, priority: 4, match: (p) => p.startsWith("/operators") },
   { id: "tasks", href: "/tasks", icon: ListChecks, label: (t) => t.nav.tasks, priority: 5, match: (p) => p.startsWith("/tasks") },
-  { id: "points", href: "/points", icon: MapPin, label: (t) => t.nav.points, priority: 6, match: (p) => p.startsWith("/points") },
+  // Модуль "Абонементы" (запрос пользователя 2026-07-17) — управление
+  // пакетами пополнения и списком кошельков клиентов, отдельный пункт меню
+  // ("Там он будет управлять ими: создавать новые/редактировать/удалять"),
+  // не вложен в "Настройки" — тот же уровень, что у Инструктажей/Лендинга.
+  // Сразу после "Задачи" (решение пользователя 2026-07-17).
+  {
+    id: "abonements",
+    href: "/abonements",
+    icon: CreditCard,
+    label: (t) => t.nav.abonements,
+    priority: 6,
+    match: (p) => p.startsWith("/abonements"),
+  },
+  { id: "points", href: "/points", icon: MapPin, label: (t) => t.nav.points, priority: 7, match: (p) => p.startsWith("/points") },
   // Полноценный модуль (docs/spec/07-instructions.md), не тенантная
   // настройка — вынесен из вложенности Ещё → Настройки → Инструктажи прямо
   // в "Ещё", перед Настройками (решение пользователя 2026-07-12).
@@ -51,7 +64,7 @@ const PRIORITY_ITEMS: NavItemConfig[] = [
     href: "/settings/instructions",
     icon: FileText,
     label: (t) => t.instructions.settingsTitle,
-    priority: 7,
+    priority: 8,
     match: (p) => p.startsWith("/settings/instructions"),
   },
   // Полноценный модуль (docs/spec/08-landing.md) — тот же паттерн, что у
@@ -61,7 +74,7 @@ const PRIORITY_ITEMS: NavItemConfig[] = [
     href: "/settings/landing",
     icon: Globe,
     label: (t) => t.landing.settingsTitle,
-    priority: 8,
+    priority: 9,
     match: (p) => p.startsWith("/settings/landing"),
   },
 ];

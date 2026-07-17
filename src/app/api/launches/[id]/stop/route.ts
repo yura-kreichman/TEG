@@ -7,6 +7,7 @@ import {
   type LaunchPricingMode,
   type LaunchRoundingMode,
 } from "@/lib/game-room";
+import { InsufficientBalanceError, spendWalletTx } from "@/lib/abonement";
 
 // Стоп пуска — оператор, серверное время; расчёт стоимости только на сервере
 // (docs/spec/04-game-room.md), по снапшоту тарифа, зафиксированному при
@@ -40,12 +41,20 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
   // 2026-07-17: "это только касается тарифа По факту"); у "fixed"/"За вход"
   // не спрашивается и в теле запроса не ожидается.
   let paymentMethod: string | null = null;
+  let abonementWalletId: string | null = null;
   if (launch.pricingMode === "per_minute") {
     const body = await request.json().catch(() => ({}));
     if (!(LAUNCH_PAYMENT_METHODS as readonly string[]).includes(body.paymentMethod)) {
       return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
     }
     paymentMethod = body.paymentMethod;
+    if (paymentMethod === "abonement") {
+      abonementWalletId =
+        typeof body.abonementWalletId === "string" && body.abonementWalletId ? body.abonementWalletId : null;
+      if (!abonementWalletId) {
+        return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
+      }
+    }
   }
 
   const endedAt = new Date();
@@ -61,10 +70,35 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
     endedAt
   );
 
-  const updated = await prisma.launch.update({
-    where: { id },
-    data: { endedAt, isOpen: false, amount, endedByOperatorId: operator.id, paymentMethod },
-  });
+  let updated;
+  try {
+    updated = await prisma.$transaction(async (tx) => {
+      const result = await tx.launch.update({
+        where: { id },
+        data: { endedAt, isOpen: false, amount, endedByOperatorId: operator.id, paymentMethod, abonementWalletId },
+      });
+
+      // Сумма "По факту" известна только сейчас, при остановке — списание
+      // сразу здесь же, тем же принципом, что и "За вход" при старте.
+      if (paymentMethod === "abonement" && abonementWalletId) {
+        await spendWalletTx(tx, abonementWalletId, {
+          tenantId: point.tenantId,
+          zoneId: launch.zoneId,
+          launchId: id,
+          pointId: point.id,
+          operatorId: operator.id,
+          amount,
+        });
+      }
+
+      return result;
+    });
+  } catch (err) {
+    if (err instanceof InsufficientBalanceError) {
+      return NextResponse.json({ error: "Недостаточно средств на абонементе" }, { status: 400 });
+    }
+    throw err;
+  }
 
   return NextResponse.json({
     id: updated.id,

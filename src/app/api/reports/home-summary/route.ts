@@ -141,7 +141,7 @@ export async function GET(request: Request) {
   let expense = 0;
   for (const op of operations) {
     const amount = Number(op.amount);
-    if (op.type === "revenue" || op.type === "revenue_cashless") revenue += amount;
+    if (op.type === "revenue" || op.type === "revenue_cashless" || op.type === "revenue_abonement") revenue += amount;
     if (op.type === "expense") expense += amount; // stored negative
   }
 

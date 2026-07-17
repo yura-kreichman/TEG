@@ -96,6 +96,66 @@ export async function GET(request: Request) {
     lastReadingIdByKey.set(key, r.id);
   }
 
+  // Абонементная выручка (revenue_abonement) не привязана к ZoneSubmission —
+  // признаётся сразу в момент траты, а не при сдаче итогов (запрос
+  // пользователя 2026-07-17), поэтому её нет в zs.cashAmount/mobileAmount.
+  // Чтобы показать её в ПРАВИЛЬНОМ окне для конкретной прошлой сдачи (между
+  // ней и предыдущей сдачей той же зоны — тот же принцип, что у
+  // previousSubmissionBoundary в lib/game-room.ts для текущего незакрытого
+  // окна), строим полную цепочку сдач по каждой зоне режима
+  // "stays"/"launches" — именно там абонемент вообще применим как способ
+  // оплаты.
+  const gameRoomZoneIds = [
+    ...new Set(
+      submissions.flatMap((s) =>
+        s.zoneSubmissions
+          .filter((zs) => zs.zone.accountingMode === "stays" || zs.zone.accountingMode === "launches")
+          .map((zs) => zs.zoneId)
+      )
+    ),
+  ];
+
+  const boundariesByZone = new Map<string, Date[]>();
+  const abonementOpsByZone = new Map<string, { amount: number; occurredAt: Date }[]>();
+  if (gameRoomZoneIds.length) {
+    const [allZoneSubmissions, abonementOps] = await Promise.all([
+      prisma.zoneSubmission.findMany({
+        where: { zoneId: { in: gameRoomZoneIds } },
+        orderBy: { createdAt: "asc" },
+        select: { zoneId: true, createdAt: true },
+      }),
+      prisma.moneyOperation.findMany({
+        where: { zoneId: { in: gameRoomZoneIds }, type: "revenue_abonement" },
+        select: { zoneId: true, amount: true, occurredAt: true },
+      }),
+    ]);
+    for (const row of allZoneSubmissions) {
+      const list = boundariesByZone.get(row.zoneId) ?? [];
+      list.push(row.createdAt);
+      boundariesByZone.set(row.zoneId, list);
+    }
+    for (const op of abonementOps) {
+      // zoneId гарантированно заполнен — фильтр выше требует его "in"
+      // непустого списка id, но Prisma не сужает тип по WHERE.
+      if (!op.zoneId) continue;
+      const list = abonementOpsByZone.get(op.zoneId) ?? [];
+      list.push({ amount: Number(op.amount), occurredAt: op.occurredAt });
+      abonementOpsByZone.set(op.zoneId, list);
+    }
+  }
+
+  function abonementAmountFor(zoneId: string, submissionCreatedAt: Date): number {
+    const boundaries = boundariesByZone.get(zoneId);
+    const ops = abonementOpsByZone.get(zoneId);
+    if (!boundaries || !ops) return 0;
+    const idx = boundaries.findIndex((d) => d.getTime() === submissionCreatedAt.getTime());
+    const windowStart = idx > 0 ? boundaries[idx - 1] : null;
+    const sum = ops
+      .filter((op) => op.occurredAt <= submissionCreatedAt && (!windowStart || op.occurredAt > windowStart))
+      .reduce((acc, op) => acc + op.amount, 0);
+    return Math.round(sum * 100) / 100;
+  }
+
   const zoneSubmissionIds = submissions.flatMap((s) => s.zoneSubmissions.map((zs) => zs.id));
   const correctionLogs = zoneSubmissionIds.length
     ? await prisma.correctionLog.findMany({
@@ -128,6 +188,16 @@ export async function GET(request: Request) {
       const netRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
       const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
       const difference = Math.round((actualCash - netRevenue) * 100) / 100;
+      // Справочно, рядом с cashAmount/mobileAmount — НЕ в кассе/разнице выше
+      // (запрос пользователя 2026-07-17: "во всех отчётах... правильные
+      // цифры", "к Наличный и Безнал добавить Абонемент") — сумма реальна,
+      // но касса точки её уже получила раньше, при пополнении, поэтому она
+      // намеренно не входит в actualCash/difference, только показывается
+      // отдельной строкой.
+      const abonementAmount =
+        zs.zone.accountingMode === "stays" || zs.zone.accountingMode === "launches"
+          ? abonementAmountFor(zs.zoneId, zs.createdAt)
+          : 0;
 
       const editable =
         zs.zone.accountingMode !== "counters" ||
@@ -177,8 +247,10 @@ export async function GET(request: Request) {
         cashAmount: Number(zs.cashAmount),
         cashEditedBefore,
         mobileAmount: Number(zs.mobileAmount),
+        abonementAmount,
         returnsCount: zs.returnsCount,
         calculatedRevenue,
+        netRevenue,
         difference,
         // Цены тарифов — чтобы владелец видел пересчитанные Расчёт/Разница
         // живьём при редактировании показаний (запрос пользователя

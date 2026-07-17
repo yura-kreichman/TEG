@@ -51,8 +51,10 @@ interface DayCard {
   cashAmount: number;
   cashEditedBefore: number | null;
   mobileAmount: number;
+  abonementAmount: number;
   returnsCount: number;
   calculatedRevenue: number;
+  netRevenue: number;
   difference: number;
   tariffs: { tariffId: string; price: number }[];
   assets: {
@@ -525,6 +527,19 @@ export default function ReadingsCalendarPage() {
                             <span>{t.operatorApp.submit.mobileLabel}</span>
                             <span className="text-foreground"><Money value={card.mobileAmount} /></span>
                           </div>
+                          {/* Справочно, не входит в Наличные/Безнал/Разницу выше —
+                              касса уже получила эту сумму раньше, при пополнении
+                              абонемента (запрос пользователя 2026-07-17: "во всех
+                              отчётах... правильные цифры", "добавить Абонемент").
+                              Условно, как и у "Прибываний"/"Пусков" в мастере
+                              сдачи — не захламляет карточки зон, где абонементом
+                              не пользовались. */}
+                          {card.abonementAmount > 0 && (
+                            <div className="flex items-center justify-between text-caption-airbnb">
+                              <span>{t.operatorApp.abonement.paymentLabel}</span>
+                              <span className="text-foreground"><Money value={card.abonementAmount} /></span>
+                            </div>
+                          )}
                           {card.accountingMode !== "cash_only" && (
                           <div className="flex items-center justify-between text-caption-airbnb">
                             <span>{t.operatorApp.submit.returnsLabel}</span>
@@ -537,6 +552,12 @@ export default function ReadingsCalendarPage() {
                             <span className="text-foreground">{t.operatorApp.submit.calculatedRevenue}</span>
                             <span className="text-foreground"><Money value={card.calculatedRevenue} /></span>
                           </div>
+                          {card.returnsCount > 0 && (
+                            <div className="flex items-center justify-between text-caption-airbnb">
+                              <span>{t.readings.netRevenueLabel}</span>
+                              <span className="text-foreground"><Money value={card.netRevenue} /></span>
+                            </div>
+                          )}
                           <div className="flex items-center justify-between text-caption-airbnb">
                             <span>{t.operatorApp.submit.difference}</span>
                             <span

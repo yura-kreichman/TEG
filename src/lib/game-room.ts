@@ -15,9 +15,12 @@ export type LaunchPricingMode = (typeof LAUNCH_PRICING_MODES)[number];
 export const LAUNCH_ROUNDING_MODES = ["up", "down", "nearest"] as const;
 export type LaunchRoundingMode = (typeof LAUNCH_ROUNDING_MODES)[number];
 
-// Способ оплаты — только у "per_minute"/"По факту" (запрос пользователя
-// 2026-07-17), спрашивается у оператора при остановке пуска.
-export const LAUNCH_PAYMENT_METHODS = ["cash", "mobile"] as const;
+// Способ оплаты — у "per_minute"/"По факту" спрашивается при остановке
+// пуска, у "fixed"/"За вход" и "Пусков" сразу (запрос пользователя
+// 2026-07-17). "abonement" (тот же день, отдельный запрос) — списание с
+// кошелька клиента вместо наличных/безнала, требует Launch.abonementWalletId,
+// см. src/lib/abonement.ts.
+export const LAUNCH_PAYMENT_METHODS = ["cash", "mobile", "abonement"] as const;
 export type LaunchPaymentMethod = (typeof LAUNCH_PAYMENT_METHODS)[number];
 
 // Ограничение на число одновременно открытых пусков одного актива/зоны
@@ -144,6 +147,63 @@ export async function countOpenLaunchesInZone(zoneId: string, tx: Tx | typeof pr
   return tx.launch.count({ where: { zoneId, isOpen: true } });
 }
 
+export interface ExpiredLaunchInfo {
+  count: number;
+  firstAssetId: string | null;
+}
+
+// Предупреждать не только когда время УЖЕ вышло, но и за минуту до конца
+// (запрос пользователя 2026-07-17: "не только те, где время уже вышло, а и
+// те где до конца остаётся минута") — оператор успевает подойти к активу
+// заранее, а не только когда таймер уже красный.
+const NEAR_EXPIRY_WINDOW_MS = 60000;
+
+/**
+ * Пуски "За вход" (pricingMode="fixed"), которым до конца остаётся минута
+ * или меньше (включая уже просроченные), по ВСЕЙ точке — не по одной
+ * выбранной зоне (запрос пользователя 2026-07-17: "не хватает
+ * напоминания/звукового непрерывного уведомления... если ПОДОШЁЛ ТАЙМЕР К
+ * КОНЦУ", независимо от того, на каком экране оператор сейчас находится).
+ * "По факту" не участвует — там нет длительности, значит нет и истечения.
+ * firstAssetId — для перехода из глобального баннера сразу к активу, тем же
+ * приёмом, что "Перейти к активу" в мастере сдачи итогов.
+ */
+export async function findExpiredFixedLaunches(
+  pointId: string,
+  operator: { id: string; allZonesAccess: boolean }
+): Promise<ExpiredLaunchInfo> {
+  const zones = await prisma.zone.findMany({
+    where: {
+      pointId,
+      active: true,
+      accountingMode: "stays",
+      ...(operator.allZonesAccess ? {} : { operatorsWithAccess: { some: { id: operator.id } } }),
+    },
+    select: { id: true },
+  });
+  if (zones.length === 0) return { count: 0, firstAssetId: null };
+
+  const launches = await prisma.launch.findMany({
+    where: {
+      zoneId: { in: zones.map((z) => z.id) },
+      isOpen: true,
+      pricingMode: "fixed",
+      durationMinutesSnapshot: { not: null },
+    },
+    select: { assetId: true, startedAt: true, durationMinutesSnapshot: true },
+    orderBy: { startedAt: "asc" },
+  });
+
+  const now = Date.now();
+  const nearExpiry = launches.filter(
+    (l) =>
+      l.durationMinutesSnapshot != null &&
+      now >= l.startedAt.getTime() + l.durationMinutesSnapshot * 60000 - NEAR_EXPIRY_WINDOW_MS
+  );
+
+  return { count: nearExpiry.length, firstAssetId: nearExpiry[0]?.assetId ?? null };
+}
+
 function roundMinutes(rawMinutes: number, mode: LaunchRoundingMode): number {
   if (mode === "up") return Math.ceil(rawMinutes);
   if (mode === "down") return Math.floor(rawMinutes);
@@ -184,12 +244,15 @@ export interface GameRoomAggregate {
   launchIds: string[];
   // Разбивка totalAmount по способу оплаты — только у "per_minute"/"По
   // факту" (у "fixed"/"За вход" paymentMethod не спрашивается, эти суммы в
-  // разбивку не попадают, поэтому cashAmount+mobileAmount может быть МЕНЬШЕ
-  // totalAmount — это ожидаемо). Чисто справочная величина: НЕ подставляется
-  // в поля кассы шага 4 мастера сдачи итогов (запрос пользователя
-  // 2026-07-17: подстановка стёрла бы контроль недостачи через "Разницу").
+  // разбивку не попадают, поэтому cashAmount+mobileAmount+abonementAmount
+  // может быть МЕНЬШЕ totalAmount — это ожидаемо). Чисто справочная
+  // величина: НЕ подставляется в поля кассы шага 4 мастера сдачи итогов
+  // (запрос пользователя 2026-07-17: подстановка стёрла бы контроль
+  // недостачи через "Разницу"). abonementAmount — запрос того же дня, третий
+  // способ оплаты наравне с наличными/безналом.
   cashAmount: number;
   mobileAmount: number;
+  abonementAmount: number;
 }
 
 /**
@@ -218,12 +281,14 @@ export async function aggregateGameRoomLaunches(
   let totalMinutes = 0;
   let cashAmount = 0;
   let mobileAmount = 0;
+  let abonementAmount = 0;
   for (const l of launches) {
     const amount = Number(l.amount ?? 0);
     totalAmount += amount;
     if (l.endedAt) totalMinutes += (l.endedAt.getTime() - l.startedAt.getTime()) / 60000;
     if (l.paymentMethod === "cash") cashAmount += amount;
     else if (l.paymentMethod === "mobile") mobileAmount += amount;
+    else if (l.paymentMethod === "abonement") abonementAmount += amount;
   }
 
   return {
@@ -233,6 +298,7 @@ export async function aggregateGameRoomLaunches(
     launchIds: launches.map((l) => l.id),
     cashAmount: Math.round(cashAmount * 100) / 100,
     mobileAmount: Math.round(mobileAmount * 100) / 100,
+    abonementAmount: Math.round(abonementAmount * 100) / 100,
   };
 }
 
@@ -249,8 +315,10 @@ export interface AssetRevenueBreakdown {
   // каждому браслету (при старте — "За вход", при остановке — "По факту",
   // см. paymentMethod у Launch) — чисто справочно, помогает быстрее
   // вспомнить реальную сумму, не подставляется в поля автоматически.
+  // abonementAmount — запрос пользователя 2026-07-17, третий способ оплаты.
   cashAmount: number;
   mobileAmount: number;
+  abonementAmount: number;
 }
 
 /**
@@ -276,22 +344,27 @@ export async function gameRoomRevenueByAsset(
     select: { assetId: true, amount: true, paymentMethod: true },
   });
 
-  const byAsset = new Map<string, { calculatedAmount: number; cashAmount: number; mobileAmount: number }>();
+  const byAsset = new Map<
+    string,
+    { calculatedAmount: number; cashAmount: number; mobileAmount: number; abonementAmount: number }
+  >();
   for (const l of launches) {
     if (!l.assetId) continue;
-    const bucket = byAsset.get(l.assetId) ?? { calculatedAmount: 0, cashAmount: 0, mobileAmount: 0 };
+    const bucket = byAsset.get(l.assetId) ?? { calculatedAmount: 0, cashAmount: 0, mobileAmount: 0, abonementAmount: 0 };
     const amount = Number(l.amount ?? 0);
     bucket.calculatedAmount += amount;
     if (l.paymentMethod === "cash") bucket.cashAmount += amount;
     else if (l.paymentMethod === "mobile") bucket.mobileAmount += amount;
+    else if (l.paymentMethod === "abonement") bucket.abonementAmount += amount;
     byAsset.set(l.assetId, bucket);
   }
 
-  return Array.from(byAsset.entries()).map(([assetId, { calculatedAmount, cashAmount, mobileAmount }]) => ({
+  return Array.from(byAsset.entries()).map(([assetId, { calculatedAmount, cashAmount, mobileAmount, abonementAmount }]) => ({
     assetId,
     calculatedAmount: Math.round(calculatedAmount * 100) / 100,
     cashAmount: Math.round(cashAmount * 100) / 100,
     mobileAmount: Math.round(mobileAmount * 100) / 100,
+    abonementAmount: Math.round(abonementAmount * 100) / 100,
   }));
 }
 

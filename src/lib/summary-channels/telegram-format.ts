@@ -150,7 +150,12 @@ function zoneHeader(data: ZoneSummaryData, showOperator: boolean, timezone: stri
     ? ` · ${colorPrefix ? `${colorPrefix} ` : ""}${data.operatorName}`
     : "";
   const date = formatSummaryDate(data.occurredAt, "/", timezone, false);
-  return `${data.zoneEmoji ?? "🏁"} <b>${data.zoneName.toUpperCase()}${operatorBit} · ${date}</b>`;
+  // Жирным — только название зоны (запрос пользователя 2026-07-17: "во всех
+  // сводках с итогами, включая краткие, не надо имя Сотрудника и дату делать
+  // жирным") — имя оператора и дата раньше попадали в тот же <b>, что и
+  // название зоны, во ВСЕХ форматах (общая zoneHeader и для compact, и для
+  // полного вида, оба вызывают её же), теперь вне тега.
+  return `${data.zoneEmoji ?? "🏁"} <b>${data.zoneName.toUpperCase()}</b>${operatorBit} · ${date}`;
 }
 
 // "Пусков: N · время: Xч Yм" — вместо блока показаний для зон
@@ -212,6 +217,14 @@ export function formatZoneSummaryTelegram(
         if (settings.showCalc) bits.push(`🧮 ${st.calculatedCompact}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
         parts.push(bits.join("  "));
       }
+      // Справочно, НЕ в кассу выше (уже получена раньше, при пополнении
+      // абонемента, не сейчас) — условно, как остальные строки "Прибываний"/
+      // "Пусков", не захламляет сводки зон, где абонементом не пользовались
+      // (запрос пользователя 2026-07-17: "во всех отчётах и сводках должны
+      // быть правильные цифры", "добавить Абонемент").
+      if (settings.showCash && data.abonementAmount > 0) {
+        parts.push(`💳 ${st.abonementCompact}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
+      }
       if (settings.showDiff || settings.showReturns) {
         const bits: string[] = [];
         if (settings.showDiff) {
@@ -261,6 +274,11 @@ export function formatZoneSummaryTelegram(
         lines.push(
           `💵 ${st.cash}: <b>${formatMoney(data.cashAmount, locale)}</b> · 📱 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`
         );
+        // Справочно, отдельной строкой, НЕ в кассе выше — уже получена
+        // раньше, при пополнении абонемента (запрос пользователя 2026-07-17).
+        if (data.abonementAmount > 0) {
+          lines.push(`💳 ${st.abonement}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
+        }
       }
       if (settings.showCalc) lines.push(`🧮 ${st.calculated}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
       if (settings.showDiff) {
@@ -282,7 +300,15 @@ export function formatZoneSummaryTelegram(
 // теперь этот блок буквально одинаков в обоих режимах.
 function formatZoneBreakdownRows(zoneBreakdown: DailyCashSummaryData["zoneBreakdown"], locale: Locale): string {
   const labelWidth = Math.max(...zoneBreakdown.map((z) => `${z.zoneName}:`.length));
-  return zoneBreakdown.map((z) => `${z.zoneName}:`.padEnd(labelWidth + 1) + formatMoney(z.revenue, locale)).join("\n");
+  return zoneBreakdown
+    .map((z) => {
+      // "+X" абонементом — справочно рядом с кассовой выручкой зоны, не
+      // складывается с ней (запрос пользователя 2026-07-17: "во всех
+      // отчётах и сводках правильные цифры", "добавить Абонемент").
+      const abonementSuffix = z.abonementAmount > 0 ? ` (+${formatMoney(z.abonementAmount, locale)})` : "";
+      return `${z.zoneName}:`.padEnd(labelWidth + 1) + formatMoney(z.revenue, locale) + abonementSuffix;
+    })
+    .join("\n");
 }
 
 export function formatDailyCashSummaryTelegram(
@@ -311,8 +337,17 @@ export function formatDailyCashSummaryTelegram(
       parts.push(
         `💵 ${st.cashCompact}: <b>${formatMoney(data.cashAmount, locale)}</b>  📱 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`
       );
+      if (data.abonementAmount > 0) {
+        parts.push(`💳 ${st.abonementCompact}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
+      }
     }
-    if (settings.showExpenses) parts.push(`🧾 ${st.expenses}: ${formatMoney(data.expenses, locale)}`);
+    if (settings.showExpenses) {
+      parts.push(`🧾 ${st.expenses}: ${formatMoney(data.expenses, locale)}`);
+      // Сразу после Расходов (запрос пользователя 2026-07-17), тот же
+      // тумблер — обе строки об одном: деньги, ушедшие из кассы за день, но
+      // не Расход бизнеса в бухгалтерском смысле.
+      parts.push(`🎁 ${st.bonusesAndAdvancesCompact}: ${formatMoney(data.bonusesAndAdvances, locale)}`);
+    }
 
     // Остаток на точке — рядом с Итогом, тем же разделителем " · ", что и
     // везде в compact-режиме (запрос пользователя 2026-07-14: раньше был
@@ -339,8 +374,17 @@ export function formatDailyCashSummaryTelegram(
     lines.push(
       `💵 ${st.cash}: <b>${formatMoney(data.cashAmount, locale)}</b> · 📱 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`
     );
+    if (data.abonementAmount > 0) {
+      lines.push(`💳 ${st.abonement}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
+    }
   }
-  if (settings.showExpenses) lines.push(`🧾 ${st.expenses}: ${formatMoney(data.expenses, locale)}`);
+  if (settings.showExpenses) {
+    lines.push(`🧾 ${st.expenses}: ${formatMoney(data.expenses, locale)}`);
+    // Сразу после Расходов (запрос пользователя 2026-07-17), тот же
+    // тумблер — обе строки об одном: деньги, ушедшие из кассы за день, но
+    // не Расход бизнеса в бухгалтерском смысле.
+    lines.push(`🎁 ${st.bonusesAndAdvances}: ${formatMoney(data.bonusesAndAdvances, locale)}`);
+  }
   lines.push(`🟰 ${st.totalFull}: <b>${formatMoney(total, locale)}</b>`);
 
   if (settings.showCashOnHand) {

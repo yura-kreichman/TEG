@@ -13,7 +13,7 @@ export async function GET() {
   }
 
   const op = await prisma.moneyOperation.findFirst({
-    where: { tenantId: owner.tenantId, type: { in: ["revenue", "revenue_cashless"] } },
+    where: { tenantId: owner.tenantId, type: { in: ["revenue", "revenue_cashless", "revenue_abonement"] } },
     orderBy: { occurredAt: "desc" },
     select: { occurredAt: true },
   });
