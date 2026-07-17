@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
-import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, isGameRoomZone, type ZoneAccountingMode } from "@/lib/results-calc";
+import {
+  calcSessions,
+  calcZoneGrossRevenue,
+  calcZoneRevenue,
+  isLaunchesZone,
+  isStaysZone,
+  type ZoneAccountingMode,
+} from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateGameRoomLaunches, countOpenLaunchesInZone, previousSubmissionBoundary } from "@/lib/game-room";
 import { dispatchZoneSummary } from "@/lib/summary-channels/dispatch";
@@ -61,11 +68,11 @@ export async function POST(request: Request) {
   }
 
   // Мягкая блокировка (docs/spec/04-game-room.md, "Деньги и сдача итогов") —
-  // сдача по game_room-зоне недоступна, пока в ней есть открытые пуски, без
+  // сдача по зоне "Прибываний" недоступна, пока в ней есть открытые пуски, без
   // обхода. Проверяем ДО тяжёлого расчёта ниже, чтобы не тратить его впустую.
   for (const zs of zoneSubmissions) {
     const zone = zoneById.get(zs.zoneId)!;
-    if (!isGameRoomZone(zone)) continue;
+    if (!isStaysZone(zone)) continue;
     const openCount = await countOpenLaunchesInZone(zone.id);
     if (openCount > 0) {
       return NextResponse.json(
@@ -119,10 +126,16 @@ export async function POST(request: Request) {
     }
   }
 
-  // Агрегат "Игровой комнаты" считается заранее (async, не влезает в
+  // Агрегат "Прибываний"/"Пусков" считается заранее (async, не влезает в
   // синхронный .map() ниже) — окно "с момента предыдущей сдачи по сейчас"
   // (docs/spec/04-game-room.md, "Деньги и сдача итогов"), тот же принцип, что
   // "предыдущее показание" у counters, просто без цепочки редактирования.
+  // Одна и та же функция для обоих режимов (запрос пользователя 2026-07-17:
+  // "Пуски" тоже read-only calculated) — запрос зоно-скопирован, а Launch
+  // "Прибываний" (assetId+tariffId=null) и "Пусков" (assetId+tariffId
+  // заполнены) взаимоисключающи по зоне, так что смешения не бывает;
+  // totalMinutes у "Пусков" всегда 0 (тап мгновенный, startedAt=endedAt) и
+  // просто не используется дальше.
   const now = new Date();
   const gameRoomAggregateByZone = new Map<
     string,
@@ -130,7 +143,7 @@ export async function POST(request: Request) {
   >();
   for (const zs of zoneSubmissions) {
     const zone = zoneById.get(zs.zoneId)!;
-    if (!isGameRoomZone(zone)) continue;
+    if (!isStaysZone(zone) && !isLaunchesZone(zone)) continue;
     const boundary = await previousSubmissionBoundary(zone.id);
     const agg = await aggregateGameRoomLaunches(zone.id, boundary, now);
     gameRoomAggregateByZone.set(zone.id, {
@@ -144,7 +157,7 @@ export async function POST(request: Request) {
   const summary = zoneSubmissions.map((zs) => {
     const zone = zoneById.get(zs.zoneId)!;
 
-    if (isGameRoomZone(zone)) {
+    if (isStaysZone(zone) || isLaunchesZone(zone)) {
       const agg = gameRoomAggregateByZone.get(zone.id)!;
       const calculatedRevenue = agg.calculatedRevenue;
       const actualCash = zs.cashAmount + zs.mobileAmount;
@@ -242,31 +255,37 @@ export async function POST(request: Request) {
         data: {
           resultsSubmissionId: created.id,
           zoneId: zs.zoneId,
-          // У Игровой комнаты нет поля "возвраты/тестовые" в мастере (его роль
-          // выполняет аннулирование пуска, docs/spec/04-game-room.md) — не
-          // доверяем тому, что мог прислать клиент.
-          returnsCount: isGameRoomZone(zone) ? 0 : zs.returnsCount,
+          // У "Прибываний"/"Пусков" нет поля "возвраты/тестовые" в мастере
+          // (его роль выполняет аннулирование пуска, docs/spec/04-game-room.md) —
+          // не доверяем тому, что мог прислать клиент.
+          returnsCount: isStaysZone(zone) || isLaunchesZone(zone) ? 0 : zs.returnsCount,
           cashAmount: zs.cashAmount,
           mobileAmount: zs.mobileAmount,
         },
       });
 
-      for (const reading of zs.readings) {
-        await tx.assetReading.create({
-          data: {
-            zoneSubmissionId: zoneSubmission.id,
-            assetId: reading.assetId,
-            tariffId: reading.tariffId,
-            reading: reading.reading,
-          },
-        });
+      // Ручные показания — только counters/launches-legacy без реального
+      // учёта тапов; "Прибывания" и "Пуски" считаются исключительно от
+      // Launch (см. агрегат выше), клиент их и не присылает, но не доверяем
+      // этому тоже.
+      if (!isStaysZone(zone) && !isLaunchesZone(zone)) {
+        for (const reading of zs.readings) {
+          await tx.assetReading.create({
+            data: {
+              zoneSubmissionId: zoneSubmission.id,
+              assetId: reading.assetId,
+              tariffId: reading.tariffId,
+              reading: reading.reading,
+            },
+          });
+        }
       }
 
       // Привязываем агрегированные пуски к этой сдаче (docs/spec/04-game-room.md) —
       // и как метка "уже учтён" для следующего окна агрегации, и как источник
       // производного calculatedRevenue на чтение (в ZoneSubmission он не
       // хранится отдельно, как и у counters/launches).
-      if (isGameRoomZone(zone)) {
+      if (isStaysZone(zone) || isLaunchesZone(zone)) {
         const agg = gameRoomAggregateByZone.get(zone.id);
         if (agg && agg.launchIds.length > 0) {
           await tx.launch.updateMany({
@@ -361,7 +380,7 @@ export async function POST(request: Request) {
               zoneName: s.zoneName,
               zoneEmoji: zone.telegramEmoji,
               accountingMode: zone.accountingMode as ZoneAccountingMode,
-              isGameRoom: isGameRoomZone(zone),
+              isGameRoom: isStaysZone(zone),
               gameRoomLaunchCount: s.gameRoomLaunchCount,
               gameRoomTotalMinutes: s.gameRoomTotalMinutes,
               occurredAt: submission.submittedAt,

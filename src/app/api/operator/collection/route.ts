@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { getZonePoolShare } from "@/lib/zone-balance";
+import { dispatchCollection } from "@/lib/summary-channels/dispatch";
 
 // Инкассация: оператор вводит сумму, переданную владельцу; касса уменьшается.
 // Подтверждение владельцем не требуется (docs/spec/02-money.md). К введённой
@@ -36,6 +37,8 @@ export async function POST(request: Request) {
       performedByOperatorId: ctx.operator.id,
     },
   });
+
+  dispatchCollection(ctx.point.tenantId, amountNumber + poolShare, zone.name, ctx.operator.name).catch(() => {});
 
   return NextResponse.json({ ok: true, settledPool: poolShare });
 }

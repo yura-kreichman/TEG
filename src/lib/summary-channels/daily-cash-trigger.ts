@@ -38,9 +38,10 @@ export async function maybeSendDailyCashSummary(
   tenantId: string,
   settings: DailyCashSummarySettingsData,
   bounds: { start: Date; end: Date },
-  forcedIncomplete: boolean
+  forcedIncomplete: boolean,
+  timezone: string
 ): Promise<void> {
-  const businessDate = businessDateKey(bounds);
+  const businessDate = businessDateKey(bounds, timezone);
 
   const alreadySent = await prisma.dailyCashSummaryDelivery.findFirst({
     where: { pointId, businessDate },
@@ -111,7 +112,7 @@ async function hasOpenShiftsAtPoint(pointId: string): Promise<boolean> {
 async function loadSettingsAndBounds(
   tenantId: string,
   at: Date
-): Promise<{ settings: DailyCashSummarySettingsData; bounds: { start: Date; end: Date } }> {
+): Promise<{ settings: DailyCashSummarySettingsData; bounds: { start: Date; end: Date }; timezone: string }> {
   const [settingsRow, tenant] = await Promise.all([
     prisma.dailyCashSummarySettings.findUnique({ where: { tenantId } }),
     prisma.tenant.findUnique({ where: { id: tenantId }, select: { businessDayBoundary: true, timezone: true } }),
@@ -120,8 +121,9 @@ async function loadSettingsAndBounds(
   const settings = settingsRow
     ? toSettingsData(settingsRow, businessDayBoundary)
     : { ...DAILY_CASH_SUMMARY_DEFAULTS, businessDayBoundary };
-  const bounds = getBusinessDayBounds(settings.businessDayBoundary, at, tenant?.timezone ?? "UTC");
-  return { settings, bounds };
+  const timezone = tenant?.timezone ?? "UTC";
+  const bounds = getBusinessDayBounds(settings.businessDayBoundary, at, timezone);
+  return { settings, bounds, timezone };
 }
 
 /**
@@ -137,7 +139,8 @@ async function maybeSendOnEvent(
   pointId: string,
   tenantId: string,
   settings: DailyCashSummarySettingsData,
-  bounds: { start: Date; end: Date }
+  bounds: { start: Date; end: Date },
+  timezone: string
 ): Promise<void> {
   if (settings.sendMode !== "event") return; // fixed — ждёт своего часа у планировщика
 
@@ -147,7 +150,7 @@ async function maybeSendOnEvent(
   ]);
   if (activeZones === 0 || coveredZones < activeZones || openShifts) return;
 
-  await maybeSendDailyCashSummary(pointId, tenantId, settings, bounds, false);
+  await maybeSendDailyCashSummary(pointId, tenantId, settings, bounds, false, timezone);
 }
 
 /**
@@ -161,17 +164,17 @@ async function maybeSendOnEvent(
  * единственной сетью для случая "зона/смена за весь день так и не закрылась".
  */
 export async function onResultsSubmission(pointId: string, tenantId: string, at: Date): Promise<void> {
-  const { settings, bounds } = await loadSettingsAndBounds(tenantId, at);
+  const { settings, bounds, timezone } = await loadSettingsAndBounds(tenantId, at);
   if (!settings.enabled) return;
 
-  const businessDate = businessDateKey(bounds);
+  const businessDate = businessDateKey(bounds, timezone);
   const alreadySent = await prisma.dailyCashSummaryDelivery.findFirst({ where: { pointId, businessDate } });
   if (alreadySent) {
     await notifyDailyCashLateSubmission(pointId, tenantId, at);
     return;
   }
 
-  await maybeSendOnEvent(pointId, tenantId, settings, bounds);
+  await maybeSendOnEvent(pointId, tenantId, settings, bounds, timezone);
 }
 
 /**
@@ -185,14 +188,14 @@ export async function onResultsSubmission(pointId: string, tenantId: string, at:
  * только когда реально есть аванс/премия.
  */
 export async function onShiftClosed(pointId: string, tenantId: string, at: Date): Promise<void> {
-  const { settings, bounds } = await loadSettingsAndBounds(tenantId, at);
+  const { settings, bounds, timezone } = await loadSettingsAndBounds(tenantId, at);
   if (!settings.enabled) return;
 
-  const businessDate = businessDateKey(bounds);
+  const businessDate = businessDateKey(bounds, timezone);
   const alreadySent = await prisma.dailyCashSummaryDelivery.findFirst({ where: { pointId, businessDate } });
   if (alreadySent) return;
 
-  await maybeSendOnEvent(pointId, tenantId, settings, bounds);
+  await maybeSendOnEvent(pointId, tenantId, settings, bounds, timezone);
 }
 
 /**
@@ -210,8 +213,9 @@ export async function notifyDailyCashLateSubmission(pointId: string, tenantId: s
   if (!settingsRow?.enabled) return;
 
   const businessDayBoundary = tenant?.businessDayBoundary ?? DAILY_CASH_SUMMARY_DEFAULTS.businessDayBoundary;
-  const bounds = getBusinessDayBounds(businessDayBoundary, at, tenant?.timezone ?? "UTC");
-  const businessDate = businessDateKey(bounds);
+  const timezone = tenant?.timezone ?? "UTC";
+  const bounds = getBusinessDayBounds(businessDayBoundary, at, timezone);
+  const businessDate = businessDateKey(bounds, timezone);
 
   const existingDeliveries = await prisma.dailyCashSummaryDelivery.findMany({
     where: { pointId, businessDate },

@@ -1,5 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { computeLaunchAmount } from "./game-room";
+import { computeLaunchAmount, smallestFreeNumber } from "./game-room";
+
+describe("smallestFreeNumber — номер браслета (docs/spec/04-game-room.md)", () => {
+  it("пусто — первый номер 1", () => {
+    expect(smallestFreeNumber([])).toBe(1);
+  });
+  it("1,2,3 заняты — следующий 4", () => {
+    expect(smallestFreeNumber([1, 2, 3])).toBe(4);
+  });
+  it("1,2,3 заняты, 2 освободился — переиспользуется 2, не растёт до 4 (запрос пользователя 2026-07-17)", () => {
+    expect(smallestFreeNumber([1, 3])).toBe(2);
+  });
+  it("порядок во входных данных не важен", () => {
+    expect(smallestFreeNumber([5, 1, 3])).toBe(2);
+  });
+});
 
 const START = new Date("2026-07-16T10:00:00.000Z");
 

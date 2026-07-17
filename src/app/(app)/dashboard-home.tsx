@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
-import { Building2, CalendarDays, ChevronRight, Gamepad2, ImagePlus, KeyRound, ListChecks, LogOut, MapPin, Pencil } from "lucide-react";
+import { Building2, CalendarDays, ChevronRight, ImagePlus, KeyRound, ListChecks, LogOut, MapPin, Pencil } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
@@ -141,9 +141,6 @@ export function OwnerDashboardCard({
   // только если точек больше одной.
   const [points, setPoints] = useState<{ id: string; name: string; iconKey: string | null }[]>([]);
   const [pointId, setPointId] = useState<string | null>(null);
-  // "Сейчас на точке" (docs/spec/04-game-room.md, "Кабинет владельца") —
-  // карточка видна только если у тенанта вообще есть зоны launchMode="game_room".
-  const [hasGameRoomZones, setHasGameRoomZones] = useState(false);
   // Пробрасывается в ссылки "В Деньги"/"Показания по дням"/"Задачи" ниже,
   // чтобы выбор точки наследовался при переходе (запрос пользователя 2026-07-16).
   const pointQuery = pointId ? `?pointId=${pointId}` : "";
@@ -188,12 +185,6 @@ export function OwnerDashboardCard({
       .then((data) => data && setSummary(data));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pointId]);
-
-  useEffect(() => {
-    fetch("/api/reports/game-room/live")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setHasGameRoomZones(!!data?.zones?.length));
-  }, []);
 
   function openAccountMenu() {
     setAccountView("menu");
@@ -435,23 +426,6 @@ export function OwnerDashboardCard({
             </SpringCard>
           </Link>
         </PressableScale>
-
-        {hasGameRoomZones && (
-          <PressableScale>
-            <Link href={`/money/game-room${pointQuery}`}>
-              <SpringCard className="flex items-center gap-3">
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
-                  <Gamepad2 className="size-5" />
-                </div>
-                <div className="min-w-0 grow">
-                  <p className="text-card-title">{t.zoneDetail.gameRoomLiveLink}</p>
-                  <p className="text-caption-airbnb">{t.home.gameRoomLiveLinkHint}</p>
-                </div>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-              </SpringCard>
-            </Link>
-          </PressableScale>
-        )}
 
         <PressableScale>
           <Link href={pointId ? `/tasks/${pointId}` : "/tasks"}>

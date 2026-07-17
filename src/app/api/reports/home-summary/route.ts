@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { calcSessions, calcZoneRevenue } from "@/lib/results-calc";
+import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 
 // "Последние итоги" на главной владельца (docs/design/prototype-owner-home-v1.html):
@@ -80,10 +80,43 @@ export async function GET(request: Request) {
     runningPrevious.set(key, r.reading);
   }
 
+  // "Прибывания" и "Пуски" (после перехода на тапы, assetReadings пустой) не
+  // пишут AssetReading — их расчётная выручка живёт в Launch, привязанном к
+  // zoneSubmissionId сервером при сдаче итогов (тот же разрыв, что был найден
+  // и исправлен в reports.ts computeZoneSubmissionRevenues, запрос
+  // пользователя 2026-07-17: "в Отчётах не отображается корректно"; здесь —
+  // тот же класс бага, просто в сводке "Последние итоги" на главной).
+  const liveZoneSubmissionIds = submissions
+    .flatMap((s) => s.zoneSubmissions)
+    .filter((zs) => isStaysZone(zs.zone) || (isLaunchesZone(zs.zone) && zs.assetReadings.length === 0))
+    .map((zs) => zs.id);
+  const liveLaunches = liveZoneSubmissionIds.length
+    ? await prisma.launch.findMany({
+        where: { zoneSubmissionId: { in: liveZoneSubmissionIds }, voidedAt: null },
+        select: { zoneSubmissionId: true, amount: true },
+      })
+    : [];
+  const liveRevenueBySubmission = new Map<string, number>();
+  for (const l of liveLaunches) {
+    if (!l.zoneSubmissionId) continue;
+    liveRevenueBySubmission.set(
+      l.zoneSubmissionId,
+      (liveRevenueBySubmission.get(l.zoneSubmissionId) ?? 0) + Number(l.amount ?? 0)
+    );
+  }
+
   let totalDifference = 0;
   for (const s of submissions) {
     for (const zs of s.zoneSubmissions) {
       if (zs.zone.accountingMode === "cash_only") continue;
+      const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
+
+      if (isStaysZone(zs.zone) || (isLaunchesZone(zs.zone) && zs.assetReadings.length === 0)) {
+        const calculatedRevenue = liveRevenueBySubmission.get(zs.id) ?? 0;
+        totalDifference += actualCash - calculatedRevenue;
+        continue;
+      }
+
       const isLaunches = zs.zone.accountingMode === "launches";
       const tariffCalc = zs.zone.tariffs.map((tariff) => ({
         tariffId: tariff.id,
@@ -93,7 +126,6 @@ export async function GET(request: Request) {
           .reduce((sum, r) => sum + (isLaunches ? r.reading : (sessionsById.get(r.id) ?? 0)), 0),
       }));
       const calculatedRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
-      const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
       totalDifference += actualCash - calculatedRevenue;
     }
   }

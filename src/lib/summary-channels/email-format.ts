@@ -74,6 +74,12 @@ export function formatZoneSummaryEmail(
         rows.push({ label: st.launchesCountLabel, value: String(data.gameRoomLaunchCount ?? 0) });
         rows.push({ label: st.launchesTimeLabel, value: formatDuration(data.gameRoomTotalMinutes ?? 0) });
       }
+    } else if (data.accountingMode === "launches") {
+      // "Пуски" — без времени, тапы мгновенные (запрос пользователя
+      // 2026-07-17), в отличие от isGameRoom ("Прибывания") выше.
+      if (settings.showReadings) {
+        rows.push({ label: st.launchesCountLabel, value: String(data.gameRoomLaunchCount ?? 0) });
+      }
     } else if (settings.showReadings || settings.showDelta) {
       for (const r of data.readings) {
         const value = [

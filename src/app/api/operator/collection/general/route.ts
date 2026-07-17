@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { getPointPoolDeficit, getZoneBalances } from "@/lib/zone-balance";
 import { distributeCollectionWhole } from "@/lib/collection-split";
+import { dispatchCollection } from "@/lib/summary-channels/dispatch";
 
 // Общая инкассация (запрос пользователя 2026-07-15): к моменту, когда
 // владелец приходит собирать деньги, наличные всех зон точки часто уже
@@ -52,6 +53,8 @@ export async function POST(request: Request) {
   if (rows.length > 0) {
     await prisma.moneyOperation.createMany({ data: rows });
   }
+
+  dispatchCollection(ctx.point.tenantId, amountNumber + poolDeficit, ctx.point.name, ctx.operator.name).catch(() => {});
 
   return NextResponse.json({ ok: true, settledPool: poolDeficit });
 }

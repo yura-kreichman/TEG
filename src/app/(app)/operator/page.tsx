@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowRightLeft, Check, ChevronRight, MapPin } from "lucide-react";
+import { Check, ChevronRight, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { MoneyInput } from "@/components/money-input";
@@ -17,7 +17,6 @@ import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { cn } from "@/lib/utils";
-import { isGameRoomZone } from "@/lib/results-calc";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface ZoneOption {
@@ -25,7 +24,6 @@ interface ZoneOption {
   name: string;
   iconKey: string | null;
   accountingMode: string;
-  launchMode: string;
 }
 
 interface PointOption {
@@ -124,7 +122,6 @@ export default function OperatorHomePage() {
             name: z.name,
             iconKey: z.iconKey,
             accountingMode: z.accountingMode,
-            launchMode: z.launchMode,
           }))
         )
       );
@@ -202,7 +199,6 @@ export default function OperatorHomePage() {
   }
 
   const elapsedLabel = activeShiftStartAt ? formatElapsed(activeShiftStartAt, now) : "00:00";
-  const gameRoomZones = zones.filter((z) => isGameRoomZone(z));
   const shiftTooLong = activeShiftStartAt ? now.getTime() - new Date(activeShiftStartAt).getTime() > 16 * 60 * 60 * 1000 : false;
 
   async function handleCheckIn() {
@@ -277,12 +273,6 @@ export default function OperatorHomePage() {
     } finally {
       setAdvancing(false);
     }
-  }
-
-  async function handleSwitchOperator() {
-    await fetch("/api/auth/operator/logout", { method: "POST" });
-    router.push("/operator/login");
-    router.refresh();
   }
 
   async function handleSwitchPoint(targetPointId: string) {
@@ -525,33 +515,6 @@ export default function OperatorHomePage() {
         )}
       </SpringCard>
 
-      {gameRoomZones.length > 0 && (
-        <SpringCard hover={false} className="mt-4 w-full max-w-sm text-left">
-          <h2 className="mb-1.5 text-[0.875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.gameRoom.entryTitle}</h2>
-          <div className="flex flex-col">
-            {gameRoomZones.map((zone) => (
-              <PressableScale key={zone.id}>
-                <button
-                  type="button"
-                  onClick={() => router.push(`/operator/game-room/${zone.id}`)}
-                  className="flex w-full items-center gap-2.5 border-t border-border py-3 text-left first:border-t-0"
-                >
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
-                    {zone.iconKey ? (
-                      <AssetOrZoneIcon iconKey={zone.iconKey} className="size-5" />
-                    ) : (
-                      <MapPin className="size-5" />
-                    )}
-                  </div>
-                  <span className="min-w-0 grow text-body-airbnb font-semibold">{zone.name}</span>
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                </button>
-              </PressableScale>
-            ))}
-          </div>
-        </SpringCard>
-      )}
-
       <SpringCard hover={false} className="mt-4 w-full max-w-sm text-left">
         <div className="mb-1.5 flex items-baseline justify-between">
           <h2 className="text-[0.875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.tasks.title}</h2>
@@ -746,15 +709,6 @@ export default function OperatorHomePage() {
           </PressableScale>
         </div>
       </BottomSheet>
-
-      <button
-        type="button"
-        className="mt-6 flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-semibold text-muted-foreground"
-        onClick={handleSwitchOperator}
-      >
-        <ArrowRightLeft className="size-3.5" />
-        {t.operatorApp.switchOperator}
-      </button>
 
       {poolSettledToast !== null && (
         <div className="fixed bottom-24 left-1/2 z-70 -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-caption-airbnb font-semibold text-background shadow-lg">

@@ -21,8 +21,7 @@ export interface ZoneSummaryData {
   // null — telegram-format.ts подставляет 🏁 по умолчанию.
   zoneEmoji: string | null;
   accountingMode: ZoneAccountingMode;
-  // Игровая комната (docs/spec/04-game-room.md) — суб-режим "launches"
-  // (Zone.launchMode="game_room"), не отдельный ZoneAccountingMode; сводке
+  // Прибывания (docs/spec/04-game-room.md) — accountingMode="stays"; сводке
   // нужен явный флаг, чтобы показать "Пусков: N · время: Xч Yм" вместо
   // блока показаний. count/minutes — null для всех остальных режимов.
   isGameRoom: boolean;

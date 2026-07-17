@@ -118,6 +118,7 @@ export interface PushNotificationSettingsData {
   shiftCloseSummary: boolean;
   shiftCheckin: boolean;
   instructionAck: boolean;
+  collection: boolean;
 }
 
 export const PUSH_NOTIFICATION_DEFAULTS: PushNotificationSettingsData = {
@@ -126,4 +127,5 @@ export const PUSH_NOTIFICATION_DEFAULTS: PushNotificationSettingsData = {
   shiftCloseSummary: true,
   shiftCheckin: true,
   instructionAck: true,
+  collection: true,
 };

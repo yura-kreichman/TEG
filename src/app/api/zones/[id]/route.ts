@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantZone, requireOwner } from "@/lib/require-owner";
-import { isZoneAccountingMode, LAUNCH_MODES } from "@/lib/results-calc";
+import { isZoneAccountingMode } from "@/lib/results-calc";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 
@@ -18,7 +18,11 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
   }
 
   const [tariffs, assets] = await Promise.all([
-    prisma.tariff.findMany({ where: { zoneId: id, deletedAt: null }, orderBy: { order: "asc" } }),
+    prisma.tariff.findMany({
+      where: { zoneId: id, deletedAt: null },
+      orderBy: { order: "asc" },
+      include: { options: { orderBy: { order: "asc" } } },
+    }),
     prisma.asset.findMany({ where: { zoneId: id }, orderBy: { sortOrder: "asc" } }),
   ]);
 
@@ -59,8 +63,6 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
     iconKey: zone.iconKey,
     telegramEmoji: zone.telegramEmoji,
     accountingMode: zone.accountingMode,
-    launchMode: zone.launchMode,
-    longLaunchThresholdMinutes: zone.longLaunchThresholdMinutes,
     modeLocked: submissionCount > 0,
     active: zone.active,
     pointId: zone.pointId,
@@ -87,16 +89,13 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
   }
 
-  const { name, iconKey, telegramEmoji, accountingMode, launchMode, active, longLaunchThresholdMinutes } =
-    await request.json();
+  const { name, iconKey, telegramEmoji, accountingMode, active } = await request.json();
   const data: {
     name?: string;
     iconKey?: string | null;
     telegramEmoji?: string | null;
     accountingMode?: string;
-    launchMode?: string;
     active?: boolean;
-    longLaunchThresholdMinutes?: number;
   } = {};
 
   if (name !== undefined) {
@@ -115,9 +114,6 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     if (!isZoneAccountingMode(accountingMode)) {
       return NextResponse.json({ error: "Некорректный режим учёта" }, { status: 400 });
     }
-    if (launchMode !== undefined && !(LAUNCH_MODES as readonly string[]).includes(launchMode)) {
-      return NextResponse.json({ error: "Некорректный вариант режима пусков" }, { status: 400 });
-    }
     const submissionCount = await prisma.zoneSubmission.count({ where: { zoneId: id } });
     if (submissionCount > 0) {
       return NextResponse.json(
@@ -125,11 +121,11 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
         { status: 409 }
       );
     }
-    // Открытые пуски "Игровой комнаты" осиротели бы: уйди зона из
-    // launchMode="game_room", их некому будет остановить (экран пропадёт из
+    // Открытые пуски "Прибываний" осиротели бы: уйди зона из
+    // accountingMode="stays", их некому будет остановить (экран пропадёт из
     // навигации) и они никогда не попадут в агрегат сдачи (тот считается
-    // только для текущего launchMode на момент сдачи), docs/spec/04-game-room.md.
-    if (zone.accountingMode === "launches" && zone.launchMode === "game_room") {
+    // только для текущего режима на момент сдачи), docs/spec/04-game-room.md.
+    if (zone.accountingMode === "stays") {
       const openLaunches = await prisma.launch.count({ where: { zoneId: id, isOpen: true } });
       if (openLaunches > 0) {
         return NextResponse.json(
@@ -139,10 +135,6 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
       }
     }
     data.accountingMode = accountingMode;
-    // launchMode осмыслен только вместе с accountingMode="launches" — режим
-    // меняется тем же самым запросом (см. changeAccountingMode на клиенте),
-    // так что сбрасываем/задаём его синхронно, не отдельным PATCH.
-    data.launchMode = accountingMode === "launches" && launchMode === "game_room" ? "game_room" : "manual";
   }
   if (active !== undefined) {
     if (typeof active !== "boolean") {
@@ -150,14 +142,6 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     }
     data.active = active;
   }
-  if (longLaunchThresholdMinutes !== undefined) {
-    const minutes = Number(longLaunchThresholdMinutes);
-    if (!Number.isFinite(minutes) || minutes <= 0) {
-      return NextResponse.json({ error: "Некорректный порог долгого пуска" }, { status: 400 });
-    }
-    data.longLaunchThresholdMinutes = Math.round(minutes);
-  }
-
   await prisma.zone.update({ where: { id }, data });
   await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ ok: true });

@@ -45,37 +45,39 @@ export function BottomSheet({ open, onClose, children, className }: BottomSheetP
             transition={{ duration: 0.2 }}
             onClick={onClose}
           />
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            className={cn(
-              "fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col rounded-t-block bg-card shadow-sheet",
-              className
-            )}
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", stiffness: 320, damping: 32 }}
-            drag="y"
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 0.5 }}
-            onDragEnd={(_event, info) => {
-              if (info.offset.y > 100 || info.velocity.y > 500) onClose();
-            }}
-          >
-            <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-muted-foreground/30" />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={onClose}
-              aria-label={t.common.close}
-              className="absolute top-3 right-3 z-10 size-10 shrink-0 rounded-full border-border"
+          <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center">
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              className={cn(
+                "relative flex max-h-[85vh] w-full flex-col rounded-t-block bg-card shadow-sheet sm:max-w-lg",
+                className
+              )}
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 320, damping: 32 }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0, bottom: 0.5 }}
+              onDragEnd={(_event, info) => {
+                if (info.offset.y > 100 || info.velocity.y > 500) onClose();
+              }}
             >
-              <X className="size-5" />
-            </Button>
-            <div className="overflow-y-auto py-1 pr-12 pb-4 pl-4">{children}</div>
-          </motion.div>
+              <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-muted-foreground/30" />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={onClose}
+                aria-label={t.common.close}
+                className="absolute top-3 right-3 z-10 size-10 shrink-0 rounded-full border-border"
+              >
+                <X className="size-5" />
+              </Button>
+              <div className="overflow-y-auto py-1 pr-12 pb-4 pl-4">{children}</div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

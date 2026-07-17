@@ -57,12 +57,12 @@ async function tick() {
     for (const point of tenant.points) {
       try {
         if (settings.sendMode === "fixed" && isAtTimeMinute(settings.fixedTime, now, tenant.timezone)) {
-          await maybeSendDailyCashSummary(point.id, tenant.id, settings, bounds, false);
+          await maybeSendDailyCashSummary(point.id, tenant.id, settings, bounds, false, tenant.timezone);
         }
 
         if (isAtBoundaryMinute(settings.businessDayBoundary, now, tenant.timezone)) {
           const prevBounds = { start: new Date(bounds.start.getTime() - 24 * 60 * 60 * 1000), end: bounds.start };
-          await maybeSendDailyCashSummary(point.id, tenant.id, settings, prevBounds, true);
+          await maybeSendDailyCashSummary(point.id, tenant.id, settings, prevBounds, true, tenant.timezone);
         }
       } catch (err) {
         console.error("summary scheduler tick failed", { pointId: point.id, err });

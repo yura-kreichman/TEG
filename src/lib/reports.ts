@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { calcSessions, calcZoneRevenue } from "@/lib/results-calc";
+import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 
 export type ReportGranularity = "week" | "month" | "year";
@@ -123,31 +123,107 @@ export async function computeZoneSubmissionRevenues(
     runningPrevious.set(key, r.reading);
   }
 
+  // "Прибывания" считают выручку от пусков (Launch), не от AssetReading —
+  // zoneSubmissionId проставляется каждому пуску сервером в момент сдачи
+  // итогов (submit-results/route.ts), поэтому достаточно один раз выбрать
+  // все пуски нужных zone-submission и сгруппировать по активу (запрос
+  // пользователя 2026-07-17: "в Отчётах не отображается корректно в
+  // разделах: Зоны и активы" — perAsset/calculatedRevenue были всегда 0 для
+  // "Прибываний", т.к. читались только из AssetReading).
+  const staysSubmissionIds = zoneSubmissions
+    .filter((zs) => isStaysZone(zoneById.get(zs.zoneId)!))
+    .map((zs) => zs.id);
+  const gameRoomLaunches = staysSubmissionIds.length
+    ? await prisma.launch.findMany({
+        where: { zoneSubmissionId: { in: staysSubmissionIds }, voidedAt: null },
+        select: { zoneSubmissionId: true, assetId: true, amount: true },
+      })
+    : [];
+  const gameRoomBySubmission = new Map<string, { calculatedRevenue: number; perAsset: Map<string, number> }>();
+  for (const l of gameRoomLaunches) {
+    if (!l.zoneSubmissionId || !l.assetId) continue;
+    const bucket = gameRoomBySubmission.get(l.zoneSubmissionId) ?? { calculatedRevenue: 0, perAsset: new Map() };
+    const amount = Number(l.amount ?? 0);
+    bucket.calculatedRevenue += amount;
+    bucket.perAsset.set(l.assetId, (bucket.perAsset.get(l.assetId) ?? 0) + amount);
+    gameRoomBySubmission.set(l.zoneSubmissionId, bucket);
+  }
+
+  // "Пуски" (accountingMode="launches") — то же самое для сдач ПОСЛЕ
+  // перехода на тапы по активу (запрос пользователя 2026-07-17, тот же
+  // разрыв, что и у "Прибываний" выше): такие сдачи не пишут AssetReading
+  // вовсе (zs.assetReadings.length === 0), выручка/perAsset считаются от
+  // Launch. Старые сдачи (assetReadings есть — ручной ввод количества до
+  // этой фичи) продолжают считаться по прежней ветке ниже — оба вида
+  // взаимоисключающи для одной сдачи. В отличие от "Прибываний", тариф на
+  // пуске известен (Launch.tariffId), поэтому perTariff строится и здесь.
+  const launchesTallySubmissionIds = zoneSubmissions
+    .filter((zs) => isLaunchesZone(zoneById.get(zs.zoneId)!) && zs.assetReadings.length === 0)
+    .map((zs) => zs.id);
+  const launchesTallies = launchesTallySubmissionIds.length
+    ? await prisma.launch.findMany({
+        where: { zoneSubmissionId: { in: launchesTallySubmissionIds }, voidedAt: null },
+        select: { zoneSubmissionId: true, assetId: true, tariffId: true, amount: true },
+      })
+    : [];
+  const launchesTallyBySubmission = new Map<
+    string,
+    { calculatedRevenue: number; perAsset: Map<string, number>; perTariff: Map<string, number> }
+  >();
+  for (const l of launchesTallies) {
+    if (!l.zoneSubmissionId || !l.assetId || !l.tariffId) continue;
+    const bucket =
+      launchesTallyBySubmission.get(l.zoneSubmissionId) ??
+      { calculatedRevenue: 0, perAsset: new Map(), perTariff: new Map() };
+    const amount = Number(l.amount ?? 0);
+    bucket.calculatedRevenue += amount;
+    bucket.perAsset.set(l.assetId, (bucket.perAsset.get(l.assetId) ?? 0) + amount);
+    bucket.perTariff.set(l.tariffId, (bucket.perTariff.get(l.tariffId) ?? 0) + amount);
+    launchesTallyBySubmission.set(l.zoneSubmissionId, bucket);
+  }
+
   return zoneSubmissions.map((zs) => {
     const zone = zoneById.get(zs.zoneId)!;
     const isLaunches = zone.accountingMode === "launches";
     const sessionsFor = (r: (typeof zs.assetReadings)[number]) => (isLaunches ? r.reading : (sessionsById.get(r.id) ?? 0));
 
-    const tariffCalc = zone.tariffs.map((tariff) => ({
-      tariffId: tariff.id,
-      price: Number(tariff.price),
-      sessions: zs.assetReadings.filter((r) => r.tariffId === tariff.id).reduce((sum, r) => sum + sessionsFor(r), 0),
-    }));
-    const calculatedRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
+    let calculatedRevenue: number;
+    let perAsset: Map<string, number>;
+    // "Прибывания" не хранят Tariff.id на пуске (только снапшот цены) —
+    // разбивка по тарифам для этого режима не строится (остаётся пустой
+    // ниже); у новых сдач "Пусков" — строится, см. ветку ниже.
+    let perTariff = new Map<string, number>();
+
+    if (isStaysZone(zone)) {
+      const bucket = gameRoomBySubmission.get(zs.id);
+      calculatedRevenue = bucket?.calculatedRevenue ?? 0;
+      perAsset = bucket?.perAsset ?? new Map();
+    } else if (isLaunches && zs.assetReadings.length === 0) {
+      const bucket = launchesTallyBySubmission.get(zs.id);
+      calculatedRevenue = bucket?.calculatedRevenue ?? 0;
+      perAsset = bucket?.perAsset ?? new Map();
+      perTariff = bucket?.perTariff ?? new Map();
+    } else {
+      const tariffCalc = zone.tariffs.map((tariff) => ({
+        tariffId: tariff.id,
+        price: Number(tariff.price),
+        sessions: zs.assetReadings.filter((r) => r.tariffId === tariff.id).reduce((sum, r) => sum + sessionsFor(r), 0),
+      }));
+      calculatedRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
+
+      perAsset = new Map<string, number>();
+      const priceByTariff = new Map(zone.tariffs.map((t) => [t.id, Number(t.price)]));
+      for (const r of zs.assetReadings) {
+        const revenue = sessionsFor(r) * (priceByTariff.get(r.tariffId) ?? 0);
+        perAsset.set(r.assetId, (perAsset.get(r.assetId) ?? 0) + revenue);
+        perTariff.set(r.tariffId, (perTariff.get(r.tariffId) ?? 0) + revenue);
+      }
+    }
 
     const actualCash = Number(zs.cashAmount);
     const actualMobile = Number(zs.mobileAmount);
     const actualTotal = actualCash + actualMobile;
     const difference = Math.round((actualTotal - calculatedRevenue) * 100) / 100;
-
-    const perAsset = new Map<string, number>();
-    const perTariff = new Map<string, number>();
-    const priceByTariff = new Map(zone.tariffs.map((t) => [t.id, Number(t.price)]));
-    for (const r of zs.assetReadings) {
-      const revenue = sessionsFor(r) * (priceByTariff.get(r.tariffId) ?? 0);
-      perAsset.set(r.assetId, (perAsset.get(r.assetId) ?? 0) + revenue);
-      perTariff.set(r.tariffId, (perTariff.get(r.tariffId) ?? 0) + revenue);
-    }
 
     return {
       zoneSubmissionId: zs.id,

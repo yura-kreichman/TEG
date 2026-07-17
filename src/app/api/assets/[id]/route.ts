@@ -25,13 +25,14 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/assets/[id
     return NextResponse.json({ error: "Актив не найден" }, { status: 404 });
   }
 
-  const { name, photoUrl, iconKey, colorTag, active } = await request.json();
+  const { name, photoUrl, iconKey, colorTag, active, tariffId } = await request.json();
   const data: {
     name?: string;
     photoUrl?: string | null;
     iconKey?: string | null;
     colorTag?: string;
     active?: boolean;
+    tariffId?: string | null;
   } = {};
 
   if (name !== undefined) {
@@ -61,6 +62,23 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/assets/[id
       return NextResponse.json({ error: "Некорректное значение active" }, { status: 400 });
     }
     data.active = active;
+  }
+  // Тариф режима "Прибывания" — актив ссылается на один из тарифов СВОЕЙ
+  // зоны (запрос пользователя 2026-07-17: тарифы и активы создаются
+  // независимо, привязка отдельным действием, можно оставить пустой).
+  if (tariffId !== undefined) {
+    if (tariffId === null) {
+      data.tariffId = null;
+    } else {
+      if (typeof tariffId !== "string") {
+        return NextResponse.json({ error: "Некорректный тариф" }, { status: 400 });
+      }
+      const tariff = await prisma.tariff.findUnique({ where: { id: tariffId } });
+      if (!tariff || tariff.zoneId !== asset.zoneId || tariff.deletedAt) {
+        return NextResponse.json({ error: "Тариф не найден в этой зоне" }, { status: 400 });
+      }
+      data.tariffId = tariffId;
+    }
   }
 
   await prisma.asset.update({ where: { id }, data });

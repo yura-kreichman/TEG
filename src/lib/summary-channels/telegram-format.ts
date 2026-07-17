@@ -153,14 +153,23 @@ function zoneHeader(data: ZoneSummaryData, showOperator: boolean, timezone: stri
   return `${data.zoneEmoji ?? "🏁"} <b>${data.zoneName.toUpperCase()}${operatorBit} · ${date}</b>`;
 }
 
-// "Пусков: N · время: Xч Yм" — вместо блока показаний для зон с
-// launchMode="game_room" (docs/spec/04-game-room.md, "Деньги и сдача
+// "Пусков: N · время: Xч Yм" — вместо блока показаний для зон
+// accountingMode="stays" (docs/spec/04-game-room.md, "Деньги и сдача
 // итогов": "Telegram/email-уведомлений по каждому отдельному пуску нет —
 // только агрегат в сводке сдачи итогов").
 function formatGameRoomLine(data: ZoneSummaryData, st: SummaryText): string {
   const count = data.gameRoomLaunchCount ?? 0;
   const minutes = data.gameRoomTotalMinutes ?? 0;
   return `🎮 ${st.launchesCountLabel}: <b>${count}</b> · ${st.launchesTimeLabel}: <b>${formatDuration(minutes)}</b>`;
+}
+
+// "Пусков: N" — без времени, в отличие от formatGameRoomLine (тапы
+// мгновенные, "Пуски" — accountingMode="launches", не сессия во времени, см.
+// docs/spec/01-counters.md). С момента запроса пользователя 2026-07-17
+// показания больше не вводятся вручную — расчёт всегда по реальным тапам.
+function formatLaunchesTallyLine(data: ZoneSummaryData, st: SummaryText): string {
+  const count = data.gameRoomLaunchCount ?? 0;
+  return `🎮 ${st.launchesCountLabel}: <b>${count}</b>`;
 }
 
 export function formatZoneSummaryTelegram(
@@ -178,6 +187,8 @@ export function formatZoneSummaryTelegram(
     } else {
       if (data.isGameRoom) {
         if (settings.showReadings) parts.push(formatGameRoomLine(data, st));
+      } else if (data.accountingMode === "launches") {
+        if (settings.showReadings) parts.push(formatLaunchesTallyLine(data, st));
       } else if (settings.showReadings && data.readings.length > 0) {
         const grid = formatCompactGrid(
           data.readings.map((r, i) => ({ label: compactAssetLabel(data.readings, i), value: String(r.reading) }))
@@ -223,6 +234,8 @@ export function formatZoneSummaryTelegram(
   } else {
     if (data.isGameRoom) {
       if (settings.showReadings) lines.push("", formatGameRoomLine(data, st));
+    } else if (data.accountingMode === "launches") {
+      if (settings.showReadings) lines.push("", formatLaunchesTallyLine(data, st));
     } else if (settings.showReadings || settings.showDelta) {
       // Выровнено в столбик (фидбек пользователя 2026-07-09) — внутри <code>
       // моноширинный шрифт, поэтому паддинг пробелами реально работает как

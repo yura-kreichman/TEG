@@ -1,0 +1,675 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Check, Layers, MapPin, Plus, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { PressableScale } from "@/components/motion/pressable-scale";
+import { BottomSheet } from "@/components/motion/bottom-sheet";
+import { AssetOrZoneIcon } from "@/components/icon-picker";
+import { useI18n } from "@/components/i18n-provider";
+import { Money } from "@/components/money";
+import { useLiveNow } from "@/hooks/use-live-now";
+import { isStaysZone } from "@/lib/results-calc";
+import { estimateLiveAmount, formatMMSS, type LaunchPricingMode, type LaunchRoundingMode } from "@/lib/game-room-client";
+import { unlockBeep, playBeep } from "@/lib/beep";
+import { cn } from "@/lib/utils";
+
+interface AssetTariffOption {
+  id: string;
+  durationMinutes: number;
+  price: number;
+}
+
+interface AssetTariffCtx {
+  pricingMode: LaunchPricingMode | null;
+  options: AssetTariffOption[];
+}
+
+interface AssetCtx {
+  id: string;
+  name: string;
+  iconKey: string | null;
+  photoUrl: string | null;
+  colorTag: string;
+  active: boolean;
+  // "За вход" — несколько вариантов длительность+цена (запрос пользователя
+  // 2026-07-17: "1 час, 2 часа..." — выбирает оператор при старте пуска),
+  // null если у актива ещё не выбран тариф.
+  tariff: AssetTariffCtx | null;
+}
+
+interface AssetWithZone extends AssetCtx {
+  zoneId: string;
+  zoneName: string;
+}
+
+interface ZoneCtx {
+  id: string;
+  name: string;
+  iconKey: string | null;
+  assets: AssetCtx[];
+}
+
+interface OpenLaunch {
+  id: string;
+  assetId: string | null;
+  number: number;
+  startedAt: string;
+  pricingMode: LaunchPricingMode;
+  priceSnapshot: number;
+  durationMinutesSnapshot: number | null;
+  roundingModeSnapshot: LaunchRoundingMode | null;
+  minAmountSnapshot: number | null;
+}
+
+const SOUND_HINT_KEY = "gameRoomSoundHintSeen";
+const POLL_MS = 6000;
+const ALL_ZONES = "all";
+
+/**
+ * Экран "Прибывания" в PWA оператора (docs/spec/04-game-room.md) — точка
+ * входа из нижнего бара напрямую сюда, без промежуточного списка зон
+ * (запрос пользователя 2026-07-17: "открываются все активы с dropdown
+ * фильтром по зонам", отменяет прежний отдельный экран-список зон). Активы
+ * ВСЕХ зон режима "stays" — в одном тайловом гриде, dropdown сверху сужает
+ * его до одной зоны. Браслеты — тайлами, привязаны к выбранному активу; их
+ * зона определяется активом (selectedZoneId), а не URL.
+ */
+export default function StaysZonePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const t = useI18n();
+  const now = useLiveNow();
+
+  const [zones, setZones] = useState<ZoneCtx[]>([]);
+  const [zoneFilter, setZoneFilter] = useState<string>(ALL_ZONES);
+  const [launches, setLaunches] = useState<OpenLaunch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
+  // Добавление браслета "За вход" — вариант длительности (если их
+  // несколько) и способ оплаты в ОДНОМ sheet, одним потоком (запрос
+  // пользователя 2026-07-17: "надо сразу при старте... в одном"), цена
+  // известна заранее — оплата берётся сразу, а не при возврате браслета
+  // (в отличие от "По факту", там способ оплаты спрашивается при остановке).
+  const [addFlow, setAddFlow] = useState<{ stage: "duration" | "payment"; optionId?: string } | null>(null);
+
+  // Подтверждение остановки "Точно?" — прямо внутри тайла браслета, без
+  // отдельного sheet (запрос пользователя 2026-07-17: "вопрос 'Точно'
+  // должен появляться внутри тайла"). Способ оплаты "По факту" — наоборот,
+  // отдельным bottom sheet (запрос того же дня: "тоже должны появляться
+  // bottom sheet"); пуск не закрывается, пока способ не выбран — глобально
+  // для обоих тарифов: "За вход" получает способ оплаты ещё при старте
+  // (см. addFlow выше), "По факту" — здесь, перед самой остановкой.
+  const [interacting, setInteracting] = useState<string | null>(null);
+  const [stopPaymentTarget, setStopPaymentTarget] = useState<OpenLaunch | null>(null);
+  const [stopping, setStopping] = useState(false);
+
+  const [soundHintOpen, setSoundHintOpen] = useState(false);
+  const alertedRef = useRef<Set<string>>(new Set());
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (typeof window !== "undefined" && !window.localStorage.getItem(SOUND_HINT_KEY)) {
+      setSoundHintOpen(true);
+    }
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  function dismissSoundHint() {
+    unlockBeep();
+    window.localStorage.setItem(SOUND_HINT_KEY, "1");
+    setSoundHintOpen(false);
+  }
+
+  function loadZones() {
+    fetch("/api/operator/submission-context")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) {
+          router.replace("/operator/login");
+          return;
+        }
+        const stays: ZoneCtx[] = (data.zones ?? [])
+          .filter(isStaysZone)
+          .map((z: { id: string; name: string; iconKey: string | null; assets: AssetCtx[] }) => ({
+            id: z.id,
+            name: z.name,
+            iconKey: z.iconKey,
+            assets: z.assets ?? [],
+          }));
+        if (stays.length === 0) {
+          router.replace("/operator");
+          return;
+        }
+        setZones(stays);
+        // Переход из мастера сдачи итогов ведёт сразу к активу с открытыми
+        // пусками (запрос пользователя 2026-07-17: "не по отношению к Зоне,
+        // а к Активу с переходом на Актуальный Актив") — актив однозначно
+        // определяет и зону, сужаем dropdown до неё же.
+        const requestedAssetId = searchParams.get("assetId");
+        const all = stays.flatMap((z) => z.assets.map((a) => ({ ...a, zoneId: z.id })));
+        setSelectedAssetId((prev) => {
+          if (prev) return prev;
+          if (requestedAssetId) {
+            const found = all.find((a) => a.id === requestedAssetId);
+            if (found) {
+              setZoneFilter(found.zoneId);
+              return found.id;
+            }
+          }
+          return all[0]?.id ?? null;
+        });
+        setLoading(false);
+      });
+  }
+
+  function loadLaunches(zoneId: string | null) {
+    if (!zoneId) {
+      setLaunches([]);
+      return;
+    }
+    fetch(`/api/zones/${zoneId}/launches`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setLaunches(data.launches ?? []);
+      });
+  }
+
+  useEffect(() => {
+    loadZones();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const allAssets: AssetWithZone[] = useMemo(
+    () => zones.flatMap((z) => z.assets.map((a) => ({ ...a, zoneId: z.id, zoneName: z.name }))),
+    [zones]
+  );
+  const filteredAssets = zoneFilter === ALL_ZONES ? allAssets : allAssets.filter((a) => a.zoneId === zoneFilter);
+  const selectedAsset = allAssets.find((a) => a.id === selectedAssetId) ?? null;
+  const selectedZoneId = selectedAsset?.zoneId ?? null;
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    loadLaunches(selectedZoneId);
+    if (!selectedZoneId) return;
+    const interval = setInterval(() => loadLaunches(selectedZoneId), POLL_MS);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedZoneId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Сигнал истечения (docs/spec/04-game-room.md) — только fixed с длительностью,
+  // разово на каждый пуск, по всей ТЕКУЩЕЙ (выбранной активом) зоне, не
+  // только выбранному в переключателе активу.
+  useEffect(() => {
+    for (const l of launches) {
+      if (l.pricingMode !== "fixed" || l.durationMinutesSnapshot == null) continue;
+      const expiresAt = new Date(l.startedAt).getTime() + l.durationMinutesSnapshot * 60000;
+      if (now.getTime() >= expiresAt && !alertedRef.current.has(l.id)) {
+        alertedRef.current.add(l.id);
+        playBeep();
+        if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+      }
+    }
+  }, [launches, now]);
+
+  function isExpired(l: OpenLaunch): boolean {
+    if (l.pricingMode !== "fixed" || l.durationMinutesSnapshot == null) return false;
+    const expiresAt = new Date(l.startedAt).getTime() + l.durationMinutesSnapshot * 60000;
+    return now.getTime() >= expiresAt;
+  }
+
+  const launchesByAsset = useMemo(() => {
+    const map = new Map<string, OpenLaunch[]>();
+    for (const l of launches) {
+      if (!l.assetId) continue;
+      if (!map.has(l.assetId)) map.set(l.assetId, []);
+      map.get(l.assetId)!.push(l);
+    }
+    // По времени старта, не по номеру (запрос пользователя 2026-07-17: номер
+    // переиспользуется от освободившихся браслетов, поэтому сортировка по
+    // номеру заставляла бы тайлы скакать местами — по времени добавления
+    // порядок стабилен, новый браслет всегда встаёт последним, рядом с "+").
+    for (const list of map.values()) list.sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+    return map;
+  }, [launches]);
+
+  // "За вход" с несколькими вариантами — оператор обязан выбрать один при
+  // старте (запрос пользователя 2026-07-17), с одним вариантом — старт
+  // мгновенный, тот же вариант подставляется автоматически (старт не должен
+  // требовать больше двух тапов, docs/spec/04-game-room.md).
+  function fixedOptions(tariff: AssetTariffCtx | null): AssetTariffOption[] {
+    return tariff?.pricingMode === "fixed" ? tariff.options : [];
+  }
+
+  async function startLaunch(optionId?: string, paymentMethod?: "cash" | "mobile") {
+    if (!selectedAssetId || !selectedZoneId) return;
+    setStarting(true);
+    setError(null);
+    unlockBeep();
+    try {
+      const res = await fetch(`/api/zones/${selectedZoneId}/launches`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetId: selectedAssetId, optionId, paymentMethod }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? t.operatorApp.gameRoom.noPricingError);
+        return;
+      }
+      loadLaunches(selectedZoneId);
+      setAddFlow(null);
+    } catch {
+      // Сетевая ошибка (не HTTP-ошибка от сервера) — docs/spec/04-game-room.md,
+      // Шаг 6: "стоп даёт внятную ошибку и не теряет пуск" — то же верно и для
+      // старта. Ничего на сервере не создалось, повтор безопасен.
+      setError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  async function stopLaunch(launchId: string, paymentMethod?: "cash" | "mobile") {
+    setStopping(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/launches/${launchId}/stop`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentMethod }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error ?? "");
+        return;
+      }
+      setInteracting(null);
+      setStopPaymentTarget(null);
+      loadLaunches(selectedZoneId);
+    } catch {
+      // Пуск на сервере не потерян (запрос мог не дойти или ответ не
+      // вернуться) — оператор видит понятную ошибку и может повторить, повтор
+      // на уже закрытый пуск сервер отклонит отдельной проверкой isOpen.
+      setError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      setStopping(false);
+    }
+  }
+
+  if (loading) return null;
+
+  const filterZone = zones.find((z) => z.id === zoneFilter) ?? null;
+  const selectedLaunches = selectedAssetId ? launchesByAsset.get(selectedAssetId) ?? [] : [];
+  const selectedOptions = fixedOptions(selectedAsset?.tariff ?? null);
+
+  function handleAddTap() {
+    if (!selectedAsset || !selectedAsset.active || !selectedAsset.tariff) return;
+    if (selectedAsset.tariff.pricingMode === "fixed") {
+      setAddFlow(
+        selectedOptions.length > 1 ? { stage: "duration" } : { stage: "payment", optionId: selectedOptions[0]?.id }
+      );
+      return;
+    }
+    // "По факту" — старт мгновенный, способ оплаты спросится при остановке
+    // (сумма известна только тогда), см. stopLaunch.
+    startLaunch();
+  }
+
+  const addDisabled = starting || !selectedAsset?.active || !selectedAsset?.tariff;
+
+  return (
+    <div className="flex min-h-dvh flex-col bg-surface-0 px-4 pb-10 pt-6" onPointerDownCapture={() => unlockBeep()}>
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
+        <h1 className="mb-4 text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.operatorApp.gameRoom.entryTitle}</h1>
+
+        {zones.length > 1 && (
+          <div className="mb-4 flex items-center gap-2">
+            <Label className="shrink-0">{t.operatorApp.gameRoom.zoneFilterLabel}</Label>
+            <div className="min-w-0 flex-1">
+              <Select
+                value={zoneFilter}
+                onValueChange={(v) => v && setZoneFilter(v)}
+                items={[
+                  { value: ALL_ZONES, label: t.operatorApp.gameRoom.allZonesOption },
+                  ...zones.map((z) => ({ value: z.id, label: z.name })),
+                ]}
+              >
+                <SelectTrigger className="h-11 w-full bg-muted">
+                  <SelectValue>
+                    <span className="flex items-center gap-2">
+                      {filterZone ? (
+                        filterZone.iconKey ? (
+                          <AssetOrZoneIcon iconKey={filterZone.iconKey} className="size-5 shrink-0" />
+                        ) : (
+                          <MapPin className="size-5 shrink-0 text-muted-foreground" />
+                        )
+                      ) : (
+                        <Layers className="size-5 shrink-0 text-muted-foreground" />
+                      )}
+                      {filterZone ? filterZone.name : t.operatorApp.gameRoom.allZonesOption}
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_ZONES}>
+                    <span className="flex items-center gap-2">
+                      <Layers className="size-5 shrink-0 text-muted-foreground" />
+                      {t.operatorApp.gameRoom.allZonesOption}
+                    </span>
+                  </SelectItem>
+                  {zones.map((z) => (
+                    <SelectItem key={z.id} value={z.id}>
+                      <span className="flex items-center gap-2">
+                        {z.iconKey ? (
+                          <AssetOrZoneIcon iconKey={z.iconKey} className="size-5 shrink-0" />
+                        ) : (
+                          <MapPin className="size-5 shrink-0 text-muted-foreground" />
+                        )}
+                        {z.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
+        {filteredAssets.length === 0 ? (
+          <p className="py-4 text-center text-body-airbnb text-muted-foreground">{t.operatorApp.gameRoom.noAssetsYet}</p>
+        ) : (
+          <>
+            <div className="mb-4 flex flex-col gap-1.5">
+              <Label>{t.operatorApp.gameRoom.assetSwitcherLabel}</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {filteredAssets.map((a) => {
+                  const active = a.id === selectedAssetId;
+                  return (
+                    <PressableScale key={a.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAssetId(a.id)}
+                        className={cn(
+                          "flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card text-left",
+                          active ? "border-primary" : "border-border"
+                        )}
+                      >
+                        <div className="relative flex h-24 w-full shrink-0 items-center justify-center overflow-hidden bg-muted">
+                          {a.photoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={a.photoUrl} alt="" className="size-full object-contain object-center" />
+                          ) : a.iconKey ? (
+                            <AssetOrZoneIcon iconKey={a.iconKey} className="size-10 text-muted-foreground" />
+                          ) : (
+                            <MapPin className="size-9 text-muted-foreground" />
+                          )}
+                          <span
+                            className="absolute left-2.5 top-2.5 size-4 rounded-full ring-[2.5px] ring-card"
+                            style={{ backgroundColor: a.colorTag }}
+                          />
+                        </div>
+                        <div className="flex flex-col gap-0.5 p-3">
+                          <span className="truncate text-[0.90625rem] font-bold tracking-[-0.01em]">{a.name}</span>
+                          {zoneFilter === ALL_ZONES && zones.length > 1 && (
+                            <span className="truncate text-[0.75rem] text-muted-foreground">{a.zoneName}</span>
+                          )}
+                        </div>
+                      </button>
+                    </PressableScale>
+                  );
+                })}
+              </div>
+            </div>
+
+            {selectedAsset && !selectedAsset.tariff && (
+              <p className="mb-3 text-caption-airbnb text-destructive">{t.operatorApp.gameRoom.noPricingError}</p>
+            )}
+
+            {selectedAsset && (
+              <div className="grid grid-cols-3 gap-3">
+                {selectedLaunches.map((l) => {
+                  const expired = isExpired(l);
+                  const elapsedMs = now.getTime() - new Date(l.startedAt).getTime();
+                  const liveAmount = estimateLiveAmount(
+                    l.pricingMode,
+                    l.priceSnapshot,
+                    l.roundingModeSnapshot,
+                    l.minAmountSnapshot,
+                    new Date(l.startedAt),
+                    now
+                  );
+                  const timeText =
+                    l.pricingMode === "fixed" && l.durationMinutesSnapshot != null
+                      ? formatMMSS(l.durationMinutesSnapshot * 60000 - elapsedMs)
+                      : formatMMSS(elapsedMs);
+                  // "Точно?" — инлайн в тайле (запрос пользователя 2026-07-17).
+                  // Способ оплаты "По факту" дальше уходит в отдельный bottom
+                  // sheet (запрос того же дня), не остаётся в тайле.
+                  if (interacting === l.id) {
+                    return (
+                      <div
+                        key={l.id}
+                        className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-card border-[1.5px] border-primary bg-card p-2 text-center"
+                      >
+                        {l.pricingMode === "per_minute" && <Money value={liveAmount} className="text-lg font-extrabold" />}
+                        <span className="text-[0.6875rem] font-semibold">{t.operatorApp.gameRoom.stopConfirmQuestion}</span>
+                        <div className="flex items-center gap-2">
+                          <PressableScale>
+                            <button
+                              type="button"
+                              aria-label={t.common.close}
+                              onClick={() => setInteracting(null)}
+                              className="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground"
+                            >
+                              <X className="size-4" />
+                            </button>
+                          </PressableScale>
+                          <PressableScale>
+                            <button
+                              type="button"
+                              aria-label={t.operatorApp.gameRoom.stopConfirmButton}
+                              disabled={stopping}
+                              onClick={() => {
+                                setInteracting(null);
+                                if (l.pricingMode === "per_minute") {
+                                  setStopPaymentTarget(l);
+                                } else {
+                                  stopLaunch(l.id);
+                                }
+                              }}
+                              className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                            >
+                              <Check className="size-4" />
+                            </button>
+                          </PressableScale>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <PressableScale key={l.id}>
+                      <button
+                        type="button"
+                        onClick={() => setInteracting(l.id)}
+                        className={cn(
+                          "flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-card border-[1.5px] bg-card p-2 text-center",
+                          expired ? "border-destructive motion-safe:animate-pulse" : "border-primary"
+                        )}
+                      >
+                        <span className="text-[0.6875rem] font-semibold text-muted-foreground">
+                          {t.operatorApp.gameRoom.wristbandNumberPrefix} {l.number}
+                        </span>
+                        <span
+                          className={cn(
+                            "tabular-nums",
+                            l.pricingMode === "fixed"
+                              ? cn("text-2xl font-extrabold", expired && "text-destructive")
+                              : "text-sm font-semibold text-muted-foreground"
+                          )}
+                        >
+                          {expired ? t.operatorApp.gameRoom.expiredLabel : timeText}
+                        </span>
+                        {l.pricingMode === "per_minute" && (
+                          <Money value={liveAmount} className="text-2xl font-extrabold" />
+                        )}
+                      </button>
+                    </PressableScale>
+                  );
+                })}
+
+                <PressableScale>
+                  <button
+                    type="button"
+                    onClick={handleAddTap}
+                    disabled={addDisabled}
+                    className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-card border-[1.5px] border-dashed border-border p-2 text-center text-muted-foreground disabled:opacity-40"
+                  >
+                    <Plus className="size-5" />
+                    <span className="text-[0.75rem] font-semibold leading-tight">
+                      {t.operatorApp.gameRoom.addWristbandLabel}
+                    </span>
+                  </button>
+                </PressableScale>
+              </div>
+            )}
+          </>
+        )}
+
+        {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+      </div>
+
+      {/* Добавление браслета "За вход" — один sheet, два последовательных
+          шага (запрос пользователя 2026-07-17: "в одном"): вариант
+          длительности (если их несколько) → способ оплаты. Цена известна
+          заранее, поэтому оплата берётся сразу при старте, не при возврате
+          браслета. */}
+      <BottomSheet open={addFlow !== null} onClose={() => setAddFlow(null)}>
+        {addFlow?.stage === "duration" && (
+          <div className="flex flex-col gap-3 pt-2">
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.gameRoom.pickOptionTitle}</h2>
+            <div className="flex flex-col gap-2">
+              {selectedOptions.map((opt) => (
+                <PressableScale key={opt.id}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-12 w-full justify-between font-semibold"
+                    disabled={starting}
+                    onClick={() => setAddFlow({ stage: "payment", optionId: opt.id })}
+                  >
+                    <span>
+                      {opt.durationMinutes} {t.operatorApp.workTime.minutesShort}
+                    </span>
+                    <Money value={opt.price} />
+                  </Button>
+                </PressableScale>
+              ))}
+            </div>
+          </div>
+        )}
+        {addFlow?.stage === "payment" && (
+          <div className="flex flex-col gap-3 pt-2">
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
+              {t.operatorApp.gameRoom.paymentMethodTitle}
+            </h2>
+            <div className="flex flex-col gap-2">
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full font-semibold"
+                  disabled={starting}
+                  onClick={() => startLaunch(addFlow.optionId, "cash")}
+                >
+                  {t.operatorApp.submit.cashLabel}
+                </Button>
+              </PressableScale>
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full font-semibold"
+                  disabled={starting}
+                  onClick={() => startLaunch(addFlow.optionId, "mobile")}
+                >
+                  {t.operatorApp.submit.mobileLabel}
+                </Button>
+              </PressableScale>
+            </div>
+          </div>
+        )}
+      </BottomSheet>
+
+      {/* Способ оплаты "По факту" при остановке — отдельный bottom sheet
+          (запрос пользователя 2026-07-17: "тоже должны появляться bottom
+          sheet"), не остаётся в тайле, в отличие от "Точно?" выше. Пуск не
+          останавливается, пока способ не выбран. */}
+      <BottomSheet open={stopPaymentTarget !== null} onClose={() => setStopPaymentTarget(null)}>
+        {stopPaymentTarget && (
+          <div className="flex flex-col gap-3 pt-2">
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
+              {t.operatorApp.gameRoom.paymentMethodTitle}
+            </h2>
+            <p className="text-caption-airbnb tabular-nums">
+              {t.operatorApp.gameRoom.wristbandNumberPrefix} {stopPaymentTarget.number} ·{" "}
+              <Money
+                value={estimateLiveAmount(
+                  stopPaymentTarget.pricingMode,
+                  stopPaymentTarget.priceSnapshot,
+                  stopPaymentTarget.roundingModeSnapshot,
+                  stopPaymentTarget.minAmountSnapshot,
+                  new Date(stopPaymentTarget.startedAt),
+                  now
+                )}
+              />
+            </p>
+            <div className="flex flex-col gap-2">
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full font-semibold"
+                  disabled={stopping}
+                  onClick={() => stopLaunch(stopPaymentTarget.id, "cash")}
+                >
+                  {t.operatorApp.submit.cashLabel}
+                </Button>
+              </PressableScale>
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full font-semibold"
+                  disabled={stopping}
+                  onClick={() => stopLaunch(stopPaymentTarget.id, "mobile")}
+                >
+                  {t.operatorApp.submit.mobileLabel}
+                </Button>
+              </PressableScale>
+            </div>
+          </div>
+        )}
+      </BottomSheet>
+
+      <BottomSheet open={soundHintOpen} onClose={dismissSoundHint}>
+        <div className="flex flex-col gap-3 pt-2">
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.gameRoom.entryTitle}</h2>
+          <p className="text-body-airbnb text-muted-foreground">{t.operatorApp.gameRoom.soundHintBody}</p>
+          <PressableScale>
+            <Button className="h-12 w-full font-bold" onClick={dismissSoundHint}>
+              {t.common.close}
+            </Button>
+          </PressableScale>
+        </div>
+      </BottomSheet>
+    </div>
+  );
+}

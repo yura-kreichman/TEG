@@ -178,6 +178,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
         moreActive={moreItems.some((item) => item.match(pathname))}
         moreBadge={moreBadge}
         onMoreClick={() => setMoreOpen(true)}
+        showMore={moreItems.length > 0}
       />
 
       <BottomSheet open={moreOpen} onClose={() => setMoreOpen(false)}>

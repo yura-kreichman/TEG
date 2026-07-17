@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Check, Pencil, Camera, ImagePlus, ListChecks, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp, Smile, Gauge, History, Coins } from "lucide-react";
+import { Check, Pencil, Camera, ImagePlus, ListChecks, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp, Smile, Gauge, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -20,21 +20,131 @@ import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
 import { StatusChip } from "@/components/status-chip";
 import { TileIcon } from "@/components/tile-icon";
 import { FilePickerButton } from "@/components/file-picker-button";
-import { useI18n } from "@/components/i18n-provider";
+import { useI18n, useCurrency, useLocale } from "@/components/i18n-provider";
 import { compressImageFile } from "@/lib/client-image";
-import { ZONE_ACCOUNTING_MODES, isGameRoomZone, type LaunchMode, type ZoneAccountingMode } from "@/lib/results-calc";
+import { ZONE_ACCOUNTING_MODES, isStaysZone, type ZoneAccountingMode } from "@/lib/results-calc";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
-import { formatTime } from "@/lib/datetime-format";
 import { Money } from "@/components/money";
+import { formatMoney } from "@/lib/format";
+import { getCurrencySign } from "@/lib/currency";
 import { cn, colorTagGradient } from "@/lib/utils";
 import { ColorTagPicker } from "@/components/color-tag-picker";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import type { Dictionary } from "@/lib/i18n";
+
+// "stays" (Прибывания) — самостоятельный 4-й режим учёта, рядоположный
+// остальным (решение пользователя 2026-07-17; было суб-режимом "launches" до
+// этого) — единый список из четырёх, без второго уровня выбора.
+const ACCOUNTING_MODE_LABEL: Record<ZoneAccountingMode, (t: Dictionary) => string> = {
+  counters: (t) => t.zonesList.accountingModeCounters,
+  launches: (t) => t.zonesList.accountingModeLaunches,
+  cash_only: (t) => t.zonesList.accountingModeCashOnly,
+  stays: (t) => t.zonesList.accountingModeStays,
+};
+const ACCOUNTING_MODE_HINT: Record<ZoneAccountingMode, (t: Dictionary) => string> = {
+  counters: (t) => t.zonesList.accountingModeCountersHint,
+  launches: (t) => t.zonesList.accountingModeLaunchesHint,
+  cash_only: (t) => t.zonesList.accountingModeCashOnlyHint,
+  stays: (t) => t.zonesList.accountingModeStaysHint,
+};
+
+interface TariffOptionInfo {
+  id: string;
+  durationMinutes: number;
+  price: string;
+}
+
+// Черновик редактируемого варианта "За вход" в форме (строковые поля инпутов,
+// не число) — до сохранения не привязан к id TariffOption.
+interface OptionDraft {
+  durationMinutes: string;
+  price: string;
+}
+const EMPTY_OPTION: OptionDraft = { durationMinutes: "", price: "" };
+
+// Список вариантов "За вход" (длительность+цена) в форме тарифа — можно
+// добавлять/удалять/редактировать (запрос пользователя 2026-07-17: "1 час,
+// 2 часа..." — оператор выбирает вариант при старте пуска). Общий для формы
+// создания и кебаба редактирования тарифа.
+function TariffOptionsEditor({
+  options,
+  onChange,
+}: {
+  options: OptionDraft[];
+  onChange: (next: OptionDraft[]) => void;
+}) {
+  const t = useI18n();
+
+  function update(index: number, patch: Partial<OptionDraft>) {
+    onChange(options.map((o, i) => (i === index ? { ...o, ...patch } : o)));
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Label>{t.zoneDetail.gameRoomOptionsLabel}</Label>
+      {options.map((opt, index) => (
+        <div key={index} className="flex items-center gap-2">
+          <Input
+            type="number"
+            inputMode="numeric"
+            min="1"
+            required
+            placeholder={t.zoneDetail.gameRoomOptionDurationPlaceholder}
+            value={opt.durationMinutes}
+            onChange={(e) => update(index, { durationMinutes: e.target.value })}
+            className="flex-1"
+          />
+          <MoneyInput
+            required
+            placeholder={t.zoneDetail.gameRoomOptionPricePlaceholder}
+            value={opt.price}
+            onChange={(e) => update(index, { price: e.target.value })}
+            className="flex-1"
+          />
+          {options.length > 1 && (
+            <PressableScale>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label={t.zoneDetail.gameRoomRemoveOptionLabel}
+                onClick={() => onChange(options.filter((_, i) => i !== index))}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </PressableScale>
+          )}
+        </div>
+      ))}
+      <PressableScale className="w-fit">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => onChange([...options, EMPTY_OPTION])}
+        >
+          <Plus className="size-4" />
+          {t.zoneDetail.gameRoomAddOptionButton}
+        </Button>
+      </PressableScale>
+    </div>
+  );
+}
 
 interface TariffInfo {
   id: string;
   name: string;
   price: string;
   order: number;
+  // Только у зон "Прибывания" (запрос пользователя 2026-07-17: тарифы —
+  // обычная сущность Tariff, лимит и правила те же, что у Счётчиков/Пусков).
+  pricingMode: "fixed" | "per_minute" | null;
+  // Только "fixed"/"За вход" — несколько вариантов длительность+цена (запрос
+  // пользователя 2026-07-17: "1 час, 2 часа..." — оператор выбирает при
+  // старте пуска), вместо одной пары.
+  options: TariffOptionInfo[];
 }
 
 interface AssetInfo {
@@ -45,16 +155,10 @@ interface AssetInfo {
   iconKey: string | null;
   active: boolean;
   lastReadings: { tariffId: string; reading: number }[];
-}
-
-interface PricingHistoryEntry {
-  id: string;
-  pricingMode: "fixed" | "per_minute";
-  price: number;
-  durationMinutes: number | null;
-  roundingMode: "up" | "down" | "nearest" | null;
-  minAmount: number | null;
-  effectiveFrom: string;
+  // Тариф зоны, который использует этот актив (только "Прибывания") — null,
+  // если ещё не выбран (запрос пользователя 2026-07-17: тарифы и активы
+  // создаются независимо, привязка — отдельное действие владельца).
+  tariffId: string | null;
 }
 
 interface ZoneDetail {
@@ -63,8 +167,6 @@ interface ZoneDetail {
   iconKey: string | null;
   telegramEmoji: string | null;
   accountingMode: ZoneAccountingMode;
-  launchMode: LaunchMode;
-  longLaunchThresholdMinutes: number;
   modeLocked: boolean;
   active: boolean;
   pointId: string;
@@ -75,12 +177,14 @@ interface ZoneDetail {
 
 type ZoneKebabView = "menu" | "rename" | "mode" | "confirm-delete";
 type TariffKebabView = "menu" | "edit" | "confirm-delete";
-type AssetKebabView = "menu" | "edit" | "photo" | "icon" | "confirm-delete" | "initial-reading" | "pricing";
+type AssetKebabView = "menu" | "edit" | "photo" | "icon" | "confirm-delete" | "initial-reading";
 
 export default function ZoneDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const t = useI18n();
+  const locale = useLocale();
+  const currencySign = getCurrencySign(useCurrency());
   const [zone, setZone] = useState<ZoneDetail | null>(null);
   const [checking, setChecking] = useState(true);
 
@@ -93,15 +197,19 @@ export default function ZoneDetailPage() {
   const [zoneActionError, setZoneActionError] = useState<string | null>(null);
   const { saved: zoneDeleted, pulse: zoneDeletePulse } = useSavePulse();
 
-  const [thresholdValue, setThresholdValue] = useState("60");
-  const [thresholdError, setThresholdError] = useState<string | null>(null);
-  const { saved: thresholdSaved, pulse: thresholdPulse } = useSavePulse();
-
   const [createTariffOpen, setCreateTariffOpen] = useState(false);
   const [tariffName, setTariffName] = useState("");
   const { saved: addTariffSaved, pulse: addTariffPulse } = useSavePulse();
   const [tariffPrice, setTariffPrice] = useState("");
   const [tariffError, setTariffError] = useState<string | null>(null);
+  // Поля "За вход"/"По факту" — только когда зона в режиме "Прибывания"
+  // (запрос пользователя 2026-07-17: тарифы создаются как обычно, теми же
+  // формами/лимитом, что у Счётчиков/Пусков, просто с доп. полями). "За
+  // вход" — список вариантов длительность+цена, не одна пара (запрос
+  // пользователя того же дня: "1 час, 2 часа..." — оператор выбирает при
+  // старте пуска, можно добавлять/удалять/редактировать варианты).
+  const [tariffPricingMode, setTariffPricingMode] = useState<"fixed" | "per_minute">("fixed");
+  const [tariffOptions, setTariffOptions] = useState<OptionDraft[]>([EMPTY_OPTION]);
 
   const [tariffKebab, setTariffKebab] = useState<TariffInfo | null>(null);
   const [tariffKebabView, setTariffKebabView] = useState<TariffKebabView>("menu");
@@ -111,6 +219,8 @@ export default function ZoneDetailPage() {
   const [editTariffError, setEditTariffError] = useState<string | null>(null);
   const [deleteTariffError, setDeleteTariffError] = useState<string | null>(null);
   const { saved: tariffDeleted, pulse: tariffDeletePulse } = useSavePulse();
+  const [editTariffPricingMode, setEditTariffPricingMode] = useState<"fixed" | "per_minute">("fixed");
+  const [editTariffOptions, setEditTariffOptions] = useState<OptionDraft[]>([EMPTY_OPTION]);
 
   const [createAssetOpen, setCreateAssetOpen] = useState(false);
   const [assetName, setAssetName] = useState("");
@@ -120,6 +230,11 @@ export default function ZoneDetailPage() {
   const [assetIconKey, setAssetIconKey] = useState<string | null>(null);
   const [assetError, setAssetError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  // Тариф выбирается независимо от создания актива (запрос пользователя
+  // 2026-07-17: "можно создавать и то и то независимо... если тарифы ещё не
+  // созданы — ничего страшного, потом создаст и привяжет") — необязательное
+  // поле, только для зон "Прибывания".
+  const [assetTariffId, setAssetTariffId] = useState("");
 
   const [assetKebab, setAssetKebab] = useState<AssetInfo | null>(null);
   const [assetKebabView, setAssetKebabView] = useState<AssetKebabView>("menu");
@@ -130,32 +245,7 @@ export default function ZoneDetailPage() {
   const [editAssetError, setEditAssetError] = useState<string | null>(null);
   const { saved: assetDeleted, pulse: assetDeletePulse } = useSavePulse();
   const [editUploading, setEditUploading] = useState(false);
-
-  // Тариф "Игровой комнаты" (docs/spec/04-game-room.md) — свойство АКТИВА,
-  // не зоны (запрос пользователя 2026-07-16: "игровая комната ХалаБуда — там
-  // и должны быть её настройки"), поэтому весь блок живёт внутри кебаба
-  // актива (assetKebabView === "pricing"), скопирован сюда из зоны 1:1.
-  // История append-only (LaunchPricing), форма всегда добавляет новую
-  // запись ("действующий сейчас" тариф). Правка/удаление отдельных записей —
-  // отдельным под-кебабом (assetPricingHistoryKebab).
-  const [assetPricingMode, setAssetPricingMode] = useState<"fixed" | "per_minute">("fixed");
-  const [assetPriceValue, setAssetPriceValue] = useState("");
-  const [assetDurationValue, setAssetDurationValue] = useState("");
-  const [assetMinAmountValue, setAssetMinAmountValue] = useState("");
-  const [assetPricingError, setAssetPricingError] = useState<string | null>(null);
-  const { saved: assetPricingSaved, pulse: assetPricingPulse } = useSavePulse();
-  const [assetPricingHistory, setAssetPricingHistory] = useState<PricingHistoryEntry[]>([]);
-
-  const [assetPricingHistoryKebab, setAssetPricingHistoryKebab] = useState<PricingHistoryEntry | null>(null);
-  const [assetPricingHistoryKebabView, setAssetPricingHistoryKebabView] = useState<"menu" | "edit" | "confirm-delete">("menu");
-  const [editAssetPricingMode, setEditAssetPricingMode] = useState<"fixed" | "per_minute">("fixed");
-  const [editAssetPriceValue, setEditAssetPriceValue] = useState("");
-  const [editAssetDurationValue, setEditAssetDurationValue] = useState("");
-  const [editAssetMinAmountValue, setEditAssetMinAmountValue] = useState("");
-  const [assetPricingHistoryActionError, setAssetPricingHistoryActionError] = useState<string | null>(null);
-  const { saved: assetPricingHistoryEditSaved, pulse: assetPricingHistoryEditPulse } = useSavePulse();
-  const { saved: assetPricingHistoryDeleted, pulse: assetPricingHistoryDeletePulse } = useSavePulse();
-  const [deletingAssetPricingHistory, setDeletingAssetPricingHistory] = useState(false);
+  const [editAssetTariffId, setEditAssetTariffId] = useState("");
 
   // Начальные (калибровочные) показания счётчика (запрос пользователя
   // 2026-07-14: "начинаю реальный тест, нужно установить начальные значения") —
@@ -181,138 +271,7 @@ export default function ZoneDetailPage() {
     loadZone();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
-
-  useEffect(() => {
-    if (!zone) return;
-    setThresholdValue(String(zone.longLaunchThresholdMinutes));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zone?.id]);
   /* eslint-enable react-hooks/set-state-in-effect */
-
-  function formatPricingDate(iso: string) {
-    const d = new Date(iso);
-    return `${d.getUTCDate()} ${t.readings.monthsGenitive[d.getUTCMonth()]} · ${formatTime(iso)}`;
-  }
-
-  function formatPricingModeLabel(p: PricingHistoryEntry) {
-    if (p.pricingMode === "fixed") {
-      return p.durationMinutes
-        ? `${t.zoneDetail.gameRoomPricingModeFixed} · ${p.durationMinutes} ${t.operatorApp.workTime.minutesShort}`
-        : t.zoneDetail.gameRoomPricingModeFixed;
-    }
-    return t.zoneDetail.gameRoomPricingModePerMinute;
-  }
-
-  // Тариф — свойство актива (см. state-блок выше), загружается при открытии
-  // кебаба актива на вкладку "pricing", не на уровне зоны.
-  function loadAssetPricing(assetId: string) {
-    fetch(`/api/assets/${assetId}/launch-pricing`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.pricing) {
-          setAssetPricingMode(data.pricing.pricingMode);
-          setAssetPriceValue(String(data.pricing.price));
-          setAssetDurationValue(data.pricing.durationMinutes != null ? String(data.pricing.durationMinutes) : "");
-          setAssetMinAmountValue(data.pricing.minAmount != null ? String(data.pricing.minAmount) : "");
-        } else {
-          setAssetPricingMode("fixed");
-          setAssetPriceValue("");
-          setAssetDurationValue("");
-          setAssetMinAmountValue("");
-        }
-        setAssetPricingHistory(data?.history ?? []);
-      });
-  }
-
-  async function saveAssetPricing() {
-    if (!assetKebab) return;
-    setAssetPricingError(null);
-    const res = await fetch(`/api/assets/${assetKebab.id}/launch-pricing`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        pricingMode: assetPricingMode,
-        price: assetPriceValue,
-        durationMinutes: assetPricingMode === "fixed" ? assetDurationValue || null : null,
-        roundingMode: assetPricingMode === "per_minute" ? "up" : null,
-        minAmount: assetPricingMode === "per_minute" ? assetMinAmountValue || null : null,
-      }),
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      setAssetPricingError(data.error ?? t.zoneDetail.gameRoomSaveError);
-      return;
-    }
-    loadAssetPricing(assetKebab.id);
-    assetPricingPulse(() => {});
-  }
-
-  function openAssetPricingHistoryKebab(entry: PricingHistoryEntry) {
-    setAssetPricingHistoryKebab(entry);
-    setAssetPricingHistoryKebabView("menu");
-    setAssetPricingHistoryActionError(null);
-    setEditAssetPricingMode(entry.pricingMode);
-    setEditAssetPriceValue(String(entry.price));
-    setEditAssetDurationValue(entry.durationMinutes != null ? String(entry.durationMinutes) : "");
-    setEditAssetMinAmountValue(entry.minAmount != null ? String(entry.minAmount) : "");
-  }
-
-  async function submitEditAssetPricingHistory() {
-    if (!assetKebab || !assetPricingHistoryKebab) return;
-    setAssetPricingHistoryActionError(null);
-    const res = await fetch(`/api/assets/${assetKebab.id}/launch-pricing/${assetPricingHistoryKebab.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        pricingMode: editAssetPricingMode,
-        price: editAssetPriceValue,
-        durationMinutes: editAssetPricingMode === "fixed" ? editAssetDurationValue || null : null,
-        roundingMode: editAssetPricingMode === "per_minute" ? "up" : null,
-        minAmount: editAssetPricingMode === "per_minute" ? editAssetMinAmountValue || null : null,
-      }),
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      setAssetPricingHistoryActionError(data.error ?? t.zoneDetail.gameRoomSaveError);
-      return;
-    }
-    loadAssetPricing(assetKebab.id);
-    assetPricingHistoryEditPulse(() => setAssetPricingHistoryKebab(null));
-  }
-
-  async function confirmDeleteAssetPricingHistory() {
-    if (!assetKebab || !assetPricingHistoryKebab) return;
-    setDeletingAssetPricingHistory(true);
-    setAssetPricingHistoryActionError(null);
-    const res = await fetch(`/api/assets/${assetKebab.id}/launch-pricing/${assetPricingHistoryKebab.id}`, {
-      method: "DELETE",
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      setAssetPricingHistoryActionError(data.error ?? t.zoneDetail.gameRoomSaveError);
-      setDeletingAssetPricingHistory(false);
-      return;
-    }
-    setDeletingAssetPricingHistory(false);
-    loadAssetPricing(assetKebab.id);
-    assetPricingHistoryDeletePulse(() => setAssetPricingHistoryKebab(null));
-  }
-
-  async function saveThreshold() {
-    if (!zone) return;
-    setThresholdError(null);
-    const res = await fetch(`/api/zones/${zone.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ longLaunchThresholdMinutes: thresholdValue }),
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      setThresholdError(data.error ?? t.zoneDetail.gameRoomSaveError);
-      return;
-    }
-    thresholdPulse(() => {});
-  }
 
   async function handleZoneIconChange(iconKey: string) {
     await fetch(`/api/zones/${params.id}`, {
@@ -362,12 +321,12 @@ export default function ZoneDetailPage() {
     await loadZone();
   }
 
-  async function changeAccountingMode(mode: ZoneAccountingMode, nextLaunchMode: LaunchMode = "manual") {
+  async function changeAccountingMode(mode: ZoneAccountingMode) {
     setZoneActionError(null);
     const res = await fetch(`/api/zones/${params.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accountingMode: mode, launchMode: nextLaunchMode }),
+      body: JSON.stringify({ accountingMode: mode }),
     });
     if (!res.ok) {
       const data = await res.json();
@@ -396,7 +355,16 @@ export default function ZoneDetailPage() {
     const res = await fetch(`/api/zones/${params.id}/tariffs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: tariffName, price: tariffPrice }),
+      body: JSON.stringify({
+        name: tariffName,
+        price: tariffPrice,
+        ...(zone && isStaysZone(zone)
+          ? {
+              pricingMode: tariffPricingMode,
+              options: tariffPricingMode === "fixed" ? tariffOptions : undefined,
+            }
+          : {}),
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -407,6 +375,8 @@ export default function ZoneDetailPage() {
     addTariffPulse(() => {
       setTariffName("");
       setTariffPrice("");
+      setTariffPricingMode("fixed");
+      setTariffOptions([EMPTY_OPTION]);
       setCreateTariffOpen(false);
     });
   }
@@ -418,6 +388,12 @@ export default function ZoneDetailPage() {
     setEditTariffPrice(tariff.price);
     setEditTariffError(null);
     setDeleteTariffError(null);
+    setEditTariffPricingMode(tariff.pricingMode ?? "fixed");
+    setEditTariffOptions(
+      tariff.options.length > 0
+        ? tariff.options.map((o) => ({ durationMinutes: String(o.durationMinutes), price: o.price }))
+        : [EMPTY_OPTION]
+    );
   }
 
   async function confirmEditTariff() {
@@ -426,7 +402,16 @@ export default function ZoneDetailPage() {
     const res = await fetch(`/api/tariffs/${tariffKebab.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editTariffName, price: editTariffPrice }),
+      body: JSON.stringify({
+        name: editTariffName,
+        price: editTariffPrice,
+        ...(zone && isStaysZone(zone)
+          ? {
+              pricingMode: editTariffPricingMode,
+              options: editTariffPricingMode === "fixed" ? editTariffOptions : undefined,
+            }
+          : {}),
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -481,6 +466,7 @@ export default function ZoneDetailPage() {
         colorTag: assetColor,
         photoUrl: assetPhotoUrl,
         iconKey: assetIconKey,
+        tariffId: assetTariffId || null,
       }),
     });
     const data = await res.json();
@@ -493,6 +479,7 @@ export default function ZoneDetailPage() {
       setAssetName("");
       setAssetPhotoUrl(null);
       setAssetIconKey(null);
+      setAssetTariffId("");
       setCreateAssetOpen(false);
     });
   }
@@ -515,13 +502,7 @@ export default function ZoneDetailPage() {
     setEditAssetColor(asset.colorTag);
     setEditAssetPhotoUrl(asset.photoUrl);
     setEditAssetError(null);
-  }
-
-  function openAssetPricing() {
-    if (!assetKebab) return;
-    setAssetPricingError(null);
-    loadAssetPricing(assetKebab.id);
-    setAssetKebabView("pricing");
+    setEditAssetTariffId(asset.tariffId && zone?.tariffs.some((tf) => tf.id === asset.tariffId) ? asset.tariffId : "");
   }
 
   async function openInitialReading() {
@@ -578,12 +559,17 @@ export default function ZoneDetailPage() {
   }
 
   async function confirmEditAsset() {
-    if (!assetKebab) return;
+    if (!assetKebab || !zone) return;
     setEditAssetError(null);
     const res = await fetch(`/api/assets/${assetKebab.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editAssetName, colorTag: editAssetColor, photoUrl: editAssetPhotoUrl }),
+      body: JSON.stringify({
+        name: editAssetName,
+        colorTag: editAssetColor,
+        photoUrl: editAssetPhotoUrl,
+        ...(isStaysZone(zone) ? { tariffId: editAssetTariffId || null } : {}),
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -639,6 +625,39 @@ export default function ZoneDetailPage() {
 
   const tariffLimitReached = zone.tariffs.length >= 2;
 
+  // Тариф актива невалиден, если не выбран вообще, или выбранный тариф с тех
+  // пор удалён (soft-delete — Asset.tariffId физически остаётся, но тариф
+  // пропадает из zone.tariffs, запрос пользователя 2026-07-17: "удалил
+  // тариф, а он уже был привязан к активу... должно быть: статус тарифа не
+  // выбран"). В обоих случаях актив не может начать пуск. Локальная const
+  // (не прямая ссылка на zone внутри функции) — иначе TS теряет narrowing
+  // "zone не null" внутри вложенной function-декларации.
+  const activeZoneTariffs = zone.tariffs;
+  const activeZoneTariffIds = new Set(activeZoneTariffs.map((tf) => tf.id));
+  function assetHasValidTariff(asset: AssetInfo): boolean {
+    return !!asset.tariffId && activeZoneTariffIds.has(asset.tariffId);
+  }
+  function assetTariffName(asset: AssetInfo): string | null {
+    return activeZoneTariffs.find((tf) => tf.id === asset.tariffId)?.name ?? null;
+  }
+
+  // Компактная подпись тарифа "Прибывания" под названием — "За вход" со
+  // списком вариантов ("60 мин — 100, 120 мин — 180") или "По факту"
+  // (минималка отдельно не показываем здесь, только в форме редактирования).
+  function formatTariffPricingLabel(tariff: TariffInfo): string {
+    if (tariff.pricingMode === "fixed") {
+      if (tariff.options.length === 0) return t.zoneDetail.gameRoomPricingModeFixed;
+      const list = tariff.options
+        .map(
+          (o) =>
+            `${o.durationMinutes} ${t.operatorApp.workTime.minutesShort} — ${formatMoney(Number(o.price), locale)}${currencySign ?? ""}`
+        )
+        .join(", ");
+      return `${t.zoneDetail.gameRoomPricingModeFixed} · ${list}`;
+    }
+    return t.zoneDetail.gameRoomPricingModePerMinute;
+  }
+
   return (
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
@@ -653,9 +672,7 @@ export default function ZoneDetailPage() {
                 <div>
                   <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{zone.name}</h1>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <StatusChip>
-                      {isGameRoomZone(zone) ? t.zonesList.modeChip.game_room : t.zonesList.modeChip[zone.accountingMode]}
-                    </StatusChip>
+                    <StatusChip>{t.zonesList.modeChip[zone.accountingMode]}</StatusChip>
                     {!zone.active && (
                       <StatusChip variant="neutral">{t.zonesList.zoneInactiveChip}</StatusChip>
                     )}
@@ -672,89 +689,54 @@ export default function ZoneDetailPage() {
             </SpringCard>
           )}
 
-          {/* Тариф "Игровой комнаты" (LaunchPricing) — свойство АКТИВА
-              (запрос пользователя 2026-07-16: "игровая комната ХалаБуда —
-              там и должны быть её настройки"), настраивается в кебабе
-              каждого актива ниже (assetKebabView === "pricing"), не здесь.
-              Порог долгого пуска и ссылки на "Сейчас на точке"/"Список
-              пусков" остаются зоновыми — единая точка для всей зоны. */}
-          {isGameRoomZone(zone) && (
-            <>
-            <SpringCard hover={false} className="flex flex-col gap-2">
-              <span className="text-section-title">{t.zoneDetail.gameRoomThresholdLabel}</span>
-              <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomThresholdHint}</p>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  className="h-11 max-w-32"
-                  value={thresholdValue}
-                  onChange={(e) => setThresholdValue(e.target.value)}
-                />
-                <PressableScale>
-                  <SaveButton className="h-11" onClick={saveThreshold} saved={thresholdSaved} />
-                </PressableScale>
-              </div>
-              {thresholdError && <p className="text-sm text-destructive">{thresholdError}</p>}
-            </SpringCard>
-
-            <div className="grid grid-cols-2 gap-3">
-              <PressableScale>
-                <Link
-                  href={`/money/game-room?pointId=${zone.pointId}`}
-                  className="flex h-full flex-col justify-center rounded-card border border-border bg-card p-3.5 text-center text-body-airbnb font-semibold"
-                >
-                  {t.zoneDetail.gameRoomLiveLink}
-                </Link>
-              </PressableScale>
-              <PressableScale>
-                <Link
-                  href={`/money/launches?zoneId=${zone.id}`}
-                  className="flex h-full flex-col justify-center rounded-card border border-border bg-card p-3.5 text-center text-body-airbnb font-semibold"
-                >
-                  {t.zoneDetail.gameRoomLaunchesListLink}
-                </Link>
-              </PressableScale>
-            </div>
-            </>
-          )}
-
-          {/* Тарифы (Tariff) — концепция режимов counters/launches-вручную (до
-              двух именованных тарифов на зону); у Игровой комнаты свой тариф —
-              LaunchPricing, уже показан выше отдельной карточкой, эта сюда не
-              относится (docs/spec/04-game-room.md). */}
-          {zone.accountingMode !== "cash_only" && !isGameRoomZone(zone) && (
+          {/* Тарифы (Tariff) — те же правила и лимит (до 2 на зону), что у
+              Счётчиков/Пусков (запрос пользователя 2026-07-17: "здесь
+              действуют те правила и лимит тарифов"). У "Прибываний" —
+              доп. поля За вход/По факту в форме ниже; активы ссылаются на
+              один из этих тарифов через свой кебаб, привязка отдельная
+              (docs/spec/04-game-room.md). Владелец не следит за отдельными
+              пусками — ни порога долгого пуска, ни "Сейчас на точке"/
+              "Список пусков" нет (запрос пользователя 2026-07-17). */}
+          {zone.accountingMode !== "cash_only" && (
           <SpringCard hover={false} className="flex flex-col gap-1">
             <h2 className="text-section-title">{t.zoneDetail.tariffsCardLabel}</h2>
 
             {zone.tariffs.map((tariff) => (
               <div key={tariff.id} className="flex items-center justify-between border-t border-border py-3 first:border-t-0">
-                <div className="text-body-airbnb">{tariff.name}</div>
+                <div className="min-w-0">
+                  <div className="text-body-airbnb">{tariff.name}</div>
+                  {isStaysZone(zone) && tariff.pricingMode && (
+                    <div className="text-caption-airbnb text-muted-foreground">{formatTariffPricingLabel(tariff)}</div>
+                  )}
+                </div>
                 <div className="flex items-center gap-3.5">
-                  <span className="text-[0.96875rem] font-bold tabular-nums">{tariff.price}</span>
+                  {tariff.pricingMode !== "fixed" && (
+                    <Money value={Number(tariff.price)} className="text-[0.96875rem] font-bold" />
+                  )}
                   <KebabButton onClick={() => openTariffKebab(tariff)} label={t.zoneDetail.tariffActionsLabel} />
                 </div>
               </div>
             ))}
 
-            <PressableScale>
-              <Button
-                type="button"
-                variant="dark"
-                size="sm"
-                disabled={tariffLimitReached}
-                className="mt-3 w-full gap-1.5"
-                onClick={() => setCreateTariffOpen(true)}
-              >
-                <Plus />
-                {tariffLimitReached ? t.zoneDetail.tariffLimitReached : t.zoneDetail.addTariffButton}
-              </Button>
-            </PressableScale>
+            {!tariffLimitReached && (
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="dark"
+                  size="sm"
+                  className="mt-3 w-full gap-1.5"
+                  onClick={() => setCreateTariffOpen(true)}
+                >
+                  <Plus />
+                  {t.zoneDetail.addTariffButton}
+                </Button>
+              </PressableScale>
+            )}
           </SpringCard>
           )}
 
           {/* Активы — общая карточка для всех режимов с активами (счётчики,
-              пуски-вручную, Игровая комната): по ним у Игровой комнаты тоже
+              пуски, Прибывания): по ним у "Прибываний" тоже
               стартуются пуски в PWA оператора (тайлы экрана зоны), поэтому
               владельцу нужно их так же заводить/фоткать/раскрашивать, как и
               везде (запрос пользователя 2026-07-16: "как в других зонах"). */}
@@ -807,9 +789,25 @@ export default function ZoneDetailPage() {
                           : asset.lastReadings[0].reading}
                       </p>
                     )}
+                    {isStaysZone(zone) && (
+                      <p className="text-caption-airbnb text-muted-foreground">
+                        {assetHasValidTariff(asset)
+                          ? `${t.zoneDetail.assetTariffLabel}: ${assetTariffName(asset)}`
+                          : t.zoneDetail.assetTariffNotLinked}
+                      </p>
+                    )}
                   </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
+                <div className="flex shrink-0 items-center gap-2">
+                  {isStaysZone(zone) && !assetHasValidTariff(asset) && (
+                    <span title={t.zoneDetail.assetTariffMissingWarning} className="shrink-0">
+                      <TriangleAlert
+                        role="img"
+                        aria-label={t.zoneDetail.assetTariffMissingWarning}
+                        className="size-6 text-destructive"
+                      />
+                    </span>
+                  )}
                   <div className="flex flex-col">
                     <button
                       type="button"
@@ -913,50 +911,17 @@ export default function ZoneDetailPage() {
                 <button
                   key={mode}
                   type="button"
-                  onClick={() =>
-                    changeAccountingMode(
-                      mode,
-                      mode === "launches" && zone.accountingMode === "launches" ? zone.launchMode : "manual"
-                    )
-                  }
+                  onClick={() => changeAccountingMode(mode)}
                   className="flex w-full items-center justify-between border-t border-border px-3 py-2.5 text-left first:border-t-0"
                 >
                   <span>
-                    <span className="block text-body-airbnb">
-                      {mode === "counters"
-                        ? t.zonesList.accountingModeCounters
-                        : mode === "launches"
-                          ? t.zonesList.accountingModeLaunches
-                          : t.zonesList.accountingModeCashOnly}
-                    </span>
-                    <span className="block text-caption-airbnb">
-                      {mode === "counters"
-                        ? t.zonesList.accountingModeCountersHint
-                        : mode === "launches"
-                          ? t.zonesList.accountingModeLaunchesHint
-                          : t.zonesList.accountingModeCashOnlyHint}
-                    </span>
+                    <span className="block text-body-airbnb">{ACCOUNTING_MODE_LABEL[mode](t)}</span>
+                    <span className="block text-caption-airbnb">{ACCOUNTING_MODE_HINT[mode](t)}</span>
                   </span>
                   {zone.accountingMode === mode && <Check className="size-4 shrink-0 text-primary" />}
                 </button>
               ))}
             </div>
-            {/* Игровая комната — суб-режим "Пусков" (docs/spec/04-game-room.md,
-                решение пользователя 2026-07-16), переключается отдельно, тем же
-                тап-и-применилось паттерном, что и список выше. */}
-            {zone.accountingMode === "launches" && (
-              <div>
-                <SegmentedTabs
-                  shape="control"
-                  options={[
-                    { key: "manual" as const, label: t.zonesList.launchVariantManual },
-                    { key: "game_room" as const, label: t.zonesList.accountingModeGameRoom },
-                  ]}
-                  value={zone.launchMode}
-                  onChange={(v) => changeAccountingMode("launches", v)}
-                />
-              </div>
-            )}
             {zoneActionError && <p className="text-sm text-destructive">{zoneActionError}</p>}
           </div>
         )}
@@ -988,22 +953,75 @@ export default function ZoneDetailPage() {
             <Label htmlFor="tariffName">{t.zoneDetail.tariffNameLabel}</Label>
             <Input id="tariffName" value={tariffName} onChange={(e) => setTariffName(e.target.value)} required />
           </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="tariffPrice">{t.zoneDetail.tariffPriceLabel}</Label>
-            <MoneyInput
-              id="tariffPrice"
-              type="number"
-              min="0"
-              step="0.01"
-              value={tariffPrice}
-              onChange={(e) => setTariffPrice(e.target.value)}
-              required
-            />
-          </div>
+          {!(isStaysZone(zone) && tariffPricingMode === "fixed") && (
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="tariffPrice">
+                {isStaysZone(zone) ? t.zoneDetail.gameRoomRateLabel : t.zoneDetail.tariffPriceLabel}
+              </Label>
+              {isStaysZone(zone) && tariffPricingMode === "per_minute" ? (
+                <div className="flex items-center gap-2">
+                  <MoneyInput
+                    id="tariffPrice"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    scale="lg"
+                    className="h-14 flex-1 border-2 text-lg"
+                    value={tariffPrice}
+                    onChange={(e) => setTariffPrice(e.target.value)}
+                    required
+                  />
+                  <PressableScale>
+                    <SaveButton type="submit" className="h-14 text-base font-bold" saved={addTariffSaved} />
+                  </PressableScale>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <MoneyInput
+                    id="tariffPrice"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    scale="lg"
+                    className="h-14 flex-1 border-2 text-lg"
+                    value={tariffPrice}
+                    onChange={(e) => setTariffPrice(e.target.value)}
+                    required
+                  />
+                  <PressableScale>
+                    <SaveButton type="submit" className="h-14 text-base font-bold" saved={addTariffSaved} />
+                  </PressableScale>
+                </div>
+              )}
+              {isStaysZone(zone) && tariffPricingMode === "per_minute" && (
+                <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomRateHint}</p>
+              )}
+            </div>
+          )}
+          {isStaysZone(zone) && (
+            <>
+              <SegmentedTabs
+                shape="control"
+                options={[
+                  { key: "fixed" as const, label: t.zoneDetail.gameRoomPricingModeFixed },
+                  { key: "per_minute" as const, label: t.zoneDetail.gameRoomPricingModePerMinute },
+                ]}
+                value={tariffPricingMode}
+                onChange={setTariffPricingMode}
+              />
+              {tariffPricingMode === "fixed" ? (
+                <TariffOptionsEditor options={tariffOptions} onChange={setTariffOptions} />
+              ) : (
+                <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomRoundingUpNote}</p>
+              )}
+            </>
+          )}
           {tariffError && <p className="text-sm text-destructive">{tariffError}</p>}
-          <PressableScale>
-            <SaveButton type="submit" className="h-12 w-full" saved={addTariffSaved} />
-          </PressableScale>
+          {isStaysZone(zone) && tariffPricingMode === "fixed" && (
+            <PressableScale>
+              <SaveButton type="submit" className="h-12 w-full" saved={addTariffSaved} />
+            </PressableScale>
+          )}
         </form>
       </BottomSheet>
 
@@ -1026,24 +1044,80 @@ export default function ZoneDetailPage() {
               <Label htmlFor="editTariffName">{t.zoneDetail.tariffNameLabel}</Label>
               <Input id="editTariffName" autoFocus value={editTariffName} onChange={(e) => setEditTariffName(e.target.value)} />
             </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="editTariffPrice">{t.zoneDetail.tariffPriceLabel}</Label>
-              <div className="flex items-center gap-2">
-                <MoneyInput
-                  id="editTariffPrice"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className="h-12 flex-1"
-                  value={editTariffPrice}
-                  onChange={(e) => setEditTariffPrice(e.target.value)}
-                />
-                <PressableScale>
-                  <SaveButton className="h-12" onClick={confirmEditTariff} saved={editTariffSaved} />
-                </PressableScale>
+            {isStaysZone(zone) && (
+              <SegmentedTabs
+                shape="control"
+                options={[
+                  { key: "fixed" as const, label: t.zoneDetail.gameRoomPricingModeFixed },
+                  { key: "per_minute" as const, label: t.zoneDetail.gameRoomPricingModePerMinute },
+                ]}
+                value={editTariffPricingMode}
+                onChange={setEditTariffPricingMode}
+              />
+            )}
+            {!(isStaysZone(zone) && editTariffPricingMode === "fixed") && (
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="editTariffPrice">
+                  {isStaysZone(zone) ? t.zoneDetail.gameRoomRateLabel : t.zoneDetail.tariffPriceLabel}
+                </Label>
+                {isStaysZone(zone) && editTariffPricingMode === "per_minute" ? (
+                  <div className="flex items-center gap-2">
+                    <MoneyInput
+                      id="editTariffPrice"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      scale="lg"
+                      className="h-14 flex-1 border-2 text-lg"
+                      value={editTariffPrice}
+                      onChange={(e) => setEditTariffPrice(e.target.value)}
+                    />
+                    <PressableScale>
+                      <SaveButton
+                        className="h-14 text-base font-bold"
+                        onClick={confirmEditTariff}
+                        saved={editTariffSaved}
+                      />
+                    </PressableScale>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <MoneyInput
+                      id="editTariffPrice"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      scale="lg"
+                      className="h-14 flex-1 border-2 text-lg"
+                      value={editTariffPrice}
+                      onChange={(e) => setEditTariffPrice(e.target.value)}
+                    />
+                    <PressableScale>
+                      <SaveButton
+                        className="h-14 text-base font-bold"
+                        onClick={confirmEditTariff}
+                        saved={editTariffSaved}
+                      />
+                    </PressableScale>
+                  </div>
+                )}
+                {isStaysZone(zone) && editTariffPricingMode === "per_minute" && (
+                  <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomRateHint}</p>
+                )}
               </div>
-            </div>
+            )}
+            {isStaysZone(zone) &&
+              (editTariffPricingMode === "fixed" ? (
+                <TariffOptionsEditor options={editTariffOptions} onChange={setEditTariffOptions} />
+              ) : (
+                <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomRoundingUpNote}</p>
+              ))}
             {editTariffError && <p className="text-sm text-destructive">{editTariffError}</p>}
+            {isStaysZone(zone) && editTariffPricingMode === "fixed" && (
+              <PressableScale>
+                <SaveButton className="h-12 w-full" onClick={confirmEditTariff} saved={editTariffSaved} />
+              </PressableScale>
+            )}
           </div>
         )}
         {tariffKebab && tariffKebabView === "confirm-delete" && (
@@ -1069,6 +1143,33 @@ export default function ZoneDetailPage() {
             <Label htmlFor="assetColor">{t.zoneDetail.assetColorLabel}</Label>
             <ColorTagPicker value={assetColor} onChange={setAssetColor} />
           </div>
+          {isStaysZone(zone) && (
+            <div className="flex flex-col gap-1">
+              <Label>
+                {t.zoneDetail.assetTariffLabel}{" "}
+                <span className="font-normal text-muted-foreground">({t.common.optional})</span>
+              </Label>
+              <Select
+                value={assetTariffId}
+                onValueChange={(v) => setAssetTariffId(v ?? "")}
+                items={zone.tariffs.map((tf) => ({ value: tf.id, label: tf.name }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t.zoneDetail.assetTariffPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {zone.tariffs.map((tf) => (
+                    <SelectItem key={tf.id} value={tf.id}>
+                      {tf.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {zone.tariffs.length === 0 && (
+                <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.assetTariffEmptyHint}</p>
+              )}
+            </div>
+          )}
           <div className="flex flex-col gap-2">
             <Label>{t.zoneDetail.assetPhotoLabel}</Label>
             <div className="flex flex-wrap items-center gap-3">
@@ -1118,16 +1219,6 @@ export default function ZoneDetailPage() {
                 {t.zoneDetail.initialReadingAction}
               </ActionSheetItem>
             )}
-            {isGameRoomZone(zone) && (
-              <ActionSheetItem icon={Coins} onClick={openAssetPricing}>
-                {t.zoneDetail.gameRoomPricingCardLabel}
-              </ActionSheetItem>
-            )}
-            {isGameRoomZone(zone) && (
-              <ActionSheetItem icon={History} onClick={() => router.push(`/money/launches?assetId=${assetKebab.id}`)}>
-                {t.zoneDetail.gameRoomLaunchesListLink}
-              </ActionSheetItem>
-            )}
             <ActionSheetItem icon={Camera} onClick={() => setAssetKebabView("photo")}>
               {t.zoneDetail.replacePhoto}
             </ActionSheetItem>
@@ -1153,6 +1244,33 @@ export default function ZoneDetailPage() {
               <Label htmlFor="editAssetColor">{t.zoneDetail.assetColorLabel}</Label>
               <ColorTagPicker value={editAssetColor} onChange={setEditAssetColor} />
             </div>
+            {isStaysZone(zone) && (
+              <div className="flex flex-col gap-1">
+                <Label>
+                  {t.zoneDetail.assetTariffLabel}{" "}
+                  <span className="font-normal text-muted-foreground">({t.common.optional})</span>
+                </Label>
+                <Select
+                  value={editAssetTariffId}
+                  onValueChange={(v) => setEditAssetTariffId(v ?? "")}
+                  items={zone.tariffs.map((tf) => ({ value: tf.id, label: tf.name }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t.zoneDetail.assetTariffPlaceholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {zone.tariffs.map((tf) => (
+                      <SelectItem key={tf.id} value={tf.id}>
+                        {tf.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {zone.tariffs.length === 0 && (
+                  <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.assetTariffEmptyHint}</p>
+                )}
+              </div>
+            )}
             {editAssetError && <p className="text-sm text-destructive">{editAssetError}</p>}
             <PressableScale>
               <SaveButton className="h-12 w-full" onClick={confirmEditAsset} saved={editAssetSaved} />
@@ -1188,192 +1306,12 @@ export default function ZoneDetailPage() {
             </PressableScale>
           </div>
         )}
-        {assetKebab && assetKebabView === "pricing" && (
-          <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{assetKebab.name}</h2>
-            <span className="text-section-title">{t.zoneDetail.gameRoomPricingCardLabel}</span>
-            <SegmentedTabs
-              shape="control"
-              options={[
-                { key: "fixed" as const, label: t.zoneDetail.gameRoomPricingModeFixed },
-                { key: "per_minute" as const, label: t.zoneDetail.gameRoomPricingModePerMinute },
-              ]}
-              value={assetPricingMode}
-              onChange={setAssetPricingMode}
-            />
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="assetGameRoomPrice">
-                {assetPricingMode === "fixed" ? t.zoneDetail.gameRoomPriceLabel : t.zoneDetail.gameRoomRateLabel}
-              </Label>
-              <MoneyInput
-                id="assetGameRoomPrice"
-                value={assetPriceValue}
-                onChange={(e) => setAssetPriceValue(e.target.value)}
-              />
-            </div>
-            {assetPricingMode === "fixed" ? (
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="assetGameRoomDuration">
-                  {t.zoneDetail.gameRoomDurationLabel}{" "}
-                  <span className="font-normal text-muted-foreground">({t.common.optional})</span>
-                </Label>
-                <Input
-                  id="assetGameRoomDuration"
-                  type="number"
-                  inputMode="numeric"
-                  placeholder={t.zoneDetail.gameRoomDurationPlaceholder}
-                  value={assetDurationValue}
-                  onChange={(e) => setAssetDurationValue(e.target.value)}
-                />
-              </div>
-            ) : (
-              <>
-                <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomRoundingUpNote}</p>
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="assetGameRoomMinAmount">{t.zoneDetail.gameRoomMinAmountLabel}</Label>
-                  <MoneyInput
-                    id="assetGameRoomMinAmount"
-                    required
-                    value={assetMinAmountValue}
-                    onChange={(e) => setAssetMinAmountValue(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-            {assetPricingError && <p className="text-sm text-destructive">{assetPricingError}</p>}
-            <PressableScale>
-              <SaveButton className="h-11" onClick={saveAssetPricing} saved={assetPricingSaved} />
-            </PressableScale>
-
-            {assetPricingHistory.length > 0 && (
-              <div className="flex flex-col gap-1 border-t border-border pt-3">
-                <span className="text-section-title">{t.zoneDetail.gameRoomPricingHistoryLabel}</span>
-                {assetPricingHistory.map((p, i) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between gap-2 border-t border-border py-2.5 first:border-t-0"
-                  >
-                    <span className="min-w-0 truncate text-caption-airbnb text-muted-foreground">
-                      {formatPricingDate(p.effectiveFrom)}
-                      {i === 0 && (
-                        <span className="ml-1.5">
-                          <StatusChip>{t.zoneDetail.gameRoomPricingActiveChip}</StatusChip>
-                        </span>
-                      )}
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2">
-                      <span className="text-caption-airbnb font-semibold tabular-nums">
-                        {formatPricingModeLabel(p)} · <Money value={p.price} />
-                      </span>
-                      <KebabButton
-                        onClick={() => openAssetPricingHistoryKebab(p)}
-                        label={t.zoneDetail.gameRoomPricingHistoryActionsLabel}
-                      />
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
         {assetKebab && assetKebabView === "confirm-delete" && (
           <div className="flex flex-col gap-3 pt-2">
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.deleteAssetAction}</h2>
             <p className="text-body-airbnb">{t.zoneDetail.confirmDeleteAsset}</p>
             <PressableScale>
               <DeleteButton className="h-12 w-full" onClick={confirmDeleteAsset} deleted={assetDeleted} />
-            </PressableScale>
-          </div>
-        )}
-      </BottomSheet>
-
-      <BottomSheet open={assetPricingHistoryKebab !== null} onClose={() => setAssetPricingHistoryKebab(null)}>
-        {assetPricingHistoryKebab && assetPricingHistoryKebabView === "menu" && (
-          <div className="pt-2">
-            <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">
-              {formatPricingDate(assetPricingHistoryKebab.effectiveFrom)}
-            </h2>
-            <ActionSheetItem icon={Pencil} onClick={() => setAssetPricingHistoryKebabView("edit")}>
-              {t.common.edit}
-            </ActionSheetItem>
-            <ActionSheetItem icon={Trash2} destructive onClick={() => setAssetPricingHistoryKebabView("confirm-delete")}>
-              {t.common.delete}
-            </ActionSheetItem>
-          </div>
-        )}
-        {assetPricingHistoryKebab && assetPricingHistoryKebabView === "edit" && (
-          <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.common.edit}</h2>
-            <SegmentedTabs
-              shape="control"
-              options={[
-                { key: "fixed" as const, label: t.zoneDetail.gameRoomPricingModeFixed },
-                { key: "per_minute" as const, label: t.zoneDetail.gameRoomPricingModePerMinute },
-              ]}
-              value={editAssetPricingMode}
-              onChange={setEditAssetPricingMode}
-            />
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="editAssetPricingPrice">
-                {editAssetPricingMode === "fixed" ? t.zoneDetail.gameRoomPriceLabel : t.zoneDetail.gameRoomRateLabel}
-              </Label>
-              <MoneyInput
-                id="editAssetPricingPrice"
-                value={editAssetPriceValue}
-                onChange={(e) => setEditAssetPriceValue(e.target.value)}
-              />
-            </div>
-            {editAssetPricingMode === "fixed" ? (
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="editAssetPricingDuration">
-                  {t.zoneDetail.gameRoomDurationLabel}{" "}
-                  <span className="font-normal text-muted-foreground">({t.common.optional})</span>
-                </Label>
-                <Input
-                  id="editAssetPricingDuration"
-                  type="number"
-                  inputMode="numeric"
-                  placeholder={t.zoneDetail.gameRoomDurationPlaceholder}
-                  value={editAssetDurationValue}
-                  onChange={(e) => setEditAssetDurationValue(e.target.value)}
-                />
-              </div>
-            ) : (
-              <>
-                <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomRoundingUpNote}</p>
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="editAssetPricingMinAmount">{t.zoneDetail.gameRoomMinAmountLabel}</Label>
-                  <MoneyInput
-                    id="editAssetPricingMinAmount"
-                    required
-                    value={editAssetMinAmountValue}
-                    onChange={(e) => setEditAssetMinAmountValue(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-            {assetPricingHistoryActionError && <p className="text-sm text-destructive">{assetPricingHistoryActionError}</p>}
-            <PressableScale>
-              <SaveButton
-                className="h-12 w-full"
-                onClick={submitEditAssetPricingHistory}
-                saved={assetPricingHistoryEditSaved}
-              />
-            </PressableScale>
-          </div>
-        )}
-        {assetPricingHistoryKebab && assetPricingHistoryKebabView === "confirm-delete" && (
-          <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.common.delete}</h2>
-            <p className="text-body-airbnb">{t.zoneDetail.gameRoomPricingHistoryDeleteConfirm}</p>
-            {assetPricingHistoryActionError && <p className="text-sm text-destructive">{assetPricingHistoryActionError}</p>}
-            <PressableScale>
-              <DeleteButton
-                className="h-12 w-full"
-                disabled={deletingAssetPricingHistory}
-                onClick={confirmDeleteAssetPricingHistory}
-                deleted={assetPricingHistoryDeleted}
-              />
             </PressableScale>
           </div>
         )}

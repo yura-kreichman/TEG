@@ -26,12 +26,18 @@ export function BottomGlassNav({
   moreActive,
   moreBadge,
   onMoreClick,
+  showMore,
 }: {
   items: BottomGlassNavItem[];
   moreLabel: string;
   moreActive: boolean;
   moreBadge: "red" | "green" | null;
   onMoreClick: () => void;
+  // "Ещё" — только когда реально есть что в него убрать (запрос пользователя
+  // 2026-07-17: не показывать "Ещё" без переполнения пунктами меню). Решает
+  // вызывающий компонент, а не сам бар — у него нет своего списка "лишних"
+  // пунктов, только уже готовый items + внешний BottomSheet.
+  showMore: boolean;
 }) {
   return (
     <nav className="nav-glass fixed inset-x-0 bottom-0 flex pb-[env(safe-area-inset-bottom)] md:hidden">
@@ -52,30 +58,32 @@ export function BottomGlassNav({
           </PressableScale>
         );
       })}
-      <PressableScale className="relative flex-1">
-        <button
-          type="button"
-          onClick={onMoreClick}
-          className={cn(
-            "flex w-full flex-col items-center gap-0.5 py-2 text-xs",
-            moreActive ? "font-semibold text-primary" : "text-nav-inactive font-medium"
-          )}
-        >
-          <span className="relative">
-            <MoreHorizontal className="size-5" />
-            {moreBadge && (
-              <span
-                className={cn(
-                  "absolute -right-0.5 -top-0.5 size-2 rounded-full",
-                  moreBadge === "red" ? "bg-destructive" : "bg-success"
-                )}
-                style={{ boxShadow: "0 0 0 2px var(--nav-glass-bg)" }}
-              />
+      {showMore && (
+        <PressableScale className="relative flex-1">
+          <button
+            type="button"
+            onClick={onMoreClick}
+            className={cn(
+              "flex w-full flex-col items-center gap-0.5 py-2 text-xs",
+              moreActive ? "font-semibold text-primary" : "text-nav-inactive font-medium"
             )}
-          </span>
-          {moreLabel}
-        </button>
-      </PressableScale>
+          >
+            <span className="relative">
+              <MoreHorizontal className="size-5" />
+              {moreBadge && (
+                <span
+                  className={cn(
+                    "absolute -right-0.5 -top-0.5 size-2 rounded-full",
+                    moreBadge === "red" ? "bg-destructive" : "bg-success"
+                  )}
+                  style={{ boxShadow: "0 0 0 2px var(--nav-glass-bg)" }}
+                />
+              )}
+            </span>
+            {moreLabel}
+          </button>
+        </PressableScale>
+      )}
     </nav>
   );
 }

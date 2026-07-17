@@ -296,3 +296,19 @@ export async function dispatchShiftCheckin(tenantId: string, operatorName: strin
     url: `/operators/${operatorId}`,
   }).catch((err) => console.error("push dispatch failed", { kind: "shiftCheckin", tenantId, err }));
 }
+
+// Инкассация оператором (запрос пользователя 2026-07-17: "владелец должен
+// получать push об инкассации") — только push, тот же принцип, что
+// shiftCheckin: короткое мгновенное уведомление о действии сотрудника, не
+// настраиваемая сводка. Владельческие инкассации (zones/[id]/collection,
+// points/[id]/collection/general) не шлют — незачем уведомлять владельца о
+// его же собственном действии.
+export async function dispatchCollection(tenantId: string, amount: number, label: string, operatorName: string): Promise<void> {
+  if (!(await pushEnabledFor(tenantId, "collection"))) return;
+  const tenant = await getTenantInfo(tenantId);
+  await sendPushToTenant(tenantId, {
+    title: tenant.t.pushSettings.collectionLabel,
+    body: `${operatorName} · ${label} · ${formatMoney(amount, tenant.locale)}`,
+    url: "/money",
+  }).catch((err) => console.error("push dispatch failed", { kind: "collection", tenantId, err }));
+}

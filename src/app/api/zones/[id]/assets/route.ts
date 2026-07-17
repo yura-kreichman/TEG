@@ -31,9 +31,24 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   const limitError = await checkPackageLimit(owner.tenantId, "maxAssets", assetCount);
   if (limitError) return limitError;
 
-  const { name, photoUrl, iconKey, colorTag } = await request.json();
+  const { name, photoUrl, iconKey, colorTag, tariffId } = await request.json();
   if (typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ error: "Название актива обязательно" }, { status: 400 });
+  }
+
+  // Тариф — необязателен при создании (запрос пользователя 2026-07-17:
+  // "если тарифы ещё не созданы, ничего страшного — потом создаст и
+  // привяжет"), но если передан — обязан принадлежать этой же зоне.
+  let tariffIdValue: string | null = null;
+  if (tariffId !== undefined && tariffId !== null) {
+    if (typeof tariffId !== "string") {
+      return NextResponse.json({ error: "Некорректный тариф" }, { status: 400 });
+    }
+    const tariff = await prisma.tariff.findUnique({ where: { id: tariffId } });
+    if (!tariff || tariff.zoneId !== zoneId || tariff.deletedAt) {
+      return NextResponse.json({ error: "Тариф не найден в этой зоне" }, { status: 400 });
+    }
+    tariffIdValue = tariffId;
   }
 
   // Порядок — в рамках зоны, не всего тенанта (assetCount выше — тенантный
@@ -51,6 +66,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
           ? colorTag.trim()
           : DEFAULT_COLOR_TAGS[assetCount % DEFAULT_COLOR_TAGS.length],
       sortOrder: zoneAssetCount,
+      tariffId: tariffIdValue,
     },
   });
 

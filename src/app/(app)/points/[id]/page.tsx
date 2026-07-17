@@ -16,11 +16,11 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconPicker } from "@/components/icon-picker";
 import { StatusChip } from "@/components/status-chip";
 import { TileIcon } from "@/components/tile-icon";
-import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
-import { ZONE_ACCOUNTING_MODES, isGameRoomZone, type LaunchMode, type ZoneAccountingMode } from "@/lib/results-calc";
+import { ZONE_ACCOUNTING_MODES, isStaysZone, type ZoneAccountingMode } from "@/lib/results-calc";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import type { Dictionary } from "@/lib/i18n";
 
 interface ZoneInfo {
   id: string;
@@ -28,11 +28,26 @@ interface ZoneInfo {
   iconKey: string | null;
   telegramEmoji: string | null;
   accountingMode: ZoneAccountingMode;
-  launchMode: LaunchMode;
   active: boolean;
   tariffs: { id: string; name: string; price: string }[];
   assets: { id: string }[];
 }
+
+// "stays" (Прибывания) — самостоятельный 4-й режим учёта, рядоположный
+// остальным (решение пользователя 2026-07-17; было суб-режимом "launches" до
+// этого) — единый список из четырёх, без второго уровня выбора.
+const ACCOUNTING_MODE_LABEL: Record<ZoneAccountingMode, (t: Dictionary) => string> = {
+  counters: (t) => t.zonesList.accountingModeCounters,
+  launches: (t) => t.zonesList.accountingModeLaunches,
+  cash_only: (t) => t.zonesList.accountingModeCashOnly,
+  stays: (t) => t.zonesList.accountingModeStays,
+};
+const ACCOUNTING_MODE_HINT: Record<ZoneAccountingMode, (t: Dictionary) => string> = {
+  counters: (t) => t.zonesList.accountingModeCountersHint,
+  launches: (t) => t.zonesList.accountingModeLaunchesHint,
+  cash_only: (t) => t.zonesList.accountingModeCashOnlyHint,
+  stays: (t) => t.zonesList.accountingModeStaysHint,
+};
 
 export default function PointDetailPage() {
   const params = useParams<{ id: string }>();
@@ -50,9 +65,6 @@ export default function PointDetailPage() {
   const [name, setName] = useState("");
   const [iconKey, setIconKey] = useState<string | null>(null);
   const [accountingMode, setAccountingMode] = useState<ZoneAccountingMode>("counters");
-  // Игровая комната — суб-режим "launches" (docs/spec/04-game-room.md), не
-  // отдельный пункт верхнего списка (решение пользователя 2026-07-16).
-  const [launchMode, setLaunchMode] = useState<LaunchMode>("manual");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { saved: createSaved, pulse: createPulse } = useSavePulse();
@@ -86,7 +98,7 @@ export default function PointDetailPage() {
       const res = await fetch(`/api/points/${params.id}/zones`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, iconKey, accountingMode, launchMode }),
+        body: JSON.stringify({ name, iconKey, accountingMode }),
       });
       const data = await res.json();
 
@@ -100,7 +112,6 @@ export default function PointDetailPage() {
         setName("");
         setIconKey(null);
         setAccountingMode("counters");
-        setLaunchMode("manual");
         setCreateOpen(false);
       });
     } finally {
@@ -161,12 +172,12 @@ export default function PointDetailPage() {
                                 ? t.zonesList.modeChip.cash_only
                                 : `${zone.assets.length} ${t.zonesList.assetsCount}`}
                               {zone.accountingMode !== "cash_only" &&
-                                ` · ${isGameRoomZone(zone) ? t.zonesList.modeChip.game_room : t.zonesList.modeChip[zone.accountingMode]}`}
+                                ` · ${t.zonesList.modeChip[zone.accountingMode]}`}
                             </p>
                           </div>
                           <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
                         </div>
-                        {zone.accountingMode !== "cash_only" && !isGameRoomZone(zone) && (
+                        {zone.accountingMode !== "cash_only" && !isStaysZone(zone) && (
                           <div className="mt-3 flex flex-wrap gap-1.5">
                             {zone.tariffs.length === 0 ? (
                               <StatusChip variant="warning">{t.zonesList.noTariffs}</StatusChip>
@@ -217,45 +228,13 @@ export default function PointDetailPage() {
                   className="flex w-full items-center justify-between border-t border-border px-3 py-2.5 text-left first:border-t-0"
                 >
                   <span>
-                    <span className="block text-body-airbnb">
-                      {mode === "counters"
-                        ? t.zonesList.accountingModeCounters
-                        : mode === "launches"
-                          ? t.zonesList.accountingModeLaunches
-                          : t.zonesList.accountingModeCashOnly}
-                    </span>
-                    <span className="block text-caption-airbnb">
-                      {mode === "counters"
-                        ? t.zonesList.accountingModeCountersHint
-                        : mode === "launches"
-                          ? t.zonesList.accountingModeLaunchesHint
-                          : t.zonesList.accountingModeCashOnlyHint}
-                    </span>
+                    <span className="block text-body-airbnb">{ACCOUNTING_MODE_LABEL[mode](t)}</span>
+                    <span className="block text-caption-airbnb">{ACCOUNTING_MODE_HINT[mode](t)}</span>
                   </span>
                   {accountingMode === mode && <Check className="size-4 shrink-0 text-primary" />}
                 </button>
               ))}
             </div>
-            {/* Игровая комната — суб-режим "Пусков" (docs/spec/04-game-room.md,
-                решение пользователя 2026-07-16: не отдельный пункт списка выше). */}
-            {accountingMode === "launches" && (
-              <div className="mt-2">
-                <SegmentedTabs
-                  shape="control"
-                  options={[
-                    { key: "manual" as const, label: t.zonesList.launchVariantManual },
-                    { key: "game_room" as const, label: t.zonesList.accountingModeGameRoom },
-                  ]}
-                  value={launchMode}
-                  onChange={setLaunchMode}
-                />
-                <p className="mt-1 text-caption-airbnb">
-                  {launchMode === "game_room"
-                    ? t.zonesList.accountingModeGameRoomHint
-                    : t.zonesList.accountingModeLaunchesHint}
-                </p>
-              </div>
-            )}
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <PressableScale>

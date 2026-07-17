@@ -13,7 +13,14 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { ImageLightbox } from "@/components/motion/image-lightbox";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
-import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, isGameRoomZone, type LaunchMode, type ZoneAccountingMode } from "@/lib/results-calc";
+import {
+  calcSessions,
+  calcZoneGrossRevenue,
+  calcZoneRevenue,
+  isLaunchesZone,
+  isStaysZone,
+  type ZoneAccountingMode,
+} from "@/lib/results-calc";
 import { queueSubmission } from "@/lib/offline-submissions";
 import { useI18n } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
@@ -44,16 +51,22 @@ interface ZoneCtx {
   name: string;
   iconKey: string | null;
   accountingMode: ZoneAccountingMode;
-  launchMode: LaunchMode;
   tariffs: TariffCtx[];
   assets: AssetCtx[];
 }
 
 interface ZoneFormState {
   returnsCount: string;
+  // Для "Прибываний" — сумма всех assetCash ниже (запрос пользователя
+  // 2026-07-17: "Активы по аналогии, как и со счётчиками" — реальные суммы
+  // вносятся по каждому активу, а не одной строкой на зону); для остальных
+  // режимов — как раньше, вводится напрямую.
   cashAmount: string;
   mobileAmount: string;
   readings: Record<string, string>; // key: `${assetId}:${tariffId}`
+  // Только "Прибывания" — реальные Наличные/Безнал по каждому активу,
+  // ключ assetId. cashAmount/mobileAmount выше пересчитываются их суммой.
+  assetCash: Record<string, { cash: string; mobile: string }>;
 }
 
 interface ExpenseRow {
@@ -80,16 +93,32 @@ export default function SubmitResultsPage() {
   const [zoneForms, setZoneForms] = useState<Record<string, ZoneFormState>>({});
   const [expenses, setExpenses] = useState<ExpenseRow[]>([]);
   const [stepIndex, setStepIndex] = useState(0);
-  const [counterAssetId, setCounterAssetId] = useState<string | null>(null);
+  // Общий sheet-по-активу: показания счётчика/пуска (counters/launches) или
+  // реальная касса "Прибываний" (запрос пользователя 2026-07-17) — режимы
+  // взаимоисключающие для одной зоны, поэтому один и тот же id обслуживает
+  // оба случая, ветвление по activeZone.accountingMode внутри самого sheet.
+  const [assetSheetId, setAssetSheetId] = useState<string | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFired = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [queued, setQueued] = useState(false);
-  // Мягкая блокировка сдачи для Игровой комнаты (docs/spec/04-game-room.md) —
-  // сколько пусков ещё открыто в этой зоне, проверяется при входе на её шаг.
-  const [gameRoomOpenCount, setGameRoomOpenCount] = useState<number | null>(null);
+  // Мягкая блокировка сдачи для "Прибываний" (docs/spec/04-game-room.md) —
+  // сколько пусков ещё открыто, по каждому АКТИВУ отдельно (запрос
+  // пользователя 2026-07-17: "не по отношению к Зоне, а к Активу с
+  // переходом на Актуальный Актив") — зона может держать несколько активов,
+  // сообщение и переход должны вести сразу к нужному, а не к зоне вообще.
+  const [gameRoomOpenByAsset, setGameRoomOpenByAsset] = useState<{ assetId: string; count: number }[]>([]);
+  // Расчётная выручка "Прибываний" по каждому активу отдельно (запрос
+  // пользователя 2026-07-17: "внутри актива... сумма расчётная как read
+  // only, сотрудник вносит реальные суммы — так мы узнаем есть ли
+  // разница") — cashAmount/mobileAmount тут лишь справочные (по данным
+  // выбранного способа оплаты браслетов), настоящая реальная сумма — в
+  // activeForm.assetCash, вводится сотрудником вручную.
+  const [gameRoomRevenueByAsset, setGameRoomRevenueByAsset] = useState<
+    { assetId: string; calculatedAmount: number; cashAmount: number; mobileAmount: number }[]
+  >([]);
   const [result, setResult] = useState<{
     summary: { zoneId: string; zoneName: string; calculatedRevenue: number; actualCash: number; difference: number }[];
     remindMarkDeparture?: boolean;
@@ -119,22 +148,42 @@ export default function SubmitResultsPage() {
   const currentStep = steps[stepIndex] ?? steps[0];
 
   // Мягкая блокировка (docs/spec/04-game-room.md) — при входе на шаг зоны
-  // Игровой комнаты проверяем, не остались ли открытые пуски.
+  // "Прибываний" проверяем, не остались ли открытые пуски.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (currentStep.kind !== "zone") {
-      setGameRoomOpenCount(null);
+      setGameRoomOpenByAsset([]);
+      setGameRoomRevenueByAsset([]);
       return;
     }
     const zone = zones.find((z) => z.id === currentStep.zoneId);
-    if (!zone || !isGameRoomZone(zone)) {
-      setGameRoomOpenCount(null);
+    setGameRoomOpenByAsset([]);
+    setGameRoomRevenueByAsset([]);
+    if (!zone) return;
+
+    if (isStaysZone(zone)) {
+      fetch(`/api/zones/${zone.id}/launches?cashSplit=1`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          const openCounts = new Map<string, number>();
+          for (const l of data?.launches ?? []) {
+            if (!l.assetId) continue;
+            openCounts.set(l.assetId, (openCounts.get(l.assetId) ?? 0) + 1);
+          }
+          setGameRoomOpenByAsset(Array.from(openCounts, ([assetId, count]) => ({ assetId, count })));
+          setGameRoomRevenueByAsset(data?.revenueByAsset ?? []);
+        });
       return;
     }
-    setGameRoomOpenCount(null);
-    fetch(`/api/zones/${zone.id}/launches`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setGameRoomOpenCount(data ? (data.launches?.length ?? 0) : 0));
+
+    // "Пуски" — тот же per-asset расчёт read-only, что и "Прибывания" (запрос
+    // пользователя 2026-07-17: "Да" на вопрос "сдача итогов тоже read-only
+    // calculated"), но без открытых пусков — тап мгновенный, блокировки нет.
+    if (isLaunchesZone(zone)) {
+      fetch(`/api/zones/${zone.id}/tally`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => setGameRoomRevenueByAsset(data?.revenueByAsset ?? []));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, zones]);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -145,11 +194,11 @@ export default function SubmitResultsPage() {
     );
     setZoneForms((prev) => {
       if (prev[zoneId]) return prev;
-      return { ...prev, [zoneId]: { returnsCount: "0", cashAmount: "", mobileAmount: "", readings: {} } };
+      return { ...prev, [zoneId]: { returnsCount: "0", cashAmount: "", mobileAmount: "", readings: {}, assetCash: {} } };
     });
   }
 
-  function updateZoneField(zoneId: string, field: keyof Omit<ZoneFormState, "readings">, value: string) {
+  function updateZoneField(zoneId: string, field: keyof Omit<ZoneFormState, "readings" | "assetCash">, value: string) {
     setZoneForms((prev) => ({ ...prev, [zoneId]: { ...prev[zoneId], [field]: value } }));
   }
 
@@ -158,6 +207,24 @@ export default function SubmitResultsPage() {
       ...prev,
       [zoneId]: { ...prev[zoneId], readings: { ...prev[zoneId].readings, [key]: value } },
     }));
+  }
+
+  // Реальная сумма Наличные/Безнал по активу "Прибываний" (запрос
+  // пользователя 2026-07-17) — cashAmount/mobileAmount зоны пересчитываются
+  // суммой сразу же, остальной код (предпросмотр, отправка формы) продолжает
+  // читать их как раньше, ничего больше менять не нужно.
+  function updateAssetCash(zoneId: string, assetId: string, field: "cash" | "mobile", value: string) {
+    setZoneForms((prev) => {
+      const form = prev[zoneId];
+      const entry = form.assetCash[assetId] ?? { cash: "", mobile: "" };
+      const assetCash = { ...form.assetCash, [assetId]: { ...entry, [field]: value } };
+      const sum = (key: "cash" | "mobile") =>
+        String(Object.values(assetCash).reduce((total, e) => total + (Number(e[key]) || 0), 0));
+      return {
+        ...prev,
+        [zoneId]: { ...form, assetCash, cashAmount: sum("cash"), mobileAmount: sum("mobile") },
+      };
+    });
   }
 
   function handlePhotoPressStart(url: string) {
@@ -256,13 +323,18 @@ export default function SubmitResultsPage() {
     const zoneSubmissions = selectedZoneIds.map((zoneId) => {
       const zone = zones.find((z) => z.id === zoneId)!;
       const form = zoneForms[zoneId];
-      const readings = zone.assets.flatMap((asset) =>
-        zone.tariffs.map((tariff) => ({
-          assetId: asset.id,
-          tariffId: tariff.id,
-          reading: resolveReading(form.readings[`${asset.id}:${tariff.id}`], asset.previousReadings[tariff.id] ?? 0),
-        }))
-      );
+      // "Прибывания"/"Пуски" — расчёт исключительно от Launch на сервере
+      // (см. submit-results/route.ts), показаний нет.
+      const readings =
+        isStaysZone(zone) || isLaunchesZone(zone)
+          ? []
+          : zone.assets.flatMap((asset) =>
+              zone.tariffs.map((tariff) => ({
+                assetId: asset.id,
+                tariffId: tariff.id,
+                reading: resolveReading(form.readings[`${asset.id}:${tariff.id}`], asset.previousReadings[tariff.id] ?? 0),
+              }))
+            );
       return {
         zoneId,
         returnsCount: Number(form.returnsCount || 0),
@@ -340,7 +412,7 @@ export default function SubmitResultsPage() {
 
   if (result) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center bg-background px-4 py-10">
+      <div className="flex flex-1 flex-col items-center justify-center bg-surface-0 px-4 py-10">
         <SpringCard hover={false} className="w-full max-w-md">
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-screen-title">{queued ? t.operatorApp.submit.queuedTitle : t.operatorApp.submit.acceptedTitle}</h1>
@@ -391,13 +463,13 @@ export default function SubmitResultsPage() {
   const activeZone = currentStep.kind === "zone" ? zones.find((z) => z.id === currentStep.zoneId) ?? null : null;
   const activeForm = activeZone ? zoneForms[activeZone.id] : null;
   const activeAsset =
-    activeZone && counterAssetId ? activeZone.assets.find((a) => a.id === counterAssetId) ?? null : null;
+    activeZone && assetSheetId ? activeZone.assets.find((a) => a.id === assetSheetId) ?? null : null;
 
   const filledCount =
     activeZone && activeForm ? activeZone.assets.filter((a) => isAssetFilled(activeZone, a, activeForm)).length : 0;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background px-4 pb-32 pt-6">
+    <div className="flex min-h-dvh flex-col bg-surface-0 px-4 pb-32 pt-6">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
         <div className="flex items-center justify-between">
           <button
@@ -488,33 +560,37 @@ export default function SubmitResultsPage() {
               <p className="mt-1 text-[0.84375rem] text-muted-foreground">
                 {activeZone.accountingMode === "cash_only"
                   ? t.operatorApp.submit.cashOnlySub
-                  : isGameRoomZone(activeZone)
+                  : isStaysZone(activeZone) || isLaunchesZone(activeZone)
                     ? t.operatorApp.submit.gameRoomSub
                     : t.operatorApp.submit.enterReadingsSub}
               </p>
             </div>
 
-            {isGameRoomZone(activeZone) && (gameRoomOpenCount ?? 0) > 0 && (
-              <div className="rounded-card border border-warning/40 bg-warning/10 p-3.5">
-                <p className="text-body-airbnb font-semibold text-warning">
-                  {t.operatorApp.submit.gameRoomBlockedPrefix} {gameRoomOpenCount}{" "}
-                  {t.operatorApp.submit.gameRoomBlockedSuffix}
-                </p>
-                <PressableScale className="mt-2 inline-block">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-10 gap-1.5 rounded-control border-warning/40 text-warning"
-                    onClick={() => router.push(`/operator/game-room/${activeZone.id}`)}
-                  >
-                    {t.operatorApp.submit.gameRoomGoToZoneButton}
-                    <ChevronRight className="size-4" />
-                  </Button>
-                </PressableScale>
-              </div>
-            )}
+            {isStaysZone(activeZone) &&
+              gameRoomOpenByAsset.map((entry) => {
+                const asset = activeZone.assets.find((a) => a.id === entry.assetId);
+                return (
+                  <div key={entry.assetId} className="rounded-card border border-warning/40 bg-warning/10 p-3.5">
+                    <p className="text-body-airbnb font-semibold text-warning">
+                      {t.operatorApp.submit.gameRoomBlockedPrefix} {entry.count} {t.operatorApp.submit.gameRoomBlockedSuffix}{" "}
+                      «{asset?.name}»
+                    </p>
+                    <PressableScale className="mt-2 inline-block">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-10 gap-1.5 rounded-control border-warning/40 text-warning"
+                        onClick={() => router.push(`/operator/game-room?assetId=${entry.assetId}`)}
+                      >
+                        {t.operatorApp.submit.gameRoomGoToAssetButton}
+                        <ChevronRight className="size-4" />
+                      </Button>
+                    </PressableScale>
+                  </div>
+                );
+              })}
 
-            {activeZone.accountingMode !== "cash_only" && !isGameRoomZone(activeZone) && (
+            {activeZone.accountingMode !== "cash_only" && !isStaysZone(activeZone) && !isLaunchesZone(activeZone) && (
             <>
             <div className="grid grid-cols-2 gap-3">
               {activeZone.assets.map((asset) => {
@@ -523,7 +599,7 @@ export default function SubmitResultsPage() {
                   <PressableScale key={asset.id}>
                     <button
                       type="button"
-                      onClick={() => setCounterAssetId(asset.id)}
+                      onClick={() => setAssetSheetId(asset.id)}
                       className={cn(
                         "relative flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card text-left",
                         filled ? "border-success" : "border-border",
@@ -611,45 +687,117 @@ export default function SubmitResultsPage() {
             </>
             )}
 
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="cash">{t.operatorApp.submit.cashLabel}</Label>
-              <MoneyInput
-                id="cash"
-                scale="lg"
-                inputMode="numeric"
-                className="h-14 rounded-control bg-muted text-lg font-bold"
-                value={activeForm.cashAmount}
-                onChange={(e) => updateZoneField(activeZone.id, "cashAmount", e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="mobile">{t.operatorApp.submit.mobileLabel}</Label>
-              <MoneyInput
-                id="mobile"
-                scale="lg"
-                inputMode="numeric"
-                className="h-14 rounded-control bg-muted text-lg font-bold"
-                value={activeForm.mobileAmount}
-                onChange={(e) => updateZoneField(activeZone.id, "mobileAmount", e.target.value)}
-              />
-            </div>
+            {/* "Прибывания"/"Пуски" — Активы по аналогии со счётчиками (запрос
+                пользователя 2026-07-17): тайл на каждый актив, внутри —
+                расчётная сумма read-only + реальные Наличные/Безнал,
+                которые вносит сотрудник (см. sheet ниже). */}
+            {(isStaysZone(activeZone) || isLaunchesZone(activeZone)) && (
+              <div className="grid grid-cols-2 gap-3">
+                {activeZone.assets.map((asset) => {
+                  const entry = activeForm.assetCash[asset.id];
+                  const filled = !!entry && (entry.cash.trim() !== "" || entry.mobile.trim() !== "");
+                  const revenue = gameRoomRevenueByAsset.find((r) => r.assetId === asset.id);
+                  return (
+                    <PressableScale key={asset.id}>
+                      <button
+                        type="button"
+                        onClick={() => setAssetSheetId(asset.id)}
+                        className={cn(
+                          "relative flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card text-left",
+                          filled ? "border-success" : "border-border"
+                        )}
+                      >
+                        <div
+                          className="relative flex h-24 w-full shrink-0 items-center justify-center overflow-hidden bg-muted"
+                          {...(asset.photoUrl
+                            ? {
+                                onPointerDown: () => handlePhotoPressStart(asset.photoUrl!),
+                                onPointerUp: handlePhotoPressEnd,
+                                onPointerLeave: handlePhotoPressEnd,
+                                onPointerCancel: handlePhotoPressEnd,
+                                onClick: handlePhotoClick,
+                              }
+                            : {})}
+                        >
+                          {asset.photoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={asset.photoUrl} alt="" className="size-full object-contain object-center" />
+                          ) : asset.iconKey ? (
+                            <AssetOrZoneIcon iconKey={asset.iconKey} className="size-12 text-muted-foreground" />
+                          ) : null}
+                          <span
+                            className="absolute left-2.5 top-2.5 size-4 rounded-full ring-[2.5px] ring-card"
+                            style={{ backgroundColor: asset.colorTag }}
+                          />
+                          {filled && (
+                            <span className="absolute right-2.5 top-2.5 flex size-6 items-center justify-center rounded-full bg-success text-success-foreground shadow-sm">
+                              <Check className="size-3.5" />
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-1 p-3">
+                          <span className="text-[0.90625rem] font-bold tracking-[-0.01em]">{asset.name}</span>
+                          <span className="text-xs leading-snug text-muted-foreground">
+                            {filled ? (
+                              <>
+                                {t.operatorApp.submit.cashLabel} {entry!.cash || 0} · {t.operatorApp.submit.mobileLabel}{" "}
+                                {entry!.mobile || 0}
+                              </>
+                            ) : revenue ? (
+                              <>
+                                {t.operatorApp.submit.calculatedRevenue} {revenue.calculatedAmount}
+                              </>
+                            ) : (
+                              t.operatorApp.submit.assetNotFilled
+                            )}
+                          </span>
+                        </div>
+                      </button>
+                    </PressableScale>
+                  );
+                })}
+              </div>
+            )}
 
-            {isGameRoomZone(activeZone) ? (
-              <p className="text-caption-airbnb">{t.operatorApp.submit.gameRoomRevenueNote}</p>
-            ) : (
-              activeZone.accountingMode !== "cash_only" &&
-              (() => {
-                const preview = previewFor(activeZone.id);
-                return (
-                  preview && (
-                    <p className="text-caption-airbnb tabular-nums">
-                      {t.operatorApp.submit.calculatedRevenue} <Money value={preview.calculatedRevenue} /> ·{" "}
-                      {t.operatorApp.submit.difference} {preview.difference > 0 ? "+" : ""}
-                      <Money value={preview.difference} />
-                    </p>
-                  )
-                );
-              })()
+            {!isStaysZone(activeZone) && !isLaunchesZone(activeZone) && (
+              <>
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="cash">{t.operatorApp.submit.cashLabel}</Label>
+                  <MoneyInput
+                    id="cash"
+                    scale="lg"
+                    inputMode="numeric"
+                    className="h-14 rounded-control bg-muted text-lg font-bold"
+                    value={activeForm.cashAmount}
+                    onChange={(e) => updateZoneField(activeZone.id, "cashAmount", e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="mobile">{t.operatorApp.submit.mobileLabel}</Label>
+                  <MoneyInput
+                    id="mobile"
+                    scale="lg"
+                    inputMode="numeric"
+                    className="h-14 rounded-control bg-muted text-lg font-bold"
+                    value={activeForm.mobileAmount}
+                    onChange={(e) => updateZoneField(activeZone.id, "mobileAmount", e.target.value)}
+                  />
+                </div>
+
+                {activeZone.accountingMode !== "cash_only" &&
+                  (() => {
+                    const preview = previewFor(activeZone.id);
+                    return (
+                      preview && (
+                        <p className="text-caption-airbnb tabular-nums">
+                          {t.operatorApp.submit.calculatedRevenue} <Money value={preview.calculatedRevenue} /> ·{" "}
+                          {t.operatorApp.submit.difference} {preview.difference > 0 ? "+" : ""}
+                          <Money value={preview.difference} />
+                        </p>
+                      )
+                    );
+                  })()}
+              </>
             )}
           </div>
         )}
@@ -742,12 +890,12 @@ export default function SubmitResultsPage() {
                   className="flex flex-col gap-1 rounded-card border border-border bg-card p-3 text-body-airbnb"
                 >
                   <span className="font-semibold">{zone.name}</span>
-                  {preview && (zone.accountingMode === "cash_only" || isGameRoomZone(zone)) && (
+                  {preview && (zone.accountingMode === "cash_only" || isStaysZone(zone) || isLaunchesZone(zone)) && (
                     <span className="tabular-nums text-muted-foreground">
                       {t.operatorApp.submit.actualCash} <Money value={preview.actualCash} />
                     </span>
                   )}
-                  {preview && zone.accountingMode !== "cash_only" && !isGameRoomZone(zone) && (
+                  {preview && zone.accountingMode !== "cash_only" && !isStaysZone(zone) && !isLaunchesZone(zone) && (
                     <>
                       <span className="tabular-nums text-muted-foreground">
                         {t.operatorApp.submit.calculatedRevenue} <Money value={preview.calculatedRevenue} />
@@ -761,9 +909,13 @@ export default function SubmitResultsPage() {
                       </span>
                     </>
                   )}
-                  {preview && !isGameRoomZone(zone) && preview.calculatedRevenue === 0 && preview.actualCash === 0 && (
-                    <span className="mt-1 text-caption-airbnb text-warning">{t.operatorApp.submit.allZeroWarning}</span>
-                  )}
+                  {preview &&
+                    !isStaysZone(zone) &&
+                    !isLaunchesZone(zone) &&
+                    preview.calculatedRevenue === 0 &&
+                    preview.actualCash === 0 && (
+                      <span className="mt-1 text-caption-airbnb text-warning">{t.operatorApp.submit.allZeroWarning}</span>
+                    )}
                 </div>
               );
             })}
@@ -804,15 +956,16 @@ export default function SubmitResultsPage() {
                   (currentStep.kind === "select" && selectedZoneIds.length === 0) ||
                   (currentStep.kind === "zone" &&
                     !!activeZone &&
-                    isGameRoomZone(activeZone) &&
-                    (gameRoomOpenCount ?? 0) > 0)
+                    isStaysZone(activeZone) &&
+                    gameRoomOpenByAsset.length > 0)
                 }
               >
                 {t.common.next}
                 {currentStep.kind === "zone" &&
                   !!activeZone &&
                   activeZone.accountingMode !== "cash_only" &&
-                  !isGameRoomZone(activeZone) && (
+                  !isStaysZone(activeZone) &&
+                  !isLaunchesZone(activeZone) && (
                   <span className="text-xs font-semibold tabular-nums opacity-75">
                     {filledCount}/{activeZone?.assets.length ?? 0}
                   </span>
@@ -824,8 +977,106 @@ export default function SubmitResultsPage() {
         </div>
       </div>
 
-      <BottomSheet open={counterAssetId !== null} onClose={() => setCounterAssetId(null)}>
-        {activeZone && activeForm && activeAsset && (
+      <BottomSheet open={assetSheetId !== null} onClose={() => setAssetSheetId(null)}>
+        {activeZone && activeForm && activeAsset && (isStaysZone(activeZone) || isLaunchesZone(activeZone)) && (
+          <div className="flex flex-col gap-4 pt-2">
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{activeAsset.name}</h2>
+            {(() => {
+              const revenue = gameRoomRevenueByAsset.find((r) => r.assetId === activeAsset.id);
+              const calculated = revenue?.calculatedAmount ?? 0;
+              const entry = activeForm.assetCash[activeAsset.id] ?? { cash: "", mobile: "" };
+              const hasEntry = entry.cash.trim() !== "" || entry.mobile.trim() !== "";
+              const actual = (Number(entry.cash) || 0) + (Number(entry.mobile) || 0);
+              const diff = Math.round((actual - calculated) * 100) / 100;
+              return (
+                <>
+                  {/* Разбивка Наличные/Безнал — справа от суммы, тот же паттерн,
+                      что карточка "Бизнес: расходы и прибыль" на money/page.tsx
+                      (запрос пользователя 2026-07-17). Общее правило для "За
+                      вход" и "По факту", не только при ненулевых суммах —
+                      показывается всегда, когда есть расчёт по активу. */}
+                  <div className="flex items-start justify-between gap-2 rounded-control bg-muted p-3.5">
+                    <div className="flex min-w-0 flex-col tabular-nums">
+                      <span className="text-caption-airbnb text-muted-foreground">
+                        {t.operatorApp.submit.calculatedRevenue}
+                      </span>
+                      <span className="text-xl font-extrabold leading-none tracking-[-0.02em]">
+                        <Money value={calculated} />
+                      </span>
+                    </div>
+                    {revenue && (
+                      <div className="flex min-w-0 flex-col items-end gap-0.5 pt-1 text-right text-caption-airbnb tabular-nums">
+                        <span>
+                          {t.operatorApp.submit.cashLabel}:{" "}
+                          <span className="font-bold text-foreground">
+                            <Money value={revenue.cashAmount} />
+                          </span>
+                        </span>
+                        <span>
+                          {t.operatorApp.submit.mobileLabel}:{" "}
+                          <span className="font-bold text-foreground">
+                            <Money value={revenue.mobileAmount} />
+                          </span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Крупная кнопка "Сохранить" — на оба поля разом (запрос
+                      пользователя 2026-07-17: "на 2 поля: наличные и безнал
+                      или 2 тарифов"), растянута на их общую высоту, не
+                      отдельной строкой и не только у последнего поля. */}
+                  <div className="flex items-stretch gap-2">
+                    <div className="flex flex-1 flex-col gap-3">
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor="assetCash">{t.operatorApp.submit.cashLabel}</Label>
+                        <MoneyInput
+                          id="assetCash"
+                          autoFocus={activeAsset.active}
+                          disabled={!activeAsset.active}
+                          scale="lg"
+                          inputMode="numeric"
+                          className="h-14 rounded-control bg-muted text-lg font-bold"
+                          value={entry.cash}
+                          onChange={(e) => updateAssetCash(activeZone.id, activeAsset.id, "cash", e.target.value)}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor="assetMobile">{t.operatorApp.submit.mobileLabel}</Label>
+                        <MoneyInput
+                          id="assetMobile"
+                          disabled={!activeAsset.active}
+                          scale="lg"
+                          inputMode="numeric"
+                          className="h-14 rounded-control bg-muted text-lg font-bold"
+                          value={entry.mobile}
+                          onChange={(e) => updateAssetCash(activeZone.id, activeAsset.id, "mobile", e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <PressableScale className="flex">
+                      <SaveButton
+                        className="h-full min-w-[5.5rem] rounded-control px-5 font-bold"
+                        onClick={() => setAssetSheetId(null)}
+                      />
+                    </PressableScale>
+                  </div>
+                  {hasEntry && (
+                    <p
+                      className={cn(
+                        "text-caption-airbnb font-semibold tabular-nums",
+                        diff === 0 ? "text-primary" : "text-warning"
+                      )}
+                    >
+                      {t.operatorApp.submit.difference} {diff > 0 ? "+" : ""}
+                      <Money value={diff} />
+                    </p>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        )}
+        {activeZone && activeForm && activeAsset && !isStaysZone(activeZone) && !isLaunchesZone(activeZone) && (
           <div className="flex flex-col gap-4 pt-2">
             <div className="relative flex h-[150px] w-full items-center justify-center overflow-hidden rounded-card bg-muted">
               {activeAsset.photoUrl ? (
@@ -846,75 +1097,74 @@ export default function SubmitResultsPage() {
               </p>
             )}
 
-            {activeZone.tariffs.map((tariff, index) => {
-              const isLaunches = activeZone.accountingMode === "launches";
-              const key = `${activeAsset.id}:${tariff.id}`;
-              const value = activeForm.readings[key] ?? "";
-              const previous = activeAsset.previousReadings[tariff.id] ?? 0;
-              const parsed = value.trim() === "" ? null : Number(value);
-              const invalid = value.trim() !== "" && (!Number.isFinite(parsed) || parsed! < 0 || parsed! > 9999);
-              const rollover = !isLaunches && !invalid && parsed !== null && parsed < previous;
-              const sessions = !invalid && parsed !== null ? (isLaunches ? parsed : calcSessions(parsed, previous)) : null;
-              // Кнопка "Сохранить" — крупная, справа от поля ввода, не отдельной
-              // строкой ниже (запрос пользователя 2026-07-14) — на последнем
-              // тарифе актива (обычно единственном; 2 тарифа — редкий случай,
-              // но кнопка сохраняет ОБА показания разом, поэтому логично
-              // держать её у последнего поля, а не дублировать).
-              const isLast = index === activeZone.tariffs.length - 1;
+            {/* Крупная кнопка "Сохранить" — растянута на оба тарифа разом,
+                не только на последний (запрос пользователя 2026-07-17: "на
+                2 поля... или 2 тарифов"); при одном тарифе вырождается в
+                тот же паттерн, что уже был — поле + кнопка в одной строке. */}
+            <div className="flex items-stretch gap-2">
+              <div className="flex flex-1 flex-col gap-3">
+                {activeZone.tariffs.map((tariff) => {
+                  const isLaunches = activeZone.accountingMode === "launches";
+                  const key = `${activeAsset.id}:${tariff.id}`;
+                  const value = activeForm.readings[key] ?? "";
+                  const previous = activeAsset.previousReadings[tariff.id] ?? 0;
+                  const parsed = value.trim() === "" ? null : Number(value);
+                  const invalid = value.trim() !== "" && (!Number.isFinite(parsed) || parsed! < 0 || parsed! > 9999);
+                  const rollover = !isLaunches && !invalid && parsed !== null && parsed < previous;
+                  const sessions =
+                    !invalid && parsed !== null ? (isLaunches ? parsed : calcSessions(parsed, previous)) : null;
 
-              return (
-                <div key={tariff.id} className="flex flex-col gap-1">
-                  <Label htmlFor={key}>
-                    {tariff.name}
-                    {!isLaunches && (
-                      <span className="font-normal text-muted-foreground">
-                        {" "}· {t.operatorApp.submit.previousReading} {previous}
-                      </span>
-                    )}
-                  </Label>
-                  <div className="flex items-stretch gap-2">
-                    <Input
-                      id={key}
-                      autoFocus={activeAsset.active}
-                      disabled={!activeAsset.active}
-                      inputMode="numeric"
-                      // Счётчики — 4 разряда (0-9999), см. AssetReading.reading в
-                      // schema.prisma — maxLength не даёт физически ввести 5-й
-                      // символ, а не только показывает предупреждение постфактум.
-                      maxLength={4}
-                      placeholder="0–9999"
-                      className="h-14 flex-1 rounded-control bg-muted text-xl font-bold tabular-nums"
-                      value={activeAsset.active ? value : String(previous)}
-                      onChange={(e) => updateReading(activeZone.id, key, e.target.value)}
-                    />
-                    {isLast && (
-                      <PressableScale className="shrink-0">
-                        <SaveButton
-                          className="h-14 rounded-control px-5 font-bold"
-                          onClick={() => setCounterAssetId(null)}
-                        />
-                      </PressableScale>
-                    )}
-                  </div>
-                  {value.trim() !== "" && (
-                    <p
-                      className={cn(
-                        "text-caption-airbnb font-semibold",
-                        invalid || rollover ? "text-warning" : "text-primary"
+                  return (
+                    <div key={tariff.id} className="flex flex-col gap-1">
+                      <Label htmlFor={key}>
+                        {tariff.name}
+                        {!isLaunches && (
+                          <span className="font-normal text-muted-foreground">
+                            {" "}· {t.operatorApp.submit.previousReading} {previous}
+                          </span>
+                        )}
+                      </Label>
+                      <Input
+                        id={key}
+                        autoFocus={activeAsset.active}
+                        disabled={!activeAsset.active}
+                        inputMode="numeric"
+                        // Счётчики — 4 разряда (0-9999), см. AssetReading.reading в
+                        // schema.prisma — maxLength не даёт физически ввести 5-й
+                        // символ, а не только показывает предупреждение постфактум.
+                        maxLength={4}
+                        placeholder="0–9999"
+                        className="h-14 rounded-control bg-muted text-xl font-bold tabular-nums"
+                        value={activeAsset.active ? value : String(previous)}
+                        onChange={(e) => updateReading(activeZone.id, key, e.target.value)}
+                      />
+                      {value.trim() !== "" && (
+                        <p
+                          className={cn(
+                            "text-caption-airbnb font-semibold",
+                            invalid || rollover ? "text-warning" : "text-primary"
+                          )}
+                        >
+                          {invalid
+                            ? t.operatorApp.submit.invalidNumberWarning
+                            : isLaunches
+                              ? `${t.operatorApp.submit.sessionsLabel} ${sessions}`
+                              : `${t.operatorApp.submit.sessionsLabel} ${sessions}${
+                                  rollover ? " · " + t.operatorApp.submit.rolloverWarning : ""
+                                }`}
+                        </p>
                       )}
-                    >
-                      {invalid
-                        ? t.operatorApp.submit.invalidNumberWarning
-                        : isLaunches
-                          ? `${t.operatorApp.submit.sessionsLabel} ${sessions}`
-                          : `${t.operatorApp.submit.sessionsLabel} ${sessions}${
-                              rollover ? " · " + t.operatorApp.submit.rolloverWarning : ""
-                            }`}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
+                    </div>
+                  );
+                })}
+              </div>
+              <PressableScale className="flex">
+                <SaveButton
+                  className="h-full min-w-[5.5rem] rounded-control px-5 font-bold"
+                  onClick={() => setAssetSheetId(null)}
+                />
+              </PressableScale>
+            </div>
           </div>
         )}
       </BottomSheet>

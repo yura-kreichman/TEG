@@ -283,6 +283,10 @@ model PushNotificationSettings {
   // такие уведомления" — оба теперь тумблеры, как остальные три).
   shiftCheckin   Boolean @default(true)
   instructionAck Boolean @default(true)
+  // Инкассация оператором — зонная и общая (запрос пользователя 2026-07-17:
+  // "владелец должен получать push об инкассации"), тот же принцип, что
+  // shiftCheckin — короткое мгновенное уведомление, не сводка.
+  collection Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -524,25 +528,14 @@ model Zone {
   // "counters" (по счётчикам, накопительные показания активов, по умолчанию) |
   // "launches" (пуски — активы остаются, но вводится готовое число заездов за
   // сдачу, без непрерывного показания) | "cash_only" (только касса — без
-  // тарифов/активов, сдаётся только сумма). Меняется только пока у зоны нет ни
-  // одной сдачи итогов — иначе более поздние сдачи молча посчитают показания
-  // не в том смысле, что был задуман изначально.
+  // тарифов/активов, сдаётся только сумма) | "stays" (Прибывания — старт/стоп
+  // в реальном времени, см. Launch/LaunchPricing ниже; docs/spec/04-game-room.md).
+  // "stays" — самостоятельный режим, РЯДОПОЛОЖНЫЙ остальным, не суб-вариант
+  // "launches" (решение пользователя 2026-07-17, было пересмотрено с прежнего
+  // "суб-режим Пусков" решения 2026-07-16). Меняется только пока у зоны нет
+  // ни одной сдачи итогов — иначе более поздние сдачи молча посчитают
+  // показания не в том смысле, что был задуман изначально.
   accountingMode String @default("counters")
-
-  // Вариант режима "launches" (docs/spec/04-game-room.md) — "manual" (по
-  // умолчанию, ручной ввод готового итога заездов, как описано выше) |
-  // "game_room" (Игровая комната — старт/стоп пусков в реальном времени,
-  // Launch/LaunchPricing ниже). НЕ отдельное значение accountingMode —
-  // Игровая комната это суб-режим Пусков, не рядоположный режим (решение
-  // пользователя 2026-07-16). Бессмысленно при accountingMode !== "launches",
-  // но отдельное явное поле, не выводится из accountingMode.
-  launchMode String @default("manual")
-
-  // Игровая комната (docs/spec/04-game-room.md, launchMode="game_room") —
-  // порог долгого пуска для UI-маркеров "требует правки"; не тарифная
-  // настройка (тариф — LaunchPricing, историзирован отдельно, см. ниже) и не
-  // участвует в расчёте стоимости, поэтому просто поле зоны, без истории.
-  longLaunchThresholdMinutes Int @default(60)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -556,17 +549,40 @@ model Zone {
   launches            Launch[]
 }
 
-// 1 или 2 тарифа на зону: свободное название + цена за сеанс.
+// 1 или 2 тарифа на зону: свободное название + цена за сеанс. Те же правила
+// и тот же лимит действуют и у режима "Прибывания" (запрос пользователя
+// 2026-07-17: "здесь действуют те правила и лимит тарифов") — создаются
+// независимо от активов через обычную карточку "Тарифы"/"Добавить тариф",
+// просто с доп. полями pricingMode/durationMinutes/roundingMode/minAmount,
+// значимыми только когда зона в режиме "stays" (докс: "переиспользовать
+// существующую сущность Tariff" вместо отдельной LaunchPricing, а до этого —
+// вместо привязки тарифа к конкретному активу через Tariff.assetId, тоже
+// пересмотрено). Актив ВЫБИРАЕТ один из тарифов зоны через Asset.tariffId
+// (см. ниже) — несколько активов могут ссылаться на один и тот же тариф.
 model Tariff {
   id     String @id @default(cuid())
   zoneId String
   zone   Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
-  name  String
+  name String
+  // Цена counters/launches и цена/минуту "По факту". У "За вход"
+  // (pricingMode="fixed") не используется — там несколько вариантов
+  // длительность+цена лежат в options ниже (запрос пользователя 2026-07-17:
+  // "1 час, 2 часа..." — выбор оператора при старте, не одна пара), поле
+  // остаётся 0 как незначащий placeholder (NOT NULL нужен другим режимам).
   price Decimal @db.Decimal(10, 2)
   // Порядковый номер тарифа в зоне (1 или 2) — определяет, какой из двух
-  // счётчиков актива ему соответствует.
+  // счётчиков актива ему соответствует (counters) либо просто порядок в
+  // списке (stays).
   order Int
+
+  // Только у зон accountingMode="stays": "fixed" ("За вход" в UI) |
+  // "per_minute" ("По факту" в UI). null у обычных тарифов counters/launches.
+  pricingMode String?
+  // Только "per_minute"/"По факту" — всегда "up" (докс), выбора у владельца нет.
+  roundingMode String?
+  // Только "per_minute"/"По факту", обязательное поле.
+  minAmount Decimal? @db.Decimal(10, 2)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -581,12 +597,49 @@ model Tariff {
 
   assetReadings   AssetReading[]
   initialReadings AssetInitialReading[]
+  // Только accountingMode="launches" — пуски, для которых оператор выбрал
+  // этот тариф в реальном времени (Launch.tariffId, запрос пользователя
+  // 2026-07-17). Пусто у counters (там тариф — просто цена показания, без
+  // ссылки на пуск) и у stays (там своя схема снапшота цены).
+  launches Launch[]
+  // Активы режима "Прибывания", которые сейчас используют этот тариф
+  // (Asset.tariffId) — необязательная обратная связь, тариф существует
+  // независимо от того, привязан ли к нему уже хоть один актив.
+  assetsUsingTariff Asset[] @relation("AssetTariff")
+  // Только "fixed"/"За вход" — варианты длительность+цена (запрос
+  // пользователя 2026-07-17: "1 час, 2 часа..." — оператор выбирает при
+  // старте пуска, см. TariffOption ниже). Пусто у "per_minute" и обычных
+  // тарифов counters/launches.
+  options TariffOption[]
 
   // Не @@unique — уникальность (zoneId, order) нужна только среди активных
   // тарифов (иначе освободившийся после soft-delete слот нельзя было бы
-  // переиспользовать, см. миграцию 20260711184500_tariff_order_partial_unique,
-  // которая заменяет это на partial unique index WHERE "deletedAt" IS NULL).
+  // переиспользовать, см. миграцию 20260711184123_tariff_order_partial_unique).
   @@index([zoneId, order])
+}
+
+// Вариант "За вход" (docs/spec/04-game-room.md) — фиксированная цена за
+// конкретную длительность, несколько на один Tariff (запрос пользователя
+// 2026-07-17: "10 руб. за 1 час, 20 руб. за 2 часа" — родитель/оператор
+// выбирает вариант при старте пуска, не одна пара цена/длительность на
+// тариф). Простое редактирование на месте — тот же принцип, что у самого
+// Tariff в этом режиме (без истории): уже идущий пуск снапшотит выбранный
+// вариант на Launch в момент старта, не читает TariffOption заново.
+model TariffOption {
+  id       String @id @default(cuid())
+  tariffId String
+  tariff   Tariff @relation(fields: [tariffId], references: [id], onDelete: Cascade)
+
+  durationMinutes Int
+  price           Decimal @db.Decimal(10, 2)
+  // Порядок отображения списка вариантов в UI — задаёт владелец (порядок
+  // добавления по умолчанию).
+  order Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tariffId, order])
 }
 
 model Asset {
@@ -612,13 +665,20 @@ model Asset {
   // src/app/(app)/operator/submit/page.tsx).
   active Boolean @default(true)
 
+  // Только у активов зон accountingMode="stays" — какой тариф зоны
+  // использует этот актив (запрос пользователя 2026-07-17: тарифы и активы
+  // создаются независимо, владелец потом сам привязывает один к другому;
+  // можно оставить пустым, если тариф ещё не создан — привяжет позже).
+  // Несколько активов могут указывать на один и тот же тариф.
+  tariffId String?
+  tariff   Tariff? @relation("AssetTariff", fields: [tariffId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   readings         AssetReading[]
   initialReadings  AssetInitialReading[]
   launches         Launch[]
-  launchPricing    LaunchPricing[]
 }
 
 // Калибровочное показание счётчика (запрос пользователя 2026-07-14: "начинаю
@@ -690,8 +750,8 @@ model ZoneSubmission {
 
   assetReadings AssetReading[]
   expenses      ExpenseEntry[]
-  // Пуски "Игровой комнаты", вошедшие в агрегат этой сдачи (docs/spec/
-  // 04-game-room.md) — заполняется только у зон launchMode="game_room".
+  // Пуски режима "Прибывания", вошедшие в агрегат этой сдачи (docs/spec/
+  // 04-game-room.md) — заполняется только у зон accountingMode="stays".
   launches      Launch[]
 }
 
@@ -775,43 +835,16 @@ model CorrectionLog {
 }
 
 // ============================================================================
-// ИГРОВАЯ КОМНАТА (см. docs/spec/04-game-room.md) — Zone.launchMode="game_room"
-// (суб-режим accountingMode="launches", не отдельное значение). Отдельно от
-// Tariff/AssetReading (те принадлежат counters/launches-manual): у Игровой
-// комнаты один тариф на зону, не до двух именованных, и вместо показания —
-// реальные старт/стоп.
+// ПРИБЫВАНИЯ (см. docs/spec/04-game-room.md) — Zone.accountingMode="stays",
+// самостоятельный режим учёта (не суб-вариант "launches" — пересмотрено
+// 2026-07-17, было суб-режимом Пусков до этого). Тариф — Tariff с assetId
+// (запрос пользователя 2026-07-17: "переиспользовать существующую сущность
+// Tariff" вместо отдельной модели LaunchPricing, которая была здесь раньше)
+// с двумя видами ("За вход"/"По факту", см. Tariff.pricingMode), без
+// истории — стоимость уже идущего пуска фиксируется снапшотом на Launch в
+// момент старта (Launch.*Snapshot ниже), поэтому история цены источника не
+// нужна для корректности расчёта.
 // ============================================================================
-
-// История тарифа зоны в режиме "Игровая комната" — append-only, тот же
-// паттерн, что OperatorRate (05-work-time.md): действующий тариф на дату X =
-// запись с максимальным effectiveFrom <= X. Нужна история (не просто поля на
-// Zone), потому что стоимость уже идущего пуска не должна задним числом
-// меняться, если владелец в середине дня поменял цену (см. Launch.*Snapshot
-// ниже — стоимость фиксируется по тарифу на момент СТАРТА пуска, не на
-// момент чтения).
-// Тариф — свойство АКТИВА, не зоны (запрос пользователя 2026-07-16: "на
-// территории парка 2 игровые комнаты — это активы", у каждой своя цена, зона
-// лишь владеет режимом/порогом долгого пуска). Один актив = одна игровая
-// комната/аттракцион.
-model LaunchPricing {
-  id      String @id @default(cuid())
-  assetId String
-  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  // "fixed" (цена за пуск, опционально durationMinutes) | "per_minute"
-  // (тариф за минуту, roundingMode + minAmount).
-  pricingMode String
-
-  price           Decimal @db.Decimal(10, 2)
-  durationMinutes Int? // только fixed, опционально — обратный отсчёт
-  roundingMode    String? // только per_minute — всегда "up" (докс)
-  minAmount       Decimal? @db.Decimal(10, 2) // только per_minute, обязательное
-
-  effectiveFrom DateTime @default(now())
-  createdAt     DateTime @default(now())
-
-  @@index([assetId, effectiveFrom])
-}
 
 // Один пуск — от старта до стопа, источник времени сервер (тот же паттерн,
 // что Shift открытой авто-смены, 05-work-time.md): startedAt/endedAt ставит
@@ -821,9 +854,23 @@ model Launch {
   zoneId String
   zone   Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
-  // Если у зоны нет активов — null, пуск принадлежит зоне целиком.
+  // Тариф — свойство актива, поэтому пуск без актива невозможен на уровне
+  // приложения (сервер отклоняет старт без assetId); поле осталось nullable
+  // в БД по историческим причинам, не как разрешённый кейс.
   assetId String?
   asset   Asset?  @relation(fields: [assetId], references: [id])
+
+  // Только у accountingMode="launches" ("Пуски", запрос пользователя
+  // 2026-07-17: "тапали по активам и пуски учитывались" — замена бумажной
+  // тетрадки с плюсиками цифровым тапом) — какой из ДО ДВУХ тарифов зоны
+  // выбрал оператор для этого конкретного пуска (в этом режиме тариф не
+  // привязан к активу заранее, как у "Прибываний" через Asset.tariffId —
+  // один и тот же актив может держать пуски по обоим тарифам зоны, как
+  // сейчас показания по обоим тарифам на один актив в counters/launches).
+  // null у "stays" — там цена приходит через priceSnapshot напрямую
+  // (TariffOption) или фикс. тариф актива, свой Tariff не нужен на пуске.
+  tariffId String?
+  tariff   Tariff? @relation(fields: [tariffId], references: [id], onDelete: SetNull)
 
   // Автонумерация в рамках (zoneId, assetId) — присваивается сервером
   // атомарно (см. docs/spec/04-game-room.md, "Пуск"): два одновременных
@@ -860,6 +907,17 @@ model Launch {
   // же принцип, что AssetReading фиксирует показание раз и навсегда), не
   // пересчитывается на каждое чтение. null, пока пуск открыт.
   amount Decimal? @db.Decimal(10, 2)
+
+  // Способ оплаты — только у "per_minute"/"По факту" (запрос пользователя
+  // 2026-07-17: "это только касается тарифа По факту"), спрашивается у
+  // оператора при остановке. "cash"/"mobile" — те же значения, что
+  // ZoneSubmission.cashAmount/mobileAmount. Только СПРАВОЧНАЯ разбивка
+  // расчётной выручки (aggregateGameRoomLaunches) — НЕ подставляется
+  // автоматически в поля кассы шага 4 мастера сдачи итогов: та сверка
+  // физического пересчёта с расчётом ловит недостачи, и подстановка стёрла
+  // бы этот контроль для пусков "По факту" (решение пользователя того же
+  // дня). null у "fixed"/"За вход" и у пусков, которые ещё не остановлены.
+  paymentMethod String?
 
   startedByOperatorId String?
   startedByOperator   Operator? @relation("LaunchStartedBy", fields: [startedByOperatorId], references: [id])

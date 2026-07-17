@@ -46,6 +46,21 @@ export async function GET() {
   }
   const initialByKey = await getInitialReadingsMap(assetIds);
 
+  // "Прибывания" — тариф+варианты актива для экрана оператора (запрос
+  // пользователя 2026-07-17: "1 час, 2 часа..." — оператор выбирает вариант
+  // при старте пуска). Один запрос на все stays-зоны разом, не по одному на
+  // актив.
+  const staysTariffIds = zones
+    .filter((z) => z.accountingMode === "stays")
+    .flatMap((z) => z.assets.map((a) => a.tariffId).filter((tid): tid is string => !!tid));
+  const staysTariffs = staysTariffIds.length
+    ? await prisma.tariff.findMany({
+        where: { id: { in: staysTariffIds }, deletedAt: null },
+        include: { options: { orderBy: { order: "asc" } } },
+      })
+    : [];
+  const staysTariffById = new Map(staysTariffs.map((t) => [t.id, t]));
+
   // Категории расходов тенанта (запрос пользователя 2026-07-14) — для выбора
   // при вводе расхода на шаге "Расходы" мастера сдачи итогов.
   const expenseCategories = await prisma.expenseCategory.findMany({
@@ -59,7 +74,6 @@ export async function GET() {
     name: zone.name,
     iconKey: zone.iconKey,
     accountingMode: zone.accountingMode,
-    launchMode: zone.launchMode,
     tariffs: zone.tariffs.map((t) => ({ id: t.id, name: t.name, price: t.price, order: t.order })),
     assets: zone.assets.map((asset) => ({
       id: asset.id,
@@ -77,6 +91,18 @@ export async function GET() {
           return [t.id, previousByKey.get(key) ?? initialByKey.get(key) ?? 0];
         })
       ),
+      ...(zone.accountingMode === "stays"
+        ? {
+            tariff: (() => {
+              const tf = asset.tariffId ? staysTariffById.get(asset.tariffId) : null;
+              if (!tf) return null;
+              return {
+                pricingMode: tf.pricingMode,
+                options: tf.options.map((o) => ({ id: o.id, durationMinutes: o.durationMinutes, price: Number(o.price) })),
+              };
+            })(),
+          }
+        : {}),
     })),
   }));
 

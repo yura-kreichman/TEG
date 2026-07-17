@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
-import { computeLaunchAmount, type LaunchPricingMode, type LaunchRoundingMode } from "@/lib/game-room";
+import {
+  computeLaunchAmount,
+  LAUNCH_PAYMENT_METHODS,
+  type LaunchPricingMode,
+  type LaunchRoundingMode,
+} from "@/lib/game-room";
 
 // Стоп пуска — оператор, серверное время; расчёт стоимости только на сервере
 // (docs/spec/04-game-room.md), по снапшоту тарифа, зафиксированному при
@@ -31,6 +36,18 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
     }
   }
 
+  // Способ оплаты — только у "per_minute"/"По факту" (запрос пользователя
+  // 2026-07-17: "это только касается тарифа По факту"); у "fixed"/"За вход"
+  // не спрашивается и в теле запроса не ожидается.
+  let paymentMethod: string | null = null;
+  if (launch.pricingMode === "per_minute") {
+    const body = await request.json().catch(() => ({}));
+    if (!(LAUNCH_PAYMENT_METHODS as readonly string[]).includes(body.paymentMethod)) {
+      return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
+    }
+    paymentMethod = body.paymentMethod;
+  }
+
   const endedAt = new Date();
   const amount = computeLaunchAmount(
     {
@@ -46,7 +63,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
 
   const updated = await prisma.launch.update({
     where: { id },
-    data: { endedAt, isOpen: false, amount, endedByOperatorId: operator.id },
+    data: { endedAt, isOpen: false, amount, endedByOperatorId: operator.id, paymentMethod },
   });
 
   return NextResponse.json({

@@ -2,6 +2,8 @@ import type { Viewport } from "next";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemeColorMeta } from "@/components/theme-color-meta";
+import { OperatorSwitchButton } from "@/components/operator-switch-button";
+import { OperatorBottomNav } from "@/components/operator-bottom-nav";
 import { OfflineSync } from "./offline-sync";
 
 // Переопределяет статический fallback из корневого layout.tsx (#ffffff,
@@ -27,10 +29,11 @@ export default function OperatorLayout({ children }: { children: React.ReactNode
       <div className="flex flex-1 flex-col">
         <ThemeColorMeta />
         <OfflineSync />
-        <div className="flex justify-end p-2">
+        <div className="flex items-center justify-between gap-2 p-2">
+          <OperatorSwitchButton />
           <ThemeToggle />
         </div>
-        {children}
+        <OperatorBottomNav>{children}</OperatorBottomNav>
       </div>
     </ThemeProvider>
   );

@@ -2,21 +2,22 @@
 
 // Режим учёта зоны — открытый список, как MoneyOperation.type (см. "Режим учёта
 // зоны" в 01-counters.md). Валидируется через этот массив на сервере и клиенте.
-export const ZONE_ACCOUNTING_MODES = ["counters", "launches", "cash_only"] as const;
+// "stays" (Прибывания, docs/spec/04-game-room.md) — самостоятельный режим,
+// РЯДОПОЛОЖНЫЙ остальным трём (решение пользователя 2026-07-17; было
+// суб-режимом "launches" до этого — пересмотрено).
+export const ZONE_ACCOUNTING_MODES = ["counters", "launches", "cash_only", "stays"] as const;
 export type ZoneAccountingMode = (typeof ZONE_ACCOUNTING_MODES)[number];
 
 export function isZoneAccountingMode(value: unknown): value is ZoneAccountingMode {
   return typeof value === "string" && (ZONE_ACCOUNTING_MODES as readonly string[]).includes(value);
 }
 
-// Вариант режима "launches" (docs/spec/04-game-room.md) — Игровая комната это
-// суб-режим Пусков, не отдельный ZoneAccountingMode (решение пользователя
-// 2026-07-16). Бессмысленно при accountingMode !== "launches".
-export const LAUNCH_MODES = ["manual", "game_room"] as const;
-export type LaunchMode = (typeof LAUNCH_MODES)[number];
+export function isStaysZone(zone: { accountingMode: string }): boolean {
+  return zone.accountingMode === "stays";
+}
 
-export function isGameRoomZone(zone: { accountingMode: string; launchMode?: string | null }): boolean {
-  return zone.accountingMode === "launches" && zone.launchMode === "game_room";
+export function isLaunchesZone(zone: { accountingMode: string }): boolean {
+  return zone.accountingMode === "launches";
 }
 
 // Счётчики 4-разрядные (0-9999), переполнение 9999→0 — разница считается по модулю 10000.
