@@ -720,7 +720,7 @@
     "pointsLabel": "Points of sale",
     "allPointsLabel": "All points",
     "addButton": "Add subscription",
-    "sellButton": "Sell",
+    "addWalletButton": "Add subscriber",
     "nameLabel": "Name (optional)",
     "newAbonementTitle": "New subscription",
     "editAbonementTitle": "Edit subscription",

@@ -720,7 +720,7 @@
     "pointsLabel": "გაყიდვის წერტილები",
     "allPointsLabel": "ყველა წერტილი",
     "addButton": "დაამატეთ აბონემენტი",
-    "sellButton": "გაყიდვა",
+    "addWalletButton": "დაამატეთ აბონენტი",
     "nameLabel": "სახელი (არასავალდებულო)",
     "newAbonementTitle": "ახალი აბონემენტი",
     "editAbonementTitle": "აბონემენტის რედაქტირება",

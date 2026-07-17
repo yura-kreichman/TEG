@@ -720,7 +720,7 @@
     "pointsLabel": "Точки продажи",
     "allPointsLabel": "Все точки",
     "addButton": "Добавить абонемент",
-    "sellButton": "Продать",
+    "addWalletButton": "Добавить абонента",
     "nameLabel": "Имя (необязательно)",
     "newAbonementTitle": "Новый абонемент",
     "editAbonementTitle": "Изменить абонемент",

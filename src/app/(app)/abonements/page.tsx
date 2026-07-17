@@ -222,18 +222,14 @@ export default function AbonementsPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-1">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="min-w-0">
+          <div className="mb-3 flex flex-col gap-3">
+            {/* Заголовок+кнопки в одной строке сверху, описание — отдельной
+                строкой во всю ширину под ними (было общей строкой с
+                кнопками — на узком экране длинный текст описания сжимал
+                кнопки в колонку из нескольких строк, "должно быть сверху,
+                а не как сейчас", запрос пользователя 2026-07-17). */}
+            <div className="flex items-center justify-between gap-3">
               <h1 className="text-screen-title">{t.abonements.title}</h1>
-              <p className="text-caption-airbnb">{t.abonements.pageSub}</p>
-            </div>
-            <div className="flex shrink-0 gap-2">
-              <PressableScale>
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setTopupSheetOpen(true)}>
-                  <Wallet className="size-4" />
-                  {t.abonements.sellButton}
-                </Button>
-              </PressableScale>
               <PressableScale>
                 <Button variant="dark" size="sm" className="gap-1.5" onClick={openNew}>
                   <Plus className="size-4" />
@@ -241,6 +237,7 @@ export default function AbonementsPage() {
                 </Button>
               </PressableScale>
             </div>
+            <p className="text-caption-airbnb">{t.abonements.pageSub}</p>
           </div>
 
           {abonements.length === 0 ? (
@@ -273,9 +270,9 @@ export default function AbonementsPage() {
           <div className="mt-8 mb-3 flex items-center justify-between gap-3">
             <h2 className="text-section-title">{t.abonements.walletsTitle}</h2>
             <PressableScale>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setTopupSheetOpen(true)}>
+              <Button variant="dark" size="sm" className="gap-1.5" onClick={() => setTopupSheetOpen(true)}>
                 <Plus className="size-4" />
-                {t.abonements.sellButton}
+                {t.abonements.addWalletButton}
               </Button>
             </PressableScale>
           </div>
