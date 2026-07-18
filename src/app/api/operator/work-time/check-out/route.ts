@@ -81,7 +81,21 @@ export async function POST(request: Request) {
   }
 
   const warnings = validateShift(startAt, endAt);
-  await prisma.shift.update({ where: { id: openShift.id }, data: { endAt, isOpen: false } });
+  // Атомарный "compare-and-swap" вместо обычного update (реальный баг,
+  // найден пользователем 2026-07-18 на проде: два почти одновременных
+  // запроса check-out — 12мс друг от друга — оба видели смену открытой и
+  // ОБА создали премию/аванс, задвоив реальные деньги оператора). WHERE
+  // isOpen:true гарантирует, что если смену уже закрыл параллельный запрос,
+  // updateMany затронет 0 строк — PostgreSQL сериализует конкурентные
+  // UPDATE на одну и ту же строку на уровне блокировки, второй запрос ждёт
+  // коммита первого и видит уже актуальный isOpen:false.
+  const closeResult = await prisma.shift.updateMany({
+    where: { id: openShift.id, isOpen: true },
+    data: { endAt, isOpen: false },
+  });
+  if (closeResult.count === 0) {
+    return NextResponse.json({ error: "Смена уже закрыта" }, { status: 409 });
+  }
 
   if (advanceAmount > 0) {
     await prisma.moneyOperation.create({

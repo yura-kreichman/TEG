@@ -70,6 +70,10 @@ export interface ZoneSubmissionRevenue {
   // найден пользователем 2026-07-18 через собственный числовой пример).
   abonementAmount: number;
   difference: number;
+  // Тесты/возвраты этой сдачи (запрос пользователя 2026-07-18: "в обоих
+  // должны быть видны Тесты/возвраты" — сумма по всем сдачам периода нужна
+  // и на Главной, и на /money бизнес-карточке).
+  returnsCount: number;
   perAsset: Map<string, number>; // assetId -> calculated revenue share (before proportional scaling)
   perTariff: Map<string, number>; // tariffId -> calculated revenue share
 }
@@ -256,6 +260,7 @@ export async function computeZoneSubmissionRevenues(
       actualTotal,
       abonementAmount,
       difference,
+      returnsCount: zs.returnsCount,
       perAsset,
       perTariff,
     };

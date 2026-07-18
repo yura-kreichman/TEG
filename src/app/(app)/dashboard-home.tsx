@@ -112,10 +112,13 @@ interface Summary {
   date?: string;
   isToday?: boolean;
   revenue?: number;
+  cash?: number;
+  mobile?: number;
   profit?: number;
   submissionsCount?: number;
   difference?: number;
   expenses?: number;
+  returnsCount?: number;
 }
 
 export function OwnerDashboardCard({
@@ -341,11 +344,30 @@ export function OwnerDashboardCard({
                         <ChevronRight className="size-3.5" />
                       </span>
                     </div>
-                    <div className="flex items-baseline gap-2 tabular-nums">
-                      <span className="text-[2rem] font-extrabold tracking-[-0.02em]">
-                        <Money value={summary.revenue!} size="display" />
-                      </span>
-                      <span className="text-caption-airbnb">{t.home.revenueUnit}</span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-baseline gap-2 tabular-nums">
+                        <span className="text-[2rem] font-extrabold tracking-[-0.02em]">
+                          <Money value={summary.revenue!} size="display" />
+                        </span>
+                        <span className="text-caption-airbnb">{t.home.revenueUnit}</span>
+                      </div>
+                      {/* Наличные/Безнал + Тесты/возвраты — тот же стек, что
+                          на /money (запрос пользователя 2026-07-18: "должна
+                          быть аналогичная сводка как и в Деньгах, где видно
+                          наличные и безналичные"). */}
+                      <div className="flex min-w-0 shrink-0 flex-col items-end gap-0.5 pt-1 text-right text-caption-airbnb tabular-nums">
+                        <span>
+                          {t.reports.cashLabel}: <span className="font-bold text-foreground"><Money value={summary.cash!} /></span>
+                        </span>
+                        <span>
+                          {t.reports.mobileLabel}: <span className="font-bold text-foreground"><Money value={summary.mobile!} /></span>
+                        </span>
+                        {summary.returnsCount! > 0 && (
+                          <span>
+                            {t.operatorApp.submit.returnsLabel}: <span className="font-bold text-foreground">{summary.returnsCount}</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex border-t border-border pt-3 tabular-nums">
                       <div className="flex-1">

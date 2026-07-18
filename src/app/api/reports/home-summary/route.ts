@@ -116,9 +116,14 @@ export async function GET(request: Request) {
   }
 
   let totalDifference = 0;
+  // Тесты/возвраты за день — сумма по всем сдачам (запрос пользователя
+  // 2026-07-18: "в обоих должны быть видны Тесты/возвраты"), не только у
+  // "counters" — поле общее для всех режимов, кроме "Только касса".
+  let totalReturns = 0;
   for (const s of submissions) {
     for (const zs of s.zoneSubmissions) {
       if (zs.zone.accountingMode === "cash_only") continue;
+      totalReturns += zs.returnsCount;
       const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
 
       if (isStaysZone(zs.zone) || (isLaunchesZone(zs.zone) && zs.assetReadings.length === 0)) {
@@ -150,9 +155,16 @@ export async function GET(request: Request) {
   });
   let revenue = 0;
   let expense = 0;
+  // Разбивка по способу оплаты — та же, что на /money (запрос пользователя
+  // 2026-07-18: "должна быть аналогичная сводка как и в Деньгах, где видно
+  // наличные и безналичные") — раньше на Главной была только общая сумма.
+  let cash = 0;
+  let mobile = 0;
   for (const op of operations) {
     const amount = Number(op.amount);
     if (op.type === "revenue" || op.type === "revenue_cashless" || op.type === "revenue_abonement") revenue += amount;
+    if (op.type === "revenue") cash += amount;
+    if (op.type === "revenue_cashless") mobile += amount;
     if (op.type === "expense") expense += amount; // stored negative
   }
 
@@ -161,9 +173,12 @@ export async function GET(request: Request) {
     date: dayStart.toISOString().slice(0, 10),
     isToday,
     revenue: Math.round(revenue * 100) / 100,
+    cash: Math.round(cash * 100) / 100,
+    mobile: Math.round(mobile * 100) / 100,
     profit: Math.round((revenue + expense) * 100) / 100,
     submissionsCount: submissions.length,
     difference: Math.round(totalDifference * 100) / 100,
     expenses: Math.round(expense * 100) / 100,
+    returnsCount: totalReturns,
   });
 }

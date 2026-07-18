@@ -26,6 +26,7 @@ interface Report {
     expense: number;
     profit: number;
     difference: number;
+    returnsCount: number;
   };
   abonementSold: { cash: number; mobile: number };
 }
@@ -421,6 +422,14 @@ export default function MoneyPage() {
                   <span>
                     {t.reports.abonementLabel}:{" "}
                     <span className="font-bold text-foreground"><Money value={report.business.abonement} /></span>
+                  </span>
+                )}
+                {/* Тесты/возвраты — тем же стеком справа (запрос пользователя
+                    2026-07-18: "в обоих должны быть видны Тесты/возвраты"). */}
+                {report.business.returnsCount > 0 && (
+                  <span>
+                    {t.operatorApp.submit.returnsLabel}:{" "}
+                    <span className="font-bold text-foreground">{report.business.returnsCount}</span>
                   </span>
                 )}
               </div>

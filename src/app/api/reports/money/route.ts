@@ -121,6 +121,7 @@ export async function GET(request: Request) {
   const reconcilableZoneIds = zones.filter((z) => z.accountingMode !== "cash_only").map((z) => z.id);
   const revenueEntries = await computeZoneSubmissionRevenues(reconcilableZoneIds, start, end);
   const totalDifference = revenueEntries.reduce((sum, e) => sum + e.difference, 0);
+  const totalReturns = revenueEntries.reduce((sum, e) => sum + e.returnsCount, 0);
 
   const zoneBalances = zones.map((zone) => ({
     zoneId: zone.id,
@@ -164,6 +165,7 @@ export async function GET(request: Request) {
       expense: Math.round(totalExpense * 100) / 100,
       profit: Math.round((totalRevenueCash + totalRevenueMobile + totalRevenueAbonement + totalExpense) * 100) / 100,
       difference: Math.round(totalDifference * 100) / 100,
+      returnsCount: totalReturns,
     },
     // Продажи абонементов за период — отдельно от business.* выше, не
     // входит в Выручку/Прибыль (это аванс клиента, не заработанные деньги).
