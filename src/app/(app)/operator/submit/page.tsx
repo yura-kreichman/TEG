@@ -25,6 +25,7 @@ import { queueSubmission } from "@/lib/offline-submissions";
 import { useI18n } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { MoneyInput } from "@/components/money-input";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 import { cn } from "@/lib/utils";
 
 interface TariffCtx {
@@ -67,6 +68,13 @@ interface ZoneFormState {
   // Только "Прибывания" — реальные Наличные/Безнал по каждому активу,
   // ключ assetId. cashAmount/mobileAmount выше пересчитываются их суммой.
   assetCash: Record<string, { cash: string; mobile: string }>;
+  // Какие активы "Прибываний"/"Пусков" сотрудник уже подтвердил кнопкой
+  // "Сохранить" в sheet'е (запрос пользователя 2026-07-18) — ОТДЕЛЬНО от
+  // assetCash: если оба поля оставлены пустыми (никого не было, 0/0), это
+  // ВСЁ РАВНО должно засчитываться как заполненный/подтверждённый актив, а
+  // не выглядеть как "ещё не тронутый" — иначе значения "никого не было"
+  // нигде не запоминаются как осознанное решение сотрудника.
+  confirmedAssetIds: string[];
 }
 
 interface ExpenseRow {
@@ -98,6 +106,11 @@ export default function SubmitResultsPage() {
   // взаимоисключающие для одной зоны, поэтому один и тот же id обслуживает
   // оба случая, ветвление по activeZone.accountingMode внутри самого sheet.
   const [assetSheetId, setAssetSheetId] = useState<string | null>(null);
+  // Галочка при сохранении показания/кассы актива — тот же приём, что у
+  // SaveButton по всему проекту (запрос пользователя 2026-07-18: "должна
+  // вылетать галочка, это верно для абсолютно всех кнопок Сохранить"), тут
+  // раньше просто закрывал sheet без анимации.
+  const { saved: assetSheetSaved, pulse: pulseAssetSheet } = useSavePulse();
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFired = useRef(false);
@@ -194,7 +207,28 @@ export default function SubmitResultsPage() {
     );
     setZoneForms((prev) => {
       if (prev[zoneId]) return prev;
-      return { ...prev, [zoneId]: { returnsCount: "0", cashAmount: "", mobileAmount: "", readings: {}, assetCash: {} } };
+      return {
+        ...prev,
+        [zoneId]: {
+          returnsCount: "0",
+          cashAmount: "",
+          mobileAmount: "",
+          readings: {},
+          assetCash: {},
+          confirmedAssetIds: [],
+        },
+      };
+    });
+  }
+
+  // Отметка "актив подтверждён" (запрос пользователя 2026-07-18) — вызывается
+  // при нажатии "Сохранить" в sheet'е "Прибываний"/"Пусков", даже если оба
+  // поля остались пустыми (0/0 — тоже осознанное решение, не "не заполнено").
+  function confirmAssetCash(zoneId: string, assetId: string) {
+    setZoneForms((prev) => {
+      const form = prev[zoneId];
+      if (form.confirmedAssetIds.includes(assetId)) return prev;
+      return { ...prev, [zoneId]: { ...form, confirmedAssetIds: [...form.confirmedAssetIds, assetId] } };
     });
   }
 
@@ -695,7 +729,12 @@ export default function SubmitResultsPage() {
               <div className="grid grid-cols-2 gap-3">
                 {activeZone.assets.map((asset) => {
                   const entry = activeForm.assetCash[asset.id];
-                  const filled = !!entry && (entry.cash.trim() !== "" || entry.mobile.trim() !== "");
+                  // "Подтверждено" — нажатие "Сохранить" в sheet'е, а не
+                  // непустые поля (запрос пользователя 2026-07-18: "если
+                  // Сотрудник не заполнил Наличные и Безнал... значения не
+                  // запоминаются" — 0/0, потому что никого не было, тоже
+                  // осознанное решение, должно засчитываться как заполнено).
+                  const filled = activeForm.confirmedAssetIds.includes(asset.id);
                   const revenue = gameRoomRevenueByAsset.find((r) => r.assetId === asset.id);
                   // Пока по активу есть незакрытые пуски, реальную кассу
                   // сдавать нельзя — счёт ещё не окончателен (запрос
@@ -748,8 +787,8 @@ export default function SubmitResultsPage() {
                           <span className="text-xs leading-snug text-muted-foreground">
                             {filled ? (
                               <>
-                                {t.operatorApp.submit.cashLabel} {entry!.cash || 0} · {t.operatorApp.submit.mobileLabel}{" "}
-                                {entry!.mobile || 0}
+                                {t.operatorApp.submit.cashLabel} {entry?.cash || 0} · {t.operatorApp.submit.mobileLabel}{" "}
+                                {entry?.mobile || 0}
                               </>
                             ) : revenue ? (
                               <>
@@ -994,7 +1033,14 @@ export default function SubmitResultsPage() {
               const entry = activeForm.assetCash[activeAsset.id] ?? { cash: "", mobile: "" };
               const hasEntry = entry.cash.trim() !== "" || entry.mobile.trim() !== "";
               const actual = (Number(entry.cash) || 0) + (Number(entry.mobile) || 0);
-              const diff = Math.round((actual - calculated) * 100) / 100;
+              // Абонемент прибавляется к факту здесь же — та касса уже
+              // получила эти деньги раньше, при пополнении абонемента, не
+              // сейчас (тот же баг, найден пользователем 2026-07-18 на этой
+              // самой плашке: "Разница" ложно показывала недостачу ровно на
+              // абонементную сумму актива — тот же класс, что уже пофикшен
+              // в lib/reports.ts/submit-results/counters-day/home-summary/
+              // readings, просто пропущен здесь).
+              const diff = Math.round((actual + (revenue?.abonementAmount ?? 0) - calculated) * 100) / 100;
               return (
                 <>
                   {/* Разбивка Наличные/Безнал — справа от суммы, тот же паттерн,
@@ -1075,7 +1121,13 @@ export default function SubmitResultsPage() {
                     <PressableScale className="flex">
                       <SaveButton
                         className="h-full min-w-[5.5rem] rounded-control px-5 font-bold"
-                        onClick={() => setAssetSheetId(null)}
+                        saved={assetSheetSaved}
+                        onClick={() =>
+                          pulseAssetSheet(() => {
+                            confirmAssetCash(activeZone.id, activeAsset.id);
+                            setAssetSheetId(null);
+                          })
+                        }
                       />
                     </PressableScale>
                   </div>
@@ -1180,7 +1232,8 @@ export default function SubmitResultsPage() {
               <PressableScale className="flex">
                 <SaveButton
                   className="h-full min-w-[5.5rem] rounded-control px-5 font-bold"
-                  onClick={() => setAssetSheetId(null)}
+                  saved={assetSheetSaved}
+                  onClick={() => pulseAssetSheet(() => setAssetSheetId(null))}
                 />
               </PressableScale>
             </div>
