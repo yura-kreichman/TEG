@@ -45,6 +45,7 @@ interface DayCard {
   zoneSubmissionId: string;
   zoneId: string;
   zoneName: string;
+  zoneIconKey: string | null;
   accountingMode: ZoneAccountingMode;
   submittedAt: string;
   operatorName: string;
@@ -674,7 +675,12 @@ export default function ReadingsCalendarPage() {
                         </div>
 
                         <div className="mt-3 border-t border-border pt-3">
-                          <p className="text-caption-airbnb font-bold">{card.zoneName}</p>
+                          <p className="flex items-center gap-1.5 text-caption-airbnb font-bold">
+                            {card.zoneIconKey && (
+                              <AssetOrZoneIcon iconKey={card.zoneIconKey} className="size-4 shrink-0 text-muted-foreground" />
+                            )}
+                            {card.zoneName}
+                          </p>
                           {card.accountingMode !== "cash_only" &&
                             card.assets.map((asset) => (
                               <div key={asset.assetId} className="mt-1.5 flex items-center gap-2">

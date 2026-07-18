@@ -343,6 +343,7 @@ export async function GET(request: Request) {
         zoneSubmissionId: zs.id,
         zoneId: zs.zoneId,
         zoneName: zs.zone.name,
+        zoneIconKey: zs.zone.iconKey,
         accountingMode: zs.zone.accountingMode,
         submittedAt: s.submittedAt,
         operatorName: s.operator.name,
