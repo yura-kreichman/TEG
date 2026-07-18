@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireOwner, findTenantPoint } from "@/lib/require-owner";
 import {
   ABONEMENT_TOPUP_PAYMENT_METHODS,
+  createWalletEmpty,
   createWalletWithAdjustment,
   createWalletWithTopup,
   findWalletByPhone,
@@ -30,7 +31,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ abonement: null });
   }
   return NextResponse.json({
-    abonement: { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance) },
+    abonement: {
+      id: wallet.id,
+      phone: wallet.phone,
+      name: wallet.name,
+      balance: Number(wallet.balance),
+      createdAt: wallet.createdAt,
+    },
   });
 }
 
@@ -64,6 +71,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Абонемент с этим номером уже существует" }, { status: 400 });
   }
 
+  // Ни суммы, ни плана — просто регистрация нового абонента, без покупки
+  // (запрос пользователя 2026-07-18: "чтобы сотрудник мог завести нового
+  // абонента, но не продавать сам абонимент... может человек потом захочет").
+  if (amount == null && !abonementId) {
+    const wallet = await createWalletEmpty(phone, name, owner.tenantId);
+    return NextResponse.json(
+      { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance), createdAt: wallet.createdAt },
+      { status: 201 }
+    );
+  }
+
   if (amount != null) {
     if (!Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json({ error: "Укажите сумму" }, { status: 400 });
@@ -73,7 +91,13 @@ export async function POST(request: Request) {
     }
     const wallet = await createWalletWithAdjustment(phone, name, owner.tenantId, pointId, amount, owner.user.id);
     return NextResponse.json(
-      { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance) },
+      {
+        id: wallet.id,
+        phone: wallet.phone,
+        name: wallet.name,
+        balance: Number(wallet.balance),
+        createdAt: wallet.createdAt,
+      },
       { status: 201 }
     );
   }
@@ -97,7 +121,13 @@ export async function POST(request: Request) {
       actor: { userId: owner.user.id },
     });
     return NextResponse.json(
-      { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance) },
+      {
+        id: wallet.id,
+        phone: wallet.phone,
+        name: wallet.name,
+        balance: Number(wallet.balance),
+        createdAt: wallet.createdAt,
+      },
       { status: 201 }
     );
   } catch (err) {

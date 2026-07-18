@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, Layers } from "lucide-react";
+import { Banknote, CreditCard, MapPin, Layers, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/confirm-button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -52,6 +53,7 @@ interface TallyEntry {
 
 const POLL_MS = 6000;
 const ALL_ZONES = "all";
+const ZONE_FILTER_KEY = "launchesZoneFilter";
 
 /**
  * Экран "Пуски" в PWA оператора (docs/spec/04-game-room.md, режим
@@ -111,6 +113,14 @@ export default function LaunchesZonePage() {
           return;
         }
         setZones(launches);
+        // Запоминаем последний выбор фильтра зоны (запрос пользователя
+        // 2026-07-18: "должен запоминаться статус выбранной Зоны, а не быть
+        // по умолчанию Все зоны при открытии") — тот же приём, что у
+        // "Прибываний" (game-room/page.tsx).
+        const savedZoneFilter = window.localStorage.getItem(ZONE_FILTER_KEY);
+        if (savedZoneFilter && launches.some((z) => z.id === savedZoneFilter)) {
+          setZoneFilter(savedZoneFilter);
+        }
         setLoading(false);
       });
   }
@@ -217,7 +227,11 @@ export default function LaunchesZonePage() {
             <div className="min-w-0 flex-1">
               <Select
                 value={zoneFilter}
-                onValueChange={(v) => v && setZoneFilter(v)}
+                onValueChange={(v) => {
+                  if (!v) return;
+                  setZoneFilter(v);
+                  window.localStorage.setItem(ZONE_FILTER_KEY, v);
+                }}
                 items={[
                   { value: ALL_ZONES, label: t.operatorApp.tally.allZonesOption },
                   ...zones.map((z) => ({ value: z.id, label: z.name })),
@@ -346,33 +360,27 @@ export default function LaunchesZonePage() {
               {tapAsset.name} · {tapTariff.name} · <Money value={tapTariff.price} />
             </p>
             <div className="flex flex-col gap-2">
+              <ConfirmButton
+                className="relative h-12 w-full font-semibold"
+                disabled={submitting}
+                onConfirm={() => logTap(tapFlow.zoneId, tapFlow.assetId, tapFlow.tariffId!, "cash")}
+              >
+                <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                {t.operatorApp.submit.cashLabel}
+              </ConfirmButton>
+              <ConfirmButton
+                className="relative h-12 w-full font-semibold"
+                disabled={submitting}
+                onConfirm={() => logTap(tapFlow.zoneId, tapFlow.assetId, tapFlow.tariffId!, "mobile")}
+              >
+                <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                {t.operatorApp.submit.mobileLabel}
+              </ConfirmButton>
               <PressableScale>
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-12 w-full font-semibold"
-                  disabled={submitting}
-                  onClick={() => logTap(tapFlow.zoneId, tapFlow.assetId, tapFlow.tariffId!, "cash")}
-                >
-                  {t.operatorApp.submit.cashLabel}
-                </Button>
-              </PressableScale>
-              <PressableScale>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-12 w-full font-semibold"
-                  disabled={submitting}
-                  onClick={() => logTap(tapFlow.zoneId, tapFlow.assetId, tapFlow.tariffId!, "mobile")}
-                >
-                  {t.operatorApp.submit.mobileLabel}
-                </Button>
-              </PressableScale>
-              <PressableScale>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-12 w-full font-semibold"
+                  className="relative h-12 w-full font-semibold"
                   disabled={submitting}
                   onClick={() => {
                     const target = { zoneId: tapFlow.zoneId, assetId: tapFlow.assetId, tariffId: tapFlow.tariffId!, amount: tapTariff.price };
@@ -380,6 +388,7 @@ export default function LaunchesZonePage() {
                     setAbonementTarget(target);
                   }}
                 >
+                  <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
                   {t.operatorApp.abonement.paymentLabel}
                 </Button>
               </PressableScale>

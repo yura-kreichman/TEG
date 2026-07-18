@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { requireOperator } from "@/lib/require-operator";
 import { listAbonements } from "@/lib/abonement";
 
-// Список абонементов (планов), видимых оператору в его точке — экран оплаты
-// "Прибываний"/"Пусков" и пополнение существующего кошелька (запрос
-// пользователя 2026-07-17). Только чтение — создают/редактируют абонементы
-// только владельцы, см. /api/abonements. Абонемент без точек виден везде
-// (запрос пользователя того же дня: "выбор действует ли он на все точки
-// клиента или нет"), с точками — только там.
+// Список абонементов (планов) тенанта — экран оплаты "Прибываний"/"Пусков" и
+// пополнение существующего кошелька (запрос пользователя 2026-07-17). Только
+// чтение — создают/редактируют абонементы только владельцы, см.
+// /api/abonements. Планы всегда видны на всех точках тенанта (запрос
+// пользователя 2026-07-18: "просто зачисляется клиенту" — без ограничения по
+// точкам).
 export async function GET() {
   const ctx = await requireOperator();
   if (!ctx) {
@@ -15,7 +15,7 @@ export async function GET() {
   }
   const { point } = ctx;
 
-  const plans = await listAbonements(point.tenantId, point.id);
+  const plans = await listAbonements(point.tenantId);
   return NextResponse.json({
     plans: plans.map((p) => ({
       id: p.id,

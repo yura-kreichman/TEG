@@ -39,6 +39,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/abonement-w
       phone: updated.phone,
       name: updated.name,
       balance: Number(updated.balance),
+      createdAt: updated.createdAt,
     });
   }
 
@@ -65,6 +66,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/abonement-w
       phone: updated.phone,
       name: updated.name,
       balance: Number(updated.balance),
+      createdAt: updated.createdAt,
     });
   } catch (err) {
     if (err instanceof Error && err.message === "ABONEMENT_NOT_FOUND") {

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { AlertTriangle, CreditCard, Home, ListChecks, Watch } from "lucide-react";
+import { AlertTriangle, ClockPlus, Home, Timer, Wallet } from "lucide-react";
 import { BottomGlassNav, type BottomGlassNavItem } from "@/components/bottom-glass-nav";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n } from "@/components/i18n-provider";
@@ -122,7 +122,7 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
           {
             href: "/operator/game-room",
             label: t.zonesList.accountingModeStays,
-            icon: Watch,
+            icon: Timer,
             active: pathname.startsWith("/operator/game-room"),
           },
         ]
@@ -132,21 +132,26 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
           {
             href: "/operator/launches",
             label: t.zonesList.accountingModeLaunches,
-            icon: ListChecks,
+            icon: ClockPlus,
             active: pathname.startsWith("/operator/launches"),
           },
         ]
       : []),
-    // "Абонементы" — только если у оператора есть хоть одна зона режима
+    // "Абоненты" — только если у оператора есть хоть одна зона режима
     // "Прибывания"/"Пуски" (запрос пользователя 2026-07-17: "если у него
     // активные зоны, где абонимент применяется") — только там абонемент
-    // вообще применим как способ оплаты (см. LAUNCH_PAYMENT_METHODS).
+    // вообще применим как способ оплаты (см. LAUNCH_PAYMENT_METHODS). Ярлык —
+    // "Абоненты", не "Абонементы" (запрос пользователя 2026-07-18: "Абоненты
+    // у нас кошелёчки, Абонементы — подарочки" — у Сотрудника этот экран
+    // только про кошельки клиентов, тарифами он не управляет, поэтому и
+    // название, и иконка — те же, что у секции "Абоненты" в кабинете
+    // владельца, не общее название модуля).
     ...(hasStays || hasLaunches
       ? [
           {
             href: "/operator/abonements",
-            label: t.nav.abonements,
-            icon: CreditCard,
+            label: t.abonements.walletsTitle,
+            icon: Wallet,
             active: pathname.startsWith("/operator/abonements"),
           },
         ]

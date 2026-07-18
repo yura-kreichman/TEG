@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireOperator } from "@/lib/require-operator";
 import {
   ABONEMENT_TOPUP_PAYMENT_METHODS,
+  createWalletEmpty,
   createWalletWithTopup,
   findWalletByPhone,
   normalizePhone,
@@ -28,7 +29,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ abonement: null });
   }
   return NextResponse.json({
-    abonement: { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance) },
+    abonement: {
+      id: wallet.id,
+      phone: wallet.phone,
+      name: wallet.name,
+      balance: Number(wallet.balance),
+      createdAt: wallet.createdAt,
+    },
   });
 }
 
@@ -51,16 +58,23 @@ export async function POST(request: Request) {
   if (!normalizePhone(phone)) {
     return NextResponse.json({ error: "Введите номер телефона" }, { status: 400 });
   }
-  if (!abonementId) {
-    return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
-  }
-  if (!(ABONEMENT_TOPUP_PAYMENT_METHODS as readonly string[]).includes(paymentMethod)) {
-    return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
-  }
 
   const existing = await findWalletByPhone(point.tenantId, phone);
   if (existing) {
     return NextResponse.json({ error: "Абонемент с этим номером уже существует" }, { status: 400 });
+  }
+
+  // Без выбранного плана — просто регистрация нового абонента, без покупки
+  // (запрос пользователя 2026-07-18: "может человек потом захочет").
+  if (!abonementId) {
+    const wallet = await createWalletEmpty(phone, name, point.tenantId);
+    return NextResponse.json(
+      { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance), createdAt: wallet.createdAt },
+      { status: 201 }
+    );
+  }
+  if (!(ABONEMENT_TOPUP_PAYMENT_METHODS as readonly string[]).includes(paymentMethod)) {
+    return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
   }
 
   try {
@@ -72,7 +86,13 @@ export async function POST(request: Request) {
       actor: { operatorId: operator.id },
     });
     return NextResponse.json(
-      { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance) },
+      {
+        id: wallet.id,
+        phone: wallet.phone,
+        name: wallet.name,
+        balance: Number(wallet.balance),
+        createdAt: wallet.createdAt,
+      },
       { status: 201 }
     );
   } catch (err) {

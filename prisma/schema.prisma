@@ -453,7 +453,6 @@ model Point {
   tasks                      Task[]
   openingHours               PointOpeningHours[]
   abonementTransactions      AbonementTransaction[]
-  abonements                 Abonement[]                 @relation("AbonementPoints")
 }
 
 // Часы работы точки, по одной строке на день недели (docs/spec/08-landing.md,
@@ -673,7 +672,11 @@ model TariffOption {
 // кассы/выручки). БЕЗ привязки к конкретному клиенту — план переиспользуется
 // любым числом разных кошельков (AbonementWallet ниже). Переименовано из
 // AbonementPackage (запрос пользователя 2026-07-17: владелец воспринимает
-// именно ЭТО как "абонемент" — план/тариф, а не кошелёк с балансом).
+// именно ЭТО как "абонемент" — план/тариф, а не кошелёк с балансом). Без
+// привязки к точкам (запрос пользователя 2026-07-18: "Веди абонемент просто
+// зачисляется клиенту" — план всегда виден и продаваем на всех точках
+// тенанта; точка нужна только в момент самой оплаты — куда пришли деньги, см.
+// AbonementTransaction.pointId — а не как атрибут плана).
 model Abonement {
   id       String @id @default(cuid())
   tenantId String
@@ -691,12 +694,6 @@ model Abonement {
   deletedAt DateTime?
 
   transactions AbonementTransaction[]
-
-  // Точки, где абонемент можно продать/пополнить — пусто = действует на
-  // ВСЕХ точках тенанта (тот же приём, что Task.assignedOperators/
-  // assignedUsers: "пусто в обоих списках = видят все"). Запрос пользователя
-  // 2026-07-17: "выбор действует ли он на все точки клиента или нет".
-  points Point[] @relation("AbonementPoints")
 
   @@index([tenantId])
 }

@@ -7,11 +7,12 @@ import type { Prisma } from "@/generated/prisma/client";
 // идентификатор — номер телефона, появляется ТОЛЬКО как побочный эффект
 // покупки какого-то плана оператором (владелец не создаёт кошельки вручную —
 // "неправильно, что я добавил абонемент и просто указал баланс, нет
-// логики"). Баланс кошелька общий на весь тенант (не по точкам — "один номер
-// работает на любой точке компании"), но САМ ПЛАН может быть ограничен
-// конкретными точками (пусто в Abonement.points = действует на всех, тот же
-// приём, что Task.assignedOperators/assignedUsers). Пополнение и трата —
-// РАЗНЫЕ бухгалтерские события (решение пользователя того же дня): пополнение
+// логики"). И баланс кошелька, и сам план — общие на весь тенант, без
+// привязки к точкам ("один номер работает на любой точке компании"; план
+// изначально был ограничиваем по точкам, убрано запросом пользователя
+// 2026-07-18: "просто зачисляется клиенту" — точка нужна только в момент
+// самой оплаты, куда пришли деньги, не как атрибут плана). Пополнение и трата
+// — РАЗНЫЕ бухгалтерские события (решение пользователя того же дня): пополнение
 // — аванс клиента, трогает физическую кассу точки (если платил наличными),
 // но НЕ "Выручку"/"Прибыль" бизнеса; трата — наоборот, признаёт "Выручку"
 // зоны в момент оплаты пуска, но кассу не трогает (реальных денег в этот
@@ -34,19 +35,11 @@ export async function findWalletByPhone(tenantId: string, rawPhone: string, tx: 
   return tx.abonementWallet.findUnique({ where: { tenantId_phone: { tenantId, phone } } });
 }
 
-// Фильтр "план виден в этой точке" — пусто в points = действует на ВСЕХ
-// точках тенанта (запрос пользователя 2026-07-17: "выбор действует ли он на
-// все точки клиента или нет").
-function visibleAtPoint(pointId: string): Prisma.AbonementWhereInput {
-  return { OR: [{ points: { none: {} } }, { points: { some: { id: pointId } } }] };
-}
-
-/** Список планов тенанта — если передан pointId, только видимые в этой точке. */
-export async function listAbonements(tenantId: string, pointId: string | null, tx: Tx | typeof prisma = prisma) {
+/** Список планов тенанта — всегда видны на всех точках (см. комментарий выше). */
+export async function listAbonements(tenantId: string, tx: Tx | typeof prisma = prisma) {
   return tx.abonement.findMany({
-    where: { tenantId, deletedAt: null, ...(pointId ? visibleAtPoint(pointId) : {}) },
+    where: { tenantId, deletedAt: null },
     orderBy: { order: "asc" },
-    include: { points: { select: { id: true } } },
   });
 }
 
@@ -77,15 +70,14 @@ interface TopupParams {
 /**
  * Пополнение существующего кошелька — планом владельца (запрос пользователя
  * 2026-07-17: "фиксированные пакеты"), сумма зачисления берётся из
- * Abonement.creditAmount, а не price (бонус). План должен быть виден в
- * текущей точке оператора (visibleAtPoint). Атомарно: баланс + журнал
+ * Abonement.creditAmount, а не price (бонус). Атомарно: баланс + журнал
  * кошелька + денежный след кассы точки одной транзакцией.
  */
 export async function topUpWallet(walletId: string, params: TopupParams) {
   const { tenantId, pointId, abonementId, paymentMethod, actor } = params;
   return prisma.$transaction(async (tx) => {
     const plan = await tx.abonement.findFirst({
-      where: { id: abonementId, tenantId, deletedAt: null, ...visibleAtPoint(pointId) },
+      where: { id: abonementId, tenantId, deletedAt: null },
     });
     if (!plan) throw new Error("ABONEMENT_NOT_FOUND");
 
@@ -123,6 +115,20 @@ export async function topUpWallet(walletId: string, params: TopupParams) {
 }
 
 /**
+ * Регистрация нового абонента БЕЗ покупки/пополнения абонемента (запрос
+ * пользователя 2026-07-18: "чтобы сотрудник мог завести нового абонента, но
+ * не продавать сам абонимент — может человек потом захочет") — кошелёк с
+ * нулевым балансом, без AbonementTransaction и без MoneyOperation (денег не
+ * было). И Владелец, и Сотрудник могут вызвать — точки тут не нужно, деньги
+ * не двигаются вообще.
+ */
+export async function createWalletEmpty(rawPhone: string, name: string | null, tenantId: string) {
+  const phone = normalizePhone(rawPhone);
+  if (!phone) throw new Error("INVALID_PHONE");
+  return prisma.abonementWallet.create({ data: { tenantId, phone, name: name || null, balance: 0 } });
+}
+
+/**
  * Первое пополнение по ещё не существующему номеру — создаёт кошелёк и сразу
  * пополняет (запрос пользователя 2026-07-17: "оператор, прямо в момент
  * оплаты"). Отдельная функция, а не findOrCreate внутри topUpWallet — тут
@@ -135,7 +141,7 @@ export async function createWalletWithTopup(rawPhone: string, name: string | nul
 
   return prisma.$transaction(async (tx) => {
     const plan = await tx.abonement.findFirst({
-      where: { id: abonementId, tenantId, deletedAt: null, ...visibleAtPoint(pointId) },
+      where: { id: abonementId, tenantId, deletedAt: null },
     });
     if (!plan) throw new Error("ABONEMENT_NOT_FOUND");
 

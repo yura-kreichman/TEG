@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Check, ChevronRight, Plus } from "lucide-react";
+import { Banknote, Check, ChevronRight, CircuitBoard, ClockPlus, Plus, Timer, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,14 @@ const ACCOUNTING_MODE_HINT: Record<ZoneAccountingMode, (t: Dictionary) => string
   launches: (t) => t.zonesList.accountingModeLaunchesHint,
   cash_only: (t) => t.zonesList.accountingModeCashOnlyHint,
   stays: (t) => t.zonesList.accountingModeStaysHint,
+};
+// Иконки режимов учёта (запрос пользователя 2026-07-18) — "Прибывания" тот
+// же Timer, что и одноимённый пункт нижнего бара Сотрудника (единообразие).
+const ACCOUNTING_MODE_ICON: Record<ZoneAccountingMode, LucideIcon> = {
+  counters: CircuitBoard,
+  launches: ClockPlus,
+  cash_only: Banknote,
+  stays: Timer,
 };
 
 export default function PointDetailPage() {
@@ -220,20 +228,24 @@ export default function PointDetailPage() {
           <div className="flex flex-col gap-1">
             <Label>{t.zonesList.accountingModeLabel}</Label>
             <div className="rounded-control border border-border">
-              {ZONE_ACCOUNTING_MODES.map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setAccountingMode(mode)}
-                  className="flex w-full items-center justify-between border-t border-border px-3 py-2.5 text-left first:border-t-0"
-                >
-                  <span>
-                    <span className="block text-body-airbnb">{ACCOUNTING_MODE_LABEL[mode](t)}</span>
-                    <span className="block text-caption-airbnb">{ACCOUNTING_MODE_HINT[mode](t)}</span>
-                  </span>
-                  {accountingMode === mode && <Check className="size-4 shrink-0 text-primary" />}
-                </button>
-              ))}
+              {ZONE_ACCOUNTING_MODES.map((mode) => {
+                const ModeIcon = ACCOUNTING_MODE_ICON[mode];
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setAccountingMode(mode)}
+                    className="flex w-full items-center gap-3 border-t border-border px-3 py-2.5 text-left first:border-t-0"
+                  >
+                    <ModeIcon className="size-5 shrink-0 text-muted-foreground" />
+                    <span className="grow">
+                      <span className="block text-body-airbnb">{ACCOUNTING_MODE_LABEL[mode](t)}</span>
+                      <span className="block text-caption-airbnb">{ACCOUNTING_MODE_HINT[mode](t)}</span>
+                    </span>
+                    {accountingMode === mode && <Check className="size-4 shrink-0 text-primary" />}
+                  </button>
+                );
+              })}
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}

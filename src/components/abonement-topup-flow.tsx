@@ -1,32 +1,56 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronLeft, Pencil } from "lucide-react";
+import { Banknote, Check, ChevronLeft, CreditCard, Gift, Pencil, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/confirm-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SaveButton } from "@/components/ui/save-button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { Money } from "@/components/money";
 import { MoneyInput } from "@/components/money-input";
 import { PhoneInput } from "@/components/phone-input";
-import { useI18n } from "@/components/i18n-provider";
+import { useI18n, useLocale } from "@/components/i18n-provider";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 import { cn } from "@/lib/utils";
+import type { Dictionary } from "@/lib/i18n";
 
 // Кнопки выбора (план/способ оплаты) должны читаться как кнопки, не как
 // плоские карточки списка (запрос пользователя 2026-07-17: "должны быть как
 // кнопки, с эффектом приподнимающимся") — стандартный variant="outline" даёт
 // тень с альфой всего .05, на светлом градиентном фоне PWA почти незаметную;
 // тут заметно плотнее и с более выраженным "утоплением" по нажатию, тот же
-// принцип объёма, что у Switch/SaveButton по всему проекту.
+// принцип объёма, что у Switch/SaveButton по всему проекту. Второй раунд
+// (запрос пользователя 2026-07-18: "должны больше приподниматься, быть более
+// яркими") — тень ещё плотнее и шире (было alpha .10/.14, стало .16/.20).
 const RAISED_OPTION_BUTTON_CLASS =
-  "border-border bg-linear-to-b from-card to-muted/50 shadow-[0_2px_5px_rgba(0,0,0,.10),inset_0_1px_0_rgba(255,255,255,.8)] hover:shadow-[0_4px_10px_rgba(0,0,0,.14),inset_0_1px_0_rgba(255,255,255,.8)] active:shadow-[inset_0_2px_4px_rgba(0,0,0,.12)]";
+  "border-border bg-linear-to-b from-card to-muted/50 shadow-[0_3px_8px_rgba(0,0,0,.16),inset_0_1px_0_rgba(255,255,255,.85)] hover:shadow-[0_6px_16px_rgba(0,0,0,.20),inset_0_1px_0_rgba(255,255,255,.85)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,.18)]";
 
 interface WalletCtx {
   id: string;
   phone: string;
   name: string | null;
   balance: number;
+  createdAt?: string;
+}
+
+// Дата создания в коротком локализованном виде + "стаж" одним числом+суффиксом
+// (тот же приём инвариантного суффикса, что и у shiftsSuffix/hoursSuffix по
+// всему проекту — без грамматически точного склонения по числам, запрос
+// пользователя 2026-07-18: "дата создания абонента и стаж").
+function formatCreatedDate(createdAt: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric" }).format(
+    new Date(createdAt)
+  );
+}
+function formatTenure(createdAt: string, t: Dictionary): string {
+  const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000);
+  if (days < 1) return t.abonements.tenureToday;
+  if (days < 30) return `${days} ${t.abonements.tenureDays}`;
+  if (days < 365) return `${Math.floor(days / 30)} ${t.abonements.tenureMonths}`;
+  return `${Math.floor(days / 365)} ${t.abonements.tenureYears}`;
 }
 
 interface AbonementCtx {
@@ -108,6 +132,7 @@ export function AbonementTopupFlow({
   onSuccess,
 }: AbonementTopupFlowProps) {
   const t = useI18n();
+  const locale = useLocale();
 
   const [phone, setPhone] = useState("");
   const [searching, setSearching] = useState(false);
@@ -131,6 +156,38 @@ export function AbonementTopupFlow({
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [savingName, setSavingName] = useState(false);
+
+  // Регистрация нового абонента БЕЗ покупки абонемента (запрос пользователя
+  // 2026-07-18: "чтобы сотрудник мог завести нового абонента, но не
+  // продавать сам абонимент — может человек потом захочет") — кнопка
+  // "Сохранить" в одном ряду с полем имени, доступна ещё до выбора плана.
+  const [savingNew, setSavingNew] = useState(false);
+  const { saved: savedNew, pulse: pulseSavedNew } = useSavePulse();
+
+  async function handleSaveNew() {
+    if (!phone.trim() || savingNew) return;
+    setSavingNew(true);
+    setError(null);
+    try {
+      const res = await fetch(createEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, name: name.trim() || undefined, ...extraBody }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? t.operatorApp.gameRoom.networkError);
+        return;
+      }
+      pulseSavedNew();
+      setFound({ id: data.id, phone: data.phone, name: data.name, balance: data.balance, createdAt: data.createdAt });
+      onSuccess?.();
+    } catch {
+      setError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      setSavingNew(false);
+    }
+  }
 
   async function saveName() {
     if (!found || !updateNameEndpointFor || savingName) return;
@@ -313,77 +370,61 @@ export function AbonementTopupFlow({
             <Money value={pendingPlan.price} /> → <Money value={pendingPlan.creditAmount} />
           </p>
           <div className="flex flex-col gap-2">
-            <PressableScale>
-              <Button
-                type="button"
-                variant="outline"
-                className={cn("h-12 w-full font-semibold", RAISED_OPTION_BUTTON_CLASS)}
-                disabled={submitting}
-                onClick={() =>
-                  isNew ? handleCreate(pendingPlan, "cash") : handleTopup(found!.id, pendingPlan, "cash")
-                }
-              >
-                {t.operatorApp.submit.cashLabel}
-              </Button>
-            </PressableScale>
-            <PressableScale>
-              <Button
-                type="button"
-                variant="outline"
-                className={cn("h-12 w-full font-semibold", RAISED_OPTION_BUTTON_CLASS)}
-                disabled={submitting}
-                onClick={() =>
-                  isNew ? handleCreate(pendingPlan, "mobile") : handleTopup(found!.id, pendingPlan, "mobile")
-                }
-              >
-                {t.operatorApp.submit.mobileLabel}
-              </Button>
-            </PressableScale>
+            <ConfirmButton
+              className={cn("relative h-12 w-full font-semibold", RAISED_OPTION_BUTTON_CLASS)}
+              disabled={submitting}
+              onConfirm={() =>
+                isNew ? handleCreate(pendingPlan, "cash") : handleTopup(found!.id, pendingPlan, "cash")
+              }
+            >
+              <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+              {t.operatorApp.submit.cashLabel}
+            </ConfirmButton>
+            <ConfirmButton
+              className={cn("relative h-12 w-full font-semibold", RAISED_OPTION_BUTTON_CLASS)}
+              disabled={submitting}
+              onConfirm={() =>
+                isNew ? handleCreate(pendingPlan, "mobile") : handleTopup(found!.id, pendingPlan, "mobile")
+              }
+            >
+              <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+              {t.operatorApp.submit.mobileLabel}
+            </ConfirmButton>
           </div>
         </>
       ) : found === undefined ? (
         <>
-          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.abonements.topupSheetTitle}</h2>
-          {pointPicker && (
-            <div className="flex flex-col gap-1">
-              <Label>{t.abonements.pointsLabel}</Label>
-              <Select
-                value={pointPicker.value ?? undefined}
-                onValueChange={(v) => v && pointPicker.onChange(v)}
-                items={pointPicker.options.map((p) => ({ value: p.id, label: p.name }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t.abonements.pointsLabel} />
-                </SelectTrigger>
-                <SelectContent>
-                  {pointPicker.options.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          {/* Без заголовка "Новый абонент" здесь (запрос пользователя
+              2026-07-18: "убрать, так как новый создаётся только если не
+              существует") — на этом шаге ещё даже не искали по телефону,
+              неизвестно, новый абонент это или уже существующий. Без пикера
+              точки тут же (запрос того же дня: "зачем ты у владельца
+              спрашиваешь Точку при создании Клиента" — сам клиент/поиск по
+              телефону не привязан к точке, пикер нужен только дальше, для
+              выбора и оплаты плана, там и показывается). */}
           <div className="flex flex-col gap-1">
             <Label htmlFor="topupPhone">{t.operatorApp.abonement.phoneLabel}</Label>
             <PhoneInput
               id="topupPhone"
-              autoFocus={!pointPicker}
+              autoFocus
               timezoneEndpoint="/api/tenant/timezone"
               value={phone}
               onChange={setPhone}
-              onKeyDown={(e) => e.key === "Enter" && pointReady && handleSearch()}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               heightClassName="h-14"
             />
           </div>
           <PressableScale>
             <Button
               type="button"
-              className="h-12 w-full font-bold"
-              disabled={searching || !phone.trim() || !pointReady}
+              className="relative h-12 w-full pl-14 font-bold"
+              disabled={searching || !phone.trim()}
               onClick={handleSearch}
             >
+              {/* Иконка поиска, как на кнопках способа оплаты (запрос
+                  пользователя 2026-07-18: "сиконка поиска, как на методах
+                  оплаты") */}
+              <Search className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
               {searching ? t.operatorApp.abonement.searching : t.operatorApp.abonement.searchButton}
             </Button>
           </PressableScale>
@@ -421,31 +462,64 @@ export function AbonementTopupFlow({
                   </PressableScale>
                 </div>
               ) : (
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
-                      {isNew ? t.operatorApp.abonement.newTitle : found?.name || phone}
-                    </h2>
-                    {!isNew && updateNameEndpointFor && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setNameDraft(found?.name ?? "");
-                          setEditingName(true);
-                        }}
-                        className="shrink-0 text-muted-foreground"
-                        aria-label={t.common.edit}
-                      >
-                        <Pencil className="size-3.5" />
-                      </button>
+                <div
+                  className={cn(!isNew && "rounded-card border border-border bg-card p-4.5 shadow-card-rest")}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
+                          {isNew ? t.operatorApp.abonement.newTitle : found?.name || phone}
+                        </h2>
+                        {!isNew && updateNameEndpointFor && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNameDraft(found?.name ?? "");
+                              setEditingName(true);
+                            }}
+                            className="shrink-0 text-muted-foreground"
+                            aria-label={t.common.edit}
+                          >
+                            <Pencil className="size-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      {/* Телефон вторичной строкой, когда есть имя — иначе он и так
+                          заголовок (найдено пользователем 2026-07-17: "здесь даже не
+                          пишется имя" — у существующего кошелька имя не показывалось
+                          вообще, только телефон в заголовке). */}
+                      {!isNew && found?.name && (
+                        <p className="text-caption-airbnb text-muted-foreground">{phone}</p>
+                      )}
+                    </div>
+                    {/* Баланс — сразу в шапке, крупными цифрами (запрос
+                        пользователя 2026-07-18: "перенеси баланс выше, в одну
+                        строку с именем"; раньше был отдельным блоком заметно
+                        ниже). */}
+                    {!isNew && found && (
+                      <div className="shrink-0 text-right">
+                        <p className="text-caption-airbnb text-muted-foreground">
+                          {t.operatorApp.abonement.balanceLabel}
+                        </p>
+                        <p className="text-2xl font-extrabold tabular-nums tracking-[-0.02em]">
+                          <Money value={found.balance} />
+                        </p>
+                      </div>
                     )}
                   </div>
-                  {/* Телефон вторичной строкой, когда есть имя — иначе он и так
-                      заголовок (найдено пользователем 2026-07-17: "здесь даже не
-                      пишется имя" — у существующего кошелька имя не показывалось
-                      вообще, только телефон в заголовке). */}
-                  {!isNew && found?.name && (
-                    <p className="text-caption-airbnb text-muted-foreground">{phone}</p>
+                  {/* Дата создания + "стаж" — разделительной линией под
+                      именем/балансом, всё в одной плашке (запрос пользователя
+                      2026-07-18). */}
+                  {!isNew && found?.createdAt && (
+                    <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-caption-airbnb text-muted-foreground">
+                      <span>
+                        {t.abonements.createdLabel} {formatCreatedDate(found.createdAt, locale)}
+                      </span>
+                      <span>
+                        {t.abonements.tenureLabel} {formatTenure(found.createdAt, t)}
+                      </span>
+                    </div>
                   )}
                 </div>
               )}
@@ -455,21 +529,52 @@ export function AbonementTopupFlow({
           {isNew && (
             <div className="flex flex-col gap-1">
               <Label htmlFor="topupName">{t.operatorApp.abonement.nameLabel}</Label>
-              <Input
-                id="topupName"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-12 rounded-control bg-muted"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="topupName"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-12 flex-1 rounded-control bg-muted"
+                />
+                {/* Завести абонента без покупки плана прямо сейчас (запрос
+                    пользователя 2026-07-18: "может человек потом захочет") —
+                    отдельно от кнопок ниже, которые сразу списывают деньги за
+                    конкретный план. */}
+                <PressableScale>
+                  <SaveButton
+                    className="h-12 shrink-0 px-5"
+                    saved={savedNew}
+                    disabled={!phone.trim()}
+                    onClick={handleSaveNew}
+                  />
+                </PressableScale>
+              </div>
             </div>
           )}
 
-          {!isNew && found && !initialWallet && (
-            <div className="flex items-center justify-between rounded-control bg-muted p-3.5">
-              <span className="text-caption-airbnb text-muted-foreground">{t.operatorApp.abonement.balanceLabel}</span>
-              <span className="text-xl font-extrabold tracking-[-0.02em]">
-                <Money value={found.balance} />
-              </span>
+          {/* Пикер точки — только здесь, перед выбором плана (запрос
+              пользователя 2026-07-18: клиент сам по себе не привязан к
+              точке, точка нужна лишь чтобы отфильтровать доступные там
+              планы и записать, в какую кассу пришли деньги). */}
+          {pointPicker && (
+            <div className="flex flex-col gap-1">
+              <Label>{t.abonements.pointsLabel}</Label>
+              <Select
+                value={pointPicker.value ?? undefined}
+                onValueChange={(v) => v && pointPicker.onChange(v)}
+                items={pointPicker.options.map((p) => ({ value: p.id, label: p.name }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t.abonements.pointsLabel} />
+                </SelectTrigger>
+                <SelectContent>
+                  {pointPicker.options.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
@@ -485,10 +590,14 @@ export function AbonementTopupFlow({
                   <Button
                     type="button"
                     variant="outline"
-                    className={cn("h-14 w-full justify-between font-semibold", RAISED_OPTION_BUTTON_CLASS)}
-                    disabled={isNew && !phone.trim()}
+                    className={cn(
+                      "relative h-14 w-full justify-between pl-14 font-semibold",
+                      RAISED_OPTION_BUTTON_CLASS
+                    )}
+                    disabled={(isNew && !phone.trim()) || !pointReady}
                     onClick={() => setPendingPlanId(plan.id)}
                   >
+                    <Gift className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
                     <span>{plan.name ?? <Money value={plan.price} />}</span>
                     <span className="tabular-nums">
                       <Money value={plan.price} /> → <Money value={plan.creditAmount} />

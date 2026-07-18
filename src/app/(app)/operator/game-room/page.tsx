@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, Layers, MapPin, Plus, X } from "lucide-react";
+import { Banknote, Check, CreditCard, Layers, MapPin, Plus, Wallet, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/confirm-button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -67,6 +68,7 @@ interface OpenLaunch {
 }
 
 const SOUND_HINT_KEY = "gameRoomSoundHintSeen";
+const ZONE_FILTER_KEY = "gameRoomZoneFilter";
 const POLL_MS = 6000;
 const ALL_ZONES = "all";
 
@@ -161,7 +163,10 @@ export default function StaysZonePage() {
         // Переход из мастера сдачи итогов ведёт сразу к активу с открытыми
         // пусками (запрос пользователя 2026-07-17: "не по отношению к Зоне,
         // а к Активу с переходом на Актуальный Актив") — актив однозначно
-        // определяет и зону, сужаем dropdown до неё же.
+        // определяет и зону, сужаем dropdown до неё же. Без такого перехода —
+        // восстанавливаем последний выбор фильтра из localStorage (запрос
+        // пользователя 2026-07-18: "должен запоминаться статус выбранной
+        // Зоны, а не быть по умолчанию Все зоны при открытии").
         const requestedAssetId = searchParams.get("assetId");
         const all = stays.flatMap((z) => z.assets.map((a) => ({ ...a, zoneId: z.id })));
         setSelectedAssetId((prev) => {
@@ -172,6 +177,11 @@ export default function StaysZonePage() {
               setZoneFilter(found.zoneId);
               return found.id;
             }
+          }
+          const savedZoneFilter = window.localStorage.getItem(ZONE_FILTER_KEY);
+          if (savedZoneFilter && stays.some((z) => z.id === savedZoneFilter)) {
+            setZoneFilter(savedZoneFilter);
+            return all.find((a) => a.zoneId === savedZoneFilter)?.id ?? all[0]?.id ?? null;
           }
           return all[0]?.id ?? null;
         });
@@ -355,7 +365,11 @@ export default function StaysZonePage() {
             <div className="min-w-0 flex-1">
               <Select
                 value={zoneFilter}
-                onValueChange={(v) => v && setZoneFilter(v)}
+                onValueChange={(v) => {
+                  if (!v) return;
+                  setZoneFilter(v);
+                  window.localStorage.setItem(ZONE_FILTER_KEY, v);
+                }}
                 items={[
                   { value: ALL_ZONES, label: t.operatorApp.gameRoom.allZonesOption },
                   ...zones.map((z) => ({ value: z.id, label: z.name })),
@@ -404,14 +418,34 @@ export default function StaysZonePage() {
 
         {filteredAssets.length === 0 ? (
           <p className="py-4 text-center text-body-airbnb text-muted-foreground">{t.operatorApp.gameRoom.noAssetsYet}</p>
+        ) : filteredAssets.length === 1 ? (
+          // Один-единственный актив в зоне — выбирать не из чего (запрос
+          // пользователя 2026-07-18: "Батутные арены" с единственной "Ареной
+          // синей" — нет смысла показывать выбор), достаточно значка,
+          // цветовой метки и названия одной строкой, без кликабельного тайла.
+          <div className="mb-4 flex items-center gap-2.5 rounded-card border border-border bg-card p-3">
+            <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-control bg-muted">
+              {filteredAssets[0].photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={filteredAssets[0].photoUrl} alt="" className="size-full object-contain object-center" />
+              ) : filteredAssets[0].iconKey ? (
+                <AssetOrZoneIcon iconKey={filteredAssets[0].iconKey} className="size-5 text-muted-foreground" />
+              ) : (
+                <MapPin className="size-5 text-muted-foreground" />
+              )}
+            </div>
+            <span
+              className="size-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: filteredAssets[0].colorTag }}
+            />
+            <span className="truncate text-[0.90625rem] font-bold tracking-[-0.01em]">{filteredAssets[0].name}</span>
+          </div>
         ) : (
           <>
-            <div className="mb-4 flex flex-col gap-1.5">
-              <Label>{t.operatorApp.gameRoom.assetSwitcherLabel}</Label>
-              <div className="grid grid-cols-2 gap-3">
-                {filteredAssets.map((a) => {
-                  const active = a.id === selectedAssetId;
-                  return (
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              {filteredAssets.map((a) => {
+                const active = a.id === selectedAssetId;
+                return (
                     <PressableScale key={a.id}>
                       <button
                         type="button"
@@ -434,6 +468,18 @@ export default function StaysZonePage() {
                             className="absolute left-2.5 top-2.5 size-4 rounded-full ring-[2.5px] ring-card"
                             style={{ backgroundColor: a.colorTag }}
                           />
+                          {/* Явная отметка выбранного актива (запрос
+                              пользователя 2026-07-18: "чтобы было очевидно
+                              какой актив выбран") — раньше единственным
+                              сигналом была тонкая цветная рамка тайла,
+                              недостаточно заметная. Размер и позиция — как у
+                              счётчика пусков на экране "Пуски" (тот же
+                              min-w-11/rounded-full/shadow-md в углу тайла). */}
+                          {active && (
+                            <span className="absolute right-2 top-2 flex size-11 items-center justify-center rounded-full bg-success text-success-foreground shadow-md ring-2 ring-card">
+                              <Check className="size-6" />
+                            </span>
+                          )}
                         </div>
                         <div className="flex flex-col gap-0.5 p-3">
                           <span className="truncate text-[0.90625rem] font-bold tracking-[-0.01em]">{a.name}</span>
@@ -445,9 +491,12 @@ export default function StaysZonePage() {
                     </PressableScale>
                   );
                 })}
-              </div>
             </div>
+          </>
+        )}
 
+        {filteredAssets.length > 0 && (
+          <>
             {selectedAsset && !selectedAsset.tariff && (
               <p className="mb-3 text-caption-airbnb text-destructive">{t.operatorApp.gameRoom.noPricingError}</p>
             )}
@@ -601,33 +650,27 @@ export default function StaysZonePage() {
               {t.operatorApp.gameRoom.paymentMethodTitle}
             </h2>
             <div className="flex flex-col gap-2">
+              <ConfirmButton
+                className="relative h-12 w-full font-semibold"
+                disabled={starting}
+                onConfirm={() => startLaunch(addFlow.optionId, "cash")}
+              >
+                <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                {t.operatorApp.submit.cashLabel}
+              </ConfirmButton>
+              <ConfirmButton
+                className="relative h-12 w-full font-semibold"
+                disabled={starting}
+                onConfirm={() => startLaunch(addFlow.optionId, "mobile")}
+              >
+                <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                {t.operatorApp.submit.mobileLabel}
+              </ConfirmButton>
               <PressableScale>
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-12 w-full font-semibold"
-                  disabled={starting}
-                  onClick={() => startLaunch(addFlow.optionId, "cash")}
-                >
-                  {t.operatorApp.submit.cashLabel}
-                </Button>
-              </PressableScale>
-              <PressableScale>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-12 w-full font-semibold"
-                  disabled={starting}
-                  onClick={() => startLaunch(addFlow.optionId, "mobile")}
-                >
-                  {t.operatorApp.submit.mobileLabel}
-                </Button>
-              </PressableScale>
-              <PressableScale>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-12 w-full font-semibold"
+                  className="relative h-12 w-full font-semibold"
                   disabled={starting}
                   onClick={() => {
                     const amount = selectedOptions.find((o) => o.id === addFlow.optionId)?.price ?? 0;
@@ -635,6 +678,7 @@ export default function StaysZonePage() {
                     setAbonementTarget({ kind: "start", optionId: addFlow.optionId, amount });
                   }}
                 >
+                  <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
                   {t.operatorApp.abonement.paymentLabel}
                 </Button>
               </PressableScale>
@@ -667,33 +711,27 @@ export default function StaysZonePage() {
               />
             </p>
             <div className="flex flex-col gap-2">
+              <ConfirmButton
+                className="relative h-12 w-full font-semibold"
+                disabled={stopping}
+                onConfirm={() => stopLaunch(stopPaymentTarget.id, "cash")}
+              >
+                <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                {t.operatorApp.submit.cashLabel}
+              </ConfirmButton>
+              <ConfirmButton
+                className="relative h-12 w-full font-semibold"
+                disabled={stopping}
+                onConfirm={() => stopLaunch(stopPaymentTarget.id, "mobile")}
+              >
+                <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                {t.operatorApp.submit.mobileLabel}
+              </ConfirmButton>
               <PressableScale>
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-12 w-full font-semibold"
-                  disabled={stopping}
-                  onClick={() => stopLaunch(stopPaymentTarget.id, "cash")}
-                >
-                  {t.operatorApp.submit.cashLabel}
-                </Button>
-              </PressableScale>
-              <PressableScale>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-12 w-full font-semibold"
-                  disabled={stopping}
-                  onClick={() => stopLaunch(stopPaymentTarget.id, "mobile")}
-                >
-                  {t.operatorApp.submit.mobileLabel}
-                </Button>
-              </PressableScale>
-              <PressableScale>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-12 w-full font-semibold"
+                  className="relative h-12 w-full font-semibold"
                   disabled={stopping}
                   onClick={() => {
                     const amount = estimateLiveAmount(
@@ -709,6 +747,7 @@ export default function StaysZonePage() {
                     setAbonementTarget({ kind: "stop", launch, amount });
                   }}
                 >
+                  <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
                   {t.operatorApp.abonement.paymentLabel}
                 </Button>
               </PressableScale>

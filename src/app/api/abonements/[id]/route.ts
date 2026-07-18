@@ -24,7 +24,6 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/abonements
   const name: string | null = typeof body.name === "string" && body.name.trim() ? body.name.trim() : null;
   const price = Number(body.price);
   const creditAmount = Number(body.creditAmount);
-  const pointIds: string[] = Array.isArray(body.pointIds) ? body.pointIds.filter((v: unknown) => typeof v === "string") : [];
 
   if (!Number.isFinite(price) || price <= 0) {
     return NextResponse.json({ error: "Укажите цену абонемента" }, { status: 400 });
@@ -36,13 +35,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/abonements
     return NextResponse.json({ error: "Зачисление не может быть меньше цены" }, { status: 400 });
   }
 
-  const ownedPoints = pointIds.length
-    ? await prisma.point.findMany({ where: { tenantId: owner.tenantId, id: { in: pointIds } }, select: { id: true } })
-    : [];
-
   await prisma.abonement.update({
     where: { id },
-    data: { name, price, creditAmount, points: { set: ownedPoints.map((p) => ({ id: p.id })) } },
+    data: { name, price, creditAmount },
   });
   return NextResponse.json({ ok: true });
 }

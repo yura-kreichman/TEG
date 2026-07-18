@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronLeft } from "lucide-react";
+import { Banknote, ChevronLeft, CreditCard, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/confirm-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -168,41 +169,35 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm }: Abon
               <Money value={pendingPlan.price} /> → <Money value={pendingPlan.creditAmount} />
             </p>
             <div className="flex flex-col gap-2">
-              <PressableScale>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-12 w-full font-semibold"
-                  disabled={submitting}
-                  onClick={() =>
-                    isNew
-                      ? handleCreate(pendingPlan.id, "cash")
-                      : handleTopup(found!.id, pendingPlan.id, "cash")
-                  }
-                >
-                  {t.operatorApp.submit.cashLabel}
-                </Button>
-              </PressableScale>
-              <PressableScale>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-12 w-full font-semibold"
-                  disabled={submitting}
-                  onClick={() =>
-                    isNew
-                      ? handleCreate(pendingPlan.id, "mobile")
-                      : handleTopup(found!.id, pendingPlan.id, "mobile")
-                  }
-                >
-                  {t.operatorApp.submit.mobileLabel}
-                </Button>
-              </PressableScale>
+              <ConfirmButton
+                className="relative h-12 w-full font-semibold"
+                disabled={submitting}
+                onConfirm={() =>
+                  isNew
+                    ? handleCreate(pendingPlan.id, "cash")
+                    : handleTopup(found!.id, pendingPlan.id, "cash")
+                }
+              >
+                <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                {t.operatorApp.submit.cashLabel}
+              </ConfirmButton>
+              <ConfirmButton
+                className="relative h-12 w-full font-semibold"
+                disabled={submitting}
+                onConfirm={() =>
+                  isNew
+                    ? handleCreate(pendingPlan.id, "mobile")
+                    : handleTopup(found!.id, pendingPlan.id, "mobile")
+                }
+              >
+                <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                {t.operatorApp.submit.mobileLabel}
+              </ConfirmButton>
             </div>
           </>
         ) : found === undefined ? (
           <>
-            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.abonement.paymentLabel}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.abonement.searchTitle}</h2>
             <div className="flex flex-col gap-1">
               <Label htmlFor="abonementPhone">{t.operatorApp.abonement.phoneLabel}</Label>
               <PhoneInput
@@ -262,11 +257,13 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm }: Abon
             )}
 
             {!isNew && found && !needsTopup && (
-              <PressableScale>
-                <Button type="button" className="h-14 w-full gap-2 rounded-control font-bold" onClick={() => onConfirm(found.id)}>
-                  {t.operatorApp.abonement.spendButton} <Money value={amount} />
-                </Button>
-              </PressableScale>
+              <ConfirmButton
+                variant="default"
+                className="h-14 w-full gap-2 rounded-control font-bold"
+                onConfirm={() => onConfirm(found.id)}
+              >
+                {t.operatorApp.abonement.spendButton} <Money value={amount} />
+              </ConfirmButton>
             )}
 
             {(isNew || needsTopup) && (
@@ -289,10 +286,11 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm }: Abon
                         <Button
                           type="button"
                           variant="outline"
-                          className="h-14 w-full justify-between font-semibold"
+                          className="relative h-14 w-full justify-between pl-14 font-semibold"
                           disabled={isNew && !phone.trim()}
                           onClick={() => setPendingPlanId(plan.id)}
                         >
+                          <Gift className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
                           <span>{plan.name ?? <Money value={plan.price} />}</span>
                           <span className="tabular-nums">
                             <Money value={plan.price} /> → <Money value={plan.creditAmount} />

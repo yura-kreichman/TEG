@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BarChart3, CreditCard, FileText, Globe, Home, ListChecks, MapPin, Settings, Users, Wallet, type LucideIcon } from "lucide-react";
+import { BarChart3, FileText, Globe, Home, ListChecks, MapPin, Settings, Users, Wallet, type LucideIcon } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/components/i18n-provider";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -50,8 +50,11 @@ const PRIORITY_ITEMS: NavItemConfig[] = [
   {
     id: "abonements",
     href: "/abonements",
-    icon: CreditCard,
-    label: (t) => t.nav.abonements,
+    icon: Wallet,
+    // "Абоненты", не "Абонементы" (запрос пользователя 2026-07-18) — тот же
+    // ярлык, что у Сотрудника (t.abonements.walletsTitle), для единообразия;
+    // страница внутри всё равно называется "Абонементы" и содержит оба таба.
+    label: (t) => t.abonements.walletsTitle,
     priority: 6,
     match: (p) => p.startsWith("/abonements"),
   },

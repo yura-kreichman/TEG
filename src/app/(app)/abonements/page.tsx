@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, CreditCard, Wallet, Search, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Gift, Search, ChevronRight, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
@@ -26,7 +27,6 @@ interface AbonementInfo {
   name: string | null;
   price: number;
   creditAmount: number;
-  pointIds: string[];
 }
 
 interface PointOption {
@@ -61,14 +61,18 @@ export default function AbonementsPage() {
   const t = useI18n();
   const router = useRouter();
   const [checking, setChecking] = useState(true);
+  // Два таба, как в "Отчётах" (запрос пользователя 2026-07-18: "слишком
+  // большой экран получается") — раньше планы и кошельки клиентов были на
+  // одной длинной странице. "wallets" по умолчанию — это то, чем владелец
+  // пользуется чаще день в день (поиск/правка абонента), планы правятся
+  // редко.
+  const [tab, setTab] = useState<"wallets" | "abonements">("wallets");
 
   const [abonements, setAbonements] = useState<AbonementInfo[]>([]);
   const [points, setPoints] = useState<PointOption[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [pointsAll, setPointsAll] = useState(true);
-  const [selectedPointIds, setSelectedPointIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const { saved, pulse } = useSavePulse();
   const [kebabTarget, setKebabTarget] = useState<AbonementInfo | null>(null);
@@ -85,6 +89,11 @@ export default function AbonementsPage() {
   // тут только правка имени/телефона существующего и просмотр истории.
   const [wallets, setWallets] = useState<WalletInfo[]>([]);
   const [walletQuery, setWalletQuery] = useState("");
+  // Сортировка списка абонентов (запрос пользователя 2026-07-18: "по
+  // балансу, активности и стажу") — "recent" (по умолчанию, недавно
+  // созданные сверху) не показывается отдельным пунктом в переключателе,
+  // это его исходное состояние.
+  const [walletSort, setWalletSort] = useState<"recent" | "balance" | "activity" | "tenure">("recent");
   const [walletKebabTarget, setWalletKebabTarget] = useState<WalletInfo | null>(null);
   const [walletConfirmDelete, setWalletConfirmDelete] = useState(false);
   const { saved: walletDeleted, pulse: walletDeletePulse } = useSavePulse();
@@ -95,8 +104,12 @@ export default function AbonementsPage() {
     setAbonements(data.abonements ?? []);
   }
 
-  async function loadWallets(q?: string) {
-    const res = await fetch(`/api/abonement-wallets/list${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+  async function loadWallets(q?: string, sort?: string) {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (sort && sort !== "recent") params.set("sort", sort);
+    const qs = params.toString();
+    const res = await fetch(`/api/abonement-wallets/list${qs ? `?${qs}` : ""}`);
     const data = await res.json();
     setWallets(data.wallets ?? []);
   }
@@ -104,7 +117,7 @@ export default function AbonementsPage() {
   async function deleteWallet() {
     if (!walletKebabTarget) return;
     await fetch(`/api/abonement-wallets/${walletKebabTarget.id}`, { method: "DELETE" });
-    await loadWallets(walletQuery);
+    await loadWallets(walletQuery, walletSort);
     walletDeletePulse(() => {
       setWalletConfirmDelete(false);
       setWalletKebabTarget(null);
@@ -134,8 +147,6 @@ export default function AbonementsPage() {
   function openNew() {
     setEditingId(null);
     setForm(EMPTY_FORM);
-    setPointsAll(true);
-    setSelectedPointIds(new Set());
     setError(null);
     setSheetOpen(true);
   }
@@ -143,20 +154,9 @@ export default function AbonementsPage() {
   function openEdit(a: AbonementInfo) {
     setEditingId(a.id);
     setForm({ name: a.name ?? "", price: String(a.price), creditAmount: String(a.creditAmount) });
-    setPointsAll(a.pointIds.length === 0);
-    setSelectedPointIds(new Set(a.pointIds));
     setError(null);
     setKebabTarget(null);
     setSheetOpen(true);
-  }
-
-  function togglePoint(pointId: string) {
-    setSelectedPointIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(pointId)) next.delete(pointId);
-      else next.add(pointId);
-      return next;
-    });
   }
 
   async function save(event: FormEvent) {
@@ -176,7 +176,6 @@ export default function AbonementsPage() {
       name: form.name.trim() || undefined,
       price,
       creditAmount,
-      pointIds: pointsAll ? [] : [...selectedPointIds],
     };
     const res = await fetch(editingId ? `/api/abonements/${editingId}` : "/api/abonements", {
       method: editingId ? "PATCH" : "POST",
@@ -202,126 +201,163 @@ export default function AbonementsPage() {
     });
   }
 
-  // План виден в точке, если он "на всех точках" (пустой pointIds) или явно
-  // включает выбранную — то же правило, что серверный visibleAtPoint в
-  // src/lib/abonement.ts, только на клиенте (пикер точки уже загружен здесь).
-  const plansAtTopupPoint = useMemo(
-    () => abonements.filter((a) => a.pointIds.length === 0 || (topupPointId ? a.pointIds.includes(topupPointId) : false)),
-    [abonements, topupPointId]
-  );
-
-  function pointsLabel(pointIds: string[]) {
-    if (pointIds.length === 0) return t.abonements.allPointsLabel;
-    const names = pointIds.map((id) => points.find((p) => p.id === id)?.name).filter(Boolean);
-    return names.join(", ") || t.abonements.allPointsLabel;
-  }
-
   if (checking) return null;
 
   return (
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-1">
-          <div className="mb-3 flex flex-col gap-3">
-            {/* Заголовок+кнопки в одной строке сверху, описание — отдельной
-                строкой во всю ширину под ними (было общей строкой с
-                кнопками — на узком экране длинный текст описания сжимал
-                кнопки в колонку из нескольких строк, "должно быть сверху,
-                а не как сейчас", запрос пользователя 2026-07-17). */}
-            <div className="flex items-center justify-between gap-3">
-              <h1 className="text-screen-title">{t.abonements.title}</h1>
-              <PressableScale>
-                <Button variant="dark" size="sm" className="gap-1.5" onClick={openNew}>
-                  <Plus className="size-4" />
-                  {t.abonements.addButton}
-                </Button>
-              </PressableScale>
-            </div>
-            <p className="text-caption-airbnb">{t.abonements.pageSub}</p>
-          </div>
+          {/* "Абоненты", не "Абонементы" (запрос пользователя 2026-07-18) —
+              заголовок страницы должен совпадать с пунктом меню, ведущим
+              сюда (t.abonements.walletsTitle), а не с одним из двух табов
+              внутри. */}
+          <h1 className="mb-4 text-screen-title">{t.abonements.walletsTitle}</h1>
 
-          {abonements.length === 0 ? (
-            <p className="text-body-airbnb text-muted-foreground">{t.abonements.noAbonements}</p>
-          ) : (
-            <StaggerList className="flex flex-col gap-3">
-              {abonements.map((a) => (
-                <StaggerItem key={a.id}>
-                  <SpringCard animate={false}>
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
-                        <CreditCard className="size-5" />
-                      </div>
-                      <div className="min-w-0 grow">
-                        <div className="text-card-title">
-                          {a.name ?? <Money value={a.price} />}
+          {/* Два таба вместо одной длинной страницы (запрос пользователя
+              2026-07-18: "слишком большой экран получается", тот же приём,
+              что в "Отчётах") — планы и кошельки клиентов правятся отдельно,
+              смешивать в один список незачем. */}
+          <SegmentedTabs
+            className="mb-4 grid grid-cols-2"
+            equalWidth
+            size="sm"
+            options={[
+              { key: "wallets", label: t.abonements.walletsTitle },
+              { key: "abonements", label: t.abonements.title },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
+
+          {tab === "abonements" && (
+            <>
+              <div className="mb-3 flex justify-end">
+                <PressableScale>
+                  <Button variant="dark" size="sm" className="gap-1.5" onClick={openNew}>
+                    <Plus className="size-4" />
+                    {t.abonements.addButton}
+                  </Button>
+                </PressableScale>
+              </div>
+              {abonements.length === 0 ? (
+                <p className="text-body-airbnb text-muted-foreground">{t.abonements.noAbonements}</p>
+              ) : (
+                <StaggerList className="flex flex-col gap-3">
+                  {abonements.map((a) => (
+                    <StaggerItem key={a.id}>
+                      <SpringCard animate={false}>
+                        <div className="flex items-center gap-3">
+                          <div className="flex size-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                            <Gift className="size-5" />
+                          </div>
+                          <div className="min-w-0 grow">
+                            <div className="text-card-title">
+                              {a.name ?? <Money value={a.price} />}
+                            </div>
+                            <p className="text-caption-airbnb tabular-nums">
+                              <Money value={a.price} /> → <Money value={a.creditAmount} />
+                            </p>
+                          </div>
+                          <KebabButton onClick={() => setKebabTarget(a)} label={t.abonements.editAction} />
                         </div>
-                        <p className="text-caption-airbnb tabular-nums">
-                          <Money value={a.price} /> → <Money value={a.creditAmount} /> · {pointsLabel(a.pointIds)}
-                        </p>
-                      </div>
-                      <KebabButton onClick={() => setKebabTarget(a)} label={t.abonements.editAction} />
-                    </div>
-                  </SpringCard>
-                </StaggerItem>
-              ))}
-            </StaggerList>
+                      </SpringCard>
+                    </StaggerItem>
+                  ))}
+                </StaggerList>
+              )}
+            </>
           )}
 
-          <div className="mt-8 mb-3 flex items-center justify-between gap-3">
-            <h2 className="text-section-title">{t.abonements.walletsTitle}</h2>
-            <PressableScale>
-              <Button variant="dark" size="sm" className="gap-1.5" onClick={() => setTopupSheetOpen(true)}>
-                <Plus className="size-4" />
-                {t.abonements.addWalletButton}
-              </Button>
-            </PressableScale>
-          </div>
-          <div className="relative mb-3">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder={t.abonements.walletsSearchPlaceholder}
-              value={walletQuery}
-              onChange={(e) => {
-                setWalletQuery(e.target.value);
-                loadWallets(e.target.value);
-              }}
-              className="pl-9"
-            />
-          </div>
+          {tab === "wallets" && (
+            <>
+              <div className="mb-3 flex justify-end">
+                <PressableScale>
+                  <Button variant="dark" size="sm" className="gap-1.5" onClick={() => setTopupSheetOpen(true)}>
+                    <Plus className="size-4" />
+                    {t.abonements.addWalletButton}
+                  </Button>
+                </PressableScale>
+              </div>
+              <div className="mb-3 flex gap-2">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder={t.abonements.walletsSearchPlaceholder}
+                    value={walletQuery}
+                    onChange={(e) => {
+                      setWalletQuery(e.target.value);
+                      loadWallets(e.target.value, walletSort);
+                    }}
+                    className="h-12 pl-9"
+                  />
+                </div>
+                {/* Сортировка списка (запрос пользователя 2026-07-18: "по
+                    балансу, активности и стажу") — фиксированная ширина, не
+                    w-auto (та "плыла" уже с самой длинной подписью, сжимая
+                    текст в многоточие), и та же высота, что у поля поиска
+                    рядом (были разной высоты — "поплыли"). */}
+                <Select
+                  value={walletSort}
+                  onValueChange={(v) => {
+                    if (!v) return;
+                    const sort = v as typeof walletSort;
+                    setWalletSort(sort);
+                    loadWallets(walletQuery, sort);
+                  }}
+                  items={[
+                    { value: "recent", label: t.abonements.sortRecent },
+                    { value: "balance", label: t.abonements.sortBalance },
+                    { value: "activity", label: t.abonements.sortActivity },
+                    { value: "tenure", label: t.abonements.sortTenure },
+                  ]}
+                >
+                  <SelectTrigger className="h-12 w-44 shrink-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="end">
+                    <SelectItem value="recent">{t.abonements.sortRecent}</SelectItem>
+                    <SelectItem value="balance">{t.abonements.sortBalance}</SelectItem>
+                    <SelectItem value="activity">{t.abonements.sortActivity}</SelectItem>
+                    <SelectItem value="tenure">{t.abonements.sortTenure}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {wallets.length === 0 ? (
-            <p className="text-body-airbnb text-muted-foreground">{t.abonements.noWallets}</p>
-          ) : (
-            <StaggerList className="flex flex-col gap-3">
-              {wallets.map((w) => (
-                <StaggerItem key={w.id}>
-                  {/* Вся карточка кликабельна — сразу в историю/редактирование
-                      (запрос пользователя 2026-07-17: "надо иметь возможность
-                      войти, чтобы увидеть историю", раньше только кебаб вёл
-                      туда через лишний промежуточный шаг). Кебаб внутри
-                      останавливает всплытие — иначе клик по нему открывал бы
-                      И своё меню, И детальный sheet разом. */}
-                  <SpringCard animate={false} className="cursor-pointer" onClick={() => router.push(`/abonements/${w.id}`)}>
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
-                        <Wallet className="size-5" />
-                      </div>
-                      <div className="min-w-0 grow">
-                        <div className="text-card-title">{w.name || w.phone}</div>
-                        <p className="text-caption-airbnb tabular-nums">
-                          {w.name ? `${w.phone} · ` : ""}
-                          {t.abonements.balanceLabel}: <Money value={w.balance} />
-                        </p>
-                      </div>
-                      <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <KebabButton onClick={() => setWalletKebabTarget(w)} label={t.abonements.editAction} />
-                      </div>
-                    </div>
-                  </SpringCard>
-                </StaggerItem>
-              ))}
-            </StaggerList>
+              {wallets.length === 0 ? (
+                <p className="text-body-airbnb text-muted-foreground">{t.abonements.noWallets}</p>
+              ) : (
+                <StaggerList className="flex flex-col gap-3">
+                  {wallets.map((w) => (
+                    <StaggerItem key={w.id}>
+                      {/* Вся карточка кликабельна — сразу в историю/редактирование
+                          (запрос пользователя 2026-07-17: "надо иметь возможность
+                          войти, чтобы увидеть историю", раньше только кебаб вёл
+                          туда через лишний промежуточный шаг). Кебаб внутри
+                          останавливает всплытие — иначе клик по нему открывал бы
+                          И своё меню, И детальный sheet разом. */}
+                      <SpringCard animate={false} className="cursor-pointer" onClick={() => router.push(`/abonements/${w.id}`)}>
+                        <div className="flex items-center gap-3">
+                          <div className="flex size-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                            <Wallet className="size-5" />
+                          </div>
+                          <div className="min-w-0 grow">
+                            <div className="text-card-title">{w.name || w.phone}</div>
+                            <p className="text-caption-airbnb tabular-nums">
+                              {w.name ? `${w.phone} · ` : ""}
+                              {t.abonements.balanceLabel}: <Money value={w.balance} />
+                            </p>
+                          </div>
+                          <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <KebabButton onClick={() => setWalletKebabTarget(w)} label={t.abonements.editAction} />
+                          </div>
+                        </div>
+                      </SpringCard>
+                    </StaggerItem>
+                  ))}
+                </StaggerList>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -362,27 +398,11 @@ export default function AbonementsPage() {
               />
             </div>
           </div>
-
-          <div className="flex flex-col gap-1">
-            <p className="text-caption-airbnb font-semibold text-foreground">{t.abonements.pointsLabel}</p>
-            <div className="flex w-full items-center justify-between border-t border-border py-3.5 text-body-airbnb first:border-t-0">
-              {t.abonements.allPointsLabel}
-              <Switch checked={pointsAll} onCheckedChange={setPointsAll} />
-            </div>
-            {!pointsAll && (
-              <div className="-mt-1 max-h-56 overflow-y-auto">
-                {points.map((point) => (
-                  <div
-                    key={point.id}
-                    className="flex w-full items-center justify-between border-t border-border py-3.5 text-body-airbnb first:border-t-0"
-                  >
-                    {point.name}
-                    <Switch checked={selectedPointIds.has(point.id)} onCheckedChange={() => togglePoint(point.id)} />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Описание механики плана — под полями Цена/Зачислится (запрос
+              пользователя 2026-07-18: "размести под полями ввода"), в форме
+              создания/редактирования, не на самом табе — справка нужна
+              именно в момент заполнения полей. */}
+          <p className="-mt-2 text-caption-airbnb text-muted-foreground">{t.abonements.pageSub}</p>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
           <PressableScale>
@@ -419,7 +439,7 @@ export default function AbonementsPage() {
       <AbonementTopupSheet
         open={topupSheetOpen}
         onClose={() => setTopupSheetOpen(false)}
-        plans={plansAtTopupPoint}
+        plans={abonements}
         searchEndpoint="/api/abonement-wallets"
         createEndpoint="/api/abonement-wallets"
         topupEndpointFor={(walletId) => `/api/abonement-wallets/${walletId}/topup`}
@@ -427,7 +447,7 @@ export default function AbonementsPage() {
         extraBody={topupPointId ? { pointId: topupPointId } : undefined}
         pointPicker={{ options: points, value: topupPointId, onChange: setTopupPointId }}
         allowArbitraryAmount
-        onSuccess={() => loadWallets(walletQuery)}
+        onSuccess={() => loadWallets(walletQuery, walletSort)}
       />
 
       <BottomSheet open={walletKebabTarget !== null && !walletConfirmDelete} onClose={() => setWalletKebabTarget(null)}>

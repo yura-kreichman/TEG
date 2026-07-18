@@ -28,5 +28,6 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operator/a
     phone: updated.phone,
     name: updated.name,
     balance: Number(updated.balance),
+    createdAt: updated.createdAt,
   });
 }

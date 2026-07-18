@@ -36,7 +36,7 @@ export default function OperatorAbonementsPage() {
   return (
     <div className="flex min-h-dvh flex-col bg-surface-0 px-4 pb-10 pt-6">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-        <h1 className="mb-4 text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.nav.abonements}</h1>
+        <h1 className="mb-4 text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.abonements.walletsTitle}</h1>
         <AbonementTopupFlow
           plans={plans}
           searchEndpoint="/api/operator/abonements"

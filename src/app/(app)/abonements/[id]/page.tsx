@@ -25,7 +25,6 @@ interface AbonementInfo {
   name: string | null;
   price: number;
   creditAmount: number;
-  pointIds: string[];
 }
 
 interface PointOption {
@@ -133,12 +132,6 @@ export default function AbonementWalletPage() {
     deletePulse(() => router.push("/abonements"));
   }
 
-  // План виден в точке, если он "на всех точках" (пустой pointIds) или явно
-  // включает выбранную — тот же принцип, что на /abonements.
-  const plansAtTopupPoint = plans.filter(
-    (a) => a.pointIds.length === 0 || (topupPointId ? a.pointIds.includes(topupPointId) : false)
-  );
-
   if (checking || !wallet) return null;
 
   return (
@@ -196,7 +189,7 @@ export default function AbonementWalletPage() {
             <AbonementTopupFlow
               key={wallet.id}
               initialWallet={{ id: wallet.id, phone: wallet.phone, name: wallet.name, balance: wallet.balance }}
-              plans={plansAtTopupPoint}
+              plans={plans}
               searchEndpoint="/api/abonement-wallets"
               createEndpoint="/api/abonement-wallets"
               topupEndpointFor={(walletId) => `/api/abonement-wallets/${walletId}/topup`}
