@@ -42,7 +42,7 @@ export interface DispatchResult {
   externalMessageId?: string;
 }
 
-async function getEnabledChannels(tenantId: string) {
+export async function getEnabledChannels(tenantId: string) {
   return prisma.tenantSummaryChannel.findMany({
     where: { tenantId, pointId: null, enabled: true },
   });

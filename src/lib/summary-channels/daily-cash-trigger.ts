@@ -1,8 +1,13 @@
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getBusinessDayBounds, businessDateKey } from "@/lib/business-day";
 import { DAILY_CASH_SUMMARY_DEFAULTS, type DailyCashSummarySettingsData } from "@/lib/summary-settings";
 import { buildDailyCashSummaryData, hasActivityInBounds } from "./daily-cash-data";
-import { dispatchDailyCashSummary } from "./dispatch";
+import { dispatchDailyCashSummary, getEnabledChannels } from "./dispatch";
+
+function isUniqueConstraintViolation(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
+}
 
 // businessDayBoundary живёт на Tenant, не на DailyCashSummarySettings
 // (docs/spec/05-work-time.md, перенесено 2026-07-11 — значение общетенантное,
@@ -51,24 +56,54 @@ export async function maybeSendDailyCashSummary(
   const active = await hasActivityInBounds(pointId, bounds);
   if (!active && settings.skipIfNoSubmissions) return;
 
+  // Атомарный захват ДО реальной отправки, не после (реальная гонка, найдена
+  // пользователем 2026-07-19: планировщик тикает раз в минуту в каждом живом
+  // процессе — на перезапуске контейнера старый и новый процесс могут
+  // недолго жить одновременно, у обоих свой таймер; findFirst-затем-upsert
+  // оставлял окно, где оба вызова проходили проверку "уже отправлено?" до
+  // того, как первый успевал это записать, и оба реально слали сообщение в
+  // Telegram — тот же класс бага, что чинили для премии/аванса на check-out
+  // 2026-07-18, здесь с другой стороны). INSERT с уникальным индексом
+  // (pointId, businessDate, channelType) ловит гонку атомарно на уровне БД:
+  // конкурентный вызов получает P2002 и останавливается ДО отправки.
+  const channels = await getEnabledChannels(tenantId);
+  const claimed: ("telegram" | "email")[] = [];
+  for (const channel of channels) {
+    try {
+      await prisma.dailyCashSummaryDelivery.create({
+        data: { tenantId, pointId, businessDate, channelType: channel.channelType },
+      });
+      claimed.push(channel.channelType);
+    } catch (err) {
+      if (isUniqueConstraintViolation(err)) continue; // уже занято параллельным вызовом
+      throw err;
+    }
+  }
+  if (claimed.length === 0) return;
+
   const data = await buildDailyCashSummaryData(pointId, bounds, forcedIncomplete);
-  if (!data) return;
+  if (!data) {
+    await prisma.dailyCashSummaryDelivery.deleteMany({ where: { pointId, businessDate, channelType: { in: claimed } } });
+    return;
+  }
 
   const results = await dispatchDailyCashSummary(tenantId, data, settings, {});
+  const resultByChannel = new Map(results.map((r) => [r.channelType, r]));
 
-  for (const result of results) {
-    if (!result.ok) continue;
-    await prisma.dailyCashSummaryDelivery.upsert({
-      where: { pointId_businessDate_channelType: { pointId, businessDate, channelType: result.channelType } },
-      create: {
-        tenantId,
-        pointId,
-        businessDate,
-        channelType: result.channelType,
-        externalMessageId: result.externalMessageId,
-      },
-      update: { externalMessageId: result.externalMessageId },
-    });
+  for (const channelType of claimed) {
+    const result = resultByChannel.get(channelType);
+    if (result?.ok) {
+      await prisma.dailyCashSummaryDelivery.update({
+        where: { pointId_businessDate_channelType: { pointId, businessDate, channelType } },
+        data: { externalMessageId: result.externalMessageId },
+      });
+    } else {
+      // Отправка не удалась (или канал вообще не сработал — например,
+      // chatStatus не active, тогда его вообще нет в results) — освобождаем
+      // слот, чтобы следующий тик мог честно повторить попытку, а не считал
+      // точку навсегда "отправленной" без реального сообщения.
+      await prisma.dailyCashSummaryDelivery.deleteMany({ where: { pointId, businessDate, channelType } });
+    }
   }
 }
 
