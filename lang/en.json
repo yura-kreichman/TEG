@@ -923,7 +923,6 @@
     "editSheetTitle": "Edit submission",
     "autoRecalcHint": "The delta and revenue will be recalculated automatically.",
     "moneySection": "Money",
-    "netRevenueLabel": "Revenue after returns:",
     "reasonLabel": "Reason for the change",
     "reasonOptionalHint": "optional",
     "reasonPlaceholder": "E.g.: the employee misread the counter",

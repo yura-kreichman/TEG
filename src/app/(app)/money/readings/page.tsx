@@ -344,14 +344,21 @@ export default function ReadingsCalendarPage() {
       price: t.price,
       sessions: sessionsByTariff.get(t.tariffId) ?? 0,
     }));
+    // "Прибывания"/тап-"Пуски" не имеют показаний вообще (card.assets пуст) —
+    // их выручка живёт в Launch, не пересчитывается на драфте (в этой форме
+    // для них нет ничего "показаниевого" редактируемого, только
+    // наличные/безнал/возвраты) — берём уже посчитанное сервером значение,
+    // а не 0 из пустого tariffCalc (тот же реальный баг, найден пользователем
+    // 2026-07-19, что и в самом /api/reports/counters/day).
+    const isLiveZone = card.accountingMode === "stays" || (isLaunches && card.assets.length === 0);
     // "Счёт." — всегда валовая выручка по счётчикам, ФАКТ (запрос пользователя
     // 2026-07-16). Разница считается от net (за вычетом тестов), с поправкой
     // на абонемент — та касса уже получила эти деньги раньше, при
     // пополнении, не сейчас (реальный баг, найден пользователем 2026-07-18:
     // без поправки разница ложно показывала недостачу ровно на сумму пусков,
     // оплаченных абонементом).
-    const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
-    const netRevenue = calcZoneRevenue(tariffCalc, Number(editReturns || 0));
+    const calculatedRevenue = isLiveZone ? card.calculatedRevenue : calcZoneGrossRevenue(tariffCalc);
+    const netRevenue = isLiveZone ? card.netRevenue : calcZoneRevenue(tariffCalc, Number(editReturns || 0));
     const actualCash = Number(editCash || 0) + Number(editMobile || 0);
     const difference = Math.round((actualCash + card.abonementAmount - netRevenue) * 100) / 100;
     return { calculatedRevenue, difference };
@@ -480,16 +487,30 @@ export default function ReadingsCalendarPage() {
                 </div>
               </SpringCard>
 
-              {/* Общий заголовок над ОБЕИМИ карточками (Итоги дня + Абонементы
-                  ниже) — сами карточки/суммы остаются раздельными, заголовок
-                  только поясняет, что ниже два блока (запрос пользователя
-                  2026-07-19: "иконка слева на 2 строчки 'Итоги дня' и 'По
-                  сдачам зон и абонементов'", подтверждено — общий заголовок,
-                  не подпись первой карточки). */}
-              {selectedDate &&
-                (((cards?.length ?? 0) > 0 || (abonementSales?.items.length ?? 0) > 0)) && (
-                  <div className="flex items-center gap-2 px-1">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+              {/* Заголовок — внутри акцентной плашки "Итоги дня" вместе с
+                  цифрами (запрос пользователя 2026-07-19: "сделай внутри
+                  плашки акцентной схемы"), но по смыслу описывает ОБА блока
+                  (Итоги дня + Абонементы ниже) — сами карточки/суммы
+                  остаются раздельными. Отдельный fallback ниже — редкий
+                  случай, когда за день были только продажи абонементов без
+                  сдач зон: тогда акцентной карточки нет, заголовок остаётся
+                  отдельным блоком, как раньше. */}
+              {selectedDate && cards !== null && cards.length === 0 && (abonementSales?.items.length ?? 0) > 0 && (
+                <div className="flex items-center gap-2 px-1">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                    <FileText className="size-4.5" />
+                  </div>
+                  <div>
+                    <p className="text-card-title">{t.readings.daySummaryTitle}</p>
+                    <p className="text-caption-airbnb text-muted-foreground">{t.readings.daySummaryHint}</p>
+                  </div>
+                </div>
+              )}
+
+              {selectedDate && cards !== null && cards.length > 0 && (
+                <SpringCard hover={false} className="flex flex-col gap-1 border-primary/20 bg-primary/10">
+                  <div className="flex items-center gap-2">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary/20 text-primary">
                       <FileText className="size-4.5" />
                     </div>
                     <div>
@@ -497,11 +518,7 @@ export default function ReadingsCalendarPage() {
                       <p className="text-caption-airbnb text-muted-foreground">{t.readings.daySummaryHint}</p>
                     </div>
                   </div>
-                )}
-
-              {selectedDate && cards !== null && cards.length > 0 && (
-                <SpringCard hover={false} className="flex flex-col gap-1 border-primary/20 bg-primary/10">
-                  <div className="flex flex-col gap-1 tabular-nums">
+                  <div className="flex flex-col gap-1 border-t border-primary/20 pt-2 tabular-nums">
                     <div className="flex items-center justify-between text-caption-airbnb">
                       <span>{t.operatorApp.submit.cashLabel}</span>
                       <span className="text-foreground"><Money value={daySummary.cash} /></span>
@@ -746,25 +763,26 @@ export default function ReadingsCalendarPage() {
                           )}
                           {card.accountingMode !== "cash_only" && (
                           <>
-                          <div className="flex items-center justify-between border-t border-border pt-1.5 text-caption-airbnb font-semibold">
-                            <span className="text-foreground">{t.operatorApp.submit.calculatedRevenue}</span>
-                            <span className="text-foreground"><Money value={card.calculatedRevenue} /></span>
+                          <div className="flex items-center justify-between border-t border-border pt-1.5 text-caption-airbnb">
+                            <span>{t.operatorApp.submit.calculatedRevenue}</span>
+                            <span><Money value={card.calculatedRevenue} /></span>
                           </div>
                           {/* Фактическая — сумма Наличные+Безнал+Баланс, чтобы
                               не складывать их в уме (запрос пользователя
-                              2026-07-18). */}
-                          <div className="flex items-center justify-between text-caption-airbnb">
-                            <span>{t.operatorApp.submit.actualCash}</span>
+                              2026-07-18). Крупнее и жирным — важнее валовой
+                              Расчётной выручки выше (запрос пользователя
+                              2026-07-19, тот же приём, что и в сводной
+                              карточке "Итоги дня"). "Выручка после
+                              возвратов" рядом больше не показываем — она
+                              математически совпадает с этой суммой ровно
+                              когда Разница=0, вторая строка с тем же числом
+                              только путала. */}
+                          <div className="flex items-center justify-between text-body-airbnb font-bold">
+                            <span className="text-foreground">{t.operatorApp.submit.actualCash}</span>
                             <span className="text-foreground">
                               <Money value={card.cashAmount + card.mobileAmount + card.abonementAmount} />
                             </span>
                           </div>
-                          {card.returnsCount > 0 && (
-                            <div className="flex items-center justify-between text-caption-airbnb">
-                              <span>{t.readings.netRevenueLabel}</span>
-                              <span className="text-foreground"><Money value={card.netRevenue} /></span>
-                            </div>
-                          )}
                           <div className="flex items-center justify-between text-caption-airbnb">
                             <span>{t.operatorApp.submit.difference}</span>
                             <span

@@ -923,7 +923,6 @@
     "editSheetTitle": "Modifica chiusura",
     "autoRecalcHint": "Il delta e l'incasso verranno ricalcolati automaticamente.",
     "moneySection": "Soldi",
-    "netRevenueLabel": "Ricavo dopo i resi:",
     "reasonLabel": "Motivo della modifica",
     "reasonOptionalHint": "facoltativo",
     "reasonPlaceholder": "Es.: il dipendente ha letto male il contatore",

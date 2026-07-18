@@ -923,7 +923,6 @@
     "editSheetTitle": "Zmień rozliczenie",
     "autoRecalcHint": "Delta i przychód zostaną przeliczone automatycznie.",
     "moneySection": "Finanse",
-    "netRevenueLabel": "Przychód po zwrotach:",
     "reasonLabel": "Powód zmiany",
     "reasonOptionalHint": "opcjonalnie",
     "reasonPlaceholder": "Np.: pracownik pomylił się w odczycie",

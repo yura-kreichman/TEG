@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue } from "@/lib/results-calc";
+import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, isLaunchesZone, isStaysZone } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 
 interface CorrectionDiff {
@@ -124,6 +124,32 @@ export async function GET(request: Request) {
 
   if (submissions.length === 0) {
     return NextResponse.json({ cards: [], abonementSales });
+  }
+
+  // "Прибывания" и тап-"Пуски" (после перехода на тапы, assetReadings
+  // пустой) не пишут AssetReading вовсе — их валовая выручка живёт в Launch,
+  // привязанном к zoneSubmissionId сервером при сдаче итогов. Без этого
+  // calculatedRevenue/netRevenue ниже всегда были бы 0 для таких зон (тот же
+  // класс бага, что уже пофикшен в lib/reports.ts и home-summary/route.ts —
+  // реальный баг, найден пользователем 2026-07-19: зона "Игровые" в "Итогах
+  // по дням" показывала Расчётная выручка=0₽ при реальной кассе 120₽/62₽).
+  const liveZoneSubmissionIds = submissions
+    .flatMap((s) => s.zoneSubmissions)
+    .filter((zs) => isStaysZone(zs.zone) || (isLaunchesZone(zs.zone) && zs.assetReadings.length === 0))
+    .map((zs) => zs.id);
+  const liveLaunches = liveZoneSubmissionIds.length
+    ? await prisma.launch.findMany({
+        where: { zoneSubmissionId: { in: liveZoneSubmissionIds }, voidedAt: null },
+        select: { zoneSubmissionId: true, amount: true },
+      })
+    : [];
+  const liveRevenueBySubmission = new Map<string, number>();
+  for (const l of liveLaunches) {
+    if (!l.zoneSubmissionId) continue;
+    liveRevenueBySubmission.set(
+      l.zoneSubmissionId,
+      (liveRevenueBySubmission.get(l.zoneSubmissionId) ?? 0) + Number(l.amount ?? 0)
+    );
   }
 
   // Sessions/previous-value are always computed from the immediately preceding
@@ -249,10 +275,19 @@ export async function GET(request: Request) {
           .reduce((sum, r) => sum + readingSessions(r), 0),
       }));
 
+      // "Прибывания"/тап-"Пуски" считают выручку от Launch, не от счётчика —
+      // у них нет ни AssetReading, ни отдельного понятия "тестовый пуск" на
+      // этом уровне (voidedAt уже исключает отменённые), поэтому gross и net
+      // здесь совпадают, в отличие от "Счётчиков" ниже.
+      const isLiveZone = isStaysZone(zs.zone) || (isLaunches && zs.assetReadings.length === 0);
       // "Счёт." — всегда валовая выручка по счётчикам, ФАКТ (запрос
       // пользователя 2026-07-16). Разница считается от net (за вычетом тестов).
-      const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
-      const netRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
+      const calculatedRevenue = isLiveZone
+        ? (liveRevenueBySubmission.get(zs.id) ?? 0)
+        : calcZoneGrossRevenue(tariffCalc);
+      const netRevenue = isLiveZone
+        ? (liveRevenueBySubmission.get(zs.id) ?? 0)
+        : calcZoneRevenue(tariffCalc, zs.returnsCount);
       const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
       // Справочно, рядом с cashAmount/mobileAmount — сумма реальна, но касса
       // точки её уже получила раньше, при пополнении, поэтому она намеренно

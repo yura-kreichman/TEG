@@ -923,7 +923,6 @@
     "editSheetTitle": "Змінити здачу",
     "autoRecalcHint": "Дельта і виручка перерахуються автоматично.",
     "moneySection": "Гроші",
-    "netRevenueLabel": "Виручка після повернень:",
     "reasonLabel": "Причина зміни",
     "reasonOptionalHint": "необов'язково",
     "reasonPlaceholder": "Наприклад: співробітник помилився в показанні",
