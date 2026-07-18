@@ -505,17 +505,19 @@ export default function ReadingsCalendarPage() {
                         <span className="text-foreground">{daySummary.returnsCount}</span>
                       </div>
                     )}
-                    <div className="flex items-center justify-between border-t border-border pt-1.5 text-caption-airbnb font-semibold">
-                      <span className="text-foreground">{t.operatorApp.submit.calculatedRevenue}</span>
-                      <span className="text-foreground"><Money value={daySummary.calculatedRevenue} /></span>
+                    <div className="flex items-center justify-between border-t border-border pt-1.5 text-caption-airbnb">
+                      <span>{t.operatorApp.submit.calculatedRevenue}</span>
+                      <span><Money value={daySummary.calculatedRevenue} /></span>
                     </div>
                     {/* Фактическая — сумма Наличные+Безнал+Баланс, чтобы не
                         складывать их в уме при сравнении с Расчётной
                         выручкой (запрос пользователя 2026-07-18). Тот же
                         ключ, что уже использует Сотрудник на своём экране
-                        подтверждения. */}
-                    <div className="flex items-center justify-between text-caption-airbnb">
-                      <span>{t.operatorApp.submit.actualCash}</span>
+                        подтверждения. Крупнее и жирным — это реальная касса
+                        точки, важнее валовой Расчётной выручки выше (запрос
+                        пользователя 2026-07-19). */}
+                    <div className="flex items-center justify-between text-body-airbnb font-bold">
+                      <span className="text-foreground">{t.operatorApp.submit.actualCash}</span>
                       <span className="text-foreground">
                         <Money value={daySummary.cash + daySummary.mobile + daySummary.abonement} />
                       </span>
