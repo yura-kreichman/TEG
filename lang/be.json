@@ -858,7 +858,7 @@
   "readings": {
     "title": "Вынікі па днях",
     "daySummaryTitle": "Вынік дня",
-    "daySummaryHint": "Па здачах зон",
+    "daySummaryHint": "Па здачах зон і абанементаў",
     "abonementSalesTitle": "Абанементы",
     "pointsEmptyHint": "Спачатку дадайце кропку.",
     "operatorLabel": "Супрацоўнік",

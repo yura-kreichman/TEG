@@ -858,7 +858,7 @@
   "readings": {
     "title": "Ամփոփումներ ըստ օրերի",
     "daySummaryTitle": "Օրվա ամփոփում",
-    "daySummaryHint": "Գոտիների հանձնումների համաձայն",
+    "daySummaryHint": "Գոտիների հանձնումների և բաժանորդագրությունների համաձայն",
     "abonementSalesTitle": "Բաժանորդագրություններ",
     "pointsEmptyHint": "Նախ ավելացրեք կետ.",
     "operatorLabel": "Աշխատակից",

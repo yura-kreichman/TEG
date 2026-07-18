@@ -858,7 +858,7 @@
   "readings": {
     "title": "Rezultate zilnice",
     "daySummaryTitle": "Rezumatul zilei",
-    "daySummaryHint": "Pe baza predărilor de zonă",
+    "daySummaryHint": "Pe baza predărilor de zonă și a abonamentelor",
     "abonementSalesTitle": "Abonamente",
     "pointsEmptyHint": "Adăugați mai întâi un punct.",
     "operatorLabel": "Angajat",

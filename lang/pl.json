@@ -858,7 +858,7 @@
   "readings": {
     "title": "Wyniki dzienne",
     "daySummaryTitle": "Podsumowanie dnia",
-    "daySummaryHint": "Wg rozliczeń stref",
+    "daySummaryHint": "Wg rozliczeń stref i abonamentów",
     "abonementSalesTitle": "Abonamenty",
     "pointsEmptyHint": "Najpierw dodaj punkt.",
     "operatorLabel": "Pracownik",

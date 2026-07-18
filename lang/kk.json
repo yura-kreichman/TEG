@@ -858,7 +858,7 @@
   "readings": {
     "title": "Күндер бойынша қорытынды",
     "daySummaryTitle": "Күн қорытындысы",
-    "daySummaryHint": "Аймақ тапсырулары бойынша",
+    "daySummaryHint": "Аймақ тапсырулары және абонементтер бойынша",
     "abonementSalesTitle": "Абонементтер",
     "pointsEmptyHint": "Алдымен нүкте қосыңыз.",
     "operatorLabel": "Қызметкер",

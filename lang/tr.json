@@ -858,7 +858,7 @@
   "readings": {
     "title": "Günlük sonuçlar",
     "daySummaryTitle": "Gün özeti",
-    "daySummaryHint": "Bölge teslimlerine göre",
+    "daySummaryHint": "Bölge teslimlerine ve aboneliklere göre",
     "abonementSalesTitle": "Abonelikler",
     "pointsEmptyHint": "Önce bir nokta ekleyin.",
     "operatorLabel": "Çalışan",

@@ -858,7 +858,7 @@
   "readings": {
     "title": "Итоги по дням",
     "daySummaryTitle": "Итоги дня",
-    "daySummaryHint": "По сдачам зон",
+    "daySummaryHint": "По сдачам зон и абонементов",
     "abonementSalesTitle": "Абонементы",
     "pointsEmptyHint": "Сначала добавьте точку.",
     "operatorLabel": "Сотрудник",

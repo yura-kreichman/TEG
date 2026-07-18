@@ -858,7 +858,7 @@
   "readings": {
     "title": "Підсумки за днями",
     "daySummaryTitle": "Підсумок дня",
-    "daySummaryHint": "За здачами зон",
+    "daySummaryHint": "За здачами зон і абонементів",
     "abonementSalesTitle": "Абонементи",
     "pointsEmptyHint": "Спочатку додайте точку.",
     "operatorLabel": "Співробітник",

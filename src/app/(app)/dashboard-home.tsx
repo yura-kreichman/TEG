@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { compressImageFile } from "@/lib/client-image";
 import { useSlugPreview } from "@/lib/use-slug-preview";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
 
 function formatRelativeDay(dateStr: string, isToday: boolean, t: Dictionary): string {
   if (isToday) return t.home.today;
@@ -143,7 +144,9 @@ export function OwnerDashboardCard({
   // — по умолчанию null = "Все точки", как и было раньше. Дропдаун виден,
   // только если точек больше одной.
   const [points, setPoints] = useState<{ id: string; name: string; iconKey: string | null }[]>([]);
-  const [pointId, setPointId] = useState<string | null>(null);
+  // Запоминается между заходами (localStorage), не сбрасывается на "Все
+  // точки" каждый раз (запрос пользователя 2026-07-19).
+  const [pointId, setPointId] = usePersistedPointId();
   // Пробрасывается в ссылки "В Деньги"/"Показания по дням"/"Задачи" ниже,
   // чтобы выбор точки наследовался при переходе (запрос пользователя 2026-07-16).
   const pointQuery = pointId ? `?pointId=${pointId}` : "";

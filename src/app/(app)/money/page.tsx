@@ -14,6 +14,7 @@ import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 import { pad, toDateStr } from "@/lib/datetime-format";
 import { Money } from "@/components/money";
+import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
 
 type Granularity = "day" | "week" | "month" | "year";
 
@@ -61,8 +62,10 @@ export default function MoneyPage() {
   const [points, setPoints] = useState<{ id: string; name: string; iconKey: string | null }[]>([]);
   // Наследует выбор с главного экрана через ?pointId= (запрос пользователя
   // 2026-07-16) — ссылка "В Деньги" в карточке "Последние итоги" пробрасывает
-  // выбранную там точку сюда же.
-  const [pointId, setPointId] = useState<string | null>(() => searchParams.get("pointId"));
+  // выбранную там точку сюда же. Без параметра в URL (прямой заход через
+  // нижнюю навигацию) — берётся сохранённая точка, а не сбрасывается на "Все
+  // точки" каждый раз (запрос пользователя 2026-07-19).
+  const [pointId, setPointId] = usePersistedPointId(searchParams.get("pointId"));
 
   useEffect(() => {
     fetch("/api/points")

@@ -858,7 +858,7 @@
   "readings": {
     "title": "შედეგები დღეების მიხედვით",
     "daySummaryTitle": "დღის შედეგი",
-    "daySummaryHint": "ზონების ჩაბარებების მიხედვით",
+    "daySummaryHint": "ზონების ჩაბარებებისა და აბონემენტების მიხედვით",
     "abonementSalesTitle": "აბონემენტები",
     "pointsEmptyHint": "ჯერ დაამატეთ წერტილი.",
     "operatorLabel": "თანამშრომელი",

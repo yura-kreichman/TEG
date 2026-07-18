@@ -13,6 +13,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -93,8 +94,9 @@ export default function ReadingsCalendarPage() {
   const [checking, setChecking] = useState(true);
   const [points, setPoints] = useState<PointOption[]>([]);
   // Наследует выбор с главного экрана через ?pointId= (запрос пользователя
-  // 2026-07-16), иначе — первая точка, как и раньше.
-  const [pointId, setPointId] = useState<string | null>(() => searchParams.get("pointId"));
+  // 2026-07-16), иначе — сохранённая точка (запрос пользователя 2026-07-19),
+  // иначе — первая точка (loadPoints ниже), как и раньше.
+  const [pointId, setPointId] = usePersistedPointId(searchParams.get("pointId"));
 
   const today = new Date();
   const [year, setYear] = useState(today.getUTCFullYear());
@@ -468,21 +470,28 @@ export default function ReadingsCalendarPage() {
                 </div>
               </SpringCard>
 
-              {selectedDate && cards !== null && cards.length > 0 && (
-                <SpringCard hover={false} className="flex flex-col gap-1 border-primary/20 bg-primary/10">
-                  <div className="flex items-start justify-between gap-2">
+              {/* Общий заголовок над ОБЕИМИ карточками (Итоги дня + Абонементы
+                  ниже) — сами карточки/суммы остаются раздельными, заголовок
+                  только поясняет, что ниже два блока (запрос пользователя
+                  2026-07-19: "иконка слева на 2 строчки 'Итоги дня' и 'По
+                  сдачам зон и абонементов'", подтверждено — общий заголовок,
+                  не подпись первой карточки). */}
+              {selectedDate &&
+                (((cards?.length ?? 0) > 0 || (abonementSales?.items.length ?? 0) > 0)) && (
+                  <div className="flex items-center gap-2 px-1">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                      <FileText className="size-4.5" />
+                    </div>
                     <div>
                       <p className="text-card-title">{t.readings.daySummaryTitle}</p>
-                      {/* Явное пояснение области (запрос пользователя
-                          2026-07-18: "путаю два разных 'Наличные' на одном
-                          экране") — эта карточка про сдачи зон, у продаж
-                          абонементов ниже своя карточка и свои Наличные/Безнал,
-                          цифры не складываются друг с другом. */}
                       <p className="text-caption-airbnb text-muted-foreground">{t.readings.daySummaryHint}</p>
                     </div>
-                    <FileText className="size-5 shrink-0 text-primary" />
                   </div>
-                  <div className="mt-1 flex flex-col gap-1 border-t border-border pt-2 tabular-nums">
+                )}
+
+              {selectedDate && cards !== null && cards.length > 0 && (
+                <SpringCard hover={false} className="flex flex-col gap-1 border-primary/20 bg-primary/10">
+                  <div className="flex flex-col gap-1 tabular-nums">
                     <div className="flex items-center justify-between text-caption-airbnb">
                       <span>{t.operatorApp.submit.cashLabel}</span>
                       <span className="text-foreground"><Money value={daySummary.cash} /></span>
