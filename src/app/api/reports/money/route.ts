@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { computeZoneSubmissionRevenues, getPeriodRange, isPeriodGranularity, type PeriodGranularity } from "@/lib/reports";
-import { affectsCashOnHand, getPointCashBalance } from "@/lib/zone-balance";
+import { affectsCashOnHand, getPointAbonementCashTotal, getPointCashBalance } from "@/lib/zone-balance";
 
 // "Бизнес: расходы и прибыль" (за выбранный период) и текущий остаток "сколько
 // наличных должно быть на точке" (docs/spec/02-money.md, всегда весь журнал —
@@ -76,6 +76,12 @@ export async function GET(request: Request) {
   // авансовые деньги клиента, ещё не заработаны бизнесом).
   let totalRevenueAbonement = 0;
   let totalExpense = 0;
+  // Продажи абонементов (планов) за период — информационно, отдельно от
+  // "Выручки" (запрос пользователя 2026-07-18: "надо ли это как-то отдельно
+  // отображать" — да, но не смешивая с revenue_abonement выше и не считая в
+  // Прибыль, это аванс клиента, не заработанные деньги бизнеса).
+  let totalAbonementSoldCash = 0;
+  let totalAbonementSoldMobile = 0;
 
   for (const op of operations) {
     const amount = Number(op.amount);
@@ -98,6 +104,8 @@ export async function GET(request: Request) {
     if (op.type === "revenue") totalRevenueCash += amount;
     if (op.type === "revenue_cashless") totalRevenueMobile += amount;
     if (op.type === "revenue_abonement") totalRevenueAbonement += amount;
+    if (op.type === "abonement_topup") totalAbonementSoldCash += amount;
+    if (op.type === "abonement_topup_cashless") totalAbonementSoldMobile += amount;
     // Расходы бизнес-карточки — только обычные expense (запрос пользователя
     // 2026-07-14: авансы/премии больше не считаются здесь расходом — это
     // выплата уже заработанного персоналу, не трата бизнеса; отдельно видны
@@ -127,11 +135,18 @@ export async function GET(request: Request) {
   // (lib/zone-balance.ts), чтобы не дублировать правило "кто внёс аванс/
   // премию + с какого момента после инкассации" в двух местах.
   const pointTotals = await Promise.all(
-    points.map(async (point) => ({
-      pointId: point.id,
-      pointName: point.name,
-      total: Math.round((await getPointCashBalance(point.id)) * 100) / 100,
-    }))
+    points.map(async (point) => {
+      const [total, abonementCashTotal] = await Promise.all([
+        getPointCashBalance(point.id),
+        getPointAbonementCashTotal(point.id),
+      ]);
+      return {
+        pointId: point.id,
+        pointName: point.name,
+        total: Math.round(total * 100) / 100,
+        abonementCashTotal: Math.round(abonementCashTotal * 100) / 100,
+      };
+    })
   );
 
   return NextResponse.json({
@@ -149,6 +164,12 @@ export async function GET(request: Request) {
       expense: Math.round(totalExpense * 100) / 100,
       profit: Math.round((totalRevenueCash + totalRevenueMobile + totalRevenueAbonement + totalExpense) * 100) / 100,
       difference: Math.round(totalDifference * 100) / 100,
+    },
+    // Продажи абонементов за период — отдельно от business.* выше, не
+    // входит в Выручку/Прибыль (это аванс клиента, не заработанные деньги).
+    abonementSold: {
+      cash: Math.round(totalAbonementSoldCash * 100) / 100,
+      mobile: Math.round(totalAbonementSoldMobile * 100) / 100,
     },
   });
 }

@@ -63,10 +63,17 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       })
     : [];
   const submissionIds = new Set<string>();
+  // Дни/месяцы, где реально что-то произошло (сдача итогов, абонемент,
+  // расход/аванс/премия) — запрос пользователя 2026-07-18: "на графике не
+  // нужно отображать день, когда не было сдачи итогов, как сегодня" — линия
+  // не должна тянуться через дни без единого события, включая сегодняшний
+  // ещё не сданный день.
+  const activeDays = new Set<string>();
   for (const s of submissions) {
     submissionIds.add(s.resultsSubmission.id);
     const dayKey = s.resultsSubmission.submittedAt.toISOString().slice(0, 10);
     byDay.set(dayKey, (byDay.get(dayKey) ?? 0) + Number(s.cashAmount) + Number(s.mobileAmount));
+    activeDays.add(dayKey);
   }
 
   const moneyOps = await prisma.moneyOperation.findMany({
@@ -79,6 +86,11 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   });
   let expenses = 0;
   let payouts = 0;
+  // Продажи абонементов за период — информационно, отдельно от total/profit
+  // (запрос пользователя 2026-07-18): это аванс клиента, не заработанная
+  // выручка, поэтому не участвует в сумме ниже, в отличие от revenue_abonement.
+  let abonementSoldCash = 0;
+  let abonementSoldMobile = 0;
   // Абонемент — "Выручка" признаётся в момент траты (revenue_abonement), не
   // пополнения; касса точки эти деньги сейчас не получает (уже получила
   // раньше, при пополнении), поэтому её нет в cashAmount/mobileAmount выше,
@@ -98,12 +110,16 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     if (op.type === "expense" || op.type === "advance" || op.type === "bonus_payout") {
       const key = op.occurredAt.toISOString().slice(0, 10);
       deductionsByDay.set(key, (deductionsByDay.get(key) ?? 0) + amount);
+      activeDays.add(key);
     }
     if (op.type === "revenue_abonement") {
       totalAbonement += amount;
       const key = op.occurredAt.toISOString().slice(0, 10);
       byDay.set(key, (byDay.get(key) ?? 0) + amount);
+      activeDays.add(key);
     }
+    if (op.type === "abonement_topup") abonementSoldCash += amount;
+    if (op.type === "abonement_topup_cashless") abonementSoldMobile += amount;
   }
 
   // Previous period: only need the actual total for the delta%, no chain-walk needed.
@@ -133,10 +149,11 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
 
   // За год — 365 ежедневных столбцов на графике нечитаемы, агрегируем по
   // месяцам (12 столбцов), как и с "Неделя"/"Месяц" — по дням.
-  const bars: { date: string; total: number; profit: number }[] = [];
+  const bars: { date: string; total: number; profit: number; hasData: boolean }[] = [];
   if (granularity === "year") {
     const byMonth = new Map<string, number>();
     const deductionsByMonth = new Map<string, number>();
+    const activeMonths = new Set<string>();
     for (const [dayKey, value] of byDay) {
       const monthKey = dayKey.slice(0, 7);
       byMonth.set(monthKey, (byMonth.get(monthKey) ?? 0) + value);
@@ -145,18 +162,29 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       const monthKey = dayKey.slice(0, 7);
       deductionsByMonth.set(monthKey, (deductionsByMonth.get(monthKey) ?? 0) + value);
     }
+    for (const dayKey of activeDays) activeMonths.add(dayKey.slice(0, 7));
     for (let m = new Date(start); m < end; m = new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() + 1, 1))) {
       const key = `${m.getUTCFullYear()}-${String(m.getUTCMonth() + 1).padStart(2, "0")}`;
       const revenueForBar = byMonth.get(key) ?? 0;
       const deductionsForBar = deductionsByMonth.get(key) ?? 0;
-      bars.push({ date: `${key}-01`, total: round2(revenueForBar), profit: round2(revenueForBar - deductionsForBar) });
+      bars.push({
+        date: `${key}-01`,
+        total: round2(revenueForBar),
+        profit: round2(revenueForBar - deductionsForBar),
+        hasData: activeMonths.has(key),
+      });
     }
   } else {
     for (let d = new Date(start); d < end; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
       const key = d.toISOString().slice(0, 10);
       const revenueForBar = byDay.get(key) ?? 0;
       const deductionsForBar = deductionsByDay.get(key) ?? 0;
-      bars.push({ date: key, total: round2(revenueForBar), profit: round2(revenueForBar - deductionsForBar) });
+      bars.push({
+        date: key,
+        total: round2(revenueForBar),
+        profit: round2(revenueForBar - deductionsForBar),
+        hasData: activeDays.has(key),
+      });
     }
   }
 
@@ -167,6 +195,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     cash: round2(totalCash),
     mobile: round2(totalMobile),
     abonement: round2(totalAbonement),
+    abonementSold: { cash: round2(abonementSoldCash), mobile: round2(abonementSoldMobile) },
     submissionsCount: submissionIds.size,
     deltaPercent,
     bars,

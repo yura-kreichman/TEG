@@ -55,6 +55,24 @@ export async function getZoneBalances(zoneIds: string[]): Promise<Map<string, nu
 // Используется и для отображения (docs/spec/05-work-time.md), и для
 // валидации максимального самостоятельного аванса/премии сотрудника —
 // единая цифра, на которую опираются оба места.
+// Момент последней инкассации на точке — максимальный occurredAt среди
+// zone-level "collection" по любой её зоне (инкассация ЛЮБОЙ одной зоны
+// значит "владелец лично на точке пересчитал и забрал деньги", поэтому всё,
+// что было до неё, по всей точке целиком считается закрытым/учтённым —
+// решение пользователя 2026-07-16 для аванса/премии, распространено на
+// абонементные деньги 2026-07-18: "инкассация должна работать по абсолютно
+// всем наличным деньгам на точке").
+async function getLastCollectionAt(zoneIds: string[]): Promise<Date | null> {
+  if (zoneIds.length === 0) return null;
+  const collections = await prisma.moneyOperation.findMany({
+    where: { zoneId: { in: zoneIds }, type: "collection" },
+    select: { occurredAt: true },
+    orderBy: { occurredAt: "desc" },
+    take: 1,
+  });
+  return collections[0]?.occurredAt ?? null;
+}
+
 export async function getPointCashBalance(pointId: string): Promise<number> {
   const zones = await prisma.zone.findMany({ where: { pointId }, select: { id: true } });
   const zoneIds = zones.map((z) => z.id);
@@ -79,9 +97,36 @@ export async function getPointCashBalance(pointId: string): Promise<number> {
       if (op.performedByUserId) continue;
       if (lastCollectionAt && op.occurredAt <= lastCollectionAt) continue;
     }
+    // Абонементные наличные, собранные ДО последней инкассации, считаются
+    // уже забранными вместе с остальной кассой — тот же принцип, что у
+    // аванса/премии выше (запрос пользователя 2026-07-18).
+    if (op.type === "abonement_topup" && lastCollectionAt && op.occurredAt <= lastCollectionAt) continue;
     total += Number(op.amount);
   }
   return total;
+}
+
+// Сколько из остатка кассы точки — продажи абонементов наличными, ещё НЕ
+// инкассированные (запрос пользователя 2026-07-18: "выделить абонементные
+// деньги из общего pool в свою явную строку" + "инкассация должна работать
+// по абсолютно всем наличным деньгам на точке") — та же отсечка по
+// последней инкассации, что и в getPointCashBalance выше, иначе цифра
+// продолжала бы расти вечно, даже когда владелец физически забрал деньги.
+// Только НАЛИЧНЫЕ (abonement_topup) — безнал (abonement_topup_cashless)
+// физически не в кассе, уже исключён affectsCashOnHand.
+export async function getPointAbonementCashTotal(pointId: string): Promise<number> {
+  const zones = await prisma.zone.findMany({ where: { pointId }, select: { id: true } });
+  const lastCollectionAt = await getLastCollectionAt(zones.map((z) => z.id));
+
+  const ops = await prisma.moneyOperation.findMany({
+    where: {
+      pointId,
+      type: "abonement_topup",
+      ...(lastCollectionAt ? { occurredAt: { gt: lastCollectionAt } } : {}),
+    },
+    select: { amount: true },
+  });
+  return ops.reduce((sum, op) => sum + Number(op.amount), 0);
 }
 
 // "Пул" — деньги, которые сотрудник уже физически забрал с точки (аванс/

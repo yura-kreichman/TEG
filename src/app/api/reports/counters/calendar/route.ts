@@ -27,12 +27,29 @@ export async function GET(request: Request) {
   const monthStart = new Date(Date.UTC(year, month - 1, 1));
   const monthEnd = new Date(Date.UTC(year, month, 1));
 
-  const submissions = await prisma.resultsSubmission.findMany({
-    where: { pointId, submittedAt: { gte: monthStart, lt: monthEnd } },
-    select: { submittedAt: true },
-  });
+  const [submissions, abonementSales] = await Promise.all([
+    prisma.resultsSubmission.findMany({
+      where: { pointId, submittedAt: { gte: monthStart, lt: monthEnd } },
+      select: { submittedAt: true },
+    }),
+    // Дни, где были только продажи абонементов, без единой Сдачи итогов —
+    // тоже должны быть кликабельны (запрос пользователя 2026-07-18).
+    prisma.moneyOperation.findMany({
+      where: {
+        pointId,
+        type: { in: ["abonement_topup", "abonement_topup_cashless"] },
+        occurredAt: { gte: monthStart, lt: monthEnd },
+      },
+      select: { occurredAt: true },
+    }),
+  ]);
 
-  const activeDates = [...new Set(submissions.map((s) => s.submittedAt.toISOString().slice(0, 10)))].sort();
+  const activeDates = [
+    ...new Set([
+      ...submissions.map((s) => s.submittedAt.toISOString().slice(0, 10)),
+      ...abonementSales.map((op) => op.occurredAt.toISOString().slice(0, 10)),
+    ]),
+  ].sort();
 
   return NextResponse.json({ activeDates });
 }

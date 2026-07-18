@@ -440,12 +440,18 @@ export default function OperatorHomePage() {
             <PressableScale>
               <Button
                 variant="outline"
-                className="flex h-24 w-full flex-col items-center justify-center gap-1.5 rounded-control border-2 p-2 text-center text-xs font-bold"
+                className="flex h-24 w-full flex-col items-center justify-center gap-1.5 whitespace-normal rounded-control border-2 p-2 text-center text-xs font-bold"
                 onClick={() => router.push("/operator/work-time?add=1")}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/api/icon-library/app-icons/clock.svg" alt="" className="size-7" />
-                <span className="leading-tight">{t.operatorApp.workTime.addShiftButton}</span>
+                {/* Не переносится сам по себе — базовый Button задаёт
+                    whitespace-nowrap (запрос пользователя 2026-07-18: текст
+                    "Добавить смену" вылезал за границы кнопки в узкой
+                    3-колоночной сетке). break-words вместо надежды на
+                    единственный пробел — устойчиво к более длинным переводам
+                    в других языках. */}
+                <span className="leading-tight wrap-break-word">{t.operatorApp.workTime.addShiftButton}</span>
               </Button>
             </PressableScale>
           )}

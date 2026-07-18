@@ -100,7 +100,7 @@ model Tenant {
   // Отдельное поле, а не строка в списке Package: намеренно НЕ покупаемый,
   // не создаваемый через FluentCart пакет — только ручной рубильник в
   // /admin/tenants/[id], как limitOverrides.
-  unlimited            Boolean            @default(false)
+  unlimited            Boolean   @default(false)
 
   // Контакты тенанта для платформенной поддержки — заполняет Super Admin в
   // админ-модуле, не сам владелец (докс 2026-07-10, "полные настройки
@@ -234,13 +234,13 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  createdOperators  Operator[]                 @relation("OperatorCreatedBy")
-  corrections       CorrectionLog[]
-  moneyOps          MoneyOperation[]
-  balanceCarryovers OperatorBalanceCarryover[]
-  createdTasks      Task[]                     @relation("TaskCreatedBy")
-  assignedTasks     Task[]                     @relation("TaskAssignedUsers")
-  pushSubscriptions PushSubscription[]
+  createdOperators      Operator[]                 @relation("OperatorCreatedBy")
+  corrections           CorrectionLog[]
+  moneyOps              MoneyOperation[]
+  balanceCarryovers     OperatorBalanceCarryover[]
+  createdTasks          Task[]                     @relation("TaskCreatedBy")
+  assignedTasks         Task[]                     @relation("TaskAssignedUsers")
+  pushSubscriptions     PushSubscription[]
   abonementTransactions AbonementTransaction[]
 }
 
@@ -256,11 +256,11 @@ model User {
 // подписки, не на уровне БД (как и остальные взаимоисключающие пары полей
 // в проекте, см. Asset.photoUrl/iconKey).
 model PushSubscription {
-  id       String @id @default(cuid())
-  tenantId String
-  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userId   String?
-  user     User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String    @id @default(cuid())
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   operatorId String?
   operator   Operator? @relation(fields: [operatorId], references: [id], onDelete: Cascade)
 
@@ -292,12 +292,12 @@ model PushNotificationSettings {
   // вовсе (запрос пользователя 2026-07-16: "Владелец должен получать Push
   // когда сотрудник начал работать... вдруг Владелец не хочет получать
   // такие уведомления" — оба теперь тумблеры, как остальные три).
-  shiftCheckin   Boolean @default(true)
-  instructionAck Boolean @default(true)
+  shiftCheckin      Boolean @default(true)
+  instructionAck    Boolean @default(true)
   // Инкассация оператором — зонная и общая (запрос пользователя 2026-07-17:
   // "владелец должен получать push об инкассации"), тот же принцип, что
   // shiftCheckin — короткое мгновенное уведомление, не сводка.
-  collection Boolean @default(true)
+  collection        Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -377,18 +377,18 @@ model Operator {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  resultsSubmissions ResultsSubmission[]
-  moneyOps           MoneyOperation[]
+  resultsSubmissions    ResultsSubmission[]
+  moneyOps              MoneyOperation[]
   // Получатель аванса/премии — отдельно от "кто провёл" (moneyOps выше).
-  receivedMoneyOps   MoneyOperation[]           @relation("MoneyOperationBeneficiary")
-  rateHistory        OperatorRate[]
-  shifts             Shift[]
-  balanceCarryovers  OperatorBalanceCarryover[]
-  assignedTasks      Task[]                     @relation("TaskAssignedOperators")
-  pushSubscriptions  PushSubscription[]
+  receivedMoneyOps      MoneyOperation[]           @relation("MoneyOperationBeneficiary")
+  rateHistory           OperatorRate[]
+  shifts                Shift[]
+  balanceCarryovers     OperatorBalanceCarryover[]
+  assignedTasks         Task[]                     @relation("TaskAssignedOperators")
+  pushSubscriptions     PushSubscription[]
   // Игровая комната (docs/spec/04-game-room.md) — старт/стоп пусков.
-  launchesStarted    Launch[]                   @relation("LaunchStartedBy")
-  launchesEnded      Launch[]                   @relation("LaunchEndedBy")
+  launchesStarted       Launch[]                   @relation("LaunchStartedBy")
+  launchesEnded         Launch[]                   @relation("LaunchEndedBy")
   abonementTransactions AbonementTransaction[]
 }
 
@@ -426,7 +426,7 @@ model Point {
   // только при её отсутствии — синтезированную из latitude/longitude.
   // Публичная страница НЕ резолвит короткую ссылку сама (докс: ноль внешних
   // запросов) — просто <a href>, переход делает браузer посетителя.
-  mapsUrl String?
+  mapsUrl   String?
 
   // Временная деактивация (докс: сезонность — решение пользователя
   // 2026-07-13, "может быть связано с сезонным фактором работы точки"), тот
@@ -577,7 +577,7 @@ model Tariff {
   zoneId String
   zone   Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
-  name String
+  name  String
   // Цена counters/launches и цена/минуту "По факту". У "За вход"
   // (pricingMode="fixed") не используется — там несколько вариантов
   // длительность+цена лежат в options ниже (запрос пользователя 2026-07-17:
@@ -591,11 +591,11 @@ model Tariff {
 
   // Только у зон accountingMode="stays": "fixed" ("За вход" в UI) |
   // "per_minute" ("По факту" в UI). null у обычных тарифов counters/launches.
-  pricingMode String?
+  pricingMode  String?
   // Только "per_minute"/"По факту" — всегда "up" (докс), выбора у владельца нет.
   roundingMode String?
   // Только "per_minute"/"По факту", обязательное поле.
-  minAmount Decimal? @db.Decimal(10, 2)
+  minAmount    Decimal? @db.Decimal(10, 2)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -608,22 +608,22 @@ model Tariff {
   // прошлых периодов.
   deletedAt DateTime?
 
-  assetReadings   AssetReading[]
-  initialReadings AssetInitialReading[]
+  assetReadings     AssetReading[]
+  initialReadings   AssetInitialReading[]
   // Только accountingMode="launches" — пуски, для которых оператор выбрал
   // этот тариф в реальном времени (Launch.tariffId, запрос пользователя
   // 2026-07-17). Пусто у counters (там тариф — просто цена показания, без
   // ссылки на пуск) и у stays (там своя схема снапшота цены).
-  launches Launch[]
+  launches          Launch[]
   // Активы режима "Прибывания", которые сейчас используют этот тариф
   // (Asset.tariffId) — необязательная обратная связь, тариф существует
   // независимо от того, привязан ли к нему уже хоть один актив.
-  assetsUsingTariff Asset[] @relation("AssetTariff")
+  assetsUsingTariff Asset[]               @relation("AssetTariff")
   // Только "fixed"/"За вход" — варианты длительность+цена (запрос
   // пользователя 2026-07-17: "1 час, 2 часа..." — оператор выбирает при
   // старте пуска, см. TariffOption ниже). Пусто у "per_minute" и обычных
   // тарифов counters/launches.
-  options TariffOption[]
+  options           TariffOption[]
 
   // Не @@unique — уникальность (zoneId, order) нужна только среди активных
   // тарифов (иначе освободившийся после soft-delete слот нельзя было бы
@@ -647,7 +647,7 @@ model TariffOption {
   price           Decimal @db.Decimal(10, 2)
   // Порядок отображения списка вариантов в UI — задаёт владелец (порядок
   // добавления по умолчанию).
-  order Int
+  order           Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -693,7 +693,8 @@ model Abonement {
   // должны продолжать ссылаться на абонемент, которым когда-то пополнили.
   deletedAt DateTime?
 
-  transactions AbonementTransaction[]
+  transactions    AbonementTransaction[]
+  moneyOperations MoneyOperation[]
 
   @@index([tenantId])
 }
@@ -714,7 +715,7 @@ model AbonementWallet {
   phone String
   // Необязательное имя — для будущего поиска по имени (запрос пользователя
   // 2026-07-17: "это потом"), пока просто отображается рядом с телефоном.
-  name String?
+  name  String?
 
   balance Decimal @default(0) @db.Decimal(10, 2)
 
@@ -807,9 +808,9 @@ model Asset {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  readings         AssetReading[]
-  initialReadings  AssetInitialReading[]
-  launches         Launch[]
+  readings        AssetReading[]
+  initialReadings AssetInitialReading[]
+  launches        Launch[]
 }
 
 // Калибровочное показание счётчика (запрос пользователя 2026-07-14: "начинаю
@@ -1028,8 +1029,8 @@ model Launch {
 
   // Снапшот тарифа на момент СТАРТА (не FK на LaunchPricing — цена не должна
   // задним числом меняться, если владелец поменял тариф зоны, пока пуск шёл).
-  pricingMode     String
-  priceSnapshot   Decimal  @db.Decimal(10, 2)
+  pricingMode             String
+  priceSnapshot           Decimal  @db.Decimal(10, 2)
   durationMinutesSnapshot Int?
   roundingModeSnapshot    String?
   minAmountSnapshot       Decimal? @db.Decimal(10, 2)
@@ -1103,6 +1104,13 @@ model MoneyOperation {
 
   pointId String?
   point   Point?  @relation(fields: [pointId], references: [id])
+
+  // Только abonement_topup/abonement_topup_cashless — какой план продан
+  // (запрос пользователя 2026-07-18: реальные деньги за конкретный план,
+  // без пересчёта по ТЕКУЩЕЙ цене плана — та могла с тех пор измениться,
+  // из-за чего сумма по плану и реальная сумма расходились).
+  abonementId String?
+  abonement   Abonement? @relation(fields: [abonementId], references: [id], onDelete: SetNull)
 
   type   String
   amount Decimal @db.Decimal(10, 2)
@@ -1698,7 +1706,7 @@ model Landing {
   // переключатель владельца (решение пользователя 2026-07-13: цены могут
   // отпугивать часть посетителей, дефолт true — сохраняет текущее поведение
   // для уже опубликованных лендингов).
-  showPrices Boolean @default(true)
+  showPrices      Boolean @default(true)
 
   // Правила посещения — опциональная ссылка на ОПУБЛИКОВАННУЮ инструкцию.
   // Статус Instruction не проверяется на уровне схемы (Prisma этого не
@@ -1799,7 +1807,7 @@ model LandingZoneContent {
   // ProseMirror/Tiptap JSON — тот же примитивный редактор, что у Instruction.content
   // (решение пользователя 2026-07-13), валидация — src/lib/rich-text.ts.
   // null → нет подписи, строка не рендерится (докс, "Правила вёрстки" п.7).
-  caption Json?
+  caption  Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

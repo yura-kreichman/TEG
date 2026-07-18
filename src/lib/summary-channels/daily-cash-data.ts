@@ -89,6 +89,23 @@ export async function buildDailyCashSummaryData(
     }
   }
 
+  // Продажа абонементов (планов) за день — реальные деньги, отдельно от
+  // abonementAmount выше (та — трата с баланса, не продажа) — запрос
+  // пользователя 2026-07-18: тот же разрыв, что закрыт в Итогах дня.
+  const abonementSalesOps = await prisma.moneyOperation.findMany({
+    where: { type: { in: ["abonement_topup", "abonement_topup_cashless"] }, occurredAt: { gte: bounds.start, lt: bounds.end }, pointId },
+    select: { amount: true, type: true },
+  });
+  const abonementSold = abonementSalesOps.reduce(
+    (acc, op) => {
+      const amount = Number(op.amount);
+      if (op.type === "abonement_topup_cashless") acc.mobile += amount;
+      else acc.cash += amount;
+      return acc;
+    },
+    { cash: 0, mobile: 0 }
+  );
+
   // Премии/авансы, которые сотрудник взял САМ из кассы точки (запрос
   // пользователя 2026-07-17: "Премии+Авансы, которые взял Сотрудник") —
   // только performedByOperatorId (самообслуживание), НЕ владельческие
@@ -126,6 +143,7 @@ export async function buildDailyCashSummaryData(
     // см. комментарий у abonementOps выше (запрос пользователя 2026-07-17:
     // "во всех отчётах и сводках должны быть правильные цифры").
     abonementAmount: round2(abonementAmount),
+    abonementSold: { cash: round2(abonementSold.cash), mobile: round2(abonementSold.mobile) },
     expenses: round2(expenses),
     bonusesAndAdvances: round2(bonusesAndAdvances),
     zoneBreakdown: [...zoneRevenueById.entries()].map(([zoneId, z]) => ({

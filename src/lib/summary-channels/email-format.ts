@@ -141,6 +141,12 @@ export function formatDailyCashSummaryEmail(
     if (data.abonementAmount > 0) {
       rows.push({ label: st.abonement, value: formatMoney(data.abonementAmount, locale) });
     }
+    // Продажа абонементов — реальные деньги, отдельно от абонемента-как-
+    // способа-оплаты выше (запрос пользователя 2026-07-18: тот же разрыв,
+    // что уже закрыт в Итогах дня/Отчётах/Остатках).
+    if (data.abonementSold.cash + data.abonementSold.mobile > 0) {
+      rows.push({ label: st.abonementSold, value: formatMoney(data.abonementSold.cash + data.abonementSold.mobile, locale) });
+    }
   }
   if (settings.showExpenses) {
     rows.push({ label: st.expenses, value: formatMoney(data.expenses, locale) });
@@ -180,7 +186,10 @@ export function formatShiftCloseSummaryEmail(
 
   if (settings.showPeriod) rows.push({ label: st.period, value: `${formatLocalTime(data.startAt, timezone)} – ${formatLocalTime(data.endAt, timezone)}` });
   if (settings.showHours) rows.push({ label: st.hoursWorked, value: formatDuration(data.minutes) });
-  if (settings.showAdvance && data.advanceAmount > 0) rows.push({ label: st.advance, value: formatMoney(data.advanceAmount, locale) });
+  // Аванс: 0 показывается всегда при включённом тумблере (запрос
+  // пользователя 2026-07-18: "если сотрудник не брал Аванс, то надо
+  // выводить Аванс: 0"), в отличие от Премии ниже.
+  if (settings.showAdvance) rows.push({ label: st.advance, value: formatMoney(data.advanceAmount, locale) });
   if (settings.showBonus && data.bonusAmount > 0) rows.push({ label: st.bonus, value: formatMoney(data.bonusAmount, locale) });
   if (settings.showTotal) rows.push({ label: st.toPayOutFull, value: formatMoney(data.toPayOut, locale), bold: true });
 

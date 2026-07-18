@@ -38,9 +38,10 @@ interface DynamicsData {
   cash: number;
   mobile: number;
   abonement: number;
+  abonementSold: { cash: number; mobile: number };
   submissionsCount: number;
   deltaPercent: number | null;
-  bars: { date: string; total: number; profit: number }[];
+  bars: { date: string; total: number; profit: number; hasData: boolean }[];
   profitAndLoss: { revenue: number; expenses: number; payouts: number; profit: number };
 }
 
@@ -386,6 +387,15 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
   const maxVal = Math.max(1, ...data.bars.flatMap((b) => [b.total, b.profit]));
   const yFor = (v: number) => 100 - ((v - minVal) / (maxVal - minVal)) * 100;
 
+  // Дни без единого события (сдача/абонемент/расход) — например, сегодняшний
+  // ещё не сданный день — целиком убраны из графика (запрос пользователя
+  // 2026-07-18: "зачем отображать 2 реально пустых дня" — не просто без линии,
+  // а без самого столбца/подписи дня недели), не только без точки/линии.
+  const visibleBars = data.bars.filter((b) => b.hasData);
+  const xFor = (i: number) => ((i + 0.5) / visibleBars.length) * 100;
+  const totalPoints = visibleBars.map((b, i) => `${xFor(i)},${yFor(b.total)}`).join(" ");
+  const profitPoints = visibleBars.map((b, i) => `${xFor(i)},${yFor(b.profit)}`).join(" ");
+
   return (
     <div className="flex flex-col gap-3">
       <SpringCard animate={false} hover={false}>
@@ -458,12 +468,12 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
                 на каждый ряд — расхождению просто неоткуда взяться. */}
             <div
               className="grid gap-1"
-              style={{ gridTemplateColumns: `repeat(${data.bars.length}, minmax(${CHART_COLUMN_MIN_WIDTH}px, 1fr))` }}
+              style={{ gridTemplateColumns: `repeat(${visibleBars.length}, minmax(${CHART_COLUMN_MIN_WIDTH}px, 1fr))` }}
             >
               {/* Суммы Выручки и Прибыли рядом друг с другом, каждая своим
                   цветом (запрос пользователя 2026-07-16: "надо отображать
                   суммы прибыли, как и выручки, рядом"). */}
-              {data.bars.map((b) => (
+              {visibleBars.map((b) => (
                 <div key={`values-${b.date}`} className="overflow-hidden text-center text-[0.5rem] font-bold tabular-nums">
                   {b.total > 0 && <div className="truncate text-primary">{formatMoneyCompact(b.total, locale, t.reports.compactThousandSuffix, t.reports.compactMillionSuffix)}</div>}
                   {b.profit !== 0 && <div className="truncate text-success">{formatMoneyCompact(b.profit, locale, t.reports.compactThousandSuffix, t.reports.compactMillionSuffix)}</div>}
@@ -478,14 +488,14 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
                   (запрос пользователя 2026-07-16: "убери все тултипы везде в
                   этих графиках") — только статичные подписи выше/ниже. */}
               <div className="relative col-span-full" style={{ height: 70 }}>
-                {data.bars.length > 1 && (
+                {visibleBars.length > 1 && (
                   <svg
                     className="pointer-events-none absolute inset-0 size-full overflow-visible"
                     viewBox="0 0 100 100"
                     preserveAspectRatio="none"
                   >
                     <polyline
-                      points={data.bars.map((b, i) => `${((i + 0.5) / data.bars.length) * 100},${yFor(b.total)}`).join(" ")}
+                      points={totalPoints}
                       fill="none"
                       className="text-primary"
                       stroke="currentColor"
@@ -495,7 +505,7 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
                       vectorEffect="non-scaling-stroke"
                     />
                     <polyline
-                      points={data.bars.map((b, i) => `${((i + 0.5) / data.bars.length) * 100},${yFor(b.profit)}`).join(" ")}
+                      points={profitPoints}
                       fill="none"
                       className="text-success"
                       stroke="currentColor"
@@ -506,8 +516,8 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
                     />
                   </svg>
                 )}
-                {data.bars.map((b, i) => {
-                  const x = ((i + 0.5) / data.bars.length) * 100;
+                {visibleBars.map((b, i) => {
+                  const x = xFor(i);
                   return (
                     <div key={`markers-${b.date}`} className="pointer-events-none absolute inset-0 size-full">
                       <div
@@ -522,7 +532,7 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
                   );
                 })}
               </div>
-              {data.bars.map((b) => (
+              {visibleBars.map((b) => (
                 <div key={`weekday-${b.date}`} className="overflow-hidden truncate text-center text-[0.625rem] font-semibold text-muted-foreground">
                   {new Date(b.date).toLocaleDateString(
                     undefined,
@@ -553,6 +563,28 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
             <div className="text-[1rem] font-bold">{data.submissionsCount}</div>
           </div>
         </div>
+
+        {/* Продажи абонементов — в той же плашке (запрос пользователя
+            2026-07-18: "Абонементы и эти итоги должны быть в одной
+            плашке"), но не в сумме total/Прибыли выше — принцип учёта не
+            меняется, это аванс клиента, не выручка бизнеса. */}
+        {(data.abonementSold.cash > 0 || data.abonementSold.mobile > 0) && (
+          <div className="mt-3.5 flex items-start justify-between gap-2 border-t border-border pt-3.5">
+            <div>
+              <p className="text-card-title">{t.money.abonementSoldTitle}</p>
+              <p className="text-caption-airbnb text-muted-foreground">{t.money.abonementSoldHint}</p>
+            </div>
+            <div className="flex min-w-0 shrink-0 flex-col items-end gap-0.5 text-right text-caption-airbnb tabular-nums">
+              <span>
+                {t.reports.cashLabel}: <span className="font-bold text-foreground"><Money value={data.abonementSold.cash} /></span>
+              </span>
+              <span>
+                {t.reports.mobileLabel}:{" "}
+                <span className="font-bold text-foreground"><Money value={data.abonementSold.mobile} /></span>
+              </span>
+            </div>
+          </div>
+        )}
       </SpringCard>
 
       <SpringCard animate={false} hover={false}>
@@ -631,6 +663,29 @@ function normalizedRatio(value: number, minVal: number, maxVal: number) {
   return maxVal > minVal ? (value - minVal) / (maxVal - minVal) : 1;
 }
 
+// Ранговая позиция среди РЕАЛЬНЫХ значений — для смайлика в тултипе, ОТДЕЛЬНО
+// от непрерывной заливки ячейки выше (запрос пользователя 2026-07-18): при
+// вторник=2700/среда=2300/четверг=1400 непрерывная интерполяция между min и
+// max давала среде ratio≈0.69 — она "переезжала" в верхнюю треть (улыбка) и
+// красилась почти как вторник, хотя её место строго посередине трёх дат.
+// Ранг гарантирует: минимум — Frown, максимум — Smile, всё остальное честно
+// распределяется по позиции в отсортированном списке, а не по абсолютной
+// удалённости от крайних точек. Среднее место при повторах — устойчиво к
+// одинаковым суммам в разные дни.
+function rankRatio(value: number, sortedAscending: number[]): number {
+  if (sortedAscending.length <= 1) return 1;
+  let sum = 0;
+  let count = 0;
+  for (let i = 0; i < sortedAscending.length; i++) {
+    if (sortedAscending[i] === value) {
+      sum += i;
+      count++;
+    }
+  }
+  if (count === 0) return 1;
+  return sum / count / (sortedAscending.length - 1);
+}
+
 // Заливка ячейки — непрерывная функция ratio, НЕ через 3-уровневый
 // moodLevel (тот остаётся дискретным только для смайлика в тултипе, у
 // эмоции и должно быть всего 3 фазы — запрос пользователя 2026-07-16). Баг
@@ -643,8 +698,9 @@ function cellOpacity(ratio: number) {
   return 0.35 + ratio * 0.65;
 }
 
-function CellTooltip({ value, minVal, maxVal }: { value: number; minVal: number; maxVal: number }) {
-  const level = moodLevel(normalizedRatio(value, minVal, maxVal));
+function CellTooltip({ value, presentValues }: { value: number; presentValues: number[] }) {
+  const sorted = [...presentValues].sort((a, b) => a - b);
+  const level = moodLevel(rankRatio(value, sorted));
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -895,7 +951,7 @@ function CalendarTab({ data, t }: { data: CalendarData; t: ReturnType<typeof use
                 )}
                 <span className="relative">{d.total > 0 ? Math.round(d.total / 100) / 10 + "к" : ""}</span>
                 <AnimatePresence>
-                  {activeDate === d.date && <CellTooltip value={d.total} minVal={minVal} maxVal={maxVal} />}
+                  {activeDate === d.date && <CellTooltip value={d.total} presentValues={presentValues} />}
                 </AnimatePresence>
               </div>
             ))}
@@ -984,7 +1040,7 @@ function CalendarMonthsTab({
                 )}
               </span>
               <AnimatePresence>
-                {activeMonth === mo.month && <CellTooltip value={mo.total} minVal={minVal} maxVal={maxVal} />}
+                {activeMonth === mo.month && <CellTooltip value={mo.total} presentValues={presentMonthValues} />}
               </AnimatePresence>
             </div>
           ))}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Banknote, ChevronLeft, ChevronRight, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { Banknote, ChevronLeft, ChevronRight, Gift, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -36,6 +36,7 @@ interface PointTotal {
   pointId: string;
   pointName: string;
   total: number;
+  abonementCashTotal: number;
 }
 
 interface CollectionEntry {
@@ -319,7 +320,13 @@ export default function ZoneBalancesPage() {
               // невидимый общий итог).
               const pointTotal = pointTotals.find((p) => p.pointId === pointId);
               const zonesRawSum = group.zones.reduce((sum, z) => sum + z.balance, 0);
-              const pool = pointTotal ? Math.round((pointTotal.total - zonesRawSum) * 100) / 100 : 0;
+              // Абонементные продажи наличными выделены в свою строку ниже
+              // (запрос пользователя 2026-07-18) — вычитаем их из pool, иначе
+              // они продолжали бы молча размазываться по остаткам зон как
+              // будто это аванс/премия, которую забрал сотрудник.
+              const pool = pointTotal
+                ? Math.round((pointTotal.total - zonesRawSum - pointTotal.abonementCashTotal) * 100) / 100
+                : 0;
               const allocation =
                 pool !== 0
                   ? distributeCollectionWhole(
@@ -367,6 +374,21 @@ export default function ZoneBalancesPage() {
                   </div>
                   );
                 })}
+                {/* Абонементы, проданные наличными на этой точке, ещё не
+                    инкассированные — своя явная строка, не смешанная с
+                    остатками зон (запрос пользователя 2026-07-18: "выделить
+                    абонементные деньги из общего pool"). */}
+                {pointTotal && pointTotal.abonementCashTotal > 0 && (
+                  <div className="flex items-center justify-between border-t border-border py-3 pl-1">
+                    <p className="flex items-center gap-1.5 text-body-airbnb">
+                      <Gift className="size-4 shrink-0 text-muted-foreground" />
+                      {t.money.abonementCashLabel}
+                    </p>
+                    <span className="text-[0.96875rem] font-bold tabular-nums">
+                      <Money value={pointTotal.abonementCashTotal} />
+                    </span>
+                  </div>
+                )}
               </div>
               );
             })}

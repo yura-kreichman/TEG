@@ -103,6 +103,7 @@ export async function topUpWallet(walletId: string, params: TopupParams) {
       data: {
         tenantId,
         pointId,
+        abonementId: plan.id,
         type: abonementTopupMoneyType(paymentMethod),
         amount: plan.price,
         performedByOperatorId: actor.operatorId,
@@ -166,6 +167,7 @@ export async function createWalletWithTopup(rawPhone: string, name: string | nul
       data: {
         tenantId,
         pointId,
+        abonementId: plan.id,
         type: abonementTopupMoneyType(paymentMethod),
         amount: plan.price,
         performedByOperatorId: actor.operatorId,

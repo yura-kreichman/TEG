@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Info, MapPin, Minus, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Gift, Info, MapPin, Minus, Pencil, Plus, Trash2 } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
@@ -67,6 +67,21 @@ interface DayCard {
   }[];
 }
 
+// Продажи абонементов за день — независимый от зон "карман" (запрос
+// пользователя 2026-07-18), items по аналогии с активами: план+цена+способ
+// оплаты+количество, вместо одной плоской суммы.
+interface AbonementSales {
+  cash: number;
+  mobile: number;
+  items: {
+    abonementId: string;
+    name: string | null;
+    cashAmount: number;
+    cashCount: number;
+    mobileAmount: number;
+    mobileCount: number;
+  }[];
+}
 
 type ActionsView = "menu" | "edit" | "confirm-delete";
 
@@ -88,6 +103,9 @@ export default function ReadingsCalendarPage() {
   const [activeDates, setActiveDates] = useState<Set<string>>(new Set());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [cards, setCards] = useState<DayCard[] | null>(null);
+  // Продажи абонементов за день — отдельный "карман", не привязанный ни к
+  // одной зоне (запрос пользователя 2026-07-18), грузится вместе с cards.
+  const [abonementSales, setAbonementSales] = useState<AbonementSales | null>(null);
   // День последней сдачи итогов — открывается по умолчанию (запрос
   // пользователя 2026-07-15), а не сегодняшний пустой день. Резолвится один
   // раз на каждую смену точки, до первой загрузки календаря — иначе был бы
@@ -136,6 +154,7 @@ export default function ReadingsCalendarPage() {
     if (!res.ok) return;
     const data = await res.json();
     setCards(data.cards ?? []);
+    setAbonementSales(data.abonementSales ?? null);
   }
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -355,6 +374,7 @@ export default function ReadingsCalendarPage() {
                       setPointId(v);
                       setSelectedDate(null);
                       setCards(null);
+                      setAbonementSales(null);
                     }}
                     items={points.map((p) => ({ value: p.id, label: p.name }))}
                   >
@@ -449,7 +469,15 @@ export default function ReadingsCalendarPage() {
 
               {selectedDate && cards !== null && cards.length > 0 && (
                 <SpringCard hover={false} className="flex flex-col gap-1">
-                  <p className="text-card-title">{t.readings.daySummaryTitle}</p>
+                  <div>
+                    <p className="text-card-title">{t.readings.daySummaryTitle}</p>
+                    {/* Явное пояснение области (запрос пользователя
+                        2026-07-18: "путаю два разных 'Наличные' на одном
+                        экране") — эта карточка про сдачи зон, у продаж
+                        абонементов ниже своя карточка и свои Наличные/Безнал,
+                        цифры не складываются друг с другом. */}
+                    <p className="text-caption-airbnb text-muted-foreground">{t.readings.daySummaryHint}</p>
+                  </div>
                   <div className="mt-1 flex flex-col gap-1 border-t border-border pt-2 tabular-nums">
                     <div className="flex items-center justify-between text-caption-airbnb">
                       <span>{t.operatorApp.submit.cashLabel}</span>
@@ -489,12 +517,62 @@ export default function ReadingsCalendarPage() {
                 </SpringCard>
               )}
 
+              {/* Продажи абонементов — отдельная карточка, не смешанная с
+                  зонами (запрос пользователя 2026-07-18): эти деньги не
+                  привязаны ни к одной зоне и не входят в Расчёт/Разницу
+                  выше. Список планов по аналогии с активами ("Абонемент —
+                  это Актив, Тариф — это стоимость абонемента"). */}
+              {selectedDate && abonementSales !== null && abonementSales.items.length > 0 && (
+                <SpringCard hover={false} className="flex flex-col gap-1">
+                  <div>
+                    <p className="text-card-title">{t.readings.abonementSalesTitle}</p>
+                    <p className="text-caption-airbnb text-muted-foreground">{t.readings.abonementSalesHint}</p>
+                  </div>
+                  <div className="mt-1 flex flex-col border-t border-border tabular-nums">
+                    {abonementSales.items.map((item) => (
+                      <div
+                        key={item.abonementId}
+                        className="flex items-center gap-2 border-b border-border py-2 last:border-b-0"
+                      >
+                        <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                          <Gift className="size-4" />
+                        </div>
+                        <div className="min-w-0 flex-1 text-caption-airbnb">
+                          <span className="font-semibold text-foreground">{item.name ?? t.abonements.title}</span>
+                          <span className="text-muted-foreground">
+                            {" "}
+                            ·{" "}
+                            {[
+                              item.cashCount > 0 && `${item.cashCount} ${t.operatorApp.submit.cashLabel.toLowerCase()}`,
+                              item.mobileCount > 0 && `${item.mobileCount} ${t.operatorApp.submit.mobileLabel.toLowerCase()}`,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
+                        </div>
+                        <span className="shrink-0 font-semibold text-foreground">
+                          <Money value={item.cashAmount + item.mobileAmount} />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-1 flex items-center justify-between border-t border-border pt-2 text-caption-airbnb font-semibold tabular-nums">
+                    <span className="text-foreground">
+                      {t.operatorApp.submit.cashLabel}: <Money value={abonementSales.cash} /> ·{" "}
+                      {t.operatorApp.submit.mobileLabel}: <Money value={abonementSales.mobile} />
+                    </span>
+                  </div>
+                </SpringCard>
+              )}
+
               {selectedDate && (
                 <div className="flex flex-col gap-3">
                   {cards === null ? null : cards.length === 0 ? (
-                    <p className="mt-1 text-body-airbnb text-muted-foreground">
-                      {t.readings.noSubmissionsPrefix} {formatReadableDate(selectedDate)}
-                    </p>
+                    (abonementSales?.items.length ?? 0) === 0 && (
+                      <p className="mt-1 text-body-airbnb text-muted-foreground">
+                        {t.readings.noSubmissionsPrefix} {formatReadableDate(selectedDate)}
+                      </p>
+                    )
                   ) : (
                     cards.map((card) => (
                       <SpringCard key={card.zoneSubmissionId} hover={false} className="flex flex-col gap-0">

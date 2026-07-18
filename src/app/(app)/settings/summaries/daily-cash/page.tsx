@@ -40,6 +40,8 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): Dai
     // предпросмотре "Сводки по зоне" (см. zone/page.tsx): предпросмотр
     // условный, показывает форму, а не гарантированно все возможные строки.
     abonementAmount: 0,
+    // Демо не показывает строку продажи абонементов (0) — тот же принцип.
+    abonementSold: { cash: 0, mobile: 0 },
     expenses: 120,
     // Демо не показывает строку "Премии и Авансы" (0) — тот же принцип, что
     // и у abonementAmount выше.

@@ -39,6 +39,73 @@ export async function GET(request: Request) {
   const dayStart = new Date(`${date}T00:00:00.000Z`);
   const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
+  // Продажа абонементов (планов) за эту дату+точку — независимо от Сдачи
+  // итогов (запрос пользователя 2026-07-18: "в Итогах дня и остатках на
+  // точке это должно быть... Сотруднику не надо вводить Наличные или
+  // Безнал, нам это и так известно при продаже"). Единственный источник —
+  // MoneyOperation (реальные деньги, MoneyOperation.abonementId — какой
+  // план): НЕ AbonementTransaction.amount (это creditAmount с учётом
+  // бонуса — другая цифра) и НЕ ТЕКУЩАЯ цена плана (Abonement.price могла
+  // измениться с тех пор — реальный баг, найденный пользователем: сумма по
+  // плану в списке и итоговая сумма внизу расходились). Отдельным
+  // "карманом" от карточек зон — эти деньги не привязаны ни к одной зоне.
+  const abonementSalesOps = await prisma.moneyOperation.findMany({
+    where: {
+      pointId,
+      type: { in: ["abonement_topup", "abonement_topup_cashless"] },
+      occurredAt: { gte: dayStart, lt: dayEnd },
+    },
+    select: { abonementId: true, amount: true, type: true },
+  });
+  const abonementSalesTotals = abonementSalesOps.reduce(
+    (acc, op) => {
+      const amount = Number(op.amount);
+      if (op.type === "abonement_topup_cashless") acc.mobile += amount;
+      else acc.cash += amount;
+      return acc;
+    },
+    { cash: 0, mobile: 0 }
+  );
+
+  // Разбивка по конкретным планам — по аналогии с тем, как карточка зоны
+  // показывает список активов с тарифом (запрос пользователя 2026-07-18:
+  // "Абонемент — это Актив, Тариф — это стоимость абонемента... может так и
+  // стоит отображать"). Одна строка на план ("не надо полный список
+  // продаж... просто Абонемент и его количество продаж по Наличному и
+  // безналичному"), сумма — реальная (из MoneyOperation), не пересчитанная.
+  const planIds = [...new Set(abonementSalesOps.map((op) => op.abonementId).filter((id): id is string => !!id))];
+  const plans = planIds.length
+    ? await prisma.abonement.findMany({ where: { id: { in: planIds } }, select: { id: true, name: true } })
+    : [];
+  const planById = new Map(plans.map((p) => [p.id, p]));
+
+  const abonementSaleItemsByPlan = new Map<
+    string,
+    { abonementId: string; name: string | null; cashAmount: number; cashCount: number; mobileAmount: number; mobileCount: number }
+  >();
+  for (const op of abonementSalesOps) {
+    const plan = op.abonementId ? planById.get(op.abonementId) : undefined;
+    if (!op.abonementId || !plan) continue;
+    const existing = abonementSaleItemsByPlan.get(op.abonementId) ?? {
+      abonementId: op.abonementId,
+      name: plan.name,
+      cashAmount: 0,
+      cashCount: 0,
+      mobileAmount: 0,
+      mobileCount: 0,
+    };
+    const amount = Number(op.amount);
+    if (op.type === "abonement_topup_cashless") {
+      existing.mobileAmount += amount;
+      existing.mobileCount += 1;
+    } else {
+      existing.cashAmount += amount;
+      existing.cashCount += 1;
+    }
+    abonementSaleItemsByPlan.set(op.abonementId, existing);
+  }
+  const abonementSales = { ...abonementSalesTotals, items: [...abonementSaleItemsByPlan.values()] };
+
   const submissions = await prisma.resultsSubmission.findMany({
     where: { pointId, submittedAt: { gte: dayStart, lt: dayEnd } },
     include: {
@@ -56,7 +123,7 @@ export async function GET(request: Request) {
   });
 
   if (submissions.length === 0) {
-    return NextResponse.json({ cards: [] });
+    return NextResponse.json({ cards: [], abonementSales });
   }
 
   // Sessions/previous-value are always computed from the immediately preceding
@@ -263,5 +330,5 @@ export async function GET(request: Request) {
     })
   );
 
-  return NextResponse.json({ cards });
+  return NextResponse.json({ cards, abonementSales });
 }
