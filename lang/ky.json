@@ -859,6 +859,7 @@
     "title": "Күндөр боюнча жыйынтык",
     "daySummaryTitle": "Күндүн жыйынтыгы",
     "daySummaryHint": "Зоналарды тапшыруу жана абонементтер боюнча",
+    "pointCashWithAbonementLabel": "Чекиттин кассасы абонементтер менен:",
     "abonementSalesTitle": "Абонементтер",
     "pointsEmptyHint": "Адегенде чекитти кошуңуз.",
     "operatorLabel": "Кызматкер",

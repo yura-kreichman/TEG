@@ -859,6 +859,7 @@
     "title": "შედეგები დღეების მიხედვით",
     "daySummaryTitle": "დღის შედეგი",
     "daySummaryHint": "ზონების ჩაბარებებისა და აბონემენტების მიხედვით",
+    "pointCashWithAbonementLabel": "წერტილის სალარო აბონემენტებთან ერთად:",
     "abonementSalesTitle": "აბონემენტები",
     "pointsEmptyHint": "ჯერ დაამატეთ წერტილი.",
     "operatorLabel": "თანამშრომელი",

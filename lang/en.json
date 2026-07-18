@@ -859,6 +859,7 @@
     "title": "Daily results",
     "daySummaryTitle": "Day summary",
     "daySummaryHint": "By zone submissions and subscriptions",
+    "pointCashWithAbonementLabel": "Point cash incl. subscriptions:",
     "abonementSalesTitle": "Subscriptions",
     "pointsEmptyHint": "Add a point first.",
     "operatorLabel": "Employee",

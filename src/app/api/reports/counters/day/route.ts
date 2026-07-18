@@ -140,16 +140,30 @@ export async function GET(request: Request) {
   const liveLaunches = liveZoneSubmissionIds.length
     ? await prisma.launch.findMany({
         where: { zoneSubmissionId: { in: liveZoneSubmissionIds }, voidedAt: null },
-        select: { zoneSubmissionId: true, amount: true },
+        select: { zoneSubmissionId: true, assetId: true, amount: true },
       })
     : [];
   const liveRevenueBySubmission = new Map<string, number>();
+  // По активу — та же группировка Launch по assetId, что уже есть в
+  // lib/reports.ts (computeZoneSubmissionRevenues), нужна отдельно и здесь:
+  // без неё карточка вообще не показывала разбивку по активам для таких зон
+  // (assets ниже строится только из assetReadings, у Launch-зон он пуст —
+  // реальный пробел, найден пользователем 2026-07-19 сразу следом за фиксом
+  // выручки).
+  const liveAssetsBySubmission = new Map<string, Map<string, { count: number; amount: number }>>();
   for (const l of liveLaunches) {
     if (!l.zoneSubmissionId) continue;
     liveRevenueBySubmission.set(
       l.zoneSubmissionId,
       (liveRevenueBySubmission.get(l.zoneSubmissionId) ?? 0) + Number(l.amount ?? 0)
     );
+    if (!l.assetId) continue;
+    const bySubmission = liveAssetsBySubmission.get(l.zoneSubmissionId) ?? new Map();
+    const bucket = bySubmission.get(l.assetId) ?? { count: 0, amount: 0 };
+    bucket.count += 1;
+    bucket.amount += Number(l.amount ?? 0);
+    bySubmission.set(l.assetId, bucket);
+    liveAssetsBySubmission.set(l.zoneSubmissionId, bySubmission);
   }
 
   // Sessions/previous-value are always computed from the immediately preceding
@@ -339,6 +353,29 @@ export async function GET(request: Request) {
         }))
         .filter((a) => a.readings.length > 0);
 
+      // Разбивка по активам для "Прибываний"/тап-"Пусков" — из Launch, не из
+      // assetReadings (см. комментарий у liveAssetsBySubmission выше). Форма
+      // сознательно другая, чем у "readings" (нет "было→стало" — у пусков нет
+      // непрерывного счётчика, только дискретные события): count+amount, тот
+      // же стиль, что уже показывает список проданных абонементов.
+      const liveAssetBuckets = liveAssetsBySubmission.get(zs.id);
+      const liveAssets = liveAssetBuckets
+        ? zs.zone.assets
+            .filter((asset) => liveAssetBuckets.has(asset.id))
+            .map((asset) => {
+              const bucket = liveAssetBuckets.get(asset.id)!;
+              return {
+                assetId: asset.id,
+                assetName: asset.name,
+                colorTag: asset.colorTag,
+                photoUrl: asset.photoUrl,
+                iconKey: asset.iconKey,
+                count: bucket.count,
+                amount: Math.round(bucket.amount * 100) / 100,
+              };
+            })
+        : [];
+
       return {
         zoneSubmissionId: zs.id,
         zoneId: zs.zoneId,
@@ -362,6 +399,7 @@ export async function GET(request: Request) {
         // 2026-07-15), не только после сохранения.
         tariffs: zs.zone.tariffs.map((t) => ({ tariffId: t.id, price: Number(t.price) })),
         assets,
+        liveAssets,
       };
     })
   );

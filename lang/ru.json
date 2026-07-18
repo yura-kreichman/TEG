@@ -859,6 +859,7 @@
     "title": "Итоги по дням",
     "daySummaryTitle": "Итоги дня",
     "daySummaryHint": "По сдачам зон и абонементов",
+    "pointCashWithAbonementLabel": "Касса точки с абонементами:",
     "abonementSalesTitle": "Абонементы",
     "pointsEmptyHint": "Сначала добавьте точку.",
     "operatorLabel": "Сотрудник",

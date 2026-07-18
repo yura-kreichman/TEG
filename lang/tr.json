@@ -859,6 +859,7 @@
     "title": "Günlük sonuçlar",
     "daySummaryTitle": "Gün özeti",
     "daySummaryHint": "Bölge teslimlerine ve aboneliklere göre",
+    "pointCashWithAbonementLabel": "Nokta kasası aboneliklerle:",
     "abonementSalesTitle": "Abonelikler",
     "pointsEmptyHint": "Önce bir nokta ekleyin.",
     "operatorLabel": "Çalışan",

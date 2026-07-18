@@ -859,6 +859,7 @@
     "title": "Wyniki dzienne",
     "daySummaryTitle": "Podsumowanie dnia",
     "daySummaryHint": "Wg rozliczeń stref i abonamentów",
+    "pointCashWithAbonementLabel": "Kasa punktu z abonamentami:",
     "abonementSalesTitle": "Abonamenty",
     "pointsEmptyHint": "Najpierw dodaj punkt.",
     "operatorLabel": "Pracownik",

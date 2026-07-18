@@ -68,6 +68,18 @@ interface DayCard {
     iconKey: string | null;
     readings: DayAssetReading[];
   }[];
+  // "Прибывания"/тап-"Пуски" — из Launch, не из assetReadings, отдельное
+  // поле вместо переиспользования "assets" выше: форма другая (count+amount,
+  // без "было→стало", у пусков нет непрерывного счётчика).
+  liveAssets: {
+    assetId: string;
+    assetName: string;
+    colorTag: string;
+    photoUrl: string | null;
+    iconKey: string | null;
+    count: number;
+    amount: number;
+  }[];
 }
 
 // Продажи абонементов за день — независимый от зон "карман" (запрос
@@ -586,6 +598,32 @@ export default function ReadingsCalendarPage() {
                         <Money value={daySummary.difference} />
                       </span>
                     </div>
+                    {/* Отдельная строка — сколько всего денег физически на
+                      точке за день, включая продажи абонементов (запрос
+                      пользователя 2026-07-19: "пусть будет видно Фактическая
+                      касса + абонементы"). Не заменяет и не трогает
+                      Фактическую кассу/Разницу выше — те сверяют именно
+                      сдачи зон с расчётной выручкой, у продажи абонемента
+                      нет расчётной пары для сверки. Показываем только когда
+                      абонементы вообще продавались в этот день. */}
+                    {(abonementSales?.cash ?? 0) + (abonementSales?.mobile ?? 0) > 0 && (
+                      <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
+                        <span>{t.readings.pointCashWithAbonementLabel}</span>
+                        {/* Сумма — вдвое крупнее подписи (0.78125rem × 2 =
+                            1.5625rem), запрос пользователя 2026-07-19. */}
+                        <span className="text-[1.5625rem] font-bold leading-none text-foreground">
+                          <Money
+                            value={
+                              daySummary.cash +
+                              daySummary.mobile +
+                              daySummary.abonement +
+                              (abonementSales?.cash ?? 0) +
+                              (abonementSales?.mobile ?? 0)
+                            }
+                          />
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </SpringCard>
               )}
@@ -726,6 +764,43 @@ export default function ReadingsCalendarPage() {
                                     </span>
                                   </div>
                                 ))}
+                                </div>
+                              </div>
+                            ))}
+                          {/* "Прибывания"/тап-"Пуски" — из Launch, не из
+                              assetReadings, поэтому card.assets тут всегда
+                              пуст (реальный пробел, найден пользователем
+                              2026-07-19 сразу следом за фиксом выручки для
+                              этих же зон: "почему тут не делаешь разбивку по
+                              активам?"). Count+amount вместо "было→стало" —
+                              у пусков нет непрерывного счётчика. */}
+                          {card.accountingMode !== "cash_only" &&
+                            card.liveAssets.map((asset) => (
+                              <div key={asset.assetId} className="mt-1.5 flex items-center gap-2">
+                                <div className="relative shrink-0">
+                                  <div className="flex size-16 items-center justify-center overflow-hidden rounded-control bg-muted">
+                                    {asset.photoUrl ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img src={asset.photoUrl} alt="" className="size-full object-contain object-center" />
+                                    ) : asset.iconKey ? (
+                                      <AssetOrZoneIcon iconKey={asset.iconKey} className="size-8 text-muted-foreground" />
+                                    ) : null}
+                                  </div>
+                                  <span
+                                    className="absolute -bottom-0.5 -right-0.5 size-4 rounded-full ring-2 ring-card"
+                                    style={{ backgroundColor: asset.colorTag }}
+                                  />
+                                </div>
+                                <div className="flex min-w-0 flex-1 items-center justify-between">
+                                  <span className="text-caption-airbnb font-semibold text-foreground">
+                                    {asset.assetName}
+                                  </span>
+                                  <span className="flex items-center gap-1.5 text-caption-airbnb tabular-nums">
+                                    <span className="text-muted-foreground">{asset.count}</span>
+                                    <span className="font-bold text-primary">
+                                      <Money value={asset.amount} />
+                                    </span>
+                                  </span>
                                 </div>
                               </div>
                             ))}

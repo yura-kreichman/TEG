@@ -859,6 +859,7 @@
     "title": "Підсумки за днями",
     "daySummaryTitle": "Підсумок дня",
     "daySummaryHint": "За здачами зон і абонементів",
+    "pointCashWithAbonementLabel": "Каса точки з абонементами:",
     "abonementSalesTitle": "Абонементи",
     "pointsEmptyHint": "Спочатку додайте точку.",
     "operatorLabel": "Співробітник",

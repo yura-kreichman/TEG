@@ -859,6 +859,7 @@
     "title": "Riepiloghi giornalieri",
     "daySummaryTitle": "Riepilogo del giorno",
     "daySummaryHint": "Per consegne zona e abbonamenti",
+    "pointCashWithAbonementLabel": "Cassa del punto con abbonamenti:",
     "abonementSalesTitle": "Abbonamenti",
     "pointsEmptyHint": "Aggiungi prima un punto.",
     "operatorLabel": "Dipendente",
