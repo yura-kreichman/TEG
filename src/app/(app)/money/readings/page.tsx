@@ -285,18 +285,10 @@ export default function ReadingsCalendarPage() {
       mobile: acc.mobile + card.mobileAmount,
       abonement: acc.abonement + card.abonementAmount,
       calculatedRevenue: acc.calculatedRevenue + card.calculatedRevenue,
-      // Разница считается от netRevenue (за вычетом тестов/возвратов), а
-      // Расчётная выручка выше — валовая (запрос пользователя 2026-07-16,
-      // см. route.ts) — эти два числа расходятся сами по себе, без ошибки.
-      // Без отдельной строки "Выручка после возвратов" разница между ними
-      // выглядела необъяснимой (реальная путаница пользователя, найдено
-      // 2026-07-19 — на скрине Расчётная 4005, Фактическая касса 3935,
-      // Разница 0, и без этой строки непонятно, откуда взялись эти 70₽).
-      netRevenue: acc.netRevenue + card.netRevenue,
       returnsCount: acc.returnsCount + card.returnsCount,
       difference: Math.round((acc.difference + card.difference) * 100) / 100,
     }),
-    { cash: 0, mobile: 0, abonement: 0, calculatedRevenue: 0, netRevenue: 0, returnsCount: 0, difference: 0 }
+    { cash: 0, mobile: 0, abonement: 0, calculatedRevenue: 0, returnsCount: 0, difference: 0 }
   );
 
   if (checking || !dateReady) return null;
@@ -477,7 +469,7 @@ export default function ReadingsCalendarPage() {
               </SpringCard>
 
               {selectedDate && cards !== null && cards.length > 0 && (
-                <SpringCard hover={false} className="flex flex-col gap-1">
+                <SpringCard hover={false} className="flex flex-col gap-1 border-primary/20 bg-primary/10">
                   <div>
                     <p className="text-card-title">{t.readings.daySummaryTitle}</p>
                     {/* Явное пояснение области (запрос пользователя
@@ -502,7 +494,12 @@ export default function ReadingsCalendarPage() {
                         <span className="text-foreground"><Money value={daySummary.abonement} /></span>
                       </div>
                     )}
-                    {daySummary.returnsCount > 0 && (
+                    {/* Применимость — по режиму учёта, как у карточки
+                        отдельной зоны ниже (cash_only его не поддерживает),
+                        а НЕ по тому, нулевое ли число — 0 возвратов за день
+                        тоже валидный результат и должен быть виден (запрос
+                        пользователя 2026-07-19). */}
+                    {cards.some((c) => c.accountingMode !== "cash_only") && (
                       <div className="flex items-center justify-between text-caption-airbnb">
                         <span>{t.operatorApp.submit.returnsLabelShort}</span>
                         <span className="text-foreground">{daySummary.returnsCount}</span>
@@ -524,17 +521,13 @@ export default function ReadingsCalendarPage() {
                       </span>
                     </div>
                     {/* Разница сверяется с ЧИСТОЙ выручкой (за вычетом
-                        тестов/возвратов), а строка выше — валовая — без этой
-                        строки расхождение между ними выглядит необъяснимым
-                        (реальная путаница пользователя, найдено 2026-07-19).
-                        Показываем только когда есть возвраты — иначе валовая
-                        и чистая совпадают, строка была бы лишней. */}
-                    {daySummary.returnsCount > 0 && (
-                      <div className="flex items-center justify-between text-caption-airbnb">
-                        <span>{t.readings.netRevenueLabel}</span>
-                        <span className="text-foreground"><Money value={daySummary.netRevenue} /></span>
-                      </div>
-                    )}
+                        тестов/возвратов) — сама эта чистая выручка отдельной
+                        строкой не показывается: она математически совпадает
+                        с "Фактическая касса" ровно когда Разница=0 (обычный
+                        случай) — вторая строка с тем же числом только
+                        путала (реальная путаница пользователя, найдено
+                        2026-07-19: "Фактическая выручка и Выручка после
+                        возвратов это одно и то же"). */}
                     <div className="flex items-center justify-between text-caption-airbnb">
                       <span>{t.operatorApp.submit.difference}</span>
                       <span
