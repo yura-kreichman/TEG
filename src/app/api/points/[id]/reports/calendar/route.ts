@@ -40,17 +40,34 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   });
   const zoneIds = zones.map((z) => z.id);
 
-  const submissions = zoneIds.length
-    ? await prisma.zoneSubmission.findMany({
-        where: { zoneId: { in: zoneIds }, resultsSubmission: { submittedAt: { gte: start, lt: end } } },
-        select: { cashAmount: true, mobileAmount: true, resultsSubmission: { select: { submittedAt: true } } },
-      })
-    : [];
+  const [submissions, abonementOps] = await Promise.all([
+    zoneIds.length
+      ? prisma.zoneSubmission.findMany({
+          where: { zoneId: { in: zoneIds }, resultsSubmission: { submittedAt: { gte: start, lt: end } } },
+          select: { cashAmount: true, mobileAmount: true, resultsSubmission: { select: { submittedAt: true } } },
+        })
+      : Promise.resolve([]),
+    // Абонемент — не в cashAmount/mobileAmount (касса точки эти деньги
+    // сейчас не получает, уже получила раньше, при пополнении), но реальная
+    // выручка бизнеса — без неё тепловая карта занижала активность дней с
+    // абонементными пусками (тот же разрыв, что и в /reports/counters/day,
+    // запрос пользователя 2026-07-17/18).
+    zoneIds.length
+      ? prisma.moneyOperation.findMany({
+          where: { type: "revenue_abonement", zoneId: { in: zoneIds }, occurredAt: { gte: start, lt: end } },
+          select: { amount: true, occurredAt: true },
+        })
+      : Promise.resolve([]),
+  ]);
 
   const byDay = new Map<string, number>();
   for (const s of submissions) {
     const key = s.resultsSubmission.submittedAt.toISOString().slice(0, 10);
     byDay.set(key, (byDay.get(key) ?? 0) + Number(s.cashAmount) + Number(s.mobileAmount));
+  }
+  for (const op of abonementOps) {
+    const key = op.occurredAt.toISOString().slice(0, 10);
+    byDay.set(key, (byDay.get(key) ?? 0) + Math.abs(Number(op.amount)));
   }
 
   // "Год" — 12 месяцев, а не сетка дней недели: 52 строки нечитаемы на

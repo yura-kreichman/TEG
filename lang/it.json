@@ -149,6 +149,7 @@
     "vsPreviousPeriodSuffix": "rispetto al periodo precedente",
     "cashLabel": "Contanti",
     "mobileLabel": "Non in contanti",
+    "abonementLabel": "Abbonamento",
     "submissionsLabel": "Chiusure",
     "noDataForPeriod": "Nessun dato per questo periodo",
     "plTitle": "Utile del periodo",

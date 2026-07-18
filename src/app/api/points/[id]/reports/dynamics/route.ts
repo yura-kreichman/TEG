@@ -69,18 +69,6 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     byDay.set(dayKey, (byDay.get(dayKey) ?? 0) + Number(s.cashAmount) + Number(s.mobileAmount));
   }
 
-  // Previous period: only need the actual total for the delta%, no chain-walk needed.
-  const prevSubmissions = zoneIds.length
-    ? await prisma.zoneSubmission.findMany({
-        where: { zoneId: { in: zoneIds }, resultsSubmission: { submittedAt: { gte: prevStart, lt: prevEnd } } },
-        select: { cashAmount: true, mobileAmount: true },
-      })
-    : [];
-  const prevTotal = prevSubmissions.reduce((sum, s) => sum + Number(s.cashAmount) + Number(s.mobileAmount), 0);
-
-  const total = totalCash + totalMobile;
-  const deltaPercent = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 1000) / 10 : null;
-
   const moneyOps = await prisma.moneyOperation.findMany({
     where: {
       tenantId: owner.tenantId,
@@ -91,6 +79,14 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   });
   let expenses = 0;
   let payouts = 0;
+  // Абонемент — "Выручка" признаётся в момент траты (revenue_abonement), не
+  // пополнения; касса точки эти деньги сейчас не получает (уже получила
+  // раньше, при пополнении), поэтому её нет в cashAmount/mobileAmount выше,
+  // но она реальная выручка бизнеса и должна попадать в total/profit ниже —
+  // тот же разрыв, что уже был найден и исправлен в daily-cash-data.ts/
+  // counters/day/route.ts (запрос пользователя 2026-07-17/18: "во всех
+  // отчётах и сводках должны быть правильные цифры"), тут был пропущен.
+  let totalAbonement = 0;
   // По дням — для линии "Прибыль" на графике (запрос пользователя 2026-07-16:
   // "и Выручку, и Прибыль двумя разными цветами"), тот же принцип, что byDay
   // для выручки выше.
@@ -103,7 +99,37 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       const key = op.occurredAt.toISOString().slice(0, 10);
       deductionsByDay.set(key, (deductionsByDay.get(key) ?? 0) + amount);
     }
+    if (op.type === "revenue_abonement") {
+      totalAbonement += amount;
+      const key = op.occurredAt.toISOString().slice(0, 10);
+      byDay.set(key, (byDay.get(key) ?? 0) + amount);
+    }
   }
+
+  // Previous period: only need the actual total for the delta%, no chain-walk needed.
+  const [prevSubmissions, prevAbonementOps] = await Promise.all([
+    zoneIds.length
+      ? prisma.zoneSubmission.findMany({
+          where: { zoneId: { in: zoneIds }, resultsSubmission: { submittedAt: { gte: prevStart, lt: prevEnd } } },
+          select: { cashAmount: true, mobileAmount: true },
+        })
+      : Promise.resolve([]),
+    prisma.moneyOperation.findMany({
+      where: {
+        tenantId: owner.tenantId,
+        type: "revenue_abonement",
+        occurredAt: { gte: prevStart, lt: prevEnd },
+        ...(isAllPoints ? {} : { OR: [{ zone: { pointId } }, { pointId }] }),
+      },
+      select: { amount: true },
+    }),
+  ]);
+  const prevTotal =
+    prevSubmissions.reduce((sum, s) => sum + Number(s.cashAmount) + Number(s.mobileAmount), 0) +
+    prevAbonementOps.reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0);
+
+  const total = totalCash + totalMobile + totalAbonement;
+  const deltaPercent = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 1000) / 10 : null;
 
   // За год — 365 ежедневных столбцов на графике нечитаемы, агрегируем по
   // месяцам (12 столбцов), как и с "Неделя"/"Месяц" — по дням.
@@ -140,6 +166,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     total: round2(total),
     cash: round2(totalCash),
     mobile: round2(totalMobile),
+    abonement: round2(totalAbonement),
     submissionsCount: submissionIds.size,
     deltaPercent,
     bars,

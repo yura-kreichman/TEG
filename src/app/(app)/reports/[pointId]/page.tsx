@@ -37,6 +37,7 @@ interface DynamicsData {
   total: number;
   cash: number;
   mobile: number;
+  abonement: number;
   submissionsCount: number;
   deltaPercent: number | null;
   bars: { date: string; total: number; profit: number }[];
@@ -532,7 +533,7 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
             </div>
           </div>
         </div>
-        <div className="mt-3.5 grid grid-cols-3 gap-3 border-t border-border pt-3.5 tabular-nums">
+        <div className={cn("mt-3.5 grid gap-3 border-t border-border pt-3.5 tabular-nums", data.abonement > 0 ? "grid-cols-4" : "grid-cols-3")}>
           <div>
             <div className="text-caption-airbnb">{t.reports.cashLabel}</div>
             <div className="text-[1rem] font-bold"><Money value={data.cash} /></div>
@@ -541,6 +542,12 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
             <div className="text-caption-airbnb">{t.reports.mobileLabel}</div>
             <div className="text-[1rem] font-bold"><Money value={data.mobile} /></div>
           </div>
+          {data.abonement > 0 && (
+            <div>
+              <div className="text-caption-airbnb">{t.reports.abonementLabel}</div>
+              <div className="text-[1rem] font-bold"><Money value={data.abonement} /></div>
+            </div>
+          )}
           <div>
             <div className="text-caption-airbnb">{t.reports.submissionsLabel}</div>
             <div className="text-[1rem] font-bold">{data.submissionsCount}</div>

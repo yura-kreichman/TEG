@@ -149,6 +149,7 @@
     "vsPreviousPeriodSuffix": "до попереднього періоду",
     "cashLabel": "Готівка",
     "mobileLabel": "Безнал",
+    "abonementLabel": "Абонемент",
     "submissionsLabel": "Здач",
     "noDataForPeriod": "За цей період даних немає",
     "plTitle": "Прибуток за період",

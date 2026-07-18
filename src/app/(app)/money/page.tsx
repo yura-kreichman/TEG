@@ -18,7 +18,15 @@ import { Money } from "@/components/money";
 type Granularity = "day" | "week" | "month" | "year";
 
 interface Report {
-  business: { revenue: number; cash: number; mobile: number; expense: number; profit: number; difference: number };
+  business: {
+    revenue: number;
+    cash: number;
+    mobile: number;
+    abonement: number;
+    expense: number;
+    profit: number;
+    difference: number;
+  };
 }
 
 export default function MoneyPage() {
@@ -408,6 +416,12 @@ export default function MoneyPage() {
                 <span>
                   {t.reports.mobileLabel}: <span className="font-bold text-foreground"><Money value={report.business.mobile} /></span>
                 </span>
+                {report.business.abonement > 0 && (
+                  <span>
+                    {t.reports.abonementLabel}:{" "}
+                    <span className="font-bold text-foreground"><Money value={report.business.abonement} /></span>
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex border-t border-border pt-3.5 tabular-nums">
