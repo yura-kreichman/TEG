@@ -3,6 +3,19 @@ import { getBusinessDayBounds, isAtBoundaryMinute, isAtTimeMinute } from "@/lib/
 import { maybeSendDailyCashSummary } from "@/lib/summary-channels/daily-cash-trigger";
 import { DAILY_CASH_SUMMARY_DEFAULTS, type DailyCashSummarySettingsData } from "@/lib/summary-settings";
 
+// Небольшая пауза между отправками точек одного тика (запрос пользователя
+// 2026-07-18: "между отправками сводок... для уверенности") — единственное
+// место в проекте, где сообщения в один Telegram-чат реально могут уйти
+// почти одновременно: у тенанта с несколькими точками на одном фиксированном
+// времени отправки все точки шлются в одном тике подряд, без паузы рискуя
+// упереться в лимит Telegram (~1 сообщение/сек на чат). В реактивных
+// отправках (после сдачи итогов/закрытия смены) паузы нет и не нужно —
+// они и так естественно разнесены действиями человека.
+const BETWEEN_POINTS_DELAY_MS = 500;
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // Планировщик "Кассы за день" — единственный источник time-based (не по
 // действию пользователя) триггеров в проекте, поэтому просто setInterval
 // внутри процесса (см. решение в чате: обычный сервер, не серверлесс, значит
@@ -67,6 +80,7 @@ async function tick() {
       } catch (err) {
         console.error("summary scheduler tick failed", { pointId: point.id, err });
       }
+      await sleep(BETWEEN_POINTS_DELAY_MS);
     }
   }
 }
