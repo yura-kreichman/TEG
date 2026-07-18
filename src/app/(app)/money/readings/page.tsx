@@ -285,9 +285,18 @@ export default function ReadingsCalendarPage() {
       mobile: acc.mobile + card.mobileAmount,
       abonement: acc.abonement + card.abonementAmount,
       calculatedRevenue: acc.calculatedRevenue + card.calculatedRevenue,
+      // Разница считается от netRevenue (за вычетом тестов/возвратов), а
+      // Расчётная выручка выше — валовая (запрос пользователя 2026-07-16,
+      // см. route.ts) — эти два числа расходятся сами по себе, без ошибки.
+      // Без отдельной строки "Выручка после возвратов" разница между ними
+      // выглядела необъяснимой (реальная путаница пользователя, найдено
+      // 2026-07-19 — на скрине Расчётная 4005, Фактическая касса 3935,
+      // Разница 0, и без этой строки непонятно, откуда взялись эти 70₽).
+      netRevenue: acc.netRevenue + card.netRevenue,
+      returnsCount: acc.returnsCount + card.returnsCount,
       difference: Math.round((acc.difference + card.difference) * 100) / 100,
     }),
-    { cash: 0, mobile: 0, abonement: 0, calculatedRevenue: 0, difference: 0 }
+    { cash: 0, mobile: 0, abonement: 0, calculatedRevenue: 0, netRevenue: 0, returnsCount: 0, difference: 0 }
   );
 
   if (checking || !dateReady) return null;
@@ -493,6 +502,12 @@ export default function ReadingsCalendarPage() {
                         <span className="text-foreground"><Money value={daySummary.abonement} /></span>
                       </div>
                     )}
+                    {daySummary.returnsCount > 0 && (
+                      <div className="flex items-center justify-between text-caption-airbnb">
+                        <span>{t.operatorApp.submit.returnsLabelShort}</span>
+                        <span className="text-foreground">{daySummary.returnsCount}</span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between border-t border-border pt-1.5 text-caption-airbnb font-semibold">
                       <span className="text-foreground">{t.operatorApp.submit.calculatedRevenue}</span>
                       <span className="text-foreground"><Money value={daySummary.calculatedRevenue} /></span>
@@ -508,6 +523,18 @@ export default function ReadingsCalendarPage() {
                         <Money value={daySummary.cash + daySummary.mobile + daySummary.abonement} />
                       </span>
                     </div>
+                    {/* Разница сверяется с ЧИСТОЙ выручкой (за вычетом
+                        тестов/возвратов), а строка выше — валовая — без этой
+                        строки расхождение между ними выглядит необъяснимым
+                        (реальная путаница пользователя, найдено 2026-07-19).
+                        Показываем только когда есть возвраты — иначе валовая
+                        и чистая совпадают, строка была бы лишней. */}
+                    {daySummary.returnsCount > 0 && (
+                      <div className="flex items-center justify-between text-caption-airbnb">
+                        <span>{t.readings.netRevenueLabel}</span>
+                        <span className="text-foreground"><Money value={daySummary.netRevenue} /></span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between text-caption-airbnb">
                       <span>{t.operatorApp.submit.difference}</span>
                       <span
