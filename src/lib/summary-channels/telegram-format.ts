@@ -213,7 +213,11 @@ export function formatZoneSummaryTelegram(
         // только cashAmount, без mobileAmount — расхождение было в отображении,
         // не в расчёте разницы (та всегда считалась правильно).
         const actualCash = data.cashAmount + data.mobileAmount;
-        const cmp = actualCash < data.calculatedRevenue ? "<" : actualCash > data.calculatedRevenue ? ">" : "=";
+        // HTML-сущности, не голые "<"/">" (реальный сбой отправки, найден
+        // 2026-07-18 по продовым логам: "Bad Request: can't parse entities" —
+        // Telegram с parse_mode="HTML" воспринимает голый "<" как начало
+        // тега и роняет отправку целиком, зона не приходит вообще).
+        const cmp = actualCash < data.calculatedRevenue ? "&lt;" : actualCash > data.calculatedRevenue ? "&gt;" : "=";
         const bits: string[] = [];
         if (settings.showCash) bits.push(`💵 ${st.cashOnly}: <b>${formatMoney(actualCash, locale)}</b>`);
         if (settings.showCash && settings.showCalc) bits.push(cmp);
