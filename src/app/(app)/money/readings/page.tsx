@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Gift, Info, MapPin, Minus, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Gift, Info, MapPin, Minus, Pencil, Plus, Trash2 } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
@@ -470,14 +470,17 @@ export default function ReadingsCalendarPage() {
 
               {selectedDate && cards !== null && cards.length > 0 && (
                 <SpringCard hover={false} className="flex flex-col gap-1 border-primary/20 bg-primary/10">
-                  <div>
-                    <p className="text-card-title">{t.readings.daySummaryTitle}</p>
-                    {/* Явное пояснение области (запрос пользователя
-                        2026-07-18: "путаю два разных 'Наличные' на одном
-                        экране") — эта карточка про сдачи зон, у продаж
-                        абонементов ниже своя карточка и свои Наличные/Безнал,
-                        цифры не складываются друг с другом. */}
-                    <p className="text-caption-airbnb text-muted-foreground">{t.readings.daySummaryHint}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-card-title">{t.readings.daySummaryTitle}</p>
+                      {/* Явное пояснение области (запрос пользователя
+                          2026-07-18: "путаю два разных 'Наличные' на одном
+                          экране") — эта карточка про сдачи зон, у продаж
+                          абонементов ниже своя карточка и свои Наличные/Безнал,
+                          цифры не складываются друг с другом. */}
+                      <p className="text-caption-airbnb text-muted-foreground">{t.readings.daySummaryHint}</p>
+                    </div>
+                    <FileText className="size-5 shrink-0 text-primary" />
                   </div>
                   <div className="mt-1 flex flex-col gap-1 border-t border-border pt-2 tabular-nums">
                     <div className="flex items-center justify-between text-caption-airbnb">
@@ -557,10 +560,7 @@ export default function ReadingsCalendarPage() {
                   это Актив, Тариф — это стоимость абонемента"). */}
               {selectedDate && abonementSales !== null && abonementSales.items.length > 0 && (
                 <SpringCard hover={false} className="flex flex-col gap-1">
-                  <div>
-                    <p className="text-card-title">{t.readings.abonementSalesTitle}</p>
-                    <p className="text-caption-airbnb text-muted-foreground">{t.readings.abonementSalesHint}</p>
-                  </div>
+                  <p className="text-card-title">{t.readings.abonementSalesTitle}</p>
                   <div className="mt-1 flex flex-col border-t border-border tabular-nums">
                     {abonementSales.items.map((item) => (
                       <div
@@ -589,12 +589,19 @@ export default function ReadingsCalendarPage() {
                       </div>
                     ))}
                   </div>
-                  <div className="mt-1 flex items-center justify-between border-t border-border pt-2 text-caption-airbnb font-semibold tabular-nums">
-                    <span className="text-foreground">
-                      {t.operatorApp.submit.cashLabel}: <Money value={abonementSales.cash} /> ·{" "}
-                      {t.operatorApp.submit.mobileLabel}: <Money value={abonementSales.mobile} />
-                    </span>
-                  </div>
+                  {/* Итог отдельной строкой — только когда тарифов
+                      несколько: при одном тарифе он дублирует ту же сумму,
+                      что уже видна в строке товара выше (запрос
+                      пользователя 2026-07-19: "Наличные и безнал я добавил
+                      бы в ту же строчку"). */}
+                  {abonementSales.items.length > 1 && (
+                    <div className="mt-1 flex items-center justify-between border-t border-border pt-2 text-caption-airbnb font-semibold tabular-nums">
+                      <span className="text-foreground">
+                        {t.operatorApp.submit.cashLabel}: <Money value={abonementSales.cash} /> ·{" "}
+                        {t.operatorApp.submit.mobileLabel}: <Money value={abonementSales.mobile} />
+                      </span>
+                    </div>
+                  )}
                 </SpringCard>
               )}
 
