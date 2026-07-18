@@ -162,7 +162,12 @@ export async function POST(request: Request) {
       const agg = gameRoomAggregateByZone.get(zone.id)!;
       const calculatedRevenue = agg.calculatedRevenue;
       const actualCash = zs.cashAmount + zs.mobileAmount;
-      const difference = Math.round((actualCash - calculatedRevenue) * 100) / 100;
+      // abonementAmount вычитается из calculatedRevenue здесь — эта касса уже
+      // получила эти деньги раньше, при пополнении абонемента, не сейчас
+      // (реальный баг, найден пользователем 2026-07-18: без вычитания
+      // разница ложно показывала недостачу ровно на сумму пусков,
+      // оплаченных абонементом, каждый раз).
+      const difference = Math.round((actualCash + agg.abonementAmount - calculatedRevenue) * 100) / 100;
       return {
         zoneId: zs.zoneId,
         zoneName: zone.name,

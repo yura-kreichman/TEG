@@ -61,6 +61,14 @@ export interface ZoneSubmissionRevenue {
   actualCash: number;
   actualMobile: number;
   actualTotal: number;
+  // Справочно — сумма пусков, оплаченных абонементом в рамках этой сдачи
+  // (докс: "во всех отчётах и сводках должны быть правильные цифры", запрос
+  // пользователя 2026-07-17/18). НЕ входит в actualTotal (касса её не
+  // получала сейчас), но ВЫЧИТАЕТСЯ из calculatedRevenue при расчёте
+  // difference ниже — иначе разница ложно показывала бы недостачу ровно на
+  // эту сумму каждый раз, когда клиент платит абонементом (реальный баг,
+  // найден пользователем 2026-07-18 через собственный числовой пример).
+  abonementAmount: number;
   difference: number;
   perAsset: Map<string, number>; // assetId -> calculated revenue share (before proportional scaling)
   perTariff: Map<string, number>; // tariffId -> calculated revenue share
@@ -136,15 +144,20 @@ export async function computeZoneSubmissionRevenues(
   const gameRoomLaunches = staysSubmissionIds.length
     ? await prisma.launch.findMany({
         where: { zoneSubmissionId: { in: staysSubmissionIds }, voidedAt: null },
-        select: { zoneSubmissionId: true, assetId: true, amount: true },
+        select: { zoneSubmissionId: true, assetId: true, amount: true, paymentMethod: true },
       })
     : [];
-  const gameRoomBySubmission = new Map<string, { calculatedRevenue: number; perAsset: Map<string, number> }>();
+  const gameRoomBySubmission = new Map<
+    string,
+    { calculatedRevenue: number; abonementAmount: number; perAsset: Map<string, number> }
+  >();
   for (const l of gameRoomLaunches) {
     if (!l.zoneSubmissionId || !l.assetId) continue;
-    const bucket = gameRoomBySubmission.get(l.zoneSubmissionId) ?? { calculatedRevenue: 0, perAsset: new Map() };
+    const bucket =
+      gameRoomBySubmission.get(l.zoneSubmissionId) ?? { calculatedRevenue: 0, abonementAmount: 0, perAsset: new Map() };
     const amount = Number(l.amount ?? 0);
     bucket.calculatedRevenue += amount;
+    if (l.paymentMethod === "abonement") bucket.abonementAmount += amount;
     bucket.perAsset.set(l.assetId, (bucket.perAsset.get(l.assetId) ?? 0) + amount);
     gameRoomBySubmission.set(l.zoneSubmissionId, bucket);
   }
@@ -163,20 +176,21 @@ export async function computeZoneSubmissionRevenues(
   const launchesTallies = launchesTallySubmissionIds.length
     ? await prisma.launch.findMany({
         where: { zoneSubmissionId: { in: launchesTallySubmissionIds }, voidedAt: null },
-        select: { zoneSubmissionId: true, assetId: true, tariffId: true, amount: true },
+        select: { zoneSubmissionId: true, assetId: true, tariffId: true, amount: true, paymentMethod: true },
       })
     : [];
   const launchesTallyBySubmission = new Map<
     string,
-    { calculatedRevenue: number; perAsset: Map<string, number>; perTariff: Map<string, number> }
+    { calculatedRevenue: number; abonementAmount: number; perAsset: Map<string, number>; perTariff: Map<string, number> }
   >();
   for (const l of launchesTallies) {
     if (!l.zoneSubmissionId || !l.assetId || !l.tariffId) continue;
     const bucket =
       launchesTallyBySubmission.get(l.zoneSubmissionId) ??
-      { calculatedRevenue: 0, perAsset: new Map(), perTariff: new Map() };
+      { calculatedRevenue: 0, abonementAmount: 0, perAsset: new Map(), perTariff: new Map() };
     const amount = Number(l.amount ?? 0);
     bucket.calculatedRevenue += amount;
+    if (l.paymentMethod === "abonement") bucket.abonementAmount += amount;
     bucket.perAsset.set(l.assetId, (bucket.perAsset.get(l.assetId) ?? 0) + amount);
     bucket.perTariff.set(l.tariffId, (bucket.perTariff.get(l.tariffId) ?? 0) + amount);
     launchesTallyBySubmission.set(l.zoneSubmissionId, bucket);
@@ -188,6 +202,7 @@ export async function computeZoneSubmissionRevenues(
     const sessionsFor = (r: (typeof zs.assetReadings)[number]) => (isLaunches ? r.reading : (sessionsById.get(r.id) ?? 0));
 
     let calculatedRevenue: number;
+    let abonementAmount = 0;
     let perAsset: Map<string, number>;
     // "Прибывания" не хранят Tariff.id на пуске (только снапшот цены) —
     // разбивка по тарифам для этого режима не строится (остаётся пустой
@@ -197,10 +212,12 @@ export async function computeZoneSubmissionRevenues(
     if (isStaysZone(zone)) {
       const bucket = gameRoomBySubmission.get(zs.id);
       calculatedRevenue = bucket?.calculatedRevenue ?? 0;
+      abonementAmount = bucket?.abonementAmount ?? 0;
       perAsset = bucket?.perAsset ?? new Map();
     } else if (isLaunches && zs.assetReadings.length === 0) {
       const bucket = launchesTallyBySubmission.get(zs.id);
       calculatedRevenue = bucket?.calculatedRevenue ?? 0;
+      abonementAmount = bucket?.abonementAmount ?? 0;
       perAsset = bucket?.perAsset ?? new Map();
       perTariff = bucket?.perTariff ?? new Map();
     } else {
@@ -223,7 +240,12 @@ export async function computeZoneSubmissionRevenues(
     const actualCash = Number(zs.cashAmount);
     const actualMobile = Number(zs.mobileAmount);
     const actualTotal = actualCash + actualMobile;
-    const difference = Math.round((actualTotal - calculatedRevenue) * 100) / 100;
+    // abonementAmount вычитается из calculatedRevenue здесь — эта касса уже
+    // получила эти деньги раньше, при пополнении абонемента, не сейчас
+    // (реальный баг, найден пользователем 2026-07-18: без вычитания разница
+    // ложно показывала недостачу ровно на сумму пусков, оплаченных
+    // абонементом, каждый раз).
+    const difference = Math.round((actualTotal + abonementAmount - calculatedRevenue) * 100) / 100;
 
     return {
       zoneSubmissionId: zs.id,
@@ -232,6 +254,7 @@ export async function computeZoneSubmissionRevenues(
       actualCash,
       actualMobile,
       actualTotal,
+      abonementAmount,
       difference,
       perAsset,
       perTariff,

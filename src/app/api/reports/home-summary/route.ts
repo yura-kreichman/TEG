@@ -93,16 +93,26 @@ export async function GET(request: Request) {
   const liveLaunches = liveZoneSubmissionIds.length
     ? await prisma.launch.findMany({
         where: { zoneSubmissionId: { in: liveZoneSubmissionIds }, voidedAt: null },
-        select: { zoneSubmissionId: true, amount: true },
+        select: { zoneSubmissionId: true, amount: true, paymentMethod: true },
       })
     : [];
   const liveRevenueBySubmission = new Map<string, number>();
+  // Абонемент — касса точки эту сумму уже получила раньше, при пополнении,
+  // не сейчас — вычитается из calculatedRevenue при расчёте разницы ниже
+  // (реальный баг, найден пользователем 2026-07-18: без вычитания разница
+  // ложно показывала недостачу ровно на сумму пусков, оплаченных
+  // абонементом).
+  const liveAbonementBySubmission = new Map<string, number>();
   for (const l of liveLaunches) {
     if (!l.zoneSubmissionId) continue;
-    liveRevenueBySubmission.set(
-      l.zoneSubmissionId,
-      (liveRevenueBySubmission.get(l.zoneSubmissionId) ?? 0) + Number(l.amount ?? 0)
-    );
+    const amount = Number(l.amount ?? 0);
+    liveRevenueBySubmission.set(l.zoneSubmissionId, (liveRevenueBySubmission.get(l.zoneSubmissionId) ?? 0) + amount);
+    if (l.paymentMethod === "abonement") {
+      liveAbonementBySubmission.set(
+        l.zoneSubmissionId,
+        (liveAbonementBySubmission.get(l.zoneSubmissionId) ?? 0) + amount
+      );
+    }
   }
 
   let totalDifference = 0;
@@ -113,7 +123,8 @@ export async function GET(request: Request) {
 
       if (isStaysZone(zs.zone) || (isLaunchesZone(zs.zone) && zs.assetReadings.length === 0)) {
         const calculatedRevenue = liveRevenueBySubmission.get(zs.id) ?? 0;
-        totalDifference += actualCash - calculatedRevenue;
+        const abonementAmount = liveAbonementBySubmission.get(zs.id) ?? 0;
+        totalDifference += actualCash + abonementAmount - calculatedRevenue;
         continue;
       }
 

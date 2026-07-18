@@ -187,17 +187,19 @@ export async function GET(request: Request) {
       const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
       const netRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
       const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
-      const difference = Math.round((actualCash - netRevenue) * 100) / 100;
-      // Справочно, рядом с cashAmount/mobileAmount — НЕ в кассе/разнице выше
-      // (запрос пользователя 2026-07-17: "во всех отчётах... правильные
-      // цифры", "к Наличный и Безнал добавить Абонемент") — сумма реальна,
-      // но касса точки её уже получила раньше, при пополнении, поэтому она
-      // намеренно не входит в actualCash/difference, только показывается
-      // отдельной строкой.
+      // Справочно, рядом с cashAmount/mobileAmount — сумма реальна, но касса
+      // точки её уже получила раньше, при пополнении, поэтому она намеренно
+      // не входит в actualCash (запрос пользователя 2026-07-17: "во всех
+      // отчётах... правильные цифры", "к Наличный и Безнал добавить
+      // Абонемент"). Но ОНА ЖЕ вычитается из netRevenue при расчёте
+      // difference ниже — иначе разница ложно показывала бы недостачу ровно
+      // на эту сумму каждый раз (реальный баг, найден пользователем
+      // 2026-07-18 через собственный числовой пример).
       const abonementAmount =
         zs.zone.accountingMode === "stays" || zs.zone.accountingMode === "launches"
           ? abonementAmountFor(zs.zoneId, zs.createdAt)
           : 0;
+      const difference = Math.round((actualCash + abonementAmount - netRevenue) * 100) / 100;
 
       const editable =
         zs.zone.accountingMode !== "counters" ||

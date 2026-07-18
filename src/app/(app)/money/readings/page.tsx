@@ -306,11 +306,15 @@ export default function ReadingsCalendarPage() {
       sessions: sessionsByTariff.get(t.tariffId) ?? 0,
     }));
     // "Счёт." — всегда валовая выручка по счётчикам, ФАКТ (запрос пользователя
-    // 2026-07-16). Разница считается от net (за вычетом тестов).
+    // 2026-07-16). Разница считается от net (за вычетом тестов), с поправкой
+    // на абонемент — та касса уже получила эти деньги раньше, при
+    // пополнении, не сейчас (реальный баг, найден пользователем 2026-07-18:
+    // без поправки разница ложно показывала недостачу ровно на сумму пусков,
+    // оплаченных абонементом).
     const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
     const netRevenue = calcZoneRevenue(tariffCalc, Number(editReturns || 0));
     const actualCash = Number(editCash || 0) + Number(editMobile || 0);
-    const difference = Math.round((actualCash - netRevenue) * 100) / 100;
+    const difference = Math.round((actualCash + card.abonementAmount - netRevenue) * 100) / 100;
     return { calculatedRevenue, difference };
   }
 
