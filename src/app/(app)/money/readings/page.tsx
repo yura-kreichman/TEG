@@ -497,6 +497,17 @@ export default function ReadingsCalendarPage() {
                       <span className="text-foreground">{t.operatorApp.submit.calculatedRevenue}</span>
                       <span className="text-foreground"><Money value={daySummary.calculatedRevenue} /></span>
                     </div>
+                    {/* Фактическая — сумма Наличные+Безнал+Баланс, чтобы не
+                        складывать их в уме при сравнении с Расчётной
+                        выручкой (запрос пользователя 2026-07-18). Тот же
+                        ключ, что уже использует Сотрудник на своём экране
+                        подтверждения. */}
+                    <div className="flex items-center justify-between text-caption-airbnb">
+                      <span>{t.operatorApp.submit.actualCash}</span>
+                      <span className="text-foreground">
+                        <Money value={daySummary.cash + daySummary.mobile + daySummary.abonement} />
+                      </span>
+                    </div>
                     <div className="flex items-center justify-between text-caption-airbnb">
                       <span>{t.operatorApp.submit.difference}</span>
                       <span
@@ -690,6 +701,15 @@ export default function ReadingsCalendarPage() {
                           <div className="flex items-center justify-between border-t border-border pt-1.5 text-caption-airbnb font-semibold">
                             <span className="text-foreground">{t.operatorApp.submit.calculatedRevenue}</span>
                             <span className="text-foreground"><Money value={card.calculatedRevenue} /></span>
+                          </div>
+                          {/* Фактическая — сумма Наличные+Безнал+Баланс, чтобы
+                              не складывать их в уме (запрос пользователя
+                              2026-07-18). */}
+                          <div className="flex items-center justify-between text-caption-airbnb">
+                            <span>{t.operatorApp.submit.actualCash}</span>
+                            <span className="text-foreground">
+                              <Money value={card.cashAmount + card.mobileAmount + card.abonementAmount} />
+                            </span>
                           </div>
                           {card.returnsCount > 0 && (
                             <div className="flex items-center justify-between text-caption-airbnb">
