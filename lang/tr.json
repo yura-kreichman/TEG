@@ -927,7 +927,6 @@
     "reasonLabel": "Değişiklik nedeni",
     "reasonOptionalHint": "isteğe bağlı",
     "reasonPlaceholder": "Örneğin: çalışan okumada hata yaptı",
-    "saveChangesButton": "Değişiklikleri kaydet",
     "saveError": "Değişiklikler kaydedilemedi",
     "deleteConfirmTitle": "Teslim silinsin mi?",
     "deleteConfirmBody": "Bu teslime ait okumalar, tutarlar ve para defteri kayıtları silinecek. İşlem değişiklik günlüğüne kaydedilecek. Geri alınamaz.",

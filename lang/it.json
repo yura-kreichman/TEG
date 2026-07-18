@@ -927,7 +927,6 @@
     "reasonLabel": "Motivo della modifica",
     "reasonOptionalHint": "facoltativo",
     "reasonPlaceholder": "Es.: il dipendente ha letto male il contatore",
-    "saveChangesButton": "Salva modifiche",
     "saveError": "Impossibile salvare le modifiche",
     "deleteConfirmTitle": "Eliminare questa chiusura?",
     "deleteConfirmBody": "Le letture, gli importi e le voci del registro soldi di questa chiusura verranno eliminati. Questa azione viene registrata e non può essere annullata.",

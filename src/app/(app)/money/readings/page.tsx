@@ -13,6 +13,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { SaveButton } from "@/components/ui/save-button";
 import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -128,6 +129,7 @@ export default function ReadingsCalendarPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const { saved: readingDeleted, pulse: readingDeletePulse } = useSavePulse();
+  const { saved: editSaved, pulse: editSavePulse } = useSavePulse();
 
   async function loadPoints() {
     const res = await fetch("/api/points");
@@ -253,8 +255,8 @@ export default function ReadingsCalendarPage() {
       setActionError(data.error ?? t.readings.saveError);
       return;
     }
-    setActionsFor(null);
     if (selectedDate) await loadDay(selectedDate);
+    editSavePulse(() => setActionsFor(null));
   }
 
   async function confirmDelete() {
@@ -383,6 +385,14 @@ export default function ReadingsCalendarPage() {
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue>
+                        {/* Пока pointId не совпал ни с одной загруженной точкой
+                            (короткое окно загрузки, или сохранённое "Все
+                            точки" с Главной/Денег, где такой вариант есть, а
+                            здесь — нет) триггер не должен быть пустым (реальный
+                            баг, найден пользователем 2026-07-19: "Изначально
+                            пусто") — показываем то же "Все точки", что и на
+                            других экранах, до того как пункт ниже сам
+                            подставит первую реальную точку. */}
                         <span className="flex items-center gap-2">
                           {(() => {
                             const current = points.find((p) => p.id === pointId);
@@ -392,7 +402,7 @@ export default function ReadingsCalendarPage() {
                               <MapPin className="size-6 shrink-0 text-muted-foreground" />
                             );
                           })()}
-                          {points.find((p) => p.id === pointId)?.name}
+                          {points.find((p) => p.id === pointId)?.name ?? t.money.allPoints}
                         </span>
                       </SelectValue>
                     </SelectTrigger>
@@ -942,9 +952,7 @@ export default function ReadingsCalendarPage() {
 
             {actionError && <p className="text-sm text-destructive">{actionError}</p>}
             <PressableScale>
-              <Button className="w-full" onClick={confirmEdit}>
-                {t.readings.saveChangesButton}
-              </Button>
+              <SaveButton className="w-full" onClick={confirmEdit} saved={editSaved} />
             </PressableScale>
           </div>
         )}

@@ -927,7 +927,6 @@
     "reasonLabel": "Reason for the change",
     "reasonOptionalHint": "optional",
     "reasonPlaceholder": "E.g.: the employee misread the counter",
-    "saveChangesButton": "Save changes",
     "saveError": "Couldn't save the changes",
     "deleteConfirmTitle": "Delete this submission?",
     "deleteConfirmBody": "The readings, amounts, and money-journal entries for this submission will be deleted. This action is logged and cannot be undone.",

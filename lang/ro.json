@@ -927,7 +927,6 @@
     "reasonLabel": "Motivul modificării",
     "reasonOptionalHint": "opțional",
     "reasonPlaceholder": "De ex.: angajatul a citit greșit contorul",
-    "saveChangesButton": "Salvează modificările",
     "saveError": "Nu s-au putut salva modificările",
     "deleteConfirmTitle": "Ștergeți această predare?",
     "deleteConfirmBody": "Citirile, sumele și înregistrările din jurnalul de bani pentru această predare vor fi șterse. Acțiunea este înregistrată și nu poate fi anulată.",

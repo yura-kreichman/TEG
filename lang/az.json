@@ -927,7 +927,6 @@
     "reasonLabel": "Dəyişikliyin səbəbi",
     "reasonOptionalHint": "məcburi deyil",
     "reasonPlaceholder": "Məsələn: işçi göstəricidə səhv edib",
-    "saveChangesButton": "Dəyişiklikləri yadda saxla",
     "saveError": "Dəyişiklikləri yadda saxlamaq mümkün olmadı",
     "deleteConfirmTitle": "Hesabat silinsin?",
     "deleteConfirmBody": "Bu hesabata aid göstəricilər, məbləğlər və pul jurnalındakı yazılar silinəcək. Əməliyyat dəyişikliklər jurnalına düşəcək. Geri qaytarmaq mümkün deyil.",

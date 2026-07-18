@@ -927,7 +927,6 @@
     "reasonLabel": "Powód zmiany",
     "reasonOptionalHint": "opcjonalnie",
     "reasonPlaceholder": "Np.: pracownik pomylił się w odczycie",
-    "saveChangesButton": "Zapisz zmiany",
     "saveError": "Nie udało się zapisać zmian",
     "deleteConfirmTitle": "Usunąć rozliczenie?",
     "deleteConfirmBody": "Odczyty, sumy i wpisy w dzienniku finansów dotyczące tego rozliczenia zostaną usunięte. Czynność trafi do dziennika zmian. Nie można jej cofnąć.",
