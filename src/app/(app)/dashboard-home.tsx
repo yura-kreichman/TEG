@@ -355,7 +355,7 @@ export function OwnerDashboardCard({
                           на /money (запрос пользователя 2026-07-18: "должна
                           быть аналогичная сводка как и в Деньгах, где видно
                           наличные и безналичные"). */}
-                      <div className="flex min-w-0 shrink-0 flex-col items-end gap-0.5 pt-1 text-right text-caption-airbnb tabular-nums">
+                      <div className="flex min-w-0 flex-col items-end gap-0.5 pt-1 text-right text-caption-airbnb tabular-nums">
                         <span>
                           {t.reports.cashLabel}: <span className="font-bold text-foreground"><Money value={summary.cash!} /></span>
                         </span>
@@ -364,7 +364,7 @@ export function OwnerDashboardCard({
                         </span>
                         {summary.returnsCount! > 0 && (
                           <span>
-                            {t.operatorApp.submit.returnsLabel}: <span className="font-bold text-foreground">{summary.returnsCount}</span>
+                            {t.operatorApp.submit.returnsLabelShort}: <span className="font-bold text-foreground">{summary.returnsCount}</span>
                           </span>
                         )}
                       </div>

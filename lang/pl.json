@@ -1021,6 +1021,7 @@
       "rolloverWarning": "przekroczenie licznika przez 9999 — sprawdź",
       "invalidNumberWarning": "Wpisz liczbę 0–9999",
       "returnsLabel": "Zwroty/testowe przejazdy",
+      "returnsLabelShort": "Zwroty/test",
       "cashLabel": "Gotówka",
       "mobileLabel": "Bezgotówkowo",
       "calculatedRevenue": "Obliczony przychód:",

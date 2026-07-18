@@ -1021,6 +1021,7 @@
       "rolloverWarning": "гузариши ҳисобкунак аз 9999 — тафтиш кунед",
       "invalidNumberWarning": "Рақами 0–9999-ро ворид кунед",
       "returnsLabel": "Баргардонӣ/оғозҳои озмоишӣ",
+      "returnsLabelShort": "Баргард./озм.",
       "cashLabel": "Нақдина",
       "mobileLabel": "Ғайринақдӣ",
       "calculatedRevenue": "Даромади ҳисобшуда:",

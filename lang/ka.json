@@ -1021,6 +1021,7 @@
       "rolloverWarning": "მრიცხველის გადასვლა 9999-ის გავლით — გადაამოწმეთ",
       "invalidNumberWarning": "შეიყვანეთ რიცხვი 0–9999",
       "returnsLabel": "დაბრუნებები/სატესტო გაშვებები",
+      "returnsLabelShort": "დაბრ./ტესტ.",
       "cashLabel": "ნაღდი",
       "mobileLabel": "უნაღდო",
       "calculatedRevenue": "გაანგარიშებული შემოსავალი:",

@@ -1021,6 +1021,7 @@
       "rolloverWarning": "counter rolled over past 9999 — please check",
       "invalidNumberWarning": "Enter a number 0–9999",
       "returnsLabel": "Returns/test runs",
+      "returnsLabelShort": "Returns/test",
       "cashLabel": "Cash",
       "mobileLabel": "Cashless",
       "calculatedRevenue": "Calculated revenue:",

@@ -4,48 +4,32 @@ import { requireOwner } from "@/lib/require-owner";
 import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 
-// "Последние итоги" на главной владельца (docs/design/prototype-owner-home-v1.html):
-// сводка за последний день, когда была хоть одна сдача итогов — по всем точкам
-// тенанта, не по одной. Если сегодня уже что-то сдавали, это и есть тот день;
-// если нет — берём последний прошедший день с активностью и отдельно говорим
-// клиенту, что это не сегодня (isToday=false), чтобы карточка могла показать
-// поясняющую заметку вместо того, чтобы выглядеть как "сегодняшний" итог.
-export async function GET(request: Request) {
-  const owner = await requireOwner();
-  if (!owner) {
-    return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
-  }
+interface WindowSummary {
+  revenue: number;
+  cash: number;
+  mobile: number;
+  profit: number;
+  submissionsCount: number;
+  difference: number;
+  expenses: number;
+  returnsCount: number;
+}
 
-  // Фильтр по точке — опциональный (запрос пользователя 2026-07-16), по
-  // умолчанию отсутствует = весь тенант сразу, как и было раньше.
-  const { searchParams } = new URL(request.url);
-  const pointIdParam = searchParams.get("pointId");
+function dayStartOf(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
 
-  const latest = await prisma.resultsSubmission.findFirst({
-    where: { tenantId: owner.tenantId, ...(pointIdParam ? { pointId: pointIdParam } : {}) },
-    orderBy: { submittedAt: "desc" },
-    select: { submittedAt: true },
-  });
-
-  if (!latest) {
-    return NextResponse.json({ hasData: false });
-  }
-
-  const dayStart = new Date(
-    Date.UTC(latest.submittedAt.getUTCFullYear(), latest.submittedAt.getUTCMonth(), latest.submittedAt.getUTCDate())
-  );
-  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-
-  const today = new Date();
-  const todayStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-  const isToday = dayStart.getTime() === todayStart.getTime();
-
+// Считает сводку за конкретное окно [dayStart, dayEnd) для ОДНОЙ точки —
+// используется и для одной точки, и как строительный блок для "Все точки"
+// (там каждая точка берёт СВОЁ собственное окно, см. GET ниже).
+async function computeWindowSummary(
+  tenantId: string,
+  pointId: string,
+  dayStart: Date,
+  dayEnd: Date
+): Promise<WindowSummary> {
   const submissions = await prisma.resultsSubmission.findMany({
-    where: {
-      tenantId: owner.tenantId,
-      submittedAt: { gte: dayStart, lt: dayEnd },
-      ...(pointIdParam ? { pointId: pointIdParam } : {}),
-    },
+    where: { tenantId, pointId, submittedAt: { gte: dayStart, lt: dayEnd } },
     include: {
       zoneSubmissions: {
         include: { zone: { include: { tariffs: true } }, assetReadings: true },
@@ -148,9 +132,9 @@ export async function GET(request: Request) {
 
   const operations = await prisma.moneyOperation.findMany({
     where: {
-      tenantId: owner.tenantId,
+      tenantId,
       occurredAt: { gte: dayStart, lt: dayEnd },
-      ...(pointIdParam ? { OR: [{ zone: { pointId: pointIdParam } }, { pointId: pointIdParam }] } : {}),
+      OR: [{ zone: { pointId } }, { pointId }],
     },
   });
   let revenue = 0;
@@ -168,17 +152,125 @@ export async function GET(request: Request) {
     if (op.type === "expense") expense += amount; // stored negative
   }
 
+  return {
+    revenue,
+    cash,
+    mobile,
+    profit: revenue + expense,
+    submissionsCount: submissions.length,
+    difference: totalDifference,
+    expenses: expense,
+    returnsCount: totalReturns,
+  };
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function roundSummary(s: WindowSummary) {
+  return {
+    revenue: round2(s.revenue),
+    cash: round2(s.cash),
+    mobile: round2(s.mobile),
+    profit: round2(s.profit),
+    submissionsCount: s.submissionsCount,
+    difference: round2(s.difference),
+    expenses: round2(s.expenses),
+    returnsCount: s.returnsCount,
+  };
+}
+
+// "Последние итоги" на главной владельца (docs/design/prototype-owner-home-v1.html):
+// для ОДНОЙ точки — сводка за её последний день с активностью. Для "Все
+// точки" (pointIdParam отсутствует) — КАЖДАЯ точка тенанта берёт СВОЙ
+// собственный последний день независимо, и уже эти суммы складываются
+// (реальный баг, найден пользователем 2026-07-19: раньше "Все точки" брали
+// один глобальный самый свежий день по всему тенанту — если сдавала только
+// одна точка сегодня, а другая последний раз сдавала пару дней назад, вторая
+// точка целиком пропадала из "Все точки", и агрегат совпадал 1-в-1 с одной
+// точкой). Дата в ответе для "Все точки" — самая свежая среди точек,
+// внёсших вклад; isToday=true, если хотя бы одна из них сдавала сегодня.
+export async function GET(request: Request) {
+  const owner = await requireOwner();
+  if (!owner) {
+    return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+
+  // Фильтр по точке — опциональный (запрос пользователя 2026-07-16), по
+  // умолчанию отсутствует = весь тенант сразу.
+  const { searchParams } = new URL(request.url);
+  const pointIdParam = searchParams.get("pointId");
+
+  const todayStart = dayStartOf(new Date());
+
+  if (pointIdParam) {
+    const latest = await prisma.resultsSubmission.findFirst({
+      where: { tenantId: owner.tenantId, pointId: pointIdParam },
+      orderBy: { submittedAt: "desc" },
+      select: { submittedAt: true },
+    });
+    if (!latest) {
+      return NextResponse.json({ hasData: false });
+    }
+    const dayStart = dayStartOf(latest.submittedAt);
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+    const summary = await computeWindowSummary(owner.tenantId, pointIdParam, dayStart, dayEnd);
+    return NextResponse.json({
+      hasData: true,
+      date: dayStart.toISOString().slice(0, 10),
+      isToday: dayStart.getTime() === todayStart.getTime(),
+      ...roundSummary(summary),
+    });
+  }
+
+  const points = await prisma.point.findMany({
+    where: { tenantId: owner.tenantId },
+    select: { id: true },
+  });
+  if (!points.length) {
+    return NextResponse.json({ hasData: false });
+  }
+
+  const perPoint = await Promise.all(
+    points.map(async (p) => {
+      const latest = await prisma.resultsSubmission.findFirst({
+        where: { tenantId: owner.tenantId, pointId: p.id },
+        orderBy: { submittedAt: "desc" },
+        select: { submittedAt: true },
+      });
+      if (!latest) return null;
+      const dayStart = dayStartOf(latest.submittedAt);
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      const summary = await computeWindowSummary(owner.tenantId, p.id, dayStart, dayEnd);
+      return { dayStart, summary };
+    })
+  );
+
+  const active = perPoint.filter((v): v is { dayStart: Date; summary: WindowSummary } => v !== null);
+  if (!active.length) {
+    return NextResponse.json({ hasData: false });
+  }
+
+  const maxDayStart = new Date(Math.max(...active.map((a) => a.dayStart.getTime())));
+  const combined = active.reduce<WindowSummary>(
+    (acc, a) => ({
+      revenue: acc.revenue + a.summary.revenue,
+      cash: acc.cash + a.summary.cash,
+      mobile: acc.mobile + a.summary.mobile,
+      profit: acc.profit + a.summary.profit,
+      submissionsCount: acc.submissionsCount + a.summary.submissionsCount,
+      difference: acc.difference + a.summary.difference,
+      expenses: acc.expenses + a.summary.expenses,
+      returnsCount: acc.returnsCount + a.summary.returnsCount,
+    }),
+    { revenue: 0, cash: 0, mobile: 0, profit: 0, submissionsCount: 0, difference: 0, expenses: 0, returnsCount: 0 }
+  );
+
   return NextResponse.json({
     hasData: true,
-    date: dayStart.toISOString().slice(0, 10),
-    isToday,
-    revenue: Math.round(revenue * 100) / 100,
-    cash: Math.round(cash * 100) / 100,
-    mobile: Math.round(mobile * 100) / 100,
-    profit: Math.round((revenue + expense) * 100) / 100,
-    submissionsCount: submissions.length,
-    difference: Math.round(totalDifference * 100) / 100,
-    expenses: Math.round(expense * 100) / 100,
-    returnsCount: totalReturns,
+    date: maxDayStart.toISOString().slice(0, 10),
+    isToday: maxDayStart.getTime() === todayStart.getTime(),
+    ...roundSummary(combined),
   });
 }

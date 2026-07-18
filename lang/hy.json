@@ -1021,6 +1021,7 @@
       "rolloverWarning": "հաշվիչի անցում 9999-ից — ստուգեք",
       "invalidNumberWarning": "Մուտքագրեք 0–9999 թիվ",
       "returnsLabel": "Վերադարձեր/փորձնական երթեր",
+      "returnsLabelShort": "Վերադ./փորձ.",
       "cashLabel": "Կանխիկ",
       "mobileLabel": "Անկանխիկ",
       "calculatedRevenue": "Հաշվարկային եկամուտ.",

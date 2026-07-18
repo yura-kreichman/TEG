@@ -1021,6 +1021,7 @@
       "rolloverWarning": "пераход лічыльніка праз 9999 — праверце",
       "invalidNumberWarning": "Увядзіце лік 0–9999",
       "returnsLabel": "Вяртанні/тэставыя пускі",
+      "returnsLabelShort": "Вярт./тэст.",
       "cashLabel": "Наяўныя",
       "mobileLabel": "Безнаяўныя",
       "calculatedRevenue": "Разліковая выручка:",

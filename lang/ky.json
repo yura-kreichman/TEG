@@ -1021,6 +1021,7 @@
       "rolloverWarning": "эсептегич 9999дон ашты — текшериңиз",
       "invalidNumberWarning": "0–9999 аралыгында сан киргизиңиз",
       "returnsLabel": "Кайтаруулар/сыноо иштетүүлөр",
+      "returnsLabelShort": "Кайт./сыноо",
       "cashLabel": "Накталай",
       "mobileLabel": "Накталай эмес",
       "calculatedRevenue": "Эсептелген түшүм:",

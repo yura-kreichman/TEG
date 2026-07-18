@@ -1021,6 +1021,7 @@
       "rolloverWarning": "переход счётчика через 9999 — проверьте",
       "invalidNumberWarning": "Введите число 0–9999",
       "returnsLabel": "Возвраты/тестовые пуски",
+      "returnsLabelShort": "Возвр./тест.",
       "cashLabel": "Наличные",
       "mobileLabel": "Безнал",
       "calculatedRevenue": "Расчётная выручка:",

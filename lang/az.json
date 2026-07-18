@@ -1021,6 +1021,7 @@
       "rolloverWarning": "sayğac 9999-u keçib — yoxlayın",
       "invalidNumberWarning": "0–9999 aralığında ədəd daxil edin",
       "returnsLabel": "Qaytarma/test gedişləri",
+      "returnsLabelShort": "Qaytarma/test",
       "cashLabel": "Nağd",
       "mobileLabel": "Nağdsız",
       "calculatedRevenue": "Hesablanmış gəlir:",

@@ -1021,6 +1021,7 @@
       "rolloverWarning": "перехід лічильника через 9999 — перевірте",
       "invalidNumberWarning": "Введіть число 0–9999",
       "returnsLabel": "Повернення/тестові заїзди",
+      "returnsLabelShort": "Поверн./тест",
       "cashLabel": "Готівка",
       "mobileLabel": "Безнал",
       "calculatedRevenue": "Розрахункова виручка:",

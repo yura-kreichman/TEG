@@ -1021,6 +1021,7 @@
       "rolloverWarning": "contorul a trecut peste 9999 — verificați",
       "invalidNumberWarning": "Introduceți un număr 0–9999",
       "returnsLabel": "Retururi/porniri de test",
+      "returnsLabelShort": "Retur/test",
       "cashLabel": "Numerar",
       "mobileLabel": "Fără numerar",
       "calculatedRevenue": "Venit calculat:",

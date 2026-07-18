@@ -1021,6 +1021,7 @@
       "rolloverWarning": "hisoblagich 9999 dan oʻtdi — tekshiring",
       "invalidNumberWarning": "0–9999 oralig'ida son kiriting",
       "returnsLabel": "Qaytarishlar/sinov yurishlari",
+      "returnsLabelShort": "Qaytarish/sinov",
       "cashLabel": "Naqd pul",
       "mobileLabel": "Naqdsiz",
       "calculatedRevenue": "Hisoblangan tushum:",

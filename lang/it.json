@@ -1021,6 +1021,7 @@
       "rolloverWarning": "il contatore ha superato 9999 — controlla",
       "invalidNumberWarning": "Inserisci un numero da 0 a 9999",
       "returnsLabel": "Resi/corse di prova",
+      "returnsLabelShort": "Resi/test",
       "cashLabel": "Contanti",
       "mobileLabel": "Non in contanti",
       "calculatedRevenue": "Incasso calcolato:",

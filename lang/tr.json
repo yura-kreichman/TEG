@@ -1021,6 +1021,7 @@
       "rolloverWarning": "sayaç 9999'u geçti — kontrol edin",
       "invalidNumberWarning": "0-9999 arasında bir sayı girin",
       "returnsLabel": "İadeler/test turları",
+      "returnsLabelShort": "İade/test",
       "cashLabel": "Nakit",
       "mobileLabel": "Kartlı",
       "calculatedRevenue": "Hesaplanan gelir:",

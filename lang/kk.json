@@ -1021,6 +1021,7 @@
       "rolloverWarning": "есептегіш 9999 арқылы аунды — тексеріңіз",
       "invalidNumberWarning": "0–9999 аралығында сан енгізіңіз",
       "returnsLabel": "Қайтарулар/сынақ жүрістер",
+      "returnsLabelShort": "Қайт./сынақ",
       "cashLabel": "Қолма-қол",
       "mobileLabel": "Қолма-қолсыз",
       "calculatedRevenue": "Есептік түсім:",

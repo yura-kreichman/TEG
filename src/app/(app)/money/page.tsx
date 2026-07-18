@@ -428,7 +428,7 @@ export default function MoneyPage() {
                     2026-07-18: "в обоих должны быть видны Тесты/возвраты"). */}
                 {report.business.returnsCount > 0 && (
                   <span>
-                    {t.operatorApp.submit.returnsLabel}:{" "}
+                    {t.operatorApp.submit.returnsLabelShort}:{" "}
                     <span className="font-bold text-foreground">{report.business.returnsCount}</span>
                   </span>
                 )}
