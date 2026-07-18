@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireOwner, findTenantPoint } from "@/lib/require-owner";
-import { ABONEMENT_TOPUP_PAYMENT_METHODS, adjustWalletBalance, topUpWallet } from "@/lib/abonement";
+import { requireOwner } from "@/lib/require-owner";
+import { adjustWalletBalance } from "@/lib/abonement";
 import { prisma } from "@/lib/prisma";
 
-// Пополнение существующего кошелька ВЛАДЕЛЬЦЕМ — аналог
-// /api/operator/abonements/[id]/topup, точку указывает явно (см. комментарий
-// в /api/abonement-wallets/route.ts).
+// Произвольное пополнение существующего кошелька ВЛАДЕЛЬЦЕМ — не кассовая
+// операция (см. комментарий в /api/abonement-wallets/route.ts). Продажа
+// плана владельцу недоступна — см. /api/operator/abonements/[id]/topup.
 export async function POST(request: Request, ctx: RouteContext<"/api/abonement-wallets/[id]/topup">) {
   const owner = await requireOwner();
   if (!owner) {
@@ -19,59 +19,17 @@ export async function POST(request: Request, ctx: RouteContext<"/api/abonement-w
   }
 
   const body = await request.json().catch(() => ({}));
-  const abonementId: string | null = typeof body.abonementId === "string" && body.abonementId ? body.abonementId : null;
-  // Произвольная сумма — только владелец, см. комментарий в
-  // /api/abonement-wallets/route.ts.
-  const amount: number | null = body.amount != null ? Number(body.amount) : null;
-  const pointId: string | null = typeof body.pointId === "string" && body.pointId ? body.pointId : null;
-  const paymentMethod = body.paymentMethod;
-
-  if (amount != null) {
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return NextResponse.json({ error: "Укажите сумму" }, { status: 400 });
-    }
-    if (!pointId || !(await findTenantPoint(owner.tenantId, pointId))) {
-      return NextResponse.json({ error: "Выберите точку" }, { status: 400 });
-    }
-    const updated = await adjustWalletBalance(walletId, owner.tenantId, pointId, amount, owner.user.id);
-    return NextResponse.json({
-      id: updated.id,
-      phone: updated.phone,
-      name: updated.name,
-      balance: Number(updated.balance),
-      createdAt: updated.createdAt,
-    });
+  const amount = Number(body.amount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return NextResponse.json({ error: "Укажите сумму" }, { status: 400 });
   }
 
-  if (!abonementId) {
-    return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
-  }
-  if (!pointId || !(await findTenantPoint(owner.tenantId, pointId))) {
-    return NextResponse.json({ error: "Выберите точку" }, { status: 400 });
-  }
-  if (!(ABONEMENT_TOPUP_PAYMENT_METHODS as readonly string[]).includes(paymentMethod)) {
-    return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
-  }
-
-  try {
-    const updated = await topUpWallet(walletId, {
-      tenantId: owner.tenantId,
-      pointId,
-      abonementId,
-      paymentMethod,
-      actor: { userId: owner.user.id },
-    });
-    return NextResponse.json({
-      id: updated.id,
-      phone: updated.phone,
-      name: updated.name,
-      balance: Number(updated.balance),
-      createdAt: updated.createdAt,
-    });
-  } catch (err) {
-    if (err instanceof Error && err.message === "ABONEMENT_NOT_FOUND") {
-      return NextResponse.json({ error: "Абонемент не найден" }, { status: 400 });
-    }
-    throw err;
-  }
+  const updated = await adjustWalletBalance(walletId, amount, owner.user.id);
+  return NextResponse.json({
+    id: updated.id,
+    phone: updated.phone,
+    name: updated.name,
+    balance: Number(updated.balance),
+    createdAt: updated.createdAt,
+  });
 }

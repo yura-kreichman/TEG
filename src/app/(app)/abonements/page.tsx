@@ -29,11 +29,6 @@ interface AbonementInfo {
   creditAmount: number;
 }
 
-interface PointOption {
-  id: string;
-  name: string;
-}
-
 interface WalletInfo {
   id: string;
   phone: string;
@@ -69,7 +64,6 @@ export default function AbonementsPage() {
   const [tab, setTab] = useState<"wallets" | "abonements">("wallets");
 
   const [abonements, setAbonements] = useState<AbonementInfo[]>([]);
-  const [points, setPoints] = useState<PointOption[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -80,7 +74,6 @@ export default function AbonementsPage() {
   const { saved: deleted, pulse: deletePulse } = useSavePulse();
 
   const [topupSheetOpen, setTopupSheetOpen] = useState(false);
-  const [topupPointId, setTopupPointId] = useState<string | null>(null);
 
   // Список кошельков клиентов (запрос пользователя 2026-07-17: "у владельца
   // так и не виден список активных абонентов") + полный CRUD ("нет ни
@@ -124,22 +117,9 @@ export default function AbonementsPage() {
     });
   }
 
-  async function loadPoints() {
-    const res = await fetch("/api/points");
-    const data = await res.json();
-    const list = (data.points ?? []).map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }));
-    setPoints(list);
-    // Точка по умолчанию — первая из списка (не только когда она одна):
-    // без дефолта пикер оставался пустым и кнопка "Найти" молча не
-    // включалась без единой подсказки почему (баг, найденный пользователем
-    // 2026-07-17 — "нет возможности добавить абонента"), владелец может
-    // переключить на другую точку явно, если нужно другую.
-    if (list.length > 0) setTopupPointId(list[0].id);
-  }
-
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    Promise.all([loadAbonements(), loadPoints(), loadWallets()]).then(() => setChecking(false));
+    Promise.all([loadAbonements(), loadWallets()]).then(() => setChecking(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -444,8 +424,7 @@ export default function AbonementsPage() {
         createEndpoint="/api/abonement-wallets"
         topupEndpointFor={(walletId) => `/api/abonement-wallets/${walletId}/topup`}
         updateNameEndpointFor={(walletId) => `/api/abonement-wallets/${walletId}`}
-        extraBody={topupPointId ? { pointId: topupPointId } : undefined}
-        pointPicker={{ options: points, value: topupPointId, onChange: setTopupPointId }}
+        allowPlanPurchase={false}
         allowArbitraryAmount
         onSuccess={() => loadWallets(walletQuery, walletSort)}
       />

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Building2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Gift, MapPin, Receipt } from "lucide-react";
+import { Building2, Calendar as CalendarIcon, CalendarDays, ChevronLeft, ChevronRight, Gift, MapPin, Receipt } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -446,6 +446,25 @@ export default function MoneyPage() {
               )}
             </div>
           </SpringCard>
+
+          {/* Тот же пункт, что на Главной у Владельца (запрос пользователя
+              2026-07-18: "Добавь это как кнопку в Деньги, как у Владельца на
+              главной") — раньше отсюда попасть в "Итоги по дням" можно было
+              только через Главную. */}
+          <PressableScale>
+            <Link href={`/money/readings${pointId ? `?pointId=${pointId}` : ""}`}>
+              <SpringCard className="flex items-center gap-3">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                  <CalendarDays className="size-5" />
+                </div>
+                <div className="min-w-0 grow">
+                  <p className="text-card-title">{t.money.readingsLink}</p>
+                  <p className="text-caption-airbnb">{t.money.readingsLinkHint}</p>
+                </div>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              </SpringCard>
+            </Link>
+          </PressableScale>
 
           <PressableScale>
             <Link href="/money/zone-balances">

@@ -256,6 +256,21 @@ export default function ReadingsCalendarPage() {
     }
   }
 
+  // Итоговая сводка дня — сумма по всем зонам точки за выбранную дату (запрос
+  // пользователя 2026-07-18: "рядом с Календарём") — та же арифметика, что и
+  // в карточке каждой отдельной зоны ниже, просто сложенная по всем cards
+  // разом, чтобы не листать каждую зону, чтобы увидеть общий итог дня.
+  const daySummary = (cards ?? []).reduce(
+    (acc, card) => ({
+      cash: acc.cash + card.cashAmount,
+      mobile: acc.mobile + card.mobileAmount,
+      abonement: acc.abonement + card.abonementAmount,
+      calculatedRevenue: acc.calculatedRevenue + card.calculatedRevenue,
+      difference: Math.round((acc.difference + card.difference) * 100) / 100,
+    }),
+    { cash: 0, mobile: 0, abonement: 0, calculatedRevenue: 0, difference: 0 }
+  );
+
   if (checking || !dateReady) return null;
 
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
@@ -431,6 +446,48 @@ export default function ReadingsCalendarPage() {
                   })}
                 </div>
               </SpringCard>
+
+              {selectedDate && cards !== null && cards.length > 0 && (
+                <SpringCard hover={false} className="flex flex-col gap-1">
+                  <p className="text-card-title">{t.readings.daySummaryTitle}</p>
+                  <div className="mt-1 flex flex-col gap-1 border-t border-border pt-2 tabular-nums">
+                    <div className="flex items-center justify-between text-caption-airbnb">
+                      <span>{t.operatorApp.submit.cashLabel}</span>
+                      <span className="text-foreground"><Money value={daySummary.cash} /></span>
+                    </div>
+                    <div className="flex items-center justify-between text-caption-airbnb">
+                      <span>{t.operatorApp.submit.mobileLabel}</span>
+                      <span className="text-foreground"><Money value={daySummary.mobile} /></span>
+                    </div>
+                    {daySummary.abonement > 0 && (
+                      <div className="flex items-center justify-between text-caption-airbnb">
+                        <span>{t.operatorApp.abonement.paymentLabel}</span>
+                        <span className="text-foreground"><Money value={daySummary.abonement} /></span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between border-t border-border pt-1.5 text-caption-airbnb font-semibold">
+                      <span className="text-foreground">{t.operatorApp.submit.calculatedRevenue}</span>
+                      <span className="text-foreground"><Money value={daySummary.calculatedRevenue} /></span>
+                    </div>
+                    <div className="flex items-center justify-between text-caption-airbnb">
+                      <span>{t.operatorApp.submit.difference}</span>
+                      <span
+                        className={cn(
+                          "font-bold",
+                          daySummary.difference === 0
+                            ? "text-muted-foreground"
+                            : daySummary.difference > 0
+                              ? "text-primary"
+                              : "text-destructive"
+                        )}
+                      >
+                        {daySummary.difference > 0 ? "+" : ""}
+                        <Money value={daySummary.difference} />
+                      </span>
+                    </div>
+                  </div>
+                </SpringCard>
+              )}
 
               {selectedDate && (
                 <div className="flex flex-col gap-3">

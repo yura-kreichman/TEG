@@ -7,7 +7,6 @@ import { ConfirmButton } from "@/components/confirm-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SaveButton } from "@/components/ui/save-button";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { Money } from "@/components/money";
 import { MoneyInput } from "@/components/money-input";
@@ -60,15 +59,9 @@ interface AbonementCtx {
   creditAmount: number;
 }
 
-interface PointOption {
-  id: string;
-  name: string;
-}
-
 export interface AbonementTopupFlowProps {
-  // Уже загруженный список планов (владелец — из /api/abonements, отфильтрован
-  // родителем по выбранной точке; оператор — из /api/operator/abonement-plans,
-  // уже отфильтрован сервером по точке сессии).
+  // Уже загруженный список планов — только когда allowPlanPurchase=true
+  // (оператор, из /api/operator/abonement-plans).
   plans: AbonementCtx[];
   // GET ?phone= — поиск кошелька.
   searchEndpoint: string;
@@ -82,21 +75,17 @@ export interface AbonementTopupFlowProps {
   // показывается (например, embedded-режим initialWallet в кабинете
   // владельца — там имя правится отдельным полем на самой странице).
   updateNameEndpointFor?: (walletId: string) => string;
-  // Доп. поля в тело create/topup-запросов — у владельца обязателен pointId
-  // (сессия не привязана к одной точке устройства, в отличие от оператора).
-  extraBody?: Record<string, unknown>;
-  // Пикер точки — только когда он передан (владелец); у оператора точка
-  // неявная из сессии, пикер не нужен.
-  pointPicker?: {
-    options: PointOption[];
-    value: string | null;
-    onChange: (id: string) => void;
-  };
-  // Пополнение на произвольную сумму, без плана и без кассы — только
-  // владелец (запрос пользователя 2026-07-17: "это родственник владельца
-  // или его друг... кинуть на абонемент произвольную сумму"; оператор может
-  // только через план — "понятно, что его можно оплатить только наличными
-  // или безналом").
+  // Продажа плана (выбор из списка + оплата Наличные/Безнал, кассовая
+  // операция) — только Сотрудник (запрос пользователя 2026-07-18: "Продаёт
+  // только сотрудник"; Владелец физически не стоит на точке и не берёт
+  // деньги). По умолчанию true (оператор); Владелец передаёт false — вся
+  // секция выбора плана скрыта, доступно только произвольное пополнение.
+  allowPlanPurchase?: boolean;
+  // Пополнение на произвольную сумму — только владелец (запрос пользователя
+  // 2026-07-17: "это родственник владельца или его друг... кинуть на
+  // абонемент произвольную сумму"). С 2026-07-18 НЕ кассовая операция и не
+  // привязана к точке (запрос пользователя: "нигде не должно учитываться") —
+  // чистое изменение баланса кошелька, без следа в "Деньгах".
   allowArbitraryAmount?: boolean;
   // Встроить сразу для уже известного кошелька, без шага поиска по телефону
   // (запрос пользователя 2026-07-17: "владелец должен иметь возможность
@@ -125,8 +114,7 @@ export function AbonementTopupFlow({
   createEndpoint,
   topupEndpointFor,
   updateNameEndpointFor,
-  extraBody,
-  pointPicker,
+  allowPlanPurchase = true,
   allowArbitraryAmount,
   initialWallet,
   onSuccess,
@@ -172,7 +160,7 @@ export function AbonementTopupFlow({
       const res = await fetch(createEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, name: name.trim() || undefined, ...extraBody }),
+        body: JSON.stringify({ phone, name: name.trim() || undefined }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -238,7 +226,7 @@ export function AbonementTopupFlow({
       const res = await fetch(createEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, name: name.trim() || undefined, abonementId: plan.id, paymentMethod, ...extraBody }),
+        body: JSON.stringify({ phone, name: name.trim() || undefined, abonementId: plan.id, paymentMethod }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -263,7 +251,7 @@ export function AbonementTopupFlow({
       const res = await fetch(topupEndpointFor(walletId), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ abonementId: plan.id, paymentMethod, ...extraBody }),
+        body: JSON.stringify({ abonementId: plan.id, paymentMethod }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -290,9 +278,7 @@ export function AbonementTopupFlow({
       const res = await fetch(isNew ? createEndpoint : topupEndpointFor(found!.id), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          isNew ? { phone, name: name.trim() || undefined, amount, ...extraBody } : { amount, ...extraBody }
-        ),
+        body: JSON.stringify(isNew ? { phone, name: name.trim() || undefined, amount } : { amount }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -312,7 +298,6 @@ export function AbonementTopupFlow({
 
   const pendingPlan = plans.find((p) => p.id === pendingPlanId) ?? null;
   const isNew = found === null;
-  const pointReady = !pointPicker || !!pointPicker.value;
 
   return (
     <div className="flex flex-col gap-3">
@@ -552,60 +537,41 @@ export function AbonementTopupFlow({
             </div>
           )}
 
-          {/* Пикер точки — только здесь, перед выбором плана (запрос
-              пользователя 2026-07-18: клиент сам по себе не привязан к
-              точке, точка нужна лишь чтобы отфильтровать доступные там
-              планы и записать, в какую кассу пришли деньги). */}
-          {pointPicker && (
-            <div className="flex flex-col gap-1">
-              <Label>{t.abonements.pointsLabel}</Label>
-              <Select
-                value={pointPicker.value ?? undefined}
-                onValueChange={(v) => v && pointPicker.onChange(v)}
-                items={pointPicker.options.map((p) => ({ value: p.id, label: p.name }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t.abonements.pointsLabel} />
-                </SelectTrigger>
-                <SelectContent>
-                  {pointPicker.options.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
+          {/* Продажа плана — только Сотрудник (запрос пользователя
+              2026-07-18: "Продаёт только сотрудник"), у Владельца секция
+              целиком скрыта. */}
+          {allowPlanPurchase && (
+            <>
+              <p className="text-caption-airbnb font-semibold text-foreground">
+                {t.operatorApp.abonement.pickAbonementTitle}
+              </p>
+              {plans.length === 0 ? (
+                <p className="text-caption-airbnb text-destructive">{t.operatorApp.abonement.noAbonementsError}</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {plans.map((plan) => (
+                    <PressableScale key={plan.id}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          "relative h-14 w-full justify-between pl-14 font-semibold",
+                          RAISED_OPTION_BUTTON_CLASS
+                        )}
+                        disabled={isNew && !phone.trim()}
+                        onClick={() => setPendingPlanId(plan.id)}
+                      >
+                        <Gift className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                        <span>{plan.name ?? <Money value={plan.price} />}</span>
+                        <span className="tabular-nums">
+                          <Money value={plan.price} /> → <Money value={plan.creditAmount} />
+                        </span>
+                      </Button>
+                    </PressableScale>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <p className="text-caption-airbnb font-semibold text-foreground">
-            {t.operatorApp.abonement.pickAbonementTitle}
-          </p>
-          {plans.length === 0 ? (
-            <p className="text-caption-airbnb text-destructive">{t.operatorApp.abonement.noAbonementsError}</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {plans.map((plan) => (
-                <PressableScale key={plan.id}>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={cn(
-                      "relative h-14 w-full justify-between pl-14 font-semibold",
-                      RAISED_OPTION_BUTTON_CLASS
-                    )}
-                    disabled={(isNew && !phone.trim()) || !pointReady}
-                    onClick={() => setPendingPlanId(plan.id)}
-                  >
-                    <Gift className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                    <span>{plan.name ?? <Money value={plan.price} />}</span>
-                    <span className="tabular-nums">
-                      <Money value={plan.price} /> → <Money value={plan.creditAmount} />
-                    </span>
-                  </Button>
-                </PressableScale>
-              ))}
-            </div>
+                </div>
+              )}
+            </>
           )}
 
           {allowArbitraryAmount && (
@@ -625,7 +591,7 @@ export function AbonementTopupFlow({
                     type="button"
                     variant="outline"
                     className="h-12 shrink-0 font-semibold"
-                    disabled={submitting || !arbitraryAmount.trim() || !pointReady || (isNew && !phone.trim())}
+                    disabled={submitting || !arbitraryAmount.trim() || (isNew && !phone.trim())}
                     onClick={handleAdjust}
                   >
                     {t.abonements.arbitraryAmountButton}

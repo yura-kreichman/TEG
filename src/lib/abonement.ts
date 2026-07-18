@@ -178,23 +178,16 @@ export async function createWalletWithTopup(rawPhone: string, name: string | nul
 }
 
 /**
- * Пополнение существующего кошелька на ПРОИЗВОЛЬНУЮ сумму владельцем —
- * трактуется КАК НАЛИЧНЫЙ РАСЧЁТ (решение пользователя 2026-07-17: "это
- * должно быть как Наличный расчёт... это как бы из его денег" — владелец
- * условно кладёт в кассу точки свои собственные деньги, отсюда и
- * MoneyOperation типа abonement_topup, ровно как у обычного пополнения
- * наличными, трогает кассу точки). AbonementTransaction при этом остаётся
- * "adjustment" (не "topup") — так в истории кошелька видно, что зачисление
- * было ручным решением владельца, а не покупкой конкретного плана; на
- * бухгалтерию это уже не влияет, только на подпись в истории.
+ * Пополнение существующего кошелька на ПРОИЗВОЛЬНУЮ сумму владельцем — НЕ
+ * кассовая операция и не привязана к точке (решение пользователя
+ * 2026-07-18, отменяет прежнее решение от 2026-07-17 "как бы из его денег,
+ * трогает кассу точки": "Владелец если хочет может произвольно пополнить
+ * баланс, но это нигде не должно учитываться" — продаёт план и берёт
+ * реальные деньги только Сотрудник, см. createWalletWithTopup/topUpWallet
+ * выше). Чистое изменение баланса кошелька + запись в истории (type
+ * "adjustment"), без MoneyOperation.
  */
-export async function adjustWalletBalance(
-  walletId: string,
-  tenantId: string,
-  pointId: string,
-  amount: number,
-  userId: string
-) {
+export async function adjustWalletBalance(walletId: string, amount: number, userId: string) {
   return prisma.$transaction(async (tx) => {
     const wallet = await tx.abonementWallet.update({
       where: { id: walletId },
@@ -202,11 +195,7 @@ export async function adjustWalletBalance(
     });
 
     await tx.abonementTransaction.create({
-      data: { walletId, type: "adjustment", amount, pointId, userId },
-    });
-
-    await tx.moneyOperation.create({
-      data: { tenantId, pointId, type: "abonement_topup", amount, performedByUserId: userId },
+      data: { walletId, type: "adjustment", amount, userId },
     });
 
     return wallet;
@@ -218,7 +207,6 @@ export async function createWalletWithAdjustment(
   rawPhone: string,
   name: string | null,
   tenantId: string,
-  pointId: string,
   amount: number,
   userId: string
 ) {
@@ -231,11 +219,7 @@ export async function createWalletWithAdjustment(
     });
 
     await tx.abonementTransaction.create({
-      data: { walletId: wallet.id, type: "adjustment", amount, pointId, userId },
-    });
-
-    await tx.moneyOperation.create({
-      data: { tenantId, pointId, type: "abonement_topup", amount, performedByUserId: userId },
+      data: { walletId: wallet.id, type: "adjustment", amount, userId },
     });
 
     return wallet;

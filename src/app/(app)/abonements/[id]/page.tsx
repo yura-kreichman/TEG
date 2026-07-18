@@ -20,18 +20,6 @@ import { useI18n } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { cn } from "@/lib/utils";
 
-interface AbonementInfo {
-  id: string;
-  name: string | null;
-  price: number;
-  creditAmount: number;
-}
-
-interface PointOption {
-  id: string;
-  name: string;
-}
-
 interface WalletHistoryEntry {
   id: string;
   type: string;
@@ -73,10 +61,6 @@ export default function AbonementWalletPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { saved: deleted, pulse: deletePulse } = useSavePulse();
 
-  const [plans, setPlans] = useState<AbonementInfo[]>([]);
-  const [points, setPoints] = useState<PointOption[]>([]);
-  const [topupPointId, setTopupPointId] = useState<string | null>(null);
-
   async function loadWallet() {
     const res = await fetch(`/api/abonement-wallets/${params.id}`);
     if (res.status === 404) {
@@ -88,23 +72,9 @@ export default function AbonementWalletPage() {
     setForm({ name: data.name ?? "", phone: data.phone });
   }
 
-  async function loadPlans() {
-    const res = await fetch("/api/abonements");
-    const data = await res.json();
-    setPlans(data.abonements ?? []);
-  }
-
-  async function loadPoints() {
-    const res = await fetch("/api/points");
-    const data = await res.json();
-    const list = (data.points ?? []).map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }));
-    setPoints(list);
-    if (list.length > 0) setTopupPointId(list[0].id);
-  }
-
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    Promise.all([loadWallet(), loadPlans(), loadPoints()]).then(() => setChecking(false));
+    loadWallet().then(() => setChecking(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -139,7 +109,7 @@ export default function AbonementWalletPage() {
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl flex-col gap-4">
           <Link href="/abonements" className="w-fit text-body-airbnb font-semibold text-primary">
-            ← {t.abonements.title}
+            ← {t.abonements.walletsTitle}
           </Link>
 
           <SpringCard hover={false} className="flex flex-col gap-4">
@@ -189,12 +159,11 @@ export default function AbonementWalletPage() {
             <AbonementTopupFlow
               key={wallet.id}
               initialWallet={{ id: wallet.id, phone: wallet.phone, name: wallet.name, balance: wallet.balance }}
-              plans={plans}
+              plans={[]}
               searchEndpoint="/api/abonement-wallets"
               createEndpoint="/api/abonement-wallets"
               topupEndpointFor={(walletId) => `/api/abonement-wallets/${walletId}/topup`}
-              extraBody={topupPointId ? { pointId: topupPointId } : undefined}
-              pointPicker={{ options: points, value: topupPointId, onChange: setTopupPointId }}
+              allowPlanPurchase={false}
               allowArbitraryAmount
               onSuccess={loadWallet}
             />
