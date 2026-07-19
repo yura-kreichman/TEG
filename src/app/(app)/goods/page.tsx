@@ -1018,6 +1018,7 @@ export default function GoodsCabinetPage() {
           <h1 className="text-screen-title">{t.goods.navLabel}</h1>
 
           <SegmentedTabs
+            className="grid grid-cols-2"
             options={[
               { key: "catalog", label: t.goods.catalogTab },
               { key: "stock", label: t.goods.stockTab },
