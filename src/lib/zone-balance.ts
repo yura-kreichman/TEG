@@ -8,8 +8,16 @@ import { distributeCollectionWhole } from "@/lib/collection-split";
 // реальных денег в этот момент не приходит, они пришли раньше, при
 // пополнении). abonement_topup (пополнение НАЛИЧНЫМИ) в списке нет
 // специально — это реальные деньги в кассе точки прямо сейчас, ровно как
-// revenue.
-const CASH_EXCLUDED_TYPES = new Set(["revenue_cashless", "abonement_topup_cashless", "revenue_abonement"]);
+// revenue. Товары (docs/spec/09-goods.md) — та же логика: goods_revenue_cashless
+// и goods_revenue_abonement исключены тем же принципом, что и их зонные
+// аналоги; goods_revenue (нал) в списке нет — реальные деньги, ровно как revenue.
+const CASH_EXCLUDED_TYPES = new Set([
+  "revenue_cashless",
+  "abonement_topup_cashless",
+  "revenue_abonement",
+  "goods_revenue_cashless",
+  "goods_revenue_abonement",
+]);
 
 export function affectsCashOnHand(type: string): boolean {
   return !CASH_EXCLUDED_TYPES.has(type);
@@ -99,8 +107,15 @@ export async function getPointCashBalance(pointId: string): Promise<number> {
     }
     // Абонементные наличные, собранные ДО последней инкассации, считаются
     // уже забранными вместе с остальной кассой — тот же принцип, что у
-    // аванса/премии выше (запрос пользователя 2026-07-18).
-    if (op.type === "abonement_topup" && lastCollectionAt && op.occurredAt <= lastCollectionAt) continue;
+    // аванса/премии выше (запрос пользователя 2026-07-18). Товарные наличные
+    // (goods_revenue) — тот же приём: без этой ветки касса "Товары" никогда
+    // не занулилась бы ни одной инкассацией (docs/spec/09-goods.md, "Деньги").
+    if (
+      (op.type === "abonement_topup" || op.type === "goods_revenue") &&
+      lastCollectionAt &&
+      op.occurredAt <= lastCollectionAt
+    )
+      continue;
     total += Number(op.amount);
   }
   return total;

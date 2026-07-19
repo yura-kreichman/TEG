@@ -117,6 +117,7 @@ export default function PointsPage() {
   const { saved: deviceDeleted, pulse: deviceDeletePulse } = useSavePulse();
   const [deviceKebabView, setDeviceKebabView] = useState<DeviceKebabView>("menu");
   const [renameDeviceValue, setRenameDeviceValue] = useState("");
+  const [renameDeviceRoaming, setRenameDeviceRoaming] = useState(false);
   const { saved: renameDeviceSaved, pulse: renameDevicePulse } = useSavePulse();
 
   async function loadPoints() {
@@ -338,6 +339,7 @@ export default function PointsPage() {
     setDeviceKebab({ pointId, device });
     setDeviceKebabView("menu");
     setRenameDeviceValue(device.label ?? "");
+    setRenameDeviceRoaming(device.roaming);
   }
 
   async function confirmRenameDevice() {
@@ -345,7 +347,7 @@ export default function PointsPage() {
     await fetch(`/api/points/${deviceKebab.pointId}/devices/${deviceKebab.device.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: renameDeviceValue }),
+      body: JSON.stringify({ label: renameDeviceValue, roaming: renameDeviceRoaming }),
     });
     await loadPoints();
     renameDevicePulse(() => setDeviceKebab(null));
@@ -741,6 +743,17 @@ export default function PointsPage() {
               value={renameDeviceValue}
               onChange={(e) => setRenameDeviceValue(e.target.value)}
             />
+            {/* Роуминг переключаем и здесь, не только при создании ссылки
+                активации (запрос пользователя 2026-07-19: "после активации
+                устройства я не могу уже включить Роуминг") — то же поле
+                PointDevice.roaming, никакой переустановки PWA не требуется. */}
+            <div className="flex items-center justify-between rounded-control border border-border p-3">
+              <span>
+                <span className="block text-body-airbnb">{t.points.roamingLabel}</span>
+                <span className="mt-0.5 block text-caption-airbnb">{t.points.roamingHint}</span>
+              </span>
+              <Switch checked={renameDeviceRoaming} onCheckedChange={setRenameDeviceRoaming} className="shrink-0" />
+            </div>
             <PressableScale>
               <SaveButton className="h-12 w-full" onClick={confirmRenameDevice} saved={renameDeviceSaved} />
             </PressableScale>

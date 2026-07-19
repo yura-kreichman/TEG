@@ -37,6 +37,8 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/operators/[
     timeTrackingMode: operator.timeTrackingMode,
     overdraftAllowed: operator.overdraftAllowed,
     skipShiftStartWindow: operator.skipShiftStartWindow,
+    goodsAccess: operator.goodsAccess,
+    revisionAccess: operator.revisionAccess,
     hasOpenShift,
   });
 }
@@ -64,6 +66,8 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
     timeTrackingMode,
     overdraftAllowed,
     skipShiftStartWindow,
+    goodsAccess,
+    revisionAccess,
   } = await request.json();
   const data: {
     name?: string;
@@ -76,6 +80,8 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
     timeTrackingMode?: string;
     overdraftAllowed?: boolean;
     skipShiftStartWindow?: boolean;
+    goodsAccess?: boolean;
+    revisionAccess?: boolean;
   } = {};
 
   if (name !== undefined) {
@@ -157,6 +163,18 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
       return NextResponse.json({ error: "Некорректное значение skipShiftStartWindow" }, { status: 400 });
     }
     data.skipShiftStartWindow = skipShiftStartWindow;
+  }
+  if (goodsAccess !== undefined) {
+    if (typeof goodsAccess !== "boolean") {
+      return NextResponse.json({ error: "Некорректное значение goodsAccess" }, { status: 400 });
+    }
+    data.goodsAccess = goodsAccess;
+  }
+  if (revisionAccess !== undefined) {
+    if (typeof revisionAccess !== "boolean") {
+      return NextResponse.json({ error: "Некорректное значение revisionAccess" }, { status: 400 });
+    }
+    data.revisionAccess = revisionAccess;
   }
 
   await prisma.operator.update({ where: { id }, data });

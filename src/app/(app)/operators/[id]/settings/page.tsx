@@ -22,6 +22,7 @@ import {
   AlarmClockOff,
   PenLine,
   Fingerprint,
+  ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -58,6 +59,8 @@ interface Profile {
   timeTrackingMode: "manual" | "auto";
   overdraftAllowed: boolean;
   skipShiftStartWindow: boolean;
+  goodsAccess: boolean;
+  revisionAccess: boolean;
   hasOpenShift: boolean;
 }
 
@@ -306,6 +309,31 @@ export default function OperatorSettingsPage() {
     });
   }
 
+  // Тумблер модуля "Товары" (docs/spec/09-goods.md, "Доступ") — группа
+  // "Работа", тот же принцип мгновенного сохранения, что overdraft/skip выше.
+  async function toggleGoodsAccess(value: boolean) {
+    if (!profile) return;
+    setProfile({ ...profile, goodsAccess: value });
+    await fetch(`/api/operators/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goodsAccess: value }),
+    });
+  }
+
+  // Отдельный тумблер ревизии остатков (запрос пользователя 2026-07-19) —
+  // виден только при включённом goodsAccess (без него раздел "Товары" не
+  // открыть вовсе, тумблер сам по себе не имеет смысла).
+  async function toggleRevisionAccess(value: boolean) {
+    if (!profile) return;
+    setProfile({ ...profile, revisionAccess: value });
+    await fetch(`/api/operators/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ revisionAccess: value }),
+    });
+  }
+
   function openColor() {
     if (!profile) return;
     setColorValue(profile.colorTag ?? "#22c55e");
@@ -535,6 +563,29 @@ export default function OperatorSettingsPage() {
                 />
               </div>
             )}
+            <div className="flex items-center gap-3 border-t border-border py-3.5">
+              <ShoppingBag className="size-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <div className="text-body-airbnb">{t.goods.navLabel}</div>
+                <div className="text-caption-airbnb">{t.operators.goodsAccessHint}</div>
+              </div>
+              <Switch checked={profile.goodsAccess} onCheckedChange={toggleGoodsAccess} className="shrink-0" />
+            </div>
+            {/* Без своей border-t и без иконки (запрос пользователя
+                2026-07-19: "надо, чтобы было понятно, что Ревизия относится
+                к Товарам... не разделять линией") — визуально приклеена к
+                строке "Товары" выше и слегка сдвинута вправо (pl-7, под
+                текст, а не под иконку), читается как её под-настройка, а не
+                независимый пункт. */}
+            {profile.goodsAccess && (
+              <div className="flex items-center gap-3 py-2.5 pl-7">
+                <div className="min-w-0 flex-1">
+                  <div className="text-caption-airbnb font-semibold">{t.goods.revisionTitle}</div>
+                  <div className="text-caption-airbnb text-muted-foreground">{t.operators.revisionAccessHint}</div>
+                </div>
+                <Switch checked={profile.revisionAccess} onCheckedChange={toggleRevisionAccess} className="shrink-0" />
+              </div>
+            )}
             <SettingsRow
               icon={Palette}
               label={t.operators.colorTagAction}
@@ -554,6 +605,29 @@ export default function OperatorSettingsPage() {
             <span className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[.08em] text-muted-foreground/70">
               {t.operators.workGroupLabel}
             </span>
+            <div className="flex items-center gap-3 border-t border-border py-3.5 first:border-t-0">
+              <ShoppingBag className="size-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <div className="text-body-airbnb">{t.goods.navLabel}</div>
+                <div className="text-caption-airbnb">{t.operators.goodsAccessHint}</div>
+              </div>
+              <Switch checked={profile.goodsAccess} onCheckedChange={toggleGoodsAccess} className="shrink-0" />
+            </div>
+            {/* Без своей border-t и без иконки (запрос пользователя
+                2026-07-19: "надо, чтобы было понятно, что Ревизия относится
+                к Товарам... не разделять линией") — визуально приклеена к
+                строке "Товары" выше и слегка сдвинута вправо (pl-7, под
+                текст, а не под иконку), читается как её под-настройка, а не
+                независимый пункт. */}
+            {profile.goodsAccess && (
+              <div className="flex items-center gap-3 py-2.5 pl-7">
+                <div className="min-w-0 flex-1">
+                  <div className="text-caption-airbnb font-semibold">{t.goods.revisionTitle}</div>
+                  <div className="text-caption-airbnb text-muted-foreground">{t.operators.revisionAccessHint}</div>
+                </div>
+                <Switch checked={profile.revisionAccess} onCheckedChange={toggleRevisionAccess} className="shrink-0" />
+              </div>
+            )}
             <SettingsRow
               icon={Palette}
               label={t.operators.colorTagAction}

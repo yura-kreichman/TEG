@@ -26,14 +26,23 @@ export async function PATCH(
     return NextResponse.json({ error: "Устройство не найдено" }, { status: 404 });
   }
 
-  const { label } = await request.json();
+  const { label, roaming } = await request.json();
   if (typeof label !== "string") {
     return NextResponse.json({ error: "Название устройства обязательно" }, { status: 400 });
   }
 
   await prisma.pointDevice.update({
     where: { id: deviceId },
-    data: { label: label.trim() || null },
+    data: {
+      label: label.trim() || null,
+      // Роуминг переключаем и у УЖЕ активированного устройства (запрос
+      // пользователя 2026-07-19: "после активации устройства я не могу уже
+      // включить Роуминг" — раньше это был только флаг при создании ссылки
+      // активации; реального технического ограничения нет, PointDevice.roaming
+      // просто не менялся вне POST). undefined — поле не пришло в запросе
+      // (например, старый клиент) — не трогаем текущее значение.
+      ...(typeof roaming === "boolean" ? { roaming } : {}),
+    },
   });
 
   return NextResponse.json({ ok: true });

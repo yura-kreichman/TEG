@@ -191,6 +191,11 @@ model Tenant {
   instructions                  Instruction[]
   landing                       Landing?
   oldSlugs                      TenantOldSlug[]
+  goodsCategories               GoodsCategory[]
+  goods                         Goods[]
+  goodsSales                    GoodsSale[]
+  goodsRevisions                GoodsRevision[]
+  goodsReconciliations          GoodsReconciliation[]
 }
 
 // ============================================================================
@@ -242,6 +247,10 @@ model User {
   assignedTasks         Task[]                     @relation("TaskAssignedUsers")
   pushSubscriptions     PushSubscription[]
   abonementTransactions AbonementTransaction[]
+  goodsRestocks         GoodsRestock[]
+  goodsSales            GoodsSale[]
+  goodsRevisions        GoodsRevision[]
+  goodsReconciliations  GoodsReconciliation[]
 }
 
 // Одна запись на браузер/устройство, подписавшееся на Web Push (фидбек
@@ -337,6 +346,24 @@ model Operator {
   allZonesAccess Boolean @default(true)
   allowedZones   Zone[]  @relation("OperatorAllowedZones")
 
+  // Тумблер модуля "Товары" (docs/spec/09-goods.md, "Доступ") — первый в
+  // проекте булев тумблер уровня "весь модуль" у оператора, не список зон,
+  // как allZonesAccess/allowedZones выше. Без него оператор не видит раздел
+  // продаж, не может продавать и не может сдавать кассу Товаров — владелец
+  // всегда может всё это независимо от этого поля.
+  goodsAccess Boolean @default(false)
+
+  // Отдельный тумблер РЕВИЗИИ остатков (запрос пользователя 2026-07-19,
+  // "Сотрудник не должен иметь право делать ревизию остатков") — намеренно
+  // ОТДЕЛЬНЫЙ от goodsAccess: продажа и сдача кассы — обычная работа на
+  // точке каждый день, ревизия — действие, которое переопределяет базовую
+  // точку для всех будущих расчётов остатка, доверить его можно не любому
+  // сотруднику. @default(true) — чтобы уже настроенные операторы не
+  // потеряли возможность при накатке миграции, владелец выключает выборочно.
+  // Имеет смысл только вместе с goodsAccess=true (без него раздел "Товары"
+  // не открыть вовсе).
+  revisionAccess Boolean @default(true)
+
   createdByUserId String
   createdBy       User   @relation("OperatorCreatedBy", fields: [createdByUserId], references: [id])
 
@@ -390,6 +417,9 @@ model Operator {
   launchesStarted       Launch[]                   @relation("LaunchStartedBy")
   launchesEnded         Launch[]                   @relation("LaunchEndedBy")
   abonementTransactions AbonementTransaction[]
+  goodsSales            GoodsSale[]
+  goodsRevisions        GoodsRevision[]
+  goodsReconciliations  GoodsReconciliation[]
 }
 
 // ============================================================================
@@ -453,6 +483,11 @@ model Point {
   tasks                      Task[]
   openingHours               PointOpeningHours[]
   abonementTransactions      AbonementTransaction[]
+  goodsStocks                GoodsStock[]
+  goodsRestocks              GoodsRestock[]
+  goodsSales                 GoodsSale[]
+  goodsRevisions             GoodsRevision[]
+  goodsReconciliations       GoodsReconciliation[]
 }
 
 // Часы работы точки, по одной строке на день недели (docs/spec/08-landing.md,
@@ -724,6 +759,7 @@ model AbonementWallet {
 
   transactions AbonementTransaction[]
   launches     Launch[]
+  goodsSales   GoodsSale[]
 
   // Один кошелёк на номер в рамках тенанта — общий на все точки.
   @@unique([tenantId, phone])
@@ -754,6 +790,12 @@ model AbonementTransaction {
   launchId String?
   launch   Launch? @relation(fields: [launchId], references: [id], onDelete: SetNull)
 
+  // Только "spend" (оплата товара балансом) / "refund" (сторно аннулированной
+  // продажи) — какая продажа (docs/spec/09-goods.md, модуль "Товары"). Тот же
+  // приём, что launchId выше.
+  goodsSaleId String?
+  goodsSale   GoodsSale? @relation(fields: [goodsSaleId], references: [id], onDelete: SetNull)
+
   pointId    String?
   point      Point?    @relation(fields: [pointId], references: [id])
   // "Кто провёл" операцию — оператор ИЛИ владелец (тот же приём, что
@@ -772,6 +814,213 @@ model AbonementTransaction {
 
   @@index([walletId, occurredAt])
   @@index([launchId])
+  @@index([goodsSaleId])
+}
+
+// ============================================================================
+// ТОВАРЫ (см. docs/spec/09-goods.md) — продажа сопутствующих товаров и
+// товаров-услуг на точках. Не встроена в ResultsSubmission/ZoneSubmission
+// (решение при проектировании 2026-07-19: Товары продаются на уровне точки,
+// не зоны, и не имеют естественного места в зоно-центричном мастере "Сдача
+// итогов") — своя независимая сверка кассы, см. GoodsReconciliation ниже.
+// Никакого per-tenant feature-флага — противоречило бы 00-architecture.md
+// ("никакого per-tenant отключения областей нет и не будет"), единственный
+// гейт — операторский тумблер (Operator, поле ниже).
+// ============================================================================
+
+model GoodsCategory {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name  String
+  order Int    @default(0)
+
+  // Soft-delete — тот же принцип, что у Goods ниже: у архивной категории
+  // могут быть товары в истории продаж, ссылку рвать нельзя.
+  deletedAt DateTime?
+
+  goods     Goods[]
+  revisions GoodsRevision[]
+
+  @@index([tenantId])
+}
+
+model Goods {
+  id         String        @id @default(cuid())
+  tenantId   String
+  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   GoodsCategory @relation(fields: [categoryId], references: [id])
+
+  name     String
+  photoUrl String?
+  price    Decimal @db.Decimal(10, 2)
+
+  lowStockThreshold Int?
+  // Товары-услуги (например, "Комплект для мастер-класса") остаток не
+  // ведут — trackStock=false, GoodsStock для них не создаётся вовсе.
+  trackStock        Boolean @default(true)
+
+  sortOrder Int       @default(0)
+  // Soft-delete (паттерн Tariff/Abonement) — прошлые GoodsSale/GoodsStock
+  // должны продолжать ссылаться на товар, которым когда-то торговали.
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  stock         GoodsStock[]
+  sales         GoodsSale[]
+  restocks      GoodsRestock[]
+  revisionLines GoodsRevisionLine[]
+
+  @@index([tenantId])
+  @@index([categoryId])
+}
+
+// Остаток товара на конкретной точке — создаётся лениво (первое пополнение
+// или первая продажа), только для trackStock=true.
+model GoodsStock {
+  id      String @id @default(cuid())
+  goodsId String
+  goods   Goods  @relation(fields: [goodsId], references: [id])
+  pointId String
+  point   Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  quantity Int @default(0)
+
+  @@unique([goodsId, pointId])
+  @@index([pointId])
+}
+
+model GoodsRestock {
+  id      String @id @default(cuid())
+  goodsId String
+  goods   Goods  @relation(fields: [goodsId], references: [id])
+  pointId String
+  point   Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  quantity          Int
+  // Пополнение — только владелец (docs/spec/09-goods.md), без
+  // performedByOperatorId.
+  performedByUserId String
+  performedByUser   User   @relation(fields: [performedByUserId], references: [id])
+
+  occurredAt DateTime @default(now())
+
+  @@index([goodsId, pointId])
+}
+
+model GoodsSale {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  goodsId  String
+  goods    Goods  @relation(fields: [goodsId], references: [id])
+  pointId  String
+  point    Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  quantity      Int
+  // Снапшот цены на момент продажи (паттерн Launch.priceSnapshot) — смена
+  // цены товара не задевает прошлые продажи.
+  priceSnapshot Decimal @db.Decimal(10, 2)
+  amount        Decimal @db.Decimal(10, 2) // = priceSnapshot * quantity, хранится, не пересчитывается
+
+  paymentMethod String // "cash" | "mobile" | "abonement"
+  walletId      String?
+  wallet        AbonementWallet? @relation(fields: [walletId], references: [id])
+
+  performedByOperatorId String?
+  performedByOperator   Operator? @relation(fields: [performedByOperatorId], references: [id])
+  performedByUserId     String?
+  performedByUser       User?     @relation(fields: [performedByUserId], references: [id])
+
+  // Аннулирование — только владелец (CorrectionLog, entityType="GoodsSale").
+  // Статус — nullable timestamp, тот же паттерн, что Launch.voidedAt, не
+  // отдельное поле "status".
+  voidedAt DateTime?
+
+  occurredAt DateTime @default(now()) // серверное время
+  createdAt  DateTime @default(now())
+
+  abonementTransactions AbonementTransaction[]
+
+  @@index([pointId, occurredAt])
+  @@index([goodsId])
+  @@index([walletId])
+}
+
+model GoodsRevision {
+  id         String        @id @default(cuid())
+  tenantId   String
+  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pointId    String
+  point      Point         @relation(fields: [pointId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   GoodsCategory @relation(fields: [categoryId], references: [id])
+
+  performedByOperatorId String?
+  performedByOperator   Operator? @relation(fields: [performedByOperatorId], references: [id])
+  performedByUserId     String?
+  performedByUser       User?     @relation(fields: [performedByUserId], references: [id])
+
+  // Одно нажатие "Сохранить" в bottom sheet ревизии может затронуть
+  // несколько категорий (запрос пользователя 2026-07-19) — каждая всё равно
+  // отдельная запись (архитектура категория=ревизия не меняется), но все
+  // созданные в одном коммите делят batchId — так История ревизий может
+  // группировать их в одну плашку вместо одной на категорию. NULL у записей
+  // до этого поля (не группируются, что и раньше).
+  batchId String?
+
+  occurredAt DateTime @default(now())
+
+  lines GoodsRevisionLine[]
+
+  @@index([pointId, occurredAt])
+  @@index([batchId])
+}
+
+model GoodsRevisionLine {
+  id         String        @id @default(cuid())
+  revisionId String
+  revision   GoodsRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  goodsId    String
+  goods      Goods         @relation(fields: [goodsId], references: [id])
+
+  // Снапшот GoodsStock.quantity ДО выравнивания — сам GoodsStock тут же
+  // перезаписывается на actualQuantity, поэтому "расчётное" нужно хранить
+  // явно, иначе история расхождений потеряется безвозвратно.
+  calculatedQuantity Int
+  actualQuantity     Int
+
+  @@index([revisionId])
+}
+
+// Сверка кассы Товаров — НЕ привязана к ResultsSubmission (docs/spec/09-goods.md,
+// "Сверка кассы"). Хранит только введённое человеком; расчётная выручка и
+// разница всегда считаются на лету суммированием GoodsSale за период
+// [предыдущая сверка этой точки → эта] — тот же принцип, что у ZoneSubmission
+// (там calculatedRevenue тоже не хранится, а не как у GoodsRevisionLine выше,
+// где хранить обязательно — GoodsStock.quantity изменяемый и перезаписывается,
+// GoodsSale неизменяем и всегда пересчитываем).
+model GoodsReconciliation {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pointId  String
+  point    Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  performedByOperatorId String?
+  performedByOperator   Operator? @relation(fields: [performedByOperatorId], references: [id])
+  performedByUserId     String?
+  performedByUser       User?     @relation(fields: [performedByUserId], references: [id])
+
+  actualCash   Decimal @db.Decimal(10, 2)
+  actualMobile Decimal @db.Decimal(10, 2)
+
+  occurredAt DateTime @default(now())
+
+  @@index([pointId, occurredAt])
 }
 
 model Asset {

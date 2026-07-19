@@ -272,7 +272,7 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
           )}
 
           <SegmentedTabs
-            className="mb-4 grid grid-cols-2"
+            className="mb-4 grid grid-cols-3"
             equalWidth
             size="sm"
             options={TABS.map((tb) => ({ key: tb.key, label: tb.label }))}
@@ -553,7 +553,12 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
             </div>
           </div>
         </div>
-        <div className={cn("mt-3.5 grid gap-3 border-t border-border pt-3.5 tabular-nums", data.abonement > 0 ? "grid-cols-4" : "grid-cols-3")}>
+        <div
+          className={cn(
+            "mt-3.5 grid gap-3 border-t border-border pt-3.5 tabular-nums",
+            data.abonement > 0 ? "grid-cols-4" : "grid-cols-3"
+          )}
+        >
           <div>
             <div className="text-caption-airbnb">{t.reports.cashLabel}</div>
             <div className="text-[1rem] font-bold"><Money value={data.cash} /></div>

@@ -7,10 +7,9 @@ import { ChevronLeft, ChevronRight, FileText, Gift, Info, MapPin, Minus, Pencil,
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
-import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
+import { IconActionButton } from "@/components/kebab-menu";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { SaveButton } from "@/components/ui/save-button";
@@ -98,7 +97,7 @@ interface AbonementSales {
   }[];
 }
 
-type ActionsView = "menu" | "edit" | "confirm-delete";
+type ActionsView = "edit" | "confirm-delete";
 
 export default function ReadingsCalendarPage() {
   const router = useRouter();
@@ -133,7 +132,7 @@ export default function ReadingsCalendarPage() {
   const dateReady = dateReadyForPointId === pointId;
 
   const [actionsFor, setActionsFor] = useState<DayCard | null>(null);
-  const [actionsView, setActionsView] = useState<ActionsView>("menu");
+  const [actionsView, setActionsView] = useState<ActionsView>("edit");
   const [editReadings, setEditReadings] = useState<Record<string, string>>({});
   const [editCash, setEditCash] = useState("");
   const [editMobile, setEditMobile] = useState("");
@@ -229,25 +228,29 @@ export default function ReadingsCalendarPage() {
     setYear(nextYear);
   }
 
-  function openActions(card: DayCard) {
-    setActionsFor(card);
-    setActionsView("menu");
-    setActionError(null);
-  }
-
-  function openEdit() {
-    if (!actionsFor) return;
+  // Прямые кнопки-иконки на строке вместо кебаб-меню (запрос пользователя
+  // 2026-07-19: "здесь тоже вместо бургера можно поставить кнопки, как ты
+  // сделал в Товарах... всего 2 опции") — actionsFor выставляется прямо тут,
+  // не через промежуточный шаг "меню".
+  function openEdit(card: DayCard) {
     const readings: Record<string, string> = {};
-    for (const asset of actionsFor.assets) {
+    for (const asset of card.assets) {
       for (const r of asset.readings) readings[`${asset.assetId}:${r.tariffId}`] = String(r.value);
     }
+    setActionsFor(card);
     setEditReadings(readings);
-    setEditCash(String(actionsFor.cashAmount));
-    setEditMobile(String(actionsFor.mobileAmount));
-    setEditReturns(String(actionsFor.returnsCount));
+    setEditCash(String(card.cashAmount));
+    setEditMobile(String(card.mobileAmount));
+    setEditReturns(String(card.returnsCount));
     setEditReason("");
     setActionError(null);
     setActionsView("edit");
+  }
+
+  function openDeleteConfirm(card: DayCard) {
+    setActionsFor(card);
+    setActionsView("confirm-delete");
+    setActionError(null);
   }
 
   async function confirmEdit() {
@@ -709,7 +712,15 @@ export default function ReadingsCalendarPage() {
                                 ` · ${t.readings.lastSubmissionNote}`}
                             </p>
                           </div>
-                          <KebabButton onClick={() => openActions(card)} label={t.readings.actionsLabel} />
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <IconActionButton icon={Pencil} onClick={() => openEdit(card)} label={t.readings.editAction} />
+                            <IconActionButton
+                              icon={Trash2}
+                              onClick={() => openDeleteConfirm(card)}
+                              label={t.readings.deleteAction}
+                              destructive={card.editable}
+                            />
+                          </div>
                         </div>
 
                         <div className="mt-3 border-t border-border pt-3">
@@ -899,39 +910,14 @@ export default function ReadingsCalendarPage() {
         </div>
       </div>
 
-      <BottomSheet open={actionsFor !== null && actionsView === "menu"} onClose={() => setActionsFor(null)}>
-        {actionsFor && (
-          <div className="pt-2">
-            <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">
-              {t.readings.actionsSheetPrefix} {formatTime(actionsFor.submittedAt)}
-            </h2>
-            {!actionsFor.editable && (
-              <p className="mb-2 text-sm text-muted-foreground">{t.readings.lockedNote}</p>
-            )}
-            <ActionSheetItem icon={Pencil} onClick={openEdit}>
-              {actionsFor.editable ? (
-                t.readings.editAction
-              ) : (
-                <span className="text-muted-foreground">{t.readings.editAction}</span>
-              )}
-            </ActionSheetItem>
-            <ActionSheetItem icon={Trash2} destructive={actionsFor.editable} onClick={() => setActionsView("confirm-delete")}>
-              {actionsFor.editable ? (
-                t.readings.deleteAction
-              ) : (
-                <span className="text-muted-foreground">{t.readings.deleteAction}</span>
-              )}
-            </ActionSheetItem>
-          </div>
-        )}
-      </BottomSheet>
-
       <BottomSheet open={actionsFor !== null && actionsView === "edit"} onClose={() => setActionsFor(null)}>
         {actionsFor && (
           <div className="flex flex-col gap-3 pt-2">
             <div>
               <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.readings.editSheetTitle}</h2>
-              <p className="text-caption-airbnb">{t.readings.autoRecalcHint}</p>
+              <p className="text-caption-airbnb">
+                {actionsFor.editable ? t.readings.autoRecalcHint : t.readings.lockedNote}
+              </p>
             </div>
 
             {actionsFor.assets.map((asset) => (
@@ -1061,7 +1047,9 @@ export default function ReadingsCalendarPage() {
         {actionsFor && (
           <div className="flex flex-col gap-3 pt-2">
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.readings.deleteConfirmTitle}</h2>
-            <p className="text-body-airbnb">{t.readings.deleteConfirmBody}</p>
+            <p className="text-body-airbnb">
+              {actionsFor.editable ? t.readings.deleteConfirmBody : t.readings.lockedNote}
+            </p>
             {actionError && <p className="text-sm text-destructive">{actionError}</p>}
             <PressableScale>
               <DeleteButton className="h-12 w-full" disabled={deleting} onClick={confirmDelete} deleted={readingDeleted}>

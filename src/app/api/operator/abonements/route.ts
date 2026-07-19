@@ -4,6 +4,7 @@ import {
   ABONEMENT_TOPUP_PAYMENT_METHODS,
   createWalletEmpty,
   createWalletWithTopup,
+  createWalletWithTopupArbitrary,
   findWalletByPhone,
   normalizePhone,
 } from "@/lib/abonement";
@@ -53,6 +54,11 @@ export async function POST(request: Request) {
   const phone: string = typeof body.phone === "string" ? body.phone : "";
   const name: string | null = typeof body.name === "string" && body.name.trim() ? body.name.trim() : null;
   const abonementId: string | null = typeof body.abonementId === "string" && body.abonementId ? body.abonementId : null;
+  // Произвольная сумма Сотрудником (запрос пользователя 2026-07-19) — в
+  // отличие от Владельца (см. /api/abonement-wallets) это РЕАЛЬНАЯ оплата на
+  // точке, поэтому обязателен способ оплаты и создаётся MoneyOperation (см.
+  // createWalletWithTopupArbitrary).
+  const amount: number | null = body.amount != null ? Number(body.amount) : null;
   const paymentMethod = body.paymentMethod;
 
   if (!normalizePhone(phone)) {
@@ -64,9 +70,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Абонемент с этим номером уже существует" }, { status: 400 });
   }
 
-  // Без выбранного плана — просто регистрация нового абонента, без покупки
-  // (запрос пользователя 2026-07-18: "может человек потом захочет").
-  if (!abonementId) {
+  // Без выбранного плана и без суммы — просто регистрация нового абонента,
+  // без покупки (запрос пользователя 2026-07-18: "может человек потом
+  // захочет").
+  if (!abonementId && amount == null) {
     const wallet = await createWalletEmpty(phone, name, point.tenantId);
     return NextResponse.json(
       { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance), createdAt: wallet.createdAt },
@@ -75,6 +82,23 @@ export async function POST(request: Request) {
   }
   if (!(ABONEMENT_TOPUP_PAYMENT_METHODS as readonly string[]).includes(paymentMethod)) {
     return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
+  }
+
+  if (!abonementId) {
+    if (!Number.isFinite(amount) || (amount as number) <= 0) {
+      return NextResponse.json({ error: "Укажите сумму" }, { status: 400 });
+    }
+    const wallet = await createWalletWithTopupArbitrary(phone, name, {
+      tenantId: point.tenantId,
+      pointId: point.id,
+      amount: amount as number,
+      paymentMethod,
+      actor: { operatorId: operator.id },
+    });
+    return NextResponse.json(
+      { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance), createdAt: wallet.createdAt },
+      { status: 201 }
+    );
   }
 
   try {

@@ -44,7 +44,7 @@ function formatCreatedDate(createdAt: string, locale: string): string {
     new Date(createdAt)
   );
 }
-function formatTenure(createdAt: string, t: Dictionary): string {
+export function formatTenure(createdAt: string, t: Dictionary): string {
   const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000);
   if (days < 1) return t.abonements.tenureToday;
   if (days < 30) return `${days} ${t.abonements.tenureDays}`;
@@ -63,6 +63,13 @@ export interface AbonementTopupFlowProps {
   // Уже загруженный список планов — только когда allowPlanPurchase=true
   // (оператор, из /api/operator/abonement-plans).
   plans: AbonementCtx[];
+  // Часовой пояс тенанта для read-only префикса телефона — разный эндпоинт
+  // для владельца/оператора (см. PhoneInput) — компонент общий для обеих
+  // ролей, поэтому не может знать это сам, обязателен явный проп (реальный
+  // баг, найден пользователем 2026-07-19: было захардкожено на владельческий
+  // /api/tenant/timezone, у оператора он отвечал 401, и префикс молча
+  // откатывался на дефолт "RU +7" вместо реального часового пояса тенанта).
+  timezoneEndpoint: string;
   // GET ?phone= — поиск кошелька.
   searchEndpoint: string;
   // POST — создание кошелька + первое пополнение.
@@ -87,6 +94,14 @@ export interface AbonementTopupFlowProps {
   // привязана к точке (запрос пользователя: "нигде не должно учитываться") —
   // чистое изменение баланса кошелька, без следа в "Деньгах".
   allowArbitraryAmount?: boolean;
+  // Произвольная сумма — тоже РЕАЛЬНАЯ оплата (запрос пользователя
+  // 2026-07-19: Сотрудник принимает деньги на точке за призвольную сумму,
+  // не только по фиксированному плану) — в отличие от Владельца (адрес
+  // выше), тут перед зачислением нужен экран выбора способа оплаты, тот же,
+  // что у покупки плана, и создаётся реальная MoneyOperation (см.
+  // topUpWalletArbitrary/createWalletWithTopupArbitrary). Не передан —
+  // поведение как раньше: мгновенное зачисление без следа в кассе (Владелец).
+  arbitraryAmountNeedsPaymentMethod?: boolean;
   // Встроить сразу для уже известного кошелька, без шага поиска по телефону
   // (запрос пользователя 2026-07-17: "владелец должен иметь возможность
   // вручную пополнить баланс" прямо из карточки абонента, не выходя в
@@ -110,12 +125,14 @@ export interface AbonementTopupFlowProps {
  */
 export function AbonementTopupFlow({
   plans,
+  timezoneEndpoint,
   searchEndpoint,
   createEndpoint,
   topupEndpointFor,
   updateNameEndpointFor,
   allowPlanPurchase = true,
   allowArbitraryAmount,
+  arbitraryAmountNeedsPaymentMethod,
   initialWallet,
   onSuccess,
 }: AbonementTopupFlowProps) {
@@ -127,7 +144,13 @@ export function AbonementTopupFlow({
   // undefined — ещё не искали, null — искали, не нашли, объект — нашли.
   const [found, setFound] = useState<WalletCtx | null | undefined>(initialWallet ?? undefined);
   const [name, setName] = useState("");
-  const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
+  // Экран выбора способа оплаты — план ИЛИ произвольная сумма (когда
+  // arbitraryAmountNeedsPaymentMethod), тот же экран для обоих (запрос
+  // пользователя 2026-07-19: реальная оплата произвольной суммы Сотрудником
+  // требует того же подтверждения способа оплаты, что и покупка плана).
+  const [pendingAction, setPendingAction] = useState<{ kind: "plan"; plan: AbonementCtx } | { kind: "arbitrary"; amount: number } | null>(
+    null
+  );
   const [arbitraryAmount, setArbitraryAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -234,7 +257,7 @@ export function AbonementTopupFlow({
         return;
       }
       setFound({ id: data.id, phone: data.phone, name: data.name, balance: data.balance });
-      setPendingPlanId(null);
+      setPendingAction(null);
       setJustCredited({ amount: plan.creditAmount, newBalance: data.balance });
       onSuccess?.();
     } catch {
@@ -259,7 +282,7 @@ export function AbonementTopupFlow({
         return;
       }
       setFound(data);
-      setPendingPlanId(null);
+      setPendingAction(null);
       setJustCredited({ amount: plan.creditAmount, newBalance: data.balance });
       onSuccess?.();
     } catch {
@@ -269,6 +292,63 @@ export function AbonementTopupFlow({
     }
   }
 
+  // Произвольная сумма, ТРЕКАЕМАЯ (Сотрудник, реальная оплата, см.
+  // arbitraryAmountNeedsPaymentMethod) — сиблинг handleCreate/handleTopup
+  // выше, а не handleAdjust ниже (тот — untracked-путь Владельца).
+  async function handleCreateArbitrary(amount: number, paymentMethod: "cash" | "mobile") {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(createEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, name: name.trim() || undefined, amount, paymentMethod }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? t.operatorApp.gameRoom.networkError);
+        return;
+      }
+      setFound({ id: data.id, phone: data.phone, name: data.name, balance: data.balance });
+      setPendingAction(null);
+      setJustCredited({ amount, newBalance: data.balance });
+      setArbitraryAmount("");
+      onSuccess?.();
+    } catch {
+      setError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleTopupArbitrary(walletId: string, amount: number, paymentMethod: "cash" | "mobile") {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(topupEndpointFor(walletId), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, paymentMethod }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? t.operatorApp.gameRoom.networkError);
+        return;
+      }
+      setFound(data);
+      setPendingAction(null);
+      setJustCredited({ amount, newBalance: data.balance });
+      setArbitraryAmount("");
+      onSuccess?.();
+    } catch {
+      setError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Untracked-путь Владельца (см. arbitraryAmountNeedsPaymentMethod выше) —
+  // мгновенное зачисление, без способа оплаты, без следа в кассе.
   async function handleAdjust() {
     const amount = Number(arbitraryAmount);
     if (!Number.isFinite(amount) || amount <= 0 || submitting) return;
@@ -296,7 +376,20 @@ export function AbonementTopupFlow({
     }
   }
 
-  const pendingPlan = plans.find((p) => p.id === pendingPlanId) ?? null;
+  // Клик по кнопке произвольной суммы — трекаемый режим уходит на экран
+  // выбора способа оплаты (см. pendingAction), untracked режим (Владелец)
+  // зачисляет сразу, как раньше.
+  function handleArbitraryButtonClick() {
+    if (submitting) return;
+    if (arbitraryAmountNeedsPaymentMethod) {
+      const amount = Number(arbitraryAmount);
+      if (!Number.isFinite(amount) || amount <= 0) return;
+      setPendingAction({ kind: "arbitrary", amount });
+      return;
+    }
+    handleAdjust();
+  }
+
   const isNew = found === null;
 
   return (
@@ -325,23 +418,23 @@ export function AbonementTopupFlow({
               type="button"
               className="h-12 w-full font-bold"
               onClick={() => {
+                // Возврат в карточку клиента (запрос пользователя
+                // 2026-07-19), а не заново на экран поиска по телефону —
+                // found уже содержит обновлённый баланс (setFound внутри
+                // handleCreate*/handleTopup* выше), просто закрываем экран
+                // подтверждения.
                 setJustCredited(null);
-                if (!initialWallet) {
-                  setFound(undefined);
-                  setPhone("");
-                  setName("");
-                }
               }}
             >
               {t.abonements.doneButton}
             </Button>
           </PressableScale>
         </div>
-      ) : pendingPlan ? (
+      ) : pendingAction ? (
         <>
           <button
             type="button"
-            onClick={() => setPendingPlanId(null)}
+            onClick={() => setPendingAction(null)}
             className="flex w-fit items-center gap-1.5 text-caption-airbnb font-semibold text-muted-foreground"
           >
             <ChevronLeft className="size-3.5" />
@@ -351,15 +444,27 @@ export function AbonementTopupFlow({
             {t.operatorApp.gameRoom.paymentMethodTitle}
           </h2>
           <p className="text-caption-airbnb text-muted-foreground">
-            {pendingPlan.name ?? <Money value={pendingPlan.price} />} ·{" "}
-            <Money value={pendingPlan.price} /> → <Money value={pendingPlan.creditAmount} />
+            {pendingAction.kind === "plan" ? (
+              <>
+                {pendingAction.plan.name ?? <Money value={pendingAction.plan.price} />} ·{" "}
+                <Money value={pendingAction.plan.price} /> → <Money value={pendingAction.plan.creditAmount} />
+              </>
+            ) : (
+              <Money value={pendingAction.amount} />
+            )}
           </p>
           <div className="flex flex-col gap-2">
             <ConfirmButton
               className={cn("relative h-12 w-full font-semibold", RAISED_OPTION_BUTTON_CLASS)}
               disabled={submitting}
               onConfirm={() =>
-                isNew ? handleCreate(pendingPlan, "cash") : handleTopup(found!.id, pendingPlan, "cash")
+                pendingAction.kind === "plan"
+                  ? isNew
+                    ? handleCreate(pendingAction.plan, "cash")
+                    : handleTopup(found!.id, pendingAction.plan, "cash")
+                  : isNew
+                    ? handleCreateArbitrary(pendingAction.amount, "cash")
+                    : handleTopupArbitrary(found!.id, pendingAction.amount, "cash")
               }
             >
               <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
@@ -369,7 +474,13 @@ export function AbonementTopupFlow({
               className={cn("relative h-12 w-full font-semibold", RAISED_OPTION_BUTTON_CLASS)}
               disabled={submitting}
               onConfirm={() =>
-                isNew ? handleCreate(pendingPlan, "mobile") : handleTopup(found!.id, pendingPlan, "mobile")
+                pendingAction.kind === "plan"
+                  ? isNew
+                    ? handleCreate(pendingAction.plan, "mobile")
+                    : handleTopup(found!.id, pendingAction.plan, "mobile")
+                  : isNew
+                    ? handleCreateArbitrary(pendingAction.amount, "mobile")
+                    : handleTopupArbitrary(found!.id, pendingAction.amount, "mobile")
               }
             >
               <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
@@ -392,7 +503,7 @@ export function AbonementTopupFlow({
             <PhoneInput
               id="topupPhone"
               autoFocus
-              timezoneEndpoint="/api/tenant/timezone"
+              timezoneEndpoint={timezoneEndpoint}
               value={phone}
               onChange={setPhone}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -559,7 +670,7 @@ export function AbonementTopupFlow({
                           RAISED_OPTION_BUTTON_CLASS
                         )}
                         disabled={isNew && !phone.trim()}
-                        onClick={() => setPendingPlanId(plan.id)}
+                        onClick={() => setPendingAction({ kind: "plan", plan })}
                       >
                         <Gift className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
                         <span>{plan.name ?? <Money value={plan.price} />}</span>
@@ -581,7 +692,7 @@ export function AbonementTopupFlow({
                 <MoneyInput
                   aria-label={t.abonements.arbitraryAmountTitle}
                   inputMode="numeric"
-                  className="h-12 flex-1"
+                  className="h-12 flex-1 bg-card"
                   value={arbitraryAmount}
                   onChange={(e) => setArbitraryAmount(e.target.value)}
                   disabled={isNew && !phone.trim()}
@@ -592,7 +703,7 @@ export function AbonementTopupFlow({
                     variant="outline"
                     className="h-12 shrink-0 font-semibold"
                     disabled={submitting || !arbitraryAmount.trim() || (isNew && !phone.trim())}
-                    onClick={handleAdjust}
+                    onClick={handleArbitraryButtonClick}
                   >
                     {t.abonements.arbitraryAmountButton}
                   </Button>

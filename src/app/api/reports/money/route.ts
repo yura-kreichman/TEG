@@ -104,6 +104,12 @@ export async function GET(request: Request) {
     if (op.type === "revenue") totalRevenueCash += amount;
     if (op.type === "revenue_cashless") totalRevenueMobile += amount;
     if (op.type === "revenue_abonement") totalRevenueAbonement += amount;
+    // Товары (docs/spec/09-goods.md: "не отдельный бизнес") — сливаются в те
+    // же три суммы, что и зонная выручка выше, а не отдельная строка —
+    // "Бизнес: расходы и прибыль" остаётся единой цифрой по всей точке.
+    if (op.type === "goods_revenue") totalRevenueCash += amount;
+    if (op.type === "goods_revenue_cashless") totalRevenueMobile += amount;
+    if (op.type === "goods_revenue_abonement") totalRevenueAbonement += amount;
     if (op.type === "abonement_topup") totalAbonementSoldCash += amount;
     if (op.type === "abonement_topup_cashless") totalAbonementSoldMobile += amount;
     // Расходы бизнес-карточки — только обычные expense (запрос пользователя

@@ -27,6 +27,7 @@ export function BottomGlassNav({
   moreBadge,
   onMoreClick,
   showMore,
+  hideOnDesktop = true,
 }: {
   items: BottomGlassNavItem[];
   moreLabel: string;
@@ -38,9 +39,20 @@ export function BottomGlassNav({
   // вызывающий компонент, а не сам бар — у него нет своего списка "лишних"
   // пунктов, только уже готовый items + внешний BottomSheet.
   showMore: boolean;
+  // Кабинет владельца на md+ переключается на боковой сайдбар (owner-shell.tsx)
+  // — бар должен спрятаться. PWA оператора — терминал на точке (часто
+  // планшет, "приспособлен к планшету", запрос пользователя 2026-07-19), у
+  // неё нет альтернативной навигации для широких экранов, нижний бар должен
+  // остаться виден на любой ширине.
+  hideOnDesktop?: boolean;
 }) {
   return (
-    <nav className="nav-glass fixed inset-x-0 bottom-0 flex pb-[env(safe-area-inset-bottom)] md:hidden">
+    <nav
+      className={cn(
+        "nav-glass fixed inset-x-0 bottom-0 flex pb-[env(safe-area-inset-bottom)]",
+        hideOnDesktop && "md:hidden"
+      )}
+    >
       {items.map((item) => {
         const Icon = item.icon;
         return (

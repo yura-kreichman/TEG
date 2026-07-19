@@ -246,7 +246,7 @@ export default function WorkTimePage() {
 
   return (
     <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-8">
-      <div className="flex w-full max-w-md flex-col gap-4">
+      <div className="flex w-full max-w-md flex-col gap-4 md:max-w-xl lg:max-w-2xl">
         <Link href="/operator" className="w-fit text-caption-airbnb font-semibold text-primary">
           ← {t.common.back}
         </Link>

@@ -23,6 +23,7 @@ export async function GET() {
       allZonesAccess: true,
       allowedZones: { select: { id: true, name: true } },
       timeTrackingMode: true,
+      goodsAccess: true,
       createdAt: true,
     },
     orderBy: { sortOrder: "asc" },

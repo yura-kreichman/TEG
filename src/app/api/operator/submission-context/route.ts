@@ -111,5 +111,6 @@ export async function GET() {
     pointName: point.name,
     zones: result,
     expenseCategories,
+    goodsAccess: operator.goodsAccess,
   });
 }

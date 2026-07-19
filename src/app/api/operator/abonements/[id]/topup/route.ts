@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireOperator } from "@/lib/require-operator";
-import { ABONEMENT_TOPUP_PAYMENT_METHODS, topUpWallet } from "@/lib/abonement";
+import { ABONEMENT_TOPUP_PAYMENT_METHODS, topUpWallet, topUpWalletArbitrary } from "@/lib/abonement";
 import { prisma } from "@/lib/prisma";
 
 // Пополнение существующего кошелька (найден по телефону на экране оплаты) —
@@ -20,13 +20,36 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operator/ab
 
   const body = await request.json().catch(() => ({}));
   const abonementId: string | null = typeof body.abonementId === "string" && body.abonementId ? body.abonementId : null;
+  // Произвольная сумма Сотрудником (запрос пользователя 2026-07-19) — см.
+  // topUpWalletArbitrary в src/lib/abonement.ts.
+  const amount: number | null = body.amount != null ? Number(body.amount) : null;
   const paymentMethod = body.paymentMethod;
 
-  if (!abonementId) {
-    return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
+  if (!abonementId && amount == null) {
+    return NextResponse.json({ error: "Выберите абонемент или укажите сумму" }, { status: 400 });
   }
   if (!(ABONEMENT_TOPUP_PAYMENT_METHODS as readonly string[]).includes(paymentMethod)) {
     return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
+  }
+
+  if (!abonementId) {
+    if (!Number.isFinite(amount) || (amount as number) <= 0) {
+      return NextResponse.json({ error: "Укажите сумму" }, { status: 400 });
+    }
+    const updated = await topUpWalletArbitrary(walletId, {
+      tenantId: point.tenantId,
+      pointId: point.id,
+      amount: amount as number,
+      paymentMethod,
+      actor: { operatorId: operator.id },
+    });
+    return NextResponse.json({
+      id: updated.id,
+      phone: updated.phone,
+      name: updated.name,
+      balance: Number(updated.balance),
+      createdAt: updated.createdAt,
+    });
   }
 
   try {

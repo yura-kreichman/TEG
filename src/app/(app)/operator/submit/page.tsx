@@ -447,7 +447,7 @@ export default function SubmitResultsPage() {
   if (result) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center bg-surface-0 px-4 py-10">
-        <SpringCard hover={false} className="w-full max-w-md">
+        <SpringCard hover={false} className="w-full max-w-md md:max-w-xl lg:max-w-2xl">
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-screen-title">{queued ? t.operatorApp.submit.queuedTitle : t.operatorApp.submit.acceptedTitle}</h1>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -504,7 +504,7 @@ export default function SubmitResultsPage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-surface-0 px-4 pb-32 pt-6">
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col md:max-w-xl lg:max-w-2xl">
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -540,7 +540,7 @@ export default function SubmitResultsPage() {
             {zones.length === 0 ? (
               <p className="text-body-airbnb text-muted-foreground">{t.operatorApp.submit.noZonesConfigured}</p>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-3">
                 {zones.map((zone) => {
                   const selected = selectedZoneIds.includes(zone.id);
                   return (
@@ -626,7 +626,7 @@ export default function SubmitResultsPage() {
 
             {activeZone.accountingMode !== "cash_only" && !isStaysZone(activeZone) && !isLaunchesZone(activeZone) && (
             <>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-3">
               {activeZone.assets.map((asset) => {
                 const filled = isAssetFilled(activeZone, asset, activeForm);
                 return (
@@ -726,7 +726,7 @@ export default function SubmitResultsPage() {
                 расчётная сумма read-only + реальные Наличные/Безнал,
                 которые вносит сотрудник (см. sheet ниже). */}
             {(isStaysZone(activeZone) || isLaunchesZone(activeZone)) && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-3">
                 {activeZone.assets.map((asset) => {
                   const entry = activeForm.assetCash[asset.id];
                   // "Подтверждено" — нажатие "Сохранить" в sheet'е, а не
@@ -982,7 +982,7 @@ export default function SubmitResultsPage() {
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-card/90 px-4 py-4 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-md gap-3">
+        <div className="mx-auto flex w-full max-w-md gap-3 md:max-w-xl lg:max-w-2xl">
           <PressableScale className="flex-1">
             <Button
               variant="outline"

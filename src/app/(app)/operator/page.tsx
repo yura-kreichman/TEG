@@ -282,9 +282,15 @@ export default function OperatorHomePage() {
       body: JSON.stringify({ pointId: targetPointId }),
     });
     if (!res.ok) return;
-    loadMe();
-    loadZones();
-    loadTasks();
+    // Полная перезагрузка, не точечный рефетч (запрос пользователя
+    // 2026-07-19, реальный баг: "Прибывания"/"Пуски" в нижнем баре
+    // оставались от старой точки) — OperatorBottomNav (layout-уровень,
+    // отдельное от этой страницы дерево) сам грузит доступные зоны/
+    // goodsAccess только один раз при монтировании (useEffect с []), точечный
+    // loadMe/loadZones/loadTasks этой страницы никак его не задевает. Смена
+    // точки — редкое осознанное действие, не hot path, полный релоад проще и
+    // надёжнее, чем городить кросс-компонентный event/context ради него.
+    window.location.reload();
   }
 
   async function handleCollection(event: FormEvent) {
@@ -338,7 +344,7 @@ export default function OperatorHomePage() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-surface-0 px-4">
-      <SpringCard hover={false} className="w-full max-w-sm">
+      <SpringCard hover={false} className="w-full max-w-sm md:max-w-lg lg:max-w-xl">
         <div className="flex flex-col items-center gap-2 text-center">
           {operatorAvatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -521,7 +527,7 @@ export default function OperatorHomePage() {
         )}
       </SpringCard>
 
-      <SpringCard hover={false} className="mt-4 w-full max-w-sm text-left">
+      <SpringCard hover={false} className="mt-4 w-full max-w-sm text-left md:max-w-lg lg:max-w-xl">
         <div className="mb-1.5 flex items-baseline justify-between">
           <h2 className="text-[0.875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.tasks.title}</h2>
           <span className="text-caption-airbnb">

@@ -15,7 +15,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { Money } from "@/components/money";
 import { PhoneInput } from "@/components/phone-input";
-import { AbonementTopupFlow } from "@/components/abonement-topup-flow";
+import { AbonementTopupFlow, formatTenure } from "@/components/abonement-topup-flow";
 import { useI18n } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,7 @@ interface WalletDetail {
   phone: string;
   name: string | null;
   balance: number;
+  createdAt: string;
   history: WalletHistoryEntry[];
 }
 
@@ -114,7 +115,12 @@ export default function AbonementWalletPage() {
 
           <SpringCard hover={false} className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-3">
-              <h1 className="text-screen-title">{wallet.name || wallet.phone}</h1>
+              <div className="flex min-w-0 items-baseline gap-2">
+                <h1 className="min-w-0 truncate text-screen-title">{wallet.name || wallet.phone}</h1>
+                <span className="shrink-0 text-caption-airbnb text-muted-foreground">
+                  {t.abonements.tenureLabel} {formatTenure(wallet.createdAt, t)}
+                </span>
+              </div>
               <PressableScale>
                 <Button
                   type="button"
@@ -160,6 +166,7 @@ export default function AbonementWalletPage() {
               key={wallet.id}
               initialWallet={{ id: wallet.id, phone: wallet.phone, name: wallet.name, balance: wallet.balance }}
               plans={[]}
+              timezoneEndpoint="/api/tenant/timezone"
               searchEndpoint="/api/abonement-wallets"
               createEndpoint="/api/abonement-wallets"
               topupEndpointFor={(walletId) => `/api/abonement-wallets/${walletId}/topup`}
@@ -186,7 +193,9 @@ export default function AbonementWalletPage() {
                           ? t.abonements.historyTopup
                           : h.type === "spend"
                             ? t.abonements.historySpend
-                            : t.abonements.historyAdjustment}
+                            : h.type === "refund"
+                              ? t.abonements.historyRefund
+                              : t.abonements.historyAdjustment}
                         {h.planName ? ` · ${h.planName}` : ""}
                       </p>
                       <p className="text-caption-airbnb text-muted-foreground">

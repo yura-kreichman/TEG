@@ -322,9 +322,12 @@ export default function AbonementsPage() {
                           </div>
                           <div className="min-w-0 grow">
                             <div className="text-card-title">{w.name || w.phone}</div>
+                            {w.name && <p className="text-caption-airbnb tabular-nums">{w.phone}</p>}
                             <p className="text-caption-airbnb tabular-nums">
-                              {w.name ? `${w.phone} · ` : ""}
-                              {t.abonements.balanceLabel}: <Money value={w.balance} />
+                              {t.abonements.balanceLabel}:{" "}
+                              <span className="font-bold text-foreground">
+                                <Money value={w.balance} />
+                              </span>
                             </p>
                           </div>
                           <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
@@ -420,6 +423,7 @@ export default function AbonementsPage() {
         open={topupSheetOpen}
         onClose={() => setTopupSheetOpen(false)}
         plans={abonements}
+        timezoneEndpoint="/api/tenant/timezone"
         searchEndpoint="/api/abonement-wallets"
         createEndpoint="/api/abonement-wallets"
         topupEndpointFor={(walletId) => `/api/abonement-wallets/${walletId}/topup`}

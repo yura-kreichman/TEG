@@ -3,7 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BarChart3, FileText, Globe, Home, ListChecks, MapPin, Settings, Users, Wallet, type LucideIcon } from "lucide-react";
+import {
+  BarChart3,
+  FileText,
+  Globe,
+  Home,
+  ListChecks,
+  MapPin,
+  Settings,
+  ShoppingBag,
+  Users,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/components/i18n-provider";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -58,7 +70,19 @@ const PRIORITY_ITEMS: NavItemConfig[] = [
     priority: 6,
     match: (p) => p.startsWith("/abonements"),
   },
-  { id: "points", href: "/points", icon: MapPin, label: (t) => t.nav.points, priority: 7, match: (p) => p.startsWith("/points") },
+  // Модуль "Товары" (docs/spec/09-goods.md) — независимый от тумблера
+  // оператора goodsAccess (тот гейтит только оператора, не владельца): весь
+  // модуль всегда доступен, как и остальные (00-architecture.md, "никакого
+  // per-tenant отключения областей нет").
+  {
+    id: "goods",
+    href: "/goods",
+    icon: ShoppingBag,
+    label: (t) => t.goods.navLabel,
+    priority: 7,
+    match: (p) => p.startsWith("/goods"),
+  },
+  { id: "points", href: "/points", icon: MapPin, label: (t) => t.nav.points, priority: 8, match: (p) => p.startsWith("/points") },
   // Полноценный модуль (docs/spec/07-instructions.md), не тенантная
   // настройка — вынесен из вложенности Ещё → Настройки → Инструктажи прямо
   // в "Ещё", перед Настройками (решение пользователя 2026-07-12).
@@ -67,7 +91,7 @@ const PRIORITY_ITEMS: NavItemConfig[] = [
     href: "/settings/instructions",
     icon: FileText,
     label: (t) => t.instructions.settingsTitle,
-    priority: 8,
+    priority: 9,
     match: (p) => p.startsWith("/settings/instructions"),
   },
   // Полноценный модуль (docs/spec/08-landing.md) — тот же паттерн, что у
@@ -77,7 +101,7 @@ const PRIORITY_ITEMS: NavItemConfig[] = [
     href: "/settings/landing",
     icon: Globe,
     label: (t) => t.landing.settingsTitle,
-    priority: 9,
+    priority: 10,
     match: (p) => p.startsWith("/settings/landing"),
   },
 ];

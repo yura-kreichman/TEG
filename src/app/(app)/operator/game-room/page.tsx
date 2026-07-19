@@ -356,7 +356,7 @@ export default function StaysZonePage() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-surface-0 px-4 pb-10 pt-6" onPointerDownCapture={() => unlockBeep()}>
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col md:max-w-xl lg:max-w-2xl">
         <h1 className="mb-4 text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.operatorApp.gameRoom.entryTitle}</h1>
 
         {zones.length > 1 && (
@@ -442,7 +442,7 @@ export default function StaysZonePage() {
           </div>
         ) : (
           <>
-            <div className="mb-4 grid grid-cols-2 gap-3">
+            <div className="mb-4 grid grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-3">
               {filteredAssets.map((a) => {
                 const active = a.id === selectedAssetId;
                 return (
@@ -502,7 +502,7 @@ export default function StaysZonePage() {
             )}
 
             {selectedAsset && (
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-3">
                 {selectedLaunches.map((l) => {
                   const expired = isExpired(l);
                   const elapsedMs = now.getTime() - new Date(l.startedAt).getTime();

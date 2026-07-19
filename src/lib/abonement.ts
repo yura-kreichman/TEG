@@ -115,6 +115,100 @@ export async function topUpWallet(walletId: string, params: TopupParams) {
   });
 }
 
+interface ArbitraryTopupParams {
+  tenantId: string;
+  pointId: string;
+  amount: number;
+  paymentMethod: AbonementTopupPaymentMethod;
+  actor: Actor;
+}
+
+/**
+ * Пополнение существующего кошелька Сотрудником на ПРОИЗВОЛЬНУЮ сумму
+ * (запрос пользователя 2026-07-19) — в отличие от adjustWalletBalance
+ * (Владелец, ниже) это РЕАЛЬНОЕ кассовое событие: деньги физически получены
+ * оператором на точке, поэтому обязателен способ оплаты и создаётся
+ * MoneyOperation, ровно как у topUpWallet — просто amount берётся напрямую
+ * из запроса, а не из Abonement.creditAmount/price (нет фиксированного
+ * плана, cумма оплаты == сумма зачисления).
+ */
+export async function topUpWalletArbitrary(walletId: string, params: ArbitraryTopupParams) {
+  const { tenantId, pointId, amount, paymentMethod, actor } = params;
+  return prisma.$transaction(async (tx) => {
+    const wallet = await tx.abonementWallet.update({
+      where: { id: walletId },
+      data: { balance: { increment: amount } },
+    });
+
+    await tx.abonementTransaction.create({
+      data: {
+        walletId,
+        type: "topup",
+        amount,
+        paymentMethod,
+        pointId,
+        operatorId: actor.operatorId,
+        userId: actor.userId,
+      },
+    });
+
+    await tx.moneyOperation.create({
+      data: {
+        tenantId,
+        pointId,
+        type: abonementTopupMoneyType(paymentMethod),
+        amount,
+        performedByOperatorId: actor.operatorId,
+        performedByUserId: actor.userId,
+      },
+    });
+
+    return wallet;
+  });
+}
+
+/** Аналог createWalletWithTopup, но произвольной суммой Сотрудника (см. topUpWalletArbitrary выше). */
+export async function createWalletWithTopupArbitrary(
+  rawPhone: string,
+  name: string | null,
+  params: ArbitraryTopupParams
+) {
+  const phone = normalizePhone(rawPhone);
+  if (!phone) throw new Error("INVALID_PHONE");
+  const { tenantId, pointId, amount, paymentMethod, actor } = params;
+
+  return prisma.$transaction(async (tx) => {
+    const wallet = await tx.abonementWallet.create({
+      data: { tenantId, phone, name: name || null, balance: amount },
+    });
+
+    await tx.abonementTransaction.create({
+      data: {
+        walletId: wallet.id,
+        type: "topup",
+        amount,
+        paymentMethod,
+        pointId,
+        operatorId: actor.operatorId,
+        userId: actor.userId,
+      },
+    });
+
+    await tx.moneyOperation.create({
+      data: {
+        tenantId,
+        pointId,
+        type: abonementTopupMoneyType(paymentMethod),
+        amount,
+        performedByOperatorId: actor.operatorId,
+        performedByUserId: actor.userId,
+      },
+    });
+
+    return wallet;
+  });
+}
+
 /**
  * Регистрация нового абонента БЕЗ покупки/пополнения абонемента (запрос
  * пользователя 2026-07-18: "чтобы сотрудник мог завести нового абонента, но

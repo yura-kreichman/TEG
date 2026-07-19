@@ -99,6 +99,12 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   // counters/day/route.ts (запрос пользователя 2026-07-17/18: "во всех
   // отчётах и сводках должны быть правильные цифры"), тут был пропущен.
   let totalAbonement = 0;
+  // Товары (docs/spec/09-goods.md, "Отчётность и размещение": "товары —
+  // равноправный слой стека рядом с зонами") — та же логика, что revenue_abonement
+  // выше: гросс-выручка (все три способа оплаты), прибавляется к total/byDay,
+  // визуально график линейный (не столбчатый), отдельного слоя не рисует —
+  // "равноправный" здесь означает "в тех же суммах", как и было с абонементом.
+  let totalGoods = 0;
   // По дням — для линии "Прибыль" на графике (запрос пользователя 2026-07-16:
   // "и Выручку, и Прибыль двумя разными цветами"), тот же принцип, что byDay
   // для выручки выше.
@@ -120,10 +126,21 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     }
     if (op.type === "abonement_topup") abonementSoldCash += amount;
     if (op.type === "abonement_topup_cashless") abonementSoldMobile += amount;
+    if (op.type === "goods_revenue" || op.type === "goods_revenue_cashless" || op.type === "goods_revenue_abonement") {
+      // Знаковая сумма, НЕ Math.abs(amount) выше — аннулирование продажи
+      // (voidGoodsSale, src/lib/goods.ts) пишет компенсирующую операцию с
+      // ОТРИЦАТЕЛЬНОЙ суммой того же типа, она должна вычесть из выручки,
+      // а не снова прибавиться по модулю.
+      const signedAmount = Number(op.amount);
+      totalGoods += signedAmount;
+      const key = op.occurredAt.toISOString().slice(0, 10);
+      byDay.set(key, (byDay.get(key) ?? 0) + signedAmount);
+      activeDays.add(key);
+    }
   }
 
   // Previous period: only need the actual total for the delta%, no chain-walk needed.
-  const [prevSubmissions, prevAbonementOps] = await Promise.all([
+  const [prevSubmissions, prevAbonementOps, prevGoodsOps] = await Promise.all([
     zoneIds.length
       ? prisma.zoneSubmission.findMany({
           where: { zoneId: { in: zoneIds }, resultsSubmission: { submittedAt: { gte: prevStart, lt: prevEnd } } },
@@ -139,12 +156,23 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       },
       select: { amount: true },
     }),
+    prisma.moneyOperation.findMany({
+      where: {
+        tenantId: owner.tenantId,
+        type: { in: ["goods_revenue", "goods_revenue_cashless", "goods_revenue_abonement"] },
+        occurredAt: { gte: prevStart, lt: prevEnd },
+        ...(isAllPoints ? {} : { OR: [{ zone: { pointId } }, { pointId }] }),
+      },
+      select: { amount: true },
+    }),
   ]);
   const prevTotal =
     prevSubmissions.reduce((sum, s) => sum + Number(s.cashAmount) + Number(s.mobileAmount), 0) +
-    prevAbonementOps.reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0);
+    prevAbonementOps.reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0) +
+    // Знаковая сумма — тот же принцип, что и totalGoods выше.
+    prevGoodsOps.reduce((sum, op) => sum + Number(op.amount), 0);
 
-  const total = totalCash + totalMobile + totalAbonement;
+  const total = totalCash + totalMobile + totalAbonement + totalGoods;
   const deltaPercent = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 1000) / 10 : null;
 
   // За год — 365 ежедневных столбцов на графике нечитаемы, агрегируем по
@@ -196,6 +224,9 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     mobile: round2(totalMobile),
     abonement: round2(totalAbonement),
     abonementSold: { cash: round2(abonementSoldCash), mobile: round2(abonementSoldMobile) },
+    // Выручка Товаров за период (docs/spec/09-goods.md) — уже входит в total/
+    // profitAndLoss выше, отдельное поле только для строки "в т.ч. Товары".
+    goodsRevenue: round2(totalGoods),
     submissionsCount: submissionIds.size,
     deltaPercent,
     bars,

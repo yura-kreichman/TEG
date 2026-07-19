@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { AlertTriangle, ClockPlus, Home, Timer, Wallet } from "lucide-react";
+import { AlertTriangle, ClockPlus, Home, ShoppingBag, Timer, Wallet } from "lucide-react";
 import { BottomGlassNav, type BottomGlassNavItem } from "@/components/bottom-glass-nav";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n } from "@/components/i18n-provider";
@@ -39,6 +39,7 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
   const t = useI18n();
   const [hasStays, setHasStays] = useState(false);
   const [hasLaunches, setHasLaunches] = useState(false);
+  const [hasGoods, setHasGoods] = useState(false);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -49,6 +50,7 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
         const zones = data.zones ?? [];
         setHasStays(zones.some(isStaysZone));
         setHasLaunches(zones.some(isLaunchesZone));
+        setHasGoods(Boolean(data.goodsAccess));
       })
       .catch(() => {});
   }, []);
@@ -137,6 +139,20 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
           },
         ]
       : []),
+    // "Товары" (docs/spec/09-goods.md, "Доступ") — рендерится только с
+    // тумблером goodsAccess, тот же принцип, что у Прибываний/Пусков выше
+    // (модуль без доступа не рендерится вовсе, не показывается заблокированным).
+    // Перед "Клиенты" (запрос пользователя 2026-07-19).
+    ...(hasGoods
+      ? [
+          {
+            href: "/operator/goods",
+            label: t.goods.navLabel,
+            icon: ShoppingBag,
+            active: pathname.startsWith("/operator/goods"),
+          },
+        ]
+      : []),
     // "Абоненты" — только если у оператора есть хоть одна зона режима
     // "Прибывания"/"Пуски" (запрос пользователя 2026-07-17: "если у него
     // активные зоны, где абонимент применяется") — только там абонемент
@@ -180,7 +196,7 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={() => router.push(`/operator/game-room${expiredAssetId ? `?assetId=${expiredAssetId}` : ""}`)}
-            className="mx-auto flex w-full max-w-md items-center gap-2 rounded-control border border-destructive/40 bg-destructive/10 px-3.5 py-2.5 text-left shadow-floating motion-safe:animate-pulse"
+            className="mx-auto flex w-full max-w-md items-center gap-2 rounded-control border border-destructive/40 bg-destructive/10 px-3.5 py-2.5 text-left shadow-floating motion-safe:animate-pulse md:max-w-xl lg:max-w-2xl"
           >
             <AlertTriangle className="size-4 shrink-0 text-destructive" />
             <span className="flex-1 truncate text-caption-airbnb font-bold text-destructive">
@@ -200,6 +216,7 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
           moreBadge={null}
           onMoreClick={() => {}}
           showMore={false}
+          hideOnDesktop={false}
         />
       )}
     </div>

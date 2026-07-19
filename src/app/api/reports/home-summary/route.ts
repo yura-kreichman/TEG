@@ -149,6 +149,14 @@ async function computeWindowSummary(
     if (op.type === "revenue" || op.type === "revenue_cashless" || op.type === "revenue_abonement") revenue += amount;
     if (op.type === "revenue") cash += amount;
     if (op.type === "revenue_cashless") mobile += amount;
+    // Товары (docs/spec/09-goods.md, "равноправный слой" в выручке по дням) —
+    // тот же принцип, что revenue*/revenue_cashless/revenue_abonement выше.
+    // amount уже знаковый (не Math.abs) — аннулирование продажи пишет
+    // отрицательную компенсирующую операцию того же типа, корректно вычитается.
+    if (op.type === "goods_revenue" || op.type === "goods_revenue_cashless" || op.type === "goods_revenue_abonement")
+      revenue += amount;
+    if (op.type === "goods_revenue") cash += amount;
+    if (op.type === "goods_revenue_cashless") mobile += amount;
     if (op.type === "expense") expense += amount; // stored negative
   }
 
