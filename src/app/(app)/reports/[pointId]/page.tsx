@@ -3,23 +3,19 @@
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  AlertTriangle,
-  ArrowDown,
-  ArrowUp,
-  Building2,
-  ChevronLeft,
-  ChevronRight,
-  Frown,
-  Lightbulb,
-  MapPin,
-  Meh,
-  Smile,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, Building2, ChevronLeft, ChevronRight, Frown, MapPin, Meh, Smile } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectGroup,
+  SelectGroupLabel,
+  SelectItem,
+} from "@/components/ui/select";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useI18n, useLocale, useCurrency } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
@@ -46,12 +42,27 @@ interface DynamicsData {
 }
 
 interface ZonesData {
-  zoneRanking: { zoneId: string; zoneName: string; iconKey: string | null; total: number; sharePercent: number }[];
+  zoneRanking: {
+    zoneId: string;
+    zoneName: string;
+    pointId: string | null;
+    pointName: string | null;
+    iconKey: string | null;
+    total: number;
+    sharePercent: number;
+  }[];
   drillZoneId: string | null;
   drillZoneName: string | null;
-  assetRanking: { assetId: string; assetName: string; colorTag: string; total: number; sharePercent: number }[];
+  assetRanking: {
+    assetId: string;
+    assetName: string;
+    colorTag: string;
+    photoUrl: string | null;
+    iconKey: string | null;
+    total: number;
+    sharePercent: number;
+  }[];
   tariffBreakdown: { tariffId: string; tariffName: string; total: number; sharePercent: number }[];
-  insight: { type: "lowAssetShare"; assetName: string; sharePercent: number; expectedSharePercent: number } | null;
 }
 
 interface OperatorRow {
@@ -66,7 +77,6 @@ interface OperatorRow {
   revenuePerHour: number | null;
   accruedForPeriod: number;
   differenceSum: number;
-  hasNegativeStreak: boolean;
 }
 
 interface CalendarData {
@@ -614,16 +624,31 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
   );
 }
 
-function RankBar({ label, total, sharePercent, suffix }: { label: string; total: number; sharePercent: number; suffix?: string }) {
+function RankBar({
+  icon,
+  label,
+  total,
+  sharePercent,
+  suffix,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  total: number;
+  sharePercent: number;
+  suffix?: string;
+}) {
   return (
     <div className="mb-1">
       <div className="mb-1 flex items-baseline justify-between gap-2">
-        <span className="min-w-0 truncate text-body-airbnb font-semibold">{label}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          {icon}
+          <span className="min-w-0 truncate text-body-airbnb font-semibold">{label}</span>
+        </span>
         <span className="flex shrink-0 items-baseline gap-1.5">
-          <span className="min-w-[4.5rem] text-right text-body-airbnb font-bold tabular-nums">
+          <span className="min-w-18 text-right text-body-airbnb font-bold tabular-nums">
             <Money value={total} />
           </span>
-          <span className="min-w-[2.75rem] text-right text-caption-airbnb tabular-nums">
+          <span className="min-w-11 text-right text-caption-airbnb tabular-nums">
             {suffix ?? `${sharePercent}%`}
           </span>
         </span>
@@ -719,21 +744,6 @@ function CellTooltip({ value, presentValues }: { value: number; presentValues: n
   );
 }
 
-function Insight({ children, tone = "warn" }: { children: React.ReactNode; tone?: "warn" | "good" }) {
-  const Icon = tone === "good" ? Lightbulb : AlertTriangle;
-  return (
-    <div
-      className={cn(
-        "mb-3 flex items-start gap-2.5 rounded-control p-3 text-sm leading-relaxed",
-        tone === "good" ? "bg-primary/10 text-primary" : "bg-warning/15 text-warning"
-      )}
-    >
-      <Icon className="size-4 shrink-0 translate-y-0.5" />
-      <span>{children}</span>
-    </div>
-  );
-}
-
 function ZonesTab({
   data,
   t,
@@ -747,14 +757,46 @@ function ZonesTab({
     return <p className="text-body-airbnb text-muted-foreground">{t.reports.noZones}</p>;
   }
 
+  // Группировка zoneRanking по точке — переиспользуется списком выручки по
+  // зонам и dropdown'ом "Активы" ниже (запрос пользователя 2026-07-19, тот
+  // же заголовок группы в обоих местах). null, если выбрана одна точка
+  // (pointId отсутствует у всех строк).
+  const zoneGroups: { pointId: string | null; pointName: string | null; zones: ZonesData["zoneRanking"] }[] = [];
+  for (const z of data.zoneRanking) {
+    const last = zoneGroups[zoneGroups.length - 1];
+    if (last && last.pointId === z.pointId) last.zones.push(z);
+    else zoneGroups.push({ pointId: z.pointId, pointName: z.pointName, zones: [z] });
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <SpringCard animate={false} hover={false}>
         <div className="mb-3 text-[0.6875rem] font-bold uppercase tracking-wider text-muted-foreground">
           {t.reports.revenueByZoneTitle}
         </div>
-        {data.zoneRanking.map((z) => (
-          <RankBar key={z.zoneId} label={z.zoneName} total={z.total} sharePercent={z.sharePercent} />
+        {zoneGroups.map((g, gi) => (
+          // Точка — заголовок группы, а не суффикс у каждой зоны (запрос
+          // пользователя 2026-07-19: "занимает много места на экране").
+          <div key={g.pointId ?? "single"}>
+            {g.pointName && (
+              <div className={cn("mb-2 text-card-title text-foreground", gi > 0 && "mt-5")}>{g.pointName}</div>
+            )}
+            {g.zones.map((z) => (
+              <RankBar
+                key={z.zoneId}
+                icon={
+                  z.iconKey ? (
+                    <AssetOrZoneIcon iconKey={z.iconKey} className="size-5 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <MapPin className="size-5 shrink-0 text-muted-foreground" />
+                  )
+                }
+                label={z.zoneName}
+                total={z.total}
+                sharePercent={z.sharePercent}
+              />
+            ))}
+          </div>
         ))}
       </SpringCard>
 
@@ -783,33 +825,69 @@ function ZonesTab({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {data.zoneRanking.map((z) => (
-                  <SelectItem key={z.zoneId} value={z.zoneId}>
-                    <span className="flex items-center gap-2">
-                      {z.iconKey ? (
-                        <AssetOrZoneIcon iconKey={z.iconKey} className="size-6 shrink-0" />
-                      ) : (
-                        <MapPin className="size-6 shrink-0 text-muted-foreground" />
-                      )}
-                      {z.zoneName}
-                    </span>
-                  </SelectItem>
-                ))}
+                {zoneGroups.map((g) =>
+                  g.pointName ? (
+                    <SelectGroup key={g.pointId ?? "single"}>
+                      <SelectGroupLabel className="text-body-airbnb font-bold text-foreground">
+                        {g.pointName}
+                      </SelectGroupLabel>
+                      {g.zones.map((z) => (
+                        <SelectItem key={z.zoneId} value={z.zoneId}>
+                          <span className="flex items-center gap-2">
+                            {z.iconKey ? (
+                              <AssetOrZoneIcon iconKey={z.iconKey} className="size-6 shrink-0" />
+                            ) : (
+                              <MapPin className="size-6 shrink-0 text-muted-foreground" />
+                            )}
+                            {z.zoneName}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ) : (
+                    g.zones.map((z) => (
+                      <SelectItem key={z.zoneId} value={z.zoneId}>
+                        <span className="flex items-center gap-2">
+                          {z.iconKey ? (
+                            <AssetOrZoneIcon iconKey={z.iconKey} className="size-6 shrink-0" />
+                          ) : (
+                            <MapPin className="size-6 shrink-0 text-muted-foreground" />
+                          )}
+                          {z.zoneName}
+                        </span>
+                      </SelectItem>
+                    ))
+                  )
+                )}
               </SelectContent>
             </Select>
           </div>
 
-          {data.insight && (
-            <Insight>
-              {t.reports.lowAssetSharePrefix} «{data.insight.assetName}» {t.reports.lowAssetShareMiddle}{" "}
-              {data.insight.sharePercent}% {t.reports.lowAssetShareExpectedSuffix} {data.insight.expectedSharePercent}%.
-            </Insight>
-          )}
-
           {data.assetRanking.length > 0 && (
             <SpringCard animate={false} hover={false}>
               {data.assetRanking.map((a) => (
-                <RankBar key={a.assetId} label={a.assetName} total={a.total} sharePercent={a.sharePercent} />
+                <RankBar
+                  key={a.assetId}
+                  icon={
+                    <span className="relative shrink-0">
+                      <span className="flex size-8 items-center justify-center overflow-hidden rounded-control bg-muted">
+                        {a.photoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={a.photoUrl} alt="" className="size-full object-contain object-center" />
+                        ) : a.iconKey ? (
+                          <AssetOrZoneIcon iconKey={a.iconKey} className="size-4 text-muted-foreground" />
+                        ) : null}
+                      </span>
+                      <span
+                        className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-card"
+                        style={{ backgroundColor: a.colorTag }}
+                      />
+                    </span>
+                  }
+                  label={a.assetName}
+                  total={a.total}
+                  sharePercent={a.sharePercent}
+                />
               ))}
             </SpringCard>
           )}
@@ -885,7 +963,6 @@ function OperatorsTab({ operators, t }: { operators: OperatorRow[]; t: ReturnTyp
               </div>
             </div>
           </div>
-          {op.hasNegativeStreak && <Insight>{t.reports.negativeStreakLabel}</Insight>}
         </SpringCard>
       ))}
     </div>

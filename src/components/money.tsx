@@ -25,10 +25,26 @@ export function Money({ value, className, size }: { value: number; className?: s
   const currency = useCurrency();
   const sign = getCurrencySign(currency);
   const signSize = size === "display" ? "text-[0.5em]" : "text-[0.85em]";
+  const formatted = formatMoney(value, locale);
+
+  // "display" — заголовочные суммы с фиксированным крупным font-size у
+  // вызывающей стороны (text-[2rem] и т.п.) — тот размер расcчитан на
+  // короткие числа; шестизначная и длиннее сумма при 100% ломает
+  // раскладку карточки (реальный баг, найден пользователем 2026-07-19 на
+  // /reports: "сейчас 12095 видно нормально, но если там будет 100 000 то
+  // уже всё поплывёт"). Масштаб — em относительно font-size родителя (тот
+  // остаётся "потолком" для коротких чисел, поэтому короткие суммы визуально
+  // не меняются), считается от длины уже отформатированной строки (с
+  // пробелами-разделителями разрядов), не только от кол-ва цифр — именно
+  // пробелы и добавляют реальную ширину при росте разряда.
+  const displayScale = size === "display" ? Math.max(0.55, 1 - Math.max(0, formatted.length - 6) * 0.08) : 1;
 
   return (
-    <span className={cn("tabular-nums", className)}>
-      {formatMoney(value, locale)}
+    <span
+      className={cn("tabular-nums", className)}
+      style={displayScale !== 1 ? { fontSize: `${displayScale}em` } : undefined}
+    >
+      {formatted}
       {sign && (
         // align-baseline, НЕ translateY и НЕ <sup> — знак должен идти строго
         // в одну строку с суммой, не выше и не ниже (фидбек пользователя

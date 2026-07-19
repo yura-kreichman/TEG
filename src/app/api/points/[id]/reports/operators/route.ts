@@ -113,10 +113,6 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     const revenue = revenueByOperator.get(op.id) ?? 0;
     const differenceSum = opSubmissions.reduce((sum, s) => sum + s.difference, 0);
 
-    const sorted = [...opSubmissions].sort((a, b) => a.submittedAt.getTime() - b.submittedAt.getTime());
-    const lastThree = sorted.slice(-3);
-    const hasNegativeStreak = lastThree.length === 3 && lastThree.every((s) => s.difference < 0);
-
     return {
       operatorId: op.id,
       name: op.name,
@@ -135,8 +131,6 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       // цифру ниже реальной заработанной суммы. Найдено аудитом 2026-07-12.
       accruedForPeriod: round2(accrued),
       differenceSum: round2(differenceSum),
-      hasNegativeStreak,
-      recentDifferences: hasNegativeStreak ? lastThree.map((s) => round2(s.difference)) : [],
     };
   });
 

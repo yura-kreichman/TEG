@@ -41,7 +41,8 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       tariffs: { where: { deletedAt: null } },
       // Имя точки — нужно только в режиме "Все точки", чтобы отличать
       // одноимённые зоны разных точек в списке (запрос пользователя
-      // 2026-07-16), но проще всегда включать, чем городить условный тип include.
+      // 2026-07-16) и группировать по точке (запрос пользователя
+      // 2026-07-19), но проще всегда включать, чем городить условный тип include.
       point: { select: { name: true } },
     },
     orderBy: { createdAt: "asc" },
@@ -55,27 +56,51 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   }
   const pointTotal = [...actualByZone.values()].reduce((sum, v) => sum + v, 0);
 
-  const zoneRanking = zones
-    .map((z) => {
-      const total = actualByZone.get(z.id) ?? 0;
-      return {
-        zoneId: z.id,
-        zoneName: isAllPoints ? `${z.name} · ${z.point.name}` : z.name,
-        iconKey: z.iconKey,
-        total: round2(total),
-        sharePercent: pointTotal > 0 ? Math.round((total / pointTotal) * 1000) / 10 : 0,
-      };
-    })
-    .sort((a, b) => b.total - a.total);
+  const zoneRanking = zones.map((z) => {
+    const total = actualByZone.get(z.id) ?? 0;
+    return {
+      zoneId: z.id,
+      zoneName: z.name,
+      pointId: isAllPoints ? z.pointId : null,
+      pointName: isAllPoints ? z.point.name : null,
+      iconKey: z.iconKey,
+      total: round2(total),
+      sharePercent: pointTotal > 0 ? Math.round((total / pointTotal) * 1000) / 10 : 0,
+    };
+  });
+
+  if (isAllPoints) {
+    // Группировка по точке вместо суффикса "Зона · Точка" у каждой строки
+    // (запрос пользователя 2026-07-19: "занимает много места на экране") —
+    // список остаётся плоским массивом, но уже отсортирован так, что зоны
+    // одной точки идут подряд: клиент рисует заголовок группы при смене
+    // pointId. Точки — по суммарной выручке точки, зоны внутри — по своей.
+    const totalByPoint = new Map<string, number>();
+    for (const z of zoneRanking) totalByPoint.set(z.pointId!, (totalByPoint.get(z.pointId!) ?? 0) + z.total);
+    zoneRanking.sort((a, b) => {
+      const byPoint = (totalByPoint.get(b.pointId!) ?? 0) - (totalByPoint.get(a.pointId!) ?? 0);
+      if (byPoint !== 0) return byPoint;
+      if (a.pointId !== b.pointId) return (a.pointName ?? "").localeCompare(b.pointName ?? "", "ru");
+      return b.total - a.total;
+    });
+  } else {
+    zoneRanking.sort((a, b) => b.total - a.total);
+  }
 
   const requestedZoneId = searchParams.get("zoneId");
   const drillZoneId = requestedZoneId && zoneIds.includes(requestedZoneId) ? requestedZoneId : zoneRanking[0]?.zoneId;
   const drillZone = zones.find((z) => z.id === drillZoneId) ?? null;
 
-  let assetRanking: { assetId: string; assetName: string; colorTag: string; total: number; sharePercent: number }[] = [];
+  let assetRanking: {
+    assetId: string;
+    assetName: string;
+    colorTag: string;
+    photoUrl: string | null;
+    iconKey: string | null;
+    total: number;
+    sharePercent: number;
+  }[] = [];
   let tariffBreakdown: { tariffId: string; tariffName: string; total: number; sharePercent: number }[] = [];
-  let insight: { type: "lowAssetShare"; assetName: string; sharePercent: number; expectedSharePercent: number } | null =
-    null;
 
   if (drillZone) {
     const zoneEntries = entries.filter((e) => e.zoneId === drillZone.id);
@@ -96,6 +121,8 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
         assetId: a.id,
         assetName: a.name,
         colorTag: a.colorTag,
+        photoUrl: a.photoUrl,
+        iconKey: a.iconKey,
         total: round2(total),
         sharePercent: rawTotal > 0 ? Math.round((total / rawTotal) * 1000) / 10 : 0,
       };
@@ -112,22 +139,6 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
         };
       })
       .sort((a, b) => b.total - a.total);
-
-    // Flag an asset earning well below its "fair share" (1/N of the zone) when
-    // there's more than one asset to compare against — a genuine computed
-    // check, not a canned string (docs feedback: insights must be honest).
-    if (assetRanking.length > 1) {
-      const expectedShare = 100 / assetRanking.length;
-      const weakest = assetRanking[assetRanking.length - 1];
-      if (weakest.sharePercent < expectedShare * 0.5) {
-        insight = {
-          type: "lowAssetShare",
-          assetName: weakest.assetName,
-          sharePercent: weakest.sharePercent,
-          expectedSharePercent: Math.round(expectedShare * 10) / 10,
-        };
-      }
-    }
   }
 
   return NextResponse.json({
@@ -138,6 +149,5 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     drillZoneName: drillZone ? (isAllPoints ? `${drillZone.name} · ${drillZone.point.name}` : drillZone.name) : null,
     assetRanking,
     tariffBreakdown,
-    insight,
   });
 }

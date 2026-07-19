@@ -16,7 +16,25 @@ function isCleanupCategory(value: unknown): value is CleanupCategory {
 }
 
 async function cleanupResults(tenantId: string) {
-  await prisma.moneyOperation.deleteMany({ where: { tenantId, resultsSubmissionId: { not: null } } });
+  // Launch.zoneSubmissionId — свободная ссылка без формального @relation
+  // (см. схему, комментарий у Launch), поэтому НЕ каскадируется при удалении
+  // ResultsSubmission/ZoneSubmission ниже — без явного удаления здесь пуски
+  // "Прибываний"/"Пусков" (accountingMode="stays"/"launches") переживали
+  // очистку целиком, и их выручка продолжала считаться в отчётах (реальный
+  // баг, найден пользователем 2026-07-19: очистка выглядела так, будто
+  // стёрлись данные только по одной точке — на деле стирались только зоны
+  // режима "Счётчики", Прибывания/Пуски оставались нетронутыми). AbonementTransaction.launchId
+  // — настоящий @relation с onDelete: SetNull, баланс кошелька клиента и
+  // история его пополнений/трат не затрагиваются, только ссылка на удалённый
+  // пуск.
+  await prisma.launch.deleteMany({ where: { zone: { point: { tenantId } } } });
+  // revenue_abonement — тоже создаётся сразу при оплате пуска абонементом
+  // (src/lib/abonement.ts), а не при сдаче итогов, поэтому у него никогда
+  // нет resultsSubmissionId — без OR ниже эта выручка тоже переживала
+  // очистку (тот же баг).
+  await prisma.moneyOperation.deleteMany({
+    where: { tenantId, OR: [{ resultsSubmissionId: { not: null } }, { type: "revenue_abonement" }] },
+  });
   await prisma.resultsSubmission.deleteMany({ where: { tenantId } });
 }
 

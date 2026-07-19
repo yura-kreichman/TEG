@@ -348,11 +348,16 @@ export function OwnerDashboardCard({
                       </span>
                     </div>
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-baseline gap-2 tabular-nums">
-                        <span className="text-[2rem] font-extrabold tracking-[-0.02em]">
-                          <Money value={summary.revenue!} size="display" />
+                      {/* Прибыль — крупная сумма, как на аналогичной плашке
+                          "Бизнес: расходы и прибыль" в Деньгах (запрос
+                          пользователя 2026-07-19: "Это должны быть идентичные
+                          плашки" — раньше здесь была Выручка, отличалась от
+                          заголовка карточки в Деньгах, что и вызвало вопрос). */}
+                      <div className="flex min-w-0 flex-col tabular-nums">
+                        <span className="text-caption-airbnb text-muted-foreground">{t.money.profit}</span>
+                        <span className="text-[2rem] font-extrabold leading-none tracking-[-0.02em]">
+                          <Money value={summary.profit!} size="display" />
                         </span>
-                        <span className="text-caption-airbnb">{t.home.revenueUnit}</span>
                       </div>
                       {/* Наличные/Безнал + Тесты/возвраты — тот же стек, что
                           на /money (запрос пользователя 2026-07-18: "должна
@@ -374,10 +379,9 @@ export function OwnerDashboardCard({
                     </div>
                     <div className="flex border-t border-border pt-3 tabular-nums">
                       <div className="flex-1">
-                        <p className="text-caption-airbnb">{t.money.profit}</p>
-                        <p className="text-[1rem] font-bold text-primary">
-                          {summary.profit! > 0 ? "+" : ""}
-                          <Money value={summary.profit!} />
+                        <p className="text-caption-airbnb">{t.money.revenue}</p>
+                        <p className="text-[1rem] font-bold">
+                          <Money value={summary.revenue!} />
                         </p>
                       </div>
                       <div className="flex-1 border-l border-border pl-4">
