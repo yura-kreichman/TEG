@@ -10,7 +10,12 @@ import {
   type ZoneAccountingMode,
 } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
-import { aggregateGameRoomLaunches, countOpenLaunchesInZone, previousSubmissionBoundary } from "@/lib/game-room";
+import {
+  aggregateGameRoomLaunches,
+  countOpenLaunchesInZone,
+  gameRoomRevenueByAsset,
+  previousSubmissionBoundary,
+} from "@/lib/game-room";
 import { dispatchZoneSummary } from "@/lib/summary-channels/dispatch";
 import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { onResultsSubmission } from "@/lib/summary-channels/daily-cash-trigger";
@@ -139,18 +144,33 @@ export async function POST(request: Request) {
   const now = new Date();
   const gameRoomAggregateByZone = new Map<
     string,
-    { calculatedRevenue: number; count: number; totalMinutes: number; launchIds: string[]; abonementAmount: number }
+    {
+      calculatedRevenue: number;
+      count: number;
+      totalMinutes: number;
+      launchIds: string[];
+      abonementAmount: number;
+      perAsset: { assetName: string; count: number; amount: number }[];
+    }
   >();
   for (const zs of zoneSubmissions) {
     const zone = zoneById.get(zs.zoneId)!;
     if (!isStaysZone(zone) && !isLaunchesZone(zone)) continue;
     const boundary = await previousSubmissionBoundary(zone.id);
-    const agg = await aggregateGameRoomLaunches(zone.id, boundary, now);
+    const [agg, perAssetBreakdown] = await Promise.all([
+      aggregateGameRoomLaunches(zone.id, boundary, now),
+      gameRoomRevenueByAsset(zone.id, boundary, now),
+    ]);
+    const assetNameById = new Map(zone.assets.map((a) => [a.id, a.name]));
+    const perAsset = perAssetBreakdown
+      .map((a) => ({ assetName: assetNameById.get(a.assetId) ?? "", count: a.count, amount: a.calculatedAmount }))
+      .sort((a, b) => b.count - a.count);
     gameRoomAggregateByZone.set(zone.id, {
       calculatedRevenue: agg.totalAmount,
       count: agg.count,
       totalMinutes: agg.totalMinutes,
       launchIds: agg.launchIds,
+      perAsset,
       abonementAmount: agg.abonementAmount,
     });
   }
@@ -185,6 +205,7 @@ export async function POST(request: Request) {
         abonementAmount: agg.abonementAmount,
         gameRoomLaunchCount: agg.count,
         gameRoomTotalMinutes: agg.totalMinutes,
+        perAsset: agg.perAsset,
       };
     }
 
@@ -252,6 +273,7 @@ export async function POST(request: Request) {
       abonementAmount: 0, // Счётчики — абонемент как способ оплаты не применим (docs/spec/01-counters.md).
       gameRoomLaunchCount: null as number | null,
       gameRoomTotalMinutes: null as number | null,
+      perAsset: [] as { assetName: string; count: number; amount: number }[],
     };
   });
 
@@ -396,6 +418,7 @@ export async function POST(request: Request) {
               gameRoomTotalMinutes: s.gameRoomTotalMinutes,
               occurredAt: submission.submittedAt,
               readings: s.readingLines,
+              perAsset: s.perAsset,
               cashAmount: s.cashAmount,
               mobileAmount: s.mobileAmount,
               abonementAmount: s.abonementAmount,

@@ -13,6 +13,17 @@ export interface ZoneAssetReadingLine {
   delta: number;
 }
 
+// Разбивка по активу для "Прибываний"/"Пусков" (accountingMode="stays"/
+// "launches") — count+amount, без "было→стало" (у пусков нет непрерывного
+// счётчика, только дискретные события) — тот же принцип, что readings[] у
+// "Счётчиков" выше, но своя форма (запрос пользователя 2026-07-19: "в них
+// нет Активов как мы делали в режиме Счётчики").
+export interface ZoneAssetTallyLine {
+  assetName: string;
+  count: number;
+  amount: number;
+}
+
 export interface ZoneSummaryData {
   pointName: string;
   zoneName: string;
@@ -29,6 +40,9 @@ export interface ZoneSummaryData {
   gameRoomTotalMinutes: number | null;
   occurredAt: Date;
   readings: ZoneAssetReadingLine[];
+  // Только у isGameRoom/"launches" — см. ZoneAssetTallyLine. Пустой массив
+  // у "counters"/"cash_only" (там используется readings выше).
+  perAsset: ZoneAssetTallyLine[];
   cashAmount: number;
   mobileAmount: number; // "безнал" — см. feedback_no_hardcoded_currency
   // Абонемент как способ оплаты пуска (docs/spec/04-game-room.md) — НЕ входит

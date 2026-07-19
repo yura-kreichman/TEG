@@ -180,6 +180,26 @@ function formatLaunchesTallyLine(data: ZoneSummaryData, st: SummaryText): string
   return `🎮 ${st.launchesCountLabel}: <b>${count}</b>`;
 }
 
+// Разбивка по активу для "Прибываний"/"Пусков" — той же формы, что уже есть
+// у "Счётчиков" (запрос пользователя 2026-07-19: "в них нет Активов как мы
+// делали в режиме Счётчики"), но count+amount вместо "было→стало" — у пусков
+// нет непрерывного счётчика, только дискретные события.
+function formatPerAssetTallyCompact(perAsset: ZoneSummaryData["perAsset"]): string {
+  const grid = formatCompactGrid(
+    perAsset.map((a) => ({ label: truncateLabel(a.assetName), value: String(a.count) }))
+  );
+  return `<blockquote><code>${grid}</code></blockquote>`;
+}
+
+function formatPerAssetTallyFull(perAsset: ZoneSummaryData["perAsset"], locale: Locale): string {
+  const labelWidth = Math.max(...perAsset.map((a) => `${a.assetName}:`.length));
+  const rows = perAsset.map((a) => {
+    const label = `${a.assetName}:`.padEnd(labelWidth + 1);
+    return `${label}${String(a.count).padStart(3)}  (${formatMoney(a.amount, locale)})`;
+  });
+  return `<blockquote><code>${rows.join("\n")}</code></blockquote>`;
+}
+
 export function formatZoneSummaryTelegram(
   data: ZoneSummaryData,
   settings: ZoneSummarySettingsData,
@@ -194,9 +214,15 @@ export function formatZoneSummaryTelegram(
       parts.push(`💵 ${st.cashOnly}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
     } else {
       if (data.isGameRoom) {
-        if (settings.showReadings) parts.push(formatGameRoomLine(data, st));
+        if (settings.showReadings) {
+          parts.push(formatGameRoomLine(data, st));
+          if (data.perAsset.length > 0) parts.push(formatPerAssetTallyCompact(data.perAsset));
+        }
       } else if (data.accountingMode === "launches") {
-        if (settings.showReadings) parts.push(formatLaunchesTallyLine(data, st));
+        if (settings.showReadings) {
+          parts.push(formatLaunchesTallyLine(data, st));
+          if (data.perAsset.length > 0) parts.push(formatPerAssetTallyCompact(data.perAsset));
+        }
       } else if (settings.showReadings && data.readings.length > 0) {
         const grid = formatCompactGrid(
           data.readings.map((r, i) => ({ label: compactAssetLabel(data.readings, i), value: String(r.reading) }))
@@ -221,7 +247,7 @@ export function formatZoneSummaryTelegram(
         const bits: string[] = [];
         if (settings.showCash) bits.push(`💵 ${st.cashOnly}: <b>${formatMoney(actualCash, locale)}</b>`);
         if (settings.showCash && settings.showCalc) bits.push(cmp);
-        if (settings.showCalc) bits.push(`🧮 ${st.calculatedCompact}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
+        if (settings.showCalc) bits.push(`🔢 ${st.calculatedCompact}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
         parts.push(bits.join("  "));
       }
       // Справочно, НЕ в кассу выше (уже получена раньше, при пополнении
@@ -253,9 +279,15 @@ export function formatZoneSummaryTelegram(
     lines.push("", `💵 ${st.cashOnly}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
   } else {
     if (data.isGameRoom) {
-      if (settings.showReadings) lines.push("", formatGameRoomLine(data, st));
+      if (settings.showReadings) {
+        lines.push("", formatGameRoomLine(data, st));
+        if (data.perAsset.length > 0) lines.push("", formatPerAssetTallyFull(data.perAsset, locale));
+      }
     } else if (data.accountingMode === "launches") {
-      if (settings.showReadings) lines.push("", formatLaunchesTallyLine(data, st));
+      if (settings.showReadings) {
+        lines.push("", formatLaunchesTallyLine(data, st));
+        if (data.perAsset.length > 0) lines.push("", formatPerAssetTallyFull(data.perAsset, locale));
+      }
     } else if (settings.showReadings || settings.showDelta) {
       // Выровнено в столбик (фидбек пользователя 2026-07-09) — внутри <code>
       // моноширинный шрифт, поэтому паддинг пробелами реально работает как
@@ -287,7 +319,7 @@ export function formatZoneSummaryTelegram(
           lines.push(`👛 ${st.abonement}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
         }
       }
-      if (settings.showCalc) lines.push(`🧮 ${st.calculated}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
+      if (settings.showCalc) lines.push(`🔢 ${st.calculated}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
       if (settings.showDiff) {
         const sign = data.difference > 0 ? "+" : "";
         lines.push(`${diffEmoji(data.difference)} ${st.difference}: <b>${sign}${formatMoney(data.difference, locale)}</b>`);
@@ -341,8 +373,10 @@ export function formatDailyCashSummaryTelegram(
     }
 
     if (settings.showCash) {
+      // Разделительная точка между Налич./Безнал — тот же приём, что и везде
+      // в compact-режиме (запрос пользователя 2026-07-19).
       parts.push(
-        `💵 ${st.cashCompact}: <b>${formatMoney(data.cashAmount, locale)}</b>  💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`
+        `💵 ${st.cashCompact}: <b>${formatMoney(data.cashAmount, locale)}</b> · 💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`
       );
       if (data.abonementAmount > 0) {
         parts.push(`👛 ${st.abonementCompact}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
@@ -357,17 +391,18 @@ export function formatDailyCashSummaryTelegram(
       }
     }
     if (settings.showExpenses) {
-      parts.push(`🛒 ${st.expenses}: ${formatMoney(data.expenses, locale)}`);
-      // Сразу после Расходов (запрос пользователя 2026-07-17), тот же
-      // тумблер — обе строки об одном: деньги, ушедшие из кассы за день, но
-      // не Расход бизнеса в бухгалтерском смысле.
-      parts.push(`🎁 ${st.bonusesAndAdvancesCompact}: ${formatMoney(data.bonusesAndAdvances, locale)}`);
+      // Расходы и Пр+Ав — одной строкой через " · " (запрос пользователя
+      // 2026-07-19), тот же тумблер — обе строки об одном: деньги, ушедшие
+      // из кассы за день, но не Расход бизнеса в бухгалтерском смысле.
+      parts.push(
+        `🛒 ${st.expenses}: ${formatMoney(data.expenses, locale)} · 💵 ${st.bonusesAndAdvancesCompact}: ${formatMoney(data.bonusesAndAdvances, locale)}`
+      );
     }
 
     // Остаток на точке — рядом с Итогом, тем же разделителем " · ", что и
     // везде в compact-режиме (запрос пользователя 2026-07-14: раньше был
     // отдельной строкой в самом низу).
-    const totalBits = [`🧮 ${st.totalCompact}: <b>${formatMoney(total, locale)}</b>`];
+    const totalBits = [`🗓️ ${st.totalCompact}: <b>${formatMoney(total, locale)}</b>`];
     if (settings.showCashOnHand) totalBits.push(`🛃 ${st.cashOnHandCompact}: ${formatMoney(data.cashOnHand, locale)}`);
     parts.push(totalBits.join(" · "));
 
@@ -403,9 +438,9 @@ export function formatDailyCashSummaryTelegram(
     // Сразу после Расходов (запрос пользователя 2026-07-17), тот же
     // тумблер — обе строки об одном: деньги, ушедшие из кассы за день, но
     // не Расход бизнеса в бухгалтерском смысле.
-    lines.push(`🎁 ${st.bonusesAndAdvances}: ${formatMoney(data.bonusesAndAdvances, locale)}`);
+    lines.push(`💵 ${st.bonusesAndAdvances}: ${formatMoney(data.bonusesAndAdvances, locale)}`);
   }
-  lines.push(`🧮 ${st.totalFull}: <b>${formatMoney(total, locale)}</b>`);
+  lines.push(`🗓️ ${st.totalFull}: <b>${formatMoney(total, locale)}</b>`);
 
   if (settings.showCashOnHand) {
     lines.push("", `🛃 ${st.cashOnHand}: ${formatMoney(data.cashOnHand, locale)}`);
@@ -443,7 +478,7 @@ export function formatShiftCloseSummaryTelegram(
     // пользователя 2026-07-18: "если сотрудник не брал Аванс, то надо
     // выводить Аванс: 0") — в отличие от Премии ниже, которая по-прежнему
     // скрывается при 0 (не просили менять).
-    if (settings.showAdvance) parts.push(`💸 ${st.advance}: ${formatMoney(data.advanceAmount, locale)}`);
+    if (settings.showAdvance) parts.push(`💵 ${st.advance}: ${formatMoney(data.advanceAmount, locale)}`);
     if (settings.showBonus && data.bonusAmount > 0) parts.push(`🏆 ${st.bonusCompact}: ${formatMoney(data.bonusAmount, locale)}`);
     if (settings.showTotal) parts.push(`💰 ${st.toPayOutCompact}: <b>${formatMoney(data.toPayOut, locale)}</b>`);
 
@@ -462,7 +497,7 @@ export function formatShiftCloseSummaryTelegram(
 
   if (settings.showPeriod) lines.push(`🕐 ${st.period}: ${formatLocalTime(data.startAt, timezone)} – ${formatLocalTime(data.endAt, timezone)}`);
   if (settings.showHours) lines.push(`▶️ ${st.hoursWorked}: ${formatDuration(data.minutes)}`);
-  if (settings.showAdvance) lines.push(`💸 ${st.advance}: ${formatMoney(data.advanceAmount, locale)}`);
+  if (settings.showAdvance) lines.push(`💵 ${st.advance}: ${formatMoney(data.advanceAmount, locale)}`);
   if (settings.showBonus && data.bonusAmount > 0) lines.push(`🏆 ${st.bonus}: ${formatMoney(data.bonusAmount, locale)}`);
   if (settings.showTotal) lines.push(`💰 ${st.toPayOutFull}: <b>${formatMoney(data.toPayOut, locale)}</b>`);
 

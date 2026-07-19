@@ -304,6 +304,9 @@ export async function aggregateGameRoomLaunches(
 
 export interface AssetRevenueBreakdown {
   assetId: string;
+  // Количество пусков этого актива в окне — запрос пользователя 2026-07-19,
+  // тот же стиль, что уже показывают "Счётчики" (count + сумма на актив).
+  count: number;
   // Расчётная выручка этого актива (сумма amount всех завершённых пусков,
   // "За вход" и "По факту" вместе) — показывается оператору READ-ONLY в
   // мастере сдачи итогов рядом с полем, куда он вносит реально собранную
@@ -346,12 +349,14 @@ export async function gameRoomRevenueByAsset(
 
   const byAsset = new Map<
     string,
-    { calculatedAmount: number; cashAmount: number; mobileAmount: number; abonementAmount: number }
+    { count: number; calculatedAmount: number; cashAmount: number; mobileAmount: number; abonementAmount: number }
   >();
   for (const l of launches) {
     if (!l.assetId) continue;
-    const bucket = byAsset.get(l.assetId) ?? { calculatedAmount: 0, cashAmount: 0, mobileAmount: 0, abonementAmount: 0 };
+    const bucket =
+      byAsset.get(l.assetId) ?? { count: 0, calculatedAmount: 0, cashAmount: 0, mobileAmount: 0, abonementAmount: 0 };
     const amount = Number(l.amount ?? 0);
+    bucket.count += 1;
     bucket.calculatedAmount += amount;
     if (l.paymentMethod === "cash") bucket.cashAmount += amount;
     else if (l.paymentMethod === "mobile") bucket.mobileAmount += amount;
@@ -359,13 +364,16 @@ export async function gameRoomRevenueByAsset(
     byAsset.set(l.assetId, bucket);
   }
 
-  return Array.from(byAsset.entries()).map(([assetId, { calculatedAmount, cashAmount, mobileAmount, abonementAmount }]) => ({
-    assetId,
-    calculatedAmount: Math.round(calculatedAmount * 100) / 100,
-    cashAmount: Math.round(cashAmount * 100) / 100,
-    mobileAmount: Math.round(mobileAmount * 100) / 100,
-    abonementAmount: Math.round(abonementAmount * 100) / 100,
-  }));
+  return Array.from(byAsset.entries()).map(
+    ([assetId, { count, calculatedAmount, cashAmount, mobileAmount, abonementAmount }]) => ({
+      assetId,
+      count,
+      calculatedAmount: Math.round(calculatedAmount * 100) / 100,
+      cashAmount: Math.round(cashAmount * 100) / 100,
+      mobileAmount: Math.round(mobileAmount * 100) / 100,
+      abonementAmount: Math.round(abonementAmount * 100) / 100,
+    })
+  );
 }
 
 export interface LaunchTallyEntry {
