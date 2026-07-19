@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,6 @@ import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
-import { KebabButton } from "@/components/kebab-menu";
 import { StatusChip } from "@/components/status-chip";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { OpenShiftBadge } from "@/components/open-shift-badge";
@@ -185,12 +184,7 @@ export default function OperatorsPage() {
                     </button>
                   </div>
                 )}
-                <div onClick={(e) => e.stopPropagation()}>
-                  <KebabButton
-                    onClick={() => router.push(`/operators/${operator.id}/settings`)}
-                    label={t.operators.actionsLabel}
-                  />
-                </div>
+                <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
               </div>
               <div className="relative flex flex-wrap items-center gap-1.5 pr-6">
                 {operator.allZonesAccess ? (
