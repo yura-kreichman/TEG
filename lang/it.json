@@ -111,7 +111,9 @@
     "systemTitle": "Sistema",
     "systemHint": "Impostazioni generali valide per l'intero tenant.",
     "systemGoodsBalancePaymentLabel": "Pagamento Prodotti dal saldo",
-    "systemGoodsBalancePaymentHint": "Consenti ai clienti di pagare i prodotti con il saldo"
+    "systemGoodsBalancePaymentHint": "Consenti ai clienti di pagare i prodotti con il saldo",
+    "systemPrintingLabel": "Stampa",
+    "systemPrintingHint": "Attiva la possibilità di stampare le ricevute — la stampante stessa si configura separatamente, per punto o per dispositivo"
   },
   "tasks": {
     "pickPointTitle": "Attività",

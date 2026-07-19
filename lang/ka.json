@@ -111,7 +111,9 @@
     "systemTitle": "სისტემა",
     "systemHint": "ზოგადი პარამეტრები მთელი ტენანტისთვის.",
     "systemGoodsBalancePaymentLabel": "საქონლის ბალანსით გადახდა",
-    "systemGoodsBalancePaymentHint": "მომხმარებლებს მიეცეთ საშუალება გადაიხადონ საქონელი ბალანსით"
+    "systemGoodsBalancePaymentHint": "მომხმარებლებს მიეცეთ საშუალება გადაიხადონ საქონელი ბალანსით",
+    "systemPrintingLabel": "ბეჭდვა",
+    "systemPrintingHint": "რთავს ქვითრის ბეჭდვის შესაძლებლობას — თავად პრინტერი ცალკე ეწყობა, წერტილზე ან მოწყობილობაზე"
   },
   "tasks": {
     "pickPointTitle": "დავალებები",

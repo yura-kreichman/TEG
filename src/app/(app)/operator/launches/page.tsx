@@ -217,7 +217,7 @@ export default function LaunchesZonePage() {
   const tapTariff = tapFlow?.tariffId ? (tapZone?.tariffs.find((tf) => tf.id === tapFlow.tariffId) ?? null) : null;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-surface-0 px-4 pb-10 pt-6">
+    <div className="flex flex-1 flex-col bg-surface-0 px-4 pb-10 pt-6">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col md:max-w-xl lg:max-w-2xl">
         <h1 className="mb-4 text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.operatorApp.tally.entryTitle}</h1>
 

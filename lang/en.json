@@ -111,7 +111,9 @@
     "systemTitle": "System",
     "systemHint": "General settings affecting the whole tenant.",
     "systemGoodsBalancePaymentLabel": "Pay for Goods with balance",
-    "systemGoodsBalancePaymentHint": "Allow clients to pay for goods using their balance"
+    "systemGoodsBalancePaymentHint": "Allow clients to pay for goods using their balance",
+    "systemPrintingLabel": "Printing",
+    "systemPrintingHint": "Turns on receipt printing capability — the printer itself is set up separately, per point or per device"
   },
   "tasks": {
     "pickPointTitle": "Tasks",

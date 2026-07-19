@@ -111,7 +111,9 @@
     "systemTitle": "Тутум",
     "systemHint": "Бүткүл тенантка тиешелүү жалпы жөндөөлөр.",
     "systemGoodsBalancePaymentLabel": "Товарларды баланс менен төлөө",
-    "systemGoodsBalancePaymentHint": "Кардарларга товарларды баланс менен төлөөгө уруксат берүү"
+    "systemGoodsBalancePaymentHint": "Кардарларга товарларды баланс менен төлөөгө уруксат берүү",
+    "systemPrintingLabel": "Басып чыгаруу",
+    "systemPrintingHint": "Түбүртүктү басып чыгаруу мүмкүнчүлүгүн күйгүзөт — принтердин өзү өзүнчө, чекитте же түзмөктө орнотулат"
   },
   "tasks": {
     "pickPointTitle": "Тапшырмалар",

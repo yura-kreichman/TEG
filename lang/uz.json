@@ -111,7 +111,9 @@
     "systemTitle": "Tizim",
     "systemHint": "Butun tenantga tegishli umumiy sozlamalar.",
     "systemGoodsBalancePaymentLabel": "Tovarlar uchun balansdan toʻlash",
-    "systemGoodsBalancePaymentHint": "Mijozlarga tovarlar uchun balansdan toʻlashga ruxsat berish"
+    "systemGoodsBalancePaymentHint": "Mijozlarga tovarlar uchun balansdan toʻlashga ruxsat berish",
+    "systemPrintingLabel": "Chop etish",
+    "systemPrintingHint": "Kvitansiya chop etish imkoniyatini yoqadi — printerning oʻzi alohida, nuqtada yoki qurilmada sozlanadi"
   },
   "tasks": {
     "pickPointTitle": "Vazifalar",

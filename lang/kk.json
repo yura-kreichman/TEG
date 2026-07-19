@@ -111,7 +111,9 @@
     "systemTitle": "Жүйе",
     "systemHint": "Бүкіл тенантқа әсер ететін жалпы баптаулар.",
     "systemGoodsBalancePaymentLabel": "Тауарларды баланспен төлеу",
-    "systemGoodsBalancePaymentHint": "Клиенттерге тауарларды баланспен төлеуге рұқсат ету"
+    "systemGoodsBalancePaymentHint": "Клиенттерге тауарларды баланспен төлеуге рұқсат ету",
+    "systemPrintingLabel": "Басып шығару",
+    "systemPrintingHint": "Түбіртекті басып шығару мүмкіндігін қосады — принтердің өзі бөлек, нүктеде немесе құрылғыда бапталады"
   },
   "tasks": {
     "pickPointTitle": "Тапсырмалар",

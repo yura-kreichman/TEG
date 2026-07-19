@@ -111,7 +111,9 @@
     "systemTitle": "Сістэма",
     "systemHint": "Агульныя налады, якія дзейнічаюць на ўвесь тэнант.",
     "systemGoodsBalancePaymentLabel": "Аплата Тавараў балансам",
-    "systemGoodsBalancePaymentHint": "Дазволіць кліентам аплачваць тавары балансам"
+    "systemGoodsBalancePaymentHint": "Дазволіць кліентам аплачваць тавары балансам",
+    "systemPrintingLabel": "Друк",
+    "systemPrintingHint": "Уключае магчымасць друку квітанцый — сам прынтар наладжваецца асобна, на кропцы ці прыладзе"
   },
   "tasks": {
     "pickPointTitle": "Задачы",

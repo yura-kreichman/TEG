@@ -111,7 +111,9 @@
     "systemTitle": "Система",
     "systemHint": "Танзимоти умумӣ барои тамоми tenant.",
     "systemGoodsBalancePaymentLabel": "Пардохти Молҳо аз баланс",
-    "systemGoodsBalancePaymentHint": "Ба мизоҷон иҷозат диҳед, ки барои молҳо аз баланс пардохт кунанд"
+    "systemGoodsBalancePaymentHint": "Ба мизоҷон иҷозат диҳед, ки барои молҳо аз баланс пардохт кунанд",
+    "systemPrintingLabel": "Чоп кардан",
+    "systemPrintingHint": "Имконияти чоп кардани квитансияро фаъол мекунад — худи принтер алоҳида, дар нуқта ё дастгоҳ танзим карда мешавад"
   },
   "tasks": {
     "pickPointTitle": "Вазифаҳо",

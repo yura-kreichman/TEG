@@ -111,7 +111,9 @@
     "systemTitle": "Համակարգ",
     "systemHint": "Ընդհանուր կարգավորումներ ամբողջ tenant-ի համար։",
     "systemGoodsBalancePaymentLabel": "Ապրանքների վճարում հաշվեկշռից",
-    "systemGoodsBalancePaymentHint": "Թույլատրել հաճախորդներին վճարել ապրանքների համար հաշվեկշռից"
+    "systemGoodsBalancePaymentHint": "Թույլատրել հաճախորդներին վճարել ապրանքների համար հաշվեկշռից",
+    "systemPrintingLabel": "Տպում",
+    "systemPrintingHint": "Միացնում է անդորրագրի տպման հնարավորությունը — տպիչն ինքը կարգավորվում է առանձին, կետում կամ սարքում"
   },
   "tasks": {
     "pickPointTitle": "Առաջադրանքներ",

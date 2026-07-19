@@ -515,7 +515,7 @@ export default function SubmitResultsPage() {
     activeZone && activeForm ? activeZone.assets.filter((a) => isAssetFilled(activeZone, a, activeForm)).length : 0;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-surface-0 px-4 pb-32 pt-6">
+    <div className="flex flex-1 flex-col bg-surface-0 px-4 pb-32 pt-6">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col md:max-w-xl lg:max-w-2xl">
         <div className="flex items-center justify-between">
           <button

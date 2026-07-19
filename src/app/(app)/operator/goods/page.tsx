@@ -280,7 +280,7 @@ export default function GoodsPage() {
   if (loading) return null;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-surface-0 px-4 pb-10 pt-6">
+    <div className="flex flex-1 flex-col bg-surface-0 px-4 pb-10 pt-6">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col md:max-w-xl lg:max-w-2xl">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.goods.navLabel}</h1>

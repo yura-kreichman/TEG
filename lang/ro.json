@@ -111,7 +111,9 @@
     "systemTitle": "Sistem",
     "systemHint": "Setări generale valabile pentru tot tenantul.",
     "systemGoodsBalancePaymentLabel": "Plata Produselor din sold",
-    "systemGoodsBalancePaymentHint": "Permite clienților să plătească produsele din sold"
+    "systemGoodsBalancePaymentHint": "Permite clienților să plătească produsele din sold",
+    "systemPrintingLabel": "Tipărire",
+    "systemPrintingHint": "Activează posibilitatea de tipărire a chitanțelor — imprimanta se configurează separat, pe punct sau pe dispozitiv"
   },
   "tasks": {
     "pickPointTitle": "Sarcini",

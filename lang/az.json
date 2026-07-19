@@ -111,7 +111,9 @@
     "systemTitle": "Sistem",
     "systemHint": "Bütün tenantə aid ümumi tənzimləmələr.",
     "systemGoodsBalancePaymentLabel": "Mallar üçün balansdan ödəniş",
-    "systemGoodsBalancePaymentHint": "Müştərilərə mallar üçün balansdan ödəməyə icazə ver"
+    "systemGoodsBalancePaymentHint": "Müştərilərə mallar üçün balansdan ödəməyə icazə ver",
+    "systemPrintingLabel": "Çap",
+    "systemPrintingHint": "Qəbz çapı imkanını aktivləşdirir — printerin özü ayrıca, nöqtədə və ya cihazda quraşdırılır"
   },
   "tasks": {
     "pickPointTitle": "Tapşırıqlar",

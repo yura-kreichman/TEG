@@ -10,17 +10,24 @@ import { OwnerShell } from "@/components/owner-shell";
 
 interface SystemSettings {
   goodsAllowBalancePayment: boolean;
+  printingEnabled: boolean;
 }
 
-const DEFAULTS: SystemSettings = { goodsAllowBalancePayment: true };
+const DEFAULTS: SystemSettings = { goodsAllowBalancePayment: true, printingEnabled: false };
 
 /**
  * Настройки → Система (запрос пользователя 2026-07-20) — глобальные
  * тумблеры Владельца, не привязанные к конкретному модулю по месту в меню.
- * Первый пункт — разрешена ли клиентам оплата Товаров балансом абонемента
- * (docs/spec/09-goods.md, "Продажа" — до этого баланс был безусловным
- * способом оплаты). Задумана расширяемой — новые тумблеры добавляются в
- * rows ниже, без переделки страницы.
+ * Задумана расширяемой — новые тумблеры добавляются в rows ниже, без
+ * переделки страницы.
+ *
+ * printingEnabled — только общий рубильник "печать вообще есть" для
+ * будущего модуля печати квитанций (НЕ фискальный чек). Сам выбор принтера
+ * сюда не переедет — он физически привязан к устройству (USB/Bluetooth,
+ * Web Bluetooth/WebUSB конкретного телефона/планшета Оператора) либо к
+ * точке (WiFi-принтер по IP) — обсуждено с пользователем 2026-07-20.
+ * Настройка "печатать квитанцию для этой зоны или нет" — по зонам, будущая
+ * отдельная страница, не эта.
  */
 export default function SystemSettingsPage() {
   const t = useI18n();
@@ -52,6 +59,11 @@ export default function SystemSettingsPage() {
       key: "goodsAllowBalancePayment",
       label: t.settings.systemGoodsBalancePaymentLabel,
       sub: t.settings.systemGoodsBalancePaymentHint,
+    },
+    {
+      key: "printingEnabled",
+      label: t.settings.systemPrintingLabel,
+      sub: t.settings.systemPrintingHint,
     },
   ];
 

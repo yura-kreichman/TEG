@@ -111,7 +111,9 @@
     "systemTitle": "Система",
     "systemHint": "Общие настройки, влияющие на весь тенант.",
     "systemGoodsBalancePaymentLabel": "Оплата Товаров балансом",
-    "systemGoodsBalancePaymentHint": "Разрешить клиентам расплачиваться за товары балансом"
+    "systemGoodsBalancePaymentHint": "Разрешить клиентам расплачиваться за товары балансом",
+    "systemPrintingLabel": "Печать",
+    "systemPrintingHint": "Включает возможность печати квитанций — сам принтер настраивается отдельно, на точке или устройстве"
   },
   "tasks": {
     "pickPointTitle": "Задачи",

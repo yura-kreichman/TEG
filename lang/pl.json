@@ -111,7 +111,9 @@
     "systemTitle": "System",
     "systemHint": "Ogólne ustawienia dotyczące całego najemcy.",
     "systemGoodsBalancePaymentLabel": "Płatność za Towary z salda",
-    "systemGoodsBalancePaymentHint": "Zezwól klientom płacić za towary z salda"
+    "systemGoodsBalancePaymentHint": "Zezwól klientom płacić za towary z salda",
+    "systemPrintingLabel": "Drukowanie",
+    "systemPrintingHint": "Włącza możliwość drukowania paragonów — sama drukarka jest konfigurowana osobno, na punkcie lub urządzeniu"
   },
   "tasks": {
     "pickPointTitle": "Zadania",

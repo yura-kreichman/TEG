@@ -111,7 +111,9 @@
     "systemTitle": "Sistem",
     "systemHint": "Tüm kiracıyı etkileyen genel ayarlar.",
     "systemGoodsBalancePaymentLabel": "Ürünler için bakiyeden ödeme",
-    "systemGoodsBalancePaymentHint": "Müşterilerin ürünler için bakiyeden ödeme yapmasına izin ver"
+    "systemGoodsBalancePaymentHint": "Müşterilerin ürünler için bakiyeden ödeme yapmasına izin ver",
+    "systemPrintingLabel": "Yazdırma",
+    "systemPrintingHint": "Fiş yazdırma olanağını açar — yazıcının kendisi ayrı olarak, nokta veya cihaz üzerinde ayarlanır"
   },
   "tasks": {
     "pickPointTitle": "Görevler",
