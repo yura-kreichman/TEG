@@ -17,7 +17,7 @@ import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
-import { KebabButton } from "@/components/kebab-menu";
+import { IconActionButton } from "@/components/kebab-menu";
 import { StatusChip } from "@/components/status-chip";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n } from "@/components/i18n-provider";
@@ -451,7 +451,8 @@ export default function OperatorCardPage() {
                   </span>
                 </div>
               )}
-              <KebabButton
+              <IconActionButton
+                icon={Pencil}
                 onClick={() => router.push(`/operators/${params.id}/settings`)}
                 label={t.operators.actionsLabel}
               />
@@ -617,7 +618,7 @@ export default function OperatorCardPage() {
                             )}
                           </div>
                         </div>
-                        <KebabButton onClick={() => openShiftEdit(item.shift)} label={t.common.edit} />
+                        <IconActionButton icon={Pencil} onClick={() => openShiftEdit(item.shift)} label={t.common.edit} />
                       </div>
                     ) : (
                       <div
@@ -638,7 +639,7 @@ export default function OperatorCardPage() {
                             <Money value={item.op.amount} />
                           </span>
                         </div>
-                        <KebabButton onClick={() => openMoneyOpEdit(item.op)} label={t.common.edit} />
+                        <IconActionButton icon={Pencil} onClick={() => openMoneyOpEdit(item.op)} label={t.common.edit} />
                       </div>
                     )
                   )
