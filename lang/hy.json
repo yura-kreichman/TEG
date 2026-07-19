@@ -107,7 +107,11 @@
     "timezoneAuto": "Ավտո",
     "currencyHint": "Դրամական գումարների կողքին արժույթի նշանը կաբինետում և աշխատակցի հավելվածում։",
     "currencySectionLabel": "Արժույթ",
-    "currencyNoneLabel": "Առանց արժույթի"
+    "currencyNoneLabel": "Առանց արժույթի",
+    "systemTitle": "Համակարգ",
+    "systemHint": "Ընդհանուր կարգավորումներ ամբողջ tenant-ի համար։",
+    "systemGoodsBalancePaymentLabel": "Ապրանքների վճարում հաշվեկշռից",
+    "systemGoodsBalancePaymentHint": "Թույլատրել հաճախորդներին վճարել ապրանքների համար հաշվեկշռից"
   },
   "tasks": {
     "pickPointTitle": "Առաջադրանքներ",
@@ -1083,7 +1087,10 @@
       "newTitle": "Նոր հաճախորդ",
       "topupTitle": "Բաժանորդագրության համալրում",
       "topupButton": "Համալրել",
-      "noAbonementsError": "Սեփականատերը դեռ չի ստեղծել բաժանորդագրություն"
+      "noAbonementsError": "Սեփականատերը դեռ չի ստեղծել բաժանորդագրություն",
+      "spendTitle": "Հանել հաշվեկշռից",
+      "debitedLabel": "Հանված է",
+      "noSpendZonesError": "Հաշվեկշռով վճարման համար հասանելի գոտի չկա"
     }
   },
   "install": {

@@ -107,7 +107,11 @@
     "timezoneAuto": "Auto",
     "currencyHint": "Znak waluty przy kwotach pieniężnych w panelu i aplikacji pracownika.",
     "currencySectionLabel": "Waluta",
-    "currencyNoneLabel": "Bez waluty"
+    "currencyNoneLabel": "Bez waluty",
+    "systemTitle": "System",
+    "systemHint": "Ogólne ustawienia dotyczące całego najemcy.",
+    "systemGoodsBalancePaymentLabel": "Płatność za Towary z salda",
+    "systemGoodsBalancePaymentHint": "Zezwól klientom płacić za towary z salda"
   },
   "tasks": {
     "pickPointTitle": "Zadania",
@@ -1083,7 +1087,10 @@
       "newTitle": "Nowy klient",
       "topupTitle": "Doładowanie abonamentu",
       "topupButton": "Doładuj",
-      "noAbonementsError": "Właściciel nie utworzył jeszcze żadnego abonamentu"
+      "noAbonementsError": "Właściciel nie utworzył jeszcze żadnego abonamentu",
+      "spendTitle": "Pobierz z salda",
+      "debitedLabel": "Pobrano",
+      "noSpendZonesError": "Brak dostępnych stref do płatności z salda"
     }
   },
   "install": {

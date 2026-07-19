@@ -1062,7 +1062,7 @@ export default function GoodsCabinetPage() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-body-airbnb font-semibold">{g.name}</p>
-                            <p className={cn("tabular-nums text-caption-airbnb", low ? "font-bold text-destructive" : "text-muted-foreground")}>
+                            <p className={cn("tabular-nums text-[0.6875rem] leading-snug", low ? "font-bold text-destructive" : "text-muted-foreground")}>
                               {g.trackStock ? `${t.goods.catalogStockLabel}: ${g.quantity ?? 0}` : t.goods.serviceItemBadge}
                             </p>
                           </div>

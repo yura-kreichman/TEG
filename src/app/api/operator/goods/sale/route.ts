@@ -35,6 +35,18 @@ export async function POST(request: Request) {
   if (paymentMethod === "abonement" && !walletId) {
     return NextResponse.json({ error: "Выберите кошелёк клиента" }, { status: 400 });
   }
+  if (paymentMethod === "abonement") {
+    // Настройки → Система (запрос пользователя 2026-07-20) — серверная
+    // проверка, не только скрытие кнопки в UI, тот же принцип, что у
+    // Operator.goodsAccess выше.
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: ctx.operator.tenantId },
+      select: { goodsAllowBalancePayment: true },
+    });
+    if (!tenant?.goodsAllowBalancePayment) {
+      return NextResponse.json({ error: "Оплата балансом отключена владельцем" }, { status: 403 });
+    }
+  }
 
   try {
     const sale = await sellGoods({

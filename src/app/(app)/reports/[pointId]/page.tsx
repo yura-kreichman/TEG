@@ -272,7 +272,7 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
           )}
 
           <SegmentedTabs
-            className="mb-4 grid grid-cols-3"
+            className="mb-4 grid grid-cols-2"
             equalWidth
             size="sm"
             options={TABS.map((tb) => ({ key: tb.key, label: tb.label }))}

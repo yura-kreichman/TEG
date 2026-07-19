@@ -107,7 +107,11 @@
     "timezoneAuto": "Otomatik",
     "currencyHint": "Kabinde ve çalışan uygulamasında para tutarlarının yanındaki para birimi işareti.",
     "currencySectionLabel": "Para birimi",
-    "currencyNoneLabel": "Para birimi yok"
+    "currencyNoneLabel": "Para birimi yok",
+    "systemTitle": "Sistem",
+    "systemHint": "Tüm kiracıyı etkileyen genel ayarlar.",
+    "systemGoodsBalancePaymentLabel": "Ürünler için bakiyeden ödeme",
+    "systemGoodsBalancePaymentHint": "Müşterilerin ürünler için bakiyeden ödeme yapmasına izin ver"
   },
   "tasks": {
     "pickPointTitle": "Görevler",
@@ -1083,7 +1087,10 @@
       "newTitle": "Yeni müşteri",
       "topupTitle": "Abonelik yükleme",
       "topupButton": "Yükle",
-      "noAbonementsError": "Sahibi henüz abonelik oluşturmadı"
+      "noAbonementsError": "Sahibi henüz abonelik oluşturmadı",
+      "spendTitle": "Bakiyeden düş",
+      "debitedLabel": "Düşüldü",
+      "noSpendZonesError": "Bakiyeyle ödeme için uygun bölge yok"
     }
   },
   "install": {

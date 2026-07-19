@@ -107,7 +107,11 @@
     "timezoneAuto": "Avto",
     "currencyHint": "Kabinetdə və işçi tətbiqində pul məbləğlərinin yanındakı valyuta işarəsi.",
     "currencySectionLabel": "Valyuta",
-    "currencyNoneLabel": "Valyuta yoxdur"
+    "currencyNoneLabel": "Valyuta yoxdur",
+    "systemTitle": "Sistem",
+    "systemHint": "Bütün tenantə aid ümumi tənzimləmələr.",
+    "systemGoodsBalancePaymentLabel": "Mallar üçün balansdan ödəniş",
+    "systemGoodsBalancePaymentHint": "Müştərilərə mallar üçün balansdan ödəməyə icazə ver"
   },
   "tasks": {
     "pickPointTitle": "Tapşırıqlar",
@@ -1083,7 +1087,10 @@
       "newTitle": "Yeni müştəri",
       "topupTitle": "Abonementi doldurmaq",
       "topupButton": "Doldur",
-      "noAbonementsError": "Sahibkar hələ abonement yaratmayıb"
+      "noAbonementsError": "Sahibkar hələ abonement yaratmayıb",
+      "spendTitle": "Balansdan çıxarış",
+      "debitedLabel": "Çıxarıldı",
+      "noSpendZonesError": "Balansla ödəniş üçün əlçatan zona yoxdur"
     }
   },
   "install": {

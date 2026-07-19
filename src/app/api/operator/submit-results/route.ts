@@ -10,6 +10,7 @@ import {
   type ZoneAccountingMode,
 } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
+import { getZoneAbonementSpendAmount } from "@/lib/abonement";
 import {
   aggregateGameRoomLaunches,
   countOpenLaunchesInZone,
@@ -175,6 +176,21 @@ export async function POST(request: Request) {
     });
   }
 
+  // "Счётчики" и "Только касса" — оплата балансом (docs/spec/01-counters.md,
+  // запрос пользователя 2026-07-20: "актуально не только для счётчиков, но и
+  // Только касса") — те же "с прошлой сдачи" границы, что у Пусков/Прибываний
+  // выше, но источник другой: у этих режимов нет Launch, только
+  // MoneyOperation(type: "revenue_abonement") на зоне (см.
+  // getZoneAbonementSpendAmount) — у "Только касса" нет даже активов, поэтому
+  // считаем по зоне напрямую, не через AbonementTransaction.assetId.
+  const counterAbonementByZone = new Map<string, number>();
+  for (const zs of zoneSubmissions) {
+    const zone = zoneById.get(zs.zoneId)!;
+    if (zone.accountingMode !== "counters" && zone.accountingMode !== "cash_only") continue;
+    const boundary = await previousSubmissionBoundary(zone.id);
+    counterAbonementByZone.set(zone.id, await getZoneAbonementSpendAmount(zone.id, boundary));
+  }
+
   const summary = zoneSubmissions.map((zs) => {
     const zone = zoneById.get(zs.zoneId)!;
 
@@ -229,7 +245,11 @@ export async function POST(request: Request) {
     const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
     const netRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
     const actualCash = zs.cashAmount + zs.mobileAmount;
-    const difference = Math.round((actualCash - netRevenue) * 100) / 100;
+    // Оплата балансом (docs/spec/01-counters.md, запрос пользователя
+    // 2026-07-20) — та же поправка, что у Пусков/Прибываний: касса уже
+    // получила эти деньги раньше, при пополнении абонемента, не сейчас.
+    const counterAbonementAmount = counterAbonementByZone.get(zone.id) ?? 0;
+    const difference = Math.round((actualCash + counterAbonementAmount - netRevenue) * 100) / 100;
 
     const readingsText = zone.assets
       .map((asset) => {
@@ -270,7 +290,7 @@ export async function POST(request: Request) {
       returnsCount: zs.returnsCount,
       cashAmount: zs.cashAmount,
       mobileAmount: zs.mobileAmount,
-      abonementAmount: 0, // Счётчики — абонемент как способ оплаты не применим (docs/spec/01-counters.md).
+      abonementAmount: counterAbonementAmount,
       gameRoomLaunchCount: null as number | null,
       gameRoomTotalMinutes: null as number | null,
       perAsset: [] as { assetName: string; count: number; amount: number }[],

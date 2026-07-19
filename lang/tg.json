@@ -107,7 +107,11 @@
     "timezoneAuto": "Худкор",
     "currencyHint": "Дар назди маблағҳои пулӣ дар кабинет ва барномаи корманд аломати асъор.",
     "currencySectionLabel": "Асъор",
-    "currencyNoneLabel": "Бе асъор"
+    "currencyNoneLabel": "Бе асъор",
+    "systemTitle": "Система",
+    "systemHint": "Танзимоти умумӣ барои тамоми tenant.",
+    "systemGoodsBalancePaymentLabel": "Пардохти Молҳо аз баланс",
+    "systemGoodsBalancePaymentHint": "Ба мизоҷон иҷозат диҳед, ки барои молҳо аз баланс пардохт кунанд"
   },
   "tasks": {
     "pickPointTitle": "Вазифаҳо",
@@ -1083,7 +1087,10 @@
       "newTitle": "Мизоҷи нав",
       "topupTitle": "Пуркунии обунамонд",
       "topupButton": "Пур кардан",
-      "noAbonementsError": "Соҳиб то ҳол ягон обунамонд насохтааст"
+      "noAbonementsError": "Соҳиб то ҳол ягон обунамонд насохтааст",
+      "spendTitle": "Аз баланс гирифтан",
+      "debitedLabel": "Гирифта шуд",
+      "noSpendZonesError": "Минтақа барои пардохт аз ҳисоб мавҷуд нест"
     }
   },
   "install": {

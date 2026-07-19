@@ -78,6 +78,15 @@ export function PlanCard() {
               {t.home.planExpiresPrefix} {new Date(planEndDate).toLocaleDateString()}
             </p>
           ) : (
+            // "Следующее списание" — дата из FluentCart-подписки, у ручного
+            // безлимит-оверрайда Super Admin'а (usage.unlimited) реальной
+            // подписки может не быть вовсе — показывать её как будто план
+            // вот-вот спишется вводит в заблуждение (нашёл пользователь
+            // 2026-07-20: "у плана безлимит и нет ограничения срока
+            // действия"). subscriptionExpiresAt (planEndDate выше) — отдельный
+            // осознанный оверрайд самого Super Admin'а, если он его явно
+            // выставил поверх безлимита, тот по-прежнему показывается.
+            !usage.unlimited &&
             usage.currentPeriodEnd &&
             usage.subscriptionStatus === "active" && (
               <p className="text-caption-airbnb whitespace-nowrap text-muted-foreground">

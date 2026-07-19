@@ -107,7 +107,11 @@
     "timezoneAuto": "Automatico",
     "currencyHint": "Simbolo di valuta mostrato accanto agli importi nel gestionale del titolare e nell'app dell'operatore.",
     "currencySectionLabel": "Valuta",
-    "currencyNoneLabel": "Nessuna valuta"
+    "currencyNoneLabel": "Nessuna valuta",
+    "systemTitle": "Sistema",
+    "systemHint": "Impostazioni generali valide per l'intero tenant.",
+    "systemGoodsBalancePaymentLabel": "Pagamento Prodotti dal saldo",
+    "systemGoodsBalancePaymentHint": "Consenti ai clienti di pagare i prodotti con il saldo"
   },
   "tasks": {
     "pickPointTitle": "Attività",
@@ -1083,7 +1087,10 @@
       "newTitle": "Nuovo cliente",
       "topupTitle": "Ricarica abbonamento",
       "topupButton": "Ricarica",
-      "noAbonementsError": "Il proprietario non ha ancora creato abbonamenti"
+      "noAbonementsError": "Il proprietario non ha ancora creato abbonamenti",
+      "spendTitle": "Addebita dal saldo",
+      "debitedLabel": "Addebitato",
+      "noSpendZonesError": "Nessuna zona disponibile per il pagamento dal saldo"
     }
   },
   "install": {

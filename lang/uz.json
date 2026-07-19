@@ -107,7 +107,11 @@
     "timezoneAuto": "Avto",
     "currencyHint": "Kabinet va xodim ilovasida pul summalarining yonidagi valyuta belgisi.",
     "currencySectionLabel": "Valyuta",
-    "currencyNoneLabel": "Valyutasiz"
+    "currencyNoneLabel": "Valyutasiz",
+    "systemTitle": "Tizim",
+    "systemHint": "Butun tenantga tegishli umumiy sozlamalar.",
+    "systemGoodsBalancePaymentLabel": "Tovarlar uchun balansdan toʻlash",
+    "systemGoodsBalancePaymentHint": "Mijozlarga tovarlar uchun balansdan toʻlashga ruxsat berish"
   },
   "tasks": {
     "pickPointTitle": "Vazifalar",
@@ -1083,7 +1087,10 @@
       "newTitle": "Yangi mijoz",
       "topupTitle": "Abonementni toʻldirish",
       "topupButton": "Toʻldirish",
-      "noAbonementsError": "Egasi hali abonement yaratmagan"
+      "noAbonementsError": "Egasi hali abonement yaratmagan",
+      "spendTitle": "Balansdan yechish",
+      "debitedLabel": "Yechildi",
+      "noSpendZonesError": "Balansdan toʻlash uchun mintaqa yoʻq"
     }
   },
   "install": {

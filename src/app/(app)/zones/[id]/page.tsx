@@ -16,7 +16,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconPicker, IconPickerSheet, AssetOrZoneIcon } from "@/components/icon-picker";
 import { EmojiPickerSheet } from "@/components/emoji-picker";
-import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
+import { KebabButton, ActionSheetItem, IconActionButton } from "@/components/kebab-menu";
 import { StatusChip } from "@/components/status-chip";
 import { TileIcon } from "@/components/tile-icon";
 import { FilePickerButton } from "@/components/file-picker-button";
@@ -184,7 +184,7 @@ interface ZoneDetail {
 }
 
 type ZoneKebabView = "menu" | "rename" | "mode" | "confirm-delete";
-type TariffKebabView = "menu" | "edit" | "confirm-delete";
+type TariffKebabView = "edit" | "confirm-delete";
 type AssetKebabView = "menu" | "edit" | "photo" | "icon" | "confirm-delete" | "initial-reading";
 
 export default function ZoneDetailPage() {
@@ -220,7 +220,7 @@ export default function ZoneDetailPage() {
   const [tariffOptions, setTariffOptions] = useState<OptionDraft[]>([EMPTY_OPTION]);
 
   const [tariffKebab, setTariffKebab] = useState<TariffInfo | null>(null);
-  const [tariffKebabView, setTariffKebabView] = useState<TariffKebabView>("menu");
+  const [tariffKebabView, setTariffKebabView] = useState<TariffKebabView>("edit");
   const [editTariffName, setEditTariffName] = useState("");
   const [editTariffPrice, setEditTariffPrice] = useState("");
   const { saved: editTariffSaved, pulse: editTariffPulse } = useSavePulse();
@@ -389,19 +389,24 @@ export default function ZoneDetailPage() {
     });
   }
 
-  function openTariffKebab(tariff: TariffInfo) {
+  function openEditTariff(tariff: TariffInfo) {
     setTariffKebab(tariff);
-    setTariffKebabView("menu");
+    setTariffKebabView("edit");
     setEditTariffName(tariff.name);
     setEditTariffPrice(tariff.price);
     setEditTariffError(null);
-    setDeleteTariffError(null);
     setEditTariffPricingMode(tariff.pricingMode ?? "fixed");
     setEditTariffOptions(
       tariff.options.length > 0
         ? tariff.options.map((o) => ({ durationMinutes: String(o.durationMinutes), price: o.price }))
         : [EMPTY_OPTION]
     );
+  }
+
+  function openDeleteTariffConfirm(tariff: TariffInfo) {
+    setTariffKebab(tariff);
+    setTariffKebabView("confirm-delete");
+    setDeleteTariffError(null);
   }
 
   async function confirmEditTariff() {
@@ -721,7 +726,13 @@ export default function ZoneDetailPage() {
                   {tariff.pricingMode !== "fixed" && (
                     <Money value={Number(tariff.price)} className="text-[0.96875rem] font-bold" />
                   )}
-                  <KebabButton onClick={() => openTariffKebab(tariff)} label={t.zoneDetail.tariffActionsLabel} />
+                  <IconActionButton icon={Pencil} onClick={() => openEditTariff(tariff)} label={t.zoneDetail.editTariff} />
+                  <IconActionButton
+                    icon={Trash2}
+                    onClick={() => openDeleteTariffConfirm(tariff)}
+                    label={t.zoneDetail.deleteTariffAction}
+                    destructive
+                  />
                 </div>
               </div>
             ))}
@@ -1038,17 +1049,6 @@ export default function ZoneDetailPage() {
       </BottomSheet>
 
       <BottomSheet open={tariffKebab !== null} onClose={() => setTariffKebab(null)}>
-        {tariffKebab && tariffKebabView === "menu" && (
-          <div className="pt-2">
-            <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">{tariffKebab.name}</h2>
-            <ActionSheetItem icon={Pencil} onClick={() => setTariffKebabView("edit")}>
-              {t.zoneDetail.editTariff}
-            </ActionSheetItem>
-            <ActionSheetItem icon={Trash2} destructive onClick={() => setTariffKebabView("confirm-delete")}>
-              {t.zoneDetail.deleteTariffAction}
-            </ActionSheetItem>
-          </div>
-        )}
         {tariffKebab && tariffKebabView === "edit" && (
           <div className="flex flex-col gap-3 pt-2">
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.editTariff}</h2>

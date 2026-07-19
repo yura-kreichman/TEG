@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Banknote, Check, ChevronLeft, CreditCard, Gift, Pencil, Search } from "lucide-react";
+import { Banknote, Check, ChevronLeft, CreditCard, Gift, MapPin, Pencil, Search, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { Money } from "@/components/money";
 import { MoneyInput } from "@/components/money-input";
 import { PhoneInput } from "@/components/phone-input";
+import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n, useLocale } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { cn } from "@/lib/utils";
@@ -111,6 +112,43 @@ export interface AbonementTopupFlowProps {
   // показывает сам) — остаётся только выбор плана/произвольной суммы.
   initialWallet?: WalletCtx;
   onSuccess?: () => void;
+  // Оплата балансом на месте (не пополнение, списание) — только Сотрудник,
+  // для зон без Launch-учёта: "Счётчики" (выбор актив+тариф) и "Только
+  // касса" (сама зона, активов нет) — docs/spec/01-counters.md, запрос
+  // пользователя 2026-07-20: "как сделать, чтобы клиенты могли оплатить
+  // балансом". Не передан — секция целиком скрыта (Владелец физически не
+  // стоит на точке и не принимает оплату). spendZones — уже загруженный
+  // страницей список (не сам компонент грузит лениво по тапу) — кнопка
+  // "Списать с баланса" не должна появляться вовсе, если у оператора на
+  // точке нет ни одной подходящей зоны (запрос пользователя 2026-07-20:
+  // "если... нет Зон с режимом учёта... эта кнопка не должна отображаться"),
+  // а до ответа сервера решить это нельзя.
+  allowZoneSpend?: boolean;
+  spendZones?: SpendZoneCtx[] | null;
+  zoneSpendEndpointFor?: (walletId: string) => string;
+}
+
+export interface SpendAssetCtx {
+  id: string;
+  name: string;
+  photoUrl: string | null;
+  iconKey: string | null;
+  colorTag: string;
+}
+
+export interface SpendTariffCtx {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface SpendZoneCtx {
+  id: string;
+  name: string;
+  iconKey: string | null;
+  accountingMode: "counters" | "cash_only";
+  assets: SpendAssetCtx[];
+  tariffs: SpendTariffCtx[];
 }
 
 /**
@@ -135,6 +173,9 @@ export function AbonementTopupFlow({
   arbitraryAmountNeedsPaymentMethod,
   initialWallet,
   onSuccess,
+  allowZoneSpend,
+  spendZones,
+  zoneSpendEndpointFor,
 }: AbonementTopupFlowProps) {
   const t = useI18n();
   const locale = useLocale();
@@ -160,6 +201,17 @@ export function AbonementTopupFlow({
   // возвращался прямо на тот же экран выбора плана с чуть другим числом
   // баланса, что было незаметно как явное подтверждение.
   const [justCredited, setJustCredited] = useState<{ amount: number; newBalance: number } | null>(null);
+
+  // Оплата балансом на месте (не пополнение, списание) — Зона → (Актив →
+  // Тариф, только "Счётчики") → сумма (запрос пользователя 2026-07-20).
+  const [zoneSpendOpen, setZoneSpendOpen] = useState(false);
+  const [spendZone, setSpendZone] = useState<SpendZoneCtx | null>(null);
+  const [spendAsset, setSpendAsset] = useState<SpendAssetCtx | null>(null);
+  const [spendTariff, setSpendTariff] = useState<SpendTariffCtx | null>(null);
+  const [spendAmount, setSpendAmount] = useState("");
+  const [spendSubmitting, setSpendSubmitting] = useState(false);
+  const [spendError, setSpendError] = useState<string | null>(null);
+  const [justDebited, setJustDebited] = useState<{ amount: number; newBalance: number } | null>(null);
 
   // Правка имени уже существующего абонента (запрос пользователя
   // 2026-07-17: "Сотрудник должен иметь возможность... менять имя, в том
@@ -347,6 +399,51 @@ export function AbonementTopupFlow({
     }
   }
 
+  function openZoneSpend() {
+    setZoneSpendOpen(true);
+    // Единственная доступная зона — сразу выбираем, не заставляем тапать по
+    // списку из одного пункта (spendZones уже загружен страницей заранее).
+    setSpendZone(spendZones && spendZones.length === 1 ? spendZones[0] : null);
+    setSpendAsset(null);
+    setSpendTariff(null);
+    setSpendAmount("");
+    setSpendError(null);
+  }
+
+  async function submitZoneSpend() {
+    if (!found || !zoneSpendEndpointFor || !spendZone || spendSubmitting) return;
+    // "Счётчики" — сумма это цена тарифа (одна поездка), не свободный ввод;
+    // "Только касса" — своей цены нет, вводится вручную (запрос пользователя
+    // 2026-07-20).
+    const amount = spendZone.accountingMode === "counters" ? (spendTariff?.price ?? NaN) : Number(spendAmount);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    setSpendSubmitting(true);
+    setSpendError(null);
+    try {
+      const res = await fetch(zoneSpendEndpointFor(found.id), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body:
+          spendZone.accountingMode === "counters"
+            ? JSON.stringify({ assetId: spendAsset?.id, tariffId: spendTariff?.id, amount })
+            : JSON.stringify({ zoneId: spendZone.id, amount }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSpendError(data.error ?? t.operatorApp.gameRoom.networkError);
+        return;
+      }
+      setFound(data);
+      setZoneSpendOpen(false);
+      setJustDebited({ amount, newBalance: data.balance });
+      onSuccess?.();
+    } catch {
+      setSpendError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      setSpendSubmitting(false);
+    }
+  }
+
   // Untracked-путь Владельца (см. arbitraryAmountNeedsPaymentMethod выше) —
   // мгновенное зачисление, без способа оплаты, без следа в кассе.
   async function handleAdjust() {
@@ -430,6 +527,171 @@ export function AbonementTopupFlow({
             </Button>
           </PressableScale>
         </div>
+      ) : justDebited ? (
+        <div className="flex flex-col items-center gap-3 py-2 text-center">
+          <div className="flex size-16 items-center justify-center rounded-full bg-success/15 text-success">
+            <Check className="size-8" />
+          </div>
+          <div>
+            <p className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
+              {t.abonements.paymentAcceptedTitle}
+            </p>
+            <p className="mt-1 text-body-airbnb text-muted-foreground">
+              {t.operatorApp.abonement.debitedLabel} −<Money value={justDebited.amount} />
+            </p>
+          </div>
+          <div className="flex w-full items-center justify-between rounded-control bg-muted p-3.5">
+            <span className="text-caption-airbnb text-muted-foreground">{t.operatorApp.abonement.balanceLabel}</span>
+            <span className="text-xl font-extrabold tracking-[-0.02em]">
+              <Money value={justDebited.newBalance} />
+            </span>
+          </div>
+          <PressableScale className="w-full">
+            <Button type="button" className="h-12 w-full font-bold" onClick={() => setJustDebited(null)}>
+              {t.abonements.doneButton}
+            </Button>
+          </PressableScale>
+        </div>
+      ) : zoneSpendOpen ? (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              // Пошагово назад: тариф → актив → зона → закрыть весь экран
+              // списания (та же логика возврата, что у категорий ревизии
+              // остатков в /goods, запрос пользователя 2026-07-19 того же
+              // дня — свернуть последний выбранный шаг, не всё разом).
+              if (spendTariff) setSpendTariff(null);
+              else if (spendAsset) setSpendAsset(null);
+              else if (spendZones && spendZones.length > 1 && spendZone) setSpendZone(null);
+              else setZoneSpendOpen(false);
+            }}
+            className="flex w-fit items-center gap-1.5 text-caption-airbnb font-semibold text-muted-foreground"
+          >
+            <ChevronLeft className="size-3.5" />
+            {t.common.back}
+          </button>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.abonement.spendTitle}</h2>
+
+          {!spendZones ? null : spendZones.length === 0 ? (
+            <p className="text-caption-airbnb text-destructive">{t.operatorApp.abonement.noSpendZonesError}</p>
+          ) : !spendZone ? (
+            <div className="flex flex-col gap-2">
+              {spendZones.map((zone) => (
+                <PressableScale key={zone.id}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn("h-12 w-full justify-start gap-2 font-semibold", RAISED_OPTION_BUTTON_CLASS)}
+                    onClick={() => setSpendZone(zone)}
+                  >
+                    {zone.iconKey ? (
+                      <AssetOrZoneIcon iconKey={zone.iconKey} className="size-4.5 shrink-0" />
+                    ) : (
+                      <MapPin className="size-4.5 shrink-0" />
+                    )}
+                    {zone.name}
+                  </Button>
+                </PressableScale>
+              ))}
+            </div>
+          ) : spendZone.accountingMode === "counters" && !spendAsset ? (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(6.25rem,1fr))] gap-3">
+              {spendZone.assets.map((asset) => (
+                <PressableScale key={asset.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSpendAsset(asset);
+                      if (spendZone.tariffs.length === 1) setSpendTariff(spendZone.tariffs[0]);
+                    }}
+                    className="flex w-full flex-col overflow-hidden rounded-card border-[1.5px] border-border bg-card text-left"
+                  >
+                    <div className="relative aspect-square w-full overflow-hidden bg-primary/10">
+                      {asset.photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={asset.photoUrl} alt="" className="size-full object-cover object-center" />
+                      ) : (
+                        <div className="flex size-full items-center justify-center">
+                          {asset.iconKey ? (
+                            <AssetOrZoneIcon iconKey={asset.iconKey} className="size-7 text-primary/50" />
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-0 px-2 py-1.5">
+                      <span className="truncate text-[0.8125rem] font-bold leading-tight">{asset.name}</span>
+                    </div>
+                  </button>
+                </PressableScale>
+              ))}
+            </div>
+          ) : spendZone.accountingMode === "counters" && spendZone.tariffs.length > 1 && !spendTariff ? (
+            <div className="flex flex-col gap-2">
+              {spendZone.tariffs.map((tariff) => (
+                <PressableScale key={tariff.id}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn("h-12 w-full justify-between font-semibold", RAISED_OPTION_BUTTON_CLASS)}
+                    onClick={() => setSpendTariff(tariff)}
+                  >
+                    {tariff.name}
+                    <Money value={tariff.price} />
+                  </Button>
+                </PressableScale>
+              ))}
+            </div>
+          ) : spendZone.accountingMode === "counters" && spendTariff ? (
+            // "Счётчики" — сумма это цена уже выбранного тарифа, не
+            // произвольный ввод (запрос пользователя 2026-07-20: "тут не
+            // произвольная сумма, а имеющиеся Тарифы") — одна поездка = один
+            // тариф по фиксированной цене, ровно как оплата наличными на той
+            // же зоне.
+            <>
+              <div className="flex flex-col items-center gap-1 rounded-control border border-border bg-card p-4 text-center">
+                <span className="text-caption-airbnb text-muted-foreground">{spendTariff.name}</span>
+                <span className="text-2xl font-extrabold tabular-nums tracking-[-0.02em]">
+                  <Money value={spendTariff.price} />
+                </span>
+              </div>
+              {spendError && <p className="text-sm text-destructive">{spendError}</p>}
+              <PressableScale>
+                <Button
+                  type="button"
+                  className="h-12 w-full font-bold"
+                  disabled={spendSubmitting}
+                  onClick={submitZoneSpend}
+                >
+                  {t.operatorApp.abonement.spendButton}
+                </Button>
+              </PressableScale>
+            </>
+          ) : (
+            <>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="spendAmount">{t.money.amountLabel}</Label>
+                <MoneyInput
+                  id="spendAmount"
+                  scale="lg"
+                  value={spendAmount}
+                  onChange={(e) => setSpendAmount(e.target.value)}
+                />
+              </div>
+              {spendError && <p className="text-sm text-destructive">{spendError}</p>}
+              <PressableScale>
+                <Button
+                  type="button"
+                  className="h-12 w-full font-bold"
+                  disabled={spendSubmitting || !Number.isFinite(Number(spendAmount)) || Number(spendAmount) <= 0}
+                  onClick={submitZoneSpend}
+                >
+                  {t.operatorApp.abonement.spendButton}
+                </Button>
+              </PressableScale>
+            </>
+          )}
+        </>
       ) : pendingAction ? (
         <>
           <button
@@ -646,6 +908,22 @@ export function AbonementTopupFlow({
                 </PressableScale>
               </div>
             </div>
+          )}
+
+          {/* Оплата балансом на месте — только Сотрудник, только для уже
+              найденного/созданного клиента (запрос пользователя 2026-07-20). */}
+          {allowZoneSpend && spendZones && spendZones.length > 0 && !isNew && found && (
+            <PressableScale>
+              <Button
+                type="button"
+                variant="outline"
+                className={cn("h-12 w-full gap-1.5 font-semibold", RAISED_OPTION_BUTTON_CLASS)}
+                onClick={openZoneSpend}
+              >
+                <Wallet className="size-4.5" />
+                {t.operatorApp.abonement.spendTitle}
+              </Button>
+            </PressableScale>
           )}
 
           {/* Продажа плана — только Сотрудник (запрос пользователя

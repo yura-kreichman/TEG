@@ -107,7 +107,11 @@
     "timezoneAuto": "ავტო",
     "currencyHint": "ფულადი თანხების გვერდით ვალუტის ნიშანი კაბინეტში და თანამშრომლის აპლიკაციაში.",
     "currencySectionLabel": "ვალუტა",
-    "currencyNoneLabel": "ვალუტის გარეშე"
+    "currencyNoneLabel": "ვალუტის გარეშე",
+    "systemTitle": "სისტემა",
+    "systemHint": "ზოგადი პარამეტრები მთელი ტენანტისთვის.",
+    "systemGoodsBalancePaymentLabel": "საქონლის ბალანსით გადახდა",
+    "systemGoodsBalancePaymentHint": "მომხმარებლებს მიეცეთ საშუალება გადაიხადონ საქონელი ბალანსით"
   },
   "tasks": {
     "pickPointTitle": "დავალებები",
@@ -1083,7 +1087,10 @@
       "newTitle": "ახალი კლიენტი",
       "topupTitle": "აბონემენტის შევსება",
       "topupButton": "შევსება",
-      "noAbonementsError": "მფლობელს ჯერ არ შეუქმნია აბონემენტი"
+      "noAbonementsError": "მფლობელს ჯერ არ შეუქმნია აბონემენტი",
+      "spendTitle": "ბალანსიდან ჩამოწერა",
+      "debitedLabel": "ჩამოწერილია",
+      "noSpendZonesError": "ბალანსით გადახდისთვის ხელმისაწვდომი ზონა არ არის"
     }
   },
   "install": {

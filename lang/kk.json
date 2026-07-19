@@ -107,7 +107,11 @@
     "timezoneAuto": "Авто",
     "currencyHint": "Кабинетте және қызметкер қосымшасында ақша сомаларының жанындағы валюта белгісі.",
     "currencySectionLabel": "Валюта",
-    "currencyNoneLabel": "Валюта жоқ"
+    "currencyNoneLabel": "Валюта жоқ",
+    "systemTitle": "Жүйе",
+    "systemHint": "Бүкіл тенантқа әсер ететін жалпы баптаулар.",
+    "systemGoodsBalancePaymentLabel": "Тауарларды баланспен төлеу",
+    "systemGoodsBalancePaymentHint": "Клиенттерге тауарларды баланспен төлеуге рұқсат ету"
   },
   "tasks": {
     "pickPointTitle": "Тапсырмалар",
@@ -1083,7 +1087,10 @@
       "newTitle": "Жаңа клиент",
       "topupTitle": "Абонементті толықтыру",
       "topupButton": "Толықтыру",
-      "noAbonementsError": "Иесі әлі абонемент жасаған жоқ"
+      "noAbonementsError": "Иесі әлі абонемент жасаған жоқ",
+      "spendTitle": "Балансынан есептен шығару",
+      "debitedLabel": "Есептен шығарылды",
+      "noSpendZonesError": "Баланспен төлеуге қолжетімді аймақ жоқ"
     }
   },
   "install": {

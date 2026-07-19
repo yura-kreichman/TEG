@@ -107,7 +107,11 @@
     "timezoneAuto": "Auto",
     "currencyHint": "Currency sign shown next to money amounts in the owner cabinet and operator app.",
     "currencySectionLabel": "Currency",
-    "currencyNoneLabel": "No currency"
+    "currencyNoneLabel": "No currency",
+    "systemTitle": "System",
+    "systemHint": "General settings affecting the whole tenant.",
+    "systemGoodsBalancePaymentLabel": "Pay for Goods with balance",
+    "systemGoodsBalancePaymentHint": "Allow clients to pay for goods using their balance"
   },
   "tasks": {
     "pickPointTitle": "Tasks",
@@ -1083,7 +1087,10 @@
       "newTitle": "New customer",
       "topupTitle": "Top up subscription",
       "topupButton": "Top up",
-      "noAbonementsError": "The owner has not created any subscriptions yet"
+      "noAbonementsError": "The owner has not created any subscriptions yet",
+      "spendTitle": "Charge from balance",
+      "debitedLabel": "Charged",
+      "noSpendZonesError": "No zones available for balance payment"
     }
   },
   "install": {

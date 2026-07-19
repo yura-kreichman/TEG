@@ -165,6 +165,15 @@ model Tenant {
   earlyToleranceMinutes Int @default(120)
   lateToleranceMinutes  Int @default(120)
 
+  // Настройки → Система (запрос пользователя 2026-07-20) — глобальный
+  // тумблер Владельца: разрешена ли клиентам оплата Товаров балансом
+  // абонемента (docs/spec/09-goods.md, "Продажа" — до этого поля баланс был
+  // безусловным способом оплаты наравне с наличными/безналом). default true —
+  // у существующих тенантов поведение не меняется молча, только у тех, кто
+  // явно выключит. Серверная проверка в /api/operator/goods/sale, не только
+  // скрытие кнопки в UI — тот же принцип, что у Operator.goodsAccess.
+  goodsAllowBalancePayment Boolean @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -643,22 +652,23 @@ model Tariff {
   // прошлых периодов.
   deletedAt DateTime?
 
-  assetReadings     AssetReading[]
-  initialReadings   AssetInitialReading[]
+  assetReadings         AssetReading[]
+  initialReadings       AssetInitialReading[]
   // Только accountingMode="launches" — пуски, для которых оператор выбрал
   // этот тариф в реальном времени (Launch.tariffId, запрос пользователя
   // 2026-07-17). Пусто у counters (там тариф — просто цена показания, без
   // ссылки на пуск) и у stays (там своя схема снапшота цены).
-  launches          Launch[]
+  launches              Launch[]
   // Активы режима "Прибывания", которые сейчас используют этот тариф
   // (Asset.tariffId) — необязательная обратная связь, тариф существует
   // независимо от того, привязан ли к нему уже хоть один актив.
-  assetsUsingTariff Asset[]               @relation("AssetTariff")
+  assetsUsingTariff     Asset[]                @relation("AssetTariff")
   // Только "fixed"/"За вход" — варианты длительность+цена (запрос
   // пользователя 2026-07-17: "1 час, 2 часа..." — оператор выбирает при
   // старте пуска, см. TariffOption ниже). Пусто у "per_minute" и обычных
   // тарифов counters/launches.
-  options           TariffOption[]
+  options               TariffOption[]
+  abonementTransactions AbonementTransaction[]
 
   // Не @@unique — уникальность (zoneId, order) нужна только среди активных
   // тарифов (иначе освободившийся после soft-delete слот нельзя было бы
@@ -796,6 +806,18 @@ model AbonementTransaction {
   goodsSaleId String?
   goodsSale   GoodsSale? @relation(fields: [goodsSaleId], references: [id], onDelete: SetNull)
 
+  // Только "spend" — оплата поездки балансом на активе режима "Счётчики"
+  // (docs/spec/01-counters.md). У этого режима нет своей отдельной записи на
+  // сеанс (в отличие от Launch у launches/stays) — счётчик тикает физически,
+  // по прикосновению RFID-метки, программа об этом не знает вообще; эта
+  // запись — независимая ручная фиксация Сотрудником "эта поездка оплачена
+  // балансом", не связанная с самим тиком счётчика. tariffId — какой из двух
+  // тарифов актива (тот же смысл, что у AssetReading.tariffId).
+  assetId  String?
+  asset    Asset?  @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  tariffId String?
+  tariff   Tariff? @relation(fields: [tariffId], references: [id], onDelete: SetNull)
+
   pointId    String?
   point      Point?    @relation(fields: [pointId], references: [id])
   // "Кто провёл" операцию — оператор ИЛИ владелец (тот же приём, что
@@ -815,6 +837,7 @@ model AbonementTransaction {
   @@index([walletId, occurredAt])
   @@index([launchId])
   @@index([goodsSaleId])
+  @@index([assetId])
 }
 
 // ============================================================================
@@ -1057,9 +1080,10 @@ model Asset {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  readings        AssetReading[]
-  initialReadings AssetInitialReading[]
-  launches        Launch[]
+  readings              AssetReading[]
+  initialReadings       AssetInitialReading[]
+  launches              Launch[]
+  abonementTransactions AbonementTransaction[]
 }
 
 // Калибровочное показание счётчика (запрос пользователя 2026-07-14: "начинаю

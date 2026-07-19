@@ -210,13 +210,17 @@ export async function GET(request: Request) {
   // ней и предыдущей сдачей той же зоны — тот же принцип, что у
   // previousSubmissionBoundary в lib/game-room.ts для текущего незакрытого
   // окна), строим полную цепочку сдач по каждой зоне режима
-  // "stays"/"launches" — именно там абонемент вообще применим как способ
-  // оплаты.
-  const gameRoomZoneIds = [
+  // "stays"/"launches"/"counters"/"cash_only" — именно там абонемент вообще
+  // применим как способ оплаты (запрос пользователя 2026-07-20: "актуально
+  // не только для счётчиков, но и Только касса" — изначально только
+  // stays/launches, см. lib/abonement.ts spendWalletForZone).
+  const abonementEligibleZoneIds = [
     ...new Set(
       submissions.flatMap((s) =>
         s.zoneSubmissions
-          .filter((zs) => zs.zone.accountingMode === "stays" || zs.zone.accountingMode === "launches")
+          .filter((zs) =>
+            ["stays", "launches", "counters", "cash_only"].includes(zs.zone.accountingMode)
+          )
           .map((zs) => zs.zoneId)
       )
     ),
@@ -224,15 +228,15 @@ export async function GET(request: Request) {
 
   const boundariesByZone = new Map<string, Date[]>();
   const abonementOpsByZone = new Map<string, { amount: number; occurredAt: Date }[]>();
-  if (gameRoomZoneIds.length) {
+  if (abonementEligibleZoneIds.length) {
     const [allZoneSubmissions, abonementOps] = await Promise.all([
       prisma.zoneSubmission.findMany({
-        where: { zoneId: { in: gameRoomZoneIds } },
+        where: { zoneId: { in: abonementEligibleZoneIds } },
         orderBy: { createdAt: "asc" },
         select: { zoneId: true, createdAt: true },
       }),
       prisma.moneyOperation.findMany({
-        where: { zoneId: { in: gameRoomZoneIds }, type: "revenue_abonement" },
+        where: { zoneId: { in: abonementEligibleZoneIds }, type: "revenue_abonement" },
         select: { zoneId: true, amount: true, occurredAt: true },
       }),
     ]);
@@ -311,10 +315,9 @@ export async function GET(request: Request) {
       // difference ниже — иначе разница ложно показывала бы недостачу ровно
       // на эту сумму каждый раз (реальный баг, найден пользователем
       // 2026-07-18 через собственный числовой пример).
-      const abonementAmount =
-        zs.zone.accountingMode === "stays" || zs.zone.accountingMode === "launches"
-          ? abonementAmountFor(zs.zoneId, zs.createdAt)
-          : 0;
+      const abonementAmount = ["stays", "launches", "counters", "cash_only"].includes(zs.zone.accountingMode)
+        ? abonementAmountFor(zs.zoneId, zs.createdAt)
+        : 0;
       const difference = Math.round((actualCash + abonementAmount - netRevenue) * 100) / 100;
 
       const editable =

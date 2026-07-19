@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Clock, Languages, Palette, Send, Trash2 } from "lucide-react";
+import { ChevronRight, Clock, Languages, Palette, Send, Settings2, Trash2 } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
@@ -12,6 +12,12 @@ export default function SettingsPage() {
   const t = useI18n();
 
   const items = [
+    {
+      href: "/settings/system",
+      icon: Settings2,
+      title: t.settings.systemTitle,
+      sub: t.settings.systemHint,
+    },
     {
       href: "/settings/appearance",
       icon: Palette,

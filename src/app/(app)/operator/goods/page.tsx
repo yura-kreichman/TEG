@@ -69,6 +69,10 @@ export default function GoodsPage() {
   // него, серверная проверка — в /api/operator/goods/revisions.
   const [revisionAccess, setRevisionAccess] = useState(false);
 
+  // Настройки → Система (запрос пользователя 2026-07-20) — глобальный
+  // тумблер Владельца, серверная проверка — в /api/operator/goods/sale.
+  const [goodsAllowBalancePayment, setGoodsAllowBalancePayment] = useState(true);
+
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>(ALL_CATEGORIES);
 
@@ -108,6 +112,7 @@ export default function GoodsPage() {
         setCategories(data.categories ?? []);
         setGoods(data.goods ?? []);
         setRevisionAccess(Boolean(data.revisionAccess));
+        setGoodsAllowBalancePayment(data.goodsAllowBalancePayment ?? true);
       })
       .catch(() => setError(t.operatorApp.gameRoom.networkError))
       .finally(() => setLoading(false));
@@ -445,22 +450,24 @@ export default function GoodsPage() {
                 <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
                 {t.operatorApp.submit.mobileLabel}
               </ConfirmButton>
-              <PressableScale>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="relative h-12 w-full font-semibold"
-                  disabled={submitting}
-                  onClick={() => {
-                    const target = { goodsId: saleTarget.goodsId, quantity: saleTarget.quantity, amount: saleAmount };
-                    setSaleTarget(null);
-                    setAbonementTarget(target);
-                  }}
-                >
-                  <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                  {t.operatorApp.abonement.paymentLabel}
-                </Button>
-              </PressableScale>
+              {goodsAllowBalancePayment && (
+                <PressableScale>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="relative h-12 w-full font-semibold"
+                    disabled={submitting}
+                    onClick={() => {
+                      const target = { goodsId: saleTarget.goodsId, quantity: saleTarget.quantity, amount: saleAmount };
+                      setSaleTarget(null);
+                      setAbonementTarget(target);
+                    }}
+                  >
+                    <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                    {t.operatorApp.abonement.paymentLabel}
+                  </Button>
+                </PressableScale>
+              )}
             </div>
           </div>
         )}

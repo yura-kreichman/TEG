@@ -107,7 +107,11 @@
     "timezoneAuto": "Auto",
     "currencyHint": "Simbolul monedei lângă sumele de bani în panou și aplicația angajatului.",
     "currencySectionLabel": "Monedă",
-    "currencyNoneLabel": "Fără monedă"
+    "currencyNoneLabel": "Fără monedă",
+    "systemTitle": "Sistem",
+    "systemHint": "Setări generale valabile pentru tot tenantul.",
+    "systemGoodsBalancePaymentLabel": "Plata Produselor din sold",
+    "systemGoodsBalancePaymentHint": "Permite clienților să plătească produsele din sold"
   },
   "tasks": {
     "pickPointTitle": "Sarcini",
@@ -1083,7 +1087,10 @@
       "newTitle": "Client nou",
       "topupTitle": "Reîncărcare abonament",
       "topupButton": "Reîncarcă",
-      "noAbonementsError": "Proprietarul nu a creat încă niciun abonament"
+      "noAbonementsError": "Proprietarul nu a creat încă niciun abonament",
+      "spendTitle": "Taxează din sold",
+      "debitedLabel": "Taxat",
+      "noSpendZonesError": "Nu există zone disponibile pentru plata din sold"
     }
   },
   "install": {

@@ -20,7 +20,7 @@ export async function GET() {
 
   const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
-  const [categories, goods, stock, recentSales] = await Promise.all([
+  const [categories, goods, stock, recentSales, tenant] = await Promise.all([
     prisma.goodsCategory.findMany({
       where: { tenantId: ctx.operator.tenantId, deletedAt: null },
       orderBy: { order: "asc" },
@@ -36,6 +36,7 @@ export async function GET() {
       where: { pointId: ctx.point.id, occurredAt: { gte: fourteenDaysAgo }, voidedAt: null },
       _sum: { quantity: true },
     }),
+    prisma.tenant.findUnique({ where: { id: ctx.operator.tenantId }, select: { goodsAllowBalancePayment: true } }),
   ]);
 
   const stockByGoods = new Map(stock.map((s) => [s.goodsId, s.quantity]));
@@ -45,6 +46,10 @@ export async function GET() {
 
   return NextResponse.json({
     revisionAccess: ctx.operator.revisionAccess,
+    // Настройки → Система (запрос пользователя 2026-07-20) — глобальный
+    // тумблер Владельца, серверная проверка в /api/operator/goods/sale, тут
+    // только чтобы скрыть кнопку "Баланс" в UI, не сама защита.
+    goodsAllowBalancePayment: tenant?.goodsAllowBalancePayment ?? true,
     categories: categories.map((c) => ({ id: c.id, name: c.name })),
     goods: goodsSorted.map((g) => ({
       id: g.id,

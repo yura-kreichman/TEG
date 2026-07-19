@@ -459,24 +459,36 @@ export default function SubmitResultsPage() {
             </p>
           )}
           <div className="mt-4 flex flex-col gap-3">
-            {result.summary.map((s) => (
+            {result.summary.map((s) => {
+              // "Только касса" не имеет расчётной выручки/разницы (docs/spec/01-counters.md:
+              // "сравнивать не с чем") — тот же фильтр, что уже применяется на
+              // шаге "Проверка" ниже (реальный пред­существующий пробел,
+              // найден аудитом 2026-07-20: этот экран после отправки
+              // показывал их безусловно для любой зоны).
+              const isCashOnly = zones.find((z) => z.id === s.zoneId)?.accountingMode === "cash_only";
+              return (
               <div
                 key={s.zoneId}
                 className="flex flex-col gap-1 rounded-control border border-border p-3 text-body-airbnb"
               >
                 <span className="font-semibold">{s.zoneName}</span>
-                <span className="tabular-nums text-muted-foreground">
-                  {t.operatorApp.submit.calculatedRevenue} <Money value={s.calculatedRevenue} />
-                </span>
+                {!isCashOnly && (
+                  <span className="tabular-nums text-muted-foreground">
+                    {t.operatorApp.submit.calculatedRevenue} <Money value={s.calculatedRevenue} />
+                  </span>
+                )}
                 <span className="tabular-nums text-muted-foreground">
                   {t.operatorApp.submit.actualCash} <Money value={s.actualCash} />
                 </span>
-                <span className="tabular-nums font-semibold">
-                  {t.operatorApp.submit.difference} {s.difference > 0 ? "+" : ""}
-                  <Money value={s.difference} />
-                </span>
+                {!isCashOnly && (
+                  <span className="tabular-nums font-semibold">
+                    {t.operatorApp.submit.difference} {s.difference > 0 ? "+" : ""}
+                    <Money value={s.difference} />
+                  </span>
+                )}
               </div>
-            ))}
+              );
+            })}
             {result.remindMarkDeparture && (
               <p className="rounded-control bg-warning/15 px-3 py-2 text-sm font-medium text-warning">
                 {t.operatorApp.workTime.markDepartureReminder}

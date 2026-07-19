@@ -328,6 +328,96 @@ export class InsufficientBalanceError extends Error {
   }
 }
 
+// Ровно один вариант: "Счётчики" — оплата привязана к конкретному
+// активу+тарифу (нужны для отчётности "какая поездка"); "Только касса" — у
+// зоны вообще нет активов/тарифов (docs/spec/01-counters.md), привязывать
+// оплату не к чему, только к самой зоне.
+type ZoneSpendTarget = { kind: "counterAsset"; assetId: string; tariffId: string } | { kind: "cashOnlyZone"; zoneId: string };
+
+interface ZoneSpendParams {
+  tenantId: string;
+  pointId: string;
+  operatorId: string;
+  amount: number;
+  target: ZoneSpendTarget;
+}
+
+/**
+ * Оплата балансом на зоне без Launch-учёта — режимы "Счётчики" и "Только
+ * касса" (docs/spec/01-counters.md, запрос пользователя 2026-07-20: "как
+ * сделать, чтобы... клиенты могли оплатить балансом", затем "актуально не
+ * только для счётчиков, но и Только касса"). В отличие от Пусков/Прибываний
+ * тут НЕТ отдельной записи на сеанс — на "Счётчиках" счётчик тикает физически
+ * по RFID-метке, программа об этом не знает, а "Только касса" вообще не
+ * ведёт по-активный учёт — эта функция только независимая ручная фиксация
+ * Сотрудником факта оплаты, не связанная с самим тиком/кассой.
+ */
+export async function spendWalletForZone(walletId: string, params: ZoneSpendParams) {
+  const { tenantId, pointId, operatorId, amount, target } = params;
+
+  return prisma.$transaction(async (tx) => {
+    let zoneId: string;
+    let assetId: string | null = null;
+    let tariffId: string | null = null;
+
+    if (target.kind === "counterAsset") {
+      const asset = await tx.asset.findFirst({
+        where: { id: target.assetId, zone: { pointId, point: { tenantId }, accountingMode: "counters" } },
+        select: { zoneId: true },
+      });
+      if (!asset) throw new Error("ASSET_NOT_FOUND");
+      const tariff = await tx.tariff.findFirst({ where: { id: target.tariffId, zoneId: asset.zoneId, deletedAt: null } });
+      if (!tariff) throw new Error("TARIFF_NOT_FOUND");
+      zoneId = asset.zoneId;
+      assetId = target.assetId;
+      tariffId = target.tariffId;
+    } else {
+      const zone = await tx.zone.findFirst({
+        where: { id: target.zoneId, pointId, point: { tenantId }, accountingMode: "cash_only" },
+        select: { id: true },
+      });
+      if (!zone) throw new Error("ZONE_NOT_FOUND");
+      zoneId = zone.id;
+    }
+
+    const updated = await tx.abonementWallet.updateMany({
+      where: { id: walletId, tenantId, balance: { gte: amount } },
+      data: { balance: { decrement: amount } },
+    });
+    if (updated.count === 0) throw new InsufficientBalanceError();
+
+    await tx.abonementTransaction.create({
+      data: { walletId, type: "spend", amount, assetId, tariffId, pointId, operatorId },
+    });
+
+    await tx.moneyOperation.create({
+      data: { tenantId, zoneId, type: "revenue_abonement", amount, performedByOperatorId: operatorId },
+    });
+
+    return tx.abonementWallet.findUniqueOrThrow({ where: { id: walletId } });
+  });
+}
+
+/**
+ * Абонементная сумма, собранная по зоне (режимы "Счётчики"/"Только касса") с
+ * прошлой сдачи итогов (или с начала времён, если её ещё не было) — та же
+ * роль, что агрегат Launch.paymentMethod="abonement" у Пусков/Прибываний,
+ * только источник другой: у этих режимов нет Launch, только
+ * MoneyOperation(type: "revenue_abonement") на зоне (см. spendWalletForZone) —
+ * читаем напрямую по zoneId, не через активы (у "Только касса" их нет вовсе).
+ */
+export async function getZoneAbonementSpendAmount(zoneId: string, since: Date | null): Promise<number> {
+  const ops = await prisma.moneyOperation.findMany({
+    where: {
+      zoneId,
+      type: "revenue_abonement",
+      ...(since ? { occurredAt: { gt: since } } : {}),
+    },
+    select: { amount: true },
+  });
+  return Math.round(ops.reduce((sum, op) => sum + Number(op.amount), 0) * 100) / 100;
+}
+
 interface SpendParams {
   tenantId: string;
   zoneId: string;

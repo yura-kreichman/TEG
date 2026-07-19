@@ -107,7 +107,11 @@
     "timezoneAuto": "Авто",
     "currencyHint": "Знак валюты у денежных сумм в кабинете и приложении сотрудника.",
     "currencySectionLabel": "Валюта",
-    "currencyNoneLabel": "Без валюты"
+    "currencyNoneLabel": "Без валюты",
+    "systemTitle": "Система",
+    "systemHint": "Общие настройки, влияющие на весь тенант.",
+    "systemGoodsBalancePaymentLabel": "Оплата Товаров балансом",
+    "systemGoodsBalancePaymentHint": "Разрешить клиентам расплачиваться за товары балансом"
   },
   "tasks": {
     "pickPointTitle": "Задачи",
@@ -1083,7 +1087,10 @@
       "newTitle": "Новый клиент",
       "topupTitle": "Пополнение абонемента",
       "topupButton": "Пополнить",
-      "noAbonementsError": "Владелец ещё не создал ни одного абонемента"
+      "noAbonementsError": "Владелец ещё не создал ни одного абонемента",
+      "spendTitle": "Списать с баланса",
+      "debitedLabel": "Списано",
+      "noSpendZonesError": "Нет доступных зон для оплаты балансом"
     }
   },
   "install": {

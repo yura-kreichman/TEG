@@ -107,7 +107,11 @@
     "timezoneAuto": "Аўта",
     "currencyHint": "Знак валюты пры грашовых сумах у кабінеце і праграме супрацоўніка.",
     "currencySectionLabel": "Валюта",
-    "currencyNoneLabel": "Без валюты"
+    "currencyNoneLabel": "Без валюты",
+    "systemTitle": "Сістэма",
+    "systemHint": "Агульныя налады, якія дзейнічаюць на ўвесь тэнант.",
+    "systemGoodsBalancePaymentLabel": "Аплата Тавараў балансам",
+    "systemGoodsBalancePaymentHint": "Дазволіць кліентам аплачваць тавары балансам"
   },
   "tasks": {
     "pickPointTitle": "Задачы",
@@ -1083,7 +1087,10 @@
       "newTitle": "Новы кліент",
       "topupTitle": "Папаўненне абанемента",
       "topupButton": "Папоўніць",
-      "noAbonementsError": "Уладальнік яшчэ не стварыў ніводнага абанемента"
+      "noAbonementsError": "Уладальнік яшчэ не стварыў ніводнага абанемента",
+      "spendTitle": "Спісаць з балансу",
+      "debitedLabel": "Спісана",
+      "noSpendZonesError": "Няма даступных зон для аплаты балансам"
     }
   },
   "install": {
