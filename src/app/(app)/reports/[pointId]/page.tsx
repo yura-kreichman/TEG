@@ -25,7 +25,7 @@ import { toDateStr } from "@/lib/datetime-format";
 import { cn } from "@/lib/utils";
 
 type Tab = "dynamics" | "zones" | "operators" | "calendar";
-type Granularity = "week" | "month" | "year";
+type Granularity = "day" | "week" | "month" | "year";
 
 interface DynamicsData {
   pointName: string;
@@ -93,8 +93,11 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   const [pointName, setPointName] = useState("");
   const [points, setPoints] = useState<{ id: string; name: string; iconKey: string | null }[]>([]);
   const [tab, setTab] = useState<Tab>("dynamics");
-  const [granularity, setGranularity] = useState<Granularity>("week");
+  const [mode, setMode] = useState<"granularity" | "custom">("granularity");
+  const [granularity, setGranularity] = useState<Granularity>("month");
   const [anchor, setAnchor] = useState(() => new Date());
+  const [customFrom, setCustomFrom] = useState(() => toDateStr(new Date()));
+  const [customTo, setCustomTo] = useState(() => toDateStr(new Date()));
 
   const [dynamics, setDynamics] = useState<DynamicsData | null>(null);
   const [zones, setZones] = useState<ZonesData | null>(null);
@@ -106,11 +109,12 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   async function loadPeriodData() {
     setLoadError(false);
     const zoneParam = zoneIdOverride ? `&zoneId=${zoneIdOverride}` : "";
-    const anchorParam = `&anchor=${toDateStr(anchor)}`;
+    const periodParam =
+      mode === "custom" ? `from=${customFrom}&to=${customTo}` : `granularity=${granularity}&anchor=${toDateStr(anchor)}`;
     const [dynRes, zonesRes, opsRes] = await Promise.all([
-      fetch(`/api/points/${pointId}/reports/dynamics?granularity=${granularity}${anchorParam}`),
-      fetch(`/api/points/${pointId}/reports/zones?granularity=${granularity}${anchorParam}${zoneParam}`),
-      fetch(`/api/points/${pointId}/reports/operators?granularity=${granularity}${anchorParam}`),
+      fetch(`/api/points/${pointId}/reports/dynamics?${periodParam}`),
+      fetch(`/api/points/${pointId}/reports/zones?${periodParam}${zoneParam}`),
+      fetch(`/api/points/${pointId}/reports/operators?${periodParam}`),
     ]);
     if (dynRes.status === 401) {
       router.replace("/login");
@@ -135,7 +139,9 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   }
 
   async function loadCalendar() {
-    const res = await fetch(`/api/points/${pointId}/reports/calendar?granularity=${granularity}&anchor=${toDateStr(anchor)}`);
+    const periodParam =
+      mode === "custom" ? `from=${customFrom}&to=${customTo}` : `granularity=${granularity}&anchor=${toDateStr(anchor)}`;
+    const res = await fetch(`/api/points/${pointId}/reports/calendar?${periodParam}`);
     if (res.ok) setCalendar(await res.json());
   }
 
@@ -143,12 +149,12 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   useEffect(() => {
     loadPeriodData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pointId, granularity, anchor, zoneIdOverride]);
+  }, [pointId, mode, granularity, anchor, customFrom, customTo, zoneIdOverride]);
 
   useEffect(() => {
     loadCalendar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pointId, granularity, anchor]);
+  }, [pointId, mode, granularity, anchor, customFrom, customTo]);
 
   // Список точек для дропдауна выбора — без отдельного экрана-пикера
   // (фидбек пользователя 2026-07-13). Загружается один раз, не зависит от pointId.
@@ -169,13 +175,16 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Перелистывание периода стрелками — тот же приём, что на /money (anchor +
-  // stepPeriod/isCurrentPeriod), запрос пользователя 2026-07-16. Здесь только
-  // week/month/year (нет "день", в отличие от /money), поэтому веток меньше.
+  // stepPeriod/isCurrentPeriod), запрос пользователя 2026-07-16/20 (теперь и
+  // с "день", как на /money — тот же переключатель День/Неделя/Месяц/Год/Период).
   function isCurrentPeriod() {
     const today = new Date();
     if (granularity === "year") return anchor.getUTCFullYear() === today.getUTCFullYear();
     if (granularity === "month") {
       return anchor.getUTCFullYear() === today.getUTCFullYear() && anchor.getUTCMonth() === today.getUTCMonth();
+    }
+    if (granularity === "day") {
+      return toDateStr(anchor) === toDateStr(today);
     }
     const weekStart = (d: Date) => {
       const day = (d.getUTCDay() + 6) % 7;
@@ -187,7 +196,8 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   function stepPeriod(delta: number) {
     if (delta > 0 && isCurrentPeriod()) return;
     const next = new Date(anchor);
-    if (granularity === "week") next.setUTCDate(next.getUTCDate() + delta * 7);
+    if (granularity === "day") next.setUTCDate(next.getUTCDate() + delta);
+    else if (granularity === "week") next.setUTCDate(next.getUTCDate() + delta * 7);
     else if (granularity === "month") next.setUTCMonth(next.getUTCMonth() + delta);
     else next.setUTCFullYear(next.getUTCFullYear() + delta);
     setAnchor(next);
@@ -196,6 +206,9 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   function formatPeriodLabel() {
     if (granularity === "year") return String(anchor.getUTCFullYear());
     if (granularity === "month") return `${t.readings.months[anchor.getUTCMonth()]} ${anchor.getUTCFullYear()}`;
+    if (granularity === "day") {
+      return `${anchor.getUTCDate()} ${t.readings.monthsGenitive[anchor.getUTCMonth()]} (${t.readings.weekdaysFull[(anchor.getUTCDay() + 6) % 7]})`;
+    }
     const day = (anchor.getUTCDay() + 6) % 7;
     const start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate() - day));
     const end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
@@ -280,38 +293,85 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
             onChange={setTab}
           />
 
-          <SegmentedTabs
-            className="mb-4"
-            shape="control"
-            options={[
-              { key: "week" as Granularity, label: t.reports.periodWeek },
-              { key: "month" as Granularity, label: t.reports.periodMonth },
-              { key: "year" as Granularity, label: t.reports.periodYear },
-            ]}
-            value={granularity}
-            onChange={setGranularity}
-          />
-
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-2 grid grid-cols-5 gap-1">
+            {(["day", "week", "month", "year"] as const).map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => {
+                  setGranularity(g);
+                  setAnchor(new Date());
+                  setMode("granularity");
+                }}
+                className={cn(
+                  "rounded-full px-1 py-1.5 text-center text-[0.6875rem] font-semibold sm:text-xs",
+                  mode === "granularity" && g === granularity
+                    ? "bg-primary/10 text-primary"
+                    : "bg-surface-0 text-muted-foreground"
+                )}
+              >
+                {g === "day"
+                  ? t.money.periodDay
+                  : g === "week"
+                    ? t.money.periodWeek
+                    : g === "month"
+                      ? t.money.periodMonth
+                      : t.money.periodYear}
+              </button>
+            ))}
             <button
               type="button"
-              aria-label={t.money.prevPeriod}
-              onClick={() => stepPeriod(-1)}
-              className="flex size-8 items-center justify-center rounded-control text-muted-foreground"
+              onClick={() => setMode("custom")}
+              className={cn(
+                "rounded-full px-1 py-1.5 text-center text-[0.6875rem] font-semibold sm:text-xs",
+                mode === "custom" ? "bg-primary/10 text-primary" : "bg-surface-0 text-muted-foreground"
+              )}
             >
-              <ChevronLeft className="size-4.5" />
-            </button>
-            <p className="text-caption-airbnb font-semibold text-foreground">{formatPeriodLabel()}</p>
-            <button
-              type="button"
-              aria-label={t.money.nextPeriod}
-              onClick={() => stepPeriod(1)}
-              disabled={isCurrentPeriod()}
-              className="flex size-8 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
-            >
-              <ChevronRight className="size-4.5" />
+              {t.money.periodCustom}
             </button>
           </div>
+
+          {mode === "granularity" ? (
+            <div className="mb-4 flex items-center justify-between">
+              <button
+                type="button"
+                aria-label={t.money.prevPeriod}
+                onClick={() => stepPeriod(-1)}
+                className="flex size-8 items-center justify-center rounded-control text-muted-foreground"
+              >
+                <ChevronLeft className="size-4.5" />
+              </button>
+              <p className="text-caption-airbnb font-semibold text-foreground">{formatPeriodLabel()}</p>
+              <button
+                type="button"
+                aria-label={t.money.nextPeriod}
+                onClick={() => stepPeriod(1)}
+                disabled={isCurrentPeriod()}
+                className="flex size-8 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
+              >
+                <ChevronRight className="size-4.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="mb-4 flex items-center gap-2">
+              <input
+                type="date"
+                value={customFrom}
+                max={customTo}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="h-9 flex-1 rounded-control border border-input bg-background px-2.5 text-caption-airbnb"
+              />
+              <span className="text-caption-airbnb text-muted-foreground">—</span>
+              <input
+                type="date"
+                value={customTo}
+                min={customFrom}
+                max={toDateStr(new Date())}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="h-9 flex-1 rounded-control border border-input bg-background px-2.5 text-caption-airbnb"
+              />
+            </div>
+          )}
 
           {loadError ? (
             <p className="text-body-airbnb text-destructive">{t.reports.genericError}</p>

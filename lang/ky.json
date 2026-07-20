@@ -37,7 +37,8 @@
     "noResults": "Эч нерсе табылган жок",
     "familyFluent": "Fluent",
     "familyMaterial": "Material",
-    "familyAvatars": "Аватарлар"
+    "familyAvatars": "Аватарлар",
+    "avatarTitle": "Аватар"
   },
   "emojiPicker": {
     "title": "Жыйынтыктар үчүн эмодзи",

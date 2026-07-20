@@ -37,7 +37,8 @@
     "noResults": "Heç nə tapılmadı",
     "familyFluent": "Fluent",
     "familyMaterial": "Material",
-    "familyAvatars": "Avatarlar"
+    "familyAvatars": "Avatarlar",
+    "avatarTitle": "Avatar"
   },
   "emojiPicker": {
     "title": "Xülasələr üçün emoji",

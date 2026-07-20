@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
-import { getPeriodRange, isReportGranularity, round2 } from "@/lib/reports";
+import { resolvePeriodFromParams, round2 } from "@/lib/reports";
 
 export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/reports/calendar">) {
   const owner = await requireOwner();
@@ -20,19 +20,15 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     pointName = point.name;
   }
 
-  // Тот же переключатель Неделя/Месяц/Год и тот же getPeriodRange, что у
-  // остальных вкладок отчёта (Динамика/Зоны/Сотрудники) — раньше здесь было
-  // отдельное жёстко зашитое окно "последние 4 недели", не связанное с
-  // переключателем (фидбек пользователя: логика должна строиться из периода).
+  // Тот же переключатель День/Неделя/Месяц/Год/Период и тот же
+  // resolvePeriodFromParams, что у остальных вкладок отчёта (Динамика/Зоны/
+  // Сотрудники) — раньше здесь было отдельное жёстко зашитое окно "последние
+  // 4 недели", не связанное с переключателем (фидбек пользователя: логика
+  // должна строиться из периода).
   const { searchParams } = new URL(request.url);
-  const granularityParam = searchParams.get("granularity");
-  const granularity = isReportGranularity(granularityParam) ? granularityParam : "week";
-  const anchorParam = searchParams.get("anchor");
   const today = new Date();
   const todayStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-  const anchor =
-    anchorParam && /^\d{4}-\d{2}-\d{2}$/.test(anchorParam) ? new Date(`${anchorParam}T00:00:00.000Z`) : todayStart;
-  const { start, end } = getPeriodRange(granularity, anchor, todayStart);
+  const { start, end, granularity } = resolvePeriodFromParams(searchParams, todayStart);
 
   const zones = await prisma.zone.findMany({
     where: isAllPoints ? { point: { tenantId: owner.tenantId } } : { pointId },

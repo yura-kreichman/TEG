@@ -37,7 +37,8 @@
     "noResults": "Hech narsa topilmadi",
     "familyFluent": "Fluent",
     "familyMaterial": "Material",
-    "familyAvatars": "Avatarlar"
+    "familyAvatars": "Avatarlar",
+    "avatarTitle": "Avatar"
   },
   "emojiPicker": {
     "title": "Xulosalar uchun emoji",

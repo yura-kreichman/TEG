@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
 import {
   computeZoneSubmissionRevenues,
-  getPeriodRange,
+  getPreviousCustomRange,
   getPreviousPeriodRange,
-  isReportGranularity,
+  resolvePeriodFromParams,
   round2,
 } from "@/lib/reports";
 
@@ -31,14 +31,11 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   }
 
   const { searchParams } = new URL(request.url);
-  const granularityParam = searchParams.get("granularity");
-  const granularity = isReportGranularity(granularityParam) ? granularityParam : "week";
-  const anchorParam = searchParams.get("anchor");
   const today = new Date();
-  const anchor = anchorParam && /^\d{4}-\d{2}-\d{2}$/.test(anchorParam) ? new Date(`${anchorParam}T00:00:00.000Z`) : today;
-
-  const { start, end } = getPeriodRange(granularity, anchor, today);
-  const { start: prevStart, end: prevEnd } = getPreviousPeriodRange(granularity, start);
+  const { start, end, granularity, isCustom } = resolvePeriodFromParams(searchParams, today);
+  const { start: prevStart, end: prevEnd } = isCustom
+    ? getPreviousCustomRange(start, end)
+    : getPreviousPeriodRange(granularity, start);
 
   const zones = await prisma.zone.findMany({
     where: isAllPoints ? { point: { tenantId: owner.tenantId } } : { pointId },

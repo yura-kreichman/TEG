@@ -37,7 +37,8 @@
     "noResults": "Sonuç bulunamadı",
     "familyFluent": "Fluent",
     "familyMaterial": "Material",
-    "familyAvatars": "Avatarlar"
+    "familyAvatars": "Avatarlar",
+    "avatarTitle": "Avatar"
   },
   "emojiPicker": {
     "title": "Özetler için emoji",

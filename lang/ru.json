@@ -37,7 +37,8 @@
     "noResults": "Ничего не найдено",
     "familyFluent": "Fluent",
     "familyMaterial": "Material",
-    "familyAvatars": "Аватары"
+    "familyAvatars": "Аватары",
+    "avatarTitle": "Аватар"
   },
   "emojiPicker": {
     "title": "Эмодзи для сводок",

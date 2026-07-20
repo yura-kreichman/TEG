@@ -2,16 +2,19 @@ import { prisma } from "@/lib/prisma";
 import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 
-export type ReportGranularity = "week" | "month" | "year";
 export type PeriodGranularity = "day" | "week" | "month" | "year";
-
-export function isReportGranularity(value: unknown): value is ReportGranularity {
-  return value === "week" || value === "month" || value === "year";
-}
+// Было отдельным типом без "day" (week/month/year), т.к. переключатель точки
+// изначально не имел День/Период — теперь это тот же переключатель, что у
+// Денег/Товаров (запрос пользователя 2026-07-20), поэтому просто алиас;
+// оставлен только чтобы не трогать все места, где он уже импортирован по
+// имени, — реального смыслового различия с PeriodGranularity больше нет.
+export type ReportGranularity = PeriodGranularity;
 
 export function isPeriodGranularity(value: unknown): value is PeriodGranularity {
   return value === "day" || value === "week" || value === "month" || value === "year";
 }
+
+export const isReportGranularity = isPeriodGranularity;
 
 /**
  * Calendar period (day/week/month/year) containing `anchor`, truncated to
@@ -43,6 +46,9 @@ export function getPeriodRange(granularity: PeriodGranularity, anchor: Date, tod
 
 /** Same-length period immediately before `start` — for the "vs previous period" delta. */
 export function getPreviousPeriodRange(granularity: ReportGranularity, start: Date) {
+  if (granularity === "day") {
+    return { start: new Date(start.getTime() - 24 * 60 * 60 * 1000), end: start };
+  }
   if (granularity === "week") {
     return { start: new Date(start.getTime() - 7 * 24 * 60 * 60 * 1000), end: start };
   }
@@ -52,6 +58,39 @@ export function getPreviousPeriodRange(granularity: ReportGranularity, start: Da
   }
   const prevMonthStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() - 1, 1));
   return { start: prevMonthStart, end: start };
+}
+
+/** Same-length window immediately before [start, end) — for custom (non-named) period "vs previous" deltas. */
+export function getPreviousCustomRange(start: Date, end: Date) {
+  const length = end.getTime() - start.getTime();
+  return { start: new Date(start.getTime() - length), end: start };
+}
+
+/**
+ * Общий парсинг периода из query — либо явный `from`/`to` (кнопка "Период"),
+ * либо `granularity`+`anchor` (День/Неделя/Месяц/Год) — тот же переключатель,
+ * что у /money и /goods, теперь и у поточечных Отчётов (запрос пользователя
+ * 2026-07-20). Раньше в каждом из 4 роутов (dynamics/zones/operators/calendar)
+ * этот разбор был скопирован отдельно и не понимал "day"/custom — вынесено
+ * сюда один раз, чтобы не разъезжаться дальше.
+ */
+export function resolvePeriodFromParams(
+  searchParams: URLSearchParams,
+  today: Date
+): { start: Date; end: Date; granularity: PeriodGranularity; isCustom: boolean } {
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
+  if (fromParam && toParam && /^\d{4}-\d{2}-\d{2}$/.test(fromParam) && /^\d{4}-\d{2}-\d{2}$/.test(toParam)) {
+    const start = new Date(`${fromParam}T00:00:00.000Z`);
+    const end = new Date(new Date(`${toParam}T00:00:00.000Z`).getTime() + 24 * 60 * 60 * 1000);
+    return { start, end, granularity: "day", isCustom: true };
+  }
+  const granularityParam = searchParams.get("granularity");
+  const granularity = isPeriodGranularity(granularityParam) ? granularityParam : "week";
+  const anchorParam = searchParams.get("anchor");
+  const anchor = anchorParam && /^\d{4}-\d{2}-\d{2}$/.test(anchorParam) ? new Date(`${anchorParam}T00:00:00.000Z`) : today;
+  const { start, end } = getPeriodRange(granularity, anchor, today);
+  return { start, end, granularity, isCustom: false };
 }
 
 export interface ZoneSubmissionRevenue {

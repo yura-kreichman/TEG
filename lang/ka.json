@@ -37,7 +37,8 @@
     "noResults": "ვერაფერი მოიძებნა",
     "familyFluent": "Fluent",
     "familyMaterial": "Material",
-    "familyAvatars": "ავატარები"
+    "familyAvatars": "ავატარები",
+    "avatarTitle": "ავატარი"
   },
   "emojiPicker": {
     "title": "ემოჯი შეჯამებებისთვის",

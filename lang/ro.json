@@ -37,7 +37,8 @@
     "noResults": "Nimic găsit",
     "familyFluent": "Fluent",
     "familyMaterial": "Material",
-    "familyAvatars": "Avatare"
+    "familyAvatars": "Avatare",
+    "avatarTitle": "Avatar"
   },
   "emojiPicker": {
     "title": "Emoji pentru sumaruri",

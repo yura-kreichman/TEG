@@ -16,7 +16,7 @@ import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
-import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
+import { IconActionButton } from "@/components/kebab-menu";
 import { Money } from "@/components/money";
 import { AbonementTopupSheet } from "@/components/abonement-topup-sheet";
 import { useI18n } from "@/components/i18n-provider";
@@ -171,6 +171,11 @@ export default function AbonementsPage() {
     pulse(() => setSheetOpen(false));
   }
 
+  function openDeleteAbonementConfirm(a: AbonementInfo) {
+    setKebabTarget(a);
+    setConfirmDelete(true);
+  }
+
   async function remove() {
     if (!kebabTarget) return;
     await fetch(`/api/abonements/${kebabTarget.id}`, { method: "DELETE" });
@@ -238,7 +243,15 @@ export default function AbonementsPage() {
                               <Money value={a.price} /> → <Money value={a.creditAmount} />
                             </p>
                           </div>
-                          <KebabButton onClick={() => setKebabTarget(a)} label={t.abonements.editAction} />
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <IconActionButton icon={Pencil} onClick={() => openEdit(a)} label={t.abonements.editAction} />
+                            <IconActionButton
+                              icon={Trash2}
+                              onClick={() => openDeleteAbonementConfirm(a)}
+                              label={t.abonements.deleteAbonement}
+                              destructive
+                            />
+                          </div>
                         </div>
                       </SpringCard>
                     </StaggerItem>
@@ -311,10 +324,10 @@ export default function AbonementsPage() {
                     <StaggerItem key={w.id}>
                       {/* Вся карточка кликабельна — сразу в историю/редактирование
                           (запрос пользователя 2026-07-17: "надо иметь возможность
-                          войти, чтобы увидеть историю", раньше только кебаб вёл
-                          туда через лишний промежуточный шаг). Кебаб внутри
-                          останавливает всплытие — иначе клик по нему открывал бы
-                          И своё меню, И детальный sheet разом. */}
+                          войти, чтобы увидеть историю"). Кебаб заменён на 2 прямые
+                          кнопки (запрос пользователя 2026-07-20, тот же приём, что
+                          в Товарах) — они останавливают всплытие, иначе клик по
+                          ним открывал бы ещё и переход по клику самой карточки. */}
                       <SpringCard animate={false} className="cursor-pointer" onClick={() => router.push(`/abonements/${w.id}`)}>
                         <div className="flex items-center gap-3">
                           <div className="flex size-10 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
@@ -330,10 +343,23 @@ export default function AbonementsPage() {
                               </span>
                             </p>
                           </div>
-                          <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
-                          <div onClick={(e) => e.stopPropagation()}>
-                            <KebabButton onClick={() => setWalletKebabTarget(w)} label={t.abonements.editAction} />
+                          <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <IconActionButton
+                              icon={Pencil}
+                              onClick={() => router.push(`/abonements/${w.id}`)}
+                              label={t.abonements.editAction}
+                            />
+                            <IconActionButton
+                              icon={Trash2}
+                              onClick={() => {
+                                setWalletKebabTarget(w);
+                                setWalletConfirmDelete(true);
+                              }}
+                              label={t.abonements.deleteWallet}
+                              destructive
+                            />
                           </div>
+                          <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
                         </div>
                       </SpringCard>
                     </StaggerItem>
@@ -394,21 +420,6 @@ export default function AbonementsPage() {
         </form>
       </BottomSheet>
 
-      <BottomSheet open={kebabTarget !== null && !confirmDelete} onClose={() => setKebabTarget(null)}>
-        {kebabTarget && (
-          <div className="pt-2">
-            <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">
-              {kebabTarget.name ?? <Money value={kebabTarget.price} />}
-            </h2>
-            <ActionSheetItem icon={Pencil} onClick={() => openEdit(kebabTarget)}>
-              {t.abonements.editAction}
-            </ActionSheetItem>
-            <ActionSheetItem icon={Trash2} destructive onClick={() => setConfirmDelete(true)}>
-              {t.abonements.deleteAbonement}
-            </ActionSheetItem>
-          </div>
-        )}
-      </BottomSheet>
       <BottomSheet open={confirmDelete} onClose={() => setConfirmDelete(false)}>
         <div className="flex flex-col gap-3 pt-2">
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.abonements.deleteAbonement}</h2>
@@ -433,21 +444,6 @@ export default function AbonementsPage() {
         onSuccess={() => loadWallets(walletQuery, walletSort)}
       />
 
-      <BottomSheet open={walletKebabTarget !== null && !walletConfirmDelete} onClose={() => setWalletKebabTarget(null)}>
-        {walletKebabTarget && (
-          <div className="pt-2">
-            <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">
-              {walletKebabTarget.name || walletKebabTarget.phone}
-            </h2>
-            <ActionSheetItem icon={Pencil} onClick={() => router.push(`/abonements/${walletKebabTarget.id}`)}>
-              {t.abonements.editAction}
-            </ActionSheetItem>
-            <ActionSheetItem icon={Trash2} destructive onClick={() => setWalletConfirmDelete(true)}>
-              {t.abonements.deleteWallet}
-            </ActionSheetItem>
-          </div>
-        )}
-      </BottomSheet>
       <BottomSheet open={walletConfirmDelete} onClose={() => setWalletConfirmDelete(false)}>
         <div className="flex flex-col gap-3 pt-2">
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.abonements.deleteWallet}</h2>

@@ -61,10 +61,16 @@ function IconGrid({
   value,
   onChange,
   families = GENERAL_ICON_FAMILIES,
+  title,
 }: {
   value: string | null | undefined;
   onChange: (iconKey: string) => void;
   families?: readonly IconFamily[];
+  // Заголовок шита — по умолчанию "Иконка" (Точка/Зона/Актив), но для
+  // пикера, ограниченного одной семьёй "avatars" (аватар Сотрудника/
+  // Владельца), это визуально не иконка, а аватар — запрос пользователя
+  // 2026-07-20.
+  title?: string;
 }) {
   const t = useI18n();
   const parsedValue = parseIconKey(value);
@@ -97,7 +103,7 @@ function IconGrid({
 
   return (
     <div className="flex flex-col gap-3 pt-2">
-      <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.iconPicker.title}</h2>
+      <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{title ?? t.iconPicker.title}</h2>
       {families.length > 1 && (
         <div className="grid grid-cols-2 gap-1">
           {families.map((f) => (
@@ -155,10 +161,12 @@ export function IconPicker({
   value,
   onChange,
   families,
+  title,
 }: {
   value: string | null | undefined;
   onChange: (iconKey: string) => void;
   families?: readonly IconFamily[];
+  title?: string;
 }) {
   const t = useI18n();
   const [open, setOpen] = useState(false);
@@ -181,6 +189,7 @@ export function IconPicker({
         <IconGrid
           value={value}
           families={families}
+          title={title}
           onChange={(iconKey) => {
             onChange(iconKey);
             setOpen(false);
@@ -197,18 +206,21 @@ export function IconPickerSheet({
   value,
   onChange,
   families,
+  title,
 }: {
   open: boolean;
   onClose: () => void;
   value: string | null | undefined;
   onChange: (iconKey: string) => void;
   families?: readonly IconFamily[];
+  title?: string;
 }) {
   return (
     <BottomSheet open={open} onClose={onClose} className="max-h-[80vh]">
       <IconGrid
         value={value}
         families={families}
+        title={title}
         onChange={(iconKey) => {
           onChange(iconKey);
           onClose();

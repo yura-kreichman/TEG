@@ -701,6 +701,7 @@ export default function OperatorSettingsPage() {
         value={profile.iconKey}
         onChange={handleChooseAvatarIcon}
         families={["avatars"]}
+        title={t.iconPicker.avatarTitle}
       />
 
       <BottomSheet open={renameOpen} onClose={() => setRenameOpen(false)}>

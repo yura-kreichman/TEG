@@ -37,7 +37,8 @@
     "noResults": "Nic nie znaleziono",
     "familyFluent": "Fluent",
     "familyMaterial": "Material",
-    "familyAvatars": "Awatary"
+    "familyAvatars": "Awatary",
+    "avatarTitle": "Awatar"
   },
   "emojiPicker": {
     "title": "Emoji do podsumowań",

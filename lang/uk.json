@@ -37,7 +37,8 @@
     "noResults": "Нічого не знайдено",
     "familyFluent": "Fluent",
     "familyMaterial": "Material",
-    "familyAvatars": "Аватари"
+    "familyAvatars": "Аватари",
+    "avatarTitle": "Аватар"
   },
   "emojiPicker": {
     "title": "Емодзі для зведень",

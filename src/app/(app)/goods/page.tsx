@@ -1756,30 +1756,36 @@ export default function GoodsCabinetPage() {
               </div>
 
               {salesSummary && (
-                <SpringCard hover={false} className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-caption-airbnb text-muted-foreground">{t.goods.salesCountLabel}</span>
-                    <span className="tabular-nums font-bold">{salesSummary.count}</span>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-border pt-2">
-                    <span className="text-caption-airbnb text-muted-foreground">{t.money.revenue}</span>
-                    <span className="text-xl font-extrabold tabular-nums tracking-[-0.02em]">
-                      <Money value={salesSummary.revenue} />
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-caption-airbnb tabular-nums">
-                    <span className="inline-flex items-center gap-1">
-                      <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
-                      {t.operatorApp.submit.cashLabel}: <span className="font-bold text-foreground"><Money value={salesSummary.cash} /></span>
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
-                      {t.operatorApp.submit.mobileLabel}: <span className="font-bold text-foreground"><Money value={salesSummary.mobile} /></span>
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
-                      {t.reports.abonementLabel}: <span className="font-bold text-foreground"><Money value={salesSummary.abonement} /></span>
-                    </span>
+                <SpringCard hover={false}>
+                  {/* Крупная сумма + стек справа — тот же приём, что на
+                      Главной/в Деньгах (запрос пользователя 2026-07-20:
+                      "надо сделать эту плашку, по дизайну, как у Владельца
+                      на главной или в Деньги"), вместо мелкого текстового
+                      списка. */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 flex-col tabular-nums">
+                      <span className="text-caption-airbnb text-muted-foreground">{t.money.revenue}</span>
+                      <span className="text-[2rem] font-extrabold leading-none tracking-[-0.02em]">
+                        <Money value={salesSummary.revenue} size="display" />
+                      </span>
+                    </div>
+                    <div className="flex min-w-0 shrink-0 flex-col items-end gap-0.5 pt-1 text-right text-caption-airbnb tabular-nums">
+                      <span>
+                        {t.goods.salesCountLabel}: <span className="font-bold text-foreground">{salesSummary.count}</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+                        {t.operatorApp.submit.cashLabel}: <span className="font-bold text-foreground"><Money value={salesSummary.cash} /></span>
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+                        {t.operatorApp.submit.mobileLabel}: <span className="font-bold text-foreground"><Money value={salesSummary.mobile} /></span>
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
+                        {t.reports.abonementLabel}: <span className="font-bold text-foreground"><Money value={salesSummary.abonement} /></span>
+                      </span>
+                    </div>
                   </div>
                 </SpringCard>
               )}
