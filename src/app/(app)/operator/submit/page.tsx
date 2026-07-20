@@ -22,10 +22,14 @@ import {
   type ZoneAccountingMode,
 } from "@/lib/results-calc";
 import { queueSubmission } from "@/lib/offline-submissions";
-import { useI18n } from "@/components/i18n-provider";
+import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { MoneyInput } from "@/components/money-input";
+import { PrintButton } from "@/components/print/print-button";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useOperatorPrintAvailable } from "@/hooks/use-print";
+import type { PrintDocumentData, PrintSection } from "@/lib/print/receipt-document";
+import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface TariffCtx {
@@ -94,6 +98,9 @@ type Step = { kind: "select" } | { kind: "zone"; zoneId: string } | { kind: "exp
 export default function SubmitResultsPage() {
   const router = useRouter();
   const t = useI18n();
+  const locale = useLocale();
+  const currency = useCurrency();
+  const printAvailable = useOperatorPrintAvailable();
   const [loading, setLoading] = useState(true);
   const [zones, setZones] = useState<ZoneCtx[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategoryCtx[]>([]);
@@ -442,6 +449,46 @@ export default function SubmitResultsPage() {
     }
   }
 
+  // Z-отчёт сдачи итогов (модуль печати, запрос пользователя 2026-07-20) —
+  // внутренний документ для себя/владельца (не клиенту), печать по
+  // требованию сразу на экране "Принято". Строится из тех же клиентских
+  // данных, что уже отрисованы на этом экране (result.summary), без
+  // повторного запроса к серверу.
+  function buildZReportData(summary: NonNullable<typeof result>["summary"]): PrintDocumentData {
+    const sections: PrintSection[] = summary.map((s) => {
+      const isCashOnly = zones.find((z) => z.id === s.zoneId)?.accountingMode === "cash_only";
+      return {
+        title: s.zoneName,
+        lines: [
+          ...(isCashOnly
+            ? []
+            : [
+                {
+                  label: t.operatorApp.submit.calculatedRevenue,
+                  value: formatMoneyWithCurrency(s.calculatedRevenue, locale, currency),
+                },
+              ]),
+          { label: t.operatorApp.submit.actualCash, value: formatMoneyWithCurrency(s.actualCash, locale, currency) },
+          ...(isCashOnly
+            ? []
+            : [
+                {
+                  label: t.operatorApp.submit.difference,
+                  value: `${s.difference > 0 ? "+" : ""}${formatMoneyWithCurrency(s.difference, locale, currency)}`,
+                },
+              ]),
+        ],
+      };
+    });
+    const totalCash = summary.reduce((sum, s) => sum + s.actualCash, 0);
+    return {
+      title: t.operatorApp.submit.zReportTitle,
+      subtitle: new Date().toLocaleString(locale),
+      sections,
+      totalLine: { label: t.operatorApp.submit.actualCash, value: formatMoneyWithCurrency(totalCash, locale, currency) },
+    };
+  }
+
   if (loading) return null;
 
   if (result) {
@@ -493,6 +540,16 @@ export default function SubmitResultsPage() {
               <p className="rounded-control bg-warning/15 px-3 py-2 text-sm font-medium text-warning">
                 {t.operatorApp.workTime.markDepartureReminder}
               </p>
+            )}
+            {/* Z-отчёт — внутренний документ, не клиенту (модуль печати,
+                запрос пользователя 2026-07-20), печать по требованию. */}
+            {printAvailable.available && (
+              <PrintButton
+                label={t.operatorApp.submit.printZReportButton}
+                data={buildZReportData(result.summary)}
+                branding={printAvailable.branding}
+                className="w-full gap-1.5 rounded-lg"
+              />
             )}
             <PressableScale>
               <Button onClick={() => router.push("/operator")} className="h-14 w-full gap-2 rounded-control font-bold">

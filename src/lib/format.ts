@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/locales";
+import { getCurrencySign, type CurrencyCode } from "@/lib/currency";
 
 // BCP-47 теги для Intl.NumberFormat — параллельно LOCALE_TIMEZONES/LOCALE_FLAGS
 // в lib/locales.ts (та же привязка "язык интерфейса -> основная страна"),
@@ -36,6 +37,19 @@ export function formatMoney(value: number, locale: Locale = "ru"): string {
     minimumFractionDigits: hasFraction ? 2 : 0,
     maximumFractionDigits: 2,
   }).format(rounded);
+}
+
+// Тот же вывод, что даёт JSX-компонент <Money> (formatMoney() + отдельно
+// приклеенный знак валюты тенанта, components/money.tsx) — но как обычная
+// строка, для мест, где JSX недоступен (печатные квитанции, модуль печати
+// строит plain-text документы, docs/spec: печать по требованию, запрос
+// пользователя 2026-07-20). Без этого суммы в квитанциях показывались без
+// знака валюты вовсе — реальный баг, найден пользователем 2026-07-20 на
+// напечатанной квитанции.
+export function formatMoneyWithCurrency(value: number, locale: Locale, currency: CurrencyCode | null | undefined): string {
+  const sign = getCurrencySign(currency);
+  const formatted = formatMoney(value, locale);
+  return sign ? `${formatted} ${sign}` : formatted;
 }
 
 // Сокращённая форма для тесных ячеек (напр. тепловая карта отчётов, docs/spec

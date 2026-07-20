@@ -214,7 +214,7 @@ export default function OperatorsPage() {
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-screen-title">{t.operators.title}</h1>
             <PressableScale>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={() => setCreateOpen(true)}>
                 <Plus className="size-4" />
                 {t.common.add}
               </Button>

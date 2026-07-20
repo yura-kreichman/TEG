@@ -16,8 +16,12 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { Money } from "@/components/money";
 import { PhoneInput } from "@/components/phone-input";
 import { AbonementTopupFlow, formatTenure } from "@/components/abonement-topup-flow";
-import { useI18n } from "@/components/i18n-provider";
+import { PrintButton } from "@/components/print/print-button";
+import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useOwnerPrintAvailable } from "@/hooks/use-print";
+import type { PrintDocumentData } from "@/lib/print/receipt-document";
+import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface WalletHistoryEntry {
@@ -53,6 +57,9 @@ export default function AbonementWalletPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const t = useI18n();
+  const locale = useLocale();
+  const currency = useCurrency();
+  const printAvailable = useOwnerPrintAvailable();
 
   const [checking, setChecking] = useState(true);
   const [wallet, setWallet] = useState<WalletDetail | null>(null);
@@ -101,6 +108,39 @@ export default function AbonementWalletPage() {
     if (!wallet) return;
     await fetch(`/api/abonement-wallets/${wallet.id}`, { method: "DELETE" });
     deletePulse(() => router.push("/abonements"));
+  }
+
+  function historyTypeLabel(h: WalletHistoryEntry): string {
+    return h.type === "topup"
+      ? t.abonements.historyTopup
+      : h.type === "spend"
+        ? t.abonements.historySpend
+        : h.type === "refund"
+          ? t.abonements.historyRefund
+          : t.abonements.historyAdjustment;
+  }
+
+  // Выписка баланса (запрос пользователя 2026-07-20) — последние 10 операций
+  // по кошельку, тот же порядок (desc по occurredAt), что и в истории на
+  // экране (см. /api/abonement-wallets/[id] — orderBy occurredAt: "desc").
+  function buildBalanceReceiptData(): PrintDocumentData {
+    return {
+      title: t.abonements.receiptTitle,
+      // Имя крупнее обычного subtitle, телефон под ним (запрос пользователя
+      // 2026-07-20) — без имени телефон и так уже primary, второй раз его
+      // не дублируем.
+      subtitle: wallet!.name ? { primary: wallet!.name, secondary: wallet!.phone } : wallet!.phone,
+      sections: [
+        {
+          title: t.abonements.historyTitle,
+          lines: wallet!.history.slice(0, 10).map((h) => ({
+            label: `${new Date(h.occurredAt).toLocaleDateString(locale)} · ${historyTypeLabel(h)}`,
+            value: `${h.type === "spend" ? "−" : "+"}${formatMoneyWithCurrency(h.amount, locale, currency)}`,
+          })),
+        },
+      ],
+      totalLine: { label: t.abonements.balanceLabel, value: formatMoneyWithCurrency(wallet!.balance, locale, currency) },
+    };
   }
 
   if (checking || !wallet) return null;
@@ -154,6 +194,17 @@ export default function AbonementWalletPage() {
                 <Money value={wallet.balance} />
               </span>
             </div>
+            {/* Выписка баланса (запрос пользователя 2026-07-20) — печать по
+                требованию, кнопка видна только если у Владельца на этом
+                браузере/устройстве отмечен принтер (useOwnerPrintAvailable). */}
+            {printAvailable.available && (
+              <PrintButton
+                label={t.abonements.printReceiptButton}
+                data={buildBalanceReceiptData()}
+                branding={printAvailable.branding}
+                className="w-full gap-1.5 rounded-lg"
+              />
+            )}
             {error && <p className="text-sm text-destructive">{error}</p>}
             <PressableScale>
               <SaveButton type="button" className="h-12 w-full" saved={saved} onClick={save} />
@@ -189,13 +240,7 @@ export default function AbonementWalletPage() {
                   >
                     <div className="min-w-0">
                       <p className="text-body-airbnb font-semibold">
-                        {h.type === "topup"
-                          ? t.abonements.historyTopup
-                          : h.type === "spend"
-                            ? t.abonements.historySpend
-                            : h.type === "refund"
-                              ? t.abonements.historyRefund
-                              : t.abonements.historyAdjustment}
+                        {historyTypeLabel(h)}
                         {h.planName ? ` · ${h.planName}` : ""}
                       </p>
                       <p className="text-caption-airbnb text-muted-foreground">

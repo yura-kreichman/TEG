@@ -24,8 +24,12 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
 import { Money } from "@/components/money";
-import { useI18n } from "@/components/i18n-provider";
+import { PrintButton } from "@/components/print/print-button";
+import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useOperatorPrintAvailable } from "@/hooks/use-print";
+import type { PrintDocumentData } from "@/lib/print/receipt-document";
+import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface CategoryCtx {
@@ -57,6 +61,8 @@ const ALL_CATEGORIES = "all";
  */
 export default function GoodsPage() {
   const t = useI18n();
+  const locale = useLocale();
+  const currency = useCurrency();
 
   const [categories, setCategories] = useState<CategoryCtx[]>([]);
   const [goods, setGoods] = useState<GoodsCtx[]>([]);
@@ -80,6 +86,17 @@ export default function GoodsPage() {
   const [abonementTarget, setAbonementTarget] = useState<{ goodsId: string; quantity: number; amount: number } | null>(
     null
   );
+  // Модуль печати (запрос пользователя 2026-07-20) — квитанция по факту,
+  // кнопка появляется в маленьком sheet сразу после успешной продажи,
+  // никогда не печатается автоматически (оператор каждый раз решает сам).
+  const [lastSale, setLastSale] = useState<{
+    goodsName: string;
+    quantity: number;
+    price: number;
+    amount: number;
+    paymentMethod: "cash" | "mobile" | "abonement";
+  } | null>(null);
+  const printAvailable = useOperatorPrintAvailable();
 
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [revisionCategory, setRevisionCategory] = useState<string | null>(null);
@@ -138,6 +155,7 @@ export default function GoodsPage() {
   async function sell(paymentMethod: "cash" | "mobile" | "abonement", walletId?: string) {
     if (!saleTarget && !abonementTarget) return;
     const target = abonementTarget ?? saleTarget!;
+    const soldGoods = goods.find((g) => g.id === target.goodsId);
     setSubmitting(true);
     setError(null);
     try {
@@ -153,12 +171,47 @@ export default function GoodsPage() {
       }
       setSaleTarget(null);
       setAbonementTarget(null);
+      if (soldGoods && printAvailable.available) {
+        setLastSale({
+          goodsName: soldGoods.name,
+          quantity: target.quantity,
+          price: soldGoods.price,
+          amount: soldGoods.price * target.quantity,
+          paymentMethod,
+        });
+      }
       load();
     } catch {
       setError(t.operatorApp.gameRoom.networkError);
     } finally {
       setSubmitting(false);
     }
+  }
+
+  const paymentMethodLabel: Record<"cash" | "mobile" | "abonement", string> = {
+    cash: t.operatorApp.submit.cashLabel,
+    mobile: t.operatorApp.submit.mobileLabel,
+    abonement: t.reports.abonementLabel,
+  };
+
+  function buildSaleReceiptData(sale: NonNullable<typeof lastSale>): PrintDocumentData {
+    return {
+      title: t.goods.receiptTitle,
+      subtitle: new Date().toLocaleString(locale),
+      sections: [
+        {
+          lines: [
+            // Значения в строке позиции не показываем — позиция всегда ровно
+            // одна за продажу (не настоящий список из разных товаров), сумма
+            // и так видна ниже в "Сумма"; дублирование только путало (запрос
+            // пользователя 2026-07-20).
+            { label: `${sale.goodsName} × ${sale.quantity}`, value: "", large: true },
+            { label: t.goods.receiptPaymentMethodLabel, value: paymentMethodLabel[sale.paymentMethod] },
+          ],
+        },
+      ],
+      totalLine: { label: t.goods.receiptTotalLabel, value: formatMoneyWithCurrency(sale.amount, locale, currency) },
+    };
   }
 
   const revisionGoods = revisionCategory
@@ -291,7 +344,7 @@ export default function GoodsPage() {
             <PressableScale>
               <Button
                 type="button"
-                className="flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-xs font-bold"
+                className="flex h-10 shrink-0 items-center gap-1.5 rounded-lg px-3.5 text-xs font-bold"
                 onClick={openReconcile}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -645,6 +698,37 @@ export default function GoodsPage() {
             </>
           )}
         </div>
+      </BottomSheet>
+
+      {/* Квитанция продажи (запрос пользователя 2026-07-20) — печать по требованию,
+          кнопка видна только если у тенанта включена печать и на этом
+          устройстве стоит принтер (useOperatorPrintAvailable); без этого
+          весь sheet просто закрывается сам без лишнего экрана "Продано". */}
+      <BottomSheet open={lastSale !== null} onClose={() => setLastSale(null)}>
+        {lastSale && (
+          <div className="flex flex-col items-center gap-3 pt-2 text-center">
+            <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Check className="size-6" />
+            </div>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.goods.saleDoneTitle}</h2>
+            <p className="text-body-airbnb text-muted-foreground">
+              {lastSale.goodsName} × {lastSale.quantity} · <Money value={lastSale.amount} />
+            </p>
+            {printAvailable.available && (
+              <PrintButton
+                label={t.goods.printReceiptButton}
+                data={buildSaleReceiptData(lastSale)}
+                branding={printAvailable.branding}
+                className="w-full gap-1.5 rounded-lg"
+              />
+            )}
+            <PressableScale className="w-full">
+              <Button type="button" variant="outline" className="h-11 w-full rounded-lg" onClick={() => setLastSale(null)}>
+                {t.common.close}
+              </Button>
+            </PressableScale>
+          </div>
+        )}
       </BottomSheet>
     </div>
   );

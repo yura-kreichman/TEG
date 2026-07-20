@@ -515,7 +515,7 @@ export default function LandingSettingsPage() {
               <div className="flex flex-wrap gap-2">
                 <PressableScale>
                   <a href={previewUrl} target="_blank" rel="noreferrer">
-                    <Button type="button" variant="outline" size="sm" className="gap-1.5">
+                    <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg">
                       <Eye className="size-3.5" />
                       {t.landing.previewButton}
                     </Button>
@@ -542,7 +542,7 @@ export default function LandingSettingsPage() {
                   </PressableScale>
                 ) : (
                   <PressableScale>
-                    <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={publish}>
+                    <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={publish}>
                       <Send className="size-3.5" />
                       {t.landing.publishButton}
                     </Button>

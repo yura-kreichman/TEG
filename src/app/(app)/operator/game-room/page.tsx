@@ -10,13 +10,17 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
-import { useI18n } from "@/components/i18n-provider";
+import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
+import { PrintButton } from "@/components/print/print-button";
 import { useLiveNow } from "@/hooks/use-live-now";
+import { useOperatorPrintAvailable } from "@/hooks/use-print";
+import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { isStaysZone } from "@/lib/results-calc";
 import { estimateLiveAmount, formatMMSS, type LaunchPricingMode, type LaunchRoundingMode } from "@/lib/game-room-client";
 import { unlockBeep, playBeep } from "@/lib/beep";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
+import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface AssetTariffOption {
@@ -53,6 +57,7 @@ interface ZoneCtx {
   name: string;
   iconKey: string | null;
   assets: AssetCtx[];
+  printReceiptEnabled: boolean;
 }
 
 interface OpenLaunch {
@@ -85,7 +90,10 @@ export default function StaysZonePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useI18n();
+  const locale = useLocale();
+  const currency = useCurrency();
   const now = useLiveNow();
+  const printAvailable = useOperatorPrintAvailable();
 
   const [zones, setZones] = useState<ZoneCtx[]>([]);
   const [zoneFilter, setZoneFilter] = useState<string>(ALL_ZONES);
@@ -112,6 +120,21 @@ export default function StaysZonePage() {
   const [interacting, setInteracting] = useState<string | null>(null);
   const [stopPaymentTarget, setStopPaymentTarget] = useState<OpenLaunch | null>(null);
   const [stopping, setStopping] = useState(false);
+  // Модуль печати (запрос пользователя 2026-07-20) — квитанция посещения,
+  // кнопка появляется сразу после остановки пуска, только если и глобально
+  // включена печать (на устройстве), и в этой конкретной зоне владелец
+  // включил printReceiptEnabled — печатать нечего/незачем предлагать там,
+  // где эта настройка выключена.
+  const [lastStopped, setLastStopped] = useState<{
+    zoneName: string;
+    assetName: string;
+    number: number;
+    amount: number;
+    startedAt: string;
+    endedAt: string;
+    paymentMethod: string | null;
+    pricingMode: LaunchPricingMode;
+  } | null>(null);
 
   // Оплата абонементом (запрос пользователя 2026-07-17) — третий способ
   // наравне с наличными/безналом, отдельный sheet (поиск/создание/
@@ -149,12 +172,15 @@ export default function StaysZonePage() {
         }
         const stays: ZoneCtx[] = (data.zones ?? [])
           .filter(isStaysZone)
-          .map((z: { id: string; name: string; iconKey: string | null; assets: AssetCtx[] }) => ({
-            id: z.id,
-            name: z.name,
-            iconKey: z.iconKey,
-            assets: z.assets ?? [],
-          }));
+          .map(
+            (z: { id: string; name: string; iconKey: string | null; assets: AssetCtx[]; printReceiptEnabled: boolean }) => ({
+              id: z.id,
+              name: z.name,
+              iconKey: z.iconKey,
+              assets: z.assets ?? [],
+              printReceiptEnabled: z.printReceiptEnabled,
+            })
+          );
         if (stays.length === 0) {
           router.replace("/operator");
           return;
@@ -308,6 +334,11 @@ export default function StaysZonePage() {
   ) {
     setStopping(true);
     setError(null);
+    // Снимок для квитанции ДО запроса — после успешного стопа сам launch
+    // пропадает из локального списка (loadLaunches грузит только открытые).
+    const launch = launches.find((l) => l.id === launchId);
+    const zone = zones.find((z) => z.id === selectedZoneId);
+    const asset = launch ? allAssets.find((a) => a.id === launch.assetId) : null;
     try {
       const res = await fetch(`/api/launches/${launchId}/stop`, {
         method: "POST",
@@ -319,10 +350,28 @@ export default function StaysZonePage() {
         setError(data.error ?? "");
         return;
       }
+      const data = await res.json();
       setInteracting(null);
       setStopPaymentTarget(null);
       setAbonementTarget(null);
       loadLaunches(selectedZoneId);
+      if (launch && zone && asset && zone.printReceiptEnabled && printAvailable.available) {
+        setLastStopped({
+          zoneName: zone.name,
+          assetName: asset.name,
+          number: launch.number,
+          amount: Number(data.amount),
+          startedAt: launch.startedAt,
+          endedAt: data.endedAt,
+          // Способ оплаты приходит с сервера, не из локального paymentMethod-
+          // аргумента этой функции — у тарифа "За вход" стоп вызывается вообще
+          // без него (способ оплаты уже выбран и сохранён раньше, при старте,
+          // см. комментарий в /api/launches/[id]/stop) — сервер знает оба
+          // случая, клиент сам по себе не всегда.
+          paymentMethod: data.paymentMethod ?? null,
+          pricingMode: launch.pricingMode,
+        });
+      }
     } catch {
       // Пуск на сервере не потерян (запрос мог не дойти или ответ не
       // вернуться) — оператор видит понятную ошибку и может повторить, повтор
@@ -331,6 +380,51 @@ export default function StaysZonePage() {
     } finally {
       setStopping(false);
     }
+  }
+
+  const stayPaymentMethodLabel: Record<string, string> = {
+    cash: t.operatorApp.submit.cashLabel,
+    mobile: t.operatorApp.submit.mobileLabel,
+    abonement: t.reports.abonementLabel,
+  };
+
+  // Квитанция посещения (модуль печати, запрос пользователя 2026-07-20) —
+  // печать по требованию, сразу после остановки пуска.
+  function buildStayReceiptData(s: NonNullable<typeof lastStopped>): PrintDocumentData {
+    const minutes = Math.round((new Date(s.endedAt).getTime() - new Date(s.startedAt).getTime()) / 60000);
+    return {
+      title: t.operatorApp.gameRoom.receiptTitle,
+      subtitle: `${s.zoneName} · ${new Date(s.endedAt).toLocaleString(locale)}`,
+      sections: [
+        {
+          lines: [
+            { label: `${s.assetName} · ${t.operatorApp.gameRoom.wristbandNumberPrefix} ${s.number}`, value: "" },
+            // Длительность имеет смысл только у "По факту" (цена зависит от
+            // фактического времени) — у "За вход" клиент платит за
+            // фиксированный вариант (например, "30 минут"), а не за реально
+            // проведённое время, показывать здесь минуты незачем и путает
+            // (запрос пользователя 2026-07-20: "это уже дело клиента").
+            ...(s.pricingMode === "per_minute"
+              ? [
+                  {
+                    label: t.operatorApp.gameRoom.receiptDurationLabel,
+                    value: `${minutes} ${t.operatorApp.gameRoom.receiptMinutesSuffix}`,
+                  },
+                ]
+              : []),
+            ...(s.paymentMethod
+              ? [
+                  {
+                    label: t.operatorApp.gameRoom.receiptPaymentMethodLabel,
+                    value: stayPaymentMethodLabel[s.paymentMethod] ?? s.paymentMethod,
+                  },
+                ]
+              : []),
+          ],
+        },
+      ],
+      totalLine: { label: t.operatorApp.gameRoom.receiptAmountLabel, value: formatMoneyWithCurrency(s.amount, locale, currency) },
+    };
   }
 
   if (loading) return null;
@@ -766,6 +860,38 @@ export default function StaysZonePage() {
           else stopLaunch(abonementTarget.launch.id, "abonement", walletId);
         }}
       />
+
+      {/* Квитанция посещения — печать по требованию (модуль печати, запрос
+          пользователя 2026-07-20), сразу после остановки пуска. Появляется,
+          только если lastStopped вообще выставлен (сама stopLaunch уже
+          отфильтровала по zone.printReceiptEnabled). */}
+      <BottomSheet open={lastStopped !== null} onClose={() => setLastStopped(null)}>
+        {lastStopped && (
+          <div className="flex flex-col items-center gap-3 pt-2 text-center">
+            <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Check className="size-6" />
+            </div>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.gameRoom.receiptDoneTitle}</h2>
+            <p className="text-body-airbnb text-muted-foreground">
+              {lastStopped.assetName} · {t.operatorApp.gameRoom.wristbandNumberPrefix} {lastStopped.number} ·{" "}
+              <Money value={lastStopped.amount} />
+            </p>
+            {printAvailable.available && (
+              <PrintButton
+                label={t.operatorApp.gameRoom.printReceiptButton}
+                data={buildStayReceiptData(lastStopped)}
+                branding={printAvailable.branding}
+                className="w-full gap-1.5 rounded-lg"
+              />
+            )}
+            <PressableScale className="w-full">
+              <Button type="button" variant="outline" className="h-11 w-full rounded-lg" onClick={() => setLastStopped(null)}>
+                {t.common.close}
+              </Button>
+            </PressableScale>
+          </div>
+        )}
+      </BottomSheet>
 
       <BottomSheet open={soundHintOpen} onClose={dismissSoundHint}>
         <div className="flex flex-col gap-3 pt-2">

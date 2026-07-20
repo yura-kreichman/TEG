@@ -26,7 +26,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Устройство не найдено" }, { status: 404 });
   }
 
-  const { label, roaming } = await request.json();
+  const { label, roaming, hasPrinter } = await request.json();
   if (typeof label !== "string") {
     return NextResponse.json({ error: "Название устройства обязательно" }, { status: 400 });
   }
@@ -42,6 +42,10 @@ export async function PATCH(
       // просто не менялся вне POST). undefined — поле не пришло в запросе
       // (например, старый клиент) — не трогаем текущее значение.
       ...(typeof roaming === "boolean" ? { roaming } : {}),
+      // "Есть ли на этом устройстве принтер" (запрос пользователя 2026-07-20) —
+      // ручной тумблер, автоопределения нет и быть не может (у веб-платформы
+      // нет API "проверить наличие принтера").
+      ...(typeof hasPrinter === "boolean" ? { hasPrinter } : {}),
     },
   });
 

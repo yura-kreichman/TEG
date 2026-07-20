@@ -1026,7 +1026,7 @@ export default function GoodsCabinetPage() {
                   товара всегда идёт из конкретной категории, см. кнопку
                   внутри карточки категории ниже). */}
               <PressableScale className="self-end">
-                <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={openCategories}>
+                <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={openCategories}>
                   <Settings2 className="size-4" />
                   {t.goods.categoriesButton}
                 </Button>
@@ -1069,7 +1069,7 @@ export default function GoodsCabinetPage() {
                       })}
                     </div>
                     <PressableScale className="self-start">
-                      <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => openAddGoods(c.id)}>
+                      <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={() => openAddGoods(c.id)}>
                         <Plus className="size-4" />
                         {t.goods.addGoodsButton}
                       </Button>
@@ -1121,7 +1121,7 @@ export default function GoodsCabinetPage() {
                   </Select>
                 </div>
                 <PressableScale className="shrink-0">
-                  <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={openRevision} disabled={!pointId}>
+                  <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={openRevision} disabled={!pointId}>
                     <ClipboardList className="size-4" />
                     {t.goods.revisionTitle}
                   </Button>
@@ -1361,7 +1361,7 @@ export default function GoodsCabinetPage() {
                   </Select>
                 </div>
                 <PressableScale className="shrink-0">
-                  <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={openReconcileSheet} disabled={!pointId}>
+                  <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={openReconcileSheet} disabled={!pointId}>
                     <Wallet2 className="size-3.5" />
                     {t.goods.reconciliationTitle}
                   </Button>

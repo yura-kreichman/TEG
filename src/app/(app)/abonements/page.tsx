@@ -218,7 +218,7 @@ export default function AbonementsPage() {
             <>
               <div className="mb-3 flex justify-end">
                 <PressableScale>
-                  <Button variant="outline" size="sm" className="gap-1.5" onClick={openNew}>
+                  <Button variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={openNew}>
                     <Plus className="size-4" />
                     {t.abonements.addButton}
                   </Button>
@@ -265,7 +265,7 @@ export default function AbonementsPage() {
             <>
               <div className="mb-3 flex justify-end">
                 <PressableScale>
-                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setTopupSheetOpen(true)}>
+                  <Button variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={() => setTopupSheetOpen(true)}>
                     <Plus className="size-4" />
                     {t.abonements.addWalletButton}
                   </Button>

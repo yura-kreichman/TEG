@@ -10,6 +10,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -22,7 +23,7 @@ import { TileIcon } from "@/components/tile-icon";
 import { FilePickerButton } from "@/components/file-picker-button";
 import { useI18n, useCurrency, useLocale } from "@/components/i18n-provider";
 import { compressImageFile } from "@/lib/client-image";
-import { ZONE_ACCOUNTING_MODES, isStaysZone, type ZoneAccountingMode } from "@/lib/results-calc";
+import { ZONE_ACCOUNTING_MODES, isStaysZone, isLaunchesZone, type ZoneAccountingMode } from "@/lib/results-calc";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { Money } from "@/components/money";
 import { formatMoney } from "@/lib/format";
@@ -177,6 +178,7 @@ interface ZoneDetail {
   accountingMode: ZoneAccountingMode;
   modeLocked: boolean;
   active: boolean;
+  printReceiptEnabled: boolean;
   pointId: string;
   pointName: string;
   tariffs: TariffInfo[];
@@ -326,6 +328,19 @@ export default function ZoneDetailPage() {
       body: JSON.stringify({ active: !zone.active }),
     });
     setZoneKebabOpen(false);
+    await loadZone();
+  }
+
+  // Модуль печати (запрос пользователя 2026-07-20) — доступна ли оператору
+  // кнопка "Печать квитанции" в этой зоне; сама печать всё равно каждый раз
+  // по требованию оператора, тумблер только открывает/закрывает саму кнопку.
+  async function togglePrintReceiptEnabled() {
+    if (!zone) return;
+    await fetch(`/api/zones/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ printReceiptEnabled: !zone.printReceiptEnabled }),
+    });
     await loadZone();
   }
 
@@ -699,6 +714,26 @@ export default function ZoneDetailPage() {
           {zone.accountingMode === "cash_only" && (
             <SpringCard hover={false}>
               <p className="text-body-airbnb text-muted-foreground">{t.zoneDetail.cashOnlyNote}</p>
+            </SpringCard>
+          )}
+
+          {/* Модуль печати (запрос пользователя 2026-07-20) — только для
+              "Прибываний"/"Пусков": там есть отдельное событие на
+              конкретного посетителя, которому можно предложить квитанцию. У
+              "Счётчики"/"Только касса" такого события нет — печатать
+              нечего на уровне одной операции (там свой Z-отчёт сдачи
+              итогов, без завязки на эту зонную настройку). */}
+          {(isStaysZone(zone) || isLaunchesZone(zone)) && (
+            <SpringCard hover={false}>
+              <div className="flex items-center justify-between gap-3">
+                <span>
+                  <span className="block text-body-airbnb">{t.zoneDetail.printReceiptLabel}</span>
+                  <span className="mt-0.5 block text-caption-airbnb text-muted-foreground">
+                    {t.zoneDetail.printReceiptHint}
+                  </span>
+                </span>
+                <Switch checked={zone.printReceiptEnabled} onCheckedChange={togglePrintReceiptEnabled} className="shrink-0" />
+              </div>
             </SpringCard>
           )}
 

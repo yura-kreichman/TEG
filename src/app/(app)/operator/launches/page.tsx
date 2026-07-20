@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Banknote, CreditCard, MapPin, Layers, Wallet } from "lucide-react";
+import { Banknote, Check, CreditCard, MapPin, Layers, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Label } from "@/components/ui/label";
@@ -10,10 +10,14 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
-import { useI18n } from "@/components/i18n-provider";
+import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
+import { PrintButton } from "@/components/print/print-button";
 import { isLaunchesZone } from "@/lib/results-calc";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
+import { useOperatorPrintAvailable } from "@/hooks/use-print";
+import type { PrintDocumentData } from "@/lib/print/receipt-document";
+import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface TariffCtx {
@@ -42,6 +46,7 @@ interface ZoneCtx {
   iconKey: string | null;
   assets: AssetCtx[];
   tariffs: TariffCtx[];
+  printReceiptEnabled: boolean;
 }
 
 interface TallyEntry {
@@ -68,6 +73,9 @@ const ZONE_FILTER_KEY = "launchesZoneFilter";
 export default function LaunchesZonePage() {
   const router = useRouter();
   const t = useI18n();
+  const locale = useLocale();
+  const currency = useCurrency();
+  const printAvailable = useOperatorPrintAvailable();
 
   const [zones, setZones] = useState<ZoneCtx[]>([]);
   const [zoneFilter, setZoneFilter] = useState<string>(ALL_ZONES);
@@ -75,6 +83,18 @@ export default function LaunchesZonePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Модуль печати (запрос пользователя 2026-07-20) — квитанция пуска, кнопка
+  // появляется сразу после тапа, только если в зоне включено
+  // printReceiptEnabled (та же логика, что у "Прибываний").
+  const [lastTap, setLastTap] = useState<{
+    zoneName: string;
+    assetName: string;
+    tariffName: string;
+    amount: number;
+    paymentMethod: "cash" | "mobile" | "abonement";
+  } | null>(
+    null
+  );
 
   // Тап по активу — если тарифов у его зоны больше одного, сперва выбор
   // тарифа, затем способ оплаты; с одним тарифом шаг выбора пропускается
@@ -100,12 +120,20 @@ export default function LaunchesZonePage() {
         const launches: ZoneCtx[] = (data.zones ?? [])
           .filter(isLaunchesZone)
           .map(
-            (z: { id: string; name: string; iconKey: string | null; assets: AssetCtx[]; tariffs: TariffCtx[] }) => ({
+            (z: {
+              id: string;
+              name: string;
+              iconKey: string | null;
+              assets: AssetCtx[];
+              tariffs: TariffCtx[];
+              printReceiptEnabled: boolean;
+            }) => ({
               id: z.id,
               name: z.name,
               iconKey: z.iconKey,
               assets: z.assets ?? [],
               tariffs: z.tariffs ?? [],
+              printReceiptEnabled: z.printReceiptEnabled,
             })
           );
         if (launches.length === 0) {
@@ -186,6 +214,9 @@ export default function LaunchesZonePage() {
   ) {
     setSubmitting(true);
     setError(null);
+    const zone = zones.find((z) => z.id === zoneId);
+    const asset = allAssets.find((a) => a.id === assetId);
+    const tariff = zone?.tariffs.find((tf) => tf.id === tariffId);
     try {
       const res = await fetch(`/api/zones/${zoneId}/tally`, {
         method: "POST",
@@ -200,6 +231,9 @@ export default function LaunchesZonePage() {
       setTapFlow(null);
       setAbonementTarget(null);
       loadTallies(zones);
+      if (zone && asset && tariff && zone.printReceiptEnabled && printAvailable.available) {
+        setLastTap({ zoneName: zone.name, assetName: asset.name, tariffName: tariff.name, amount: tariff.price, paymentMethod });
+      }
     } catch {
       // Сетевая ошибка — пуск на сервере не создан (тот же принцип, что и у
       // "Прибываний"), повтор безопасен.
@@ -207,6 +241,37 @@ export default function LaunchesZonePage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  const tapPaymentMethodLabel: Record<"cash" | "mobile" | "abonement", string> = {
+    cash: t.operatorApp.submit.cashLabel,
+    mobile: t.operatorApp.submit.mobileLabel,
+    abonement: t.reports.abonementLabel,
+  };
+
+  // Квитанция пуска (модуль печати, запрос пользователя 2026-07-20) —
+  // печать по требованию, сразу после тапа.
+  function buildTapReceiptData(s: NonNullable<typeof lastTap>): PrintDocumentData {
+    return {
+      title: t.operatorApp.tally.receiptTitle,
+      subtitle: `${s.zoneName} · ${new Date().toLocaleString(locale)}`,
+      sections: [
+        {
+          lines: [
+            // Значения в строке позиции не показываем — позиция всегда ровно
+            // одна за документ (не настоящий список из разных позиций, как
+            // Z-отчёт по зонам), сумма и так видна ниже в "Сумма";
+            // дублирование только путало (запрос пользователя 2026-07-20).
+            { label: `${s.assetName} · ${s.tariffName}`, value: "", large: true },
+            { label: t.operatorApp.gameRoom.receiptPaymentMethodLabel, value: tapPaymentMethodLabel[s.paymentMethod] },
+          ],
+        },
+      ],
+      totalLine: {
+        label: t.operatorApp.gameRoom.receiptAmountLabel,
+        value: formatMoneyWithCurrency(s.amount, locale, currency),
+      },
+    };
   }
 
   if (loading) return null;
@@ -406,6 +471,36 @@ export default function LaunchesZonePage() {
           logTap(abonementTarget.zoneId, abonementTarget.assetId, abonementTarget.tariffId, "abonement", walletId);
         }}
       />
+
+      {/* Квитанция пуска — печать по требованию (модуль печати, запрос
+          пользователя 2026-07-20), сразу после тапа. lastTap уже
+          отфильтрован по zone.printReceiptEnabled внутри logTap. */}
+      <BottomSheet open={lastTap !== null} onClose={() => setLastTap(null)}>
+        {lastTap && (
+          <div className="flex flex-col items-center gap-3 pt-2 text-center">
+            <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Check className="size-6" />
+            </div>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.tally.receiptDoneTitle}</h2>
+            <p className="text-body-airbnb text-muted-foreground">
+              {lastTap.assetName} · {lastTap.tariffName} · <Money value={lastTap.amount} />
+            </p>
+            {printAvailable.available && (
+              <PrintButton
+                label={t.operatorApp.gameRoom.printReceiptButton}
+                data={buildTapReceiptData(lastTap)}
+                branding={printAvailable.branding}
+                className="w-full gap-1.5 rounded-lg"
+              />
+            )}
+            <PressableScale className="w-full">
+              <Button type="button" variant="outline" className="h-11 w-full rounded-lg" onClick={() => setLastTap(null)}>
+                {t.common.close}
+              </Button>
+            </PressableScale>
+          </div>
+        )}
+      </BottomSheet>
     </div>
   );
 }

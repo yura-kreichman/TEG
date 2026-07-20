@@ -3,7 +3,20 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus, Pencil, Trash2, Link2, ImagePlus, ChevronRight, MapPin, Pause, Play, TabletSmartphone } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Link2,
+  ImagePlus,
+  ChevronRight,
+  MapPin,
+  Pause,
+  Play,
+  TabletSmartphone,
+  ArrowLeftRight,
+  PrinterCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -30,6 +43,7 @@ interface PointDeviceInfo {
   label: string | null;
   activated: boolean;
   roaming: boolean;
+  hasPrinter: boolean;
 }
 
 interface PointInfo {
@@ -118,6 +132,9 @@ export default function PointsPage() {
   const [deviceKebabView, setDeviceKebabView] = useState<DeviceKebabView>("rename");
   const [renameDeviceValue, setRenameDeviceValue] = useState("");
   const [renameDeviceRoaming, setRenameDeviceRoaming] = useState(false);
+  // Модуль печати (запрос пользователя 2026-07-20) — ручной тумблер "на этом
+  // устройстве есть принтер", автоопределения нет и быть не может.
+  const [renameDeviceHasPrinter, setRenameDeviceHasPrinter] = useState(false);
   const { saved: renameDeviceSaved, pulse: renameDevicePulse } = useSavePulse();
   const [copiedDeviceId, setCopiedDeviceId] = useState<string | null>(null);
 
@@ -345,6 +362,7 @@ export default function PointsPage() {
     setDeviceKebabView(view);
     setRenameDeviceValue(device.label ?? "");
     setRenameDeviceRoaming(device.roaming);
+    setRenameDeviceHasPrinter(device.hasPrinter);
   }
 
   async function confirmRenameDevice() {
@@ -352,7 +370,7 @@ export default function PointsPage() {
     await fetch(`/api/points/${deviceKebab.pointId}/devices/${deviceKebab.device.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: renameDeviceValue, roaming: renameDeviceRoaming }),
+      body: JSON.stringify({ label: renameDeviceValue, roaming: renameDeviceRoaming, hasPrinter: renameDeviceHasPrinter }),
     });
     await loadPoints();
     renameDevicePulse(() => setDeviceKebab(null));
@@ -389,7 +407,7 @@ export default function PointsPage() {
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-screen-title">{t.points.title}</h1>
             <PressableScale>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={() => setCreateOpen(true)}>
                 <Plus className="size-4" />
                 {t.common.add}
               </Button>
@@ -448,7 +466,25 @@ export default function PointsPage() {
                                     <TabletSmartphone className="size-6 shrink-0 text-muted-foreground" />
                                     {device.label ?? t.points.unnamedDevice}
                                     {device.activated && <StatusChip>{t.points.deviceActivated}</StatusChip>}
-                                    {device.roaming && <StatusChip variant="warning">{t.points.roamingChip}</StatusChip>}
+                                    {/* Иконки вместо текстовых плашек (запрос пользователя
+                                        2026-07-20) — Роуминг/Есть принтер не требуют
+                                        отдельного слова, компактнее рядом с названием. */}
+                                    {device.roaming && (
+                                      <ArrowLeftRight
+                                        className="size-4 shrink-0 text-warning"
+                                        aria-label={t.points.roamingChip}
+                                      >
+                                        <title>{t.points.roamingChip}</title>
+                                      </ArrowLeftRight>
+                                    )}
+                                    {device.hasPrinter && (
+                                      <PrinterCheck
+                                        className="size-4 shrink-0 text-primary"
+                                        aria-label={t.points.hasPrinterLabel}
+                                      >
+                                        <title>{t.points.hasPrinterLabel}</title>
+                                      </PrinterCheck>
+                                    )}
                                   </div>
                                   {!device.activated && (
                                     <p className="text-caption-airbnb">{t.points.deviceAwaiting}</p>
@@ -507,7 +543,7 @@ export default function PointsPage() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="mt-3 w-full gap-1.5"
+                          className="mt-3 w-full gap-1.5 rounded-lg"
                           onClick={() => {
                             setDeviceSheetPointId(point.id);
                             setDeviceLabel("");
@@ -759,6 +795,17 @@ export default function PointsPage() {
                 <span className="mt-0.5 block text-caption-airbnb">{t.points.roamingHint}</span>
               </span>
               <Switch checked={renameDeviceRoaming} onCheckedChange={setRenameDeviceRoaming} className="shrink-0" />
+            </div>
+            {/* Модуль печати (запрос пользователя 2026-07-20) — ручной
+                тумблер, у веб-платформы нет способа определить наличие
+                принтера автоматически. Владелец включает только там, где
+                физически стоит принтер, настроенный в ОС этого устройства. */}
+            <div className="flex items-center justify-between rounded-control border border-border p-3">
+              <span>
+                <span className="block text-body-airbnb">{t.points.hasPrinterLabel}</span>
+                <span className="mt-0.5 block text-caption-airbnb">{t.points.hasPrinterHint}</span>
+              </span>
+              <Switch checked={renameDeviceHasPrinter} onCheckedChange={setRenameDeviceHasPrinter} className="shrink-0" />
             </div>
             <PressableScale>
               <SaveButton className="h-12 w-full" onClick={confirmRenameDevice} saved={renameDeviceSaved} />

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AbonementTopupFlow, type SpendZoneCtx } from "@/components/abonement-topup-flow";
 import { useI18n } from "@/components/i18n-provider";
+import { useOperatorPrintAvailable } from "@/hooks/use-print";
 
 interface AbonementCtx {
   id: string;
@@ -32,6 +33,7 @@ export default function OperatorAbonementsPage() {
   // точке) — до ответа сервера кнопку показывать нельзя, поэтому undefined
   // тоже трактуется как "скрыть" в AbonementTopupFlow.
   const [spendZones, setSpendZones] = useState<SpendZoneCtx[] | undefined>(undefined);
+  const printAvailable = useOperatorPrintAvailable();
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -60,6 +62,8 @@ export default function OperatorAbonementsPage() {
           allowZoneSpend
           spendZones={spendZones}
           zoneSpendEndpointFor={(walletId) => `/api/operator/abonements/${walletId}/zone-spend`}
+          printAvailable={printAvailable.available}
+          printBranding={printAvailable.branding}
         />
       </div>
     </div>

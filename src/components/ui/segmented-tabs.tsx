@@ -51,7 +51,7 @@ export function SegmentedTabs<T extends string>({
             shape === "pill" ? "rounded-full" : "rounded-control",
             equalWidth && "flex-1 text-center",
             value === option.key
-              ? "border-primary bg-primary/10 text-primary shadow-[inset_0_1px_3px_rgba(0,0,0,.12)]"
+              ? "border-transparent bg-primary text-primary-foreground shadow-[0_1px_3px_rgba(0,0,0,.18),inset_0_1px_0_rgba(255,255,255,.16)]"
               : "border-border bg-card text-muted-foreground shadow-[0_1px_2px_rgba(0,0,0,.05),inset_0_1px_0_rgba(255,255,255,.5)]"
           )}
         >

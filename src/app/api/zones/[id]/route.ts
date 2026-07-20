@@ -65,6 +65,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
     accountingMode: zone.accountingMode,
     modeLocked: submissionCount > 0,
     active: zone.active,
+    printReceiptEnabled: zone.printReceiptEnabled,
     pointId: zone.pointId,
     pointName: zone.point.name,
     tariffs,
@@ -89,13 +90,14 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
   }
 
-  const { name, iconKey, telegramEmoji, accountingMode, active } = await request.json();
+  const { name, iconKey, telegramEmoji, accountingMode, active, printReceiptEnabled } = await request.json();
   const data: {
     name?: string;
     iconKey?: string | null;
     telegramEmoji?: string | null;
     accountingMode?: string;
     active?: boolean;
+    printReceiptEnabled?: boolean;
   } = {};
 
   if (name !== undefined) {
@@ -141,6 +143,12 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
       return NextResponse.json({ error: "Некорректное значение active" }, { status: 400 });
     }
     data.active = active;
+  }
+  if (printReceiptEnabled !== undefined) {
+    if (typeof printReceiptEnabled !== "boolean") {
+      return NextResponse.json({ error: "Некорректное значение printReceiptEnabled" }, { status: 400 });
+    }
+    data.printReceiptEnabled = printReceiptEnabled;
   }
   await prisma.zone.update({ where: { id }, data });
   await revalidateLandingForTenant(owner.tenantId);

@@ -14,10 +14,14 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { SweepButton } from "@/components/motion/SweepButton";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
-import { useI18n } from "@/components/i18n-provider";
+import { PrintButton } from "@/components/print/print-button";
+import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
+import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useOperatorPrintAvailable } from "@/hooks/use-print";
+import type { PrintDocumentData } from "@/lib/print/receipt-document";
 
 interface ZoneOption {
   id: string;
@@ -43,6 +47,9 @@ interface OperatorTask {
 export default function OperatorHomePage() {
   const router = useRouter();
   const t = useI18n();
+  const locale = useLocale();
+  const currency = useCurrency();
+  const printAvailable = useOperatorPrintAvailable();
   const [operatorName, setOperatorName] = useState<string | null>(null);
   const [operatorAvatarUrl, setOperatorAvatarUrl] = useState<string | null>(null);
   const [operatorIconKey, setOperatorIconKey] = useState<string | null>(null);
@@ -80,6 +87,9 @@ export default function OperatorHomePage() {
   // (lib/zone-balance.ts, найдено на реальных данных 2026-07-16).
   const [poolSettledToast, setPoolSettledToast] = useState<number | null>(null);
   const { saved: collectionSaved, pulse: collectionPulse } = useSavePulse();
+  // Модуль печати (запрос пользователя 2026-07-20) — слип инкассации, кнопка
+  // печати по требованию сразу после успешной инкассации.
+  const [lastCollection, setLastCollection] = useState<{ amount: number; zoneName: string | null } | null>(null);
 
   const [tasks, setTasks] = useState<OperatorTask[]>([]);
   const [doneToday, setDoneToday] = useState(0);
@@ -326,10 +336,30 @@ export default function OperatorHomePage() {
       setPoolSettledToast(data.settledPool);
       setTimeout(() => setPoolSettledToast(null), 3000);
     }
+    const zoneName = collectionMode === "zone" ? (zones.find((z) => z.id === collectionZoneId)?.name ?? null) : null;
     collectionPulse(() => {
       setShowCollection(false);
       setCollectionAmount("");
+      if (printAvailable.available) {
+        setLastCollection({ amount: Number(collectionAmount), zoneName });
+      }
     });
+  }
+
+  function buildCollectionReceiptData(c: NonNullable<typeof lastCollection>): PrintDocumentData {
+    return {
+      title: t.money.collectionSlipTitle,
+      subtitle: new Date().toLocaleString(locale),
+      sections: [
+        {
+          lines: [
+            { label: t.operatorApp.pointLabel, value: pointName ?? "" },
+            ...(c.zoneName ? [{ label: t.operatorApp.zoneLabel, value: c.zoneName }] : []),
+          ],
+        },
+      ],
+      totalLine: { label: t.money.collectionAmountLabel, value: formatMoneyWithCurrency(c.amount, locale, currency) },
+    };
   }
 
   function openCollection() {
@@ -673,6 +703,36 @@ export default function OperatorHomePage() {
               </div>
               {collectionError && <p className="text-sm text-destructive">{collectionError}</p>}
         </form>
+      </BottomSheet>
+
+      {/* Слип инкассации — печать по требованию (модуль печати, запрос
+          пользователя 2026-07-20), сразу после успешной инкассации. */}
+      <BottomSheet open={lastCollection !== null} onClose={() => setLastCollection(null)}>
+        {lastCollection && (
+          <div className="flex flex-col items-center gap-3 pt-2 text-center">
+            <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Check className="size-6" />
+            </div>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.money.collectionDoneTitle}</h2>
+            <p className="text-body-airbnb text-muted-foreground">
+              {lastCollection.zoneName ? `${lastCollection.zoneName} · ` : ""}
+              <Money value={lastCollection.amount} />
+            </p>
+            {printAvailable.available && (
+              <PrintButton
+                label={t.money.printCollectionSlipButton}
+                data={buildCollectionReceiptData(lastCollection)}
+                branding={printAvailable.branding}
+                className="w-full gap-1.5 rounded-lg"
+              />
+            )}
+            <PressableScale className="w-full">
+              <Button type="button" variant="outline" className="h-11 w-full rounded-lg" onClick={() => setLastCollection(null)}>
+                {t.common.close}
+              </Button>
+            </PressableScale>
+          </div>
+        )}
       </BottomSheet>
 
       <BottomSheet open={checkoutSheetOpen} onClose={() => !checkInOutBusy && setCheckoutSheetOpen(false)}>

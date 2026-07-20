@@ -74,6 +74,9 @@ export async function GET() {
     name: zone.name,
     iconKey: zone.iconKey,
     accountingMode: zone.accountingMode,
+    // Модуль печати (запрос пользователя 2026-07-20) — доступна ли кнопка
+    // "Печать квитанции" оператору в этой зоне (stays/launches).
+    printReceiptEnabled: zone.printReceiptEnabled,
     tariffs: zone.tariffs.map((t) => ({ id: t.id, name: t.name, price: t.price, order: t.order })),
     assets: zone.assets.map((asset) => ({
       id: asset.id,

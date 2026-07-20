@@ -172,7 +172,7 @@ export default function ExpensesRegisterPage() {
               ← {t.money.title}
             </Link>
             <PressableScale>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={openCategories}>
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={openCategories}>
                 <Settings2 className="size-4" />
                 {t.money.expenseCategoriesButton}
               </Button>

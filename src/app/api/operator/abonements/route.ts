@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import {
   ABONEMENT_TOPUP_PAYMENT_METHODS,
@@ -29,6 +30,18 @@ export async function GET(request: Request) {
   if (!wallet) {
     return NextResponse.json({ abonement: null });
   }
+
+  // Последние 10 операций — только для Выписки баланса (модуль печати,
+  // запрос пользователя 2026-07-20), не для отображения на экране
+  // (в отличие от Владельца в /api/abonement-wallets/[id], у Сотрудника тут
+  // нет отдельного списка истории в UI).
+  const history = await prisma.abonementTransaction.findMany({
+    where: { walletId: wallet.id },
+    orderBy: { occurredAt: "desc" },
+    take: 10,
+    include: { abonement: { select: { name: true } } },
+  });
+
   return NextResponse.json({
     abonement: {
       id: wallet.id,
@@ -36,6 +49,12 @@ export async function GET(request: Request) {
       name: wallet.name,
       balance: Number(wallet.balance),
       createdAt: wallet.createdAt,
+      history: history.map((h) => ({
+        type: h.type,
+        amount: Number(h.amount),
+        occurredAt: h.occurredAt,
+        planName: h.abonement?.name ?? null,
+      })),
     },
   });
 }

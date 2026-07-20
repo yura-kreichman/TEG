@@ -118,5 +118,6 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
     startedAt: updated.startedAt,
     endedAt: updated.endedAt,
     amount: Number(updated.amount),
+    paymentMethod: updated.paymentMethod,
   });
 }

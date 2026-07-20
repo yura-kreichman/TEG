@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Banknote, ChevronLeft, ChevronRight, Gift, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { Banknote, Check, ChevronLeft, ChevronRight, Gift, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -16,12 +16,16 @@ import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
-import { useI18n } from "@/components/i18n-provider";
+import { PrintButton } from "@/components/print/print-button";
+import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { formatTime } from "@/lib/datetime-format";
 import { cn } from "@/lib/utils";
 import { Money } from "@/components/money";
+import { formatMoneyWithCurrency } from "@/lib/format";
 import { distributeCollectionWhole } from "@/lib/collection-split";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useOwnerPrintAvailable } from "@/hooks/use-print";
+import type { PrintDocumentData } from "@/lib/print/receipt-document";
 
 interface ZoneBalance {
   zoneId: string;
@@ -52,6 +56,9 @@ type CollectionMode = "zone" | "general";
 export default function ZoneBalancesPage() {
   const router = useRouter();
   const t = useI18n();
+  const locale = useLocale();
+  const currency = useCurrency();
+  const printAvailable = useOwnerPrintAvailable();
   const [checking, setChecking] = useState(true);
   const [zoneBalances, setZoneBalances] = useState<ZoneBalance[]>([]);
   const [pointTotals, setPointTotals] = useState<PointTotal[]>([]);
@@ -79,6 +86,12 @@ export default function ZoneBalancesPage() {
   // найдено на реальных данных 2026-07-16: без этого владелец не понимал бы,
   // почему по зонам списалось больше введённой суммы).
   const [poolSettledToast, setPoolSettledToast] = useState<number | null>(null);
+  // Модуль печати (запрос пользователя 2026-07-20) — слип инкассации, кнопка
+  // печати по требованию сразу после успешной инкассации, никогда не
+  // автоматически.
+  const [lastCollection, setLastCollection] = useState<{ amount: number; pointName: string; zoneName: string | null } | null>(
+    null
+  );
 
   // Реестр инкассаций — перенесён сюда с отдельного экрана /money/collections
   // (запрос пользователя 2026-07-15: "весь раздел Инкассации переносим в
@@ -240,11 +253,33 @@ export default function ZoneBalancesPage() {
       setPoolSettledToast(data.settledPool);
       setTimeout(() => setPoolSettledToast(null), 3000);
     }
+    const pointName = points.find((p) => p.id === collectionPointId)?.name ?? "";
+    const zoneName =
+      collectionMode === "zone" ? (zonesForCollectionPoint.find((z) => z.zoneId === collectionZoneId)?.zoneName ?? null) : null;
     await Promise.all([loadReport(), loadCollections()]);
     collectionPulse(() => {
       setCollectionOpen(false);
       setCollectionAmount("");
+      if (printAvailable.available) {
+        setLastCollection({ amount: Number(collectionAmount), pointName, zoneName });
+      }
     });
+  }
+
+  function buildCollectionReceiptData(c: NonNullable<typeof lastCollection>): PrintDocumentData {
+    return {
+      title: t.money.collectionSlipTitle,
+      subtitle: new Date().toLocaleString(locale),
+      sections: [
+        {
+          lines: [
+            { label: t.money.pointLabel, value: c.pointName },
+            ...(c.zoneName ? [{ label: t.operatorApp.zoneLabel, value: c.zoneName }] : []),
+          ],
+        },
+      ],
+      totalLine: { label: t.money.collectionAmountLabel, value: formatMoneyWithCurrency(c.amount, locale, currency) },
+    };
   }
 
   function isCalendarCurrentMonth() {
@@ -594,6 +629,36 @@ export default function ZoneBalancesPage() {
               </div>
               {collectionError && <p className="text-sm text-destructive">{collectionError}</p>}
         </form>
+      </BottomSheet>
+
+      {/* Слип инкассации — печать по требованию (модуль печати, запрос
+          пользователя 2026-07-20), сразу после успешной инкассации. */}
+      <BottomSheet open={lastCollection !== null} onClose={() => setLastCollection(null)}>
+        {lastCollection && (
+          <div className="flex flex-col items-center gap-3 pt-2 text-center">
+            <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Check className="size-6" />
+            </div>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.money.collectionDoneTitle}</h2>
+            <p className="text-body-airbnb text-muted-foreground">
+              {lastCollection.pointName}
+              {lastCollection.zoneName ? ` · ${lastCollection.zoneName}` : ""} · <Money value={lastCollection.amount} />
+            </p>
+            {printAvailable.available && (
+              <PrintButton
+                label={t.money.printCollectionSlipButton}
+                data={buildCollectionReceiptData(lastCollection)}
+                branding={printAvailable.branding}
+                className="w-full gap-1.5 rounded-lg"
+              />
+            )}
+            <PressableScale className="w-full">
+              <Button type="button" variant="outline" className="h-11 w-full rounded-lg" onClick={() => setLastCollection(null)}>
+                {t.common.close}
+              </Button>
+            </PressableScale>
+          </div>
+        )}
       </BottomSheet>
 
       <BottomSheet open={editingCollection !== null} onClose={() => setEditingCollection(null)}>

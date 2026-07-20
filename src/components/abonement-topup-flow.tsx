@@ -12,10 +12,13 @@ import { Money } from "@/components/money";
 import { MoneyInput } from "@/components/money-input";
 import { PhoneInput } from "@/components/phone-input";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
-import { useI18n, useLocale } from "@/components/i18n-provider";
+import { PrintButton } from "@/components/print/print-button";
+import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { cn } from "@/lib/utils";
+import { formatMoneyWithCurrency } from "@/lib/format";
 import type { Dictionary } from "@/lib/i18n";
+import type { PrintDocumentData, ReceiptBranding } from "@/lib/print/receipt-document";
 
 // Кнопки выбора (план/способ оплаты) должны читаться как кнопки, не как
 // плоские карточки списка (запрос пользователя 2026-07-17: "должны быть как
@@ -28,12 +31,24 @@ import type { Dictionary } from "@/lib/i18n";
 const RAISED_OPTION_BUTTON_CLASS =
   "border-border bg-linear-to-b from-card to-muted/50 shadow-[0_3px_8px_rgba(0,0,0,.16),inset_0_1px_0_rgba(255,255,255,.85)] hover:shadow-[0_6px_16px_rgba(0,0,0,.20),inset_0_1px_0_rgba(255,255,255,.85)] active:shadow-[inset_0_3px_6px_rgba(0,0,0,.18)]";
 
+interface WalletHistoryEntry {
+  type: string;
+  amount: number;
+  occurredAt: string;
+  planName: string | null;
+}
+
 interface WalletCtx {
   id: string;
   phone: string;
   name: string | null;
   balance: number;
   createdAt?: string;
+  // Только для Выписки баланса (модуль печати, запрос пользователя
+  // 2026-07-20) — последние 10 операций, приходят только из операторского
+  // /api/operator/abonements (Владелец печатает выписку со своей отдельной
+  // страницы /abonements/[id], не через этот компонент).
+  history?: WalletHistoryEntry[];
 }
 
 // Дата создания в коротком локализованном виде + "стаж" одним числом+суффиксом
@@ -126,6 +141,15 @@ export interface AbonementTopupFlowProps {
   allowZoneSpend?: boolean;
   spendZones?: SpendZoneCtx[] | null;
   zoneSpendEndpointFor?: (walletId: string) => string;
+  // Печать выписки баланса (модуль печати, запрос пользователя 2026-07-20) —
+  // не передано (Владелец, /abonements/[id] уже рисует свою кнопку печати
+  // сама на странице, с полной историей за всё время) — кнопка здесь просто
+  // не появляется, дублей нет. Передано (Оператор, /operator/abonements) —
+  // источник доступности/брендинга разный для ролей (useOwnerPrintAvailable
+  // vs useOperatorPrintAvailable, разные API), поэтому решается снаружи, не
+  // внутри этого общего компонента.
+  printAvailable?: boolean;
+  printBranding?: ReceiptBranding;
 }
 
 export interface SpendAssetCtx {
@@ -176,9 +200,12 @@ export function AbonementTopupFlow({
   allowZoneSpend,
   spendZones,
   zoneSpendEndpointFor,
+  printAvailable,
+  printBranding,
 }: AbonementTopupFlowProps) {
   const t = useI18n();
   const locale = useLocale();
+  const currency = useCurrency();
 
   const [phone, setPhone] = useState("");
   const [searching, setSearching] = useState(false);
@@ -489,6 +516,52 @@ export function AbonementTopupFlow({
 
   const isNew = found === null;
 
+  // Реальный баг, найден при самопроверке 2026-07-20: после пополнения/
+  // списания found обновляется БЕЗ history (POST-ответы её не возвращают,
+  // только GET по телефону) — печать выписки сразу после операции
+  // показывала бы 0 операций, хотя они только что произошли. Перезапрос по
+  // телефону только когда печать вообще доступна (иначе, на странице
+  // Владельца, где эта кнопка не рендерится вовсе, лишний запрос не нужен).
+  async function refreshHistoryIfPrintable() {
+    if (!printAvailable || !found?.phone) return;
+    const res = await fetch(`${searchEndpoint}?phone=${encodeURIComponent(found.phone)}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.abonement) setFound(data.abonement);
+  }
+
+  function historyTypeLabel(h: WalletHistoryEntry): string {
+    return h.type === "topup"
+      ? t.abonements.historyTopup
+      : h.type === "spend"
+        ? t.abonements.historySpend
+        : h.type === "refund"
+          ? t.abonements.historyRefund
+          : t.abonements.historyAdjustment;
+  }
+
+  // Выписка баланса (запрос пользователя 2026-07-20) — последние 10 операций,
+  // уже приходят с сервера отсортированными (см. /api/operator/abonements).
+  function buildBalanceReceiptData(wallet: WalletCtx): PrintDocumentData {
+    return {
+      title: t.abonements.receiptTitle,
+      // Имя крупнее обычного subtitle, телефон под ним (запрос пользователя
+      // 2026-07-20) — без имени телефон и так уже primary, второй раз его
+      // не дублируем.
+      subtitle: wallet.name ? { primary: wallet.name, secondary: wallet.phone } : wallet.phone,
+      sections: [
+        {
+          title: t.abonements.historyTitle,
+          lines: (wallet.history ?? []).map((h) => ({
+            label: `${new Date(h.occurredAt).toLocaleDateString(locale)} · ${historyTypeLabel(h)}`,
+            value: `${h.type === "spend" ? "−" : "+"}${formatMoneyWithCurrency(h.amount, locale, currency)}`,
+          })),
+        },
+      ],
+      totalLine: { label: t.abonements.balanceLabel, value: formatMoneyWithCurrency(wallet.balance, locale, currency) },
+    };
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {justCredited ? (
@@ -521,6 +594,7 @@ export function AbonementTopupFlow({
                 // handleCreate*/handleTopup* выше), просто закрываем экран
                 // подтверждения.
                 setJustCredited(null);
+                refreshHistoryIfPrintable();
               }}
             >
               {t.abonements.doneButton}
@@ -547,7 +621,14 @@ export function AbonementTopupFlow({
             </span>
           </div>
           <PressableScale className="w-full">
-            <Button type="button" className="h-12 w-full font-bold" onClick={() => setJustDebited(null)}>
+            <Button
+              type="button"
+              className="h-12 w-full font-bold"
+              onClick={() => {
+                setJustDebited(null);
+                refreshHistoryIfPrintable();
+              }}
+            >
               {t.abonements.doneButton}
             </Button>
           </PressableScale>
@@ -877,6 +958,21 @@ export function AbonementTopupFlow({
                       <span>
                         {t.abonements.tenureLabel} {formatTenure(found.createdAt, t)}
                       </span>
+                    </div>
+                  )}
+                  {/* Выписка баланса — печать по требованию (модуль печати,
+                      запрос пользователя 2026-07-20), только когда снаружи
+                      явно передали printAvailable/printBranding (Оператор) —
+                      у Владельца эта кнопка уже есть на самой странице
+                      /abonements/[id], дублировать её тут не нужно. */}
+                  {!isNew && found && printAvailable && printBranding && (
+                    <div className="mt-3 border-t border-border pt-3">
+                      <PrintButton
+                        label={t.abonements.printReceiptButton}
+                        data={buildBalanceReceiptData(found)}
+                        branding={printBranding}
+                        className="w-full gap-1.5 rounded-lg"
+                      />
                     </div>
                   )}
                 </div>

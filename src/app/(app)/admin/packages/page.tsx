@@ -146,7 +146,7 @@ export default function AdminPackagesPage() {
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-screen-title">{t.admin.packagesTitle}</h1>
             <PressableScale>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={openCreate}>
+              <Button variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={openCreate}>
                 <Plus className="size-4" />
                 {t.admin.addPackage}
               </Button>
