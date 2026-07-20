@@ -269,7 +269,7 @@ export default function ZoneBalancesPage() {
   function buildCollectionReceiptData(c: NonNullable<typeof lastCollection>): PrintDocumentData {
     return {
       title: t.money.collectionSlipTitle,
-      subtitle: new Date().toLocaleString(locale),
+      subtitle: `${new Date().toLocaleString(locale)} · ${t.common.ownerLabel}`,
       sections: [
         {
           lines: [

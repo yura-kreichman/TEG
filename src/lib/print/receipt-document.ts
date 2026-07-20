@@ -72,11 +72,13 @@ export interface ReceiptBranding {
 // всегда заполняет ровно ту ширину, что реально пришла — без разъезда
 // в обе стороны, независимо от рулона.
 //
-// Шрифты укрупнены (запрос пользователя 2026-07-20: "на мой взгляд шрифты
-// мелкие и не ориентированы на размеры бумаги 58/80 мм") — на 58мм рулоне
-// (~32 моноширинных символа в строке при обычном ESC/POS-шрифте) прежние
-// 11-13px читались бы как убористая мелкая печать, крупнее — ближе к
-// реальным чекам из магазинов.
+// Шрифты/межстрочные отступы — после двух раундов правки по живым
+// распечаткам с реального термопринтера (запрос пользователя 2026-07-20).
+// Первый раунд ("шрифты мелкие") их укрупнил, второй — "слишком крупные
+// шрифты истории операций... квитанции должны быть компактнее" — вернул
+// обратно вниз и одновременно заметно сжал line-height/отступы между
+// строками; текущие значения — итог обеих правок, не промежуточное
+// состояние.
 // .receipt-doc — единая точка входа для сброса (было html,body раньше) —
 // нужна, чтобы этот же CSS можно было безопасно вставить ПРЯМО в текущую
 // страницу приложения (не только в изолированный iframe/document), не
@@ -103,7 +105,11 @@ const RECEIPT_CSS = `
      самой квитанции незачем и просто тратит расходники. */
   @media screen {
     .receipt-doc { background: #e7e9ec; }
-    .receipt-paper { position: relative; padding: 14px 0; }
+    /* Ширина — та же физическая 58mm, что у .receipt ниже (запрос
+       пользователя 2026-07-20: превью должно выглядеть как настоящая
+       58-миллиметровая бумага) — без этого рваный край растягивался на всю
+       ширину canvas превью, шире самой квитанции, и не совпадал с её краями. */
+    .receipt-paper { position: relative; max-width: 58mm; margin: 0 auto; padding: 14px 0; }
     .receipt-paper::before,
     .receipt-paper::after {
       content: "";
@@ -120,13 +126,21 @@ const RECEIPT_CSS = `
     .receipt-paper::before { top: 0; background-position: top; }
     .receipt-paper::after { bottom: 0; background-position: bottom; }
   }
+  /* max-width — физическая единица (mm), не произвольные px (запрос
+     пользователя 2026-07-20: "предпросмотр должен отображать, как он реально
+     выглядит на 58 мм" — mm браузер трактует одинаково что на экране, что
+     при печати, поэтому 58mm здесь = настоящие 58мм на мониторе, не
+     приблизительная имитация). На реальную печать это не влияет вообще — на
+     @media print ниже max-width сбрасывается в none, страница уже физически
+     той ширины, что выбрана в драйвере/ОС; 58mm — только для превью в
+     Настройках → Система, самый частый размер термо-рулона. */
   .receipt {
     width: 100%;
-    max-width: 380px;
+    max-width: 58mm;
     margin: 0 auto;
     padding: 10px 6px;
-    font-size: 19px;
-    line-height: 1.5;
+    font-size: 14px;
+    line-height: 1.25;
   }
   @media screen {
     .receipt {
@@ -134,7 +148,7 @@ const RECEIPT_CSS = `
       box-shadow: 0 2px 10px rgba(0,0,0,.12);
     }
   }
-  .receipt-header { text-align: center; margin-bottom: 12px; }
+  .receipt-header { text-align: center; margin-bottom: 6px; }
   /* filter — подготовка лого перед печатью на термопринтере (запрос
      пользователя 2026-07-20, уточнено после проверки 2026-07-20: "уверен,
      что термопринтер передаст оттенки серого?" — нет, не уверен, и это не
@@ -152,16 +166,16 @@ const RECEIPT_CSS = `
   .receipt-logo {
     max-width: 180px;
     max-height: 90px;
-    margin: 0 auto 8px;
+    margin: 0 auto 5px;
     display: block;
     filter: grayscale(1) contrast(1.35) brightness(1.05);
   }
-  .receipt-tenant { font-size: 23px; font-weight: 800; }
-  .receipt-title { font-size: 20px; font-weight: 700; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.06em; }
-  .receipt-subtitle { font-size: 16px; color: #444; margin-top: 3px; }
+  .receipt-tenant { font-size: 17px; font-weight: 800; }
+  .receipt-title { font-size: 14px; font-weight: 700; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .receipt-subtitle { font-size: 12.65px; color: #444; margin-top: 2px; }
   /* Имя клиента в выписке баланса — крупнее обычного subtitle, телефон под
      ним обычным subtitle-стилем (запрос пользователя 2026-07-20). */
-  .receipt-subtitle-name { font-size: 19px; font-weight: 700; color: #222; margin-top: 4px; }
+  .receipt-subtitle-name { font-size: 15px; font-weight: 700; color: #222; margin-top: 2px; }
   /* Компактная шапка (запрос пользователя 2026-07-20) — только перестановка:
      лого слева, название тенанта + заголовок документа справа от него, а не
      раскладка сверху вниз по центру — короче по высоте, заметно на
@@ -175,48 +189,48 @@ const RECEIPT_CSS = `
   .receipt-header-compact .receipt-header-text { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
   .receipt-header-compact .receipt-title { margin-top: 0; }
   .receipt-header-compact .receipt-subtitle,
-  .receipt-header-compact .receipt-subtitle-name { margin-top: 6px; }
-  .receipt-section { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #999; }
+  .receipt-header-compact .receipt-subtitle-name { margin-top: 3px; }
+  .receipt-section { margin-top: 5px; padding-top: 5px; border-top: 1px dashed #999; }
   .receipt-section:first-of-type { border-top: none; }
   .receipt-section-title {
-    font-size: 15px;
+    font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: #444;
-    margin-bottom: 5px;
+    margin-bottom: 2px;
   }
-  .receipt-line { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; }
+  .receipt-line { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; font-size: 11.9px; }
   .receipt-line .label { color: #222; }
   .receipt-line .value { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .receipt-line.bold { font-weight: 700; }
-  .receipt-line.large { font-size: 22px; font-weight: 700; }
+  .receipt-line.large { font-size: 17px; font-weight: 700; }
   .receipt-total {
     display: flex;
     justify-content: space-between;
     gap: 8px;
-    margin-top: 12px;
-    padding-top: 10px;
+    margin-top: 6px;
+    padding-top: 5px;
     border-top: 1px solid #111;
-    font-size: 24px;
+    font-size: 18px;
     font-weight: 800;
   }
   .receipt-footer {
-    margin-top: 16px;
-    padding-top: 10px;
+    margin-top: 8px;
+    padding-top: 5px;
     border-top: 1px dashed #999;
     text-align: center;
-    font-size: 17px;
+    font-size: 12px;
     color: #333;
   }
-  .receipt-footer p { margin: 0 0 6px; }
+  .receipt-footer p { margin: 0 0 3px; }
   .receipt-footer p:last-child { margin-bottom: 0; }
-  .receipt-footer ul, .receipt-footer ol { margin: 0 0 6px; padding-left: 18px; text-align: left; }
-  .receipt-footer blockquote { margin: 0 0 6px; padding-left: 8px; border-left: 2px solid #ccc; }
+  .receipt-footer ul, .receipt-footer ol { margin: 0 0 3px; padding-left: 18px; text-align: left; }
+  .receipt-footer blockquote { margin: 0 0 3px; padding-left: 8px; border-left: 2px solid #ccc; }
   /* Уровни заголовков в футере — реально разного размера (найдено
      пользователем 2026-07-20). */
-  .receipt-footer .rt-h1 { font-size: 22px; font-weight: 800; color: #111; margin: 0 0 8px; }
-  .receipt-footer .rt-h2 { font-size: 19px; font-weight: 700; color: #111; margin: 0 0 7px; }
+  .receipt-footer .rt-h1 { font-size: 16px; font-weight: 800; color: #111; margin: 0 0 4px; }
+  .receipt-footer .rt-h2 { font-size: 14px; font-weight: 700; color: #111; margin: 0 0 3px; }
   @media print {
     .receipt { max-width: none; }
   }

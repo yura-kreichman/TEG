@@ -31,7 +31,7 @@ const DEFAULTS: SystemSettings = { goodsAllowBalancePayment: true, printingEnabl
 function samplePrintData(t: ReturnType<typeof useI18n>): PrintDocumentData {
   return {
     title: t.settings.systemReceiptPreviewTitle,
-    subtitle: "20.07.2026 · 14:32",
+    subtitle: `20.07.2026 · 14:32 · ${t.common.ownerLabel}`,
     sections: [
       {
         lines: [

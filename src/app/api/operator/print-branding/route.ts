@@ -35,5 +35,10 @@ export async function GET() {
     receiptShowLogo: tenant?.receiptShowLogo ?? true,
     receiptShowTenantName: tenant?.receiptShowTenantName ?? true,
     receiptCompactHeader: tenant?.receiptCompactHeader ?? false,
+    // Кто напечатал квитанцию (запрос пользователя 2026-07-20: "должно быть
+    // и имя сотрудника или Владелец" рядом со строкой даты) — имя Сотрудника,
+    // Владелец печатает с другого экрана и подставляет статичный ярлык
+    // "Владелец" сам, без похода на этот роут.
+    operatorName: ctx.operator.name,
   });
 }

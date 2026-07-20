@@ -254,7 +254,7 @@ export default function LaunchesZonePage() {
   function buildTapReceiptData(s: NonNullable<typeof lastTap>): PrintDocumentData {
     return {
       title: t.operatorApp.tally.receiptTitle,
-      subtitle: `${s.zoneName} · ${new Date().toLocaleString(locale)}`,
+      subtitle: `${s.zoneName} · ${new Date().toLocaleString(locale)}${printAvailable.operatorName ? ` · ${printAvailable.operatorName}` : ""}`,
       sections: [
         {
           lines: [

@@ -197,7 +197,7 @@ export default function GoodsPage() {
   function buildSaleReceiptData(sale: NonNullable<typeof lastSale>): PrintDocumentData {
     return {
       title: t.goods.receiptTitle,
-      subtitle: new Date().toLocaleString(locale),
+      subtitle: `${new Date().toLocaleString(locale)}${printAvailable.operatorName ? ` · ${printAvailable.operatorName}` : ""}`,
       sections: [
         {
           lines: [

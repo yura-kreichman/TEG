@@ -483,7 +483,7 @@ export default function SubmitResultsPage() {
     const totalCash = summary.reduce((sum, s) => sum + s.actualCash, 0);
     return {
       title: t.operatorApp.submit.zReportTitle,
-      subtitle: new Date().toLocaleString(locale),
+      subtitle: `${new Date().toLocaleString(locale)}${printAvailable.operatorName ? ` · ${printAvailable.operatorName}` : ""}`,
       sections,
       totalLine: { label: t.operatorApp.submit.actualCash, value: formatMoneyWithCurrency(totalCash, locale, currency) },
     };

@@ -394,7 +394,7 @@ export default function StaysZonePage() {
     const minutes = Math.round((new Date(s.endedAt).getTime() - new Date(s.startedAt).getTime()) / 60000);
     return {
       title: t.operatorApp.gameRoom.receiptTitle,
-      subtitle: `${s.zoneName} · ${new Date(s.endedAt).toLocaleString(locale)}`,
+      subtitle: `${s.zoneName} · ${new Date(s.endedAt).toLocaleString(locale)}${printAvailable.operatorName ? ` · ${printAvailable.operatorName}` : ""}`,
       sections: [
         {
           lines: [

@@ -124,7 +124,7 @@
     "systemOwnerHasPrinterHint": "На этом браузере/устройстве есть принтер — здесь появятся кнопки печати выписки баланса и других документов Владельца. Дешёвым Bluetooth-принтерам обычно нужно приложение-сервис печати (например ESCPOS Bluetooth Print Service) — иначе принтер не появится в диалоге печати Android.",
     "systemReceiptFooterLabel": "Текст в конце квитанции",
     "systemReceiptFooterPlaceholder": "Например: Спасибо за визит! До встречи!",
-    "systemReceiptPreviewLabel": "Превью квитанции",
+    "systemReceiptPreviewLabel": "Предпросмотр квитанции",
     "systemReceiptTestPrintButton": "Тестовая печать",
     "systemReceiptPreviewTitle": "Квитанция",
     "systemReceiptPreviewLine1": "Позиция",

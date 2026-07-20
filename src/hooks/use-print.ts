@@ -27,6 +27,11 @@ export function useOwnerHasPrinterLocal() {
 interface PrintAvailability {
   available: boolean;
   branding: ReceiptBranding;
+  /** Имя Сотрудника, напечатавшего документ (запрос пользователя 2026-07-20:
+   * строка даты на квитанции должна сопровождаться исполнителем) — только у
+   * Оператора (Владелец подставляет статичный t.common.ownerLabel сам, без
+   * похода на сервер). */
+  operatorName?: string | null;
 }
 
 const EMPTY_BRANDING: ReceiptBranding = {
@@ -70,9 +75,10 @@ export function useOwnerPrintAvailable(): PrintAvailability {
 
 /** Сотрудник: доступна ли печать на этом (активированном) устройстве прямо сейчас. */
 export function useOperatorPrintAvailable(): PrintAvailability {
-  const [state, setState] = useState<{ available: boolean; branding: ReceiptBranding }>({
+  const [state, setState] = useState<{ available: boolean; branding: ReceiptBranding; operatorName: string | null }>({
     available: false,
     branding: EMPTY_BRANDING,
+    operatorName: null,
   });
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -90,6 +96,7 @@ export function useOperatorPrintAvailable(): PrintAvailability {
             showTenantName: data.receiptShowTenantName ?? true,
             compactHeader: data.receiptCompactHeader ?? false,
           },
+          operatorName: data.operatorName ?? null,
         });
       });
   }, []);

@@ -349,7 +349,7 @@ export default function OperatorHomePage() {
   function buildCollectionReceiptData(c: NonNullable<typeof lastCollection>): PrintDocumentData {
     return {
       title: t.money.collectionSlipTitle,
-      subtitle: new Date().toLocaleString(locale),
+      subtitle: `${new Date().toLocaleString(locale)}${printAvailable.operatorName ? ` · ${printAvailable.operatorName}` : ""}`,
       sections: [
         {
           lines: [
