@@ -373,9 +373,24 @@ export function buildReceiptHtml(data: PrintDocumentData, branding: ReceiptBrand
 // один и тот же для обоих) — гарантированно тот же origin (iframe остаётся
 // ребёнком текущего документа, окно никуда не открывается), без попапов и
 // без кросс-window доступа вообще.
+//
+// Реальный (не нулевой) размер + вынос за экран позиционированием, БЕЗ
+// visibility:hidden (реальный баг, найден пользователем 2026-07-20 через
+// PDF с Android: "Тестовая печать" на телефоне без физического принтера,
+// сохранение в PDF печатало ВСЮ страницу приложения — низ навигации,
+// тумблеры настроек, а не только квитанцию; на Windows тот же код печатал
+// корректно). Известный давний баг Chromium именно с печатью
+// iframe.contentWindow.print() на Android — при visibility:hidden и/или
+// нулевом размере мобильный Chrome иногда не может определить, ЧТО печатать,
+// и откатывается к печати всей видимой страницы (issues.chromium.org/issues/
+// 40896385, bugs.chromium.org/.../561438). Даже react-to-print — самая
+// популярная библиотека именно для этой задачи — не даёт полной гарантии на
+// мобильных (сами авторы: "requires changes by Google/Chromium"), но по
+// умолчанию использует РЕАЛЬНЫЙ размер iframe (размер документа), не нулевой,
+// и не visibility:hidden — тот же принцип здесь.
 export function openPrintDocument(data: PrintDocumentData, branding: ReceiptBranding): void {
   const iframe = document.createElement("iframe");
-  iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
+  iframe.style.cssText = "position:fixed;top:0;left:-10000px;width:400px;height:600px;border:0;";
   iframe.setAttribute("aria-hidden", "true");
   document.body.appendChild(iframe);
 
