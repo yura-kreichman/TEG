@@ -298,12 +298,13 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex flex-col gap-1">
+                <div className={cn("flex flex-col gap-1", tenant.unlimited && "pointer-events-none opacity-40")}>
                   <Label htmlFor="subscriptionExpiresAt">{t.admin.subscriptionExpiresLabel}</Label>
                   <Input
                     id="subscriptionExpiresAt"
                     type="date"
-                    value={subscriptionExpiresAtInput}
+                    disabled={tenant.unlimited}
+                    value={tenant.unlimited ? "" : subscriptionExpiresAtInput}
                     onChange={(e) => setSubscriptionExpiresAtInput(e.target.value)}
                     onBlur={(e) => updateSubscriptionExpiresAt(e.target.value)}
                   />

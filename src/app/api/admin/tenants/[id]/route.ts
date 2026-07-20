@@ -207,6 +207,18 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/admin/tena
     data.unlimited = unlimited;
     before.unlimited = tenant.unlimited;
     after.unlimited = unlimited;
+    // "Безлимит = безлимит на всё" (реальный баг, найден пользователем
+    // 2026-07-20: включил Безлимит на проде, срок подписки не изменился) —
+    // безлимит снимает не только 4 числовых лимита (Точки/Зоны/Активы/
+    // Сотрудники), но и срок действия подписки, иначе тенант с бессрочным
+    // безлимитом всё равно упирался бы в дату и планировщик переводил его в
+    // "Истекла". Не трогаем, если сам запрос ЯВНО прислал свою
+    // subscriptionExpiresAt в этом же PATCH — тот случай уже обработан выше.
+    if (unlimited && subscriptionExpiresAt === undefined) {
+      data.subscriptionExpiresAt = null;
+      before.subscriptionExpiresAt = tenant.subscriptionExpiresAt;
+      after.subscriptionExpiresAt = null;
+    }
   }
   if (limitOverrides !== undefined) {
     if (limitOverrides === null) {

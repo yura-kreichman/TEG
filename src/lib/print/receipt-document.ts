@@ -476,9 +476,34 @@ export function openPrintDocument(data: PrintDocumentData, branding: ReceiptBran
     restored = true;
     document.title = previousTitle;
   }
-  document.title = data.title;
-  window.addEventListener("afterprint", restoreTitle, { once: true });
-  setTimeout(restoreTitle, 5000);
 
-  window.print();
+  let printed = false;
+  function triggerPrint() {
+    if (printed) return;
+    printed = true;
+    document.title = data.title;
+    window.addEventListener("afterprint", restoreTitle, { once: true });
+    setTimeout(restoreTitle, 5000);
+    window.print();
+  }
+
+  // Реальный баг, найден пользователем 2026-07-20: "иногда при первой
+  // генерации квитанции логотип не отображается, при повторной уже
+  // появляется" — window.print() вызывался сразу после вставки innerHTML, не
+  // дожидаясь, пока браузер реально ЗАГРУЗИТ <img> (сетевой запрос,
+  // асинхронный) — печать могла захватить кадр раньше, чем лого успевало
+  // отрисоваться. На повторной попытке лого уже в HTTP-кэше браузера,
+  // грузится мгновенно, гонки не видно. Явно ждём загрузки лого (если оно
+  // вообще есть в этом документе) перед печатью — img.complete уже true,
+  // если картинка закэширована (частый случай), тогда ждать не нужно вообще.
+  const logo = root.querySelector<HTMLImageElement>(".receipt-logo");
+  if (logo && !logo.complete) {
+    logo.addEventListener("load", triggerPrint, { once: true });
+    logo.addEventListener("error", triggerPrint, { once: true });
+    // Фолбэк — не блокировать печать вечно, если лого вообще не загрузится
+    // (плохая сеть, битая ссылка).
+    setTimeout(triggerPrint, 1500);
+  } else {
+    triggerPrint();
+  }
 }

@@ -201,11 +201,12 @@ export default function GoodsPage() {
       sections: [
         {
           lines: [
-            // Значения в строке позиции не показываем — позиция всегда ровно
-            // одна за продажу (не настоящий список из разных товаров), сумма
-            // и так видна ниже в "Сумма"; дублирование только путало (запрос
-            // пользователя 2026-07-20).
-            { label: `${sale.goodsName} × ${sale.quantity}`, value: "", large: true },
+            // Значение строки — цена ЗА ЕДИНИЦУ (запрос пользователя
+            // 2026-07-20: "стоит указывать стоимость за единицу, а не только
+            // конечную Сумму") — при quantity>1 это не дублирует "Итого"
+            // ниже (там сумма за все единицы), а показывает то, что "Итого"
+            // само по себе не объясняет.
+            { label: `${sale.goodsName} × ${sale.quantity}`, value: formatMoneyWithCurrency(sale.price, locale, currency), large: true },
             { label: t.goods.receiptPaymentMethodLabel, value: paymentMethodLabel[sale.paymentMethod] },
           ],
         },
