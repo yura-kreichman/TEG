@@ -37,6 +37,11 @@ interface AbonementPaymentSheetProps {
   // paymentMethod="abonement"+abonementWalletId), эта форма только находит/
   // создаёт/пополняет кошелёк.
   onConfirm: (walletId: string) => void;
+  /** true только у вызывающих экранов, что уже играют свой звук
+   * подтверждения (Пуски/Прибывания) — этот же sheet используется и в
+   * Товарах, где своего звука нет, там должен звучать общий "дзинь" (запрос
+   * пользователя 2026-07-20). */
+  silent?: boolean;
 }
 
 /**
@@ -46,7 +51,7 @@ interface AbonementPaymentSheetProps {
  * не нашёлся или не хватает — пополнение абонементом владельца прямо тут
  * ("оператор, прямо в момент оплаты"), без выхода из потока оплаты пуска.
  */
-export function AbonementPaymentSheet({ open, onClose, amount, onConfirm }: AbonementPaymentSheetProps) {
+export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent }: AbonementPaymentSheetProps) {
   const t = useI18n();
 
   const [phone, setPhone] = useState("");
@@ -172,6 +177,7 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm }: Abon
               <ConfirmButton
                 className="relative h-12 w-full font-semibold"
                 disabled={submitting}
+                silent={silent}
                 onConfirm={() =>
                   isNew
                     ? handleCreate(pendingPlan.id, "cash")
@@ -184,6 +190,7 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm }: Abon
               <ConfirmButton
                 className="relative h-12 w-full font-semibold"
                 disabled={submitting}
+                silent={silent}
                 onConfirm={() =>
                   isNew
                     ? handleCreate(pendingPlan.id, "mobile")

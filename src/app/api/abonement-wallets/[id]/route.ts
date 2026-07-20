@@ -32,7 +32,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/abonement-w
       abonement: { select: { name: true, price: true, creditAmount: true } },
       point: { select: { name: true } },
       operator: { select: { name: true } },
-      user: { select: { email: true } },
+      user: { select: { id: true } },
     },
   });
 
@@ -50,7 +50,12 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/abonement-w
       planName: h.abonement?.name ?? null,
       paymentMethod: h.paymentMethod,
       pointName: h.point?.name ?? null,
-      performedBy: h.operator?.name ?? h.user?.email ?? null,
+      // Email владельца не отдаём наружу (реальный баг, найден пользователем
+      // 2026-07-20: "должно быть просто Владелец") — отдельный флаг вместо
+      // строки-емейла, клиент сам подставляет переведённую роль (t.common.
+      // ownerLabel), как и везде в квитанциях/этом же экране.
+      performedBy: h.operator?.name ?? null,
+      performedByOwner: !!h.user,
     })),
   });
 }

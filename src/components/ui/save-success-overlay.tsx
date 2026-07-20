@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { playSaveDing, unlockBeep } from "@/lib/beep";
 
 // Крупная галочка, "улетающая" в центр экрана при успешном сохранении
 // (запрос пользователя 2026-07-16) — дополняет, а не заменяет галочку на
@@ -40,14 +41,31 @@ let nextId = 0;
 export function SaveSuccessOverlay() {
   const [events, setEvents] = useState<FlyEvent[]>([]);
 
+  // Разблокировка AudioContext по самому первому тапу где угодно в
+  // приложении (запрос пользователя 2026-07-20: звук "дзинь" нужен на ~40
+  // экранах с SaveButton, у большинства из них своей ранней разблокировки
+  // по тапу нет — раньше это делали только Пуски/Прибывания локально, у
+  // себя на странице). SaveSuccessOverlay смонтирован один раз на всё
+  // приложение — естественное место для общей разблокировки.
+  useEffect(() => {
+    document.addEventListener("pointerdown", unlockBeep, { once: true });
+    return () => document.removeEventListener("pointerdown", unlockBeep);
+  }, []);
+
   useEffect(() => {
     function setPhase(id: number, phase: Phase) {
       setEvents((prev) => prev.map((ev) => (ev.id === id ? { ...ev, phase } : ev)));
     }
 
     function handler(e: Event) {
-      const detail = (e as CustomEvent<{ x: number; y: number }>).detail;
+      const detail = (e as CustomEvent<{ x: number; y: number; silent?: boolean }>).detail;
       if (!detail) return;
+      // Звук "дзинь" при каждом сохранении (запрос пользователя 2026-07-20:
+      // "везде... вылетает зелёная галочка") — кроме мест, что явно
+      // помечают событие silent (ConfirmButton — у него в части экранов уже
+      // свой отдельный звук подтверждения, playConfirmChime/playCloseChime,
+      // два звука подряд на одно действие звучали бы как накладка).
+      if (!detail.silent) playSaveDing();
       const id = ++nextId;
       setEvents((prev) => [...prev, { id, x: detail.x, y: detail.y, phase: "flying" }]);
       setTimeout(() => setPhase(id, "green"), FLY_MS);

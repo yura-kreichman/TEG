@@ -33,6 +33,7 @@ interface WalletHistoryEntry {
   paymentMethod: string | null;
   pointName: string | null;
   performedBy: string | null;
+  performedByOwner: boolean;
 }
 
 interface WalletDetail {
@@ -246,7 +247,11 @@ export default function AbonementWalletPage() {
                       <p className="text-caption-airbnb text-muted-foreground">
                         {new Date(h.occurredAt).toLocaleString()}
                         {h.pointName ? ` · ${h.pointName}` : ""}
-                        {h.performedBy ? ` · ${h.performedBy}` : ""}
+                        {h.performedByOwner
+                          ? ` · ${t.common.ownerLabel}`
+                          : h.performedBy
+                            ? ` · ${h.performedBy}`
+                            : ""}
                       </p>
                     </div>
                     <span

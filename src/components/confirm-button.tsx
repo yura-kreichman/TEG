@@ -13,6 +13,13 @@ interface ConfirmButtonProps {
   className?: string;
   variant?: React.ComponentProps<typeof Button>["variant"];
   children: React.ReactNode;
+  /** true только там, где вызывающий экран уже играет свой отдельный звук
+   * подтверждения (Пуски/Прибывания — playConfirmChime/playCloseChime) —
+   * иначе звук "дзинь" при вылетающей галочке играет по умолчанию, как и
+   * у SaveButton (запрос пользователя 2026-07-20: реальный баг, найден
+   * пользователем — покупка абонемента через эту же кнопку вообще была без
+   * звука, потому что silent раньше был жёстко зашит внутри компонента). */
+  silent?: boolean;
 }
 
 /**
@@ -25,7 +32,7 @@ interface ConfirmButtonProps {
  * Деньги реально списываются/приходят по этим кнопкам — случайный тап не
  * должен сразу списывать с абонемента или запускать оплаченный пуск.
  */
-export function ConfirmButton({ onConfirm, disabled, className, variant = "outline", children }: ConfirmButtonProps) {
+export function ConfirmButton({ onConfirm, disabled, className, variant = "outline", children, silent }: ConfirmButtonProps) {
   const t = useI18n();
   const [confirming, setConfirming] = useState(false);
 
@@ -63,7 +70,7 @@ export function ConfirmButton({ onConfirm, disabled, className, variant = "outli
               const rect = e.currentTarget.getBoundingClientRect();
               window.dispatchEvent(
                 new CustomEvent("save-success-fly", {
-                  detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+                  detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, silent },
                 })
               );
               setConfirming(false);

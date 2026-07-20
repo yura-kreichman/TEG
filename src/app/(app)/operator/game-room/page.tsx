@@ -645,11 +645,26 @@ export default function StaysZonePage() {
                               type="button"
                               aria-label={t.operatorApp.gameRoom.stopConfirmButton}
                               disabled={stopping}
-                              onClick={() => {
+                              onClick={(e) => {
                                 setInteracting(null);
                                 if (l.pricingMode === "per_minute") {
                                   setStopPaymentTarget(l);
                                 } else {
+                                  // Улетающая галочка (реальный баг, найден
+                                  // пользователем 2026-07-20: "у 'За вход'
+                                  // при закрытии галочка не вылетает") — у
+                                  // "По факту" её шлёт ConfirmButton в
+                                  // stopPaymentTarget-шторке, а этот путь
+                                  // ("За вход", без выбора оплаты) — обычная
+                                  // <button>, событие не отправляла вообще.
+                                  // silent: true — звук уже играет
+                                  // playCloseChime() внутри stopLaunch().
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  window.dispatchEvent(
+                                    new CustomEvent("save-success-fly", {
+                                      detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, silent: true },
+                                    })
+                                  );
                                   stopLaunch(l.id);
                                 }
                               }}
@@ -753,6 +768,7 @@ export default function StaysZonePage() {
               <ConfirmButton
                 className="relative h-12 w-full font-semibold"
                 disabled={starting}
+                silent
                 onConfirm={() => startLaunch(addFlow.optionId, "cash")}
               >
                 <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
@@ -761,6 +777,7 @@ export default function StaysZonePage() {
               <ConfirmButton
                 className="relative h-12 w-full font-semibold"
                 disabled={starting}
+                silent
                 onConfirm={() => startLaunch(addFlow.optionId, "mobile")}
               >
                 <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
@@ -814,6 +831,7 @@ export default function StaysZonePage() {
               <ConfirmButton
                 className="relative h-12 w-full font-semibold"
                 disabled={stopping}
+                silent
                 onConfirm={() => stopLaunch(stopPaymentTarget.id, "cash")}
               >
                 <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
@@ -822,6 +840,7 @@ export default function StaysZonePage() {
               <ConfirmButton
                 className="relative h-12 w-full font-semibold"
                 disabled={stopping}
+                silent
                 onConfirm={() => stopLaunch(stopPaymentTarget.id, "mobile")}
               >
                 <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
@@ -860,6 +879,7 @@ export default function StaysZonePage() {
         open={abonementTarget !== null}
         onClose={() => setAbonementTarget(null)}
         amount={abonementTarget?.amount ?? 0}
+        silent
         onConfirm={(walletId) => {
           if (!abonementTarget) return;
           if (abonementTarget.kind === "start") startLaunch(abonementTarget.optionId, "abonement", walletId);

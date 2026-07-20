@@ -432,6 +432,7 @@ export default function LaunchesZonePage() {
               <ConfirmButton
                 className="relative h-12 w-full font-semibold"
                 disabled={submitting}
+                silent
                 onConfirm={() => logTap(tapFlow.zoneId, tapFlow.assetId, tapFlow.tariffId!, "cash")}
               >
                 <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
@@ -440,6 +441,7 @@ export default function LaunchesZonePage() {
               <ConfirmButton
                 className="relative h-12 w-full font-semibold"
                 disabled={submitting}
+                silent
                 onConfirm={() => logTap(tapFlow.zoneId, tapFlow.assetId, tapFlow.tariffId!, "mobile")}
               >
                 <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
@@ -470,6 +472,7 @@ export default function LaunchesZonePage() {
         open={abonementTarget !== null}
         onClose={() => setAbonementTarget(null)}
         amount={abonementTarget?.amount ?? 0}
+        silent
         onConfirm={(walletId) => {
           if (!abonementTarget) return;
           logTap(abonementTarget.zoneId, abonementTarget.assetId, abonementTarget.tariffId, "abonement", walletId);
