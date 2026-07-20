@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Pencil, Plus, Settings2, Trash2, X } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SaveButton } from "@/components/ui/save-button";
@@ -158,7 +159,31 @@ export default function ExpensesRegisterPage() {
     else expenseGroups.push({ date: dateKey, items: [e] });
   }
 
-  if (checking) return null;
+  if (checking) {
+    return (
+      <OwnerShell>
+        <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
+          <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-3.5">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-7 w-24 rounded-lg" />
+            </div>
+            <SpringCard hover={false} animate={false} className="flex flex-col gap-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 border-t border-border pt-3 first:border-t-0 first:pt-0">
+                  <div className="flex flex-col gap-1.5">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))}
+            </SpringCard>
+          </div>
+        </div>
+      </OwnerShell>
+    );
+  }
 
   const calYear = calendarMonth.getUTCFullYear();
   const calMonth = calendarMonth.getUTCMonth() + 1;

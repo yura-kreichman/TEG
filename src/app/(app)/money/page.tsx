@@ -8,6 +8,7 @@ import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
@@ -205,7 +206,7 @@ export default function MoneyPage() {
       : `${start.getUTCDate()} ${t.readings.monthsGenitive[start.getUTCMonth()]} – ${end.getUTCDate()} ${t.readings.monthsGenitive[end.getUTCMonth()]}`;
   }
 
-  if (checking || !report) return null;
+  if (checking || !report) return <MoneySkeleton />;
 
   // Тот же приём компактного календаря, что в /money/readings — не
   // показываем ячейки будущих дней, текущий месяц обрезан сегодняшним числом.
@@ -591,6 +592,70 @@ export default function MoneyPage() {
           {renderCalendarGrid()}
         </div>
       </BottomSheet>
+    </OwnerShell>
+  );
+}
+
+// Скелетон вместо return null на время загрузки (запрос пользователя
+// 2026-07-20: "переход между Деньги и Отчёты... на секунду экран только
+// фона... нет индикации, что это загрузка") — форма повторяет реальный
+// экран (заголовок, переключатель периода, плашка "Прибыль", 4 карточки-
+// ссылки), чтобы не было "прыжка" разметки, когда данные приходят.
+function MoneySkeleton() {
+  return (
+    <OwnerShell>
+      <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
+        <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-3.5">
+          <Skeleton className="h-7 w-28" />
+
+          <div className="grid grid-cols-5 gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-7 rounded-full" />
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Skeleton className="size-8 rounded-control" />
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="size-8 rounded-control" />
+          </div>
+
+          <SpringCard hover={false} animate={false} className="flex flex-col gap-4">
+            <Skeleton className="h-5 w-24" />
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-9 w-32" />
+              </div>
+              <div className="flex flex-col items-end gap-1.5 pt-1">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+            <div className="flex gap-4 border-t border-border pt-3.5">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Skeleton className="h-3 w-14" />
+                <Skeleton className="h-5 w-20" />
+              </div>
+              <div className="flex flex-1 flex-col gap-1.5 border-l border-border pl-4">
+                <Skeleton className="h-3 w-14" />
+                <Skeleton className="h-5 w-20" />
+              </div>
+            </div>
+          </SpringCard>
+
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SpringCard key={i} hover={false} animate={false} className="flex items-center gap-3">
+              <Skeleton className="size-11 shrink-0 rounded-control" />
+              <div className="flex min-w-0 grow flex-col gap-1.5">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-44" />
+              </div>
+            </SpringCard>
+          ))}
+        </div>
+      </div>
     </OwnerShell>
   );
 }

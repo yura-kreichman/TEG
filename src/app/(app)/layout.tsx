@@ -10,6 +10,7 @@ import { TextScaleProvider } from "@/components/text-scale-provider";
 import { getAccentCookie } from "@/lib/accent";
 import { getBgStyleCookie } from "@/lib/bg-style";
 import { AppBackground } from "@/components/app-background";
+import { NavProgressBar } from "@/components/nav-progress-bar";
 import { SaveSuccessOverlay } from "@/components/ui/save-success-overlay";
 import { DeleteSuccessOverlay } from "@/components/ui/delete-success-overlay";
 import { getDictionary, resolveLocale } from "@/lib/i18n";
@@ -93,6 +94,7 @@ export default async function RootLayout({
             storageKey="teg-theme-owner"
           >
             <ThemeColorMeta />
+            <NavProgressBar />
             <InstallAppBanner />
             <SaveSuccessOverlay />
             <DeleteSuccessOverlay />

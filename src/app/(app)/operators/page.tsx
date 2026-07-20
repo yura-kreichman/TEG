@@ -15,6 +15,7 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { StatusChip } from "@/components/status-chip";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { OpenShiftBadge } from "@/components/open-shift-badge";
+import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
 import { useI18n } from "@/components/i18n-provider";
 import { colorTagGradient } from "@/lib/utils";
 import { useSavePulse } from "@/hooks/use-save-pulse";
@@ -119,7 +120,23 @@ export default function OperatorsPage() {
     }
   }
 
-  if (checking) return null;
+  if (checking) {
+    return (
+      <OwnerShell>
+        <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
+          <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-1">
+            <div className="flex items-start justify-between gap-3">
+              <Skeleton className="h-7 w-32" />
+              <Skeleton className="h-7 w-24 rounded-lg" />
+            </div>
+            <div className="mt-4 flex flex-col gap-3.5">
+              <SkeletonListRows count={4} />
+            </div>
+          </div>
+        </div>
+      </OwnerShell>
+    );
+  }
 
   const activeOperators = operators.filter((o) => o.active);
   const inactiveOperators = operators.filter((o) => !o.active);

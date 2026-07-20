@@ -13,6 +13,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
+import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
@@ -186,7 +187,21 @@ export default function AbonementsPage() {
     });
   }
 
-  if (checking) return null;
+  if (checking) {
+    return (
+      <OwnerShell>
+        <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
+          <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-1">
+            <Skeleton className="mb-4 h-7 w-32" />
+            <Skeleton className="mb-4 h-8" />
+            <div className="flex flex-col gap-3.5">
+              <SkeletonListRows count={4} />
+            </div>
+          </div>
+        </div>
+      </OwnerShell>
+    );
+  }
 
   return (
     <OwnerShell>

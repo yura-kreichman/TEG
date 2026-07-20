@@ -14,6 +14,7 @@ import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { PrintButton } from "@/components/print/print-button";
@@ -309,7 +310,35 @@ export default function ZoneBalancesPage() {
     else collectionGroups.push({ date: dateKey, items: [c] });
   }
 
-  if (checking) return null;
+  if (checking) {
+    return (
+      <OwnerShell>
+        <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
+          <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-3.5">
+            <Skeleton className="h-4 w-28" />
+            <div className="flex items-start justify-between gap-3">
+              <Skeleton className="h-7 w-48" />
+              <Skeleton className="h-9 w-24 rounded-lg" />
+            </div>
+            <SpringCard hover={false} animate={false} className="flex flex-col gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 border-t border-border pt-3 first:border-t-0 first:pt-0">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))}
+            </SpringCard>
+            <SpringCard hover={false} animate={false} className="flex flex-col gap-3">
+              <Skeleton className="h-3 w-40" />
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-4 w-full" />
+              ))}
+            </SpringCard>
+          </div>
+        </div>
+      </OwnerShell>
+    );
+  }
 
   const activeZoneName = zoneBalances.find((z) => z.zoneId === changeFundZoneId)?.zoneName;
   const calYear = calendarMonth.getUTCFullYear();

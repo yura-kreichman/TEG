@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
+import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
@@ -398,7 +399,24 @@ export default function PointsPage() {
     deviceDeletePulse(() => setDeviceKebab(null));
   }
 
-  if (checking) return null;
+  if (checking) {
+    return (
+      <OwnerShell>
+        <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
+          <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-1">
+            <div className="flex items-start justify-between gap-3">
+              <Skeleton className="h-7 w-24" />
+              <Skeleton className="h-7 w-24 rounded-lg" />
+            </div>
+            <Skeleton className="mb-4 mt-1.5 h-3 w-48" />
+            <div className="flex flex-col gap-3.5">
+              <SkeletonListRows count={3} />
+            </div>
+          </div>
+        </div>
+      </OwnerShell>
+    );
+  }
 
   return (
     <OwnerShell>

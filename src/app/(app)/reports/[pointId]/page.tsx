@@ -18,6 +18,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n, useLocale, useCurrency } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { formatMoneyCompact } from "@/lib/format";
@@ -219,7 +220,7 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
       : `${start.getUTCDate()} ${t.readings.monthsGenitive[start.getUTCMonth()]} – ${end.getUTCDate()} ${t.readings.monthsGenitive[end.getUTCMonth()]}`;
   }
 
-  if (checking) return null;
+  if (checking) return <ReportsSkeleton />;
 
   const TABS: { key: Tab; label: string }[] = [
     { key: "dynamics", label: t.reports.tabDynamics },
@@ -386,6 +387,60 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
               {tab === "calendar" && calendar && <CalendarTab data={calendar} t={t} />}
             </>
           )}
+        </div>
+      </div>
+    </OwnerShell>
+  );
+}
+
+// Скелетон вместо return null на время загрузки (запрос пользователя
+// 2026-07-20: "переход между Деньги и Отчёты... на секунду экран только
+// фона" — Отчёты названы отдельно как самый тяжёлый экран). Форма графика
+// динамики (SVG-линии по дням) не воспроизводится буквально — один блок-
+// заглушка на месте графика, стандартный приём для скелетонов там, где
+// точная форма контента заранее непредсказуема.
+function ReportsSkeleton() {
+  return (
+    <OwnerShell>
+      <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
+        <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-1">
+          <Skeleton className="mb-4 h-7 w-28" />
+
+          <div className="mb-4 grid grid-cols-2 gap-1">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-8" />
+            ))}
+          </div>
+
+          <div className="mb-2 grid grid-cols-5 gap-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-7 rounded-full" />
+            ))}
+          </div>
+
+          <div className="mb-4 flex items-center justify-between">
+            <Skeleton className="size-8 rounded-control" />
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="size-8 rounded-control" />
+          </div>
+
+          <SpringCard hover={false} animate={false}>
+            <div className="flex flex-wrap items-start gap-2.5">
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-9 w-28" />
+              </div>
+              <div className="ml-10 flex flex-col gap-2">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-9 w-28" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-center gap-3">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+            <Skeleton className="mt-4 h-40 w-full" />
+          </SpringCard>
         </div>
       </div>
     </OwnerShell>

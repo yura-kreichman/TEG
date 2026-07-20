@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, FileText, Gift, Info, MapPin, Minus, Pencil, Plus, Trash2 } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
+import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconActionButton } from "@/components/kebab-menu";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
@@ -311,7 +312,22 @@ export default function ReadingsCalendarPage() {
     { cash: 0, mobile: 0, abonement: 0, calculatedRevenue: 0, returnsCount: 0, difference: 0 }
   );
 
-  if (checking || !dateReady) return null;
+  if (checking || !dateReady) {
+    return (
+      <OwnerShell>
+        <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
+          <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-1">
+            <Skeleton className="mb-2 h-4 w-32" />
+            <Skeleton className="mb-4 h-7 w-40" />
+            <Skeleton className="mb-4 h-10" />
+            <div className="flex flex-col gap-3.5">
+              <SkeletonListRows count={3} />
+            </div>
+          </div>
+        </div>
+      </OwnerShell>
+    );
+  }
 
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const firstWeekdayIndex = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7; // 0=Mon

@@ -182,13 +182,26 @@ const RECEIPT_CSS = `
      термопринтере. Текст остаётся того же размера, что в обычной шапке
      (первый запрос: "не уменьшай размер логотипа и текстов, просто
      перенеси") — единственное сознательное исключение из этого правила,
-     добавленное позже отдельным запросом: лого именно в компактном режиме
-     на 10% меньше (162x81 вместо 180x90), текст без изменений. */
+     добавленное позже отдельными запросами: лого именно в компактном режиме
+     сначала −10%, затем ещё −15% от результата (180x90 → 162x81 → 137.7x68.85),
+     текст без изменений. */
   .receipt-header-compact { text-align: left; }
   .receipt-header-compact .receipt-header-row { display: flex; align-items: center; gap: 10px; }
-  .receipt-header-compact .receipt-logo { max-width: 162px; max-height: 81px; margin: 0; flex-shrink: 0; }
-  .receipt-header-compact .receipt-header-text { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
-  .receipt-header-compact .receipt-title { margin-top: 0; }
+  .receipt-header-compact .receipt-logo { max-width: 137.7px; max-height: 68.85px; margin: 0; flex-shrink: 0; }
+  /* flex: 1 — колонка тянется на всю оставшуюся ширину строки (не сжимается
+     по контенту), иначе разделительная линия на .receipt-title ниже
+     заканчивалась бы на ширине самого текста, а не доходила до правого края
+     квитанции (запрос пользователя 2026-07-20: "линия должна идти до конца
+     правой стороны"). */
+  .receipt-header-compact .receipt-header-text { display: flex; flex: 1; flex-direction: column; justify-content: center; min-width: 0; }
+  /* Разделительная линия между названием компании и заголовком квитанции
+     (запрос пользователя 2026-07-20) — только в компактной шапке, где они
+     стоят друг под другом в одном узком блоке рядом с лого. */
+  .receipt-header-compact .receipt-title {
+    margin-top: 3px;
+    padding-top: 3px;
+    border-top: 4px solid #ccc;
+  }
   .receipt-header-compact .receipt-subtitle,
   .receipt-header-compact .receipt-subtitle-name { margin-top: 3px; }
   .receipt-section { margin-top: 5px; padding-top: 5px; border-top: 1px dashed #999; }
@@ -201,7 +214,7 @@ const RECEIPT_CSS = `
     color: #444;
     margin-bottom: 2px;
   }
-  .receipt-line { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; font-size: 11.9px; }
+  .receipt-line { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; font-size: 13.685px; }
   .receipt-line .label { color: #222; }
   .receipt-line .value { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .receipt-line.bold { font-weight: 700; }
