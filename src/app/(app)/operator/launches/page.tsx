@@ -14,6 +14,7 @@ import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { PrintButton } from "@/components/print/print-button";
 import { isLaunchesZone } from "@/lib/results-calc";
+import { unlockBeep, playConfirmChime } from "@/lib/beep";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
@@ -228,6 +229,9 @@ export default function LaunchesZonePage() {
         setError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
+      // Звук подтверждения (запрос пользователя 2026-07-20) — "бам-бум",
+      // сразу после успешного тапа+оплаты, независимо от печати/тумблеров.
+      playConfirmChime();
       setTapFlow(null);
       setAbonementTarget(null);
       loadTallies(zones);
@@ -282,7 +286,7 @@ export default function LaunchesZonePage() {
   const tapTariff = tapFlow?.tariffId ? (tapZone?.tariffs.find((tf) => tf.id === tapFlow.tariffId) ?? null) : null;
 
   return (
-    <div className="flex flex-1 flex-col bg-surface-0 px-4 pb-10 pt-6">
+    <div className="flex flex-1 flex-col bg-surface-0 px-4 pb-10 pt-6" onPointerDownCapture={() => unlockBeep()}>
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col md:max-w-xl lg:max-w-2xl">
         <h1 className="mb-4 text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.operatorApp.tally.entryTitle}</h1>
 

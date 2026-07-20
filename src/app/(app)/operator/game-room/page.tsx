@@ -18,7 +18,7 @@ import { useOperatorPrintAvailable } from "@/hooks/use-print";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { isStaysZone } from "@/lib/results-calc";
 import { estimateLiveAmount, formatMMSS, type LaunchPricingMode, type LaunchRoundingMode } from "@/lib/game-room-client";
-import { unlockBeep, playBeep } from "@/lib/beep";
+import { unlockBeep, playBeep, playConfirmChime, playCloseChime } from "@/lib/beep";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -314,6 +314,9 @@ export default function StaysZonePage() {
         setError(data.error ?? t.operatorApp.gameRoom.noPricingError);
         return;
       }
+      // Звук подтверждения (запрос пользователя 2026-07-20) — "бам-бум",
+      // браслет открыт.
+      playConfirmChime();
       loadLaunches(selectedZoneId);
       setAddFlow(null);
       setAbonementTarget(null);
@@ -351,6 +354,9 @@ export default function StaysZonePage() {
         return;
       }
       const data = await res.json();
+      // Звук подтверждения (запрос пользователя 2026-07-20) — "бум-бам",
+      // те же две ноты в обратном порядке, браслет закрыт.
+      playCloseChime();
       setInteracting(null);
       setStopPaymentTarget(null);
       setAbonementTarget(null);

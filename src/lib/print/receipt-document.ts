@@ -245,6 +245,12 @@ const RECEIPT_CSS = `
      пользователем 2026-07-20). */
   .receipt-footer .rt-h1 { font-size: 16px; font-weight: 800; color: #111; margin: 0 0 4px; }
   .receipt-footer .rt-h2 { font-size: 14px; font-weight: 700; color: #111; margin: 0 0 3px; }
+  /* Линия отреза (запрос пользователя 2026-07-20) — в конце каждой
+     квитанции: иконка ножниц + чёрная пунктирная линия. Изначальные 2мм
+     смотрелись слишком жирно (фидбек того же дня) — уменьшено до 0.5мм. */
+  .receipt-cut-line { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+  .receipt-cut-icon { flex-shrink: 0; font-size: 16px; line-height: 1; color: #000; }
+  .receipt-cut-dash { flex: 1; border-top: 0.5mm dashed #000; }
   @media print {
     .receipt { max-width: none; }
   }
@@ -379,6 +385,17 @@ export function buildReceiptBodyHtml(data: PrintDocumentData, branding: ReceiptB
       </div>
     `;
 
+  // Линия отреза (запрос пользователя 2026-07-20) — в конце КАЖДОГО
+  // документа, после всего остального содержимого (включая футер), не
+  // отдельным условием — принтеру всё равно нечего печатать дальше, это
+  // финальный элемент.
+  const cutLine = `
+    <div class="receipt-cut-line">
+      <span class="receipt-cut-icon">✂</span>
+      <span class="receipt-cut-dash"></span>
+    </div>
+  `;
+
   return `
     <div class="receipt-paper">
       <div class="receipt">
@@ -386,6 +403,7 @@ export function buildReceiptBodyHtml(data: PrintDocumentData, branding: ReceiptB
         ${sections}
         ${total}
         ${footer}
+        ${cutLine}
       </div>
     </div>
   `;
