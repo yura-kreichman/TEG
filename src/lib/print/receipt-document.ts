@@ -1,16 +1,22 @@
 // Общая инфраструктура печати (запрос пользователя 2026-07-20) — чистый
-// браузер, без доп. софта: window.print() с самодостаточным HTML-документом
-// (собственный <style>, без Tailwind/CSS-переменных приложения — печатное
-// окно не грузит бандл приложения). Годится и на 58/80мм термопринтер через
-// @page, и на обычный A4/Letter принтер — печатающий принтер настраивается
-// на уровне ОС устройства, это приложение о типе подключения ничего не
-// знает и не хранит (docs/design обсуждение 2026-07-20).
+// браузер, без доп. софта. Самодостаточная разметка/CSS (без Tailwind/
+// CSS-переменных приложения) переиспользуется в двух РАЗНЫХ местах со своей
+// изоляцией у каждого:
+// - живое превью в Настройках → Система — полноценный изолированный HTML-
+//   документ (buildReceiptHtml, через <iframe srcDoc>), гарантированно
+//   показывает именно то, что реально напечатается;
+// - реальная печать (openPrintDocument) — НЕ отдельный документ (после двух
+//   неудачных попыток на Android, см. комментарий у openPrintDocument ниже),
+//   а сама текущая страница приложения с временно подменённым видимым
+//   содержимым через @media print. Именно поэтому весь CSS написан с
+//   единой точкой сброса .receipt-doc, а не голыми html/body — второй сценарий
+//   вставляет этот же CSS ПРЯМО в текущую страницу, где html/body принадлежат
+//   приложению, а не изолированному документу.
 //
-// Один и тот же buildReceiptHtml() используется и для реального
-// window.print() (openPrintDocument), и для живого превью в Настройках →
-// Система (там — через <iframe srcDoc>, чтобы гарантированно показывать
-// именно то, что реально напечатается, без риска разъехаться с реальной
-// печатью).
+// Годится и на 58/80мм термопринтер через @page, и на обычный A4/Letter —
+// принтер настраивается на уровне ОС устройства, приложение о типе
+// подключения ничего не знает и не хранит (docs/design обсуждение
+// 2026-07-20).
 
 import { isRichContentEmpty, type PMNode } from "@/lib/rich-text";
 
@@ -71,10 +77,19 @@ export interface ReceiptBranding {
 // (~32 моноширинных символа в строке при обычном ESC/POS-шрифте) прежние
 // 11-13px читались бы как убористая мелкая печать, крупнее — ближе к
 // реальным чекам из магазинов.
+// .receipt-doc — единая точка входа для сброса (было html,body раньше) —
+// нужна, чтобы этот же CSS можно было безопасно вставить ПРЯМО в текущую
+// страницу приложения (не только в изолированный iframe/document), не
+// затрагивая html/body самого приложения (реальный риск — найден при
+// переходе на "печать текущей страницы" 2026-07-20: голый селектор html,body
+// сломал бы фон/шрифт всего приложения в момент печати). .receipt-doc
+// ставится и на <body> изолированного документа (buildReceiptHtml, превью
+// в Настройках → Система), и на обёртку внутри печатного корня
+// (openPrintDocument) — один и тот же CSS работает в обоих местах.
 const RECEIPT_CSS = `
   @page { size: auto; margin: 3mm; }
   * { box-sizing: border-box; }
-  html, body {
+  .receipt-doc {
     margin: 0;
     padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
@@ -87,7 +102,7 @@ const RECEIPT_CSS = `
      термо-рулон уже физически имеет такой край, рисовать его чернилами на
      самой квитанции незачем и просто тратит расходники. */
   @media screen {
-    html, body { background: #e7e9ec; }
+    .receipt-doc { background: #e7e9ec; }
     .receipt-paper { position: relative; padding: 14px 0; }
     .receipt-paper::before,
     .receipt-paper::after {
@@ -218,9 +233,9 @@ function escapeHtml(text: string): string {
 // Печатный рендер PMNode -> HTML-строка — то же дерево узлов/меток, что
 // src/components/landing/rich-text.tsx (RichText, публичная страница
 // Лендинга) и src/lib/instructions/pdf.ts (PDF-вариант), но третий вывод:
-// сюда, в самодостаточный HTML печатного документа. Не переиспользует
-// RichText напрямую — тот React-компонент, а окно печати собирается через
-// document.write() как строка, без React-рендера в отдельном window.
+// сюда, в самодостаточный HTML печатной разметки. Не переиспользует
+// RichText напрямую — тот React-компонент, а печатная разметка собирается
+// как HTML-строка (innerHTML), без React-рендера.
 function renderMarksHtml(text: string, marks: { type: string }[] | undefined): string {
   let html = escapeHtml(text);
   for (const mark of marks ?? []) {
@@ -293,7 +308,7 @@ function renderSubtitle(subtitle: PrintDocumentData["subtitle"]): string {
   return primary + secondary;
 }
 
-/** Тело документа (без <html>/<head>) — переиспользуется и в окне печати, и в превью через iframe srcDoc. */
+/** Тело документа (без <html>/<head>) — переиспользуется и в реальной печати (openPrintDocument), и в превью через iframe srcDoc. */
 export function buildReceiptBodyHtml(data: PrintDocumentData, branding: ReceiptBranding): string {
   const logo = branding.showLogo && branding.logoUrl ? `<img class="receipt-logo" src="${escapeHtml(branding.logoUrl)}" alt="" />` : "";
   const tenantName = branding.showTenantName ? `<div class="receipt-tenant">${escapeHtml(branding.tenantName)}</div>` : "";
@@ -356,70 +371,68 @@ export function buildReceiptHtml(data: PrintDocumentData, branding: ReceiptBrand
 <title>${escapeHtml(data.title)}</title>
 <style>${RECEIPT_CSS}</style>
 </head>
-<body>${buildReceiptBodyHtml(data, branding)}</body>
+<body class="receipt-doc">${buildReceiptBodyHtml(data, branding)}</body>
 </html>`;
 }
 
-// БЕЗ window.open()+document.write() (реальный баг, найден пользователем
-// 2026-07-20: SecurityError "Blocked a frame ... from accessing a
-// cross-origin frame" на win.print() — в PWA Оператора на части
-// Android-браузеров window.open() либо блокируется, либо открывает окно в
-// отдельном изолированном браузинг-контексте с opaque origin, из-за чего сам
-// браузер уже не даёт скрипту доступ к .print() у открытого окна, даже когда
-// URL пустой (по спецификации about:blank должен наследовать origin
-// открывателя, но платформенно это не всегда так, особенно в
-// установленной/standalone PWA). Скрытый <iframe> с srcdoc — тот же приём,
-// что уже работает в живом превью на Настройках → Система (buildReceiptHtml
-// один и тот же для обоих) — гарантированно тот же origin (iframe остаётся
-// ребёнком текущего документа, окно никуда не открывается), без попапов и
-// без кросс-window доступа вообще.
-//
-// Реальный (не нулевой) размер + вынос за экран позиционированием, БЕЗ
-// visibility:hidden (реальный баг, найден пользователем 2026-07-20 через
-// PDF с Android: "Тестовая печать" на телефоне без физического принтера,
-// сохранение в PDF печатало ВСЮ страницу приложения — низ навигации,
-// тумблеры настроек, а не только квитанцию; на Windows тот же код печатал
-// корректно). Известный давний баг Chromium именно с печатью
-// iframe.contentWindow.print() на Android — при visibility:hidden и/или
-// нулевом размере мобильный Chrome иногда не может определить, ЧТО печатать,
-// и откатывается к печати всей видимой страницы (issues.chromium.org/issues/
-// 40896385, bugs.chromium.org/.../561438). Даже react-to-print — самая
-// популярная библиотека именно для этой задачи — не даёт полной гарантии на
-// мобильных (сами авторы: "requires changes by Google/Chromium"), но по
-// умолчанию использует РЕАЛЬНЫЙ размер iframe (размер документа), не нулевой,
-// и не visibility:hidden — тот же принцип здесь.
+// Печатаем ТЕКУЩУЮ страницу целиком, БЕЗ отдельного документа вообще — ни
+// window.open() (реальный баг, найден пользователем 2026-07-20: SecurityError
+// "Blocked a frame ... from accessing a cross-origin frame" на win.print() —
+// в PWA Оператора на части Android-браузеров window.open() открывает окно в
+// изолированном браузинг-контексте с opaque origin), ни iframe.print()
+// (следующая попытка — реальный вывод, найден пользователем 2026-07-20:
+// даже с реальным размером и без visibility:hidden часть Android-браузеров и
+// сторонние принт-сервисы вроде "ESCPOS Bluetooth Print Service" всё равно
+// печатали ВСЮ страницу приложения вместо содержимого iframe — давний,
+// по сей день открытый баг Chromium именно с печатью ВЛОЖЕННОГО документа на
+// Android/мобильных print-пайплайнах, issues.chromium.org/issues/40896385,
+// не имеющий полностью надёжного фикса средствами кода). Вместо печати
+// вложенного документа — печатаем сам document/window (window.print() без
+// аргументов, самый базовый и повсеместно поддерживаемый путь, никаких
+// вложенных браузинг-контекстов вообще), временно подменяя ВИДИМОЕ содержимое
+// страницы квитанцией через CSS @media print (классическая техника "print
+// only this element" — body > *:not(#печатный-корень) прячется, печатный
+// корень показывается) — у этого пути просто нет кросс-frame границы, на
+// которой ломается вся предыдущая цепочка попыток.
+const PRINT_ROOT_ID = "rentos-print-root";
+
+function ensurePrintRoot(): HTMLElement {
+  let root = document.getElementById(PRINT_ROOT_ID);
+  if (!root) {
+    root = document.createElement("div");
+    root.id = PRINT_ROOT_ID;
+    document.body.appendChild(root);
+  }
+  return root;
+}
+
 export function openPrintDocument(data: PrintDocumentData, branding: ReceiptBranding): void {
-  const iframe = document.createElement("iframe");
-  iframe.style.cssText = "position:fixed;top:0;left:-10000px;width:400px;height:600px;border:0;";
-  iframe.setAttribute("aria-hidden", "true");
-  document.body.appendChild(iframe);
+  const root = ensurePrintRoot();
+  root.innerHTML = `
+    <style>
+      #${PRINT_ROOT_ID} { display: none; }
+      @media print {
+        body > *:not(#${PRINT_ROOT_ID}) { display: none !important; }
+        #${PRINT_ROOT_ID} { display: block !important; }
+      }
+      ${RECEIPT_CSS}
+    </style>
+    <div class="receipt-doc">${buildReceiptBodyHtml(data, branding)}</div>
+  `;
 
-  function cleanup() {
-    iframe.remove();
+  // Заголовок документа — предлагаемое имя файла у "Сохранить в PDF" (та же
+  // мелочь, что раньше давал отдельный <title> изолированного документа) —
+  // временно подменяется на заголовок квитанции, восстанавливается после.
+  const previousTitle = document.title;
+  let restored = false;
+  function restoreTitle() {
+    if (restored) return;
+    restored = true;
+    document.title = previousTitle;
   }
+  document.title = data.title;
+  window.addEventListener("afterprint", restoreTitle, { once: true });
+  setTimeout(restoreTitle, 5000);
 
-  // Без guard-флага print() мог бы вызваться дважды (onload + таймаут-фолбэк
-  // ниже) — тот же класс бага, что раньше был у window.open()-варианта
-  // (найдено при самопроверке 2026-07-20).
-  let printed = false;
-  function triggerPrint() {
-    if (printed) return;
-    printed = true;
-    const win = iframe.contentWindow;
-    if (!win) {
-      cleanup();
-      return;
-    }
-    // afterprint ненадёжен на части мобильных браузеров (тот же класс
-    // проблем, что был у onload после document.write раньше) — таймаут-
-    // фолбэк гарантирует, что iframe в итоге уберётся из DOM в любом случае.
-    win.addEventListener("afterprint", cleanup);
-    setTimeout(cleanup, 60000);
-    win.focus();
-    win.print();
-  }
-
-  iframe.onload = triggerPrint;
-  iframe.srcdoc = buildReceiptHtml(data, branding);
-  setTimeout(triggerPrint, 500);
+  window.print();
 }
