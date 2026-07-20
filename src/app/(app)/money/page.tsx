@@ -10,6 +10,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
+import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 import { pad, toDateStr } from "@/lib/datetime-format";
@@ -40,13 +41,18 @@ export default function MoneyPage() {
   const [report, setReport] = useState<Report | null>(null);
 
   const [mode, setMode] = useState<"granularity" | "custom">("granularity");
-  const [granularity, setGranularity] = useState<Granularity>("day");
+  // Дефолт "Месяц" — тот же переключатель, что везде по проекту (запрос
+  // пользователя 2026-07-20: "везде на этих переключателях по умолчанию
+  // должно быть установлено 'Месяц'"); было "День" (запрос пользователя
+  // 2026-07-14, именно для этой страницы) — новое общепроектное правило
+  // явно это переопределяет.
+  const [granularity, setGranularity] = useState<Granularity>("month");
   const [anchor, setAnchor] = useState(() => new Date());
-  // По умолчанию — День последней сдачи (запрос пользователя 2026-07-14):
-  // если сегодня ещё ничего не сдавали, открывать не пустой сегодняшний
-  // день, а последний день с реальной выручкой. Резолвится один раз при
-  // монтировании, до первой загрузки отчёта — иначе был бы виден "прыжок"
-  // с сегодняшнего пустого дня на предыдущий.
+  // Якорь всё равно резолвится на последний день/период с реальной выручкой
+  // (запрос пользователя 2026-07-14), а не на сегодняшний пустой день/месяц —
+  // это не завязано на конкретную granularity, просто исходная дата, от
+  // которой считается текущий период. Резолвится один раз при монтировании,
+  // до первой загрузки отчёта — иначе был бы виден "прыжок".
   const [anchorReady, setAnchorReady] = useState(false);
   const [customFrom, setCustomFrom] = useState(() => toDateStr(new Date()));
   const [customTo, setCustomTo] = useState(() => toDateStr(new Date()));
@@ -415,14 +421,17 @@ export default function MoneyPage() {
                 </span>
               </div>
               <div className="flex min-w-0 flex-col items-end gap-0.5 pt-1 text-right text-caption-airbnb tabular-nums">
-                <span>
+                <span className="inline-flex items-center gap-1">
+                  <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
                   {t.reports.cashLabel}: <span className="font-bold text-foreground"><Money value={report.business.cash} /></span>
                 </span>
-                <span>
+                <span className="inline-flex items-center gap-1">
+                  <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
                   {t.reports.mobileLabel}: <span className="font-bold text-foreground"><Money value={report.business.mobile} /></span>
                 </span>
                 {report.business.abonement > 0 && (
-                  <span>
+                  <span className="inline-flex items-center gap-1">
+                    <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
                     {t.reports.abonementLabel}:{" "}
                     <span className="font-bold text-foreground"><Money value={report.business.abonement} /></span>
                   </span>
@@ -474,10 +483,12 @@ export default function MoneyPage() {
                   <p className="text-caption-airbnb text-muted-foreground">{t.money.abonementSoldHint}</p>
                 </div>
                 <div className="flex min-w-0 shrink-0 flex-col items-end gap-0.5 text-right text-caption-airbnb tabular-nums">
-                  <span>
+                  <span className="inline-flex items-center gap-1">
+                    <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
                     {t.reports.cashLabel}: <span className="font-bold text-foreground"><Money value={report.abonementSold.cash} /></span>
                   </span>
-                  <span>
+                  <span className="inline-flex items-center gap-1">
+                    <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
                     {t.reports.mobileLabel}:{" "}
                     <span className="font-bold text-foreground"><Money value={report.abonementSold.mobile} /></span>
                   </span>

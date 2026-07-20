@@ -1311,7 +1311,7 @@
   },
   "summaryText": {
     "cash": "Нақдина",
-    "cashCompact": "Нақд.",
+    "cashCompact": "Нақ.",
     "abonement": "Баланс",
     "abonementCompact": "Бал.",
     "abonementSold": "Фурӯши обунамондҳо",
@@ -1319,7 +1319,7 @@
     "mobile": "Ғайринақдӣ",
     "expenses": "Хароҷот",
     "bonusesAndAdvances": "Мукофот ва пешпардохт",
-    "bonusesAndAdvancesCompact": "Мукофот + пешпардохт",
+    "bonusesAndAdvancesCompact": "Пеш.+Мук.",
     "advance": "Пешпардохт",
     "bonus": "Мукофот",
     "bonusCompact": "Мукоф.",

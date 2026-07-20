@@ -1311,7 +1311,7 @@
   },
   "summaryText": {
     "cash": "Nakit",
-    "cashCompact": "Nakit",
+    "cashCompact": "Nak.",
     "abonement": "Bakiye",
     "abonementCompact": "Bak.",
     "abonementSold": "Abonelik satışları",
@@ -1319,7 +1319,7 @@
     "mobile": "Kartlı",
     "expenses": "Giderler",
     "bonusesAndAdvances": "Prim ve Avanslar",
-    "bonusesAndAdvancesCompact": "Prim + Avanslar",
+    "bonusesAndAdvancesCompact": "Avans+Prim",
     "advance": "Avans",
     "bonus": "Prim",
     "bonusCompact": "Prim",

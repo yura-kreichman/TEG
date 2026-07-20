@@ -267,7 +267,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-screen-title">{t.tasks.pickPointTitle}</h1>
             <PressableScale>
-              <Button variant="dark" size="sm" className="gap-1.5" onClick={openCreate}>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={openCreate}>
                 <Plus className="size-4" />
                 {t.tasks.addButton}
               </Button>

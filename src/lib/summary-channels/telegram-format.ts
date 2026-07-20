@@ -391,12 +391,13 @@ export function formatDailyCashSummaryTelegram(
       }
     }
     if (settings.showExpenses) {
-      // Расходы и Пр+Ав — одной строкой через " · " (запрос пользователя
-      // 2026-07-19), тот же тумблер — обе строки об одном: деньги, ушедшие
-      // из кассы за день, но не Расход бизнеса в бухгалтерском смысле.
-      parts.push(
-        `🛒 ${st.expenses}: ${formatMoney(data.expenses, locale)} · 💵 ${st.bonusesAndAdvancesCompact}: ${formatMoney(data.bonusesAndAdvances, locale)}`
-      );
+      // Расходы и Аванс+Прем — раньше одной строкой через " · " (запрос
+      // пользователя 2026-07-19), теперь разнесены на отдельные строки
+      // (запрос пользователя 2026-07-20) — тот же тумблер, обе строки об
+      // одном: деньги, ушедшие из кассы за день, но не Расход бизнеса в
+      // бухгалтерском смысле.
+      parts.push(`🛒 ${st.expenses}: ${formatMoney(data.expenses, locale)}`);
+      parts.push(`💵 ${st.bonusesAndAdvancesCompact}: ${formatMoney(data.bonusesAndAdvances, locale)}`);
     }
 
     // Остаток на точке — рядом с Итогом, тем же разделителем " · ", что и
@@ -473,7 +474,7 @@ export function formatShiftCloseSummaryTelegram(
     // (фидбек 2026-07-14: "здесь это не мешает").
     const parts: string[] = [];
     if (settings.showPeriod) parts.push(`🕐 ${formatLocalTime(data.startAt, timezone)}–${formatLocalTime(data.endAt, timezone)}`);
-    if (settings.showHours) parts.push(`▶️ ${formatDuration(data.minutes)}`);
+    if (settings.showHours) parts.push(`▶️ ${formatDuration(data.minutes, true)}`);
     // Аванс: 0 показывается всегда при включённом тумблере (запрос
     // пользователя 2026-07-18: "если сотрудник не брал Аванс, то надо
     // выводить Аванс: 0") — в отличие от Премии ниже, которая по-прежнему

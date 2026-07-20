@@ -13,12 +13,11 @@ import {
   Settings2,
   X,
   ClipboardList,
-  Banknote,
-  CreditCard,
   Crown,
   Check,
 } from "lucide-react";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
+import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -181,15 +180,6 @@ function PerformedByTag({
       {name}
     </span>
   );
-}
-
-// Иконка способа оплаты (запрос пользователя 2026-07-19: "иконки способов
-// оплаты") — те же иконки, что уже используются для cash/mobile на экране
-// оплаты оператора (operator-app submit) и абонемента (Banknote/CreditCard),
-// Wallet2 — для баланса абонемента, тот же, что кнопка "Сверить кассу" выше.
-function PaymentMethodIcon({ method, className }: { method: string; className?: string }) {
-  const Icon = method === "cash" ? Banknote : method === "mobile" ? CreditCard : Wallet2;
-  return <Icon className={className ?? "size-3.5 shrink-0"} />;
 }
 
 type PeriodGranularity = "day" | "week" | "month" | "year";
@@ -1470,19 +1460,27 @@ export default function GoodsCabinetPage() {
                   <GoodsBarsChart bars={cashBars} granularity={cashGranularity} t={t} />
 
                   <SpringCard hover={false} className="flex flex-col gap-2">
-                    <h2 className="text-card-title">{t.goods.cashCardTitle}</h2>
-                  {reconcilePending && (
-                    <div className="flex items-center justify-between text-caption-airbnb tabular-nums text-muted-foreground">
-                      <span className="inline-flex items-center gap-1">
-                        <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
-                        {t.goods.calculatedCashLabel}: <Money value={reconcilePending.cash} />
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
-                        {t.goods.calculatedMobileLabel}: <Money value={reconcilePending.mobile} />
-                      </span>
+                    {/* Методы оплаты — правый столбик, тот же приём, что на
+                        плашках в Деньгах/Отчётах (запрос пользователя
+                        2026-07-20: "сделай методы оплаты справа как на
+                        плашках в Деньги"), вместо строки на всю ширину. */}
+                    <div className="flex items-start justify-between gap-2">
+                      <h2 className="text-card-title">{t.goods.cashCardTitle}</h2>
+                      {reconcilePending && (
+                        <div className="flex min-w-0 shrink-0 flex-col items-end gap-0.5 text-right text-caption-airbnb tabular-nums">
+                          <span className="inline-flex items-center gap-1">
+                            <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+                            {t.reports.cashLabel}:{" "}
+                            <span className="font-bold text-foreground"><Money value={reconcilePending.cash} /></span>
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+                            {t.reports.mobileLabel}:{" "}
+                            <span className="font-bold text-foreground"><Money value={reconcilePending.mobile} /></span>
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
 
                   {/* История сдач — внутри той же плашки "Кассы" (запрос
                       пользователя 2026-07-19: "надо внутри плашки 'Сверить

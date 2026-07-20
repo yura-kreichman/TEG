@@ -1311,7 +1311,7 @@
   },
   "summaryText": {
     "cash": "Накталай",
-    "cashCompact": "Накт.",
+    "cashCompact": "Нак.",
     "abonement": "Баланс",
     "abonementCompact": "Бал.",
     "abonementSold": "Абонементтерди сатуу",
@@ -1319,7 +1319,7 @@
     "mobile": "Накталай эмес",
     "expenses": "Чыгашалар",
     "bonusesAndAdvances": "Сыйлыктар жана аванстар",
-    "bonusesAndAdvancesCompact": "Сыйлыктар + аванстар",
+    "bonusesAndAdvancesCompact": "Авн.+Сый.",
     "advance": "Аванс",
     "bonus": "Сыйлык",
     "bonusCompact": "Сыйл.",

@@ -30,7 +30,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-full flex-1 flex-col md:flex-row">
-      <aside className="hidden shrink-0 flex-col justify-between bg-surface-0 p-4 md:flex md:w-56">
+      <aside className="hidden shrink-0 flex-col justify-between overflow-y-auto bg-surface-0 p-4 md:sticky md:top-0 md:flex md:h-screen md:w-56">
         <div>
           <div className="mb-4 px-3 text-sm font-extrabold tracking-[-0.01em]">{t.admin.shellTitle}</div>
           <nav className="flex flex-col gap-1">

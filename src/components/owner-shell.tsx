@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   BarChart3,
+  Banknote,
   FileText,
   Globe,
   Home,
@@ -50,7 +51,7 @@ const PRIORITY_ITEMS: NavItemConfig[] = [
   // поэтому startsWith — иначе активная подсветка пропадает на них, как и
   // пропадала для "Отчёты" (найдено 2026-07-11).
   { id: "home", href: "/", icon: Home, label: (t) => t.nav.home, priority: 1, match: (p) => p === "/" },
-  { id: "money", href: "/money", icon: Wallet, label: (t) => t.nav.money, priority: 2, match: (p) => p.startsWith("/money") },
+  { id: "money", href: "/money", icon: Banknote, label: (t) => t.nav.money, priority: 2, match: (p) => p.startsWith("/money") },
   { id: "reports", href: "/reports", icon: BarChart3, label: (t) => t.nav.reports, priority: 3, match: (p) => p.startsWith("/reports") },
   { id: "operators", href: "/operators", icon: Users, label: (t) => t.nav.operators, priority: 4, match: (p) => p.startsWith("/operators") },
   { id: "tasks", href: "/tasks", icon: ListChecks, label: (t) => t.nav.tasks, priority: 5, match: (p) => p.startsWith("/tasks") },
@@ -201,7 +202,15 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-full flex-1 flex-col md:flex-row" style={{ zoom: textScaleZoom(scale) }}>
       <ImpersonationBanner />
       <SubscriptionBanner />
-      <aside className="hidden shrink-0 flex-col justify-between bg-surface-0 p-4 md:flex md:w-56">
+      {/* sticky + h-screen — иначе на длинных страницах (например, Товары со
+          множеством категорий/списков) sidebar растягивался на всю высоту
+          контента-соседа (flex-row по умолчанию stretch), и ThemeToggle внизу
+          сайдбара оказывался за тысячи пикселей вниз, практически недоступным
+          без прокрутки всей страницы (запрос пользователя 2026-07-20:
+          "на компьютере не на всех страницах есть переключатель темы... в
+          Товарах он отсутствует" — на самом деле был в DOM везде, просто вне
+          видимой области на длинных страницах). */}
+      <aside className="hidden shrink-0 flex-col justify-between overflow-y-auto bg-surface-0 p-4 md:sticky md:top-0 md:flex md:h-screen md:w-56">
         <nav className="flex flex-col gap-1">
           {barItems.map(sidebarLink)}
           <div className="my-1 border-t border-border" />

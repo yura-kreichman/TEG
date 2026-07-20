@@ -291,7 +291,7 @@ export default function ZoneBalancesPage() {
             <h1 className="text-screen-title">{t.money.zoneBalancesLink}</h1>
             <PressableScale>
               <Button
-                variant="dark"
+                variant="outline"
                 size="sm"
                 className="h-auto min-w-0 shrink items-start gap-1.5 whitespace-normal px-2.5 py-1.5 text-left leading-tight"
                 onClick={openCollection}

@@ -26,10 +26,6 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/10 text-destructive shadow-[0_1px_2px_rgba(0,0,0,.05),inset_0_1px_0_rgba(255,255,255,.25)] hover:bg-destructive/20 active:shadow-[inset_0_1px_2px_rgba(0,0,0,.08)] focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
-        // "+ Добавить" pill per docs/design/prototype-owner-v2.html (.btn-add) —
-        // deliberately not --primary: this is a neutral chrome action, accent
-        // stays reserved for genuinely primary CTAs (see design-system.md §3).
-        dark: "rounded-full bg-linear-to-b from-foreground to-[color-mix(in_oklch,var(--foreground),transparent_12%)] text-background shadow-[0_1px_3px_rgba(0,0,0,.18),inset_0_1px_0_rgba(255,255,255,.14)] hover:brightness-110 active:shadow-[inset_0_1px_2px_rgba(0,0,0,.2)]",
       },
       size: {
         default:

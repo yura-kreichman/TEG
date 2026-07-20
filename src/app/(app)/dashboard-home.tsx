@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
+import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { useI18n } from "@/components/i18n-provider";
 import type { Dictionary } from "@/lib/i18n";
 import { Money } from "@/components/money";
@@ -364,10 +365,12 @@ export function OwnerDashboardCard({
                           быть аналогичная сводка как и в Деньгах, где видно
                           наличные и безналичные"). */}
                       <div className="flex min-w-0 flex-col items-end gap-0.5 pt-1 text-right text-caption-airbnb tabular-nums">
-                        <span>
+                        <span className="inline-flex items-center gap-1">
+                          <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
                           {t.reports.cashLabel}: <span className="font-bold text-foreground"><Money value={summary.cash!} /></span>
                         </span>
-                        <span>
+                        <span className="inline-flex items-center gap-1">
+                          <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
                           {t.reports.mobileLabel}: <span className="font-bold text-foreground"><Money value={summary.mobile!} /></span>
                         </span>
                         {summary.returnsCount! > 0 && (

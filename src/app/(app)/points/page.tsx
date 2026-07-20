@@ -17,7 +17,7 @@ import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconPicker, IconPickerSheet } from "@/components/icon-picker";
-import { KebabButton, ActionSheetItem } from "@/components/kebab-menu";
+import { KebabButton, ActionSheetItem, IconActionButton } from "@/components/kebab-menu";
 import { StatusChip } from "@/components/status-chip";
 import { TileIcon } from "@/components/tile-icon";
 import { QrCode } from "@/components/qr-code";
@@ -72,7 +72,7 @@ function WEEKDAY_LABELS(t: ReturnType<typeof useI18n>): string[] {
 }
 
 type PointKebabView = "menu" | "rename" | "icon" | "location" | "confirm-delete";
-type DeviceKebabView = "menu" | "rename" | "confirm-delete";
+type DeviceKebabView = "rename" | "confirm-delete";
 
 export default function PointsPage() {
   const router = useRouter();
@@ -115,10 +115,11 @@ export default function PointsPage() {
 
   const [deviceKebab, setDeviceKebab] = useState<{ pointId: string; device: PointDeviceInfo } | null>(null);
   const { saved: deviceDeleted, pulse: deviceDeletePulse } = useSavePulse();
-  const [deviceKebabView, setDeviceKebabView] = useState<DeviceKebabView>("menu");
+  const [deviceKebabView, setDeviceKebabView] = useState<DeviceKebabView>("rename");
   const [renameDeviceValue, setRenameDeviceValue] = useState("");
   const [renameDeviceRoaming, setRenameDeviceRoaming] = useState(false);
   const { saved: renameDeviceSaved, pulse: renameDevicePulse } = useSavePulse();
+  const [copiedDeviceId, setCopiedDeviceId] = useState<string | null>(null);
 
   async function loadPoints() {
     const res = await fetch("/api/points");
@@ -335,9 +336,13 @@ export default function PointsPage() {
     pointDeletePulse(() => setPointKebab(null));
   }
 
-  function openDeviceKebab(pointId: string, device: PointDeviceInfo) {
+  // Кебаб с 2-3 действиями заменён прямыми кнопками (запрос пользователя
+  // 2026-07-20: "в Устройствах для точки тоже вместо кебаб меню сделай две
+  // кнопки"), тот же приём, что уже применён по всему проекту для кебабов с
+  // одним-двумя действиями — открываем сразу нужный view, минуя view "menu".
+  function openDeviceKebab(pointId: string, device: PointDeviceInfo, view: DeviceKebabView = "rename") {
     setDeviceKebab({ pointId, device });
-    setDeviceKebabView("menu");
+    setDeviceKebabView(view);
     setRenameDeviceValue(device.label ?? "");
     setRenameDeviceRoaming(device.roaming);
   }
@@ -353,12 +358,12 @@ export default function PointsPage() {
     renameDevicePulse(() => setDeviceKebab(null));
   }
 
-  async function copyActivationLink() {
-    if (!deviceKebab) return;
-    const link = installLinks[deviceKebab.device.id];
+  async function copyActivationLink(deviceId: string) {
+    const link = installLinks[deviceId];
     if (!link) return;
     await navigator.clipboard.writeText(link);
-    setDeviceKebab(null);
+    setCopiedDeviceId(deviceId);
+    setTimeout(() => setCopiedDeviceId((id) => (id === deviceId ? null : id)), 1500);
   }
 
   async function confirmDeleteDevice() {
@@ -384,7 +389,7 @@ export default function PointsPage() {
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-screen-title">{t.points.title}</h1>
             <PressableScale>
-              <Button variant="dark" size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
                 <Plus className="size-4" />
                 {t.common.add}
               </Button>
@@ -449,10 +454,19 @@ export default function PointsPage() {
                                     <p className="text-caption-airbnb">{t.points.deviceAwaiting}</p>
                                   )}
                                 </div>
-                                <KebabButton
-                                  onClick={() => openDeviceKebab(point.id, device)}
-                                  label={t.points.renameDevice}
-                                />
+                                <div className="flex shrink-0 items-center gap-1.5">
+                                  <IconActionButton
+                                    icon={Pencil}
+                                    onClick={() => openDeviceKebab(point.id, device, "rename")}
+                                    label={t.points.renameDevice}
+                                  />
+                                  <IconActionButton
+                                    icon={Trash2}
+                                    onClick={() => openDeviceKebab(point.id, device, "confirm-delete")}
+                                    label={t.points.deleteDevice}
+                                    destructive
+                                  />
+                                </div>
                               </div>
                               {/* Ссылка/QR активации теряет смысл, как только устройство
                                   реально активировано (запрос пользователя 2026-07-14) —
@@ -461,13 +475,23 @@ export default function PointsPage() {
                                   видимой, пока не обновится страница целиком. */}
                               {installLinks[device.id] && !device.activated && (
                                 <div className="flex flex-col gap-2">
-                                  <button
-                                    type="button"
-                                    className="w-fit text-caption-airbnb font-semibold text-primary underline underline-offset-2"
-                                    onClick={() => setQrOpenFor(qrOpenFor === device.id ? null : device.id)}
-                                  >
-                                    {qrOpenFor === device.id ? t.points.hideQr : t.points.showQr}
-                                  </button>
+                                  <div className="flex items-center gap-3">
+                                    <button
+                                      type="button"
+                                      className="w-fit text-caption-airbnb font-semibold text-primary underline underline-offset-2"
+                                      onClick={() => setQrOpenFor(qrOpenFor === device.id ? null : device.id)}
+                                    >
+                                      {qrOpenFor === device.id ? t.points.hideQr : t.points.showQr}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="inline-flex w-fit items-center gap-1 text-caption-airbnb font-semibold text-primary underline underline-offset-2"
+                                      onClick={() => copyActivationLink(device.id)}
+                                    >
+                                      <Link2 className="size-3.5 shrink-0" />
+                                      {copiedDeviceId === device.id ? t.instructions.linkCopiedToast : t.points.copyActivationLink}
+                                    </button>
+                                  </div>
                                   {qrOpenFor === device.id && (
                                     <QrCode value={installLinks[device.id]} alt={t.points.qrAlt} />
                                   )}
@@ -481,7 +505,7 @@ export default function PointsPage() {
                       <PressableScale>
                         <Button
                           type="button"
-                          variant="dark"
+                          variant="outline"
                           size="sm"
                           className="mt-3 w-full gap-1.5"
                           onClick={() => {
@@ -716,24 +740,6 @@ export default function PointsPage() {
       )}
 
       <BottomSheet open={deviceKebab !== null} onClose={() => setDeviceKebab(null)}>
-        {deviceKebab && deviceKebabView === "menu" && (
-          <div className="pt-2">
-            <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">
-              {deviceKebab.device.label ?? t.points.unnamedDevice}
-            </h2>
-            <ActionSheetItem icon={Pencil} onClick={() => setDeviceKebabView("rename")}>
-              {t.points.renameDevice}
-            </ActionSheetItem>
-            {installLinks[deviceKebab.device.id] && (
-              <ActionSheetItem icon={Link2} onClick={copyActivationLink}>
-                {t.points.copyActivationLink}
-              </ActionSheetItem>
-            )}
-            <ActionSheetItem icon={Trash2} destructive onClick={() => setDeviceKebabView("confirm-delete")}>
-              {t.points.deleteDevice}
-            </ActionSheetItem>
-          </div>
-        )}
         {deviceKebab && deviceKebabView === "rename" && (
           <div className="flex flex-col gap-3 pt-2">
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.renameDevice}</h2>

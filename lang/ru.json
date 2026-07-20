@@ -1311,7 +1311,7 @@
   },
   "summaryText": {
     "cash": "Наличные",
-    "cashCompact": "Налич.",
+    "cashCompact": "Нал.",
     "abonement": "Баланс",
     "abonementCompact": "Бал.",
     "abonementSold": "Абонементы: продано",
@@ -1319,7 +1319,7 @@
     "mobile": "Безнал",
     "expenses": "Расходы",
     "bonusesAndAdvances": "Премии и Авансы",
-    "bonusesAndAdvancesCompact": "Премии + Авансы",
+    "bonusesAndAdvancesCompact": "Аванс+Прем",
     "advance": "Аванс",
     "bonus": "Премия",
     "bonusCompact": "Прем.",

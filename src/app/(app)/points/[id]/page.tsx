@@ -140,7 +140,7 @@ export default function PointDetailPage() {
             <h1 className="text-screen-title">{t.zonesList.title}</h1>
             <PressableScale>
               <Button
-                variant="dark"
+                variant="outline"
                 size="sm"
                 className="gap-1.5"
                 onClick={() => {

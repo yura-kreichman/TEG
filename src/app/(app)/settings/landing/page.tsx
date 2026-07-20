@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ImagePlus, ExternalLink, Copy, Check, MapPin, Phone, CheckCircle2, AlertCircle, Video, Eye, QrCode, EyeOff, Send } from "lucide-react";
+import { Plus, Trash2, ImagePlus, ExternalLink, Copy, Check, MapPin, Phone, CheckCircle2, AlertCircle, Video, Eye, QrCode, EyeOff, Send, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   TelegramIcon,
   ViberIcon,
@@ -31,6 +31,7 @@ import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n } from "@/components/i18n-provider";
 import { compressImageFile } from "@/lib/client-image";
 import { cn } from "@/lib/utils";
+import { toDateStr } from "@/lib/datetime-format";
 import { EffectPreview } from "@/components/landing/effect-preview";
 import "@/components/landing/landing-themes.css";
 import { InstructionEditor } from "@/components/instructions/instruction-editor";
@@ -541,7 +542,7 @@ export default function LandingSettingsPage() {
                   </PressableScale>
                 ) : (
                   <PressableScale>
-                    <Button type="button" variant="dark" size="sm" className="gap-1.5" onClick={publish}>
+                    <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={publish}>
                       <Send className="size-3.5" />
                       {t.landing.publishButton}
                     </Button>
@@ -1009,9 +1010,12 @@ export default function LandingSettingsPage() {
 
 interface StatsData {
   summary: { visits: number; uniqueVisitors: number };
+  period: { granularity: Granularity };
   series: { date: string; visits: number; uniqueVisitors: number }[];
   topSources: { source: string; count: number }[];
 }
+
+type Granularity = "day" | "week" | "month" | "year";
 
 // "13 июля (Пн)" — row.date приходит как "YYYY-MM-DD" (без времени); парсим
 // как локальную дату (не new Date(str), которая читает YYYY-MM-DD как UTC
@@ -1024,9 +1028,23 @@ function formatStatsDayLabel(isoDate: string): string {
   return `${dayMonth} (${weekday.charAt(0).toUpperCase()}${weekday.slice(1)})`;
 }
 
+// Строки при granularity="year" — по месяцам, не по дням (тот же приём, что
+// в Отчётах/CalendarMonthsTab), row.date приходит как "YYYY-MM-01".
+function formatStatsMonthLabel(isoDate: string, t: ReturnType<typeof useI18n>): string {
+  const [year, month] = isoDate.split("-").map(Number);
+  return `${t.readings.months[month - 1]} ${year}`;
+}
+
 function LandingStats() {
   const t = useI18n();
-  const [range, setRange] = useState<"today" | "7d" | "30d">("7d");
+  // Тот же переключатель День/Неделя/Месяц/Год/Период, что на /money,
+  // /goods, /reports (запрос пользователя 2026-07-20) — вместо отдельного
+  // Сегодня/7д/30д; дефолт "Месяц" — как и везде теперь по проекту.
+  const [mode, setMode] = useState<"granularity" | "custom">("granularity");
+  const [granularity, setGranularity] = useState<Granularity>("month");
+  const [anchor, setAnchor] = useState(() => new Date());
+  const [customFrom, setCustomFrom] = useState(() => toDateStr(new Date()));
+  const [customTo, setCustomTo] = useState(() => toDateStr(new Date()));
   const [data, setData] = useState<StatsData | null>(null);
   // Раньше без этого флага между переключением на вкладку "Статистика" и
   // ответом сервера на долю секунды показывалась карточка "нет данных" —
@@ -1036,16 +1054,58 @@ function LandingStats() {
   const [loading, setLoading] = useState(true);
 
   const loadStats = useCallback(async () => {
-    const res = await fetch(`/api/tenant/landing/stats?range=${range}`);
+    setLoading(true);
+    const periodParam =
+      mode === "custom" ? `from=${customFrom}&to=${customTo}` : `granularity=${granularity}&anchor=${toDateStr(anchor)}`;
+    const res = await fetch(`/api/tenant/landing/stats?${periodParam}`);
     if (res.ok) setData(await res.json());
     setLoading(false);
-  }, [range]);
+  }, [mode, granularity, anchor, customFrom, customTo]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     loadStats();
   }, [loadStats]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  function isCurrentPeriod() {
+    const today = new Date();
+    if (granularity === "year") return anchor.getUTCFullYear() === today.getUTCFullYear();
+    if (granularity === "month") {
+      return anchor.getUTCFullYear() === today.getUTCFullYear() && anchor.getUTCMonth() === today.getUTCMonth();
+    }
+    if (granularity === "day") return toDateStr(anchor) === toDateStr(today);
+    const weekStart = (d: Date) => {
+      const day = (d.getUTCDay() + 6) % 7;
+      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day);
+    };
+    return weekStart(anchor) === weekStart(today);
+  }
+
+  function stepPeriod(delta: number) {
+    if (delta > 0 && isCurrentPeriod()) return;
+    const next = new Date(anchor);
+    if (granularity === "day") next.setUTCDate(next.getUTCDate() + delta);
+    else if (granularity === "week") next.setUTCDate(next.getUTCDate() + delta * 7);
+    else if (granularity === "month") next.setUTCMonth(next.getUTCMonth() + delta);
+    else next.setUTCFullYear(next.getUTCFullYear() + delta);
+    setAnchor(next);
+  }
+
+  function formatPeriodLabel() {
+    if (granularity === "year") return String(anchor.getUTCFullYear());
+    if (granularity === "month") return `${t.readings.months[anchor.getUTCMonth()]} ${anchor.getUTCFullYear()}`;
+    if (granularity === "day") {
+      return `${anchor.getUTCDate()} ${t.readings.monthsGenitive[anchor.getUTCMonth()]} (${t.readings.weekdaysFull[(anchor.getUTCDay() + 6) % 7]})`;
+    }
+    const day = (anchor.getUTCDay() + 6) % 7;
+    const start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate() - day));
+    const end = new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
+    const sameMonth = start.getUTCMonth() === end.getUTCMonth();
+    return sameMonth
+      ? `${start.getUTCDate()}–${end.getUTCDate()} ${t.readings.monthsGenitive[start.getUTCMonth()]}`
+      : `${start.getUTCDate()} ${t.readings.monthsGenitive[start.getUTCMonth()]} – ${end.getUTCDate()} ${t.readings.monthsGenitive[end.getUTCMonth()]}`;
+  }
 
   const sourceLabel: Record<string, string> = {
     direct: t.landing.statsSourceDirect,
@@ -1055,15 +1115,85 @@ function LandingStats() {
 
   return (
     <div className="flex flex-col gap-4">
-      <SegmentedTabs
-        options={[
-          { key: "today" as const, label: t.landing.statsRangeToday },
-          { key: "7d" as const, label: t.landing.statsRange7d },
-          { key: "30d" as const, label: t.landing.statsRange30d },
-        ]}
-        value={range}
-        onChange={setRange}
-      />
+      <div className="grid grid-cols-5 gap-1">
+        {(["day", "week", "month", "year"] as const).map((g) => (
+          <button
+            key={g}
+            type="button"
+            onClick={() => {
+              setGranularity(g);
+              setAnchor(new Date());
+              setMode("granularity");
+            }}
+            className={cn(
+              "rounded-full px-1 py-1.5 text-center text-[0.6875rem] font-semibold sm:text-xs",
+              mode === "granularity" && g === granularity
+                ? "bg-primary/10 text-primary"
+                : "bg-surface-0 text-muted-foreground"
+            )}
+          >
+            {g === "day"
+              ? t.money.periodDay
+              : g === "week"
+                ? t.money.periodWeek
+                : g === "month"
+                  ? t.money.periodMonth
+                  : t.money.periodYear}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => setMode("custom")}
+          className={cn(
+            "rounded-full px-1 py-1.5 text-center text-[0.6875rem] font-semibold sm:text-xs",
+            mode === "custom" ? "bg-primary/10 text-primary" : "bg-surface-0 text-muted-foreground"
+          )}
+        >
+          {t.money.periodCustom}
+        </button>
+      </div>
+
+      {mode === "granularity" ? (
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            aria-label={t.money.prevPeriod}
+            onClick={() => stepPeriod(-1)}
+            className="flex size-8 items-center justify-center rounded-control text-muted-foreground"
+          >
+            <ChevronLeft className="size-4.5" />
+          </button>
+          <p className="text-caption-airbnb font-semibold text-foreground">{formatPeriodLabel()}</p>
+          <button
+            type="button"
+            aria-label={t.money.nextPeriod}
+            onClick={() => stepPeriod(1)}
+            disabled={isCurrentPeriod()}
+            className="flex size-8 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
+          >
+            <ChevronRight className="size-4.5" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={customFrom}
+            max={customTo}
+            onChange={(e) => setCustomFrom(e.target.value)}
+            className="h-9 flex-1 rounded-control border border-input bg-background px-2.5 text-caption-airbnb"
+          />
+          <span className="text-caption-airbnb text-muted-foreground">—</span>
+          <input
+            type="date"
+            value={customTo}
+            min={customFrom}
+            max={toDateStr(new Date())}
+            onChange={(e) => setCustomTo(e.target.value)}
+            className="h-9 flex-1 rounded-control border border-input bg-background px-2.5 text-caption-airbnb"
+          />
+        </div>
+      )}
 
       {loading ? null : !data || (data.summary.visits === 0 && data.series.length === 0) ? (
         <SpringCard hover={false}>
@@ -1087,7 +1217,9 @@ function LandingStats() {
               <p className="text-body-airbnb font-semibold">{t.landing.statsByDayTitle}</p>
               {data.series.map((row) => (
                 <div key={row.date} className="flex items-center justify-between text-sm tabular-nums">
-                  <span className="text-muted-foreground">{formatStatsDayLabel(row.date)}</span>
+                  <span className="text-muted-foreground">
+                    {data.period.granularity === "year" ? formatStatsMonthLabel(row.date, t) : formatStatsDayLabel(row.date)}
+                  </span>
                   <span>
                     {row.visits} / {row.uniqueVisitors}
                   </span>

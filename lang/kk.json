@@ -1311,7 +1311,7 @@
   },
   "summaryText": {
     "cash": "Қолма-қол",
-    "cashCompact": "Қолма-қол",
+    "cashCompact": "Қолм.",
     "abonement": "Баланс",
     "abonementCompact": "Бал.",
     "abonementSold": "Абонементтерді сату",
@@ -1319,7 +1319,7 @@
     "mobile": "Қолма-қолсыз",
     "expenses": "Шығыстар",
     "bonusesAndAdvances": "Сыйақылар мен аванстар",
-    "bonusesAndAdvancesCompact": "Сыйақылар + аванстар",
+    "bonusesAndAdvancesCompact": "Авн.+Сый.",
     "advance": "Аванс",
     "bonus": "Сыйақы",
     "bonusCompact": "Сыйақ.",

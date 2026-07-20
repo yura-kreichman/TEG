@@ -7,6 +7,7 @@ import { ArrowDown, ArrowUp, Building2, ChevronLeft, ChevronRight, Frown, MapPin
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
+import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import {
   Select,
   SelectTrigger,
@@ -620,16 +621,25 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
           )}
         >
           <div>
-            <div className="text-caption-airbnb">{t.reports.cashLabel}</div>
+            <div className="flex items-center gap-1 text-caption-airbnb">
+              <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+              {t.reports.cashLabel}
+            </div>
             <div className="text-[1rem] font-bold"><Money value={data.cash} /></div>
           </div>
           <div>
-            <div className="text-caption-airbnb">{t.reports.mobileLabel}</div>
+            <div className="flex items-center gap-1 text-caption-airbnb">
+              <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+              {t.reports.mobileLabel}
+            </div>
             <div className="text-[1rem] font-bold"><Money value={data.mobile} /></div>
           </div>
           {data.abonement > 0 && (
             <div>
-              <div className="text-caption-airbnb">{t.reports.abonementLabel}</div>
+              <div className="flex items-center gap-1 text-caption-airbnb">
+                <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
+                {t.reports.abonementLabel}
+              </div>
               <div className="text-[1rem] font-bold"><Money value={data.abonement} /></div>
             </div>
           )}
@@ -650,10 +660,12 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
               <p className="text-caption-airbnb text-muted-foreground">{t.money.abonementSoldHint}</p>
             </div>
             <div className="flex min-w-0 shrink-0 flex-col items-end gap-0.5 text-right text-caption-airbnb tabular-nums">
-              <span>
+              <span className="inline-flex items-center gap-1">
+                <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
                 {t.reports.cashLabel}: <span className="font-bold text-foreground"><Money value={data.abonementSold.cash} /></span>
               </span>
-              <span>
+              <span className="inline-flex items-center gap-1">
+                <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
                 {t.reports.mobileLabel}:{" "}
                 <span className="font-bold text-foreground"><Money value={data.abonementSold.mobile} /></span>
               </span>

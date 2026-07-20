@@ -1311,7 +1311,7 @@
   },
   "summaryText": {
     "cash": "Կանխիկ",
-    "cashCompact": "Կանխ.",
+    "cashCompact": "Կնխ.",
     "abonement": "Մնացորդ",
     "abonementCompact": "Մնաց.",
     "abonementSold": "Բաժանորդագրությունների վաճառք",
@@ -1319,7 +1319,7 @@
     "mobile": "Անկանխիկ",
     "expenses": "Ծախսեր",
     "bonusesAndAdvances": "Պարգևատրումներ և Կանխավճարներ",
-    "bonusesAndAdvancesCompact": "Պարգևատրումներ + Կանխավճարներ",
+    "bonusesAndAdvancesCompact": "Կանխ.+Պրգ.",
     "advance": "Կանխավճար",
     "bonus": "Պարգևատրում",
     "bonusCompact": "Պարգև.",

@@ -741,7 +741,7 @@ export default function ZoneDetailPage() {
               <PressableScale>
                 <Button
                   type="button"
-                  variant="dark"
+                  variant="outline"
                   size="sm"
                   className="mt-3 w-full gap-1.5"
                   onClick={() => setCreateTariffOpen(true)}
@@ -854,7 +854,7 @@ export default function ZoneDetailPage() {
 
             <PressableScale>
               <Button
-                variant="dark"
+                variant="outline"
                 size="sm"
                 className="mt-3 w-full gap-1.5"
                 onClick={() => setCreateAssetOpen(true)}

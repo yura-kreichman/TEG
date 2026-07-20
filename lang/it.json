@@ -1311,7 +1311,7 @@
   },
   "summaryText": {
     "cash": "Contanti",
-    "cashCompact": "Cont.",
+    "cashCompact": "Cnt.",
     "abonement": "Saldo",
     "abonementCompact": "Sal.",
     "abonementSold": "Vendite abbonamenti",
@@ -1319,7 +1319,7 @@
     "mobile": "Non in contanti",
     "expenses": "Spese",
     "bonusesAndAdvances": "Bonus e Anticipi",
-    "bonusesAndAdvancesCompact": "Bonus + Anticipi",
+    "bonusesAndAdvancesCompact": "Antic.+Bonus",
     "advance": "Anticipo",
     "bonus": "Bonus",
     "bonusCompact": "Bon.",

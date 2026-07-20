@@ -3,10 +3,14 @@
 
 export const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
-export function formatDuration(minutes: number): string {
+// compact=true — "м" вместо "мин" (запрос пользователя 2026-07-20: "как
+// сейчас '12 ч 34 мин' сократи до '12 ч 34 м'"), только для компактных
+// сводок — полная сводка Закрытия смены по-прежнему пишет "мин" целиком.
+export function formatDuration(minutes: number, compact = false): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return m ? `${h} ч ${m} мин` : `${h} ч`;
+  const unit = compact ? "м" : "мин";
+  return m ? `${h} ч ${m} ${unit}` : `${h} ч`;
 }
 
 // Часовой пояс тенанта, не сырой UTC сервера (реальный баг, найден
