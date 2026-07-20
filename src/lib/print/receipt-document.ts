@@ -176,16 +176,17 @@ const RECEIPT_CSS = `
   /* Имя клиента в выписке баланса — крупнее обычного subtitle, телефон под
      ним обычным subtitle-стилем (запрос пользователя 2026-07-20). */
   .receipt-subtitle-name { font-size: 15px; font-weight: 700; color: #222; margin-top: 2px; }
-  /* Компактная шапка (запрос пользователя 2026-07-20) — только перестановка:
+  /* Компактная шапка (запрос пользователя 2026-07-20) — в основе перестановка:
      лого слева, название тенанта + заголовок документа справа от него, а не
      раскладка сверху вниз по центру — короче по высоте, заметно на
-     термопринтере. Размеры лого и текстов НЕ меняются (запрос пользователя
-     2026-07-20: "не уменьшай размер логотипа и текстов, просто перенеси") —
-     только layout/отступы, шрифты/max-width/max-height те же, что в обычной
-     шапке. */
+     термопринтере. Текст остаётся того же размера, что в обычной шапке
+     (первый запрос: "не уменьшай размер логотипа и текстов, просто
+     перенеси") — единственное сознательное исключение из этого правила,
+     добавленное позже отдельным запросом: лого именно в компактном режиме
+     на 10% меньше (162x81 вместо 180x90), текст без изменений. */
   .receipt-header-compact { text-align: left; }
   .receipt-header-compact .receipt-header-row { display: flex; align-items: center; gap: 10px; }
-  .receipt-header-compact .receipt-logo { margin: 0; flex-shrink: 0; }
+  .receipt-header-compact .receipt-logo { max-width: 162px; max-height: 81px; margin: 0; flex-shrink: 0; }
   .receipt-header-compact .receipt-header-text { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
   .receipt-header-compact .receipt-title { margin-top: 0; }
   .receipt-header-compact .receipt-subtitle,
