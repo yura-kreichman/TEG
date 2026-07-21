@@ -13,6 +13,7 @@ import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { StatusChip } from "@/components/status-chip";
+import { ActiveStatusIcon } from "@/components/active-status-icon";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { OpenShiftBadge } from "@/components/open-shift-badge";
 import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
@@ -83,6 +84,24 @@ export default function OperatorsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ direction }),
     });
+    await loadOperators();
+  }
+
+  // Активация/деактивация прямо по тапу на иконке статуса (запрос
+  // пользователя 2026-07-22) — тот же путь, что уже был у переключателя в
+  // operators/[id]/settings/page.tsx (handleToggleActive): деактивация —
+  // отдельный роут (там же и будущие проверки вроде открытой смены),
+  // активация — обычный PATCH active:true.
+  async function toggleOperatorActive(operator: OperatorInfo) {
+    if (operator.active) {
+      await fetch(`/api/operators/${operator.id}/deactivate`, { method: "POST" });
+    } else {
+      await fetch(`/api/operators/${operator.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: true }),
+      });
+    }
     await loadOperators();
   }
 
@@ -175,9 +194,12 @@ export default function OperatorsPage() {
                 </div>
                 <div className="flex min-w-0 grow flex-wrap items-center gap-1.5">
                   <span className="text-card-title">{operator.name}</span>
-                  <StatusChip variant={operator.active ? "accent" : "warning"}>
-                    {operator.active ? t.operators.active : t.operators.inactive}
-                  </StatusChip>
+                  <ActiveStatusIcon
+                    active={operator.active}
+                    activeLabel={t.operators.active}
+                    inactiveLabel={t.operators.inactive}
+                    onToggle={() => toggleOperatorActive(operator)}
+                  />
                 </div>
                 {showMove && (
                   <div className="flex shrink-0 flex-col" onClick={(e) => e.stopPropagation()}>

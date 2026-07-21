@@ -22,6 +22,15 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/goods/[id]
   }
 
   const body = await request.json().catch(() => ({}));
+
+  // Частичное обновление (тот же приём, что /api/points/[id]) — запрос
+  // пользователя 2026-07-22: быстрый тап по иконке статуса шлёт только
+  // {active}, без остальных полей формы редактирования.
+  if (Object.keys(body).length === 1 && typeof body.active === "boolean") {
+    await prisma.goods.update({ where: { id }, data: { active: body.active } });
+    return NextResponse.json({ ok: true });
+  }
+
   const categoryId: string = typeof body.categoryId === "string" ? body.categoryId : goods.categoryId;
   const name: string = typeof body.name === "string" ? body.name.trim() : "";
   const price = Number(body.price);

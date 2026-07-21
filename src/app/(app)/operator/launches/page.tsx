@@ -17,6 +17,7 @@ import { isLaunchesZone } from "@/lib/results-calc";
 import { unlockBeep, playConfirmChime } from "@/lib/beep";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
+import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -170,6 +171,10 @@ export default function LaunchesZonePage() {
     loadZones();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Держит список зон/активов/тарифов свежим, пока экран часами не покидают
+  // (запрос пользователя 2026-07-22).
+  useLiveRefetch(loadZones);
 
   useEffect(() => {
     if (zones.length === 0) return;

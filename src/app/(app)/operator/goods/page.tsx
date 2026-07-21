@@ -31,6 +31,7 @@ import { PrintButton } from "@/components/print/print-button";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
+import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -147,6 +148,11 @@ export default function GoodsPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Держит каталог свежим, пока экран часами не покидают (запрос
+  // пользователя 2026-07-22) — деактивация/активация товара Владельцем
+  // должна отразиться у Сотрудника без перезахода на экран.
+  useLiveRefetch(load);
 
   const filteredGoods = useMemo(() => {
     const q = query.trim().toLowerCase();

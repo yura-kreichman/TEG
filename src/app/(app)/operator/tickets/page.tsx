@@ -18,6 +18,7 @@ import { useTicketsCart } from "@/components/operator-cart-context";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
+import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import { openPrintDocument, type PrintDocumentData } from "@/lib/print/receipt-document";
 import { isTicketsZone } from "@/lib/results-calc";
 import { unlockBeep, playErrorChime, playSaveDing } from "@/lib/beep";
@@ -108,7 +109,7 @@ export default function TicketsZonePage() {
   const [tab, setTab] = useState<Tab>("sell");
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  function loadContext() {
     fetch("/api/operator/submission-context")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -149,8 +150,17 @@ export default function TicketsZonePage() {
         if (!access) setTab("orders");
         setLoading(false);
       });
+  }
+
+  useEffect(() => {
+    loadContext();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Держит доступ к зонам/тумблеру продажи свежим, пока экран часами не
+  // покидают (запрос пользователя 2026-07-22) — Владелец мог снять доступ к
+  // зоне или тумблер "Продажа билетов" без ведома оператора за терминалом.
+  useLiveRefetch(loadContext);
 
   const zone = zones.find((z) => z.id === zoneId) ?? null;
 
@@ -867,22 +877,41 @@ export default function TicketsZonePage() {
               {variantSheetAsset.ticketVariants.map((v) => {
                 const qty = cart[cartKey(variantSheetAsset.id, v.id)] ?? 0;
                 return (
-                  <PressableScale key={v.id} className="relative">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setQuantity(variantSheetAsset.id, v.id, qty + 1)}
-                      className="h-12 w-full justify-between font-semibold"
-                    >
-                      <span>{v.name}</span>
-                      <Money value={v.price} />
-                    </Button>
+                  <div key={v.id} className="flex items-center gap-2">
+                    <PressableScale className="relative flex-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setQuantity(variantSheetAsset.id, v.id, qty + 1)}
+                        className="h-12 w-full justify-between font-semibold"
+                      >
+                        <span>{v.name}</span>
+                        <Money value={v.price} />
+                      </Button>
+                      {qty > 0 && (
+                        <span className="absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-primary text-base font-extrabold text-primary-foreground shadow-md">
+                          {qty}
+                        </span>
+                      )}
+                    </PressableScale>
+                    {/* Минус рядом с плюсом (запрос пользователя 2026-07-22:
+                        "тап это плюс... должна быть рядом кнопка минус, чтобы
+                        отредактировать или удалить при лишнем тапе") — без
+                        неё поправить случайный лишний тап можно было только
+                        уйдя в Корзину отдельным экраном. */}
                     {qty > 0 && (
-                      <span className="absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-primary text-base font-extrabold text-primary-foreground shadow-md">
-                        {qty}
-                      </span>
+                      <PressableScale>
+                        <button
+                          type="button"
+                          aria-label={t.common.delete}
+                          onClick={() => setQuantity(variantSheetAsset.id, v.id, qty - 1)}
+                          className="flex size-12 shrink-0 items-center justify-center rounded-control border border-border"
+                        >
+                          <Minus className="size-4" />
+                        </button>
+                      </PressableScale>
                     )}
-                  </PressableScale>
+                  </div>
                 );
               })}
             </div>

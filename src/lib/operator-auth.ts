@@ -93,9 +93,17 @@ export async function getActivatedPoint() {
  * attributed to a specific operator to lock out — see PointDevice's own
  * failedPinAttempts/pinLockedUntil for the actual lockout, applied by the caller.
  */
+// НЕ фильтрует по active — реальный баг, найден пользователем 2026-07-22
+// (после того как деактивация Сотрудника стала доступна одним тапом на
+// иконке статуса в списке/профиле, гораздо легче деактивировать по
+// случайности, чем раньше через отдельную настройку): раньше деактивированный
+// Сотрудник с ПРАВИЛЬНЫМ ПИН-кодом получал то же "Неверный ПИН-код", что и
+// при реальной ошибке ввода — неотличимо снаружи. Вызывающий роут
+// (/api/auth/operator/login) теперь сам проверяет operator.active и
+// показывает точную причину.
 export async function findOperatorByPin(tenantId: string, pin: string) {
   const operators = await prisma.operator.findMany({
-    where: { tenantId, active: true },
+    where: { tenantId },
   });
 
   for (const operator of operators) {

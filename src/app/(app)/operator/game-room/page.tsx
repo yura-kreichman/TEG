@@ -15,6 +15,7 @@ import { Money } from "@/components/money";
 import { PrintButton } from "@/components/print/print-button";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
+import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { isStaysZone } from "@/lib/results-calc";
 import { estimateLiveAmount, formatMMSS, type LaunchPricingMode, type LaunchRoundingMode } from "@/lib/game-room-client";
@@ -231,6 +232,11 @@ export default function StaysZonePage() {
     loadZones();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Держит список зон/активов свежим, пока экран часами не покидают (запрос
+  // пользователя 2026-07-22) — не трогает сами живые пуски (loadLaunches
+  // отдельно), только состав зон/активов/тумблеров.
+  useLiveRefetch(loadZones);
 
   const allAssets: AssetWithZone[] = useMemo(
     () => zones.flatMap((z) => z.assets.map((a) => ({ ...a, zoneId: z.id, zoneName: z.name }))),

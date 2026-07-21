@@ -25,8 +25,11 @@ export async function GET() {
       where: { tenantId: ctx.operator.tenantId, deletedAt: null },
       orderBy: { order: "asc" },
     }),
+    // active: true — временно приостановленный товар (запрос пользователя
+    // 2026-07-22, тот же принцип, что у Asset) не должен предлагаться
+    // Сотруднику к продаже, хотя Владелец продолжает видеть его в каталоге.
     prisma.goods.findMany({
-      where: { tenantId: ctx.operator.tenantId, deletedAt: null },
+      where: { tenantId: ctx.operator.tenantId, deletedAt: null, active: true },
     }),
     prisma.goodsStock.findMany({
       where: { pointId: ctx.point.id },

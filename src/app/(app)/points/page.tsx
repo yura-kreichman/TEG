@@ -10,7 +10,6 @@ import {
   Link2,
   ImagePlus,
   ChevronRight,
-  CircleCheckBig,
   MapPin,
   Pause,
   Play,
@@ -33,12 +32,15 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconPicker, IconPickerSheet } from "@/components/icon-picker";
 import { KebabButton, ActionSheetItem, IconActionButton } from "@/components/kebab-menu";
-import { StatusChip } from "@/components/status-chip";
+import { ActiveStatusIcon } from "@/components/active-status-icon";
+import { ActionToast } from "@/components/action-toast";
 import { TileIcon } from "@/components/tile-icon";
 import { QrCode } from "@/components/qr-code";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useActionToast } from "@/hooks/use-action-toast";
+import { playSaveDing } from "@/lib/beep";
 
 interface PointDeviceInfo {
   id: string;
@@ -95,6 +97,7 @@ export default function PointsPage() {
   const t = useI18n();
   const [checking, setChecking] = useState(true);
   const [points, setPoints] = useState<PointInfo[]>([]);
+  const { message: toastMessage, variant: toastVariant, flash: flashToast } = useActionToast();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
@@ -334,15 +337,23 @@ export default function PointsPage() {
     await loadPoints();
   }
 
-  async function togglePointActive() {
-    if (!pointKebab) return;
-    await fetch(`/api/points/${pointKebab.id}`, {
+  // Принимает точку напрямую, а не только через pointKebab (запрос
+  // пользователя 2026-07-22: иконка статуса в самом списке тоже кликабельна,
+  // без захода в кебаб-меню) — кебаб-пункт "Деактивировать"/"Активировать"
+  // продолжает работать через тот же вызов с pointKebab.
+  async function togglePointActive(point: PointInfo) {
+    const nextActive = !point.active;
+    await fetch(`/api/points/${point.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: !pointKebab.active }),
+      body: JSON.stringify({ active: nextActive }),
     });
     setPointKebab(null);
     await loadPoints();
+    // Сообщение по типу "Заказ не найден" у Сотрудника (запрос пользователя
+    // 2026-07-22) — подтверждает результат тапа по иконке статуса.
+    playSaveDing();
+    flashToast(nextActive ? t.points.pointActiveChip : t.points.pointInactiveChip, nextActive ? "success" : "error");
   }
 
   async function confirmDeletePoint() {
@@ -423,6 +434,7 @@ export default function PointsPage() {
 
   return (
     <OwnerShell>
+      <ActionToast message={toastMessage} variant={toastVariant} />
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-1">
           <div className="flex items-start justify-between gap-3">
@@ -458,16 +470,20 @@ export default function PointsPage() {
                                 Чип статуса — в одном ряду с подписью зон, не с
                                 названием — длинное название точки иначе
                                 сжималось из-за соседнего чипа. */}
-                            <p className="flex flex-wrap items-center gap-1.5 text-caption-airbnb">
+                            {/* div, не p — ActiveStatusIcon оборачивает кнопку в
+                                PressableScale (motion.div), а div внутри p
+                                невалиден и молча обрывает тег раньше времени. */}
+                            <div className="flex flex-wrap items-center gap-1.5 text-caption-airbnb">
                               <span>
                                 {point.zonesCount} {t.points.zonesSuffix}
                               </span>
-                              {point.active ? (
-                                <StatusChip>{t.points.pointActiveChip}</StatusChip>
-                              ) : (
-                                <StatusChip variant="neutral">{t.points.pointInactiveChip}</StatusChip>
-                              )}
-                            </p>
+                              <ActiveStatusIcon
+                                active={point.active}
+                                activeLabel={t.points.pointActiveChip}
+                                inactiveLabel={t.points.pointInactiveChip}
+                                onToggle={() => togglePointActive(point)}
+                              />
+                            </div>
                           </div>
                           <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
                         </Link>
@@ -488,15 +504,22 @@ export default function PointsPage() {
                                     {device.label ?? t.points.unnamedDevice}
                                     {/* Иконка вместо текстовой плашки (запрос пользователя
                                         2026-07-21) — тот же приём, что у Роуминга/Есть
-                                        принтера ниже: активация не требует отдельного слова. */}
-                                    {device.activated && (
-                                      <CircleCheckBig
-                                        className="size-4 shrink-0 text-success"
-                                        aria-label={t.points.deviceActivated}
-                                      >
-                                        <title>{t.points.deviceActivated}</title>
-                                      </CircleCheckBig>
-                                    )}
+                                        принтера ниже: активация не требует отдельного слова.
+                                        square-check-big вместо circle-check-big и видна ВСЕГДА,
+                                        не только когда активно (запрос пользователя 2026-07-22:
+                                        единообразная иконка активности по всему проекту) —
+                                        неактивированное устройство теперь тоже помечено, серым
+                                        triangle-alert, а не молчанием, как раньше. Без onToggle
+                                        (не кнопка) — активация устройства это claim самим
+                                        оператором через код на физическом устройстве, у
+                                        Владельца нет действия "активировать"/"деактивировать"
+                                        устройство напрямую (есть только переименование и
+                                        удаление), поэтому тут просто индикатор. */}
+                                    <ActiveStatusIcon
+                                      active={device.activated}
+                                      activeLabel={t.points.deviceActivated}
+                                      inactiveLabel={t.points.deviceAwaiting}
+                                    />
                                     {/* Иконки вместо текстовых плашек (запрос пользователя
                                         2026-07-20) — Роуминг/Есть принтер не требуют
                                         отдельного слова, компактнее рядом с названием. */}
@@ -672,7 +695,7 @@ export default function PointsPage() {
             <ActionSheetItem icon={MapPin} onClick={openLocationView}>
               {t.points.editLocationAction}
             </ActionSheetItem>
-            <ActionSheetItem icon={pointKebab.active ? Pause : Play} onClick={togglePointActive}>
+            <ActionSheetItem icon={pointKebab.active ? Pause : Play} onClick={() => togglePointActive(pointKebab)}>
               {pointKebab.active ? t.points.deactivatePoint : t.points.activatePoint}
             </ActionSheetItem>
             <ActionSheetItem icon={Trash2} destructive onClick={() => setPointKebabView("confirm-delete")}>

@@ -19,6 +19,8 @@ import { IconPicker, IconPickerSheet, AssetOrZoneIcon } from "@/components/icon-
 import { EmojiPickerSheet } from "@/components/emoji-picker";
 import { KebabButton, ActionSheetItem, IconActionButton } from "@/components/kebab-menu";
 import { StatusChip } from "@/components/status-chip";
+import { ActiveStatusIcon } from "@/components/active-status-icon";
+import { ActionToast } from "@/components/action-toast";
 import { TileIcon } from "@/components/tile-icon";
 import { FilePickerButton } from "@/components/file-picker-button";
 import { useI18n, useCurrency, useLocale } from "@/components/i18n-provider";
@@ -32,6 +34,8 @@ import { cn, colorTagGradient } from "@/lib/utils";
 import { ColorTagPicker } from "@/components/color-tag-picker";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useActionToast } from "@/hooks/use-action-toast";
+import { playSaveDing } from "@/lib/beep";
 import type { Dictionary } from "@/lib/i18n";
 
 // "stays"/"tickets" — самостоятельные режимы учёта, рядоположные остальным
@@ -215,6 +219,7 @@ export default function ZoneDetailPage() {
   const currencySign = getCurrencySign(useCurrency());
   const [zone, setZone] = useState<ZoneDetail | null>(null);
   const [checking, setChecking] = useState(true);
+  const { message: toastMessage, variant: toastVariant, flash: flashToast } = useActionToast();
 
   const [ticketLifetimeInput, setTicketLifetimeInput] = useState("");
   const { saved: ticketLifetimeSaved, pulse: ticketLifetimePulse } = useSavePulse();
@@ -362,13 +367,16 @@ export default function ZoneDetailPage() {
 
   async function toggleZoneActive() {
     if (!zone) return;
+    const nextActive = !zone.active;
     await fetch(`/api/zones/${params.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: !zone.active }),
+      body: JSON.stringify({ active: nextActive }),
     });
     setZoneKebabOpen(false);
     await loadZone();
+    playSaveDing();
+    flashToast(nextActive ? t.zonesList.zoneActiveChip : t.zonesList.zoneInactiveChip, nextActive ? "success" : "error");
   }
 
   // Модуль печати (запрос пользователя 2026-07-20) — доступна ли оператору
@@ -768,13 +776,24 @@ export default function ZoneDetailPage() {
   // оператора, а становится read-only (см. operator/submit/page.tsx).
   async function toggleAssetActive() {
     if (!assetKebab) return;
-    await fetch(`/api/assets/${assetKebab.id}`, {
+    await toggleAssetActiveFor(assetKebab);
+    setAssetKebab(null);
+  }
+
+  // Принимает актив напрямую, а не только через assetKebab (запрос
+  // пользователя 2026-07-22: иконка статуса прямо в строке актива, без
+  // захода в кебаб-меню) — тот же принцип, что togglePointActive/
+  // toggleZoneActive выше.
+  async function toggleAssetActiveFor(asset: AssetInfo) {
+    const nextActive = !asset.active;
+    await fetch(`/api/assets/${asset.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: !assetKebab.active }),
+      body: JSON.stringify({ active: nextActive }),
     });
-    setAssetKebab(null);
     await loadZone();
+    playSaveDing();
+    flashToast(nextActive ? t.zoneDetail.assetActiveChip : t.zoneDetail.assetInactiveChip, nextActive ? "success" : "error");
   }
 
   if (checking) return null;
@@ -827,6 +846,7 @@ export default function ZoneDetailPage() {
 
   return (
     <OwnerShell>
+      <ActionToast message={toastMessage} variant={toastVariant} />
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-6">
           <div>
@@ -834,18 +854,28 @@ export default function ZoneDetailPage() {
               ← {t.zonesList.title} · {zone.pointName}
             </Link>
             <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3.5">
+              {/* Серым целиком — иконка, название, чипы — когда зона
+                  деактивирована (запрос пользователя 2026-07-22), тот же
+                  приём, что уже был у карточек зон/активов в списках. */}
+              <div className={cn("flex items-center gap-3.5", !zone.active && "grayscale")}>
                 <TileIcon iconKey={zone.iconKey} emoji={zone.telegramEmoji} size="lg" />
                 <div>
                   <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{zone.name}</h1>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <StatusChip dot={false}>
-                      <HeaderModeIcon className="size-4 shrink-0" />
+                      <HeaderModeIcon className="size-5 shrink-0" />
                       {t.zonesList.modeChip[zone.accountingMode]}
                     </StatusChip>
-                    {!zone.active && (
-                      <StatusChip variant="neutral">{t.zonesList.zoneInactiveChip}</StatusChip>
-                    )}
+                    {/* Иконка статуса видна всегда, не только когда неактивна
+                        (запрос пользователя 2026-07-22: единообразная
+                        иконка активности по всему проекту) — кликабельна,
+                        переключает активность зоны напрямую. */}
+                    <ActiveStatusIcon
+                      active={zone.active}
+                      activeLabel={t.zonesList.zoneActiveChip}
+                      inactiveLabel={t.zonesList.zoneInactiveChip}
+                      onToggle={toggleZoneActive}
+                    />
                   </div>
                 </div>
               </div>
@@ -1036,6 +1066,15 @@ export default function ZoneDetailPage() {
                   <div>
                     <div className="flex items-center gap-1.5">
                       <div className="text-card-title">{asset.name}</div>
+                      {/* Быстрая активация/деактивация прямо в строке
+                          (запрос пользователя 2026-07-22) — тот же
+                          компонент, что у Точки/Зоны/Сотрудника. */}
+                      <ActiveStatusIcon
+                        active={asset.active}
+                        activeLabel={t.zoneDetail.assetActiveChip}
+                        inactiveLabel={t.zoneDetail.assetInactiveChip}
+                        onToggle={() => toggleAssetActiveFor(asset)}
+                      />
                     </div>
                     {zone.accountingMode === "counters" && asset.lastReadings.length > 0 && (
                       <p className="text-body-airbnb tabular-nums">

@@ -26,6 +26,12 @@ export async function POST(request: Request) {
   if (!operator) {
     return NextResponse.json({ error: "Неверный ПИН-код" }, { status: 401 });
   }
+  // ПИН верный, но Сотрудник деактивирован — отдельная причина, не "неверный
+  // ПИН" (реальный баг, найден пользователем 2026-07-22, см. комментарий у
+  // findOperatorByPin).
+  if (!operator.active) {
+    return NextResponse.json({ error: "Сотрудник деактивирован. Обратитесь к владельцу." }, { status: 403 });
+  }
 
   await createOperatorSession(operator.id);
 

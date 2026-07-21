@@ -18,7 +18,7 @@ import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconActionButton } from "@/components/kebab-menu";
-import { StatusChip } from "@/components/status-chip";
+import { ActiveStatusIcon } from "@/components/active-status-icon";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useI18n } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
@@ -229,6 +229,23 @@ export default function OperatorCardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [granularity, anchor]);
 
+  // Активация/деактивация прямо по тапу на иконке статуса в шапке (запрос
+  // пользователя 2026-07-22) — тот же путь, что уже у переключателя в
+  // operators/[id]/settings/page.tsx (handleToggleActive).
+  async function toggleActive() {
+    if (!profile) return;
+    if (profile.active) {
+      await fetch(`/api/operators/${params.id}/deactivate`, { method: "POST" });
+    } else {
+      await fetch(`/api/operators/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: true }),
+      });
+    }
+    await loadAll();
+  }
+
   function isCurrentPeriod() {
     return isCurrentPeriodFor(granularity, anchor);
   }
@@ -438,9 +455,12 @@ export default function OperatorCardPage() {
               <div className="min-w-0 grow">
                 <h1 className="text-card-title">{profile.name}</h1>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                  <StatusChip variant={profile.active ? "accent" : "warning"}>
-                    {profile.active ? t.operators.active : t.operators.inactive}
-                  </StatusChip>
+                  <ActiveStatusIcon
+                    active={profile.active}
+                    activeLabel={t.operators.active}
+                    inactiveLabel={t.operators.inactive}
+                    onToggle={toggleActive}
+                  />
                 </div>
               </div>
               {moduleEnabled && balance && (

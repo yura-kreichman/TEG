@@ -10,6 +10,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n } from "@/components/i18n-provider";
 import { isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { unlockBeep, playBeep } from "@/lib/beep";
+import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import { cn } from "@/lib/utils";
 
 const EXPIRY_POLL_MS = 6000;
@@ -50,8 +51,7 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
   const [hasZones, setHasZones] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
+  function loadSubmissionContext() {
     fetch("/api/operator/submission-context")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -72,8 +72,20 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
         setHasZones(zones.length > 0);
       })
       .catch(() => {});
+  }
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    loadSubmissionContext();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Держит состав нижнего бара свежим, пока устройство-терминал часами не
+  // покидает этот экран (запрос пользователя 2026-07-22) — если Владелец
+  // снял доступ к зоне/тумблер продажи, пункт бара должен пропасть без
+  // перезахода.
+  useLiveRefetch(loadSubmissionContext);
 
   const hidden = pathname === "/operator/login" || pathname.startsWith("/operator/submit");
 

@@ -974,6 +974,14 @@ model Goods {
   // ведут — trackStock=false, GoodsStock для них не создаётся вовсе.
   trackStock        Boolean @default(true)
 
+  // Временная пауза (запрос пользователя 2026-07-22, тот же принцип, что у
+  // Asset.active — не путать с deletedAt ниже, тот необратим и рвёт связь с
+  // прошлыми продажами; active — временно, товар остаётся в каталоге и
+  // отчётах Владельца, просто прячется из экрана продажи Сотрудника, пока
+  // снова не включат). Default true — у существующих товаров ничего не
+  // меняется.
+  active Boolean @default(true)
+
   sortOrder Int       @default(0)
   // Soft-delete (паттерн Tariff/Abonement) — прошлые GoodsSale/GoodsStock
   // должны продолжать ссылаться на товар, которым когда-то торговали.

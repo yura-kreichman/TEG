@@ -35,6 +35,7 @@ export async function GET() {
       price: Number(g.price),
       lowStockThreshold: g.lowStockThreshold,
       trackStock: g.trackStock,
+      active: g.active,
       sortOrder: g.sortOrder,
       quantity: g.trackStock ? quantityByGoodsId.get(g.id) ?? 0 : null,
     })),

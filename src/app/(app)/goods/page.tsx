@@ -32,13 +32,17 @@ import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconActionButton } from "@/components/kebab-menu";
+import { ActiveStatusIcon } from "@/components/active-status-icon";
+import { ActionToast } from "@/components/action-toast";
 import { FilePickerButton } from "@/components/file-picker-button";
 import { Money } from "@/components/money";
 import { useI18n, useLocale } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useActionToast } from "@/hooks/use-action-toast";
 import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { compressImageFile } from "@/lib/client-image";
 import { formatMoneyCompact } from "@/lib/format";
+import { playSaveDing } from "@/lib/beep";
 import { cn } from "@/lib/utils";
 
 interface CategoryInfo {
@@ -55,6 +59,7 @@ interface GoodsInfo {
   price: number;
   lowStockThreshold: number | null;
   trackStock: boolean;
+  active: boolean;
   quantity: number | null;
 }
 
@@ -379,6 +384,7 @@ export default function GoodsCabinetPage() {
   const [categories, setCategories] = useState<CategoryInfo[]>([]);
   const [goods, setGoods] = useState<GoodsInfo[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
+  const { message: toastMessage, variant: toastVariant, flash: flashToast } = useActionToast();
 
   // Управление категориями — тот же паттерн, что у категорий расходов
   // (/money/expenses, запрос пользователя 2026-07-19: "должно быть, как и в
@@ -418,6 +424,22 @@ export default function GoodsCabinetPage() {
     loadCatalog();
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Быстрая пауза/возобновление прямо по тапу на иконке статуса (запрос
+  // пользователя 2026-07-22) — тот же принцип, что у Точки/Зоны/Актива/
+  // Сотрудника. PATCH теперь поддерживает частичное тело {active} отдельно
+  // от полной формы редактирования (см. комментарий в /api/goods/[id]).
+  async function toggleGoodsActive(goods: GoodsInfo) {
+    const nextActive = !goods.active;
+    await fetch(`/api/goods/${goods.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active: nextActive }),
+    });
+    await loadCatalog();
+    playSaveDing();
+    flashToast(nextActive ? t.goods.goodsActiveChip : t.goods.goodsInactiveChip, nextActive ? "success" : "error");
+  }
 
   function openCategories() {
     setEditingCategoryId(null);
@@ -1003,6 +1025,7 @@ export default function GoodsCabinetPage() {
 
   return (
     <OwnerShell>
+      <ActionToast message={toastMessage} variant={toastVariant} />
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl flex-col gap-4">
           <h1 className="text-screen-title">{t.goods.navLabel}</h1>
@@ -1042,7 +1065,7 @@ export default function GoodsCabinetPage() {
                       {(goodsByCategory.get(c.id) ?? []).map((g) => {
                         const low = g.trackStock && g.lowStockThreshold !== null && (g.quantity ?? 0) <= g.lowStockThreshold;
                         return (
-                        <div key={g.id} className="flex items-center gap-3">
+                        <div key={g.id} className={cn("flex items-center gap-3", !g.active && "grayscale")}>
                           <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-control bg-primary/10">
                             {g.photoUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
@@ -1060,7 +1083,16 @@ export default function GoodsCabinetPage() {
                           <p className="shrink-0 tabular-nums text-body-airbnb font-semibold text-foreground">
                             <Money value={g.price} />
                           </p>
+                          {/* Иконка статуса — рядом с "изменить"/"удалить"
+                              (запрос пользователя 2026-07-22), не рядом с
+                              названием. */}
                           <div className="flex shrink-0 items-center gap-1.5">
+                            <ActiveStatusIcon
+                              active={g.active}
+                              activeLabel={t.goods.goodsActiveChip}
+                              inactiveLabel={t.goods.goodsInactiveChip}
+                              onToggle={() => toggleGoodsActive(g)}
+                            />
                             <IconActionButton icon={Pencil} onClick={() => openEditGoods(g)} label={t.goods.editGoodsAction} />
                             <IconActionButton icon={Trash2} onClick={() => openArchiveGoods(g)} label={t.goods.archiveGoodsAction} destructive />
                           </div>
