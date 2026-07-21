@@ -12,6 +12,8 @@ import {
   Plus,
   Search,
   ShoppingBag,
+  ShoppingCart,
+  Trash2,
   Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,6 +25,7 @@ import { SaveButton } from "@/components/ui/save-button";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
+import { useGoodsCart } from "@/components/operator-cart-context";
 import { Money } from "@/components/money";
 import { PrintButton } from "@/components/print/print-button";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
@@ -82,18 +85,23 @@ export default function GoodsPage() {
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>(ALL_CATEGORIES);
 
-  const [saleTarget, setSaleTarget] = useState<{ goodsId: string; quantity: number } | null>(null);
-  const [abonementTarget, setAbonementTarget] = useState<{ goodsId: string; quantity: number; amount: number } | null>(
-    null
-  );
+  // Корзина — тот же принцип, что у Билетов (запрос пользователя 2026-07-21:
+  // "такой же принцип корзины должен быть в Товарах, а то сейчас можно
+  // продавать только по одному товару"), в общем контексте на уровне
+  // operator/layout.tsx — переживает переключение вкладок нижнего бара. Тап
+  // по тайлу добавляет 1 сразу (без промежуточного sheet количества),
+  // корректировка — степперами в sheet корзины.
+  const goodsCart = useGoodsCart();
+  const [cartSheetOpen, setCartSheetOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [abonementTarget, setAbonementTarget] = useState<{ amount: number } | null>(null);
   // Модуль печати (запрос пользователя 2026-07-20) — квитанция по факту,
   // кнопка появляется в маленьком sheet сразу после успешной продажи,
   // никогда не печатается автоматически (оператор каждый раз решает сам).
-  const [lastSale, setLastSale] = useState<{
-    goodsName: string;
-    quantity: number;
-    price: number;
-    amount: number;
+  // Теперь несколько позиций за раз (корзина), не одна.
+  const [lastOrder, setLastOrder] = useState<{
+    items: { goodsName: string; quantity: number; price: number; amount: number }[];
+    total: number;
     paymentMethod: "cash" | "mobile" | "abonement";
   } | null>(null);
   const printAvailable = useOperatorPrintAvailable();
@@ -149,37 +157,51 @@ export default function GoodsPage() {
     });
   }, [goods, query, categoryFilter]);
 
-  const saleGoods = saleTarget ? (goods.find((g) => g.id === saleTarget.goodsId) ?? null) : null;
-  const saleAmount = saleGoods && saleTarget ? saleGoods.price * saleTarget.quantity : 0;
+  const currentCartLines = Object.entries(goodsCart.cart)
+    .filter(([, quantity]) => quantity > 0)
+    .map(([goodsId, quantity]) => {
+      const g = goods.find((x) => x.id === goodsId);
+      return g ? { goodsId, name: g.name, photoUrl: g.photoUrl, price: g.price, quantity } : null;
+    })
+    .filter((l): l is { goodsId: string; name: string; photoUrl: string | null; price: number; quantity: number } => l !== null);
+  const cartCount = currentCartLines.reduce((sum, l) => sum + l.quantity, 0);
+  const cartTotal = currentCartLines.reduce((sum, l) => sum + l.price * l.quantity, 0);
 
-  async function sell(paymentMethod: "cash" | "mobile" | "abonement", walletId?: string) {
-    if (!saleTarget && !abonementTarget) return;
-    const target = abonementTarget ?? saleTarget!;
-    const soldGoods = goods.find((g) => g.id === target.goodsId);
+  async function sellCart(paymentMethod: "cash" | "mobile" | "abonement", walletId?: string) {
+    if (currentCartLines.length === 0) return;
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/operator/goods/sale", {
+      const res = await fetch("/api/operator/goods/sale/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goodsId: target.goodsId, quantity: target.quantity, paymentMethod, walletId }),
+        body: JSON.stringify({
+          items: currentCartLines.map((l) => ({ goodsId: l.goodsId, quantity: l.quantity })),
+          paymentMethod,
+          walletId,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
-      setSaleTarget(null);
-      setAbonementTarget(null);
-      if (soldGoods && printAvailable.available) {
-        setLastSale({
-          goodsName: soldGoods.name,
-          quantity: target.quantity,
-          price: soldGoods.price,
-          amount: soldGoods.price * target.quantity,
+      if (printAvailable.available) {
+        setLastOrder({
+          items: currentCartLines.map((l) => ({
+            goodsName: l.name,
+            quantity: l.quantity,
+            price: l.price,
+            amount: l.price * l.quantity,
+          })),
+          total: data.total,
           paymentMethod,
         });
       }
+      goodsCart.clearCart();
+      setCartSheetOpen(false);
+      setPaymentOpen(false);
+      setAbonementTarget(null);
       load();
     } catch {
       setError(t.operatorApp.gameRoom.networkError);
@@ -194,7 +216,11 @@ export default function GoodsPage() {
     abonement: t.reports.abonementLabel,
   };
 
-  function buildSaleReceiptData(sale: NonNullable<typeof lastSale>): PrintDocumentData {
+  // Несколько позиций в одном чеке (корзина, запрос пользователя 2026-07-21) —
+  // не N отдельных документов, как у Билетов (там билеты предъявляются и
+  // гасятся ПОШТУЧНО, товары — нет, один чек на всю покупку вполне
+  // естественен, как в обычном магазине).
+  function buildSaleReceiptData(order: NonNullable<typeof lastOrder>): PrintDocumentData {
     return {
       title: t.goods.receiptTitle,
       subtitle: `${new Date().toLocaleString(locale)}${printAvailable.operatorName ? ` · ${printAvailable.operatorName}` : ""}`,
@@ -206,12 +232,16 @@ export default function GoodsPage() {
             // конечную Сумму") — при quantity>1 это не дублирует "Итого"
             // ниже (там сумма за все единицы), а показывает то, что "Итого"
             // само по себе не объясняет.
-            { label: `${sale.goodsName} × ${sale.quantity}`, value: formatMoneyWithCurrency(sale.price, locale, currency), large: true },
-            { label: t.goods.receiptPaymentMethodLabel, value: paymentMethodLabel[sale.paymentMethod] },
+            ...order.items.map((item) => ({
+              label: `${item.goodsName} × ${item.quantity}`,
+              value: formatMoneyWithCurrency(item.price, locale, currency),
+              large: order.items.length === 1,
+            })),
+            { label: t.goods.receiptPaymentMethodLabel, value: paymentMethodLabel[order.paymentMethod] },
           ],
         },
       ],
-      totalLine: { label: t.goods.receiptTotalLabel, value: formatMoneyWithCurrency(sale.amount, locale, currency) },
+      totalLine: { label: t.goods.receiptTotalLabel, value: formatMoneyWithCurrency(order.total, locale, currency) },
     };
   }
 
@@ -370,6 +400,28 @@ export default function GoodsPage() {
                 </button>
               </PressableScale>
             )}
+            {/* Корзина — та же иконка-кнопка, что у Билетов (запрос
+                пользователя 2026-07-21: "такой же принцип корзины"), всегда
+                видна, серая пока пуста. */}
+            <PressableScale>
+              <button
+                type="button"
+                onClick={() => cartCount > 0 && setCartSheetOpen(true)}
+                disabled={cartCount === 0}
+                aria-label={t.tickets.cartTitle}
+                className={cn(
+                  "relative flex size-10 shrink-0 items-center justify-center rounded-full",
+                  cartCount > 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                )}
+              >
+                <ShoppingCart className="size-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-card text-base font-extrabold text-primary shadow-sm">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+            </PressableScale>
           </div>
         </div>
 
@@ -397,141 +449,188 @@ export default function GoodsPage() {
           // вместо фиксированных grid-cols-N: число колонок само
           // подстраивается под ширину экрана, а не по жёстким брейкпоинтам.
           <div className="grid grid-cols-[repeat(auto-fill,minmax(6.25rem,1fr))] gap-3">
-            {filteredGoods.map((g) => (
-              <PressableScale key={g.id}>
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => setSaleTarget({ goodsId: g.id, quantity: 1 })}
-                  className="flex w-full flex-col overflow-hidden rounded-card border-[1.5px] border-border bg-card text-left disabled:opacity-40"
-                >
-                  {/* Изображения товаров — 1:1 (информация пользователя
-                      2026-07-19), object-cover заполняет квадрат ровно. */}
-                  <div className="relative aspect-square w-full overflow-hidden bg-primary/10">
-                    {g.photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={g.photoUrl} alt="" className="size-full object-cover object-center" />
-                    ) : (
-                      <div className="flex size-full items-center justify-center">
-                        <ShoppingBag className="size-7 text-primary/50" />
-                      </div>
-                    )}
-                    {g.lowStock && (
-                      <span className="absolute left-1.5 top-1.5 rounded-full bg-destructive px-1.5 py-0.5 text-[0.625rem] font-bold text-white">
-                        {t.goods.lowStockBadge}
+            {filteredGoods.map((g) => {
+              const qty = goodsCart.cart[g.id] ?? 0;
+              return (
+                <PressableScale key={g.id}>
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={() => goodsCart.setQuantity(g.id, qty + 1)}
+                    className="flex w-full flex-col overflow-hidden rounded-card border-[1.5px] border-border bg-card text-left disabled:opacity-40"
+                  >
+                    {/* Изображения товаров — 1:1 (информация пользователя
+                        2026-07-19), object-cover заполняет квадрат ровно. */}
+                    <div className="relative aspect-square w-full overflow-hidden bg-primary/10">
+                      {g.photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={g.photoUrl} alt="" className="size-full object-cover object-center" />
+                      ) : (
+                        <div className="flex size-full items-center justify-center">
+                          <ShoppingBag className="size-7 text-primary/50" />
+                        </div>
+                      )}
+                      {g.lowStock && (
+                        <span className="absolute left-1.5 top-1.5 rounded-full bg-destructive px-1.5 py-0.5 text-[0.625rem] font-bold text-white">
+                          {t.goods.lowStockBadge}
+                        </span>
+                      )}
+                      {qty > 0 && (
+                        <span className="absolute right-1 top-1 flex size-8 items-center justify-center rounded-full bg-primary text-lg font-extrabold text-primary-foreground shadow-md">
+                          {qty}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 flex-col gap-0 px-2 py-1.5">
+                      <span className="truncate text-[0.8125rem] font-bold leading-tight tracking-[-0.01em]">{g.name}</span>
+                      <span className="truncate tabular-nums text-[0.75rem] font-semibold leading-tight text-primary">
+                        <Money value={g.price} />
                       </span>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 flex-col gap-0 px-2 py-1.5">
-                    <span className="truncate text-[0.8125rem] font-bold leading-tight tracking-[-0.01em]">{g.name}</span>
-                    <span className="truncate tabular-nums text-[0.75rem] font-semibold leading-tight text-primary">
-                      <Money value={g.price} />
-                    </span>
-                  </div>
-                </button>
-              </PressableScale>
-            ))}
+                    </div>
+                  </button>
+                </PressableScale>
+              );
+            })}
           </div>
         )}
 
         {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
       </div>
 
-      <BottomSheet open={saleTarget !== null} onClose={() => setSaleTarget(null)}>
-        {saleTarget && saleGoods && (
-          <div className="flex flex-col gap-4 pt-2">
-            <div className="flex items-center gap-3">
-              <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-control bg-muted">
-                {saleGoods.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={saleGoods.photoUrl} alt="" className="size-full object-contain object-center" />
-                ) : (
-                  <ShoppingBag className="size-6 text-muted-foreground" />
-                )}
+      {/* Корзина — позиции со степперами (тот же принцип, что у Билетов,
+          запрос пользователя 2026-07-21), минус на 1 убирает строку целиком. */}
+      <BottomSheet open={cartSheetOpen} onClose={() => setCartSheetOpen(false)}>
+        <div className="flex flex-col gap-3 pt-2">
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.tickets.cartTitle}</h2>
+          {currentCartLines.length === 0 ? (
+            <p className="py-4 text-center text-body-airbnb text-muted-foreground">{t.tickets.cartEmpty}</p>
+          ) : (
+            <>
+              <div className="flex max-h-[45vh] flex-col gap-2 overflow-y-auto">
+                {currentCartLines.map((l) => (
+                  <div key={l.goodsId} className="flex items-center gap-3 rounded-control bg-muted p-3">
+                    <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-control bg-card">
+                      {l.photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={l.photoUrl} alt="" className="size-full object-contain object-center" />
+                      ) : (
+                        <ShoppingBag className="size-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-body-airbnb font-semibold">{l.name}</p>
+                      <p className="text-caption-airbnb text-muted-foreground">
+                        <Money value={l.price} /> · <Money value={l.price * l.quantity} className="font-bold text-foreground" />
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2.5">
+                      <PressableScale>
+                        <button
+                          type="button"
+                          aria-label={t.common.delete}
+                          onClick={() => goodsCart.setQuantity(l.goodsId, l.quantity - 1)}
+                          className="flex size-8 items-center justify-center rounded-full border border-border"
+                        >
+                          <Minus className="size-4" />
+                        </button>
+                      </PressableScale>
+                      <span className="w-5 text-center text-body-airbnb font-extrabold tabular-nums">{l.quantity}</span>
+                      <PressableScale>
+                        <button
+                          type="button"
+                          aria-label={t.common.add}
+                          onClick={() => goodsCart.setQuantity(l.goodsId, l.quantity + 1)}
+                          className="flex size-8 items-center justify-center rounded-full border border-border"
+                        >
+                          <Plus className="size-4" />
+                        </button>
+                      </PressableScale>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="min-w-0 flex-1">
-                <h2 className="truncate text-[1.1875rem] font-extrabold tracking-[-0.01em]">{saleGoods.name}</h2>
-                <span className="text-caption-airbnb text-muted-foreground">
-                  <Money value={saleGoods.price} />
+              <div className="flex items-center justify-between rounded-control bg-muted p-3.5">
+                <span className="text-caption-airbnb text-muted-foreground">{t.goods.totalLabel}</span>
+                <span className="text-xl font-extrabold tracking-[-0.02em]">
+                  <Money value={cartTotal} />
                 </span>
               </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-body-airbnb font-semibold">{t.goods.quantityLabel}</span>
-              <div className="flex items-center gap-3">
-                <PressableScale>
-                  <button
-                    type="button"
-                    disabled={saleTarget.quantity <= 1}
-                    onClick={() => setSaleTarget((s) => (s ? { ...s, quantity: Math.max(1, s.quantity - 1) } : s))}
-                    className="flex size-10 items-center justify-center rounded-full border border-border disabled:opacity-40"
-                  >
-                    <Minus className="size-4" />
-                  </button>
-                </PressableScale>
-                <span className="w-8 text-center text-[1.1875rem] font-extrabold tabular-nums">{saleTarget.quantity}</span>
-                <PressableScale>
-                  <button
-                    type="button"
-                    onClick={() => setSaleTarget((s) => (s ? { ...s, quantity: s.quantity + 1 } : s))}
-                    className="flex size-10 items-center justify-center rounded-full border border-border"
-                  >
-                    <Plus className="size-4" />
-                  </button>
-                </PressableScale>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between rounded-control bg-muted p-3.5">
-              <span className="text-caption-airbnb text-muted-foreground">{t.goods.totalLabel}</span>
-              <span className="text-xl font-extrabold tracking-[-0.02em]">
-                <Money value={saleAmount} />
-              </span>
-            </div>
-
-            <p className="text-caption-airbnb font-semibold text-foreground">{t.operatorApp.gameRoom.paymentMethodTitle}</p>
-            <div className="flex flex-col gap-2">
-              <ConfirmButton className="relative h-12 w-full font-semibold" disabled={submitting} onConfirm={() => sell("cash")}>
-                <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                {t.operatorApp.submit.cashLabel}
-              </ConfirmButton>
-              <ConfirmButton
-                className="relative h-12 w-full font-semibold"
-                disabled={submitting}
-                onConfirm={() => sell("mobile")}
-              >
-                <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                {t.operatorApp.submit.mobileLabel}
-              </ConfirmButton>
-              {goodsAllowBalancePayment && (
-                <PressableScale>
+              <div className="flex items-stretch gap-2">
+                <PressableScale className="flex flex-1">
                   <Button
                     type="button"
-                    variant="outline"
-                    className="relative h-12 w-full font-semibold"
-                    disabled={submitting}
+                    className="h-12 w-full font-bold"
                     onClick={() => {
-                      const target = { goodsId: saleTarget.goodsId, quantity: saleTarget.quantity, amount: saleAmount };
-                      setSaleTarget(null);
-                      setAbonementTarget(target);
+                      setCartSheetOpen(false);
+                      setPaymentOpen(true);
                     }}
                   >
-                    <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                    {t.operatorApp.abonement.paymentLabel}
+                    {t.tickets.continueButton}
                   </Button>
                 </PressableScale>
-              )}
-            </div>
+                {/* Очистить корзину целиком — через "Точно?" (запрос
+                    пользователя 2026-07-21), тот же ConfirmButton, что и
+                    везде по проекту для необратимых действий. */}
+                <ConfirmButton
+                  className="h-12 shrink-0 px-3.5 text-destructive"
+                  onConfirm={() => {
+                    goodsCart.clearCart();
+                    // Пустую корзину смотреть незачем (запрос пользователя
+                    // 2026-07-21) — sheet закрывается сам сразу после "Точно?".
+                    setCartSheetOpen(false);
+                  }}
+                >
+                  <Trash2 className="size-5" />
+                  <span className="sr-only">{t.tickets.clearCartAction}</span>
+                </ConfirmButton>
+              </div>
+            </>
+          )}
+        </div>
+      </BottomSheet>
+
+      <BottomSheet open={paymentOpen} onClose={() => setPaymentOpen(false)}>
+        <div className="flex flex-col gap-3 pt-2">
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.gameRoom.paymentMethodTitle}</h2>
+          <div className="flex flex-col gap-2">
+            <ConfirmButton className="relative h-12 w-full font-semibold" disabled={submitting} onConfirm={() => sellCart("cash")}>
+              <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+              {t.operatorApp.submit.cashLabel}
+            </ConfirmButton>
+            <ConfirmButton
+              className="relative h-12 w-full font-semibold"
+              disabled={submitting}
+              onConfirm={() => sellCart("mobile")}
+            >
+              <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+              {t.operatorApp.submit.mobileLabel}
+            </ConfirmButton>
+            {goodsAllowBalancePayment && (
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="relative h-12 w-full font-semibold"
+                  disabled={submitting}
+                  onClick={() => {
+                    setPaymentOpen(false);
+                    setAbonementTarget({ amount: cartTotal });
+                  }}
+                >
+                  <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                  {t.operatorApp.abonement.paymentLabel}
+                </Button>
+              </PressableScale>
+            )}
           </div>
-        )}
+        </div>
       </BottomSheet>
 
       <AbonementPaymentSheet
         open={abonementTarget !== null}
         onClose={() => setAbonementTarget(null)}
         amount={abonementTarget?.amount ?? 0}
-        onConfirm={(walletId) => sell("abonement", walletId)}
+        onConfirm={(walletId) => sellCart("abonement", walletId)}
       />
 
       <BottomSheet
@@ -705,26 +804,39 @@ export default function GoodsPage() {
           кнопка видна только если у тенанта включена печать и на этом
           устройстве стоит принтер (useOperatorPrintAvailable); без этого
           весь sheet просто закрывается сам без лишнего экрана "Продано". */}
-      <BottomSheet open={lastSale !== null} onClose={() => setLastSale(null)}>
-        {lastSale && (
+      <BottomSheet open={lastOrder !== null} onClose={() => setLastOrder(null)}>
+        {lastOrder && (
           <div className="flex flex-col items-center gap-3 pt-2 text-center">
             <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Check className="size-6" />
             </div>
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.goods.saleDoneTitle}</h2>
-            <p className="text-body-airbnb text-muted-foreground">
-              {lastSale.goodsName} × {lastSale.quantity} · <Money value={lastSale.amount} />
-            </p>
+            <div className="flex w-full flex-col gap-1">
+              {lastOrder.items.map((item, i) => (
+                <p key={i} className="flex items-center justify-between text-body-airbnb text-muted-foreground">
+                  <span className="truncate">
+                    {item.goodsName} × {item.quantity}
+                  </span>
+                  <Money value={item.amount} className="shrink-0 font-semibold text-foreground" />
+                </p>
+              ))}
+            </div>
+            <div className="flex w-full items-center justify-between border-t border-border pt-3">
+              <span className="text-caption-airbnb text-muted-foreground">{t.goods.totalLabel}</span>
+              <span className="text-xl font-extrabold tracking-[-0.02em]">
+                <Money value={lastOrder.total} />
+              </span>
+            </div>
             {printAvailable.available && (
               <PrintButton
                 label={t.goods.printReceiptButton}
-                data={buildSaleReceiptData(lastSale)}
+                data={buildSaleReceiptData(lastOrder)}
                 branding={printAvailable.branding}
                 className="w-full gap-1.5 rounded-lg"
               />
             )}
             <PressableScale className="w-full">
-              <Button type="button" variant="outline" className="h-11 w-full rounded-lg" onClick={() => setLastSale(null)}>
+              <Button type="button" variant="outline" className="h-11 w-full rounded-lg" onClick={() => setLastOrder(null)}>
                 {t.common.close}
               </Button>
             </PressableScale>

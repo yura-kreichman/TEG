@@ -1520,6 +1520,7 @@
     "confirmVoidTicket": "Bu bilet ləğv edilsin? Bilet qiyməti üzrə geri qaytarma, bu əməliyyat geri qaytarıla bilməz.",
     "confirmVoidOrder": "Bu sifarişdəki bütün aktiv biletlər ləğv edilsin? Hər bilet üzrə geri qaytarma, bu əməliyyat geri qaytarıla bilməz.",
     "newOrderButton": "Yeni sifariş",
-    "noPriceLabel": "Qiymət yoxdur"
+    "noPriceLabel": "Qiymət yoxdur",
+    "clearCartAction": "Səbəti təmizlə"
   }
 }

@@ -702,7 +702,7 @@
     "newTariffTitle": "Новый тариф",
     "deleteTariffAction": "Удалить тариф",
     "confirmDeleteTariff": "Удалить этот тариф?",
-    "nameAndColorAction": "Название, цвет и тариф",
+    "nameAndColorAction": "Название и цветовая метка",
     "replacePhoto": "Заменить фото",
     "deleteAssetAction": "Удалить актив",
     "confirmDeleteAsset": "Удалить этот актив?",
@@ -1520,6 +1520,7 @@
     "confirmVoidTicket": "Аннулировать билет? Возврат по цене билета, действие необратимо.",
     "confirmVoidOrder": "Аннулировать все активные билеты заказа? Возврат по каждому билету, действие необратимо.",
     "newOrderButton": "Новый заказ",
-    "noPriceLabel": "Нет цены"
+    "noPriceLabel": "Нет цены",
+    "clearCartAction": "Очистить корзину"
   }
 }

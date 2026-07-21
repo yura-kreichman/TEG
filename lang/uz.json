@@ -1520,6 +1520,7 @@
     "confirmVoidTicket": "Ushbu chiptani bekor qilasizmi? Chipta narxi bo'yicha qaytarish, bu amalni ortga qaytarib bo'lmaydi.",
     "confirmVoidOrder": "Buyurtmadagi barcha faol chiptalarni bekor qilasizmi? Har bir chipta bo'yicha qaytarish, bu amalni ortga qaytarib bo'lmaydi.",
     "newOrderButton": "Yangi buyurtma",
-    "noPriceLabel": "Narxi yo'q"
+    "noPriceLabel": "Narxi yo'q",
+    "clearCartAction": "Savatni tozalash"
   }
 }

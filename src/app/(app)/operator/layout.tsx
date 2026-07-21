@@ -4,6 +4,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemeColorMeta } from "@/components/theme-color-meta";
 import { OperatorSwitchButton } from "@/components/operator-switch-button";
 import { OperatorBottomNav } from "@/components/operator-bottom-nav";
+import { TicketsCartProvider, GoodsCartProvider } from "@/components/operator-cart-context";
 import { OfflineSync } from "./offline-sync";
 
 // Переопределяет статический fallback из корневого layout.tsx (#ffffff,
@@ -33,7 +34,15 @@ export default function OperatorLayout({ children }: { children: React.ReactNode
           <OperatorSwitchButton />
           <ThemeToggle />
         </div>
-        <OperatorBottomNav>{children}</OperatorBottomNav>
+        {/* Корзины Билетов/Товаров — на уровне layout (запрос пользователя
+            2026-07-21: "не должно сбрасываться при переключении между
+            пунктами меню"), этот layout не перемонтируется между /operator/*
+            страницами, в отличие от самих страниц. */}
+        <TicketsCartProvider>
+          <GoodsCartProvider>
+            <OperatorBottomNav>{children}</OperatorBottomNav>
+          </GoodsCartProvider>
+        </TicketsCartProvider>
       </div>
     </ThemeProvider>
   );

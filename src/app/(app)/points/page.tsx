@@ -108,6 +108,7 @@ export default function PointsPage() {
   const { saved: createDeviceSaved, pulse: createDevicePulse } = useSavePulse();
   const [deviceLabel, setDeviceLabel] = useState("");
   const [deviceRoaming, setDeviceRoaming] = useState(false);
+  const [deviceHasPrinter, setDeviceHasPrinter] = useState(false);
   const [installLinks, setInstallLinks] = useState<Record<string, string>>({});
   const [qrOpenFor, setQrOpenFor] = useState<string | null>(null);
 
@@ -224,7 +225,7 @@ export default function PointsPage() {
     const res = await fetch(`/api/points/${deviceSheetPointId}/devices`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: deviceLabel, roaming: deviceRoaming }),
+      body: JSON.stringify({ label: deviceLabel, roaming: deviceRoaming, hasPrinter: deviceHasPrinter }),
     });
     const data = await res.json();
     if (res.ok) {
@@ -233,6 +234,7 @@ export default function PointsPage() {
       createDevicePulse(() => {
         setDeviceLabel("");
         setDeviceRoaming(false);
+        setDeviceHasPrinter(false);
         setDeviceSheetPointId(null);
       });
     }
@@ -640,6 +642,16 @@ export default function PointsPage() {
               <span className="mt-0.5 block text-caption-airbnb">{t.points.roamingHint}</span>
             </span>
             <Switch checked={deviceRoaming} onCheckedChange={setDeviceRoaming} className="shrink-0" />
+          </div>
+          {/* Реальный баг (запрос пользователя 2026-07-21): тумблер был только
+              в форме редактирования уже созданного устройства — при СОЗДАНИИ
+              нового его не было вовсе, значение всегда уходило false. */}
+          <div className="flex items-center justify-between rounded-control border border-border p-3">
+            <span>
+              <span className="block text-body-airbnb">{t.points.hasPrinterLabel}</span>
+              <span className="mt-0.5 block text-caption-airbnb">{t.points.hasPrinterHint}</span>
+            </span>
+            <Switch checked={deviceHasPrinter} onCheckedChange={setDeviceHasPrinter} className="shrink-0" />
           </div>
           <PressableScale>
             <SaveButton type="submit" className="h-12 w-full" saved={createDeviceSaved} />

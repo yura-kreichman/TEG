@@ -1520,6 +1520,7 @@
     "confirmVoidTicket": "Anulezi acest bilet? Se face rambursare la prețul biletului, ireversibil.",
     "confirmVoidOrder": "Anulezi toate biletele active din această comandă? Rambursare pentru fiecare bilet, ireversibil.",
     "newOrderButton": "Comandă nouă",
-    "noPriceLabel": "Fără preț"
+    "noPriceLabel": "Fără preț",
+    "clearCartAction": "Golește coșul"
   }
 }

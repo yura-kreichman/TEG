@@ -1520,6 +1520,7 @@
     "confirmVoidTicket": "Void this ticket? Refund at the ticket's price, this cannot be undone.",
     "confirmVoidOrder": "Void all active tickets in this order? Refund per ticket, this cannot be undone.",
     "newOrderButton": "New order",
-    "noPriceLabel": "No price"
+    "noPriceLabel": "No price",
+    "clearCartAction": "Clear cart"
   }
 }

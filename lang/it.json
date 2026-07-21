@@ -1520,6 +1520,7 @@
     "confirmVoidTicket": "Annullare questo biglietto? Rimborso al prezzo del biglietto, azione irreversibile.",
     "confirmVoidOrder": "Annullare tutti i biglietti attivi di questo ordine? Rimborso per ogni biglietto, azione irreversibile.",
     "newOrderButton": "Nuovo ordine",
-    "noPriceLabel": "Nessun prezzo"
+    "noPriceLabel": "Nessun prezzo",
+    "clearCartAction": "Svuota il carrello"
   }
 }

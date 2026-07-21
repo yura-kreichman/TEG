@@ -19,7 +19,7 @@ export async function POST(
     return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
   }
 
-  const { label, roaming } = await request.json().catch(() => ({ label: undefined, roaming: undefined }));
+  const { label, roaming, hasPrinter } = await request.json().catch(() => ({ label: undefined, roaming: undefined, hasPrinter: undefined }));
 
   const { token, tokenHash } = generateInstallToken();
   const device = await prisma.pointDevice.create({
@@ -27,6 +27,7 @@ export async function POST(
       pointId,
       label: typeof label === "string" && label.trim() ? label.trim() : null,
       roaming: roaming === true,
+      hasPrinter: hasPrinter === true,
       installTokenHash: tokenHash,
       installTokenExpiresAt: new Date(Date.now() + INSTALL_TOKEN_TTL_MS),
     },

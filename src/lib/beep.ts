@@ -105,3 +105,31 @@ export function playSaveDing() {
   playTone(now, 784, 0.16, 0.4); // G5
   playTone(now + 0.09, 988, 0.22, 0.45); // B5
 }
+
+// "Жужжащий" нисходящий сигнал ошибки (запрос пользователя 2026-07-21:
+// "заказ не найден... с характерным звуком ошибки") — square-волна вместо
+// синуса и нисходящий тон намеренно противопоставлены приятным
+// playConfirmChime/playSaveDing выше, читаются как "не то", не "успех".
+export function playErrorChime() {
+  if (!ctx) unlockBeep();
+  if (!ctx) return;
+  if (ctx.state === "suspended") ctx.resume();
+
+  const now = ctx.currentTime;
+  for (const [offset, freq] of [
+    [0, 220],
+    [0.14, 165],
+  ] as [number, number][]) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "square";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, now + offset);
+    gain.gain.exponentialRampToValueAtTime(0.3, now + offset + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.13);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now + offset);
+    osc.stop(now + offset + 0.15);
+  }
+}

@@ -550,7 +550,24 @@ export default function ZoneDetailPage() {
 
   async function handleAddAsset(event: FormEvent) {
     event.preventDefault();
+    if (!zone) return;
     setAssetError(null);
+    setTicketVariantsError(null);
+
+    // Билеты — варианты цен валидируются ДО создания актива (запрос
+    // пользователя 2026-07-21: "сразу должны появляться при добавлении
+    // Актива"): без единого варианта актив нельзя продать, лучше не
+    // создавать пустой актив вовсе, чем создать и заставить идти в кебаб.
+    let ticketVariants: { name: string; price: string }[] | null = null;
+    if (isTicketsZone(zone)) {
+      ticketVariants = ticketVariantDrafts
+        .map((v) => ({ name: v.name.trim(), price: v.price }))
+        .filter((v) => v.name.length > 0);
+      if (ticketVariants.length === 0) {
+        setTicketVariantsError(t.zoneDetail.ticketVariantsEmptyError);
+        return;
+      }
+    }
 
     const res = await fetch(`/api/zones/${params.id}/assets`, {
       method: "POST",
@@ -568,12 +585,28 @@ export default function ZoneDetailPage() {
       setAssetError(data.error ?? "Не удалось добавить актив");
       return;
     }
+
+    if (ticketVariants) {
+      const variantsRes = await fetch(`/api/assets/${data.id}/ticket-variants`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variants: ticketVariants }),
+      });
+      if (!variantsRes.ok) {
+        const variantsData = await variantsRes.json().catch(() => ({}));
+        setTicketVariantsError(variantsData.error ?? t.zoneDetail.ticketVariantsSaveError);
+        await loadZone();
+        return;
+      }
+    }
+
     await loadZone();
     addAssetPulse(() => {
       setAssetName("");
       setAssetPhotoUrl(null);
       setAssetIconKey(null);
       setAssetTariffId("");
+      setTicketVariantDrafts([{ name: "", price: "" }]);
       setCreateAssetOpen(false);
     });
   }
@@ -831,14 +864,15 @@ export default function ZoneDetailPage() {
               конкретного посетителя, которому можно предложить квитанцию. У
               "Счётчики"/"Только касса" такого события нет — печатать
               нечего на уровне одной операции (там свой Z-отчёт сдачи
-              итогов, без завязки на эту зонную настройку). */}
-          {(isStaysZone(zone) || isLaunchesZone(zone) || isTicketsZone(zone)) && (
+              итогов, без завязки на эту зонную настройку). У "Билетов" — своя
+              карточка ниже (запрос пользователя 2026-07-21: "все настройки
+              зоны с режимом Билеты на одной плашке"), эта — только для
+              Прибываний/Пусков. */}
+          {(isStaysZone(zone) || isLaunchesZone(zone)) && (
             <SpringCard hover={false}>
               <div className="flex items-center justify-between gap-3">
                 <span>
-                  <span className="block text-body-airbnb">
-                    {isTicketsZone(zone) ? t.zoneDetail.printTicketsLabel : t.zoneDetail.printReceiptLabel}
-                  </span>
+                  <span className="block text-body-airbnb">{t.zoneDetail.printReceiptLabel}</span>
                   <span className="mt-0.5 block text-caption-airbnb text-muted-foreground">
                     {t.zoneDetail.printReceiptHint}
                   </span>
@@ -848,23 +882,34 @@ export default function ZoneDetailPage() {
             </SpringCard>
           )}
 
-          {/* Билеты (docs/spec/10-tickets.md, "ГАШЕНИЕ"/"СРОК ЖИЗНИ") — срок
-              жизни виден только при включённом гашении (при выключенном к
-              заказам не применяется вовсе). */}
+          {/* Билеты — все настройки зоны на одной карточке (запрос
+              пользователя 2026-07-21), было три отдельные плашки (печать /
+              заказы+гашение+срок). Срок жизни виден только при включённом
+              гашении (docs/spec/10-tickets.md, "ГАШЕНИЕ"/"СРОК ЖИЗНИ" — при
+              выключенном к заказам не применяется вовсе). */}
           {isTicketsZone(zone) && (
             <SpringCard hover={false} className="flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-3">
+                <span>
+                  <span className="block text-body-airbnb">{t.zoneDetail.printTicketsLabel}</span>
+                  <span className="mt-0.5 block text-caption-airbnb text-muted-foreground">
+                    {t.zoneDetail.printReceiptHint}
+                  </span>
+                </span>
+                <Switch checked={zone.printReceiptEnabled} onCheckedChange={togglePrintReceiptEnabled} className="shrink-0" />
+              </div>
               {/* Экран заказов зоны (docs/spec/10-tickets.md, "Кабинет
                   владельца", п.3) — поиск по номеру, список за период,
                   аннулирование поштучно/весь заказ. Отдельная страница, не
                   sheet — список может быть длинным (за период). */}
               <Link
                 href={`/zones/${zone.id}/orders`}
-                className="flex items-center justify-between gap-2 border-b border-border pb-3"
+                className="flex items-center justify-between gap-2 border-t border-border pt-3"
               >
                 <span className="text-body-airbnb font-semibold">{t.tickets.ownerOrdersTitle}</span>
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
               </Link>
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
                 <span>
                   <span className="block text-body-airbnb">{t.zoneDetail.ticketRedemptionLabel}</span>
                   <span className="mt-0.5 block text-caption-airbnb text-muted-foreground">
@@ -878,22 +923,26 @@ export default function ZoneDetailPage() {
                 />
               </div>
               {zone.ticketRedemptionEnabled && (
-                <div className="flex items-end gap-2 border-t border-border pt-3">
-                  <div className="flex flex-1 flex-col gap-1">
-                    <Label htmlFor="ticketLifetimeDays">{t.zoneDetail.ticketLifetimeLabel}</Label>
-                    <Input
-                      id="ticketLifetimeDays"
-                      inputMode="numeric"
-                      placeholder={t.zoneDetail.ticketLifetimeUnlimited}
-                      value={ticketLifetimeInput}
-                      onChange={(e) => setTicketLifetimeInput(e.target.value.replace(/\D/g, ""))}
-                    />
-                  </div>
+                <div className="flex items-center gap-2 border-t border-border pt-3">
+                  {/* Метка, поле и кнопка в одну строку (запрос пользователя
+                      2026-07-21) — раньше метка была отдельной строкой над
+                      полем+кнопкой. */}
+                  <Label htmlFor="ticketLifetimeDays" className="shrink-0">
+                    {t.zoneDetail.ticketLifetimeLabel}
+                  </Label>
+                  <Input
+                    id="ticketLifetimeDays"
+                    inputMode="numeric"
+                    placeholder={t.zoneDetail.ticketLifetimeUnlimited}
+                    value={ticketLifetimeInput}
+                    onChange={(e) => setTicketLifetimeInput(e.target.value.replace(/\D/g, ""))}
+                    className="flex-1"
+                  />
                   <PressableScale>
                     <SaveButton
                       onClick={saveTicketLifetimeDays}
                       saved={ticketLifetimeSaved}
-                      className="h-11 min-w-22 rounded-control px-4 font-bold"
+                      className="h-11 min-w-22 shrink-0 rounded-control px-4 font-bold"
                     />
                   </PressableScale>
                 </div>
@@ -1013,6 +1062,17 @@ export default function ZoneDetailPage() {
                           : t.zoneDetail.assetTariffNotLinked}
                       </p>
                     )}
+                    {/* Варианты цен билета прямо в списке (запрос
+                        пользователя 2026-07-21: "у активов в режиме учёта
+                        Билеты должны отображаться варианты цен") — тот же
+                        приём, что тариф у Прибываний выше. */}
+                    {isTicketsZone(zone) && (
+                      <p className="text-caption-airbnb text-muted-foreground">
+                        {asset.ticketVariants.length > 0
+                          ? asset.ticketVariants.map((v) => `${v.name}: ${formatMoney(Number(v.price), locale)}`).join(" · ")
+                          : t.tickets.noPriceLabel}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -1023,6 +1083,11 @@ export default function ZoneDetailPage() {
                         aria-label={t.zoneDetail.assetTariffMissingWarning}
                         className="size-6 text-destructive"
                       />
+                    </span>
+                  )}
+                  {isTicketsZone(zone) && asset.ticketVariants.length === 0 && (
+                    <span title={t.tickets.noPriceLabel} className="shrink-0">
+                      <TriangleAlert role="img" aria-label={t.tickets.noPriceLabel} className="size-6 text-destructive" />
                     </span>
                   )}
                   <div className="flex flex-col">
@@ -1055,7 +1120,17 @@ export default function ZoneDetailPage() {
                 variant="outline"
                 size="sm"
                 className="mt-3 w-full gap-1.5"
-                onClick={() => setCreateAssetOpen(true)}
+                onClick={() => {
+                  // Билеты (запрос пользователя 2026-07-21: "варианты цен
+                  // сразу должны появляться при добавлении Актива в Зону с
+                  // режимом Билеты") — без варианта актив всё равно нельзя
+                  // продать (docs/spec/10-tickets.md, "ЦЕНЫ — НА АКТИВАХ"),
+                  // раньше приходилось отдельно идти в кебаб уже созданного
+                  // актива.
+                  setTicketVariantDrafts([{ name: "", price: "" }]);
+                  setTicketVariantsError(null);
+                  setCreateAssetOpen(true);
+                }}
               >
                 <Plus />
                 {t.zoneDetail.addAssetButton}
@@ -1378,6 +1453,63 @@ export default function ZoneDetailPage() {
               {zone.tariffs.length === 0 && (
                 <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.assetTariffEmptyHint}</p>
               )}
+            </div>
+          )}
+          {isTicketsZone(zone) && (
+            <div className="flex flex-col gap-2">
+              <Label>{t.zoneDetail.ticketVariantsTitle}</Label>
+              <div className="flex flex-col gap-2">
+                {ticketVariantDrafts.map((variant, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      placeholder={t.zoneDetail.ticketVariantNamePlaceholder}
+                      value={variant.name}
+                      onChange={(e) =>
+                        setTicketVariantDrafts((prev) =>
+                          prev.map((v, i) => (i === index ? { ...v, name: e.target.value } : v))
+                        )
+                      }
+                      className="flex-1"
+                    />
+                    <MoneyInput
+                      placeholder={t.zoneDetail.ticketVariantPricePlaceholder}
+                      value={variant.price}
+                      onChange={(e) =>
+                        setTicketVariantDrafts((prev) =>
+                          prev.map((v, i) => (i === index ? { ...v, price: e.target.value } : v))
+                        )
+                      }
+                      className="flex-1"
+                    />
+                    {ticketVariantDrafts.length > 1 && (
+                      <PressableScale>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          aria-label={t.zoneDetail.removeTicketVariantLabel}
+                          onClick={() => setTicketVariantDrafts((prev) => prev.filter((_, i) => i !== index))}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </PressableScale>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <PressableScale className="w-fit">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => setTicketVariantDrafts((prev) => [...prev, { name: "", price: "" }])}
+                >
+                  <Plus className="size-4" />
+                  {t.zoneDetail.addTicketVariantButton}
+                </Button>
+              </PressableScale>
+              {ticketVariantsError && <p className="text-sm text-destructive">{ticketVariantsError}</p>}
             </div>
           )}
           <div className="flex flex-col gap-2">

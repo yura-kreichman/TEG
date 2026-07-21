@@ -1520,6 +1520,7 @@
     "confirmVoidTicket": "Bu bilet iptal edilsin mi? Bilet fiyatı üzerinden iade yapılır, bu işlem geri alınamaz.",
     "confirmVoidOrder": "Bu siparişteki tüm aktif biletler iptal edilsin mi? Her bilet için iade yapılır, bu işlem geri alınamaz.",
     "newOrderButton": "Yeni sipariş",
-    "noPriceLabel": "Fiyat yok"
+    "noPriceLabel": "Fiyat yok",
+    "clearCartAction": "Sepeti temizle"
   }
 }

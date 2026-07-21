@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Banknote, Check, CreditCard, Delete, Layers, MapPin, Minus, Plus, Printer, Search, Ticket, Wallet } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Banknote, Check, ChevronLeft, CreditCard, Delete, Layers, MapPin, Minus, Plus, Printer, Search, ShoppingCart, Ticket, Trash2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Label } from "@/components/ui/label";
@@ -12,11 +13,13 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
+import { useTicketsCart } from "@/components/operator-cart-context";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
 import { openPrintDocument, type PrintDocumentData } from "@/lib/print/receipt-document";
 import { isTicketsZone } from "@/lib/results-calc";
+import { unlockBeep, playErrorChime } from "@/lib/beep";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +45,7 @@ interface ZoneCtx {
   iconKey: string | null;
   assets: AssetCtx[];
   ticketRedemptionEnabled: boolean;
+  printReceiptEnabled: boolean;
 }
 
 // cart key: `${assetId}:${variantId}`
@@ -120,12 +124,14 @@ export default function TicketsZonePage() {
               iconKey: string | null;
               assets: AssetCtx[];
               ticketRedemptionEnabled: boolean;
+              printReceiptEnabled: boolean;
             }) => ({
               id: z.id,
               name: z.name,
               iconKey: z.iconKey,
               assets: z.assets ?? [],
               ticketRedemptionEnabled: z.ticketRedemptionEnabled,
+              printReceiptEnabled: z.printReceiptEnabled,
             })
           );
         if (tickets.length === 0) {
@@ -134,7 +140,12 @@ export default function TicketsZonePage() {
         }
         setZones(tickets);
         setZoneId((prev) => prev ?? tickets[0]?.id ?? null);
-        setTicketsAccess(Boolean(data.ticketsAccess));
+        // "Без тумблера вкладка не рендерится" (docs/spec/10-tickets.md,
+        // "PWA оператора") — «Заказы» тогда единственная, ставим её сразу,
+        // не оставляем "sell" выбранной вкладкой без соответствующего таба.
+        const access = Boolean(data.ticketsAccess);
+        setTicketsAccess(access);
+        if (!access) setTab("orders");
         setLoading(false);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,7 +154,13 @@ export default function TicketsZonePage() {
   const zone = zones.find((z) => z.id === zoneId) ?? null;
 
   // ---- Продать ----
-  const [cart, setCart] = useState<Cart>({});
+  // Корзина — в общем контексте на уровне operator/layout.tsx (запрос
+  // пользователя 2026-07-21: "не должно сбрасываться при переключении между
+  // пунктами меню"), с ключом по zoneId — так переключение МЕЖДУ tickets-
+  // зонами (Select выше) тоже не теряет черновик каждой из них, просто
+  // показывает свою.
+  const ticketsCart = useTicketsCart();
+  const cart: Cart = zoneId ? ticketsCart.getCart(zoneId) : {};
   const [variantSheetAssetId, setVariantSheetAssetId] = useState<string | null>(null);
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -168,8 +185,9 @@ export default function TicketsZonePage() {
   const [printingIndex, setPrintingIndex] = useState<number | null>(null);
 
   function selectZone(id: string) {
+    // Корзина НЕ очищается — у каждой зоны своя, в контексте (см. выше),
+    // переключение просто показывает корзину новой зоны как есть.
     setZoneId(id);
-    setCart({});
     setSearchResult(null);
     setSearchNumber("");
   }
@@ -197,7 +215,8 @@ export default function TicketsZonePage() {
   const cartTotal = currentCartLines.reduce((sum, l) => sum + l.price * l.quantity, 0);
 
   function setQuantity(assetId: string, variantId: string, quantity: number) {
-    setCart((prev) => ({ ...prev, [cartKey(assetId, variantId)]: Math.max(0, quantity) }));
+    if (!zoneId) return;
+    ticketsCart.setQuantity(zoneId, cartKey(assetId, variantId), quantity);
   }
 
   const variantSheetAsset = zone?.assets.find((a) => a.id === variantSheetAssetId) ?? null;
@@ -240,7 +259,7 @@ export default function TicketsZonePage() {
         paymentMethod,
         tickets: ticketRows,
       });
-      setCart({});
+      if (zoneId) ticketsCart.clearCart(zoneId);
       setCartSheetOpen(false);
       setPaymentOpen(false);
       setAbonementTarget(null);
@@ -331,6 +350,7 @@ export default function TicketsZonePage() {
   const [searchNumber, setSearchNumber] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const searchErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [searchResult, setSearchResult] = useState<OrderDetail | null>(null);
   const [recentOrders, setRecentOrders] = useState<OrderDetail[]>([]);
   const [assetFilter, setAssetFilterState] = useState<string>(ALL_ASSETS);
@@ -353,13 +373,40 @@ export default function TicketsZonePage() {
   function loadRecentOrders(zId: string) {
     fetch(`/api/zones/${zId}/ticket-orders`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => data && setRecentOrders(data.orders ?? []));
+      .then(
+        (data) =>
+          data &&
+          // Только непогашенные (запрос пользователя 2026-07-21) —
+          // openTicketsCount>0 значит есть хоть один живой (active) билет;
+          // полностью погашенный/аннулированный заказ больше не требует
+          // внимания оператора в этой ленте.
+          setRecentOrders((data.orders ?? []).filter((o: OrderDetail) => o.openTicketsCount > 0))
+      );
   }
 
   useEffect(() => {
     if (tab !== "orders" || !zoneId) return;
     loadRecentOrders(zoneId);
   }, [tab, zoneId]);
+
+  // "Заказ не найден" — не текстовая строка, а самогаснущий тост поверх
+  // циферблата (запрос пользователя 2026-07-21: "Zoom in и Bounce по центру
+  // NumPad с характерным звуком ошибки и тухнуть Fade-out и Zoom out через
+  // несколько секунд"); поле ввода сбрасывается сразу, не ждёт угасания тоста.
+  function flashSearchError(message: string) {
+    playErrorChime();
+    setSearchError(message);
+    setSearchNumber("");
+    if (searchErrorTimerRef.current) clearTimeout(searchErrorTimerRef.current);
+    searchErrorTimerRef.current = setTimeout(() => setSearchError(null), 2500);
+  }
+
+  useEffect(
+    () => () => {
+      if (searchErrorTimerRef.current) clearTimeout(searchErrorTimerRef.current);
+    },
+    []
+  );
 
   async function searchOrder() {
     if (!zone || !searchNumber) return;
@@ -370,12 +417,12 @@ export default function TicketsZonePage() {
       const res = await fetch(`/api/zones/${zone.id}/ticket-orders?number=${encodeURIComponent(searchNumber)}`);
       const data = await res.json();
       if (!res.ok) {
-        setSearchError(data.error ?? t.tickets.orderNotFound);
+        flashSearchError(data.error ?? t.tickets.orderNotFound);
         return;
       }
       setSearchResult(data.order);
     } catch {
-      setSearchError(t.operatorApp.gameRoom.networkError);
+      flashSearchError(t.operatorApp.gameRoom.networkError);
     } finally {
       setSearching(false);
     }
@@ -391,7 +438,10 @@ export default function TicketsZonePage() {
       };
     }
     setSearchResult((prev) => (prev ? apply(prev) : prev));
-    setRecentOrders((prev) => prev.map(apply));
+    // Погашение последнего живого билета — заказ сразу выпадает из ленты
+    // (тот же фильтр, что при загрузке, см. loadRecentOrders), не ждёт
+    // следующей перезагрузки.
+    setRecentOrders((prev) => prev.map(apply).filter((o) => o.openTicketsCount > 0));
   }
 
   async function redeemTicket(orderId: string, ticketId: string) {
@@ -418,9 +468,36 @@ export default function TicketsZonePage() {
   if (!zone) return null;
 
   return (
-    <div className="flex flex-1 flex-col bg-surface-0 px-4 pb-10 pt-6">
+    <div className="flex flex-1 flex-col bg-surface-0 px-4 pb-10 pt-6" onPointerDownCapture={() => unlockBeep()}>
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 md:max-w-xl lg:max-w-2xl">
-        <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.tickets.entryTitle}</h1>
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.tickets.entryTitle}</h1>
+          {/* Корзина — иконка в одном ряду с заголовком, без слова "Корзина"
+              (запрос пользователя 2026-07-21), вместо плавающей плашки
+              снизу. Всегда видна, серая/неактивная, пока пуста (запрос
+              пользователя того же дня), не пропадает совсем. */}
+          {tab === "sell" && (
+            <PressableScale>
+              <button
+                type="button"
+                onClick={() => cartTicketsCount > 0 && setCartSheetOpen(true)}
+                disabled={cartTicketsCount === 0}
+                aria-label={t.tickets.cartTitle}
+                className={cn(
+                  "relative flex size-10 shrink-0 items-center justify-center rounded-full shadow-floating",
+                  cartTicketsCount > 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                )}
+              >
+                <ShoppingCart className="size-5" />
+                {cartTicketsCount > 0 && (
+                  <span className="absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-card text-base font-extrabold text-primary shadow-sm">
+                    {cartTicketsCount}
+                  </span>
+                )}
+              </button>
+            </PressableScale>
+          )}
+        </div>
 
         {zones.length > 1 && (
           <div className="flex items-center gap-2">
@@ -462,19 +539,26 @@ export default function TicketsZonePage() {
           </div>
         )}
 
-        <SegmentedTabs
-          options={[
-            { key: "sell", label: t.tickets.sellTab },
-            { key: "orders", label: t.tickets.ordersTab },
-          ]}
-          value={tab}
-          onChange={setTab}
-        />
+        {/* "Без тумблера вкладка не рендерится" (docs/spec/10-tickets.md,
+            "PWA оператора") — реальный баг, найден пользователем 2026-07-21
+            по скриншоту: раньше вкладка «Продать» оставалась в переключателе
+            и просто показывала заглушку "Нет доступа". У «Заказы» тумблер
+            не нужен (докс: "все операторы с доступом к зоне; существует
+            всегда") — с одной вкладкой сам переключатель не нужен, как и
+            везде в проекте, где выбирать не из чего. */}
+        {ticketsAccess && (
+          <SegmentedTabs
+            options={[
+              { key: "sell", label: t.tickets.sellTab },
+              { key: "orders", label: t.tickets.ordersTab },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
+        )}
 
         {tab === "sell" ? (
-          !ticketsAccess ? (
-            <p className="py-4 text-center text-body-airbnb text-muted-foreground">{t.tickets.noSellAccessHint}</p>
-          ) : zone.assets.every((a) => a.ticketVariants.length === 0) ? (
+          zone.assets.every((a) => a.ticketVariants.length === 0) ? (
             <p className="py-4 text-center text-body-airbnb text-muted-foreground">{t.tickets.noVariantsYet}</p>
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(6.25rem,1fr))] gap-3">
@@ -504,7 +588,7 @@ export default function TicketsZonePage() {
                           style={{ backgroundColor: a.colorTag }}
                         />
                         {qty > 0 && (
-                          <span className="absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded-full bg-primary text-[0.75rem] font-bold text-primary-foreground shadow-md">
+                          <span className="absolute right-1 top-1 flex size-8 items-center justify-center rounded-full bg-primary text-lg font-extrabold text-primary-foreground shadow-md">
                             {qty}
                           </span>
                         )}
@@ -524,9 +608,64 @@ export default function TicketsZonePage() {
               })}
             </div>
           )
+        ) : searchResult ? (
+          // "Зайти внутрь" найденного заказа (запрос пользователя
+          // 2026-07-21) — циферблат/лента полностью уступают место карточке,
+          // не остаются под ней; назад — явной кнопкой, не переключением таба.
+          <div className="flex flex-col gap-3">
+            <PressableScale className="w-fit">
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchResult(null);
+                  setSearchNumber("");
+                  setSearchError(null);
+                }}
+                className="flex items-center gap-1 text-body-airbnb font-semibold text-primary"
+              >
+                <ChevronLeft className="size-4" />
+                {t.common.back}
+              </button>
+            </PressableScale>
+            <OrderCard
+              order={searchResult}
+              zone={zone}
+              locale={locale}
+              paymentMethodLabel={paymentMethodLabel}
+              redeeming={redeeming}
+              onRedeem={redeemTicket}
+              t={t}
+              highlightAssetId={highlightAssetId}
+              printAvailable={printAvailable.available && zone.printReceiptEnabled}
+              printing={printingIndex !== null}
+              onPrint={printOrderTickets}
+            />
+          </div>
         ) : (
           <>
-            <div className="flex flex-col gap-3">
+            <div className="relative flex flex-col gap-3">
+              {/* "Заказ не найден" — zoom-in+bounce поверх NumPad, автоматически
+                  гаснет fade-out+zoom-out через 2.5с (запрос пользователя
+                  2026-07-21), не текстовая строка под кнопкой. */}
+              <AnimatePresence>
+                {searchError && (
+                  <motion.div
+                    key="search-error-toast"
+                    initial={{ opacity: 0, scale: 0.4 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.5 }}
+                    transition={{
+                      scale: { type: "spring", stiffness: 500, damping: 14 },
+                      opacity: { duration: 0.15 },
+                    }}
+                    className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center"
+                  >
+                    <div className="rounded-card bg-destructive px-5 py-3 text-center text-lg font-extrabold text-white shadow-floating">
+                      {searchError}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <div className="flex h-14 items-center justify-center rounded-control border-2 border-input bg-background text-2xl font-extrabold tabular-nums">
                 {searchNumber || <span className="text-body-airbnb font-semibold text-muted-foreground">{t.tickets.searchOrderPlaceholder}</span>}
               </div>
@@ -587,23 +726,6 @@ export default function TicketsZonePage() {
               </PressableScale>
             </div>
 
-            {searchError && <p className="text-sm text-destructive">{searchError}</p>}
-            {searchResult && (
-              <OrderCard
-                order={searchResult}
-                zone={zone}
-                locale={locale}
-                paymentMethodLabel={paymentMethodLabel}
-                redeeming={redeeming}
-                onRedeem={redeemTicket}
-                t={t}
-                highlightAssetId={highlightAssetId}
-                printAvailable={printAvailable.available}
-                printing={printingIndex !== null}
-                onPrint={printOrderTickets}
-              />
-            )}
-
             {zone.assets.length > 1 && (
               <div className="flex flex-wrap gap-1.5">
                 <button
@@ -648,7 +770,7 @@ export default function TicketsZonePage() {
                     onRedeem={redeemTicket}
                     t={t}
                     highlightAssetId={highlightAssetId}
-                    printAvailable={printAvailable.available}
+                    printAvailable={printAvailable.available && zone.printReceiptEnabled}
                     printing={printingIndex !== null}
                     onPrint={printOrderTickets}
                   />
@@ -661,51 +783,34 @@ export default function TicketsZonePage() {
         {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
 
-      {/* Корзина зафиксирована снизу, пока в ней что-то есть — тот же
-          принцип "плавающей плашки", что баннер истёкших пусков в нижнем
-          баре (operator-bottom-nav.tsx). */}
-      {tab === "sell" && cartTicketsCount > 0 && (
-        <PressableScale className="fixed inset-x-0 z-40 px-3" style={{ bottom: "calc(4.75rem + env(safe-area-inset-bottom))" }}>
-          <button
-            type="button"
-            onClick={() => setCartSheetOpen(true)}
-            className="mx-auto flex w-full max-w-md items-center gap-2 rounded-control bg-primary px-3.5 py-2.5 text-left text-primary-foreground shadow-floating md:max-w-xl lg:max-w-2xl"
-          >
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-foreground/20 text-[0.75rem] font-bold tabular-nums">
-              {cartTicketsCount}
-            </span>
-            <span className="flex-1 truncate text-caption-airbnb font-bold">{t.tickets.cartTitle}</span>
-            <Money value={cartTotal} className="font-bold" />
-          </button>
-        </PressableScale>
-      )}
-
-      {/* Выбор варианта цены актива — чипы "название — цена"
-          (docs/spec/10-tickets.md, "PWA оператора": "тап по варианту
-          добавляет билет в корзину"), каждый тап добавляет ровно один билет,
-          sheet остаётся открытым (можно добавлять несколько вариантов
-          подряд без промежуточных закрытий); убрать лишнее — в Корзине
-          (крестик у строки), степперов здесь нет — квик-тап, не количество. */}
+      {/* Выбор варианта цены актива — крупные кнопки во всю ширину, тот же
+          единый подход, что у выбора варианта "За вход" в Прибываниях и у
+          способа оплаты ниже (запрос пользователя 2026-07-21: "должны быть
+          крупнее, как метод оплаты. Используй единый подход в интерфейсе"),
+          не мелкие чипы. Каждый тап добавляет ровно один билет, sheet
+          остаётся открытым (можно добавлять несколько вариантов подряд без
+          промежуточных закрытий); убрать лишнее — в Корзине (степпер),
+          степперов здесь нет — квик-тап, не количество. */}
       <BottomSheet open={variantSheetAssetId !== null} onClose={() => setVariantSheetAssetId(null)}>
         {variantSheetAsset && (
           <div className="flex flex-col gap-3 pt-2">
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{variantSheetAsset.name}</h2>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2">
               {variantSheetAsset.ticketVariants.map((v) => {
                 const qty = cart[cartKey(variantSheetAsset.id, v.id)] ?? 0;
                 return (
                   <PressableScale key={v.id} className="relative">
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
                       onClick={() => setQuantity(variantSheetAsset.id, v.id, qty + 1)}
-                      className="flex items-center gap-1.5 rounded-full border-[1.5px] border-border bg-card px-4 py-2 text-body-airbnb font-semibold"
+                      className="h-12 w-full justify-between font-semibold"
                     >
-                      {v.name}
-                      <span className="text-muted-foreground">—</span>
-                      <Money value={v.price} className="font-bold text-primary" />
-                    </button>
+                      <span>{v.name}</span>
+                      <Money value={v.price} />
+                    </Button>
                     {qty > 0 && (
-                      <span className="absolute -right-1.5 -top-1.5 flex size-5.5 items-center justify-center rounded-full bg-primary text-[0.6875rem] font-bold text-primary-foreground shadow-md">
+                      <span className="absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full bg-primary text-base font-extrabold text-primary-foreground shadow-md">
                         {qty}
                       </span>
                     )}
@@ -779,18 +884,35 @@ export default function TicketsZonePage() {
                   <Money value={cartTotal} />
                 </span>
               </div>
-              <PressableScale>
-                <Button
-                  type="button"
-                  className="h-12 w-full font-bold"
-                  onClick={() => {
+              <div className="flex items-stretch gap-2">
+                <PressableScale className="flex flex-1">
+                  <Button
+                    type="button"
+                    className="h-12 w-full font-bold"
+                    onClick={() => {
+                      setCartSheetOpen(false);
+                      setPaymentOpen(true);
+                    }}
+                  >
+                    {t.tickets.continueButton}
+                  </Button>
+                </PressableScale>
+                {/* Очистить корзину целиком — через "Точно?" (запрос
+                    пользователя 2026-07-21), тот же ConfirmButton, что и
+                    везде по проекту для необратимых действий. */}
+                <ConfirmButton
+                  className="h-12 shrink-0 px-3.5 text-destructive"
+                  onConfirm={() => {
+                    if (zoneId) ticketsCart.clearCart(zoneId);
+                    // Пустую корзину смотреть незачем (запрос пользователя
+                    // 2026-07-21) — sheet закрывается сам сразу после "Точно?".
                     setCartSheetOpen(false);
-                    setPaymentOpen(true);
                   }}
                 >
-                  {t.tickets.continueButton}
-                </Button>
-              </PressableScale>
+                  <Trash2 className="size-5" />
+                  <span className="sr-only">{t.tickets.clearCartAction}</span>
+                </ConfirmButton>
+              </div>
             </>
           )}
         </div>
@@ -854,7 +976,7 @@ export default function TicketsZonePage() {
             <p className="text-body-airbnb text-muted-foreground">
               {lastOrder.tickets.length} {t.tickets.ticketsCountLabel.toLowerCase()} · <Money value={lastOrder.totalSnapshot} />
             </p>
-            {printAvailable.available && (
+            {printAvailable.available && zone.printReceiptEnabled && (
               <PressableScale className="w-full">
                 <Button
                   type="button"

@@ -1520,6 +1520,7 @@
     "confirmVoidTicket": "Anulować ten bilet? Zwrot według ceny biletu, tej czynności nie można cofnąć.",
     "confirmVoidOrder": "Anulować wszystkie aktywne bilety w tym zamówieniu? Zwrot za każdy bilet, tej czynności nie można cofnąć.",
     "newOrderButton": "Nowe zamówienie",
-    "noPriceLabel": "Brak ceny"
+    "noPriceLabel": "Brak ceny",
+    "clearCartAction": "Wyczyść koszyk"
   }
 }

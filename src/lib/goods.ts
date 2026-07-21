@@ -34,71 +34,142 @@ interface SellParams {
 }
 
 /**
- * Продажа — атомарно: снапшот цены, декремент остатка (только trackStock),
- * MoneyOperation (нал/безнал) ИЛИ AbonementTransaction+MoneyOperation
- * (баланс, тот же паттерн, что spendWalletTx в abonement.ts — условный
- * UPDATE WHERE balance >= amount, 0 обновлённых строк = недостаточно
- * средств, без гонки между операторами). Мягкий остаток — decrement всегда
- * проходит, даже уводя в минус (docs/spec/09-goods.md, "Остатки": "блокировки
- * при нуле НЕТ").
+ * Продажа ОДНОЙ позиции внутри уже открытой транзакции — общее ядро для
+ * sellGoods (одна позиция, своя транзакция) и sellGoodsCart (несколько
+ * позиций, ОДНА транзакция на всю корзину — запрос пользователя 2026-07-21:
+ * "такой же принцип корзины должен быть в Товарах"). Снапшот цены, декремент
+ * остатка (только trackStock), MoneyOperation (нал/безнал) ИЛИ
+ * AbonementTransaction+MoneyOperation (баланс, тот же паттерн, что
+ * spendWalletTx в abonement.ts — условный UPDATE WHERE balance >= amount, 0
+ * обновлённых строк = недостаточно средств, без гонки между операторами).
+ * Мягкий остаток — decrement всегда проходит, даже уводя в минус
+ * (docs/spec/09-goods.md, "Остатки": "блокировки при нуле НЕТ").
  */
+async function sellOneItemTx(
+  tx: Tx,
+  params: {
+    tenantId: string;
+    pointId: string;
+    goodsId: string;
+    quantity: number;
+    paymentMethod: GoodsPaymentMethod;
+    walletId?: string;
+    actor: Actor;
+  }
+) {
+  const { tenantId, pointId, goodsId, quantity, paymentMethod, walletId, actor } = params;
+
+  const goods = await tx.goods.findFirst({ where: { id: goodsId, tenantId, deletedAt: null } });
+  if (!goods) throw new Error("GOODS_NOT_FOUND");
+
+  const amount = Number(goods.price) * quantity;
+
+  if (goods.trackStock) {
+    await tx.goodsStock.upsert({
+      where: { goodsId_pointId: { goodsId, pointId } },
+      create: { goodsId, pointId, quantity: -quantity },
+      update: { quantity: { decrement: quantity } },
+    });
+  }
+
+  const sale = await tx.goodsSale.create({
+    data: {
+      tenantId,
+      goodsId,
+      pointId,
+      quantity,
+      priceSnapshot: goods.price,
+      amount,
+      paymentMethod,
+      walletId: paymentMethod === "abonement" ? walletId : null,
+      performedByOperatorId: actor.operatorId,
+      performedByUserId: actor.userId,
+    },
+  });
+
+  if (paymentMethod === "abonement") {
+    const updated = await tx.abonementWallet.updateMany({
+      where: { id: walletId, tenantId, balance: { gte: amount } },
+      data: { balance: { decrement: amount } },
+    });
+    if (updated.count === 0) throw new InsufficientBalanceError();
+
+    await tx.abonementTransaction.create({
+      data: { walletId: walletId!, type: "spend", amount, goodsSaleId: sale.id, pointId, ...actor },
+    });
+  }
+
+  await tx.moneyOperation.create({
+    data: {
+      tenantId,
+      pointId,
+      type: moneyTypeFor(paymentMethod),
+      amount,
+      performedByOperatorId: actor.operatorId,
+      performedByUserId: actor.userId,
+    },
+  });
+
+  return { sale, amount };
+}
+
 export async function sellGoods(params: SellParams) {
   const { tenantId, pointId, goodsId, quantity, paymentMethod, walletId, actor } = params;
   if (paymentMethod === "abonement" && !walletId) throw new Error("WALLET_REQUIRED");
 
   return prisma.$transaction(async (tx) => {
-    const goods = await tx.goods.findFirst({ where: { id: goodsId, tenantId, deletedAt: null } });
-    if (!goods) throw new Error("GOODS_NOT_FOUND");
-
-    const amount = Number(goods.price) * quantity;
-
-    if (goods.trackStock) {
-      await tx.goodsStock.upsert({
-        where: { goodsId_pointId: { goodsId, pointId } },
-        create: { goodsId, pointId, quantity: -quantity },
-        update: { quantity: { decrement: quantity } },
-      });
-    }
-
-    const sale = await tx.goodsSale.create({
-      data: {
-        tenantId,
-        goodsId,
-        pointId,
-        quantity,
-        priceSnapshot: goods.price,
-        amount,
-        paymentMethod,
-        walletId: paymentMethod === "abonement" ? walletId : null,
-        performedByOperatorId: actor.operatorId,
-        performedByUserId: actor.userId,
-      },
-    });
-
-    if (paymentMethod === "abonement") {
-      const updated = await tx.abonementWallet.updateMany({
-        where: { id: walletId, tenantId, balance: { gte: amount } },
-        data: { balance: { decrement: amount } },
-      });
-      if (updated.count === 0) throw new InsufficientBalanceError();
-
-      await tx.abonementTransaction.create({
-        data: { walletId: walletId!, type: "spend", amount, goodsSaleId: sale.id, pointId, ...actor },
-      });
-    }
-
-    await tx.moneyOperation.create({
-      data: {
-        tenantId,
-        pointId,
-        type: moneyTypeFor(paymentMethod),
-        amount,
-        performedByOperatorId: actor.operatorId,
-        performedByUserId: actor.userId,
-      },
-    });
-
+    const { sale } = await sellOneItemTx(tx, { tenantId, pointId, goodsId, quantity, paymentMethod, walletId, actor });
     return sale;
+  });
+}
+
+interface SellCartParams {
+  tenantId: string;
+  pointId: string;
+  items: { goodsId: string; quantity: number }[];
+  paymentMethod: GoodsPaymentMethod;
+  walletId?: string; // только paymentMethod="abonement"
+  actor: Actor;
+}
+
+export interface SoldCartLine {
+  id: string;
+  goodsId: string;
+  quantity: number;
+  amount: number;
+}
+
+/**
+ * Продажа КОРЗИНЫ — несколько разных товаров одним чеком, одним способом
+ * оплаты (запрос пользователя 2026-07-21: "сейчас можно продавать только по
+ * одному товару"). Каждая позиция по-прежнему собственная запись GoodsSale
+ * (история/отчёты не меняются, видят то же самое, что и раньше — просто N
+ * продаж вместо одной), но ОДНОЙ атомарной транзакцией: либо весь чек
+ * проходит, либо ни одна позиция (важно для баланса — недостаток средств на
+ * третьей позиции откатывает уже decrement-нутые остатки первых двух). В
+ * отличие от Билетов, здесь НЕТ отдельной сущности "заказ" — товары не
+ * гасятся/не предъявляются повторно, поэтому обёртка не нужна вовсе.
+ */
+export async function sellGoodsCart(params: SellCartParams): Promise<SoldCartLine[]> {
+  const { tenantId, pointId, items, paymentMethod, walletId, actor } = params;
+  if (paymentMethod === "abonement" && !walletId) throw new Error("WALLET_REQUIRED");
+  if (items.length === 0) throw new Error("EMPTY_CART");
+
+  return prisma.$transaction(async (tx) => {
+    const results: SoldCartLine[] = [];
+    for (const item of items) {
+      const { sale, amount } = await sellOneItemTx(tx, {
+        tenantId,
+        pointId,
+        goodsId: item.goodsId,
+        quantity: item.quantity,
+        paymentMethod,
+        walletId,
+        actor,
+      });
+      results.push({ id: sale.id, goodsId: item.goodsId, quantity: item.quantity, amount });
+    }
+    return results;
   });
 }
 
