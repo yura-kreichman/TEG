@@ -9,9 +9,16 @@ import { cn } from "@/lib/utils";
 export function StatusChip({
   children,
   variant = "accent",
+  dot = true,
 }: {
   children: React.ReactNode;
   variant?: "accent" | "warning" | "neutral";
+  /** false — без ведущей точки (запрос пользователя 2026-07-21: у чипа
+   * режима учёта, где перед текстом уже стоит своя иконка, точка лишняя —
+   * два маркера подряд). Остальные использования (активна/неактивна зона,
+   * "нет тарифов" и т.п.) точку сохраняют — там она реальный индикатор
+   * статуса, не декорация. */
+  dot?: boolean;
 }) {
   return (
     <span
@@ -22,14 +29,16 @@ export function StatusChip({
         variant === "neutral" && "bg-muted text-muted-foreground"
       )}
     >
-      <span
-        className={cn(
-          "size-1.5 rounded-full",
-          variant === "accent" && "bg-primary",
-          variant === "warning" && "bg-warning",
-          variant === "neutral" && "bg-muted-foreground/40"
-        )}
-      />
+      {dot && (
+        <span
+          className={cn(
+            "size-1.5 rounded-full",
+            variant === "accent" && "bg-primary",
+            variant === "warning" && "bg-warning",
+            variant === "neutral" && "bg-muted-foreground/40"
+          )}
+        />
+      )}
       {children}
     </span>
   );

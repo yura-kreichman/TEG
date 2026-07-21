@@ -839,8 +839,8 @@ export default function ZoneDetailPage() {
                 <div>
                   <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{zone.name}</h1>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <StatusChip>
-                      <HeaderModeIcon className="size-3.5 shrink-0" />
+                    <StatusChip dot={false}>
+                      <HeaderModeIcon className="size-4 shrink-0" />
                       {t.zonesList.modeChip[zone.accountingMode]}
                     </StatusChip>
                     {!zone.active && (
@@ -915,28 +915,30 @@ export default function ZoneDetailPage() {
                 />
               </div>
               {zone.ticketRedemptionEnabled && (
-                <div className="flex items-center gap-2 border-t border-border pt-3">
-                  {/* Метка, поле и кнопка в одну строку (запрос пользователя
-                      2026-07-21) — раньше метка была отдельной строкой над
-                      полем+кнопкой. */}
-                  <Label htmlFor="ticketLifetimeDays" className="shrink-0">
-                    {t.zoneDetail.ticketLifetimeLabel}
-                  </Label>
-                  <Input
-                    id="ticketLifetimeDays"
-                    inputMode="numeric"
-                    placeholder={t.zoneDetail.ticketLifetimeUnlimited}
-                    value={ticketLifetimeInput}
-                    onChange={(e) => setTicketLifetimeInput(e.target.value.replace(/\D/g, ""))}
-                    className="flex-1"
-                  />
-                  <PressableScale>
-                    <SaveButton
-                      onClick={saveTicketLifetimeDays}
-                      saved={ticketLifetimeSaved}
-                      className="h-11 min-w-22 shrink-0 rounded-control px-4 font-bold"
+                <div className="flex flex-col gap-2 border-t border-border pt-3">
+                  {/* Метка отдельной строкой, поле+кнопка — под ней (запрос
+                      пользователя 2026-07-21) — метка+поле+кнопка в одну
+                      строку не помещались на узком экране, кнопка обрезалась
+                      по правому краю; более раннее решение той же сессии
+                      "в одну строку" отменено. */}
+                  <Label htmlFor="ticketLifetimeDays">{t.zoneDetail.ticketLifetimeLabel}</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="ticketLifetimeDays"
+                      inputMode="numeric"
+                      placeholder={t.zoneDetail.ticketLifetimeUnlimited}
+                      value={ticketLifetimeInput}
+                      onChange={(e) => setTicketLifetimeInput(e.target.value.replace(/\D/g, ""))}
+                      className="flex-1"
                     />
-                  </PressableScale>
+                    <PressableScale>
+                      <SaveButton
+                        onClick={saveTicketLifetimeDays}
+                        saved={ticketLifetimeSaved}
+                        className="h-11 min-w-22 shrink-0 rounded-control px-4 font-bold"
+                      />
+                    </PressableScale>
+                  </div>
                 </div>
               )}
             </SpringCard>
