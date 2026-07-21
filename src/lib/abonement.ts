@@ -464,3 +464,49 @@ export async function spendWalletTx(tx: Tx, walletId: string, params: SpendParam
 
   return tx.abonementWallet.findUniqueOrThrow({ where: { id: walletId } });
 }
+
+interface TicketOrderSpendParams {
+  tenantId: string;
+  zoneId: string;
+  ticketOrderId: string;
+  pointId: string;
+  operatorId: string;
+  amount: number;
+}
+
+/**
+ * Списание на оплату заказа билетов — тот же принцип, что spendWalletTx
+ * выше (docs/spec/10-tickets.md, "ЗАКАЗ": "списание с кошелька — при
+ * продаже, атомарно"), просто ticketOrderId вместо launchId — оплата
+ * признаётся "Выручкой" сразу в момент продажи, не откладывается до сдачи
+ * итогов (тот же revenue_abonement, что у Пусков/Прибываний/Счётчиков —
+ * "поштучно нет операций" из спеки касается только нал/безнал, абонемент
+ * везде в проекте — исключение, реальные деньги уже пришли раньше).
+ * Принимает ЧУЖОЙ открытый tx — вызывающий роут уже ведёт транзакцию
+ * создания заказа+билетов, списание должно быть её частью (если заказ не
+ * сохранится, баланс не должен списаться, и наоборот).
+ */
+export async function spendWalletForTicketOrderTx(tx: Tx, walletId: string, params: TicketOrderSpendParams) {
+  const { tenantId, zoneId, ticketOrderId, pointId, operatorId, amount } = params;
+  const updated = await tx.abonementWallet.updateMany({
+    where: { id: walletId, tenantId, balance: { gte: amount } },
+    data: { balance: { decrement: amount } },
+  });
+  if (updated.count === 0) throw new InsufficientBalanceError();
+
+  await tx.abonementTransaction.create({
+    data: { walletId, type: "spend", amount, ticketOrderId, pointId, operatorId },
+  });
+
+  await tx.moneyOperation.create({
+    data: {
+      tenantId,
+      zoneId,
+      type: "revenue_abonement",
+      amount,
+      performedByOperatorId: operatorId,
+    },
+  });
+
+  return tx.abonementWallet.findUniqueOrThrow({ where: { id: walletId } });
+}

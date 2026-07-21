@@ -668,11 +668,14 @@
     "accountingModeCashOnlyHint": "ტარიფებისა და აქტივების გარეშე — მხოლოდ თანხა",
     "accountingModeStays": "ვიზიტები",
     "accountingModeStaysHint": "გაშვებების დაწყება/გაჩერება რეალურ დროში",
+    "accountingModeTickets": "ბილეთები",
+    "accountingModeTicketsHint": "ბილეთების გაყიდვა შეკვეთებით, გამოყენება არასავალდებულოა",
     "modeChip": {
       "counters": "მრიცხველებით",
       "launches": "გაშვებები",
       "cash_only": "მხოლოდ სალარო",
-      "stays": "ვიზიტები"
+      "stays": "ვიზიტები",
+      "tickets": "ბილეთები"
     },
     "zoneActiveChip": "აქტიური",
     "zoneInactiveChip": "არააქტიური"
@@ -723,6 +726,19 @@
     "cashOnlyNote": "რეჟიმი «მხოლოდ სალარო»: ამ ზონას ტარიფები და აქტივები არ სჭირდება — თანამშრომელი ჩააბარებს მხოლოდ თანხას.",
     "printReceiptLabel": "ქვითრის ბეჭდვა",
     "printReceiptHint": "ოპერატორს შეეძლება დაბეჭდოს ქვითარი სტუმრისთვის ვიზიტის/გაშვების შემდეგ",
+    "printTicketsLabel": "ბილეთების ბეჭდვა",
+    "ticketRedemptionLabel": "ბილეთების დაფარვა",
+    "ticketRedemptionHint": "გამორთულია — სისტემა იცის მხოლოდ გაყიდვები, სტატუსებისა და დაფარვის გარეშე",
+    "ticketLifetimeLabel": "შეკვეთის მოქმედების ვადა, დღე",
+    "ticketLifetimeUnlimited": "ვადის გარეშე",
+    "ticketVariantsAction": "ფასის ვარიანტები",
+    "ticketVariantsTitle": "ფასის ვარიანტები",
+    "ticketVariantNamePlaceholder": "სახელი (მაგ. ზრდასრული)",
+    "ticketVariantPricePlaceholder": "ფასი",
+    "addTicketVariantButton": "ვარიანტის დამატება",
+    "removeTicketVariantLabel": "ვარიანტის წაშლა",
+    "ticketVariantsEmptyError": "დაამატეთ სულ მცირე ერთი დასახელებული ვარიანტი",
+    "ticketVariantsSaveError": "ფასის ვარიანტების შენახვა ვერ მოხერხდა",
     "gameRoomPricingModeFixed": "შესვლით",
     "gameRoomPricingModePerMinute": "ფაქტობრივად",
     "gameRoomRateLabel": "ყოფნის ერთი წუთის ფასი",
@@ -822,6 +838,8 @@
     "skipShiftStartWindowHint": "მაგალითად, არასტანდარტული გრაფიკის თანამშრომლისთვის — საერთო დასაშვები ფანჯარა მასზე არ იმოქმედებს",
     "timeTrackingModeHint": "ხელით — თანამშრომელი თავად შეყავს მისვლის/წასვლის დროს; ავტო — დრო ფიქსირდება სერვერზე ღილაკით «ცვლის დაწყება/დასრულება»",
     "goodsAccessHint": "წვდომა საქონლის გაყიდვასა და სალაროს შემოწმებაზე",
+    "ticketsAccessLabel": "ბილეთების გაყიდვა",
+    "ticketsAccessHint": "წვდომა ბილეთების გაყიდვაზე; დაფარვა უკვე ხელმისაწვდომ ზონებში მუშაობს ამ გადამრთველის გარეშეც",
     "revisionAccessHint": "საშუალებას აძლევს ჩაატაროს ნაშთების რევიზია"
   },
   "money": {
@@ -1069,6 +1087,7 @@
       "homeButton": "მთავარზე",
       "categoryPlaceholder": "კატეგორია (არასავალდებულო)",
       "gameRoomSub": "ჩვენებები საჭირო არ არის — შემოსავალი გამოითვლება გაშვებების მიხედვით",
+      "ticketsSub": "ჩვენებები საჭირო არ არის — შემოსავალი გამოითვლება გაყიდული შეკვეთების მიხედვით",
       "gameRoomBlockedPrefix": "დაასრულე",
       "gameRoomBlockedSuffix": "აქტიური გაშვება:",
       "gameRoomGoToAssetButton": "აქტივზე გადასვლა"
@@ -1386,7 +1405,9 @@
     "shiftWord": "ცვლა",
     "shiftWordCap": "ცვლა",
     "launchesCountLabel": "გაშვებები",
-    "launchesTimeLabel": "დრო"
+    "launchesTimeLabel": "დრო",
+    "ticketsOrdersCountLabel": "შეკვეთები",
+    "ticketsSoldCountLabel": "ბილეთები"
   },
   "goods": {
     "navLabel": "საქონელი",
@@ -1461,5 +1482,44 @@
     "voided": "გაუქმებული",
     "voidReasonLabel": "მიზეზი (სურვილისამებრ)",
     "catalogStockLabel": "ნაშთი"
+  },
+  "tickets": {
+    "entryTitle": "ბილეთები",
+    "sellTab": "გაყიდვა",
+    "ordersTab": "შეკვეთები",
+    "noVariantsYet": "ამ ზონის აქტივებს ჯერ არ აქვთ ფასის ვარიანტები",
+    "noSellAccessHint": "ბილეთების გაყიდვაზე წვდომა არ გაქვთ — დაუკავშირდით მფლობელს",
+    "cartTitle": "კალათა",
+    "cartEmpty": "კალათა ცარიელია",
+    "totalLabel": "სულ",
+    "continueButton": "შემდეგი",
+    "orderDoneTitle": "შეკვეთა გაფორმდა",
+    "orderNumberLabel": "შეკვეთა №",
+    "ticketsCountLabel": "ბილეთები",
+    "printTicketButton": "ბილეთების ბეჭდვა",
+    "receiptTitle": "ბილეთი",
+    "receiptOrderLabel": "შეკვეთა",
+    "receiptExpiresLabel": "მოქმედია",
+    "receiptPriceLabel": "ფასი",
+    "searchOrderPlaceholder": "შეკვეთის ნომერი",
+    "findOrderButton": "ძებნა",
+    "orderNotFound": "ამ ნომრით შეკვეთა ვერ მოიძებნა",
+    "recentOrdersTitle": "ბოლო შეკვეთები",
+    "noOrdersYet": "შეკვეთები ჯერ არ არის",
+    "redeemButton": "გამოყენება",
+    "redeemedStatusLabel": "გამოყენებული",
+    "voidedStatusLabel": "გაუქმებული",
+    "expiredStatusLabel": "ვადაგასული",
+    "activeStatusLabel": "აქტიური",
+    "redemptionDisabledHint": "ამ ზონისთვის გამოყენება გამორთულია",
+    "allAssetsLabel": "ყველა აქტივი",
+    "soldByLabel": "გაყიდა",
+    "ownerOrdersTitle": "შეკვეთები",
+    "voidTicketAction": "გაუქმება",
+    "voidOrderAction": "შეკვეთის გაუქმება",
+    "confirmVoidTicket": "გავაუქმოთ ეს ბილეთი? დაბრუნება ბილეთის ფასის მიხედვით, მოქმედება შეუქცევადია.",
+    "confirmVoidOrder": "გავაუქმოთ ამ შეკვეთის ყველა აქტიური ბილეთი? დაბრუნება თითოეული ბილეთისთვის, მოქმედება შეუქცევადია.",
+    "newOrderButton": "ახალი შეკვეთა",
+    "noPriceLabel": "ფასი არ არის"
   }
 }

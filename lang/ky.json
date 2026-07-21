@@ -668,11 +668,14 @@
     "accountingModeCashOnlyHint": "Тарифтерсиз жана активдерсиз — тек сумма",
     "accountingModeStays": "Болуулар",
     "accountingModeStaysHint": "Пуcктерди реалдуу убакытта баштоо/токтотуу",
+    "accountingModeTickets": "Билеттер",
+    "accountingModeTicketsHint": "Билеттерди заказ менен сатуу, өтөө милдеттүү эмес",
     "modeChip": {
       "counters": "Эсептегичтер боюнча",
       "launches": "Иштетүүлөр",
       "cash_only": "Тек касса",
-      "stays": "Болуулар"
+      "stays": "Болуулар",
+      "tickets": "Билеттер"
     },
     "zoneActiveChip": "Активдүү",
     "zoneInactiveChip": "Активдүү эмес"
@@ -723,6 +726,19 @@
     "cashOnlyNote": "«Тек касса» режими: бул аймакка тарифтер жана активдер керек эмес — кызматкер тек сумманы тапшырат.",
     "printReceiptLabel": "Квитанцияны басып чыгаруу",
     "printReceiptHint": "Оператор келүүдөн/иштетүүдөн кийин конокко квитанция басып чыгара алат",
+    "printTicketsLabel": "Билеттерди басып чыгаруу",
+    "ticketRedemptionLabel": "Билеттерди өтөө",
+    "ticketRedemptionHint": "Өчүрүлгөн — система сатууларды гана билет, статустарсыз жана өтөөсүз (\"эскича\")",
+    "ticketLifetimeLabel": "Заказдардын мөөнөтү, күн",
+    "ticketLifetimeUnlimited": "Мөөнөтсүз",
+    "ticketVariantsAction": "Баа варианттары",
+    "ticketVariantsTitle": "Баа варианттары",
+    "ticketVariantNamePlaceholder": "Аты (мисалы, Чоң адам)",
+    "ticketVariantPricePlaceholder": "Баасы",
+    "addTicketVariantButton": "Вариант кошуу",
+    "removeTicketVariantLabel": "Вариантты өчүрүү",
+    "ticketVariantsEmptyError": "Атайын кеминде бир вариант кошуңуз",
+    "ticketVariantsSaveError": "Баа варианттарын сактоо мүмкүн болгон жок",
     "gameRoomPricingModeFixed": "Кирүү боюнча",
     "gameRoomPricingModePerMinute": "Факт боюнча",
     "gameRoomRateLabel": "Болуунун бир мүнөтүнүн баасы",
@@ -822,6 +838,8 @@
     "skipShiftStartWindowHint": "Мисалы, стандарттуу эмес графиктеги кызматкер үчүн — жалпы уруксат берилген терезе ага колдонулбайт",
     "timeTrackingModeHint": "Кол менен — кызматкер келүү/кетүү убактысын өзү киргизет; Авто — убакыт серверде «Кезекти баштоо/аяктоо» баскычы менен катталат",
     "goodsAccessHint": "Товар сатууга жана кассаны текшерүүгө мүмкүнчүлүк",
+    "ticketsAccessLabel": "Билет сатуу",
+    "ticketsAccessHint": "Билет сатууга мүмкүнчүлүк; жеткиликтүү зоналарда өтөө бул которгучсуз иштейт",
     "revisionAccessHint": "Калдыктарды текшерүүгө (ревизия) мүмкүнчүлүк берет"
   },
   "money": {
@@ -1069,6 +1087,7 @@
       "homeButton": "Башкы бетке",
       "categoryPlaceholder": "Категория (милдеттүү эмес)",
       "gameRoomSub": "Көрсөткүчтөр керек эмес — түшүм пуcктер боюнча эсептелет",
+      "ticketsSub": "Көрсөткүчтөр керек эмес — түшүм сатылган буйрутмалар боюнча эсептелет",
       "gameRoomBlockedPrefix": "Аякта",
       "gameRoomBlockedSuffix": "активдүү пусктар:",
       "gameRoomGoToAssetButton": "Активге өтүү"
@@ -1386,7 +1405,9 @@
     "shiftWord": "смена",
     "shiftWordCap": "Смена",
     "launchesCountLabel": "Пуcктер",
-    "launchesTimeLabel": "убакыт"
+    "launchesTimeLabel": "убакыт",
+    "ticketsOrdersCountLabel": "Буйрутмалар",
+    "ticketsSoldCountLabel": "Билеттер"
   },
   "goods": {
     "navLabel": "Товарлар",
@@ -1461,5 +1482,44 @@
     "voided": "Жокко чыгарылган",
     "voidReasonLabel": "Себеби (милдеттүү эмес)",
     "catalogStockLabel": "Калдык"
+  },
+  "tickets": {
+    "entryTitle": "Билеттер",
+    "sellTab": "Сатуу",
+    "ordersTab": "Буйрутмалар",
+    "noVariantsYet": "Бул аймактын активдеринде дагы баа варианттары жок",
+    "noSellAccessHint": "Билет сатууга уруксат жок — ээсине кайрылыңыз",
+    "cartTitle": "Себет",
+    "cartEmpty": "Себет бош",
+    "totalLabel": "Баары болуп",
+    "continueButton": "Кийинки",
+    "orderDoneTitle": "Буйрутма таризделди",
+    "orderNumberLabel": "Буйрутма №",
+    "ticketsCountLabel": "Билеттер",
+    "printTicketButton": "Билеттерди басып чыгаруу",
+    "receiptTitle": "Билет",
+    "receiptOrderLabel": "Буйрутма",
+    "receiptExpiresLabel": "Жарактуулук мөөнөтү",
+    "receiptPriceLabel": "Баасы",
+    "searchOrderPlaceholder": "Буйрутма номери",
+    "findOrderButton": "Табуу",
+    "orderNotFound": "Мындай номер менен буйрутма табылган жок",
+    "recentOrdersTitle": "Акыркы буйрутмалар",
+    "noOrdersYet": "Буйрутмалар азырынча жок",
+    "redeemButton": "Өтөө",
+    "redeemedStatusLabel": "Өтөлгөн",
+    "voidedStatusLabel": "Жокко чыгарылган",
+    "expiredStatusLabel": "Мөөнөтү өткөн",
+    "activeStatusLabel": "Активдүү",
+    "redemptionDisabledHint": "Бул аймак үчүн өтөө өчүрүлгөн",
+    "allAssetsLabel": "Бардык активдер",
+    "soldByLabel": "Сатты",
+    "ownerOrdersTitle": "Буйрутмалар",
+    "voidTicketAction": "Күчүн жоюу",
+    "voidOrderAction": "Буйрутманы күчүн жоюу",
+    "confirmVoidTicket": "Бул билетти күчүн жойосузбу? Билет баасы боюнча кайтарым, аракетти артка кайтарууга болбойт.",
+    "confirmVoidOrder": "Буйрутмадагы бардык активдүү билеттерди күчүн жойосузбу? Ар бир билет боюнча кайтарым, аракетти артка кайтарууга болбойт.",
+    "newOrderButton": "Жаңы буйрутма",
+    "noPriceLabel": "Баасы жок"
   }
 }

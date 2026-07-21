@@ -81,6 +81,17 @@ interface DayCard {
     count: number;
     amount: number;
   }[];
+  // Билеты (docs/spec/10-tickets.md, "Отчёты") — только у accountingMode
+  // "tickets", null у остальных режимов. ticketAssets — разрез по активам и
+  // вариантам (заказ мультиактивный, поэтому не переиспользует ни assets,
+  // ни liveAssets выше — своя форма без "было→стало" и без единого actives,
+  // одна строка на КОМБИНАЦИЮ актив+вариант).
+  ticketsOrdersCount: number | null;
+  ticketsCount: number | null;
+  ticketsRedeemedCount: number | null;
+  ticketsExpiredCount: number | null;
+  ticketRedemptionEnabled: boolean | null;
+  ticketAssets: { assetId: string; assetName: string; variantName: string; count: number; amount: number }[];
 }
 
 // Продажи абонементов за день — независимый от зон "карман" (запрос
@@ -841,6 +852,35 @@ export default function ReadingsCalendarPage() {
                                 </div>
                               </div>
                             ))}
+                          {/* Билеты (docs/spec/10-tickets.md, "Отчёты", п.2) —
+                              заказов N · билетов M, дальше разрez по активам
+                              и вариантам (одна строка на комбинацию, заказ
+                              мультиактивный — не переиспользует ни assets,
+                              ни liveAssets выше). */}
+                          {card.accountingMode === "tickets" && (
+                            <div className="mt-1.5 flex flex-col gap-1.5">
+                              <p className="text-caption-airbnb font-semibold text-foreground">
+                                {t.tickets.ownerOrdersTitle}: {card.ticketsOrdersCount ?? 0} · {t.tickets.ticketsCountLabel}:{" "}
+                                {card.ticketsCount ?? 0}
+                              </p>
+                              {card.ticketAssets.map((a) => (
+                                <div
+                                  key={`${a.assetId}:${a.variantName}`}
+                                  className="flex items-center justify-between text-caption-airbnb"
+                                >
+                                  <span className="text-muted-foreground">
+                                    {a.assetName} · {a.variantName}
+                                  </span>
+                                  <span className="flex items-center gap-1.5 tabular-nums">
+                                    <span className="text-muted-foreground">{a.count}</span>
+                                    <span className="font-bold text-primary">
+                                      <Money value={a.amount} />
+                                    </span>
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         <div className="mt-3 flex flex-col gap-1 border-t border-border pt-3 tabular-nums">
@@ -873,11 +913,30 @@ export default function ReadingsCalendarPage() {
                               <span className="text-foreground"><Money value={card.abonementAmount} /></span>
                             </div>
                           )}
-                          {card.accountingMode !== "cash_only" && (
+                          {/* "Возвраты/тестовые" не относится к Билетам — эту
+                              роль там играет аннулирование, отдельный экран
+                              (docs/spec/10-tickets.md, "Отчёты", п.3: "шаг
+                              возвратов/тестовых не показывается"). */}
+                          {card.accountingMode !== "cash_only" && card.accountingMode !== "tickets" && (
                           <div className="flex items-center justify-between text-caption-airbnb">
                             <span>{t.operatorApp.submit.returnsLabel}</span>
                             <span className="text-foreground">{card.returnsCount}</span>
                           </div>
+                          )}
+                          {/* "Погашено X из Y · истекло Z" — только при
+                              включённом гашении зоны (docs/spec/10-tickets.md,
+                              "Отчёты", п.3: "при выключенном гашении —
+                              погашенных не существует"). */}
+                          {card.accountingMode === "tickets" && card.ticketRedemptionEnabled && (
+                            <div className="flex items-center justify-between text-caption-airbnb">
+                              <span>
+                                {t.tickets.redeemedStatusLabel}: {card.ticketsRedeemedCount ?? 0} {t.common.of}{" "}
+                                {card.ticketsCount ?? 0}
+                              </span>
+                              <span className="text-foreground">
+                                {t.tickets.expiredStatusLabel.toLowerCase()}: {card.ticketsExpiredCount ?? 0}
+                              </span>
+                            </div>
                           )}
                           {card.accountingMode !== "cash_only" && (
                           <>

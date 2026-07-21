@@ -43,6 +43,10 @@ export interface ZoneSummaryData {
   // Только у isGameRoom/"launches" — см. ZoneAssetTallyLine. Пустой массив
   // у "counters"/"cash_only" (там используется readings выше).
   perAsset: ZoneAssetTallyLine[];
+  // Билеты (docs/spec/10-tickets.md) — accountingMode="tickets"; null у всех
+  // остальных режимов, тот же принцип, что gameRoomLaunchCount выше.
+  ticketsOrdersCount: number | null;
+  ticketsCount: number | null;
   cashAmount: number;
   mobileAmount: number; // "безнал" — см. feedback_no_hardcoded_currency
   // Абонемент как способ оплаты пуска (docs/spec/04-game-room.md) — НЕ входит

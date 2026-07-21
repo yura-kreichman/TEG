@@ -19,9 +19,13 @@ const buttonVariants = cva(
         // что и у variant="outline" (запрос пользователя 2026-07-22: "на всех
         // синих кнопках глубину по аналогии, синие остаются синими") — цвет/
         // градиент/brightness не тронуты, добавлен только третий слой (нижнее
-        // inset-затемнение), которого раньше не было.
+        // inset-затемнение), которого раньше не было. Обводка — тот же тон,
+        // что тёмный конец градиента ("to" ниже), не унаследованный
+        // border-transparent из базового класса (запрос пользователя того же
+        // вечера: "обводку синих кнопок сделать самым тёмным синим цветом
+        // градиента, а не белой").
         default:
-          "bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary),black_14%)] text-primary-foreground shadow-[0_2px_5px_rgba(0,0,0,.2),inset_0_1px_0_rgba(255,255,255,.22),inset_0_-2px_3px_rgba(0,0,0,.14)] hover:brightness-105 hover:shadow-[0_3px_7px_rgba(0,0,0,.24),inset_0_1px_0_rgba(255,255,255,.24),inset_0_-2px_3px_rgba(0,0,0,.16)] active:brightness-95 active:shadow-[0_1px_2px_rgba(0,0,0,.18),inset_0_1px_0_rgba(255,255,255,.14),inset_0_-1px_2px_rgba(0,0,0,.16)]",
+          "border-[color-mix(in_oklch,var(--primary),black_14%)] bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary),black_14%)] text-primary-foreground shadow-[0_2px_5px_rgba(0,0,0,.2),inset_0_1px_0_rgba(255,255,255,.22),inset_0_-2px_3px_rgba(0,0,0,.14)] hover:brightness-105 hover:shadow-[0_3px_7px_rgba(0,0,0,.24),inset_0_1px_0_rgba(255,255,255,.24),inset_0_-2px_3px_rgba(0,0,0,.16)] active:brightness-95 active:shadow-[0_1px_2px_rgba(0,0,0,.18),inset_0_1px_0_rgba(255,255,255,.14),inset_0_-1px_2px_rgba(0,0,0,.16)]",
         // Тот же выраженный "объёмный" bevel, что раньше был только у
         // SaveButton (src/components/ui/save-button.tsx) — запрос
         // пользователя 2026-07-22 по скриншоту кнопки "Сохранить" в

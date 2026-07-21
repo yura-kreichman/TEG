@@ -23,5 +23,5 @@ export interface SummaryPreviewContext extends SummaryPreviewContextByZone {
   // Реальный контекст на каждый режим учёта — только для карусели
   // предпросмотра "Сводки по зоне" (см. api/tenant/summary-settings/
   // preview-context/route.ts).
-  byMode: Record<"counters" | "launches" | "stays" | "cash_only", SummaryPreviewContextByZone>;
+  byMode: Record<"counters" | "launches" | "stays" | "cash_only" | "tickets", SummaryPreviewContextByZone>;
 }

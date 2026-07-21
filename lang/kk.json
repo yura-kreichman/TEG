@@ -668,11 +668,14 @@
     "accountingModeCashOnlyHint": "Тарифтер мен активтерсіз — тек сома",
     "accountingModeStays": "Болулар",
     "accountingModeStaysHint": "Пуcктерді нақты уақытта бастау/тоқтату",
+    "accountingModeTickets": "Билеттер",
+    "accountingModeTicketsHint": "Билеттерді тапсырыспен сату, өтеу міндетті емес",
     "modeChip": {
       "counters": "Есептегіштер бойынша",
       "launches": "Жүрістер",
       "cash_only": "Тек касса",
-      "stays": "Болулар"
+      "stays": "Болулар",
+      "tickets": "Билеттер"
     },
     "zoneActiveChip": "Белсенді",
     "zoneInactiveChip": "Белсенді емес"
@@ -723,6 +726,19 @@
     "cashOnlyNote": "«Тек касса» режимі: бұл аймаққа тарифтер мен активтер қажет емес — қызметкер тек соманы тапсырады.",
     "printReceiptLabel": "Түбіртекті басып шығару",
     "printReceiptHint": "Оператор келуден/іске қосудан кейін келушіге түбіртек басып шығара алады",
+    "printTicketsLabel": "Билеттерді басып шығару",
+    "ticketRedemptionLabel": "Билеттерді өтеу",
+    "ticketRedemptionHint": "Өшірулі — жүйе тек сатуларды біледі, статустар мен өтеусіз (\"ескіше\")",
+    "ticketLifetimeLabel": "Тапсырыстардың қолданылу мерзімі, күн",
+    "ticketLifetimeUnlimited": "Мерзімсіз",
+    "ticketVariantsAction": "Баға нұсқалары",
+    "ticketVariantsTitle": "Баға нұсқалары",
+    "ticketVariantNamePlaceholder": "Атауы (мысалы, Ересек)",
+    "ticketVariantPricePlaceholder": "Бағасы",
+    "addTicketVariantButton": "Нұсқа қосу",
+    "removeTicketVariantLabel": "Нұсқаны өшіру",
+    "ticketVariantsEmptyError": "Атауы бар кемінде бір нұсқа қосыңыз",
+    "ticketVariantsSaveError": "Баға нұсқаларын сақтау мүмкін болмады",
     "gameRoomPricingModeFixed": "Кіру бойынша",
     "gameRoomPricingModePerMinute": "Нақты бойынша",
     "gameRoomRateLabel": "Болу минутының бағасы",
@@ -822,6 +838,8 @@
     "skipShiftStartWindowHint": "Мысалы, кестесі стандартты емес қызметкер үшін — жалпы рұқсат етілген терезе оған қолданылмайды",
     "timeTrackingModeHint": "Қолмен — қызметкер келу/кету уақытын өзі енгізеді; Авто — уақыт серверде «Ауысымды бастау/аяқтау» батырмасымен тіркеледі",
     "goodsAccessHint": "Тауар сату мен кассаны тексеруге қолжетімділік",
+    "ticketsAccessLabel": "Билет сату",
+    "ticketsAccessHint": "Билет сатуға қолжетімділік; қолжетімді аймақтарда өтеу осы тумблерсіз жұмыс істейді",
     "revisionAccessHint": "Қалдықтарды түгендеуге мүмкіндік береді"
   },
   "money": {
@@ -1069,6 +1087,7 @@
       "homeButton": "Басты бетке",
       "categoryPlaceholder": "Санат (міндетті емес)",
       "gameRoomSub": "Көрсеткіштер қажет емес — түсім пуcктер бойынша есептеледі",
+      "ticketsSub": "Көрсеткіштер қажет емес — түсім сатылған тапсырыстар бойынша есептеледі",
       "gameRoomBlockedPrefix": "Аяқта",
       "gameRoomBlockedSuffix": "белсенді пусктер:",
       "gameRoomGoToAssetButton": "Активке өту"
@@ -1386,7 +1405,9 @@
     "shiftWord": "ауысым",
     "shiftWordCap": "Ауысым",
     "launchesCountLabel": "Пуcктер",
-    "launchesTimeLabel": "уақыт"
+    "launchesTimeLabel": "уақыт",
+    "ticketsOrdersCountLabel": "Тапсырыстар",
+    "ticketsSoldCountLabel": "Билеттер"
   },
   "goods": {
     "navLabel": "Тауарлар",
@@ -1461,5 +1482,44 @@
     "voided": "Жойылған",
     "voidReasonLabel": "Себебі (міндетті емес)",
     "catalogStockLabel": "Қалдық"
+  },
+  "tickets": {
+    "entryTitle": "Билеттер",
+    "sellTab": "Сату",
+    "ordersTab": "Тапсырыстар",
+    "noVariantsYet": "Бұл аймақтың активтерінде әлі баға нұсқалары жоқ",
+    "noSellAccessHint": "Билет сатуға қол жеткізу жоқ — иесіне хабарласыңыз",
+    "cartTitle": "Себет",
+    "cartEmpty": "Себет бос",
+    "totalLabel": "Барлығы",
+    "continueButton": "Келесі",
+    "orderDoneTitle": "Тапсырыс рәсімделді",
+    "orderNumberLabel": "Тапсырыс №",
+    "ticketsCountLabel": "Билеттер",
+    "printTicketButton": "Билеттерді басып шығару",
+    "receiptTitle": "Билет",
+    "receiptOrderLabel": "Тапсырыс",
+    "receiptExpiresLabel": "Жарамдылық мерзімі",
+    "receiptPriceLabel": "Бағасы",
+    "searchOrderPlaceholder": "Тапсырыс нөмірі",
+    "findOrderButton": "Табу",
+    "orderNotFound": "Мұндай нөмірмен тапсырыс табылмады",
+    "recentOrdersTitle": "Соңғы тапсырыстар",
+    "noOrdersYet": "Тапсырыстар әлі жоқ",
+    "redeemButton": "Өтеу",
+    "redeemedStatusLabel": "Өтелген",
+    "voidedStatusLabel": "Күші жойылған",
+    "expiredStatusLabel": "Мерзімі өткен",
+    "activeStatusLabel": "Белсенді",
+    "redemptionDisabledHint": "Бұл аймақ үшін өтеу өшірілген",
+    "allAssetsLabel": "Барлық активтер",
+    "soldByLabel": "Сатқан",
+    "ownerOrdersTitle": "Тапсырыстар",
+    "voidTicketAction": "Күшін жою",
+    "voidOrderAction": "Тапсырысты күшін жою",
+    "confirmVoidTicket": "Бұл билетті күшін жоямыз ба? Билет бағасы бойынша қайтарым, әрекетті қайтару мүмкін емес.",
+    "confirmVoidOrder": "Тапсырыстың барлық белсенді билеттерін күшін жоямыз ба? Әр билет бойынша қайтарым, әрекетті қайтару мүмкін емес.",
+    "newOrderButton": "Жаңа тапсырыс",
+    "noPriceLabel": "Бағасы жоқ"
   }
 }

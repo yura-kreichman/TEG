@@ -668,11 +668,14 @@
     "accountingModeCashOnlyHint": "Tarife ve varlık yok — yalnızca tutar",
     "accountingModeStays": "Kalışlar",
     "accountingModeStaysHint": "Başlatmaları gerçek zamanlı başlat/durdur",
+    "accountingModeTickets": "Biletler",
+    "accountingModeTicketsHint": "Sipariş ile bilet satışı, kullanım isteğe bağlı",
     "modeChip": {
       "counters": "Sayaçlara göre",
       "launches": "Turlar",
       "cash_only": "Yalnızca kasa",
-      "stays": "Kalışlar"
+      "stays": "Kalışlar",
+      "tickets": "Biletler"
     },
     "zoneActiveChip": "Aktif",
     "zoneInactiveChip": "Etkin değil"
@@ -723,6 +726,19 @@
     "cashOnlyNote": "«Yalnızca kasa» modu: bu bölge için tarife ve varlık gerekmez — çalışan yalnızca tutarı teslim eder.",
     "printReceiptLabel": "Makbuz yazdırma",
     "printReceiptHint": "Operatör ziyaret/başlatmadan sonra ziyaretçiye makbuz yazdırabilecek",
+    "printTicketsLabel": "Bilet yazdırma",
+    "ticketRedemptionLabel": "Bilet kullanımı",
+    "ticketRedemptionHint": "Kapalı — sistem yalnızca satışları bilir, durum ve kullanım olmadan (\"eski usul\")",
+    "ticketLifetimeLabel": "Sipariş geçerlilik süresi, gün",
+    "ticketLifetimeUnlimited": "Süresiz",
+    "ticketVariantsAction": "Fiyat seçenekleri",
+    "ticketVariantsTitle": "Fiyat seçenekleri",
+    "ticketVariantNamePlaceholder": "Ad (örn. Yetişkin)",
+    "ticketVariantPricePlaceholder": "Fiyat",
+    "addTicketVariantButton": "Seçenek ekle",
+    "removeTicketVariantLabel": "Seçeneği sil",
+    "ticketVariantsEmptyError": "En az bir adlandırılmış seçenek ekleyin",
+    "ticketVariantsSaveError": "Fiyat seçenekleri kaydedilemedi",
     "gameRoomPricingModeFixed": "Giriş başına",
     "gameRoomPricingModePerMinute": "Fiili",
     "gameRoomRateLabel": "Kalış dakikası fiyatı",
@@ -822,6 +838,8 @@
     "skipShiftStartWindowHint": "Örneğin, düzensiz çalışma saatleri olan bir çalışan için — ortak izin verilen aralık ona uygulanmaz",
     "timeTrackingModeHint": "Manuel — çalışan giriş/çıkış saatini kendisi girer; Otomatik — saat sunucuda \"Vardiyayı başlat/bitir\" düğmesiyle kaydedilir",
     "goodsAccessHint": "Ürün satışına ve kasa doğrulamasına erişim",
+    "ticketsAccessLabel": "Bilet satışı",
+    "ticketsAccessHint": "Bilet satışına erişim; erişilebilir bölgelerde kullanım bu anahtar olmadan çalışır",
     "revisionAccessHint": "Stok revizyonu yapmaya izin verir"
   },
   "money": {
@@ -1069,6 +1087,7 @@
       "homeButton": "Ana sayfa",
       "categoryPlaceholder": "Kategori (isteğe bağlı)",
       "gameRoomSub": "Okuma girmeye gerek yok — gelir başlatmalardan hesaplanır",
+      "ticketsSub": "Okuma girmeye gerek yok — gelir satılan siparişlerden hesaplanır",
       "gameRoomBlockedPrefix": "Tamamla",
       "gameRoomBlockedSuffix": "aktif başlatma:",
       "gameRoomGoToAssetButton": "Varlığa git"
@@ -1386,7 +1405,9 @@
     "shiftWord": "vardiya",
     "shiftWordCap": "Vardiya",
     "launchesCountLabel": "Başlatmalar",
-    "launchesTimeLabel": "süre"
+    "launchesTimeLabel": "süre",
+    "ticketsOrdersCountLabel": "Siparişler",
+    "ticketsSoldCountLabel": "Biletler"
   },
   "goods": {
     "navLabel": "Ürünler",
@@ -1461,5 +1482,44 @@
     "voided": "İptal edildi",
     "voidReasonLabel": "Neden (isteğe bağlı)",
     "catalogStockLabel": "Stok"
+  },
+  "tickets": {
+    "entryTitle": "Biletler",
+    "sellTab": "Sat",
+    "ordersTab": "Siparişler",
+    "noVariantsYet": "Bu bölgenin varlıklarında henüz fiyat seçeneği yok",
+    "noSellAccessHint": "Bilet satışına erişiminiz yok — sahibiyle iletişime geçin",
+    "cartTitle": "Sepet",
+    "cartEmpty": "Sepet boş",
+    "totalLabel": "Toplam",
+    "continueButton": "İleri",
+    "orderDoneTitle": "Sipariş oluşturuldu",
+    "orderNumberLabel": "Sipariş №",
+    "ticketsCountLabel": "Bilet",
+    "printTicketButton": "Biletleri yazdır",
+    "receiptTitle": "Bilet",
+    "receiptOrderLabel": "Sipariş",
+    "receiptExpiresLabel": "Son geçerlilik",
+    "receiptPriceLabel": "Fiyat",
+    "searchOrderPlaceholder": "Sipariş numarası",
+    "findOrderButton": "Bul",
+    "orderNotFound": "Bu numarayla sipariş bulunamadı",
+    "recentOrdersTitle": "Son siparişler",
+    "noOrdersYet": "Henüz sipariş yok",
+    "redeemButton": "Kullan",
+    "redeemedStatusLabel": "Kullanıldı",
+    "voidedStatusLabel": "İptal edildi",
+    "expiredStatusLabel": "Süresi doldu",
+    "activeStatusLabel": "Aktif",
+    "redemptionDisabledHint": "Bu bölge için kullanım kapalı",
+    "allAssetsLabel": "Tüm varlıklar",
+    "soldByLabel": "Satan",
+    "ownerOrdersTitle": "Siparişler",
+    "voidTicketAction": "İptal et",
+    "voidOrderAction": "Siparişi iptal et",
+    "confirmVoidTicket": "Bu bilet iptal edilsin mi? Bilet fiyatı üzerinden iade yapılır, bu işlem geri alınamaz.",
+    "confirmVoidOrder": "Bu siparişteki tüm aktif biletler iptal edilsin mi? Her bilet için iade yapılır, bu işlem geri alınamaz.",
+    "newOrderButton": "Yeni sipariş",
+    "noPriceLabel": "Fiyat yok"
   }
 }

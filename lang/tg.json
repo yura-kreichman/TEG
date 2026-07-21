@@ -668,11 +668,14 @@
     "accountingModeCashOnlyHint": "Бе тарифҳо ва активҳо — танҳо маблағ",
     "accountingModeStays": "Истиқоматҳо",
     "accountingModeStaysHint": "Оғоз/қатъи пускҳо дар вақти воқеӣ",
+    "accountingModeTickets": "Билетҳо",
+    "accountingModeTicketsHint": "Фурӯши билет бо фармоиш, бозхонд ихтиёрӣ",
     "modeChip": {
       "counters": "Аз рӯи ҳисобкунакҳо",
       "launches": "Оғозҳо",
       "cash_only": "Танҳо касса",
-      "stays": "Истиқоматҳо"
+      "stays": "Истиқоматҳо",
+      "tickets": "Билетҳо"
     },
     "zoneActiveChip": "Фаъол",
     "zoneInactiveChip": "Ғайрифаъол"
@@ -723,6 +726,19 @@
     "cashOnlyNote": "Реҷаи «Танҳо касса»: ба ин минтақа тарифҳо ва активҳо лозим нестанд — корманд танҳо маблағро месупорад.",
     "printReceiptLabel": "Чопи квитансия",
     "printReceiptHint": "Оператор пас аз ташриф/оғоз метавонад ба меҳмон квитансия чоп кунад",
+    "printTicketsLabel": "Чопи билетҳо",
+    "ticketRedemptionLabel": "Бозхонди билетҳо",
+    "ticketRedemptionHint": "Хомӯш — система танҳо фурӯшро медонад, бе статус ва бозхонд (\"тарзи кӯҳна\")",
+    "ticketLifetimeLabel": "Мӯҳлати амали фармоишҳо, рӯз",
+    "ticketLifetimeUnlimited": "Бемӯҳлат",
+    "ticketVariantsAction": "Вариантҳои нарх",
+    "ticketVariantsTitle": "Вариантҳои нарх",
+    "ticketVariantNamePlaceholder": "Ном (масалан, Калонсол)",
+    "ticketVariantPricePlaceholder": "Нарх",
+    "addTicketVariantButton": "Илова кардани вариант",
+    "removeTicketVariantLabel": "Нест кардани вариант",
+    "ticketVariantsEmptyError": "Ақаллан як варианти номдорро илова кунед",
+    "ticketVariantsSaveError": "Захира кардани вариантҳои нарх муяссар нашуд",
     "gameRoomPricingModeFixed": "Вурудӣ",
     "gameRoomPricingModePerMinute": "Воқеӣ",
     "gameRoomRateLabel": "Нархи як дақиқаи буд",
@@ -822,6 +838,8 @@
     "skipShiftStartWindowHint": "Масалан, барои кормандест бо ҷадвали ғайристандартӣ — тирезаи умумии иҷозат ба ӯ татбиқ намешавад",
     "timeTrackingModeHint": "Дастӣ — корманд вақти омадан/рафтанро худаш ворид мекунад; Авто — вақт дар сервер бо тугмаи «Оғоз/Анҷоми смена» сабт мешавад",
     "goodsAccessHint": "Дастрасӣ ба фурӯши молҳо ва мувофиқати сандуқ",
+    "ticketsAccessLabel": "Фурӯши билетҳо",
+    "ticketsAccessHint": "Дастрасӣ ба фурӯши билетҳо; бозхонд дар минтақаҳои аллакай дастрас бе ин тумблер кор мекунад",
     "revisionAccessHint": "Имкон медиҳад, ки ревизияи мондаҳо гузаронида шавад"
   },
   "money": {
@@ -1069,6 +1087,7 @@
       "homeButton": "Ба саҳифаи асосӣ",
       "categoryPlaceholder": "Категория (ихтиёрӣ)",
       "gameRoomSub": "Нишондиҳандаҳо лозим нестанд — даромад аз рӯи пускҳо ҳисоб мешавад",
+      "ticketsSub": "Нишондиҳандаҳо лозим нестанд — даромад аз рӯи фармоишҳои фурӯхташуда ҳисоб мешавад",
       "gameRoomBlockedPrefix": "Ба итмом расон",
       "gameRoomBlockedSuffix": "пуски фаъол дар",
       "gameRoomGoToAssetButton": "Гузариш ба актив"
@@ -1386,7 +1405,9 @@
     "shiftWord": "смена",
     "shiftWordCap": "Смена",
     "launchesCountLabel": "Пускҳо",
-    "launchesTimeLabel": "вақт"
+    "launchesTimeLabel": "вақт",
+    "ticketsOrdersCountLabel": "Фармоишҳо",
+    "ticketsSoldCountLabel": "Чиптаҳо"
   },
   "goods": {
     "navLabel": "Молҳо",
@@ -1461,5 +1482,44 @@
     "voided": "Бекоршуда",
     "voidReasonLabel": "Сабаб (ихтиёрӣ)",
     "catalogStockLabel": "Монда"
+  },
+  "tickets": {
+    "entryTitle": "Чиптаҳо",
+    "sellTab": "Фурӯхтан",
+    "ordersTab": "Фармоишҳо",
+    "noVariantsYet": "Активҳои ин минтақа ҳанӯз вариантҳои нарх надоранд",
+    "noSellAccessHint": "Дастрасӣ ба фурӯши чиптаҳо нест — бо соҳиб тамос гиред",
+    "cartTitle": "Сабад",
+    "cartEmpty": "Сабад холист",
+    "totalLabel": "Ҳамагӣ",
+    "continueButton": "Минбаъд",
+    "orderDoneTitle": "Фармоиш расмият ёфт",
+    "orderNumberLabel": "Фармоиши №",
+    "ticketsCountLabel": "Чиптаҳо",
+    "printTicketButton": "Чоп кардани чиптаҳо",
+    "receiptTitle": "Чипта",
+    "receiptOrderLabel": "Фармоиш",
+    "receiptExpiresLabel": "Эътибор то",
+    "receiptPriceLabel": "Нарх",
+    "searchOrderPlaceholder": "Рақами фармоиш",
+    "findOrderButton": "Ёфтан",
+    "orderNotFound": "Фармоише бо ин рақам ёфт нашуд",
+    "recentOrdersTitle": "Фармоишҳои охирин",
+    "noOrdersYet": "Фармоишҳо ҳанӯз нестанд",
+    "redeemButton": "Истифода",
+    "redeemedStatusLabel": "Истифодашуда",
+    "voidedStatusLabel": "Бекоршуда",
+    "expiredStatusLabel": "Мӯҳлаташ гузашта",
+    "activeStatusLabel": "Фаъол",
+    "redemptionDisabledHint": "Барои ин минтақа истифодабарӣ хомӯш аст",
+    "allAssetsLabel": "Ҳамаи активҳо",
+    "soldByLabel": "Фурӯхт",
+    "ownerOrdersTitle": "Фармоишҳо",
+    "voidTicketAction": "Бекор кардан",
+    "voidOrderAction": "Фармоишро бекор кардан",
+    "confirmVoidTicket": "Ин чиптаро бекор мекунед? Баргардонидан аз рӯи нархи чипта, амалро баргардонидан мумкин нест.",
+    "confirmVoidOrder": "Ҳамаи чиптаҳои фаъоли ин фармоишро бекор мекунед? Баргардонидан аз рӯи ҳар чипта, амалро баргардонидан мумкин нест.",
+    "newOrderButton": "Фармоиши нав",
+    "noPriceLabel": "Нарх нест"
   }
 }

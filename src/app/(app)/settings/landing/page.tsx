@@ -1214,7 +1214,16 @@ function LandingStats() {
 
           {data.series.length > 0 && (
             <SpringCard hover={false} className="flex flex-col gap-2">
-              <p className="text-body-airbnb font-semibold">{t.landing.statsByDayTitle}</p>
+              <div>
+                <p className="text-body-airbnb font-semibold">{t.landing.statsByDayTitle}</p>
+                {/* Легенда для компактной "X / Y" (запрос пользователя
+                    2026-07-21: "не понятно, что за дробные числа") — одна
+                    строка на всю карточку, не дублируется в каждой строке
+                    списка, те же подписи, что у сводных карточек выше. */}
+                <p className="text-caption-airbnb text-muted-foreground">
+                  {t.landing.statsVisits} / {t.landing.statsUniqueVisitors}
+                </p>
+              </div>
               {data.series.map((row) => (
                 <div key={row.date} className="flex items-center justify-between text-sm tabular-nums">
                   <span className="text-muted-foreground">

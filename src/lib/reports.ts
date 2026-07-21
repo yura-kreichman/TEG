@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone } from "@/lib/results-calc";
+import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
+import { aggregateTicketOrders, ticketRevenueByAssetVariant } from "@/lib/tickets";
 
 export type PeriodGranularity = "day" | "week" | "month" | "year";
 // Было отдельным типом без "day" (week/month/year), т.к. переключатель точки
@@ -239,6 +240,52 @@ export async function computeZoneSubmissionRevenues(
     launchesTallyBySubmission.set(l.zoneSubmissionId, bucket);
   }
 
+  // Билеты (docs/spec/10-tickets.md, "Отчёты": "money-роуты... получают её
+  // автоматически через общий калькулятор — добавь isTicketsZone и ветку
+  // агрегата") — тот же класс пробела, что уже был у "Прибываний"/"Пусков"
+  // выше: без своей ветки zone.tariffs пуст, calcZoneRevenue([], ...) всегда
+  // даёт 0. В отличие от Launch, у Билетов нет zoneSubmissionId на заказе
+  // (заказы разнесены во времени от сдачи) — окно восстанавливается по
+  // ВСЕЙ истории сдач зоны (не только внутри текущего периода отчёта, иначе
+  // первая сдача периода не знала бы своей настоящей предыдущей границы),
+  // тот же приём, что boundariesByZone/abonementAmountFor в
+  // /api/reports/counters/day/route.ts.
+  const ticketZoneIds = zones.filter((z) => isTicketsZone(z)).map((z) => z.id);
+  const ticketBoundariesByZone = new Map<string, Date[]>();
+  if (ticketZoneIds.length) {
+    const allTicketZoneSubmissions = await prisma.zoneSubmission.findMany({
+      where: { zoneId: { in: ticketZoneIds } },
+      orderBy: { createdAt: "asc" },
+      select: { zoneId: true, createdAt: true },
+    });
+    for (const row of allTicketZoneSubmissions) {
+      const list = ticketBoundariesByZone.get(row.zoneId) ?? [];
+      list.push(row.createdAt);
+      ticketBoundariesByZone.set(row.zoneId, list);
+    }
+  }
+  function ticketWindowFor(zoneId: string, submissionCreatedAt: Date): { start: Date | null; end: Date } {
+    const boundaries = ticketBoundariesByZone.get(zoneId) ?? [];
+    const idx = boundaries.findIndex((d) => d.getTime() === submissionCreatedAt.getTime());
+    return { start: idx > 0 ? boundaries[idx - 1] : null, end: submissionCreatedAt };
+  }
+  const ticketZoneSubmissions = zoneSubmissions.filter((zs) => isTicketsZone(zoneById.get(zs.zoneId)!));
+  const ticketAggregateBySubmission = new Map<string, { totalAmount: number; abonementAmount: number }>();
+  const ticketAssetTotalsBySubmission = new Map<string, Map<string, number>>();
+  await Promise.all(
+    ticketZoneSubmissions.map(async (zs) => {
+      const { start, end } = ticketWindowFor(zs.zoneId, zs.createdAt);
+      const [agg, breakdown] = await Promise.all([
+        aggregateTicketOrders(zs.zoneId, start, end),
+        ticketRevenueByAssetVariant(zs.zoneId, start, end),
+      ]);
+      ticketAggregateBySubmission.set(zs.id, { totalAmount: agg.totalAmount, abonementAmount: agg.abonementAmount });
+      const perAssetTotals = new Map<string, number>();
+      for (const b of breakdown) perAssetTotals.set(b.assetId, (perAssetTotals.get(b.assetId) ?? 0) + b.amount);
+      ticketAssetTotalsBySubmission.set(zs.id, perAssetTotals);
+    })
+  );
+
   return zoneSubmissions.map((zs) => {
     const zone = zoneById.get(zs.zoneId)!;
     const isLaunches = zone.accountingMode === "launches";
@@ -263,6 +310,13 @@ export async function computeZoneSubmissionRevenues(
       abonementAmount = bucket?.abonementAmount ?? 0;
       perAsset = bucket?.perAsset ?? new Map();
       perTariff = bucket?.perTariff ?? new Map();
+    } else if (isTicketsZone(zone)) {
+      const agg = ticketAggregateBySubmission.get(zs.id);
+      calculatedRevenue = agg?.totalAmount ?? 0;
+      abonementAmount = agg?.abonementAmount ?? 0;
+      perAsset = ticketAssetTotalsBySubmission.get(zs.id) ?? new Map();
+      // perTariff остаётся пустым — у Билетов цены на активах, не на
+      // тарифах (docs/spec/10-tickets.md, "ЦЕНЫ — НА АКТИВАХ, НЕ ТАРИФЫ").
     } else {
       const tariffCalc = zone.tariffs.map((tariff) => ({
         tariffId: tariff.id,

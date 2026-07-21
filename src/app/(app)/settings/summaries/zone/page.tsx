@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 // будет выглядеть сводка для остальных режимов (запрос пользователя
 // 2026-07-19: "предпросмотр надо сделать несколько в зависимости от режима
 // учёта, меняется свайпом"). Порядок — от самого частого к самому редкому.
-const PREVIEW_MODES: ZoneAccountingMode[] = ["counters", "launches", "stays", "cash_only"];
+const PREVIEW_MODES: ZoneAccountingMode[] = ["counters", "launches", "stays", "cash_only", "tickets"];
 
 // Числа в предпросмотре — демо (тумблеры проверяют, ЧТО показывается, не
 // сколько), а названия зоны/активов/тарифов/оператора — настоящие (см. фидбек
@@ -79,11 +79,33 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary, mode
       gameRoomTotalMinutes: null,
       readings: [],
       perAsset: [],
+      ticketsOrdersCount: null,
+      ticketsCount: null,
       cashAmount: 1345,
       mobileAmount: 0,
       abonementAmount: 0,
       calculatedRevenue: 0,
       difference: 0,
+      returnsCount: 0,
+    };
+  }
+
+  if (mode === "tickets") {
+    return {
+      ...base,
+      accountingMode: "tickets",
+      isGameRoom: false,
+      gameRoomLaunchCount: null,
+      gameRoomTotalMinutes: null,
+      readings: [],
+      perAsset: [],
+      ticketsOrdersCount: 14,
+      ticketsCount: 22,
+      cashAmount: 900,
+      mobileAmount: 200,
+      abonementAmount: 100,
+      calculatedRevenue: 1200,
+      difference: Math.round((900 + 200 - 1200) * 100) / 100,
       returnsCount: 0,
     };
   }
@@ -98,6 +120,8 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary, mode
       gameRoomTotalMinutes: 245,
       readings: [],
       perAsset: splitPerAsset(names, 18, 1715),
+      ticketsOrdersCount: null,
+      ticketsCount: null,
       cashAmount: 1200,
       mobileAmount: 300,
       abonementAmount: 150,
@@ -117,6 +141,8 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary, mode
       gameRoomTotalMinutes: null,
       readings: [],
       perAsset: splitPerAsset(names, 24, 1200),
+      ticketsOrdersCount: null,
+      ticketsCount: null,
       cashAmount: 1000,
       mobileAmount: 200,
       abonementAmount: 0,
@@ -144,6 +170,8 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary, mode
     gameRoomTotalMinutes: null,
     readings,
     perAsset: [],
+    ticketsOrdersCount: null,
+    ticketsCount: null,
     // Демо-цифры согласованы с реальной формулой (submit-results/route.ts:
     // difference = (cashAmount + mobileAmount) - calculatedRevenue) — раньше
     // difference было отдельным произвольным числом (25), не совпадавшим с
@@ -213,6 +241,7 @@ export default function ZoneSummaryEditorPage() {
     launches: t.zonesList.accountingModeLaunches,
     stays: t.zonesList.accountingModeStays,
     cash_only: t.zonesList.accountingModeCashOnly,
+    tickets: t.zonesList.accountingModeTickets,
   };
 
   const rows: Array<{

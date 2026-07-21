@@ -19,6 +19,7 @@ import {
   calcZoneRevenue,
   isLaunchesZone,
   isStaysZone,
+  isTicketsZone,
   type ZoneAccountingMode,
 } from "@/lib/results-calc";
 import { queueSubmission } from "@/lib/offline-submissions";
@@ -139,6 +140,16 @@ export default function SubmitResultsPage() {
   const [gameRoomRevenueByAsset, setGameRoomRevenueByAsset] = useState<
     { assetId: string; calculatedAmount: number; cashAmount: number; mobileAmount: number; abonementAmount: number }[]
   >([]);
+  // Билеты (docs/spec/10-tickets.md) — расчётная выручка ОДНОЙ парой на
+  // зону, не по активам (заказ мультиактивный) — тот же принцип получения
+  // (fetch при входе на шаг зоны), что у gameRoomRevenueByAsset выше, просто
+  // агрегат зонный, не по активам.
+  const [ticketsAggregate, setTicketsAggregate] = useState<{
+    totalAmount: number;
+    cashAmount: number;
+    mobileAmount: number;
+    abonementAmount: number;
+  } | null>(null);
   const [result, setResult] = useState<{
     summary: { zoneId: string; zoneName: string; calculatedRevenue: number; actualCash: number; difference: number }[];
     remindMarkDeparture?: boolean;
@@ -174,12 +185,21 @@ export default function SubmitResultsPage() {
     if (currentStep.kind !== "zone") {
       setGameRoomOpenByAsset([]);
       setGameRoomRevenueByAsset([]);
+      setTicketsAggregate(null);
       return;
     }
     const zone = zones.find((z) => z.id === currentStep.zoneId);
     setGameRoomOpenByAsset([]);
     setGameRoomRevenueByAsset([]);
+    setTicketsAggregate(null);
     if (!zone) return;
+
+    if (isTicketsZone(zone)) {
+      fetch(`/api/zones/${zone.id}/ticket-orders?aggregate=1`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => setTicketsAggregate(data?.aggregate ?? null));
+      return;
+    }
 
     if (isStaysZone(zone)) {
       fetch(`/api/zones/${zone.id}/launches?cashSplit=1`)
@@ -663,9 +683,11 @@ export default function SubmitResultsPage() {
               <p className="mt-1 text-[0.84375rem] text-muted-foreground">
                 {activeZone.accountingMode === "cash_only"
                   ? t.operatorApp.submit.cashOnlySub
-                  : isStaysZone(activeZone) || isLaunchesZone(activeZone)
-                    ? t.operatorApp.submit.gameRoomSub
-                    : t.operatorApp.submit.enterReadingsSub}
+                  : isTicketsZone(activeZone)
+                    ? t.operatorApp.submit.ticketsSub
+                    : isStaysZone(activeZone) || isLaunchesZone(activeZone)
+                      ? t.operatorApp.submit.gameRoomSub
+                      : t.operatorApp.submit.enterReadingsSub}
               </p>
             </div>
 
@@ -693,7 +715,10 @@ export default function SubmitResultsPage() {
                 );
               })}
 
-            {activeZone.accountingMode !== "cash_only" && !isStaysZone(activeZone) && !isLaunchesZone(activeZone) && (
+            {activeZone.accountingMode !== "cash_only" &&
+              !isStaysZone(activeZone) &&
+              !isLaunchesZone(activeZone) &&
+              !isTicketsZone(activeZone) && (
             <>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-3">
               {activeZone.assets.map((asset) => {
@@ -902,6 +927,24 @@ export default function SubmitResultsPage() {
 
                 {activeZone.accountingMode !== "cash_only" &&
                   (() => {
+                    // Билеты — расчёт из серверного агрегата (ticketsAggregate,
+                    // заказы с момента предыдущей сдачи), не из previewFor
+                    // (та формула — только для тарифов/показаний counters,
+                    // у Билетов zone.tariffs всегда пуст).
+                    if (isTicketsZone(activeZone)) {
+                      if (!ticketsAggregate) return null;
+                      const actualCash = Number(activeForm.cashAmount || 0) + Number(activeForm.mobileAmount || 0);
+                      const difference =
+                        Math.round((actualCash + ticketsAggregate.abonementAmount - ticketsAggregate.totalAmount) * 100) /
+                        100;
+                      return (
+                        <p className="text-caption-airbnb tabular-nums">
+                          {t.operatorApp.submit.calculatedRevenue} <Money value={ticketsAggregate.totalAmount} /> ·{" "}
+                          {t.operatorApp.submit.difference} {difference > 0 ? "+" : ""}
+                          <Money value={difference} />
+                        </p>
+                      );
+                    }
                     const preview = previewFor(activeZone.id);
                     return (
                       preview && (
@@ -913,6 +956,22 @@ export default function SubmitResultsPage() {
                       )
                     );
                   })()}
+                {/* Билеты — справочная разбивка способов оплаты заказов
+                    (докс: "показывается подсказкой у полей кассы, БЕЗ
+                    автоподстановки"), тот же принцип, что у Пусков/
+                    Прибываний. */}
+                {isTicketsZone(activeZone) && ticketsAggregate && (
+                  <p className="text-caption-airbnb text-muted-foreground tabular-nums">
+                    {t.operatorApp.submit.cashLabel}: <Money value={ticketsAggregate.cashAmount} /> ·{" "}
+                    {t.operatorApp.submit.mobileLabel}: <Money value={ticketsAggregate.mobileAmount} />
+                    {ticketsAggregate.abonementAmount > 0 && (
+                      <>
+                        {" "}
+                        · {t.operatorApp.abonement.paymentLabel}: <Money value={ticketsAggregate.abonementAmount} />
+                      </>
+                    )}
+                  </p>
+                )}
               </>
             )}
           </div>

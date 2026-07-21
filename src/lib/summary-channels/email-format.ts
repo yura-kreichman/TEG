@@ -80,6 +80,15 @@ export function formatZoneSummaryEmail(
       if (settings.showReadings) {
         rows.push({ label: st.launchesCountLabel, value: String(data.gameRoomLaunchCount ?? 0) });
       }
+    } else if (data.accountingMode === "tickets") {
+      // Билеты (docs/spec/10-tickets.md) — ни показаний, ни разреза по
+      // активу (заказ может содержать разные активы сразу), только счётчики
+      // заказов/билетов, тот же принцип, что formatTicketsLine в
+      // telegram-format.ts.
+      if (settings.showReadings) {
+        rows.push({ label: st.ticketsOrdersCountLabel, value: String(data.ticketsOrdersCount ?? 0) });
+        rows.push({ label: st.ticketsSoldCountLabel, value: String(data.ticketsCount ?? 0) });
+      }
     } else if (settings.showReadings || settings.showDelta) {
       for (const r of data.readings) {
         const value = [

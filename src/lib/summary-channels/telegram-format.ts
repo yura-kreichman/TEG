@@ -180,6 +180,16 @@ function formatLaunchesTallyLine(data: ZoneSummaryData, st: SummaryText): string
   return `🎮 ${st.launchesCountLabel}: <b>${count}</b>`;
 }
 
+// "Заказов: N · Билетов: M" — Билеты (docs/spec/10-tickets.md) не имеют ни
+// показаний (readings), ни разреза по активу в духе perAsset (заказ может
+// содержать разные активы одновременно) — единственная содержательная
+// строка сводки для этого режима — счётчики заказов/билетов.
+function formatTicketsLine(data: ZoneSummaryData, st: SummaryText): string {
+  const orders = data.ticketsOrdersCount ?? 0;
+  const tickets = data.ticketsCount ?? 0;
+  return `🎫 ${st.ticketsOrdersCountLabel}: <b>${orders}</b> · ${st.ticketsSoldCountLabel}: <b>${tickets}</b>`;
+}
+
 // Разбивка по активу для "Прибываний"/"Пусков" — той же формы, что уже есть
 // у "Счётчиков" (запрос пользователя 2026-07-19: "в них нет Активов как мы
 // делали в режиме Счётчики"), но count+amount вместо "было→стало" — у пусков
@@ -223,6 +233,8 @@ export function formatZoneSummaryTelegram(
           parts.push(formatLaunchesTallyLine(data, st));
           if (data.perAsset.length > 0) parts.push(formatPerAssetTallyCompact(data.perAsset));
         }
+      } else if (data.accountingMode === "tickets") {
+        if (settings.showReadings) parts.push(formatTicketsLine(data, st));
       } else if (settings.showReadings && data.readings.length > 0) {
         const grid = formatCompactGrid(
           data.readings.map((r, i) => ({ label: compactAssetLabel(data.readings, i), value: String(r.reading) }))
@@ -288,6 +300,8 @@ export function formatZoneSummaryTelegram(
         lines.push("", formatLaunchesTallyLine(data, st));
         if (data.perAsset.length > 0) lines.push("", formatPerAssetTallyFull(data.perAsset, locale));
       }
+    } else if (data.accountingMode === "tickets") {
+      if (settings.showReadings) lines.push("", formatTicketsLine(data, st));
     } else if (settings.showReadings || settings.showDelta) {
       // Выровнено в столбик (фидбек пользователя 2026-07-09) — внутри <code>
       // моноширинный шрифт, поэтому паддинг пробелами реально работает как

@@ -417,6 +417,15 @@ model Operator {
   // не открыть вовсе).
   revisionAccess Boolean @default(true)
 
+  // Тумблер модуля "Билеты" (docs/spec/10-tickets.md, "PWA оператора") —
+  // тот же UI-паттерн, что goodsAccess выше: второй модульный тумблер
+  // "весь модуль" у оператора, не список зон. Без него вкладка "Продать" не
+  // рендерится, эндпоинт продажи отклоняет запрос, tickets-зона не
+  // показывается в мастере сдачи итогов — оператор при этом всё ещё может
+  // гасить билеты во вкладке "Заказы" (тумблер не про доступ к зоне вообще,
+  // только про продажу). default false — как и goodsAccess, включать явно.
+  ticketsAccess Boolean @default(false)
+
   createdByUserId String
   createdBy       User   @relation("OperatorCreatedBy", fields: [createdByUserId], references: [id])
 
@@ -473,6 +482,8 @@ model Operator {
   goodsSales            GoodsSale[]
   goodsRevisions        GoodsRevision[]
   goodsReconciliations  GoodsReconciliation[]
+  ticketOrdersSold      TicketOrder[]
+  ticketsRedeemed       Ticket[]                   @relation("TicketRedeemedBy")
 }
 
 // ============================================================================
@@ -658,6 +669,15 @@ model Zone {
   // остальные переключатели печати, включать явно.
   printReceiptEnabled Boolean @default(false)
 
+  // Билеты (docs/spec/10-tickets.md), только accountingMode="tickets".
+  // Гашение — включено/выключено; default true ("нормальный" режим с
+  // полным циклом статусов, "по старинке" — осознанное исключение).
+  ticketRedemptionEnabled Boolean @default(true)
+  // Срок жизни заказа в днях, null = бессрочно — имеет смысл только при
+  // включённом гашении (см. docs/spec/10-tickets.md, "Срок жизни");
+  // при выключенном гашении поле скрыто в UI и к заказам не применяется.
+  ticketLifetimeDays      Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -668,6 +688,7 @@ model Zone {
   moneyOps            MoneyOperation[]
   landingContent      LandingZoneContent?
   launches            Launch[]
+  ticketOrders        TicketOrder[]
 }
 
 // 1 или 2 тарифа на зону: свободное название + цена за сеанс. Те же правила
@@ -834,6 +855,7 @@ model AbonementWallet {
   transactions AbonementTransaction[]
   launches     Launch[]
   goodsSales   GoodsSale[]
+  ticketOrders TicketOrder[]
 
   // Один кошелёк на номер в рамках тенанта — общий на все точки.
   @@unique([tenantId, phone])
@@ -870,6 +892,12 @@ model AbonementTransaction {
   goodsSaleId String?
   goodsSale   GoodsSale? @relation(fields: [goodsSaleId], references: [id], onDelete: SetNull)
 
+  // Только "spend" (оплата заказа билетов балансом) / "refund" (сторно
+  // аннулированного билета после сдачи итогов) — docs/spec/10-tickets.md.
+  // Тот же приём, что launchId/goodsSaleId выше.
+  ticketOrderId String?
+  ticketOrder   TicketOrder? @relation(fields: [ticketOrderId], references: [id], onDelete: SetNull)
+
   // Только "spend" — оплата поездки балансом на активе режима "Счётчики"
   // (docs/spec/01-counters.md). У этого режима нет своей отдельной записи на
   // сеанс (в отличие от Launch у launches/stays) — счётчик тикает физически,
@@ -901,6 +929,7 @@ model AbonementTransaction {
   @@index([walletId, occurredAt])
   @@index([launchId])
   @@index([goodsSaleId])
+  @@index([ticketOrderId])
   @@index([assetId])
 }
 
@@ -1110,6 +1139,118 @@ model GoodsReconciliation {
   @@index([pointId, occurredAt])
 }
 
+// ============================================================================
+// БИЛЕТЫ (см. docs/spec/10-tickets.md) — Zone.accountingMode="tickets".
+// Продажа заказами, использование (гашение) — опционально и разнесено во
+// времени/операторах. Цены — на активах (TicketVariant), не через Tariff.
+// ============================================================================
+
+// Варианты цен актива (докс: "У tickets-зоны карточка Тарифы не
+// показывается — вместо неё у каждого актива варианты цен"). Билет фиксирует
+// снапшот name/price — смена/удаление варианта прошлое не трогает, тот же
+// принцип, что у Launch.priceSnapshot/Goods.priceSnapshot.
+model TicketVariant {
+  id      String @id @default(cuid())
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  name  String
+  price Decimal @db.Decimal(10, 2)
+  order Int
+
+  deletedAt DateTime? // soft-delete, паттерн Tariff/Abonement
+
+  @@index([assetId, order])
+}
+
+// Один заказ — "создан+оплачен" одной атомарной транзакцией (серверных
+// черновиков нет, докс: "ЗАКАЗ"). Оплата целиком одним способом на весь
+// заказ; позиции заказа — отдельные билеты (Ticket ниже), каждый гасится
+// независимо.
+model TicketOrder {
+  id     String @id @default(cuid())
+  zoneId String
+  zone   Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  // Короткий номер, пул отдельный НА ЗОНУ (не на актив, как у Launch.number) —
+  // та же механика smallestFreeNumber/advisory-lock (src/lib/game-room.ts),
+  // лок по zoneId. "Занят" определяется полем openTicketsCount ниже, не
+  // отдельным статусом — см. его комментарий.
+  number Int
+
+  // "cash" | "mobile" | "abonement" — LAUNCH_PAYMENT_METHODS, тот же список.
+  paymentMethod String
+  walletId      String?
+  wallet        AbonementWallet? @relation(fields: [walletId], references: [id])
+
+  // Сумма к оплате на момент продажи — для чека/истории заказа. НЕ источник
+  // для расчёта выручки сдачи итогов (та считается по сумме НЕ voided
+  // Ticket.priceSnapshot окна — частичная аннуляция заказа иначе не
+  // уменьшала бы расчёт, docs/spec/01-counters.md, раздел "Расчёт").
+  totalSnapshot Decimal @db.Decimal(10, 2)
+
+  // Снапшот срока жизни при продаже (только если Zone.ticketRedemptionEnabled
+  // было true в момент продажи) — null = бессрочно. Общий на ВЕСЬ заказ, не
+  // по билетам (все билеты одного заказа истекают одновременно) — поэтому
+  // "истёк ли заказ" всегда одно сравнение с этим полем, без отдельного
+  // состояния на Ticket (см. Ticket.status ниже).
+  expiresAt DateTime?
+
+  // Держит номер занятым, пока > 0 — декремент атомарно при каждом гашении
+  // ИЛИ аннулировании билета этого заказа (число живых билетов, не
+  // булев статус: правило освобождения номера — "все билеты погашены ИЛИ
+  // истекли ИЛИ аннулированы", а не только "все аннулированы", поэтому
+  // плоский active/voided статус этого не покрыл бы). "Занят" (для
+  // smallestFreeNumber) = openTicketsCount > 0 AND (expiresAt IS NULL OR
+  // expiresAt > now()).
+  openTicketsCount Int @default(0)
+
+  soldByOperatorId String
+  soldByOperator   Operator @relation(fields: [soldByOperatorId], references: [id])
+  soldAt           DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tickets               Ticket[]
+  abonementTransactions AbonementTransaction[]
+
+  @@index([zoneId, number])
+  @@index([zoneId, openTicketsCount])
+}
+
+// Одна позиция заказа = один билет, гасится независимо от остальных билетов
+// того же заказа.
+model Ticket {
+  id      String      @id @default(cuid())
+  orderId String
+  order   TicketOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  variantNameSnapshot String
+  priceSnapshot       Decimal @db.Decimal(10, 2)
+
+  // "active" | "redeemed" | "voided" — "истёк" НЕ отдельное хранимое
+  // значение и никогда не пишется (докс: "статус expired назначается
+  // лениво при чтении, отдельного крона нет") — вычисляется на лету как
+  // status="active" AND order.expiresAt < now(), везде, где нужно (кнопка
+  // гашения, отчёты "истекло Z", сам openTicketsCount выше).
+  status String @default("active")
+
+  redeemedAt           DateTime?
+  redeemedByOperatorId String?
+  redeemedByOperator   Operator? @relation("TicketRedeemedBy", fields: [redeemedByOperatorId], references: [id])
+  voidedAt             DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([status])
+}
+
 model Asset {
   id     String @id @default(cuid())
   zoneId String
@@ -1148,6 +1289,8 @@ model Asset {
   initialReadings       AssetInitialReading[]
   launches              Launch[]
   abonementTransactions AbonementTransaction[]
+  ticketVariants        TicketVariant[]
+  tickets               Ticket[]
 }
 
 // Калибровочное показание счётчика (запрос пользователя 2026-07-14: "начинаю

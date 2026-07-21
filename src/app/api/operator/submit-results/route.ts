@@ -7,6 +7,7 @@ import {
   calcZoneRevenue,
   isLaunchesZone,
   isStaysZone,
+  isTicketsZone,
   type ZoneAccountingMode,
 } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
@@ -17,6 +18,7 @@ import {
   gameRoomRevenueByAsset,
   previousSubmissionBoundary,
 } from "@/lib/game-room";
+import { aggregateTicketOrders } from "@/lib/tickets";
 import { dispatchZoneSummary } from "@/lib/summary-channels/dispatch";
 import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { onResultsSubmission } from "@/lib/summary-channels/daily-cash-trigger";
@@ -71,6 +73,19 @@ export async function POST(request: Request) {
 
   if (zones.length !== zoneIds.length) {
     return NextResponse.json({ error: "Одна из зон не найдена" }, { status: 400 });
+  }
+
+  // Билеты (docs/spec/10-tickets.md, "ДОСТУП К СДАЧЕ") — серверная проверка,
+  // не только скрытие в UI (submission-context уже отмечает такие зоны
+  // флагом ticketsSubmissionAllowed=false, но обойти это со стороны клиента
+  // ничего не стоит — реальная защита должна быть здесь).
+  for (const zone of zones) {
+    if (zone.accountingMode === "tickets" && !operator.ticketsAccess) {
+      return NextResponse.json(
+        { error: `Нет доступа к сдаче зоны «${zone.name}» — нужен тумблер «Продажа билетов»` },
+        { status: 403 }
+      );
+    }
   }
 
   // Мягкая блокировка (docs/spec/04-game-room.md, "Деньги и сдача итогов") —
@@ -191,6 +206,19 @@ export async function POST(request: Request) {
     counterAbonementByZone.set(zone.id, await getZoneAbonementSpendAmount(zone.id, boundary));
   }
 
+  // Билеты (docs/spec/10-tickets.md, "ДЕНЬГИ И СДАЧА ИТОГОВ") — та же схема
+  // "с момента предыдущей сдачи", что у Пусков/Прибываний выше, просто
+  // источник другой (TicketOrder/Ticket, не Launch). Расчётная выручка = сумма
+  // НЕ voided Ticket.priceSnapshot окна — считается заранее (async), не в
+  // синхронном .map() ниже.
+  const ticketsAggregateByZone = new Map<string, Awaited<ReturnType<typeof aggregateTicketOrders>>>();
+  for (const zs of zoneSubmissions) {
+    const zone = zoneById.get(zs.zoneId)!;
+    if (!isTicketsZone(zone)) continue;
+    const boundary = await previousSubmissionBoundary(zone.id);
+    ticketsAggregateByZone.set(zone.id, await aggregateTicketOrders(zone.id, boundary, now));
+  }
+
   const summary = zoneSubmissions.map((zs) => {
     const zone = zoneById.get(zs.zoneId)!;
 
@@ -222,6 +250,43 @@ export async function POST(request: Request) {
         gameRoomLaunchCount: agg.count,
         gameRoomTotalMinutes: agg.totalMinutes,
         perAsset: agg.perAsset,
+        ticketsOrdersCount: null as number | null,
+        ticketsCount: null as number | null,
+        ticketsRedeemedCount: null as number | null,
+        ticketsExpiredCount: null as number | null,
+      };
+    }
+
+    if (isTicketsZone(zone)) {
+      // Билеты (docs/spec/10-tickets.md, "ДЕНЬГИ И СДАЧА ИТОГОВ") — касса
+      // ОДНОЙ ПАРОЙ ПОЛЕЙ на зону (не по активам, как у stays/launches выше —
+      // заказ мультиактивный, физически деньги по активам не разложить,
+      // осознанное расхождение). Способ оплаты заказа — справочная разбивка
+      // (agg.cash/mobile/abonementAmount), НЕ автоподстановка — те же
+      // zs.cashAmount/mobileAmount, что оператор ввёл вручную.
+      const agg = ticketsAggregateByZone.get(zone.id)!;
+      const calculatedRevenue = agg.totalAmount;
+      const actualCash = zs.cashAmount + zs.mobileAmount;
+      const difference = Math.round((actualCash + agg.abonementAmount - calculatedRevenue) * 100) / 100;
+      return {
+        zoneId: zs.zoneId,
+        zoneName: zone.name,
+        calculatedRevenue,
+        actualCash,
+        difference,
+        readingsText: "",
+        readingLines: [] as { assetName: string; tariffName: string; reading: number; delta: number }[],
+        returnsCount: 0,
+        cashAmount: zs.cashAmount,
+        mobileAmount: zs.mobileAmount,
+        abonementAmount: agg.abonementAmount,
+        gameRoomLaunchCount: null as number | null,
+        gameRoomTotalMinutes: null as number | null,
+        perAsset: [] as { assetName: string; count: number; amount: number }[],
+        ticketsOrdersCount: agg.ordersCount,
+        ticketsCount: agg.ticketsCount,
+        ticketsRedeemedCount: agg.redeemedCount,
+        ticketsExpiredCount: agg.expiredCount,
       };
     }
 
@@ -294,6 +359,10 @@ export async function POST(request: Request) {
       gameRoomLaunchCount: null as number | null,
       gameRoomTotalMinutes: null as number | null,
       perAsset: [] as { assetName: string; count: number; amount: number }[],
+      ticketsOrdersCount: null as number | null,
+      ticketsCount: null as number | null,
+      ticketsRedeemedCount: null as number | null,
+      ticketsExpiredCount: null as number | null,
     };
   });
 
@@ -308,20 +377,21 @@ export async function POST(request: Request) {
         data: {
           resultsSubmissionId: created.id,
           zoneId: zs.zoneId,
-          // У "Прибываний"/"Пусков" нет поля "возвраты/тестовые" в мастере
-          // (его роль выполняет аннулирование пуска, docs/spec/04-game-room.md) —
-          // не доверяем тому, что мог прислать клиент.
-          returnsCount: isStaysZone(zone) || isLaunchesZone(zone) ? 0 : zs.returnsCount,
+          // У "Прибываний"/"Пусков"/"Билетов" нет поля "возвраты/тестовые" в
+          // мастере (его роль выполняет аннулирование пуска/билета,
+          // docs/spec/04-game-room.md, docs/spec/10-tickets.md) — не доверяем
+          // тому, что мог прислать клиент.
+          returnsCount: isStaysZone(zone) || isLaunchesZone(zone) || isTicketsZone(zone) ? 0 : zs.returnsCount,
           cashAmount: zs.cashAmount,
           mobileAmount: zs.mobileAmount,
         },
       });
 
       // Ручные показания — только counters/launches-legacy без реального
-      // учёта тапов; "Прибывания" и "Пуски" считаются исключительно от
-      // Launch (см. агрегат выше), клиент их и не присылает, но не доверяем
-      // этому тоже.
-      if (!isStaysZone(zone) && !isLaunchesZone(zone)) {
+      // учёта тапов; "Прибывания", "Пуски" и "Билеты" считаются исключительно
+      // от Launch/TicketOrder (см. агрегаты выше), клиент их и не присылает,
+      // но не доверяем этому тоже.
+      if (!isStaysZone(zone) && !isLaunchesZone(zone) && !isTicketsZone(zone)) {
         for (const reading of zs.readings) {
           await tx.assetReading.create({
             data: {
@@ -439,6 +509,8 @@ export async function POST(request: Request) {
               occurredAt: submission.submittedAt,
               readings: s.readingLines,
               perAsset: s.perAsset,
+              ticketsOrdersCount: s.ticketsOrdersCount,
+              ticketsCount: s.ticketsCount,
               cashAmount: s.cashAmount,
               mobileAmount: s.mobileAmount,
               abonementAmount: s.abonementAmount,

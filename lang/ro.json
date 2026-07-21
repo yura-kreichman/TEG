@@ -668,11 +668,14 @@
     "accountingModeCashOnlyHint": "Fără tarife sau active — doar suma",
     "accountingModeStays": "Șederi",
     "accountingModeStaysHint": "Start/stop lansări în timp real",
+    "accountingModeTickets": "Bilete",
+    "accountingModeTicketsHint": "Vânzare de bilete pe comenzi, validarea este opțională",
     "modeChip": {
       "counters": "După contoare",
       "launches": "Curse",
       "cash_only": "Doar numerar",
-      "stays": "Șederi"
+      "stays": "Șederi",
+      "tickets": "Bilete"
     },
     "zoneActiveChip": "Activ",
     "zoneInactiveChip": "Inactivă"
@@ -723,6 +726,19 @@
     "cashOnlyNote": "Modul „Doar numerar”: această zonă nu are nevoie de tarife sau active — angajatul predă doar suma.",
     "printReceiptLabel": "Imprimare chitanță",
     "printReceiptHint": "Operatorul va putea imprima o chitanță pentru vizitator după vizită/pornire",
+    "printTicketsLabel": "Imprimare bilete",
+    "ticketRedemptionLabel": "Validare bilete",
+    "ticketRedemptionHint": "Dezactivat — sistemul cunoaște doar vânzările, fără statusuri sau validare (\"stil vechi\")",
+    "ticketLifetimeLabel": "Valabilitatea comenzilor, zile",
+    "ticketLifetimeUnlimited": "Nelimitat",
+    "ticketVariantsAction": "Variante de preț",
+    "ticketVariantsTitle": "Variante de preț",
+    "ticketVariantNamePlaceholder": "Nume (ex. Adult)",
+    "ticketVariantPricePlaceholder": "Preț",
+    "addTicketVariantButton": "Adaugă variantă",
+    "removeTicketVariantLabel": "Șterge varianta",
+    "ticketVariantsEmptyError": "Adăugați cel puțin o variantă cu nume",
+    "ticketVariantsSaveError": "Nu s-au putut salva variantele de preț",
     "gameRoomPricingModeFixed": "Pe intrare",
     "gameRoomPricingModePerMinute": "Real",
     "gameRoomRateLabel": "Preț pe minut de ședere",
@@ -822,6 +838,8 @@
     "skipShiftStartWindowHint": "De exemplu, pentru un angajat cu program neregulat — fereastra comună nu i se va aplica",
     "timeTrackingModeHint": "Manual — angajatul introduce singur ora de start/sfârșit; Automat — ora este înregistrată prin butonul „Începe/Termină tura” pe server",
     "goodsAccessHint": "Acces la vânzarea produselor și verificarea casei",
+    "ticketsAccessLabel": "Vânzare bilete",
+    "ticketsAccessHint": "Acces la vânzarea biletelor; validarea în zonele deja accesibile funcționează fără acest comutator",
     "revisionAccessHint": "Permite efectuarea reviziei stocurilor"
   },
   "money": {
@@ -1069,6 +1087,7 @@
       "homeButton": "Acasă",
       "categoryPlaceholder": "Categorie (opțional)",
       "gameRoomSub": "Nu sunt necesare citiri — venitul se calculează din lansări",
+      "ticketsSub": "Nu sunt necesare citiri — venitul se calculează din comenzile vândute",
       "gameRoomBlockedPrefix": "Finalizează",
       "gameRoomBlockedSuffix": "porniri active în",
       "gameRoomGoToAssetButton": "Mergi la activ"
@@ -1386,7 +1405,9 @@
     "shiftWord": "tură",
     "shiftWordCap": "Tură",
     "launchesCountLabel": "Lansări",
-    "launchesTimeLabel": "timp"
+    "launchesTimeLabel": "timp",
+    "ticketsOrdersCountLabel": "Comenzi",
+    "ticketsSoldCountLabel": "Bilete"
   },
   "goods": {
     "navLabel": "Produse",
@@ -1461,5 +1482,44 @@
     "voided": "Anulată",
     "voidReasonLabel": "Motiv (opțional)",
     "catalogStockLabel": "Stoc"
+  },
+  "tickets": {
+    "entryTitle": "Bilete",
+    "sellTab": "Vinde",
+    "ordersTab": "Comenzi",
+    "noVariantsYet": "Activele acestei zone nu au încă variante de preț",
+    "noSellAccessHint": "Nu aveți acces la vânzarea biletelor — contactați proprietarul",
+    "cartTitle": "Coș",
+    "cartEmpty": "Coșul este gol",
+    "totalLabel": "Total",
+    "continueButton": "Continuă",
+    "orderDoneTitle": "Comandă plasată",
+    "orderNumberLabel": "Comanda nr. ",
+    "ticketsCountLabel": "Bilete",
+    "printTicketButton": "Tipărește biletele",
+    "receiptTitle": "Bilet",
+    "receiptOrderLabel": "Comanda",
+    "receiptExpiresLabel": "Valabil până la",
+    "receiptPriceLabel": "Preț",
+    "searchOrderPlaceholder": "Număr comandă",
+    "findOrderButton": "Caută",
+    "orderNotFound": "Nu s-a găsit nicio comandă cu acest număr",
+    "recentOrdersTitle": "Comenzi recente",
+    "noOrdersYet": "Încă nu există comenzi",
+    "redeemButton": "Validează",
+    "redeemedStatusLabel": "Validat",
+    "voidedStatusLabel": "Anulat",
+    "expiredStatusLabel": "Expirat",
+    "activeStatusLabel": "Activ",
+    "redemptionDisabledHint": "Validarea este dezactivată pentru această zonă",
+    "allAssetsLabel": "Toate activele",
+    "soldByLabel": "Vândut de",
+    "ownerOrdersTitle": "Comenzi",
+    "voidTicketAction": "Anulează",
+    "voidOrderAction": "Anulează comanda",
+    "confirmVoidTicket": "Anulezi acest bilet? Se face rambursare la prețul biletului, ireversibil.",
+    "confirmVoidOrder": "Anulezi toate biletele active din această comandă? Rambursare pentru fiecare bilet, ireversibil.",
+    "newOrderButton": "Comandă nouă",
+    "noPriceLabel": "Fără preț"
   }
 }

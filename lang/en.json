@@ -668,11 +668,14 @@
     "accountingModeCashOnlyHint": "No tariffs or assets — just the amount",
     "accountingModeStays": "Stays",
     "accountingModeStaysHint": "Start/stop launches in real time",
+    "accountingModeTickets": "Tickets",
+    "accountingModeTicketsHint": "Ticket sales by order, redemption optional",
     "modeChip": {
       "counters": "By counters",
       "launches": "Launches",
       "cash_only": "Cash only",
-      "stays": "Stays"
+      "stays": "Stays",
+      "tickets": "Tickets"
     },
     "zoneActiveChip": "Active",
     "zoneInactiveChip": "Inactive"
@@ -723,6 +726,19 @@
     "cashOnlyNote": "\"Cash only\" mode: this zone doesn't need tariffs or assets — the employee just submits an amount.",
     "printReceiptLabel": "Print receipt",
     "printReceiptHint": "The operator will be able to print a receipt for the visitor after a stay/launch",
+    "printTicketsLabel": "Print tickets",
+    "ticketRedemptionLabel": "Ticket redemption",
+    "ticketRedemptionHint": "Off — the system only knows sales, no statuses or redemption (\"old-school\")",
+    "ticketLifetimeLabel": "Order lifetime, days",
+    "ticketLifetimeUnlimited": "Unlimited",
+    "ticketVariantsAction": "Price variants",
+    "ticketVariantsTitle": "Price variants",
+    "ticketVariantNamePlaceholder": "Name (e.g. Adult)",
+    "ticketVariantPricePlaceholder": "Price",
+    "addTicketVariantButton": "Add variant",
+    "removeTicketVariantLabel": "Remove variant",
+    "ticketVariantsEmptyError": "Add at least one named variant",
+    "ticketVariantsSaveError": "Failed to save price variants",
     "gameRoomPricingModeFixed": "Per entry",
     "gameRoomPricingModePerMinute": "By actual time",
     "gameRoomRateLabel": "Price per minute of stay",
@@ -822,6 +838,8 @@
     "skipShiftStartWindowHint": "For example, for an employee with an irregular schedule — the shared shift-start window won't apply to them",
     "timeTrackingModeHint": "Manual — the employee enters start/end time themselves; Auto — time is recorded via the \"Start/End shift\" button on the server",
     "goodsAccessHint": "Access to selling goods and cash reconciliation",
+    "ticketsAccessLabel": "Ticket sales",
+    "ticketsAccessHint": "Access to selling tickets; redeeming tickets in already accessible zones works without this toggle",
     "revisionAccessHint": "Allows performing stock revisions"
   },
   "money": {
@@ -1069,6 +1087,7 @@
       "homeButton": "Go home",
       "categoryPlaceholder": "Category (optional)",
       "gameRoomSub": "No readings needed — revenue is calculated from launches",
+      "ticketsSub": "No readings needed — revenue is calculated from sold orders",
       "gameRoomBlockedPrefix": "Finish",
       "gameRoomBlockedSuffix": "active launches in",
       "gameRoomGoToAssetButton": "Go to asset"
@@ -1386,7 +1405,9 @@
     "shiftWord": "shift",
     "shiftWordCap": "Shift",
     "launchesCountLabel": "Launches",
-    "launchesTimeLabel": "time"
+    "launchesTimeLabel": "time",
+    "ticketsOrdersCountLabel": "Orders",
+    "ticketsSoldCountLabel": "Tickets"
   },
   "goods": {
     "navLabel": "Goods",
@@ -1461,5 +1482,44 @@
     "voided": "Voided",
     "voidReasonLabel": "Reason (optional)",
     "catalogStockLabel": "Stock"
+  },
+  "tickets": {
+    "entryTitle": "Tickets",
+    "sellTab": "Sell",
+    "ordersTab": "Orders",
+    "noVariantsYet": "This zone's assets don't have price variants yet",
+    "noSellAccessHint": "No access to selling tickets — contact the owner",
+    "cartTitle": "Cart",
+    "cartEmpty": "Cart is empty",
+    "totalLabel": "Total",
+    "continueButton": "Next",
+    "orderDoneTitle": "Order placed",
+    "orderNumberLabel": "Order #",
+    "ticketsCountLabel": "Tickets",
+    "printTicketButton": "Print tickets",
+    "receiptTitle": "Ticket",
+    "receiptOrderLabel": "Order",
+    "receiptExpiresLabel": "Valid until",
+    "receiptPriceLabel": "Price",
+    "searchOrderPlaceholder": "Order number",
+    "findOrderButton": "Find",
+    "orderNotFound": "No order found with this number",
+    "recentOrdersTitle": "Recent orders",
+    "noOrdersYet": "No orders yet",
+    "redeemButton": "Redeem",
+    "redeemedStatusLabel": "Redeemed",
+    "voidedStatusLabel": "Voided",
+    "expiredStatusLabel": "Expired",
+    "activeStatusLabel": "Active",
+    "redemptionDisabledHint": "Redemption is off for this zone",
+    "allAssetsLabel": "All assets",
+    "soldByLabel": "Sold by",
+    "ownerOrdersTitle": "Orders",
+    "voidTicketAction": "Void",
+    "voidOrderAction": "Void order",
+    "confirmVoidTicket": "Void this ticket? Refund at the ticket's price, this cannot be undone.",
+    "confirmVoidOrder": "Void all active tickets in this order? Refund per ticket, this cannot be undone.",
+    "newOrderButton": "New order",
+    "noPriceLabel": "No price"
   }
 }

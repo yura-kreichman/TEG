@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { AlertTriangle, ClockPlus, Home, ShoppingBag, Timer, Wallet } from "lucide-react";
+import { AlertTriangle, ClockPlus, Home, ShoppingBag, Ticket, Timer, Wallet } from "lucide-react";
 import { BottomGlassNav, type BottomGlassNavItem } from "@/components/bottom-glass-nav";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n } from "@/components/i18n-provider";
-import { isLaunchesZone, isStaysZone } from "@/lib/results-calc";
+import { isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { unlockBeep, playBeep } from "@/lib/beep";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +39,7 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
   const t = useI18n();
   const [hasStays, setHasStays] = useState(false);
   const [hasLaunches, setHasLaunches] = useState(false);
+  const [hasTickets, setHasTickets] = useState(false);
   const [hasGoods, setHasGoods] = useState(false);
   const [hasZones, setHasZones] = useState(false);
 
@@ -51,6 +52,10 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
         const zones = data.zones ?? [];
         setHasStays(zones.some(isStaysZone));
         setHasLaunches(zones.some(isLaunchesZone));
+        // Доступна оператору с доступом к зоне вообще, не только с
+        // тумблером "Продажа билетов" (докс: "гашение доступно без него") —
+        // сам тумблер гейтит только вкладку "Продать" внутри экрана.
+        setHasTickets(zones.some(isTicketsZone));
         setHasGoods(Boolean(data.goodsAccess));
         // Абонемент применим как способ оплаты на ЛЮБОЙ зоне (запрос
         // пользователя 2026-07-20: "актуально не только для счётчиков, но и
@@ -143,6 +148,16 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
             label: t.zonesList.accountingModeLaunches,
             icon: ClockPlus,
             active: pathname.startsWith("/operator/launches"),
+          },
+        ]
+      : []),
+    ...(hasTickets
+      ? [
+          {
+            href: "/operator/tickets",
+            label: t.zonesList.accountingModeTickets,
+            icon: Ticket,
+            active: pathname.startsWith("/operator/tickets"),
           },
         ]
       : []),

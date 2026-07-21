@@ -668,11 +668,14 @@
     "accountingModeCashOnlyHint": "Առանց սակագների և ակտիվների — միայն գումար",
     "accountingModeStays": "Կեցություններ",
     "accountingModeStaysHint": "Մեկնարկների սկիզբ/կանգ իրական ժամանակում",
+    "accountingModeTickets": "Տոմսեր",
+    "accountingModeTicketsHint": "Տոմսերի վաճառք պատվերներով, մարումը ընտրովի է",
     "modeChip": {
       "counters": "Ըստ հաշվիչների",
       "launches": "Երթեր",
       "cash_only": "Միայն դրամարկղ",
-      "stays": "Կեցություններ"
+      "stays": "Կեցություններ",
+      "tickets": "Տոմսեր"
     },
     "zoneActiveChip": "Ակտիվ",
     "zoneInactiveChip": "Ապաակտիվ"
@@ -723,6 +726,19 @@
     "cashOnlyNote": "«Միայն դրամարկղ» ռեժիմ. այս գոտուն սակագներ և ակտիվներ պետք չեն — աշխատակիցը հանձնում է միայն գումարը.",
     "printReceiptLabel": "Կտրոնի տպում",
     "printReceiptHint": "Օպերատորը այցելությունից/մեկնարկից հետո կկարողանա տպել կտրոն այցելուի համար",
+    "printTicketsLabel": "Տոմսերի տպում",
+    "ticketRedemptionLabel": "Տոմսերի մարում",
+    "ticketRedemptionHint": "Անջատված է — համակարգը գիտի միայն վաճառքները, առանց կարգավիճակների և մարման (\"հին ձևով\")",
+    "ticketLifetimeLabel": "Պատվերների գործողության ժամկետ, օր",
+    "ticketLifetimeUnlimited": "Անժամկետ",
+    "ticketVariantsAction": "Գնի տարբերակներ",
+    "ticketVariantsTitle": "Գնի տարբերակներ",
+    "ticketVariantNamePlaceholder": "Անվանում (օր. Մեծահասակ)",
+    "ticketVariantPricePlaceholder": "Գին",
+    "addTicketVariantButton": "Ավելացնել տարբերակ",
+    "removeTicketVariantLabel": "Հեռացնել տարբերակը",
+    "ticketVariantsEmptyError": "Ավելացրեք առնվազն մեկ անվանված տարբերակ",
+    "ticketVariantsSaveError": "Չհաջողվեց պահպանել գների տարբերակները",
     "gameRoomPricingModeFixed": "Մուտքով",
     "gameRoomPricingModePerMinute": "Փաստացի",
     "gameRoomRateLabel": "Մեկ րոպե մնալու գինը",
@@ -822,6 +838,8 @@
     "skipShiftStartWindowHint": "Օրինակ՝ ոչ ստանդարտ գրաֆիկով աշխատակցի համար — ընդհանուր թույլատրելի պատուհանը նրա վրա չի գործի",
     "timeTrackingModeHint": "Ձեռքով — աշխատակիցն ինքն է մուտքագրում գալու/գնալու ժամանակը; Ավտո — ժամանակը գրանցվում է սերվերում «Սկսել/ավարտել հերթափոխը» կոճակով",
     "goodsAccessHint": "Ապրանքների վաճառքի և դրամարկղի ստուգման հասանելիություն",
+    "ticketsAccessLabel": "Տոմսերի վաճառք",
+    "ticketsAccessHint": "Տոմսերի վաճառքի հասանելիություն. արդեն հասանելի գոտիներում մարումն աշխատում է առանց այս անջատիչի",
     "revisionAccessHint": "Թույլ է տալիս իրականացնել մնացորդների վերստուգում"
   },
   "money": {
@@ -1069,6 +1087,7 @@
       "homeButton": "Գլխավոր",
       "categoryPlaceholder": "Կատեգորիա (ըստ ցանկության)",
       "gameRoomSub": "Ցուցմունքներ պետք չեն․ եկամուտը հաշվարկվում է մեկնարկներով",
+      "ticketsSub": "Ցուցմունքներ պետք չեն․ եկամուտը հաշվարկվում է վաճառված պատվերներով",
       "gameRoomBlockedPrefix": "Ավարտիր",
       "gameRoomBlockedSuffix": "ակտիվ մեկնարկներ՝",
       "gameRoomGoToAssetButton": "Անցնել ակտիվին"
@@ -1386,7 +1405,9 @@
     "shiftWord": "հերթափոխ",
     "shiftWordCap": "Հերթափոխ",
     "launchesCountLabel": "Մեկնարկներ",
-    "launchesTimeLabel": "ժամանակ"
+    "launchesTimeLabel": "ժամանակ",
+    "ticketsOrdersCountLabel": "Պատվերներ",
+    "ticketsSoldCountLabel": "Տոմսեր"
   },
   "goods": {
     "navLabel": "Ապրանքներ",
@@ -1461,5 +1482,44 @@
     "voided": "Չեղարկված",
     "voidReasonLabel": "Պատճառ (ընտրովի)",
     "catalogStockLabel": "Մնացորդ"
+  },
+  "tickets": {
+    "entryTitle": "Տոմսեր",
+    "sellTab": "Վաճառել",
+    "ordersTab": "Պատվերներ",
+    "noVariantsYet": "Այս գոտու ակտիվները դեռ գնային տարբերակներ չունեն",
+    "noSellAccessHint": "Տոմսերի վաճառքի հասանելիություն չկա․ դիմեք սեփականատիրոջը",
+    "cartTitle": "Զամբյուղ",
+    "cartEmpty": "Զամբյուղը դատարկ է",
+    "totalLabel": "Ընդամենը",
+    "continueButton": "Հաջորդը",
+    "orderDoneTitle": "Պատվերը կատարված է",
+    "orderNumberLabel": "Պատվեր №",
+    "ticketsCountLabel": "Տոմսեր",
+    "printTicketButton": "Տպել տոմսերը",
+    "receiptTitle": "Տոմս",
+    "receiptOrderLabel": "Պատվեր",
+    "receiptExpiresLabel": "Վավեր է մինչև",
+    "receiptPriceLabel": "Գին",
+    "searchOrderPlaceholder": "Պատվերի համար",
+    "findOrderButton": "Գտնել",
+    "orderNotFound": "Այս համարով պատվեր չի գտնվել",
+    "recentOrdersTitle": "Վերջին պատվերները",
+    "noOrdersYet": "Պատվերներ դեռ չկան",
+    "redeemButton": "Օգտագործել",
+    "redeemedStatusLabel": "Օգտագործված",
+    "voidedStatusLabel": "Չեղարկված",
+    "expiredStatusLabel": "Ժամկետանց",
+    "activeStatusLabel": "Ակտիվ",
+    "redemptionDisabledHint": "Այս գոտու համար օգտագործումն անջատված է",
+    "allAssetsLabel": "Բոլոր ակտիվները",
+    "soldByLabel": "Վաճառեց",
+    "ownerOrdersTitle": "Պատվերներ",
+    "voidTicketAction": "Չեղարկել",
+    "voidOrderAction": "Չեղարկել պատվերը",
+    "confirmVoidTicket": "Չեղարկե՞լ այս տոմսը։ Վերադարձ տոմսի գնով, գործողությունն անշրջելի է։",
+    "confirmVoidOrder": "Չեղարկե՞լ այս պատվերի բոլոր ակտիվ տոմսերը։ Վերադարձ յուրաքանչյուր տոմսի համար, գործողությունն անշրջելի է։",
+    "newOrderButton": "Նոր պատվեր",
+    "noPriceLabel": "Գին չկա"
   }
 }

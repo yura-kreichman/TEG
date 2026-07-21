@@ -67,6 +67,7 @@ export default function OperatorHomePage() {
   const [checkoutAdvance, setCheckoutAdvance] = useState("");
   const [checkoutBonus, setCheckoutBonus] = useState("");
   const [checkoutSheetError, setCheckoutSheetError] = useState<string | null>(null);
+  const { saved: checkoutSaved, pulse: checkoutPulse } = useSavePulse();
   // Мягкие напоминания после check-in/check-out (docs/spec/05-work-time.md,
   // "СВЯЗЬ СО СДАЧЕЙ ИТОГОВ") — то же самое уведомление, что в ручном режиме.
   const [homeNotice, setHomeNotice] = useState<{ warnings: string[]; noResultsToday: boolean } | null>(null);
@@ -274,7 +275,7 @@ export default function OperatorHomePage() {
       }
       setActiveShiftStartAt(null);
       setToPayOut(data.balance.toPayOut);
-      setCheckoutSheetOpen(false);
+      checkoutPulse(() => setCheckoutSheetOpen(false));
       if (data.warnings?.length || data.noResultsToday) {
         setHomeNotice({ warnings: data.warnings ?? [], noResultsToday: !!data.noResultsToday });
       } else {
@@ -768,34 +769,42 @@ export default function OperatorHomePage() {
             <p className="text-sm font-medium text-warning">{t.operatorApp.workTime.warningTooLong}</p>
           )}
 
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="checkoutAdvance">{t.operatorApp.workTime.advanceFieldLabel}</Label>
-            <MoneyInput
-              id="checkoutAdvance"
-              scale="lg"
-              className="h-14 text-lg"
-              value={checkoutAdvance}
-              onChange={(e) => setCheckoutAdvance(e.target.value)}
-              placeholder="0"
-            />
+          <div className="flex items-stretch gap-2">
+            <div className="flex flex-1 flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="checkoutAdvance">{t.operatorApp.workTime.advanceFieldLabel}</Label>
+                <MoneyInput
+                  id="checkoutAdvance"
+                  scale="lg"
+                  className="h-14 text-lg"
+                  value={checkoutAdvance}
+                  onChange={(e) => setCheckoutAdvance(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="checkoutBonus">{t.operatorApp.workTime.bonusFieldLabel}</Label>
+                <MoneyInput
+                  id="checkoutBonus"
+                  scale="lg"
+                  className="h-14 text-lg"
+                  value={checkoutBonus}
+                  onChange={(e) => setCheckoutBonus(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <PressableScale className="flex">
+              <SaveButton
+                onClick={handleCheckOut}
+                disabled={checkInOutBusy}
+                saved={checkoutSaved}
+                className="h-full min-w-22 rounded-control px-5 font-bold"
+              />
+            </PressableScale>
           </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="checkoutBonus">{t.operatorApp.workTime.bonusFieldLabel}</Label>
-            <MoneyInput
-              id="checkoutBonus"
-              scale="lg"
-              className="h-14 text-lg"
-              value={checkoutBonus}
-              onChange={(e) => setCheckoutBonus(e.target.value)}
-              placeholder="0"
-            />
-          </div>
+
           {checkoutSheetError && <p className="text-sm text-destructive">{checkoutSheetError}</p>}
-          <PressableScale>
-            <Button onClick={handleCheckOut} disabled={checkInOutBusy} className="h-14 w-full rounded-control font-bold">
-              {t.operatorApp.workTime.checkoutButton}
-            </Button>
-          </PressableScale>
         </div>
       </BottomSheet>
 

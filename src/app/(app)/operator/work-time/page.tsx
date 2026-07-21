@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
 import { SpringCard } from "@/components/spring-card";
@@ -14,7 +16,7 @@ import { WheelTimePicker } from "@/components/wheel-time-picker";
 import { useI18n } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { cn } from "@/lib/utils";
-import { formatDuration as formatDurationBase, formatTime } from "@/lib/datetime-format";
+import { formatDuration as formatDurationBase, formatTime, nowInTimezone } from "@/lib/datetime-format";
 import {
   formatPeriodLabel as formatPeriodLabelFor,
   isCurrentPeriod as isCurrentPeriodFor,
@@ -98,15 +100,18 @@ export default function WorkTimePage() {
   const [bonusAmount, setBonusAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const { saved: shiftSaved, pulse: shiftPulse } = useSavePulse();
+  const [tenantTimezone, setTenantTimezone] = useState("UTC");
 
   const [notice, setNotice] = useState<{ warnings: string[]; noResultsToday: boolean } | null>(null);
 
   async function loadData() {
     const { from, to } = periodRangeFor(granularity, anchor);
-    const [summaryRes, shiftsRes, meRes] = await Promise.all([
+    const [summaryRes, shiftsRes, meRes, timezoneRes] = await Promise.all([
       fetch(`/api/operator/work-time/summary?from=${from}&to=${to}`),
       fetch(`/api/operator/work-time/shifts?from=${from}&to=${to}`),
       fetch("/api/auth/operator/me"),
+      fetch("/api/operator/tenant-timezone"),
     ]);
     if (summaryRes.status === 401 || shiftsRes.status === 401) {
       router.replace("/operator/login");
@@ -119,6 +124,10 @@ export default function WorkTimePage() {
     if (meRes.ok) {
       const meData = await meRes.json();
       setTimeTrackingMode(meData.timeTrackingMode === "auto" ? "auto" : "manual");
+    }
+    if (timezoneRes.ok) {
+      const timezoneData = await timezoneRes.json();
+      setTenantTimezone(timezoneData.timezone ?? "UTC");
     }
     const summaryData = await summaryRes.json();
     setBalance(summaryData);
@@ -154,14 +163,18 @@ export default function WorkTimePage() {
   function openForm() {
     // "Пришёл" по умолчанию — время из настроек владельца (Settings ->
     // Рабочее время), было зашито как 10:00, теперь настраиваемо; "ушёл" —
-    // реальное текущее время устройства/браузера, а не фиксированное
-    // значение, чтобы форма сразу отражала "я ухожу прямо сейчас".
+    // реальное текущее время, чтобы форма сразу отражала "я ухожу прямо
+    // сейчас". Реальный баг, найден пользователем 2026-07-22: раньше бралось
+    // через date.getHours()/getMinutes() — часовой пояс УСТРОЙСТВА оператора,
+    // не бизнес-часовой пояс тенанта (см. nowInTimezone, src/lib/datetime-
+    // format.ts) — на устройстве с другим системным поясом, чем у точки,
+    // подставлялось неверное время.
     const [defaultHour, defaultMinute] = defaultShiftStartTime.split(":").map(Number);
-    const now = new Date();
+    const { hour: nowHour, minute: nowMinute } = nowInTimezone(tenantTimezone);
     setStartHour(defaultHour);
     setStartMinute(defaultMinute);
-    setEndHour(now.getHours());
-    setEndMinute(now.getMinutes());
+    setEndHour(nowHour);
+    setEndMinute(nowMinute);
     setAdvanceAmount("");
     setBonusAmount("");
     setSubmitError(null);
@@ -208,7 +221,7 @@ export default function WorkTimePage() {
         setSubmitError(data.error ?? t.operatorApp.workTime.saveError);
         return;
       }
-      setFormOpen(false);
+      shiftPulse(() => setFormOpen(false));
       if (data.warnings?.length || data.noResultsToday) {
         setNotice({ warnings: data.warnings ?? [], noResultsToday: !!data.noResultsToday });
       } else {
@@ -433,36 +446,42 @@ export default function WorkTimePage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="advanceInput">{t.operatorApp.workTime.advanceFieldLabel}</Label>
-            <MoneyInput
-              id="advanceInput"
-              scale="lg"
-              className="h-14 text-lg"
-              value={advanceAmount}
-              onChange={(e) => setAdvanceAmount(e.target.value)}
-              placeholder="0"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="bonusInput">{t.operatorApp.workTime.bonusFieldLabel}</Label>
-            <MoneyInput
-              id="bonusInput"
-              scale="lg"
-              className="h-14 text-lg"
-              value={bonusAmount}
-              onChange={(e) => setBonusAmount(e.target.value)}
-              placeholder="0"
-            />
+          <div className="flex items-stretch gap-2">
+            <div className="flex flex-1 flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="advanceInput">{t.operatorApp.workTime.advanceFieldLabel}</Label>
+                <MoneyInput
+                  id="advanceInput"
+                  scale="lg"
+                  className="h-14 text-lg"
+                  value={advanceAmount}
+                  onChange={(e) => setAdvanceAmount(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="bonusInput">{t.operatorApp.workTime.bonusFieldLabel}</Label>
+                <MoneyInput
+                  id="bonusInput"
+                  scale="lg"
+                  className="h-14 text-lg"
+                  value={bonusAmount}
+                  onChange={(e) => setBonusAmount(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <PressableScale className="flex">
+              <SaveButton
+                onClick={handleSubmitShift}
+                disabled={submitting}
+                saved={shiftSaved}
+                className="h-full min-w-22 rounded-control px-5 font-bold"
+              />
+            </PressableScale>
           </div>
 
           {submitError && <p className="text-sm text-destructive">{submitError}</p>}
-
-          <PressableScale>
-            <Button onClick={handleSubmitShift} disabled={submitting} className="h-14 w-full rounded-control font-bold">
-              {submitting ? t.operatorApp.submit.submitting : t.operatorApp.workTime.saveShiftButton}
-            </Button>
-          </PressableScale>
         </div>
       </BottomSheet>
     </div>

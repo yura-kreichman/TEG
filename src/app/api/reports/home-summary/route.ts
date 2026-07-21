@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone } from "@/lib/results-calc";
+import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
+import { aggregateTicketOrders } from "@/lib/tickets";
 
 interface WindowSummary {
   revenue: number;
@@ -99,6 +100,38 @@ async function computeWindowSummary(
     }
   }
 
+  // Билеты (docs/spec/10-tickets.md, "Отчёты") — тот же класс бага, что у
+  // Прибываний/Пусков выше, но для "Разницы" в сводке "Последние итоги":
+  // без своей ветки zone.tariffs пуст, calcZoneRevenue([], ...) даёт 0, и
+  // "разница" ложно раздувалась бы на всю кассу зоны. Заказы не привязаны к
+  // zoneSubmissionId — окно восстанавливается по всей истории сдач зоны, тот
+  // же приём, что в lib/reports.ts computeZoneSubmissionRevenues.
+  const ticketZoneSubmissions = submissions.flatMap((s) => s.zoneSubmissions).filter((zs) => isTicketsZone(zs.zone));
+  const ticketZoneIds = [...new Set(ticketZoneSubmissions.map((zs) => zs.zoneId))];
+  const ticketBoundariesByZone = new Map<string, Date[]>();
+  if (ticketZoneIds.length) {
+    const allTicketZoneSubmissions = await prisma.zoneSubmission.findMany({
+      where: { zoneId: { in: ticketZoneIds } },
+      orderBy: { createdAt: "asc" },
+      select: { zoneId: true, createdAt: true },
+    });
+    for (const row of allTicketZoneSubmissions) {
+      const list = ticketBoundariesByZone.get(row.zoneId) ?? [];
+      list.push(row.createdAt);
+      ticketBoundariesByZone.set(row.zoneId, list);
+    }
+  }
+  const ticketRevenueBySubmission = new Map<string, { totalAmount: number; abonementAmount: number }>();
+  await Promise.all(
+    ticketZoneSubmissions.map(async (zs) => {
+      const boundaries = ticketBoundariesByZone.get(zs.zoneId) ?? [];
+      const idx = boundaries.findIndex((d) => d.getTime() === zs.createdAt.getTime());
+      const start = idx > 0 ? boundaries[idx - 1] : null;
+      const agg = await aggregateTicketOrders(zs.zoneId, start, zs.createdAt);
+      ticketRevenueBySubmission.set(zs.id, { totalAmount: agg.totalAmount, abonementAmount: agg.abonementAmount });
+    })
+  );
+
   let totalDifference = 0;
   // Тесты/возвраты за день — сумма по всем сдачам (запрос пользователя
   // 2026-07-18: "в обоих должны быть видны Тесты/возвраты"), не только у
@@ -113,6 +146,14 @@ async function computeWindowSummary(
       if (isStaysZone(zs.zone) || (isLaunchesZone(zs.zone) && zs.assetReadings.length === 0)) {
         const calculatedRevenue = liveRevenueBySubmission.get(zs.id) ?? 0;
         const abonementAmount = liveAbonementBySubmission.get(zs.id) ?? 0;
+        totalDifference += actualCash + abonementAmount - calculatedRevenue;
+        continue;
+      }
+
+      if (isTicketsZone(zs.zone)) {
+        const ticketRevenue = ticketRevenueBySubmission.get(zs.id);
+        const calculatedRevenue = ticketRevenue?.totalAmount ?? 0;
+        const abonementAmount = ticketRevenue?.abonementAmount ?? 0;
         totalDifference += actualCash + abonementAmount - calculatedRevenue;
         continue;
       }

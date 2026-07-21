@@ -18,6 +18,27 @@ export function formatTime(iso: string) {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/**
+ * Час:минута "сейчас" В ЧАСОВОМ ПОЯСЕ ТЕНАНТА, не устройства (реальный баг,
+ * найден пользователем 2026-07-22: "Ушёл" в форме "Новая смена" по
+ * умолчанию бралось через date.getHours()/getMinutes() — часы/минуты
+ * УСТРОЙСТВА оператора, а не бизнес-часового пояса тенанта; на устройстве с
+ * другим системным часовым поясом, чем у точки, подставлялось неверное
+ * время). new Date() сам по себе всегда корректен (абсолютный момент) — баг
+ * был именно в том, КАК из него доставали час/минуту для отображения.
+ */
+export function nowInTimezone(timezone: string): { hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0") % 24;
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  return { hour, minute };
+}
+
 export function formatDuration(minutes: number, t: Dictionary) {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;

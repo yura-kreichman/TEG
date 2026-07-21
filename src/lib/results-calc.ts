@@ -3,9 +3,10 @@
 // Режим учёта зоны — открытый список, как MoneyOperation.type (см. "Режим учёта
 // зоны" в 01-counters.md). Валидируется через этот массив на сервере и клиенте.
 // "stays" (Прибывания, docs/spec/04-game-room.md) — самостоятельный режим,
-// РЯДОПОЛОЖНЫЙ остальным трём (решение пользователя 2026-07-17; было
-// суб-режимом "launches" до этого — пересмотрено).
-export const ZONE_ACCOUNTING_MODES = ["counters", "launches", "cash_only", "stays"] as const;
+// РЯДОПОЛОЖНЫЙ остальным (решение пользователя 2026-07-17; было
+// суб-режимом "launches" до этого — пересмотрено). "tickets" (Билеты,
+// docs/spec/10-tickets.md) — пятый рядоположный режим, добавлен 2026-07-22.
+export const ZONE_ACCOUNTING_MODES = ["counters", "launches", "cash_only", "stays", "tickets"] as const;
 export type ZoneAccountingMode = (typeof ZONE_ACCOUNTING_MODES)[number];
 
 export function isZoneAccountingMode(value: unknown): value is ZoneAccountingMode {
@@ -18,6 +19,10 @@ export function isStaysZone(zone: { accountingMode: string }): boolean {
 
 export function isLaunchesZone(zone: { accountingMode: string }): boolean {
   return zone.accountingMode === "launches";
+}
+
+export function isTicketsZone(zone: { accountingMode: string }): boolean {
+  return zone.accountingMode === "tickets";
 }
 
 // Счётчики 4-разрядные (0-9999), переполнение 9999→0 — разница считается по модулю 10000.

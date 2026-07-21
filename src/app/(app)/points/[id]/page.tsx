@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Banknote, Check, ChevronRight, CircuitBoard, ClockPlus, Plus, Timer, type LucideIcon } from "lucide-react";
+import { Banknote, Check, ChevronRight, CircuitBoard, ClockPlus, Plus, Ticket, Timer, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import { StatusChip } from "@/components/status-chip";
 import { TileIcon } from "@/components/tile-icon";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
-import { ZONE_ACCOUNTING_MODES, isStaysZone, type ZoneAccountingMode } from "@/lib/results-calc";
+import { ZONE_ACCOUNTING_MODES, isStaysZone, isTicketsZone, type ZoneAccountingMode } from "@/lib/results-calc";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import type { Dictionary } from "@/lib/i18n";
 
@@ -33,20 +33,23 @@ interface ZoneInfo {
   assets: { id: string }[];
 }
 
-// "stays" (Прибывания) — самостоятельный 4-й режим учёта, рядоположный
-// остальным (решение пользователя 2026-07-17; было суб-режимом "launches" до
-// этого) — единый список из четырёх, без второго уровня выбора.
+// "stays"/"tickets" — самостоятельные режимы учёта, рядоположные остальным
+// (решение пользователя 2026-07-17 для stays, было суб-режимом "launches" до
+// этого; tickets добавлен 2026-07-22, docs/spec/10-tickets.md) — единый
+// список из пяти, без второго уровня выбора.
 const ACCOUNTING_MODE_LABEL: Record<ZoneAccountingMode, (t: Dictionary) => string> = {
   counters: (t) => t.zonesList.accountingModeCounters,
   launches: (t) => t.zonesList.accountingModeLaunches,
   cash_only: (t) => t.zonesList.accountingModeCashOnly,
   stays: (t) => t.zonesList.accountingModeStays,
+  tickets: (t) => t.zonesList.accountingModeTickets,
 };
 const ACCOUNTING_MODE_HINT: Record<ZoneAccountingMode, (t: Dictionary) => string> = {
   counters: (t) => t.zonesList.accountingModeCountersHint,
   launches: (t) => t.zonesList.accountingModeLaunchesHint,
   cash_only: (t) => t.zonesList.accountingModeCashOnlyHint,
   stays: (t) => t.zonesList.accountingModeStaysHint,
+  tickets: (t) => t.zonesList.accountingModeTicketsHint,
 };
 // Иконки режимов учёта (запрос пользователя 2026-07-18) — "Прибывания" тот
 // же Timer, что и одноимённый пункт нижнего бара Сотрудника (единообразие).
@@ -55,6 +58,7 @@ const ACCOUNTING_MODE_ICON: Record<ZoneAccountingMode, LucideIcon> = {
   launches: ClockPlus,
   cash_only: Banknote,
   stays: Timer,
+  tickets: Ticket,
 };
 
 export default function PointDetailPage() {
@@ -185,7 +189,12 @@ export default function PointDetailPage() {
                           </div>
                           <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
                         </div>
-                        {zone.accountingMode !== "cash_only" && !isStaysZone(zone) && (
+                        {/* Билеты не участвуют в этом блоке — у них нет
+                            тарифов вовсе, цены на активах (docs/spec/10-
+                            tickets.md, "ЦЕНЫ — НА АКТИВАХ, НЕ ТАРИФЫ"); без
+                            исключения тут ложно показывался бы warning-чип
+                            "Нет тарифов" на КАЖДОЙ tickets-зоне. */}
+                        {zone.accountingMode !== "cash_only" && !isStaysZone(zone) && !isTicketsZone(zone) && (
                           <div className="mt-3 flex flex-wrap gap-1.5">
                             {zone.tariffs.length === 0 ? (
                               <StatusChip variant="warning">{t.zonesList.noTariffs}</StatusChip>

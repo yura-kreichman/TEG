@@ -668,11 +668,14 @@
     "accountingModeCashOnlyHint": "Tarif va aktivlarsiz — faqat summa",
     "accountingModeStays": "Turishlar",
     "accountingModeStaysHint": "Pusklarni real vaqtda boshlash/toʻxtatish",
+    "accountingModeTickets": "Chiptalar",
+    "accountingModeTicketsHint": "Buyurtma orqali chipta sotish, qoplash ixtiyoriy",
     "modeChip": {
       "counters": "Hisoblagichlar boʻyicha",
       "launches": "Yurishlar",
       "cash_only": "Faqat kassa",
-      "stays": "Turishlar"
+      "stays": "Turishlar",
+      "tickets": "Chiptalar"
     },
     "zoneActiveChip": "Faol",
     "zoneInactiveChip": "Nofaol"
@@ -723,6 +726,19 @@
     "cashOnlyNote": "«Faqat kassa» rejimi: bu zonaga tarif va aktivlar kerak emas — xodim faqat summani topshiradi.",
     "printReceiptLabel": "Kvitansiyani chop etish",
     "printReceiptHint": "Operator tashrif/ishga tushirishdan keyin mehmonga kvitansiya chop eta oladi",
+    "printTicketsLabel": "Chiptalarni chop etish",
+    "ticketRedemptionLabel": "Chiptalarni qoplash",
+    "ticketRedemptionHint": "O'chirilgan — tizim faqat sotuvlarni biladi, statussiz va qoplashsiz (\"eski uslub\")",
+    "ticketLifetimeLabel": "Buyurtmalar amal qilish muddati, kun",
+    "ticketLifetimeUnlimited": "Muddatsiz",
+    "ticketVariantsAction": "Narx variantlari",
+    "ticketVariantsTitle": "Narx variantlari",
+    "ticketVariantNamePlaceholder": "Nomi (masalan, Kattalar)",
+    "ticketVariantPricePlaceholder": "Narxi",
+    "addTicketVariantButton": "Variant qo'shish",
+    "removeTicketVariantLabel": "Variantni o'chirish",
+    "ticketVariantsEmptyError": "Kamida bitta nomlangan variant qo'shing",
+    "ticketVariantsSaveError": "Narx variantlarini saqlab bo'lmadi",
     "gameRoomPricingModeFixed": "Kirish bo'yicha",
     "gameRoomPricingModePerMinute": "Fakt bo'yicha",
     "gameRoomRateLabel": "Bo'lish daqiqasining narxi",
@@ -822,6 +838,8 @@
     "skipShiftStartWindowHint": "Masalan, notekis jadvalli xodim uchun — umumiy ruxsat etilgan oyna unga taalluqli boʻlmaydi",
     "timeTrackingModeHint": "Qo‘lda — xodim kelish/ketish vaqtini o‘zi kiritadi; Avto — vaqt serverda «Smenani boshlash/tugatish» tugmasi orqali qayd etiladi",
     "goodsAccessHint": "Tovar sotish va kassani tekshirishga ruxsat",
+    "ticketsAccessLabel": "Chipta sotish",
+    "ticketsAccessHint": "Chipta sotishga ruxsat; allaqachon ochiq zonalarda qoplash bu tumblersiz ishlaydi",
     "revisionAccessHint": "Qoldiqlar reviziyasini o'tkazishga ruxsat beradi"
   },
   "money": {
@@ -1069,6 +1087,7 @@
       "homeButton": "Bosh sahifaga",
       "categoryPlaceholder": "Kategoriya (ixtiyoriy)",
       "gameRoomSub": "Koʻrsatkichlar shart emas — tushum ishga tushirishlar boʻyicha hisoblanadi",
+      "ticketsSub": "Koʻrsatkichlar shart emas — tushum sotilgan buyurtmalar boʻyicha hisoblanadi",
       "gameRoomBlockedPrefix": "Tugating",
       "gameRoomBlockedSuffix": "faol pusklar:",
       "gameRoomGoToAssetButton": "Aktivga o'tish"
@@ -1386,7 +1405,9 @@
     "shiftWord": "smena",
     "shiftWordCap": "Smena",
     "launchesCountLabel": "Pusklar",
-    "launchesTimeLabel": "vaqt"
+    "launchesTimeLabel": "vaqt",
+    "ticketsOrdersCountLabel": "Buyurtmalar",
+    "ticketsSoldCountLabel": "Chiptalar"
   },
   "goods": {
     "navLabel": "Tovarlar",
@@ -1461,5 +1482,44 @@
     "voided": "Bekor qilingan",
     "voidReasonLabel": "Sabab (ixtiyoriy)",
     "catalogStockLabel": "Qoldiq"
+  },
+  "tickets": {
+    "entryTitle": "Chiptalar",
+    "sellTab": "Sotish",
+    "ordersTab": "Buyurtmalar",
+    "noVariantsYet": "Bu zonadagi aktivlarda hali narx variantlari yo'q",
+    "noSellAccessHint": "Chipta sotishga ruxsat yo'q — egasiga murojaat qiling",
+    "cartTitle": "Savat",
+    "cartEmpty": "Savat bo'sh",
+    "totalLabel": "Jami",
+    "continueButton": "Keyingisi",
+    "orderDoneTitle": "Buyurtma rasmiylashtirildi",
+    "orderNumberLabel": "Buyurtma №",
+    "ticketsCountLabel": "Chiptalar",
+    "printTicketButton": "Chiptalarni chop etish",
+    "receiptTitle": "Chipta",
+    "receiptOrderLabel": "Buyurtma",
+    "receiptExpiresLabel": "Amal qilish muddati",
+    "receiptPriceLabel": "Narxi",
+    "searchOrderPlaceholder": "Buyurtma raqami",
+    "findOrderButton": "Qidirish",
+    "orderNotFound": "Bunday raqamli buyurtma topilmadi",
+    "recentOrdersTitle": "So'nggi buyurtmalar",
+    "noOrdersYet": "Hali buyurtmalar yo'q",
+    "redeemButton": "Ishlatish",
+    "redeemedStatusLabel": "Ishlatilgan",
+    "voidedStatusLabel": "Bekor qilingan",
+    "expiredStatusLabel": "Muddati o'tgan",
+    "activeStatusLabel": "Faol",
+    "redemptionDisabledHint": "Bu zona uchun ishlatish o'chirilgan",
+    "allAssetsLabel": "Barcha aktivlar",
+    "soldByLabel": "Sotdi",
+    "ownerOrdersTitle": "Buyurtmalar",
+    "voidTicketAction": "Bekor qilish",
+    "voidOrderAction": "Buyurtmani bekor qilish",
+    "confirmVoidTicket": "Ushbu chiptani bekor qilasizmi? Chipta narxi bo'yicha qaytarish, bu amalni ortga qaytarib bo'lmaydi.",
+    "confirmVoidOrder": "Buyurtmadagi barcha faol chiptalarni bekor qilasizmi? Har bir chipta bo'yicha qaytarish, bu amalni ortga qaytarib bo'lmaydi.",
+    "newOrderButton": "Yangi buyurtma",
+    "noPriceLabel": "Narxi yo'q"
   }
 }

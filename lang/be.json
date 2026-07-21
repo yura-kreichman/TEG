@@ -668,11 +668,14 @@
     "accountingModeCashOnlyHint": "Без тарыфаў і актываў — толькі сума",
     "accountingModeStays": "Знаходжанні",
     "accountingModeStaysHint": "Старт і стоп пускаў у рэальным часе",
+    "accountingModeTickets": "Білеты",
+    "accountingModeTicketsHint": "Продаж білетаў заказамі, пагашэнне неабавязковае",
     "modeChip": {
       "counters": "Па лічыльніках",
       "launches": "Пускі",
       "cash_only": "Толькі каса",
-      "stays": "Знаходжанні"
+      "stays": "Знаходжанні",
+      "tickets": "Білеты"
     },
     "zoneActiveChip": "Актыўная",
     "zoneInactiveChip": "Неактыўная"
@@ -723,6 +726,19 @@
     "cashOnlyNote": "Рэжым «Толькі каса»: гэтай зоне не патрэбны тарыфы і актывы — супрацоўнік здае толькі суму.",
     "printReceiptLabel": "Друк квітанцыі",
     "printReceiptHint": "Аператар зможа надрукаваць квітанцыю наведвальніку пасля наведвання/пуску",
+    "printTicketsLabel": "Друк білетаў",
+    "ticketRedemptionLabel": "Пагашэнне білетаў",
+    "ticketRedemptionHint": "Выключана — сістэма ведае толькі продажы, без статусаў і пагашэння (\"па-старому\")",
+    "ticketLifetimeLabel": "Тэрмін дзеяння заказаў, дзён",
+    "ticketLifetimeUnlimited": "Бестэрмінова",
+    "ticketVariantsAction": "Варыянты цаны",
+    "ticketVariantsTitle": "Варыянты цаны",
+    "ticketVariantNamePlaceholder": "Назва (напр., Дарослы)",
+    "ticketVariantPricePlaceholder": "Цана",
+    "addTicketVariantButton": "Дадаць варыянт",
+    "removeTicketVariantLabel": "Выдаліць варыянт",
+    "ticketVariantsEmptyError": "Дадайце хаця б адзін варыянт з назвай",
+    "ticketVariantsSaveError": "Не ўдалося захаваць варыянты цаны",
     "gameRoomPricingModeFixed": "За ўваход",
     "gameRoomPricingModePerMinute": "Па факце",
     "gameRoomRateLabel": "Цана за хвіліну знаходжання",
@@ -822,6 +838,8 @@
     "skipShiftStartWindowHint": "Напрыклад, для супрацоўніка з нестандартным графікам — агульны допуск пачатку змены на яго дзейнічаць не будзе",
     "timeTrackingModeHint": "Ручны — супрацоўнік сам уводзіць час прыходу і сыходу; Аўта — час фіксуецца кнопкай «Пачаць/Скончыць змену» на серверы",
     "goodsAccessHint": "Доступ да продажу тавараў і зверкі касы",
+    "ticketsAccessLabel": "Продаж білетаў",
+    "ticketsAccessHint": "Доступ да продажу білетаў; пагашэнне ў ужо даступных зонах працуе без гэтага пераключальніка",
     "revisionAccessHint": "Дазваляе праводзіць рэвізію застаткаў"
   },
   "money": {
@@ -1069,6 +1087,7 @@
       "homeButton": "На галоўную",
       "categoryPlaceholder": "Катэгорыя (неабавязкова)",
       "gameRoomSub": "Паказанні не патрэбныя — выручка лічыцца па пусках",
+      "ticketsSub": "Паказанні не патрэбныя — выручка лічыцца па прададзеных заказах",
       "gameRoomBlockedPrefix": "Завяршы",
       "gameRoomBlockedSuffix": "актыўных пускаў у",
       "gameRoomGoToAssetButton": "Перайсці да актыву"
@@ -1386,7 +1405,9 @@
     "shiftWord": "змена",
     "shiftWordCap": "Змена",
     "launchesCountLabel": "Пускаў",
-    "launchesTimeLabel": "час"
+    "launchesTimeLabel": "час",
+    "ticketsOrdersCountLabel": "Заказаў",
+    "ticketsSoldCountLabel": "Білетаў"
   },
   "goods": {
     "navLabel": "Тавары",
@@ -1461,5 +1482,44 @@
     "voided": "Ануляваная",
     "voidReasonLabel": "Прычына (неабавязкова)",
     "catalogStockLabel": "Астатак"
+  },
+  "tickets": {
+    "entryTitle": "Білеты",
+    "sellTab": "Прадаць",
+    "ordersTab": "Заказы",
+    "noVariantsYet": "Актывы гэтай зоны яшчэ не маюць варыянтаў цаны",
+    "noSellAccessHint": "Няма доступу да продажу білетаў — звярніцеся да ўладальніка",
+    "cartTitle": "Кошык",
+    "cartEmpty": "Кошык пусты",
+    "totalLabel": "Разам",
+    "continueButton": "Далей",
+    "orderDoneTitle": "Заказ аформлены",
+    "orderNumberLabel": "Заказ №",
+    "ticketsCountLabel": "Білеты",
+    "printTicketButton": "Друкаваць білеты",
+    "receiptTitle": "Білет",
+    "receiptOrderLabel": "Заказ",
+    "receiptExpiresLabel": "Дзейнічае да",
+    "receiptPriceLabel": "Цана",
+    "searchOrderPlaceholder": "Нумар заказу",
+    "findOrderButton": "Знайсці",
+    "orderNotFound": "Заказ з такім нумарам не знойдзены",
+    "recentOrdersTitle": "Апошнія заказы",
+    "noOrdersYet": "Заказаў пакуль няма",
+    "redeemButton": "Пагасіць",
+    "redeemedStatusLabel": "Пагашаны",
+    "voidedStatusLabel": "Ануляваны",
+    "expiredStatusLabel": "Просрочаны",
+    "activeStatusLabel": "Актыўны",
+    "redemptionDisabledHint": "Пагашэнне выключана для гэтай зоны",
+    "allAssetsLabel": "Усе актывы",
+    "soldByLabel": "Прадаў",
+    "ownerOrdersTitle": "Заказы",
+    "voidTicketAction": "Ануляваць",
+    "voidOrderAction": "Ануляваць заказ",
+    "confirmVoidTicket": "Ануляваць гэты білет? Вяртанне па цане білета, дзеянне незваротнае.",
+    "confirmVoidOrder": "Ануляваць усе актыўныя білеты гэтага заказу? Вяртанне па кожным білеце, дзеянне незваротнае.",
+    "newOrderButton": "Новы заказ",
+    "noPriceLabel": "Няма цаны"
   }
 }

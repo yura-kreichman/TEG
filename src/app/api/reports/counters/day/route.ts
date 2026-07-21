@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, isLaunchesZone, isStaysZone } from "@/lib/results-calc";
+import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
+import { aggregateTicketOrders, ticketRevenueByAssetVariant } from "@/lib/tickets";
 
 interface CorrectionDiff {
   cashAmount: number;
@@ -267,6 +268,57 @@ export async function GET(request: Request) {
     return Math.round(sum * 100) / 100;
   }
 
+  // Билеты (docs/spec/10-tickets.md, "Отчёты", п.2-3) — карточка сдачи в
+  // паттерне "stays": агрегат (заказов/билетов/погашено/истекло) + разрез по
+  // активам и вариантам. Заказы не привязаны к zoneSubmissionId (в отличие от
+  // Launch у Прибываний/Пусков — билеты разнесены во времени от сдачи),
+  // поэтому окно восстанавливается по ВСЕЙ истории сдач зоны, тот же приём,
+  // что boundariesByZone/abonementAmountFor выше, но своя карта (тикетам
+  // revenue_abonement не пишется — их абонементная сумма уже сидит в
+  // aggregateTicketOrders напрямую, MoneyOperation здесь не нужен).
+  const ticketZoneIds = [
+    ...new Set(submissions.flatMap((s) => s.zoneSubmissions.filter((zs) => isTicketsZone(zs.zone)).map((zs) => zs.zoneId))),
+  ];
+  const ticketBoundariesByZone = new Map<string, Date[]>();
+  if (ticketZoneIds.length) {
+    const allTicketZoneSubmissions = await prisma.zoneSubmission.findMany({
+      where: { zoneId: { in: ticketZoneIds } },
+      orderBy: { createdAt: "asc" },
+      select: { zoneId: true, createdAt: true },
+    });
+    for (const row of allTicketZoneSubmissions) {
+      const list = ticketBoundariesByZone.get(row.zoneId) ?? [];
+      list.push(row.createdAt);
+      ticketBoundariesByZone.set(row.zoneId, list);
+    }
+  }
+  const ticketZoneSubmissions = submissions.flatMap((s) => s.zoneSubmissions.filter((zs) => isTicketsZone(zs.zone)));
+  const ticketDataBySubmission = new Map<
+    string,
+    { totalAmount: number; abonementAmount: number; ordersCount: number; ticketsCount: number; redeemedCount: number; expiredCount: number; assets: { assetId: string; variantName: string; count: number; amount: number }[] }
+  >();
+  await Promise.all(
+    ticketZoneSubmissions.map(async (zs) => {
+      const boundaries = ticketBoundariesByZone.get(zs.zoneId) ?? [];
+      const idx = boundaries.findIndex((d) => d.getTime() === zs.createdAt.getTime());
+      const start = idx > 0 ? boundaries[idx - 1] : null;
+      const end = zs.createdAt;
+      const [agg, breakdown] = await Promise.all([
+        aggregateTicketOrders(zs.zoneId, start, end),
+        ticketRevenueByAssetVariant(zs.zoneId, start, end),
+      ]);
+      ticketDataBySubmission.set(zs.id, {
+        totalAmount: agg.totalAmount,
+        abonementAmount: agg.abonementAmount,
+        ordersCount: agg.ordersCount,
+        ticketsCount: agg.ticketsCount,
+        redeemedCount: agg.redeemedCount,
+        expiredCount: agg.expiredCount,
+        assets: breakdown.map((b) => ({ assetId: b.assetId, variantName: b.variantName, count: b.count, amount: b.amount })),
+      });
+    })
+  );
+
   const zoneSubmissionIds = submissions.flatMap((s) => s.zoneSubmissions.map((zs) => zs.id));
   const correctionLogs = zoneSubmissionIds.length
     ? await prisma.correctionLog.findMany({
@@ -298,14 +350,20 @@ export async function GET(request: Request) {
       // этом уровне (voidedAt уже исключает отменённые), поэтому gross и net
       // здесь совпадают, в отличие от "Счётчиков" ниже.
       const isLiveZone = isStaysZone(zs.zone) || (isLaunches && zs.assetReadings.length === 0);
+      const isTickets = isTicketsZone(zs.zone);
+      const ticketData = isTickets ? ticketDataBySubmission.get(zs.id) : undefined;
       // "Счёт." — всегда валовая выручка по счётчикам, ФАКТ (запрос
       // пользователя 2026-07-16). Разница считается от net (за вычетом тестов).
-      const calculatedRevenue = isLiveZone
-        ? (liveRevenueBySubmission.get(zs.id) ?? 0)
-        : calcZoneGrossRevenue(tariffCalc);
-      const netRevenue = isLiveZone
-        ? (liveRevenueBySubmission.get(zs.id) ?? 0)
-        : calcZoneRevenue(tariffCalc, zs.returnsCount);
+      const calculatedRevenue = isTickets
+        ? (ticketData?.totalAmount ?? 0)
+        : isLiveZone
+          ? (liveRevenueBySubmission.get(zs.id) ?? 0)
+          : calcZoneGrossRevenue(tariffCalc);
+      const netRevenue = isTickets
+        ? (ticketData?.totalAmount ?? 0)
+        : isLiveZone
+          ? (liveRevenueBySubmission.get(zs.id) ?? 0)
+          : calcZoneRevenue(tariffCalc, zs.returnsCount);
       const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
       // Справочно, рядом с cashAmount/mobileAmount — сумма реальна, но касса
       // точки её уже получила раньше, при пополнении, поэтому она намеренно
@@ -315,9 +373,11 @@ export async function GET(request: Request) {
       // difference ниже — иначе разница ложно показывала бы недостачу ровно
       // на эту сумму каждый раз (реальный баг, найден пользователем
       // 2026-07-18 через собственный числовой пример).
-      const abonementAmount = ["stays", "launches", "counters", "cash_only"].includes(zs.zone.accountingMode)
-        ? abonementAmountFor(zs.zoneId, zs.createdAt)
-        : 0;
+      const abonementAmount = isTickets
+        ? (ticketData?.abonementAmount ?? 0)
+        : ["stays", "launches", "counters", "cash_only"].includes(zs.zone.accountingMode)
+          ? abonementAmountFor(zs.zoneId, zs.createdAt)
+          : 0;
       const difference = Math.round((actualCash + abonementAmount - netRevenue) * 100) / 100;
 
       const editable =
@@ -379,6 +439,18 @@ export async function GET(request: Request) {
             })
         : [];
 
+      // Разрez по активам и вариантам для Билетов (docs/spec/10-tickets.md,
+      // "Отчёты", п.2: "раскрытие разреза по активам и вариантам внутри
+      // карточки") — asset name резолвится тут же, ticketRevenueByAssetVariant
+      // отдаёт только id.
+      const ticketAssets = (ticketData?.assets ?? []).map((b) => ({
+        assetId: b.assetId,
+        assetName: zs.zone.assets.find((a) => a.id === b.assetId)?.name ?? "",
+        variantName: b.variantName,
+        count: b.count,
+        amount: b.amount,
+      }));
+
       return {
         zoneSubmissionId: zs.id,
         zoneId: zs.zoneId,
@@ -403,6 +475,16 @@ export async function GET(request: Request) {
         tariffs: zs.zone.tariffs.map((t) => ({ tariffId: t.id, price: Number(t.price) })),
         assets,
         liveAssets,
+        // Билеты (docs/spec/10-tickets.md, "Отчёты", п.2-3) — заказов/билетов
+        // агрегат + "Погашено X из Y · истекло Z", только у зон гашения
+        // (докс: "при включённом гашении — две строки"; при выключенном
+        // гашения нет и погашенных не существует, ticketData всё равно 0/0).
+        ticketsOrdersCount: ticketData?.ordersCount ?? null,
+        ticketsCount: ticketData?.ticketsCount ?? null,
+        ticketsRedeemedCount: ticketData?.redeemedCount ?? null,
+        ticketsExpiredCount: ticketData?.expiredCount ?? null,
+        ticketRedemptionEnabled: isTickets ? zs.zone.ticketRedemptionEnabled : null,
+        ticketAssets,
       };
     })
   );

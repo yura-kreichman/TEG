@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Banknote, Check, Pencil, Camera, CircuitBoard, ClockPlus, ImagePlus, ListChecks, Timer, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp, Smile, Gauge, TriangleAlert, type LucideIcon } from "lucide-react";
+import { Banknote, Check, Pencil, Camera, CircuitBoard, ChevronRight, ClockPlus, ImagePlus, ListChecks, Ticket, Timer, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp, Smile, Gauge, TriangleAlert, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -23,7 +23,7 @@ import { TileIcon } from "@/components/tile-icon";
 import { FilePickerButton } from "@/components/file-picker-button";
 import { useI18n, useCurrency, useLocale } from "@/components/i18n-provider";
 import { compressImageFile } from "@/lib/client-image";
-import { ZONE_ACCOUNTING_MODES, isStaysZone, isLaunchesZone, type ZoneAccountingMode } from "@/lib/results-calc";
+import { ZONE_ACCOUNTING_MODES, isStaysZone, isLaunchesZone, isTicketsZone, type ZoneAccountingMode } from "@/lib/results-calc";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { Money } from "@/components/money";
 import { formatMoney } from "@/lib/format";
@@ -34,20 +34,23 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import type { Dictionary } from "@/lib/i18n";
 
-// "stays" (Прибывания) — самостоятельный 4-й режим учёта, рядоположный
-// остальным (решение пользователя 2026-07-17; было суб-режимом "launches" до
-// этого) — единый список из четырёх, без второго уровня выбора.
+// "stays"/"tickets" — самостоятельные режимы учёта, рядоположные остальным
+// (решение пользователя 2026-07-17 для stays, было суб-режимом "launches" до
+// этого; tickets добавлен 2026-07-22, docs/spec/10-tickets.md) — единый
+// список из пяти, без второго уровня выбора.
 const ACCOUNTING_MODE_LABEL: Record<ZoneAccountingMode, (t: Dictionary) => string> = {
   counters: (t) => t.zonesList.accountingModeCounters,
   launches: (t) => t.zonesList.accountingModeLaunches,
   cash_only: (t) => t.zonesList.accountingModeCashOnly,
   stays: (t) => t.zonesList.accountingModeStays,
+  tickets: (t) => t.zonesList.accountingModeTickets,
 };
 const ACCOUNTING_MODE_HINT: Record<ZoneAccountingMode, (t: Dictionary) => string> = {
   counters: (t) => t.zonesList.accountingModeCountersHint,
   launches: (t) => t.zonesList.accountingModeLaunchesHint,
   cash_only: (t) => t.zonesList.accountingModeCashOnlyHint,
   stays: (t) => t.zonesList.accountingModeStaysHint,
+  tickets: (t) => t.zonesList.accountingModeTicketsHint,
 };
 // Иконки режимов учёта (запрос пользователя 2026-07-18) — "Прибывания" тот
 // же Timer, что и одноимённый пункт нижнего бара Сотрудника (единообразие).
@@ -56,6 +59,7 @@ const ACCOUNTING_MODE_ICON: Record<ZoneAccountingMode, LucideIcon> = {
   launches: ClockPlus,
   cash_only: Banknote,
   stays: Timer,
+  tickets: Ticket,
 };
 
 interface TariffOptionInfo {
@@ -156,6 +160,15 @@ interface TariffInfo {
   options: TariffOptionInfo[];
 }
 
+// Вариант цены билета (docs/spec/10-tickets.md, "ЦЕНЫ — НА АКТИВАХ, НЕ
+// ТАРИФЫ") — принадлежит активу напрямую, не тарифу зоны.
+interface TicketVariantInfo {
+  id: string;
+  name: string;
+  price: string;
+  order: number;
+}
+
 interface AssetInfo {
   id: string;
   name: string;
@@ -168,6 +181,8 @@ interface AssetInfo {
   // если ещё не выбран (запрос пользователя 2026-07-17: тарифы и активы
   // создаются независимо, привязка — отдельное действие владельца).
   tariffId: string | null;
+  // Только "Билеты" (docs/spec/10-tickets.md) — варианты цен этого актива.
+  ticketVariants: TicketVariantInfo[];
 }
 
 interface ZoneDetail {
@@ -179,6 +194,9 @@ interface ZoneDetail {
   modeLocked: boolean;
   active: boolean;
   printReceiptEnabled: boolean;
+  // Только "Билеты" (docs/spec/10-tickets.md, "ГАШЕНИЕ"/"СРОК ЖИЗНИ").
+  ticketRedemptionEnabled: boolean;
+  ticketLifetimeDays: number | null;
   pointId: string;
   pointName: string;
   tariffs: TariffInfo[];
@@ -187,7 +205,7 @@ interface ZoneDetail {
 
 type ZoneKebabView = "menu" | "rename" | "mode" | "confirm-delete";
 type TariffKebabView = "edit" | "confirm-delete";
-type AssetKebabView = "menu" | "edit" | "photo" | "icon" | "confirm-delete" | "initial-reading";
+type AssetKebabView = "menu" | "edit" | "photo" | "icon" | "confirm-delete" | "initial-reading" | "ticket-variants";
 
 export default function ZoneDetailPage() {
   const params = useParams<{ id: string }>();
@@ -197,6 +215,17 @@ export default function ZoneDetailPage() {
   const currencySign = getCurrencySign(useCurrency());
   const [zone, setZone] = useState<ZoneDetail | null>(null);
   const [checking, setChecking] = useState(true);
+
+  const [ticketLifetimeInput, setTicketLifetimeInput] = useState("");
+  const { saved: ticketLifetimeSaved, pulse: ticketLifetimePulse } = useSavePulse();
+
+  // Синхронизация локального черновика поля с загруженной зоной — то же
+  // самое "открыть = взять текущее значение", что у остальных inline-полей
+  // этой страницы (не отдельный useEffect, достаточно делать при каждой
+  // загрузке зоны, см. loadZone).
+  function syncTicketLifetimeInput(z: ZoneDetail) {
+    setTicketLifetimeInput(z.ticketLifetimeDays != null ? String(z.ticketLifetimeDays) : "");
+  }
 
   const [zoneIconSheetOpen, setZoneIconSheetOpen] = useState(false);
   const [zoneEmojiSheetOpen, setZoneEmojiSheetOpen] = useState(false);
@@ -268,10 +297,21 @@ export default function ZoneDetailPage() {
   const [initialReadingError, setInitialReadingError] = useState<string | null>(null);
   const { saved: initialReadingSaved, pulse: initialReadingPulse } = useSavePulse();
 
+  // Варианты цен билета (docs/spec/10-tickets.md, "ЦЕНЫ — НА АКТИВАХ, НЕ
+  // ТАРИФЫ") — тот же приём, что TariffOptionsEditor выше (список черновиков,
+  // полная замена набора при сохранении), просто name+price.
+  const [ticketVariantDrafts, setTicketVariantDrafts] = useState<{ name: string; price: string }[]>([
+    { name: "", price: "" },
+  ]);
+  const [ticketVariantsError, setTicketVariantsError] = useState<string | null>(null);
+  const { saved: ticketVariantsSaved, pulse: ticketVariantsPulse } = useSavePulse();
+
   async function loadZone() {
     const res = await fetch(`/api/zones/${params.id}`);
     if (res.ok) {
-      setZone(await res.json());
+      const data: ZoneDetail = await res.json();
+      setZone(data);
+      syncTicketLifetimeInput(data);
     }
     setChecking(false);
   }
@@ -341,6 +381,32 @@ export default function ZoneDetailPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ printReceiptEnabled: !zone.printReceiptEnabled }),
     });
+    await loadZone();
+  }
+
+  // Билеты (docs/spec/10-tickets.md, "ГАШЕНИЕ") — переключение безопасно в
+  // любой момент, деньги от тумблера не зависят.
+  async function toggleTicketRedemptionEnabled() {
+    if (!zone) return;
+    await fetch(`/api/zones/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticketRedemptionEnabled: !zone.ticketRedemptionEnabled }),
+    });
+    await loadZone();
+  }
+
+  async function saveTicketLifetimeDays() {
+    if (!zone) return;
+    const trimmed = ticketLifetimeInput.trim();
+    const days = trimmed ? Number(trimmed) : null;
+    if (trimmed && (!Number.isFinite(days) || (days as number) <= 0)) return;
+    await fetch(`/api/zones/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticketLifetimeDays: days }),
+    });
+    ticketLifetimePulse();
     await loadZone();
   }
 
@@ -567,6 +633,44 @@ export default function ZoneDetailPage() {
     initialReadingPulse(() => setAssetKebab(null));
   }
 
+  function openTicketVariants() {
+    if (!assetKebab) return;
+    setTicketVariantsError(null);
+    setTicketVariantDrafts(
+      assetKebab.ticketVariants.length > 0
+        ? assetKebab.ticketVariants
+            .slice()
+            .sort((a, b) => a.order - b.order)
+            .map((v) => ({ name: v.name, price: v.price }))
+        : [{ name: "", price: "" }]
+    );
+    setAssetKebabView("ticket-variants");
+  }
+
+  async function confirmTicketVariants() {
+    if (!assetKebab) return;
+    setTicketVariantsError(null);
+    const variants = ticketVariantDrafts
+      .map((v) => ({ name: v.name.trim(), price: v.price }))
+      .filter((v) => v.name.length > 0);
+    if (variants.length === 0) {
+      setTicketVariantsError(t.zoneDetail.ticketVariantsEmptyError);
+      return;
+    }
+    const res = await fetch(`/api/assets/${assetKebab.id}/ticket-variants`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ variants }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setTicketVariantsError(data.error ?? t.zoneDetail.ticketVariantsSaveError);
+      return;
+    }
+    ticketVariantsPulse(() => setAssetKebab(null));
+    await loadZone();
+  }
+
   async function handleEditUploadPhoto(file: File) {
     setEditUploading(true);
     setEditAssetError(null);
@@ -686,6 +790,8 @@ export default function ZoneDetailPage() {
     return t.zoneDetail.gameRoomPricingModePerMinute;
   }
 
+  const HeaderModeIcon = ACCOUNTING_MODE_ICON[zone.accountingMode];
+
   return (
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
@@ -700,7 +806,10 @@ export default function ZoneDetailPage() {
                 <div>
                   <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{zone.name}</h1>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <StatusChip>{t.zonesList.modeChip[zone.accountingMode]}</StatusChip>
+                    <StatusChip>
+                      <HeaderModeIcon className="size-3.5 shrink-0" />
+                      {t.zonesList.modeChip[zone.accountingMode]}
+                    </StatusChip>
                     {!zone.active && (
                       <StatusChip variant="neutral">{t.zonesList.zoneInactiveChip}</StatusChip>
                     )}
@@ -723,17 +832,72 @@ export default function ZoneDetailPage() {
               "Счётчики"/"Только касса" такого события нет — печатать
               нечего на уровне одной операции (там свой Z-отчёт сдачи
               итогов, без завязки на эту зонную настройку). */}
-          {(isStaysZone(zone) || isLaunchesZone(zone)) && (
+          {(isStaysZone(zone) || isLaunchesZone(zone) || isTicketsZone(zone)) && (
             <SpringCard hover={false}>
               <div className="flex items-center justify-between gap-3">
                 <span>
-                  <span className="block text-body-airbnb">{t.zoneDetail.printReceiptLabel}</span>
+                  <span className="block text-body-airbnb">
+                    {isTicketsZone(zone) ? t.zoneDetail.printTicketsLabel : t.zoneDetail.printReceiptLabel}
+                  </span>
                   <span className="mt-0.5 block text-caption-airbnb text-muted-foreground">
                     {t.zoneDetail.printReceiptHint}
                   </span>
                 </span>
                 <Switch checked={zone.printReceiptEnabled} onCheckedChange={togglePrintReceiptEnabled} className="shrink-0" />
               </div>
+            </SpringCard>
+          )}
+
+          {/* Билеты (docs/spec/10-tickets.md, "ГАШЕНИЕ"/"СРОК ЖИЗНИ") — срок
+              жизни виден только при включённом гашении (при выключенном к
+              заказам не применяется вовсе). */}
+          {isTicketsZone(zone) && (
+            <SpringCard hover={false} className="flex flex-col gap-3">
+              {/* Экран заказов зоны (docs/spec/10-tickets.md, "Кабинет
+                  владельца", п.3) — поиск по номеру, список за период,
+                  аннулирование поштучно/весь заказ. Отдельная страница, не
+                  sheet — список может быть длинным (за период). */}
+              <Link
+                href={`/zones/${zone.id}/orders`}
+                className="flex items-center justify-between gap-2 border-b border-border pb-3"
+              >
+                <span className="text-body-airbnb font-semibold">{t.tickets.ownerOrdersTitle}</span>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              </Link>
+              <div className="flex items-center justify-between gap-3">
+                <span>
+                  <span className="block text-body-airbnb">{t.zoneDetail.ticketRedemptionLabel}</span>
+                  <span className="mt-0.5 block text-caption-airbnb text-muted-foreground">
+                    {t.zoneDetail.ticketRedemptionHint}
+                  </span>
+                </span>
+                <Switch
+                  checked={zone.ticketRedemptionEnabled}
+                  onCheckedChange={toggleTicketRedemptionEnabled}
+                  className="shrink-0"
+                />
+              </div>
+              {zone.ticketRedemptionEnabled && (
+                <div className="flex items-end gap-2 border-t border-border pt-3">
+                  <div className="flex flex-1 flex-col gap-1">
+                    <Label htmlFor="ticketLifetimeDays">{t.zoneDetail.ticketLifetimeLabel}</Label>
+                    <Input
+                      id="ticketLifetimeDays"
+                      inputMode="numeric"
+                      placeholder={t.zoneDetail.ticketLifetimeUnlimited}
+                      value={ticketLifetimeInput}
+                      onChange={(e) => setTicketLifetimeInput(e.target.value.replace(/\D/g, ""))}
+                    />
+                  </div>
+                  <PressableScale>
+                    <SaveButton
+                      onClick={saveTicketLifetimeDays}
+                      saved={ticketLifetimeSaved}
+                      className="h-11 min-w-22 rounded-control px-4 font-bold"
+                    />
+                  </PressableScale>
+                </div>
+              )}
             </SpringCard>
           )}
 
@@ -744,8 +908,10 @@ export default function ZoneDetailPage() {
               один из этих тарифов через свой кебаб, привязка отдельная
               (docs/spec/04-game-room.md). Владелец не следит за отдельными
               пусками — ни порога долгого пуска, ни "Сейчас на точке"/
-              "Список пусков" нет (запрос пользователя 2026-07-17). */}
-          {zone.accountingMode !== "cash_only" && (
+              "Список пусков" нет (запрос пользователя 2026-07-17). Не
+              показывается у "Билетов" — там цены на активах, не тарифы,
+              docs/spec/10-tickets.md, "ЦЕНЫ — НА АКТИВАХ, НЕ ТАРИФЫ". */}
+          {zone.accountingMode !== "cash_only" && !isTicketsZone(zone) && (
           <SpringCard hover={false} className="flex flex-col gap-1">
             <h2 className="text-section-title">{t.zoneDetail.tariffsCardLabel}</h2>
 
@@ -827,9 +993,6 @@ export default function ZoneDetailPage() {
                   <div>
                     <div className="flex items-center gap-1.5">
                       <div className="text-card-title">{asset.name}</div>
-                      {(!zone.active || !asset.active) && (
-                        <StatusChip variant="neutral">{t.zoneDetail.assetInactiveChip}</StatusChip>
-                      )}
                     </div>
                     {zone.accountingMode === "counters" && asset.lastReadings.length > 0 && (
                       <p className="text-body-airbnb tabular-nums">
@@ -1266,6 +1429,11 @@ export default function ZoneDetailPage() {
                 {t.zoneDetail.initialReadingAction}
               </ActionSheetItem>
             )}
+            {isTicketsZone(zone) && (
+              <ActionSheetItem icon={Ticket} onClick={openTicketVariants}>
+                {t.zoneDetail.ticketVariantsAction}
+              </ActionSheetItem>
+            )}
             <ActionSheetItem icon={Camera} onClick={() => setAssetKebabView("photo")}>
               {t.zoneDetail.replacePhoto}
             </ActionSheetItem>
@@ -1350,6 +1518,66 @@ export default function ZoneDetailPage() {
             {initialReadingError && <p className="text-sm text-destructive">{initialReadingError}</p>}
             <PressableScale>
               <SaveButton className="h-12 w-full" onClick={confirmInitialReading} saved={initialReadingSaved} />
+            </PressableScale>
+          </div>
+        )}
+        {assetKebab && assetKebabView === "ticket-variants" && (
+          <div className="flex flex-col gap-3 pt-2">
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.ticketVariantsTitle}</h2>
+            <div className="flex flex-col gap-2">
+              {ticketVariantDrafts.map((variant, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Input
+                    placeholder={t.zoneDetail.ticketVariantNamePlaceholder}
+                    value={variant.name}
+                    onChange={(e) =>
+                      setTicketVariantDrafts((prev) =>
+                        prev.map((v, i) => (i === index ? { ...v, name: e.target.value } : v))
+                      )
+                    }
+                    className="flex-1"
+                  />
+                  <MoneyInput
+                    placeholder={t.zoneDetail.ticketVariantPricePlaceholder}
+                    value={variant.price}
+                    onChange={(e) =>
+                      setTicketVariantDrafts((prev) =>
+                        prev.map((v, i) => (i === index ? { ...v, price: e.target.value } : v))
+                      )
+                    }
+                    className="flex-1"
+                  />
+                  {ticketVariantDrafts.length > 1 && (
+                    <PressableScale>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label={t.zoneDetail.removeTicketVariantLabel}
+                        onClick={() => setTicketVariantDrafts((prev) => prev.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </PressableScale>
+                  )}
+                </div>
+              ))}
+            </div>
+            <PressableScale className="w-fit">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => setTicketVariantDrafts((prev) => [...prev, { name: "", price: "" }])}
+              >
+                <Plus className="size-4" />
+                {t.zoneDetail.addTicketVariantButton}
+              </Button>
+            </PressableScale>
+            {ticketVariantsError && <p className="text-sm text-destructive">{ticketVariantsError}</p>}
+            <PressableScale>
+              <SaveButton className="h-12 w-full" onClick={confirmTicketVariants} saved={ticketVariantsSaved} />
             </PressableScale>
           </div>
         )}

@@ -23,7 +23,11 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
       orderBy: { order: "asc" },
       include: { options: { orderBy: { order: "asc" } } },
     }),
-    prisma.asset.findMany({ where: { zoneId: id }, orderBy: { sortOrder: "asc" } }),
+    prisma.asset.findMany({
+      where: { zoneId: id },
+      orderBy: { sortOrder: "asc" },
+      include: { ticketVariants: { where: { deletedAt: null }, orderBy: { order: "asc" } } },
+    }),
   ]);
 
   const submissionCount = await prisma.zoneSubmission.count({ where: { zoneId: id } });
@@ -66,6 +70,8 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
     modeLocked: submissionCount > 0,
     active: zone.active,
     printReceiptEnabled: zone.printReceiptEnabled,
+    ticketRedemptionEnabled: zone.ticketRedemptionEnabled,
+    ticketLifetimeDays: zone.ticketLifetimeDays,
     pointId: zone.pointId,
     pointName: zone.point.name,
     tariffs,
@@ -90,7 +96,16 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
   }
 
-  const { name, iconKey, telegramEmoji, accountingMode, active, printReceiptEnabled } = await request.json();
+  const {
+    name,
+    iconKey,
+    telegramEmoji,
+    accountingMode,
+    active,
+    printReceiptEnabled,
+    ticketRedemptionEnabled,
+    ticketLifetimeDays,
+  } = await request.json();
   const data: {
     name?: string;
     iconKey?: string | null;
@@ -98,6 +113,8 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     accountingMode?: string;
     active?: boolean;
     printReceiptEnabled?: boolean;
+    ticketRedemptionEnabled?: boolean;
+    ticketLifetimeDays?: number | null;
   } = {};
 
   if (name !== undefined) {
@@ -149,6 +166,23 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
       return NextResponse.json({ error: "Некорректное значение printReceiptEnabled" }, { status: 400 });
     }
     data.printReceiptEnabled = printReceiptEnabled;
+  }
+  if (ticketRedemptionEnabled !== undefined) {
+    if (typeof ticketRedemptionEnabled !== "boolean") {
+      return NextResponse.json({ error: "Некорректное значение ticketRedemptionEnabled" }, { status: 400 });
+    }
+    data.ticketRedemptionEnabled = ticketRedemptionEnabled;
+  }
+  if (ticketLifetimeDays !== undefined) {
+    if (ticketLifetimeDays !== null) {
+      const days = Number(ticketLifetimeDays);
+      if (!Number.isFinite(days) || days <= 0 || !Number.isInteger(days)) {
+        return NextResponse.json({ error: "Некорректный срок жизни" }, { status: 400 });
+      }
+      data.ticketLifetimeDays = days;
+    } else {
+      data.ticketLifetimeDays = null;
+    }
   }
   await prisma.zone.update({ where: { id }, data });
   await revalidateLandingForTenant(owner.tenantId);

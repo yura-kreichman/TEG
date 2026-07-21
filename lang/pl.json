@@ -668,11 +668,14 @@
     "accountingModeCashOnlyHint": "Bez taryf i zasobów — tylko suma",
     "accountingModeStays": "Pobyty",
     "accountingModeStaysHint": "Start/stop uruchomień w czasie rzeczywistym",
+    "accountingModeTickets": "Bilety",
+    "accountingModeTicketsHint": "Sprzedaż biletów zamówieniami, realizacja opcjonalna",
     "modeChip": {
       "counters": "Wg liczników",
       "launches": "Uruchomienia",
       "cash_only": "Tylko kasa",
-      "stays": "Pobyty"
+      "stays": "Pobyty",
+      "tickets": "Bilety"
     },
     "zoneActiveChip": "Aktywny",
     "zoneInactiveChip": "Nieaktywna"
@@ -723,6 +726,19 @@
     "cashOnlyNote": "Tryb „Tylko kasa”: ta strefa nie potrzebuje taryf ani zasobów — pracownik zdaje tylko sumę.",
     "printReceiptLabel": "Drukowanie potwierdzenia",
     "printReceiptHint": "Operator będzie mógł wydrukować potwierdzenie dla gościa po wizycie/uruchomieniu",
+    "printTicketsLabel": "Drukowanie biletów",
+    "ticketRedemptionLabel": "Realizacja biletów",
+    "ticketRedemptionHint": "Wyłączone — system zna tylko sprzedaż, bez statusów i realizacji (\"po staremu\")",
+    "ticketLifetimeLabel": "Ważność zamówień, dni",
+    "ticketLifetimeUnlimited": "Bezterminowo",
+    "ticketVariantsAction": "Warianty cen",
+    "ticketVariantsTitle": "Warianty cen",
+    "ticketVariantNamePlaceholder": "Nazwa (np. Dorosły)",
+    "ticketVariantPricePlaceholder": "Cena",
+    "addTicketVariantButton": "Dodaj wariant",
+    "removeTicketVariantLabel": "Usuń wariant",
+    "ticketVariantsEmptyError": "Dodaj co najmniej jeden nazwany wariant",
+    "ticketVariantsSaveError": "Nie udało się zapisać wariantów cen",
     "gameRoomPricingModeFixed": "Za wejście",
     "gameRoomPricingModePerMinute": "Rzeczywisty",
     "gameRoomRateLabel": "Cena za minutę pobytu",
@@ -822,6 +838,8 @@
     "skipShiftStartWindowHint": "Na przykład dla pracownika z nietypowym grafikiem — wspólne okno tolerancji nie będzie go dotyczyć",
     "timeTrackingModeHint": "Ręczny — pracownik sam wpisuje godzinę przyjścia/wyjścia; Auto — czas jest rejestrowany na serwerze przyciskiem „Rozpocznij/zakończ zmianę”",
     "goodsAccessHint": "Dostęp do sprzedaży towarów i sprawdzania kasy",
+    "ticketsAccessLabel": "Sprzedaż biletów",
+    "ticketsAccessHint": "Dostęp do sprzedaży biletów; realizacja w już dostępnych strefach działa bez tego przełącznika",
     "revisionAccessHint": "Pozwala przeprowadzać rewizję stanów magazynowych"
   },
   "money": {
@@ -1069,6 +1087,7 @@
       "homeButton": "Do strony głównej",
       "categoryPlaceholder": "Kategoria (opcjonalnie)",
       "gameRoomSub": "Odczyty nie są potrzebne — przychód liczony jest z uruchomień",
+      "ticketsSub": "Odczyty nie są potrzebne — przychód liczony jest ze sprzedanych zamówień",
       "gameRoomBlockedPrefix": "Zakończ",
       "gameRoomBlockedSuffix": "aktywnych startów w",
       "gameRoomGoToAssetButton": "Przejdź do aktywu"
@@ -1386,7 +1405,9 @@
     "shiftWord": "zmiana",
     "shiftWordCap": "Zmiana",
     "launchesCountLabel": "Uruchomień",
-    "launchesTimeLabel": "czas"
+    "launchesTimeLabel": "czas",
+    "ticketsOrdersCountLabel": "Zamówień",
+    "ticketsSoldCountLabel": "Biletów"
   },
   "goods": {
     "navLabel": "Towary",
@@ -1461,5 +1482,44 @@
     "voided": "Anulowana",
     "voidReasonLabel": "Powód (opcjonalnie)",
     "catalogStockLabel": "Stan"
+  },
+  "tickets": {
+    "entryTitle": "Bilety",
+    "sellTab": "Sprzedaj",
+    "ordersTab": "Zamówienia",
+    "noVariantsYet": "Zasoby tej strefy nie mają jeszcze wariantów cenowych",
+    "noSellAccessHint": "Brak dostępu do sprzedaży biletów — skontaktuj się z właścicielem",
+    "cartTitle": "Koszyk",
+    "cartEmpty": "Koszyk jest pusty",
+    "totalLabel": "Razem",
+    "continueButton": "Dalej",
+    "orderDoneTitle": "Zamówienie złożone",
+    "orderNumberLabel": "Zamówienie nr ",
+    "ticketsCountLabel": "Bilety",
+    "printTicketButton": "Drukuj bilety",
+    "receiptTitle": "Bilet",
+    "receiptOrderLabel": "Zamówienie",
+    "receiptExpiresLabel": "Ważny do",
+    "receiptPriceLabel": "Cena",
+    "searchOrderPlaceholder": "Numer zamówienia",
+    "findOrderButton": "Szukaj",
+    "orderNotFound": "Nie znaleziono zamówienia o tym numerze",
+    "recentOrdersTitle": "Ostatnie zamówienia",
+    "noOrdersYet": "Brak zamówień",
+    "redeemButton": "Zrealizuj",
+    "redeemedStatusLabel": "Zrealizowany",
+    "voidedStatusLabel": "Anulowany",
+    "expiredStatusLabel": "Wygasł",
+    "activeStatusLabel": "Aktywny",
+    "redemptionDisabledHint": "Realizacja jest wyłączona dla tej strefy",
+    "allAssetsLabel": "Wszystkie zasoby",
+    "soldByLabel": "Sprzedał",
+    "ownerOrdersTitle": "Zamówienia",
+    "voidTicketAction": "Anuluj",
+    "voidOrderAction": "Anuluj zamówienie",
+    "confirmVoidTicket": "Anulować ten bilet? Zwrot według ceny biletu, tej czynności nie można cofnąć.",
+    "confirmVoidOrder": "Anulować wszystkie aktywne bilety w tym zamówieniu? Zwrot za każdy bilet, tej czynności nie można cofnąć.",
+    "newOrderButton": "Nowe zamówienie",
+    "noPriceLabel": "Brak ceny"
   }
 }

@@ -668,11 +668,14 @@
     "accountingModeCashOnlyHint": "Tarif və aktivlər olmadan — yalnız məbləğ",
     "accountingModeStays": "Qalmalar",
     "accountingModeStaysHint": "Başlanğıcların real vaxtda başladılması/dayandırılması",
+    "accountingModeTickets": "Biletlər",
+    "accountingModeTicketsHint": "Sifarişlə bilet satışı, ödəniş istəyə bağlıdır",
     "modeChip": {
       "counters": "Sayğaclar üzrə",
       "launches": "Buraxılışlar",
       "cash_only": "Yalnız kassa",
-      "stays": "Qalmalar"
+      "stays": "Qalmalar",
+      "tickets": "Biletlər"
     },
     "zoneActiveChip": "Aktiv",
     "zoneInactiveChip": "Qeyri-aktiv"
@@ -723,6 +726,19 @@
     "cashOnlyNote": "«Yalnız kassa» rejimi: bu zona üçün tarif və aktiv lazım deyil — işçi yalnız məbləği təhvil verir.",
     "printReceiptLabel": "Qəbz çapı",
     "printReceiptHint": "Operator qonaq üçün baş çəkmə/başlatmadan sonra qəbz çap edə biləcək",
+    "printTicketsLabel": "Biletlərin çapı",
+    "ticketRedemptionLabel": "Biletlərin ödənilməsi",
+    "ticketRedemptionHint": "Deaktiv — sistem yalnız satışları bilir, statuslar və ödəniş olmadan (\"köhnə üsul\")",
+    "ticketLifetimeLabel": "Sifarişlərin etibarlılıq müddəti, gün",
+    "ticketLifetimeUnlimited": "Müddətsiz",
+    "ticketVariantsAction": "Qiymət variantları",
+    "ticketVariantsTitle": "Qiymət variantları",
+    "ticketVariantNamePlaceholder": "Ad (məs. Böyük)",
+    "ticketVariantPricePlaceholder": "Qiymət",
+    "addTicketVariantButton": "Variant əlavə et",
+    "removeTicketVariantLabel": "Variantı sil",
+    "ticketVariantsEmptyError": "Ən azı bir adlandırılmış variant əlavə edin",
+    "ticketVariantsSaveError": "Qiymət variantlarını yadda saxlamaq mümkün olmadı",
     "gameRoomPricingModeFixed": "Giriş üzrə",
     "gameRoomPricingModePerMinute": "Faktiki",
     "gameRoomRateLabel": "Qalma dəqiqəsinin qiyməti",
@@ -822,6 +838,8 @@
     "skipShiftStartWindowHint": "Məsələn, qeyri-standart qrafikli işçi üçün — ümumi növbə başlanğıcı diapazonu ona tətbiq olunmayacaq",
     "timeTrackingModeHint": "Manual — işçi gəliş/gediş vaxtını özü daxil edir; Avto — vaxt serverdə «Növbəni başlat/bitir» düyməsi ilə qeyd olunur",
     "goodsAccessHint": "Mal satışına və kassa yoxlamasına giriş",
+    "ticketsAccessLabel": "Bilet satışı",
+    "ticketsAccessHint": "Bilet satışına giriş; artıq əlçatan zonalarda ödəniş bu keçid olmadan işləyir",
     "revisionAccessHint": "Qalıqların reviziyasını aparmağa icazə verir"
   },
   "money": {
@@ -1069,6 +1087,7 @@
       "homeButton": "Ana səhifəyə",
       "categoryPlaceholder": "Kateqoriya (istəyə bağlı)",
       "gameRoomSub": "Göstəricilər lazım deyil — gəlir başlanğıclara görə hesablanır",
+      "ticketsSub": "Göstəricilər lazım deyil — gəlir satılmış sifarişlərə görə hesablanır",
       "gameRoomBlockedPrefix": "Bitir",
       "gameRoomBlockedSuffix": "aktiv startlar:",
       "gameRoomGoToAssetButton": "Aktivə keç"
@@ -1386,7 +1405,9 @@
     "shiftWord": "növbə",
     "shiftWordCap": "Növbə",
     "launchesCountLabel": "Başlanğıclar",
-    "launchesTimeLabel": "vaxt"
+    "launchesTimeLabel": "vaxt",
+    "ticketsOrdersCountLabel": "Sifarişlər",
+    "ticketsSoldCountLabel": "Biletlər"
   },
   "goods": {
     "navLabel": "Mallar",
@@ -1461,5 +1482,44 @@
     "voided": "Ləğv edilib",
     "voidReasonLabel": "Səbəb (məcburi deyil)",
     "catalogStockLabel": "Qalıq"
+  },
+  "tickets": {
+    "entryTitle": "Biletlər",
+    "sellTab": "Sat",
+    "ordersTab": "Sifarişlər",
+    "noVariantsYet": "Bu zonanın aktivlərində hələ qiymət variantı yoxdur",
+    "noSellAccessHint": "Bilet satışına girişiniz yoxdur — sahibinə müraciət edin",
+    "cartTitle": "Səbət",
+    "cartEmpty": "Səbət boşdur",
+    "totalLabel": "Cəmi",
+    "continueButton": "İrəli",
+    "orderDoneTitle": "Sifariş tamamlandı",
+    "orderNumberLabel": "Sifariş №",
+    "ticketsCountLabel": "Biletlər",
+    "printTicketButton": "Biletləri çap et",
+    "receiptTitle": "Bilet",
+    "receiptOrderLabel": "Sifariş",
+    "receiptExpiresLabel": "Etibarlıdır",
+    "receiptPriceLabel": "Qiymət",
+    "searchOrderPlaceholder": "Sifariş nömrəsi",
+    "findOrderButton": "Tap",
+    "orderNotFound": "Bu nömrə ilə sifariş tapılmadı",
+    "recentOrdersTitle": "Son sifarişlər",
+    "noOrdersYet": "Hələ sifariş yoxdur",
+    "redeemButton": "İstifadə et",
+    "redeemedStatusLabel": "İstifadə edildi",
+    "voidedStatusLabel": "Ləğv edildi",
+    "expiredStatusLabel": "Vaxtı bitib",
+    "activeStatusLabel": "Aktiv",
+    "redemptionDisabledHint": "Bu zona üçün istifadə söndürülüb",
+    "allAssetsLabel": "Bütün aktivlər",
+    "soldByLabel": "Satdı",
+    "ownerOrdersTitle": "Sifarişlər",
+    "voidTicketAction": "Ləğv et",
+    "voidOrderAction": "Sifarişi ləğv et",
+    "confirmVoidTicket": "Bu bilet ləğv edilsin? Bilet qiyməti üzrə geri qaytarma, bu əməliyyat geri qaytarıla bilməz.",
+    "confirmVoidOrder": "Bu sifarişdəki bütün aktiv biletlər ləğv edilsin? Hər bilet üzrə geri qaytarma, bu əməliyyat geri qaytarıla bilməz.",
+    "newOrderButton": "Yeni sifariş",
+    "noPriceLabel": "Qiymət yoxdur"
   }
 }

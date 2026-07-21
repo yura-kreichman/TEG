@@ -23,6 +23,7 @@ import {
   PenLine,
   Fingerprint,
   ShoppingBag,
+  Ticket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -61,6 +62,7 @@ interface Profile {
   skipShiftStartWindow: boolean;
   goodsAccess: boolean;
   revisionAccess: boolean;
+  ticketsAccess: boolean;
   hasOpenShift: boolean;
 }
 
@@ -334,6 +336,19 @@ export default function OperatorSettingsPage() {
     });
   }
 
+  // Тумблер модуля "Билеты" (docs/spec/10-tickets.md, "PWA оператора") — тот
+  // же UI-паттерн, что goodsAccess выше, второй модульный тумблер в группе
+  // "Работа".
+  async function toggleTicketsAccess(value: boolean) {
+    if (!profile) return;
+    setProfile({ ...profile, ticketsAccess: value });
+    await fetch(`/api/operators/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticketsAccess: value }),
+    });
+  }
+
   function openColor() {
     if (!profile) return;
     setColorValue(profile.colorTag ?? "#22c55e");
@@ -586,6 +601,14 @@ export default function OperatorSettingsPage() {
                 <Switch checked={profile.revisionAccess} onCheckedChange={toggleRevisionAccess} className="shrink-0" />
               </div>
             )}
+            <div className="flex items-center gap-3 border-t border-border py-3.5">
+              <Ticket className="size-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <div className="text-body-airbnb">{t.operators.ticketsAccessLabel}</div>
+                <div className="text-caption-airbnb">{t.operators.ticketsAccessHint}</div>
+              </div>
+              <Switch checked={profile.ticketsAccess} onCheckedChange={toggleTicketsAccess} className="shrink-0" />
+            </div>
             <SettingsRow
               icon={Palette}
               label={t.operators.colorTagAction}
@@ -628,6 +651,14 @@ export default function OperatorSettingsPage() {
                 <Switch checked={profile.revisionAccess} onCheckedChange={toggleRevisionAccess} className="shrink-0" />
               </div>
             )}
+            <div className="flex items-center gap-3 border-t border-border py-3.5">
+              <Ticket className="size-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <div className="text-body-airbnb">{t.operators.ticketsAccessLabel}</div>
+                <div className="text-caption-airbnb">{t.operators.ticketsAccessHint}</div>
+              </div>
+              <Switch checked={profile.ticketsAccess} onCheckedChange={toggleTicketsAccess} className="shrink-0" />
+            </div>
             <SettingsRow
               icon={Palette}
               label={t.operators.colorTagAction}

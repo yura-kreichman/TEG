@@ -10,6 +10,7 @@ import {
   Link2,
   ImagePlus,
   ChevronRight,
+  CircleCheckBig,
   MapPin,
   Pause,
   Play,
@@ -483,7 +484,17 @@ export default function PointsPage() {
                                   <div className="flex items-center gap-1.5 text-body-airbnb">
                                     <TabletSmartphone className="size-6 shrink-0 text-muted-foreground" />
                                     {device.label ?? t.points.unnamedDevice}
-                                    {device.activated && <StatusChip>{t.points.deviceActivated}</StatusChip>}
+                                    {/* Иконка вместо текстовой плашки (запрос пользователя
+                                        2026-07-21) — тот же приём, что у Роуминга/Есть
+                                        принтера ниже: активация не требует отдельного слова. */}
+                                    {device.activated && (
+                                      <CircleCheckBig
+                                        className="size-4 shrink-0 text-success"
+                                        aria-label={t.points.deviceActivated}
+                                      >
+                                        <title>{t.points.deviceActivated}</title>
+                                      </CircleCheckBig>
+                                    )}
                                     {/* Иконки вместо текстовых плашек (запрос пользователя
                                         2026-07-20) — Роуминг/Есть принтер не требуют
                                         отдельного слова, компактнее рядом с названием. */}

@@ -668,11 +668,14 @@
     "accountingModeCashOnlyHint": "Без тарифів і активів — лише сума",
     "accountingModeStays": "Перебування",
     "accountingModeStaysHint": "Старт і стоп пусків у реальному часі",
+    "accountingModeTickets": "Квитки",
+    "accountingModeTicketsHint": "Продаж квитків замовленнями, погашення необов'язкове",
     "modeChip": {
       "counters": "За лічильниками",
       "launches": "Заїзди",
       "cash_only": "Лише каса",
-      "stays": "Перебування"
+      "stays": "Перебування",
+      "tickets": "Квитки"
     },
     "zoneActiveChip": "Активна",
     "zoneInactiveChip": "Неактивна"
@@ -723,6 +726,19 @@
     "cashOnlyNote": "Режим «Лише каса»: цій зоні не потрібні тарифи й активи — співробітник здає лише суму.",
     "printReceiptLabel": "Друк квитанції",
     "printReceiptHint": "Оператор зможе роздрукувати квитанцію відвідувачу після відвідування/запуску",
+    "printTicketsLabel": "Друк квитків",
+    "ticketRedemptionLabel": "Погашення квитків",
+    "ticketRedemptionHint": "Вимкнено — система знає лише продажі, без статусів і погашення (\"по-старому\")",
+    "ticketLifetimeLabel": "Строк дії замовлень, днів",
+    "ticketLifetimeUnlimited": "Безстроково",
+    "ticketVariantsAction": "Варіанти цін",
+    "ticketVariantsTitle": "Варіанти цін",
+    "ticketVariantNamePlaceholder": "Назва (наприклад, Дорослий)",
+    "ticketVariantPricePlaceholder": "Ціна",
+    "addTicketVariantButton": "Додати варіант",
+    "removeTicketVariantLabel": "Видалити варіант",
+    "ticketVariantsEmptyError": "Додайте хоча б один варіант з назвою",
+    "ticketVariantsSaveError": "Не вдалося зберегти варіанти цін",
     "gameRoomPricingModeFixed": "За вхід",
     "gameRoomPricingModePerMinute": "За фактом",
     "gameRoomRateLabel": "Ціна за хвилину перебування",
@@ -822,6 +838,8 @@
     "skipShiftStartWindowHint": "Наприклад, для співробітника з нестандартним графіком — загальне допустиме вікно на нього діяти не буде",
     "timeTrackingModeHint": "Ручний — співробітник сам вводить час приходу й відходу; Авто — час фіксується кнопкою «Почати/Завершити зміну» на сервері",
     "goodsAccessHint": "Доступ до продажу товарів і звірки каси",
+    "ticketsAccessLabel": "Продаж квитків",
+    "ticketsAccessHint": "Доступ до продажу квитків; погашення в уже доступних зонах працює без цього перемикача",
     "revisionAccessHint": "Дозволяє проводити ревізію залишків"
   },
   "money": {
@@ -1069,6 +1087,7 @@
       "homeButton": "На головну",
       "categoryPlaceholder": "Категорія (необов'язково)",
       "gameRoomSub": "Показання не потрібні — виручка рахується за пусками",
+      "ticketsSub": "Показання не потрібні — виручка рахується за проданими замовленнями",
       "gameRoomBlockedPrefix": "Заверши",
       "gameRoomBlockedSuffix": "активних пусків у",
       "gameRoomGoToAssetButton": "Перейти до активу"
@@ -1386,7 +1405,9 @@
     "shiftWord": "зміна",
     "shiftWordCap": "Зміна",
     "launchesCountLabel": "Пусків",
-    "launchesTimeLabel": "час"
+    "launchesTimeLabel": "час",
+    "ticketsOrdersCountLabel": "Замовлень",
+    "ticketsSoldCountLabel": "Квитків"
   },
   "goods": {
     "navLabel": "Товари",
@@ -1461,5 +1482,44 @@
     "voided": "Анульована",
     "voidReasonLabel": "Причина (необовʼязково)",
     "catalogStockLabel": "Залишок"
+  },
+  "tickets": {
+    "entryTitle": "Квитки",
+    "sellTab": "Продати",
+    "ordersTab": "Замовлення",
+    "noVariantsYet": "У активів цієї зони ще немає варіантів цін",
+    "noSellAccessHint": "Немає доступу до продажу квитків — зверніться до власника",
+    "cartTitle": "Кошик",
+    "cartEmpty": "Кошик порожній",
+    "totalLabel": "Разом",
+    "continueButton": "Далі",
+    "orderDoneTitle": "Замовлення оформлено",
+    "orderNumberLabel": "Замовлення №",
+    "ticketsCountLabel": "Квитків",
+    "printTicketButton": "Друкувати квитки",
+    "receiptTitle": "Квиток",
+    "receiptOrderLabel": "Замовлення",
+    "receiptExpiresLabel": "Дійсний до",
+    "receiptPriceLabel": "Ціна",
+    "searchOrderPlaceholder": "Номер замовлення",
+    "findOrderButton": "Знайти",
+    "orderNotFound": "Замовлення з таким номером не знайдено",
+    "recentOrdersTitle": "Останні замовлення",
+    "noOrdersYet": "Замовлень поки немає",
+    "redeemButton": "Погасити",
+    "redeemedStatusLabel": "Погашено",
+    "voidedStatusLabel": "Анульовано",
+    "expiredStatusLabel": "Прострочено",
+    "activeStatusLabel": "Активний",
+    "redemptionDisabledHint": "Погашення вимкнено для цієї зони",
+    "allAssetsLabel": "Усі активи",
+    "soldByLabel": "Продав",
+    "ownerOrdersTitle": "Замовлення",
+    "voidTicketAction": "Анулювати",
+    "voidOrderAction": "Анулювати замовлення",
+    "confirmVoidTicket": "Анулювати цей квиток? Повернення за ціною квитка, дію не можна скасувати.",
+    "confirmVoidOrder": "Анулювати всі активні квитки цього замовлення? Повернення за кожен квиток, дію не можна скасувати.",
+    "newOrderButton": "Нове замовлення",
+    "noPriceLabel": "Немає ціни"
   }
 }

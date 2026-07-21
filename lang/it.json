@@ -668,11 +668,14 @@
     "accountingModeCashOnlyHint": "Nessuna tariffa o bene — solo l'importo",
     "accountingModeStays": "Soggiorni",
     "accountingModeStaysHint": "Avvio/stop degli avvii in tempo reale",
+    "accountingModeTickets": "Biglietti",
+    "accountingModeTicketsHint": "Vendita di biglietti tramite ordini, riscatto opzionale",
     "modeChip": {
       "counters": "A contatori",
       "launches": "Avvii",
       "cash_only": "Solo contanti",
-      "stays": "Soggiorni"
+      "stays": "Soggiorni",
+      "tickets": "Biglietti"
     },
     "zoneActiveChip": "Attiva",
     "zoneInactiveChip": "Inattiva"
@@ -723,6 +726,19 @@
     "cashOnlyNote": "Modalità \"Solo contanti\": questa zona non ha bisogno di tariffe o beni — il dipendente inserisce solo un importo.",
     "printReceiptLabel": "Stampa ricevuta",
     "printReceiptHint": "L'operatore potrà stampare una ricevuta per il visitatore dopo la visita/avvio",
+    "printTicketsLabel": "Stampa biglietti",
+    "ticketRedemptionLabel": "Convalida biglietti",
+    "ticketRedemptionHint": "Disattivato — il sistema conosce solo le vendite, senza stati né convalida (\"vecchio stile\")",
+    "ticketLifetimeLabel": "Validità degli ordini, giorni",
+    "ticketLifetimeUnlimited": "Illimitata",
+    "ticketVariantsAction": "Varianti di prezzo",
+    "ticketVariantsTitle": "Varianti di prezzo",
+    "ticketVariantNamePlaceholder": "Nome (es. Adulto)",
+    "ticketVariantPricePlaceholder": "Prezzo",
+    "addTicketVariantButton": "Aggiungi variante",
+    "removeTicketVariantLabel": "Rimuovi variante",
+    "ticketVariantsEmptyError": "Aggiungi almeno una variante con nome",
+    "ticketVariantsSaveError": "Impossibile salvare le varianti di prezzo",
     "gameRoomPricingModeFixed": "Per ingresso",
     "gameRoomPricingModePerMinute": "Reale",
     "gameRoomRateLabel": "Prezzo al minuto di permanenza",
@@ -822,6 +838,8 @@
     "skipShiftStartWindowHint": "Ad esempio, per un dipendente con orario irregolare — la finestra di inizio turno condivisa non si applicherà a lui",
     "timeTrackingModeHint": "Manuale — il dipendente inserisce da sé l'orario di inizio/fine; Automatico — l'orario viene registrato tramite il pulsante \"Inizia/Termina turno\" sul server",
     "goodsAccessHint": "Accesso alla vendita di prodotti e verifica cassa",
+    "ticketsAccessLabel": "Vendita biglietti",
+    "ticketsAccessHint": "Accesso alla vendita di biglietti; la convalida nelle zone già accessibili funziona senza questo interruttore",
     "revisionAccessHint": "Consente di effettuare la revisione delle scorte"
   },
   "money": {
@@ -1069,6 +1087,7 @@
       "homeButton": "Torna alla home",
       "categoryPlaceholder": "Categoria (facoltativo)",
       "gameRoomSub": "Le letture non servono — l'incasso è calcolato dagli avvii",
+      "ticketsSub": "Le letture non servono — l'incasso è calcolato dagli ordini venduti",
       "gameRoomBlockedPrefix": "Termina",
       "gameRoomBlockedSuffix": "avvii attivi in",
       "gameRoomGoToAssetButton": "Vai all'attivo"
@@ -1386,7 +1405,9 @@
     "shiftWord": "turno",
     "shiftWordCap": "Turno",
     "launchesCountLabel": "Avvii",
-    "launchesTimeLabel": "tempo"
+    "launchesTimeLabel": "tempo",
+    "ticketsOrdersCountLabel": "Ordini",
+    "ticketsSoldCountLabel": "Biglietti"
   },
   "goods": {
     "navLabel": "Prodotti",
@@ -1461,5 +1482,44 @@
     "voided": "Annullata",
     "voidReasonLabel": "Motivo (facoltativo)",
     "catalogStockLabel": "Scorta"
+  },
+  "tickets": {
+    "entryTitle": "Biglietti",
+    "sellTab": "Vendi",
+    "ordersTab": "Ordini",
+    "noVariantsYet": "Gli asset di questa zona non hanno ancora varianti di prezzo",
+    "noSellAccessHint": "Nessun accesso alla vendita di biglietti — contatta il proprietario",
+    "cartTitle": "Carrello",
+    "cartEmpty": "Il carrello è vuoto",
+    "totalLabel": "Totale",
+    "continueButton": "Avanti",
+    "orderDoneTitle": "Ordine effettuato",
+    "orderNumberLabel": "Ordine n. ",
+    "ticketsCountLabel": "Biglietti",
+    "printTicketButton": "Stampa biglietti",
+    "receiptTitle": "Biglietto",
+    "receiptOrderLabel": "Ordine",
+    "receiptExpiresLabel": "Valido fino al",
+    "receiptPriceLabel": "Prezzo",
+    "searchOrderPlaceholder": "Numero ordine",
+    "findOrderButton": "Cerca",
+    "orderNotFound": "Nessun ordine trovato con questo numero",
+    "recentOrdersTitle": "Ordini recenti",
+    "noOrdersYet": "Nessun ordine ancora",
+    "redeemButton": "Convalida",
+    "redeemedStatusLabel": "Convalidato",
+    "voidedStatusLabel": "Annullato",
+    "expiredStatusLabel": "Scaduto",
+    "activeStatusLabel": "Attivo",
+    "redemptionDisabledHint": "La convalida è disattivata per questa zona",
+    "allAssetsLabel": "Tutti gli asset",
+    "soldByLabel": "Venduto da",
+    "ownerOrdersTitle": "Ordini",
+    "voidTicketAction": "Annulla",
+    "voidOrderAction": "Annulla ordine",
+    "confirmVoidTicket": "Annullare questo biglietto? Rimborso al prezzo del biglietto, azione irreversibile.",
+    "confirmVoidOrder": "Annullare tutti i biglietti attivi di questo ordine? Rimborso per ogni biglietto, azione irreversibile.",
+    "newOrderButton": "Nuovo ordine",
+    "noPriceLabel": "Nessun prezzo"
   }
 }

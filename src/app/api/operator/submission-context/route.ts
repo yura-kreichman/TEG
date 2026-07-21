@@ -61,6 +61,24 @@ export async function GET() {
     : [];
   const staysTariffById = new Map(staysTariffs.map((t) => [t.id, t]));
 
+  // Билеты (docs/spec/10-tickets.md) — варианты цен активов для экрана
+  // "Продать" (PWA оператора), тот же принцип, что staysTariffs выше: один
+  // запрос на все tickets-зоны разом.
+  const ticketAssetIds = zones
+    .filter((z) => z.accountingMode === "tickets")
+    .flatMap((z) => z.assets.map((a) => a.id));
+  const ticketVariants = ticketAssetIds.length
+    ? await prisma.ticketVariant.findMany({
+        where: { assetId: { in: ticketAssetIds }, deletedAt: null },
+        orderBy: { order: "asc" },
+      })
+    : [];
+  const ticketVariantsByAsset = new Map<string, typeof ticketVariants>();
+  for (const v of ticketVariants) {
+    if (!ticketVariantsByAsset.has(v.assetId)) ticketVariantsByAsset.set(v.assetId, []);
+    ticketVariantsByAsset.get(v.assetId)!.push(v);
+  }
+
   // Категории расходов тенанта (запрос пользователя 2026-07-14) — для выбора
   // при вводе расхода на шаге "Расходы" мастера сдачи итогов.
   const expenseCategories = await prisma.expenseCategory.findMany({
@@ -77,6 +95,19 @@ export async function GET() {
     // Модуль печати (запрос пользователя 2026-07-20) — доступна ли кнопка
     // "Печать квитанции" оператору в этой зоне (stays/launches).
     printReceiptEnabled: zone.printReceiptEnabled,
+    // Билеты (docs/spec/10-tickets.md, "ДОСТУП К СДАЧЕ") — оператор БЕЗ
+    // тумблера "Продажа билетов" всё ещё гасит билеты (см. /api/tickets/
+    // [id]/redeem, доступ там проверяется отдельно, по allowedZones), но
+    // зону режима tickets в МАСТЕРЕ СДАЧИ ИТОГОВ видеть не должен — этот
+    // эндпоинт общий (его же используют экраны Прибываний/Пусков для нав.
+    // видимости), поэтому саму зону из списка не убираем — только
+    // отмечаем флагом, мастер сдачи фильтрует по нему сам (не переиспользуем
+    // логику Товаров — та зон в мастере не касалась вовсе, см. обсуждение
+    // на этапе ревью спеки).
+    ticketsSubmissionAllowed: zone.accountingMode !== "tickets" || operator.ticketsAccess,
+    ...(zone.accountingMode === "tickets"
+      ? { ticketRedemptionEnabled: zone.ticketRedemptionEnabled, ticketLifetimeDays: zone.ticketLifetimeDays }
+      : {}),
     tariffs: zone.tariffs.map((t) => ({ id: t.id, name: t.name, price: t.price, order: t.order })),
     assets: zone.assets.map((asset) => ({
       id: asset.id,
@@ -106,6 +137,15 @@ export async function GET() {
             })(),
           }
         : {}),
+      ...(zone.accountingMode === "tickets"
+        ? {
+            ticketVariants: (ticketVariantsByAsset.get(asset.id) ?? []).map((v) => ({
+              id: v.id,
+              name: v.name,
+              price: Number(v.price),
+            })),
+          }
+        : {}),
     })),
   }));
 
@@ -115,5 +155,6 @@ export async function GET() {
     zones: result,
     expenseCategories,
     goodsAccess: operator.goodsAccess,
+    ticketsAccess: operator.ticketsAccess,
   });
 }

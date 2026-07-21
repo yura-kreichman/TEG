@@ -29,9 +29,19 @@ function WheelColumn({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const target = value * ITEM_HEIGHT;
+    // Реальный баг, найден пользователем 2026-07-22: "value * ITEM_HEIGHT"
+    // молчаливо считал value ИНДЕКСОМ в массиве values, что верно только
+    // для полного списка 0..N без пропусков (минуты, часы без ограничения).
+    // У часов "Пришёл" в ручном учёте времени values — ОГРАНИЧЕННЫЙ список
+    // (hourValues, окно допуска вокруг defaultShiftStartTime, не с нуля) —
+    // так, для values=[9..19] значение 10 попадало на позицию индекса 10,
+    // т.е. на элемент values[10] = 19, а не на сам "10". Нужен индекс
+    // значения В МАССИВЕ, не само значение.
+    const index = values.indexOf(value);
+    if (index === -1) return;
+    const target = index * ITEM_HEIGHT;
     if (Math.abs(el.scrollTop - target) > 1) el.scrollTop = target;
-  }, [value]);
+  }, [value, values]);
 
   function snapToScrollPosition() {
     const el = ref.current;

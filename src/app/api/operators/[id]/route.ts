@@ -39,6 +39,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/operators/[
     skipShiftStartWindow: operator.skipShiftStartWindow,
     goodsAccess: operator.goodsAccess,
     revisionAccess: operator.revisionAccess,
+    ticketsAccess: operator.ticketsAccess,
     hasOpenShift,
   });
 }
@@ -68,6 +69,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
     skipShiftStartWindow,
     goodsAccess,
     revisionAccess,
+    ticketsAccess,
   } = await request.json();
   const data: {
     name?: string;
@@ -82,6 +84,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
     skipShiftStartWindow?: boolean;
     goodsAccess?: boolean;
     revisionAccess?: boolean;
+    ticketsAccess?: boolean;
   } = {};
 
   if (name !== undefined) {
@@ -175,6 +178,12 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
       return NextResponse.json({ error: "Некорректное значение revisionAccess" }, { status: 400 });
     }
     data.revisionAccess = revisionAccess;
+  }
+  if (ticketsAccess !== undefined) {
+    if (typeof ticketsAccess !== "boolean") {
+      return NextResponse.json({ error: "Некорректное значение ticketsAccess" }, { status: 400 });
+    }
+    data.ticketsAccess = ticketsAccess;
   }
 
   await prisma.operator.update({ where: { id }, data });

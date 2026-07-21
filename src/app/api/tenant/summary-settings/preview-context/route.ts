@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import type { ZoneAccountingMode } from "@/lib/results-calc";
 
-const PREVIEW_MODES: ZoneAccountingMode[] = ["counters", "launches", "stays", "cash_only"];
+const PREVIEW_MODES: ZoneAccountingMode[] = ["counters", "launches", "stays", "cash_only", "tickets"];
 
 // Реальные названия (зона/точка/активы/тарифы/оператор) для живого
 // предпросмотра сводок в редакторах (/settings/summaries/*) — цифры там
