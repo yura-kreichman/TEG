@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Banknote, Check, Pencil, Camera, CircuitBoard, ChevronRight, ClockPlus, ImagePlus, ListChecks, Ticket, Timer, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp, Smile, Gauge, TriangleAlert, type LucideIcon } from "lucide-react";
+import { Banknote, Check, Pencil, Camera, CircuitBoard, ClockPlus, ImagePlus, ListChecks, Ticket, Timer, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp, Smile, Gauge, TriangleAlert, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -898,17 +898,9 @@ export default function ZoneDetailPage() {
                 </span>
                 <Switch checked={zone.printReceiptEnabled} onCheckedChange={togglePrintReceiptEnabled} className="shrink-0" />
               </div>
-              {/* Экран заказов зоны (docs/spec/10-tickets.md, "Кабинет
-                  владельца", п.3) — поиск по номеру, список за период,
-                  аннулирование поштучно/весь заказ. Отдельная страница, не
-                  sheet — список может быть длинным (за период). */}
-              <Link
-                href={`/zones/${zone.id}/orders`}
-                className="flex items-center justify-between gap-2 border-t border-border pt-3"
-              >
-                <span className="text-body-airbnb font-semibold">{t.tickets.ownerOrdersTitle}</span>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-              </Link>
+              {/* Экран заказов зоны убран (запрос пользователя 2026-07-21:
+                  "у Владельца не нужны эти заказы") — был отдельной
+                  страницей /zones/[id]/orders, теперь удалена целиком. */}
               <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
                 <span>
                   <span className="block text-body-airbnb">{t.zoneDetail.ticketRedemptionLabel}</span>

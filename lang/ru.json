@@ -856,6 +856,7 @@
     "readingsLinkHint": "Календарь сдач итогов по точкам",
     "zoneBalancesLink": "Остатки и инкассации",
     "zoneBalancesLinkHint": "Сколько должно быть на точке и история инкассаций",
+    "zoneBalancesTotalLabel": "Итог",
     "abonementCashLabel": "Абонементы наличными",
     "abonementSoldTitle": "Абонементы: продано",
     "abonementSoldHint": "По продажам абонементов",

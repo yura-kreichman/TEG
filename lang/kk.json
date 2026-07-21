@@ -856,6 +856,7 @@
     "readingsLinkHint": "Нүктелер бойынша қорытынды тапсырулар күнтізбесі",
     "zoneBalancesLink": "Қалдықтар мен инкассациялар",
     "zoneBalancesLinkHint": "Нүктеде қанша болуы керек және инкассациялар тарихы",
+    "zoneBalancesTotalLabel": "Барлығы",
     "abonementCashLabel": "Абонементтер (қолма-қол)",
     "abonementSoldTitle": "Абонементтерді сату",
     "abonementSoldHint": "Абонементтерді сату бойынша",

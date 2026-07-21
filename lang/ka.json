@@ -856,6 +856,7 @@
     "readingsLinkHint": "ჩაბარებების კალენდარი წერტილების მიხედვით",
     "zoneBalancesLink": "ნაშთები და ინკასაციები",
     "zoneBalancesLinkHint": "რამდენი უნდა იყოს წერტილზე და ინკასაციების ისტორია",
+    "zoneBalancesTotalLabel": "სულ",
     "abonementCashLabel": "აბონემენტები (ნაღდი)",
     "abonementSoldTitle": "აბონემენტების გაყიდვები",
     "abonementSoldHint": "აბონემენტების გაყიდვების მიხედვით",

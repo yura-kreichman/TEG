@@ -856,6 +856,7 @@
     "readingsLinkHint": "Noktalara göre sonuç teslimleri takvimi",
     "zoneBalancesLink": "Bakiyeler ve tahsilatlar",
     "zoneBalancesLinkHint": "Noktada ne kadar olması gerektiği ve tahsilat geçmişi",
+    "zoneBalancesTotalLabel": "Toplam",
     "abonementCashLabel": "Abonelikler (nakit)",
     "abonementSoldTitle": "Abonelik satışları",
     "abonementSoldHint": "Abonelik satışlarına göre",

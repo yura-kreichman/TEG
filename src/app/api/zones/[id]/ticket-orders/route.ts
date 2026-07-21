@@ -72,12 +72,13 @@ function serializeOrder(o: {
  * зоне, не только с тумблером "Продажа билетов" (тот гейтит только продажу,
  * не просмотр/гашение — см. POST ниже и /api/tickets/[id]/redeem).
  *
- * Владелец (docs/spec/10-tickets.md, "Кабинет владельца", п.3 — "Экран
- * заказов tickets-зоны") использует тот же роут, что и оператор — поиск по
- * номеру и список идентичны, разница только в авторизации (owner-сессия
- * вместо operator-сессии, без привязки к точке/allZonesAccess) и в
- * поддержке `from`/`to` для "список за период" (операторской ленте период не
- * нужен — там всегда просто "последние N").
+ * Владелец тоже может искать по номеру этим же роутом (авторизация —
+ * owner-сессия вместо operator-сессии, без привязки к точке/allZonesAccess).
+ * "Список за период" с `from`/`to` для владельца (изначальный план отдельного
+ * экрана "Заказы") здесь БОЛЬШЕ НЕ ИСПОЛЬЗУЕТСЯ — тот экран удалён (запрос
+ * пользователя 2026-07-21: "у Владельца не нужны эти заказы"), аннулирование
+ * теперь живёт прямо в карточке «Итоги дня» на своих данных (money/readings,
+ * /api/reports/counters/day), не через этот роут.
  */
 export async function GET(request: Request, ctx: RouteContext<"/api/zones/[id]/ticket-orders">) {
   const { id: zoneId } = await ctx.params;
@@ -129,25 +130,18 @@ export async function GET(request: Request, ctx: RouteContext<"/api/zones/[id]/t
     return NextResponse.json({ order: serializeOrder(order) });
   }
 
-  // "Список за период" (docs/spec/10-tickets.md, "Кабинет владельца", п.3) —
-  // from/to как YYYY-MM-DD, тот же формат, что /api/goods/sales; без них —
-  // операторская лента "последних N" (limit), период не участвует.
-  const fromParam = url.searchParams.get("from");
-  const toParam = url.searchParams.get("to");
-  const hasPeriod = fromParam && toParam && /^\d{4}-\d{2}-\d{2}$/.test(fromParam) && /^\d{4}-\d{2}-\d{2}$/.test(toParam);
+  // Лента последних заказов — только "живые" (openTicketsCount > 0, запрос
+  // пользователя 2026-07-21: "сотрудник, который видит только Заказы, должен
+  // видеть только активные — аннулированные/погашенные ему не нужны").
+  // Полностью погашенный/аннулированный заказ ничего не даёт оператору
+  // (гасить/аннулировать больше нечего) — только шумит в списке. Истёкший,
+  // но ещё не погашенный целиком заказ ОСТАЁТСЯ (openTicketsCount не
+  // декрементируется истечением) — его ещё можно аннулировать балансом.
   const limit = Math.min(Number(url.searchParams.get("limit")) || 20, 50);
   const orders = await prisma.ticketOrder.findMany({
-    where: hasPeriod
-      ? {
-          zoneId,
-          soldAt: {
-            gte: new Date(`${fromParam}T00:00:00.000Z`),
-            lt: new Date(new Date(`${toParam}T00:00:00.000Z`).getTime() + 24 * 60 * 60 * 1000),
-          },
-        }
-      : { zoneId },
+    where: { zoneId, openTicketsCount: { gt: 0 } },
     orderBy: { soldAt: "desc" },
-    take: hasPeriod ? 300 : limit,
+    take: limit,
     include: { tickets: true, soldByOperator: { select: { name: true } } },
   });
 
@@ -226,9 +220,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
       ? computeTicketExpiresAt(now, zone.ticketLifetimeDays)
       : null;
 
-  let order;
+  let result;
   try {
-    order = await prisma.$transaction(async (tx) => {
+    result = await prisma.$transaction(async (tx) => {
       const number = await nextTicketOrderNumber(tx, zone.id);
       const created = await tx.ticketOrder.create({
         data: {
@@ -244,7 +238,13 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
         },
       });
 
-      await tx.ticket.createMany({
+      // createManyAndReturn, а не createMany — реальный баг, найден
+      // пользователем 2026-07-21: "при создании заказа они не сразу
+      // появляются в табе Заказы... должны там быть сразу", не после
+      // отдельного перезапроса ленты. Клиент подставляет вернувшиеся билеты
+      // (с настоящими id — теми же, что нужны для гашения/аннулирования)
+      // прямо в список без сетевого round-trip.
+      const tickets = await tx.ticket.createManyAndReturn({
         data: ticketsToCreate.map((t) => ({ orderId: created.id, ...t })),
       });
 
@@ -259,7 +259,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
         });
       }
 
-      return created;
+      return { order: created, tickets };
     });
   } catch (err) {
     if (err instanceof InsufficientBalanceError) {
@@ -268,14 +268,25 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     throw err;
   }
 
+  const { order, tickets } = result;
   return NextResponse.json(
     {
       id: order.id,
       number: order.number,
+      paymentMethod: order.paymentMethod,
       totalSnapshot: Number(order.totalSnapshot),
       expiresAt: order.expiresAt,
+      openTicketsCount: order.openTicketsCount,
       soldAt: order.soldAt,
-      ticketsCount: ticketsToCreate.length,
+      soldByOperatorName: operator.name,
+      tickets: tickets.map((t) => ({
+        id: t.id,
+        assetId: t.assetId,
+        variantNameSnapshot: t.variantNameSnapshot,
+        priceSnapshot: Number(t.priceSnapshot),
+        status: t.status,
+        redeemedAt: t.redeemedAt,
+      })),
     },
     { status: 201 }
   );

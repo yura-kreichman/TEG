@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AlertTriangle, ClockPlus, Home, ShoppingBag, Ticket, Timer, Wallet } from "lucide-react";
 import { BottomGlassNav, type BottomGlassNavItem } from "@/components/bottom-glass-nav";
+import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n } from "@/components/i18n-provider";
 import { isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
@@ -15,6 +17,10 @@ const EXPIRY_POLL_MS = 6000;
 // пользователя 2026-07-17: "звукового непрерывного уведомления", позже
 // "должно быть громче и чаще" — было 20000, слишком редко на реальной точке).
 const EXPIRY_ALERT_REPEAT_MS = 8000;
+// "Ещё" при 5+ пунктах (запрос пользователя 2026-07-21) — тот же слот-лимит
+// и тот же паттерн (первые N прямо в баре, остальное — в BottomSheet), что
+// уже есть у Владельца (owner-shell.tsx, BAR_SLOTS).
+const BAR_SLOTS = 4;
 
 /**
  * Нижний бар PWA оператора (docs/spec/03-design-system.md, "Навигация":
@@ -42,6 +48,7 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
   const [hasTickets, setHasTickets] = useState(false);
   const [hasGoods, setHasGoods] = useState(false);
   const [hasZones, setHasZones] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -198,6 +205,9 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
       : []),
   ];
 
+  const barItems = items.slice(0, BAR_SLOTS);
+  const overflowItems = items.slice(BAR_SLOTS);
+
   return (
     <div
       className="flex flex-1 flex-col"
@@ -234,15 +244,35 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
       )}
       {!hidden && (
         <BottomGlassNav
-          items={items}
+          items={barItems}
           moreLabel={t.nav.more}
-          moreActive={false}
+          moreActive={overflowItems.some((item) => item.active)}
           moreBadge={null}
-          onMoreClick={() => {}}
-          showMore={false}
+          onMoreClick={() => setMoreOpen(true)}
+          showMore={overflowItems.length > 0}
           hideOnDesktop={false}
         />
       )}
+
+      <BottomSheet open={moreOpen} onClose={() => setMoreOpen(false)}>
+        <div className="flex flex-col pt-2">
+          <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.nav.more}</h2>
+          {overflowItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMoreOpen(false)}
+                className="flex items-center gap-3 border-t border-border py-3.5 text-left text-body-airbnb first:border-t-0"
+              >
+                <Icon className="size-4 shrink-0" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </BottomSheet>
     </div>
   );
 }

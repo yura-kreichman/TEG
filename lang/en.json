@@ -856,6 +856,7 @@
     "readingsLinkHint": "Calendar of results submissions by point",
     "zoneBalancesLink": "Balances & collections",
     "zoneBalancesLinkHint": "How much should be on-site, and collection history",
+    "zoneBalancesTotalLabel": "Total",
     "abonementCashLabel": "Subscriptions (cash)",
     "abonementSoldTitle": "Subscription sales",
     "abonementSoldHint": "By subscription sales",

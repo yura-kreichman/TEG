@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
-import { aggregateTicketOrders, ticketRevenueByAssetVariant } from "@/lib/tickets";
+import { aggregateTicketOrders, ticketRevenueByAssetVariant, listTicketOrdersForWindow, type TicketOrderWindowItem } from "@/lib/tickets";
 
 interface CorrectionDiff {
   cashAmount: number;
@@ -295,7 +295,16 @@ export async function GET(request: Request) {
   const ticketZoneSubmissions = submissions.flatMap((s) => s.zoneSubmissions.filter((zs) => isTicketsZone(zs.zone)));
   const ticketDataBySubmission = new Map<
     string,
-    { totalAmount: number; abonementAmount: number; ordersCount: number; ticketsCount: number; redeemedCount: number; expiredCount: number; assets: { assetId: string; variantName: string; count: number; amount: number }[] }
+    {
+      totalAmount: number;
+      abonementAmount: number;
+      ordersCount: number;
+      ticketsCount: number;
+      redeemedCount: number;
+      expiredCount: number;
+      assets: { assetId: string; variantName: string; count: number; amount: number }[];
+      orders: TicketOrderWindowItem[];
+    }
   >();
   await Promise.all(
     ticketZoneSubmissions.map(async (zs) => {
@@ -303,9 +312,12 @@ export async function GET(request: Request) {
       const idx = boundaries.findIndex((d) => d.getTime() === zs.createdAt.getTime());
       const start = idx > 0 ? boundaries[idx - 1] : null;
       const end = zs.createdAt;
-      const [agg, breakdown] = await Promise.all([
+      const [agg, breakdown, orders] = await Promise.all([
         aggregateTicketOrders(zs.zoneId, start, end),
         ticketRevenueByAssetVariant(zs.zoneId, start, end),
+        // Полные заказы окна — для аннулирования владельцем прямо в
+        // карточке (запрос пользователя 2026-07-21).
+        listTicketOrdersForWindow(zs.zoneId, start, end),
       ]);
       ticketDataBySubmission.set(zs.id, {
         totalAmount: agg.totalAmount,
@@ -315,6 +327,7 @@ export async function GET(request: Request) {
         redeemedCount: agg.redeemedCount,
         expiredCount: agg.expiredCount,
         assets: breakdown.map((b) => ({ assetId: b.assetId, variantName: b.variantName, count: b.count, amount: b.amount })),
+        orders,
       });
     })
   );
@@ -485,6 +498,17 @@ export async function GET(request: Request) {
         ticketsExpiredCount: ticketData?.expiredCount ?? null,
         ticketRedemptionEnabled: isTickets ? zs.zone.ticketRedemptionEnabled : null,
         ticketAssets,
+        // Заказы окна с полным составом билетов — для аннулирования владельцем
+        // прямо в карточке (запрос пользователя 2026-07-21: "прямо в карточке
+        // Итогов дня", не отдельный экран). Имя актива резолвится тут же, как
+        // и у ticketAssets выше.
+        ticketOrders: (ticketData?.orders ?? []).map((o) => ({
+          ...o,
+          tickets: o.tickets.map((tk) => ({
+            ...tk,
+            assetName: zs.zone.assets.find((a) => a.id === tk.assetId)?.name ?? "",
+          })),
+        })),
       };
     })
   );

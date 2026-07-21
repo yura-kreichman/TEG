@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { requireOperator } from "@/lib/require-operator";
 import { voidTicketInTx } from "@/lib/tickets";
 
 /**
@@ -9,20 +10,47 @@ import { voidTicketInTx } from "@/lib/tickets";
  * "«Аннулировать заказ» = все живые билеты разом"). Один CorrectionLog на
  * весь заказ (entityType="TicketOrder"), не по записи на билет — это
  * действие пользователя одно, а не N независимых.
+ *
+ * Владелец — без ограничений, любой способ оплаты. Оператор с доступом к
+ * продаже билетов — ТОЛЬКО заказы, оплаченные балансом (запрос пользователя
+ * 2026-07-21, тот же принцип, что /api/tickets/[id]/void — см. его
+ * комментарий).
  */
 export async function POST(request: Request, ctx: RouteContext<"/api/ticket-orders/[id]/void">) {
-  const owner = await requireOwner();
-  if (!owner) {
-    return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  const opCtx = await requireOperator();
+  const owner = opCtx ? null : await requireOwner();
+  if (!opCtx && !owner) {
+    return NextResponse.json({ error: "Требуется вход" }, { status: 401 });
   }
   const { id } = await ctx.params;
 
   const order = await prisma.ticketOrder.findUnique({
     where: { id },
-    include: { zone: { include: { point: true } }, tickets: true },
+    include: {
+      zone: { include: { point: true, operatorsWithAccess: { select: { id: true } } } },
+      tickets: true,
+    },
   });
-  if (!order || order.zone.point.tenantId !== owner.tenantId) {
+  const tenantId = opCtx ? opCtx.point.tenantId : owner!.tenantId;
+  if (!order || order.zone.point.tenantId !== tenantId) {
     return NextResponse.json({ error: "Заказ не найден" }, { status: 404 });
+  }
+
+  if (opCtx) {
+    const { operator, point } = opCtx;
+    if (order.zone.pointId !== point.id) {
+      return NextResponse.json({ error: "Заказ не найден" }, { status: 404 });
+    }
+    if (!operator.ticketsAccess) {
+      return NextResponse.json({ error: "Нет доступа к продаже билетов" }, { status: 403 });
+    }
+    const hasZoneAccess = operator.allZonesAccess || order.zone.operatorsWithAccess.some((o) => o.id === operator.id);
+    if (!hasZoneAccess) {
+      return NextResponse.json({ error: "Заказ не найден" }, { status: 404 });
+    }
+    if (order.paymentMethod !== "abonement") {
+      return NextResponse.json({ error: "Аннулирование нал/безнал заказов доступно только владельцу" }, { status: 403 });
+    }
   }
 
   const activeTickets = order.tickets.filter((t) => t.status === "active");
@@ -46,7 +74,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/ticket-orde
           walletId: order.walletId,
           soldAt: order.soldAt,
         },
-        { tenantId: owner.tenantId, pointId: order.zone.pointId, userId: owner.user.id }
+        opCtx
+          ? { tenantId, pointId: opCtx.point.id, operatorId: opCtx.operator.id }
+          : { tenantId, pointId: order.zone.pointId, userId: owner!.user.id }
       );
     }
     const after = await tx.ticket.findMany({ where: { id: { in: activeTickets.map((t) => t.id) } } });
@@ -54,7 +84,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/ticket-orde
       data: {
         entityType: "TicketOrder",
         entityId: order.id,
-        correctedByUserId: owner.user.id,
+        correctedByUserId: opCtx ? null : owner!.user.id,
+        correctedByOperatorId: opCtx ? opCtx.operator.id : null,
         beforeJson: JSON.parse(JSON.stringify(before)),
         afterJson: JSON.parse(JSON.stringify({ tickets: after })),
         comment: reason,

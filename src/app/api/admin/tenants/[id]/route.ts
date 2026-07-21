@@ -81,7 +81,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/admin/tenan
     history: history.map((h) => ({
       id: h.id,
       correctedAt: h.correctedAt,
-      correctedByEmail: h.correctedBy.email,
+      correctedByEmail: h.correctedBy?.email ?? null,
       before: h.beforeJson,
       after: h.afterJson,
       comment: h.comment,

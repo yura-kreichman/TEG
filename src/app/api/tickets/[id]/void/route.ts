@@ -1,28 +1,59 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { requireOperator } from "@/lib/require-operator";
 import { voidTicketInTx } from "@/lib/tickets";
 
 /**
- * Аннулирование ОДНОГО билета — только владелец, поштучно
- * (docs/spec/10-tickets.md, "АННУЛИРОВАНИЕ"). Погашенный билет не
- * аннулируется (услуга оказана); активный и истёкший — можно (оба —
- * status="active", "истёк" не отдельное хранимое значение).
+ * Аннулирование ОДНОГО билета — поштучно (docs/spec/10-tickets.md,
+ * "АННУЛИРОВАНИЕ"). Погашенный билет не аннулируется (услуга оказана);
+ * активный и истёкший — можно (оба — status="active", "истёк" не отдельное
+ * хранимое значение).
+ *
+ * Владелец — без ограничений, любой способ оплаты. Оператор с доступом к
+ * продаже билетов — ТОЛЬКО заказы, оплаченные балансом (запрос пользователя
+ * 2026-07-21): у нал/безнал заказов уже пробит фискальный чек, программный
+ * возврат кассой не отменяет его и рискует скрыть недостачу — та же причина,
+ * по которой нал/безнал остаются только у Владельца. Балансовый возврат
+ * физической кассы вообще не касается — чисто цифровая операция на кошельке
+ * клиента.
  */
 export async function POST(request: Request, ctx: RouteContext<"/api/tickets/[id]/void">) {
-  const owner = await requireOwner();
-  if (!owner) {
-    return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  const opCtx = await requireOperator();
+  const owner = opCtx ? null : await requireOwner();
+  if (!opCtx && !owner) {
+    return NextResponse.json({ error: "Требуется вход" }, { status: 401 });
   }
   const { id } = await ctx.params;
 
   const ticket = await prisma.ticket.findUnique({
     where: { id },
-    include: { order: { include: { zone: { include: { point: true } } } } },
+    include: {
+      order: { include: { zone: { include: { point: true, operatorsWithAccess: { select: { id: true } } } } } },
+    },
   });
-  if (!ticket || ticket.order.zone.point.tenantId !== owner.tenantId) {
+  const tenantId = opCtx ? opCtx.point.tenantId : owner!.tenantId;
+  if (!ticket || ticket.order.zone.point.tenantId !== tenantId) {
     return NextResponse.json({ error: "Билет не найден" }, { status: 404 });
   }
+
+  if (opCtx) {
+    const { operator, point } = opCtx;
+    if (ticket.order.zone.pointId !== point.id) {
+      return NextResponse.json({ error: "Билет не найден" }, { status: 404 });
+    }
+    if (!operator.ticketsAccess) {
+      return NextResponse.json({ error: "Нет доступа к продаже билетов" }, { status: 403 });
+    }
+    const hasZoneAccess = operator.allZonesAccess || ticket.order.zone.operatorsWithAccess.some((o) => o.id === operator.id);
+    if (!hasZoneAccess) {
+      return NextResponse.json({ error: "Билет не найден" }, { status: 404 });
+    }
+    if (ticket.order.paymentMethod !== "abonement") {
+      return NextResponse.json({ error: "Аннулирование нал/безнал заказов доступно только владельцу" }, { status: 403 });
+    }
+  }
+
   if (ticket.status === "redeemed") {
     return NextResponse.json({ error: "Погашенный билет нельзя аннулировать" }, { status: 400 });
   }
@@ -45,14 +76,17 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tickets/[id
         walletId: ticket.order.walletId,
         soldAt: ticket.order.soldAt,
       },
-      { tenantId: owner.tenantId, pointId: ticket.order.zone.pointId, userId: owner.user.id }
+      opCtx
+        ? { tenantId, pointId: opCtx.point.id, operatorId: opCtx.operator.id }
+        : { tenantId, pointId: ticket.order.zone.pointId, userId: owner!.user.id }
     );
     const result = await tx.ticket.findUniqueOrThrow({ where: { id: ticket.id } });
     await tx.correctionLog.create({
       data: {
         entityType: "Ticket",
         entityId: ticket.id,
-        correctedByUserId: owner.user.id,
+        correctedByUserId: opCtx ? null : owner!.user.id,
+        correctedByOperatorId: opCtx ? opCtx.operator.id : null,
         beforeJson: JSON.parse(JSON.stringify(before)),
         afterJson: JSON.parse(JSON.stringify(result)),
         comment: reason,

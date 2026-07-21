@@ -12,18 +12,20 @@ import { distributeCollectionWhole } from "@/lib/collection-split";
 // и goods_revenue_abonement исключены тем же принципом, что и их зонные
 // аналоги; goods_revenue (нал) в списке нет — реальные деньги, ровно как revenue.
 // Билеты (docs/spec/10-tickets.md, "ДЕНЬГИ И СДАЧА ИТОГОВ") — возврат при
-// аннулировании ПОСЛЕ сдачи итогов: ticket_refund_cashless/
-// ticket_refund_abonement исключены тем же принципом (безнал/баланс никогда
-// не были физической наличностью, значит и их возврат ею не является);
-// ticket_refund (нал) в списке нет — реальный отток налички из кассы зоны.
+// аннулировании ПОСЛЕ сдачи итогов ПЕРЕИСПОЛЬЗУЕТ revenue/revenue_cashless/
+// revenue_abonement отрицательной суммой (src/lib/tickets.ts,
+// ticketRefundMoneyType — исправлено при аудите отчётов 2026-07-21: отдельные
+// ticket_refund* типы корректно исключались отсюда, но ни один отчёт
+// "Выручка" их не суммировал, возврат молча не уменьшал показанную выручку),
+// отдельных типов под билеты здесь больше нет — тот же паттерн, что уже был
+// у Товаров (goods_revenue* ниже, voidGoodsSale тоже переиспользует
+// исходный тип, а не отдельный "goods_refund").
 const CASH_EXCLUDED_TYPES = new Set([
   "revenue_cashless",
   "abonement_topup_cashless",
   "revenue_abonement",
   "goods_revenue_cashless",
   "goods_revenue_abonement",
-  "ticket_refund_cashless",
-  "ticket_refund_abonement",
 ]);
 
 export function affectsCashOnHand(type: string): boolean {

@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Banknote, Check, ChevronLeft, CreditCard, Delete, Layers, MapPin, Minus, Plus, Printer, Search, ShoppingCart, Ticket, Trash2, Wallet } from "lucide-react";
+import { Banknote, Check, ChevronLeft, ChevronRight, CreditCard, Delete, Layers, MapPin, Minus, Plus, Printer, Search, ShoppingCart, Ticket, Trash2, TriangleAlert, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
+import { ConfirmIconButton } from "@/components/confirm-icon-button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
@@ -175,15 +176,7 @@ export default function TicketsZonePage() {
     paymentMethod: string;
     tickets: { id: string; assetName: string; variantName: string; price: number }[];
   } | null>(null);
-  // Печать всех билетов заказа — ОДНА кнопка "Распечатать билеты"
-  // (docs/spec/10-tickets.md, "PWA оператора"), которая внутри делает N
-  // ПОСЛЕДОВАТЕЛЬНЫХ вызовов печати, по одному документу на билет (докс,
-  // "ПЕЧАТЬ": решение пользователя 2026-07-21 — один документ с разрывами
-  // страниц отклонён, на Bluetooth ESC/POS давал испорченную "страницу";
-  // N отдельных вызовов подряд, с паузой между ними — тот же кулдаун, что у
-  // общего PrintButton, только автоматический, не по N ручным тапам).
-  const [printingIndex, setPrintingIndex] = useState<number | null>(null);
-
+  const [successPrinting, setSuccessPrinting] = useState(false);
   function selectZone(id: string) {
     // Корзина НЕ очищается — у каждой зоны своя, в контексте (см. выше),
     // переключение просто показывает корзину новой зоны как есть.
@@ -240,16 +233,18 @@ export default function TicketsZonePage() {
         setError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
-      // Одна строка корзины -> N билетов одного варианта — снапшот тикетов
-      // для success-экрана строится тут же, id самих Ticket сервер не
-      // возвращает по одному (только агрегат) — печати нужен только текст,
-      // не реальный Ticket.id, поэтому синтетический ключ вполне достаточен.
-      const ticketRows: { id: string; assetName: string; variantName: string; price: number }[] = [];
-      for (const l of currentCartLines) {
-        for (let i = 0; i < l.quantity; i++) {
-          ticketRows.push({ id: `${l.variantId}-${i}`, assetName: l.assetName, variantName: l.variantName, price: l.price });
-        }
-      }
+      // Реальные билеты с сервера (createManyAndReturn — см. комментарий
+      // ниже у recentOrders), не реконструкция из строк корзины — не зависит
+      // от того, что порядок создания на сервере совпадает с порядком строк
+      // корзины.
+      const ticketRows: { id: string; assetName: string; variantName: string; price: number }[] = data.tickets.map(
+        (t: OrderTicket) => ({
+          id: t.id,
+          assetName: zone.assets.find((a) => a.id === t.assetId)?.name ?? "",
+          variantName: t.variantNameSnapshot,
+          price: t.priceSnapshot,
+        })
+      );
       setLastOrder({
         zoneName: zone.name,
         number: data.number,
@@ -263,6 +258,29 @@ export default function TicketsZonePage() {
       setCartSheetOpen(false);
       setPaymentOpen(false);
       setAbonementTarget(null);
+      // Реальный баг, найден пользователем 2026-07-21: "при создании заказа
+      // они не сразу появляются в табе Заказы" — и это должно происходить
+      // МГНОВЕННО ("должны там быть сразу"), не через повторный запрос ленты
+      // после сохранения (тот вариант уже отклонён пользователем как
+      // неверный — задержка на round-trip всё ещё заметна). Сервер теперь
+      // возвращает реальные билеты заказа (createManyAndReturn, не
+      // createMany) — те же id, что нужны для гашения/аннулирования —
+      // поэтому можно вставить готовый OrderDetail в начало ленты локально,
+      // без единого сетевого запроса.
+      setRecentOrders((prev) => [
+        {
+          id: data.id,
+          number: data.number,
+          paymentMethod: data.paymentMethod,
+          totalSnapshot: data.totalSnapshot,
+          expiresAt: data.expiresAt,
+          openTicketsCount: data.openTicketsCount,
+          soldAt: data.soldAt,
+          soldByOperatorName: data.soldByOperatorName,
+          tickets: data.tickets,
+        },
+        ...prev,
+      ]);
     } catch {
       setError(t.operatorApp.gameRoom.networkError);
     } finally {
@@ -276,10 +294,13 @@ export default function TicketsZonePage() {
     abonement: t.reports.abonementLabel,
   };
 
-  function buildTicketReceiptData(
-    ticket: { assetName: string; variantName: string; price: number },
-    order: { zoneName: string; number: number; expiresAt: string | null; soldAt: string; paymentMethod: string }
-  ): PrintDocumentData {
+  // Один документ на весь заказ (запрос пользователя 2026-07-21: "печать
+  // одним документом. Много диалоговых окон это неправильно") — заменяет
+  // прежние N отдельных вызовов печати; каждый билет — своя секция с
+  // разрезом (cutLineAfter) между ними, чтобы рулон можно было физически
+  // разрезать на отдельные билеты после печати. Общий способ оплаты и
+  // итоговая сумма — один раз на весь документ, не дублируются по билетам.
+  function buildOrderReceiptData(order: NonNullable<typeof lastOrder>): PrintDocumentData {
     return {
       title: t.tickets.receiptTitle,
       // Дата ПРОДАЖИ (docs/spec/10-tickets.md, "ПЕЧАТЬ": "дата продажи"), не
@@ -288,47 +309,49 @@ export default function TicketsZonePage() {
       // в любой день после продажи, new Date() показывал бы неверную дату.
       subtitle: `${order.zoneName} · ${new Date(order.soldAt).toLocaleString(locale)}${printAvailable.operatorName ? ` · ${printAvailable.operatorName}` : ""}`,
       sections: [
-        {
+        ...order.tickets.map((ticket, i) => ({
           lines: [
             // "Крупный номер заказа" — первым и large (docs/spec/10-
             // tickets.md, "ПЕЧАТЬ") — гашение ищет заказ ПО НОМЕРУ (циферблат
             // во вкладке «Заказы»), это единственное, что реально нужно
-            // прочитать издалека на бумажке у актива.
+            // прочитать издалека на бумажке у актива, повторяется на КАЖДОМ
+            // билете — после разреза каждый кусок остаётся самостоятельным.
             { label: t.tickets.receiptOrderLabel, value: `№${order.number}`, large: true },
-            { label: `${ticket.assetName} · ${ticket.variantName}`, value: "" },
-            { label: t.operatorApp.gameRoom.receiptPaymentMethodLabel, value: paymentMethodLabel[order.paymentMethod] ?? order.paymentMethod },
+            { label: `${ticket.assetName} · ${ticket.variantName}`, value: formatMoneyWithCurrency(ticket.price, locale, currency) },
             ...(order.expiresAt
               ? [{ label: t.tickets.receiptExpiresLabel, value: new Date(order.expiresAt).toLocaleDateString(locale) }]
               : []),
           ],
+          cutLineAfter: i < order.tickets.length - 1,
+        })),
+        {
+          lines: [
+            { label: t.operatorApp.gameRoom.receiptPaymentMethodLabel, value: paymentMethodLabel[order.paymentMethod] ?? order.paymentMethod },
+          ],
         },
       ],
-      totalLine: { label: t.tickets.receiptPriceLabel, value: formatMoneyWithCurrency(ticket.price, locale, currency) },
+      totalLine: { label: t.tickets.totalLabel, value: formatMoneyWithCurrency(order.totalSnapshot, locale, currency) },
     };
   }
 
-  const PRINT_SEQUENCE_DELAY_MS = 4000;
-
-  async function printAllTickets(order: NonNullable<typeof lastOrder>) {
-    if (printingIndex !== null) return;
-    for (let i = 0; i < order.tickets.length; i++) {
-      setPrintingIndex(i);
-      openPrintDocument(buildTicketReceiptData(order.tickets[i], order), printAvailable.branding);
-      if (i < order.tickets.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, PRINT_SEQUENCE_DELAY_MS));
-      }
-    }
-    setPrintingIndex(null);
+  function printOrder(order: NonNullable<typeof lastOrder>) {
+    openPrintDocument(buildOrderReceiptData(order), printAvailable.branding);
   }
 
   // "Допечатать потерянный" (docs/spec/10-tickets.md, "ПЕЧАТЬ": "кнопка
   // печати также доступна из карточки заказа во вкладке «Заказы»") —
-  // тот же printAllTickets, адаптер к форме OrderDetail (карточка хранит
-  // assetId, не имя — резолвится через zone.assets, как и остальной рендер
-  // карточки). Аннулированные билеты не печатаются — по ним уже возврат.
+  // адаптер к форме OrderDetail (карточка хранит assetId, не имя —
+  // резолвится через zone.assets, как и остальной рендер карточки). Печатает
+  // ТОЛЬКО живые (status="active") билеты — не только аннулированные
+  // (возврат уже случился), но и ПОГАШЕННЫЕ (реальный баг, найден
+  // пользователем 2026-07-21: "не должна посылать на печать погашенные
+  // билеты" — раньше фильтр был только tk.status !== "voided", погашенные
+  // проходили). Услуга по погашенному билету уже оказана, печатать его
+  // заново нет смысла — тот же принцип, что уже скрывает погашенные/
+  // аннулированные из самого списка карточки (liveTickets выше).
   function printOrderTickets(order: OrderDetail) {
     if (!zone) return;
-    printAllTickets({
+    printOrder({
       zoneName: zone.name,
       number: order.number,
       totalSnapshot: order.totalSnapshot,
@@ -336,7 +359,7 @@ export default function TicketsZonePage() {
       soldAt: order.soldAt,
       paymentMethod: order.paymentMethod,
       tickets: order.tickets
-        .filter((tk) => tk.status !== "voided")
+        .filter((tk) => tk.status === "active")
         .map((tk) => ({
           id: tk.id,
           assetName: zone.assets.find((a) => a.id === tk.assetId)?.name ?? "",
@@ -355,6 +378,8 @@ export default function TicketsZonePage() {
   const [recentOrders, setRecentOrders] = useState<OrderDetail[]>([]);
   const [assetFilter, setAssetFilterState] = useState<string>(ALL_ASSETS);
   const [redeeming, setRedeeming] = useState<string | null>(null);
+  const [voidingTicket, setVoidingTicket] = useState<string | null>(null);
+  const [voidingOrder, setVoidingOrder] = useState<string | null>(null);
 
   function setAssetFilter(value: string) {
     setAssetFilterState(value);
@@ -459,6 +484,50 @@ export default function TicketsZonePage() {
       setSearchError(t.operatorApp.gameRoom.networkError);
     } finally {
       setRedeeming(null);
+    }
+  }
+
+  // Аннулирование балансовых заказов — доступно Сотруднику с ticketsAccess
+  // (запрос пользователя 2026-07-21: нал/безнал уже прошли через фискальный
+  // чек и остаются только у Владельца, а баланс — чисто цифровая операция,
+  // без риска скрыть недостачу кассы). Роут сам проверяет paymentMethod и
+  // ticketsAccess ещё раз на сервере — эти проверки в UI (OrderCard ниже)
+  // только скрывают недоступное действие, не единственная защита.
+  async function voidTicket(orderId: string, ticketId: string) {
+    setVoidingTicket(ticketId);
+    setSearchError(null);
+    try {
+      const res = await fetch(`/api/tickets/${ticketId}/void`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setSearchError(data.error ?? t.operatorApp.gameRoom.networkError);
+        return;
+      }
+      patchOrderTicket(orderId, ticketId, { status: data.status });
+    } catch {
+      setSearchError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      setVoidingTicket(null);
+    }
+  }
+
+  async function voidOrder(orderId: string) {
+    setVoidingOrder(orderId);
+    setSearchError(null);
+    try {
+      const res = await fetch(`/api/ticket-orders/${orderId}/void`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setSearchError(data.error ?? t.operatorApp.gameRoom.networkError);
+        return;
+      }
+      for (const ticketId of (data.voidedTicketIds as string[]) ?? []) {
+        patchOrderTicket(orderId, ticketId, { status: "voided" });
+      }
+    } catch {
+      setSearchError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      setVoidingOrder(null);
     }
   }
 
@@ -637,8 +706,12 @@ export default function TicketsZonePage() {
               t={t}
               highlightAssetId={highlightAssetId}
               printAvailable={printAvailable.available && zone.printReceiptEnabled}
-              printing={printingIndex !== null}
               onPrint={printOrderTickets}
+              ticketsAccess={ticketsAccess}
+              voidingTicket={voidingTicket}
+              voidingOrder={voidingOrder}
+              onVoidTicket={voidTicket}
+              onVoidOrder={voidOrder}
             />
           </div>
         ) : (
@@ -660,8 +733,9 @@ export default function TicketsZonePage() {
                     }}
                     className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center"
                   >
-                    <div className="rounded-card bg-destructive px-5 py-3 text-center text-lg font-extrabold text-white shadow-floating">
-                      {searchError}
+                    <div className="flex flex-col items-center gap-1.5 rounded-card bg-destructive px-5 py-3 text-center text-white shadow-floating">
+                      <TriangleAlert className="size-9" />
+                      <span className="text-lg font-extrabold">{searchError}</span>
                     </div>
                   </motion.div>
                 )}
@@ -675,7 +749,7 @@ export default function TicketsZonePage() {
                     <button
                       type="button"
                       onClick={() => setSearchNumber((v) => (v + k).slice(0, 6))}
-                      className="flex h-14 w-full items-center justify-center rounded-control bg-muted text-xl font-bold tabular-nums"
+                      className="flex h-14 w-full items-center justify-center rounded-control border border-border bg-background text-xl font-bold tabular-nums shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] active:shadow-[0_1px_2px_rgba(0,0,0,.13),inset_0_1px_0_rgba(255,255,255,.13),inset_0_-1px_2px_rgba(0,0,0,.1)] dark:border-input dark:bg-input/30"
                     >
                       {k}
                     </button>
@@ -687,7 +761,7 @@ export default function TicketsZonePage() {
                     disabled={!searchNumber}
                     onClick={() => setSearchNumber("")}
                     aria-label={t.common.delete}
-                    className="flex h-14 w-full items-center justify-center rounded-control bg-muted text-caption-airbnb font-semibold text-muted-foreground disabled:opacity-40"
+                    className="flex h-14 w-full items-center justify-center rounded-control border border-border bg-background text-caption-airbnb font-semibold text-muted-foreground shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] active:shadow-[0_1px_2px_rgba(0,0,0,.13),inset_0_1px_0_rgba(255,255,255,.13),inset_0_-1px_2px_rgba(0,0,0,.1)] disabled:opacity-40 dark:border-input dark:bg-input/30"
                   >
                     {t.common.delete}
                   </button>
@@ -696,7 +770,7 @@ export default function TicketsZonePage() {
                   <button
                     type="button"
                     onClick={() => setSearchNumber((v) => (v + "0").slice(0, 6))}
-                    className="flex h-14 w-full items-center justify-center rounded-control bg-muted text-xl font-bold tabular-nums"
+                    className="flex h-14 w-full items-center justify-center rounded-control border border-border bg-background text-xl font-bold tabular-nums shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] active:shadow-[0_1px_2px_rgba(0,0,0,.13),inset_0_1px_0_rgba(255,255,255,.13),inset_0_-1px_2px_rgba(0,0,0,.1)] dark:border-input dark:bg-input/30"
                   >
                     0
                   </button>
@@ -707,7 +781,7 @@ export default function TicketsZonePage() {
                     disabled={!searchNumber}
                     onClick={() => setSearchNumber((v) => v.slice(0, -1))}
                     aria-label={t.common.back}
-                    className="flex h-14 w-full items-center justify-center rounded-control bg-muted disabled:opacity-40"
+                    className="flex h-14 w-full items-center justify-center rounded-control border border-border bg-background shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] active:shadow-[0_1px_2px_rgba(0,0,0,.13),inset_0_1px_0_rgba(255,255,255,.13),inset_0_-1px_2px_rgba(0,0,0,.1)] disabled:opacity-40 dark:border-input dark:bg-input/30"
                   >
                     <Delete className="size-5" />
                   </button>
@@ -726,32 +800,16 @@ export default function TicketsZonePage() {
               </PressableScale>
             </div>
 
+            {/* Слайдер, не перенос на новую строку — тот же паттерн, что
+                CategoryChipsRow у Товаров (запрос пользователя 2026-07-21:
+                "сделать слайдером, как категории Товаров"). Выбор — личная
+                настройка вкладки оператора ("я стою на Карусели"), НЕ список
+                доступа: доступ к активам у Сотрудника в режиме "Билеты"
+                нигде отдельно не ограничивается — только доступ к зоне
+                целиком (allZonesAccess/allowedZones), как и у остальных
+                режимов учёта. */}
             {zone.assets.length > 1 && (
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setAssetFilter(ALL_ASSETS)}
-                  className={cn(
-                    "shrink-0 rounded-full px-3 py-1.5 text-caption-airbnb font-semibold whitespace-nowrap",
-                    assetFilter === ALL_ASSETS ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {t.tickets.allAssetsLabel}
-                </button>
-                {zone.assets.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => setAssetFilter(a.id)}
-                    className={cn(
-                      "shrink-0 rounded-full px-3 py-1.5 text-caption-airbnb font-semibold whitespace-nowrap",
-                      assetFilter === a.id ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {a.name}
-                  </button>
-                ))}
-              </div>
+              <AssetChipsRow assets={zone.assets} assetFilter={assetFilter} onSelect={setAssetFilter} t={t} />
             )}
 
             <div className="flex flex-col gap-3">
@@ -771,8 +829,12 @@ export default function TicketsZonePage() {
                     t={t}
                     highlightAssetId={highlightAssetId}
                     printAvailable={printAvailable.available && zone.printReceiptEnabled}
-                    printing={printingIndex !== null}
                     onPrint={printOrderTickets}
+                    ticketsAccess={ticketsAccess}
+                    voidingTicket={voidingTicket}
+                    voidingOrder={voidingOrder}
+                    onVoidTicket={voidTicket}
+                    onVoidOrder={voidOrder}
                   />
                 ))
               )}
@@ -958,10 +1020,11 @@ export default function TicketsZonePage() {
 
       {/* Успешная продажа — крупный номер заказа + ОДНА кнопка "Распечатать
           билеты" (docs/spec/10-tickets.md, "PWA оператора") + "Новый заказ".
-          Кнопка печати внутри делает N последовательных вызовов, по одному
-          документу на билет (докс, "ПЕЧАТЬ": решение пользователя 2026-07-21 —
-          один документ с разрывами страниц отклонён, на Bluetooth ESC/POS
-          давал испорченную вторую "страницу"). */}
+          Один вызов window.print() на весь заказ — секции билетов внутри
+          документа разделены линией отреза, не CSS page-break (решение
+          пользователя 2026-07-21: "распечатывать билеты надо одним
+          документом", более раннее решение про N отдельных вызовов
+          отменено). */}
       <BottomSheet open={lastOrder !== null} onClose={() => setLastOrder(null)}>
         {lastOrder && (
           <div className="flex flex-col items-center gap-3 pt-2 text-center">
@@ -981,14 +1044,17 @@ export default function TicketsZonePage() {
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={printingIndex !== null}
-                  onClick={() => printAllTickets(lastOrder)}
+                  disabled={successPrinting}
+                  onClick={() => {
+                    if (successPrinting) return;
+                    setSuccessPrinting(true);
+                    printOrder(lastOrder);
+                    setTimeout(() => setSuccessPrinting(false), 4000);
+                  }}
                   className="w-full gap-1.5 rounded-lg"
                 >
                   <Printer className="size-4" />
-                  {printingIndex !== null
-                    ? `${t.tickets.printTicketButton} ${printingIndex + 1}/${lastOrder.tickets.length}`
-                    : t.tickets.printTicketButton}
+                  {t.tickets.printTicketButton}
                 </Button>
               </PressableScale>
             )}
@@ -1000,6 +1066,97 @@ export default function TicketsZonePage() {
           </div>
         )}
       </BottomSheet>
+    </div>
+  );
+}
+
+/**
+ * Слайдер фильтра по активу — тот же паттерн, что CategoryChipsRow у
+ * Товаров (operator/goods/page.tsx): белая плашка, стрелки по бокам когда не
+ * помещается целиком, нативный скроллбар скрыт (запрос пользователя
+ * 2026-07-21: "сделать слайдером, как категории Товаров").
+ */
+function AssetChipsRow({
+  assets,
+  assetFilter,
+  onSelect,
+  t,
+}: {
+  assets: AssetCtx[];
+  assetFilter: string;
+  onSelect: (id: string) => void;
+  t: ReturnType<typeof useI18n>;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  function updateScrollState() {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }
+
+  useEffect(() => {
+    updateScrollState();
+  }, [assets]);
+
+  function scrollByAmount(delta: number) {
+    scrollRef.current?.scrollBy({ left: delta, behavior: "smooth" });
+  }
+
+  return (
+    <div className="flex items-center gap-1 rounded-control bg-card p-1.5 shadow-card-rest">
+      {canScrollLeft && (
+        <PressableScale className="shrink-0">
+          <button
+            type="button"
+            onClick={() => scrollByAmount(-120)}
+            aria-label={t.common.back}
+            className="flex size-7 items-center justify-center rounded-full text-muted-foreground"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+        </PressableScale>
+      )}
+      <div ref={scrollRef} onScroll={updateScrollState} className="scrollbar-none flex flex-1 gap-1.5 overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => onSelect(ALL_ASSETS)}
+          className={cn(
+            "shrink-0 rounded-full px-3 py-1.5 text-caption-airbnb font-semibold whitespace-nowrap",
+            assetFilter === ALL_ASSETS ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+          )}
+        >
+          {t.tickets.allAssetsLabel}
+        </button>
+        {assets.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            onClick={() => onSelect(a.id)}
+            className={cn(
+              "shrink-0 rounded-full px-3 py-1.5 text-caption-airbnb font-semibold whitespace-nowrap",
+              assetFilter === a.id ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+            )}
+          >
+            {a.name}
+          </button>
+        ))}
+      </div>
+      {canScrollRight && (
+        <PressableScale className="shrink-0">
+          <button
+            type="button"
+            onClick={() => scrollByAmount(120)}
+            aria-label={t.common.next}
+            className="flex size-7 items-center justify-center rounded-full text-muted-foreground"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+        </PressableScale>
+      )}
     </div>
   );
 }
@@ -1021,8 +1178,12 @@ function OrderCard({
   t,
   highlightAssetId,
   printAvailable,
-  printing,
   onPrint,
+  ticketsAccess,
+  voidingTicket,
+  voidingOrder,
+  onVoidTicket,
+  onVoidOrder,
 }: {
   order: OrderDetail;
   zone: ZoneCtx;
@@ -1038,15 +1199,42 @@ function OrderCard({
   // карточки.
   highlightAssetId: string | null;
   // "Допечатать потерянный" (docs/spec/10-tickets.md, "ПЕЧАТЬ") — печать из
-  // карточки заказа во вкладке «Заказы», не только сразу после продажи.
+  // карточки заказа во вкладке «Заказы», не только сразу после продажи. Один
+  // документ на весь заказ (запрос пользователя 2026-07-21), кулдаун теперь
+  // локальный в самой карточке (тот же принцип, что у общего PrintButton) —
+  // печать больше не многошаговая, отдельного состояния на уровне страницы
+  // не нужно.
   printAvailable: boolean;
-  printing: boolean;
   onPrint: (order: OrderDetail) => void;
+  // Аннулирование балансовых заказов Сотрудником (запрос пользователя
+  // 2026-07-21) — только когда есть доступ к продаже билетов И заказ оплачен
+  // балансом (см. canVoid ниже); нал/безнал недоступны здесь вовсе, роут это
+  // же проверяет ещё раз на сервере.
+  ticketsAccess: boolean;
+  voidingTicket: string | null;
+  voidingOrder: string | null;
+  onVoidTicket: (orderId: string, ticketId: string) => void;
+  onVoidOrder: (orderId: string) => void;
 }) {
   const now = new Date();
+  const canVoid = ticketsAccess && order.paymentMethod === "abonement";
+  const [printing, setPrinting] = useState(false);
+  function handlePrint() {
+    if (printing) return;
+    setPrinting(true);
+    onPrint(order);
+    setTimeout(() => setPrinting(false), 4000);
+  }
+  // Погашенные и аннулированные билеты не показываются Сотруднику вовсе
+  // (запрос пользователя 2026-07-21: "видит только Заказы — должен видеть
+  // только активные, аннулированные ему вообще не нужны") — над ними нет
+  // доступного действия (гасить/аннулировать нечего), только шум. Истёкший
+  // остаётся виден (status всё ещё "active" в БД, isOrderExpired вычисляет
+  // на лету) — его ещё можно аннулировать балансом.
+  const liveTickets = order.tickets.filter((tk) => tk.status === "active");
   const tickets = highlightAssetId
-    ? [...order.tickets].sort((a, b) => Number(b.assetId === highlightAssetId) - Number(a.assetId === highlightAssetId))
-    : order.tickets;
+    ? [...liveTickets].sort((a, b) => Number(b.assetId === highlightAssetId) - Number(a.assetId === highlightAssetId))
+    : liveTickets;
   return (
     <div className="flex flex-col gap-3 rounded-card border border-border bg-card p-3.5">
       <div className="flex items-start justify-between gap-2">
@@ -1064,13 +1252,17 @@ function OrderCard({
             <Money value={order.totalSnapshot} className="text-lg font-extrabold" />
             <p className="text-caption-airbnb text-muted-foreground">{paymentMethodLabel[order.paymentMethod] ?? order.paymentMethod}</p>
           </div>
-          {printAvailable && (
+          {/* Печатать нечего, если живых билетов не осталось (запрос
+              пользователя 2026-07-21) — без этой проверки кнопка отправляла
+              бы на печать документ без единой секции билета, только шапка +
+              способ оплаты. */}
+          {printAvailable && liveTickets.length > 0 && (
             <PressableScale>
               <button
                 type="button"
                 aria-label={t.tickets.printTicketButton}
                 disabled={printing}
-                onClick={() => onPrint(order)}
+                onClick={handlePrint}
                 className="flex size-9 items-center justify-center rounded-full border border-border text-muted-foreground disabled:opacity-40"
               >
                 <Printer className="size-4" />
@@ -1083,12 +1275,19 @@ function OrderCard({
         {tickets.map((tk) => {
           const st = statusLabel(tk, order, now, t);
           const canRedeem = zone.ticketRedemptionEnabled && tk.status === "active" && !isOrderExpired(order, now);
+          // Активный и истёкший — можно аннулировать (docs/spec/10-tickets.md,
+          // "АННУЛИРОВАНИЕ") — в отличие от canRedeem, тут нет проверки на
+          // "истёк" и на ticketRedemptionEnabled.
+          const canVoidTicket = canVoid && tk.status === "active";
           const asset = zone.assets.find((a) => a.id === tk.assetId);
           const dimmed = highlightAssetId !== null && tk.assetId !== highlightAssetId;
           return (
             <div
               key={tk.id}
-              className={cn("flex items-center justify-between gap-2 rounded-control bg-muted px-3 py-2", dimmed && "opacity-40")}
+              className={cn(
+                "relative flex items-center justify-between gap-2 rounded-control bg-muted px-3 py-2",
+                dimmed && "opacity-40"
+              )}
             >
               <div className="min-w-0">
                 <p className="truncate text-body-airbnb font-semibold">
@@ -1096,19 +1295,37 @@ function OrderCard({
                 </p>
                 {/* "Без статусов и кнопок" при выключенном гашении
                     (docs/spec/10-tickets.md, "ГАШЕНИЕ — НАСТРОЙКА ЗОНЫ") —
-                    статусы не назначаются, показывать нечего. */}
-                {zone.ticketRedemptionEnabled && (
+                    статусы не назначаются, показывать нечего. "Активен" тоже
+                    не показывается — раз погашенные/аннулированные уже
+                    отфильтрованы выше (liveTickets), всё видимое здесь и так
+                    активно по умолчанию, наличие кнопки "Погасить"/
+                    "Аннулировать" уже это сообщает (запрос пользователя
+                    2026-07-21). Остаётся только "Истёк" — единственный
+                    статус, который не следует из самого факта присутствия в
+                    списке. */}
+                {zone.ticketRedemptionEnabled && isOrderExpired(order, now) && (
                   <p className={cn("text-caption-airbnb font-semibold", st.cls)}>{st.text}</p>
                 )}
               </div>
-              {canRedeem ? (
-                <ConfirmButton
-                  className="h-9 shrink-0 px-3 text-xs font-bold"
-                  disabled={redeeming === tk.id}
-                  onConfirm={() => onRedeem(order.id, tk.id)}
-                >
-                  {t.tickets.redeemButton}
-                </ConfirmButton>
+              {canRedeem || canVoidTicket ? (
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {canVoidTicket && (
+                    <ConfirmIconButton
+                      label={t.tickets.voidTicketAction}
+                      disabled={voidingTicket === tk.id}
+                      onConfirm={() => onVoidTicket(order.id, tk.id)}
+                    />
+                  )}
+                  {canRedeem && (
+                    <ConfirmButton
+                      className="h-9 shrink-0 px-3 text-xs font-bold"
+                      disabled={redeeming === tk.id}
+                      onConfirm={() => onRedeem(order.id, tk.id)}
+                    >
+                      {t.tickets.redeemButton}
+                    </ConfirmButton>
+                  )}
+                </div>
               ) : (
                 <Money value={tk.priceSnapshot} className="shrink-0 text-caption-airbnb font-semibold text-muted-foreground" />
               )}
@@ -1117,6 +1334,16 @@ function OrderCard({
         })}
       </div>
       {!zone.ticketRedemptionEnabled && <p className="text-caption-airbnb text-muted-foreground">{t.tickets.redemptionDisabledHint}</p>}
+      {canVoid && liveTickets.length > 0 && (
+        <ConfirmButton
+          variant="outline"
+          className="h-9 w-full text-destructive"
+          disabled={voidingOrder === order.id}
+          onConfirm={() => onVoidOrder(order.id)}
+        >
+          {t.tickets.voidOrderAction}
+        </ConfirmButton>
+      )}
     </div>
   );
 }

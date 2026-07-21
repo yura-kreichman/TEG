@@ -210,14 +210,87 @@ export async function ticketRevenueByAssetVariant(
   return Array.from(byKey.values()).map((e) => ({ ...e, amount: Math.round(e.amount * 100) / 100 }));
 }
 
-/** Тип MoneyOperation для возврата при аннулировании ПОСЛЕ сдачи итогов —
- * тот же трёхсторонний принцип, что moneyTypeFor у Товаров
- * (src/lib/goods.ts): нал — физическая, не исключённая из кассы; безнал и
- * баланс — учётные, в CASH_EXCLUDED_TYPES (src/lib/zone-balance.ts). */
+export interface TicketOrderWindowItem {
+  id: string;
+  number: number;
+  paymentMethod: string;
+  totalSnapshot: number;
+  expiresAt: Date | null;
+  soldAt: Date;
+  soldByOperatorName: string;
+  tickets: {
+    id: string;
+    assetId: string;
+    variantNameSnapshot: string;
+    priceSnapshot: number;
+    status: string;
+    redeemedAt: Date | null;
+  }[];
+}
+
+/**
+ * Полные заказы (не только агрегат) зоны за то же окно, что и
+ * aggregateTicketOrders выше — для аннулирования владельцем прямо в карточке
+ * «Итоги дня» (docs/spec/10-tickets.md, "Кабинет владельца", п.3:
+ * "аннулирование поштучно и «весь заказ»"; запрос пользователя 2026-07-21:
+ * "где мы добавим возможность отмены заказа" → "прямо в карточке Итогов
+ * дня" вместо отдельного экрана). В отличие от aggregate — включает и уже
+ * аннулированные билеты/заказы (владелец видит полную картину окна, не
+ * только то, что ещё считается в выручке).
+ */
+export async function listTicketOrdersForWindow(
+  zoneId: string,
+  since: Date | null,
+  until: Date,
+  tx: Tx | typeof prisma = prisma
+): Promise<TicketOrderWindowItem[]> {
+  const orders = await tx.ticketOrder.findMany({
+    where: { zoneId, soldAt: { lte: until, ...(since ? { gt: since } : {}) } },
+    orderBy: { soldAt: "desc" },
+    include: { tickets: true, soldByOperator: { select: { name: true } } },
+  });
+  return orders.map((o) => ({
+    id: o.id,
+    number: o.number,
+    paymentMethod: o.paymentMethod,
+    totalSnapshot: Number(o.totalSnapshot),
+    expiresAt: o.expiresAt,
+    soldAt: o.soldAt,
+    soldByOperatorName: o.soldByOperator.name,
+    tickets: o.tickets.map((t) => ({
+      id: t.id,
+      assetId: t.assetId,
+      variantNameSnapshot: t.variantNameSnapshot,
+      priceSnapshot: Number(t.priceSnapshot),
+      status: t.status,
+      redeemedAt: t.redeemedAt,
+    })),
+  }));
+}
+
+/**
+ * Тип MoneyOperation для возврата при аннулировании ПОСЛЕ сдачи итогов —
+ * ПЕРЕИСПОЛЬЗУЕТ те же типы, что и сама выручка (revenue/revenue_cashless/
+ * revenue_abonement), просто отрицательной суммой. Реальный баг (найден при
+ * аудите отчётов 2026-07-21, запрос пользователя "не забудь перепроверить
+ * все отчёты"): раньше здесь были отдельные ticket_refund/ticket_refund_
+ * cashless/ticket_refund_abonement — корректно попадали в остаток физической
+ * кассы зоны (zone-balance.ts, CASH_EXCLUDED_TYPES), НО ни один из отчётов
+ * "Выручка"/"Прибыль" (money/route.ts, home-summary/route.ts, points/[id]/
+ * reports/dynamics/route.ts) не знал про эти типы вовсе — они суммируют
+ * строго "revenue"/"revenue_cashless"/"revenue_abonement" по имени, поэтому
+ * возврат после сдачи молча не уменьшал показанную выручку. Тот же паттерн,
+ * что у Товаров: voidGoodsSale (src/lib/goods.ts) переиспользует
+ * moneyTypeFor(sale.paymentMethod) для своей компенсирующей записи, а не
+ * отдельный "goods_refund" — это и есть источник комментария "тот же
+ * трёхсторонний принцип" ниже, применённый теперь буквально, а не только к
+ * CASH_EXCLUDED_TYPES. Zone-balance.ts не тронут — revenue_cashless/
+ * revenue_abonement уже были в CASH_EXCLUDED_TYPES по своей исходной роли.
+ */
 export function ticketRefundMoneyType(paymentMethod: string): string {
-  if (paymentMethod === "cash") return "ticket_refund";
-  if (paymentMethod === "mobile") return "ticket_refund_cashless";
-  return "ticket_refund_abonement";
+  if (paymentMethod === "cash") return "revenue";
+  if (paymentMethod === "mobile") return "revenue_cashless";
+  return "revenue_abonement";
 }
 
 export interface VoidableTicket {
@@ -245,21 +318,33 @@ export interface VoidableOrder {
  *   тот же принцип, что аннулирование Launch до сдачи (докс: "исключаются
  *   из расчётной выручки того окна... если сдача ещё не сделана").
  * - ПОСЛЕ сдачи итогов — прошлая сдача неизменна, поэтому нужен ЯВНЫЙ
- *   компенсирующий MoneyOperation прямо сейчас (ticket_refund*, см. выше).
+ *   компенсирующий MoneyOperation прямо сейчас (ticketRefundMoneyType, см.
+ *   выше — тот же тип, что исходная выручка, отрицательной суммой).
  * - Возврат на кошелёк (AbonementTransaction type="refund") — ВСЕГДА при
  *   оплате балансом, независимо от того, была сдача или нет: баланс клиента
  *   независим от цикла сдач зоны — если списание было, возврат обязан
  *   произойти сразу, иначе деньги клиента просто пропадают без следа.
  * Принимает ЧУЖОЙ открытый tx — вызывающий роут ведёт транзакцию (одиночное
  * аннулирование или цикл по всем билетам заказа, см. API-роуты).
+ *
+ * actor — владелец ИЛИ оператор, ровно одно из userId/operatorId (тот же
+ * приём, что MoneyOperation.performedByUserId/performedByOperatorId и
+ * AbonementTransaction.userId/operatorId, теперь и у CorrectionLog).
+ * Расширено с "только владелец" (запрос пользователя 2026-07-21): у
+ * нал/безнал заказов уже пробит фискальный чек и возврат кассой рискует
+ * скрыть недостачу, поэтому те остаются только у Владельца (роуты сами не
+ * пускают сюда оператора для paymentMethod!="abonement") — а вот балансовый
+ * возврат физической кассы вообще не касается, это чисто цифровая операция
+ * на кошельке клиента, и Сотрудник с доступом к продаже билетов может
+ * провести её сам.
  */
 export async function voidTicketInTx(
   tx: Tx,
   ticket: VoidableTicket,
   order: VoidableOrder,
-  actor: { tenantId: string; pointId: string; userId: string }
+  actor: { tenantId: string; pointId: string; userId?: string; operatorId?: string }
 ): Promise<void> {
-  const { tenantId, pointId, userId } = actor;
+  const { tenantId, pointId, userId, operatorId } = actor;
   const amount = Number(ticket.priceSnapshot);
 
   await tx.ticket.update({ where: { id: ticket.id }, data: { status: "voided", voidedAt: new Date() } });
@@ -276,6 +361,7 @@ export async function voidTicketInTx(
         type: ticketRefundMoneyType(order.paymentMethod),
         amount: -amount,
         performedByUserId: userId,
+        performedByOperatorId: operatorId,
       },
     });
   }
@@ -283,7 +369,7 @@ export async function voidTicketInTx(
   if (order.paymentMethod === "abonement" && order.walletId) {
     await tx.abonementWallet.update({ where: { id: order.walletId }, data: { balance: { increment: amount } } });
     await tx.abonementTransaction.create({
-      data: { walletId: order.walletId, type: "refund", amount, ticketOrderId: order.id, pointId, userId },
+      data: { walletId: order.walletId, type: "refund", amount, ticketOrderId: order.id, pointId, userId, operatorId },
     });
   }
 }

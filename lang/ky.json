@@ -856,6 +856,7 @@
     "readingsLinkHint": "Чекиттер боюнча жыйынтык тапшыруулардын календары",
     "zoneBalancesLink": "Калдыктар жана инкассациялар",
     "zoneBalancesLinkHint": "Чекитте канча болушу керек жана инкассациялар тарыхы",
+    "zoneBalancesTotalLabel": "Жалпы",
     "abonementCashLabel": "Абонементтер (накта)",
     "abonementSoldTitle": "Абонементтерди сатуу",
     "abonementSoldHint": "Абонементтерди сатуу боюнча",

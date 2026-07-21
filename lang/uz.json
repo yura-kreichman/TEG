@@ -856,6 +856,7 @@
     "readingsLinkHint": "Nuqtalar boʻyicha yakuniy topshiriqlar taqvimi",
     "zoneBalancesLink": "Qoldiqlar va inkassatsiyalar",
     "zoneBalancesLinkHint": "Nuqtada qancha boʻlishi kerak va inkassatsiyalar tarixi",
+    "zoneBalancesTotalLabel": "Jami",
     "abonementCashLabel": "Abonementlar (naqd)",
     "abonementSoldTitle": "Abonement sotuvlari",
     "abonementSoldHint": "Abonement sotuvi boʻyicha",

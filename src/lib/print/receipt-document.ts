@@ -32,6 +32,14 @@ export interface PrintLine {
 export interface PrintSection {
   title?: string;
   lines: PrintLine[];
+  /** Линия отреза (ножницы + пунктир) сразу после этой секции — не обычный
+   * лёгкий разделитель между секциями, а явное "здесь можно оторвать".
+   * Билеты (docs/spec/10-tickets.md, запрос пользователя 2026-07-21:
+   * "распечатывать одним документом, много диалоговых окон — неправильно") —
+   * несколько билетов заказа печатаются ОДНИМ вызовом печати (не N отдельных,
+   * как раньше), каждый билет — своя секция с этим флагом, чтобы физически
+   * разрезать рулон на отдельные билеты после печати. */
+  cutLineAfter?: boolean;
 }
 
 export interface PrintDocumentData {
@@ -145,6 +153,34 @@ const RECEIPT_CSS = `
     font-size: 14px;
     line-height: 1.25;
   }
+  /* break-inside: avoid везде — гипотеза по реальному багу 2026-07-22:
+     футер richtext заменили на обычный текст, и на тесте тогда это "чинило"
+     печать, но баг вернулся (запрос пользователя 2026-07-21..22: "дело не в
+     форматировании... когда строки вообще нет — проблем нет"). Вероятная
+     истинная причина — не формат текста, а ВЫСОТА документа: у "Билетов"
+     этой же сессии печать перешла на ОДИН документ на весь заказ с разрезами
+     между билетами (несколько секций подряд) — многобилетный заказ + футер
+     легко превышает высоту "страницы", которую предполагает Bluetooth
+     ESC/POS print-мост на Android, даже при @page size:auto (спецификация не
+     гарантирует бесконечную высоту для конкретного драйвера — раньше короткие
+     чеки без футера просто не доходили до этого порога). break-inside:avoid
+     не даёт браузеру разорвать ОДИН блок между "страницами" — самый
+     вероятный источник видимого искажения (пол-строки на одном листе,
+     пол-строки на другом), не панацея от переполнения контента длиннее целой
+     страницы, но должно убрать разрыв ВНУТРИ строк/секции. ТРЕБУЕТ проверки
+     на реальном принтере — здесь нет возможности воспроизвести физическую
+     печать.
+  */
+  .receipt-paper,
+  .receipt-header,
+  .receipt-section,
+  .receipt-line,
+  .receipt-total,
+  .receipt-footer,
+  .receipt-cut-line {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
   @media screen {
     .receipt {
       background: #fff;
@@ -232,14 +268,16 @@ const RECEIPT_CSS = `
     font-size: 18px;
     font-weight: 800;
   }
-  /* Реальный баг с искажённой печатью на второй "странице" (2026-07-21..22) —
-     причина подтверждена на реальном устройстве: richtext-рендеринг футера,
-     не высота блока (урезание отступов ничего не изменило; полный переход
-     на обычный текст полностью убрал баг). CSS упрощён вслед за этим:
-     списков, цитат и заголовков в футере больше не бывает, только один
-     абзац (Input, не textarea, см. settings/system/page.tsx). Размер — как у
-     строки даты/времени/владельца (.receipt-subtitle ниже), запрос
-     пользователя 2026-07-22. */
+  /* Искажённая печать на второй "странице" с непустым футером (2026-07-21..
+     22, ЗАТЕМ СНОВА 2026-07-21 позже) — переход richtext → обычный текст
+     СНАЧАЛА казался фиксом на реальном устройстве, но баг вернулся уже на
+     Input (запрос пользователя: "дело не в форматировании текста... когда
+     строки вообще нет — проблем нет"), то есть причина НЕ в richtext-
+     рендеринге, вывод был преждевременным. Текущая гипотеза — высота
+     документа, не формат текста (см. break-inside: avoid у .receipt-paper и
+     соседей выше), требует проверки на реальном принтере. CSS футера
+     остаётся простым (один абзац, без списков/заголовков) — это не мешает
+     ничему, даже если не является настоящей причиной. */
   .receipt-footer {
     margin-top: 4px;
     padding-top: 3px;
@@ -281,6 +319,19 @@ function renderFooterText(text: string): string {
   return trimmed ? `<p>${escapeHtml(trimmed)}</p>` : "";
 }
 
+// Линия отреза (запрос пользователя 2026-07-20) — ножницы + чёрная
+// пунктирная линия; вынесена в отдельную функцию (запрос пользователя
+// 2026-07-21) — теперь нужна не только один раз в конце документа, но и
+// между билетами внутри одного многобилетного документа (см. PrintSection.cutLineAfter).
+function renderCutLineHtml(): string {
+  return `
+    <div class="receipt-cut-line">
+      <span class="receipt-cut-icon">✂</span>
+      <span class="receipt-cut-dash"></span>
+    </div>
+  `;
+}
+
 function renderSection(section: PrintSection): string {
   const title = section.title ? `<div class="receipt-section-title">${escapeHtml(section.title)}</div>` : "";
   const lines = section.lines
@@ -289,7 +340,8 @@ function renderSection(section: PrintSection): string {
       return `<div class="receipt-line${cls ? ` ${cls}` : ""}"><span class="label">${escapeHtml(l.label)}</span><span class="value">${escapeHtml(l.value)}</span></div>`;
     })
     .join("");
-  return `<div class="receipt-section">${title}${lines}</div>`;
+  const cutLine = section.cutLineAfter ? renderCutLineHtml() : "";
+  return `<div class="receipt-section">${title}${lines}</div>${cutLine}`;
 }
 
 function renderSubtitle(subtitle: PrintDocumentData["subtitle"]): string {
@@ -341,12 +393,7 @@ export function buildReceiptBodyHtml(data: PrintDocumentData, branding: ReceiptB
   // документа, после всего остального содержимого (включая футер), не
   // отдельным условием — принтеру всё равно нечего печатать дальше, это
   // финальный элемент.
-  const cutLine = `
-    <div class="receipt-cut-line">
-      <span class="receipt-cut-icon">✂</span>
-      <span class="receipt-cut-dash"></span>
-    </div>
-  `;
+  const cutLine = renderCutLineHtml();
 
   return `
     <div class="receipt-paper">
@@ -439,6 +486,37 @@ export function openPrintDocument(data: PrintDocumentData, branding: ReceiptBran
     window.print();
   }
 
+  // Та же гонка, что уже чинили для лого (2026-07-20), но для ТЕКСТА, не
+  // картинки — реальный баг с искажённой печатью при непустом футере
+  // (2026-07-21..22), подтверждён пользователем: воспроизводится даже на
+  // КОРОТКОЙ квитанции и даже на обычном тексте, без richtext — значит дело
+  // не в высоте документа и не в форматировании (обе версии уже проверены и
+  // отклонены), а в том, что футер обычно — САМЫЙ первый текст в этом
+  // конкретном документе, для которого браузеру ещё не приходилось
+  // растеризовать эти конкретные кириллические глифы: document.fonts.ready
+  // может быть не готов (шрифт/начертание догружается или ещё не
+  // прошейпился), а window.print() ниже раньше не ждал НИЧЕГО, кроме лого —
+  // print мог захватить кадр с ещё не отрисованным (или отрисованным
+  // временным fallback-шрифтом другой ширины) футером, что на растровом
+  // ESC/POS-мосту читается как испорченный хвост документа. Двойной rAF —
+  // стандартный приём "дождаться реального paint", не только запланированного.
+  function waitForRenderThenPrint() {
+    let proceeded = false;
+    function proceed() {
+      if (proceeded) return;
+      proceeded = true;
+      requestAnimationFrame(() => requestAnimationFrame(triggerPrint));
+    }
+    if (typeof document.fonts !== "undefined" && document.fonts.status !== "loaded") {
+      document.fonts.ready.then(proceed).catch(proceed);
+      // Фолбэк — не блокировать печать вечно, если fonts.ready почему-то не
+      // резолвится (редкие браузерные баги).
+      setTimeout(proceed, 1000);
+    } else {
+      proceed();
+    }
+  }
+
   // Реальный баг, найден пользователем 2026-07-20: "иногда при первой
   // генерации квитанции логотип не отображается, при повторной уже
   // появляется" — window.print() вызывался сразу после вставки innerHTML, не
@@ -448,14 +526,15 @@ export function openPrintDocument(data: PrintDocumentData, branding: ReceiptBran
   // грузится мгновенно, гонки не видно. Явно ждём загрузки лого (если оно
   // вообще есть в этом документе) перед печатью — img.complete уже true,
   // если картинка закэширована (частый случай), тогда ждать не нужно вообще.
+  // Дальше — waitForRenderThenPrint выше, тот же принцип, но для текста.
   const logo = root.querySelector<HTMLImageElement>(".receipt-logo");
   if (logo && !logo.complete) {
-    logo.addEventListener("load", triggerPrint, { once: true });
-    logo.addEventListener("error", triggerPrint, { once: true });
+    logo.addEventListener("load", waitForRenderThenPrint, { once: true });
+    logo.addEventListener("error", waitForRenderThenPrint, { once: true });
     // Фолбэк — не блокировать печать вечно, если лого вообще не загрузится
     // (плохая сеть, битая ссылка).
-    setTimeout(triggerPrint, 1500);
+    setTimeout(waitForRenderThenPrint, 1500);
   } else {
-    triggerPrint();
+    waitForRenderThenPrint();
   }
 }

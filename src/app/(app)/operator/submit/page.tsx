@@ -143,13 +143,17 @@ export default function SubmitResultsPage() {
   // Билеты (docs/spec/10-tickets.md) — расчётная выручка ОДНОЙ парой на
   // зону, не по активам (заказ мультиактивный) — тот же принцип получения
   // (fetch при входе на шаг зоны), что у gameRoomRevenueByAsset выше, просто
-  // агрегат зонный, не по активам.
-  const [ticketsAggregate, setTicketsAggregate] = useState<{
-    totalAmount: number;
-    cashAmount: number;
-    mobileAmount: number;
-    abonementAmount: number;
-  } | null>(null);
+  // агрегат зонный, не по активам. ПО ЗОНЕ (не одно значение "текущей" зоны) —
+  // реальный баг, найден пользователем 2026-07-21: на шаге "Проверьте перед
+  // отправкой" расчётная выручка Билетов показывала 0₽, хотя на шаге ввода
+  // кассы только что верно посчиталась — предыдущая версия сбрасывала это
+  // значение в null при уходе С шага зоны, а previewFor() (используется на
+  // шаге "Проверка") вообще не знал о билетах и всегда считал по tariffCalc
+  // (у Билетов zone.tariffs всегда пуст → 0). Копится по всем зонам сдачи,
+  // не сбрасывается при переходе между шагами.
+  const [ticketsAggregateByZone, setTicketsAggregateByZone] = useState<
+    Record<string, { totalAmount: number; cashAmount: number; mobileAmount: number; abonementAmount: number }>
+  >({});
   const [result, setResult] = useState<{
     summary: { zoneId: string; zoneName: string; calculatedRevenue: number; actualCash: number; difference: number }[];
     remindMarkDeparture?: boolean;
@@ -185,19 +189,23 @@ export default function SubmitResultsPage() {
     if (currentStep.kind !== "zone") {
       setGameRoomOpenByAsset([]);
       setGameRoomRevenueByAsset([]);
-      setTicketsAggregate(null);
       return;
     }
     const zone = zones.find((z) => z.id === currentStep.zoneId);
     setGameRoomOpenByAsset([]);
     setGameRoomRevenueByAsset([]);
-    setTicketsAggregate(null);
     if (!zone) return;
 
     if (isTicketsZone(zone)) {
+      // Копится в ticketsAggregateByZone (не сбрасывается при уходе с шага —
+      // нужен ещё и на шаге "Проверьте перед отправкой", см. previewFor()).
       fetch(`/api/zones/${zone.id}/ticket-orders?aggregate=1`)
         .then((res) => (res.ok ? res.json() : null))
-        .then((data) => setTicketsAggregate(data?.aggregate ?? null));
+        .then((data) => {
+          if (data?.aggregate) {
+            setTicketsAggregateByZone((prev) => ({ ...prev, [zone.id]: data.aggregate }));
+          }
+        });
       return;
     }
 
@@ -345,6 +353,20 @@ export default function SubmitResultsPage() {
     const zone = zones.find((z) => z.id === zoneId);
     const form = zoneForms[zoneId];
     if (!zone || !form) return null;
+
+    // Билеты — расчёт из серверного агрегата (ticketsAggregateByZone, заказы
+    // с момента предыдущей сдачи), не из tariffCalc ниже — та формула только
+    // для тарифов/показаний counters-подобных зон, у Билетов zone.tariffs
+    // всегда пуст (реальный баг, найден пользователем 2026-07-21: "Проверьте
+    // перед отправкой" показывал 0₽ вместо верной суммы с шага ввода кассы).
+    if (isTicketsZone(zone)) {
+      const agg = ticketsAggregateByZone[zoneId];
+      const calculatedRevenue = agg?.totalAmount ?? 0;
+      const abonementAmount = agg?.abonementAmount ?? 0;
+      const actualCash = Number(form.cashAmount || 0) + Number(form.mobileAmount || 0);
+      const difference = Math.round((actualCash + abonementAmount - calculatedRevenue) * 100) / 100;
+      return { calculatedRevenue, actualCash, difference };
+    }
 
     const tariffCalc = zone.tariffs.map((tariff) => {
       const sessions = zone.assets.reduce((sum, asset) => {
@@ -927,24 +949,9 @@ export default function SubmitResultsPage() {
 
                 {activeZone.accountingMode !== "cash_only" &&
                   (() => {
-                    // Билеты — расчёт из серверного агрегата (ticketsAggregate,
-                    // заказы с момента предыдущей сдачи), не из previewFor
-                    // (та формула — только для тарифов/показаний counters,
-                    // у Билетов zone.tariffs всегда пуст).
-                    if (isTicketsZone(activeZone)) {
-                      if (!ticketsAggregate) return null;
-                      const actualCash = Number(activeForm.cashAmount || 0) + Number(activeForm.mobileAmount || 0);
-                      const difference =
-                        Math.round((actualCash + ticketsAggregate.abonementAmount - ticketsAggregate.totalAmount) * 100) /
-                        100;
-                      return (
-                        <p className="text-caption-airbnb tabular-nums">
-                          {t.operatorApp.submit.calculatedRevenue} <Money value={ticketsAggregate.totalAmount} /> ·{" "}
-                          {t.operatorApp.submit.difference} {difference > 0 ? "+" : ""}
-                          <Money value={difference} />
-                        </p>
-                      );
-                    }
+                    // previewFor() теперь сам знает про Билеты (см. её
+                    // определение выше) — единая формула для обоих режимов,
+                    // не дублируем здесь.
                     const preview = previewFor(activeZone.id);
                     return (
                       preview && (
@@ -960,14 +967,15 @@ export default function SubmitResultsPage() {
                     (докс: "показывается подсказкой у полей кассы, БЕЗ
                     автоподстановки"), тот же принцип, что у Пусков/
                     Прибываний. */}
-                {isTicketsZone(activeZone) && ticketsAggregate && (
+                {isTicketsZone(activeZone) && ticketsAggregateByZone[activeZone.id] && (
                   <p className="text-caption-airbnb text-muted-foreground tabular-nums">
-                    {t.operatorApp.submit.cashLabel}: <Money value={ticketsAggregate.cashAmount} /> ·{" "}
-                    {t.operatorApp.submit.mobileLabel}: <Money value={ticketsAggregate.mobileAmount} />
-                    {ticketsAggregate.abonementAmount > 0 && (
+                    {t.operatorApp.submit.cashLabel}: <Money value={ticketsAggregateByZone[activeZone.id].cashAmount} /> ·{" "}
+                    {t.operatorApp.submit.mobileLabel}: <Money value={ticketsAggregateByZone[activeZone.id].mobileAmount} />
+                    {ticketsAggregateByZone[activeZone.id].abonementAmount > 0 && (
                       <>
                         {" "}
-                        · {t.operatorApp.abonement.paymentLabel}: <Money value={ticketsAggregate.abonementAmount} />
+                        · {t.operatorApp.abonement.paymentLabel}:{" "}
+                        <Money value={ticketsAggregateByZone[activeZone.id].abonementAmount} />
                       </>
                     )}
                   </p>

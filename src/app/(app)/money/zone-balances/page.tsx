@@ -210,6 +210,14 @@ export default function ZoneBalancesPage() {
   const points = Array.from(new Map(zoneBalances.map((z) => [z.pointId, z.pointName])).entries()).map(
     ([id, name]) => ({ id, name })
   );
+  // Итог, доступный к инкассации, по всему тенанту сразу (запрос пользователя
+  // 2026-07-21: "плашка акцентным цветом... Итог... большим шрифтом") —
+  // pointTotal.total уже включает остатки зон (с пуловой поправкой на
+  // забранные аванс/премию) И абонементы наличными этой точки (см. вывод
+  // pool = total - zonesRawSum - abonementCashTotal ниже в рендере), поэтому
+  // сумма total по точкам — тот же итог, что сложение всех строк списка, без
+  // повторного пересчёта.
+  const grandTotal = Math.round(pointTotals.reduce((sum, p) => sum + p.total, 0) * 100) / 100;
   const zonesForCollectionPoint = zoneBalances.filter((z) => z.pointId === collectionPointId);
 
   function openCollection() {
@@ -365,6 +373,16 @@ export default function ZoneBalancesPage() {
               </Button>
             </PressableScale>
           </div>
+
+          {/* Итог по всему тенанту — акцентная плашка (запрос пользователя
+              2026-07-21), тот же паттерн, что "Итоги дня" в money/readings —
+              крупный масштабируемый Money size="display" под подписью. */}
+          <SpringCard hover={false} className="flex flex-col gap-1 border-primary/20 bg-primary/10">
+            <span className="text-caption-airbnb text-muted-foreground">{t.money.zoneBalancesTotalLabel}</span>
+            <span className="text-[2.75rem] font-extrabold leading-none tracking-[-0.02em] text-primary">
+              <Money value={grandTotal} size="display" />
+            </span>
+          </SpringCard>
 
           <SpringCard hover={false} className="flex flex-col gap-1">
             {Object.entries(

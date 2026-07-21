@@ -470,6 +470,7 @@ model Operator {
   moneyOps              MoneyOperation[]
   // Получатель аванса/премии — отдельно от "кто провёл" (moneyOps выше).
   receivedMoneyOps      MoneyOperation[]           @relation("MoneyOperationBeneficiary")
+  corrections           CorrectionLog[]
   rateHistory           OperatorRate[]
   shifts                Shift[]
   balanceCarryovers     OperatorBalanceCarryover[]
@@ -1436,8 +1437,17 @@ model CorrectionLog {
   entityType String
   entityId   String
 
-  correctedByUserId String
-  correctedBy       User   @relation(fields: [correctedByUserId], references: [id])
+  // "Кто провёл" — владелец ИЛИ оператор, ровно одно из двух (тот же приём,
+  // что MoneyOperation.performedByUserId/performedByOperatorId и
+  // AbonementTransaction.userId/operatorId) — расширено, когда Сотруднику с
+  // доступом к продаже билетов разрешили самостоятельно аннулировать
+  // балансовые заказы (запрос пользователя 2026-07-21: "не может, кроме как
+  // на баланс" — нал/безнал остаются только у Владельца). До этого поле было
+  // жёстко привязано к User — все корректировки были только владельческими.
+  correctedByUserId     String?
+  correctedBy           User?     @relation(fields: [correctedByUserId], references: [id])
+  correctedByOperatorId String?
+  correctedByOperator   Operator? @relation(fields: [correctedByOperatorId], references: [id])
 
   beforeJson Json
   afterJson  Json
