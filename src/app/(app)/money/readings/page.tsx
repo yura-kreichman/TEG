@@ -10,6 +10,7 @@ import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconActionButton } from "@/components/kebab-menu";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
+import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { useSavePulse } from "@/hooks/use-save-pulse";
@@ -528,7 +529,7 @@ export default function ReadingsCalendarPage() {
                   сдач зон: тогда акцентной карточки нет, заголовок остаётся
                   отдельным блоком, как раньше. */}
               {selectedDate && cards !== null && cards.length === 0 && (abonementSales?.items.length ?? 0) > 0 && (
-                <div className="flex items-center gap-2 px-1">
+                <div className="mt-3.5 flex items-center gap-2 px-1">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
                     <FileText className="size-4.5" />
                   </div>
@@ -540,7 +541,7 @@ export default function ReadingsCalendarPage() {
               )}
 
               {selectedDate && cards !== null && cards.length > 0 && (
-                <SpringCard hover={false} className="flex flex-col gap-1 border-primary/20 bg-primary/10">
+                <SpringCard hover={false} className="mt-3.5 flex flex-col gap-1 border-primary/20 bg-primary/10">
                   <div className="flex items-center gap-2">
                     <div className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary/20 text-primary">
                       <FileText className="size-4.5" />
@@ -552,16 +553,25 @@ export default function ReadingsCalendarPage() {
                   </div>
                   <div className="flex flex-col gap-1 border-t border-primary/20 pt-2 tabular-nums">
                     <div className="flex items-center justify-between text-caption-airbnb">
-                      <span>{t.operatorApp.submit.cashLabel}</span>
+                      <span className="flex items-center gap-1">
+                        <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+                        {t.operatorApp.submit.cashLabel}
+                      </span>
                       <span className="text-foreground"><Money value={daySummary.cash} /></span>
                     </div>
                     <div className="flex items-center justify-between text-caption-airbnb">
-                      <span>{t.operatorApp.submit.mobileLabel}</span>
+                      <span className="flex items-center gap-1">
+                        <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+                        {t.operatorApp.submit.mobileLabel}
+                      </span>
                       <span className="text-foreground"><Money value={daySummary.mobile} /></span>
                     </div>
                     {daySummary.abonement > 0 && (
                       <div className="flex items-center justify-between text-caption-airbnb">
-                        <span>{t.operatorApp.abonement.paymentLabel}</span>
+                        <span className="flex items-center gap-1">
+                          <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
+                          {t.operatorApp.abonement.paymentLabel}
+                        </span>
                         <span className="text-foreground"><Money value={daySummary.abonement} /></span>
                       </div>
                     )}
@@ -653,7 +663,7 @@ export default function ReadingsCalendarPage() {
                   выше. Список планов по аналогии с активами ("Абонемент —
                   это Актив, Тариф — это стоимость абонемента"). */}
               {selectedDate && abonementSales !== null && abonementSales.items.length > 0 && (
-                <SpringCard hover={false} className="flex flex-col gap-1">
+                <SpringCard hover={false} className="mt-3.5 flex flex-col gap-1">
                   <p className="text-card-title">{t.readings.abonementSalesTitle}</p>
                   <div className="mt-1 flex flex-col border-t border-border tabular-nums">
                     {abonementSales.items.map((item) => (
@@ -700,7 +710,7 @@ export default function ReadingsCalendarPage() {
               )}
 
               {selectedDate && (
-                <div className="flex flex-col gap-3">
+                <div className="mt-3.5 flex flex-col gap-3">
                   {cards === null ? null : cards.length === 0 ? (
                     (abonementSales?.items.length ?? 0) === 0 && (
                       <p className="mt-1 text-body-airbnb text-muted-foreground">

@@ -229,22 +229,31 @@ const RECEIPT_CSS = `
     font-size: 18px;
     font-weight: 800;
   }
+  /* Отступы урезаны до минимума (запрос пользователя 2026-07-21: на одном
+     конкретном Bluetooth ESC/POS принтере/приложении даже одна строка футера
+     ломает печать во вторую "страницу" — похоже на маленький зашитый лимит
+     высоты у самого стороннего принт-сервиса, не настраиваемый и вне нашего
+     контроля; richtext тут ни при чём — до принтера долетает уже готовый
+     растр, а не разметка, и даже один plain-абзац уже воспроизводит баг.
+     Единственный доступный нам рычаг — сократить именно "обвязку" футера
+     (margin/padding/line-height), не трогая формат данных). */
   .receipt-footer {
-    margin-top: 8px;
-    padding-top: 5px;
+    margin-top: 4px;
+    padding-top: 3px;
     border-top: 1px dashed #999;
     text-align: center;
     font-size: 12px;
+    line-height: 1.15;
     color: #333;
   }
-  .receipt-footer p { margin: 0 0 3px; }
+  .receipt-footer p { margin: 0 0 2px; }
   .receipt-footer p:last-child { margin-bottom: 0; }
-  .receipt-footer ul, .receipt-footer ol { margin: 0 0 3px; padding-left: 18px; text-align: left; }
-  .receipt-footer blockquote { margin: 0 0 3px; padding-left: 8px; border-left: 2px solid #ccc; }
+  .receipt-footer ul, .receipt-footer ol { margin: 0 0 2px; padding-left: 18px; text-align: left; }
+  .receipt-footer blockquote { margin: 0 0 2px; padding-left: 8px; border-left: 2px solid #ccc; }
   /* Уровни заголовков в футере — реально разного размера (найдено
      пользователем 2026-07-20). */
-  .receipt-footer .rt-h1 { font-size: 16px; font-weight: 800; color: #111; margin: 0 0 4px; }
-  .receipt-footer .rt-h2 { font-size: 14px; font-weight: 700; color: #111; margin: 0 0 3px; }
+  .receipt-footer .rt-h1 { font-size: 16px; font-weight: 800; color: #111; margin: 0 0 3px; }
+  .receipt-footer .rt-h2 { font-size: 14px; font-weight: 700; color: #111; margin: 0 0 2px; }
   /* Линия отреза (запрос пользователя 2026-07-20) — в конце каждой
      квитанции: иконка ножниц + чёрная пунктирная линия. Изначальные 2мм
      смотрелись слишком жирно (фидбек того же дня) — уменьшено до 0.5мм. */
