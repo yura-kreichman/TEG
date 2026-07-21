@@ -1309,9 +1309,9 @@ function OwnerTicketOrderCard({
     <div className="flex flex-col gap-2 rounded-control bg-muted p-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-body-airbnb font-extrabold tabular-nums text-primary">
+          <p className="text-body-airbnb font-extrabold tabular-nums">
             {t.tickets.orderNumberLabel}
-            {order.number}
+            <span className="text-primary">{order.number}</span>
           </p>
           <p className="text-caption-airbnb text-muted-foreground">
             {new Date(order.soldAt).toLocaleString(locale)} · {t.tickets.soldByLabel} {order.soldByOperatorName}

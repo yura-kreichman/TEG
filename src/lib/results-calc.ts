@@ -6,7 +6,9 @@
 // РЯДОПОЛОЖНЫЙ остальным (решение пользователя 2026-07-17; было
 // суб-режимом "launches" до этого — пересмотрено). "tickets" (Билеты,
 // docs/spec/10-tickets.md) — пятый рядоположный режим, добавлен 2026-07-22.
-export const ZONE_ACCOUNTING_MODES = ["counters", "launches", "cash_only", "stays", "tickets"] as const;
+// "cash_only" — последним (запрос пользователя 2026-07-22: "самый не
+// популярный" режим), остальной порядок — по частоте использования.
+export const ZONE_ACCOUNTING_MODES = ["counters", "launches", "stays", "tickets", "cash_only"] as const;
 export type ZoneAccountingMode = (typeof ZONE_ACCOUNTING_MODES)[number];
 
 export function isZoneAccountingMode(value: unknown): value is ZoneAccountingMode {
