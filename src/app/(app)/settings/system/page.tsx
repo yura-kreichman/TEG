@@ -4,15 +4,10 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
-import { PressableScale } from "@/components/motion/pressable-scale";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { useI18n } from "@/components/i18n-provider";
 import { OwnerShell } from "@/components/owner-shell";
 import { useOwnerHasPrinterLocal } from "@/hooks/use-print";
-import { useSavePulse } from "@/hooks/use-save-pulse";
-import { SaveButton } from "@/components/ui/save-button";
 import { PrintButton } from "@/components/print/print-button";
 import { buildReceiptHtml, type PrintDocumentData } from "@/lib/print/receipt-document";
 
@@ -75,12 +70,6 @@ export default function SystemSettingsPage() {
   // тенанта + заголовок документа рядом с ним, а не раскладка в столбик по
   // центру — короче по высоте, заметно на рулоне термопринтера.
   const [compactHeader, setCompactHeader] = useState(false);
-  // Футер — обычный текст (был richtext-редактор как у Лендинга/Инструктажей
-  // до 2026-07-22 — переведён на обычный textarea, реальный баг с искажённой
-  // печатью на второй "странице" у конкретного Bluetooth ESC/POS принтера,
-  // воспроизводимый при любом непустом футере независимо от размера).
-  const [footerContent, setFooterContent] = useState("");
-  const { saved: footerSaved, pulse: footerPulse } = useSavePulse();
   const [ownerHasPrinter, setOwnerHasPrinter] = useOwnerHasPrinterLocal();
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -95,7 +84,6 @@ export default function SystemSettingsPage() {
           setShowLogo(data.receiptShowLogo ?? true);
           setShowTenantName(data.receiptShowTenantName ?? true);
           setCompactHeader(data.receiptCompactHeader ?? false);
-          setFooterContent(data.receiptFooterContent ?? "");
         }
         setChecking(false);
       });
@@ -126,19 +114,9 @@ export default function SystemSettingsPage() {
     });
   }
 
-  function saveFooterContent() {
-    fetch("/api/tenant/system-settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ receiptFooterContent: footerContent }),
-    });
-    footerPulse();
-  }
-
   const previewHtml = buildReceiptHtml(samplePrintData(t), {
     tenantName,
     logoUrl,
-    footerContent,
     showLogo,
     showTenantName,
     compactHeader,
@@ -235,18 +213,6 @@ export default function SystemSettingsPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-1.5 border-t border-border pt-3">
-                    <Label>{t.settings.systemReceiptFooterLabel}</Label>
-                    <Input
-                      value={footerContent}
-                      onChange={(e) => setFooterContent(e.target.value)}
-                      maxLength={1000}
-                    />
-                    <PressableScale className="self-end">
-                      <SaveButton onClick={saveFooterContent} saved={footerSaved} />
-                    </PressableScale>
-                  </div>
-
                   <div className="border-t border-border pt-3">
                     <p className="mb-2 text-caption-airbnb text-muted-foreground">{t.settings.systemReceiptPreviewLabel}</p>
                     {/* Фон рисует сам HTML внутри iframe (RECEIPT_CSS,
@@ -281,7 +247,7 @@ export default function SystemSettingsPage() {
                       <PrintButton
                         label={t.settings.systemReceiptTestPrintButton}
                         data={samplePrintData(t)}
-                        branding={{ tenantName, logoUrl, footerContent, showLogo, showTenantName, compactHeader }}
+                        branding={{ tenantName, logoUrl, showLogo, showTenantName, compactHeader }}
                         className="gap-1.5 rounded-lg"
                       />
                     </div>

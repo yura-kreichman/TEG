@@ -37,7 +37,6 @@ interface PrintAvailability {
 const EMPTY_BRANDING: ReceiptBranding = {
   tenantName: "",
   logoUrl: null,
-  footerContent: null,
   showLogo: true,
   showTenantName: true,
   compactHeader: false,
@@ -61,7 +60,6 @@ export function useOwnerPrintAvailable(): PrintAvailability {
           branding: {
             tenantName: data.tenantName ?? "",
             logoUrl: data.logoUrl ?? null,
-            footerContent: data.receiptFooterContent ?? null,
             showLogo: data.receiptShowLogo ?? true,
             showTenantName: data.receiptShowTenantName ?? true,
             compactHeader: data.receiptCompactHeader ?? false,
@@ -91,7 +89,6 @@ export function useOperatorPrintAvailable(): PrintAvailability {
           branding: {
             tenantName: data.tenantName ?? "",
             logoUrl: data.logoUrl ?? null,
-            footerContent: data.receiptFooterContent ?? null,
             showLogo: data.receiptShowLogo ?? true,
             showTenantName: data.receiptShowTenantName ?? true,
             compactHeader: data.receiptCompactHeader ?? false,

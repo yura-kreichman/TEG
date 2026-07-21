@@ -20,7 +20,7 @@ import { Money } from "@/components/money";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
 import { openPrintDocument, type PrintDocumentData } from "@/lib/print/receipt-document";
 import { isTicketsZone } from "@/lib/results-calc";
-import { unlockBeep, playErrorChime } from "@/lib/beep";
+import { unlockBeep, playErrorChime, playSaveDing } from "@/lib/beep";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -445,6 +445,12 @@ export default function TicketsZonePage() {
         flashSearchError(data.error ?? t.tickets.orderNotFound);
         return;
       }
+      // Одобрительный "мягкий дзинь" при найденном заказе (запрос
+      // пользователя 2026-07-21) — тот же playSaveDing, что уже звучит по
+      // всему проекту при "Сохранено" (обычно приходит бесплатно через
+      // SaveSuccessOverlay у SaveButton, но здесь нет кнопки сохранения —
+      // просто найден заказ, поэтому звук нужно вызвать явно).
+      playSaveDing();
       setSearchResult(data.order);
     } catch {
       flashSearchError(t.operatorApp.gameRoom.networkError);

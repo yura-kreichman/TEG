@@ -9,9 +9,14 @@ import { requireOwner } from "@/lib/require-owner";
 // - printingEnabled: общий рубильник будущего модуля печати квитанций (не
 //   фискальных чеков) — сам выбор принтера сюда не переедет, он привязан к
 //   устройству/точке, не к тенанту (см. комментарий у поля в schema.prisma).
-// - receiptFooterContent: обычный текст (был richtext до 2026-07-22 —
-//   переведён на plain string, см. комментарий у поля в schema.prisma).
 // - receiptShowLogo/receiptShowTenantName: что показывать в шапке квитанции.
+// - Футер квитанции УДАЛЁН целиком (запрос пользователя 2026-07-21) —
+//   реальный, так и не решённый баг: непустой футер 100% гарантированно
+//   портил печать на конкретном Bluetooth ESC/POS-мосту, независимо от
+//   формата текста (richtext/обычный) и длины документа — несколько раундов
+//   гипотез (см. историю в src/lib/print/receipt-document.ts до этой правки)
+//   ни разу не подтвердились на реальном устройстве. Решили не тратить
+//   больше времени на этот конкретный принтер/мост и убрать функцию.
 export async function GET() {
   const owner = await requireOwner();
   if (!owner) {
@@ -25,7 +30,6 @@ export async function GET() {
       logoUrl: true,
       goodsAllowBalancePayment: true,
       printingEnabled: true,
-      receiptFooterContent: true,
       receiptShowLogo: true,
       receiptShowTenantName: true,
       receiptCompactHeader: true,
@@ -40,7 +44,6 @@ export async function GET() {
     // редактируется здесь (запрос пользователя 2026-07-20).
     tenantName: tenant?.name ?? "",
     logoUrl: tenant?.logoUrl ?? null,
-    receiptFooterContent: tenant?.receiptFooterContent ?? null,
     receiptShowLogo: tenant?.receiptShowLogo ?? true,
     receiptShowTenantName: tenant?.receiptShowTenantName ?? true,
     receiptCompactHeader: tenant?.receiptCompactHeader ?? false,
@@ -57,7 +60,6 @@ export async function PATCH(request: Request) {
   const data: {
     goodsAllowBalancePayment?: boolean;
     printingEnabled?: boolean;
-    receiptFooterContent?: string | null;
     receiptShowLogo?: boolean;
     receiptShowTenantName?: boolean;
     receiptCompactHeader?: boolean;
@@ -74,20 +76,6 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
     }
     data.printingEnabled = body.printingEnabled;
-  }
-  if (body.receiptFooterContent !== undefined) {
-    if (body.receiptFooterContent === null) {
-      data.receiptFooterContent = null;
-    } else {
-      if (typeof body.receiptFooterContent !== "string") {
-        return NextResponse.json({ error: "Некорректный формат текста" }, { status: 400 });
-      }
-      if (body.receiptFooterContent.length > 1000) {
-        return NextResponse.json({ error: "Слишком длинный текст" }, { status: 400 });
-      }
-      const trimmed = body.receiptFooterContent.trim();
-      data.receiptFooterContent = trimmed.length > 0 ? trimmed : null;
-    }
   }
   if (body.receiptShowLogo !== undefined) {
     if (typeof body.receiptShowLogo !== "boolean") {

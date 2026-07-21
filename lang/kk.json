@@ -122,7 +122,6 @@
     "systemReceiptCompactHeaderLabel": "Ықшам тақырып",
     "systemReceiptCompactHeaderHint": "Логотип сол жақта, тенант атауы мен түбіртек тақырыбы қасында — термопринтерде қысқарақ",
     "systemOwnerHasPrinterHint": "Бұл браузерде/құрылғыда принтер бар — мұнда Иесінің баланс үзінді көшірмесі мен басқа құжаттарын басып шығару түймелері пайда болады. Арзан Bluetooth принтерлеріне әдетте басып шығару қызметінің қолданбасы қажет (мысалы, ESCPOS Bluetooth Print Service) — әйтпесе принтер Android басып шығару терезесінде көрінбейді.",
-    "systemReceiptFooterLabel": "Түбіртектің соңындағы мәтін",
     "systemReceiptFooterPlaceholder": "Мысалы: Келгеніңізге рахмет! Кездескенше!",
     "systemReceiptPreviewLabel": "Түбіртекті алдын ала қарау",
     "systemReceiptTestPrintButton": "Сынақ басып шығару",

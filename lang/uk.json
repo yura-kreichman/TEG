@@ -122,7 +122,6 @@
     "systemReceiptCompactHeaderLabel": "Компактний заголовок",
     "systemReceiptCompactHeaderHint": "Логотип зліва, назва орендаря та заголовок квитанції поруч — коротше на термопринтері",
     "systemOwnerHasPrinterHint": "У цьому браузері/пристрої є принтер — тут з'являться кнопки друку виписки балансу та інших документів Власника. Дешевим Bluetooth-принтерам зазвичай потрібен додаток-сервіс друку (наприклад, ESCPOS Bluetooth Print Service) — інакше принтер не з'явиться в діалозі друку Android.",
-    "systemReceiptFooterLabel": "Текст наприкінці чека",
     "systemReceiptFooterPlaceholder": "Наприклад: Дякуємо за візит! До зустрічі!",
     "systemReceiptPreviewLabel": "Попередній перегляд чека",
     "systemReceiptTestPrintButton": "Тестовий друк",

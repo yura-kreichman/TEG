@@ -122,7 +122,6 @@
     "systemReceiptCompactHeaderLabel": "Кампактны загаловак",
     "systemReceiptCompactHeaderHint": "Лагатып злева, назва арандатара і загаловак квітанцыі побач з ім — карацей на тэрмапрынтары",
     "systemOwnerHasPrinterHint": "На гэтым браўзеры/прыладзе ёсць прынтэр — тут з'явяцца кнопкі друку выпіскі балансу і іншых дакументаў Уладальніка. Танным Bluetooth-прынтарам звычайна патрэбны праграма-сэрвіс друку (напрыклад, ESCPOS Bluetooth Print Service) — інакш прынтар не з'явіцца ў дыялогу друку Android.",
-    "systemReceiptFooterLabel": "Тэкст у канцы квітанцыі",
     "systemReceiptFooterPlaceholder": "Напрыклад: Дзякуй за візіт! Да сустрэчы!",
     "systemReceiptPreviewLabel": "Прэв'ю квітанцыі",
     "systemReceiptTestPrintButton": "Тэставы друк",

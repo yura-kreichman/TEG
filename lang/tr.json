@@ -122,7 +122,6 @@
     "systemReceiptCompactHeaderLabel": "Kompakt başlık",
     "systemReceiptCompactHeaderHint": "Logo solda, kiracı adı ve fiş başlığı yanında — termal yazıcıda daha kısa",
     "systemOwnerHasPrinterHint": "Bu tarayıcıda/cihazda yazıcı var — burada Sahibin bakiye ekstresi ve diğer belgelerinin yazdırma düğmeleri görünecek. Ucuz Bluetooth yazıcılar genellikle bir yazdırma hizmeti uygulaması gerektirir (ör. ESCPOS Bluetooth Print Service) — aksi halde yazıcı Android yazdırma iletişim kutusunda görünmez.",
-    "systemReceiptFooterLabel": "Fişin sonundaki metin",
     "systemReceiptFooterPlaceholder": "Örneğin: Ziyaretiniz için teşekkürler! Görüşmek üzere!",
     "systemReceiptPreviewLabel": "Fiş önizlemesi",
     "systemReceiptTestPrintButton": "Test yazdırma",

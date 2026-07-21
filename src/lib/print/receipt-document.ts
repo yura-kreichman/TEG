@@ -58,12 +58,6 @@ export interface PrintDocumentData {
 export interface ReceiptBranding {
   tenantName: string;
   logoUrl: string | null;
-  /** Обычный текст, не richtext (запрос пользователя 2026-07-22: реальный
-   * баг с искажённой печатью на второй "странице" у конкретного Bluetooth
-   * ESC/POS принт-сервиса, воспроизводимый при любом непустом футере) —
-   * перенос строки становится новым абзацем при печати (см.
-   * renderFooterText ниже), без жирного/списков/заголовков. */
-  footerContent: string | null;
   /** Настройки → Система, блок "Квитанция" — что показывать в шапке (запрос пользователя 2026-07-20). */
   showLogo: boolean;
   showTenantName: boolean;
@@ -153,30 +147,18 @@ const RECEIPT_CSS = `
     font-size: 14px;
     line-height: 1.25;
   }
-  /* break-inside: avoid везде — гипотеза по реальному багу 2026-07-22:
-     футер richtext заменили на обычный текст, и на тесте тогда это "чинило"
-     печать, но баг вернулся (запрос пользователя 2026-07-21..22: "дело не в
-     форматировании... когда строки вообще нет — проблем нет"). Вероятная
-     истинная причина — не формат текста, а ВЫСОТА документа: у "Билетов"
-     этой же сессии печать перешла на ОДИН документ на весь заказ с разрезами
-     между билетами (несколько секций подряд) — многобилетный заказ + футер
-     легко превышает высоту "страницы", которую предполагает Bluetooth
-     ESC/POS print-мост на Android, даже при @page size:auto (спецификация не
-     гарантирует бесконечную высоту для конкретного драйвера — раньше короткие
-     чеки без футера просто не доходили до этого порога). break-inside:avoid
-     не даёт браузеру разорвать ОДИН блок между "страницами" — самый
-     вероятный источник видимого искажения (пол-строки на одном листе,
-     пол-строки на другом), не панацея от переполнения контента длиннее целой
-     страницы, но должно убрать разрыв ВНУТРИ строк/секции. ТРЕБУЕТ проверки
-     на реальном принтере — здесь нет возможности воспроизвести физическую
-     печать.
-  */
+  /* break-inside: avoid везде — защитная мера из расследования реального
+     бага 2026-07-21..22 (искажённая печать на Bluetooth ESC/POS-мосту),
+     который в итоге оказался на 100% привязан к самому наличию футера в
+     документе (richtext/обычный текст, короткий/длинный чек — не влияло,
+     см. историю у Tenant.receiptFooterContent, поле удалено). Футер убран
+     совсем, но правило само по себе безвредно и разумно оставить как общую
+     защиту от разрыва блока между "страницами". */
   .receipt-paper,
   .receipt-header,
   .receipt-section,
   .receipt-line,
   .receipt-total,
-  .receipt-footer,
   .receipt-cut-line {
     break-inside: avoid;
     page-break-inside: avoid;
@@ -268,30 +250,6 @@ const RECEIPT_CSS = `
     font-size: 18px;
     font-weight: 800;
   }
-  /* Искажённая печать на второй "странице" с непустым футером (2026-07-21..
-     22, ЗАТЕМ СНОВА 2026-07-21 позже) — переход richtext → обычный текст
-     СНАЧАЛА казался фиксом на реальном устройстве, но баг вернулся уже на
-     Input (запрос пользователя: "дело не в форматировании текста... когда
-     строки вообще нет — проблем нет"), то есть причина НЕ в richtext-
-     рендеринге, вывод был преждевременным. Текущая гипотеза — высота
-     документа, не формат текста (см. break-inside: avoid у .receipt-paper и
-     соседей выше), требует проверки на реальном принтере. CSS футера
-     остаётся простым (один абзац, без списков/заголовков) — это не мешает
-     ничему, даже если не является настоящей причиной. */
-  .receipt-footer {
-    margin-top: 4px;
-    padding-top: 3px;
-    border-top: 1px dashed #999;
-    text-align: center;
-    font-size: 12.65px;
-    line-height: 1.15;
-    color: #333;
-  }
-  /* overflow-wrap — реальный баг, найден пользователем 2026-07-22: длинный
-     текст без пробелов вылезал за ширину квитанции вместо переноса (обычный
-     word-wrap переносит только по пробелам). */
-  .receipt-footer p { margin: 0 0 2px; overflow-wrap: break-word; }
-  .receipt-footer p:last-child { margin-bottom: 0; }
   /* Линия отреза (запрос пользователя 2026-07-20) — в конце каждой
      квитанции: иконка ножниц + чёрная пунктирная линия. Изначальные 2мм
      смотрелись слишком жирно (фидбек того же дня) — уменьшено до 0.5мм. */
@@ -309,14 +267,6 @@ const RECEIPT_CSS = `
 // самопроверке 2026-07-20).
 function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-// Обычный текст футера -> HTML-строка (запрос пользователя 2026-07-22, см.
-// комментарий у ReceiptBranding.footerContent) — однострочное поле в
-// настройках (Input, не textarea), поэтому один <p> на весь текст.
-function renderFooterText(text: string): string {
-  const trimmed = text.trim();
-  return trimmed ? `<p>${escapeHtml(trimmed)}</p>` : "";
 }
 
 // Линия отреза (запрос пользователя 2026-07-20) — ножницы + чёрная
@@ -364,9 +314,6 @@ export function buildReceiptBodyHtml(data: PrintDocumentData, branding: ReceiptB
   const total = data.totalLine
     ? `<div class="receipt-total"><span>${escapeHtml(data.totalLine.label)}</span><span>${escapeHtml(data.totalLine.value)}</span></div>`
     : "";
-  const footerHtml = branding.footerContent ? renderFooterText(branding.footerContent) : "";
-  const footer = footerHtml ? `<div class="receipt-footer">${footerHtml}</div>` : "";
-
   const header = branding.compactHeader
     ? `
       <div class="receipt-header receipt-header-compact">
@@ -390,9 +337,8 @@ export function buildReceiptBodyHtml(data: PrintDocumentData, branding: ReceiptB
     `;
 
   // Линия отреза (запрос пользователя 2026-07-20) — в конце КАЖДОГО
-  // документа, после всего остального содержимого (включая футер), не
-  // отдельным условием — принтеру всё равно нечего печатать дальше, это
-  // финальный элемент.
+  // документа, после всего остального содержимого, не отдельным условием —
+  // принтеру всё равно нечего печатать дальше, это финальный элемент.
   const cutLine = renderCutLineHtml();
 
   return `
@@ -401,7 +347,6 @@ export function buildReceiptBodyHtml(data: PrintDocumentData, branding: ReceiptB
         ${header}
         ${sections}
         ${total}
-        ${footer}
         ${cutLine}
       </div>
     </div>

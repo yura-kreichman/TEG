@@ -122,7 +122,6 @@
     "systemReceiptCompactHeaderLabel": "Yığcam başlıq",
     "systemReceiptCompactHeaderHint": "Loqo solda, tenant adı və qəbz başlığı onun yanında — termoprinterdə daha qısa",
     "systemOwnerHasPrinterHint": "Bu brauzerdə/cihazda printer var — burada Sahibkarın balans çıxarışı və digər sənədlərinin çap düymələri görünəcək. Ucuz Bluetooth printerlərə adətən çap xidməti tətbiqi lazımdır (məs., ESCPOS Bluetooth Print Service) — əks halda printer Android çap dialoqunda görünməyəcək.",
-    "systemReceiptFooterLabel": "Qəbzin sonundakı mətn",
     "systemReceiptFooterPlaceholder": "Məsələn: Ziyarətiniz üçün təşəkkürlər! Görüşənədək!",
     "systemReceiptPreviewLabel": "Qəbz önizləməsi",
     "systemReceiptTestPrintButton": "Sınaq çapı",

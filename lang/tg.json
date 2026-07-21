@@ -122,7 +122,6 @@
     "systemReceiptCompactHeaderLabel": "Сарлавҳаи фишурда",
     "systemReceiptCompactHeaderHint": "Логотип дар чап, номи тенант ва сарлавҳаи квитансия дар паҳлӯи он — дар принтери термалӣ кӯтоҳтар",
     "systemOwnerHasPrinterHint": "Дар ин браузер/дастгоҳ принтер ҳаст — дар ин ҷо тугмаҳои чопи иқтибоси баланс ва дигар ҳуҷҷатҳои Соҳиб пайдо мешаванд. Принтерҳои арзони Bluetooth одатан ба барномаи хидмати чоп ниёз доранд (масалан, ESCPOS Bluetooth Print Service) — вагарна принтер дар равзанаи чопи Android намоён намешавад.",
-    "systemReceiptFooterLabel": "Матн дар охири чек",
     "systemReceiptFooterPlaceholder": "Масалан: Барои ташриф ташаккур! То дидор!",
     "systemReceiptPreviewLabel": "Пешнамоиши чек",
     "systemReceiptTestPrintButton": "Чопи озмоишӣ",
