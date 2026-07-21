@@ -22,8 +22,10 @@ const buttonVariants = cva(
         // пользователя 2026-07-22 по скриншоту кнопки "Сохранить" в
         // Инструктажах: "такой дизайн должен быть у всех белых кнопок в
         // проекте", решение расширено с одной кнопки на весь variant.
+        // Интенсивность снижена тем же вечером ("глубину сделай немного
+        // меньше") — сама тень остаётся, просто мягче исходной.
         outline:
-          "border-border bg-background shadow-[0_3px_6px_rgba(0,0,0,.2),inset_0_1px_0_rgba(255,255,255,.22),inset_0_-2px_3px_rgba(0,0,0,.12)] hover:bg-muted hover:text-foreground hover:shadow-[0_4px_10px_rgba(0,0,0,.24),inset_0_1px_0_rgba(255,255,255,.25),inset_0_-2px_3px_rgba(0,0,0,.14)] active:shadow-[0_1px_2px_rgba(0,0,0,.18),inset_0_1px_0_rgba(255,255,255,.16),inset_0_-1px_2px_rgba(0,0,0,.14)] aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-border bg-background shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] hover:bg-muted hover:text-foreground hover:shadow-[0_3px_7px_rgba(0,0,0,.18),inset_0_1px_0_rgba(255,255,255,.2),inset_0_-1px_2px_rgba(0,0,0,.1)] active:shadow-[0_1px_2px_rgba(0,0,0,.13),inset_0_1px_0_rgba(255,255,255,.13),inset_0_-1px_2px_rgba(0,0,0,.1)] aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
           "bg-linear-to-b from-secondary to-[color-mix(in_oklch,var(--secondary),black_6%)] text-secondary-foreground shadow-[0_1px_2px_rgba(0,0,0,.08),inset_0_1px_0_rgba(255,255,255,.3)] hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] active:shadow-[inset_0_1px_2px_rgba(0,0,0,.1)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:

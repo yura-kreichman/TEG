@@ -49,17 +49,23 @@ export interface SaveButtonProps extends Omit<React.ComponentProps<typeof Button
   saved?: boolean;
 }
 
-function SaveButton({ children, saved, className, ...props }: SaveButtonProps) {
+function SaveButton({ children, saved, className, variant, ...props }: SaveButtonProps) {
   const t = useI18n();
   const anchorRef = useFlyOnShow<HTMLSpanElement>(!!saved, "save-success-fly");
 
   return (
     <Button
+      variant={variant}
       className={cn(
         "relative gap-1.5",
-        "shadow-[0_3px_6px_rgba(0,0,0,.2),inset_0_1px_0_rgba(255,255,255,.22),inset_0_-2px_3px_rgba(0,0,0,.12)]",
-        "hover:shadow-[0_4px_10px_rgba(0,0,0,.24),inset_0_1px_0_rgba(255,255,255,.25),inset_0_-2px_3px_rgba(0,0,0,.14)]",
-        "active:shadow-[0_1px_2px_rgba(0,0,0,.18),inset_0_1px_0_rgba(255,255,255,.16),inset_0_-1px_2px_rgba(0,0,0,.14)]",
+        // variant="outline" уже несёт этот же bevel сам по себе (button.tsx) —
+        // не переопределяем его здесь, иначе эта кнопка не подхватывает
+        // единую правку интенсивности тени для белых кнопок проекта.
+        variant !== "outline" && [
+          "shadow-[0_3px_6px_rgba(0,0,0,.2),inset_0_1px_0_rgba(255,255,255,.22),inset_0_-2px_3px_rgba(0,0,0,.12)]",
+          "hover:shadow-[0_4px_10px_rgba(0,0,0,.24),inset_0_1px_0_rgba(255,255,255,.25),inset_0_-2px_3px_rgba(0,0,0,.14)]",
+          "active:shadow-[0_1px_2px_rgba(0,0,0,.18),inset_0_1px_0_rgba(255,255,255,.16),inset_0_-1px_2px_rgba(0,0,0,.14)]",
+        ],
         className
       )}
       {...props}

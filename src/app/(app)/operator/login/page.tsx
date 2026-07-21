@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { AuthCard } from "@/components/auth-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -12,7 +11,6 @@ import { useI18n } from "@/components/i18n-provider";
 type DeviceStatus = "checking" | "unknown" | "ready";
 
 export default function OperatorLoginPage() {
-  const router = useRouter();
   const t = useI18n();
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatus>("checking");
   const [pointName, setPointName] = useState<string | null>(null);
@@ -51,8 +49,17 @@ export default function OperatorLoginPage() {
         return;
       }
 
-      router.push("/operator");
-      router.refresh();
+      // Полная навигация, не router.push (реальный баг, найден пользователем
+      // 2026-07-22: кнопки в нижнем баре не появлялись сразу после входа,
+      // только после ручного обновления страницы) — OperatorBottomNav живёт
+      // на уровне layout (operator/layout.tsx) и грузит доступные зоны/
+      // goodsAccess один раз при монтировании (useEffect с []); при
+      // router.push этот layout не размонтируется/не перемонтируется между
+      // /operator/login и /operator, поэтому эффект не перезапускается и
+      // бар остаётся с состоянием "до входа". Тот же корень, что уже чинили
+      // 2026-07-19 для смены точки (см. handleSwitchPoint в operator/page.tsx) —
+      // там же полным reload'ом, не точечным рефетчем.
+      window.location.href = "/operator";
     } finally {
       setLoading(false);
     }
