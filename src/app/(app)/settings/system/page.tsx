@@ -7,14 +7,13 @@ import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { useI18n } from "@/components/i18n-provider";
 import { OwnerShell } from "@/components/owner-shell";
 import { useOwnerHasPrinterLocal } from "@/hooks/use-print";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { SaveButton } from "@/components/ui/save-button";
-import { InstructionEditor } from "@/components/instructions/instruction-editor";
 import { PrintButton } from "@/components/print/print-button";
-import { EMPTY_DOC, type PMNode } from "@/lib/rich-text";
 import { buildReceiptHtml, type PrintDocumentData } from "@/lib/print/receipt-document";
 
 interface SystemSettings {
@@ -76,10 +75,11 @@ export default function SystemSettingsPage() {
   // тенанта + заголовок документа рядом с ним, а не раскладка в столбик по
   // центру — короче по высоте, заметно на рулоне термопринтера.
   const [compactHeader, setCompactHeader] = useState(false);
-  // Футер — rich text (тот же примитивный редактор, что у Лендинга/
-  // Инструктажей, запрос пользователя 2026-07-20: "базовый редактор reach
-  // text как мы делали в Лендинге"), не голый textarea.
-  const [footerContent, setFooterContent] = useState<PMNode>(EMPTY_DOC);
+  // Футер — обычный текст (был richtext-редактор как у Лендинга/Инструктажей
+  // до 2026-07-22 — переведён на обычный textarea, реальный баг с искажённой
+  // печатью на второй "странице" у конкретного Bluetooth ESC/POS принтера,
+  // воспроизводимый при любом непустом футере независимо от размера).
+  const [footerContent, setFooterContent] = useState("");
   const { saved: footerSaved, pulse: footerPulse } = useSavePulse();
   const [ownerHasPrinter, setOwnerHasPrinter] = useOwnerHasPrinterLocal();
 
@@ -95,7 +95,7 @@ export default function SystemSettingsPage() {
           setShowLogo(data.receiptShowLogo ?? true);
           setShowTenantName(data.receiptShowTenantName ?? true);
           setCompactHeader(data.receiptCompactHeader ?? false);
-          setFooterContent(data.receiptFooterContent ?? EMPTY_DOC);
+          setFooterContent(data.receiptFooterContent ?? "");
         }
         setChecking(false);
       });
@@ -237,7 +237,11 @@ export default function SystemSettingsPage() {
 
                   <div className="flex flex-col gap-1.5 border-t border-border pt-3">
                     <Label>{t.settings.systemReceiptFooterLabel}</Label>
-                    <InstructionEditor content={footerContent} onChange={setFooterContent} heightClassName="h-40 min-h-0" />
+                    <Input
+                      value={footerContent}
+                      onChange={(e) => setFooterContent(e.target.value)}
+                      maxLength={1000}
+                    />
                     <PressableScale className="self-end">
                       <SaveButton onClick={saveFooterContent} saved={footerSaved} />
                     </PressableScale>

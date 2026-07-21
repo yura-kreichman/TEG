@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { validateRichContent, extractPlainText, isRichContentEmpty } from "@/lib/rich-text";
 
 // Настройки → Система (запрос пользователя 2026-07-20) — страница задумана
 // расширяемой ("первый пункт там будет"). Тумблеры:
@@ -11,8 +9,8 @@ import { validateRichContent, extractPlainText, isRichContentEmpty } from "@/lib
 // - printingEnabled: общий рубильник будущего модуля печати квитанций (не
 //   фискальных чеков) — сам выбор принтера сюда не переедет, он привязан к
 //   устройству/точке, не к тенанту (см. комментарий у поля в schema.prisma).
-// - receiptFooterContent: rich text (тот же формат/редактор, что у Лендинга/
-//   Инструктажей, запрос пользователя 2026-07-20), не голый текст.
+// - receiptFooterContent: обычный текст (был richtext до 2026-07-22 —
+//   переведён на plain string, см. комментарий у поля в schema.prisma).
 // - receiptShowLogo/receiptShowTenantName: что показывать в шапке квитанции.
 export async function GET() {
   const owner = await requireOwner();
@@ -59,7 +57,7 @@ export async function PATCH(request: Request) {
   const data: {
     goodsAllowBalancePayment?: boolean;
     printingEnabled?: boolean;
-    receiptFooterContent?: Prisma.InputJsonValue | typeof Prisma.DbNull;
+    receiptFooterContent?: string | null;
     receiptShowLogo?: boolean;
     receiptShowTenantName?: boolean;
     receiptCompactHeader?: boolean;
@@ -79,17 +77,16 @@ export async function PATCH(request: Request) {
   }
   if (body.receiptFooterContent !== undefined) {
     if (body.receiptFooterContent === null) {
-      data.receiptFooterContent = Prisma.DbNull;
+      data.receiptFooterContent = null;
     } else {
-      if (!validateRichContent(body.receiptFooterContent)) {
+      if (typeof body.receiptFooterContent !== "string") {
         return NextResponse.json({ error: "Некорректный формат текста" }, { status: 400 });
       }
-      if (extractPlainText(body.receiptFooterContent).length > 1000) {
+      if (body.receiptFooterContent.length > 1000) {
         return NextResponse.json({ error: "Слишком длинный текст" }, { status: 400 });
       }
-      data.receiptFooterContent = isRichContentEmpty(body.receiptFooterContent)
-        ? Prisma.DbNull
-        : (body.receiptFooterContent as unknown as Prisma.InputJsonValue);
+      const trimmed = body.receiptFooterContent.trim();
+      data.receiptFooterContent = trimmed.length > 0 ? trimmed : null;
     }
   }
   if (body.receiptShowLogo !== undefined) {

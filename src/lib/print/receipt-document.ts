@@ -18,7 +18,6 @@
 // подключения ничего не знает и не хранит (docs/design обсуждение
 // 2026-07-20).
 
-import { isRichContentEmpty, type PMNode } from "@/lib/rich-text";
 
 export interface PrintLine {
   label: string;
@@ -51,8 +50,12 @@ export interface PrintDocumentData {
 export interface ReceiptBranding {
   tenantName: string;
   logoUrl: string | null;
-  /** Rich text (ProseMirror JSON, src/lib/rich-text.ts) — тот же формат, что у Лендинга/Инструктажей. */
-  footerContent: PMNode | null;
+  /** Обычный текст, не richtext (запрос пользователя 2026-07-22: реальный
+   * баг с искажённой печатью на второй "странице" у конкретного Bluetooth
+   * ESC/POS принт-сервиса, воспроизводимый при любом непустом футере) —
+   * перенос строки становится новым абзацем при печати (см.
+   * renderFooterText ниже), без жирного/списков/заголовков. */
+  footerContent: string | null;
   /** Настройки → Система, блок "Квитанция" — что показывать в шапке (запрос пользователя 2026-07-20). */
   showLogo: boolean;
   showTenantName: boolean;
@@ -229,14 +232,14 @@ const RECEIPT_CSS = `
     font-size: 18px;
     font-weight: 800;
   }
-  /* Отступы урезаны до минимума (запрос пользователя 2026-07-21: на одном
-     конкретном Bluetooth ESC/POS принтере/приложении даже одна строка футера
-     ломает печать во вторую "страницу" — похоже на маленький зашитый лимит
-     высоты у самого стороннего принт-сервиса, не настраиваемый и вне нашего
-     контроля; richtext тут ни при чём — до принтера долетает уже готовый
-     растр, а не разметка, и даже один plain-абзац уже воспроизводит баг.
-     Единственный доступный нам рычаг — сократить именно "обвязку" футера
-     (margin/padding/line-height), не трогая формат данных). */
+  /* Отступы урезаны до минимума (запрос пользователя 2026-07-21) — попытка
+     не помогла (подтверждено пользователем 2026-07-22 на реальном
+     устройстве: баг идентичен, не "стало лучше"), так что дело не в высоте
+     на грани лимита, а в самом факте наличия блока футера. Формат данных
+     сменён с richtext на обычный текст тем же вечером (см.
+     ReceiptBranding.footerContent) — CSS упрощён вслед за этим: списков,
+     цитат и заголовков в футере больше не бывает, только абзацы. Урезанные
+     отступы оставлены как есть — раз не мешают, лишний повод их не трогать. */
   .receipt-footer {
     margin-top: 4px;
     padding-top: 3px;
@@ -246,14 +249,11 @@ const RECEIPT_CSS = `
     line-height: 1.15;
     color: #333;
   }
-  .receipt-footer p { margin: 0 0 2px; }
+  /* overflow-wrap — реальный баг, найден пользователем 2026-07-22: длинный
+     текст без пробелов вылезал за ширину квитанции вместо переноса (обычный
+     word-wrap переносит только по пробелам). */
+  .receipt-footer p { margin: 0 0 2px; overflow-wrap: break-word; }
   .receipt-footer p:last-child { margin-bottom: 0; }
-  .receipt-footer ul, .receipt-footer ol { margin: 0 0 2px; padding-left: 18px; text-align: left; }
-  .receipt-footer blockquote { margin: 0 0 2px; padding-left: 8px; border-left: 2px solid #ccc; }
-  /* Уровни заголовков в футере — реально разного размера (найдено
-     пользователем 2026-07-20). */
-  .receipt-footer .rt-h1 { font-size: 16px; font-weight: 800; color: #111; margin: 0 0 3px; }
-  .receipt-footer .rt-h2 { font-size: 14px; font-weight: 700; color: #111; margin: 0 0 2px; }
   /* Линия отреза (запрос пользователя 2026-07-20) — в конце каждой
      квитанции: иконка ножниц + чёрная пунктирная линия. Изначальные 2мм
      смотрелись слишком жирно (фидбек того же дня) — уменьшено до 0.5мм. */
@@ -273,61 +273,12 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-// Печатный рендер PMNode -> HTML-строка — то же дерево узлов/меток, что
-// src/components/landing/rich-text.tsx (RichText, публичная страница
-// Лендинга) и src/lib/instructions/pdf.ts (PDF-вариант), но третий вывод:
-// сюда, в самодостаточный HTML печатной разметки. Не переиспользует
-// RichText напрямую — тот React-компонент, а печатная разметка собирается
-// как HTML-строка (innerHTML), без React-рендера.
-function renderMarksHtml(text: string, marks: { type: string }[] | undefined): string {
-  let html = escapeHtml(text);
-  for (const mark of marks ?? []) {
-    if (mark.type === "bold") html = `<strong>${html}</strong>`;
-    else if (mark.type === "italic") html = `<em>${html}</em>`;
-    else if (mark.type === "underline") html = `<u>${html}</u>`;
-  }
-  return html;
-}
-
-function renderPMChildren(nodes: PMNode[] | undefined): string {
-  return (nodes ?? []).map(renderPMNode).join("");
-}
-
-function renderPMNode(node: PMNode): string {
-  switch (node.type) {
-    case "text":
-      return renderMarksHtml(node.text ?? "", node.marks);
-    case "hardBreak":
-      return "<br />";
-    case "paragraph":
-      return `<p>${renderPMChildren(node.content)}</p>`;
-    case "heading": {
-      // Уровни реально различаются размером (найдено пользователем
-      // 2026-07-20 по скриншоту: "обычный текст мелкий и размер заголовков
-      // не отличается" — раньше все уровни схлопывались в один <p><strong>,
-      // визуально неотличимый от обычного жирного абзаца). rt-h1/rt-h2 —
-      // тот же принцип суффиксных классов, что у RichText Лендинга
-      // (src/components/landing/rich-text.tsx), стили — в RECEIPT_CSS ниже.
-      const cls = node.attrs?.level === 1 ? "rt-h1" : "rt-h2";
-      return `<p class="${cls}">${renderPMChildren(node.content)}</p>`;
-    }
-    case "bulletList":
-      return `<ul>${renderPMChildren(node.content)}</ul>`;
-    case "orderedList":
-      return `<ol>${renderPMChildren(node.content)}</ol>`;
-    case "listItem":
-      return `<li>${renderPMChildren(node.content)}</li>`;
-    case "blockquote":
-      return `<blockquote>${renderPMChildren(node.content)}</blockquote>`;
-    case "horizontalRule":
-      return "<hr />";
-    default:
-      return "";
-  }
-}
-
-export function pmNodeToHtml(doc: PMNode): string {
-  return renderPMChildren(doc.content);
+// Обычный текст футера -> HTML-строка (запрос пользователя 2026-07-22, см.
+// комментарий у ReceiptBranding.footerContent) — однострочное поле в
+// настройках (Input, не textarea), поэтому один <p> на весь текст.
+function renderFooterText(text: string): string {
+  const trimmed = text.trim();
+  return trimmed ? `<p>${escapeHtml(trimmed)}</p>` : "";
 }
 
 function renderSection(section: PrintSection): string {
@@ -361,16 +312,8 @@ export function buildReceiptBodyHtml(data: PrintDocumentData, branding: ReceiptB
   const total = data.totalLine
     ? `<div class="receipt-total"><span>${escapeHtml(data.totalLine.label)}</span><span>${escapeHtml(data.totalLine.value)}</span></div>`
     : "";
-  // isRichContentEmpty, не pmNodeToHtml(...).trim() — реальный баг, найден
-  // при самопроверке 2026-07-20: пустой параграф без текста (стандартное
-  // состояние редактора после того, как весь текст стёрли, ProseMirror
-  // всегда оставляет хотя бы один пустой блок) рендерится в "<p></p>" —
-  // непустую строку после .trim(), из-за чего футер показывал пустую
-  // секцию с разделительной линией даже когда владелец ничего не написал.
-  const footer =
-    branding.footerContent && !isRichContentEmpty(branding.footerContent)
-      ? `<div class="receipt-footer">${pmNodeToHtml(branding.footerContent)}</div>`
-      : "";
+  const footerHtml = branding.footerContent ? renderFooterText(branding.footerContent) : "";
+  const footer = footerHtml ? `<div class="receipt-footer">${footerHtml}</div>` : "";
 
   const header = branding.compactHeader
     ? `
