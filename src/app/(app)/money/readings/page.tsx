@@ -1309,7 +1309,7 @@ function OwnerTicketOrderCard({
     <div className="flex flex-col gap-2 rounded-control bg-muted p-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-body-airbnb font-extrabold tabular-nums">
+          <p className="text-body-airbnb font-extrabold tabular-nums text-primary">
             {t.tickets.orderNumberLabel}
             {order.number}
           </p>

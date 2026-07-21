@@ -1032,7 +1032,12 @@ export default function TicketsZonePage() {
               <Check className="size-6" />
             </div>
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.tickets.orderDoneTitle}</h2>
-            <p className="text-3xl font-extrabold tabular-nums">
+            {/* Всегда акцентным цветом (запрос пользователя 2026-07-21,
+                упрощение предыдущей версии, которая красила красным только
+                при выключенной печати) — номер заказа это "ключ" к
+                гашению/аннулированию позже (поиск по номеру во вкладке
+                «Заказы»), важно не терять из виду независимо от печати. */}
+            <p className="text-3xl font-extrabold tabular-nums text-primary">
               {t.tickets.orderNumberLabel}
               {lastOrder.number}
             </p>
@@ -1239,7 +1244,7 @@ function OrderCard({
     <div className="flex flex-col gap-3 rounded-card border border-border bg-card p-3.5">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-[1.0625rem] font-extrabold tabular-nums">
+          <p className="text-[1.0625rem] font-extrabold tabular-nums text-primary">
             {t.tickets.orderNumberLabel}
             {order.number}
           </p>
@@ -1321,6 +1326,7 @@ function OrderCard({
                       className="h-9 shrink-0 px-3 text-xs font-bold"
                       disabled={redeeming === tk.id}
                       onConfirm={() => onRedeem(order.id, tk.id)}
+                      fillParent
                     >
                       {t.tickets.redeemButton}
                     </ConfirmButton>

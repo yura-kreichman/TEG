@@ -20,6 +20,14 @@ interface ConfirmButtonProps {
    * пользователем — покупка абонемента через эту же кнопку вообще была без
    * звука, потому что silent раньше был жёстко зашит внутри компонента). */
   silent?: boolean;
+  /** Для кнопок внутри плотной строки (например, "Погасить" в строке билета,
+   * рядом с именем актива) — обычный w-full у состояния подтверждения там
+   * растягивается только на свой узкий flex-слот, а не на всю строку, и
+   * "Точно?" остаётся тесным (запрос пользователя 2026-07-21: "должно быть
+   * на всю ширину", тот же фикс, что уже сделан у ConfirmIconButton).
+   * Вместо обычного потока — absolute inset-0 поверх РОДИТЕЛЯ (тот обязан
+   * быть position:relative), перекрывает всю строку целиком. */
+  fillParent?: boolean;
 }
 
 /**
@@ -32,7 +40,15 @@ interface ConfirmButtonProps {
  * Деньги реально списываются/приходят по этим кнопкам — случайный тап не
  * должен сразу списывать с абонемента или запускать оплаченный пуск.
  */
-export function ConfirmButton({ onConfirm, disabled, className, variant = "outline", children, silent }: ConfirmButtonProps) {
+export function ConfirmButton({
+  onConfirm,
+  disabled,
+  className,
+  variant = "outline",
+  children,
+  silent,
+  fillParent,
+}: ConfirmButtonProps) {
   const t = useI18n();
   const [confirming, setConfirming] = useState(false);
 
@@ -40,8 +56,10 @@ export function ConfirmButton({ onConfirm, disabled, className, variant = "outli
     return (
       <div
         className={cn(
-          "relative flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-primary bg-card font-semibold",
-          className
+          fillParent
+            ? "absolute inset-0 z-10 flex items-center justify-center gap-3 rounded-lg border border-primary bg-card font-semibold"
+            : "relative flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-primary bg-card font-semibold",
+          !fillParent && className
         )}
       >
         <span className="text-body-airbnb font-semibold">{t.operatorApp.gameRoom.stopConfirmQuestion}</span>
