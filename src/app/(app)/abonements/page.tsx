@@ -2,7 +2,8 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Gift, Search, ChevronRight, Wallet } from "lucide-react";
+import { Plus, Pencil, Trash2, Gift, Search, ChevronRight, Wallet, Send, Megaphone } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -35,6 +36,7 @@ interface WalletInfo {
   phone: string;
   name: string | null;
   balance: number;
+  hasTelegram: boolean;
 }
 
 const EMPTY_FORM = { name: "", price: "", creditAmount: "" };
@@ -91,6 +93,38 @@ export default function AbonementsPage() {
   const [walletKebabTarget, setWalletKebabTarget] = useState<WalletInfo | null>(null);
   const [walletConfirmDelete, setWalletConfirmDelete] = useState(false);
   const { saved: walletDeleted, pulse: walletDeletePulse } = useSavePulse();
+
+  // Рассылка клиентам, подключившим Telegram-бота (запрос пользователя
+  // 2026-07-23) — без отдельного тумблера-разрешения ("в глобальных
+  // настройках не нужна такая опция", явное решение пользователя), метка
+  // "📣" в самом тексте сообщения (см. /api/abonement-wallets/broadcast)
+  // отличает рассылку от транзакционных уведомлений бота.
+  const [broadcastOpen, setBroadcastOpen] = useState(false);
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastSending, setBroadcastSending] = useState(false);
+  const [broadcastResult, setBroadcastResult] = useState<{ sent: number; total: number } | null>(null);
+  const [broadcastError, setBroadcastError] = useState<string | null>(null);
+
+  async function sendBroadcast() {
+    setBroadcastSending(true);
+    setBroadcastError(null);
+    try {
+      const res = await fetch("/api/abonement-wallets/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: broadcastMessage.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBroadcastError(data.error ?? t.abonements.broadcastError);
+        return;
+      }
+      setBroadcastResult({ sent: data.sent, total: data.total });
+      setBroadcastMessage("");
+    } finally {
+      setBroadcastSending(false);
+    }
+  }
 
   async function loadAbonements() {
     const res = await fetch("/api/abonements");
@@ -286,7 +320,22 @@ export default function AbonementsPage() {
 
           {tab === "wallets" && (
             <>
-              <div className="mb-3 flex justify-end">
+              <div className="mb-3 flex justify-end gap-2">
+                <PressableScale>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 rounded-lg"
+                    onClick={() => {
+                      setBroadcastResult(null);
+                      setBroadcastError(null);
+                      setBroadcastOpen(true);
+                    }}
+                  >
+                    <Megaphone className="size-4" />
+                    {t.abonements.broadcastButton}
+                  </Button>
+                </PressableScale>
                 <PressableScale>
                   <Button variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={() => setTopupSheetOpen(true)}>
                     <Plus className="size-4" />
@@ -357,7 +406,14 @@ export default function AbonementsPage() {
                             <Wallet className="size-5" />
                           </div>
                           <div className="min-w-0 grow">
-                            <div className="text-card-title">{w.name || w.phone}</div>
+                            <div className="flex items-center gap-1.5 text-card-title">
+                              <span className="truncate">{w.name || w.phone}</span>
+                              {/* Подключил бота RentOS в Telegram (запрос пользователя
+                                  2026-07-23) — только индикатор, не кнопка. */}
+                              {w.hasTelegram && (
+                                <Send className="size-3.5 shrink-0 text-primary" aria-label={t.abonements.telegramLinkedLabel} />
+                              )}
+                            </div>
                             {w.name && <p className="text-caption-airbnb tabular-nums">{w.phone}</p>}
                             <p className="text-caption-airbnb tabular-nums">
                               {t.abonements.balanceLabel}:{" "}
@@ -473,6 +529,36 @@ export default function AbonementsPage() {
           <p className="text-body-airbnb">{t.abonements.confirmDeleteWallet}</p>
           <PressableScale>
             <DeleteButton className="h-12 w-full" onClick={deleteWallet} deleted={walletDeleted} />
+          </PressableScale>
+        </div>
+      </BottomSheet>
+
+      <BottomSheet open={broadcastOpen} onClose={() => setBroadcastOpen(false)}>
+        <div className="flex flex-col gap-3 pt-2">
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.abonements.broadcastButton}</h2>
+          <p className="text-caption-airbnb text-muted-foreground">{t.abonements.broadcastHint}</p>
+          <Textarea
+            value={broadcastMessage}
+            onChange={(e) => setBroadcastMessage(e.target.value)}
+            placeholder={t.abonements.broadcastPlaceholder}
+            rows={5}
+            maxLength={1000}
+          />
+          {broadcastError && <p className="text-sm text-destructive">{broadcastError}</p>}
+          {broadcastResult && (
+            <p className="text-body-airbnb text-success">
+              {t.abonements.broadcastSentPrefix} {broadcastResult.sent} / {broadcastResult.total}
+            </p>
+          )}
+          <PressableScale>
+            <Button
+              type="button"
+              className="h-12 w-full"
+              disabled={broadcastSending || !broadcastMessage.trim()}
+              onClick={sendBroadcast}
+            >
+              {broadcastSending ? t.abonements.broadcastSending : t.abonements.broadcastSendButton}
+            </Button>
           </PressableScale>
         </div>
       </BottomSheet>

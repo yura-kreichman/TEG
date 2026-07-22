@@ -54,6 +54,13 @@ export async function GET(request: Request) {
     : [];
   const lastActivityMap = new Map(lastActivityByWallet.map((a) => [a.walletId, a._max.occurredAt]));
 
+  // Кто уже привязал Telegram-бота (запрос пользователя 2026-07-23) — метка в
+  // списке, отдельная от самого баланса. ClientTelegramLink ключуется по
+  // (tenantId, chatId), а не по walletId — сверяем по номеру телефона, тому
+  // же, что уже используется для поиска кошелька в вебхуке.
+  const telegramLinks = await prisma.clientTelegramLink.findMany({ where: { tenantId: owner.tenantId }, select: { phone: true } });
+  const phonesWithTelegram = new Set(telegramLinks.map((l) => l.phone));
+
   const list = wallets.map((w) => ({
     id: w.id,
     phone: w.phone,
@@ -64,6 +71,7 @@ export async function GET(request: Request) {
     // кошелька (запрос пользователя 2026-07-17: можно завести абонента без
     // покупки плана, тогда транзакций ещё нет вовсе).
     lastActivityAt: lastActivityMap.get(w.id) ?? w.createdAt,
+    hasTelegram: phonesWithTelegram.has(w.phone),
   }));
 
   if (sort === "balance") {
