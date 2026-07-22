@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2, UserRoundPen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -435,22 +435,27 @@ export default function OperatorCardPage() {
                   />
                 )}
               </div>
-              <div className="flex min-w-0 grow flex-wrap items-center gap-1.5">
-                <h1 className="text-card-title">{profile.name}</h1>
-                {/* Не кнопка (запрос пользователя 2026-07-22) —
-                    активация/деактивация только через переключатель на
-                    странице настроек сотрудника. В одном ряду с именем — тот
-                    же паттерн, что на странице списка /operators (реальный
-                    баг, найден пользователем 2026-07-22: тут была отдельным
-                    рядом ниже, "криво отображается"). */}
+              <div className="flex min-w-0 grow flex-col gap-1">
+                <h1 className="truncate text-card-title">{profile.name}</h1>
+                {/* Статус под именем, отдельной строкой (запрос пользователя
+                    2026-07-22: "криво отображается" — в одну строку с именем
+                    он конкурировал за место со ставкой и переносился сам по
+                    себе, ломая карточку). Только иконка, без текста (запрос
+                    пользователя того же дня: "убери слово Активен, галочки
+                    достаточно") — тот же иконка-без-текста контракт, что и
+                    везде у ActiveStatusIcon в проекте.
+                    ml-0.5 — иконка компонента size-8 c padding вокруг
+                    самой SVG (size-4), без сдвига она визуально не совпадала
+                    по левому краю с текстом имени строкой выше. */}
                 <ActiveStatusIcon
                   active={profile.active}
                   activeLabel={t.operators.active}
                   inactiveLabel={t.operators.inactive}
+                  className="-ml-2"
                 />
               </div>
               {moduleEnabled && balance && (
-                <div className="flex flex-col items-end gap-1">
+                <div className="flex shrink-0 flex-col items-end gap-1">
                   <span className="text-caption-airbnb text-muted-foreground">{t.operatorApp.workTime.rateLabel}</span>
                   <span className="text-[1.0625rem] font-bold tabular-nums text-muted-foreground">
                     <Money value={balance.currentRate} />
@@ -578,7 +583,7 @@ export default function OperatorCardPage() {
                           <div className="flex items-center justify-between">
                             <span className="flex items-center gap-1.5 text-body-airbnb font-semibold">
                               {formatShiftDate(item.shift.startAt)}
-                              {item.shift.edited && <Pencil className="size-3 text-muted-foreground" />}
+                              {item.shift.edited && <UserRoundPen className="size-3 text-muted-foreground" />}
                               {item.shift.requiresEdit && (
                                 <span className="text-caption-airbnb font-semibold text-destructive">
                                   {t.operatorApp.workTime.requiresEditBadge}
