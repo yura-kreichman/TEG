@@ -121,8 +121,6 @@
     "systemReceiptShowNameLabel": "კომპანიის სახელის ჩვენება",
     "systemReceiptCompactHeaderLabel": "კომპაქტური თავსართი",
     "systemReceiptCompactHeaderHint": "ლოგო მარცხნივ, ორგანიზაციის სახელი და ქვითრის სათაური გვერდით — უფრო მოკლეა თერმოპრინტერზე",
-    "systemReceiptShowTelegramQrLabel": "ბოტის QR ბალანსის შესამოწმებლად",
-    "systemReceiptShowTelegramQrHint": "ქვითრის ბოლოში — კლიენტი სკანირებს და მაშინვე ხედავს ბალანსს Telegram-ში",
     "systemOwnerHasPrinterHint": "ამ ბრაუზერს/მოწყობილობას აქვს პრინტერი — აქ გამოჩნდება ბალანსის ამონაწერისა და მფლობელის სხვა დოკუმენტების ბეჭდვის ღილაკები. იაფ Bluetooth პრინტერებს ჩვეულებრივ სჭირდებათ ბეჭდვის სერვისის აპლიკაცია (მაგ., ESCPOS Bluetooth Print Service) — წინააღმდეგ შემთხვევაში პრინტერი არ გამოჩნდება Android-ის ბეჭდვის დიალოგში.",
     "systemReceiptFooterPlaceholder": "მაგალითად: მადლობა ვიზიტისთვის! შევხვდეთ!",
     "systemReceiptPreviewLabel": "ქვითრის გადახედვა",

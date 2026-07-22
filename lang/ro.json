@@ -121,8 +121,6 @@
     "systemReceiptShowNameLabel": "Afișează numele companiei",
     "systemReceiptCompactHeaderLabel": "Antet compact",
     "systemReceiptCompactHeaderHint": "Logo în stânga, numele tenantului și titlul chitanței lângă el — mai scurt pe hârtie termică",
-    "systemReceiptShowTelegramQrLabel": "QR pentru verificarea soldului",
-    "systemReceiptShowTelegramQrHint": "În partea de jos a bonului — clientul scanează și vede soldul în Telegram",
     "systemOwnerHasPrinterHint": "Acest browser/dispozitiv are o imprimantă — aici vor apărea butoanele de imprimare a extrasului de sold și a altor documente ale Proprietarului. Imprimantele Bluetooth ieftine au de obicei nevoie de o aplicație serviciu de imprimare (de ex. ESCPOS Bluetooth Print Service) — altfel imprimanta nu va apărea în dialogul de imprimare Android.",
     "systemReceiptFooterPlaceholder": "De exemplu: Mulțumim pentru vizită! Pe curând!",
     "systemReceiptPreviewLabel": "Previzualizare bon",

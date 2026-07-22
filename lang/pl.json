@@ -121,8 +121,6 @@
     "systemReceiptShowNameLabel": "Pokaż nazwę firmy",
     "systemReceiptCompactHeaderLabel": "Kompaktowy nagłówek",
     "systemReceiptCompactHeaderHint": "Logo po lewej, nazwa najemcy i tytuł paragonu obok — krócej na drukarce termicznej",
-    "systemReceiptShowTelegramQrLabel": "QR bota do sprawdzania salda",
-    "systemReceiptShowTelegramQrHint": "Na dole paragonu — klient skanuje i od razu widzi saldo w Telegramie",
     "systemOwnerHasPrinterHint": "Ta przeglądarka/urządzenie ma drukarkę — tutaj pojawią się przyciski drukowania wyciągu z salda i innych dokumentów Właściciela. Tanie drukarki Bluetooth zwykle wymagają aplikacji usługi druku (np. ESCPOS Bluetooth Print Service) — w przeciwnym razie drukarka nie pojawi się w oknie drukowania Androida.",
     "systemReceiptFooterPlaceholder": "Np.: Dziękujemy za wizytę! Do zobaczenia!",
     "systemReceiptPreviewLabel": "Podgląd paragonu",

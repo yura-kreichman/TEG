@@ -121,8 +121,6 @@
     "systemReceiptShowNameLabel": "Компания атауын көрсету",
     "systemReceiptCompactHeaderLabel": "Ықшам тақырып",
     "systemReceiptCompactHeaderHint": "Логотип сол жақта, тенант атауы мен түбіртек тақырыбы қасында — термопринтерде қысқарақ",
-    "systemReceiptShowTelegramQrLabel": "Баланс тексеру үшін бот QR-коды",
-    "systemReceiptShowTelegramQrHint": "Түбіртектің төменгі жағында — клиент сканерлеп, Telegram-да балансын бірден көреді",
     "systemOwnerHasPrinterHint": "Бұл браузерде/құрылғыда принтер бар — мұнда Иесінің баланс үзінді көшірмесі мен басқа құжаттарын басып шығару түймелері пайда болады. Арзан Bluetooth принтерлеріне әдетте басып шығару қызметінің қолданбасы қажет (мысалы, ESCPOS Bluetooth Print Service) — әйтпесе принтер Android басып шығару терезесінде көрінбейді.",
     "systemReceiptFooterPlaceholder": "Мысалы: Келгеніңізге рахмет! Кездескенше!",
     "systemReceiptPreviewLabel": "Түбіртекті алдын ала қарау",

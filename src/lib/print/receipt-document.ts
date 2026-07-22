@@ -53,14 +53,6 @@ export interface PrintDocumentData {
   sections: PrintSection[];
   /** Итоговая строка — крупнее и жирным, отдельно от секций. */
   totalLine?: PrintLine;
-  /** QR-код внизу чека, например ссылка на бота для проверки баланса (запрос
-   * пользователя 2026-07-23) — ГОТОВЫЙ data:-URI (QRCode.toDataURL),
-   * сгенерированный вызывающей стороной, не url для генерации тут: печать не
-   * должна тянуть сеть/зависеть от библиотеки в этом модуле, а data:-URI
-   * рендерится сразу, без гонки с загрузкой (в отличие от ReceiptBranding.logoUrl
-   * — тот реальный сетевой файл, отсюда и вся защита от гонки загрузки у него). */
-  qrCodeDataUrl?: string;
-  qrCodeCaption?: string;
 }
 
 export interface ReceiptBranding {
@@ -73,11 +65,6 @@ export interface ReceiptBranding {
    * справа от него, вместо раскладки в столбик (запрос пользователя
    * 2026-07-20: экономит высоту рулона термопринтера). */
   compactHeader: boolean;
-  /** Настройки → Система, блок "Квитанция" (запрос пользователя 2026-07-23) —
-   * общий рубильник поверх PrintDocumentData.qrCodeDataUrl: даже если
-   * вызывающая сторона сгенерировала QR, при выключенном тумблере он не
-   * печатается — единая точка, а не проверка в каждом месте, что строит чек. */
-  showTelegramQr: boolean;
 }
 
 // Размер бумаги НЕ форсируем ("size: 80mm auto" раньше) — реальная ширина
@@ -263,12 +250,6 @@ const RECEIPT_CSS = `
     font-size: 18px;
     font-weight: 800;
   }
-  /* QR внизу чека (запрос пользователя 2026-07-23) — перед линией отреза, не
-     после: сама квитанция физически ещё держится за рулон в этот момент,
-     после отреза QR должен остаться на оторванном куске у клиента. */
-  .receipt-qr { text-align: center; margin-top: 8px; }
-  .receipt-qr img { width: 30mm; height: 30mm; }
-  .receipt-qr-caption { font-size: 11px; color: #444; margin-top: 3px; }
   /* Линия отреза (запрос пользователя 2026-07-20) — в конце каждой
      квитанции: иконка ножниц + чёрная пунктирная линия. Изначальные 2мм
      смотрелись слишком жирно (фидбек того же дня) — уменьшено до 0.5мм. */
@@ -333,13 +314,6 @@ export function buildReceiptBodyHtml(data: PrintDocumentData, branding: ReceiptB
   const total = data.totalLine
     ? `<div class="receipt-total"><span>${escapeHtml(data.totalLine.label)}</span><span>${escapeHtml(data.totalLine.value)}</span></div>`
     : "";
-  const qr =
-    data.qrCodeDataUrl && branding.showTelegramQr
-      ? `<div class="receipt-qr">
-        <img src="${escapeHtml(data.qrCodeDataUrl)}" alt="" />
-        ${data.qrCodeCaption ? `<div class="receipt-qr-caption">${escapeHtml(data.qrCodeCaption)}</div>` : ""}
-      </div>`
-      : "";
   const header = branding.compactHeader
     ? `
       <div class="receipt-header receipt-header-compact">
@@ -373,7 +347,6 @@ export function buildReceiptBodyHtml(data: PrintDocumentData, branding: ReceiptB
         ${header}
         ${sections}
         ${total}
-        ${qr}
         ${cutLine}
       </div>
     </div>
@@ -499,24 +472,12 @@ export function openPrintDocument(data: PrintDocumentData, branding: ReceiptBran
   // вообще есть в этом документе) перед печатью — img.complete уже true,
   // если картинка закэширована (частый случай), тогда ждать не нужно вообще.
   // Дальше — waitForRenderThenPrint выше, тот же принцип, но для текста.
-  // QR — тот же data:-URI, decode обычно синхронный/мгновенный (в отличие от
-  // лого, тут нет сетевого запроса), но подстраховываемся тем же паттерном —
-  // дешёво, а реальный принтер уже один раз ловил гонку именно на .complete.
   const logo = root.querySelector<HTMLImageElement>(".receipt-logo");
-  const qrImg = root.querySelector<HTMLImageElement>(".receipt-qr img");
-  const pendingImages = [logo, qrImg].filter((img): img is HTMLImageElement => !!img && !img.complete);
-  if (pendingImages.length > 0) {
-    let remaining = pendingImages.length;
-    function onOneReady() {
-      remaining -= 1;
-      if (remaining <= 0) waitForRenderThenPrint();
-    }
-    for (const img of pendingImages) {
-      img.addEventListener("load", onOneReady, { once: true });
-      img.addEventListener("error", onOneReady, { once: true });
-    }
-    // Фолбэк — не блокировать печать вечно, если картинка вообще не
-    // загрузится (плохая сеть, битая ссылка).
+  if (logo && !logo.complete) {
+    logo.addEventListener("load", waitForRenderThenPrint, { once: true });
+    logo.addEventListener("error", waitForRenderThenPrint, { once: true });
+    // Фолбэк — не блокировать печать вечно, если лого вообще не загрузится
+    // (плохая сеть, битая ссылка).
     setTimeout(waitForRenderThenPrint, 1500);
   } else {
     waitForRenderThenPrint();

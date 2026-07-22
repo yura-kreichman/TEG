@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Banknote, Check, ChevronLeft, CreditCard, Delete, Gift, MapPin, Pencil, Search, Send, Trash2, Wallet } from "lucide-react";
 import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
-import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Input } from "@/components/ui/input";
@@ -242,7 +241,6 @@ export function AbonementTopupFlow({
   // подтверждения показан: пока идёт поиск/оплата, запрос уже успевает
   // отработать в фоне, к моменту показа экрана ссылка уже готова.
   const [telegramBalanceLink, setTelegramBalanceLink] = useState<string | null>(null);
-  const [telegramQrDataUrl, setTelegramQrDataUrl] = useState<string | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
   // Уже привязал бота сам — не тот же самый флаг, что telegramBalanceLink
   // выше (тот про тенанта в целом): предлагать/печатать QR клиенту, который
@@ -268,15 +266,6 @@ export function AbonementTopupFlow({
       .catch(() => {});
   }, [found?.phone]);
   /* eslint-enable react-hooks/set-state-in-effect */
-  // QR для чека (запрос пользователя 2026-07-23) — генерируется ОДИН раз тут
-  // же, как только ссылка известна, а не заново на каждую печать: data:-URI
-  // готов заранее, печать не ждёт ни сеть, ни библиотеку в момент вызова.
-  useEffect(() => {
-    if (!telegramBalanceLink) return;
-    QRCode.toDataURL(telegramBalanceLink, { width: 240, margin: 1 })
-      .then(setTelegramQrDataUrl)
-      .catch(() => {});
-  }, [telegramBalanceLink]);
 
   // Оплата балансом на месте (не пополнение, списание) — Зона → (Актив →
   // Тариф, только "Счётчики") → сумма (запрос пользователя 2026-07-20).
@@ -631,8 +620,6 @@ export function AbonementTopupFlow({
         },
       ],
       totalLine: { label: t.abonements.balanceLabel, value: formatMoneyWithCurrency(wallet.balance, locale, currency) },
-      qrCodeDataUrl: !foundHasTelegram ? (telegramQrDataUrl ?? undefined) : undefined,
-      qrCodeCaption: !foundHasTelegram && telegramQrDataUrl ? t.abonements.telegramBalanceButton : undefined,
     };
   }
 

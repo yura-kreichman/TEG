@@ -121,8 +121,6 @@
     "systemReceiptShowNameLabel": "Показывать название компании",
     "systemReceiptCompactHeaderLabel": "Компактная шапка",
     "systemReceiptCompactHeaderHint": "Лого слева, название и заголовок квитанции рядом с ним — короче по высоте на термопринтере",
-    "systemReceiptShowTelegramQrLabel": "QR на бота для проверки баланса",
-    "systemReceiptShowTelegramQrHint": "Внизу квитанции — клиент сканирует и сразу видит свой баланс в Telegram",
     "systemOwnerHasPrinterHint": "На этом браузере/устройстве есть принтер — здесь появятся кнопки печати выписки баланса и других документов Владельца. Дешёвым Bluetooth-принтерам обычно нужно приложение-сервис печати (например ESCPOS Bluetooth Print Service) — иначе принтер не появится в диалоге печати Android.",
     "systemReceiptFooterPlaceholder": "Например: Спасибо за визит! До встречи!",
     "systemReceiptPreviewLabel": "Предпросмотр квитанции",

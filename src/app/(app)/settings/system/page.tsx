@@ -14,7 +14,6 @@ import { PrintButton } from "@/components/print/print-button";
 import { SilentPrintSetupCard } from "@/components/silent-print-setup";
 import { buildReceiptHtml, type PrintDocumentData } from "@/lib/print/receipt-document";
 import { cn } from "@/lib/utils";
-import QRCode from "qrcode";
 
 // Плашка "Модули" (запрос пользователя 2026-07-22) — множественный выбор,
 // тем же визуальным паттерном, что CurrencyPicker (src/components/currency-picker.tsx),
@@ -59,7 +58,7 @@ const DEFAULTS: SystemSettings = {
 // "должно быть превью квитанции (шапка и футер) настраиваются") — те же
 // данные и та же buildReceiptHtml(), что и у реальной печати, чтобы превью
 // гарантированно не разъезжалось с тем, что реально напечатается.
-function samplePrintData(t: ReturnType<typeof useI18n>, qrCodeDataUrl: string | null): PrintDocumentData {
+function samplePrintData(t: ReturnType<typeof useI18n>): PrintDocumentData {
   return {
     title: t.settings.systemReceiptPreviewTitle,
     subtitle: `20.07.2026 · 14:32 · ${t.common.ownerLabel}`,
@@ -72,8 +71,6 @@ function samplePrintData(t: ReturnType<typeof useI18n>, qrCodeDataUrl: string | 
       },
     ],
     totalLine: { label: t.settings.systemReceiptPreviewTotal, value: "500 ₽" },
-    qrCodeDataUrl: qrCodeDataUrl ?? undefined,
-    qrCodeCaption: qrCodeDataUrl ? t.abonements.telegramBalanceButton : undefined,
   };
 }
 
@@ -109,20 +106,7 @@ export default function SystemSettingsPage() {
   // тенанта + заголовок документа рядом с ним, а не раскладка в столбик по
   // центру — короче по высоте, заметно на рулоне термопринтера.
   const [compactHeader, setCompactHeader] = useState(false);
-  // QR на бота внизу квитанции (запрос пользователя 2026-07-23) — реальная
-  // ссылка тенанта, не заглушка: превью должно гарантированно совпадать с
-  // тем, что реально напечатается (тот же принцип, что у остальной шапки).
-  const [showTelegramQr, setShowTelegramQr] = useState(true);
-  const [previewQrDataUrl, setPreviewQrDataUrl] = useState<string | null>(null);
   const [ownerHasPrinter, setOwnerHasPrinter] = useOwnerHasPrinterLocal();
-
-  useEffect(() => {
-    fetch("/api/tenant/telegram-balance-link")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => (data?.link ? QRCode.toDataURL(data.link, { width: 240, margin: 1 }) : null))
-      .then((dataUrl) => setPreviewQrDataUrl(dataUrl))
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     fetch("/api/tenant/system-settings")
@@ -135,7 +119,6 @@ export default function SystemSettingsPage() {
           setShowLogo(data.receiptShowLogo ?? true);
           setShowTenantName(data.receiptShowTenantName ?? true);
           setCompactHeader(data.receiptCompactHeader ?? false);
-          setShowTelegramQr(data.receiptShowTelegramQr ?? true);
         }
         setChecking(false);
       });
@@ -161,12 +144,10 @@ export default function SystemSettingsPage() {
     receiptShowLogo?: boolean;
     receiptShowTenantName?: boolean;
     receiptCompactHeader?: boolean;
-    receiptShowTelegramQr?: boolean;
   }) {
     if (partial.receiptShowLogo !== undefined) setShowLogo(partial.receiptShowLogo);
     if (partial.receiptShowTenantName !== undefined) setShowTenantName(partial.receiptShowTenantName);
     if (partial.receiptCompactHeader !== undefined) setCompactHeader(partial.receiptCompactHeader);
-    if (partial.receiptShowTelegramQr !== undefined) setShowTelegramQr(partial.receiptShowTelegramQr);
     fetch("/api/tenant/system-settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -183,13 +164,12 @@ export default function SystemSettingsPage() {
   // превью здесь строится через srcDoc.
   const absoluteLogoUrl =
     logoUrl && typeof window !== "undefined" ? `${window.location.origin}${logoUrl}` : logoUrl;
-  const previewHtml = buildReceiptHtml(samplePrintData(t, previewQrDataUrl), {
+  const previewHtml = buildReceiptHtml(samplePrintData(t), {
     tenantName,
     logoUrl: absoluteLogoUrl,
     showLogo,
     showTenantName,
     compactHeader,
-    showTelegramQr,
   });
 
   const rows: Array<{ key: keyof SystemSettings; label: string; sub: string }> = [
@@ -341,19 +321,6 @@ export default function SystemSettingsPage() {
                         className="shrink-0"
                       />
                     </div>
-                    {previewQrDataUrl && (
-                      <div className="flex items-center justify-between gap-3 py-2">
-                        <div className="min-w-0">
-                          <span className="text-body-airbnb">{t.settings.systemReceiptShowTelegramQrLabel}</span>
-                          <p className="text-caption-airbnb text-muted-foreground">{t.settings.systemReceiptShowTelegramQrHint}</p>
-                        </div>
-                        <Switch
-                          checked={showTelegramQr}
-                          onCheckedChange={(v) => patchHeaderToggle({ receiptShowTelegramQr: v })}
-                          className="shrink-0"
-                        />
-                      </div>
-                    )}
                   </div>
 
                   <div className="border-t border-border pt-3">
@@ -389,8 +356,8 @@ export default function SystemSettingsPage() {
                     <div className="mt-3 flex justify-center">
                       <PrintButton
                         label={t.settings.systemReceiptTestPrintButton}
-                        data={samplePrintData(t, previewQrDataUrl)}
-                        branding={{ tenantName, logoUrl, showLogo, showTenantName, compactHeader, showTelegramQr }}
+                        data={samplePrintData(t)}
+                        branding={{ tenantName, logoUrl, showLogo, showTenantName, compactHeader }}
                         className="gap-1.5 rounded-lg"
                       />
                     </div>

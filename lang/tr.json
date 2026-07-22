@@ -121,8 +121,6 @@
     "systemReceiptShowNameLabel": "Şirket adını göster",
     "systemReceiptCompactHeaderLabel": "Kompakt başlık",
     "systemReceiptCompactHeaderHint": "Logo solda, kiracı adı ve fiş başlığı yanında — termal yazıcıda daha kısa",
-    "systemReceiptShowTelegramQrLabel": "Bakiye kontrolü için bot QR kodu",
-    "systemReceiptShowTelegramQrHint": "Fişin altında — müşteri tarar ve bakiyesini hemen Telegramda görür",
     "systemOwnerHasPrinterHint": "Bu tarayıcıda/cihazda yazıcı var — burada Sahibin bakiye ekstresi ve diğer belgelerinin yazdırma düğmeleri görünecek. Ucuz Bluetooth yazıcılar genellikle bir yazdırma hizmeti uygulaması gerektirir (ör. ESCPOS Bluetooth Print Service) — aksi halde yazıcı Android yazdırma iletişim kutusunda görünmez.",
     "systemReceiptFooterPlaceholder": "Örneğin: Ziyaretiniz için teşekkürler! Görüşmek üzere!",
     "systemReceiptPreviewLabel": "Fiş önizlemesi",

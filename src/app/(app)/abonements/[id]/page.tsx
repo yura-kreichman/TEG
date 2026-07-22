@@ -25,7 +25,6 @@ import { useOwnerPrintAvailable } from "@/hooks/use-print";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import QRCode from "qrcode";
 
 interface WalletHistoryEntry {
   id: string;
@@ -75,7 +74,6 @@ export default function AbonementWalletPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { saved: deleted, pulse: deletePulse } = useSavePulse();
   const [qrOpen, setQrOpen] = useState(false);
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   async function loadWallet() {
     const res = await fetch(`/api/abonement-wallets/${params.id}`);
@@ -90,16 +88,6 @@ export default function AbonementWalletPage() {
     const data = await res.json();
     setWallet(data);
     setForm({ name: data.name ?? "", phone: data.phone });
-    // Для чека (запрос пользователя 2026-07-23) — только если ссылка есть И
-    // клиент ЕЩЁ не привязал бота сам (иначе показывать ему QR ещё раз
-    // незачем, тот же принцип, что у кнопки "Баланс в Telegram" выше).
-    if (data.telegramBalanceLink && !data.hasTelegram) {
-      QRCode.toDataURL(data.telegramBalanceLink, { width: 240, margin: 1 })
-        .then(setQrDataUrl)
-        .catch(() => {});
-    } else {
-      setQrDataUrl(null);
-    }
   }
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -162,8 +150,6 @@ export default function AbonementWalletPage() {
         },
       ],
       totalLine: { label: t.abonements.balanceLabel, value: formatMoneyWithCurrency(wallet!.balance, locale, currency) },
-      qrCodeDataUrl: qrDataUrl ?? undefined,
-      qrCodeCaption: qrDataUrl ? t.abonements.telegramBalanceButton : undefined,
     };
   }
 

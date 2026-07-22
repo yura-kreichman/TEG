@@ -121,8 +121,6 @@
     "systemReceiptShowNameLabel": "Şirkət adını göstər",
     "systemReceiptCompactHeaderLabel": "Yığcam başlıq",
     "systemReceiptCompactHeaderHint": "Loqo solda, tenant adı və qəbz başlığı onun yanında — termoprinterdə daha qısa",
-    "systemReceiptShowTelegramQrLabel": "Balansı yoxlamaq üçün bot QR-kodu",
-    "systemReceiptShowTelegramQrHint": "Qəbzin altında — müştəri skan edir və Telegram-da balansını dərhal görür",
     "systemOwnerHasPrinterHint": "Bu brauzerdə/cihazda printer var — burada Sahibkarın balans çıxarışı və digər sənədlərinin çap düymələri görünəcək. Ucuz Bluetooth printerlərə adətən çap xidməti tətbiqi lazımdır (məs., ESCPOS Bluetooth Print Service) — əks halda printer Android çap dialoqunda görünməyəcək.",
     "systemReceiptFooterPlaceholder": "Məsələn: Ziyarətiniz üçün təşəkkürlər! Görüşənədək!",
     "systemReceiptPreviewLabel": "Qəbz önizləməsi",

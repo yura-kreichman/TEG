@@ -40,7 +40,6 @@ const EMPTY_BRANDING: ReceiptBranding = {
   showLogo: true,
   showTenantName: true,
   compactHeader: false,
-  showTelegramQr: true,
 };
 
 /** Владелец: доступна ли печать прямо сейчас (тенант включил + этот браузер помечен как "с принтером"). */
@@ -64,7 +63,6 @@ export function useOwnerPrintAvailable(): PrintAvailability {
             showLogo: data.receiptShowLogo ?? true,
             showTenantName: data.receiptShowTenantName ?? true,
             compactHeader: data.receiptCompactHeader ?? false,
-            showTelegramQr: data.receiptShowTelegramQr ?? true,
           },
         });
       });
@@ -94,7 +92,6 @@ export function useOperatorPrintAvailable(): PrintAvailability {
             showLogo: data.receiptShowLogo ?? true,
             showTenantName: data.receiptShowTenantName ?? true,
             compactHeader: data.receiptCompactHeader ?? false,
-            showTelegramQr: data.receiptShowTelegramQr ?? true,
           },
           operatorName: data.operatorName ?? null,
         });
