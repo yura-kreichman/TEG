@@ -606,6 +606,13 @@ export default function StaysZonePage() {
             {selectedAsset && !selectedAsset.tariff && (
               <p className="mb-3 text-caption-airbnb text-destructive">{t.operatorApp.gameRoom.noPricingError}</p>
             )}
+            {/* Актив на паузе — тайл кликабелен, но "Добавить браслет" молча
+                задизейблен ниже без всякого пояснения (реальный пробел,
+                найден пользователем 2026-07-22: та же подсказка уже была у
+                Счётчиков, здесь её не было вовсе). */}
+            {selectedAsset && selectedAsset.tariff && !selectedAsset.active && (
+              <p className="mb-3 text-caption-airbnb text-muted-foreground">{t.operatorApp.gameRoom.assetInactiveHint}</p>
+            )}
 
             {selectedAsset && (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-3">

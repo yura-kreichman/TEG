@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { dialInfoForTimezone } from "@/lib/locales";
 import { cn } from "@/lib/utils";
@@ -21,8 +21,16 @@ interface PhoneInputProps {
   id?: string;
   autoFocus?: boolean;
   heightClassName?: string;
+  // Размер шрифта префикса+поля вместе (запрос пользователя 2026-07-22:
+  // "как в Заказах") — по умолчанию прежний мелкий текст, не трогает
+  // остальные места использования компонента.
+  sizeClassName?: string;
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
   required?: boolean;
+  // Отдаёт код страны наверх (запрос пользователя 2026-07-22) — родителю
+  // нужен dialCode, чтобы правильно склеивать/стирать цифры при вводе с
+  // нумпада поверх этого поля, не дублируя запрос часового пояса.
+  onDialInfo?: (info: { dialCode: string; flag: string }) => void;
 }
 
 /**
@@ -39,8 +47,10 @@ export function PhoneInput({
   id,
   autoFocus,
   heightClassName = "h-12",
+  sizeClassName,
   onKeyDown,
   required,
+  onDialInfo,
 }: PhoneInputProps) {
   const [timezone, setTimezone] = useState<string>("Europe/Moscow");
 
@@ -57,11 +67,31 @@ export function PhoneInput({
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const { dialCode, flag } = dialInfoForTimezone(timezone);
+
+  useEffect(() => {
+    onDialInfo?.({ dialCode, flag });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dialCode, flag]);
   // Хранится/сравнивается только цифрами (normalizePhone в src/lib/abonement.ts
   // отбрасывает "+" вместе с остальным форматированием) — сверяем и
   // склеиваем без "+", он только в отображаемом префиксе.
   const dialDigits = dialCode.replace("+", "");
   const localPart = value.startsWith(dialDigits) ? value.slice(dialDigits.length) : value;
+
+  // Автофокус — ТОЛЬКО на устройствах с мышью/клавиатурой (запрос
+  // пользователя 2026-07-22: "не будет ли неудобно, что сразу и наш нумпад,
+  // и штатная клавиатура") — на тач-устройстве autoFocus сразу же вызвал бы
+  // системную клавиатуру поверх уже показанного нумпада, задваивая ввод.
+  // Обычный autoFocus-проп сюда не годится: значение зависит от pointer,
+  // известного только в браузере — решаем это в эффекте (клиент), а не в
+  // самом рендере, чтобы не разъезжаться с сервером при гидратации.
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (autoFocus && typeof window !== "undefined" && !window.matchMedia("(pointer: coarse)").matches) {
+      inputRef.current?.focus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className={cn("flex items-stretch gap-2", heightClassName)}>
@@ -75,10 +105,10 @@ export function PhoneInput({
         <span className="tabular-nums">{dialCode}</span>
       </div>
       <Input
+        ref={inputRef}
         id={id}
         type="tel"
         inputMode="tel"
-        autoFocus={autoFocus}
         value={localPart}
         onChange={(e) => {
           const typed = e.target.value.replace(/[^\d\s()-]/g, "");
@@ -94,7 +124,7 @@ export function PhoneInput({
         }}
         onKeyDown={onKeyDown}
         required={required}
-        className={cn("flex-1", heightClassName)}
+        className={cn("flex-1", heightClassName, sizeClassName)}
       />
     </div>
   );

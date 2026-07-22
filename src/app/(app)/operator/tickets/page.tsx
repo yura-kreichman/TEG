@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Banknote, Check, ChevronLeft, ChevronRight, CreditCard, Delete, Layers, MapPin, Minus, Plus, Printer, Search, ShoppingCart, Ticket, Trash2, TriangleAlert, Wallet } from "lucide-react";
+import { Banknote, Check, ChevronDown, ChevronLeft, CreditCard, Delete, Layers, Lock, LockOpen, MapPin, Minus, Plus, Printer, Search, ShoppingCart, Ticket, Trash2, TriangleAlert, Wallet, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { ConfirmIconButton } from "@/components/confirm-icon-button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
@@ -76,11 +77,22 @@ interface OrderDetail {
 
 type Tab = "sell" | "orders";
 
-// "Я стою на Карусели" (docs/spec/10-tickets.md, "PWA оператора") — личная
-// настройка вкладки «Заказы», переживает перезагрузку страницы (та же
-// логика, что ZONE_FILTER_KEY в game-room.tsx).
-const ASSET_FILTER_KEY = "ticketsAssetFilter";
-const ALL_ASSETS = "all";
+// Замок по активам (запрос пользователя 2026-07-22: "избежать ситуацию,
+// чтобы Сотрудник не погасил Актив не свой" — на одном аттракционе может
+// стоять один Сотрудник, на другой день — один Сотрудник на 2-3 сразу) —
+// НЕ система прав доступа, чисто UX-подсказка от случайного тапа не туда:
+// пока замок открыт, список выбранных активов свободно меняется; закрыт —
+// dropdown недоступен, заказы/билеты других активов не показываются вовсе.
+// Ключи хранения — на зону (у тенанта может быть больше одной зоны с
+// режимом "Билеты", каждая со своим набором активов и своим замком),
+// переживают перезагрузку страницы (устройство на точке может стоять
+// открытым часами, см. use-live-refetch.ts).
+function assetSelectionKey(zoneId: string) {
+  return `ticketsSelectedAssets:${zoneId}`;
+}
+function assetLockKey(zoneId: string) {
+  return `ticketsAssetLock:${zoneId}`;
+}
 
 function isOrderExpired(order: { expiresAt: string | null }, now: Date): boolean {
   return order.expiresAt != null && new Date(order.expiresAt) < now;
@@ -386,21 +398,35 @@ export default function TicketsZonePage() {
   const searchErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [searchResult, setSearchResult] = useState<OrderDetail | null>(null);
   const [recentOrders, setRecentOrders] = useState<OrderDetail[]>([]);
-  const [assetFilter, setAssetFilterState] = useState<string>(ALL_ASSETS);
+  const [selectedAssetIds, setSelectedAssetIdsState] = useState<string[]>([]);
+  const [assetLocked, setAssetLockedState] = useState(false);
   const [redeeming, setRedeeming] = useState<string | null>(null);
   const [voidingTicket, setVoidingTicket] = useState<string | null>(null);
   const [voidingOrder, setVoidingOrder] = useState<string | null>(null);
 
-  function setAssetFilter(value: string) {
-    setAssetFilterState(value);
-    window.localStorage.setItem(ASSET_FILTER_KEY, value);
+  function setSelectedAssetIds(ids: string[]) {
+    setSelectedAssetIdsState(ids);
+    if (zone) window.localStorage.setItem(assetSelectionKey(zone.id), JSON.stringify(ids));
+  }
+
+  function setAssetLocked(value: boolean) {
+    setAssetLockedState(value);
+    if (zone) window.localStorage.setItem(assetLockKey(zone.id), value ? "1" : "0");
   }
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!zone) return;
-    const saved = window.localStorage.getItem(ASSET_FILTER_KEY);
-    setAssetFilterState(saved && (saved === ALL_ASSETS || zone.assets.some((a) => a.id === saved)) ? saved : ALL_ASSETS);
+    const allIds = zone.assets.map((a) => a.id);
+    let saved: string[] = [];
+    try {
+      saved = JSON.parse(window.localStorage.getItem(assetSelectionKey(zone.id)) ?? "[]");
+    } catch {
+      saved = [];
+    }
+    const valid = saved.filter((id) => allIds.includes(id));
+    setSelectedAssetIdsState(valid.length > 0 ? valid : allIds);
+    setAssetLockedState(window.localStorage.getItem(assetLockKey(zone.id)) === "1");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zone?.id]);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -455,13 +481,23 @@ export default function TicketsZonePage() {
         flashSearchError(data.error ?? t.tickets.orderNotFound);
         return;
       }
+      // Замок по активам действует и для поиска по номеру (запрос
+      // пользователя 2026-07-22: "в заказах также отображается только те
+      // активы которые выбраны") — заказ без единого билета выбранного
+      // актива для Сотрудника сейчас не существует вовсе, тот же "не
+      // найден", а не пустая карточка.
+      const order: OrderDetail = data.order;
+      if (!order.tickets.some((tk) => tk.status === "active" && selectedAssetIds.includes(tk.assetId))) {
+        flashSearchError(t.tickets.orderNotFound);
+        return;
+      }
       // Одобрительный "мягкий дзинь" при найденном заказе (запрос
       // пользователя 2026-07-21) — тот же playSaveDing, что уже звучит по
       // всему проекту при "Сохранено" (обычно приходит бесплатно через
       // SaveSuccessOverlay у SaveButton, но здесь нет кнопки сохранения —
       // просто найден заказ, поэтому звук нужно вызвать явно).
       playSaveDing();
-      setSearchResult(data.order);
+      setSearchResult(order);
     } catch {
       flashSearchError(t.operatorApp.gameRoom.networkError);
     } finally {
@@ -478,11 +514,21 @@ export default function TicketsZonePage() {
         tickets: o.tickets.map((tk) => (tk.id === ticketId ? { ...tk, ...patch } : tk)),
       };
     }
+    // Погашённый/аннулированный билет сразу пропадает из видимого списка
+    // (liveTickets фильтрует по status === "active"), а с ним — только что
+    // нажатая кнопка "Погасить": удаление из DOM элемента, на который только
+    // что тапнули, сбрасывало скролл страницы наверх (реальный баг, найден
+    // пользователем 2026-07-22: "гасит несколько билетов подряд, каждый раз
+    // приходится скролить заново"). Явно фиксируем и восстанавливаем позицию
+    // скролла вокруг обновления состояния — надёжнее, чем гоняться за точной
+    // причиной (потеря фокуса/сжатие layout) в разных браузерах.
+    const scrollY = window.scrollY;
     setSearchResult((prev) => (prev ? apply(prev) : prev));
     // Погашение последнего живого билета — заказ сразу выпадает из ленты
     // (тот же фильтр, что при загрузке, см. loadRecentOrders), не ждёт
     // следующей перезагрузки.
     setRecentOrders((prev) => prev.map(apply).filter((o) => o.openTicketsCount > 0));
+    requestAnimationFrame(() => window.scrollTo(0, scrollY));
   }
 
   async function redeemTicket(orderId: string, ticketId: string) {
@@ -547,7 +593,9 @@ export default function TicketsZonePage() {
     }
   }
 
-  const highlightAssetId = assetFilter === ALL_ASSETS ? null : assetFilter;
+  const visibleRecentOrders = recentOrders.filter((o) =>
+    o.tickets.some((tk) => tk.status === "active" && selectedAssetIds.includes(tk.assetId))
+  );
 
   if (loading) return null;
   if (!zone) return null;
@@ -720,7 +768,7 @@ export default function TicketsZonePage() {
               redeeming={redeeming}
               onRedeem={redeemTicket}
               t={t}
-              highlightAssetId={highlightAssetId}
+              selectedAssetIds={selectedAssetIds}
               printAvailable={printAvailable.available && zone.printReceiptEnabled}
               onPrint={printOrderTickets}
               ticketsAccess={ticketsAccess}
@@ -732,6 +780,23 @@ export default function TicketsZonePage() {
           </div>
         ) : (
           <>
+            {/* Dropdown с тумблерами по активам + замок (запрос пользователя
+                2026-07-22, заменил прежний слайдер-чипы) — не система прав
+                доступа, а UX-подсказка от случайной путаницы: на одном
+                аттракционе может стоять свой Сотрудник, на другой день один
+                Сотрудник обслуживает сразу несколько. Замок закрыт — dropdown
+                недоступен, заказы/билеты не выбранных активов не
+                показываются нигде на этой вкладке, включая поиск по номеру. */}
+            {zone.assets.length > 1 && (
+              <AssetAccessControl
+                assets={zone.assets}
+                selectedAssetIds={selectedAssetIds}
+                onChangeSelected={setSelectedAssetIds}
+                locked={assetLocked}
+                onToggleLocked={() => setAssetLocked(!assetLocked)}
+                t={t}
+              />
+            )}
             <div className="relative flex flex-col gap-3">
               {/* "Заказ не найден" — zoom-in+bounce поверх NumPad, автоматически
                   гаснет fade-out+zoom-out через 2.5с (запрос пользователя
@@ -756,9 +821,34 @@ export default function TicketsZonePage() {
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div className="flex h-14 items-center justify-center rounded-control border-2 border-input bg-background text-2xl font-extrabold tabular-nums">
-                {searchNumber || <span className="text-body-airbnb font-semibold text-muted-foreground">{t.tickets.searchOrderPlaceholder}</span>}
-              </div>
+              {/* Настоящий input, не просто дисплей (запрос пользователя
+                  2026-07-22: "как это будет вести себя не на тач-экране, а
+                  на Windows? Мышкой вводить номер неудобно") — нумпад ниже
+                  остаётся, но теперь это лишь один из способов ввода, не
+                  единственный: с физической клавиатуры печатать тоже можно,
+                  достаточно кликнуть в поле (или оно и так в фокусе). */}
+              <input
+                type="text"
+                inputMode="numeric"
+                ref={(el) => {
+                  // Автофокус — только на устройствах с мышью/клавиатурой
+                  // (запрос пользователя 2026-07-22: "не будет ли неудобно,
+                  // что сразу и наш нумпад, и штатная клавиатура") — на
+                  // тач-устройстве голый autoFocus сразу вызвал бы системную
+                  // клавиатуру поверх уже показанного нумпада. Callback-ref,
+                  // не useEffect — поле смонтировано условно (таб "Заказы" +
+                  // ещё не найден результат), нужен фокус именно в момент
+                  // появления, не один раз при монтировании всей страницы.
+                  if (el && typeof window !== "undefined" && !window.matchMedia("(pointer: coarse)").matches) {
+                    el.focus();
+                  }
+                }}
+                value={searchNumber}
+                onChange={(e) => setSearchNumber(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                onKeyDown={(e) => e.key === "Enter" && searchOrder()}
+                placeholder={t.tickets.searchOrderPlaceholder}
+                className="flex h-14 w-full items-center justify-center rounded-control border-2 border-input bg-background text-center text-2xl font-extrabold tabular-nums placeholder:text-body-airbnb placeholder:font-semibold placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
               <div className="grid grid-cols-3 gap-2">
                 {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => (
                   <PressableScale key={k}>
@@ -777,9 +867,9 @@ export default function TicketsZonePage() {
                     disabled={!searchNumber}
                     onClick={() => setSearchNumber("")}
                     aria-label={t.common.delete}
-                    className="flex h-14 w-full items-center justify-center rounded-control border border-border bg-background text-caption-airbnb font-semibold text-muted-foreground shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] active:shadow-[0_1px_2px_rgba(0,0,0,.13),inset_0_1px_0_rgba(255,255,255,.13),inset_0_-1px_2px_rgba(0,0,0,.1)] disabled:opacity-40 dark:border-input dark:bg-input/30"
+                    className="flex h-14 w-full items-center justify-center rounded-control border border-border bg-background text-muted-foreground shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] active:shadow-[0_1px_2px_rgba(0,0,0,.13),inset_0_1px_0_rgba(255,255,255,.13),inset_0_-1px_2px_rgba(0,0,0,.1)] disabled:opacity-40 dark:border-input dark:bg-input/30"
                   >
-                    {t.common.delete}
+                    <Trash2 className="size-5" />
                   </button>
                 </PressableScale>
                 <PressableScale>
@@ -808,32 +898,25 @@ export default function TicketsZonePage() {
                   type="button"
                   disabled={searching || !searchNumber}
                   onClick={searchOrder}
-                  className="h-12 w-full gap-1.5 rounded-control font-bold"
+                  className="relative h-12 w-full rounded-control pl-14 font-bold"
                 >
-                  <Search className="size-4.5" />
+                  <Search className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
                   {t.tickets.findOrderButton}
                 </Button>
               </PressableScale>
             </div>
 
-            {/* Слайдер, не перенос на новую строку — тот же паттерн, что
-                CategoryChipsRow у Товаров (запрос пользователя 2026-07-21:
-                "сделать слайдером, как категории Товаров"). Выбор — личная
-                настройка вкладки оператора ("я стою на Карусели"), НЕ список
-                доступа: доступ к активам у Сотрудника в режиме "Билеты"
-                нигде отдельно не ограничивается — только доступ к зоне
-                целиком (allZonesAccess/allowedZones), как и у остальных
-                режимов учёта. */}
-            {zone.assets.length > 1 && (
-              <AssetChipsRow assets={zone.assets} assetFilter={assetFilter} onSelect={setAssetFilter} t={t} />
-            )}
-
             <div className="flex flex-col gap-3">
               <p className="text-caption-airbnb font-semibold text-muted-foreground">{t.tickets.recentOrdersTitle}</p>
-              {recentOrders.length === 0 ? (
+              {/* Заказ, ни один билет которого не относится к выбранному
+                  активу — не просто приглушается, а не показывается вовсе
+                  (реальный баг, найден пользователем 2026-07-22: серый билет
+                  всё равно можно было погасить — визуальное приглушение не
+                  значит "недоступно"). */}
+              {visibleRecentOrders.length === 0 ? (
                 <p className="py-4 text-center text-body-airbnb text-muted-foreground">{t.tickets.noOrdersYet}</p>
               ) : (
-                recentOrders.map((o) => (
+                visibleRecentOrders.map((o) => (
                   <OrderCard
                     key={o.id}
                     order={o}
@@ -843,7 +926,7 @@ export default function TicketsZonePage() {
                     redeeming={redeeming}
                     onRedeem={redeemTicket}
                     t={t}
-                    highlightAssetId={highlightAssetId}
+                    selectedAssetIds={selectedAssetIds}
                     printAvailable={printAvailable.available && zone.printReceiptEnabled}
                     onPrint={printOrderTickets}
                     ticketsAccess={ticketsAccess}
@@ -1111,93 +1194,150 @@ export default function TicketsZonePage() {
 }
 
 /**
- * Слайдер фильтра по активу — тот же паттерн, что CategoryChipsRow у
- * Товаров (operator/goods/page.tsx): белая плашка, стрелки по бокам когда не
- * помещается целиком, нативный скроллбар скрыт (запрос пользователя
- * 2026-07-21: "сделать слайдером, как категории Товаров").
+ * Dropdown с тумблерами по активам + замок (запрос пользователя 2026-07-22,
+ * заменил прежний слайдер-чипы AssetChipsRow) — множественный выбор вместо
+ * одиночного: реальный сценарий — один Сотрудник может обслуживать сразу
+ * несколько аттракционов, не только один. Замок открыт — можно менять выбор
+ * (dropdown кликабелен); закрыт — dropdown задизейблен, случайно поменять
+ * выбор нельзя, нужно сперва явно открыть замок. Это НЕ права доступа —
+ * чисто клиентская подсказка от невнимательности, сервер ничего не
+ * проверяет; Сотрудник в любой момент может открыть замок сам.
  */
-function AssetChipsRow({
+function AssetAccessControl({
   assets,
-  assetFilter,
-  onSelect,
+  selectedAssetIds,
+  onChangeSelected,
+  locked,
+  onToggleLocked,
   t,
 }: {
   assets: AssetCtx[];
-  assetFilter: string;
-  onSelect: (id: string) => void;
+  selectedAssetIds: string[];
+  onChangeSelected: (ids: string[]) => void;
+  locked: boolean;
+  onToggleLocked: () => void;
   t: ReturnType<typeof useI18n>;
 }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  // "Точно?" — только на снятие замка (запрос пользователя 2026-07-22:
+  // "'Точно?' достаточно", решили не городить проверку ПИН-кодом) —
+  // закрытие замка безопасное направление (сужает доступ), подтверждения не
+  // требует; риск случайности только при открытии.
+  const [confirmingUnlock, setConfirmingUnlock] = useState(false);
 
-  function updateScrollState() {
-    const el = scrollRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 4);
-    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  function handleLockButtonClick() {
+    if (locked) {
+      setConfirmingUnlock(true);
+    } else {
+      onToggleLocked();
+    }
   }
 
-  useEffect(() => {
-    updateScrollState();
-  }, [assets]);
+  const summaryLabel =
+    selectedAssetIds.length === assets.length
+      ? t.tickets.allAssetsLabel
+      : selectedAssetIds.length === 1
+        ? (assets.find((a) => a.id === selectedAssetIds[0])?.name ?? t.tickets.allAssetsLabel)
+        : `${t.tickets.assetsSelectedLabel} ${selectedAssetIds.length}`;
 
-  function scrollByAmount(delta: number) {
-    scrollRef.current?.scrollBy({ left: delta, behavior: "smooth" });
+  function toggleAsset(id: string) {
+    if (selectedAssetIds.includes(id)) {
+      // Нельзя снять последний выбранный — иначе список заказов/билетов
+      // окажется пуст без всякого объяснения.
+      if (selectedAssetIds.length === 1) return;
+      onChangeSelected(selectedAssetIds.filter((x) => x !== id));
+    } else {
+      onChangeSelected([...selectedAssetIds, id]);
+    }
   }
 
   return (
-    <div className="flex items-center gap-1 rounded-control bg-card p-1.5 shadow-card-rest">
-      {canScrollLeft && (
+    <>
+      <div className="relative flex items-center gap-2">
+        {confirmingUnlock && (
+          <div className="absolute inset-0 z-10 flex h-11 items-center justify-center gap-3 rounded-control border border-primary bg-card font-semibold shadow-card-rest">
+            <span className="text-body-airbnb font-semibold">{t.operatorApp.gameRoom.stopConfirmQuestion}</span>
+            <PressableScale>
+              <button
+                type="button"
+                aria-label={t.common.close}
+                onClick={() => setConfirmingUnlock(false)}
+                className="flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </PressableScale>
+            <PressableScale>
+              <button
+                type="button"
+                aria-label={t.common.confirm}
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  window.dispatchEvent(
+                    new CustomEvent("save-success-fly", {
+                      detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+                    })
+                  );
+                  setConfirmingUnlock(false);
+                  onToggleLocked();
+                }}
+                className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
+              >
+                <Check className="size-4" />
+              </button>
+            </PressableScale>
+          </div>
+        )}
+        <PressableScale className="flex-1">
+          <button
+            type="button"
+            disabled={locked}
+            onClick={() => setSheetOpen(true)}
+            className="flex h-11 w-full items-center justify-between gap-2 rounded-control border border-border bg-card px-3.5 text-body-airbnb font-semibold shadow-card-rest disabled:opacity-60"
+          >
+            <span className="truncate">{summaryLabel}</span>
+            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+          </button>
+        </PressableScale>
         <PressableScale className="shrink-0">
           <button
             type="button"
-            onClick={() => scrollByAmount(-120)}
-            aria-label={t.common.back}
-            className="flex size-7 items-center justify-center rounded-full text-muted-foreground"
-          >
-            <ChevronLeft className="size-4" />
-          </button>
-        </PressableScale>
-      )}
-      <div ref={scrollRef} onScroll={updateScrollState} className="scrollbar-none flex flex-1 gap-1.5 overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => onSelect(ALL_ASSETS)}
-          className={cn(
-            "shrink-0 rounded-full px-3 py-1.5 text-caption-airbnb font-semibold whitespace-nowrap",
-            assetFilter === ALL_ASSETS ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-          )}
-        >
-          {t.tickets.allAssetsLabel}
-        </button>
-        {assets.map((a) => (
-          <button
-            key={a.id}
-            type="button"
-            onClick={() => onSelect(a.id)}
+            onClick={handleLockButtonClick}
+            aria-label={locked ? t.tickets.assetLockUnlockAction : t.tickets.assetLockLockAction}
             className={cn(
-              "shrink-0 rounded-full px-3 py-1.5 text-caption-airbnb font-semibold whitespace-nowrap",
-              assetFilter === a.id ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+              "flex size-11 shrink-0 items-center justify-center rounded-control border shadow-card-rest",
+              locked ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground"
             )}
           >
-            {a.name}
-          </button>
-        ))}
-      </div>
-      {canScrollRight && (
-        <PressableScale className="shrink-0">
-          <button
-            type="button"
-            onClick={() => scrollByAmount(120)}
-            aria-label={t.common.next}
-            className="flex size-7 items-center justify-center rounded-full text-muted-foreground"
-          >
-            <ChevronRight className="size-4" />
+            {locked ? <Lock className="size-5" /> : <LockOpen className="size-5" />}
           </button>
         </PressableScale>
-      )}
-    </div>
+      </div>
+      <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)}>
+        <div className="flex flex-col pt-2">
+          <h2 className="mb-1 text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.tickets.assetFilterTitle}</h2>
+          {assets.map((a) => (
+            <div
+              key={a.id}
+              className="flex items-center justify-between gap-3 border-t border-border py-3 first:border-t-0"
+            >
+              <div className="flex min-w-0 items-center gap-2.5">
+                <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-control bg-muted">
+                  {a.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={a.photoUrl} alt="" className="size-full object-cover" />
+                  ) : (
+                    <AssetOrZoneIcon iconKey={a.iconKey} className="size-5 text-muted-foreground" />
+                  )}
+                </div>
+                <span className="truncate text-body-airbnb font-semibold">{a.name}</span>
+              </div>
+              <Switch checked={selectedAssetIds.includes(a.id)} onCheckedChange={() => toggleAsset(a.id)} />
+            </div>
+          ))}
+        </div>
+      </BottomSheet>
+    </>
   );
 }
 
@@ -1216,7 +1356,7 @@ function OrderCard({
   redeeming,
   onRedeem,
   t,
-  highlightAssetId,
+  selectedAssetIds,
   printAvailable,
   onPrint,
   ticketsAccess,
@@ -1232,12 +1372,9 @@ function OrderCard({
   redeeming: string | null;
   onRedeem: (orderId: string, ticketId: string) => void;
   t: ReturnType<typeof useI18n>;
-  // "Я стою на Карусели" (docs/spec/10-tickets.md, "PWA оператора": "фильтр
-  // по активу... в карточках заказов чужие билеты приглушены, свои —
-  // первыми") — личная настройка вкладки, не список-фильтр: заказ целиком
-  // остаётся видимым, меняется только порядок и приглушение билетов ВНУТРИ
-  // карточки.
-  highlightAssetId: string | null;
+  // Замок по активам (запрос пользователя 2026-07-22) — билеты активов вне
+  // этого списка не рендерятся вовсе, не просто приглушаются.
+  selectedAssetIds: string[];
   // "Допечатать потерянный" (docs/spec/10-tickets.md, "ПЕЧАТЬ") — печать из
   // карточки заказа во вкладке «Заказы», не только сразу после продажи. Один
   // документ на весь заказ (запрос пользователя 2026-07-21), кулдаун теперь
@@ -1272,9 +1409,7 @@ function OrderCard({
   // остаётся виден (status всё ещё "active" в БД, isOrderExpired вычисляет
   // на лету) — его ещё можно аннулировать балансом.
   const liveTickets = order.tickets.filter((tk) => tk.status === "active");
-  const tickets = highlightAssetId
-    ? [...liveTickets].sort((a, b) => Number(b.assetId === highlightAssetId) - Number(a.assetId === highlightAssetId))
-    : liveTickets;
+  const tickets = liveTickets.filter((tk) => selectedAssetIds.includes(tk.assetId));
   return (
     <div className="flex flex-col gap-3 rounded-card border border-border bg-card p-3.5">
       <div className="flex items-start justify-between gap-2">
@@ -1320,15 +1455,8 @@ function OrderCard({
           // "истёк" и на ticketRedemptionEnabled.
           const canVoidTicket = canVoid && tk.status === "active";
           const asset = zone.assets.find((a) => a.id === tk.assetId);
-          const dimmed = highlightAssetId !== null && tk.assetId !== highlightAssetId;
           return (
-            <div
-              key={tk.id}
-              className={cn(
-                "relative flex items-center justify-between gap-2 rounded-control bg-muted px-3 py-2",
-                dimmed && "opacity-40"
-              )}
-            >
+            <div key={tk.id} className="relative flex items-center justify-between gap-2 rounded-control bg-muted px-3 py-2">
               <div className="min-w-0">
                 <p className="truncate text-body-airbnb font-semibold">
                   {asset?.name ?? ""} · {tk.variantNameSnapshot}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Banknote, Check, ChevronLeft, CreditCard, Gift, MapPin, Pencil, Search, Wallet } from "lucide-react";
+import { Banknote, Check, ChevronLeft, CreditCard, Delete, Gift, MapPin, Pencil, Search, Trash2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Input } from "@/components/ui/input";
@@ -208,6 +208,11 @@ export function AbonementTopupFlow({
   const currency = useCurrency();
 
   const [phone, setPhone] = useState("");
+  // Код страны отдельно (запрос пользователя 2026-07-22) — нужен нумпаду
+  // ниже, чтобы дописывать/стирать цифры ПОСЛЕ префикса, не трогая его;
+  // PhoneInput сам вычисляет его из часового пояса тенанта и отдаёт наверх
+  // через onDialInfo, чтобы не запрашивать timezone второй раз.
+  const [dialCode, setDialCode] = useState("+7");
   const [searching, setSearching] = useState(false);
   // undefined — ещё не искали, null — искали, не нашли, объект — нашли.
   const [found, setFound] = useState<WalletCtx | null | undefined>(initialWallet ?? undefined);
@@ -303,6 +308,29 @@ export function AbonementTopupFlow({
       setSavingName(false);
     }
   }
+
+  // Нумпад поверх PhoneInput (запрос пользователя 2026-07-22, тот же приём,
+  // что у поиска заказа в Билетах) — дописывает/стирает цифры ПОСЛЕ кода
+  // страны, физическая клавиатура при этом продолжает работать как обычно
+  // (PhoneInput остаётся настоящим <input>), нумпад — просто ещё один способ
+  // ввода для тач-устройств, не единственный.
+  const dialDigits = dialCode.replace("+", "");
+  function tapPhoneDigit(digit: string) {
+    setPhone((v) => {
+      const local = v.startsWith(dialDigits) ? v.slice(dialDigits.length) : v;
+      return dialDigits + local + digit;
+    });
+  }
+  function backspacePhoneDigit() {
+    setPhone((v) => {
+      const local = v.startsWith(dialDigits) ? v.slice(dialDigits.length) : v;
+      return dialDigits + local.slice(0, -1);
+    });
+  }
+  function clearPhoneLocal() {
+    setPhone(dialDigits);
+  }
+  const phoneLocal = phone.startsWith(dialDigits) ? phone.slice(dialDigits.length) : phone;
 
   function handleSearch() {
     if (!phone.trim() || searching) return;
@@ -849,9 +877,58 @@ export function AbonementTopupFlow({
               timezoneEndpoint={timezoneEndpoint}
               value={phone}
               onChange={setPhone}
+              onDialInfo={({ dialCode }) => setDialCode(dialCode)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               heightClassName="h-14"
+              sizeClassName="text-2xl font-extrabold tabular-nums"
             />
+          </div>
+          {/* Нумпад — дополнительный способ ввода для тач-устройств (запрос
+              пользователя 2026-07-22), не единственный: поле выше остаётся
+              настоящим input, с клавиатуры печатать можно и без нумпада. */}
+          <div className="grid grid-cols-3 gap-2">
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => (
+              <PressableScale key={k}>
+                <button
+                  type="button"
+                  onClick={() => tapPhoneDigit(k)}
+                  className="flex h-14 w-full items-center justify-center rounded-control border border-border bg-background text-xl font-bold tabular-nums shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] active:shadow-[0_1px_2px_rgba(0,0,0,.13),inset_0_1px_0_rgba(255,255,255,.13),inset_0_-1px_2px_rgba(0,0,0,.1)] dark:border-input dark:bg-input/30"
+                >
+                  {k}
+                </button>
+              </PressableScale>
+            ))}
+            <PressableScale>
+              <button
+                type="button"
+                disabled={!phoneLocal}
+                onClick={clearPhoneLocal}
+                aria-label={t.common.delete}
+                className="flex h-14 w-full items-center justify-center rounded-control border border-border bg-background text-muted-foreground shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] active:shadow-[0_1px_2px_rgba(0,0,0,.13),inset_0_1px_0_rgba(255,255,255,.13),inset_0_-1px_2px_rgba(0,0,0,.1)] disabled:opacity-40 dark:border-input dark:bg-input/30"
+              >
+                <Trash2 className="size-5" />
+              </button>
+            </PressableScale>
+            <PressableScale>
+              <button
+                type="button"
+                onClick={() => tapPhoneDigit("0")}
+                className="flex h-14 w-full items-center justify-center rounded-control border border-border bg-background text-xl font-bold tabular-nums shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] active:shadow-[0_1px_2px_rgba(0,0,0,.13),inset_0_1px_0_rgba(255,255,255,.13),inset_0_-1px_2px_rgba(0,0,0,.1)] dark:border-input dark:bg-input/30"
+              >
+                0
+              </button>
+            </PressableScale>
+            <PressableScale>
+              <button
+                type="button"
+                disabled={!phoneLocal}
+                onClick={backspacePhoneDigit}
+                aria-label={t.common.back}
+                className="flex h-14 w-full items-center justify-center rounded-control border border-border bg-background shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] active:shadow-[0_1px_2px_rgba(0,0,0,.13),inset_0_1px_0_rgba(255,255,255,.13),inset_0_-1px_2px_rgba(0,0,0,.1)] disabled:opacity-40 dark:border-input dark:bg-input/30"
+              >
+                <Delete className="size-5" />
+              </button>
+            </PressableScale>
           </div>
           <PressableScale>
             <Button
