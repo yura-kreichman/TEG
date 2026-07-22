@@ -130,7 +130,11 @@
     "systemReceiptPreviewLine2": "Kwota",
     "systemReceiptPreviewTotal": "Razem",
     "systemModulesTitle": "Moduły",
-    "systemModulesHint": "Wyłącz to, czego nie używasz — upraszcza interfejs."
+    "systemModulesHint": "Wyłącz to, czego nie używasz — upraszcza interfejs.",
+    "systemSilentPrintTitle": "Ciche drukowanie (Windows)",
+    "systemSilentPrintHint": "Aplikacja pokazuje teraz za każdym razem systemowe okno drukowania. Pobierz i uruchom skrypt — utworzy osobny skrót na Pulpicie, który drukuje od razu, bez okna dialogowego. Po uruchomieniu plik skryptu można usunąć — nie jest już potrzebny.",
+    "systemSilentPrintDownloadButton": "Pobierz skrypt konfiguracyjny",
+    "systemSilentPrintConfirmButton": "Skonfigurowano — okno się nie pojawia"
   },
   "tasks": {
     "pickPointTitle": "Zadania",

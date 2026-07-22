@@ -130,7 +130,11 @@
     "systemReceiptPreviewLine2": "Маблағ",
     "systemReceiptPreviewTotal": "Ҳамагӣ",
     "systemModulesTitle": "Модулҳо",
-    "systemModulesHint": "Он чиро истифода намебаред, хомӯш кунед — интерфейсро содда мекунад."
+    "systemModulesHint": "Он чиро истифода намебаред, хомӯш кунед — интерфейсро содда мекунад.",
+    "systemSilentPrintTitle": "Чопи хомӯш (Windows)",
+    "systemSilentPrintHint": "Барнома ҳоло ҳар дафъа равзанаи чопи системаро нишон медиҳад. Скриптро боргирӣ ва иҷро кунед — он дар Мизи корӣ миёнбури алоҳида месозад, ки фавран, бе равзана чоп мекунад. Пас аз иҷро, файли скриптро нест кардан мумкин аст — он дигар лозим нест.",
+    "systemSilentPrintDownloadButton": "Боргирии скрипти танзим",
+    "systemSilentPrintConfirmButton": "Танзим шуд — равзана дигар намебарояд"
   },
   "tasks": {
     "pickPointTitle": "Вазифаҳо",

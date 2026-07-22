@@ -130,7 +130,11 @@
     "systemReceiptPreviewLine2": "Tutar",
     "systemReceiptPreviewTotal": "Toplam",
     "systemModulesTitle": "Modüller",
-    "systemModulesHint": "Kullanmadığınızı kapatın — arayüzü basitleştirir."
+    "systemModulesHint": "Kullanmadığınızı kapatın — arayüzü basitleştirir.",
+    "systemSilentPrintTitle": "Sessiz yazdırma (Windows)",
+    "systemSilentPrintHint": "Uygulama şu anda her seferinde sistem yazdırma penceresini gösteriyor. Betiği indirip çalıştırın — Masaüstünde, hiçbir pencere göstermeden anında yazdıran ayrı bir kısayol oluşturacak. Çalıştırdıktan sonra betik dosyasını silebilirsiniz — artık gerekli değil.",
+    "systemSilentPrintDownloadButton": "Kurulum betiğini indir",
+    "systemSilentPrintConfirmButton": "Kuruldu — pencere artık görünmüyor"
   },
   "tasks": {
     "pickPointTitle": "Görevler",

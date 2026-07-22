@@ -130,7 +130,11 @@
     "systemReceiptPreviewLine2": "Summa",
     "systemReceiptPreviewTotal": "Jami",
     "systemModulesTitle": "Modullar",
-    "systemModulesHint": "Foydalanmaydiganingizni oʻchiring — interfeysni soddalashtiradi."
+    "systemModulesHint": "Foydalanmaydiganingizni oʻchiring — interfeysni soddalashtiradi.",
+    "systemSilentPrintTitle": "Ovozsiz chop etish (Windows)",
+    "systemSilentPrintHint": "Ilova hozir har safar tizim chop etish oynasini ko'rsatadi. Skriptni yuklab oling va ishga tushiring — u Ish stolida alohida yorliq yaratadi, u darhol, oynasiz chop etadi. Ishga tushirgandan keyin skript faylini o'chirish mumkin — u endi kerak emas.",
+    "systemSilentPrintDownloadButton": "Sozlash skriptini yuklab olish",
+    "systemSilentPrintConfirmButton": "Sozlandi — oyna endi chiqmaydi"
   },
   "tasks": {
     "pickPointTitle": "Vazifalar",

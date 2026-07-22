@@ -11,6 +11,7 @@ import type { Dictionary } from "@/lib/i18n";
 import { OwnerShell } from "@/components/owner-shell";
 import { useOwnerHasPrinterLocal } from "@/hooks/use-print";
 import { PrintButton } from "@/components/print/print-button";
+import { SilentPrintSetupCard } from "@/components/silent-print-setup";
 import { buildReceiptHtml, type PrintDocumentData } from "@/lib/print/receipt-document";
 import { cn } from "@/lib/utils";
 
@@ -271,6 +272,11 @@ export default function SystemSettingsPage() {
                     </div>
                     <Switch checked={ownerHasPrinter} onCheckedChange={setOwnerHasPrinter} className="shrink-0" />
                   </div>
+
+                  {/* Тихая печать без диалога Windows (запрос пользователя
+                      2026-07-22) — сама себя показывает/прячет по
+                      applicability (см. компонент), тут просто место. */}
+                  <SilentPrintSetupCard />
 
                   {/* Шапка — что показывать (запрос пользователя 2026-07-20).
                       Сами лого/название переиспользуют Tenant.logoUrl/name,

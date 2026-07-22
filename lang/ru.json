@@ -130,7 +130,11 @@
     "systemReceiptPreviewLine2": "Сумма",
     "systemReceiptPreviewTotal": "Итого",
     "systemModulesTitle": "Модули",
-    "systemModulesHint": "Отключайте то, чем не пользуетесь — упрощает интерфейс."
+    "systemModulesHint": "Отключайте то, чем не пользуетесь — упрощает интерфейс.",
+    "systemSilentPrintTitle": "Тихая печать (Windows)",
+    "systemSilentPrintHint": "Приложение сейчас каждый раз показывает системное окно печати. Скачайте и запустите скрипт — он создаст отдельный ярлык на Рабочем столе, который печатает сразу, без диалога. После запуска сам файл скрипта можно удалить — он больше не нужен.",
+    "systemSilentPrintDownloadButton": "Скачать скрипт настройки",
+    "systemSilentPrintConfirmButton": "Настроено — диалог не появляется"
   },
   "tasks": {
     "pickPointTitle": "Задачи",

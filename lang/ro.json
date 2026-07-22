@@ -130,7 +130,11 @@
     "systemReceiptPreviewLine2": "Sumă",
     "systemReceiptPreviewTotal": "Total",
     "systemModulesTitle": "Module",
-    "systemModulesHint": "Dezactivați ce nu folosiți — simplifică interfața."
+    "systemModulesHint": "Dezactivați ce nu folosiți — simplifică interfața.",
+    "systemSilentPrintTitle": "Tipărire silențioasă (Windows)",
+    "systemSilentPrintHint": "Aplicația afișează acum de fiecare dată fereastra de sistem pentru tipărire. Descărcați și rulați scriptul — va crea o comandă rapidă separată pe Desktop, care tipărește instant, fără dialog. După rulare, fișierul scriptului poate fi șters — nu mai este necesar.",
+    "systemSilentPrintDownloadButton": "Descarcă scriptul de configurare",
+    "systemSilentPrintConfirmButton": "Configurat — dialogul nu mai apare"
   },
   "tasks": {
     "pickPointTitle": "Sarcini",

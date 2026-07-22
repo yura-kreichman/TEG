@@ -130,7 +130,11 @@
     "systemReceiptPreviewLine2": "Сумма",
     "systemReceiptPreviewTotal": "Баары болуп",
     "systemModulesTitle": "Модулдар",
-    "systemModulesHint": "Пайдаланбаганыңызды өчүрүңүз — интерфейсти жөнөкөйлөтөт."
+    "systemModulesHint": "Пайдаланбаганыңызды өчүрүңүз — интерфейсти жөнөкөйлөтөт.",
+    "systemSilentPrintTitle": "Үнсүз басып чыгаруу (Windows)",
+    "systemSilentPrintHint": "Колдонмо азыр ар жолу системалык басып чыгаруу терезесин көрсөтөт. Скриптти жүктөп алып иштетиңиз — ал Иш столунда өзүнчө ярлык түзөт, ал дароо, терезесиз басып чыгарат. Иштеткенден кийин скрипт файлын өчүрүүгө болот — ал эми керек эмес.",
+    "systemSilentPrintDownloadButton": "Тууралоо скриптин жүктөө",
+    "systemSilentPrintConfirmButton": "Туураланды — терезе эми чыкпайт"
   },
   "tasks": {
     "pickPointTitle": "Тапшырмалар",

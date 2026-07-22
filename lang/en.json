@@ -130,7 +130,11 @@
     "systemReceiptPreviewLine2": "Amount",
     "systemReceiptPreviewTotal": "Total",
     "systemModulesTitle": "Modules",
-    "systemModulesHint": "Turn off what you don’t use — simplifies the interface."
+    "systemModulesHint": "Turn off what you don’t use — simplifies the interface.",
+    "systemSilentPrintTitle": "Silent printing (Windows)",
+    "systemSilentPrintHint": "The app currently shows the system print dialog every time. Download and run the script — it creates a separate Desktop shortcut that prints instantly, with no dialog. Once it's run, you can delete the script file — it's no longer needed.",
+    "systemSilentPrintDownloadButton": "Download setup script",
+    "systemSilentPrintConfirmButton": "Set up — dialog no longer appears"
   },
   "tasks": {
     "pickPointTitle": "Tasks",

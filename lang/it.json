@@ -130,7 +130,11 @@
     "systemReceiptPreviewLine2": "Importo",
     "systemReceiptPreviewTotal": "Totale",
     "systemModulesTitle": "Moduli",
-    "systemModulesHint": "Disattiva ciò che non usi — semplifica l’interfaccia."
+    "systemModulesHint": "Disattiva ciò che non usi — semplifica l’interfaccia.",
+    "systemSilentPrintTitle": "Stampa silenziosa (Windows)",
+    "systemSilentPrintHint": "L'app mostra ora ogni volta la finestra di stampa di sistema. Scarica ed esegui lo script — creerà un collegamento separato sul Desktop che stampa subito, senza finestra di dialogo. Dopo l'esecuzione, il file dello script può essere eliminato — non serve più.",
+    "systemSilentPrintDownloadButton": "Scarica script di configurazione",
+    "systemSilentPrintConfirmButton": "Configurato — la finestra non appare più"
   },
   "tasks": {
     "pickPointTitle": "Attività",
