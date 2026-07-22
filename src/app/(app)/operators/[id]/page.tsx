@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2, UserRoundPen } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -583,7 +583,12 @@ export default function OperatorCardPage() {
                           <div className="flex items-center justify-between">
                             <span className="flex items-center gap-1.5 text-body-airbnb font-semibold">
                               {formatShiftDate(item.shift.startAt)}
-                              {item.shift.edited && <UserRoundPen className="size-3 text-muted-foreground" />}
+                              {/* Corona — эта запись правится ТОЛЬКО Владельцем (экран
+                                  в кабинете владельца, у Сотрудника нет своего интерфейса
+                                  правки смен), тот же смысл, что и везде в проекте, где
+                                  показывается "кто выполнил действие" (запрос пользователя
+                                  2026-07-22: "везде... иконка crown вместо слова Владелец"). */}
+                              {item.shift.edited && <Crown className="size-3 text-success" />}
                               {item.shift.requiresEdit && (
                                 <span className="text-caption-airbnb font-semibold text-destructive">
                                   {t.operatorApp.workTime.requiresEditBadge}

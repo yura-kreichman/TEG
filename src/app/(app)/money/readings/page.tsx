@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, FileText, Gift, Info, MapPin, Minus, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown, FileText, Gift, Info, MapPin, Minus, Pencil, Plus, Trash2 } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
@@ -835,7 +835,8 @@ export default function ReadingsCalendarPage() {
                               <span className="text-body-airbnb font-bold">{formatReadableDate(selectedDate)}</span>
                               <span className="text-caption-airbnb tabular-nums">{formatTime(card.submittedAt)}</span>
                               {card.edited && (
-                                <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
+                                  <Crown className="size-3 shrink-0 text-success" />
                                   {t.readings.editedByOwner}
                                 </span>
                               )}

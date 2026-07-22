@@ -16,6 +16,7 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { Money } from "@/components/money";
 import { PhoneInput } from "@/components/phone-input";
 import { AbonementTopupFlow, formatTenure } from "@/components/abonement-topup-flow";
+import { PerformedByTag } from "@/components/performed-by-tag";
 import { PrintButton } from "@/components/print/print-button";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
@@ -248,14 +249,17 @@ export default function AbonementWalletPage() {
                         {historyTypeLabel(h)}
                         {h.planName ? ` · ${h.planName}` : ""}
                       </p>
-                      <p className="text-caption-airbnb text-muted-foreground">
-                        {new Date(h.occurredAt).toLocaleString()}
-                        {h.pointName ? ` · ${h.pointName}` : ""}
-                        {h.performedByOwner
-                          ? ` · ${t.common.ownerLabel}`
-                          : h.performedBy
-                            ? ` · ${h.performedBy}`
-                            : ""}
+                      <p className="flex flex-wrap items-center gap-x-1 text-caption-airbnb text-muted-foreground">
+                        <span>
+                          {new Date(h.occurredAt).toLocaleString()}
+                          {h.pointName ? ` · ${h.pointName}` : ""}
+                        </span>
+                        {(h.performedByOwner || h.performedBy) && (
+                          <>
+                            <span>·</span>
+                            <PerformedByTag name={h.performedBy} isOwner={h.performedByOwner} avatarUrl={null} iconKey={null} />
+                          </>
+                        )}
                       </p>
                     </div>
                     <span

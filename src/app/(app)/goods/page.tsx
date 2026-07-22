@@ -14,10 +14,10 @@ import {
   Settings2,
   X,
   ClipboardList,
-  Crown,
   Check,
 } from "lucide-react";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
+import { PerformedByTag } from "@/components/performed-by-tag";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -137,56 +137,6 @@ interface ReconciliationEntry {
   occurredAt: string;
 }
 
-// Мини-аватар сотрудника в списках продаж/ревизий/сверок (запрос
-// пользователя 2026-07-19: "фото/иконку сотрудников") — тот же приём
-// приоритета, что у крупной карточки оператора в /reports/[pointId]
-// (фото → выбранная иконка → первая буква имени), просто в компактном
-// размере под однострочные записи. isOwner (действие выполнено Владельцем,
-// не Сотрудником) — реальный баг был показан email вместо имени (запрос
-// пользователя 2026-07-19: "должно быть написано 'Владелец'"), теперь
-// отдельная иконка + t.common.ownerLabel, без обращения к email.
-function PerformedByTag({
-  name,
-  isOwner,
-  avatarUrl,
-  iconKey,
-  t,
-}: {
-  name: string | null;
-  isOwner: boolean;
-  avatarUrl: string | null;
-  iconKey: string | null;
-  t: ReturnType<typeof useI18n>;
-}) {
-  if (isOwner) {
-    return (
-      <span className="inline-flex items-center gap-1">
-        <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/10">
-          <Crown className="size-3 text-primary" />
-        </span>
-        {t.common.ownerLabel}
-      </span>
-    );
-  }
-  if (!name) return null;
-  return (
-    <span className="inline-flex items-center gap-1">
-      {avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={avatarUrl} alt="" className="size-4 shrink-0 rounded-full object-cover" />
-      ) : iconKey ? (
-        <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/10">
-          <AssetOrZoneIcon iconKey={iconKey} className="size-3" />
-        </span>
-      ) : (
-        <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-[0.5625rem] font-bold text-primary-foreground">
-          {name.slice(0, 1).toUpperCase()}
-        </span>
-      )}
-      {name}
-    </span>
-  );
-}
 
 type PeriodGranularity = "day" | "week" | "month" | "year";
 
@@ -1328,7 +1278,7 @@ export default function GoodsCabinetPage() {
                     revisions.map((r) => (
                       <SpringCard key={r.id} hover={false} animate={false} className="flex flex-col gap-2">
                         <div className="flex items-center justify-between text-caption-airbnb text-muted-foreground">
-                          <PerformedByTag name={r.performedBy} isOwner={r.performedByOwner} avatarUrl={r.performedByAvatarUrl} iconKey={r.performedByIconKey} t={t} />
+                          <PerformedByTag name={r.performedBy} isOwner={r.performedByOwner} avatarUrl={r.performedByAvatarUrl} iconKey={r.performedByIconKey} />
                           <span>{new Date(r.occurredAt).toLocaleString()}</span>
                         </div>
                         {r.groups.map((group, gi) => (
@@ -1542,7 +1492,7 @@ export default function GoodsCabinetPage() {
                         <div key={r.id} className="flex items-center justify-between gap-2 text-caption-airbnb tabular-nums">
                           <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
                             <span className="shrink-0">{new Date(r.occurredAt).toLocaleString()}</span>
-                            <PerformedByTag name={r.performedBy} isOwner={r.performedByOwner} avatarUrl={r.performedByAvatarUrl} iconKey={r.performedByIconKey} t={t} />
+                            <PerformedByTag name={r.performedBy} isOwner={r.performedByOwner} avatarUrl={r.performedByAvatarUrl} iconKey={r.performedByIconKey} />
                           </span>
                           <span className="flex shrink-0 items-center gap-2">
                             <span className="inline-flex items-center gap-1">
@@ -1722,7 +1672,7 @@ export default function GoodsCabinetPage() {
                       ) : (
                         (() => {
                           const op = operators.find((o) => o.id === salesOperatorFilter);
-                          return op ? <PerformedByTag name={op.name} isOwner={false} avatarUrl={op.avatarUrl} iconKey={op.iconKey} t={t} /> : null;
+                          return op ? <PerformedByTag name={op.name} isOwner={false} avatarUrl={op.avatarUrl} iconKey={op.iconKey} /> : null;
                         })()
                       )}
                     </SelectValue>
@@ -1731,7 +1681,7 @@ export default function GoodsCabinetPage() {
                     <SelectItem value="all">{t.goods.allOperatorsLabel}</SelectItem>
                     {operators.map((o) => (
                       <SelectItem key={o.id} value={o.id}>
-                        <PerformedByTag name={o.name} isOwner={false} avatarUrl={o.avatarUrl} iconKey={o.iconKey} t={t} />
+                        <PerformedByTag name={o.name} isOwner={false} avatarUrl={o.avatarUrl} iconKey={o.iconKey} />
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1871,7 +1821,7 @@ export default function GoodsCabinetPage() {
                           {(s.performedBy || s.performedByOwner) && (
                             <span className="inline-flex items-center gap-1">
                               ·
-                              <PerformedByTag name={s.performedBy} isOwner={s.performedByOwner} avatarUrl={s.performedByAvatarUrl} iconKey={s.performedByIconKey} t={t} />
+                              <PerformedByTag name={s.performedBy} isOwner={s.performedByOwner} avatarUrl={s.performedByAvatarUrl} iconKey={s.performedByIconKey} />
                             </span>
                           )}
                         </p>
