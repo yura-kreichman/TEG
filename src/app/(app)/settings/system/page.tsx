@@ -155,9 +155,18 @@ export default function SystemSettingsPage() {
     });
   }
 
+  // Абсолютный URL, не относительный путь из БД (запрос пользователя
+  // 2026-07-22: "не отображается логотип" — реальный баг, найден на
+  // конкретной квитанции: <iframe srcDoc> ненадёжно резолвит "/uploads/..."
+  // относительно происхождения родительской страницы в изолированном
+  // srcdoc-документе, зависит от браузера. Сама печать (openPrintDocument)
+  // этой проблемы не имеет — там нет вложенного документа вовсе, только
+  // превью здесь строится через srcDoc.
+  const absoluteLogoUrl =
+    logoUrl && typeof window !== "undefined" ? `${window.location.origin}${logoUrl}` : logoUrl;
   const previewHtml = buildReceiptHtml(samplePrintData(t), {
     tenantName,
-    logoUrl,
+    logoUrl: absoluteLogoUrl,
     showLogo,
     showTenantName,
     compactHeader,
