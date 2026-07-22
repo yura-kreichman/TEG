@@ -58,3 +58,8 @@ next-env.d.ts
 /temp apps/
 /FluentCart/
 /Progressify/
+
+# nightly Postgres dumps (deploy/backup-db.sh) — live inside the deployed
+# checkout on purpose so ISPmanager's existing site file-backup sweeps them
+# up automatically; never meant to be committed
+/db-backups/
