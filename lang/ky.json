@@ -793,6 +793,7 @@
     "receiptTitle": "Баланс көчүрмөсү",
     "printReceiptButton": "Көчүрмөнү басып чыгаруу",
     "telegramBalanceButton": "Telegram балансы",
+    "telegramConnectSheetTitle": "Telegram туташтыруу",
     "telegramLinkedLabel": "Telegram туташты",
     "broadcastButton": "Жалпы билдирүү",
     "broadcastHint": "Билдирүүнү Telegram ботун туташтырган кардарлар алышат.",

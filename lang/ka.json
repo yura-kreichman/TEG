@@ -793,6 +793,7 @@
     "receiptTitle": "ბალანსის ამონაწერი",
     "printReceiptButton": "ამონაწერის დაბეჭდვა",
     "telegramBalanceButton": "Telegram ბალანსი",
+    "telegramConnectSheetTitle": "Telegram-ის დაკავშირება",
     "telegramLinkedLabel": "Telegram დაკავშირებულია",
     "broadcastButton": "მასობრივი შეტყობინება",
     "broadcastHint": "შეტყობინებას მიიღებენ კლიენტები, რომლებმაც დააკავშირეს Telegram ბოტი.",

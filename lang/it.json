@@ -793,6 +793,7 @@
     "receiptTitle": "Estratto conto",
     "printReceiptButton": "Stampa estratto",
     "telegramBalanceButton": "Saldo su Telegram",
+    "telegramConnectSheetTitle": "Collega Telegram",
     "telegramLinkedLabel": "Telegram collegato",
     "broadcastButton": "Messaggio broadcast",
     "broadcastHint": "Il messaggio verrà inviato ai clienti che hanno collegato il bot Telegram.",

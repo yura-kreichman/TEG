@@ -793,6 +793,7 @@
     "receiptTitle": "Extras de sold",
     "printReceiptButton": "Imprimă extrasul",
     "telegramBalanceButton": "Sold în Telegram",
+    "telegramConnectSheetTitle": "Conectează Telegram",
     "telegramLinkedLabel": "Telegram conectat",
     "broadcastButton": "Difuzare",
     "broadcastHint": "Mesajul va fi trimis clienților care au conectat botul Telegram.",

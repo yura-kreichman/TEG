@@ -793,6 +793,7 @@
     "receiptTitle": "Выписка баланса",
     "printReceiptButton": "Печать выписки",
     "telegramBalanceButton": "Баланс в Telegram",
+    "telegramConnectSheetTitle": "Подключить Telegram",
     "telegramLinkedLabel": "Подключил Telegram",
     "broadcastButton": "Рассылка",
     "broadcastHint": "Сообщение получат клиенты, подключившие Telegram-бота.",

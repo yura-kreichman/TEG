@@ -793,6 +793,7 @@
     "receiptTitle": "Balance statement",
     "printReceiptButton": "Print statement",
     "telegramBalanceButton": "Telegram balance",
+    "telegramConnectSheetTitle": "Connect Telegram",
     "telegramLinkedLabel": "Connected Telegram",
     "broadcastButton": "Broadcast",
     "broadcastHint": "Sent to clients who connected the Telegram bot.",

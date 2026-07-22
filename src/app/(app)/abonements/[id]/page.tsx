@@ -330,7 +330,7 @@ export default function AbonementWalletPage() {
         <InstructionQrSheet
           open={qrOpen}
           onClose={() => setQrOpen(false)}
-          title={t.abonements.telegramBalanceButton}
+          title={t.abonements.telegramConnectSheetTitle}
           url={wallet.telegramBalanceLink}
         />
       )}

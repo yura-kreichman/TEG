@@ -793,6 +793,7 @@
     "receiptTitle": "Balans ko'chirmasi",
     "printReceiptButton": "Ko'chirmani chop etish",
     "telegramBalanceButton": "Telegram balansi",
+    "telegramConnectSheetTitle": "Telegramni ulash",
     "telegramLinkedLabel": "Telegram ulangan",
     "broadcastButton": "Ommaviy xabar",
     "broadcastHint": "Xabar Telegram botini ulagan mijozlarga yuboriladi.",

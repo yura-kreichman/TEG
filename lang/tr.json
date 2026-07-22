@@ -793,6 +793,7 @@
     "receiptTitle": "Bakiye ekstresi",
     "printReceiptButton": "Ekstreyi yazdır",
     "telegramBalanceButton": "Telegram bakiyesi",
+    "telegramConnectSheetTitle": "Telegram bağla",
     "telegramLinkedLabel": "Telegram bağlı",
     "broadcastButton": "Toplu mesaj",
     "broadcastHint": "Mesajı Telegram botunu bağlayan müşteriler alacak.",

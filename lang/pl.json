@@ -793,6 +793,7 @@
     "receiptTitle": "Wyciąg z salda",
     "printReceiptButton": "Drukuj wyciąg",
     "telegramBalanceButton": "Saldo w Telegramie",
+    "telegramConnectSheetTitle": "Połącz Telegram",
     "telegramLinkedLabel": "Połączono z Telegramem",
     "broadcastButton": "Wysyłka",
     "broadcastHint": "Wiadomość otrzymają klienci, którzy podłączyli bota Telegram.",
