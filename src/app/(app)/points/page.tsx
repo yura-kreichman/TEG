@@ -477,11 +477,13 @@ export default function PointsPage() {
                               <span>
                                 {point.zonesCount} {t.points.zonesSuffix}
                               </span>
+                              {/* Не кнопка (запрос пользователя 2026-07-22) —
+                                  переключение только через ActionSheetItem
+                                  в кебаб-меню точки ниже. */}
                               <ActiveStatusIcon
                                 active={point.active}
                                 activeLabel={t.points.pointActiveChip}
                                 inactiveLabel={t.points.pointInactiveChip}
-                                onToggle={() => togglePointActive(point)}
                               />
                             </div>
                           </div>

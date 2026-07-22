@@ -868,13 +868,15 @@ export default function ZoneDetailPage() {
                     </StatusChip>
                     {/* Иконка статуса видна всегда, не только когда неактивна
                         (запрос пользователя 2026-07-22: единообразная
-                        иконка активности по всему проекту) — кликабельна,
-                        переключает активность зоны напрямую. */}
+                        иконка активности по всему проекту) — не кнопка
+                        (запрос пользователя того же дня, отмена более
+                        раннего решения: "пусть это делается из кебаб-меню"),
+                        переключение — только через ActionSheetItem в кебабе
+                        зоны ниже. */}
                     <ActiveStatusIcon
                       active={zone.active}
                       activeLabel={t.zonesList.zoneActiveChip}
                       inactiveLabel={t.zonesList.zoneInactiveChip}
-                      onToggle={toggleZoneActive}
                     />
                   </div>
                 </div>
@@ -1066,14 +1068,13 @@ export default function ZoneDetailPage() {
                   <div>
                     <div className="flex items-center gap-1.5">
                       <div className="text-card-title">{asset.name}</div>
-                      {/* Быстрая активация/деактивация прямо в строке
-                          (запрос пользователя 2026-07-22) — тот же
-                          компонент, что у Точки/Зоны/Сотрудника. */}
+                      {/* Не кнопка (запрос пользователя 2026-07-22: отмена
+                          более раннего решения — переключение только через
+                          ActionSheetItem в кебабе актива). */}
                       <ActiveStatusIcon
                         active={asset.active}
                         activeLabel={t.zoneDetail.assetActiveChip}
                         inactiveLabel={t.zoneDetail.assetInactiveChip}
-                        onToggle={() => toggleAssetActiveFor(asset)}
                       />
                     </div>
                     {zone.accountingMode === "counters" && asset.lastReadings.length > 0 && (

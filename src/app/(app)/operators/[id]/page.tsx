@@ -229,23 +229,6 @@ export default function OperatorCardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [granularity, anchor]);
 
-  // Активация/деактивация прямо по тапу на иконке статуса в шапке (запрос
-  // пользователя 2026-07-22) — тот же путь, что уже у переключателя в
-  // operators/[id]/settings/page.tsx (handleToggleActive).
-  async function toggleActive() {
-    if (!profile) return;
-    if (profile.active) {
-      await fetch(`/api/operators/${params.id}/deactivate`, { method: "POST" });
-    } else {
-      await fetch(`/api/operators/${params.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ active: true }),
-      });
-    }
-    await loadAll();
-  }
-
   function isCurrentPeriod() {
     return isCurrentPeriodFor(granularity, anchor);
   }
@@ -455,11 +438,13 @@ export default function OperatorCardPage() {
               <div className="min-w-0 grow">
                 <h1 className="text-card-title">{profile.name}</h1>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  {/* Не кнопка (запрос пользователя 2026-07-22) —
+                      активация/деактивация только через переключатель на
+                      странице настроек сотрудника. */}
                   <ActiveStatusIcon
                     active={profile.active}
                     activeLabel={t.operators.active}
                     inactiveLabel={t.operators.inactive}
-                    onToggle={toggleActive}
                   />
                 </div>
               </div>

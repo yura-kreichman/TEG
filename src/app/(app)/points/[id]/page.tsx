@@ -16,14 +16,11 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconPicker } from "@/components/icon-picker";
 import { StatusChip } from "@/components/status-chip";
 import { ActiveStatusIcon } from "@/components/active-status-icon";
-import { ActionToast } from "@/components/action-toast";
 import { TileIcon } from "@/components/tile-icon";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 import { ZONE_ACCOUNTING_MODES, isStaysZone, isTicketsZone, type ZoneAccountingMode } from "@/lib/results-calc";
 import { useSavePulse } from "@/hooks/use-save-pulse";
-import { useActionToast } from "@/hooks/use-action-toast";
-import { playSaveDing } from "@/lib/beep";
 import type { Dictionary } from "@/lib/i18n";
 
 interface ZoneInfo {
@@ -77,7 +74,6 @@ export default function PointDetailPage() {
   // тоже "серые", даже если у каждой отдельно zone.active === true; и
   // оператору такие зоны в любом случае не попадут (см. requireOperator).
   const [pointActive, setPointActive] = useState(true);
-  const { message: toastMessage, variant: toastVariant, flash: flashToast } = useActionToast();
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const [iconKey, setIconKey] = useState<string | null>(null);
@@ -97,21 +93,6 @@ export default function PointDetailPage() {
     setPointName(data.pointName ?? "");
     setPointActive(data.pointActive ?? true);
     setChecking(false);
-  }
-
-  // Активация/деактивация прямо по тапу на иконке статуса в списке (запрос
-  // пользователя 2026-07-22) — тот же роут, что и toggleZoneActive в
-  // zones/[id]/page.tsx.
-  async function toggleZoneActive(zone: ZoneInfo) {
-    const nextActive = !zone.active;
-    await fetch(`/api/zones/${zone.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: nextActive }),
-    });
-    await loadZones();
-    playSaveDing();
-    flashToast(nextActive ? t.zonesList.zoneActiveChip : t.zonesList.zoneInactiveChip, nextActive ? "success" : "error");
   }
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -155,7 +136,6 @@ export default function PointDetailPage() {
 
   return (
     <OwnerShell>
-      <ActionToast message={toastMessage} variant={toastVariant} />
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-1">
           <Link href="/points" className="mb-2 w-fit text-body-airbnb font-semibold text-primary">
@@ -194,16 +174,13 @@ export default function PointDetailPage() {
                           <div className="min-w-0 grow">
                             <div className="flex items-center gap-1.5">
                               <div className="text-card-title">{zone.name}</div>
-                              {/* Кликабельна, только если сама точка активна
-                                  (запрос пользователя 2026-07-22) — если точка
-                                  выключена, переключение отдельной зоны
-                                  ничего не изменит визуально (та же логика,
-                                  что уже даёт этой карточке grayscale ниже). */}
+                              {/* Не кнопка (запрос пользователя 2026-07-22) —
+                                  переключение только в кебаб-меню на самой
+                                  странице зоны, куда ведёт вся карточка. */}
                               <ActiveStatusIcon
                                 active={pointActive && zone.active}
                                 activeLabel={t.zonesList.zoneActiveChip}
                                 inactiveLabel={t.zonesList.zoneInactiveChip}
-                                onToggle={pointActive ? () => toggleZoneActive(zone) : undefined}
                               />
                             </div>
                             <p className="text-caption-airbnb">

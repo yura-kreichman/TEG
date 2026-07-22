@@ -87,24 +87,6 @@ export default function OperatorsPage() {
     await loadOperators();
   }
 
-  // Активация/деактивация прямо по тапу на иконке статуса (запрос
-  // пользователя 2026-07-22) — тот же путь, что уже был у переключателя в
-  // operators/[id]/settings/page.tsx (handleToggleActive): деактивация —
-  // отдельный роут (там же и будущие проверки вроде открытой смены),
-  // активация — обычный PATCH active:true.
-  async function toggleOperatorActive(operator: OperatorInfo) {
-    if (operator.active) {
-      await fetch(`/api/operators/${operator.id}/deactivate`, { method: "POST" });
-    } else {
-      await fetch(`/api/operators/${operator.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ active: true }),
-      });
-    }
-    await loadOperators();
-  }
-
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
     setError(null);
@@ -194,11 +176,13 @@ export default function OperatorsPage() {
                 </div>
                 <div className="flex min-w-0 grow flex-wrap items-center gap-1.5">
                   <span className="text-card-title">{operator.name}</span>
+                  {/* Не кнопка (запрос пользователя 2026-07-22) —
+                      активация/деактивация только через переключатель на
+                      странице настроек сотрудника. */}
                   <ActiveStatusIcon
                     active={operator.active}
                     activeLabel={t.operators.active}
                     inactiveLabel={t.operators.inactive}
-                    onToggle={() => toggleOperatorActive(operator)}
                   />
                 </div>
                 {showMove && (
