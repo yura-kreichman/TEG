@@ -3,7 +3,21 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Crown, FileText, Gift, Info, MapPin, Minus, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Crown,
+  FileText,
+  Gift,
+  Info,
+  MapPin,
+  Minus,
+  Pencil,
+  Plus,
+  RefreshCcw,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
@@ -691,7 +705,10 @@ export default function ReadingsCalendarPage() {
                         быть виден (запрос пользователя 2026-07-19). */}
                     {cards.some(returnsApplicable) && (
                       <div className="flex items-center justify-between text-caption-airbnb">
-                        <span>{t.operatorApp.submit.returnsLabelShort}</span>
+                        <span className="flex items-center gap-1.5">
+                          <RefreshCcw className="size-3.5 shrink-0" />
+                          {t.operatorApp.submit.returnsLabelShort}
+                        </span>
                         <span className="text-foreground">{daySummary.returnsCount}</span>
                       </div>
                     )}
@@ -721,7 +738,12 @@ export default function ReadingsCalendarPage() {
                         2026-07-19: "Фактическая выручка и Выручка после
                         возвратов это одно и то же"). */}
                     <div className="flex items-center justify-between text-caption-airbnb">
-                      <span>{t.operatorApp.submit.difference}</span>
+                      <span className="flex items-center gap-1.5">
+                        {t.operatorApp.submit.difference}
+                        {daySummary.difference !== 0 && (
+                          <TriangleAlert className="size-3.5 shrink-0 text-warning" />
+                        )}
+                      </span>
                       <span
                         className={cn(
                           "font-bold",
@@ -1041,6 +1063,7 @@ export default function ReadingsCalendarPage() {
                         <div className="mt-3 flex flex-col gap-1 border-t border-border pt-3 tabular-nums">
                           <div className="flex items-center justify-between text-caption-airbnb">
                             <span className="flex items-center gap-1.5">
+                              <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
                               {t.operatorApp.submit.cashLabel}
                               {card.cashEditedBefore !== null && (
                                 <Info
@@ -1052,7 +1075,10 @@ export default function ReadingsCalendarPage() {
                             <span className="text-foreground"><Money value={card.cashAmount} /></span>
                           </div>
                           <div className="flex items-center justify-between text-caption-airbnb">
-                            <span>{t.operatorApp.submit.mobileLabel}</span>
+                            <span className="flex items-center gap-1.5">
+                              <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+                              {t.operatorApp.submit.mobileLabel}
+                            </span>
                             <span className="text-foreground"><Money value={card.mobileAmount} /></span>
                           </div>
                           {/* Справочно, не входит в Наличные/Безнал/Разницу выше —
@@ -1064,13 +1090,19 @@ export default function ReadingsCalendarPage() {
                               не пользовались. */}
                           {card.abonementAmount > 0 && (
                             <div className="flex items-center justify-between text-caption-airbnb">
-                              <span>{t.operatorApp.abonement.paymentLabel}</span>
+                              <span className="flex items-center gap-1.5">
+                                <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
+                                {t.operatorApp.abonement.paymentLabel}
+                              </span>
                               <span className="text-foreground"><Money value={card.abonementAmount} /></span>
                             </div>
                           )}
                           {returnsApplicable(card) && (
                           <div className="flex items-center justify-between text-caption-airbnb">
-                            <span>{t.operatorApp.submit.returnsLabel}</span>
+                            <span className="flex items-center gap-1.5">
+                              <RefreshCcw className="size-3.5 shrink-0" />
+                              {t.operatorApp.submit.returnsLabel}
+                            </span>
                             <span className="text-foreground">{card.returnsCount}</span>
                           </div>
                           )}
@@ -1112,7 +1144,12 @@ export default function ReadingsCalendarPage() {
                             </span>
                           </div>
                           <div className="flex items-center justify-between text-caption-airbnb">
-                            <span>{t.operatorApp.submit.difference}</span>
+                            <span className="flex items-center gap-1.5">
+                              {t.operatorApp.submit.difference}
+                              {card.difference !== 0 && (
+                                <TriangleAlert className="size-3.5 shrink-0 text-warning" />
+                              )}
+                            </span>
                             <span
                               className={cn(
                                 "font-bold",
@@ -1236,7 +1273,10 @@ export default function ReadingsCalendarPage() {
                   actionsFor.accountingMode !== "tickets" &&
                   !(actionsFor.accountingMode === "stays" || (actionsFor.accountingMode === "launches" && actionsFor.assets.length === 0)) && (
                   <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
-                    <p className="text-body-airbnb font-semibold">{t.operatorApp.submit.returnsLabel}</p>
+                    <p className="flex items-center gap-1.5 text-body-airbnb font-semibold">
+                      <RefreshCcw className="size-4 shrink-0" />
+                      {t.operatorApp.submit.returnsLabel}
+                    </p>
                     <div className="flex items-center overflow-hidden rounded-control border border-border">
                       <button
                         type="button"

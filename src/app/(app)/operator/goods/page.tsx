@@ -14,8 +14,10 @@ import {
   ShoppingBag,
   ShoppingCart,
   Trash2,
+  TriangleAlert,
   Wallet,
 } from "lucide-react";
+import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Input } from "@/components/ui/input";
@@ -734,20 +736,23 @@ export default function GoodsPage() {
                   </span>
                 </div>
                 <div className="flex min-w-0 flex-col items-end gap-0.5 pt-1 text-right text-caption-airbnb tabular-nums">
-                  <span>
+                  <span className="inline-flex items-center gap-1">
+                    <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
                     {t.operatorApp.submit.cashLabel}:{" "}
                     <span className="font-bold text-foreground">
                       <Money value={reconcilePending.cash} />
                     </span>
                   </span>
-                  <span>
+                  <span className="inline-flex items-center gap-1">
+                    <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
                     {t.operatorApp.submit.mobileLabel}:{" "}
                     <span className="font-bold text-foreground">
                       <Money value={reconcilePending.mobile} />
                     </span>
                   </span>
                   {reconcilePending.abonement > 0 && (
-                    <span>
+                    <span className="inline-flex items-center gap-1">
+                      <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
                       {t.operatorApp.abonement.paymentLabel}:{" "}
                       <span className="font-bold text-foreground">
                         <Money value={reconcilePending.abonement} />
@@ -760,7 +765,10 @@ export default function GoodsPage() {
               <div className="flex items-stretch gap-2">
                 <div className="flex flex-1 flex-col gap-3">
                   <div className="flex flex-col gap-1">
-                    <Label htmlFor="reconcileCash">{t.operatorApp.submit.cashLabel}</Label>
+                    <Label htmlFor="reconcileCash" className="flex items-center gap-1.5">
+                      <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+                      {t.operatorApp.submit.cashLabel}
+                    </Label>
                     <MoneyInput
                       id="reconcileCash"
                       autoFocus
@@ -772,7 +780,10 @@ export default function GoodsPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label htmlFor="reconcileMobile">{t.operatorApp.submit.mobileLabel}</Label>
+                    <Label htmlFor="reconcileMobile" className="flex items-center gap-1.5">
+                      <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+                      {t.operatorApp.submit.mobileLabel}
+                    </Label>
                     <MoneyInput
                       id="reconcileMobile"
                       scale="lg"
@@ -796,11 +807,13 @@ export default function GoodsPage() {
               {reconcileDifference !== null && (
                 <p
                   className={cn(
-                    "text-caption-airbnb font-semibold tabular-nums",
+                    "flex items-center gap-1.5 text-caption-airbnb font-semibold tabular-nums",
                     reconcileDifference === 0 ? "text-primary" : "text-warning"
                   )}
                 >
-                  {t.operatorApp.submit.difference} {reconcileDifference > 0 ? "+" : ""}
+                  {t.operatorApp.submit.difference}
+                  {reconcileDifference !== 0 && <TriangleAlert className="size-3.5 shrink-0" />}
+                  {reconcileDifference > 0 ? "+" : ""}
                   <Money value={reconcileDifference} />
                 </p>
               )}

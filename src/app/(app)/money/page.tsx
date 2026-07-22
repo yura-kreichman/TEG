@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Building2, Calendar as CalendarIcon, CalendarDays, ChevronLeft, ChevronRight, Gift, MapPin, Receipt } from "lucide-react";
+import { Building2, Calendar as CalendarIcon, CalendarDays, ChevronLeft, ChevronRight, Gift, MapPin, Receipt, RefreshCcw } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -440,7 +440,8 @@ export default function MoneyPage() {
                 {/* Тесты/возвраты — тем же стеком справа (запрос пользователя
                     2026-07-18: "в обоих должны быть видны Тесты/возвраты"). */}
                 {report.business.returnsCount > 0 && (
-                  <span>
+                  <span className="inline-flex items-center gap-1">
+                    <RefreshCcw className="size-3.5 shrink-0" />
                     {t.operatorApp.submit.returnsLabelShort}:{" "}
                     <span className="font-bold text-foreground">{report.business.returnsCount}</span>
                   </span>

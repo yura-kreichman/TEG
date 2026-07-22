@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
-import { Building2, CalendarDays, ChevronRight, ImagePlus, KeyRound, ListChecks, LogOut, MapPin, Pencil } from "lucide-react";
+import { Building2, CalendarDays, ChevronRight, ImagePlus, KeyRound, ListChecks, LogOut, MapPin, Pencil, RefreshCcw } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
@@ -374,7 +374,8 @@ export function OwnerDashboardCard({
                           {t.reports.mobileLabel}: <span className="font-bold text-foreground"><Money value={summary.mobile!} /></span>
                         </span>
                         {summary.returnsCount! > 0 && (
-                          <span>
+                          <span className="inline-flex items-center gap-1">
+                            <RefreshCcw className="size-3.5 shrink-0" />
                             {t.operatorApp.submit.returnsLabelShort}: <span className="font-bold text-foreground">{summary.returnsCount}</span>
                           </span>
                         )}

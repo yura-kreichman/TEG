@@ -375,28 +375,54 @@ export default function TicketsZonePage() {
   // билеты" — раньше фильтр был только tk.status !== "voided", погашенные
   // проходили). Услуга по погашенному билету уже оказана, печатать его
   // заново нет смысла — тот же принцип, что уже скрывает погашенные/
-  // аннулированные из самого списка карточки (liveTickets выше).
+  // аннулированные из самого списка карточки (liveTickets выше). Плюс тот же
+  // замок по активам, что и в OrderCard.tickets (реальный баг, найден
+  // пользователем 2026-07-22: печать не учитывала selectedAssetIds, поэтому
+  // печатала билеты других активов заказа, которых не было видно на экране —
+  // выглядело так, будто печатаются "лишние"/погашенные билеты, хотя все они
+  // были активными, просто вне текущего замка).
   function printOrderTickets(order: OrderDetail) {
     if (!zone) return;
+    const activeTickets = order.tickets.filter((tk) => tk.status === "active" && selectedAssetIds.includes(tk.assetId));
     printOrder({
       zoneName: zone.name,
       number: order.number,
-      totalSnapshot: order.totalSnapshot,
+      // Сумма ТОЛЬКО живых билетов, не order.totalSnapshot (реальный баг,
+      // найден пользователем 2026-07-22: "в квитанцию попадают уже
+      // погашенные билеты" — по факту строки печатались верно, фильтр
+      // status==="active" уже работал, но "Итого" ниже брало исходную сумму
+      // заказа целиком, включая стоимость АННУЛИРОВАННЫХ билетов — строка
+      // для них не печаталась, а деньги в итоге оставались, из-за чего
+      // "Итого" не совпадало с суммой напечатанных строк, создавая
+      // впечатление "лишних" билетов в чеке).
+      totalSnapshot: activeTickets.reduce((sum, tk) => sum + tk.priceSnapshot, 0),
       expiresAt: order.expiresAt,
       soldAt: order.soldAt,
       paymentMethod: order.paymentMethod,
-      tickets: order.tickets
-        .filter((tk) => tk.status === "active")
-        .map((tk) => ({
-          id: tk.id,
-          assetName: zone.assets.find((a) => a.id === tk.assetId)?.name ?? "",
-          variantName: tk.variantNameSnapshot,
-          price: tk.priceSnapshot,
-        })),
+      tickets: activeTickets.map((tk) => ({
+        id: tk.id,
+        assetName: zone.assets.find((a) => a.id === tk.assetId)?.name ?? "",
+        variantName: tk.variantNameSnapshot,
+        price: tk.priceSnapshot,
+      })),
     });
   }
 
   // ---- Заказы ----
+  // Реальный баг, найден пользователем 2026-07-22: "гасит несколько билетов
+  // подряд, каждый раз скролит наверх, но не в самое начало, а к полю ввода
+  // номера заказа" — предыдущий фикс (window.scrollTo в patchOrderTicket)
+  // боролся не с тем. Настоящая причина — inline callback-ref ниже вызывает
+  // el.focus() на КАЖДЫЙ ре-рендер, не только при первом появлении поля:
+  // React вызывает callback-ref заново всякий раз, когда сама функция —
+  // новый инстанс (а инлайновая стрелочная функция в JSX им и является
+  // каждый рендер), а не только при монтировании/размонтировании DOM-узла.
+  // Погашение билета вызывает setSearchResult → ре-рендер → повторный
+  // el.focus() → браузер скроллит к полю. Флаг "уже сфокусировали" сбрасывается
+  // только когда сам input реально размонтируется (el === null) — то есть
+  // фокус происходит один раз за появление таба "Заказы", как и задумано
+  // изначально, но не на каждый ре-рендер, пока таб остаётся открытым.
+  const orderInputFocusedRef = useRef(false);
   const [searchNumber, setSearchNumber] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -844,9 +870,21 @@ export default function TicketsZonePage() {
                   // не useEffect — поле смонтировано условно (таб "Заказы" +
                   // ещё не найден результат), нужен фокус именно в момент
                   // появления, не один раз при монтировании всей страницы.
-                  if (el && typeof window !== "undefined" && !window.matchMedia("(pointer: coarse)").matches) {
+                  // orderInputFocusedRef — реальный баг (см. комментарий у
+                  // объявления рефа выше): без него el.focus() срабатывал на
+                  // каждый ре-рендер (не только на реальное появление узла),
+                  // из-за чего погашение билета уводило скролл обратно к
+                  // этому полю.
+                  if (
+                    el &&
+                    !orderInputFocusedRef.current &&
+                    typeof window !== "undefined" &&
+                    !window.matchMedia("(pointer: coarse)").matches
+                  ) {
                     el.focus();
+                    orderInputFocusedRef.current = true;
                   }
+                  if (!el) orderInputFocusedRef.current = false;
                 }}
                 value={searchNumber}
                 onChange={(e) => setSearchNumber(e.target.value.replace(/\D/g, "").slice(0, 6))}

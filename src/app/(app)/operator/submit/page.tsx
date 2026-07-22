@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Home, MapPin, Minus, Plus, Send, Trash2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Home, MapPin, Minus, Plus, RefreshCcw, Send, Trash2, TriangleAlert } from "lucide-react";
+import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
@@ -570,8 +571,10 @@ export default function SubmitResultsPage() {
                   {t.operatorApp.submit.actualCash} <Money value={s.actualCash} />
                 </span>
                 {!isCashOnly && (
-                  <span className="tabular-nums font-semibold">
-                    {t.operatorApp.submit.difference} {s.difference > 0 ? "+" : ""}
+                  <span className="flex items-center gap-1.5 tabular-nums font-semibold">
+                    {t.operatorApp.submit.difference}
+                    {s.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                    {s.difference > 0 ? "+" : ""}
                     <Money value={s.difference} />
                   </span>
                 )}
@@ -805,7 +808,10 @@ export default function SubmitResultsPage() {
             </div>
 
             <div className="flex items-center justify-between gap-3 rounded-card border border-border bg-card p-3.5">
-              <p className="text-body-airbnb font-semibold">{t.operatorApp.submit.returnsLabel}</p>
+              <p className="flex items-center gap-1.5 text-body-airbnb font-semibold">
+                <RefreshCcw className="size-4 shrink-0" />
+                {t.operatorApp.submit.returnsLabel}
+              </p>
               <div className="flex items-center overflow-hidden rounded-control border border-border">
                 <button
                   type="button"
@@ -900,11 +906,17 @@ export default function SubmitResultsPage() {
                         </div>
                         <div className="flex flex-col gap-1 p-3">
                           <span className="text-[0.90625rem] font-bold tracking-[-0.01em]">{asset.name}</span>
-                          <span className="text-xs leading-snug text-muted-foreground">
+                          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs leading-snug text-muted-foreground">
                             {filled ? (
                               <>
-                                {t.operatorApp.submit.cashLabel} {entry?.cash || 0} · {t.operatorApp.submit.mobileLabel}{" "}
-                                {entry?.mobile || 0}
+                                <span className="inline-flex items-center gap-1">
+                                  <PaymentMethodIcon method="cash" className="size-3 shrink-0" />
+                                  {t.operatorApp.submit.cashLabel} {entry?.cash || 0}
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <PaymentMethodIcon method="mobile" className="size-3 shrink-0" />
+                                  {t.operatorApp.submit.mobileLabel} {entry?.mobile || 0}
+                                </span>
                               </>
                             ) : revenue ? (
                               <>
@@ -925,7 +937,10 @@ export default function SubmitResultsPage() {
             {!isStaysZone(activeZone) && !isLaunchesZone(activeZone) && (
               <>
                 <div className="flex flex-col gap-1">
-                  <Label htmlFor="cash">{t.operatorApp.submit.cashLabel}</Label>
+                  <Label htmlFor="cash" className="flex items-center gap-1.5">
+                    <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+                    {t.operatorApp.submit.cashLabel}
+                  </Label>
                   <MoneyInput
                     id="cash"
                     scale="lg"
@@ -936,7 +951,10 @@ export default function SubmitResultsPage() {
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label htmlFor="mobile">{t.operatorApp.submit.mobileLabel}</Label>
+                  <Label htmlFor="mobile" className="flex items-center gap-1.5">
+                    <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+                    {t.operatorApp.submit.mobileLabel}
+                  </Label>
                   <MoneyInput
                     id="mobile"
                     scale="lg"
@@ -955,30 +973,58 @@ export default function SubmitResultsPage() {
                     const preview = previewFor(activeZone.id);
                     return (
                       preview && (
-                        <p className="text-caption-airbnb tabular-nums">
-                          {t.operatorApp.submit.calculatedRevenue} <Money value={preview.calculatedRevenue} /> ·{" "}
-                          {t.operatorApp.submit.difference} {preview.difference > 0 ? "+" : ""}
-                          <Money value={preview.difference} />
-                        </p>
+                        <div className="flex flex-col gap-1 text-caption-airbnb tabular-nums">
+                          <div className="flex items-center justify-between">
+                            <span>{t.operatorApp.submit.calculatedRevenue}</span>
+                            <span><Money value={preview.calculatedRevenue} /></span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              {t.operatorApp.submit.difference}
+                              {preview.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                            </span>
+                            <span>
+                              {preview.difference > 0 ? "+" : ""}
+                              <Money value={preview.difference} />
+                            </span>
+                          </div>
+                        </div>
                       )
                     );
                   })()}
                 {/* Билеты — справочная разбивка способов оплаты заказов
                     (докс: "показывается подсказкой у полей кассы, БЕЗ
                     автоподстановки"), тот же принцип, что у Пусков/
-                    Прибываний. */}
+                    Прибываний. Каждый способ — отдельной строкой (запрос
+                    пользователя 2026-07-22: "а то идёт всё сплошным
+                    текстом"), тот же приём, что у карточки зоны на "Итогах
+                    по дням" (money/readings/page.tsx). */}
                 {isTicketsZone(activeZone) && ticketsAggregateByZone[activeZone.id] && (
-                  <p className="text-caption-airbnb text-muted-foreground tabular-nums">
-                    {t.operatorApp.submit.cashLabel}: <Money value={ticketsAggregateByZone[activeZone.id].cashAmount} /> ·{" "}
-                    {t.operatorApp.submit.mobileLabel}: <Money value={ticketsAggregateByZone[activeZone.id].mobileAmount} />
+                  <div className="flex flex-col gap-1 text-caption-airbnb text-muted-foreground tabular-nums">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+                        {t.operatorApp.submit.cashLabel}
+                      </span>
+                      <span><Money value={ticketsAggregateByZone[activeZone.id].cashAmount} /></span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+                        {t.operatorApp.submit.mobileLabel}
+                      </span>
+                      <span><Money value={ticketsAggregateByZone[activeZone.id].mobileAmount} /></span>
+                    </div>
                     {ticketsAggregateByZone[activeZone.id].abonementAmount > 0 && (
-                      <>
-                        {" "}
-                        · {t.operatorApp.abonement.paymentLabel}:{" "}
-                        <Money value={ticketsAggregateByZone[activeZone.id].abonementAmount} />
-                      </>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
+                          {t.operatorApp.abonement.paymentLabel}
+                        </span>
+                        <span><Money value={ticketsAggregateByZone[activeZone.id].abonementAmount} /></span>
+                      </div>
                     )}
-                  </p>
+                  </div>
                 )}
               </>
             )}
@@ -1086,8 +1132,10 @@ export default function SubmitResultsPage() {
                       <span className="tabular-nums text-muted-foreground">
                         {t.operatorApp.submit.actualCash} <Money value={preview.actualCash} />
                       </span>
-                      <span className="tabular-nums font-semibold">
-                        {t.operatorApp.submit.difference} {preview.difference > 0 ? "+" : ""}
+                      <span className="flex items-center gap-1.5 tabular-nums font-semibold">
+                        {t.operatorApp.submit.difference}
+                        {preview.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                        {preview.difference > 0 ? "+" : ""}
                         <Money value={preview.difference} />
                       </span>
                     </>
