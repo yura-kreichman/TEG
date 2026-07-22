@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { computeZoneSubmissionRevenues, getPeriodRange, isPeriodGranularity, type PeriodGranularity } from "@/lib/reports";
-import { affectsCashOnHand, getPointAbonementCashTotal, getPointCashBalance } from "@/lib/zone-balance";
+import { affectsCashOnHand, getOutstandingCollectionAdvance, getPointAbonementCashTotal, getPointCashBalance } from "@/lib/zone-balance";
 
 // "Бизнес: расходы и прибыль" (за выбранный период) и текущий остаток "сколько
 // наличных должно быть на точке" (docs/spec/02-money.md, всегда весь журнал —
@@ -143,15 +143,21 @@ export async function GET(request: Request) {
   // премию + с какого момента после инкассации" в двух местах.
   const pointTotals = await Promise.all(
     points.map(async (point) => {
-      const [total, abonementCashTotal] = await Promise.all([
+      const [total, abonementCashTotal, collectionAdvance] = await Promise.all([
         getPointCashBalance(point.id),
         getPointAbonementCashTotal(point.id),
+        // "Аванс инкассации" (lib/zone-balance.ts) — забрано физически, но
+        // ещё не разнесено по зонам (запрос пользователя 2026-07-22) —
+        // отдельная строка на экране, своя транзакция, не в getPointCashBalance
+        // (там она намеренно исключена, см. CASH_EXCLUDED_TYPES).
+        getOutstandingCollectionAdvance(point.id),
       ]);
       return {
         pointId: point.id,
         pointName: point.name,
         total: Math.round(total * 100) / 100,
         abonementCashTotal: Math.round(abonementCashTotal * 100) / 100,
+        collectionAdvance: Math.round(collectionAdvance * 100) / 100,
       };
     })
   );

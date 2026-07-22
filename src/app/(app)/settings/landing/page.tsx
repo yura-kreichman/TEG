@@ -226,6 +226,10 @@ export default function LandingSettingsPage() {
       router.replace("/login");
       return;
     }
+    if (landingRes.status === 403) {
+      router.replace("/");
+      return;
+    }
     setLanding(await landingRes.json());
     const zonesData = await zonesRes.json();
     setZones(zonesData.zones ?? []);

@@ -13,6 +13,7 @@ import {
   previousSubmissionBoundary,
 } from "@/lib/game-room";
 import { InsufficientBalanceError, spendWalletTx } from "@/lib/abonement";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Список открытых пусков зоны — для экрана зоны в PWA (тайлы с активными
 // пусками) и восстановления таймеров после перезапуска/смены устройства
@@ -129,8 +130,13 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
       return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
     }
     paymentMethod = body.paymentMethod;
-    if (paymentMethod === "abonement" && !abonementWalletId) {
-      return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
+    if (paymentMethod === "abonement") {
+      if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+        return NextResponse.json({ error: "Оплата балансом отключена владельцем" }, { status: 403 });
+      }
+      if (!abonementWalletId) {
+        return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
+      }
     }
   }
 

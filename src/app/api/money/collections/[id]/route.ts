@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 
-// Правка/удаление ошибочно введённой инкассации (type=collection) — владелец
-// или сотрудник иногда вносят её по ошибке или с опечаткой в сумме, только
-// владелец может исправить. Журнал правок как у авансов/премий
-// (/api/work-time/money-ops/[id]) — было → стало.
+// Правка/удаление ошибочно введённой инкассации — владелец или сотрудник
+// иногда вносят её по ошибке или с опечаткой в сумме, только владелец может
+// исправить. Журнал правок как у авансов/премий (/api/work-time/money-ops/[id]) —
+// было → стало. Три типа (запрос пользователя 2026-07-22): type=collection
+// (касса зоны) и collection_pool_sweep_abonement/_goods (абонементы/товары
+// наличными точки, свои независимые кассы — lib/zone-balance.ts) — та же
+// операция редактирования подходит всем, знак/формат суммы одинаковый.
 export async function PATCH(request: Request, ctx: RouteContext<"/api/money/collections/[id]">) {
   const owner = await requireOwner();
   if (!owner) {
@@ -13,7 +16,11 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/coll
   }
   const { id } = await ctx.params;
   const op = await prisma.moneyOperation.findUnique({ where: { id } });
-  if (!op || op.tenantId !== owner.tenantId || op.type !== "collection") {
+  if (
+    !op ||
+    op.tenantId !== owner.tenantId ||
+    !["collection", "collection_pool_sweep_abonement", "collection_pool_sweep_goods"].includes(op.type)
+  ) {
     return NextResponse.json({ error: "Инкассация не найдена" }, { status: 404 });
   }
 
@@ -50,7 +57,11 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/money/co
   }
   const { id } = await ctx.params;
   const op = await prisma.moneyOperation.findUnique({ where: { id } });
-  if (!op || op.tenantId !== owner.tenantId || op.type !== "collection") {
+  if (
+    !op ||
+    op.tenantId !== owner.tenantId ||
+    !["collection", "collection_pool_sweep_abonement", "collection_pool_sweep_goods"].includes(op.type)
+  ) {
     return NextResponse.json({ error: "Инкассация не найдена" }, { status: 404 });
   }
 

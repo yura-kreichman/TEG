@@ -128,7 +128,9 @@
     "systemReceiptPreviewTitle": "Receipt",
     "systemReceiptPreviewLine1": "Item",
     "systemReceiptPreviewLine2": "Amount",
-    "systemReceiptPreviewTotal": "Total"
+    "systemReceiptPreviewTotal": "Total",
+    "systemModulesTitle": "Modules",
+    "systemModulesHint": "Turn off what you don’t use — simplifies the interface."
   },
   "tasks": {
     "pickPointTitle": "Tasks",
@@ -474,7 +476,7 @@
     "instructionAckLabel": "Instruction acknowledged",
     "instructionAckSub": "when an employee signs an instruction",
     "collectionLabel": "Collection",
-    "collectionSub": "when staff hands in a cash collection",
+    "collectionSub": "when a cash collection is recorded",
     "errors": {
       "notSupported": "This browser doesn't support push notifications.",
       "permissionDenied": "Notification permission was denied in the browser — enable it manually in site settings.",
@@ -831,7 +833,7 @@
     "pinRowLabel": "PIN",
     "deactivateOperatorButton": "Deactivate employee",
     "activateOperatorButton": "Activate employee",
-    "deactivateOpenShiftWarning": "This employee has an open shift — after deactivating, you can close it from the timesheet",
+    "deactivateOpenShiftWarning": "This employee has an open shift — after deactivating, you can close it from their profile, in the “Work time” section",
     "overdraftLabel": "Advance overdraft",
     "overdraftHint": "Allow this employee an advance beyond their balance (it goes negative)",
     "skipShiftStartWindowLabel": "No shift-start time restriction",
@@ -857,14 +859,14 @@
     "zoneBalancesLink": "Balances & collections",
     "zoneBalancesLinkHint": "How much should be on-site, and collection history",
     "zoneBalancesTotalLabel": "Total",
-    "abonementCashLabel": "Subscriptions (cash)",
+    "abonementCashLabel": "Subscriptions",
     "abonementSoldTitle": "Subscription sales",
     "abonementSoldHint": "By subscription sales",
     "recordCollectionButton": "Record collection",
     "collectionAmountLabel": "Collection amount",
     "collectionSlipTitle": "Collection slip",
     "collectionDoneTitle": "Collection recorded",
-    "printCollectionSlipButton": "Print slip",
+    "printCollectionSlipButton": "Print collection summary",
     "collectionGeneralAmountLabel": "Total collection amount",
     "collectionPoolSettledPrefix": "Also deducted",
     "collectionPoolSettledSuffix": "already taken by the operator earlier",
@@ -902,7 +904,12 @@
     "deleteCollectionError": "Failed to delete the collection",
     "voidedChip": "Voided",
     "voidAction": "Void",
-    "voidConfirm": "Void this launch? It will be excluded from calculated revenue."
+    "voidConfirm": "Void this launch? It will be excluded from calculated revenue.",
+    "collectionAdvanceLabel": "Collection advance",
+    "collectionAdvanceHint": "Collected already, not yet allocated to zones",
+    "collectionAdvanceToastPrefix": "Set aside as an advance",
+    "collectionAdvanceToastSuffix": "— will appear in the zone balance once results are submitted",
+    "collectionPoolSweepLabel": "Subscriptions/goods (cash)"
   },
   "readings": {
     "title": "Daily results",
@@ -984,14 +991,14 @@
     "pointLabel": "Point:",
     "submitResults": "Submit results",
     "collection": "Collection",
-    "collectionModeZone": "By zone",
+    "collectionModeZone": "By register",
     "collectionModeGeneral": "General",
     "collectionGeneralHint": "The amount will be split across the point's zones automatically, proportional to each till's balance.",
     "collectionGeneralAmountLabel": "Total amount handed to the owner",
     "collectionPoolSettledPrefix": "Also deducted",
     "collectionPoolSettledSuffix": "already taken by the operator earlier",
     "zoneLabel": "Zone",
-    "selectZone": "Select a zone",
+    "selectZone": "Select a register",
     "collectionAmountLabel": "Amount handed to the owner",
     "switchOperator": "Switch employee",
     "tasks": {
@@ -1152,7 +1159,10 @@
       "spendTitle": "Charge from balance",
       "debitedLabel": "Charged",
       "noSpendZonesError": "No zones available for balance payment"
-    }
+    },
+    "collectionAdvanceToastPrefix": "Set aside as an advance",
+    "collectionAdvanceToastSuffix": "— will appear in the zone balance once results are submitted",
+    "cashPointLabel": "Register"
   },
   "install": {
     "hint": "Install the app for quick access from your phone's home screen.",

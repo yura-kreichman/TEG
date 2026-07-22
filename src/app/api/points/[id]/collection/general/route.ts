@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
-import { getPointPoolDeficit, getZoneBalances } from "@/lib/zone-balance";
+import {
+  getPointAbonementCashTotal,
+  getPointGoodsCashTotal,
+  getPointPoolDeficit,
+  getZoneBalances,
+  settleOutstandingCollectionAdvance,
+  splitCollectionAmountDetailed,
+} from "@/lib/zone-balance";
 import { distributeCollectionWhole } from "@/lib/collection-split";
+import { dispatchCollection } from "@/lib/summary-channels/dispatch";
 
 // Общая инкассация точки, но вносит владелец (запрос пользователя
 // 2026-07-15: "как и у Сотрудника") — тот же принцип, что у оператора
@@ -27,7 +35,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
 
   const { amount } = await request.json();
   const amountNumber = Math.round(Number(amount));
-  if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+  // < 0, не <= 0 — 0 допустим: способ вручную запустить погашение
+  // накопленного аванса/пула, когда физически новых денег нет (запрос
+  // пользователя 2026-07-22).
+  if (!Number.isFinite(amountNumber) || amountNumber < 0) {
     return NextResponse.json({ error: "Некорректная сумма" }, { status: 400 });
   }
 
@@ -36,10 +47,34 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     return NextResponse.json({ error: "На точке нет зон" }, { status: 400 });
   }
 
+  const actor = { performedByUserId: owner.user.id };
+
+  // Сначала гасим накопленный аванс инкассации остатками зон точки, если они
+  // уже появились — до расчёта самой этой инкассации (lib/zone-balance.ts,
+  // "Аванс инкассации").
+  await settleOutstandingCollectionAdvance(owner.tenantId, pointId, actor);
+
   const balanceByZone = await getZoneBalances(zones.map((z) => z.id));
   const weights = zones.map((z) => balanceByZone.get(z.id) ?? 0);
+  const zonesRawSum = weights.reduce((sum, w) => sum + Math.max(0, w), 0);
   const poolDeficit = await getPointPoolDeficit(pointId);
-  const shares = distributeCollectionWhole(amountNumber + poolDeficit, weights);
+  // Абонементы и товары наличными — НЕ привязаны ни к одной зоне никогда, и
+  // друг с другом не смешиваются: это могут быть физически разные пачки денег
+  // (запрос пользователя 2026-07-22: "могут быть и 2 пачки — Сотрудник
+  // продавал абонементы, а продавец Поп-корн"). Разный учёт, одна инкассация
+  // (решение пользователя того же дня) — свои независимые части разбивки, см.
+  // splitCollectionAmountDetailed.
+  const [abonementCash, goodsCash] = await Promise.all([
+    getPointAbonementCashTotal(pointId),
+    getPointGoodsCashTotal(pointId),
+  ]);
+  const { zonePortion, abonementSweepPortion, goodsSweepPortion, advance } = splitCollectionAmountDetailed(
+    amountNumber,
+    zonesRawSum,
+    abonementCash,
+    goodsCash
+  );
+  const shares = distributeCollectionWhole(zonePortion + poolDeficit, weights);
 
   const rows = zones
     .map((zone, i) => ({
@@ -54,6 +89,50 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
   if (rows.length > 0) {
     await prisma.moneyOperation.createMany({ data: rows });
   }
+  // Абонементы/товары наличными физически забраны — реальной суммой, СВОИМ
+  // типом каждый (не "collection_advance": та копится как ЖДУЩИЙ будущей
+  // выручки остаток, а тут уже всё собрано и закрыто) — попадают в Реестр
+  // инкассаций раздельными строками (реальный баг, найден пользователем
+  // 2026-07-22: "абонементы исчезли а в реестре ничего не добавилось" —
+  // раньше здесь писался один нулевой маркер без видимой суммы). Заодно
+  // двигают СВОИ, независимые отсечки (lib/zone-balance.ts, getPoolSweepCutoff).
+  if (abonementSweepPortion > 0) {
+    await prisma.moneyOperation.create({
+      data: {
+        tenantId: owner.tenantId,
+        pointId,
+        type: "collection_pool_sweep_abonement",
+        amount: -abonementSweepPortion,
+        performedByUserId: owner.user.id,
+      },
+    });
+  }
+  if (goodsSweepPortion > 0) {
+    await prisma.moneyOperation.create({
+      data: {
+        tenantId: owner.tenantId,
+        pointId,
+        type: "collection_pool_sweep_goods",
+        amount: -goodsSweepPortion,
+        performedByUserId: owner.user.id,
+      },
+    });
+  }
+  // "Аванс инкассации" — то, для чего пока нет ни зоны, ни пула, ждёт будущей
+  // выручки (см. "Аванс инкассации" в lib/zone-balance.ts).
+  if (advance > 0) {
+    await prisma.moneyOperation.create({
+      data: {
+        tenantId: owner.tenantId,
+        pointId,
+        type: "collection_advance",
+        amount: -advance,
+        performedByUserId: owner.user.id,
+      },
+    });
+  }
 
-  return NextResponse.json({ ok: true, settledPool: poolDeficit });
+  dispatchCollection(owner.tenantId, amountNumber + poolDeficit, point.name, null).catch(() => {});
+
+  return NextResponse.json({ ok: true, settledPool: poolDeficit, advance });
 }

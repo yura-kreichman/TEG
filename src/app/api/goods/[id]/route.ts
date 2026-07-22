@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { deleteUploadedImage } from "@/lib/uploads";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 async function findOwnedGoods(tenantId: string, id: string) {
   const goods = await prisma.goods.findUnique({ where: { id } });
@@ -13,6 +14,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/goods/[id]
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "goodsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const { id } = await ctx.params;
@@ -78,6 +82,9 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/goods/[i
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "goodsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const { id } = await ctx.params;

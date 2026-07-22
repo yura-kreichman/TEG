@@ -49,8 +49,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/public/inst
 
   const instruction = await prisma.instruction.findFirst({
     where: { slug: instructionSlug, status: "published", tenant: { slug: tenantSlug } },
+    include: { tenant: { select: { instructionsEnabled: true } } },
   });
-  if (!instruction) {
+  if (!instruction || !instruction.tenant.instructionsEnabled) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 

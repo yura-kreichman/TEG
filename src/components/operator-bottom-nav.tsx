@@ -69,7 +69,7 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
         // Только касса" — расширил ранее stays/launches-only список до всех
         // 4 режимов учёта), поэтому "Клиенты" теперь зависит просто от
         // наличия хоть одной зоны, а не конкретного режима.
-        setHasZones(zones.length > 0);
+        setHasZones(zones.length > 0 && data.clientsEnabled !== false);
       })
       .catch(() => {});
   }

@@ -9,6 +9,7 @@ import {
   findWalletByPhone,
   normalizePhone,
 } from "@/lib/abonement";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Поиск кошелька по телефону — экран оплаты "Прибываний"/"Пусков" (запрос
 // пользователя 2026-07-17). Не найден — не ошибка, просто null, дальше
@@ -19,6 +20,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
   const { point } = ctx;
+  if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
+  }
 
   const { searchParams } = new URL(request.url);
   const phone = searchParams.get("phone") ?? "";
@@ -68,6 +72,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
   const { operator, point } = ctx;
+  if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
+  }
 
   const body = await request.json().catch(() => ({}));
   const phone: string = typeof body.phone === "string" ? body.phone : "";

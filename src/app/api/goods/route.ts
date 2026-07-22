@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Каталог товаров (docs/spec/09-goods.md, "Каталог") — общий на тенант,
 // владелец создаёт/редактирует. Позиций 100+ — сортировка по order, как у
@@ -9,6 +10,9 @@ export async function GET() {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "goodsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const goods = await prisma.goods.findMany({
@@ -46,6 +50,9 @@ export async function POST(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "goodsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const body = await request.json().catch(() => ({}));

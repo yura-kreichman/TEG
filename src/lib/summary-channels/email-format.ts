@@ -120,7 +120,14 @@ export function formatZoneSummaryEmail(
         bold: true,
       });
     }
-    if (settings.showReturns) rows.push({ label: st.returns, value: String(data.returnsCount) });
+    // Возвраты — понятие только "Счётчиков" (docs/spec/10-tickets.md: "Шаг
+    // возвратов/тестовых не показывается [у Билетов] — его роль у
+    // аннулирования", тот же принцип у Прибываний/Пусков): для остальных
+    // режимов returnsCount на сервере всегда 0 (submit-results/route.ts),
+    // строка ничего не сообщала бы.
+    if (settings.showReturns && data.accountingMode === "counters") {
+      rows.push({ label: st.returns, value: String(data.returnsCount) });
+    }
   }
   if (settings.showOperator) rows.push({ label: st.operatorLabel, value: data.operatorName });
 

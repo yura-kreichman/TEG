@@ -33,6 +33,11 @@ export async function GET() {
       receiptShowLogo: true,
       receiptShowTenantName: true,
       receiptCompactHeader: true,
+      instructionsEnabled: true,
+      tasksEnabled: true,
+      landingEnabled: true,
+      goodsEnabled: true,
+      clientsEnabled: true,
     },
   });
 
@@ -47,6 +52,14 @@ export async function GET() {
     receiptShowLogo: tenant?.receiptShowLogo ?? true,
     receiptShowTenantName: tenant?.receiptShowTenantName ?? true,
     receiptCompactHeader: tenant?.receiptCompactHeader ?? false,
+    // Плашка "Модули" (запрос пользователя 2026-07-22) — первая на странице,
+    // множественный выбор, см. schema.prisma у Tenant для полного объяснения
+    // каждого поля.
+    instructionsEnabled: tenant?.instructionsEnabled ?? true,
+    tasksEnabled: tenant?.tasksEnabled ?? true,
+    landingEnabled: tenant?.landingEnabled ?? true,
+    goodsEnabled: tenant?.goodsEnabled ?? true,
+    clientsEnabled: tenant?.clientsEnabled ?? true,
   });
 }
 
@@ -63,37 +76,34 @@ export async function PATCH(request: Request) {
     receiptShowLogo?: boolean;
     receiptShowTenantName?: boolean;
     receiptCompactHeader?: boolean;
+    instructionsEnabled?: boolean;
+    tasksEnabled?: boolean;
+    landingEnabled?: boolean;
+    goodsEnabled?: boolean;
+    clientsEnabled?: boolean;
   } = {};
 
-  if (body.goodsAllowBalancePayment !== undefined) {
-    if (typeof body.goodsAllowBalancePayment !== "boolean") {
+  // Все поля этого роута — плоские boolean-тумблеры, один и тот же
+  // валидируй-и-скопируй паттерн; цикл вместо повторяющихся if-блоков подряд
+  // (плашка "Модули" добавила ещё 5 к уже существующим 5).
+  const BOOLEAN_FIELDS = [
+    "goodsAllowBalancePayment",
+    "printingEnabled",
+    "receiptShowLogo",
+    "receiptShowTenantName",
+    "receiptCompactHeader",
+    "instructionsEnabled",
+    "tasksEnabled",
+    "landingEnabled",
+    "goodsEnabled",
+    "clientsEnabled",
+  ] as const;
+  for (const field of BOOLEAN_FIELDS) {
+    if (body[field] === undefined) continue;
+    if (typeof body[field] !== "boolean") {
       return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
     }
-    data.goodsAllowBalancePayment = body.goodsAllowBalancePayment;
-  }
-  if (body.printingEnabled !== undefined) {
-    if (typeof body.printingEnabled !== "boolean") {
-      return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
-    }
-    data.printingEnabled = body.printingEnabled;
-  }
-  if (body.receiptShowLogo !== undefined) {
-    if (typeof body.receiptShowLogo !== "boolean") {
-      return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
-    }
-    data.receiptShowLogo = body.receiptShowLogo;
-  }
-  if (body.receiptShowTenantName !== undefined) {
-    if (typeof body.receiptShowTenantName !== "boolean") {
-      return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
-    }
-    data.receiptShowTenantName = body.receiptShowTenantName;
-  }
-  if (body.receiptCompactHeader !== undefined) {
-    if (typeof body.receiptCompactHeader !== "boolean") {
-      return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
-    }
-    data.receiptCompactHeader = body.receiptCompactHeader;
+    data[field] = body[field];
   }
 
   await prisma.tenant.update({ where: { id: owner.tenantId }, data });

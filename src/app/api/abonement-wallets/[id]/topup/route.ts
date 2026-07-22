@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireOwner } from "@/lib/require-owner";
 import { adjustWalletBalance } from "@/lib/abonement";
 import { prisma } from "@/lib/prisma";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Произвольное пополнение существующего кошелька ВЛАДЕЛЬЦЕМ — не кассовая
 // операция (см. комментарий в /api/abonement-wallets/route.ts). Продажа
@@ -10,6 +11,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/abonement-w
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "clientsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
   const { id: walletId } = await ctx.params;
 

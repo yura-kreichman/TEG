@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireOwner } from "@/lib/require-owner";
 import { voidGoodsSale } from "@/lib/goods";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Аннулирование продажи — только владелец (docs/spec/09-goods.md,
 // "Аннулирование"). Оператор не может отменить ни одним способом оплаты.
@@ -8,6 +9,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/goods/sale/
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "goodsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const { id } = await ctx.params;

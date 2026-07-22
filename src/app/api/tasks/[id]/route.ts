@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { TASK_SELECT, isTaskStatus } from "@/lib/tasks";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 async function findTenantTask(tenantId: string, taskId: string) {
   const task = await prisma.task.findUnique({ where: { id: taskId } });
@@ -13,6 +14,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tasks/[id]
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "tasksEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const { id } = await ctx.params;
@@ -78,6 +82,9 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/tasks/[i
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "tasksEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const { id } = await ctx.params;

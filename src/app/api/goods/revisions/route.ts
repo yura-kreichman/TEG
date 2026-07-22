@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner, findTenantPoint } from "@/lib/require-owner";
 import { reviseGoodsStockBatch } from "@/lib/goods";
 import { getPeriodRange, isPeriodGranularity } from "@/lib/reports";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 interface RevisionLineOut {
   goodsName: string;
@@ -32,6 +33,9 @@ export async function GET(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "goodsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -116,6 +120,9 @@ export async function POST(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "goodsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const body = await request.json().catch(() => ({}));

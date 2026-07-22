@@ -28,6 +28,26 @@ import { useTextScale, textScaleZoom } from "@/components/text-scale-provider";
 import { cn } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n";
 
+// Плашка "Модули" в Настройки → Система (запрос пользователя 2026-07-22) —
+// НЕ то же самое, что пакеты/лимиты (Package/limitOverrides/unlimited): это
+// чисто упрощение интерфейса, множественный выбор, Владелец сам решает.
+// Ключи — поля Tenant, см. schema.prisma для полного объяснения каждого.
+export interface EnabledModules {
+  instructionsEnabled: boolean;
+  tasksEnabled: boolean;
+  landingEnabled: boolean;
+  goodsEnabled: boolean;
+  clientsEnabled: boolean;
+}
+
+const DEFAULT_ENABLED_MODULES: EnabledModules = {
+  instructionsEnabled: true,
+  tasksEnabled: true,
+  landingEnabled: true,
+  goodsEnabled: true,
+  clientsEnabled: true,
+};
+
 interface NavItemConfig {
   id: string;
   href: string;
@@ -35,11 +55,15 @@ interface NavItemConfig {
   label: (t: Dictionary) => string;
   // Приоритет заполнения слотов бара (docs/spec/00-architecture.md,
   // "Навигация") — меньше число, выше приоритет. Первые 4 занимают слоты
-  // бара, остальные — в "Ещё". Модули больше не гейтятся (во всех пакетах
-  // работают все модули, разница только в числовых лимитах — фидбек
-  // пользователя 2026-07-12), поэтому все пункты ниже всегда доступны.
+  // бара, остальные — в "Ещё". Пакеты/лимиты по-прежнему не гейтят модули
+  // (во всех пакетах работают все модули, разница только в числовых лимитах —
+  // фидбек пользователя 2026-07-12) — но Владелец теперь может САМ скрыть
+  // модуль через moduleFlag ниже (Настройки → Система → "Модули", запрос
+  // пользователя 2026-07-22) — это другое, не связанное с пакетом решение.
   priority: number;
   match: (pathname: string) => boolean;
+  // Если задано — пункт рендерится только пока это поле EnabledModules true.
+  moduleFlag?: keyof EnabledModules;
 }
 
 const BAR_SLOTS = 4;
@@ -54,7 +78,15 @@ const PRIORITY_ITEMS: NavItemConfig[] = [
   { id: "money", href: "/money", icon: Banknote, label: (t) => t.nav.money, priority: 2, match: (p) => p.startsWith("/money") },
   { id: "reports", href: "/reports", icon: BarChart3, label: (t) => t.nav.reports, priority: 3, match: (p) => p.startsWith("/reports") },
   { id: "operators", href: "/operators", icon: Users, label: (t) => t.nav.operators, priority: 4, match: (p) => p.startsWith("/operators") },
-  { id: "tasks", href: "/tasks", icon: ListChecks, label: (t) => t.nav.tasks, priority: 5, match: (p) => p.startsWith("/tasks") },
+  {
+    id: "tasks",
+    href: "/tasks",
+    icon: ListChecks,
+    label: (t) => t.nav.tasks,
+    priority: 5,
+    match: (p) => p.startsWith("/tasks"),
+    moduleFlag: "tasksEnabled",
+  },
   // Модуль "Абонементы" (запрос пользователя 2026-07-17) — управление
   // пакетами пополнения и списком кошельков клиентов, отдельный пункт меню
   // ("Там он будет управлять ими: создавать новые/редактировать/удалять"),
@@ -70,6 +102,7 @@ const PRIORITY_ITEMS: NavItemConfig[] = [
     label: (t) => t.abonements.walletsTitle,
     priority: 6,
     match: (p) => p.startsWith("/abonements"),
+    moduleFlag: "clientsEnabled",
   },
   // Модуль "Товары" (docs/spec/09-goods.md) — независимый от тумблера
   // оператора goodsAccess (тот гейтит только оператора, не владельца): весь
@@ -82,6 +115,7 @@ const PRIORITY_ITEMS: NavItemConfig[] = [
     label: (t) => t.goods.navLabel,
     priority: 7,
     match: (p) => p.startsWith("/goods"),
+    moduleFlag: "goodsEnabled",
   },
   { id: "points", href: "/points", icon: MapPin, label: (t) => t.nav.points, priority: 8, match: (p) => p.startsWith("/points") },
   // Полноценный модуль (docs/spec/07-instructions.md), не тенантная
@@ -94,6 +128,7 @@ const PRIORITY_ITEMS: NavItemConfig[] = [
     label: (t) => t.instructions.settingsTitle,
     priority: 9,
     match: (p) => p.startsWith("/settings/instructions"),
+    moduleFlag: "instructionsEnabled",
   },
   // Полноценный модуль (docs/spec/08-landing.md) — тот же паттерн, что у
   // Инструктажей: в "Ещё", не в bottom nav.
@@ -104,6 +139,7 @@ const PRIORITY_ITEMS: NavItemConfig[] = [
     label: (t) => t.landing.settingsTitle,
     priority: 10,
     match: (p) => p.startsWith("/settings/landing"),
+    moduleFlag: "landingEnabled",
   },
 ];
 
@@ -133,6 +169,13 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [pendingTodoCount, setPendingTodoCount] = useState(0);
   const [pendingDoingCount, setPendingDoingCount] = useState(0);
+  // Плашка "Модули" (запрос пользователя 2026-07-22) — раз на монтирование,
+  // не на каждую навигацию (в отличие от pending-count выше): состав
+  // включённых модулей меняется Владельцем вручную в Настройках, не по ходу
+  // обычной работы, лишний fetch на каждый переход был бы бессмысленным.
+  // Дефолт — всё включено, чтобы до ответа сервера бар не мигал пустыми
+  // слотами (тот же приём, что list начинается с 0 у badge-счётчиков).
+  const [enabledModules, setEnabledModules] = useState<EnabledModules>(DEFAULT_ENABLED_MODULES);
 
   // Обновляем при каждой навигации — самый дешёвый способ не держать
   // отдельный стор ради одного badge-числа (список пунктов бара маленький,
@@ -148,7 +191,33 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
       });
   }, [pathname]);
 
-  const available = [...PRIORITY_ITEMS].sort((a, b) => a.priority - b.priority);
+  useEffect(() => {
+    function loadEnabledModules() {
+      fetch("/api/tenant/system-settings")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!data) return;
+          setEnabledModules({
+            instructionsEnabled: data.instructionsEnabled ?? true,
+            tasksEnabled: data.tasksEnabled ?? true,
+            landingEnabled: data.landingEnabled ?? true,
+            goodsEnabled: data.goodsEnabled ?? true,
+            clientsEnabled: data.clientsEnabled ?? true,
+          });
+        });
+    }
+    loadEnabledModules();
+    // Настройки → Система → "Модули" дёргает это событие сразу после
+    // сохранения тумблера (settings/system/page.tsx) — бар/сайдбар
+    // обновляется мгновенно, без ожидания следующей полной перезагрузки
+    // страницы (запрос пользователя 2026-07-22).
+    window.addEventListener("tenant-modules-changed", loadEnabledModules);
+    return () => window.removeEventListener("tenant-modules-changed", loadEnabledModules);
+  }, []);
+
+  const available = [...PRIORITY_ITEMS]
+    .filter((item) => !item.moduleFlag || enabledModules[item.moduleFlag])
+    .sort((a, b) => a.priority - b.priority);
   const barItems = available.slice(0, BAR_SLOTS);
   const overflowItems = available.slice(BAR_SLOTS);
   const moreItems = [...overflowItems, SETTINGS_ITEM];

@@ -9,7 +9,6 @@ import { SpringCard } from "@/components/spring-card";
 import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconActionButton } from "@/components/kebab-menu";
-import { ConfirmButton } from "@/components/confirm-button";
 import { ConfirmIconButton } from "@/components/confirm-icon-button";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
@@ -134,6 +133,22 @@ interface AbonementSales {
 
 type ActionsView = "edit" | "confirm-delete";
 
+// "Возвраты/тестовые" содержательны только у "Счётчиков" и у legacy
+// "Пусков" на показаниях (assets.length > 0 — сейчас такие уже не
+// создаются, тап-"Пуски" не пишут assetReadings, только Launch): у Билетов
+// эту роль играет аннулирование (docs/spec/10-tickets.md, "Отчёты", п.3), у
+// "Прибываний" и тап-"Пусков" возвратов как понятия нет вовсе, а у
+// cash_only — нет ни тарифов, ни выручки для вычета. Тот же isLiveZone, что
+// уже использует computeEditPreview ниже — общий helper, чтобы условие
+// видимости строки "Возвраты" (агрегат дня, карточка зоны, форма
+// редактирования) не расходилось по трём копиям, как было до аудита
+// 2026-07-22 (агрегат вообще не исключал tickets, форма редактирования не
+// исключала stays/тап-launches — все три места показывали "Возвраты: 0" без
+// какого-либо эффекта на Расчёт/Разницу).
+function returnsApplicable(card: Pick<DayCard, "accountingMode" | "assets">): boolean {
+  return card.accountingMode === "counters" || (card.accountingMode === "launches" && card.assets.length > 0);
+}
+
 export default function ReadingsCalendarPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -183,11 +198,15 @@ export default function ReadingsCalendarPage() {
   // /api/tickets/[id]/void и /api/ticket-orders/[id]/void (docs/spec/10-
   // tickets.md, "АННУЛИРОВАНИЕ"). Просто мусорка с инлайн-подтверждением
   // "Точно?" (запрос пользователя 2026-07-21: "просто кнопка удалить") —
-  // без промежуточного BottomSheet, тот же ConfirmButton-паттерн, что уже у
-  // Сотрудника в operator/tickets/page.tsx.
+  // тот же ConfirmIconButton-паттерн, что уже у Сотрудника в
+  // operator/tickets/page.tsx. Список заказов в самой карточке —
+  // компактные строки (запрос пользователя 2026-07-22: "слишком большой,
+  // нужно компактно... заходить внутрь"); поштучное аннулирование билетов —
+  // внутри BottomSheet, открытого по конкретному заказу (viewOrderId).
   const [voidingTicket, setVoidingTicket] = useState<string | null>(null);
   const [voidingOrder, setVoidingOrder] = useState<string | null>(null);
   const [voidError, setVoidError] = useState<string | null>(null);
+  const [viewOrderId, setViewOrderId] = useState<string | null>(null);
 
   async function voidTicket(orderId: string, ticketId: string) {
     setVoidingTicket(ticketId);
@@ -480,6 +499,14 @@ export default function ReadingsCalendarPage() {
     return { calculatedRevenue, difference };
   }
 
+  // Заказ, открытый в детальном BottomSheet (компактные строки заказов —
+  // запрос пользователя 2026-07-22, "заходить внутрь"). Ищем по всем card —
+  // не привязано к cardId, id заказа глобально уникален; после
+  // voidTicket/voidOrder cards перезагружается, ссылка обновляется сама.
+  const viewOrder = viewOrderId
+    ? (cards?.flatMap((c) => c.ticketOrders).find((o) => o.id === viewOrderId) ?? null)
+    : null;
+
   return (
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
@@ -659,11 +686,10 @@ export default function ReadingsCalendarPage() {
                       </div>
                     )}
                     {/* Применимость — по режиму учёта, как у карточки
-                        отдельной зоны ниже (cash_only его не поддерживает),
-                        а НЕ по тому, нулевое ли число — 0 возвратов за день
-                        тоже валидный результат и должен быть виден (запрос
-                        пользователя 2026-07-19). */}
-                    {cards.some((c) => c.accountingMode !== "cash_only") && (
+                        отдельной зоны ниже, а НЕ по тому, нулевое ли число —
+                        0 возвратов за день тоже валидный результат и должен
+                        быть виден (запрос пользователя 2026-07-19). */}
+                    {cards.some(returnsApplicable) && (
                       <div className="flex items-center justify-between text-caption-airbnb">
                         <span>{t.operatorApp.submit.returnsLabelShort}</span>
                         <span className="text-foreground">{daySummary.returnsCount}</span>
@@ -953,39 +979,57 @@ export default function ReadingsCalendarPage() {
                               ))}
                             </div>
                           )}
-                          {/* Аннулирование прямо в карточке (запрос
-                              пользователя 2026-07-21: "где мы добавим
-                              возможность отмены заказа" → "прямо в карточке
-                              Итогов дня") — владелец видит заказы этого окна и
-                              может аннулировать билет/заказ целиком
+                          {/* Аннулирование заказов этого окна
                               (docs/spec/10-tickets.md, "Кабинет владельца",
-                              п.3). Погашенные билеты не показываются вовсе —
-                              действий над ними нет (запрос пользователя
-                              2026-07-21: "нет смысла отображать их
-                              неактивными"). Заказы, где ПОГАШЕНЫ вообще все
-                              билеты, не показываются целиком по той же логике
-                              (запрос пользователя того же дня: "возможности
-                              редактировать у владельца нет — не расходится ли
-                              с логикой?") — услуга оказана целиком, действие
-                              над заказом невозможно, пустая карточка без кнопок
-                              только шумит. */}
+                              п.3) — компактные строки, не полные карточки
+                              (запрос пользователя 2026-07-22: "слишком
+                              большой... компактно отображать список заказов и
+                              заходить внутрь него" — раньше каждый заказ
+                              разворачивал ВЕСЬ список билетов прямо тут).
+                              Карандаш открывает BottomSheet с билетами и
+                              поштучным аннулированием; мусорка в строке —
+                              аннулирование заказа целиком, без захода внутрь.
+                              Погашенные билеты не показываются вовсе, заказы,
+                              где ПОГАШЕНЫ вообще все билеты, — тоже (те же
+                              причины, что раньше). */}
                           {card.accountingMode === "tickets" &&
                             card.ticketOrders.some((o) => o.tickets.some((tk) => tk.status !== "redeemed")) && (
-                              <div className="mt-2 flex flex-col gap-2">
+                              <div className="mt-2 flex flex-col gap-1.5">
                                 {card.ticketOrders
                                   .filter((o) => o.tickets.some((tk) => tk.status !== "redeemed"))
-                                  .map((o) => (
-                                    <OwnerTicketOrderCard
-                                      key={o.id}
-                                      order={o}
-                                      locale={locale}
-                                      t={t}
-                                      voidingTicket={voidingTicket}
-                                      voidingOrder={voidingOrder}
-                                      onVoidTicket={(ticketId) => voidTicket(o.id, ticketId)}
-                                      onVoidOrder={() => voidOrder(o.id)}
-                                    />
-                                  ))}
+                                  .map((o) => {
+                                    const hasVoidableTicket = o.tickets.some((tk) => tk.status === "active");
+                                    return (
+                                      <div
+                                        key={o.id}
+                                        className="relative flex items-center gap-1.5 rounded-control bg-muted px-3 py-2"
+                                      >
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-caption-airbnb font-bold tabular-nums">
+                                            {t.tickets.orderNumberLabel}
+                                            <span className="text-primary">{o.number}</span>
+                                          </p>
+                                          <p className="truncate text-xs text-muted-foreground">
+                                            {formatTime(o.soldAt)} · {o.soldByOperatorName}
+                                          </p>
+                                        </div>
+                                        <Money value={o.totalSnapshot} className="shrink-0 text-caption-airbnb font-bold" />
+                                        <IconActionButton
+                                          icon={Pencil}
+                                          label={t.common.edit}
+                                          onClick={() => setViewOrderId(o.id)}
+                                        />
+                                        {hasVoidableTicket && (
+                                          <ConfirmIconButton
+                                            label={t.tickets.voidOrderAction}
+                                            disabled={voidingOrder === o.id}
+                                            onConfirm={() => voidOrder(o.id)}
+                                            className="size-8"
+                                          />
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                               </div>
                             )}
                           {card.accountingMode === "tickets" && voidError && (
@@ -1023,11 +1067,7 @@ export default function ReadingsCalendarPage() {
                               <span className="text-foreground"><Money value={card.abonementAmount} /></span>
                             </div>
                           )}
-                          {/* "Возвраты/тестовые" не относится к Билетам — эту
-                              роль там играет аннулирование, отдельный экран
-                              (docs/spec/10-tickets.md, "Отчёты", п.3: "шаг
-                              возвратов/тестовых не показывается"). */}
-                          {card.accountingMode !== "cash_only" && card.accountingMode !== "tickets" && (
+                          {returnsApplicable(card) && (
                           <div className="flex items-center justify-between text-caption-airbnb">
                             <span>{t.operatorApp.submit.returnsLabel}</span>
                             <span className="text-foreground">{card.returnsCount}</span>
@@ -1179,12 +1219,21 @@ export default function ReadingsCalendarPage() {
                     />
                   </div>
                 </div>
-                {/* "Возвраты/тестовые" не относится к Билетам — эту роль там
-                    играет аннулирование (docs/spec/10-tickets.md, "Отчёты",
-                    п.3: "шаг возвратов/тестовых не показывается"), тот же
-                    принцип уже применён к read-only карточке ниже — здесь была
-                    пропущена (реальный баг, найден при аудите 2026-07-21). */}
-                {actionsFor.accountingMode !== "cash_only" && actionsFor.accountingMode !== "tickets" && (
+                {/* "Возвраты/тестовые" — понятие только "Счётчиков" (и legacy
+                    "Пусков" на показаниях, card.assets.length > 0 — сейчас
+                    такие уже не создаются, но старые сдачи могли остаться).
+                    У Билетов эту роль играет аннулирование
+                    (docs/spec/10-tickets.md, "Отчёты", п.3), у Прибываний и
+                    тап-"Пусков" возвратов как понятия нет вовсе — то же
+                    isLiveZone, что уже использует computeEditPreview ниже.
+                    Раньше условие исключало только cash_only/tickets,
+                    оставляя мёртвый — без всякого эффекта на Расчёт/Разницу —
+                    степпер у Прибываний и тап-"Пусков" (реальный баг, найден
+                    при аудите 2026-07-22: то же исключение, что уже сделали
+                    для сводок Telegram/Email, было пропущено именно здесь). */}
+                {actionsFor.accountingMode !== "cash_only" &&
+                  actionsFor.accountingMode !== "tickets" &&
+                  !(actionsFor.accountingMode === "stays" || (actionsFor.accountingMode === "launches" && actionsFor.assets.length === 0)) && (
                   <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
                     <p className="text-body-airbnb font-semibold">{t.operatorApp.submit.returnsLabel}</p>
                     <div className="flex items-center overflow-hidden rounded-control border border-border">
@@ -1259,103 +1308,102 @@ export default function ReadingsCalendarPage() {
           </div>
         )}
       </BottomSheet>
+
+      {/* Детали заказа билетов — открывается карандашом из компактной строки
+          заказа выше (запрос пользователя 2026-07-22: "заходить внутрь него и
+          там уже удалять билеты"). Только просмотр+поштучное аннулирование
+          (docs/spec/10-tickets.md, "Кабинет владельца", п.3), никакого
+          гашения — это действие оператора. Погашенные билеты не рендерятся
+          вовсе (запрос пользователя 2026-07-21) — над ними нет доступного
+          действия. Аннулирование заказа целиком — НЕ здесь, кнопка вынесена в
+          саму строку заказа (мусорка рядом с карандашом), чтобы не заставлять
+          заходить внутрь ради этого одного действия. */}
+      <BottomSheet open={viewOrderId !== null} onClose={() => setViewOrderId(null)}>
+        {viewOrder && (
+          <div className="flex flex-col gap-3 pt-2">
+            <div>
+              <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em] tabular-nums">
+                {t.tickets.orderNumberLabel}
+                <span className="text-primary">{viewOrder.number}</span>
+              </h2>
+              <p className="text-caption-airbnb text-muted-foreground">
+                {new Date(viewOrder.soldAt).toLocaleString(locale)} · {t.tickets.soldByLabel} {viewOrder.soldByOperatorName}
+              </p>
+            </div>
+            <TicketOrderVoidList
+              order={viewOrder}
+              t={t}
+              voidingTicket={voidingTicket}
+              onVoidTicket={(ticketId) => voidTicket(viewOrder.id, ticketId)}
+            />
+            {voidError && <p className="text-sm text-destructive">{voidError}</p>}
+          </div>
+        )}
+      </BottomSheet>
     </OwnerShell>
   );
 }
 
-/**
- * Заказ билетов внутри карточки «Итоги дня» — только просмотр+аннулирование
- * (docs/spec/10-tickets.md, "Кабинет владельца", п.3), никакого гашения —
- * это действие оператора. Погашенные билеты не рендерятся вовсе (запрос
- * пользователя 2026-07-21) — над ними нет доступного действия, только
- * занимали бы место. Аннулирование — просто мусорка с инлайн "Точно?" через
- * ConfirmButton (запрос пользователя того же дня: "просто кнопка удалить"),
- * без промежуточного BottomSheet — тот же паттерн, что у Сотрудника в
- * operator/tickets/page.tsx.
- */
-function OwnerTicketOrderCard({
+// Список билетов заказа с поштучным аннулированием — тело BottomSheet'а
+// выше. Статус "Активен" НЕ выводится (запрос пользователя 2026-07-22: "на
+// мой взгляд вообще не актуальна") — это подразумеваемое умолчание, подпись
+// нужна только для исключений (аннулирован/истёк).
+function TicketOrderVoidList({
   order,
-  locale,
   t,
   voidingTicket,
-  voidingOrder,
   onVoidTicket,
-  onVoidOrder,
 }: {
   order: DayCard["ticketOrders"][number];
-  locale: string;
   t: ReturnType<typeof useI18n>;
   voidingTicket: string | null;
-  voidingOrder: string | null;
   onVoidTicket: (ticketId: string) => void;
-  onVoidOrder: () => void;
 }) {
   const now = new Date();
   const visibleTickets = order.tickets.filter((tk) => tk.status !== "redeemed");
-  const hasVoidableTicket = visibleTickets.some((tk) => tk.status === "active");
 
-  function statusOf(tk: (typeof visibleTickets)[number]) {
+  function statusOf(tk: (typeof visibleTickets)[number]): { text: string; cls: string } | null {
     if (tk.status === "voided") return { text: t.tickets.voidedStatusLabel, cls: "text-destructive" };
-    if (order.expiresAt != null && new Date(order.expiresAt) < now) return { text: t.tickets.expiredStatusLabel, cls: "text-destructive" };
-    return { text: t.tickets.activeStatusLabel, cls: "text-primary" };
+    if (order.expiresAt != null && new Date(order.expiresAt) < now) {
+      return { text: t.tickets.expiredStatusLabel, cls: "text-destructive" };
+    }
+    return null;
   }
 
   return (
-    // bg-muted, а не border — на белой карточке (--card) грань --border почти
-    // не читается (реальный баг, найден пользователем 2026-07-21: "все заказы
-    // в одной плашке"), тот же приём, что и у остальных вложенных строк-плашек
-    // в этом файле (карточки активов, корзина и т.п.). Внутренние строки
-    // билетов — bg-card, чтобы контрастировать уже с этим фоном.
-    <div className="flex flex-col gap-2 rounded-control bg-muted p-3">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-body-airbnb font-extrabold tabular-nums">
-            {t.tickets.orderNumberLabel}
-            <span className="text-primary">{order.number}</span>
-          </p>
-          <p className="text-caption-airbnb text-muted-foreground">
-            {new Date(order.soldAt).toLocaleString(locale)} · {t.tickets.soldByLabel} {order.soldByOperatorName}
-          </p>
-        </div>
-        <Money value={order.totalSnapshot} className="shrink-0 text-body-airbnb font-extrabold" />
-      </div>
-      {visibleTickets.length > 0 && (
-        <div className="flex flex-col gap-1.5">
-          {visibleTickets.map((tk) => {
-            const st = statusOf(tk);
-            return (
-              <div key={tk.id} className="relative flex items-center justify-between gap-2 rounded-control bg-card px-2.5 py-1.5">
-                <div className="min-w-0">
-                  <p className="truncate text-caption-airbnb font-semibold">
-                    {tk.assetName} · {tk.variantNameSnapshot}
-                  </p>
-                  <p className={cn("text-xs font-semibold", st.cls)}>{st.text}</p>
-                </div>
-                {tk.status === "active" ? (
-                  <ConfirmIconButton
-                    label={t.tickets.voidTicketAction}
-                    disabled={voidingTicket === tk.id}
-                    onConfirm={() => onVoidTicket(tk.id)}
-                  />
-                ) : (
-                  <Money value={tk.priceSnapshot} className="shrink-0 text-caption-airbnb font-semibold text-muted-foreground" />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-      {hasVoidableTicket && (
-        <ConfirmButton
-          variant="outline"
-          className="h-9 w-full text-destructive"
-          disabled={voidingOrder === order.id}
-          onConfirm={onVoidOrder}
-        >
-          <Trash2 className="size-4" />
-          {t.tickets.voidOrderAction}
-        </ConfirmButton>
-      )}
+    <div className="flex flex-col">
+      {visibleTickets.map((tk) => {
+        const status = statusOf(tk);
+        return (
+          <div
+            key={tk.id}
+            // min-h, а не только py — "Точно?" убирает мусорку из потока
+            // (ConfirmIconButton в подтверждении — absolute inset-0), без
+            // фиксированной высоты строка со всеми соседями прыгала вверх
+            // при подтверждении и обратно вниз при отмене (запрос
+            // пользователя 2026-07-22: "видно, как скачут строки"). Высота
+            // подобрана под сам оверлей "Точно?" (две круглые size-8-кнопки
+            // + текст) — тот же ориентир, что просил пользователь.
+            className="relative flex min-h-12 items-center justify-between gap-2 border-t border-border py-1.5 first:border-t-0"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-caption-airbnb font-semibold">
+                {tk.assetName} · {tk.variantNameSnapshot}
+              </p>
+              {status && <p className={cn("text-xs font-semibold", status.cls)}>{status.text}</p>}
+            </div>
+            {tk.status === "active" ? (
+              <ConfirmIconButton
+                label={t.tickets.voidTicketAction}
+                disabled={voidingTicket === tk.id}
+                onConfirm={() => onVoidTicket(tk.id)}
+              />
+            ) : (
+              <Money value={tk.priceSnapshot} className="shrink-0 text-caption-airbnb font-semibold text-muted-foreground" />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

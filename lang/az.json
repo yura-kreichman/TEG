@@ -128,7 +128,9 @@
     "systemReceiptPreviewTitle": "Qəbz",
     "systemReceiptPreviewLine1": "Mövqe",
     "systemReceiptPreviewLine2": "Məbləğ",
-    "systemReceiptPreviewTotal": "Cəmi"
+    "systemReceiptPreviewTotal": "Cəmi",
+    "systemModulesTitle": "Modullar",
+    "systemModulesHint": "İstifadə etmədiklərinizi söndürün — interfeysi sadələşdirir."
   },
   "tasks": {
     "pickPointTitle": "Tapşırıqlar",
@@ -474,7 +476,7 @@
     "instructionAckLabel": "Təlimat keçildi",
     "instructionAckSub": "işçi təlimatı imzalayanda",
     "collectionLabel": "İnkassasiya",
-    "collectionSub": "işçi inkassasiya təhvil verdikdə",
+    "collectionSub": "inkassasiya təhvil verildikdə",
     "errors": {
       "notSupported": "Bu brauzer push bildirişlərini dəstəkləmir.",
       "permissionDenied": "Bildirişlərə icazə brauzerdə rədd edilib — sayt tənzimləmələrində əl ilə aktivləşdirin.",
@@ -831,7 +833,7 @@
     "pinRowLabel": "PIN-kod",
     "deactivateOperatorButton": "İşçini deaktiv et",
     "activateOperatorButton": "İşçini aktivləşdir",
-    "deactivateOpenShiftWarning": "İşçinin hazırda açıq növbəsi var — deaktivasiyadan sonra onu təbeldən bağlamaq mümkün olacaq",
+    "deactivateOpenShiftWarning": "İşçinin hazırda açıq növbəsi var — deaktivasiyadan sonra onu işçinin profilində, «İş vaxtı» bölməsində bağlamaq mümkün olacaq",
     "overdraftLabel": "Avanslar üzrə overdraft",
     "overdraftHint": "Bu işçiyə balansdan artıq avans verməyə icazə ver (mənfiyə düşəcək)",
     "skipShiftStartWindowLabel": "Növbənin başlama vaxtına məhdudiyyət yoxdur",
@@ -857,14 +859,14 @@
     "zoneBalancesLink": "Qalıqlar və inkassasiyalar",
     "zoneBalancesLinkHint": "Nöqtədə nə qədər olmalıdır və inkassasiya tarixçəsi",
     "zoneBalancesTotalLabel": "Cəmi",
-    "abonementCashLabel": "Abonementlər (nağd)",
+    "abonementCashLabel": "Abonementlər",
     "abonementSoldTitle": "Abonement satışları",
     "abonementSoldHint": "Abonement satışları üzrə",
     "recordCollectionButton": "İnkassasiya əlavə et",
     "collectionAmountLabel": "İnkassasiya məbləği",
     "collectionSlipTitle": "İnkassasiya sənədi",
     "collectionDoneTitle": "İnkassasiya aparıldı",
-    "printCollectionSlipButton": "Sənədi çap et",
+    "printCollectionSlipButton": "İnkassasiya nəticələrini çap et",
     "collectionGeneralAmountLabel": "Ümumi inkassasiya məbləği",
     "collectionPoolSettledPrefix": "Həmçinin silindi",
     "collectionPoolSettledSuffix": "əvvəllər işçi tərəfindən götürülmüş",
@@ -902,7 +904,12 @@
     "deleteCollectionError": "İnkassasiyanı silmək mümkün olmadı",
     "voidedChip": "Ləğv edilib",
     "voidAction": "Ləğv et",
-    "voidConfirm": "Bu başlanğıc ləğv edilsin? O, hesablanmış gəlirdən çıxarılacaq."
+    "voidConfirm": "Bu başlanğıc ləğv edilsin? O, hesablanmış gəlirdən çıxarılacaq.",
+    "collectionAdvanceLabel": "İnkassasiya avansı",
+    "collectionAdvanceHint": "Yığılıb, amma hələ zonalara bölünməyib",
+    "collectionAdvanceToastPrefix": "Avans kimi ayrıldı",
+    "collectionAdvanceToastSuffix": "— nəticələr təqdim edildikdən sonra zona qalığında görünəcək",
+    "collectionPoolSweepLabel": "Abonement/mallar (nağd)"
   },
   "readings": {
     "title": "Günlər üzrə yekunlar",
@@ -984,14 +991,14 @@
     "pointLabel": "Nöqtə:",
     "submitResults": "Nəticələri təhvil ver",
     "collection": "İnkassasiya",
-    "collectionModeZone": "Zonalar üzrə",
+    "collectionModeZone": "Kassalar üzrə",
     "collectionModeGeneral": "Ümumi",
     "collectionGeneralHint": "Məbləğ obyektin zonaları arasında avtomatik, kassalarının qalığına mütənasib bölünəcək.",
     "collectionGeneralAmountLabel": "Sahibkara verilən ümumi məbləğ",
     "collectionPoolSettledPrefix": "Həmçinin silindi",
     "collectionPoolSettledSuffix": "əvvəllər işçi tərəfindən götürülmüş",
     "zoneLabel": "Zona",
-    "selectZone": "Zona seçin",
+    "selectZone": "Kassa seçin",
     "collectionAmountLabel": "Sahibkara verilən məbləğ",
     "switchOperator": "İşçini dəyiş",
     "tasks": {
@@ -1152,7 +1159,10 @@
       "spendTitle": "Balansdan çıxarış",
       "debitedLabel": "Çıxarıldı",
       "noSpendZonesError": "Balansla ödəniş üçün əlçatan zona yoxdur"
-    }
+    },
+    "collectionAdvanceToastPrefix": "Avans kimi ayrıldı",
+    "collectionAdvanceToastSuffix": "— nəticələr təqdim edildikdən sonra zona qalığında görünəcək",
+    "cashPointLabel": "Kassa"
   },
   "install": {
     "hint": "Telefon ekranından sürətli giriş üçün tətbiqi quraşdırın.",

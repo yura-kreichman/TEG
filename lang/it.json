@@ -128,7 +128,9 @@
     "systemReceiptPreviewTitle": "Ricevuta",
     "systemReceiptPreviewLine1": "Voce",
     "systemReceiptPreviewLine2": "Importo",
-    "systemReceiptPreviewTotal": "Totale"
+    "systemReceiptPreviewTotal": "Totale",
+    "systemModulesTitle": "Moduli",
+    "systemModulesHint": "Disattiva ciò che non usi — semplifica l’interfaccia."
   },
   "tasks": {
     "pickPointTitle": "Attività",
@@ -474,7 +476,7 @@
     "instructionAckLabel": "Istruzione completata",
     "instructionAckSub": "quando un dipendente firma un'istruzione",
     "collectionLabel": "Incasso",
-    "collectionSub": "quando il dipendente consegna un incasso",
+    "collectionSub": "quando viene registrato un incasso",
     "errors": {
       "notSupported": "Questo browser non supporta le notifiche push.",
       "permissionDenied": "Il permesso per le notifiche è stato negato nel browser — attivalo manualmente nelle impostazioni del sito.",
@@ -831,7 +833,7 @@
     "pinRowLabel": "PIN",
     "deactivateOperatorButton": "Disattiva dipendente",
     "activateOperatorButton": "Attiva dipendente",
-    "deactivateOpenShiftWarning": "Questo dipendente ha un turno aperto — dopo la disattivazione potrai chiuderlo dagli orari",
+    "deactivateOpenShiftWarning": "Questo dipendente ha un turno aperto — dopo la disattivazione potrai chiuderlo dal profilo del dipendente, nella sezione «Orario di lavoro»",
     "overdraftLabel": "Scoperto sull'anticipo",
     "overdraftHint": "Consenti a questo dipendente un anticipo oltre il suo saldo (che diventa negativo)",
     "skipShiftStartWindowLabel": "Nessun limite orario di inizio turno",
@@ -857,14 +859,14 @@
     "zoneBalancesLink": "Saldi e incassi",
     "zoneBalancesLinkHint": "Quanto dovrebbe esserci sul posto, e cronologia degli incassi",
     "zoneBalancesTotalLabel": "Totale",
-    "abonementCashLabel": "Abbonamenti (contanti)",
+    "abonementCashLabel": "Abbonamenti",
     "abonementSoldTitle": "Vendite abbonamenti",
     "abonementSoldHint": "Per vendite abbonamenti",
     "recordCollectionButton": "Registra incasso",
     "collectionAmountLabel": "Importo incassato",
     "collectionSlipTitle": "Distinta di versamento",
     "collectionDoneTitle": "Versamento registrato",
-    "printCollectionSlipButton": "Stampa distinta",
+    "printCollectionSlipButton": "Stampa il riepilogo dell’incasso",
     "collectionGeneralAmountLabel": "Importo totale incassato",
     "collectionPoolSettledPrefix": "Detratto anche",
     "collectionPoolSettledSuffix": "già preso dall'operatore in precedenza",
@@ -902,7 +904,12 @@
     "deleteCollectionError": "Eliminazione dell'incasso non riuscita",
     "voidedChip": "Annullato",
     "voidAction": "Annulla",
-    "voidConfirm": "Annullare questo avvio? Sarà escluso dall'incasso calcolato."
+    "voidConfirm": "Annullare questo avvio? Sarà escluso dall'incasso calcolato.",
+    "collectionAdvanceLabel": "Anticipo incasso",
+    "collectionAdvanceHint": "Già ritirato, ma non ancora ripartito tra le zone",
+    "collectionAdvanceToastPrefix": "Accantonato come anticipo",
+    "collectionAdvanceToastSuffix": "— comparirà nel saldo della zona dopo l’invio dei risultati",
+    "collectionPoolSweepLabel": "Abbonamenti/prodotti (contanti)"
   },
   "readings": {
     "title": "Riepiloghi giornalieri",
@@ -984,14 +991,14 @@
     "pointLabel": "Punto:",
     "submitResults": "Invia risultati",
     "collection": "Incasso",
-    "collectionModeZone": "Per zona",
+    "collectionModeZone": "Per cassa",
     "collectionModeGeneral": "Generale",
     "collectionGeneralHint": "L'importo verrà ripartito automaticamente tra le zone del punto, in proporzione al saldo di ogni cassa.",
     "collectionGeneralAmountLabel": "Importo totale consegnato al titolare",
     "collectionPoolSettledPrefix": "Detratto anche",
     "collectionPoolSettledSuffix": "già preso dall'operatore in precedenza",
     "zoneLabel": "Zona",
-    "selectZone": "Seleziona una zona",
+    "selectZone": "Seleziona una cassa",
     "collectionAmountLabel": "Importo consegnato al titolare",
     "switchOperator": "Cambia dipendente",
     "tasks": {
@@ -1152,7 +1159,10 @@
       "spendTitle": "Addebita dal saldo",
       "debitedLabel": "Addebitato",
       "noSpendZonesError": "Nessuna zona disponibile per il pagamento dal saldo"
-    }
+    },
+    "collectionAdvanceToastPrefix": "Accantonato come anticipo",
+    "collectionAdvanceToastSuffix": "— comparirà nel saldo della zona dopo l’invio dei risultati",
+    "cashPointLabel": "Cassa"
   },
   "install": {
     "hint": "Installa l'app per un accesso rapido dalla schermata Home del telefono.",

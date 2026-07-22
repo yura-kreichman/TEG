@@ -128,7 +128,9 @@
     "systemReceiptPreviewTitle": "Կտրոն",
     "systemReceiptPreviewLine1": "Դիրք",
     "systemReceiptPreviewLine2": "Գումար",
-    "systemReceiptPreviewTotal": "Ընդամենը"
+    "systemReceiptPreviewTotal": "Ընդամենը",
+    "systemModulesTitle": "Մոդուլներ",
+    "systemModulesHint": "Անջատեք այն, ինչից չեք օգտվում — պարզեցնում է ինտերֆեյսը։"
   },
   "tasks": {
     "pickPointTitle": "Առաջադրանքներ",
@@ -474,7 +476,7 @@
     "instructionAckLabel": "Հրահանգն անցած է",
     "instructionAckSub": "երբ աշխատակիցը ստորագրում է հրահանգը",
     "collectionLabel": "Ինկասացիա",
-    "collectionSub": "երբ աշխատակիցը հանձնում է ինկասացիա",
+    "collectionSub": "երբ գրանցվում է ինկասացիա",
     "errors": {
       "notSupported": "Այս բրաուզերը չի աջակցում push-ծանուցումներ.",
       "permissionDenied": "Ծանուցումների թույլտվությունը մերժված է բրաուզերում — միացրեք այն ձեռքով կայքի կարգավորումներում.",
@@ -831,7 +833,7 @@
     "pinRowLabel": "PIN-կոդ",
     "deactivateOperatorButton": "Ապաակտիվացնել աշխատակցին",
     "activateOperatorButton": "Ակտիվացնել աշխատակցին",
-    "deactivateOpenShiftWarning": "Աշխատակիցն այժմ ունի բաց հերթափոխ — ապաակտիվացումից հետո այն փակել հնարավոր կլինի տաբելից",
+    "deactivateOpenShiftWarning": "Աշխատակիցն այժմ ունի բաց հերթափոխ — ապաակտիվացումից հետո այն կարող եք փակել աշխատակցի պրոֆիլում, «Աշխատանքային ժամանակ» բաժնում",
     "overdraftLabel": "Օվերդրաֆտ կանխավճարների համար",
     "overdraftHint": "Թույլատրել այս աշխատակցին կանխավճար մնացորդից ավելի (կգնա մինուս)",
     "skipShiftStartWindowLabel": "Հերթափոխի սկզբի ժամանակի սահմանափակում չկա",
@@ -857,14 +859,14 @@
     "zoneBalancesLink": "Մնացորդներ և ինկասացիաներ",
     "zoneBalancesLinkHint": "Որքան պետք է լինի կետում և ինկասացիաների պատմությունը",
     "zoneBalancesTotalLabel": "Ընդամենը",
-    "abonementCashLabel": "Բաժանորդագրություններ (կանխիկ)",
+    "abonementCashLabel": "Բաժանորդագրություններ",
     "abonementSoldTitle": "Բաժանորդագրությունների վաճառք",
     "abonementSoldHint": "Բաժանորդագրությունների վաճառքի համաձայն",
     "recordCollectionButton": "Ավելացնել ինկասացիա",
     "collectionAmountLabel": "Ինկասացիայի գումարը",
     "collectionSlipTitle": "Ինկասացիայի փաստաթուղթ",
     "collectionDoneTitle": "Ինկասացիան կատարվեց",
-    "printCollectionSlipButton": "Տպել փաստաթուղթը",
+    "printCollectionSlipButton": "Տպել ինկասացիայի արդյունքները",
     "collectionGeneralAmountLabel": "Ընդհանուր ինկասացիայի գումարը",
     "collectionPoolSettledPrefix": "Նաև դուրս գրվեց",
     "collectionPoolSettledSuffix": "աշխատակցի կողմից նախկինում վերցված",
@@ -902,7 +904,12 @@
     "deleteCollectionError": "Չհաջողվեց ջնջել ինկասացիան",
     "voidedChip": "Չեղարկված",
     "voidAction": "Չեղարկել",
-    "voidConfirm": "Չեղարկե՞լ այս մեկնարկը։ Այն կբացառվի հաշվարկային եկամուտից։"
+    "voidConfirm": "Չեղարկե՞լ այս մեկնարկը։ Այն կբացառվի հաշվարկային եկամուտից։",
+    "collectionAdvanceLabel": "Ինկասացիայի կանխավճար",
+    "collectionAdvanceHint": "Հավաքվել է, բայց դեռ չի բաշխվել գոտիներով",
+    "collectionAdvanceToastPrefix": "Հետաձգվել է որպես կանխավճար",
+    "collectionAdvanceToastSuffix": "— կհայտնվի գոտու մնացորդում արդյունքների հանձնումից հետո",
+    "collectionPoolSweepLabel": "Բաժանորդագրություններ/ապրանքներ (կանխիկ)"
   },
   "readings": {
     "title": "Ամփոփումներ ըստ օրերի",
@@ -984,14 +991,14 @@
     "pointLabel": "Կետ.",
     "submitResults": "Հանձնել արդյունքները",
     "collection": "Ինկասացիա",
-    "collectionModeZone": "Ըստ գոտիների",
+    "collectionModeZone": "Դրամարկղերով",
     "collectionModeGeneral": "Ընդհանուր",
     "collectionGeneralHint": "Գումարը ավտոմատ կբաշխվի կետի գոտիների միջև՝ համամասնորեն դրանց դրամարկղերի մնացորդին։",
     "collectionGeneralAmountLabel": "Սեփականատիրոջը փոխանցված ընդհանուր գումարը",
     "collectionPoolSettledPrefix": "Նաև դուրս գրվեց",
     "collectionPoolSettledSuffix": "աշխատակցի կողմից նախկինում վերցված",
     "zoneLabel": "Գոտի",
-    "selectZone": "Ընտրեք գոտի",
+    "selectZone": "Ընտրեք դրամարկղ",
     "collectionAmountLabel": "Սեփականատիրոջը փոխանցված գումարը",
     "switchOperator": "Փոխել աշխատակցին",
     "tasks": {
@@ -1152,7 +1159,10 @@
       "spendTitle": "Հանել հաշվեկշռից",
       "debitedLabel": "Հանված է",
       "noSpendZonesError": "Հաշվեկշռով վճարման համար հասանելի գոտի չկա"
-    }
+    },
+    "collectionAdvanceToastPrefix": "Հետաձգվել է որպես կանխավճար",
+    "collectionAdvanceToastSuffix": "— կհայտնվի գոտու մնացորդում արդյունքների հանձնումից հետո",
+    "cashPointLabel": "Դրամարկղ"
   },
   "install": {
     "hint": "Տեղադրեք հավելվածը հեռախոսի էկրանից արագ մուտքի համար.",

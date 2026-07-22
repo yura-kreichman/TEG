@@ -11,9 +11,11 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/public/inst
 
   const instruction = await prisma.instruction.findFirst({
     where: { slug: instructionSlug, status: "published", tenant: { slug: tenantSlug } },
-    include: { tenant: { select: { name: true } } },
+    include: { tenant: { select: { name: true, instructionsEnabled: true } } },
   });
-  if (!instruction) {
+  // Модуль выключен владельцем (Настройки → Система → "Модули") — тот же
+  // not_found, что для несуществующей/архивной инструкции, без деталей.
+  if (!instruction || !instruction.tenant.instructionsEnabled) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 

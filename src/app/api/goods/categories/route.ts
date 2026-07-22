@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Категории товаров (docs/spec/09-goods.md, "Каталог") — создаёт владелец,
 // общие на тенант. Тот же CRUD-паттерн, что /api/abonements.
@@ -8,6 +9,9 @@ export async function GET() {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "goodsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const categories = await prisma.goodsCategory.findMany({
@@ -22,6 +26,9 @@ export async function POST(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "goodsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const body = await request.json().catch(() => ({}));

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Зоны, где применима оплата балансом БЕЗ Launch-учёта — "Счётчики" (выбор
 // актив+тариф) и "Только касса" (сама зона) — docs/spec/01-counters.md,
@@ -13,6 +14,9 @@ export async function GET() {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
   const { operator, point } = ctx;
+  if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
+  }
 
   const zoneWhere = operator.allZonesAccess
     ? { pointId: point.id, active: true }

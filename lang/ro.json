@@ -128,7 +128,9 @@
     "systemReceiptPreviewTitle": "Chitanță",
     "systemReceiptPreviewLine1": "Poziție",
     "systemReceiptPreviewLine2": "Sumă",
-    "systemReceiptPreviewTotal": "Total"
+    "systemReceiptPreviewTotal": "Total",
+    "systemModulesTitle": "Module",
+    "systemModulesHint": "Dezactivați ce nu folosiți — simplifică interfața."
   },
   "tasks": {
     "pickPointTitle": "Sarcini",
@@ -474,7 +476,7 @@
     "instructionAckLabel": "Instrucțiune finalizată",
     "instructionAckSub": "când un angajat semnează o instrucțiune",
     "collectionLabel": "Colectare",
-    "collectionSub": "când angajatul predă o colectare de numerar",
+    "collectionSub": "când este înregistrată o colectare de numerar",
     "errors": {
       "notSupported": "Acest browser nu suportă notificări push.",
       "permissionDenied": "Permisiunea pentru notificări a fost refuzată în browser — activați-o manual în setările site-ului.",
@@ -831,7 +833,7 @@
     "pinRowLabel": "Cod PIN",
     "deactivateOperatorButton": "Dezactivează angajatul",
     "activateOperatorButton": "Activează angajatul",
-    "deactivateOpenShiftWarning": "Acest angajat are o tură deschisă — după dezactivare o poți încheia din pontaj",
+    "deactivateOpenShiftWarning": "Acest angajat are o tură deschisă — după dezactivare o poți încheia din profilul angajatului, în secțiunea «Timp de lucru»",
     "overdraftLabel": "Overdraft la avansuri",
     "overdraftHint": "Permite acestui angajat un avans peste soldul său (devine negativ)",
     "skipShiftStartWindowLabel": "Fără restricție de oră de început a turei",
@@ -857,14 +859,14 @@
     "zoneBalancesLink": "Solduri și încasări",
     "zoneBalancesLinkHint": "Cât ar trebui să fie pe punct și istoricul încasărilor",
     "zoneBalancesTotalLabel": "Total",
-    "abonementCashLabel": "Abonamente (numerar)",
+    "abonementCashLabel": "Abonamente",
     "abonementSoldTitle": "Vânzări de abonamente",
     "abonementSoldHint": "Pe baza vânzărilor de abonamente",
     "recordCollectionButton": "Adaugă o încasare",
     "collectionAmountLabel": "Suma încasării",
     "collectionSlipTitle": "Document de încasare",
     "collectionDoneTitle": "Încasarea a fost înregistrată",
-    "printCollectionSlipButton": "Imprimă documentul",
+    "printCollectionSlipButton": "Imprimă rezultatele colectării",
     "collectionGeneralAmountLabel": "Suma totală a încasării",
     "collectionPoolSettledPrefix": "S-a scăzut suplimentar",
     "collectionPoolSettledSuffix": "luat anterior de angajat",
@@ -902,7 +904,12 @@
     "deleteCollectionError": "Nu s-a putut șterge colectarea",
     "voidedChip": "Anulată",
     "voidAction": "Anulează",
-    "voidConfirm": "Anulezi această lansare? Va fi exclusă din venitul calculat."
+    "voidConfirm": "Anulezi această lansare? Va fi exclusă din venitul calculat.",
+    "collectionAdvanceLabel": "Avans de colectare",
+    "collectionAdvanceHint": "Ridicat deja, dar neatribuit încă zonelor",
+    "collectionAdvanceToastPrefix": "Pus deoparte ca avans",
+    "collectionAdvanceToastSuffix": "— va apărea în soldul zonei după trimiterea rezultatelor",
+    "collectionPoolSweepLabel": "Abonamente/produse (numerar)"
   },
   "readings": {
     "title": "Rezultate zilnice",
@@ -984,14 +991,14 @@
     "pointLabel": "Punct:",
     "submitResults": "Predă rezultatele",
     "collection": "Colectare",
-    "collectionModeZone": "Pe zone",
+    "collectionModeZone": "Pe casă",
     "collectionModeGeneral": "General",
     "collectionGeneralHint": "Suma se va împărți automat între zonele punctului, proporțional cu soldul caselor lor.",
     "collectionGeneralAmountLabel": "Suma totală predată proprietarului",
     "collectionPoolSettledPrefix": "S-a scăzut suplimentar",
     "collectionPoolSettledSuffix": "luat anterior de angajat",
     "zoneLabel": "Zonă",
-    "selectZone": "Selectați o zonă",
+    "selectZone": "Selectați o casă",
     "collectionAmountLabel": "Suma predată proprietarului",
     "switchOperator": "Schimbă angajatul",
     "tasks": {
@@ -1152,7 +1159,10 @@
       "spendTitle": "Taxează din sold",
       "debitedLabel": "Taxat",
       "noSpendZonesError": "Nu există zone disponibile pentru plata din sold"
-    }
+    },
+    "collectionAdvanceToastPrefix": "Pus deoparte ca avans",
+    "collectionAdvanceToastSuffix": "— va apărea în soldul zonei după trimiterea rezultatelor",
+    "cashPointLabel": "Casă"
   },
   "install": {
     "hint": "Instalați aplicația pentru acces rapid de pe ecranul telefonului.",

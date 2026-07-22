@@ -110,6 +110,10 @@ export default function LaunchesZonePage() {
   const [abonementTarget, setAbonementTarget] = useState<
     { zoneId: string; assetId: string; tariffId: string; amount: number } | null
   >(null);
+  // Настройки → Система → "Модули" (запрос пользователя 2026-07-22) —
+  // кнопка "Баланс" прячется целиком, если Владелец отключил Клиентов;
+  // серверная защита уже есть в /api/zones/[id]/tally.
+  const [clientsEnabled, setClientsEnabled] = useState(true);
 
   function loadZones() {
     fetch("/api/operator/submission-context")
@@ -143,6 +147,7 @@ export default function LaunchesZonePage() {
           return;
         }
         setZones(launches);
+        setClientsEnabled(data.clientsEnabled !== false);
         // Запоминаем последний выбор фильтра зоны (запрос пользователя
         // 2026-07-18: "должен запоминаться статус выбранной Зоны, а не быть
         // по умолчанию Все зоны при открытии") — тот же приём, что у
@@ -452,22 +457,24 @@ export default function LaunchesZonePage() {
                 <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
                 {t.operatorApp.submit.mobileLabel}
               </ConfirmButton>
-              <PressableScale>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="relative h-12 w-full font-semibold"
-                  disabled={submitting}
-                  onClick={() => {
-                    const target = { zoneId: tapFlow.zoneId, assetId: tapFlow.assetId, tariffId: tapFlow.tariffId!, amount: tapTariff.price };
-                    setTapFlow(null);
-                    setAbonementTarget(target);
-                  }}
-                >
-                  <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                  {t.operatorApp.abonement.paymentLabel}
-                </Button>
-              </PressableScale>
+              {clientsEnabled && (
+                <PressableScale>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="relative h-12 w-full font-semibold"
+                    disabled={submitting}
+                    onClick={() => {
+                      const target = { zoneId: tapFlow.zoneId, assetId: tapFlow.assetId, tariffId: tapFlow.tariffId!, amount: tapTariff.price };
+                      setTapFlow(null);
+                      setAbonementTarget(target);
+                    }}
+                  >
+                    <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                    {t.operatorApp.abonement.paymentLabel}
+                  </Button>
+                </PressableScale>
+              )}
             </div>
           </div>
         )}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Один шаг вперёд: todo -> doing -> done (см. prototype-tasks-v1.html,
 // opProgress() — та же однокнопочная механика "Взять в работу"/"Выполнено").
@@ -8,6 +9,9 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/operator/t
   const { operator, point } = (await requireOperator()) ?? {};
   if (!operator || !point) {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(operator.tenantId, "tasksEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const { id } = await ctx.params;

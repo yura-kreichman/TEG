@@ -69,6 +69,10 @@ export default function InstructionsSettingsPage() {
       router.replace("/login");
       return;
     }
+    if (res.status === 403) {
+      router.replace("/");
+      return;
+    }
     const data = await res.json();
     setInstructions(data.instructions ?? []);
     setTenantSlug(data.tenantSlug ?? null);

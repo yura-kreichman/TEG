@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireOperator } from "@/lib/require-operator";
 import { reviseGoodsStockBatch } from "@/lib/goods";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 function parseRevisionLines(lines: unknown): { goodsId: string; actualQuantity: number }[] {
   if (!Array.isArray(lines)) return [];
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
   if (!ctx) {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
-  if (!ctx.operator.goodsAccess || !ctx.operator.revisionAccess) {
+  if (!(await isModuleEnabled(ctx.operator.tenantId, "goodsEnabled")) || !ctx.operator.goodsAccess || !ctx.operator.revisionAccess) {
     return NextResponse.json({ error: "Нет доступа к ревизии остатков" }, { status: 403 });
   }
 

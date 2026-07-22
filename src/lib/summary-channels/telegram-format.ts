@@ -270,14 +270,18 @@ export function formatZoneSummaryTelegram(
       if (settings.showCash && data.abonementAmount > 0) {
         parts.push(`👛 ${st.abonementCompact}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
       }
-      if (settings.showDiff || settings.showReturns) {
+      // Возвраты — понятие только "Счётчиков" (docs/spec/10-tickets.md: у
+      // Билетов/Прибываний/Пусков returnsCount на сервере всегда 0, строка
+      // ничего не сообщала бы, см. тот же комментарий ниже в full-режиме).
+      const showReturnsHere = settings.showReturns && data.accountingMode === "counters";
+      if (settings.showDiff || showReturnsHere) {
         const bits: string[] = [];
         if (settings.showDiff) {
           const sign = data.difference > 0 ? "+" : "";
           bits.push(`${diffEmoji(data.difference)} ${st.differenceCompact}: <b>${sign}${formatMoney(data.difference, locale)}</b>`);
         }
-        if (settings.showDiff && settings.showReturns) bits.push("·");
-        if (settings.showReturns) bits.push(`🔄 ${st.returnsCompact}: <b>${data.returnsCount}</b>`);
+        if (settings.showDiff && showReturnsHere) bits.push("·");
+        if (showReturnsHere) bits.push(`🔄 ${st.returnsCompact}: <b>${data.returnsCount}</b>`);
         parts.push(bits.join("  "));
       }
     }
@@ -321,7 +325,13 @@ export function formatZoneSummaryTelegram(
       lines.push("", `<blockquote><code>${readingRows.join("\n")}</code></blockquote>`);
     }
 
-    if (settings.showCash || settings.showCalc || settings.showDiff || settings.showReturns) {
+    // Возвраты — понятие только "Счётчиков" (docs/spec/10-tickets.md: "Шаг
+    // возвратов/тестовых не показывается [у Билетов] — его роль у
+    // аннулирования", тот же принцип у Прибываний/Пусков): для остальных
+    // режимов returnsCount на сервере всегда 0 (submit-results/route.ts),
+    // строка ничего не сообщала бы.
+    const showReturnsFull = settings.showReturns && data.accountingMode === "counters";
+    if (settings.showCash || settings.showCalc || settings.showDiff || showReturnsFull) {
       lines.push("");
       if (settings.showCash) {
         lines.push(
@@ -338,7 +348,7 @@ export function formatZoneSummaryTelegram(
         const sign = data.difference > 0 ? "+" : "";
         lines.push(`${diffEmoji(data.difference)} ${st.difference}: <b>${sign}${formatMoney(data.difference, locale)}</b>`);
       }
-      if (settings.showReturns) lines.push(`↩️ ${st.returns}: <b>${data.returnsCount}</b>`);
+      if (showReturnsFull) lines.push(`↩️ ${st.returns}: <b>${data.returnsCount}</b>`);
     }
   }
 

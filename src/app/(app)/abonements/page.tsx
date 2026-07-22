@@ -94,6 +94,14 @@ export default function AbonementsPage() {
 
   async function loadAbonements() {
     const res = await fetch("/api/abonements");
+    if (res.status === 401) {
+      router.replace("/login");
+      return;
+    }
+    if (res.status === 403) {
+      router.replace("/");
+      return;
+    }
     const data = await res.json();
     setAbonements(data.abonements ?? []);
   }

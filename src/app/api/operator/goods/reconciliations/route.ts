@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireOperator } from "@/lib/require-operator";
 import { calculateGoodsCashSince, reconcileGoodsCash } from "@/lib/goods";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Сверка кассы — оператор только с тумблером goodsAccess
 // (docs/spec/09-goods.md, "Доступ"), по своей точке (устройство).
@@ -9,7 +10,7 @@ export async function GET() {
   if (!ctx) {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
-  if (!ctx.operator.goodsAccess) {
+  if (!(await isModuleEnabled(ctx.operator.tenantId, "goodsEnabled")) || !ctx.operator.goodsAccess) {
     return NextResponse.json({ error: "Нет доступа к товарам" }, { status: 403 });
   }
 
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
   if (!ctx) {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
-  if (!ctx.operator.goodsAccess) {
+  if (!(await isModuleEnabled(ctx.operator.tenantId, "goodsEnabled")) || !ctx.operator.goodsAccess) {
     return NextResponse.json({ error: "Нет доступа к товарам" }, { status: 403 });
   }
 

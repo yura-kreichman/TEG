@@ -128,7 +128,9 @@
     "systemReceiptPreviewTitle": "Potwierdzenie",
     "systemReceiptPreviewLine1": "Pozycja",
     "systemReceiptPreviewLine2": "Kwota",
-    "systemReceiptPreviewTotal": "Razem"
+    "systemReceiptPreviewTotal": "Razem",
+    "systemModulesTitle": "Moduły",
+    "systemModulesHint": "Wyłącz to, czego nie używasz — upraszcza interfejs."
   },
   "tasks": {
     "pickPointTitle": "Zadania",
@@ -474,7 +476,7 @@
     "instructionAckLabel": "Instrukcja ukończona",
     "instructionAckSub": "gdy pracownik podpisuje instrukcję",
     "collectionLabel": "Inkasacja",
-    "collectionSub": "gdy pracownik przekazuje inkasację",
+    "collectionSub": "gdy zostaje zarejestrowana inkasacja",
     "errors": {
       "notSupported": "Ta przeglądarka nie obsługuje powiadomień push.",
       "permissionDenied": "Zgoda na powiadomienia została odrzucona w przeglądarce — włącz ją ręcznie w ustawieniach witryny.",
@@ -831,7 +833,7 @@
     "pinRowLabel": "Kod PIN",
     "deactivateOperatorButton": "Dezaktywuj pracownika",
     "activateOperatorButton": "Aktywuj pracownika",
-    "deactivateOpenShiftWarning": "Pracownik ma obecnie otwartą zmianę — po dezaktywacji będzie można ją zamknąć z grafiku",
+    "deactivateOpenShiftWarning": "Pracownik ma obecnie otwartą zmianę — po dezaktywacji będzie można ją zamknąć w profilu pracownika, w sekcji «Czas pracy»",
     "overdraftLabel": "Debet w zaliczkach",
     "overdraftHint": "Zezwól temu pracownikowi na zaliczkę ponad saldo (wejdzie na minus)",
     "skipShiftStartWindowLabel": "Bez ograniczenia czasu rozpoczęcia zmiany",
@@ -857,14 +859,14 @@
     "zoneBalancesLink": "Salda i inkasa",
     "zoneBalancesLinkHint": "Ile powinno być w punkcie i historia inkas",
     "zoneBalancesTotalLabel": "Suma",
-    "abonementCashLabel": "Abonamenty (gotówka)",
+    "abonementCashLabel": "Abonamenty",
     "abonementSoldTitle": "Sprzedaż abonamentów",
     "abonementSoldHint": "Wg sprzedaży abonamentów",
     "recordCollectionButton": "Dodaj inkaso",
     "collectionAmountLabel": "Kwota inkasa",
     "collectionSlipTitle": "Dokument inkasa",
     "collectionDoneTitle": "Inkaso zarejestrowane",
-    "printCollectionSlipButton": "Drukuj dokument",
+    "printCollectionSlipButton": "Drukuj podsumowanie inkasa",
     "collectionGeneralAmountLabel": "Łączna kwota inkasa",
     "collectionPoolSettledPrefix": "Dodatkowo potrącono",
     "collectionPoolSettledSuffix": "wcześniej pobrane przez pracownika",
@@ -902,7 +904,12 @@
     "deleteCollectionError": "Nie udało się usunąć inkasacji",
     "voidedChip": "Anulowano",
     "voidAction": "Anuluj",
-    "voidConfirm": "Anulować to uruchomienie? Zostanie wykluczone z obliczonego przychodu."
+    "voidConfirm": "Anulować to uruchomienie? Zostanie wykluczone z obliczonego przychodu.",
+    "collectionAdvanceLabel": "Zaliczka inkasa",
+    "collectionAdvanceHint": "Pobrane, ale jeszcze nieprzypisane do stref",
+    "collectionAdvanceToastPrefix": "Odłożone jako zaliczka",
+    "collectionAdvanceToastSuffix": "— pojawi się w saldzie strefy po przesłaniu wyników",
+    "collectionPoolSweepLabel": "Abonamenty/towary (gotówka)"
   },
   "readings": {
     "title": "Wyniki dzienne",
@@ -984,14 +991,14 @@
     "pointLabel": "Punkt:",
     "submitResults": "Zdaj wyniki",
     "collection": "Inkaso",
-    "collectionModeZone": "Wg stref",
+    "collectionModeZone": "Wg kas",
     "collectionModeGeneral": "Ogólne",
     "collectionGeneralHint": "Kwota zostanie automatycznie podzielona między strefy punktu, proporcjonalnie do stanu ich kas.",
     "collectionGeneralAmountLabel": "Łączna kwota przekazana właścicielowi",
     "collectionPoolSettledPrefix": "Dodatkowo potrącono",
     "collectionPoolSettledSuffix": "wcześniej pobrane przez pracownika",
     "zoneLabel": "Strefa",
-    "selectZone": "Wybierz strefę",
+    "selectZone": "Wybierz kasę",
     "collectionAmountLabel": "Kwota przekazana właścicielowi",
     "switchOperator": "Zmień pracownika",
     "tasks": {
@@ -1152,7 +1159,10 @@
       "spendTitle": "Pobierz z salda",
       "debitedLabel": "Pobrano",
       "noSpendZonesError": "Brak dostępnych stref do płatności z salda"
-    }
+    },
+    "collectionAdvanceToastPrefix": "Odłożone jako zaliczka",
+    "collectionAdvanceToastSuffix": "— pojawi się w saldzie strefy po przesłaniu wyników",
+    "cashPointLabel": "Kasa"
   },
   "install": {
     "hint": "Zainstaluj aplikację, aby uzyskać szybki dostęp z ekranu telefonu.",

@@ -342,7 +342,20 @@ export async function computeZoneSubmissionRevenues(
     // (реальный баг, найден пользователем 2026-07-18: без вычитания разница
     // ложно показывала недостачу ровно на сумму пусков, оплаченных
     // абонементом, каждый раз).
-    const difference = Math.round((actualTotal + abonementAmount - calculatedRevenue) * 100) / 100;
+    // cash_only: "Расчётной выручки и разницы не существует — сравнивать не
+    // с чем" (docs/spec/01-counters.md, "Расчёт") — без этой ветки difference
+    // молча считался как actualTotal+abonementAmount−0 (calculatedRevenue у
+    // cash_only всегда 0, tariffs пуст), т.е. фактически равнялся полной
+    // кассе зоны. /api/reports/money уже исключает cash_only ДО вызова этой
+    // функции, но /api/points/[id]/reports/{operators,zones,dynamics} — нет,
+    // из-за чего "Разница" оператора в Отчётах → Сотрудники ложно включала
+    // кассу его cash_only-зон (тот же класс бага, что уже пофикшен в
+    // /api/reports/counters/day/route.ts — найден при том же аудите
+    // 2026-07-22, исправление отложено и забыто).
+    const difference =
+      zone.accountingMode === "cash_only"
+        ? 0
+        : Math.round((actualTotal + abonementAmount - calculatedRevenue) * 100) / 100;
 
     return {
       zoneSubmissionId: zs.id,

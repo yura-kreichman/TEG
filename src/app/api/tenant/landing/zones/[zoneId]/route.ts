@@ -4,6 +4,7 @@ import { findTenantZone, requireOwner } from "@/lib/require-owner";
 import { deleteUploadedImage } from "@/lib/uploads";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 import { validateRichContent, extractPlainText, isRichContentEmpty } from "@/lib/rich-text";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 import { Prisma } from "@/generated/prisma/client";
 
 // "Витринное" фото/подпись зоны (docs/spec/08-landing.md — решение
@@ -13,6 +14,9 @@ export async function PUT(request: Request, ctx: RouteContext<"/api/tenant/landi
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "landingEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
   const { zoneId } = await ctx.params;
   const zone = await findTenantZone(owner.tenantId, zoneId);

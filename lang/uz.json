@@ -128,7 +128,9 @@
     "systemReceiptPreviewTitle": "Kvitansiya",
     "systemReceiptPreviewLine1": "Pozitsiya",
     "systemReceiptPreviewLine2": "Summa",
-    "systemReceiptPreviewTotal": "Jami"
+    "systemReceiptPreviewTotal": "Jami",
+    "systemModulesTitle": "Modullar",
+    "systemModulesHint": "Foydalanmaydiganingizni oʻchiring — interfeysni soddalashtiradi."
   },
   "tasks": {
     "pickPointTitle": "Vazifalar",
@@ -474,7 +476,7 @@
     "instructionAckLabel": "Yo'riqnoma o'qildi",
     "instructionAckSub": "xodim yo'riqnomani imzolaganda",
     "collectionLabel": "Inkassatsiya",
-    "collectionSub": "xodim inkassatsiya topshirganda",
+    "collectionSub": "inkassatsiya amalga oshirilganda",
     "errors": {
       "notSupported": "Ushbu brauzer push-bildirishnomalarni qoʻllab-quvvatlamaydi.",
       "permissionDenied": "Bildirishnomalarga ruxsat brauzerda rad etilgan — sayt sozlamalarida qoʻlda yoqing.",
@@ -831,7 +833,7 @@
     "pinRowLabel": "PIN-kod",
     "deactivateOperatorButton": "Xodimni faolsizlantirish",
     "activateOperatorButton": "Xodimni faollashtirish",
-    "deactivateOpenShiftWarning": "Xodimning hozir ochiq smenasi bor — faolsizlantirilgandan keyin uni tabeldan yopish mumkin boʻladi",
+    "deactivateOpenShiftWarning": "Xodimning hozir ochiq smenasi bor — faolsizlantirilgandan keyin uni xodim profilida, «Ish vaqti» boʻlimida yopish mumkin boʻladi",
     "overdraftLabel": "Avanslar boʻyicha overdraft",
     "overdraftHint": "Ushbu xodimga balansdan ortiqcha avans berishga ruxsat berish (minusga tushadi)",
     "skipShiftStartWindowLabel": "Smena boshlanish vaqtiga cheklov yoʻq",
@@ -857,14 +859,14 @@
     "zoneBalancesLink": "Qoldiqlar va inkassatsiyalar",
     "zoneBalancesLinkHint": "Nuqtada qancha boʻlishi kerak va inkassatsiyalar tarixi",
     "zoneBalancesTotalLabel": "Jami",
-    "abonementCashLabel": "Abonementlar (naqd)",
+    "abonementCashLabel": "Abonementlar",
     "abonementSoldTitle": "Abonement sotuvlari",
     "abonementSoldHint": "Abonement sotuvi boʻyicha",
     "recordCollectionButton": "Inkassatsiya kiritish",
     "collectionAmountLabel": "Inkassatsiya summasi",
     "collectionSlipTitle": "Inkassatsiya hujjati",
     "collectionDoneTitle": "Inkassatsiya amalga oshirildi",
-    "printCollectionSlipButton": "Hujjatni chop etish",
+    "printCollectionSlipButton": "Inkassatsiya natijalarini chop etish",
     "collectionGeneralAmountLabel": "Umumiy inkassatsiya summasi",
     "collectionPoolSettledPrefix": "Shuningdek, hisobdan chiqarildi",
     "collectionPoolSettledSuffix": "xodim avval olgan",
@@ -902,7 +904,12 @@
     "deleteCollectionError": "Inkassatsiyani oʻchirib bo'lmadi",
     "voidedChip": "Bekor qilingan",
     "voidAction": "Bekor qilish",
-    "voidConfirm": "Bu pusk bekor qilinsinmi? U hisoblangan tushumdan chiqarib tashlanadi."
+    "voidConfirm": "Bu pusk bekor qilinsinmi? U hisoblangan tushumdan chiqarib tashlanadi.",
+    "collectionAdvanceLabel": "Inkassatsiya avansi",
+    "collectionAdvanceHint": "Olindi, lekin hali zonalarga taqsimlanmagan",
+    "collectionAdvanceToastPrefix": "Avans sifatida ajratildi",
+    "collectionAdvanceToastSuffix": "— natijalar topshirilgandan keyin zona qoldig‘ida paydo bo‘ladi",
+    "collectionPoolSweepLabel": "Abonementlar/tovarlar (naqd)"
   },
   "readings": {
     "title": "Kunlik natijalar",
@@ -984,14 +991,14 @@
     "pointLabel": "Nuqta:",
     "submitResults": "Natijalarni topshirish",
     "collection": "Inkassatsiya",
-    "collectionModeZone": "Zonalar bo'yicha",
+    "collectionModeZone": "Kassalar boʻyicha",
     "collectionModeGeneral": "Umumiy",
     "collectionGeneralHint": "Summa nuqtaning zonalari o'rtasida ularning kassa qoldig'iga proporsional avtomatik taqsimlanadi.",
     "collectionGeneralAmountLabel": "Egasiga topshirilgan umumiy summa",
     "collectionPoolSettledPrefix": "Shuningdek, hisobdan chiqarildi",
     "collectionPoolSettledSuffix": "xodim avval olgan",
     "zoneLabel": "Zona",
-    "selectZone": "Zonani tanlang",
+    "selectZone": "Kassani tanlang",
     "collectionAmountLabel": "Egasiga topshirilgan summa",
     "switchOperator": "Xodimni almashtirish",
     "tasks": {
@@ -1152,7 +1159,10 @@
       "spendTitle": "Balansdan yechish",
       "debitedLabel": "Yechildi",
       "noSpendZonesError": "Balansdan toʻlash uchun mintaqa yoʻq"
-    }
+    },
+    "collectionAdvanceToastPrefix": "Avans sifatida ajratildi",
+    "collectionAdvanceToastSuffix": "— natijalar topshirilgandan keyin zona qoldig‘ida paydo bo‘ladi",
+    "cashPointLabel": "Kassa"
   },
   "install": {
     "hint": "Telefon ekranidan tezkor kirish uchun ilovani oʻrnating.",

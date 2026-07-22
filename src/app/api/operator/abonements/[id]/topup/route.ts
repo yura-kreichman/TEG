@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireOperator } from "@/lib/require-operator";
 import { ABONEMENT_TOPUP_PAYMENT_METHODS, topUpWallet, topUpWalletArbitrary } from "@/lib/abonement";
 import { prisma } from "@/lib/prisma";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Пополнение существующего кошелька (найден по телефону на экране оплаты) —
 // например, у клиента не хватает баланса на пуск, пополняет прямо тут.
@@ -11,6 +12,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operator/ab
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
   const { operator, point } = opCtx;
+  if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
+  }
   const { id: walletId } = await ctx.params;
 
   const wallet = await prisma.abonementWallet.findFirst({ where: { id: walletId, tenantId: point.tenantId } });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 const MAX_GALLERY_PHOTOS = 10; // докс: "5–10 фото владельца"
 
@@ -13,6 +14,9 @@ export async function POST(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "landingEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const landing = await prisma.landing.upsert({

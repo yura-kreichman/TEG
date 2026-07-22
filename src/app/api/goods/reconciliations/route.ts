@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner, findTenantPoint } from "@/lib/require-owner";
 import { calculateGoodsCashSince, reconcileGoodsCash } from "@/lib/goods";
 import { getPeriodRange, isPeriodGranularity, round2 } from "@/lib/reports";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Сверка кассы Товаров (docs/spec/09-goods.md, "Сверка кассы") — НЕ
 // привязана к ResultsSubmission. GET отдаёт историю + расчётную кассу с
@@ -15,6 +16,9 @@ export async function GET(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "goodsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -102,6 +106,9 @@ export async function POST(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "goodsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const body = await request.json().catch(() => ({}));

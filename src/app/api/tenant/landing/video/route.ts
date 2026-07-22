@@ -4,6 +4,7 @@ import { requireOwner } from "@/lib/require-owner";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 import { deleteUploadedImage, saveRemoteImageAsWebp } from "@/lib/uploads";
 import { parseYoutubeId, fetchYoutubeThumbnail } from "@/lib/landing/youtube";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // docs/spec/08-landing.md, "Секция видео" — фасад: ID парсится и обложка
 // скачивается/валидируется ЗДЕСЬ, при сохранении в кабинете, не на публичной
@@ -13,6 +14,9 @@ export async function POST(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "landingEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const { url } = await request.json().catch(() => ({}));
@@ -54,6 +58,9 @@ export async function DELETE() {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "landingEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const landing = await prisma.landing.findUnique({ where: { tenantId: owner.tenantId } });

@@ -128,7 +128,9 @@
     "systemReceiptPreviewTitle": "Квитанция",
     "systemReceiptPreviewLine1": "Позиция",
     "systemReceiptPreviewLine2": "Сумма",
-    "systemReceiptPreviewTotal": "Баары болуп"
+    "systemReceiptPreviewTotal": "Баары болуп",
+    "systemModulesTitle": "Модулдар",
+    "systemModulesHint": "Пайдаланбаганыңызды өчүрүңүз — интерфейсти жөнөкөйлөтөт."
   },
   "tasks": {
     "pickPointTitle": "Тапшырмалар",
@@ -474,7 +476,7 @@
     "instructionAckLabel": "Нускама өтүлдү",
     "instructionAckSub": "кызматкер нускамага кол койгондо",
     "collectionLabel": "Инкассация",
-    "collectionSub": "кызматкер инкассация тапшырганда",
+    "collectionSub": "инкассация тапшырылганда",
     "errors": {
       "notSupported": "Бул браузер push-билдирүүлөрдү колдобойт.",
       "permissionDenied": "Билдирүүлөргө уруксат браузерде четке кагылды — аны сайттын жөндөөлөрүндө кол менен күйгүзүңүз.",
@@ -831,7 +833,7 @@
     "pinRowLabel": "ПИН-код",
     "deactivateOperatorButton": "Кызматкерди деактивдештирүү",
     "activateOperatorButton": "Кызматкерди активдештирүү",
-    "deactivateOpenShiftWarning": "Кызматкерде азыр ачык смена бар — деактивдештиргенден кийин аны табелден жабууга болот",
+    "deactivateOpenShiftWarning": "Кызматкерде азыр ачык смена бар — деактивдештиргенден кийин аны кызматкердин профилинде, «Жумуш убактысы» бөлүмүндө жабууга болот",
     "overdraftLabel": "Аванстар боюнча овердрафт",
     "overdraftHint": "Бул кызматкерге балансынан ашык аванс алууга уруксат берүү (терс баланска кетет)",
     "skipShiftStartWindowLabel": "Смена башталуу убактысына чектөө жок",
@@ -857,14 +859,14 @@
     "zoneBalancesLink": "Калдыктар жана инкассациялар",
     "zoneBalancesLinkHint": "Чекитте канча болушу керек жана инкассациялар тарыхы",
     "zoneBalancesTotalLabel": "Жалпы",
-    "abonementCashLabel": "Абонементтер (накта)",
+    "abonementCashLabel": "Абонементтер",
     "abonementSoldTitle": "Абонементтерди сатуу",
     "abonementSoldHint": "Абонементтерди сатуу боюнча",
     "recordCollectionButton": "Инкассацияны киргизүү",
     "collectionAmountLabel": "Инкассация суммасы",
     "collectionSlipTitle": "Инкассация документи",
     "collectionDoneTitle": "Инкассация жүргүзүлдү",
-    "printCollectionSlipButton": "Документти басып чыгаруу",
+    "printCollectionSlipButton": "Инкассация жыйынтыктарын басып чыгаруу",
     "collectionGeneralAmountLabel": "Жалпы инкассация суммасы",
     "collectionPoolSettledPrefix": "Ошондой эле эсептен алынды",
     "collectionPoolSettledSuffix": "мурда кызматкер алган",
@@ -902,7 +904,12 @@
     "deleteCollectionError": "Инкассацияны өчүрүү мүмкүн болгон жок",
     "voidedChip": "Жокко чыгарылды",
     "voidAction": "Жокко чыгаруу",
-    "voidConfirm": "Бул пуcк жокко чыгарылсынбы? Ал эсептелген түшүмдөн алынып салынат."
+    "voidConfirm": "Бул пуcк жокко чыгарылсынбы? Ал эсептелген түшүмдөн алынып салынат.",
+    "collectionAdvanceLabel": "Инкассация авансы",
+    "collectionAdvanceHint": "Алынды, бирок дагы деле зоналарга бөлүштүрүлгөн жок",
+    "collectionAdvanceToastPrefix": "Аванс катары калтырылды",
+    "collectionAdvanceToastSuffix": "— жыйынтыктар тапшырылгандан кийин зона калдыгында пайда болот",
+    "collectionPoolSweepLabel": "Абонементтер/товарлар (накта)"
   },
   "readings": {
     "title": "Күндөр боюнча жыйынтык",
@@ -984,14 +991,14 @@
     "pointLabel": "Чекит:",
     "submitResults": "Жыйынтык тапшыруу",
     "collection": "Инкассация",
-    "collectionModeZone": "Аймактар боюнча",
+    "collectionModeZone": "Кассалар боюнча",
     "collectionModeGeneral": "Жалпы",
     "collectionGeneralHint": "Сумма чекиттин аймактарына автоматтык түрдө, алардын кассаларынын калдыгына пропорционалдуу бөлүштүрүлөт.",
     "collectionGeneralAmountLabel": "Ээсине берилген жалпы сумма",
     "collectionPoolSettledPrefix": "Ошондой эле эсептен алынды",
     "collectionPoolSettledSuffix": "мурда кызматкер алган",
     "zoneLabel": "Аймак",
-    "selectZone": "Аймакты тандаңыз",
+    "selectZone": "Кассаны тандаңыз",
     "collectionAmountLabel": "Ээсине берилген сумма",
     "switchOperator": "Кызматкерди алмаштыруу",
     "tasks": {
@@ -1152,7 +1159,10 @@
       "spendTitle": "Балансынан эсептен алуу",
       "debitedLabel": "Эсептен алынды",
       "noSpendZonesError": "Баланс менен төлөө үчүн зона жок"
-    }
+    },
+    "collectionAdvanceToastPrefix": "Аванс катары калтырылды",
+    "collectionAdvanceToastSuffix": "— жыйынтыктар тапшырылгандан кийин зона калдыгында пайда болот",
+    "cashPointLabel": "Касса"
   },
   "install": {
     "hint": "Телефон экранынан тез кирүү үчүн колдонмону орнотуңуз.",

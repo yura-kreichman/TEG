@@ -128,7 +128,9 @@
     "systemReceiptPreviewTitle": "Квітанцыя",
     "systemReceiptPreviewLine1": "Пазіцыя",
     "systemReceiptPreviewLine2": "Сума",
-    "systemReceiptPreviewTotal": "Разам"
+    "systemReceiptPreviewTotal": "Разам",
+    "systemModulesTitle": "Модулі",
+    "systemModulesHint": "Выключайце тое, чым не карыстаецеся — спрашчае інтэрфейс."
   },
   "tasks": {
     "pickPointTitle": "Задачы",
@@ -474,7 +476,7 @@
     "instructionAckLabel": "Інструктаж пройдзены",
     "instructionAckSub": "калі супрацоўнік падпісвае інструктаж",
     "collectionLabel": "Інкасацыя",
-    "collectionSub": "калі супрацоўнік здае інкасацыю",
+    "collectionSub": "калі ўносіцца інкасацыя",
     "errors": {
       "notSupported": "Гэты браўзер не падтрымлівае push-апавяшчэнні.",
       "permissionDenied": "Дазвол на апавяшчэнні адхілены ў браўзеры — уключыце яго ў наладах сайта ўручную.",
@@ -831,7 +833,7 @@
     "pinRowLabel": "ПІН-код",
     "deactivateOperatorButton": "Дэактываваць супрацоўніка",
     "activateOperatorButton": "Актываваць супрацоўніка",
-    "deactivateOpenShiftWarning": "У супрацоўніка зараз адкрыта змена — пасля дэактывацыі закрыць яе можна будзе з табеля",
+    "deactivateOpenShiftWarning": "У супрацоўніка зараз адкрыта змена — пасля дэактывацыі закрыць яе можна будзе ў профілі супрацоўніка, у раздзеле «Рабочы час»",
     "overdraftLabel": "Авердрафт па авансах",
     "overdraftHint": "Дазволіць гэтаму супрацоўніку аванс звыш балансу (сыдзе ў мінус)",
     "skipShiftStartWindowLabel": "Без абмежавання часу пачатку змены",
@@ -857,14 +859,14 @@
     "zoneBalancesLink": "Астаткі і інкасацыі",
     "zoneBalancesLinkHint": "Колькі павінна быць на кропцы і гісторыя інкасацый",
     "zoneBalancesTotalLabel": "Разам",
-    "abonementCashLabel": "Абанементы (наяўныя)",
+    "abonementCashLabel": "Абанементы",
     "abonementSoldTitle": "Продаж абанементаў",
     "abonementSoldHint": "Па продажы абанементаў",
     "recordCollectionButton": "Унесці інкасацыю",
     "collectionAmountLabel": "Сума інкасацыі",
     "collectionSlipTitle": "Слып інкасацыі",
     "collectionDoneTitle": "Інкасацыя праведзена",
-    "printCollectionSlipButton": "Друкаваць слып",
+    "printCollectionSlipButton": "Друкаваць вынікі інкасацыі",
     "collectionGeneralAmountLabel": "Агульная сума інкасацыі",
     "collectionPoolSettledPrefix": "Таксама спісана",
     "collectionPoolSettledSuffix": "раней забранага супрацоўнікам",
@@ -902,7 +904,12 @@
     "deleteCollectionError": "Не ўдалося выдаліць інкасацыю",
     "voidedChip": "Ануляваны",
     "voidAction": "Ануляваць",
-    "voidConfirm": "Ануляваць гэты пуск? Ён будзе выключаны з разліковай выручкі."
+    "voidConfirm": "Ануляваць гэты пуск? Ён будзе выключаны з разліковай выручкі.",
+    "collectionAdvanceLabel": "Аванс інкасацыі",
+    "collectionAdvanceHint": "Забрана, але яшчэ не размеркавана па зонах",
+    "collectionAdvanceToastPrefix": "Адкладзена як аванс",
+    "collectionAdvanceToastSuffix": "— з’явіцца ў рэштцы зоны пасля здачы вынікаў",
+    "collectionPoolSweepLabel": "Абанементы/тавары (наяўныя)"
   },
   "readings": {
     "title": "Вынікі па днях",
@@ -984,14 +991,14 @@
     "pointLabel": "Кропка:",
     "submitResults": "Здаць вынікі",
     "collection": "Інкасацыя",
-    "collectionModeZone": "Па зонах",
+    "collectionModeZone": "Па касах",
     "collectionModeGeneral": "Агульная",
     "collectionGeneralHint": "Сума аўтаматычна падзеліцца паміж зонамі кропкі прапарцыйна астаткам іх кас.",
     "collectionGeneralAmountLabel": "Агульная сума, перададзеная ўладальніку",
     "collectionPoolSettledPrefix": "Таксама спісана",
     "collectionPoolSettledSuffix": "раней забранага супрацоўнікам",
     "zoneLabel": "Зона",
-    "selectZone": "Выберыце зону",
+    "selectZone": "Выберыце касу",
     "collectionAmountLabel": "Сума, перададзеная ўладальніку",
     "switchOperator": "Змяніць супрацоўніка",
     "tasks": {
@@ -1152,7 +1159,10 @@
       "spendTitle": "Спісаць з балансу",
       "debitedLabel": "Спісана",
       "noSpendZonesError": "Няма даступных зон для аплаты балансам"
-    }
+    },
+    "collectionAdvanceToastPrefix": "Адкладзена як аванс",
+    "collectionAdvanceToastSuffix": "— з’явіцца ў рэштцы зоны пасля здачы вынікаў",
+    "cashPointLabel": "Каса"
   },
   "install": {
     "hint": "Усталюйце прыкладанне для хуткага доступу з экрана тэлефона.",

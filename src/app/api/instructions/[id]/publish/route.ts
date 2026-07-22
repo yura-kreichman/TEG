@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { validateInstructionContent } from "@/lib/instructions/content";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 import type { Prisma } from "@/generated/prisma/client";
 
 // Публикация (docs/spec/07-instructions.md, "Версии") — снимает immutable
@@ -12,6 +13,9 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/instructio
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "instructionsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const { id } = await ctx.params;

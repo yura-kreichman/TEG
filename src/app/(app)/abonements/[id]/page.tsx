@@ -72,6 +72,10 @@ export default function AbonementWalletPage() {
 
   async function loadWallet() {
     const res = await fetch(`/api/abonement-wallets/${params.id}`);
+    if (res.status === 403) {
+      router.replace("/");
+      return;
+    }
     if (res.status === 404) {
       router.replace("/abonements");
       return;

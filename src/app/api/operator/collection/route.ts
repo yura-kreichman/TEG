@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
-import { getZonePoolShare } from "@/lib/zone-balance";
+import { getZonePoolShare, settleOutstandingCollectionAdvance } from "@/lib/zone-balance";
 import { dispatchCollection } from "@/lib/summary-channels/dispatch";
 
 // Инкассация: оператор вводит сумму, переданную владельцу; касса уменьшается.
@@ -10,6 +10,9 @@ import { dispatchCollection } from "@/lib/summary-channels/dispatch";
 // которые сотрудник уже забрал с точки после прошлой инкассации
 // (lib/zone-balance.ts, getZonePoolShare) — иначе эти деньги зависают в
 // журнале зоны навсегда (решение пользователя 2026-07-16).
+//
+// Списывается ПРЯМО, без потолка/"Аванса инкассации" — см. owner-версию
+// (/api/zones/[id]/collection) для полного объяснения решения 2026-07-22.
 export async function POST(request: Request) {
   const ctx = await requireOperator();
   if (!ctx) {
@@ -18,7 +21,10 @@ export async function POST(request: Request) {
 
   const { zoneId, amount } = await request.json();
   const amountNumber = Number(amount);
-  if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+  // < 0, не <= 0 — 0 допустим: способ вручную запустить погашение
+  // накопленного аванса/пула "Общей" инкассации, когда физически новых денег
+  // нет (запрос пользователя 2026-07-22).
+  if (!Number.isFinite(amountNumber) || amountNumber < 0) {
     return NextResponse.json({ error: "Некорректная сумма" }, { status: 400 });
   }
 
@@ -26,6 +32,12 @@ export async function POST(request: Request) {
   if (!zone || zone.point.tenantId !== ctx.point.tenantId) {
     return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
   }
+
+  const actor = { performedByOperatorId: ctx.operator.id };
+
+  // Гасим накопленный аванс "Общей" инкассации остатками зон точки, если они
+  // уже появились (lib/zone-balance.ts, "Аванс инкассации").
+  await settleOutstandingCollectionAdvance(ctx.point.tenantId, zone.pointId, actor);
 
   const poolShare = await getZonePoolShare(zone.pointId, zoneId);
   await prisma.moneyOperation.create({

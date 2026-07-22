@@ -4,6 +4,7 @@ import { requireOwner } from "@/lib/require-owner";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 import { validateRichContent, extractPlainText, isRichContentEmpty } from "@/lib/rich-text";
 import { extractVerificationCode } from "@/lib/landing/verification-code";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 import { Prisma } from "@/generated/prisma/client";
 
 // Лендинг — 1:1 с тенантом (docs/spec/08-landing.md), но не создаётся при
@@ -19,6 +20,9 @@ export async function GET() {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "landingEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const [landing, tenant] = await Promise.all([
@@ -51,6 +55,9 @@ export async function PATCH(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "landingEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const landing = await getOrCreateLanding(owner.tenantId);

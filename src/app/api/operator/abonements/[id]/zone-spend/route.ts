@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireOperator } from "@/lib/require-operator";
 import { InsufficientBalanceError, spendWalletForZone } from "@/lib/abonement";
 import { prisma } from "@/lib/prisma";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Оплата балансом на зоне без Launch-учёта — "Счётчики" (актив+тариф) и
 // "Только касса" (сама зона, без активов) — docs/spec/01-counters.md, запрос
@@ -14,6 +15,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operator/ab
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
   const { operator, point } = opCtx;
+  if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
+  }
   const { id: walletId } = await ctx.params;
 
   const wallet = await prisma.abonementWallet.findFirst({ where: { id: walletId, tenantId: point.tenantId } });

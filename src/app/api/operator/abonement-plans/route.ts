@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireOperator } from "@/lib/require-operator";
 import { listAbonements } from "@/lib/abonement";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Список абонементов (планов) тенанта — экран оплаты "Прибываний"/"Пусков" и
 // пополнение существующего кошелька (запрос пользователя 2026-07-17). Только
@@ -14,6 +15,9 @@ export async function GET() {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
   const { point } = ctx;
+  if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
+  }
 
   const plans = await listAbonements(point.tenantId);
   return NextResponse.json({

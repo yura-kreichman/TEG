@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Незавершённые задачи всего тенанта — источник badge-точки на "Ещё" в
 // нижнем баре кабинета владельца (docs/spec/03-design-system.md, НАВИГАЦИЯ:
@@ -13,6 +14,12 @@ export async function GET() {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  // Опрашивается на каждой навигации безусловно (owner-shell.tsx) — при
+  // выключенном модуле просто отдаём нули, а не 403, иначе badge застынет
+  // на последнем известном значении вместо того, чтобы погаснуть.
+  if (!(await isModuleEnabled(owner.tenantId, "tasksEnabled"))) {
+    return NextResponse.json({ count: 0, todoCount: 0, doingCount: 0 });
   }
 
   const [todoCount, doingCount] = await Promise.all([

@@ -128,7 +128,9 @@
     "systemReceiptPreviewTitle": "ქვითარი",
     "systemReceiptPreviewLine1": "პოზიცია",
     "systemReceiptPreviewLine2": "თანხა",
-    "systemReceiptPreviewTotal": "სულ"
+    "systemReceiptPreviewTotal": "სულ",
+    "systemModulesTitle": "მოდულები",
+    "systemModulesHint": "გამორთეთ ის, რასაც არ იყენებთ — ამარტივებს ინტერფეისს."
   },
   "tasks": {
     "pickPointTitle": "დავალებები",
@@ -474,7 +476,7 @@
     "instructionAckLabel": "ინსტრუქტაჟი გავლილია",
     "instructionAckSub": "როცა თანამშრომელი ხელს აწერს ინსტრუქციას",
     "collectionLabel": "ინკასაცია",
-    "collectionSub": "როცა თანამშრომელი აბარებს ინკასაციას",
+    "collectionSub": "როცა ფიქსირდება ინკასაცია",
     "errors": {
       "notSupported": "ეს ბრაუზერი push-შეტყობინებებს არ უჭერს მხარს.",
       "permissionDenied": "შეტყობინებების ნებართვა ბრაუზერში უარყოფილია — ჩართეთ ის საიტის პარამეტრებში ხელით.",
@@ -831,7 +833,7 @@
     "pinRowLabel": "PIN-კოდი",
     "deactivateOperatorButton": "თანამშრომლის დეაქტივაცია",
     "activateOperatorButton": "თანამშრომლის აქტივაცია",
-    "deactivateOpenShiftWarning": "თანამშრომელს ამჟამად აქვს გახსნილი ცვლა — დეაქტივაციის შემდეგ მისი დახურვა შესაძლებელი იქნება ტაბელიდან",
+    "deactivateOpenShiftWarning": "თანამშრომელს ამჟამად აქვს გახსნილი ცვლა — დეაქტივაციის შემდეგ მისი დახურვა შესაძლებელი იქნება თანამშრომლის პროფილში, განყოფილებაში «სამუშაო დრო»",
     "overdraftLabel": "ოვერდრაფტი ავანსებზე",
     "overdraftHint": "ამ თანამშრომელს დაშვება ავანსზე ბალანსზე მეტად (წავა მინუსში)",
     "skipShiftStartWindowLabel": "ცვლის დაწყების დროის შეზღუდვის გარეშე",
@@ -857,14 +859,14 @@
     "zoneBalancesLink": "ნაშთები და ინკასაციები",
     "zoneBalancesLinkHint": "რამდენი უნდა იყოს წერტილზე და ინკასაციების ისტორია",
     "zoneBalancesTotalLabel": "სულ",
-    "abonementCashLabel": "აბონემენტები (ნაღდი)",
+    "abonementCashLabel": "აბონემენტები",
     "abonementSoldTitle": "აბონემენტების გაყიდვები",
     "abonementSoldHint": "აბონემენტების გაყიდვების მიხედვით",
     "recordCollectionButton": "ინკასაციის შეტანა",
     "collectionAmountLabel": "ინკასაციის თანხა",
     "collectionSlipTitle": "ინკასაციის დოკუმენტი",
     "collectionDoneTitle": "ინკასაცია ჩატარდა",
-    "printCollectionSlipButton": "დოკუმენტის დაბეჭდვა",
+    "printCollectionSlipButton": "ინკასაციის შედეგების დაბეჭდვა",
     "collectionGeneralAmountLabel": "საერთო ინკასაციის თანხა",
     "collectionPoolSettledPrefix": "ასევე ჩამოიწერა",
     "collectionPoolSettledSuffix": "ადრე თანამშრომლის მიერ აღებული",
@@ -902,7 +904,12 @@
     "deleteCollectionError": "ინკასაციის წაშლა ვერ მოხერხდა",
     "voidedChip": "გაუქმებულია",
     "voidAction": "გაუქმება",
-    "voidConfirm": "გავაუქმოთ ეს გაშვება? ის გამოირიცხება გაანგარიშებული შემოსავლიდან."
+    "voidConfirm": "გავაუქმოთ ეს გაშვება? ის გამოირიცხება გაანგარიშებული შემოსავლიდან.",
+    "collectionAdvanceLabel": "ინკასაციის ავანსი",
+    "collectionAdvanceHint": "აღებულია, მაგრამ ჯერ არ არის განაწილებული ზონებზე",
+    "collectionAdvanceToastPrefix": "გადადებულია ავანსად",
+    "collectionAdvanceToastSuffix": "— გამოჩნდება ზონის ნაშთში შედეგების ჩაბარების შემდეგ",
+    "collectionPoolSweepLabel": "აბონემენტები/საქონელი (ნაღდი)"
   },
   "readings": {
     "title": "შედეგები დღეების მიხედვით",
@@ -984,14 +991,14 @@
     "pointLabel": "წერტილი:",
     "submitResults": "შედეგების ჩაბარება",
     "collection": "ინკასაცია",
-    "collectionModeZone": "ზონების მიხედვით",
+    "collectionModeZone": "სალაროების მიხედვით",
     "collectionModeGeneral": "საერთო",
     "collectionGeneralHint": "თანხა ავტომატურად გადანაწილდება წერტილის ზონებს შორის, მათი სალაროს ნაშთის პროპორციულად.",
     "collectionGeneralAmountLabel": "მფლობელისთვის გადაცემული საერთო თანხა",
     "collectionPoolSettledPrefix": "ასევე ჩამოიწერა",
     "collectionPoolSettledSuffix": "ადრე თანამშრომლის მიერ აღებული",
     "zoneLabel": "ზონა",
-    "selectZone": "აირჩიეთ ზონა",
+    "selectZone": "აირჩიეთ სალარო",
     "collectionAmountLabel": "მფლობელისთვის გადაცემული თანხა",
     "switchOperator": "თანამშრომლის შეცვლა",
     "tasks": {
@@ -1152,7 +1159,10 @@
       "spendTitle": "ბალანსიდან ჩამოწერა",
       "debitedLabel": "ჩამოწერილია",
       "noSpendZonesError": "ბალანსით გადახდისთვის ხელმისაწვდომი ზონა არ არის"
-    }
+    },
+    "collectionAdvanceToastPrefix": "გადადებულია ავანსად",
+    "collectionAdvanceToastSuffix": "— გამოჩნდება ზონის ნაშთში შედეგების ჩაბარების შემდეგ",
+    "cashPointLabel": "სალარო"
   },
   "install": {
     "hint": "დააყენეთ აპლიკაცია სწრაფი წვდომისთვის ტელეფონის ეკრანიდან.",

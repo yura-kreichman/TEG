@@ -128,7 +128,9 @@
     "systemReceiptPreviewTitle": "Квитансия",
     "systemReceiptPreviewLine1": "Мавқеъ",
     "systemReceiptPreviewLine2": "Маблағ",
-    "systemReceiptPreviewTotal": "Ҳамагӣ"
+    "systemReceiptPreviewTotal": "Ҳамагӣ",
+    "systemModulesTitle": "Модулҳо",
+    "systemModulesHint": "Он чиро истифода намебаред, хомӯш кунед — интерфейсро содда мекунад."
   },
   "tasks": {
     "pickPointTitle": "Вазифаҳо",
@@ -474,7 +476,7 @@
     "instructionAckLabel": "Дастурамал гузашта шуд",
     "instructionAckSub": "вақте ки корманд дастурамалро имзо мекунад",
     "collectionLabel": "Инкассатсия",
-    "collectionSub": "вақте ки корманд инкассатсия месупорад",
+    "collectionSub": "вақте ки инкассатсия сабт мешавад",
     "errors": {
       "notSupported": "Ин браузер огоҳиномаҳои push-ро дастгирӣ намекунад.",
       "permissionDenied": "Иҷозат барои огоҳиномаҳо дар браузер рад карда шуд — онро дар танзимоти сайт дастӣ фаъол кунед.",
@@ -831,7 +833,7 @@
     "pinRowLabel": "Коди ПИН",
     "deactivateOperatorButton": "Кормандро ғайрифаъол кардан",
     "activateOperatorButton": "Кормандро фаъол кардан",
-    "deactivateOpenShiftWarning": "Корманд ҳоло смена кушода дорад — пас аз ғайрифаъолсозӣ онро аз табел пӯшидан мумкин мешавад",
+    "deactivateOpenShiftWarning": "Корманд ҳоло смена кушода дорад — пас аз ғайрифаъолсозӣ онро дар профили корманд, дар бахши «Вақти корӣ» пӯшидан мумкин мешавад",
     "overdraftLabel": "Овердрафт аз рӯи пешпардохтҳо",
     "overdraftHint": "Ба ин корманд иҷозат додан пешпардохти зиёда аз бақия гирад (ба манфӣ меравад)",
     "skipShiftStartWindowLabel": "Бе маҳдудияти вақти оғози смена",
@@ -857,14 +859,14 @@
     "zoneBalancesLink": "Бақияҳо ва инкассатсияҳо",
     "zoneBalancesLinkHint": "Дар нуқта чанд бояд бошад ва таърихи инкассатсияҳо",
     "zoneBalancesTotalLabel": "Ҳамагӣ",
-    "abonementCashLabel": "Обунамондҳо (нақд)",
+    "abonementCashLabel": "Обунамондҳо",
     "abonementSoldTitle": "Фурӯши обунамондҳо",
     "abonementSoldHint": "Аз рӯи фурӯши обунамондҳо",
     "recordCollectionButton": "Илова кардани инкассатсия",
     "collectionAmountLabel": "Маблағи инкассатсия",
     "collectionSlipTitle": "Ҳуҷҷати инкассатсия",
     "collectionDoneTitle": "Инкассатсия анҷом ёфт",
-    "printCollectionSlipButton": "Чопи ҳуҷҷат",
+    "printCollectionSlipButton": "Чопи натиҷаҳои инкассатсия",
     "collectionGeneralAmountLabel": "Маблағи умумии инкассатсия",
     "collectionPoolSettledPrefix": "Инчунин хориҷ карда шуд",
     "collectionPoolSettledSuffix": "пештар аз ҷониби корманд гирифташуда",
@@ -902,7 +904,12 @@
     "deleteCollectionError": "Инкассатсияро нест кардан ғайриимкон аст",
     "voidedChip": "Бекор карда шуд",
     "voidAction": "Бекор кардан",
-    "voidConfirm": "Ин пуск бекор карда шавад? Он аз даромади ҳисобшуда хориҷ карда мешавад."
+    "voidConfirm": "Ин пуск бекор карда шавад? Он аз даромади ҳисобшуда хориҷ карда мешавад.",
+    "collectionAdvanceLabel": "Пеши инкассатсия",
+    "collectionAdvanceHint": "Гирифта шуд, аммо ҳанӯз ба минтақаҳо тақсим нашудааст",
+    "collectionAdvanceToastPrefix": "Ҳамчун пеш гузошта шуд",
+    "collectionAdvanceToastSuffix": "— пас аз супоридани натиҷаҳо дар бақияи минтақа пайдо мешавад",
+    "collectionPoolSweepLabel": "Обунамондҳо/молҳо (нақд)"
   },
   "readings": {
     "title": "Натиҷаҳо аз рӯи рӯзҳо",
@@ -984,14 +991,14 @@
     "pointLabel": "Нуқта:",
     "submitResults": "Натиҷаҳоро супоридан",
     "collection": "Инкассатсия",
-    "collectionModeZone": "Аз рӯи минтақаҳо",
+    "collectionModeZone": "Аз рӯи кассаҳо",
     "collectionModeGeneral": "Умумӣ",
     "collectionGeneralHint": "Маблағ ба таври худкор байни минтақаҳои нуқта мутаносибан ба монданги кассаҳояшон тақсим мешавад.",
     "collectionGeneralAmountLabel": "Маблағи умумии ба соҳиб додашуда",
     "collectionPoolSettledPrefix": "Инчунин хориҷ карда шуд",
     "collectionPoolSettledSuffix": "пештар аз ҷониби корманд гирифташуда",
     "zoneLabel": "Минтақа",
-    "selectZone": "Минтақаро интихоб кунед",
+    "selectZone": "Кассаро интихоб кунед",
     "collectionAmountLabel": "Маблағи ба соҳиб додашуда",
     "switchOperator": "Кормандро иваз кардан",
     "tasks": {
@@ -1152,7 +1159,10 @@
       "spendTitle": "Аз баланс гирифтан",
       "debitedLabel": "Гирифта шуд",
       "noSpendZonesError": "Минтақа барои пардохт аз ҳисоб мавҷуд нест"
-    }
+    },
+    "collectionAdvanceToastPrefix": "Ҳамчун пеш гузошта шуд",
+    "collectionAdvanceToastSuffix": "— пас аз супоридани натиҷаҳо дар бақияи минтақа пайдо мешавад",
+    "cashPointLabel": "Касса"
   },
   "install": {
     "hint": "Барои дастрасии зуд аз экрани телефон замимаро насб кунед.",

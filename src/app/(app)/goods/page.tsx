@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   Pencil,
@@ -378,6 +379,7 @@ const EMPTY_GOODS_FORM = {
  */
 export default function GoodsCabinetPage() {
   const t = useI18n();
+  const router = useRouter();
   const [tab, setTab] = useState<"catalog" | "stock" | "cash" | "purchases">("catalog");
 
   // ------- Каталог -------
@@ -412,6 +414,14 @@ export default function GoodsCabinetPage() {
 
   async function loadCatalog() {
     const [categoriesRes, goodsRes] = await Promise.all([fetch("/api/goods/categories"), fetch("/api/goods")]);
+    if (categoriesRes.status === 401 || goodsRes.status === 401) {
+      router.replace("/login");
+      return;
+    }
+    if (categoriesRes.status === 403 || goodsRes.status === 403) {
+      router.replace("/");
+      return;
+    }
     const categoriesData = await categoriesRes.json();
     const goodsData = await goodsRes.json();
     setCategories(categoriesData.categories ?? []);
@@ -1119,39 +1129,41 @@ export default function GoodsCabinetPage() {
                   пользователя 2026-07-19: "должна быть в один ряд с
                   dropdown"). */}
               <div className="flex items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <Select value={pointId ?? ""} onValueChange={(v) => v && setPointId(v)} items={points.map((p) => ({ value: p.id, label: p.name }))}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue>
-                        <span className="flex items-center gap-2">
-                          {(() => {
-                            const iconKey = points.find((p) => p.id === pointId)?.iconKey;
-                            return iconKey ? (
-                              <AssetOrZoneIcon iconKey={iconKey} className="size-5 shrink-0 text-muted-foreground" />
-                            ) : (
-                              <MapPin className="size-5 shrink-0 text-muted-foreground" />
-                            );
-                          })()}
-                          {points.find((p) => p.id === pointId)?.name}
-                        </span>
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {points.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
+                {points.length > 1 && (
+                  <div className="min-w-0 flex-1">
+                    <Select value={pointId ?? ""} onValueChange={(v) => v && setPointId(v)} items={points.map((p) => ({ value: p.id, label: p.name }))}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue>
                           <span className="flex items-center gap-2">
-                            {p.iconKey ? (
-                              <AssetOrZoneIcon iconKey={p.iconKey} className="size-4 shrink-0 text-muted-foreground" />
-                            ) : (
-                              <MapPin className="size-4 shrink-0 text-muted-foreground" />
-                            )}
-                            {p.name}
+                            {(() => {
+                              const iconKey = points.find((p) => p.id === pointId)?.iconKey;
+                              return iconKey ? (
+                                <AssetOrZoneIcon iconKey={iconKey} className="size-5 shrink-0 text-muted-foreground" />
+                              ) : (
+                                <MapPin className="size-5 shrink-0 text-muted-foreground" />
+                              );
+                            })()}
+                            {points.find((p) => p.id === pointId)?.name}
                           </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {points.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            <span className="flex items-center gap-2">
+                              {p.iconKey ? (
+                                <AssetOrZoneIcon iconKey={p.iconKey} className="size-4 shrink-0 text-muted-foreground" />
+                              ) : (
+                                <MapPin className="size-4 shrink-0 text-muted-foreground" />
+                              )}
+                              {p.name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <PressableScale className="shrink-0">
                   <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={openRevision} disabled={!pointId}>
                     <ClipboardList className="size-4" />
@@ -1359,39 +1371,41 @@ export default function GoodsCabinetPage() {
                   пользователя 2026-07-19: "как в 'Остатки'") — тот же
                   паттерн, что дропдаун + "Ревизия остатков" там. */}
               <div className="flex items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <Select value={pointId ?? ""} onValueChange={(v) => v && setPointId(v)} items={points.map((p) => ({ value: p.id, label: p.name }))}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue>
-                        <span className="flex items-center gap-2">
-                          {(() => {
-                            const iconKey = points.find((p) => p.id === pointId)?.iconKey;
-                            return iconKey ? (
-                              <AssetOrZoneIcon iconKey={iconKey} className="size-5 shrink-0 text-muted-foreground" />
-                            ) : (
-                              <MapPin className="size-5 shrink-0 text-muted-foreground" />
-                            );
-                          })()}
-                          {points.find((p) => p.id === pointId)?.name}
-                        </span>
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {points.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
+                {points.length > 1 && (
+                  <div className="min-w-0 flex-1">
+                    <Select value={pointId ?? ""} onValueChange={(v) => v && setPointId(v)} items={points.map((p) => ({ value: p.id, label: p.name }))}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue>
                           <span className="flex items-center gap-2">
-                            {p.iconKey ? (
-                              <AssetOrZoneIcon iconKey={p.iconKey} className="size-4 shrink-0 text-muted-foreground" />
-                            ) : (
-                              <MapPin className="size-4 shrink-0 text-muted-foreground" />
-                            )}
-                            {p.name}
+                            {(() => {
+                              const iconKey = points.find((p) => p.id === pointId)?.iconKey;
+                              return iconKey ? (
+                                <AssetOrZoneIcon iconKey={iconKey} className="size-5 shrink-0 text-muted-foreground" />
+                              ) : (
+                                <MapPin className="size-5 shrink-0 text-muted-foreground" />
+                              );
+                            })()}
+                            {points.find((p) => p.id === pointId)?.name}
                           </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {points.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            <span className="flex items-center gap-2">
+                              {p.iconKey ? (
+                                <AssetOrZoneIcon iconKey={p.iconKey} className="size-4 shrink-0 text-muted-foreground" />
+                              ) : (
+                                <MapPin className="size-4 shrink-0 text-muted-foreground" />
+                              )}
+                              {p.name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <PressableScale className="shrink-0">
                   <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={openReconcileSheet} disabled={!pointId}>
                     <Wallet2 className="size-3.5" />
@@ -1637,38 +1651,40 @@ export default function GoodsCabinetPage() {
                 </div>
               )}
 
-              <Select value={pointId ?? "all"} onValueChange={(v) => setPointId(v === "all" ? null : v)} items={[{ value: "all", label: t.money.allPoints }, ...points.map((p) => ({ value: p.id, label: p.name }))]}>
-                <SelectTrigger className="w-full">
-                  <SelectValue>
-                    <span className="flex items-center gap-2">
-                      {(() => {
-                        const iconKey = pointId ? points.find((p) => p.id === pointId)?.iconKey : null;
-                        return iconKey ? (
-                          <AssetOrZoneIcon iconKey={iconKey} className="size-5 shrink-0 text-muted-foreground" />
-                        ) : (
-                          <MapPin className="size-5 shrink-0 text-muted-foreground" />
-                        );
-                      })()}
-                      {pointId ? points.find((p) => p.id === pointId)?.name : t.money.allPoints}
-                    </span>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t.money.allPoints}</SelectItem>
-                  {points.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
+              {points.length > 1 && (
+                <Select value={pointId ?? "all"} onValueChange={(v) => setPointId(v === "all" ? null : v)} items={[{ value: "all", label: t.money.allPoints }, ...points.map((p) => ({ value: p.id, label: p.name }))]}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue>
                       <span className="flex items-center gap-2">
-                        {p.iconKey ? (
-                          <AssetOrZoneIcon iconKey={p.iconKey} className="size-4 shrink-0 text-muted-foreground" />
-                        ) : (
-                          <MapPin className="size-4 shrink-0 text-muted-foreground" />
-                        )}
-                        {p.name}
+                        {(() => {
+                          const iconKey = pointId ? points.find((p) => p.id === pointId)?.iconKey : null;
+                          return iconKey ? (
+                            <AssetOrZoneIcon iconKey={iconKey} className="size-5 shrink-0 text-muted-foreground" />
+                          ) : (
+                            <MapPin className="size-5 shrink-0 text-muted-foreground" />
+                          );
+                        })()}
+                        {pointId ? points.find((p) => p.id === pointId)?.name : t.money.allPoints}
                       </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t.money.allPoints}</SelectItem>
+                    {points.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <span className="flex items-center gap-2">
+                          {p.iconKey ? (
+                            <AssetOrZoneIcon iconKey={p.iconKey} className="size-4 shrink-0 text-muted-foreground" />
+                          ) : (
+                            <MapPin className="size-4 shrink-0 text-muted-foreground" />
+                          )}
+                          {p.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
               <div className="grid grid-cols-2 gap-2">
                 <Select

@@ -8,6 +8,7 @@ import {
   type LaunchRoundingMode,
 } from "@/lib/game-room";
 import { InsufficientBalanceError, spendWalletTx } from "@/lib/abonement";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Стоп пуска — оператор, серверное время; расчёт стоимости только на сервере
 // (docs/spec/04-game-room.md), по снапшоту тарифа, зафиксированному при
@@ -57,6 +58,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
     }
     paymentMethod = body.paymentMethod;
     if (paymentMethod === "abonement") {
+      if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+        return NextResponse.json({ error: "Оплата балансом отключена владельцем" }, { status: 403 });
+      }
       abonementWalletId =
         typeof body.abonementWalletId === "string" && body.abonementWalletId ? body.abonementWalletId : null;
       if (!abonementWalletId) {

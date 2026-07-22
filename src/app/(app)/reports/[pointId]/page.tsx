@@ -282,9 +282,7 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
                 </SelectContent>
               </Select>
             </div>
-          ) : (
-            <p className="mb-4 text-caption-airbnb">{pointName}</p>
-          )}
+          ) : null}
 
           <SegmentedTabs
             className="mb-4 grid grid-cols-2"

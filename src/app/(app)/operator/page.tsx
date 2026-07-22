@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Check, ChevronRight, MapPin } from "lucide-react";
+import { Check, ChevronRight, Gift, MapPin, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { MoneyInput } from "@/components/money-input";
@@ -36,6 +36,11 @@ interface PointOption {
   iconKey: string | null;
 }
 
+// Сентинелы для "Абонементы"/"Товары" в дропдауне "По кассам" — см. тот же
+// приём в money/zone-balances/page.tsx (owner-версия) для полного объяснения.
+const ABONEMENT_POOL_ID = "__abonement__";
+const GOODS_POOL_ID = "__goods__";
+
 interface OperatorTask {
   id: string;
   title: string;
@@ -56,6 +61,13 @@ export default function OperatorHomePage() {
   const [pointId, setPointId] = useState<string | null>(null);
   const [pointName, setPointName] = useState<string | null>(null);
   const [zones, setZones] = useState<ZoneOption[]>([]);
+  // "Товары" в дропдауне инкассации "По кассам" — только с тумблером
+  // goodsAccess, тот же принцип, что у пункта "Товары" в нижней навигации
+  // (запрос пользователя 2026-07-22: "не все сотрудники имеют возможность
+  // продажи товаров и поэтому нет смысла ему показывать в инкассации эту
+  // кассу"). Абонементы — без гейта: применимы как способ оплаты на любой
+  // зоне вне зависимости от тумблеров, отдельного тумблера-доступа нет.
+  const [goodsAccess, setGoodsAccess] = useState(false);
   const [checking, setChecking] = useState(true);
   const [workTimeEnabled, setWorkTimeEnabled] = useState(false);
   const [toPayOut, setToPayOut] = useState<number | null>(null);
@@ -87,6 +99,10 @@ export default function OperatorHomePage() {
   // сам оператор уже забрал с точки после прошлой инкассации
   // (lib/zone-balance.ts, найдено на реальных данных 2026-07-16).
   const [poolSettledToast, setPoolSettledToast] = useState<number | null>(null);
+  // Аванс инкассации (lib/zone-balance.ts) — часть суммы, для которой сейчас
+  // нет остатка ни в одной зоне точки, отложена отдельно вместо размазывания
+  // по случайной зоне (запрос пользователя 2026-07-22).
+  const [advanceToast, setAdvanceToast] = useState<number | null>(null);
   const { saved: collectionSaved, pulse: collectionPulse } = useSavePulse();
   // Модуль печати (запрос пользователя 2026-07-20) — слип инкассации, кнопка
   // печати по требованию сразу после успешной инкассации.
@@ -126,7 +142,7 @@ export default function OperatorHomePage() {
   function loadZones() {
     fetch("/api/operator/submission-context")
       .then((res) => res.json())
-      .then((data) =>
+      .then((data) => {
         setZones(
           (data.zones ?? []).map((z: ZoneOption) => ({
             id: z.id,
@@ -134,8 +150,9 @@ export default function OperatorHomePage() {
             iconKey: z.iconKey,
             accountingMode: z.accountingMode,
           }))
-        )
-      );
+        );
+        setGoodsAccess(Boolean(data.goodsAccess));
+      });
   }
 
   function loadTasks() {
@@ -325,25 +342,32 @@ export default function OperatorHomePage() {
     event.preventDefault();
     setCollectionError(null);
 
-    const res =
-      collectionMode === "general"
-        ? await fetch("/api/operator/collection/general", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ amount: collectionAmount }),
-          })
-        : await (async () => {
-            if (!collectionZoneId) {
-              setCollectionError(t.operatorApp.selectZone);
-              return null;
-            }
-            return fetch("/api/operator/collection", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ zoneId: collectionZoneId, amount: collectionAmount }),
-            });
-          })();
-    if (!res) return;
+    let res: Response | null;
+    if (collectionMode === "general") {
+      res = await fetch("/api/operator/collection/general", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: collectionAmount }),
+      });
+    } else if (!collectionZoneId) {
+      setCollectionError(t.operatorApp.selectZone);
+      return;
+    } else if (collectionZoneId === ABONEMENT_POOL_ID || collectionZoneId === GOODS_POOL_ID) {
+      res = await fetch("/api/operator/collection/pool", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pool: collectionZoneId === ABONEMENT_POOL_ID ? "abonement" : "goods",
+          amount: collectionAmount,
+        }),
+      });
+    } else {
+      res = await fetch("/api/operator/collection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ zoneId: collectionZoneId, amount: collectionAmount }),
+      });
+    }
 
     const data = await res.json();
     if (!res.ok) {
@@ -354,7 +378,18 @@ export default function OperatorHomePage() {
       setPoolSettledToast(data.settledPool);
       setTimeout(() => setPoolSettledToast(null), 3000);
     }
-    const zoneName = collectionMode === "zone" ? (zones.find((z) => z.id === collectionZoneId)?.name ?? null) : null;
+    if (data.advance > 0) {
+      setAdvanceToast(data.advance);
+      setTimeout(() => setAdvanceToast(null), 4000);
+    }
+    const zoneName =
+      collectionMode !== "zone"
+        ? null
+        : collectionZoneId === ABONEMENT_POOL_ID
+          ? t.money.abonementCashLabel
+          : collectionZoneId === GOODS_POOL_ID
+            ? t.goods.navLabel
+            : (zones.find((z) => z.id === collectionZoneId)?.name ?? null);
     collectionPulse(() => {
       setShowCollection(false);
       setCollectionAmount("");
@@ -372,7 +407,7 @@ export default function OperatorHomePage() {
         {
           lines: [
             { label: t.operatorApp.pointLabel, value: pointName ?? "" },
-            ...(c.zoneName ? [{ label: t.operatorApp.zoneLabel, value: c.zoneName }] : []),
+            ...(c.zoneName ? [{ label: t.operatorApp.cashPointLabel, value: c.zoneName }] : []),
           ],
         },
       ],
@@ -393,22 +428,28 @@ export default function OperatorHomePage() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-surface-0 px-4">
       <SpringCard hover={false} className="w-full max-w-sm md:max-w-lg lg:max-w-xl">
-        <div className="flex flex-col items-center gap-2 text-center">
-          {operatorAvatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={operatorAvatarUrl} alt="" className="size-21 rounded-full object-cover" />
-          ) : operatorIconKey ? (
-            <div className="flex size-21 items-center justify-center rounded-full bg-primary/10">
-              <AssetOrZoneIcon iconKey={operatorIconKey} className="size-18" />
-            </div>
-          ) : (
-            <div className="flex size-21 items-center justify-center rounded-full bg-primary text-3xl font-bold text-primary-foreground">
-              {operatorName?.slice(0, 1).toUpperCase()}
-            </div>
-          )}
-          <h1 className="text-screen-title">
-            {t.operatorApp.greeting} {operatorName}
-          </h1>
+        <div className="flex flex-col gap-2">
+          {/* Аватар слева, "Привет," и имя в две строки по его высоте —
+              компактнее, чем аватар над текстом (запрос пользователя
+              2026-07-22). */}
+          <div className="flex items-center gap-3">
+            {operatorAvatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={operatorAvatarUrl} alt="" className="size-20 shrink-0 rounded-full object-cover" />
+            ) : operatorIconKey ? (
+              <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <AssetOrZoneIcon iconKey={operatorIconKey} className="size-16" />
+              </div>
+            ) : (
+              <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-primary text-2xl font-bold text-primary-foreground">
+                {operatorName?.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <h1 className="flex flex-col leading-tight text-screen-title">
+              <span>{t.operatorApp.greeting}</span>
+              <span>{operatorName}</span>
+            </h1>
+          </div>
           {roaming && points.length > 1 ? (
             <div className="flex w-full items-center gap-2 text-left">
               <p className="shrink-0 text-body-airbnb text-muted-foreground">{t.operatorApp.pointLabel}</p>
@@ -643,28 +684,51 @@ export default function OperatorHomePage() {
       <BottomSheet open={showCollection} onClose={() => setShowCollection(false)}>
         <form onSubmit={handleCollection} className="flex flex-col gap-4 pt-2">
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.collection}</h2>
-          {zones.length > 1 && (
-                <SegmentedTabs
-                  shape="control"
-                  options={[
-                    { key: "zone" as const, label: t.operatorApp.collectionModeZone },
-                    { key: "general" as const, label: t.operatorApp.collectionModeGeneral },
-                  ]}
-                  value={collectionMode}
-                  onChange={setCollectionMode}
-                />
-              )}
+          {/* Тумблер всегда виден — целей для "По кассам" минимум три: любая
+              зона + Абонементы + Товары (запрос пользователя 2026-07-22). */}
+              <SegmentedTabs
+                shape="control"
+                options={[
+                  { key: "zone" as const, label: t.operatorApp.collectionModeZone },
+                  { key: "general" as const, label: t.operatorApp.collectionModeGeneral },
+                ]}
+                value={collectionMode}
+                onChange={setCollectionMode}
+              />
 
               {collectionMode === "zone" ? (
                 <div className="flex flex-col gap-1">
-                  <Label htmlFor="collectionZone">{t.operatorApp.zoneLabel}</Label>
                   <Select
                     value={collectionZoneId || null}
                     onValueChange={(v) => setCollectionZoneId(v ?? "")}
-                    items={zones.map((z) => ({ value: z.id, label: z.name }))}
+                    items={[
+                      ...zones.map((z) => ({ value: z.id, label: z.name })),
+                      { value: ABONEMENT_POOL_ID, label: t.money.abonementCashLabel },
+                      ...(goodsAccess ? [{ value: GOODS_POOL_ID, label: t.goods.navLabel }] : []),
+                    ]}
                   >
                     <SelectTrigger id="collectionZone" className="h-14 border-2 text-base">
                       {(() => {
+                        if (collectionZoneId === ABONEMENT_POOL_ID) {
+                          return (
+                            <SelectValue>
+                              <span className="flex items-center gap-2">
+                                <Gift className="size-5 shrink-0 text-muted-foreground" />
+                                {t.money.abonementCashLabel}
+                              </span>
+                            </SelectValue>
+                          );
+                        }
+                        if (collectionZoneId === GOODS_POOL_ID) {
+                          return (
+                            <SelectValue>
+                              <span className="flex items-center gap-2">
+                                <ShoppingBag className="size-5 shrink-0 text-muted-foreground" />
+                                {t.goods.navLabel}
+                              </span>
+                            </SelectValue>
+                          );
+                        }
                         const current = zones.find((z) => z.id === collectionZoneId);
                         if (!current) return <SelectValue placeholder={t.operatorApp.selectZone} />;
                         return (
@@ -694,6 +758,20 @@ export default function OperatorHomePage() {
                           </span>
                         </SelectItem>
                       ))}
+                      <SelectItem value={ABONEMENT_POOL_ID}>
+                        <span className="flex items-center gap-2">
+                          <Gift className="size-5 shrink-0 text-muted-foreground" />
+                          {t.money.abonementCashLabel}
+                        </span>
+                      </SelectItem>
+                      {goodsAccess && (
+                        <SelectItem value={GOODS_POOL_ID}>
+                          <span className="flex items-center gap-2">
+                            <ShoppingBag className="size-5 shrink-0 text-muted-foreground" />
+                            {t.goods.navLabel}
+                          </span>
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -811,6 +889,11 @@ export default function OperatorHomePage() {
       {poolSettledToast !== null && (
         <div className="fixed bottom-24 left-1/2 z-70 -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-caption-airbnb font-semibold text-background shadow-lg">
           {t.operatorApp.collectionPoolSettledPrefix} <Money value={poolSettledToast} /> {t.operatorApp.collectionPoolSettledSuffix}
+        </div>
+      )}
+      {advanceToast !== null && (
+        <div className="fixed bottom-24 left-1/2 z-70 -translate-x-1/2 max-w-[calc(100vw-2rem)] rounded-full bg-foreground px-4 py-2 text-center text-caption-airbnb font-semibold text-background shadow-lg">
+          {t.operatorApp.collectionAdvanceToastPrefix} <Money value={advanceToast} /> {t.operatorApp.collectionAdvanceToastSuffix}
         </div>
       )}
     </div>

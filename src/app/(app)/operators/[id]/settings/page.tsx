@@ -111,6 +111,11 @@ export default function OperatorSettingsPage() {
   const [checking, setChecking] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [moduleEnabled, setModuleEnabled] = useState(false);
+  // Настройки → Система → "Модули" (запрос пользователя 2026-07-22: "при
+  // отключённых модулях не должны быть и соответствующие тумблеры") —
+  // goodsAccess/revisionAccess прячутся целиком, если Владелец выключил
+  // Товары на уровне тенанта, не только UI-скрытие самого раздела "Товары".
+  const [goodsModuleEnabled, setGoodsModuleEnabled] = useState(true);
   const [currentRate, setCurrentRate] = useState<number | null>(null);
   const [allZones, setAllZones] = useState<ZoneOption[]>([]);
 
@@ -138,10 +143,11 @@ export default function OperatorSettingsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   async function loadAll() {
-    const [profileRes, summaryRes, zonesRes] = await Promise.all([
+    const [profileRes, summaryRes, zonesRes, systemSettingsRes] = await Promise.all([
       fetch(`/api/operators/${params.id}`),
       fetch(`/api/operators/${params.id}/work-time/summary`),
       fetch("/api/zones"),
+      fetch("/api/tenant/system-settings"),
     ]);
     if (profileRes.status === 401) {
       router.replace("/login");
@@ -156,6 +162,7 @@ export default function OperatorSettingsPage() {
     setModuleEnabled(summaryRes.ok);
     if (summaryRes.ok) setCurrentRate((await summaryRes.json()).currentRate);
     if (zonesRes.ok) setAllZones((await zonesRes.json()).zones ?? []);
+    if (systemSettingsRes.ok) setGoodsModuleEnabled((await systemSettingsRes.json()).goodsEnabled ?? true);
     setChecking(false);
   }
 
@@ -578,21 +585,23 @@ export default function OperatorSettingsPage() {
                 />
               </div>
             )}
-            <div className="flex items-center gap-3 border-t border-border py-3.5">
-              <ShoppingBag className="size-4 shrink-0 text-muted-foreground" />
-              <div className="min-w-0 flex-1">
-                <div className="text-body-airbnb">{t.goods.navLabel}</div>
-                <div className="text-caption-airbnb">{t.operators.goodsAccessHint}</div>
+            {goodsModuleEnabled && (
+              <div className="flex items-center gap-3 border-t border-border py-3.5">
+                <ShoppingBag className="size-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-body-airbnb">{t.goods.navLabel}</div>
+                  <div className="text-caption-airbnb">{t.operators.goodsAccessHint}</div>
+                </div>
+                <Switch checked={profile.goodsAccess} onCheckedChange={toggleGoodsAccess} className="shrink-0" />
               </div>
-              <Switch checked={profile.goodsAccess} onCheckedChange={toggleGoodsAccess} className="shrink-0" />
-            </div>
+            )}
             {/* Без своей border-t и без иконки (запрос пользователя
                 2026-07-19: "надо, чтобы было понятно, что Ревизия относится
                 к Товарам... не разделять линией") — визуально приклеена к
                 строке "Товары" выше и слегка сдвинута вправо (pl-7, под
                 текст, а не под иконку), читается как её под-настройка, а не
                 независимый пункт. */}
-            {profile.goodsAccess && (
+            {goodsModuleEnabled && profile.goodsAccess && (
               <div className="flex items-center gap-3 py-2.5 pl-7">
                 <div className="min-w-0 flex-1">
                   <div className="text-caption-airbnb font-semibold">{t.goods.revisionTitle}</div>
@@ -628,21 +637,23 @@ export default function OperatorSettingsPage() {
             <span className="mb-1 text-[0.6875rem] font-bold uppercase tracking-[.08em] text-muted-foreground/70">
               {t.operators.workGroupLabel}
             </span>
-            <div className="flex items-center gap-3 border-t border-border py-3.5 first:border-t-0">
-              <ShoppingBag className="size-4 shrink-0 text-muted-foreground" />
-              <div className="min-w-0 flex-1">
-                <div className="text-body-airbnb">{t.goods.navLabel}</div>
-                <div className="text-caption-airbnb">{t.operators.goodsAccessHint}</div>
+            {goodsModuleEnabled && (
+              <div className="flex items-center gap-3 border-t border-border py-3.5 first:border-t-0">
+                <ShoppingBag className="size-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-body-airbnb">{t.goods.navLabel}</div>
+                  <div className="text-caption-airbnb">{t.operators.goodsAccessHint}</div>
+                </div>
+                <Switch checked={profile.goodsAccess} onCheckedChange={toggleGoodsAccess} className="shrink-0" />
               </div>
-              <Switch checked={profile.goodsAccess} onCheckedChange={toggleGoodsAccess} className="shrink-0" />
-            </div>
+            )}
             {/* Без своей border-t и без иконки (запрос пользователя
                 2026-07-19: "надо, чтобы было понятно, что Ревизия относится
                 к Товарам... не разделять линией") — визуально приклеена к
                 строке "Товары" выше и слегка сдвинута вправо (pl-7, под
                 текст, а не под иконку), читается как её под-настройка, а не
                 независимый пункт. */}
-            {profile.goodsAccess && (
+            {goodsModuleEnabled && profile.goodsAccess && (
               <div className="flex items-center gap-3 py-2.5 pl-7">
                 <div className="min-w-0 flex-1">
                   <div className="text-caption-airbnb font-semibold">{t.goods.revisionTitle}</div>

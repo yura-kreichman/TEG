@@ -145,6 +145,10 @@ export default function StaysZonePage() {
   const [abonementTarget, setAbonementTarget] = useState<
     { kind: "start"; optionId?: string; amount: number } | { kind: "stop"; launch: OpenLaunch; amount: number } | null
   >(null);
+  // Настройки → Система → "Модули" (запрос пользователя 2026-07-22) —
+  // кнопка "Баланс" прячется целиком, если Владелец отключил Клиентов;
+  // серверная защита уже есть в /api/zones/[id]/launches и /api/launches/[id]/stop.
+  const [clientsEnabled, setClientsEnabled] = useState(true);
 
   const [soundHintOpen, setSoundHintOpen] = useState(false);
   const alertedRef = useRef<Set<string>>(new Set());
@@ -187,6 +191,7 @@ export default function StaysZonePage() {
           return;
         }
         setZones(stays);
+        setClientsEnabled(data.clientsEnabled !== false);
         // Переход из мастера сдачи итогов ведёт сразу к активу с открытыми
         // пусками (запрос пользователя 2026-07-17: "не по отношению к Зоне,
         // а к Активу с переходом на Актуальный Актив") — актив однозначно
@@ -796,22 +801,24 @@ export default function StaysZonePage() {
                 <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
                 {t.operatorApp.submit.mobileLabel}
               </ConfirmButton>
-              <PressableScale>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="relative h-12 w-full font-semibold"
-                  disabled={starting}
-                  onClick={() => {
-                    const amount = selectedOptions.find((o) => o.id === addFlow.optionId)?.price ?? 0;
-                    setAddFlow(null);
-                    setAbonementTarget({ kind: "start", optionId: addFlow.optionId, amount });
-                  }}
-                >
-                  <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                  {t.operatorApp.abonement.paymentLabel}
-                </Button>
-              </PressableScale>
+              {clientsEnabled && (
+                <PressableScale>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="relative h-12 w-full font-semibold"
+                    disabled={starting}
+                    onClick={() => {
+                      const amount = selectedOptions.find((o) => o.id === addFlow.optionId)?.price ?? 0;
+                      setAddFlow(null);
+                      setAbonementTarget({ kind: "start", optionId: addFlow.optionId, amount });
+                    }}
+                  >
+                    <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                    {t.operatorApp.abonement.paymentLabel}
+                  </Button>
+                </PressableScale>
+              )}
             </div>
           </div>
         )}
@@ -859,30 +866,32 @@ export default function StaysZonePage() {
                 <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
                 {t.operatorApp.submit.mobileLabel}
               </ConfirmButton>
-              <PressableScale>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="relative h-12 w-full font-semibold"
-                  disabled={stopping}
-                  onClick={() => {
-                    const amount = estimateLiveAmount(
-                      stopPaymentTarget.pricingMode,
-                      stopPaymentTarget.priceSnapshot,
-                      stopPaymentTarget.roundingModeSnapshot,
-                      stopPaymentTarget.minAmountSnapshot,
-                      new Date(stopPaymentTarget.startedAt),
-                      now
-                    );
-                    const launch = stopPaymentTarget;
-                    setStopPaymentTarget(null);
-                    setAbonementTarget({ kind: "stop", launch, amount });
-                  }}
-                >
-                  <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                  {t.operatorApp.abonement.paymentLabel}
-                </Button>
-              </PressableScale>
+              {clientsEnabled && (
+                <PressableScale>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="relative h-12 w-full font-semibold"
+                    disabled={stopping}
+                    onClick={() => {
+                      const amount = estimateLiveAmount(
+                        stopPaymentTarget.pricingMode,
+                        stopPaymentTarget.priceSnapshot,
+                        stopPaymentTarget.roundingModeSnapshot,
+                        stopPaymentTarget.minAmountSnapshot,
+                        new Date(stopPaymentTarget.startedAt),
+                        now
+                      );
+                      const launch = stopPaymentTarget;
+                      setStopPaymentTarget(null);
+                      setAbonementTarget({ kind: "stop", launch, amount });
+                    }}
+                  >
+                    <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                    {t.operatorApp.abonement.paymentLabel}
+                  </Button>
+                </PressableScale>
+              )}
             </div>
           </div>
         )}

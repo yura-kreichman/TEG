@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { localDateParts } from "@/lib/business-day";
 import { resolvePeriodFromParams } from "@/lib/reports";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Дневные агрегаты уже честные (докс: "Принцип честности" — только
 // отфильтрованные реальные данные) — этот роут только суммирует то, что уже
@@ -15,6 +16,9 @@ export async function GET(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "landingEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });

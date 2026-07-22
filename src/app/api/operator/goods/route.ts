@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Каталог для раздела "Товары" в ПВА (docs/spec/09-goods.md, "Продажа") —
 // только с тумблером goodsAccess (серверная проверка, не только скрытие в
@@ -14,13 +15,13 @@ export async function GET() {
   if (!ctx) {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
-  if (!ctx.operator.goodsAccess) {
+  if (!(await isModuleEnabled(ctx.operator.tenantId, "goodsEnabled")) || !ctx.operator.goodsAccess) {
     return NextResponse.json({ error: "Нет доступа к товарам" }, { status: 403 });
   }
 
   const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
-  const [categories, goods, stock, recentSales, tenant] = await Promise.all([
+  const [categories, goods, stock, recentSales, tenant, clientsEnabled] = await Promise.all([
     prisma.goodsCategory.findMany({
       where: { tenantId: ctx.operator.tenantId, deletedAt: null },
       orderBy: { order: "asc" },
@@ -40,6 +41,7 @@ export async function GET() {
       _sum: { quantity: true },
     }),
     prisma.tenant.findUnique({ where: { id: ctx.operator.tenantId }, select: { goodsAllowBalancePayment: true } }),
+    isModuleEnabled(ctx.operator.tenantId, "clientsEnabled"),
   ]);
 
   const stockByGoods = new Map(stock.map((s) => [s.goodsId, s.quantity]));
@@ -52,7 +54,7 @@ export async function GET() {
     // Настройки → Система (запрос пользователя 2026-07-20) — глобальный
     // тумблер Владельца, серверная проверка в /api/operator/goods/sale, тут
     // только чтобы скрыть кнопку "Баланс" в UI, не сама защита.
-    goodsAllowBalancePayment: tenant?.goodsAllowBalancePayment ?? true,
+    goodsAllowBalancePayment: (tenant?.goodsAllowBalancePayment ?? true) && clientsEnabled,
     categories: categories.map((c) => ({ id: c.id, name: c.name })),
     goods: goodsSorted.map((g) => ({
       id: g.id,

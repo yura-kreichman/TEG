@@ -130,6 +130,10 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
       router.replace("/login");
       return;
     }
+    if (tasksRes.status === 403) {
+      router.replace("/");
+      return;
+    }
     if (tasksRes.status === 404) {
       router.replace("/tasks");
       return;

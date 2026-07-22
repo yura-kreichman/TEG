@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Оператор видит задачи своей точки, где либо нет ни одного назначенного
 // (оператора/пользователя) — "пусто = видят все операторы" (см.
@@ -12,6 +13,9 @@ export async function GET() {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
   const { operator, point } = ctx;
+  if (!(await isModuleEnabled(operator.tenantId, "tasksEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
+  }
 
   const tasks = await prisma.task.findMany({
     where: {

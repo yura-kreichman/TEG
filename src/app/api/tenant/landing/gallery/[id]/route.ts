@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { deleteUploadedImage } from "@/lib/uploads";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 async function findOwnedPhoto(tenantId: string, id: string) {
   const photo = await prisma.landingGalleryPhoto.findUnique({ where: { id }, include: { landing: true } });
@@ -17,6 +18,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tenant/lan
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "landingEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
   const { id } = await ctx.params;
   const photo = await findOwnedPhoto(owner.tenantId, id);
@@ -38,6 +42,9 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/tenant/l
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "landingEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
   const { id } = await ctx.params;
   const photo = await findOwnedPhoto(owner.tenantId, id);

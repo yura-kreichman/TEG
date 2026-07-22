@@ -297,18 +297,28 @@ export async function dispatchShiftCheckin(tenantId: string, operatorName: strin
   }).catch((err) => console.error("push dispatch failed", { kind: "shiftCheckin", tenantId, err }));
 }
 
-// Инкассация оператором (запрос пользователя 2026-07-17: "владелец должен
-// получать push об инкассации") — только push, тот же принцип, что
-// shiftCheckin: короткое мгновенное уведомление о действии сотрудника, не
-// настраиваемая сводка. Владельческие инкассации (zones/[id]/collection,
-// points/[id]/collection/general) не шлют — незачем уведомлять владельца о
-// его же собственном действии.
-export async function dispatchCollection(tenantId: string, amount: number, label: string, operatorName: string): Promise<void> {
+// Инкассация (запрос пользователя 2026-07-17: "владелец должен получать
+// push об инкассации") — только push, тот же принцип, что shiftCheckin:
+// короткое мгновенное уведомление о действии, не настраиваемая сводка.
+// Вне зависимости от того, кто провёл инкассацию — Сотрудник или сам
+// Владелец (запрос пользователя 2026-07-22: "оно должно быть вне
+// зависимости кто её вводит" — раньше владельческие инкассации,
+// zones/[id]/collection и points/[id]/collection/general, вообще не слали
+// push, решение 2026-07-17 пересмотрено). actorName===null — инкассацию
+// провёл сам владелец, подставляем переведённую роль (тот же приём, что
+// abonement-wallets/[id]/route.ts: клиент не получает email напрямую).
+export async function dispatchCollection(
+  tenantId: string,
+  amount: number,
+  label: string,
+  actorName: string | null
+): Promise<void> {
   if (!(await pushEnabledFor(tenantId, "collection"))) return;
   const tenant = await getTenantInfo(tenantId);
+  const who = actorName ?? tenant.t.common.ownerLabel;
   await sendPushToTenant(tenantId, {
     title: tenant.t.pushSettings.collectionLabel,
-    body: `${operatorName} · ${label} · ${formatMoney(amount, tenant.locale)}`,
+    body: `${who} · ${label} · ${formatMoney(amount, tenant.locale)}`,
     url: "/money",
   }).catch((err) => console.error("push dispatch failed", { kind: "collection", tenantId, err }));
 }

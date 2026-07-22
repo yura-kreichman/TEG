@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireOperator } from "@/lib/require-operator";
 import { prisma } from "@/lib/prisma";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Правка имени существующего абонента оператором (запрос пользователя
 // 2026-07-17: "Сотрудник должен иметь возможность... менять имя, в том
@@ -12,6 +13,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operator/a
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
   const { point } = opCtx;
+  if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
+  }
   const { id } = await ctx.params;
 
   const wallet = await prisma.abonementWallet.findFirst({ where: { id, tenantId: point.tenantId } });

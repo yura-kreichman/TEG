@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 export async function GET() {
   const ctx = await requireOperator();
@@ -156,5 +157,9 @@ export async function GET() {
     expenseCategories,
     goodsAccess: operator.goodsAccess,
     ticketsAccess: operator.ticketsAccess,
+    // Настройки → Система → "Модули" (запрос пользователя 2026-07-22) —
+    // гейтит видимость пункта "Клиенты" в нижнем баре (operator-bottom-nav.tsx),
+    // тот же принцип, что goodsAccess выше.
+    clientsEnabled: await isModuleEnabled(point.tenantId, "clientsEnabled"),
   });
 }

@@ -128,7 +128,9 @@
     "systemReceiptPreviewTitle": "Makbuz",
     "systemReceiptPreviewLine1": "Kalem",
     "systemReceiptPreviewLine2": "Tutar",
-    "systemReceiptPreviewTotal": "Toplam"
+    "systemReceiptPreviewTotal": "Toplam",
+    "systemModulesTitle": "Modüller",
+    "systemModulesHint": "Kullanmadığınızı kapatın — arayüzü basitleştirir."
   },
   "tasks": {
     "pickPointTitle": "Görevler",
@@ -474,7 +476,7 @@
     "instructionAckLabel": "Talimat tamamlandı",
     "instructionAckSub": "bir çalışan talimatı imzaladığında",
     "collectionLabel": "Tahsilat",
-    "collectionSub": "çalışan bir tahsilat teslim ettiğinde",
+    "collectionSub": "bir tahsilat kaydedildiğinde",
     "errors": {
       "notSupported": "Bu tarayıcı push bildirimlerini desteklemiyor.",
       "permissionDenied": "Tarayıcıda bildirim izni reddedildi — site ayarlarından manuel olarak etkinleştirin.",
@@ -831,7 +833,7 @@
     "pinRowLabel": "PIN kodu",
     "deactivateOperatorButton": "Çalışanı devre dışı bırak",
     "activateOperatorButton": "Çalışanı etkinleştir",
-    "deactivateOpenShiftWarning": "Çalışanın şu anda açık bir vardiyası var — devre dışı bırakıldıktan sonra puantajdan kapatılabilir",
+    "deactivateOpenShiftWarning": "Çalışanın şu anda açık bir vardiyası var — devre dışı bıraktıktan sonra çalışanın profilinden, «Çalışma süresi» bölümünden kapatabilirsiniz",
     "overdraftLabel": "Avans açığı",
     "overdraftHint": "Bu çalışanın bakiyesinin üzerinde avans almasına izin ver (eksiye düşebilir)",
     "skipShiftStartWindowLabel": "Vardiya başlangıç saatinde kısıtlama yok",
@@ -857,14 +859,14 @@
     "zoneBalancesLink": "Bakiyeler ve tahsilatlar",
     "zoneBalancesLinkHint": "Noktada ne kadar olması gerektiği ve tahsilat geçmişi",
     "zoneBalancesTotalLabel": "Toplam",
-    "abonementCashLabel": "Abonelikler (nakit)",
+    "abonementCashLabel": "Abonelikler",
     "abonementSoldTitle": "Abonelik satışları",
     "abonementSoldHint": "Abonelik satışlarına göre",
     "recordCollectionButton": "Tahsilat ekle",
     "collectionAmountLabel": "Tahsilat tutarı",
     "collectionSlipTitle": "Tahsilat belgesi",
     "collectionDoneTitle": "Tahsilat kaydedildi",
-    "printCollectionSlipButton": "Belgeyi yazdır",
+    "printCollectionSlipButton": "Tahsilat sonuçlarını yazdır",
     "collectionGeneralAmountLabel": "Toplam tahsilat tutarı",
     "collectionPoolSettledPrefix": "Ayrıca düşüldü",
     "collectionPoolSettledSuffix": "daha önce çalışan tarafından alınan",
@@ -902,7 +904,12 @@
     "deleteCollectionError": "Tahsilat silinemedi",
     "voidedChip": "İptal edildi",
     "voidAction": "İptal et",
-    "voidConfirm": "Bu başlatma iptal edilsin mi? Hesaplanan gelirden hariç tutulacak."
+    "voidConfirm": "Bu başlatma iptal edilsin mi? Hesaplanan gelirden hariç tutulacak.",
+    "collectionAdvanceLabel": "Tahsilat avansı",
+    "collectionAdvanceHint": "Alındı ama henüz bölgelere dağıtılmadı",
+    "collectionAdvanceToastPrefix": "Avans olarak ayrıldı",
+    "collectionAdvanceToastSuffix": "— sonuçlar teslim edildikten sonra bölge bakiyesinde görünecek",
+    "collectionPoolSweepLabel": "Abonelikler/ürünler (nakit)"
   },
   "readings": {
     "title": "Günlük sonuçlar",
@@ -984,14 +991,14 @@
     "pointLabel": "Nokta:",
     "submitResults": "Sonuçları teslim et",
     "collection": "Tahsilat",
-    "collectionModeZone": "Bölgelere göre",
+    "collectionModeZone": "Kasalara göre",
     "collectionModeGeneral": "Genel",
     "collectionGeneralHint": "Tutar, noktanın bölgeleri arasında kasalarının bakiyesiyle orantılı olarak otomatik bölüştürülür.",
     "collectionGeneralAmountLabel": "Sahibe verilen toplam tutar",
     "collectionPoolSettledPrefix": "Ayrıca düşüldü",
     "collectionPoolSettledSuffix": "daha önce çalışan tarafından alınan",
     "zoneLabel": "Bölge",
-    "selectZone": "Bölge seçin",
+    "selectZone": "Kasa seçin",
     "collectionAmountLabel": "Sahibe verilen tutar",
     "switchOperator": "Çalışan değiştir",
     "tasks": {
@@ -1152,7 +1159,10 @@
       "spendTitle": "Bakiyeden düş",
       "debitedLabel": "Düşüldü",
       "noSpendZonesError": "Bakiyeyle ödeme için uygun bölge yok"
-    }
+    },
+    "collectionAdvanceToastPrefix": "Avans olarak ayrıldı",
+    "collectionAdvanceToastSuffix": "— sonuçlar teslim edildikten sonra bölge bakiyesinde görünecek",
+    "cashPointLabel": "Kasa"
   },
   "install": {
     "hint": "Telefon ekranından hızlı erişim için uygulamayı yükleyin.",

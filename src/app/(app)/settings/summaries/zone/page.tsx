@@ -127,7 +127,7 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary, mode
       abonementAmount: 150,
       calculatedRevenue: 1715,
       difference: Math.round((1200 + 300 - 1715) * 100) / 100,
-      returnsCount: 1,
+      returnsCount: 0,
     };
   }
 

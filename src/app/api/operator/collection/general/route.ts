@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
-import { getPointPoolDeficit, getZoneBalances } from "@/lib/zone-balance";
+import {
+  getPointAbonementCashTotal,
+  getPointGoodsCashTotal,
+  getPointPoolDeficit,
+  getZoneBalances,
+  settleOutstandingCollectionAdvance,
+  splitCollectionAmountDetailed,
+} from "@/lib/zone-balance";
 import { distributeCollectionWhole } from "@/lib/collection-split";
 import { dispatchCollection } from "@/lib/summary-channels/dispatch";
 
@@ -23,7 +30,10 @@ export async function POST(request: Request) {
 
   const { amount } = await request.json();
   const amountNumber = Math.round(Number(amount));
-  if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+  // < 0, не <= 0 — 0 допустим: способ вручную запустить погашение
+  // накопленного аванса/пула, когда физически новых денег нет (запрос
+  // пользователя 2026-07-22).
+  if (!Number.isFinite(amountNumber) || amountNumber < 0) {
     return NextResponse.json({ error: "Некорректная сумма" }, { status: 400 });
   }
 
@@ -32,13 +42,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "На точке нет зон" }, { status: 400 });
   }
 
+  const actor = { performedByOperatorId: ctx.operator.id };
+
+  // Сначала гасим накопленный аванс инкассации остатками зон точки, если они
+  // уже появились (lib/zone-balance.ts, "Аванс инкассации").
+  await settleOutstandingCollectionAdvance(ctx.point.tenantId, ctx.point.id, actor);
+
   const balanceByZone = await getZoneBalances(zones.map((z) => z.id));
   const weights = zones.map((z) => balanceByZone.get(z.id) ?? 0);
+  const zonesRawSum = weights.reduce((sum, w) => sum + Math.max(0, w), 0);
   // Довзыскиваем пул — аванс/премия, уже забранные с точки после прошлой
   // инкассации (см. owner-версию /api/points/[id]/collection/general для
   // причины: иначе эти деньги зависают в журнале зон навсегда).
   const poolDeficit = await getPointPoolDeficit(ctx.point.id);
-  const shares = distributeCollectionWhole(amountNumber + poolDeficit, weights);
+  // Абонементы и товары наличными — не привязаны ни к одной зоне, и друг с
+  // другом не смешиваются (см. owner-версию: "могут быть и 2 пачки"). Разный
+  // учёт, одна инкассация — свои части разбивки.
+  const [abonementCash, goodsCash] = await Promise.all([
+    getPointAbonementCashTotal(ctx.point.id),
+    getPointGoodsCashTotal(ctx.point.id),
+  ]);
+  const { zonePortion, abonementSweepPortion, goodsSweepPortion, advance } = splitCollectionAmountDetailed(
+    amountNumber,
+    zonesRawSum,
+    abonementCash,
+    goodsCash
+  );
+  const shares = distributeCollectionWhole(zonePortion + poolDeficit, weights);
 
   const rows = zones
     .map((zone, i) => ({
@@ -53,8 +83,44 @@ export async function POST(request: Request) {
   if (rows.length > 0) {
     await prisma.moneyOperation.createMany({ data: rows });
   }
+  // Абонементы/товары наличными — реальной суммой, СВОИМ типом каждый, в
+  // Реестр инкассаций раздельными строками (см. owner-версию для полного
+  // объяснения).
+  if (abonementSweepPortion > 0) {
+    await prisma.moneyOperation.create({
+      data: {
+        tenantId: ctx.point.tenantId,
+        pointId: ctx.point.id,
+        type: "collection_pool_sweep_abonement",
+        amount: -abonementSweepPortion,
+        performedByOperatorId: ctx.operator.id,
+      },
+    });
+  }
+  if (goodsSweepPortion > 0) {
+    await prisma.moneyOperation.create({
+      data: {
+        tenantId: ctx.point.tenantId,
+        pointId: ctx.point.id,
+        type: "collection_pool_sweep_goods",
+        amount: -goodsSweepPortion,
+        performedByOperatorId: ctx.operator.id,
+      },
+    });
+  }
+  if (advance > 0) {
+    await prisma.moneyOperation.create({
+      data: {
+        tenantId: ctx.point.tenantId,
+        pointId: ctx.point.id,
+        type: "collection_advance",
+        amount: -advance,
+        performedByOperatorId: ctx.operator.id,
+      },
+    });
+  }
 
   dispatchCollection(ctx.point.tenantId, amountNumber + poolDeficit, ctx.point.name, ctx.operator.name).catch(() => {});
 
-  return NextResponse.json({ ok: true, settledPool: poolDeficit });
+  return NextResponse.json({ ok: true, settledPool: poolDeficit, advance });
 }

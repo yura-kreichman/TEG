@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { generateAcknowledgmentPdf } from "@/lib/instructions/pdf";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 import type { PMNode } from "@/lib/instructions/content";
 
 // Генерация на сервере по требованию (docs/spec/07-instructions.md, "PDF") —
@@ -12,6 +13,9 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/instruction
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "instructionsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const { id } = await ctx.params;

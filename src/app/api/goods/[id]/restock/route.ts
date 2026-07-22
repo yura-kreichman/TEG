@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner, findTenantPoint } from "@/lib/require-owner";
 import { restockGoods } from "@/lib/goods";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Пополнение остатка — только владелец (docs/spec/09-goods.md, "Остатки"),
 // "+N штук" на точку, без закупочных цен.
@@ -9,6 +10,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/goods/[id]/
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "goodsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const { id } = await ctx.params;

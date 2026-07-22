@@ -30,8 +30,8 @@ export const dynamic = "force-dynamic";
 const SITE_URL = process.env.SITE_URL ?? "http://localhost:3000";
 
 async function loadPreviewData(slug: string, token: string): Promise<LandingRenderData | null> {
-  const tenant = await prisma.tenant.findUnique({ where: { slug }, select: { id: true } });
-  if (!tenant) return null;
+  const tenant = await prisma.tenant.findUnique({ where: { slug }, select: { id: true, landingEnabled: true } });
+  if (!tenant || !tenant.landingEnabled) return null;
   const landing = await prisma.landing.findUnique({ where: { tenantId: tenant.id }, select: { previewToken: true } });
   if (!landing || landing.previewToken !== token) return null;
   return getLandingRenderData(tenant.id);

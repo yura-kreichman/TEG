@@ -117,6 +117,10 @@ export default function TicketsZonePage() {
   const [zones, setZones] = useState<ZoneCtx[]>([]);
   const [zoneId, setZoneId] = useState<string | null>(null);
   const [ticketsAccess, setTicketsAccess] = useState(false);
+  // Настройки → Система → "Модули" (запрос пользователя 2026-07-22) —
+  // кнопка "Баланс" прячется целиком, если Владелец отключил Клиентов;
+  // серверная защита уже есть в /api/zones/[id]/ticket-orders.
+  const [clientsEnabled, setClientsEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("sell");
   const [error, setError] = useState<string | null>(null);
@@ -159,6 +163,7 @@ export default function TicketsZonePage() {
         // не оставляем "sell" выбранной вкладкой без соответствующего таба.
         const access = Boolean(data.ticketsAccess);
         setTicketsAccess(access);
+        setClientsEnabled(data.clientsEnabled !== false);
         if (!access) setTab("orders");
         setLoading(false);
       });
@@ -1115,21 +1120,23 @@ export default function TicketsZonePage() {
               <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
               {t.operatorApp.submit.mobileLabel}
             </ConfirmButton>
-            <PressableScale>
-              <Button
-                type="button"
-                variant="outline"
-                className="relative h-12 w-full font-semibold"
-                disabled={submitting}
-                onClick={() => {
-                  setPaymentOpen(false);
-                  setAbonementTarget({ amount: cartTotal });
-                }}
-              >
-                <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                {t.operatorApp.abonement.paymentLabel}
-              </Button>
-            </PressableScale>
+            {clientsEnabled && (
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="relative h-12 w-full font-semibold"
+                  disabled={submitting}
+                  onClick={() => {
+                    setPaymentOpen(false);
+                    setAbonementTarget({ amount: cartTotal });
+                  }}
+                >
+                  <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                  {t.operatorApp.abonement.paymentLabel}
+                </Button>
+              </PressableScale>
+            )}
           </div>
         </div>
       </BottomSheet>

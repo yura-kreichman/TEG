@@ -391,7 +391,19 @@ export async function GET(request: Request) {
         : ["stays", "launches", "counters", "cash_only"].includes(zs.zone.accountingMode)
           ? abonementAmountFor(zs.zoneId, zs.createdAt)
           : 0;
-      const difference = Math.round((actualCash + abonementAmount - netRevenue) * 100) / 100;
+      // cash_only: "Расчётной выручки и разницы не существует — сравнивать
+      // не с чем" (docs/spec/01-counters.md, "Расчёт") — без этой ветки
+      // difference молча считался как actualCash+abonementAmount−0
+      // (netRevenue у cash_only всегда 0, tariffCalc пуст), т.е. фактически
+      // равнялся полной кассе зоны, а не нулю. Карточка зоны эту строку не
+      // показывает (UI-условие ниже), но daySummary суммирует difference по
+      // ВСЕМ card без исключений — реальный баг, найден при аудите
+      // 2026-07-22: касса cash_only-зоны просачивалась в итоговую "Разницу"
+      // дня, искажая её на точках, где есть и cash_only, и другие зоны.
+      const difference =
+        zs.zone.accountingMode === "cash_only"
+          ? 0
+          : Math.round((actualCash + abonementAmount - netRevenue) * 100) / 100;
 
       const editable =
         zs.zone.accountingMode !== "counters" ||

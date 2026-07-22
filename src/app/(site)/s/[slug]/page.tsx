@@ -24,8 +24,8 @@ import {
 const SITE_URL = process.env.SITE_URL ?? "http://localhost:3000";
 
 async function loadPublishedData(slug: string): Promise<LandingRenderData | null> {
-  const tenant = await prisma.tenant.findUnique({ where: { slug }, select: { id: true } });
-  if (!tenant) return null;
+  const tenant = await prisma.tenant.findUnique({ where: { slug }, select: { id: true, landingEnabled: true } });
+  if (!tenant || !tenant.landingEnabled) return null;
   const data = await getLandingRenderData(tenant.id);
   if (!data || data.status !== "published") return null;
   return data;

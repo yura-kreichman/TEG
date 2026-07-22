@@ -2,21 +2,56 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { Check, FileText, Globe, ListChecks, ShoppingBag, Wallet, type LucideIcon } from "lucide-react";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/components/i18n-provider";
+import type { Dictionary } from "@/lib/i18n";
 import { OwnerShell } from "@/components/owner-shell";
 import { useOwnerHasPrinterLocal } from "@/hooks/use-print";
 import { PrintButton } from "@/components/print/print-button";
 import { buildReceiptHtml, type PrintDocumentData } from "@/lib/print/receipt-document";
+import { cn } from "@/lib/utils";
+
+// Плашка "Модули" (запрос пользователя 2026-07-22) — множественный выбор,
+// тем же визуальным паттерном, что CurrencyPicker (src/components/currency-picker.tsx),
+// только там один тайл может быть выбран, а тут любое число сразу. Ключи —
+// поля Tenant, см. schema.prisma для полного объяснения каждого модуля.
+// "Рабочее время" НЕ входит (запрос пользователя 2026-07-22: "невозможно
+// отключить... кто же будет вводить итоги тогда" — у него нет отдельного
+// nav-пункта, живёт внутри Сотрудников, того же экрана, что PIN/доступ к
+// зонам/вход оператора для сдачи итогов; риск спутать "выключить учёт часов"
+// с "выключить самих сотрудников" перевесил пользу тумблера).
+type ModuleKey = "instructionsEnabled" | "tasksEnabled" | "landingEnabled" | "goodsEnabled" | "clientsEnabled";
+
+const MODULE_TILES: { key: ModuleKey; icon: LucideIcon; label: (t: Dictionary) => string }[] = [
+  { key: "instructionsEnabled", icon: FileText, label: (t) => t.instructions.settingsTitle },
+  { key: "tasksEnabled", icon: ListChecks, label: (t) => t.nav.tasks },
+  { key: "landingEnabled", icon: Globe, label: (t) => t.landing.settingsTitle },
+  { key: "goodsEnabled", icon: ShoppingBag, label: (t) => t.goods.navLabel },
+  { key: "clientsEnabled", icon: Wallet, label: (t) => t.abonements.walletsTitle },
+];
 
 interface SystemSettings {
   goodsAllowBalancePayment: boolean;
   printingEnabled: boolean;
+  instructionsEnabled: boolean;
+  tasksEnabled: boolean;
+  landingEnabled: boolean;
+  goodsEnabled: boolean;
+  clientsEnabled: boolean;
 }
 
-const DEFAULTS: SystemSettings = { goodsAllowBalancePayment: true, printingEnabled: false };
+const DEFAULTS: SystemSettings = {
+  goodsAllowBalancePayment: true,
+  printingEnabled: false,
+  instructionsEnabled: true,
+  tasksEnabled: true,
+  landingEnabled: true,
+  goodsEnabled: true,
+  clientsEnabled: true,
+};
 
 // Пример содержимого квитанции для живого превью (запрос пользователя 2026-07-20:
 // "должно быть превью квитанции (шапка и футер) настраиваются") — те же
@@ -72,7 +107,6 @@ export default function SystemSettingsPage() {
   const [compactHeader, setCompactHeader] = useState(false);
   const [ownerHasPrinter, setOwnerHasPrinter] = useOwnerHasPrinterLocal();
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetch("/api/tenant/system-settings")
       .then((res) => (res.ok ? res.json() : null))
@@ -88,7 +122,6 @@ export default function SystemSettingsPage() {
         setChecking(false);
       });
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   function patch(partial: Partial<SystemSettings>) {
     setSettings((prev) => ({ ...prev, ...partial }));
@@ -96,6 +129,13 @@ export default function SystemSettingsPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(partial),
+    }).then(() => {
+      // Нав владельца (owner-shell.tsx) слушает это событие и сразу
+      // перезапрашивает состав модулей — без него переключатель в "Модулях"
+      // менялся мгновенно, а сам бар/сайдбар обновлялся только после
+      // следующей полной перезагрузки страницы (запрос пользователя
+      // 2026-07-22: "сразу должен обновляться интерфейс... владельца").
+      window.dispatchEvent(new Event("tenant-modules-changed"));
     });
   }
 
@@ -147,6 +187,51 @@ export default function SystemSettingsPage() {
           <h1 className="mb-4 text-screen-title">{t.settings.systemTitle}</h1>
 
           <StaggerList className="flex flex-col gap-3">
+            {/* "Модули" — первая плашка (запрос пользователя 2026-07-22),
+                множественный выбор тем же визуальным паттерном, что
+                CurrencyPicker, но без единственности выбора — любой набор
+                тайлов сразу. Чисто упрощение интерфейса Владельца, не пакет/
+                тариф (см. комментарий у полей в schema.prisma). */}
+            <StaggerItem>
+              <SpringCard animate={false} hover={false} className="flex flex-col gap-2">
+                <span className="text-section-title">{t.settings.systemModulesTitle}</span>
+                <p className="text-caption-airbnb">{t.settings.systemModulesHint}</p>
+                {/* Адаптивная сетка (запрос пользователя 2026-07-22): 3 в ряд
+                    на телефоне, все 6 в один ряд от sm и шире — тайлы не
+                    фиксированного размера, а тянутся на ширину колонки
+                    (aspect-square вместо size-18), иначе на 3-колоночной
+                    сетке остались бы пустые промежутки. */}
+                <div className="mt-1 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+                  {MODULE_TILES.map((tile) => {
+                    const Icon = tile.icon;
+                    const selected = settings[tile.key];
+                    return (
+                      <button
+                        key={tile.key}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => patch({ [tile.key]: !selected })}
+                        className={cn(
+                          "relative flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-control border p-1 text-center transition-colors",
+                          selected ? "border-primary bg-primary/5" : "border-border hover:border-foreground/30"
+                        )}
+                      >
+                        {selected && (
+                          <span className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-background">
+                            <Check className="size-3" />
+                          </span>
+                        )}
+                        <Icon className="size-5 text-foreground" />
+                        <span className="text-[0.625rem] font-medium leading-tight text-muted-foreground">
+                          {tile.label(t)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </SpringCard>
+            </StaggerItem>
+
             <StaggerItem>
               <SpringCard animate={false} hover={false} className="flex flex-col">
                 {rows.map((row) => (

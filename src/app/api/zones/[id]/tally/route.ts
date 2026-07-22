@@ -9,6 +9,7 @@ import {
   previousSubmissionBoundary,
 } from "@/lib/game-room";
 import { InsufficientBalanceError, spendWalletTx } from "@/lib/abonement";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // "Пуски" (accountingMode="launches", запрос пользователя 2026-07-17:
 // "тапали по активам и пуски учитывались" — цифровая замена бумажной
@@ -76,8 +77,13 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   const paymentMethod: string = body.paymentMethod;
   const abonementWalletId: string | null =
     typeof body.abonementWalletId === "string" && body.abonementWalletId ? body.abonementWalletId : null;
-  if (paymentMethod === "abonement" && !abonementWalletId) {
-    return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
+  if (paymentMethod === "abonement") {
+    if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+      return NextResponse.json({ error: "Оплата балансом отключена владельцем" }, { status: 403 });
+    }
+    if (!abonementWalletId) {
+      return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
+    }
   }
 
   const now = new Date();

@@ -3,11 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
 import { TASK_SELECT, isTaskStatus } from "@/lib/tasks";
 import { sendPushToOperators } from "@/lib/push-notifications";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]/tasks">) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "tasksEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const { id: pointId } = await ctx.params;
@@ -29,6 +33,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "tasksEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const { id: pointId } = await ctx.params;

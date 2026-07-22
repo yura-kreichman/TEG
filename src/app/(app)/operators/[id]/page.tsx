@@ -435,18 +435,19 @@ export default function OperatorCardPage() {
                   />
                 )}
               </div>
-              <div className="min-w-0 grow">
+              <div className="flex min-w-0 grow flex-wrap items-center gap-1.5">
                 <h1 className="text-card-title">{profile.name}</h1>
-                <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                  {/* Не кнопка (запрос пользователя 2026-07-22) —
-                      активация/деактивация только через переключатель на
-                      странице настроек сотрудника. */}
-                  <ActiveStatusIcon
-                    active={profile.active}
-                    activeLabel={t.operators.active}
-                    inactiveLabel={t.operators.inactive}
-                  />
-                </div>
+                {/* Не кнопка (запрос пользователя 2026-07-22) —
+                    активация/деактивация только через переключатель на
+                    странице настроек сотрудника. В одном ряду с именем — тот
+                    же паттерн, что на странице списка /operators (реальный
+                    баг, найден пользователем 2026-07-22: тут была отдельным
+                    рядом ниже, "криво отображается"). */}
+                <ActiveStatusIcon
+                  active={profile.active}
+                  activeLabel={t.operators.active}
+                  inactiveLabel={t.operators.inactive}
+                />
               </div>
               {moduleEnabled && balance && (
                 <div className="flex flex-col items-end gap-1">

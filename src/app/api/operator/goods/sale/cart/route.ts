@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { sellGoodsCart, GOODS_PAYMENT_METHODS, type GoodsPaymentMethod } from "@/lib/goods";
 import { InsufficientBalanceError } from "@/lib/abonement";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 function isGoodsPaymentMethod(value: unknown): value is GoodsPaymentMethod {
   return typeof value === "string" && (GOODS_PAYMENT_METHODS as readonly string[]).includes(value);
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
   if (!ctx) {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
-  if (!ctx.operator.goodsAccess) {
+  if (!(await isModuleEnabled(ctx.operator.tenantId, "goodsEnabled")) || !ctx.operator.goodsAccess) {
     return NextResponse.json({ error: "Нет доступа к товарам" }, { status: 403 });
   }
 
@@ -54,7 +55,13 @@ export async function POST(request: Request) {
   if (paymentMethod === "abonement") {
     // Настройки → Система (запрос пользователя 2026-07-20) — серверная
     // проверка, не только скрытие кнопки в UI, тот же принцип, что у
-    // Operator.goodsAccess выше.
+    // Operator.goodsAccess выше. clientsEnabled — отдельная, более общая
+    // проверка (запрос пользователя 2026-07-22: "раз не будет клиентов то
+    // не будет и метода оплаты Балансом" — везде, не только в Товарах),
+    // добавляется К goodsAllowBalancePayment, а не заменяет её.
+    if (!(await isModuleEnabled(ctx.operator.tenantId, "clientsEnabled"))) {
+      return NextResponse.json({ error: "Оплата балансом отключена владельцем" }, { status: 403 });
+    }
     const tenant = await prisma.tenant.findUnique({
       where: { id: ctx.operator.tenantId },
       select: { goodsAllowBalancePayment: true },
