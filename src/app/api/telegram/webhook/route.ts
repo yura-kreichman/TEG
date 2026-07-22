@@ -40,21 +40,86 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
-async function handleStartMessage(message: { text: string; chat: { id: number; title?: string; type: string } }) {
+// --- Локализация клиентских сообщений (запрос пользователя 2026-07-22:
+// "язык ответов бота должен определяться сам... если Телеграм на русском, то
+// на русском, на любом другом пока на английском, ведь локализации ещё нет")
+// — двухъязычная, НЕ через полноценный lang/*.json (это plain-text сообщения
+// в Telegram, не React UI). Источник — Telegram-нативное поле
+// message.from.language_code (IETF-тег интерфейса аккаунта клиента, не
+// текста конкретного сообщения) — платформа уже это знает, отдельно
+// спрашивать язык не нужно. ТОЛЬКО для клиентских сообщений (баланс/история/
+// заказы) — сообщения Владельцу/Сотруднику (групповые команды, привязка
+// сводок) остаются на русском, тот же принцип, что уже действует в проекте
+// для остальных бот-сообщений этой группы.
+type BotLang = "ru" | "en";
+function pickBotLang(languageCode?: string): BotLang {
+  return languageCode?.toLowerCase().startsWith("ru") ? "ru" : "en";
+}
+
+const BOT_STRINGS: Record<
+  BotLang,
+  {
+    shareButton: string;
+    startHintGeneric: string;
+    startHintTenant: (name: string) => string;
+    linkInvalid: string;
+    notFoundGeneric: (phone: string) => string;
+    notFoundTenant: (phone: string, name: string) => string;
+    yourBalance: string;
+    recentOps: string;
+    openOrders: string;
+    ticketsWord: string;
+  }
+> = {
+  ru: {
+    shareButton: "📱 Поделиться номером",
+    startHintGeneric: "Чтобы узнать баланс, поделитесь своим номером телефона — тем же, что вы называли на точке проката.",
+    startHintTenant: (name) =>
+      `Чтобы узнать баланс у «${name}», поделитесь своим номером телефона — тем же, что вы называли на точке.`,
+    linkInvalid: "Ссылка недействительна",
+    notFoundGeneric: (phone) => `Клиент с номером ${phone} не найден ни у одного проката`,
+    notFoundTenant: (phone, name) => `Клиент с номером ${phone} не найден у «${name}»`,
+    yourBalance: "Ваш баланс",
+    recentOps: "Последние операции",
+    openOrders: "Неиспользованные заказы",
+    ticketsWord: "билет(ов)",
+  },
+  en: {
+    shareButton: "📱 Share phone number",
+    startHintGeneric: "To check your balance, share your phone number — the same one you gave at the rental point.",
+    startHintTenant: (name) =>
+      `To check your balance at "${name}", share your phone number — the same one you gave at the point.`,
+    linkInvalid: "This link is no longer valid",
+    notFoundGeneric: (phone) => `No client found with number ${phone}`,
+    notFoundTenant: (phone, name) => `No client found with number ${phone} at "${name}"`,
+    yourBalance: "Your balance",
+    recentOps: "Recent transactions",
+    openOrders: "Unused orders",
+    ticketsWord: "ticket(s)",
+  },
+};
+
+async function handleStartMessage(message: {
+  text: string;
+  chat: { id: number; title?: string; type: string };
+  from?: { language_code?: string };
+}) {
+  const lang = pickBotLang(message.from?.language_code);
   const match = message.text.match(/^\/start(?:@\w+)?\s+(\S+)/);
   if (!match) {
     // Голый /start без параметра — Telegram шлёт его только когда чат
     // открыли не по ссылке (например, набрали руками или нашли бота в
-    // поиске). Тенанта в этом случае определить неоткуда (в отличие от
-    // /start CLIENT-<slug>/<код привязки> — оба несут его в себе), поэтому
-    // просто объясняем, а не молчим — раньше эта ветка вообще ничего не
-    // отвечала, что выглядело как зависший бот (реальный баг, найден
-    // пользователем 2026-07-22).
+    // поиске). РАНЬШЕ тут просто объясняли "откройте по ссылке" и на этом
+    // всё — реальный баг, найден пользователем 2026-07-22: "нет никакой
+    // инструкции"/"не просит поделиться телефоном". Ссылка конкретного
+    // тенанта на самом деле не обязательна: телефон проверяется Telegram'ом
+    // (request_contact), а тенанта после этого можно найти ПО НОМЕРУ,
+    // поискав кошелёк сразу среди всех тенантов платформы (см. ветку
+    // pendingTenantId===null в handleContact ниже) — ссылка из карточки
+    // клиента остаётся лишь удобным способом сразу узнать тенанта, не
+    // единственным путём.
     if (/^\/start(?:@\w+)?\s*$/.test(message.text)) {
-      await sendChatMessage(
-        String(message.chat.id),
-        "Чтобы узнать баланс, откройте эту переписку по ссылке, которую вам дали на точке проката."
-      ).catch(() => {});
+      await promptContactShare(String(message.chat.id), null, undefined, lang);
     }
     return;
   }
@@ -65,7 +130,7 @@ async function handleStartMessage(message: { text: string; chat: { id: number; t
   // тот же формат, что в публичной ссылке /s/{slug}), см.
   // getClientBalanceDeepLink в telegram-bot.ts.
   if (rawCode.startsWith(CLIENT_START_PREFIX)) {
-    await handleClientStart(String(message.chat.id), rawCode.slice(CLIENT_START_PREFIX.length));
+    await handleClientStart(String(message.chat.id), rawCode.slice(CLIENT_START_PREFIX.length), lang);
     return;
   }
 
@@ -141,10 +206,10 @@ async function handleMyChatMember(update: {
 // Клиент открыл ссылку t.me/<bot>?start=CLIENT-<slug> — либо у него уже есть
 // подтверждённая привязка для этого тенанта (быстрый путь: сразу баланс, без
 // повторного запроса контакта), либо просим поделиться номером.
-async function handleClientStart(chatId: string, tenantSlug: string) {
+async function handleClientStart(chatId: string, tenantSlug: string, lang: BotLang) {
   const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, name: true, currency: true } });
   if (!tenant) {
-    await sendChatMessage(chatId, "Ссылка недействительна").catch(() => {});
+    await sendChatMessage(chatId, BOT_STRINGS[lang].linkInvalid).catch(() => {});
     return;
   }
 
@@ -154,56 +219,93 @@ async function handleClientStart(chatId: string, tenantSlug: string) {
   if (existingLink) {
     const wallet = await findWalletByPhone(tenant.id, existingLink.phone);
     if (wallet) {
-      await sendChatMessage(chatId, await buildClientReport(tenant, wallet)).catch(() => {});
+      await sendChatMessage(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
       return;
     }
     // Кошелёк с тех пор удалили/номер сменился — привязка устарела, спросим
     // контакт заново ниже, а не покажем ошибку.
   }
 
+  await promptContactShare(chatId, tenant.id, tenant.name, lang);
+}
+
+// pendingTenantId === null — "generic" запрос (голый /start, голый /balance
+// без предыдущей привязки): тенант неизвестен заранее, определится по
+// присланному номеру (см. handleContact — ищет кошелёк сразу по всем
+// тенантам). pendingTenantId === "<id>" — "scoped" запрос из конкретной
+// ссылки клиента (t.me/...?start=CLIENT-<slug>), ищем кошелёк только у этого
+// тенанта.
+async function promptContactShare(chatId: string, tenantId: string | null, tenantName: string | undefined, lang: BotLang) {
   await prisma.clientBotSession.upsert({
     where: { chatId },
-    create: { chatId, pendingTenantId: tenant.id },
-    update: { pendingTenantId: tenant.id },
+    create: { chatId, pendingTenantId: tenantId },
+    update: { pendingTenantId: tenantId },
   });
-  await sendContactRequest(
-    chatId,
-    `Чтобы узнать баланс у «${tenant.name}», поделитесь своим номером телефона — тем же, что вы называли на точке.`,
-    "📱 Поделиться номером"
-  ).catch(() => {});
+  const s = BOT_STRINGS[lang];
+  const text = tenantName ? s.startHintTenant(tenantName) : s.startHintGeneric;
+  await sendContactRequest(chatId, text, s.shareButton).catch(() => {});
 }
 
 // Клиент нажал кнопку "Поделиться номером" — Telegram гарантирует, что
 // contact.phone_number принадлежит именно этому аккаунту (не вводится
 // текстом, подделать нельзя), поэтому дальше можно доверять номеру напрямую.
-async function handleContact(message: { chat: { id: number }; contact?: { phone_number: string; user_id?: number } }) {
+async function handleContact(message: {
+  chat: { id: number };
+  contact?: { phone_number: string; user_id?: number };
+  from?: { language_code?: string };
+}) {
   const chatId = String(message.chat.id);
   const contact = message.contact;
   if (!contact) return;
+  const lang = pickBotLang(message.from?.language_code);
 
   const session = await prisma.clientBotSession.findUnique({ where: { chatId } });
-  if (!session?.pendingTenantId) return; // контакт прислан не в ответ на наш запрос — игнорируем
+  if (!session) return; // контакт прислан не в ответ на наш запрос — игнорируем
 
-  const tenantId = session.pendingTenantId;
+  const pendingTenantId = session.pendingTenantId;
   await prisma.clientBotSession.update({ where: { chatId }, data: { pendingTenantId: null } });
 
-  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, name: true, currency: true } });
-  if (!tenant) return;
-
   const phone = normalizePhone(contact.phone_number);
-  const wallet = await findWalletByPhone(tenant.id, phone);
-  if (!wallet) {
-    await sendChatMessage(chatId, `Клиент с номером ${contact.phone_number} не найден у «${tenant.name}»`).catch(() => {});
+  const s = BOT_STRINGS[lang];
+
+  if (pendingTenantId) {
+    // Scoped-флоу — конкретная ссылка тенанта, ищем только там.
+    const tenant = await prisma.tenant.findUnique({ where: { id: pendingTenantId }, select: { id: true, name: true, currency: true } });
+    if (!tenant) return;
+    const wallet = await findWalletByPhone(tenant.id, phone);
+    if (!wallet) {
+      await sendChatMessage(chatId, s.notFoundTenant(contact.phone_number, tenant.name)).catch(() => {});
+      return;
+    }
+    await prisma.clientTelegramLink.upsert({
+      where: { tenantId_chatId: { tenantId: tenant.id, chatId } },
+      create: { tenantId: tenant.id, chatId, phone },
+      update: { phone },
+    });
+    await sendChatMessage(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
     return;
   }
 
-  await prisma.clientTelegramLink.upsert({
-    where: { tenantId_chatId: { tenantId: tenant.id, chatId } },
-    create: { tenantId: tenant.id, chatId, phone },
-    update: { phone },
-  });
+  // Generic-флоу — тенант неизвестен заранее (голый /start, ссылка не
+  // использовалась), ищем кошелёк с этим номером СРАЗУ по всем тенантам
+  // платформы: один и тот же человек вполне может быть клиентом нескольких
+  // разных прокатов на RentOS, отправляем отчёт по каждому найденному.
+  const wallets = await prisma.abonementWallet.findMany({ where: { phone } });
+  if (wallets.length === 0) {
+    await sendChatMessage(chatId, s.notFoundGeneric(contact.phone_number)).catch(() => {});
+    return;
+  }
 
-  await sendChatMessage(chatId, await buildClientReport(tenant, wallet)).catch(() => {});
+  for (const wallet of wallets) {
+    const tenant = await prisma.tenant.findUnique({ where: { id: wallet.tenantId }, select: { id: true, name: true, currency: true } });
+    if (!tenant) continue;
+    await prisma.clientTelegramLink.upsert({
+      where: { tenantId_chatId: { tenantId: tenant.id, chatId } },
+      create: { tenantId: tenant.id, chatId, phone },
+      update: { phone },
+    });
+    await sendChatMessage(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
+  }
 }
 
 const HISTORY_LIMIT = 5;
@@ -213,10 +315,12 @@ const HISTORY_LIMIT = 5;
 // отдельных командах, один тап по кнопке даёт полную картину сразу).
 async function buildClientReport(
   tenant: { id: string; name: string; currency: string | null },
-  wallet: { id: string; balance: unknown }
+  wallet: { id: string; balance: unknown },
+  lang: BotLang
 ): Promise<string> {
+  const s = BOT_STRINGS[lang];
   const currency = tenant.currency as CurrencyCode | null;
-  const lines = [`«${tenant.name}»`, `Ваш баланс: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`];
+  const lines = [`«${tenant.name}»`, `${s.yourBalance}: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`];
 
   const history = await prisma.abonementTransaction.findMany({
     where: { walletId: wallet.id },
@@ -225,7 +329,7 @@ async function buildClientReport(
     select: { type: true, amount: true, occurredAt: true },
   });
   if (history.length > 0) {
-    lines.push("", "<b>Последние операции:</b>");
+    lines.push("", `<b>${s.recentOps}:</b>`);
     for (const h of history) {
       const sign = h.type === "spend" ? "−" : "+";
       const date = h.occurredAt.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" });
@@ -244,9 +348,9 @@ async function buildClientReport(
     select: { number: true, openTicketsCount: true },
   });
   if (openOrders.length > 0) {
-    lines.push("", "<b>Неиспользованные заказы:</b>");
+    lines.push("", `<b>${s.openOrders}:</b>`);
     for (const o of openOrders) {
-      lines.push(`№${o.number} — ${o.openTicketsCount} билет(ов)`);
+      lines.push(`№${o.number} — ${o.openTicketsCount} ${s.ticketsWord}`);
     }
   }
 
@@ -262,8 +366,10 @@ async function buildClientReport(
 // спрашивал"). Если chatId не найден в TenantSummaryChannel — это НЕ группа
 // тенанта, а либо посторонний чат, либо личный чат клиента: там /balance
 // означает другое (см. handlePrivateBalanceCommand ниже) — тот же текст
-// команды, разное значение в зависимости от типа чата.
-async function handleGroupCommand(message: { text: string; chat: { id: number } }) {
+// команды, разное значение в зависимости от типа чата. Групповые ответы
+// остаются на русском (Владелец/Сотрудник, не клиент) — не путать с
+// BOT_STRINGS выше, тот словарь только для клиентских сообщений.
+async function handleGroupCommand(message: { text: string; chat: { id: number }; from?: { language_code?: string } }) {
   const chatId = String(message.chat.id);
   const text = message.text.trim();
   const channel = await prisma.tenantSummaryChannel.findFirst({
@@ -283,23 +389,18 @@ async function handleGroupCommand(message: { text: string; chat: { id: number } 
 
   // Личный чат клиента: /balance тут без аргумента — просто "покажи мой
   // баланс ещё раз" (та же команда, что зарегистрирована в BotFather для
-  // Direct Messages). Работает только если чат УЖЕ проходил проверку
-  // контактом хотя бы раз (см. handleContact) — иначе неоткуда взять номер,
-  // просить его текстом здесь нельзя (та же причина, что у handleClientStart:
-  // это открыло бы ровно ту дыру с угадыванием номера, которой опасался
-  // пользователь).
+  // Direct Messages). Если чат ещё ни разу не проходил проверку контактом —
+  // предлагаем это сделать сразу же (тот же generic-флоу, что у голого
+  // /start), а не просто отсылаем к ссылке.
   if (/^\/balance(?:@\w+)?/.test(text)) {
-    await handlePrivateBalanceCommand(chatId);
+    await handlePrivateBalanceCommand(chatId, pickBotLang(message.from?.language_code));
   }
 }
 
-async function handlePrivateBalanceCommand(chatId: string) {
+async function handlePrivateBalanceCommand(chatId: string, lang: BotLang) {
   const links = await prisma.clientTelegramLink.findMany({ where: { chatId } });
   if (links.length === 0) {
-    await sendChatMessage(
-      chatId,
-      "Чтобы узнать баланс, откройте эту переписку по ссылке, которую вам дали на точке проката."
-    ).catch(() => {});
+    await promptContactShare(chatId, null, undefined, lang);
     return;
   }
 
@@ -308,7 +409,7 @@ async function handlePrivateBalanceCommand(chatId: string) {
     if (!tenant) continue;
     const wallet = await findWalletByPhone(tenant.id, link.phone);
     if (!wallet) continue;
-    await sendChatMessage(chatId, await buildClientReport(tenant, wallet)).catch(() => {});
+    await sendChatMessage(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
   }
 }
 
