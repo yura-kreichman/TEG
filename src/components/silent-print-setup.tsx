@@ -49,13 +49,29 @@ function buildBatContent(url: string): string {
     "setlocal",
     "",
     `set "URL=${url}"`,
-    'set "SHORTCUT=%USERPROFILE%\\Desktop\\RentOS (silent print).lnk"',
+    'set "SHORTCUT_NAME=RentOS (silent print).lnk"',
+    'set "DESKTOP_SHORTCUT=%USERPROFILE%\\Desktop\\%SHORTCUT_NAME%"',
+    'set "STARTUP_SHORTCUT=%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\%SHORTCUT_NAME%"',
     'set "BROWSER="',
     "",
-    'if exist "%ProgramFiles(x86)%\\Microsoft\\Edge\\Application\\msedge.exe" set "BROWSER=%ProgramFiles(x86)%\\Microsoft\\Edge\\Application\\msedge.exe"',
+    // Реестр Windows (App Paths) — тот же механизм, которым сама ОС находит
+    // exe по имени независимо от РЕАЛЬНОГО пути установки: покрывает и
+    // machine-wide (Program Files), и per-user (без прав администратора,
+    // например %LocalAppData%\Google\Chrome — частый случай для Chrome,
+    // который жёстко прописанные пути ниже пропускали). HKLM сначала (Edge
+    // почти всегда устанавливается на машину целиком), HKCU — для
+    // per-user Chrome.
+    "for /f \"tokens=2*\" %%A in ('reg query \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe\" /ve 2>nul') do set \"BROWSER=%%B\"",
+    "if not defined BROWSER for /f \"tokens=2*\" %%A in ('reg query \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe\" /ve 2>nul') do set \"BROWSER=%%B\"",
+    "if not defined BROWSER for /f \"tokens=2*\" %%A in ('reg query \"HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe\" /ve 2>nul') do set \"BROWSER=%%B\"",
+    "",
+    // Запасной вариант — известные пути напрямую, если по какой-то причине
+    // реестр недоступен (например политика безопасности блокирует reg.exe).
+    'if not defined BROWSER if exist "%ProgramFiles(x86)%\\Microsoft\\Edge\\Application\\msedge.exe" set "BROWSER=%ProgramFiles(x86)%\\Microsoft\\Edge\\Application\\msedge.exe"',
     'if not defined BROWSER if exist "%ProgramFiles%\\Microsoft\\Edge\\Application\\msedge.exe" set "BROWSER=%ProgramFiles%\\Microsoft\\Edge\\Application\\msedge.exe"',
     'if not defined BROWSER if exist "%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe" set "BROWSER=%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe"',
     'if not defined BROWSER if exist "%ProgramFiles(x86)%\\Google\\Chrome\\Application\\chrome.exe" set "BROWSER=%ProgramFiles(x86)%\\Google\\Chrome\\Application\\chrome.exe"',
+    'if not defined BROWSER if exist "%LocalAppData%\\Google\\Chrome\\Application\\chrome.exe" set "BROWSER=%LocalAppData%\\Google\\Chrome\\Application\\chrome.exe"',
     "",
     "if not defined BROWSER (",
     "  echo Edge or Chrome not found.",
@@ -63,10 +79,15 @@ function buildBatContent(url: string): string {
     "  exit /b 1",
     ")",
     "",
-    "powershell -NoProfile -Command \"$s = (New-Object -COM WScript.Shell).CreateShortcut('%SHORTCUT%'); $s.TargetPath = '%BROWSER%'; $s.Arguments = '--app=%URL% --kiosk-printing --profile-directory=Default'; $s.IconLocation = '%BROWSER%,0'; $s.Save()\"",
+    "powershell -NoProfile -Command \"$s = (New-Object -COM WScript.Shell).CreateShortcut('%DESKTOP_SHORTCUT%'); $s.TargetPath = '%BROWSER%'; $s.Arguments = '--app=%URL% --kiosk-printing --profile-directory=Default'; $s.IconLocation = '%BROWSER%,0'; $s.Save()\"",
+    // Автозагрузка (запрос пользователя 2026-07-22) — тот же ярлык, просто
+    // копия в папку "Автозагрузка" текущего пользователя: терминал точки
+    // открывает RentOS сам при входе в Windows, без ручного клика.
+    'copy /y "%DESKTOP_SHORTCUT%" "%STARTUP_SHORTCUT%" > nul',
     "",
     "echo.",
-    "echo Done. Shortcut \"RentOS (silent print)\" created on the Desktop.",
+    "echo Done. Shortcut \"RentOS (silent print)\" created on the Desktop",
+    "echo and added to Windows Startup (opens automatically on login).",
     "echo Before first use, close ALL Edge/Chrome windows (including the system tray) -",
     "echo otherwise the new shortcut opens in the already-running process and the flag is ignored.",
     "echo From now on, open RentOS only through this new shortcut.",

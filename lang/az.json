@@ -132,7 +132,7 @@
     "systemModulesTitle": "Modullar",
     "systemModulesHint": "İstifadə etmədiklərinizi söndürün — interfeysi sadələşdirir.",
     "systemSilentPrintTitle": "Səssiz çap (Windows)",
-    "systemSilentPrintHint": "Tətbiq indi hər dəfə sistem çap pəncərəsini göstərir. Skripti yükləyib işə salın — o, İş masasında ayrıca qısayol yaradacaq, bu, dərhal, pəncərəsiz çap edir. İşə salındıqdan sonra skript faylını silmək olar — o artıq lazım deyil.",
+    "systemSilentPrintHint": "Tətbiq indi hər dəfə sistem çap pəncərəsini göstərir. Skripti yükləyib işə salın — o, İş masasında ayrıca qısayol yaradacaq, bu, dərhal, pəncərəsiz çap edir, və onu Windows avtoyükləməsinə əlavə edəcək (girişdə özü açılır). İşə salındıqdan sonra skript faylını silmək olar — o artıq lazım deyil.",
     "systemSilentPrintDownloadButton": "Quraşdırma skriptini yükləyin",
     "systemSilentPrintConfirmButton": "Quraşdırıldı — pəncərə artıq görünmür"
   },

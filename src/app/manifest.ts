@@ -26,6 +26,18 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     description: "RentOS SaaS",
     start_url: device ? "/operator/login" : "/",
     display: "standalone",
+    // display_override — браузер пробует значения по порядку, использует
+    // первое поддерживаемое (запрос пользователя 2026-07-22):
+    // - window-controls-overlay (Windows/desktop Chromium) — убирает ряд
+    //   иконок браузера (пазл-расширения/загрузки/меню "⋮") из шапки
+    //   установленного PWA-окна, оставляя только нативные
+    //   свернуть/развернуть/закрыть (их подменить кастомными нельзя — это
+    //   осознанное ограничение платформы против подделки чужого окна).
+    // - fullscreen (Android) — без строки состояния/навигации системы,
+    //   ближе к "весь экран" для терминала точки.
+    // display (standalone) — обязательный fallback для браузеров без
+    // display_override вовсе (Safari/Firefox).
+    display_override: ["window-controls-overlay", "fullscreen", "standalone"],
     background_color: "#18181b",
     theme_color: "#18181b",
     icons: [
