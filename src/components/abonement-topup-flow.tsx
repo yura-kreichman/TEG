@@ -1065,37 +1065,46 @@ export function AbonementTopupFlow({
                           {isNew ? t.operatorApp.abonement.newTitle : found?.name || phone}
                         </h2>
                         {!isNew && updateNameEndpointFor && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setNameDraft(found?.name ?? "");
-                              setEditingName(true);
-                            }}
-                            className="shrink-0 text-muted-foreground"
-                            aria-label={t.common.edit}
-                          >
-                            <Pencil className="size-3.5" />
-                          </button>
+                          <PressableScale className="shrink-0">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="rounded-lg"
+                              onClick={() => {
+                                setNameDraft(found?.name ?? "");
+                                setEditingName(true);
+                              }}
+                              aria-label={t.common.edit}
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                          </PressableScale>
                         )}
                         {/* Значок статуса Telegram — виден всегда, когда бот
                             вообще настроен (запрос пользователя 2026-07-23):
-                            активный синий = ещё не привязан (тап открывает
-                            QR), серый неактивный = клиент уже подключил бота
-                            сам, просто индикатор, без действия. */}
+                            пока клиент ещё не привязан — настоящая кнопка,
+                            той же формы, что у "Нового клиента"; привязал сам
+                            — просто чёрный неактивный значок, без рамки и
+                            без действия. */}
                         {!isNew && found && telegramBalanceLink && (
                           foundHasTelegram ? (
-                            <span className="ml-auto shrink-0 text-muted-foreground" aria-label={t.abonements.telegramLinkedLabel}>
+                            <span className="ml-auto shrink-0 text-foreground" aria-label={t.abonements.telegramLinkedLabel}>
                               <Send className="size-5" />
                             </span>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() => setQrOpen(true)}
-                              className="ml-auto shrink-0 text-primary"
-                              aria-label={t.abonements.telegramBalanceButton}
-                            >
-                              <Send className="size-5" />
-                            </button>
+                            <PressableScale className="ml-auto shrink-0">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="rounded-lg"
+                                onClick={() => setQrOpen(true)}
+                                aria-label={t.abonements.telegramBalanceButton}
+                              >
+                                <Send className="size-4" />
+                              </Button>
+                            </PressableScale>
                           )
                         )}
                       </div>
