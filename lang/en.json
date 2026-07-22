@@ -1498,7 +1498,7 @@
     "cartTitle": "Cart",
     "cartEmpty": "Cart is empty",
     "totalLabel": "Total",
-    "continueButton": "Next",
+    "payButton": "Pay",
     "orderDoneTitle": "Order placed",
     "orderNumberLabel": "Order #",
     "ticketsCountLabel": "Tickets",

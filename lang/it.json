@@ -1498,7 +1498,7 @@
     "cartTitle": "Carrello",
     "cartEmpty": "Il carrello è vuoto",
     "totalLabel": "Totale",
-    "continueButton": "Avanti",
+    "payButton": "Paga",
     "orderDoneTitle": "Ordine effettuato",
     "orderNumberLabel": "Ordine n. ",
     "ticketsCountLabel": "Biglietti",

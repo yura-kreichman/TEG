@@ -1074,7 +1074,7 @@ export default function TicketsZonePage() {
                       setPaymentOpen(true);
                     }}
                   >
-                    {t.tickets.continueButton}
+                    {t.tickets.payButton}
                   </Button>
                 </PressableScale>
                 {/* Очистить корзину целиком — через "Точно?" (запрос
