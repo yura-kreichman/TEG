@@ -121,6 +121,8 @@
     "systemReceiptShowNameLabel": "Show company name",
     "systemReceiptCompactHeaderLabel": "Compact header",
     "systemReceiptCompactHeaderHint": "Logo on the left, tenant name and receipt title next to it — shorter on thermal paper",
+    "systemReceiptShowTelegramQrLabel": "Bot QR for balance check",
+    "systemReceiptShowTelegramQrHint": "At the bottom of the receipt — client scans it and sees their balance in Telegram",
     "systemOwnerHasPrinterHint": "This browser/device has a printer — buttons to print the balance statement and other Owner documents will appear here. Cheap Bluetooth printers usually need a print service app (e.g. ESCPOS Bluetooth Print Service) — otherwise the printer won't appear in the Android print dialog.",
     "systemReceiptFooterPlaceholder": "E.g.: Thanks for visiting! See you soon!",
     "systemReceiptPreviewLabel": "Receipt preview",

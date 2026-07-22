@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Banknote, Check, ChevronLeft, CreditCard, Delete, Gift, MapPin, Pencil, Search, Trash2, Wallet } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Banknote, Check, ChevronLeft, CreditCard, Delete, Gift, MapPin, Pencil, Search, Send, Trash2, Wallet } from "lucide-react";
+import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
+import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Input } from "@/components/ui/input";
@@ -234,6 +236,48 @@ export function AbonementTopupFlow({
   // баланса, что было незаметно как явное подтверждение.
   const [justCredited, setJustCredited] = useState<{ amount: number; newBalance: number } | null>(null);
 
+  // QR/ссылка на бота для показа клиенту сразу после оплаты (запрос
+  // пользователя 2026-07-23: "экран подтверждения оператора — как основной")
+  // — грузится один раз при монтировании, а не только когда экран
+  // подтверждения показан: пока идёт поиск/оплата, запрос уже успевает
+  // отработать в фоне, к моменту показа экрана ссылка уже готова.
+  const [telegramBalanceLink, setTelegramBalanceLink] = useState<string | null>(null);
+  const [telegramQrDataUrl, setTelegramQrDataUrl] = useState<string | null>(null);
+  const [qrOpen, setQrOpen] = useState(false);
+  // Уже привязал бота сам — не тот же самый флаг, что telegramBalanceLink
+  // выше (тот про тенанта в целом): предлагать/печатать QR клиенту, который
+  // уже это сделал, только шум (запрос пользователя 2026-07-23). Перезапрашивается
+  // при каждой смене найденного клиента — новый номер телефона может быть
+  // (не) привязан независимо от предыдущего найденного.
+  const [foundHasTelegram, setFoundHasTelegram] = useState(false);
+  useEffect(() => {
+    fetch("/api/tenant/telegram-balance-link")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setTelegramBalanceLink(data?.link ?? null))
+      .catch(() => {});
+  }, []);
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!found?.phone) {
+      setFoundHasTelegram(false);
+      return;
+    }
+    fetch(`/api/tenant/telegram-balance-link?phone=${encodeURIComponent(found.phone)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setFoundHasTelegram(!!data?.hasTelegram))
+      .catch(() => {});
+  }, [found?.phone]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+  // QR для чека (запрос пользователя 2026-07-23) — генерируется ОДИН раз тут
+  // же, как только ссылка известна, а не заново на каждую печать: data:-URI
+  // готов заранее, печать не ждёт ни сеть, ни библиотеку в момент вызова.
+  useEffect(() => {
+    if (!telegramBalanceLink) return;
+    QRCode.toDataURL(telegramBalanceLink, { width: 240, margin: 1 })
+      .then(setTelegramQrDataUrl)
+      .catch(() => {});
+  }, [telegramBalanceLink]);
+
   // Оплата балансом на месте (не пополнение, списание) — Зона → (Актив →
   // Тариф, только "Счётчики") → сумма (запрос пользователя 2026-07-20).
   const [zoneSpendOpen, setZoneSpendOpen] = useState(false);
@@ -276,6 +320,12 @@ export function AbonementTopupFlow({
       }
       pulseSavedNew();
       setFound({ id: data.id, phone: data.phone, name: data.name, balance: data.balance, createdAt: data.createdAt });
+      // Новый клиент — сразу предложить привязать Telegram (запрос
+      // пользователя 2026-07-23: "показывать QR и предлагать сосканировать"),
+      // пока он ещё стоит рядом с Сотрудником, а не молча ждать следующего
+      // пополнения. hasTelegram не проверяем — это только что созданный
+      // кошелёк, привязки в принципе не могло быть раньше (см. hasTelegramLink).
+      if (telegramBalanceLink) setQrOpen(true);
       onSuccess?.();
     } catch {
       setError(t.operatorApp.gameRoom.networkError);
@@ -587,6 +637,8 @@ export function AbonementTopupFlow({
         },
       ],
       totalLine: { label: t.abonements.balanceLabel, value: formatMoneyWithCurrency(wallet.balance, locale, currency) },
+      qrCodeDataUrl: !foundHasTelegram ? (telegramQrDataUrl ?? undefined) : undefined,
+      qrCodeCaption: !foundHasTelegram && telegramQrDataUrl ? t.abonements.telegramBalanceButton : undefined,
     };
   }
 
@@ -611,6 +663,17 @@ export function AbonementTopupFlow({
               <Money value={justCredited.newBalance} />
             </span>
           </div>
+          {/* QR на бота — самый горячий момент показать клиенту, как самому
+              проверять баланс (запрос пользователя 2026-07-23), телефон и так
+              скорее всего уже в руках. */}
+          {telegramBalanceLink && !foundHasTelegram && (
+            <PressableScale className="w-full">
+              <Button type="button" variant="outline" className="h-12 w-full gap-1.5" onClick={() => setQrOpen(true)}>
+                <Send className="size-4" />
+                {t.abonements.telegramBalanceButton}
+              </Button>
+            </PressableScale>
+          )}
           <PressableScale className="w-full">
             <Button
               type="button"
@@ -648,6 +711,14 @@ export function AbonementTopupFlow({
               <Money value={justDebited.newBalance} />
             </span>
           </div>
+          {telegramBalanceLink && !foundHasTelegram && (
+            <PressableScale className="w-full">
+              <Button type="button" variant="outline" className="h-12 w-full gap-1.5" onClick={() => setQrOpen(true)}>
+                <Send className="size-4" />
+                {t.abonements.telegramBalanceButton}
+              </Button>
+            </PressableScale>
+          )}
           <PressableScale className="w-full">
             <Button
               type="button"
@@ -1166,6 +1237,15 @@ export function AbonementTopupFlow({
       )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
+
+      {telegramBalanceLink && (
+        <InstructionQrSheet
+          open={qrOpen}
+          onClose={() => setQrOpen(false)}
+          title={t.abonements.telegramBalanceButton}
+          url={telegramBalanceLink}
+        />
+      )}
     </div>
   );
 }

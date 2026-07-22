@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { normalizePhone } from "@/lib/abonement";
+import { normalizePhone, hasTelegramLink } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 import { getClientBalanceDeepLink } from "@/lib/telegram-bot";
 
@@ -43,6 +43,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/abonement-w
 
   const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { slug: true } });
   const telegramBalanceLink = tenant?.slug ? await getClientBalanceDeepLink(tenant.slug) : null;
+  const hasTelegram = await hasTelegramLink(owner.tenantId, wallet.phone);
 
   return NextResponse.json({
     id: wallet.id,
@@ -51,6 +52,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/abonement-w
     balance: Number(wallet.balance),
     createdAt: wallet.createdAt,
     telegramBalanceLink,
+    hasTelegram,
     history: history.map((h) => ({
       id: h.id,
       type: h.type,

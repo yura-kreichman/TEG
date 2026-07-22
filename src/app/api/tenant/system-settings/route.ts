@@ -33,6 +33,7 @@ export async function GET() {
       receiptShowLogo: true,
       receiptShowTenantName: true,
       receiptCompactHeader: true,
+      receiptShowTelegramQr: true,
       instructionsEnabled: true,
       tasksEnabled: true,
       landingEnabled: true,
@@ -52,6 +53,7 @@ export async function GET() {
     receiptShowLogo: tenant?.receiptShowLogo ?? true,
     receiptShowTenantName: tenant?.receiptShowTenantName ?? true,
     receiptCompactHeader: tenant?.receiptCompactHeader ?? false,
+    receiptShowTelegramQr: tenant?.receiptShowTelegramQr ?? true,
     // Плашка "Модули" (запрос пользователя 2026-07-22) — первая на странице,
     // множественный выбор, см. schema.prisma у Tenant для полного объяснения
     // каждого поля.
@@ -76,6 +78,7 @@ export async function PATCH(request: Request) {
     receiptShowLogo?: boolean;
     receiptShowTenantName?: boolean;
     receiptCompactHeader?: boolean;
+    receiptShowTelegramQr?: boolean;
     instructionsEnabled?: boolean;
     tasksEnabled?: boolean;
     landingEnabled?: boolean;
@@ -92,6 +95,7 @@ export async function PATCH(request: Request) {
     "receiptShowLogo",
     "receiptShowTenantName",
     "receiptCompactHeader",
+    "receiptShowTelegramQr",
     "instructionsEnabled",
     "tasksEnabled",
     "landingEnabled",

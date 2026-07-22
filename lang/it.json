@@ -121,6 +121,8 @@
     "systemReceiptShowNameLabel": "Mostra nome azienda",
     "systemReceiptCompactHeaderLabel": "Intestazione compatta",
     "systemReceiptCompactHeaderHint": "Logo a sinistra, nome del tenant e titolo della ricevuta accanto — più corto su carta termica",
+    "systemReceiptShowTelegramQrLabel": "QR del bot per controllare il saldo",
+    "systemReceiptShowTelegramQrHint": "In fondo alla ricevuta — il cliente scansiona e vede subito il saldo su Telegram",
     "systemOwnerHasPrinterHint": "Questo browser/dispositivo ha una stampante — qui appariranno i pulsanti di stampa dell'estratto conto e di altri documenti del Titolare. Le stampanti Bluetooth economiche di solito richiedono un'app di servizio di stampa (es. ESCPOS Bluetooth Print Service) — altrimenti la stampante non apparirà nella finestra di stampa di Android.",
     "systemReceiptFooterPlaceholder": "Ad esempio: Grazie per la visita! A presto!",
     "systemReceiptPreviewLabel": "Anteprima scontrino",

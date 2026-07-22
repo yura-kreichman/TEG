@@ -40,6 +40,14 @@ export async function findWalletByPhone(tenantId: string, rawPhone: string, tx: 
   return tx.abonementWallet.findUnique({ where: { tenantId_phone: { tenantId, phone } } });
 }
 
+// Уже привязал Telegram-бота (запрос пользователя 2026-07-23: "если клиент
+// уже есть в Telegram, ему печатать QR/предлагать привязку не нужно") — он
+// уже знает, как проверить баланс сам, показывать это ещё раз только шум.
+export async function hasTelegramLink(tenantId: string, phone: string): Promise<boolean> {
+  const link = await prisma.clientTelegramLink.findFirst({ where: { tenantId, phone }, select: { id: true } });
+  return !!link;
+}
+
 // Пуш клиенту в Telegram при любом изменении баланса кошелька (запрос
 // пользователя 2026-07-22: "проактивные уведомления о балансе — надо
 // обязательно реализовать"). ВСЕГДА вызывается ПОСЛЕ того, как транзакция,

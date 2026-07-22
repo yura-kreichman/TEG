@@ -121,6 +121,8 @@
     "systemReceiptShowNameLabel": "Ցուցադրել ընկերության անունը",
     "systemReceiptCompactHeaderLabel": "Կոմպակտ վերնագիր",
     "systemReceiptCompactHeaderHint": "Լոգոն ձախից, կազմակերպության անունը և կտրոնի վերնագիրը կողքին — ավելի կարճ ջերմային տպիչի վրա",
+    "systemReceiptShowTelegramQrLabel": "Բոտի QR՝ մնացորդը ստուգելու համար",
+    "systemReceiptShowTelegramQrHint": "Անդորրագրի ներքևում՝ հաճախորդը սկանավորում է և անմիջապես տեսնում իր մնացորդը Telegram-ում",
     "systemOwnerHasPrinterHint": "Այս բրաուզերում/սարքում տպիչ կա — այստեղ կհայտնվեն Սեփականատիրոջ մնացորդի քաղվածքի և այլ փաստաթղթերի տպման կոճակները. Էժան Bluetooth տպիչներին սովորաբար անհրաժեշտ է տպման ծառայության հավելված (օրինակ՝ ESCPOS Bluetooth Print Service) — հակառակ դեպքում տպիչը չի հայտնվի Android-ի տպման երկխոսությունում.",
     "systemReceiptFooterPlaceholder": "Օրինակ՝ Շնորհակալություն այցի համար! Կտեսնվենք!",
     "systemReceiptPreviewLabel": "Կտրոնի նախադիտում",
