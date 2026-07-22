@@ -320,12 +320,6 @@ export function AbonementTopupFlow({
       }
       pulseSavedNew();
       setFound({ id: data.id, phone: data.phone, name: data.name, balance: data.balance, createdAt: data.createdAt });
-      // Новый клиент — сразу предложить привязать Telegram (запрос
-      // пользователя 2026-07-23: "показывать QR и предлагать сосканировать"),
-      // пока он ещё стоит рядом с Сотрудником, а не молча ждать следующего
-      // пополнения. hasTelegram не проверяем — это только что созданный
-      // кошелёк, привязки в принципе не могло быть раньше (см. hasTelegramLink).
-      if (telegramBalanceLink) setQrOpen(true);
       onSuccess?.();
     } catch {
       setError(t.operatorApp.gameRoom.networkError);
@@ -1095,6 +1089,27 @@ export function AbonementTopupFlow({
                       </div>
                     )}
                   </div>
+                  {/* QR на бота — постоянно на карточке клиента, не только
+                      после оплаты (запрос пользователя 2026-07-23: "клиенты
+                      как подписчики, нам надо их собирать") — пока клиент
+                      ещё не привязал бота сам. Кнопка предпочтена сплошному
+                      "показывать QR всегда" — сам QR виден по тапу через уже
+                      существующую шторку, тут просто вход в неё. */}
+                  {!isNew && found && telegramBalanceLink && !foundHasTelegram && (
+                    <div className="mt-3 border-t border-border pt-3">
+                      <PressableScale>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full gap-1.5 rounded-lg"
+                          onClick={() => setQrOpen(true)}
+                        >
+                          <Send className="size-4" />
+                          {t.abonements.telegramBalanceButton}
+                        </Button>
+                      </PressableScale>
+                    </div>
+                  )}
                   {/* Дата создания + "стаж" — разделительной линией под
                       именем/балансом, всё в одной плашке (запрос пользователя
                       2026-07-18). */}
@@ -1129,28 +1144,49 @@ export function AbonementTopupFlow({
           )}
 
           {isNew && (
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="topupName">{t.operatorApp.abonement.nameLabel}</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="topupName"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="h-12 flex-1 rounded-control bg-muted"
-                />
-                {/* Завести абонента без покупки плана прямо сейчас (запрос
-                    пользователя 2026-07-18: "может человек потом захочет") —
-                    отдельно от кнопок ниже, которые сразу списывают деньги за
-                    конкретный план. */}
-                <PressableScale>
-                  <SaveButton
-                    className="h-12 shrink-0 px-5"
-                    saved={savedNew}
-                    disabled={!phone.trim()}
-                    onClick={handleSaveNew}
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="topupName">{t.operatorApp.abonement.nameLabel}</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="topupName"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="h-12 flex-1 rounded-control bg-muted"
                   />
-                </PressableScale>
+                  {/* Завести абонента без покупки плана прямо сейчас (запрос
+                      пользователя 2026-07-18: "может человек потом захочет") —
+                      отдельно от кнопок ниже, которые сразу списывают деньги за
+                      конкретный план. */}
+                  <PressableScale>
+                    <SaveButton
+                      className="h-12 shrink-0 px-5"
+                      saved={savedNew}
+                      disabled={!phone.trim()}
+                      onClick={handleSaveNew}
+                    />
+                  </PressableScale>
+                </div>
               </div>
+              {/* QR на бота — уже здесь, до сохранения (запрос пользователя
+                  2026-07-23: "клиенты как подписчики, нам надо их собирать") —
+                  клиент может отсканировать, пока Сотрудник ещё вводит имя,
+                  не обязательно ждать сохранения. Новый клиент по
+                  определению ещё не мог привязать бота раньше (см.
+                  hasTelegramLink), отдельная проверка не нужна. */}
+              {telegramBalanceLink && (
+                <PressableScale>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-12 w-full gap-1.5 rounded-lg"
+                    onClick={() => setQrOpen(true)}
+                  >
+                    <Send className="size-4" />
+                    {t.abonements.telegramBalanceButton}
+                  </Button>
+                </PressableScale>
+              )}
             </div>
           )}
 
