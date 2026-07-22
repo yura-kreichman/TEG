@@ -18,5 +18,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Некорректная коллекция иконок" }, { status: 400 });
   }
 
-  return NextResponse.json({ icons: listIconNames(family) });
+  return NextResponse.json(
+    { icons: listIconNames(family) },
+    {
+      // private (не public) — роут требует сессию владельца, не годится для
+      // общих/промежуточных кэшей. Умеренный max-age (не immutable, в отличие
+      // от самих SVG-файлов) — список коллекции скоро пополнится новыми
+      // файлами (запрос пользователя 2026-07-22), не хотим, чтобы новые
+      // иконки были не видны в пикере до ручной очистки кэша браузера.
+      headers: { "Cache-Control": "private, max-age=3600" },
+    }
+  );
 }

@@ -20,5 +20,16 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/icon-librar
     return NextResponse.json({ error: "Иконка не найдена" }, { status: 404 });
   }
 
-  return new NextResponse(svg, { headers: { "Content-Type": "image/svg+xml" } });
+  return new NextResponse(svg, {
+    headers: {
+      "Content-Type": "image/svg+xml",
+      // Статичный файл коллекции, не пользовательские данные — можно кэшировать
+      // надолго (запрос пользователя 2026-07-22: "каждый раз загружаются в icon
+      // picker"). immutable безопасен даже при пополнении коллекции новыми SVG
+      // (это просто новые URL) — небезопасен только при ПЕРЕЗАПИСИ существующего
+      // файла под тем же именем, тогда браузеры с уже закэшированной версией не
+      // увидят замену до истечения года.
+      "Cache-Control": "public, max-age=31536000, immutable",
+    },
+  });
 }
