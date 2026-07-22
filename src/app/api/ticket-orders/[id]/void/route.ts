@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { requireOperator } from "@/lib/require-operator";
 import { voidTicketInTx } from "@/lib/tickets";
+import { notifyWalletBalanceChange } from "@/lib/abonement";
 
 /**
  * "Аннулировать заказ" — кнопка-удобство, аннулирует РАЗОМ все живые
@@ -93,6 +94,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/ticket-orde
     });
     return activeTickets.map((t) => t.id);
   });
+
+  if (order.paymentMethod === "abonement" && order.walletId) {
+    const totalRefunded = activeTickets.reduce((sum, t) => sum + Number(t.priceSnapshot), 0);
+    await notifyWalletBalanceChange(tenantId, order.walletId, totalRefunded).catch(() => {});
+  }
 
   return NextResponse.json({ voidedTicketIds: voidedIds });
 }

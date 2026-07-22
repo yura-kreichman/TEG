@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -18,6 +18,7 @@ import { PhoneInput } from "@/components/phone-input";
 import { AbonementTopupFlow, formatTenure } from "@/components/abonement-topup-flow";
 import { PerformedByTag } from "@/components/performed-by-tag";
 import { PrintButton } from "@/components/print/print-button";
+import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { useOwnerPrintAvailable } from "@/hooks/use-print";
@@ -44,6 +45,7 @@ interface WalletDetail {
   balance: number;
   createdAt: string;
   history: WalletHistoryEntry[];
+  telegramBalanceLink: string | null;
 }
 
 /**
@@ -70,6 +72,7 @@ export default function AbonementWalletPage() {
   const { saved, pulse } = useSavePulse();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { saved: deleted, pulse: deletePulse } = useSavePulse();
+  const [qrOpen, setQrOpen] = useState(false);
 
   async function loadWallet() {
     const res = await fetch(`/api/abonement-wallets/${params.id}`);
@@ -211,6 +214,23 @@ export default function AbonementWalletPage() {
                 className="w-full gap-1.5 rounded-lg"
               />
             )}
+            {/* Клиент сам проверяет баланс в Telegram (запрос пользователя
+                2026-07-22) — бот подтверждает личность номером через
+                request_contact, не показывается, если Владелец ещё не
+                подключил бота (telegramBalanceLink тогда null). */}
+            {wallet.telegramBalanceLink && (
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-1.5 rounded-lg"
+                  onClick={() => setQrOpen(true)}
+                >
+                  <Send className="size-4" />
+                  {t.abonements.telegramBalanceButton}
+                </Button>
+              </PressableScale>
+            )}
             {error && <p className="text-sm text-destructive">{error}</p>}
             <PressableScale>
               <SaveButton type="button" className="h-12 w-full" saved={saved} onClick={save} />
@@ -288,6 +308,15 @@ export default function AbonementWalletPage() {
           </PressableScale>
         </div>
       </BottomSheet>
+
+      {wallet.telegramBalanceLink && (
+        <InstructionQrSheet
+          open={qrOpen}
+          onClose={() => setQrOpen(false)}
+          title={t.abonements.telegramBalanceButton}
+          url={wallet.telegramBalanceLink}
+        />
+      )}
     </OwnerShell>
   );
 }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { requireOperator } from "@/lib/require-operator";
 import { voidTicketInTx } from "@/lib/tickets";
+import { notifyWalletBalanceChange } from "@/lib/abonement";
 
 /**
  * Аннулирование ОДНОГО билета — поштучно (docs/spec/10-tickets.md,
@@ -94,6 +95,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tickets/[id
     });
     return result;
   });
+
+  if (ticket.order.paymentMethod === "abonement" && ticket.order.walletId) {
+    await notifyWalletBalanceChange(tenantId, ticket.order.walletId, Number(ticket.priceSnapshot)).catch(() => {});
+  }
 
   return NextResponse.json({ id: updated.id, status: updated.status, voidedAt: updated.voidedAt });
 }

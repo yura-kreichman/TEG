@@ -790,6 +790,7 @@
     "historyTitle": "Transaction history",
     "receiptTitle": "Balance statement",
     "printReceiptButton": "Print statement",
+    "telegramBalanceButton": "Telegram balance",
     "noHistory": "No transactions yet",
     "historyTopup": "Top-up",
     "historySpend": "Spend",

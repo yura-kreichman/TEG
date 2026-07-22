@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { normalizePhone } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
+import { getClientBalanceDeepLink } from "@/lib/telegram-bot";
 
 async function findOwnedWallet(tenantId: string, id: string) {
   const wallet = await prisma.abonementWallet.findUnique({ where: { id } });
@@ -40,12 +41,16 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/abonement-w
     },
   });
 
+  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { slug: true } });
+  const telegramBalanceLink = tenant?.slug ? await getClientBalanceDeepLink(tenant.slug) : null;
+
   return NextResponse.json({
     id: wallet.id,
     phone: wallet.phone,
     name: wallet.name,
     balance: Number(wallet.balance),
     createdAt: wallet.createdAt,
+    telegramBalanceLink,
     history: history.map((h) => ({
       id: h.id,
       type: h.type,

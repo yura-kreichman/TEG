@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
-import { InsufficientBalanceError } from "@/lib/abonement";
+import { InsufficientBalanceError, notifyWalletBalanceChange } from "@/lib/abonement";
 
 type Tx = Prisma.TransactionClient;
 
@@ -117,10 +117,14 @@ export async function sellGoods(params: SellParams) {
   const { tenantId, pointId, goodsId, quantity, paymentMethod, walletId, actor } = params;
   if (paymentMethod === "abonement" && !walletId) throw new Error("WALLET_REQUIRED");
 
-  return prisma.$transaction(async (tx) => {
-    const { sale } = await sellOneItemTx(tx, { tenantId, pointId, goodsId, quantity, paymentMethod, walletId, actor });
-    return sale;
+  const { sale, amount } = await prisma.$transaction(async (tx) => {
+    return sellOneItemTx(tx, { tenantId, pointId, goodsId, quantity, paymentMethod, walletId, actor });
   });
+
+  if (paymentMethod === "abonement" && walletId) {
+    await notifyWalletBalanceChange(tenantId, walletId, -amount).catch(() => {});
+  }
+  return sale;
 }
 
 interface SellCartParams {
@@ -155,7 +159,7 @@ export async function sellGoodsCart(params: SellCartParams): Promise<SoldCartLin
   if (paymentMethod === "abonement" && !walletId) throw new Error("WALLET_REQUIRED");
   if (items.length === 0) throw new Error("EMPTY_CART");
 
-  return prisma.$transaction(async (tx) => {
+  const results = await prisma.$transaction(async (tx) => {
     const results: SoldCartLine[] = [];
     for (const item of items) {
       const { sale, amount } = await sellOneItemTx(tx, {
@@ -171,6 +175,14 @@ export async function sellGoodsCart(params: SellCartParams): Promise<SoldCartLin
     }
     return results;
   });
+
+  // Одно сообщение на всю корзину, не по позиции — способ оплаты общий на
+  // чек (SellCartParams.paymentMethod), N уведомлений подряд были бы шумом.
+  if (paymentMethod === "abonement" && walletId) {
+    const total = results.reduce((sum, r) => sum + r.amount, 0);
+    await notifyWalletBalanceChange(tenantId, walletId, -total).catch(() => {});
+  }
+  return results;
 }
 
 interface RestockParams {
@@ -212,7 +224,7 @@ export async function restockGoods(params: RestockParams) {
  * обязательна (entityType="GoodsSale").
  */
 export async function voidGoodsSale(saleId: string, tenantId: string, userId: string, reason: string | null) {
-  return prisma.$transaction(async (tx) => {
+  const { updated, refundedWalletId, refundedAmount } = await prisma.$transaction(async (tx) => {
     const sale = await tx.goodsSale.findFirst({ where: { id: saleId, tenantId } });
     if (!sale) throw new Error("SALE_NOT_FOUND");
     if (sale.voidedAt) throw new Error("ALREADY_VOIDED");
@@ -258,8 +270,14 @@ export async function voidGoodsSale(saleId: string, tenantId: string, userId: st
       },
     });
 
-    return updated;
+    const refundedWalletId = sale.paymentMethod === "abonement" ? sale.walletId : null;
+    return { updated, refundedWalletId, refundedAmount: amount };
   });
+
+  if (refundedWalletId) {
+    await notifyWalletBalanceChange(tenantId, refundedWalletId, refundedAmount).catch(() => {});
+  }
+  return updated;
 }
 
 interface RevisionLineInput {

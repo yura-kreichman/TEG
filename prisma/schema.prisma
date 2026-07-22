@@ -274,6 +274,7 @@ model Tenant {
   balanceCarryovers             OperatorBalanceCarryover[]
   summaryChannels               TenantSummaryChannel[]
   telegramBindCodes             TelegramBindCode[]
+  clientTelegramLinks           ClientTelegramLink[]
   zoneSummarySettings           ZoneSummarySettings?
   dailyCashSummarySettings      DailyCashSummarySettings?
   shiftCloseSummarySettings     ShiftCloseSummarySettings?
@@ -1852,6 +1853,41 @@ model TelegramBindCode {
   createdAt DateTime @default(now())
 
   @@index([tenantId])
+}
+
+// Подтверждённая привязка: этот Telegram-чат клиента показал через кнопку
+// "Поделиться номером" (request_contact — гарантия Telegram, что номер
+// принадлежит именно этому аккаунту, не вводится текстом) свой телефон для
+// проверки баланса у конкретного тенанта. Один чат может быть клиентом
+// нескольких разных прокатов на платформе — отсюда unique по паре, а не по
+// одному chatId. Используется как "быстрый путь": повторный /start
+// CLIENT-<slug> в уже привязанном чате сразу отвечает балансом, без повторного
+// запроса контакта.
+model ClientTelegramLink {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  chatId String
+  phone  String
+
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, chatId])
+  @@index([chatId])
+  @@index([tenantId, phone])
+}
+
+// Эфемерное состояние "этот чат сейчас ждёт присланный контакт для проверки
+// баланса у тенанта X" — мост между сообщением /start CLIENT-<slug> и
+// следующим апдейтом с контактом (Telegram не связывает их сам, это два
+// отдельных апдейта в одном чате). Одна строка на чат, перезаписывается при
+// каждом новом /start CLIENT-<slug> — если клиент передумал/зашёл по ссылке
+// другого тенанта, актуален всегда последний запрос.
+model ClientBotSession {
+  chatId          String   @id
+  pendingTenantId String?
+  updatedAt       DateTime @updatedAt
 }
 
 // Настройки состава и триггера каждого типа сводки — по одной строке на

@@ -12,7 +12,7 @@ import {
   nextLaunchNumber,
   previousSubmissionBoundary,
 } from "@/lib/game-room";
-import { InsufficientBalanceError, spendWalletTx } from "@/lib/abonement";
+import { InsufficientBalanceError, spendWalletTx, notifyWalletBalanceChange } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Список открытых пусков зоны — для экрана зоны в PWA (тайлы с активными
@@ -192,6 +192,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
       return NextResponse.json({ error: "Недостаточно средств на абонементе" }, { status: 400 });
     }
     throw err;
+  }
+
+  if (paymentMethod === "abonement" && launch.abonementWalletId) {
+    await notifyWalletBalanceChange(point.tenantId, launch.abonementWalletId, -Number(launch.priceSnapshot)).catch(() => {});
   }
 
   return NextResponse.json({

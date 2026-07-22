@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
+import { sendChatMessage } from "@/lib/telegram-bot";
+import { formatMoneyWithCurrency } from "@/lib/format";
+import type { CurrencyCode } from "@/lib/currency";
 
 // Модуль "Абонементы" (запрос пользователя 2026-07-17) — Abonement — это
 // ТАРИФ-ПЛАН владельца ("заплатить price → зачислить creditAmount"), БЕЗ
@@ -33,6 +36,39 @@ export async function findWalletByPhone(tenantId: string, rawPhone: string, tx: 
   const phone = normalizePhone(rawPhone);
   if (!phone) return null;
   return tx.abonementWallet.findUnique({ where: { tenantId_phone: { tenantId, phone } } });
+}
+
+// Пуш клиенту в Telegram при любом изменении баланса кошелька (запрос
+// пользователя 2026-07-22: "проактивные уведомления о балансе — надо
+// обязательно реализовать"). ВСЕГДА вызывается ПОСЛЕ того, как транзакция,
+// изменившая баланс, уже закоммитилась (никогда изнутри prisma.$transaction)
+// — тот же принцип, что уже используется в вебхуке привязки чата Владельца
+// ("сеть может зависнуть/упасть без влияния на консистентность записанного").
+// Читает баланс заново из БД, а не берёт из результата транзакции — так
+// сообщение всегда отражает ФАКТИЧЕСКИ сохранённое состояние, даже если этот
+// вызов случайно запоздал относительно другой параллельной операции. amount —
+// подписанная дельта (+ пополнение/возврат, − списание), только для текста
+// сообщения, на итоговый баланс не влияет. Молча ничего не делает, если у
+// клиента нет привязанного Telegram-чата — это норма, не ошибка.
+export async function notifyWalletBalanceChange(tenantId: string, walletId: string, amount: number): Promise<void> {
+  const wallet = await prisma.abonementWallet.findUnique({ where: { id: walletId }, select: { phone: true, balance: true } });
+  if (!wallet) return;
+
+  const links = await prisma.clientTelegramLink.findMany({ where: { tenantId, phone: wallet.phone } });
+  if (links.length === 0) return;
+
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, currency: true } });
+  if (!tenant) return;
+
+  const currency = tenant.currency as CurrencyCode | null;
+  const sign = amount >= 0 ? "+" : "−";
+  const text = [
+    `«${tenant.name}»`,
+    `${sign}${formatMoneyWithCurrency(Math.abs(amount), "ru", currency)}`,
+    `Баланс: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`,
+  ].join("\n");
+
+  await Promise.all(links.map((link) => sendChatMessage(link.chatId, text).catch(() => {})));
 }
 
 /** Список планов тенанта — всегда видны на всех точках (см. комментарий выше). */
@@ -75,7 +111,7 @@ interface TopupParams {
  */
 export async function topUpWallet(walletId: string, params: TopupParams) {
   const { tenantId, pointId, abonementId, paymentMethod, actor } = params;
-  return prisma.$transaction(async (tx) => {
+  const { wallet, creditAmount } = await prisma.$transaction(async (tx) => {
     const plan = await tx.abonement.findFirst({
       where: { id: abonementId, tenantId, deletedAt: null },
     });
@@ -111,8 +147,11 @@ export async function topUpWallet(walletId: string, params: TopupParams) {
       },
     });
 
-    return wallet;
+    return { wallet, creditAmount: Number(plan.creditAmount) };
   });
+
+  await notifyWalletBalanceChange(tenantId, walletId, creditAmount).catch(() => {});
+  return wallet;
 }
 
 interface ArbitraryTopupParams {
@@ -134,7 +173,7 @@ interface ArbitraryTopupParams {
  */
 export async function topUpWalletArbitrary(walletId: string, params: ArbitraryTopupParams) {
   const { tenantId, pointId, amount, paymentMethod, actor } = params;
-  return prisma.$transaction(async (tx) => {
+  const wallet = await prisma.$transaction(async (tx) => {
     const wallet = await tx.abonementWallet.update({
       where: { id: walletId },
       data: { balance: { increment: amount } },
@@ -165,6 +204,9 @@ export async function topUpWalletArbitrary(walletId: string, params: ArbitraryTo
 
     return wallet;
   });
+
+  await notifyWalletBalanceChange(tenantId, walletId, amount).catch(() => {});
+  return wallet;
 }
 
 /** Аналог createWalletWithTopup, но произвольной суммой Сотрудника (см. topUpWalletArbitrary выше). */
@@ -177,7 +219,7 @@ export async function createWalletWithTopupArbitrary(
   if (!phone) throw new Error("INVALID_PHONE");
   const { tenantId, pointId, amount, paymentMethod, actor } = params;
 
-  return prisma.$transaction(async (tx) => {
+  const wallet = await prisma.$transaction(async (tx) => {
     const wallet = await tx.abonementWallet.create({
       data: { tenantId, phone, name: name || null, balance: amount },
     });
@@ -207,6 +249,13 @@ export async function createWalletWithTopupArbitrary(
 
     return wallet;
   });
+
+  // Кошелёк только что создан — привязанного Telegram-чата по определению
+  // ещё нет, notifyWalletBalanceChange() тут молча ничего не пришлёт. Вызов
+  // всё равно оставлен для единообразия/на случай будущей привязки до
+  // первого пополнения.
+  await notifyWalletBalanceChange(tenantId, wallet.id, amount).catch(() => {});
+  return wallet;
 }
 
 /**
@@ -234,7 +283,7 @@ export async function createWalletWithTopup(rawPhone: string, name: string | nul
   if (!phone) throw new Error("INVALID_PHONE");
   const { tenantId, pointId, abonementId, paymentMethod, actor } = params;
 
-  return prisma.$transaction(async (tx) => {
+  const wallet = await prisma.$transaction(async (tx) => {
     const plan = await tx.abonement.findFirst({
       where: { id: abonementId, tenantId, deletedAt: null },
     });
@@ -271,6 +320,11 @@ export async function createWalletWithTopup(rawPhone: string, name: string | nul
 
     return wallet;
   });
+
+  // Кошелёк только что создан — привязанного Telegram-чата ещё нет, см.
+  // тот же комментарий в createWalletWithTopupArbitrary выше.
+  await notifyWalletBalanceChange(tenantId, wallet.id, Number(wallet.balance)).catch(() => {});
+  return wallet;
 }
 
 /**
@@ -284,7 +338,7 @@ export async function createWalletWithTopup(rawPhone: string, name: string | nul
  * "adjustment"), без MoneyOperation.
  */
 export async function adjustWalletBalance(walletId: string, amount: number, userId: string) {
-  return prisma.$transaction(async (tx) => {
+  const wallet = await prisma.$transaction(async (tx) => {
     const wallet = await tx.abonementWallet.update({
       where: { id: walletId },
       data: { balance: { increment: amount } },
@@ -296,6 +350,9 @@ export async function adjustWalletBalance(walletId: string, amount: number, user
 
     return wallet;
   });
+
+  await notifyWalletBalanceChange(wallet.tenantId, walletId, amount).catch(() => {});
+  return wallet;
 }
 
 /** Аналог createWalletWithTopup, но произвольной суммой (см. adjustWalletBalance выше). */
@@ -309,7 +366,7 @@ export async function createWalletWithAdjustment(
   const phone = normalizePhone(rawPhone);
   if (!phone) throw new Error("INVALID_PHONE");
 
-  return prisma.$transaction(async (tx) => {
+  const wallet = await prisma.$transaction(async (tx) => {
     const wallet = await tx.abonementWallet.create({
       data: { tenantId, phone, name: name || null, balance: amount },
     });
@@ -320,6 +377,9 @@ export async function createWalletWithAdjustment(
 
     return wallet;
   });
+
+  await notifyWalletBalanceChange(tenantId, wallet.id, amount).catch(() => {});
+  return wallet;
 }
 
 export class InsufficientBalanceError extends Error {
@@ -395,6 +455,9 @@ export async function spendWalletForZone(walletId: string, params: ZoneSpendPara
     });
 
     return tx.abonementWallet.findUniqueOrThrow({ where: { id: walletId } });
+  }).then(async (wallet) => {
+    await notifyWalletBalanceChange(tenantId, walletId, -amount).catch(() => {});
+    return wallet;
   });
 }
 

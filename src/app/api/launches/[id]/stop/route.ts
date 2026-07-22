@@ -7,7 +7,7 @@ import {
   type LaunchPricingMode,
   type LaunchRoundingMode,
 } from "@/lib/game-room";
-import { InsufficientBalanceError, spendWalletTx } from "@/lib/abonement";
+import { InsufficientBalanceError, spendWalletTx, notifyWalletBalanceChange } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Стоп пуска — оператор, серверное время; расчёт стоимости только на сервере
@@ -115,6 +115,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
       return NextResponse.json({ error: "Недостаточно средств на абонементе" }, { status: 400 });
     }
     throw err;
+  }
+
+  if (launch.pricingMode === "per_minute" && paymentMethod === "abonement" && abonementWalletId) {
+    await notifyWalletBalanceChange(point.tenantId, abonementWalletId, -amount).catch(() => {});
   }
 
   return NextResponse.json({

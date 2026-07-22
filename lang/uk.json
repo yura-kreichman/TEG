@@ -790,6 +790,7 @@
     "historyTitle": "Історія операцій",
     "receiptTitle": "Виписка балансу",
     "printReceiptButton": "Друкувати виписку",
+    "telegramBalanceButton": "Баланс у Telegram",
     "noHistory": "Поки немає операцій",
     "historyTopup": "Поповнення",
     "historySpend": "Списання",

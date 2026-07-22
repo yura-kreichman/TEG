@@ -59,6 +59,24 @@ export async function getBindDeepLink(code: string): Promise<string | null> {
   return `https://t.me/${username}?startgroup=${encodeURIComponent(code)}`;
 }
 
+// Префикс payload'а в /start для клиентского флоу "узнать баланс", в отличие
+// от одноразовых кодов TelegramBindCode (владельческая привязка чата) — см.
+// handleClientStart в вебхуке.
+export const CLIENT_START_PREFIX = "CLIENT-";
+
+// Ссылка для клиента (не Владельца) — открывает ЛИЧНЫЙ чат с ботом
+// (`?start=`, не `?startgroup=` — та ссылка добавляет бота в группу, а не
+// открывает диалог 1-на-1), запускает флоу "поделиться номером → узнать
+// баланс". Tenant.slug уже публичный и URL-safe (используется в /s/{slug}),
+// поэтому кодируем прямо им, без отдельной таблицы одноразовых кодов —
+// ссылка бессрочная и переиспользуемая (можно один раз выдать клиенту на
+// чеке/в карточке).
+export async function getClientBalanceDeepLink(tenantSlug: string): Promise<string | null> {
+  const username = await getBotUsername();
+  if (!username) return null;
+  return `https://t.me/${username}?start=${encodeURIComponent(CLIENT_START_PREFIX + tenantSlug)}`;
+}
+
 interface TelegramApiResult {
   ok: boolean;
   status: number;
@@ -87,6 +105,24 @@ async function callTelegramApi(method: string, body: Record<string, unknown>): P
 
 export async function sendChatMessage(chatId: string, text: string): Promise<TelegramApiResult> {
   return callTelegramApi("sendMessage", { chat_id: chatId, text, parse_mode: "HTML" });
+}
+
+// Клавиатура с ОДНОЙ кнопкой request_contact — это гарантия самого Telegram
+// (не наша проверка), что присланный номер принадлежит именно нажавшему
+// аккаунту: подделать чужой номер через эту кнопку нельзя, в отличие от
+// текстового ввода. Ключевая часть флоу "узнать баланс без PIN" — см.
+// handleClientStart/handleContact в вебхуке.
+export async function sendContactRequest(chatId: string, text: string, buttonText: string): Promise<TelegramApiResult> {
+  return callTelegramApi("sendMessage", {
+    chat_id: chatId,
+    text,
+    parse_mode: "HTML",
+    reply_markup: {
+      keyboard: [[{ text: buttonText, request_contact: true }]],
+      resize_keyboard: true,
+      one_time_keyboard: true,
+    },
+  });
 }
 
 export async function editChatMessage(

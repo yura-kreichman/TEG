@@ -10,7 +10,7 @@ import {
   nextTicketOrderNumber,
 } from "@/lib/tickets";
 import { previousSubmissionBoundary } from "@/lib/game-room";
-import { InsufficientBalanceError, spendWalletForTicketOrderTx } from "@/lib/abonement";
+import { InsufficientBalanceError, spendWalletForTicketOrderTx, notifyWalletBalanceChange } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
 interface CartItemInput {
@@ -272,6 +272,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
       return NextResponse.json({ error: "Недостаточно средств на абонементе" }, { status: 400 });
     }
     throw err;
+  }
+
+  if (paymentMethod === "abonement" && abonementWalletId) {
+    await notifyWalletBalanceChange(point.tenantId, abonementWalletId, -totalSnapshot).catch(() => {});
   }
 
   const { order, tickets } = result;

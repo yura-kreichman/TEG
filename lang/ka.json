@@ -790,6 +790,7 @@
     "historyTitle": "ტრანზაქციების ისტორია",
     "receiptTitle": "ბალანსის ამონაწერი",
     "printReceiptButton": "ამონაწერის დაბეჭდვა",
+    "telegramBalanceButton": "Telegram ბალანსი",
     "noHistory": "ჯერ არცერთი ტრანზაქცია არ არის",
     "historyTopup": "შევსება",
     "historySpend": "ხარჯი",

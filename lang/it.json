@@ -790,6 +790,7 @@
     "historyTitle": "Storico transazioni",
     "receiptTitle": "Estratto conto",
     "printReceiptButton": "Stampa estratto",
+    "telegramBalanceButton": "Saldo su Telegram",
     "noHistory": "Ancora nessuna transazione",
     "historyTopup": "Ricarica",
     "historySpend": "Spesa",
