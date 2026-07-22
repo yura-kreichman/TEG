@@ -125,6 +125,33 @@ export async function sendContactRequest(chatId: string, text: string, buttonTex
   });
 }
 
+// Инлайн-кнопки под сообщением (не заменяет обычную клавиатуру ввода, в
+// отличие от sendContactRequest) — список кликабельных вариантов вместо
+// ручного набора текста, например "выбери клиента, а не набирай его номер
+// руками" (запрос пользователя 2026-07-22, экран /balance в групповом чате).
+// Каждая кнопка — своя строка (проще читать список имён, чем ужимать в
+// колонки). callbackData ограничен Telegram 64 байтами — вызывающий код
+// отвечает за то, чтобы влезало (id из cuid() укладывается с большим запасом).
+export async function sendInlineKeyboard(
+  chatId: string,
+  text: string,
+  buttons: { text: string; callbackData: string }[]
+): Promise<TelegramApiResult> {
+  return callTelegramApi("sendMessage", {
+    chat_id: chatId,
+    text,
+    parse_mode: "HTML",
+    reply_markup: { inline_keyboard: buttons.map((b) => [{ text: b.text, callback_data: b.callbackData }]) },
+  });
+}
+
+// Обязательный ответ на нажатие инлайн-кнопки — без него у пользователя
+// крутится "часики" на кнопке до таймаута Telegram (документированное
+// поведение Bot API, не опционально для нормального UX).
+export async function answerCallbackQuery(callbackQueryId: string): Promise<void> {
+  await callTelegramApi("answerCallbackQuery", { callback_query_id: callbackQueryId }).catch(() => {});
+}
+
 export async function editChatMessage(
   chatId: string,
   messageId: string,

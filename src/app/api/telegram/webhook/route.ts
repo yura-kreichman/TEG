@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendChatMessage, sendContactRequest, CLIENT_START_PREFIX } from "@/lib/telegram-bot";
+import { sendChatMessage, sendContactRequest, sendInlineKeyboard, answerCallbackQuery, CLIENT_START_PREFIX } from "@/lib/telegram-bot";
 import { findWalletByPhone, normalizePhone } from "@/lib/abonement";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import type { CurrencyCode } from "@/lib/currency";
@@ -32,6 +32,8 @@ export async function POST(request: Request) {
     } else {
       await handleGroupCommand(update.message);
     }
+  } else if (update.callback_query) {
+    await handleCallbackQuery(update.callback_query);
   } else if (update.my_chat_member) {
     await handleMyChatMember(update.my_chat_member);
   }
@@ -438,25 +440,82 @@ async function handleKassaCommand(chatId: string, tenantId: string) {
   await sendChatMessage(chatId, lines.join("\n")).catch(() => {});
 }
 
-async function handleGroupBalanceCommand(chatId: string, tenantId: string, phoneArg: string) {
-  if (!phoneArg) {
-    await sendChatMessage(chatId, "Формат: /balance 79001234567").catch(() => {});
-    return;
-  }
+const RECENT_CLIENTS_LIMIT = 8;
+const BALANCE_CALLBACK_PREFIX = "bal:";
 
+async function handleGroupBalanceCommand(chatId: string, tenantId: string, phoneArg: string) {
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { currency: true } });
   if (!tenant) return;
+
+  if (!phoneArg) {
+    // Без номера — не текстовая подсказка "введите формат" (запрос
+    // пользователя 2026-07-22: "владельцу не нужно вводить номер руками,
+    // пусть подставляются клиенты у которых есть баланс, а если нет — нет
+    // смысла присылать такие сообщения"), а список реальных клиентов
+    // кнопками — тапнул и сразу баланс, вводить ничего не нужно. Раз клиентов
+    // на тенанте нет вообще — молчим, а не шлём бесполезное сообщение.
+    const clients = await prisma.abonementWallet.findMany({
+      where: { tenantId },
+      orderBy: { updatedAt: "desc" },
+      take: RECENT_CLIENTS_LIMIT,
+      select: { id: true, name: true, phone: true, balance: true },
+    });
+    if (clients.length === 0) return;
+
+    const currency = tenant.currency as CurrencyCode | null;
+    const buttons = clients.map((c) => ({
+      text: `${c.name ? `${c.name} (${c.phone})` : c.phone} — ${formatMoneyWithCurrency(Number(c.balance), "ru", currency)}`,
+      callbackData: `${BALANCE_CALLBACK_PREFIX}${c.id}`,
+    }));
+    await sendInlineKeyboard(chatId, "Выберите клиента:", buttons).catch(() => {});
+    return;
+  }
 
   const wallet = await findWalletByPhone(tenantId, phoneArg);
   if (!wallet) {
     await sendChatMessage(chatId, `Клиент с номером ${phoneArg} не найден`).catch(() => {});
     return;
   }
+  await sendWalletBalanceReply(chatId, tenant.currency, wallet);
+}
 
-  const currency = tenant.currency as CurrencyCode | null;
+async function sendWalletBalanceReply(
+  chatId: string,
+  currencyRaw: string | null,
+  wallet: { name: string | null; phone: string; balance: unknown }
+) {
+  const currency = currencyRaw as CurrencyCode | null;
   const label = wallet.name ? `${wallet.name} (${wallet.phone})` : wallet.phone;
   await sendChatMessage(
     chatId,
     `${label}\nБаланс: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`
   ).catch(() => {});
+}
+
+// Нажатие кнопки клиента из списка (см. handleGroupBalanceCommand выше) —
+// tenantId для проверки берём из TenantSummaryChannel по chatId, а не
+// доверяем чему-то в самом callback_data: коллбэк технически мог прийти
+// только из чата, где мы сами показали эту клавиатуру (Telegram не позволяет
+// подделать чужой чат), но лишняя проверка "кошелёк реально принадлежит
+// этому тенанту" ничего не стоит и на всякий случай не помешает.
+async function handleCallbackQuery(callbackQuery: { id: string; data?: string; message?: { chat: { id: number } } }) {
+  const data = callbackQuery.data;
+  const chatId = callbackQuery.message ? String(callbackQuery.message.chat.id) : null;
+  await answerCallbackQuery(callbackQuery.id);
+  if (!data || !chatId || !data.startsWith(BALANCE_CALLBACK_PREFIX)) return;
+
+  const channel = await prisma.tenantSummaryChannel.findFirst({
+    where: { channelType: "telegram", chatId },
+    select: { tenantId: true },
+  });
+  if (!channel) return;
+
+  const walletId = data.slice(BALANCE_CALLBACK_PREFIX.length);
+  const wallet = await prisma.abonementWallet.findUnique({ where: { id: walletId } });
+  if (!wallet || wallet.tenantId !== channel.tenantId) return;
+
+  const tenant = await prisma.tenant.findUnique({ where: { id: channel.tenantId }, select: { currency: true } });
+  if (!tenant) return;
+
+  await sendWalletBalanceReply(chatId, tenant.currency, wallet);
 }
