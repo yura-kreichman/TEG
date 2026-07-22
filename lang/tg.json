@@ -794,6 +794,7 @@
     "telegramLinkedLabel": "Telegram пайваст аст",
     "broadcastButton": "Паёмрасонӣ",
     "broadcastHint": "Паём ба мизоҷоне, ки боти Telegram-ро пайваст кардаанд, фиристода мешавад.",
+    "broadcastImageLabel": "Расм (ихтиёрӣ)",
     "broadcastPlaceholder": "Матни паём",
     "broadcastSendButton": "Фиристодан",
     "broadcastSending": "Фиристода истодааст...",

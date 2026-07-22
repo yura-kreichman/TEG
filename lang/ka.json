@@ -794,6 +794,7 @@
     "telegramLinkedLabel": "Telegram დაკავშირებულია",
     "broadcastButton": "მასობრივი შეტყობინება",
     "broadcastHint": "შეტყობინებას მიიღებენ კლიენტები, რომლებმაც დააკავშირეს Telegram ბოტი.",
+    "broadcastImageLabel": "სურათი (არასავალდებულო)",
     "broadcastPlaceholder": "შეტყობინების ტექსტი",
     "broadcastSendButton": "გაგზავნა",
     "broadcastSending": "იგზავნება...",

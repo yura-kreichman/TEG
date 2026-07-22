@@ -107,6 +107,16 @@ export async function sendChatMessage(chatId: string, text: string): Promise<Tel
   return callTelegramApi("sendMessage", { chat_id: chatId, text, parse_mode: "HTML" });
 }
 
+// Фото с подписью (запрос пользователя 2026-07-23, рассылка клиентам) —
+// photoUrl передаётся Telegram'у как обычная ссылка (photo: <URL>), сам файл
+// прокачивать через наш сервер не нужно — Bot API умеет скачать его сам,
+// достаточно чтобы ссылка была публично доступна (как и наши /uploads/...,
+// см. src/lib/uploads.ts). caption ограничен Telegram 1024 символами —
+// вызывающий код отвечает за то, чтобы влезало.
+export async function sendPhotoMessage(chatId: string, photoUrl: string, caption: string): Promise<TelegramApiResult> {
+  return callTelegramApi("sendPhoto", { chat_id: chatId, photo: photoUrl, caption, parse_mode: "HTML" });
+}
+
 // Клавиатура с ОДНОЙ кнопкой request_contact — это гарантия самого Telegram
 // (не наша проверка), что присланный номер принадлежит именно нажавшему
 // аккаунту: подделать чужой номер через эту кнопку нельзя, в отличие от

@@ -794,6 +794,7 @@
     "telegramLinkedLabel": "Telegram қосылған",
     "broadcastButton": "Жаппай хабарлама",
     "broadcastHint": "Хабарламаны Telegram ботын қосқан клиенттер алады.",
+    "broadcastImageLabel": "Сурет (міндетті емес)",
     "broadcastPlaceholder": "Хабарлама мәтіні",
     "broadcastSendButton": "Жіберу",
     "broadcastSending": "Жіберілуде...",

@@ -794,6 +794,7 @@
     "telegramLinkedLabel": "Połączono z Telegramem",
     "broadcastButton": "Wysyłka",
     "broadcastHint": "Wiadomość otrzymają klienci, którzy podłączyli bota Telegram.",
+    "broadcastImageLabel": "Obraz (opcjonalnie)",
     "broadcastPlaceholder": "Treść wiadomości",
     "broadcastSendButton": "Wyślij",
     "broadcastSending": "Wysyłanie...",

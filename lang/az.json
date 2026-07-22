@@ -794,6 +794,7 @@
     "telegramLinkedLabel": "Telegram qoşulub",
     "broadcastButton": "Toplu mesaj",
     "broadcastHint": "Mesaj Telegram botunu qoşan müştərilərə göndəriləcək.",
+    "broadcastImageLabel": "Şəkil (istəyə bağlı)",
     "broadcastPlaceholder": "Mesaj mətni",
     "broadcastSendButton": "Göndər",
     "broadcastSending": "Göndərilir...",

@@ -794,6 +794,7 @@
     "telegramLinkedLabel": "Telegram collegato",
     "broadcastButton": "Messaggio broadcast",
     "broadcastHint": "Il messaggio verrà inviato ai clienti che hanno collegato il bot Telegram.",
+    "broadcastImageLabel": "Immagine (facoltativa)",
     "broadcastPlaceholder": "Testo del messaggio",
     "broadcastSendButton": "Invia",
     "broadcastSending": "Invio...",

@@ -794,6 +794,7 @@
     "telegramLinkedLabel": "Telegram туташты",
     "broadcastButton": "Жалпы билдирүү",
     "broadcastHint": "Билдирүүнү Telegram ботун туташтырган кардарлар алышат.",
+    "broadcastImageLabel": "Сүрөт (милдеттүү эмес)",
     "broadcastPlaceholder": "Билдирүү тексти",
     "broadcastSendButton": "Жөнөтүү",
     "broadcastSending": "Жөнөтүлүүдө...",

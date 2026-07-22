@@ -794,6 +794,7 @@
     "telegramLinkedLabel": "Подключил Telegram",
     "broadcastButton": "Рассылка",
     "broadcastHint": "Сообщение получат клиенты, подключившие Telegram-бота.",
+    "broadcastImageLabel": "Картинка (необязательно)",
     "broadcastPlaceholder": "Текст сообщения",
     "broadcastSendButton": "Отправить",
     "broadcastSending": "Отправка...",

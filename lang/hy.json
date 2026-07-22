@@ -794,6 +794,7 @@
     "telegramLinkedLabel": "Telegram-ը միացված է",
     "broadcastButton": "Զանգվածային հաղորդագրություն",
     "broadcastHint": "Հաղորդագրությունը կստանան Telegram բոտը միացրած հաճախորդները։",
+    "broadcastImageLabel": "Նկար (ըստ ցանկության)",
     "broadcastPlaceholder": "Հաղորդագրության տեքստը",
     "broadcastSendButton": "Ուղարկել",
     "broadcastSending": "Ուղարկվում է...",

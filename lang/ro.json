@@ -794,6 +794,7 @@
     "telegramLinkedLabel": "Telegram conectat",
     "broadcastButton": "Difuzare",
     "broadcastHint": "Mesajul va fi trimis clienților care au conectat botul Telegram.",
+    "broadcastImageLabel": "Imagine (opțional)",
     "broadcastPlaceholder": "Textul mesajului",
     "broadcastSendButton": "Trimite",
     "broadcastSending": "Se trimite...",

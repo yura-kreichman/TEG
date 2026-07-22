@@ -794,6 +794,7 @@
     "telegramLinkedLabel": "Telegram ulangan",
     "broadcastButton": "Ommaviy xabar",
     "broadcastHint": "Xabar Telegram botini ulagan mijozlarga yuboriladi.",
+    "broadcastImageLabel": "Rasm (ixtiyoriy)",
     "broadcastPlaceholder": "Xabar matni",
     "broadcastSendButton": "Yuborish",
     "broadcastSending": "Yuborilmoqda...",

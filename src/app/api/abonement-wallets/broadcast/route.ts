@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { isModuleEnabled } from "@/lib/tenant-modules";
-import { sendChatMessage } from "@/lib/telegram-bot";
+import { sendChatMessage, sendPhotoMessage } from "@/lib/telegram-bot";
 
-const MAX_MESSAGE_LENGTH = 1000;
+// Telegram ограничивает подпись к фото 1024 символами (жёстче, чем 4096 у
+// обычного текста) — единый лимит поменьше для обоих случаев, чтобы с
+// картинкой и без неё вести себя предсказуемо одинаково, не считать отдельно
+// длину префикса "📣 <b>{имя тенанта}</b>\n\n" под каждый случай.
+const MAX_MESSAGE_LENGTH = 900;
 // Пауза между отправками (запрос пользователя 2026-07-23: "Владелец может
 // слать промо клиентам, у кого подключён Telegram") — тот же приём и то же
 // значение, что уже используется в summary-scheduler.ts между точками одного
@@ -31,6 +35,7 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => ({}));
   const message: string = typeof body.message === "string" ? body.message.trim() : "";
+  const imageUrl: string | null = typeof body.imageUrl === "string" && body.imageUrl ? body.imageUrl : null;
   if (!message) {
     return NextResponse.json({ error: "Введите текст сообщения" }, { status: 400 });
   }
@@ -42,9 +47,16 @@ export async function POST(request: Request) {
   const links = await prisma.clientTelegramLink.findMany({ where: { tenantId: owner.tenantId }, select: { chatId: true } });
 
   const text = `📣 <b>${tenant?.name ?? ""}</b>\n\n${message}`;
+  // Ссылка на фото — относительный путь из /api/uploads (тот же формат, что
+  // Tenant.logoUrl и т.п.), Telegram нужен полный URL, чтобы скачать файл
+  // сам (см. комментарий у sendPhotoMessage в telegram-bot.ts).
+  const absoluteImageUrl = imageUrl ? `${new URL(request.url).origin}${imageUrl}` : null;
+
   let sent = 0;
   for (const link of links) {
-    const result = await sendChatMessage(link.chatId, text);
+    const result = absoluteImageUrl
+      ? await sendPhotoMessage(link.chatId, absoluteImageUrl, text)
+      : await sendChatMessage(link.chatId, text);
     if (result.ok) sent++;
     await sleep(BETWEEN_SENDS_DELAY_MS);
   }

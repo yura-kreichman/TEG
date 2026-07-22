@@ -4,6 +4,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, Gift, Search, ChevronRight, Wallet, Send, Megaphone } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { FilePickerButton } from "@/components/file-picker-button";
+import { compressImageFile } from "@/lib/client-image";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -101,9 +103,30 @@ export default function AbonementsPage() {
   // отличает рассылку от транзакционных уведомлений бота.
   const [broadcastOpen, setBroadcastOpen] = useState(false);
   const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastImageUrl, setBroadcastImageUrl] = useState<string | null>(null);
+  const [broadcastImageUploading, setBroadcastImageUploading] = useState(false);
   const [broadcastSending, setBroadcastSending] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState<{ sent: number; total: number } | null>(null);
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
+
+  async function handleBroadcastImageUpload(file: File) {
+    setBroadcastImageUploading(true);
+    setBroadcastError(null);
+    try {
+      const compressed = await compressImageFile(file);
+      const formData = new FormData();
+      formData.append("file", compressed);
+      const res = await fetch("/api/uploads", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        setBroadcastError(data.error ?? t.abonements.broadcastError);
+        return;
+      }
+      setBroadcastImageUrl(data.url);
+    } finally {
+      setBroadcastImageUploading(false);
+    }
+  }
 
   async function sendBroadcast() {
     setBroadcastSending(true);
@@ -112,7 +135,7 @@ export default function AbonementsPage() {
       const res = await fetch("/api/abonement-wallets/broadcast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: broadcastMessage.trim() }),
+        body: JSON.stringify({ message: broadcastMessage.trim(), imageUrl: broadcastImageUrl }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -121,6 +144,7 @@ export default function AbonementsPage() {
       }
       setBroadcastResult({ sent: data.sent, total: data.total });
       setBroadcastMessage("");
+      setBroadcastImageUrl(null);
     } finally {
       setBroadcastSending(false);
     }
@@ -537,12 +561,40 @@ export default function AbonementsPage() {
         <div className="flex flex-col gap-3 pt-2">
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.abonements.broadcastButton}</h2>
           <p className="text-caption-airbnb text-muted-foreground">{t.abonements.broadcastHint}</p>
+
+          <div className="flex flex-col gap-1">
+            <Label>{t.abonements.broadcastImageLabel}</Label>
+            <div className="flex flex-wrap items-center gap-3">
+              {broadcastImageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={broadcastImageUrl} alt="" className="size-12 rounded-control object-cover" />
+              )}
+              <PressableScale>
+                <FilePickerButton
+                  accept="image/jpeg,image/png,image/webp"
+                  onFileSelected={handleBroadcastImageUpload}
+                  disabled={broadcastImageUploading}
+                  hasFile={!!broadcastImageUrl}
+                />
+              </PressableScale>
+              {broadcastImageUrl && (
+                <button
+                  type="button"
+                  className="text-caption-airbnb font-semibold text-destructive"
+                  onClick={() => setBroadcastImageUrl(null)}
+                >
+                  {t.common.delete}
+                </button>
+              )}
+            </div>
+          </div>
+
           <Textarea
             value={broadcastMessage}
             onChange={(e) => setBroadcastMessage(e.target.value)}
             placeholder={t.abonements.broadcastPlaceholder}
             rows={5}
-            maxLength={1000}
+            maxLength={900}
           />
           {broadcastError && <p className="text-sm text-destructive">{broadcastError}</p>}
           {broadcastResult && (
