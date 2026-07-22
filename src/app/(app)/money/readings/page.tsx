@@ -834,12 +834,12 @@ export default function ReadingsCalendarPage() {
                             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                               <span className="text-body-airbnb font-bold">{formatReadableDate(selectedDate)}</span>
                               <span className="text-caption-airbnb tabular-nums">{formatTime(card.submittedAt)}</span>
-                              {card.edited && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">
-                                  <Crown className="size-3 shrink-0 text-success" />
-                                  {t.readings.editedByOwner}
-                                </span>
-                              )}
+                              {/* Только иконка, без фона и подписи (запрос
+                                  пользователя 2026-07-22: "везде по проекту
+                                  достаточно только зелёной иконки... никаких
+                                  фонов и надписей не надо") — тот же единый
+                                  минимальный вид короны, что и везде. */}
+                              {card.edited && <Crown className="size-3.5 shrink-0 text-success" />}
                             </div>
                             <p className="text-caption-airbnb">
                               {t.readings.operatorLabel}: {card.operatorName}
