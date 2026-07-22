@@ -561,7 +561,7 @@ export default function GoodsPage() {
                   <Money value={cartTotal} />
                 </span>
               </div>
-              <div className="flex items-stretch gap-2">
+              <div className="relative flex items-stretch gap-2">
                 <PressableScale className="flex flex-1">
                   <Button
                     type="button"
@@ -576,9 +576,14 @@ export default function GoodsPage() {
                 </PressableScale>
                 {/* Очистить корзину целиком — через "Точно?" (запрос
                     пользователя 2026-07-21), тот же ConfirmButton, что и
-                    везде по проекту для необратимых действий. */}
+                    везде по проекту для необратимых действий. fillParent —
+                    реальный баг, найден пользователем 2026-07-22 в Билетах
+                    (тот же паттерн здесь): без него "Точно?" вылезал за
+                    пределы узкого слота иконки корзины, теперь оверлей на
+                    весь ряд целиком, тот же приём, что у замка активов. */}
                 <ConfirmButton
                   className="h-12 shrink-0 px-3.5 text-destructive"
+                  fillParent
                   onConfirm={() => {
                     goodsCart.clearCart();
                     // Пустую корзину смотреть незачем (запрос пользователя
