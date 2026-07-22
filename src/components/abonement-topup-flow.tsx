@@ -661,10 +661,16 @@ export function AbonementTopupFlow({
               проверять баланс (запрос пользователя 2026-07-23), телефон и так
               скорее всего уже в руках. */}
           {telegramBalanceLink && !foundHasTelegram && (
-            <PressableScale className="w-full">
-              <Button type="button" variant="outline" className="h-12 w-full gap-1.5" onClick={() => setQrOpen(true)}>
-                <Send className="size-4" />
-                {t.abonements.telegramBalanceButton}
+            <PressableScale>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-12 rounded-lg"
+                aria-label={t.abonements.telegramBalanceButton}
+                onClick={() => setQrOpen(true)}
+              >
+                <Send className="size-5" />
               </Button>
             </PressableScale>
           )}
@@ -706,10 +712,16 @@ export function AbonementTopupFlow({
             </span>
           </div>
           {telegramBalanceLink && !foundHasTelegram && (
-            <PressableScale className="w-full">
-              <Button type="button" variant="outline" className="h-12 w-full gap-1.5" onClick={() => setQrOpen(true)}>
-                <Send className="size-4" />
-                {t.abonements.telegramBalanceButton}
+            <PressableScale>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-12 rounded-lg"
+                aria-label={t.abonements.telegramBalanceButton}
+                onClick={() => setQrOpen(true)}
+              >
+                <Send className="size-5" />
               </Button>
             </PressableScale>
           )}
@@ -1065,19 +1077,26 @@ export function AbonementTopupFlow({
                             <Pencil className="size-3.5" />
                           </button>
                         )}
-                        {/* QR на бота — в одном ряду с заголовком (запрос
-                            пользователя 2026-07-23), не отдельным блоком ниже
-                            — только пока клиент ещё не привязал бота сам
-                            ("клиенты как подписчики, нам надо их собирать"). */}
-                        {!isNew && found && telegramBalanceLink && !foundHasTelegram && (
-                          <button
-                            type="button"
-                            onClick={() => setQrOpen(true)}
-                            className="ml-auto shrink-0 text-primary"
-                            aria-label={t.abonements.telegramBalanceButton}
-                          >
-                            <Send className="size-4" />
-                          </button>
+                        {/* Значок статуса Telegram — виден всегда, когда бот
+                            вообще настроен (запрос пользователя 2026-07-23):
+                            активный синий = ещё не привязан (тап открывает
+                            QR), серый неактивный = клиент уже подключил бота
+                            сам, просто индикатор, без действия. */}
+                        {!isNew && found && telegramBalanceLink && (
+                          foundHasTelegram ? (
+                            <span className="ml-auto shrink-0 text-muted-foreground" aria-label={t.abonements.telegramLinkedLabel}>
+                              <Send className="size-5" />
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setQrOpen(true)}
+                              className="ml-auto shrink-0 text-primary"
+                              aria-label={t.abonements.telegramBalanceButton}
+                            >
+                              <Send className="size-5" />
+                            </button>
+                          )
                         )}
                       </div>
                       {/* Телефон вторичной строкой, когда есть имя — иначе он и так
@@ -1110,12 +1129,12 @@ export function AbonementTopupFlow({
                         <Button
                           type="button"
                           variant="outline"
-                          size="sm"
-                          className="gap-1.5 rounded-lg"
+                          size="icon"
+                          className="rounded-lg"
+                          aria-label={t.abonements.telegramBalanceButton}
                           onClick={() => setQrOpen(true)}
                         >
-                          <Send className="size-4" />
-                          {t.abonements.telegramBalanceButton}
+                          <Send className="size-5" />
                         </Button>
                       </PressableScale>
                     )}

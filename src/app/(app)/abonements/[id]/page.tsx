@@ -240,11 +240,12 @@ export default function AbonementWalletPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full gap-1.5 rounded-lg"
+                  size="icon"
+                  className="rounded-lg"
+                  aria-label={t.abonements.telegramBalanceButton}
                   onClick={() => setQrOpen(true)}
                 >
-                  <Send className="size-4" />
-                  {t.abonements.telegramBalanceButton}
+                  <Send className="size-5" />
                 </Button>
               </PressableScale>
             )}
