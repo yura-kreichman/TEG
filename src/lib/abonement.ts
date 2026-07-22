@@ -3,6 +3,8 @@ import type { Prisma } from "@/generated/prisma/client";
 import { sendChatMessage } from "@/lib/telegram-bot";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import type { CurrencyCode } from "@/lib/currency";
+import { BOT_STRINGS, greetingLine } from "@/lib/telegram-client-i18n";
+import type { Locale } from "@/lib/locales";
 
 // Модуль "Абонементы" (запрос пользователя 2026-07-17) — Abonement — это
 // ТАРИФ-ПЛАН владельца ("заплатить price → зачислить creditAmount"), БЕЗ
@@ -51,7 +53,7 @@ export async function findWalletByPhone(tenantId: string, rawPhone: string, tx: 
 // сообщения, на итоговый баланс не влияет. Молча ничего не делает, если у
 // клиента нет привязанного Telegram-чата — это норма, не ошибка.
 export async function notifyWalletBalanceChange(tenantId: string, walletId: string, amount: number): Promise<void> {
-  const wallet = await prisma.abonementWallet.findUnique({ where: { id: walletId }, select: { phone: true, balance: true } });
+  const wallet = await prisma.abonementWallet.findUnique({ where: { id: walletId }, select: { name: true, phone: true, balance: true } });
   if (!wallet) return;
 
   const links = await prisma.clientTelegramLink.findMany({ where: { tenantId, phone: wallet.phone } });
@@ -62,13 +64,20 @@ export async function notifyWalletBalanceChange(tenantId: string, walletId: stri
 
   const currency = tenant.currency as CurrencyCode | null;
   const sign = amount >= 0 ? "+" : "−";
-  const text = [
-    `«${tenant.name}»`,
-    `${sign}${formatMoneyWithCurrency(Math.abs(amount), "ru", currency)}`,
-    `Баланс: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`,
-  ].join("\n");
 
-  await Promise.all(links.map((link) => sendChatMessage(link.chatId, text).catch(() => {})));
+  // Язык — из привязки чата (сохранён один раз при первой проверке контакта,
+  // см. вебхук), не из живого Telegram-апдейта: тут его попросту нет, это
+  // проактивный пуш, а не ответ на сообщение клиента.
+  for (const link of links) {
+    const s = BOT_STRINGS[link.language as Locale] ?? BOT_STRINGS.en;
+    const text = [
+      greetingLine(wallet.name, s),
+      `«${tenant.name}»`,
+      `${sign}${formatMoneyWithCurrency(Math.abs(amount), "ru", currency)}`,
+      `${s.balanceWord}: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`,
+    ].join("\n");
+    await sendChatMessage(link.chatId, text).catch(() => {});
+  }
 }
 
 /** Список планов тенанта — всегда видны на всех точках (см. комментарий выше). */

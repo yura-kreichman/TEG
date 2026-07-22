@@ -5,6 +5,8 @@ import { findWalletByPhone, normalizePhone } from "@/lib/abonement";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import type { CurrencyCode } from "@/lib/currency";
 import { getPointCashBalance } from "@/lib/zone-balance";
+import { pickBotLang, BOT_STRINGS, greetingLine } from "@/lib/telegram-client-i18n";
+import type { Locale } from "@/lib/locales";
 
 // Обработчик вебхука платформенного бота (docs/spec/telegram-summaries.md).
 // Публичный эндпоинт по определению (Telegram сам его дёргает) — единственная
@@ -42,64 +44,13 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
-// --- Локализация клиентских сообщений (запрос пользователя 2026-07-22:
-// "язык ответов бота должен определяться сам... если Телеграм на русском, то
-// на русском, на любом другом пока на английском, ведь локализации ещё нет")
-// — двухъязычная, НЕ через полноценный lang/*.json (это plain-text сообщения
-// в Telegram, не React UI). Источник — Telegram-нативное поле
-// message.from.language_code (IETF-тег интерфейса аккаунта клиента, не
-// текста конкретного сообщения) — платформа уже это знает, отдельно
-// спрашивать язык не нужно. ТОЛЬКО для клиентских сообщений (баланс/история/
-// заказы) — сообщения Владельцу/Сотруднику (групповые команды, привязка
-// сводок) остаются на русском, тот же принцип, что уже действует в проекте
-// для остальных бот-сообщений этой группы.
-type BotLang = "ru" | "en";
-function pickBotLang(languageCode?: string): BotLang {
-  return languageCode?.toLowerCase().startsWith("ru") ? "ru" : "en";
-}
-
-const BOT_STRINGS: Record<
-  BotLang,
-  {
-    shareButton: string;
-    startHintGeneric: string;
-    startHintTenant: (name: string) => string;
-    linkInvalid: string;
-    notFoundGeneric: (phone: string) => string;
-    notFoundTenant: (phone: string, name: string) => string;
-    yourBalance: string;
-    recentOps: string;
-    openOrders: string;
-    ticketsWord: string;
-  }
-> = {
-  ru: {
-    shareButton: "📱 Поделиться номером",
-    startHintGeneric: "Чтобы узнать баланс, поделитесь своим номером телефона — тем же, что вы называли на точке проката.",
-    startHintTenant: (name) =>
-      `Чтобы узнать баланс у «${name}», поделитесь своим номером телефона — тем же, что вы называли на точке.`,
-    linkInvalid: "Ссылка недействительна",
-    notFoundGeneric: (phone) => `Клиент с номером ${phone} не найден ни у одного проката`,
-    notFoundTenant: (phone, name) => `Клиент с номером ${phone} не найден у «${name}»`,
-    yourBalance: "Ваш баланс",
-    recentOps: "Последние операции",
-    openOrders: "Неиспользованные заказы",
-    ticketsWord: "билет(ов)",
-  },
-  en: {
-    shareButton: "📱 Share phone number",
-    startHintGeneric: "To check your balance, share your phone number — the same one you gave at the rental point.",
-    startHintTenant: (name) =>
-      `To check your balance at "${name}", share your phone number — the same one you gave at the point.`,
-    linkInvalid: "This link is no longer valid",
-    notFoundGeneric: (phone) => `No client found with number ${phone}`,
-    notFoundTenant: (phone, name) => `No client found with number ${phone} at "${name}"`,
-    yourBalance: "Your balance",
-    recentOps: "Recent transactions",
-    openOrders: "Unused orders",
-    ticketsWord: "ticket(s)",
-  },
-};
+// Локализация клиентских сообщений — словарь и подбор языка вынесены в
+// src/lib/telegram-client-i18n.ts (переиспользуется также notifyWalletBalanceChange
+// в abonement.ts и напоминаниями об истечении билетов в summary-scheduler.ts,
+// поэтому не может жить только здесь). ТОЛЬКО для клиентских сообщений —
+// сообщения Владельцу/Сотруднику (групповые команды, привязка сводок)
+// остаются на русском.
+type BotLang = Locale;
 
 async function handleStartMessage(message: {
   text: string;
@@ -281,8 +232,8 @@ async function handleContact(message: {
     }
     await prisma.clientTelegramLink.upsert({
       where: { tenantId_chatId: { tenantId: tenant.id, chatId } },
-      create: { tenantId: tenant.id, chatId, phone },
-      update: { phone },
+      create: { tenantId: tenant.id, chatId, phone, language: lang },
+      update: { phone, language: lang },
     });
     await sendChatMessage(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
     return;
@@ -303,8 +254,8 @@ async function handleContact(message: {
     if (!tenant) continue;
     await prisma.clientTelegramLink.upsert({
       where: { tenantId_chatId: { tenantId: tenant.id, chatId } },
-      create: { tenantId: tenant.id, chatId, phone },
-      update: { phone },
+      create: { tenantId: tenant.id, chatId, phone, language: lang },
+      update: { phone, language: lang },
     });
     await sendChatMessage(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
   }
@@ -317,25 +268,56 @@ const HISTORY_LIMIT = 5;
 // отдельных командах, один тап по кнопке даёт полную картину сразу).
 async function buildClientReport(
   tenant: { id: string; name: string; currency: string | null },
-  wallet: { id: string; balance: unknown },
+  wallet: { id: string; name: string | null; balance: unknown },
   lang: BotLang
 ): Promise<string> {
   const s = BOT_STRINGS[lang];
   const currency = tenant.currency as CurrencyCode | null;
-  const lines = [`«${tenant.name}»`, `${s.yourBalance}: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`];
+  const lines = [
+    greetingLine(wallet.name, s),
+    `«${tenant.name}»`,
+    `${s.yourBalance}: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`,
+  ];
 
+  // Обогащённая история (запрос пользователя 2026-07-23: раньше строка была
+  // просто "22.07  −150 ₽" без объяснения, за что) — подключаем все связи,
+  // через которые AbonementTransaction ссылается на "что именно" (план
+  // пополнения / актив-пуск / товар / заказ билетов), берём первое
+  // непустое имя. Для "Счётчиков" (прямое списание на актив без Launch) имя
+  // берём из asset напрямую — единственный тип операции, где Launch нет
+  // вообще (см. spendWalletForZone в abonement.ts).
   const history = await prisma.abonementTransaction.findMany({
     where: { walletId: wallet.id },
     orderBy: { occurredAt: "desc" },
     take: HISTORY_LIMIT,
-    select: { type: true, amount: true, occurredAt: true },
+    select: {
+      type: true,
+      amount: true,
+      occurredAt: true,
+      abonement: { select: { name: true } },
+      launch: { select: { asset: { select: { name: true } }, zone: { select: { name: true } } } },
+      goodsSale: { select: { goods: { select: { name: true } } } },
+      ticketOrder: { select: { number: true } },
+      asset: { select: { name: true } },
+    },
   });
   if (history.length > 0) {
     lines.push("", `<b>${s.recentOps}:</b>`);
     for (const h of history) {
       const sign = h.type === "spend" ? "−" : "+";
       const date = h.occurredAt.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" });
-      lines.push(`${date}  ${sign}${formatMoneyWithCurrency(Number(h.amount), "ru", currency)}`);
+      const typeLabel =
+        h.type === "spend" ? s.typeSpend : h.type === "refund" ? s.typeRefund : h.type === "adjustment" ? s.typeAdjustment : s.typeTopup;
+      const detail =
+        h.abonement?.name ??
+        h.launch?.asset?.name ??
+        h.launch?.zone.name ??
+        h.goodsSale?.goods.name ??
+        (h.ticketOrder ? `${s.ticketOrderPrefix} №${h.ticketOrder.number}` : null) ??
+        h.asset?.name ??
+        null;
+      const label = detail ? `${typeLabel} · ${detail}` : typeLabel;
+      lines.push(`${date}  ${label}  ${sign}${formatMoneyWithCurrency(Number(h.amount), "ru", currency)}`);
     }
   }
 

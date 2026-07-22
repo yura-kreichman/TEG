@@ -1266,8 +1266,16 @@ model TicketOrder {
   tickets               Ticket[]
   abonementTransactions AbonementTransaction[]
 
+  // Планировщик (src/lib/summary-scheduler.ts) шлёт клиенту в Telegram
+  // напоминание "заказ скоро истечёт" ровно один раз за expiresAt — этот
+  // флаг гасит повторные срабатывания на каждом тике. Null = ещё не
+  // отправлено (в т.ч. для заказов без expiresAt вообще — им напоминание не
+  // положено, планировщик их и не находит по WHERE).
+  expiryReminderSentAt DateTime?
+
   @@index([zoneId, number])
   @@index([zoneId, openTicketsCount])
+  @@index([expiresAt, expiryReminderSentAt])
 }
 
 // Одна позиция заказа = один билет, гасится независимо от остальных билетов
@@ -1870,6 +1878,12 @@ model ClientTelegramLink {
 
   chatId String
   phone  String
+  // Определён один раз при первой проверке контакта (message.from.language_code,
+  // сматченный на ALL_LOCALES, иначе "en" — src/lib/telegram-client-i18n.ts).
+  // Нужен ИМЕННО для проактивных сообщений (изменение баланса, напоминание об
+  // истечении билетов) — там нет живого Telegram-апдейта, откуда можно было бы
+  // взять язык на лету, как у обычных ответов в вебхуке.
+  language String @default("en")
 
   createdAt DateTime @default(now())
 
