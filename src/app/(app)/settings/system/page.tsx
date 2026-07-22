@@ -163,11 +163,21 @@ export default function SystemSettingsPage() {
   });
 
   const rows: Array<{ key: keyof SystemSettings; label: string; sub: string }> = [
-    {
-      key: "goodsAllowBalancePayment",
-      label: t.settings.systemGoodsBalancePaymentLabel,
-      sub: t.settings.systemGoodsBalancePaymentHint,
-    },
+    // "Оплата Товаров балансом" сама по себе бессмысленна, если выключен
+    // модуль Товары (нечем платить) ИЛИ модуль Клиенты (нечем платить чем —
+    // баланс — это Клиенты, запрос пользователя 2026-07-22: "проверь ещё раз
+    // эти зависимости"). Тот же принцип, что и с тумблерами goodsAccess/
+    // revisionAccess в настройках Сотрудника — тумблер прячется целиком, а не
+    // просто становится неактивным.
+    ...(settings.goodsEnabled && settings.clientsEnabled
+      ? [
+          {
+            key: "goodsAllowBalancePayment" as const,
+            label: t.settings.systemGoodsBalancePaymentLabel,
+            sub: t.settings.systemGoodsBalancePaymentHint,
+          },
+        ]
+      : []),
     {
       key: "printingEnabled",
       label: t.settings.systemPrintingLabel,
