@@ -126,7 +126,9 @@ export async function POST(request: Request) {
     });
   }
 
-  dispatchCollection(ctx.point.tenantId, amountNumber + poolDeficit, ctx.point.name, ctx.operator.name).catch(() => {});
+  // В уведомлении — именно введённая сумма (см. комментарий у той же строки в
+  // /api/zones/[id]/collection — тот же баг, найден пользователем 2026-07-25).
+  dispatchCollection(ctx.point.tenantId, amountNumber, ctx.point.name, ctx.operator.name).catch(() => {});
 
   return NextResponse.json({ ok: true, settledPool: poolDeficit, advance });
 }

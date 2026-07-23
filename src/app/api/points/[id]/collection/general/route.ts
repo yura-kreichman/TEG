@@ -140,7 +140,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     });
   }
 
-  dispatchCollection(owner.tenantId, amountNumber + poolDeficit, point.name, null).catch(() => {});
+  // В уведомлении — именно введённая сумма, не + poolDeficit (см. комментарий
+  // у той же строки в /api/zones/[id]/collection — тот же баг, найден
+  // пользователем 2026-07-25).
+  dispatchCollection(owner.tenantId, amountNumber, point.name, null).catch(() => {});
 
   return NextResponse.json({ ok: true, settledPool: poolDeficit, advance });
 }

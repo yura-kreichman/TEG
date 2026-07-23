@@ -60,7 +60,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     },
   });
 
-  dispatchCollection(owner.tenantId, amountNumber + poolShare, zone.name, null).catch(() => {});
+  // В уведомлении — именно введённая сумма (сколько физически забрали сейчас),
+  // не + poolShare: тот довесок не новые деньги, а формальная доразноска по
+  // зоне уже забранного раньше аванса/премии (реальный баг, найден
+  // пользователем 2026-07-25: push показывал "забрал 955", хотя физически
+  // забрали 700, poolShare/poolDeficit добавлялся молча).
+  dispatchCollection(owner.tenantId, amountNumber, zone.name, null).catch(() => {});
 
   return NextResponse.json({ ok: true, settledPool: poolShare });
 }
