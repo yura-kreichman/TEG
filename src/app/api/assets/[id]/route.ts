@@ -98,6 +98,24 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/assets/[
     return NextResponse.json({ error: "Актив не найден" }, { status: 404 });
   }
 
+  // Явная проверка вместо голого prisma.asset.delete() (аудит 2026-07-25,
+  // финальный проход) — AssetReading.assetId и Ticket.assetId оба ON DELETE
+  // RESTRICT, без этой проверки удаление актива с историей показаний/билетов
+  // падало необработанным 500, а клиент раньше не проверял res.ok и
+  // показывал "успех" (тот же класс бага, что уже пофикшен для тарифов —
+  // см. комментарий в tariffs/[id]/route.ts — но там пропустили аналог для
+  // активов). Launch.assetId — SET NULL, не блокирует, проверять не нужно.
+  const [readingCount, ticketCount] = await Promise.all([
+    prisma.assetReading.count({ where: { assetId: id } }),
+    prisma.ticket.count({ where: { assetId: id } }),
+  ]);
+  if (readingCount > 0 || ticketCount > 0) {
+    return NextResponse.json(
+      { error: "У этого актива есть история показаний/билетов — его нельзя удалить безвозвратно" },
+      { status: 409 }
+    );
+  }
+
   await prisma.asset.delete({ where: { id } });
   await deleteUploadedImage(asset.photoUrl);
   await revalidateLandingForTenant(owner.tenantId);

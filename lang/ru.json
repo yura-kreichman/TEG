@@ -1121,6 +1121,7 @@
       "gameRoomGoToAssetButton": "Перейти к активу"
     },
     "offlineQueueHint": "Ждут отправки: {count} сдач(и) — уйдут автоматически при связи",
+    "offlineQueueDroppedHint": "Не удалось отправить {count} отложенную сдачу — сервер отклонил её, данные утеряны, введите заново",
     "gameRoom": {
       "voidLaunchAction": "Аннулировать пуск",
       "noAssetsYet": "Владелец ещё не добавил активы в эту зону",

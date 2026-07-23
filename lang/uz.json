@@ -1121,6 +1121,7 @@
       "gameRoomGoToAssetButton": "Aktivga o'tish"
     },
     "offlineQueueHint": "Yuborilishini kutmoqda: {count} ta topshiriq — aloqa boʻlganda avtomatik yuboriladi",
+    "offlineQueueDroppedHint": "Navbatdagi {count} ta topshiriq server tomonidan rad etildi va yoʻqoldi — qayta kiriting",
     "gameRoom": {
       "voidLaunchAction": "Ishga tushirishni bekor qilish",
       "noAssetsYet": "Egasi bu zonaga hali aktivlar qo'shmagan",

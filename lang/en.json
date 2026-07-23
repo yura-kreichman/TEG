@@ -1121,6 +1121,7 @@
       "gameRoomGoToAssetButton": "Go to asset"
     },
     "offlineQueueHint": "Waiting to send: {count} submission(s) — will send automatically once online",
+    "offlineQueueDroppedHint": "{count} queued submission(s) were rejected by the server and lost — please re-enter them manually",
     "gameRoom": {
       "voidLaunchAction": "Void launch",
       "noAssetsYet": "The owner hasn't added any assets to this zone yet",

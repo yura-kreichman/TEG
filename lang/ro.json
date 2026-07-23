@@ -1121,6 +1121,7 @@
       "gameRoomGoToAssetButton": "Mergi la activ"
     },
     "offlineQueueHint": "În așteptare: {count} predări — se trimit automat la reconectare",
+    "offlineQueueDroppedHint": "{count} predare(i) din coadă au fost respinse de server și pierdute — reintroduceți-le manual",
     "gameRoom": {
       "voidLaunchAction": "Anulează pornirea",
       "noAssetsYet": "Proprietarul nu a adăugat încă active în această zonă",

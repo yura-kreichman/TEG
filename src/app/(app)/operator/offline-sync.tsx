@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CloudOff } from "lucide-react";
-import { flushPendingSubmissions, getPendingSubmissions } from "@/lib/offline-submissions";
+import { CloudOff, TriangleAlert } from "lucide-react";
+import { flushPendingSubmissions, getPendingSubmissions, type DroppedSubmission } from "@/lib/offline-submissions";
 import { useI18n } from "@/components/i18n-provider";
 
 /**
@@ -17,11 +17,20 @@ import { useI18n } from "@/components/i18n-provider";
 export function OfflineSync() {
   const t = useI18n();
   const [pendingCount, setPendingCount] = useState(0);
+  // Не автоскрывается само по себе (аудит 2026-07-25, финальный проход) —
+  // раньше отклонённая сервером сдача из офлайн-очереди молча удалялась без
+  // единого сигнала, вся касса/показания/расходы терялись безвозвратно.
+  // Держим список, пока оператор сам не закроет — данные всё равно
+  // потеряны, важно, чтобы это заметили и ввели заново вручную.
+  const [dropped, setDropped] = useState<DroppedSubmission[]>([]);
 
   useEffect(() => {
     async function sync() {
-      const { remaining } = await flushPendingSubmissions();
-      setPendingCount(remaining);
+      const result = await flushPendingSubmissions();
+      setPendingCount(result.remaining);
+      if (result.dropped.length > 0) {
+        setDropped((prev) => [...prev, ...result.dropped]);
+      }
     }
     getPendingSubmissions().then((items) => setPendingCount(items.length));
     sync();
@@ -29,12 +38,25 @@ export function OfflineSync() {
     return () => window.removeEventListener("online", sync);
   }, []);
 
-  if (pendingCount === 0) return null;
-
   return (
-    <div className="flex items-center gap-2 bg-warning/15 px-4 py-2 text-caption-airbnb font-semibold text-warning">
-      <CloudOff className="size-4 shrink-0" />
-      {t.operatorApp.offlineQueueHint.replace("{count}", String(pendingCount))}
-    </div>
+    <>
+      {pendingCount > 0 && (
+        <div className="flex items-center gap-2 bg-warning/15 px-4 py-2 text-caption-airbnb font-semibold text-warning">
+          <CloudOff className="size-4 shrink-0" />
+          {t.operatorApp.offlineQueueHint.replace("{count}", String(pendingCount))}
+        </div>
+      )}
+      {dropped.length > 0 && (
+        <div className="flex items-start gap-2 bg-destructive/15 px-4 py-2 text-caption-airbnb font-semibold text-destructive">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+          <div className="flex flex-1 flex-col gap-1">
+            <span>{t.operatorApp.offlineQueueDroppedHint.replace("{count}", String(dropped.length))}</span>
+            <button type="button" className="self-start underline" onClick={() => setDropped([])}>
+              {t.common.close}
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

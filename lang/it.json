@@ -1121,6 +1121,7 @@
       "gameRoomGoToAssetButton": "Vai all'attivo"
     },
     "offlineQueueHint": "In attesa di invio: {count} chiusura/e — verranno inviate automaticamente non appena online",
+    "offlineQueueDroppedHint": "{count} chiusura/e in coda sono state rifiutate dal server e perse — reinseriscile manualmente",
     "gameRoom": {
       "voidLaunchAction": "Annulla avvio",
       "noAssetsYet": "Il proprietario non ha ancora aggiunto elementi a questa zona",

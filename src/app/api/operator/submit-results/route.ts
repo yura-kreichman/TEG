@@ -23,6 +23,7 @@ import { dispatchZoneSummary } from "@/lib/summary-channels/dispatch";
 import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { onResultsSubmission } from "@/lib/summary-channels/daily-cash-trigger";
 import { settleOutstandingCollectionAdvance } from "@/lib/zone-balance";
+import { localDateParts, zonedWallTimeToUtc } from "@/lib/business-day";
 
 interface ReadingInput {
   assetId: string;
@@ -55,9 +56,24 @@ export async function POST(request: Request) {
   const body = await request.json();
   const zoneSubmissions: ZoneSubmissionInput[] = body.zoneSubmissions ?? [];
   const expenses: ExpenseInput[] = body.expenses ?? [];
+  const idempotencyKey: string | null = typeof body.idempotencyKey === "string" && body.idempotencyKey ? body.idempotencyKey : null;
 
   if (!Array.isArray(zoneSubmissions) || zoneSubmissions.length === 0) {
     return NextResponse.json({ error: "Выберите хотя бы одну зону" }, { status: 400 });
+  }
+
+  // Защита от повторной отправки (аудит 2026-07-25, финальный проход,
+  // подтверждено двумя независимыми проверками) — связь может оборваться
+  // ПОСЛЕ того, как эта же сдача уже успешно создана здесь, но ДО того, как
+  // ответ дошёл до клиента; клиент не может отличить это от "запрос вообще
+  // не дошёл" и кладёт сдачу в офлайн-очередь на повтор с ТЕМ ЖЕ
+  // idempotencyKey (см. operator/submit/page.tsx). Если сдача с этим ключом
+  // уже существует — не создаём вторую, просто подтверждаем уже сделанное.
+  if (idempotencyKey) {
+    const existing = await prisma.resultsSubmission.findUnique({ where: { idempotencyKey } });
+    if (existing) {
+      return NextResponse.json({ id: existing.id, summary: [], remindMarkDeparture: false, alreadyProcessed: true });
+    }
   }
 
   // Re-derive everything server-side from the DB rather than trusting any
@@ -99,7 +115,28 @@ export async function POST(request: Request) {
   // только расчётную выручку этой сдачи, но и цепочку "предыдущее показание"
   // чужой зоны при её следующей сдаче, поскольку previousByKey ищет по
   // assetId+tariffId без учёта зоны вовсе).
+  // Диапазон/знак входных чисел (аудит 2026-07-25, финальный проход) —
+  // раньше не проверялись вообще, в отличие от PATCH-двойника
+  // (reports/counters/zone-submission/[id]/route.ts), который жёстко
+  // требует то же самое: reading — целое 0–9999 (4-разрядный счётчик,
+  // отрицательное/пятизначное значение проходило через модульную формулу
+  // calcSessions с переполнением-wraparound и давало произвольно большое
+  // число сеансов), returnsCount/cashAmount/mobileAmount — конечные
+  // неотрицательные числа (отрицательный returnsCount у calcZoneRevenue
+  // делал бы расчётную чистую выручку БОЛЬШЕ валовой). Клиентский визард и
+  // так ограничивает ввод, но это только UI — прямой вызов API (в т.ч.
+  // испорченный офлайн-payload) их не видел.
   for (const zs of zoneSubmissions) {
+    if (
+      !Number.isFinite(zs.returnsCount) ||
+      zs.returnsCount < 0 ||
+      !Number.isFinite(zs.cashAmount) ||
+      zs.cashAmount < 0 ||
+      !Number.isFinite(zs.mobileAmount) ||
+      zs.mobileAmount < 0
+    ) {
+      return NextResponse.json({ error: "Некорректная сумма" }, { status: 400 });
+    }
     const zone = zoneById.get(zs.zoneId)!;
     if (zone.accountingMode !== "counters") continue;
     const zoneAssetIds = new Set(zone.assets.map((a) => a.id));
@@ -107,6 +144,9 @@ export async function POST(request: Request) {
     for (const r of zs.readings) {
       if (!zoneAssetIds.has(r.assetId) || !zoneTariffIds.has(r.tariffId)) {
         return NextResponse.json({ error: `Показание не принадлежит зоне «${zone.name}»` }, { status: 400 });
+      }
+      if (!Number.isInteger(r.reading) || r.reading < 0 || r.reading > 9999) {
+        return NextResponse.json({ error: "Показание должно быть числом 0–9999" }, { status: 400 });
       }
     }
   }
@@ -402,9 +442,11 @@ export async function POST(request: Request) {
     };
   });
 
-  const submission = await prisma.$transaction(async (tx) => {
+  let submission;
+  try {
+    submission = await prisma.$transaction(async (tx) => {
     const created = await tx.resultsSubmission.create({
-      data: { tenantId: point.tenantId, pointId: point.id, operatorId: operator.id },
+      data: { tenantId: point.tenantId, pointId: point.id, operatorId: operator.id, idempotencyKey },
     });
 
     for (const zs of zoneSubmissions) {
@@ -512,7 +554,22 @@ export async function POST(request: Request) {
     }
 
     return created;
-  });
+    });
+  } catch (err) {
+    // Остаточная гонка на idempotencyKey (аудит 2026-07-25) — findUnique
+    // выше это только быстрый оптимистичный отказ; два ПОЧТИ одновременных
+    // запроса с одним и тем же ключом (маловероятно при последовательных
+    // ретраях, но теоретически возможно) оба могли пройти его и упереться
+    // в @@unique уже здесь, в самой записи. Тот же результат, что и обычное
+    // повторное попадание — не задваиваем.
+    if (idempotencyKey && err instanceof Error && "code" in err && (err as { code?: string }).code === "P2002") {
+      const existing = await prisma.resultsSubmission.findUnique({ where: { idempotencyKey } });
+      if (existing) {
+        return NextResponse.json({ id: existing.id, summary: [], remindMarkDeparture: false, alreadyProcessed: true });
+      }
+    }
+    throw err;
+  }
 
   // Гасим накопленный "Аванс инкассации" сразу же, а не ждём следующей
   // инкассации (запрос пользователя 2026-07-25: "почему не вычесть эти 700 и
@@ -585,7 +642,14 @@ export async function POST(request: Request) {
   // после сдачи итогов, если сегодня ещё не отмечен уход (нет смены с
   // startAt сегодня — сама смена вводится целиком, "уход" не отдельное
   // событие, поэтому это буквально "смена сегодня ещё не введена").
-  const dayStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
+  // Часовой пояс тенанта, не сырой UTC сервера (аудит 2026-07-25, финальный
+  // проход, тот же класс бага, что уже чинили в lib/business-day.ts/
+  // lib/reports.ts) — мягкое напоминание, не блокирует ничего, но могло
+  // ложно срабатывать/не срабатывать около полуночи для тенанта не в UTC.
+  const tenantForTz = await prisma.tenant.findUnique({ where: { id: point.tenantId }, select: { timezone: true } });
+  const timezone = tenantForTz?.timezone ?? "UTC";
+  const nowLocal = localDateParts(new Date(), timezone);
+  const dayStart = zonedWallTimeToUtc(nowLocal.year, nowLocal.month, nowLocal.day, 0, 0, timezone);
   const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
   const todayShift = await prisma.shift.findFirst({
     where: { operatorId: operator.id, startAt: { gte: dayStart, lt: dayEnd } },

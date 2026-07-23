@@ -1121,6 +1121,7 @@
       "gameRoomGoToAssetButton": "Активке өту"
     },
     "offlineQueueHint": "Жіберілуді күтуде: {count} тапсыру — байланыс болғанда автоматты түрде кетеді",
+    "offlineQueueDroppedHint": "Кезектегі {count} тапсыруды сервер қабылдамады, олар жоғалды — қайта енгізіңіз",
     "gameRoom": {
       "voidLaunchAction": "Іске қосуды күшін жою",
       "noAssetsYet": "Иесі бұл аймаққа әлі активтер қоспаған",

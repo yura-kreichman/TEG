@@ -10,6 +10,7 @@ import {
   FileText,
   Gift,
   Info,
+  Lock,
   MapPin,
   Minus,
   Pencil,
@@ -904,13 +905,23 @@ export default function ReadingsCalendarPage() {
                             </p>
                           </div>
                           <div className="flex shrink-0 items-center gap-1.5">
-                            <IconActionButton icon={Pencil} onClick={() => openEdit(card)} label={t.readings.editAction} />
-                            <IconActionButton
-                              icon={Trash2}
-                              onClick={() => openDeleteConfirm(card)}
-                              label={t.readings.deleteAction}
-                              destructive={card.editable}
-                            />
+                            {card.editable ? (
+                              <>
+                                <IconActionButton icon={Pencil} onClick={() => openEdit(card)} label={t.readings.editAction} />
+                                <IconActionButton
+                                  icon={Trash2}
+                                  onClick={() => openDeleteConfirm(card)}
+                                  label={t.readings.deleteAction}
+                                  destructive
+                                />
+                              </>
+                            ) : (
+                              // Заблокированная сдача (не последняя в цепочке) — вместо
+                              // действий поясняющая заметка (docs/spec/01-counters.md,
+                              // "Прозрачность"), а не активные кнопки, ведущие к 409 уже
+                              // после заполнения формы (аудит 2026-07-25, финальный проход).
+                              <Lock className="size-4 shrink-0 text-muted-foreground" aria-label={t.readings.lockedNote} />
+                            )}
                           </div>
                         </div>
 

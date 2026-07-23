@@ -72,9 +72,25 @@ export async function removePendingSubmission(id: number): Promise<void> {
  * всё ещё нет по факту, incorrect навигатор.onLine бывает оптимистичным) —
  * не удаляет из очереди то, что не отправилось.
  */
-export async function flushPendingSubmissions(): Promise<{ sent: number; remaining: number }> {
+export interface DroppedSubmission {
+  createdAt: number;
+  error: string;
+}
+
+export async function flushPendingSubmissions(): Promise<{
+  sent: number;
+  remaining: number;
+  dropped: DroppedSubmission[];
+}> {
   const pending = await getPendingSubmissions();
   let sent = 0;
+  // Отклонённые сервером (4xx) сдачи раньше молча удалялись из очереди без
+  // единого сигнала оператору (аудит 2026-07-25, финальный проход, реальный
+  // найденный баг) — вся сдача (показания/касса/расходы) терялась
+  // безвозвратно, владелец узнавал об этом только по факту "почему-то не
+  // сошлось", если вообще замечал. Теперь собираем их и возвращаем вызывающему
+  // коду (OfflineSync) для видимого, не исчезающего само по себе предупреждения.
+  const dropped: DroppedSubmission[] = [];
   for (const item of pending) {
     try {
       const res = await fetch("/api/operator/submit-results", {
@@ -87,7 +103,12 @@ export async function flushPendingSubmissions(): Promise<{ sent: number; remaini
       // не зациклиться на нём навечно — но не считаем "отправленным".
       if (res.ok || res.status < 500) {
         await removePendingSubmission(item.id);
-        if (res.ok) sent++;
+        if (res.ok) {
+          sent++;
+        } else {
+          const data = await res.json().catch(() => null);
+          dropped.push({ createdAt: item.createdAt, error: data?.error ?? `HTTP ${res.status}` });
+        }
       }
     } catch {
       // Сетевая ошибка — интернета всё ещё нет, прерываем, оставляя
@@ -96,5 +117,5 @@ export async function flushPendingSubmissions(): Promise<{ sent: number; remaini
     }
   }
   const remaining = (await getPendingSubmissions()).length;
-  return { sent, remaining };
+  return { sent, remaining, dropped };
 }

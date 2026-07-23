@@ -1121,6 +1121,7 @@
       "gameRoomGoToAssetButton": "Varlığa git"
     },
     "offlineQueueHint": "Gönderim bekleyen: {count} teslim — bağlantı gelince otomatik gönderilecek",
+    "offlineQueueDroppedHint": "Sırada bekleyen {count} teslim sunucu tarafından reddedildi ve kayboldu — lütfen yeniden girin",
     "gameRoom": {
       "voidLaunchAction": "Başlatmayı iptal et",
       "noAssetsYet": "Sahip bu bölgeye henüz varlık eklemedi",

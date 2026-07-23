@@ -1121,6 +1121,7 @@
       "gameRoomGoToAssetButton": "აქტივზე გადასვლა"
     },
     "offlineQueueHint": "ელოდება გაგზავნას: {count} ჩაბარება — ავტომატურად წავა კავშირის აღდგენისას",
+    "offlineQueueDroppedHint": "რიგში მდგარი {count} ჩაბარება სერვერმა უარყო და დაიკარგა — შეიყვანეთ ხელახლა",
     "gameRoom": {
       "voidLaunchAction": "გაშვების გაუქმება",
       "noAssetsYet": "მფლობელს ჯერ არ დაუმატებია აქტივები ამ ზონაში",

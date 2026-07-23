@@ -1121,6 +1121,7 @@
       "gameRoomGoToAssetButton": "Aktivə keç"
     },
     "offlineQueueHint": "Göndərilməni gözləyir: {count} hesabat — əlaqə olduqda avtomatik göndəriləcək",
+    "offlineQueueDroppedHint": "Növbədəki {count} hesabat server tərəfindən rədd edildi və itdi — yenidən daxil edin",
     "gameRoom": {
       "voidLaunchAction": "Başlatmanı ləğv et",
       "noAssetsYet": "Sahibkar hələ bu zonaya aktiv əlavə etməyib",

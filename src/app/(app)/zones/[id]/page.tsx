@@ -287,6 +287,7 @@ export default function ZoneDetailPage() {
   const { saved: editAssetSaved, pulse: editAssetPulse } = useSavePulse();
   const [editAssetPhotoUrl, setEditAssetPhotoUrl] = useState<string | null>(null);
   const [editAssetError, setEditAssetError] = useState<string | null>(null);
+  const [deleteAssetError, setDeleteAssetError] = useState<string | null>(null);
   const { saved: assetDeleted, pulse: assetDeletePulse } = useSavePulse();
   const [editUploading, setEditUploading] = useState(false);
   const [editAssetTariffId, setEditAssetTariffId] = useState("");
@@ -755,7 +756,18 @@ export default function ZoneDetailPage() {
 
   async function confirmDeleteAsset() {
     if (!assetKebab) return;
-    await fetch(`/api/assets/${assetKebab.id}`, { method: "DELETE" });
+    setDeleteAssetError(null);
+    // Актив с историей показаний хард-удалить нельзя (AssetReading.assetId —
+    // ON DELETE RESTRICT), сервер отвечает 500 — раньше res.ok не
+    // проверялся, и владелец видел "успех" (галочка/звук), хотя актив
+    // никуда не делся (аудит 2026-07-25, финальный проход; тот же класс
+    // бага уже был найден и исправлен для тарифов ранее).
+    const res = await fetch(`/api/assets/${assetKebab.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setDeleteAssetError(data?.error ?? "Не удалось удалить актив — возможно, по нему уже есть показания");
+      return;
+    }
     await loadZone();
     assetDeletePulse(() => setAssetKebab(null));
   }
@@ -1751,6 +1763,7 @@ export default function ZoneDetailPage() {
           <div className="flex flex-col gap-3 pt-2">
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.deleteAssetAction}</h2>
             <p className="text-body-airbnb">{t.zoneDetail.confirmDeleteAsset}</p>
+            {deleteAssetError && <p className="text-sm text-destructive">{deleteAssetError}</p>}
             <PressableScale>
               <DeleteButton className="h-12 w-full" onClick={confirmDeleteAsset} deleted={assetDeleted} />
             </PressableScale>

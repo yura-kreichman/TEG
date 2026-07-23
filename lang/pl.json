@@ -1121,6 +1121,7 @@
       "gameRoomGoToAssetButton": "Przejdź do aktywu"
     },
     "offlineQueueHint": "Oczekują na wysłanie: {count} rozliczeń — zostaną wysłane automatycznie po połączeniu",
+    "offlineQueueDroppedHint": "{count} rozliczenie(a) w kolejce zostały odrzucone przez serwer i utracone — wprowadź je ponownie",
     "gameRoom": {
       "voidLaunchAction": "Anuluj uruchomienie",
       "noAssetsYet": "Właściciel nie dodał jeszcze żadnych zasobów do tej strefy",
