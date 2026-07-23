@@ -101,8 +101,22 @@ async function handleStartMessage(message: {
   // Сетевые вызовы (уведомление старого чата, подтверждение новому) — ПОСЛЕ
   // транзакции, не внутри: транзакция должна быть только про БД, а сеть может
   // зависнуть/упасть без влияния на консистентность записанного.
+  let alreadyUsed = false;
   const notifyOldChatId = await prisma.$transaction(async (tx) => {
-    await tx.telegramBindCode.update({ where: { id: bindCode.id }, data: { usedAt: new Date() } });
+    // CAS вместо обычного update (аудит 2026-07-25, повторная проверка): чтение
+    // usedAt выше — ДО транзакции; Telegram гарантирует лишь "at least once"
+    // доставку вебхука — два почти одновременных дубля апдейта с одним и тем
+    // же кодом оба проходили эту проверку и оба выполняли транзакцию, создавая
+    // задвоенный/лишний TenantSummaryChannel. where с usedAt:null — если код
+    // уже использован параллельным дублем, updateMany затронет 0 строк.
+    const claimed = await tx.telegramBindCode.updateMany({
+      where: { id: bindCode.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    if (claimed.count === 0) {
+      alreadyUsed = true;
+      return null;
+    }
 
     // Пересвязка: если уже была активная привязка на другой чат — деактивируем
     // старую запись, а не перезаписываем (сохраняем историю, см. схему).
@@ -138,6 +152,8 @@ async function handleStartMessage(message: {
     });
     return existing?.chatId ?? null;
   });
+
+  if (alreadyUsed) return;
 
   if (notifyOldChatId) {
     await sendChatMessage(notifyOldChatId, "Сводки переведены в другой чат").catch(() => {});

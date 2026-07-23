@@ -130,7 +130,17 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   const shiftPointId = shift.pointId;
   const shiftOperatorId = shift.operatorId;
 
+  let advanceDelta = 0;
   await prisma.$transaction(async (tx) => {
+    // Лок по pointId (аудит 2026-07-25, повторная проверка) — два почти
+    // одновременных PATCH на одну смену иначе оба читали бы один и тот же
+    // currentAdvance/currentBonus ДО того, как другой успевал записать свой,
+    // и оба вызывали бы chargeSelfServiceAdvanceToZones каждый со своей
+    // дельтой от одной и той же устаревшей базы, реально задваивая или теряя
+    // часть зонного разнесения. Тот же паттерн, что у chargeSelfServiceAdvanceToZones/
+    // settleOutstandingCollectionAdvance в lib/zone-balance.ts.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${shiftPointId}))`;
+
     // isOpen держим синхронно с endAt (см. Shift.isOpen в schema.prisma).
     await tx.shift.update({
       where: { id },
@@ -139,8 +149,21 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
         : { startAt: nextStartAt, endAt: nextEndAt, isOpen: false },
     });
 
-    const syncLinkedOp = async (type: "advance" | "bonus_payout", amount: number) => {
-      const existing = linkedOps.find((o) => o.type === type);
+    // Свежее чтение под локом, не внешний linkedOps (прочитан ДО транзакции,
+    // мог устареть под гонкой выше).
+    const freshLinkedOps = await tx.moneyOperation.findMany({
+      where: { shiftId, type: { in: ["advance", "bonus_payout"] } },
+    });
+    const freshAdvanceOp = freshLinkedOps.find((o) => o.type === "advance");
+    const freshBonusOp = freshLinkedOps.find((o) => o.type === "bonus_payout");
+    const freshCurrentAdvance = Math.abs(Number(freshAdvanceOp?.amount ?? 0));
+    const freshCurrentBonus = Math.abs(Number(freshBonusOp?.amount ?? 0));
+
+    const syncLinkedOp = async (
+      existing: typeof freshAdvanceOp,
+      type: "advance" | "bonus_payout",
+      amount: number
+    ) => {
       if (amount > 0) {
         if (existing) {
           await tx.moneyOperation.update({ where: { id: existing.id }, data: { amount: -amount } });
@@ -162,8 +185,25 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
       }
     };
 
-    await syncLinkedOp("advance", nextAdvance);
-    await syncLinkedOp("bonus_payout", nextBonus);
+    await syncLinkedOp(freshAdvanceOp, "advance", nextAdvance);
+    await syncLinkedOp(freshBonusOp, "bonus_payout", nextBonus);
+
+    // Зонная дельта — ТОЛЬКО для self-service части (performedByOperatorId
+    // на существующей записи). Найдено аудитом 2026-07-25 (повторная
+    // проверка): владелец МОЖЕТ через эту же форму добавить аванс/премию,
+    // которых у смены раньше не было вовсе — ветка create выше пишет такую
+    // запись с performedByUserId (деньги владельца, не из кассы точки, тот
+    // же принцип, что /api/operators/[id]/work-time/advance/bonus), и она не
+    // должна списываться с зон. Правка СУММЫ у уже существующей
+    // self-service записи (создана в check-out/shifts POST с
+    // performedByOperatorId) сохраняет исходного исполнителя — update выше
+    // меняет только amount — поэтому её дельта законно остаётся
+    // self-service.
+    const advanceIsSelfService = freshAdvanceOp?.performedByOperatorId != null;
+    const bonusIsSelfService = freshBonusOp?.performedByOperatorId != null;
+    advanceDelta =
+      (advanceIsSelfService ? nextAdvance - freshCurrentAdvance : 0) +
+      (bonusIsSelfService ? nextBonus - freshCurrentBonus : 0);
 
     if (changed) {
       await tx.correctionLog.create({
@@ -186,7 +226,6 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   // конкретной сменой, поэтому корректируем ДЕЛЬТОЙ, тем же вызовом, что и
   // при первом взятии). ПОСЛЕ основной транзакции — тот же порядок, что и в
   // check-out/shifts POST (см. комментарий у самой функции).
-  const advanceDelta = nextAdvance + nextBonus - (currentAdvance + currentBonus);
   if (advanceDelta !== 0) {
     await chargeSelfServiceAdvanceToZones(tenantId, shiftPointId, advanceDelta, shiftOperatorId).catch((err) =>
       console.error("chargeSelfServiceAdvanceToZones failed (shift edit)", err)
@@ -246,8 +285,10 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
   }
 
   const linkedOps = await loadLinkedMoneyOps(id);
-  const advanceAmount = linkedOps.filter((o) => o.type === "advance").reduce((s, o) => s + Math.abs(Number(o.amount)), 0);
-  const bonusAmount = linkedOps.filter((o) => o.type === "bonus_payout").reduce((s, o) => s + Math.abs(Number(o.amount)), 0);
+  const advanceOp = linkedOps.find((o) => o.type === "advance");
+  const bonusOp = linkedOps.find((o) => o.type === "bonus_payout");
+  const advanceAmount = Math.abs(Number(advanceOp?.amount ?? 0));
+  const bonusAmount = Math.abs(Number(bonusOp?.amount ?? 0));
   const before = {
     startAt: shift.startAt.toISOString(),
     endAt: shift.endAt?.toISOString() ?? null,
@@ -273,8 +314,14 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
   // Возврат уже разнесённых по зонам advance_settlement-записей — та же
   // причина, что у PATCH выше: удаление смены обнуляет личный баланс
   // сотрудника по авансу/премии, но без этого зонные остатки кассы навсегда
-  // остались бы заниженными на уже списанную сумму.
-  const deletedTotal = advanceAmount + bonusAmount;
+  // остались бы заниженными на уже списанную сумму. ТОЛЬКО self-service
+  // часть (performedByOperatorId) — запись, добавленная владельцем через
+  // PATCH (performedByUserId), никогда не списывалась с зон и не должна
+  // возвращаться туда же (аудит 2026-07-25, повторная проверка, тот же
+  // принцип, что и в PATCH выше).
+  const deletedTotal =
+    (advanceOp?.performedByOperatorId != null ? advanceAmount : 0) +
+    (bonusOp?.performedByOperatorId != null ? bonusAmount : 0);
   if (deletedTotal > 0) {
     await chargeSelfServiceAdvanceToZones(owner.tenantId, shift.pointId, -deletedTotal, shift.operatorId).catch((err) =>
       console.error("chargeSelfServiceAdvanceToZones failed (shift delete)", err)

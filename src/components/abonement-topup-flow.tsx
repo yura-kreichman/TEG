@@ -1257,8 +1257,7 @@ export function AbonementTopupFlow({
                 <PressableScale>
                   <Button
                     type="button"
-                    variant="outline"
-                    className="h-12 shrink-0 font-semibold"
+                    className="h-12 shrink-0 font-bold"
                     disabled={submitting || !arbitraryAmount.trim() || (isNew && !phone.trim())}
                     onClick={handleArbitraryButtonClick}
                   >

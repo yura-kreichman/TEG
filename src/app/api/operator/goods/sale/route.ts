@@ -68,7 +68,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ id: sale.id, amount: Number(sale.amount) }, { status: 201 });
   } catch (err) {
     if (err instanceof InsufficientBalanceError) {
-      const wallet = walletId ? await prisma.abonementWallet.findUnique({ where: { id: walletId } }) : null;
+      // tenantId в where обязателен (аудит 2026-07-25, повторная проверка):
+      // без него подставленный/угаданный walletId ЧУЖОГО тенанта всё равно
+      // корректно проваливался бы в InsufficientBalanceError (spendWalletTx
+      // сам скопирован по tenantId), но этот catch-блок без фильтра читал
+      // бы чужой кошелёк напрямую и возвращал его реальный баланс в ответе —
+      // утечка баланса клиента чужого тенанта.
+      const wallet = walletId
+        ? await prisma.abonementWallet.findFirst({ where: { id: walletId, tenantId: ctx.operator.tenantId } })
+        : null;
       return NextResponse.json(
         { error: "Недостаточно средств на балансе", balance: wallet ? Number(wallet.balance) : 0 },
         { status: 400 }

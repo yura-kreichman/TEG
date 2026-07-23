@@ -84,7 +84,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ items: sold, total }, { status: 201 });
   } catch (err) {
     if (err instanceof InsufficientBalanceError) {
-      const wallet = walletId ? await prisma.abonementWallet.findUnique({ where: { id: walletId } }) : null;
+      // tenantId в where обязателен (аудит 2026-07-25, повторная проверка) —
+      // см. тот же фикс и комментарий в /api/operator/goods/sale/route.ts.
+      const wallet = walletId
+        ? await prisma.abonementWallet.findFirst({ where: { id: walletId, tenantId: ctx.operator.tenantId } })
+        : null;
       return NextResponse.json(
         { error: "Недостаточно средств на балансе", balance: wallet ? Number(wallet.balance) : 0 },
         { status: 400 }
