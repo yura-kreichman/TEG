@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server";
-import { verifyToken } from "@/lib/session-crypto";
+import { verifySessionToken } from "@/lib/session-crypto";
 import { prisma } from "@/lib/prisma";
 import { resolveTenantBySlug } from "@/lib/landing/resolve-tenant";
 import { isBotUserAgent, recordLandingVisit, pruneOldVisitorHashes } from "@/lib/landing/stats";
@@ -134,7 +134,11 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   const isExempt = SUBSCRIPTION_GATE_EXEMPT_PREFIXES.some((prefix) => pathname.startsWith(prefix));
   if (isMutating && !isExempt) {
     const token = request.cookies.get("session")?.value;
-    const userId = token ? verifyToken(token) : null;
+    // verifySessionToken, не голый verifyToken — сессия имперсонации
+    // (startImpersonation, lib/auth.ts) несёт другой, self-expiring формат
+    // токена; голый verifyToken не распознавал бы её вовсе, из-за чего этот
+    // гейт подписки молча пропускал бы все мутирующие запросы имперсонации.
+    const userId = token ? verifySessionToken(token) : null;
     if (userId) {
       const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, tenantId: true } });
       if (user?.role === "owner" && user.tenantId) {

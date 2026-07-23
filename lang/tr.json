@@ -1117,6 +1117,7 @@
     },
     "offlineQueueHint": "Gönderim bekleyen: {count} teslim — bağlantı gelince otomatik gönderilecek",
     "gameRoom": {
+      "voidLaunchAction": "Başlatmayı iptal et",
       "noAssetsYet": "Sahip bu bölgeye henüz varlık eklemedi",
       "assetSwitcherLabel": "Varlık",
       "wristbandNumberPrefix": "Bileklik",

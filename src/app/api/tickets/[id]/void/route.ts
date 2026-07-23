@@ -67,7 +67,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tickets/[id
 
   const before = { ...ticket };
   const updated = await prisma.$transaction(async (tx) => {
-    await voidTicketInTx(
+    const voided = await voidTicketInTx(
       tx,
       { id: ticket.id, orderId: ticket.orderId, priceSnapshot: ticket.priceSnapshot },
       {
@@ -81,6 +81,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tickets/[id
         ? { tenantId, pointId: opCtx.point.id, operatorId: opCtx.operator.id }
         : { tenantId, pointId: ticket.order.zone.pointId, userId: owner!.user.id }
     );
+    if (!voided) return null;
     const result = await tx.ticket.findUniqueOrThrow({ where: { id: ticket.id } });
     await tx.correctionLog.create({
       data: {
@@ -95,6 +96,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tickets/[id
     });
     return result;
   });
+
+  if (!updated) {
+    return NextResponse.json({ error: "Билет уже аннулирован" }, { status: 409 });
+  }
 
   if (ticket.order.paymentMethod === "abonement" && ticket.order.walletId) {
     await notifyWalletBalanceChange(tenantId, ticket.order.walletId, Number(ticket.priceSnapshot)).catch(() => {});

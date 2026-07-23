@@ -1117,6 +1117,7 @@
     },
     "offlineQueueHint": "Жіберілуді күтуде: {count} тапсыру — байланыс болғанда автоматты түрде кетеді",
     "gameRoom": {
+      "voidLaunchAction": "Іске қосуды күшін жою",
       "noAssetsYet": "Иесі бұл аймаққа әлі активтер қоспаған",
       "assetSwitcherLabel": "Актив",
       "wristbandNumberPrefix": "Білезік",

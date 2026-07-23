@@ -9,6 +9,7 @@ import { buildDailyCashSummaryData } from "@/lib/summary-channels/daily-cash-dat
 import { DAILY_CASH_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { pickBotLang, BOT_STRINGS, greetingLine } from "@/lib/telegram-client-i18n";
 import type { Locale } from "@/lib/locales";
+import { timingSafeEqualStrings } from "@/lib/timing-safe-equal";
 
 // Обработчик вебхука платформенного бота (docs/spec/telegram-summaries.md).
 // Публичный эндпоинт по определению (Telegram сам его дёргает) — единственная
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
   }
   const gotSecret = request.headers.get("x-telegram-bot-api-secret-token");
-  if (gotSecret !== expectedSecret) {
+  if (!gotSecret || !timingSafeEqualStrings(gotSecret, expectedSecret)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

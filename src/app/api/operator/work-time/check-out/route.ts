@@ -97,37 +97,67 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Смена уже закрыта" }, { status: 409 });
   }
 
-  if (advanceAmount > 0) {
-    await prisma.moneyOperation.create({
-      data: {
-        tenantId: point.tenantId,
-        pointId: point.id,
-        type: "advance",
-        amount: -advanceAmount,
-        performedByOperatorId: operator.id,
-        beneficiaryOperatorId: operator.id,
-        shiftId: openShift.id,
-      },
-    });
-  }
-  if (bonusAmount > 0) {
-    await prisma.moneyOperation.create({
-      data: {
-        tenantId: point.tenantId,
-        pointId: point.id,
-        type: "bonus_payout",
-        amount: -bonusAmount,
-        performedByOperatorId: operator.id,
-        beneficiaryOperatorId: operator.id,
-        shiftId: openShift.id,
-      },
-    });
-  }
-  // Сразу разносим по зонам (запрос пользователя 2026-07-25), не дожидаясь
-  // следующей инкассации — см. комментарий у chargeSelfServiceAdvanceToZones
-  // в lib/zone-balance.ts. Вызов ПОСЛЕ обеих записей выше — важен порядок.
+  // Авторитетная, атомарная проверка потолка — та же блокировка по pointId,
+  // что у chargeSelfServiceAdvanceToZones/settleOutstandingCollectionAdvance
+  // (lib/zone-balance.ts). Проверка выше (до закрытия смены) — только
+  // быстрый оптимистичный отказ для типового случая; она сама по себе не
+  // закрывает гонку (найдено аудитом 2026-07-25: два почти одновременных
+  // check-out на разных операторов одной точки могли оба прочитать один и
+  // тот же pointBalance ДО того, как другой успевал списать свой аванс, и
+  // оба пройти проверку, вместе превысив кассу). Здесь — авторитетный повтор
+  // ровно перед самой записью, под локом.
   if (advanceAmount + bonusAmount > 0) {
-    await chargeSelfServiceAdvanceToZones(point.tenantId, point.id, advanceAmount + bonusAmount, operator.id);
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${point.id}))`;
+      const freshBalance = await getPointCashBalance(point.id);
+      if (advanceAmount + bonusAmount > freshBalance) {
+        return { ok: false as const, freshBalance };
+      }
+      if (advanceAmount > 0) {
+        await tx.moneyOperation.create({
+          data: {
+            tenantId: point.tenantId,
+            pointId: point.id,
+            type: "advance",
+            amount: -advanceAmount,
+            performedByOperatorId: operator.id,
+            beneficiaryOperatorId: operator.id,
+            shiftId: openShift.id,
+          },
+        });
+      }
+      if (bonusAmount > 0) {
+        await tx.moneyOperation.create({
+          data: {
+            tenantId: point.tenantId,
+            pointId: point.id,
+            type: "bonus_payout",
+            amount: -bonusAmount,
+            performedByOperatorId: operator.id,
+            beneficiaryOperatorId: operator.id,
+            shiftId: openShift.id,
+          },
+        });
+      }
+      return { ok: true as const };
+    });
+    if (!result.ok) {
+      const locale = await resolveLocale();
+      return NextResponse.json(
+        { error: `Сумма превышает остаток кассы точки (${formatMoney(result.freshBalance, locale)})` },
+        { status: 400 }
+      );
+    }
+    // Сразу разносим по зонам (запрос пользователя 2026-07-25), не дожидаясь
+    // следующей инкассации — см. комментарий у chargeSelfServiceAdvanceToZones
+    // в lib/zone-balance.ts. Вызов ПОСЛЕ обеих записей выше — важен порядок.
+    // Не блокирует ответ при сбое (см. .catch ниже) — деньги уже честно
+    // списаны из личного баланса сотрудника, при ошибке зонного разнесения
+    // остаётся старый механизм-фолбэк (getPointPoolDeficit) на следующей
+    // инкассации.
+    await chargeSelfServiceAdvanceToZones(point.tenantId, point.id, advanceAmount + bonusAmount, operator.id).catch(
+      (err) => console.error("chargeSelfServiceAdvanceToZones failed (check-out)", err)
+    );
   }
 
   const balance = await calcOperatorBalance(operator.id);

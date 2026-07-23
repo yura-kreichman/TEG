@@ -47,16 +47,27 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/tickets/[i
 
   const now = new Date();
   const updated = await prisma.$transaction(async (tx) => {
-    const result = await tx.ticket.update({
-      where: { id },
+    // Атомарный CAS вместо обычного update (аудит 2026-07-25: проверка
+    // status!=="active" выше читалась ДО транзакции — двойной клик/повтор
+    // запроса на гашение одного билета мог пройти её дважды и дважды
+    // декрементировать openTicketsCount). where со status:"active" —
+    // если билет уже погашен/аннулирован параллельным запросом, updateMany
+    // затронет 0 строк.
+    const redeemResult = await tx.ticket.updateMany({
+      where: { id, status: "active" },
       data: { status: "redeemed", redeemedAt: now, redeemedByOperatorId: operator.id },
     });
+    if (redeemResult.count === 0) return null;
     await tx.ticketOrder.update({
       where: { id: ticket.orderId },
       data: { openTicketsCount: { decrement: 1 } },
     });
-    return result;
+    return tx.ticket.findUniqueOrThrow({ where: { id } });
   });
+
+  if (!updated) {
+    return NextResponse.json({ error: "Билет уже погашен или аннулирован" }, { status: 409 });
+  }
 
   return NextResponse.json({
     id: updated.id,

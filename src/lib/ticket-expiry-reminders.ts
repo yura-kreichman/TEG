@@ -46,6 +46,18 @@ async function sendReminderForOrder(order: {
   walletId: string | null;
   zone: { point: { tenantId: string } };
 }) {
+  // CAS ПЕРЕД отправкой, не после (аудит 2026-07-25: раньше флаг гасился
+  // только в самом конце — если планировщик когда-нибудь пересечётся сам с
+  // собой (медленный тик ещё не закончился, а следующий уже стартовал),
+  // оба находили один и тот же заказ через findMany выше и оба слали
+  // напоминание). where с expiryReminderSentAt:null — если другой вызов уже
+  // забрал этот заказ, updateMany затронет 0 строк и сообщение не уйдёт.
+  const claimed = await prisma.ticketOrder.updateMany({
+    where: { id: order.id, expiryReminderSentAt: null },
+    data: { expiryReminderSentAt: new Date() },
+  });
+  if (claimed.count === 0) return;
+
   // walletId гарантирован не-null запросом выше (WHERE walletId not null), но
   // Prisma-тип этого не знает — узкое приведение прямо тут, без ещё одного if.
   const walletId = order.walletId!;
@@ -61,8 +73,4 @@ async function sendReminderForOrder(order: {
       await sendChatMessage(link.chatId, text).catch(() => {});
     }
   }
-
-  // Гасим флаг независимо от того, был ли привязан Telegram-чат — иначе
-  // планировщик находил бы этот же заказ на каждом тике до самого истечения.
-  await prisma.ticketOrder.update({ where: { id: order.id }, data: { expiryReminderSentAt: new Date() } });
 }

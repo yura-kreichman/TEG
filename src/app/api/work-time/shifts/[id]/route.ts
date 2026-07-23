@@ -5,6 +5,7 @@ import { calcOperatorBalance, calcShiftAccrual, getRateForDate, hasOverlappingSh
 import { sendPushToOperators } from "@/lib/push-notifications";
 import { resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
+import { chargeSelfServiceAdvanceToZones } from "@/lib/zone-balance";
 
 interface ShiftCorrectionDiff {
   startAt: string;
@@ -178,6 +179,20 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
     }
   });
 
+  // Синхронизация уже разнесённых по зонам advance_settlement-записей
+  // (аудит 2026-07-25: правка суммы аванса/премии владельцем меняла личный
+  // баланс сотрудника корректно, но зонные остатки кассы навсегда оставались
+  // на уровне ДО правки — chargeSelfServiceAdvanceToZones не хранит связь с
+  // конкретной сменой, поэтому корректируем ДЕЛЬТОЙ, тем же вызовом, что и
+  // при первом взятии). ПОСЛЕ основной транзакции — тот же порядок, что и в
+  // check-out/shifts POST (см. комментарий у самой функции).
+  const advanceDelta = nextAdvance + nextBonus - (currentAdvance + currentBonus);
+  if (advanceDelta !== 0) {
+    await chargeSelfServiceAdvanceToZones(tenantId, shiftPointId, advanceDelta, shiftOperatorId).catch((err) =>
+      console.error("chargeSelfServiceAdvanceToZones failed (shift edit)", err)
+    );
+  }
+
   // Открытая смена, оставшаяся открытой (правили только начало) — оператор
   // мог всё это время держать приложение открытым, где счётчик отработанного
   // времени тикает от старого startAt, полученного один раз при заходе на
@@ -231,11 +246,13 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
   }
 
   const linkedOps = await loadLinkedMoneyOps(id);
+  const advanceAmount = linkedOps.filter((o) => o.type === "advance").reduce((s, o) => s + Math.abs(Number(o.amount)), 0);
+  const bonusAmount = linkedOps.filter((o) => o.type === "bonus_payout").reduce((s, o) => s + Math.abs(Number(o.amount)), 0);
   const before = {
     startAt: shift.startAt.toISOString(),
     endAt: shift.endAt?.toISOString() ?? null,
-    advanceAmount: linkedOps.filter((o) => o.type === "advance").reduce((s, o) => s + Math.abs(Number(o.amount)), 0),
-    bonusAmount: linkedOps.filter((o) => o.type === "bonus_payout").reduce((s, o) => s + Math.abs(Number(o.amount)), 0),
+    advanceAmount,
+    bonusAmount,
   };
 
   await prisma.$transaction(async (tx) => {
@@ -252,6 +269,17 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
     });
     await tx.shift.delete({ where: { id } });
   });
+
+  // Возврат уже разнесённых по зонам advance_settlement-записей — та же
+  // причина, что у PATCH выше: удаление смены обнуляет личный баланс
+  // сотрудника по авансу/премии, но без этого зонные остатки кассы навсегда
+  // остались бы заниженными на уже списанную сумму.
+  const deletedTotal = advanceAmount + bonusAmount;
+  if (deletedTotal > 0) {
+    await chargeSelfServiceAdvanceToZones(owner.tenantId, shift.pointId, -deletedTotal, shift.operatorId).catch((err) =>
+      console.error("chargeSelfServiceAdvanceToZones failed (shift delete)", err)
+    );
+  }
 
   return NextResponse.json({ ok: true });
 }

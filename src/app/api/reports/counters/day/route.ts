@@ -141,7 +141,7 @@ export async function GET(request: Request) {
   const liveLaunches = liveZoneSubmissionIds.length
     ? await prisma.launch.findMany({
         where: { zoneSubmissionId: { in: liveZoneSubmissionIds }, voidedAt: null },
-        select: { zoneSubmissionId: true, assetId: true, amount: true },
+        select: { id: true, zoneSubmissionId: true, assetId: true, amount: true, startedAt: true, endedAt: true, paymentMethod: true },
       })
     : [];
   const liveRevenueBySubmission = new Map<string, number>();
@@ -152,12 +152,30 @@ export async function GET(request: Request) {
   // реальный пробел, найден пользователем 2026-07-19 сразу следом за фиксом
   // выручки).
   const liveAssetsBySubmission = new Map<string, Map<string, { count: number; amount: number }>>();
+  // Поштучный список пусков окна — для аннулирования владельцем прямо в
+  // карточке (аудит 2026-07-25: у "Прибываний"/тап-"Пусков" не было вообще
+  // никакого способа исправить ошибочный/тестовый пуск, в отличие от
+  // Билетов — см. /api/launches/[id]/void).
+  const liveLaunchDetailsBySubmission = new Map<
+    string,
+    { id: string; assetId: string; startedAt: string; endedAt: string | null; amount: number; paymentMethod: string | null }[]
+  >();
   for (const l of liveLaunches) {
     if (!l.zoneSubmissionId) continue;
     liveRevenueBySubmission.set(
       l.zoneSubmissionId,
       (liveRevenueBySubmission.get(l.zoneSubmissionId) ?? 0) + Number(l.amount ?? 0)
     );
+    const details = liveLaunchDetailsBySubmission.get(l.zoneSubmissionId) ?? [];
+    details.push({
+      id: l.id,
+      assetId: l.assetId ?? "",
+      startedAt: l.startedAt.toISOString(),
+      endedAt: l.endedAt?.toISOString() ?? null,
+      amount: Number(l.amount ?? 0),
+      paymentMethod: l.paymentMethod,
+    });
+    liveLaunchDetailsBySubmission.set(l.zoneSubmissionId, details);
     if (!l.assetId) continue;
     const bySubmission = liveAssetsBySubmission.get(l.zoneSubmissionId) ?? new Map();
     const bucket = bySubmission.get(l.assetId) ?? { count: 0, amount: 0 };
@@ -500,6 +518,10 @@ export async function GET(request: Request) {
         tariffs: zs.zone.tariffs.map((t) => ({ tariffId: t.id, price: Number(t.price) })),
         assets,
         liveAssets,
+        liveLaunches: (liveLaunchDetailsBySubmission.get(zs.id) ?? []).map((l) => ({
+          ...l,
+          assetName: zs.zone.assets.find((a) => a.id === l.assetId)?.name ?? "",
+        })),
         // Билеты (docs/spec/10-tickets.md, "Отчёты", п.2-3) — заказов/билетов
         // агрегат + "Погашено X из Y · истекло Z", только у зон гашения
         // (докс: "при включённом гашении — две строки"; при выключенном

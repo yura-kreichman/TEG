@@ -62,10 +62,14 @@ export async function POST(request: Request, ctx: RouteContext<"/api/ticket-orde
   const body = await request.json().catch(() => ({}));
   const reason: string | null = typeof body.reason === "string" && body.reason.trim() ? body.reason.trim() : null;
 
-  const before = { tickets: activeTickets };
   const voidedIds = await prisma.$transaction(async (tx) => {
+    // Реально аннулированные в ЭТОМ вызове (не все activeTickets — voidTicketInTx
+    // теперь CAS: если билет уже аннулирован параллельным запросом, например
+    // повторным кликом "Аннулировать заказ" или одиночным /tickets/[id]/void,
+    // он возвращает false и пропускается, чтобы не задвоить возврат/кошелёк).
+    const actuallyVoided: typeof activeTickets = [];
     for (const ticket of activeTickets) {
-      await voidTicketInTx(
+      const voided = await voidTicketInTx(
         tx,
         { id: ticket.id, orderId: ticket.orderId, priceSnapshot: ticket.priceSnapshot },
         {
@@ -79,24 +83,32 @@ export async function POST(request: Request, ctx: RouteContext<"/api/ticket-orde
           ? { tenantId, pointId: opCtx.point.id, operatorId: opCtx.operator.id }
           : { tenantId, pointId: order.zone.pointId, userId: owner!.user.id }
       );
+      if (voided) actuallyVoided.push(ticket);
     }
-    const after = await tx.ticket.findMany({ where: { id: { in: activeTickets.map((t) => t.id) } } });
+    if (actuallyVoided.length === 0) return [];
+    const after = await tx.ticket.findMany({ where: { id: { in: actuallyVoided.map((t) => t.id) } } });
     await tx.correctionLog.create({
       data: {
         entityType: "TicketOrder",
         entityId: order.id,
         correctedByUserId: opCtx ? null : owner!.user.id,
         correctedByOperatorId: opCtx ? opCtx.operator.id : null,
-        beforeJson: JSON.parse(JSON.stringify(before)),
+        beforeJson: JSON.parse(JSON.stringify({ tickets: actuallyVoided })),
         afterJson: JSON.parse(JSON.stringify({ tickets: after })),
         comment: reason,
       },
     });
-    return activeTickets.map((t) => t.id);
+    return actuallyVoided.map((t) => t.id);
   });
 
+  if (voidedIds.length === 0) {
+    return NextResponse.json({ error: "В заказе нет активных билетов для аннулирования" }, { status: 409 });
+  }
+
   if (order.paymentMethod === "abonement" && order.walletId) {
-    const totalRefunded = activeTickets.reduce((sum, t) => sum + Number(t.priceSnapshot), 0);
+    const totalRefunded = activeTickets
+      .filter((t) => voidedIds.includes(t.id))
+      .reduce((sum, t) => sum + Number(t.priceSnapshot), 0);
     await notifyWalletBalanceChange(tenantId, order.walletId, totalRefunded).catch(() => {});
   }
 

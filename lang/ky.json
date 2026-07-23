@@ -1117,6 +1117,7 @@
     },
     "offlineQueueHint": "Жөнөтүүнү күтүүдө: {count} тапшыруу — байланыш болгондо автоматтык түрдө жөнөтүлөт",
     "gameRoom": {
+      "voidLaunchAction": "Иштетүүнү күчүн жоюу",
       "noAssetsYet": "Ээси бул зонага азырынча активдерди кошо элек",
       "assetSwitcherLabel": "Актив",
       "wristbandNumberPrefix": "Билерик",

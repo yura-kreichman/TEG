@@ -76,6 +76,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Одна из зон не найдена" }, { status: 400 });
   }
 
+  // Доступ оператора к зоне (аудит 2026-07-25: раньше проверялись только
+  // тенант/точка/active самой зоны — оператор с ограниченным allowedZones мог
+  // сдать итоги по ЛЮБОЙ зоне своей точки, не только по своим, если знал её
+  // id, тем же классом пробела, что уже закрыт у /api/launches и
+  // /api/tickets/*). allZonesAccess=true (по умолчанию) пропускает всех.
+  if (!operator.allZonesAccess) {
+    const allowed = await prisma.zone.findMany({
+      where: { id: { in: zoneIds }, operatorsWithAccess: { some: { id: operator.id } } },
+      select: { id: true },
+    });
+    if (allowed.length !== zoneIds.length) {
+      return NextResponse.json({ error: "Нет доступа к одной из выбранных зон" }, { status: 403 });
+    }
+  }
+
+  // Принадлежность показаний ИМЕННО СВОЕЙ зоне (аудит 2026-07-25: assetById
+  // ниже строился ПЛОСКОЙ картой по всем зонам сразу — reading.assetId/
+  // tariffId клиента не проверялись на принадлежность конкретной zs.zoneId,
+  // из которой они пришли. Чужой/угаданный assetId из ДРУГОЙ зоны той же
+  // точки прошёл бы насквозь и записал AssetReading не туда — искажая не
+  // только расчётную выручку этой сдачи, но и цепочку "предыдущее показание"
+  // чужой зоны при её следующей сдаче, поскольку previousByKey ищет по
+  // assetId+tariffId без учёта зоны вовсе).
+  for (const zs of zoneSubmissions) {
+    const zone = zoneById.get(zs.zoneId)!;
+    if (zone.accountingMode !== "counters") continue;
+    const zoneAssetIds = new Set(zone.assets.map((a) => a.id));
+    const zoneTariffIds = new Set(zone.tariffs.map((t) => t.id));
+    for (const r of zs.readings) {
+      if (!zoneAssetIds.has(r.assetId) || !zoneTariffIds.has(r.tariffId)) {
+        return NextResponse.json({ error: `Показание не принадлежит зоне «${zone.name}»` }, { status: 400 });
+      }
+    }
+  }
+
   // Билеты (docs/spec/10-tickets.md, "ДОСТУП К СДАЧЕ") — серверная проверка,
   // не только скрытие в UI (submission-context уже отмечает такие зоны
   // флагом ticketsSubmissionAllowed=false, но обойти это со стороны клиента

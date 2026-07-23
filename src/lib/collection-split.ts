@@ -23,7 +23,16 @@ export function distributeCollectionWhole(total: number, weights: number[]): num
   const sumEffective = effective.reduce((a, b) => a + b, 0);
 
   const niceTotal = Math.floor(total / NICE_UNIT) * NICE_UNIT;
-  const oddLeftover = Math.round(total - niceTotal);
+  // До копеек (100, не 1) — реальный баг, найден аудитом 2026-07-25: раньше
+  // Math.round(total - niceTotal) округлял хвост до целого рубля, из-за чего
+  // дробная часть входной суммы (например, 0.45 ₽ у 123.45) молча пропадала —
+  // не попадала ни в одну зону, ни в "Аванс инкассации", просто исчезала из
+  // системы. Раньше все вызывающие места передавали только целые суммы,
+  // поэтому баг не проявлялся, но settleOutstandingCollectionAdvance
+  // (округляет до копеек, не до рубля) и chargeSelfServiceAdvanceToZones
+  // (сумма аванса/премии сотрудника, никогда не округляется до целого) — оба
+  // в lib/zone-balance.ts — реально передают сюда дробные суммы.
+  const oddLeftover = Math.round((total - niceTotal) * 100) / 100;
   const unitsTotal = niceTotal / NICE_UNIT;
 
   const raw = effective.map((w) => (w / sumEffective) * unitsTotal);

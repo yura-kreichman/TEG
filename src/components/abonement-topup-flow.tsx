@@ -657,7 +657,7 @@ export function AbonementTopupFlow({
                 aria-label={t.abonements.telegramBalanceButton}
                 onClick={() => setQrOpen(true)}
               >
-                <Send className="size-5" />
+                <QrCode className="size-5" />
               </Button>
             </PressableScale>
           )}
@@ -708,7 +708,7 @@ export function AbonementTopupFlow({
                 aria-label={t.abonements.telegramBalanceButton}
                 onClick={() => setQrOpen(true)}
               >
-                <Send className="size-5" />
+                <QrCode className="size-5" />
               </Button>
             </PressableScale>
           )}

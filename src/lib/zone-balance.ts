@@ -68,10 +68,15 @@ export function affectsCashOnHand(type: string): boolean {
 // общий для owner- и operator-инкассации, чтобы пропорциональная разбивка
 // "общей" инкассации всегда опиралась на одни и те же цифры, что видны на
 // экране "Остатки по зонам".
-export async function getZoneBalances(zoneIds: string[]): Promise<Map<string, number>> {
+type Tx = Prisma.TransactionClient;
+
+export async function getZoneBalances(
+  zoneIds: string[],
+  client: Tx | typeof prisma = prisma
+): Promise<Map<string, number>> {
   if (zoneIds.length === 0) return new Map();
 
-  const operations = await prisma.moneyOperation.findMany({
+  const operations = await client.moneyOperation.findMany({
     where: { zoneId: { in: zoneIds } },
   });
 
@@ -223,33 +228,60 @@ export async function getPointCashBalance(pointId: string): Promise<number> {
 // в /api/reports/money/collections). getZoneCollectionCutoff выше НАРОЧНО
 // продолжает видеть этот тип наравне с "collection" — иначе сломается
 // анти-задвоение из абзаца выше.
+//
+// Целиком в одной транзакции с pg_advisory_xact_lock по pointId (найдено
+// аудитом 2026-07-25: два параллельных самостоятельных аванса/премии на одной
+// точке — двойной клик или гонка двух операторских сессий — читали остатки
+// зон ДО того, как первый вызов успевал их списать, и оба распределяли по
+// одним и тем же "старым" весам, реально списывая с зон больше, чем на самом
+// деле было взято). Тот же паттерн блокировки, что у nextTicketOrderNumber/
+// nextLaunchNumber (src/lib/tickets.ts, src/lib/game-room.ts) — лочимся по
+// ключу pointId, а не zoneId, потому что распределяем СРАЗУ по всем зонам
+// точки.
+//
+// amount может быть ОТРИЦАТЕЛЬНЫМ — возврат в зоны (найдено аудитом
+// 2026-07-25: PATCH/DELETE .../work-time/shifts/[id] правят или удаляют уже
+// разнесённый по зонам аванс/премию, но зонные advance_settlement-записи
+// НЕ привязаны к конкретной смене — их нечем найти и скорректировать точечно).
+// При уменьшении/удалении вызывающий код передаёт сюда ОТРИЦАТЕЛЬНУЮ дельту —
+// зоны получают компенсирующую ПОЛОЖИТЕЛЬНУЮ запись, распределённую по тем же
+// текущим весам, что и обычное списание (симметрично, без отдельного учёта
+// "с какой именно зоны была взята эта часть аванса раньше" — тот же уровень
+// приближения, что и у самого распределения).
 export async function chargeSelfServiceAdvanceToZones(
   tenantId: string,
   pointId: string,
   amount: number,
   performedByOperatorId: string
 ): Promise<void> {
-  if (amount <= 0) return;
-  const zones = await prisma.zone.findMany({ where: { pointId }, select: { id: true } });
-  if (zones.length === 0) return;
+  if (amount === 0) return;
 
-  const balanceByZone = await getZoneBalances(zones.map((z) => z.id));
-  const weights = zones.map((z) => balanceByZone.get(z.id) ?? 0);
-  const shares = distributeCollectionWhole(amount, weights);
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pointId}))`;
 
-  const rows = zones
-    .map((zone, i) => ({
-      tenantId,
-      zoneId: zone.id,
-      type: "advance_settlement",
-      amount: -Math.abs(shares[i]),
-      performedByOperatorId,
-    }))
-    .filter((row) => row.amount !== 0);
+    const zones = await tx.zone.findMany({ where: { pointId }, select: { id: true } });
+    if (zones.length === 0) return;
 
-  if (rows.length > 0) {
-    await prisma.moneyOperation.createMany({ data: rows });
-  }
+    const zoneIds = zones.map((z) => z.id);
+    const balanceByZone = await getZoneBalances(zoneIds, tx);
+    const weights = zoneIds.map((id) => balanceByZone.get(id) ?? 0);
+    const shares = distributeCollectionWhole(Math.abs(amount), weights);
+    const sign = amount > 0 ? -1 : 1;
+
+    const rows = zoneIds
+      .map((zoneId, i) => ({
+        tenantId,
+        zoneId,
+        type: "advance_settlement",
+        amount: sign * Math.abs(shares[i]),
+        performedByOperatorId,
+      }))
+      .filter((row) => row.amount !== 0);
+
+    if (rows.length > 0) {
+      await tx.moneyOperation.createMany({ data: rows });
+    }
+  });
 }
 
 // Сколько из остатка кассы точки — продажи абонементов наличными, ещё НЕ
@@ -348,8 +380,11 @@ export async function getZonePoolShare(pointId: string, zoneId: string): Promise
 // (splitCollectionAmountDetailed ниже), а излишек откладывается отдельной
 // точечной операцией без zoneId — не привязывая его ни к одной зоне
 // произвольно.
-export async function getOutstandingCollectionAdvance(pointId: string): Promise<number> {
-  const ops = await prisma.moneyOperation.findMany({
+export async function getOutstandingCollectionAdvance(
+  pointId: string,
+  client: Tx | typeof prisma = prisma
+): Promise<number> {
+  const ops = await client.moneyOperation.findMany({
     where: { pointId, type: "collection_advance" },
     select: { amount: true },
   });
@@ -428,48 +463,62 @@ type CollectionActor = { performedByUserId?: string; performedByOperatorId?: str
 // выше): это автоматическое служебное погашение, не факт "владелец пришёл и
 // инкассировал", городить по строке на каждую зону в "Реестре инкассаций"
 // только шумит — сам факт "Аванс инкассации" уже виден одной строкой.
+//
+// Целиком в одной транзакции с pg_advisory_xact_lock по pointId (найдено
+// аудитом 2026-07-25: эта функция вызывается из НЕСКОЛЬКИХ мест — вручную из
+// каждого роута инкассации И автоматически из /api/operator/submit-results —
+// два почти одновременных триггера на одной точке, например двойной клик
+// "Сдать итоги" или Сдача итогов, совпавшая по времени с ручной инкассацией,
+// читали один и тот же getOutstandingCollectionAdvance ДО того, как первый
+// вызов успевал его погасить, и оба списывали одну и ту же сумму с зон
+// дважды). Тот же паттерн блокировки, что у chargeSelfServiceAdvanceToZones
+// выше и nextTicketOrderNumber/nextLaunchNumber.
 export async function settleOutstandingCollectionAdvance(
   tenantId: string,
   pointId: string,
   actor: CollectionActor
 ): Promise<number> {
-  const outstanding = await getOutstandingCollectionAdvance(pointId);
-  if (outstanding <= 0) return 0;
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pointId}))`;
 
-  const zones = await prisma.zone.findMany({ where: { pointId }, select: { id: true } });
-  const zoneIds = zones.map((z) => z.id);
-  if (zoneIds.length === 0) return 0;
+    const outstanding = await getOutstandingCollectionAdvance(pointId, tx);
+    if (outstanding <= 0) return 0;
 
-  const balances = await getZoneBalances(zoneIds);
-  const weights = zoneIds.map((id) => balances.get(id) ?? 0);
-  const zonesRawSum = weights.reduce((sum, w) => sum + Math.max(0, w), 0);
-  const settleable = Math.round(Math.min(outstanding, zonesRawSum) * 100) / 100;
-  if (settleable <= 0) return 0;
+    const zones = await tx.zone.findMany({ where: { pointId }, select: { id: true } });
+    const zoneIds = zones.map((z) => z.id);
+    if (zoneIds.length === 0) return 0;
 
-  const shares = distributeCollectionWhole(settleable, weights);
-  const rows = zoneIds
-    .map((zoneId, i) => ({
-      tenantId,
-      zoneId,
-      type: "advance_settlement",
-      amount: -Math.abs(shares[i]),
-      performedByUserId: actor.performedByUserId,
-      performedByOperatorId: actor.performedByOperatorId,
-    }))
-    .filter((row) => row.amount !== 0);
+    const balances = await getZoneBalances(zoneIds, tx);
+    const weights = zoneIds.map((id) => balances.get(id) ?? 0);
+    const zonesRawSum = weights.reduce((sum, w) => sum + Math.max(0, w), 0);
+    const settleable = Math.round(Math.min(outstanding, zonesRawSum) * 100) / 100;
+    if (settleable <= 0) return 0;
 
-  if (rows.length > 0) await prisma.moneyOperation.createMany({ data: rows });
+    const shares = distributeCollectionWhole(settleable, weights);
+    const rows = zoneIds
+      .map((zoneId, i) => ({
+        tenantId,
+        zoneId,
+        type: "advance_settlement",
+        amount: -Math.abs(shares[i]),
+        performedByUserId: actor.performedByUserId,
+        performedByOperatorId: actor.performedByOperatorId,
+      }))
+      .filter((row) => row.amount !== 0);
 
-  await prisma.moneyOperation.create({
-    data: {
-      tenantId,
-      pointId,
-      type: "collection_advance",
-      amount: settleable,
-      performedByUserId: actor.performedByUserId,
-      performedByOperatorId: actor.performedByOperatorId,
-    },
+    if (rows.length > 0) await tx.moneyOperation.createMany({ data: rows });
+
+    await tx.moneyOperation.create({
+      data: {
+        tenantId,
+        pointId,
+        type: "collection_advance",
+        amount: settleable,
+        performedByUserId: actor.performedByUserId,
+        performedByOperatorId: actor.performedByOperatorId,
+      },
+    });
+
+    return settleable;
   });
-
-  return settleable;
 }

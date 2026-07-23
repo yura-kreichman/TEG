@@ -1117,6 +1117,7 @@
     },
     "offlineQueueHint": "Waiting to send: {count} submission(s) — will send automatically once online",
     "gameRoom": {
+      "voidLaunchAction": "Void launch",
       "noAssetsYet": "The owner hasn't added any assets to this zone yet",
       "assetSwitcherLabel": "Asset",
       "wristbandNumberPrefix": "Wristband",

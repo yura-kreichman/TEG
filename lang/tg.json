@@ -1117,6 +1117,7 @@
     },
     "offlineQueueHint": "Мунтазири фиристодан: {count} супориш(ҳо) — ба таври худкор ҳангоми алоқа мефиристанд",
     "gameRoom": {
+      "voidLaunchAction": "Оғозро бекор кардан",
       "noAssetsYet": "Соҳиб то ҳол ба ин минтақа дороиҳо илова накардааст",
       "assetSwitcherLabel": "Актив",
       "wristbandNumberPrefix": "Дастбанд",

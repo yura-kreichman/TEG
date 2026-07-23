@@ -1,7 +1,14 @@
 import { createHash, randomBytes } from "crypto";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
-import { sessionCookieOptions, signExpiringToken, signToken, verifyExpiringToken, verifyToken } from "@/lib/session-crypto";
+import {
+  sessionCookieOptions,
+  signExpiringToken,
+  signToken,
+  verifyExpiringToken,
+  verifySessionToken,
+  verifyToken,
+} from "@/lib/session-crypto";
 
 const SESSION_COOKIE = "session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -64,7 +71,7 @@ export async function getSessionUserId(): Promise<string | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  return verifyToken(token);
+  return verifySessionToken(token);
 }
 
 export async function createAdminSession(userId: string) {
@@ -89,21 +96,36 @@ export async function getAdminSessionUserId(): Promise<string | null> {
   return verifyExpiringToken(token);
 }
 
-// Начинает имперсонацию — обычная Owner-сессия для ownerUserId (все
-// существующие requireOwner()-проверки продолжают работать без изменений)
-// плюс маркер, что это Admin вошёл от чужого имени. Admin'ская собственная
-// сессия (ADMIN_SESSION_COOKIE) не трогается — админ не разлогинивается.
+// Начинает имперсонацию — Owner-сессия для ownerUserId (все существующие
+// requireOwner()-проверки продолжают работать без изменений, formaт токена
+// им прозрачен) плюс маркер, что это Admin вошёл от чужого имени.
+// Admin'ская собственная сессия (ADMIN_SESSION_COOKIE) не трогается — админ
+// не разлогинивается. ОБА токена — тем же коротким self-expiring форматом и
+// сроком, что у самой admin-сессии (аудит 2026-07-25: раньше здесь был
+// обычный signToken с 7-дневным SESSION_MAX_AGE — имперсонированная
+// Owner-сессия технически могла пережить 2-часовую сессию запустившего её
+// админа, а перехваченное сырое значение cookie оставалось валидным без
+// browser maxAge вообще, см. комментарий у signExpiringToken).
 export async function startImpersonation(adminUserId: string, ownerUserId: string) {
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, signToken(ownerUserId), sessionCookieOptions(SESSION_MAX_AGE));
-  cookieStore.set(IMPERSONATION_COOKIE, signToken(adminUserId), sessionCookieOptions(SESSION_MAX_AGE));
+  const expiresAt = Date.now() + ADMIN_SESSION_MAX_AGE * 1000;
+  cookieStore.set(
+    SESSION_COOKIE,
+    signExpiringToken(ownerUserId, expiresAt),
+    sessionCookieOptions(ADMIN_SESSION_MAX_AGE)
+  );
+  cookieStore.set(
+    IMPERSONATION_COOKIE,
+    signExpiringToken(adminUserId, expiresAt),
+    sessionCookieOptions(ADMIN_SESSION_MAX_AGE)
+  );
 }
 
 export async function getImpersonatingAdminId(): Promise<string | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(IMPERSONATION_COOKIE)?.value;
   if (!token) return null;
-  return verifyToken(token);
+  return verifyExpiringToken(token);
 }
 
 // Выход из режима имперсонации — разлогинивает текущую (чужую) Owner-сессию;

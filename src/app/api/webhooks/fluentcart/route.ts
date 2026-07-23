@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseFluentCartPayload, syncTenantFromFluentCartEvent } from "@/lib/fluentcart-webhook";
+import { timingSafeEqualStrings } from "@/lib/timing-safe-equal";
 
 // Приём вебхуков FluentCart (docs/spec/06-super-admin.md, п.5). Плагин
 // FluentCart (см. FluentCart/fluent-cart-pro/.../WebhookConnect.php) шлёт
@@ -17,7 +18,8 @@ const EVENT_HEADER = "x-fluentcart-event";
 
 export async function POST(request: Request) {
   const secret = process.env.FLUENTCART_WEBHOOK_SECRET;
-  if (!secret || request.headers.get(SECRET_HEADER) !== secret) {
+  const providedSecret = request.headers.get(SECRET_HEADER);
+  if (!secret || !providedSecret || !timingSafeEqualStrings(providedSecret, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -1117,6 +1117,7 @@
     },
     "offlineQueueHint": "Yuborilishini kutmoqda: {count} ta topshiriq — aloqa boʻlganda avtomatik yuboriladi",
     "gameRoom": {
+      "voidLaunchAction": "Ishga tushirishni bekor qilish",
       "noAssetsYet": "Egasi bu zonaga hali aktivlar qo'shmagan",
       "assetSwitcherLabel": "Aktiv",
       "wristbandNumberPrefix": "Bilaguzuk",

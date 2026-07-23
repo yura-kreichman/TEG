@@ -59,6 +59,17 @@ export function verifyExpiringToken(token: string): string | null {
   return id;
 }
 
+// Диспетчер формата для cookie "session" — она несёт ЛИБО обычный
+// signToken (id.signature, 1 точка, обычный логин владельца), ЛИБО
+// signExpiringToken (id.expiresAt.signature, 2 точки, сессия имперсонации из
+// startImpersonation в lib/auth.ts — тот же короткий серверный таймаут, что у
+// собственной сессии админа). Общий для lib/auth.ts (getSessionUserId) и
+// edge-мидлвара (proxy.ts, который читает cookie напрямую, в обход
+// getSessionUserId, и раньше не понимал формат имперсонации вовсе).
+export function verifySessionToken(token: string): string | null {
+  return token.split(".").length === 3 ? verifyExpiringToken(token) : verifyToken(token);
+}
+
 export function sessionCookieOptions(maxAge: number) {
   return {
     httpOnly: true,

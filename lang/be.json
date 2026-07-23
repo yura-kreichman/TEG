@@ -1117,6 +1117,7 @@
     },
     "offlineQueueHint": "Чакаюць адпраўкі: {count} здач(ы) — сыдуць аўтаматычна пры сувязі",
     "gameRoom": {
+      "voidLaunchAction": "Ануляваць пуск",
       "noAssetsYet": "Уладальнік яшчэ не дадаў актывы ў гэтую зону",
       "assetSwitcherLabel": "Актыў",
       "wristbandNumberPrefix": "Бранзалет",

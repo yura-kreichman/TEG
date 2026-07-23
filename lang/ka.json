@@ -1117,6 +1117,7 @@
     },
     "offlineQueueHint": "ელოდება გაგზავნას: {count} ჩაბარება — ავტომატურად წავა კავშირის აღდგენისას",
     "gameRoom": {
+      "voidLaunchAction": "გაშვების გაუქმება",
       "noAssetsYet": "მფლობელს ჯერ არ დაუმატებია აქტივები ამ ზონაში",
       "assetSwitcherLabel": "აქტივი",
       "wristbandNumberPrefix": "სამაჯური",

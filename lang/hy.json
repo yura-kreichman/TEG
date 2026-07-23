@@ -1117,6 +1117,7 @@
     },
     "offlineQueueHint": "Սպասում են ուղարկման. {count} հանձնում(ներ) — կուղարկվեն ավտոմատ կապի առկայության դեպքում",
     "gameRoom": {
+      "voidLaunchAction": "Չեղարկել մեկնարկը",
       "noAssetsYet": "Սեփականատերը դեռ այս գոտում ակտիվներ չի ավելացրել",
       "assetSwitcherLabel": "Ակտիվ",
       "wristbandNumberPrefix": "Ապարանջան",

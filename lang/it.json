@@ -1117,6 +1117,7 @@
     },
     "offlineQueueHint": "In attesa di invio: {count} chiusura/e — verranno inviate automaticamente non appena online",
     "gameRoom": {
+      "voidLaunchAction": "Annulla avvio",
       "noAssetsYet": "Il proprietario non ha ancora aggiunto elementi a questa zona",
       "assetSwitcherLabel": "Attivo",
       "wristbandNumberPrefix": "Braccialetto",

@@ -1117,6 +1117,7 @@
     },
     "offlineQueueHint": "În așteptare: {count} predări — se trimit automat la reconectare",
     "gameRoom": {
+      "voidLaunchAction": "Anulează pornirea",
       "noAssetsYet": "Proprietarul nu a adăugat încă active în această zonă",
       "assetSwitcherLabel": "Activ",
       "wristbandNumberPrefix": "Brățară",

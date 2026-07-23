@@ -10,6 +10,8 @@ import {
 import { InsufficientBalanceError, spendWalletTx, notifyWalletBalanceChange } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
+class LaunchAlreadyStoppedError extends Error {}
+
 // Стоп пуска — оператор, серверное время; расчёт стоимости только на сервере
 // (docs/spec/04-game-room.md), по снапшоту тарифа, зафиксированному при
 // старте (см. /api/zones/[id]/launches POST), не по текущему тарифу зоны.
@@ -87,10 +89,17 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
   let updated;
   try {
     updated = await prisma.$transaction(async (tx) => {
-      const result = await tx.launch.update({
-        where: { id },
+      // CAS вместо обычного update (аудит 2026-07-25: проверка !launch.isOpen
+      // выше читалась ДО транзакции — двойной клик "Стоп" на одном пуске с
+      // оплатой балансом "По факту" мог пройти её дважды и дважды списать
+      // ту же сумму с кошелька через spendWalletTx). where с isOpen:true —
+      // если пуск уже остановлен параллельным запросом, updateMany затронет
+      // 0 строк.
+      const stopResult = await tx.launch.updateMany({
+        where: { id, isOpen: true },
         data: { endedAt, isOpen: false, amount, endedByOperatorId: operator.id, paymentMethod, abonementWalletId },
       });
+      if (stopResult.count === 0) throw new LaunchAlreadyStoppedError();
 
       // Сумма "По факту" известна только сейчас, при остановке — списание
       // сразу здесь же, тем же принципом, что и "За вход" при старте.
@@ -108,11 +117,14 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
         });
       }
 
-      return result;
+      return tx.launch.findUniqueOrThrow({ where: { id } });
     });
   } catch (err) {
     if (err instanceof InsufficientBalanceError) {
       return NextResponse.json({ error: "Недостаточно средств на абонементе" }, { status: 400 });
+    }
+    if (err instanceof LaunchAlreadyStoppedError) {
+      return NextResponse.json({ error: "Пуск уже завершён" }, { status: 409 });
     }
     throw err;
   }

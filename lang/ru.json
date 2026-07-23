@@ -1117,6 +1117,7 @@
     },
     "offlineQueueHint": "Ждут отправки: {count} сдач(и) — уйдут автоматически при связи",
     "gameRoom": {
+      "voidLaunchAction": "Аннулировать пуск",
       "noAssetsYet": "Владелец ещё не добавил активы в эту зону",
       "assetSwitcherLabel": "Актив",
       "wristbandNumberPrefix": "Браслет",

@@ -64,7 +64,19 @@ async function cleanupCollections(tenantId: string) {
 async function cleanupShifts(tenantId: string) {
   // "Смены" = весь модуль Рабочее время: сами смены, авансы/премии (и
   // привязанные к конкретной смене, и разовые без shiftId), переносы баланса.
-  await prisma.moneyOperation.deleteMany({ where: { tenantId, type: { in: ["advance", "bonus_payout"] } } });
+  // advance_settlement (аудит 2026-07-25) — зонные записи, которыми
+  // chargeSelfServiceAdvanceToZones (lib/zone-balance.ts) сразу разносит
+  // самообслуживаемый аванс/премию по зонам; без этой строки очистка ТОЛЬКО
+  // "Смен" (без "Инкассаций") удаляла бы advance/bonus_payout, но оставляла
+  // бы зонные остатки навсегда заниженными на уже списанную сумму —
+  // orphaned-запись без источника. Тот же тип используется и
+  // settleOutstandingCollectionAdvance (погашение "Аванса инкассации") —
+  // здесь удаляются ОБА происхождения разом, это осознанно: без авансов/
+  // премий смен и без истории инкассаций (см. cleanupCollections) сама эта
+  // зонная корректировка теряет смысл в любом случае.
+  await prisma.moneyOperation.deleteMany({
+    where: { tenantId, type: { in: ["advance", "bonus_payout", "advance_settlement"] } },
+  });
   await prisma.operatorBalanceCarryover.deleteMany({ where: { tenantId } });
   await prisma.shift.deleteMany({ where: { tenantId } });
 }

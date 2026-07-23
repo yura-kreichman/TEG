@@ -227,7 +227,21 @@ export async function voidGoodsSale(saleId: string, tenantId: string, userId: st
   const { updated, refundedWalletId, refundedAmount } = await prisma.$transaction(async (tx) => {
     const sale = await tx.goodsSale.findFirst({ where: { id: saleId, tenantId } });
     if (!sale) throw new Error("SALE_NOT_FOUND");
-    if (sale.voidedAt) throw new Error("ALREADY_VOIDED");
+
+    // CAS вместо отдельного if(sale.voidedAt) + безусловного update ниже
+    // (аудит 2026-07-25: goodsSale.update без условия по voidedAt позволял
+    // двум почти одновременным запросам на аннулирование одной продажи
+    // обоим пройти ранний read-check — WHERE у update был только по id, а
+    // второй запрос, дождавшись коммита первого на блокировке строки, всё
+    // равно проходил дальше и повторно восстанавливал остаток/баланс).
+    // updateMany с voidedAt:null в WHERE переоценивается Postgres заново
+    // после снятия блокировки (EvalPlanQual) — если строку уже аннулировал
+    // первый запрос, здесь совпадёт 0 строк.
+    const voidResult = await tx.goodsSale.updateMany({
+      where: { id: saleId, voidedAt: null },
+      data: { voidedAt: new Date() },
+    });
+    if (voidResult.count === 0) throw new Error("ALREADY_VOIDED");
 
     const goods = await tx.goods.findUniqueOrThrow({ where: { id: sale.goodsId } });
     const amount = Number(sale.amount);
@@ -257,7 +271,7 @@ export async function voidGoodsSale(saleId: string, tenantId: string, userId: st
       },
     });
 
-    const updated = await tx.goodsSale.update({ where: { id: saleId }, data: { voidedAt: new Date() } });
+    const updated = await tx.goodsSale.findUniqueOrThrow({ where: { id: saleId } });
 
     await tx.correctionLog.create({
       data: {
@@ -303,6 +317,16 @@ async function reviseGoodsStockInTx(
       where: { id: line.goodsId, tenantId, categoryId, deletedAt: null, trackStock: true },
     });
     if (!goods) throw new Error("GOODS_NOT_FOUND");
+
+    // Advisory lock по (goodsId, pointId) — ревизия читает текущий остаток и
+    // ЗАТЕМ АБСОЛЮТНО его перезаписывает (upsert quantity: actualQuantity,
+    // не increment/decrement, как у продажи/довоза) — без лока две почти
+    // одновременные ревизии ОДНОГО товара (двойной клик "Сохранить" или два
+    // сотрудника разом) обе читали бы один и тот же остаток ДО того, как
+    // другая успевала записать свой, и обе создавали бы правдоподобную, но
+    // задвоенную/противоречивую строку в GoodsRevisionLine — итоговый остаток
+    // остаётся плаузибельным, аудиторский след нет (аудит 2026-07-25).
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${goods.id}:${pointId}`}))`;
 
     const stock = await tx.goodsStock.findUnique({ where: { goodsId_pointId: { goodsId: goods.id, pointId } } });
     const calculatedQuantity = stock?.quantity ?? 0;

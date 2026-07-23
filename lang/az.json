@@ -1117,6 +1117,7 @@
     },
     "offlineQueueHint": "Göndərilməni gözləyir: {count} hesabat — əlaqə olduqda avtomatik göndəriləcək",
     "gameRoom": {
+      "voidLaunchAction": "Başlatmanı ləğv et",
       "noAssetsYet": "Sahibkar hələ bu zonaya aktiv əlavə etməyib",
       "assetSwitcherLabel": "Aktiv",
       "wristbandNumberPrefix": "Bilərzik",

@@ -1117,6 +1117,7 @@
     },
     "offlineQueueHint": "Oczekują na wysłanie: {count} rozliczeń — zostaną wysłane automatycznie po połączeniu",
     "gameRoom": {
+      "voidLaunchAction": "Anuluj uruchomienie",
       "noAssetsYet": "Właściciel nie dodał jeszcze żadnych zasobów do tej strefy",
       "assetSwitcherLabel": "Aktyw",
       "wristbandNumberPrefix": "Opaska",

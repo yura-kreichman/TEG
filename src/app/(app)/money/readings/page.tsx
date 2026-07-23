@@ -96,6 +96,19 @@ interface DayCard {
     count: number;
     amount: number;
   }[];
+  // Поштучный список пусков окна — для аннулирования владельцем прямо в
+  // карточке (запрос "выполни всё" по аудиту 2026-07-25: у "Прибываний"/
+  // тап-"Пусков" не было способа исправить ошибочный/тестовый пуск, в
+  // отличие от Билетов).
+  liveLaunches: {
+    id: string;
+    assetId: string;
+    assetName: string;
+    startedAt: string;
+    endedAt: string | null;
+    amount: number;
+    paymentMethod: string | null;
+  }[];
   // Билеты (docs/spec/10-tickets.md, "Отчёты") — только у accountingMode
   // "tickets", null у остальных режимов. ticketAssets — разрез по активам и
   // вариантам (заказ мультиактивный, поэтому не переиспользует ни assets,
@@ -251,6 +264,26 @@ export default function ReadingsCalendarPage() {
       if (selectedDate) await loadDay(selectedDate);
     } finally {
       setVoidingOrder(null);
+    }
+  }
+
+  // Аннулирование пуска — тот же ConfirmIconButton-паттерн, что у заказов
+  // билетов выше (/api/launches/[id]/void).
+  const [voidingLaunch, setVoidingLaunch] = useState<string | null>(null);
+
+  async function voidLaunch(launchId: string) {
+    setVoidingLaunch(launchId);
+    setVoidError(null);
+    try {
+      const res = await fetch(`/api/launches/${launchId}/void`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setVoidError(data?.error ?? t.readings.saveError);
+        return;
+      }
+      if (selectedDate) await loadDay(selectedDate);
+    } finally {
+      setVoidingLaunch(null);
     }
   }
 
@@ -973,6 +1006,45 @@ export default function ReadingsCalendarPage() {
                                 </div>
                               </div>
                             ))}
+                          {/* Поштучный список пусков — для аннулирования
+                              владельцем прямо в карточке, тот же
+                              компактный-строки-паттерн, что у заказов билетов
+                              ниже (аудит 2026-07-25: раньше у "Прибываний"/
+                              тап-"Пусков" не было вообще никакого способа
+                              исправить ошибочный/тестовый пуск). */}
+                          {card.liveLaunches.length > 0 && (
+                            <div className="mt-2 flex flex-col gap-1.5">
+                              {card.liveLaunches.map((l) => (
+                                <div
+                                  key={l.id}
+                                  className="relative flex items-center gap-1.5 rounded-control bg-muted px-3 py-2"
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-caption-airbnb font-semibold text-foreground">
+                                      {l.assetName}
+                                    </p>
+                                    <p className="truncate text-xs text-muted-foreground">
+                                      {formatTime(l.startedAt)}
+                                      {l.endedAt ? ` – ${formatTime(l.endedAt)}` : ""}
+                                    </p>
+                                  </div>
+                                  {l.paymentMethod && (
+                                    <PaymentMethodIcon method={l.paymentMethod} className="size-3.5 shrink-0" />
+                                  )}
+                                  <Money value={l.amount} className="shrink-0 text-caption-airbnb font-bold" />
+                                  <ConfirmIconButton
+                                    label={t.operatorApp.gameRoom.voidLaunchAction}
+                                    disabled={voidingLaunch === l.id}
+                                    onConfirm={() => voidLaunch(l.id)}
+                                    className="size-8"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {card.liveLaunches.length > 0 && voidError && (
+                            <p className="mt-2 text-sm text-destructive">{voidError}</p>
+                          )}
                           {/* Билеты (docs/spec/10-tickets.md, "Отчёты", п.2) —
                               заказов N · билетов M, дальше разрez по активам
                               и вариантам (одна строка на комбинацию, заказ

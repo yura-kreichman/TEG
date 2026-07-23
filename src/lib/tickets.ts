@@ -337,17 +337,29 @@ export interface VoidableOrder {
  * возврат физической кассы вообще не касается, это чисто цифровая операция
  * на кошельке клиента, и Сотрудник с доступом к продаже билетов может
  * провести её сам.
+ *
+ * Возвращает false, а не бросает исключение, если билет уже не в статусе
+ * "active" на момент записи (аудит 2026-07-25: раньше блок tx.ticket.update
+ * ничем не был защищён от повторного срабатывания — вызывающие роуты читают
+ * текущий status ДО открытия транзакции, и два почти одновременных запроса
+ * на аннулирование одного билета оба проходили эту проверку и оба выполняли
+ * возврат/декремент/зачисление на кошелёк дважды). CAS через updateMany —
+ * тот же приём, что у Shift.close/AbonementWallet.spend.
  */
 export async function voidTicketInTx(
   tx: Tx,
   ticket: VoidableTicket,
   order: VoidableOrder,
   actor: { tenantId: string; pointId: string; userId?: string; operatorId?: string }
-): Promise<void> {
+): Promise<boolean> {
   const { tenantId, pointId, userId, operatorId } = actor;
   const amount = Number(ticket.priceSnapshot);
 
-  await tx.ticket.update({ where: { id: ticket.id }, data: { status: "voided", voidedAt: new Date() } });
+  const voidResult = await tx.ticket.updateMany({
+    where: { id: ticket.id, status: "active" },
+    data: { status: "voided", voidedAt: new Date() },
+  });
+  if (voidResult.count === 0) return false;
   await tx.ticketOrder.update({ where: { id: order.id }, data: { openTicketsCount: { decrement: 1 } } });
 
   const boundary = await previousSubmissionBoundary(order.zoneId, tx);
@@ -372,4 +384,6 @@ export async function voidTicketInTx(
       data: { walletId: order.walletId, type: "refund", amount, ticketOrderId: order.id, pointId, userId, operatorId },
     });
   }
+
+  return true;
 }

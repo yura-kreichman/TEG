@@ -111,37 +111,59 @@ export async function POST(request: Request) {
     data: { tenantId: point.tenantId, operatorId: operator.id, pointId: point.id, startAt, endAt },
   });
 
-  if (advanceAmount > 0) {
-    await prisma.moneyOperation.create({
-      data: {
-        tenantId: point.tenantId,
-        pointId: point.id,
-        type: "advance",
-        amount: -advanceAmount,
-        performedByOperatorId: operator.id,
-        beneficiaryOperatorId: operator.id,
-        shiftId: shift.id,
-      },
-    });
-  }
-  if (bonusAmount > 0) {
-    await prisma.moneyOperation.create({
-      data: {
-        tenantId: point.tenantId,
-        pointId: point.id,
-        type: "bonus_payout",
-        amount: -bonusAmount,
-        performedByOperatorId: operator.id,
-        beneficiaryOperatorId: operator.id,
-        shiftId: shift.id,
-      },
-    });
-  }
-  // Сразу разносим по зонам (запрос пользователя 2026-07-25), не дожидаясь
-  // следующей инкассации — см. комментарий у chargeSelfServiceAdvanceToZones
-  // в lib/zone-balance.ts. Вызов ПОСЛЕ обеих записей выше — важен порядок.
+  // Авторитетная, атомарная проверка потолка под локом по pointId — см.
+  // тот же паттерн и комментарий в /api/operator/work-time/check-out.
+  // Проверка выше — только быстрый оптимистичный отказ, не закрывает гонку
+  // сама по себе.
   if (advanceAmount + bonusAmount > 0) {
-    await chargeSelfServiceAdvanceToZones(point.tenantId, point.id, advanceAmount + bonusAmount, operator.id);
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${point.id}))`;
+      const freshBalance = await getPointCashBalance(point.id);
+      if (advanceAmount + bonusAmount > freshBalance) {
+        return { ok: false as const, freshBalance };
+      }
+      if (advanceAmount > 0) {
+        await tx.moneyOperation.create({
+          data: {
+            tenantId: point.tenantId,
+            pointId: point.id,
+            type: "advance",
+            amount: -advanceAmount,
+            performedByOperatorId: operator.id,
+            beneficiaryOperatorId: operator.id,
+            shiftId: shift.id,
+          },
+        });
+      }
+      if (bonusAmount > 0) {
+        await tx.moneyOperation.create({
+          data: {
+            tenantId: point.tenantId,
+            pointId: point.id,
+            type: "bonus_payout",
+            amount: -bonusAmount,
+            performedByOperatorId: operator.id,
+            beneficiaryOperatorId: operator.id,
+            shiftId: shift.id,
+          },
+        });
+      }
+      return { ok: true as const };
+    });
+    if (!result.ok) {
+      const locale = await resolveLocale();
+      return NextResponse.json(
+        { error: `Сумма превышает остаток кассы точки (${formatMoney(result.freshBalance, locale)})` },
+        { status: 400 }
+      );
+    }
+    // Сразу разносим по зонам (запрос пользователя 2026-07-25), не дожидаясь
+    // следующей инкассации — см. комментарий у chargeSelfServiceAdvanceToZones
+    // в lib/zone-balance.ts. Вызов ПОСЛЕ обеих записей выше — важен порядок.
+    // Не блокирует ответ при сбое — см. комментарий в check-out/route.ts.
+    await chargeSelfServiceAdvanceToZones(point.tenantId, point.id, advanceAmount + bonusAmount, operator.id).catch(
+      (err) => console.error("chargeSelfServiceAdvanceToZones failed (shifts)", err)
+    );
   }
 
   const balance = await calcOperatorBalance(operator.id);
