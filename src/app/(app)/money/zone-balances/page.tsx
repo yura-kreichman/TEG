@@ -50,12 +50,13 @@ interface CollectionEntry {
   id: string;
   occurredAt: string;
   // null — не зонная запись, а свип абонементов/товаров наличными точки
-  // (lib/zone-balance.ts, collection_pool_sweep_abonement/_goods) — клиент
-  // сам подставляет переведённую подпись по значению pool.
+  // (lib/zone-balance.ts, collection_pool_sweep_abonement/_goods) или "Аванс
+  // инкассации" (collection_advance) — клиент сам подставляет переведённую
+  // подпись по значению pool.
   zoneName: string | null;
   pointName: string;
   amount: number;
-  pool: "abonement" | "goods" | null;
+  pool: "abonement" | "goods" | "advance" | null;
 }
 
 // Сентинелы для "Абонементы"/"Товары" в дропдауне "По кассам" (запрос
@@ -617,8 +618,14 @@ export default function ZoneBalancesPage() {
                           <span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
                             {c.pool === "abonement" && <Gift className="size-3 shrink-0" />}
                             {c.pool === "goods" && <ShoppingBag className="size-3 shrink-0" />}
+                            {c.pool === "advance" && <PiggyBank className="size-3 shrink-0" />}
                             {formatTime(c.occurredAt)} ·{" "}
-                            {c.zoneName ?? (c.pool === "abonement" ? t.money.abonementCashLabel : t.goods.navLabel)}
+                            {c.zoneName ??
+                              (c.pool === "abonement"
+                                ? t.money.abonementCashLabel
+                                : c.pool === "advance"
+                                  ? t.money.collectionAdvanceLabel
+                                  : t.goods.navLabel)}
                           </span>
                           <span className="flex shrink-0 items-center gap-2">
                             <span className="text-xs font-bold tabular-nums"><Money value={c.amount} /></span>

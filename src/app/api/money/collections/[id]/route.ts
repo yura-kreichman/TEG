@@ -19,7 +19,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/coll
   if (
     !op ||
     op.tenantId !== owner.tenantId ||
-    !["collection", "collection_pool_sweep_abonement", "collection_pool_sweep_goods"].includes(op.type)
+    !["collection", "collection_pool_sweep_abonement", "collection_pool_sweep_goods", "collection_advance"].includes(op.type)
   ) {
     return NextResponse.json({ error: "Инкассация не найдена" }, { status: 404 });
   }
@@ -60,7 +60,7 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/money/co
   if (
     !op ||
     op.tenantId !== owner.tenantId ||
-    !["collection", "collection_pool_sweep_abonement", "collection_pool_sweep_goods"].includes(op.type)
+    !["collection", "collection_pool_sweep_abonement", "collection_pool_sweep_goods", "collection_advance"].includes(op.type)
   ) {
     return NextResponse.json({ error: "Инкассация не найдена" }, { status: 404 });
   }

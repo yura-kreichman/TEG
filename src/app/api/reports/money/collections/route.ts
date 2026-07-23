@@ -9,15 +9,20 @@ import { requireOwner } from "@/lib/require-owner";
 // больше одной), реестр скопирован под тот же принцип; без параметра — как
 // раньше, весь тенант (обратная совместимость на случай других вызывающих).
 //
-// Три "формы" инкассации в одном списке: type=collection (касса зоны) и два
-// отдельных типа для абонементов/товаров наличными точки — collection_pool_
-// sweep_abonement / _goods (не привязаны ни к одной зоне, свои собственные
-// кассы — см. lib/zone-balance.ts и дропдаун "По кассам"). Раньше был один
-// общий тип без видимой суммы, из-за чего такая инкассация вообще не
-// попадала в реестр (реальный баг, найден пользователем 2026-07-22:
-// "абонементы исчезли а в реестре ничего не добавилось"); разделены на два
-// (тот же день, "могут быть и 2 пачки — Сотрудник продавал абонементы, а
-// продавец Поп-корн").
+// Четыре "формы" инкассации в одном списке: type=collection (касса зоны),
+// два отдельных типа для абонементов/товаров наличными точки —
+// collection_pool_sweep_abonement / _goods (не привязаны ни к одной зоне,
+// свои собственные кассы — см. lib/zone-balance.ts и дропдаун "По кассам") —
+// и collection_advance ("Аванс инкассации", lib/zone-balance.ts, "Аванс
+// инкассации") — деньги без зоны-адреса, ждущие будущей сдачи итогов.
+// Раньше был один общий тип без видимой суммы, из-за чего такая инкассация
+// вообще не попадала в реестр (реальный баг, найден пользователем
+// 2026-07-22: "абонементы исчезли а в реестре ничего не добавилось");
+// разделены на два (тот же день, "могут быть и 2 пачки — Сотрудник продавал
+// абонементы, а продавец Поп-корн"). collection_advance добавлен в реестр
+// позже (реальный баг, найден пользователем 2026-07-25: тип вообще не был
+// заведён сюда — инкассация проходила и деньги учитывались верно, но
+// строка в "Реестре инкассаций" молча не появлялась).
 export async function GET(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
@@ -36,7 +41,7 @@ export async function GET(request: Request) {
   const monthStart = new Date(Date.UTC(year, month - 1, 1));
   const monthEnd = new Date(Date.UTC(year, month, 1));
 
-  const [zoneOps, poolOps] = await Promise.all([
+  const [zoneOps, poolOps, advanceOps] = await Promise.all([
     prisma.moneyOperation.findMany({
       where: {
         tenantId: owner.tenantId,
@@ -51,6 +56,24 @@ export async function GET(request: Request) {
       where: {
         tenantId: owner.tenantId,
         type: { in: ["collection_pool_sweep_abonement", "collection_pool_sweep_goods"] },
+        occurredAt: { gte: monthStart, lt: monthEnd },
+        ...(pointId ? { pointId } : {}),
+      },
+      include: { point: true },
+      orderBy: { occurredAt: "desc" },
+    }),
+    prisma.moneyOperation.findMany({
+      where: {
+        tenantId: owner.tenantId,
+        type: "collection_advance",
+        // Только отрицательные — это НОВЫЙ аванс, который владелец реально
+        // внёс (см. /api/points/[id]/collection/general). Положительные
+        // collection_advance — не отдельное событие инкассации, а служебная
+        // проводка settleOutstandingCollectionAdvance (lib/zone-balance.ts),
+        // гасящая старый аванс уже показанными ниже zone-level "collection"
+        // операциями — показывать её тут второй раз как ещё один аванс
+        // было бы обманчиво.
+        amount: { lt: 0 },
         occurredAt: { gte: monthStart, lt: monthEnd },
         ...(pointId ? { pointId } : {}),
       },
@@ -84,6 +107,16 @@ export async function GET(request: Request) {
         pointName: op.point!.name,
         amount: Math.abs(Number(op.amount)),
         pool: (op.type === "collection_pool_sweep_abonement" ? "abonement" : "goods") as "abonement" | "goods",
+      })),
+    ...advanceOps
+      .filter((op) => op.point !== null)
+      .map((op) => ({
+        id: op.id,
+        occurredAt: op.occurredAt.toISOString(),
+        zoneName: null as string | null,
+        pointName: op.point!.name,
+        amount: Math.abs(Number(op.amount)),
+        pool: "advance" as const,
       })),
   ].sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1));
 
