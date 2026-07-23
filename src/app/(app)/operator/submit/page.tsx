@@ -533,7 +533,12 @@ export default function SubmitResultsPage() {
     const totalCash = summary.reduce((sum, s) => sum + s.actualCash, 0);
     return {
       title: t.operatorApp.submit.zReportTitle,
-      subtitle: `${new Date().toLocaleString(locale)}${printAvailable.operatorName ? ` · ${printAvailable.operatorName}` : ""}`,
+      // В очереди (офлайн) — result.summary клиентский предпросмотр, сервер
+      // ещё не считал (округления/серверная валидация показаний могут дать
+      // другое число) — печатный документ обязан нести ту же пометку, что
+      // уже видна на экране (queuedHint), а не только экран: бумага может
+      // быть показана/оставлена клиенту отдельно от экрана (аудит 2026-07-24).
+      subtitle: `${new Date().toLocaleString(locale)}${printAvailable.operatorName ? ` · ${printAvailable.operatorName}` : ""}${queued ? ` · ${t.operatorApp.submit.zReportPreliminaryNote}` : ""}`,
       sections,
       totalLine: { label: t.operatorApp.submit.actualCash, value: formatMoneyWithCurrency(totalCash, locale, currency) },
     };

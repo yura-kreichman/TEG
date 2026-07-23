@@ -21,10 +21,15 @@ export async function GET() {
     where: {
       pointId: point.id,
       status: { not: "done" },
-      OR: [
-        { assignedOperators: { none: {} }, assignedUsers: { none: {} } },
-        { assignedOperators: { some: { id: operator.id } } },
-      ],
+      // assignedUsers (назначение на владельца, галочка "это моё" в форме) НЕ
+      // влияет на видимость у оператора вообще — только assignedOperators
+      // (см. комментарий выше). Реальный баг, найден аудитом 2026-07-24:
+      // условие раньше требовало ОБА списка пустыми для ветки "видят все",
+      // из-за чего задача, назначенная владельцем на себя без назначенного
+      // оператора, полностью пропадала у операторов — противоречило
+      // собственному комментарию файла и логике /progress-роута ниже,
+      // который проверяет только assignedOperators.
+      OR: [{ assignedOperators: { none: {} } }, { assignedOperators: { some: { id: operator.id } } }],
     },
     select: { id: true, title: true, note: true, status: true, assignedOperators: { select: { id: true } } },
     orderBy: { createdAt: "asc" },
@@ -34,10 +39,15 @@ export async function GET() {
     where: {
       pointId: point.id,
       status: "done",
-      OR: [
-        { assignedOperators: { none: {} }, assignedUsers: { none: {} } },
-        { assignedOperators: { some: { id: operator.id } } },
-      ],
+      // assignedUsers (назначение на владельца, галочка "это моё" в форме) НЕ
+      // влияет на видимость у оператора вообще — только assignedOperators
+      // (см. комментарий выше). Реальный баг, найден аудитом 2026-07-24:
+      // условие раньше требовало ОБА списка пустыми для ветки "видят все",
+      // из-за чего задача, назначенная владельцем на себя без назначенного
+      // оператора, полностью пропадала у операторов — противоречило
+      // собственному комментарию файла и логике /progress-роута ниже,
+      // который проверяет только assignedOperators.
+      OR: [{ assignedOperators: { none: {} } }, { assignedOperators: { some: { id: operator.id } } }],
       updatedAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
     },
   });

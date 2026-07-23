@@ -1,4 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
+
+function isRecordNotFound(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025";
+}
 
 // Реальная структура payload сверена с исходниками плагина FluentCart
 // (fluent-cart-pro/app/Modules/Integrations/WebhookConnect.php,
@@ -166,45 +171,56 @@ export async function syncTenantFromFluentCartEvent(
   // отменённую подписку.
   const isStaleEvent = tenant.lastFluentcartEventAt !== null && eventReceivedAt < tenant.lastFluentcartEventAt;
 
-  if (isStaleEvent) {
-    skippedReason = `stale event, received ${eventReceivedAt.toISOString()} but tenant already processed one from ${tenant.lastFluentcartEventAt!.toISOString()}`;
-  } else if (ACTIVATING_EVENTS.has(parsed.eventType)) {
-    await prisma.tenant.update({
-      where: { id: tenant.id },
-      data: {
-        subscriptionStatus: "active",
-        ...(pkg ? { packageId: pkg.id } : {}),
-        // Обнуляем ручной "жёсткий" срок истечения — теперь источник правды
-        // об окончании подписки это сам вебхук (следующий cancel/expire),
-        // а не устаревшая дата из до-биллингового ручного режима.
-        subscriptionExpiresAt: null,
-        // Чисто информационное поле "действует до" в кабинете владельца —
-        // логика доступа по нему не принимает решений, только status (см.
-        // docs/fluentcart-webhook-schema.md §3).
-        currentPeriodEnd,
-        // Запоминаем, какой заказ сейчас "авторитетный" — см. проверку ниже
-        // и комментарий у поля в schema.prisma.
-        fluentcartOrderId: parsed.orderId,
-        lastFluentcartEventAt: eventReceivedAt,
-      },
-    });
-  } else if (EXPIRING_EVENTS.has(parsed.eventType)) {
-    // Событие относится к УЖЕ НЕактуальному заказу того же клиента (например,
-    // отменили/удалили старый дублирующий тестовый заказ, а более новый
-    // остаётся активным) — не трогаем статус, просто логируем событие как
-    // обработанное. Найдено 2026-07-12: без этой проверки такое событие
-    // слепо переводило тенанта в expired поверх реально активной подписки.
-    const isStaleOrder =
-      tenant.fluentcartOrderId !== null && parsed.orderId !== null && tenant.fluentcartOrderId !== parsed.orderId;
-
-    if (isStaleOrder) {
-      skippedReason = `stale event from order ${parsed.orderId}, tenant is currently on order ${tenant.fluentcartOrderId}`;
-    } else {
+  // Тенант мог быть удалён МЕЖДУ чтением выше и update ниже (супер-админ
+  // удаляет тенант ровно во время обработки его же вебхука) — без этого
+  // catch update бросал бы P2025 наружу, роут отвечал бы 500,
+  // WebhookEvent.status="failed" с сырым текстом ошибки Prisma, и FluentCart
+  // бесконечно ретраил бы событие для тенанта, которого уже нет (аудит
+  // 2026-07-24). Трактуем как штатное "не найдено", не как внутреннюю ошибку.
+  try {
+    if (isStaleEvent) {
+      skippedReason = `stale event, received ${eventReceivedAt.toISOString()} but tenant already processed one from ${tenant.lastFluentcartEventAt!.toISOString()}`;
+    } else if (ACTIVATING_EVENTS.has(parsed.eventType)) {
       await prisma.tenant.update({
         where: { id: tenant.id },
-        data: { subscriptionStatus: "expired", currentPeriodEnd: null, lastFluentcartEventAt: eventReceivedAt },
+        data: {
+          subscriptionStatus: "active",
+          ...(pkg ? { packageId: pkg.id } : {}),
+          // Обнуляем ручной "жёсткий" срок истечения — теперь источник правды
+          // об окончании подписки это сам вебхук (следующий cancel/expire),
+          // а не устаревшая дата из до-биллингового ручного режима.
+          subscriptionExpiresAt: null,
+          // Чисто информационное поле "действует до" в кабинете владельца —
+          // логика доступа по нему не принимает решений, только status (см.
+          // docs/fluentcart-webhook-schema.md §3).
+          currentPeriodEnd,
+          // Запоминаем, какой заказ сейчас "авторитетный" — см. проверку ниже
+          // и комментарий у поля в schema.prisma.
+          fluentcartOrderId: parsed.orderId,
+          lastFluentcartEventAt: eventReceivedAt,
+        },
       });
+    } else if (EXPIRING_EVENTS.has(parsed.eventType)) {
+      // Событие относится к УЖЕ НЕактуальному заказу того же клиента (например,
+      // отменили/удалили старый дублирующий тестовый заказ, а более новый
+      // остаётся активным) — не трогаем статус, просто логируем событие как
+      // обработанное. Найдено 2026-07-12: без этой проверки такое событие
+      // слепо переводило тенанта в expired поверх реально активной подписки.
+      const isStaleOrder =
+        tenant.fluentcartOrderId !== null && parsed.orderId !== null && tenant.fluentcartOrderId !== parsed.orderId;
+
+      if (isStaleOrder) {
+        skippedReason = `stale event from order ${parsed.orderId}, tenant is currently on order ${tenant.fluentcartOrderId}`;
+      } else {
+        await prisma.tenant.update({
+          where: { id: tenant.id },
+          data: { subscriptionStatus: "expired", currentPeriodEnd: null, lastFluentcartEventAt: eventReceivedAt },
+        });
+      }
     }
+  } catch (err) {
+    if (!isRecordNotFound(err)) throw err;
+    return { matched: false, reason: `tenant ${tenant.id} was deleted during processing` };
   }
 
   return {

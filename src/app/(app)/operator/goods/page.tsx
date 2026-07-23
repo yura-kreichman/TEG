@@ -198,12 +198,23 @@ export default function GoodsPage() {
         return;
       }
       if (printAvailable.available) {
+        // Суммы строк чека — из ответа сервера (data.items: SoldCartLine[],
+        // amount = реальная зачтённая сумма из свежей цены БД внутри
+        // транзакции), а не из currentCartLines (цена товара, закэшированная
+        // на клиенте при последней загрузке каталога). Реальный баг, найден
+        // аудитом 2026-07-24: если владелец меняет цену товара, пока у
+        // оператора уже открыта корзина (окно до следующего useLiveRefetch),
+        // в БД списывается новая цена, а на чеке печаталась старая — тот же
+        // класс расхождения "экран/печать", что уже чинили у Билетов. Имя
+        // товара — не денежная величина, безопасно брать из currentCartLines.
+        const nameByGoodsId = new Map(currentCartLines.map((l) => [l.goodsId, l.name]));
+        const soldItems: { id: string; goodsId: string; quantity: number; amount: number }[] = data.items ?? [];
         setLastOrder({
-          items: currentCartLines.map((l) => ({
-            goodsName: l.name,
-            quantity: l.quantity,
-            price: l.price,
-            amount: l.price * l.quantity,
+          items: soldItems.map((s) => ({
+            goodsName: nameByGoodsId.get(s.goodsId) ?? "",
+            quantity: s.quantity,
+            price: s.quantity > 0 ? s.amount / s.quantity : s.amount,
+            amount: s.amount,
           })),
           total: data.total,
           paymentMethod,

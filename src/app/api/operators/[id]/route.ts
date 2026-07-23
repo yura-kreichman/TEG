@@ -215,25 +215,32 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/operator
   // (аванс/премия ПОЛУЧЕНЫ этим оператором, а не проведены им) — onDelete:
   // SetNull, тоже не ловилось прежней проверкой: операция в журнале
   // оставалась, но обезличивалась (терялось "кому").
-  const [submissionCount, moneyOpCount, beneficiaryMoneyOpCount, shiftCount, balanceCarryoverCount] =
+  const [submissionCount, moneyOpCount, beneficiaryMoneyOpCount, shiftCount, balanceCarryoverCount, assignedTaskCount] =
     await Promise.all([
       prisma.resultsSubmission.count({ where: { operatorId: id } }),
       prisma.moneyOperation.count({ where: { performedByOperatorId: id } }),
       prisma.moneyOperation.count({ where: { beneficiaryOperatorId: id } }),
       prisma.shift.count({ where: { operatorId: id } }),
       prisma.operatorBalanceCarryover.count({ where: { operatorId: id } }),
+      // _TaskAssignedOperators — ON DELETE CASCADE, поэтому без этой проверки
+      // удаление не оставляет осиротевших строк в БД, но задача, назначенная
+      // ИСКЛЮЧИТЕЛЬНО этому оператору, молча становится видимой ВСЕМ
+      // операторам точки (правило "пусто в assignedOperators = видят все") —
+      // без единого предупреждения владельцу (аудит 2026-07-24).
+      prisma.task.count({ where: { assignedOperators: { some: { id } } } }),
     ]);
   if (
     submissionCount > 0 ||
     moneyOpCount > 0 ||
     beneficiaryMoneyOpCount > 0 ||
     shiftCount > 0 ||
-    balanceCarryoverCount > 0
+    balanceCarryoverCount > 0 ||
+    assignedTaskCount > 0
   ) {
     return NextResponse.json(
       {
         error:
-          "У этого оператора есть история сдач итогов, табеля или денежных операций (включая авансы/премии) — его нельзя удалить безвозвратно, только деактивировать.",
+          "У этого оператора есть история сдач итогов, табеля, денежных операций (включая авансы/премии) или назначенные задачи — его нельзя удалить безвозвратно, только деактивировать.",
       },
       { status: 409 }
     );

@@ -8,7 +8,7 @@ import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
 interface ConfirmButtonProps {
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<unknown>;
   disabled?: boolean;
   className?: string;
   variant?: React.ComponentProps<typeof Button>["variant"];
@@ -85,14 +85,27 @@ export function ConfirmButton({
               // ((app)/layout.tsx), просто запущен напрямую по клику
               // (useFlyOnShow рассчитан на переход false→true пропса, тут
               // подтверждение — мгновенное действие, а не пропс).
+              //
+              // Ждём результат onConfirm ПЕРЕД галочкой/звуком, не до него
+              // (аудит 2026-07-24: раньше "дзинь" и улетающая галочка играли
+              // синхронно на самом тапе, ДО того, как асинхронный запрос
+              // вообще стартовал — на денежных подтверждениях (продажа,
+              // оплата пуска, списание с абонемента) это ложноположительная
+              // обратная связь "готово", если запрос ещё не завершился или
+              // вовсе не начался). Вызывающие экраны сами ловят свои
+              // ошибки (setError) и не пробрасывают исключение наружу —
+              // await здесь как минимум гарантирует, что сетевой раунд-трип
+              // уже произошёл, а не досрочный сигнал успеха при ещё не
+              // отправленном запросе.
               const rect = e.currentTarget.getBoundingClientRect();
-              window.dispatchEvent(
-                new CustomEvent("save-success-fly", {
-                  detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, silent },
-                })
-              );
               setConfirming(false);
-              onConfirm();
+              Promise.resolve(onConfirm()).finally(() => {
+                window.dispatchEvent(
+                  new CustomEvent("save-success-fly", {
+                    detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, silent },
+                  })
+                );
+              });
             }}
             className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
           >

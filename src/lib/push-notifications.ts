@@ -74,7 +74,15 @@ export async function sendPushToTenant(tenantId: string, payload: PushPayload): 
   if (!config) return;
   webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
 
-  const subscriptions = await prisma.pushSubscription.findMany({ where: { tenantId } });
+  // userId: not null — PushSubscription хранит и Owner-, и Operator-подписки
+  // в одной таблице (Operator подписывается для уведомлений о Задачах,
+  // install-app-banner.tsx вызывает ensurePushSubscribed безусловно в общем
+  // (app)/layout.tsx). Без этого фильтра финансовые сводки (выручка, разница
+  // кассы, сумма к выплате при закрытии смены, сумма инкассации) утекали на
+  // телефон любого Оператора, установившего PWA — реальная утечка, найдена
+  // аудитом 2026-07-24 (эта функция всегда была задумана Owner-only, см.
+  // комментарий у sendPushToOperators ниже).
+  const subscriptions = await prisma.pushSubscription.findMany({ where: { tenantId, userId: { not: null } } });
   if (subscriptions.length === 0) return;
   await sendToSubscriptions(subscriptions, payload);
 }

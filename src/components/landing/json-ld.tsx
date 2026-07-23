@@ -13,7 +13,13 @@ export function LandingJsonLd({ data, baseUrl }: { data: LandingRenderData; base
   // 2026-07-14, была ошибка: url: baseUrl без пути).
   const canonicalUrl = `${baseUrl}/s/${data.slug}`;
   const logoUrl = data.tenant.logoUrl ? `${baseUrl}${data.tenant.logoUrl}` : null;
-  const sameAs = (["telegram", "instagram", "facebook", "tiktok", "whatsapp", "viber"] as const)
+  // Все соцсети, которые контакты вообще поддерживают (ContactKind минус
+  // "phone" — телефон не соцсеть) — раньше vk/ok/youtube были пропущены
+  // (добавлены в контакты позже, sameAs не обновили; аудит 2026-07-24):
+  // на странице кнопка есть, а в структурированных данных канала не было.
+  const sameAs = (
+    ["telegram", "instagram", "facebook", "tiktok", "whatsapp", "viber", "vk", "ok", "youtube"] as const
+  )
     .map((kind) => (data.contacts[kind] ? contactHref(kind, data.contacts[kind]!) : null))
     .filter((v): v is string => !!v);
 

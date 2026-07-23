@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { validateInstructionContent } from "@/lib/instructions/content";
+import { extractPlainText, MAX_INSTRUCTION_CONTENT_LENGTH, validateInstructionContent } from "@/lib/instructions/content";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -70,6 +70,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/instructio
   if (content !== undefined) {
     if (!validateInstructionContent(content)) {
       return NextResponse.json({ error: "Недопустимый формат контента" }, { status: 400 });
+    }
+    if (extractPlainText(content).length > MAX_INSTRUCTION_CONTENT_LENGTH) {
+      return NextResponse.json({ error: "Текст инструкции слишком длинный" }, { status: 400 });
     }
     data.content = content as unknown as Prisma.InputJsonValue;
   }

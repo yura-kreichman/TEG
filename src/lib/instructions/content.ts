@@ -25,6 +25,15 @@ export function validateInstructionContent(value: unknown): value is PMNode {
   return validateRichContent(value);
 }
 
+// Верхняя граница объёма — та же защита, что уже есть у Лендинга (aboutText
+// ≤ 4000, src/app/api/tenant/landing/route.ts), но шире: реальная инструкция
+// (техника безопасности, договор) законно может быть в разы длиннее
+// маркетингового "О нас". У Инструктажей такого предела не было вообще
+// (аудит 2026-07-24) — неограниченный текст долетал до PDF-генератора
+// (pdfkit, без верхней границы страниц) и до публичной страницы/уведомлений
+// без единой проверки.
+export const MAX_INSTRUCTION_CONTENT_LENGTH = 50000;
+
 const WORDS_PER_MINUTE = 150; // средняя скорость чтения делового текста на русском
 
 export function estimateReadingMinutes(node: PMNode): number {

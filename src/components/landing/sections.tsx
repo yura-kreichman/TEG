@@ -169,6 +169,12 @@ export function GallerySection({ data, lp }: { data: LandingRenderData; lp: LP }
           fill
           sizes="200px"
           className="object-cover"
+          // Первое фото ленты — реальный кандидат в LCP (сразу под хедером,
+          // почти всегда во вьюпорте на мобильном), в отличие от постера
+          // VideoSection ниже, который priority держал раньше без всякой
+          // причины (аудит 2026-07-24: секция рендерится ПОСЛЕ галереи и
+          // почти всегда уже не первый экран).
+          priority={!duplicate && i === 0}
           {...(duplicate ? {} : { "data-lightbox-group": "gallery", "data-lightbox-src": photo.url })}
         />
       </div>

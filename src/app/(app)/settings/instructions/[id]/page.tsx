@@ -41,6 +41,7 @@ export default function InstructionEditorPage() {
   const [honestyCheck, setHonestyCheck] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { saved, pulse: savePulse } = useSavePulse(1500);
 
   useEffect(() => {
@@ -56,15 +57,33 @@ export default function InstructionEditorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  async function saveDraft() {
+  // Возвращает успех явно (а не полагается на побочный эффект) — publish()
+  // ниже должен знать, реально ли сохранение прошло, прежде чем публиковать
+  // (аудит 2026-07-24: раньше !res.ok нигде не показывался — ни здесь, ни в
+  // publish — владелец видел просто переставшую крутиться кнопку без единого
+  // объяснения; хуже того, publish() вызывал /publish БЕЗУСЛОВНО после
+  // saveDraft(), не проверяя её результат — если PATCH падал по валидации,
+  // "Опубликовать" всё равно публиковала последнюю успешно сохранённую
+  // версию, тихо отбрасывая то, что владелец только что напечатал).
+  async function saveDraft(): Promise<boolean> {
     setSaving(true);
+    setError(null);
     try {
       const res = await fetch(`/api/instructions/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, content, honestyCheck }),
       });
-      if (res.ok) savePulse();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? t.instructions.saveError);
+        return false;
+      }
+      savePulse();
+      return true;
+    } catch {
+      setError(t.instructions.saveError);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -72,13 +91,20 @@ export default function InstructionEditorPage() {
 
   async function publish() {
     setPublishing(true);
+    setError(null);
     try {
-      await saveDraft();
+      const saved = await saveDraft();
+      if (!saved) return;
       const res = await fetch(`/api/instructions/${id}/publish`, { method: "POST" });
-      if (res.ok) {
-        const data = await res.json();
-        setInstruction((prev) => (prev ? { ...prev, status: "published", currentVersionNumber: data.versionNumber } : prev));
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? t.instructions.publishError);
+        return;
       }
+      const data = await res.json();
+      setInstruction((prev) => (prev ? { ...prev, status: "published", currentVersionNumber: data.versionNumber } : prev));
+    } catch {
+      setError(t.instructions.publishError);
     } finally {
       setPublishing(false);
     }
@@ -145,6 +171,8 @@ export default function InstructionEditorPage() {
               </PressableScale>
             </div>
           )}
+
+          {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
         </div>
       </div>
     </OwnerShell>
