@@ -55,6 +55,12 @@ export async function POST(request: Request) {
   // инкассации (см. owner-версию /api/points/[id]/collection/general для
   // причины: иначе эти деньги зависают в журнале зон навсегда).
   const poolDeficit = await getPointPoolDeficit(ctx.point.id);
+  // Сколько из "сырого" остатка зон РЕАЛЬНО свободно для новой инкассации —
+  // не весь zonesRawSum, а за вычетом poolDeficit (реальный баг, найден
+  // пользователем 2026-07-25 — см. owner-версию для полного разбора: тот же
+  // остаток зон одновременно шёл и в zonePortion, и отдельно довзыскивался
+  // как poolDeficit — одни и те же деньги списывались с зон дважды).
+  const zonesAvailable = Math.max(0, zonesRawSum - poolDeficit);
   // Абонементы и товары наличными — не привязаны ни к одной зоне, и друг с
   // другом не смешиваются (см. owner-версию: "могут быть и 2 пачки"). Разный
   // учёт, одна инкассация — свои части разбивки.
@@ -64,7 +70,7 @@ export async function POST(request: Request) {
   ]);
   const { zonePortion, abonementSweepPortion, goodsSweepPortion, advance } = splitCollectionAmountDetailed(
     amountNumber,
-    zonesRawSum,
+    zonesAvailable,
     abonementCash,
     goodsCash
   );

@@ -58,6 +58,14 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
   const weights = zones.map((z) => balanceByZone.get(z.id) ?? 0);
   const zonesRawSum = weights.reduce((sum, w) => sum + Math.max(0, w), 0);
   const poolDeficit = await getPointPoolDeficit(pointId);
+  // Сколько из "сырого" остатка зон РЕАЛЬНО свободно для новой инкассации —
+  // не весь zonesRawSum, а за вычетом poolDeficit (реальный баг, найден
+  // пользователем 2026-07-25: тот же остаток зон одновременно шёл и сюда, и
+  // отдельно довзыскивался как poolDeficit ниже — одни и те же деньги
+  // списывались с зон дважды. Пример: Женя забрал авансом ровно весь остаток
+  // зон (255₽, poolDeficit=255) — к моменту новой инкассации в зонах
+  // "физически свободно" 0, а не 255, все 255 уже обещаны погашению долга).
+  const zonesAvailable = Math.max(0, zonesRawSum - poolDeficit);
   // Абонементы и товары наличными — НЕ привязаны ни к одной зоне никогда, и
   // друг с другом не смешиваются: это могут быть физически разные пачки денег
   // (запрос пользователя 2026-07-22: "могут быть и 2 пачки — Сотрудник
@@ -70,7 +78,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
   ]);
   const { zonePortion, abonementSweepPortion, goodsSweepPortion, advance } = splitCollectionAmountDetailed(
     amountNumber,
-    zonesRawSum,
+    zonesAvailable,
     abonementCash,
     goodsCash
   );
