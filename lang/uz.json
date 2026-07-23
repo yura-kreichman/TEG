@@ -1029,6 +1029,8 @@
       "bonusesLabel": "Mukofotlar",
       "advancesLabel": "Avanslar",
       "addShiftButton": "Smena qoʻshish",
+      "requestAdvanceButton": "Avans/mukofot so'rash",
+      "requestAdvanceTitle": "Avans/mukofot",
       "timeTrackingModeLabel": "Vaqt hisobi",
       "timeTrackingModeManual": "Qoʻlda",
       "timeTrackingModeAuto": "Avto",

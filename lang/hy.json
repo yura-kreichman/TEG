@@ -1029,6 +1029,8 @@
       "bonusesLabel": "Պարգևատրումներ",
       "advancesLabel": "Կանխավճարներ",
       "addShiftButton": "Ավելացնել հերթափոխ",
+      "requestAdvanceButton": "Խնդրել կանխավճար/հավելավճար",
+      "requestAdvanceTitle": "Կանխավճար/հավելավճար",
       "timeTrackingModeLabel": "Ժամանակի հաշվառում",
       "timeTrackingModeManual": "Ձեռքով",
       "timeTrackingModeAuto": "Ավտո",

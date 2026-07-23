@@ -1029,6 +1029,8 @@
       "bonusesLabel": "Prime",
       "advancesLabel": "Avansuri",
       "addShiftButton": "Adaugă tură",
+      "requestAdvanceButton": "Solicită avans/primă",
+      "requestAdvanceTitle": "Avans/primă",
       "timeTrackingModeLabel": "Pontaj",
       "timeTrackingModeManual": "Manual",
       "timeTrackingModeAuto": "Automat",

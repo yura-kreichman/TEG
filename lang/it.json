@@ -1029,6 +1029,8 @@
       "bonusesLabel": "Bonus",
       "advancesLabel": "Anticipi",
       "addShiftButton": "Aggiungi turno",
+      "requestAdvanceButton": "Richiedi acconto/premio",
+      "requestAdvanceTitle": "Acconto/premio",
       "timeTrackingModeLabel": "Rilevazione orario",
       "timeTrackingModeManual": "Manuale",
       "timeTrackingModeAuto": "Automatico",

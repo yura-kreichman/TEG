@@ -1029,6 +1029,8 @@
       "bonusesLabel": "Premie",
       "advancesLabel": "Zaliczki",
       "addShiftButton": "Dodaj zmianę",
+      "requestAdvanceButton": "Poproś o zaliczkę/premię",
+      "requestAdvanceTitle": "Zaliczka/premia",
       "timeTrackingModeLabel": "Rejestracja czasu",
       "timeTrackingModeManual": "Ręczny",
       "timeTrackingModeAuto": "Automatyczny",

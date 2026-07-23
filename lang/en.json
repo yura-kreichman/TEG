@@ -1029,6 +1029,8 @@
       "bonusesLabel": "Bonuses",
       "advancesLabel": "Advances",
       "addShiftButton": "Add shift",
+      "requestAdvanceButton": "Request advance/bonus",
+      "requestAdvanceTitle": "Advance/bonus",
       "timeTrackingModeLabel": "Time tracking",
       "timeTrackingModeManual": "Manual",
       "timeTrackingModeAuto": "Auto",

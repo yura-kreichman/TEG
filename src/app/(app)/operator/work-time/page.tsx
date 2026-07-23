@@ -103,6 +103,16 @@ export default function WorkTimePage() {
   const { saved: shiftSaved, pulse: shiftPulse } = useSavePulse();
   const [tenantTimezone, setTenantTimezone] = useState("UTC");
 
+  // Самостоятельный запрос аванса/премии посреди смены, без её закрытия —
+  // только auto-режим (docs/spec/05-work-time.md, "АВАНС": «...или отдельно
+  // в PWA»; в manual аванс/премия уже вводятся вместе с формой смены).
+  const [advanceRequestOpen, setAdvanceRequestOpen] = useState(false);
+  const [advanceRequestAmount, setAdvanceRequestAmount] = useState("");
+  const [bonusRequestAmount, setBonusRequestAmount] = useState("");
+  const [advanceRequestSubmitting, setAdvanceRequestSubmitting] = useState(false);
+  const [advanceRequestError, setAdvanceRequestError] = useState<string | null>(null);
+  const { saved: advanceRequestSaved, pulse: advanceRequestPulse } = useSavePulse();
+
   const [notice, setNotice] = useState<{ warnings: string[]; noResultsToday: boolean } | null>(null);
 
   async function loadData() {
@@ -230,6 +240,37 @@ export default function WorkTimePage() {
       await loadData();
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function openAdvanceRequest() {
+    setAdvanceRequestAmount("");
+    setBonusRequestAmount("");
+    setAdvanceRequestError(null);
+    setAdvanceRequestOpen(true);
+  }
+
+  async function submitAdvanceRequest() {
+    const advance = advanceRequestAmount ? Number(advanceRequestAmount) : 0;
+    const bonus = bonusRequestAmount ? Number(bonusRequestAmount) : 0;
+    if (advance <= 0 && bonus <= 0) return;
+    setAdvanceRequestSubmitting(true);
+    setAdvanceRequestError(null);
+    try {
+      const res = await fetch("/api/operator/work-time/advance-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ advanceAmount: advance, bonusAmount: bonus }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAdvanceRequestError(data.error ?? t.operatorApp.workTime.saveError);
+        return;
+      }
+      advanceRequestPulse(() => setAdvanceRequestOpen(false));
+      await loadData();
+    } finally {
+      setAdvanceRequestSubmitting(false);
     }
   }
 
@@ -365,6 +406,21 @@ export default function WorkTimePage() {
             </Button>
           </PressableScale>
         )}
+        {/* Auto-режим: аванс/премия вводятся не вместе с формой смены (её нет),
+            а отдельной кнопкой — доступна, только пока смена открыта (см.
+            /api/operator/work-time/advance-request, 409 без открытой смены). */}
+        {timeTrackingMode === "auto" && (
+          <PressableScale>
+            <Button
+              onClick={openAdvanceRequest}
+              variant="secondary"
+              className="h-14 w-full gap-2 rounded-control font-bold"
+            >
+              <Plus className="size-5" />
+              {t.operatorApp.workTime.requestAdvanceButton}
+            </Button>
+          </PressableScale>
+        )}
 
         <div className="flex flex-col gap-2">
           {historyItems.length === 0 ? (
@@ -482,6 +538,51 @@ export default function WorkTimePage() {
           </div>
 
           {submitError && <p className="text-sm text-destructive">{submitError}</p>}
+        </div>
+      </BottomSheet>
+
+      <BottomSheet open={advanceRequestOpen} onClose={() => setAdvanceRequestOpen(false)}>
+        <div className="flex flex-col gap-4 pt-2">
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
+            {t.operatorApp.workTime.requestAdvanceTitle}
+          </h2>
+
+          <div className="flex items-stretch gap-2">
+            <div className="flex flex-1 flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="advanceRequestInput">{t.operatorApp.workTime.advanceFieldLabel}</Label>
+                <MoneyInput
+                  id="advanceRequestInput"
+                  scale="lg"
+                  className="h-14 text-lg"
+                  value={advanceRequestAmount}
+                  onChange={(e) => setAdvanceRequestAmount(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="bonusRequestInput">{t.operatorApp.workTime.bonusFieldLabel}</Label>
+                <MoneyInput
+                  id="bonusRequestInput"
+                  scale="lg"
+                  className="h-14 text-lg"
+                  value={bonusRequestAmount}
+                  onChange={(e) => setBonusRequestAmount(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <PressableScale className="flex">
+              <SaveButton
+                onClick={submitAdvanceRequest}
+                disabled={advanceRequestSubmitting}
+                saved={advanceRequestSaved}
+                className="h-full min-w-22 rounded-control px-5 font-bold"
+              />
+            </PressableScale>
+          </div>
+
+          {advanceRequestError && <p className="text-sm text-destructive">{advanceRequestError}</p>}
         </div>
       </BottomSheet>
     </div>

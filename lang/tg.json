@@ -1029,6 +1029,8 @@
       "bonusesLabel": "Мукофотҳо",
       "advancesLabel": "Пешпардохтҳо",
       "addShiftButton": "Смена илова кардан",
+      "requestAdvanceButton": "Дархости пешпардохт/мукофот",
+      "requestAdvanceTitle": "Пешпардохт/мукофот",
       "timeTrackingModeLabel": "Баҳисобгирии вақт",
       "timeTrackingModeManual": "Дастӣ",
       "timeTrackingModeAuto": "Худкор",

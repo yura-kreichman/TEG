@@ -1029,6 +1029,8 @@
       "bonusesLabel": "Премії",
       "advancesLabel": "Аванси",
       "addShiftButton": "Додати зміну",
+      "requestAdvanceButton": "Запросити аванс/премію",
+      "requestAdvanceTitle": "Аванс/премія",
       "timeTrackingModeLabel": "Облік часу",
       "timeTrackingModeManual": "Ручний",
       "timeTrackingModeAuto": "Авто",

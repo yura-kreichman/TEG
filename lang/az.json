@@ -1029,6 +1029,8 @@
       "bonusesLabel": "Mükafatlar",
       "advancesLabel": "Avanslar",
       "addShiftButton": "Növbə əlavə et",
+      "requestAdvanceButton": "Avans/mükafat istə",
+      "requestAdvanceTitle": "Avans/mükafat",
       "timeTrackingModeLabel": "Vaxt uçotu",
       "timeTrackingModeManual": "Əl ilə",
       "timeTrackingModeAuto": "Avtomatik",

@@ -1029,6 +1029,8 @@
       "bonusesLabel": "პრემიები",
       "advancesLabel": "ავანსები",
       "addShiftButton": "ცვლის დამატება",
+      "requestAdvanceButton": "წინასწარი გადახდის/პრემიის მოთხოვნა",
+      "requestAdvanceTitle": "წინასწარი გადახდა/პრემია",
       "timeTrackingModeLabel": "დროის აღრიცხვა",
       "timeTrackingModeManual": "ხელით",
       "timeTrackingModeAuto": "ავტომატური",

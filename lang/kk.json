@@ -1029,6 +1029,8 @@
       "bonusesLabel": "Сыйақылар",
       "advancesLabel": "Аванстар",
       "addShiftButton": "Ауысым қосу",
+      "requestAdvanceButton": "Аванс/сыйақы сұрау",
+      "requestAdvanceTitle": "Аванс/сыйақы",
       "timeTrackingModeLabel": "Уақытты есепке алу",
       "timeTrackingModeManual": "Қолмен",
       "timeTrackingModeAuto": "Авто",
