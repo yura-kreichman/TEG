@@ -545,8 +545,8 @@ async function handleKassaCommand(chatId: string, tenantId: string) {
 
     if (points.length > 1) lines.push("", `<b>${p.name}</b>`);
     lines.push(`💵 Наличные: ${money(d.cashOnHand)}`);
-    if (d.mobileAmount > 0) lines.push(`💳 Безналичные сегодня: ${money(d.mobileAmount)}`);
-    if (d.abonementAmount > 0) lines.push(`👨🏻‍💼 Баланс сегодня: ${money(d.abonementAmount)}`);
+    if (d.mobileAmount > 0) lines.push(`💳 Безнал: ${money(d.mobileAmount)}`);
+    if (d.abonementAmount > 0) lines.push(`👨🏻‍💼 Баланс: ${money(d.abonementAmount)}`);
   });
 
   if (points.length > 1) {
