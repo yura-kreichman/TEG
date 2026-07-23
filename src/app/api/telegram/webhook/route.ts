@@ -4,7 +4,9 @@ import { sendChatMessage, sendChatMessageWithMenu, sendContactRequest, sendInlin
 import { findWalletByPhone, normalizePhone } from "@/lib/abonement";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import type { CurrencyCode } from "@/lib/currency";
-import { getPointCashBalance } from "@/lib/zone-balance";
+import { getBusinessDayBounds } from "@/lib/business-day";
+import { buildDailyCashSummaryData } from "@/lib/summary-channels/daily-cash-data";
+import { DAILY_CASH_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { pickBotLang, BOT_STRINGS, greetingLine } from "@/lib/telegram-client-i18n";
 import type { Locale } from "@/lib/locales";
 
@@ -506,9 +508,17 @@ async function sendServicesForPoint(chatId: string, pointId: string, lang: BotLa
   }
 }
 
+// Наличные — весь журнал без периода (getPointCashBalance внутри
+// buildDailyCashSummaryData, обнуляется только инкассацией), безнал/баланс —
+// ЗА СЕГОДНЯ (запрос пользователя 2026-07-25: у безнала/баланса нет
+// собственной "инкассации", которая бы их когда-либо обнуляла — сумма за всю
+// историю тенанта была бы бесполезно огромной для быстрой проверки в чате).
+// Переиспользует buildDailyCashSummaryData — те же цифры, что уже видны
+// Владельцу в автосводке "Касса за день" (docs/spec/telegram-summaries.md),
+// не отдельный расчёт с риском разъехаться.
 async function handleKassaCommand(chatId: string, tenantId: string) {
   const [tenant, points] = await Promise.all([
-    prisma.tenant.findUnique({ where: { id: tenantId }, select: { currency: true } }),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { currency: true, businessDayBoundary: true, timezone: true } }),
     prisma.point.findMany({ where: { tenantId }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
   if (!tenant || points.length === 0) {
@@ -517,15 +527,33 @@ async function handleKassaCommand(chatId: string, tenantId: string) {
   }
 
   const currency = tenant.currency as CurrencyCode | null;
-  const balances = await Promise.all(points.map((p) => getPointCashBalance(p.id)));
-  const total = balances.reduce((sum, b) => sum + b, 0);
+  const businessDayBoundary = tenant.businessDayBoundary ?? DAILY_CASH_SUMMARY_DEFAULTS.businessDayBoundary;
+  const timezone = tenant.timezone ?? "UTC";
+  const bounds = getBusinessDayBounds(businessDayBoundary, new Date(), timezone);
+  const data = await Promise.all(points.map((p) => buildDailyCashSummaryData(p.id, bounds, false)));
 
+  const money = (n: number) => formatMoneyWithCurrency(n, "ru", currency);
+  const totals = { cash: 0, mobile: 0, abonement: 0 };
   const lines = ["<b>Касса сейчас:</b>"];
+
   points.forEach((p, i) => {
-    lines.push(`${p.name}: ${formatMoneyWithCurrency(balances[i], "ru", currency)}`);
+    const d = data[i];
+    if (!d) return;
+    totals.cash += d.cashOnHand;
+    totals.mobile += d.mobileAmount;
+    totals.abonement += d.abonementAmount;
+
+    if (points.length > 1) lines.push("", `<b>${p.name}</b>`);
+    lines.push(`💵 Наличные: ${money(d.cashOnHand)}`);
+    if (d.mobileAmount > 0) lines.push(`💳 Безналичные сегодня: ${money(d.mobileAmount)}`);
+    if (d.abonementAmount > 0) lines.push(`👨🏻‍💼 Баланс сегодня: ${money(d.abonementAmount)}`);
   });
+
   if (points.length > 1) {
-    lines.push("", `Итого: <b>${formatMoneyWithCurrency(total, "ru", currency)}</b>`);
+    lines.push("", "<b>Итого:</b>");
+    lines.push(`💵 Наличные: ${money(totals.cash)}`);
+    if (totals.mobile > 0) lines.push(`💳 Безналичные сегодня: ${money(totals.mobile)}`);
+    if (totals.abonement > 0) lines.push(`👨🏻‍💼 Баланс сегодня: ${money(totals.abonement)}`);
   }
 
   await sendChatMessage(chatId, lines.join("\n")).catch(() => {});
