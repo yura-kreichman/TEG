@@ -46,19 +46,28 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     return NextResponse.json({ error: "Некорректный режим учёта" }, { status: 400 });
   }
 
-  const zoneCount = await prisma.zone.count({ where: { point: { tenantId: owner.tenantId } } });
-  const limitError = await checkPackageLimit(owner.tenantId, "maxZones", zoneCount);
-  if (limitError) return limitError;
-
+  // Счёт+проверка+создание под локом (аудит 2026-07-24) — maxZones считается
+  // по всему тенанту, лимит той же природы, что и у Точек, лочимся по
+  // tenantId, тот же паттерн, что /api/points POST.
   const resolvedAccountingMode = isZoneAccountingMode(accountingMode) ? accountingMode : "counters";
-  const zone = await prisma.zone.create({
-    data: {
-      pointId,
-      name: name.trim(),
-      iconKey: typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null,
-      accountingMode: resolvedAccountingMode,
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${owner.tenantId}))`;
+    const zoneCount = await tx.zone.count({ where: { point: { tenantId: owner.tenantId } } });
+    const limitError = await checkPackageLimit(owner.tenantId, "maxZones", zoneCount);
+    if (limitError) return { ok: false as const, limitError };
+
+    const zone = await tx.zone.create({
+      data: {
+        pointId,
+        name: name.trim(),
+        iconKey: typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null,
+        accountingMode: resolvedAccountingMode,
+      },
+    });
+    return { ok: true as const, zone };
   });
+  if (!result.ok) return result.limitError;
+  const zone = result.zone;
 
   await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ id: zone.id, name: zone.name }, { status: 201 });

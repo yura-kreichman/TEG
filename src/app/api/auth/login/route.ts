@@ -10,6 +10,9 @@ import {
 } from "@/lib/auth";
 import { setAccentCookie } from "@/lib/accent";
 import { setBgStyleCookie } from "@/lib/bg-style";
+import { isPinLockedOut, recordFailedOwnerPin, remainingLockoutMinutes, resetOwnerPinLockout } from "@/lib/pin-lockout";
+import { isAuthRateLimited } from "@/lib/auth-rate-limit";
+import { getClientIp } from "@/lib/instructions/request-ip";
 
 async function syncAccentCookie(tenantId: string | null) {
   if (!tenantId) return;
@@ -27,6 +30,13 @@ const DEVICE_NOT_RECOGNIZED =
   "Это устройство ещё не привязано к аккаунту. Войдите с логином и паролем.";
 
 export async function POST(request: Request) {
+  // Единая на весь роут (обе вкладки — пароль и ПИН) — обе точки входа в
+  // один и тот же аккаунт, бюджет должен быть общим, не удваиваться при
+  // переключении вкладки (аудит 2026-07-24, см. lib/auth-rate-limit.ts).
+  if (isAuthRateLimited("owner-login", getClientIp(request))) {
+    return NextResponse.json({ error: "Слишком много попыток. Попробуйте позже." }, { status: 429 });
+  }
+
   const { email, password, pin } = await request.json();
 
   // PIN tab: no email — the account is resolved from this browser's owner_device cookie.
@@ -49,10 +59,24 @@ export async function POST(request: Request) {
       );
     }
 
+    // Блокировка по попыткам (аудит 2026-07-24, реальная дыра — поля были в
+    // схеме, но нигде не использовались, см. lib/pin-lockout.ts) — проверка
+    // ДО bcrypt.compare, не тратим время на сравнение уже заблокированного.
+    if (isPinLockedOut(user.pinLockedUntil)) {
+      return NextResponse.json(
+        {
+          error: `Слишком много попыток. Попробуйте через ${remainingLockoutMinutes(user.pinLockedUntil!)} мин или войдите с логином и паролем.`,
+        },
+        { status: 429 }
+      );
+    }
+
     const ok = await verifyPin(pin, user.pinHash);
     if (!ok) {
+      await recordFailedOwnerPin(user.id, user.failedPinAttempts);
       return NextResponse.json({ error: "Неверный ПИН-код" }, { status: 401 });
     }
+    if (user.failedPinAttempts > 0) await resetOwnerPinLockout(user.id);
 
     await createSession(user.id);
     await rememberOwnerDevice(user.id);

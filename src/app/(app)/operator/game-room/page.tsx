@@ -903,9 +903,14 @@ export default function StaysZonePage() {
         amount={abonementTarget?.amount ?? 0}
         silent
         onConfirm={(walletId) => {
-          if (!abonementTarget) return;
-          if (abonementTarget.kind === "start") startLaunch(abonementTarget.optionId, "abonement", walletId);
-          else stopLaunch(abonementTarget.launch.id, "abonement", walletId);
+          if (!abonementTarget) return undefined;
+          // return — иначе ConfirmButton (аудит 2026-07-24, найдено
+          // само-ревью моей же предыдущей правки) не получает промис для
+          // ожидания и играет галочку "успех" сразу по тапу, до реального
+          // списания с баланса.
+          return abonementTarget.kind === "start"
+            ? startLaunch(abonementTarget.optionId, "abonement", walletId)
+            : stopLaunch(abonementTarget.launch.id, "abonement", walletId);
         }}
       />
 

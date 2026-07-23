@@ -27,10 +27,6 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
   }
 
-  const assetCount = await prisma.asset.count({ where: { zone: { point: { tenantId: owner.tenantId } } } });
-  const limitError = await checkPackageLimit(owner.tenantId, "maxAssets", assetCount);
-  if (limitError) return limitError;
-
   const { name, photoUrl, iconKey, colorTag, tariffId } = await request.json();
   if (typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ error: "Название актива обязательно" }, { status: 400 });
@@ -51,24 +47,38 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     tariffIdValue = tariffId;
   }
 
-  // Порядок — в рамках зоны, не всего тенанта (assetCount выше — тенантный
-  // счётчик для лимита пакета, для sortOrder нужен именно счёт внутри зоны).
-  const zoneAssetCount = await prisma.asset.count({ where: { zoneId } });
+  // Счёт+проверка+создание под локом (аудит 2026-07-24) — maxAssets считается
+  // по всему тенанту, тот же паттерн, что у Точек/Зон; заодно zoneAssetCount
+  // (для sortOrder) теперь тоже читается под тем же локом, не отдельным
+  // незащищённым запросом.
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${owner.tenantId}))`;
+    const assetCount = await tx.asset.count({ where: { zone: { point: { tenantId: owner.tenantId } } } });
+    const limitError = await checkPackageLimit(owner.tenantId, "maxAssets", assetCount);
+    if (limitError) return { ok: false as const, limitError };
 
-  const asset = await prisma.asset.create({
-    data: {
-      zoneId,
-      name: name.trim(),
-      photoUrl: typeof photoUrl === "string" && photoUrl.trim() ? photoUrl.trim() : null,
-      iconKey: typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null,
-      colorTag:
-        typeof colorTag === "string" && colorTag.trim()
-          ? colorTag.trim()
-          : DEFAULT_COLOR_TAGS[assetCount % DEFAULT_COLOR_TAGS.length],
-      sortOrder: zoneAssetCount,
-      tariffId: tariffIdValue,
-    },
+    // Порядок — в рамках зоны, не всего тенанта (assetCount выше — тенантный
+    // счётчик для лимита пакета, для sortOrder нужен именно счёт внутри зоны).
+    const zoneAssetCount = await tx.asset.count({ where: { zoneId } });
+
+    const asset = await tx.asset.create({
+      data: {
+        zoneId,
+        name: name.trim(),
+        photoUrl: typeof photoUrl === "string" && photoUrl.trim() ? photoUrl.trim() : null,
+        iconKey: typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null,
+        colorTag:
+          typeof colorTag === "string" && colorTag.trim()
+            ? colorTag.trim()
+            : DEFAULT_COLOR_TAGS[assetCount % DEFAULT_COLOR_TAGS.length],
+        sortOrder: zoneAssetCount,
+        tariffId: tariffIdValue,
+      },
+    });
+    return { ok: true as const, asset };
   });
+  if (!result.ok) return result.limitError;
+  const asset = result.asset;
 
   await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json(

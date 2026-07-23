@@ -114,6 +114,18 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/abonement-
     where: { id },
     data: { ...(phone !== undefined ? { phone } : {}), ...(name !== undefined ? { name } : {}) },
   });
+
+  // Смена номера — старая привязка Telegram-чата к СТАРОМУ номеру больше не
+  // должна резолвиться в этот кошелёк (аудит 2026-07-24, реальная утечка:
+  // ClientTelegramLink хранит только (chatId, phone), без FK на кошелёк —
+  // если номер позже достанется ДРУГОМУ клиенту, старый чат молча "унаследует"
+  // чужой баланс/историю и продолжит получать проактивные push об изменении
+  // баланса чужого кошелька). Чат не переносится автоматически на новый номер —
+  // клиент должен заново подтвердить контакт (request_contact), это осознанно:
+  // сам факт смены номера не доказывает, что это тот же человек.
+  if (phone !== undefined && phone !== wallet.phone) {
+    await prisma.clientTelegramLink.deleteMany({ where: { tenantId: owner.tenantId, phone: wallet.phone } });
+  }
   return NextResponse.json({ ok: true });
 }
 

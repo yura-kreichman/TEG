@@ -42,24 +42,38 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     return NextResponse.json({ error: "Некорректная сумма" }, { status: 400 });
   }
 
-  const available = await (pool === "abonement" ? getPointAbonementCashTotal(pointId) : getPointGoodsCashTotal(pointId));
-  if (amountNumber > available) {
+  // Читаем остаток и пишем инкассацию под локом одной транзакцией — тот же
+  // класс гонки, что уже закрыт для zone/general-инкассации и авансов
+  // (аудит 2026-07-24: этот роут и operator-версия добавлены 2026-07-22, уже
+  // ПОСЛЕ ретрофита локов на остальные роуты инкассации, и остались не
+  // покрыты — двойной клик читал один и тот же "остаток" дважды и списывал
+  // дважды).
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pointId}))`;
+    const freshAvailable = await (pool === "abonement"
+      ? getPointAbonementCashTotal(pointId, tx)
+      : getPointGoodsCashTotal(pointId, tx));
+    if (amountNumber > freshAvailable) {
+      return { ok: false as const, available: freshAvailable };
+    }
+    await tx.moneyOperation.create({
+      data: {
+        tenantId: owner.tenantId,
+        pointId,
+        type: pool === "abonement" ? "collection_pool_sweep_abonement" : "collection_pool_sweep_goods",
+        amount: -amountNumber,
+        performedByUserId: owner.user.id,
+      },
+    });
+    return { ok: true as const };
+  });
+  if (!result.ok) {
     const locale = await resolveLocale();
     return NextResponse.json(
-      { error: `Сумма превышает остаток наличных (${formatMoney(available, locale)})` },
+      { error: `Сумма превышает остаток наличных (${formatMoney(result.available, locale)})` },
       { status: 400 }
     );
   }
-
-  await prisma.moneyOperation.create({
-    data: {
-      tenantId: owner.tenantId,
-      pointId,
-      type: pool === "abonement" ? "collection_pool_sweep_abonement" : "collection_pool_sweep_goods",
-      amount: -amountNumber,
-      performedByUserId: owner.user.id,
-    },
-  });
 
   dispatchCollection(owner.tenantId, amountNumber, point.name, null).catch(() => {});
 

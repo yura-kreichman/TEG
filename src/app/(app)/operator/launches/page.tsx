@@ -486,8 +486,10 @@ export default function LaunchesZonePage() {
         amount={abonementTarget?.amount ?? 0}
         silent
         onConfirm={(walletId) => {
-          if (!abonementTarget) return;
-          logTap(abonementTarget.zoneId, abonementTarget.assetId, abonementTarget.tariffId, "abonement", walletId);
+          if (!abonementTarget) return undefined;
+          // return — тот же фикс, что и в game-room/page.tsx (аудит
+          // 2026-07-24, найдено само-ревью моей же предыдущей правки).
+          return logTap(abonementTarget.zoneId, abonementTarget.assetId, abonementTarget.tariffId, "abonement", walletId);
         }}
       />
 

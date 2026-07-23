@@ -37,7 +37,7 @@ interface AbonementPaymentSheetProps {
   // фактическое списание (старт/стоп пуска или тап "Пусков" с
   // paymentMethod="abonement"+abonementWalletId), эта форма только находит/
   // создаёт/пополняет кошелёк.
-  onConfirm: (walletId: string) => void;
+  onConfirm: (walletId: string) => void | Promise<unknown>;
   /** true только у вызывающих экранов, что уже играют свой звук
    * подтверждения (Пуски/Прибывания) — этот же sheet используется и в
    * Товарах, где своего звука нет, там должен звучать общий "дзинь" (запрос

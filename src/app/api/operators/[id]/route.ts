@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { deleteUploadedImage } from "@/lib/uploads";
 import { getOpenShift, isTimeTrackingMode } from "@/lib/work-time";
+import { isLocale } from "@/lib/locales";
 
 export async function GET(_request: Request, ctx: RouteContext<"/api/operators/[id]">) {
   const owner = await requireOwner();
@@ -40,6 +41,13 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/operators/[
     goodsAccess: operator.goodsAccess,
     revisionAccess: operator.revisionAccess,
     ticketsAccess: operator.ticketsAccess,
+    // null = следует языку тенанта (prisma/schema.prisma) — персональный
+    // оверрайд, который раньше нечем было сбросить обратно (аудит
+    // 2026-07-24): один ПИН-вход на устройстве с ранее переключённым языком
+    // экрана входа молча цементировал его в Operator.locale навсегда, смена
+    // языка тенанта в Настройках владельца этого оператора больше не
+    // касалась.
+    locale: operator.locale,
     hasOpenShift,
   });
 }
@@ -70,6 +78,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
     goodsAccess,
     revisionAccess,
     ticketsAccess,
+    locale,
   } = await request.json();
   const data: {
     name?: string;
@@ -85,7 +94,17 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
     goodsAccess?: boolean;
     revisionAccess?: boolean;
     ticketsAccess?: boolean;
+    locale?: string | null;
   } = {};
+  // null — явный сброс оверрайда, "следовать языку тенанта" (аудит
+  // 2026-07-24) — единственный способ достать оператора из зацементированного
+  // при логине персонального языка.
+  if (locale !== undefined) {
+    if (locale !== null && !isLocale(locale)) {
+      return NextResponse.json({ error: "Некорректный язык" }, { status: 400 });
+    }
+    data.locale = locale;
+  }
 
   if (name !== undefined) {
     if (typeof name !== "string" || name.trim().length === 0) {

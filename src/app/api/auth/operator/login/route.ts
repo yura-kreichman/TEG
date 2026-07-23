@@ -7,13 +7,40 @@ import {
 import { setAccentCookie } from "@/lib/accent";
 import { getPreAuthLocaleCookie } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
+import {
+  isPinLockedOut,
+  recordFailedDevicePin,
+  remainingLockoutMinutes,
+  resetDevicePinLockout,
+} from "@/lib/pin-lockout";
+import { isAuthRateLimited } from "@/lib/auth-rate-limit";
+import { getClientIp } from "@/lib/instructions/request-ip";
 
 export async function POST(request: Request) {
+  // Второй, независимый слой поверх PIN-блокировки самого устройства — та
+  // защищает от перебора ОДНОГО конкретного устройства, но не мешает
+  // атакующему с сетевым доступом к нескольким киоскам/подделанной
+  // point_device-кукой распределить перебор (аудит 2026-07-24).
+  if (isAuthRateLimited("operator-login", getClientIp(request))) {
+    return NextResponse.json({ error: "Слишком много попыток. Попробуйте позже." }, { status: 429 });
+  }
+
   const device = await getActivatedDevice();
   if (!device) {
     return NextResponse.json(
       { error: "Это устройство ещё не привязано к точке. Обратитесь к владельцу." },
       { status: 400 }
+    );
+  }
+
+  // Блокировка по попыткам — на устройстве, не на операторе (аудит
+  // 2026-07-24, реальная дыра — поля были в схеме, но нигде не
+  // использовались; ПИН проверяется сканом ВСЕХ операторов тенанта на одном
+  // устройстве, нет отдельного "кто ошибся", см. lib/pin-lockout.ts).
+  if (isPinLockedOut(device.pinLockedUntil)) {
+    return NextResponse.json(
+      { error: `Слишком много попыток. Попробуйте через ${remainingLockoutMinutes(device.pinLockedUntil!)} мин.` },
+      { status: 429 }
     );
   }
 
@@ -24,8 +51,10 @@ export async function POST(request: Request) {
 
   const operator = await findOperatorByPin(device.point.tenantId, pin);
   if (!operator) {
+    await recordFailedDevicePin(device.id, device.failedPinAttempts);
     return NextResponse.json({ error: "Неверный ПИН-код" }, { status: 401 });
   }
+  if (device.failedPinAttempts > 0) await resetDevicePinLockout(device.id);
   // ПИН верный, но Сотрудник деактивирован — отдельная причина, не "неверный
   // ПИН" (реальный баг, найден пользователем 2026-07-22, см. комментарий у
   // findOperatorByPin).

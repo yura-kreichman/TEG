@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createAdminSession, verifyPassword } from "@/lib/auth";
+import { isAuthRateLimited } from "@/lib/auth-rate-limit";
+import { getClientIp } from "@/lib/instructions/request-ip";
 
 // Отдельный вход для платформенного Super Admin (docs/spec/06-super-admin.md) —
 // намеренно не переиспользует /api/auth/login: не хотим, чтобы одна форма
 // проверяла учётки и владельцев, и админов платформы. Вход по логину, не
 // email (п.1 спеки) — аккаунт заводится/чинится через npm run admin:seed.
 export async function POST(request: Request) {
+  // Самый чувствительный вход в проекте (полный доступ ко всем тенантам) —
+  // отдельный, независимый лимит от /api/auth/login (аудит 2026-07-24).
+  if (isAuthRateLimited("admin-login", getClientIp(request))) {
+    return NextResponse.json({ error: "Слишком много попыток. Попробуйте позже." }, { status: 429 });
+  }
+
   const { login, password } = await request.json();
 
   if (typeof login !== "string" || typeof password !== "string") {

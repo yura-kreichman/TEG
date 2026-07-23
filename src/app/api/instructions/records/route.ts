@@ -36,6 +36,11 @@ export async function GET(request: Request) {
   const records = await prisma.acknowledgmentRecord.findMany({
     where,
     orderBy: { createdAt: "desc" },
+    // take — тот же защитный потолок, что у соседних журналов (Продажи
+    // Товаров take:300, Сверки take:100) — без него список ознакомлений
+    // читался вообще без ограничения (аудит 2026-07-24: from/to — опциональные
+    // фильтры, без них весь журнал тенанта за всё время в одном ответе).
+    take: 500,
     include: {
       instruction: { select: { title: true, currentVersionNumber: true } },
       version: { select: { versionNumber: true, content: true } },

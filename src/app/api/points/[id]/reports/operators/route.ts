@@ -65,6 +65,26 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     list.push({ submittedAt: s.resultsSubmission.submittedAt, difference: entry.difference });
     submissionsByOperator.set(opId, list);
   }
+  // Абонементная выручка (аудит 2026-07-24, то же расхождение, что и у
+  // вкладки "Зоны" — см. комментарий в points/[id]/reports/zones/route.ts) —
+  // MoneyOperation(revenue_abonement) всегда несёт performedByOperatorId
+  // (см. spendWalletTx/spendWalletForZone/spendWalletForTicketOrderTx в
+  // lib/abonement.ts), поэтому атрибуция по оператору строится тем же
+  // прямым запросом, что и по зоне.
+  const abonementOps = zoneIds.length
+    ? await prisma.moneyOperation.findMany({
+        where: { zoneId: { in: zoneIds }, type: "revenue_abonement", occurredAt: { gte: start, lt: end } },
+        select: { performedByOperatorId: true, amount: true },
+      })
+    : [];
+  for (const op of abonementOps) {
+    if (!op.performedByOperatorId) continue;
+    operatorIds.add(op.performedByOperatorId);
+    revenueByOperator.set(
+      op.performedByOperatorId,
+      (revenueByOperator.get(op.performedByOperatorId) ?? 0) + Number(op.amount)
+    );
+  }
   for (const sh of shifts) operatorIds.add(sh.operatorId);
 
   if (operatorIds.size === 0) {

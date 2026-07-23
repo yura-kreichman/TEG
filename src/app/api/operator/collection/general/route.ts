@@ -29,7 +29,9 @@ export async function POST(request: Request) {
   }
 
   const { amount } = await request.json();
-  const amountNumber = Math.round(Number(amount));
+  // Округление до копеек, не до целого рубля (аудит 2026-07-24, см.
+  // owner-версию /api/points/[id]/collection/general для полного разбора).
+  const amountNumber = Math.round(Number(amount) * 100) / 100;
   // < 0, не <= 0 — 0 допустим: способ вручную запустить погашение
   // накопленного аванса/пула, когда физически новых денег нет (запрос
   // пользователя 2026-07-22).

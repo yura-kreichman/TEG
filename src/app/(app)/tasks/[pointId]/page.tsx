@@ -436,7 +436,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
                   assignMe ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground"
                 )}
               >
-                <Avatar label={t.tasks.meLabel} colorTag={assignMe ? null : "#9AA39F"} />
+                <Avatar label={t.tasks.meLabel} colorTag={assignMe ? null : "var(--muted-foreground)"} />
                 {t.tasks.meLabel}
               </button>
               {operators.map((op) => {
@@ -455,7 +455,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
                   >
                     <Avatar
                       label={op.name}
-                      colorTag={selected ? op.colorTag : "#9AA39F"}
+                      colorTag={selected ? op.colorTag : "var(--muted-foreground)"}
                       avatarUrl={op.avatarUrl}
                       iconKey={op.iconKey}
                     />

@@ -32,26 +32,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Некорректная сумма" }, { status: 400 });
   }
 
-  const available = await (pool === "abonement"
-    ? getPointAbonementCashTotal(ctx.point.id)
-    : getPointGoodsCashTotal(ctx.point.id));
-  if (amountNumber > available) {
+  // Тот же лок, что у owner-версии (аудит 2026-07-24) — двойной клик/гонка
+  // владелец+оператор больше не читают устаревший остаток дважды.
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${ctx.point.id}))`;
+    const freshAvailable = await (pool === "abonement"
+      ? getPointAbonementCashTotal(ctx.point.id, tx)
+      : getPointGoodsCashTotal(ctx.point.id, tx));
+    if (amountNumber > freshAvailable) {
+      return { ok: false as const, available: freshAvailable };
+    }
+    await tx.moneyOperation.create({
+      data: {
+        tenantId: ctx.point.tenantId,
+        pointId: ctx.point.id,
+        type: pool === "abonement" ? "collection_pool_sweep_abonement" : "collection_pool_sweep_goods",
+        amount: -amountNumber,
+        performedByOperatorId: ctx.operator.id,
+      },
+    });
+    return { ok: true as const };
+  });
+  if (!result.ok) {
     const locale = await resolveLocale();
     return NextResponse.json(
-      { error: `Сумма превышает остаток наличных (${formatMoney(available, locale)})` },
+      { error: `Сумма превышает остаток наличных (${formatMoney(result.available, locale)})` },
       { status: 400 }
     );
   }
-
-  await prisma.moneyOperation.create({
-    data: {
-      tenantId: ctx.point.tenantId,
-      pointId: ctx.point.id,
-      type: pool === "abonement" ? "collection_pool_sweep_abonement" : "collection_pool_sweep_goods",
-      amount: -amountNumber,
-      performedByOperatorId: ctx.operator.id,
-    },
-  });
 
   dispatchCollection(ctx.point.tenantId, amountNumber, ctx.point.name, ctx.operator.name).catch(() => {});
 

@@ -114,6 +114,17 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/points/[id
           { status: 409 }
         );
       }
+      // Та же причина, что и у деактивации отдельной Билетной зоны (аудит
+      // 2026-07-24) — только шире, по всей точке разом.
+      const activeTickets = await prisma.ticket.count({
+        where: { order: { zone: { pointId: id, accountingMode: "tickets" } }, status: "active" },
+      });
+      if (activeTickets > 0) {
+        return NextResponse.json(
+          { error: `На точке ${activeTickets} непогашенных билетов — деактивировать точку нельзя, пока они не погашены/не истекли` },
+          { status: 409 }
+        );
+      }
     }
     data.active = active;
   }
@@ -138,13 +149,30 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/points/[
   // A Point referenced by historical records (results submissions / money
   // operations on its zones) can't be hard-deleted without silently losing
   // that history via cascade — same guard as Operator deletion.
-  const [submissionCount, moneyOpCount] = await Promise.all([
+  //
+  // openLaunchCount/activeTicketCount (аудит 2026-07-24) — тот же пробел, что
+  // и у DELETE зоны, только по всей точке разом.
+  const [submissionCount, moneyOpCount, openLaunchCount, activeTicketCount] = await Promise.all([
     prisma.resultsSubmission.count({ where: { pointId: id } }),
     prisma.moneyOperation.count({ where: { zone: { pointId: id } } }),
+    prisma.launch.count({ where: { zone: { pointId: id }, isOpen: true } }),
+    prisma.ticket.count({ where: { order: { zone: { pointId: id } }, status: "active" } }),
   ]);
   if (submissionCount > 0 || moneyOpCount > 0) {
     return NextResponse.json(
       { error: "У этой точки есть история сдач итогов/операций — её нельзя удалить." },
+      { status: 409 }
+    );
+  }
+  if (openLaunchCount > 0) {
+    return NextResponse.json(
+      { error: `На точке ${openLaunchCount} активных пусков — заверши их, прежде чем удалить точку` },
+      { status: 409 }
+    );
+  }
+  if (activeTicketCount > 0) {
+    return NextResponse.json(
+      { error: `На точке ${activeTicketCount} непогашенных билетов — их нельзя будет погасить после удаления точки` },
       { status: 409 }
     );
   }

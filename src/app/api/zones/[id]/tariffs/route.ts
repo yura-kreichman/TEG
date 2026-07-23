@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { findTenantZone, requireOwner } from "@/lib/require-owner";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
@@ -84,25 +85,38 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     }
   }
 
-  const tariff = await prisma.$transaction(async (tx) => {
-    const created = await tx.tariff.create({
-      data: {
-        zoneId,
-        name: name.trim(),
-        price: priceNumber,
-        order,
-        pricingMode: pricingModeValue,
-        roundingMode: roundingModeValue,
-        minAmount: null,
-      },
-    });
-    if (optionsData.length > 0) {
-      await tx.tariffOption.createMany({
-        data: optionsData.map((o) => ({ tariffId: created.id, ...o })),
+  // order вычислен ВЫШЕ, вне транзакции/лока — двойной клик "Добавить тариф"
+  // мог посчитать одинаковый order дважды; целостность спасает partial unique
+  // index Tariff_zoneId_order_active_key (@@unique(zoneId, order) WHERE
+  // deletedAt IS NULL), но без обработки P2002 проигравший запрос долетал
+  // до клиента необработанной 500 вместо понятной 409 (аудит 2026-07-24).
+  let tariff;
+  try {
+    tariff = await prisma.$transaction(async (tx) => {
+      const created = await tx.tariff.create({
+        data: {
+          zoneId,
+          name: name.trim(),
+          price: priceNumber,
+          order,
+          pricingMode: pricingModeValue,
+          roundingMode: roundingModeValue,
+          minAmount: null,
+        },
       });
+      if (optionsData.length > 0) {
+        await tx.tariffOption.createMany({
+          data: optionsData.map((o) => ({ tariffId: created.id, ...o })),
+        });
+      }
+      return created;
+    });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return NextResponse.json({ error: "У зоны уже максимум 2 тарифа" }, { status: 409 });
     }
-    return created;
-  });
+    throw err;
+  }
 
   await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json(

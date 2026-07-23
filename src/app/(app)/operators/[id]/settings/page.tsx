@@ -24,6 +24,7 @@ import {
   Fingerprint,
   ShoppingBag,
   Ticket,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -32,6 +33,8 @@ import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { ALL_LOCALES, LOCALE_FLAGS, LOCALE_NAMES, type Locale } from "@/lib/locales";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StatusChip } from "@/components/status-chip";
@@ -63,6 +66,7 @@ interface Profile {
   goodsAccess: boolean;
   revisionAccess: boolean;
   ticketsAccess: boolean;
+  locale: Locale | null;
   hasOpenShift: boolean;
 }
 
@@ -315,6 +319,19 @@ export default function OperatorSettingsPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ skipShiftStartWindow: value }),
+    });
+  }
+
+  // null = "следовать языку тенанта" — единственный способ снять оверрайд,
+  // который раньше молча цементировался при первом ПИН-входе оператора на
+  // устройстве с переключённым языком экрана входа (аудит 2026-07-24).
+  async function changeLocale(value: Locale | null) {
+    if (!profile) return;
+    setProfile({ ...profile, locale: value });
+    await fetch(`/api/operators/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locale: value }),
     });
   }
 
@@ -585,6 +602,39 @@ export default function OperatorSettingsPage() {
                 />
               </div>
             )}
+            <div className="flex items-center gap-3 border-t border-border py-3.5">
+              <Globe className="size-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <div className="text-body-airbnb">{t.operators.localeLabel}</div>
+                <div className="text-caption-airbnb">{t.operators.localeHint}</div>
+              </div>
+              <Select
+                value={profile.locale ?? "tenant"}
+                onValueChange={(value) => changeLocale(value === "tenant" ? null : (value as Locale))}
+              >
+                <SelectTrigger className="w-auto shrink-0">
+                  <SelectValue>
+                    {profile.locale ? (
+                      <>
+                        <span className="mr-1.5">{LOCALE_FLAGS[profile.locale]}</span>
+                        {LOCALE_NAMES[profile.locale]}
+                      </>
+                    ) : (
+                      t.operators.localeFollowTenant
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="tenant">{t.operators.localeFollowTenant}</SelectItem>
+                  {ALL_LOCALES.map((l) => (
+                    <SelectItem key={l} value={l} className="gap-1.5">
+                      <span className="mr-1.5 shrink-0">{LOCALE_FLAGS[l]}</span>
+                      {LOCALE_NAMES[l]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             {goodsModuleEnabled && (
               <div className="flex items-center gap-3 border-t border-border py-3.5">
                 <ShoppingBag className="size-4 shrink-0 text-muted-foreground" />

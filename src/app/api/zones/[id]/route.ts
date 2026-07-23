@@ -153,6 +153,20 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
         );
       }
     }
+    // Та же причина, но для Билетов (аудит 2026-07-24, реальный пробел —
+    // проверка была добавлена только для stays): непогашенные билеты
+    // (status="active") уже физически выданы клиентам и оплачены —
+    // findOperatorTicketsZone (lib/tickets.ts) фильтрует accountingMode:
+    // "tickets", после смены режима гасить их станет негде и нечем.
+    if (zone.accountingMode === "tickets") {
+      const activeTickets = await prisma.ticket.count({ where: { order: { zoneId: id }, status: "active" } });
+      if (activeTickets > 0) {
+        return NextResponse.json(
+          { error: `Есть ${activeTickets} непогашенных билетов — их нельзя будет погасить после смены режима учёта` },
+          { status: 409 }
+        );
+      }
+    }
     data.accountingMode = accountingMode;
   }
   if (active !== undefined) {
@@ -170,6 +184,18 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
       if (openLaunches > 0) {
         return NextResponse.json(
           { error: `Заверши ${openLaunches} активных пусков, прежде чем деактивировать зону` },
+          { status: 409 }
+        );
+      }
+    }
+    // Та же причина, что и у смены accountingMode выше (аудит 2026-07-24) —
+    // деактивированная зона тоже пропадает из findOperatorTicketsZone
+    // (фильтр active:true), непогашенные билеты становится нечем гасить.
+    if (active === false && zone.accountingMode === "tickets") {
+      const activeTickets = await prisma.ticket.count({ where: { order: { zoneId: id }, status: "active" } });
+      if (activeTickets > 0) {
+        return NextResponse.json(
+          { error: `Есть ${activeTickets} непогашенных билетов — деактивировать зону нельзя, пока они не погашены/не истекли` },
           { status: 409 }
         );
       }
@@ -219,13 +245,36 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/zones/[i
   // Same history guard as Point/Operator deletion — a Zone referenced by
   // submissions/money operations can't be hard-deleted without losing that
   // history (ZoneSubmission/MoneyOperation don't cascade from Zone).
-  const [submissionCount, moneyOpCount] = await Promise.all([
+  //
+  // openLaunchCount/activeTicketCount (аудит 2026-07-24, реальный пробел) —
+  // зона, у которой ЕЩЁ не было ни одной сдачи итогов (типичное состояние
+  // для только что созданной зоны), проходила эту проверку беспрепятственно,
+  // даже если прямо сейчас у неё есть открытый Launch (Launch.zoneId
+  // onDelete: Cascade) или непогашенные TicketOrder/Ticket с уже собранными
+  // деньгами (TicketOrder.zoneId onDelete: Cascade) — DELETE каскадно уничтожал
+  // бы их без единого предупреждения, теряя учёт уже полученных денег и
+  // физически выданных клиенту билетов.
+  const [submissionCount, moneyOpCount, openLaunchCount, activeTicketCount] = await Promise.all([
     prisma.zoneSubmission.count({ where: { zoneId: id } }),
     prisma.moneyOperation.count({ where: { zoneId: id } }),
+    prisma.launch.count({ where: { zoneId: id, isOpen: true } }),
+    prisma.ticket.count({ where: { order: { zoneId: id }, status: "active" } }),
   ]);
   if (submissionCount > 0 || moneyOpCount > 0) {
     return NextResponse.json(
       { error: "У этой зоны есть история сдач итогов/операций — её нельзя удалить." },
+      { status: 409 }
+    );
+  }
+  if (openLaunchCount > 0) {
+    return NextResponse.json(
+      { error: `Заверши ${openLaunchCount} активных пусков, прежде чем удалить зону` },
+      { status: 409 }
+    );
+  }
+  if (activeTicketCount > 0) {
+    return NextResponse.json(
+      { error: `Есть ${activeTicketCount} непогашенных билетов — их нельзя будет погасить после удаления зоны` },
       { status: 409 }
     );
   }

@@ -104,14 +104,27 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/assets/[
   // падало необработанным 500, а клиент раньше не проверял res.ok и
   // показывал "успех" (тот же класс бага, что уже пофикшен для тарифов —
   // см. комментарий в tariffs/[id]/route.ts — но там пропустили аналог для
-  // активов). Launch.assetId — SET NULL, не блокирует, проверять не нужно.
-  const [readingCount, ticketCount] = await Promise.all([
+  // активов). Launch.assetId — SET NULL, FK-целостность это не блокирует, но
+  // ОТКРЫТЫЙ пуск (isOpen:true) — отдельная проверка (аудит 2026-07-24,
+  // реальный пробел): SET NULL обнулило бы assetId прямо во время идущей
+  // сессии — у оператора в PWA продолжает тикать таймер по активу, которого
+  // больше нет, а осиротевший Launch по-прежнему учитывается в
+  // countOpenLaunchesInZone и блокирует зоне следующую сдачу итогов без
+  // какого-либо способа найти и закрыть его через UI.
+  const [readingCount, ticketCount, openLaunchCount] = await Promise.all([
     prisma.assetReading.count({ where: { assetId: id } }),
     prisma.ticket.count({ where: { assetId: id } }),
+    prisma.launch.count({ where: { assetId: id, isOpen: true } }),
   ]);
   if (readingCount > 0 || ticketCount > 0) {
     return NextResponse.json(
       { error: "У этого актива есть история показаний/билетов — его нельзя удалить безвозвратно" },
+      { status: 409 }
+    );
+  }
+  if (openLaunchCount > 0) {
+    return NextResponse.json(
+      { error: `У этого актива ${openLaunchCount} активных пусков — заверши их, прежде чем удалить актив` },
       { status: 409 }
     );
   }

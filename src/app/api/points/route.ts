@@ -34,18 +34,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Название точки обязательно" }, { status: 400 });
   }
 
-  const pointCount = await prisma.point.count({ where: { tenantId: owner.tenantId } });
-  const limitError = await checkPackageLimit(owner.tenantId, "maxPoints", pointCount);
-  if (limitError) return limitError;
+  // Счёт+проверка+создание под локом одной транзакцией (аудит 2026-07-24,
+  // реальная гонка: два параллельных запроса у лимита N оба читали count=N-1
+  // ДО того, как первый успевал создать точку, оба проходили проверку —
+  // лимит пакета молча превышался навсегда, без единой ошибки). Тот же
+  // pg_advisory_xact_lock(hashtext(...)) паттерн, что уже применён к
+  // денежным гонкам этой сессии.
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${owner.tenantId}))`;
+    const pointCount = await tx.point.count({ where: { tenantId: owner.tenantId } });
+    const limitError = await checkPackageLimit(owner.tenantId, "maxPoints", pointCount);
+    if (limitError) return { ok: false as const, limitError };
 
-  const point = await prisma.point.create({
-    data: {
-      tenantId: owner.tenantId,
-      name: name.trim(),
-      address: typeof address === "string" && address.trim() ? address.trim() : null,
-      iconKey: typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null,
-    },
+    const point = await tx.point.create({
+      data: {
+        tenantId: owner.tenantId,
+        name: name.trim(),
+        address: typeof address === "string" && address.trim() ? address.trim() : null,
+        iconKey: typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null,
+      },
+    });
+    return { ok: true as const, point };
   });
+  if (!result.ok) return result.limitError;
+  const point = result.point;
 
   await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ id: point.id, name: point.name }, { status: 201 });
