@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 import { sendChatMessage, sendPhotoMessage } from "@/lib/telegram-bot";
+import { getRequestOrigin } from "@/lib/request-origin";
 
 // Telegram ограничивает подпись к фото 1024 символами (жёстче, чем 4096 у
 // обычного текста) — единый лимит поменьше для обоих случаев, чтобы с
@@ -49,8 +50,13 @@ export async function POST(request: Request) {
   const text = `📣 <b>${tenant?.name ?? ""}</b>\n\n${message}`;
   // Ссылка на фото — относительный путь из /api/uploads (тот же формат, что
   // Tenant.logoUrl и т.п.), Telegram нужен полный URL, чтобы скачать файл
-  // сам (см. комментарий у sendPhotoMessage в telegram-bot.ts).
-  const absoluteImageUrl = imageUrl ? `${new URL(request.url).origin}${imageUrl}` : null;
+  // сам (см. комментарий у sendPhotoMessage в telegram-bot.ts). ОБЯЗАТЕЛЬНО
+  // getRequestOrigin, не new URL(request.url).origin напрямую — реальный баг,
+  // найден пользователем 2026-07-24: за nginx-прокси это отдаёт то, что видит
+  // сам Node-процесс (localhost:3000), а не публичный домен, Telegram не
+  // может скачать картинку по недоступному извне адресу (тот же класс бага,
+  // что уже был у activate-device/reset-password, см. src/lib/request-origin.ts).
+  const absoluteImageUrl = imageUrl ? `${getRequestOrigin(request)}${imageUrl}` : null;
 
   let sent = 0;
   for (const link of links) {
