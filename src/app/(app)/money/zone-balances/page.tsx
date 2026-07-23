@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Check, ChevronLeft, ChevronRight, Coins, Gift, MapPin, Pencil, PiggyBank, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Coins, Gift, HandCoins, MapPin, Pencil, PiggyBank, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -50,13 +50,16 @@ interface CollectionEntry {
   id: string;
   occurredAt: string;
   // null — не зонная запись, а свип абонементов/товаров наличными точки
-  // (lib/zone-balance.ts, collection_pool_sweep_abonement/_goods) или "Аванс
-  // инкассации" (collection_advance) — клиент сам подставляет переведённую
-  // подпись по значению pool.
+  // (lib/zone-balance.ts, collection_pool_sweep_abonement/_goods), "Аванс
+  // инкассации" (collection_advance) или аванс/премия, забранные сотрудником
+  // самостоятельно из кассы точки (advance_taken/bonus_taken) — клиент сам
+  // подставляет переведённую подпись по значению pool.
   zoneName: string | null;
   pointName: string;
   amount: number;
-  pool: "abonement" | "goods" | "advance" | null;
+  pool: "abonement" | "goods" | "advance" | "advance_taken" | "bonus_taken" | null;
+  // Только у advance_taken/bonus_taken — кто забрал.
+  operatorName?: string | null;
 }
 
 // Сентинелы для "Абонементы"/"Товары" в дропдауне "По кассам" (запрос
@@ -361,6 +364,21 @@ export default function ZoneBalancesPage() {
     return `${d.getUTCDate()} ${t.readings.monthsGenitive[d.getUTCMonth()]}`;
   }
 
+  // Подпись строки реестра для нового типа "забрал сам" (запрос пользователя
+  // 2026-07-25) — имя + Аванс/Премия, а не просто одно из двух: без имени
+  // непонятно, кто именно взял, если сотрудников на точке несколько.
+  function collectionEntryLabel(c: CollectionEntry): string {
+    if (c.zoneName) return c.zoneName;
+    if (c.pool === "abonement") return t.money.abonementCashLabel;
+    if (c.pool === "goods") return t.goods.navLabel;
+    if (c.pool === "advance") return t.money.collectionAdvanceLabel;
+    if (c.pool === "advance_taken" || c.pool === "bonus_taken") {
+      const kind = c.pool === "advance_taken" ? t.operatorApp.workTime.advanceFieldLabel : t.operatorApp.workTime.bonusFieldLabel;
+      return c.operatorName ? `${c.operatorName} · ${kind}` : kind;
+    }
+    return "";
+  }
+
   const collectionGroups: { date: string; items: CollectionEntry[] }[] = [];
   for (const c of collections) {
     const dateKey = c.occurredAt.slice(0, 10);
@@ -619,26 +637,39 @@ export default function ZoneBalancesPage() {
                             {c.pool === "abonement" && <Gift className="size-3 shrink-0" />}
                             {c.pool === "goods" && <ShoppingBag className="size-3 shrink-0" />}
                             {c.pool === "advance" && <PiggyBank className="size-3 shrink-0" />}
-                            {formatTime(c.occurredAt)} ·{" "}
-                            {c.zoneName ??
-                              (c.pool === "abonement"
-                                ? t.money.abonementCashLabel
-                                : c.pool === "advance"
-                                  ? t.money.collectionAdvanceLabel
-                                  : t.goods.navLabel)}
+                            {(c.pool === "advance_taken" || c.pool === "bonus_taken") && (
+                              <HandCoins className="size-3 shrink-0" />
+                            )}
+                            {formatTime(c.occurredAt)} · {collectionEntryLabel(c)}
                           </span>
                           <span className="flex shrink-0 items-center gap-2">
-                            <span className="text-xs font-bold tabular-nums"><Money value={c.amount} /></span>
-                            <PressableScale>
-                              <button
-                                type="button"
-                                onClick={() => openCollectionEdit(c)}
-                                aria-label={t.money.editCollectionAction}
-                                className="flex items-center justify-center rounded-full border border-border bg-card p-1.5 text-muted-foreground"
-                              >
-                                <Pencil className="size-3.5" />
-                              </button>
-                            </PressableScale>
+                            <span
+                              className={cn(
+                                "text-xs font-bold tabular-nums",
+                                c.pool === "advance_taken" && "text-warning",
+                                c.pool === "bonus_taken" && "text-success"
+                              )}
+                            >
+                              <Money value={c.amount} />
+                            </span>
+                            {/* "Забрал сам" — не редактируется отсюда (нет
+                                соответствующего эндпоинта, правка/удаление
+                                живёт на карточке сотрудника, "Авансы и
+                                премии") — эта строка тут только для
+                                прозрачности, откуда взялась просадка по
+                                зонам. */}
+                            {c.pool !== "advance_taken" && c.pool !== "bonus_taken" && (
+                              <PressableScale>
+                                <button
+                                  type="button"
+                                  onClick={() => openCollectionEdit(c)}
+                                  aria-label={t.money.editCollectionAction}
+                                  className="flex items-center justify-center rounded-full border border-border bg-card p-1.5 text-muted-foreground"
+                                >
+                                  <Pencil className="size-3.5" />
+                                </button>
+                              </PressableScale>
+                            )}
                           </span>
                         </div>
                       ))}

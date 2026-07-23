@@ -23,6 +23,15 @@ import { requireOwner } from "@/lib/require-owner";
 // позже (реальный баг, найден пользователем 2026-07-25: тип вообще не был
 // заведён сюда — инкассация проходила и деньги учитывались верно, но
 // строка в "Реестре инкассаций" молча не появлялась).
+//
+// Пятый тип — advance/bonus_payout, но только САМООБСЛУЖИВАНИЕ сотрудника
+// (performedByOperatorId, физически из кассы точки — см. getPointCashBalance
+// в lib/zone-balance.ts; владельческие "не из кассы точки" — не показываем,
+// не создают "пул"). Запрос пользователя 2026-07-25: без этого владелец
+// видит эффект (задним числом, при следующей инкассации, зоны "внезапно"
+// списываются) без причины — теперь сам факт "сотрудник забрал аванс/премию"
+// виден в реестре сразу, в момент, когда это произошло, а не только когда
+// система потом доразносит его по зонам.
 export async function GET(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
@@ -41,7 +50,7 @@ export async function GET(request: Request) {
   const monthStart = new Date(Date.UTC(year, month - 1, 1));
   const monthEnd = new Date(Date.UTC(year, month, 1));
 
-  const [zoneOps, poolOps, advanceOps] = await Promise.all([
+  const [zoneOps, poolOps, advanceOps, takenOps] = await Promise.all([
     prisma.moneyOperation.findMany({
       where: {
         tenantId: owner.tenantId,
@@ -78,6 +87,19 @@ export async function GET(request: Request) {
         ...(pointId ? { pointId } : {}),
       },
       include: { point: true },
+      orderBy: { occurredAt: "desc" },
+    }),
+    prisma.moneyOperation.findMany({
+      where: {
+        tenantId: owner.tenantId,
+        type: { in: ["advance", "bonus_payout"] },
+        // Только самообслуживание — physически из кассы точки (тот же
+        // фильтр, что getPointCashBalance использует для "пула").
+        performedByOperatorId: { not: null },
+        occurredAt: { gte: monthStart, lt: monthEnd },
+        ...(pointId ? { pointId } : {}),
+      },
+      include: { point: true, beneficiaryOperator: true, performedByOperator: true },
       orderBy: { occurredAt: "desc" },
     }),
   ]);
@@ -117,6 +139,18 @@ export async function GET(request: Request) {
         pointName: op.point!.name,
         amount: Math.abs(Number(op.amount)),
         pool: "advance" as const,
+        operatorName: null as string | null,
+      })),
+    ...takenOps
+      .filter((op) => op.point !== null)
+      .map((op) => ({
+        id: op.id,
+        occurredAt: op.occurredAt.toISOString(),
+        zoneName: null as string | null,
+        pointName: op.point!.name,
+        amount: Math.abs(Number(op.amount)),
+        pool: (op.type === "advance" ? "advance_taken" : "bonus_taken") as "advance_taken" | "bonus_taken",
+        operatorName: op.beneficiaryOperator?.name ?? op.performedByOperator?.name ?? null,
       })),
   ].sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1));
 
