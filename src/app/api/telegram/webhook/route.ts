@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendChatMessage, sendContactRequest, sendInlineKeyboard, answerCallbackQuery, CLIENT_START_PREFIX } from "@/lib/telegram-bot";
+import { sendChatMessage, sendChatMessageWithMenu, sendContactRequest, sendInlineKeyboard, answerCallbackQuery, CLIENT_START_PREFIX } from "@/lib/telegram-bot";
 import { findWalletByPhone, normalizePhone } from "@/lib/abonement";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import type { CurrencyCode } from "@/lib/currency";
@@ -172,7 +172,7 @@ async function handleClientStart(chatId: string, tenantSlug: string, lang: BotLa
   if (existingLink) {
     const wallet = await findWalletByPhone(tenant.id, existingLink.phone);
     if (wallet) {
-      await sendChatMessage(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
+      await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
       return;
     }
     // Кошелёк с тех пор удалили/номер сменился — привязка устарела, спросим
@@ -235,7 +235,7 @@ async function handleContact(message: {
       create: { tenantId: tenant.id, chatId, phone, language: lang },
       update: { phone, language: lang },
     });
-    await sendChatMessage(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
+    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
     return;
   }
 
@@ -257,7 +257,7 @@ async function handleContact(message: {
       create: { tenantId: tenant.id, chatId, phone, language: lang },
       update: { phone, language: lang },
     });
-    await sendChatMessage(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
+    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
   }
 }
 
@@ -395,7 +395,7 @@ async function handlePrivateBalanceCommand(chatId: string, lang: BotLang) {
     if (!tenant) continue;
     const wallet = await findWalletByPhone(tenant.id, link.phone);
     if (!wallet) continue;
-    await sendChatMessage(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
+    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
   }
 }
 

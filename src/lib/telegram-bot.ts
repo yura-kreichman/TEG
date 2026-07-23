@@ -135,6 +135,29 @@ export async function sendContactRequest(chatId: string, text: string, buttonTex
   });
 }
 
+// Постоянное меню клиента (запрос пользователя 2026-07-25: кнопки "/balance"
+// и "/services" вместо набора команд руками, как уже была кнопка "Поделиться
+// номером") — reply-клавиатура, не inline: живёт в самом чате (composer), не
+// привязана к одному сообщению, автоматически вытесняет предыдущую
+// клавиатуру (в частности, request_contact) без отдельного шага удаления —
+// Telegram просто заменяет один reply_markup.keyboard другим. Текст кнопки —
+// буквально сама команда ("/balance"/"/services"), не человекочитаемая
+// подпись: тап шлёт этот текст обычным сообщением, тот же regex в вебхуке
+// уже её понимает без доп. кода, одинаково на всех 15 языках бота.
+const CLIENT_MENU_KEYBOARD = {
+  keyboard: [[{ text: "/balance" }, { text: "/services" }]],
+  resize_keyboard: true,
+};
+
+export async function sendChatMessageWithMenu(chatId: string, text: string): Promise<TelegramApiResult> {
+  return callTelegramApi("sendMessage", {
+    chat_id: chatId,
+    text,
+    parse_mode: "HTML",
+    reply_markup: CLIENT_MENU_KEYBOARD,
+  });
+}
+
 // Инлайн-кнопки под сообщением (не заменяет обычную клавиатуру ввода, в
 // отличие от sendContactRequest) — список кликабельных вариантов вместо
 // ручного набора текста, например "выбери клиента, а не набирай его номер
