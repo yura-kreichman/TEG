@@ -2,6 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateTicketOrders, ticketRevenueByAssetVariant } from "@/lib/tickets";
+import { localDateParts, zonedWallTimeToUtc } from "@/lib/business-day";
+
+function addCalendarDays(parts: { year: number; month: number; day: number }, days: number) {
+  const d = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days));
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
 
 export type PeriodGranularity = "day" | "week" | "month" | "year";
 // Было отдельным типом без "day" (week/month/year), т.к. переключатель точки
@@ -22,42 +28,61 @@ export const isReportGranularity = isPeriodGranularity;
  * `today` so an in-progress period doesn't silently include days that
  * haven't happened yet. Shared by the per-point reports (week/month only,
  * via `ReportGranularity`) and /api/reports/money (all four).
+ *
+ * Границы — в КАЛЕНДАРЕ ЧАСОВОГО ПОЯСА ТЕНАНТА (Tenant.timezone), не в сыром
+ * UTC сервера (РЕАЛЬНЫЙ БАГ, найден при повторном аудите 2026-07-25: тот же
+ * класс, что уже чинили для business-day.ts/isWithinShiftStartWindow
+ * 2026-07-12 — "anchor.getUTCFullYear()" читает календарную дату по UTC,
+ * которая для тенанта восточнее/западнее UTC у полуночи может отличаться от
+ * реального местного дня на сутки, "Сегодня"/"Неделя"/"Месяц" в Отчётах
+ * могли молча включать/исключать не те данные).
  */
-export function getPeriodRange(granularity: PeriodGranularity, anchor: Date, today: Date) {
-  let start: Date;
-  let end: Date;
+export function getPeriodRange(granularity: PeriodGranularity, anchor: Date, today: Date, timezone: string) {
+  const a = localDateParts(anchor, timezone);
+  const toUtc = (p: { year: number; month: number; day: number }) => zonedWallTimeToUtc(p.year, p.month, p.day, 0, 0, timezone);
+
+  let startParts: { year: number; month: number; day: number };
+  let endParts: { year: number; month: number; day: number };
   if (granularity === "day") {
-    start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate()));
-    end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    startParts = a;
+    endParts = addCalendarDays(a, 1);
   } else if (granularity === "week") {
-    const dayIndex = (anchor.getUTCDay() + 6) % 7; // 0=Mon
-    start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate() - dayIndex));
-    end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const weekday = new Date(Date.UTC(a.year, a.month - 1, a.day)).getUTCDay();
+    const dayIndex = (weekday + 6) % 7; // 0=Mon
+    startParts = addCalendarDays(a, -dayIndex);
+    endParts = addCalendarDays(startParts, 7);
   } else if (granularity === "month") {
-    start = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), 1));
-    end = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 1));
+    startParts = { year: a.year, month: a.month, day: 1 };
+    endParts = a.month === 12 ? { year: a.year + 1, month: 1, day: 1 } : { year: a.year, month: a.month + 1, day: 1 };
   } else {
-    start = new Date(Date.UTC(anchor.getUTCFullYear(), 0, 1));
-    end = new Date(Date.UTC(anchor.getUTCFullYear() + 1, 0, 1));
+    startParts = { year: a.year, month: 1, day: 1 };
+    endParts = { year: a.year + 1, month: 1, day: 1 };
   }
-  const todayEnd = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 1));
+
+  const start = toUtc(startParts);
+  let end = toUtc(endParts);
+
+  const todayEnd = toUtc(addCalendarDays(localDateParts(today, timezone), 1));
   if (end > todayEnd) end = todayEnd;
   return { start, end };
 }
 
 /** Same-length period immediately before `start` — for the "vs previous period" delta. */
-export function getPreviousPeriodRange(granularity: ReportGranularity, start: Date) {
+export function getPreviousPeriodRange(granularity: ReportGranularity, start: Date, timezone: string) {
   if (granularity === "day") {
     return { start: new Date(start.getTime() - 24 * 60 * 60 * 1000), end: start };
   }
   if (granularity === "week") {
     return { start: new Date(start.getTime() - 7 * 24 * 60 * 60 * 1000), end: start };
   }
+  const s = localDateParts(start, timezone);
   if (granularity === "year") {
-    const prevYearStart = new Date(Date.UTC(start.getUTCFullYear() - 1, 0, 1));
+    const prevYearStart = zonedWallTimeToUtc(s.year - 1, 1, 1, 0, 0, timezone);
     return { start: prevYearStart, end: start };
   }
-  const prevMonthStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() - 1, 1));
+  const prevMonthY = s.month === 1 ? s.year - 1 : s.year;
+  const prevMonthM = s.month === 1 ? 12 : s.month - 1;
+  const prevMonthStart = zonedWallTimeToUtc(prevMonthY, prevMonthM, 1, 0, 0, timezone);
   return { start: prevMonthStart, end: start };
 }
 
@@ -75,22 +100,41 @@ export function getPreviousCustomRange(start: Date, end: Date) {
  * этот разбор был скопирован отдельно и не понимал "day"/custom — вынесено
  * сюда один раз, чтобы не разъезжаться дальше.
  */
+export function parseDateParam(value: string): { year: number; month: number; day: number } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!m) return null;
+  return { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) };
+}
+
 export function resolvePeriodFromParams(
   searchParams: URLSearchParams,
-  today: Date
+  today: Date,
+  timezone: string
 ): { start: Date; end: Date; granularity: PeriodGranularity; isCustom: boolean } {
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
-  if (fromParam && toParam && /^\d{4}-\d{2}-\d{2}$/.test(fromParam) && /^\d{4}-\d{2}-\d{2}$/.test(toParam)) {
-    const start = new Date(`${fromParam}T00:00:00.000Z`);
-    const end = new Date(new Date(`${toParam}T00:00:00.000Z`).getTime() + 24 * 60 * 60 * 1000);
+  const fromParts = fromParam ? parseDateParam(fromParam) : null;
+  const toParts = toParam ? parseDateParam(toParam) : null;
+  if (fromParts && toParts) {
+    // Календарные даты, выбранные владельцем ("Период" from/to) — переводим
+    // в местную полночь тенанта, не в UTC-полночь строки (тот же фикс, что
+    // у getPeriodRange ниже): для тенанта западнее UTC "2026-07-25T00:00Z"
+    // это ещё 24 июля по месту.
+    const start = zonedWallTimeToUtc(fromParts.year, fromParts.month, fromParts.day, 0, 0, timezone);
+    const endParts = addCalendarDays(toParts, 1);
+    const end = zonedWallTimeToUtc(endParts.year, endParts.month, endParts.day, 0, 0, timezone);
     return { start, end, granularity: "day", isCustom: true };
   }
   const granularityParam = searchParams.get("granularity");
   const granularity = isPeriodGranularity(granularityParam) ? granularityParam : "week";
   const anchorParam = searchParams.get("anchor");
-  const anchor = anchorParam && /^\d{4}-\d{2}-\d{2}$/.test(anchorParam) ? new Date(`${anchorParam}T00:00:00.000Z`) : today;
-  const { start, end } = getPeriodRange(granularity, anchor, today);
+  const anchorParts = anchorParam ? parseDateParam(anchorParam) : null;
+  // Полдень, не полночь — избегаем любой пограничной двусмысленности при
+  // обратном чтении local Date Parts внутри getPeriodRange ниже.
+  const anchor = anchorParts
+    ? zonedWallTimeToUtc(anchorParts.year, anchorParts.month, anchorParts.day, 12, 0, timezone)
+    : today;
+  const { start, end } = getPeriodRange(granularity, anchor, today, timezone);
   return { start, end, granularity, isCustom: false };
 }
 

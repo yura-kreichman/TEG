@@ -22,7 +22,10 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
 
   const { searchParams } = new URL(request.url);
   const today = new Date();
-  const { start, end, granularity } = resolvePeriodFromParams(searchParams, today);
+  // Часовой пояс тенанта (аудит 2026-07-25, повторная проверка) — см.
+  // комментарий у getPeriodRange в lib/reports.ts.
+  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });
+  const { start, end, granularity } = resolvePeriodFromParams(searchParams, today, tenant?.timezone ?? "UTC");
 
   const zones = await prisma.zone.findMany({
     where: isAllPoints ? { point: { tenantId: owner.tenantId } } : { pointId },

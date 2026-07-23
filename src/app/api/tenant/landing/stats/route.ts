@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { localDateParts } from "@/lib/business-day";
 import { resolvePeriodFromParams } from "@/lib/reports";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
@@ -28,9 +27,12 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const { year, month, day } = localDateParts(new Date(), tenant.timezone);
-  const todayUtc = new Date(Date.UTC(year, month - 1, day));
-  const { start, end, granularity } = resolvePeriodFromParams(searchParams, todayUtc);
+  // resolvePeriodFromParams теперь сам конвертирует today через часовой
+  // пояс тенанта (аудит 2026-07-25, повторная проверка) — раньше этот роут
+  // вручную приводил "сегодня" к местному календарному дню, закодированному
+  // как UTC-полночь, под старую (наивную-UTC) реализацию; с новой это
+  // приводило бы к двойной, неверной конвертации для тенанта не в UTC.
+  const { start, end, granularity } = resolvePeriodFromParams(searchParams, new Date(), tenant.timezone);
   // LandingDailyStat.date — полночь UTC на календарный день (без времени),
   // [start, end) от resolvePeriodFromParams эксклюзивен по концу — lte
   // сработал бы неверно на границе дня, поэтому lt(end) - 1ms эквивалентно

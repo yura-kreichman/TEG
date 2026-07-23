@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { getPeriodRange, isPeriodGranularity, round2 } from "@/lib/reports";
+import { getPeriodRange, isPeriodGranularity, parseDateParam, round2 } from "@/lib/reports";
+import { zonedWallTimeToUtc } from "@/lib/business-day";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -23,19 +24,30 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const today = new Date();
+  // Часовой пояс тенанта (аудит 2026-07-25, повторная проверка) — границы
+  // периода должны совпадать с местным календарным днём владельца, не с
+  // сырым UTC сервера, см. комментарий у getPeriodRange в lib/reports.ts.
+  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });
+  const timezone = tenant?.timezone ?? "UTC";
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
   const granularityParam = searchParams.get("granularity");
+  const fromParts = fromParam ? parseDateParam(fromParam) : null;
+  const toParts = toParam ? parseDateParam(toParam) : null;
   let start: Date;
   let end: Date;
-  if (fromParam && toParam && /^\d{4}-\d{2}-\d{2}$/.test(fromParam) && /^\d{4}-\d{2}-\d{2}$/.test(toParam)) {
-    start = new Date(`${fromParam}T00:00:00.000Z`);
-    end = new Date(new Date(`${toParam}T00:00:00.000Z`).getTime() + 24 * 60 * 60 * 1000);
+  if (fromParts && toParts) {
+    start = zonedWallTimeToUtc(fromParts.year, fromParts.month, fromParts.day, 0, 0, timezone);
+    const nextDay = new Date(Date.UTC(toParts.year, toParts.month - 1, toParts.day + 1));
+    end = zonedWallTimeToUtc(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate(), 0, 0, timezone);
   } else {
     const granularity = isPeriodGranularity(granularityParam) ? granularityParam : "month";
     const anchorParam = searchParams.get("anchor");
-    const anchor = anchorParam && /^\d{4}-\d{2}-\d{2}$/.test(anchorParam) ? new Date(`${anchorParam}T00:00:00.000Z`) : today;
-    ({ start, end } = getPeriodRange(granularity, anchor, today));
+    const anchorParts = anchorParam ? parseDateParam(anchorParam) : null;
+    const anchor = anchorParts
+      ? zonedWallTimeToUtc(anchorParts.year, anchorParts.month, anchorParts.day, 12, 0, timezone)
+      : today;
+    ({ start, end } = getPeriodRange(granularity, anchor, today, timezone));
   }
 
   const where: Prisma.GoodsSaleWhereInput = {

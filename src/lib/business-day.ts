@@ -60,7 +60,7 @@ export function localDateParts(at: Date, timezone: string): { year: number; mont
 // компенсируем разницу. Работает корректно и для дат около перехода на/с
 // летнего времени, потому что смещение берётся на сам guess-момент, а не
 // откуда-то ещё.
-function zonedWallTimeToUtc(
+export function zonedWallTimeToUtc(
   year: number,
   month: number,
   day: number,

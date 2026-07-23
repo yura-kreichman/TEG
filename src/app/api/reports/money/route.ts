@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { computeZoneSubmissionRevenues, getPeriodRange, isPeriodGranularity, type PeriodGranularity } from "@/lib/reports";
+import {
+  computeZoneSubmissionRevenues,
+  getPeriodRange,
+  isPeriodGranularity,
+  parseDateParam,
+  type PeriodGranularity,
+} from "@/lib/reports";
+import { localDateParts, zonedWallTimeToUtc } from "@/lib/business-day";
 import {
   affectsCashOnHand,
   getOutstandingCollectionAdvance,
@@ -23,7 +30,21 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const today = new Date();
-  const todayEnd = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 1));
+  // Часовой пояс тенанта (аудит 2026-07-25, повторная проверка) — границы
+  // периода должны совпадать с местным календарным днём владельца, не с
+  // сырым UTC сервера, см. комментарий у getPeriodRange в lib/reports.ts.
+  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });
+  const timezone = tenant?.timezone ?? "UTC";
+  const todayLocal = localDateParts(today, timezone);
+  const todayNext = new Date(Date.UTC(todayLocal.year, todayLocal.month - 1, todayLocal.day + 1));
+  const todayEnd = zonedWallTimeToUtc(
+    todayNext.getUTCFullYear(),
+    todayNext.getUTCMonth() + 1,
+    todayNext.getUTCDate(),
+    0,
+    0,
+    timezone
+  );
 
   // Свой диапазон (from/to) — отдельная ветка от granularity/anchor: владелец
   // выбирает произвольные даты вместо готового периода. Конец диапазона
@@ -31,23 +52,27 @@ export async function GET(request: Request) {
   // обрезаем будущим — как и у остальных периодов.
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
+  const fromParts = fromParam ? parseDateParam(fromParam) : null;
+  const toParts = toParam ? parseDateParam(toParam) : null;
   let start: Date;
   let end: Date;
   let granularity: PeriodGranularity | "custom";
-  if (fromParam && toParam && /^\d{4}-\d{2}-\d{2}$/.test(fromParam) && /^\d{4}-\d{2}-\d{2}$/.test(toParam)) {
+  if (fromParts && toParts) {
     granularity = "custom";
-    start = new Date(`${fromParam}T00:00:00.000Z`);
-    const toDate = new Date(`${toParam}T00:00:00.000Z`);
-    end = new Date(toDate.getTime() + 24 * 60 * 60 * 1000);
+    start = zonedWallTimeToUtc(fromParts.year, fromParts.month, fromParts.day, 0, 0, timezone);
+    const nextDay = new Date(Date.UTC(toParts.year, toParts.month - 1, toParts.day + 1));
+    end = zonedWallTimeToUtc(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate(), 0, 0, timezone);
     if (end > todayEnd) end = todayEnd;
     if (start > end) start = end;
   } else {
     const granularityParam = searchParams.get("granularity");
     granularity = isPeriodGranularity(granularityParam) ? granularityParam : "month";
     const anchorParam = searchParams.get("anchor");
-    const anchor =
-      anchorParam && /^\d{4}-\d{2}-\d{2}$/.test(anchorParam) ? new Date(`${anchorParam}T00:00:00.000Z`) : new Date();
-    ({ start, end } = getPeriodRange(granularity, anchor, today));
+    const anchorParts = anchorParam ? parseDateParam(anchorParam) : null;
+    const anchor = anchorParts
+      ? zonedWallTimeToUtc(anchorParts.year, anchorParts.month, anchorParts.day, 12, 0, timezone)
+      : today;
+    ({ start, end } = getPeriodRange(granularity, anchor, today, timezone));
   }
 
   // Фильтр по точке — опциональный (запрос пользователя 2026-07-16: "по
