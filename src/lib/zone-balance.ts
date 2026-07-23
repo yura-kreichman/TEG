@@ -177,6 +177,57 @@ export async function getPointCashBalance(pointId: string): Promise<number> {
   return total;
 }
 
+// Немедленное разнесение самообслуживаемого аванса/премии по зонам точки
+// (запрос пользователя 2026-07-25: "чтобы сразу разносились", а не только
+// на следующей инкассации) — та же пропорциональная разбивка, что у обычной
+// инкассации (distributeCollectionWhole), просто по ТЕКУЩИМ остаткам зон в
+// момент взятия, а не по остаткам на момент следующей инкассации. Раньше
+// (getPointPoolDeficit/getZonePoolShare выше) эффект был виден только
+// вычитанием на экране "Остатки по зонам" и доразносился реальными
+// zone-level записями лишь при следующей инкассации — владелец видел
+// "внезапное" списание зон задним числом, без понятной причины. Тот старый
+// механизм остаётся как есть — он и дальше корректно доразносит уже
+// накопленные ДО этой функции долги (обратная совместимость), а для НОВЫХ
+// авансов/премий poolDeficit с самого начала будет 0 (zonesRawSum и
+// pointTotal падают на одну и ту же сумму в один момент, разница не меняется).
+//
+// ВАЖНО: вызывать СРАЗУ ПОСЛЕ создания самой advance/bonus_payout операции,
+// не раньше и не параллельно — её occurredAt должен быть строго ДО зонных
+// записей ниже (обычный Prisma-инсерт со своим now() после предыдущего
+// await это и так гарантирует). Иначе getPointCashBalance
+// (zoneCollectionCutoff = момент последней zone-level "collection") не
+// исключит advance/bonus_payout из своего расчёта, и те же деньги вычтутся
+// из остатка точки дважды — один раз зонными записями тут, второй раз самой
+// advance-записью.
+export async function chargeSelfServiceAdvanceToZones(
+  tenantId: string,
+  pointId: string,
+  amount: number,
+  performedByOperatorId: string
+): Promise<void> {
+  if (amount <= 0) return;
+  const zones = await prisma.zone.findMany({ where: { pointId }, select: { id: true } });
+  if (zones.length === 0) return;
+
+  const balanceByZone = await getZoneBalances(zones.map((z) => z.id));
+  const weights = zones.map((z) => balanceByZone.get(z.id) ?? 0);
+  const shares = distributeCollectionWhole(amount, weights);
+
+  const rows = zones
+    .map((zone, i) => ({
+      tenantId,
+      zoneId: zone.id,
+      type: "collection",
+      amount: -Math.abs(shares[i]),
+      performedByOperatorId,
+    }))
+    .filter((row) => row.amount !== 0);
+
+  if (rows.length > 0) {
+    await prisma.moneyOperation.createMany({ data: rows });
+  }
+}
+
 // Сколько из остатка кассы точки — продажи абонементов наличными, ещё НЕ
 // инкассированные (запрос пользователя 2026-07-18: "выделить абонементные
 // деньги из общего pool в свою явную строку" + "инкассация должна работать

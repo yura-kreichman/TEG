@@ -9,7 +9,7 @@ import {
   hasNoResultsToday,
   validateShift,
 } from "@/lib/work-time";
-import { getPointCashBalance } from "@/lib/zone-balance";
+import { chargeSelfServiceAdvanceToZones, getPointCashBalance } from "@/lib/zone-balance";
 import { dispatchShiftCloseSummary } from "@/lib/summary-channels/dispatch";
 import { SHIFT_CLOSE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { notifyDailyCashLateSubmission, onShiftClosed } from "@/lib/summary-channels/daily-cash-trigger";
@@ -122,6 +122,12 @@ export async function POST(request: Request) {
         shiftId: openShift.id,
       },
     });
+  }
+  // Сразу разносим по зонам (запрос пользователя 2026-07-25), не дожидаясь
+  // следующей инкассации — см. комментарий у chargeSelfServiceAdvanceToZones
+  // в lib/zone-balance.ts. Вызов ПОСЛЕ обеих записей выше — важен порядок.
+  if (advanceAmount + bonusAmount > 0) {
+    await chargeSelfServiceAdvanceToZones(point.tenantId, point.id, advanceAmount + bonusAmount, operator.id);
   }
 
   const balance = await calcOperatorBalance(operator.id);
