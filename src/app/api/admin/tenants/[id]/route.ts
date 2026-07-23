@@ -319,7 +319,26 @@ export async function DELETE(request: Request, ctx: RouteContext<"/api/admin/ten
       comment: "Полное удаление владельца из админ-модуля",
     },
   });
-  await prisma.tenant.delete({ where: { id } });
+  try {
+    await prisma.tenant.delete({ where: { id } });
+  } catch (err) {
+    // Раньше падало необработанным 500 на ЛЮБОМ тенанте, хоть раз сдавшем
+    // итоги/продавшем билет/провёдшем ревизию Товаров — три FK
+    // (ResultsSubmission.operator, TicketOrder.soldByOperator,
+    // GoodsRevisionLine.goods) были ON DELETE RESTRICT, найдено и исправлено
+    // на onDelete:Cascade аудитом 2026-07-25 (см. миграцию
+    // fix_tenant_delete_cascade_fks). Это только защитная сетка на случай
+    // будущего нового тенант-скоуп-поля без Cascade — понятная ошибка вместо
+    // сырого 500, CorrectionLog выше уже записан и не откатывается (это
+    // журнал попытки, не самого удаления).
+    if (err instanceof Error && "code" in err && (err as { code?: string }).code === "P2003") {
+      return NextResponse.json(
+        { error: "Не удалось удалить — база данных отклонила из-за внешнего ключа. Сообщите разработчику." },
+        { status: 500 }
+      );
+    }
+    throw err;
+  }
 
   // Загруженные файлы (public/uploads/<tenantId>/, см. src/lib/uploads.ts)
   // лежат на диске, а не в БД — каскад Prisma их не трогает. Best-effort:

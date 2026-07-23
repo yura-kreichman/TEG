@@ -14,8 +14,13 @@ export const dynamic = "force-dynamic";
 const SITE_URL = process.env.SITE_URL ?? "http://localhost:3000";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // landingEnabled — тумблер владельца (Настройки → Система) может выключить
+  // модуль уже после публикации; без этого фильтра карта сайта продолжала бы
+  // звать краулеров на страницу, которая реально отдаёт 404 (аудит
+  // 2026-07-25, финальный проход — сама страница /s/[slug] это уже
+  // корректно проверяет, sitemap был единственным местом, где забыли).
   const published = await prisma.landing.findMany({
-    where: { status: "published", tenant: { slug: { not: null } } },
+    where: { status: "published", tenant: { slug: { not: null }, landingEnabled: true } },
     select: { updatedAt: true, tenant: { select: { slug: true } } },
   });
 

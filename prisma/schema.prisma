@@ -89,6 +89,16 @@ model Tenant {
   // subscriptionExpiresAt (тот — ручной/плановый жёсткий срок, выставляется
   // Super Admin'ом напрямую или планировщиком, самостоятельный механизм).
   currentPeriodEnd     DateTime?
+  // Момент получения ПОСЛЕДНЕГО фактически применённого вебхука FluentCart
+  // (не создания WebhookEvent — самого syncTenantFromFluentCartEvent) —
+  // защита от переупорядоченной доставки (найдено аудитом 2026-07-25):
+  // fluentcartOrderId выше ловит только "событие от чужого/старого ЗАКАЗА",
+  // но не ловит повторную доставку УЖЕ УСТАРЕВШЕГО события ПО ТОМУ ЖЕ
+  // заказу (например, ретрай неудачно доставленного order_paid_done приходит
+  // ПОСЛЕ более свежего order_status_changed_to_canceled того же заказа) —
+  // без этого поля такой поздний ретрай молча реактивировал бы уже честно
+  // отменённую подписку. События старше этой метки отклоняются (skippedReason).
+  lastFluentcartEventAt DateTime?
   // Точечный оверрайд числовых лимитов пакета для конкретного тенанта —
   // { maxPoints?, maxZones?, maxAssets?, maxOperators? } | null, поверх
   // package.*. См. getTenantLimits() в src/lib/packages.ts.
@@ -1151,8 +1161,11 @@ model GoodsRevisionLine {
   id         String        @id @default(cuid())
   revisionId String
   revision   GoodsRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
-  goodsId    String
-  goods      Goods         @relation(fields: [goodsId], references: [id])
+  goodsId String
+  // onDelete: Cascade — тот же фикс удаления тенанта, что у
+  // ResultsSubmission.operator выше: без него удаление падало на любом
+  // тенанте, хоть раз проводившем ревизию остатков Товаров.
+  goods Goods @relation(fields: [goodsId], references: [id], onDelete: Cascade)
 
   // Снапшот GoodsStock.quantity ДО выравнивания — сам GoodsStock тут же
   // перезаписывается на actualQuantity, поэтому "расчётное" нужно хранить
@@ -1257,8 +1270,11 @@ model TicketOrder {
   openTicketsCount Int @default(0)
 
   soldByOperatorId String
-  soldByOperator   Operator @relation(fields: [soldByOperatorId], references: [id])
-  soldAt           DateTime @default(now())
+  // onDelete: Cascade — тот же фикс удаления тенанта, что у
+  // ResultsSubmission.operator выше: без него удаление падало на любом
+  // тенанте, хоть раз продавшем билет.
+  soldByOperator Operator @relation(fields: [soldByOperatorId], references: [id], onDelete: Cascade)
+  soldAt         DateTime @default(now())
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1391,7 +1407,14 @@ model ResultsSubmission {
   point    Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
 
   operatorId String
-  operator   Operator @relation(fields: [operatorId], references: [id])
+  // onDelete: Cascade — без него удаление тенанта (docs/spec/06-super-admin.md,
+  // "Удаление тенанта") падало необработанным FK-конфликтом на ЛЮБОМ
+  // тенанте, хоть раз сдававшем итоги: Point/Zone уже каскадно уносят
+  // ZoneSubmission через ResultsSubmission, но Operator удалялся отдельной
+  // цепочкой (через Tenant напрямую) и Postgres не гарантирует порядок,
+  // в котором сработают два независимых каскада — реальная ошибка,
+  // найдена и воспроизведена прямым выполнением DELETE на аудите 2026-07-25.
+  operator Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
 
   submittedAt DateTime @default(now())
   createdAt   DateTime @default(now())

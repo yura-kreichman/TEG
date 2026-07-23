@@ -133,10 +133,18 @@ export async function topUpWallet(walletId: string, params: TopupParams) {
     });
     if (!plan) throw new Error("ABONEMENT_NOT_FOUND");
 
-    const wallet = await tx.abonementWallet.update({
-      where: { id: walletId },
+    // updateMany с tenantId в where, не голый update (аудит 2026-07-25,
+    // финальный проход) — defense-in-depth, тот же приём, что уже
+    // используют все money-OUT функции этого файла (spendWalletTx и
+    // соседи); сегодня все вызывающие роуты и так проверяют владение
+    // кошельком заранее, но здесь эта проверка встроена в саму операцию, а
+    // не оставлена только на совести вызывающего кода.
+    const claimed = await tx.abonementWallet.updateMany({
+      where: { id: walletId, tenantId },
       data: { balance: { increment: plan.creditAmount } },
     });
+    if (claimed.count === 0) throw new Error("WALLET_NOT_FOUND");
+    const wallet = await tx.abonementWallet.findUniqueOrThrow({ where: { id: walletId } });
 
     await tx.abonementTransaction.create({
       data: {
@@ -190,10 +198,13 @@ interface ArbitraryTopupParams {
 export async function topUpWalletArbitrary(walletId: string, params: ArbitraryTopupParams) {
   const { tenantId, pointId, amount, paymentMethod, actor } = params;
   const wallet = await prisma.$transaction(async (tx) => {
-    const wallet = await tx.abonementWallet.update({
-      where: { id: walletId },
+    // updateMany с tenantId — см. комментарий в topUpWallet выше.
+    const claimed = await tx.abonementWallet.updateMany({
+      where: { id: walletId, tenantId },
       data: { balance: { increment: amount } },
     });
+    if (claimed.count === 0) throw new Error("WALLET_NOT_FOUND");
+    const wallet = await tx.abonementWallet.findUniqueOrThrow({ where: { id: walletId } });
 
     await tx.abonementTransaction.create({
       data: {
@@ -353,12 +364,15 @@ export async function createWalletWithTopup(rawPhone: string, name: string | nul
  * выше). Чистое изменение баланса кошелька + запись в истории (type
  * "adjustment"), без MoneyOperation.
  */
-export async function adjustWalletBalance(walletId: string, amount: number, userId: string) {
+export async function adjustWalletBalance(walletId: string, tenantId: string, amount: number, userId: string) {
   const wallet = await prisma.$transaction(async (tx) => {
-    const wallet = await tx.abonementWallet.update({
-      where: { id: walletId },
+    // updateMany с tenantId — см. комментарий в topUpWallet выше.
+    const claimed = await tx.abonementWallet.updateMany({
+      where: { id: walletId, tenantId },
       data: { balance: { increment: amount } },
     });
+    if (claimed.count === 0) throw new Error("WALLET_NOT_FOUND");
+    const wallet = await tx.abonementWallet.findUniqueOrThrow({ where: { id: walletId } });
 
     await tx.abonementTransaction.create({
       data: { walletId, type: "adjustment", amount, userId },
@@ -367,7 +381,7 @@ export async function adjustWalletBalance(walletId: string, amount: number, user
     return wallet;
   });
 
-  await notifyWalletBalanceChange(wallet.tenantId, walletId, amount).catch(() => {});
+  await notifyWalletBalanceChange(tenantId, walletId, amount).catch(() => {});
   return wallet;
 }
 

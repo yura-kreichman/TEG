@@ -68,26 +68,39 @@ export async function POST(request: Request) {
   // Без суммы — просто регистрация нового клиента, без пополнения (запрос
   // пользователя 2026-07-18: "чтобы сотрудник мог завести нового абонента, но
   // не продавать сам абонимент... может человек потом захочет").
-  if (amount == null) {
-    const wallet = await createWalletEmpty(phone, name, owner.tenantId);
+  try {
+    if (amount == null) {
+      const wallet = await createWalletEmpty(phone, name, owner.tenantId);
+      return NextResponse.json(
+        { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance), createdAt: wallet.createdAt },
+        { status: 201 }
+      );
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return NextResponse.json({ error: "Укажите сумму" }, { status: 400 });
+    }
+    const wallet = await createWalletWithAdjustment(phone, name, owner.tenantId, amount, owner.user.id);
     return NextResponse.json(
-      { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance), createdAt: wallet.createdAt },
+      {
+        id: wallet.id,
+        phone: wallet.phone,
+        name: wallet.name,
+        balance: Number(wallet.balance),
+        createdAt: wallet.createdAt,
+      },
       { status: 201 }
     );
+  } catch (err) {
+    // Гонка "два почти одновременных создания на один и тот же новый номер"
+    // (аудит 2026-07-25, финальный проход) — findWalletByPhone выше не
+    // защищает от неё сама по себе (check-then-create), но
+    // @@unique([tenantId, phone]) в схеме гарантированно ловит дубль на
+    // уровне БД; здесь превращаем голый P2002/500 в тот же дружелюбный текст,
+    // что уже возвращает предварительная проверка.
+    if (err instanceof Error && "code" in err && (err as { code?: string }).code === "P2002") {
+      return NextResponse.json({ error: "Абонемент с этим номером уже существует" }, { status: 400 });
+    }
+    throw err;
   }
-
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return NextResponse.json({ error: "Укажите сумму" }, { status: 400 });
-  }
-  const wallet = await createWalletWithAdjustment(phone, name, owner.tenantId, amount, owner.user.id);
-  return NextResponse.json(
-    {
-      id: wallet.id,
-      phone: wallet.phone,
-      name: wallet.name,
-      balance: Number(wallet.balance),
-      createdAt: wallet.createdAt,
-    },
-    { status: 201 }
-  );
 }

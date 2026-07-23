@@ -58,10 +58,23 @@ export async function POST() {
     );
   }
 
-  const shift = await prisma.shift.create({
-    data: { tenantId: point.tenantId, operatorId: operator.id, pointId: point.id, startAt, endAt: null, isOpen: true },
-  });
-  const noResultsToday = await hasNoResultsToday(point, operator, startAt);
+  // Двойной тап "Начать смену" (аудит 2026-07-25, финальный проход) — DB-level
+  // частичный уникальный индекс Shift_operatorId_open_unique уже гарантированно
+  // не даёт создать вторую открытую смену (getOpenShift выше — только быстрый
+  // оптимистичный отказ, не защита сама по себе), но раньше проигравший запрос
+  // получал сырой необработанный P2002/500 вместо понятной ошибки.
+  let shift;
+  try {
+    shift = await prisma.shift.create({
+      data: { tenantId: point.tenantId, operatorId: operator.id, pointId: point.id, startAt, endAt: null, isOpen: true },
+    });
+  } catch (err) {
+    if (err instanceof Error && "code" in err && (err as { code?: string }).code === "P2002") {
+      return NextResponse.json({ error: "Смена уже начата" }, { status: 409 });
+    }
+    throw err;
+  }
+  const noResultsToday = await hasNoResultsToday(point, operator, startAt, tenant?.timezone ?? "UTC");
 
   dispatchShiftCheckin(point.tenantId, operator.name, point.name, operator.id).catch((err) =>
     console.error("shift checkin push dispatch failed", err)

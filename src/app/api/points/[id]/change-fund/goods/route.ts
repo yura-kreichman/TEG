@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Размен для кассы "Товары" (запрос пользователя 2026-07-25: "продавец
 // Товаров по идее могут оставить размен") — та же операция, что у зонного
@@ -14,6 +15,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  if (!(await isModuleEnabled(owner.tenantId, "goodsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const { id: pointId } = await ctx.params;

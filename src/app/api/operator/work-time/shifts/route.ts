@@ -18,6 +18,8 @@ import { resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
 import { notifyDailyCashLateSubmission } from "@/lib/summary-channels/daily-cash-trigger";
 
+class ShiftOverlapError extends Error {}
+
 export async function GET(request: Request) {
   const ctx = await requireOperator();
   if (!ctx) {
@@ -107,9 +109,29 @@ export async function POST(request: Request) {
 
   const warnings = validateShift(startAt, endAt);
 
-  const shift = await prisma.shift.create({
-    data: { tenantId: point.tenantId, operatorId: operator.id, pointId: point.id, startAt, endAt },
-  });
+  // Авторитетная, атомарная проверка пересечения под локом по operatorId
+  // (аудит 2026-07-25, финальный проход) — проверка выше (до этой точки) —
+  // только быстрый оптимистичный отказ, не закрывает гонку сама по себе:
+  // два почти одновременных ручных ввода смены (двойной клик, две вкладки)
+  // могли оба пройти её на одном и том же устаревшем состоянии и оба
+  // создать реально пересекающиеся смены.
+  let shift;
+  try {
+    shift = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${operator.id}))`;
+      if (await hasOverlappingShift(operator.id, startAt, endAt, undefined, tx)) {
+        throw new ShiftOverlapError();
+      }
+      return tx.shift.create({
+        data: { tenantId: point.tenantId, operatorId: operator.id, pointId: point.id, startAt, endAt },
+      });
+    });
+  } catch (err) {
+    if (err instanceof ShiftOverlapError) {
+      return NextResponse.json({ error: "Смена пересекается с другой вашей сменой" }, { status: 409 });
+    }
+    throw err;
+  }
 
   // Авторитетная, атомарная проверка потолка под локом по pointId — см.
   // тот же паттерн и комментарий в /api/operator/work-time/check-out.
@@ -167,7 +189,8 @@ export async function POST(request: Request) {
   }
 
   const balance = await calcOperatorBalance(operator.id);
-  const noResultsToday = await hasNoResultsToday(point, operator, startAt);
+  const tenantForTz = await prisma.tenant.findUnique({ where: { id: point.tenantId }, select: { timezone: true } });
+  const noResultsToday = await hasNoResultsToday(point, operator, startAt, tenantForTz?.timezone ?? "UTC");
 
   const rate = await getRateForDate(operator.id, startAt);
   const { minutes, accrued } = calcShiftAccrual(startAt, endAt, rate);

@@ -117,7 +117,10 @@ export type SyncResult =
  * Бросает исключение только при настоящей внутренней ошибке — "тенант не
  * найден" это ожидаемый, не-исключительный результат (matched:false).
  */
-export async function syncTenantFromFluentCartEvent(parsed: ParsedFluentCartEvent): Promise<SyncResult> {
+export async function syncTenantFromFluentCartEvent(
+  parsed: ParsedFluentCartEvent,
+  eventReceivedAt: Date = new Date()
+): Promise<SyncResult> {
   const pkg = parsed.productIds.length
     ? await prisma.package.findFirst({ where: { fluentcartProductId: { in: parsed.productIds } } })
     : null;
@@ -153,7 +156,19 @@ export async function syncTenantFromFluentCartEvent(parsed: ParsedFluentCartEven
     ? `upgrade from subscription ${parsed.upgradedFromSubId}`
     : undefined;
 
-  if (ACTIVATING_EVENTS.has(parsed.eventType)) {
+  // Переупорядоченная доставка (найдено аудитом 2026-07-25) — событие
+  // старше уже применённого lastFluentcartEventAt отклоняется целиком, ДО
+  // разбора на ACTIVATING/EXPIRING: типичный сценарий — неудачная попытка
+  // доставки order_paid_done ретраится провайдером и приходит ПОЗЖЕ более
+  // свежего order_status_changed_to_canceled того же заказа (тот же order.id,
+  // поэтому старая проверка isStaleOrder по номеру заказа его не ловит вовсе)
+  // — без этой проверки поздний ретрай молча реактивировал бы уже честно
+  // отменённую подписку.
+  const isStaleEvent = tenant.lastFluentcartEventAt !== null && eventReceivedAt < tenant.lastFluentcartEventAt;
+
+  if (isStaleEvent) {
+    skippedReason = `stale event, received ${eventReceivedAt.toISOString()} but tenant already processed one from ${tenant.lastFluentcartEventAt!.toISOString()}`;
+  } else if (ACTIVATING_EVENTS.has(parsed.eventType)) {
     await prisma.tenant.update({
       where: { id: tenant.id },
       data: {
@@ -170,6 +185,7 @@ export async function syncTenantFromFluentCartEvent(parsed: ParsedFluentCartEven
         // Запоминаем, какой заказ сейчас "авторитетный" — см. проверку ниже
         // и комментарий у поля в schema.prisma.
         fluentcartOrderId: parsed.orderId,
+        lastFluentcartEventAt: eventReceivedAt,
       },
     });
   } else if (EXPIRING_EVENTS.has(parsed.eventType)) {
@@ -186,7 +202,7 @@ export async function syncTenantFromFluentCartEvent(parsed: ParsedFluentCartEven
     } else {
       await prisma.tenant.update({
         where: { id: tenant.id },
-        data: { subscriptionStatus: "expired", currentPeriodEnd: null },
+        data: { subscriptionStatus: "expired", currentPeriodEnd: null, lastFluentcartEventAt: eventReceivedAt },
       });
     }
   }

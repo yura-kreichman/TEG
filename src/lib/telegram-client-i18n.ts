@@ -34,6 +34,7 @@ export interface BotStringSet {
   startHintGeneric: string;
   startHintTenant: (name: string) => string;
   linkInvalid: string;
+  contactMismatch: string;
   notFoundGeneric: (phone: string) => string;
   notFoundTenant: (phone: string, name: string) => string;
   yourBalance: string;
@@ -63,6 +64,7 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     startHintTenant: (name) =>
       `Чтобы узнать баланс у «${name}», поделитесь своим номером телефона — тем же, что вы называли на точке.`,
     linkInvalid: "Ссылка недействительна",
+    contactMismatch: "Пожалуйста, воспользуйтесь кнопкой «Поделиться номером» ниже — так мы точно узнаем, что это ваш номер.",
     notFoundGeneric: (phone) => `Клиент с номером ${phone} не найден ни у одного проката`,
     notFoundTenant: (phone, name) => `Клиент с номером ${phone} не найден у «${name}»`,
     yourBalance: "Ваш баланс",
@@ -90,6 +92,7 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     startHintTenant: (name) =>
       `To check your balance at "${name}", share your phone number — the same one you gave at the point.`,
     linkInvalid: "This link is no longer valid",
+    contactMismatch: "Please use the \"Share phone number\" button below — that's how we can confirm it's really your number.",
     notFoundGeneric: (phone) => `No client found with number ${phone}`,
     notFoundTenant: (phone, name) => `No client found with number ${phone} at "${name}"`,
     yourBalance: "Your balance",
@@ -117,6 +120,7 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     startHintTenant: (name) =>
       `Щоб дізнатися баланс у «${name}», поділіться своїм номером телефону — тим самим, що ви називали на точці.`,
     linkInvalid: "Посилання недійсне",
+    contactMismatch: "Будь ласка, скористайтеся кнопкою «Поділитися номером» нижче — так ми точно дізнаємось, що це ваш номер.",
     notFoundGeneric: (phone) => `Клієнта з номером ${phone} не знайдено в жодному прокаті`,
     notFoundTenant: (phone, name) => `Клієнта з номером ${phone} не знайдено в «${name}»`,
     yourBalance: "Ваш баланс",
@@ -144,6 +148,7 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     startHintTenant: (name) =>
       `Pentru a verifica soldul la „${name}”, trimiteți numărul dvs. de telefon — același pe care l-ați dat la punct.`,
     linkInvalid: "Acest link nu mai este valabil",
+    contactMismatch: "Vă rugăm să folosiți butonul „Trimite numărul de telefon” de mai jos — astfel putem confirma că este într-adevăr numărul dumneavoastră.",
     notFoundGeneric: (phone) => `Niciun client găsit cu numărul ${phone}`,
     notFoundTenant: (phone, name) => `Niciun client găsit cu numărul ${phone} la „${name}”`,
     yourBalance: "Soldul dvs.",
@@ -171,6 +176,7 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     startHintTenant: (name) =>
       `Каб даведацца баланс у «${name}», падзяліцеся сваім нумарам тэлефона — тым жа, які вы называлі на пункце.`,
     linkInvalid: "Спасылка несапраўдная",
+    contactMismatch: "Калі ласка, скарыстайцеся кнопкай «Падзяліцца нумарам» ніжэй — так мы дакладна даведаемся, што гэта ваш нумар.",
     notFoundGeneric: (phone) => `Кліент з нумарам ${phone} не знойдзены ні ў адным пракаце`,
     notFoundTenant: (phone, name) => `Кліент з нумарам ${phone} не знойдзены ў «${name}»`,
     yourBalance: "Ваш баланс",
@@ -198,6 +204,7 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     startHintTenant: (name) =>
       `Aby sprawdzić saldo w „${name}”, udostępnij swój numer telefonu — ten sam, który podałeś w punkcie.`,
     linkInvalid: "Ten link jest nieaktualny",
+    contactMismatch: "Skorzystaj z przycisku „Udostępnij numer telefonu” poniżej — dzięki temu na pewno potwierdzimy, że to Twój numer.",
     notFoundGeneric: (phone) => `Nie znaleziono klienta z numerem ${phone}`,
     notFoundTenant: (phone, name) => `Nie znaleziono klienta z numerem ${phone} w „${name}”`,
     yourBalance: "Twoje saldo",
@@ -225,6 +232,7 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     startHintTenant: (name) =>
       `Per controllare il saldo presso «${name}», condividi il tuo numero di telefono — lo stesso che hai fornito al punto.`,
     linkInvalid: "Questo link non è più valido",
+    contactMismatch: "Utilizza il pulsante \"Condividi numero di telefono\" qui sotto — così potremo confermare che è davvero il tuo numero.",
     notFoundGeneric: (phone) => `Nessun cliente trovato con il numero ${phone}`,
     notFoundTenant: (phone, name) => `Nessun cliente trovato con il numero ${phone} presso «${name}»`,
     yourBalance: "Il tuo saldo",
@@ -251,6 +259,7 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     startHintGeneric: "Balansni bilish uchun telefon raqamingizni yuboring — ijara nuqtasida aytgan raqamingiz bilan.",
     startHintTenant: (name) => `«${name}»dagi balansni bilish uchun telefon raqamingizni yuboring — nuqtada aytgan raqamingiz bilan.`,
     linkInvalid: "Havola endi amal qilmaydi",
+    contactMismatch: "Iltimos, quyidagi \"Telefon raqamini ulashish\" tugmasidan foydalaning — shunda bu haqiqatan ham sizning raqamingiz ekanini bilamiz.",
     notFoundGeneric: (phone) => `${phone} raqamli mijoz topilmadi`,
     notFoundTenant: (phone, name) => `${phone} raqamli mijoz «${name}»da topilmadi`,
     yourBalance: "Balansingiz",
@@ -278,6 +287,7 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     startHintTenant: (name) =>
       `«${name}» балансын білу үшін телефон нөміріңізді бөлісіңіз — нүктеде айтқан нөміріңізбен бірдей.`,
     linkInvalid: "Бұл сілтеме жарамсыз",
+    contactMismatch: "Төмендегі «Нөмірмен бөлісу» түймесін пайдаланыңыз — осылай бұл сіздің нөміріңіз екенін нақты білеміз.",
     notFoundGeneric: (phone) => `${phone} нөмірлі клиент табылмады`,
     notFoundTenant: (phone, name) => `${phone} нөмірлі клиент «${name}»-де табылмады`,
     yourBalance: "Сіздің балансыңыз",
@@ -305,6 +315,7 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     startHintTenant: (name) =>
       `Барои дидани баланс дар «${name}», рақами телефони худро мубодила кунед — ҳамон рақаме, ки дар нуқта гуфта будед.`,
     linkInvalid: "Ин истинод дигар эътибор надорад",
+    contactMismatch: "Лутфан, тугмаи «Ба аштирок гузоштани рақам»-ро дар поён истифода баред — ҳамин тавр мо мутмаин мешавем, ки ин рақами шумост.",
     notFoundGeneric: (phone) => `Мизоҷ бо рақами ${phone} ёфт нашуд`,
     notFoundTenant: (phone, name) => `Мизоҷ бо рақами ${phone} дар «${name}» ёфт нашуд`,
     yourBalance: "Балансатон",
@@ -332,6 +343,7 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     startHintTenant: (name) =>
       `«${name}» балансын билүү үчүн телефон номериңизди бөлүшүңүз — пунктта айткан номериңиз менен бирдей.`,
     linkInvalid: "Бул шилтеме жараксыз",
+    contactMismatch: "Төмөнкү «Номерди бөлүшүү» баскычын колдонуңуз — ошондо бул сиздин номериңиз экенин так билебиз.",
     notFoundGeneric: (phone) => `${phone} номериндеги кардар табылган жок`,
     notFoundTenant: (phone, name) => `${phone} номериндеги кардар «${name}»де табылган жок`,
     yourBalance: "Сиздин балансыңыз",
@@ -359,6 +371,7 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     startHintTenant: (name) =>
       `«${name}»-ում մնացորդը ստուգելու համար կիսվեք ձեր հեռախոսահամարով՝ նույնը, որ նշել եք կետում։`,
     linkInvalid: "Այս հղումն այլևս վավեր չէ",
+    contactMismatch: "Խնդրում ենք օգտագործել ստորև «Կիսվել հեռախոսահամարով» կոճակը՝ այդպես մենք հստակ կիմանանք, որ սա իսկապես ձեր համարն է։",
     notFoundGeneric: (phone) => `${phone} համարով հաճախորդ չի գտնվել`,
     notFoundTenant: (phone, name) => `${phone} համարով հաճախորդ չի գտնվել «${name}»-ում`,
     yourBalance: "Ձեր մնացորդը",
@@ -385,6 +398,7 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     startHintGeneric: "Balansı yoxlamaq üçün telefon nömrənizi paylaşın — icarə nöqtəsində dediyiniz eyni nömrə.",
     startHintTenant: (name) => `«${name}»-də balansı yoxlamaq üçün telefon nömrənizi paylaşın — nöqtədə dediyiniz eyni nömrə.`,
     linkInvalid: "Bu link artıq etibarlı deyil",
+    contactMismatch: "Zəhmət olmasa aşağıdakı «Nömrəni paylaş» düyməsindən istifadə edin — bu şəkildə nömrənin həqiqətən sizə aid olduğunu təsdiqləyə bilərik.",
     notFoundGeneric: (phone) => `${phone} nömrəli müştəri tapılmadı`,
     notFoundTenant: (phone, name) => `${phone} nömrəli müştəri «${name}»-də tapılmadı`,
     yourBalance: "Balansınız",
@@ -412,6 +426,7 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     startHintTenant: (name) =>
       `«${name}»-ში ბალანსის საჩვენებლად გააზიარეთ თქვენი ტელეფონის ნომერი — იგივე, რომელიც დაასახელეთ პუნქტში.`,
     linkInvalid: "ეს ბმული აღარ არის აქტიური",
+    contactMismatch: "გთხოვთ, გამოიყენოთ ქვემოთ მოცემული ღილაკი „ნომრის გაზიარება\" — ასე ზუსტად დავრწმუნდებით, რომ ეს თქვენი ნომერია.",
     notFoundGeneric: (phone) => `${phone} ნომრით კლიენტი ვერ მოიძებნა`,
     notFoundTenant: (phone, name) => `${phone} ნომრით კლიენტი «${name}»-ში ვერ მოიძებნა`,
     yourBalance: "თქვენი ბალანსი",
@@ -439,6 +454,7 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     startHintTenant: (name) =>
       `«${name}»'da bakiyenizi kontrol etmek için telefon numaranızı paylaşın — noktada verdiğiniz numarayla aynı.`,
     linkInvalid: "Bu bağlantı artık geçerli değil",
+    contactMismatch: "Lütfen aşağıdaki \"Telefon numarasını paylaş\" düğmesini kullanın — böylece bu numaranın gerçekten size ait olduğunu doğrulayabiliriz.",
     notFoundGeneric: (phone) => `${phone} numaralı müşteri bulunamadı`,
     notFoundTenant: (phone, name) => `${phone} numaralı müşteri «${name}»'da bulunamadı`,
     yourBalance: "Bakiyeniz",

@@ -312,6 +312,11 @@ export default function AbonementWalletPage() {
         <div className="flex flex-col gap-3 pt-2">
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.abonements.deleteWallet}</h2>
           <p className="text-body-airbnb">{t.abonements.confirmDeleteWallet}</p>
+          {wallet.balance !== 0 && (
+            <p className="flex items-center gap-1.5 text-body-airbnb font-semibold text-destructive">
+              {t.abonements.confirmDeleteWalletBalanceWarning} <Money value={wallet.balance} />
+            </p>
+          )}
           <PressableScale>
             <DeleteButton className="h-12 w-full" onClick={remove} deleted={deleted} />
           </PressableScale>

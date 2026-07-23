@@ -28,6 +28,14 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/operator/t
   }
 
   const nextStatus = task.status === "todo" ? "doing" : "done";
-  const updated = await prisma.task.update({ where: { id }, data: { status: nextStatus } });
-  return NextResponse.json({ status: updated.status });
+  // CAS вместо обычного update (аудит 2026-07-25, финальный проход) —
+  // двойной тап по кнопке "Взять в работу"/"Выполнено" на медленной сети
+  // иначе оба запроса читали один и тот же task.status и оба писали ОДИН
+  // И ТОТ ЖЕ nextStatus — второй тап молча "терялся" (задача требовала на
+  // один тап больше, чем должна), без единой ошибки оператору.
+  const claimed = await prisma.task.updateMany({ where: { id, status: task.status }, data: { status: nextStatus } });
+  if (claimed.count === 0) {
+    return NextResponse.json({ error: "Статус задачи уже изменился, обновите страницу" }, { status: 409 });
+  }
+  return NextResponse.json({ status: nextStatus });
 }

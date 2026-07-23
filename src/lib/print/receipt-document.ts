@@ -415,10 +415,21 @@ export function openPrintDocument(data: PrintDocumentData, branding: ReceiptBran
   // временно подменяется на заголовок квитанции, восстанавливается после.
   const previousTitle = document.title;
   let restored = false;
-  function restoreTitle() {
+  function cleanup() {
     if (restored) return;
     restored = true;
     document.title = previousTitle;
+    // Очищаем печатный корень (аудит 2026-07-25, финальный проход) — иначе
+    // его @media print CSS ("body>*:not(#корень) скрыт") остаётся глобально
+    // действующим ПОСЛЕ печати, на весь остаток вкладки: любой СЛЕДУЮЩИЙ
+    // window.print() (случайный Ctrl+P, стороннее расширение) молча
+    // перепечатывал бы ЭТУ ЖЕ, уже устаревшую квитанцию вместо реальной
+    // страницы — root это obычный DOM-узел вне React-дерева, "Сменить
+    // сотрудника" (client-side навигация, без полной перезагрузки) его не
+    // трогает. На тихом киоске (--kiosk-printing, без диалога подтверждения)
+    // это реально означает случайную повторную печать чека ПРЕДЫДУЩЕГО
+    // клиента другому сотруднику/клиенту незаметно для персонала.
+    root.innerHTML = "";
   }
 
   let printed = false;
@@ -426,8 +437,8 @@ export function openPrintDocument(data: PrintDocumentData, branding: ReceiptBran
     if (printed) return;
     printed = true;
     document.title = data.title;
-    window.addEventListener("afterprint", restoreTitle, { once: true });
-    setTimeout(restoreTitle, 5000);
+    window.addEventListener("afterprint", cleanup, { once: true });
+    setTimeout(cleanup, 5000);
     window.print();
   }
 

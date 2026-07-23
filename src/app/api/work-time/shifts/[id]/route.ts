@@ -75,7 +75,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
 
   // Для проверки пересечения открытой смене нужна хоть какая-то верхняя
   // граница — "сейчас" (текущий, ещё не завершённый отрезок), не
-  // предполагаемое время окончания, которого пока не существует.
+  // предполагаемое время окончания, которого пока не существует. Это —
+  // только быстрый оптимистичный отказ, авторитетная проверка под локом по
+  // operatorId — внутри транзакции ниже (аудит 2026-07-25, финальный проход).
   if (await hasOverlappingShift(shift.operatorId, nextStartAt, nextEndAt ?? new Date(), shift.id)) {
     return NextResponse.json({ error: "Смена пересекается с другой сменой этого оператора" }, { status: 409 });
   }
@@ -131,6 +133,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   const shiftOperatorId = shift.operatorId;
 
   let advanceDelta = 0;
+  let overlapConflict = false;
   await prisma.$transaction(async (tx) => {
     // Лок по pointId (аудит 2026-07-25, повторная проверка) — два почти
     // одновременных PATCH на одну смену иначе оба читали бы один и тот же
@@ -140,6 +143,15 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
     // часть зонного разнесения. Тот же паттерн, что у chargeSelfServiceAdvanceToZones/
     // settleOutstandingCollectionAdvance в lib/zone-balance.ts.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${shiftPointId}))`;
+    // Второй, независимый лок по operatorId — авторитетная защита от гонки
+    // пересечения смен (аудит 2026-07-25, финальный проход), см. комментарий
+    // у проверки выше. Разные ключи advisory-лока не конфликтуют друг с
+    // другом, порядок неважен.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${shiftOperatorId}))`;
+    if (await hasOverlappingShift(shiftOperatorId, nextStartAt, nextEndAt ?? new Date(), shiftId, tx)) {
+      overlapConflict = true;
+      return;
+    }
 
     // isOpen держим синхронно с endAt (см. Shift.isOpen в schema.prisma).
     await tx.shift.update({
@@ -218,6 +230,10 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
       });
     }
   });
+
+  if (overlapConflict) {
+    return NextResponse.json({ error: "Смена пересекается с другой сменой этого оператора" }, { status: 409 });
+  }
 
   // Синхронизация уже разнесённых по зонам advance_settlement-записей
   // (аудит 2026-07-25: правка суммы аванса/премии владельцем меняла личный

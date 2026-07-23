@@ -10,6 +10,7 @@ import { DAILY_CASH_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { pickBotLang, BOT_STRINGS, greetingLine } from "@/lib/telegram-client-i18n";
 import type { Locale } from "@/lib/locales";
 import { timingSafeEqualStrings } from "@/lib/timing-safe-equal";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Обработчик вебхука платформенного бота (docs/spec/telegram-summaries.md).
 // Публичный эндпоинт по определению (Telegram сам его дёргает) — единственная
@@ -29,18 +30,30 @@ export async function POST(request: Request) {
   const update = await request.json().catch(() => null);
   if (!update) return NextResponse.json({ ok: true });
 
-  if (update.message?.contact) {
-    await handleContact(update.message);
-  } else if (update.message?.text) {
-    if (/^\/start(?:@\w+)?(\s|$)/.test(update.message.text)) {
-      await handleStartMessage(update.message);
-    } else {
-      await handleGroupCommand(update.message);
+  // try/catch вокруг всего диспетчера (аудит 2026-07-25, финальный проход) —
+  // ниже уже было заявлено "Telegram ждёт 200 в любом случае — иначе ретраит
+  // доставку того же update", но само тело диспетчера ничем не было от этого
+  // защищено: необработанное исключение в любом из обработчиков (например,
+  // временный сбой БД внутри buildDailyCashSummaryData у /kassa) уводило
+  // ошибку наружу из POST, Next.js отвечал 500, и Telegram переотправлял бы
+  // тот же update заново — тихий сбой команды превращался в цикл ретраев
+  // вместо того, чтобы просто ничего не ответить в чат в этот раз.
+  try {
+    if (update.message?.contact) {
+      await handleContact(update.message);
+    } else if (update.message?.text) {
+      if (/^\/start(?:@\w+)?(\s|$)/.test(update.message.text)) {
+        await handleStartMessage(update.message);
+      } else {
+        await handleGroupCommand(update.message);
+      }
+    } else if (update.callback_query) {
+      await handleCallbackQuery(update.callback_query);
+    } else if (update.my_chat_member) {
+      await handleMyChatMember(update.my_chat_member);
     }
-  } else if (update.callback_query) {
-    await handleCallbackQuery(update.callback_query);
-  } else if (update.my_chat_member) {
-    await handleMyChatMember(update.my_chat_member);
+  } catch (err) {
+    console.error("telegram webhook handler failed", err);
   }
 
   // Telegram ждёт 200 в любом случае — иначе ретраит доставку того же update.
@@ -180,7 +193,12 @@ async function handleMyChatMember(update: {
 // повторного запроса контакта), либо просим поделиться номером.
 async function handleClientStart(chatId: string, tenantSlug: string, lang: BotLang) {
   const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, name: true, currency: true } });
-  if (!tenant) {
+  // Тумблер "Клиенты" (Настройки → Система) — серверная проверка, не только
+  // скрытие в UI кабинета (аудит 2026-07-25, финальный проход, тот же
+  // принцип, что уже применён к goodsAccess/goodsAllowBalancePayment): без
+  // неё выключенный владельцем модуль всё равно продолжал бы выдавать
+  // баланс/историю клиентам через уже привязанные Telegram-чаты.
+  if (!tenant || !(await isModuleEnabled(tenant.id, "clientsEnabled"))) {
     await sendChatMessage(chatId, BOT_STRINGS[lang].linkInvalid).catch(() => {});
     return;
   }
@@ -218,18 +236,31 @@ async function promptContactShare(chatId: string, tenantId: string | null, tenan
   await sendContactRequest(chatId, text, s.shareButton).catch(() => {});
 }
 
-// Клиент нажал кнопку "Поделиться номером" — Telegram гарантирует, что
-// contact.phone_number принадлежит именно этому аккаунту (не вводится
-// текстом, подделать нельзя), поэтому дальше можно доверять номеру напрямую.
+// Клиент нажал кнопку "Поделиться номером". Telegram Bot API НЕ гарантирует,
+// что присланный contact принадлежит отправителю (Contact.user_id как раз
+// существует для этой проверки на стороне бота — она молча отсутствовала:
+// найдено при финальном аудите 2026-07-25). Без сверки contact.user_id ===
+// from.id пользователь мог вместо нажатия кнопки "Поделиться номером"
+// приложить ЧУЖУЮ контакт-карточку из телефонной книги (обычное вложение,
+// не отличить от настоящего шаринга иначе) и получить баланс/историю/заказы
+// того человека — на любом тенанте платформы, где у этого номера есть
+// кошелёк (generic-флоу ниже ищет сразу по всем тенантам). Сверяем и
+// отклоняем несовпадение, вместо того чтобы доверять номеру напрямую.
 async function handleContact(message: {
   chat: { id: number };
   contact?: { phone_number: string; user_id?: number };
-  from?: { language_code?: string };
+  from?: { id?: number; language_code?: string };
 }) {
   const chatId = String(message.chat.id);
   const contact = message.contact;
   if (!contact) return;
   const lang = pickBotLang(message.from?.language_code);
+
+  if (message.from?.id != null && contact.user_id != null && contact.user_id !== message.from.id) {
+    const s = BOT_STRINGS[lang];
+    await sendChatMessage(chatId, s.contactMismatch).catch(() => {});
+    return;
+  }
 
   const session = await prisma.clientBotSession.findUnique({ where: { chatId } });
   if (!session) return; // контакт прислан не в ответ на наш запрос — игнорируем
@@ -243,7 +274,7 @@ async function handleContact(message: {
   if (pendingTenantId) {
     // Scoped-флоу — конкретная ссылка тенанта, ищем только там.
     const tenant = await prisma.tenant.findUnique({ where: { id: pendingTenantId }, select: { id: true, name: true, currency: true } });
-    if (!tenant) return;
+    if (!tenant || !(await isModuleEnabled(tenant.id, "clientsEnabled"))) return;
     const wallet = await findWalletByPhone(tenant.id, phone);
     if (!wallet) {
       await sendChatMessage(chatId, s.notFoundTenant(contact.phone_number, tenant.name)).catch(() => {});
@@ -270,7 +301,7 @@ async function handleContact(message: {
 
   for (const wallet of wallets) {
     const tenant = await prisma.tenant.findUnique({ where: { id: wallet.tenantId }, select: { id: true, name: true, currency: true } });
-    if (!tenant) continue;
+    if (!tenant || !(await isModuleEnabled(tenant.id, "clientsEnabled"))) continue;
     await prisma.clientTelegramLink.upsert({
       where: { tenantId_chatId: { tenantId: tenant.id, chatId } },
       create: { tenantId: tenant.id, chatId, phone, language: lang },
@@ -411,7 +442,7 @@ async function handlePrivateBalanceCommand(chatId: string, lang: BotLang) {
 
   for (const link of links) {
     const tenant = await prisma.tenant.findUnique({ where: { id: link.tenantId }, select: { id: true, name: true, currency: true } });
-    if (!tenant) continue;
+    if (!tenant || !(await isModuleEnabled(tenant.id, "clientsEnabled"))) continue;
     const wallet = await findWalletByPhone(tenant.id, link.phone);
     if (!wallet) continue;
     await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});

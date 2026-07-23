@@ -1,4 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@/generated/prisma/client";
+import { localDateParts, zonedWallTimeToUtc } from "@/lib/business-day";
+
+type Tx = Prisma.TransactionClient;
 
 export type TimeTrackingMode = "manual" | "auto";
 
@@ -21,9 +25,17 @@ export function isShiftTooLong(startAt: Date, now: Date = new Date()): boolean {
 export async function hasNoResultsToday(
   point: { id: string },
   operator: { id: string; allZonesAccess: boolean },
-  at: Date
+  at: Date,
+  timezone: string = "UTC"
 ): Promise<boolean> {
-  const dayStart = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()));
+  // Часовой пояс тенанта, не сырой UTC сервера (аудит 2026-07-25, финальный
+  // проход) — для тенанта не в UTC "сегодня" по местному времени и по
+  // серверному UTC могут разойтись около полуночи, тот же класс бага, что
+  // уже чинили в lib/business-day.ts/lib/reports.ts. Мягкое напоминание, не
+  // блокирует ничего функционально — но ложно срабатывало/не срабатывало
+  // именно в этом окне.
+  const dayLocal = localDateParts(at, timezone);
+  const dayStart = zonedWallTimeToUtc(dayLocal.year, dayLocal.month, dayLocal.day, 0, 0, timezone);
   const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
   const zoneWhere = operator.allZonesAccess
     ? { pointId: point.id }
@@ -95,18 +107,31 @@ export function validateShift(startAt: Date, endAt: Date): ShiftWarningCode[] {
 // Жёсткая проверка пересечения смен одного оператора — физически невозможно,
 // поэтому блокирует создание/правку (409), в отличие от остальных мягких
 // предупреждений выше.
+//
+// ОБЯЗАТЕЛЬНО через OR на isOpen, не единое "endAt > startAt" (аудит
+// 2026-07-25, финальный проход, реальный найденный баг): у ОТКРЫТОЙ смены
+// endAt = NULL в БД, а "NULL > x" в SQL — это NULL (ложно), поэтому старое
+// единое условие "startAt < endAt AND endAt > startAt" молча ИСКЛЮЧАЛО из
+// проверки вообще все открытые смены — оператор, забывший закрыть auto-смену
+// и переключённый владельцем в ручной режим, мог получить второй, реально
+// пересекающийся по времени ручной ввод без единой ошибки, задваивая
+// начисление за перекрытые часы. Открытая смена трактуется как [startAt, +∞) —
+// пересекается с любым диапазоном, начавшимся до её собственного startAt.
 export async function hasOverlappingShift(
   operatorId: string,
   startAt: Date,
   endAt: Date,
-  excludeShiftId?: string
+  excludeShiftId?: string,
+  tx: Tx | typeof prisma = prisma
 ): Promise<boolean> {
-  const overlapping = await prisma.shift.findFirst({
+  const overlapping = await tx.shift.findFirst({
     where: {
       operatorId,
       ...(excludeShiftId ? { id: { not: excludeShiftId } } : {}),
-      startAt: { lt: endAt },
-      endAt: { gt: startAt },
+      OR: [
+        { isOpen: false, startAt: { lt: endAt }, endAt: { gt: startAt } },
+        { isOpen: true, startAt: { lt: endAt } },
+      ],
     },
     select: { id: true },
   });

@@ -8,7 +8,7 @@ import { verifyPassword } from "@/lib/auth";
 // свободные строки, см. схему) — каскада нет, поэтому связанные операции
 // журнала денег удаляются явно вместе с "родителем", иначе останутся висящие
 // записи выручки/расходов/авансов без источника.
-export const CLEANUP_CATEGORIES = ["results", "collections", "shifts", "change_fund", "all"] as const;
+export const CLEANUP_CATEGORIES = ["results", "collections", "shifts", "change_fund", "goods", "clients", "all"] as const;
 export type CleanupCategory = (typeof CLEANUP_CATEGORIES)[number];
 
 function isCleanupCategory(value: unknown): value is CleanupCategory {
@@ -31,9 +31,22 @@ async function cleanupResults(tenantId: string) {
   // revenue_abonement — тоже создаётся сразу при оплате пуска абонементом
   // (src/lib/abonement.ts), а не при сдаче итогов, поэтому у него никогда
   // нет resultsSubmissionId — без OR ниже эта выручка тоже переживала
-  // очистку (тот же баг).
+  // очистку (тот же баг). revenue/revenue_cashless БЕЗ resultsSubmissionId
+  // (аудит 2026-07-25, финальный проход) — тот же класс: voidTicketInTx
+  // (lib/tickets.ts) переиспользует ЭТИ ЖЕ типы отрицательной суммой при
+  // аннулировании билета ПОСЛЕ сдачи итогов, но без resultsSubmissionId —
+  // submit-results/route.ts единственный, кто создаёт revenue/revenue_cashless
+  // с ним, поэтому "тип revenue* без resultsSubmissionId" однозначно
+  // означает такой возврат, безопасно захватывать в очистку.
   await prisma.moneyOperation.deleteMany({
-    where: { tenantId, OR: [{ resultsSubmissionId: { not: null } }, { type: "revenue_abonement" }] },
+    where: {
+      tenantId,
+      OR: [
+        { resultsSubmissionId: { not: null } },
+        { type: "revenue_abonement" },
+        { type: { in: ["revenue", "revenue_cashless"] }, resultsSubmissionId: null },
+      ],
+    },
   });
   await prisma.resultsSubmission.deleteMany({ where: { tenantId } });
 }
@@ -85,11 +98,42 @@ async function cleanupChangeFund(tenantId: string) {
   await prisma.moneyOperation.deleteMany({ where: { tenantId, type: "change_fund" } });
 }
 
+// "Товары" — не было категории вовсе (аудит 2026-07-25, финальный проход:
+// ни один из типов goods_revenue*/goods_change_fund, ни сама история продаж/
+// довозов/ревизий/сверок не были покрыты НИ ОДНОЙ категорией, включая
+// "Очистить всё"). Каталог (Goods/GoodsCategory) и текущие остатки
+// (GoodsStock) НЕ трогаем — тот же принцип, что у "Счётчиков"/"Смен": здесь
+// стирается история операций, не настройка/текущее состояние.
+async function cleanupGoods(tenantId: string) {
+  await prisma.moneyOperation.deleteMany({
+    where: { tenantId, type: { in: ["goods_revenue", "goods_revenue_cashless", "goods_revenue_abonement", "goods_change_fund"] } },
+  });
+  await prisma.goodsSale.deleteMany({ where: { tenantId } });
+  await prisma.goodsRestock.deleteMany({ where: { goods: { tenantId } } });
+  await prisma.goodsRevision.deleteMany({ where: { tenantId } });
+  await prisma.goodsReconciliation.deleteMany({ where: { tenantId } });
+}
+
+// "Клиенты" — та же находка, что у "Товаров": ни одной категории. Кошельки
+// удаляются целиком (не только их топ-апы) — тот же смысл, что у остальных
+// категорий "очистки перед реальным стартом": тестовые клиенты с тестовыми
+// балансами, а не только денежный след. AbonementTransaction уходит
+// каскадом (onDelete: Cascade), ссылки на кошелёк у GoodsSale/TicketOrder/
+// Launch — onDelete: SetNull, ничего не блокирует и не осиротевает.
+async function cleanupClients(tenantId: string) {
+  await prisma.moneyOperation.deleteMany({
+    where: { tenantId, type: { in: ["abonement_topup", "abonement_topup_cashless"] } },
+  });
+  await prisma.abonementWallet.deleteMany({ where: { tenantId } });
+}
+
 const CLEANUP_RUNNERS: Record<Exclude<CleanupCategory, "all">, (tenantId: string) => Promise<void>> = {
   results: cleanupResults,
   collections: cleanupCollections,
   shifts: cleanupShifts,
   change_fund: cleanupChangeFund,
+  goods: cleanupGoods,
+  clients: cleanupClients,
 };
 
 export async function GET() {
@@ -134,6 +178,8 @@ export async function POST(request: Request) {
     await cleanupCollections(owner.tenantId);
     await cleanupShifts(owner.tenantId);
     await cleanupChangeFund(owner.tenantId);
+    await cleanupGoods(owner.tenantId);
+    await cleanupClients(owner.tenantId);
   } else {
     await CLEANUP_RUNNERS[category](owner.tenantId);
   }

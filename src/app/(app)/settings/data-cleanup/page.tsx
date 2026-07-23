@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AlertTriangle, Banknote, ClipboardList, RefreshCw, Trash2 } from "lucide-react";
+import { AlertTriangle, Banknote, ClipboardList, RefreshCw, ShoppingBag, Trash2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { useSavePulse } from "@/hooks/use-save-pulse";
@@ -16,7 +16,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { useI18n } from "@/components/i18n-provider";
 
-type CleanupCategory = "results" | "collections" | "shifts" | "change_fund" | "all";
+type CleanupCategory = "results" | "collections" | "shifts" | "change_fund" | "goods" | "clients" | "all";
 
 export default function DataCleanupPage() {
   const router = useRouter();
@@ -50,6 +50,8 @@ export default function DataCleanupPage() {
     { key: "collections", icon: Banknote, title: t.dataCleanup.collectionsTitle, hint: t.dataCleanup.collectionsHint },
     { key: "shifts", icon: RefreshCw, title: t.dataCleanup.shiftsTitle, hint: t.dataCleanup.shiftsHint },
     { key: "change_fund", icon: Banknote, title: t.dataCleanup.changeFundTitle, hint: t.dataCleanup.changeFundHint },
+    { key: "goods", icon: ShoppingBag, title: t.dataCleanup.goodsTitle, hint: t.dataCleanup.goodsHint },
+    { key: "clients", icon: Wallet, title: t.dataCleanup.clientsTitle, hint: t.dataCleanup.clientsHint },
   ];
 
   function openConfirm(category: CleanupCategory) {

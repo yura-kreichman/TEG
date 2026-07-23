@@ -161,7 +161,8 @@ export async function POST(request: Request) {
   }
 
   const balance = await calcOperatorBalance(operator.id);
-  const noResultsToday = await hasNoResultsToday(point, operator, endAt);
+  const tenantForTz = await prisma.tenant.findUnique({ where: { id: point.tenantId }, select: { timezone: true } });
+  const noResultsToday = await hasNoResultsToday(point, operator, endAt, tenantForTz?.timezone ?? "UTC");
 
   const shiftCloseSettings =
     (await prisma.shiftCloseSummarySettings.findUnique({ where: { tenantId: point.tenantId } })) ??

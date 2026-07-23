@@ -99,35 +99,35 @@ export async function POST(request: Request) {
   // Без выбранного плана и без суммы — просто регистрация нового абонента,
   // без покупки (запрос пользователя 2026-07-18: "может человек потом
   // захочет").
-  if (!abonementId && amount == null) {
-    const wallet = await createWalletEmpty(phone, name, point.tenantId);
-    return NextResponse.json(
-      { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance), createdAt: wallet.createdAt },
-      { status: 201 }
-    );
-  }
-  if (!(ABONEMENT_TOPUP_PAYMENT_METHODS as readonly string[]).includes(paymentMethod)) {
-    return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
-  }
-
-  if (!abonementId) {
-    if (!Number.isFinite(amount) || (amount as number) <= 0) {
-      return NextResponse.json({ error: "Укажите сумму" }, { status: 400 });
-    }
-    const wallet = await createWalletWithTopupArbitrary(phone, name, {
-      tenantId: point.tenantId,
-      pointId: point.id,
-      amount: amount as number,
-      paymentMethod,
-      actor: { operatorId: operator.id },
-    });
-    return NextResponse.json(
-      { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance), createdAt: wallet.createdAt },
-      { status: 201 }
-    );
-  }
-
   try {
+    if (!abonementId && amount == null) {
+      const wallet = await createWalletEmpty(phone, name, point.tenantId);
+      return NextResponse.json(
+        { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance), createdAt: wallet.createdAt },
+        { status: 201 }
+      );
+    }
+    if (!(ABONEMENT_TOPUP_PAYMENT_METHODS as readonly string[]).includes(paymentMethod)) {
+      return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
+    }
+
+    if (!abonementId) {
+      if (!Number.isFinite(amount) || (amount as number) <= 0) {
+        return NextResponse.json({ error: "Укажите сумму" }, { status: 400 });
+      }
+      const wallet = await createWalletWithTopupArbitrary(phone, name, {
+        tenantId: point.tenantId,
+        pointId: point.id,
+        amount: amount as number,
+        paymentMethod,
+        actor: { operatorId: operator.id },
+      });
+      return NextResponse.json(
+        { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance), createdAt: wallet.createdAt },
+        { status: 201 }
+      );
+    }
+
     const wallet = await createWalletWithTopup(phone, name, {
       tenantId: point.tenantId,
       pointId: point.id,
@@ -148,6 +148,12 @@ export async function POST(request: Request) {
   } catch (err) {
     if (err instanceof Error && err.message === "ABONEMENT_NOT_FOUND") {
       return NextResponse.json({ error: "Абонемент не найден" }, { status: 400 });
+    }
+    // Гонка "два почти одновременных создания на один и тот же новый номер"
+    // (аудит 2026-07-25, финальный проход) — см. тот же фикс в
+    // /api/abonement-wallets/route.ts.
+    if (err instanceof Error && "code" in err && (err as { code?: string }).code === "P2002") {
+      return NextResponse.json({ error: "Абонемент с этим номером уже существует" }, { status: 400 });
     }
     throw err;
   }

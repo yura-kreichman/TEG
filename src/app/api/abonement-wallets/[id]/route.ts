@@ -120,6 +120,16 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/abonement-
 // Удаление кошелька владельцем — история операций уходит каскадом
 // (AbonementTransaction.walletId onDelete: Cascade), пуски, оплаченные этим
 // кошельком, остаются (Launch.abonementWalletId onDelete: SetNull).
+//
+// Ненулевой остаток при удалении (аудит 2026-07-25, финальный проход):
+// раньше баланс молча пропадал вместе с кошельком — ни следа в CorrectionLog,
+// подтверждение на клиенте не упоминало сумму вовсе. Полностью блокировать
+// удаление до обнуления баланса — тупик (в проекте пока нет отдельной формы
+// "списать остаток без покупки", клиент может быть просто закрыт навсегда с
+// небольшим неиспользуемым остатком) — поэтому удаление разрешено, но при
+// ненулевом балансе пишем CorrectionLog (entityId — свободная ссылка, не FK,
+// переживает каскадное удаление кошелька) с точной прощённой суммой, чтобы
+// в истории остался след, а не полная тишина.
 export async function DELETE(_request: Request, ctx: RouteContext<"/api/abonement-wallets/[id]">) {
   const owner = await requireOwner();
   if (!owner) {
@@ -135,6 +145,21 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/abonemen
     return NextResponse.json({ error: "Абонент не найден" }, { status: 404 });
   }
 
-  await prisma.abonementWallet.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
+  const forfeitedBalance = Number(wallet.balance);
+  await prisma.$transaction(async (tx) => {
+    if (forfeitedBalance !== 0) {
+      await tx.correctionLog.create({
+        data: {
+          entityType: "AbonementWallet",
+          entityId: id,
+          correctedByUserId: owner.user.id,
+          beforeJson: { phone: wallet.phone, name: wallet.name, balance: forfeitedBalance },
+          afterJson: { deleted: true, forfeitedBalance },
+          comment: "Кошелёк удалён с ненулевым остатком — остаток безвозвратно списан",
+        },
+      });
+    }
+    await tx.abonementWallet.delete({ where: { id } });
+  });
+  return NextResponse.json({ ok: true, forfeitedBalance });
 }

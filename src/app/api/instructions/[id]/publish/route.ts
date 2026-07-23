@@ -32,20 +32,31 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/instructio
 
   const nextVersionNumber = instruction.currentVersionNumber + 1;
 
-  await prisma.$transaction([
-    prisma.instructionVersion.create({
-      data: {
-        instructionId: instruction.id,
-        versionNumber: nextVersionNumber,
-        title: instruction.title,
-        content: instruction.content as Prisma.InputJsonValue,
-      },
-    }),
-    prisma.instruction.update({
-      where: { id: instruction.id },
-      data: { status: "published", currentVersionNumber: nextVersionNumber },
-    }),
-  ]);
+  try {
+    await prisma.$transaction([
+      prisma.instructionVersion.create({
+        data: {
+          instructionId: instruction.id,
+          versionNumber: nextVersionNumber,
+          title: instruction.title,
+          content: instruction.content as Prisma.InputJsonValue,
+        },
+      }),
+      prisma.instruction.update({
+        where: { id: instruction.id },
+        data: { status: "published", currentVersionNumber: nextVersionNumber },
+      }),
+    ]);
+  } catch (err) {
+    // Двойной клик "Опубликовать" (аудит 2026-07-25, финальный проход) —
+    // @@unique([instructionId, versionNumber]) уже защищает от порчи данных
+    // (весь batch падает и откатывается атомарно), но раньше это был сырой
+    // необработанный 500 вместо понятной ошибки.
+    if (err instanceof Error && "code" in err && (err as { code?: string }).code === "P2002") {
+      return NextResponse.json({ error: "Уже опубликовано — обновите страницу" }, { status: 409 });
+    }
+    throw err;
+  }
 
   return NextResponse.json({ ok: true, versionNumber: nextVersionNumber });
 }

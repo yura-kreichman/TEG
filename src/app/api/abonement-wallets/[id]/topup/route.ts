@@ -28,7 +28,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/abonement-w
     return NextResponse.json({ error: "Укажите сумму" }, { status: 400 });
   }
 
-  const updated = await adjustWalletBalance(walletId, amount, owner.user.id);
+  const updated = await adjustWalletBalance(walletId, owner.tenantId, amount, owner.user.id);
   return NextResponse.json({
     id: updated.id,
     phone: updated.phone,
