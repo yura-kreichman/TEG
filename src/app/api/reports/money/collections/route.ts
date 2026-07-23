@@ -117,6 +117,7 @@ export async function GET(request: Request) {
         pointName: op.zone!.point.name,
         amount: Math.abs(Number(op.amount)),
         pool: null as "abonement" | "goods" | null,
+        comment: op.comment,
       })),
     ...poolOps
       .filter((op) => op.point !== null)
@@ -129,6 +130,7 @@ export async function GET(request: Request) {
         pointName: op.point!.name,
         amount: Math.abs(Number(op.amount)),
         pool: (op.type === "collection_pool_sweep_abonement" ? "abonement" : "goods") as "abonement" | "goods",
+        comment: op.comment,
       })),
     ...advanceOps
       .filter((op) => op.point !== null)
@@ -140,6 +142,7 @@ export async function GET(request: Request) {
         amount: Math.abs(Number(op.amount)),
         pool: "advance" as const,
         operatorName: null as string | null,
+        comment: op.comment,
       })),
     ...takenOps
       .filter((op) => op.point !== null)
@@ -151,6 +154,7 @@ export async function GET(request: Request) {
         amount: Math.abs(Number(op.amount)),
         pool: (op.type === "advance" ? "advance_taken" : "bonus_taken") as "advance_taken" | "bonus_taken",
         operatorName: op.beneficiaryOperator?.name ?? op.performedByOperator?.name ?? null,
+        comment: op.comment,
       })),
   ].sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1));
 

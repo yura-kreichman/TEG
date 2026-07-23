@@ -60,6 +60,11 @@ interface CollectionEntry {
   pool: "abonement" | "goods" | "advance" | "advance_taken" | "bonus_taken" | null;
   // Только у advance_taken/bonus_taken — кто забрал.
   operatorName?: string | null;
+  // Владелец может пояснить происхождение записи (запрос пользователя
+  // 2026-07-25: "чтобы я видел, что это был аванс Жени") — например, у
+  // zone-level "collection", которая доразнесла старый самообслуживаемый
+  // аванс сотрудника при следующей инкассации.
+  comment?: string | null;
 }
 
 // Сентинелы для "Абонементы"/"Товары" в дропдауне "По кассам" (запрос
@@ -629,10 +634,8 @@ export default function ZoneBalancesPage() {
                     </p>
                     <div className="flex flex-col">
                       {group.items.map((c) => (
-                        <div
-                          key={c.id}
-                          className="flex items-center justify-between gap-2 border-t border-border py-1.5 first:border-t-0"
-                        >
+                        <div key={c.id} className="border-t border-border py-1.5 first:border-t-0">
+                        <div className="flex items-center justify-between gap-2">
                           <span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
                             {c.pool === "abonement" && <Gift className="size-3 shrink-0" />}
                             {c.pool === "goods" && <ShoppingBag className="size-3 shrink-0" />}
@@ -671,6 +674,10 @@ export default function ZoneBalancesPage() {
                               </PressableScale>
                             )}
                           </span>
+                        </div>
+                        {c.comment && (
+                          <p className="mt-0.5 truncate pl-4 text-[0.6875rem] text-muted-foreground/70">{c.comment}</p>
+                        )}
                         </div>
                       ))}
                     </div>
