@@ -68,6 +68,13 @@ export default function OperatorHomePage() {
   // кассу"). Абонементы — без гейта: применимы как способ оплаты на любой
   // зоне вне зависимости от тумблеров, отдельного тумблера-доступа нет.
   const [goodsAccess, setGoodsAccess] = useState(false);
+  // Остатки Абонементов/Товаров наличными (запрос пользователя 2026-07-25) —
+  // пункты в дропдауне "По кассам" не показываем, если брать реально неоткуда
+  // (в отличие от зон, у этих двух касс нет разрыва "деньги уже есть, система
+  // ещё не знает" — сумма всегда точна, см. owner-версию для полного
+  // объяснения).
+  const [abonementCashTotal, setAbonementCashTotal] = useState(0);
+  const [goodsCashTotal, setGoodsCashTotal] = useState(0);
   const [checking, setChecking] = useState(true);
   const [workTimeEnabled, setWorkTimeEnabled] = useState(false);
   const [toPayOut, setToPayOut] = useState<number | null>(null);
@@ -152,6 +159,8 @@ export default function OperatorHomePage() {
           }))
         );
         setGoodsAccess(Boolean(data.goodsAccess));
+        setAbonementCashTotal(Number(data.abonementCashTotal) || 0);
+        setGoodsCashTotal(Number(data.goodsCashTotal) || 0);
       });
   }
 
@@ -703,8 +712,8 @@ export default function OperatorHomePage() {
                     onValueChange={(v) => setCollectionZoneId(v ?? "")}
                     items={[
                       ...zones.map((z) => ({ value: z.id, label: z.name })),
-                      { value: ABONEMENT_POOL_ID, label: t.money.abonementCashLabel },
-                      ...(goodsAccess ? [{ value: GOODS_POOL_ID, label: t.goods.navLabel }] : []),
+                      ...(abonementCashTotal > 0 ? [{ value: ABONEMENT_POOL_ID, label: t.money.abonementCashLabel }] : []),
+                      ...(goodsAccess && goodsCashTotal > 0 ? [{ value: GOODS_POOL_ID, label: t.goods.navLabel }] : []),
                     ]}
                   >
                     <SelectTrigger id="collectionZone" className="h-14 border-2 text-base">
@@ -758,13 +767,15 @@ export default function OperatorHomePage() {
                           </span>
                         </SelectItem>
                       ))}
-                      <SelectItem value={ABONEMENT_POOL_ID}>
-                        <span className="flex items-center gap-2">
-                          <Gift className="size-5 shrink-0 text-muted-foreground" />
-                          {t.money.abonementCashLabel}
-                        </span>
-                      </SelectItem>
-                      {goodsAccess && (
+                      {abonementCashTotal > 0 && (
+                        <SelectItem value={ABONEMENT_POOL_ID}>
+                          <span className="flex items-center gap-2">
+                            <Gift className="size-5 shrink-0 text-muted-foreground" />
+                            {t.money.abonementCashLabel}
+                          </span>
+                        </SelectItem>
+                      )}
+                      {goodsAccess && goodsCashTotal > 0 && (
                         <SelectItem value={GOODS_POOL_ID}>
                           <span className="flex items-center gap-2">
                             <ShoppingBag className="size-5 shrink-0 text-muted-foreground" />

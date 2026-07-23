@@ -174,9 +174,18 @@ export async function getPointCashBalance(pointId: string): Promise<number> {
     // Абонементные/товарные наличные, собранные ДО СВОЕЙ ПОСЛЕДНЕЙ инкассации
     // (не общей — см. getPoolSweepCutoff), считаются уже забранными
     // (запрос пользователя 2026-07-18, разделено на два независимых пула
-    // 2026-07-22 — docs/spec/09-goods.md, "Деньги").
+    // 2026-07-22 — docs/spec/09-goods.md, "Деньги"). goods_change_fund —
+    // "Размен" Товаров (запрос пользователя 2026-07-25) — та же отсечка, что
+    // и goods_revenue: это тоже реальные наличные в товарной кассе, без этой
+    // строки они бы после свипа продолжали учитываться в общем остатке точки
+    // навсегда, хотя getPointGoodsCashTotal их уже честно обнулил своим окном.
     if (op.type === "abonement_topup" && abonementCutoff && op.occurredAt <= abonementCutoff) continue;
-    if (op.type === "goods_revenue" && goodsCutoff && op.occurredAt <= goodsCutoff) continue;
+    if (
+      (op.type === "goods_revenue" || op.type === "goods_change_fund") &&
+      goodsCutoff &&
+      op.occurredAt <= goodsCutoff
+    )
+      continue;
     total += Number(op.amount);
   }
   return total;
@@ -265,14 +274,21 @@ export async function getPointAbonementCashTotal(pointId: string): Promise<numbe
 
 // Товарные наличные (docs/spec/09-goods.md, "Деньги") — тот же принцип, что
 // у getPointAbonementCashTotal выше, но своя, независимая отсечка (см.
-// getPoolSweepCutoff) — нужен явной цифрой для потолка "что честно
-// раскладывается по зонам" при инкассации, см. splitCollectionAmountDetailed.
+// getPoolSweepCutoff) — нужен явной цифрой и для потолка "что честно
+// раскладывается по зонам" при инкассации (splitCollectionAmountDetailed), и
+// теперь для самого потолка инкассации "Товаров" (запрос пользователя
+// 2026-07-25, см. /api/points/[id]/collection/pool). "Размен" по Товарам
+// (goods_change_fund, реальные деньги, которые Владелец сам добавил в кассу
+// на сдачу — /api/points/[id]/change-fund/goods) тоже учитывается в этой же
+// сумме — та же логика, что у зонного "Размена" (change_fund) в getZoneBalances:
+// это реальные наличные, физически лежащие в кассе, следующая инкассация
+// заберёт их вместе с настоящей выручкой.
 export async function getPointGoodsCashTotal(pointId: string): Promise<number> {
   const cutoff = await getPoolSweepCutoff(pointId, "collection_pool_sweep_goods");
   const ops = await prisma.moneyOperation.findMany({
     where: {
       pointId,
-      type: "goods_revenue",
+      type: { in: ["goods_revenue", "goods_change_fund"] },
       ...(cutoff ? { occurredAt: { gt: cutoff } } : {}),
     },
     select: { amount: true },

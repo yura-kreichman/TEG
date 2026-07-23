@@ -97,7 +97,11 @@ export default function ZoneBalancesPage() {
   // всех точек вперемешку одним списком, тот же паттерн, что на /goods).
   const [points, setPoints] = useState<{ id: string; name: string; iconKey: string | null }[]>([]);
   const [pointId, setPointId] = usePersistedPointId();
-  const [changeFundZoneId, setChangeFundZoneId] = useState<string | null>(null);
+  // Либо реальный zoneId, либо GOODS_POOL_ID (запрос пользователя 2026-07-25:
+  // "продавец Товаров по идее могут оставить размен" — Размен теперь не
+  // только зонный). Абонементам Размен намеренно не сделан — там нет своей
+  // "кассы на сдачу", только суммы, реально оплаченные клиентами.
+  const [changeFundTarget, setChangeFundTarget] = useState<string | null>(null);
   const [changeFundAmount, setChangeFundAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const { saved: changeFundSaved, pulse: changeFundPulse } = useSavePulse();
@@ -241,9 +245,13 @@ export default function ZoneBalancesPage() {
   async function handleChangeFund(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    if (!changeFundZoneId) return;
+    if (!changeFundTarget) return;
 
-    const res = await fetch(`/api/zones/${changeFundZoneId}/change-fund`, {
+    const url =
+      changeFundTarget === GOODS_POOL_ID
+        ? `/api/points/${pointId}/change-fund/goods`
+        : `/api/zones/${changeFundTarget}/change-fund`;
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount: changeFundAmount }),
@@ -256,7 +264,7 @@ export default function ZoneBalancesPage() {
     await loadReport();
     changeFundPulse(() => {
       setChangeFundAmount("");
-      setChangeFundZoneId(null);
+      setChangeFundTarget(null);
     });
   }
 
@@ -268,6 +276,15 @@ export default function ZoneBalancesPage() {
   const currentPointTotal = pointTotals.find((p) => p.pointId === pointId) ?? null;
   const currentZoneBalances = zoneBalances.filter((z) => z.pointId === pointId);
   const zonesForCollectionPoint = zoneBalances.filter((z) => z.pointId === collectionPointId);
+  // "Забрать авансом" из Абонементов/Товаров, когда там реально 0 ₽, —
+  // нечего забирать (запрос пользователя 2026-07-25: у этих касс, в отличие
+  // от зон, нет разрыва "деньги уже есть, система ещё не знает" — продажа
+  // сразу пишется в кассу, так что учтённая сумма ВСЕГДА точна). Пункт
+  // просто не предлагаем, если брать неоткуда — сервер всё равно это же
+  // проверяет отдельно (см. /api/points/[id]/collection/pool).
+  const collectionPointTotal = pointTotals.find((p) => p.pointId === collectionPointId);
+  const showAbonementPoolOption = clientsEnabled && (collectionPointTotal?.abonementCashTotal ?? 0) > 0;
+  const showGoodsPoolOption = goodsEnabled && (collectionPointTotal?.goodsCashTotal ?? 0) > 0;
 
   function openCollection() {
     setCollectionPointId(pointId ?? points[0]?.id ?? "");
@@ -432,7 +449,10 @@ export default function ZoneBalancesPage() {
     );
   }
 
-  const activeZoneName = zoneBalances.find((z) => z.zoneId === changeFundZoneId)?.zoneName;
+  const changeFundTargetName =
+    changeFundTarget === GOODS_POOL_ID
+      ? t.goods.navLabel
+      : zoneBalances.find((z) => z.zoneId === changeFundTarget)?.zoneName;
   const calYear = calendarMonth.getUTCFullYear();
   const calMonth = calendarMonth.getUTCMonth() + 1;
 
@@ -595,7 +615,7 @@ export default function ZoneBalancesPage() {
                         type="button"
                         className="flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground"
                         onClick={() => {
-                          setChangeFundZoneId(zb.zoneId);
+                          setChangeFundTarget(zb.zoneId);
                           setChangeFundAmount("");
                           setError(null);
                         }}
@@ -610,44 +630,55 @@ export default function ZoneBalancesPage() {
                 {/* Абонементы, проданные наличными на этой точке, ещё не
                     инкассированные — своя явная строка, не смешанная с
                     остатками зон (запрос пользователя 2026-07-18: "выделить
-                    абонементные деньги из общего pool"). Видна всегда, пока
-                    модуль включён — не только при ненулевой сумме (запрос
-                    пользователя 2026-07-25: раньше строка полностью пропадала
-                    при 0 ₽, хотя зоны показываются и при нулевом остатке). */}
-                {clientsEnabled && currentPointTotal && (
+                    абонементные деньги из общего pool"). Скрыта при 0 ₽
+                    (запрос пользователя 2026-07-25: "нет смысла отображать
+                    кассы с 0" — в отличие от зон, тут нет своего действия
+                    вроде "Размена", которое надо было бы держать доступным
+                    и при нулевом остатке, скрывать без потерь). */}
+                {clientsEnabled && currentPointTotal && currentPointTotal.abonementCashTotal > 0 && (
                   <div className="flex items-center justify-between border-t border-border py-3 pl-1">
                     <p className="flex items-center gap-1.5 text-body-airbnb">
                       <Gift className="size-4 shrink-0 text-muted-foreground" />
                       {t.money.abonementCashLabel}
                     </p>
-                    <span
-                      className={cn(
-                        "text-[0.96875rem] font-bold tabular-nums",
-                        currentPointTotal.abonementCashTotal === 0 && "font-medium text-muted-foreground"
-                      )}
-                    >
+                    <span className="text-[0.96875rem] font-bold tabular-nums">
                       <Money value={currentPointTotal.abonementCashTotal} />
                     </span>
                   </div>
                 )}
-                {/* Товары наличными — та же логика, что у Абонементов выше
-                    (запрос пользователя 2026-07-25: раньше эта сумма вообще
-                    нигде на экране не показывалась, только использовалась в
-                    расчётах). */}
+                {/* Товары — в отличие от Абонементов, видна всегда, пока
+                    модуль включён, даже при 0 ₽ (запрос пользователя
+                    2026-07-25: "продавец Товаров по идее могут оставить
+                    размен" — своя кнопка "Размен" ниже, та же причина, по
+                    которой зоны выше тоже всегда видны). */}
                 {goodsEnabled && currentPointTotal && (
                   <div className="flex items-center justify-between border-t border-border py-3 pl-1">
                     <p className="flex items-center gap-1.5 text-body-airbnb">
                       <ShoppingBag className="size-4 shrink-0 text-muted-foreground" />
                       {t.goods.navLabel}
                     </p>
-                    <span
-                      className={cn(
-                        "text-[0.96875rem] font-bold tabular-nums",
-                        currentPointTotal.goodsCashTotal === 0 && "font-medium text-muted-foreground"
-                      )}
-                    >
-                      <Money value={currentPointTotal.goodsCashTotal} />
-                    </span>
+                    <div className="flex items-center gap-3.5">
+                      <span
+                        className={cn(
+                          "text-[0.96875rem] font-bold tabular-nums",
+                          currentPointTotal.goodsCashTotal === 0 && "font-medium text-muted-foreground"
+                        )}
+                      >
+                        <Money value={currentPointTotal.goodsCashTotal} />
+                      </span>
+                      <button
+                        type="button"
+                        className="flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground"
+                        onClick={() => {
+                          setChangeFundTarget(GOODS_POOL_ID);
+                          setChangeFundAmount("");
+                          setError(null);
+                        }}
+                      >
+                        <Coins className="size-3.5" />
+                        {t.money.changeFund}
+                      </button>
+                    </div>
                   </div>
                 )}
               </>
@@ -753,10 +784,10 @@ export default function ZoneBalancesPage() {
         </div>
       </div>
 
-      <BottomSheet open={changeFundZoneId !== null} onClose={() => setChangeFundZoneId(null)}>
+      <BottomSheet open={changeFundTarget !== null} onClose={() => setChangeFundTarget(null)}>
         <form onSubmit={handleChangeFund} className="flex flex-col gap-4 pt-2">
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
-            {t.money.changeFundAmountFor} «{activeZoneName}»
+            {t.money.changeFundAmountFor} «{changeFundTargetName}»
           </h2>
           <div className="flex flex-col gap-1">
             <Label htmlFor="changeFundAmount">{t.money.amountLabel}</Label>
@@ -805,8 +836,8 @@ export default function ZoneBalancesPage() {
                     onValueChange={(v) => setCollectionZoneId(v ?? "")}
                     items={[
                       ...zonesForCollectionPoint.map((z) => ({ value: z.zoneId, label: z.zoneName })),
-                      { value: ABONEMENT_POOL_ID, label: t.money.abonementCashLabel },
-                      { value: GOODS_POOL_ID, label: t.goods.navLabel },
+                      ...(showAbonementPoolOption ? [{ value: ABONEMENT_POOL_ID, label: t.money.abonementCashLabel }] : []),
+                      ...(showGoodsPoolOption ? [{ value: GOODS_POOL_ID, label: t.goods.navLabel }] : []),
                     ]}
                   >
                     <SelectTrigger id="collectionZone">
@@ -860,18 +891,22 @@ export default function ZoneBalancesPage() {
                           </span>
                         </SelectItem>
                       ))}
-                      <SelectItem value={ABONEMENT_POOL_ID}>
-                        <span className="flex items-center gap-2">
-                          <Gift className="size-5 shrink-0 text-muted-foreground" />
-                          {t.money.abonementCashLabel}
-                        </span>
-                      </SelectItem>
-                      <SelectItem value={GOODS_POOL_ID}>
-                        <span className="flex items-center gap-2">
-                          <ShoppingBag className="size-5 shrink-0 text-muted-foreground" />
-                          {t.goods.navLabel}
-                        </span>
-                      </SelectItem>
+                      {showAbonementPoolOption && (
+                        <SelectItem value={ABONEMENT_POOL_ID}>
+                          <span className="flex items-center gap-2">
+                            <Gift className="size-5 shrink-0 text-muted-foreground" />
+                            {t.money.abonementCashLabel}
+                          </span>
+                        </SelectItem>
+                      )}
+                      {showGoodsPoolOption && (
+                        <SelectItem value={GOODS_POOL_ID}>
+                          <span className="flex items-center gap-2">
+                            <ShoppingBag className="size-5 shrink-0 text-muted-foreground" />
+                            {t.goods.navLabel}
+                          </span>
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

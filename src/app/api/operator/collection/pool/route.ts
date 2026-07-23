@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { dispatchCollection } from "@/lib/summary-channels/dispatch";
+import { getPointAbonementCashTotal, getPointGoodsCashTotal } from "@/lib/zone-balance";
+import { formatMoney } from "@/lib/format";
+import { resolveLocale } from "@/lib/i18n";
 
 // Инкассация "Абонементы"/"Товары" наличными точки, вносит Сотрудник — см.
-// owner-версию (/api/points/[id]/collection/pool) для полного объяснения.
+// owner-версию (/api/points/[id]/collection/pool) для полного объяснения, в
+// т.ч. почему тут (в отличие от зонной инкассации) есть потолок.
 export async function POST(request: Request) {
   const ctx = await requireOperator();
   if (!ctx) {
@@ -26,6 +30,17 @@ export async function POST(request: Request) {
   const amountNumber = Number(amount);
   if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
     return NextResponse.json({ error: "Некорректная сумма" }, { status: 400 });
+  }
+
+  const available = await (pool === "abonement"
+    ? getPointAbonementCashTotal(ctx.point.id)
+    : getPointGoodsCashTotal(ctx.point.id));
+  if (amountNumber > available) {
+    const locale = await resolveLocale();
+    return NextResponse.json(
+      { error: `Сумма превышает остаток наличных (${formatMoney(available, locale)})` },
+      { status: 400 }
+    );
   }
 
   await prisma.moneyOperation.create({

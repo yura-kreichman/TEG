@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { isModuleEnabled } from "@/lib/tenant-modules";
+import { getPointAbonementCashTotal, getPointGoodsCashTotal } from "@/lib/zone-balance";
 
 export async function GET() {
   const ctx = await requireOperator();
@@ -150,6 +151,15 @@ export async function GET() {
     })),
   }));
 
+  // Остатки Абонементов/Товаров наличными — для дропдауна выбора цели
+  // инкассации (запрос пользователя 2026-07-25: "если нет денег в
+  // абонементах и товарах, они вообще не должны отображаться в dropdown" —
+  // те же цифры, что owner-версия берёт из /api/reports/money).
+  const [abonementCashTotal, goodsCashTotal] = await Promise.all([
+    getPointAbonementCashTotal(point.id),
+    getPointGoodsCashTotal(point.id),
+  ]);
+
   return NextResponse.json({
     operatorName: operator.name,
     pointName: point.name,
@@ -161,5 +171,7 @@ export async function GET() {
     // гейтит видимость пункта "Клиенты" в нижнем баре (operator-bottom-nav.tsx),
     // тот же принцип, что goodsAccess выше.
     clientsEnabled: await isModuleEnabled(point.tenantId, "clientsEnabled"),
+    abonementCashTotal: Math.round(abonementCashTotal * 100) / 100,
+    goodsCashTotal: Math.round(goodsCashTotal * 100) / 100,
   });
 }
