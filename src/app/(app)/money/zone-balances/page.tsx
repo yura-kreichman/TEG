@@ -43,6 +43,7 @@ interface PointTotal {
   pointName: string;
   total: number;
   abonementCashTotal: number;
+  goodsCashTotal: number;
   collectionAdvance: number;
 }
 
@@ -87,6 +88,10 @@ export default function ZoneBalancesPage() {
   const [checking, setChecking] = useState(true);
   const [zoneBalances, setZoneBalances] = useState<ZoneBalance[]>([]);
   const [pointTotals, setPointTotals] = useState<PointTotal[]>([]);
+  // Модули тенанта (запрос пользователя 2026-07-25) — строки "Абонементы"/
+  // "Товары" видны всегда, пока модуль включён, не только при ненулевой сумме.
+  const [clientsEnabled, setClientsEnabled] = useState(false);
+  const [goodsEnabled, setGoodsEnabled] = useState(false);
   // Одна точка за раз — типичный дропдаун наверху, если их больше одной
   // (запрос пользователя 2026-07-22: "не удобно" смотреть остатки/инкассации
   // всех точек вперемешку одним списком, тот же паттерн, что на /goods).
@@ -204,6 +209,8 @@ export default function ZoneBalancesPage() {
     const data = await res.json();
     setZoneBalances(data.zoneBalances ?? []);
     setPointTotals(data.pointTotals ?? []);
+    setClientsEnabled(!!data.clientsEnabled);
+    setGoodsEnabled(!!data.goodsEnabled);
     setChecking(false);
   }
 
@@ -529,12 +536,22 @@ export default function ZoneBalancesPage() {
               // должны быть 0" — должны обнулиться сами цифры зон, а не только
               // невидимый общий итог).
               const zonesRawSum = currentZoneBalances.reduce((sum, z) => sum + z.balance, 0);
-              // Абонементные продажи наличными выделены в свою строку ниже
-              // (запрос пользователя 2026-07-18) — вычитаем их из pool, иначе
-              // они продолжали бы молча размазываться по остаткам зон как
-              // будто это аванс/премия, которую забрал сотрудник.
+              // Абонементные и товарные продажи наличными выделены в свои
+              // строки ниже (запрос пользователя 2026-07-18 и 2026-07-25) —
+              // вычитаем обе из pool, иначе они продолжали бы молча
+              // размазываться по остаткам зон как будто это аванс/премия,
+              // которую забрал сотрудник (goodsCashTotal раньше тут не
+              // вычитался вообще — реальный баг, товарные деньги искажали
+              // отображаемые остатки зон, просто раньше это было незаметно,
+              // потому что сама сумма нигде не показывалась).
               const pool = currentPointTotal
-                ? Math.round((currentPointTotal.total - zonesRawSum - currentPointTotal.abonementCashTotal) * 100) / 100
+                ? Math.round(
+                    (currentPointTotal.total -
+                      zonesRawSum -
+                      currentPointTotal.abonementCashTotal -
+                      currentPointTotal.goodsCashTotal) *
+                      100
+                  ) / 100
                 : 0;
               const allocation =
                 pool !== 0
@@ -554,7 +571,17 @@ export default function ZoneBalancesPage() {
                     key={zb.zoneId}
                     className="flex items-center justify-between border-t border-border py-3 pl-1 first:border-t-0"
                   >
-                    <p className="text-body-airbnb">{zb.zoneName}</p>
+                    {/* Иконка зоны — запрос пользователя 2026-07-25: раз у
+                        Абонементов/Товаров ниже есть иконка, у зон в этой же
+                        плашке тоже должна быть, для единообразия. */}
+                    <p className="flex items-center gap-1.5 text-body-airbnb">
+                      {zb.zoneIconKey ? (
+                        <AssetOrZoneIcon iconKey={zb.zoneIconKey} className="size-4 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <MapPin className="size-4 shrink-0 text-muted-foreground" />
+                      )}
+                      {zb.zoneName}
+                    </p>
                     <div className="flex items-center gap-3.5">
                       <span
                         className={cn(
@@ -583,15 +610,43 @@ export default function ZoneBalancesPage() {
                 {/* Абонементы, проданные наличными на этой точке, ещё не
                     инкассированные — своя явная строка, не смешанная с
                     остатками зон (запрос пользователя 2026-07-18: "выделить
-                    абонементные деньги из общего pool"). */}
-                {currentPointTotal && currentPointTotal.abonementCashTotal > 0 && (
+                    абонементные деньги из общего pool"). Видна всегда, пока
+                    модуль включён — не только при ненулевой сумме (запрос
+                    пользователя 2026-07-25: раньше строка полностью пропадала
+                    при 0 ₽, хотя зоны показываются и при нулевом остатке). */}
+                {clientsEnabled && currentPointTotal && (
                   <div className="flex items-center justify-between border-t border-border py-3 pl-1">
                     <p className="flex items-center gap-1.5 text-body-airbnb">
                       <Gift className="size-4 shrink-0 text-muted-foreground" />
                       {t.money.abonementCashLabel}
                     </p>
-                    <span className="text-[0.96875rem] font-bold tabular-nums">
+                    <span
+                      className={cn(
+                        "text-[0.96875rem] font-bold tabular-nums",
+                        currentPointTotal.abonementCashTotal === 0 && "font-medium text-muted-foreground"
+                      )}
+                    >
                       <Money value={currentPointTotal.abonementCashTotal} />
+                    </span>
+                  </div>
+                )}
+                {/* Товары наличными — та же логика, что у Абонементов выше
+                    (запрос пользователя 2026-07-25: раньше эта сумма вообще
+                    нигде на экране не показывалась, только использовалась в
+                    расчётах). */}
+                {goodsEnabled && currentPointTotal && (
+                  <div className="flex items-center justify-between border-t border-border py-3 pl-1">
+                    <p className="flex items-center gap-1.5 text-body-airbnb">
+                      <ShoppingBag className="size-4 shrink-0 text-muted-foreground" />
+                      {t.goods.navLabel}
+                    </p>
+                    <span
+                      className={cn(
+                        "text-[0.96875rem] font-bold tabular-nums",
+                        currentPointTotal.goodsCashTotal === 0 && "font-medium text-muted-foreground"
+                      )}
+                    >
+                      <Money value={currentPointTotal.goodsCashTotal} />
                     </span>
                   </div>
                 )}

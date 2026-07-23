@@ -2,7 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { computeZoneSubmissionRevenues, getPeriodRange, isPeriodGranularity, type PeriodGranularity } from "@/lib/reports";
-import { affectsCashOnHand, getOutstandingCollectionAdvance, getPointAbonementCashTotal, getPointCashBalance } from "@/lib/zone-balance";
+import {
+  affectsCashOnHand,
+  getOutstandingCollectionAdvance,
+  getPointAbonementCashTotal,
+  getPointCashBalance,
+  getPointGoodsCashTotal,
+} from "@/lib/zone-balance";
+import { getTenantModuleFlags } from "@/lib/tenant-modules";
 
 // "Бизнес: расходы и прибыль" (за выбранный период) и текущий остаток "сколько
 // наличных должно быть на точке" (docs/spec/02-money.md, всегда весь журнал —
@@ -143,9 +150,10 @@ export async function GET(request: Request) {
   // премию + с какого момента после инкассации" в двух местах.
   const pointTotals = await Promise.all(
     points.map(async (point) => {
-      const [total, abonementCashTotal, collectionAdvance] = await Promise.all([
+      const [total, abonementCashTotal, goodsCashTotal, collectionAdvance] = await Promise.all([
         getPointCashBalance(point.id),
         getPointAbonementCashTotal(point.id),
+        getPointGoodsCashTotal(point.id),
         // "Аванс инкассации" (lib/zone-balance.ts) — забрано физически, но
         // ещё не разнесено по зонам (запрос пользователя 2026-07-22) —
         // отдельная строка на экране, своя транзакция, не в getPointCashBalance
@@ -157,14 +165,24 @@ export async function GET(request: Request) {
         pointName: point.name,
         total: Math.round(total * 100) / 100,
         abonementCashTotal: Math.round(abonementCashTotal * 100) / 100,
+        goodsCashTotal: Math.round(goodsCashTotal * 100) / 100,
         collectionAdvance: Math.round(collectionAdvance * 100) / 100,
       };
     })
   );
 
+  // Модули тенанта (запрос пользователя 2026-07-25: "в верхней плашке... если
+  // Владелец использует эти модули") — строки "Абонементы"/"Товары" на
+  // экране должны быть видны всегда, пока модуль включён, а не только когда
+  // в них случайно оказалась ненулевая сумма (тот же принцип, что уже
+  // применён к самим зонам — они тоже показываются и при 0 ₽).
+  const { goodsEnabled, clientsEnabled } = await getTenantModuleFlags(owner.tenantId);
+
   return NextResponse.json({
     zoneBalances,
     pointTotals,
+    goodsEnabled,
+    clientsEnabled,
     // Название точки в группировке имеет смысл, только если точек больше
     // одной (запрос пользователя 2026-07-14 — и так ясно, если она одна).
     showPointName: points.length > 1,
