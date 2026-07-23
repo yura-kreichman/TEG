@@ -1008,7 +1008,7 @@
     "collection": "Colectare",
     "collectionModeZone": "Pe casă",
     "collectionModeGeneral": "General",
-    "collectionGeneralHint": "Suma se va împărți automat între zonele punctului, proporțional cu soldul caselor lor.",
+    "collectionGeneralHint": "Suma se împarte mai întâi între zone, proporțional cu soldul lor. Surplusul se scade din casele Abonamente/Produse (dacă există numerar neîncasat acolo), iar ce nu încape nicăieri devine „Avans de colectare”.",
     "collectionGeneralAmountLabel": "Suma totală predată proprietarului",
     "collectionPoolSettledPrefix": "S-a scăzut suplimentar",
     "collectionPoolSettledSuffix": "luat anterior de angajat",

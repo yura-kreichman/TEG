@@ -1008,7 +1008,7 @@
     "collection": "Collection",
     "collectionModeZone": "By register",
     "collectionModeGeneral": "General",
-    "collectionGeneralHint": "The amount will be split across the point's zones automatically, proportional to each till's balance.",
+    "collectionGeneralHint": "The amount is first split across zones proportional to their balance. Any leftover is swept from the Subscriptions/Goods till (if there's uncollected cash there), and whatever still doesn't fit becomes a \"Collection advance\".",
     "collectionGeneralAmountLabel": "Total amount handed to the owner",
     "collectionPoolSettledPrefix": "Also deducted",
     "collectionPoolSettledSuffix": "already taken by the operator earlier",

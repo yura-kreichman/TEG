@@ -1008,7 +1008,7 @@
     "collection": "Incasso",
     "collectionModeZone": "Per cassa",
     "collectionModeGeneral": "Generale",
-    "collectionGeneralHint": "L'importo verrà ripartito automaticamente tra le zone del punto, in proporzione al saldo di ogni cassa.",
+    "collectionGeneralHint": "L'importo viene prima ripartito tra le zone in proporzione al loro saldo. L'eccedenza viene prelevata dalle casse Abbonamenti/Prodotti (se lì c'è contante non ancora incassato), e ciò che non trova posto da nessuna parte diventa un \"Anticipo incasso\".",
     "collectionGeneralAmountLabel": "Importo totale consegnato al titolare",
     "collectionPoolSettledPrefix": "Detratto anche",
     "collectionPoolSettledSuffix": "già preso dall'operatore in precedenza",

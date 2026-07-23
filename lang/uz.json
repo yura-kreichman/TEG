@@ -1008,7 +1008,7 @@
     "collection": "Inkassatsiya",
     "collectionModeZone": "Kassalar boʻyicha",
     "collectionModeGeneral": "Umumiy",
-    "collectionGeneralHint": "Summa nuqtaning zonalari o'rtasida ularning kassa qoldig'iga proporsional avtomatik taqsimlanadi.",
+    "collectionGeneralHint": "Summa avval zonalar o'rtasida ularning qoldig'iga mutanosib taqsimlanadi. Ortiqcha summa Abonementlar/Tovarlar kassasidan yechiladi (agar u yerda hisobga olinmagan naqd pul bo'lsa), qolgan qismi esa \"Inkassatsiya avansi\"ga aylanadi.",
     "collectionGeneralAmountLabel": "Egasiga topshirilgan umumiy summa",
     "collectionPoolSettledPrefix": "Shuningdek, hisobdan chiqarildi",
     "collectionPoolSettledSuffix": "xodim avval olgan",

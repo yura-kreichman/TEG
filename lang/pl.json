@@ -1008,7 +1008,7 @@
     "collection": "Inkaso",
     "collectionModeZone": "Wg kas",
     "collectionModeGeneral": "Ogólne",
-    "collectionGeneralHint": "Kwota zostanie automatycznie podzielona między strefy punktu, proporcjonalnie do stanu ich kas.",
+    "collectionGeneralHint": "Kwota jest najpierw dzielona między strefy proporcjonalnie do ich stanu. Nadwyżka zostanie pobrana z kas Abonamenty/Towary (jeśli jest tam nierozliczona gotówka), a to, co nigdzie się nie zmieści, stanie się „Zaliczką inkasa”.",
     "collectionGeneralAmountLabel": "Łączna kwota przekazana właścicielowi",
     "collectionPoolSettledPrefix": "Dodatkowo potrącono",
     "collectionPoolSettledSuffix": "wcześniej pobrane przez pracownika",

@@ -1008,7 +1008,7 @@
     "collection": "İnkassasiya",
     "collectionModeZone": "Kassalar üzrə",
     "collectionModeGeneral": "Ümumi",
-    "collectionGeneralHint": "Məbləğ obyektin zonaları arasında avtomatik, kassalarının qalığına mütənasib bölünəcək.",
+    "collectionGeneralHint": "Məbləğ əvvəlcə zonalar arasında onların qalığına mütənasib bölünür. Artıq hissə Abonementlər/Mallar kassasından götürülür (əgər orada uçota alınmamış nağd pul varsa), heç yerə sığmayan hissə isə «İnkassasiya avansına» çevrilir.",
     "collectionGeneralAmountLabel": "Sahibkara verilən ümumi məbləğ",
     "collectionPoolSettledPrefix": "Həmçinin silindi",
     "collectionPoolSettledSuffix": "əvvəllər işçi tərəfindən götürülmüş",

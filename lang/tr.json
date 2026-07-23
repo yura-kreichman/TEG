@@ -1008,7 +1008,7 @@
     "collection": "Tahsilat",
     "collectionModeZone": "Kasalara göre",
     "collectionModeGeneral": "Genel",
-    "collectionGeneralHint": "Tutar, noktanın bölgeleri arasında kasalarının bakiyesiyle orantılı olarak otomatik bölüştürülür.",
+    "collectionGeneralHint": "Tutar önce bölgeler arasında bakiyeleriyle orantılı bölüştürülür. Fazlası Abonelikler/Ürünler kasasından düşülür (orada kaydedilmemiş nakit varsa), hiçbir yere sığmayan kısım ise \"Tahsilat avansı\"na dönüşür.",
     "collectionGeneralAmountLabel": "Sahibe verilen toplam tutar",
     "collectionPoolSettledPrefix": "Ayrıca düşüldü",
     "collectionPoolSettledSuffix": "daha önce çalışan tarafından alınan",
