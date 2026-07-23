@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Banknote, Check, ChevronLeft, CreditCard, Delete, Gift, MapPin, Pencil, Search, Send, Trash2, Wallet } from "lucide-react";
+import { Banknote, Check, ChevronLeft, CreditCard, Delete, Gift, MapPin, Pencil, QrCode, Search, Send, Trash2, Wallet } from "lucide-react";
 import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
@@ -1089,7 +1089,7 @@ export function AbonementTopupFlow({
                                 onClick={() => setQrOpen(true)}
                                 aria-label={t.abonements.telegramBalanceButton}
                               >
-                                <Send className="size-4" />
+                                <QrCode className="size-4" />
                               </Button>
                             </PressableScale>
                           )
@@ -1130,7 +1130,7 @@ export function AbonementTopupFlow({
                           aria-label={t.abonements.telegramBalanceButton}
                           onClick={() => setQrOpen(true)}
                         >
-                          <Send className="size-5" />
+                          <QrCode className="size-5" />
                         </Button>
                       </PressableScale>
                     )}

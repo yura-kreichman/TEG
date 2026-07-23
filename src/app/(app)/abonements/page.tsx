@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Gift, Search, ChevronRight, Wallet, Send, Megaphone } from "lucide-react";
+import { Plus, Pencil, Trash2, Gift, Search, ChevronRight, Wallet, Send, Megaphone, QrCode as QrCodeIcon } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { FilePickerButton } from "@/components/file-picker-button";
 import { compressImageFile } from "@/lib/client-image";
@@ -23,6 +23,7 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconActionButton } from "@/components/kebab-menu";
 import { Money } from "@/components/money";
 import { AbonementTopupSheet } from "@/components/abonement-topup-sheet";
+import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
 import { useI18n } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 
@@ -109,6 +110,14 @@ export default function AbonementsPage() {
   const [broadcastResult, setBroadcastResult] = useState<{ sent: number; total: number } | null>(null);
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
 
+  // Общий QR (не привязан к конкретному клиенту) — Владелец показывает его
+  // новому клиенту прямо на месте, чтобы тот отсканировал и подключил бота
+  // сам (запрос пользователя 2026-07-25), тот же tenant-scoped deep link, что
+  // уже используется в карточке конкретного клиента — /api/tenant/telegram-balance-link
+  // без ?phone= отдаёт именно его, никакой отдельной ручки не нужно.
+  const [genericQrOpen, setGenericQrOpen] = useState(false);
+  const [telegramBalanceLink, setTelegramBalanceLink] = useState<string | null>(null);
+
   async function handleBroadcastImageUpload(file: File) {
     setBroadcastImageUploading(true);
     setBroadcastError(null);
@@ -187,6 +196,10 @@ export default function AbonementsPage() {
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     Promise.all([loadAbonements(), loadWallets()]).then(() => setChecking(false));
+    fetch("/api/tenant/telegram-balance-link")
+      .then((res) => res.json())
+      .then((data) => setTelegramBalanceLink(data.link ?? null))
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -345,6 +358,25 @@ export default function AbonementsPage() {
           {tab === "wallets" && (
             <>
               <div className="mb-3 flex justify-end gap-2">
+                {/* Общий QR для нового клиента — показать/дать отсканировать
+                    на месте, без поиска его в списке (запрос пользователя
+                    2026-07-25). Не показываем, если бот вообще не настроен
+                    (telegramBalanceLink тогда null) — тот же принцип, что и у
+                    кнопки в карточке конкретного клиента. */}
+                {telegramBalanceLink && (
+                  <PressableScale>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="rounded-lg"
+                      aria-label={t.abonements.telegramBalanceButton}
+                      onClick={() => setGenericQrOpen(true)}
+                    >
+                      <QrCodeIcon className="size-4" />
+                    </Button>
+                  </PressableScale>
+                )}
                 <PressableScale>
                   <Button
                     variant="outline"
@@ -556,6 +588,15 @@ export default function AbonementsPage() {
           </PressableScale>
         </div>
       </BottomSheet>
+
+      {telegramBalanceLink && (
+        <InstructionQrSheet
+          open={genericQrOpen}
+          onClose={() => setGenericQrOpen(false)}
+          title={t.abonements.telegramConnectSheetTitle}
+          url={telegramBalanceLink}
+        />
+      )}
 
       <BottomSheet open={broadcastOpen} onClose={() => setBroadcastOpen(false)}>
         <div className="flex flex-col gap-3 pt-2">

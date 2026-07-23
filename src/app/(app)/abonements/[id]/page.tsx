@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Send, Trash2 } from "lucide-react";
+import { QrCode as QrCodeIcon, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -231,7 +231,7 @@ export default function AbonementWalletPage() {
                   aria-label={t.abonements.telegramBalanceButton}
                   onClick={() => setQrOpen(true)}
                 >
-                  <Send className="size-5" />
+                  <QrCodeIcon className="size-5" />
                 </Button>
               </PressableScale>
             )}
