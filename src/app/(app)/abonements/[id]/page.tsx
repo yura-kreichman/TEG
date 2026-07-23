@@ -171,18 +171,43 @@ export default function AbonementWalletPage() {
                   {t.abonements.tenureLabel} {formatTenure(wallet.createdAt, t)}
                 </span>
               </div>
-              <PressableScale>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="size-10 shrink-0 rounded-full border-border text-destructive"
-                  onClick={() => setConfirmDelete(true)}
-                  aria-label={t.abonements.deleteWallet}
-                >
-                  <Trash2 className="size-4.5" />
-                </Button>
-              </PressableScale>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {/* Клиент сам проверяет баланс в Telegram (запрос пользователя
+                    2026-07-22) — бот подтверждает личность номером через
+                    request_contact, не показывается, если Владелец ещё не
+                    подключил бота (telegramBalanceLink тогда null), а также если
+                    клиент уже привязал чат сам — показывать QR ему заново
+                    незачем (запрос пользователя 2026-07-23). Перенесена в один
+                    ряд с заголовком, рядом с удалением (запрос пользователя
+                    2026-07-25) — раньше была отдельной кнопкой ниже, у "Печать
+                    выписки". */}
+                {wallet.telegramBalanceLink && !wallet.hasTelegram && (
+                  <PressableScale>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="rounded-lg"
+                      aria-label={t.abonements.telegramBalanceButton}
+                      onClick={() => setQrOpen(true)}
+                    >
+                      <QrCodeIcon className="size-4.5" />
+                    </Button>
+                  </PressableScale>
+                )}
+                <PressableScale>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="size-10 shrink-0 rounded-full border-border text-destructive"
+                    onClick={() => setConfirmDelete(true)}
+                    aria-label={t.abonements.deleteWallet}
+                  >
+                    <Trash2 className="size-4.5" />
+                  </Button>
+                </PressableScale>
+              </div>
             </div>
 
             <div className="flex flex-col gap-1">
@@ -214,26 +239,6 @@ export default function AbonementWalletPage() {
                 branding={printAvailable.branding}
                 className="w-full gap-1.5 rounded-lg"
               />
-            )}
-            {/* Клиент сам проверяет баланс в Telegram (запрос пользователя
-                2026-07-22) — бот подтверждает личность номером через
-                request_contact, не показывается, если Владелец ещё не
-                подключил бота (telegramBalanceLink тогда null), а также если
-                клиент уже привязал чат сам — показывать QR ему заново
-                незачем (запрос пользователя 2026-07-23). */}
-            {wallet.telegramBalanceLink && !wallet.hasTelegram && (
-              <PressableScale>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="rounded-lg"
-                  aria-label={t.abonements.telegramBalanceButton}
-                  onClick={() => setQrOpen(true)}
-                >
-                  <QrCodeIcon className="size-5" />
-                </Button>
-              </PressableScale>
             )}
             {error && <p className="text-sm text-destructive">{error}</p>}
             <PressableScale>
