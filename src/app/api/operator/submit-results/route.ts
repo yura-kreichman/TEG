@@ -22,6 +22,7 @@ import { aggregateTicketOrders } from "@/lib/tickets";
 import { dispatchZoneSummary } from "@/lib/summary-channels/dispatch";
 import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { onResultsSubmission } from "@/lib/summary-channels/daily-cash-trigger";
+import { settleOutstandingCollectionAdvance } from "@/lib/zone-balance";
 
 interface ReadingInput {
   assetId: string;
@@ -477,6 +478,15 @@ export async function POST(request: Request) {
 
     return created;
   });
+
+  // Гасим накопленный "Аванс инкассации" сразу же, а не ждём следующей
+  // инкассации (запрос пользователя 2026-07-25: "почему не вычесть эти 700 и
+  // остаток оставить в зонах, чтобы я видел реальные цифры и авансовая
+  // инкассация гасилась") — как только Сотрудник сдал итоги, свежая выручка
+  // зон уже реальна, ждать отдельного нажатия "Инкассация" незачем. Функция
+  // сама ничего не делает, если аванса нет (outstanding <= 0) — безопасно
+  // вызывать после каждой сдачи, даже когда гасить нечего.
+  await settleOutstandingCollectionAdvance(point.tenantId, point.id, { performedByOperatorId: operator.id });
 
   // "Сводка по зоне" (docs/spec/telegram-summaries.md) — одна сводка на каждую
   // выбранную зону, не одно сообщение на всю сдачу (замена старой единой

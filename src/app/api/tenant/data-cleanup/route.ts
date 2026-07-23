@@ -39,7 +39,26 @@ async function cleanupResults(tenantId: string) {
 }
 
 async function cleanupCollections(tenantId: string) {
-  await prisma.moneyOperation.deleteMany({ where: { tenantId, type: "collection" } });
+  // Все формы "Инкассации" (docs/spec/02-money.md) — не только сам
+  // "collection", иначе очистка оставляла бы висящие записи Аванса
+  // инкассации/его погашения и абонементных/товарных свипов без источника
+  // (найдено при добавлении advance_settlement 2026-07-25 — то же упущение
+  // уже было и для collection_advance/collection_pool_sweep_* с 2026-07-22,
+  // расширяю заодно).
+  await prisma.moneyOperation.deleteMany({
+    where: {
+      tenantId,
+      type: {
+        in: [
+          "collection",
+          "advance_settlement",
+          "collection_advance",
+          "collection_pool_sweep_abonement",
+          "collection_pool_sweep_goods",
+        ],
+      },
+    },
+  });
 }
 
 async function cleanupShifts(tenantId: string) {

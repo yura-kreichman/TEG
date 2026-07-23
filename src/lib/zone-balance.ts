@@ -94,12 +94,15 @@ async function latestOccurredAt(where: Prisma.MoneyOperationWhereInput): Promise
 
 // Момент последней "настоящей" инкассации на точке — для отсечки
 // аванса/премии сотрудника (docs/spec/05-work-time.md). Максимум среди:
-// zone-level "collection" по любой её зоне (инкассация ЛЮБОЙ одной зоны
-// значит "владелец лично на точке пересчитал и забрал деньги" — решение
-// пользователя 2026-07-16) и точечной "collection_advance" (та тоже момент
-// "владелец был здесь и забирал", просто часть суммы ушла в аванс — иначе
-// инкассация, целиком ушедшая в аванс без единой зонной операции, не
-// двигала бы эту отсечку вообще).
+// zone-level "collection"/"advance_settlement" по любой её зоне (инкассация
+// ЛЮБОЙ одной зоны значит "владелец лично на точке пересчитал и забрал
+// деньги" — решение пользователя 2026-07-16; advance_settlement — та же
+// логика "касса зоны только что честно обнулилась", просто не рукой
+// владельца, а автоматическим погашением, см. chargeSelfServiceAdvanceToZones/
+// settleOutstandingCollectionAdvance ниже) и точечной "collection_advance"
+// (та тоже момент "владелец был здесь и забирал", просто часть суммы ушла в
+// аванс — иначе инкассация, целиком ушедшая в аванс без единой зонной
+// операции, не двигала бы эту отсечку вообще).
 //
 // НЕ включает collection_pool_sweep_abonement/_goods — те двигают СВОИ
 // собственные, независимые отсечки ниже (getPoolSweepCutoff), а не эту.
@@ -110,7 +113,9 @@ async function latestOccurredAt(where: Prisma.MoneyOperationWhereInput): Promise
 // сверялись по одной и той же дате последней инкассации.
 async function getZoneCollectionCutoff(pointId: string, zoneIds: string[]): Promise<Date | null> {
   const [zoneAt, advanceAt] = await Promise.all([
-    zoneIds.length ? latestOccurredAt({ zoneId: { in: zoneIds }, type: "collection" }) : Promise.resolve(null),
+    zoneIds.length
+      ? latestOccurredAt({ zoneId: { in: zoneIds }, type: { in: ["collection", "advance_settlement"] } })
+      : Promise.resolve(null),
     latestOccurredAt({ pointId, type: "collection_advance" }),
   ]);
   const dates = [zoneAt, advanceAt].filter((d): d is Date => d !== null);
@@ -195,10 +200,20 @@ export async function getPointCashBalance(pointId: string): Promise<number> {
 // не раньше и не параллельно — её occurredAt должен быть строго ДО зонных
 // записей ниже (обычный Prisma-инсерт со своим now() после предыдущего
 // await это и так гарантирует). Иначе getPointCashBalance
-// (zoneCollectionCutoff = момент последней zone-level "collection") не
-// исключит advance/bonus_payout из своего расчёта, и те же деньги вычтутся
-// из остатка точки дважды — один раз зонными записями тут, второй раз самой
-// advance-записью.
+// (zoneCollectionCutoff = момент последней zone-level "collection"/
+// "advance_settlement") не исключит advance/bonus_payout из своего расчёта,
+// и те же деньги вычтутся из остатка точки дважды — один раз зонными
+// записями тут, второй раз самой advance-записью.
+//
+// Тип "advance_settlement", а не "collection" — сознательно (запрос
+// пользователя 2026-07-25: "зачем так много строк, пусть будет написано, что
+// просто [сотрудник] взял аванс, как обычно"): это автоматическое служебное
+// погашение, не факт "кто-то физически инкассировал зону", и не должно
+// засорять "Реестр инкассаций" построчной разбивкой по зонам — сам факт
+// "аванс/премия взяты" уже виден одной строкой (см. advance_taken/bonus_taken
+// в /api/reports/money/collections). getZoneCollectionCutoff выше НАРОЧНО
+// продолжает видеть этот тип наравне с "collection" — иначе сломается
+// анти-задвоение из абзаца выше.
 export async function chargeSelfServiceAdvanceToZones(
   tenantId: string,
   pointId: string,
@@ -217,7 +232,7 @@ export async function chargeSelfServiceAdvanceToZones(
     .map((zone, i) => ({
       tenantId,
       zoneId: zone.id,
-      type: "collection",
+      type: "advance_settlement",
       amount: -Math.abs(shares[i]),
       performedByOperatorId,
     }))
@@ -371,11 +386,16 @@ export function splitCollectionAmountDetailed(
 type CollectionActor = { performedByUserId?: string; performedByOperatorId?: string };
 
 // Гасит накопленный аванс инкассации остатками зон точки, если они уже
-// появились (Сотрудник наконец сдал итоги) — вызывается ПЕРВЫМ шагом в
-// каждом из /api/zones/[id]/collection, /api/points/[id]/collection/general
-// и их operator-аналогов, до расчёта самой новой инкассации: свежие остатки
-// зон после гашения используются дальше как основа для
-// splitCollectionAmountDetailed новой суммы.
+// появились — вызывается ПЕРВЫМ шагом в каждом из /api/zones/[id]/collection,
+// /api/points/[id]/collection/general и их operator-аналогов, до расчёта
+// самой новой инкассации: свежие остатки зон после гашения используются
+// дальше как основа для splitCollectionAmountDetailed новой суммы. Также
+// вызывается автоматически из /api/operator/submit-results сразу после
+// сохранения выручки (запрос пользователя 2026-07-25: "почему не вычесть эти
+// 700 и остаток оставить в зонах, чтобы я видел реальные цифры и авансовая
+// инкассация гасилась" — раньше гашение происходило только на СЛЕДУЮЩЕЙ
+// инкассации, владелец мог долго видеть неактуальный "Аванс инкассации" и
+// заниженные остатки зон, хотя Сотрудник уже сдал покрывающую выручку).
 //
 // НЕ через общий computeZonePool/deficit выше (deficit пересчитывается
 // заново из истории каждый раз, ничего не "помнит" как погашенное) — при
@@ -386,6 +406,12 @@ type CollectionActor = { performedByUserId?: string; performedByOperatorId?: str
 // этого — явная компенсирующая операция +settleable на каждое погашение,
 // поэтому исходная -отрицательная сумма аванса гасится РОВНО один раз на
 // каждую распределённую часть, без повторного срабатывания.
+//
+// Тип зонных записей — "advance_settlement", не "collection" (запрос
+// пользователя 2026-07-25, тот же принцип, что у chargeSelfServiceAdvanceToZones
+// выше): это автоматическое служебное погашение, не факт "владелец пришёл и
+// инкассировал", городить по строке на каждую зону в "Реестре инкассаций"
+// только шумит — сам факт "Аванс инкассации" уже виден одной строкой.
 export async function settleOutstandingCollectionAdvance(
   tenantId: string,
   pointId: string,
@@ -409,7 +435,7 @@ export async function settleOutstandingCollectionAdvance(
     .map((zoneId, i) => ({
       tenantId,
       zoneId,
-      type: "collection",
+      type: "advance_settlement",
       amount: -Math.abs(shares[i]),
       performedByUserId: actor.performedByUserId,
       performedByOperatorId: actor.performedByOperatorId,
