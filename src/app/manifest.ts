@@ -33,11 +33,13 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     //   установленного PWA-окна, оставляя только нативные
     //   свернуть/развернуть/закрыть (их подменить кастомными нельзя — это
     //   осознанное ограничение платформы против подделки чужого окна).
-    // - fullscreen (Android) — без строки состояния/навигации системы,
-    //   ближе к "весь экран" для терминала точки.
+    // fullscreen (Android) убран из списка (запрос пользователя 2026-07-24:
+    // "не надо делать PWA на Android на весь экран") — без строки состояния
+    // не видно времени/заряда/уведомлений, оператору на точке это нужнее,
+    // чем лишний вертикальный сантиметр.
     // display (standalone) — обязательный fallback для браузеров без
     // display_override вовсе (Safari/Firefox).
-    display_override: ["window-controls-overlay", "fullscreen", "standalone"],
+    display_override: ["window-controls-overlay", "standalone"],
     background_color: "#18181b",
     theme_color: "#18181b",
     icons: [
