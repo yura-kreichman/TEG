@@ -189,8 +189,17 @@ export async function POST(request: Request) {
   }
 
   const balance = await calcOperatorBalance(operator.id);
-  const tenantForTz = await prisma.tenant.findUnique({ where: { id: point.tenantId }, select: { timezone: true } });
-  const noResultsToday = await hasNoResultsToday(point, operator, startAt, tenantForTz?.timezone ?? "UTC");
+  const tenantForTz = await prisma.tenant.findUnique({
+    where: { id: point.tenantId },
+    select: { timezone: true, businessDayBoundary: true },
+  });
+  const noResultsToday = await hasNoResultsToday(
+    point,
+    operator,
+    startAt,
+    tenantForTz?.timezone ?? "UTC",
+    tenantForTz?.businessDayBoundary ?? "06:00"
+  );
 
   const rate = await getRateForDate(operator.id, startAt);
   const { minutes, accrued } = calcShiftAccrual(startAt, endAt, rate);

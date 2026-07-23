@@ -31,6 +31,15 @@ export async function POST(request: Request) {
   if (!openShift) {
     return NextResponse.json({ error: "Смена не начата" }, { status: 409 });
   }
+  // Касса и зонное разнесение авансов/премий должны идти по ТОЙ точке, где
+  // реально шла смена (openShift.pointId), а не по текущей точке устройства
+  // (point.id/ctx.point) — на роуминг-устройстве (PointDevice.roaming) их
+  // может отличать /api/operator/switch-point, вызванный ПОСЛЕ check-in, но
+  // ДО check-out (реальный баг, найден аудитом 2026-07-24: см. комментарий
+  // у поля Shift.pointId в prisma/schema.prisma — "нужна, чтобы знать, из
+  // кассы какой точки списывать" — код это нарушал, списывая с кассы точки
+  // устройства, а не точки смены).
+  const shiftPointId = openShift.pointId;
 
   const body = await request.json().catch(() => ({}));
   const advanceAmount = Math.abs(Number(body.advanceAmount) || 0);
@@ -52,7 +61,7 @@ export async function POST(request: Request) {
     // даже с овердрафтом. У владельца наоборот: деньги не из кассы точки,
     // проверка по личному балансу сотрудника + овердрафт — см.
     // /api/operators/[id]/work-time/advance и .../bonus.
-    const pointBalance = await getPointCashBalance(point.id);
+    const pointBalance = await getPointCashBalance(shiftPointId);
     if (advanceAmount + bonusAmount > pointBalance) {
       const locale = await resolveLocale();
       return NextResponse.json(
@@ -108,8 +117,8 @@ export async function POST(request: Request) {
   // ровно перед самой записью, под локом.
   if (advanceAmount + bonusAmount > 0) {
     const result = await prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${point.id}))`;
-      const freshBalance = await getPointCashBalance(point.id);
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${shiftPointId}))`;
+      const freshBalance = await getPointCashBalance(shiftPointId);
       if (advanceAmount + bonusAmount > freshBalance) {
         return { ok: false as const, freshBalance };
       }
@@ -117,7 +126,7 @@ export async function POST(request: Request) {
         await tx.moneyOperation.create({
           data: {
             tenantId: point.tenantId,
-            pointId: point.id,
+            pointId: shiftPointId,
             type: "advance",
             amount: -advanceAmount,
             performedByOperatorId: operator.id,
@@ -130,7 +139,7 @@ export async function POST(request: Request) {
         await tx.moneyOperation.create({
           data: {
             tenantId: point.tenantId,
-            pointId: point.id,
+            pointId: shiftPointId,
             type: "bonus_payout",
             amount: -bonusAmount,
             performedByOperatorId: operator.id,
@@ -155,14 +164,26 @@ export async function POST(request: Request) {
     // списаны из личного баланса сотрудника, при ошибке зонного разнесения
     // остаётся старый механизм-фолбэк (getPointPoolDeficit) на следующей
     // инкассации.
-    await chargeSelfServiceAdvanceToZones(point.tenantId, point.id, advanceAmount + bonusAmount, operator.id).catch(
-      (err) => console.error("chargeSelfServiceAdvanceToZones failed (check-out)", err)
-    );
+    await chargeSelfServiceAdvanceToZones(
+      point.tenantId,
+      shiftPointId,
+      advanceAmount + bonusAmount,
+      operator.id
+    ).catch((err) => console.error("chargeSelfServiceAdvanceToZones failed (check-out)", err));
   }
 
   const balance = await calcOperatorBalance(operator.id);
-  const tenantForTz = await prisma.tenant.findUnique({ where: { id: point.tenantId }, select: { timezone: true } });
-  const noResultsToday = await hasNoResultsToday(point, operator, endAt, tenantForTz?.timezone ?? "UTC");
+  const tenantForTz = await prisma.tenant.findUnique({
+    where: { id: point.tenantId },
+    select: { timezone: true, businessDayBoundary: true },
+  });
+  const noResultsToday = await hasNoResultsToday(
+    { id: shiftPointId },
+    operator,
+    endAt,
+    tenantForTz?.timezone ?? "UTC",
+    tenantForTz?.businessDayBoundary ?? "06:00"
+  );
 
   const shiftCloseSettings =
     (await prisma.shiftCloseSummarySettings.findUnique({ where: { tenantId: point.tenantId } })) ??
@@ -189,7 +210,7 @@ export async function POST(request: Request) {
   // Смена с авансом/премией меняет остаток кассы точки — если сегодняшняя
   // "Касса за день" уже отправлена, это досдача (см. POST .../work-time/shifts).
   if (advanceAmount > 0 || bonusAmount > 0) {
-    notifyDailyCashLateSubmission(point.id, point.tenantId, startAt).catch((err) =>
+    notifyDailyCashLateSubmission(shiftPointId, point.tenantId, startAt).catch((err) =>
       console.error("daily cash late-submission notify failed", err)
     );
   }
@@ -200,7 +221,7 @@ export async function POST(request: Request) {
   // всегда, не только при авансе/премии. startAt, не endAt — чтобы совпадать
   // с business-day, к которому notifyDailyCashLateSubmission выше уже
   // отнёс эту же смену.
-  onShiftClosed(point.id, point.tenantId, startAt).catch((err) =>
+  onShiftClosed(shiftPointId, point.tenantId, startAt).catch((err) =>
     console.error("daily cash on-shift-closed notify failed", err)
   );
 

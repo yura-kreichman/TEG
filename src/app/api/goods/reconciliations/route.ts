@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner, findTenantPoint } from "@/lib/require-owner";
-import { calculateGoodsCashSince, reconcileGoodsCash } from "@/lib/goods";
+import { calculateGoodsCashSince, reconcileGoodsCash, ReconciliationChangedError } from "@/lib/goods";
 import { getPeriodRange, isPeriodGranularity, parseDateParam, round2 } from "@/lib/reports";
-import { zonedWallTimeToUtc } from "@/lib/business-day";
+import { dayBoundsUtc, localDateParts, zonedWallTimeToUtc } from "@/lib/business-day";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Сверка кассы Товаров (docs/spec/09-goods.md, "Сверка кассы") — НЕ
@@ -67,10 +67,16 @@ export async function GET(request: Request) {
 
   // График — тот же паттерн, что "Отчёты → Динамика"/"Продажи" (запрос
   // пользователя 2026-07-19), сумма сданных Наличные+Безнал по дню сдачи.
+  // Ключ дня — местная календарная дата тенанта, не сырой UTC (аудит
+  // 2026-07-24, тот же класс бага, что и у /reports/points/[id]/reports/*).
+  const dateKey = (d: Date) => {
+    const { year: y, month: m, day } = localDateParts(d, timezone);
+    return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  };
   const byDay = new Map<string, number>();
   const activeDays = new Set<string>();
   for (const r of reconciliations) {
-    const key = r.occurredAt.toISOString().slice(0, 10);
+    const key = dateKey(r.occurredAt);
     const amount = Number(r.actualCash) + Number(r.actualMobile);
     byDay.set(key, (byDay.get(key) ?? 0) + amount);
     activeDays.add(key);
@@ -84,13 +90,20 @@ export async function GET(request: Request) {
       byMonth.set(monthKey, (byMonth.get(monthKey) ?? 0) + value);
     }
     for (const dayKey of activeDays) activeMonths.add(dayKey.slice(0, 7));
-    for (let m = new Date(start); m < end; m = new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() + 1, 1))) {
-      const key = `${m.getUTCFullYear()}-${String(m.getUTCMonth() + 1).padStart(2, "0")}`;
+    let { year: mYear, month: mMonth } = localDateParts(start, timezone);
+    while (dayBoundsUtc(mYear, mMonth, 1, timezone).start < end) {
+      const key = `${mYear}-${String(mMonth).padStart(2, "0")}`;
       bars.push({ date: `${key}-01`, total: round2(byMonth.get(key) ?? 0), hasData: activeMonths.has(key) });
+      if (mMonth === 12) {
+        mYear += 1;
+        mMonth = 1;
+      } else {
+        mMonth += 1;
+      }
     }
   } else {
     for (let d = new Date(start); d < end; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
-      const key = d.toISOString().slice(0, 10);
+      const key = dateKey(d);
       bars.push({ date: key, total: round2(byDay.get(key) ?? 0), hasData: activeDays.has(key) });
     }
   }
@@ -126,6 +139,8 @@ export async function POST(request: Request) {
   const pointId: string = typeof body.pointId === "string" ? body.pointId : "";
   const actualCash = Number(body.actualCash);
   const actualMobile = Number(body.actualMobile);
+  const sinceReconciliationId: string | null =
+    typeof body.sinceReconciliationId === "string" ? body.sinceReconciliationId : null;
 
   const point = await findTenantPoint(owner.tenantId, pointId);
   if (!point) {
@@ -135,12 +150,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Укажите фактические суммы" }, { status: 400 });
   }
 
-  const reconciliation = await reconcileGoodsCash({
-    tenantId: owner.tenantId,
-    pointId,
-    actualCash,
-    actualMobile,
-    actor: { userId: owner.user.id },
-  });
-  return NextResponse.json({ id: reconciliation.id }, { status: 201 });
+  try {
+    const reconciliation = await reconcileGoodsCash({
+      tenantId: owner.tenantId,
+      pointId,
+      actualCash,
+      actualMobile,
+      actor: { userId: owner.user.id },
+      expectedSinceReconciliationId: sinceReconciliationId,
+    });
+    return NextResponse.json({ id: reconciliation.id }, { status: 201 });
+  } catch (err) {
+    if (err instanceof ReconciliationChangedError) {
+      return NextResponse.json(
+        { error: "Кассу уже сверили без вас — обновите экран и проверьте заново." },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
 }

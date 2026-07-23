@@ -59,7 +59,15 @@ async function sellOneItemTx(
 ) {
   const { tenantId, pointId, goodsId, quantity, paymentMethod, walletId, actor } = params;
 
-  const goods = await tx.goods.findFirst({ where: { id: goodsId, tenantId, deletedAt: null } });
+  // active:true — тот же принцип, что уже применён к goodsAllowBalancePayment
+  // (docs/spec/09-goods.md: серверная проверка, не только скрытие в UI):
+  // /api/operator/goods (GET, каталог) уже скрывает приостановленные товары
+  // от Сотрудника, но продажа конкретного goodsId это не проверяла (аудит
+  // 2026-07-24) — товар, поставленный владельцем на паузу (физически кончился),
+  // всё ещё можно было продать, если запрос уже был в полёте или отправлен
+  // напрямую. GOODS_NOT_FOUND — та же реакция, что и для реально
+  // несуществующего/удалённого товара, с точки зрения продажи разницы нет.
+  const goods = await tx.goods.findFirst({ where: { id: goodsId, tenantId, deletedAt: null, active: true } });
   if (!goods) throw new Error("GOODS_NOT_FOUND");
 
   const amount = Number(goods.price) * quantity;
@@ -383,7 +391,10 @@ export interface GoodsCashBreakdown {
  * аннулированные. НЕ хранится нигде — считается на лету при каждом обращении
  * (тот же принцип, что ZoneSubmission.calculatedRevenue).
  */
-export async function calculateGoodsCashSince(tenantId: string, pointId: string): Promise<GoodsCashBreakdown> {
+export async function calculateGoodsCashSince(
+  tenantId: string,
+  pointId: string
+): Promise<GoodsCashBreakdown & { sinceReconciliationId: string | null }> {
   const lastReconciliation = await prisma.goodsReconciliation.findFirst({
     where: { tenantId, pointId },
     orderBy: { occurredAt: "desc" },
@@ -405,13 +416,27 @@ export async function calculateGoodsCashSince(tenantId: string, pointId: string)
     cash: byMethod.get("cash") ?? 0,
     mobile: byMethod.get("mobile") ?? 0,
     abonement: byMethod.get("abonement") ?? 0,
+    sinceReconciliationId: lastReconciliation?.id ?? null,
   };
 }
+
+export class ReconciliationChangedError extends Error {}
 
 /**
  * Сверка кассы — хранит только введённое человеком (actualCash/actualMobile),
  * расчёт всегда пересчитывается заново (см. calculateGoodsCashSince). Сама
  * НЕ создаёт MoneyOperation — продажи уже создали свои в момент продажи.
+ *
+ * expectedSinceReconciliationId — то, что клиент видел в calculateGoodsCashSince
+ * при открытии формы (аудит 2026-07-24: между GET расчёта и этим POST всегда
+ * есть реальная пауза — человек физически пересчитывает кассу, — за это время
+ * кто-то другой (второй оператор на том же устройстве через пересменку, или
+ * владелец параллельно) мог уже сверить кассу первым. Без проверки оба POST
+ * создали бы отдельные GoodsReconciliation за один и тот же, уже частично
+ * перекрывающийся период — задвоение истории и два конфликтующих уведомления.
+ * CAS здесь — не блокировка (её тут физически быть не может, человек
+ * считает деньги руками), а просто честный отказ "кто-то уже сверил, обнови
+ * экран" вместо молчаливого дубля.
  */
 export async function reconcileGoodsCash(params: {
   tenantId: string;
@@ -419,16 +444,36 @@ export async function reconcileGoodsCash(params: {
   actualCash: number;
   actualMobile: number;
   actor: Actor;
+  expectedSinceReconciliationId?: string | null;
 }) {
-  const { tenantId, pointId, actualCash, actualMobile, actor } = params;
-  return prisma.goodsReconciliation.create({
-    data: {
-      tenantId,
-      pointId,
-      actualCash,
-      actualMobile,
-      performedByOperatorId: actor.operatorId,
-      performedByUserId: actor.userId,
-    },
+  const { tenantId, pointId, actualCash, actualMobile, actor, expectedSinceReconciliationId } = params;
+
+  return prisma.$transaction(async (tx) => {
+    // Лок по pointId — тот же приём, что у ревизии/инкассации (сама
+    // проверка+запись атомарны, второй параллельный POST ждёт коммита
+    // первого и видит уже актуальный "текущий последний" при своей проверке).
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pointId}))`;
+
+    if (expectedSinceReconciliationId !== undefined) {
+      const current = await tx.goodsReconciliation.findFirst({
+        where: { tenantId, pointId },
+        orderBy: { occurredAt: "desc" },
+        select: { id: true },
+      });
+      if ((current?.id ?? null) !== expectedSinceReconciliationId) {
+        throw new ReconciliationChangedError();
+      }
+    }
+
+    return tx.goodsReconciliation.create({
+      data: {
+        tenantId,
+        pointId,
+        actualCash,
+        actualMobile,
+        performedByOperatorId: actor.operatorId,
+        performedByUserId: actor.userId,
+      },
+    });
   });
 }

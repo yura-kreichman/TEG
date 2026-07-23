@@ -98,6 +98,23 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/points/[id
     if (typeof active !== "boolean") {
       return NextResponse.json({ error: "Некорректное значение active" }, { status: 400 });
     }
+    // Та же причина, что и у деактивации отдельной зоны (аудит 2026-07-24,
+    // /api/zones/[id]/route.ts) — только шире: requireOperator() проверяет
+    // device.point.active ПЕРВЫМ делом (lib/require-operator.ts), поэтому
+    // деактивация точки мгновенно блокирует ЛЮБОЕ действие оператора на её
+    // устройствах, включая стоп уже открытых пусков — не только в
+    // "проблемной" зоне, а на всей точке разом.
+    if (active === false) {
+      const openLaunches = await prisma.launch.count({
+        where: { zone: { pointId: id, accountingMode: "stays" }, isOpen: true },
+      });
+      if (openLaunches > 0) {
+        return NextResponse.json(
+          { error: `Заверши ${openLaunches} активных пусков на точке, прежде чем её деактивировать` },
+          { status: 409 }
+        );
+      }
+    }
     data.active = active;
   }
 

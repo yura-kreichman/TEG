@@ -159,6 +159,21 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     if (typeof active !== "boolean") {
       return NextResponse.json({ error: "Некорректное значение active" }, { status: 400 });
     }
+    // Та же причина, что и у смены accountingMode выше (аудит 2026-07-24,
+    // реальный пробел — соседняя, буквально идентичная по сути проверка была
+    // добавлена, а эта нет): деактивированная зона мгновенно и полностью
+    // пропадает из findOperatorStaysZone/submission-context (фильтр
+    // active:true), открытый пуск остаётся isOpen:true навсегда — его
+    // некому остановить, и он никогда не попадёт в сдачу итогов.
+    if (active === false && zone.accountingMode === "stays") {
+      const openLaunches = await prisma.launch.count({ where: { zoneId: id, isOpen: true } });
+      if (openLaunches > 0) {
+        return NextResponse.json(
+          { error: `Заверши ${openLaunches} активных пусков, прежде чем деактивировать зону` },
+          { status: 409 }
+        );
+      }
+    }
     data.active = active;
   }
   if (printReceiptEnabled !== undefined) {

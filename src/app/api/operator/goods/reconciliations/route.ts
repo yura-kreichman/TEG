@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireOperator } from "@/lib/require-operator";
-import { calculateGoodsCashSince, reconcileGoodsCash } from "@/lib/goods";
+import { calculateGoodsCashSince, reconcileGoodsCash, ReconciliationChangedError } from "@/lib/goods";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Сверка кассы — оператор только с тумблером goodsAccess
@@ -30,17 +30,30 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const actualCash = Number(body.actualCash);
   const actualMobile = Number(body.actualMobile);
+  const sinceReconciliationId: string | null =
+    typeof body.sinceReconciliationId === "string" ? body.sinceReconciliationId : null;
 
   if (!Number.isFinite(actualCash) || actualCash < 0 || !Number.isFinite(actualMobile) || actualMobile < 0) {
     return NextResponse.json({ error: "Укажите фактические суммы" }, { status: 400 });
   }
 
-  const reconciliation = await reconcileGoodsCash({
-    tenantId: ctx.operator.tenantId,
-    pointId: ctx.point.id,
-    actualCash,
-    actualMobile,
-    actor: { operatorId: ctx.operator.id },
-  });
-  return NextResponse.json({ id: reconciliation.id }, { status: 201 });
+  try {
+    const reconciliation = await reconcileGoodsCash({
+      tenantId: ctx.operator.tenantId,
+      pointId: ctx.point.id,
+      actualCash,
+      actualMobile,
+      actor: { operatorId: ctx.operator.id },
+      expectedSinceReconciliationId: sinceReconciliationId,
+    });
+    return NextResponse.json({ id: reconciliation.id }, { status: 201 });
+  } catch (err) {
+    if (err instanceof ReconciliationChangedError) {
+      return NextResponse.json(
+        { error: "Кассу уже сверили без вас — обновите экран и проверьте заново." },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
 }

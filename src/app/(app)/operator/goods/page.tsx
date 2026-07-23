@@ -118,9 +118,12 @@ export default function GoodsPage() {
   const { saved: revisionSaved, pulse: revisionPulse } = useSavePulse();
 
   const [reconcileOpen, setReconcileOpen] = useState(false);
-  const [reconcilePending, setReconcilePending] = useState<{ cash: number; mobile: number; abonement: number } | null>(
-    null
-  );
+  const [reconcilePending, setReconcilePending] = useState<{
+    cash: number;
+    mobile: number;
+    abonement: number;
+    sinceReconciliationId: string | null;
+  } | null>(null);
   const [reconcileCash, setReconcileCash] = useState("");
   const [reconcileMobile, setReconcileMobile] = useState("");
   const [reconcileSubmitting, setReconcileSubmitting] = useState(false);
@@ -349,7 +352,11 @@ export default function GoodsPage() {
       const res = await fetch("/api/operator/goods/reconciliations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ actualCash, actualMobile }),
+        body: JSON.stringify({
+          actualCash,
+          actualMobile,
+          sinceReconciliationId: reconcilePending?.sinceReconciliationId ?? null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
-import { localDateParts, zonedWallTimeToUtc } from "@/lib/business-day";
+import { getBusinessDayBounds } from "@/lib/business-day";
 
 type Tx = Prisma.TransactionClient;
 
@@ -26,17 +26,17 @@ export async function hasNoResultsToday(
   point: { id: string },
   operator: { id: string; allZonesAccess: boolean },
   at: Date,
-  timezone: string = "UTC"
+  timezone: string = "UTC",
+  businessDayBoundary: string = "06:00"
 ): Promise<boolean> {
-  // Часовой пояс тенанта, не сырой UTC сервера (аудит 2026-07-25, финальный
-  // проход) — для тенанта не в UTC "сегодня" по местному времени и по
-  // серверному UTC могут разойтись около полуночи, тот же класс бага, что
-  // уже чинили в lib/business-day.ts/lib/reports.ts. Мягкое напоминание, не
-  // блокирует ничего функционально — но ложно срабатывало/не срабатывало
-  // именно в этом окне.
-  const dayLocal = localDateParts(at, timezone);
-  const dayStart = zonedWallTimeToUtc(dayLocal.year, dayLocal.month, dayLocal.day, 0, 0, timezone);
-  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+  // Бизнес-день с границей тенанта (Tenant.businessDayBoundary), не
+  // календарная полночь (аудит 2026-07-24: раньше здесь была полночь тем же
+  // способом, что и getBusinessDayBounds/daily-cash-trigger.ts используют
+  // для ТОГО ЖЕ ПОНЯТИЯ "сдана ли Касса за день" — сдача в 23:30 business-
+  // дня D и check-out в 02:00 следующей ночи (по границе 06:00 всё ещё
+  // business-день D, но уже другие календарные сутки) давали ложное
+  // "итоги ещё не сданы", хотя за фактический рабочий день их уже сдавали).
+  const { start: dayStart, end: dayEnd } = getBusinessDayBounds(businessDayBoundary, at, timezone);
   const zoneWhere = operator.allZonesAccess
     ? { pointId: point.id }
     : { pointId: point.id, operatorsWithAccess: { some: { id: operator.id } } };

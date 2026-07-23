@@ -767,9 +767,12 @@ export default function GoodsCabinetPage() {
   const [cashCustomTo, setCashCustomTo] = useState(() => toDateStr(new Date()));
   const [cashBars, setCashBars] = useState<{ date: string; total: number; hasData: boolean }[]>([]);
 
-  const [reconcilePending, setReconcilePending] = useState<{ cash: number; mobile: number; abonement: number } | null>(
-    null
-  );
+  const [reconcilePending, setReconcilePending] = useState<{
+    cash: number;
+    mobile: number;
+    abonement: number;
+    sinceReconciliationId: string | null;
+  } | null>(null);
   const [reconciliations, setReconciliations] = useState<ReconciliationEntry[]>([]);
   const [reconcileSheetOpen, setReconcileSheetOpen] = useState(false);
   const [reconcileCash, setReconcileCash] = useState("");
@@ -910,7 +913,12 @@ export default function GoodsCabinetPage() {
     const res = await fetch("/api/goods/reconciliations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pointId, actualCash, actualMobile }),
+      body: JSON.stringify({
+        pointId,
+        actualCash,
+        actualMobile,
+        sinceReconciliationId: reconcilePending?.sinceReconciliationId ?? null,
+      }),
     });
     const data = await res.json();
     if (!res.ok) {

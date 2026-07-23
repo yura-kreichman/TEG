@@ -30,7 +30,13 @@ export async function POST() {
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: point.tenantId },
-    select: { defaultShiftStartTime: true, earlyToleranceMinutes: true, lateToleranceMinutes: true, timezone: true },
+    select: {
+      defaultShiftStartTime: true,
+      earlyToleranceMinutes: true,
+      lateToleranceMinutes: true,
+      timezone: true,
+      businessDayBoundary: true,
+    },
   });
   // Персональное исключение (запрос пользователя 2026-07-14) — например,
   // студент, который выходит на пару часов вечером: общее тенантное окно
@@ -74,7 +80,13 @@ export async function POST() {
     }
     throw err;
   }
-  const noResultsToday = await hasNoResultsToday(point, operator, startAt, tenant?.timezone ?? "UTC");
+  const noResultsToday = await hasNoResultsToday(
+    point,
+    operator,
+    startAt,
+    tenant?.timezone ?? "UTC",
+    tenant?.businessDayBoundary ?? "06:00"
+  );
 
   dispatchShiftCheckin(point.tenantId, operator.name, point.name, operator.id).catch((err) =>
     console.error("shift checkin push dispatch failed", err)

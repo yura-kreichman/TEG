@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { getPeriodRange, isPeriodGranularity, parseDateParam, round2 } from "@/lib/reports";
-import { zonedWallTimeToUtc } from "@/lib/business-day";
+import { dayBoundsUtc, localDateParts, zonedWallTimeToUtc } from "@/lib/business-day";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -93,10 +93,17 @@ export async function GET(request: Request) {
   // расходы не привязаны к конкретному товару). За "Год" агрегируем по
   // месяцам (12 столбцов), иначе — по дням; тот же приём, что
   // /api/points/[id]/reports/dynamics.
+  // Ключ дня — местная календарная дата тенанта, не сырой UTC (аудит
+  // 2026-07-24, тот же класс бага, что и у /reports/points/[id]/reports/*
+  // и /api/goods/reconciliations).
+  const dateKey = (d: Date) => {
+    const { year: y, month: m, day } = localDateParts(d, timezone);
+    return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  };
   const byDay = new Map<string, number>();
   const activeDays = new Set<string>();
   for (const s of nonVoided) {
-    const key = s.occurredAt.toISOString().slice(0, 10);
+    const key = dateKey(s.occurredAt);
     byDay.set(key, (byDay.get(key) ?? 0) + Number(s.amount));
     activeDays.add(key);
   }
@@ -109,13 +116,20 @@ export async function GET(request: Request) {
       byMonth.set(monthKey, (byMonth.get(monthKey) ?? 0) + value);
     }
     for (const dayKey of activeDays) activeMonths.add(dayKey.slice(0, 7));
-    for (let m = new Date(start); m < end; m = new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() + 1, 1))) {
-      const key = `${m.getUTCFullYear()}-${String(m.getUTCMonth() + 1).padStart(2, "0")}`;
+    let { year: mYear, month: mMonth } = localDateParts(start, timezone);
+    while (dayBoundsUtc(mYear, mMonth, 1, timezone).start < end) {
+      const key = `${mYear}-${String(mMonth).padStart(2, "0")}`;
       bars.push({ date: `${key}-01`, total: round2(byMonth.get(key) ?? 0), hasData: activeMonths.has(key) });
+      if (mMonth === 12) {
+        mYear += 1;
+        mMonth = 1;
+      } else {
+        mMonth += 1;
+      }
     }
   } else {
     for (let d = new Date(start); d < end; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
-      const key = d.toISOString().slice(0, 10);
+      const key = dateKey(d);
       bars.push({ date: key, total: round2(byDay.get(key) ?? 0), hasData: activeDays.has(key) });
     }
   }
