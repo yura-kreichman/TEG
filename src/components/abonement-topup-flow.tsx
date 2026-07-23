@@ -1198,12 +1198,7 @@ export function AbonementTopupFlow({
               найденного/созданного клиента (запрос пользователя 2026-07-20). */}
           {allowZoneSpend && spendZones && spendZones.length > 0 && !isNew && found && (
             <PressableScale>
-              <Button
-                type="button"
-                variant="outline"
-                className={cn("h-12 w-full gap-1.5 font-semibold", RAISED_OPTION_BUTTON_CLASS)}
-                onClick={openZoneSpend}
-              >
+              <Button type="button" className="h-12 w-full gap-1.5 font-bold" onClick={openZoneSpend}>
                 <Wallet className="size-4.5" />
                 {t.operatorApp.abonement.spendTitle}
               </Button>
