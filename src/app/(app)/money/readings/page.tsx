@@ -36,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n, useLocale } from "@/components/i18n-provider";
+import type { Dictionary } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, type ZoneAccountingMode } from "@/lib/results-calc";
 import { formatMoney } from "@/lib/format";
@@ -175,6 +176,16 @@ type ActionsView = "edit" | "confirm-delete";
 // какого-либо эффекта на Расчёт/Разницу).
 function returnsApplicable(card: Pick<DayCard, "accountingMode" | "assets">): boolean {
   return card.accountingMode === "counters" || (card.accountingMode === "launches" && card.assets.length > 0);
+}
+
+// "counters" — единственный режим, где locked означает "не последнее звено
+// цепочки показаний" (t.readings.lockedNote); у остальных не-cash_only
+// режимов locked теперь означает "этот режим вообще не редактируется/не
+// удаляется" (isZoneSubmissionEditable, аудит 2026-07-24) — разная причина
+// требует разного текста, иначе подпись вводит владельца в заблуждение
+// ("есть более поздняя сдача", хотя дело не в этом).
+function lockedNoteFor(card: Pick<DayCard, "accountingMode">, t: Dictionary): string {
+  return card.accountingMode === "counters" ? t.readings.lockedNote : t.readings.lockedNoteMode;
 }
 
 export default function ReadingsCalendarPage() {
@@ -920,7 +931,7 @@ export default function ReadingsCalendarPage() {
                               // действий поясняющая заметка (docs/spec/01-counters.md,
                               // "Прозрачность"), а не активные кнопки, ведущие к 409 уже
                               // после заполнения формы (аудит 2026-07-25, финальный проход).
-                              <Lock className="size-4 shrink-0 text-muted-foreground" aria-label={t.readings.lockedNote} />
+                              <Lock className="size-4 shrink-0 text-muted-foreground" aria-label={lockedNoteFor(card, t)} />
                             )}
                           </div>
                         </div>
@@ -1253,7 +1264,7 @@ export default function ReadingsCalendarPage() {
 
                         {!card.editable && (
                           <p className="mt-3 rounded-control bg-surface-0 p-3 text-xs leading-relaxed text-muted-foreground">
-                            {t.readings.lockedNote}
+                            {lockedNoteFor(card, t)}
                           </p>
                         )}
                       </SpringCard>

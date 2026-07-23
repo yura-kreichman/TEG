@@ -36,18 +36,27 @@ export async function POST(request: Request) {
   const actor = { performedByOperatorId: ctx.operator.id };
 
   // Гасим накопленный аванс "Общей" инкассации остатками зон точки, если они
-  // уже появились (lib/zone-balance.ts, "Аванс инкассации").
+  // уже появились (lib/zone-balance.ts, "Аванс инкассации"). Своя отдельная
+  // locked-транзакция, уже закоммичена к моменту следующей строки.
   await settleOutstandingCollectionAdvance(ctx.point.tenantId, zone.pointId, actor);
 
-  const poolShare = await getZonePoolShare(zone.pointId, zoneId);
-  await prisma.moneyOperation.create({
-    data: {
-      tenantId: ctx.point.tenantId,
-      zoneId,
-      type: "collection",
-      amount: -(Math.abs(amountNumber) + poolShare),
-      performedByOperatorId: ctx.operator.id,
-    },
+  // Чтение доли пула и запись collection — единая locked-транзакция (аудит
+  // 2026-07-24, тот же гоночный сценарий, что у owner-версии — см. комментарий
+  // в /api/zones/[id]/collection).
+  const poolShare = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${zone.pointId}))`;
+
+    const poolShare = await getZonePoolShare(zone.pointId, zoneId, tx);
+    await tx.moneyOperation.create({
+      data: {
+        tenantId: ctx.point.tenantId,
+        zoneId,
+        type: "collection",
+        amount: -(Math.abs(amountNumber) + poolShare),
+        performedByOperatorId: ctx.operator.id,
+      },
+    });
+    return poolShare;
   });
 
   // В уведомлении — именно введённая сумма (см. комментарий у той же строки в

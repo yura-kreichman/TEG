@@ -980,6 +980,7 @@
     "editAction": "Edit readings and amount",
     "deleteAction": "Delete submission",
     "lockedNote": "One of this zone's assets has a later submission. Only the last submission in the chain can be corrected.",
+    "lockedNoteMode": "This submission can't be edited or deleted in this accounting mode.",
     "editSheetTitle": "Edit submission",
     "autoRecalcHint": "The delta and revenue will be recalculated automatically.",
     "moneySection": "Money",

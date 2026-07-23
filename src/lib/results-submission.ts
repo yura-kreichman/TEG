@@ -5,10 +5,21 @@ import { prisma } from "@/lib/prisma";
  * link in the chain for every asset+tariff it touched — editing an earlier
  * entry would silently move the "previous reading" baseline a later
  * submission already calculated its sessions from (docs/spec/01-counters.md,
- * "Прозрачность"). Only "counters" zones have a chain at all — "launches"/
- * "cash_only" submissions don't depend on each other, so they're always
- * editable. Pass `accountingMode` if the caller already has it (avoids an
- * extra lookup); otherwise it's fetched here.
+ * "Прозрачность"). Only "counters" zones have this AssetReading-based chain.
+ *
+ * "stays"/"launches"(tap)/"tickets" have a DIFFERENT, undocumented chain: the
+ * aggregation window for the NEXT submission of the same zone is computed
+ * from the most recent still-existing ZoneSubmission row
+ * (previousSubmissionBoundary in game-room.ts / ticketBoundariesByZone in
+ * reports/counters/day/route.ts) — not from a per-record FK. Deleting/editing
+ * such a submission was previously allowed unconditionally ("always
+ * editable", same as cash_only) — found by audit 2026-07-24 to silently wipe
+ * the collected cash's MoneyOperation AND widen the next submission's window
+ * back, double-counting the same already-collected Launch/Ticket revenue.
+ * docs/spec/01-counters.md, "Прозрачность" is explicit that these modes
+ * shouldn't have an edit/delete history UI at all — only "cash_only" has no
+ * chain of any kind and stays always editable. Pass `accountingMode` if the
+ * caller already has it (avoids an extra lookup); otherwise it's fetched here.
  */
 export async function isZoneSubmissionEditable(
   zoneSubmissionId: string,
@@ -22,7 +33,8 @@ export async function isZoneSubmissionEditable(
     });
     mode = zoneSubmission?.zone.accountingMode;
   }
-  if (mode !== "counters") return true;
+  if (mode === "cash_only") return true;
+  if (mode !== "counters") return false;
 
   const readings = await prisma.assetReading.findMany({
     where: { zoneSubmissionId },

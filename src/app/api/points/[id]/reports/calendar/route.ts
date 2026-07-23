@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
 import { resolvePeriodFromParams, round2 } from "@/lib/reports";
+import { dayBoundsUtc, localDateParts } from "@/lib/business-day";
 
 export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/reports/calendar">) {
   const owner = await requireOwner();
@@ -27,11 +28,26 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   // должна строиться из периода).
   const { searchParams } = new URL(request.url);
   const today = new Date();
-  const todayStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
   // Часовой пояс тенанта (аудит 2026-07-25, повторная проверка) — см.
-  // комментарий у getPeriodRange в lib/reports.ts.
+  // комментарий у getPeriodRange в lib/reports.ts. Передаём today БЕЗ
+  // предварительного усечения до сырой UTC-полуночи (аудит 2026-07-24,
+  // реальный баг: getPeriodRange сам делает localDateParts(today, timezone)
+  // внутри — усечение здесь заранее в UTC могло потерять "сегодня" по
+  // месту для тенанта восточнее UTC в первые часы после местной полуночи,
+  // но ещё до полуночи UTC, из-за чего today ошибочно читался как вчера).
   const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });
-  const { start, end, granularity } = resolvePeriodFromParams(searchParams, todayStart, tenant?.timezone ?? "UTC");
+  const timezone = tenant?.timezone ?? "UTC";
+  const { start, end, granularity } = resolvePeriodFromParams(searchParams, today, timezone);
+  // Ключ дня — местная календарная дата (аудит 2026-07-24): [start, end) уже
+  // тенант-таймзонный (resolvePeriodFromParams), но группировка отдельных
+  // операций/дней сетки внутри этого окна раньше читала СЫРОЙ UTC-календарь
+  // через toISOString() — для тенанта восточнее UTC местная полночь дня X
+  // это ещё вечер UTC дня X−1, и вся тепловая карта/названия ячеек
+  // сдвигались на день относительно того же дня в "Итогах дня"/"Отчётах".
+  const dateKey = (d: Date) => {
+    const { year: y, month: m, day } = localDateParts(d, timezone);
+    return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  };
 
   const zones = await prisma.zone.findMany({
     where: isAllPoints ? { point: { tenantId: owner.tenantId } } : { pointId },
@@ -61,11 +77,11 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
 
   const byDay = new Map<string, number>();
   for (const s of submissions) {
-    const key = s.resultsSubmission.submittedAt.toISOString().slice(0, 10);
+    const key = dateKey(s.resultsSubmission.submittedAt);
     byDay.set(key, (byDay.get(key) ?? 0) + Number(s.cashAmount) + Number(s.mobileAmount));
   }
   for (const op of abonementOps) {
-    const key = op.occurredAt.toISOString().slice(0, 10);
+    const key = dateKey(op.occurredAt);
     byDay.set(key, (byDay.get(key) ?? 0) + Math.abs(Number(op.amount)));
   }
 
@@ -73,14 +89,14 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   // телефоне, и сезонность за год показательнее по месяцам, чем по дням
   // недели (запрос пользователя 2026-07-15).
   if (granularity === "year") {
-    const year = start.getUTCFullYear();
+    const year = localDateParts(start, timezone).year;
     const monthTotals = Array.from({ length: 12 }, () => 0);
     for (const [key, val] of byDay) {
       const m = Number(key.slice(5, 7)) - 1;
       monthTotals[m] += val;
     }
     const months = Array.from({ length: 12 }, (_, m) => {
-      const monthStart = new Date(Date.UTC(year, m, 1));
+      const monthStart = dayBoundsUtc(year, m + 1, 1, timezone).start;
       const hasData = monthStart < end;
       return { month: m, total: round2(hasData ? monthTotals[m] : 0), hasData };
     });
@@ -105,12 +121,12 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     const days = [];
     for (let d = 0; d < 7; d++) {
       const date = new Date(weekStart.getTime() + d * 24 * 60 * 60 * 1000);
-      const key = date.toISOString().slice(0, 10);
+      const key = dateKey(date);
       const hasData = date >= start && date < end;
       const total = hasData ? (byDay.get(key) ?? 0) : 0;
       days.push({ date: key, dayOfWeek: d, total: round2(total), hasData });
     }
-    weeks.push({ weekStart: weekStart.toISOString().slice(0, 10), days });
+    weeks.push({ weekStart: dateKey(weekStart), days });
   }
 
   return NextResponse.json({ pointName, weeks, months: null });

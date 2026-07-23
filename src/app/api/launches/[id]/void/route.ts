@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { notifyWalletBalanceChange } from "@/lib/abonement";
+import { computeLaunchAmount, type LaunchPricingMode, type LaunchRoundingMode } from "@/lib/game-room";
 
 /**
  * Аннулирование пуска (docs/spec/04-game-room.md, "Жизненный цикл") — только
@@ -64,8 +65,30 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
 
       let refundedWalletId: string | null = null;
       let refundedAmount = 0;
-      if (launch.paymentMethod === "abonement" && launch.abonementWalletId && launch.amount != null) {
-        refundedAmount = Number(launch.amount);
+      if (launch.paymentMethod === "abonement" && launch.abonementWalletId) {
+        // launch.amount остаётся null, пока пуск открыт (заполняется только
+        // на /stop) — но списание с баланса для "fixed"/"За вход" уже
+        // произошло РАНЬШЕ, при старте (см. POST /api/zones/[id]/launches),
+        // независимо от того, был ли пуск когда-либо остановлен. Раньше
+        // возврат тут пропускался целиком для ещё открытых пусков ("amount
+        // != null" никогда не проходило) — клиент терял деньги с баланса
+        // безвозвратно (аудит 2026-07-24). computeLaunchAmount для "fixed"
+        // не зависит от endedAt (просто priceSnapshot), поэтому now() как
+        // endedAt здесь безопасен и для ещё не завершённых "per_minute".
+        refundedAmount =
+          launch.amount != null
+            ? Number(launch.amount)
+            : computeLaunchAmount(
+                {
+                  pricingMode: launch.pricingMode as LaunchPricingMode,
+                  priceSnapshot: launch.priceSnapshot,
+                  durationMinutesSnapshot: launch.durationMinutesSnapshot,
+                  roundingModeSnapshot: launch.roundingModeSnapshot as LaunchRoundingMode | null,
+                  minAmountSnapshot: launch.minAmountSnapshot,
+                },
+                launch.startedAt,
+                now
+              );
         refundedWalletId = launch.abonementWalletId;
         await tx.abonementWallet.update({
           where: { id: launch.abonementWalletId },

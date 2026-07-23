@@ -980,6 +980,7 @@
     "editAction": "Okumaları ve tutarı düzenle",
     "deleteAction": "Teslimi sil",
     "lockedNote": "Bu bölgenin varlıkları için daha sonraki bir teslim mevcut. Yalnızca zincirdeki son teslim düzeltilebilir.",
+    "lockedNoteMode": "Bu teslim bu muhasebe modunda düzenlenemez veya silinemez.",
     "editSheetTitle": "Teslimi düzenle",
     "autoRecalcHint": "Fark ve gelir otomatik olarak yeniden hesaplanacak.",
     "moneySection": "Para",

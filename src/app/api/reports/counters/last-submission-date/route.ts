@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { localDateParts } from "@/lib/business-day";
 
 // Дата последней сдачи итогов по точке — для дефолта на экране /money/readings
 // (запрос пользователя 2026-07-15: по умолчанию должен открываться последний
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Некорректные параметры" }, { status: 400 });
   }
 
-  const point = await prisma.point.findUnique({ where: { id: pointId } });
+  const point = await prisma.point.findUnique({ where: { id: pointId }, include: { tenant: { select: { timezone: true } } } });
   if (!point || point.tenantId !== owner.tenantId) {
     return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
   }
@@ -31,5 +32,12 @@ export async function GET(request: Request) {
     select: { submittedAt: true },
   });
 
-  return NextResponse.json({ date: submission ? submission.submittedAt.toISOString().slice(0, 10) : null });
+  // Местная календарная дата тенанта, не сырой UTC (аудит 2026-07-24) — эта
+  // дата напрямую становится значением ?date= у /api/reports/counters/day,
+  // поэтому смещение на день здесь означало бы, что "Итоги дня" при обычном
+  // открытии экрана (без выбора даты вручную) сразу показывали бы не тот
+  // день, что реально сдавался последним.
+  if (!submission) return NextResponse.json({ date: null });
+  const { year, month, day } = localDateParts(submission.submittedAt, point.tenant.timezone ?? "UTC");
+  return NextResponse.json({ date: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}` });
 }

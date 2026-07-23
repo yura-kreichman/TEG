@@ -4,6 +4,7 @@ import { requireOwner } from "@/lib/require-owner";
 import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateTicketOrders, ticketRevenueByAssetVariant, listTicketOrdersForWindow, type TicketOrderWindowItem } from "@/lib/tickets";
+import { dayBoundsUtc } from "@/lib/business-day";
 
 interface CorrectionDiff {
   cashAmount: number;
@@ -32,13 +33,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Некорректные параметры" }, { status: 400 });
   }
 
-  const point = await prisma.point.findUnique({ where: { id: pointId } });
+  const point = await prisma.point.findUnique({ where: { id: pointId }, include: { tenant: { select: { timezone: true } } } });
   if (!point || point.tenantId !== owner.tenantId) {
     return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
   }
 
-  const dayStart = new Date(`${date}T00:00:00.000Z`);
-  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+  // Часовой пояс тенанта, не сырой UTC сервера (аудит 2026-07-24: та же
+  // сдача около полуночи по месту могла оказаться на СОСЕДНЕЙ дате здесь, а
+  // не на выбранной владельцем в календаре — см. комментарий у dayBoundsUtc
+  // в lib/business-day.ts).
+  const timezone = point.tenant.timezone ?? "UTC";
+  const [dateYear, dateMonth, dateDay] = date.split("-").map(Number);
+  const { start: dayStart, end: dayEnd } = dayBoundsUtc(dateYear, dateMonth, dateDay, timezone);
 
   // Продажа абонементов (планов) за эту дату+точку — независимо от Сдачи
   // итогов (запрос пользователя 2026-07-18: "в Итогах дня и остатках на
@@ -423,9 +429,17 @@ export async function GET(request: Request) {
           ? 0
           : Math.round((actualCash + abonementAmount - netRevenue) * 100) / 100;
 
+      // Держать в синхроне с src/lib/isZoneSubmissionEditable — только
+      // cash_only всегда редактируема (нет цепочки зависимостей), counters
+      // редактируема пока остаётся последним звеном цепочки показаний;
+      // stays/launches(тап)/tickets НЕ редактируемы вовсе (аудит 2026-07-24:
+      // окно агрегации следующей сдачи зависит от факта существования этой
+      // строки — удаление задваивает уже сданную выручку, см. комментарий у
+      // isZoneSubmissionEditable).
       const editable =
-        zs.zone.accountingMode !== "counters" ||
-        zs.assetReadings.every((r) => lastReadingIdByKey.get(`${r.assetId}:${r.tariffId}`) === r.id);
+        zs.zone.accountingMode === "cash_only" ||
+        (zs.zone.accountingMode === "counters" &&
+          zs.assetReadings.every((r) => lastReadingIdByKey.get(`${r.assetId}:${r.tariffId}`) === r.id));
 
       const log = latestLogByZoneSubmissionId.get(zs.id);
       const before = log?.beforeJson as CorrectionDiff | undefined;

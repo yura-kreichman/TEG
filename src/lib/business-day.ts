@@ -119,6 +119,30 @@ export function businessDateKey(bounds: { start: Date }, timezone: string): Date
   return new Date(Date.UTC(year, month - 1, day));
 }
 
+/**
+ * [start, end) календарного дня year/month/day в часовом поясе тенанта —
+ * midnight-to-midnight ПО МЕСТУ, не сырой UTC-полночи сервера (тот же приём,
+ * что уже вручную дублировался в reports/money/route.ts: Date.UTC(...) для
+ * безопасного календарного переноса через границу месяца/года, затем
+ * zonedWallTimeToUtc для перевода этой стенной полуночи в момент UTC).
+ *
+ * НЕ путать с getBusinessDayBounds выше — это отдельная, самостоятельная
+ * концепция (граница дня в 06:00 для Telegram "Касса за день"/рабочего
+ * времени). dayBoundsUtc — обычный календарный день тенанта, используется
+ * report-роутами (Итоги дня, Главная, календари), где "день" уже давно
+ * означает calendar day, не бизнес-день (аудит 2026-07-24: часть этих
+ * роутов ошибочно бакетировала по СЫРОМУ UTC серверу вместо календарного дня
+ * тенанта — тот же класс бага, что уже чинили для getPeriodRange, просто в
+ * соседних не полученных этим фиксом файлах, из-за чего одна и та же
+ * операция могла попадать на РАЗНЫЕ числа на разных экранах владельца).
+ */
+export function dayBoundsUtc(year: number, month: number, day: number, timezone: string): { start: Date; end: Date } {
+  const start = zonedWallTimeToUtc(year, month, day, 0, 0, timezone);
+  const next = new Date(Date.UTC(year, month - 1, day + 1));
+  const end = zonedWallTimeToUtc(next.getUTCFullYear(), next.getUTCMonth() + 1, next.getUTCDate(), 0, 0, timezone);
+  return { start, end };
+}
+
 /** Только что миновала ли граница дня в минуту `at` по часовому поясу тенанта (для планировщика, тик раз в минуту). */
 export function isAtBoundaryMinute(boundaryTime: string, at: Date, timezone: string): boolean {
   const { hours, minutes } = parseBoundary(boundaryTime);

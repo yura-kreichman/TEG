@@ -980,6 +980,7 @@
     "editAction": "Zmień odczyty i sumę",
     "deleteAction": "Usuń rozliczenie",
     "lockedNote": "Dla zasobów tej strefy istnieje późniejsze rozliczenie. Poprawić można tylko ostatnie rozliczenie w łańcuchu.",
+    "lockedNoteMode": "Tego rozliczenia nie można edytować ani usunąć w tym trybie księgowania.",
     "editSheetTitle": "Zmień rozliczenie",
     "autoRecalcHint": "Delta i przychód zostaną przeliczone automatycznie.",
     "moneySection": "Finanse",

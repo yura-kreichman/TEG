@@ -8,6 +8,7 @@ import {
   resolvePeriodFromParams,
   round2,
 } from "@/lib/reports";
+import { dayBoundsUtc, localDateParts } from "@/lib/business-day";
 
 export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/reports/dynamics">) {
   const owner = await requireOwner();
@@ -40,6 +41,13 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   const { start: prevStart, end: prevEnd } = isCustom
     ? getPreviousCustomRange(start, end)
     : getPreviousPeriodRange(granularity, start, timezone);
+  // Ключ дня — местная календарная дата тенанта, не сырой UTC (аудит
+  // 2026-07-24: тот же класс бага, что и у /reports/counters/day/calendar —
+  // toISOString() читает UTC-дату момента, а не местную).
+  const dateKey = (d: Date) => {
+    const { year: y, month: m, day } = localDateParts(d, timezone);
+    return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  };
 
   const zones = await prisma.zone.findMany({
     where: isAllPoints ? { point: { tenantId: owner.tenantId } } : { pointId },
@@ -72,7 +80,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   const activeDays = new Set<string>();
   for (const s of submissions) {
     submissionIds.add(s.resultsSubmission.id);
-    const dayKey = s.resultsSubmission.submittedAt.toISOString().slice(0, 10);
+    const dayKey = dateKey(s.resultsSubmission.submittedAt);
     byDay.set(dayKey, (byDay.get(dayKey) ?? 0) + Number(s.cashAmount) + Number(s.mobileAmount));
     activeDays.add(dayKey);
   }
@@ -115,13 +123,13 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     if (op.type === "expense") expenses += amount;
     if (op.type === "advance" || op.type === "bonus_payout") payouts += amount;
     if (op.type === "expense" || op.type === "advance" || op.type === "bonus_payout") {
-      const key = op.occurredAt.toISOString().slice(0, 10);
+      const key = dateKey(op.occurredAt);
       deductionsByDay.set(key, (deductionsByDay.get(key) ?? 0) + amount);
       activeDays.add(key);
     }
     if (op.type === "revenue_abonement") {
       totalAbonement += amount;
-      const key = op.occurredAt.toISOString().slice(0, 10);
+      const key = dateKey(op.occurredAt);
       byDay.set(key, (byDay.get(key) ?? 0) + amount);
       activeDays.add(key);
     }
@@ -134,7 +142,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       // а не снова прибавиться по модулю.
       const signedAmount = Number(op.amount);
       totalGoods += signedAmount;
-      const key = op.occurredAt.toISOString().slice(0, 10);
+      const key = dateKey(op.occurredAt);
       byDay.set(key, (byDay.get(key) ?? 0) + signedAmount);
       activeDays.add(key);
     }
@@ -192,8 +200,13 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       deductionsByMonth.set(monthKey, (deductionsByMonth.get(monthKey) ?? 0) + value);
     }
     for (const dayKey of activeDays) activeMonths.add(dayKey.slice(0, 7));
-    for (let m = new Date(start); m < end; m = new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() + 1, 1))) {
-      const key = `${m.getUTCFullYear()}-${String(m.getUTCMonth() + 1).padStart(2, "0")}`;
+    // Год/месяц из start читается местной календарной датой тенанта, не
+    // getUTCFullYear()/getUTCMonth() (аудит 2026-07-24: start — момент
+    // тенант-таймзонной полуночи 1 января, для тенанта восточнее UTC это
+    // ещё 31 декабря по UTC — старый цикл начинал бы с декабря прошлого года).
+    let { year: mYear, month: mMonth } = localDateParts(start, timezone);
+    while (dayBoundsUtc(mYear, mMonth, 1, timezone).start < end) {
+      const key = `${mYear}-${String(mMonth).padStart(2, "0")}`;
       const revenueForBar = byMonth.get(key) ?? 0;
       const deductionsForBar = deductionsByMonth.get(key) ?? 0;
       bars.push({
@@ -202,10 +215,16 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
         profit: round2(revenueForBar - deductionsForBar),
         hasData: activeMonths.has(key),
       });
+      if (mMonth === 12) {
+        mYear += 1;
+        mMonth = 1;
+      } else {
+        mMonth += 1;
+      }
     }
   } else {
     for (let d = new Date(start); d < end; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
-      const key = d.toISOString().slice(0, 10);
+      const key = dateKey(d);
       const revenueForBar = byDay.get(key) ?? 0;
       const deductionsForBar = deductionsByDay.get(key) ?? 0;
       bars.push({

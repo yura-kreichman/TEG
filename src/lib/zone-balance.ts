@@ -88,8 +88,11 @@ export async function getZoneBalances(
   return balanceByZone;
 }
 
-async function latestOccurredAt(where: Prisma.MoneyOperationWhereInput): Promise<Date | null> {
-  const row = await prisma.moneyOperation.findFirst({
+async function latestOccurredAt(
+  where: Prisma.MoneyOperationWhereInput,
+  client: Tx | typeof prisma = prisma
+): Promise<Date | null> {
+  const row = await client.moneyOperation.findFirst({
     where,
     select: { occurredAt: true },
     orderBy: { occurredAt: "desc" },
@@ -116,12 +119,16 @@ async function latestOccurredAt(where: Prisma.MoneyOperationWhereInput): Promise
 // продавал абонементы, а продавец Поп-корн" — инкассация ТОЛЬКО абонементной
 // пачки ложно обнуляла и ещё не забранную товарную кассу тоже, раз обе
 // сверялись по одной и той же дате последней инкассации.
-async function getZoneCollectionCutoff(pointId: string, zoneIds: string[]): Promise<Date | null> {
+async function getZoneCollectionCutoff(
+  pointId: string,
+  zoneIds: string[],
+  client: Tx | typeof prisma = prisma
+): Promise<Date | null> {
   const [zoneAt, advanceAt] = await Promise.all([
     zoneIds.length
-      ? latestOccurredAt({ zoneId: { in: zoneIds }, type: { in: ["collection", "advance_settlement"] } })
+      ? latestOccurredAt({ zoneId: { in: zoneIds }, type: { in: ["collection", "advance_settlement"] } }, client)
       : Promise.resolve(null),
-    latestOccurredAt({ pointId, type: "collection_advance" }),
+    latestOccurredAt({ pointId, type: "collection_advance" }, client),
   ]);
   const dates = [zoneAt, advanceAt].filter((d): d is Date => d !== null);
   return dates.length ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null;
@@ -132,8 +139,12 @@ async function getZoneCollectionCutoff(pointId: string, zoneIds: string[]): Prom
 // инкассацией (collection_pool_sweep_abonement/_goods). Независима от
 // getZoneCollectionCutoff выше и от отсечки другого пула — см. комментарий
 // там же про "2 пачки".
-async function getPoolSweepCutoff(pointId: string, sweepType: string): Promise<Date | null> {
-  return latestOccurredAt({ pointId, type: sweepType });
+async function getPoolSweepCutoff(
+  pointId: string,
+  sweepType: string,
+  client: Tx | typeof prisma = prisma
+): Promise<Date | null> {
+  return latestOccurredAt({ pointId, type: sweepType }, client);
 }
 
 // Физический остаток кассы точки в целом = сумма остатков её зон + операции,
@@ -153,16 +164,19 @@ async function getPoolSweepCutoff(pointId: string, sweepType: string): Promise<D
 // Используется и для отображения (docs/spec/05-work-time.md), и для
 // валидации максимального самостоятельного аванса/премии сотрудника —
 // единая цифра, на которую опираются оба места.
-export async function getPointCashBalance(pointId: string): Promise<number> {
-  const zones = await prisma.zone.findMany({ where: { pointId }, select: { id: true } });
+export async function getPointCashBalance(
+  pointId: string,
+  client: Tx | typeof prisma = prisma
+): Promise<number> {
+  const zones = await client.zone.findMany({ where: { pointId }, select: { id: true } });
   const zoneIds = zones.map((z) => z.id);
 
   const [zoneOps, pointOps, zoneCollectionCutoff, abonementCutoff, goodsCutoff] = await Promise.all([
-    zoneIds.length ? prisma.moneyOperation.findMany({ where: { zoneId: { in: zoneIds } } }) : Promise.resolve([]),
-    prisma.moneyOperation.findMany({ where: { pointId } }),
-    getZoneCollectionCutoff(pointId, zoneIds),
-    getPoolSweepCutoff(pointId, "collection_pool_sweep_abonement"),
-    getPoolSweepCutoff(pointId, "collection_pool_sweep_goods"),
+    zoneIds.length ? client.moneyOperation.findMany({ where: { zoneId: { in: zoneIds } } }) : Promise.resolve([]),
+    client.moneyOperation.findMany({ where: { pointId } }),
+    getZoneCollectionCutoff(pointId, zoneIds, client),
+    getPoolSweepCutoff(pointId, "collection_pool_sweep_abonement", client),
+    getPoolSweepCutoff(pointId, "collection_pool_sweep_goods", client),
   ]);
 
   let total = 0;
@@ -291,9 +305,12 @@ export async function chargeSelfServiceAdvanceToZones(
 // от товарной кассы (getPoolSweepCutoff, см. комментарий там же). Только
 // НАЛИЧНЫЕ (abonement_topup) — безнал (abonement_topup_cashless) физически
 // не в кассе, уже исключён affectsCashOnHand.
-export async function getPointAbonementCashTotal(pointId: string): Promise<number> {
-  const cutoff = await getPoolSweepCutoff(pointId, "collection_pool_sweep_abonement");
-  const ops = await prisma.moneyOperation.findMany({
+export async function getPointAbonementCashTotal(
+  pointId: string,
+  client: Tx | typeof prisma = prisma
+): Promise<number> {
+  const cutoff = await getPoolSweepCutoff(pointId, "collection_pool_sweep_abonement", client);
+  const ops = await client.moneyOperation.findMany({
     where: {
       pointId,
       type: "abonement_topup",
@@ -315,9 +332,12 @@ export async function getPointAbonementCashTotal(pointId: string): Promise<numbe
 // сумме — та же логика, что у зонного "Размена" (change_fund) в getZoneBalances:
 // это реальные наличные, физически лежащие в кассе, следующая инкассация
 // заберёт их вместе с настоящей выручкой.
-export async function getPointGoodsCashTotal(pointId: string): Promise<number> {
-  const cutoff = await getPoolSweepCutoff(pointId, "collection_pool_sweep_goods");
-  const ops = await prisma.moneyOperation.findMany({
+export async function getPointGoodsCashTotal(
+  pointId: string,
+  client: Tx | typeof prisma = prisma
+): Promise<number> {
+  const cutoff = await getPoolSweepCutoff(pointId, "collection_pool_sweep_goods", client);
+  const ops = await client.moneyOperation.findMany({
     where: {
       pointId,
       type: { in: ["goods_revenue", "goods_change_fund"] },
@@ -340,10 +360,16 @@ export async function getPointGoodsCashTotal(pointId: string): Promise<number> {
 // инкассация (по зоне или общая, владельцем или оператором) должна
 // довзыскивать этот пул одновременно с введённой суммой — см. использование
 // в /api/*/collection*.
-async function computeZonePool(pointId: string): Promise<{ zoneIds: string[]; weights: number[]; deficit: number }> {
-  const zones = await prisma.zone.findMany({ where: { pointId }, select: { id: true } });
+async function computeZonePool(
+  pointId: string,
+  client: Tx | typeof prisma = prisma
+): Promise<{ zoneIds: string[]; weights: number[]; deficit: number }> {
+  const zones = await client.zone.findMany({ where: { pointId }, select: { id: true } });
   const zoneIds = zones.map((z) => z.id);
-  const [balances, pointTotal] = await Promise.all([getZoneBalances(zoneIds), getPointCashBalance(pointId)]);
+  const [balances, pointTotal] = await Promise.all([
+    getZoneBalances(zoneIds, client),
+    getPointCashBalance(pointId, client),
+  ]);
   const weights = zoneIds.map((id) => balances.get(id) ?? 0);
   const zonesRawSum = weights.reduce((a, b) => a + b, 0);
   const deficit = Math.max(0, Math.round((zonesRawSum - pointTotal) * 100) / 100);
@@ -354,14 +380,18 @@ async function computeZonePool(pointId: string): Promise<{ zoneIds: string[]; we
 // перед пропорциональной разбивкой по зонам (distributeCollectionWhole),
 // чтобы полная инкассация всех зон реально обнуляла их журнал, а не только
 // экран.
-export async function getPointPoolDeficit(pointId: string): Promise<number> {
-  return (await computeZonePool(pointId)).deficit;
+export async function getPointPoolDeficit(pointId: string, client: Tx | typeof prisma = prisma): Promise<number> {
+  return (await computeZonePool(pointId, client)).deficit;
 }
 
 // Доля пула конкретной зоны — для инкассации ОДНОЙ зоны: та же пропорция,
 // что и в общей разбивке, но нужна только сумма для этой зоны.
-export async function getZonePoolShare(pointId: string, zoneId: string): Promise<number> {
-  const { zoneIds, weights, deficit } = await computeZonePool(pointId);
+export async function getZonePoolShare(
+  pointId: string,
+  zoneId: string,
+  client: Tx | typeof prisma = prisma
+): Promise<number> {
+  const { zoneIds, weights, deficit } = await computeZonePool(pointId, client);
   if (deficit === 0) return 0;
   const shares = distributeCollectionWhole(deficit, weights);
   const idx = zoneIds.indexOf(zoneId);

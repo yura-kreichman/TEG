@@ -980,6 +980,7 @@
     "editAction": "Göstəriciləri və məbləği dəyiş",
     "deleteAction": "Hesabatı sil",
     "lockedNote": "Bu zonanın aktivləri üzrə daha sonrakı hesabat var. Yalnız zəncirdəki son hesabatı düzəltmək mümkündür.",
+    "lockedNoteMode": "Bu hesabat bu uçot rejimində redaktə edilə və ya silinə bilməz.",
     "editSheetTitle": "Hesabatı dəyiş",
     "autoRecalcHint": "Delta və gəlir avtomatik yenidən hesablanacaq.",
     "moneySection": "Pul",

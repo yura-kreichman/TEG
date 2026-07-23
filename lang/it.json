@@ -980,6 +980,7 @@
     "editAction": "Modifica letture e importo",
     "deleteAction": "Elimina chiusura",
     "lockedNote": "Uno dei beni di questa zona ha una chiusura successiva. Solo l'ultima chiusura della catena può essere corretta.",
+    "lockedNoteMode": "Questo versamento non può essere modificato o eliminato in questa modalità di contabilità.",
     "editSheetTitle": "Modifica chiusura",
     "autoRecalcHint": "Il delta e l'incasso verranno ricalcolati automaticamente.",
     "moneySection": "Soldi",

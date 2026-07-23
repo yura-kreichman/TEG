@@ -462,7 +462,16 @@ const SERVICES_POINT_CALLBACK_PREFIX = "svcp:";
 async function handleServicesCommand(chatId: string, lang: BotLang) {
   const s = BOT_STRINGS[lang];
   const links = await prisma.clientTelegramLink.findMany({ where: { chatId }, select: { tenantId: true } });
-  const tenantIds = [...new Set(links.map((l) => l.tenantId))];
+  const linkedTenantIds = [...new Set(links.map((l) => l.tenantId))];
+  // Тумблер "Клиенты" — та же серверная проверка, что у /balance и контакт-
+  // верификации (строки 201/277/304), пропущенная здесь при добавлении
+  // /services (найдено аудитом 2026-07-24): без нeё выключенный владельцем
+  // модуль всё равно продолжал бы отдавать список зон/активов уже
+  // привязанным чатам.
+  const tenantIds: string[] = [];
+  for (const id of linkedTenantIds) {
+    if (await isModuleEnabled(id, "clientsEnabled")) tenantIds.push(id);
+  }
 
   if (tenantIds.length === 0) {
     await sendChatMessage(chatId, s.servicesNotLinkedHint).catch(() => {});
@@ -480,6 +489,14 @@ async function handleServicesCommand(chatId: string, lang: BotLang) {
 
 async function sendServicesForTenant(chatId: string, tenantId: string, lang: BotLang) {
   const s = BOT_STRINGS[lang];
+  // Прямая точка входа и из handleServicesCommand, и из callback-кнопки
+  // (данные кнопки — свежие, но сама кнопка может быть нажата из старого
+  // сообщения уже после того, как владелец выключил "Клиенты") — проверка
+  // обязана стоять именно здесь, не только выше по цепочке.
+  if (!(await isModuleEnabled(tenantId, "clientsEnabled"))) {
+    await sendChatMessage(chatId, s.noServicesFound).catch(() => {});
+    return;
+  }
   // Только активные (запрос пользователя 2026-07-13: сезонная деактивация) —
   // тот же флаг, что уже скрывает точку с публичного лендинга.
   const points = await prisma.point.findMany({

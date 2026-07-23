@@ -980,6 +980,7 @@
     "editAction": "Koʻrsatkich va summani oʻzgartirish",
     "deleteAction": "Topshiriqni oʻchirish",
     "lockedNote": "Bu zonaning aktivlari boʻyicha keyinroq topshiriq mavjud. Faqat zanjirdagi oxirgi topshiriqni tuzatish mumkin.",
+    "lockedNoteMode": "Bu topshiriqni ushbu hisob rejimida tahrirlash yoki o'chirish mumkin emas.",
     "editSheetTitle": "Topshiriqni oʻzgartirish",
     "autoRecalcHint": "Delta va tushum avtomatik qayta hisoblanadi.",
     "moneySection": "Pul",

@@ -489,8 +489,18 @@ export async function POST(request: Request) {
       if (isStaysZone(zone) || isLaunchesZone(zone)) {
         const agg = gameRoomAggregateByZone.get(zone.id);
         if (agg && agg.launchIds.length > 0) {
+          // zoneSubmissionId:null в where — CAS (тот же приём, что
+          // nextLaunchNumber/voidTicketInTx): launchIds посчитаны ДО этой
+          // транзакции (previousSubmissionBoundary — обычный SELECT вне tx),
+          // поэтому две параллельные сдачи по одной зоне могли посчитать
+          // одинаковый список пусков. Без этого условия транзакция,
+          // закоммитившаяся второй, молча переподписала бы уже занятые
+          // пуски на себя, задваивая их расчётную выручку и обнуляя её у
+          // проигравшей сдачи (аудит 2026-07-24). С условием — второй
+          // updateMany затронет 0 строк для уже занятых пусков вместо их
+          // перезаписи.
           await tx.launch.updateMany({
-            where: { id: { in: agg.launchIds } },
+            where: { id: { in: agg.launchIds }, zoneSubmissionId: null },
             data: { zoneSubmissionId: zoneSubmission.id },
           });
         }

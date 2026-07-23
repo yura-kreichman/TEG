@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { dayBoundsUtc } from "@/lib/business-day";
 
 // Реестр инкассаций за месяц для компактного списка на странице «Остатки и
 // инкассации» — замена календарю "Выручка по дням". pointId (запрос
@@ -56,8 +57,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Некорректные параметры" }, { status: 400 });
   }
 
-  const monthStart = new Date(Date.UTC(year, month - 1, 1));
-  const monthEnd = new Date(Date.UTC(year, month, 1));
+  // Часовой пояс тенанта, не сырой UTC сервера (аудит 2026-07-24, тот же
+  // класс бага, что и у /api/reports/counters/day — см. комментарий у
+  // dayBoundsUtc в lib/business-day.ts).
+  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });
+  const timezone = tenant?.timezone ?? "UTC";
+  const monthStart = dayBoundsUtc(year, month, 1, timezone).start;
+  const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+  const monthEnd = dayBoundsUtc(nextMonth.year, nextMonth.month, 1, timezone).start;
 
   const [zoneOps, poolOps, advanceOps, takenOps] = await Promise.all([
     prisma.moneyOperation.findMany({

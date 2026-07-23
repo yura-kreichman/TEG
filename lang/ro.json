@@ -980,6 +980,7 @@
     "editAction": "Modifică citirile și suma",
     "deleteAction": "Șterge predarea",
     "lockedNote": "Unul dintre activele acestei zone are o predare ulterioară. Se poate corecta doar ultima predare din lanț.",
+    "lockedNoteMode": "Această predare nu poate fi editată sau ștearsă în acest mod de evidență.",
     "editSheetTitle": "Modifică predarea",
     "autoRecalcHint": "Delta și venitul se vor recalcula automat.",
     "moneySection": "Bani",

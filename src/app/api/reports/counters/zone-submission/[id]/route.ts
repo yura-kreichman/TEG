@@ -41,10 +41,16 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/co
   }
 
   if (!(await isZoneSubmissionEditable(id, zoneSubmission.zone.accountingMode))) {
-    return NextResponse.json(
-      { error: "Есть более поздняя сдача по одному из активов этой зоны — сначала удалите её." },
-      { status: 409 }
-    );
+    // Для counters причина — незакрытая цепочка показаний; для остальных
+    // не-cash_only режимов правка/удаление недоступны структурно (см.
+    // комментарий у isZoneSubmissionEditable) — разные причины требуют
+    // разного сообщения, иначе владелец решит подождать несуществующую
+    // "более позднюю сдачу".
+    const error =
+      zoneSubmission.zone.accountingMode === "counters"
+        ? "Есть более поздняя сдача по одному из активов этой зоны — сначала удалите её."
+        : "Сдачи этого режима учёта нельзя редактировать или удалять.";
+    return NextResponse.json({ error }, { status: 409 });
   }
 
   const body = await request.json();
@@ -193,10 +199,16 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/reports/
   }
 
   if (!(await isZoneSubmissionEditable(id, zoneSubmission.zone.accountingMode))) {
-    return NextResponse.json(
-      { error: "Есть более поздняя сдача по одному из активов этой зоны — сначала удалите её." },
-      { status: 409 }
-    );
+    // Для counters причина — незакрытая цепочка показаний; для остальных
+    // не-cash_only режимов правка/удаление недоступны структурно (см.
+    // комментарий у isZoneSubmissionEditable) — разные причины требуют
+    // разного сообщения, иначе владелец решит подождать несуществующую
+    // "более позднюю сдачу".
+    const error =
+      zoneSubmission.zone.accountingMode === "counters"
+        ? "Есть более поздняя сдача по одному из активов этой зоны — сначала удалите её."
+        : "Сдачи этого режима учёта нельзя редактировать или удалять.";
+    return NextResponse.json({ error }, { status: 409 });
   }
 
   const before: CorrectionDiff = {
