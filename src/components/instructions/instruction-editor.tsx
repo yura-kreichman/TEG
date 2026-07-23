@@ -7,6 +7,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
 import type { PMNode } from "@/lib/instructions/content";
+import { useI18n } from "@/components/i18n-provider";
 
 // Редактор инструкций (docs/spec/07-instructions.md) — набор форматирования
 // НАМЕРЕННО ограничен: H1, H2, жирный, курсив, подчёркнутый, списки, цитата,
@@ -60,31 +61,36 @@ function ToolbarButton({
 }
 
 function Toolbar({ editor }: { editor: Editor }) {
+  // aria-label через i18n, не хардкод (аудит 2026-07-25, финальный проход) —
+  // этот редактор используется и в Инструктажах, и в Лендинге (aboutText/
+  // caption), для тенанта не на русском интерфейсе screen reader озвучивал
+  // бы русский текст на кнопках тулбара независимо от языка кабинета.
+  const t = useI18n();
   return (
     <div className="flex flex-wrap items-center gap-1 border-b border-border p-1.5">
       <ToolbarButton
-        label="Заголовок 1"
+        label={t.richTextEditor.heading1}
         active={editor.isActive("heading", { level: 1 })}
         onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
       >
         H1
       </ToolbarButton>
       <ToolbarButton
-        label="Заголовок 2"
+        label={t.richTextEditor.heading2}
         active={editor.isActive("heading", { level: 2 })}
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
       >
         H2
       </ToolbarButton>
       <div className="mx-1 h-5 w-px bg-border" />
-      <ToolbarButton label="Жирный" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
+      <ToolbarButton label={t.richTextEditor.bold} active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
         <Bold className="size-4" />
       </ToolbarButton>
-      <ToolbarButton label="Курсив" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}>
+      <ToolbarButton label={t.richTextEditor.italic} active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}>
         <Italic className="size-4" />
       </ToolbarButton>
       <ToolbarButton
-        label="Подчёркнутый"
+        label={t.richTextEditor.underline}
         active={editor.isActive("underline")}
         onClick={() => editor.chain().focus().toggleUnderline().run()}
       >
@@ -92,14 +98,14 @@ function Toolbar({ editor }: { editor: Editor }) {
       </ToolbarButton>
       <div className="mx-1 h-5 w-px bg-border" />
       <ToolbarButton
-        label="Маркированный список"
+        label={t.richTextEditor.bulletList}
         active={editor.isActive("bulletList")}
         onClick={() => editor.chain().focus().toggleBulletList().run()}
       >
         <List className="size-4" />
       </ToolbarButton>
       <ToolbarButton
-        label="Нумерованный список"
+        label={t.richTextEditor.orderedList}
         active={editor.isActive("orderedList")}
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
       >
@@ -107,13 +113,13 @@ function Toolbar({ editor }: { editor: Editor }) {
       </ToolbarButton>
       <div className="mx-1 h-5 w-px bg-border" />
       <ToolbarButton
-        label="Цитата"
+        label={t.richTextEditor.quote}
         active={editor.isActive("blockquote")}
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
       >
         <Quote className="size-4" />
       </ToolbarButton>
-      <ToolbarButton label="Разделительная линия" active={false} onClick={() => editor.chain().focus().setHorizontalRule().run()}>
+      <ToolbarButton label={t.richTextEditor.horizontalRule} active={false} onClick={() => editor.chain().focus().setHorizontalRule().run()}>
         <Minus className="size-4" />
       </ToolbarButton>
     </div>

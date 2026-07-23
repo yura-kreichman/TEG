@@ -76,7 +76,7 @@ export default async function LandingPreviewPage({
       <div className="flex flex-col">
         <Header data={data} lp={lp} />
         <main className="flex flex-col">
-          <GallerySection data={data} />
+          <GallerySection data={data} lp={lp} />
           <VideoSection data={data} lp={lp} />
           <AboutSection data={data} />
           <SectionDivider />

@@ -66,7 +66,7 @@ export default async function PublicLandingPage({ params }: { params: Promise<{ 
             Insights 2026-07-14); header/footer — свои landmark вне main. */}
         <Header data={data} lp={lp} />
         <main className="flex flex-col">
-          <GallerySection data={data} />
+          <GallerySection data={data} lp={lp} />
           <VideoSection data={data} lp={lp} />
           <AboutSection data={data} />
           <SectionDivider />

@@ -151,16 +151,21 @@ export function AboutSection({ data }: { data: LandingRenderData }) {
 // (landing-lightbox.js) переносит позицию ровно на ширину одного комплекта
 // по достижении середины — переход визуально неотличим, т.к. там та же
 // картинка.
-export function GallerySection({ data }: { data: LandingRenderData }) {
+export function GallerySection({ data, lp }: { data: LandingRenderData; lp: LP }) {
   if (!data.galleryEnabled || data.galleryPhotos.length === 0) return null;
   const loop = data.galleryPhotos.length > 1;
   function renderItem(photo: { id: string; url: string }, i: number, duplicate: boolean) {
+    // alt/title через lp, не хардкод кириллицы (аудит 2026-07-25, финальный
+    // проход) — публичная страница переводится, "фото"/"видео" были
+    // единственными жёстко русскими словами на ней, значимыми и для SEO, и
+    // для screen reader на нерусском тенанте.
+    const altText = duplicate ? "" : lp.galleryPhotoAlt.replace("{tenantName}", data.tenant.name).replace("{index}", String(i + 1));
     return (
       <div key={`${photo.id}${duplicate ? "-dup" : ""}`} className="lt-gallery-item relative overflow-hidden" aria-hidden={duplicate || undefined}>
         <Image
           src={photo.url}
-          alt={duplicate ? "" : `${data.tenant.name} — фото ${i + 1}`}
-          title={duplicate ? undefined : `${data.tenant.name} — фото ${i + 1}`}
+          alt={altText}
+          title={duplicate ? undefined : altText}
           fill
           sizes="200px"
           className="object-cover"
@@ -202,8 +207,8 @@ export function VideoSection({ data, lp }: { data: LandingRenderData; lp: LP }) 
       <div className="lt-card relative aspect-video w-full overflow-hidden">
         <Image
           src={data.videoPoster}
-          alt={`${data.tenant.name} — видео`}
-          title={`${data.tenant.name} — видео`}
+          alt={lp.videoAlt.replace("{tenantName}", data.tenant.name)}
+          title={lp.videoAlt.replace("{tenantName}", data.tenant.name)}
           width={1280}
           height={720}
           sizes="(max-width: 640px) 100vw, 640px"
