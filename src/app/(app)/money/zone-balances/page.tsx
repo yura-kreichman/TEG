@@ -379,7 +379,10 @@ export default function ZoneBalancesPage() {
     if (c.pool === "advance") return t.money.collectionAdvanceLabel;
     if (c.pool === "advance_taken" || c.pool === "bonus_taken") {
       const kind = c.pool === "advance_taken" ? t.operatorApp.workTime.advanceFieldLabel : t.operatorApp.workTime.bonusFieldLabel;
-      return c.operatorName ? `${c.operatorName} · ${kind}` : kind;
+      // "Аванс · Женя", не "Женя · Аванс" (запрос пользователя 2026-07-25:
+      // сначала что произошло, потом кто) — иконка перед этим текстом, время
+      // перед иконкой, см. рендер ниже.
+      return c.operatorName ? `${kind} · ${c.operatorName}` : kind;
     }
     return "";
   }
@@ -636,14 +639,20 @@ export default function ZoneBalancesPage() {
                       {group.items.map((c) => (
                         <div key={c.id} className="border-t border-border py-1.5 first:border-t-0">
                         <div className="flex items-center justify-between gap-2">
+                          {/* Время — всегда первым (запрос пользователя
+                              2026-07-25: "хочу чтобы время было в ряд") —
+                              иначе у строк с иконкой время сдвигалось вправо
+                              относительно строк без иконки (зонные "collection"),
+                              и колонка времени не выравнивалась по строкам. */}
                           <span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+                            {formatTime(c.occurredAt)} ·
                             {c.pool === "abonement" && <Gift className="size-3 shrink-0" />}
                             {c.pool === "goods" && <ShoppingBag className="size-3 shrink-0" />}
                             {c.pool === "advance" && <PiggyBank className="size-3 shrink-0" />}
                             {(c.pool === "advance_taken" || c.pool === "bonus_taken") && (
                               <HandCoins className="size-3 shrink-0" />
                             )}
-                            {formatTime(c.occurredAt)} · {collectionEntryLabel(c)}
+                            {collectionEntryLabel(c)}
                           </span>
                           <span className="flex shrink-0 items-center gap-2">
                             <span
