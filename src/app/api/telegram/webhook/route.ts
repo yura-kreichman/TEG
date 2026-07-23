@@ -275,7 +275,6 @@ async function buildClientReport(
   const currency = tenant.currency as CurrencyCode | null;
   const lines = [
     greetingLine(wallet.name, s),
-    `«${tenant.name}»`,
     `${s.yourBalance}: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`,
   ];
 
@@ -362,11 +361,12 @@ async function handleGroupCommand(message: { text: string; chat: { id: number };
   });
 
   if (channel) {
+    // /balance тут намеренно НЕ обрабатывается (запрос пользователя
+    // 2026-07-24: "не надо, чтобы в общей группе Сотрудники могли узнавать
+    // баланс клиента") — только /kassa. Раньше был просмотр/выбор клиента
+    // прямо в группе, убран целиком, не просто скрыт за флагом.
     if (/^\/kassa(?:@\w+)?/.test(text)) {
       await handleKassaCommand(chatId, channel.tenantId);
-    } else if (/^\/balance(?:@\w+)?/.test(text)) {
-      const phoneArg = text.replace(/^\/balance(?:@\w+)?\s*/, "");
-      await handleGroupBalanceCommand(chatId, channel.tenantId, phoneArg);
     }
     return;
   }
@@ -378,6 +378,8 @@ async function handleGroupCommand(message: { text: string; chat: { id: number };
   // /start), а не просто отсылаем к ссылке.
   if (/^\/balance(?:@\w+)?/.test(text)) {
     await handlePrivateBalanceCommand(chatId, pickBotLang(message.from?.language_code));
+  } else if (/^\/services(?:@\w+)?/.test(text)) {
+    await handleServicesCommand(chatId, pickBotLang(message.from?.language_code));
   }
 }
 
@@ -394,6 +396,113 @@ async function handlePrivateBalanceCommand(chatId: string, lang: BotLang) {
     const wallet = await findWalletByPhone(tenant.id, link.phone);
     if (!wallet) continue;
     await sendChatMessage(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
+  }
+}
+
+const SERVICES_TENANT_CALLBACK_PREFIX = "svct:";
+const SERVICES_POINT_CALLBACK_PREFIX = "svcp:";
+
+// Статический список активных зон/активов (запрос пользователя 2026-07-24:
+// "клиенты как подписчики" — /services тоже держится на уже существующей
+// привязке, отдельного флоу верификации под это заводить не стали, ровно та
+// же причина, что у /balance без ссылки: без привязки бот не знает, какой
+// именно тенант имеется в виду, раз бот один на всю платформу). Слово "зона"
+// в тексте НИКОГДА не используется — это внутренний термин проекта, клиенту
+// показываются только имена, которые задал сам Владелец.
+async function handleServicesCommand(chatId: string, lang: BotLang) {
+  const s = BOT_STRINGS[lang];
+  const links = await prisma.clientTelegramLink.findMany({ where: { chatId }, select: { tenantId: true } });
+  const tenantIds = [...new Set(links.map((l) => l.tenantId))];
+
+  if (tenantIds.length === 0) {
+    await sendChatMessage(chatId, s.servicesNotLinkedHint).catch(() => {});
+    return;
+  }
+  if (tenantIds.length === 1) {
+    await sendServicesForTenant(chatId, tenantIds[0], lang);
+    return;
+  }
+
+  const tenants = await prisma.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true } });
+  const buttons = tenants.map((t) => ({ text: t.name, callbackData: `${SERVICES_TENANT_CALLBACK_PREFIX}${t.id}` }));
+  await sendInlineKeyboard(chatId, s.chooseTenantPrompt, buttons).catch(() => {});
+}
+
+async function sendServicesForTenant(chatId: string, tenantId: string, lang: BotLang) {
+  const s = BOT_STRINGS[lang];
+  // Только активные (запрос пользователя 2026-07-13: сезонная деактивация) —
+  // тот же флаг, что уже скрывает точку с публичного лендинга.
+  const points = await prisma.point.findMany({
+    where: { tenantId, active: true },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+
+  if (points.length === 0) {
+    await sendChatMessage(chatId, s.noServicesFound).catch(() => {});
+    return;
+  }
+  if (points.length === 1) {
+    await sendServicesForPoint(chatId, points[0].id, lang);
+    return;
+  }
+
+  const buttons = points.map((p) => ({ text: p.name, callbackData: `${SERVICES_POINT_CALLBACK_PREFIX}${p.id}` }));
+  await sendInlineKeyboard(chatId, s.choosePointPrompt, buttons).catch(() => {});
+}
+
+async function sendServicesForPoint(chatId: string, pointId: string, lang: BotLang) {
+  const s = BOT_STRINGS[lang];
+  const point = await prisma.point.findUnique({
+    where: { id: pointId },
+    select: {
+      name: true,
+      tenant: { select: { slug: true, landingEnabled: true } },
+      zones: {
+        where: { active: true },
+        orderBy: { createdAt: "asc" },
+        select: {
+          name: true,
+          telegramEmoji: true,
+          accountingMode: true,
+          // Билеты — единственный режим, где одна "витрина" может продавать
+          // сразу несколько разных аттракционов под одним именем (запрос
+          // пользователя 2026-07-24: "для билетов имеет смысл показывать
+          // активы") — у остальных режимов имя самой витрины уже и есть
+          // конкретный аттракцион, перечислять активы там избыточно.
+          assets: { where: { active: true }, orderBy: { sortOrder: "asc" }, select: { name: true } },
+        },
+      },
+    },
+  });
+  if (!point) return;
+
+  const lines = [`<b>${point.name}</b>`, ""];
+  if (point.zones.length === 0) {
+    lines.push(s.noServicesFound);
+  } else {
+    for (const zone of point.zones) {
+      const emoji = zone.telegramEmoji ?? "🏁";
+      if (zone.accountingMode === "tickets" && zone.assets.length > 0) {
+        lines.push(`${emoji} ${zone.name}:`);
+        for (const asset of zone.assets) {
+          lines.push(`  • ${asset.name}`);
+        }
+      } else {
+        lines.push(`${emoji} ${zone.name}`);
+      }
+    }
+  }
+  const text = lines.join("\n");
+
+  // Ссылка на лендинг — только если Владелец не отключил модуль (запрос
+  // пользователя 2026-07-24: "надо учесть, чтобы он был включён у Владельца"),
+  // без неё просто обычное сообщение без кнопок.
+  if (point.tenant.landingEnabled && point.tenant.slug) {
+    const siteUrl = process.env.SITE_URL ?? "http://localhost:3000";
+    await sendInlineKeyboard(chatId, text, [{ text: s.openLandingButton, url: `${siteUrl}/s/${point.tenant.slug}` }]).catch(() => {});
+  } else {
+    await sendChatMessage(chatId, text).catch(() => {});
   }
 }
 
@@ -422,82 +531,23 @@ async function handleKassaCommand(chatId: string, tenantId: string) {
   await sendChatMessage(chatId, lines.join("\n")).catch(() => {});
 }
 
-const RECENT_CLIENTS_LIMIT = 8;
-const BALANCE_CALLBACK_PREFIX = "bal:";
-
-async function handleGroupBalanceCommand(chatId: string, tenantId: string, phoneArg: string) {
-  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { currency: true } });
-  if (!tenant) return;
-
-  if (!phoneArg) {
-    // Без номера — не текстовая подсказка "введите формат" (запрос
-    // пользователя 2026-07-22: "владельцу не нужно вводить номер руками,
-    // пусть подставляются клиенты у которых есть баланс, а если нет — нет
-    // смысла присылать такие сообщения"), а список реальных клиентов
-    // кнопками — тапнул и сразу баланс, вводить ничего не нужно. Раз клиентов
-    // на тенанте нет вообще — молчим, а не шлём бесполезное сообщение.
-    const clients = await prisma.abonementWallet.findMany({
-      where: { tenantId },
-      orderBy: { updatedAt: "desc" },
-      take: RECENT_CLIENTS_LIMIT,
-      select: { id: true, name: true, phone: true, balance: true },
-    });
-    if (clients.length === 0) return;
-
-    const currency = tenant.currency as CurrencyCode | null;
-    const buttons = clients.map((c) => ({
-      text: `${c.name ? `${c.name} (${c.phone})` : c.phone} — ${formatMoneyWithCurrency(Number(c.balance), "ru", currency)}`,
-      callbackData: `${BALANCE_CALLBACK_PREFIX}${c.id}`,
-    }));
-    await sendInlineKeyboard(chatId, "Выберите клиента:", buttons).catch(() => {});
-    return;
-  }
-
-  const wallet = await findWalletByPhone(tenantId, phoneArg);
-  if (!wallet) {
-    await sendChatMessage(chatId, `Клиент с номером ${phoneArg} не найден`).catch(() => {});
-    return;
-  }
-  await sendWalletBalanceReply(chatId, tenant.currency, wallet);
-}
-
-async function sendWalletBalanceReply(
-  chatId: string,
-  currencyRaw: string | null,
-  wallet: { name: string | null; phone: string; balance: unknown }
-) {
-  const currency = currencyRaw as CurrencyCode | null;
-  const label = wallet.name ? `${wallet.name} (${wallet.phone})` : wallet.phone;
-  await sendChatMessage(
-    chatId,
-    `${label}\nБаланс: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`
-  ).catch(() => {});
-}
-
-// Нажатие кнопки клиента из списка (см. handleGroupBalanceCommand выше) —
-// tenantId для проверки берём из TenantSummaryChannel по chatId, а не
-// доверяем чему-то в самом callback_data: коллбэк технически мог прийти
-// только из чата, где мы сами показали эту клавиатуру (Telegram не позволяет
-// подделать чужой чат), но лишняя проверка "кошелёк реально принадлежит
-// этому тенанту" ничего не стоит и на всякий случай не помешает.
-async function handleCallbackQuery(callbackQuery: { id: string; data?: string; message?: { chat: { id: number } } }) {
+async function handleCallbackQuery(callbackQuery: {
+  id: string;
+  data?: string;
+  message?: { chat: { id: number } };
+  from?: { language_code?: string };
+}) {
   const data = callbackQuery.data;
   const chatId = callbackQuery.message ? String(callbackQuery.message.chat.id) : null;
   await answerCallbackQuery(callbackQuery.id);
-  if (!data || !chatId || !data.startsWith(BALANCE_CALLBACK_PREFIX)) return;
+  if (!data || !chatId) return;
 
-  const channel = await prisma.tenantSummaryChannel.findFirst({
-    where: { channelType: "telegram", chatId },
-    select: { tenantId: true },
-  });
-  if (!channel) return;
-
-  const walletId = data.slice(BALANCE_CALLBACK_PREFIX.length);
-  const wallet = await prisma.abonementWallet.findUnique({ where: { id: walletId } });
-  if (!wallet || wallet.tenantId !== channel.tenantId) return;
-
-  const tenant = await prisma.tenant.findUnique({ where: { id: channel.tenantId }, select: { currency: true } });
-  if (!tenant) return;
-
-  await sendWalletBalanceReply(chatId, tenant.currency, wallet);
+  // Кнопки выбора тенанта/точки у /services (личный чат клиента) — публичная
+  // информация (список услуг), доп. проверка принадлежности тут не нужна.
+  const lang = pickBotLang(callbackQuery.from?.language_code);
+  if (data.startsWith(SERVICES_TENANT_CALLBACK_PREFIX)) {
+    await sendServicesForTenant(chatId, data.slice(SERVICES_TENANT_CALLBACK_PREFIX.length), lang);
+  } else if (data.startsWith(SERVICES_POINT_CALLBACK_PREFIX)) {
+    await sendServicesForPoint(chatId, data.slice(SERVICES_POINT_CALLBACK_PREFIX.length), lang);
+  }
 }

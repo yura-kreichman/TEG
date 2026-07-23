@@ -54,13 +54,10 @@ async function sendReminderForOrder(order: {
   const wallet = await prisma.abonementWallet.findUnique({ where: { id: walletId }, select: { name: true, phone: true } });
   if (wallet) {
     const links = await prisma.clientTelegramLink.findMany({ where: { tenantId, phone: wallet.phone } });
-    const tenant = links.length > 0 ? await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }) : null;
 
     for (const link of links) {
       const s = BOT_STRINGS[link.language as Locale] ?? BOT_STRINGS.en;
-      const text = [greetingLine(wallet.name, s), tenant ? `«${tenant.name}»` : null, s.orderExpiringSoon(order.number)]
-        .filter(Boolean)
-        .join("\n");
+      const text = [greetingLine(wallet.name, s), s.orderExpiringSoon(order.number)].join("\n");
       await sendChatMessage(link.chatId, text).catch(() => {});
     }
   }

@@ -4,6 +4,7 @@ import { requireOwner } from "@/lib/require-owner";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 import { sendChatMessage, sendPhotoMessage } from "@/lib/telegram-bot";
 import { getRequestOrigin } from "@/lib/request-origin";
+import { deleteUploadedImage } from "@/lib/uploads";
 
 // Telegram ограничивает подпись к фото 1024 символами (жёстче, чем 4096 у
 // обычного текста) — единый лимит поменьше для обоих случаев, чтобы с
@@ -65,6 +66,14 @@ export async function POST(request: Request) {
       : await sendChatMessage(link.chatId, text);
     if (result.ok) sent++;
     await sleep(BETWEEN_SENDS_DELAY_MS);
+  }
+
+  // Картинка рассылки одноразовая, не переиспользуется нигде больше (не
+  // логотип/аватар) — держать её на сервере после отправки незачем (запрос
+  // пользователя 2026-07-24: "не засорять сервер"). Удаляем независимо от
+  // того, сколько получателей реально дошло — сама рассылка уже случилась.
+  if (imageUrl) {
+    await deleteUploadedImage(imageUrl);
   }
 
   return NextResponse.json({ sent, total: links.length });

@@ -47,6 +47,11 @@ export interface BotStringSet {
   typeAdjustment: string;
   ticketOrderPrefix: string;
   orderExpiringSoon: (orderNumber: number) => string;
+  servicesNotLinkedHint: string;
+  chooseTenantPrompt: string;
+  choosePointPrompt: string;
+  openLandingButton: string;
+  noServicesFound: string;
 }
 
 export const BOT_STRINGS: Record<Locale, BotStringSet> = {
@@ -71,6 +76,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     typeAdjustment: "Начисление",
     ticketOrderPrefix: "Билеты",
     orderExpiringSoon: (n) => `Ваш заказ №${n} скоро истекает — успейте использовать билеты.`,
+    servicesNotLinkedHint: "Чтобы узнать это, сначала откройте бота по ссылке, которую вам дали на точке проката.",
+    chooseTenantPrompt: "Выберите прокат:",
+    choosePointPrompt: "Выберите точку:",
+    openLandingButton: "🌐 Открыть сайт",
+    noServicesFound: "Сейчас ничего не доступно",
   },
   en: {
     greetingWithName: (n) => `Hi, ${n}!`,
@@ -93,6 +103,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     typeAdjustment: "Adjustment",
     ticketOrderPrefix: "Tickets",
     orderExpiringSoon: (n) => `Your order #${n} is expiring soon — use your tickets in time.`,
+    servicesNotLinkedHint: "To see this, open the bot via the link you got at the rental point first.",
+    chooseTenantPrompt: "Choose a rental:",
+    choosePointPrompt: "Choose a location:",
+    openLandingButton: "🌐 Open website",
+    noServicesFound: "Nothing available right now",
   },
   uk: {
     greetingWithName: (n) => `Привіт, ${n}!`,
@@ -115,6 +130,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     typeAdjustment: "Нарахування",
     ticketOrderPrefix: "Квитки",
     orderExpiringSoon: (n) => `Ваше замовлення №${n} скоро закінчується — встигніть скористатися квитками.`,
+    servicesNotLinkedHint: "Щоб дізнатися це, спершу відкрийте бота за посиланням, яке вам дали на точці прокату.",
+    chooseTenantPrompt: "Виберіть прокат:",
+    choosePointPrompt: "Виберіть точку:",
+    openLandingButton: "🌐 Відкрити сайт",
+    noServicesFound: "Зараз нічого не доступно",
   },
   ro: {
     greetingWithName: (n) => `Salut, ${n}!`,
@@ -137,6 +157,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     typeAdjustment: "Ajustare",
     ticketOrderPrefix: "Bilete",
     orderExpiringSoon: (n) => `Comanda dvs. nr. ${n} expiră în curând — folosiți biletele la timp.`,
+    servicesNotLinkedHint: "Pentru a vedea asta, deschideți mai întâi botul prin linkul primit la punctul de închiriere.",
+    chooseTenantPrompt: "Alegeți o companie:",
+    choosePointPrompt: "Alegeți un punct:",
+    openLandingButton: "🌐 Deschide site-ul",
+    noServicesFound: "Momentan nimic disponibil",
   },
   be: {
     greetingWithName: (n) => `Прывітанне, ${n}!`,
@@ -159,6 +184,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     typeAdjustment: "Налічэнне",
     ticketOrderPrefix: "Білеты",
     orderExpiringSoon: (n) => `Ваш заказ №${n} хутка сканчаецца — паспейце скарыстаць білеты.`,
+    servicesNotLinkedHint: "Каб даведацца гэта, спачатку адкрыйце бота па спасылцы, якую вам далі на пункце пракату.",
+    chooseTenantPrompt: "Выберыце пракат:",
+    choosePointPrompt: "Выберыце пункт:",
+    openLandingButton: "🌐 Адкрыць сайт",
+    noServicesFound: "Зараз нічога не даступна",
   },
   pl: {
     greetingWithName: (n) => `Cześć, ${n}!`,
@@ -181,6 +211,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     typeAdjustment: "Korekta",
     ticketOrderPrefix: "Bilety",
     orderExpiringSoon: (n) => `Twoje zamówienie nr ${n} wkrótce wygaśnie — zdąż wykorzystać bilety.`,
+    servicesNotLinkedHint: "Aby to zobaczyć, najpierw otwórz bota przez link, który dostałeś w punkcie wynajmu.",
+    chooseTenantPrompt: "Wybierz wypożyczalnię:",
+    choosePointPrompt: "Wybierz punkt:",
+    openLandingButton: "🌐 Otwórz stronę",
+    noServicesFound: "Obecnie nic nie jest dostępne",
   },
   it: {
     greetingWithName: (n) => `Ciao, ${n}!`,
@@ -203,6 +238,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     typeAdjustment: "Rettifica",
     ticketOrderPrefix: "Biglietti",
     orderExpiringSoon: (n) => `Il tuo ordine n. ${n} sta per scadere — usa i biglietti in tempo.`,
+    servicesNotLinkedHint: "Per vederlo, apri prima il bot tramite il link ricevuto al punto noleggio.",
+    chooseTenantPrompt: "Scegli un noleggio:",
+    choosePointPrompt: "Scegli un punto:",
+    openLandingButton: "🌐 Apri il sito",
+    noServicesFound: "Al momento nulla disponibile",
   },
   uz: {
     greetingWithName: (n) => `Salom, ${n}!`,
@@ -224,6 +264,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     typeAdjustment: "Tuzatish",
     ticketOrderPrefix: "Chiptalar",
     orderExpiringSoon: (n) => `№${n} buyurtmangiz muddati tugayapti — chiptalardan vaqtida foydalaning.`,
+    servicesNotLinkedHint: "Buni bilish uchun avval botni ijara nuqtasida bergan havola orqali oching.",
+    chooseTenantPrompt: "Ijarani tanlang:",
+    choosePointPrompt: "Nuqtani tanlang:",
+    openLandingButton: "🌐 Saytni ochish",
+    noServicesFound: "Hozircha hech narsa yoʻq",
   },
   kk: {
     greetingWithName: (n) => `Сәлем, ${n}!`,
@@ -246,6 +291,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     typeAdjustment: "Түзету",
     ticketOrderPrefix: "Билеттер",
     orderExpiringSoon: (n) => `№${n} тапсырысыңыздың мерзімі жақында аяқталады — билеттерді уақытында пайдаланыңыз.`,
+    servicesNotLinkedHint: "Мұны білу үшін алдымен прокат нүктесінде берілген сілтеме арқылы ботты ашыңыз.",
+    chooseTenantPrompt: "Прокатты таңдаңыз:",
+    choosePointPrompt: "Нүктені таңдаңыз:",
+    openLandingButton: "🌐 Сайтты ашу",
+    noServicesFound: "Қазір ештеңе қолжетімсіз",
   },
   tg: {
     greetingWithName: (n) => `Салом, ${n}!`,
@@ -268,6 +318,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     typeAdjustment: "Ислоҳ",
     ticketOrderPrefix: "Билетҳо",
     orderExpiringSoon: (n) => `Фармоиши №${n} шумо ба зудӣ анҷом меёбад — билетҳоро сари вақт истифода баред.`,
+    servicesNotLinkedHint: "Барои дидани ин, аввал ботро тавассути истиноде, ки дар нуқтаи иҷора додаанд, кушоед.",
+    chooseTenantPrompt: "Иҷораро интихоб кунед:",
+    choosePointPrompt: "Нуқтаро интихоб кунед:",
+    openLandingButton: "🌐 Кушодани сайт",
+    noServicesFound: "Ҳоло чизе дастрас нест",
   },
   ky: {
     greetingWithName: (n) => `Салам, ${n}!`,
@@ -290,6 +345,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     typeAdjustment: "Түзөтүү",
     ticketOrderPrefix: "Билеттер",
     orderExpiringSoon: (n) => `№${n} буйрутмаңыздын мөөнөтү жакында бүтөт — билеттерди убагында колдонуңуз.`,
+    servicesNotLinkedHint: "Муну билүү үчүн алгач ботту прокат пунктунда берилген шилтеме аркылуу ачыңыз.",
+    chooseTenantPrompt: "Пркатты тандаңыз:",
+    choosePointPrompt: "Пунктту тандаңыз:",
+    openLandingButton: "🌐 Сайтты ачуу",
+    noServicesFound: "Азырынча эч нерсе жок",
   },
   hy: {
     greetingWithName: (n) => `Բարև, ${n}!`,
@@ -312,6 +372,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     typeAdjustment: "Ճշգրտում",
     ticketOrderPrefix: "Տոմսեր",
     orderExpiringSoon: (n) => `Ձեր №${n} պատվերը շուտով կլրանա՝ հասցրեք օգտագործել տոմսերը։`,
+    servicesNotLinkedHint: "Սա տեսնելու համար նախ բացեք բոտը այն հղումով, որը ստացաք վարձակալման կետում։",
+    chooseTenantPrompt: "Ընտրեք վարձակալությունը՝",
+    choosePointPrompt: "Ընտրեք կետը՝",
+    openLandingButton: "🌐 Բացել կայքը",
+    noServicesFound: "Այս պահին ոչինչ հասանելի չէ",
   },
   az: {
     greetingWithName: (n) => `Salam, ${n}!`,
@@ -333,6 +398,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     typeAdjustment: "Düzəliş",
     ticketOrderPrefix: "Biletlər",
     orderExpiringSoon: (n) => `№${n} sifarişinizin müddəti tezliklə bitir — biletlərdən vaxtında istifadə edin.`,
+    servicesNotLinkedHint: "Bunu görmək üçün əvvəlcə botu icarə nöqtəsində verilən link vasitəsilə açın.",
+    chooseTenantPrompt: "İcarəni seçin:",
+    choosePointPrompt: "Nöqtəni seçin:",
+    openLandingButton: "🌐 Saytı aç",
+    noServicesFound: "Hazırda heç nə mövcud deyil",
   },
   ka: {
     greetingWithName: (n) => `გამარჯობა, ${n}!`,
@@ -355,6 +425,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     typeAdjustment: "კორექტირება",
     ticketOrderPrefix: "ბილეთები",
     orderExpiringSoon: (n) => `თქვენი შეკვეთა №${n} მალე ამოიწურება — მოასწარით ბილეთების გამოყენება.`,
+    servicesNotLinkedHint: "ამის სანახავად ჯერ გახსენით ბოტი გაქირავების პუნქტში მიღებული ბმულით.",
+    chooseTenantPrompt: "აირჩიეთ გაქირავება:",
+    choosePointPrompt: "აირჩიეთ პუნქტი:",
+    openLandingButton: "🌐 საიტის გახსნა",
+    noServicesFound: "ამჟამად არაფერია ხელმისაწვდომი",
   },
   tr: {
     greetingWithName: (n) => `Merhaba, ${n}!`,
@@ -377,5 +452,10 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     typeAdjustment: "Düzeltme",
     ticketOrderPrefix: "Biletler",
     orderExpiringSoon: (n) => `№${n} siparişinizin süresi yakında doluyor — biletlerinizi zamanında kullanın.`,
+    servicesNotLinkedHint: "Bunu görmek için önce kiralama noktasında verilen bağlantıyla botu açın.",
+    chooseTenantPrompt: "Kiralama seçin:",
+    choosePointPrompt: "Nokta seçin:",
+    openLandingButton: "🌐 Siteyi aç",
+    noServicesFound: "Şu anda hiçbir şey yok",
   },
 };

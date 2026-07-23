@@ -142,16 +142,23 @@ export async function sendContactRequest(chatId: string, text: string, buttonTex
 // Каждая кнопка — своя строка (проще читать список имён, чем ужимать в
 // колонки). callbackData ограничен Telegram 64 байтами — вызывающий код
 // отвечает за то, чтобы влезало (id из cuid() укладывается с большим запасом).
-export async function sendInlineKeyboard(
-  chatId: string,
-  text: string,
-  buttons: { text: string; callbackData: string }[]
-): Promise<TelegramApiResult> {
+// callbackData — тап обрабатывает наш вебхук (см. handleCallbackQuery);
+// url — обычная ссылка, Telegram открывает её сам, к нам вообще не
+// обращаясь (запрос пользователя 2026-07-24: кнопка "Открыть сайт" на
+// лендинг тенанта). Каждая кнопка — своя строка, тот же принцип, что уже
+// был у флоу выбора клиента в группе.
+type InlineKeyboardButton = { text: string; callbackData: string } | { text: string; url: string };
+
+export async function sendInlineKeyboard(chatId: string, text: string, buttons: InlineKeyboardButton[]): Promise<TelegramApiResult> {
   return callTelegramApi("sendMessage", {
     chat_id: chatId,
     text,
     parse_mode: "HTML",
-    reply_markup: { inline_keyboard: buttons.map((b) => [{ text: b.text, callback_data: b.callbackData }]) },
+    reply_markup: {
+      inline_keyboard: buttons.map((b) => [
+        "url" in b ? { text: b.text, url: b.url } : { text: b.text, callback_data: b.callbackData },
+      ]),
+    },
   });
 }
 

@@ -67,7 +67,7 @@ export async function notifyWalletBalanceChange(tenantId: string, walletId: stri
   const links = await prisma.clientTelegramLink.findMany({ where: { tenantId, phone: wallet.phone } });
   if (links.length === 0) return;
 
-  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, currency: true } });
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { currency: true } });
   if (!tenant) return;
 
   const currency = tenant.currency as CurrencyCode | null;
@@ -80,7 +80,6 @@ export async function notifyWalletBalanceChange(tenantId: string, walletId: stri
     const s = BOT_STRINGS[link.language as Locale] ?? BOT_STRINGS.en;
     const text = [
       greetingLine(wallet.name, s),
-      `«${tenant.name}»`,
       `${sign}${formatMoneyWithCurrency(Math.abs(amount), "ru", currency)}`,
       `${s.balanceWord}: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`,
     ].join("\n");
