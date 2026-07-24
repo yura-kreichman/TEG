@@ -26,11 +26,32 @@ export async function saveUploadedImage(tenantId: string, file: File): Promise<s
     throw new Error("Файл слишком большой (максимум 5 МБ)");
   }
 
+  // file.type — это то, что браузер САМ подставил в multipart-запрос, ничем
+  // не подтверждено содержимым (вопрос пользователя 2026-07-24: JPG может
+  // нести вредоносный код). До этого места код доверял ему вслепую и писал
+  // байты на диск как есть — под видом .jpg могло уйти на диск что угодно.
+  // Прогон через sharp — та же защита, что уже стоит в saveRemoteImageAsWebp
+  // ниже: sharp реально декодирует пиксели и перекодирует заново, поэтому
+  // (а) не-картинка гарантированно упадёт здесь с ошибкой, (б) любой
+  // полиглот/встроенная нагрузка не переживёт передекодирование — на диск
+  // попадают только заново собранные из пикселей байты, не исходные.
+  let buffer: Buffer;
+  try {
+    const image = sharp(Buffer.from(await file.arrayBuffer()));
+    buffer =
+      ext === "jpg"
+        ? await image.jpeg().toBuffer()
+        : ext === "png"
+          ? await image.png().toBuffer()
+          : await image.webp().toBuffer();
+  } catch {
+    throw new Error("Файл повреждён или не является изображением");
+  }
+
   const filename = `${randomUUID()}.${ext}`;
   const tenantDir = path.join(UPLOADS_ROOT, tenantId);
   await mkdir(tenantDir, { recursive: true });
 
-  const buffer = Buffer.from(await file.arrayBuffer());
   await writeFile(path.join(tenantDir, filename), buffer);
 
   return `/uploads/${tenantId}/${filename}`;
