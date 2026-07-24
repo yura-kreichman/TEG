@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { QrCode as QrCodeIcon, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, QrCode as QrCodeIcon, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -20,6 +20,7 @@ import { PerformedByTag } from "@/components/performed-by-tag";
 import { PrintButton } from "@/components/print/print-button";
 import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
+import { formatPeriodLabel as formatPeriodLabelFor, isCurrentPeriod as isCurrentPeriodFor, periodRange, steppedAnchor } from "@/lib/period-nav";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { useOwnerPrintAvailable } from "@/hooks/use-print";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
@@ -32,6 +33,12 @@ interface WalletHistoryEntry {
   amount: number;
   occurredAt: string;
   planName: string | null;
+  // "За что" списание/возврат (запрос пользователя 2026-07-24: "не просто
+  // Списание, а за что именно").
+  description: string | null;
+  // Количество (запрос пользователя 2026-07-24: "в Печатную сводку и везде
+  // должно быть указано количество") — только у "Счётчиков"-строк с тарифом.
+  quantity: number | null;
   paymentMethod: string | null;
   pointName: string | null;
   performedBy: string | null;
@@ -75,8 +82,15 @@ export default function AbonementWalletPage() {
   const { saved: deleted, pulse: deletePulse } = useSavePulse();
   const [qrOpen, setQrOpen] = useState(false);
 
-  async function loadWallet() {
-    const res = await fetch(`/api/abonement-wallets/${params.id}`);
+  // Переключатель месяцев в истории операций (запрос пользователя
+  // 2026-07-24: "слишком большой список будет") — тот же приём, что у
+  // /operators/[id] (period-nav.ts), только без переключателя неделя/месяц —
+  // тут явно просили именно "переключатель месяцев".
+  const [anchor, setAnchor] = useState(() => new Date());
+
+  async function loadWallet(currentAnchor?: Date) {
+    const { from, to } = periodRange("month", currentAnchor ?? anchor);
+    const res = await fetch(`/api/abonement-wallets/${params.id}?from=${from}&to=${to}`);
     if (res.status === 403) {
       router.replace("/");
       return;
@@ -92,10 +106,20 @@ export default function AbonementWalletPage() {
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    loadWallet().then(() => setChecking(false));
+    loadWallet(anchor).then(() => setChecking(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id]);
+  }, [params.id, anchor]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  function stepPeriod(delta: number) {
+    setAnchor((prev) => steppedAnchor("month", prev, delta));
+  }
+  function formatPeriodLabel() {
+    return formatPeriodLabelFor("month", anchor, t);
+  }
+  function isCurrentPeriod() {
+    return isCurrentPeriodFor("month", anchor);
+  }
 
   async function save() {
     if (!wallet) return;
@@ -130,12 +154,30 @@ export default function AbonementWalletPage() {
           : t.abonements.historyAdjustment;
   }
 
-  // Выписка баланса (запрос пользователя 2026-07-20) — последние 10 операций
-  // по кошельку, тот же порядок (desc по occurredAt), что и в истории на
-  // экране (см. /api/abonement-wallets/[id] — orderBy occurredAt: "desc").
+  // Итоговая строка операции — запрос пользователя 2026-07-24: "убери
+  // везде слово 'Списание', это итак понятно, ведь число с минусом". Слово
+  // "Пополнение"/"Возврат"/"Корректировка" оставляем — у одинакового плюса
+  // разный смысл (реальное поступление vs возврат вычета), знаком не
+  // различить, а "Списание" при известном источнике (зона/товар/билеты) —
+  // чистая тавтология с минусом рядом.
+  function historyLabel(h: WalletHistoryEntry): string {
+    const base = h.planName ?? h.description;
+    // Количество (запрос пользователя 2026-07-24) — только у "Счётчиков".
+    const detail = base && h.quantity ? `${base} × ${h.quantity}` : base;
+    if (h.type === "spend") return detail ?? historyTypeLabel(h);
+    return detail ? `${historyTypeLabel(h)} · ${detail}` : historyTypeLabel(h);
+  }
+
+  // Выписка баланса (запрос пользователя 2026-07-20) — операции ЗА
+  // ПРОСМОТРЕННЫЙ МЕСЯЦ (переключатель месяцев, запрос пользователя
+  // 2026-07-24), тот же порядок (desc по occurredAt), что сейчас на
+  // экране, но не более 20 последних (запрос того же дня) — сам экран
+  // по-прежнему показывает весь месяц целиком, это ограничение только для
+  // печати (длинный месяц на A4 и так уже показал реальный баг с разрывом
+  // страниц, см. комментарий у receipt-document.ts).
   function buildBalanceReceiptData(): PrintDocumentData {
     return {
-      title: t.abonements.receiptTitle,
+      title: `${t.abonements.receiptTitle} · ${formatPeriodLabel()}`,
       // Имя крупнее обычного subtitle, телефон под ним (запрос пользователя
       // 2026-07-20) — без имени телефон и так уже primary, второй раз его
       // не дублируем.
@@ -143,10 +185,15 @@ export default function AbonementWalletPage() {
       sections: [
         {
           title: t.abonements.historyTitle,
-          lines: wallet!.history.slice(0, 10).map((h) => ({
-            label: `${new Date(h.occurredAt).toLocaleDateString(locale)} · ${historyTypeLabel(h)}`,
-            value: `${h.type === "spend" ? "−" : "+"}${formatMoneyWithCurrency(h.amount, locale, currency)}`,
-          })),
+          lines: wallet!.history.slice(0, 20).map((h) => {
+            const when = new Date(h.occurredAt);
+            const shortDate = when.toLocaleDateString(locale, { day: "2-digit", month: "2-digit" });
+            const shortTime = when.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+            return {
+              label: `${shortDate} ${shortTime} · ${historyLabel(h)}`,
+              value: `${h.type === "spend" ? "−" : "+"}${formatMoneyWithCurrency(h.amount, locale, currency)}`,
+            };
+          }),
         },
       ],
       totalLine: { label: t.abonements.balanceLabel, value: formatMoneyWithCurrency(wallet!.balance, locale, currency) },
@@ -263,7 +310,31 @@ export default function AbonementWalletPage() {
           </SpringCard>
 
           <SpringCard hover={false}>
-            <p className="mb-2 text-card-title">{t.abonements.historyTitle}</p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-card-title">{t.abonements.historyTitle}</p>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  aria-label={t.money.prevPeriod}
+                  onClick={() => stepPeriod(-1)}
+                  className="flex size-8 items-center justify-center rounded-control text-muted-foreground"
+                >
+                  <ChevronLeft className="size-4.5" />
+                </button>
+                <p className="w-28 text-center text-caption-airbnb font-semibold text-foreground">
+                  {formatPeriodLabel()}
+                </p>
+                <button
+                  type="button"
+                  aria-label={t.money.nextPeriod}
+                  onClick={() => stepPeriod(1)}
+                  disabled={isCurrentPeriod()}
+                  className="flex size-8 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
+                >
+                  <ChevronRight className="size-4.5" />
+                </button>
+              </div>
+            </div>
             {wallet.history.length === 0 ? (
               <p className="text-caption-airbnb text-muted-foreground">{t.abonements.noHistory}</p>
             ) : (
@@ -274,10 +345,7 @@ export default function AbonementWalletPage() {
                     className="flex items-center justify-between gap-2 border-t border-border py-2.5 first:border-t-0"
                   >
                     <div className="min-w-0">
-                      <p className="text-body-airbnb font-semibold">
-                        {historyTypeLabel(h)}
-                        {h.planName ? ` · ${h.planName}` : ""}
-                      </p>
+                      <p className="text-body-airbnb font-semibold">{historyLabel(h)}</p>
                       <p className="flex flex-wrap items-center gap-x-1 text-caption-airbnb text-muted-foreground">
                         <span>
                           {new Date(h.occurredAt).toLocaleString()}

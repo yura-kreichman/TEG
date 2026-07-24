@@ -412,23 +412,48 @@ export async function createWalletWithAdjustment(
   return wallet;
 }
 
+/**
+ * "За что" списание/возврат — иначе выписка/история показывали безликое
+ * "Списание" без единого пояснения (запрос пользователя 2026-07-24: "лучше,
+ * чтобы не было написано просто Списание, а за что именно — Товары, зоны,
+ * активы и т.д."). Порядок проверки соответствует набору взаимоисключающих
+ * ссылок AbonementTransaction — ровно одна заполнена на транзакцию. Общий
+ * хелпер для обоих мест, что читают историю (operator/abonements,
+ * abonement-wallets/[id]) — include-форма join'ов там должна совпадать с
+ * тем, что здесь ожидается.
+ */
+export function describeAbonementTransactionSource(h: {
+  launch?: { zone: { name: string } } | null;
+  goodsSale?: { goods: { name: string } } | null;
+  ticketOrder?: { zone: { name: string } } | null;
+  tariff?: { zone: { name: string } } | null;
+}): string | null {
+  return h.launch?.zone.name ?? h.goodsSale?.goods.name ?? h.ticketOrder?.zone.name ?? h.tariff?.zone.name ?? null;
+}
+
 export class InsufficientBalanceError extends Error {
   constructor() {
     super("INSUFFICIENT_BALANCE");
   }
 }
 
-// Ровно один вариант: "Счётчики" — оплата привязана к конкретному
-// активу+тарифу (нужны для отчётности "какая поездка"); "Только касса" — у
-// зоны вообще нет активов/тарифов (docs/spec/01-counters.md), привязывать
-// оплату не к чему, только к самой зоне.
-type ZoneSpendTarget = { kind: "counterAsset"; assetId: string; tariffId: string } | { kind: "cashOnlyZone"; zoneId: string };
+// Ровно один вариант: "Счётчики" — оплата привязана к зоне+тарифам, без
+// актива (запрос пользователя 2026-07-24: на экране "Списать с баланса"
+// выбор конкретного актива — чистое трение без пользы для денег зоны, сумма
+// зависит только от тарифа, актив раньше давал только подпись в истории
+// кошелька), НЕСКОЛЬКО строк за раз (запрос того же дня: "чтобы Сотрудник
+// мог списывать сразу несколько тарифов", степпер количества — та же
+// механика, что уже есть у Билетов); "Только касса" — у зоны вообще нет
+// активов/тарифов (docs/spec/01-counters.md), привязывать оплату не к чему,
+// только к самой зоне, свободная сумма остаётся одной строкой.
+type ZoneSpendTarget =
+  | { kind: "counterTariff"; zoneId: string; lines: { tariffId: string; quantity: number }[] }
+  | { kind: "cashOnlyZone"; zoneId: string; amount: number };
 
 interface ZoneSpendParams {
   tenantId: string;
   pointId: string;
   operatorId: string;
-  amount: number;
   target: ZoneSpendTarget;
 }
 
@@ -441,26 +466,40 @@ interface ZoneSpendParams {
  * по RFID-метке, программа об этом не знает, а "Только касса" вообще не
  * ведёт по-активный учёт — эта функция только независимая ручная фиксация
  * Сотрудником факта оплаты, не связанная с самим тиком/кассой.
+ *
+ * "Счётчики" — сумма КАЖДОЙ строки считается СЕРВЕРОМ от реальной цены
+ * тарифа (не доверяем amount от клиента, запрос пользователя 2026-07-24
+ * закрыл заодно и небольшую дыру доверия, которая была раньше) — на каждый
+ * выбранный тариф своя AbonementTransaction (аудит по тарифам остаётся
+ * читаемым, тот же приём, что у отдельных строк GoodsSale/Ticket за один
+ * чек), но ОДНА общая MoneyOperation на всю корзину — MoneyOperation не
+ * хранит tariffId, разбивка по тарифам ей не нужна.
  */
 export async function spendWalletForZone(walletId: string, params: ZoneSpendParams) {
-  const { tenantId, pointId, operatorId, amount, target } = params;
+  const { tenantId, pointId, operatorId, target } = params;
 
   return prisma.$transaction(async (tx) => {
     let zoneId: string;
-    let assetId: string | null = null;
-    let tariffId: string | null = null;
+    let totalAmount = 0;
+    const txLines: { tariffId: string | null; amount: number; quantity: number | null }[] = [];
 
-    if (target.kind === "counterAsset") {
-      const asset = await tx.asset.findFirst({
-        where: { id: target.assetId, zone: { pointId, point: { tenantId }, accountingMode: "counters" } },
-        select: { zoneId: true },
+    if (target.kind === "counterTariff") {
+      if (target.lines.length === 0) throw new Error("EMPTY_CART");
+      const zone = await tx.zone.findFirst({
+        where: { id: target.zoneId, pointId, point: { tenantId }, accountingMode: "counters" },
+        select: { id: true },
       });
-      if (!asset) throw new Error("ASSET_NOT_FOUND");
-      const tariff = await tx.tariff.findFirst({ where: { id: target.tariffId, zoneId: asset.zoneId, deletedAt: null } });
-      if (!tariff) throw new Error("TARIFF_NOT_FOUND");
-      zoneId = asset.zoneId;
-      assetId = target.assetId;
-      tariffId = target.tariffId;
+      if (!zone) throw new Error("ZONE_NOT_FOUND");
+      zoneId = zone.id;
+      for (const line of target.lines) {
+        if (!Number.isInteger(line.quantity) || line.quantity <= 0) continue;
+        const tariff = await tx.tariff.findFirst({ where: { id: line.tariffId, zoneId: zone.id, deletedAt: null } });
+        if (!tariff) throw new Error("TARIFF_NOT_FOUND");
+        const amount = Math.round(Number(tariff.price) * line.quantity * 100) / 100;
+        totalAmount += amount;
+        txLines.push({ tariffId: line.tariffId, amount, quantity: line.quantity });
+      }
+      if (txLines.length === 0) throw new Error("EMPTY_CART");
     } else {
       const zone = await tx.zone.findFirst({
         where: { id: target.zoneId, pointId, point: { tenantId }, accountingMode: "cash_only" },
@@ -468,25 +507,33 @@ export async function spendWalletForZone(walletId: string, params: ZoneSpendPara
       });
       if (!zone) throw new Error("ZONE_NOT_FOUND");
       zoneId = zone.id;
+      totalAmount = target.amount;
+      txLines.push({ tariffId: null, amount: target.amount, quantity: null });
     }
 
     const updated = await tx.abonementWallet.updateMany({
-      where: { id: walletId, tenantId, balance: { gte: amount } },
-      data: { balance: { decrement: amount } },
+      where: { id: walletId, tenantId, balance: { gte: totalAmount } },
+      data: { balance: { decrement: totalAmount } },
     });
     if (updated.count === 0) throw new InsufficientBalanceError();
 
-    await tx.abonementTransaction.create({
-      data: { walletId, type: "spend", amount, assetId, tariffId, pointId, operatorId },
-    });
+    // assetId больше не проставляется (запрос пользователя 2026-07-24) —
+    // поле осталось nullable в схеме ради старых записей. quantity — только
+    // у "Счётчиков"-строк (запрос того же дня: "в Печатную сводку и везде
+    // должно быть указано количество").
+    for (const line of txLines) {
+      await tx.abonementTransaction.create({
+        data: { walletId, type: "spend", amount: line.amount, tariffId: line.tariffId, quantity: line.quantity, pointId, operatorId },
+      });
+    }
 
     await tx.moneyOperation.create({
-      data: { tenantId, zoneId, type: "revenue_abonement", amount, performedByOperatorId: operatorId },
+      data: { tenantId, zoneId, type: "revenue_abonement", amount: totalAmount, performedByOperatorId: operatorId },
     });
 
-    return tx.abonementWallet.findUniqueOrThrow({ where: { id: walletId } });
-  }).then(async (wallet) => {
-    await notifyWalletBalanceChange(tenantId, walletId, -amount).catch(() => {});
+    return { wallet: await tx.abonementWallet.findUniqueOrThrow({ where: { id: walletId } }), totalAmount };
+  }).then(async ({ wallet, totalAmount }) => {
+    await notifyWalletBalanceChange(tenantId, walletId, -totalAmount).catch(() => {});
     return wallet;
   });
 }

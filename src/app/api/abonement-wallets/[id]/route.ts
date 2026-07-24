@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { normalizePhone, hasTelegramLink } from "@/lib/abonement";
+import { normalizePhone, hasTelegramLink, describeAbonementTransactionSource } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 import { getClientBalanceDeepLink } from "@/lib/telegram-bot";
 
@@ -14,7 +14,7 @@ async function findOwnedWallet(tenantId: string, id: string) {
 // Детали кошелька + история операций (запрос пользователя 2026-07-17: "у
 // владельца нет ни истории купленных абонементов, ни возможности... удалить,
 // ни редактировать") — полный CRUD-компаньон к /api/abonement-wallets/list.
-export async function GET(_request: Request, ctx: RouteContext<"/api/abonement-wallets/[id]">) {
+export async function GET(request: Request, ctx: RouteContext<"/api/abonement-wallets/[id]">) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
@@ -29,15 +29,34 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/abonement-w
     return NextResponse.json({ error: "Абонент не найден" }, { status: 404 });
   }
 
+  // Переключатель месяцев в истории (запрос пользователя 2026-07-24:
+  // "слишком большой список будет") — тот же приём from/to, что у
+  // /api/operator/work-time/shifts. Без параметров — старое поведение
+  // (последние 100 когда-либо), для обратной совместимости.
+  const { searchParams } = new URL(request.url);
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
+  const occurredAt =
+    fromParam && toParam
+      ? {
+          gte: new Date(`${fromParam}T00:00:00.000Z`),
+          lt: new Date(new Date(`${toParam}T00:00:00.000Z`).getTime() + 24 * 60 * 60 * 1000),
+        }
+      : undefined;
+
   const history = await prisma.abonementTransaction.findMany({
-    where: { walletId: id },
+    where: { walletId: id, ...(occurredAt ? { occurredAt } : {}) },
     orderBy: { occurredAt: "desc" },
-    take: 100,
+    take: occurredAt ? 500 : 100,
     include: {
       abonement: { select: { name: true, price: true, creditAmount: true } },
       point: { select: { name: true } },
       operator: { select: { name: true } },
       user: { select: { id: true } },
+      launch: { select: { zone: { select: { name: true } } } },
+      goodsSale: { select: { goods: { select: { name: true } } } },
+      ticketOrder: { select: { zone: { select: { name: true } } } },
+      tariff: { select: { zone: { select: { name: true } } } },
     },
   });
 
@@ -59,6 +78,8 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/abonement-w
       amount: Number(h.amount),
       occurredAt: h.occurredAt,
       planName: h.abonement?.name ?? null,
+      description: describeAbonementTransactionSource(h),
+      quantity: h.quantity,
       paymentMethod: h.paymentMethod,
       pointName: h.point?.name ?? null,
       // Email владельца не отдаём наружу (реальный баг, найден пользователем

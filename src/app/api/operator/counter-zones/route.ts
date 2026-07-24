@@ -4,10 +4,12 @@ import { requireOperator } from "@/lib/require-operator";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Зоны, где применима оплата балансом БЕЗ Launch-учёта — "Счётчики" (выбор
-// актив+тариф) и "Только касса" (сама зона) — docs/spec/01-counters.md,
-// запрос пользователя 2026-07-20. Тот же список доступа, что и
-// /api/operator/submission-context, но без тяжёлых показаний — тут нужны
-// только сами зоны+активы+тарифы для пикера в экране "Клиенты".
+// тарифа, без актива — запрос пользователя 2026-07-24: "нет смысла", актив
+// ничего не менял в сумме списания) и "Только касса" (сама зона) —
+// docs/spec/01-counters.md, запрос пользователя 2026-07-20. Тот же список
+// доступа, что и /api/operator/submission-context, но без тяжёлых
+// показаний — тут нужны только сами зоны+тарифы для пикера в экране
+// "Клиенты".
 export async function GET() {
   const ctx = await requireOperator();
   if (!ctx) {
@@ -24,10 +26,7 @@ export async function GET() {
 
   const zones = await prisma.zone.findMany({
     where: { ...zoneWhere, accountingMode: { in: ["counters", "cash_only"] } },
-    include: {
-      tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" } },
-      assets: { where: { active: true }, orderBy: { sortOrder: "asc" } },
-    },
+    include: { tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" } } },
     orderBy: { createdAt: "asc" },
   });
 
@@ -38,13 +37,6 @@ export async function GET() {
       iconKey: zone.iconKey,
       accountingMode: zone.accountingMode,
       tariffs: zone.tariffs.map((t) => ({ id: t.id, name: t.name, price: Number(t.price) })),
-      assets: zone.assets.map((a) => ({
-        id: a.id,
-        name: a.name,
-        photoUrl: a.photoUrl,
-        iconKey: a.iconKey,
-        colorTag: a.colorTag,
-      })),
     })),
   });
 }

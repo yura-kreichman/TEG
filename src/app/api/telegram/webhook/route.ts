@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendChatMessage, sendChatMessageWithMenu, sendContactRequest, sendInlineKeyboard, answerCallbackQuery, CLIENT_START_PREFIX } from "@/lib/telegram-bot";
-import { findWalletByPhone, normalizePhone } from "@/lib/abonement";
+import { describeAbonementTransactionSource, findWalletByPhone, normalizePhone } from "@/lib/abonement";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import type { CurrencyCode } from "@/lib/currency";
 import { getBusinessDayBounds } from "@/lib/business-day";
@@ -311,7 +311,9 @@ async function handleContact(message: {
   }
 }
 
-const HISTORY_LIMIT = 5;
+// 20 — как у Печатной выписки (запрос пользователя 2026-07-24: "то же
+// самое и при запросе /balance"), было 5.
+const HISTORY_LIMIT = 20;
 
 // Баланс + последние операции + непогашенные заказы билетов — всё одним
 // сообщением (запрос пользователя 2026-07-22: клиент не должен разбираться в
@@ -329,12 +331,14 @@ async function buildClientReport(
   ];
 
   // Обогащённая история (запрос пользователя 2026-07-23: раньше строка была
-  // просто "22.07  −150 ₽" без объяснения, за что) — подключаем все связи,
-  // через которые AbonementTransaction ссылается на "что именно" (план
-  // пополнения / актив-пуск / товар / заказ билетов), берём первое
-  // непустое имя. Для "Счётчиков" (прямое списание на актив без Launch) имя
-  // берём из asset напрямую — единственный тип операции, где Launch нет
-  // вообще (см. spendWalletForZone в abonement.ts).
+  // просто "22.07  −150 ₽" без объяснения, за что; синхронизировано с
+  // Печатной выпиской, запрос пользователя 2026-07-24: "там тоже должно
+  // быть как и в Печатной выписке") — те же связи и тот же общий резолвер
+  // describeAbonementTransactionSource (lib/abonement.ts), что и у
+  // /api/abonement-wallets/[id] / /api/operator/abonements. Раньше тут был
+  // отдельный, слегка другой набор фолбэков (включая h.asset — поле,
+  // которое "Счётчики" больше не проставляют после отказа от привязки к
+  // активу в этом потоке, реальный баг, найденный при синхронизации 2026-07-24).
   const history = await prisma.abonementTransaction.findMany({
     where: { walletId: wallet.id },
     orderBy: { occurredAt: "desc" },
@@ -343,30 +347,36 @@ async function buildClientReport(
       type: true,
       amount: true,
       occurredAt: true,
+      quantity: true,
       abonement: { select: { name: true } },
-      launch: { select: { asset: { select: { name: true } }, zone: { select: { name: true } } } },
+      launch: { select: { zone: { select: { name: true } } } },
       goodsSale: { select: { goods: { select: { name: true } } } },
-      ticketOrder: { select: { number: true } },
-      asset: { select: { name: true } },
+      ticketOrder: { select: { zone: { select: { name: true } } } },
+      tariff: { select: { zone: { select: { name: true } } } },
     },
   });
   if (history.length > 0) {
     lines.push("", `<b>${s.recentOps}:</b>`);
     for (const h of history) {
       const sign = h.type === "spend" ? "−" : "+";
+      // Короткие дата+время (запрос пользователя 2026-07-24), та же пара
+      // опций, что в Печатной выписке.
       const date = h.occurredAt.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" });
+      const time = h.occurredAt.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
       const typeLabel =
         h.type === "spend" ? s.typeSpend : h.type === "refund" ? s.typeRefund : h.type === "adjustment" ? s.typeAdjustment : s.typeTopup;
-      const detail =
-        h.abonement?.name ??
-        h.launch?.asset?.name ??
-        h.launch?.zone.name ??
-        h.goodsSale?.goods.name ??
-        (h.ticketOrder ? `${s.ticketOrderPrefix} №${h.ticketOrder.number}` : null) ??
-        h.asset?.name ??
-        null;
-      const label = detail ? `${typeLabel} · ${detail}` : typeLabel;
-      lines.push(`${date}  ${label}  ${sign}${formatMoneyWithCurrency(Number(h.amount), "ru", currency)}`);
+      // Количество (запрос пользователя 2026-07-24: "в Печатную сводку и
+      // везде должно быть указано количество") — только у "Счётчиков", там
+      // где реально можно списать несколько тарифов за раз.
+      const detailBase = h.abonement?.name ?? describeAbonementTransactionSource(h);
+      const detail = detailBase && h.quantity ? `${detailBase} × ${h.quantity}` : detailBase;
+      // Слово "Списание" убрано (запрос пользователя 2026-07-24: "это итак
+      // понятно, ведь число с минусом") — при известном источнике просто
+      // название зоны/товара, знак минус и так говорит, что это расход;
+      // "Пополнение"/"Возврат"/"Корректировка" оставлены — одинаковый плюс
+      // у них означает разное, знаком не различить.
+      const label = h.type === "spend" ? (detail ?? typeLabel) : detail ? `${typeLabel} · ${detail}` : typeLabel;
+      lines.push(`${date} ${time}  ${label}  ${sign}${formatMoneyWithCurrency(Number(h.amount), "ru", currency)}`);
     }
   }
 

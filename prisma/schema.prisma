@@ -957,11 +957,21 @@ model AbonementTransaction {
   // по прикосновению RFID-метки, программа об этом не знает вообще; эта
   // запись — независимая ручная фиксация Сотрудником "эта поездка оплачена
   // балансом", не связанная с самим тиком счётчика. tariffId — какой из двух
-  // тарифов актива (тот же смысл, что у AssetReading.tariffId).
+  // тарифов актива (тот же смысл, что у AssetReading.tariffId). assetId
+  // больше не проставляется новым кодом (запрос пользователя 2026-07-24—
+  // актив убран из экрана "Списать с баланса"), поле осталось nullable ради
+  // старых записей.
   assetId  String?
   asset    Asset?  @relation(fields: [assetId], references: [id], onDelete: SetNull)
   tariffId String?
   tariff   Tariff? @relation(fields: [tariffId], references: [id], onDelete: SetNull)
+  // Количество (запрос пользователя 2026-07-24: "Сотрудник мог списывать
+  // сразу несколько тарифов" + "в Печатную сводку и везде должно быть
+  // указано количество") — та же роль, что GoodsSale.quantity, только тут
+  // необязательна: заполняется лишь у "Счётчиков"-строк с тарифом, null у
+  // всех остальных типов (там количество либо не имеет смысла, либо уже
+  // есть на связанной сущности — Ticket/GoodsSale хранят его сами).
+  quantity Int?
 
   pointId    String?
   point      Point?    @relation(fields: [pointId], references: [id])

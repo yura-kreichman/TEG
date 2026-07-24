@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Banknote, Check, ChevronDown, ChevronLeft, CreditCard, Delete, Layers, Lock, LockOpen, MapPin, Minus, Plus, Printer, Search, ShoppingCart, Ticket, Trash2, TriangleAlert, Wallet, X } from "lucide-react";
+import { Banknote, Check, ChevronDown, CreditCard, Delete, Layers, Lock, LockOpen, MapPin, Minus, Plus, Printer, Search, ShoppingCart, Ticket, Trash2, TriangleAlert, Wallet, X } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { ConfirmIconButton } from "@/components/confirm-icon-button";
@@ -778,18 +779,14 @@ export default function TicketsZonePage() {
           // не остаются под ней; назад — явной кнопкой, не переключением таба.
           <div className="flex flex-col gap-3">
             <PressableScale className="w-fit">
-              <button
-                type="button"
+              <BackLink
+                label={t.common.back}
                 onClick={() => {
                   setSearchResult(null);
                   setSearchNumber("");
                   setSearchError(null);
                 }}
-                className="flex items-center gap-1 text-body-airbnb font-semibold text-primary"
-              >
-                <ChevronLeft className="size-4" />
-                {t.common.back}
-              </button>
+              />
             </PressableScale>
             <OrderCard
               order={searchResult}

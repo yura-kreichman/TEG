@@ -26,19 +26,26 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operator/ab
   }
 
   const body = await request.json().catch(() => ({}));
-  const assetId: string = typeof body.assetId === "string" ? body.assetId : "";
-  const tariffId: string = typeof body.tariffId === "string" ? body.tariffId : "";
   const zoneId: string = typeof body.zoneId === "string" ? body.zoneId : "";
+  // "Счётчики" — несколько строк тариф+количество (запрос пользователя
+  // 2026-07-24: "чтобы Сотрудник мог списывать сразу несколько тарифов",
+  // степпер, как у Билетов); "Только касса" — по-прежнему одна свободная
+  // сумма, у неё тарифов нет вовсе.
+  const rawLines: unknown[] = Array.isArray(body.lines) ? body.lines : [];
+  const lines = rawLines
+    .map((l) =>
+      l && typeof l === "object" && typeof (l as { tariffId?: unknown }).tariffId === "string"
+        ? { tariffId: (l as { tariffId: string }).tariffId, quantity: Number((l as { quantity?: unknown }).quantity) }
+        : null
+    )
+    .filter((l): l is { tariffId: string; quantity: number } => l !== null && Number.isInteger(l.quantity) && l.quantity > 0);
   const amount = Number(body.amount);
 
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return NextResponse.json({ error: "Укажите сумму" }, { status: 400 });
-  }
-  if (!assetId && !zoneId) {
+  if (!zoneId) {
     return NextResponse.json({ error: "Выберите зону" }, { status: 400 });
   }
-  if (assetId && !tariffId) {
-    return NextResponse.json({ error: "Выберите тариф" }, { status: 400 });
+  if (lines.length === 0 && (!Number.isFinite(amount) || amount <= 0)) {
+    return NextResponse.json({ error: "Укажите сумму" }, { status: 400 });
   }
 
   try {
@@ -46,8 +53,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operator/ab
       tenantId: point.tenantId,
       pointId: point.id,
       operatorId: operator.id,
-      amount,
-      target: assetId ? { kind: "counterAsset", assetId, tariffId } : { kind: "cashOnlyZone", zoneId },
+      target: lines.length > 0 ? { kind: "counterTariff", zoneId, lines } : { kind: "cashOnlyZone", zoneId, amount },
     });
     return NextResponse.json({
       id: updated.id,
@@ -60,11 +66,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operator/ab
     if (err instanceof InsufficientBalanceError) {
       return NextResponse.json({ error: "Недостаточно средств на балансе" }, { status: 400 });
     }
-    if (
-      err instanceof Error &&
-      (err.message === "ASSET_NOT_FOUND" || err.message === "TARIFF_NOT_FOUND" || err.message === "ZONE_NOT_FOUND")
-    ) {
-      return NextResponse.json({ error: "Зона, актив или тариф не найдены" }, { status: 400 });
+    if (err instanceof Error && (err.message === "TARIFF_NOT_FOUND" || err.message === "ZONE_NOT_FOUND")) {
+      return NextResponse.json({ error: "Зона или тариф не найдены" }, { status: 400 });
+    }
+    if (err instanceof Error && err.message === "EMPTY_CART") {
+      return NextResponse.json({ error: "Выберите хотя бы один тариф" }, { status: 400 });
     }
     throw err;
   }

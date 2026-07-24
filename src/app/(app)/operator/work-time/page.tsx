@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { useSavePulse } from "@/hooks/use-save-pulse";
@@ -301,9 +301,7 @@ export default function WorkTimePage() {
   return (
     <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-8">
       <div className="flex w-full max-w-md flex-col gap-4 md:max-w-xl lg:max-w-2xl">
-        <Link href="/operator" className="w-fit text-caption-airbnb font-semibold text-primary">
-          ← {t.common.back}
-        </Link>
+        <BackLink label={t.common.back} href="/operator" />
         <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.operatorApp.workTime.title}</h1>
 
         {notice && (

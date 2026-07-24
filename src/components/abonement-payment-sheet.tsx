@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Banknote, ChevronLeft, CreditCard, Gift, Search, TriangleAlert } from "lucide-react";
+import { Banknote, CreditCard, Gift, Search, TriangleAlert } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Label } from "@/components/ui/label";
@@ -164,14 +165,7 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
       <div className="flex flex-col gap-3 pt-2">
         {pendingPlan ? (
           <>
-            <button
-              type="button"
-              onClick={() => setPendingPlanId(null)}
-              className="flex w-fit items-center gap-1.5 text-caption-airbnb font-semibold text-muted-foreground"
-            >
-              <ChevronLeft className="size-3.5" />
-              {t.common.back}
-            </button>
+            <BackLink label={t.common.back} onClick={() => setPendingPlanId(null)} />
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
               {t.operatorApp.gameRoom.paymentMethodTitle}
             </h2>
@@ -252,14 +246,7 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
           </div>
         ) : (
           <>
-            <button
-              type="button"
-              onClick={() => setFound(undefined)}
-              className="flex w-fit items-center gap-1.5 text-caption-airbnb font-semibold text-muted-foreground"
-            >
-              <ChevronLeft className="size-3.5" />
-              {t.common.back}
-            </button>
+            <BackLink label={t.common.back} onClick={() => setFound(undefined)} />
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{found.name || phone}</h2>
             {/* Телефон вторичной строкой, когда есть имя (тот же приём, что
                 в Клиентах, abonement-topup-flow.tsx) — иначе он и так

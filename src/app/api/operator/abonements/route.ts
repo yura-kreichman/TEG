@@ -6,6 +6,7 @@ import {
   createWalletEmpty,
   createWalletWithTopup,
   createWalletWithTopupArbitrary,
+  describeAbonementTransactionSource,
   findWalletByPhone,
   normalizePhone,
 } from "@/lib/abonement";
@@ -35,15 +36,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ abonement: null });
   }
 
-  // Последние 10 операций — только для Выписки баланса (модуль печати,
-  // запрос пользователя 2026-07-20), не для отображения на экране
-  // (в отличие от Владельца в /api/abonement-wallets/[id], у Сотрудника тут
-  // нет отдельного списка истории в UI).
+  // Последние 20 операций (запрос пользователя 2026-07-24, было 10) —
+  // только для Выписки баланса (модуль печати, запрос пользователя
+  // 2026-07-20), не для отображения на экране (в отличие от Владельца в
+  // /api/abonement-wallets/[id], у Сотрудника тут нет отдельного списка
+  // истории в UI).
   const history = await prisma.abonementTransaction.findMany({
     where: { walletId: wallet.id },
     orderBy: { occurredAt: "desc" },
-    take: 10,
-    include: { abonement: { select: { name: true } } },
+    take: 20,
+    include: {
+      abonement: { select: { name: true } },
+      launch: { select: { zone: { select: { name: true } } } },
+      goodsSale: { select: { goods: { select: { name: true } } } },
+      ticketOrder: { select: { zone: { select: { name: true } } } },
+      tariff: { select: { zone: { select: { name: true } } } },
+    },
   });
 
   return NextResponse.json({
@@ -58,6 +66,8 @@ export async function GET(request: Request) {
         amount: Number(h.amount),
         occurredAt: h.occurredAt,
         planName: h.abonement?.name ?? null,
+        description: describeAbonementTransactionSource(h),
+        quantity: h.quantity,
       })),
     },
   });

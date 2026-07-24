@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Home, MapPin, Minus, Plus, RefreshCcw, Send, Trash2, TriangleAlert } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -632,14 +633,10 @@ export default function SubmitResultsPage() {
     <div className="flex flex-1 flex-col bg-surface-0 px-4 pb-32 pt-6">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col md:max-w-xl lg:max-w-2xl">
         <div className="flex items-center justify-between">
-          <button
-            type="button"
+          <BackLink
+            label={stepIndex === 0 ? t.operatorApp.submit.cancelWizard : t.common.back}
             onClick={stepIndex === 0 ? () => router.push("/operator") : goBack}
-            className="flex items-center gap-1.5 text-caption-airbnb font-semibold text-muted-foreground"
-          >
-            <ChevronLeft className="size-3.5" />
-            {stepIndex === 0 ? t.operatorApp.submit.cancelWizard : t.common.back}
-          </button>
+          />
           <span className="text-caption-airbnb font-semibold text-muted-foreground/70">
             {t.operatorApp.submit.stepLabel} {stepIndex + 1} {t.common.of} {steps.length}
           </span>
