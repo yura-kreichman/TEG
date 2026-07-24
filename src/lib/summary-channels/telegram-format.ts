@@ -403,7 +403,7 @@ export function formatDailyCashSummaryTelegram(
         `💵 ${st.cashCompact}: <b>${formatMoney(data.cashAmount, locale)}</b> · 💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`
       );
       if (data.abonementAmount > 0) {
-        parts.push(`👛 ${st.abonementCompact}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
+        parts.push(`🎫 ${st.abonementCompact}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
       }
       // Продажа абонементов — реальные деньги, отдельно от абонемента-как-
       // способа-оплаты выше (запрос пользователя 2026-07-18: тот же разрыв,
@@ -450,7 +450,7 @@ export function formatDailyCashSummaryTelegram(
       `💵 ${st.cash}: <b>${formatMoney(data.cashAmount, locale)}</b> · 💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`
     );
     if (data.abonementAmount > 0) {
-      lines.push(`👛 ${st.abonement}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
+      lines.push(`🎫 ${st.abonement}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
     }
     if (data.abonementSold.cash + data.abonementSold.mobile > 0) {
       lines.push(

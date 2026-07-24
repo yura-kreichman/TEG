@@ -9,9 +9,13 @@ import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { SaveButton } from "@/components/ui/save-button";
 import { TelegramConnectSheet } from "@/components/summary-telegram-connect-sheet";
 import { useI18n } from "@/components/i18n-provider";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface PublicGroupStatus {
   botConfigured: boolean;
@@ -38,6 +42,14 @@ export default function PublicGroupSettingsPage() {
   const [checking, setChecking] = useState(true);
   const [group, setGroup] = useState<PublicGroupStatus | null>(null);
   const [connectOpen, setConnectOpen] = useState(false);
+  // Ссылка-приглашение — прямо на странице, не только внутри шторки
+  // подключения (реальный баг, найден пользователем 2026-07-24: чат был
+  // привязан, но поле ссылки осталось пустым, потому что раньше жило только
+  // в шторке, которую владелец уже не открывал повторно после подключения —
+  // /join клиентам отвечал "группа не подключена", хотя формально была).
+  const [inviteLink, setInviteLink] = useState("");
+  const [savingInviteLink, setSavingInviteLink] = useState(false);
+  const { saved: inviteLinkSaved, pulse: pulseInviteLinkSaved } = useSavePulse();
 
   async function loadStatus() {
     const res = await fetch("/api/tenant/public-group/telegram/status");
@@ -45,8 +57,25 @@ export default function PublicGroupSettingsPage() {
       router.replace("/login");
       return;
     }
-    setGroup(await res.json());
+    const data = await res.json();
+    setGroup(data);
+    setInviteLink(data.inviteLink ?? "");
     setChecking(false);
+  }
+
+  async function handleSaveInviteLink() {
+    if (savingInviteLink) return;
+    setSavingInviteLink(true);
+    try {
+      await fetch("/api/tenant/public-group/invite-link", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inviteLink: inviteLink.trim() || null }),
+      });
+      pulseInviteLinkSaved();
+    } finally {
+      setSavingInviteLink(false);
+    }
   }
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -115,6 +144,31 @@ export default function PublicGroupSettingsPage() {
                     </Button>
                   </PressableScale>
                 )}
+
+                {/* Независимо от факта подключения чата (тот же принцип, что
+                    у тумблеров анонса ниже) — команда /join у клиентов
+                    отвечает ровно по этому полю, не по chatStatus. */}
+                <div className="flex flex-col gap-1 border-t border-border pt-3">
+                  <Label htmlFor="publicGroupInviteLink">{t.summaries.publicGroupInviteLinkLabel}</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="publicGroupInviteLink"
+                      placeholder="https://t.me/+..."
+                      value={inviteLink}
+                      onChange={(e) => setInviteLink(e.target.value)}
+                      className="h-11 flex-1"
+                    />
+                    <PressableScale>
+                      <SaveButton
+                        className="h-11 shrink-0 px-4"
+                        saved={inviteLinkSaved}
+                        disabled={savingInviteLink}
+                        onClick={handleSaveInviteLink}
+                      />
+                    </PressableScale>
+                  </div>
+                  <p className="text-caption-airbnb text-muted-foreground">{t.summaries.publicGroupInviteLinkHint}</p>
+                </div>
               </SpringCard>
             </StaggerItem>
 
@@ -184,7 +238,6 @@ export default function PublicGroupSettingsPage() {
         statusEndpoint="/api/tenant/public-group/telegram/status"
         testEndpoint="/api/tenant/public-group/telegram/test"
         disconnectEndpoint="/api/tenant/public-group/telegram/disconnect"
-        inviteLinkEndpoint="/api/tenant/public-group/invite-link"
         doneHint={t.summaries.publicGroupConnectedHint}
       />
     </OwnerShell>

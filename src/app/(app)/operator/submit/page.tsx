@@ -156,6 +156,14 @@ export default function SubmitResultsPage() {
   const [ticketsAggregateByZone, setTicketsAggregateByZone] = useState<
     Record<string, { totalAmount: number; cashAmount: number; mobileAmount: number; abonementAmount: number }>
   >({});
+  // "Счётчики"/"Только касса" — сумма, оплаченная с баланса клиента с
+  // момента предыдущей сдачи (реальный баг, найден пользователем 2026-07-24:
+  // "Разница" на сервере уже её учитывала — actualCash + abonementAmount -
+  // netRevenue, — а живой предпросмотр здесь нет, сотрудник видел один
+  // расчёт при вводе кассы и другой после отправки). Тот же принцип
+  // накопления, что у ticketsAggregateByZone выше — нужен ещё и на шаге
+  // "Проверьте перед отправкой".
+  const [counterAbonementByZone, setCounterAbonementByZone] = useState<Record<string, number>>({});
   const [result, setResult] = useState<{
     summary: { zoneId: string; zoneName: string; calculatedRevenue: number; actualCash: number; difference: number }[];
     remindMarkDeparture?: boolean;
@@ -248,6 +256,20 @@ export default function SubmitResultsPage() {
       fetch(`/api/zones/${zone.id}/tally`)
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => setGameRoomRevenueByAsset(data?.revenueByAsset ?? []));
+      return;
+    }
+
+    // "Счётчики"/"Только касса" — сумма, оплаченная с баланса (см.
+    // counterAbonementByZone выше). Копится по всем зонам сдачи, не
+    // сбрасывается при уходе с шага — тот же принцип, что у Билетов.
+    if (zone.accountingMode === "counters" || zone.accountingMode === "cash_only") {
+      fetch(`/api/zones/${zone.id}/abonement-amount`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (typeof data?.amount === "number") {
+            setCounterAbonementByZone((prev) => ({ ...prev, [zone.id]: data.amount }));
+          }
+        });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, zones]);
@@ -402,7 +424,14 @@ export default function SubmitResultsPage() {
     const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
     const netRevenue = calcZoneRevenue(tariffCalc, Number(form.returnsCount || 0));
     const actualCash = Number(form.cashAmount || 0) + Number(form.mobileAmount || 0);
-    const difference = Math.round((actualCash - netRevenue) * 100) / 100;
+    // Оплата балансом (реальный баг, найден пользователем 2026-07-24: без
+    // этой поправки живой предпросмотр показывал ложную недостачу ровно на
+    // сумму, оплаченную с баланса — касса её и не должна была получить, у
+    // сотрудника этих денег наличными физически нет) — та же поправка, что
+    // уже в submit-results/route.ts (counterAbonementAmount) и у Билетов
+    // (abonementAmount) в этой же функции выше.
+    const counterAbonementAmount = counterAbonementByZone[zoneId] ?? 0;
+    const difference = Math.round((actualCash + counterAbonementAmount - netRevenue) * 100) / 100;
     return { calculatedRevenue, actualCash, difference };
   }
 
@@ -993,6 +1022,20 @@ export default function SubmitResultsPage() {
                       )
                     );
                   })()}
+                {/* "Счётчики" — справочная строка "Баланс" (реальный баг,
+                    найден пользователем 2026-07-24: без неё сотрудник не
+                    видел, что часть расчётной выручки уже оплачена с
+                    баланса и в кассу вноситься не должна) — тот же принцип,
+                    что у Билетов ниже. */}
+                {activeZone.accountingMode === "counters" && (counterAbonementByZone[activeZone.id] ?? 0) > 0 && (
+                  <div className="flex items-center justify-between text-caption-airbnb text-muted-foreground tabular-nums">
+                    <span className="flex items-center gap-1.5">
+                      <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
+                      {t.operatorApp.abonement.paymentLabel}
+                    </span>
+                    <span><Money value={counterAbonementByZone[activeZone.id]} /></span>
+                  </div>
+                )}
                 {/* Билеты — справочная разбивка способов оплаты заказов
                     (докс: "показывается подсказкой у полей кассы, БЕЗ
                     автоподстановки"), тот же принцип, что у Пусков/

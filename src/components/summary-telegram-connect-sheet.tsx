@@ -134,6 +134,16 @@ export function TelegramConnectSheet({
     await fetch(disconnectEndpoint, { method: "POST" });
     setChatTitle(null);
     setConnState("loading");
+    // Реальный баг: после этого больше никто не выводил из "loading" —
+    // эффект перезапуска привязки следит только за открытием шторки
+    // (изменение пропа open), а тут шторка остаётся открытой, просто её
+    // внутреннее состояние меняется — спиннер крутился бесконечно. Явно
+    // повторяем ту же логику, что и при открытии: проверяем статус и,
+    // если не подключено, сразу начинаем новую привязку.
+    const s = await loadStatus();
+    if (!s?.connected && s?.botConfigured) {
+      await startBind();
+    }
     onChanged();
   }
 
