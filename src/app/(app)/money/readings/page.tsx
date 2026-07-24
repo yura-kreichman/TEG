@@ -786,9 +786,17 @@ export default function ReadingsCalendarPage() {
                     <div className="flex items-center justify-between text-caption-airbnb">
                       <span className="flex items-center gap-1.5">
                         {t.operatorApp.submit.difference}
-                        {daySummary.difference !== 0 && (
-                          <TriangleAlert className="size-3.5 shrink-0 text-warning" />
-                        )}
+                        {/* Не тревожим значком, если разница целиком
+                            объясняется суммой "Баланс" рядом (запрос
+                            пользователя 2026-07-24: "не может это быть
+                            проблема, ведь это уже оприходованные деньги
+                            клиента, отдельный метод оплаты") — Наличные/
+                            Безнал при этом не трогаем, они настоящие и
+                            должны сходиться при сверке с кассой/терминалом. */}
+                        {Math.abs(daySummary.difference) > 0.01 &&
+                          Math.abs(daySummary.difference) - daySummary.abonement > 0.01 && (
+                            <TriangleAlert className="size-3.5 shrink-0 text-warning" />
+                          )}
                       </span>
                       <span
                         className={cn(
@@ -1241,9 +1249,13 @@ export default function ReadingsCalendarPage() {
                           <div className="flex items-center justify-between text-caption-airbnb">
                             <span className="flex items-center gap-1.5">
                               {t.operatorApp.submit.difference}
-                              {card.difference !== 0 && (
-                                <TriangleAlert className="size-3.5 shrink-0 text-warning" />
-                              )}
+                              {/* Та же поправка, что и в сводке дня выше —
+                                  не тревожим значком, если разница целиком
+                                  объясняется суммой "Баланс" этой зоны. */}
+                              {Math.abs(card.difference) > 0.01 &&
+                                Math.abs(card.difference) - card.abonementAmount > 0.01 && (
+                                  <TriangleAlert className="size-3.5 shrink-0 text-warning" />
+                                )}
                             </span>
                             <span
                               className={cn(

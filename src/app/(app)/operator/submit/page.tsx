@@ -165,7 +165,14 @@ export default function SubmitResultsPage() {
   // "Проверьте перед отправкой".
   const [counterAbonementByZone, setCounterAbonementByZone] = useState<Record<string, number>>({});
   const [result, setResult] = useState<{
-    summary: { zoneId: string; zoneName: string; calculatedRevenue: number; actualCash: number; difference: number }[];
+    summary: {
+      zoneId: string;
+      zoneName: string;
+      calculatedRevenue: number;
+      actualCash: number;
+      difference: number;
+      abonementAmount: number;
+    }[];
     remindMarkDeparture?: boolean;
   } | null>(null);
   // Возвраты/тестовые пуски (docs/spec/01-counters.md, п.3) — раньше
@@ -404,7 +411,7 @@ export default function SubmitResultsPage() {
       const abonementAmount = agg?.abonementAmount ?? 0;
       const actualCash = Number(form.cashAmount || 0) + Number(form.mobileAmount || 0);
       const difference = Math.round((actualCash + abonementAmount - calculatedRevenue) * 100) / 100;
-      return { calculatedRevenue, actualCash, difference };
+      return { calculatedRevenue, actualCash, difference, abonementAmount };
     }
 
     const tariffCalc = zone.tariffs.map((tariff) => {
@@ -432,7 +439,7 @@ export default function SubmitResultsPage() {
     // (abonementAmount) в этой же функции выше.
     const counterAbonementAmount = counterAbonementByZone[zoneId] ?? 0;
     const difference = Math.round((actualCash + counterAbonementAmount - netRevenue) * 100) / 100;
-    return { calculatedRevenue, actualCash, difference };
+    return { calculatedRevenue, actualCash, difference, abonementAmount: counterAbonementAmount };
   }
 
   // Актив "заполнен", если хотя бы один тариф введён — не обязательно все
@@ -505,6 +512,7 @@ export default function SubmitResultsPage() {
         calculatedRevenue: preview?.calculatedRevenue ?? 0,
         actualCash: preview?.actualCash ?? 0,
         difference: preview?.difference ?? 0,
+        abonementAmount: preview?.abonementAmount ?? 0,
       };
     });
 
@@ -630,7 +638,13 @@ export default function SubmitResultsPage() {
                 {!isCashOnly && (
                   <span className="flex items-center gap-1.5 tabular-nums font-semibold">
                     {t.operatorApp.submit.difference}
-                    {s.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                    {/* Не тревожим значком, если разница целиком объясняется
+                        суммой "Баланс" — отдельный метод оплаты, деньги за
+                        него получены раньше, при пополнении (запрос
+                        пользователя 2026-07-24). */}
+                    {Math.abs(s.difference) > 0.01 && Math.abs(s.difference) - s.abonementAmount > 0.01 && (
+                      <TriangleAlert className="size-3.5 shrink-0 text-warning" />
+                    )}
                     {s.difference > 0 ? "+" : ""}
                     <Money value={s.difference} />
                   </span>
@@ -1011,7 +1025,10 @@ export default function SubmitResultsPage() {
                           <div className="flex items-center justify-between">
                             <span className="flex items-center gap-1.5">
                               {t.operatorApp.submit.difference}
-                              {preview.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                              {Math.abs(preview.difference) > 0.01 &&
+                                Math.abs(preview.difference) - preview.abonementAmount > 0.01 && (
+                                  <TriangleAlert className="size-3.5 shrink-0 text-warning" />
+                                )}
                             </span>
                             <span>
                               {preview.difference > 0 ? "+" : ""}
@@ -1178,7 +1195,10 @@ export default function SubmitResultsPage() {
                       </span>
                       <span className="flex items-center gap-1.5 tabular-nums font-semibold">
                         {t.operatorApp.submit.difference}
-                        {preview.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                        {Math.abs(preview.difference) > 0.01 &&
+                          Math.abs(preview.difference) - preview.abonementAmount > 0.01 && (
+                            <TriangleAlert className="size-3.5 shrink-0 text-warning" />
+                          )}
                         {preview.difference > 0 ? "+" : ""}
                         <Money value={preview.difference} />
                       </span>

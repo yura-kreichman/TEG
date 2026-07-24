@@ -132,8 +132,15 @@ function compactAssetLabel(readings: ZoneSummaryData["readings"], index: number)
 // ненулевой разнице вводит в заблуждение (фидбек пользователя 2026-07-12:
 // "это не нормально, чтобы была зелёная галочка"). ⚠️ на любое ненулевое
 // значение, в любую сторону — и недостача, и избыток одинаково "не сошлось".
-function diffEmoji(difference: number): string {
-  return difference === 0 ? "✅" : "⚠️";
+// Исключение — когда весь разрыв целиком объясняется суммой "Баланс" рядом
+// (запрос пользователя 2026-07-24: оплата с баланса клиента — отдельный
+// метод оплаты, деньги за неё получены раньше, при пополнении, "не может
+// это быть проблема") — Наличные/Безнал при этом не трогаем нигде, они
+// настоящие и должны сходиться при сверке с кассой/терминалом; тревожный
+// значок просто не показываем, если ⚠️ и так объяснён строкой "Баланс".
+function diffEmoji(difference: number, abonementAmount = 0): string {
+  if (difference === 0) return "✅";
+  return Math.abs(difference) - abonementAmount > 0.01 ? "⚠️" : "✅";
 }
 
 // Имя оператора — в первой строке сводки, рядом с зоной (фидбек пользователя
@@ -278,7 +285,7 @@ export function formatZoneSummaryTelegram(
         const bits: string[] = [];
         if (settings.showDiff) {
           const sign = data.difference > 0 ? "+" : "";
-          bits.push(`${diffEmoji(data.difference)} ${st.differenceCompact}: <b>${sign}${formatMoney(data.difference, locale)}</b>`);
+          bits.push(`${diffEmoji(data.difference, data.abonementAmount)} ${st.differenceCompact}: <b>${sign}${formatMoney(data.difference, locale)}</b>`);
         }
         if (settings.showDiff && showReturnsHere) bits.push("·");
         if (showReturnsHere) bits.push(`🔄 ${st.returnsCompact}: <b>${data.returnsCount}</b>`);
@@ -346,7 +353,7 @@ export function formatZoneSummaryTelegram(
       if (settings.showCalc) lines.push(`🔢 ${st.calculated}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
       if (settings.showDiff) {
         const sign = data.difference > 0 ? "+" : "";
-        lines.push(`${diffEmoji(data.difference)} ${st.difference}: <b>${sign}${formatMoney(data.difference, locale)}</b>`);
+        lines.push(`${diffEmoji(data.difference, data.abonementAmount)} ${st.difference}: <b>${sign}${formatMoney(data.difference, locale)}</b>`);
       }
       if (showReturnsFull) lines.push(`↩️ ${st.returns}: <b>${data.returnsCount}</b>`);
     }
