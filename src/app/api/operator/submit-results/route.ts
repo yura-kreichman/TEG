@@ -462,6 +462,13 @@ export async function POST(request: Request) {
   });
 
   let submission;
+  // zoneId -> id только что созданной ZoneSubmission (реальный запрос
+  // пользователя 2026-07-25: "сохранение id [Telegram-сообщения]... чтобы
+  // такие ситуации можно было чинить") — нужен ПОСЛЕ транзакции, чтобы
+  // привязать externalMessageId отправленной сводки к конкретной строке
+  // (см. dispatchZoneSummary ниже), а после правки кассы через PATCH
+  // .../zone-submission/[id] было что редактировать в Telegram.
+  const zoneSubmissionIdByZone = new Map<string, string>();
   try {
     submission = await prisma.$transaction(async (tx) => {
     const created = await tx.resultsSubmission.create({
@@ -483,6 +490,7 @@ export async function POST(request: Request) {
           mobileAmount: zs.mobileAmount,
         },
       });
+      zoneSubmissionIdByZone.set(zs.zoneId, zoneSubmission.id);
 
       // Ручные показания — только counters/launches-legacy без реального
       // учёта тапов; "Прибывания", "Пуски" и "Билеты" считаются исключительно
@@ -627,7 +635,7 @@ export async function POST(request: Request) {
       for (const s of summary) {
         const zone = zoneById.get(s.zoneId)!;
         try {
-          await dispatchZoneSummary(
+          const results = await dispatchZoneSummary(
             point.tenantId,
             {
               pointName: point.name,
@@ -653,6 +661,21 @@ export async function POST(request: Request) {
             },
             zoneSummarySettings
           );
+          // Запрос пользователя 2026-07-25: сохраняем id отправленного
+          // Telegram-сообщения на саму ZoneSubmission — понадобится, если
+          // Владелец позже поправит кассу через PATCH .../zone-submission/[id]
+          // (тогда сводку можно отредактировать задним числом, а не оставлять
+          // её с устаревшими цифрами навсегда).
+          const telegramResult = results.find((r) => r.channelType === "telegram" && r.ok);
+          const zoneSubmissionId = zoneSubmissionIdByZone.get(s.zoneId);
+          if (telegramResult?.externalMessageId && zoneSubmissionId) {
+            await prisma.zoneSubmission
+              .update({
+                where: { id: zoneSubmissionId },
+                data: { telegramSummaryMessageId: telegramResult.externalMessageId },
+              })
+              .catch(() => {});
+          }
         } catch (err) {
           console.error("zone summary dispatch failed", err);
         }

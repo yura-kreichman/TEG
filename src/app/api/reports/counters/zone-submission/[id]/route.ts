@@ -3,6 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { requireOwner } from "@/lib/require-owner";
 import { isZoneSubmissionEditable } from "@/lib/results-submission";
+import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue } from "@/lib/results-calc";
+import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
+import { getZoneAbonementSpendAmount } from "@/lib/abonement";
+import { editChatMessage } from "@/lib/telegram-bot";
+import { formatZoneSummaryTelegram } from "@/lib/summary-channels/telegram-format";
+import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
+import { isLocale, type Locale } from "@/lib/locales";
+import { getDictionary } from "@/lib/i18n";
 
 interface CorrectionDiff {
   cashAmount: number;
@@ -15,13 +23,134 @@ async function loadZoneSubmission(id: string, tenantId: string) {
   const zoneSubmission = await prisma.zoneSubmission.findUnique({
     where: { id },
     include: {
-      zone: { include: { point: true } },
+      zone: { include: { point: true, tariffs: { where: { deletedAt: null } }, assets: { orderBy: { sortOrder: "asc" } } } },
       assetReadings: true,
       resultsSubmission: true,
     },
   });
   if (!zoneSubmission || zoneSubmission.zone.point.tenantId !== tenantId) return null;
   return zoneSubmission;
+}
+
+// Пересчитывает и редактирует уже отправленную Telegram-сводку по зоне после
+// правки кассы/показаний (запрос пользователя 2026-07-25: "на будущее сделай
+// сохранение id... чтобы такие ситуации можно было чинить") — только
+// counters/cash_only (остальные режимы через этот роут вообще не
+// редактируются, см. isZoneSubmissionEditable). Best-effort — падение здесь
+// не должно ронять саму правку, которая к этому моменту уже сохранена.
+async function reEditZoneSummaryMessage(zoneSubmissionId: string, tenantId: string): Promise<void> {
+  const zs = await prisma.zoneSubmission.findUnique({
+    where: { id: zoneSubmissionId },
+    include: {
+      zone: { include: { tariffs: { where: { deletedAt: null } }, assets: { orderBy: { sortOrder: "asc" } } } },
+      assetReadings: true,
+      resultsSubmission: { include: { operator: { select: { name: true, colorTag: true } } } },
+    },
+  });
+  if (!zs?.telegramSummaryMessageId) return;
+
+  const [channel, zoneSummarySettings, point, tenant] = await Promise.all([
+    prisma.tenantSummaryChannel.findFirst({
+      where: { tenantId, channelType: "telegram", pointId: null, enabled: true, chatStatus: "active" },
+    }),
+    prisma.zoneSummarySettings.findUnique({ where: { tenantId } }),
+    prisma.point.findFirst({ where: { zones: { some: { id: zs.zoneId } } } }),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, locale: true, timezone: true } }),
+  ]);
+  if (!channel?.chatId || !point) return;
+
+  const settings = zoneSummarySettings ?? ZONE_SUMMARY_DEFAULTS;
+  if (!settings.enabled) return;
+
+  const locale: Locale = tenant?.locale && isLocale(tenant.locale) ? tenant.locale : "ru";
+  const timezone = tenant?.timezone ?? "UTC";
+  const st = getDictionary(locale).summaryText;
+
+  // Предыдущая сдача ЭТОЙ ЖЕ зоны, СТРОГО до текущей (previousSubmissionBoundary
+  // из game-room.ts берёт "последнюю", а здесь текущая сдача сама и есть
+  // последняя — нужна именно предыдущая, отсюда отдельный запрос).
+  const previous = await prisma.zoneSubmission.findFirst({
+    where: { zoneId: zs.zoneId, createdAt: { lt: zs.createdAt } },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
+  });
+  const boundary = previous?.createdAt ?? null;
+
+  const isCashOnly = zs.zone.accountingMode === "cash_only";
+  let calculatedRevenue = 0;
+  let netRevenue = 0;
+  let readingLines: { assetName: string; tariffName: string; reading: number; delta: number }[] = [];
+
+  if (!isCashOnly) {
+    const previousReadings = await prisma.assetReading.findMany({
+      where: { assetId: { in: zs.zone.assets.map((a) => a.id) }, zoneSubmissionId: { not: zs.id } },
+      orderBy: { createdAt: "desc" },
+    });
+    const previousByKey = new Map<string, number>();
+    for (const r of previousReadings) {
+      const key = `${r.assetId}:${r.tariffId}`;
+      if (!previousByKey.has(key)) previousByKey.set(key, r.reading);
+    }
+    const initialByKey = await getInitialReadingsMap(zs.zone.assets.map((a) => a.id));
+
+    const tariffCalc = zs.zone.tariffs.map((tariff) => {
+      const readingsForTariff = zs.assetReadings.filter((r) => r.tariffId === tariff.id);
+      const sessions = readingsForTariff.reduce((sum, r) => {
+        const key = `${r.assetId}:${tariff.id}`;
+        const previousReading = previousByKey.get(key) ?? initialByKey.get(key) ?? 0;
+        return sum + calcSessions(r.reading, previousReading);
+      }, 0);
+      return { tariffId: tariff.id, price: Number(tariff.price), sessions };
+    });
+    calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
+    netRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
+
+    readingLines = zs.zone.assets.flatMap((asset) =>
+      zs.zone.tariffs
+        .map((tariff) => {
+          const reading = zs.assetReadings.find((r) => r.assetId === asset.id && r.tariffId === tariff.id);
+          if (!reading) return null;
+          const key = `${asset.id}:${tariff.id}`;
+          const previousReading = previousByKey.get(key) ?? initialByKey.get(key) ?? 0;
+          return { assetName: asset.name, tariffName: tariff.name, reading: reading.reading, delta: calcSessions(reading.reading, previousReading) };
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null)
+    );
+  }
+
+  const abonementAmount = await getZoneAbonementSpendAmount(zs.zoneId, boundary);
+  const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
+  const difference = isCashOnly ? 0 : Math.round((actualCash + abonementAmount - netRevenue) * 100) / 100;
+
+  const text = formatZoneSummaryTelegram(
+    {
+      pointName: point.name,
+      zoneName: zs.zone.name,
+      zoneEmoji: zs.zone.telegramEmoji,
+      accountingMode: zs.zone.accountingMode as import("@/lib/results-calc").ZoneAccountingMode,
+      isGameRoom: false,
+      gameRoomLaunchCount: null,
+      gameRoomTotalMinutes: null,
+      occurredAt: zs.createdAt,
+      readings: readingLines,
+      perAsset: [],
+      ticketsOrdersCount: null,
+      ticketsCount: null,
+      cashAmount: Number(zs.cashAmount),
+      mobileAmount: Number(zs.mobileAmount),
+      abonementAmount,
+      calculatedRevenue,
+      difference,
+      returnsCount: zs.returnsCount,
+      operatorName: zs.resultsSubmission.operator.name,
+      operatorColorTag: zs.resultsSubmission.operator.colorTag,
+    },
+    settings,
+    locale,
+    timezone,
+    st
+  );
+  await editChatMessage(channel.chatId, zs.telegramSummaryMessageId, text).catch(() => {});
 }
 
 // Правка последней сдачи по зоне (docs/spec/01-counters.md, «Прозрачность»):
@@ -179,6 +308,11 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/co
       });
     }
   });
+
+  // Best-effort, вне транзакции (сетевой вызов) — правка кассы уже сохранена
+  // независимо от того, получится ли обновить Telegram (запрос пользователя
+  // 2026-07-25).
+  await reEditZoneSummaryMessage(id, owner.tenantId).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }

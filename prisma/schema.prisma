@@ -1493,6 +1493,14 @@ model ZoneSubmission {
   cashAmount   Decimal @db.Decimal(10, 2)
   mobileAmount Decimal @db.Decimal(10, 2)
 
+  // id отправленного Telegram-сообщения "Сводка по зоне" (запрос пользователя
+  // 2026-07-25: "на будущее сделай сохранение id... чтобы такие ситуации
+  // можно было чинить") — раньше не сохранялся вообще, отредактировать уже
+  // отправленную сводку задним числом (например, после правки кассы через
+  // PATCH .../zone-submission/[id]) было нечем. null — сводка не уходила
+  // (канал выключен/не настроен) или ушла до этого поля.
+  telegramSummaryMessageId String?
+
   createdAt DateTime @default(now())
 
   assetReadings AssetReading[]
