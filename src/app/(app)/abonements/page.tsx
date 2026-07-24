@@ -368,7 +368,7 @@ export default function AbonementsPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      size="icon"
+                      size="icon-sm"
                       className="rounded-lg"
                       aria-label={t.abonements.telegramBalanceButton}
                       onClick={() => setGenericQrOpen(true)}

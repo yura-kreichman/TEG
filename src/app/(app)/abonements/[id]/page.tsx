@@ -245,7 +245,7 @@ export default function AbonementWalletPage() {
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="size-10 shrink-0 rounded-full border-border text-destructive"
+                    className="shrink-0 rounded-lg border-border text-destructive"
                     onClick={() => setConfirmDelete(true)}
                     aria-label={t.abonements.deleteWallet}
                   >

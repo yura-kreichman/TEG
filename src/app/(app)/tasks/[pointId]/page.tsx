@@ -362,7 +362,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
                       <button
                         type="button"
                         onClick={() => setActionsFor(task)}
-                        className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground"
+                        className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground"
                         aria-label={t.tasks.actionsTitle}
                       >
                         ···

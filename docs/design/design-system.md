@@ -236,7 +236,7 @@ framer-motion, не сигнал сменить движок. Подтвержд
 | `.field input` | `Input` + `Label` (без изменений) |
 | `.btn-primary` | `Button` (variant по умолчанию, использует `--primary`) |
 | `.btn-add` | `Button variant="outline"` — нейтральная светлая заливка (не `--primary`, не тёмный `--ink`-пилл, см. §3.3) |
-| `.kebab` | `Button` `variant="ghost"` `size="icon"`, круглый, иконка `MoreHorizontal` (lucide) |
+| `.kebab` | `Button` `variant="outline"` `size="icon"`, квадратный `rounded-lg` (запрос пользователя 2026-07-24: единый дизайн для всех кнопок-действий — Редактировать/Удалить/kebab/QR и подобных, ранее часть была `rounded-full`, часть `rounded-lg`), иконка `MoreHorizontal` (lucide) |
 | `.swatch` (цветовая метка) | нативный `<input type="color">`, уже используется в `/zones/[id]` — паттерн без изменений |
 
 ## 5. Общие компоненты

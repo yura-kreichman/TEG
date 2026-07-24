@@ -64,7 +64,7 @@ export function ActiveStatusIcon({
           onToggle();
         }}
         aria-label={label}
-        className={cn("size-8 shrink-0 rounded-full border-border", active ? "text-success" : "text-muted-foreground", className)}
+        className={cn("size-8 shrink-0 rounded-lg border-border", active ? "text-success" : "text-muted-foreground", className)}
       >
         <Icon className="size-4" />
       </Button>

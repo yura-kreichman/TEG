@@ -1485,7 +1485,7 @@ function OrderCard({
                 aria-label={t.tickets.printTicketButton}
                 disabled={printing}
                 onClick={handlePrint}
-                className="flex size-9 items-center justify-center rounded-full border border-border text-muted-foreground disabled:opacity-40"
+                className="flex size-9 items-center justify-center rounded-lg border border-border text-muted-foreground disabled:opacity-40"
               >
                 <Printer className="size-4" />
               </button>

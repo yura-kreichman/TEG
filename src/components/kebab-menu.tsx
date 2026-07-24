@@ -24,7 +24,7 @@ export function KebabButton({
       type="button"
       variant="outline"
       size="icon"
-      className="size-8 shrink-0 rounded-full border-border"
+      className="size-8 shrink-0 rounded-lg border-border"
       onClick={onClick}
       aria-label={label}
     >
@@ -59,7 +59,7 @@ export function IconActionButton({
       type="button"
       variant="outline"
       size="icon"
-      className={cn("size-8 shrink-0 rounded-full border-border", destructive && "text-destructive hover:text-destructive")}
+      className={cn("size-8 shrink-0 rounded-lg border-border", destructive && "text-destructive hover:text-destructive")}
       onClick={onClick}
       aria-label={label}
     >

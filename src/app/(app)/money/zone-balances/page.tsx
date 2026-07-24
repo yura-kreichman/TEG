@@ -609,18 +609,22 @@ export default function ZoneBalancesPage() {
                       >
                         <Money value={displayBalance} />
                       </span>
-                      <button
-                        type="button"
-                        className="flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground"
-                        onClick={() => {
-                          setChangeFundTarget(zb.zoneId);
-                          setChangeFundAmount("");
-                          setError(null);
-                        }}
-                      >
-                        <Coins className="size-3.5" />
-                        {t.money.changeFund}
-                      </button>
+                      <PressableScale>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="xs"
+                          className="gap-1 rounded-lg"
+                          onClick={() => {
+                            setChangeFundTarget(zb.zoneId);
+                            setChangeFundAmount("");
+                            setError(null);
+                          }}
+                        >
+                          <Coins className="size-3.5" />
+                          {t.money.changeFund}
+                        </Button>
+                      </PressableScale>
                     </div>
                   </div>
                   );
@@ -664,18 +668,22 @@ export default function ZoneBalancesPage() {
                       >
                         <Money value={currentPointTotal.goodsCashTotal} />
                       </span>
-                      <button
-                        type="button"
-                        className="flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground"
-                        onClick={() => {
-                          setChangeFundTarget(GOODS_POOL_ID);
-                          setChangeFundAmount("");
-                          setError(null);
-                        }}
-                      >
-                        <Coins className="size-3.5" />
-                        {t.money.changeFund}
-                      </button>
+                      <PressableScale>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="xs"
+                          className="gap-1 rounded-lg"
+                          onClick={() => {
+                            setChangeFundTarget(GOODS_POOL_ID);
+                            setChangeFundAmount("");
+                            setError(null);
+                          }}
+                        >
+                          <Coins className="size-3.5" />
+                          {t.money.changeFund}
+                        </Button>
+                      </PressableScale>
                     </div>
                   </div>
                 )}
@@ -760,7 +768,7 @@ export default function ZoneBalancesPage() {
                                   type="button"
                                   onClick={() => openCollectionEdit(c)}
                                   aria-label={t.money.editCollectionAction}
-                                  className="flex items-center justify-center rounded-full border border-border bg-card p-1.5 text-muted-foreground"
+                                  className="flex items-center justify-center rounded-lg border border-border bg-card p-1.5 text-muted-foreground"
                                 >
                                   <Pencil className="size-3.5" />
                                 </button>

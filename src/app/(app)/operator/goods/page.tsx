@@ -420,7 +420,7 @@ export default function GoodsPage() {
                   type="button"
                   onClick={openRevision}
                   aria-label={t.goods.revisionTitle}
-                  className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground"
+                  className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground"
                 >
                   <ClipboardList className="size-5" />
                 </button>

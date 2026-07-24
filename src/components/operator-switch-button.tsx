@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowRightLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/i18n-provider";
 
 // Кнопка "Сменить сотрудника" — перенесена в верхний бар PWA рядом с
@@ -18,13 +19,9 @@ export function OperatorSwitchButton() {
   }
 
   return (
-    <button
-      type="button"
-      className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-semibold text-muted-foreground"
-      onClick={handleSwitchOperator}
-    >
+    <Button type="button" variant="outline" size="xs" className="gap-1.5 rounded-lg" onClick={handleSwitchOperator}>
       <ArrowRightLeft className="size-3.5" />
       {t.operatorApp.switchOperator}
-    </button>
+    </Button>
   );
 }
