@@ -46,9 +46,19 @@ export async function POST(request: Request) {
   }
 
   const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { name: true } });
-  const links = await prisma.clientTelegramLink.findMany({ where: { tenantId: owner.tenantId }, select: { chatId: true } });
+  const links = await prisma.clientTelegramLink.findMany({ where: { tenantId: owner.tenantId }, select: { chatId: true, phone: true } });
 
-  const text = `📣 <b>${tenant?.name ?? ""}</b>\n\n${message}`;
+  // Адресное обращение вместо статичного названия компании (запрос
+  // пользователя 2026-07-24) — по имени клиента, когда оно сохранено в
+  // кошельке ("Привет, Аня"), иначе от имени компании ("Привет от
+  // КидсБург") — ClientTelegramLink своего имени не хранит, только
+  // телефон, поэтому имя ищем по (tenantId, phone) в AbonementWallet.
+  const wallets = await prisma.abonementWallet.findMany({
+    where: { tenantId: owner.tenantId, phone: { in: links.map((l) => l.phone) } },
+    select: { phone: true, name: true },
+  });
+  const nameByPhone = new Map(wallets.map((w) => [w.phone, w.name]));
+
   // Ссылка на фото — относительный путь из /api/uploads (тот же формат, что
   // Tenant.logoUrl и т.п.), Telegram нужен полный URL, чтобы скачать файл
   // сам (см. комментарий у sendPhotoMessage в telegram-bot.ts). ОБЯЗАТЕЛЬНО
@@ -61,6 +71,9 @@ export async function POST(request: Request) {
 
   let sent = 0;
   for (const link of links) {
+    const clientName = nameByPhone.get(link.phone);
+    const greeting = clientName ? `Привет, ${clientName}` : `Привет от ${tenant?.name ?? ""}`;
+    const text = `📣 <b>${greeting}</b>\n\n${message}`;
     const result = absoluteImageUrl
       ? await sendPhotoMessage(link.chatId, absoluteImageUrl, text)
       : await sendChatMessage(link.chatId, text);
