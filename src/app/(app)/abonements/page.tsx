@@ -26,6 +26,7 @@ import { AbonementTopupSheet } from "@/components/abonement-topup-sheet";
 import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
 import { useI18n } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { cn } from "@/lib/utils";
 
 interface AbonementInfo {
   id: string;
@@ -107,8 +108,13 @@ export default function AbonementsPage() {
   const [broadcastImageUrl, setBroadcastImageUrl] = useState<string | null>(null);
   const [broadcastImageUploading, setBroadcastImageUploading] = useState(false);
   const [broadcastSending, setBroadcastSending] = useState(false);
-  const [broadcastResult, setBroadcastResult] = useState<{ sent: number; total: number } | null>(null);
+  const [broadcastResult, setBroadcastResult] = useState<{ sent: number; total: number; groupSent: boolean | null } | null>(null);
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
+  // Адресат рассылки — "в группу" доступен только когда публичная группа
+  // подключена и включена (запрос пользователя 2026-07-24: "только если она
+  // настроена"), иначе выбор вообще не показываем (нечего выбирать).
+  const [broadcastDestination, setBroadcastDestination] = useState<"all" | "clients" | "group">("all");
+  const [publicGroupReady, setPublicGroupReady] = useState(false);
 
   // Общий QR (не привязан к конкретному клиенту) — Владелец показывает его
   // новому клиенту прямо на месте, чтобы тот отсканировал и подключил бота
@@ -144,14 +150,18 @@ export default function AbonementsPage() {
       const res = await fetch("/api/abonement-wallets/broadcast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: broadcastMessage.trim(), imageUrl: broadcastImageUrl }),
+        body: JSON.stringify({
+          message: broadcastMessage.trim(),
+          imageUrl: broadcastImageUrl,
+          destination: publicGroupReady ? broadcastDestination : "clients",
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
         setBroadcastError(data.error ?? t.abonements.broadcastError);
         return;
       }
-      setBroadcastResult({ sent: data.sent, total: data.total });
+      setBroadcastResult({ sent: data.sent, total: data.total, groupSent: data.groupSent });
       setBroadcastMessage("");
       setBroadcastImageUrl(null);
     } finally {
@@ -199,6 +209,10 @@ export default function AbonementsPage() {
     fetch("/api/tenant/telegram-balance-link")
       .then((res) => res.json())
       .then((data) => setTelegramBalanceLink(data.link ?? null))
+      .catch(() => {});
+    fetch("/api/tenant/public-group/telegram/status")
+      .then((res) => res.json())
+      .then((data) => setPublicGroupReady(!!data.connected && data.enabled !== false))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -608,6 +622,24 @@ export default function AbonementsPage() {
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.abonements.broadcastButton}</h2>
           <p className="text-caption-airbnb text-muted-foreground">{t.abonements.broadcastHint}</p>
 
+          {/* "В группу" только когда публичная группа подключена и включена
+              (запрос пользователя 2026-07-24: "только если она настроена") —
+              без группы выбирать вообще не из чего, весь блок скрыт, старое
+              поведение (только клиентам) не меняется. */}
+          {publicGroupReady && (
+            <SegmentedTabs
+              equalWidth
+              size="sm"
+              options={[
+                { key: "all", label: t.abonements.broadcastDestinationAll },
+                { key: "clients", label: t.abonements.broadcastDestinationClients },
+                { key: "group", label: t.abonements.broadcastDestinationGroup },
+              ]}
+              value={broadcastDestination}
+              onChange={setBroadcastDestination}
+            />
+          )}
+
           <div className="flex flex-col gap-1">
             <Label>{t.abonements.broadcastImageLabel}</Label>
             <div className="flex flex-wrap items-center gap-3">
@@ -644,9 +676,18 @@ export default function AbonementsPage() {
           />
           {broadcastError && <p className="text-sm text-destructive">{broadcastError}</p>}
           {broadcastResult && (
-            <p className="text-body-airbnb text-success">
-              {t.abonements.broadcastSentPrefix} {broadcastResult.sent} / {broadcastResult.total}
-            </p>
+            <div className="flex flex-col gap-0.5">
+              {(broadcastDestination === "all" || broadcastDestination === "clients") && (
+                <p className="text-body-airbnb text-success">
+                  {t.abonements.broadcastSentPrefix} {broadcastResult.sent} / {broadcastResult.total}
+                </p>
+              )}
+              {(broadcastDestination === "all" || broadcastDestination === "group") && (
+                <p className={cn("text-body-airbnb", broadcastResult.groupSent ? "text-success" : "text-destructive")}>
+                  {broadcastResult.groupSent ? t.abonements.broadcastGroupSent : t.abonements.broadcastGroupFailed}
+                </p>
+              )}
+            </div>
           )}
           <PressableScale>
             <Button

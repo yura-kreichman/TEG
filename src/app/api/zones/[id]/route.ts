@@ -4,6 +4,7 @@ import { findTenantZone, requireOwner } from "@/lib/require-owner";
 import { isZoneAccountingMode } from "@/lib/results-calc";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
+import { announceEntityActivated } from "@/lib/telegram-bot";
 
 export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]">) {
   const owner = await requireOwner();
@@ -226,6 +227,13 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     }
   }
   await prisma.zone.update({ where: { id }, data });
+  // Автоанонс в публичную группу — только на переходе false→true (запрос
+  // пользователя 2026-07-24: "создание = готовлю, включение = готово,
+  // объявляю"), не на любом PATCH с active=true (иначе повторный тот же
+  // true в теле запроса анонсировал бы заново).
+  if (data.active === true && !zone.active) {
+    await announceEntityActivated(owner.tenantId, "zone", data.name ?? zone.name);
+  }
   await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ ok: true });
 }

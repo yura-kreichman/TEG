@@ -5,10 +5,21 @@ import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { SaveButton } from "@/components/ui/save-button";
 import { useI18n } from "@/components/i18n-provider";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 import { cn } from "@/lib/utils";
 
 type ConnState = "loading" | "wait" | "done";
+
+const DEFAULT_ENDPOINTS = {
+  bind: "/api/tenant/summary-channels/telegram/bind",
+  status: "/api/tenant/summary-channels/telegram/status",
+  test: "/api/tenant/summary-channels/telegram/test",
+  disconnect: "/api/tenant/summary-channels/telegram/disconnect",
+};
 
 // Прототип docs/design/prototype-telegram-summaries-v1.html, sheet-connect:
 // loading (POST .../bind сразу при открытии шторки) -> wait (poll .../status
@@ -19,14 +30,33 @@ type ConnState = "loading" | "wait" | "done";
 // на клик пользователя, из-за чего Telegram может не подхватить intent —
 // экран "мигал" и падал назад в ожидание). Убрано в пользу единственного
 // способа, который реально гарантирован документацией — прямой клик по <a>.
+//
+// Параметризован эндпоинтами (запрос пользователя 2026-07-24: "Телеграм для
+// сотрудников" и "Телеграм для клиентов" — два разных назначения) —
+// TenantSummaryChannel (по умолчанию) и TenantPublicGroup — одна и та же
+// механика привязки (bind-код + ?startgroup=), разные таблицы на бэкенде.
+// inviteLinkEndpoint — только у публичной группы: ссылка-приглашение вводится
+// Владельцем вручную, отдельно от привязки самого чата.
 export function TelegramConnectSheet({
   open,
   onClose,
   onChanged,
+  bindEndpoint = DEFAULT_ENDPOINTS.bind,
+  statusEndpoint = DEFAULT_ENDPOINTS.status,
+  testEndpoint = DEFAULT_ENDPOINTS.test,
+  disconnectEndpoint = DEFAULT_ENDPOINTS.disconnect,
+  doneHint,
+  inviteLinkEndpoint,
 }: {
   open: boolean;
   onClose: () => void;
   onChanged: () => void;
+  bindEndpoint?: string;
+  statusEndpoint?: string;
+  testEndpoint?: string;
+  disconnectEndpoint?: string;
+  doneHint?: string;
+  inviteLinkEndpoint?: string;
 }) {
   const t = useI18n();
   const [botConfigured, setBotConfigured] = useState(true);
@@ -36,6 +66,9 @@ export function TelegramConnectSheet({
   const [deepLink, setDeepLink] = useState<string | null>(null);
   const [testLoading, setTestLoading] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [inviteLink, setInviteLink] = useState("");
+  const [savingInviteLink, setSavingInviteLink] = useState(false);
+  const { saved: inviteLinkSaved, pulse: pulseInviteLinkSaved } = useSavePulse();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function stopPolling() {
@@ -46,10 +79,11 @@ export function TelegramConnectSheet({
   }
 
   async function loadStatus() {
-    const res = await fetch("/api/tenant/summary-channels/telegram/status");
+    const res = await fetch(statusEndpoint);
     if (!res.ok) return null;
     const data = await res.json();
     setBotConfigured(data.botConfigured);
+    if (inviteLinkEndpoint) setInviteLink(data.inviteLink ?? "");
     if (data.connected) {
       setChatTitle(data.chatTitle);
       setConnState("done");
@@ -59,7 +93,7 @@ export function TelegramConnectSheet({
   }
 
   async function startBind() {
-    const res = await fetch("/api/tenant/summary-channels/telegram/bind", { method: "POST" });
+    const res = await fetch(bindEndpoint, { method: "POST" });
     const data = await res.json();
     if (!res.ok) {
       setBotConfigured(false);
@@ -97,7 +131,7 @@ export function TelegramConnectSheet({
   }
 
   async function handleDisconnect() {
-    await fetch("/api/tenant/summary-channels/telegram/disconnect", { method: "POST" });
+    await fetch(disconnectEndpoint, { method: "POST" });
     setChatTitle(null);
     setConnState("loading");
     onChanged();
@@ -107,7 +141,7 @@ export function TelegramConnectSheet({
     setTestLoading(true);
     setTestResult(null);
     try {
-      const res = await fetch("/api/tenant/summary-channels/telegram/test", { method: "POST" });
+      const res = await fetch(testEndpoint, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
         setTestResult({ ok: false, message: data.error ?? t.summaries.genericError });
@@ -119,6 +153,21 @@ export function TelegramConnectSheet({
       });
     } finally {
       setTestLoading(false);
+    }
+  }
+
+  async function handleSaveInviteLink() {
+    if (!inviteLinkEndpoint || savingInviteLink) return;
+    setSavingInviteLink(true);
+    try {
+      await fetch(inviteLinkEndpoint, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inviteLink: inviteLink.trim() || null }),
+      });
+      pulseInviteLinkSaved();
+    } finally {
+      setSavingInviteLink(false);
     }
   }
 
@@ -182,9 +231,33 @@ export function TelegramConnectSheet({
                   {t.summaries.connectDoneConnectedPrefix} «{chatTitle}»
                 </b>
                 <br />
-                {t.summaries.connectDoneHint}
+                {doneHint ?? t.summaries.connectDoneHint}
               </span>
             </div>
+
+            {inviteLinkEndpoint && (
+              <div className="mt-3 flex flex-col gap-1">
+                <Label htmlFor="publicGroupInviteLink">{t.summaries.publicGroupInviteLinkLabel}</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="publicGroupInviteLink"
+                    placeholder="https://t.me/+..."
+                    value={inviteLink}
+                    onChange={(e) => setInviteLink(e.target.value)}
+                    className="h-11 flex-1"
+                  />
+                  <PressableScale>
+                    <SaveButton
+                      className="h-11 shrink-0 px-4"
+                      saved={inviteLinkSaved}
+                      disabled={savingInviteLink}
+                      onClick={handleSaveInviteLink}
+                    />
+                  </PressableScale>
+                </div>
+                <p className="text-caption-airbnb text-muted-foreground">{t.summaries.publicGroupInviteLinkHint}</p>
+              </div>
+            )}
 
             <PressableScale className="mt-3">
               <Button

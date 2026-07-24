@@ -62,6 +62,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
         name: name.trim(),
         iconKey: typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null,
         accountingMode: resolvedAccountingMode,
+        // Новая зона по умолчанию неактивна (запрос пользователя 2026-07-24:
+        // "создание = готовлю, включение = готово") — Владелец сначала
+        // настраивает тарифы/активы, затем сам включает, когда готова; это
+        // же включение — единственный триггер автоанонса в публичную группу
+        // (см. active в zones/[id]/route.ts PATCH), не само создание.
+        active: false,
       },
     });
     return { ok: true as const, zone };

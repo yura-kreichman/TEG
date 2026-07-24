@@ -2,14 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell, ChevronRight, Clock, DollarSign, FileText, Mail, Send, Zap } from "lucide-react";
+import { Bell, ChevronRight, Mail, Send } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
-import { PressableScale } from "@/components/motion/pressable-scale";
 import { Switch } from "@/components/ui/switch";
-import { TelegramConnectSheet } from "@/components/summary-telegram-connect-sheet";
 import { EmailChannelSheet } from "@/components/summary-email-sheet";
 import { useI18n } from "@/components/i18n-provider";
 import { isPushSupported, getPushSubscription } from "@/lib/push-client";
@@ -21,23 +19,33 @@ interface TelegramStatus {
   chatTitle: string | null;
 }
 
+interface PublicGroupStatus {
+  botConfigured: boolean;
+  connected: boolean;
+  enabled: boolean;
+  chatTitle: string | null;
+  inviteLink: string | null;
+}
+
 interface EmailStatus {
   smtpConfigured: boolean;
   enabled: boolean;
   emailAddresses: string;
 }
 
+// Список верхнего уровня — только КАНАЛЫ (куда доставляется), не типы сводок
+// (запрос пользователя 2026-07-24: "перенести настройки сводок в Telegram
+// для сотрудников по аналогии, как с Push-уведомлениями") — каждый канал со
+// своей механикой ведёт на свой экран: Zoна/Касса/Закрытие смены/Инструктаж
+// теперь живут внутри /settings/summaries/telegram, а не отдельными
+// карточками тут.
 export default function SummariesListPage() {
   const router = useRouter();
   const t = useI18n();
   const [checking, setChecking] = useState(true);
   const [telegram, setTelegram] = useState<TelegramStatus | null>(null);
+  const [publicGroup, setPublicGroup] = useState<PublicGroupStatus | null>(null);
   const [email, setEmail] = useState<EmailStatus | null>(null);
-  const [zoneEnabled, setZoneEnabled] = useState(false);
-  const [dailyCashEnabled, setDailyCashEnabled] = useState(false);
-  const [shiftCloseEnabled, setShiftCloseEnabled] = useState(false);
-  const [instructionAckEnabled, setInstructionAckEnabled] = useState(false);
-  const [connectOpen, setConnectOpen] = useState(false);
   const [emailSheetOpen, setEmailSheetOpen] = useState(false);
   // Push — не тенантный toggle как Telegram/email (нет единого "chatId"),
   // а подписка конкретного устройства (фидбек пользователя 2026-07-12:
@@ -47,24 +55,18 @@ export default function SummariesListPage() {
   const [pushSubscribed, setPushSubscribed] = useState(false);
 
   async function loadAll() {
-    const [tgRes, emailRes, zoneRes, dcRes, scRes, iaRes] = await Promise.all([
+    const [tgRes, pgRes, emailRes] = await Promise.all([
       fetch("/api/tenant/summary-channels/telegram/status"),
+      fetch("/api/tenant/public-group/telegram/status"),
       fetch("/api/tenant/summary-channels/email"),
-      fetch("/api/tenant/summary-settings/zone"),
-      fetch("/api/tenant/summary-settings/daily-cash"),
-      fetch("/api/tenant/summary-settings/shift-close"),
-      fetch("/api/tenant/summary-settings/instruction-ack"),
     ]);
     if (tgRes.status === 401) {
       router.replace("/login");
       return;
     }
     setTelegram(await tgRes.json());
+    setPublicGroup(await pgRes.json());
     setEmail(await emailRes.json());
-    setZoneEnabled((await zoneRes.json()).enabled);
-    setDailyCashEnabled((await dcRes.json()).enabled);
-    setShiftCloseEnabled((await scRes.json()).enabled);
-    setInstructionAckEnabled((await iaRes.json()).enabled);
     if (isPushSupported()) {
       setPushSubscribed(!!(await getPushSubscription()));
     }
@@ -87,6 +89,15 @@ export default function SummariesListPage() {
     });
   }
 
+  async function togglePublicGroup(next: boolean) {
+    setPublicGroup((prev) => (prev ? { ...prev, enabled: next } : prev));
+    await fetch("/api/tenant/public-group/telegram", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: next }),
+    });
+  }
+
   async function toggleEmail(next: boolean) {
     setEmail((prev) => (prev ? { ...prev, enabled: next } : prev));
     await fetch("/api/tenant/summary-channels/email", {
@@ -96,43 +107,7 @@ export default function SummariesListPage() {
     });
   }
 
-  async function toggleZone(next: boolean) {
-    setZoneEnabled(next);
-    await fetch("/api/tenant/summary-settings/zone", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled: next }),
-    });
-  }
-
-  async function toggleDailyCash(next: boolean) {
-    setDailyCashEnabled(next);
-    await fetch("/api/tenant/summary-settings/daily-cash", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled: next }),
-    });
-  }
-
-  async function toggleShiftClose(next: boolean) {
-    setShiftCloseEnabled(next);
-    await fetch("/api/tenant/summary-settings/shift-close", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled: next }),
-    });
-  }
-
-  async function toggleInstructionAck(next: boolean) {
-    setInstructionAckEnabled(next);
-    await fetch("/api/tenant/summary-settings/instruction-ack", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled: next }),
-    });
-  }
-
-  if (checking || !telegram || !email) return null;
+  if (checking || !telegram || !publicGroup || !email) return null;
 
   return (
     <OwnerShell>
@@ -149,28 +124,63 @@ export default function SummariesListPage() {
                   {t.summaries.channelsCardLabel}
                 </span>
 
-                <div className="flex items-center justify-between gap-3 py-2">
+                {/* "Telegram для сотрудников" — строка-переход на свой
+                    экран (запрос пользователя 2026-07-24: "по аналогии, как
+                    с Push-уведомлениями"), там же и типы сводок, и
+                    привязка/тумблер чата. */}
+                <div
+                  className="flex cursor-pointer items-center justify-between gap-3 py-2"
+                  onClick={() => router.push("/settings/summaries/telegram")}
+                >
                   <div className="flex min-w-0 items-center gap-2.5">
                     <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#2AABEE] text-white">
                       <Send className="size-4" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-body-airbnb font-medium">{t.summaries.telegramLabel}</div>
+                      <div className="text-body-airbnb font-medium">{t.summaries.telegramStaffLabel}</div>
                       <div className="truncate text-caption-airbnb">
                         {telegram.connected ? `«${telegram.chatTitle}»` : t.summaries.telegramNotConnected}{" "}
-                        <button
-                          type="button"
-                          onClick={() => setConnectOpen(true)}
-                          className="font-semibold text-primary"
-                        >
-                          {t.summaries.telegramChangeLink}
-                        </button>
+                        <span className="font-semibold text-primary">{t.summaries.telegramChangeLink}</span>
                       </div>
                     </div>
                   </div>
-                  {telegram.connected && (
-                    <Switch checked={telegram.enabled} onCheckedChange={toggleTelegram} className="shrink-0" />
-                  )}
+                  <div className="flex shrink-0 items-center gap-2">
+                    {/* Тумблер независим от факта привязки чата (запрос
+                        пользователя 2026-07-24: "настройки должны быть
+                        независимо от того, подключена ли реальная группа/чат
+                        или нет") — можно настроить заранее, до подключения. */}
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <Switch checked={telegram.enabled} onCheckedChange={toggleTelegram} />
+                    </span>
+                    <ChevronRight className="size-4 text-muted-foreground/50" />
+                  </div>
+                </div>
+
+                {/* "Телеграм для клиентов" — публичная группа анонсов (запрос
+                    пользователя 2026-07-24), отдельная от рабочего чата
+                    сотрудников выше. */}
+                <div
+                  className="flex cursor-pointer items-center justify-between gap-3 border-t border-border py-2 pt-3"
+                  onClick={() => router.push("/settings/summaries/public-group")}
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#2AABEE] text-white">
+                      <Send className="size-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-body-airbnb font-medium">{t.summaries.telegramClientsLabel}</div>
+                      <div className="truncate text-caption-airbnb">
+                        {publicGroup.connected ? `«${publicGroup.chatTitle}»` : t.summaries.telegramNotConnected}{" "}
+                        <span className="font-semibold text-primary">{t.summaries.telegramChangeLink}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <Switch checked={publicGroup.enabled} onCheckedChange={togglePublicGroup} />
+                    </span>
+                    <ChevronRight className="size-4 text-muted-foreground/50" />
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between gap-3 border-t border-border py-2 pt-3">
@@ -215,97 +225,10 @@ export default function SummariesListPage() {
                 </div>
               </SpringCard>
             </StaggerItem>
-
-            <StaggerItem>
-              <PressableScale>
-                <SpringCard
-                  animate={false}
-                  className="flex cursor-pointer items-center gap-3.5"
-                  onClick={() => router.push("/settings/summaries/zone")}
-                >
-                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Zap className="size-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-body-airbnb font-bold">{t.summaries.zoneCardTitle}</div>
-                    <div className="text-caption-airbnb">{t.summaries.zoneCardSub}</div>
-                  </div>
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" />
-                  <span onClick={(e) => e.stopPropagation()} className="shrink-0">
-                    <Switch checked={zoneEnabled} onCheckedChange={toggleZone} />
-                  </span>
-                </SpringCard>
-              </PressableScale>
-            </StaggerItem>
-
-            <StaggerItem>
-              <PressableScale>
-                <SpringCard
-                  animate={false}
-                  className="flex cursor-pointer items-center gap-3.5"
-                  onClick={() => router.push("/settings/summaries/daily-cash")}
-                >
-                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <DollarSign className="size-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-body-airbnb font-bold">{t.summaries.dailyCashCardTitle}</div>
-                    <div className="text-caption-airbnb">{t.summaries.dailyCashCardSub}</div>
-                  </div>
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" />
-                  <span onClick={(e) => e.stopPropagation()} className="shrink-0">
-                    <Switch checked={dailyCashEnabled} onCheckedChange={toggleDailyCash} />
-                  </span>
-                </SpringCard>
-              </PressableScale>
-            </StaggerItem>
-
-            <StaggerItem>
-              <PressableScale>
-                <SpringCard
-                  animate={false}
-                  className="flex cursor-pointer items-center gap-3.5"
-                  onClick={() => router.push("/settings/summaries/shift-close")}
-                >
-                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Clock className="size-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-body-airbnb font-bold">{t.summaries.shiftCloseCardTitle}</div>
-                    <div className="text-caption-airbnb">{t.summaries.shiftCloseCardSub}</div>
-                  </div>
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" />
-                  <span onClick={(e) => e.stopPropagation()} className="shrink-0">
-                    <Switch checked={shiftCloseEnabled} onCheckedChange={toggleShiftClose} />
-                  </span>
-                </SpringCard>
-              </PressableScale>
-            </StaggerItem>
-
-            {/* Единственное булево поле (docs/spec/07-instructions.md, доп.
-                решение 2026-07-12) — само сообщение не настраивается, поэтому
-                без перехода на отдельный экран, в отличие от карточек выше. */}
-            <StaggerItem>
-              <SpringCard animate={false} className="flex items-center gap-3.5">
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <FileText className="size-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-body-airbnb font-bold">{t.summaries.instructionAckCardTitle}</div>
-                  <div className="text-caption-airbnb">{t.summaries.instructionAckCardSub}</div>
-                </div>
-                <Switch checked={instructionAckEnabled} onCheckedChange={toggleInstructionAck} className="shrink-0" />
-              </SpringCard>
-            </StaggerItem>
           </StaggerList>
         </div>
       </div>
 
-      <TelegramConnectSheet
-        open={connectOpen}
-        onClose={() => setConnectOpen(false)}
-        onChanged={loadAll}
-      />
       <EmailChannelSheet open={emailSheetOpen} onClose={() => setEmailSheetOpen(false)} onChanged={loadAll} />
     </OwnerShell>
   );

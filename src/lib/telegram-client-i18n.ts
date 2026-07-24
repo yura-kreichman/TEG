@@ -53,6 +53,16 @@ export interface BotStringSet {
   choosePointPrompt: string;
   openLandingButton: string;
   noServicesFound: string;
+  // Постоянное меню (запрос пользователя 2026-07-24: "чтобы названия кнопок
+  // были понятными" — были буквальные "/balance"/"/services") + новая
+  // команда "/join" (публичная группа анонсов). Отдельные ключи, не
+  // переиспользуют balanceWord/т.п. — у кнопок свои эмодзи-префиксы (запрос
+  // того же дня: 💵/✅/🤝).
+  balanceMenuButton: string;
+  servicesMenuButton: string;
+  joinMenuButton: string;
+  joinGroupPrompt: string;
+  joinGroupNotConfigured: string;
 }
 
 export const BOT_STRINGS: Record<Locale, BotStringSet> = {
@@ -83,6 +93,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     choosePointPrompt: "Выберите точку:",
     openLandingButton: "🌐 Открыть сайт",
     noServicesFound: "Сейчас ничего не доступно",
+    balanceMenuButton: "💵 Баланс",
+    servicesMenuButton: "✅ Что работает",
+    joinMenuButton: "🤝 Будем вместе",
+    joinGroupPrompt: "Присоединяйтесь к нашей группе — там анонсы и новости!",
+    joinGroupNotConfigured: "Группа пока не подключена.",
   },
   en: {
     greetingWithName: (n) => `Hi, ${n}!`,
@@ -111,6 +126,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     choosePointPrompt: "Choose a location:",
     openLandingButton: "🌐 Open website",
     noServicesFound: "Nothing available right now",
+    balanceMenuButton: "💵 Balance",
+    servicesMenuButton: "✅ What's on",
+    joinMenuButton: "🤝 Join us",
+    joinGroupPrompt: "Join our group — announcements and news!",
+    joinGroupNotConfigured: "The group isn't set up yet.",
   },
   uk: {
     greetingWithName: (n) => `Привіт, ${n}!`,
@@ -139,6 +159,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     choosePointPrompt: "Виберіть точку:",
     openLandingButton: "🌐 Відкрити сайт",
     noServicesFound: "Зараз нічого не доступно",
+    balanceMenuButton: "💵 Баланс",
+    servicesMenuButton: "✅ Що працює",
+    joinMenuButton: "🤝 Будьмо разом",
+    joinGroupPrompt: "Приєднуйтесь до нашої групи — там анонси та новини!",
+    joinGroupNotConfigured: "Групу ще не підключено.",
   },
   ro: {
     greetingWithName: (n) => `Salut, ${n}!`,
@@ -167,6 +192,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     choosePointPrompt: "Alegeți un punct:",
     openLandingButton: "🌐 Deschide site-ul",
     noServicesFound: "Momentan nimic disponibil",
+    balanceMenuButton: "💵 Sold",
+    servicesMenuButton: "✅ Ce funcționează",
+    joinMenuButton: "🤝 Hai împreună",
+    joinGroupPrompt: "Alăturați-vă grupului nostru — acolo sunt anunțuri și noutăți!",
+    joinGroupNotConfigured: "Grupul nu este încă configurat.",
   },
   be: {
     greetingWithName: (n) => `Прывітанне, ${n}!`,
@@ -195,6 +225,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     choosePointPrompt: "Выберыце пункт:",
     openLandingButton: "🌐 Адкрыць сайт",
     noServicesFound: "Зараз нічога не даступна",
+    balanceMenuButton: "💵 Баланс",
+    servicesMenuButton: "✅ Што працуе",
+    joinMenuButton: "🤝 Будзем разам",
+    joinGroupPrompt: "Далучайцеся да нашай групы — там анонсы і навіны!",
+    joinGroupNotConfigured: "Група пакуль не падключана.",
   },
   pl: {
     greetingWithName: (n) => `Cześć, ${n}!`,
@@ -223,6 +258,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     choosePointPrompt: "Wybierz punkt:",
     openLandingButton: "🌐 Otwórz stronę",
     noServicesFound: "Obecnie nic nie jest dostępne",
+    balanceMenuButton: "💵 Saldo",
+    servicesMenuButton: "✅ Co działa",
+    joinMenuButton: "🤝 Bądźmy razem",
+    joinGroupPrompt: "Dołącz do naszej grupy — tam ogłoszenia i nowości!",
+    joinGroupNotConfigured: "Grupa nie została jeszcze skonfigurowana.",
   },
   it: {
     greetingWithName: (n) => `Ciao, ${n}!`,
@@ -251,6 +291,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     choosePointPrompt: "Scegli un punto:",
     openLandingButton: "🌐 Apri il sito",
     noServicesFound: "Al momento nulla disponibile",
+    balanceMenuButton: "💵 Saldo",
+    servicesMenuButton: "✅ Cosa c'è",
+    joinMenuButton: "🤝 Uniamoci",
+    joinGroupPrompt: "Unisciti al nostro gruppo — lì trovi annunci e novità!",
+    joinGroupNotConfigured: "Il gruppo non è ancora configurato.",
   },
   uz: {
     greetingWithName: (n) => `Salom, ${n}!`,
@@ -278,6 +323,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     choosePointPrompt: "Nuqtani tanlang:",
     openLandingButton: "🌐 Saytni ochish",
     noServicesFound: "Hozircha hech narsa yoʻq",
+    balanceMenuButton: "💵 Balans",
+    servicesMenuButton: "✅ Nima ishlaydi",
+    joinMenuButton: "🤝 Birga bo'laylik",
+    joinGroupPrompt: "Guruhimizga qoʻshiling — u yerda eʼlonlar va yangiliklar!",
+    joinGroupNotConfigured: "Guruh hali sozlanmagan.",
   },
   kk: {
     greetingWithName: (n) => `Сәлем, ${n}!`,
@@ -306,6 +356,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     choosePointPrompt: "Нүктені таңдаңыз:",
     openLandingButton: "🌐 Сайтты ашу",
     noServicesFound: "Қазір ештеңе қолжетімсіз",
+    balanceMenuButton: "💵 Баланс",
+    servicesMenuButton: "✅ Не жұмыс істейді",
+    joinMenuButton: "🤝 Бірге болайық",
+    joinGroupPrompt: "Топымызға қосылыңыз — онда хабарландырулар мен жаңалықтар!",
+    joinGroupNotConfigured: "Топ әлі қосылмаған.",
   },
   tg: {
     greetingWithName: (n) => `Салом, ${n}!`,
@@ -334,6 +389,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     choosePointPrompt: "Нуқтаро интихоб кунед:",
     openLandingButton: "🌐 Кушодани сайт",
     noServicesFound: "Ҳоло чизе дастрас нест",
+    balanceMenuButton: "💵 Баланс",
+    servicesMenuButton: "✅ Чӣ кор мекунад",
+    joinMenuButton: "🤝 Якҷоя бошем",
+    joinGroupPrompt: "Ба гурӯҳи мо ҳамроҳ шавед — дар он ҷо эълонҳо ва хабарҳо!",
+    joinGroupNotConfigured: "Гурӯҳ ҳанӯз пайваст нашудааст.",
   },
   ky: {
     greetingWithName: (n) => `Салам, ${n}!`,
@@ -362,6 +422,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     choosePointPrompt: "Пунктту тандаңыз:",
     openLandingButton: "🌐 Сайтты ачуу",
     noServicesFound: "Азырынча эч нерсе жок",
+    balanceMenuButton: "💵 Баланс",
+    servicesMenuButton: "✅ Эмне иштейт",
+    joinMenuButton: "🤝 Бирге болобуз",
+    joinGroupPrompt: "Топубузга кошулуңуз — анда жарыялар жана жаңылыктар!",
+    joinGroupNotConfigured: "Топ азырынча кошулган жок.",
   },
   hy: {
     greetingWithName: (n) => `Բարև, ${n}!`,
@@ -390,6 +455,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     choosePointPrompt: "Ընտրեք կետը՝",
     openLandingButton: "🌐 Բացել կայքը",
     noServicesFound: "Այս պահին ոչինչ հասանելի չէ",
+    balanceMenuButton: "💵 Մնացորդ",
+    servicesMenuButton: "✅ Ինչն է աշխատում",
+    joinMenuButton: "🤝 Եկեք միասին լինենք",
+    joinGroupPrompt: "Միացե՛ք մեր խմբին — այնտեղ հայտարարություններ և նորություններ են!",
+    joinGroupNotConfigured: "Խումբը դեռ միացված չէ։",
   },
   az: {
     greetingWithName: (n) => `Salam, ${n}!`,
@@ -417,6 +487,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     choosePointPrompt: "Nöqtəni seçin:",
     openLandingButton: "🌐 Saytı aç",
     noServicesFound: "Hazırda heç nə mövcud deyil",
+    balanceMenuButton: "💵 Balans",
+    servicesMenuButton: "✅ Nə işləyir",
+    joinMenuButton: "🤝 Birlikdə olaq",
+    joinGroupPrompt: "Qrupumuza qoşulun — orada elanlar və xəbərlər var!",
+    joinGroupNotConfigured: "Qrup hələ qoşulmayıb.",
   },
   ka: {
     greetingWithName: (n) => `გამარჯობა, ${n}!`,
@@ -445,6 +520,11 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     choosePointPrompt: "აირჩიეთ პუნქტი:",
     openLandingButton: "🌐 საიტის გახსნა",
     noServicesFound: "ამჟამად არაფერია ხელმისაწვდომი",
+    balanceMenuButton: "💵 ბალანსი",
+    servicesMenuButton: "✅ რა მუშაობს",
+    joinMenuButton: "🤝 ერთად ვიყოთ",
+    joinGroupPrompt: "შემოუერთდით ჩვენს ჯგუფს — იქ განცხადებები და სიახლეებია!",
+    joinGroupNotConfigured: "ჯგუფი ჯერ არ არის დაკავშირებული.",
   },
   tr: {
     greetingWithName: (n) => `Merhaba, ${n}!`,
@@ -473,5 +553,10 @@ export const BOT_STRINGS: Record<Locale, BotStringSet> = {
     choosePointPrompt: "Nokta seçin:",
     openLandingButton: "🌐 Siteyi aç",
     noServicesFound: "Şu anda hiçbir şey yok",
+    balanceMenuButton: "💵 Bakiye",
+    servicesMenuButton: "✅ Neler var",
+    joinMenuButton: "🤝 Birlikte olalım",
+    joinGroupPrompt: "Grubumuza katılın — orada duyurular ve haberler var!",
+    joinGroupNotConfigured: "Grup henüz bağlanmadı.",
   },
 };

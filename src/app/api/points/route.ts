@@ -52,6 +52,9 @@ export async function POST(request: Request) {
         name: name.trim(),
         address: typeof address === "string" && address.trim() ? address.trim() : null,
         iconKey: typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null,
+        // Новая точка по умолчанию неактивна — тот же принцип, что у зоны
+        // (запрос пользователя 2026-07-24), включается явно, когда готова.
+        active: false,
       },
     });
     return { ok: true as const, point };

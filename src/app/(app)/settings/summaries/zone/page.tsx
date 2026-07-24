@@ -265,7 +265,7 @@ export default function ZoneSummaryEditorPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-md md:max-w-xl lg:max-w-2xl flex-col gap-1">
-          <BackLink label={t.summaries.listTitle} href="/settings/summaries" className="mb-2" />
+          <BackLink label={t.summaries.telegramStaffLabel} href="/settings/summaries/telegram" className="mb-2" />
           <h1 className="text-screen-title">{t.summaries.zoneEditorTitle}</h1>
           <p className="mb-4 text-caption-airbnb">{t.summaries.zoneEditorSub}</p>
 

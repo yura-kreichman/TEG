@@ -285,6 +285,7 @@ model Tenant {
   summaryChannels               TenantSummaryChannel[]
   telegramBindCodes             TelegramBindCode[]
   clientTelegramLinks           ClientTelegramLink[]
+  publicGroup                   TenantPublicGroup?
   zoneSummarySettings           ZoneSummarySettings?
   dailyCashSummarySettings      DailyCashSummarySettings?
   shiftCloseSummarySettings     ShiftCloseSummarySettings?
@@ -1930,12 +1931,65 @@ model TelegramBindCode {
   // Задел на точечные привязки — сейчас всегда null (общий чат тенанта).
   pointId String?
 
+  // "summary" (рабочий чат — Итоги/Касса/Инструктажи, TenantSummaryChannel) |
+  // "public_group" (публичная группа для клиентов — анонсы/рассылка,
+  // TenantPublicGroup) — запрос пользователя 2026-07-24: "надо понимать, что
+  // может быть 'рабочая' группа для сотрудников с итогами и т.п. и публичная
+  // для клиентов", разные назначения одного и того же кода привязки решают,
+  // в какую таблицу вебхук запишет chatId (см. handleStart в webhook/route.ts).
+  purpose String @default("summary")
+
   expiresAt DateTime
   usedAt    DateTime?
 
   createdAt DateTime @default(now())
 
   @@index([tenantId])
+}
+
+// Публичная Telegram-группа тенанта для клиентов — анонсы/рассылка (запрос
+// пользователя 2026-07-24), СОЗНАТЕЛЬНО отдельная таблица от
+// TenantSummaryChannel, а не ещё один SummaryChannelType: рабочий чат
+// сотрудников получает внутренние Итоги/Кассу/Инструктажи, эта группа —
+// только рассылки владельца клиентам, смешение было бы реальным риском
+// (кассовые цифры точки утекли бы в публичный чат при любой будущей ошибке
+// в фильтрации по channelType). Один на тенанта (singleton, tenantId
+// unique), та же привязка "без Group ID" через TelegramBindCode(purpose:
+// "public_group") + ?startgroup= — Telegram сам присылает реальный chatId,
+// когда бот добавлен в группу владельцем.
+model TenantPublicGroup {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Тумблер "вкл/выкл" (запрос пользователя 2026-07-24, для единообразия с
+  // рабочим чатом сотрудников) — независим от chatStatus, приостанавливает
+  // отправку рассылок в группу, не отвязывая сам чат.
+  enabled Boolean @default(true)
+
+  chatId     String?
+  chatTitle  String?
+  // active | inactive — тот же принцип, что TenantSummaryChannel.chatStatus
+  // (my_chat_member вебхук, бот кикнут/вышел).
+  chatStatus String?
+
+  // Ссылка-приглашение для клиентов — Владелец вставляет её сам (у бота нет
+  // прав администратора группы, чтобы сгенерировать её через Bot API), не
+  // часть флоу привязки chatId.
+  inviteLink String?
+
+  // Автоанонс в группу при активации новой зоны/точки/актива (запрос
+  // пользователя 2026-07-24) — по умолчанию false (явный opt-in, не спам по
+  // умолчанию). Триггер — переход active false→true (см. обсуждение того же
+  // дня: "создание = готовлю, включение = готово, объявляю"), не само
+  // создание записи. Три отдельных тумблера, не один общий (решение
+  // пользователя того же дня: "отдельно на каждую сущность").
+  announceNewZones  Boolean @default(false)
+  announceNewPoints Boolean @default(false)
+  announceNewAssets Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Подтверждённая привязка: этот Telegram-чат клиента показал через кнопку

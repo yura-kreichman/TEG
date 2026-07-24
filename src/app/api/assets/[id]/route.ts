@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { deleteUploadedImage } from "@/lib/uploads";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
+import { announceEntityActivated } from "@/lib/telegram-bot";
 
 async function findOwnedAsset(tenantId: string, id: string) {
   const asset = await prisma.asset.findUnique({
@@ -82,6 +83,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/assets/[id
   }
 
   await prisma.asset.update({ where: { id }, data });
+  if (data.active === true && !asset.active) {
+    await announceEntityActivated(asset.zone.point.tenantId, "asset", data.name ?? asset.name);
+  }
   await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ ok: true });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
+import { announceEntityActivated } from "@/lib/telegram-bot";
 
 export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]">) {
   const owner = await requireOwner();
@@ -130,6 +131,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/points/[id
   }
 
   await prisma.point.update({ where: { id }, data });
+  if (data.active === true && !point.active) {
+    await announceEntityActivated(owner.tenantId, "point", data.name ?? point.name);
+  }
   await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ ok: true });
 }

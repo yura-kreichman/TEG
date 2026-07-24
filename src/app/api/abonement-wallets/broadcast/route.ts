@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { isModuleEnabled } from "@/lib/tenant-modules";
-import { sendChatMessage, sendPhotoMessage } from "@/lib/telegram-bot";
+import { sendChatMessage, sendPhotoMessage, getTenantPublicGroup } from "@/lib/telegram-bot";
 import { getRequestOrigin } from "@/lib/request-origin";
 import { deleteUploadedImage } from "@/lib/uploads";
 
@@ -38,6 +38,14 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const message: string = typeof body.message === "string" ? body.message.trim() : "";
   const imageUrl: string | null = typeof body.imageUrl === "string" && body.imageUrl ? body.imageUrl : null;
+  // "Всем" (по умолчанию — и клиентам, и в группу) | "clients" (только
+  // личные сообщения) | "group" (только публичная группа) — запрос
+  // пользователя 2026-07-24: выбор адресата рассылки, "в группу" доступно,
+  // только если группа вообще настроена (проверяется на фронте выбором
+  // пункта — сервер тоже проверяет, не доверяя телу запроса).
+  const destination: "all" | "clients" | "group" = ["all", "clients", "group"].includes(body.destination)
+    ? body.destination
+    : "all";
   if (!message) {
     return NextResponse.json({ error: "Введите текст сообщения" }, { status: 400 });
   }
@@ -46,18 +54,6 @@ export async function POST(request: Request) {
   }
 
   const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { name: true } });
-  const links = await prisma.clientTelegramLink.findMany({ where: { tenantId: owner.tenantId }, select: { chatId: true, phone: true } });
-
-  // Адресное обращение вместо статичного названия компании (запрос
-  // пользователя 2026-07-24) — по имени клиента, когда оно сохранено в
-  // кошельке ("Привет, Аня"), иначе от имени компании ("Привет от
-  // КидсБург") — ClientTelegramLink своего имени не хранит, только
-  // телефон, поэтому имя ищем по (tenantId, phone) в AbonementWallet.
-  const wallets = await prisma.abonementWallet.findMany({
-    where: { tenantId: owner.tenantId, phone: { in: links.map((l) => l.phone) } },
-    select: { phone: true, name: true },
-  });
-  const nameByPhone = new Map(wallets.map((w) => [w.phone, w.name]));
 
   // Ссылка на фото — относительный путь из /api/uploads (тот же формат, что
   // Tenant.logoUrl и т.п.), Telegram нужен полный URL, чтобы скачать файл
@@ -70,15 +66,49 @@ export async function POST(request: Request) {
   const absoluteImageUrl = imageUrl ? `${getRequestOrigin(request)}${imageUrl}` : null;
 
   let sent = 0;
-  for (const link of links) {
-    const clientName = nameByPhone.get(link.phone);
-    const greeting = clientName ? `Привет, ${clientName}` : `Привет от ${tenant?.name ?? ""}`;
-    const text = `📣 <b>${greeting}</b>\n\n${message}`;
-    const result = absoluteImageUrl
-      ? await sendPhotoMessage(link.chatId, absoluteImageUrl, text)
-      : await sendChatMessage(link.chatId, text);
-    if (result.ok) sent++;
-    await sleep(BETWEEN_SENDS_DELAY_MS);
+  let total = 0;
+  if (destination === "all" || destination === "clients") {
+    const links = await prisma.clientTelegramLink.findMany({ where: { tenantId: owner.tenantId }, select: { chatId: true, phone: true } });
+    total = links.length;
+
+    // Адресное обращение вместо статичного названия компании (запрос
+    // пользователя 2026-07-24) — по имени клиента, когда оно сохранено в
+    // кошельке ("Привет, Аня"), иначе от имени компании ("Привет от
+    // КидсБург") — ClientTelegramLink своего имени не хранит, только
+    // телефон, поэтому имя ищем по (tenantId, phone) в AbonementWallet.
+    const wallets = await prisma.abonementWallet.findMany({
+      where: { tenantId: owner.tenantId, phone: { in: links.map((l) => l.phone) } },
+      select: { phone: true, name: true },
+    });
+    const nameByPhone = new Map(wallets.map((w) => [w.phone, w.name]));
+
+    for (const link of links) {
+      const clientName = nameByPhone.get(link.phone);
+      const greeting = clientName ? `Привет, ${clientName}` : `Привет от ${tenant?.name ?? ""}`;
+      const text = `📣 <b>${greeting}</b>\n\n${message}`;
+      const result = absoluteImageUrl
+        ? await sendPhotoMessage(link.chatId, absoluteImageUrl, text)
+        : await sendChatMessage(link.chatId, text);
+      if (result.ok) sent++;
+      await sleep(BETWEEN_SENDS_DELAY_MS);
+    }
+  }
+
+  let groupSent: boolean | null = null;
+  if (destination === "all" || destination === "group") {
+    const group = await getTenantPublicGroup(owner.tenantId);
+    // "Привет от {компания}" — не по имени (запрос пользователя 2026-07-24:
+    // "если сообщение из Рассылки уходит в группу, должно использоваться
+    // 'Привет от' + название компании") — в группе нет одного адресата.
+    if (group?.chatId && group.chatStatus === "active" && group.enabled) {
+      const text = `📣 <b>Привет от ${tenant?.name ?? ""}</b>\n\n${message}`;
+      const result = absoluteImageUrl
+        ? await sendPhotoMessage(group.chatId, absoluteImageUrl, text)
+        : await sendChatMessage(group.chatId, text);
+      groupSent = result.ok;
+    } else {
+      groupSent = false;
+    }
   }
 
   // Картинка рассылки одноразовая, не переиспользуется нигде больше (не
@@ -89,5 +119,5 @@ export async function POST(request: Request) {
     await deleteUploadedImage(imageUrl);
   }
 
-  return NextResponse.json({ sent, total: links.length });
+  return NextResponse.json({ sent, total, groupSent });
 }

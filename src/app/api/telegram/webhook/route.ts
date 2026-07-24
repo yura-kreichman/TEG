@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendChatMessage, sendChatMessageWithMenu, sendContactRequest, sendInlineKeyboard, answerCallbackQuery, CLIENT_START_PREFIX } from "@/lib/telegram-bot";
+import {
+  sendChatMessage,
+  sendChatMessageWithMenu,
+  sendContactRequest,
+  sendInlineKeyboard,
+  answerCallbackQuery,
+  getTenantPublicGroup,
+  CLIENT_START_PREFIX,
+} from "@/lib/telegram-bot";
 import { describeAbonementTransactionSource, findWalletByPhone, normalizePhone } from "@/lib/abonement";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import type { CurrencyCode } from "@/lib/currency";
 import { getBusinessDayBounds } from "@/lib/business-day";
 import { buildDailyCashSummaryData } from "@/lib/summary-channels/daily-cash-data";
 import { DAILY_CASH_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
-import { pickBotLang, BOT_STRINGS, greetingLine } from "@/lib/telegram-client-i18n";
+import { pickBotLang, BOT_STRINGS, greetingLine, type BotStringSet } from "@/lib/telegram-client-i18n";
 import type { Locale } from "@/lib/locales";
 import { timingSafeEqualStrings } from "@/lib/timing-safe-equal";
 import { isModuleEnabled } from "@/lib/tenant-modules";
@@ -111,6 +119,16 @@ async function handleStartMessage(message: {
   const chatId = String(message.chat.id);
   const chatTitle = message.chat.title ?? null;
 
+  // Публичная группа клиентов (запрос пользователя 2026-07-24) обязана быть
+  // настоящей группой, не личным чатом с ботом — deep-link "?startgroup="
+  // всегда открывает выбор группы, но владелец теоретически мог отправить
+  // код руками боту напрямую по ошибке. Код НЕ гасим (usedAt не трогаем) —
+  // пусть отправит его ещё раз, уже в саму группу.
+  if (bindCode.purpose === "public_group" && message.chat.type === "private") {
+    await sendChatMessage(chatId, "Отправьте этот код в вашу группу, не сюда — добавьте бота в группу и напишите код там.").catch(() => {});
+    return;
+  }
+
   // Сетевые вызовы (уведомление старого чата, подтверждение новому) — ПОСЛЕ
   // транзакции, не внутри: транзакция должна быть только про БД, а сеть может
   // зависнуть/упасть без влияния на консистентность записанного.
@@ -131,6 +149,19 @@ async function handleStartMessage(message: {
       return null;
     }
 
+    if (bindCode.purpose === "public_group") {
+      // Singleton на тенанта (TenantPublicGroup.tenantId unique) — истории
+      // прошлых чатов нет по конструкции, просто перезаписываем; старый
+      // chatId читаем ДО апдейта, только чтобы было куда послать "переехали".
+      const existingGroup = await tx.tenantPublicGroup.findUnique({ where: { tenantId: bindCode.tenantId } });
+      await tx.tenantPublicGroup.upsert({
+        where: { tenantId: bindCode.tenantId },
+        create: { tenantId: bindCode.tenantId, chatId, chatTitle, chatStatus: "active" },
+        update: { chatId, chatTitle, chatStatus: "active" },
+      });
+      return existingGroup?.chatId && existingGroup.chatId !== chatId ? existingGroup.chatId : null;
+    }
+
     // Пересвязка: если уже была активная привязка на другой чат — деактивируем
     // старую запись, а не перезаписываем (сохраняем историю, см. схему).
     const existing = await tx.tenantSummaryChannel.findFirst({
@@ -143,6 +174,17 @@ async function handleStartMessage(message: {
       await tx.tenantSummaryChannel.update({
         where: { id: existing.id },
         data: { enabled: true, chatStatus: "active", chatTitle },
+      });
+      return null;
+    }
+
+    if (existing && existing.chatId === null) {
+      // Запись уже была — Владелец настроил тумблер ДО подключения (запрос
+      // пользователя 2026-07-24) — просто проставляем chatId в неё же, не
+      // создаём новую и не трогаем уже выбранный enabled.
+      await tx.tenantSummaryChannel.update({
+        where: { id: existing.id },
+        data: { chatId, chatTitle, chatStatus: "active" },
       });
       return null;
     }
@@ -169,7 +211,8 @@ async function handleStartMessage(message: {
   if (alreadyUsed) return;
 
   if (notifyOldChatId) {
-    await sendChatMessage(notifyOldChatId, "Сводки переведены в другой чат").catch(() => {});
+    const oldChatText = bindCode.purpose === "public_group" ? "Группа анонсов теперь в другом чате" : "Сводки переведены в другой чат";
+    await sendChatMessage(notifyOldChatId, oldChatText).catch(() => {});
   }
   await sendChatMessage(chatId, "✅ RentOS подключён к этому чату").catch(() => {});
 }
@@ -184,6 +227,13 @@ async function handleMyChatMember(update: {
   const chatId = String(update.chat.id);
   await prisma.tenantSummaryChannel.updateMany({
     where: { channelType: "telegram", chatId },
+    data: { chatStatus: "inactive" },
+  });
+  // Публичная группа — тот же chatId не может совпасть с рабочим чатом
+  // (разные Telegram-группы), поэтому оба updateMany безопасно идут подряд,
+  // затронет только реально совпавшую таблицу.
+  await prisma.tenantPublicGroup.updateMany({
+    where: { chatId },
     data: { chatStatus: "inactive" },
   });
 }
@@ -209,7 +259,7 @@ async function handleClientStart(chatId: string, tenantSlug: string, lang: BotLa
   if (existingLink) {
     const wallet = await findWalletByPhone(tenant.id, existingLink.phone);
     if (wallet) {
-      await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
+      await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang]).catch(() => {});
       return;
     }
     // Кошелёк с тех пор удалили/номер сменился — привязка устарела, спросим
@@ -285,7 +335,7 @@ async function handleContact(message: {
       create: { tenantId: tenant.id, chatId, phone, language: lang },
       update: { phone, language: lang },
     });
-    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
+    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang]).catch(() => {});
     return;
   }
 
@@ -307,7 +357,7 @@ async function handleContact(message: {
       create: { tenantId: tenant.id, chatId, phone, language: lang },
       update: { phone, language: lang },
     });
-    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
+    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang]).catch(() => {});
   }
 }
 
@@ -435,12 +485,23 @@ async function handleGroupCommand(message: { text: string; chat: { id: number };
   // баланс ещё раз" (та же команда, что зарегистрирована в BotFather для
   // Direct Messages). Если чат ещё ни разу не проходил проверку контактом —
   // предлагаем это сделать сразу же (тот же generic-флоу, что у голого
-  // /start), а не просто отсылаем к ссылке.
-  if (/^\/balance(?:@\w+)?/.test(text)) {
-    await handlePrivateBalanceCommand(chatId, pickBotLang(message.from?.language_code));
-  } else if (/^\/services(?:@\w+)?/.test(text)) {
-    await handleServicesCommand(chatId, pickBotLang(message.from?.language_code));
+  // /start), а не просто отсылаем к ссылке. Кнопки постоянного меню шлют
+  // человекочитаемый локализованный текст, не голую команду (запрос
+  // пользователя 2026-07-24) — matchesMenuCommand матчит и то, и другое, не
+  // важно, на каком из 15 языков подписана кнопка у конкретного клиента.
+  const lang = pickBotLang(message.from?.language_code);
+  if (matchesMenuCommand(text, /^\/balance(?:@\w+)?/, (s) => s.balanceMenuButton)) {
+    await handlePrivateBalanceCommand(chatId, lang);
+  } else if (matchesMenuCommand(text, /^\/services(?:@\w+)?/, (s) => s.servicesMenuButton)) {
+    await handleServicesCommand(chatId, lang);
+  } else if (matchesMenuCommand(text, /^\/join(?:@\w+)?/, (s) => s.joinMenuButton)) {
+    await handleJoinCommand(chatId, lang);
   }
+}
+
+function matchesMenuCommand(text: string, commandRegex: RegExp, buttonLabel: (s: BotStringSet) => string): boolean {
+  if (commandRegex.test(text)) return true;
+  return Object.values(BOT_STRINGS).some((s) => buttonLabel(s) === text);
 }
 
 async function handlePrivateBalanceCommand(chatId: string, lang: BotLang) {
@@ -455,11 +516,12 @@ async function handlePrivateBalanceCommand(chatId: string, lang: BotLang) {
     if (!tenant || !(await isModuleEnabled(tenant.id, "clientsEnabled"))) continue;
     const wallet = await findWalletByPhone(tenant.id, link.phone);
     if (!wallet) continue;
-    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang)).catch(() => {});
+    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang]).catch(() => {});
   }
 }
 
 const SERVICES_TENANT_CALLBACK_PREFIX = "svct:";
+const JOIN_TENANT_CALLBACK_PREFIX = "joint:";
 const SERVICES_POINT_CALLBACK_PREFIX = "svcp:";
 
 // Статический список активных зон/активов (запрос пользователя 2026-07-24:
@@ -634,6 +696,43 @@ async function handleKassaCommand(chatId: string, tenantId: string) {
   await sendChatMessage(chatId, lines.join("\n")).catch(() => {});
 }
 
+// "/join" — ссылка на публичную группу анонсов тенанта (запрос пользователя
+// 2026-07-24: "как стимулировать клиентов присоединяться"). Та же схема
+// резолва тенанта, что у /services (клиент может быть привязан к нескольким
+// прокатам платформы) — но без каскада по точкам, группа одна на тенанта.
+async function handleJoinCommand(chatId: string, lang: BotLang) {
+  const s = BOT_STRINGS[lang];
+  const links = await prisma.clientTelegramLink.findMany({ where: { chatId }, select: { tenantId: true } });
+  const linkedTenantIds = [...new Set(links.map((l) => l.tenantId))];
+  const tenantIds: string[] = [];
+  for (const id of linkedTenantIds) {
+    if (await isModuleEnabled(id, "clientsEnabled")) tenantIds.push(id);
+  }
+
+  if (tenantIds.length === 0) {
+    await sendChatMessage(chatId, s.servicesNotLinkedHint).catch(() => {});
+    return;
+  }
+  if (tenantIds.length === 1) {
+    await sendJoinForTenant(chatId, tenantIds[0], lang);
+    return;
+  }
+
+  const tenants = await prisma.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true } });
+  const buttons = tenants.map((t) => ({ text: t.name, callbackData: `${JOIN_TENANT_CALLBACK_PREFIX}${t.id}` }));
+  await sendInlineKeyboard(chatId, s.chooseTenantPrompt, buttons).catch(() => {});
+}
+
+async function sendJoinForTenant(chatId: string, tenantId: string, lang: BotLang) {
+  const s = BOT_STRINGS[lang];
+  const group = await getTenantPublicGroup(tenantId);
+  if (!group?.inviteLink) {
+    await sendChatMessage(chatId, s.joinGroupNotConfigured).catch(() => {});
+    return;
+  }
+  await sendInlineKeyboard(chatId, s.joinGroupPrompt, [{ text: s.joinMenuButton, url: group.inviteLink }]).catch(() => {});
+}
+
 async function handleCallbackQuery(callbackQuery: {
   id: string;
   data?: string;
@@ -652,5 +751,7 @@ async function handleCallbackQuery(callbackQuery: {
     await sendServicesForTenant(chatId, data.slice(SERVICES_TENANT_CALLBACK_PREFIX.length), lang);
   } else if (data.startsWith(SERVICES_POINT_CALLBACK_PREFIX)) {
     await sendServicesForPoint(chatId, data.slice(SERVICES_POINT_CALLBACK_PREFIX.length), lang);
+  } else if (data.startsWith(JOIN_TENANT_CALLBACK_PREFIX)) {
+    await sendJoinForTenant(chatId, data.slice(JOIN_TENANT_CALLBACK_PREFIX.length), lang);
   }
 }

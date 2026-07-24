@@ -5,6 +5,10 @@ import { getTenantChannel } from "@/lib/telegram-bot";
 
 // Тумблер "вкл/выкл" на списке каналов — независим от факта привязки чата
 // (chatStatus): можно временно приостановить доставку, не отвязывая чат.
+// Настраивается ДАЖЕ ДО подключения (запрос пользователя 2026-07-24:
+// "настройки... должны быть независимо от того, подключена ли реальная
+// группа или нет") — если записи ещё нет, создаём её заранее (chatId
+// проставится позже, самой привязкой).
 export async function PATCH(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
@@ -17,11 +21,13 @@ export async function PATCH(request: Request) {
   }
 
   const channel = await getTenantChannel(owner.tenantId, "telegram");
-  if (!channel) {
-    return NextResponse.json({ error: "Чат не подключён" }, { status: 400 });
+  if (channel) {
+    await prisma.tenantSummaryChannel.update({ where: { id: channel.id }, data: { enabled } });
+  } else {
+    await prisma.tenantSummaryChannel.create({
+      data: { tenantId: owner.tenantId, channelType: "telegram", enabled },
+    });
   }
-
-  await prisma.tenantSummaryChannel.update({ where: { id: channel.id }, data: { enabled } });
 
   return NextResponse.json({ ok: true });
 }

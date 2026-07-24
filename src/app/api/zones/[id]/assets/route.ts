@@ -73,6 +73,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
             : DEFAULT_COLOR_TAGS[assetCount % DEFAULT_COLOR_TAGS.length],
         sortOrder: zoneAssetCount,
         tariffId: tariffIdValue,
+        // Новый актив по умолчанию неактивен — тот же принцип, что у
+        // зоны/точки (запрос пользователя 2026-07-24).
+        active: false,
       },
     });
     return { ok: true as const, asset };

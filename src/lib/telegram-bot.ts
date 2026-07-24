@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getSystemSettingsConfig, patchSystemSettingsConfig } from "@/lib/system-settings";
+import type { BotStringSet } from "@/lib/telegram-client-i18n";
 
 // Единый платформенный бот на всех тенантов (docs/spec/telegram-summaries.md) —
 // НЕ путать со старым src/lib/telegram.ts (Tenant.telegramBotToken, бот на
@@ -137,24 +138,24 @@ export async function sendContactRequest(chatId: string, text: string, buttonTex
 
 // Постоянное меню клиента (запрос пользователя 2026-07-25: кнопки "/balance"
 // и "/services" вместо набора команд руками, как уже была кнопка "Поделиться
-// номером") — reply-клавиатура, не inline: живёт в самом чате (composer), не
-// привязана к одному сообщению, автоматически вытесняет предыдущую
-// клавиатуру (в частности, request_contact) без отдельного шага удаления —
-// Telegram просто заменяет один reply_markup.keyboard другим. Текст кнопки —
-// буквально сама команда ("/balance"/"/services"), не человекочитаемая
-// подпись: тап шлёт этот текст обычным сообщением, тот же regex в вебхуке
-// уже её понимает без доп. кода, одинаково на всех 15 языках бота.
-const CLIENT_MENU_KEYBOARD = {
-  keyboard: [[{ text: "/balance" }, { text: "/services" }]],
-  resize_keyboard: true,
-};
-
-export async function sendChatMessageWithMenu(chatId: string, text: string): Promise<TelegramApiResult> {
+// номером"; запрос 2026-07-24: понятные подписи вместо голых команд + третья
+// кнопка "/join" для публичной группы анонсов) — reply-клавиатура, не
+// inline: живёт в самом чате (composer), не привязана к одному сообщению,
+// автоматически вытесняет предыдущую клавиатуру (в частности,
+// request_contact) без отдельного шага удаления. Кнопка шлёт СВОЙ текст как
+// обычное сообщение (это устройство Telegram, изменить нельзя) — поэтому
+// подписи теперь человекочитаемые и локализованные (s.balanceMenuButton и
+// т.п.), а вебхук матчит и их тоже, не только голые "/balance"/"/services"/
+// "/join" (см. handleGroupCommand).
+export async function sendChatMessageWithMenu(chatId: string, text: string, s: BotStringSet): Promise<TelegramApiResult> {
   return callTelegramApi("sendMessage", {
     chat_id: chatId,
     text,
     parse_mode: "HTML",
-    reply_markup: CLIENT_MENU_KEYBOARD,
+    reply_markup: {
+      keyboard: [[{ text: s.balanceMenuButton }, { text: s.servicesMenuButton }], [{ text: s.joinMenuButton }]],
+      resize_keyboard: true,
+    },
   });
 }
 
@@ -212,10 +213,17 @@ export function mapTelegramApiError(result: TelegramApiResult): string {
 
 const BIND_CODE_TTL_MS = 15 * 60 * 1000;
 
-export async function createBindCode(tenantId: string): Promise<{ code: string; expiresAt: Date }> {
+// purpose: "summary" (рабочий чат — Итоги/Касса/Инструктажи) | "public_group"
+// (публичная группа клиентов — запрос пользователя 2026-07-24) — вебхук
+// читает bindCode.purpose и решает, в какую таблицу писать chatId
+// (handleStart в webhook/route.ts).
+export async function createBindCode(
+  tenantId: string,
+  purpose: "summary" | "public_group" = "summary"
+): Promise<{ code: string; expiresAt: Date }> {
   const code = generateBindCode();
   const expiresAt = new Date(Date.now() + BIND_CODE_TTL_MS);
-  await prisma.telegramBindCode.create({ data: { tenantId, code, expiresAt } });
+  await prisma.telegramBindCode.create({ data: { tenantId, code, expiresAt, purpose } });
   return { code, expiresAt };
 }
 
@@ -226,4 +234,39 @@ export async function getTenantChannel(tenantId: string, channelType: "telegram"
     where: { tenantId, channelType, pointId: null },
     orderBy: { createdAt: "desc" },
   });
+}
+
+// Публичная группа тенанта (singleton, docs см. TenantPublicGroup в схеме) —
+// тот же принцип, что getTenantChannel выше, но без channelType/pointId, у
+// этой таблицы одна запись на тенанта по конструкции.
+export async function getTenantPublicGroup(tenantId: string) {
+  return prisma.tenantPublicGroup.findUnique({ where: { tenantId } });
+}
+
+// Автоанонс в публичную группу при активации новой зоны/точки/актива (запрос
+// пользователя 2026-07-24) — вызывается ТОЛЬКО из PATCH-роутов при переходе
+// active false→true (не из create — "создание = готовлю, включение =
+// готово, объявляю", то же обсуждение). Молча ничего не делает, если группа
+// не подключена/выключена/соответствующий тумблер анонса выключен — это
+// норма, не ошибка. Текст на русском — группа общая, не персональный чат
+// клиента, локализовать не на что (тот же принцип, что у групповых
+// сообщений Владельцу/Сотруднику в вебхуке).
+const ANNOUNCE_LABEL: Record<"zone" | "point" | "asset", string> = {
+  zone: "Новая зона",
+  point: "Новая точка",
+  asset: "Новый актив",
+};
+
+export async function announceEntityActivated(
+  tenantId: string,
+  kind: "zone" | "point" | "asset",
+  name: string
+): Promise<void> {
+  const group = await getTenantPublicGroup(tenantId);
+  if (!group?.chatId || group.chatStatus !== "active" || !group.enabled) return;
+  const flagByKind = { zone: group.announceNewZones, point: group.announceNewPoints, asset: group.announceNewAssets };
+  if (!flagByKind[kind]) return;
+
+  const text = `🎉 <b>${ANNOUNCE_LABEL[kind]}: ${name}</b>`;
+  await sendChatMessage(group.chatId, text).catch(() => {});
 }
