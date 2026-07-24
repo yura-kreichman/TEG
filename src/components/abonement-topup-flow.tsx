@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Banknote, Check, CreditCard, Delete, Gift, MapPin, Minus, Pencil, QrCode, Search, Send, Trash2, Wallet } from "lucide-react";
+import { Banknote, Check, CreditCard, Delete, Gift, MapPin, Minus, Pencil, Plus, QrCode, Search, Send, Trash2, Wallet } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
 import { Button } from "@/components/ui/button";
@@ -888,6 +888,21 @@ export function AbonementTopupFlow({
                             className="absolute -right-2 -bottom-2 flex size-9 items-center justify-center rounded-full border border-border bg-card shadow-md"
                           >
                             <Minus className="size-5" />
+                          </button>
+                          {/* Плюс в противоположном от минуса углу (запрос
+                              пользователя 2026-07-24) — то же действие, что
+                              тап по самому тайлу, просто явная симметричная
+                              кнопка рядом с минусом, не только неявный тап. */}
+                          <button
+                            type="button"
+                            aria-label={t.common.add}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSpendTariffQuantity(tariff.id, qty + 1);
+                            }}
+                            className="absolute -left-2 -bottom-2 flex size-9 items-center justify-center rounded-full border border-border bg-card shadow-md"
+                          >
+                            <Plus className="size-5" />
                           </button>
                         </>
                       )}
