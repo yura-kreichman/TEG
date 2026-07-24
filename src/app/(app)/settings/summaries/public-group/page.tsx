@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { MapPin, Package, Send, Zap } from "lucide-react";
+import { MapPin, Package, Pencil, Send, Zap } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
@@ -85,30 +85,29 @@ export default function PublicGroupSettingsPage() {
                       <Send className="size-4" />
                     </div>
                     <div className="min-w-0">
-                      {group.connected ? (
-                        <>
-                          <div className="text-body-airbnb font-medium">«{group.chatTitle}»</div>
-                          <button
-                            type="button"
-                            onClick={() => setConnectOpen(true)}
-                            className="text-caption-airbnb font-semibold text-primary"
-                          >
-                            {t.summaries.telegramChangeLink}
-                          </button>
-                        </>
-                      ) : (
-                        <div className="text-body-airbnb font-medium">{t.summaries.telegramNotConnected}</div>
-                      )}
+                      <div className="text-body-airbnb font-medium">
+                        {group.connected ? `«${group.chatTitle}»` : t.summaries.telegramNotConnected}
+                      </div>
                     </div>
                   </div>
                   {/* Тумблер независим от подключения — тот же принцип, что
                       и на списке каналов. */}
                   <Switch checked={group.enabled} onCheckedChange={(v) => patch({ enabled: v })} className="shrink-0" />
                 </div>
-                {/* Не подключена — крупная кнопка, не мелкая ссылка (запрос
-                    пользователя 2026-07-24: "нет удобного bottom sheet для
-                    подключения"). */}
-                {!group.connected && (
+                {/* "изменить" — обычная белая кнопка с иконкой (запрос
+                    пользователя 2026-07-25: "должна быть нашей типичной
+                    белой кнопкой + иконка"), не текстовая ссылка — на своей
+                    строке под названием чата. Не подключена — крупная кнопка
+                    вместо неё (запрос пользователя 2026-07-24: "нет
+                    удобного bottom sheet для подключения"). */}
+                {group.connected ? (
+                  <PressableScale className="w-fit">
+                    <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setConnectOpen(true)}>
+                      <Pencil className="size-3.5" />
+                      {t.summaries.telegramChangeLink}
+                    </Button>
+                  </PressableScale>
+                ) : (
                   <PressableScale>
                     <Button type="button" className="w-full gap-2" onClick={() => setConnectOpen(true)}>
                       <Send className="size-4" />

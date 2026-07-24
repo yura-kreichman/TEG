@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronRight, Clock, DollarSign, FileText, Send, Zap } from "lucide-react";
+import { ChevronRight, Clock, DollarSign, FileText, Pencil, Send, Zap } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
@@ -118,29 +118,27 @@ export default function StaffTelegramSettingsPage() {
                       <Send className="size-4" />
                     </div>
                     <div className="min-w-0">
-                      {telegram.connected ? (
-                        <>
-                          <div className="text-body-airbnb font-medium">«{telegram.chatTitle}»</div>
-                          <button
-                            type="button"
-                            onClick={() => setConnectOpen(true)}
-                            className="text-caption-airbnb font-semibold text-primary"
-                          >
-                            {t.summaries.telegramChangeLink}
-                          </button>
-                        </>
-                      ) : (
-                        <div className="text-body-airbnb font-medium">{t.summaries.telegramNotConnected}</div>
-                      )}
+                      <div className="text-body-airbnb font-medium">
+                        {telegram.connected ? `«${telegram.chatTitle}»` : t.summaries.telegramNotConnected}
+                      </div>
                     </div>
                   </div>
                 </div>
-                {/* Не подключён — крупная кнопка, не мелкая ссылка (запрос
+                {/* "изменить" — обычная белая кнопка с иконкой (запрос
+                    пользователя 2026-07-25), не текстовая ссылка. Не
+                    подключён — крупная кнопка вместо неё (запрос
                     пользователя 2026-07-24: "нет удобного bottom sheet для
                     подключения") — первый шаг должен быть заметным.
                     Тумблер вкл/выкл — на списке "Сводки и сообщения", не
                     здесь (запрос того же дня: дублировать не нужно). */}
-                {!telegram.connected && (
+                {telegram.connected ? (
+                  <PressableScale className="w-fit">
+                    <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setConnectOpen(true)}>
+                      <Pencil className="size-3.5" />
+                      {t.summaries.telegramChangeLink}
+                    </Button>
+                  </PressableScale>
+                ) : (
                   <PressableScale>
                     <Button type="button" className="w-full gap-2" onClick={() => setConnectOpen(true)}>
                       <Send className="size-4" />

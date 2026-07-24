@@ -2,11 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell, ChevronRight, Mail, Send } from "lucide-react";
+import { Bell, ChevronRight, Mail, Pencil, Send } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
+import { PressableScale } from "@/components/motion/pressable-scale";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { EmailChannelSheet } from "@/components/summary-email-sheet";
 import { useI18n } from "@/components/i18n-provider";
@@ -127,101 +129,157 @@ export default function SummariesListPage() {
                 {/* "Telegram для сотрудников" — строка-переход на свой
                     экран (запрос пользователя 2026-07-24: "по аналогии, как
                     с Push-уведомлениями"), там же и типы сводок, и
-                    привязка/тумблер чата. */}
-                <div
-                  className="flex cursor-pointer items-center justify-between gap-3 py-2"
-                  onClick={() => router.push("/settings/summaries/telegram")}
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#2AABEE] text-white">
-                      <Send className="size-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-body-airbnb font-medium">{t.summaries.telegramStaffLabel}</div>
-                      <div className="truncate text-caption-airbnb">
-                        {telegram.connected ? `«${telegram.chatTitle}»` : t.summaries.telegramNotConnected}{" "}
-                        <span className="font-semibold text-primary">{t.summaries.telegramChangeLink}</span>
+                    привязка/тумблер чата. Разбито на 2 строки, "изменить" —
+                    обычная белая кнопка с иконкой, не текстовая ссылка
+                    (запрос пользователя 2026-07-25: раньше всё это плюс
+                    тумблер/шеврон теснились в одну строку и обрезались). */}
+                <div className="flex flex-col gap-2 py-2">
+                  <div
+                    className="flex cursor-pointer items-center justify-between gap-3"
+                    onClick={() => router.push("/settings/summaries/telegram")}
+                  >
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#2AABEE] text-white">
+                        <Send className="size-4" />
                       </div>
+                      <div className="min-w-0 text-body-airbnb font-medium">{t.summaries.telegramStaffLabel}</div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {/* Тумблер независим от факта привязки чата (запрос
+                          пользователя 2026-07-24: "настройки должны быть
+                          независимо от того, подключена ли реальная
+                          группа/чат или нет") — можно настроить заранее, до
+                          подключения. */}
+                      <span onClick={(e) => e.stopPropagation()}>
+                        <Switch checked={telegram.enabled} onCheckedChange={toggleTelegram} />
+                      </span>
+                      <ChevronRight className="size-4 text-muted-foreground/50" />
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {/* Тумблер независим от факта привязки чата (запрос
-                        пользователя 2026-07-24: "настройки должны быть
-                        независимо от того, подключена ли реальная группа/чат
-                        или нет") — можно настроить заранее, до подключения. */}
-                    <span onClick={(e) => e.stopPropagation()}>
-                      <Switch checked={telegram.enabled} onCheckedChange={toggleTelegram} />
+                  <div className="flex items-center justify-between gap-2 pl-11.5">
+                    <span className="truncate text-caption-airbnb text-muted-foreground">
+                      {telegram.connected ? `«${telegram.chatTitle}»` : t.summaries.telegramNotConnected}
                     </span>
-                    <ChevronRight className="size-4 text-muted-foreground/50" />
+                    <PressableScale className="shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push("/settings/summaries/telegram");
+                        }}
+                      >
+                        <Pencil className="size-3.5" />
+                        {t.summaries.telegramChangeLink}
+                      </Button>
+                    </PressableScale>
                   </div>
                 </div>
 
                 {/* "Телеграм для клиентов" — публичная группа анонсов (запрос
                     пользователя 2026-07-24), отдельная от рабочего чата
                     сотрудников выше. */}
-                <div
-                  className="flex cursor-pointer items-center justify-between gap-3 border-t border-border py-2 pt-3"
-                  onClick={() => router.push("/settings/summaries/public-group")}
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#2AABEE] text-white">
-                      <Send className="size-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-body-airbnb font-medium">{t.summaries.telegramClientsLabel}</div>
-                      <div className="truncate text-caption-airbnb">
-                        {publicGroup.connected ? `«${publicGroup.chatTitle}»` : t.summaries.telegramNotConnected}{" "}
-                        <span className="font-semibold text-primary">{t.summaries.telegramChangeLink}</span>
+                <div className="flex flex-col gap-2 border-t border-border py-2 pt-3">
+                  <div
+                    className="flex cursor-pointer items-center justify-between gap-3"
+                    onClick={() => router.push("/settings/summaries/public-group")}
+                  >
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#2AABEE] text-white">
+                        <Send className="size-4" />
                       </div>
+                      <div className="min-w-0 text-body-airbnb font-medium">{t.summaries.telegramClientsLabel}</div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span onClick={(e) => e.stopPropagation()}>
+                        <Switch checked={publicGroup.enabled} onCheckedChange={togglePublicGroup} />
+                      </span>
+                      <ChevronRight className="size-4 text-muted-foreground/50" />
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span onClick={(e) => e.stopPropagation()}>
-                      <Switch checked={publicGroup.enabled} onCheckedChange={togglePublicGroup} />
+                  <div className="flex items-center justify-between gap-2 pl-11.5">
+                    <span className="truncate text-caption-airbnb text-muted-foreground">
+                      {publicGroup.connected ? `«${publicGroup.chatTitle}»` : t.summaries.telegramNotConnected}
                     </span>
-                    <ChevronRight className="size-4 text-muted-foreground/50" />
+                    <PressableScale className="shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push("/settings/summaries/public-group");
+                        }}
+                      >
+                        <Pencil className="size-3.5" />
+                        {t.summaries.telegramChangeLink}
+                      </Button>
+                    </PressableScale>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between gap-3 border-t border-border py-2 pt-3">
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Mail className="size-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-body-airbnb font-medium">{t.summaries.emailLabel}</div>
-                      <div className="truncate text-caption-airbnb">
-                        {email.emailAddresses ? email.emailAddresses.split(",")[0]?.trim() : t.summaries.emailNotConnected}{" "}
-                        <button
-                          type="button"
-                          onClick={() => setEmailSheetOpen(true)}
-                          className="font-semibold text-primary"
-                        >
-                          {t.summaries.telegramChangeLink}
-                        </button>
+                <div className="flex flex-col gap-2 border-t border-border py-2 pt-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Mail className="size-4" />
                       </div>
+                      <div className="min-w-0 text-body-airbnb font-medium">{t.summaries.emailLabel}</div>
                     </div>
+                    <Switch checked={email.enabled} onCheckedChange={toggleEmail} className="shrink-0" />
                   </div>
-                  <Switch checked={email.enabled} onCheckedChange={toggleEmail} className="shrink-0" />
+                  <div className="flex items-center justify-between gap-2 pl-11.5">
+                    <span className="truncate text-caption-airbnb text-muted-foreground">
+                      {email.emailAddresses ? email.emailAddresses.split(",")[0]?.trim() : t.summaries.emailNotConnected}
+                    </span>
+                    <PressableScale className="shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => setEmailSheetOpen(true)}
+                      >
+                        <Pencil className="size-3.5" />
+                        {t.summaries.telegramChangeLink}
+                      </Button>
+                    </PressableScale>
+                  </div>
                 </div>
 
-                <div
-                  className="flex cursor-pointer items-center justify-between gap-3 border-t border-border py-2 pt-3"
-                  onClick={() => router.push("/settings/push")}
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Bell className="size-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-body-airbnb font-medium">{t.pushSettings.title}</div>
-                      <div className="truncate text-caption-airbnb">
-                        {pushSubscribed ? t.summaries.pushOnThisDevice : t.summaries.pushNotConnected}{" "}
-                        <span className="font-semibold text-primary">{t.summaries.telegramChangeLink}</span>
+                <div className="flex flex-col gap-2 border-t border-border py-2 pt-3">
+                  <div
+                    className="flex cursor-pointer items-center justify-between gap-3"
+                    onClick={() => router.push("/settings/push")}
+                  >
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Bell className="size-4" />
                       </div>
+                      <div className="min-w-0 text-body-airbnb font-medium">{t.pushSettings.title}</div>
                     </div>
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" />
                   </div>
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" />
+                  <div className="flex items-center justify-between gap-2 pl-11.5">
+                    <span className="truncate text-caption-airbnb text-muted-foreground">
+                      {pushSubscribed ? t.summaries.pushOnThisDevice : t.summaries.pushNotConnected}
+                    </span>
+                    <PressableScale className="shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => router.push("/settings/push")}
+                      >
+                        <Pencil className="size-3.5" />
+                        {t.summaries.telegramChangeLink}
+                      </Button>
+                    </PressableScale>
+                  </div>
                 </div>
               </SpringCard>
             </StaggerItem>
