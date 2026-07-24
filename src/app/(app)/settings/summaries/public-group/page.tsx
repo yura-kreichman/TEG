@@ -102,9 +102,14 @@ export default function PublicGroupSettingsPage() {
                     удобного bottom sheet для подключения"). */}
                 {group.connected ? (
                   <PressableScale className="w-fit">
-                    <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setConnectOpen(true)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label={t.summaries.telegramChangeLink}
+                      onClick={() => setConnectOpen(true)}
+                    >
                       <Pencil className="size-3.5" />
-                      {t.summaries.telegramChangeLink}
                     </Button>
                   </PressableScale>
                 ) : (

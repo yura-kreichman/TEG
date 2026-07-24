@@ -179,15 +179,14 @@ export default function SummariesListPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
-                        className="gap-1.5"
+                        size="icon-sm"
+                        aria-label={t.summaries.telegramChangeLink}
                         onClick={(e) => {
                           e.stopPropagation();
                           router.push("/settings/summaries/telegram");
                         }}
                       >
                         <Pencil className="size-3.5" />
-                        {t.summaries.telegramChangeLink}
                       </Button>
                     </PressableScale>
                   </div>
@@ -233,15 +232,14 @@ export default function SummariesListPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
-                        className="gap-1.5"
+                        size="icon-sm"
+                        aria-label={t.summaries.telegramChangeLink}
                         onClick={(e) => {
                           e.stopPropagation();
                           router.push("/settings/summaries/public-group");
                         }}
                       >
                         <Pencil className="size-3.5" />
-                        {t.summaries.telegramChangeLink}
                       </Button>
                     </PressableScale>
                   </div>
@@ -265,12 +263,11 @@ export default function SummariesListPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
-                        className="gap-1.5"
+                        size="icon-sm"
+                        aria-label={t.summaries.telegramChangeLink}
                         onClick={() => setEmailSheetOpen(true)}
                       >
                         <Pencil className="size-3.5" />
-                        {t.summaries.telegramChangeLink}
                       </Button>
                     </PressableScale>
                   </div>
@@ -297,12 +294,11 @@ export default function SummariesListPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
-                        className="gap-1.5"
+                        size="icon-sm"
+                        aria-label={t.summaries.telegramChangeLink}
                         onClick={() => router.push("/settings/push")}
                       >
                         <Pencil className="size-3.5" />
-                        {t.summaries.telegramChangeLink}
                       </Button>
                     </PressableScale>
                   </div>
