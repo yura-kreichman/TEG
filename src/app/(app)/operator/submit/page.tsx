@@ -22,6 +22,7 @@ import {
   isLaunchesZone,
   isStaysZone,
   isTicketsZone,
+  shownDifference,
   type ZoneAccountingMode,
 } from "@/lib/results-calc";
 import { queueSubmission } from "@/lib/offline-submissions";
@@ -635,20 +636,21 @@ export default function SubmitResultsPage() {
                 <span className="tabular-nums text-muted-foreground">
                   {t.operatorApp.submit.actualCash} <Money value={s.actualCash} />
                 </span>
-                {!isCashOnly && (
-                  <span className="flex items-center gap-1.5 tabular-nums font-semibold">
-                    {t.operatorApp.submit.difference}
-                    {/* Не тревожим значком, если разница целиком объясняется
-                        суммой "Баланс" — отдельный метод оплаты, деньги за
-                        него получены раньше, при пополнении (запрос
-                        пользователя 2026-07-24). */}
-                    {Math.abs(s.difference) > 0.01 && Math.abs(s.difference) - s.abonementAmount > 0.01 && (
-                      <TriangleAlert className="size-3.5 shrink-0 text-warning" />
-                    )}
-                    {s.difference > 0 ? "+" : ""}
-                    <Money value={s.difference} />
-                  </span>
-                )}
+                {!isCashOnly &&
+                  (() => {
+                    // На экране — остаток за вычетом того, что покрывает
+                    // Баланс (запрос пользователя 2026-07-24/25), сама
+                    // Разница не меняется, см. shownDifference.
+                    const shown = shownDifference(s.difference, s.abonementAmount);
+                    return (
+                      <span className="flex items-center gap-1.5 tabular-nums font-semibold">
+                        {t.operatorApp.submit.difference}
+                        {shown !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                        {shown > 0 ? "+" : ""}
+                        <Money value={shown} />
+                      </span>
+                    );
+                  })()}
               </div>
               );
             })}
@@ -1015,6 +1017,7 @@ export default function SubmitResultsPage() {
                     // определение выше) — единая формула для обоих режимов,
                     // не дублируем здесь.
                     const preview = previewFor(activeZone.id);
+                    const shown = preview ? shownDifference(preview.difference, preview.abonementAmount) : 0;
                     return (
                       preview && (
                         <div className="flex flex-col gap-1 text-caption-airbnb tabular-nums">
@@ -1025,14 +1028,11 @@ export default function SubmitResultsPage() {
                           <div className="flex items-center justify-between">
                             <span className="flex items-center gap-1.5">
                               {t.operatorApp.submit.difference}
-                              {Math.abs(preview.difference) > 0.01 &&
-                                Math.abs(preview.difference) - preview.abonementAmount > 0.01 && (
-                                  <TriangleAlert className="size-3.5 shrink-0 text-warning" />
-                                )}
+                              {shown !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
                             </span>
                             <span>
-                              {preview.difference > 0 ? "+" : ""}
-                              <Money value={preview.difference} />
+                              {shown > 0 ? "+" : ""}
+                              <Money value={shown} />
                             </span>
                           </div>
                         </div>
@@ -1174,6 +1174,7 @@ export default function SubmitResultsPage() {
             {selectedZoneIds.map((zoneId) => {
               const zone = zones.find((z) => z.id === zoneId)!;
               const preview = previewFor(zoneId);
+              const shown = preview ? shownDifference(preview.difference, preview.abonementAmount) : 0;
               return (
                 <div
                   key={zoneId}
@@ -1195,12 +1196,9 @@ export default function SubmitResultsPage() {
                       </span>
                       <span className="flex items-center gap-1.5 tabular-nums font-semibold">
                         {t.operatorApp.submit.difference}
-                        {Math.abs(preview.difference) > 0.01 &&
-                          Math.abs(preview.difference) - preview.abonementAmount > 0.01 && (
-                            <TriangleAlert className="size-3.5 shrink-0 text-warning" />
-                          )}
-                        {preview.difference > 0 ? "+" : ""}
-                        <Money value={preview.difference} />
+                        {shown !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                        {shown > 0 ? "+" : ""}
+                        <Money value={shown} />
                       </span>
                     </>
                   )}

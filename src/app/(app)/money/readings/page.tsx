@@ -38,7 +38,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n, useLocale } from "@/components/i18n-provider";
 import type { Dictionary } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, type ZoneAccountingMode } from "@/lib/results-calc";
+import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, shownDifference, type ZoneAccountingMode } from "@/lib/results-calc";
 import { formatMoney } from "@/lib/format";
 import { Money } from "@/components/money";
 import { MoneyInput } from "@/components/money-input";
@@ -783,35 +783,36 @@ export default function ReadingsCalendarPage() {
                         путала (реальная путаница пользователя, найдено
                         2026-07-19: "Фактическая выручка и Выручка после
                         возвратов это одно и то же"). */}
-                    <div className="flex items-center justify-between text-caption-airbnb">
-                      <span className="flex items-center gap-1.5">
-                        {t.operatorApp.submit.difference}
-                        {/* Не тревожим значком, если разница целиком
-                            объясняется суммой "Баланс" рядом (запрос
-                            пользователя 2026-07-24: "не может это быть
-                            проблема, ведь это уже оприходованные деньги
-                            клиента, отдельный метод оплаты") — Наличные/
-                            Безнал при этом не трогаем, они настоящие и
-                            должны сходиться при сверке с кассой/терминалом. */}
-                        {Math.abs(daySummary.difference) > 0.01 &&
-                          Math.abs(daySummary.difference) - daySummary.abonement > 0.01 && (
-                            <TriangleAlert className="size-3.5 shrink-0 text-warning" />
-                          )}
-                      </span>
-                      <span
-                        className={cn(
-                          "font-bold",
-                          daySummary.difference === 0
-                            ? "text-muted-foreground"
-                            : daySummary.difference > 0
-                              ? "text-primary"
-                              : "text-destructive"
-                        )}
-                      >
-                        {daySummary.difference > 0 ? "+" : ""}
-                        <Money value={daySummary.difference} />
-                      </span>
-                    </div>
+                    {(() => {
+                      // Показываем ОСТАТОК за вычетом того, что покрывает
+                      // Баланс (запрос пользователя 2026-07-24/25: "для меня
+                      // важно, чтобы в Итогах дня разница была нулевой", когда
+                      // весь разрыв объясняется балансом) — не саму формулу
+                      // (она защищает от ложной недостачи в будущем, когда
+                      // сотрудник честно исключает баланс из кассы, остаётся
+                      // без изменений), а именно то, что видно на экране.
+                      // Баланс "гасит" разницу только в пределах своей же
+                      // суммы — крупная непокрытая разница (>Баланса) всё
+                      // равно видна целиком, тревога не пропадает.
+                      const shown = shownDifference(daySummary.difference, daySummary.abonement);
+                      return (
+                        <div className="flex items-center justify-between text-caption-airbnb">
+                          <span className="flex items-center gap-1.5">
+                            {t.operatorApp.submit.difference}
+                            {shown !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                          </span>
+                          <span
+                            className={cn(
+                              "font-bold",
+                              shown === 0 ? "text-muted-foreground" : shown > 0 ? "text-primary" : "text-destructive"
+                            )}
+                          >
+                            {shown > 0 ? "+" : ""}
+                            <Money value={shown} />
+                          </span>
+                        </div>
+                      );
+                    })()}
                     {/* Отдельная строка — сколько всего денег физически на
                       точке за день, включая продажи абонементов (запрос
                       пользователя 2026-07-19: "пусть будет видно Фактическая
@@ -1246,31 +1247,29 @@ export default function ReadingsCalendarPage() {
                               <Money value={card.cashAmount + card.mobileAmount + card.abonementAmount} />
                             </span>
                           </div>
-                          <div className="flex items-center justify-between text-caption-airbnb">
-                            <span className="flex items-center gap-1.5">
-                              {t.operatorApp.submit.difference}
-                              {/* Та же поправка, что и в сводке дня выше —
-                                  не тревожим значком, если разница целиком
-                                  объясняется суммой "Баланс" этой зоны. */}
-                              {Math.abs(card.difference) > 0.01 &&
-                                Math.abs(card.difference) - card.abonementAmount > 0.01 && (
-                                  <TriangleAlert className="size-3.5 shrink-0 text-warning" />
-                                )}
-                            </span>
-                            <span
-                              className={cn(
-                                "font-bold",
-                                card.difference === 0
-                                  ? "text-muted-foreground"
-                                  : card.difference > 0
-                                    ? "text-primary"
-                                    : "text-destructive"
-                              )}
-                            >
-                              {card.difference > 0 ? "+" : ""}
-                              <Money value={card.difference} />
-                            </span>
-                          </div>
+                          {(() => {
+                            // Тот же приём, что и в сводке дня выше — на
+                            // экране остаток Разницы за вычетом того, что
+                            // покрывает Баланс этой зоны, не сама формула.
+                            const shown = shownDifference(card.difference, card.abonementAmount);
+                            return (
+                              <div className="flex items-center justify-between text-caption-airbnb">
+                                <span className="flex items-center gap-1.5">
+                                  {t.operatorApp.submit.difference}
+                                  {shown !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                                </span>
+                                <span
+                                  className={cn(
+                                    "font-bold",
+                                    shown === 0 ? "text-muted-foreground" : shown > 0 ? "text-primary" : "text-destructive"
+                                  )}
+                                >
+                                  {shown > 0 ? "+" : ""}
+                                  <Money value={shown} />
+                                </span>
+                              </div>
+                            );
+                          })()}
                           </>
                           )}
                         </div>

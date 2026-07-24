@@ -3,6 +3,7 @@ import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData, Inst
 import { formatDuration, formatLocalTime, formatSummaryDate } from "./format-shared";
 import { colorTagToEmoji } from "@/lib/color-tag";
 import { formatMoney } from "@/lib/format";
+import { shownDifference } from "@/lib/results-calc";
 import type { Locale } from "@/lib/locales";
 import type { Dictionary } from "@/lib/i18n";
 
@@ -132,15 +133,13 @@ function compactAssetLabel(readings: ZoneSummaryData["readings"], index: number)
 // ненулевой разнице вводит в заблуждение (фидбек пользователя 2026-07-12:
 // "это не нормально, чтобы была зелёная галочка"). ⚠️ на любое ненулевое
 // значение, в любую сторону — и недостача, и избыток одинаково "не сошлось".
-// Исключение — когда весь разрыв целиком объясняется суммой "Баланс" рядом
-// (запрос пользователя 2026-07-24: оплата с баланса клиента — отдельный
-// метод оплаты, деньги за неё получены раньше, при пополнении, "не может
-// это быть проблема") — Наличные/Безнал при этом не трогаем нигде, они
-// настоящие и должны сходиться при сверке с кассой/терминалом; тревожный
-// значок просто не показываем, если ⚠️ и так объяснён строкой "Баланс".
-function diffEmoji(difference: number, abonementAmount = 0): string {
-  if (difference === 0) return "✅";
-  return Math.abs(difference) - abonementAmount > 0.01 ? "⚠️" : "✅";
+// difference здесь уже прошла через shownDifference() на вызывающей стороне
+// (запрос пользователя 2026-07-24/25: "для меня важно, чтобы разница была
+// нулевой", когда весь разрыв объясняется "Балансом" рядом) — сама формула
+// разницы не меняется (защита от ложной недостачи 2026-07-18), меняется
+// только то, что показываем.
+function diffEmoji(difference: number): string {
+  return difference === 0 ? "✅" : "⚠️";
 }
 
 // Имя оператора — в первой строке сводки, рядом с зоной (фидбек пользователя
@@ -284,8 +283,9 @@ export function formatZoneSummaryTelegram(
       if (settings.showDiff || showReturnsHere) {
         const bits: string[] = [];
         if (settings.showDiff) {
-          const sign = data.difference > 0 ? "+" : "";
-          bits.push(`${diffEmoji(data.difference, data.abonementAmount)} ${st.differenceCompact}: <b>${sign}${formatMoney(data.difference, locale)}</b>`);
+          const shown = shownDifference(data.difference, data.abonementAmount);
+          const sign = shown > 0 ? "+" : "";
+          bits.push(`${diffEmoji(shown)} ${st.differenceCompact}: <b>${sign}${formatMoney(shown, locale)}</b>`);
         }
         if (settings.showDiff && showReturnsHere) bits.push("·");
         if (showReturnsHere) bits.push(`🔄 ${st.returnsCompact}: <b>${data.returnsCount}</b>`);
@@ -352,8 +352,9 @@ export function formatZoneSummaryTelegram(
       }
       if (settings.showCalc) lines.push(`🔢 ${st.calculated}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
       if (settings.showDiff) {
-        const sign = data.difference > 0 ? "+" : "";
-        lines.push(`${diffEmoji(data.difference, data.abonementAmount)} ${st.difference}: <b>${sign}${formatMoney(data.difference, locale)}</b>`);
+        const shown = shownDifference(data.difference, data.abonementAmount);
+        const sign = shown > 0 ? "+" : "";
+        lines.push(`${diffEmoji(shown)} ${st.difference}: <b>${sign}${formatMoney(shown, locale)}</b>`);
       }
       if (showReturnsFull) lines.push(`↩️ ${st.returns}: <b>${data.returnsCount}</b>`);
     }
