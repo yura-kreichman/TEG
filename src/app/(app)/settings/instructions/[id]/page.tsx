@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Send } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -122,9 +122,7 @@ export default function InstructionEditorPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-1">
-          <Link href="/settings/instructions" className="mb-2 w-fit text-body-airbnb font-semibold text-primary">
-            ← {t.instructions.settingsTitle}
-          </Link>
+          <BackLink label={t.instructions.settingsTitle} href="/settings/instructions" className="mb-2" />
 
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="min-w-0 flex-1">

@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Pencil, Plus, Settings2, Trash2, X } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -193,9 +193,7 @@ export default function ExpensesRegisterPage() {
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-3.5">
           <div className="flex items-center justify-between">
-            <Link href="/money" className="w-fit text-body-airbnb font-semibold text-primary">
-              ← {t.money.title}
-            </Link>
+            <BackLink label={t.money.title} href="/money" />
             <PressableScale>
               <Button variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={openCategories}>
                 <Settings2 className="size-4" />

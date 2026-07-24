@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Banknote, Check, Pencil, Camera, CircuitBoard, ClockPlus, ImagePlus, ListChecks, Ticket, Timer, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp, Smile, Gauge, TriangleAlert, type LucideIcon } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -862,9 +862,7 @@ export default function ZoneDetailPage() {
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-6">
           <div>
-            <Link href={`/points/${zone.pointId}`} className="mb-2 block w-fit text-body-airbnb font-semibold text-primary">
-              ← {t.zonesList.title} · {zone.pointName}
-            </Link>
+            <BackLink crumbs={[t.zonesList.title, zone.pointName]} href={`/points/${zone.pointId}`} className="mb-2" />
             <div className="flex items-start justify-between gap-3">
               {/* Серым целиком — иконка, название, чипы — когда зона
                   деактивирована (запрос пользователя 2026-07-22), тот же

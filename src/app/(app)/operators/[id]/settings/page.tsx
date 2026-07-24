@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  ChevronLeft,
   ChevronRight,
   Camera,
   ImagePlus,
@@ -35,6 +33,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { ALL_LOCALES, LOCALE_FLAGS, LOCALE_NAMES, type Locale } from "@/lib/locales";
+import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StatusChip } from "@/components/status-chip";
@@ -457,15 +456,8 @@ export default function OperatorSettingsPage() {
     <OwnerShell>
     <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
       <div className="flex w-full max-w-md md:max-w-xl lg:max-w-2xl flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/operators/${params.id}`}
-            className="flex size-9 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-muted"
-          >
-            <ChevronLeft className="size-5" />
-          </Link>
-          <h1 className="text-screen-title">{t.operators.settingsTitle}</h1>
-        </div>
+        <BackLink label={t.common.back} href={`/operators/${params.id}`} className="mb-2" />
+        <h1 className="text-screen-title">{t.operators.settingsTitle}</h1>
 
         <SpringCard hover={false} className="relative flex flex-col items-center gap-2 text-center">
           {profile.hasOpenShift && profile.timeTrackingMode === "auto" && (

@@ -346,7 +346,6 @@
     "genericError": "Nie udało się wykonać czyszczenia"
   },
   "summaries": {
-    "backToSettings": "← Ustawienia",
     "listTitle": "Podsumowania i wiadomości",
     "listSubtitle": "Co i dokąd jest wysyłane automatycznie",
     "channelsCardLabel": "Kanały dostawy",

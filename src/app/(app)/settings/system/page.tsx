@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Check, FileText, Globe, ListChecks, ShoppingBag, Wallet, type LucideIcon } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { Switch } from "@/components/ui/switch";
@@ -201,9 +201,7 @@ export default function SystemSettingsPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-md md:max-w-xl lg:max-w-2xl flex-col gap-1">
-          <Link href="/settings" className="mb-2 w-fit text-body-airbnb font-semibold text-primary">
-            ← {t.settings.title}
-          </Link>
+          <BackLink label={t.settings.title} href="/settings" className="mb-2" />
           <h1 className="mb-4 text-screen-title">{t.settings.systemTitle}</h1>
 
           <StaggerList className="flex flex-col gap-3">

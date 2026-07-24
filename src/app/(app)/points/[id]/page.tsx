@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
@@ -138,9 +139,7 @@ export default function PointDetailPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-1">
-          <Link href="/points" className="mb-2 w-fit text-body-airbnb font-semibold text-primary">
-            ← {t.zonesList.allPoints}
-          </Link>
+          <BackLink label={t.zonesList.allPoints} href="/points" className="mb-2" />
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-screen-title">{t.zonesList.title}</h1>
             <PressableScale>

@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { useI18n } from "@/components/i18n-provider";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
@@ -79,9 +79,7 @@ export default function WorkTimeSettingsPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-md md:max-w-xl lg:max-w-2xl flex-col gap-3">
-          <Link href="/settings" className="mb-1 w-fit text-body-airbnb font-semibold text-primary">
-            ← {t.settings.title}
-          </Link>
+          <BackLink label={t.settings.title} href="/settings" className="mb-1" />
           <h1 className="text-screen-title">{t.settings.workTimeTitle}</h1>
           <p className="mb-1 text-caption-airbnb">{t.settings.workTimeHint}</p>
 

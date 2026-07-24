@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -19,6 +18,7 @@ import {
   Trash2,
   TriangleAlert,
 } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
@@ -570,9 +570,10 @@ export default function ReadingsCalendarPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-1">
-          <Link href="/" className="mb-2 w-fit text-body-airbnb font-semibold text-primary">
-            ← {t.readings.backToHome}
-          </Link>
+          {/* Реальный баг, найден пользователем 2026-07-24: вело на Главную
+              вместо Денег — эта страница вложена в /money, как
+              zone-balances/expenses/advances-bonuses, а не в корень. */}
+          <BackLink label={t.money.title} href="/money" className="mb-2" />
           <h1 className="text-screen-title">{t.readings.title}</h1>
 
           {points.length === 0 ? (

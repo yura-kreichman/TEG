@@ -346,7 +346,6 @@
     "genericError": "Temizlik gerçekleştirilemedi"
   },
   "summaries": {
-    "backToSettings": "← Ayarlar",
     "listTitle": "Özetler ve mesajlar",
     "listSubtitle": "Neyin nereye otomatik gönderildiği",
     "channelsCardLabel": "Teslimat kanalları",

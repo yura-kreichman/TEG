@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, QrCode as QrCodeIcon, Trash2 } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -206,9 +206,7 @@ export default function AbonementWalletPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl flex-col gap-4">
-          <Link href="/abonements" className="w-fit text-body-airbnb font-semibold text-primary">
-            ← {t.abonements.walletsTitle}
-          </Link>
+          <BackLink label={t.abonements.walletsTitle} href="/abonements" />
 
           <SpringCard hover={false} className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-3">

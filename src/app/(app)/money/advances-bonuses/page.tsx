@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -109,9 +109,7 @@ export default function AdvancesBonusesRegisterPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-3.5">
-          <Link href="/money" className="w-fit text-body-airbnb font-semibold text-primary">
-            ← {t.money.title}
-          </Link>
+          <BackLink label={t.money.title} href="/money" />
           <h1 className="text-screen-title">{t.money.advancesBonusesRegisterTitle}</h1>
 
           <SpringCard hover={false} className="flex flex-col gap-3">

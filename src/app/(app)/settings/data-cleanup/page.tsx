@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AlertTriangle, Banknote, ClipboardList, RefreshCw, ShoppingBag, Trash2, Wallet } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { useSavePulse } from "@/hooks/use-save-pulse";
@@ -94,9 +94,7 @@ export default function DataCleanupPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-md md:max-w-xl lg:max-w-2xl flex-col gap-1">
-          <Link href="/settings" className="mb-2 w-fit text-body-airbnb font-semibold text-primary">
-            ← {t.settings.title}
-          </Link>
+          <BackLink label={t.settings.title} href="/settings" className="mb-2" />
           <h1 className="text-screen-title">{t.dataCleanup.title}</h1>
           <p className="mb-4 text-caption-airbnb">{t.dataCleanup.hint}</p>
 

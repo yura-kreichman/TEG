@@ -346,7 +346,6 @@
     "genericError": "Impossibile completare la pulizia"
   },
   "summaries": {
-    "backToSettings": "← Impostazioni",
     "listTitle": "Riepiloghi e messaggi",
     "listSubtitle": "Cosa viene inviato automaticamente, e dove",
     "channelsCardLabel": "Canali di invio",

@@ -346,7 +346,6 @@
     "genericError": "Не удалось выполнить очистку"
   },
   "summaries": {
-    "backToSettings": "← Настройки",
     "listTitle": "Сводки и сообщения",
     "listSubtitle": "Что и куда отправляется автоматически",
     "channelsCardLabel": "Каналы доставки",

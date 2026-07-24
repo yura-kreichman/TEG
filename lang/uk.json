@@ -346,7 +346,6 @@
     "genericError": "Не вдалося виконати очищення"
   },
   "summaries": {
-    "backToSettings": "← Налаштування",
     "listTitle": "Зведення та повідомлення",
     "listSubtitle": "Що і куди надсилається автоматично",
     "channelsCardLabel": "Канали доставки",

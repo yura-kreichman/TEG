@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Check, ChevronLeft, ChevronRight, Coins, Gift, HandCoins, MapPin, Pencil, PiggyBank, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { BackLink } from "@/components/back-link";
 import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -460,9 +460,7 @@ export default function ZoneBalancesPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-3.5">
-          <Link href="/money" className="w-fit text-body-airbnb font-semibold text-primary">
-            ← {t.money.title}
-          </Link>
+          <BackLink label={t.money.title} href="/money" />
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-screen-title">{t.money.zoneBalancesLink}</h1>
             <PressableScale>

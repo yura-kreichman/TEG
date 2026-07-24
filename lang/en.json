@@ -346,7 +346,6 @@
     "genericError": "Couldn't complete the cleanup"
   },
   "summaries": {
-    "backToSettings": "← Settings",
     "listTitle": "Summaries and messages",
     "listSubtitle": "What's sent automatically, and where",
     "channelsCardLabel": "Delivery channels",

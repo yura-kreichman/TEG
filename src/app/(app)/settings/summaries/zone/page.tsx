@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { BackLink } from "@/components/back-link";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { Switch } from "@/components/ui/switch";
@@ -265,9 +265,7 @@ export default function ZoneSummaryEditorPage() {
     <OwnerShell>
       <div className="flex flex-1 flex-col items-center bg-surface-0 px-4 py-10">
         <div className="flex w-full max-w-md md:max-w-xl lg:max-w-2xl flex-col gap-1">
-          <Link href="/settings/summaries" className="mb-2 w-fit text-body-airbnb font-semibold text-primary">
-            ← {t.summaries.listTitle}
-          </Link>
+          <BackLink label={t.summaries.listTitle} href="/settings/summaries" className="mb-2" />
           <h1 className="text-screen-title">{t.summaries.zoneEditorTitle}</h1>
           <p className="mb-4 text-caption-airbnb">{t.summaries.zoneEditorSub}</p>
 
