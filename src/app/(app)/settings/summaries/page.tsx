@@ -142,7 +142,22 @@ export default function SummariesListPage() {
                       <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#2AABEE] text-white">
                         <Send className="size-4" />
                       </div>
-                      <div className="min-w-0 text-body-airbnb font-medium">{t.summaries.telegramStaffLabel}</div>
+                      {/* "Telegram" — всегда отдельной первой строкой
+                          (запрос пользователя 2026-07-25) — бренд не
+                          переводится ни на один язык, безопасно резать по
+                          первому пробелу. */}
+                      <div className="min-w-0 text-body-airbnb font-medium">
+                        {(() => {
+                          const [brand, ...rest] = t.summaries.telegramStaffLabel.split(" ");
+                          return (
+                            <>
+                              {brand}
+                              <br />
+                              {rest.join(" ")}
+                            </>
+                          );
+                        })()}
+                      </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       {/* Тумблер независим от факта привязки чата (запрос
@@ -156,8 +171,8 @@ export default function SummariesListPage() {
                       <ChevronRight className="size-4 text-muted-foreground/50" />
                     </div>
                   </div>
-                  <div className="flex items-center justify-between gap-2 pl-11.5">
-                    <span className="truncate text-caption-airbnb text-muted-foreground">
+                  <div className="flex items-center gap-2 pl-11.5">
+                    <span className="min-w-0 flex-1 truncate text-caption-airbnb text-muted-foreground">
                       {telegram.connected ? `«${telegram.chatTitle}»` : t.summaries.telegramNotConnected}
                     </span>
                     <PressableScale className="shrink-0">
@@ -190,7 +205,18 @@ export default function SummariesListPage() {
                       <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#2AABEE] text-white">
                         <Send className="size-4" />
                       </div>
-                      <div className="min-w-0 text-body-airbnb font-medium">{t.summaries.telegramClientsLabel}</div>
+                      <div className="min-w-0 text-body-airbnb font-medium">
+                        {(() => {
+                          const [brand, ...rest] = t.summaries.telegramClientsLabel.split(" ");
+                          return (
+                            <>
+                              {brand}
+                              <br />
+                              {rest.join(" ")}
+                            </>
+                          );
+                        })()}
+                      </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <span onClick={(e) => e.stopPropagation()}>
@@ -199,8 +225,8 @@ export default function SummariesListPage() {
                       <ChevronRight className="size-4 text-muted-foreground/50" />
                     </div>
                   </div>
-                  <div className="flex items-center justify-between gap-2 pl-11.5">
-                    <span className="truncate text-caption-airbnb text-muted-foreground">
+                  <div className="flex items-center gap-2 pl-11.5">
+                    <span className="min-w-0 flex-1 truncate text-caption-airbnb text-muted-foreground">
                       {publicGroup.connected ? `«${publicGroup.chatTitle}»` : t.summaries.telegramNotConnected}
                     </span>
                     <PressableScale className="shrink-0">
@@ -231,8 +257,8 @@ export default function SummariesListPage() {
                     </div>
                     <Switch checked={email.enabled} onCheckedChange={toggleEmail} className="shrink-0" />
                   </div>
-                  <div className="flex items-center justify-between gap-2 pl-11.5">
-                    <span className="truncate text-caption-airbnb text-muted-foreground">
+                  <div className="flex items-center gap-2 pl-11.5">
+                    <span className="min-w-0 flex-1 truncate text-caption-airbnb text-muted-foreground">
                       {email.emailAddresses ? email.emailAddresses.split(",")[0]?.trim() : t.summaries.emailNotConnected}
                     </span>
                     <PressableScale className="shrink-0">
@@ -263,8 +289,8 @@ export default function SummariesListPage() {
                     </div>
                     <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" />
                   </div>
-                  <div className="flex items-center justify-between gap-2 pl-11.5">
-                    <span className="truncate text-caption-airbnb text-muted-foreground">
+                  <div className="flex items-center gap-2 pl-11.5">
+                    <span className="min-w-0 flex-1 truncate text-caption-airbnb text-muted-foreground">
                       {pushSubscribed ? t.summaries.pushOnThisDevice : t.summaries.pushNotConnected}
                     </span>
                     <PressableScale className="shrink-0">
