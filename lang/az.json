@@ -662,7 +662,7 @@
     "newZoneTitle": "Yeni zona",
     "newZoneSub": "Nöqtə daxilində attraksionlar qrupu",
     "accountingModeLabel": "Uçot rejimi",
-    "accountingModeCounters": "Sayğaclar üzrə",
+    "accountingModeCounters": "Sayğaclar",
     "accountingModeCountersHint": "Aktivlərin toplanan göstəriciləri",
     "accountingModeLaunches": "Buraxılışlar",
     "accountingModeLaunchesHint": "Hesabat üçün hazır gediş sayı",
@@ -673,7 +673,7 @@
     "accountingModeTickets": "Biletlər",
     "accountingModeTicketsHint": "Sifarişlə bilet satışı, ödəniş istəyə bağlıdır",
     "modeChip": {
-      "counters": "Sayğaclar üzrə",
+      "counters": "Sayğaclar",
       "launches": "Buraxılışlar",
       "cash_only": "Yalnız kassa",
       "stays": "Qalmalar",
@@ -1082,6 +1082,7 @@
       "invalidNumberWarning": "0–9999 aralığında ədəd daxil edin",
       "returnsLabel": "Qaytarma/test gedişləri",
       "returnsLabelShort": "Qaytarma/test",
+      "returnsCardLabel": "Qaytarma/test",
       "cashLabel": "Nağd",
       "mobileLabel": "Nağdsız",
       "calculatedRevenue": "Hesablanmış gəlir:",
@@ -1144,6 +1145,12 @@
       "receiptTitle": "Başlatma qəbzi",
       "receiptDoneTitle": "Başlatma qeydə alındı"
     },
+    "counters": {
+      "pickZoneTitle": "Zonanı seçin",
+      "todayCountLabel": "Bu gün:",
+      "logTitle": "Tarixçə",
+      "emptyLog": "Hələ qeyd yoxdur"
+    },
     "abonement": {
       "paymentLabel": "Balans",
       "searchTitle": "Müştəri",
@@ -1162,7 +1169,8 @@
       "noAbonementsError": "Sahibkar hələ abonement yaratmayıb",
       "spendTitle": "Balansdan çıxarış",
       "debitedLabel": "Çıxarıldı",
-      "noSpendZonesError": "Balansla ödəniş üçün əlçatan zona yoxdur"
+      "noSpendZonesError": "Balansla ödəniş üçün əlçatan zona yoxdur",
+      "spendOnlyNotFound": "Müştəri tapılmadı. Onu «Müştərilər» bölməsində əlavə edin."
     },
     "collectionAdvanceToastPrefix": "Avans kimi ayrıldı",
     "collectionAdvanceToastSuffix": "— nəticələr təqdim edildikdən sonra zona qalığında görünəcək",

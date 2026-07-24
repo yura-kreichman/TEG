@@ -161,6 +161,14 @@ export interface AbonementTopupFlowProps {
   // внутри этого общего компонента.
   printAvailable?: boolean;
   printBranding?: ReceiptBranding;
+  // Пункт нижнего бара "Счётчики" (запрос пользователя 2026-07-24) —
+  // Сотрудник ищет клиента и сразу попадает на списание, без промежуточной
+  // карточки клиента (пополнение/печать/смена имени — там не нужны, это
+  // задачи экрана "Клиенты") и БЕЗ создания нового клиента ("в этом пункте
+  // меню нового добавить нельзя" — решение того же дня; не нашли — просто
+  // сообщение, завести клиента можно только в "Клиентах"). Требует
+  // allowZoneSpend+spendZones+zoneSpendEndpointFor, как обычно.
+  spendOnlyMode?: boolean;
 }
 
 export interface SpendTariffCtx {
@@ -204,6 +212,7 @@ export function AbonementTopupFlow({
   zoneSpendEndpointFor,
   printAvailable,
   printBranding,
+  spendOnlyMode,
 }: AbonementTopupFlowProps) {
   const t = useI18n();
   const locale = useLocale();
@@ -511,6 +520,19 @@ export function AbonementTopupFlow({
     setSpendError(null);
   }
 
+  // spendOnlyMode: сразу после успешного поиска — на списание, без
+  // промежуточной карточки клиента (запрос пользователя 2026-07-24). Не
+  // трогает found===null (не нашли) — та ветка ниже не создаёт клиента в
+  // этом режиме вовсе, и found===undefined (ещё не искали).
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (spendOnlyMode && found && !zoneSpendOpen && !justDebited && !justCredited) {
+      openZoneSpend();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spendOnlyMode, found]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   function spendQuantityFor(tariffId: string): number {
     return spendQuantities[tariffId] ?? 0;
   }
@@ -777,7 +799,14 @@ export function AbonementTopupFlow({
               className="h-12 w-full font-bold"
               onClick={() => {
                 setJustDebited(null);
-                refreshHistoryIfPrintable();
+                if (spendOnlyMode) {
+                  // Следующий клиент — заново с поиска (запрос пользователя
+                  // 2026-07-24), а не карточка только что списанного.
+                  setFound(undefined);
+                  setPhone("");
+                } else {
+                  refreshHistoryIfPrintable();
+                }
               }}
             >
               {t.abonements.doneButton}
@@ -786,20 +815,31 @@ export function AbonementTopupFlow({
         </div>
       ) : zoneSpendOpen ? (
         <>
-          <BackLink
-            label={t.common.back}
-            onClick={() => {
-              // Пошагово назад: зона → закрыть весь экран списания (та же
-              // логика возврата, что у категорий ревизии остатков в /goods,
-              // запрос пользователя 2026-07-19). Отдельного шага "тариф" с
-              // 2026-07-24 больше нет — количество тарифов правится прямо на
-              // экране выбранной зоны (степпер, механика Билетов), не
-              // отдельным экраном-подтверждением, поэтому каскад из
-              // предыдущей версии (тариф→актив→зона) тут больше не нужен.
-              if (spendZones && spendZones.length > 1 && spendZone) setSpendZone(null);
-              else setZoneSpendOpen(false);
-            }}
-          />
+          {/* spendOnlyMode: единая хлебная крошка снаружи (родительская
+              страница "Счётчики") уже даёт "назад" — свой BackLink тут
+              дублировал бы её 1-в-1 везде, кроме реального шага "сменить
+              зону" при нескольких зонах (запрос пользователя 2026-07-24:
+              "должно быть едиными хлебными крошками"). */}
+          {(!spendOnlyMode || (spendZones && spendZones.length > 1 && spendZone)) && (
+            <BackLink
+              label={t.common.back}
+              onClick={() => {
+                // Пошагово назад: зона → закрыть весь экран списания (та же
+                // логика возврата, что у категорий ревизии остатков в /goods,
+                // запрос пользователя 2026-07-19). Отдельного шага "тариф" с
+                // 2026-07-24 больше нет — количество тарифов правится прямо на
+                // экране выбранной зоны (степпер, механика Билетов), не
+                // отдельным экраном-подтверждением, поэтому каскад из
+                // предыдущей версии (тариф→актив→зона) тут больше не нужен.
+                if (spendZones && spendZones.length > 1 && spendZone) setSpendZone(null);
+                else if (spendOnlyMode) {
+                  setZoneSpendOpen(false);
+                  setFound(undefined);
+                  setPhone("");
+                } else setZoneSpendOpen(false);
+              }}
+            />
+          )}
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.abonement.spendTitle}</h2>
 
           {!spendZones ? null : spendZones.length === 0 ? (
@@ -1093,10 +1133,26 @@ export function AbonementTopupFlow({
                   пользователя 2026-07-18: "сиконка поиска, как на методах
                   оплаты") */}
               <Search className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-              {searching ? t.operatorApp.abonement.searching : t.operatorApp.abonement.searchButton}
+              {searching
+                ? t.operatorApp.abonement.searching
+                : spendOnlyMode
+                  ? t.operatorApp.abonement.searchOnlyButton
+                  : t.operatorApp.abonement.searchButton}
             </Button>
           </PressableScale>
         </>
+      ) : spendOnlyMode && isNew ? (
+        // Не нашли — в этом режиме клиента не заводят (запрос пользователя
+        // 2026-07-24: "в этом пункте меню нового добавить нельзя"), только
+        // сообщение с возвратом к поиску.
+        <div className="flex flex-col items-center gap-3 py-6 text-center">
+          <p className="text-body-airbnb text-muted-foreground">{t.operatorApp.abonement.spendOnlyNotFound}</p>
+          <PressableScale>
+            <Button type="button" variant="outline" onClick={() => setFound(undefined)}>
+              {t.common.back}
+            </Button>
+          </PressableScale>
+        </div>
       ) : (
         <>
           {!initialWallet && (

@@ -662,7 +662,7 @@
     "newZoneTitle": "Жаңы аймак",
     "newZoneSub": "Чекиттин ичиндеги активдер тобу",
     "accountingModeLabel": "Эсепке алуу режими",
-    "accountingModeCounters": "Эсептегичтер боюнча",
+    "accountingModeCounters": "Эсептегичтер",
     "accountingModeCountersHint": "Активдердин топтолмо көрсөткүчтөрү",
     "accountingModeLaunches": "Иштетүүлөр",
     "accountingModeLaunchesHint": "Тапшыруу үчүн даяр айдоолор саны",
@@ -673,7 +673,7 @@
     "accountingModeTickets": "Билеттер",
     "accountingModeTicketsHint": "Билеттерди заказ менен сатуу, өтөө милдеттүү эмес",
     "modeChip": {
-      "counters": "Эсептегичтер боюнча",
+      "counters": "Эсептегичтер",
       "launches": "Иштетүүлөр",
       "cash_only": "Тек касса",
       "stays": "Болуулар",
@@ -1082,6 +1082,7 @@
       "invalidNumberWarning": "0–9999 аралыгында сан киргизиңиз",
       "returnsLabel": "Кайтаруулар/сыноо иштетүүлөр",
       "returnsLabelShort": "Кайт./сыноо",
+      "returnsCardLabel": "Кайтаруулар/сыноо",
       "cashLabel": "Накталай",
       "mobileLabel": "Накталай эмес",
       "calculatedRevenue": "Эсептелген түшүм:",
@@ -1144,6 +1145,12 @@
       "receiptTitle": "Иштетүү квитанциясы",
       "receiptDoneTitle": "Иштетүү эсепке алынды"
     },
+    "counters": {
+      "pickZoneTitle": "Аймакты тандаңыз",
+      "todayCountLabel": "Бүгүн:",
+      "logTitle": "Тарых",
+      "emptyLog": "Азырынча жазуулар жок"
+    },
     "abonement": {
       "paymentLabel": "Баланс",
       "searchTitle": "Клиент",
@@ -1162,7 +1169,8 @@
       "noAbonementsError": "Ээси азырынча абонемент түзгөн жок",
       "spendTitle": "Балансынан эсептен алуу",
       "debitedLabel": "Эсептен алынды",
-      "noSpendZonesError": "Баланс менен төлөө үчүн зона жок"
+      "noSpendZonesError": "Баланс менен төлөө үчүн зона жок",
+      "spendOnlyNotFound": "Кардар табылган жок. Аны «Клиенттер» бөлүмүнөн кошуңуз."
     },
     "collectionAdvanceToastPrefix": "Аванс катары калтырылды",
     "collectionAdvanceToastSuffix": "— жыйынтыктар тапшырылгандан кийин зона калдыгында пайда болот",

@@ -662,7 +662,7 @@
     "newZoneTitle": "Նոր գոտի",
     "newZoneSub": "Ատրակցիոնների խումբ կետի ներսում",
     "accountingModeLabel": "Հաշվառման ռեժիմ",
-    "accountingModeCounters": "Ըստ հաշվիչների",
+    "accountingModeCounters": "Հաշվիչներ",
     "accountingModeCountersHint": "Ակտիվների կուտակային ցուցմունքներ",
     "accountingModeLaunches": "Երթեր",
     "accountingModeLaunchesHint": "Հանձնման ընթացքում երթերի պատրաստի քանակ",
@@ -673,7 +673,7 @@
     "accountingModeTickets": "Տոմսեր",
     "accountingModeTicketsHint": "Տոմսերի վաճառք պատվերներով, մարումը ընտրովի է",
     "modeChip": {
-      "counters": "Ըստ հաշվիչների",
+      "counters": "Հաշվիչներ",
       "launches": "Երթեր",
       "cash_only": "Միայն դրամարկղ",
       "stays": "Կեցություններ",
@@ -1082,6 +1082,7 @@
       "invalidNumberWarning": "Մուտքագրեք 0–9999 թիվ",
       "returnsLabel": "Վերադարձեր/փորձնական երթեր",
       "returnsLabelShort": "Վերադ./փորձ.",
+      "returnsCardLabel": "Վերադարձեր/փորձ",
       "cashLabel": "Կանխիկ",
       "mobileLabel": "Անկանխիկ",
       "calculatedRevenue": "Հաշվարկային եկամուտ.",
@@ -1144,6 +1145,12 @@
       "receiptTitle": "Մեկնարկի կտրոն",
       "receiptDoneTitle": "Մեկնարկը հաշվառվեց"
     },
+    "counters": {
+      "pickZoneTitle": "Ընտրեք գոտին",
+      "todayCountLabel": "Այսօր՝",
+      "logTitle": "Պատմություն",
+      "emptyLog": "Դեռ գրառումներ չկան"
+    },
     "abonement": {
       "paymentLabel": "Բալանս",
       "searchTitle": "Հաճախորդ",
@@ -1162,7 +1169,8 @@
       "noAbonementsError": "Սեփականատերը դեռ չի ստեղծել բաժանորդագրություն",
       "spendTitle": "Հանել հաշվեկշռից",
       "debitedLabel": "Հանված է",
-      "noSpendZonesError": "Հաշվեկշռով վճարման համար հասանելի գոտի չկա"
+      "noSpendZonesError": "Հաշվեկշռով վճարման համար հասանելի գոտի չկա",
+      "spendOnlyNotFound": "Հաճախորդը չի գտնվել։ Ավելացրեք նրան «Հաճախորդներ» բաժնում։"
     },
     "collectionAdvanceToastPrefix": "Հետաձգվել է որպես կանխավճար",
     "collectionAdvanceToastSuffix": "— կհայտնվի գոտու մնացորդում արդյունքների հանձնումից հետո",

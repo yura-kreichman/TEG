@@ -60,7 +60,12 @@ export async function hasTelegramLink(tenantId: string, phone: string): Promise<
 // подписанная дельта (+ пополнение/возврат, − списание), только для текста
 // сообщения, на итоговый баланс не влияет. Молча ничего не делает, если у
 // клиента нет привязанного Telegram-чата — это норма, не ошибка.
-export async function notifyWalletBalanceChange(tenantId: string, walletId: string, amount: number): Promise<void> {
+export async function notifyWalletBalanceChange(
+  tenantId: string,
+  walletId: string,
+  amount: number,
+  detail?: string | null
+): Promise<void> {
   const wallet = await prisma.abonementWallet.findUnique({ where: { id: walletId }, select: { name: true, phone: true, balance: true } });
   if (!wallet) return;
 
@@ -80,6 +85,7 @@ export async function notifyWalletBalanceChange(tenantId: string, walletId: stri
     const s = BOT_STRINGS[link.language as Locale] ?? BOT_STRINGS.en;
     const text = [
       greetingLine(wallet.name, s),
+      ...(detail ? [detail] : []),
       `${sign}${formatMoneyWithCurrency(Math.abs(amount), "ru", currency)}`,
       `${s.balanceWord}: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`,
     ].join("\n");
@@ -480,6 +486,7 @@ export async function spendWalletForZone(walletId: string, params: ZoneSpendPara
 
   return prisma.$transaction(async (tx) => {
     let zoneId: string;
+    let zoneName: string;
     let totalAmount = 0;
     const txLines: { tariffId: string | null; amount: number; quantity: number | null }[] = [];
 
@@ -487,10 +494,11 @@ export async function spendWalletForZone(walletId: string, params: ZoneSpendPara
       if (target.lines.length === 0) throw new Error("EMPTY_CART");
       const zone = await tx.zone.findFirst({
         where: { id: target.zoneId, pointId, point: { tenantId }, accountingMode: "counters" },
-        select: { id: true },
+        select: { id: true, name: true },
       });
       if (!zone) throw new Error("ZONE_NOT_FOUND");
       zoneId = zone.id;
+      zoneName = zone.name;
       for (const line of target.lines) {
         if (!Number.isInteger(line.quantity) || line.quantity <= 0) continue;
         const tariff = await tx.tariff.findFirst({ where: { id: line.tariffId, zoneId: zone.id, deletedAt: null } });
@@ -503,10 +511,11 @@ export async function spendWalletForZone(walletId: string, params: ZoneSpendPara
     } else {
       const zone = await tx.zone.findFirst({
         where: { id: target.zoneId, pointId, point: { tenantId }, accountingMode: "cash_only" },
-        select: { id: true },
+        select: { id: true, name: true },
       });
       if (!zone) throw new Error("ZONE_NOT_FOUND");
       zoneId = zone.id;
+      zoneName = zone.name;
       totalAmount = target.amount;
       txLines.push({ tariffId: null, amount: target.amount, quantity: null });
     }
@@ -531,9 +540,15 @@ export async function spendWalletForZone(walletId: string, params: ZoneSpendPara
       data: { tenantId, zoneId, type: "revenue_abonement", amount: totalAmount, performedByOperatorId: operatorId },
     });
 
-    return { wallet: await tx.abonementWallet.findUniqueOrThrow({ where: { id: walletId } }), totalAmount };
-  }).then(async ({ wallet, totalAmount }) => {
-    await notifyWalletBalanceChange(tenantId, walletId, -totalAmount).catch(() => {});
+    return { wallet: await tx.abonementWallet.findUniqueOrThrow({ where: { id: walletId } }), totalAmount, zoneName, txLines };
+  }).then(async ({ wallet, totalAmount, zoneName, txLines }) => {
+    // Количество показываем в пуше только когда строка одна (запрос
+    // пользователя 2026-07-24, тот же формат, что historyLabel() в
+    // abonement-topup-flow.tsx) — при нескольких тарифах в одной корзине
+    // единое "× N" было бы неоднозначным (к какому тарифу относится).
+    const single = txLines.length === 1 ? txLines[0] : null;
+    const detail = single?.quantity ? `${zoneName} × ${single.quantity}` : zoneName;
+    await notifyWalletBalanceChange(tenantId, walletId, -totalAmount, detail).catch(() => {});
     return wallet;
   });
 }

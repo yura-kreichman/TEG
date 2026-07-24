@@ -662,7 +662,7 @@
     "newZoneTitle": "Zonă nouă",
     "newZoneSub": "Un grup de atracții în cadrul unui punct",
     "accountingModeLabel": "Mod de evidență",
-    "accountingModeCounters": "După contoare",
+    "accountingModeCounters": "Contoare",
     "accountingModeCountersHint": "Citiri cumulative ale activelor",
     "accountingModeLaunches": "Curse",
     "accountingModeLaunchesHint": "Un număr gata de curse per predare",
@@ -673,7 +673,7 @@
     "accountingModeTickets": "Bilete",
     "accountingModeTicketsHint": "Vânzare de bilete pe comenzi, validarea este opțională",
     "modeChip": {
-      "counters": "După contoare",
+      "counters": "Contoare",
       "launches": "Curse",
       "cash_only": "Doar numerar",
       "stays": "Șederi",
@@ -1082,6 +1082,7 @@
       "invalidNumberWarning": "Introduceți un număr 0–9999",
       "returnsLabel": "Retururi/porniri de test",
       "returnsLabelShort": "Retur/test",
+      "returnsCardLabel": "Retururi/test",
       "cashLabel": "Numerar",
       "mobileLabel": "Fără numerar",
       "calculatedRevenue": "Venit calculat:",
@@ -1144,6 +1145,12 @@
       "receiptTitle": "Chitanță pornire",
       "receiptDoneTitle": "Pornire înregistrată"
     },
+    "counters": {
+      "pickZoneTitle": "Selectați zona",
+      "todayCountLabel": "Astăzi:",
+      "logTitle": "Istoric",
+      "emptyLog": "Încă nicio înregistrare"
+    },
     "abonement": {
       "paymentLabel": "Sold",
       "searchTitle": "Client",
@@ -1162,7 +1169,8 @@
       "noAbonementsError": "Proprietarul nu a creat încă niciun abonament",
       "spendTitle": "Taxează din sold",
       "debitedLabel": "Taxat",
-      "noSpendZonesError": "Nu există zone disponibile pentru plata din sold"
+      "noSpendZonesError": "Nu există zone disponibile pentru plata din sold",
+      "spendOnlyNotFound": "Clientul nu a fost găsit. Adăugați-l în secțiunea «Clienți»."
     },
     "collectionAdvanceToastPrefix": "Pus deoparte ca avans",
     "collectionAdvanceToastSuffix": "— va apărea în soldul zonei după trimiterea rezultatelor",

@@ -662,7 +662,7 @@
     "newZoneTitle": "New zone",
     "newZoneSub": "A group of attractions within a point",
     "accountingModeLabel": "Accounting mode",
-    "accountingModeCounters": "By counters",
+    "accountingModeCounters": "Counters",
     "accountingModeCountersHint": "Cumulative asset readings",
     "accountingModeLaunches": "Launches",
     "accountingModeLaunchesHint": "A ready ride count per submission",
@@ -673,7 +673,7 @@
     "accountingModeTickets": "Tickets",
     "accountingModeTicketsHint": "Ticket sales by order, redemption optional",
     "modeChip": {
-      "counters": "By counters",
+      "counters": "Counters",
       "launches": "Launches",
       "cash_only": "Cash only",
       "stays": "Stays",
@@ -1082,6 +1082,7 @@
       "invalidNumberWarning": "Enter a number 0–9999",
       "returnsLabel": "Returns/test runs",
       "returnsLabelShort": "Returns/test",
+      "returnsCardLabel": "Returns/test",
       "cashLabel": "Cash",
       "mobileLabel": "Cashless",
       "calculatedRevenue": "Calculated revenue:",
@@ -1144,6 +1145,12 @@
       "receiptTitle": "Launch receipt",
       "receiptDoneTitle": "Launch recorded"
     },
+    "counters": {
+      "pickZoneTitle": "Select zone",
+      "todayCountLabel": "Today:",
+      "logTitle": "History",
+      "emptyLog": "No entries yet"
+    },
     "abonement": {
       "paymentLabel": "Balance",
       "searchTitle": "Customer",
@@ -1162,7 +1169,8 @@
       "noAbonementsError": "The owner has not created any subscriptions yet",
       "spendTitle": "Charge from balance",
       "debitedLabel": "Charged",
-      "noSpendZonesError": "No zones available for balance payment"
+      "noSpendZonesError": "No zones available for balance payment",
+      "spendOnlyNotFound": "Client not found. Add them in the Customers section."
     },
     "collectionAdvanceToastPrefix": "Set aside as an advance",
     "collectionAdvanceToastSuffix": "— will appear in the zone balance once results are submitted",

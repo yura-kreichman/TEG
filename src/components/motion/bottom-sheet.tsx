@@ -71,7 +71,7 @@ export function BottomSheet({ open, onClose, children, className }: BottomSheetP
                 size="icon"
                 onClick={onClose}
                 aria-label={t.common.close}
-                className="absolute top-3 right-3 z-10 size-10 shrink-0 rounded-full border-border"
+                className="absolute top-3 right-3 z-10 size-10 shrink-0 rounded-lg border-border"
               >
                 <X className="size-5" />
               </Button>

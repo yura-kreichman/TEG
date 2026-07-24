@@ -662,7 +662,7 @@
     "newZoneTitle": "Nuova zona",
     "newZoneSub": "Un gruppo di attrazioni all'interno di un punto",
     "accountingModeLabel": "Modalità di conteggio",
-    "accountingModeCounters": "A contatori",
+    "accountingModeCounters": "Contatori",
     "accountingModeCountersHint": "Letture cumulative dei beni",
     "accountingModeLaunches": "Avvii",
     "accountingModeLaunchesHint": "Un numero di corse pronte per chiusura",
@@ -673,7 +673,7 @@
     "accountingModeTickets": "Biglietti",
     "accountingModeTicketsHint": "Vendita di biglietti tramite ordini, riscatto opzionale",
     "modeChip": {
-      "counters": "A contatori",
+      "counters": "Contatori",
       "launches": "Avvii",
       "cash_only": "Solo contanti",
       "stays": "Soggiorni",
@@ -1082,6 +1082,7 @@
       "invalidNumberWarning": "Inserisci un numero da 0 a 9999",
       "returnsLabel": "Resi/corse di prova",
       "returnsLabelShort": "Resi/test",
+      "returnsCardLabel": "Resi/test",
       "cashLabel": "Contanti",
       "mobileLabel": "Non in contanti",
       "calculatedRevenue": "Incasso calcolato:",
@@ -1144,6 +1145,12 @@
       "receiptTitle": "Ricevuta avvio",
       "receiptDoneTitle": "Avvio registrato"
     },
+    "counters": {
+      "pickZoneTitle": "Seleziona zona",
+      "todayCountLabel": "Oggi:",
+      "logTitle": "Cronologia",
+      "emptyLog": "Ancora nessuna voce"
+    },
     "abonement": {
       "paymentLabel": "Saldo",
       "searchTitle": "Cliente",
@@ -1162,7 +1169,8 @@
       "noAbonementsError": "Il proprietario non ha ancora creato abbonamenti",
       "spendTitle": "Addebita dal saldo",
       "debitedLabel": "Addebitato",
-      "noSpendZonesError": "Nessuna zona disponibile per il pagamento dal saldo"
+      "noSpendZonesError": "Nessuna zona disponibile per il pagamento dal saldo",
+      "spendOnlyNotFound": "Cliente non trovato. Aggiungilo nella sezione «Clienti»."
     },
     "collectionAdvanceToastPrefix": "Accantonato come anticipo",
     "collectionAdvanceToastSuffix": "— comparirà nel saldo della zona dopo l’invio dei risultati",

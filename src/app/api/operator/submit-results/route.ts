@@ -121,15 +121,15 @@ export async function POST(request: Request) {
   // требует то же самое: reading — целое 0–9999 (4-разрядный счётчик,
   // отрицательное/пятизначное значение проходило через модульную формулу
   // calcSessions с переполнением-wraparound и давало произвольно большое
-  // число сеансов), returnsCount/cashAmount/mobileAmount — конечные
-  // неотрицательные числа (отрицательный returnsCount у calcZoneRevenue
-  // делал бы расчётную чистую выручку БОЛЬШЕ валовой). Клиентский визард и
-  // так ограничивает ввод, но это только UI — прямой вызов API (в т.ч.
-  // испорченный офлайн-payload) их не видел.
+  // число сеансов), cashAmount/mobileAmount — конечные неотрицательные
+  // числа. Клиентский визард и так ограничивает ввод, но это только UI —
+  // прямой вызов API (в т.ч. испорченный офлайн-payload) их не видел.
+  // returnsCount клиент тоже присылает, но с 2026-07-24 больше не участвует
+  // в расчёте вообще (см. returnsCountByZone ниже) — источник истины
+  // теперь только журнал ZoneReturnEvent, значение из payload здесь даже не
+  // читается.
   for (const zs of zoneSubmissions) {
     if (
-      !Number.isFinite(zs.returnsCount) ||
-      zs.returnsCount < 0 ||
       !Number.isFinite(zs.cashAmount) ||
       zs.cashAmount < 0 ||
       !Number.isFinite(zs.mobileAmount) ||
@@ -295,6 +295,25 @@ export async function POST(request: Request) {
     ticketsAggregateByZone.set(zone.id, await aggregateTicketOrders(zone.id, boundary, now));
   }
 
+  // Возвраты/тестовые пуски (docs/spec/01-counters.md, п.3) — запрос
+  // пользователя 2026-07-24: раньше это было доверенное клиентское число
+  // (returnsCount в payload), теперь единственный источник — журнал
+  // ZoneReturnEvent (пункт нижнего бара "Счётчики"), та же граница "с
+  // момента предыдущей сдачи", что у остальных агрегатов выше. Только
+  // "counters" — у остальных режимов этого поля нет вовсе (см. комментарий
+  // у ZoneSubmission.returnsCount ниже), Map просто не заполняется для них,
+  // ?? 0 при чтении покрывает и это, и отсутствие записей.
+  const returnsCountByZone = new Map<string, number>();
+  for (const zs of zoneSubmissions) {
+    const zone = zoneById.get(zs.zoneId)!;
+    if (zone.accountingMode !== "counters") continue;
+    const boundary = await previousSubmissionBoundary(zone.id);
+    const count = await prisma.zoneReturnEvent.count({
+      where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now } },
+    });
+    returnsCountByZone.set(zone.id, count);
+  }
+
   const summary = zoneSubmissions.map((zs) => {
     const zone = zoneById.get(zs.zoneId)!;
 
@@ -384,7 +403,7 @@ export async function POST(request: Request) {
     // не сошлось", и оно должно оставаться 0, когда тесты объясняют весь
     // разрыв, даже если "Счёт." теперь визуально не равен кассе.
     const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
-    const netRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
+    const netRevenue = calcZoneRevenue(tariffCalc, returnsCountByZone.get(zone.id) ?? 0);
     const actualCash = zs.cashAmount + zs.mobileAmount;
     // Оплата балансом (docs/spec/01-counters.md, запрос пользователя
     // 2026-07-20) — та же поправка, что у Пусков/Прибываний: касса уже
@@ -428,7 +447,7 @@ export async function POST(request: Request) {
       difference,
       readingsText,
       readingLines,
-      returnsCount: zs.returnsCount,
+      returnsCount: returnsCountByZone.get(zone.id) ?? 0,
       cashAmount: zs.cashAmount,
       mobileAmount: zs.mobileAmount,
       abonementAmount: counterAbonementAmount,
@@ -457,9 +476,9 @@ export async function POST(request: Request) {
           zoneId: zs.zoneId,
           // У "Прибываний"/"Пусков"/"Билетов" нет поля "возвраты/тестовые" в
           // мастере (его роль выполняет аннулирование пуска/билета,
-          // docs/spec/04-game-room.md, docs/spec/10-tickets.md) — не доверяем
-          // тому, что мог прислать клиент.
-          returnsCount: isStaysZone(zone) || isLaunchesZone(zone) || isTicketsZone(zone) ? 0 : zs.returnsCount,
+          // docs/spec/04-game-room.md, docs/spec/10-tickets.md) — Map просто
+          // не заполняется для них, ?? 0 покрывает и это тоже.
+          returnsCount: returnsCountByZone.get(zone.id) ?? 0,
           cashAmount: zs.cashAmount,
           mobileAmount: zs.mobileAmount,
         },

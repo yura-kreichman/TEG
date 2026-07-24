@@ -662,7 +662,7 @@
     "newZoneTitle": "Новая зона",
     "newZoneSub": "Группа активов внутри точки",
     "accountingModeLabel": "Режим учёта",
-    "accountingModeCounters": "По счётчикам",
+    "accountingModeCounters": "Счётчики",
     "accountingModeCountersHint": "Накопительные показания активов",
     "accountingModeLaunches": "Пуски",
     "accountingModeLaunchesHint": "Готовое число заездов за сдачу",
@@ -673,7 +673,7 @@
     "accountingModeTickets": "Билеты",
     "accountingModeTicketsHint": "Продажа билетов заказами, гашение опционально",
     "modeChip": {
-      "counters": "По счётчикам",
+      "counters": "Счётчики",
       "launches": "Пуски",
       "cash_only": "Только касса",
       "stays": "Прибывания",
@@ -1082,6 +1082,7 @@
       "invalidNumberWarning": "Введите число 0–9999",
       "returnsLabel": "Возвраты/тестовые пуски",
       "returnsLabelShort": "Возвр./тест.",
+      "returnsCardLabel": "Возвраты/тесты",
       "cashLabel": "Наличные",
       "mobileLabel": "Безнал",
       "calculatedRevenue": "Расчётная выручка:",
@@ -1144,6 +1145,12 @@
       "receiptTitle": "Квитанция пуска",
       "receiptDoneTitle": "Пуск учтён"
     },
+    "counters": {
+      "pickZoneTitle": "Выберите зону",
+      "todayCountLabel": "Сегодня:",
+      "logTitle": "История",
+      "emptyLog": "Пока нет записей"
+    },
     "abonement": {
       "paymentLabel": "Баланс",
       "searchTitle": "Клиент",
@@ -1162,7 +1169,8 @@
       "noAbonementsError": "Владелец ещё не создал ни одного абонемента",
       "spendTitle": "Списать с баланса",
       "debitedLabel": "Списано",
-      "noSpendZonesError": "Нет доступных зон для оплаты балансом"
+      "noSpendZonesError": "Нет доступных зон для оплаты балансом",
+      "spendOnlyNotFound": "Клиент не найден. Добавьте его в разделе «Клиенты»."
     },
     "collectionAdvanceToastPrefix": "Отложено как аванс",
     "collectionAdvanceToastSuffix": "— появится в остатке зоны после сдачи итогов",

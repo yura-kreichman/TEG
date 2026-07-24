@@ -662,7 +662,7 @@
     "newZoneTitle": "Жаңа аймақ",
     "newZoneSub": "Нүкте ішіндегі активтер тобы",
     "accountingModeLabel": "Есеп режимі",
-    "accountingModeCounters": "Есептегіштер бойынша",
+    "accountingModeCounters": "Есептегіштер",
     "accountingModeCountersHint": "Активтердің жинақталған көрсеткіштері",
     "accountingModeLaunches": "Жүрістер",
     "accountingModeLaunchesHint": "Тапсыру кезіндегі дайын жүрістер саны",
@@ -673,7 +673,7 @@
     "accountingModeTickets": "Билеттер",
     "accountingModeTicketsHint": "Билеттерді тапсырыспен сату, өтеу міндетті емес",
     "modeChip": {
-      "counters": "Есептегіштер бойынша",
+      "counters": "Есептегіштер",
       "launches": "Жүрістер",
       "cash_only": "Тек касса",
       "stays": "Болулар",
@@ -1082,6 +1082,7 @@
       "invalidNumberWarning": "0–9999 аралығында сан енгізіңіз",
       "returnsLabel": "Қайтарулар/сынақ жүрістер",
       "returnsLabelShort": "Қайт./сынақ",
+      "returnsCardLabel": "Қайтарулар/сынақ",
       "cashLabel": "Қолма-қол",
       "mobileLabel": "Қолма-қолсыз",
       "calculatedRevenue": "Есептік түсім:",
@@ -1144,6 +1145,12 @@
       "receiptTitle": "Іске қосу түбіртегі",
       "receiptDoneTitle": "Іске қосу есепке алынды"
     },
+    "counters": {
+      "pickZoneTitle": "Аймақты таңдаңыз",
+      "todayCountLabel": "Бүгін:",
+      "logTitle": "Тарих",
+      "emptyLog": "Әзірге жазбалар жоқ"
+    },
     "abonement": {
       "paymentLabel": "Баланс",
       "searchTitle": "Клиент",
@@ -1162,7 +1169,8 @@
       "noAbonementsError": "Иесі әлі абонемент жасаған жоқ",
       "spendTitle": "Балансынан есептен шығару",
       "debitedLabel": "Есептен шығарылды",
-      "noSpendZonesError": "Баланспен төлеуге қолжетімді аймақ жоқ"
+      "noSpendZonesError": "Баланспен төлеуге қолжетімді аймақ жоқ",
+      "spendOnlyNotFound": "Клиент табылмады. Оны «Клиенттер» бөлімінде қосыңыз."
     },
     "collectionAdvanceToastPrefix": "Аванс ретінде қалдырылды",
     "collectionAdvanceToastSuffix": "— нәтижелер тапсырылғаннан кейін аймақ қалдығында пайда болады",

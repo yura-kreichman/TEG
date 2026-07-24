@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Home, MapPin, Minus, Plus, RefreshCcw, Send, Trash2, TriangleAlert } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Home, MapPin, Plus, RefreshCcw, Send, Trash2, TriangleAlert } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { Button } from "@/components/ui/button";
@@ -160,6 +160,13 @@ export default function SubmitResultsPage() {
     summary: { zoneId: string; zoneName: string; calculatedRevenue: number; actualCash: number; difference: number }[];
     remindMarkDeparture?: boolean;
   } | null>(null);
+  // Возвраты/тестовые пуски (docs/spec/01-counters.md, п.3) — раньше
+  // вводились тут же "из головы" (запрос пользователя 2026-07-24: "надо
+  // запоминать" — теперь каждый факт фиксируется заранее через пункт
+  // нижнего бара "Счётчики", это поле только показывает уже накопленное за
+  // текущий период зоны, менять его тут больше нельзя ("раз не внёс, то
+  // проехали" — решение того же дня).
+  const [returnCountsByZone, setReturnCountsByZone] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetch("/api/operator/submission-context")
@@ -173,6 +180,14 @@ export default function SubmitResultsPage() {
         setExpenseCategories(data.expenseCategories ?? []);
         setLoading(false);
       });
+    fetch("/api/operator/zone-return-events")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const counts: Record<string, number> = {};
+        for (const e of data?.events ?? []) counts[e.zoneId] = (counts[e.zoneId] ?? 0) + 1;
+        setReturnCountsByZone(counts);
+      })
+      .catch(() => {});
   }, [router]);
 
   const steps: Step[] = useMemo(() => {
@@ -247,7 +262,7 @@ export default function SubmitResultsPage() {
       return {
         ...prev,
         [zoneId]: {
-          returnsCount: "0",
+          returnsCount: String(returnCountsByZone[zoneId] ?? 0),
           cashAmount: "",
           mobileAmount: "",
           readings: {},
@@ -667,7 +682,7 @@ export default function SubmitResultsPage() {
                 {zones.map((zone) => {
                   const selected = selectedZoneIds.includes(zone.id);
                   return (
-                    <PressableScale key={zone.id}>
+                    <PressableScale key={zone.id} className="relative">
                       <button
                         type="button"
                         onClick={() => toggleZone(zone.id)}
@@ -676,11 +691,6 @@ export default function SubmitResultsPage() {
                           selected ? "border-primary bg-primary/10" : "border-border bg-card"
                         )}
                       >
-                        {selected && (
-                          <span className="absolute right-2.5 top-2.5 flex size-5.5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                            <Check className="size-3" />
-                          </span>
-                        )}
                         <div
                           className={cn(
                             "flex size-14 items-center justify-center rounded-control",
@@ -702,6 +712,11 @@ export default function SubmitResultsPage() {
                           {zone.name}
                         </span>
                       </button>
+                      {selected && (
+                        <span className="absolute -right-2 -top-2 flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
+                          <Check className="size-5" />
+                        </span>
+                      )}
                     </PressableScale>
                   );
                 })}
@@ -758,7 +773,7 @@ export default function SubmitResultsPage() {
               {activeZone.assets.map((asset) => {
                 const filled = isAssetFilled(activeZone, asset, activeForm);
                 return (
-                  <PressableScale key={asset.id}>
+                  <PressableScale key={asset.id} className="relative">
                     <button
                       type="button"
                       onClick={() => setAssetSheetId(asset.id)}
@@ -790,11 +805,6 @@ export default function SubmitResultsPage() {
                           className="absolute left-2.5 top-2.5 size-4 rounded-full ring-[2.5px] ring-card"
                           style={{ backgroundColor: asset.colorTag }}
                         />
-                        {filled && (
-                          <span className="absolute right-2.5 top-2.5 flex size-6 items-center justify-center rounded-full bg-success text-success-foreground shadow-sm">
-                            <Check className="size-3.5" />
-                          </span>
-                        )}
                       </div>
                       <div className="flex flex-col gap-1 p-3">
                         <span className="text-[0.90625rem] font-bold tracking-[-0.01em]">{asset.name}</span>
@@ -811,6 +821,11 @@ export default function SubmitResultsPage() {
                         </span>
                       </div>
                     </button>
+                    {filled && (
+                      <span className="absolute -right-2 -top-2 flex size-9 items-center justify-center rounded-full bg-success text-success-foreground shadow-md">
+                        <Check className="size-5" />
+                      </span>
+                    )}
                   </PressableScale>
                 );
               })}
@@ -821,33 +836,10 @@ export default function SubmitResultsPage() {
                 <RefreshCcw className="size-4 shrink-0" />
                 {t.operatorApp.submit.returnsLabel}
               </p>
-              <div className="flex items-center overflow-hidden rounded-control border border-border">
-                <button
-                  type="button"
-                  className="flex size-10 items-center justify-center bg-muted"
-                  onClick={() =>
-                    updateZoneField(
-                      activeZone.id,
-                      "returnsCount",
-                      String(Math.max(0, Number(activeForm.returnsCount || 0) - 1))
-                    )
-                  }
-                >
-                  <Minus className="size-4" />
-                </button>
-                <span className="w-11 text-center text-[0.9375rem] font-bold tabular-nums">
-                  {activeForm.returnsCount || 0}
-                </span>
-                <button
-                  type="button"
-                  className="flex size-10 items-center justify-center bg-muted"
-                  onClick={() =>
-                    updateZoneField(activeZone.id, "returnsCount", String(Number(activeForm.returnsCount || 0) + 1))
-                  }
-                >
-                  <Plus className="size-4" />
-                </button>
-              </div>
+              {/* Read-only (запрос пользователя 2026-07-24) — источник числа
+                  теперь пункт нижнего бара "Счётчики", тут его больше нельзя
+                  поправить руками. */}
+              <span className="text-[0.9375rem] font-bold tabular-nums">{activeForm.returnsCount || 0}</span>
             </div>
             </>
             )}
@@ -874,7 +866,7 @@ export default function SubmitResultsPage() {
                   // активными"), баннер выше уже даёт переход завершить их.
                   const blocked = (gameRoomOpenByAsset.find((o) => o.assetId === asset.id)?.count ?? 0) > 0;
                   return (
-                    <PressableScale key={asset.id}>
+                    <PressableScale key={asset.id} className="relative">
                       <button
                         type="button"
                         onClick={() => setAssetSheetId(asset.id)}
@@ -907,11 +899,6 @@ export default function SubmitResultsPage() {
                             className="absolute left-2.5 top-2.5 size-4 rounded-full ring-[2.5px] ring-card"
                             style={{ backgroundColor: asset.colorTag }}
                           />
-                          {filled && (
-                            <span className="absolute right-2.5 top-2.5 flex size-6 items-center justify-center rounded-full bg-success text-success-foreground shadow-sm">
-                              <Check className="size-3.5" />
-                            </span>
-                          )}
                         </div>
                         <div className="flex flex-col gap-1 p-3">
                           <span className="text-[0.90625rem] font-bold tracking-[-0.01em]">{asset.name}</span>
@@ -937,6 +924,11 @@ export default function SubmitResultsPage() {
                           </span>
                         </div>
                       </button>
+                      {filled && (
+                        <span className="absolute -right-2 -top-2 flex size-9 items-center justify-center rounded-full bg-success text-success-foreground shadow-md">
+                          <Check className="size-5" />
+                        </span>
+                      )}
                     </PressableScale>
                   );
                 })}

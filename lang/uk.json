@@ -662,7 +662,7 @@
     "newZoneTitle": "Нова зона",
     "newZoneSub": "Група атракціонів усередині точки",
     "accountingModeLabel": "Режим обліку",
-    "accountingModeCounters": "За лічильниками",
+    "accountingModeCounters": "Лічильники",
     "accountingModeCountersHint": "Накопичувальні показання активів",
     "accountingModeLaunches": "Заїзди",
     "accountingModeLaunchesHint": "Готове число заїздів за здачу",
@@ -673,7 +673,7 @@
     "accountingModeTickets": "Квитки",
     "accountingModeTicketsHint": "Продаж квитків замовленнями, погашення необов'язкове",
     "modeChip": {
-      "counters": "За лічильниками",
+      "counters": "Лічильники",
       "launches": "Заїзди",
       "cash_only": "Лише каса",
       "stays": "Перебування",
@@ -1082,6 +1082,7 @@
       "invalidNumberWarning": "Введіть число 0–9999",
       "returnsLabel": "Повернення/тестові заїзди",
       "returnsLabelShort": "Поверн./тест",
+      "returnsCardLabel": "Повернення/тест",
       "cashLabel": "Готівка",
       "mobileLabel": "Безготівка",
       "calculatedRevenue": "Розрахункова виручка:",
@@ -1144,6 +1145,12 @@
       "receiptTitle": "Квитанція запуску",
       "receiptDoneTitle": "Запуск враховано"
     },
+    "counters": {
+      "pickZoneTitle": "Виберіть зону",
+      "todayCountLabel": "Сьогодні:",
+      "logTitle": "Історія",
+      "emptyLog": "Поки немає записів"
+    },
     "abonement": {
       "paymentLabel": "Баланс",
       "searchTitle": "Клієнт",
@@ -1162,7 +1169,8 @@
       "noAbonementsError": "Власник ще не створив жодного абонемента",
       "spendTitle": "Списати з балансу",
       "debitedLabel": "Списано",
-      "noSpendZonesError": "Немає доступних зон для оплати балансом"
+      "noSpendZonesError": "Немає доступних зон для оплати балансом",
+      "spendOnlyNotFound": "Клієнта не знайдено. Додайте його в розділі «Клієнти»."
     },
     "collectionAdvanceToastPrefix": "Відкладено як аванс",
     "collectionAdvanceToastSuffix": "— з’явиться в залишку зони після здачі підсумків",

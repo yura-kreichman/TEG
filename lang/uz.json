@@ -662,7 +662,7 @@
     "newZoneTitle": "Yangi zona",
     "newZoneSub": "Nuqta ichidagi attraksionlar guruhi",
     "accountingModeLabel": "Hisob rejimi",
-    "accountingModeCounters": "Hisoblagichlar boʻyicha",
+    "accountingModeCounters": "Hisoblagichlar",
     "accountingModeCountersHint": "Aktivlarning yigʻma koʻrsatkichlari",
     "accountingModeLaunches": "Yurishlar",
     "accountingModeLaunchesHint": "Topshiriq uchun tayyor yurishlar soni",
@@ -673,7 +673,7 @@
     "accountingModeTickets": "Chiptalar",
     "accountingModeTicketsHint": "Buyurtma orqali chipta sotish, qoplash ixtiyoriy",
     "modeChip": {
-      "counters": "Hisoblagichlar boʻyicha",
+      "counters": "Hisoblagichlar",
       "launches": "Yurishlar",
       "cash_only": "Faqat kassa",
       "stays": "Turishlar",
@@ -1082,6 +1082,7 @@
       "invalidNumberWarning": "0–9999 oralig'ida son kiriting",
       "returnsLabel": "Qaytarishlar/sinov yurishlari",
       "returnsLabelShort": "Qaytarish/sinov",
+      "returnsCardLabel": "Qaytarishlar/sinov",
       "cashLabel": "Naqd pul",
       "mobileLabel": "Naqdsiz",
       "calculatedRevenue": "Hisoblangan tushum:",
@@ -1144,6 +1145,12 @@
       "receiptTitle": "Ishga tushirish kvitansiyasi",
       "receiptDoneTitle": "Ishga tushirish hisobga olindi"
     },
+    "counters": {
+      "pickZoneTitle": "Zonani tanlang",
+      "todayCountLabel": "Bugun:",
+      "logTitle": "Tarix",
+      "emptyLog": "Hozircha yozuvlar yoʻq"
+    },
     "abonement": {
       "paymentLabel": "Balans",
       "searchTitle": "Mijoz",
@@ -1162,7 +1169,8 @@
       "noAbonementsError": "Egasi hali abonement yaratmagan",
       "spendTitle": "Balansdan yechish",
       "debitedLabel": "Yechildi",
-      "noSpendZonesError": "Balansdan toʻlash uchun mintaqa yoʻq"
+      "noSpendZonesError": "Balansdan toʻlash uchun mintaqa yoʻq",
+      "spendOnlyNotFound": "Mijoz topilmadi. Uni «Mijozlar» boʻlimida qoʻshing."
     },
     "collectionAdvanceToastPrefix": "Avans sifatida ajratildi",
     "collectionAdvanceToastSuffix": "— natijalar topshirilgandan keyin zona qoldig‘ida paydo bo‘ladi",

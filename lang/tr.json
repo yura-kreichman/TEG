@@ -662,7 +662,7 @@
     "newZoneTitle": "Yeni bölge",
     "newZoneSub": "Nokta içindeki eğlence araçları grubu",
     "accountingModeLabel": "Muhasebe modu",
-    "accountingModeCounters": "Sayaçlara göre",
+    "accountingModeCounters": "Sayaçlar",
     "accountingModeCountersHint": "Varlıkların kümülatif okumaları",
     "accountingModeLaunches": "Turlar",
     "accountingModeLaunchesHint": "Teslim başına hazır tur sayısı",
@@ -673,7 +673,7 @@
     "accountingModeTickets": "Biletler",
     "accountingModeTicketsHint": "Sipariş ile bilet satışı, kullanım isteğe bağlı",
     "modeChip": {
-      "counters": "Sayaçlara göre",
+      "counters": "Sayaçlar",
       "launches": "Turlar",
       "cash_only": "Yalnızca kasa",
       "stays": "Kalışlar",
@@ -1082,6 +1082,7 @@
       "invalidNumberWarning": "0-9999 arasında bir sayı girin",
       "returnsLabel": "İadeler/test turları",
       "returnsLabelShort": "İade/test",
+      "returnsCardLabel": "İadeler/test",
       "cashLabel": "Nakit",
       "mobileLabel": "Kartlı",
       "calculatedRevenue": "Hesaplanan gelir:",
@@ -1144,6 +1145,12 @@
       "receiptTitle": "Başlatma makbuzu",
       "receiptDoneTitle": "Başlatma kaydedildi"
     },
+    "counters": {
+      "pickZoneTitle": "Bölge seçin",
+      "todayCountLabel": "Bugün:",
+      "logTitle": "Geçmiş",
+      "emptyLog": "Henüz kayıt yok"
+    },
     "abonement": {
       "paymentLabel": "Bakiye",
       "searchTitle": "Müşteri",
@@ -1162,7 +1169,8 @@
       "noAbonementsError": "Sahibi henüz abonelik oluşturmadı",
       "spendTitle": "Bakiyeden düş",
       "debitedLabel": "Düşüldü",
-      "noSpendZonesError": "Bakiyeyle ödeme için uygun bölge yok"
+      "noSpendZonesError": "Bakiyeyle ödeme için uygun bölge yok",
+      "spendOnlyNotFound": "Müşteri bulunamadı. «Müşteriler» bölümünden ekleyin."
     },
     "collectionAdvanceToastPrefix": "Avans olarak ayrıldı",
     "collectionAdvanceToastSuffix": "— sonuçlar teslim edildikten sonra bölge bakiyesinde görünecek",

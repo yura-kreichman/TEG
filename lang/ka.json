@@ -662,7 +662,7 @@
     "newZoneTitle": "ახალი ზონა",
     "newZoneSub": "ატრაქციონების ჯგუფი წერტილის შიგნით",
     "accountingModeLabel": "აღრიცხვის რეჟიმი",
-    "accountingModeCounters": "მრიცხველებით",
+    "accountingModeCounters": "მრიცხველები",
     "accountingModeCountersHint": "აქტივების დაგროვებითი ჩვენებები",
     "accountingModeLaunches": "გაშვებები",
     "accountingModeLaunchesHint": "მზა რიცხვი გარბენებისთვის ჩაბარებაზე",
@@ -673,7 +673,7 @@
     "accountingModeTickets": "ბილეთები",
     "accountingModeTicketsHint": "ბილეთების გაყიდვა შეკვეთებით, გამოყენება არასავალდებულოა",
     "modeChip": {
-      "counters": "მრიცხველებით",
+      "counters": "მრიცხველები",
       "launches": "გაშვებები",
       "cash_only": "მხოლოდ სალარო",
       "stays": "ვიზიტები",
@@ -1082,6 +1082,7 @@
       "invalidNumberWarning": "შეიყვანეთ რიცხვი 0–9999",
       "returnsLabel": "დაბრუნებები/სატესტო გაშვებები",
       "returnsLabelShort": "დაბრ./ტესტ.",
+      "returnsCardLabel": "დაბრუნებები/ტესტ",
       "cashLabel": "ნაღდი",
       "mobileLabel": "უნაღდო",
       "calculatedRevenue": "გაანგარიშებული შემოსავალი:",
@@ -1144,6 +1145,12 @@
       "receiptTitle": "გაშვების ქვითარი",
       "receiptDoneTitle": "გაშვება აღირიცხა"
     },
+    "counters": {
+      "pickZoneTitle": "აირჩიეთ ზონა",
+      "todayCountLabel": "დღეს:",
+      "logTitle": "ისტორია",
+      "emptyLog": "ჯერ ჩანაწერები არ არის"
+    },
     "abonement": {
       "paymentLabel": "ბალანსი",
       "searchTitle": "კლიენტი",
@@ -1162,7 +1169,8 @@
       "noAbonementsError": "მფლობელს ჯერ არ შეუქმნია აბონემენტი",
       "spendTitle": "ბალანსიდან ჩამოწერა",
       "debitedLabel": "ჩამოწერილია",
-      "noSpendZonesError": "ბალანსით გადახდისთვის ხელმისაწვდომი ზონა არ არის"
+      "noSpendZonesError": "ბალანსით გადახდისთვის ხელმისაწვდომი ზონა არ არის",
+      "spendOnlyNotFound": "კლიენტი ვერ მოიძებნა. დაამატეთ იგი განყოფილებაში „კლიენტები“."
     },
     "collectionAdvanceToastPrefix": "გადადებულია ავანსად",
     "collectionAdvanceToastSuffix": "— გამოჩნდება ზონის ნაშთში შედეგების ჩაბარების შემდეგ",

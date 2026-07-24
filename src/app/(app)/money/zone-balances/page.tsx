@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
+import { IconActionButton } from "@/components/kebab-menu";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -613,8 +614,8 @@ export default function ZoneBalancesPage() {
                         <Button
                           type="button"
                           variant="outline"
-                          size="xs"
-                          className="gap-1 rounded-lg"
+                          size="sm"
+                          className="gap-1.5 rounded-lg"
                           onClick={() => {
                             setChangeFundTarget(zb.zoneId);
                             setChangeFundAmount("");
@@ -672,8 +673,8 @@ export default function ZoneBalancesPage() {
                         <Button
                           type="button"
                           variant="outline"
-                          size="xs"
-                          className="gap-1 rounded-lg"
+                          size="sm"
+                          className="gap-1.5 rounded-lg"
                           onClick={() => {
                             setChangeFundTarget(GOODS_POOL_ID);
                             setChangeFundAmount("");
@@ -763,16 +764,11 @@ export default function ZoneBalancesPage() {
                                 прозрачности, откуда взялась просадка по
                                 зонам. */}
                             {c.pool !== "advance_taken" && c.pool !== "bonus_taken" && (
-                              <PressableScale>
-                                <button
-                                  type="button"
-                                  onClick={() => openCollectionEdit(c)}
-                                  aria-label={t.money.editCollectionAction}
-                                  className="flex items-center justify-center rounded-lg border border-border bg-card p-1.5 text-muted-foreground"
-                                >
-                                  <Pencil className="size-3.5" />
-                                </button>
-                              </PressableScale>
+                              <IconActionButton
+                                icon={Pencil}
+                                onClick={() => openCollectionEdit(c)}
+                                label={t.money.editCollectionAction}
+                              />
                             )}
                           </span>
                         </div>

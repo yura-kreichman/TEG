@@ -662,7 +662,7 @@
     "newZoneTitle": "Минтақаи нав",
     "newZoneSub": "Гурӯҳи аттраксионҳо дар дохили нуқта",
     "accountingModeLabel": "Реҷаи баҳисобгирӣ",
-    "accountingModeCounters": "Аз рӯи ҳисобкунакҳо",
+    "accountingModeCounters": "Ҳисобкунакҳо",
     "accountingModeCountersHint": "Нишондиҳандаҳои ҷамъшавандаи активҳо",
     "accountingModeLaunches": "Оғозҳо",
     "accountingModeLaunchesHint": "Шумораи тайёри даромадҳо барои як супориш",
@@ -673,7 +673,7 @@
     "accountingModeTickets": "Билетҳо",
     "accountingModeTicketsHint": "Фурӯши билет бо фармоиш, бозхонд ихтиёрӣ",
     "modeChip": {
-      "counters": "Аз рӯи ҳисобкунакҳо",
+      "counters": "Ҳисобкунакҳо",
       "launches": "Оғозҳо",
       "cash_only": "Танҳо касса",
       "stays": "Истиқоматҳо",
@@ -1082,6 +1082,7 @@
       "invalidNumberWarning": "Рақами 0–9999-ро ворид кунед",
       "returnsLabel": "Баргардонӣ/оғозҳои озмоишӣ",
       "returnsLabelShort": "Баргард./озм.",
+      "returnsCardLabel": "Баргардонӣ/озмоишӣ",
       "cashLabel": "Нақдина",
       "mobileLabel": "Ғайринақдӣ",
       "calculatedRevenue": "Даромади ҳисобшуда:",
@@ -1144,6 +1145,12 @@
       "receiptTitle": "Квитансияи оғоз",
       "receiptDoneTitle": "Оғоз ба ҳисоб гирифта шуд"
     },
+    "counters": {
+      "pickZoneTitle": "Минтақаро интихоб кунед",
+      "todayCountLabel": "Имрӯз:",
+      "logTitle": "Таърих",
+      "emptyLog": "Ҳанӯз сабте нест"
+    },
     "abonement": {
       "paymentLabel": "Баланс",
       "searchTitle": "Мизоҷ",
@@ -1162,7 +1169,8 @@
       "noAbonementsError": "Соҳиб то ҳол ягон обунамонд насохтааст",
       "spendTitle": "Аз баланс гирифтан",
       "debitedLabel": "Гирифта шуд",
-      "noSpendZonesError": "Минтақа барои пардохт аз ҳисоб мавҷуд нест"
+      "noSpendZonesError": "Минтақа барои пардохт аз ҳисоб мавҷуд нест",
+      "spendOnlyNotFound": "Мизоҷ ёфт нашуд. Ӯро дар бахши «Мизоҷон» илова кунед."
     },
     "collectionAdvanceToastPrefix": "Ҳамчун пеш гузошта шуд",
     "collectionAdvanceToastSuffix": "— пас аз супоридани натиҷаҳо дар бақияи минтақа пайдо мешавад",

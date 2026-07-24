@@ -3,12 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AlertTriangle, ClockPlus, Home, ShoppingBag, Ticket, Timer, Wallet } from "lucide-react";
+import { AlertTriangle, CircuitBoard, ClockPlus, Home, ShoppingBag, Ticket, Timer, Wallet } from "lucide-react";
 import { BottomGlassNav, type BottomGlassNavItem } from "@/components/bottom-glass-nav";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n } from "@/components/i18n-provider";
-import { isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
+import { isCountersZone, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { unlockBeep, playBeep } from "@/lib/beep";
 import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import { cn } from "@/lib/utils";
@@ -44,6 +44,7 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const t = useI18n();
+  const [hasCounters, setHasCounters] = useState(false);
   const [hasStays, setHasStays] = useState(false);
   const [hasLaunches, setHasLaunches] = useState(false);
   const [hasTickets, setHasTickets] = useState(false);
@@ -57,6 +58,7 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
       .then((data) => {
         if (!data) return;
         const zones = data.zones ?? [];
+        setHasCounters(zones.some(isCountersZone));
         setHasStays(zones.some(isStaysZone));
         setHasLaunches(zones.some(isLaunchesZone));
         // Доступна оператору с доступом к зоне вообще, не только с
@@ -150,6 +152,22 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
       icon: Home,
       active: pathname === "/operator",
     },
+    // "Счётчики" — Возврат/тест + Списать с баланса на месте, без похода в
+    // "Клиенты" (запрос пользователя 2026-07-24: "немного не единообразный
+    // интерфейс... надо запоминать, что если по Счётчикам, то заходить в
+    // Клиенты"; заодно сдача итогов больше не просит вспоминать возвраты из
+    // головы — см. /operator/counters и submit/page.tsx). Та же иконка, что
+    // у режима в кабинете владельца (points/[id]/page.tsx ACCOUNTING_MODE_ICON).
+    ...(hasCounters
+      ? [
+          {
+            href: "/operator/counters",
+            label: t.zonesList.accountingModeCounters,
+            icon: CircuitBoard,
+            active: pathname.startsWith("/operator/counters"),
+          },
+        ]
+      : []),
     ...(hasStays
       ? [
           {

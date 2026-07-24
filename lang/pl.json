@@ -662,7 +662,7 @@
     "newZoneTitle": "Nowa strefa",
     "newZoneSub": "Grupa atrakcji w obrębie punktu",
     "accountingModeLabel": "Tryb rozliczania",
-    "accountingModeCounters": "Wg liczników",
+    "accountingModeCounters": "Liczniki",
     "accountingModeCountersHint": "Narastające odczyty zasobów",
     "accountingModeLaunches": "Uruchomienia",
     "accountingModeLaunchesHint": "Gotowa liczba przejazdów za rozliczenie",
@@ -673,7 +673,7 @@
     "accountingModeTickets": "Bilety",
     "accountingModeTicketsHint": "Sprzedaż biletów zamówieniami, realizacja opcjonalna",
     "modeChip": {
-      "counters": "Wg liczników",
+      "counters": "Liczniki",
       "launches": "Uruchomienia",
       "cash_only": "Tylko kasa",
       "stays": "Pobyty",
@@ -1082,6 +1082,7 @@
       "invalidNumberWarning": "Wpisz liczbę 0–9999",
       "returnsLabel": "Zwroty/testowe przejazdy",
       "returnsLabelShort": "Zwroty/test",
+      "returnsCardLabel": "Zwroty/test",
       "cashLabel": "Gotówka",
       "mobileLabel": "Bezgotówkowo",
       "calculatedRevenue": "Obliczony przychód:",
@@ -1144,6 +1145,12 @@
       "receiptTitle": "Potwierdzenie uruchomienia",
       "receiptDoneTitle": "Uruchomienie zarejestrowane"
     },
+    "counters": {
+      "pickZoneTitle": "Wybierz strefę",
+      "todayCountLabel": "Dziś:",
+      "logTitle": "Historia",
+      "emptyLog": "Brak wpisów"
+    },
     "abonement": {
       "paymentLabel": "Saldo",
       "searchTitle": "Klient",
@@ -1162,7 +1169,8 @@
       "noAbonementsError": "Właściciel nie utworzył jeszcze żadnego abonamentu",
       "spendTitle": "Pobierz z salda",
       "debitedLabel": "Pobrano",
-      "noSpendZonesError": "Brak dostępnych stref do płatności z salda"
+      "noSpendZonesError": "Brak dostępnych stref do płatności z salda",
+      "spendOnlyNotFound": "Nie znaleziono klienta. Dodaj go w sekcji «Klienci»."
     },
     "collectionAdvanceToastPrefix": "Odłożone jako zaliczka",
     "collectionAdvanceToastSuffix": "— pojawi się w saldzie strefy po przesłaniu wyników",

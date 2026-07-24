@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AbonementTopupFlow, type SpendZoneCtx } from "@/components/abonement-topup-flow";
+import { AbonementTopupFlow } from "@/components/abonement-topup-flow";
 import { useI18n } from "@/components/i18n-provider";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
 
@@ -20,31 +20,26 @@ interface AbonementCtx {
  * 2026-07-20 включая "Счётчики"/"Только касса"). Продажа/пополнение
  * кошелька клиента ВНЕ момента оплаты конкретного пуска — точка неявная из
  * сессии устройства, поэтому AbonementTopupFlow тут без pointPicker, в
- * отличие от кабинета владельца. allowZoneSpend — оплата балансом на месте
- * для "Счётчиков"/"Только кассы" (запрос пользователя 2026-07-20: "как
- * сделать, чтобы клиенты могли оплатить балансом").
+ * отличие от кабинета владельца.
+ *
+ * Списание с баланса на месте ("Счётчики"/"Только касса") больше НЕ здесь
+ * (запрос пользователя 2026-07-24: "немного не единообразный интерфейс...
+ * надо запоминать, что если по Счётчикам, то заходить в Клиенты") —
+ * переехало в отдельный пункт нижнего бара "Счётчики"
+ * (/operator/counters), единственный путь для этого действия, дублей нет.
+ * Этот экран остался единообразным для любого режима учёта: поиск/создание
+ * клиента, пополнение, печать выписки.
  */
 export default function OperatorAbonementsPage() {
   const t = useI18n();
   const [plans, setPlans] = useState<AbonementCtx[]>([]);
-  // undefined — ещё грузится, [] — загружено, но подходящих зон нет (запрос
-  // пользователя 2026-07-20: кнопка "Списать с баланса" не должна
-  // появляться вовсе без хотя бы одной зоны "Счётчики"/"Только касса" на
-  // точке) — до ответа сервера кнопку показывать нельзя, поэтому undefined
-  // тоже трактуется как "скрыть" в AbonementTopupFlow.
-  const [spendZones, setSpendZones] = useState<SpendZoneCtx[] | undefined>(undefined);
   const printAvailable = useOperatorPrintAvailable();
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetch("/api/operator/abonement-plans")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => setPlans(data?.plans ?? []));
-    fetch("/api/operator/counter-zones")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setSpendZones(data?.zones ?? []));
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <div className="flex flex-1 flex-col bg-surface-0 px-4 pb-10 pt-6">
@@ -59,9 +54,6 @@ export default function OperatorAbonementsPage() {
           updateNameEndpointFor={(walletId) => `/api/operator/abonements/${walletId}`}
           allowArbitraryAmount
           arbitraryAmountNeedsPaymentMethod
-          allowZoneSpend
-          spendZones={spendZones}
-          zoneSpendEndpointFor={(walletId) => `/api/operator/abonements/${walletId}/zone-spend`}
           printAvailable={printAvailable.available}
           printBranding={printAvailable.branding}
         />

@@ -662,7 +662,7 @@
     "newZoneTitle": "Новая зона",
     "newZoneSub": "Група атракцыёнаў унутры кропкі",
     "accountingModeLabel": "Рэжым уліку",
-    "accountingModeCounters": "Па лічыльніках",
+    "accountingModeCounters": "Лічыльнікі",
     "accountingModeCountersHint": "Накапляльныя паказанні актываў",
     "accountingModeLaunches": "Пускі",
     "accountingModeLaunchesHint": "Гатовая колькасць заездаў за здачу",
@@ -673,7 +673,7 @@
     "accountingModeTickets": "Білеты",
     "accountingModeTicketsHint": "Продаж білетаў заказамі, пагашэнне неабавязковае",
     "modeChip": {
-      "counters": "Па лічыльніках",
+      "counters": "Лічыльнікі",
       "launches": "Пускі",
       "cash_only": "Толькі каса",
       "stays": "Знаходжанні",
@@ -1082,6 +1082,7 @@
       "invalidNumberWarning": "Увядзіце лік 0–9999",
       "returnsLabel": "Вяртанні/тэставыя пускі",
       "returnsLabelShort": "Вярт./тэст.",
+      "returnsCardLabel": "Вяртанні/тэст",
       "cashLabel": "Наяўныя",
       "mobileLabel": "Безнаяўныя",
       "calculatedRevenue": "Разліковая выручка:",
@@ -1144,6 +1145,12 @@
       "receiptTitle": "Квітанцыя пуску",
       "receiptDoneTitle": "Пуск улічаны"
     },
+    "counters": {
+      "pickZoneTitle": "Абярыце зону",
+      "todayCountLabel": "Сёння:",
+      "logTitle": "Гісторыя",
+      "emptyLog": "Пакуль няма запісаў"
+    },
     "abonement": {
       "paymentLabel": "Баланс",
       "searchTitle": "Кліент",
@@ -1162,7 +1169,8 @@
       "noAbonementsError": "Уладальнік яшчэ не стварыў ніводнага абанемента",
       "spendTitle": "Спісаць з балансу",
       "debitedLabel": "Спісана",
-      "noSpendZonesError": "Няма даступных зон для аплаты балансам"
+      "noSpendZonesError": "Няма даступных зон для аплаты балансам",
+      "spendOnlyNotFound": "Кліента не знойдзена. Дадайце яго ў раздзеле «Кліенты»."
     },
     "collectionAdvanceToastPrefix": "Адкладзена як аванс",
     "collectionAdvanceToastSuffix": "— з’явіцца ў рэштцы зоны пасля здачы вынікаў",

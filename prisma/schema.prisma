@@ -537,6 +537,7 @@ model Operator {
   goodsReconciliations  GoodsReconciliation[]
   ticketOrdersSold      TicketOrder[]
   ticketsRedeemed       Ticket[]                   @relation("TicketRedeemedBy")
+  zoneReturnEvents      ZoneReturnEvent[]
 }
 
 // ============================================================================
@@ -605,6 +606,7 @@ model Point {
   goodsSales                 GoodsSale[]
   goodsRevisions             GoodsRevision[]
   goodsReconciliations       GoodsReconciliation[]
+  zoneReturnEvents           ZoneReturnEvent[]
 }
 
 // Часы работы точки, по одной строке на день недели (docs/spec/08-landing.md,
@@ -742,6 +744,35 @@ model Zone {
   landingContent      LandingZoneContent?
   launches            Launch[]
   ticketOrders        TicketOrder[]
+  returnEvents        ZoneReturnEvent[]
+}
+
+// Реальный возврат/тестовый пуск, отмеченный Сотрудником в моменте, режим
+// "Счётчики" (docs/spec/01-counters.md, п.3) — запрос пользователя
+// 2026-07-24: раньше это было одно число, вводимое на мастере сдачи итогов
+// "из головы"/с бумажки, теперь Сотрудник фиксирует каждый факт сразу через
+// пункт нижнего бара "Счётчики", а сдача итогов только суммирует эти записи
+// за период (см. submit-results/route.ts). "Раз не внёс — проехали" (решение
+// пользователя того же дня) — сдача итогов больше не даёт править это число
+// руками, единственный способ поправить — удалить/добавить запись здесь, до
+// того как зона будет сдана.
+model ZoneReturnEvent {
+  id     String @id @default(cuid())
+  zoneId String
+  zone   Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  pointId String
+  point   Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  operatorId String
+  operator   Operator @relation(fields: [operatorId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  // Та же роль, что AssetReading.createdAt у показаний — "с последней сдачи
+  // этой зоны" всегда ищется сортировкой по времени, самый горячий путь и
+  // при живом счётчике на экране "Счётчики", и при сдаче итогов.
+  @@index([zoneId, createdAt])
 }
 
 // 1 или 2 тарифа на зону: свободное название + цена за сеанс. Те же правила

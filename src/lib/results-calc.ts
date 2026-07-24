@@ -27,6 +27,10 @@ export function isTicketsZone(zone: { accountingMode: string }): boolean {
   return zone.accountingMode === "tickets";
 }
 
+export function isCountersZone(zone: { accountingMode: string }): boolean {
+  return zone.accountingMode === "counters";
+}
+
 // Счётчики 4-разрядные (0-9999), переполнение 9999→0 — разница считается по модулю 10000.
 export const COUNTER_MOD = 10000;
 
