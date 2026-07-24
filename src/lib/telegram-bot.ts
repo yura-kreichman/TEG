@@ -243,6 +243,33 @@ export async function getTenantPublicGroup(tenantId: string) {
   return prisma.tenantPublicGroup.findUnique({ where: { tenantId } });
 }
 
+// Автоматическая ссылка-приглашение (запрос пользователя 2026-07-24: "должна
+// быть автоматическая") — Bot API умеет отдать её сам через
+// exportChatInviteLink, НО только если бота добавили в группу админом с
+// правом "приглашать пользователей по ссылке". Раньше считали это
+// невозможным ("нет прав администратора") — на деле зависит от того, как
+// Владелец добавил бота; если прав хватает, работает сразу, если нет —
+// молча возвращает null, и страница настроек показывает ручное поле как
+// раньше (страховка, не единственный путь). Вызывать только один раз, пока
+// ссылки ещё нет — сам метод каждый раз ВЫПУСКАЕТ НОВУЮ ссылку и отзывает
+// предыдущую, повторный вызов сломал бы уже разосланную клиентам ссылку.
+export async function fetchChatInviteLink(chatId: string): Promise<string | null> {
+  const token = await getBotToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/exportChatInviteLink`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId }),
+    });
+    const data = await res.json().catch(() => null);
+    const link: unknown = data?.result;
+    return res.ok && typeof link === "string" ? link : null;
+  } catch {
+    return null;
+  }
+}
+
 // Автоанонс в публичную группу при активации новой зоны/точки/актива (запрос
 // пользователя 2026-07-24) — вызывается ТОЛЬКО из PATCH-роутов при переходе
 // active false→true (не из create — "создание = готовлю, включение =

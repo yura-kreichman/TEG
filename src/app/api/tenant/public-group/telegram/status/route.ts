@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { getTenantPublicGroup, isBotConfigured } from "@/lib/telegram-bot";
+import { getTenantPublicGroup, isBotConfigured, fetchChatInviteLink } from "@/lib/telegram-bot";
 
 // Используется и для поллинга в шторке привязки, и для карточки канала на
 // экране "Сводки и сообщения" — тот же принцип, что у summary-channels
@@ -11,7 +12,20 @@ export async function GET() {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
 
-  const group = await getTenantPublicGroup(owner.tenantId);
+  let group = await getTenantPublicGroup(owner.tenantId);
+
+  // Ленивый подхват автоссылки (запрос пользователя 2026-07-24) — для чатов,
+  // привязанных ДО того, как появилось авто-получение через Bot API (или
+  // если оно не сработало сразу при привязке, например бота ещё не успели
+  // сделать админом). Пробуем один раз, пока ссылки нет — сам метод Bot API
+  // выпускает НОВУЮ ссылку при каждом вызове, повторный вызов уже с
+  // заполненным полем не делаем.
+  if (group?.chatId && group.chatStatus === "active" && !group.inviteLink) {
+    const link = await fetchChatInviteLink(group.chatId);
+    if (link) {
+      group = await prisma.tenantPublicGroup.update({ where: { tenantId: owner.tenantId }, data: { inviteLink: link } });
+    }
+  }
 
   return NextResponse.json({
     botConfigured: await isBotConfigured(),

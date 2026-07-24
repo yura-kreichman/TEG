@@ -7,6 +7,7 @@ import {
   sendInlineKeyboard,
   answerCallbackQuery,
   getTenantPublicGroup,
+  fetchChatInviteLink,
   CLIENT_START_PREFIX,
 } from "@/lib/telegram-bot";
 import { describeAbonementTransactionSource, findWalletByPhone, normalizePhone } from "@/lib/abonement";
@@ -215,6 +216,17 @@ async function handleStartMessage(message: {
     await sendChatMessage(notifyOldChatId, oldChatText).catch(() => {});
   }
   await sendChatMessage(chatId, "✅ RentOS подключён к этому чату").catch(() => {});
+
+  // Автоматическая ссылка-приглашение (запрос пользователя 2026-07-24) —
+  // пробуем сразу при привязке; сработает, только если бота добавили в
+  // группу админом с правом приглашать по ссылке. Не получилось — не беда,
+  // страница настроек предложит вставить ссылку вручную, как и раньше.
+  if (bindCode.purpose === "public_group") {
+    const link = await fetchChatInviteLink(chatId);
+    if (link) {
+      await prisma.tenantPublicGroup.update({ where: { tenantId: bindCode.tenantId }, data: { inviteLink: link } }).catch(() => {});
+    }
+  }
 }
 
 async function handleMyChatMember(update: {

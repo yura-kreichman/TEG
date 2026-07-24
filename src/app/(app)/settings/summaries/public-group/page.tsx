@@ -50,6 +50,11 @@ export default function PublicGroupSettingsPage() {
   const [inviteLink, setInviteLink] = useState("");
   const [savingInviteLink, setSavingInviteLink] = useState(false);
   const { saved: inviteLinkSaved, pulse: pulseInviteLinkSaved } = useSavePulse();
+  // Ссылка теперь чаще всего подтягивается сама через Bot API (запрос
+  // пользователя 2026-07-24: "должна быть автоматическая") — поле-инпут с
+  // кнопкой "Сохранить" нужно только как ручной резерв, когда авто не
+  // сработало (бот не админ группы) или владелец сам хочет её сменить.
+  const [editingInviteLink, setEditingInviteLink] = useState(false);
 
   async function loadStatus() {
     const res = await fetch("/api/tenant/public-group/telegram/status");
@@ -60,6 +65,7 @@ export default function PublicGroupSettingsPage() {
     const data = await res.json();
     setGroup(data);
     setInviteLink(data.inviteLink ?? "");
+    setEditingInviteLink(!data.inviteLink);
     setChecking(false);
   }
 
@@ -72,7 +78,7 @@ export default function PublicGroupSettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ inviteLink: inviteLink.trim() || null }),
       });
-      pulseInviteLinkSaved();
+      pulseInviteLinkSaved(() => setEditingInviteLink(false));
     } finally {
       setSavingInviteLink(false);
     }
@@ -150,23 +156,40 @@ export default function PublicGroupSettingsPage() {
                     отвечает ровно по этому полю, не по chatStatus. */}
                 <div className="flex flex-col gap-1 border-t border-border pt-3">
                   <Label htmlFor="publicGroupInviteLink">{t.summaries.publicGroupInviteLinkLabel}</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="publicGroupInviteLink"
-                      placeholder="https://t.me/+..."
-                      value={inviteLink}
-                      onChange={(e) => setInviteLink(e.target.value)}
-                      className="h-11 flex-1"
-                    />
-                    <PressableScale>
-                      <SaveButton
-                        className="h-11 shrink-0 px-4"
-                        saved={inviteLinkSaved}
-                        disabled={savingInviteLink}
-                        onClick={handleSaveInviteLink}
+                  {!editingInviteLink && group.inviteLink ? (
+                    // Подтянулась сама через Bot API — просто показываем,
+                    // кнопка "Сохранить" тут не нужна и только путает (запрос
+                    // пользователя 2026-07-24). Ручное поле — только по
+                    // явному "изменить".
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate text-body-airbnb text-muted-foreground">{group.inviteLink}</span>
+                      <button
+                        type="button"
+                        onClick={() => setEditingInviteLink(true)}
+                        className="shrink-0 text-caption-airbnb font-semibold text-primary"
+                      >
+                        {t.summaries.telegramChangeLink}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <Input
+                        id="publicGroupInviteLink"
+                        placeholder="https://t.me/+..."
+                        value={inviteLink}
+                        onChange={(e) => setInviteLink(e.target.value)}
+                        className="h-11 w-full"
                       />
-                    </PressableScale>
-                  </div>
+                      <PressableScale>
+                        <SaveButton
+                          className="h-11 w-full"
+                          saved={inviteLinkSaved}
+                          disabled={savingInviteLink}
+                          onClick={handleSaveInviteLink}
+                        />
+                      </PressableScale>
+                    </div>
+                  )}
                   <p className="text-caption-airbnb text-muted-foreground">{t.summaries.publicGroupInviteLinkHint}</p>
                 </div>
               </SpringCard>
