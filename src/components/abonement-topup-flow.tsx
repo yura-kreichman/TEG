@@ -877,15 +877,20 @@ export function AbonementTopupFlow({
                           </span>
                           {/* Свой угол, не под количеством (запрос
                               пользователя 2026-07-24, уточнение предыдущей
-                              правки) — правый нижний угол тайла. */}
+                              правки) — правый нижний угол тайла. Минимум 1
+                              (запрос того же дня: "0 не нужен") — минус
+                              останавливается на 1, а не убирает тариф
+                              целиком; чтобы отменить выбор — крестик/закрыть
+                              шаг, не минус. */}
                           <button
                             type="button"
                             aria-label={t.common.delete}
+                            disabled={qty <= 1}
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSpendTariffQuantity(tariff.id, qty - 1);
+                              setSpendTariffQuantity(tariff.id, Math.max(1, qty - 1));
                             }}
-                            className="absolute -right-2 -bottom-2 flex size-9 items-center justify-center rounded-full border border-border bg-card shadow-md"
+                            className="absolute -right-2 -bottom-2 flex size-9 items-center justify-center rounded-full border border-border bg-card shadow-md disabled:opacity-40"
                           >
                             <Minus className="size-5" />
                           </button>
