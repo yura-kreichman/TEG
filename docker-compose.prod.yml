@@ -3,12 +3,40 @@
 # сам файл .env на сервере в git не попадает.
 services:
   db:
-    image: postgres:16-alpine
+    # Свой образ поверх postgres:16-alpine (db/Dockerfile) — оборачивает
+    # запуск скриптом db/pg-autotune-entrypoint.sh, который на каждом старте
+    # заново считает shared_buffers/work_mem/etc по PGTune-формулам из
+    # PG_TUNE_TOTAL_MB/PG_TUNE_CPUS (обсуждение с пользователем 2026-07-24:
+    # "чтобы настройки автоматически настраивались"). Явный image: — иначе
+    # build подставил бы тег postgres:16-alpine поверх настоящего образа
+    # из Docker Hub с тем же именем, что путает при будущих docker pull/inspect.
+    image: rentos-db:local
+    build: ./db
     restart: unless-stopped
     environment:
       POSTGRES_USER: teg
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: teg_saas
+      # Сейчас сервер маленький и общий с почтой/apache/php-fpm — держим
+      # консервативную долю. При переезде на отдельный/больший сервер поднять
+      # PG_TUNE_TOTAL_MB (и PG_TUNE_CPUS) в .env — остальные параметры
+      # (shared_buffers, work_mem, effective_cache_size...) пересчитаются
+      # сами при следующем деплое/рестарте, без правки этого файла.
+      PG_TUNE_TOTAL_MB: ${PG_TUNE_TOTAL_MB:-512}
+      PG_TUNE_CPUS: ${PG_TUNE_CPUS:-2}
+      PG_TUNE_MAX_CONNECTIONS: ${PG_TUNE_MAX_CONNECTIONS:-50}
+    # Жёсткий потолок памяти для соседних сайтов на этом же VPS (вопрос
+    # пользователя 2026-07-24: "не затронет ли соседние сайты"). Без этого
+    # PG_TUNE_* — просто ориентир для планировщика Postgres, не гарантия:
+    # work_mem выделяется НА КАЖДУЮ операцию сортировки/хеша НА КАЖДОЕ
+    # соединение, так что при пиковой конкурентной нагрузке фактическое
+    # потребление может превысить бюджет PG_TUNE_TOTAL_MB. mem_limit —
+    # это cgroup-лимит: при превышении ядро прибьёт процесс ВНУТРИ этого
+    # контейнера (Postgres перезапустится через restart:unless-stopped), а
+    # не тронет чужие mysql/apache/почту на хосте. Ставим с запасом над
+    # PG_TUNE_TOTAL_MB=512 (там только буферы, не оверхед соединений/ОС).
+    mem_limit: ${PG_MEM_LIMIT:-768m}
+    mem_reservation: 384m
     # docker-compose.yml (базовый, для локальной разработки) публикует 5432
     # на хост для прямого psql-доступа. Списки при мердже нескольких -f
     # компоуз-файлов конкатенируются, а не заменяются — без явного сброса
@@ -36,6 +64,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Тот же смысл, что у db.mem_limit выше — сейчас держит ~300МБ (see
+    # `ps aux` на сервере), запас на пики запросов/сборку отчётов.
+    mem_limit: ${APP_MEM_LIMIT:-768m}
+    mem_reservation: 384m
     # public/uploads это bind-mount на папку домена (не именованный volume) —
     # владелец на хосте это пользователь сайта в ISPmanager (id <имя_сайта>),
     # не UID образа (rentos, 100:101). Без этого mkdir внутри контейнера

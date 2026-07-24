@@ -10,7 +10,7 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-docker compose -f docker-compose.prod.yml build app
+docker compose -f docker-compose.prod.yml build app db
 docker compose -f docker-compose.prod.yml up -d db
 docker compose -f docker-compose.prod.yml run --rm app npx prisma migrate deploy
 docker compose -f docker-compose.prod.yml up -d app
