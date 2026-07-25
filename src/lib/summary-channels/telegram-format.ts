@@ -222,6 +222,12 @@ export function formatZoneSummaryTelegram(
 
     if (data.accountingMode === "cash_only") {
       parts.push(`💵 ${st.cashOnly}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
+      // Справочно (аудит 2026-07-25) — cash_only тоже поддерживает оплату
+      // балансом, но раньше эта ветка её нигде не показывала, в отличие от
+      // веб-кабинета ("Итоги дня"), где строка "Баланс" была всегда.
+      if (data.abonementAmount > 0) {
+        parts.push(`🎫 ${st.abonementCompact}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
+      }
     } else {
       if (data.isGameRoom) {
         if (settings.showReadings) {
@@ -268,7 +274,7 @@ export function formatZoneSummaryTelegram(
       // (запрос пользователя 2026-07-17: "во всех отчётах и сводках должны
       // быть правильные цифры", "добавить Абонемент").
       if (settings.showCash && data.abonementAmount > 0) {
-        parts.push(`👛 ${st.abonementCompact}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
+        parts.push(`🎫 ${st.abonementCompact}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
       }
       // Возвраты — понятие только "Счётчиков" (docs/spec/10-tickets.md: у
       // Билетов/Прибываний/Пусков returnsCount на сервере всегда 0, строка
@@ -293,6 +299,9 @@ export function formatZoneSummaryTelegram(
 
   if (data.accountingMode === "cash_only") {
     lines.push("", `💵 ${st.cashOnly}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
+    if (data.abonementAmount > 0) {
+      lines.push(`🎫 ${st.abonement}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
+    }
   } else {
     if (data.isGameRoom) {
       if (settings.showReadings) {
@@ -340,7 +349,7 @@ export function formatZoneSummaryTelegram(
         // Справочно, отдельной строкой, НЕ в кассе выше — уже получена
         // раньше, при пополнении абонемента (запрос пользователя 2026-07-17).
         if (data.abonementAmount > 0) {
-          lines.push(`👛 ${st.abonement}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
+          lines.push(`🎫 ${st.abonement}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
         }
       }
       if (settings.showCalc) lines.push(`🔢 ${st.calculated}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);

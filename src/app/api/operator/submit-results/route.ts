@@ -414,7 +414,14 @@ export async function POST(request: Request) {
     // сразу и правильно исключается), тут нет причины "честно исключать"
     // баланс из кассы — он просто в стороне, только информационная строка.
     const counterAbonementAmount = counterAbonementByZone.get(zone.id) ?? 0;
-    const difference = Math.round((actualCash - netRevenue) * 100) / 100;
+    // "Только касса": "Расчётной выручки и разницы не существует — сравнивать
+    // не с чем" (docs/spec/01-counters.md) — явно 0, а не actualCash−0 (аудит
+    // 2026-07-25: без этой ветки Разница молча равнялась ВСЕЙ кассе зоны;
+    // нигде в UI не показывается для cash_only, но лучше не оставлять
+    // бессмысленное число в ответе API — тот же принцип, что уже применён в
+    // /api/reports/counters/day/route.ts).
+    const difference =
+      zone.accountingMode === "cash_only" ? 0 : Math.round((actualCash - netRevenue) * 100) / 100;
 
     const readingsText = zone.assets
       .map((asset) => {

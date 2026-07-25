@@ -1029,12 +1029,15 @@ export default function SubmitResultsPage() {
                       )
                     );
                   })()}
-                {/* "Счётчики" — справочная строка "Баланс" (реальный баг,
-                    найден пользователем 2026-07-24: без неё сотрудник не
-                    видел, что часть расчётной выручки уже оплачена с
-                    баланса и в кассу вноситься не должна) — тот же принцип,
-                    что у Билетов ниже. */}
-                {activeZone.accountingMode === "counters" && (counterAbonementByZone[activeZone.id] ?? 0) > 0 && (
+                {/* "Счётчики"/"Только касса" — справочная строка "Баланс"
+                    (реальный баг, найден пользователем 2026-07-24: без неё
+                    сотрудник не видел, что часть выручки уже оплачена с
+                    баланса) — тот же принцип, что у Билетов ниже. Раньше
+                    была только у "Счётчиков" (аудит 2026-07-25: "Только
+                    касса" тоже поддерживает оплату балансом, но подсказку
+                    не видела). */}
+                {(activeZone.accountingMode === "counters" || activeZone.accountingMode === "cash_only") &&
+                  (counterAbonementByZone[activeZone.id] ?? 0) > 0 && (
                   <div className="flex items-center justify-between text-caption-airbnb text-muted-foreground tabular-nums">
                     <span className="flex items-center gap-1.5">
                       <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
