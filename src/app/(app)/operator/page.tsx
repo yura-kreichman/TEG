@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Check, ChevronRight, Gift, MapPin, ShoppingBag } from "lucide-react";
+import { Check, ChevronRight, Gift, MapPin, ShoppingBag, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { MoneyInput } from "@/components/money-input";
@@ -75,6 +75,10 @@ export default function OperatorHomePage() {
   // объяснения).
   const [abonementCashTotal, setAbonementCashTotal] = useState(0);
   const [goodsCashTotal, setGoodsCashTotal] = useState(0);
+  // Настройки → Система → "Расходы" (запрос пользователя 2026-07-25) — если
+  // Владелец выключил тумблер глобально, кнопка ниже пропадает целиком, а не
+  // просто блокируется (тот же принцип, что у goodsAccess выше).
+  const [expensesEnabled, setExpensesEnabled] = useState(true);
   const [checking, setChecking] = useState(true);
   const [workTimeEnabled, setWorkTimeEnabled] = useState(false);
   const [toPayOut, setToPayOut] = useState<number | null>(null);
@@ -161,6 +165,7 @@ export default function OperatorHomePage() {
         setGoodsAccess(Boolean(data.goodsAccess));
         setAbonementCashTotal(Number(data.abonementCashTotal) || 0);
         setGoodsCashTotal(Number(data.goodsCashTotal) || 0);
+        setExpensesEnabled(data.expensesEnabled !== false);
       });
   }
 
@@ -671,6 +676,24 @@ export default function OperatorHomePage() {
           </div>
         )}
       </SpringCard>
+
+      {/* "Расходы" (запрос пользователя 2026-07-25) — редкая операция, не
+          крупная плитка в основной сетке, а компактная outline-кнопка
+          ("Только пусть будет кнопка а не строка вход"); гейтится тем же
+          глобальным тумблером Владельца, что и сам экран/API ниже. */}
+      {expensesEnabled && (
+        <PressableScale className="mt-3 w-full max-w-sm md:max-w-lg lg:max-w-xl">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full gap-2 rounded-lg"
+            onClick={() => router.push("/operator/expenses")}
+          >
+            <ShoppingCart className="size-4" />
+            {t.operatorApp.submit.expensesTitle}
+          </Button>
+        </PressableScale>
+      )}
 
       <BottomSheet open={openTask !== null} onClose={() => setOpenTask(null)}>
         {openTask && (

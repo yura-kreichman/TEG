@@ -155,9 +155,14 @@ export async function GET() {
   // инкассации (запрос пользователя 2026-07-25: "если нет денег в
   // абонементах и товарах, они вообще не должны отображаться в dropdown" —
   // те же цифры, что owner-версия берёт из /api/reports/money).
-  const [abonementCashTotal, goodsCashTotal] = await Promise.all([
+  // Настройки → Система → "Расходы" (запрос пользователя 2026-07-25) — НЕ
+  // часть плашки "Модули" (tenant-modules.ts), простой булев тумблер, тот же
+  // паттерн, что goodsAllowBalancePayment/printingEnabled. Гейтит и кнопку
+  // на Главной, и сам шаг "Расходы" в мастере сдачи итогов.
+  const [abonementCashTotal, goodsCashTotal, tenantFlags] = await Promise.all([
     getPointAbonementCashTotal(point.id),
     getPointGoodsCashTotal(point.id),
+    prisma.tenant.findUnique({ where: { id: point.tenantId }, select: { expensesEnabled: true } }),
   ]);
 
   return NextResponse.json({
@@ -171,6 +176,7 @@ export async function GET() {
     // гейтит видимость пункта "Клиенты" в нижнем баре (operator-bottom-nav.tsx),
     // тот же принцип, что goodsAccess выше.
     clientsEnabled: await isModuleEnabled(point.tenantId, "clientsEnabled"),
+    expensesEnabled: tenantFlags?.expensesEnabled ?? true,
     abonementCashTotal: Math.round(abonementCashTotal * 100) / 100,
     goodsCashTotal: Math.round(goodsCashTotal * 100) / 100,
   });

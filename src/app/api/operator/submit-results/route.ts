@@ -39,13 +39,6 @@ interface ZoneSubmissionInput {
   readings: ReadingInput[];
 }
 
-interface ExpenseInput {
-  zoneId: string;
-  amount: number;
-  comment?: string;
-  categoryId?: string | null;
-}
-
 export async function POST(request: Request) {
   const ctx = await requireOperator();
   if (!ctx) {
@@ -55,7 +48,8 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const zoneSubmissions: ZoneSubmissionInput[] = body.zoneSubmissions ?? [];
-  const expenses: ExpenseInput[] = body.expenses ?? [];
+  // Расходы (запрос пользователя 2026-07-25) — client payload больше не
+  // читается вовсе, единственный источник — ZoneExpenseEvent (см. ниже).
   const idempotencyKey: string | null = typeof body.idempotencyKey === "string" && body.idempotencyKey ? body.idempotencyKey : null;
 
   if (!Array.isArray(zoneSubmissions) || zoneSubmissions.length === 0) {
@@ -314,6 +308,24 @@ export async function POST(request: Request) {
     returnsCountByZone.set(zone.id, count);
   }
 
+  // Расходы (запрос пользователя 2026-07-25: "чтобы не надо было запоминать
+  // до конца смены") — тот же принцип, что у Возвратов выше: единственный
+  // источник — журнал ZoneExpenseEvent (экран "Расходы"), не доверенный
+  // клиентский payload. Применимо к ЛЮБОМУ режиму учёта, не только
+  // "counters" — расход не завязан на режим зоны.
+  const expenseEventsByZone = new Map<string, { id: string; amount: number; categoryId: string | null; comment: string | null }[]>();
+  for (const zs of zoneSubmissions) {
+    const zone = zoneById.get(zs.zoneId)!;
+    const boundary = await previousSubmissionBoundary(zone.id);
+    const events = await prisma.zoneExpenseEvent.findMany({
+      where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now } },
+    });
+    expenseEventsByZone.set(
+      zone.id,
+      events.map((e) => ({ id: e.id, amount: Number(e.amount), categoryId: e.categoryId, comment: e.comment }))
+    );
+  }
+
   const summary = zoneSubmissions.map((zs) => {
     const zone = zoneById.get(zs.zoneId)!;
 
@@ -545,16 +557,20 @@ export async function POST(request: Request) {
         }
       }
 
-      const zoneExpenses = expenses.filter((e) => e.zoneId === zs.zoneId);
+      // Расходы — из журнала ZoneExpenseEvent (см. expenseEventsByZone выше),
+      // не из клиентского payload (запрос пользователя 2026-07-25). Записи
+      // этого окна переносим в ExpenseEntry/MoneyOperation как раньше, сам
+      // журнал не трогаем — он естественно "закрывается" следующим окном
+      // (previousSubmissionBoundary сдвигается на эту сдачу).
+      const zoneExpenses = expenseEventsByZone.get(zs.zoneId) ?? [];
       for (const expense of zoneExpenses) {
-        const categoryId =
-          expense.categoryId && validCategoryIds.has(expense.categoryId) ? expense.categoryId : null;
+        const categoryId = expense.categoryId && validCategoryIds.has(expense.categoryId) ? expense.categoryId : null;
         await tx.expenseEntry.create({
           data: {
             zoneSubmissionId: zoneSubmission.id,
             categoryId,
             amount: expense.amount,
-            comment: expense.comment || null,
+            comment: expense.comment,
           },
         });
         await tx.moneyOperation.create({
@@ -564,7 +580,7 @@ export async function POST(request: Request) {
             type: "expense",
             amount: -Math.abs(expense.amount),
             performedByOperatorId: operator.id,
-            comment: expense.comment || null,
+            comment: expense.comment,
             resultsSubmissionId: created.id,
           },
         });

@@ -184,6 +184,17 @@ model Tenant {
   // скрытие кнопки в UI — тот же принцип, что у Operator.goodsAccess.
   goodsAllowBalancePayment Boolean @default(true)
 
+  // Настройки → Система (запрос пользователя 2026-07-25) — глобальный
+  // рубильник: разрешает ли Владелец Сотрудникам вообще списывать расходы
+  // (на ремонт и непредвиденные траты) из текущей наличной кассы точки. При
+  // выключении — экран "Расходы" и кнопка на Главной у Сотрудников исчезают
+  // целиком (не просто блокируются с ошибкой), серверная проверка в
+  // /api/operator/zone-expense-events, не только скрытие в UI — тот же
+  // принцип, что у goodsAllowBalancePayment выше. default true — у
+  // существующих тенантов поведение (расходы уже были частью мастера сдачи
+  // итогов) не меняется молча.
+  expensesEnabled Boolean @default(true)
+
   // Настройки → Система (запрос пользователя 2026-07-20) — общий рубильник
   // "печать вообще есть" для будущего модуля печати квитанций (НЕ фискальный
   // чек — простая квитанция, без интеграции с ОФД/кассовым законодательством).
@@ -539,6 +550,7 @@ model Operator {
   ticketOrdersSold      TicketOrder[]
   ticketsRedeemed       Ticket[]                   @relation("TicketRedeemedBy")
   zoneReturnEvents      ZoneReturnEvent[]
+  zoneExpenseEvents     ZoneExpenseEvent[]
 }
 
 // ============================================================================
@@ -608,6 +620,7 @@ model Point {
   goodsRevisions             GoodsRevision[]
   goodsReconciliations       GoodsReconciliation[]
   zoneReturnEvents           ZoneReturnEvent[]
+  zoneExpenseEvents          ZoneExpenseEvent[]
 }
 
 // Часы работы точки, по одной строке на день недели (docs/spec/08-landing.md,
@@ -746,6 +759,7 @@ model Zone {
   launches            Launch[]
   ticketOrders        TicketOrder[]
   returnEvents        ZoneReturnEvent[]
+  expenseEvents       ZoneExpenseEvent[]
 }
 
 // Реальный возврат/тестовый пуск, отмеченный Сотрудником в моменте, режим
@@ -773,6 +787,36 @@ model ZoneReturnEvent {
   // Та же роль, что AssetReading.createdAt у показаний — "с последней сдачи
   // этой зоны" всегда ищется сортировкой по времени, самый горячий путь и
   // при живом счётчике на экране "Счётчики", и при сдаче итогов.
+  @@index([zoneId, createdAt])
+}
+
+// Расход, зафиксированный Сотрудником в моменте, а не "из головы" на мастере
+// сдачи итогов (запрос пользователя 2026-07-25: "чтобы не надо было
+// запоминать до конца смены") — тот же принцип, что ZoneReturnEvent выше:
+// отдельный экран "Расходы" (доступен любому Сотруднику, не завязан на
+// режим учёта зоны, в отличие от "Счётчики" в баре), сдача итогов только
+// суммирует записи ЭТОЙ модели за текущий период (previousSubmissionBoundary)
+// и переносит их в ExpenseEntry/MoneyOperation, как раньше. "Раз не внёс —
+// проехали", поправить можно только здесь, до сдачи.
+model ZoneExpenseEvent {
+  id     String @id @default(cuid())
+  zoneId String
+  zone   Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  pointId String
+  point   Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  operatorId String
+  operator   Operator @relation(fields: [operatorId], references: [id])
+
+  categoryId String?
+  category   ExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  amount  Decimal @db.Decimal(10, 2)
+  comment String?
+
+  createdAt DateTime @default(now())
+
   @@index([zoneId, createdAt])
 }
 
@@ -1551,6 +1595,7 @@ model ExpenseCategory {
   createdAt DateTime @default(now())
 
   expenseEntries ExpenseEntry[]
+  expenseEvents  ZoneExpenseEvent[]
 
   @@index([tenantId])
 }

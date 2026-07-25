@@ -30,6 +30,7 @@ export async function GET() {
       logoUrl: true,
       goodsAllowBalancePayment: true,
       printingEnabled: true,
+      expensesEnabled: true,
       receiptShowLogo: true,
       receiptShowTenantName: true,
       receiptCompactHeader: true,
@@ -44,6 +45,7 @@ export async function GET() {
   return NextResponse.json({
     goodsAllowBalancePayment: tenant?.goodsAllowBalancePayment ?? true,
     printingEnabled: tenant?.printingEnabled ?? false,
+    expensesEnabled: tenant?.expensesEnabled ?? true,
     // Только для превью квитанции ниже на этой же странице — шапка (лого/
     // название) переиспользует уже существующие поля тенанта, отдельно не
     // редактируется здесь (запрос пользователя 2026-07-20).
@@ -73,6 +75,7 @@ export async function PATCH(request: Request) {
   const data: {
     goodsAllowBalancePayment?: boolean;
     printingEnabled?: boolean;
+    expensesEnabled?: boolean;
     receiptShowLogo?: boolean;
     receiptShowTenantName?: boolean;
     receiptCompactHeader?: boolean;
@@ -89,6 +92,7 @@ export async function PATCH(request: Request) {
   const BOOLEAN_FIELDS = [
     "goodsAllowBalancePayment",
     "printingEnabled",
+    "expensesEnabled",
     "receiptShowLogo",
     "receiptShowTenantName",
     "receiptCompactHeader",

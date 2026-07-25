@@ -37,6 +37,7 @@ const MODULE_TILES: { key: ModuleKey; icon: LucideIcon; label: (t: Dictionary) =
 interface SystemSettings {
   goodsAllowBalancePayment: boolean;
   printingEnabled: boolean;
+  expensesEnabled: boolean;
   instructionsEnabled: boolean;
   tasksEnabled: boolean;
   landingEnabled: boolean;
@@ -47,6 +48,7 @@ interface SystemSettings {
 const DEFAULTS: SystemSettings = {
   goodsAllowBalancePayment: true,
   printingEnabled: false,
+  expensesEnabled: true,
   instructionsEnabled: true,
   tasksEnabled: true,
   landingEnabled: true,
@@ -192,6 +194,11 @@ export default function SystemSettingsPage() {
       key: "printingEnabled",
       label: t.settings.systemPrintingLabel,
       sub: t.settings.systemPrintingHint,
+    },
+    {
+      key: "expensesEnabled",
+      label: t.settings.systemExpensesLabel,
+      sub: t.settings.systemExpensesHint,
     },
   ];
 

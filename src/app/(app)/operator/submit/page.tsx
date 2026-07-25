@@ -2,14 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Home, MapPin, Plus, RefreshCcw, Send, Trash2, TriangleAlert } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Home, MapPin, RefreshCcw, Send, TriangleAlert } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
@@ -84,16 +83,15 @@ interface ZoneFormState {
   confirmedAssetIds: string[];
 }
 
-interface ExpenseRow {
-  zoneId: string;
-  amount: string;
-  comment: string;
-  categoryId: string;
-}
-
-interface ExpenseCategoryCtx {
+// Расход, уже зафиксированный через экран "Расходы" за текущий период зоны
+// (запрос пользователя 2026-07-25: "чтобы не надо было запоминать до конца
+// смены") — тот же принцип, что и Возвраты: шаг сдачи итогов только
+// показывает read-only, вводить здесь больше нельзя.
+interface ExpenseEventCtx {
   id: string;
-  name: string;
+  amount: number;
+  categoryName: string | null;
+  comment: string | null;
 }
 
 type Step = { kind: "select" } | { kind: "zone"; zoneId: string } | { kind: "expenses" } | { kind: "review" };
@@ -106,10 +104,9 @@ export default function SubmitResultsPage() {
   const printAvailable = useOperatorPrintAvailable();
   const [loading, setLoading] = useState(true);
   const [zones, setZones] = useState<ZoneCtx[]>([]);
-  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategoryCtx[]>([]);
   const [selectedZoneIds, setSelectedZoneIds] = useState<string[]>([]);
   const [zoneForms, setZoneForms] = useState<Record<string, ZoneFormState>>({});
-  const [expenses, setExpenses] = useState<ExpenseRow[]>([]);
+  const [expenseEventsByZone, setExpenseEventsByZone] = useState<Record<string, ExpenseEventCtx[]>>({});
   const [stepIndex, setStepIndex] = useState(0);
   // Общий sheet-по-активу: показания счётчика/пуска (counters/launches) или
   // реальная касса "Прибываний" (запрос пользователя 2026-07-17) — режимы
@@ -182,6 +179,10 @@ export default function SubmitResultsPage() {
   // текущий период зоны, менять его тут больше нельзя ("раз не внёс, то
   // проехали" — решение того же дня).
   const [returnCountsByZone, setReturnCountsByZone] = useState<Record<string, number>>({});
+  // Настройки → Система → "Расходы" (запрос пользователя 2026-07-25) — если
+  // Владелец выключил тумблер, шаг "Расходы" не показываем вовсе (внести
+  // расход и так неоткуда было — экран/API уже недоступны).
+  const [expensesEnabled, setExpensesEnabled] = useState(true);
 
   useEffect(() => {
     fetch("/api/operator/submission-context")
@@ -192,7 +193,7 @@ export default function SubmitResultsPage() {
         }
         const data = await res.json();
         setZones(data.zones ?? []);
-        setExpenseCategories(data.expenseCategories ?? []);
+        setExpensesEnabled(data.expensesEnabled !== false);
         setLoading(false);
       });
     fetch("/api/operator/zone-return-events")
@@ -203,14 +204,29 @@ export default function SubmitResultsPage() {
         setReturnCountsByZone(counts);
       })
       .catch(() => {});
+    // Расходы, уже внесённые через экран "Расходы" за текущий период (запрос
+    // пользователя 2026-07-25) — та же логика, что у Возвратов выше.
+    fetch("/api/operator/zone-expense-events")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const byZone: Record<string, ExpenseEventCtx[]> = {};
+        for (const e of data?.events ?? []) {
+          (byZone[e.zoneId] ??= []).push({ id: e.id, amount: e.amount, categoryName: e.categoryName, comment: e.comment });
+        }
+        setExpenseEventsByZone(byZone);
+      })
+      .catch(() => {});
   }, [router]);
 
   const steps: Step[] = useMemo(() => {
     const list: Step[] = [{ kind: "select" }];
     for (const zoneId of selectedZoneIds) list.push({ kind: "zone", zoneId });
-    if (selectedZoneIds.length > 0) list.push({ kind: "expenses" }, { kind: "review" });
+    if (selectedZoneIds.length > 0) {
+      if (expensesEnabled) list.push({ kind: "expenses" });
+      list.push({ kind: "review" });
+    }
     return list;
-  }, [selectedZoneIds]);
+  }, [selectedZoneIds, expensesEnabled]);
 
   const currentStep = steps[stepIndex] ?? steps[0];
 
@@ -363,21 +379,6 @@ export default function SubmitResultsPage() {
     }
   }
 
-  function addExpense() {
-    setExpenses((prev) => [
-      ...prev,
-      { zoneId: selectedZoneIds[0] ?? "", amount: "", comment: "", categoryId: "" },
-    ]);
-  }
-
-  function updateExpense(index: number, field: keyof ExpenseRow, value: string) {
-    setExpenses((prev) => prev.map((e, i) => (i === index ? { ...e, [field]: value } : e)));
-  }
-
-  function removeExpense(index: number) {
-    setExpenses((prev) => prev.filter((_, i) => i !== index));
-  }
-
   function goNext() {
     setStepIndex((i) => Math.min(i + 1, steps.length - 1));
   }
@@ -481,14 +482,8 @@ export default function SubmitResultsPage() {
 
     const payload = {
       zoneSubmissions,
-      expenses: expenses
-        .filter((e) => e.amount)
-        .map((e) => ({
-          zoneId: e.zoneId,
-          amount: Number(e.amount),
-          comment: e.comment,
-          categoryId: e.categoryId || null,
-        })),
+      // Расходы больше не шлём отсюда (запрос пользователя 2026-07-25) —
+      // сервер сам берёт их из журнала ZoneExpenseEvent (экран "Расходы").
       // Один ключ на попытку сдачи, переиспользуется при каждом ретрае ЭТОЙ
       // ЖЕ сдачи (аудит 2026-07-25, финальный проход, реальный найденный
       // баг) — офлайн-очередь ниже хранит и повторно шлёт этот ЖЕ объект
@@ -1087,77 +1082,42 @@ export default function SubmitResultsPage() {
 
         {currentStep.kind === "expenses" && (
           <div className="flex flex-col gap-4">
-            <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.operatorApp.submit.expensesTitle}</h1>
-            {expenses.map((expense, index) => (
-              <div key={index} className="flex flex-col gap-2 rounded-card border border-border bg-card p-3">
-                {selectedZoneIds.length > 1 && (
-                  <Select
-                    value={expense.zoneId}
-                    onValueChange={(v) => v && updateExpense(index, "zoneId", v)}
-                    items={selectedZoneIds.map((zoneId) => ({
-                      value: zoneId,
-                      label: zones.find((z) => z.id === zoneId)?.name ?? zoneId,
-                    }))}
-                  >
-                    <SelectTrigger className="h-10 bg-muted text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedZoneIds.map((zoneId) => (
-                        <SelectItem key={zoneId} value={zoneId}>
-                          {zones.find((z) => z.id === zoneId)?.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                <MoneyInput
-                  scale="lg"
-                  placeholder={t.operatorApp.submit.amountPlaceholder}
-                  className="h-14 rounded-control bg-muted text-lg font-bold"
-                  value={expense.amount}
-                  onChange={(e) => updateExpense(index, "amount", e.target.value)}
-                />
-                {expenseCategories.length > 0 && (
-                  <Select
-                    value={expense.categoryId}
-                    onValueChange={(v) => v && updateExpense(index, "categoryId", v)}
-                    items={expenseCategories.map((c) => ({ value: c.id, label: c.name }))}
-                  >
-                    <SelectTrigger className="h-10 bg-muted text-sm">
-                      <SelectValue placeholder={t.operatorApp.submit.categoryPlaceholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {expenseCategories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                <Input
-                  placeholder={t.operatorApp.submit.commentPlaceholder}
-                  className="rounded-control bg-muted"
-                  value={expense.comment}
-                  onChange={(e) => updateExpense(index, "comment", e.target.value)}
-                />
-                <Button
-                  variant="link"
-                  className="h-auto w-fit gap-1 p-0 text-destructive"
-                  onClick={() => removeExpense(index)}
-                >
-                  <Trash2 className="size-4" />
-                  {t.common.delete}
-                </Button>
-              </div>
-            ))}
-            <PressableScale className="w-fit">
-              <Button variant="outline" className="gap-2 rounded-control border-border" onClick={addExpense}>
-                <Plus className="size-4" />
-                {t.operatorApp.submit.addExpense}
-              </Button>
-            </PressableScale>
+            <div>
+              <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.operatorApp.submit.expensesTitle}</h1>
+              {/* Read-only (запрос пользователя 2026-07-25: "чтобы не надо
+                  было запоминать до конца смены") — источник теперь экран
+                  "Расходы" на Главной, тот же принцип, что и у Возвратов:
+                  "раз не внёс, то проехали", здесь только просмотр. */}
+              <p className="mt-1 text-[0.84375rem] text-muted-foreground">{t.operatorApp.submit.expensesReadOnlyHint}</p>
+            </div>
+            {selectedZoneIds.every((zoneId) => (expenseEventsByZone[zoneId] ?? []).length === 0) ? (
+              <p className="text-body-airbnb text-muted-foreground">{t.operatorApp.submit.expensesEmpty}</p>
+            ) : (
+              selectedZoneIds.map((zoneId) => {
+                const items = expenseEventsByZone[zoneId] ?? [];
+                if (items.length === 0) return null;
+                const zone = zones.find((z) => z.id === zoneId);
+                return (
+                  <div key={zoneId} className="flex flex-col gap-2">
+                    {selectedZoneIds.length > 1 && (
+                      <p className="text-caption-airbnb font-semibold text-muted-foreground">{zone?.name}</p>
+                    )}
+                    {items.map((expense) => (
+                      <div
+                        key={expense.id}
+                        className="flex items-center justify-between gap-3 rounded-card border border-border bg-card p-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-body-airbnb font-semibold">{expense.categoryName ?? t.operatorApp.submit.expensesTitle}</p>
+                          {expense.comment && <p className="truncate text-caption-airbnb text-muted-foreground">{expense.comment}</p>}
+                        </div>
+                        <span className="shrink-0 tabular-nums font-bold"><Money value={expense.amount} /></span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
 
