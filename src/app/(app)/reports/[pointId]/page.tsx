@@ -1103,10 +1103,10 @@ function OperatorsTab({ operators, t }: { operators: OperatorRow[]; t: ReturnTyp
               {op.bonus > 0 && (
                 <div className="text-[0.65625rem] leading-tight text-muted-foreground">
                   <div>
-                    {t.operatorApp.workTime.rateAccruedLabel} <Money value={op.rateAccrued} />
+                    {t.reports.rateLabel} <span className="font-bold text-foreground"><Money value={op.rateAccrued} /></span>
                   </div>
                   <div>
-                    {t.operatorApp.workTime.bonusesLabel} <Money value={op.bonus} />
+                    {t.reports.bonusLabel} <span className="font-bold text-foreground"><Money value={op.bonus} /></span>
                   </div>
                 </div>
               )}

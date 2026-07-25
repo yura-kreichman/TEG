@@ -411,7 +411,7 @@ export function OwnerDashboardCard({
                           <ChevronRight className="size-3 shrink-0" />
                         </p>
                         <p className="text-[1rem] font-bold">
-                          <Money value={summary.expenses!} />
+                          <Money value={Math.abs(summary.expenses!)} />
                         </p>
                       </div>
                     </div>

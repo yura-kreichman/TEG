@@ -26,6 +26,7 @@ interface Report {
     cash: number;
     mobile: number;
     expense: number;
+    salary: number;
     profit: number;
     difference: number;
     returnsCount: number;
@@ -446,9 +447,14 @@ export default function MoneyPage() {
               </div>
               <div className="flex-1 border-l border-border pl-4">
                 <p className="text-caption-airbnb">{t.money.expense}</p>
-                <p className="text-[1.0625rem] font-bold"><Money value={report.business.expense} /></p>
-                <p className="text-[0.65625rem] leading-tight text-muted-foreground">{t.money.expenseHint}</p>
+                <p className="text-[1.0625rem] font-bold"><Money value={Math.abs(report.business.expense)} /></p>
               </div>
+              {report.business.salary !== 0 && (
+                <div className="flex-1 border-l border-border pl-4">
+                  <p className="text-caption-airbnb">{t.money.salaryLabel}</p>
+                  <p className="text-[1.0625rem] font-bold"><Money value={Math.abs(report.business.salary)} /></p>
+                </div>
+              )}
               {report.business.difference !== 0 && (
                 <div className="flex-1 border-l border-border pl-4">
                   <p className="text-caption-airbnb">{t.money.difference}</p>

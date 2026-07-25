@@ -104,6 +104,7 @@ export async function GET(request: Request) {
   let totalRevenueCash = 0;
   let totalRevenueMobile = 0;
   let totalExpense = 0;
+  let totalPayouts = 0;
 
   for (const op of operations) {
     const amount = Number(op.amount);
@@ -140,11 +141,15 @@ export async function GET(request: Request) {
     // не входят вовсе — деньги уже учтены в момент пополнения.
     if (op.type === "abonement_topup") totalRevenueCash += amount;
     if (op.type === "abonement_topup_cashless") totalRevenueMobile += amount;
-    // Расходы бизнес-карточки — только обычные expense (запрос пользователя
-    // 2026-07-14: авансы/премии больше не считаются здесь расходом — это
-    // выплата уже заработанного персоналу, не трата бизнеса; отдельно видны
-    // в /money/advances-bonuses).
     if (op.type === "expense") totalExpense += amount;
+    // Зарплаты (пересмотрено 2026-07-25 — решение 2026-07-14 "авансы/премии
+    // не расход бизнеса" создало расхождение с Отчётами → Динамика, где
+    // profitAndLoss.profit их ВСЕГДА вычитал: та же Прибыль на разных
+    // экранах показывала разные числа. Авансы/премии — реальные деньги,
+    // физически покинувшие кассу, значит настоящий расход бизнеса — теперь
+    // вычитаются и здесь, отдельной строкой "Зарплаты" рядом с Расходами
+    // (не слиты в expense, чтобы не терять разбивку "закупки" vs "ФОТ").
+    if (op.type === "advance" || op.type === "bonus_payout") totalPayouts += amount;
   }
 
   // Разница (недостача/излишек) бизнес-карточки — сумма "факт минус расчёт
@@ -213,7 +218,8 @@ export async function GET(request: Request) {
       cash: Math.round(totalRevenueCash * 100) / 100,
       mobile: Math.round(totalRevenueMobile * 100) / 100,
       expense: Math.round(totalExpense * 100) / 100,
-      profit: Math.round((totalRevenueCash + totalRevenueMobile + totalExpense) * 100) / 100,
+      salary: Math.round(totalPayouts * 100) / 100,
+      profit: Math.round((totalRevenueCash + totalRevenueMobile + totalExpense + totalPayouts) * 100) / 100,
       difference: Math.round(totalDifference * 100) / 100,
       returnsCount: totalReturns,
     },

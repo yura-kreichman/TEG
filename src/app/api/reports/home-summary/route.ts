@@ -17,6 +17,7 @@ interface WindowSummary {
   returnsCount: number;
 }
 
+
 // Календарный день ПО МЕСТУ (часовой пояс тенанта), не сырой UTC сервера
 // (аудит 2026-07-24: реальный баг — сдача около полуночи по месту могла
 // попасть на карточку "23 июля" здесь и на "24 июля" в /api/reports/money за
@@ -195,6 +196,13 @@ async function computeWindowSummary(
   });
   let revenue = 0;
   let expense = 0;
+  // Зарплаты (пересмотрено 2026-07-25 — см. полный разбор в
+  // reports/money/route.ts): авансы/премии — реальные деньги, физически
+  // покинувшие кассу, значит настоящий расход бизнеса — теперь тоже
+  // вычитаются из Прибыли здесь, иначе та же "Прибыль" на Главной и на
+  // /money показывала бы разные числа. Без отдельной строки в карточке
+  // Главной (места нет, три колонки уже заняты) — только в самой сумме.
+  let payouts = 0;
   // Разбивка по способу оплаты — та же, что на /money (запрос пользователя
   // 2026-07-18: "должна быть аналогичная сводка как и в Деньгах, где видно
   // наличные и безналичные") — раньше на Главной была только общая сумма.
@@ -220,13 +228,14 @@ async function computeWindowSummary(
     if (op.type === "abonement_topup") cash += amount;
     if (op.type === "abonement_topup_cashless") mobile += amount;
     if (op.type === "expense") expense += amount; // stored negative
+    if (op.type === "advance" || op.type === "bonus_payout") payouts += amount; // stored negative
   }
 
   return {
     revenue,
     cash,
     mobile,
-    profit: revenue + expense,
+    profit: revenue + expense + payouts,
     submissionsCount: submissions.length,
     difference: totalDifference,
     expenses: expense,
