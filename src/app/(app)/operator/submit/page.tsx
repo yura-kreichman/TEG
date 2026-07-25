@@ -35,6 +35,7 @@ import { useOperatorPrintAvailable } from "@/hooks/use-print";
 import { playErrorChime } from "@/lib/beep";
 import type { PrintDocumentData, PrintSection } from "@/lib/print/receipt-document";
 import { formatMoneyWithCurrency } from "@/lib/format";
+import { formatTime } from "@/lib/datetime-format";
 import { cn } from "@/lib/utils";
 
 interface TariffCtx {
@@ -95,6 +96,7 @@ interface ExpenseEventCtx {
   amount: number;
   categoryName: string | null;
   comment: string | null;
+  createdAt: string;
 }
 
 type Step = { kind: "select" } | { kind: "zone"; zoneId: string } | { kind: "expenses" } | { kind: "review" };
@@ -214,7 +216,13 @@ export default function SubmitResultsPage() {
       .then((data) => {
         const byZone: Record<string, ExpenseEventCtx[]> = {};
         for (const e of data?.events ?? []) {
-          (byZone[e.zoneId] ??= []).push({ id: e.id, amount: e.amount, categoryName: e.categoryName, comment: e.comment });
+          (byZone[e.zoneId] ??= []).push({
+            id: e.id,
+            amount: e.amount,
+            categoryName: e.categoryName,
+            comment: e.comment,
+            createdAt: e.createdAt,
+          });
         }
         setExpenseEventsByZone(byZone);
       })
@@ -1091,14 +1099,7 @@ export default function SubmitResultsPage() {
 
         {currentStep.kind === "expenses" && (
           <div className="flex flex-col gap-4">
-            <div>
-              <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.operatorApp.submit.expensesTitle}</h1>
-              {/* Read-only (запрос пользователя 2026-07-25: "чтобы не надо
-                  было запоминать до конца смены") — источник теперь экран
-                  "Расходы" на Главной, тот же принцип, что и у Возвратов:
-                  "раз не внёс, то проехали", здесь только просмотр. */}
-              <p className="mt-1 text-[0.84375rem] text-muted-foreground">{t.operatorApp.submit.expensesReadOnlyHint}</p>
-            </div>
+            <h1 className="text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.operatorApp.submit.expensesTitle}</h1>
             {selectedZoneIds.map((zoneId) => {
               const items = expenseEventsByZone[zoneId] ?? [];
               if (items.length === 0) return null;
@@ -1115,7 +1116,10 @@ export default function SubmitResultsPage() {
                     >
                       <div className="min-w-0">
                         <p className="text-body-airbnb font-semibold">{expense.categoryName ?? t.operatorApp.submit.expensesTitle}</p>
-                        {expense.comment && <p className="truncate text-caption-airbnb text-muted-foreground">{expense.comment}</p>}
+                        <p className="truncate text-caption-airbnb text-muted-foreground">
+                          {formatTime(expense.createdAt)}
+                          {expense.comment ? ` · ${expense.comment}` : ""}
+                        </p>
                       </div>
                       <span className="shrink-0 tabular-nums font-bold"><Money value={expense.amount} /></span>
                     </div>
