@@ -2,13 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell, ChevronRight, Mail, Pencil, Send } from "lucide-react";
+import { Bell, ChevronRight, Mail, Send } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
-import { PressableScale } from "@/components/motion/pressable-scale";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { EmailChannelSheet } from "@/components/summary-email-sheet";
 import { useI18n } from "@/components/i18n-provider";
@@ -171,25 +169,13 @@ export default function SummariesListPage() {
                       <ChevronRight className="size-4 text-muted-foreground/50" />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 pl-11.5">
-                    <span className="min-w-0 flex-1 truncate text-caption-airbnb text-muted-foreground">
-                      {telegram.connected ? `«${telegram.chatTitle}»` : t.summaries.telegramNotConnected}
-                    </span>
-                    <PressableScale className="shrink-0">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label={t.summaries.telegramChangeLink}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push("/settings/summaries/telegram");
-                        }}
-                      >
-                        <Pencil className="size-3.5" />
-                      </Button>
-                    </PressableScale>
-                  </div>
+                  {/* Кнопка "изменить" убрана (запрос пользователя
+                      2026-07-25: "оставить её внутри настроек канала
+                      доставки") — вся строка и так ведёт на свою страницу,
+                      дублировать переход второй кнопкой было лишним. */}
+                  <p className="truncate pl-11.5 text-caption-airbnb text-muted-foreground">
+                    {telegram.connected ? `«${telegram.chatTitle}»` : t.summaries.telegramNotConnected}
+                  </p>
                 </div>
 
                 {/* "Телеграм для клиентов" — публичная группа анонсов (запрос
@@ -224,53 +210,29 @@ export default function SummariesListPage() {
                       <ChevronRight className="size-4 text-muted-foreground/50" />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 pl-11.5">
-                    <span className="min-w-0 flex-1 truncate text-caption-airbnb text-muted-foreground">
-                      {publicGroup.connected ? `«${publicGroup.chatTitle}»` : t.summaries.telegramNotConnected}
-                    </span>
-                    <PressableScale className="shrink-0">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label={t.summaries.telegramChangeLink}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push("/settings/summaries/public-group");
-                        }}
-                      >
-                        <Pencil className="size-3.5" />
-                      </Button>
-                    </PressableScale>
-                  </div>
+                  <p className="truncate pl-11.5 text-caption-airbnb text-muted-foreground">
+                    {publicGroup.connected ? `«${publicGroup.chatTitle}»` : t.summaries.telegramNotConnected}
+                  </p>
                 </div>
 
                 <div className="flex flex-col gap-2 border-t border-border py-2 pt-3">
-                  <div className="flex items-center justify-between gap-3">
+                  <div
+                    className="flex cursor-pointer items-center justify-between gap-3"
+                    onClick={() => setEmailSheetOpen(true)}
+                  >
                     <div className="flex min-w-0 items-center gap-2.5">
                       <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <Mail className="size-4" />
                       </div>
                       <div className="min-w-0 text-body-airbnb font-medium">{t.summaries.emailLabel}</div>
                     </div>
-                    <Switch checked={email.enabled} onCheckedChange={toggleEmail} className="shrink-0" />
-                  </div>
-                  <div className="flex items-center gap-2 pl-11.5">
-                    <span className="min-w-0 flex-1 truncate text-caption-airbnb text-muted-foreground">
-                      {email.emailAddresses ? email.emailAddresses.split(",")[0]?.trim() : t.summaries.emailNotConnected}
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <Switch checked={email.enabled} onCheckedChange={toggleEmail} className="shrink-0" />
                     </span>
-                    <PressableScale className="shrink-0">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label={t.summaries.telegramChangeLink}
-                        onClick={() => setEmailSheetOpen(true)}
-                      >
-                        <Pencil className="size-3.5" />
-                      </Button>
-                    </PressableScale>
                   </div>
+                  <p className="truncate pl-11.5 text-caption-airbnb text-muted-foreground">
+                    {email.emailAddresses ? email.emailAddresses.split(",")[0]?.trim() : t.summaries.emailNotConnected}
+                  </p>
                 </div>
 
                 <div className="flex flex-col gap-2 border-t border-border py-2 pt-3">
@@ -286,22 +248,9 @@ export default function SummariesListPage() {
                     </div>
                     <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" />
                   </div>
-                  <div className="flex items-center gap-2 pl-11.5">
-                    <span className="min-w-0 flex-1 truncate text-caption-airbnb text-muted-foreground">
-                      {pushSubscribed ? t.summaries.pushOnThisDevice : t.summaries.pushNotConnected}
-                    </span>
-                    <PressableScale className="shrink-0">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        aria-label={t.summaries.telegramChangeLink}
-                        onClick={() => router.push("/settings/push")}
-                      >
-                        <Pencil className="size-3.5" />
-                      </Button>
-                    </PressableScale>
-                  </div>
+                  <p className="truncate pl-11.5 text-caption-airbnb text-muted-foreground">
+                    {pushSubscribed ? t.summaries.pushOnThisDevice : t.summaries.pushNotConnected}
+                  </p>
                 </div>
               </SpringCard>
             </StaggerItem>

@@ -79,40 +79,40 @@ export default function PublicGroupSettingsPage() {
           <StaggerList className="flex flex-col gap-3">
             <StaggerItem>
               <SpringCard animate={false} hover={false} className="flex flex-col gap-3">
+                {/* "изменить" — обычная белая кнопка с иконкой, в один ряд
+                    с названием чата (запрос пользователя 2026-07-25), не
+                    отдельной строкой ниже. Не подключена — крупная кнопка
+                    вместо неё (запрос пользователя 2026-07-24: "нет
+                    удобного bottom sheet для подключения"). */}
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2.5">
                     <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#2AABEE] text-white">
                       <Send className="size-4" />
                     </div>
-                    <div className="min-w-0">
-                      <div className="text-body-airbnb font-medium">
-                        {group.connected ? `«${group.chatTitle}»` : t.summaries.telegramNotConnected}
-                      </div>
+                    <div className="min-w-0 truncate text-body-airbnb font-medium">
+                      {group.connected ? `«${group.chatTitle}»` : t.summaries.telegramNotConnected}
                     </div>
                   </div>
-                  {/* Тумблер независим от подключения — тот же принцип, что
-                      и на списке каналов. */}
-                  <Switch checked={group.enabled} onCheckedChange={(v) => patch({ enabled: v })} className="shrink-0" />
+                  <div className="flex shrink-0 items-center gap-2">
+                    {group.connected && (
+                      <PressableScale>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon-sm"
+                          aria-label={t.summaries.telegramChangeLink}
+                          onClick={() => setConnectOpen(true)}
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                      </PressableScale>
+                    )}
+                    {/* Тумблер независим от подключения — тот же принцип,
+                        что и на списке каналов. */}
+                    <Switch checked={group.enabled} onCheckedChange={(v) => patch({ enabled: v })} />
+                  </div>
                 </div>
-                {/* "изменить" — обычная белая кнопка с иконкой (запрос
-                    пользователя 2026-07-25: "должна быть нашей типичной
-                    белой кнопкой + иконка"), не текстовая ссылка — на своей
-                    строке под названием чата. Не подключена — крупная кнопка
-                    вместо неё (запрос пользователя 2026-07-24: "нет
-                    удобного bottom sheet для подключения"). */}
-                {group.connected ? (
-                  <PressableScale className="w-fit">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      aria-label={t.summaries.telegramChangeLink}
-                      onClick={() => setConnectOpen(true)}
-                    >
-                      <Pencil className="size-3.5" />
-                    </Button>
-                  </PressableScale>
-                ) : (
+                {!group.connected && (
                   <PressableScale>
                     <Button type="button" className="w-full gap-2" onClick={() => setConnectOpen(true)}>
                       <Send className="size-4" />

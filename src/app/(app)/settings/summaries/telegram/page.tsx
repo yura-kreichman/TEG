@@ -112,38 +112,38 @@ export default function StaffTelegramSettingsPage() {
           <StaggerList className="flex flex-col gap-3">
             <StaggerItem>
               <SpringCard animate={false} hover={false} className="flex flex-col gap-3">
+                {/* "изменить" — обычная белая кнопка с иконкой, в один ряд
+                    с названием чата (запрос пользователя 2026-07-25), не
+                    отдельной строкой ниже. Не подключён — крупная кнопка
+                    вместо неё (запрос пользователя 2026-07-24: "нет
+                    удобного bottom sheet для подключения") — первый шаг
+                    должен быть заметным. Тумблер вкл/выкл — на списке
+                    "Сводки и сообщения", не здесь (запрос того же дня:
+                    дублировать не нужно). */}
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2.5">
                     <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#2AABEE] text-white">
                       <Send className="size-4" />
                     </div>
-                    <div className="min-w-0">
-                      <div className="text-body-airbnb font-medium">
-                        {telegram.connected ? `«${telegram.chatTitle}»` : t.summaries.telegramNotConnected}
-                      </div>
+                    <div className="min-w-0 truncate text-body-airbnb font-medium">
+                      {telegram.connected ? `«${telegram.chatTitle}»` : t.summaries.telegramNotConnected}
                     </div>
                   </div>
+                  {telegram.connected && (
+                    <PressableScale className="shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        aria-label={t.summaries.telegramChangeLink}
+                        onClick={() => setConnectOpen(true)}
+                      >
+                        <Pencil className="size-3.5" />
+                      </Button>
+                    </PressableScale>
+                  )}
                 </div>
-                {/* "изменить" — обычная белая кнопка с иконкой (запрос
-                    пользователя 2026-07-25), не текстовая ссылка. Не
-                    подключён — крупная кнопка вместо неё (запрос
-                    пользователя 2026-07-24: "нет удобного bottom sheet для
-                    подключения") — первый шаг должен быть заметным.
-                    Тумблер вкл/выкл — на списке "Сводки и сообщения", не
-                    здесь (запрос того же дня: дублировать не нужно). */}
-                {telegram.connected ? (
-                  <PressableScale className="w-fit">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      aria-label={t.summaries.telegramChangeLink}
-                      onClick={() => setConnectOpen(true)}
-                    >
-                      <Pencil className="size-3.5" />
-                    </Button>
-                  </PressableScale>
-                ) : (
+                {!telegram.connected && (
                   <PressableScale>
                     <Button type="button" className="w-full gap-2" onClick={() => setConnectOpen(true)}>
                       <Send className="size-4" />
