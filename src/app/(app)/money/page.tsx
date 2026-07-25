@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Building2, Calendar as CalendarIcon, CalendarDays, ChevronLeft, ChevronRight, Gift, MapPin, Receipt, RefreshCcw } from "lucide-react";
+import { Building2, Calendar as CalendarIcon, CalendarDays, ChevronLeft, ChevronRight, HandCoins, MapPin, RefreshCcw, ShoppingCart } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -506,7 +506,7 @@ export default function MoneyPage() {
             <Link href="/money/expenses">
               <SpringCard className="flex items-center gap-3">
                 <div className="flex size-11 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
-                  <Receipt className="size-5" />
+                  <ShoppingCart className="size-5" />
                 </div>
                 <div className="min-w-0 grow">
                   <p className="text-card-title">{t.money.expensesLink}</p>
@@ -521,7 +521,7 @@ export default function MoneyPage() {
             <Link href="/money/advances-bonuses">
               <SpringCard className="flex items-center gap-3">
                 <div className="flex size-11 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
-                  <Gift className="size-5" />
+                  <HandCoins className="size-5" />
                 </div>
                 <div className="min-w-0 grow">
                   <p className="text-card-title">{t.money.advancesBonusesLink}</p>
