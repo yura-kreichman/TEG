@@ -221,6 +221,22 @@ export async function answerCallbackQuery(callbackQueryId: string): Promise<void
   await callTelegramApi("answerCallbackQuery", { callback_query_id: callbackQueryId }).catch(() => {});
 }
 
+// Подсказка "/kassa" только в конкретном рабочем чате Сотрудников (запрос
+// пользователя 2026-07-25: "найдётся дурак, который будет тыкать среди
+// клиентов kassa") — Владелец сам убрал /kassa из общего списка в BotFather
+// (там нет прицельной настройки на один конкретный чат, только общие
+// категории "Group Chats"/"Direct Messages" сразу на все группы). Прицельный
+// scope {type:"chat", chat_id} есть только в Bot API, не в интерфейсе
+// BotFather — выставляем его сами при каждой успешной привязке рабочего
+// чата (handleStartMessage, purpose "summary"). best-effort — сбой не
+// должен ломать саму привязку.
+export async function setStaffGroupCommands(chatId: string): Promise<void> {
+  await callTelegramApi("setMyCommands", {
+    commands: [{ command: "kassa", description: "Касса сейчас" }],
+    scope: { type: "chat", chat_id: chatId },
+  }).catch(() => {});
+}
+
 export async function editChatMessage(
   chatId: string,
   messageId: string,

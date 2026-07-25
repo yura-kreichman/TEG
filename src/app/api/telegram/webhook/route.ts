@@ -11,6 +11,7 @@ import {
   isChatMember,
   getClientBalanceDeepLink,
   deleteChatMessage,
+  setStaffGroupCommands,
   CLIENT_START_PREFIX,
 } from "@/lib/telegram-bot";
 import { describeAbonementTransactionSource, findWalletByPhone, normalizePhone } from "@/lib/abonement";
@@ -222,6 +223,12 @@ async function handleStartMessage(message: {
     await sendChatMessage(notifyOldChatId, oldChatText).catch(() => {});
   }
   await sendChatMessage(chatId, "✅ RentOS подключён к этому чату").catch(() => {});
+
+  // Подсказка "/kassa" — только в этом конкретном рабочем чате (запрос
+  // пользователя 2026-07-25), не в клиентской группе (см. setStaffGroupCommands).
+  if (bindCode.purpose === "summary") {
+    await setStaffGroupCommands(chatId);
+  }
 
   // Автоматическая ссылка-приглашение (запрос пользователя 2026-07-24) —
   // пробуем сразу при привязке; сработает, только если бота добавили в
