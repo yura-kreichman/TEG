@@ -90,6 +90,30 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   }
   for (const sh of shifts) operatorIds.add(sh.operatorId);
 
+  // Премии за период (запрос пользователя 2026-07-25: "Начислено... должно
+  // включать премию, а снизу мелко сколько премии и сколько ставки") — тот
+  // же принцип, что earnedInPeriod/rateEarnedInPeriod/bonusesInPeriod в
+  // calcOperatorBalance (lib/work-time.ts), но одним массовым запросом на
+  // всех операторов сразу (та функция — на одного, здесь список). Именно
+  // beneficiaryOperatorId, не performedByOperatorId — премию может провести
+  // Владелец за оператора (см. .../bonus/route.ts), получатель не меняется.
+  // Аванс намеренно не участвует — это не заработок, а уже выданные деньги.
+  const bonusOps = await prisma.moneyOperation.findMany({
+    where: {
+      type: "bonus_payout",
+      occurredAt: { gte: start, lt: end },
+      beneficiaryOperatorId: { not: null },
+      ...(isAllPoints ? { tenantId: owner.tenantId } : { pointId }),
+    },
+    select: { beneficiaryOperatorId: true, amount: true },
+  });
+  const bonusByOperator = new Map<string, number>();
+  for (const op of bonusOps) {
+    if (!op.beneficiaryOperatorId) continue;
+    operatorIds.add(op.beneficiaryOperatorId);
+    bonusByOperator.set(op.beneficiaryOperatorId, (bonusByOperator.get(op.beneficiaryOperatorId) ?? 0) + Math.abs(Number(op.amount)));
+  }
+
   if (operatorIds.size === 0) {
     return NextResponse.json({ pointName, operators: [] });
   }
@@ -134,6 +158,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     const opSubmissions = submissionsByOperator.get(op.id) ?? [];
     const revenue = revenueByOperator.get(op.id) ?? 0;
     const differenceSum = opSubmissions.reduce((sum, s) => sum + s.difference, 0);
+    const bonus = bonusByOperator.get(op.id) ?? 0;
 
     return {
       operatorId: op.id,
@@ -145,13 +170,15 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       totalHours: round2(totalHours),
       revenue: round2(revenue),
       revenuePerHour: totalHours > 0 ? round2(revenue / totalHours) : null,
-      // "Начислено за период" — чистое начисление по ставке (часы × ставка),
-      // без вычета авансов/премий (docs/spec/05-work-time.md, тот же принцип,
-      // что и rateEarnedInPeriod в calcOperatorBalance/work-time.ts). Раньше
-      // здесь вычитались авансы+премии — путало "начислено" с "к выдаче" и
-      // premium-выплаты (не входящие в начисление по ставке вовсе) занижали
-      // цифру ниже реальной заработанной суммы. Найдено аудитом 2026-07-12.
-      accruedForPeriod: round2(accrued),
+      // "Начислено за период" (запрос пользователя 2026-07-25) — теперь
+      // ВСЁ заработанное: по ставке + премия, тот же принцип, что
+      // earnedInPeriod в calcOperatorBalance/work-time.ts. rateAccrued/
+      // bonus — та же пара для мелкой подписи-разбивки под цифрой. Аванс
+      // по-прежнему не участвует нигде — это не заработок, а уже выданные
+      // деньги (docs/spec/05-work-time.md).
+      accruedForPeriod: round2(accrued + bonus),
+      rateAccrued: round2(accrued),
+      bonus: round2(bonus),
       differenceSum: round2(differenceSum),
     };
   });

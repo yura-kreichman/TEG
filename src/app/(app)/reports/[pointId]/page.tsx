@@ -83,6 +83,8 @@ interface OperatorRow {
   revenue: number;
   revenuePerHour: number | null;
   accruedForPeriod: number;
+  rateAccrued: number;
+  bonus: number;
   differenceSum: number;
 }
 
@@ -1075,14 +1077,29 @@ function OperatorsTab({ operators, t }: { operators: OperatorRow[]; t: ReturnTyp
                 {op.shiftsCount} {t.reports.shiftsSuffix} · {op.totalHours} {t.reports.hoursSuffix}
               </div>
             </div>
-            {/* Начислено за период — растущее число (запрос пользователя
-                2026-07-25: "цифра растёт и скоро налезут друг на друга") —
-                перенесено в шапку карточки, рядом с именем (запрос того же
-                дня: "в ту секцию где имя сотрудника"), там у неё весь
-                простор строки, а не 1/3 узкой сетки внизу. */}
+            {/* "Заработано" — растущее число (запрос пользователя 2026-07-25:
+                "цифра растёт и скоро налезут друг на друга") — перенесено в
+                шапку карточки, рядом с именем (запрос того же дня: "в ту
+                секцию где имя сотрудника"), там у неё весь простор строки,
+                а не 1/3 узкой сетки внизу. Включает премию (запрос того же
+                дня: "не начислено, а заработано... включая премию"), под
+                цифрой — разбивка "По ставке"/"Премии" отдельными строками
+                (запрос того же дня: "отдельными строчками"), тот же принцип,
+                что earnedInPeriod/rateEarnedInPeriod/bonusesInPeriod в PWA
+                оператора. */}
             <div className="shrink-0 text-right tabular-nums">
               <div className="text-caption-airbnb">{t.reports.accruedLabel}</div>
               <div className="text-[1rem] font-bold"><Money value={op.accruedForPeriod} /></div>
+              {op.bonus > 0 && (
+                <div className="text-[0.65625rem] leading-tight text-muted-foreground">
+                  <div>
+                    {t.operatorApp.workTime.rateAccruedLabel} <Money value={op.rateAccrued} />
+                  </div>
+                  <div>
+                    {t.operatorApp.workTime.bonusesLabel} <Money value={op.bonus} />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-start justify-between gap-3 border-t border-border pt-3 tabular-nums">
