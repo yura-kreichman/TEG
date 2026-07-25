@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RefreshCcw, Wallet, Trash2, MapPin, Plus } from "lucide-react";
+import { RefreshCcw, Wallet, Trash2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { BackLink } from "@/components/back-link";
@@ -14,6 +15,7 @@ import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
 import { AbonementTopupFlow, type SpendZoneCtx } from "@/components/abonement-topup-flow";
 import { useI18n } from "@/components/i18n-provider";
 import { formatTime } from "@/lib/datetime-format";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface CounterZone {
   id: string;
@@ -47,6 +49,7 @@ export default function OperatorCountersPage() {
   const [returnSheetOpen, setReturnSheetOpen] = useState(false);
   const [returnZone, setReturnZone] = useState<CounterZone | null>(null);
   const [logging, setLogging] = useState(false);
+  const { saved: returnSaved, pulse: returnPulse } = useSavePulse();
 
   const [spendSheetOpen, setSpendSheetOpen] = useState(false);
   // undefined — ещё грузится (кнопка "Списать с баланса" скрыта до ответа
@@ -80,7 +83,7 @@ export default function OperatorCountersPage() {
     return events.filter((e) => e.zoneId === zoneId).length;
   }
 
-  async function logReturn(zone: CounterZone, e: React.MouseEvent) {
+  async function logReturn(zone: CounterZone) {
     if (logging) return;
     setLogging(true);
     try {
@@ -92,10 +95,9 @@ export default function OperatorCountersPage() {
       if (!res.ok) return;
       const data = await res.json();
       setEvents((prev) => [{ id: data.id, zoneId: zone.id, zoneName: zone.name, createdAt: data.createdAt }, ...prev]);
-      const rect = e.currentTarget.getBoundingClientRect();
-      window.dispatchEvent(
-        new CustomEvent("save-success-fly", { detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } })
-      );
+      // SaveButton сам шлёт "save-success-fly" при переходе saved false→true
+      // (см. save-button.tsx) — раньше это дублировалось вручную здесь.
+      returnPulse();
     } finally {
       setLogging(false);
     }
@@ -142,6 +144,7 @@ export default function OperatorCountersPage() {
             spendZones={spendZones}
             zoneSpendEndpointFor={(walletId) => `/api/operator/abonements/${walletId}/zone-spend`}
             spendOnlyMode
+            toastErrors
           />
         </div>
       </div>
@@ -217,13 +220,17 @@ export default function OperatorCountersPage() {
           {zones.length > 1 && !returnZone && (
             <>
               <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.counters.pickZoneTitle}</h2>
-              <div className="grid grid-cols-2 gap-3">
+              {/* Тап сразу переключает на следующий экран (returnZone
+                  устанавливается и этот блок размонтируется), поэтому
+                  "выбранного" состояния тут никогда не бывает видно — только
+                  сама сетка/стиль тайла общий со "Сдачей итогов"/"Расходами". */}
+              <div className="grid grid-cols-3 gap-3">
                 {zones.map((zone) => (
-                  <PressableScale key={zone.id}>
+                  <PressableScale key={zone.id} className="relative">
                     <button
                       type="button"
                       onClick={() => setReturnZone(zone)}
-                      className="flex w-full flex-col items-center gap-2.5 rounded-card border-[1.5px] border-border bg-card px-3 py-5 text-center"
+                      className="relative flex w-full flex-col items-center gap-2.5 rounded-card border-[1.5px] border-border bg-card px-3 py-5 text-center"
                     >
                       <div className="flex size-14 items-center justify-center rounded-control bg-muted text-muted-foreground/50">
                         {zone.iconKey ? <AssetOrZoneIcon iconKey={zone.iconKey} className="size-9" /> : <MapPin className="size-9" />}
@@ -244,15 +251,13 @@ export default function OperatorCountersPage() {
                   {t.operatorApp.counters.todayCountLabel} <span className="font-bold text-foreground">{countFor((returnZone ?? zones[0]).id)}</span>
                 </p>
                 <PressableScale className="w-full">
-                  <Button
+                  <SaveButton
                     type="button"
-                    className="h-14 w-full gap-2 text-lg font-bold"
+                    className="h-14 w-full text-lg font-bold"
                     disabled={logging}
-                    onClick={(e) => logReturn(returnZone ?? zones[0], e)}
-                  >
-                    <Plus className="size-5" />
-                    {t.operatorApp.submit.returnsLabelShort}
-                  </Button>
+                    saved={returnSaved}
+                    onClick={() => logReturn(returnZone ?? zones[0])}
+                  />
                 </PressableScale>
               </div>
             </>

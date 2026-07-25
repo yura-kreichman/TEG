@@ -30,10 +30,13 @@ import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
 import { useGoodsCart } from "@/components/operator-cart-context";
 import { Money } from "@/components/money";
 import { PrintButton } from "@/components/print/print-button";
+import { ActionToast } from "@/components/action-toast";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useActionToast } from "@/hooks/use-action-toast";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
 import { useLiveRefetch } from "@/hooks/use-live-refetch";
+import { playErrorChime } from "@/lib/beep";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -73,8 +76,12 @@ export default function GoodsPage() {
   const [categories, setCategories] = useState<CategoryCtx[]>([]);
   const [goods, setGoods] = useState<GoodsCtx[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const errorToast = useActionToast();
+  function flashError(message: string) {
+    playErrorChime();
+    errorToast.flash(message, "error");
+  }
 
   // Отдельное от goodsAccess право на ревизию остатков (запрос пользователя
   // 2026-07-19) — кебаб-кнопка ревизии в шапке вообще не рендерится без
@@ -114,7 +121,6 @@ export default function GoodsPage() {
   const [revisionQuantities, setRevisionQuantities] = useState<Record<string, string>>({});
   const [revisionDrafts, setRevisionDrafts] = useState<Record<string, Record<string, string>>>({});
   const [revisionSubmitting, setRevisionSubmitting] = useState(false);
-  const [revisionError, setRevisionError] = useState<string | null>(null);
   const { saved: revisionSaved, pulse: revisionPulse } = useSavePulse();
 
   const [reconcileOpen, setReconcileOpen] = useState(false);
@@ -127,7 +133,6 @@ export default function GoodsPage() {
   const [reconcileCash, setReconcileCash] = useState("");
   const [reconcileMobile, setReconcileMobile] = useState("");
   const [reconcileSubmitting, setReconcileSubmitting] = useState(false);
-  const [reconcileError, setReconcileError] = useState<string | null>(null);
   // Вылетающая галочка, как у всех SaveButton по проекту (запрос
   // пользователя 2026-07-19: "не надо писать 'Сохранено', а вылетающая
   // зелёная галочка, как у нас везде"), вместо отдельного текстового
@@ -145,7 +150,7 @@ export default function GoodsPage() {
         setRevisionAccess(Boolean(data.revisionAccess));
         setGoodsAllowBalancePayment(data.goodsAllowBalancePayment ?? true);
       })
-      .catch(() => setError(t.operatorApp.gameRoom.networkError))
+      .catch(() => flashError(t.operatorApp.gameRoom.networkError))
       .finally(() => setLoading(false));
   }
 
@@ -181,7 +186,6 @@ export default function GoodsPage() {
   async function sellCart(paymentMethod: "cash" | "mobile" | "abonement", walletId?: string) {
     if (currentCartLines.length === 0) return;
     setSubmitting(true);
-    setError(null);
     try {
       const res = await fetch("/api/operator/goods/sale/cart", {
         method: "POST",
@@ -194,7 +198,7 @@ export default function GoodsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? t.operatorApp.gameRoom.networkError);
+        flashError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       if (printAvailable.available) {
@@ -226,7 +230,7 @@ export default function GoodsPage() {
       setAbonementTarget(null);
       load();
     } catch {
-      setError(t.operatorApp.gameRoom.networkError);
+      flashError(t.operatorApp.gameRoom.networkError);
     } finally {
       setSubmitting(false);
     }
@@ -275,7 +279,6 @@ export default function GoodsPage() {
     setRevisionCategory(null);
     setRevisionQuantities({});
     setRevisionDrafts({});
-    setRevisionError(null);
     setRevisionOpen(true);
   }
 
@@ -313,11 +316,10 @@ export default function GoodsPage() {
       .map((c) => ({ categoryId: c.id, lines: revisionLinesFor(c.id, revisionDrafts[c.id] ?? {}) }))
       .filter((g) => g.lines.length > 0);
     if (groups.length === 0) {
-      setRevisionError(t.goods.noTrackedGoods);
+      flashError(t.goods.noTrackedGoods);
       return;
     }
     setRevisionSubmitting(true);
-    setRevisionError(null);
     try {
       const res = await fetch("/api/operator/goods/revisions", {
         method: "POST",
@@ -326,7 +328,7 @@ export default function GoodsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setRevisionError(data.error ?? t.operatorApp.gameRoom.networkError);
+        flashError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       load();
@@ -335,7 +337,7 @@ export default function GoodsPage() {
         setRevisionOpen(false);
       });
     } catch {
-      setRevisionError(t.operatorApp.gameRoom.networkError);
+      flashError(t.operatorApp.gameRoom.networkError);
     } finally {
       setRevisionSubmitting(false);
     }
@@ -344,13 +346,12 @@ export default function GoodsPage() {
   function openReconcile() {
     setReconcileCash("");
     setReconcileMobile("");
-    setReconcileError(null);
     setReconcilePending(null);
     setReconcileOpen(true);
     fetch("/api/operator/goods/reconciliations")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data && setReconcilePending(data.pending))
-      .catch(() => setReconcileError(t.operatorApp.gameRoom.networkError));
+      .catch(() => flashError(t.operatorApp.gameRoom.networkError));
   }
 
   async function saveReconciliation() {
@@ -358,7 +359,6 @@ export default function GoodsPage() {
     const actualMobile = Number(reconcileMobile || "0");
     if (!Number.isFinite(actualCash) || actualCash < 0 || !Number.isFinite(actualMobile) || actualMobile < 0) return;
     setReconcileSubmitting(true);
-    setReconcileError(null);
     try {
       const res = await fetch("/api/operator/goods/reconciliations", {
         method: "POST",
@@ -371,12 +371,12 @@ export default function GoodsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setReconcileError(data.error ?? t.operatorApp.gameRoom.networkError);
+        flashError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       reconcilePulse(() => setReconcileOpen(false));
     } catch {
-      setReconcileError(t.operatorApp.gameRoom.networkError);
+      flashError(t.operatorApp.gameRoom.networkError);
     } finally {
       setReconcileSubmitting(false);
     }
@@ -520,7 +520,6 @@ export default function GoodsPage() {
           </div>
         )}
 
-        {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
       </div>
 
       {/* Корзина — позиции со степперами (тот же принцип, что у Билетов,
@@ -691,7 +690,6 @@ export default function GoodsPage() {
                   </PressableScale>
                 ))}
               </div>
-              {revisionError && <p className="text-sm text-destructive">{revisionError}</p>}
               <PressableScale>
                 <SaveButton type="button" className="h-12 w-full" disabled={revisionSubmitting} saved={revisionSaved} onClick={saveAllRevisions} />
               </PressableScale>
@@ -835,8 +833,6 @@ export default function GoodsPage() {
                   <Money value={reconcileDifference} />
                 </p>
               )}
-
-              {reconcileError && <p className="text-sm text-destructive">{reconcileError}</p>}
             </>
           )}
         </div>
@@ -885,6 +881,7 @@ export default function GoodsPage() {
           </div>
         )}
       </BottomSheet>
+      <ActionToast message={errorToast.message} variant={errorToast.variant} />
     </div>
   );
 }

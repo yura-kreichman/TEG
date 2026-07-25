@@ -15,12 +15,15 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { SweepButton } from "@/components/motion/SweepButton";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { PrintButton } from "@/components/print/print-button";
+import { ActionToast } from "@/components/action-toast";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useActionToast } from "@/hooks/use-action-toast";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
+import { playErrorChime } from "@/lib/beep";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 
 interface ZoneOption {
@@ -85,12 +88,20 @@ export default function OperatorHomePage() {
   const [timeTrackingMode, setTimeTrackingMode] = useState<"manual" | "auto">("manual");
   const [activeShiftStartAt, setActiveShiftStartAt] = useState<string | null>(null);
   const [checkInOutBusy, setCheckInOutBusy] = useState(false);
-  const [checkInOutError, setCheckInOutError] = useState<string | null>(null);
   const [checkoutSheetOpen, setCheckoutSheetOpen] = useState(false);
   const [checkoutAdvance, setCheckoutAdvance] = useState("");
   const [checkoutBonus, setCheckoutBonus] = useState("");
-  const [checkoutSheetError, setCheckoutSheetError] = useState<string | null>(null);
   const { saved: checkoutSaved, pulse: checkoutPulse } = useSavePulse();
+  // Ошибки Сотрудника — общий bounce-тост по центру экрана + звук ошибки
+  // (запрос пользователя 2026-07-25: "везде... где это логично", тот же
+  // приём, что уже был у "Заказ не найден" в Билетах) вместо обычного
+  // текста под кнопкой — один инстанс на всю страницу, разные действия
+  // (чек-ин/аут, инкассация) не показываются одновременно.
+  const errorToast = useActionToast();
+  function flashError(message: string) {
+    playErrorChime();
+    errorToast.flash(message, "error");
+  }
   // Мягкие напоминания после check-in/check-out (docs/spec/05-work-time.md,
   // "СВЯЗЬ СО СДАЧЕЙ ИТОГОВ") — то же самое уведомление, что в ручном режиме.
   const [homeNotice, setHomeNotice] = useState<{ warnings: string[]; noResultsToday: boolean } | null>(null);
@@ -105,7 +116,6 @@ export default function OperatorHomePage() {
   const [collectionMode, setCollectionMode] = useState<"zone" | "general">("general");
   const [collectionZoneId, setCollectionZoneId] = useState("");
   const [collectionAmount, setCollectionAmount] = useState("");
-  const [collectionError, setCollectionError] = useState<string | null>(null);
   // Уведомление, если инкассация довзыскала "пул" — аванс/премию, которые
   // сам оператор уже забрал с точки после прошлой инкассации
   // (lib/zone-balance.ts, найдено на реальных данных 2026-07-16).
@@ -261,13 +271,12 @@ export default function OperatorHomePage() {
   const shiftTooLong = activeShiftStartAt ? now.getTime() - new Date(activeShiftStartAt).getTime() > 16 * 60 * 60 * 1000 : false;
 
   async function handleCheckIn() {
-    setCheckInOutError(null);
     setCheckInOutBusy(true);
     try {
       const res = await fetch("/api/operator/work-time/check-in", { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        setCheckInOutError(data.error ?? t.operatorApp.workTime.saveError);
+        flashError(data.error ?? t.operatorApp.workTime.saveError);
         return;
       }
       setActiveShiftStartAt(data.shift.startAt);
@@ -283,12 +292,10 @@ export default function OperatorHomePage() {
   function openCheckoutSheet() {
     setCheckoutAdvance("");
     setCheckoutBonus("");
-    setCheckoutSheetError(null);
     setCheckoutSheetOpen(true);
   }
 
   async function handleCheckOut() {
-    setCheckoutSheetError(null);
     setCheckInOutBusy(true);
     try {
       const res = await fetch("/api/operator/work-time/check-out", {
@@ -301,7 +308,7 @@ export default function OperatorHomePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setCheckoutSheetError(data.error ?? t.operatorApp.workTime.saveError);
+        flashError(data.error ?? t.operatorApp.workTime.saveError);
         return;
       }
       setActiveShiftStartAt(null);
@@ -354,7 +361,6 @@ export default function OperatorHomePage() {
 
   async function handleCollection(event: FormEvent) {
     event.preventDefault();
-    setCollectionError(null);
 
     let res: Response | null;
     if (collectionMode === "general") {
@@ -364,7 +370,7 @@ export default function OperatorHomePage() {
         body: JSON.stringify({ amount: collectionAmount }),
       });
     } else if (!collectionZoneId) {
-      setCollectionError(t.operatorApp.selectZone);
+      flashError(t.operatorApp.selectZone);
       return;
     } else if (collectionZoneId === ABONEMENT_POOL_ID || collectionZoneId === GOODS_POOL_ID) {
       res = await fetch("/api/operator/collection/pool", {
@@ -385,7 +391,7 @@ export default function OperatorHomePage() {
 
     const data = await res.json();
     if (!res.ok) {
-      setCollectionError(data.error ?? "Не удалось провести инкассацию");
+      flashError(data.error ?? "Не удалось провести инкассацию");
       return;
     }
     if (data.settledPool > 0) {
@@ -433,7 +439,6 @@ export default function OperatorHomePage() {
     setCollectionMode("zone");
     setCollectionZoneId("");
     setCollectionAmount("");
-    setCollectionError(null);
     setShowCollection(true);
   }
 
@@ -608,7 +613,6 @@ export default function OperatorHomePage() {
             </Button>
           </PressableScale>
         </div>
-        {checkInOutError && <p className="mt-2 text-center text-caption-airbnb text-destructive">{checkInOutError}</p>}
 
         {shiftTooLong && (
           <div className="mt-3 rounded-control bg-warning/15 p-3 text-sm font-medium text-warning">
@@ -831,7 +835,6 @@ export default function OperatorHomePage() {
                   </PressableScale>
                 </div>
               </div>
-              {collectionError && <p className="text-sm text-destructive">{collectionError}</p>}
         </form>
       </BottomSheet>
 
@@ -915,8 +918,6 @@ export default function OperatorHomePage() {
               />
             </PressableScale>
           </div>
-
-          {checkoutSheetError && <p className="text-sm text-destructive">{checkoutSheetError}</p>}
         </div>
       </BottomSheet>
 
@@ -930,6 +931,7 @@ export default function OperatorHomePage() {
           {t.operatorApp.collectionAdvanceToastPrefix} <Money value={advanceToast} /> {t.operatorApp.collectionAdvanceToastSuffix}
         </div>
       )}
+      <ActionToast message={errorToast.message} variant={errorToast.variant} />
     </div>
   );
 }

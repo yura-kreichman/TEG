@@ -1191,7 +1191,7 @@
       "spendTitle": "Balansdan çıxarış",
       "debitedLabel": "Çıxarıldı",
       "noSpendZonesError": "Balansla ödəniş üçün əlçatan zona yoxdur",
-      "spendOnlyNotFound": "Müştəri tapılmadı. Onu «Müştərilər» bölməsində əlavə edin."
+      "spendOnlyNotFound": "Müştəri tapılmadı"
     },
     "collectionAdvanceToastPrefix": "Avans kimi ayrıldı",
     "collectionAdvanceToastSuffix": "— nəticələr təqdim edildikdən sonra zona qalığında görünəcək",

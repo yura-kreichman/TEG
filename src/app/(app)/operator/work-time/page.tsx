@@ -7,14 +7,17 @@ import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useActionToast } from "@/hooks/use-action-toast";
 import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { WheelTimePicker } from "@/components/wheel-time-picker";
+import { ActionToast } from "@/components/action-toast";
 import { useI18n } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
+import { playErrorChime } from "@/lib/beep";
 import { cn } from "@/lib/utils";
 import { formatDuration as formatDurationBase, formatTime, nowInTimezone } from "@/lib/datetime-format";
 import {
@@ -99,8 +102,12 @@ export default function WorkTimePage() {
   const [advanceAmount, setAdvanceAmount] = useState("");
   const [bonusAmount, setBonusAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const { saved: shiftSaved, pulse: shiftPulse } = useSavePulse();
+  const errorToast = useActionToast();
+  function flashError(message: string) {
+    playErrorChime();
+    errorToast.flash(message, "error");
+  }
   const [tenantTimezone, setTenantTimezone] = useState("UTC");
 
   // Самостоятельный запрос аванса/премии посреди смены, без её закрытия —
@@ -110,7 +117,6 @@ export default function WorkTimePage() {
   const [advanceRequestAmount, setAdvanceRequestAmount] = useState("");
   const [bonusRequestAmount, setBonusRequestAmount] = useState("");
   const [advanceRequestSubmitting, setAdvanceRequestSubmitting] = useState(false);
-  const [advanceRequestError, setAdvanceRequestError] = useState<string | null>(null);
   const { saved: advanceRequestSaved, pulse: advanceRequestPulse } = useSavePulse();
 
   const [notice, setNotice] = useState<{ warnings: string[]; noResultsToday: boolean } | null>(null);
@@ -187,7 +193,6 @@ export default function WorkTimePage() {
     setEndMinute(nowMinute);
     setAdvanceAmount("");
     setBonusAmount("");
-    setSubmitError(null);
     setFormOpen(true);
   }
 
@@ -207,7 +212,6 @@ export default function WorkTimePage() {
 
   async function handleSubmitShift() {
     setSubmitting(true);
-    setSubmitError(null);
     // Локальные компоненты даты/времени устройства — не UTC, иначе введённые
     // часы:минуты сместятся на разницу часовых поясов при отправке на сервер.
     const today = new Date();
@@ -228,7 +232,7 @@ export default function WorkTimePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setSubmitError(data.error ?? t.operatorApp.workTime.saveError);
+        flashError(data.error ?? t.operatorApp.workTime.saveError);
         return;
       }
       shiftPulse(() => setFormOpen(false));
@@ -246,7 +250,6 @@ export default function WorkTimePage() {
   function openAdvanceRequest() {
     setAdvanceRequestAmount("");
     setBonusRequestAmount("");
-    setAdvanceRequestError(null);
     setAdvanceRequestOpen(true);
   }
 
@@ -255,7 +258,6 @@ export default function WorkTimePage() {
     const bonus = bonusRequestAmount ? Number(bonusRequestAmount) : 0;
     if (advance <= 0 && bonus <= 0) return;
     setAdvanceRequestSubmitting(true);
-    setAdvanceRequestError(null);
     try {
       const res = await fetch("/api/operator/work-time/advance-request", {
         method: "POST",
@@ -264,7 +266,7 @@ export default function WorkTimePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setAdvanceRequestError(data.error ?? t.operatorApp.workTime.saveError);
+        flashError(data.error ?? t.operatorApp.workTime.saveError);
         return;
       }
       advanceRequestPulse(() => setAdvanceRequestOpen(false));
@@ -534,8 +536,6 @@ export default function WorkTimePage() {
               />
             </PressableScale>
           </div>
-
-          {submitError && <p className="text-sm text-destructive">{submitError}</p>}
         </div>
       </BottomSheet>
 
@@ -579,10 +579,9 @@ export default function WorkTimePage() {
               />
             </PressableScale>
           </div>
-
-          {advanceRequestError && <p className="text-sm text-destructive">{advanceRequestError}</p>}
         </div>
       </BottomSheet>
+      <ActionToast message={errorToast.message} variant={errorToast.variant} />
     </div>
   );
 }

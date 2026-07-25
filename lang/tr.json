@@ -1191,7 +1191,7 @@
       "spendTitle": "Bakiyeden düş",
       "debitedLabel": "Düşüldü",
       "noSpendZonesError": "Bakiyeyle ödeme için uygun bölge yok",
-      "spendOnlyNotFound": "Müşteri bulunamadı. «Müşteriler» bölümünden ekleyin."
+      "spendOnlyNotFound": "Müşteri bulunamadı"
     },
     "collectionAdvanceToastPrefix": "Avans olarak ayrıldı",
     "collectionAdvanceToastSuffix": "— sonuçlar teslim edildikten sonra bölge bakiyesinde görünecek",

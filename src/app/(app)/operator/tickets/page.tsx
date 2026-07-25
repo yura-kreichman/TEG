@@ -17,9 +17,11 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
 import { useTicketsCart } from "@/components/operator-cart-context";
+import { ActionToast } from "@/components/action-toast";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
+import { useActionToast } from "@/hooks/use-action-toast";
 import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import { openPrintDocument, type PrintDocumentData } from "@/lib/print/receipt-document";
 import { isTicketsZone } from "@/lib/results-calc";
@@ -124,7 +126,11 @@ export default function TicketsZonePage() {
   const [clientsEnabled, setClientsEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("sell");
-  const [error, setError] = useState<string | null>(null);
+  const errorToast = useActionToast();
+  function flashError(message: string) {
+    playErrorChime();
+    errorToast.flash(message, "error");
+  }
 
   function loadContext() {
     fetch("/api/operator/submission-context")
@@ -245,7 +251,6 @@ export default function TicketsZonePage() {
   async function submitOrder(paymentMethod: "cash" | "mobile" | "abonement", abonementWalletId?: string) {
     if (!zone || currentCartLines.length === 0) return;
     setSubmitting(true);
-    setError(null);
     try {
       const res = await fetch(`/api/zones/${zone.id}/ticket-orders`, {
         method: "POST",
@@ -258,7 +263,7 @@ export default function TicketsZonePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? t.operatorApp.gameRoom.networkError);
+        flashError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       // Реальные билеты с сервера (createManyAndReturn — см. комментарий
@@ -310,7 +315,7 @@ export default function TicketsZonePage() {
         ...prev,
       ]);
     } catch {
-      setError(t.operatorApp.gameRoom.networkError);
+      flashError(t.operatorApp.gameRoom.networkError);
     } finally {
       setSubmitting(false);
     }
@@ -981,7 +986,6 @@ export default function TicketsZonePage() {
           </>
         )}
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
 
       {/* Выбор варианта цены актива — крупные кнопки во всю ширину, тот же
@@ -1236,6 +1240,7 @@ export default function TicketsZonePage() {
           </div>
         )}
       </BottomSheet>
+      <ActionToast message={errorToast.message} variant={errorToast.variant} />
     </div>
   );
 }

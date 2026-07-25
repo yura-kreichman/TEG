@@ -19,8 +19,10 @@ import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { isStaysZone } from "@/lib/results-calc";
 import { estimateLiveAmount, formatMMSS, type LaunchPricingMode, type LaunchRoundingMode } from "@/lib/game-room-client";
-import { unlockBeep, playBeep, playConfirmChime, playCloseChime } from "@/lib/beep";
+import { unlockBeep, playBeep, playConfirmChime, playCloseChime, playErrorChime } from "@/lib/beep";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
+import { ActionToast } from "@/components/action-toast";
+import { useActionToast } from "@/hooks/use-action-toast";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -100,7 +102,11 @@ export default function StaysZonePage() {
   const [zoneFilter, setZoneFilter] = useState<string>(ALL_ZONES);
   const [launches, setLaunches] = useState<OpenLaunch[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const errorToast = useActionToast();
+  function flashError(message: string) {
+    playErrorChime();
+    errorToast.flash(message, "error");
+  }
 
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -312,7 +318,6 @@ export default function StaysZonePage() {
   ) {
     if (!selectedAssetId || !selectedZoneId) return;
     setStarting(true);
-    setError(null);
     unlockBeep();
     try {
       const res = await fetch(`/api/zones/${selectedZoneId}/launches`, {
@@ -322,7 +327,7 @@ export default function StaysZonePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? t.operatorApp.gameRoom.noPricingError);
+        flashError(data.error ?? t.operatorApp.gameRoom.noPricingError);
         return;
       }
       // Звук подтверждения (запрос пользователя 2026-07-20) — "бам-бум",
@@ -335,7 +340,7 @@ export default function StaysZonePage() {
       // Сетевая ошибка (не HTTP-ошибка от сервера) — docs/spec/04-game-room.md,
       // Шаг 6: "стоп даёт внятную ошибку и не теряет пуск" — то же верно и для
       // старта. Ничего на сервере не создалось, повтор безопасен.
-      setError(t.operatorApp.gameRoom.networkError);
+      flashError(t.operatorApp.gameRoom.networkError);
     } finally {
       setStarting(false);
     }
@@ -347,7 +352,6 @@ export default function StaysZonePage() {
     abonementWalletId?: string
   ) {
     setStopping(true);
-    setError(null);
     // Снимок для квитанции ДО запроса — после успешного стопа сам launch
     // пропадает из локального списка (loadLaunches грузит только открытые).
     const launch = launches.find((l) => l.id === launchId);
@@ -361,7 +365,7 @@ export default function StaysZonePage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error ?? "");
+        flashError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       const data = await res.json();
@@ -393,7 +397,7 @@ export default function StaysZonePage() {
       // Пуск на сервере не потерян (запрос мог не дойти или ответ не
       // вернуться) — оператор видит понятную ошибку и может повторить, повтор
       // на уже закрытый пуск сервер отклонит отдельной проверкой isOpen.
-      setError(t.operatorApp.gameRoom.networkError);
+      flashError(t.operatorApp.gameRoom.networkError);
     } finally {
       setStopping(false);
     }
@@ -745,7 +749,6 @@ export default function StaysZonePage() {
           </>
         )}
 
-        {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
       </div>
 
       {/* Добавление браслета "За вход" — один sheet, два последовательных
@@ -957,6 +960,7 @@ export default function StaysZonePage() {
           </PressableScale>
         </div>
       </BottomSheet>
+      <ActionToast message={errorToast.message} variant={errorToast.variant} />
     </div>
   );
 }

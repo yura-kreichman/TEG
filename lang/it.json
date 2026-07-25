@@ -1191,7 +1191,7 @@
       "spendTitle": "Addebita dal saldo",
       "debitedLabel": "Addebitato",
       "noSpendZonesError": "Nessuna zona disponibile per il pagamento dal saldo",
-      "spendOnlyNotFound": "Cliente non trovato. Aggiungilo nella sezione «Clienti»."
+      "spendOnlyNotFound": "Cliente non trovato"
     },
     "collectionAdvanceToastPrefix": "Accantonato come anticipo",
     "collectionAdvanceToastSuffix": "— comparirà nel saldo della zona dopo l’invio dei risultati",

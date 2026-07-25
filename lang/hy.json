@@ -1191,7 +1191,7 @@
       "spendTitle": "Հանել հաշվեկշռից",
       "debitedLabel": "Հանված է",
       "noSpendZonesError": "Հաշվեկշռով վճարման համար հասանելի գոտի չկա",
-      "spendOnlyNotFound": "Հաճախորդը չի գտնվել։ Ավելացրեք նրան «Հաճախորդներ» բաժնում։"
+      "spendOnlyNotFound": "Հաճախորդը չի գտնվել"
     },
     "collectionAdvanceToastPrefix": "Հետաձգվել է որպես կանխավճար",
     "collectionAdvanceToastSuffix": "— կհայտնվի գոտու մնացորդում արդյունքների հանձնումից հետո",

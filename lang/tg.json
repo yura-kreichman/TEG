@@ -1191,7 +1191,7 @@
       "spendTitle": "Аз баланс гирифтан",
       "debitedLabel": "Гирифта шуд",
       "noSpendZonesError": "Минтақа барои пардохт аз ҳисоб мавҷуд нест",
-      "spendOnlyNotFound": "Мизоҷ ёфт нашуд. Ӯро дар бахши «Мизоҷон» илова кунед."
+      "spendOnlyNotFound": "Мизоҷ ёфт нашуд"
     },
     "collectionAdvanceToastPrefix": "Ҳамчун пеш гузошта шуд",
     "collectionAdvanceToastSuffix": "— пас аз супоридани натиҷаҳо дар бақияи минтақа пайдо мешавад",

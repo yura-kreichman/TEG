@@ -1191,7 +1191,7 @@
       "spendTitle": "Charge from balance",
       "debitedLabel": "Charged",
       "noSpendZonesError": "No zones available for balance payment",
-      "spendOnlyNotFound": "Client not found. Add them in the Customers section."
+      "spendOnlyNotFound": "Client not found"
     },
     "collectionAdvanceToastPrefix": "Set aside as an advance",
     "collectionAdvanceToastSuffix": "— will appear in the zone balance once results are submitted",

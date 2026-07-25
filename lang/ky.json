@@ -1191,7 +1191,7 @@
       "spendTitle": "Балансынан эсептен алуу",
       "debitedLabel": "Эсептен алынды",
       "noSpendZonesError": "Баланс менен төлөө үчүн зона жок",
-      "spendOnlyNotFound": "Кардар табылган жок. Аны «Клиенттер» бөлүмүнөн кошуңуз."
+      "spendOnlyNotFound": "Кардар табылган жок"
     },
     "collectionAdvanceToastPrefix": "Аванс катары калтырылды",
     "collectionAdvanceToastSuffix": "— жыйынтыктар тапшырылгандан кийин зона калдыгында пайда болот",

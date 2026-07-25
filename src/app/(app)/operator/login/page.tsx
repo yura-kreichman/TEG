@@ -6,7 +6,10 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ActionToast } from "@/components/action-toast";
 import { useI18n } from "@/components/i18n-provider";
+import { useActionToast } from "@/hooks/use-action-toast";
+import { playErrorChime } from "@/lib/beep";
 
 type DeviceStatus = "checking" | "unknown" | "ready";
 
@@ -15,8 +18,8 @@ export default function OperatorLoginPage() {
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatus>("checking");
   const [pointName, setPointName] = useState<string | null>(null);
   const [pin, setPin] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const errorToast = useActionToast();
 
   useEffect(() => {
     fetch("/api/auth/operator/me")
@@ -33,7 +36,6 @@ export default function OperatorLoginPage() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setError(null);
     setLoading(true);
 
     try {
@@ -45,7 +47,12 @@ export default function OperatorLoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? "Не удалось войти");
+        // Zoom-in+bounce по центру со звуком ошибки (запрос пользователя
+        // 2026-07-25) — тот же приём, что "Заказ не найден"/"Клиент не
+        // найден"; PIN сбрасывается сразу, вводить заново с нуля.
+        playErrorChime();
+        errorToast.flash(data.error ?? "Не удалось войти", "error");
+        setPin("");
         return;
       }
 
@@ -99,8 +106,6 @@ export default function OperatorLoginPage() {
             />
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
           <PressableScale>
             <Button type="submit" disabled={loading} className="h-14 w-full rounded-control text-base font-bold">
               {loading ? t.auth.loggingIn : t.auth.loginButton}
@@ -108,6 +113,7 @@ export default function OperatorLoginPage() {
           </PressableScale>
         </form>
       )}
+      <ActionToast message={errorToast.message} variant={errorToast.variant} />
     </AuthCard>
   );
 }

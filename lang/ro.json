@@ -1191,7 +1191,7 @@
       "spendTitle": "Taxează din sold",
       "debitedLabel": "Taxat",
       "noSpendZonesError": "Nu există zone disponibile pentru plata din sold",
-      "spendOnlyNotFound": "Clientul nu a fost găsit. Adăugați-l în secțiunea «Clienți»."
+      "spendOnlyNotFound": "Clientul nu a fost găsit"
     },
     "collectionAdvanceToastPrefix": "Pus deoparte ca avans",
     "collectionAdvanceToastSuffix": "— va apărea în soldul zonei după trimiterea rezultatelor",

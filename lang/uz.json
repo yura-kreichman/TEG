@@ -1191,7 +1191,7 @@
       "spendTitle": "Balansdan yechish",
       "debitedLabel": "Yechildi",
       "noSpendZonesError": "Balansdan toʻlash uchun mintaqa yoʻq",
-      "spendOnlyNotFound": "Mijoz topilmadi. Uni «Mijozlar» boʻlimida qoʻshing."
+      "spendOnlyNotFound": "Mijoz topilmadi"
     },
     "collectionAdvanceToastPrefix": "Avans sifatida ajratildi",
     "collectionAdvanceToastSuffix": "— natijalar topshirilgandan keyin zona qoldig‘ida paydo bo‘ladi",

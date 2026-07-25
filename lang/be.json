@@ -1191,7 +1191,7 @@
       "spendTitle": "Спісаць з балансу",
       "debitedLabel": "Спісана",
       "noSpendZonesError": "Няма даступных зон для аплаты балансам",
-      "spendOnlyNotFound": "Кліента не знойдзена. Дадайце яго ў раздзеле «Кліенты»."
+      "spendOnlyNotFound": "Кліента не знойдзена"
     },
     "collectionAdvanceToastPrefix": "Адкладзена як аванс",
     "collectionAdvanceToastSuffix": "— з’явіцца ў рэштцы зоны пасля здачы вынікаў",

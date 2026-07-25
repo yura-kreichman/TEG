@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { MapPin, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import { Check, MapPin, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/money-input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -16,8 +17,13 @@ import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
 import { Money } from "@/components/money";
+import { ActionToast } from "@/components/action-toast";
 import { useI18n } from "@/components/i18n-provider";
 import { formatTime } from "@/lib/datetime-format";
+import { cn } from "@/lib/utils";
+import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useActionToast } from "@/hooks/use-action-toast";
+import { playErrorChime } from "@/lib/beep";
 
 interface ExpenseZone {
   id: string;
@@ -64,7 +70,12 @@ export default function OperatorExpensesPage() {
   const [formCategoryId, setFormCategoryId] = useState("");
   const [formComment, setFormComment] = useState("");
   const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const { saved: formSaved, pulse: formPulse } = useSavePulse();
+  const errorToast = useActionToast();
+  function flashError(message: string) {
+    playErrorChime();
+    errorToast.flash(message, "error");
+  }
 
   function loadEvents() {
     fetch("/api/operator/zone-expense-events")
@@ -94,23 +105,21 @@ export default function OperatorExpensesPage() {
     setFormAmount("");
     setFormCategoryId("");
     setFormComment("");
-    setFormError(null);
     setSheetOpen(true);
   }
 
   async function submitExpense() {
     if (saving) return;
     if (!formZoneId) {
-      setFormError(t.operatorApp.selectZone);
+      flashError(t.operatorApp.selectZone);
       return;
     }
     const amount = Number(formAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      setFormError(t.operatorApp.submit.amountPlaceholder);
+      flashError(t.operatorApp.submit.amountPlaceholder);
       return;
     }
     setSaving(true);
-    setFormError(null);
     try {
       const res = await fetch("/api/operator/zone-expense-events", {
         method: "POST",
@@ -124,7 +133,7 @@ export default function OperatorExpensesPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setFormError(data.error ?? t.operatorApp.workTime.saveError);
+        flashError(data.error ?? t.operatorApp.workTime.saveError);
         return;
       }
       const zone = zones.find((z) => z.id === formZoneId);
@@ -141,7 +150,7 @@ export default function OperatorExpensesPage() {
         },
         ...prev,
       ]);
-      setSheetOpen(false);
+      formPulse(() => setSheetOpen(false));
     } finally {
       setSaving(false);
     }
@@ -223,23 +232,48 @@ export default function OperatorExpensesPage() {
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.submit.addExpense}</h2>
 
           {zones.length > 1 && (
-            <div className="grid grid-cols-2 gap-3">
-              {zones.map((zone) => (
-                <PressableScale key={zone.id}>
-                  <button
-                    type="button"
-                    onClick={() => setFormZoneId(zone.id)}
-                    className={`flex w-full flex-col items-center gap-2 rounded-card border-[1.5px] px-3 py-4 text-center ${
-                      formZoneId === zone.id ? "border-primary bg-primary/5" : "border-border bg-card"
-                    }`}
-                  >
-                    <div className="flex size-11 items-center justify-center rounded-control bg-muted text-muted-foreground/50">
-                      {zone.iconKey ? <AssetOrZoneIcon iconKey={zone.iconKey} className="size-7" /> : <MapPin className="size-7" />}
-                    </div>
-                    <span className="text-[0.84375rem] font-semibold text-foreground">{zone.name}</span>
-                  </button>
-                </PressableScale>
-              ))}
+            <div className="grid grid-cols-3 gap-3">
+              {zones.map((zone) => {
+                const selected = formZoneId === zone.id;
+                return (
+                  <PressableScale key={zone.id} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setFormZoneId(zone.id)}
+                      className={cn(
+                        "relative flex w-full flex-col items-center gap-2.5 rounded-card border-[1.5px] px-3 py-5 text-center",
+                        selected ? "border-primary bg-primary/10" : "border-border bg-card"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "flex size-14 items-center justify-center rounded-control",
+                          selected ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground/50"
+                        )}
+                      >
+                        {zone.iconKey ? (
+                          <AssetOrZoneIcon iconKey={zone.iconKey} className="size-9" />
+                        ) : (
+                          <MapPin className="size-9" />
+                        )}
+                      </div>
+                      <span
+                        className={cn(
+                          "text-[0.90625rem] font-semibold",
+                          selected ? "text-foreground" : "text-muted-foreground"
+                        )}
+                      >
+                        {zone.name}
+                      </span>
+                    </button>
+                    {selected && (
+                      <span className="absolute -right-2 -top-2 flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
+                        <Check className="size-5" />
+                      </span>
+                    )}
+                  </PressableScale>
+                );
+              })}
             </div>
           )}
 
@@ -278,15 +312,18 @@ export default function OperatorExpensesPage() {
             onChange={(e) => setFormComment(e.target.value)}
           />
 
-          {formError && <p className="text-sm text-destructive">{formError}</p>}
-
           <PressableScale className="w-full">
-            <Button type="button" className="h-14 w-full text-lg font-bold" disabled={saving} onClick={submitExpense}>
-              {t.common.save}
-            </Button>
+            <SaveButton
+              type="button"
+              className="h-14 w-full text-lg font-bold"
+              disabled={saving}
+              saved={formSaved}
+              onClick={submitExpense}
+            />
           </PressableScale>
         </div>
       </BottomSheet>
+      <ActionToast message={errorToast.message} variant={errorToast.variant} />
     </div>
   );
 }

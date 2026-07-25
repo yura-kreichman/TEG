@@ -28,8 +28,11 @@ import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { MoneyInput } from "@/components/money-input";
 import { PrintButton } from "@/components/print/print-button";
+import { ActionToast } from "@/components/action-toast";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useActionToast } from "@/hooks/use-action-toast";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
+import { playErrorChime } from "@/lib/beep";
 import type { PrintDocumentData, PrintSection } from "@/lib/print/receipt-document";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -122,7 +125,7 @@ export default function SubmitResultsPage() {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFired = useRef(false);
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const errorToast = useActionToast();
   const [queued, setQueued] = useState(false);
   // Мягкая блокировка сдачи для "Прибываний" (docs/spec/04-game-room.md) —
   // сколько пусков ещё открыто, по каждому АКТИВУ отдельно (запрос
@@ -454,7 +457,6 @@ export default function SubmitResultsPage() {
 
   async function handleSubmit() {
     setSubmitting(true);
-    setSubmitError(null);
 
     const zoneSubmissions = selectedZoneIds.map((zoneId) => {
       const zone = zones.find((z) => z.id === zoneId)!;
@@ -531,7 +533,8 @@ export default function SubmitResultsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setSubmitError(data.error ?? "Не удалось отправить сдачу итогов");
+        playErrorChime();
+        errorToast.flash(data.error ?? "Не удалось отправить сдачу итогов", "error");
         setSubmitting(false);
         return;
       }
@@ -1164,7 +1167,6 @@ export default function SubmitResultsPage() {
                 </div>
               );
             })}
-            {submitError && <p className="text-sm text-destructive">{submitError}</p>}
             <PressableScale>
               <Button
                 onClick={handleSubmit}
@@ -1440,6 +1442,7 @@ export default function SubmitResultsPage() {
       </BottomSheet>
 
       <ImageLightbox src={lightboxUrl} />
+      <ActionToast message={errorToast.message} variant={errorToast.variant} />
     </div>
   );
 }

@@ -1191,7 +1191,7 @@
       "spendTitle": "Балансынан есептен шығару",
       "debitedLabel": "Есептен шығарылды",
       "noSpendZonesError": "Баланспен төлеуге қолжетімді аймақ жоқ",
-      "spendOnlyNotFound": "Клиент табылмады. Оны «Клиенттер» бөлімінде қосыңыз."
+      "spendOnlyNotFound": "Клиент табылмады"
     },
     "collectionAdvanceToastPrefix": "Аванс ретінде қалдырылды",
     "collectionAdvanceToastSuffix": "— нәтижелер тапсырылғаннан кейін аймақ қалдығында пайда болады",

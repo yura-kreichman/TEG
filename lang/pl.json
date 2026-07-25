@@ -1191,7 +1191,7 @@
       "spendTitle": "Pobierz z salda",
       "debitedLabel": "Pobrano",
       "noSpendZonesError": "Brak dostępnych stref do płatności z salda",
-      "spendOnlyNotFound": "Nie znaleziono klienta. Dodaj go w sekcji «Klienci»."
+      "spendOnlyNotFound": "Nie znaleziono klienta"
     },
     "collectionAdvanceToastPrefix": "Odłożone jako zaliczka",
     "collectionAdvanceToastSuffix": "— pojawi się w saldzie strefy po przesłaniu wyników",

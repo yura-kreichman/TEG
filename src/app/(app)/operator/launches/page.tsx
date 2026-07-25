@@ -14,9 +14,11 @@ import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { PrintButton } from "@/components/print/print-button";
 import { isLaunchesZone } from "@/lib/results-calc";
-import { unlockBeep, playConfirmChime } from "@/lib/beep";
+import { unlockBeep, playConfirmChime, playErrorChime } from "@/lib/beep";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
+import { ActionToast } from "@/components/action-toast";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
+import { useActionToast } from "@/hooks/use-action-toast";
 import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { formatMoneyWithCurrency } from "@/lib/format";
@@ -83,7 +85,11 @@ export default function LaunchesZonePage() {
   const [zoneFilter, setZoneFilter] = useState<string>(ALL_ZONES);
   const [entries, setEntries] = useState<TallyEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const errorToast = useActionToast();
+  function flashError(message: string) {
+    playErrorChime();
+    errorToast.flash(message, "error");
+  }
   const [submitting, setSubmitting] = useState(false);
   // Модуль печати (запрос пользователя 2026-07-20) — квитанция пуска, кнопка
   // появляется сразу после тапа, только если в зоне включено
@@ -205,10 +211,9 @@ export default function LaunchesZonePage() {
     if (!asset.active || submitting) return;
     const zone = zones.find((z) => z.id === asset.zoneId);
     if (!zone || zone.tariffs.length === 0) {
-      setError(t.operatorApp.gameRoom.noPricingError);
+      flashError(t.operatorApp.gameRoom.noPricingError);
       return;
     }
-    setError(null);
     setTapFlow(
       zone.tariffs.length === 1
         ? { zoneId: zone.id, assetId: asset.id, tariffId: zone.tariffs[0].id }
@@ -224,7 +229,6 @@ export default function LaunchesZonePage() {
     abonementWalletId?: string
   ) {
     setSubmitting(true);
-    setError(null);
     const zone = zones.find((z) => z.id === zoneId);
     const asset = allAssets.find((a) => a.id === assetId);
     const tariff = zone?.tariffs.find((tf) => tf.id === tariffId);
@@ -236,7 +240,7 @@ export default function LaunchesZonePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? t.operatorApp.gameRoom.networkError);
+        flashError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       // Звук подтверждения (запрос пользователя 2026-07-20) — "бам-бум",
@@ -251,7 +255,7 @@ export default function LaunchesZonePage() {
     } catch {
       // Сетевая ошибка — пуск на сервере не создан (тот же принцип, что и у
       // "Прибываний"), повтор безопасен.
-      setError(t.operatorApp.gameRoom.networkError);
+      flashError(t.operatorApp.gameRoom.networkError);
     } finally {
       setSubmitting(false);
     }
@@ -406,8 +410,6 @@ export default function LaunchesZonePage() {
             })}
           </div>
         )}
-
-        {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
       </div>
 
       <BottomSheet open={tapFlow !== null} onClose={() => setTapFlow(null)}>
@@ -522,6 +524,7 @@ export default function LaunchesZonePage() {
           </div>
         )}
       </BottomSheet>
+      <ActionToast message={errorToast.message} variant={errorToast.variant} />
     </div>
   );
 }

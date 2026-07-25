@@ -1191,7 +1191,7 @@
       "spendTitle": "ბალანსიდან ჩამოწერა",
       "debitedLabel": "ჩამოწერილია",
       "noSpendZonesError": "ბალანსით გადახდისთვის ხელმისაწვდომი ზონა არ არის",
-      "spendOnlyNotFound": "კლიენტი ვერ მოიძებნა. დაამატეთ იგი განყოფილებაში „კლიენტები“."
+      "spendOnlyNotFound": "კლიენტი ვერ მოიძებნა"
     },
     "collectionAdvanceToastPrefix": "გადადებულია ავანსად",
     "collectionAdvanceToastSuffix": "— გამოჩნდება ზონის ნაშთში შედეგების ჩაბარების შემდეგ",

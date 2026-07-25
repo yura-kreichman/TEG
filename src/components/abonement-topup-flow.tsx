@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Banknote, Check, CreditCard, Delete, Gift, MapPin, Minus, Pencil, Plus, QrCode, Search, Send, Trash2, Wallet } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Banknote, Check, CreditCard, Delete, Gift, MapPin, Minus, Pencil, Plus, QrCode, Search, Send, Trash2, TriangleAlert, Wallet } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
 import { Button } from "@/components/ui/button";
@@ -15,8 +16,11 @@ import { MoneyInput } from "@/components/money-input";
 import { PhoneInput } from "@/components/phone-input";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { PrintButton } from "@/components/print/print-button";
+import { ActionToast } from "@/components/action-toast";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useActionToast } from "@/hooks/use-action-toast";
+import { playErrorChime } from "@/lib/beep";
 import { cn } from "@/lib/utils";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import type { Dictionary } from "@/lib/i18n";
@@ -169,6 +173,14 @@ export interface AbonementTopupFlowProps {
   // сообщение, завести клиента можно только в "Клиентах"). Требует
   // allowZoneSpend+spendZones+zoneSpendEndpointFor, как обычно.
   spendOnlyMode?: boolean;
+  // Ошибки поиска/создания/пополнения — красный bounce-тост по центру со
+  // звуком (запрос пользователя 2026-07-25: "везде у Сотрудника... где это
+  // логично", тот же приём, что "Заказ не найден" в Билетах) вместо обычного
+  // текста под полем. Только Сотрудник — Владелец (`/abonements/[id]`)
+  // сохраняет прежний инлайн-текст, не передаёт этот проп. Ошибки списания с
+  // баланса на месте (spendError, allowZoneSpend) всегда идут тостом — та
+  // ветка физически недоступна Владельцу (он не передаёт allowZoneSpend).
+  toastErrors?: boolean;
 }
 
 export interface SpendTariffCtx {
@@ -213,10 +225,50 @@ export function AbonementTopupFlow({
   printAvailable,
   printBranding,
   spendOnlyMode,
+  toastErrors,
 }: AbonementTopupFlowProps) {
   const t = useI18n();
   const locale = useLocale();
   const currency = useCurrency();
+  const errorToast = useActionToast();
+  // Владелец (toastErrors не передан) сохраняет прежний инлайн-текст под
+  // полем (см. error state ниже); Сотрудник — bounce-тост со звуком.
+  function reportError(message: string) {
+    if (toastErrors) {
+      playErrorChime();
+      errorToast.flash(message, "error");
+    } else {
+      setError(message);
+    }
+  }
+  // Списание с баланса на месте физически недоступно Владельцу (нет
+  // allowZoneSpend/zoneSpendEndpointFor) — тост безусловно, без toastErrors.
+  function reportSpendError(message: string) {
+    playErrorChime();
+    errorToast.flash(message, "error");
+  }
+
+  // "Клиент не найден" на шаге поиска телефона — не общий центрированный
+  // ActionToast, а локальный zoom-in+bounce прямо над полем/нумпадом (запрос
+  // пользователя 2026-07-25: "по идее у тебя такое же как в Билетах при
+  // поиске заказа"), тот же приём и разметка, что flashSearchError в
+  // operator/tickets/page.tsx. Поле телефона сразу очищается — вводить
+  // заново с нуля, как и там.
+  const [searchFlash, setSearchFlash] = useState<string | null>(null);
+  const searchFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function flashSearchNotFound(message: string) {
+    playErrorChime();
+    setSearchFlash(message);
+    clearPhoneLocal();
+    if (searchFlashTimerRef.current) clearTimeout(searchFlashTimerRef.current);
+    searchFlashTimerRef.current = setTimeout(() => setSearchFlash(null), 2500);
+  }
+  useEffect(
+    () => () => {
+      if (searchFlashTimerRef.current) clearTimeout(searchFlashTimerRef.current);
+    },
+    []
+  );
 
   const [phone, setPhone] = useState("");
   // Код страны отдельно (запрос пользователя 2026-07-22) — нужен нумпаду
@@ -290,8 +342,8 @@ export function AbonementTopupFlow({
   const [spendQuantities, setSpendQuantities] = useState<Record<string, number>>({});
   const [spendAmount, setSpendAmount] = useState("");
   const [spendSubmitting, setSpendSubmitting] = useState(false);
-  const [spendError, setSpendError] = useState<string | null>(null);
   const [justDebited, setJustDebited] = useState<{ amount: number; newBalance: number } | null>(null);
+  const { saved: spendSaved, pulse: spendPulse } = useSavePulse();
 
   // Правка имени уже существующего абонента (запрос пользователя
   // 2026-07-17: "Сотрудник должен иметь возможность... менять имя, в том
@@ -319,14 +371,14 @@ export function AbonementTopupFlow({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? t.operatorApp.gameRoom.networkError);
+        reportError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       pulseSavedNew();
       setFound({ id: data.id, phone: data.phone, name: data.name, balance: data.balance, createdAt: data.createdAt });
       onSuccess?.();
     } catch {
-      setError(t.operatorApp.gameRoom.networkError);
+      reportError(t.operatorApp.gameRoom.networkError);
     } finally {
       setSavingNew(false);
     }
@@ -344,14 +396,14 @@ export function AbonementTopupFlow({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? t.operatorApp.gameRoom.networkError);
+        reportError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       setFound((prev) => (prev ? { ...prev, name: data.name } : prev));
       setEditingName(false);
       onSuccess?.();
     } catch {
-      setError(t.operatorApp.gameRoom.networkError);
+      reportError(t.operatorApp.gameRoom.networkError);
     } finally {
       setSavingName(false);
     }
@@ -383,17 +435,31 @@ export function AbonementTopupFlow({
   function handleSearch() {
     if (!phone.trim() || searching) return;
     setSearching(true);
-    setError(null);
+    if (!toastErrors) setError(null);
     fetch(`${searchEndpoint}?phone=${encodeURIComponent(phone)}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
-          setError(data.error);
+          if (toastErrors) flashSearchNotFound(data.error);
+          else setError(data.error);
+          return;
+        }
+        // spendOnlyMode не заводит нового клиента (запрос пользователя
+        // 2026-07-24: "в этом пункте меню нового добавить нельзя") — "не
+        // найден" здесь не отдельный экран с кнопкой "Назад", а тот же
+        // bounce-тост, что и "Заказ не найден" в Билетах (запрос
+        // пользователя 2026-07-25): found остаётся undefined, оператор
+        // остаётся на экране поиска, номер сразу очищается.
+        if (spendOnlyMode && !data.abonement) {
+          flashSearchNotFound(t.operatorApp.abonement.spendOnlyNotFound);
           return;
         }
         setFound(data.abonement);
       })
-      .catch(() => setError(t.operatorApp.gameRoom.networkError))
+      .catch(() => {
+        if (toastErrors) flashSearchNotFound(t.operatorApp.gameRoom.networkError);
+        else setError(t.operatorApp.gameRoom.networkError);
+      })
       .finally(() => setSearching(false));
   }
 
@@ -408,7 +474,7 @@ export function AbonementTopupFlow({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? t.operatorApp.gameRoom.networkError);
+        reportError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       setFound({ id: data.id, phone: data.phone, name: data.name, balance: data.balance });
@@ -416,7 +482,7 @@ export function AbonementTopupFlow({
       setJustCredited({ amount: plan.creditAmount, newBalance: data.balance });
       onSuccess?.();
     } catch {
-      setError(t.operatorApp.gameRoom.networkError);
+      reportError(t.operatorApp.gameRoom.networkError);
     } finally {
       setSubmitting(false);
     }
@@ -433,7 +499,7 @@ export function AbonementTopupFlow({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? t.operatorApp.gameRoom.networkError);
+        reportError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       setFound(data);
@@ -441,7 +507,7 @@ export function AbonementTopupFlow({
       setJustCredited({ amount: plan.creditAmount, newBalance: data.balance });
       onSuccess?.();
     } catch {
-      setError(t.operatorApp.gameRoom.networkError);
+      reportError(t.operatorApp.gameRoom.networkError);
     } finally {
       setSubmitting(false);
     }
@@ -461,7 +527,7 @@ export function AbonementTopupFlow({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? t.operatorApp.gameRoom.networkError);
+        reportError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       setFound({ id: data.id, phone: data.phone, name: data.name, balance: data.balance });
@@ -470,7 +536,7 @@ export function AbonementTopupFlow({
       setArbitraryAmount("");
       onSuccess?.();
     } catch {
-      setError(t.operatorApp.gameRoom.networkError);
+      reportError(t.operatorApp.gameRoom.networkError);
     } finally {
       setSubmitting(false);
     }
@@ -487,7 +553,7 @@ export function AbonementTopupFlow({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? t.operatorApp.gameRoom.networkError);
+        reportError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       setFound(data);
@@ -496,7 +562,7 @@ export function AbonementTopupFlow({
       setArbitraryAmount("");
       onSuccess?.();
     } catch {
-      setError(t.operatorApp.gameRoom.networkError);
+      reportError(t.operatorApp.gameRoom.networkError);
     } finally {
       setSubmitting(false);
     }
@@ -517,7 +583,6 @@ export function AbonementTopupFlow({
         : {}
     );
     setSpendAmount("");
-    setSpendError(null);
   }
 
   // spendOnlyMode: сразу после успешного поиска — на списание, без
@@ -563,7 +628,6 @@ export function AbonementTopupFlow({
     const amount = isCounters ? spendCartTotal : Number(spendAmount);
     if (!isCounters && (!Number.isFinite(amount) || amount <= 0)) return;
     setSpendSubmitting(true);
-    setSpendError(null);
     try {
       const res = await fetch(zoneSpendEndpointFor(found.id), {
         method: "POST",
@@ -577,15 +641,21 @@ export function AbonementTopupFlow({
       });
       const data = await res.json();
       if (!res.ok) {
-        setSpendError(data.error ?? t.operatorApp.gameRoom.networkError);
+        reportSpendError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       setFound(data);
-      setZoneSpendOpen(false);
-      setJustDebited({ amount, newBalance: data.balance });
+      // Зелёная вылетающая галочка на кнопке перед переходом на экран
+      // подтверждения (запрос пользователя 2026-07-25) — тот же приём
+      // useSavePulse, что и у остальных SaveButton по проекту: держит
+      // галочку видимой, только потом закрывает шторку/показывает итог.
+      spendPulse(() => {
+        setZoneSpendOpen(false);
+        setJustDebited({ amount, newBalance: data.balance });
+      });
       onSuccess?.();
     } catch {
-      setSpendError(t.operatorApp.gameRoom.networkError);
+      reportSpendError(t.operatorApp.gameRoom.networkError);
     } finally {
       setSpendSubmitting(false);
     }
@@ -606,7 +676,7 @@ export function AbonementTopupFlow({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? t.operatorApp.gameRoom.networkError);
+        reportError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       setFound({ id: data.id, phone: data.phone, name: data.name, balance: data.balance });
@@ -614,7 +684,7 @@ export function AbonementTopupFlow({
       setArbitraryAmount("");
       onSuccess?.();
     } catch {
-      setError(t.operatorApp.gameRoom.networkError);
+      reportError(t.operatorApp.gameRoom.networkError);
     } finally {
       setSubmitting(false);
     }
@@ -966,16 +1036,16 @@ export function AbonementTopupFlow({
                   </span>
                 </div>
               )}
-              {spendError && <p className="text-sm text-destructive">{spendError}</p>}
               <PressableScale>
-                <Button
+                <SaveButton
                   type="button"
                   className="h-12 w-full font-bold"
                   disabled={spendSubmitting || spendCartLines.length === 0}
+                  saved={spendSaved}
                   onClick={submitZoneSpend}
                 >
                   {t.operatorApp.abonement.spendButton}
-                </Button>
+                </SaveButton>
               </PressableScale>
             </>
           ) : (
@@ -989,16 +1059,16 @@ export function AbonementTopupFlow({
                   onChange={(e) => setSpendAmount(e.target.value)}
                 />
               </div>
-              {spendError && <p className="text-sm text-destructive">{spendError}</p>}
               <PressableScale>
-                <Button
+                <SaveButton
                   type="button"
                   className="h-12 w-full font-bold"
                   disabled={spendSubmitting || !Number.isFinite(Number(spendAmount)) || Number(spendAmount) <= 0}
+                  saved={spendSaved}
                   onClick={submitZoneSpend}
                 >
                   {t.operatorApp.abonement.spendButton}
-                </Button>
+                </SaveButton>
               </PressableScale>
             </>
           )}
@@ -1055,7 +1125,31 @@ export function AbonementTopupFlow({
           </div>
         </>
       ) : found === undefined ? (
-        <>
+        <div className="relative flex flex-col gap-3">
+          {/* "Клиент не найден" — zoom-in+bounce прямо над полем/нумпадом,
+              не текстовая строка (запрос пользователя 2026-07-25: "такое же
+              как в Билетах при поиске заказа"), тот же приём и разметка, что
+              flashSearchError в operator/tickets/page.tsx. */}
+          <AnimatePresence>
+            {searchFlash && (
+              <motion.div
+                key="search-not-found-toast"
+                initial={{ opacity: 0, scale: 0.4 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.5 }}
+                transition={{
+                  scale: { type: "spring", stiffness: 500, damping: 14 },
+                  opacity: { duration: 0.15 },
+                }}
+                className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center"
+              >
+                <div className="flex flex-col items-center gap-1.5 rounded-card bg-destructive px-5 py-3 text-center text-white shadow-floating">
+                  <TriangleAlert className="size-9" />
+                  <span className="text-lg font-extrabold">{searchFlash}</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           {/* Без заголовка "Новый абонент" здесь (запрос пользователя
               2026-07-18: "убрать, так как новый создаётся только если не
               существует") — на этом шаге ещё даже не искали по телефону,
@@ -1141,18 +1235,6 @@ export function AbonementTopupFlow({
                 : spendOnlyMode
                   ? t.operatorApp.abonement.searchOnlyButton
                   : t.operatorApp.abonement.searchButton}
-            </Button>
-          </PressableScale>
-        </>
-      ) : spendOnlyMode && isNew ? (
-        // Не нашли — в этом режиме клиента не заводят (запрос пользователя
-        // 2026-07-24: "в этом пункте меню нового добавить нельзя"), только
-        // сообщение с возвратом к поиску.
-        <div className="flex flex-col items-center gap-3 py-6 text-center">
-          <p className="text-body-airbnb text-muted-foreground">{t.operatorApp.abonement.spendOnlyNotFound}</p>
-          <PressableScale>
-            <Button type="button" variant="outline" onClick={() => setFound(undefined)}>
-              {t.common.back}
             </Button>
           </PressableScale>
         </div>
@@ -1410,7 +1492,8 @@ export function AbonementTopupFlow({
         </>
       )}
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {!toastErrors && error && <p className="text-sm text-destructive">{error}</p>}
+      {toastErrors && <ActionToast message={errorToast.message} variant={errorToast.variant} />}
 
       {telegramBalanceLink && (
         <InstructionQrSheet
