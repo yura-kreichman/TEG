@@ -662,39 +662,42 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
                 })}
               </div>
               {visibleBars.map((b) => (
-                <div key={`weekday-${b.date}`} className="overflow-hidden truncate text-center text-[0.625rem] font-semibold text-muted-foreground">
+                <div
+                  key={`weekday-${b.date}`}
+                  className="overflow-hidden truncate text-center text-[0.625rem] font-semibold text-muted-foreground"
+                >
                   {new Date(b.date).toLocaleDateString(
                     undefined,
                     data.period.granularity === "year" ? { month: "short" } : { weekday: "short" }
+                  )}
+                  {/* Число дня под днём недели — только "Месяц" (запрос
+                      пользователя 2026-07-25: "чт/пт/сб... на разных неделях
+                      выглядят одинаково, число помогает понять, какой именно
+                      день"), без месяца — тот и так виден в переключателе
+                      периода выше. */}
+                  {data.period.granularity === "month" && (
+                    <div className="tabular-nums">{Number(b.date.slice(8, 10))}</div>
                   )}
                 </div>
               ))}
             </div>
           </div>
         </div>
-        {/* Способы оплаты — каждый в своей строке (запрос пользователя
-            2026-07-25: "цифры растут и теперь всё сливается") — раньше все
-            три (плюс "Сдач") жили колонками в одной сетке grid-cols-3/4,
-            равная доля ширины на каждую сумму быстро зажимала крупные числа.
-            Теперь стек строк слева (метка+иконка ... сумма справа, ширина
-            не ограничена соседями) и "Сдач" отдельным блоком справа — на
-            прежнем месте, просто больше не в общей сетке. */}
-        <div className="mt-3.5 flex items-stretch justify-between gap-5 border-t border-border pt-3.5 tabular-nums">
-          <div className="flex flex-1 flex-col gap-1.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-1 text-caption-airbnb">
-                <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
-                {t.reports.cashLabel}
-              </span>
-              <span className="text-[1rem] font-bold"><Money value={data.cash} /></span>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-1 text-caption-airbnb">
-                <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
-                {t.reports.mobileLabel}
-              </span>
-              <span className="text-[1rem] font-bold"><Money value={data.mobile} /></span>
-            </div>
+        {/* Способы оплаты — компактной инлайн-строкой (запрос пользователя
+            2026-07-25: "уменьши интервал, пусть будет как в Деньги") — тот
+            же приём, что в business-карточке /money (метка+сумма в одну
+            строку, caption-размер, gap-0.5), вместо двухстрочных блоков
+            метка/сумма покрупнее, которые тут раньше только сближали. */}
+        <div className="mt-3.5 flex items-start justify-between gap-5 border-t border-border pt-3.5 tabular-nums">
+          <div className="flex flex-1 flex-col gap-0.5 text-caption-airbnb">
+            <span className="inline-flex items-center gap-1">
+              <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+              {t.reports.cashLabel}: <span className="font-bold text-foreground"><Money value={data.cash} /></span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+              {t.reports.mobileLabel}: <span className="font-bold text-foreground"><Money value={data.mobile} /></span>
+            </span>
           </div>
           <div className="shrink-0 border-l border-border pl-4 text-right">
             <div className="text-caption-airbnb">{t.reports.submissionsLabel}</div>
@@ -1072,19 +1075,24 @@ function OperatorsTab({ operators, t }: { operators: OperatorRow[]; t: ReturnTyp
                 {op.shiftsCount} {t.reports.shiftsSuffix} · {op.totalHours} {t.reports.hoursSuffix}
               </div>
             </div>
+            {/* Начислено за период — растущее число (запрос пользователя
+                2026-07-25: "цифра растёт и скоро налезут друг на друга") —
+                перенесено в шапку карточки, рядом с именем (запрос того же
+                дня: "в ту секцию где имя сотрудника"), там у неё весь
+                простор строки, а не 1/3 узкой сетки внизу. */}
+            <div className="shrink-0 text-right tabular-nums">
+              <div className="text-caption-airbnb">{t.reports.accruedLabel}</div>
+              <div className="text-[1rem] font-bold"><Money value={op.accruedForPeriod} /></div>
+            </div>
           </div>
-          <div className="grid grid-cols-3 gap-3 border-t border-border pt-3 tabular-nums">
-            <div>
+          <div className="flex items-start justify-between gap-3 border-t border-border pt-3 tabular-nums">
+            <div className="flex-1">
               <div className="text-caption-airbnb">{t.reports.revenuePerHourLabel}</div>
               <div className="text-[1rem] font-bold">
                 {op.revenuePerHour !== null ? <Money value={op.revenuePerHour} /> : "—"}
               </div>
             </div>
-            <div>
-              <div className="text-caption-airbnb">{t.reports.accruedLabel}</div>
-              <div className="text-[1rem] font-bold"><Money value={op.accruedForPeriod} /></div>
-            </div>
-            <div>
+            <div className="shrink-0 border-l border-border pl-4 text-right">
               <div className="text-caption-airbnb">{t.reports.differenceLabel}</div>
               <div className={cn("text-[1rem] font-bold", op.differenceSum >= 0 ? "text-primary" : "text-destructive")}>
                 {op.differenceSum > 0 ? "+" : ""}
