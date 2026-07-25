@@ -553,18 +553,26 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
           </div>
         </div>
 
-        <div className="mt-2 flex items-center gap-3 text-caption-airbnb text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <span className="size-2 shrink-0 rounded-full bg-primary" />
-            {t.reports.revenueLabel}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="size-2 shrink-0 rounded-full bg-success" />
-            {t.reports.profitLabel}
-          </span>
-        </div>
+        {/* График трендов не имеет смысла для "День" (запрос пользователя
+            2026-07-25: "когда выбрано День, график вообще не уместен") —
+            ровно одна точка, линию тренда строить не из чего (SVG уже
+            скрывался сам через visibleBars.length > 1 ниже), но легенда и
+            пустая область под неё оставались — убраны целиком для этого
+            режима, не только линия. */}
+        {data.period.granularity !== "day" && (
+          <>
+            <div className="mt-2 flex items-center gap-3 text-caption-airbnb text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span className="size-2 shrink-0 rounded-full bg-primary" />
+                {t.reports.revenueLabel}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-2 shrink-0 rounded-full bg-success" />
+                {t.reports.profitLabel}
+              </span>
+            </div>
 
-        <div className="relative mt-4">
+            <div className="relative mt-4">
           {canScrollLeft && (
             <button
               type="button"
@@ -685,6 +693,8 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
             </div>
           </div>
         </div>
+          </>
+        )}
         {/* Способы оплаты — компактной инлайн-строкой (запрос пользователя
             2026-07-25: "уменьши интервал, пусть будет как в Деньги") — тот
             же приём, что в business-карточке /money (метка+сумма в одну
