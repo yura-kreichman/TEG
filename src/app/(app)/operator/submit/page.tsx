@@ -221,15 +221,21 @@ export default function SubmitResultsPage() {
       .catch(() => {});
   }, [router]);
 
+  // Шаг "Расходы" — только если за текущий период есть хоть одна запись
+  // хотя бы по одной из сдаваемых зон (запрос пользователя 2026-07-25:
+  // "если расходов нет... то и нет смысла показывать этот экран") — иначе
+  // это пустой экран с одним "Расходов пока нет.", ничего не даёт оператору.
+  const hasExpensesToShow = selectedZoneIds.some((zoneId) => (expenseEventsByZone[zoneId] ?? []).length > 0);
+
   const steps: Step[] = useMemo(() => {
     const list: Step[] = [{ kind: "select" }];
     for (const zoneId of selectedZoneIds) list.push({ kind: "zone", zoneId });
     if (selectedZoneIds.length > 0) {
-      if (expensesEnabled) list.push({ kind: "expenses" });
+      if (expensesEnabled && hasExpensesToShow) list.push({ kind: "expenses" });
       list.push({ kind: "review" });
     }
     return list;
-  }, [selectedZoneIds, expensesEnabled]);
+  }, [selectedZoneIds, expensesEnabled, hasExpensesToShow]);
 
   const currentStep = steps[stepIndex] ?? steps[0];
 
@@ -1093,34 +1099,30 @@ export default function SubmitResultsPage() {
                   "раз не внёс, то проехали", здесь только просмотр. */}
               <p className="mt-1 text-[0.84375rem] text-muted-foreground">{t.operatorApp.submit.expensesReadOnlyHint}</p>
             </div>
-            {selectedZoneIds.every((zoneId) => (expenseEventsByZone[zoneId] ?? []).length === 0) ? (
-              <p className="text-body-airbnb text-muted-foreground">{t.operatorApp.submit.expensesEmpty}</p>
-            ) : (
-              selectedZoneIds.map((zoneId) => {
-                const items = expenseEventsByZone[zoneId] ?? [];
-                if (items.length === 0) return null;
-                const zone = zones.find((z) => z.id === zoneId);
-                return (
-                  <div key={zoneId} className="flex flex-col gap-2">
-                    {selectedZoneIds.length > 1 && (
-                      <p className="text-caption-airbnb font-semibold text-muted-foreground">{zone?.name}</p>
-                    )}
-                    {items.map((expense) => (
-                      <div
-                        key={expense.id}
-                        className="flex items-center justify-between gap-3 rounded-card border border-border bg-card p-3"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-body-airbnb font-semibold">{expense.categoryName ?? t.operatorApp.submit.expensesTitle}</p>
-                          {expense.comment && <p className="truncate text-caption-airbnb text-muted-foreground">{expense.comment}</p>}
-                        </div>
-                        <span className="shrink-0 tabular-nums font-bold"><Money value={expense.amount} /></span>
+            {selectedZoneIds.map((zoneId) => {
+              const items = expenseEventsByZone[zoneId] ?? [];
+              if (items.length === 0) return null;
+              const zone = zones.find((z) => z.id === zoneId);
+              return (
+                <div key={zoneId} className="flex flex-col gap-2">
+                  {selectedZoneIds.length > 1 && (
+                    <p className="text-caption-airbnb font-semibold text-muted-foreground">{zone?.name}</p>
+                  )}
+                  {items.map((expense) => (
+                    <div
+                      key={expense.id}
+                      className="flex items-center justify-between gap-3 rounded-card border border-border bg-card p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-body-airbnb font-semibold">{expense.categoryName ?? t.operatorApp.submit.expensesTitle}</p>
+                        {expense.comment && <p className="truncate text-caption-airbnb text-muted-foreground">{expense.comment}</p>}
                       </div>
-                    ))}
-                  </div>
-                );
-              })
-            )}
+                      <span className="shrink-0 tabular-nums font-bold"><Money value={expense.amount} /></span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
           </div>
         )}
 
