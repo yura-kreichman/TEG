@@ -671,3 +671,189 @@ html:has(.app-bg[data-bg-style]) {
 .prose-instruction p:first-child {
   margin-top: 0;
 }
+
+/* Печать квитанций (src/lib/print/receipt-document.ts, openPrintDocument) —
+   реальный баг, найден пользователем 2026-07-25 на Android: печаталась ВСЯ
+   страница приложения, хотя на Windows тот же код работает верно. Раньше
+   этот CSS (включая правило "спрятать всё, кроме #rentos-print-root")
+   вставлялся через <style> ВНУТРЬ root.innerHTML в момент самой печати —
+   рабочая гипотеза: печатный конвейер Android Chrome не всегда успевает
+   учесть стили, вставленные в DOM непосредственно перед window.print()
+   (стиль ещё не переразобран/не применён к моменту снятия "снимка" для
+   печати на этой платформе, в отличие от Windows). Здесь тот же CSS живёт
+   в обычном стилевом файле страницы с самой загрузки — браузеру уже
+   физически нечего "успевать" разбирать в момент печати, применять
+   остаётся только замену СОДЕРЖИМОГО (innerHTML) печатного корня, самую
+   простую DOM-операцию. ID #rentos-print-root — та же константа
+   PRINT_ROOT_ID из receipt-document.ts, синхронизировать вручную при
+   переименовании. */
+#rentos-print-root {
+  display: none;
+}
+@media print {
+  body > *:not(#rentos-print-root) {
+    display: none !important;
+  }
+  #rentos-print-root {
+    display: block !important;
+  }
+}
+
+@page {
+  size: auto;
+  margin: 3mm;
+}
+.receipt-doc {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  color: #111;
+  background: #fff;
+}
+.receipt {
+  width: 100%;
+  max-width: 58mm;
+  margin: 0 auto;
+  padding: 10px 6px;
+  font-size: 14px;
+  line-height: 1.25;
+}
+.receipt-header,
+.receipt-section,
+.receipt-line,
+.receipt-total,
+.receipt-cut-line {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.receipt-header {
+  text-align: center;
+  margin-bottom: 6px;
+}
+.receipt-logo {
+  max-width: 180px;
+  max-height: 90px;
+  margin: 0 auto 5px;
+  display: block;
+  filter: grayscale(1) contrast(1.35) brightness(1.05);
+}
+.receipt-tenant {
+  font-size: 17px;
+  font-weight: 800;
+}
+.receipt-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.receipt-subtitle {
+  font-size: 12.65px;
+  color: #444;
+  margin-top: 2px;
+}
+.receipt-subtitle-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #222;
+  margin-top: 2px;
+}
+.receipt-header-compact {
+  text-align: left;
+}
+.receipt-header-compact .receipt-header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.receipt-header-compact .receipt-logo {
+  max-width: 137.7px;
+  max-height: 68.85px;
+  margin: 0;
+  flex-shrink: 0;
+}
+.receipt-header-compact .receipt-header-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+.receipt-header-compact .receipt-title {
+  margin-top: 3px;
+  padding-top: 3px;
+  border-top: 4px solid #ccc;
+}
+.receipt-header-compact .receipt-subtitle,
+.receipt-header-compact .receipt-subtitle-name {
+  margin-top: 3px;
+}
+.receipt-section {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px dashed #999;
+}
+.receipt-section:first-of-type {
+  border-top: none;
+}
+.receipt-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #444;
+  margin-bottom: 2px;
+}
+.receipt-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 1px 0;
+  font-size: 13.685px;
+}
+.receipt-line .label {
+  color: #222;
+}
+.receipt-line .value {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.receipt-line.bold {
+  font-weight: 700;
+}
+.receipt-line.large {
+  font-size: 17px;
+  font-weight: 700;
+}
+.receipt-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid #111;
+  font-size: 18px;
+  font-weight: 800;
+}
+.receipt-cut-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.receipt-cut-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+  line-height: 1;
+  color: #000;
+}
+.receipt-cut-dash {
+  flex: 1;
+  border-top: 0.5mm dashed #000;
+}
+@media print {
+  .receipt {
+    max-width: none;
+  }
+}

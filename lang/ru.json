@@ -525,6 +525,7 @@
     "renameCompanyHint": "Отображается на главной и в отчётах",
     "renameCompanySlugWarning": "Название компании также используется для адреса постоянных ссылок (Инструктажи, Лендинг).",
     "latestResultsLabel": "Последние итоги",
+    "liveRevenueTitle": "Выручка сейчас",
     "today": "сегодня",
     "yesterday": "вчера",
     "toMoneyLink": "В «Деньги»",

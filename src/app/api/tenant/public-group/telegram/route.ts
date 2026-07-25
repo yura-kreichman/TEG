@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 const BOOLEAN_FIELDS = ["enabled", "announceNewZones", "announceNewPoints", "announceNewAssets"] as const;
 type BooleanField = (typeof BOOLEAN_FIELDS)[number];
@@ -16,6 +17,10 @@ export async function PATCH(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
+  }
+  // Аудит 2026-07-25 — тот же принцип, что у .../bind.
+  if (!(await isModuleEnabled(owner.tenantId, "clientsEnabled"))) {
+    return NextResponse.json({ error: "Модуль отключён" }, { status: 403 });
   }
 
   const body = await request.json().catch(() => ({}));

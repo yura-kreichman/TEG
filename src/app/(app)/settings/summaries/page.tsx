@@ -23,6 +23,7 @@ interface TelegramStatus {
 
 interface PublicGroupStatus {
   botConfigured: boolean;
+  clientsEnabled: boolean;
   connected: boolean;
   enabled: boolean;
   chatTitle: string | null;
@@ -182,7 +183,11 @@ export default function SummariesListPage() {
 
                 {/* "Телеграм для клиентов" — публичная группа анонсов (запрос
                     пользователя 2026-07-24), отдельная от рабочего чата
-                    сотрудников выше. */}
+                    сотрудников выше. Реальный баг, найден пользователем
+                    2026-07-25: выключенный тумблер "Клиенты" (Настройки →
+                    Система) никак не влиял на этот пункт — весь блок должен
+                    исчезать вместе с остальным функционалом модуля. */}
+                {publicGroup.clientsEnabled && (
                 <div className="flex flex-col gap-2 border-t border-border py-2 pt-3">
                   <div
                     className="flex cursor-pointer items-center justify-between gap-3"
@@ -216,6 +221,7 @@ export default function SummariesListPage() {
                     {publicGroup.connected ? `«${publicGroup.chatTitle}»` : t.summaries.telegramNotConnected}
                   </p>
                 </div>
+                )}
 
                 <div className="flex flex-col gap-2 border-t border-border py-2 pt-3">
                   {/* У Email нет своей страницы настроек (в отличие от

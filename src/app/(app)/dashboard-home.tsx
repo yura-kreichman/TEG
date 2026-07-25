@@ -109,6 +109,14 @@ export function WelcomeCard() {
   );
 }
 
+interface LiveRevenue {
+  points: { id: string; name: string }[];
+  total: number;
+  cash: number;
+  mobile: number;
+  zones: { zoneId: string; zoneName: string; pointName: string | null; iconKey: string | null; total: number }[];
+}
+
 interface Summary {
   hasData: boolean;
   date?: string;
@@ -152,6 +160,14 @@ export function OwnerDashboardCard({
   // чтобы выбор точки наследовался при переходе (запрос пользователя 2026-07-16).
   const pointQuery = pointId ? `?pointId=${pointId}` : "";
 
+  // "Расчётная выручка" (запрос пользователя 2026-07-25) — отдельная от
+  // "Последних итогов" карточка и СВОЙ дропдаун точки (не переиспользует
+  // pointId выше): список точек здесь — только те, где реально есть зоны
+  // "живых" режимов (Пуски/Прибывания/Билеты), у "Последних итогов" — все
+  // точки тенанта, это разные множества.
+  const [liveRevenue, setLiveRevenue] = useState<LiveRevenue | null>(null);
+  const [liveRevenuePointId, setLiveRevenuePointId] = useState<string | null>(null);
+
   const [accountView, setAccountView] = useState<"menu" | "rename" | null>(null);
   const [renameValue, setRenameValue] = useState(tenantName ?? "");
   const [updateSlugOnRename, setUpdateSlugOnRename] = useState(false);
@@ -192,6 +208,14 @@ export function OwnerDashboardCard({
       .then((data) => data && setSummary(data));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pointId]);
+
+  useEffect(() => {
+    const pointParam = liveRevenuePointId ? `?pointId=${liveRevenuePointId}` : "";
+    fetch(`/api/reports/live-revenue${pointParam}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data && setLiveRevenue(data));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveRevenuePointId]);
 
   function openAccountMenu() {
     setAccountView("menu");
@@ -276,6 +300,80 @@ export function OwnerDashboardCard({
               {t.home.setPinNow}
             </Link>
           </div>
+        )}
+
+        {/* "Расчётная выручка" (запрос пользователя 2026-07-25) — над
+            "Последними итогами": то, что уже накопилось в "живых" зонах
+            (Пуски/Прибывания/Билеты) с момента их последней сдачи, ДО самой
+            сдачи — не сверка (факта ещё нет физически), поэтому без пары
+            "Факт/Разница", как у "Последних итогов" ниже. Виден только если
+            у тенанта вообще есть такие зоны хоть на одной точке. */}
+        {liveRevenue && liveRevenue.points.length > 0 && (
+          <SpringCard className="flex flex-col gap-3">
+            <h2 className="text-section-title">{t.home.liveRevenueTitle}</h2>
+            {liveRevenue.points.length > 1 && (
+              <Select
+                value={liveRevenuePointId ?? "all"}
+                onValueChange={(v) => setLiveRevenuePointId(v === "all" ? null : v)}
+                items={[
+                  { value: "all", label: t.money.allPoints },
+                  ...liveRevenue.points.map((p) => ({ value: p.id, label: p.name })),
+                ]}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    {liveRevenuePointId ? liveRevenue.points.find((p) => p.id === liveRevenuePointId)?.name : t.money.allPoints}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.money.allPoints}</SelectItem>
+                  {liveRevenue.points.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 flex-col tabular-nums">
+                <span className="text-caption-airbnb text-muted-foreground">
+                  {t.operatorApp.submit.calculatedRevenue.replace(/:$/, "")}
+                </span>
+                <span className="text-[2rem] font-extrabold leading-none tracking-[-0.02em]">
+                  <Money value={liveRevenue.total} size="display" />
+                </span>
+              </div>
+              <div className="flex min-w-0 flex-col items-end gap-0.5 pt-1 text-right text-caption-airbnb tabular-nums">
+                <span className="inline-flex items-center gap-1">
+                  <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+                  {t.reports.cashLabel}: <span className="font-bold text-foreground"><Money value={liveRevenue.cash} /></span>
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+                  {t.reports.mobileLabel}: <span className="font-bold text-foreground"><Money value={liveRevenue.mobile} /></span>
+                </span>
+              </div>
+            </div>
+            {liveRevenue.zones.length > 0 && (
+              <div className="flex flex-col gap-1.5 border-t border-border pt-3">
+                {liveRevenue.zones.map((z) => (
+                  <div key={z.zoneId} className="flex items-center justify-between gap-2 text-caption-airbnb">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      {z.iconKey && <AssetOrZoneIcon iconKey={z.iconKey} className="size-4 shrink-0 text-muted-foreground" />}
+                      <span className="min-w-0 truncate">
+                        {z.zoneName}
+                        {z.pointName && <span className="text-muted-foreground"> · {z.pointName}</span>}
+                      </span>
+                    </span>
+                    <span className="shrink-0 font-bold text-foreground">
+                      <Money value={z.total} />
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </SpringCard>
         )}
 
         {/* Последние итоги — дропдаун точки живёт в той же плашке (запрос

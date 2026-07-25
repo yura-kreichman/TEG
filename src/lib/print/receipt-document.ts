@@ -406,17 +406,16 @@ function ensurePrintRoot(): HTMLElement {
 
 export function openPrintDocument(data: PrintDocumentData, branding: ReceiptBranding): void {
   const root = ensurePrintRoot();
-  root.innerHTML = `
-    <style>
-      #${PRINT_ROOT_ID} { display: none; }
-      @media print {
-        body > *:not(#${PRINT_ROOT_ID}) { display: none !important; }
-        #${PRINT_ROOT_ID} { display: block !important; }
-      }
-      ${RECEIPT_CSS}
-    </style>
-    <div class="receipt-doc">${buildReceiptBodyHtml(data, branding)}</div>
-  `;
+  // Реальный баг, найден пользователем 2026-07-25 на Android: печаталась ВСЯ
+  // страница приложения (Windows — тот же код работал верно). Раньше здесь
+  // вставлялся <style> с правилами видимости + RECEIPT_CSS ПРЯМО в момент
+  // печати — рабочая гипотеза: печатный конвейер Android Chrome не всегда
+  // успевает учесть стили, добавленные в DOM непосредственно перед
+  // window.print(). Тот же CSS теперь живёт в globals.css с самой загрузки
+  // страницы (см. #rentos-print-root там) — здесь остаётся только замена
+  // СОДЕРЖИМОГО корня, самая простая DOM-операция, стилям уже нечего
+  // "успевать".
+  root.innerHTML = `<div class="receipt-doc">${buildReceiptBodyHtml(data, branding)}</div>`;
 
   // Заголовок документа — предлагаемое имя файла у "Сохранить в PDF" (та же
   // мелочь, что раньше давал отдельный <title> изолированного документа) —

@@ -15,6 +15,7 @@ import { useI18n } from "@/components/i18n-provider";
 
 interface PublicGroupStatus {
   botConfigured: boolean;
+  clientsEnabled: boolean;
   connected: boolean;
   enabled: boolean;
   chatTitle: string | null;
@@ -51,6 +52,14 @@ export default function PublicGroupSettingsPage() {
       return;
     }
     const data = await res.json();
+    // Реальный баг, найден пользователем 2026-07-25: прямой переход на этот
+    // экран (например, старая закладка) работал полностью независимо от
+    // тумблера "Клиенты" (Настройки → Система) — весь функционал модуля
+    // должен исчезать вместе с ним, не только пункт в списке выше.
+    if (!data.clientsEnabled) {
+      router.replace("/settings/summaries");
+      return;
+    }
     setGroup(data);
     setChecking(false);
   }

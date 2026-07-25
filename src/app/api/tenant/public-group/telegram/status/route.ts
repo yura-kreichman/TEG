@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { getTenantPublicGroup, isBotConfigured, fetchChatInviteLink } from "@/lib/telegram-bot";
+import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Используется и для поллинга в шторке привязки, и для карточки канала на
 // экране "Сводки и сообщения" — тот же принцип, что у summary-channels
@@ -29,6 +30,13 @@ export async function GET() {
 
   return NextResponse.json({
     botConfigured: await isBotConfigured(),
+    // Реальный баг, найден пользователем 2026-07-25: выключенный тумблер
+    // "Клиенты" (Настройки → Система) никак не влиял на эту страницу — и
+    // сама страница, и пункт в списке "Сводки и сообщения" продолжали
+    // работать так, будто модуль включён. Отдаём флаг клиенту, чтобы
+    // страница/пункт списка могли спрятаться, тот же принцип, что уже
+    // применён к API самих кошельков/абонементов.
+    clientsEnabled: await isModuleEnabled(owner.tenantId, "clientsEnabled"),
     connected: !!group && group.chatStatus === "active",
     enabled: group?.enabled ?? true,
     chatTitle: group?.chatTitle ?? null,
