@@ -147,13 +147,27 @@ export async function sendContactRequest(chatId: string, text: string, buttonTex
 // подписи теперь человекочитаемые и локализованные (s.balanceMenuButton и
 // т.п.), а вебхук матчит и их тоже, не только голые "/balance"/"/services"/
 // "/join" (см. handleGroupCommand).
-export async function sendChatMessageWithMenu(chatId: string, text: string, s: BotStringSet): Promise<TelegramApiResult> {
+//
+// showJoin — реальный баг, найден пользователем 2026-07-25: кнопка "Будем
+// вместе" показывалась всегда, даже если у тенанта клиента группа не
+// подключена или Владелец её выключил тумблером — тап приводил только к
+// "Группа пока не подключена". Вызывающая сторона уже знает конкретного
+// tenant для этого сообщения (buildClientReport вызывается на тенанта), ей
+// и решать, включать ли третью кнопку — здесь этой информации нет.
+export async function sendChatMessageWithMenu(
+  chatId: string,
+  text: string,
+  s: BotStringSet,
+  showJoin: boolean
+): Promise<TelegramApiResult> {
+  const keyboard = [[{ text: s.balanceMenuButton }, { text: s.servicesMenuButton }]];
+  if (showJoin) keyboard.push([{ text: s.joinMenuButton }]);
   return callTelegramApi("sendMessage", {
     chat_id: chatId,
     text,
     parse_mode: "HTML",
     reply_markup: {
-      keyboard: [[{ text: s.balanceMenuButton }, { text: s.servicesMenuButton }], [{ text: s.joinMenuButton }]],
+      keyboard,
       resize_keyboard: true,
     },
   });

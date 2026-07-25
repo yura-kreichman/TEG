@@ -271,7 +271,7 @@ async function handleClientStart(chatId: string, tenantSlug: string, lang: BotLa
   if (existingLink) {
     const wallet = await findWalletByPhone(tenant.id, existingLink.phone);
     if (wallet) {
-      await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang]).catch(() => {});
+      await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang], await tenantHasActiveGroup(tenant.id)).catch(() => {});
       return;
     }
     // Кошелёк с тех пор удалили/номер сменился — привязка устарела, спросим
@@ -347,7 +347,7 @@ async function handleContact(message: {
       create: { tenantId: tenant.id, chatId, phone, language: lang },
       update: { phone, language: lang },
     });
-    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang]).catch(() => {});
+    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang], await tenantHasActiveGroup(tenant.id)).catch(() => {});
     return;
   }
 
@@ -369,8 +369,18 @@ async function handleContact(message: {
       create: { tenantId: tenant.id, chatId, phone, language: lang },
       update: { phone, language: lang },
     });
-    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang]).catch(() => {});
+    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang], await tenantHasActiveGroup(tenant.id)).catch(() => {});
   }
+}
+
+// Показывать ли кнопку "Будем вместе" в постоянном меню — та же проверка,
+// что уже применяет sendJoinForTenant при самом тапе (запрос пользователя
+// 2026-07-25: "нельзя эту кнопку и команду вообще скрыть, если группа не
+// подключена" — раньше кнопка показывалась всегда, тап на неотключённой/
+// неподключённой группе вёл только к "Группа пока не подключена").
+async function tenantHasActiveGroup(tenantId: string): Promise<boolean> {
+  const group = await getTenantPublicGroup(tenantId);
+  return !!(group?.inviteLink && group.enabled);
 }
 
 // 20 — как у Печатной выписки (запрос пользователя 2026-07-24: "то же
@@ -528,7 +538,7 @@ async function handlePrivateBalanceCommand(chatId: string, lang: BotLang) {
     if (!tenant || !(await isModuleEnabled(tenant.id, "clientsEnabled"))) continue;
     const wallet = await findWalletByPhone(tenant.id, link.phone);
     if (!wallet) continue;
-    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang]).catch(() => {});
+    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang], await tenantHasActiveGroup(tenant.id)).catch(() => {});
   }
 }
 
