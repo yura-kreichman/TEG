@@ -38,7 +38,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n, useLocale } from "@/components/i18n-provider";
 import type { Dictionary } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, shownDifference, type ZoneAccountingMode } from "@/lib/results-calc";
+import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, type ZoneAccountingMode } from "@/lib/results-calc";
 import { formatMoney } from "@/lib/format";
 import { Money } from "@/components/money";
 import { MoneyInput } from "@/components/money-input";
@@ -460,11 +460,17 @@ export default function ReadingsCalendarPage() {
       cash: acc.cash + card.cashAmount,
       mobile: acc.mobile + card.mobileAmount,
       abonement: acc.abonement + card.abonementAmount,
+      // Баланс участвует в "Фактической кассе" только у "Прибываний"/
+      // "Пусков"/Билетов (запрос пользователя 2026-07-25, финальное
+      // решение) — у "Счётчиков"/"Только касса" это чисто информационная
+      // сумма, в кассу и разницу не подмешивается.
+      abonementInCash:
+        acc.abonementInCash + (card.accountingMode === "counters" || card.accountingMode === "cash_only" ? 0 : card.abonementAmount),
       calculatedRevenue: acc.calculatedRevenue + card.calculatedRevenue,
       returnsCount: acc.returnsCount + card.returnsCount,
       difference: Math.round((acc.difference + card.difference) * 100) / 100,
     }),
-    { cash: 0, mobile: 0, abonement: 0, calculatedRevenue: 0, returnsCount: 0, difference: 0 }
+    { cash: 0, mobile: 0, abonement: 0, abonementInCash: 0, calculatedRevenue: 0, returnsCount: 0, difference: 0 }
   );
 
   if (checking || !dateReady) {
@@ -554,7 +560,11 @@ export default function ReadingsCalendarPage() {
     const calculatedRevenue = isLiveZone ? card.calculatedRevenue : calcZoneGrossRevenue(tariffCalc);
     const netRevenue = isLiveZone ? card.netRevenue : calcZoneRevenue(tariffCalc, Number(editReturns || 0));
     const actualCash = Number(editCash || 0) + Number(editMobile || 0);
-    const difference = Math.round((actualCash + card.abonementAmount - netRevenue) * 100) / 100;
+    // Баланс — только у "Прибываний"/"Пусков"/Билетов (запрос пользователя
+    // 2026-07-25, финальное решение) — у "Счётчиков"/"Только касса" в
+    // Разницу не подмешивается вовсе.
+    const abonementInDifference = card.accountingMode === "counters" || card.accountingMode === "cash_only" ? 0 : card.abonementAmount;
+    const difference = Math.round((actualCash + abonementInDifference - netRevenue) * 100) / 100;
     return { calculatedRevenue, difference };
   }
 
@@ -772,7 +782,7 @@ export default function ReadingsCalendarPage() {
                     <div className="flex items-center justify-between text-body-airbnb font-bold">
                       <span className="text-foreground">{t.operatorApp.submit.actualCash}</span>
                       <span className="text-foreground">
-                        <Money value={daySummary.cash + daySummary.mobile + daySummary.abonement} />
+                        <Money value={daySummary.cash + daySummary.mobile + daySummary.abonementInCash} />
                       </span>
                     </div>
                     {/* Разница сверяется с ЧИСТОЙ выручкой (за вычетом
@@ -783,36 +793,25 @@ export default function ReadingsCalendarPage() {
                         путала (реальная путаница пользователя, найдено
                         2026-07-19: "Фактическая выручка и Выручка после
                         возвратов это одно и то же"). */}
-                    {(() => {
-                      // Показываем ОСТАТОК за вычетом того, что покрывает
-                      // Баланс (запрос пользователя 2026-07-24/25: "для меня
-                      // важно, чтобы в Итогах дня разница была нулевой", когда
-                      // весь разрыв объясняется балансом) — не саму формулу
-                      // (она защищает от ложной недостачи в будущем, когда
-                      // сотрудник честно исключает баланс из кассы, остаётся
-                      // без изменений), а именно то, что видно на экране.
-                      // Баланс "гасит" разницу только в пределах своей же
-                      // суммы — крупная непокрытая разница (>Баланса) всё
-                      // равно видна целиком, тревога не пропадает.
-                      const shown = shownDifference(daySummary.difference, daySummary.abonement);
-                      return (
-                        <div className="flex items-center justify-between text-caption-airbnb">
-                          <span className="flex items-center gap-1.5">
-                            {t.operatorApp.submit.difference}
-                            {shown !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
-                          </span>
-                          <span
-                            className={cn(
-                              "font-bold",
-                              shown === 0 ? "text-muted-foreground" : shown > 0 ? "text-primary" : "text-destructive"
-                            )}
-                          >
-                            {shown > 0 ? "+" : ""}
-                            <Money value={shown} />
-                          </span>
-                        </div>
-                      );
-                    })()}
+                    <div className="flex items-center justify-between text-caption-airbnb">
+                      <span className="flex items-center gap-1.5">
+                        {t.operatorApp.submit.difference}
+                        {daySummary.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                      </span>
+                      <span
+                        className={cn(
+                          "font-bold",
+                          daySummary.difference === 0
+                            ? "text-muted-foreground"
+                            : daySummary.difference > 0
+                              ? "text-primary"
+                              : "text-destructive"
+                        )}
+                      >
+                        {daySummary.difference > 0 ? "+" : ""}
+                        <Money value={daySummary.difference} />
+                      </span>
+                    </div>
                     {/* Отдельная строка — сколько всего денег физически на
                       точке за день, включая продажи абонементов (запрос
                       пользователя 2026-07-19: "пусть будет видно Фактическая
@@ -831,7 +830,7 @@ export default function ReadingsCalendarPage() {
                             value={
                               daySummary.cash +
                               daySummary.mobile +
-                              daySummary.abonement +
+                              daySummary.abonementInCash +
                               (abonementSales?.cash ?? 0) +
                               (abonementSales?.mobile ?? 0)
                             }
@@ -1244,32 +1243,32 @@ export default function ReadingsCalendarPage() {
                           <div className="flex items-center justify-between text-body-airbnb font-bold">
                             <span className="text-foreground">{t.operatorApp.submit.actualCash}</span>
                             <span className="text-foreground">
+                              {/* Этот блок рендерится только для
+                                  "Прибываний"/"Пусков"/Билетов (см. условие
+                                  выше) — у "Счётчиков"/"Только касса" своя
+                                  ветка ниже, без Баланса в сумме. */}
                               <Money value={card.cashAmount + card.mobileAmount + card.abonementAmount} />
                             </span>
                           </div>
-                          {(() => {
-                            // Тот же приём, что и в сводке дня выше — на
-                            // экране остаток Разницы за вычетом того, что
-                            // покрывает Баланс этой зоны, не сама формула.
-                            const shown = shownDifference(card.difference, card.abonementAmount);
-                            return (
-                              <div className="flex items-center justify-between text-caption-airbnb">
-                                <span className="flex items-center gap-1.5">
-                                  {t.operatorApp.submit.difference}
-                                  {shown !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
-                                </span>
-                                <span
-                                  className={cn(
-                                    "font-bold",
-                                    shown === 0 ? "text-muted-foreground" : shown > 0 ? "text-primary" : "text-destructive"
-                                  )}
-                                >
-                                  {shown > 0 ? "+" : ""}
-                                  <Money value={shown} />
-                                </span>
-                              </div>
-                            );
-                          })()}
+                          <div className="flex items-center justify-between text-caption-airbnb">
+                            <span className="flex items-center gap-1.5">
+                              {t.operatorApp.submit.difference}
+                              {card.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                            </span>
+                            <span
+                              className={cn(
+                                "font-bold",
+                                card.difference === 0
+                                  ? "text-muted-foreground"
+                                  : card.difference > 0
+                                    ? "text-primary"
+                                    : "text-destructive"
+                              )}
+                            >
+                              {card.difference > 0 ? "+" : ""}
+                              <Money value={card.difference} />
+                            </span>
+                          </div>
                           </>
                           )}
                         </div>

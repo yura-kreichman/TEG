@@ -906,7 +906,10 @@ export function AbonementTopupFlow({
                         )}
                       >
                         <span className="text-[0.90625rem] font-semibold text-foreground">{tariff.name}</span>
-                        <span className="text-caption-airbnb font-bold text-primary">
+                        {/* Крупнее (запрос пользователя 2026-07-25) — сумма
+                            это главное, что нужно быстро прочитать на
+                            тайле, была мельче названия тарифа. */}
+                        <span className="text-[1.09375rem] font-extrabold text-primary">
                           <Money value={tariff.price} />
                         </span>
                       </button>

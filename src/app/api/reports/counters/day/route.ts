@@ -406,15 +406,24 @@ export async function GET(request: Request) {
       // точки её уже получила раньше, при пополнении, поэтому она намеренно
       // не входит в actualCash (запрос пользователя 2026-07-17: "во всех
       // отчётах... правильные цифры", "к Наличный и Безнал добавить
-      // Абонемент"). Но ОНА ЖЕ вычитается из netRevenue при расчёте
-      // difference ниже — иначе разница ложно показывала бы недостачу ровно
-      // на эту сумму каждый раз (реальный баг, найден пользователем
-      // 2026-07-18 через собственный числовой пример).
+      // Абонемент"). У "Прибываний"/"Пусков" ОНА ЖЕ вычитается из netRevenue
+      // при расчёте difference ниже — иначе разница ложно показывала бы
+      // недостачу ровно на эту сумму каждый раз (реальный баг, найден
+      // пользователем 2026-07-18 через собственный числовой пример). У
+      // "Счётчиков"/"Только касса" — НЕТ (запрос пользователя 2026-07-25,
+      // финальное решение после долгого разбора): там способ оплаты
+      // балансом фиксируется отдельным действием в баре "Счётчики", не в
+      // момент ввода кассы, поэтому касса не обязана его "честно исключать"
+      // сама, как это происходит у Прибываний/Пусков — Баланс просто не
+      // должен участвовать ни в Фактической кассе, ни в Разнице этих
+      // режимов вовсе, только в собственной информационной строке.
       const abonementAmount = isTickets
         ? (ticketData?.abonementAmount ?? 0)
         : ["stays", "launches", "counters", "cash_only"].includes(zs.zone.accountingMode)
           ? abonementAmountFor(zs.zoneId, zs.createdAt)
           : 0;
+      const abonementInDifference =
+        zs.zone.accountingMode === "counters" || zs.zone.accountingMode === "cash_only" ? 0 : abonementAmount;
       // cash_only: "Расчётной выручки и разницы не существует — сравнивать
       // не с чем" (docs/spec/01-counters.md, "Расчёт") — без этой ветки
       // difference молча считался как actualCash+abonementAmount−0
@@ -427,7 +436,7 @@ export async function GET(request: Request) {
       const difference =
         zs.zone.accountingMode === "cash_only"
           ? 0
-          : Math.round((actualCash + abonementAmount - netRevenue) * 100) / 100;
+          : Math.round((actualCash + abonementInDifference - netRevenue) * 100) / 100;
 
       // Держать в синхроне с src/lib/isZoneSubmissionEditable — только
       // cash_only всегда редактируема (нет цепочки зависимостей), counters

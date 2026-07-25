@@ -405,11 +405,16 @@ export async function POST(request: Request) {
     const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
     const netRevenue = calcZoneRevenue(tariffCalc, returnsCountByZone.get(zone.id) ?? 0);
     const actualCash = zs.cashAmount + zs.mobileAmount;
-    // Оплата балансом (docs/spec/01-counters.md, запрос пользователя
-    // 2026-07-20) — та же поправка, что у Пусков/Прибываний: касса уже
-    // получила эти деньги раньше, при пополнении абонемента, не сейчас.
+    // Оплата балансом (docs/spec/01-counters.md) — у "Счётчиков"/"Только
+    // касса" НЕ участвует ни в Разнице, ни в Фактической кассе вовсе
+    // (запрос пользователя 2026-07-25, финальное решение после долгого
+    // разбора): способ оплаты балансом тут фиксируется отдельным действием
+    // в баре "Счётчики", не в момент ввода кассы, поэтому, в отличие от
+    // Пусков/Прибываний (где касса вводится ПОАКТИВНО, способ оплаты виден
+    // сразу и правильно исключается), тут нет причины "честно исключать"
+    // баланс из кассы — он просто в стороне, только информационная строка.
     const counterAbonementAmount = counterAbonementByZone.get(zone.id) ?? 0;
-    const difference = Math.round((actualCash + counterAbonementAmount - netRevenue) * 100) / 100;
+    const difference = Math.round((actualCash - netRevenue) * 100) / 100;
 
     const readingsText = zone.assets
       .map((asset) => {

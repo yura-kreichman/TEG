@@ -22,7 +22,6 @@ import {
   isLaunchesZone,
   isStaysZone,
   isTicketsZone,
-  shownDifference,
   type ZoneAccountingMode,
 } from "@/lib/results-calc";
 import { queueSubmission } from "@/lib/offline-submissions";
@@ -432,14 +431,13 @@ export default function SubmitResultsPage() {
     const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
     const netRevenue = calcZoneRevenue(tariffCalc, Number(form.returnsCount || 0));
     const actualCash = Number(form.cashAmount || 0) + Number(form.mobileAmount || 0);
-    // Оплата балансом (реальный баг, найден пользователем 2026-07-24: без
-    // этой поправки живой предпросмотр показывал ложную недостачу ровно на
-    // сумму, оплаченную с баланса — касса её и не должна была получить, у
-    // сотрудника этих денег наличными физически нет) — та же поправка, что
-    // уже в submit-results/route.ts (counterAbonementAmount) и у Билетов
-    // (abonementAmount) в этой же функции выше.
+    // Оплата балансом — у "Счётчиков"/"Только касса" НЕ участвует в
+    // Разнице вовсе (запрос пользователя 2026-07-25, финальное решение) —
+    // тот же принцип, что и в submit-results/route.ts. abonementAmount
+    // ниже — только для информационной строки "Баланс" в UI, в саму
+    // разницу больше не подмешивается.
     const counterAbonementAmount = counterAbonementByZone[zoneId] ?? 0;
-    const difference = Math.round((actualCash + counterAbonementAmount - netRevenue) * 100) / 100;
+    const difference = Math.round((actualCash - netRevenue) * 100) / 100;
     return { calculatedRevenue, actualCash, difference, abonementAmount: counterAbonementAmount };
   }
 
@@ -636,21 +634,14 @@ export default function SubmitResultsPage() {
                 <span className="tabular-nums text-muted-foreground">
                   {t.operatorApp.submit.actualCash} <Money value={s.actualCash} />
                 </span>
-                {!isCashOnly &&
-                  (() => {
-                    // На экране — остаток за вычетом того, что покрывает
-                    // Баланс (запрос пользователя 2026-07-24/25), сама
-                    // Разница не меняется, см. shownDifference.
-                    const shown = shownDifference(s.difference, s.abonementAmount);
-                    return (
-                      <span className="flex items-center gap-1.5 tabular-nums font-semibold">
-                        {t.operatorApp.submit.difference}
-                        {shown !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
-                        {shown > 0 ? "+" : ""}
-                        <Money value={shown} />
-                      </span>
-                    );
-                  })()}
+                {!isCashOnly && (
+                  <span className="flex items-center gap-1.5 tabular-nums font-semibold">
+                    {t.operatorApp.submit.difference}
+                    {s.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                    {s.difference > 0 ? "+" : ""}
+                    <Money value={s.difference} />
+                  </span>
+                )}
               </div>
               );
             })}
@@ -1017,7 +1008,6 @@ export default function SubmitResultsPage() {
                     // определение выше) — единая формула для обоих режимов,
                     // не дублируем здесь.
                     const preview = previewFor(activeZone.id);
-                    const shown = preview ? shownDifference(preview.difference, preview.abonementAmount) : 0;
                     return (
                       preview && (
                         <div className="flex flex-col gap-1 text-caption-airbnb tabular-nums">
@@ -1028,11 +1018,11 @@ export default function SubmitResultsPage() {
                           <div className="flex items-center justify-between">
                             <span className="flex items-center gap-1.5">
                               {t.operatorApp.submit.difference}
-                              {shown !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                              {preview.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
                             </span>
                             <span>
-                              {shown > 0 ? "+" : ""}
-                              <Money value={shown} />
+                              {preview.difference > 0 ? "+" : ""}
+                              <Money value={preview.difference} />
                             </span>
                           </div>
                         </div>
@@ -1174,7 +1164,6 @@ export default function SubmitResultsPage() {
             {selectedZoneIds.map((zoneId) => {
               const zone = zones.find((z) => z.id === zoneId)!;
               const preview = previewFor(zoneId);
-              const shown = preview ? shownDifference(preview.difference, preview.abonementAmount) : 0;
               return (
                 <div
                   key={zoneId}
@@ -1196,9 +1185,9 @@ export default function SubmitResultsPage() {
                       </span>
                       <span className="flex items-center gap-1.5 tabular-nums font-semibold">
                         {t.operatorApp.submit.difference}
-                        {shown !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
-                        {shown > 0 ? "+" : ""}
-                        <Money value={shown} />
+                        {preview.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                        {preview.difference > 0 ? "+" : ""}
+                        <Money value={preview.difference} />
                       </span>
                     </>
                   )}

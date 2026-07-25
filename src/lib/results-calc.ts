@@ -70,20 +70,3 @@ export function calcZoneRevenue(tariffs: TariffCalcInput[], returnsCount: number
   const ratio = netSessions / totalSessions;
   return Math.round(totalRevenueBeforeReturns * ratio * 100) / 100;
 }
-
-/**
- * Что реально показываем как "Разница" (запрос пользователя 2026-07-24/25:
- * "для меня важно, чтобы в Итогах дня разница была нулевой", когда весь
- * разрыв целиком объясняется суммой "Баланс") — САМА Разница (actualCash +
- * abonementAmount − netRevenue) не меняется нигде, она и есть защита от
- * ложной недостачи на будущее, когда сотрудник честно исключает баланс из
- * кассы (баг, найденный и исправленный 2026-07-18). Меняется только то, что
- * видно на экране: Баланс "гасит" разницу в пределах СВОЕЙ ЖЕ суммы — не
- * больше — остаток сверху (если разница крупнее баланса) всё равно виден
- * целиком, с тревогой.
- */
-export function shownDifference(difference: number, abonementAmount: number): number {
-  if (difference > 0) return Math.max(0, Math.round((difference - abonementAmount) * 100) / 100);
-  if (difference < 0) return Math.min(0, Math.round((difference + abonementAmount) * 100) / 100);
-  return 0;
-}

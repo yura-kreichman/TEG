@@ -118,9 +118,13 @@ async function reEditZoneSummaryMessage(zoneSubmissionId: string, tenantId: stri
     );
   }
 
+  // Баланс — только информационная строка у "Счётчиков"/"Только касса"
+  // (запрос пользователя 2026-07-25, финальное решение) — в саму Разницу
+  // не подмешивается, эта функция обслуживает только эти два режима (см.
+  // isZoneSubmissionEditable в вызывающем коде).
   const abonementAmount = await getZoneAbonementSpendAmount(zs.zoneId, boundary);
   const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
-  const difference = isCashOnly ? 0 : Math.round((actualCash + abonementAmount - netRevenue) * 100) / 100;
+  const difference = isCashOnly ? 0 : Math.round((actualCash - netRevenue) * 100) / 100;
 
   const text = formatZoneSummaryTelegram(
     {
