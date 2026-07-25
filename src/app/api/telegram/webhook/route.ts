@@ -13,6 +13,7 @@ import {
   deleteChatMessage,
   setStaffGroupCommands,
   CLIENT_START_PREFIX,
+  escapeHtml,
 } from "@/lib/telegram-bot";
 import { describeAbonementTransactionSource, findWalletByPhone, normalizePhone } from "@/lib/abonement";
 import { formatMoneyWithCurrency } from "@/lib/format";
@@ -381,7 +382,7 @@ async function handleClientStart(chatId: string, tenantSlug: string, lang: BotLa
     // контакт заново ниже, а не покажем ошибку.
   }
 
-  await promptContactShare(chatId, tenant.id, tenant.name, lang);
+  await promptContactShare(chatId, tenant.id, escapeHtml(tenant.name), lang);
 }
 
 // pendingTenantId === null — "generic" запрос (голый /start, голый /balance
@@ -496,7 +497,7 @@ async function offerRegistration(
     data: { pendingRegistrationTenantId: tenant.id, pendingRegistrationPhone: phone, awaitingRegistrationName: false },
   });
   const [showJoin, showBonus] = await Promise.all([tenantHasActiveGroup(tenant.id, chatId), tenantHasAbonementsToSell(tenant.id)]);
-  const text = `${s.notFoundTenant(rawPhone, tenant.name)}\n\n${s.tapRegisterHint}`;
+  const text = `${s.notFoundTenant(rawPhone, escapeHtml(tenant.name))}\n\n${s.tapRegisterHint}`;
   await sendChatMessageWithMenu(chatId, text, s, { showRegister: true, showJoin, showBonus }).catch(() => {});
 }
 
@@ -569,7 +570,7 @@ async function handleRegistrationName(chatId: string, tenantId: string, phone: s
     tenantHasActiveGroup(tenant.id, chatId),
     tenantHasAbonementsToSell(tenant.id),
   ]);
-  const parts = [s.registeredGreeting(tenant.name), report];
+  const parts = [s.registeredGreeting(escapeHtml(tenant.name)), report];
   if (abonementsInfo) parts.push(abonementsInfo);
   await sendChatMessageWithMenu(chatId, parts.join("\n\n"), s, { showJoin, showBonus }).catch(() => {});
 }
@@ -626,14 +627,17 @@ async function buildAbonementsInfo(tenant: { id: string; currency: string | null
   if (plans.length === 0 || points.length === 0) return null;
 
   const currency = tenant.currency as CurrencyCode | null;
-  const pointNames = points.map((p) => p.name).join(", ");
+  const pointNames = points.map((p) => escapeHtml(p.name)).join(", ");
   const lines = [s.abonementsIntro(pointNames)];
   for (const plan of plans) {
     const priceStr = formatMoneyWithCurrency(Number(plan.price), "ru", currency);
     const creditStr = formatMoneyWithCurrency(Number(plan.creditAmount), "ru", currency);
     // Безымянный план (Abonement.name опционален) — тот же фоллбэк, что уже
     // используют владельческие/операторские экраны (plan.name ?? цена).
-    lines.push(s.abonementLine(plan.name ?? priceStr, priceStr, creditStr));
+    // Экранируем ДО подстановки в HTML-шаблон abonementLine (запрос
+    // пользователя 2026-07-25 про форматирование) — название плана задаёт
+    // Владелец, может содержать "<"/">"/"&".
+    lines.push(s.abonementLine(plan.name ? escapeHtml(plan.name) : priceStr, priceStr, creditStr));
   }
   return lines.join("\n");
 }
@@ -672,7 +676,7 @@ async function buildClientReport(
   const s = BOT_STRINGS[lang];
   const currency = tenant.currency as CurrencyCode | null;
   const lines = [
-    greetingLine(wallet.name, s),
+    greetingLine(wallet.name ? escapeHtml(wallet.name) : null, s),
     `${s.yourBalance}: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`,
   ];
 
@@ -714,7 +718,8 @@ async function buildClientReport(
       // Количество (запрос пользователя 2026-07-24: "в Печатную сводку и
       // везде должно быть указано количество") — только у "Счётчиков", там
       // где реально можно списать несколько тарифов за раз.
-      const detailBase = h.abonement?.name ?? describeAbonementTransactionSource(h);
+      const rawDetail = h.abonement?.name ?? describeAbonementTransactionSource(h);
+      const detailBase = rawDetail ? escapeHtml(rawDetail) : null;
       const detail = detailBase && h.quantity ? `${detailBase} × ${h.quantity}` : detailBase;
       // Слово "Списание" убрано (запрос пользователя 2026-07-24: "это итак
       // понятно, ведь число с минусом") — при известном источнике просто
@@ -722,7 +727,9 @@ async function buildClientReport(
       // "Пополнение"/"Возврат"/"Корректировка" оставлены — одинаковый плюс
       // у них означает разное, знаком не различить.
       const label = h.type === "spend" ? (detail ?? typeLabel) : detail ? `${typeLabel} · ${detail}` : typeLabel;
-      lines.push(`${date} ${time}  ${label}  ${sign}${formatMoneyWithCurrency(Number(h.amount), "ru", currency)}`);
+      // Сумма — жирным (запрос пользователя 2026-07-25: "красивое
+      // форматирование... суммы жирным"), остальное обычным текстом.
+      lines.push(`${date} ${time}  ${label}  <b>${sign}${formatMoneyWithCurrency(Number(h.amount), "ru", currency)}</b>`);
     }
   }
 
@@ -739,7 +746,7 @@ async function buildClientReport(
   if (openOrders.length > 0) {
     lines.push("", `<b>${s.openOrders}:</b>`);
     for (const o of openOrders) {
-      lines.push(`№${o.number} — ${o.openTicketsCount} ${s.ticketsWord}`);
+      lines.push(`№${o.number} — <b>${o.openTicketsCount}</b> ${s.ticketsWord}`);
     }
   }
 
@@ -928,19 +935,20 @@ async function sendServicesForPoint(chatId: string, pointId: string, lang: BotLa
   });
   if (!point) return;
 
-  const lines = [`<b>${point.name}</b>`, ""];
+  const lines = [`<b>${escapeHtml(point.name)}</b>`, ""];
   if (point.zones.length === 0) {
     lines.push(s.noServicesFound);
   } else {
     for (const zone of point.zones) {
       const emoji = zone.telegramEmoji ?? "🏁";
+      const zoneName = escapeHtml(zone.name);
       if (zone.accountingMode === "tickets" && zone.assets.length > 0) {
-        lines.push(`${emoji} ${zone.name}:`);
+        lines.push(`${emoji} ${zoneName}:`);
         for (const asset of zone.assets) {
-          lines.push(`  • ${asset.name}`);
+          lines.push(`  • ${escapeHtml(asset.name)}`);
         }
       } else {
-        lines.push(`${emoji} ${zone.name}`);
+        lines.push(`${emoji} ${zoneName}`);
       }
     }
   }
@@ -992,17 +1000,17 @@ async function handleKassaCommand(chatId: string, tenantId: string) {
     totals.mobile += d.mobileAmount;
     totals.abonement += d.abonementAmount;
 
-    if (points.length > 1) lines.push("", `<b>${p.name}</b>`);
-    lines.push(`💵 Наличные: ${money(d.cashOnHand)}`);
-    if (d.mobileAmount > 0) lines.push(`💳 Безнал: ${money(d.mobileAmount)}`);
-    if (d.abonementAmount > 0) lines.push(`👨🏻‍💼 Баланс: ${money(d.abonementAmount)}`);
+    if (points.length > 1) lines.push("", `<b>${escapeHtml(p.name)}</b>`);
+    lines.push(`💵 Наличные: <b>${money(d.cashOnHand)}</b>`);
+    if (d.mobileAmount > 0) lines.push(`💳 Безнал: <b>${money(d.mobileAmount)}</b>`);
+    if (d.abonementAmount > 0) lines.push(`👨🏻‍💼 Баланс: <b>${money(d.abonementAmount)}</b>`);
   });
 
   if (points.length > 1) {
     lines.push("", "<b>Итого:</b>");
-    lines.push(`💵 Наличные: ${money(totals.cash)}`);
-    if (totals.mobile > 0) lines.push(`💳 Безналичные сегодня: ${money(totals.mobile)}`);
-    if (totals.abonement > 0) lines.push(`👨🏻‍💼 Баланс сегодня: ${money(totals.abonement)}`);
+    lines.push(`💵 Наличные: <b>${money(totals.cash)}</b>`);
+    if (totals.mobile > 0) lines.push(`💳 Безналичные сегодня: <b>${money(totals.mobile)}</b>`);
+    if (totals.abonement > 0) lines.push(`👨🏻‍💼 Баланс сегодня: <b>${money(totals.abonement)}</b>`);
   }
 
   await sendChatMessage(chatId, lines.join("\n")).catch(() => {});

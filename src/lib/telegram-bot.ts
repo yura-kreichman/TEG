@@ -9,6 +9,15 @@ import type { BotStringSet } from "@/lib/telegram-client-i18n";
 // переключаются на эту систему, а старая карта настроек в /settings убирается.
 // Токен — платформенная настройка (docs/spec/06-super-admin.md, /admin/settings),
 // БД первична, .env (TELEGRAM_BOT_TOKEN) — тихий фоллбэк на переходный период.
+// Экранирование пользовательских данных (имена зон/тарифов/точек/клиентов)
+// перед вставкой в текст сообщения — все клиентские сообщения уходят с
+// parse_mode: "HTML" (см. sendMessage ниже), без экранирования "<"/">"/"&" в
+// названии, которое задал сам Владелец, Telegram просто откажет в отправке
+// (ошибка парсинга entities) — найдено при аудите форматирования 2026-07-25.
+export function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 async function getBotToken(): Promise<string | null> {
   const { telegramBotToken } = await getSystemSettingsConfig();
   return telegramBotToken || process.env.TELEGRAM_BOT_TOKEN || null;
