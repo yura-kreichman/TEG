@@ -667,36 +667,40 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
             </div>
           </div>
         </div>
-        <div
-          className={cn(
-            "mt-3.5 grid gap-3 border-t border-border pt-3.5 tabular-nums",
-            data.abonement > 0 ? "grid-cols-4" : "grid-cols-3"
-          )}
-        >
-          <div>
-            <div className="flex items-center gap-1 text-caption-airbnb">
-              <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
-              {t.reports.cashLabel}
+        {/* Способы оплаты — каждый в своей строке (запрос пользователя
+            2026-07-25: "цифры растут и теперь всё сливается") — раньше все
+            три (плюс "Сдач") жили колонками в одной сетке grid-cols-3/4,
+            равная доля ширины на каждую сумму быстро зажимала крупные числа.
+            Теперь стек строк слева (метка+иконка ... сумма справа, ширина
+            не ограничена соседями) и "Сдач" отдельным блоком справа — на
+            прежнем месте, просто больше не в общей сетке. */}
+        <div className="mt-3.5 flex items-start justify-between gap-4 border-t border-border pt-3.5 tabular-nums">
+          <div className="flex flex-1 flex-col gap-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1 text-caption-airbnb">
+                <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+                {t.reports.cashLabel}
+              </span>
+              <span className="text-[1rem] font-bold"><Money value={data.cash} /></span>
             </div>
-            <div className="text-[1rem] font-bold"><Money value={data.cash} /></div>
-          </div>
-          <div>
-            <div className="flex items-center gap-1 text-caption-airbnb">
-              <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
-              {t.reports.mobileLabel}
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1 text-caption-airbnb">
+                <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+                {t.reports.mobileLabel}
+              </span>
+              <span className="text-[1rem] font-bold"><Money value={data.mobile} /></span>
             </div>
-            <div className="text-[1rem] font-bold"><Money value={data.mobile} /></div>
-          </div>
-          {data.abonement > 0 && (
-            <div>
-              <div className="flex items-center gap-1 text-caption-airbnb">
-                <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
-                {t.reports.abonementLabel}
+            {data.abonement > 0 && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1 text-caption-airbnb">
+                  <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
+                  {t.reports.abonementLabel}
+                </span>
+                <span className="text-[1rem] font-bold"><Money value={data.abonement} /></span>
               </div>
-              <div className="text-[1rem] font-bold"><Money value={data.abonement} /></div>
-            </div>
-          )}
-          <div>
+            )}
+          </div>
+          <div className="shrink-0 text-right">
             <div className="text-caption-airbnb">{t.reports.submissionsLabel}</div>
             <div className="text-[1rem] font-bold">{data.submissionsCount}</div>
           </div>
