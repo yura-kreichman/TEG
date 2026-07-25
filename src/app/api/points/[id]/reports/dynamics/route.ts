@@ -95,24 +95,12 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   });
   let expenses = 0;
   let payouts = 0;
-  // Абонементы (пересмотрено 2026-07-25 — прошлое решение признавать
-  // "Выручку" в момент траты баланса было ошибочным, найдено пользователем:
-  // клиент физически отдаёт деньги в момент ПОПОЛНЕНИЯ, Владелец их получает
-  // и инкассирует именно тогда — см. полный разбор в reports/money/route.ts.
-  // Трата баланса (revenue_abonement) — внутреннее списание уже полученных
-  // денег, в total/byDay больше не входит, иначе задвоение с пополнением.
-  // Разбивка по способу оплаты клиента сохранена (та же пара, что раньше
-  // называлась "abonementSold" и была информационной, теперь это сама
-  // выручка).
-  let abonementSoldCash = 0;
-  let abonementSoldMobile = 0;
-  let totalAbonement = 0;
   // Товары (docs/spec/09-goods.md, "Отчётность и размещение": "товары —
   // равноправный слой стека рядом с зонами") — гросс-выручка наличными и
   // безналом, прибавляется к total/byDay, визуально график линейный (не
   // столбчатый), отдельного слоя не рисует. goods_revenue_abonement (товар,
-  // оплаченный балансом) сюда НЕ входит — тем же принципом, что и выше: эти
-  // деньги уже посчитаны в totalAbonement в момент пополнения, не когда
+  // оплаченный балансом) сюда НЕ входит — эти деньги уже посчитаны в
+  // totalCash/totalMobile ниже в момент пополнения баланса, не когда
   // потрачены на товар.
   let totalGoods = 0;
   // По дням — для линии "Прибыль" на графике (запрос пользователя 2026-07-16:
@@ -128,10 +116,17 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       deductionsByDay.set(key, (deductionsByDay.get(key) ?? 0) + amount);
       activeDays.add(key);
     }
+    // Абонементы (пересмотрено 2026-07-25 дважды — сперва отдельной строкой
+    // "Баланс", это оказалось ошибкой: та же иконка/подпись, что везде
+    // означает "клиент заплатил СО своего баланса" — а тут наоборот деньги
+    // ЗА пополнение, реальные наличные/безнал клиента. Слито в totalCash/
+    // totalMobile по факту способа оплаты пополнения, тем же принципом, что
+    // и Товары ниже — не отдельная вводящая в заблуждение строка.
+    // revenue_abonement/goods_revenue_abonement (трата) по-прежнему не
+    // входят вовсе — деньги уже учтены в момент пополнения.
     if (op.type === "abonement_topup" || op.type === "abonement_topup_cashless") {
-      if (op.type === "abonement_topup") abonementSoldCash += amount;
-      else abonementSoldMobile += amount;
-      totalAbonement += amount;
+      if (op.type === "abonement_topup") totalCash += amount;
+      else totalMobile += amount;
       const key = dateKey(op.occurredAt);
       byDay.set(key, (byDay.get(key) ?? 0) + amount);
       activeDays.add(key);
@@ -182,7 +177,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     // Знаковая сумма — тот же принцип, что и totalGoods выше.
     prevGoodsOps.reduce((sum, op) => sum + Number(op.amount), 0);
 
-  const total = totalCash + totalMobile + totalAbonement + totalGoods;
+  const total = totalCash + totalMobile + totalGoods;
   const deltaPercent = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 1000) / 10 : null;
 
   // За год — 365 ежедневных столбцов на графике нечитаемы, агрегируем по
@@ -243,8 +238,6 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     total: round2(total),
     cash: round2(totalCash),
     mobile: round2(totalMobile),
-    abonement: round2(totalAbonement),
-    abonementSold: { cash: round2(abonementSoldCash), mobile: round2(abonementSoldMobile) },
     // Выручка Товаров за период (docs/spec/09-goods.md) — уже входит в total/
     // profitAndLoss выше, отдельное поле только для строки "в т.ч. Товары".
     goodsRevenue: round2(totalGoods),

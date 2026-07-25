@@ -25,13 +25,11 @@ interface Report {
     revenue: number;
     cash: number;
     mobile: number;
-    abonement: number;
     expense: number;
     profit: number;
     difference: number;
     returnsCount: number;
   };
-  abonementSold: { cash: number; mobile: number };
 }
 
 export default function MoneyPage() {
@@ -430,13 +428,6 @@ export default function MoneyPage() {
                   <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
                   {t.reports.mobileLabel}: <span className="font-bold text-foreground"><Money value={report.business.mobile} /></span>
                 </span>
-                {report.business.abonement > 0 && (
-                  <span className="inline-flex items-center gap-1">
-                    <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
-                    {t.reports.abonementLabel}:{" "}
-                    <span className="font-bold text-foreground"><Money value={report.business.abonement} /></span>
-                  </span>
-                )}
                 {/* Тесты/возвраты — тем же стеком справа (запрос пользователя
                     2026-07-18: "в обоих должны быть видны Тесты/возвраты"). */}
                 {report.business.returnsCount > 0 && (

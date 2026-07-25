@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
 import { computeZoneSubmissionRevenues, resolvePeriodFromParams, round2, sumByKey } from "@/lib/reports";
+import { getTenantModuleFlags } from "@/lib/tenant-modules";
+
+// Тот же приём сентинелов, что уже у "По кассам" (operator/page.tsx,
+// money/zone-balances/page.tsx) — Абонементы/Товары не зоны, но такая же
+// касса, участвующая в ранжировании "Выручка по кассам" наравне с зонами
+// (запрос пользователя 2026-07-25: "чтобы видеть продажи абонементов и
+// товаров", раньше вкладка честно, но неудобно показывала только зоны).
+const ABONEMENT_POOL_ID = "__abonement__";
+const GOODS_POOL_ID = "__goods__";
 
 export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/reports/zones">) {
   const owner = await requireOwner();
@@ -47,20 +56,46 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   for (const e of entries) {
     actualByZone.set(e.zoneId, (actualByZone.get(e.zoneId) ?? 0) + e.actualTotal);
   }
-  // Абонементная выручка НЕ входит в разбивку по зонам (пересмотрено
-  // 2026-07-25 — см. полный разбор в reports/money/route.ts). Раньше
-  // (аудит 2026-07-24) сюда прибавляли revenue_abonement (трата баланса) по
-  // zoneId, чтобы сумма по зонам совпадала с "Динамикой" — то было
-  // компенсацией одной ошибки другой. Теперь выручка признаётся в момент
-  // ПОПОЛНЕНИЯ (abonement_topup*), а пополнение физически не привязано к
-  // зоне (происходит на экране "Клиенты", не через зону) — у неё просто нет
-  // законной зоны-владельца. Итог: сумма этой вкладки честно МЕНЬШЕ
-  // "Динамики" на абонементную часть — это ожидаемо, не расхождение,
-  // разбивка "по зонам" не может включать деньги, не привязанные ни к одной
-  // зоне.
-  const pointTotal = [...actualByZone.values()].reduce((sum, v) => sum + v, 0);
+  // Абонементы/Товары — не зона, но такая же "касса" (запрос пользователя
+  // 2026-07-25: "переименовать в Кассы, чтобы видеть продажи абонементов и
+  // товаров") — деньги за пополнение баланса/продажу товара физически не
+  // привязаны ни к одной зоне (пополнение — экран "Клиенты", не зона; товар
+  // продаётся вне зон вовсе), поэтому раньше вкладка их просто не
+  // показывала. Теперь — отдельные строки ранжирования наравне с зонами,
+  // тот же принцип, что уже у "По кассам" в инкассации. Абонементы — по
+  // ПОПОЛНЕНИЮ (см. reports/money/route.ts), не по трате. Товары —
+  // goods_revenue/goods_revenue_cashless, БЕЗ goods_revenue_abonement (та
+  // сумма уже учтена в момент пополнения баланса).
+  const { goodsEnabled, clientsEnabled } = await getTenantModuleFlags(owner.tenantId);
+  const pointFilter = isAllPoints ? { tenantId: owner.tenantId } : { pointId };
+  const [abonementOps, goodsOps] = await Promise.all([
+    clientsEnabled
+      ? prisma.moneyOperation.findMany({
+          where: { type: { in: ["abonement_topup", "abonement_topup_cashless"] }, occurredAt: { gte: start, lt: end }, ...pointFilter },
+          select: { amount: true },
+        })
+      : Promise.resolve([]),
+    goodsEnabled
+      ? prisma.moneyOperation.findMany({
+          where: { type: { in: ["goods_revenue", "goods_revenue_cashless"] }, occurredAt: { gte: start, lt: end }, ...pointFilter },
+          select: { amount: true },
+        })
+      : Promise.resolve([]),
+  ]);
+  const abonementRevenue = abonementOps.reduce((sum, op) => sum + Number(op.amount), 0);
+  const goodsRevenue = goodsOps.reduce((sum, op) => sum + Number(op.amount), 0);
 
-  const zoneRanking = zones.map((z) => {
+  const pointTotal = [...actualByZone.values()].reduce((sum, v) => sum + v, 0) + abonementRevenue + goodsRevenue;
+
+  const zoneRanking: {
+    zoneId: string;
+    zoneName: string;
+    pointId: string | null;
+    pointName: string | null;
+    iconKey: string | null;
+    total: number;
+    sharePercent: number;
+  }[] = zones.map((z) => {
     const total = actualByZone.get(z.id) ?? 0;
     return {
       zoneId: z.id,
@@ -72,7 +107,6 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       sharePercent: pointTotal > 0 ? Math.round((total / pointTotal) * 1000) / 10 : 0,
     };
   });
-
   if (isAllPoints) {
     // Группировка по точке вместо суффикса "Зона · Точка" у каждой строки
     // (запрос пользователя 2026-07-19: "занимает много места на экране") —
@@ -91,8 +125,49 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     zoneRanking.sort((a, b) => b.total - a.total);
   }
 
+  // Абонементы/Товары — фиксированным хвостом ПОСЛЕ зон, не встроены в
+  // сортировку по сумме (запрос пользователя 2026-07-25: "сначала зоны по
+  // списку, а потом Абонементы и товары, как и в инкассации") — тот же
+  // порядок, что в "По кассам" (operator/page.tsx: зоны → Абонементы →
+  // Товары). Без группировки по точке даже в "Все точки" (проще одной
+  // сводной строкой на тенант, чем городить per-point разбивку ради двух
+  // вспомогательных строк) и без записи в actualByZone/zoneIds — их
+  // сознательно нет в drill-down "Активы"/"Тарифы" ниже, там нечего
+  // показывать. zoneName пустой намеренно — клиент сам подставляет
+  // переведённую подпись и иконку по сентинелу zoneId, сервер не
+  // занимается i18n-строками.
+  if (clientsEnabled && abonementRevenue > 0) {
+    zoneRanking.push({
+      zoneId: ABONEMENT_POOL_ID,
+      zoneName: "",
+      pointId: null,
+      pointName: null,
+      iconKey: null,
+      total: round2(abonementRevenue),
+      sharePercent: pointTotal > 0 ? Math.round((abonementRevenue / pointTotal) * 1000) / 10 : 0,
+    });
+  }
+  if (goodsEnabled && goodsRevenue > 0) {
+    zoneRanking.push({
+      zoneId: GOODS_POOL_ID,
+      zoneName: "",
+      pointId: null,
+      pointName: null,
+      iconKey: null,
+      total: round2(goodsRevenue),
+      sharePercent: pointTotal > 0 ? Math.round((goodsRevenue / pointTotal) * 1000) / 10 : 0,
+    });
+  }
+
   const requestedZoneId = searchParams.get("zoneId");
-  const drillZoneId = requestedZoneId && zoneIds.includes(requestedZoneId) ? requestedZoneId : zoneRanking[0]?.zoneId;
+  // Фоллбэк — первая РЕАЛЬНАЯ зона в списке, не просто zoneRanking[0]:
+  // Абонементы/Товары — псевдо-строки без активов/тарифов, если одна из них
+  // окажется топ-1 по выручке, drill-down "Активы"/"Тарифы" не должен
+  // пропадать вовсе, просто должен указывать на первую настоящую зону.
+  const drillZoneId =
+    requestedZoneId && zoneIds.includes(requestedZoneId)
+      ? requestedZoneId
+      : zoneRanking.find((z) => zoneIds.includes(z.zoneId))?.zoneId;
   const drillZone = zones.find((z) => z.id === drillZoneId) ?? null;
 
   let assetRanking: {

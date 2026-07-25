@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, ArrowUp, Building2, ChevronLeft, ChevronRight, Frown, MapPin, Meh, Smile } from "lucide-react";
+import { ArrowDown, ArrowUp, Building2, ChevronLeft, ChevronRight, Frown, Gift, MapPin, Meh, ShoppingBag, Smile } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
@@ -29,14 +29,19 @@ import { cn } from "@/lib/utils";
 type Tab = "dynamics" | "zones" | "operators" | "calendar";
 type Granularity = "day" | "week" | "month" | "year";
 
+// Те же сентинелы, что у "По кассам" (operator/page.tsx, money/zone-
+// balances/page.tsx) — сервер отдаёт эти id для строк Абонементы/Товары в
+// zoneRanking (запрос пользователя 2026-07-25: "Кассы... видеть продажи
+// абонементов и товаров"), клиент сам подставляет иконку/подпись.
+const ABONEMENT_POOL_ID = "__abonement__";
+const GOODS_POOL_ID = "__goods__";
+
 interface DynamicsData {
   pointName: string;
   period: { granularity: Granularity };
   total: number;
   cash: number;
   mobile: number;
-  abonement: number;
-  abonementSold: { cash: number; mobile: number };
   submissionsCount: number;
   deltaPercent: number | null;
   bars: { date: string; total: number; profit: number; hasData: boolean }[];
@@ -690,15 +695,6 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
               </span>
               <span className="text-[1rem] font-bold"><Money value={data.mobile} /></span>
             </div>
-            {data.abonement > 0 && (
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1 text-caption-airbnb">
-                  <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
-                  {t.reports.abonementLabel}
-                </span>
-                <span className="text-[1rem] font-bold"><Money value={data.abonement} /></span>
-              </div>
-            )}
           </div>
           <div className="shrink-0 border-l border-border pl-4 text-right">
             <div className="text-caption-airbnb">{t.reports.submissionsLabel}</div>
@@ -854,6 +850,20 @@ function CellTooltip({ value, presentValues }: { value: number; presentValues: n
   );
 }
 
+// Абонементы/Товары — не зона, значок/подпись подставляем на клиенте по
+// сентинелу id (сервер их не переводит, см. zones/route.ts). null для
+// настоящих зон — вызывающий код в этом случае берёт z.iconKey/z.zoneName.
+function poolIcon(zoneId: string, sizeClass: string) {
+  if (zoneId === ABONEMENT_POOL_ID) return <Gift className={cn(sizeClass, "shrink-0 text-muted-foreground")} />;
+  if (zoneId === GOODS_POOL_ID) return <ShoppingBag className={cn(sizeClass, "shrink-0 text-muted-foreground")} />;
+  return null;
+}
+function poolLabel(zoneId: string, t: ReturnType<typeof useI18n>): string | null {
+  if (zoneId === ABONEMENT_POOL_ID) return t.money.abonementCashLabel;
+  if (zoneId === GOODS_POOL_ID) return t.goods.navLabel;
+  return null;
+}
+
 function ZonesTab({
   data,
   t,
@@ -878,6 +888,14 @@ function ZonesTab({
     else zoneGroups.push({ pointId: z.pointId, pointName: z.pointName, zones: [z] });
   }
 
+  // Dropdown "Активы" ниже — только настоящие зоны (запрос пользователя
+  // 2026-07-25): у Абонементов/Товаров нет активов/тарифов, туда нечего
+  // drill-down'ить, поэтому в выбор они не попадают, хотя в самом
+  // ранжировании "Выручка по кассам" выше показаны наравне с зонами.
+  const realZoneGroups = zoneGroups
+    .map((g) => ({ ...g, zones: g.zones.filter((z) => z.zoneId !== ABONEMENT_POOL_ID && z.zoneId !== GOODS_POOL_ID) }))
+    .filter((g) => g.zones.length > 0);
+
   return (
     <div className="flex flex-col gap-3">
       <SpringCard animate={false} hover={false}>
@@ -895,13 +913,14 @@ function ZonesTab({
               <RankBar
                 key={z.zoneId}
                 icon={
-                  z.iconKey ? (
+                  poolIcon(z.zoneId, "size-5") ??
+                  (z.iconKey ? (
                     <AssetOrZoneIcon iconKey={z.iconKey} className="size-5 shrink-0 text-muted-foreground" />
                   ) : (
                     <MapPin className="size-5 shrink-0 text-muted-foreground" />
-                  )
+                  ))
                 }
-                label={z.zoneName}
+                label={poolLabel(z.zoneId, t) ?? z.zoneName}
                 total={z.total}
                 sharePercent={z.sharePercent}
               />
@@ -917,7 +936,7 @@ function ZonesTab({
             <Select
               value={data.drillZoneId}
               onValueChange={(v) => v && onDrillZoneChange(v)}
-              items={data.zoneRanking.map((z) => ({ value: z.zoneId, label: z.zoneName }))}
+              items={realZoneGroups.flatMap((g) => g.zones).map((z) => ({ value: z.zoneId, label: z.zoneName }))}
             >
               <SelectTrigger className="w-full">
                 <SelectValue>
@@ -935,7 +954,7 @@ function ZonesTab({
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {zoneGroups.map((g) =>
+                {realZoneGroups.map((g) =>
                   g.pointName ? (
                     <SelectGroup key={g.pointId ?? "single"}>
                       <SelectGroupLabel className="text-body-airbnb font-bold text-foreground">

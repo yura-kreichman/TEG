@@ -103,19 +103,6 @@ export async function GET(request: Request) {
   const balanceByZone = new Map<string, number>();
   let totalRevenueCash = 0;
   let totalRevenueMobile = 0;
-  // Абонементы (пересмотрено 2026-07-25 — прошлое решение 2026-07-17
-  // признавать "Выручку" в момент ТРАТЫ было ошибочным, найдено пользователем:
-  // клиент физически отдаёт деньги в момент ПОПОЛНЕНИЯ — Владелец их получает
-  // и инкассирует именно тогда (та же физическая касса/пул "Абонементы",
-  // getPointAbonementCashTotal ниже). Трата баланса — просто внутреннее
-  // списание уже полученных денег, не новый приток. Признаём выручку по
-  // abonement_topup/abonement_topup_cashless (пополнение); revenue_abonement/
-  // goods_revenue_abonement (трата) в сумму больше не входят вовсе — иначе
-  // задвоение с уже учтённым пополнением. Разбивка по способу оплаты клиента
-  // (cash/mobile) сохранена — та же пара переменных, что раньше называлась
-  // "abonementSold" и была информационной, теперь это и есть сама выручка.
-  let totalAbonementCash = 0;
-  let totalAbonementMobile = 0;
   let totalExpense = 0;
 
   for (const op of operations) {
@@ -143,8 +130,16 @@ export async function GET(request: Request) {
     // "Бизнес: расходы и прибыль" остаётся единой цифрой по всей точке.
     if (op.type === "goods_revenue") totalRevenueCash += amount;
     if (op.type === "goods_revenue_cashless") totalRevenueMobile += amount;
-    if (op.type === "abonement_topup") totalAbonementCash += amount;
-    if (op.type === "abonement_topup_cashless") totalAbonementMobile += amount;
+    // Абонементы (пересмотрено 2026-07-25 дважды — сперва отдельной строкой
+    // "Баланс", это оказалось ошибкой: та же иконка/подпись, что везде
+    // означает "клиент заплатил СО своего баланса" — а тут наоборот деньги
+    // ЗА пополнение, реальные наличные/безнал. Слито в общие суммы, тем же
+    // принципом, что и Товары выше ("не отдельный бизнес") — по факту
+    // способа оплаты пополнения, без отдельной вводящей в заблуждение
+    // строки. revenue_abonement/goods_revenue_abonement (трата) по-прежнему
+    // не входят вовсе — деньги уже учтены в момент пополнения.
+    if (op.type === "abonement_topup") totalRevenueCash += amount;
+    if (op.type === "abonement_topup_cashless") totalRevenueMobile += amount;
     // Расходы бизнес-карточки — только обычные expense (запрос пользователя
     // 2026-07-14: авансы/премии больше не считаются здесь расходом — это
     // выплата уже заработанного персоналу, не трата бизнеса; отдельно видны
@@ -214,24 +209,13 @@ export async function GET(request: Request) {
     showPointName: points.length > 1,
     period: { granularity, start: start.toISOString(), end: end.toISOString() },
     business: {
-      revenue: Math.round((totalRevenueCash + totalRevenueMobile + totalAbonementCash + totalAbonementMobile) * 100) / 100,
+      revenue: Math.round((totalRevenueCash + totalRevenueMobile) * 100) / 100,
       cash: Math.round(totalRevenueCash * 100) / 100,
       mobile: Math.round(totalRevenueMobile * 100) / 100,
-      abonement: Math.round((totalAbonementCash + totalAbonementMobile) * 100) / 100,
       expense: Math.round(totalExpense * 100) / 100,
-      profit:
-        Math.round((totalRevenueCash + totalRevenueMobile + totalAbonementCash + totalAbonementMobile + totalExpense) * 100) /
-        100,
+      profit: Math.round((totalRevenueCash + totalRevenueMobile + totalExpense) * 100) / 100,
       difference: Math.round(totalDifference * 100) / 100,
       returnsCount: totalReturns,
-    },
-    // Пополнения абонементов за период, с разбивкой по способу оплаты
-    // клиента (запрос пользователя 2026-07-25) — тот же source, что и
-    // business.abonement выше (это теперь одни и те же деньги, просто с
-    // разбивкой наличные/безнал), не отдельная "невыручка".
-    abonementSold: {
-      cash: Math.round(totalAbonementCash * 100) / 100,
-      mobile: Math.round(totalAbonementMobile * 100) / 100,
     },
   });
 }
