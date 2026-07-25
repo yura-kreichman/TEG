@@ -770,31 +770,6 @@ async function handleGroupCommand(message: { text: string; chat: { id: number };
     return;
   }
 
-  // Сама публичная группа клиентов (TenantPublicGroup) — реальный пробел,
-  // найден пользователем 2026-07-25: "/bonus"/"/services" резолвят тенанта
-  // через ClientTelegramLink конкретного человека (личный чат), а у самой
-  // группы такой привязки ни у кого нет — команда, набранная прямо в
-  // группе, отвечала "сначала откройте бота по ссылке", хотя тенант уже
-  // известен по самой группе. /balance и /register сюда намеренно НЕ входят
-  // — личный баланс всей группе не показываем, регистрация требует приватного
-  // шаринга номера. /kassa в этой группе не нужен (это чат клиентов, не
-  // сотрудников) — и не сработает, эта ветка его не матчит.
-  const publicGroup = await prisma.tenantPublicGroup.findFirst({
-    where: { chatId, chatStatus: "active" },
-    select: { tenantId: true, tenant: { select: { locale: true } } },
-  });
-  if (publicGroup) {
-    const groupLang: BotLang = isLocale(publicGroup.tenant.locale) ? publicGroup.tenant.locale : "ru";
-    if (matchesMenuCommand(text, /^\/services(?:@\w+)?/, (s) => s.servicesMenuButton)) {
-      await sendServicesForTenant(chatId, publicGroup.tenantId, groupLang);
-    } else if (matchesMenuCommand(text, /^\/bonus(?:@\w+)?/, (s) => s.bonusMenuButton)) {
-      await sendBonusForTenant(chatId, publicGroup.tenantId, groupLang);
-    } else if (matchesMenuCommand(text, /^\/join(?:@\w+)?/, (s) => s.joinMenuButton)) {
-      await sendJoinForTenant(chatId, publicGroup.tenantId, groupLang);
-    }
-    return;
-  }
-
   const lang = pickBotLang(message.from?.language_code);
 
   // Саморегистрация ждёт имя (запрос пользователя 2026-07-25) — проверяем
