@@ -346,7 +346,13 @@ export default function AbonementWalletPage() {
                       <p className="text-body-airbnb font-semibold">{historyLabel(h)}</p>
                       <p className="flex flex-wrap items-center gap-x-1 text-caption-airbnb text-muted-foreground">
                         <span>
-                          {new Date(h.occurredAt).toLocaleString()}
+                          {/* Короткий формат — день.месяц ЧЧ:ММ, без года и
+                              секунд (запрос пользователя 2026-07-25) — тот
+                              же приём, что уже в печатной выписке ниже
+                              (formatPrintDocument), только теперь и на
+                              самом экране, не только на бумаге. */}
+                          {new Date(h.occurredAt).toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })}{" "}
+                          {new Date(h.occurredAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}
                           {h.pointName ? ` · ${h.pointName}` : ""}
                         </span>
                         {(h.performedByOwner || h.performedBy) && (

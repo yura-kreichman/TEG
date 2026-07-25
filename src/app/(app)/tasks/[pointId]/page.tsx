@@ -9,7 +9,7 @@ import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
-import { ActionSheetItem } from "@/components/kebab-menu";
+import { ActionSheetItem, KebabButton } from "@/components/kebab-menu";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -359,14 +359,7 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
                         </div>
                         {task.note && <p className="mt-1 text-caption-airbnb">{task.note}</p>}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setActionsFor(task)}
-                        className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border text-muted-foreground"
-                        aria-label={t.tasks.actionsTitle}
-                      >
-                        ···
-                      </button>
+                      <KebabButton onClick={() => setActionsFor(task)} label={t.tasks.actionsTitle} />
                     </div>
                     <div className="mt-3 flex items-center justify-between gap-2">
                       <div className="flex flex-wrap items-center gap-1.5">
