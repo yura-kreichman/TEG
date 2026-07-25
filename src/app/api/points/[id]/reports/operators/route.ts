@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
 import { computeZoneSubmissionRevenues, resolvePeriodFromParams, round2 } from "@/lib/reports";
+import { calcShiftAccrual } from "@/lib/work-time";
 
 export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/reports/operators">) {
   const owner = await requireOwner();
@@ -151,8 +152,18 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   const operators = operatorRows.map((op) => {
     const opShifts = shiftsByOperator.get(op.id) ?? [];
     const totalHours = opShifts.reduce((sum, sh) => sum + (sh.endAt!.getTime() - sh.startAt.getTime()) / 3_600_000, 0);
+    // Реальный баг, найден пользователем 2026-07-25 на проде (2 копейки
+    // расхождения с карточкой Сотрудника: 4162,09 здесь vs 4162,07 там,
+    // подтверждено даже на ОДНОМ сотруднике, не сумма округлений разных
+    // людей) — эта копия формулы округляла сумму по всем сменам ОДИН раз в
+    // конце (round2(accrued) ниже), а канонический calcOperatorBalance
+    // (lib/work-time.ts, страница Сотрудника) округляет НАЧИСЛЕНИЕ КАЖДОЙ
+    // СМЕНЫ до копеек ОТДЕЛЬНО, ещё и через Math.round() минут, а не сырые
+    // миллисекунды — при 10 сменах разница накапливается. Теперь буквально
+    // та же функция, не повторная реализация — расхождение невозможно в
+    // принципе, а не просто "сейчас совпало".
     const accrued = opShifts.reduce(
-      (sum, sh) => sum + ((sh.endAt!.getTime() - sh.startAt.getTime()) / 3_600_000) * rateAt(op.id, sh.startAt),
+      (sum, sh) => sum + calcShiftAccrual(sh.startAt, sh.endAt!, rateAt(op.id, sh.startAt)).accrued,
       0
     );
     const opSubmissions = submissionsByOperator.get(op.id) ?? [];

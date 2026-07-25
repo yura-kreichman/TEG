@@ -406,16 +406,27 @@ function ensurePrintRoot(): HTMLElement {
 
 export function openPrintDocument(data: PrintDocumentData, branding: ReceiptBranding): void {
   const root = ensurePrintRoot();
-  // Реальный баг, найден пользователем 2026-07-25 на Android: печаталась ВСЯ
-  // страница приложения (Windows — тот же код работал верно). Раньше здесь
-  // вставлялся <style> с правилами видимости + RECEIPT_CSS ПРЯМО в момент
-  // печати — рабочая гипотеза: печатный конвейер Android Chrome не всегда
-  // успевает учесть стили, добавленные в DOM непосредственно перед
-  // window.print(). Тот же CSS теперь живёт в globals.css с самой загрузки
-  // страницы (см. #rentos-print-root там) — здесь остаётся только замена
-  // СОДЕРЖИМОГО корня, самая простая DOM-операция, стилям уже нечего
-  // "успевать".
-  root.innerHTML = `<div class="receipt-doc">${buildReceiptBodyHtml(data, branding)}</div>`;
+  // ОТКАТ (2026-07-25): пробовали вынести этот <style> в globals.css
+  // (гипотеза — печатный конвейер Android Chrome не успевает учесть стили,
+  // вставленные в DOM непосредственно перед window.print()), проверено на
+  // реальном устройстве — стало ХУЖЕ: печать вообще перестала что-либо
+  // выводить (раньше печаталась вся страница, что тоже плохо, но хоть
+  // что-то). Гипотеза не подтвердилась и полностью откачена (включая
+  // добавление в globals.css) — возвращено рабочее, пусть не идеальное
+  // состояние: печать всей страницы вместо только квитанции остаётся
+  // открытой, непонятой проблемой на Android, см. историю у openPrintDocument
+  // выше про уже отвергнутые гипотезы (iframe, window.open).
+  root.innerHTML = `
+    <style>
+      #${PRINT_ROOT_ID} { display: none; }
+      @media print {
+        body > *:not(#${PRINT_ROOT_ID}) { display: none !important; }
+        #${PRINT_ROOT_ID} { display: block !important; }
+      }
+      ${RECEIPT_CSS}
+    </style>
+    <div class="receipt-doc">${buildReceiptBodyHtml(data, branding)}</div>
+  `;
 
   // Заголовок документа — предлагаемое имя файла у "Сохранить в PDF" (та же
   // мелочь, что раньше давал отдельный <title> изолированного документа) —
@@ -444,8 +455,28 @@ export function openPrintDocument(data: PrintDocumentData, branding: ReceiptBran
     if (printed) return;
     printed = true;
     document.title = data.title;
-    window.addEventListener("afterprint", cleanup, { once: true });
-    setTimeout(cleanup, 5000);
+    // РЕАЛЬНАЯ причина обоих багов печати на Android (2026-07-25, найдено
+    // через внешний источник — issue react-to-print #526 на GitHub, тот же
+    // класс проблемы): "afterprint" на Android Chrome документированно
+    // стреляет СРАЗУ после window.print(), НЕ дожидаясь, пока реальный
+    // печатный конвейер (особенно сторонний Print Service для Bluetooth
+    // ESC/POS-принтера — Android отдаёт ему PDF асинхронно, тот сам его ещё
+    // конвертирует и стримит по Bluetooth) успеет забрать содержимое
+    // страницы. Раньше здесь был слушатель afterprint → cleanup(), который
+    // стирал печатный корень (root.innerHTML = "") ПРЕЖДЕ, чем Android
+    // реально успевал его отрендерить:
+    //   - с инлайн-<style> внутри root (текущая версия) — стирались И CSS
+    //     правила видимости, И контент → печаталась вся страница целиком
+    //     (первый найденный баг);
+    //   - когда CSS временно жил в globals.css (эксперимент, откачен) —
+    //     правила видимости уцелевали (не в root), а контент всё равно
+    //     стирался → печатный корень оставался пустым, видимым, но БЕЗ
+    //     содержимого → пустой PDF (второй найденный баг, стало хуже).
+    // Оба бага — одна и та же гонка, просто с разным итогом. Фикс: НЕ
+    // полагаемся на afterprint вообще (на Android ему верить нельзя),
+    // только фиксированная задержка, с запасом на асинхронный сторонний
+    // Print Service, а не только на нативный "Сохранить в PDF".
+    setTimeout(cleanup, 10000);
     window.print();
   }
 
