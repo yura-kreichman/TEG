@@ -48,6 +48,21 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     const { year: y, month: m, day } = localDateParts(d, timezone);
     return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   };
+  // День недели МЕСТНОЙ календарной даты (аудит 2026-07-25 — реальный баг,
+  // найден пользователем на проде: "Вс" в тепловой карте всегда пустой,
+  // хотя в "Итогах по дням" воскресенье с выручкой видно). getUTCDay()
+  // ниже читал день недели у самого Date-инстанта — для тенанта восточнее
+  // UTC местная полночь дня X это ещё вечер UTC дня X−1, поэтому
+  // startDow/lastDow вычислялись на день меньше нужного, вся сетка недели
+  // (gridStart) съезжала на день позже, и реальные данные каждого дня
+  // недели попадали под СОСЕДНИЙ (более ранний) заголовок колонки — тот же
+  // класс бага, что уже чинили у dateKey/getPeriodRange, просто здесь
+  // отдельная точка со своим getUTCDay(). Y-M-D → UTC-полночь того же Y-M-D
+  // даёт день недели корректно независимо от смещения тенанта.
+  const localDayOfWeek = (d: Date): number => {
+    const { year: y, month: m, day } = localDateParts(d, timezone);
+    return (new Date(Date.UTC(y, m - 1, day)).getUTCDay() + 6) % 7;
+  };
 
   const zones = await prisma.zone.findMany({
     where: isAllPoints ? { point: { tenantId: owner.tenantId } } : { pointId },
@@ -110,10 +125,10 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   // Неделя/Месяц — сетка строится полными неделями Пн–Вс, покрывающими
   // [start, end); дни за пределами периода (хвост соседнего месяца, будущее)
   // остаются hasData: false.
-  const startDow = (start.getUTCDay() + 6) % 7; // 0=Пн
+  const startDow = localDayOfWeek(start); // 0=Пн
   const gridStart = new Date(start.getTime() - startDow * 24 * 60 * 60 * 1000);
   const lastDay = new Date(end.getTime() - 24 * 60 * 60 * 1000);
-  const lastDow = (lastDay.getUTCDay() + 6) % 7;
+  const lastDow = localDayOfWeek(lastDay);
   const gridEnd = new Date(lastDay.getTime() + (6 - lastDow) * 24 * 60 * 60 * 1000 + 24 * 60 * 60 * 1000);
   const weeksCount = Math.round((gridEnd.getTime() - gridStart.getTime()) / (7 * 24 * 60 * 60 * 1000));
 
