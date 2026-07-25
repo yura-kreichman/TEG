@@ -1243,11 +1243,23 @@ export default function ReadingsCalendarPage() {
                           <div className="flex items-center justify-between text-body-airbnb font-bold">
                             <span className="text-foreground">{t.operatorApp.submit.actualCash}</span>
                             <span className="text-foreground">
-                              {/* Этот блок рендерится только для
-                                  "Прибываний"/"Пусков"/Билетов (см. условие
-                                  выше) — у "Счётчиков"/"Только касса" своя
-                                  ветка ниже, без Баланса в сумме. */}
-                              <Money value={card.cashAmount + card.mobileAmount + card.abonementAmount} />
+                              {/* Условие блока (accountingMode !== "cash_only")
+                                  пропускает и "Счётчики" тоже — реальный баг,
+                                  найден пользователем 2026-07-25: тут Баланс
+                                  безусловно прибавлялся к Фактической кассе
+                                  даже у "Счётчиков", хотя формула Разницы
+                                  ниже (card.difference, из API) для этого
+                                  режима его уже НЕ учитывает — числа
+                                  расходились. Тот же принцип, что и в
+                                  сводной карточке "Итоги дня" выше
+                                  (daySummary.abonementInCash). */}
+                              <Money
+                                value={
+                                  card.cashAmount +
+                                  card.mobileAmount +
+                                  (card.accountingMode === "counters" ? 0 : card.abonementAmount)
+                                }
+                              />
                             </span>
                           </div>
                           <div className="flex items-center justify-between text-caption-airbnb">
