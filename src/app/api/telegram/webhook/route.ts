@@ -8,6 +8,9 @@ import {
   answerCallbackQuery,
   getTenantPublicGroup,
   fetchChatInviteLink,
+  isChatMember,
+  getClientBalanceDeepLink,
+  deleteChatMessage,
   CLIENT_START_PREFIX,
 } from "@/lib/telegram-bot";
 import { describeAbonementTransactionSource, findWalletByPhone, normalizePhone } from "@/lib/abonement";
@@ -18,6 +21,7 @@ import { buildDailyCashSummaryData } from "@/lib/summary-channels/daily-cash-dat
 import { DAILY_CASH_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { pickBotLang, BOT_STRINGS, greetingLine, type BotStringSet } from "@/lib/telegram-client-i18n";
 import type { Locale } from "@/lib/locales";
+import { isLocale } from "@/lib/locales";
 import { timingSafeEqualStrings } from "@/lib/timing-safe-equal";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
@@ -50,6 +54,8 @@ export async function POST(request: Request) {
   try {
     if (update.message?.contact) {
       await handleContact(update.message);
+    } else if (update.message?.new_chat_members) {
+      await handleNewChatMembers(update.message);
     } else if (update.message?.text) {
       if (/^\/start(?:@\w+)?(\s|$)/.test(update.message.text)) {
         await handleStartMessage(update.message);
@@ -230,13 +236,29 @@ async function handleStartMessage(message: {
 }
 
 async function handleMyChatMember(update: {
-  chat: { id: number };
+  chat: { id: number; type: string };
   new_chat_member: { status: string };
 }) {
   const status = update.new_chat_member?.status;
   if (status !== "left" && status !== "kicked") return;
 
   const chatId = String(update.chat.id);
+
+  // Личный чат клиента с ботом — реальный баг, найден пользователем
+  // 2026-07-25: клиент заблокировал/удалил бота, а синий значок "подключён
+  // Telegram" у Владельца/Сотрудника (abonement-topup-flow.tsx,
+  // foundHasTelegram) оставался навсегда, потому что ClientTelegramLink
+  // никто не удалял. Telegram шлёт my_chat_member и для приватных чатов —
+  // "у бота изменился статус в этом чате" (kicked = заблокировал) — та же
+  // механика, что уже обрабатывает статус бота в группах ниже, просто для
+  // private нужна другая таблица. При повторном /start ссылка пересоздаётся
+  // сама (handleClientStart/handleContact делают upsert), поэтому просто
+  // удаляем — не помечаем неактивной.
+  if (update.chat.type === "private") {
+    await prisma.clientTelegramLink.deleteMany({ where: { chatId } });
+    return;
+  }
+
   await prisma.tenantSummaryChannel.updateMany({
     where: { channelType: "telegram", chatId },
     data: { chatStatus: "inactive" },
@@ -250,10 +272,84 @@ async function handleMyChatMember(update: {
   });
 }
 
+// Приветствие новых участников публичной группы клиентов (запрос
+// пользователя 2026-07-25: "стимулировать, чтобы сами себя добавляли" —
+// обсуждение свелось к двум рычагам: это, и разовая рассылка в группу для
+// уже состоящих — см. .../public-group/telegram/invite-registration/route.ts).
+// Telegram шлёт служебное сообщение "X вступил в группу" даже без прав
+// администратора у бота — тем самым НЕ ограничение, что бот не может писать
+// в личку первым: сама группа уже видна боту. Реагируем только если группа
+// реально включена (group.enabled — тот же тумблер, что и у прочих исходящих
+// анонсов, см. announceNewZoneOrPointOrAsset/sendJoinForTenant), и только на
+// НАСТОЯЩИХ пользователей (is_bot исключает случай, когда кто-то добавил
+// СТОРОННЕГО бота в ту же группу).
+async function handleNewChatMembers(message: {
+  chat: { id: number; type: string };
+  new_chat_members: { id: number; is_bot: boolean; first_name: string }[];
+}) {
+  const chatId = String(message.chat.id);
+  const group = await prisma.tenantPublicGroup.findFirst({
+    where: { chatId, chatStatus: "active", enabled: true },
+    select: { tenantId: true },
+  });
+  if (!group) return;
+
+  const tenant = await prisma.tenant.findUnique({ where: { id: group.tenantId }, select: { slug: true, locale: true } });
+  if (!tenant?.slug) return;
+  const deepLink = await getClientBalanceDeepLink(tenant.slug);
+  if (!deepLink) return;
+
+  // Групповое сообщение видно сразу всем участникам разных языков — берём
+  // ЯЗЫК ТЕНАНТА (Tenant.locale), не message.from.language_code отдельного
+  // вступившего: у одной группы один язык на всех, персонализировать нечем.
+  const lang: BotLang = isLocale(tenant.locale) ? tenant.locale : "ru";
+  const s = BOT_STRINGS[lang];
+
+  for (const member of message.new_chat_members) {
+    if (member.is_bot) continue;
+    const text = `${s.groupWelcomeGreeting(member.first_name)}\n${s.groupWelcomeBody}`;
+    const result = await sendInlineKeyboard(chatId, text, [{ text: s.groupWelcomeButton, url: deepLink }]).catch(() => null);
+    // Сохраняем id сообщения — удалится, когда человек реально перейдёт по
+    // кнопке в бота (запрос пользователя 2026-07-25: "чтобы не засорять
+    // группу"), см. handleClientStart. memberChatId — тот же id, которым
+    // Telegram потом придёт /start в личке этого человека (совпадение
+    // user.id и private chat.id, см. комментарий у isChatMember).
+    if (result?.ok && result.messageId) {
+      const memberChatId = String(member.id);
+      await prisma.clientBotSession
+        .upsert({
+          where: { chatId: memberChatId },
+          create: { chatId: memberChatId, pendingWelcomeGroupChatId: chatId, pendingWelcomeMessageId: result.messageId },
+          update: { pendingWelcomeGroupChatId: chatId, pendingWelcomeMessageId: result.messageId },
+        })
+        .catch(() => {});
+    }
+  }
+}
+
+// Удаляет приветственное сообщение в группе клиентов, если оно ещё ждёт
+// этого перехода (см. handleNewChatMembers) — best-effort, молча ничего не
+// делает, если pending-полей нет (обычный /start без приветствия) или
+// удаление в Telegram не удалось (сообщение уже стёрли вручную и т.п.).
+async function cleanupPendingWelcomeMessage(chatId: string): Promise<void> {
+  const session = await prisma.clientBotSession.findUnique({ where: { chatId } });
+  if (!session?.pendingWelcomeGroupChatId || !session.pendingWelcomeMessageId) return;
+  await deleteChatMessage(session.pendingWelcomeGroupChatId, session.pendingWelcomeMessageId);
+  await prisma.clientBotSession
+    .update({ where: { chatId }, data: { pendingWelcomeGroupChatId: null, pendingWelcomeMessageId: null } })
+    .catch(() => {});
+}
+
 // Клиент открыл ссылку t.me/<bot>?start=CLIENT-<slug> — либо у него уже есть
 // подтверждённая привязка для этого тенанта (быстрый путь: сразу баланс, без
 // повторного запроса контакта), либо просим поделиться номером.
 async function handleClientStart(chatId: string, tenantSlug: string, lang: BotLang) {
+  // Приветствие в группе клиентов ждало именно этого перехода (запрос
+  // пользователя 2026-07-25: "чтобы не засорять группу") — удаляем и чистим
+  // стейт независимо от исхода самого /start ниже (модуль мог быть выключен
+  // и т.п. — приветствие всё равно больше не нужно, раз человек уже перешёл).
+  await cleanupPendingWelcomeMessage(chatId);
+
   const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, name: true, currency: true } });
   // Тумблер "Клиенты" (Настройки → Система) — серверная проверка, не только
   // скрытие в UI кабинета (аудит 2026-07-25, финальный проход, тот же
@@ -271,7 +367,7 @@ async function handleClientStart(chatId: string, tenantSlug: string, lang: BotLa
   if (existingLink) {
     const wallet = await findWalletByPhone(tenant.id, existingLink.phone);
     if (wallet) {
-      await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang], await tenantHasActiveGroup(tenant.id)).catch(() => {});
+      await sendClientReportWithMenu(chatId, tenant, wallet, lang);
       return;
     }
     // Кошелёк с тех пор удалили/номер сменился — привязка устарела, спросим
@@ -339,7 +435,7 @@ async function handleContact(message: {
     if (!tenant || !(await isModuleEnabled(tenant.id, "clientsEnabled"))) return;
     const wallet = await findWalletByPhone(tenant.id, phone);
     if (!wallet) {
-      await sendChatMessage(chatId, s.notFoundTenant(contact.phone_number, tenant.name)).catch(() => {});
+      await offerRegistration(chatId, tenant, phone, contact.phone_number, lang);
       return;
     }
     await prisma.clientTelegramLink.upsert({
@@ -347,7 +443,7 @@ async function handleContact(message: {
       create: { tenantId: tenant.id, chatId, phone, language: lang },
       update: { phone, language: lang },
     });
-    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang], await tenantHasActiveGroup(tenant.id)).catch(() => {});
+    await sendClientReportWithMenu(chatId, tenant, wallet, lang);
     return;
   }
 
@@ -369,18 +465,189 @@ async function handleContact(message: {
       create: { tenantId: tenant.id, chatId, phone, language: lang },
       update: { phone, language: lang },
     });
-    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang], await tenantHasActiveGroup(tenant.id)).catch(() => {});
+    await sendClientReportWithMenu(chatId, tenant, wallet, lang);
   }
+}
+
+// Саморегистрация клиента (запрос пользователя 2026-07-25: "чтобы сами себя
+// добавляли в базу Клиентов Владельца") — только в scoped-флоу (известен
+// tenant), НЕ в generic (тенант не определён вовсе — регистрировать
+// человека неизвестно куда бессмысленно). Телефон уже проверен Telegram'ом
+// (contact.user_id) на шаге handleContact — при тапе "Регистрация" повторно
+// его не спрашиваем, только имя. Тенант+телефон живут в ClientBotSession до
+// тапа по кнопке.
+async function offerRegistration(
+  chatId: string,
+  tenant: { id: string; name: string; currency: string | null },
+  phone: string,
+  rawPhone: string,
+  lang: BotLang
+): Promise<void> {
+  const s = BOT_STRINGS[lang];
+  await prisma.clientBotSession.update({
+    where: { chatId },
+    data: { pendingRegistrationTenantId: tenant.id, pendingRegistrationPhone: phone, awaitingRegistrationName: false },
+  });
+  const [showJoin, showBonus] = await Promise.all([tenantHasActiveGroup(tenant.id, chatId), tenantHasAbonementsToSell(tenant.id)]);
+  const text = `${s.notFoundTenant(rawPhone, tenant.name)}\n\n${s.tapRegisterHint}`;
+  await sendChatMessageWithMenu(chatId, text, s, { showRegister: true, showJoin, showBonus }).catch(() => {});
+}
+
+// Тап по кнопке "📝 Регистрация" — переводит в режим "жду имя". Стейл-стейт
+// (кнопка нажата из старого сообщения, например через день, когда pending*
+// уже не сохранился/сброшен) — просто просим поделиться номером заново,
+// без ошибки.
+async function handleRegisterTap(chatId: string, lang: BotLang): Promise<void> {
+  const s = BOT_STRINGS[lang];
+  const session = await prisma.clientBotSession.findUnique({ where: { chatId } });
+  if (!session?.pendingRegistrationTenantId || !session.pendingRegistrationPhone) {
+    await promptContactShare(chatId, null, undefined, lang);
+    return;
+  }
+  await prisma.clientBotSession.update({ where: { chatId }, data: { awaitingRegistrationName: true } });
+  await sendChatMessage(chatId, s.askNamePrompt).catch(() => {});
+}
+
+// Следующее произвольное сообщение после тапа "Регистрация" — трактуется как
+// имя (запрос пользователя 2026-07-25: "пусть имя будет обязательным, без
+// пропустить"). Пустое — просим повторить, стейт не сбрасываем.
+async function handleRegistrationName(chatId: string, tenantId: string, phone: string, rawName: string, lang: BotLang): Promise<void> {
+  const s = BOT_STRINGS[lang];
+  const name = rawName.trim();
+  if (!name) {
+    await sendChatMessage(chatId, s.nameRequiredHint).catch(() => {});
+    return;
+  }
+
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, name: true, currency: true } });
+  if (!tenant || !(await isModuleEnabled(tenant.id, "clientsEnabled"))) {
+    await prisma.clientBotSession.update({
+      where: { chatId },
+      data: { pendingRegistrationTenantId: null, pendingRegistrationPhone: null, awaitingRegistrationName: false },
+    });
+    return;
+  }
+
+  // Клиент мог успеть появиться в базе за время между "не найден" и вводом
+  // имени (например, Сотрудник продал ему абонемент лично на точке, пока он
+  // печатал имя) — перепроверяем перед созданием, чтобы не задвоить.
+  let wallet = await findWalletByPhone(tenant.id, phone);
+  if (!wallet) {
+    try {
+      wallet = await prisma.abonementWallet.create({ data: { tenantId: tenant.id, phone, name } });
+    } catch {
+      // Параллельная доставка того же апдейта (Telegram "at least once")
+      // могла создать кошелёк первой — просто забираем то, что уже создано.
+      wallet = await findWalletByPhone(tenant.id, phone);
+      if (!wallet) return;
+    }
+  }
+
+  await prisma.clientTelegramLink.upsert({
+    where: { tenantId_chatId: { tenantId: tenant.id, chatId } },
+    create: { tenantId: tenant.id, chatId, phone, language: lang },
+    update: { phone, language: lang },
+  });
+  await prisma.clientBotSession.update({
+    where: { chatId },
+    data: { pendingRegistrationTenantId: null, pendingRegistrationPhone: null, awaitingRegistrationName: false },
+  });
+
+  // Приветствие + отчёт + (если настроено) список абонементов и где купить
+  // (запрос пользователя 2026-07-25: "проверить, что абонементы созданы и
+  // есть кто их продаёт и где") — одним сообщением, не спамим тремя подряд.
+  const [report, abonementsInfo, showJoin, showBonus] = await Promise.all([
+    buildClientReport(tenant, wallet, lang),
+    buildAbonementsInfo(tenant, lang),
+    tenantHasActiveGroup(tenant.id, chatId),
+    tenantHasAbonementsToSell(tenant.id),
+  ]);
+  const parts = [s.registeredGreeting(tenant.name), report];
+  if (abonementsInfo) parts.push(abonementsInfo);
+  await sendChatMessageWithMenu(chatId, parts.join("\n\n"), s, { showJoin, showBonus }).catch(() => {});
 }
 
 // Показывать ли кнопку "Будем вместе" в постоянном меню — та же проверка,
 // что уже применяет sendJoinForTenant при самом тапе (запрос пользователя
 // 2026-07-25: "нельзя эту кнопку и команду вообще скрыть, если группа не
 // подключена" — раньше кнопка показывалась всегда, тап на неотключённой/
-// неподключённой группе вёл только к "Группа пока не подключена").
-async function tenantHasActiveGroup(tenantId: string): Promise<boolean> {
+// неподключённой группе вёл только к "Группа пока не подключена"; тот же
+// день, следом: "а если Клиент уже в группе?" — если бот реально подключён
+// к группе (group.chatId), дополнительно проверяем членство САМОГО этого
+// клиента через isChatMember; clientChatId клиента — тот же chatId личного
+// чата с ботом (см. комментарий у isChatMember про совпадение с user_id).
+// null от isChatMember ("не удалось проверить") — не считаем за "уже
+// состоит", ведём себя как раньше, кнопку показываем.
+async function tenantHasActiveGroup(tenantId: string, clientChatId: string): Promise<boolean> {
   const group = await getTenantPublicGroup(tenantId);
-  return !!(group?.inviteLink && group.enabled);
+  if (!group?.inviteLink || !group.enabled) return false;
+  if (group.chatId) {
+    const isMember = await isChatMember(group.chatId, clientChatId);
+    if (isMember) return false;
+  }
+  return true;
+}
+
+// Показывать ли кнопку "🎁 Абонементы" — есть ли вообще что показать (запрос
+// пользователя 2026-07-25: "проверить, что абонементы созданы и есть кто их
+// продаёт и где"). Продажа — только Сотрудник на точке (Владелец продавать
+// планы не может, docs/spec: решение 2026-07-18), конкретного продавца
+// указать нельзя, поэтому условие — активная точка вообще, без привязки к
+// сотруднику.
+async function tenantHasAbonementsToSell(tenantId: string): Promise<boolean> {
+  const [planCount, pointCount] = await Promise.all([
+    prisma.abonement.count({ where: { tenantId, deletedAt: null } }),
+    prisma.point.count({ where: { tenantId, active: true } }),
+  ]);
+  return planCount > 0 && pointCount > 0;
+}
+
+// Список планов + где купить (запрос пользователя 2026-07-25) — null, если
+// нечего показать (оба условия tenantHasAbonementsToSell), НЕ "абонементов
+// пока нет" текстом — чтобы не выглядело недоработкой владельца. Общий
+// строитель для /bonus и приветствия после саморегистрации.
+async function buildAbonementsInfo(tenant: { id: string; currency: string | null }, lang: BotLang): Promise<string | null> {
+  const s = BOT_STRINGS[lang];
+  const [plans, points] = await Promise.all([
+    prisma.abonement.findMany({
+      where: { tenantId: tenant.id, deletedAt: null },
+      orderBy: { order: "asc" },
+      select: { name: true, price: true, creditAmount: true },
+    }),
+    prisma.point.findMany({ where: { tenantId: tenant.id, active: true }, select: { name: true }, orderBy: { name: "asc" } }),
+  ]);
+  if (plans.length === 0 || points.length === 0) return null;
+
+  const currency = tenant.currency as CurrencyCode | null;
+  const pointNames = points.map((p) => p.name).join(", ");
+  const lines = [s.abonementsIntro(pointNames)];
+  for (const plan of plans) {
+    const priceStr = formatMoneyWithCurrency(Number(plan.price), "ru", currency);
+    const creditStr = formatMoneyWithCurrency(Number(plan.creditAmount), "ru", currency);
+    // Безымянный план (Abonement.name опционален) — тот же фоллбэк, что уже
+    // используют владельческие/операторские экраны (plan.name ?? цена).
+    lines.push(s.abonementLine(plan.name ?? priceStr, priceStr, creditStr));
+  }
+  return lines.join("\n");
+}
+
+// Общий "успех" для /balance, /start и генерик-флоу handleContact — отчёт +
+// постоянное меню с уже вычисленными showJoin/showBonus (запрос пользователя
+// 2026-07-25 про кнопку "Абонементы") — раньше было 4 одинаковых вызова
+// sendChatMessageWithMenu(...) подряд, добавление ещё одного флага в каждый
+// легко забыть в одном из мест.
+async function sendClientReportWithMenu(
+  chatId: string,
+  tenant: { id: string; name: string; currency: string | null },
+  wallet: { id: string; name: string | null; balance: unknown },
+  lang: BotLang
+): Promise<void> {
+  const [report, showJoin, showBonus] = await Promise.all([
+    buildClientReport(tenant, wallet, lang),
+    tenantHasActiveGroup(tenant.id, chatId),
+    tenantHasAbonementsToSell(tenant.id),
+  ]);
+  await sendChatMessageWithMenu(chatId, report, BOT_STRINGS[lang], { showJoin, showBonus }).catch(() => {});
 }
 
 // 20 — как у Печатной выписки (запрос пользователя 2026-07-24: "то же
@@ -503,6 +770,18 @@ async function handleGroupCommand(message: { text: string; chat: { id: number };
     return;
   }
 
+  const lang = pickBotLang(message.from?.language_code);
+
+  // Саморегистрация ждёт имя (запрос пользователя 2026-07-25) — проверяем
+  // ПЕРЕД обычным матчингом команд/кнопок: на этом шаге ЛЮБОЙ текст от этого
+  // чата трактуется как попытка ввести имя, не как команда (даже если он
+  // случайно совпал с текстом одной из кнопок меню).
+  const session = await prisma.clientBotSession.findUnique({ where: { chatId } });
+  if (session?.awaitingRegistrationName && session.pendingRegistrationTenantId && session.pendingRegistrationPhone) {
+    await handleRegistrationName(chatId, session.pendingRegistrationTenantId, session.pendingRegistrationPhone, text, lang);
+    return;
+  }
+
   // Личный чат клиента: /balance тут без аргумента — просто "покажи мой
   // баланс ещё раз" (та же команда, что зарегистрирована в BotFather для
   // Direct Messages). Если чат ещё ни разу не проходил проверку контактом —
@@ -511,11 +790,14 @@ async function handleGroupCommand(message: { text: string; chat: { id: number };
   // человекочитаемый локализованный текст, не голую команду (запрос
   // пользователя 2026-07-24) — matchesMenuCommand матчит и то, и другое, не
   // важно, на каком из 15 языков подписана кнопка у конкретного клиента.
-  const lang = pickBotLang(message.from?.language_code);
   if (matchesMenuCommand(text, /^\/balance(?:@\w+)?/, (s) => s.balanceMenuButton)) {
     await handlePrivateBalanceCommand(chatId, lang);
+  } else if (matchesMenuCommand(text, /^\/register(?:@\w+)?/, (s) => s.registerMenuButton)) {
+    await handleRegisterTap(chatId, lang);
   } else if (matchesMenuCommand(text, /^\/services(?:@\w+)?/, (s) => s.servicesMenuButton)) {
     await handleServicesCommand(chatId, lang);
+  } else if (matchesMenuCommand(text, /^\/bonus(?:@\w+)?/, (s) => s.bonusMenuButton)) {
+    await handleBonusCommand(chatId, lang);
   } else if (matchesMenuCommand(text, /^\/join(?:@\w+)?/, (s) => s.joinMenuButton)) {
     await handleJoinCommand(chatId, lang);
   }
@@ -538,13 +820,14 @@ async function handlePrivateBalanceCommand(chatId: string, lang: BotLang) {
     if (!tenant || !(await isModuleEnabled(tenant.id, "clientsEnabled"))) continue;
     const wallet = await findWalletByPhone(tenant.id, link.phone);
     if (!wallet) continue;
-    await sendChatMessageWithMenu(chatId, await buildClientReport(tenant, wallet, lang), BOT_STRINGS[lang], await tenantHasActiveGroup(tenant.id)).catch(() => {});
+    await sendClientReportWithMenu(chatId, tenant, wallet, lang);
   }
 }
 
 const SERVICES_TENANT_CALLBACK_PREFIX = "svct:";
 const JOIN_TENANT_CALLBACK_PREFIX = "joint:";
 const SERVICES_POINT_CALLBACK_PREFIX = "svcp:";
+const BONUS_TENANT_CALLBACK_PREFIX = "bonust:";
 
 // Статический список активных зон/активов (запрос пользователя 2026-07-24:
 // "клиенты как подписчики" — /services тоже держится на уже существующей
@@ -759,7 +1042,54 @@ async function sendJoinForTenant(chatId: string, tenantId: string, lang: BotLang
     await sendChatMessage(chatId, s.joinGroupNotConfigured).catch(() => {});
     return;
   }
+  // Клиент уже состоит в группе (запрос пользователя 2026-07-25) — та же
+  // проверка, что уже прячет саму кнопку в постоянном меню (см.
+  // tenantHasActiveGroup); здесь дублируется на случай, если клиент всё
+  // равно наберёт "/join" текстом руками, а не тапнет по меню.
+  if (group.chatId && (await isChatMember(group.chatId, chatId))) {
+    await sendChatMessage(chatId, s.alreadyInGroup).catch(() => {});
+    return;
+  }
   await sendInlineKeyboard(chatId, s.joinGroupPrompt, [{ text: s.joinMenuButton, url: group.inviteLink }]).catch(() => {});
+}
+
+// "/bonus" — список планов абонементов + где купить (запрос пользователя
+// 2026-07-25: "чтобы клиенты могли всегда посмотреть какие есть абонементы
+// и где можно купить"). Та же схема резолва тенанта, что у /services и
+// /join (клиент может быть привязан к нескольким прокатам платформы).
+async function handleBonusCommand(chatId: string, lang: BotLang) {
+  const s = BOT_STRINGS[lang];
+  const links = await prisma.clientTelegramLink.findMany({ where: { chatId }, select: { tenantId: true } });
+  const linkedTenantIds = [...new Set(links.map((l) => l.tenantId))];
+  const tenantIds: string[] = [];
+  for (const id of linkedTenantIds) {
+    if (await isModuleEnabled(id, "clientsEnabled")) tenantIds.push(id);
+  }
+
+  if (tenantIds.length === 0) {
+    await sendChatMessage(chatId, s.servicesNotLinkedHint).catch(() => {});
+    return;
+  }
+  if (tenantIds.length === 1) {
+    await sendBonusForTenant(chatId, tenantIds[0], lang);
+    return;
+  }
+
+  const tenants = await prisma.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true } });
+  const buttons = tenants.map((t) => ({ text: t.name, callbackData: `${BONUS_TENANT_CALLBACK_PREFIX}${t.id}` }));
+  await sendInlineKeyboard(chatId, s.chooseTenantPrompt, buttons).catch(() => {});
+}
+
+async function sendBonusForTenant(chatId: string, tenantId: string, lang: BotLang) {
+  const s = BOT_STRINGS[lang];
+  if (!(await isModuleEnabled(tenantId, "clientsEnabled"))) {
+    await sendChatMessage(chatId, s.noAbonementsAvailable).catch(() => {});
+    return;
+  }
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, currency: true } });
+  if (!tenant) return;
+  const info = await buildAbonementsInfo(tenant, lang);
+  await sendChatMessage(chatId, info ?? s.noAbonementsAvailable).catch(() => {});
 }
 
 async function handleCallbackQuery(callbackQuery: {
@@ -782,5 +1112,7 @@ async function handleCallbackQuery(callbackQuery: {
     await sendServicesForPoint(chatId, data.slice(SERVICES_POINT_CALLBACK_PREFIX.length), lang);
   } else if (data.startsWith(JOIN_TENANT_CALLBACK_PREFIX)) {
     await sendJoinForTenant(chatId, data.slice(JOIN_TENANT_CALLBACK_PREFIX.length), lang);
+  } else if (data.startsWith(BONUS_TENANT_CALLBACK_PREFIX)) {
+    await sendBonusForTenant(chatId, data.slice(BONUS_TENANT_CALLBACK_PREFIX.length), lang);
   }
 }

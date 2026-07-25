@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Banknote, Check, CreditCard, Delete, Gift, MapPin, Minus, Pencil, Plus, QrCode, Search, Send, Trash2, TriangleAlert, Wallet } from "lucide-react";
+import { ArrowBigRight, Banknote, Check, CreditCard, Delete, Gift, MapPin, Minus, Pencil, Plus, QrCode, Search, Send, Trash2, TriangleAlert, Wallet } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
 import { Button } from "@/components/ui/button";
@@ -1079,16 +1079,34 @@ export function AbonementTopupFlow({
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
             {t.operatorApp.gameRoom.paymentMethodTitle}
           </h2>
-          <p className="text-caption-airbnb text-muted-foreground">
-            {pendingAction.kind === "plan" ? (
-              <>
-                {pendingAction.plan.name ?? <Money value={pendingAction.plan.price} />} ·{" "}
-                <Money value={pendingAction.plan.price} /> → <Money value={pendingAction.plan.creditAmount} />
-              </>
-            ) : (
+          {/* Крупно и по центру (запрос пользователя 2026-07-25) — раньше была
+              мелкая серая подпись, сумма на этом шаге теряется рядом с
+              заголовком. У абонемента — двумя строками: название сверху,
+              Цена → Зачисляется снизу, тем же крупным начертанием. */}
+          {pendingAction.kind === "plan" ? (
+            <div className="flex flex-col items-center gap-1 text-center">
+              <p className="text-lg font-bold">{pendingAction.plan.name ?? <Money value={pendingAction.plan.price} />}</p>
+              <div className="flex items-center gap-2.5">
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[2.125rem] font-extrabold leading-none tabular-nums tracking-[-0.02em] text-primary">
+                    <Money value={pendingAction.plan.price} />
+                  </span>
+                  <span className="text-caption-airbnb text-muted-foreground">{t.abonements.priceLabel}</span>
+                </div>
+                <ArrowBigRight className="size-6 shrink-0 fill-muted-foreground text-muted-foreground" />
+                <div className="flex flex-col items-center gap-0.5">
+                  <span className="text-[2.125rem] font-extrabold leading-none tabular-nums tracking-[-0.02em] text-primary">
+                    <Money value={pendingAction.plan.creditAmount} />
+                  </span>
+                  <span className="text-caption-airbnb text-muted-foreground">{t.abonements.creditAmountLabel}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-center text-[2.125rem] font-extrabold leading-none tabular-nums tracking-[-0.02em] text-primary">
               <Money value={pendingAction.amount} />
-            )}
-          </p>
+            </p>
+          )}
           <div className="flex flex-col gap-2">
             <ConfirmButton
               className={cn("relative h-12 w-full font-semibold", RAISED_OPTION_BUTTON_CLASS)}
@@ -1298,7 +1316,7 @@ export function AbonementTopupFlow({
                             без действия. */}
                         {!isNew && found && telegramBalanceLink && (
                           foundHasTelegram ? (
-                            <span className="ml-auto shrink-0 text-foreground" aria-label={t.abonements.telegramLinkedLabel}>
+                            <span className="ml-auto shrink-0 text-primary" aria-label={t.abonements.telegramLinkedLabel}>
                               <Send className="size-5" />
                             </span>
                           ) : (

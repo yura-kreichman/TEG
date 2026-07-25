@@ -38,6 +38,11 @@ export default function PublicGroupSettingsPage() {
   const [checking, setChecking] = useState(true);
   const [group, setGroup] = useState<PublicGroupStatus | null>(null);
   const [connectOpen, setConnectOpen] = useState(false);
+  // Разовый призыв уже состоящим в группе зарегистрироваться в боте (запрос
+  // пользователя 2026-07-25) — та же схема состояния (sending/result/error),
+  // что у рассылки клиентам на /abonements.
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteResult, setInviteResult] = useState<"sent" | "error" | null>(null);
 
   async function loadStatus() {
     const res = await fetch("/api/tenant/public-group/telegram/status");
@@ -64,6 +69,19 @@ export default function PublicGroupSettingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(partial),
     });
+  }
+
+  async function sendInviteRegistration() {
+    setInviteSending(true);
+    setInviteResult(null);
+    try {
+      const res = await fetch("/api/tenant/public-group/telegram/invite-registration", { method: "POST" });
+      setInviteResult(res.ok ? "sent" : "error");
+    } catch {
+      setInviteResult("error");
+    } finally {
+      setInviteSending(false);
+    }
   }
 
   if (checking || !group) return null;
@@ -123,6 +141,27 @@ export default function PublicGroupSettingsPage() {
 
               </SpringCard>
             </StaggerItem>
+
+            {/* Разовый призыв уже состоящим в группе зарегистрироваться в
+                боте (запрос пользователя 2026-07-25) — только пока чат
+                реально подключён и не поставлен на паузу тумблером выше;
+                второй, дополняющий рычаг — автоприветствие новых участников,
+                оно уже работает само, без действий Владельца. */}
+            {group.connected && group.enabled && (
+              <StaggerItem>
+                <SpringCard animate={false} hover={false} className="flex flex-col gap-2">
+                  <PressableScale>
+                    <Button type="button" variant="outline" className="w-full gap-2" disabled={inviteSending} onClick={sendInviteRegistration}>
+                      <Send className="size-4" />
+                      {t.summaries.inviteRegistrationButton}
+                    </Button>
+                  </PressableScale>
+                  <p className="text-caption-airbnb text-muted-foreground">{t.summaries.inviteRegistrationHint}</p>
+                  {inviteResult === "sent" && <p className="text-caption-airbnb text-primary">{t.summaries.inviteRegistrationSent}</p>}
+                  {inviteResult === "error" && <p className="text-caption-airbnb text-destructive">{t.summaries.inviteRegistrationError}</p>}
+                </SpringCard>
+              </StaggerItem>
+            )}
 
             {/* Автоанонс в группу при включении новой зоны/точки/актива
                 (запрос пользователя 2026-07-24) — отдельные тумблеры на

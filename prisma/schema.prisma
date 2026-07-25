@@ -2083,7 +2083,28 @@ model ClientTelegramLink {
 model ClientBotSession {
   chatId          String   @id
   pendingTenantId String?
-  updatedAt       DateTime @updatedAt
+
+  // Флоу саморегистрации (запрос пользователя 2026-07-25: "чтобы сами себя
+  // добавляли в базу Клиентов") — телефон уже подтверждён Telegram'ом
+  // (contact.user_id) на шаге, где wallet не нашёлся; тенант+телефон живут
+  // здесь до тапа по кнопке "Регистрация", а awaitingRegistrationName
+  // включается ПОСЛЕ тапа — следующее произвольное текстовое сообщение от
+  // этого chatId тогда трактуется как имя, не как случайный текст/команда.
+  pendingRegistrationTenantId String?
+  pendingRegistrationPhone    String?
+  awaitingRegistrationName    Boolean @default(false)
+
+  // Приветствие в группе клиентов ждёт удаления (запрос пользователя
+  // 2026-07-25: "чтобы не засорять группу") — id сообщения-приветствия,
+  // отправленного этому конкретному новому участнику (chatId этой записи —
+  // тот же id, что и его личный чат с ботом, см. handleNewChatMembers).
+  // Удаляется, когда человек реально откроет бота по кнопке из приветствия
+  // (см. handleClientStart) — тап по url-кнопке сам по себе не шлёт боту
+  // апдейт, единственный сигнал "перешёл" — это последующий /start.
+  pendingWelcomeGroupChatId String?
+  pendingWelcomeMessageId   String?
+
+  updatedAt DateTime @updatedAt
 }
 
 // Настройки состава и триггера каждого типа сводки — по одной строке на

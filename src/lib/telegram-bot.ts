@@ -154,14 +154,28 @@ export async function sendContactRequest(chatId: string, text: string, buttonTex
 // "Группа пока не подключена". Вызывающая сторона уже знает конкретного
 // tenant для этого сообщения (buildClientReport вызывается на тенанта), ей
 // и решать, включать ли третью кнопку — здесь этой информации нет.
+//
+// showRegister — саморегистрация (запрос пользователя 2026-07-25: "чтобы
+// сами себя добавляли в базу Клиентов") — до регистрации первая кнопка
+// "📝 Регистрация" вместо "💵 Баланс" (баланса ещё нет, проверять нечего).
+// showBonus — та же логика, что showJoin, но для кнопки "🎁 Абонементы"
+// (список планов + где купить, запрос того же дня): показывается, только
+// если у тенанта вообще есть что показать (планы + активные точки).
+export interface ChatMenuOptions {
+  showRegister?: boolean;
+  showJoin?: boolean;
+  showBonus?: boolean;
+}
+
 export async function sendChatMessageWithMenu(
   chatId: string,
   text: string,
   s: BotStringSet,
-  showJoin: boolean
+  options: ChatMenuOptions = {}
 ): Promise<TelegramApiResult> {
-  const keyboard = [[{ text: s.balanceMenuButton }, { text: s.servicesMenuButton }]];
-  if (showJoin) keyboard.push([{ text: s.joinMenuButton }]);
+  const keyboard = [[{ text: options.showRegister ? s.registerMenuButton : s.balanceMenuButton }, { text: s.servicesMenuButton }]];
+  if (options.showBonus) keyboard.push([{ text: s.bonusMenuButton }]);
+  if (options.showJoin) keyboard.push([{ text: s.joinMenuButton }]);
   return callTelegramApi("sendMessage", {
     chat_id: chatId,
     text,
@@ -225,6 +239,25 @@ export function mapTelegramApiError(result: TelegramApiResult): string {
   return "Не удалось отправить сообщение в Telegram";
 }
 
+// Удаление приветственного сообщения в группе клиентов после того, как
+// человек реально перешёл по нему в бота (запрос пользователя 2026-07-25:
+// "чтобы не засорять группу") — best-effort: сообщение могло быть уже
+// удалено вручную, бот мог потерять права и т.п., в этих случаях просто
+// молча ничего не происходит, отдельно не сообщаем об ошибке никому.
+export async function deleteChatMessage(chatId: string, messageId: string): Promise<void> {
+  const token = await getBotToken();
+  if (!token) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/deleteMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, message_id: Number(messageId) }),
+    });
+  } catch {
+    // ignore
+  }
+}
+
 const BIND_CODE_TTL_MS = 15 * 60 * 1000;
 
 // purpose: "summary" (рабочий чат — Итоги/Касса/Инструктажи) | "public_group"
@@ -279,6 +312,33 @@ export async function fetchChatInviteLink(chatId: string): Promise<string | null
     const data = await res.json().catch(() => null);
     const link: unknown = data?.result;
     return res.ok && typeof link === "string" ? link : null;
+  } catch {
+    return null;
+  }
+}
+
+// Уже состоит ли конкретный клиент в публичной группе тенанта (запрос
+// пользователя 2026-07-25: "если Клиент уже в группе, кнопка тоже не нужна")
+// — userId это тот же chatId, которым клиент общается с ботом в личке:
+// у приватных чатов Telegram chat.id и user.id ВСЕГДА совпадают (устройство
+// самого Bot API, не наше допущение), отдельно спрашивать/хранить
+// telegram user_id клиента не нужно. null — "не удалось проверить" (бот не
+// состоит в группе, пользователь никогда не писал боту и т.п.), вызывающая
+// сторона в этом случае должна вести себя как раньше (кнопку показывать).
+export async function isChatMember(groupChatId: string, userId: string): Promise<boolean | null> {
+  const token = await getBotToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/getChatMember`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: groupChatId, user_id: userId }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) return null;
+    const status: string | undefined = data?.result?.status;
+    if (!status) return null;
+    return status !== "left" && status !== "kicked";
   } catch {
     return null;
   }

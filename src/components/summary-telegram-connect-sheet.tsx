@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Loader2, Send } from "lucide-react";
+import { Check, CheckCircle2, Copy, Loader2, Send } from "lucide-react";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { Button } from "@/components/ui/button";
@@ -70,6 +70,16 @@ export function TelegramConnectSheet({
   const [savingInviteLink, setSavingInviteLink] = useState(false);
   const { saved: inviteLinkSaved, pulse: pulseInviteLinkSaved } = useSavePulse();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Копирование "/start КОД" (запрос пользователя 2026-07-25) — только
+  // иконка, без текста: на сайте намеренно нельзя выделять текст (спека
+  // дизайн-системы), значит скопировать вручную человек не может в принципе.
+  const [commandCopied, setCommandCopied] = useState(false);
+
+  async function copyStartCommand() {
+    await navigator.clipboard.writeText(`/start ${code}`).catch(() => {});
+    setCommandCopied(true);
+    setTimeout(() => setCommandCopied(false), 1500);
+  }
 
   function stopPolling() {
     if (pollRef.current) {
@@ -210,6 +220,8 @@ export function TelegramConnectSheet({
               <PressableScale>
                 <a
                   href={deepLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-transparent bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary),black_14%)] text-sm font-medium text-primary-foreground shadow-[0_1px_2px_rgba(0,0,0,.12),inset_0_1px_0_rgba(255,255,255,.16)]"
                 >
                   <Send className="size-4" />
@@ -223,6 +235,24 @@ export function TelegramConnectSheet({
                 {t.summaries.connectWaitPrefix} <b className="tabular-nums text-foreground">{code}</b>{" "}
                 {t.summaries.connectWaitSuffix}
               </span>
+            </div>
+            {/* Реальный баг, найден пользователем 2026-07-25: бот уже был
+                добавлен в группу вручную (не через ссылку выше), человек
+                отправил голый код и отдельно "@bot КОД" текстом — оба раза
+                Telegram отфильтровал сообщение режимом приватности (только
+                команды вида /start@bot обходят его, обычное упоминание —
+                нет), бот вообще не получил апдейт. Explicit hint, чтобы не
+                гадать. */}
+            <div className="mt-2 flex items-center gap-1 text-caption-airbnb text-muted-foreground">
+              <span>
+                {t.summaries.connectManualFallbackPrefix} <b className="tabular-nums text-foreground">/start {code}</b>
+                {t.summaries.connectManualFallbackSuffix}
+              </span>
+              <PressableScale className="shrink-0">
+                <Button type="button" variant="outline" size="icon-sm" className="rounded-lg" aria-label={t.common.copy} onClick={copyStartCommand}>
+                  {commandCopied ? <Check className="size-3.5 text-primary" /> : <Copy className="size-3.5" />}
+                </Button>
+              </PressableScale>
             </div>
             <PressableScale className="mt-3">
               <Button type="button" variant="outline" className="w-full" onClick={cancelBind}>
