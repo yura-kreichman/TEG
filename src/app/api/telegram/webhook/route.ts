@@ -738,7 +738,14 @@ async function handleJoinCommand(chatId: string, lang: BotLang) {
 async function sendJoinForTenant(chatId: string, tenantId: string, lang: BotLang) {
   const s = BOT_STRINGS[lang];
   const group = await getTenantPublicGroup(tenantId);
-  if (!group?.inviteLink) {
+  // group.enabled — тот же тумблер, что уже проверяют исходящие анонсы
+  // (announceNewZone/Point/Asset, abonement-wallets/broadcast) — реальный
+  // баг, найден пользователем 2026-07-25: Владелец выключил группу
+  // тумблером (или физически удалил её в Telegram — inviteLink при этом не
+  // стирается, disconnect намеренно его не трогает, см. .../disconnect/
+  // route.ts), а клиентам бот всё равно предлагал старую ссылку — эта
+  // проверка раньше смотрела только на наличие inviteLink.
+  if (!group?.inviteLink || !group.enabled) {
     await sendChatMessage(chatId, s.joinGroupNotConfigured).catch(() => {});
     return;
   }
