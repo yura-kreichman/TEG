@@ -363,15 +363,11 @@ export function formatZoneSummaryTelegram(
 // теперь этот блок буквально одинаков в обоих режимах.
 function formatZoneBreakdownRows(zoneBreakdown: DailyCashSummaryData["zoneBreakdown"], locale: Locale): string {
   const labelWidth = Math.max(...zoneBreakdown.map((z) => `${z.zoneName}:`.length));
-  return zoneBreakdown
-    .map((z) => {
-      // "+X" абонементом — справочно рядом с кассовой выручкой зоны, не
-      // складывается с ней (запрос пользователя 2026-07-17: "во всех
-      // отчётах и сводках правильные цифры", "добавить Абонемент").
-      const abonementSuffix = z.abonementAmount > 0 ? ` (+${formatMoney(z.abonementAmount, locale)})` : "";
-      return `${z.zoneName}:`.padEnd(labelWidth + 1) + formatMoney(z.revenue, locale) + abonementSuffix;
-    })
-    .join("\n");
+  // "(+X)" абонементом убран (запрос пользователя 2026-07-25) — дублировал
+  // отдельную строку "Баланс" ниже и визуально намекал, что баланс
+  // складывается с кассой зоны, хотя это не так (весь вечерний разбор про
+  // то, что баланс у Счётчиков — отдельная, не смешивается с кассой).
+  return zoneBreakdown.map((z) => `${z.zoneName}:`.padEnd(labelWidth + 1) + formatMoney(z.revenue, locale)).join("\n");
 }
 
 export function formatDailyCashSummaryTelegram(
