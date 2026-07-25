@@ -1,4 +1,4 @@
-import { Crown } from "lucide-react";
+import { Crown, Users } from "lucide-react";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 
 // Мини-аватар сотрудника в списках продаж/ревизий/сверок/истории кошелька
@@ -38,9 +38,10 @@ export function PerformedByTag({
           <AssetOrZoneIcon iconKey={iconKey} className="size-3" />
         </span>
       ) : (
-        <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-[0.5625rem] font-bold text-primary-foreground">
-          {name.slice(0, 1).toUpperCase()}
-        </span>
+        // Без фона/букв, тот же минимальный принцип, что у иконки-короны
+        // Владельца выше (запрос пользователя 2026-07-25: "просто иконку
+        // users, а не синий кружок с первой буквой").
+        <Users className="size-3.5 shrink-0 text-muted-foreground" />
       )}
       {name}
     </span>

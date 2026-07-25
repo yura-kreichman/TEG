@@ -63,6 +63,10 @@ export async function GET(request: Request, ctx: RouteContext<"/api/abonement-wa
   const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { slug: true } });
   const telegramBalanceLink = tenant?.slug ? await getClientBalanceDeepLink(tenant.slug) : null;
   const hasTelegram = await hasTelegramLink(owner.tenantId, wallet.phone);
+  // Название точки в истории — только если точек больше одной (запрос
+  // пользователя 2026-07-25: "нет смысла... если у Владельца одна точка"),
+  // тот же приём showPointName, что и в /api/reports/money/expenses.
+  const pointCount = await prisma.point.count({ where: { tenantId: owner.tenantId } });
 
   return NextResponse.json({
     id: wallet.id,
@@ -72,6 +76,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/abonement-wa
     createdAt: wallet.createdAt,
     telegramBalanceLink,
     hasTelegram,
+    showPointName: pointCount > 1,
     history: history.map((h) => ({
       id: h.id,
       type: h.type,

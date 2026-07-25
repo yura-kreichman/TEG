@@ -54,6 +54,7 @@ interface WalletDetail {
   history: WalletHistoryEntry[];
   telegramBalanceLink: string | null;
   hasTelegram: boolean;
+  showPointName: boolean;
 }
 
 /**
@@ -353,7 +354,7 @@ export default function AbonementWalletPage() {
                               самом экране, не только на бумаге. */}
                           {new Date(h.occurredAt).toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })}{" "}
                           {new Date(h.occurredAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}
-                          {h.pointName ? ` · ${h.pointName}` : ""}
+                          {wallet.showPointName && h.pointName ? ` · ${h.pointName}` : ""}
                         </span>
                         {(h.performedByOwner || h.performedBy) && (
                           <>
