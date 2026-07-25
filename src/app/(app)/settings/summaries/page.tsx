@@ -2,11 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell, ChevronRight, Mail, Send } from "lucide-react";
+import { Bell, ChevronRight, Mail, Pencil, Send } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
+import { PressableScale } from "@/components/motion/pressable-scale";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { EmailChannelSheet } from "@/components/summary-email-sheet";
 import { useI18n } from "@/components/i18n-provider";
@@ -216,19 +218,31 @@ export default function SummariesListPage() {
                 </div>
 
                 <div className="flex flex-col gap-2 border-t border-border py-2 pt-3">
-                  <div
-                    className="flex cursor-pointer items-center justify-between gap-3"
-                    onClick={() => setEmailSheetOpen(true)}
-                  >
+                  {/* У Email нет своей страницы настроек (в отличие от
+                      Telegram/Push) — кнопка "изменить" остаётся, в один
+                      ряд с тумблером (запрос пользователя 2026-07-25: "у
+                      неё нет настроек внутри"). */}
+                  <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-2.5">
                       <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <Mail className="size-4" />
                       </div>
                       <div className="min-w-0 text-body-airbnb font-medium">{t.summaries.emailLabel}</div>
                     </div>
-                    <span onClick={(e) => e.stopPropagation()}>
-                      <Switch checked={email.enabled} onCheckedChange={toggleEmail} className="shrink-0" />
-                    </span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <PressableScale>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon-sm"
+                          aria-label={t.summaries.telegramChangeLink}
+                          onClick={() => setEmailSheetOpen(true)}
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                      </PressableScale>
+                      <Switch checked={email.enabled} onCheckedChange={toggleEmail} />
+                    </div>
                   </div>
                   <p className="truncate pl-11.5 text-caption-airbnb text-muted-foreground">
                     {email.emailAddresses ? email.emailAddresses.split(",")[0]?.trim() : t.summaries.emailNotConnected}
