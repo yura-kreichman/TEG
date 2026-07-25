@@ -62,17 +62,20 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
           select: { cashAmount: true, mobileAmount: true, resultsSubmission: { select: { submittedAt: true } } },
         })
       : Promise.resolve([]),
-    // Абонемент — не в cashAmount/mobileAmount (касса точки эти деньги
-    // сейчас не получает, уже получила раньше, при пополнении), но реальная
-    // выручка бизнеса — без неё тепловая карта занижала активность дней с
-    // абонементными пусками (тот же разрыв, что и в /reports/counters/day,
-    // запрос пользователя 2026-07-17/18).
-    zoneIds.length
-      ? prisma.moneyOperation.findMany({
-          where: { type: "revenue_abonement", zoneId: { in: zoneIds }, occurredAt: { gte: start, lt: end } },
-          select: { amount: true, occurredAt: true },
-        })
-      : Promise.resolve([]),
+    // Абонемент — не в cashAmount/mobileAmount (касса зоны эти деньги в
+    // момент пуска/тарифа не получает), но реальная выручка бизнеса — без
+    // неё тепловая карта занижала бы активность дней с пополнениями.
+    // Признаётся в момент ПОПОЛНЕНИЯ (пересмотрено 2026-07-25, см. полный
+    // разбор в reports/money/route.ts), не траты — abonement_topup* не несёт
+    // zoneId (пополнение не привязано к зоне), фильтр по pointId/tenantId.
+    prisma.moneyOperation.findMany({
+      where: {
+        type: { in: ["abonement_topup", "abonement_topup_cashless"] },
+        occurredAt: { gte: start, lt: end },
+        ...(isAllPoints ? { tenantId: owner.tenantId } : { pointId }),
+      },
+      select: { amount: true, occurredAt: true },
+    }),
   ]);
 
   const byDay = new Map<string, number>();

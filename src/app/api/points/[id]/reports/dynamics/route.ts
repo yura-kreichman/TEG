@@ -95,24 +95,25 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   });
   let expenses = 0;
   let payouts = 0;
-  // Продажи абонементов за период — информационно, отдельно от total/profit
-  // (запрос пользователя 2026-07-18): это аванс клиента, не заработанная
-  // выручка, поэтому не участвует в сумме ниже, в отличие от revenue_abonement.
+  // Абонементы (пересмотрено 2026-07-25 — прошлое решение признавать
+  // "Выручку" в момент траты баланса было ошибочным, найдено пользователем:
+  // клиент физически отдаёт деньги в момент ПОПОЛНЕНИЯ, Владелец их получает
+  // и инкассирует именно тогда — см. полный разбор в reports/money/route.ts.
+  // Трата баланса (revenue_abonement) — внутреннее списание уже полученных
+  // денег, в total/byDay больше не входит, иначе задвоение с пополнением.
+  // Разбивка по способу оплаты клиента сохранена (та же пара, что раньше
+  // называлась "abonementSold" и была информационной, теперь это сама
+  // выручка).
   let abonementSoldCash = 0;
   let abonementSoldMobile = 0;
-  // Абонемент — "Выручка" признаётся в момент траты (revenue_abonement), не
-  // пополнения; касса точки эти деньги сейчас не получает (уже получила
-  // раньше, при пополнении), поэтому её нет в cashAmount/mobileAmount выше,
-  // но она реальная выручка бизнеса и должна попадать в total/profit ниже —
-  // тот же разрыв, что уже был найден и исправлен в daily-cash-data.ts/
-  // counters/day/route.ts (запрос пользователя 2026-07-17/18: "во всех
-  // отчётах и сводках должны быть правильные цифры"), тут был пропущен.
   let totalAbonement = 0;
   // Товары (docs/spec/09-goods.md, "Отчётность и размещение": "товары —
-  // равноправный слой стека рядом с зонами") — та же логика, что revenue_abonement
-  // выше: гросс-выручка (все три способа оплаты), прибавляется к total/byDay,
-  // визуально график линейный (не столбчатый), отдельного слоя не рисует —
-  // "равноправный" здесь означает "в тех же суммах", как и было с абонементом.
+  // равноправный слой стека рядом с зонами") — гросс-выручка наличными и
+  // безналом, прибавляется к total/byDay, визуально график линейный (не
+  // столбчатый), отдельного слоя не рисует. goods_revenue_abonement (товар,
+  // оплаченный балансом) сюда НЕ входит — тем же принципом, что и выше: эти
+  // деньги уже посчитаны в totalAbonement в момент пополнения, не когда
+  // потрачены на товар.
   let totalGoods = 0;
   // По дням — для линии "Прибыль" на графике (запрос пользователя 2026-07-16:
   // "и Выручку, и Прибыль двумя разными цветами"), тот же принцип, что byDay
@@ -127,15 +128,15 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       deductionsByDay.set(key, (deductionsByDay.get(key) ?? 0) + amount);
       activeDays.add(key);
     }
-    if (op.type === "revenue_abonement") {
+    if (op.type === "abonement_topup" || op.type === "abonement_topup_cashless") {
+      if (op.type === "abonement_topup") abonementSoldCash += amount;
+      else abonementSoldMobile += amount;
       totalAbonement += amount;
       const key = dateKey(op.occurredAt);
       byDay.set(key, (byDay.get(key) ?? 0) + amount);
       activeDays.add(key);
     }
-    if (op.type === "abonement_topup") abonementSoldCash += amount;
-    if (op.type === "abonement_topup_cashless") abonementSoldMobile += amount;
-    if (op.type === "goods_revenue" || op.type === "goods_revenue_cashless" || op.type === "goods_revenue_abonement") {
+    if (op.type === "goods_revenue" || op.type === "goods_revenue_cashless") {
       // Знаковая сумма, НЕ Math.abs(amount) выше — аннулирование продажи
       // (voidGoodsSale, src/lib/goods.ts) пишет компенсирующую операцию с
       // ОТРИЦАТЕЛЬНОЙ суммой того же типа, она должна вычесть из выручки,
@@ -159,7 +160,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     prisma.moneyOperation.findMany({
       where: {
         tenantId: owner.tenantId,
-        type: "revenue_abonement",
+        type: { in: ["abonement_topup", "abonement_topup_cashless"] },
         occurredAt: { gte: prevStart, lt: prevEnd },
         ...(isAllPoints ? {} : { OR: [{ zone: { pointId } }, { pointId }] }),
       },
@@ -168,7 +169,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     prisma.moneyOperation.findMany({
       where: {
         tenantId: owner.tenantId,
-        type: { in: ["goods_revenue", "goods_revenue_cashless", "goods_revenue_abonement"] },
+        type: { in: ["goods_revenue", "goods_revenue_cashless"] },
         occurredAt: { gte: prevStart, lt: prevEnd },
         ...(isAllPoints ? {} : { OR: [{ zone: { pointId } }, { pointId }] }),
       },

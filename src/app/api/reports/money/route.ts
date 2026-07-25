@@ -103,17 +103,20 @@ export async function GET(request: Request) {
   const balanceByZone = new Map<string, number>();
   let totalRevenueCash = 0;
   let totalRevenueMobile = 0;
-  // Абонементы (запрос пользователя 2026-07-17) — "Выручка" признаётся в
-  // момент ТРАТЫ (revenue_abonement), не пополнения (abonement_topup*,
-  // авансовые деньги клиента, ещё не заработаны бизнесом).
-  let totalRevenueAbonement = 0;
+  // Абонементы (пересмотрено 2026-07-25 — прошлое решение 2026-07-17
+  // признавать "Выручку" в момент ТРАТЫ было ошибочным, найдено пользователем:
+  // клиент физически отдаёт деньги в момент ПОПОЛНЕНИЯ — Владелец их получает
+  // и инкассирует именно тогда (та же физическая касса/пул "Абонементы",
+  // getPointAbonementCashTotal ниже). Трата баланса — просто внутреннее
+  // списание уже полученных денег, не новый приток. Признаём выручку по
+  // abonement_topup/abonement_topup_cashless (пополнение); revenue_abonement/
+  // goods_revenue_abonement (трата) в сумму больше не входят вовсе — иначе
+  // задвоение с уже учтённым пополнением. Разбивка по способу оплаты клиента
+  // (cash/mobile) сохранена — та же пара переменных, что раньше называлась
+  // "abonementSold" и была информационной, теперь это и есть сама выручка.
+  let totalAbonementCash = 0;
+  let totalAbonementMobile = 0;
   let totalExpense = 0;
-  // Продажи абонементов (планов) за период — информационно, отдельно от
-  // "Выручки" (запрос пользователя 2026-07-18: "надо ли это как-то отдельно
-  // отображать" — да, но не смешивая с revenue_abonement выше и не считая в
-  // Прибыль, это аванс клиента, не заработанные деньги бизнеса).
-  let totalAbonementSoldCash = 0;
-  let totalAbonementSoldMobile = 0;
 
   for (const op of operations) {
     const amount = Number(op.amount);
@@ -135,15 +138,13 @@ export async function GET(request: Request) {
     // пользователя 2026-07-15: "не видна разбивка по наличным и безналичным").
     if (op.type === "revenue") totalRevenueCash += amount;
     if (op.type === "revenue_cashless") totalRevenueMobile += amount;
-    if (op.type === "revenue_abonement") totalRevenueAbonement += amount;
     // Товары (docs/spec/09-goods.md: "не отдельный бизнес") — сливаются в те
     // же три суммы, что и зонная выручка выше, а не отдельная строка —
     // "Бизнес: расходы и прибыль" остаётся единой цифрой по всей точке.
     if (op.type === "goods_revenue") totalRevenueCash += amount;
     if (op.type === "goods_revenue_cashless") totalRevenueMobile += amount;
-    if (op.type === "goods_revenue_abonement") totalRevenueAbonement += amount;
-    if (op.type === "abonement_topup") totalAbonementSoldCash += amount;
-    if (op.type === "abonement_topup_cashless") totalAbonementSoldMobile += amount;
+    if (op.type === "abonement_topup") totalAbonementCash += amount;
+    if (op.type === "abonement_topup_cashless") totalAbonementMobile += amount;
     // Расходы бизнес-карточки — только обычные expense (запрос пользователя
     // 2026-07-14: авансы/премии больше не считаются здесь расходом — это
     // выплата уже заработанного персоналу, не трата бизнеса; отдельно видны
@@ -213,20 +214,24 @@ export async function GET(request: Request) {
     showPointName: points.length > 1,
     period: { granularity, start: start.toISOString(), end: end.toISOString() },
     business: {
-      revenue: Math.round((totalRevenueCash + totalRevenueMobile + totalRevenueAbonement) * 100) / 100,
+      revenue: Math.round((totalRevenueCash + totalRevenueMobile + totalAbonementCash + totalAbonementMobile) * 100) / 100,
       cash: Math.round(totalRevenueCash * 100) / 100,
       mobile: Math.round(totalRevenueMobile * 100) / 100,
-      abonement: Math.round(totalRevenueAbonement * 100) / 100,
+      abonement: Math.round((totalAbonementCash + totalAbonementMobile) * 100) / 100,
       expense: Math.round(totalExpense * 100) / 100,
-      profit: Math.round((totalRevenueCash + totalRevenueMobile + totalRevenueAbonement + totalExpense) * 100) / 100,
+      profit:
+        Math.round((totalRevenueCash + totalRevenueMobile + totalAbonementCash + totalAbonementMobile + totalExpense) * 100) /
+        100,
       difference: Math.round(totalDifference * 100) / 100,
       returnsCount: totalReturns,
     },
-    // Продажи абонементов за период — отдельно от business.* выше, не
-    // входит в Выручку/Прибыль (это аванс клиента, не заработанные деньги).
+    // Пополнения абонементов за период, с разбивкой по способу оплаты
+    // клиента (запрос пользователя 2026-07-25) — тот же source, что и
+    // business.abonement выше (это теперь одни и те же деньги, просто с
+    // разбивкой наличные/безнал), не отдельная "невыручка".
     abonementSold: {
-      cash: Math.round(totalAbonementSoldCash * 100) / 100,
-      mobile: Math.round(totalAbonementSoldMobile * 100) / 100,
+      cash: Math.round(totalAbonementCash * 100) / 100,
+      mobile: Math.round(totalAbonementMobile * 100) / 100,
     },
   });
 }

@@ -37,14 +37,17 @@ export async function GET(request: Request) {
       // бизнес") — та же выручка, что /api/reports/money и /api/reports/
       // home-summary уже намеренно вливают в общий итог; календарь Денег был
       // единственным местом, которое их не учитывало (аудит 2026-07-24).
+      // Абонементы — по пополнению (abonement_topup*), не по трате
+      // (пересмотрено 2026-07-25, см. reports/money/route.ts) — revenue_
+      // abonement/goods_revenue_abonement сюда больше не входят.
       type: {
         in: [
           "revenue",
           "revenue_cashless",
-          "revenue_abonement",
           "goods_revenue",
           "goods_revenue_cashless",
-          "goods_revenue_abonement",
+          "abonement_topup",
+          "abonement_topup_cashless",
         ],
       },
       occurredAt: { gte: monthStart, lt: monthEnd },

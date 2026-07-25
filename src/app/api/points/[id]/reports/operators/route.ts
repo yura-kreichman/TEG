@@ -65,18 +65,21 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     list.push({ submittedAt: s.resultsSubmission.submittedAt, difference: entry.difference });
     submissionsByOperator.set(opId, list);
   }
-  // Абонементная выручка (аудит 2026-07-24, то же расхождение, что и у
-  // вкладки "Зоны" — см. комментарий в points/[id]/reports/zones/route.ts) —
-  // MoneyOperation(revenue_abonement) всегда несёт performedByOperatorId
-  // (см. spendWalletTx/spendWalletForZone/spendWalletForTicketOrderTx в
-  // lib/abonement.ts), поэтому атрибуция по оператору строится тем же
-  // прямым запросом, что и по зоне.
-  const abonementOps = zoneIds.length
-    ? await prisma.moneyOperation.findMany({
-        where: { zoneId: { in: zoneIds }, type: "revenue_abonement", occurredAt: { gte: start, lt: end } },
-        select: { performedByOperatorId: true, amount: true },
-      })
-    : [];
+  // Абонементная выручка (пересмотрено 2026-07-25 — см. полный разбор в
+  // reports/money/route.ts: выручка признаётся в момент ПОПОЛНЕНИЯ, не
+  // траты баланса) — атрибуция по оператору теперь строится по
+  // abonement_topup/abonement_topup_cashless, они несут performedByOperatorId
+  // (см. topUpWallet/createWalletWithTopup* в lib/abonement.ts), но НЕ несут
+  // zoneId (пополнение не привязано к зоне, только к точке) — фильтр по
+  // pointId/tenantId, тот же принцип, что isAllPoints у zones выше.
+  const abonementOps = await prisma.moneyOperation.findMany({
+    where: {
+      type: { in: ["abonement_topup", "abonement_topup_cashless"] },
+      occurredAt: { gte: start, lt: end },
+      ...(isAllPoints ? { tenantId: owner.tenantId } : { pointId }),
+    },
+    select: { performedByOperatorId: true, amount: true },
+  });
   for (const op of abonementOps) {
     if (!op.performedByOperatorId) continue;
     operatorIds.add(op.performedByOperatorId);

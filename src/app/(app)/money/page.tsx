@@ -469,34 +469,6 @@ export default function MoneyPage() {
                 </div>
               )}
             </div>
-
-            {/* Продажи абонементов — в той же плашке, но не в сумме Прибыли
-                выше (запрос пользователя 2026-07-18: "Абонементы и эти итоги
-                должны быть в одной плашке" — при этом принцип учёта не
-                меняется, это аванс клиента, не заработанные деньги, см.
-                money.abonementSoldHint). */}
-            {(report.abonementSold.cash > 0 || report.abonementSold.mobile > 0) && (
-              <div className="flex items-start justify-between gap-2 border-t border-border pt-3.5">
-                <div>
-                  <p className="text-card-title">{t.money.abonementSoldTitle}</p>
-                  {/* Явно про какие деньги — чтобы не путать с Наличные/Безнал
-                      выручки выше (запрос пользователя 2026-07-18: "путаю два
-                      разных 'Наличные' на одном экране"). */}
-                  <p className="text-caption-airbnb text-muted-foreground">{t.money.abonementSoldHint}</p>
-                </div>
-                <div className="flex min-w-0 shrink-0 flex-col items-end gap-0.5 text-right text-caption-airbnb tabular-nums">
-                  <span className="inline-flex items-center gap-1">
-                    <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
-                    {t.reports.cashLabel}: <span className="font-bold text-foreground"><Money value={report.abonementSold.cash} /></span>
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
-                    {t.reports.mobileLabel}:{" "}
-                    <span className="font-bold text-foreground"><Money value={report.abonementSold.mobile} /></span>
-                  </span>
-                </div>
-              </div>
-            )}
           </SpringCard>
 
           {/* Тот же пункт, что на Главной у Владельца (запрос пользователя

@@ -15,7 +15,12 @@ export async function GET() {
 
   const [op, tenant] = await Promise.all([
     prisma.moneyOperation.findFirst({
-      where: { tenantId: owner.tenantId, type: { in: ["revenue", "revenue_cashless", "revenue_abonement"] } },
+      where: {
+        tenantId: owner.tenantId,
+        // Абонементы — по пополнению, не по трате (пересмотрено 2026-07-25,
+        // см. reports/money/route.ts) — та же выручка, что считает /money.
+        type: { in: ["revenue", "revenue_cashless", "abonement_topup", "abonement_topup_cashless"] },
+      },
       orderBy: { occurredAt: "desc" },
       select: { occurredAt: true },
     }),

@@ -47,25 +47,17 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   for (const e of entries) {
     actualByZone.set(e.zoneId, (actualByZone.get(e.zoneId) ?? 0) + e.actualTotal);
   }
-  // Абонементная выручка (аудит 2026-07-24, реальное расхождение) — эта
-  // касса зоны реального наличного/безналичного дня не получает (клиент уже
-  // заплатил раньше, при пополнении), но это реальная выручка бизнеса и на
-  // вкладке "Динамика" (соседний отчёт того же периода/точки) она есть в
-  // total — здесь её не было вовсе, из-за чего суммы по зонам расходились с
-  // "Динамикой" ровно на этот слой. Прямой запрос по MoneyOperation, не
-  // entries[].abonementAmount — то поле считается только для
-  // stays/launches/tickets (lib/reports.ts), у counters/cash_only своя,
-  // отдельная запись без привязки к ZoneSubmission (spendWalletForZone).
-  const abonementOps = zoneIds.length
-    ? await prisma.moneyOperation.findMany({
-        where: { zoneId: { in: zoneIds }, type: "revenue_abonement", occurredAt: { gte: start, lt: end } },
-        select: { zoneId: true, amount: true },
-      })
-    : [];
-  for (const op of abonementOps) {
-    if (!op.zoneId) continue;
-    actualByZone.set(op.zoneId, (actualByZone.get(op.zoneId) ?? 0) + Number(op.amount));
-  }
+  // Абонементная выручка НЕ входит в разбивку по зонам (пересмотрено
+  // 2026-07-25 — см. полный разбор в reports/money/route.ts). Раньше
+  // (аудит 2026-07-24) сюда прибавляли revenue_abonement (трата баланса) по
+  // zoneId, чтобы сумма по зонам совпадала с "Динамикой" — то было
+  // компенсацией одной ошибки другой. Теперь выручка признаётся в момент
+  // ПОПОЛНЕНИЯ (abonement_topup*), а пополнение физически не привязано к
+  // зоне (происходит на экране "Клиенты", не через зону) — у неё просто нет
+  // законной зоны-владельца. Итог: сумма этой вкладки честно МЕНЬШЕ
+  // "Динамики" на абонементную часть — это ожидаемо, не расхождение,
+  // разбивка "по зонам" не может включать деньги, не привязанные ни к одной
+  // зоне.
   const pointTotal = [...actualByZone.values()].reduce((sum, v) => sum + v, 0);
 
   const zoneRanking = zones.map((z) => {

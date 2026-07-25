@@ -202,17 +202,23 @@ async function computeWindowSummary(
   let mobile = 0;
   for (const op of operations) {
     const amount = Number(op.amount);
-    if (op.type === "revenue" || op.type === "revenue_cashless" || op.type === "revenue_abonement") revenue += amount;
+    if (op.type === "revenue" || op.type === "revenue_cashless") revenue += amount;
     if (op.type === "revenue") cash += amount;
     if (op.type === "revenue_cashless") mobile += amount;
     // Товары (docs/spec/09-goods.md, "равноправный слой" в выручке по дням) —
-    // тот же принцип, что revenue*/revenue_cashless/revenue_abonement выше.
-    // amount уже знаковый (не Math.abs) — аннулирование продажи пишет
-    // отрицательную компенсирующую операцию того же типа, корректно вычитается.
-    if (op.type === "goods_revenue" || op.type === "goods_revenue_cashless" || op.type === "goods_revenue_abonement")
-      revenue += amount;
+    // тот же принцип, что revenue/revenue_cashless выше. amount уже знаковый
+    // (не Math.abs) — аннулирование продажи пишет отрицательную
+    // компенсирующую операцию того же типа, корректно вычитается.
+    if (op.type === "goods_revenue" || op.type === "goods_revenue_cashless") revenue += amount;
     if (op.type === "goods_revenue") cash += amount;
     if (op.type === "goods_revenue_cashless") mobile += amount;
+    // Абонементы (пересмотрено 2026-07-25 — см. полный разбор в
+    // reports/money/route.ts): выручка признаётся в момент ПОПОЛНЕНИЯ
+    // (деньги реальны физически тогда же), не траты баланса —
+    // revenue_abonement/goods_revenue_abonement сюда больше не входят.
+    if (op.type === "abonement_topup" || op.type === "abonement_topup_cashless") revenue += amount;
+    if (op.type === "abonement_topup") cash += amount;
+    if (op.type === "abonement_topup_cashless") mobile += amount;
     if (op.type === "expense") expense += amount; // stored negative
   }
 

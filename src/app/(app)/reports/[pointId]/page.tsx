@@ -674,7 +674,7 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
             Теперь стек строк слева (метка+иконка ... сумма справа, ширина
             не ограничена соседями) и "Сдач" отдельным блоком справа — на
             прежнем месте, просто больше не в общей сетке. */}
-        <div className="mt-3.5 flex items-start justify-between gap-4 border-t border-border pt-3.5 tabular-nums">
+        <div className="mt-3.5 flex items-stretch justify-between gap-5 border-t border-border pt-3.5 tabular-nums">
           <div className="flex flex-1 flex-col gap-1.5">
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-1 text-caption-airbnb">
@@ -700,35 +700,11 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
               </div>
             )}
           </div>
-          <div className="shrink-0 text-right">
+          <div className="shrink-0 border-l border-border pl-4 text-right">
             <div className="text-caption-airbnb">{t.reports.submissionsLabel}</div>
             <div className="text-[1rem] font-bold">{data.submissionsCount}</div>
           </div>
         </div>
-
-        {/* Продажи абонементов — в той же плашке (запрос пользователя
-            2026-07-18: "Абонементы и эти итоги должны быть в одной
-            плашке"), но не в сумме total/Прибыли выше — принцип учёта не
-            меняется, это аванс клиента, не выручка бизнеса. */}
-        {(data.abonementSold.cash > 0 || data.abonementSold.mobile > 0) && (
-          <div className="mt-3.5 flex items-start justify-between gap-2 border-t border-border pt-3.5">
-            <div>
-              <p className="text-card-title">{t.money.abonementSoldTitle}</p>
-              <p className="text-caption-airbnb text-muted-foreground">{t.money.abonementSoldHint}</p>
-            </div>
-            <div className="flex min-w-0 shrink-0 flex-col items-end gap-0.5 text-right text-caption-airbnb tabular-nums">
-              <span className="inline-flex items-center gap-1">
-                <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
-                {t.reports.cashLabel}: <span className="font-bold text-foreground"><Money value={data.abonementSold.cash} /></span>
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
-                {t.reports.mobileLabel}:{" "}
-                <span className="font-bold text-foreground"><Money value={data.abonementSold.mobile} /></span>
-              </span>
-            </div>
-          </div>
-        )}
       </SpringCard>
 
       <SpringCard animate={false} hover={false}>
