@@ -770,11 +770,16 @@
     "gameRoomRateLabel": "Preț pe minut de ședere",
     "gameRoomRateHint": "De exemplu: 1 ₽ — 45 de minute de ședere vor costa 45 ₽.",
     "gameRoomOptionsLabel": "Variante",
+    "gameRoomOptionNamePlaceholder": "Nume (de ex., 1 oră)",
     "gameRoomOptionDurationPlaceholder": "Minute",
     "gameRoomOptionPricePlaceholder": "Preț",
     "gameRoomAddOptionButton": "Adaugă variantă",
     "gameRoomRemoveOptionLabel": "Șterge varianta",
-    "gameRoomRoundingUpNote": "Durata se rotunjește în sus la minutul întreg — punctul nu pierde la minutele incomplete."
+    "gameRoomRoundingUpNote": "Durata se rotunjește în sus la minutul întreg — punctul nu pierde la minutele incomplete.",
+    "gameRoomRateOptionsLabel": "Tarife",
+    "gameRoomRateOptionNamePlaceholder": "Nume (de ex., Zile lucrătoare)",
+    "gameRoomAddRateVariantButton": "Adaugă încă un tarif",
+    "gameRoomUseSingleRateButton": "Revino la un singur preț"
   },
   "abonements": {
     "title": "Abonamente",
@@ -1158,6 +1163,7 @@
       "printReceiptButton": "Imprimă chitanța",
       "addWristbandLabel": "Adaugă brățară",
       "pickOptionTitle": "Alege o variantă",
+      "pickRateTitle": "Alege un tarif",
       "paymentMethodTitle": "Metodă de plată",
       "stopConfirmQuestion": "Sigur?",
       "stopConfirmButton": "Finalizează",

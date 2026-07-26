@@ -770,11 +770,16 @@
     "gameRoomRateLabel": "ყოფნის ერთი წუთის ფასი",
     "gameRoomRateHint": "მაგალითად: 1 ₽ — 45 წუთი ყოფნა დაჯდება 45 ₽.",
     "gameRoomOptionsLabel": "ვარიანტები",
+    "gameRoomOptionNamePlaceholder": "სახელი (მაგ., 1 საათი)",
     "gameRoomOptionDurationPlaceholder": "წუთი",
     "gameRoomOptionPricePlaceholder": "ფასი",
     "gameRoomAddOptionButton": "ვარიანტის დამატება",
     "gameRoomRemoveOptionLabel": "ვარიანტის წაშლა",
-    "gameRoomRoundingUpNote": "ხანგრძლივობა მრგვალდება ზემოთ სრულ წუთამდე — წერტილი არ კარგავს არასრულ წუთებზე."
+    "gameRoomRoundingUpNote": "ხანგრძლივობა მრგვალდება ზემოთ სრულ წუთამდე — წერტილი არ კარგავს არასრულ წუთებზე.",
+    "gameRoomRateOptionsLabel": "ტარიფები",
+    "gameRoomRateOptionNamePlaceholder": "სახელი (მაგ., სამუშაო დღეები)",
+    "gameRoomAddRateVariantButton": "კიდევ ერთი ტარიფის დამატება",
+    "gameRoomUseSingleRateButton": "დაბრუნება ერთ ფასზე"
   },
   "abonements": {
     "title": "აბონემენტები",
@@ -1158,6 +1163,7 @@
       "printReceiptButton": "ქვითრის დაბეჭდვა",
       "addWristbandLabel": "სამაჯურის დამატება",
       "pickOptionTitle": "აირჩიეთ ვარიანტი",
+      "pickRateTitle": "აირჩიეთ ტარიფი",
       "paymentMethodTitle": "გადახდის მეთოდი",
       "stopConfirmQuestion": "დარწმუნებული ხართ?",
       "stopConfirmButton": "დასრულება",

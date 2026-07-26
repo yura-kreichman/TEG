@@ -770,11 +770,16 @@
     "gameRoomRateLabel": "Մեկ րոպե մնալու գինը",
     "gameRoomRateHint": "Օրինակ՝ 1 ₽ — 45 րոպե մնալը կարժենա 45 ₽։",
     "gameRoomOptionsLabel": "Տարբերակներ",
+    "gameRoomOptionNamePlaceholder": "Անվանում (օր.՝ 1 ժամ)",
     "gameRoomOptionDurationPlaceholder": "Րոպե",
     "gameRoomOptionPricePlaceholder": "Գին",
     "gameRoomAddOptionButton": "Ավելացնել տարբերակ",
     "gameRoomRemoveOptionLabel": "Ջնջել տարբերակը",
-    "gameRoomRoundingUpNote": "Տևողությունը կլորացվում է վերև՝ ամբողջ րոպեի, կետը չի կորցնում թերի րոպեների վրա։"
+    "gameRoomRoundingUpNote": "Տևողությունը կլորացվում է վերև՝ ամբողջ րոպեի, կետը չի կորցնում թերի րոպեների վրա։",
+    "gameRoomRateOptionsLabel": "Սակագներ",
+    "gameRoomRateOptionNamePlaceholder": "Անվանում (օր.՝ Աշխատանքային օրեր)",
+    "gameRoomAddRateVariantButton": "Ավելացնել ևս մեկ սակագին",
+    "gameRoomUseSingleRateButton": "Վերադառնալ մեկ գնի"
   },
   "abonements": {
     "title": "Բաժանորդագրություններ",
@@ -1158,6 +1163,7 @@
       "printReceiptButton": "Տպել կտրոնը",
       "addWristbandLabel": "Ավելացնել ապարանջան",
       "pickOptionTitle": "Ընտրեք տարբերակ",
+      "pickRateTitle": "Ընտրեք սակագին",
       "paymentMethodTitle": "Վճարման եղանակ",
       "stopConfirmQuestion": "Վստա՞հ եք",
       "stopConfirmButton": "Ավարտել",

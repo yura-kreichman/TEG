@@ -48,7 +48,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   let pricingModeValue: string | null = null;
   let roundingModeValue: string | null = null;
   let priceNumber = 0;
-  const optionsData: { durationMinutes: number; price: number; order: number }[] = [];
+  const optionsData: { durationMinutes: number; price: number; order: number; name?: string }[] = [];
 
   if (isStaysZone(zone)) {
     if (!(LAUNCH_PRICING_MODES as readonly string[]).includes(pricingMode)) {
@@ -63,19 +63,37 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
         return NextResponse.json({ error: "Добавьте хотя бы один вариант" }, { status: 400 });
       }
       for (const opt of options) {
-        const o = opt as { durationMinutes?: unknown; price?: unknown };
+        const o = opt as { name?: unknown; durationMinutes?: unknown; price?: unknown };
+        const nm = typeof o?.name === "string" ? o.name.trim() : "";
         const d = Number(o?.durationMinutes);
         const p = Number(o?.price);
-        if (!Number.isFinite(d) || d <= 0 || !Number.isFinite(p) || p < 0) {
+        if (!nm || !Number.isFinite(d) || d <= 0 || !Number.isFinite(p) || p < 0) {
           return NextResponse.json({ error: "Некорректный вариант тарифа" }, { status: 400 });
         }
-        optionsData.push({ durationMinutes: Math.round(d), price: p, order: optionsData.length });
+        optionsData.push({ durationMinutes: Math.round(d), price: p, order: optionsData.length, name: nm });
       }
     } else {
       roundingModeValue = "up";
-      priceNumber = Number(price);
-      if (!Number.isFinite(priceNumber) || priceNumber < 0) {
-        return NextResponse.json({ error: "Некорректная цена" }, { status: 400 });
+      // Несколько именованных ставок на выбор оператора при старте (запрос
+      // пользователя 2026-07-26: "в выходные один тариф, в будние другой") —
+      // необязательно, по умолчанию единая цена в price ниже, та же логика,
+      // что options у "fixed" выше, только с name вместо durationMinutes
+      // (у "per_minute" нет естественной длительности-подписи).
+      if (Array.isArray(options) && options.length > 0) {
+        for (const opt of options) {
+          const o = opt as { name?: unknown; price?: unknown };
+          const nm = typeof o?.name === "string" ? o.name.trim() : "";
+          const p = Number(o?.price);
+          if (!nm || !Number.isFinite(p) || p < 0) {
+            return NextResponse.json({ error: "Некорректный вариант тарифа" }, { status: 400 });
+          }
+          optionsData.push({ durationMinutes: 0, price: p, order: optionsData.length, name: nm });
+        }
+      } else {
+        priceNumber = Number(price);
+        if (!Number.isFinite(priceNumber) || priceNumber < 0) {
+          return NextResponse.json({ error: "Некорректная цена" }, { status: 400 });
+        }
       }
     }
   } else {

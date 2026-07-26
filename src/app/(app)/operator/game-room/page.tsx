@@ -30,6 +30,8 @@ interface AssetTariffOption {
   id: string;
   durationMinutes: number;
   price: number;
+  // Только "per_minute" — название ставки ("Будни"/"Выходные"), null у "fixed".
+  name: string | null;
 }
 
 interface AssetTariffCtx {
@@ -121,7 +123,7 @@ export default function StaysZonePage() {
   // пользователя 2026-07-17: "надо сразу при старте... в одном"), цена
   // известна заранее — оплата берётся сразу, а не при возврате браслета
   // (в отличие от "По факту", там способ оплаты спрашивается при остановке).
-  const [addFlow, setAddFlow] = useState<{ stage: "duration" | "payment"; optionId?: string } | null>(null);
+  const [addFlow, setAddFlow] = useState<{ stage: "duration" | "rate" | "payment"; optionId?: string } | null>(null);
 
   // Подтверждение остановки "Точно?" — прямо внутри тайла браслета, без
   // отдельного sheet (запрос пользователя 2026-07-17: "вопрос 'Точно'
@@ -328,6 +330,16 @@ export default function StaysZonePage() {
     return tariff?.pricingMode === "fixed" ? tariff.options : [];
   }
 
+  // Несколько именованных ставок "По факту" (запрос пользователя 2026-07-26:
+  // "в выходные один тариф, в будние другой") — та же логика выбора, что у
+  // "За вход" выше: с одним вариантом старт мгновенный (вариант подставляется
+  // автоматически), с несколькими — оператор выбирает. Тариф без вариантов
+  // (все "По факту" до этой фичи) продолжает работать как раньше — вообще
+  // без этого шага.
+  function rateOptions(tariff: AssetTariffCtx | null): AssetTariffOption[] {
+    return tariff?.pricingMode === "per_minute" ? tariff.options : [];
+  }
+
   async function startLaunch(
     optionId?: string,
     paymentMethod?: "cash" | "mobile" | "abonement",
@@ -470,6 +482,7 @@ export default function StaysZonePage() {
   const filterZone = zones.find((z) => z.id === zoneFilter) ?? null;
   const selectedLaunches = selectedAssetId ? launchesByAsset.get(selectedAssetId) ?? [] : [];
   const selectedOptions = fixedOptions(selectedAsset?.tariff ?? null);
+  const selectedRateOptions = rateOptions(selectedAsset?.tariff ?? null);
 
   function handleAddTap() {
     if (!selectedAsset || !selectedAsset.active || !selectedAsset.tariff) return;
@@ -479,9 +492,15 @@ export default function StaysZonePage() {
       );
       return;
     }
-    // "По факту" — старт мгновенный, способ оплаты спросится при остановке
-    // (сумма известна только тогда), см. stopLaunch.
-    startLaunch();
+    // "По факту" — способ оплаты спросится при остановке (сумма известна
+    // только тогда), см. stopLaunch. Ставка — если у тарифа несколько
+    // именованных вариантов, оператор выбирает при старте (та же механика,
+    // что у "За вход" длительностей); с одним/без вариантов — старт мгновенный.
+    if (selectedRateOptions.length > 1) {
+      setAddFlow({ stage: "rate" });
+      return;
+    }
+    startLaunch(selectedRateOptions[0]?.id);
   }
 
   const addDisabled = starting || !selectedAsset?.active || !selectedAsset?.tariff;
@@ -796,9 +815,28 @@ export default function StaysZonePage() {
                     disabled={starting}
                     onClick={() => setAddFlow({ stage: "payment", optionId: opt.id })}
                   >
-                    <span>
-                      {opt.durationMinutes} {t.operatorApp.workTime.minutesShort}
-                    </span>
+                    <span>{opt.name ?? `${opt.durationMinutes} ${t.operatorApp.workTime.minutesShort}`}</span>
+                    <Money value={opt.price} />
+                  </Button>
+                </PressableScale>
+              ))}
+            </div>
+          </div>
+        )}
+        {addFlow?.stage === "rate" && (
+          <div className="flex flex-col gap-3 pt-2">
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.gameRoom.pickRateTitle}</h2>
+            <div className="flex flex-col gap-2">
+              {selectedRateOptions.map((opt) => (
+                <PressableScale key={opt.id}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-12 w-full justify-between font-semibold"
+                    disabled={starting}
+                    onClick={() => startLaunch(opt.id)}
+                  >
+                    <span>{opt.name}</span>
                     <Money value={opt.price} />
                   </Button>
                 </PressableScale>

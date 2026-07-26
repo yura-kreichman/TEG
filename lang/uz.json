@@ -770,11 +770,16 @@
     "gameRoomRateLabel": "Bo'lish daqiqasining narxi",
     "gameRoomRateHint": "Masalan: 1 ₽ — 45 daqiqa bo'lish 45 ₽ turadi.",
     "gameRoomOptionsLabel": "Variantlar",
+    "gameRoomOptionNamePlaceholder": "Nomi (masalan, 1 soat)",
     "gameRoomOptionDurationPlaceholder": "Daqiqa",
     "gameRoomOptionPricePlaceholder": "Narx",
     "gameRoomAddOptionButton": "Variant qo'shish",
     "gameRoomRemoveOptionLabel": "Variantni o'chirish",
-    "gameRoomRoundingUpNote": "Davomiyligi toʻliq daqiqagacha yuqoriga yaxlitlanadi — nuqta toʻliq boʻlmagan daqiqalarda yoʻqotmaydi."
+    "gameRoomRoundingUpNote": "Davomiyligi toʻliq daqiqagacha yuqoriga yaxlitlanadi — nuqta toʻliq boʻlmagan daqiqalarda yoʻqotmaydi.",
+    "gameRoomRateOptionsLabel": "Tariflar",
+    "gameRoomRateOptionNamePlaceholder": "Nomi (masalan, Ish kunlari)",
+    "gameRoomAddRateVariantButton": "Yana tarif qo'shish",
+    "gameRoomUseSingleRateButton": "Bitta narxga qaytish"
   },
   "abonements": {
     "title": "Abonementlar",
@@ -1158,6 +1163,7 @@
       "printReceiptButton": "Kvitansiyani chop etish",
       "addWristbandLabel": "Bilaguzuk qo'shish",
       "pickOptionTitle": "Variant tanlang",
+      "pickRateTitle": "Tarifni tanlang",
       "paymentMethodTitle": "To'lov usuli",
       "stopConfirmQuestion": "Aniqmi?",
       "stopConfirmButton": "Yakunlash",

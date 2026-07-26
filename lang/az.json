@@ -770,11 +770,16 @@
     "gameRoomRateLabel": "Qalma dəqiqəsinin qiyməti",
     "gameRoomRateHint": "Məsələn: 1 ₽ — 45 dəqiqə qalma 45 ₽-ə başa gələcək.",
     "gameRoomOptionsLabel": "Variantlar",
+    "gameRoomOptionNamePlaceholder": "Ad (məsələn, 1 saat)",
     "gameRoomOptionDurationPlaceholder": "Dəqiqə",
     "gameRoomOptionPricePlaceholder": "Qiymət",
     "gameRoomAddOptionButton": "Variant əlavə et",
     "gameRoomRemoveOptionLabel": "Variantı sil",
-    "gameRoomRoundingUpNote": "Müddət tam dəqiqəyə qədər yuxarı yuvarlaqlaşdırılır — nöqtə natamam dəqiqələrdə itirmir."
+    "gameRoomRoundingUpNote": "Müddət tam dəqiqəyə qədər yuxarı yuvarlaqlaşdırılır — nöqtə natamam dəqiqələrdə itirmir.",
+    "gameRoomRateOptionsLabel": "Tariflər",
+    "gameRoomRateOptionNamePlaceholder": "Ad (məsələn, İş günləri)",
+    "gameRoomAddRateVariantButton": "Başqa tarif əlavə et",
+    "gameRoomUseSingleRateButton": "Tək qiymətə qayıt"
   },
   "abonements": {
     "title": "Abonementlər",
@@ -1158,6 +1163,7 @@
       "printReceiptButton": "Qəbzi çap et",
       "addWristbandLabel": "Bilərzik əlavə et",
       "pickOptionTitle": "Variant seçin",
+      "pickRateTitle": "Tarif seçin",
       "paymentMethodTitle": "Ödəniş üsulu",
       "stopConfirmQuestion": "Əminsiniz?",
       "stopConfirmButton": "Bitir",

@@ -770,11 +770,16 @@
     "gameRoomRateLabel": "Ціна за хвилину перебування",
     "gameRoomRateHint": "Наприклад: 1 ₽ — 45 хвилин перебування коштуватимуть 45 ₽.",
     "gameRoomOptionsLabel": "Варіанти",
+    "gameRoomOptionNamePlaceholder": "Назва (наприклад, 1 година)",
     "gameRoomOptionDurationPlaceholder": "Хвилин",
     "gameRoomOptionPricePlaceholder": "Ціна",
     "gameRoomAddOptionButton": "Додати варіант",
     "gameRoomRemoveOptionLabel": "Видалити варіант",
-    "gameRoomRoundingUpNote": "Тривалість округляється вгору до повної хвилини — точка не втрачає на неповних хвилинах."
+    "gameRoomRoundingUpNote": "Тривалість округляється вгору до повної хвилини — точка не втрачає на неповних хвилинах.",
+    "gameRoomRateOptionsLabel": "Ставки",
+    "gameRoomRateOptionNamePlaceholder": "Назва (наприклад, Будні)",
+    "gameRoomAddRateVariantButton": "Додати ще тариф",
+    "gameRoomUseSingleRateButton": "Повернутися до однієї ціни"
   },
   "abonements": {
     "title": "Абонементи",
@@ -1158,6 +1163,7 @@
       "printReceiptButton": "Друкувати квитанцію",
       "addWristbandLabel": "Додати браслет",
       "pickOptionTitle": "Виберіть варіант",
+      "pickRateTitle": "Виберіть тариф",
       "paymentMethodTitle": "Спосіб оплати",
       "stopConfirmQuestion": "Точно?",
       "stopConfirmButton": "Завершити",

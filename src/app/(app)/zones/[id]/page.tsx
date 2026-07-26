@@ -70,15 +70,22 @@ interface TariffOptionInfo {
   id: string;
   durationMinutes: number;
   price: string;
+  // Только "per_minute" — название ставки ("Будни"/"Выходные"), null у "fixed".
+  name: string | null;
 }
 
 // Черновик редактируемого варианта "За вход" в форме (строковые поля инпутов,
-// не число) — до сохранения не привязан к id TariffOption.
+// не число) — до сохранения не привязан к id TariffOption. name — отдельное
+// текстовое название (запрос пользователя 2026-07-26: "в Тарифах независимо
+// от опции учёта у каждого должно быть название" — то же требование, что и
+// у именованных ставок "По факту" ниже), не заменяет durationMinutes —
+// длительность по-прежнему нужна отдельно (таймер обратного отсчёта пуска).
 interface OptionDraft {
+  name: string;
   durationMinutes: string;
   price: string;
 }
-const EMPTY_OPTION: OptionDraft = { durationMinutes: "", price: "" };
+const EMPTY_OPTION: OptionDraft = { name: "", durationMinutes: "", price: "" };
 
 // Список вариантов "За вход" (длительность+цена) в форме тарифа — можно
 // добавлять/удалять/редактировать (запрос пользователя 2026-07-17: "1 час,
@@ -101,15 +108,103 @@ function TariffOptionsEditor({
     <div className="flex flex-col gap-2">
       <Label>{t.zoneDetail.gameRoomOptionsLabel}</Label>
       {options.map((opt, index) => (
+        <div key={index} className="flex flex-col gap-2 rounded-control border border-border p-2">
+          <div className="flex items-center gap-2">
+            <Input
+              required
+              placeholder={t.zoneDetail.gameRoomOptionNamePlaceholder}
+              value={opt.name}
+              onChange={(e) => update(index, { name: e.target.value })}
+              className="flex-1"
+            />
+            {options.length > 1 && (
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label={t.zoneDetail.gameRoomRemoveOptionLabel}
+                  onClick={() => onChange(options.filter((_, i) => i !== index))}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </PressableScale>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              inputMode="numeric"
+              min="1"
+              required
+              placeholder={t.zoneDetail.gameRoomOptionDurationPlaceholder}
+              value={opt.durationMinutes}
+              onChange={(e) => update(index, { durationMinutes: e.target.value })}
+              className="flex-1"
+            />
+            <MoneyInput
+              required
+              placeholder={t.zoneDetail.gameRoomOptionPricePlaceholder}
+              value={opt.price}
+              onChange={(e) => update(index, { price: e.target.value })}
+              className="flex-1"
+            />
+          </div>
+        </div>
+      ))}
+      <PressableScale className="w-fit">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => onChange([...options, EMPTY_OPTION])}
+        >
+          <Plus className="size-4" />
+          {t.zoneDetail.gameRoomAddOptionButton}
+        </Button>
+      </PressableScale>
+    </div>
+  );
+}
+
+// Черновик именованной ставки "По факту" (запрос пользователя 2026-07-26:
+// "в выходные один тариф, в будние другой" — оператор выбирает нужную
+// ставку при старте пуска, та же механика, что TariffOptionsEditor у "За
+// вход" выше, только name вместо длительности — у "per_minute" нет
+// естественной длительности-подписи).
+interface RateOptionDraft {
+  name: string;
+  price: string;
+}
+const EMPTY_RATE_OPTION: RateOptionDraft = { name: "", price: "" };
+
+// Список именованных ставок "По факту" — необязательный: тариф без единого
+// варианта продолжает работать по-старому, одной ценой (см. RateOptionsField
+// ниже, это редактор только для случая "уже добавили хотя бы один вариант").
+function RateOptionsEditor({
+  options,
+  onChange,
+}: {
+  options: RateOptionDraft[];
+  onChange: (next: RateOptionDraft[]) => void;
+}) {
+  const t = useI18n();
+
+  function update(index: number, patch: Partial<RateOptionDraft>) {
+    onChange(options.map((o, i) => (i === index ? { ...o, ...patch } : o)));
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Label>{t.zoneDetail.gameRoomRateOptionsLabel}</Label>
+      {options.map((opt, index) => (
         <div key={index} className="flex items-center gap-2">
           <Input
-            type="number"
-            inputMode="numeric"
-            min="1"
             required
-            placeholder={t.zoneDetail.gameRoomOptionDurationPlaceholder}
-            value={opt.durationMinutes}
-            onChange={(e) => update(index, { durationMinutes: e.target.value })}
+            placeholder={t.zoneDetail.gameRoomRateOptionNamePlaceholder}
+            value={opt.name}
+            onChange={(e) => update(index, { name: e.target.value })}
             className="flex-1"
           />
           <MoneyInput
@@ -134,18 +229,20 @@ function TariffOptionsEditor({
           )}
         </div>
       ))}
-      <PressableScale className="w-fit">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={() => onChange([...options, EMPTY_OPTION])}
-        >
-          <Plus className="size-4" />
-          {t.zoneDetail.gameRoomAddOptionButton}
-        </Button>
-      </PressableScale>
+      <div className="flex items-center gap-3">
+        <PressableScale className="w-fit">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => onChange([...options, EMPTY_RATE_OPTION])}
+          >
+            <Plus className="size-4" />
+            {t.zoneDetail.gameRoomAddOptionButton}
+          </Button>
+        </PressableScale>
+      </div>
     </div>
   );
 }
@@ -258,6 +355,11 @@ export default function ZoneDetailPage() {
   // старте пуска, можно добавлять/удалять/редактировать варианты).
   const [tariffPricingMode, setTariffPricingMode] = useState<"fixed" | "per_minute">("fixed");
   const [tariffOptions, setTariffOptions] = useState<OptionDraft[]>([EMPTY_OPTION]);
+  // Именованные ставки "По факту" (запрос пользователя 2026-07-26) —
+  // необязательные, пусто по умолчанию: тариф сохраняется одной ценой
+  // (tariffPrice), как раньше, пока владелец явно не нажмёт "добавить ещё
+  // тариф" ниже.
+  const [tariffRateOptions, setTariffRateOptions] = useState<RateOptionDraft[]>([]);
 
   const [tariffKebab, setTariffKebab] = useState<TariffInfo | null>(null);
   const [tariffKebabView, setTariffKebabView] = useState<TariffKebabView>("edit");
@@ -269,6 +371,7 @@ export default function ZoneDetailPage() {
   const { saved: tariffDeleted, pulse: tariffDeletePulse } = useSavePulse();
   const [editTariffPricingMode, setEditTariffPricingMode] = useState<"fixed" | "per_minute">("fixed");
   const [editTariffOptions, setEditTariffOptions] = useState<OptionDraft[]>([EMPTY_OPTION]);
+  const [editTariffRateOptions, setEditTariffRateOptions] = useState<RateOptionDraft[]>([]);
 
   const [createAssetOpen, setCreateAssetOpen] = useState(false);
   const [assetName, setAssetName] = useState("");
@@ -474,7 +577,12 @@ export default function ZoneDetailPage() {
         ...(zone && isStaysZone(zone)
           ? {
               pricingMode: tariffPricingMode,
-              options: tariffPricingMode === "fixed" ? tariffOptions : undefined,
+              options:
+                tariffPricingMode === "fixed"
+                  ? tariffOptions
+                  : tariffRateOptions.length > 0
+                    ? tariffRateOptions
+                    : undefined,
             }
           : {}),
       }),
@@ -490,6 +598,7 @@ export default function ZoneDetailPage() {
       setTariffPrice("");
       setTariffPricingMode("fixed");
       setTariffOptions([EMPTY_OPTION]);
+      setTariffRateOptions([]);
       setCreateTariffOpen(false);
     });
   }
@@ -502,9 +611,14 @@ export default function ZoneDetailPage() {
     setEditTariffError(null);
     setEditTariffPricingMode(tariff.pricingMode ?? "fixed");
     setEditTariffOptions(
-      tariff.options.length > 0
-        ? tariff.options.map((o) => ({ durationMinutes: String(o.durationMinutes), price: o.price }))
+      tariff.pricingMode === "fixed" && tariff.options.length > 0
+        ? tariff.options.map((o) => ({ name: o.name ?? "", durationMinutes: String(o.durationMinutes), price: o.price }))
         : [EMPTY_OPTION]
+    );
+    setEditTariffRateOptions(
+      tariff.pricingMode === "per_minute" && tariff.options.length > 0
+        ? tariff.options.map((o) => ({ name: o.name ?? "", price: o.price }))
+        : []
     );
   }
 
@@ -526,7 +640,12 @@ export default function ZoneDetailPage() {
         ...(zone && isStaysZone(zone)
           ? {
               pricingMode: editTariffPricingMode,
-              options: editTariffPricingMode === "fixed" ? editTariffOptions : undefined,
+              options:
+                editTariffPricingMode === "fixed"
+                  ? editTariffOptions
+                  : editTariffRateOptions.length > 0
+                    ? editTariffRateOptions
+                    : [],
             }
           : {}),
       }),
@@ -861,12 +980,14 @@ export default function ZoneDetailPage() {
       const list = tariff.options
         .map(
           (o) =>
-            `${o.durationMinutes} ${t.operatorApp.workTime.minutesShort} — ${formatMoney(Number(o.price), locale)}${currencySign ?? ""}`
+            `${o.name ?? `${o.durationMinutes} ${t.operatorApp.workTime.minutesShort}`} — ${formatMoney(Number(o.price), locale)}${currencySign ?? ""}`
         )
         .join(", ");
       return `${t.zoneDetail.gameRoomPricingModeFixed} · ${list}`;
     }
-    return t.zoneDetail.gameRoomPricingModePerMinute;
+    if (tariff.options.length === 0) return t.zoneDetail.gameRoomPricingModePerMinute;
+    const list = tariff.options.map((o) => `${o.name} — ${formatMoney(Number(o.price), locale)}${currencySign ?? ""}`).join(", ");
+    return `${t.zoneDetail.gameRoomPricingModePerMinute} · ${list}`;
   }
 
   const HeaderModeIcon = ACCOUNTING_MODE_ICON[zone.accountingMode];
@@ -1333,12 +1454,23 @@ export default function ZoneDetailPage() {
             <Label htmlFor="tariffName">{t.zoneDetail.tariffNameLabel}</Label>
             <Input id="tariffName" value={tariffName} onChange={(e) => setTariffName(e.target.value)} required />
           </div>
-          {!(isStaysZone(zone) && tariffPricingMode === "fixed") && (
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="tariffPrice">
-                {isStaysZone(zone) ? t.zoneDetail.gameRoomRateLabel : t.zoneDetail.tariffPriceLabel}
-              </Label>
-              {isStaysZone(zone) && tariffPricingMode === "per_minute" ? (
+          {isStaysZone(zone) && (
+            <SegmentedTabs
+              shape="control"
+              options={[
+                { key: "fixed" as const, label: t.zoneDetail.gameRoomPricingModeFixed },
+                { key: "per_minute" as const, label: t.zoneDetail.gameRoomPricingModePerMinute },
+              ]}
+              value={tariffPricingMode}
+              onChange={setTariffPricingMode}
+            />
+          )}
+          {!(isStaysZone(zone) && tariffPricingMode === "fixed") &&
+            !(isStaysZone(zone) && tariffPricingMode === "per_minute" && tariffRateOptions.length > 0) && (
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="tariffPrice">
+                  {isStaysZone(zone) ? t.zoneDetail.gameRoomRateLabel : t.zoneDetail.tariffPriceLabel}
+                </Label>
                 <div className="flex items-center gap-2">
                   <MoneyInput
                     id="tariffPrice"
@@ -1355,53 +1487,56 @@ export default function ZoneDetailPage() {
                     <SaveButton type="submit" className="h-14 text-base font-bold" saved={addTariffSaved} />
                   </PressableScale>
                 </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <MoneyInput
-                    id="tariffPrice"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    scale="lg"
-                    className="h-14 flex-1 border-2 text-lg"
-                    value={tariffPrice}
-                    onChange={(e) => setTariffPrice(e.target.value)}
-                    required
-                  />
-                  <PressableScale>
-                    <SaveButton type="submit" className="h-14 text-base font-bold" saved={addTariffSaved} />
-                  </PressableScale>
-                </div>
-              )}
-              {isStaysZone(zone) && tariffPricingMode === "per_minute" && (
-                <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomRateHint}</p>
-              )}
+                {isStaysZone(zone) && tariffPricingMode === "per_minute" && (
+                  <>
+                    <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomRateHint}</p>
+                    <PressableScale className="w-fit">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => setTariffRateOptions([{ ...EMPTY_RATE_OPTION, price: tariffPrice }, EMPTY_RATE_OPTION])}
+                      >
+                        <Plus className="size-4" />
+                        {t.zoneDetail.gameRoomAddRateVariantButton}
+                      </Button>
+                    </PressableScale>
+                  </>
+                )}
+              </div>
+            )}
+          {isStaysZone(zone) && tariffPricingMode === "per_minute" && tariffRateOptions.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <RateOptionsEditor options={tariffRateOptions} onChange={setTariffRateOptions} />
+              <PressableScale className="w-fit">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto px-0 text-muted-foreground underline underline-offset-2"
+                  onClick={() => setTariffRateOptions([])}
+                >
+                  {t.zoneDetail.gameRoomUseSingleRateButton}
+                </Button>
+              </PressableScale>
             </div>
           )}
-          {isStaysZone(zone) && (
-            <>
-              <SegmentedTabs
-                shape="control"
-                options={[
-                  { key: "fixed" as const, label: t.zoneDetail.gameRoomPricingModeFixed },
-                  { key: "per_minute" as const, label: t.zoneDetail.gameRoomPricingModePerMinute },
-                ]}
-                value={tariffPricingMode}
-                onChange={setTariffPricingMode}
-              />
-              {tariffPricingMode === "fixed" ? (
-                <TariffOptionsEditor options={tariffOptions} onChange={setTariffOptions} />
-              ) : (
+          {isStaysZone(zone) &&
+            (tariffPricingMode === "fixed" ? (
+              <TariffOptionsEditor options={tariffOptions} onChange={setTariffOptions} />
+            ) : (
+              tariffRateOptions.length === 0 && (
                 <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomRoundingUpNote}</p>
-              )}
-            </>
-          )}
+              )
+            ))}
           {tariffError && <p className="text-sm text-destructive">{tariffError}</p>}
-          {isStaysZone(zone) && tariffPricingMode === "fixed" && (
-            <PressableScale>
-              <SaveButton type="submit" className="h-12 w-full" saved={addTariffSaved} />
-            </PressableScale>
-          )}
+          {isStaysZone(zone) &&
+            (tariffPricingMode === "fixed" || (tariffPricingMode === "per_minute" && tariffRateOptions.length > 0)) && (
+              <PressableScale>
+                <SaveButton type="submit" className="h-12 w-full" saved={addTariffSaved} />
+              </PressableScale>
+            )}
         </form>
       </BottomSheet>
 
@@ -1424,12 +1559,12 @@ export default function ZoneDetailPage() {
                 onChange={setEditTariffPricingMode}
               />
             )}
-            {!(isStaysZone(zone) && editTariffPricingMode === "fixed") && (
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="editTariffPrice">
-                  {isStaysZone(zone) ? t.zoneDetail.gameRoomRateLabel : t.zoneDetail.tariffPriceLabel}
-                </Label>
-                {isStaysZone(zone) && editTariffPricingMode === "per_minute" ? (
+            {!(isStaysZone(zone) && editTariffPricingMode === "fixed") &&
+              !(isStaysZone(zone) && editTariffPricingMode === "per_minute" && editTariffRateOptions.length > 0) && (
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="editTariffPrice">
+                    {isStaysZone(zone) ? t.zoneDetail.gameRoomRateLabel : t.zoneDetail.tariffPriceLabel}
+                  </Label>
                   <div className="flex items-center gap-2">
                     <MoneyInput
                       id="editTariffPrice"
@@ -1449,44 +1584,58 @@ export default function ZoneDetailPage() {
                       />
                     </PressableScale>
                   </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <MoneyInput
-                      id="editTariffPrice"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      scale="lg"
-                      className="h-14 flex-1 border-2 text-lg"
-                      value={editTariffPrice}
-                      onChange={(e) => setEditTariffPrice(e.target.value)}
-                    />
-                    <PressableScale>
-                      <SaveButton
-                        className="h-14 text-base font-bold"
-                        onClick={confirmEditTariff}
-                        saved={editTariffSaved}
-                      />
-                    </PressableScale>
-                  </div>
-                )}
-                {isStaysZone(zone) && editTariffPricingMode === "per_minute" && (
-                  <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomRateHint}</p>
-                )}
+                  {isStaysZone(zone) && editTariffPricingMode === "per_minute" && (
+                    <>
+                      <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomRateHint}</p>
+                      <PressableScale className="w-fit">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() =>
+                            setEditTariffRateOptions([{ ...EMPTY_RATE_OPTION, price: editTariffPrice }, EMPTY_RATE_OPTION])
+                          }
+                        >
+                          <Plus className="size-4" />
+                          {t.zoneDetail.gameRoomAddRateVariantButton}
+                        </Button>
+                      </PressableScale>
+                    </>
+                  )}
+                </div>
+              )}
+            {isStaysZone(zone) && editTariffPricingMode === "per_minute" && editTariffRateOptions.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <RateOptionsEditor options={editTariffRateOptions} onChange={setEditTariffRateOptions} />
+                <PressableScale className="w-fit">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto px-0 text-muted-foreground underline underline-offset-2"
+                    onClick={() => setEditTariffRateOptions([])}
+                  >
+                    {t.zoneDetail.gameRoomUseSingleRateButton}
+                  </Button>
+                </PressableScale>
               </div>
             )}
             {isStaysZone(zone) &&
               (editTariffPricingMode === "fixed" ? (
                 <TariffOptionsEditor options={editTariffOptions} onChange={setEditTariffOptions} />
               ) : (
-                <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomRoundingUpNote}</p>
+                editTariffRateOptions.length === 0 && (
+                  <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomRoundingUpNote}</p>
+                )
               ))}
             {editTariffError && <p className="text-sm text-destructive">{editTariffError}</p>}
-            {isStaysZone(zone) && editTariffPricingMode === "fixed" && (
-              <PressableScale>
-                <SaveButton className="h-12 w-full" onClick={confirmEditTariff} saved={editTariffSaved} />
-              </PressableScale>
-            )}
+            {isStaysZone(zone) &&
+              (editTariffPricingMode === "fixed" || (editTariffPricingMode === "per_minute" && editTariffRateOptions.length > 0)) && (
+                <PressableScale>
+                  <SaveButton className="h-12 w-full" onClick={confirmEditTariff} saved={editTariffSaved} />
+                </PressableScale>
+              )}
           </div>
         )}
         {tariffKebab && tariffKebabView === "confirm-delete" && (

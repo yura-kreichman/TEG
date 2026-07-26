@@ -138,6 +138,23 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
         return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
       }
     }
+  } else if (pricingMode === "per_minute") {
+    // Несколько именованных ставок на тариф (запрос пользователя 2026-07-26:
+    // "в выходные один тариф, в будние другой") — выбор оператора при старте,
+    // та же механика, что у "fixed" выше. Тариф без вариантов (все
+    // существующие "По факту" до этой фичи) продолжает работать как раньше —
+    // единая ставка pricing.price, без выбора.
+    const rateOptions = await prisma.tariffOption.findMany({ where: { tariffId: pricing.id } });
+    if (rateOptions.length > 0) {
+      if (!optionId) {
+        return NextResponse.json({ error: "Выберите тариф" }, { status: 400 });
+      }
+      const option = rateOptions.find((o) => o.id === optionId);
+      if (!option) {
+        return NextResponse.json({ error: "Вариант тарифа не найден" }, { status: 400 });
+      }
+      priceSnapshot = option.price;
+    }
   }
 
   const openCount = await countOpenLaunches(assetId);

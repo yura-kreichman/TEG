@@ -770,11 +770,16 @@
     "gameRoomRateLabel": "Болуунун бир мүнөтүнүн баасы",
     "gameRoomRateHint": "Мисалы: 1 ₽ — 45 мүнөт болуу 45 ₽ турат.",
     "gameRoomOptionsLabel": "Варианттар",
+    "gameRoomOptionNamePlaceholder": "Аты (мисалы, 1 саат)",
     "gameRoomOptionDurationPlaceholder": "Мүнөт",
     "gameRoomOptionPricePlaceholder": "Баа",
     "gameRoomAddOptionButton": "Вариант кошуу",
     "gameRoomRemoveOptionLabel": "Вариантты өчүрүү",
-    "gameRoomRoundingUpNote": "Узактыгы толук мүнөткө чейин жогору тегеректелет — пункт толук эмес мүнөттөрдө утулбайт."
+    "gameRoomRoundingUpNote": "Узактыгы толук мүнөткө чейин жогору тегеректелет — пункт толук эмес мүнөттөрдө утулбайт.",
+    "gameRoomRateOptionsLabel": "Тарифтер",
+    "gameRoomRateOptionNamePlaceholder": "Аты (мисалы, Жумуш күндөрү)",
+    "gameRoomAddRateVariantButton": "Дагы бир тариф кошуу",
+    "gameRoomUseSingleRateButton": "Бир баага кайтуу"
   },
   "abonements": {
     "title": "Абонементтер",
@@ -1158,6 +1163,7 @@
       "printReceiptButton": "Квитанцияны басып чыгаруу",
       "addWristbandLabel": "Билерик кошуу",
       "pickOptionTitle": "Вариант тандаңыз",
+      "pickRateTitle": "Тарифти тандаңыз",
       "paymentMethodTitle": "Төлөм ыкмасы",
       "stopConfirmQuestion": "Ырас бекен?",
       "stopConfirmButton": "Аяктоо",

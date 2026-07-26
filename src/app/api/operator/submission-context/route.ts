@@ -141,7 +141,12 @@ export async function GET() {
               if (!tf) return null;
               return {
                 pricingMode: tf.pricingMode,
-                options: tf.options.map((o) => ({ id: o.id, durationMinutes: o.durationMinutes, price: Number(o.price) })),
+                options: tf.options.map((o) => ({
+                  id: o.id,
+                  durationMinutes: o.durationMinutes,
+                  price: Number(o.price),
+                  name: o.name,
+                })),
               };
             })(),
           }

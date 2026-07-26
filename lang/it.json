@@ -770,11 +770,16 @@
     "gameRoomRateLabel": "Prezzo al minuto di permanenza",
     "gameRoomRateHint": "Esempio: 1 ₽ — 45 minuti di permanenza costeranno 45 ₽.",
     "gameRoomOptionsLabel": "Opzioni",
+    "gameRoomOptionNamePlaceholder": "Nome (es. 1 ora)",
     "gameRoomOptionDurationPlaceholder": "Minuti",
     "gameRoomOptionPricePlaceholder": "Prezzo",
     "gameRoomAddOptionButton": "Aggiungi opzione",
     "gameRoomRemoveOptionLabel": "Rimuovi opzione",
-    "gameRoomRoundingUpNote": "La durata viene arrotondata per eccesso al minuto intero — il punto non perde sui minuti parziali."
+    "gameRoomRoundingUpNote": "La durata viene arrotondata per eccesso al minuto intero — il punto non perde sui minuti parziali.",
+    "gameRoomRateOptionsLabel": "Tariffe",
+    "gameRoomRateOptionNamePlaceholder": "Nome (es. Giorni feriali)",
+    "gameRoomAddRateVariantButton": "Aggiungi un'altra tariffa",
+    "gameRoomUseSingleRateButton": "Torna a un prezzo unico"
   },
   "abonements": {
     "title": "Abbonamenti",
@@ -1158,6 +1163,7 @@
       "printReceiptButton": "Stampa ricevuta",
       "addWristbandLabel": "Aggiungi braccialetto",
       "pickOptionTitle": "Scegli un'opzione",
+      "pickRateTitle": "Scegli una tariffa",
       "paymentMethodTitle": "Metodo di pagamento",
       "stopConfirmQuestion": "Sicuro?",
       "stopConfirmButton": "Termina",

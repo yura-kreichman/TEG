@@ -39,7 +39,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tariffs/[i
   // опции"), проще, чем точечный diff по id, и достаточно для реалистичных
   // 2-4 вариантов на тариф. undefined — не трогать options вообще (например,
   // PATCH только name).
-  let optionsData: { durationMinutes: number; price: number; order: number }[] | undefined;
+  let optionsData: { durationMinutes: number; price: number; order: number; name?: string }[] | undefined;
 
   if (name !== undefined) {
     if (typeof name !== "string" || name.trim().length === 0) {
@@ -65,13 +65,14 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tariffs/[i
       }
       optionsData = [];
       for (const opt of options) {
-        const o = opt as { durationMinutes?: unknown; price?: unknown };
+        const o = opt as { name?: unknown; durationMinutes?: unknown; price?: unknown };
+        const nm = typeof o?.name === "string" ? o.name.trim() : "";
         const d = Number(o?.durationMinutes);
         const p = Number(o?.price);
-        if (!Number.isFinite(d) || d <= 0 || !Number.isFinite(p) || p < 0) {
+        if (!nm || !Number.isFinite(d) || d <= 0 || !Number.isFinite(p) || p < 0) {
           return NextResponse.json({ error: "Некорректный вариант тарифа" }, { status: 400 });
         }
-        optionsData.push({ durationMinutes: Math.round(d), price: p, order: optionsData.length });
+        optionsData.push({ durationMinutes: Math.round(d), price: p, order: optionsData.length, name: nm });
       }
       data.roundingMode = null;
       data.minAmount = null;
@@ -81,13 +82,32 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tariffs/[i
       // "вообще не нужна, это лишнее") — всегда null у "По факту".
       data.roundingMode = "up";
       data.minAmount = null;
-      optionsData = [];
-      if (price !== undefined) {
-        const numericPrice = Number(price);
-        if (!Number.isFinite(numericPrice) || numericPrice < 0) {
-          return NextResponse.json({ error: "Некорректная цена" }, { status: 400 });
+      // Несколько именованных ставок (запрос пользователя 2026-07-26) — та же
+      // логика создания выше (POST .../tariffs): options непустой массив
+      // переключает тариф в режим списка ставок, иначе — обычная одна цена
+      // в price, как раньше (обратная совместимость с уже существующими
+      // тарифами "По факту" без вариантов).
+      if (Array.isArray(options) && options.length > 0) {
+        optionsData = [];
+        for (const opt of options) {
+          const o = opt as { name?: unknown; price?: unknown };
+          const nm = typeof o?.name === "string" ? o.name.trim() : "";
+          const p = Number(o?.price);
+          if (!nm || !Number.isFinite(p) || p < 0) {
+            return NextResponse.json({ error: "Некорректный вариант тарифа" }, { status: 400 });
+          }
+          optionsData.push({ durationMinutes: 0, price: p, order: optionsData.length, name: nm });
         }
-        data.price = String(price);
+        data.price = "0";
+      } else {
+        optionsData = [];
+        if (price !== undefined) {
+          const numericPrice = Number(price);
+          if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+            return NextResponse.json({ error: "Некорректная цена" }, { status: 400 });
+          }
+          data.price = String(price);
+        }
       }
     }
   } else if (price !== undefined) {

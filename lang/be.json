@@ -770,11 +770,16 @@
     "gameRoomRateLabel": "Цана за хвіліну знаходжання",
     "gameRoomRateHint": "Напрыклад: 1 ₽ — 45 хвілін знаходжання будуць каштаваць 45 ₽.",
     "gameRoomOptionsLabel": "Варыянты",
+    "gameRoomOptionNamePlaceholder": "Назва (напрыклад, 1 гадзіна)",
     "gameRoomOptionDurationPlaceholder": "Хвілін",
     "gameRoomOptionPricePlaceholder": "Цана",
     "gameRoomAddOptionButton": "Дадаць варыянт",
     "gameRoomRemoveOptionLabel": "Выдаліць варыянт",
-    "gameRoomRoundingUpNote": "Працягласць акругляецца ўверх да поўнай хвіліны — кропка не губляе на няпоўных хвілінах."
+    "gameRoomRoundingUpNote": "Працягласць акругляецца ўверх да поўнай хвіліны — кропка не губляе на няпоўных хвілінах.",
+    "gameRoomRateOptionsLabel": "Стаўкі",
+    "gameRoomRateOptionNamePlaceholder": "Назва (напрыклад, Будні)",
+    "gameRoomAddRateVariantButton": "Дадаць яшчэ тарыф",
+    "gameRoomUseSingleRateButton": "Вярнуцца да адной цаны"
   },
   "abonements": {
     "title": "Абанементы",
@@ -1158,6 +1163,7 @@
       "printReceiptButton": "Друкаваць квітанцыю",
       "addWristbandLabel": "Дадаць бранзалет",
       "pickOptionTitle": "Выберыце варыянт",
+      "pickRateTitle": "Выберыце тарыф",
       "paymentMethodTitle": "Спосаб аплаты",
       "stopConfirmQuestion": "Дакладна?",
       "stopConfirmButton": "Завяршыць",

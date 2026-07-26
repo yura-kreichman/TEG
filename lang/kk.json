@@ -770,11 +770,16 @@
     "gameRoomRateLabel": "Болу минутының бағасы",
     "gameRoomRateHint": "Мысалы: 1 ₽ — 45 минут болу 45 ₽ тұрады.",
     "gameRoomOptionsLabel": "Нұсқалар",
+    "gameRoomOptionNamePlaceholder": "Атауы (мысалы, 1 сағат)",
     "gameRoomOptionDurationPlaceholder": "Минут",
     "gameRoomOptionPricePlaceholder": "Баға",
     "gameRoomAddOptionButton": "Нұсқа қосу",
     "gameRoomRemoveOptionLabel": "Нұсқаны жою",
-    "gameRoomRoundingUpNote": "Ұзақтық толық минутқа дейін жоғары дөңгелектенеді — нүкте толық емес минуттарда ұтылмайды."
+    "gameRoomRoundingUpNote": "Ұзақтық толық минутқа дейін жоғары дөңгелектенеді — нүкте толық емес минуттарда ұтылмайды.",
+    "gameRoomRateOptionsLabel": "Тарифтер",
+    "gameRoomRateOptionNamePlaceholder": "Атауы (мысалы, Жұмыс күндері)",
+    "gameRoomAddRateVariantButton": "Тағы бір тариф қосу",
+    "gameRoomUseSingleRateButton": "Бір бағаға оралу"
   },
   "abonements": {
     "title": "Абонементтер",
@@ -1158,6 +1163,7 @@
       "printReceiptButton": "Түбіртекті басып шығару",
       "addWristbandLabel": "Білезік қосу",
       "pickOptionTitle": "Нұсқа таңдаңыз",
+      "pickRateTitle": "Тарифті таңдаңыз",
       "paymentMethodTitle": "Төлем тәсілі",
       "stopConfirmQuestion": "Дәл осы ма?",
       "stopConfirmButton": "Аяқтау",

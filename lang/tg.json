@@ -770,11 +770,16 @@
     "gameRoomRateLabel": "Нархи як дақиқаи буд",
     "gameRoomRateHint": "Масалан: 1 ₽ — 45 дақиқа буд 45 ₽ арзиш дорад.",
     "gameRoomOptionsLabel": "Вариантҳо",
+    "gameRoomOptionNamePlaceholder": "Ном (масалан, 1 соат)",
     "gameRoomOptionDurationPlaceholder": "Дақиқа",
     "gameRoomOptionPricePlaceholder": "Нарх",
     "gameRoomAddOptionButton": "Илова кардани вариант",
     "gameRoomRemoveOptionLabel": "Нест кардани вариант",
-    "gameRoomRoundingUpNote": "Давомнокӣ то дақиқаи пурра ба боло мудаввар мешавад — нуқта дар дақиқаҳои нопурра гум намекунад."
+    "gameRoomRoundingUpNote": "Давомнокӣ то дақиқаи пурра ба боло мудаввар мешавад — нуқта дар дақиқаҳои нопурра гум намекунад.",
+    "gameRoomRateOptionsLabel": "Тарифҳо",
+    "gameRoomRateOptionNamePlaceholder": "Ном (масалан, Рӯзҳои корӣ)",
+    "gameRoomAddRateVariantButton": "Илова кардани тарифи дигар",
+    "gameRoomUseSingleRateButton": "Бозгашт ба як нарх"
   },
   "abonements": {
     "title": "Обунамондҳо",
@@ -1158,6 +1163,7 @@
       "printReceiptButton": "Чопи квитансия",
       "addWristbandLabel": "Дастбанд илова кардан",
       "pickOptionTitle": "Вариантро интихоб кунед",
+      "pickRateTitle": "Тарифро интихоб кунед",
       "paymentMethodTitle": "Тарзи пардохт",
       "stopConfirmQuestion": "Дуруст?",
       "stopConfirmButton": "Ба итмом расонидан",
