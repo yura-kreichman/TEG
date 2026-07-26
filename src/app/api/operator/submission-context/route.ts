@@ -107,6 +107,13 @@ export async function GET() {
     // логику Товаров — та зон в мастере не касалась вовсе, см. обсуждение
     // на этапе ревью спеки).
     ticketsSubmissionAllowed: zone.accountingMode !== "tickets" || operator.ticketsAccess,
+    // "Счётчики" с тапами вместо ручного ввода показаний (запрос пользователя
+    // 2026-07-25) — мастер сдачи итогов для такой зоны пропускает шаг
+    // показаний так же, как уже делает для launches/stays/tickets/cash_only
+    // (см. operator/submit/page.tsx), только у ЭТОЙ зоны accountingMode
+    // остаётся "counters" — различать нужно ИМЕННО по этому флагу, не по
+    // режиму.
+    countersTapAssistEnabled: zone.countersTapAssistEnabled,
     ...(zone.accountingMode === "tickets"
       ? { ticketRedemptionEnabled: zone.ticketRedemptionEnabled, ticketLifetimeDays: zone.ticketLifetimeDays }
       : {}),

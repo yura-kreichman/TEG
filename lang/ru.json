@@ -750,6 +750,8 @@
     "assetActiveChip": "Активен",
     "assetInactiveChip": "Неактивен",
     "cashOnlyNote": "Режим «Только касса»: этой зоне не нужны тарифы и активы — сотрудник сдаёт только сумму.",
+    "countersTapAssistLabel": "Показания по сеансам",
+    "countersTapAssistHint": "Показание считается автоматически из сеансов Сотрудника — вместо ручного ввода на Сдаче итогов",
     "printReceiptLabel": "Печать квитанции",
     "printTicketsLabel": "Печать билетов",
     "printReceiptHint": "Оператор сможет распечатать квитанцию посетителю после посещения/пуска",
@@ -1102,6 +1104,8 @@
       "selectZonesSub": "Можно выбрать несколько",
       "noZonesConfigured": "Для этой точки не настроено ни одной зоны.",
       "enterReadingsSub": "Нажмите на актив и введите показания",
+      "countersTapAssistSub": "Показания посчитаны автоматически по отмеченным сеансам",
+      "tapHintCaption": "расчётно",
       "cashOnlySub": "Введите кассу за эту сдачу",
       "assetNotFilled": "Не заполнено",
       "previousReading": "было:",
@@ -1180,7 +1184,12 @@
       "pickZoneTitle": "Выберите зону",
       "todayCountLabel": "Сегодня:",
       "logTitle": "История",
-      "emptyLog": "Пока нет записей"
+      "emptyLog": "Пока нет записей",
+      "tapTitle": "Учёт сеансов",
+      "tapHistoryButton": "История сеансов",
+      "tapVoidedLabel": "возврат/тест",
+      "tapVoidAction": "Отметить как возврат/тест",
+      "tapUnvoidAction": "Снять пометку возврата/теста"
     },
     "abonement": {
       "paymentLabel": "Баланс",

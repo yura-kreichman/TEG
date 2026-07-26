@@ -18,6 +18,7 @@ import {
   calcSessions,
   calcZoneGrossRevenue,
   calcZoneRevenue,
+  isCountersTapAssistZone,
   isLaunchesZone,
   isStaysZone,
   isTicketsZone,
@@ -62,6 +63,9 @@ interface ZoneCtx {
   name: string;
   iconKey: string | null;
   accountingMode: ZoneAccountingMode;
+  // Показания по тапам вместо ручного ввода (запрос пользователя 2026-07-25) —
+  // см. isCountersTapAssistZone в results-calc.ts.
+  countersTapAssistEnabled: boolean;
   tariffs: TariffCtx[];
   assets: AssetCtx[];
 }
@@ -166,6 +170,29 @@ export default function SubmitResultsPage() {
   // накопления, что у ticketsAggregateByZone выше — нужен ещё и на шаге
   // "Проверьте перед отправкой".
   const [counterAbonementByZone, setCounterAbonementByZone] = useState<Record<string, number>>({});
+  // Расчётная разбивка Наличные/Безнал по тапам с указанным способом оплаты
+  // (запрос пользователя 2026-07-25: "не видно сколько по наличному и
+  // безналичному") — только подсказка рядом с полями ввода, кассу это НЕ
+  // заполняет автоматически (см. комментарий в counter-tap-events/route.ts).
+  const [tapPaymentBreakdownByZone, setTapPaymentBreakdownByZone] = useState<
+    Record<string, { cashAmount: number; mobileAmount: number; abonementAmount: number }>
+  >({});
+  // Подсказка скрыта "шумом" (как спойлер в Telegram, запрос пользователя
+  // 2026-07-25) — 1-й тап только раскрывает число под размытием, 2-й (уже
+  // видимое) — подставляет в поле. Заставляет сначала реально посмотреть на
+  // цифру, а не тапнуть не глядя. Ключ — zoneId, отдельно для Наличных/Безнала.
+  const [tapHintRevealed, setTapHintRevealed] = useState<Record<string, { cash?: boolean; mobile?: boolean }>>({});
+  // Возвраты/тесты tap-зон по ТАРИФУ (ключ `${zoneId}:${tariffId}`) — реальный
+  // баг, найден пользователем 2026-07-25: живой предпросмотр здесь считал
+  // "Разницу" по старой формуле calcZoneRevenue(tariffCalc, form.returnsCount),
+  // а form.returnsCount для tap-зон всегда 0 (источник теперь voidedAt на
+  // конкретном тапе, не общий счётчик зоны — /api/operator/zone-return-events
+  // больше не отдаёт tap-зоны вовсе), поэтому превью НИКОГДА не учитывало
+  // возвраты и показывало Разницу большей, чем при реальной отправке
+  // (submit-results/route.ts уже считает точно, по voidedCountByZoneTariff) —
+  // здесь то же самое, чтобы предпросмотр не расходился с тем, что реально
+  // отправится.
+  const [voidedCountByZoneTariff, setVoidedCountByZoneTariff] = useState<Record<string, number>>({});
   const [result, setResult] = useState<{
     summary: {
       zoneId: string;
@@ -299,6 +326,59 @@ export default function SubmitResultsPage() {
       return;
     }
 
+    // "Счётчики" с тапами вместо ручного ввода (запрос пользователя
+    // 2026-07-25) — показания не вводятся тут, тапы делаются заранее на
+    // отдельном экране "Счётчики" (нижний бар), сюда только подтягиваем уже
+    // накопленное и молча заполняем form.readings тем же ключом
+    // `${assetId}:${tariffId}`, что использует ручной ввод — весь остальной
+    // код (previewFor, isAssetFilled, handleSubmit) работает НЕ ЗНАЯ, что
+    // источник другой, изменений там не требуется.
+    if (isCountersTapAssistZone(zone)) {
+      fetch("/api/operator/counter-tap-events")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          const counts: { assetId: string; tariffId: string; count: number }[] = data?.counts ?? [];
+          const countByKey = new Map(counts.map((c) => [`${c.assetId}:${c.tariffId}`, c.count]));
+          const readings: Record<string, string> = {};
+          for (const asset of zone.assets) {
+            for (const tariff of zone.tariffs) {
+              const key = `${asset.id}:${tariff.id}`;
+              const previous = asset.previousReadings[tariff.id] ?? 0;
+              const taps = countByKey.get(key) ?? 0;
+              readings[key] = String((previous + taps) % 10000);
+            }
+          }
+          setZoneForms((prev) => ({ ...prev, [zone.id]: { ...prev[zone.id], readings } }));
+          const breakdown: { zoneId: string; cashAmount: number; mobileAmount: number; abonementAmount: number }[] =
+            data?.paymentBreakdown ?? [];
+          const own = breakdown.find((b) => b.zoneId === zone.id);
+          if (own) {
+            setTapPaymentBreakdownByZone((prev) => ({
+              ...prev,
+              [zone.id]: { cashAmount: own.cashAmount, mobileAmount: own.mobileAmount, abonementAmount: own.abonementAmount },
+            }));
+          }
+          // Возвраты/тесты по тарифу (см. комментарий у voidedCountByZoneTariff
+          // выше) — та же точная логика, что submit-results/route.ts
+          // использует для НАСТОЯЩЕЙ отправки, тут только для превью.
+          const recentTaps: { zoneId: string; tariffId: string; voidedAt: string | null }[] = data?.recentTaps ?? [];
+          // Обнуляем ВСЕ тарифы этой зоны перед пересчётом — иначе тариф, у
+          // которого пометку сняли (voidedAt → null), продолжал бы числиться
+          // возвратом по старому значению из прошлого фетча (не пересоздаётся
+          // ключ, которого больше нет во входных данных).
+          const voidedByTariff: Record<string, number> = {};
+          for (const tariff of zone.tariffs) voidedByTariff[`${zone.id}:${tariff.id}`] = 0;
+          for (const tap of recentTaps) {
+            if (tap.zoneId !== zone.id || !tap.voidedAt) continue;
+            const key = `${tap.zoneId}:${tap.tariffId}`;
+            voidedByTariff[key] = (voidedByTariff[key] ?? 0) + 1;
+          }
+          setVoidedCountByZoneTariff((prev) => ({ ...prev, ...voidedByTariff }));
+        });
+      // Без return — ниже ещё абонементная сумма (см. следующий блок), она
+      // нужна tap-зонам точно так же, как обычным "Счётчикам".
+    }
+
     // "Счётчики"/"Только касса" — сумма, оплаченная с баланса (см.
     // counterAbonementByZone выше). Копится по всем зонам сдачи, не
     // сбрасывается при уходе с шага — тот же принцип, что у Билетов.
@@ -311,7 +391,6 @@ export default function SubmitResultsPage() {
           }
         });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, zones]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -429,7 +508,7 @@ export default function SubmitResultsPage() {
       const abonementAmount = agg?.abonementAmount ?? 0;
       const actualCash = Number(form.cashAmount || 0) + Number(form.mobileAmount || 0);
       const difference = Math.round((actualCash + abonementAmount - calculatedRevenue) * 100) / 100;
-      return { calculatedRevenue, actualCash, difference, abonementAmount };
+      return { calculatedRevenue, netRevenue: calculatedRevenue, actualCash, difference, abonementAmount };
     }
 
     const tariffCalc = zone.tariffs.map((tariff) => {
@@ -447,16 +526,37 @@ export default function SubmitResultsPage() {
     // 2026-07-16). Разница считается от net (за вычетом тестов) — это
     // остаётся тем числом, по которому оператор/владелец решает "сошлось".
     const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
-    const netRevenue = calcZoneRevenue(tariffCalc, Number(form.returnsCount || 0));
+    // Tap-зоны — точный вычет ПО ТАРИФУ из voidedCountByZoneTariff, та же
+    // логика, что submit-results/route.ts использует для настоящей отправки
+    // (см. комментарий у voidedCountByZoneTariff выше — form.returnsCount для
+    // tap-зон всегда 0, доверять ему тут больше нельзя).
+    const netRevenue = isCountersTapAssistZone(zone)
+      ? calcZoneGrossRevenue(
+          tariffCalc.map((tc) => ({
+            ...tc,
+            sessions: Math.max(tc.sessions - (voidedCountByZoneTariff[`${zoneId}:${tc.tariffId}`] ?? 0), 0),
+          }))
+        )
+      : calcZoneRevenue(tariffCalc, Number(form.returnsCount || 0));
     const actualCash = Number(form.cashAmount || 0) + Number(form.mobileAmount || 0);
-    // Оплата балансом — у "Счётчиков"/"Только касса" НЕ участвует в
-    // Разнице вовсе (запрос пользователя 2026-07-25, финальное решение) —
-    // тот же принцип, что и в submit-results/route.ts. abonementAmount
-    // ниже — только для информационной строки "Баланс" в UI, в саму
-    // разницу больше не подмешивается.
+    // Оплата балансом — у ОБЫЧНЫХ (ручных) "Счётчиков"/"Только касса" НЕ
+    // участвует в Разнице (правило 2026-07-25, для decoupled "Списать с
+    // баланса" — там списание вообще не связано ни с каким конкретным
+    // сеансом/показанием, поэтому "честно исключать" его из Разницы
+    // нечего). У TAP-зон — другое дело (найдено пользователем 2026-07-25 на
+    // живых данных, "ошибочно включаешь оплату с Баланса в расчёт Разницы"):
+    // там оплата балансом происходит НА КОНКРЕТНОМ тапе, который уже учтён
+    // как сеанс в netRevenue выше — если не вычесть именно эту часть,
+    // Разница показывает фиктивную недостачу ровно на сумму баланса, хотя
+    // деньги за неё никогда и не должны были попасть в кассу. Именно
+    // TAP-привязанная сумма (tapPaymentBreakdownByZone), НЕ весь
+    // counterAbonementByZone — та зонная сумма может включать и старые
+    // decoupled списания через "Списать с баланса", не привязанные ни к
+    // одному тапу, их эта поправка не касается.
     const counterAbonementAmount = counterAbonementByZone[zoneId] ?? 0;
-    const difference = Math.round((actualCash - netRevenue) * 100) / 100;
-    return { calculatedRevenue, actualCash, difference, abonementAmount: counterAbonementAmount };
+    const tapAbonementAmount = isCountersTapAssistZone(zone) ? (tapPaymentBreakdownByZone[zoneId]?.abonementAmount ?? 0) : 0;
+    const difference = Math.round((actualCash - (netRevenue - tapAbonementAmount)) * 100) / 100;
+    return { calculatedRevenue, netRevenue, actualCash, difference, abonementAmount: counterAbonementAmount };
   }
 
   // Актив "заполнен", если хотя бы один тариф введён — не обязательно все
@@ -784,7 +884,9 @@ export default function SubmitResultsPage() {
                     ? t.operatorApp.submit.ticketsSub
                     : isStaysZone(activeZone) || isLaunchesZone(activeZone)
                       ? t.operatorApp.submit.gameRoomSub
-                      : t.operatorApp.submit.enterReadingsSub}
+                      : isCountersTapAssistZone(activeZone)
+                        ? t.operatorApp.submit.countersTapAssistSub
+                        : t.operatorApp.submit.enterReadingsSub}
               </p>
             </div>
 
@@ -824,11 +926,18 @@ export default function SubmitResultsPage() {
                   <PressableScale key={asset.id} className="relative">
                     <button
                       type="button"
-                      onClick={() => setAssetSheetId(asset.id)}
+                      // Тапы-показания (запрос пользователя 2026-07-25) — тут
+                      // нечего вводить руками, сами тапы делаются заранее на
+                      // отдельном экране "Счётчики" (нижний бар); открывать
+                      // sheet с полем ввода для такого актива не нужно.
+                      onClick={() => {
+                        if (!isCountersTapAssistZone(activeZone)) setAssetSheetId(asset.id);
+                      }}
                       className={cn(
                         "relative flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card text-left",
                         filled ? "border-success" : "border-border",
-                        !asset.active && "grayscale"
+                        !asset.active && "grayscale",
+                        isCountersTapAssistZone(activeZone) && "cursor-default"
                       )}
                     >
                       <div
@@ -877,17 +986,6 @@ export default function SubmitResultsPage() {
                   </PressableScale>
                 );
               })}
-            </div>
-
-            <div className="flex items-center justify-between gap-3 rounded-card border border-border bg-card p-3.5">
-              <p className="flex items-center gap-1.5 text-body-airbnb font-semibold">
-                <RefreshCcw className="size-4 shrink-0" />
-                {t.operatorApp.submit.returnsLabel}
-              </p>
-              {/* Read-only (запрос пользователя 2026-07-24) — источник числа
-                  теперь пункт нижнего бара "Счётчики", тут его больше нельзя
-                  поправить руками. */}
-              <span className="text-[0.9375rem] font-bold tabular-nums">{activeForm.returnsCount || 0}</span>
             </div>
             </>
             )}
@@ -983,79 +1081,225 @@ export default function SubmitResultsPage() {
               </div>
             )}
 
+            {!isStaysZone(activeZone) && !isLaunchesZone(activeZone) &&
+              (() => {
+                // Расчётная подсказка по способу оплаты, отмеченному на тапах
+                // (запрос пользователя 2026-07-25: "не видно сколько по
+                // наличному и безналичному") — только справочно, поля ниже
+                // по-прежнему вводятся вручную (сверка факта с расчётом
+                // должна остаться реальной проверкой, не самозаполнением).
+                // Тапы без способа оплаты (старые записи) в эту подсказку не
+                // попадают. Берётся НАПРЯМУЮ из paymentBreakdown (API уже
+                // считает точно — конкретный помеченный "Возврат/тест" тап
+                // исключён из СВОЕГО способа оплаты, см. counter-tap-events/
+                // route.ts). Реальный баг, найден пользователем 2026-07-25:
+                // здесь ЕЩЁ РАЗ домножалось на коэффициент
+                // netRevenue/calculatedRevenue поверх уже точного числа —
+                // двойной вычет, отсюда дробные 30,63/91,88 вместо целых
+                // 35/105. Коэффициент убран полностью, raw используется как
+                // есть. Показывается КРУПНО, в одной строке с полем ввода — и
+                // по тапу сама подставляет значение в поле, чтобы не
+                // перепечатывать вручную.
+                let cashHint = 0;
+                let mobileHint = 0;
+                if (isCountersTapAssistZone(activeZone)) {
+                  const raw = tapPaymentBreakdownByZone[activeZone.id];
+                  if (raw) {
+                    cashHint = raw.cashAmount;
+                    mobileHint = raw.mobileAmount;
+                  }
+                }
+                const cashRevealed = tapHintRevealed[activeZone.id]?.cash ?? false;
+                const mobileRevealed = tapHintRevealed[activeZone.id]?.mobile ?? false;
+                const revealOrFillCash = () => {
+                  if (!cashRevealed) {
+                    setTapHintRevealed((prev) => ({ ...prev, [activeZone.id]: { ...prev[activeZone.id], cash: true } }));
+                  } else {
+                    updateZoneField(activeZone.id, "cashAmount", String(cashHint));
+                  }
+                };
+                const revealOrFillMobile = () => {
+                  if (!mobileRevealed) {
+                    setTapHintRevealed((prev) => ({ ...prev, [activeZone.id]: { ...prev[activeZone.id], mobile: true } }));
+                  } else {
+                    updateZoneField(activeZone.id, "mobileAmount", String(mobileHint));
+                  }
+                };
+                return (
+                  <>
+                    <div className="flex flex-col gap-1">
+                      <Label htmlFor="cash" className="flex items-center gap-1.5">
+                        <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+                        {t.operatorApp.submit.cashLabel}
+                      </Label>
+                      {/* Подсказка — ПЕРЕД полем ввода, вровень с ним по
+                          высоте (запрос пользователя 2026-07-25), скрыта
+                          "шумом" (как закрытые сообщения в Telegram) — 1-й тап
+                          только снимает размытие, 2-й, уже по видимому числу —
+                          подставляет в поле. Мелкая подпись "расчётно" —
+                          понятно, что это за число, даже пока оно ещё
+                          размыто. Приглушённый серый, без цветного фона даже
+                          раскрытая — остаётся подсказкой, не акцентной
+                          кнопкой. */}
+                      <div className="flex items-center gap-2">
+                        {cashHint > 0 && (
+                          <PressableScale className="shrink-0">
+                            <button
+                              type="button"
+                              onClick={revealOrFillCash}
+                              className="flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-control px-2.5"
+                            >
+                              <span
+                                className={cn(
+                                  "text-lg font-semibold tabular-nums leading-none text-muted-foreground/50 transition-[filter]",
+                                  !cashRevealed && "blur-sm select-none"
+                                )}
+                              >
+                                <Money value={cashHint} />
+                              </span>
+                              <span
+                                className={cn(
+                                  "text-[0.625rem] leading-none text-muted-foreground/40 transition-[filter]",
+                                  !cashRevealed && "blur-sm select-none"
+                                )}
+                              >
+                                {t.operatorApp.submit.tapHintCaption}
+                              </span>
+                            </button>
+                          </PressableScale>
+                        )}
+                        <MoneyInput
+                          id="cash"
+                          scale="lg"
+                          inputMode="numeric"
+                          className="h-14 rounded-control bg-muted text-lg font-bold"
+                          value={activeForm.cashAmount}
+                          onChange={(e) => updateZoneField(activeZone.id, "cashAmount", e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Label htmlFor="mobile" className="flex items-center gap-1.5">
+                        <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+                        {t.operatorApp.submit.mobileLabel}
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        {mobileHint > 0 && (
+                          <PressableScale className="shrink-0">
+                            <button
+                              type="button"
+                              onClick={revealOrFillMobile}
+                              className="flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-control px-2.5"
+                            >
+                              <span
+                                className={cn(
+                                  "text-lg font-semibold tabular-nums leading-none text-muted-foreground/50 transition-[filter]",
+                                  !mobileRevealed && "blur-sm select-none"
+                                )}
+                              >
+                                <Money value={mobileHint} />
+                              </span>
+                              <span
+                                className={cn(
+                                  "text-[0.625rem] leading-none text-muted-foreground/40 transition-[filter]",
+                                  !mobileRevealed && "blur-sm select-none"
+                                )}
+                              >
+                                {t.operatorApp.submit.tapHintCaption}
+                              </span>
+                            </button>
+                          </PressableScale>
+                        )}
+                        <MoneyInput
+                          id="mobile"
+                          scale="lg"
+                          inputMode="numeric"
+                          className="h-14 rounded-control bg-muted text-lg font-bold"
+                          value={activeForm.mobileAmount}
+                          onChange={(e) => updateZoneField(activeZone.id, "mobileAmount", e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             {!isStaysZone(activeZone) && !isLaunchesZone(activeZone) && (
               <>
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="cash" className="flex items-center gap-1.5">
-                    <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
-                    {t.operatorApp.submit.cashLabel}
-                  </Label>
-                  <MoneyInput
-                    id="cash"
-                    scale="lg"
-                    inputMode="numeric"
-                    className="h-14 rounded-control bg-muted text-lg font-bold"
-                    value={activeForm.cashAmount}
-                    onChange={(e) => updateZoneField(activeZone.id, "cashAmount", e.target.value)}
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="mobile" className="flex items-center gap-1.5">
-                    <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
-                    {t.operatorApp.submit.mobileLabel}
-                  </Label>
-                  <MoneyInput
-                    id="mobile"
-                    scale="lg"
-                    inputMode="numeric"
-                    className="h-14 rounded-control bg-muted text-lg font-bold"
-                    value={activeForm.mobileAmount}
-                    onChange={(e) => updateZoneField(activeZone.id, "mobileAmount", e.target.value)}
-                  />
-                </div>
 
-                {activeZone.accountingMode !== "cash_only" &&
-                  (() => {
-                    // previewFor() теперь сам знает про Билеты (см. её
-                    // определение выше) — единая формула для обоих режимов,
-                    // не дублируем здесь.
-                    const preview = previewFor(activeZone.id);
-                    return (
-                      preview && (
-                        <div className="flex flex-col gap-1 text-caption-airbnb tabular-nums">
-                          <div className="flex items-center justify-between">
-                            <span>{t.operatorApp.submit.calculatedRevenue}</span>
-                            <span><Money value={preview.calculatedRevenue} /></span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-1.5">
+                {(() => {
+                  // previewFor() теперь сам знает про Билеты (см. её
+                  // определение выше) — единая формула для обоих режимов, не
+                  // дублируем здесь.
+                  const preview = activeZone.accountingMode !== "cash_only" ? previewFor(activeZone.id) : null;
+                  const abonementAmount =
+                    activeZone.accountingMode === "counters" || activeZone.accountingMode === "cash_only"
+                      ? (counterAbonementByZone[activeZone.id] ?? 0)
+                      : 0;
+                  if (!preview && abonementAmount <= 0) return null;
+                  return (
+                    <div className="flex flex-col gap-1.5">
+                      {/* "Расчётная выручка" убрана (запрос пользователя
+                          2026-07-25) — preview.calculatedRevenue остаётся в
+                          расчёте (Разница по-прежнему от net), просто больше
+                          не выводится отдельной строкой. */}
+                      {/* Разница и Баланс — в одну строку, крупным размером
+                          (запрос пользователя 2026-07-25), без плашки-фона —
+                          это те два числа, по которым Сотрудник/Владелец
+                          реально решают "сошлось", не должны теряться среди
+                          остального. Разница — половина строки, если Баланс
+                          тоже есть; одна на всю строку, если Баланса нет. */}
+                      <div className="flex items-center gap-4">
+                        {preview && (
+                          <div className="flex flex-1 items-center justify-between gap-2">
+                            <span className="flex items-center gap-1.5 font-semibold">
                               {t.operatorApp.submit.difference}
-                              {preview.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                              {preview.difference !== 0 && <TriangleAlert className="size-4 shrink-0 text-warning" />}
                             </span>
-                            <span>
+                            <span
+                              className={cn(
+                                "text-lg font-extrabold tabular-nums",
+                                preview.difference !== 0 && "text-warning"
+                              )}
+                            >
                               {preview.difference > 0 ? "+" : ""}
                               <Money value={preview.difference} />
                             </span>
                           </div>
-                        </div>
-                      )
-                    );
-                  })()}
-                {/* "Счётчики"/"Только касса" — справочная строка "Баланс"
-                    (реальный баг, найден пользователем 2026-07-24: без неё
-                    сотрудник не видел, что часть выручки уже оплачена с
-                    баланса) — тот же принцип, что у Билетов ниже. Раньше
-                    была только у "Счётчиков" (аудит 2026-07-25: "Только
-                    касса" тоже поддерживает оплату балансом, но подсказку
-                    не видела). */}
-                {(activeZone.accountingMode === "counters" || activeZone.accountingMode === "cash_only") &&
-                  (counterAbonementByZone[activeZone.id] ?? 0) > 0 && (
-                  <div className="flex items-center justify-between text-caption-airbnb text-muted-foreground tabular-nums">
-                    <span className="flex items-center gap-1.5">
-                      <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
-                      {t.operatorApp.abonement.paymentLabel}
-                    </span>
-                    <span><Money value={counterAbonementByZone[activeZone.id]} /></span>
+                        )}
+                        {/* "Счётчики"/"Только касса" — справочная строка
+                            "Баланс" (реальный баг, найден пользователем
+                            2026-07-24: без неё сотрудник не видел, что часть
+                            выручки уже оплачена с баланса). */}
+                        {abonementAmount > 0 && (
+                          <div className="flex flex-1 items-center justify-between gap-2">
+                            <span className="flex items-center gap-1.5 font-semibold">
+                              <PaymentMethodIcon method="abonement" className="size-4 shrink-0" />
+                              {t.operatorApp.abonement.paymentLabel}
+                            </span>
+                            <span className="text-lg font-extrabold tabular-nums">
+                              <Money value={abonementAmount} />
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+                {/* Возвраты/тестовые пуски — перенесено под "Баланс" (запрос
+                    пользователя 2026-07-25), без плашки-фона, как и
+                    остальные строки здесь. Только "counters" (докс:
+                    "Возвраты/тестовые пуски... только counters") — у
+                    cash_only этого поля нет вовсе. */}
+                {activeZone.accountingMode === "counters" && (
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="flex items-center gap-1.5 text-body-airbnb font-semibold">
+                      <RefreshCcw className="size-4 shrink-0" />
+                      {t.operatorApp.submit.returnsLabel}
+                    </p>
+                    {/* Read-only (запрос пользователя 2026-07-24) — источник
+                        числа теперь пункт нижнего бара "Счётчики", тут его
+                        больше нельзя поправить руками. */}
+                    <span className="text-[0.9375rem] font-bold tabular-nums">{activeForm.returnsCount || 0}</span>
                   </div>
                 )}
                 {/* Билеты — справочная разбивка способов оплаты заказов

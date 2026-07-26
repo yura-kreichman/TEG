@@ -198,6 +198,10 @@ interface ZoneDetail {
   modeLocked: boolean;
   active: boolean;
   printReceiptEnabled: boolean;
+  // Только accountingMode="counters" (запрос пользователя 2026-07-25) —
+  // показания считаются автоматически по тапам вместо ручного ввода, см.
+  // isCountersTapAssistZone в lib/results-calc.ts.
+  countersTapAssistEnabled: boolean;
   // Только "Билеты" (docs/spec/10-tickets.md, "ГАШЕНИЕ"/"СРОК ЖИЗНИ").
   ticketRedemptionEnabled: boolean;
   ticketLifetimeDays: number | null;
@@ -389,6 +393,17 @@ export default function ZoneDetailPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ printReceiptEnabled: !zone.printReceiptEnabled }),
+    });
+    await loadZone();
+  }
+
+  // Тапы вместо ручного ввода показаний (запрос пользователя 2026-07-25).
+  async function toggleCountersTapAssistEnabled() {
+    if (!zone) return;
+    await fetch(`/api/zones/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ countersTapAssistEnabled: !zone.countersTapAssistEnabled }),
     });
     await loadZone();
   }
@@ -898,6 +913,31 @@ export default function ZoneDetailPage() {
           {zone.accountingMode === "cash_only" && (
             <SpringCard hover={false}>
               <p className="text-body-airbnb text-muted-foreground">{t.zoneDetail.cashOnlyNote}</p>
+            </SpringCard>
+          )}
+
+          {/* Тапы вместо ручного ввода показаний (запрос пользователя
+              2026-07-25: "то, что Сотрудник натапал, и является прибавкой к
+              счётчику") — только "Счётчики". В отличие от режима учёта,
+              переключается в любой момент, даже после сдач итогов (см.
+              комментарий у countersTapAssistEnabled в api/zones/[id]/route.ts) —
+              формула расчёта не меняется, следующая сдача просто возьмёт
+              предыдущее показание + тапы с момента переключения. */}
+          {zone.accountingMode === "counters" && (
+            <SpringCard hover={false}>
+              <div className="flex items-center justify-between gap-3">
+                <span>
+                  <span className="block text-body-airbnb">{t.zoneDetail.countersTapAssistLabel}</span>
+                  <span className="mt-0.5 block text-caption-airbnb text-muted-foreground">
+                    {t.zoneDetail.countersTapAssistHint}
+                  </span>
+                </span>
+                <Switch
+                  checked={zone.countersTapAssistEnabled}
+                  onCheckedChange={toggleCountersTapAssistEnabled}
+                  className="shrink-0"
+                />
+              </div>
             </SpringCard>
           )}
 

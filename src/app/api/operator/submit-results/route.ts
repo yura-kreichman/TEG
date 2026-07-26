@@ -5,6 +5,7 @@ import {
   calcSessions,
   calcZoneGrossRevenue,
   calcZoneRevenue,
+  isCountersTapAssistZone,
   isLaunchesZone,
   isStaysZone,
   isTicketsZone,
@@ -81,6 +82,12 @@ export async function POST(request: Request) {
     include: { tariffs: { where: { deletedAt: null } }, assets: { orderBy: { sortOrder: "asc" } } },
   });
   const zoneById = new Map(zones.map((z) => [z.id, z]));
+  // Единый момент "сейчас" для всех агрегатов ниже (тапы Пусков/Прибываний,
+  // Билеты, тапы-показания Счётчиков) — было объявлено ниже отдельно для
+  // каждого блока, вынесено сюда при добавлении countersTapAssistEnabled
+  // (запрос пользователя 2026-07-25), чтобы окно "с прошлой сдачи по сейчас"
+  // было одинаковым везде, а не чуть-чуть расходилось по миллисекундам.
+  const now = new Date();
 
   if (zones.length !== zoneIds.length) {
     return NextResponse.json({ error: "Одна из зон не найдена" }, { status: 400 });
@@ -184,9 +191,15 @@ export async function POST(request: Request) {
 
   // "Previous reading" only means anything in "counters" mode (running meter) —
   // "launches" readings are already the finished count for this submission.
-  const allAssetIds = zoneSubmissions
-    .filter((z) => zoneById.get(z.zoneId)?.accountingMode === "counters")
-    .flatMap((z) => z.readings.map((r) => r.assetId));
+  // Зоны с countersTapAssistEnabled (запрос пользователя 2026-07-25) — берём
+  // ВСЕ активы зоны, а не только те, что есть в zs.readings: клиент для таких
+  // зон readings вообще не собирает (см. блок ниже), payload может прийти
+  // пустым.
+  const allAssetIds = zoneSubmissions.flatMap((z) => {
+    const zone = zoneById.get(z.zoneId);
+    if (zone?.accountingMode !== "counters") return [];
+    return zone.countersTapAssistEnabled ? zone.assets.map((a) => a.id) : z.readings.map((r) => r.assetId);
+  });
   const previousReadings = allAssetIds.length
     ? await prisma.assetReading.findMany({
         where: { assetId: { in: allAssetIds } },
@@ -199,6 +212,78 @@ export async function POST(request: Request) {
     if (!previousByKey.has(key)) previousByKey.set(key, reading.reading);
   }
   const initialByKey = await getInitialReadingsMap(allAssetIds);
+
+  // Показания зон с countersTapAssistEnabled (запрос пользователя 2026-07-25:
+  // "то, что Сотрудник натапал, и является прибавкой к счётчику") — не
+  // доверяем zs.readings от клиента вовсе (тот же принцип, что уже применён к
+  // returnsCount/расходам выше по файлу), пересчитываем на сервере из журнала
+  // CounterTapEvent для КАЖДОЙ пары актив+тариф зоны: новое показание =
+  // (предыдущее + тапы с прошлой сдачи) mod 10000 — то же правило
+  // переполнения "4 разряда", что у реальных показаний (docs/spec/
+  // 01-counters.md), поэтому вся дальнейшая формула сеансов (calcSessions,
+  // тоже по модулю) отрабатывает БЕЗ единой правки — она не знает и не
+  // должна знать, что источник числа — тапы, а не рука оператора.
+  // Возвраты/тесты, привязанные к КОНКРЕТНОМУ тапу (запрос пользователя
+  // 2026-07-25: "у конкретных активов был выбран конкретный метод оплаты" —
+  // размазывать вычет пропорционально между тарифами больше не нужно, раз
+  // известно, у какого именно тарифа он случился), см. CounterTapEvent.voidedAt.
+  // По ТАРИФУ, не по активу — выручка считается на уровне тарифа.
+  const voidedCountByZoneTariff = new Map<string, number>();
+  // Сумма оплаты балансом, привязанная к КОНКРЕТНОМУ тапу этой зоны (запрос
+  // пользователя 2026-07-25: "ошибочно включаешь оплату с Баланса в расчёт
+  // Разницы") — в отличие от counterAbonementByZone ниже (вся выручка
+  // "revenue_abonement" зоны — туда попадает и старое decoupled "Списать с
+  // баланса", вообще не привязанное ни к какому тапу/сеансу), тут только
+  // тапы, реально учтённые как сеанс в netRevenue выше — именно ИХ нужно
+  // вычесть из netRevenue перед сравнением с фактической кассой, иначе
+  // Разница показывает фиктивную недостачу ровно на сумму баланса (деньги за
+  // неё никогда и не должны были попасть в наличные/безнал).
+  const tapAbonementAmountByZone = new Map<string, number>();
+  for (const zs of zoneSubmissions) {
+    const zone = zoneById.get(zs.zoneId)!;
+    if (zone.accountingMode !== "counters" || !zone.countersTapAssistEnabled) continue;
+    const boundary = await previousSubmissionBoundary(zone.id);
+    const tapCounts = await prisma.counterTapEvent.groupBy({
+      by: ["assetId", "tariffId"],
+      where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now } },
+      _count: { _all: true },
+    });
+    const tapCountByKey = new Map(tapCounts.map((tc) => [`${tc.assetId}:${tc.tariffId}`, tc._count._all]));
+    zs.readings = zone.assets.flatMap((asset) =>
+      zone.tariffs.map((tariff) => {
+        const key = `${asset.id}:${tariff.id}`;
+        const taps = tapCountByKey.get(key) ?? 0;
+        const previous = previousByKey.get(key) ?? initialByKey.get(key) ?? 0;
+        return { assetId: asset.id, tariffId: tariff.id, reading: (previous + taps) % 10000 };
+      })
+    );
+
+    const voidedCounts = await prisma.counterTapEvent.groupBy({
+      by: ["tariffId"],
+      where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now }, voidedAt: { not: null } },
+      _count: { _all: true },
+    });
+    for (const vc of voidedCounts) {
+      voidedCountByZoneTariff.set(`${zone.id}:${vc.tariffId}`, vc._count._all);
+    }
+
+    const abonementCounts = await prisma.counterTapEvent.groupBy({
+      by: ["tariffId"],
+      where: {
+        zoneId: zone.id,
+        createdAt: { gt: boundary ?? new Date(0), lte: now },
+        paymentMethod: "abonement",
+        voidedAt: null,
+      },
+      _count: { _all: true },
+    });
+    const priceByTariff = new Map(zone.tariffs.map((t) => [t.id, Number(t.price)]));
+    const zoneTapAbonementAmount = abonementCounts.reduce(
+      (sum, ac) => sum + ac._count._all * (priceByTariff.get(ac.tariffId) ?? 0),
+      0
+    );
+    tapAbonementAmountByZone.set(zone.id, zoneTapAbonementAmount);
+  }
 
   // Актив на ремонте (Asset.active=false) — read-only и на сервере, не
   // только в форме: что бы ни прислал клиент, показание принудительно
@@ -227,7 +312,6 @@ export async function POST(request: Request) {
   // заполнены) взаимоисключающи по зоне, так что смешения не бывает;
   // totalMinutes у "Пусков" всегда 0 (тап мгновенный, startedAt=endedAt) и
   // просто не используется дальше.
-  const now = new Date();
   const gameRoomAggregateByZone = new Map<
     string,
     {
@@ -302,9 +386,18 @@ export async function POST(request: Request) {
     const zone = zoneById.get(zs.zoneId)!;
     if (zone.accountingMode !== "counters") continue;
     const boundary = await previousSubmissionBoundary(zone.id);
-    const count = await prisma.zoneReturnEvent.count({
-      where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now } },
-    });
+    // Tap-зоны (запрос пользователя 2026-07-25) — источник теперь
+    // CounterTapEvent.voidedAt (привязан к конкретному тапу), ZoneReturnEvent
+    // для них больше не используется вовсе (см. voidedCountByZoneTariff выше,
+    // считает то же самое ПО ТАРИФУ для точного вычета в выручке; тут — сумма
+    // по всем тарифам зоны, только для отображения общего числа).
+    const count = isCountersTapAssistZone(zone)
+      ? await prisma.counterTapEvent.count({
+          where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now }, voidedAt: { not: null } },
+        })
+      : await prisma.zoneReturnEvent.count({
+          where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now } },
+        });
     returnsCountByZone.set(zone.id, count);
   }
 
@@ -415,17 +508,30 @@ export async function POST(request: Request) {
     // не сошлось", и оно должно оставаться 0, когда тесты объясняют весь
     // разрыв, даже если "Счёт." теперь визуально не равен кассе.
     const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
-    const netRevenue = calcZoneRevenue(tariffCalc, returnsCountByZone.get(zone.id) ?? 0);
+    // Tap-зоны (запрос пользователя 2026-07-25) — точный вычет ПО ТАРИФУ из
+    // voidedCountByZoneTariff вместо пропорционального calcZoneRevenue:
+    // теперь известно, у какого именно тарифа случился возврат/тест (тап
+    // привязан к конкретной записи), размазывать вычет по всем тарифам зоны
+    // больше не нужно и было бы менее точно, чем то, что уже известно.
+    const netRevenue = isCountersTapAssistZone(zone)
+      ? calcZoneGrossRevenue(
+          tariffCalc.map((tc) => ({
+            ...tc,
+            sessions: Math.max(tc.sessions - (voidedCountByZoneTariff.get(`${zone.id}:${tc.tariffId}`) ?? 0), 0),
+          }))
+        )
+      : calcZoneRevenue(tariffCalc, returnsCountByZone.get(zone.id) ?? 0);
     const actualCash = zs.cashAmount + zs.mobileAmount;
-    // Оплата балансом (docs/spec/01-counters.md) — у "Счётчиков"/"Только
-    // касса" НЕ участвует ни в Разнице, ни в Фактической кассе вовсе
-    // (запрос пользователя 2026-07-25, финальное решение после долгого
-    // разбора): способ оплаты балансом тут фиксируется отдельным действием
-    // в баре "Счётчики", не в момент ввода кассы, поэтому, в отличие от
-    // Пусков/Прибываний (где касса вводится ПОАКТИВНО, способ оплаты виден
-    // сразу и правильно исключается), тут нет причины "честно исключать"
-    // баланс из кассы — он просто в стороне, только информационная строка.
+    // Оплата балансом (docs/spec/01-counters.md) — у ОБЫЧНЫХ (ручных)
+    // "Счётчиков"/"Только касса" НЕ участвует в Разнице (решение 2026-07-25 —
+    // decoupled "Списать с баланса" вообще не привязано ни к какому
+    // сеансу/показанию, вычитать там нечего). У TAP-зон иначе (запрос
+    // пользователя 2026-07-25: "ошибочно включаешь оплату с Баланса в расчёт
+    // Разницы") — там оплата балансом происходит на КОНКРЕТНОМ тапе, который
+    // уже учтён как сеанс в netRevenue выше; не вычесть именно эту часть —
+    // получить фиктивную недостачу ровно на сумму баланса.
     const counterAbonementAmount = counterAbonementByZone.get(zone.id) ?? 0;
+    const tapAbonementAmount = isCountersTapAssistZone(zone) ? (tapAbonementAmountByZone.get(zone.id) ?? 0) : 0;
     // "Только касса": "Расчётной выручки и разницы не существует — сравнивать
     // не с чем" (docs/spec/01-counters.md) — явно 0, а не actualCash−0 (аудит
     // 2026-07-25: без этой ветки Разница молча равнялась ВСЕЙ кассе зоны;
@@ -433,7 +539,9 @@ export async function POST(request: Request) {
     // бессмысленное число в ответе API — тот же принцип, что уже применён в
     // /api/reports/counters/day/route.ts).
     const difference =
-      zone.accountingMode === "cash_only" ? 0 : Math.round((actualCash - netRevenue) * 100) / 100;
+      zone.accountingMode === "cash_only"
+        ? 0
+        : Math.round((actualCash - (netRevenue - tapAbonementAmount)) * 100) / 100;
 
     const readingsText = zone.assets
       .map((asset) => {

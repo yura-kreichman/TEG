@@ -551,6 +551,7 @@ model Operator {
   ticketsRedeemed       Ticket[]                   @relation("TicketRedeemedBy")
   zoneReturnEvents      ZoneReturnEvent[]
   zoneExpenseEvents     ZoneExpenseEvent[]
+  counterTapEvents      CounterTapEvent[]
 }
 
 // ============================================================================
@@ -621,6 +622,7 @@ model Point {
   goodsReconciliations       GoodsReconciliation[]
   zoneReturnEvents           ZoneReturnEvent[]
   zoneExpenseEvents          ZoneExpenseEvent[]
+  counterTapEvents           CounterTapEvent[]
 }
 
 // Часы работы точки, по одной строке на день недели (docs/spec/08-landing.md,
@@ -728,6 +730,21 @@ model Zone {
   // показания не в том смысле, что был задуман изначально.
   accountingMode String @default("counters")
 
+  // Только accountingMode="counters" — вместо ручного ввода показания на
+  // Сдаче итогов, Сотрудник в течение дня тапает по активу (тот же тайл, что
+  // у "launches"), показание считается сервером как пред. + тапы с прошлой
+  // сдачи (mod 10000, см. CounterTapEvent ниже и docs/spec/01-counters.md).
+  // В отличие от accountingMode — НЕ блокируется после первой сдачи: это
+  // только источник числа "текущее показание", не смена самой формулы
+  // расчёта (сеансы/выручка/Разница считаются одинаково независимо от
+  // источника), переключать безопасно в любой момент — следующая сдача
+  // просто пересчитает "пред. показание + тапы с момента переключения".
+  // default false — реальный аппаратный счётчик остаётся источником по
+  // умолчанию (запрос пользователя 2026-07-25: "Счётчики реальные аппаратные
+  // устройства" — обязательная защита от кражи, тапы её убирают, поэтому это
+  // осознанный выбор Владельца для конкретной зоны, не поведение по умолчанию).
+  countersTapAssistEnabled Boolean @default(false)
+
   // Модуль печати (запрос пользователя 2026-07-20) — доступна ли оператору
   // кнопка "Печать квитанции" в этой зоне (актуально для "stays"/"launches" —
   // там есть отдельное событие на конкретного посетителя). Не для
@@ -760,6 +777,7 @@ model Zone {
   ticketOrders        TicketOrder[]
   returnEvents        ZoneReturnEvent[]
   expenseEvents       ZoneExpenseEvent[]
+  counterTapEvents    CounterTapEvent[]
 }
 
 // Реальный возврат/тестовый пуск, отмеченный Сотрудником в моменте, режим
@@ -820,6 +838,76 @@ model ZoneExpenseEvent {
   @@index([zoneId, createdAt])
 }
 
+// Тап "Пуск" по активу в зоне "Счётчики" с включённым
+// Zone.countersTapAssistEnabled (запрос пользователя 2026-07-25: "то, что
+// Сотрудник натапал, и является прибавкой к счётчику") — тот же принцип, что
+// ZoneReturnEvent/ZoneExpenseEvent выше (лёгкий журнал событий, "с последней
+// сдачи зоны" считается previousSubmissionBoundary, сдача итогов только
+// суммирует), НЕ модель Launch — той не место здесь: Launch несёт снапшоты
+// цены/длительности/способа оплаты, весь движок "launches"/"stays", а тут
+// нужен только сам факт "было +1 по этому активу/тарифу", касса и цена
+// по-прежнему приходят агрегатом на Сдаче итогов, как и у обычных показаний
+// counters. tariffId обязателен (не как у Launch, где nullable по историческим
+// причинам) — тап без выбранного тарифа не имеет смысла считать в показание.
+model CounterTapEvent {
+  id     String @id @default(cuid())
+  zoneId String
+  zone   Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  pointId String
+  point   Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  tariffId String
+  tariff   Tariff @relation(fields: [tariffId], references: [id], onDelete: Cascade)
+
+  operatorId String
+  operator   Operator @relation(fields: [operatorId], references: [id])
+
+  // Способ оплаты (запрос пользователя 2026-07-25: "разве не имеет смысл
+  // спрашивать метод оплаты") — СПРАВОЧНАЯ пометка для cash/mobile, тот же
+  // принцип, что у Launch.paymentMethod: НЕ подставляется автоматически в
+  // Наличные/Безнал на Сдаче итогов — сверка факта с расчётом должна
+  // оставаться реальной проверкой, не самозаполнением. null — тапы, сделанные
+  // до этого поля (историческая совместимость). Для "abonement" — это не
+  // просто пометка, реальное списание уже проведено ДО создания этой записи,
+  // тем же кодом, что у существующей кнопки "Списать с баланса"
+  // (spendWalletForZone, lib/abonement.ts) — тап лишь СВЯЗЫВАЕТ уже
+  // состоявшееся списание с конкретным активом/тарифом, дублирующего второго
+  // списания тут не происходит.
+  paymentMethod String?
+
+  // Только paymentMethod="abonement" — какой кошелёк был списан, тот же
+  // принцип, что Launch.abonementWalletId.
+  abonementWalletId String?
+  abonementWallet   AbonementWallet? @relation(fields: [abonementWalletId], references: [id], onDelete: SetNull)
+
+  // "Возврат/тест" привязан к КОНКРЕТНОМУ тапу (запрос пользователя
+  // 2026-07-25: "у конкретных активов был выбран конкретный метод оплаты" —
+  // проверка нашла, что старая зонная схема ZoneReturnEvent (без ссылки на
+  // конкретную запись) заставляла размазывать вычет возврата ПРОПОРЦИОНАЛЬНО
+  // между наличными/безналом на подсказке кассы, хотя в реальности у
+  // конкретного тапа был конкретный способ оплаты — та же логика, что
+  // Launch.voidedAt (docs/spec/04-game-room.md, "Жизненный цикл"): тап
+  // ОСТАЁТСЯ в базе и по-прежнему увеличивает показание (реальный
+  // физический счётчик тоже тикнул бы на тестовом/возвратном заезде), но
+  // ИСКЛЮЧАЕТСЯ из расчёта выручки/подсказки по способу оплаты. Только
+  // "counters" с countersTapAssistEnabled — у ZoneReturnEvent (обычные
+  // "Счётчики" без тапов) своя, отдельная, зонная схема без привязки к
+  // конкретной записи остаётся как была.
+  voidedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  // "С последней сдачи по assetId+tariffId" — тот же горячий путь, что у
+  // ZoneReturnEvent.zoneId+createdAt, но по паре актив+тариф (показание
+  // считается per-паре, не per-зоне).
+  @@index([assetId, tariffId, createdAt])
+  @@index([zoneId, createdAt])
+}
+
 // 1 или 2 тарифа на зону: свободное название + цена за сеанс. Те же правила
 // и тот же лимит действуют и у режима "Прибывания" (запрос пользователя
 // 2026-07-17: "здесь действуют те правила и лимит тарифов") — создаются
@@ -873,6 +961,10 @@ model Tariff {
   // 2026-07-17). Пусто у counters (там тариф — просто цена показания, без
   // ссылки на пуск) и у stays (там своя схема снапшота цены).
   launches              Launch[]
+  // Только accountingMode="counters" с включённым countersTapAssistEnabled
+  // (запрос пользователя 2026-07-25) — тапы, увеличивающие виртуальное
+  // показание, см. CounterTapEvent.
+  counterTapEvents      CounterTapEvent[]
   // Активы режима "Прибывания", которые сейчас используют этот тариф
   // (Asset.tariffId) — необязательная обратная связь, тариф существует
   // независимо от того, привязан ли к нему уже хоть один актив.
@@ -981,10 +1073,11 @@ model AbonementWallet {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  transactions AbonementTransaction[]
-  launches     Launch[]
-  goodsSales   GoodsSale[]
-  ticketOrders TicketOrder[]
+  transactions     AbonementTransaction[]
+  launches         Launch[]
+  goodsSales       GoodsSale[]
+  ticketOrders     TicketOrder[]
+  counterTapEvents CounterTapEvent[]
 
   // Один кошелёк на номер в рамках тенанта — общий на все точки.
   @@unique([tenantId, phone])
@@ -1449,6 +1542,7 @@ model Asset {
   readings              AssetReading[]
   initialReadings       AssetInitialReading[]
   launches              Launch[]
+  counterTapEvents      CounterTapEvent[]
   abonementTransactions AbonementTransaction[]
   ticketVariants        TicketVariant[]
   tickets               Ticket[]

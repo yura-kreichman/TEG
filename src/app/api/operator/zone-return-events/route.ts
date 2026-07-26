@@ -27,8 +27,13 @@ export async function GET() {
     ? { pointId: point.id, active: true }
     : { pointId: point.id, active: true, operatorsWithAccess: { some: { id: operator.id } } };
 
+  // countersTapAssistEnabled: false (запрос пользователя 2026-07-25) — у
+  // tap-зон "Возврат/тест" теперь привязывается к КОНКРЕТНОМУ тапу
+  // (CounterTapEvent.voidedAt, см. /api/operator/counter-tap-events), этот
+  // зонный журнал для них больше не источник истины вовсе — без фильтра
+  // Сотрудник мог бы создать запись, которая тихо не влияла бы на расчёт.
   const zones = await prisma.zone.findMany({
-    where: { ...zoneWhere, accountingMode: "counters" },
+    where: { ...zoneWhere, accountingMode: "counters", countersTapAssistEnabled: false },
     select: { id: true, name: true, iconKey: true },
     orderBy: { createdAt: "asc" },
   });
@@ -82,6 +87,7 @@ export async function POST(request: Request) {
       id: zoneId,
       pointId: point.id,
       active: true,
+      countersTapAssistEnabled: false,
       ...(operator.allZonesAccess ? {} : { operatorsWithAccess: { some: { id: operator.id } } }),
     },
     select: { id: true, accountingMode: true },

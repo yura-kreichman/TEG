@@ -71,6 +71,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
     modeLocked: submissionCount > 0,
     active: zone.active,
     printReceiptEnabled: zone.printReceiptEnabled,
+    countersTapAssistEnabled: zone.countersTapAssistEnabled,
     ticketRedemptionEnabled: zone.ticketRedemptionEnabled,
     ticketLifetimeDays: zone.ticketLifetimeDays,
     pointId: zone.pointId,
@@ -104,6 +105,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     accountingMode,
     active,
     printReceiptEnabled,
+    countersTapAssistEnabled,
     ticketRedemptionEnabled,
     ticketLifetimeDays,
   } = await request.json();
@@ -114,6 +116,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     accountingMode?: string;
     active?: boolean;
     printReceiptEnabled?: boolean;
+    countersTapAssistEnabled?: boolean;
     ticketRedemptionEnabled?: boolean;
     ticketLifetimeDays?: number | null;
   } = {};
@@ -208,6 +211,16 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
       return NextResponse.json({ error: "Некорректное значение printReceiptEnabled" }, { status: 400 });
     }
     data.printReceiptEnabled = printReceiptEnabled;
+  }
+  if (countersTapAssistEnabled !== undefined) {
+    if (typeof countersTapAssistEnabled !== "boolean") {
+      return NextResponse.json({ error: "Некорректное значение countersTapAssistEnabled" }, { status: 400 });
+    }
+    // В отличие от accountingMode — можно менять в любой момент, даже после
+    // сдач итогов (запрос пользователя 2026-07-25: "не блокируется, только
+    // источник показания") — формула расчёта не меняется, следующая сдача
+    // просто возьмёт предыдущее показание + тапы с момента переключения.
+    data.countersTapAssistEnabled = countersTapAssistEnabled;
   }
   if (ticketRedemptionEnabled !== undefined) {
     if (typeof ticketRedemptionEnabled !== "boolean") {
