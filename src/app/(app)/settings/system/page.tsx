@@ -6,13 +6,13 @@ import { BackLink } from "@/components/back-link";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { Switch } from "@/components/ui/switch";
-import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useI18n } from "@/components/i18n-provider";
 import type { Dictionary } from "@/lib/i18n";
 import { OwnerShell } from "@/components/owner-shell";
 import { useOwnerHasPrinterLocal, useOwnerPaperWidthLocal } from "@/hooks/use-print";
 import { PrintButton } from "@/components/print/print-button";
-import { buildReceiptHtml, type PrintDocumentData } from "@/lib/print/receipt-document";
+import { buildReceiptHtml, type PrintDocumentData, type ReceiptPaperWidth } from "@/lib/print/receipt-document";
 import { cn } from "@/lib/utils";
 
 // Плашка "Модули" (запрос пользователя 2026-07-22) — множественный выбор,
@@ -301,22 +301,35 @@ export default function SystemSettingsPage() {
                       печать теперь форсирует эту ширину явно (@page в
                       receipt-document.ts), а не полагается на "auto", которая
                       в тихой печати без диалога её не определяет. */}
+                  {/* Dropdown, не SegmentedTabs (запрос пользователя
+                      2026-07-26, живой скриншот) — рядом с длинной подсказкой
+                      сегменты сжимались и переносились на узком экране.
+                      Компактный, справа, как тумблер (запрос того же дня:
+                      "не на всю ширину, пусть будет справа как тумблер") —
+                      не на всю ширину строки. */}
                   <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
                     <div className="min-w-0">
                       <div className="text-body-airbnb">{t.settings.systemReceiptPaperWidthLabel}</div>
                       <div className="text-caption-airbnb">{t.settings.systemReceiptPaperWidthHint}</div>
                     </div>
-                    <SegmentedTabs
-                      options={[
-                        { key: "58", label: "58мм" },
-                        { key: "80", label: "80мм" },
-                        { key: "a4", label: "A4" },
-                      ]}
+                    <Select
                       value={paperWidth}
-                      onChange={setPaperWidth}
-                      equalWidth={false}
-                      className="shrink-0"
-                    />
+                      onValueChange={(v) => v && setPaperWidth(v as ReceiptPaperWidth)}
+                      items={[
+                        { value: "58", label: "58мм" },
+                        { value: "80", label: "80мм" },
+                        { value: "a4", label: "A4" },
+                      ]}
+                    >
+                      <SelectTrigger className="h-9 w-auto shrink-0 gap-1.5 px-2.5">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="58">58мм</SelectItem>
+                        <SelectItem value="80">80мм</SelectItem>
+                        <SelectItem value="a4">A4</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Шапка — что показывать (запрос пользователя 2026-07-20).

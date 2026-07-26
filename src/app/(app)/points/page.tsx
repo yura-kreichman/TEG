@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { TimeInput } from "@/components/time-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import type { ReceiptPaperWidth } from "@/lib/print/receipt-document";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
@@ -704,22 +704,29 @@ export default function PointsPage() {
               2026-07-26) — только пока есть сам принтер выше, иначе нечего
               настраивать. */}
           {deviceHasPrinter && (
-            <div className="flex items-center justify-between rounded-control border border-border p-3">
-              <span>
-                <span className="block text-body-airbnb">{t.settings.systemReceiptPaperWidthLabel}</span>
-                <span className="mt-0.5 block text-caption-airbnb">{t.settings.systemReceiptPaperWidthHint}</span>
-              </span>
-              <SegmentedTabs
-                options={[
-                  { key: "58", label: "58мм" },
-                  { key: "80", label: "80мм" },
-                  { key: "a4", label: "A4" },
-                ]}
+            <div className="flex items-center justify-between gap-3 rounded-control border border-border p-3">
+              <div className="min-w-0">
+                <div className="text-body-airbnb">{t.settings.systemReceiptPaperWidthLabel}</div>
+                <div className="text-caption-airbnb">{t.settings.systemReceiptPaperWidthHint}</div>
+              </div>
+              <Select
                 value={deviceReceiptPaperWidth}
-                onChange={setDeviceReceiptPaperWidth}
-                equalWidth={false}
-                className="shrink-0"
-              />
+                onValueChange={(v) => v && setDeviceReceiptPaperWidth(v as ReceiptPaperWidth)}
+                items={[
+                  { value: "58", label: "58мм" },
+                  { value: "80", label: "80мм" },
+                  { value: "a4", label: "A4" },
+                ]}
+              >
+                <SelectTrigger className="h-9 w-auto shrink-0 gap-1.5 px-2.5">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="58">58мм</SelectItem>
+                  <SelectItem value="80">80мм</SelectItem>
+                  <SelectItem value="a4">A4</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           )}
           <PressableScale>
@@ -918,22 +925,29 @@ export default function PointsPage() {
               <Switch checked={renameDeviceHasPrinter} onCheckedChange={setRenameDeviceHasPrinter} className="shrink-0" />
             </div>
             {renameDeviceHasPrinter && (
-              <div className="flex items-center justify-between rounded-control border border-border p-3">
-                <span>
-                  <span className="block text-body-airbnb">{t.settings.systemReceiptPaperWidthLabel}</span>
-                  <span className="mt-0.5 block text-caption-airbnb">{t.settings.systemReceiptPaperWidthHint}</span>
-                </span>
-                <SegmentedTabs
-                  options={[
-                    { key: "58", label: "58мм" },
-                    { key: "80", label: "80мм" },
-                    { key: "a4", label: "A4" },
-                  ]}
+              <div className="flex items-center justify-between gap-3 rounded-control border border-border p-3">
+                <div className="min-w-0">
+                  <div className="text-body-airbnb">{t.settings.systemReceiptPaperWidthLabel}</div>
+                  <div className="text-caption-airbnb">{t.settings.systemReceiptPaperWidthHint}</div>
+                </div>
+                <Select
                   value={renameDeviceReceiptPaperWidth}
-                  onChange={setRenameDeviceReceiptPaperWidth}
-                  equalWidth={false}
-                  className="shrink-0"
-                />
+                  onValueChange={(v) => v && setRenameDeviceReceiptPaperWidth(v as ReceiptPaperWidth)}
+                  items={[
+                    { value: "58", label: "58мм" },
+                    { value: "80", label: "80мм" },
+                    { value: "a4", label: "A4" },
+                  ]}
+                >
+                  <SelectTrigger className="h-9 w-auto shrink-0 gap-1.5 px-2.5">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="58">58мм</SelectItem>
+                    <SelectItem value="80">80мм</SelectItem>
+                    <SelectItem value="a4">A4</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
             <PressableScale>

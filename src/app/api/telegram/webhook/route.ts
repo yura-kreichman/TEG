@@ -837,9 +837,11 @@ const BALANCE_TENANT_CALLBACK_PREFIX = "balt:";
 // номером, запрос пользователя 2026-07-26: "Я клиент у двух Владельцев...
 // надо, чтобы при запросе баланса тоже спрашивалось у какого владельца") —
 // раньше при нескольких привязках бот молча слал ОБА баланса подряд, без
-// выбора. Формулировка — отдельная (chooseCompanyPrompt), не chooseTenantPrompt
-// остальных команд (явный запрос того же дня: "не 'выберите прокат', а
-// просто 'Выберите компанию'").
+// выбора. chooseCompanyPrompt ("Выберите компанию") — единая формулировка
+// для ВСЕХ команд с выбором тенанта (/balance, /services, /join, /bonus,
+// запрос пользователя 2026-07-26: "не 'выберите прокат', а просто 'Выберите
+// компанию'" — распространено на все места, старое "Выберите прокат"
+// нигде больше не используется).
 async function handlePrivateBalanceCommand(chatId: string, lang: BotLang) {
   const s = BOT_STRINGS[lang];
   const links = await prisma.clientTelegramLink.findMany({ where: { chatId } });
@@ -922,7 +924,7 @@ async function handleServicesCommand(chatId: string, lang: BotLang) {
 
   const tenants = await prisma.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true } });
   const buttons = tenants.map((t) => ({ text: t.name, callbackData: `${SERVICES_TENANT_CALLBACK_PREFIX}${t.id}` }));
-  await sendInlineKeyboard(chatId, s.chooseTenantPrompt, buttons).catch(() => {});
+  await sendInlineKeyboard(chatId, s.chooseCompanyPrompt, buttons).catch(() => {});
 }
 
 async function sendServicesForTenant(chatId: string, tenantId: string, lang: BotLang) {
@@ -962,7 +964,7 @@ async function sendServicesForPoint(chatId: string, pointId: string, lang: BotLa
     where: { id: pointId },
     select: {
       name: true,
-      tenant: { select: { slug: true, landingEnabled: true } },
+      tenant: { select: { slug: true, landingEnabled: true, landing: { select: { status: true } } } },
       zones: {
         where: { active: true },
         orderBy: { createdAt: "asc" },
@@ -1002,9 +1004,14 @@ async function sendServicesForPoint(chatId: string, pointId: string, lang: BotLa
   const text = lines.join("\n");
 
   // Ссылка на лендинг — только если Владелец не отключил модуль (запрос
-  // пользователя 2026-07-24: "надо учесть, чтобы он был включён у Владельца"),
-  // без неё просто обычное сообщение без кнопок.
-  if (point.tenant.landingEnabled && point.tenant.slug) {
+  // пользователя 2026-07-24: "надо учесть, чтобы он был включён у Владельца")
+  // И лендинг реально ОПУБЛИКОВАН, не черновик (реальный баг, найден
+  // пользователем 2026-07-26: "кнопка... не может быть, если Владелец не
+  // опубликовал Лендинг" — публичная /s/[slug] отдаёт пустую страницу для
+  // status !== "published", см. src/app/(site)/s/[slug]/page.tsx; landingEnabled
+  // сам по себе — только тумблер модуля, не гарантирует, что там есть что
+  // показать). Без выполнения обоих условий — просто обычное сообщение без кнопок.
+  if (point.tenant.landingEnabled && point.tenant.slug && point.tenant.landing?.status === "published") {
     const siteUrl = process.env.SITE_URL ?? "http://localhost:3000";
     await sendInlineKeyboard(chatId, text, [{ text: s.openLandingButton, url: `${siteUrl}/s/${point.tenant.slug}` }]).catch(() => {});
   } else {
@@ -1087,7 +1094,7 @@ async function handleJoinCommand(chatId: string, lang: BotLang) {
 
   const tenants = await prisma.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true } });
   const buttons = tenants.map((t) => ({ text: t.name, callbackData: `${JOIN_TENANT_CALLBACK_PREFIX}${t.id}` }));
-  await sendInlineKeyboard(chatId, s.chooseTenantPrompt, buttons).catch(() => {});
+  await sendInlineKeyboard(chatId, s.chooseCompanyPrompt, buttons).catch(() => {});
 }
 
 async function sendJoinForTenant(chatId: string, tenantId: string, lang: BotLang) {
@@ -1139,7 +1146,7 @@ async function handleBonusCommand(chatId: string, lang: BotLang) {
 
   const tenants = await prisma.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true } });
   const buttons = tenants.map((t) => ({ text: t.name, callbackData: `${BONUS_TENANT_CALLBACK_PREFIX}${t.id}` }));
-  await sendInlineKeyboard(chatId, s.chooseTenantPrompt, buttons).catch(() => {});
+  await sendInlineKeyboard(chatId, s.chooseCompanyPrompt, buttons).catch(() => {});
 }
 
 async function sendBonusForTenant(chatId: string, tenantId: string, lang: BotLang) {

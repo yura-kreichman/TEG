@@ -135,7 +135,13 @@ function receiptCss(paperWidth: ReceiptPaperWidth): string {
     margin: 0;
     padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    color: #111;
+    /* Строго #000, не #111/#444/т.п. "приглушённый" серый (запрос
+       пользователя 2026-07-26, живой скриншот) — термопринтер не умеет
+       печатать настоящий серый, только дизерит его в разреженные точки,
+       отсюда и блёклость/полосатость на "приглушённых" элементах (телефон,
+       заголовки разделов). У обычного экрана/PDF разница между #000 и #111
+       незаметна, так что для превью это тоже безопасно. */
+    color: #000;
     background: #fff;
   }
   /* Канва + рваный край бумаги — ТОЛЬКО на экране (превью в Настройках →
@@ -248,10 +254,10 @@ function receiptCss(paperWidth: ReceiptPaperWidth): string {
   }
   .receipt-tenant { font-size: 17px; font-weight: 800; }
   .receipt-title { font-size: 14px; font-weight: 700; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
-  .receipt-subtitle { font-size: 12.65px; color: #444; margin-top: 2px; }
+  .receipt-subtitle { font-size: 12.65px; color: #000; margin-top: 2px; }
   /* Имя клиента в выписке баланса — крупнее обычного subtitle, телефон под
      ним обычным subtitle-стилем (запрос пользователя 2026-07-20). */
-  .receipt-subtitle-name { font-size: 15px; font-weight: 700; color: #222; margin-top: 2px; }
+  .receipt-subtitle-name { font-size: 15px; font-weight: 700; color: #000; margin-top: 2px; }
   /* Компактная шапка (запрос пользователя 2026-07-20) — в основе перестановка:
      лого слева, название тенанта + заголовок документа справа от него, а не
      раскладка сверху вниз по центру — короче по высоте, заметно на
@@ -287,11 +293,11 @@ function receiptCss(paperWidth: ReceiptPaperWidth): string {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #444;
+    color: #000;
     margin-bottom: 2px;
   }
   .receipt-line { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; font-size: 13.685px; }
-  .receipt-line .label { color: #222; }
+  .receipt-line .label { color: #000; }
   .receipt-line .value { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .receipt-line.bold { font-weight: 700; }
   .receipt-line.large { font-size: 17px; font-weight: 700; }
