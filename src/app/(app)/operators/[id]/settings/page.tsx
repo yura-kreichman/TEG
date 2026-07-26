@@ -29,6 +29,7 @@ import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/money-input";
+import { parseMoneyInput } from "@/lib/format";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -269,7 +270,7 @@ export default function OperatorSettingsPage() {
     const res = await fetch(`/api/operators/${params.id}/work-time/rate`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rate: Number(rateValue) }),
+      body: JSON.stringify({ rate: parseMoneyInput(rateValue) }),
     });
     const data = await res.json();
     if (!res.ok) {

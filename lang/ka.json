@@ -123,6 +123,8 @@
     "systemReceiptShowNameLabel": "კომპანიის სახელის ჩვენება",
     "systemReceiptCompactHeaderLabel": "კომპაქტური თავსართი",
     "systemReceiptCompactHeaderHint": "ლოგო მარცხნივ, ორგანიზაციის სახელი და ქვითრის სათაური გვერდით — უფრო მოკლეა თერმოპრინტერზე",
+    "systemReceiptPaperWidthLabel": "რულონის სიგანე",
+    "systemReceiptPaperWidthHint": "მიუთითეთ თქვენი პრინტერის ქაღალდის რეალური სიგანე — წინააღმდეგ შემთხვევაში ბეჭდვა შეიძლება მოიჭრას გვერდებზე",
     "systemOwnerHasPrinterHint": "ამ ბრაუზერს/მოწყობილობას აქვს პრინტერი — აქ გამოჩნდება ბალანსის ამონაწერისა და მფლობელის სხვა დოკუმენტების ბეჭდვის ღილაკები. იაფ Bluetooth პრინტერებს ჩვეულებრივ სჭირდებათ ბეჭდვის სერვისის აპლიკაცია (მაგ., ESCPOS Bluetooth Print Service) — წინააღმდეგ შემთხვევაში პრინტერი არ გამოჩნდება Android-ის ბეჭდვის დიალოგში.",
     "systemReceiptPreviewLabel": "ქვითრის გადახედვა",
     "systemReceiptTestPrintButton": "სატესტო ბეჭდვა",

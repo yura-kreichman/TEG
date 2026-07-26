@@ -19,7 +19,15 @@ export async function POST(
     return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
   }
 
-  const { label, roaming, hasPrinter } = await request.json().catch(() => ({ label: undefined, roaming: undefined, hasPrinter: undefined }));
+  const { label, roaming, hasPrinter, receiptPaperWidth } = await request
+    .json()
+    .catch(() => ({ label: undefined, roaming: undefined, hasPrinter: undefined, receiptPaperWidth: undefined }));
+
+  // Только "58"/"80"/"a4" — любое другое значение молча сломало бы печать
+  // (@page/.receipt в receipt-document.ts берут это напрямую в CSS).
+  if (receiptPaperWidth !== undefined && !["58", "80", "a4"].includes(receiptPaperWidth)) {
+    return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
+  }
 
   const { token, tokenHash } = generateInstallToken();
   const device = await prisma.pointDevice.create({
@@ -28,6 +36,7 @@ export async function POST(
       label: typeof label === "string" && label.trim() ? label.trim() : null,
       roaming: roaming === true,
       hasPrinter: hasPrinter === true,
+      ...(receiptPaperWidth !== undefined ? { receiptPaperWidth } : {}),
       installTokenHash: tokenHash,
       installTokenExpiresAt: new Date(Date.now() + INSTALL_TOKEN_TTL_MS),
     },

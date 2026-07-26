@@ -123,6 +123,8 @@
     "systemReceiptShowNameLabel": "Pokaż nazwę firmy",
     "systemReceiptCompactHeaderLabel": "Kompaktowy nagłówek",
     "systemReceiptCompactHeaderHint": "Logo po lewej, nazwa najemcy i tytuł paragonu obok — krócej na drukarce termicznej",
+    "systemReceiptPaperWidthLabel": "Szerokość rolki",
+    "systemReceiptPaperWidthHint": "Podaj rzeczywistą szerokość papieru drukarki — w przeciwnym razie wydruk może być przycięty po bokach",
     "systemOwnerHasPrinterHint": "Ta przeglądarka/urządzenie ma drukarkę — tutaj pojawią się przyciski drukowania wyciągu z salda i innych dokumentów Właściciela. Tanie drukarki Bluetooth zwykle wymagają aplikacji usługi druku (np. ESCPOS Bluetooth Print Service) — w przeciwnym razie drukarka nie pojawi się w oknie drukowania Androida.",
     "systemReceiptPreviewLabel": "Podgląd paragonu",
     "systemReceiptTestPrintButton": "Wydruk testowy",

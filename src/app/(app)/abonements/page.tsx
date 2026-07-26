@@ -11,6 +11,7 @@ import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/money-input";
+import { parseMoneyInput } from "@/lib/format";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
@@ -236,8 +237,8 @@ export default function AbonementsPage() {
   async function save(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    const price = Number(form.price);
-    const creditAmount = Number(form.creditAmount);
+    const price = parseMoneyInput(form.price);
+    const creditAmount = parseMoneyInput(form.creditAmount);
     // Зачисленный баланс не может быть меньше цены (запрос пользователя
     // 2026-07-17) — иначе это не бонус клиенту, а скрытая недостача.
     // Проверка тут — быстрая обратная связь без round-trip; API проверяет

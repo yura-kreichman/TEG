@@ -24,7 +24,7 @@ import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { formatTime } from "@/lib/datetime-format";
 import { cn } from "@/lib/utils";
 import { Money } from "@/components/money";
-import { formatMoneyWithCurrency } from "@/lib/format";
+import { formatMoneyWithCurrency, parseMoneyInput } from "@/lib/format";
 import { distributeCollectionWhole } from "@/lib/collection-split";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { useOwnerPrintAvailable } from "@/hooks/use-print";
@@ -166,7 +166,7 @@ export default function ZoneBalancesPage() {
     const res = await fetch(`/api/money/collections/${editingCollection.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: Number(editCollectionAmount) }),
+      body: JSON.stringify({ amount: parseMoneyInput(editCollectionAmount) }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -305,7 +305,7 @@ export default function ZoneBalancesPage() {
       res = await fetch(`/api/points/${collectionPointId}/collection/general`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: collectionAmount }),
+        body: JSON.stringify({ amount: parseMoneyInput(collectionAmount) }),
       });
     } else if (!collectionZoneId) {
       setCollectionError(t.operatorApp.selectZone);
@@ -316,14 +316,14 @@ export default function ZoneBalancesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pool: collectionZoneId === ABONEMENT_POOL_ID ? "abonement" : "goods",
-          amount: collectionAmount,
+          amount: parseMoneyInput(collectionAmount),
         }),
       });
     } else {
       res = await fetch(`/api/zones/${collectionZoneId}/collection`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: collectionAmount }),
+        body: JSON.stringify({ amount: parseMoneyInput(collectionAmount) }),
       });
     }
 
@@ -354,7 +354,7 @@ export default function ZoneBalancesPage() {
       setCollectionOpen(false);
       setCollectionAmount("");
       if (printAvailable.available) {
-        setLastCollection({ amount: Number(collectionAmount), pointName, zoneName });
+        setLastCollection({ amount: parseMoneyInput(collectionAmount), pointName, zoneName });
       }
     });
   }

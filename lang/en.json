@@ -123,6 +123,8 @@
     "systemReceiptShowNameLabel": "Show company name",
     "systemReceiptCompactHeaderLabel": "Compact header",
     "systemReceiptCompactHeaderHint": "Logo on the left, tenant name and receipt title next to it — shorter on thermal paper",
+    "systemReceiptPaperWidthLabel": "Roll width",
+    "systemReceiptPaperWidthHint": "Set your printer's actual paper width — otherwise printouts may get cropped on the sides",
     "systemOwnerHasPrinterHint": "This browser/device has a printer — buttons to print the balance statement and other Owner documents will appear here. Cheap Bluetooth printers usually need a print service app (e.g. ESCPOS Bluetooth Print Service) — otherwise the printer won't appear in the Android print dialog.",
     "systemReceiptPreviewLabel": "Receipt preview",
     "systemReceiptTestPrintButton": "Test print",

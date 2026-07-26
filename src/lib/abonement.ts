@@ -72,7 +72,7 @@ export async function notifyWalletBalanceChange(
   const links = await prisma.clientTelegramLink.findMany({ where: { tenantId, phone: wallet.phone } });
   if (links.length === 0) return;
 
-  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { currency: true } });
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, currency: true } });
   if (!tenant) return;
 
   const currency = tenant.currency as CurrencyCode | null;
@@ -83,8 +83,16 @@ export async function notifyWalletBalanceChange(
   // проактивный пуш, а не ответ на сообщение клиента.
   for (const link of links) {
     const s = BOT_STRINGS[link.language as Locale] ?? BOT_STRINGS.en;
+    // Название компании — только если у ЭТОГО чата есть привязка ещё к
+    // какому-то другому тенанту (запрос пользователя 2026-07-26: "если у
+    // клиента в боте подключено больше одной компании... чтобы было понятно,
+    // где списание или пополнение") — не показываем зря там, где клиент и
+    // так знает, что это единственный прокат, с которым он взаимодействует.
+    const otherLinks = await prisma.clientTelegramLink.findMany({ where: { chatId: link.chatId }, select: { tenantId: true } });
+    const isMultiTenant = new Set(otherLinks.map((l) => l.tenantId)).size > 1;
     const text = [
       greetingLine(wallet.name, s),
+      ...(isMultiTenant ? [s.companyLine(tenant.name)] : []),
       ...(detail ? [detail] : []),
       `${sign}${formatMoneyWithCurrency(Math.abs(amount), "ru", currency)}`,
       `${s.balanceWord}: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`,

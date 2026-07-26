@@ -38,7 +38,7 @@ import { useOperatorPrintAvailable } from "@/hooks/use-print";
 import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import { playErrorChime } from "@/lib/beep";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
-import { formatMoneyWithCurrency } from "@/lib/format";
+import { formatMoneyWithCurrency, parseMoneyInput } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface CategoryCtx {
@@ -355,8 +355,8 @@ export default function GoodsPage() {
   }
 
   async function saveReconciliation() {
-    const actualCash = Number(reconcileCash || "0");
-    const actualMobile = Number(reconcileMobile || "0");
+    const actualCash = parseMoneyInput(reconcileCash);
+    const actualMobile = parseMoneyInput(reconcileMobile);
     if (!Number.isFinite(actualCash) || actualCash < 0 || !Number.isFinite(actualMobile) || actualMobile < 0) return;
     setReconcileSubmitting(true);
     try {
@@ -384,7 +384,7 @@ export default function GoodsPage() {
 
   const reconcileDifference =
     reconcilePending && (reconcileCash || reconcileMobile)
-      ? Number(reconcileCash || "0") + Number(reconcileMobile || "0") - reconcilePending.cash - reconcilePending.mobile
+      ? parseMoneyInput(reconcileCash) + parseMoneyInput(reconcileMobile) - reconcilePending.cash - reconcilePending.mobile
       : null;
 
   if (loading) return null;
@@ -792,7 +792,7 @@ export default function GoodsPage() {
                       inputMode="numeric"
                       className="h-14 rounded-control bg-muted text-lg font-bold"
                       value={reconcileCash}
-                      onChange={(e) => setReconcileCash(e.target.value.replace(/[^\d.]/g, ""))}
+                      onChange={(e) => setReconcileCash(e.target.value.replace(/[^\d.,]/g, ""))}
                     />
                   </div>
                   <div className="flex flex-col gap-1">
@@ -806,7 +806,7 @@ export default function GoodsPage() {
                       inputMode="numeric"
                       className="h-14 rounded-control bg-muted text-lg font-bold"
                       value={reconcileMobile}
-                      onChange={(e) => setReconcileMobile(e.target.value.replace(/[^\d.]/g, ""))}
+                      onChange={(e) => setReconcileMobile(e.target.value.replace(/[^\d.,]/g, ""))}
                     />
                   </div>
                 </div>

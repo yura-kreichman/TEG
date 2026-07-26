@@ -565,7 +565,7 @@ async function handleRegistrationName(chatId: string, tenantId: string, phone: s
   // (запрос пользователя 2026-07-25: "проверить, что абонементы созданы и
   // есть кто их продаёт и где") — одним сообщением, не спамим тремя подряд.
   const [report, abonementsInfo, showJoin, showBonus] = await Promise.all([
-    buildClientReport(tenant, wallet, lang),
+    buildClientReport(chatId, tenant, wallet, lang),
     buildAbonementsInfo(tenant, lang),
     tenantHasActiveGroup(tenant.id, chatId),
     tenantHasAbonementsToSell(tenant.id),
@@ -654,7 +654,7 @@ async function sendClientReportWithMenu(
   lang: BotLang
 ): Promise<void> {
   const [report, showJoin, showBonus] = await Promise.all([
-    buildClientReport(tenant, wallet, lang),
+    buildClientReport(chatId, tenant, wallet, lang),
     tenantHasActiveGroup(tenant.id, chatId),
     tenantHasAbonementsToSell(tenant.id),
   ]);
@@ -669,14 +669,22 @@ const HISTORY_LIMIT = 20;
 // сообщением (запрос пользователя 2026-07-22: клиент не должен разбираться в
 // отдельных командах, один тап по кнопке даёт полную картину сразу).
 async function buildClientReport(
+  chatId: string,
   tenant: { id: string; name: string; currency: string | null },
   wallet: { id: string; name: string | null; balance: unknown },
   lang: BotLang
 ): Promise<string> {
   const s = BOT_STRINGS[lang];
   const currency = tenant.currency as CurrencyCode | null;
+  // Название компании — только если у ЭТОГО чата привязано больше одной
+  // компании (запрос пользователя 2026-07-26, тот же принцип, что у
+  // notifyWalletBalanceChange в lib/abonement.ts) — в отчёте/выписке /balance
+  // так же легко перепутать, о какой компании речь, как и в проактивном пуше.
+  const otherLinks = await prisma.clientTelegramLink.findMany({ where: { chatId }, select: { tenantId: true } });
+  const isMultiTenant = new Set(otherLinks.map((l) => l.tenantId)).size > 1;
   const lines = [
     greetingLine(wallet.name ? escapeHtml(wallet.name) : null, s),
+    ...(isMultiTenant ? [s.companyLine(escapeHtml(tenant.name))] : []),
     `${s.yourBalance}: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`,
   ];
 
@@ -822,20 +830,59 @@ function matchesMenuCommand(text: string, commandRegex: RegExp, buttonLabel: (s:
   return Object.values(BOT_STRINGS).some((s) => buttonLabel(s) === text);
 }
 
+const BALANCE_TENANT_CALLBACK_PREFIX = "balt:";
+
+// "/balance" — резолв тенанта той же схемой, что /services, /join, /bonus
+// (клиент может быть привязан к нескольким прокатам платформы одним
+// номером, запрос пользователя 2026-07-26: "Я клиент у двух Владельцев...
+// надо, чтобы при запросе баланса тоже спрашивалось у какого владельца") —
+// раньше при нескольких привязках бот молча слал ОБА баланса подряд, без
+// выбора. Формулировка — отдельная (chooseCompanyPrompt), не chooseTenantPrompt
+// остальных команд (явный запрос того же дня: "не 'выберите прокат', а
+// просто 'Выберите компанию'").
 async function handlePrivateBalanceCommand(chatId: string, lang: BotLang) {
+  const s = BOT_STRINGS[lang];
   const links = await prisma.clientTelegramLink.findMany({ where: { chatId } });
   if (links.length === 0) {
     await promptContactShare(chatId, null, undefined, lang);
     return;
   }
 
+  // Тенант годится, только если модуль включён И у него реально есть кошелёк
+  // на этот телефон — та же пара проверок, что раньше стояла внутри цикла
+  // рассылки, просто теперь сначала считаем, СКОЛЬКО их, прежде чем решать
+  // между прямой отправкой и выбором.
+  const tenantIds: string[] = [];
   for (const link of links) {
-    const tenant = await prisma.tenant.findUnique({ where: { id: link.tenantId }, select: { id: true, name: true, currency: true } });
-    if (!tenant || !(await isModuleEnabled(tenant.id, "clientsEnabled"))) continue;
-    const wallet = await findWalletByPhone(tenant.id, link.phone);
+    if (!(await isModuleEnabled(link.tenantId, "clientsEnabled"))) continue;
+    const wallet = await findWalletByPhone(link.tenantId, link.phone);
     if (!wallet) continue;
-    await sendClientReportWithMenu(chatId, tenant, wallet, lang);
+    tenantIds.push(link.tenantId);
   }
+  if (tenantIds.length === 0) return;
+
+  if (tenantIds.length === 1) {
+    await sendBalanceForTenant(chatId, tenantIds[0], lang);
+    return;
+  }
+
+  const tenants = await prisma.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true } });
+  const buttons = tenants.map((t) => ({ text: t.name, callbackData: `${BALANCE_TENANT_CALLBACK_PREFIX}${t.id}` }));
+  await sendInlineKeyboard(chatId, s.chooseCompanyPrompt, buttons).catch(() => {});
+}
+
+async function sendBalanceForTenant(chatId: string, tenantId: string, lang: BotLang) {
+  // Перечитываем link по tenantId+chatId (не полагаемся на тот, что уже
+  // проверили в handlePrivateBalanceCommand — кнопка выбора компании может
+  // быть нажата из старого сообщения, та же защита, что у sendServicesForTenant
+  // и соседей: "проверка обязана стоять именно здесь, не только выше по цепочке").
+  const link = await prisma.clientTelegramLink.findUnique({ where: { tenantId_chatId: { tenantId, chatId } } });
+  if (!link) return;
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, name: true, currency: true } });
+  if (!tenant || !(await isModuleEnabled(tenant.id, "clientsEnabled"))) return;
+  const wallet = await findWalletByPhone(tenant.id, link.phone);
+  if (!wallet) return;
+  await sendClientReportWithMenu(chatId, tenant, wallet, lang);
 }
 
 const SERVICES_TENANT_CALLBACK_PREFIX = "svct:";
@@ -1129,5 +1176,7 @@ async function handleCallbackQuery(callbackQuery: {
     await sendJoinForTenant(chatId, data.slice(JOIN_TENANT_CALLBACK_PREFIX.length), lang);
   } else if (data.startsWith(BONUS_TENANT_CALLBACK_PREFIX)) {
     await sendBonusForTenant(chatId, data.slice(BONUS_TENANT_CALLBACK_PREFIX.length), lang);
+  } else if (data.startsWith(BALANCE_TENANT_CALLBACK_PREFIX)) {
+    await sendBalanceForTenant(chatId, data.slice(BALANCE_TENANT_CALLBACK_PREFIX.length), lang);
   }
 }

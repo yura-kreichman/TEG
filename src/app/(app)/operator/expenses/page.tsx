@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/money-input";
+import { parseMoneyInput } from "@/lib/format";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
@@ -114,7 +115,7 @@ export default function OperatorExpensesPage() {
       flashError(t.operatorApp.selectZone);
       return;
     }
-    const amount = Number(formAmount);
+    const amount = parseMoneyInput(formAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
       flashError(t.operatorApp.submit.amountPlaceholder);
       return;

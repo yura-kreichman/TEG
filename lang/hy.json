@@ -123,6 +123,8 @@
     "systemReceiptShowNameLabel": "Ցուցադրել ընկերության անունը",
     "systemReceiptCompactHeaderLabel": "Կոմպակտ վերնագիր",
     "systemReceiptCompactHeaderHint": "Լոգոն ձախից, կազմակերպության անունը և կտրոնի վերնագիրը կողքին — ավելի կարճ ջերմային տպիչի վրա",
+    "systemReceiptPaperWidthLabel": "Գլանի լայնությունը",
+    "systemReceiptPaperWidthHint": "Նշեք ձեր տպիչի իրական թղթի լայնությունը — հակառակ դեպքում տպագրությունը կարող է կտրվել կողքերից",
     "systemOwnerHasPrinterHint": "Այս բրաուզերում/սարքում տպիչ կա — այստեղ կհայտնվեն Սեփականատիրոջ մնացորդի քաղվածքի և այլ փաստաթղթերի տպման կոճակները. Էժան Bluetooth տպիչներին սովորաբար անհրաժեշտ է տպման ծառայության հավելված (օրինակ՝ ESCPOS Bluetooth Print Service) — հակառակ դեպքում տպիչը չի հայտնվի Android-ի տպման երկխոսությունում.",
     "systemReceiptPreviewLabel": "Կտրոնի նախադիտում",
     "systemReceiptTestPrintButton": "Փորձնական տպում",

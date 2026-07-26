@@ -43,7 +43,7 @@ import { useSavePulse } from "@/hooks/use-save-pulse";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { compressImageFile } from "@/lib/client-image";
-import { formatMoneyCompact } from "@/lib/format";
+import { formatMoneyCompact, parseMoneyInput } from "@/lib/format";
 import { playSaveDing } from "@/lib/beep";
 import { cn } from "@/lib/utils";
 
@@ -504,7 +504,7 @@ export default function GoodsCabinetPage() {
       setGoodsError(t.goods.nameRequiredError);
       return;
     }
-    const price = Number(goodsForm.price);
+    const price = parseMoneyInput(goodsForm.price);
     if (!Number.isFinite(price) || price <= 0) {
       setGoodsError(t.goods.priceRequiredError);
       return;
@@ -904,8 +904,8 @@ export default function GoodsCabinetPage() {
 
   async function saveReconcile() {
     if (!pointId) return;
-    const actualCash = Number(reconcileCash || "0");
-    const actualMobile = Number(reconcileMobile || "0");
+    const actualCash = parseMoneyInput(reconcileCash);
+    const actualMobile = parseMoneyInput(reconcileMobile);
     if (!Number.isFinite(actualCash) || actualCash < 0 || !Number.isFinite(actualMobile) || actualMobile < 0) {
       setReconcileError(t.goods.quantityRequiredError);
       return;
@@ -944,8 +944,8 @@ export default function GoodsCabinetPage() {
 
   async function saveEditReconciliation() {
     if (!reconciliationKebab) return;
-    const actualCash = Number(editReconcileCash || "0");
-    const actualMobile = Number(editReconcileMobile || "0");
+    const actualCash = parseMoneyInput(editReconcileCash);
+    const actualMobile = parseMoneyInput(editReconcileMobile);
     if (!Number.isFinite(actualCash) || actualCash < 0 || !Number.isFinite(actualMobile) || actualMobile < 0) {
       setEditReconcileError(t.goods.quantityRequiredError);
       return;
@@ -989,7 +989,7 @@ export default function GoodsCabinetPage() {
 
   const reconcileDifference =
     reconcilePending && (reconcileCash || reconcileMobile)
-      ? Number(reconcileCash || "0") + Number(reconcileMobile || "0") - reconcilePending.cash - reconcilePending.mobile
+      ? parseMoneyInput(reconcileCash) + parseMoneyInput(reconcileMobile) - reconcilePending.cash - reconcilePending.mobile
       : null;
 
   return (
@@ -1970,7 +1970,7 @@ export default function GoodsCabinetPage() {
               <MoneyInput
                 id="goodsPrice"
                 value={goodsForm.price}
-                onChange={(e) => setGoodsForm((f) => ({ ...f, price: e.target.value.replace(/[^\d.]/g, "") }))}
+                onChange={(e) => setGoodsForm((f) => ({ ...f, price: e.target.value.replace(/[^\d.,]/g, "") }))}
                 className="h-12"
               />
             </div>
@@ -2174,7 +2174,7 @@ export default function GoodsCabinetPage() {
                   inputMode="numeric"
                   className="h-14 rounded-control bg-muted text-lg font-bold"
                   value={reconcileCash}
-                  onChange={(e) => setReconcileCash(e.target.value.replace(/[^\d.]/g, ""))}
+                  onChange={(e) => setReconcileCash(e.target.value.replace(/[^\d.,]/g, ""))}
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -2188,7 +2188,7 @@ export default function GoodsCabinetPage() {
                   inputMode="numeric"
                   className="h-14 rounded-control bg-muted text-lg font-bold"
                   value={reconcileMobile}
-                  onChange={(e) => setReconcileMobile(e.target.value.replace(/[^\d.]/g, ""))}
+                  onChange={(e) => setReconcileMobile(e.target.value.replace(/[^\d.,]/g, ""))}
                 />
               </div>
             </div>
@@ -2231,7 +2231,7 @@ export default function GoodsCabinetPage() {
               id="editReconcileCash"
               inputMode="decimal"
               value={editReconcileCash}
-              onChange={(e) => setEditReconcileCash(e.target.value.replace(/[^\d.]/g, ""))}
+              onChange={(e) => setEditReconcileCash(e.target.value.replace(/[^\d.,]/g, ""))}
               className="h-12"
             />
           </div>
@@ -2241,7 +2241,7 @@ export default function GoodsCabinetPage() {
               id="editReconcileMobile"
               inputMode="decimal"
               value={editReconcileMobile}
-              onChange={(e) => setEditReconcileMobile(e.target.value.replace(/[^\d.]/g, ""))}
+              onChange={(e) => setEditReconcileMobile(e.target.value.replace(/[^\d.,]/g, ""))}
               className="h-12"
             />
           </div>

@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { parseMoneyInput } from "@/lib/format";
 
 interface PackageInfo {
   id: string;
@@ -104,7 +105,7 @@ export default function AdminPackagesPage() {
       maxZones: Number(form.maxZones),
       maxAssets: Number(form.maxAssets),
       maxOperators: Number(form.maxOperators),
-      priceMonthly: Number(form.priceMonthly),
+      priceMonthly: parseMoneyInput(form.priceMonthly),
       fluentcartProductId: form.fluentcartProductId.trim() || null,
     };
     const res = await fetch(editingId ? `/api/admin/packages/${editingId}` : "/api/admin/packages", {

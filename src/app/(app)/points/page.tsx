@@ -24,6 +24,8 @@ import { Input } from "@/components/ui/input";
 import { TimeInput } from "@/components/time-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import type { ReceiptPaperWidth } from "@/lib/print/receipt-document";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
@@ -48,6 +50,7 @@ interface PointDeviceInfo {
   activated: boolean;
   roaming: boolean;
   hasPrinter: boolean;
+  receiptPaperWidth: ReceiptPaperWidth;
 }
 
 interface PointInfo {
@@ -112,6 +115,12 @@ export default function PointsPage() {
   const [deviceLabel, setDeviceLabel] = useState("");
   const [deviceRoaming, setDeviceRoaming] = useState(false);
   const [deviceHasPrinter, setDeviceHasPrinter] = useState(false);
+  // Ширина рулона/тип принтера ЭТОГО устройства (запрос пользователя
+  // 2026-07-26: "на разных привязанных устройствах тоже может быть разная
+  // ширина бумаги") — печать привязана к конкретному принтеру устройства, не
+  // к тенанту целиком, поэтому и настройка тут, рядом с hasPrinter, а не в
+  // Настройках → Система.
+  const [deviceReceiptPaperWidth, setDeviceReceiptPaperWidth] = useState<ReceiptPaperWidth>("58");
   const [installLinks, setInstallLinks] = useState<Record<string, string>>({});
   const [qrOpenFor, setQrOpenFor] = useState<string | null>(null);
 
@@ -141,6 +150,7 @@ export default function PointsPage() {
   // Модуль печати (запрос пользователя 2026-07-20) — ручной тумблер "на этом
   // устройстве есть принтер", автоопределения нет и быть не может.
   const [renameDeviceHasPrinter, setRenameDeviceHasPrinter] = useState(false);
+  const [renameDeviceReceiptPaperWidth, setRenameDeviceReceiptPaperWidth] = useState<ReceiptPaperWidth>("58");
   const { saved: renameDeviceSaved, pulse: renameDevicePulse } = useSavePulse();
   const [copiedDeviceId, setCopiedDeviceId] = useState<string | null>(null);
 
@@ -228,7 +238,12 @@ export default function PointsPage() {
     const res = await fetch(`/api/points/${deviceSheetPointId}/devices`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: deviceLabel, roaming: deviceRoaming, hasPrinter: deviceHasPrinter }),
+      body: JSON.stringify({
+        label: deviceLabel,
+        roaming: deviceRoaming,
+        hasPrinter: deviceHasPrinter,
+        receiptPaperWidth: deviceReceiptPaperWidth,
+      }),
     });
     const data = await res.json();
     if (res.ok) {
@@ -238,6 +253,7 @@ export default function PointsPage() {
         setDeviceLabel("");
         setDeviceRoaming(false);
         setDeviceHasPrinter(false);
+        setDeviceReceiptPaperWidth("58");
         setDeviceSheetPointId(null);
       });
     }
@@ -378,6 +394,7 @@ export default function PointsPage() {
     setRenameDeviceValue(device.label ?? "");
     setRenameDeviceRoaming(device.roaming);
     setRenameDeviceHasPrinter(device.hasPrinter);
+    setRenameDeviceReceiptPaperWidth(device.receiptPaperWidth);
   }
 
   async function confirmRenameDevice() {
@@ -385,7 +402,12 @@ export default function PointsPage() {
     await fetch(`/api/points/${deviceKebab.pointId}/devices/${deviceKebab.device.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: renameDeviceValue, roaming: renameDeviceRoaming, hasPrinter: renameDeviceHasPrinter }),
+      body: JSON.stringify({
+        label: renameDeviceValue,
+        roaming: renameDeviceRoaming,
+        hasPrinter: renameDeviceHasPrinter,
+        receiptPaperWidth: renameDeviceReceiptPaperWidth,
+      }),
     });
     await loadPoints();
     renameDevicePulse(() => setDeviceKebab(null));
@@ -678,6 +700,28 @@ export default function PointsPage() {
             </span>
             <Switch checked={deviceHasPrinter} onCheckedChange={setDeviceHasPrinter} className="shrink-0" />
           </div>
+          {/* Ширина рулона/тип принтера ЭТОГО устройства (запрос пользователя
+              2026-07-26) — только пока есть сам принтер выше, иначе нечего
+              настраивать. */}
+          {deviceHasPrinter && (
+            <div className="flex items-center justify-between rounded-control border border-border p-3">
+              <span>
+                <span className="block text-body-airbnb">{t.settings.systemReceiptPaperWidthLabel}</span>
+                <span className="mt-0.5 block text-caption-airbnb">{t.settings.systemReceiptPaperWidthHint}</span>
+              </span>
+              <SegmentedTabs
+                options={[
+                  { key: "58", label: "58мм" },
+                  { key: "80", label: "80мм" },
+                  { key: "a4", label: "A4" },
+                ]}
+                value={deviceReceiptPaperWidth}
+                onChange={setDeviceReceiptPaperWidth}
+                equalWidth={false}
+                className="shrink-0"
+              />
+            </div>
+          )}
           <PressableScale>
             <SaveButton type="submit" className="h-12 w-full" saved={createDeviceSaved} />
           </PressableScale>
@@ -873,6 +917,25 @@ export default function PointsPage() {
               </span>
               <Switch checked={renameDeviceHasPrinter} onCheckedChange={setRenameDeviceHasPrinter} className="shrink-0" />
             </div>
+            {renameDeviceHasPrinter && (
+              <div className="flex items-center justify-between rounded-control border border-border p-3">
+                <span>
+                  <span className="block text-body-airbnb">{t.settings.systemReceiptPaperWidthLabel}</span>
+                  <span className="mt-0.5 block text-caption-airbnb">{t.settings.systemReceiptPaperWidthHint}</span>
+                </span>
+                <SegmentedTabs
+                  options={[
+                    { key: "58", label: "58мм" },
+                    { key: "80", label: "80мм" },
+                    { key: "a4", label: "A4" },
+                  ]}
+                  value={renameDeviceReceiptPaperWidth}
+                  onChange={setRenameDeviceReceiptPaperWidth}
+                  equalWidth={false}
+                  className="shrink-0"
+                />
+              </div>
+            )}
             <PressableScale>
               <SaveButton className="h-12 w-full" onClick={confirmRenameDevice} saved={renameDeviceSaved} />
             </PressableScale>

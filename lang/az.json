@@ -123,6 +123,8 @@
     "systemReceiptShowNameLabel": "Şirkət adını göstər",
     "systemReceiptCompactHeaderLabel": "Yığcam başlıq",
     "systemReceiptCompactHeaderHint": "Loqo solda, tenant adı və qəbz başlığı onun yanında — termoprinterdə daha qısa",
+    "systemReceiptPaperWidthLabel": "Rulon eni",
+    "systemReceiptPaperWidthHint": "Printerinizin real kağız enini göstərin — əks halda çap yan tərəflərdən kəsilə bilər",
     "systemOwnerHasPrinterHint": "Bu brauzerdə/cihazda printer var — burada Sahibkarın balans çıxarışı və digər sənədlərinin çap düymələri görünəcək. Ucuz Bluetooth printerlərə adətən çap xidməti tətbiqi lazımdır (məs., ESCPOS Bluetooth Print Service) — əks halda printer Android çap dialoqunda görünməyəcək.",
     "systemReceiptPreviewLabel": "Qəbz önizləməsi",
     "systemReceiptTestPrintButton": "Sınaq çapı",

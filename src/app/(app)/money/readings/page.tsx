@@ -39,7 +39,7 @@ import { useI18n, useLocale } from "@/components/i18n-provider";
 import type { Dictionary } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, type ZoneAccountingMode } from "@/lib/results-calc";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, parseMoneyInput } from "@/lib/format";
 import { Money } from "@/components/money";
 import { MoneyInput } from "@/components/money-input";
 import { formatTime, pad } from "@/lib/datetime-format";
@@ -416,8 +416,8 @@ export default function ReadingsCalendarPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         readings: Object.fromEntries(Object.entries(editReadings).map(([k, v]) => [k, Number(v)])),
-        cashAmount: Number(editCash || 0),
-        mobileAmount: Number(editMobile || 0),
+        cashAmount: parseMoneyInput(editCash),
+        mobileAmount: parseMoneyInput(editMobile),
         returnsCount: Number(editReturns || 0),
         reason: editReason,
       }),
@@ -559,7 +559,7 @@ export default function ReadingsCalendarPage() {
     // оплаченных абонементом).
     const calculatedRevenue = isLiveZone ? card.calculatedRevenue : calcZoneGrossRevenue(tariffCalc);
     const netRevenue = isLiveZone ? card.netRevenue : calcZoneRevenue(tariffCalc, Number(editReturns || 0));
-    const actualCash = Number(editCash || 0) + Number(editMobile || 0);
+    const actualCash = parseMoneyInput(editCash) + parseMoneyInput(editMobile);
     // Баланс — только у "Прибываний"/"Пусков"/Билетов (запрос пользователя
     // 2026-07-25, финальное решение) — у "Счётчиков"/"Только касса" в
     // Разницу не подмешивается вовсе.

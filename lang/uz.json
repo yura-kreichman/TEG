@@ -123,6 +123,8 @@
     "systemReceiptShowNameLabel": "Kompaniya nomini ko'rsatish",
     "systemReceiptCompactHeaderLabel": "Ixcham sarlavha",
     "systemReceiptCompactHeaderHint": "Logotip chapda, ijarachi nomi va kvitansiya sarlavhasi yonida — termoprinterda qisqaroq",
+    "systemReceiptPaperWidthLabel": "Rulon kengligi",
+    "systemReceiptPaperWidthHint": "Printeringizning haqiqiy qog'oz kengligini ko'rsating — aks holda chop etish yon tomonlardan kesilishi mumkin",
     "systemOwnerHasPrinterHint": "Bu brauzerda/qurilmada printer bor — bu yerda Egasining balans ko'chirmasi va boshqa hujjatlarini chop etish tugmalari paydo bo'ladi. Arzon Bluetooth printerlarga odatda chop etish xizmati ilovasi kerak (masalan, ESCPOS Bluetooth Print Service) — aks holda printer Android chop etish oynasida ko'rinmaydi.",
     "systemReceiptPreviewLabel": "Chekni oldindan ko'rish",
     "systemReceiptTestPrintButton": "Sinov chop etish",

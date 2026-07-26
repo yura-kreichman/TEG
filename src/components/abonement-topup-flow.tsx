@@ -22,7 +22,7 @@ import { useSavePulse } from "@/hooks/use-save-pulse";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { playErrorChime } from "@/lib/beep";
 import { cn } from "@/lib/utils";
-import { formatMoneyWithCurrency } from "@/lib/format";
+import { formatMoneyWithCurrency, parseMoneyInput } from "@/lib/format";
 import type { Dictionary } from "@/lib/i18n";
 import type { PrintDocumentData, ReceiptBranding } from "@/lib/print/receipt-document";
 
@@ -625,7 +625,7 @@ export function AbonementTopupFlow({
     // 2026-07-24); "Только касса" — своей цены нет, вводится вручную
     // (запрос пользователя 2026-07-20).
     if (isCounters && spendCartLines.length === 0) return;
-    const amount = isCounters ? spendCartTotal : Number(spendAmount);
+    const amount = isCounters ? spendCartTotal : parseMoneyInput(spendAmount);
     if (!isCounters && (!Number.isFinite(amount) || amount <= 0)) return;
     setSpendSubmitting(true);
     try {
@@ -664,7 +664,7 @@ export function AbonementTopupFlow({
   // Untracked-путь Владельца (см. arbitraryAmountNeedsPaymentMethod выше) —
   // мгновенное зачисление, без способа оплаты, без следа в кассе.
   async function handleAdjust() {
-    const amount = Number(arbitraryAmount);
+    const amount = parseMoneyInput(arbitraryAmount);
     if (!Number.isFinite(amount) || amount <= 0 || submitting) return;
     setSubmitting(true);
     setError(null);
@@ -696,7 +696,7 @@ export function AbonementTopupFlow({
   function handleArbitraryButtonClick() {
     if (submitting) return;
     if (arbitraryAmountNeedsPaymentMethod) {
-      const amount = Number(arbitraryAmount);
+      const amount = parseMoneyInput(arbitraryAmount);
       if (!Number.isFinite(amount) || amount <= 0) return;
       setPendingAction({ kind: "arbitrary", amount });
       return;
@@ -1063,7 +1063,7 @@ export function AbonementTopupFlow({
                 <SaveButton
                   type="button"
                   className="h-12 w-full font-bold"
-                  disabled={spendSubmitting || !Number.isFinite(Number(spendAmount)) || Number(spendAmount) <= 0}
+                  disabled={spendSubmitting || parseMoneyInput(spendAmount) <= 0}
                   saved={spendSaved}
                   onClick={submitZoneSpend}
                 >

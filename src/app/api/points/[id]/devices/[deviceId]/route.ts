@@ -26,9 +26,13 @@ export async function PATCH(
     return NextResponse.json({ error: "Устройство не найдено" }, { status: 404 });
   }
 
-  const { label, roaming, hasPrinter } = await request.json();
+  const { label, roaming, hasPrinter, receiptPaperWidth } = await request.json();
   if (typeof label !== "string") {
     return NextResponse.json({ error: "Название устройства обязательно" }, { status: 400 });
+  }
+  // Только "58"/"80"/"a4" — та же проверка, что у POST выше.
+  if (receiptPaperWidth !== undefined && !["58", "80", "a4"].includes(receiptPaperWidth)) {
+    return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
   }
 
   await prisma.pointDevice.update({
@@ -46,6 +50,9 @@ export async function PATCH(
       // ручной тумблер, автоопределения нет и быть не может (у веб-платформы
       // нет API "проверить наличие принтера").
       ...(typeof hasPrinter === "boolean" ? { hasPrinter } : {}),
+      // Ширина рулона/тип принтера ЭТОГО устройства (запрос пользователя
+      // 2026-07-26).
+      ...(receiptPaperWidth !== undefined ? { receiptPaperWidth } : {}),
     },
   });
 

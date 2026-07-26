@@ -30,6 +30,22 @@ const LOCALE_TO_INTL: Record<Locale, string> = {
 // Разделители — Intl.NumberFormat по локали (для ru реальный разделитель
 // тысяч — NBSP U+00A0, не обычный пробел; это корректная типографика
 // Intl/ГОСТ, а не опечатка).
+// Разбор того, что реально набрал оператор в MoneyInput — поле хранит сырой
+// текст без какого-либо форматирования при вводе, поэтому запятая (тот же
+// десятичный разделитель, что formatMoney печатает для ru/ro/... локалей —
+// и что показывает мобильная цифровая клавиатура телефона на этих локалях)
+// остаётся в значении как есть. Number("5,80") молча возвращает NaN, а
+// NaN || 0 — 0: сумма беззвучно обнулялась (реальный баг, найден
+// пользователем 2026-07-26 на "Прибываниях" — Разница показывала минус
+// всю расчётную выручку, хотя Наличные/Безнал были явно заполнены).
+// Единственная точка разбора денежных ВВОДОВ в проекте, симметрично
+// formatMoney ниже для ВЫВОДА.
+export function parseMoneyInput(raw: string | null | undefined): number {
+  if (!raw) return 0;
+  const value = Number(raw.trim().replace(",", "."));
+  return Number.isFinite(value) ? value : 0;
+}
+
 export function formatMoney(value: number, locale: Locale = "ru"): string {
   const rounded = Math.round(value * 100) / 100;
   const hasFraction = rounded % 1 !== 0;

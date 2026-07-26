@@ -6,10 +6,11 @@ import { BackLink } from "@/components/back-link";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { Switch } from "@/components/ui/switch";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useI18n } from "@/components/i18n-provider";
 import type { Dictionary } from "@/lib/i18n";
 import { OwnerShell } from "@/components/owner-shell";
-import { useOwnerHasPrinterLocal } from "@/hooks/use-print";
+import { useOwnerHasPrinterLocal, useOwnerPaperWidthLocal } from "@/hooks/use-print";
 import { PrintButton } from "@/components/print/print-button";
 import { SilentPrintSetupCard } from "@/components/silent-print-setup";
 import { buildReceiptHtml, type PrintDocumentData } from "@/lib/print/receipt-document";
@@ -109,6 +110,14 @@ export default function SystemSettingsPage() {
   // центру — короче по высоте, заметно на рулоне термопринтера.
   const [compactHeader, setCompactHeader] = useState(false);
   const [ownerHasPrinter, setOwnerHasPrinter] = useOwnerHasPrinterLocal();
+  // Ширина рулона/тип принтера (запрос пользователя 2026-07-26, реальный
+  // баг: "auto" в @page не подстраивается под физический рулон в
+  // --kiosk-printing, тихая печать без диалога — драйвер получал дефолт
+  // Chrome, обычно A4/Letter, и обрезал лишнее по бокам) — та же
+  // localStorage-логика, что у ownerHasPrinter выше (запрос того же дня:
+  // "у Владельца тоже нужна настройка, так как он тоже печатает из своего
+  // приложения") — печать привязана к браузеру/устройству, не к тенанту.
+  const [paperWidth, setPaperWidth] = useOwnerPaperWidthLocal();
 
   useEffect(() => {
     fetch("/api/tenant/system-settings")
@@ -172,6 +181,7 @@ export default function SystemSettingsPage() {
     showLogo,
     showTenantName,
     compactHeader,
+    paperWidth,
   });
 
   const rows: Array<{ key: keyof SystemSettings; label: string; sub: string }> = [
@@ -287,6 +297,29 @@ export default function SystemSettingsPage() {
                     <Switch checked={ownerHasPrinter} onCheckedChange={setOwnerHasPrinter} className="shrink-0" />
                   </div>
 
+                  {/* Ширина рулона (запрос пользователя 2026-07-26) — реальная
+                      физическая ширина ДОЛЖНА совпадать с настоящим принтером:
+                      печать теперь форсирует эту ширину явно (@page в
+                      receipt-document.ts), а не полагается на "auto", которая
+                      в тихой печати без диалога её не определяет. */}
+                  <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
+                    <div className="min-w-0">
+                      <div className="text-body-airbnb">{t.settings.systemReceiptPaperWidthLabel}</div>
+                      <div className="text-caption-airbnb">{t.settings.systemReceiptPaperWidthHint}</div>
+                    </div>
+                    <SegmentedTabs
+                      options={[
+                        { key: "58", label: "58мм" },
+                        { key: "80", label: "80мм" },
+                        { key: "a4", label: "A4" },
+                      ]}
+                      value={paperWidth}
+                      onChange={setPaperWidth}
+                      equalWidth={false}
+                      className="shrink-0"
+                    />
+                  </div>
+
                   {/* Тихая печать без диалога Windows (запрос пользователя
                       2026-07-22) — сама себя показывает/прячет по
                       applicability (см. компонент), тут просто место. */}
@@ -362,7 +395,7 @@ export default function SystemSettingsPage() {
                       <PrintButton
                         label={t.settings.systemReceiptTestPrintButton}
                         data={samplePrintData(t)}
-                        branding={{ tenantName, logoUrl, showLogo, showTenantName, compactHeader }}
+                        branding={{ tenantName, logoUrl, showLogo, showTenantName, compactHeader, paperWidth }}
                         className="gap-1.5 rounded-lg"
                       />
                     </div>

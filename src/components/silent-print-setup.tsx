@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Download } from "lucide-react";
+import { Check, Download, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PressableScale } from "@/components/motion/pressable-scale";
+import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { useI18n } from "@/components/i18n-provider";
 
 const STORAGE_KEY = "rentos_silent_print_configured";
@@ -30,8 +31,9 @@ function detectSilentPrintEligible(): boolean {
 // один JS API не даёт ни отключить его, ни узнать, отключён ли он уже (нет
 // сигнала для detectSilentPrintEligible о статусе --kiosk-printing) — поэтому
 // "исчезает, если всё настроено" реализовано честно, через ручное
-// подтверждение Владельца после того, как он сам проверил тестовую печать,
-// а не через автоопределение (которого не существует технически).
+// подтверждение (Владельца ИЛИ Сотрудника — см. SilentPrintIconButton ниже)
+// после того, как тестовая печать проверена, а не через автоопределение
+// (которого не существует технически).
 //
 // Реальный баг, найден пользователем 2026-07-22 на живой машине: кириллица
 // ВНУТРИ .bat (даже с UTF-8 BOM + chcp 65001) рвёт построчный разбор
@@ -113,18 +115,14 @@ function downloadBat(url: string) {
   window.URL.revokeObjectURL(url_);
 }
 
-/**
- * Настройки → Система, блок "Печать" (запрос пользователя 2026-07-22) —
- * скачиваемый .bat, создающий отдельный ярлык Windows с флагом
- * --kiosk-printing (печать сразу на принтер по умолчанию, без системного
- * диалога). Показывается только когда реально применимо (см.
- * detectSilentPrintEligible) и пока Владелец сам не подтвердил, что настроил
- * (localStorage — состояние per-устройство, не per-тенант: у одного
- * владельца может быть несколько Windows-точек, каждая настраивается
- * отдельно на своём устройстве).
- */
-export function SilentPrintSetupCard() {
-  const t = useI18n();
+// Общее состояние для обоих мест входа — карточки в Настройки → Система
+// (Владелец) и иконки в шапке PWA Оператора (запрос пользователя 2026-07-26:
+// "если это PWA с интерфейсом Сотрудника" — у Сотрудника нет доступа к
+// Настройкам вовсе, но настройка привязана к УСТРОЙСТВУ/браузеру, не к роли
+// вошедшего, поэтому один и тот же localStorage-ключ и одна и та же
+// eligibility-проверка работают из обоих мест одинаково: подтверждение в
+// одном месте скрывает и второе на этом же устройстве.
+function useSilentPrintSetup() {
   const [eligible, setEligible] = useState(false);
   // true по умолчанию — не мигать блоком, пока не проверили localStorage.
   const [configured, setConfigured] = useState(true);
@@ -136,7 +134,26 @@ export function SilentPrintSetupCard() {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  if (!eligible || configured) return null;
+  function markConfigured() {
+    window.localStorage.setItem(STORAGE_KEY, "1");
+    setConfigured(true);
+  }
+
+  return { visible: eligible && !configured, markConfigured };
+}
+
+/**
+ * Настройки → Система, блок "Печать" (запрос пользователя 2026-07-22) —
+ * скачиваемый .bat, создающий отдельный ярлык Windows с флагом
+ * --kiosk-printing (печать сразу на принтер по умолчанию, без системного
+ * диалога). Показывается только когда реально применимо и пока никто не
+ * подтвердил, что уже настроено на этом устройстве (см. useSilentPrintSetup).
+ */
+export function SilentPrintSetupCard() {
+  const t = useI18n();
+  const { visible, markConfigured } = useSilentPrintSetup();
+
+  if (!visible) return null;
 
   return (
     <div className="flex flex-col gap-2 border-t border-border pt-3">
@@ -157,20 +174,80 @@ export function SilentPrintSetupCard() {
           </Button>
         </PressableScale>
         <PressableScale className="flex-1">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full gap-1.5 rounded-lg"
-            onClick={() => {
-              window.localStorage.setItem(STORAGE_KEY, "1");
-              setConfigured(true);
-            }}
-          >
+          <Button type="button" variant="outline" className="w-full gap-1.5 rounded-lg" onClick={markConfigured}>
             <Check className="size-4" />
             {t.settings.systemSilentPrintConfirmButton}
           </Button>
         </PressableScale>
       </div>
     </div>
+  );
+}
+
+/**
+ * Иконка в шапке PWA Оператора, рядом с "Сменить сотрудника" (запрос
+ * пользователя 2026-07-26) — у Сотрудника нет своих "Настроек", а терминал
+ * точки чаще всего физически не тот же компьютер, за которым сидит Владелец,
+ * так что раньше настроить тихую печать можно было только временно
+ * залогинившись Владельцем на этом же устройстве. Та же eligibility и тот же
+ * localStorage-ключ, что у SilentPrintSetupCard — просто другая точка входа
+ * на то же самое устройство/браузер. Открывает шторку с тем же содержимым
+ * вместо целой карточки — в шапке места ровно на иконку.
+ */
+export function SilentPrintIconButton() {
+  const t = useI18n();
+  const { visible, markConfigured } = useSilentPrintSetup();
+  const [open, setOpen] = useState(false);
+
+  if (!visible) return null;
+
+  return (
+    <>
+      <PressableScale>
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          className="rounded-lg"
+          aria-label={t.settings.systemSilentPrintTitle}
+          onClick={() => setOpen(true)}
+        >
+          <Printer className="size-3.5" />
+        </Button>
+      </PressableScale>
+      <BottomSheet open={open} onClose={() => setOpen(false)}>
+        <div className="flex flex-col gap-3 pt-2">
+          <div className="min-w-0">
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.settings.systemSilentPrintTitle}</h2>
+            <p className="mt-1 text-caption-airbnb text-muted-foreground">{t.settings.systemSilentPrintHint}</p>
+          </div>
+          <PressableScale>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-1.5 rounded-lg"
+              onClick={() => downloadBat(`${window.location.origin}/`)}
+            >
+              <Download className="size-4" />
+              {t.settings.systemSilentPrintDownloadButton}
+            </Button>
+          </PressableScale>
+          <PressableScale>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-1.5 rounded-lg"
+              onClick={() => {
+                markConfigured();
+                setOpen(false);
+              }}
+            >
+              <Check className="size-4" />
+              {t.settings.systemSilentPrintConfirmButton}
+            </Button>
+          </PressableScale>
+        </div>
+      </BottomSheet>
+    </>
   );
 }

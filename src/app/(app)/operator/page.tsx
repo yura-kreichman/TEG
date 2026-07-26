@@ -18,7 +18,7 @@ import { PrintButton } from "@/components/print/print-button";
 import { ActionToast } from "@/components/action-toast";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
-import { formatMoneyWithCurrency } from "@/lib/format";
+import { formatMoneyWithCurrency, parseMoneyInput } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { useActionToast } from "@/hooks/use-action-toast";
@@ -302,8 +302,8 @@ export default function OperatorHomePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          advanceAmount: checkoutAdvance ? Number(checkoutAdvance) : 0,
-          bonusAmount: checkoutBonus ? Number(checkoutBonus) : 0,
+          advanceAmount: checkoutAdvance ? parseMoneyInput(checkoutAdvance) : 0,
+          bonusAmount: checkoutBonus ? parseMoneyInput(checkoutBonus) : 0,
         }),
       });
       const data = await res.json();
@@ -367,7 +367,7 @@ export default function OperatorHomePage() {
       res = await fetch("/api/operator/collection/general", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: collectionAmount }),
+        body: JSON.stringify({ amount: parseMoneyInput(collectionAmount) }),
       });
     } else if (!collectionZoneId) {
       flashError(t.operatorApp.selectZone);
@@ -378,14 +378,14 @@ export default function OperatorHomePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pool: collectionZoneId === ABONEMENT_POOL_ID ? "abonement" : "goods",
-          amount: collectionAmount,
+          amount: parseMoneyInput(collectionAmount),
         }),
       });
     } else {
       res = await fetch("/api/operator/collection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ zoneId: collectionZoneId, amount: collectionAmount }),
+        body: JSON.stringify({ zoneId: collectionZoneId, amount: parseMoneyInput(collectionAmount) }),
       });
     }
 
@@ -414,7 +414,7 @@ export default function OperatorHomePage() {
       setShowCollection(false);
       setCollectionAmount("");
       if (printAvailable.available) {
-        setLastCollection({ amount: Number(collectionAmount), zoneName });
+        setLastCollection({ amount: parseMoneyInput(collectionAmount), zoneName });
       }
     });
   }

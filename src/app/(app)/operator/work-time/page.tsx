@@ -9,6 +9,7 @@ import { SaveButton } from "@/components/ui/save-button";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { MoneyInput } from "@/components/money-input";
+import { parseMoneyInput } from "@/lib/format";
 import { Label } from "@/components/ui/label";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -226,8 +227,8 @@ export default function WorkTimePage() {
         body: JSON.stringify({
           startAt: startAt.toISOString(),
           endAt: endAt.toISOString(),
-          advanceAmount: advanceAmount ? Number(advanceAmount) : 0,
-          bonusAmount: bonusAmount ? Number(bonusAmount) : 0,
+          advanceAmount: advanceAmount ? parseMoneyInput(advanceAmount) : 0,
+          bonusAmount: bonusAmount ? parseMoneyInput(bonusAmount) : 0,
         }),
       });
       const data = await res.json();
@@ -254,8 +255,8 @@ export default function WorkTimePage() {
   }
 
   async function submitAdvanceRequest() {
-    const advance = advanceRequestAmount ? Number(advanceRequestAmount) : 0;
-    const bonus = bonusRequestAmount ? Number(bonusRequestAmount) : 0;
+    const advance = advanceRequestAmount ? parseMoneyInput(advanceRequestAmount) : 0;
+    const bonus = bonusRequestAmount ? parseMoneyInput(bonusRequestAmount) : 0;
     if (advance <= 0 && bonus <= 0) return;
     setAdvanceRequestSubmitting(true);
     try {

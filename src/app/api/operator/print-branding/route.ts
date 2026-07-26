@@ -33,6 +33,10 @@ export async function GET() {
     receiptShowLogo: tenant?.receiptShowLogo ?? true,
     receiptShowTenantName: tenant?.receiptShowTenantName ?? true,
     receiptCompactHeader: tenant?.receiptCompactHeader ?? false,
+    // Ширина рулона/тип принтера — с УСТРОЙСТВА, не с тенанта (запрос
+    // пользователя 2026-07-26: печать физически привязана к конкретному
+    // принтеру этого устройства, не к бизнесу целиком).
+    receiptPaperWidth: ctx.device.receiptPaperWidth,
     // Кто напечатал квитанцию (запрос пользователя 2026-07-20: "должно быть
     // и имя сотрудника или Владелец" рядом со строкой даты) — имя Сотрудника,
     // Владелец печатает с другого экрана и подставляет статичный ярлык

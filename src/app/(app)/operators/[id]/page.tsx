@@ -10,6 +10,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { Input } from "@/components/ui/input";
 import { TimeInput } from "@/components/time-input";
 import { MoneyInput } from "@/components/money-input";
+import { parseMoneyInput } from "@/lib/format";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -156,7 +157,7 @@ export default function OperatorCardPage() {
     const res = await fetch(`/api/work-time/money-ops/${editingMoneyOp.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: Number(editMoneyOpAmount) }),
+      body: JSON.stringify({ amount: parseMoneyInput(editMoneyOpAmount) }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -279,7 +280,7 @@ export default function OperatorCardPage() {
     const res = await fetch(`/api/operators/${params.id}/work-time/${moneyForm}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: Number(moneyAmount), pointId: moneyPointId }),
+      body: JSON.stringify({ amount: parseMoneyInput(moneyAmount), pointId: moneyPointId }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -299,7 +300,7 @@ export default function OperatorCardPage() {
 
   async function confirmCarryover() {
     setCarryoverError(null);
-    const amountNumber = Number(carryoverAmount);
+    const amountNumber = parseMoneyInput(carryoverAmount);
     if (!Number.isFinite(amountNumber) || amountNumber === 0) {
       setCarryoverError(t.operatorApp.workTime.saveError);
       return;
@@ -378,8 +379,8 @@ export default function OperatorCardPage() {
       body: JSON.stringify({
         startAt: startAt.toISOString(),
         ...(endAtIso ? { endAt: endAtIso } : {}),
-        advanceAmount: editAdvance ? Number(editAdvance) : 0,
-        bonusAmount: editBonus ? Number(editBonus) : 0,
+        advanceAmount: editAdvance ? parseMoneyInput(editAdvance) : 0,
+        bonusAmount: editBonus ? parseMoneyInput(editBonus) : 0,
         reason: editReason || undefined,
       }),
     });

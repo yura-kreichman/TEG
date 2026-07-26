@@ -35,7 +35,7 @@ import { useActionToast } from "@/hooks/use-action-toast";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
 import { playErrorChime } from "@/lib/beep";
 import type { PrintDocumentData, PrintSection } from "@/lib/print/receipt-document";
-import { formatMoneyWithCurrency } from "@/lib/format";
+import { formatMoneyWithCurrency, parseMoneyInput } from "@/lib/format";
 import { formatTime } from "@/lib/datetime-format";
 import { cn } from "@/lib/utils";
 
@@ -446,7 +446,7 @@ export default function SubmitResultsPage() {
       const entry = form.assetCash[assetId] ?? { cash: "", mobile: "" };
       const assetCash = { ...form.assetCash, [assetId]: { ...entry, [field]: value } };
       const sum = (key: "cash" | "mobile") =>
-        String(Object.values(assetCash).reduce((total, e) => total + (Number(e[key]) || 0), 0));
+        String(Object.values(assetCash).reduce((total, e) => total + parseMoneyInput(e[key]), 0));
       return {
         ...prev,
         [zoneId]: { ...form, assetCash, cashAmount: sum("cash"), mobileAmount: sum("mobile") },
@@ -506,7 +506,7 @@ export default function SubmitResultsPage() {
       const agg = ticketsAggregateByZone[zoneId];
       const calculatedRevenue = agg?.totalAmount ?? 0;
       const abonementAmount = agg?.abonementAmount ?? 0;
-      const actualCash = Number(form.cashAmount || 0) + Number(form.mobileAmount || 0);
+      const actualCash = parseMoneyInput(form.cashAmount) + parseMoneyInput(form.mobileAmount);
       const difference = Math.round((actualCash + abonementAmount - calculatedRevenue) * 100) / 100;
       return { calculatedRevenue, netRevenue: calculatedRevenue, actualCash, difference, abonementAmount };
     }
@@ -538,7 +538,7 @@ export default function SubmitResultsPage() {
           }))
         )
       : calcZoneRevenue(tariffCalc, Number(form.returnsCount || 0));
-    const actualCash = Number(form.cashAmount || 0) + Number(form.mobileAmount || 0);
+    const actualCash = parseMoneyInput(form.cashAmount) + parseMoneyInput(form.mobileAmount);
     // Оплата балансом — у ОБЫЧНЫХ (ручных) "Счётчиков"/"Только касса" НЕ
     // участвует в Разнице (правило 2026-07-25, для decoupled "Списать с
     // баланса" — там списание вообще не связано ни с каким конкретным
@@ -590,8 +590,8 @@ export default function SubmitResultsPage() {
       return {
         zoneId,
         returnsCount: Number(form.returnsCount || 0),
-        cashAmount: Number(form.cashAmount || 0),
-        mobileAmount: Number(form.mobileAmount || 0),
+        cashAmount: parseMoneyInput(form.cashAmount),
+        mobileAmount: parseMoneyInput(form.mobileAmount),
         readings,
       };
     });
@@ -1482,7 +1482,7 @@ export default function SubmitResultsPage() {
               const calculated = revenue?.calculatedAmount ?? 0;
               const entry = activeForm.assetCash[activeAsset.id] ?? { cash: "", mobile: "" };
               const hasEntry = entry.cash.trim() !== "" || entry.mobile.trim() !== "";
-              const actual = (Number(entry.cash) || 0) + (Number(entry.mobile) || 0);
+              const actual = parseMoneyInput(entry.cash) + parseMoneyInput(entry.mobile);
               // Абонемент прибавляется к факту здесь же — та касса уже
               // получила эти деньги раньше, при пополнении абонемента, не
               // сейчас (тот же баг, найден пользователем 2026-07-18 на этой
