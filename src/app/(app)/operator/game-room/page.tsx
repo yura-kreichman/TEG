@@ -77,6 +77,12 @@ interface OpenLaunch {
 
 const SOUND_HINT_KEY = "gameRoomSoundHintSeen";
 const ZONE_FILTER_KEY = "gameRoomZoneFilter";
+// Запоминаем конкретный выбранный АКТИВ (не только зону, см. ZONE_FILTER_KEY
+// выше) — запрос пользователя 2026-07-26: "чтобы когда возвращался сотрудник
+// было то состояние выбранного Актива" — при переключении на Товары и
+// обратно (нижний бар) этот экран перемонтируется, обычный useState теряет
+// выбор, откатываясь на первый актив зоны.
+const ASSET_SELECTION_KEY = "gameRoomSelectedAsset";
 const POLL_MS = 6000;
 const ALL_ZONES = "all";
 
@@ -211,6 +217,17 @@ export default function StaysZonePage() {
           if (prev) return prev;
           if (requestedAssetId) {
             const found = all.find((a) => a.id === requestedAssetId);
+            if (found) {
+              setZoneFilter(found.zoneId);
+              return found.id;
+            }
+          }
+          // Сохранённый конкретный актив — приоритетнее сохранённой зоны
+          // (та ниже просто берёт первый актив в зоне, это не то же самое,
+          // что запомненный выбор конкретного тайла).
+          const savedAssetId = window.localStorage.getItem(ASSET_SELECTION_KEY);
+          if (savedAssetId) {
+            const found = all.find((a) => a.id === savedAssetId);
             if (found) {
               setZoneFilter(found.zoneId);
               return found.id;
@@ -564,7 +581,10 @@ export default function StaysZonePage() {
                     <PressableScale key={a.id}>
                       <button
                         type="button"
-                        onClick={() => setSelectedAssetId(a.id)}
+                        onClick={() => {
+                          setSelectedAssetId(a.id);
+                          window.localStorage.setItem(ASSET_SELECTION_KEY, a.id);
+                        }}
                         className={cn(
                           "flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card text-left",
                           active ? "border-primary" : "border-border"
@@ -724,7 +744,13 @@ export default function StaysZonePage() {
                           {expired ? t.operatorApp.gameRoom.expiredLabel : timeText}
                         </span>
                         {l.pricingMode === "per_minute" && (
-                          <Money value={liveAmount} className="text-2xl font-extrabold" />
+                          // size="display" — сумма растёт со временем ("По
+                          // факту", руб/мин), в маленьком квадратном тайле
+                          // 3+ значные суммы с копейками не влезали бы при
+                          // фиксированном text-2xl (запрос пользователя
+                          // 2026-07-26, живой скриншот). Тот же механизм
+                          // авто-уменьшения, что уже на Отчётах/Главной.
+                          <Money value={liveAmount} className="text-2xl font-extrabold" size="display" />
                         )}
                       </button>
                     </PressableScale>

@@ -3,7 +3,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemeColorMeta } from "@/components/theme-color-meta";
 import { OperatorSwitchButton } from "@/components/operator-switch-button";
-import { SilentPrintIconButton } from "@/components/silent-print-setup";
 import { OperatorBottomNav } from "@/components/operator-bottom-nav";
 import { TicketsCartProvider, GoodsCartProvider } from "@/components/operator-cart-context";
 import { OfflineSync } from "./offline-sync";
@@ -33,7 +32,6 @@ export default function OperatorLayout({ children }: { children: React.ReactNode
         <OfflineSync />
         <div className="flex items-center justify-between gap-2 p-2">
           <OperatorSwitchButton />
-          <SilentPrintIconButton />
           <ThemeToggle />
         </div>
         {/* Корзины Билетов/Товаров — на уровне layout (запрос пользователя
