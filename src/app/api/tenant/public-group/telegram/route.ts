@@ -24,9 +24,18 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const patch: Partial<Record<BooleanField, boolean>> = {};
+  const patch: Partial<Record<BooleanField, boolean>> & { inviteLink?: string | null } = {};
   for (const field of BOOLEAN_FIELDS) {
     if (typeof body[field] === "boolean") patch[field] = body[field];
+  }
+  // Ручной ввод ссылки-приглашения — реальный баг, найден пользователем
+  // 2026-07-26: fetchChatInviteLink срабатывает только если бота добавили
+  // с правом приглашать по ссылке; когда этого права нет, inviteLink
+  // навсегда остаётся пустым, а этот PATCH раньше вообще не принимал такое
+  // поле — на UI была готовая форма ручного ввода (TelegramConnectSheet),
+  // но её никто не мог сохранить.
+  if (typeof body.inviteLink === "string" || body.inviteLink === null) {
+    patch.inviteLink = body.inviteLink;
   }
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Нет полей для обновления" }, { status: 400 });

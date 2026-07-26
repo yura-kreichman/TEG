@@ -238,6 +238,7 @@ export default function PublicGroupSettingsPage() {
         statusEndpoint="/api/tenant/public-group/telegram/status"
         testEndpoint="/api/tenant/public-group/telegram/test"
         disconnectEndpoint="/api/tenant/public-group/telegram/disconnect"
+        inviteLinkEndpoint="/api/tenant/public-group/telegram"
         doneHint={t.summaries.publicGroupConnectedHint}
       />
     </OwnerShell>
