@@ -4,9 +4,22 @@ import { requireOperator } from "@/lib/require-operator";
 import { sellGoodsCart, GOODS_PAYMENT_METHODS, type GoodsPaymentMethod } from "@/lib/goods";
 import { InsufficientBalanceError } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
+import { InvalidPaymentSplitError, type PaymentLegInput } from "@/lib/payment-split";
 
 function isGoodsPaymentMethod(value: unknown): value is GoodsPaymentMethod {
   return typeof value === "string" && (GOODS_PAYMENT_METHODS as readonly string[]).includes(value);
+}
+
+function parseLegs(value: unknown): PaymentLegInput[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  return value.map((raw) => {
+    const l = raw as { method?: unknown; amount?: unknown; walletId?: unknown };
+    return {
+      method: typeof l?.method === "string" ? l.method : "",
+      amount: Number(l?.amount),
+      walletId: typeof l?.walletId === "string" ? l.walletId : undefined,
+    };
+  });
 }
 
 interface CartItemInput {
@@ -33,6 +46,10 @@ export async function POST(request: Request) {
   const rawItems = Array.isArray(body.items) ? (body.items as CartItemInput[]) : [];
   const paymentMethod = body.paymentMethod;
   const walletId: string | undefined = typeof body.walletId === "string" ? body.walletId : undefined;
+  // Разбивка оплаты (запрос пользователя 2026-07-26) — необязательный
+  // массив долей на всю корзину; итоговая сумма проверяется внутри
+  // sellGoodsCart (там же, где она впервые становится известна).
+  const legs = parseLegs(body.legs);
 
   const items: { goodsId: string; quantity: number }[] = [];
   for (const item of rawItems) {
@@ -46,13 +63,14 @@ export async function POST(request: Request) {
   if (items.length === 0) {
     return NextResponse.json({ error: "Корзина пуста" }, { status: 400 });
   }
-  if (!isGoodsPaymentMethod(paymentMethod)) {
+  if (!legs && !isGoodsPaymentMethod(paymentMethod)) {
     return NextResponse.json({ error: "Укажите способ оплаты" }, { status: 400 });
   }
-  if (paymentMethod === "abonement" && !walletId) {
+  if (!legs && paymentMethod === "abonement" && !walletId) {
     return NextResponse.json({ error: "Выберите кошелёк клиента" }, { status: 400 });
   }
-  if (paymentMethod === "abonement") {
+  const usesBalance = legs ? legs.some((l) => l.method === "abonement") : paymentMethod === "abonement";
+  if (usesBalance) {
     // Настройки → Система (запрос пользователя 2026-07-20) — серверная
     // проверка, не только скрытие кнопки в UI, тот же принцип, что у
     // Operator.goodsAccess выше. clientsEnabled — отдельная, более общая
@@ -76,18 +94,23 @@ export async function POST(request: Request) {
       tenantId: ctx.operator.tenantId,
       pointId: ctx.point.id,
       items,
-      paymentMethod,
+      paymentMethod: legs ? "cash" : paymentMethod,
       walletId,
+      legs,
       actor: { operatorId: ctx.operator.id },
     });
     const total = Math.round(sold.reduce((sum, s) => sum + s.amount, 0) * 100) / 100;
     return NextResponse.json({ items: sold, total }, { status: 201 });
   } catch (err) {
+    if (err instanceof InvalidPaymentSplitError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     if (err instanceof InsufficientBalanceError) {
       // tenantId в where обязателен (аудит 2026-07-25, повторная проверка) —
       // см. тот же фикс и комментарий в /api/operator/goods/sale/route.ts.
-      const wallet = walletId
-        ? await prisma.abonementWallet.findFirst({ where: { id: walletId, tenantId: ctx.operator.tenantId } })
+      const effectiveWalletId = legs?.find((l) => l.method === "abonement")?.walletId ?? walletId;
+      const wallet = effectiveWalletId
+        ? await prisma.abonementWallet.findFirst({ where: { id: effectiveWalletId, tenantId: ctx.operator.tenantId } })
         : null;
       return NextResponse.json(
         { error: "Недостаточно средств на балансе", balance: wallet ? Number(wallet.balance) : 0 },

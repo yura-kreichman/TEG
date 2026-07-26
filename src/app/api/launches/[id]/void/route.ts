@@ -65,7 +65,17 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
 
       let refundedWalletId: string | null = null;
       let refundedAmount = 0;
-      if (launch.paymentMethod === "abonement" && launch.abonementWalletId) {
+      // Разбивка оплаты (запрос пользователя 2026-07-26) — свой кошелёк/сумма
+      // лежат в LaunchPaymentLeg, не в launch.abonementWalletId (тот у
+      // paymentMethod="split" всегда null, см. схему). Наличные/безнал-доли
+      // не возвращаются — тот же принцип, что и для обычного paymentMethod.
+      const splitAbonementLeg =
+        launch.paymentMethod === "split"
+          ? await tx.launchPaymentLeg.findFirst({ where: { launchId: launch.id, method: "abonement" } })
+          : null;
+      const abonementWalletId = launch.paymentMethod === "split" ? splitAbonementLeg?.walletId ?? null : launch.abonementWalletId;
+      const splitAbonementAmount = splitAbonementLeg ? Number(splitAbonementLeg.amount) : null;
+      if ((launch.paymentMethod === "abonement" || launch.paymentMethod === "split") && abonementWalletId) {
         // launch.amount остаётся null, пока пуск открыт (заполняется только
         // на /stop) — но списание с баланса для "fixed"/"За вход" уже
         // произошло РАНЬШЕ, при старте (см. POST /api/zones/[id]/launches),
@@ -76,7 +86,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
         // не зависит от endedAt (просто priceSnapshot), поэтому now() как
         // endedAt здесь безопасен и для ещё не завершённых "per_minute".
         refundedAmount =
-          launch.amount != null
+          splitAbonementAmount ??
+          (launch.amount != null
             ? Number(launch.amount)
             : computeLaunchAmount(
                 {
@@ -88,15 +99,15 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
                 },
                 launch.startedAt,
                 now
-              );
-        refundedWalletId = launch.abonementWalletId;
+              ));
+        refundedWalletId = abonementWalletId;
         await tx.abonementWallet.update({
-          where: { id: launch.abonementWalletId },
+          where: { id: abonementWalletId },
           data: { balance: { increment: refundedAmount } },
         });
         await tx.abonementTransaction.create({
           data: {
-            walletId: launch.abonementWalletId,
+            walletId: abonementWalletId,
             type: "refund",
             amount: refundedAmount,
             launchId: launch.id,

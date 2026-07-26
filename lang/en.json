@@ -721,6 +721,7 @@
     "removePhoto": "Remove photo",
     "editTariff": "Edit name and price",
     "tariffsCardLabel": "Tariffs · up to 2",
+    "tariffsCardLabelUnlimited": "Tariffs",
     "addTariffButton": "Add tariff",
     "addAssetButton": "Add asset",
     "newTariffTitle": "New tariff",
@@ -1598,5 +1599,13 @@
     "newOrderButton": "New order",
     "noPriceLabel": "No price",
     "clearCartAction": "Clear cart"
+  },
+  "splitPayment": {
+    "title": "Split payment",
+    "remainingLabel": "Remaining to allocate:",
+    "addMethodButton": "Add method",
+    "selectWalletButton": "Select wallet",
+    "walletSelectedLabel": "Wallet selected",
+    "submitButton": "Pay"
   }
 }

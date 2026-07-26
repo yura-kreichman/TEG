@@ -44,6 +44,13 @@ interface AbonementPaymentSheetProps {
    * Товарах, где своего звука нет, там должен звучать общий "дзинь" (запрос
    * пользователя 2026-07-20). */
   silent?: boolean;
+  // Разбивка оплаты (запрос пользователя 2026-07-26): при выборе кошелька
+  // для ОДНОЙ доли разбивки реального списания ещё не происходит (оно
+  // случится один раз на сервере при отправке всей разбивки) — подпись
+  // кнопки не должна звучать как "спишется сейчас". По умолчанию — текущая
+  // подпись "Списать" (обычная, не-split оплата, все 4 места вызова не
+  // меняются).
+  confirmLabel?: string;
 }
 
 /**
@@ -53,7 +60,7 @@ interface AbonementPaymentSheetProps {
  * не нашёлся или не хватает — пополнение абонементом владельца прямо тут
  * ("оператор, прямо в момент оплаты"), без выхода из потока оплаты пуска.
  */
-export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent }: AbonementPaymentSheetProps) {
+export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent, confirmLabel }: AbonementPaymentSheetProps) {
   const t = useI18n();
 
   const [phone, setPhone] = useState("");
@@ -266,7 +273,7 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
                 className="h-14 w-full gap-2 rounded-control font-bold"
                 onConfirm={() => onConfirm(found.id)}
               >
-                {t.operatorApp.abonement.spendButton} <Money value={amount} />
+                {confirmLabel ?? t.operatorApp.abonement.spendButton} <Money value={amount} />
               </ConfirmButton>
             )}
 

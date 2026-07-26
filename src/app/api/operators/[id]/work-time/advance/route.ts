@@ -38,25 +38,38 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operators/[
   // личному балансу сотрудника "к выдаче" + овердрафт. У самого сотрудника
   // (self-service в PWA) наоборот: без овердрафта, но по остатку кассы точки —
   // см. /api/operator/work-time/check-out и .../shifts.
-  const balance = await calcOperatorBalance(operator.id);
-  if (!operator.overdraftAllowed && amountNumber > balance.toPayOut) {
+  //
+  // Advisory-лок по operatorId (аудит 2026-07-26) — раньше проверка баланса и
+  // создание MoneyOperation были обычным read-then-write без блокировки, а
+  // сама форма на карточке оператора не защищена от двойного клика/тапа:
+  // два почти одновременных запроса читали один и тот же "к выдаче" и оба
+  // проходили проверку — выплата реально задваивалась. Тот же приём, что уже
+  // применён к кассе точки в operator/work-time/shifts/[id]/route.ts.
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${operator.id}))`;
+    const balance = await calcOperatorBalance(operator.id, undefined, tx);
+    if (!operator.overdraftAllowed && amountNumber > balance.toPayOut) {
+      return { ok: false as const, toPayOut: balance.toPayOut };
+    }
+    await tx.moneyOperation.create({
+      data: {
+        tenantId: owner.tenantId,
+        pointId: point.id,
+        type: "advance",
+        amount: -amountNumber,
+        performedByUserId: owner.user.id,
+        beneficiaryOperatorId: operator.id,
+      },
+    });
+    return { ok: true as const };
+  });
+  if (!result.ok) {
     const locale = await resolveLocale();
     return NextResponse.json(
-      { error: `Аванс превышает доступный баланс к выдаче (${formatMoney(balance.toPayOut, locale)})` },
+      { error: `Аванс превышает доступный баланс к выдаче (${formatMoney(result.toPayOut, locale)})` },
       { status: 400 }
     );
   }
-
-  await prisma.moneyOperation.create({
-    data: {
-      tenantId: owner.tenantId,
-      pointId: point.id,
-      type: "advance",
-      amount: -amountNumber,
-      performedByUserId: owner.user.id,
-      beneficiaryOperatorId: operator.id,
-    },
-  });
 
   return NextResponse.json({ balance: await calcOperatorBalance(operator.id) });
 }

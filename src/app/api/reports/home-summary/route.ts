@@ -5,6 +5,7 @@ import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZo
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateTicketOrders } from "@/lib/tickets";
 import { dayBoundsUtc, localDateParts } from "@/lib/business-day";
+import { PAYMENT_SPLIT_METHOD } from "@/lib/payment-split";
 
 interface WindowSummary {
   revenue: number;
@@ -94,7 +95,7 @@ async function computeWindowSummary(
   const liveLaunches = liveZoneSubmissionIds.length
     ? await prisma.launch.findMany({
         where: { zoneSubmissionId: { in: liveZoneSubmissionIds }, voidedAt: null },
-        select: { zoneSubmissionId: true, amount: true, paymentMethod: true },
+        select: { id: true, zoneSubmissionId: true, amount: true, paymentMethod: true },
       })
     : [];
   const liveRevenueBySubmission = new Map<string, number>();
@@ -104,6 +105,7 @@ async function computeWindowSummary(
   // ложно показывала недостачу ровно на сумму пусков, оплаченных
   // абонементом).
   const liveAbonementBySubmission = new Map<string, number>();
+  const liveSplitLaunchIds: string[] = [];
   for (const l of liveLaunches) {
     if (!l.zoneSubmissionId) continue;
     const amount = Number(l.amount ?? 0);
@@ -113,6 +115,23 @@ async function computeWindowSummary(
         l.zoneSubmissionId,
         (liveAbonementBySubmission.get(l.zoneSubmissionId) ?? 0) + amount
       );
+    } else if (l.paymentMethod === PAYMENT_SPLIT_METHOD) {
+      liveSplitLaunchIds.push(l.id);
+    }
+  }
+  // Разбивка оплаты (аудит 2026-07-26) — доля "Баланс" сплит-пуска тоже уже
+  // списана и должна вычитаться из Разницы, тот же класс бага, что и у
+  // обычного paymentMethod="abonement" выше.
+  if (liveSplitLaunchIds.length > 0) {
+    const legs = await prisma.launchPaymentLeg.findMany({
+      where: { launchId: { in: liveSplitLaunchIds }, method: "abonement" },
+      select: { launchId: true, amount: true },
+    });
+    const launchToSubmission = new Map(liveLaunches.map((l) => [l.id, l.zoneSubmissionId]));
+    for (const leg of legs) {
+      const zoneSubmissionId = launchToSubmission.get(leg.launchId);
+      if (!zoneSubmissionId) continue;
+      liveAbonementBySubmission.set(zoneSubmissionId, (liveAbonementBySubmission.get(zoneSubmissionId) ?? 0) + Number(leg.amount));
     }
   }
 

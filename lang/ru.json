@@ -721,6 +721,7 @@
     "removePhoto": "Убрать фото",
     "editTariff": "Изменить название и цену",
     "tariffsCardLabel": "Тарифы · до 2",
+    "tariffsCardLabelUnlimited": "Тарифы",
     "addTariffButton": "Добавить тариф",
     "addAssetButton": "Добавить актив",
     "newTariffTitle": "Новый тариф",
@@ -1598,5 +1599,13 @@
     "newOrderButton": "Новый заказ",
     "noPriceLabel": "Нет цены",
     "clearCartAction": "Очистить корзину"
+  },
+  "splitPayment": {
+    "title": "Разбить оплату",
+    "remainingLabel": "Осталось распределить:",
+    "addMethodButton": "Добавить способ",
+    "selectWalletButton": "Выбрать кошелёк",
+    "walletSelectedLabel": "Кошелёк выбран",
+    "submitButton": "Оплатить"
   }
 }

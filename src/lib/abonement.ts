@@ -5,6 +5,7 @@ import { formatMoneyWithCurrency } from "@/lib/format";
 import type { CurrencyCode } from "@/lib/currency";
 import { BOT_STRINGS, greetingLine } from "@/lib/telegram-client-i18n";
 import type { Locale } from "@/lib/locales";
+import { PAYMENT_SPLIT_METHOD, validateSplitLegs, type PaymentLegInput } from "@/lib/payment-split";
 
 // Модуль "Абонементы" (запрос пользователя 2026-07-17) — Abonement — это
 // ТАРИФ-ПЛАН владельца ("заплатить price → зачислить creditAmount"), БЕЗ
@@ -130,6 +131,12 @@ interface TopupParams {
   pointId: string;
   abonementId: string;
   paymentMethod: AbonementTopupPaymentMethod;
+  // Разбивка оплаты (запрос пользователя 2026-07-26) — только cash/mobile
+  // (нельзя оплатить пополнение с баланса того же кошелька, по определению).
+  // Сумма долей должна равняться plan.price (реальные деньги) — НЕ
+  // creditAmount (может включать маркетинговый бонус, который на доли не
+  // делится, зачисляется одной суммой независимо от разбивки оплаты).
+  legs?: PaymentLegInput[];
   actor: Actor;
 }
 
@@ -140,12 +147,13 @@ interface TopupParams {
  * кошелька + денежный след кассы точки одной транзакцией.
  */
 export async function topUpWallet(walletId: string, params: TopupParams) {
-  const { tenantId, pointId, abonementId, paymentMethod, actor } = params;
+  const { tenantId, pointId, abonementId, paymentMethod, legs, actor } = params;
   const { wallet, creditAmount } = await prisma.$transaction(async (tx) => {
     const plan = await tx.abonement.findFirst({
       where: { id: abonementId, tenantId, deletedAt: null },
     });
     if (!plan) throw new Error("ABONEMENT_NOT_FOUND");
+    if (legs && legs.length > 0) validateSplitLegs(legs, Number(plan.price), ABONEMENT_TOPUP_PAYMENT_METHODS);
 
     // updateMany с tenantId в where, не голый update (аудит 2026-07-25,
     // финальный проход) — defense-in-depth, тот же приём, что уже
@@ -166,24 +174,40 @@ export async function topUpWallet(walletId: string, params: TopupParams) {
         type: "topup",
         amount: plan.creditAmount,
         abonementId: plan.id,
-        paymentMethod,
+        paymentMethod: legs && legs.length > 0 ? PAYMENT_SPLIT_METHOD : paymentMethod,
         pointId,
         operatorId: actor.operatorId,
         userId: actor.userId,
       },
     });
 
-    await tx.moneyOperation.create({
-      data: {
-        tenantId,
-        pointId,
-        abonementId: plan.id,
-        type: abonementTopupMoneyType(paymentMethod),
-        amount: plan.price,
-        performedByOperatorId: actor.operatorId,
-        performedByUserId: actor.userId,
-      },
-    });
+    if (legs && legs.length > 0) {
+      for (const leg of legs) {
+        await tx.moneyOperation.create({
+          data: {
+            tenantId,
+            pointId,
+            abonementId: plan.id,
+            type: abonementTopupMoneyType(leg.method as AbonementTopupPaymentMethod),
+            amount: leg.amount,
+            performedByOperatorId: actor.operatorId,
+            performedByUserId: actor.userId,
+          },
+        });
+      }
+    } else {
+      await tx.moneyOperation.create({
+        data: {
+          tenantId,
+          pointId,
+          abonementId: plan.id,
+          type: abonementTopupMoneyType(paymentMethod),
+          amount: plan.price,
+          performedByOperatorId: actor.operatorId,
+          performedByUserId: actor.userId,
+        },
+      });
+    }
 
     return { wallet, creditAmount: Number(plan.creditAmount) };
   });
@@ -197,6 +221,10 @@ interface ArbitraryTopupParams {
   pointId: string;
   amount: number;
   paymentMethod: AbonementTopupPaymentMethod;
+  // Разбивка оплаты (запрос пользователя 2026-07-26) — только cash/mobile,
+  // сумма долей должна равняться amount (здесь нет отдельного бонуса —
+  // сумма оплаты всегда равна сумме зачисления).
+  legs?: PaymentLegInput[];
   actor: Actor;
 }
 
@@ -210,7 +238,8 @@ interface ArbitraryTopupParams {
  * плана, cумма оплаты == сумма зачисления).
  */
 export async function topUpWalletArbitrary(walletId: string, params: ArbitraryTopupParams) {
-  const { tenantId, pointId, amount, paymentMethod, actor } = params;
+  const { tenantId, pointId, amount, paymentMethod, legs, actor } = params;
+  if (legs && legs.length > 0) validateSplitLegs(legs, amount, ABONEMENT_TOPUP_PAYMENT_METHODS);
   const wallet = await prisma.$transaction(async (tx) => {
     // updateMany с tenantId — см. комментарий в topUpWallet выше.
     const claimed = await tx.abonementWallet.updateMany({
@@ -225,23 +254,38 @@ export async function topUpWalletArbitrary(walletId: string, params: ArbitraryTo
         walletId,
         type: "topup",
         amount,
-        paymentMethod,
+        paymentMethod: legs && legs.length > 0 ? PAYMENT_SPLIT_METHOD : paymentMethod,
         pointId,
         operatorId: actor.operatorId,
         userId: actor.userId,
       },
     });
 
-    await tx.moneyOperation.create({
-      data: {
-        tenantId,
-        pointId,
-        type: abonementTopupMoneyType(paymentMethod),
-        amount,
-        performedByOperatorId: actor.operatorId,
-        performedByUserId: actor.userId,
-      },
-    });
+    if (legs && legs.length > 0) {
+      for (const leg of legs) {
+        await tx.moneyOperation.create({
+          data: {
+            tenantId,
+            pointId,
+            type: abonementTopupMoneyType(leg.method as AbonementTopupPaymentMethod),
+            amount: leg.amount,
+            performedByOperatorId: actor.operatorId,
+            performedByUserId: actor.userId,
+          },
+        });
+      }
+    } else {
+      await tx.moneyOperation.create({
+        data: {
+          tenantId,
+          pointId,
+          type: abonementTopupMoneyType(paymentMethod),
+          amount,
+          performedByOperatorId: actor.operatorId,
+          performedByUserId: actor.userId,
+        },
+      });
+    }
 
     return wallet;
   });
@@ -258,7 +302,8 @@ export async function createWalletWithTopupArbitrary(
 ) {
   const phone = normalizePhone(rawPhone);
   if (!phone) throw new Error("INVALID_PHONE");
-  const { tenantId, pointId, amount, paymentMethod, actor } = params;
+  const { tenantId, pointId, amount, paymentMethod, legs, actor } = params;
+  if (legs && legs.length > 0) validateSplitLegs(legs, amount, ABONEMENT_TOPUP_PAYMENT_METHODS);
 
   const wallet = await prisma.$transaction(async (tx) => {
     const wallet = await tx.abonementWallet.create({
@@ -270,23 +315,38 @@ export async function createWalletWithTopupArbitrary(
         walletId: wallet.id,
         type: "topup",
         amount,
-        paymentMethod,
+        paymentMethod: legs && legs.length > 0 ? PAYMENT_SPLIT_METHOD : paymentMethod,
         pointId,
         operatorId: actor.operatorId,
         userId: actor.userId,
       },
     });
 
-    await tx.moneyOperation.create({
-      data: {
-        tenantId,
-        pointId,
-        type: abonementTopupMoneyType(paymentMethod),
-        amount,
-        performedByOperatorId: actor.operatorId,
-        performedByUserId: actor.userId,
-      },
-    });
+    if (legs && legs.length > 0) {
+      for (const leg of legs) {
+        await tx.moneyOperation.create({
+          data: {
+            tenantId,
+            pointId,
+            type: abonementTopupMoneyType(leg.method as AbonementTopupPaymentMethod),
+            amount: leg.amount,
+            performedByOperatorId: actor.operatorId,
+            performedByUserId: actor.userId,
+          },
+        });
+      }
+    } else {
+      await tx.moneyOperation.create({
+        data: {
+          tenantId,
+          pointId,
+          type: abonementTopupMoneyType(paymentMethod),
+          amount,
+          performedByOperatorId: actor.operatorId,
+          performedByUserId: actor.userId,
+        },
+      });
+    }
 
     return wallet;
   });
@@ -322,13 +382,14 @@ export async function createWalletEmpty(rawPhone: string, name: string | null, t
 export async function createWalletWithTopup(rawPhone: string, name: string | null, params: TopupParams) {
   const phone = normalizePhone(rawPhone);
   if (!phone) throw new Error("INVALID_PHONE");
-  const { tenantId, pointId, abonementId, paymentMethod, actor } = params;
+  const { tenantId, pointId, abonementId, paymentMethod, legs, actor } = params;
 
   const wallet = await prisma.$transaction(async (tx) => {
     const plan = await tx.abonement.findFirst({
       where: { id: abonementId, tenantId, deletedAt: null },
     });
     if (!plan) throw new Error("ABONEMENT_NOT_FOUND");
+    if (legs && legs.length > 0) validateSplitLegs(legs, Number(plan.price), ABONEMENT_TOPUP_PAYMENT_METHODS);
 
     const wallet = await tx.abonementWallet.create({
       data: { tenantId, phone, name: name || null, balance: plan.creditAmount },
@@ -340,24 +401,40 @@ export async function createWalletWithTopup(rawPhone: string, name: string | nul
         type: "topup",
         amount: plan.creditAmount,
         abonementId: plan.id,
-        paymentMethod,
+        paymentMethod: legs && legs.length > 0 ? PAYMENT_SPLIT_METHOD : paymentMethod,
         pointId,
         operatorId: actor.operatorId,
         userId: actor.userId,
       },
     });
 
-    await tx.moneyOperation.create({
-      data: {
-        tenantId,
-        pointId,
-        abonementId: plan.id,
-        type: abonementTopupMoneyType(paymentMethod),
-        amount: plan.price,
-        performedByOperatorId: actor.operatorId,
-        performedByUserId: actor.userId,
-      },
-    });
+    if (legs && legs.length > 0) {
+      for (const leg of legs) {
+        await tx.moneyOperation.create({
+          data: {
+            tenantId,
+            pointId,
+            abonementId: plan.id,
+            type: abonementTopupMoneyType(leg.method as AbonementTopupPaymentMethod),
+            amount: leg.amount,
+            performedByOperatorId: actor.operatorId,
+            performedByUserId: actor.userId,
+          },
+        });
+      }
+    } else {
+      await tx.moneyOperation.create({
+        data: {
+          tenantId,
+          pointId,
+          abonementId: plan.id,
+          type: abonementTopupMoneyType(paymentMethod),
+          amount: plan.price,
+          performedByOperatorId: actor.operatorId,
+          performedByUserId: actor.userId,
+        },
+      });
+    }
 
     return wallet;
   });
@@ -569,8 +646,12 @@ export async function spendWalletForZone(walletId: string, params: ZoneSpendPara
  * MoneyOperation(type: "revenue_abonement") на зоне (см. spendWalletForZone) —
  * читаем напрямую по zoneId, не через активы (у "Только касса" их нет вовсе).
  */
-export async function getZoneAbonementSpendAmount(zoneId: string, since: Date | null): Promise<number> {
-  const ops = await prisma.moneyOperation.findMany({
+export async function getZoneAbonementSpendAmount(
+  zoneId: string,
+  since: Date | null,
+  tx: Tx | typeof prisma = prisma
+): Promise<number> {
+  const ops = await tx.moneyOperation.findMany({
     where: {
       zoneId,
       type: "revenue_abonement",

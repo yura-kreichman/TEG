@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { extractPlainText, MAX_INSTRUCTION_CONTENT_LENGTH, validateInstructionContent } from "@/lib/instructions/content";
 import { isModuleEnabled } from "@/lib/tenant-modules";
+import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 import type { Prisma } from "@/generated/prisma/client";
 
 async function loadInstruction(id: string, tenantId: string) {
@@ -116,5 +117,10 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/instruct
   }
 
   await prisma.instruction.delete({ where: { id } });
+  // Тот же реальный пробел, что и у /archive (аудит 2026-07-26) — удалённая
+  // инструкция могла быть привязана к лендингу, статическая страница
+  // /s/[slug] иначе продолжила бы ссылаться на несуществующую запись до
+  // ближайшей несвязанной правки лендинга.
+  await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ ok: true });
 }

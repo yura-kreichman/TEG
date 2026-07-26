@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Banknote, Check, CreditCard, MapPin, Layers, Wallet } from "lucide-react";
+import { ArrowLeftRight, Banknote, Check, CreditCard, MapPin, Layers, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,8 @@ import { PrintButton } from "@/components/print/print-button";
 import { isLaunchesZone } from "@/lib/results-calc";
 import { unlockBeep, playConfirmChime, playErrorChime } from "@/lib/beep";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
+import { SplitPaymentSheet } from "@/components/split-payment-sheet";
+import type { PaymentLegInput } from "@/lib/payment-split";
 import { ActionToast } from "@/components/action-toast";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
 import { useActionToast } from "@/hooks/use-action-toast";
@@ -63,6 +65,7 @@ interface TallyEntry {
 const POLL_MS = 6000;
 const ALL_ZONES = "all";
 const ZONE_FILTER_KEY = "launchesZoneFilter";
+const TALLY_SPLIT_METHODS = ["cash", "mobile", "abonement"] as const;
 
 /**
  * Экран "Пуски" в PWA оператора (docs/spec/04-game-room.md, режим
@@ -99,7 +102,8 @@ export default function LaunchesZonePage() {
     assetName: string;
     tariffName: string;
     amount: number;
-    paymentMethod: "cash" | "mobile" | "abonement";
+    paymentMethod: "cash" | "mobile" | "abonement" | "split";
+    legs?: PaymentLegInput[];
   } | null>(
     null
   );
@@ -120,6 +124,12 @@ export default function LaunchesZonePage() {
   // кнопка "Баланс" прячется целиком, если Владелец отключил Клиентов;
   // серверная защита уже есть в /api/zones/[id]/tally.
   const [clientsEnabled, setClientsEnabled] = useState(true);
+  // Разбивка оплаты (аудит 2026-07-26) — тот же приём захвата цели в момент
+  // клика, что у splitStartTarget в game-room/page.tsx: tapFlow обнуляется
+  // до открытия SplitPaymentSheet.
+  const [splitTapTarget, setSplitTapTarget] = useState<
+    { zoneId: string; assetId: string; tariffId: string; amount: number } | null
+  >(null);
 
   function loadZones() {
     fetch("/api/operator/submission-context")
@@ -226,7 +236,8 @@ export default function LaunchesZonePage() {
     assetId: string,
     tariffId: string,
     paymentMethod: "cash" | "mobile" | "abonement",
-    abonementWalletId?: string
+    abonementWalletId?: string,
+    legs?: PaymentLegInput[]
   ) {
     setSubmitting(true);
     const zone = zones.find((z) => z.id === zoneId);
@@ -236,7 +247,7 @@ export default function LaunchesZonePage() {
       const res = await fetch(`/api/zones/${zoneId}/tally`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assetId, tariffId, paymentMethod, abonementWalletId }),
+        body: JSON.stringify({ assetId, tariffId, paymentMethod, abonementWalletId, legs }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -248,9 +259,17 @@ export default function LaunchesZonePage() {
       playConfirmChime();
       setTapFlow(null);
       setAbonementTarget(null);
+      setSplitTapTarget(null);
       loadTallies(zones);
       if (zone && asset && tariff && zone.printReceiptEnabled && printAvailable.available) {
-        setLastTap({ zoneName: zone.name, assetName: asset.name, tariffName: tariff.name, amount: tariff.price, paymentMethod });
+        setLastTap({
+          zoneName: zone.name,
+          assetName: asset.name,
+          tariffName: tariff.name,
+          amount: tariff.price,
+          paymentMethod: legs ? "split" : paymentMethod,
+          legs: legs && legs.length > 0 ? legs : undefined,
+        });
       }
     } catch {
       // Сетевая ошибка — пуск на сервере не создан (тот же принцип, что и у
@@ -261,7 +280,7 @@ export default function LaunchesZonePage() {
     }
   }
 
-  const tapPaymentMethodLabel: Record<"cash" | "mobile" | "abonement", string> = {
+  const tapPaymentMethodLabel: Record<string, string> = {
     cash: t.operatorApp.submit.cashLabel,
     mobile: t.operatorApp.submit.mobileLabel,
     abonement: t.reports.abonementLabel,
@@ -281,7 +300,14 @@ export default function LaunchesZonePage() {
             // Z-отчёт по зонам), сумма и так видна ниже в "Сумма";
             // дублирование только путало (запрос пользователя 2026-07-20).
             { label: `${s.assetName} · ${s.tariffName}`, value: "", large: true },
-            { label: t.operatorApp.gameRoom.receiptPaymentMethodLabel, value: tapPaymentMethodLabel[s.paymentMethod] },
+            // Разбивка оплаты (аудит 2026-07-26) — своя строка на каждый
+            // способ вместо одной общей, тот же приём, что у "Прибываний".
+            ...(s.legs
+              ? s.legs.map((leg) => ({
+                  label: tapPaymentMethodLabel[leg.method] ?? leg.method,
+                  value: formatMoneyWithCurrency(leg.amount, locale, currency),
+                }))
+              : [{ label: t.operatorApp.gameRoom.receiptPaymentMethodLabel, value: tapPaymentMethodLabel[s.paymentMethod] }]),
           ],
         },
       ],
@@ -478,6 +504,21 @@ export default function LaunchesZonePage() {
                 </PressableScale>
               )}
             </div>
+            <PressableScale className="w-fit">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto gap-1 px-0 text-muted-foreground underline underline-offset-2"
+                onClick={() => {
+                  setSplitTapTarget({ zoneId: tapFlow.zoneId, assetId: tapFlow.assetId, tariffId: tapFlow.tariffId!, amount: tapTariff.price });
+                  setTapFlow(null);
+                }}
+              >
+                <ArrowLeftRight className="size-3.5" />
+                {t.splitPayment.title}
+              </Button>
+            </PressableScale>
           </div>
         )}
       </BottomSheet>
@@ -493,6 +534,20 @@ export default function LaunchesZonePage() {
           // 2026-07-24, найдено само-ревью моей же предыдущей правки).
           return logTap(abonementTarget.zoneId, abonementTarget.assetId, abonementTarget.tariffId, "abonement", walletId);
         }}
+      />
+
+      <SplitPaymentSheet
+        open={splitTapTarget !== null}
+        onClose={() => setSplitTapTarget(null)}
+        total={splitTapTarget?.amount ?? 0}
+        allowedMethods={TALLY_SPLIT_METHODS}
+        clientsEnabled={clientsEnabled}
+        submitting={submitting}
+        onSubmit={(legs) =>
+          splitTapTarget
+            ? logTap(splitTapTarget.zoneId, splitTapTarget.assetId, splitTapTarget.tariffId, "cash", undefined, legs)
+            : undefined
+        }
       />
 
       {/* Квитанция пуска — печать по требованию (модуль печати, запрос

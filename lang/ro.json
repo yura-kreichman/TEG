@@ -721,6 +721,7 @@
     "removePhoto": "Elimină foto",
     "editTariff": "Editează numele și prețul",
     "tariffsCardLabel": "Tarife · până la 2",
+    "tariffsCardLabelUnlimited": "Tarife",
     "addTariffButton": "Adaugă tarif",
     "addAssetButton": "Adaugă activ",
     "newTariffTitle": "Tarif nou",
@@ -1598,5 +1599,13 @@
     "newOrderButton": "Comandă nouă",
     "noPriceLabel": "Fără preț",
     "clearCartAction": "Golește coșul"
+  },
+  "splitPayment": {
+    "title": "Împarte plata",
+    "remainingLabel": "Rămas de distribuit:",
+    "addMethodButton": "Adaugă metodă",
+    "selectWalletButton": "Selectează portofelul",
+    "walletSelectedLabel": "Portofel selectat",
+    "submitButton": "Plătește"
   }
 }

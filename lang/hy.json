@@ -721,6 +721,7 @@
     "removePhoto": "Հեռացնել լուսանկարը",
     "editTariff": "Փոփոխել անվանումը և գինը",
     "tariffsCardLabel": "Սակագներ · մինչև 2",
+    "tariffsCardLabelUnlimited": "Սակագներ",
     "addTariffButton": "Ավելացնել սակագին",
     "addAssetButton": "Ավելացնել ակտիվ",
     "newTariffTitle": "Նոր սակագին",
@@ -1598,5 +1599,13 @@
     "newOrderButton": "Նոր պատվեր",
     "noPriceLabel": "Գին չկա",
     "clearCartAction": "Դատարկել զամբյուղը"
+  },
+  "splitPayment": {
+    "title": "Բաժանել վճարումը",
+    "remainingLabel": "Մնում է բաշխել՝",
+    "addMethodButton": "Ավելացնել եղանակ",
+    "selectWalletButton": "Ընտրել դրամապանակը",
+    "walletSelectedLabel": "Դրամապանակն ընտրված է",
+    "submitButton": "Վճարել"
   }
 }

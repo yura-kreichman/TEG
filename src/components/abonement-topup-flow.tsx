@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowBigRight, Banknote, Check, CreditCard, Delete, Gift, MapPin, Minus, Pencil, Plus, QrCode, Search, Send, Trash2, TriangleAlert, Wallet } from "lucide-react";
+import { ArrowBigRight, ArrowLeftRight, Banknote, Check, CreditCard, Delete, Gift, MapPin, Minus, Pencil, Plus, QrCode, Search, Send, Trash2, TriangleAlert, Wallet } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,19 @@ import { PhoneInput } from "@/components/phone-input";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { PrintButton } from "@/components/print/print-button";
 import { ActionToast } from "@/components/action-toast";
+import { SplitPaymentSheet } from "@/components/split-payment-sheet";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { playErrorChime } from "@/lib/beep";
 import { cn } from "@/lib/utils";
 import { formatMoneyWithCurrency, parseMoneyInput } from "@/lib/format";
+import type { PaymentLegInput } from "@/lib/payment-split";
+
+// Только Наличные/Безнал (запрос пользователя 2026-07-26: "абонементы по
+// определению не могут быть оплачены с баланса" — нельзя пополнить кошелёк
+// с него же самого).
+const TOPUP_SPLIT_METHODS = ["cash", "mobile"] as const;
 import type { Dictionary } from "@/lib/i18n";
 import type { PrintDocumentData, ReceiptBranding } from "@/lib/print/receipt-document";
 
@@ -287,6 +294,9 @@ export function AbonementTopupFlow({
   const [pendingAction, setPendingAction] = useState<{ kind: "plan"; plan: AbonementCtx } | { kind: "arbitrary"; amount: number } | null>(
     null
   );
+  // Разбивка оплаты (запрос пользователя 2026-07-26) — необязательный
+  // отдельный sheet поверх обычных кнопок, см. SplitPaymentSheet.
+  const [splitOpen, setSplitOpen] = useState(false);
   const [arbitraryAmount, setArbitraryAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -463,14 +473,14 @@ export function AbonementTopupFlow({
       .finally(() => setSearching(false));
   }
 
-  async function handleCreate(plan: AbonementCtx, paymentMethod: "cash" | "mobile") {
+  async function handleCreate(plan: AbonementCtx, paymentMethod: "cash" | "mobile", legs?: PaymentLegInput[]) {
     setSubmitting(true);
     setError(null);
     try {
       const res = await fetch(createEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, name: name.trim() || undefined, abonementId: plan.id, paymentMethod }),
+        body: JSON.stringify({ phone, name: name.trim() || undefined, abonementId: plan.id, paymentMethod, legs }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -488,14 +498,14 @@ export function AbonementTopupFlow({
     }
   }
 
-  async function handleTopup(walletId: string, plan: AbonementCtx, paymentMethod: "cash" | "mobile") {
+  async function handleTopup(walletId: string, plan: AbonementCtx, paymentMethod: "cash" | "mobile", legs?: PaymentLegInput[]) {
     setSubmitting(true);
     setError(null);
     try {
       const res = await fetch(topupEndpointFor(walletId), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ abonementId: plan.id, paymentMethod }),
+        body: JSON.stringify({ abonementId: plan.id, paymentMethod, legs }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -516,14 +526,14 @@ export function AbonementTopupFlow({
   // Произвольная сумма, ТРЕКАЕМАЯ (Сотрудник, реальная оплата, см.
   // arbitraryAmountNeedsPaymentMethod) — сиблинг handleCreate/handleTopup
   // выше, а не handleAdjust ниже (тот — untracked-путь Владельца).
-  async function handleCreateArbitrary(amount: number, paymentMethod: "cash" | "mobile") {
+  async function handleCreateArbitrary(amount: number, paymentMethod: "cash" | "mobile", legs?: PaymentLegInput[]) {
     setSubmitting(true);
     setError(null);
     try {
       const res = await fetch(createEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, name: name.trim() || undefined, amount, paymentMethod }),
+        body: JSON.stringify({ phone, name: name.trim() || undefined, amount, paymentMethod, legs }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -542,14 +552,14 @@ export function AbonementTopupFlow({
     }
   }
 
-  async function handleTopupArbitrary(walletId: string, amount: number, paymentMethod: "cash" | "mobile") {
+  async function handleTopupArbitrary(walletId: string, amount: number, paymentMethod: "cash" | "mobile", legs?: PaymentLegInput[]) {
     setSubmitting(true);
     setError(null);
     try {
       const res = await fetch(topupEndpointFor(walletId), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, paymentMethod }),
+        body: JSON.stringify({ amount, paymentMethod, legs }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -1141,6 +1151,18 @@ export function AbonementTopupFlow({
               {t.operatorApp.submit.mobileLabel}
             </ConfirmButton>
           </div>
+          <PressableScale className="w-fit self-center">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-auto gap-1 px-0 text-muted-foreground underline underline-offset-2"
+              onClick={() => setSplitOpen(true)}
+            >
+              <ArrowLeftRight className="size-3.5" />
+              {t.splitPayment.title}
+            </Button>
+          </PressableScale>
         </>
       ) : found === undefined ? (
         <div className="relative flex flex-col gap-3">
@@ -1521,6 +1543,27 @@ export function AbonementTopupFlow({
           url={telegramBalanceLink}
         />
       )}
+
+      <SplitPaymentSheet
+        open={splitOpen}
+        onClose={() => setSplitOpen(false)}
+        total={pendingAction ? (pendingAction.kind === "plan" ? Number(pendingAction.plan.price) : pendingAction.amount) : 0}
+        allowedMethods={TOPUP_SPLIT_METHODS}
+        clientsEnabled={false}
+        submitting={submitting}
+        onSubmit={(legs) => {
+          if (!pendingAction) return undefined;
+          setSplitOpen(false);
+          if (pendingAction.kind === "plan") {
+            return isNew
+              ? handleCreate(pendingAction.plan, "cash", legs)
+              : handleTopup(found!.id, pendingAction.plan, "cash", legs);
+          }
+          return isNew
+            ? handleCreateArbitrary(pendingAction.amount, "cash", legs)
+            : handleTopupArbitrary(found!.id, pendingAction.amount, "cash", legs);
+        }}
+      />
     </div>
   );
 }

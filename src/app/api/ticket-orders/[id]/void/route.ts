@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { requireOperator } from "@/lib/require-operator";
-import { voidTicketInTx } from "@/lib/tickets";
+import { voidTicketInTx, refundOrderSplitLegsTx } from "@/lib/tickets";
 import { notifyWalletBalanceChange } from "@/lib/abonement";
 
 /**
@@ -62,7 +62,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/ticket-orde
   const body = await request.json().catch(() => ({}));
   const reason: string | null = typeof body.reason === "string" && body.reason.trim() ? body.reason.trim() : null;
 
-  const voidedIds = await prisma.$transaction(async (tx) => {
+  const { voidedIds, refundedWalletLegs } = await prisma.$transaction(async (tx) => {
     // Реально аннулированные в ЭТОМ вызове (не все activeTickets — voidTicketInTx
     // теперь CAS: если билет уже аннулирован параллельным запросом, например
     // повторным кликом "Аннулировать заказ" или одиночным /tickets/[id]/void,
@@ -85,7 +85,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/ticket-orde
       );
       if (voided) actuallyVoided.push(ticket);
     }
-    if (actuallyVoided.length === 0) return [];
+    if (actuallyVoided.length === 0) return { voidedIds: [], refundedWalletLegs: [] };
     const after = await tx.ticket.findMany({ where: { id: { in: actuallyVoided.map((t) => t.id) } } });
     await tx.correctionLog.create({
       data: {
@@ -98,7 +98,25 @@ export async function POST(request: Request, ctx: RouteContext<"/api/ticket-orde
         comment: reason,
       },
     });
-    return actuallyVoided.map((t) => t.id);
+
+    // Разбивка оплаты (запрос пользователя 2026-07-26) — voidTicketInTx выше
+    // для paymentMethod="split" НЕ возвращает деньги сам (по билету это
+    // невозможно честно распределить), возврат считается один раз на весь
+    // аннулируемый в этом вызове объём.
+    let refundedWalletLegs: { walletId: string; amount: number }[] = [];
+    if (order.paymentMethod === "split") {
+      const refundAmount = actuallyVoided.reduce((sum, t) => sum + Number(t.priceSnapshot), 0);
+      refundedWalletLegs = await refundOrderSplitLegsTx(
+        tx,
+        { id: order.id, zoneId: order.zoneId, soldAt: order.soldAt, totalSnapshot: order.totalSnapshot },
+        refundAmount,
+        opCtx
+          ? { tenantId, pointId: opCtx.point.id, operatorId: opCtx.operator.id }
+          : { tenantId, pointId: order.zone.pointId, userId: owner!.user.id }
+      );
+    }
+
+    return { voidedIds: actuallyVoided.map((t) => t.id), refundedWalletLegs };
   });
 
   if (voidedIds.length === 0) {
@@ -110,6 +128,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/ticket-orde
       .filter((t) => voidedIds.includes(t.id))
       .reduce((sum, t) => sum + Number(t.priceSnapshot), 0);
     await notifyWalletBalanceChange(tenantId, order.walletId, totalRefunded).catch(() => {});
+  }
+  for (const leg of refundedWalletLegs) {
+    await notifyWalletBalanceChange(tenantId, leg.walletId, leg.amount).catch(() => {});
   }
 
   return NextResponse.json({ voidedTicketIds: voidedIds });

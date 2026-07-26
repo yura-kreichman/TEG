@@ -9,6 +9,7 @@ import {
 } from "@/lib/game-room";
 import { InsufficientBalanceError, spendWalletTx, notifyWalletBalanceChange } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
+import { PAYMENT_SPLIT_METHOD, validateSplitLegs, InvalidPaymentSplitError, type PaymentLegInput } from "@/lib/payment-split";
 
 class LaunchAlreadyStoppedError extends Error {}
 
@@ -53,23 +54,45 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
   // самом пуске, вместо null.
   let paymentMethod: string | null = launch.paymentMethod;
   let abonementWalletId: string | null = launch.abonementWalletId;
+  // Разбивка оплаты (запрос пользователя 2026-07-26) — тот же принцип, что
+  // у "fixed" при старте, только тут сумма известна лишь сейчас (см.
+  // computeLaunchAmount ниже), поэтому сумма долей сверяется ПОСЛЕ него.
+  let legs: PaymentLegInput[] | undefined;
   if (launch.pricingMode === "per_minute") {
     const body = await request.json().catch(() => ({}));
-    if (!(LAUNCH_PAYMENT_METHODS as readonly string[]).includes(body.paymentMethod)) {
-      return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
-    }
-    paymentMethod = body.paymentMethod;
-    if (paymentMethod === "abonement") {
-      if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+    legs = Array.isArray(body.legs)
+      ? (body.legs as unknown[]).map((raw) => {
+          const l = raw as { method?: unknown; amount?: unknown; walletId?: unknown };
+          return {
+            method: typeof l?.method === "string" ? l.method : "",
+            amount: Number(l?.amount),
+            walletId: typeof l?.walletId === "string" ? l.walletId : undefined,
+          };
+        })
+      : undefined;
+    if (legs) {
+      paymentMethod = PAYMENT_SPLIT_METHOD;
+      abonementWalletId = null;
+      if (legs.some((l) => l.method === "abonement") && !(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
         return NextResponse.json({ error: "Оплата балансом отключена владельцем" }, { status: 403 });
       }
-      abonementWalletId =
-        typeof body.abonementWalletId === "string" && body.abonementWalletId ? body.abonementWalletId : null;
-      if (!abonementWalletId) {
-        return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
-      }
     } else {
-      abonementWalletId = null;
+      if (!(LAUNCH_PAYMENT_METHODS as readonly string[]).includes(body.paymentMethod)) {
+        return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
+      }
+      paymentMethod = body.paymentMethod;
+      if (paymentMethod === "abonement") {
+        if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+          return NextResponse.json({ error: "Оплата балансом отключена владельцем" }, { status: 403 });
+        }
+        abonementWalletId =
+          typeof body.abonementWalletId === "string" && body.abonementWalletId ? body.abonementWalletId : null;
+        if (!abonementWalletId) {
+          return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
+        }
+      } else {
+        abonementWalletId = null;
+      }
     }
   }
 
@@ -85,6 +108,16 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
     launch.startedAt,
     endedAt
   );
+  if (legs) {
+    try {
+      validateSplitLegs(legs, amount, LAUNCH_PAYMENT_METHODS);
+    } catch (err) {
+      if (err instanceof InvalidPaymentSplitError) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
+      throw err;
+    }
+  }
 
   let updated;
   try {
@@ -106,7 +139,29 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
       // ТОЛЬКО "per_minute" — у "fixed" списание уже прошло раньше, при
       // старте (см. POST /api/zones/[id]/launches), повторное списание тут
       // задвоило бы его.
-      if (launch.pricingMode === "per_minute" && paymentMethod === "abonement" && abonementWalletId) {
+      if (legs) {
+        for (const leg of legs) {
+          if (leg.method === "abonement") {
+            await spendWalletTx(tx, leg.walletId!, {
+              tenantId: point.tenantId,
+              zoneId: launch.zoneId,
+              launchId: id,
+              pointId: point.id,
+              operatorId: operator.id,
+              amount: leg.amount,
+            });
+          }
+        }
+        await tx.launchPaymentLeg.createMany({
+          data: legs.map((leg, index) => ({
+            launchId: id,
+            method: leg.method,
+            amount: leg.amount,
+            walletId: leg.walletId,
+            order: index,
+          })),
+        });
+      } else if (launch.pricingMode === "per_minute" && paymentMethod === "abonement" && abonementWalletId) {
         await spendWalletTx(tx, abonementWalletId, {
           tenantId: point.tenantId,
           zoneId: launch.zoneId,
@@ -129,7 +184,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
     throw err;
   }
 
-  if (launch.pricingMode === "per_minute" && paymentMethod === "abonement" && abonementWalletId) {
+  if (legs) {
+    const abonementLeg = legs.find((l) => l.method === "abonement");
+    if (abonementLeg) {
+      await notifyWalletBalanceChange(point.tenantId, abonementLeg.walletId!, -abonementLeg.amount).catch(() => {});
+    }
+  } else if (launch.pricingMode === "per_minute" && paymentMethod === "abonement" && abonementWalletId) {
     await notifyWalletBalanceChange(point.tenantId, abonementWalletId, -amount).catch(() => {});
   }
 

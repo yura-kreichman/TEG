@@ -10,6 +10,7 @@ import {
 } from "@/lib/game-room";
 import { InsufficientBalanceError, spendWalletTx, notifyWalletBalanceChange } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
+import { PAYMENT_SPLIT_METHOD, validateSplitLegs, InvalidPaymentSplitError, type PaymentLegInput } from "@/lib/payment-split";
 
 // "Пуски" (accountingMode="launches", запрос пользователя 2026-07-17:
 // "тапали по активам и пуски учитывались" — цифровая замена бумажной
@@ -63,6 +64,20 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   const body = await request.json().catch(() => ({}));
   const assetId: string | null = typeof body.assetId === "string" && body.assetId ? body.assetId : null;
   const tariffId: string | null = typeof body.tariffId === "string" && body.tariffId ? body.tariffId : null;
+  // Разбивка оплаты (аудит 2026-07-26: "по всем модулям, по всем методам
+  // оплаты" — этот тап-режим "Пусков" остался единственным непокрытым) —
+  // тот же приём, что у fixed-варианта /api/zones/[id]/launches: цена
+  // известна заранее (tariff.price), поэтому разбивка возможна сразу.
+  const legs: PaymentLegInput[] | undefined = Array.isArray(body.legs)
+    ? (body.legs as unknown[]).map((raw) => {
+        const l = raw as { method?: unknown; amount?: unknown; walletId?: unknown };
+        return {
+          method: typeof l?.method === "string" ? l.method : "",
+          amount: Number(l?.amount),
+          walletId: typeof l?.walletId === "string" ? l.walletId : undefined,
+        };
+      })
+    : undefined;
 
   if (!assetId || !zone.assets.some((a) => a.id === assetId)) {
     return NextResponse.json({ error: "Выберите актив" }, { status: 400 });
@@ -71,18 +86,36 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   if (!tariff) {
     return NextResponse.json({ error: "Выберите тариф" }, { status: 400 });
   }
-  if (!(LAUNCH_PAYMENT_METHODS as readonly string[]).includes(body.paymentMethod)) {
-    return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
-  }
-  const paymentMethod: string = body.paymentMethod;
-  const abonementWalletId: string | null =
-    typeof body.abonementWalletId === "string" && body.abonementWalletId ? body.abonementWalletId : null;
-  if (paymentMethod === "abonement") {
-    if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+
+  let paymentMethod: string;
+  let abonementWalletId: string | null = null;
+  if (legs) {
+    try {
+      validateSplitLegs(legs, Number(tariff.price), LAUNCH_PAYMENT_METHODS);
+    } catch (err) {
+      if (err instanceof InvalidPaymentSplitError) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
+      throw err;
+    }
+    paymentMethod = PAYMENT_SPLIT_METHOD;
+    if (legs.some((l) => l.method === "abonement") && !(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
       return NextResponse.json({ error: "Оплата балансом отключена владельцем" }, { status: 403 });
     }
-    if (!abonementWalletId) {
-      return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
+  } else {
+    if (!(LAUNCH_PAYMENT_METHODS as readonly string[]).includes(body.paymentMethod)) {
+      return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
+    }
+    paymentMethod = body.paymentMethod;
+    abonementWalletId =
+      typeof body.abonementWalletId === "string" && body.abonementWalletId ? body.abonementWalletId : null;
+    if (paymentMethod === "abonement") {
+      if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+        return NextResponse.json({ error: "Оплата балансом отключена владельцем" }, { status: 403 });
+      }
+      if (!abonementWalletId) {
+        return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
+      }
     }
   }
 
@@ -107,13 +140,35 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
           priceSnapshot: tariff.price,
           amount: tariff.price,
           paymentMethod,
-          abonementWalletId: paymentMethod === "abonement" ? abonementWalletId : null,
+          abonementWalletId: !legs && paymentMethod === "abonement" ? abonementWalletId : null,
           startedByOperatorId: operator.id,
           endedByOperatorId: operator.id,
         },
       });
 
-      if (paymentMethod === "abonement" && abonementWalletId) {
+      if (legs) {
+        for (const leg of legs) {
+          if (leg.method === "abonement") {
+            await spendWalletTx(tx, leg.walletId!, {
+              tenantId: point.tenantId,
+              zoneId: zone.id,
+              launchId: created.id,
+              pointId: point.id,
+              operatorId: operator.id,
+              amount: leg.amount,
+            });
+          }
+        }
+        await tx.launchPaymentLeg.createMany({
+          data: legs.map((leg, index) => ({
+            launchId: created.id,
+            method: leg.method,
+            amount: leg.amount,
+            walletId: leg.walletId,
+            order: index,
+          })),
+        });
+      } else if (paymentMethod === "abonement" && abonementWalletId) {
         await spendWalletTx(tx, abonementWalletId, {
           tenantId: point.tenantId,
           zoneId: zone.id,
@@ -133,7 +188,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     throw err;
   }
 
-  if (launch.paymentMethod === "abonement" && launch.abonementWalletId) {
+  if (legs) {
+    const abonementLeg = legs.find((l) => l.method === "abonement");
+    if (abonementLeg) {
+      await notifyWalletBalanceChange(point.tenantId, abonementLeg.walletId!, -abonementLeg.amount).catch(() => {});
+    }
+  } else if (launch.paymentMethod === "abonement" && launch.abonementWalletId) {
     await notifyWalletBalanceChange(point.tenantId, launch.abonementWalletId, -Number(launch.amount)).catch(() => {});
   }
 

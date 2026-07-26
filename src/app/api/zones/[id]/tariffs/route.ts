@@ -3,7 +3,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { findTenantZone, requireOwner } from "@/lib/require-owner";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
-import { LAUNCH_PRICING_MODES } from "@/lib/game-room";
+import { LAUNCH_PRICING_MODES, smallestFreeNumber } from "@/lib/game-room";
 import { isStaysZone } from "@/lib/results-calc";
 
 export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/tariffs">) {
@@ -22,7 +22,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     where: { zoneId, deletedAt: null },
     select: { order: true },
   });
-  if (activeTariffs.length >= 2) {
+  // Лимит "максимум 2" — только у Счётчиков, аппаратно обоснован (запрос
+  // пользователя 2026-07-27: "Счётчики — это аппаратные устройства... в
+  // других режимах учёта их нет"). Раньше действовал везде (запрос
+  // 2026-07-17: "здесь действуют те же правила и лимит тарифов"), решение
+  // пересмотрено.
+  if (zone.accountingMode === "counters" && activeTariffs.length >= 2) {
     return NextResponse.json(
       { error: "У зоны уже максимум 2 тарифа" },
       { status: 409 }
@@ -30,9 +35,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   }
   // @@unique([zoneId, order]) — после soft-delete тарифа с order=1 может
   // остаться активный только с order=2, тогда новому нужен именно order=1,
-  // не "count+1" (это дало бы конфликт с уже занятым order=2).
-  const usedOrders = new Set(activeTariffs.map((t) => t.order));
-  const order = usedOrders.has(1) ? 2 : 1;
+  // не "count+1" (это дало бы конфликт с уже занятым order=2). Наименьший
+  // свободный, не только 1/2 (та же smallestFreeNumber, что у номеров
+  // пусков/браслетов) — с 2026-07-27 у Прибываний/Пусков/Только касса
+  // тарифов может быть больше двух.
+  const order = smallestFreeNumber(activeTariffs.map((t) => t.order));
 
   const { name, price, pricingMode, options } = await request.json();
   if (typeof name !== "string" || name.trim().length === 0) {
@@ -40,8 +47,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   }
 
   // "За вход"/"По факту" — только у зон "Прибывания" (запрос пользователя
-  // 2026-07-17: те же правила и лимит тарифов, что у Счётчиков/Пусков,
-  // просто с доп. полями, значимыми только в этом режиме). Минимальная сумма
+  // 2026-07-17: та же карточка "Тарифы", что у Счётчиков/Пусков, просто с
+  // доп. полями, значимыми только в этом режиме; лимит "макс. 2" — только у
+  // Счётчиков, см. проверку выше). Минимальная сумма
   // пуска убрана (запрос пользователя того же дня: "вообще не нужна, это
   // лишнее") — roundingMode остаётся "up" для округления длительности,
   // minAmount всегда null у новых тарифов "По факту".
@@ -131,7 +139,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      return NextResponse.json({ error: "У зоны уже максимум 2 тарифа" }, { status: 409 });
+      // Гонка на order при двойном клике "Добавить тариф" (комментарий выше)
+      // — не обязательно "максимум 2" теперь, раз лимит только у Счётчиков.
+      return NextResponse.json({ error: "Повторите — не удалось сохранить тариф, попробуйте ещё раз" }, { status: 409 });
     }
     throw err;
   }

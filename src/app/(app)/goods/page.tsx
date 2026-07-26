@@ -1720,6 +1720,7 @@ export default function GoodsCabinetPage() {
                     { value: "cash", label: t.operatorApp.submit.cashLabel },
                     { value: "mobile", label: t.operatorApp.submit.mobileLabel },
                     { value: "abonement", label: t.reports.abonementLabel },
+                    { value: "split", label: t.splitPayment.title },
                   ]}
                 >
                   <SelectTrigger className="h-11 w-full">
@@ -1732,7 +1733,9 @@ export default function GoodsCabinetPage() {
                             ? t.operatorApp.submit.cashLabel
                             : salesMethodFilter === "mobile"
                               ? t.operatorApp.submit.mobileLabel
-                              : t.reports.abonementLabel}
+                              : salesMethodFilter === "abonement"
+                                ? t.reports.abonementLabel
+                                : t.splitPayment.title}
                       </span>
                     </SelectValue>
                   </SelectTrigger>
@@ -1754,6 +1757,12 @@ export default function GoodsCabinetPage() {
                       <span className="flex items-center gap-1.5">
                         <PaymentMethodIcon method="abonement" className="size-4 shrink-0 text-muted-foreground" />
                         {t.reports.abonementLabel}
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="split">
+                      <span className="flex items-center gap-1.5">
+                        <PaymentMethodIcon method="split" className="size-4 shrink-0 text-muted-foreground" />
+                        {t.splitPayment.title}
                       </span>
                     </SelectItem>
                   </SelectContent>

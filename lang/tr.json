@@ -721,6 +721,7 @@
     "removePhoto": "Fotoğrafı kaldır",
     "editTariff": "Ad ve fiyatı düzenle",
     "tariffsCardLabel": "Tarifeler · en fazla 2",
+    "tariffsCardLabelUnlimited": "Tarifeler",
     "addTariffButton": "Tarife ekle",
     "addAssetButton": "Varlık ekle",
     "newTariffTitle": "Yeni tarife",
@@ -1598,5 +1599,13 @@
     "newOrderButton": "Yeni sipariş",
     "noPriceLabel": "Fiyat yok",
     "clearCartAction": "Sepeti temizle"
+  },
+  "splitPayment": {
+    "title": "Ödemeyi böl",
+    "remainingLabel": "Dağıtılacak kalan:",
+    "addMethodButton": "Yöntem ekle",
+    "selectWalletButton": "Cüzdan seç",
+    "walletSelectedLabel": "Cüzdan seçildi",
+    "submitButton": "Öde"
   }
 }

@@ -721,6 +721,7 @@
     "removePhoto": "Rimuovi foto",
     "editTariff": "Modifica nome e prezzo",
     "tariffsCardLabel": "Tariffe · fino a 2",
+    "tariffsCardLabelUnlimited": "Tariffe",
     "addTariffButton": "Aggiungi tariffa",
     "addAssetButton": "Aggiungi bene",
     "newTariffTitle": "Nuova tariffa",
@@ -1598,5 +1599,13 @@
     "newOrderButton": "Nuovo ordine",
     "noPriceLabel": "Nessun prezzo",
     "clearCartAction": "Svuota il carrello"
+  },
+  "splitPayment": {
+    "title": "Dividi il pagamento",
+    "remainingLabel": "Rimanente da distribuire:",
+    "addMethodButton": "Aggiungi metodo",
+    "selectWalletButton": "Seleziona portafoglio",
+    "walletSelectedLabel": "Portafoglio selezionato",
+    "submitButton": "Paga"
   }
 }

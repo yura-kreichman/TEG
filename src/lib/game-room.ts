@@ -6,6 +6,7 @@
 
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { PAYMENT_SPLIT_METHOD } from "@/lib/payment-split";
 
 type Tx = Prisma.TransactionClient;
 
@@ -282,6 +283,7 @@ export async function aggregateGameRoomLaunches(
   let cashAmount = 0;
   let mobileAmount = 0;
   let abonementAmount = 0;
+  const splitLaunchIds: string[] = [];
   for (const l of launches) {
     const amount = Number(l.amount ?? 0);
     totalAmount += amount;
@@ -289,6 +291,18 @@ export async function aggregateGameRoomLaunches(
     if (l.paymentMethod === "cash") cashAmount += amount;
     else if (l.paymentMethod === "mobile") mobileAmount += amount;
     else if (l.paymentMethod === "abonement") abonementAmount += amount;
+    // Разбивка оплаты (запрос пользователя 2026-07-26) — справочная, как и
+    // сам paymentMethod (см. комментарий у Launch.paymentMethod в schema.prisma).
+    else if (l.paymentMethod === PAYMENT_SPLIT_METHOD) splitLaunchIds.push(l.id);
+  }
+  if (splitLaunchIds.length > 0) {
+    const legs = await tx.launchPaymentLeg.findMany({ where: { launchId: { in: splitLaunchIds } } });
+    for (const leg of legs) {
+      const legAmount = Number(leg.amount);
+      if (leg.method === "cash") cashAmount += legAmount;
+      else if (leg.method === "mobile") mobileAmount += legAmount;
+      else if (leg.method === "abonement") abonementAmount += legAmount;
+    }
   }
 
   return {
@@ -344,13 +358,14 @@ export async function gameRoomRevenueByAsset(
       voidedAt: null,
       endedAt: { not: null, lte: until, ...(since ? { gt: since } : {}) },
     },
-    select: { assetId: true, amount: true, paymentMethod: true },
+    select: { id: true, assetId: true, amount: true, paymentMethod: true },
   });
 
   const byAsset = new Map<
     string,
     { count: number; calculatedAmount: number; cashAmount: number; mobileAmount: number; abonementAmount: number }
   >();
+  const splitAssetByLaunchId = new Map<string, string>();
   for (const l of launches) {
     if (!l.assetId) continue;
     const bucket =
@@ -361,7 +376,20 @@ export async function gameRoomRevenueByAsset(
     if (l.paymentMethod === "cash") bucket.cashAmount += amount;
     else if (l.paymentMethod === "mobile") bucket.mobileAmount += amount;
     else if (l.paymentMethod === "abonement") bucket.abonementAmount += amount;
+    else if (l.paymentMethod === PAYMENT_SPLIT_METHOD) splitAssetByLaunchId.set(l.id, l.assetId);
     byAsset.set(l.assetId, bucket);
+  }
+  if (splitAssetByLaunchId.size > 0) {
+    const legs = await tx.launchPaymentLeg.findMany({ where: { launchId: { in: [...splitAssetByLaunchId.keys()] } } });
+    for (const leg of legs) {
+      const assetId = splitAssetByLaunchId.get(leg.launchId);
+      if (!assetId) continue;
+      const bucket = byAsset.get(assetId)!;
+      const legAmount = Number(leg.amount);
+      if (leg.method === "cash") bucket.cashAmount += legAmount;
+      else if (leg.method === "mobile") bucket.mobileAmount += legAmount;
+      else if (leg.method === "abonement") bucket.abonementAmount += legAmount;
+    }
   }
 
   return Array.from(byAsset.entries()).map(

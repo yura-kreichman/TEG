@@ -721,6 +721,7 @@
     "removePhoto": "Прибрати фото",
     "editTariff": "Змінити назву і ціну",
     "tariffsCardLabel": "Тарифи · до 2",
+    "tariffsCardLabelUnlimited": "Тарифи",
     "addTariffButton": "Додати тариф",
     "addAssetButton": "Додати актив",
     "newTariffTitle": "Новий тариф",
@@ -1598,5 +1599,13 @@
     "newOrderButton": "Нове замовлення",
     "noPriceLabel": "Немає ціни",
     "clearCartAction": "Очистити кошик"
+  },
+  "splitPayment": {
+    "title": "Розбити оплату",
+    "remainingLabel": "Залишилось розподілити:",
+    "addMethodButton": "Додати спосіб",
+    "selectWalletButton": "Вибрати гаманець",
+    "walletSelectedLabel": "Гаманець обрано",
+    "submitButton": "Оплатити"
   }
 }

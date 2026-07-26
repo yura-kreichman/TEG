@@ -776,7 +776,7 @@ export default function PointsPage() {
                   <Label htmlFor="locMapsUrl">{t.points.mapsUrlLabel}</Label>
                   <Input
                     id="locMapsUrl"
-                    placeholder="https://maps.app.goo.gl/… или yandex.ru/maps/…"
+                    placeholder="https://maps.app.goo.gl/… / yandex.ru/maps/…"
                     value={locMapsUrl}
                     onChange={(e) => setLocMapsUrl(e.target.value)}
                   />

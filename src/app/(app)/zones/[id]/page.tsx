@@ -28,7 +28,7 @@ import { compressImageFile } from "@/lib/client-image";
 import { ZONE_ACCOUNTING_MODES, isStaysZone, isLaunchesZone, isTicketsZone, type ZoneAccountingMode } from "@/lib/results-calc";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { Money } from "@/components/money";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, parseMoneyInput } from "@/lib/format";
 import { getCurrencySign } from "@/lib/currency";
 import { cn, colorTagGradient } from "@/lib/utils";
 import { ColorTagPicker } from "@/components/color-tag-picker";
@@ -207,13 +207,22 @@ function RateOptionsEditor({
             onChange={(e) => update(index, { name: e.target.value })}
             className="flex-1"
           />
-          <MoneyInput
-            required
-            placeholder={t.zoneDetail.gameRoomOptionPricePlaceholder}
-            value={opt.price}
-            onChange={(e) => update(index, { price: e.target.value })}
-            className="flex-1"
-          />
+          <div className="flex flex-1 items-center gap-1">
+            <MoneyInput
+              required
+              placeholder={t.zoneDetail.gameRoomOptionPricePlaceholder}
+              value={opt.price}
+              onChange={(e) => update(index, { price: e.target.value })}
+              className="flex-1"
+            />
+            {/* Компактная подпись "/мин" (запрос пользователя 2026-07-26:
+                "должно быть компактно видно, что это за минуту") — сумма
+                здесь всегда ставка "По факту", а не разовая цена, как в
+                большинстве других мест, где переиспользуется MoneyInput. */}
+            <span className="shrink-0 text-caption-airbnb text-muted-foreground">
+              /{t.operatorApp.workTime.minutesShort}
+            </span>
+          </div>
           {options.length > 1 && (
             <PressableScale>
               <Button
@@ -253,7 +262,8 @@ interface TariffInfo {
   price: string;
   order: number;
   // Только у зон "Прибывания" (запрос пользователя 2026-07-17: тарифы —
-  // обычная сущность Tariff, лимит и правила те же, что у Счётчиков/Пусков).
+  // обычная сущность Tariff, та же карточка/форма, что у Счётчиков/Пусков;
+  // лимит "до 2" — только у Счётчиков, см. tariffLimitReached ниже).
   pricingMode: "fixed" | "per_minute" | null;
   // Только "fixed"/"За вход" — несколько вариантов длительность+цена (запрос
   // пользователя 2026-07-17: "1 час, 2 часа..." — оператор выбирает при
@@ -347,6 +357,12 @@ export default function ZoneDetailPage() {
   const { saved: addTariffSaved, pulse: addTariffPulse } = useSavePulse();
   const [tariffPrice, setTariffPrice] = useState("");
   const [tariffError, setTariffError] = useState<string | null>(null);
+  // Защита от повторной отправки (реальный баг, найден пользователем
+  // 2026-07-26: двойной клик/тап по "Сохранить" — обе формы уходят до того,
+  // как sheet успевает закрыться — создавал ДВА тарифа с одинаковыми
+  // данными вместо одного, оба укладываются в лимит "до 2 тарифов" зоны и
+  // никакая серверная проверка это не ловит, у них просто разный order).
+  const [savingTariff, setSavingTariff] = useState(false);
   // Поля "За вход"/"По факту" — только когда зона в режиме "Прибывания"
   // (запрос пользователя 2026-07-17: тарифы создаются как обычно, теми же
   // формами/лимитом, что у Счётчиков/Пусков, просто с доп. полями). "За
@@ -367,6 +383,8 @@ export default function ZoneDetailPage() {
   const [editTariffPrice, setEditTariffPrice] = useState("");
   const { saved: editTariffSaved, pulse: editTariffPulse } = useSavePulse();
   const [editTariffError, setEditTariffError] = useState<string | null>(null);
+  // Та же защита от двойной отправки, что у создания (см. savingTariff).
+  const [savingEditTariff, setSavingEditTariff] = useState(false);
   const [deleteTariffError, setDeleteTariffError] = useState<string | null>(null);
   const { saved: tariffDeleted, pulse: tariffDeletePulse } = useSavePulse();
   const [editTariffPricingMode, setEditTariffPricingMode] = useState<"fixed" | "per_minute">("fixed");
@@ -566,41 +584,47 @@ export default function ZoneDetailPage() {
 
   async function handleAddTariff(event: FormEvent) {
     event.preventDefault();
+    if (savingTariff) return;
     setTariffError(null);
+    setSavingTariff(true);
 
-    const res = await fetch(`/api/zones/${params.id}/tariffs`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: tariffName,
-        price: tariffPrice,
-        ...(zone && isStaysZone(zone)
-          ? {
-              pricingMode: tariffPricingMode,
-              options:
-                tariffPricingMode === "fixed"
-                  ? tariffOptions
-                  : tariffRateOptions.length > 0
-                    ? tariffRateOptions
-                    : undefined,
-            }
-          : {}),
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setTariffError(data.error ?? "Не удалось добавить тариф");
-      return;
+    try {
+      const res = await fetch(`/api/zones/${params.id}/tariffs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: tariffName,
+          price: tariffPrice,
+          ...(zone && isStaysZone(zone)
+            ? {
+                pricingMode: tariffPricingMode,
+                options:
+                  tariffPricingMode === "fixed"
+                    ? tariffOptions.map((o) => ({ ...o, price: parseMoneyInput(o.price) }))
+                    : tariffRateOptions.length > 0
+                      ? tariffRateOptions.map((o) => ({ ...o, price: parseMoneyInput(o.price) }))
+                      : undefined,
+              }
+            : {}),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTariffError(data.error ?? "Не удалось добавить тариф");
+        return;
+      }
+      await loadZone();
+      addTariffPulse(() => {
+        setTariffName("");
+        setTariffPrice("");
+        setTariffPricingMode("fixed");
+        setTariffOptions([EMPTY_OPTION]);
+        setTariffRateOptions([]);
+        setCreateTariffOpen(false);
+      });
+    } finally {
+      setSavingTariff(false);
     }
-    await loadZone();
-    addTariffPulse(() => {
-      setTariffName("");
-      setTariffPrice("");
-      setTariffPricingMode("fixed");
-      setTariffOptions([EMPTY_OPTION]);
-      setTariffRateOptions([]);
-      setCreateTariffOpen(false);
-    });
   }
 
   function openEditTariff(tariff: TariffInfo) {
@@ -629,34 +653,39 @@ export default function ZoneDetailPage() {
   }
 
   async function confirmEditTariff() {
-    if (!tariffKebab) return;
+    if (!tariffKebab || savingEditTariff) return;
     setEditTariffError(null);
-    const res = await fetch(`/api/tariffs/${tariffKebab.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: editTariffName,
-        price: editTariffPrice,
-        ...(zone && isStaysZone(zone)
-          ? {
-              pricingMode: editTariffPricingMode,
-              options:
-                editTariffPricingMode === "fixed"
-                  ? editTariffOptions
-                  : editTariffRateOptions.length > 0
-                    ? editTariffRateOptions
-                    : [],
-            }
-          : {}),
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setEditTariffError(data.error ?? "Не удалось сохранить тариф");
-      return;
+    setSavingEditTariff(true);
+    try {
+      const res = await fetch(`/api/tariffs/${tariffKebab.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editTariffName,
+          price: editTariffPrice,
+          ...(zone && isStaysZone(zone)
+            ? {
+                pricingMode: editTariffPricingMode,
+                options:
+                  editTariffPricingMode === "fixed"
+                    ? editTariffOptions.map((o) => ({ ...o, price: parseMoneyInput(o.price) }))
+                    : editTariffRateOptions.length > 0
+                      ? editTariffRateOptions.map((o) => ({ ...o, price: parseMoneyInput(o.price) }))
+                      : [],
+              }
+            : {}),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditTariffError(data.error ?? "Не удалось сохранить тариф");
+        return;
+      }
+      await loadZone();
+      editTariffPulse(() => setTariffKebab(null));
+    } finally {
+      setSavingEditTariff(false);
     }
-    await loadZone();
-    editTariffPulse(() => setTariffKebab(null));
   }
 
   async function confirmDeleteTariff() {
@@ -953,7 +982,12 @@ export default function ZoneDetailPage() {
     );
   }
 
-  const tariffLimitReached = zone.tariffs.length >= 2;
+  // Лимит "максимум 2" — только у Счётчиков, он аппаратно обоснован (запрос
+  // пользователя 2026-07-27: "Счётчики — это аппаратные устройства... в
+  // других режимах учёта их нет"). У Прибываний/Пусков/Только касса тарифов
+  // может быть сколько угодно — то же снято и на сервере, см.
+  // /api/zones/[id]/tariffs/route.ts.
+  const tariffLimitReached = zone.accountingMode === "counters" && zone.tariffs.length >= 2;
 
   // Тариф актива невалиден, если не выбран вообще, или выбранный тариф с тех
   // пор удалён (soft-delete — Asset.tariffId физически остаётся, но тариф
@@ -1147,9 +1181,10 @@ export default function ZoneDetailPage() {
             </SpringCard>
           )}
 
-          {/* Тарифы (Tariff) — те же правила и лимит (до 2 на зону), что у
-              Счётчиков/Пусков (запрос пользователя 2026-07-17: "здесь
-              действуют те правила и лимит тарифов"). У "Прибываний" —
+          {/* Тарифы (Tariff) — та же карточка/форма, что у Счётчиков/Пусков;
+              лимит "до 2 на зону" — только у Счётчиков (аппаратное
+              ограничение, запрос пользователя 2026-07-27), у остальных
+              режимов тарифов может быть сколько угодно. У "Прибываний" —
               доп. поля За вход/По факту в форме ниже; активы ссылаются на
               один из этих тарифов через свой кебаб, привязка отдельная
               (docs/spec/04-game-room.md). Владелец не следит за отдельными
@@ -1159,7 +1194,9 @@ export default function ZoneDetailPage() {
               docs/spec/10-tickets.md, "ЦЕНЫ — НА АКТИВАХ, НЕ ТАРИФЫ". */}
           {zone.accountingMode !== "cash_only" && !isTicketsZone(zone) && (
           <SpringCard hover={false} className="flex flex-col gap-1">
-            <h2 className="text-section-title">{t.zoneDetail.tariffsCardLabel}</h2>
+            <h2 className="text-section-title">
+              {zone.accountingMode === "counters" ? t.zoneDetail.tariffsCardLabel : t.zoneDetail.tariffsCardLabelUnlimited}
+            </h2>
 
             {zone.tariffs.map((tariff) => (
               <div key={tariff.id} className="flex items-center justify-between border-t border-border py-3 first:border-t-0">
@@ -1483,9 +1520,18 @@ export default function ZoneDetailPage() {
                     onChange={(e) => setTariffPrice(e.target.value)}
                     required
                   />
-                  <PressableScale>
-                    <SaveButton type="submit" className="h-14 text-base font-bold" saved={addTariffSaved} />
-                  </PressableScale>
+                  {/* Кнопка "Сохранить" рядом с полем — только у обычных
+                      тарифов Счётчиков/Пусков (не "Прибываний"). У
+                      "Прибываний" сохранение — всегда один и тот же кнопка
+                      снизу формы, единообразно с "За вход" (запрос
+                      пользователя 2026-07-26: "интерфейс должен быть
+                      единообразный, как «За вход»" — раньше "По факту" в
+                      простом режиме имел свою вторую Save-кнопку тут же). */}
+                  {!isStaysZone(zone) && (
+                    <PressableScale>
+                      <SaveButton type="submit" className="h-14 text-base font-bold" saved={addTariffSaved} disabled={savingTariff} />
+                    </PressableScale>
+                  )}
                 </div>
                 {isStaysZone(zone) && tariffPricingMode === "per_minute" && (
                   <>
@@ -1531,12 +1577,11 @@ export default function ZoneDetailPage() {
               )
             ))}
           {tariffError && <p className="text-sm text-destructive">{tariffError}</p>}
-          {isStaysZone(zone) &&
-            (tariffPricingMode === "fixed" || (tariffPricingMode === "per_minute" && tariffRateOptions.length > 0)) && (
-              <PressableScale>
-                <SaveButton type="submit" className="h-12 w-full" saved={addTariffSaved} />
-              </PressableScale>
-            )}
+          {isStaysZone(zone) && (
+            <PressableScale>
+              <SaveButton type="submit" className="h-12 w-full" saved={addTariffSaved} disabled={savingTariff} />
+            </PressableScale>
+          )}
         </form>
       </BottomSheet>
 
@@ -1576,13 +1621,16 @@ export default function ZoneDetailPage() {
                       value={editTariffPrice}
                       onChange={(e) => setEditTariffPrice(e.target.value)}
                     />
-                    <PressableScale>
-                      <SaveButton
-                        className="h-14 text-base font-bold"
-                        onClick={confirmEditTariff}
-                        saved={editTariffSaved}
-                      />
-                    </PressableScale>
+                    {!isStaysZone(zone) && (
+                      <PressableScale>
+                        <SaveButton
+                          className="h-14 text-base font-bold"
+                          onClick={confirmEditTariff}
+                          saved={editTariffSaved}
+                          disabled={savingEditTariff}
+                        />
+                      </PressableScale>
+                    )}
                   </div>
                   {isStaysZone(zone) && editTariffPricingMode === "per_minute" && (
                     <>
@@ -1630,12 +1678,11 @@ export default function ZoneDetailPage() {
                 )
               ))}
             {editTariffError && <p className="text-sm text-destructive">{editTariffError}</p>}
-            {isStaysZone(zone) &&
-              (editTariffPricingMode === "fixed" || (editTariffPricingMode === "per_minute" && editTariffRateOptions.length > 0)) && (
-                <PressableScale>
-                  <SaveButton className="h-12 w-full" onClick={confirmEditTariff} saved={editTariffSaved} />
-                </PressableScale>
-              )}
+            {isStaysZone(zone) && (
+              <PressableScale>
+                <SaveButton className="h-12 w-full" onClick={confirmEditTariff} saved={editTariffSaved} disabled={savingEditTariff} />
+              </PressableScale>
+            )}
           </div>
         )}
         {tariffKebab && tariffKebabView === "confirm-delete" && (

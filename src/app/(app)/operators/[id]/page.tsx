@@ -106,6 +106,7 @@ export default function OperatorCardPage() {
   const [carryoverAmount, setCarryoverAmount] = useState("");
   const [carryoverComment, setCarryoverComment] = useState("");
   const [carryoverError, setCarryoverError] = useState<string | null>(null);
+  const [carryoverSubmitting, setCarryoverSubmitting] = useState(false);
   const { saved: carryoverSaved, pulse: carryoverPulse } = useSavePulse();
 
   const [granularity, setGranularity] = useState<PeriodGranularity>("month");
@@ -115,6 +116,7 @@ export default function OperatorCardPage() {
   const [moneyAmount, setMoneyAmount] = useState("");
   const [moneyPointId, setMoneyPointId] = useState("");
   const [moneyError, setMoneyError] = useState<string | null>(null);
+  const [moneySubmitting, setMoneySubmitting] = useState(false);
   const { saved: moneyFormSaved, pulse: moneyFormPulse } = useSavePulse();
 
   const [editingShift, setEditingShift] = useState<ShiftRow | null>(null);
@@ -275,20 +277,30 @@ export default function OperatorCardPage() {
   }
 
   async function submitMoneyForm() {
-    if (!moneyForm) return;
+    // Guard от двойной отправки (аудит 2026-07-26) — в отличие от
+    // операторских self-service путей (advance-request/check-out), которые
+    // уже защищены pg_advisory_xact_lock, эти owner-side роуты создают
+    // MoneyOperation безусловным CREATE — двойной клик/тап реально задваивал
+    // выплату. Кнопка ниже дополнительно получает disabled={moneySubmitting}.
+    if (!moneyForm || moneySubmitting) return;
+    setMoneySubmitting(true);
     setMoneyError(null);
-    const res = await fetch(`/api/operators/${params.id}/work-time/${moneyForm}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: parseMoneyInput(moneyAmount), pointId: moneyPointId }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setMoneyError(data.error ?? t.operatorApp.workTime.saveError);
-      return;
+    try {
+      const res = await fetch(`/api/operators/${params.id}/work-time/${moneyForm}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: parseMoneyInput(moneyAmount), pointId: moneyPointId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMoneyError(data.error ?? t.operatorApp.workTime.saveError);
+        return;
+      }
+      await loadAll();
+      moneyFormPulse(() => setMoneyForm(null));
+    } finally {
+      setMoneySubmitting(false);
     }
-    await loadAll();
-    moneyFormPulse(() => setMoneyForm(null));
   }
 
   function openCarryover() {
@@ -299,24 +311,33 @@ export default function OperatorCardPage() {
   }
 
   async function confirmCarryover() {
+    // Guard от двойной отправки (аудит 2026-07-26) — тот же класс бага, что
+    // у submitMoneyForm выше: бэкенд создаёт OperatorBalanceCarryover
+    // безусловным CREATE, без идемпотентности.
+    if (carryoverSubmitting) return;
+    setCarryoverSubmitting(true);
     setCarryoverError(null);
-    const amountNumber = parseMoneyInput(carryoverAmount);
-    if (!Number.isFinite(amountNumber) || amountNumber === 0) {
-      setCarryoverError(t.operatorApp.workTime.saveError);
-      return;
+    try {
+      const amountNumber = parseMoneyInput(carryoverAmount);
+      if (!Number.isFinite(amountNumber) || amountNumber === 0) {
+        setCarryoverError(t.operatorApp.workTime.saveError);
+        return;
+      }
+      const res = await fetch(`/api/operators/${params.id}/work-time/carryover`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: amountNumber, comment: carryoverComment }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setCarryoverError(data.error ?? t.operatorApp.workTime.saveError);
+        return;
+      }
+      await loadAll();
+      carryoverPulse(() => setCarryoverOpen(false));
+    } finally {
+      setCarryoverSubmitting(false);
     }
-    const res = await fetch(`/api/operators/${params.id}/work-time/carryover`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: amountNumber, comment: carryoverComment }),
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      setCarryoverError(data.error ?? t.operatorApp.workTime.saveError);
-      return;
-    }
-    await loadAll();
-    carryoverPulse(() => setCarryoverOpen(false));
   }
 
   function openShiftEdit(shift: ShiftRow) {
@@ -695,7 +716,7 @@ export default function OperatorCardPage() {
               />
               {operatorPoints.length <= 1 && (
                 <PressableScale>
-                  <SaveButton className="h-14" onClick={submitMoneyForm} saved={moneyFormSaved} />
+                  <SaveButton className="h-14" onClick={submitMoneyForm} saved={moneyFormSaved} disabled={moneySubmitting} />
                 </PressableScale>
               )}
             </div>
@@ -724,7 +745,7 @@ export default function OperatorCardPage() {
           {moneyError && <p className="text-sm text-destructive">{moneyError}</p>}
           {operatorPoints.length > 1 && (
             <PressableScale>
-              <SaveButton className="h-12 w-full" onClick={submitMoneyForm} saved={moneyFormSaved} />
+              <SaveButton className="h-12 w-full" onClick={submitMoneyForm} saved={moneyFormSaved} disabled={moneySubmitting} />
             </PressableScale>
           )}
         </div>
@@ -755,7 +776,7 @@ export default function OperatorCardPage() {
           </div>
           {carryoverError && <p className="text-sm text-destructive">{carryoverError}</p>}
           <PressableScale>
-            <SaveButton className="h-12 w-full" onClick={confirmCarryover} saved={carryoverSaved} />
+            <SaveButton className="h-12 w-full" onClick={confirmCarryover} saved={carryoverSaved} disabled={carryoverSubmitting} />
           </PressableScale>
         </div>
       </BottomSheet>

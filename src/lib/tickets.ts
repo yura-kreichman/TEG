@@ -6,19 +6,14 @@
 
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import {
-  smallestFreeNumber,
-  previousSubmissionBoundary,
-  LAUNCH_PAYMENT_METHODS,
-  type LaunchPaymentMethod,
-} from "@/lib/game-room";
+import { smallestFreeNumber, previousSubmissionBoundary, LAUNCH_PAYMENT_METHODS } from "@/lib/game-room";
+import { PAYMENT_SPLIT_METHOD } from "@/lib/payment-split";
 
 type Tx = Prisma.TransactionClient;
 
 // Те же три способа оплаты, что у Пусков/Прибываний (docs/spec/10-tickets.md,
 // "ЗАКАЗ") — переиспользуем список, не дублируем.
 export const TICKET_PAYMENT_METHODS = LAUNCH_PAYMENT_METHODS;
-export type TicketPaymentMethod = LaunchPaymentMethod;
 
 /**
  * Номер заказа для следующей продажи — наименьший свободный СРЕДИ ЗАНЯТЫХ
@@ -145,6 +140,7 @@ export async function aggregateTicketOrders(
 
   const now = new Date();
   const orderIds = new Set<string>();
+  const splitOrderIds = new Set<string>();
   let totalAmount = 0;
   let cashAmount = 0;
   let mobileAmount = 0;
@@ -159,9 +155,24 @@ export async function aggregateTicketOrders(
     if (t.order.paymentMethod === "cash") cashAmount += amount;
     else if (t.order.paymentMethod === "mobile") mobileAmount += amount;
     else if (t.order.paymentMethod === "abonement") abonementAmount += amount;
+    // Разбивка оплаты (запрос пользователя 2026-07-26) — считается ПО
+    // ЗАКАЗУ, не по билету, ниже (частичное аннулирование разбитого заказа
+    // запрещено сервером, поэтому пока у заказа есть хоть один незачёркнутый
+    // билет в окне — это ВЕСЬ его исходный набор долей, без пропорций).
+    else if (t.order.paymentMethod === PAYMENT_SPLIT_METHOD) splitOrderIds.add(t.orderId);
 
     if (t.status === "redeemed") redeemedCount += 1;
     else if (isTicketExpired({ status: t.status }, t.order, now)) expiredCount += 1;
+  }
+
+  if (splitOrderIds.size > 0) {
+    const legs = await tx.ticketOrderPaymentLeg.findMany({ where: { orderId: { in: [...splitOrderIds] } } });
+    for (const leg of legs) {
+      const amount = Number(leg.amount);
+      if (leg.method === "cash") cashAmount += amount;
+      else if (leg.method === "mobile") mobileAmount += amount;
+      else if (leg.method === "abonement") abonementAmount += amount;
+    }
   }
 
   return {
@@ -362,28 +373,101 @@ export async function voidTicketInTx(
   if (voidResult.count === 0) return false;
   await tx.ticketOrder.update({ where: { id: order.id }, data: { openTicketsCount: { decrement: 1 } } });
 
-  const boundary = await previousSubmissionBoundary(order.zoneId, tx);
-  const isPostSubmission = boundary != null && order.soldAt <= boundary;
+  // Разбивка оплаты (запрос пользователя 2026-07-26) — возврат ДЕНЕГ разбитого
+  // заказа считается ОДИН РАЗ на весь заказ, не по билету (см.
+  // refundOrderSplitLegsTx ниже) — здесь для split-заказа только сам билет
+  // помечается voided, вызывающий роут отдельно вызывает refundOrderSplitLegsTx
+  // после цикла по всем билетам заказа. Одиночное аннулирование ОДНОГО билета
+  // разбитого заказа сервер вообще не допускает раньше этой функции (см.
+  // /api/tickets/[id]/void) — сюда для split приходит только полный цикл по
+  // заказу.
+  if (order.paymentMethod !== PAYMENT_SPLIT_METHOD) {
+    const boundary = await previousSubmissionBoundary(order.zoneId, tx);
+    const isPostSubmission = boundary != null && order.soldAt <= boundary;
 
-  if (isPostSubmission) {
-    await tx.moneyOperation.create({
-      data: {
-        tenantId,
-        zoneId: order.zoneId,
-        type: ticketRefundMoneyType(order.paymentMethod),
-        amount: -amount,
-        performedByUserId: userId,
-        performedByOperatorId: operatorId,
-      },
-    });
-  }
+    if (isPostSubmission) {
+      await tx.moneyOperation.create({
+        data: {
+          tenantId,
+          zoneId: order.zoneId,
+          type: ticketRefundMoneyType(order.paymentMethod),
+          amount: -amount,
+          performedByUserId: userId,
+          performedByOperatorId: operatorId,
+        },
+      });
+    }
 
-  if (order.paymentMethod === "abonement" && order.walletId) {
-    await tx.abonementWallet.update({ where: { id: order.walletId }, data: { balance: { increment: amount } } });
-    await tx.abonementTransaction.create({
-      data: { walletId: order.walletId, type: "refund", amount, ticketOrderId: order.id, pointId, userId, operatorId },
-    });
+    if (order.paymentMethod === "abonement" && order.walletId) {
+      await tx.abonementWallet.update({ where: { id: order.walletId }, data: { balance: { increment: amount } } });
+      await tx.abonementTransaction.create({
+        data: { walletId: order.walletId, type: "refund", amount, ticketOrderId: order.id, pointId, userId, operatorId },
+      });
+    }
   }
 
   return true;
+}
+
+/**
+ * Возврат денег разбитого заказа целиком (запрос пользователя 2026-07-26) —
+ * вызывается ОДИН раз после того, как все аннулируемые билеты заказа уже
+ * помечены voided (voidTicketInTx выше сам ничего не возвращает для
+ * paymentMethod="split"). refundAmount — сумма priceSnapshot реально
+ * аннулированных сейчас билетов; распределяется по долям заказа
+ * пропорционально (частичное аннулирование одного билета из разбитого
+ * заказа запрещено сервером — на практике refundAmount всегда равен либо
+ * 0, либо полной сумме заказа, но пропорция считается честно на случай
+ * будущих изменений этого правила).
+ */
+export async function refundOrderSplitLegsTx(
+  tx: Tx,
+  order: { id: string; zoneId: string; soldAt: Date; totalSnapshot: Prisma.Decimal | number },
+  refundAmount: number,
+  actor: { tenantId: string; pointId: string; userId?: string; operatorId?: string }
+): Promise<{ walletId: string; amount: number }[]> {
+  const refundedWalletLegs: { walletId: string; amount: number }[] = [];
+  if (refundAmount <= 0) return refundedWalletLegs;
+  const { tenantId, pointId, userId, operatorId } = actor;
+
+  const legs = await tx.ticketOrderPaymentLeg.findMany({ where: { orderId: order.id }, orderBy: { order: "asc" } });
+  if (legs.length === 0) return refundedWalletLegs;
+
+  const total = Number(order.totalSnapshot);
+  const boundary = await previousSubmissionBoundary(order.zoneId, tx);
+  const isPostSubmission = boundary != null && order.soldAt <= boundary;
+
+  let allocated = 0;
+  for (let i = 0; i < legs.length; i++) {
+    const leg = legs[i]!;
+    const legAmount = Number(leg.amount);
+    const isLast = i === legs.length - 1;
+    const share = isLast
+      ? Math.round((refundAmount - allocated) * 100) / 100
+      : Math.round(((legAmount * refundAmount) / total) * 100) / 100;
+    allocated += share;
+    if (share <= 0) continue;
+
+    if (isPostSubmission) {
+      await tx.moneyOperation.create({
+        data: {
+          tenantId,
+          zoneId: order.zoneId,
+          type: ticketRefundMoneyType(leg.method),
+          amount: -share,
+          performedByUserId: userId,
+          performedByOperatorId: operatorId,
+        },
+      });
+    }
+
+    if (leg.method === "abonement" && leg.walletId) {
+      await tx.abonementWallet.update({ where: { id: leg.walletId }, data: { balance: { increment: share } } });
+      await tx.abonementTransaction.create({
+        data: { walletId: leg.walletId, type: "refund", amount: share, ticketOrderId: order.id, pointId, userId, operatorId },
+      });
+      refundedWalletLegs.push({ walletId: leg.walletId, amount: share });
+    }
+  }
+  return refundedWalletLegs;
 }

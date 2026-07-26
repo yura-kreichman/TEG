@@ -22,6 +22,7 @@ export function usePersistedPointId(
 ): [string | null, (update: PointIdUpdater) => void] {
   const [pointId, setPointIdState] = useState<string | null>(urlOverride ?? null);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (urlOverride) {
       localStorage.setItem(STORAGE_KEY, urlOverride);
@@ -31,6 +32,7 @@ export function usePersistedPointId(
     if (stored) setPointIdState(stored);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlOverride]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Тот же функциональный апдейтер, что и у нативного useState (readings/page.tsx
   // использует `setPointId(prev => prev ?? list[0]?.id ?? null)` — не сужать сигнатуру.

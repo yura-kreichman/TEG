@@ -26,7 +26,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/goods/sale/
       return NextResponse.json({ error: "Продажа не найдена" }, { status: 404 });
     }
     if (err instanceof Error && err.message === "ALREADY_VOIDED") {
-      return NextResponse.json({ error: "Продажа уже аннулирована" }, { status: 400 });
+      // 409, не 400 (аудит 2026-07-26) — та же CAS-гонка двойного клика, что
+      // у /api/launches/[id]/void, /api/tickets/[id]/void, /api/ticket-orders/[id]/void
+      // — везде остальных три "уже аннулировано" маппится в 409 (конфликт
+      // состояния), этот роут был единственным выбросом на 400.
+      return NextResponse.json({ error: "Продажа уже аннулирована" }, { status: 409 });
     }
     throw err;
   }

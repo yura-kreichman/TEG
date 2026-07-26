@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Banknote, Check, ChevronDown, CreditCard, Delete, Layers, Lock, LockOpen, MapPin, Minus, Plus, Printer, Search, ShoppingCart, Ticket, Trash2, TriangleAlert, Wallet, X } from "lucide-react";
+import { ArrowLeftRight, Banknote, Check, ChevronDown, CreditCard, Delete, Layers, Lock, LockOpen, MapPin, Minus, Plus, Printer, Search, ShoppingCart, Ticket, Trash2, TriangleAlert, Wallet, X } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
@@ -16,6 +16,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
+import { SplitPaymentSheet } from "@/components/split-payment-sheet";
 import { useTicketsCart } from "@/components/operator-cart-context";
 import { ActionToast } from "@/components/action-toast";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
@@ -27,7 +28,13 @@ import { openPrintDocument, type PrintDocumentData } from "@/lib/print/receipt-d
 import { isTicketsZone } from "@/lib/results-calc";
 import { unlockBeep, playErrorChime, playSaveDing } from "@/lib/beep";
 import { formatMoneyWithCurrency } from "@/lib/format";
+import type { PaymentLegInput } from "@/lib/payment-split";
 import { cn } from "@/lib/utils";
+
+// Те же значения, что TICKET_PAYMENT_METHODS в src/lib/tickets.ts — не
+// импортируем сам модуль сюда (серверный, тянет prisma в клиентский
+// бандл), см. тот же приём в operator/goods/page.tsx.
+const TICKET_SPLIT_METHODS = ["cash", "mobile", "abonement"] as const;
 
 interface TicketVariantCtx {
   id: string;
@@ -76,6 +83,11 @@ interface OrderDetail {
   soldAt: string;
   soldByOperatorName: string;
   tickets: OrderTicket[];
+  // Разбивка оплаты (аудит 2026-07-26) — раньше отсутствовала здесь, из-за
+  // чего поиск по номеру/лента "Заказы" и допечатка чека теряли разбивку
+  // целиком и показывали буквально "split" вместо неё (см. serializeOrder
+  // в /api/zones/[id]/ticket-orders/route.ts, теперь возвращает legs).
+  legs?: { method: string; amount: number }[];
 }
 
 type Tab = "sell" | "orders";
@@ -200,6 +212,9 @@ export default function TicketsZonePage() {
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [abonementTarget, setAbonementTarget] = useState<{ amount: number } | null>(null);
+  // Разбивка оплаты (запрос пользователя 2026-07-26) — необязательный
+  // отдельный sheet поверх обычных кнопок, см. SplitPaymentSheet.
+  const [splitOpen, setSplitOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [lastOrder, setLastOrder] = useState<{
     zoneName: string;
@@ -208,6 +223,7 @@ export default function TicketsZonePage() {
     expiresAt: string | null;
     soldAt: string;
     paymentMethod: string;
+    legs?: { method: string; amount: number }[];
     tickets: { id: string; assetName: string; variantName: string; price: number }[];
   } | null>(null);
   const [successPrinting, setSuccessPrinting] = useState(false);
@@ -248,7 +264,11 @@ export default function TicketsZonePage() {
 
   const variantSheetAsset = zone?.assets.find((a) => a.id === variantSheetAssetId) ?? null;
 
-  async function submitOrder(paymentMethod: "cash" | "mobile" | "abonement", abonementWalletId?: string) {
+  async function submitOrder(
+    paymentMethod: "cash" | "mobile" | "abonement",
+    abonementWalletId?: string,
+    legs?: PaymentLegInput[]
+  ) {
     if (!zone || currentCartLines.length === 0) return;
     setSubmitting(true);
     try {
@@ -259,6 +279,7 @@ export default function TicketsZonePage() {
           items: currentCartLines.map((l) => ({ assetId: l.assetId, variantId: l.variantId, quantity: l.quantity })),
           paymentMethod,
           abonementWalletId,
+          legs,
         }),
       });
       const data = await res.json();
@@ -284,13 +305,18 @@ export default function TicketsZonePage() {
         totalSnapshot: data.totalSnapshot,
         expiresAt: data.expiresAt,
         soldAt: data.soldAt,
-        paymentMethod,
+        // data.paymentMethod — реальное значение с сервера ("split" при
+        // разбивке, запрос пользователя 2026-07-26), не аргумент функции
+        // (тот при split — заглушка "cash", см. вызов из SplitPaymentSheet).
+        paymentMethod: data.paymentMethod,
+        legs: legs && legs.length > 0 ? legs : undefined,
         tickets: ticketRows,
       });
       if (zoneId) ticketsCart.clearCart(zoneId);
       setCartSheetOpen(false);
       setPaymentOpen(false);
       setAbonementTarget(null);
+      setSplitOpen(false);
       // Реальный баг, найден пользователем 2026-07-21: "при создании заказа
       // они не сразу появляются в табе Заказы" — и это должно происходить
       // МГНОВЕННО ("должны там быть сразу"), не через повторный запрос ленты
@@ -325,6 +351,12 @@ export default function TicketsZonePage() {
     cash: t.operatorApp.submit.cashLabel,
     mobile: t.operatorApp.submit.mobileLabel,
     abonement: t.reports.abonementLabel,
+    // Аудит 2026-07-26 — без этого ключа список "Заказы"/допечатка чека
+    // показывали буквально нерусское слово "split" вместо разбивки: заказ,
+    // прочитанный заново (поиск/лента), не проверяет order.legs здесь, если
+    // legs не разобраны выше, отсюда OrderCard берёт лейбл прямо по
+    // paymentMethod.
+    split: t.splitPayment.title,
   };
 
   // Один документ на весь заказ (запрос пользователя 2026-07-21: "печать
@@ -358,9 +390,14 @@ export default function TicketsZonePage() {
           cutLineAfter: i < order.tickets.length - 1,
         })),
         {
-          lines: [
-            { label: t.operatorApp.gameRoom.receiptPaymentMethodLabel, value: paymentMethodLabel[order.paymentMethod] ?? order.paymentMethod },
-          ],
+          // Разбивка оплаты (запрос пользователя 2026-07-26) — своя строка на
+          // каждый способ вместо одной общей.
+          lines: order.legs
+            ? order.legs.map((leg) => ({
+                label: paymentMethodLabel[leg.method] ?? leg.method,
+                value: formatMoneyWithCurrency(leg.amount, locale, currency),
+              }))
+            : [{ label: t.operatorApp.gameRoom.receiptPaymentMethodLabel, value: paymentMethodLabel[order.paymentMethod] ?? order.paymentMethod }],
         },
       ],
       totalLine: { label: t.tickets.totalLabel, value: formatMoneyWithCurrency(order.totalSnapshot, locale, currency) },
@@ -405,6 +442,10 @@ export default function TicketsZonePage() {
       expiresAt: order.expiresAt,
       soldAt: order.soldAt,
       paymentMethod: order.paymentMethod,
+      // Разбивка оплаты (аудит 2026-07-26) — split-заказ можно аннулировать
+      // только целиком (см. /api/tickets/[id]/void), поэтому пока в заказе
+      // остались живые билеты, legs всегда соответствуют полному набору.
+      legs: order.legs,
       tickets: activeTickets.map((tk) => ({
         id: tk.id,
         assetName: zone.assets.find((a) => a.id === tk.assetId)?.name ?? "",
@@ -1177,6 +1218,21 @@ export default function TicketsZonePage() {
               </PressableScale>
             )}
           </div>
+          <PressableScale className="w-fit">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-auto gap-1 px-0 text-muted-foreground underline underline-offset-2"
+              onClick={() => {
+                setPaymentOpen(false);
+                setSplitOpen(true);
+              }}
+            >
+              <ArrowLeftRight className="size-3.5" />
+              {t.splitPayment.title}
+            </Button>
+          </PressableScale>
         </div>
       </BottomSheet>
 
@@ -1185,6 +1241,16 @@ export default function TicketsZonePage() {
         onClose={() => setAbonementTarget(null)}
         amount={abonementTarget?.amount ?? 0}
         onConfirm={(walletId) => submitOrder("abonement", walletId)}
+      />
+
+      <SplitPaymentSheet
+        open={splitOpen}
+        onClose={() => setSplitOpen(false)}
+        total={cartTotal}
+        allowedMethods={TICKET_SPLIT_METHODS}
+        clientsEnabled={clientsEnabled}
+        submitting={submitting}
+        onSubmit={(legs) => submitOrder("cash", undefined, legs)}
       />
 
       {/* Успешная продажа — крупный номер заказа + ОДНА кнопка "Распечатать

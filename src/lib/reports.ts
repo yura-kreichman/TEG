@@ -3,6 +3,7 @@ import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZo
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateTicketOrders, ticketRevenueByAssetVariant } from "@/lib/tickets";
 import { localDateParts, zonedWallTimeToUtc } from "@/lib/business-day";
+import { PAYMENT_SPLIT_METHOD } from "@/lib/payment-split";
 
 function addCalendarDays(parts: { year: number; month: number; day: number }, days: number) {
   const d = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days));
@@ -232,13 +233,14 @@ export async function computeZoneSubmissionRevenues(
   const gameRoomLaunches = staysSubmissionIds.length
     ? await prisma.launch.findMany({
         where: { zoneSubmissionId: { in: staysSubmissionIds }, voidedAt: null },
-        select: { zoneSubmissionId: true, assetId: true, amount: true, paymentMethod: true },
+        select: { id: true, zoneSubmissionId: true, assetId: true, amount: true, paymentMethod: true },
       })
     : [];
   const gameRoomBySubmission = new Map<
     string,
     { calculatedRevenue: number; abonementAmount: number; perAsset: Map<string, number> }
   >();
+  const gameRoomSplitLaunchIds: string[] = [];
   for (const l of gameRoomLaunches) {
     if (!l.zoneSubmissionId || !l.assetId) continue;
     const bucket =
@@ -246,8 +248,28 @@ export async function computeZoneSubmissionRevenues(
     const amount = Number(l.amount ?? 0);
     bucket.calculatedRevenue += amount;
     if (l.paymentMethod === "abonement") bucket.abonementAmount += amount;
+    else if (l.paymentMethod === PAYMENT_SPLIT_METHOD) gameRoomSplitLaunchIds.push(l.id);
     bucket.perAsset.set(l.assetId, (bucket.perAsset.get(l.assetId) ?? 0) + amount);
     gameRoomBySubmission.set(l.zoneSubmissionId, bucket);
+  }
+  // Разбивка оплаты (аудит 2026-07-26) — доля "Баланс" сплит-пуска не
+  // учитывалась тут вовсе (abonementAmount считался только по чистому
+  // paymentMethod="abonement"), из-за чего "Разница" в Отчётах ложно
+  // раздувалась на эту сумму — тот же класс бага, что уже чинили в
+  // aggregateGameRoomLaunches (src/lib/game-room.ts), но это ОТДЕЛЬНЫЙ,
+  // дублирующий агрегат специально для карточек сдач по зоне.
+  if (gameRoomSplitLaunchIds.length > 0) {
+    const legs = await prisma.launchPaymentLeg.findMany({
+      where: { launchId: { in: gameRoomSplitLaunchIds }, method: "abonement" },
+      select: { launchId: true, amount: true },
+    });
+    const launchToSubmission = new Map(gameRoomLaunches.map((l) => [l.id, l.zoneSubmissionId]));
+    for (const leg of legs) {
+      const zoneSubmissionId = launchToSubmission.get(leg.launchId);
+      if (!zoneSubmissionId) continue;
+      const bucket = gameRoomBySubmission.get(zoneSubmissionId);
+      if (bucket) bucket.abonementAmount += Number(leg.amount);
+    }
   }
 
   // "Пуски" (accountingMode="launches") — то же самое для сдач ПОСЛЕ
@@ -264,13 +286,14 @@ export async function computeZoneSubmissionRevenues(
   const launchesTallies = launchesTallySubmissionIds.length
     ? await prisma.launch.findMany({
         where: { zoneSubmissionId: { in: launchesTallySubmissionIds }, voidedAt: null },
-        select: { zoneSubmissionId: true, assetId: true, tariffId: true, amount: true, paymentMethod: true },
+        select: { id: true, zoneSubmissionId: true, assetId: true, tariffId: true, amount: true, paymentMethod: true },
       })
     : [];
   const launchesTallyBySubmission = new Map<
     string,
     { calculatedRevenue: number; abonementAmount: number; perAsset: Map<string, number>; perTariff: Map<string, number> }
   >();
+  const launchesTallySplitIds: string[] = [];
   for (const l of launchesTallies) {
     if (!l.zoneSubmissionId || !l.assetId || !l.tariffId) continue;
     const bucket =
@@ -279,9 +302,25 @@ export async function computeZoneSubmissionRevenues(
     const amount = Number(l.amount ?? 0);
     bucket.calculatedRevenue += amount;
     if (l.paymentMethod === "abonement") bucket.abonementAmount += amount;
+    else if (l.paymentMethod === PAYMENT_SPLIT_METHOD) launchesTallySplitIds.push(l.id);
     bucket.perAsset.set(l.assetId, (bucket.perAsset.get(l.assetId) ?? 0) + amount);
     bucket.perTariff.set(l.tariffId, (bucket.perTariff.get(l.tariffId) ?? 0) + amount);
     launchesTallyBySubmission.set(l.zoneSubmissionId, bucket);
+  }
+  // Разбивка оплаты (аудит 2026-07-26) — тот же вычет, что у gameRoomBySubmission
+  // выше, но для "Пусков" (accountingMode="launches").
+  if (launchesTallySplitIds.length > 0) {
+    const legs = await prisma.launchPaymentLeg.findMany({
+      where: { launchId: { in: launchesTallySplitIds }, method: "abonement" },
+      select: { launchId: true, amount: true },
+    });
+    const launchToSubmission = new Map(launchesTallies.map((l) => [l.id, l.zoneSubmissionId]));
+    for (const leg of legs) {
+      const zoneSubmissionId = launchToSubmission.get(leg.launchId);
+      if (!zoneSubmissionId) continue;
+      const bucket = launchesTallyBySubmission.get(zoneSubmissionId);
+      if (bucket) bucket.abonementAmount += Number(leg.amount);
+    }
   }
 
   // Билеты (docs/spec/10-tickets.md, "Отчёты": "money-роуты... получают её

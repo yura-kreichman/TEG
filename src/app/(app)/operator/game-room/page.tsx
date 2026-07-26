@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Banknote, Check, CreditCard, Layers, MapPin, Plus, Wallet, X } from "lucide-react";
+import { ArrowLeftRight, Banknote, Check, CreditCard, Layers, MapPin, Plus, Wallet, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Label } from "@/components/ui/label";
@@ -21,10 +21,17 @@ import { isStaysZone } from "@/lib/results-calc";
 import { estimateLiveAmount, formatMMSS, type LaunchPricingMode, type LaunchRoundingMode } from "@/lib/game-room-client";
 import { unlockBeep, playBeep, playConfirmChime, playCloseChime, playErrorChime } from "@/lib/beep";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
+import { SplitPaymentSheet } from "@/components/split-payment-sheet";
 import { ActionToast } from "@/components/action-toast";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { formatMoneyWithCurrency } from "@/lib/format";
+import type { PaymentLegInput } from "@/lib/payment-split";
 import { cn } from "@/lib/utils";
+
+// Те же значения, что LAUNCH_PAYMENT_METHODS в src/lib/game-room.ts — не
+// импортируем сам модуль сюда (серверный), см. тот же приём в других
+// operator-страницах этого проекта.
+const LAUNCH_SPLIT_METHODS = ["cash", "mobile", "abonement"] as const;
 
 interface AssetTariffOption {
   id: string;
@@ -148,8 +155,28 @@ export default function StaysZonePage() {
     startedAt: string;
     endedAt: string;
     paymentMethod: string | null;
+    legs?: { method: string; amount: number }[];
     pricingMode: LaunchPricingMode;
   } | null>(null);
+
+  // Разбивка оплаты (запрос пользователя 2026-07-26) — необязательные
+  // отдельные sheet поверх обычных кнопок, свои для старта ("За вход") и
+  // стопа ("По факту"), см. SplitPaymentSheet. Сумма фиксируется в момент
+  // открытия (тот же приём, что abonementTarget ниже) — addFlow/
+  // stopPaymentTarget обнуляются при закрытии своих sheet, к моменту сабмита
+  // разбивки их уже может не быть.
+  const [splitStartTarget, setSplitStartTarget] = useState<{ optionId?: string; amount: number } | null>(null);
+  // "По факту" — в отличие от splitStartTarget выше, СУММА НЕ ФИКСИРУЕТСЯ в
+  // момент открытия (аудит 2026-07-26, реальный баг) — при per_minute
+  // тарификации цена растёт с каждой секундой, а сервер (validateSplitLegs
+  // в /api/launches/[id]/stop) требует ТОЧНОГО совпадения суммы долей с
+  // суммой, пересчитанной на момент запроса; замороженная сумма почти
+  // всегда успевала разойтись с ней за время заполнения формы, и разбивка
+  // "По факту" отклонялась с "Сумма долей не равна итоговой сумме" без вины
+  // оператора. Храним только launch, сумма для SplitPaymentSheet считается
+  // на каждый рендер тем же estimateLiveAmount+живым `now`, что и сама
+  // плитка/шторка обычной оплаты — всегда совпадает с тем, что увидит сервер.
+  const [splitStopTarget, setSplitStopTarget] = useState<{ launch: OpenLaunch } | null>(null);
 
   // Оплата абонементом (запрос пользователя 2026-07-17) — третий способ
   // наравне с наличными/безналом, отдельный sheet (поиск/создание/
@@ -343,7 +370,8 @@ export default function StaysZonePage() {
   async function startLaunch(
     optionId?: string,
     paymentMethod?: "cash" | "mobile" | "abonement",
-    abonementWalletId?: string
+    abonementWalletId?: string,
+    legs?: PaymentLegInput[]
   ) {
     if (!selectedAssetId || !selectedZoneId) return;
     setStarting(true);
@@ -352,7 +380,7 @@ export default function StaysZonePage() {
       const res = await fetch(`/api/zones/${selectedZoneId}/launches`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assetId: selectedAssetId, optionId, paymentMethod, abonementWalletId }),
+        body: JSON.stringify({ assetId: selectedAssetId, optionId, paymentMethod, abonementWalletId, legs }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -365,6 +393,7 @@ export default function StaysZonePage() {
       loadLaunches(selectedZoneId);
       setAddFlow(null);
       setAbonementTarget(null);
+      setSplitStartTarget(null);
     } catch {
       // Сетевая ошибка (не HTTP-ошибка от сервера) — docs/spec/04-game-room.md,
       // Шаг 6: "стоп даёт внятную ошибку и не теряет пуск" — то же верно и для
@@ -378,7 +407,8 @@ export default function StaysZonePage() {
   async function stopLaunch(
     launchId: string,
     paymentMethod?: "cash" | "mobile" | "abonement",
-    abonementWalletId?: string
+    abonementWalletId?: string,
+    legs?: PaymentLegInput[]
   ) {
     setStopping(true);
     // Снимок для квитанции ДО запроса — после успешного стопа сам launch
@@ -390,7 +420,7 @@ export default function StaysZonePage() {
       const res = await fetch(`/api/launches/${launchId}/stop`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentMethod, abonementWalletId }),
+        body: JSON.stringify({ paymentMethod, abonementWalletId, legs }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -404,6 +434,7 @@ export default function StaysZonePage() {
       setInteracting(null);
       setStopPaymentTarget(null);
       setAbonementTarget(null);
+      setSplitStopTarget(null);
       loadLaunches(selectedZoneId);
       if (launch && zone && asset && zone.printReceiptEnabled && printAvailable.available) {
         setLastStopped({
@@ -419,6 +450,7 @@ export default function StaysZonePage() {
           // см. комментарий в /api/launches/[id]/stop) — сервер знает оба
           // случая, клиент сам по себе не всегда.
           paymentMethod: data.paymentMethod ?? null,
+          legs: legs && legs.length > 0 ? legs : undefined,
           pricingMode: launch.pricingMode,
         });
       }
@@ -462,14 +494,21 @@ export default function StaysZonePage() {
                   },
                 ]
               : []),
-            ...(s.paymentMethod
-              ? [
-                  {
-                    label: t.operatorApp.gameRoom.receiptPaymentMethodLabel,
-                    value: stayPaymentMethodLabel[s.paymentMethod] ?? s.paymentMethod,
-                  },
-                ]
-              : []),
+            // Разбивка оплаты (запрос пользователя 2026-07-26) — своя строка
+            // на каждый способ вместо одной общей.
+            ...(s.legs
+              ? s.legs.map((leg) => ({
+                  label: stayPaymentMethodLabel[leg.method] ?? leg.method,
+                  value: formatMoneyWithCurrency(leg.amount, locale, currency),
+                }))
+              : s.paymentMethod
+                ? [
+                    {
+                      label: t.operatorApp.gameRoom.receiptPaymentMethodLabel,
+                      value: stayPaymentMethodLabel[s.paymentMethod] ?? s.paymentMethod,
+                    },
+                  ]
+                : []),
           ],
         },
       ],
@@ -887,9 +926,35 @@ export default function StaysZonePage() {
                 </PressableScale>
               )}
             </div>
+            <PressableScale className="w-fit">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto gap-1 px-0 text-muted-foreground underline underline-offset-2"
+                onClick={() => {
+                  const amount = selectedOptions.find((o) => o.id === addFlow.optionId)?.price ?? 0;
+                  setSplitStartTarget({ optionId: addFlow.optionId, amount });
+                  setAddFlow(null);
+                }}
+              >
+                <ArrowLeftRight className="size-3.5" />
+                {t.splitPayment.title}
+              </Button>
+            </PressableScale>
           </div>
         )}
       </BottomSheet>
+
+      <SplitPaymentSheet
+        open={splitStartTarget !== null}
+        onClose={() => setSplitStartTarget(null)}
+        total={splitStartTarget?.amount ?? 0}
+        allowedMethods={LAUNCH_SPLIT_METHODS}
+        clientsEnabled={clientsEnabled}
+        submitting={starting}
+        onSubmit={(legs) => startLaunch(splitStartTarget?.optionId, "cash", undefined, legs)}
+      />
 
       {/* Способ оплаты "По факту" при остановке — отдельный bottom sheet
           (запрос пользователя 2026-07-17: "тоже должны появляться bottom
@@ -960,9 +1025,46 @@ export default function StaysZonePage() {
                 </PressableScale>
               )}
             </div>
+            <PressableScale className="w-fit">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto gap-1 px-0 text-muted-foreground underline underline-offset-2"
+                onClick={() => {
+                  const launch = stopPaymentTarget;
+                  setStopPaymentTarget(null);
+                  setSplitStopTarget({ launch });
+                }}
+              >
+                <ArrowLeftRight className="size-3.5" />
+                {t.splitPayment.title}
+              </Button>
+            </PressableScale>
           </div>
         )}
       </BottomSheet>
+
+      <SplitPaymentSheet
+        open={splitStopTarget !== null}
+        onClose={() => setSplitStopTarget(null)}
+        total={
+          splitStopTarget
+            ? estimateLiveAmount(
+                splitStopTarget.launch.pricingMode,
+                splitStopTarget.launch.priceSnapshot,
+                splitStopTarget.launch.roundingModeSnapshot,
+                splitStopTarget.launch.minAmountSnapshot,
+                new Date(splitStopTarget.launch.startedAt),
+                now
+              )
+            : 0
+        }
+        allowedMethods={LAUNCH_SPLIT_METHODS}
+        clientsEnabled={clientsEnabled}
+        submitting={stopping}
+        onSubmit={(legs) => (splitStopTarget ? stopLaunch(splitStopTarget.launch.id, "cash", undefined, legs) : undefined)}
+      />
 
       <AbonementPaymentSheet
         open={abonementTarget !== null}

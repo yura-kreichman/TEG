@@ -153,17 +153,18 @@ export interface OperatorBalance {
 // "к выдаче" не влияет; премия туда входит, в "к выдаче" — никогда (уже выдана).
 export async function calcOperatorBalance(
   operatorId: string,
-  period?: { from: Date; to: Date }
+  period?: { from: Date; to: Date },
+  tx: Tx | typeof prisma = prisma
 ): Promise<OperatorBalance> {
   const [shifts, rates, moneyOps, carryovers] = await Promise.all([
     // isOpen: открытая смена (docs/spec/05-work-time.md, "АВТО"), ещё не
     // начислена, не в этом расчёте: попадёт в баланс при check-out.
-    prisma.shift.findMany({ where: { operatorId, isOpen: false } }),
-    prisma.operatorRate.findMany({ where: { operatorId }, orderBy: [{ effectiveFrom: "desc" }, { createdAt: "desc" }] }),
-    prisma.moneyOperation.findMany({
+    tx.shift.findMany({ where: { operatorId, isOpen: false } }),
+    tx.operatorRate.findMany({ where: { operatorId }, orderBy: [{ effectiveFrom: "desc" }, { createdAt: "desc" }] }),
+    tx.moneyOperation.findMany({
       where: { beneficiaryOperatorId: operatorId, type: { in: ["advance", "bonus_payout"] } },
     }),
-    prisma.operatorBalanceCarryover.findMany({ where: { operatorId } }),
+    tx.operatorBalanceCarryover.findMany({ where: { operatorId } }),
   ]);
 
   function rateForDate(date: Date): number {

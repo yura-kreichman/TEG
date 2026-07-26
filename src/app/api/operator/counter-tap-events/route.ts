@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { previousSubmissionBoundary } from "@/lib/game-room";
 import { isCountersZone } from "@/lib/results-calc";
-import { InsufficientBalanceError, spendWalletForZone } from "@/lib/abonement";
+import { InsufficientBalanceError, spendWalletForZone, notifyWalletBalanceChange } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
+import { PAYMENT_SPLIT_METHOD, validateSplitLegs, InvalidPaymentSplitError, type PaymentLegInput } from "@/lib/payment-split";
 
 /**
  * Тап "Пуск" в зоне "Счётчики" с включённым Zone.countersTapAssistEnabled
@@ -84,8 +85,13 @@ export async function GET() {
     for (const t of z.tariffs) priceByKey.set(`${z.id}:${t.id}`, Number(t.price));
   }
   const breakdownByZone = new Map<string, { cashAmount: number; mobileAmount: number; abonementAmount: number }>();
+  const splitTapZoneById = new Map<string, string>();
   for (const e of events) {
     if (e.voidedAt) continue;
+    if (e.paymentMethod === "split") {
+      splitTapZoneById.set(e.id, e.zoneId);
+      continue;
+    }
     if (e.paymentMethod !== "cash" && e.paymentMethod !== "mobile" && e.paymentMethod !== "abonement") continue;
     const price = priceByKey.get(`${e.zoneId}:${e.tariffId}`) ?? 0;
     const entry = breakdownByZone.get(e.zoneId) ?? { cashAmount: 0, mobileAmount: 0, abonementAmount: 0 };
@@ -93,6 +99,21 @@ export async function GET() {
     else if (e.paymentMethod === "mobile") entry.mobileAmount += price;
     else entry.abonementAmount += price;
     breakdownByZone.set(e.zoneId, entry);
+  }
+  // Разбивка оплаты (запрос пользователя 2026-07-26) — та же подсказка, что
+  // и обычный paymentMethod выше, просто сумма приходит из нескольких долей.
+  if (splitTapZoneById.size > 0) {
+    const legs = await prisma.counterTapEventPaymentLeg.findMany({ where: { tapId: { in: [...splitTapZoneById.keys()] } } });
+    for (const leg of legs) {
+      const zId = splitTapZoneById.get(leg.tapId);
+      if (!zId) continue;
+      const entry = breakdownByZone.get(zId) ?? { cashAmount: 0, mobileAmount: 0, abonementAmount: 0 };
+      const legAmount = Number(leg.amount);
+      if (leg.method === "cash") entry.cashAmount += legAmount;
+      else if (leg.method === "mobile") entry.mobileAmount += legAmount;
+      else if (leg.method === "abonement") entry.abonementAmount += legAmount;
+      breakdownByZone.set(zId, entry);
+    }
   }
 
   return NextResponse.json({
@@ -167,6 +188,18 @@ export async function POST(request: Request) {
   if (paymentMethod === "abonement" && !abonementWalletId) {
     return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
   }
+  // Разбивка оплаты (запрос пользователя 2026-07-26) — как и paymentMethod,
+  // необязательная.
+  const legs: PaymentLegInput[] | undefined = Array.isArray(body?.legs)
+    ? (body.legs as unknown[]).map((raw) => {
+        const l = raw as { method?: unknown; amount?: unknown; walletId?: unknown };
+        return {
+          method: typeof l?.method === "string" ? l.method : "",
+          amount: Number(l?.amount),
+          walletId: typeof l?.walletId === "string" ? l.walletId : undefined,
+        };
+      })
+    : undefined;
 
   const zone = await prisma.zone.findFirst({
     where: {
@@ -180,17 +213,82 @@ export async function POST(request: Request) {
       id: true,
       accountingMode: true,
       assets: { where: { id: assetId, active: true }, select: { id: true } },
-      tariffs: { where: { id: tariffId, deletedAt: null }, select: { id: true } },
+      tariffs: { where: { id: tariffId, deletedAt: null }, select: { id: true, price: true } },
     },
   });
   if (!zone || !isCountersZone(zone) || zone.assets.length === 0 || zone.tariffs.length === 0) {
     return NextResponse.json({ error: "Зона, актив или тариф не найдены" }, { status: 404 });
   }
 
-  if (paymentMethod === "abonement" && abonementWalletId) {
-    if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
-      return NextResponse.json({ error: "Оплата балансом отключена владельцем" }, { status: 403 });
+  const usesBalance = legs ? legs.some((l) => l.method === "abonement") : paymentMethod === "abonement";
+  if (usesBalance && !(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+    return NextResponse.json({ error: "Оплата балансом отключена владельцем" }, { status: 403 });
+  }
+
+  if (legs) {
+    try {
+      validateSplitLegs(legs, Number(zone.tariffs[0]!.price), ["cash", "mobile", "abonement"]);
+    } catch (err) {
+      if (err instanceof InvalidPaymentSplitError) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
+      throw err;
     }
+
+    try {
+      const event = await prisma.$transaction(async (tx) => {
+        const created = await tx.counterTapEvent.create({
+          data: { zoneId: zone.id, pointId: point.id, assetId, tariffId, operatorId: operator.id, paymentMethod: PAYMENT_SPLIT_METHOD },
+        });
+        for (const leg of legs) {
+          if (leg.method === "abonement") {
+            const updated = await tx.abonementWallet.updateMany({
+              where: { id: leg.walletId, tenantId: point.tenantId, balance: { gte: leg.amount } },
+              data: { balance: { decrement: leg.amount } },
+            });
+            if (updated.count === 0) throw new InsufficientBalanceError();
+            await tx.abonementTransaction.create({
+              data: {
+                walletId: leg.walletId!,
+                type: "spend",
+                amount: leg.amount,
+                tariffId,
+                quantity: 1,
+                pointId: point.id,
+                operatorId: operator.id,
+              },
+            });
+            await tx.moneyOperation.create({
+              data: { tenantId: point.tenantId, zoneId: zone.id, type: "revenue_abonement", amount: leg.amount, performedByOperatorId: operator.id },
+            });
+          }
+        }
+        await tx.counterTapEventPaymentLeg.createMany({
+          data: legs.map((leg, index) => ({
+            tapId: created.id,
+            method: leg.method,
+            amount: leg.amount,
+            walletId: leg.walletId,
+            order: index,
+          })),
+        });
+        return created;
+      });
+
+      const abonementLeg = legs.find((l) => l.method === "abonement");
+      if (abonementLeg) {
+        await notifyWalletBalanceChange(point.tenantId, abonementLeg.walletId!, -abonementLeg.amount).catch(() => {});
+      }
+      return NextResponse.json({ id: event.id, zoneId: event.zoneId, assetId: event.assetId, tariffId: event.tariffId, createdAt: event.createdAt });
+    } catch (err) {
+      if (err instanceof InsufficientBalanceError) {
+        return NextResponse.json({ error: "Недостаточно средств на абонементе" }, { status: 400 });
+      }
+      throw err;
+    }
+  }
+
+  if (paymentMethod === "abonement" && abonementWalletId) {
     try {
       await spendWalletForZone(abonementWalletId, {
         tenantId: point.tenantId,

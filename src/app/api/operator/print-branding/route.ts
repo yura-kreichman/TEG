@@ -11,7 +11,10 @@ import { requireOperator } from "@/lib/require-operator";
 export async function GET() {
   const ctx = await requireOperator();
   if (!ctx) {
-    return NextResponse.json({ error: "Требуется вход сотрудника" }, { status: 401 });
+    // "оператора", не "сотрудника" (аудит 2026-07-26) — единственный выброс
+    // формулировки среди ~90 роутов с requireOperator(), все остальные
+    // единообразно пишут "Требуется вход оператора".
+    return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
 
   const tenant = await prisma.tenant.findUnique({

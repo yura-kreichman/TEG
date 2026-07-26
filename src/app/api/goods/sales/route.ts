@@ -80,12 +80,28 @@ export async function GET(request: Request) {
   });
 
   const nonVoided = sales.filter((s) => !s.voidedAt);
+  let cash = nonVoided.filter((s) => s.paymentMethod === "cash").reduce((sum, s) => sum + Number(s.amount), 0);
+  let mobile = nonVoided.filter((s) => s.paymentMethod === "mobile").reduce((sum, s) => sum + Number(s.amount), 0);
+  let abonement = nonVoided.filter((s) => s.paymentMethod === "abonement").reduce((sum, s) => sum + Number(s.amount), 0);
+  // Разбивка оплаты (аудит 2026-07-26) — без этого сплит-продажи не попадали
+  // ни в одну из 3 корзин выше, и cash+mobile+abonement переставали сходиться
+  // с revenue ровно на сумму сплит-продаж.
+  const splitSaleIds = nonVoided.filter((s) => s.paymentMethod === "split").map((s) => s.id);
+  if (splitSaleIds.length > 0) {
+    const legs = await prisma.goodsSalePaymentLeg.findMany({ where: { saleId: { in: splitSaleIds } } });
+    for (const leg of legs) {
+      const amount = Number(leg.amount);
+      if (leg.method === "cash") cash += amount;
+      else if (leg.method === "mobile") mobile += amount;
+      else if (leg.method === "abonement") abonement += amount;
+    }
+  }
   const summary = {
     count: nonVoided.reduce((sum, s) => sum + s.quantity, 0),
     revenue: nonVoided.reduce((sum, s) => sum + Number(s.amount), 0),
-    cash: nonVoided.filter((s) => s.paymentMethod === "cash").reduce((sum, s) => sum + Number(s.amount), 0),
-    mobile: nonVoided.filter((s) => s.paymentMethod === "mobile").reduce((sum, s) => sum + Number(s.amount), 0),
-    abonement: nonVoided.filter((s) => s.paymentMethod === "abonement").reduce((sum, s) => sum + Number(s.amount), 0),
+    cash,
+    mobile,
+    abonement,
   };
 
   // График — тот же паттерн, что "Отчёты → Динамика" (запрос пользователя

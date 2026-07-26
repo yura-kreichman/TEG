@@ -12,6 +12,7 @@ import {
 import { previousSubmissionBoundary } from "@/lib/game-room";
 import { InsufficientBalanceError, spendWalletForTicketOrderTx, notifyWalletBalanceChange } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
+import { PAYMENT_SPLIT_METHOD, validateSplitLegs, InvalidPaymentSplitError, type PaymentLegInput } from "@/lib/payment-split";
 
 interface CartItemInput {
   assetId?: unknown;
@@ -36,6 +37,7 @@ function serializeOrder(o: {
     status: string;
     redeemedAt: Date | null;
   }[];
+  paymentLegs: { method: string; amount: unknown; order: number }[];
 }) {
   return {
     id: o.id,
@@ -54,6 +56,13 @@ function serializeOrder(o: {
       status: t.status,
       redeemedAt: t.redeemedAt,
     })),
+    // Разбивка оплаты (аудит 2026-07-26) — раньше терялась при повторном
+    // чтении заказа (поиск по номеру/лента "Заказы"): писалась в БД при
+    // продаже, но не выбиралась и не возвращалась здесь, из-за чего
+    // допечатка/список показывали буквально "split" вместо разбивки.
+    legs: o.paymentLegs.length
+      ? o.paymentLegs.sort((a, b) => a.order - b.order).map((l) => ({ method: l.method, amount: Number(l.amount) }))
+      : undefined,
   };
 }
 
@@ -108,8 +117,16 @@ export async function GET(request: Request, ctx: RouteContext<"/api/zones/[id]/t
   // "касса одной парой полей... расчётная выручка read-only"). Тот же
   // источник (aggregateTicketOrders), что submit-results/route.ts использует
   // при реальной сдаче — превью гарантированно совпадёт с тем, что
-  // фактически посчитается при отправке.
+  // фактически посчитается при отправке. В отличие от поиска по номеру/ленты
+  // заказов ниже (доступны любому оператору с доступом к зоне) — это уже не
+  // "посмотреть/погасить билет", а касса/выручка зоны, поэтому тот же гейт
+  // ticketsAccess, что и у самой Сдачи итогов (аудит 2026-07-26: раньше
+  // серверной проверки не было вовсе — оператор без тумблера "Продажа
+  // билетов", зная zoneId, мог прочитать агрегат кассы зоны напрямую).
   if (url.searchParams.get("aggregate") === "1") {
+    if (opCtx && !opCtx.operator.ticketsAccess) {
+      return NextResponse.json({ error: "Нет доступа к продаже билетов" }, { status: 403 });
+    }
     const boundary = await previousSubmissionBoundary(zoneId);
     const agg = await aggregateTicketOrders(zoneId, boundary, new Date());
     return NextResponse.json({ aggregate: agg });
@@ -123,7 +140,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/zones/[id]/t
     const order = await prisma.ticketOrder.findFirst({
       where: { zoneId, number },
       orderBy: { soldAt: "desc" },
-      include: { tickets: true, soldByOperator: { select: { name: true } } },
+      include: { tickets: true, soldByOperator: { select: { name: true } }, paymentLegs: true },
     });
     if (!order) {
       return NextResponse.json({ error: "Заказ не найден" }, { status: 404 });
@@ -143,7 +160,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/zones/[id]/t
     where: { zoneId, openTicketsCount: { gt: 0 } },
     orderBy: { soldAt: "desc" },
     take: limit,
-    include: { tickets: true, soldByOperator: { select: { name: true } } },
+    include: { tickets: true, soldByOperator: { select: { name: true } }, paymentLegs: true },
   });
 
   return NextResponse.json({ orders: orders.map(serializeOrder) });
@@ -177,17 +194,32 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   if (items.length === 0) {
     return NextResponse.json({ error: "Корзина пуста" }, { status: 400 });
   }
-  if (!(TICKET_PAYMENT_METHODS as readonly string[]).includes(body.paymentMethod)) {
+  // Разбивка оплаты (запрос пользователя 2026-07-26) — необязательный массив
+  // долей вместо одного paymentMethod; сумма долей проверяется ниже, когда
+  // становится известна totalSnapshot корзины.
+  const legs: PaymentLegInput[] | undefined = Array.isArray(body.legs)
+    ? (body.legs as unknown[]).map((raw) => {
+        const l = raw as { method?: unknown; amount?: unknown; walletId?: unknown };
+        return {
+          method: typeof l?.method === "string" ? l.method : "",
+          amount: Number(l?.amount),
+          walletId: typeof l?.walletId === "string" ? l.walletId : undefined,
+        };
+      })
+    : undefined;
+
+  if (!legs && !(TICKET_PAYMENT_METHODS as readonly string[]).includes(body.paymentMethod)) {
     return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
   }
-  const paymentMethod: (typeof TICKET_PAYMENT_METHODS)[number] = body.paymentMethod;
+  const paymentMethod: (typeof TICKET_PAYMENT_METHODS)[number] = legs ? "cash" : body.paymentMethod;
   const abonementWalletId: string | null =
     typeof body.abonementWalletId === "string" && body.abonementWalletId ? body.abonementWalletId : null;
-  if (paymentMethod === "abonement") {
+  const usesBalance = legs ? legs.some((l) => l.method === "abonement") : paymentMethod === "abonement";
+  if (usesBalance) {
     if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
       return NextResponse.json({ error: "Оплата балансом отключена владельцем" }, { status: 403 });
     }
-    if (!abonementWalletId) {
+    if (!legs && !abonementWalletId) {
       return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
     }
   }
@@ -218,6 +250,16 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   }
 
   const totalSnapshot = Math.round(ticketsToCreate.reduce((sum, t) => sum + t.priceSnapshot, 0) * 100) / 100;
+  if (legs) {
+    try {
+      validateSplitLegs(legs, totalSnapshot, TICKET_PAYMENT_METHODS);
+    } catch (err) {
+      if (err instanceof InvalidPaymentSplitError) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
+      throw err;
+    }
+  }
   const now = new Date();
   // Срок жизни — только при включённом гашении (докс, "СРОК ЖИЗНИ"); при
   // выключенном гашении или ticketLifetimeDays=null — бессрочно.
@@ -234,8 +276,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
         data: {
           zoneId: zone.id,
           number,
-          paymentMethod,
-          walletId: paymentMethod === "abonement" ? abonementWalletId : null,
+          paymentMethod: legs ? PAYMENT_SPLIT_METHOD : paymentMethod,
+          walletId: !legs && paymentMethod === "abonement" ? abonementWalletId : null,
           totalSnapshot,
           expiresAt,
           openTicketsCount: ticketsToCreate.length,
@@ -254,7 +296,33 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
         data: ticketsToCreate.map((t) => ({ orderId: created.id, ...t })),
       });
 
-      if (paymentMethod === "abonement" && abonementWalletId) {
+      if (legs) {
+        // Разбивка (запрос пользователя 2026-07-26) — списание балансовой
+        // доли на её собственную сумму, не на весь заказ; остальные доли
+        // (нал/безнал) для Билетов и так никогда не журналировались отдельно
+        // от заказа — сама TicketOrderPaymentLeg-строка их фиксирует.
+        for (const leg of legs) {
+          if (leg.method === "abonement") {
+            await spendWalletForTicketOrderTx(tx, leg.walletId!, {
+              tenantId: point.tenantId,
+              zoneId: zone.id,
+              ticketOrderId: created.id,
+              pointId: point.id,
+              operatorId: operator.id,
+              amount: leg.amount,
+            });
+          }
+        }
+        await tx.ticketOrderPaymentLeg.createMany({
+          data: legs.map((leg, index) => ({
+            orderId: created.id,
+            method: leg.method,
+            amount: leg.amount,
+            walletId: leg.walletId,
+            order: index,
+          })),
+        });
+      } else if (paymentMethod === "abonement" && abonementWalletId) {
         await spendWalletForTicketOrderTx(tx, abonementWalletId, {
           tenantId: point.tenantId,
           zoneId: zone.id,
@@ -274,7 +342,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     throw err;
   }
 
-  if (paymentMethod === "abonement" && abonementWalletId) {
+  if (legs) {
+    const abonementLeg = legs.find((l) => l.method === "abonement");
+    if (abonementLeg) {
+      await notifyWalletBalanceChange(point.tenantId, abonementLeg.walletId!, -abonementLeg.amount).catch(() => {});
+    }
+  } else if (paymentMethod === "abonement" && abonementWalletId) {
     await notifyWalletBalanceChange(point.tenantId, abonementWalletId, -totalSnapshot).catch(() => {});
   }
 

@@ -14,6 +14,14 @@ import {
 } from "@/lib/game-room";
 import { InsufficientBalanceError, spendWalletTx, notifyWalletBalanceChange } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
+import { PAYMENT_SPLIT_METHOD, validateSplitLegs, InvalidPaymentSplitError, type PaymentLegInput } from "@/lib/payment-split";
+
+// Аудит 2026-07-26: countOpenLaunches читался ДО входа в транзакцию, где
+// только тогда берётся advisory-лок по assetId (nextLaunchNumber) — два
+// одновременных старта на одном активе у самого лимита оба проходили
+// проверку "< 50" раньше, чем первый успевал закоммититься. Проверка
+// перенесена внутрь транзакции, ПОСЛЕ захвата лока (см. POST ниже).
+class MaxParallelLaunchesError extends Error {}
 
 // Список открытых пусков зоны — для экрана зоны в PWA (тайлы с активными
 // пусками) и восстановления таймеров после перезапуска/смены устройства
@@ -89,6 +97,19 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   const optionId: string | null = typeof body.optionId === "string" && body.optionId ? body.optionId : null;
   const abonementWalletId: string | null =
     typeof body.abonementWalletId === "string" && body.abonementWalletId ? body.abonementWalletId : null;
+  // Разбивка оплаты (запрос пользователя 2026-07-26) — только у "fixed"/"За
+  // вход" (там способ оплаты вообще известен на старте); "per_minute"/"По
+  // факту" по-прежнему спрашивает оплату на стопе, см. .../stop/route.ts.
+  const legs: PaymentLegInput[] | undefined = Array.isArray(body.legs)
+    ? (body.legs as unknown[]).map((raw) => {
+        const l = raw as { method?: unknown; amount?: unknown; walletId?: unknown };
+        return {
+          method: typeof l?.method === "string" ? l.method : "",
+          amount: Number(l?.amount),
+          walletId: typeof l?.walletId === "string" ? l.walletId : undefined,
+        };
+      })
+    : undefined;
 
   // Тариф — свойство актива (запрос пользователя 2026-07-16: "2 игровые
   // комнаты — это активы", у каждой своя цена), поэтому пуск без актива
@@ -126,16 +147,31 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     priceSnapshot = option.price;
     durationMinutesSnapshot = option.durationMinutes;
 
-    if (!(LAUNCH_PAYMENT_METHODS as readonly string[]).includes(body.paymentMethod)) {
-      return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
-    }
-    paymentMethod = body.paymentMethod;
-    if (paymentMethod === "abonement") {
-      if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+    if (legs) {
+      try {
+        validateSplitLegs(legs, Number(priceSnapshot), LAUNCH_PAYMENT_METHODS);
+      } catch (err) {
+        if (err instanceof InvalidPaymentSplitError) {
+          return NextResponse.json({ error: err.message }, { status: 400 });
+        }
+        throw err;
+      }
+      paymentMethod = PAYMENT_SPLIT_METHOD;
+      if (legs.some((l) => l.method === "abonement") && !(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
         return NextResponse.json({ error: "Оплата балансом отключена владельцем" }, { status: 403 });
       }
-      if (!abonementWalletId) {
-        return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
+    } else {
+      if (!(LAUNCH_PAYMENT_METHODS as readonly string[]).includes(body.paymentMethod)) {
+        return NextResponse.json({ error: "Выберите способ оплаты" }, { status: 400 });
+      }
+      paymentMethod = body.paymentMethod;
+      if (paymentMethod === "abonement") {
+        if (!(await isModuleEnabled(point.tenantId, "clientsEnabled"))) {
+          return NextResponse.json({ error: "Оплата балансом отключена владельцем" }, { status: 403 });
+        }
+        if (!abonementWalletId) {
+          return NextResponse.json({ error: "Выберите абонемент" }, { status: 400 });
+        }
       }
     }
   } else if (pricingMode === "per_minute") {
@@ -157,18 +193,16 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     }
   }
 
-  const openCount = await countOpenLaunches(assetId);
-  if (openCount >= MAX_PARALLEL_LAUNCHES) {
-    return NextResponse.json(
-      { error: `Слишком много одновременных пусков (максимум ${MAX_PARALLEL_LAUNCHES})` },
-      { status: 400 }
-    );
-  }
-
   let launch;
   try {
     launch = await prisma.$transaction(async (tx) => {
       const number = await nextLaunchNumber(tx, assetId);
+      // Тот же лок по assetId, что уже взят строкой выше (nextLaunchNumber) —
+      // проверка лимита теперь видит актуальный count, а не устаревший.
+      const openCount = await countOpenLaunches(assetId, tx);
+      if (openCount >= MAX_PARALLEL_LAUNCHES) {
+        throw new MaxParallelLaunchesError();
+      }
       const created = await tx.launch.create({
         data: {
           zoneId: zone.id,
@@ -191,7 +225,29 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
       // Списание сразу при старте — "За вход" известна цена заранее, деньги
       // логично брать при выдаче браслета (тот же момент, что и наличные/
       // безнал, запрос пользователя 2026-07-17).
-      if (paymentMethod === "abonement" && abonementWalletId) {
+      if (legs) {
+        for (const leg of legs) {
+          if (leg.method === "abonement") {
+            await spendWalletTx(tx, leg.walletId!, {
+              tenantId: point.tenantId,
+              zoneId: zone.id,
+              launchId: created.id,
+              pointId: point.id,
+              operatorId: operator.id,
+              amount: leg.amount,
+            });
+          }
+        }
+        await tx.launchPaymentLeg.createMany({
+          data: legs.map((leg, index) => ({
+            launchId: created.id,
+            method: leg.method,
+            amount: leg.amount,
+            walletId: leg.walletId,
+            order: index,
+          })),
+        });
+      } else if (paymentMethod === "abonement" && abonementWalletId) {
         await spendWalletTx(tx, abonementWalletId, {
           tenantId: point.tenantId,
           zoneId: zone.id,
@@ -208,10 +264,21 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     if (err instanceof InsufficientBalanceError) {
       return NextResponse.json({ error: "Недостаточно средств на абонементе" }, { status: 400 });
     }
+    if (err instanceof MaxParallelLaunchesError) {
+      return NextResponse.json(
+        { error: `Слишком много одновременных пусков (максимум ${MAX_PARALLEL_LAUNCHES})` },
+        { status: 400 }
+      );
+    }
     throw err;
   }
 
-  if (paymentMethod === "abonement" && launch.abonementWalletId) {
+  if (legs) {
+    const abonementLeg = legs.find((l) => l.method === "abonement");
+    if (abonementLeg) {
+      await notifyWalletBalanceChange(point.tenantId, abonementLeg.walletId!, -abonementLeg.amount).catch(() => {});
+    }
+  } else if (paymentMethod === "abonement" && launch.abonementWalletId) {
     await notifyWalletBalanceChange(point.tenantId, launch.abonementWalletId, -Number(launch.priceSnapshot)).catch(() => {});
   }
 

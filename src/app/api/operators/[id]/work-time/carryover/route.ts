@@ -52,14 +52,19 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operators/[
     return NextResponse.json({ error: "Некорректная сумма" }, { status: 400 });
   }
 
-  await prisma.operatorBalanceCarryover.create({
-    data: {
-      tenantId: owner.tenantId,
-      operatorId: operator.id,
-      amount: amountNumber,
-      comment: typeof comment === "string" && comment.trim() ? comment.trim() : null,
-      createdByUserId: owner.user.id,
-    },
+  // Advisory-лок по operatorId (аудит 2026-07-26) — тот же класс бага, что и
+  // у /advance и /bonus: форма не была защищена от двойного клика/тапа.
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${operator.id}))`;
+    await tx.operatorBalanceCarryover.create({
+      data: {
+        tenantId: owner.tenantId,
+        operatorId: operator.id,
+        amount: amountNumber,
+        comment: typeof comment === "string" && comment.trim() ? comment.trim() : null,
+        createdByUserId: owner.user.id,
+      },
+    });
   });
 
   return NextResponse.json({ balance: await calcOperatorBalance(operator.id) });

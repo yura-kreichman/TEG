@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { isModuleEnabled } from "@/lib/tenant-modules";
+import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 
 // Архивная инструкция недоступна по публичной ссылке (docs/spec/07-
 // instructions.md) — уже опубликованные записи ознакомлений не трогаются,
@@ -22,5 +23,11 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/instructio
   }
 
   await prisma.instruction.update({ where: { id }, data: { status: "archived" } });
+  // Лендинг может ссылаться на эту инструкцию (docs/spec/08-landing.md) —
+  // /s/[slug] статически закэширован, без ревалидации опубликованная
+  // страница продолжила бы показывать блок с уже мёртвой ссылкой до
+  // ближайшей НЕСВЯЗАННОЙ правки лендинга (аудит 2026-07-26, реальный баг —
+  // ревалидация уже была на привязку, но не на обратное действие).
+  await revalidateLandingForTenant(owner.tenantId);
   return NextResponse.json({ ok: true });
 }

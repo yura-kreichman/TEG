@@ -721,6 +721,7 @@
     "removePhoto": "Fotoni olib tashlash",
     "editTariff": "Nomi va narxini oʻzgartirish",
     "tariffsCardLabel": "Tariflar · 2 tagacha",
+    "tariffsCardLabelUnlimited": "Tariflar",
     "addTariffButton": "Tarif qoʻshish",
     "addAssetButton": "Aktiv qoʻshish",
     "newTariffTitle": "Yangi tarif",
@@ -1598,5 +1599,13 @@
     "newOrderButton": "Yangi buyurtma",
     "noPriceLabel": "Narxi yo'q",
     "clearCartAction": "Savatni tozalash"
+  },
+  "splitPayment": {
+    "title": "To'lovni bo'lish",
+    "remainingLabel": "Taqsimlanishi kerak:",
+    "addMethodButton": "Usul qo'shish",
+    "selectWalletButton": "Hamyonni tanlash",
+    "walletSelectedLabel": "Hamyon tanlandi",
+    "submitButton": "To'lash"
   }
 }

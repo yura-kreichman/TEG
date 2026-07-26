@@ -721,6 +721,7 @@
     "removePhoto": "Şəkli sil",
     "editTariff": "Adı və qiyməti dəyiş",
     "tariffsCardLabel": "Tariflər · maks. 2",
+    "tariffsCardLabelUnlimited": "Tariflər",
     "addTariffButton": "Tarif əlavə et",
     "addAssetButton": "Aktiv əlavə et",
     "newTariffTitle": "Yeni tarif",
@@ -1598,5 +1599,13 @@
     "newOrderButton": "Yeni sifariş",
     "noPriceLabel": "Qiymət yoxdur",
     "clearCartAction": "Səbəti təmizlə"
+  },
+  "splitPayment": {
+    "title": "Ödənişi böl",
+    "remainingLabel": "Bölüşdürülməli qalıb:",
+    "addMethodButton": "Üsul əlavə et",
+    "selectWalletButton": "Cüzdan seç",
+    "walletSelectedLabel": "Cüzdan seçildi",
+    "submitButton": "Ödə"
   }
 }

@@ -1,12 +1,17 @@
 // IP клиента за реверс-прокси nginx (deploy/nginx/*.conf: proxy_set_header
-// X-Real-IP $remote_addr) — единственное значение, не список, в отличие от
-// X-Forwarded-For (используется как фолбэк на случай другого окружения).
+// X-Real-IP $remote_addr) — единственное значение, не список, ВСЕГДА
+// проставляется nginx безусловно в этом деплое.
+//
+// X-Forwarded-For НЕ используется как фолбэк (аудит 2026-07-26, реальный
+// баг) — этот заголовок клиент может прислать сам, и это первое (левое)
+// значение в списке, которое как раз и читал старый фолбэк: обходя
+// rate-limit на публичной подписи (sign/route.ts) простой сменой заголовка
+// на каждый запрос. X-Real-IP — единственный источник, которому можно
+// доверять в этой топологии; его отсутствие (например, локальная разработка
+// без nginx) намеренно даёт общий "unknown"-бакет вместо доверия клиенту.
 export function getClientIp(request: Request): string {
   const realIp = request.headers.get("x-real-ip");
   if (realIp) return realIp.trim();
-
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) return forwardedFor.split(",")[0]!.trim();
 
   return "unknown";
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import {
@@ -20,6 +21,7 @@ import {
   previousSubmissionBoundary,
 } from "@/lib/game-room";
 import { aggregateTicketOrders } from "@/lib/tickets";
+import { PAYMENT_SPLIT_METHOD } from "@/lib/payment-split";
 import { dispatchZoneSummary } from "@/lib/summary-channels/dispatch";
 import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { onResultsSubmission } from "@/lib/summary-channels/daily-cash-trigger";
@@ -82,12 +84,6 @@ export async function POST(request: Request) {
     include: { tariffs: { where: { deletedAt: null } }, assets: { orderBy: { sortOrder: "asc" } } },
   });
   const zoneById = new Map(zones.map((z) => [z.id, z]));
-  // Единый момент "сейчас" для всех агрегатов ниже (тапы Пусков/Прибываний,
-  // Билеты, тапы-показания Счётчиков) — было объявлено ниже отдельно для
-  // каждого блока, вынесено сюда при добавлении countersTapAssistEnabled
-  // (запрос пользователя 2026-07-25), чтобы окно "с прошлой сдачи по сейчас"
-  // было одинаковым везде, а не чуть-чуть расходилось по миллисекундам.
-  const now = new Date();
 
   if (zones.length !== zoneIds.length) {
     return NextResponse.json({ error: "Одна из зон не найдена" }, { status: 400 });
@@ -189,31 +185,74 @@ export async function POST(request: Request) {
     )
   );
 
-  // "Previous reading" only means anything in "counters" mode (running meter) —
-  // "launches" readings are already the finished count for this submission.
-  // Зоны с countersTapAssistEnabled (запрос пользователя 2026-07-25) — берём
-  // ВСЕ активы зоны, а не только те, что есть в zs.readings: клиент для таких
-  // зон readings вообще не собирает (см. блок ниже), payload может прийти
-  // пустым.
-  const allAssetIds = zoneSubmissions.flatMap((z) => {
-    const zone = zoneById.get(z.zoneId);
-    if (zone?.accountingMode !== "counters") return [];
-    return zone.countersTapAssistEnabled ? zone.assets.map((a) => a.id) : z.readings.map((r) => r.assetId);
-  });
-  const previousReadings = allAssetIds.length
-    ? await prisma.assetReading.findMany({
-        where: { assetId: { in: allAssetIds } },
-        orderBy: { createdAt: "desc" },
-      })
-    : [];
-  const previousByKey = new Map<string, number>();
-  for (const reading of previousReadings) {
-    const key = `${reading.assetId}:${reading.tariffId}`;
-    if (!previousByKey.has(key)) previousByKey.set(key, reading.reading);
-  }
-  const initialByKey = await getInitialReadingsMap(allAssetIds);
+  // Единая точка чтения ОКНА агрегации ("с прошлой сдачи по сейчас") и
+  // записи самой сдачи — раньше окно (previousReadings, тапы, Прибывания/
+  // Пуски, Билеты, расходы, возвраты) читалось ДО транзакции, обычными
+  // SELECT без блокировки, а писалось только в транзакции ниже (аудит
+  // 2026-07-26): две почти одновременные сдачи по одной и той же зоне
+  // (пересменка — спека прямо допускает "сдач может быть несколько в день")
+  // читали ОДНО И ТО ЖЕ окно и обе успешно коммитили — расходы/показания/
+  // касса задваивались без единой ошибки. Теперь и чтение окна, и запись —
+  // в ОДНОЙ транзакции, под advisory-локом по каждой зоне, взятым САМЫМ
+  // первым действием: вторая сдача той же зоны ждёт коммита первой и лишь
+  // потом видит её как свою границу — окна больше не пересекаются.
+  async function runSubmission(tx: Prisma.TransactionClient) {
+    // Сортировка — фиксированный порядок захвата локов исключает deadlock
+    // между двумя сдачами, каждая из которых закрывает те же несколько зон
+    // (мультизонная сдача), но в разном порядке.
+    for (const zoneId of [...zoneIds].sort()) {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${zoneId}))`;
+    }
 
-  // Показания зон с countersTapAssistEnabled (запрос пользователя 2026-07-25:
+    // Единый момент "сейчас" для всех агрегатов ниже (тапы Пусков/Прибываний,
+    // Билеты, тапы-показания Счётчиков) — намеренно захватывается ЗДЕСЬ,
+    // ПОСЛЕ локов выше, а не раньше входа в транзакцию (аудит 2026-07-26,
+    // самопроверка рефакторинга: захват до локов допускал обратный порядок —
+    // сдача, стартовавшая позже, но обогнавшая другую на пред-транзакционных
+    // проверках и закоммитившаяся первой, могла получить now МЕНЬШЕ, чем
+    // createdAt только что закоммиченной ZoneSubmission от "проигравшей по
+    // времени, но выигравшей по коммиту" сдачи — окно (boundary, until]
+    // становилось бы пустым/инвертированным, агрегаты молча обнулялись бы).
+    // Захват после лока гарантирует монотонность: следующая транзакция той
+    // же зоны ждёт коммита предыдущей, значит её now физически позже.
+    const now = new Date();
+
+    // Граница "с прошлой сдачи" на зону — считается ОДИН раз здесь, не
+    // отдельным запросом в каждом из 6 циклов агрегации ниже (аудит
+    // 2026-07-27, производительность: раньше одна и та же зона могла давать
+    // 2-4 идентичных SELECT ZoneSubmission за один и тот же boundary, пока
+    // транзакция уже держит advisory-лок — лишние round-trip продлевали
+    // время его удержания без всякой пользы).
+    const boundaryByZone = new Map<string, Date | null>();
+    for (const zoneId of zoneIds) {
+      boundaryByZone.set(zoneId, await previousSubmissionBoundary(zoneId, tx));
+    }
+
+    // "Previous reading" only means anything in "counters" mode (running meter) —
+    // "launches" readings are already the finished count for this submission.
+    // Зоны с countersTapAssistEnabled (запрос пользователя 2026-07-25) — берём
+    // ВСЕ активы зоны, а не только те, что есть в zs.readings: клиент для таких
+    // зон readings вообще не собирает (см. блок ниже), payload может прийти
+    // пустым.
+    const allAssetIds = zoneSubmissions.flatMap((z) => {
+      const zone = zoneById.get(z.zoneId);
+      if (zone?.accountingMode !== "counters") return [];
+      return zone.countersTapAssistEnabled ? zone.assets.map((a) => a.id) : z.readings.map((r) => r.assetId);
+    });
+    const previousReadings = allAssetIds.length
+      ? await tx.assetReading.findMany({
+          where: { assetId: { in: allAssetIds } },
+          orderBy: { createdAt: "desc" },
+        })
+      : [];
+    const previousByKey = new Map<string, number>();
+    for (const reading of previousReadings) {
+      const key = `${reading.assetId}:${reading.tariffId}`;
+      if (!previousByKey.has(key)) previousByKey.set(key, reading.reading);
+    }
+    const initialByKey = await getInitialReadingsMap(allAssetIds, tx);
+
+    // Показания зон с countersTapAssistEnabled (запрос пользователя 2026-07-25:
   // "то, что Сотрудник натапал, и является прибавкой к счётчику") — не
   // доверяем zs.readings от клиента вовсе (тот же принцип, что уже применён к
   // returnsCount/расходам выше по файлу), пересчитываем на сервере из журнала
@@ -228,79 +267,101 @@ export async function POST(request: Request) {
   // размазывать вычет пропорционально между тарифами больше не нужно, раз
   // известно, у какого именно тарифа он случился), см. CounterTapEvent.voidedAt.
   // По ТАРИФУ, не по активу — выручка считается на уровне тарифа.
-  const voidedCountByZoneTariff = new Map<string, number>();
-  // Сумма оплаты балансом, привязанная к КОНКРЕТНОМУ тапу этой зоны (запрос
-  // пользователя 2026-07-25: "ошибочно включаешь оплату с Баланса в расчёт
-  // Разницы") — в отличие от counterAbonementByZone ниже (вся выручка
-  // "revenue_abonement" зоны — туда попадает и старое decoupled "Списать с
-  // баланса", вообще не привязанное ни к какому тапу/сеансу), тут только
-  // тапы, реально учтённые как сеанс в netRevenue выше — именно ИХ нужно
-  // вычесть из netRevenue перед сравнением с фактической кассой, иначе
-  // Разница показывает фиктивную недостачу ровно на сумму баланса (деньги за
-  // неё никогда и не должны были попасть в наличные/безнал).
-  const tapAbonementAmountByZone = new Map<string, number>();
-  for (const zs of zoneSubmissions) {
-    const zone = zoneById.get(zs.zoneId)!;
-    if (zone.accountingMode !== "counters" || !zone.countersTapAssistEnabled) continue;
-    const boundary = await previousSubmissionBoundary(zone.id);
-    const tapCounts = await prisma.counterTapEvent.groupBy({
-      by: ["assetId", "tariffId"],
-      where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now } },
-      _count: { _all: true },
-    });
-    const tapCountByKey = new Map(tapCounts.map((tc) => [`${tc.assetId}:${tc.tariffId}`, tc._count._all]));
-    zs.readings = zone.assets.flatMap((asset) =>
-      zone.tariffs.map((tariff) => {
-        const key = `${asset.id}:${tariff.id}`;
-        const taps = tapCountByKey.get(key) ?? 0;
-        const previous = previousByKey.get(key) ?? initialByKey.get(key) ?? 0;
-        return { assetId: asset.id, tariffId: tariff.id, reading: (previous + taps) % 10000 };
-      })
-    );
+    const voidedCountByZoneTariff = new Map<string, number>();
+    // Сумма оплаты балансом, привязанная к КОНКРЕТНОМУ тапу этой зоны (запрос
+    // пользователя 2026-07-25: "ошибочно включаешь оплату с Баланса в расчёт
+    // Разницы") — в отличие от counterAbonementByZone ниже (вся выручка
+    // "revenue_abonement" зоны — туда попадает и старое decoupled "Списать с
+    // баланса", вообще не привязанное ни к какому тапу/сеансу), тут только
+    // тапы, реально учтённые как сеанс в netRevenue выше — именно ИХ нужно
+    // вычесть из netRevenue перед сравнением с фактической кассой, иначе
+    // Разница показывает фиктивную недостачу ровно на сумму баланса (деньги за
+    // неё никогда и не должны были попасть в наличные/безнал).
+    const tapAbonementAmountByZone = new Map<string, number>();
+    for (const zs of zoneSubmissions) {
+      const zone = zoneById.get(zs.zoneId)!;
+      if (zone.accountingMode !== "counters" || !zone.countersTapAssistEnabled) continue;
+      const boundary = boundaryByZone.get(zone.id) ?? null;
+      const tapCounts = await tx.counterTapEvent.groupBy({
+        by: ["assetId", "tariffId"],
+        where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now } },
+        _count: { _all: true },
+      });
+      const tapCountByKey = new Map(tapCounts.map((tc) => [`${tc.assetId}:${tc.tariffId}`, tc._count._all]));
+      zs.readings = zone.assets.flatMap((asset) =>
+        zone.tariffs.map((tariff) => {
+          const key = `${asset.id}:${tariff.id}`;
+          const taps = tapCountByKey.get(key) ?? 0;
+          const previous = previousByKey.get(key) ?? initialByKey.get(key) ?? 0;
+          return { assetId: asset.id, tariffId: tariff.id, reading: (previous + taps) % 10000 };
+        })
+      );
 
-    const voidedCounts = await prisma.counterTapEvent.groupBy({
-      by: ["tariffId"],
-      where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now }, voidedAt: { not: null } },
-      _count: { _all: true },
-    });
-    for (const vc of voidedCounts) {
-      voidedCountByZoneTariff.set(`${zone.id}:${vc.tariffId}`, vc._count._all);
+      const voidedCounts = await tx.counterTapEvent.groupBy({
+        by: ["tariffId"],
+        where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now }, voidedAt: { not: null } },
+        _count: { _all: true },
+      });
+      for (const vc of voidedCounts) {
+        voidedCountByZoneTariff.set(`${zone.id}:${vc.tariffId}`, vc._count._all);
+      }
+
+      const abonementCounts = await tx.counterTapEvent.groupBy({
+        by: ["tariffId"],
+        where: {
+          zoneId: zone.id,
+          createdAt: { gt: boundary ?? new Date(0), lte: now },
+          paymentMethod: "abonement",
+          voidedAt: null,
+        },
+        _count: { _all: true },
+      });
+      const priceByTariff = new Map(zone.tariffs.map((t) => [t.id, Number(t.price)]));
+      let zoneTapAbonementAmount = abonementCounts.reduce(
+        (sum, ac) => sum + ac._count._all * (priceByTariff.get(ac.tariffId) ?? 0),
+        0
+      );
+      // Разбивка оплаты (запрос пользователя 2026-07-26, аудит 2026-07-26) —
+      // доля "Баланс" сплит-тапа тоже реально списана и учтена в netRevenue
+      // как полный сеанс (см. tariffCalc выше), тот же вычет нужен и для неё,
+      // иначе Разница снова покажет фиктивную недостачу — тот же класс бага,
+      // что и у обычных абонементных тапов в комментарии выше.
+      const splitTapIds = (
+        await tx.counterTapEvent.findMany({
+          where: {
+            zoneId: zone.id,
+            createdAt: { gt: boundary ?? new Date(0), lte: now },
+            paymentMethod: PAYMENT_SPLIT_METHOD,
+            voidedAt: null,
+          },
+          select: { id: true },
+        })
+      ).map((t) => t.id);
+      if (splitTapIds.length > 0) {
+        const splitLegs = await tx.counterTapEventPaymentLeg.findMany({
+          where: { tapId: { in: splitTapIds }, method: "abonement" },
+        });
+        zoneTapAbonementAmount += splitLegs.reduce((sum, leg) => sum + Number(leg.amount), 0);
+      }
+      tapAbonementAmountByZone.set(zone.id, zoneTapAbonementAmount);
     }
 
-    const abonementCounts = await prisma.counterTapEvent.groupBy({
-      by: ["tariffId"],
-      where: {
-        zoneId: zone.id,
-        createdAt: { gt: boundary ?? new Date(0), lte: now },
-        paymentMethod: "abonement",
-        voidedAt: null,
-      },
-      _count: { _all: true },
-    });
-    const priceByTariff = new Map(zone.tariffs.map((t) => [t.id, Number(t.price)]));
-    const zoneTapAbonementAmount = abonementCounts.reduce(
-      (sum, ac) => sum + ac._count._all * (priceByTariff.get(ac.tariffId) ?? 0),
-      0
-    );
-    tapAbonementAmountByZone.set(zone.id, zoneTapAbonementAmount);
-  }
-
-  // Актив на ремонте (Asset.active=false) — read-only и на сервере, не
-  // только в форме: что бы ни прислал клиент, показание принудительно
-  // остаётся последним известным (запрос пользователя 2026-07-16: "сотрудник
-  // не может проводить никакие операции с деактивированными сущностями").
-  // Мутируем сам объект — обе последующие стадии (расчёт выручки ниже и
-  // запись AssetReading дальше по файлу) используют один и тот же массив.
-  const assetById = new Map(zones.flatMap((z) => z.assets.map((a) => [a.id, a])));
-  for (const zs of zoneSubmissions) {
-    for (const r of zs.readings) {
-      const asset = assetById.get(r.assetId);
-      if (asset && !asset.active) {
-        const key = `${r.assetId}:${r.tariffId}`;
-        r.reading = previousByKey.get(key) ?? initialByKey.get(key) ?? 0;
+    // Актив на ремонте (Asset.active=false) — read-only и на сервере, не
+    // только в форме: что бы ни прислал клиент, показание принудительно
+    // остаётся последним известным (запрос пользователя 2026-07-16: "сотрудник
+    // не может проводить никакие операции с деактивированными сущностями").
+    // Мутируем сам объект — обе последующие стадии (расчёт выручки ниже и
+    // запись AssetReading дальше по файлу) используют один и тот же массив.
+    const assetById = new Map(zones.flatMap((z) => z.assets.map((a) => [a.id, a])));
+    for (const zs of zoneSubmissions) {
+      for (const r of zs.readings) {
+        const asset = assetById.get(r.assetId);
+        if (asset && !asset.active) {
+          const key = `${r.assetId}:${r.tariffId}`;
+          r.reading = previousByKey.get(key) ?? initialByKey.get(key) ?? 0;
+        }
       }
     }
-  }
 
   // Агрегат "Прибываний"/"Пусков" считается заранее (async, не влезает в
   // синхронный .map() ниже) — окно "с момента предыдущей сдачи по сейчас"
@@ -312,297 +373,295 @@ export async function POST(request: Request) {
   // заполнены) взаимоисключающи по зоне, так что смешения не бывает;
   // totalMinutes у "Пусков" всегда 0 (тап мгновенный, startedAt=endedAt) и
   // просто не используется дальше.
-  const gameRoomAggregateByZone = new Map<
-    string,
-    {
-      calculatedRevenue: number;
-      count: number;
-      totalMinutes: number;
-      launchIds: string[];
-      abonementAmount: number;
-      perAsset: { assetName: string; count: number; amount: number }[];
+    const gameRoomAggregateByZone = new Map<
+      string,
+      {
+        calculatedRevenue: number;
+        count: number;
+        totalMinutes: number;
+        launchIds: string[];
+        abonementAmount: number;
+        perAsset: { assetName: string; count: number; amount: number }[];
+      }
+    >();
+    for (const zs of zoneSubmissions) {
+      const zone = zoneById.get(zs.zoneId)!;
+      if (!isStaysZone(zone) && !isLaunchesZone(zone)) continue;
+      const boundary = boundaryByZone.get(zone.id) ?? null;
+      const [agg, perAssetBreakdown] = await Promise.all([
+        aggregateGameRoomLaunches(zone.id, boundary, now, tx),
+        gameRoomRevenueByAsset(zone.id, boundary, now, tx),
+      ]);
+      const assetNameById = new Map(zone.assets.map((a) => [a.id, a.name]));
+      const perAsset = perAssetBreakdown
+        .map((a) => ({ assetName: assetNameById.get(a.assetId) ?? "", count: a.count, amount: a.calculatedAmount }))
+        .sort((a, b) => b.count - a.count);
+      gameRoomAggregateByZone.set(zone.id, {
+        calculatedRevenue: agg.totalAmount,
+        count: agg.count,
+        totalMinutes: agg.totalMinutes,
+        launchIds: agg.launchIds,
+        perAsset,
+        abonementAmount: agg.abonementAmount,
+      });
     }
-  >();
-  for (const zs of zoneSubmissions) {
-    const zone = zoneById.get(zs.zoneId)!;
-    if (!isStaysZone(zone) && !isLaunchesZone(zone)) continue;
-    const boundary = await previousSubmissionBoundary(zone.id);
-    const [agg, perAssetBreakdown] = await Promise.all([
-      aggregateGameRoomLaunches(zone.id, boundary, now),
-      gameRoomRevenueByAsset(zone.id, boundary, now),
-    ]);
-    const assetNameById = new Map(zone.assets.map((a) => [a.id, a.name]));
-    const perAsset = perAssetBreakdown
-      .map((a) => ({ assetName: assetNameById.get(a.assetId) ?? "", count: a.count, amount: a.calculatedAmount }))
-      .sort((a, b) => b.count - a.count);
-    gameRoomAggregateByZone.set(zone.id, {
-      calculatedRevenue: agg.totalAmount,
-      count: agg.count,
-      totalMinutes: agg.totalMinutes,
-      launchIds: agg.launchIds,
-      perAsset,
-      abonementAmount: agg.abonementAmount,
-    });
-  }
 
-  // "Счётчики" и "Только касса" — оплата балансом (docs/spec/01-counters.md,
-  // запрос пользователя 2026-07-20: "актуально не только для счётчиков, но и
-  // Только касса") — те же "с прошлой сдачи" границы, что у Пусков/Прибываний
-  // выше, но источник другой: у этих режимов нет Launch, только
-  // MoneyOperation(type: "revenue_abonement") на зоне (см.
-  // getZoneAbonementSpendAmount) — у "Только касса" нет даже активов, поэтому
-  // считаем по зоне напрямую, не через AbonementTransaction.assetId.
-  const counterAbonementByZone = new Map<string, number>();
-  for (const zs of zoneSubmissions) {
-    const zone = zoneById.get(zs.zoneId)!;
-    if (zone.accountingMode !== "counters" && zone.accountingMode !== "cash_only") continue;
-    const boundary = await previousSubmissionBoundary(zone.id);
-    counterAbonementByZone.set(zone.id, await getZoneAbonementSpendAmount(zone.id, boundary));
-  }
+    // "Счётчики" и "Только касса" — оплата балансом (docs/spec/01-counters.md,
+    // запрос пользователя 2026-07-20: "актуально не только для счётчиков, но и
+    // Только касса") — те же "с прошлой сдачи" границы, что у Пусков/Прибываний
+    // выше, но источник другой: у этих режимов нет Launch, только
+    // MoneyOperation(type: "revenue_abonement") на зоне (см.
+    // getZoneAbonementSpendAmount) — у "Только касса" нет даже активов, поэтому
+    // считаем по зоне напрямую, не через AbonementTransaction.assetId.
+    const counterAbonementByZone = new Map<string, number>();
+    for (const zs of zoneSubmissions) {
+      const zone = zoneById.get(zs.zoneId)!;
+      if (zone.accountingMode !== "counters" && zone.accountingMode !== "cash_only") continue;
+      const boundary = boundaryByZone.get(zone.id) ?? null;
+      counterAbonementByZone.set(zone.id, await getZoneAbonementSpendAmount(zone.id, boundary, tx));
+    }
 
-  // Билеты (docs/spec/10-tickets.md, "ДЕНЬГИ И СДАЧА ИТОГОВ") — та же схема
-  // "с момента предыдущей сдачи", что у Пусков/Прибываний выше, просто
-  // источник другой (TicketOrder/Ticket, не Launch). Расчётная выручка = сумма
-  // НЕ voided Ticket.priceSnapshot окна — считается заранее (async), не в
-  // синхронном .map() ниже.
-  const ticketsAggregateByZone = new Map<string, Awaited<ReturnType<typeof aggregateTicketOrders>>>();
-  for (const zs of zoneSubmissions) {
-    const zone = zoneById.get(zs.zoneId)!;
-    if (!isTicketsZone(zone)) continue;
-    const boundary = await previousSubmissionBoundary(zone.id);
-    ticketsAggregateByZone.set(zone.id, await aggregateTicketOrders(zone.id, boundary, now));
-  }
+    // Билеты (docs/spec/10-tickets.md, "ДЕНЬГИ И СДАЧА ИТОГОВ") — та же схема
+    // "с момента предыдущей сдачи", что у Пусков/Прибываний выше, просто
+    // источник другой (TicketOrder/Ticket, не Launch). Расчётная выручка = сумма
+    // НЕ voided Ticket.priceSnapshot окна — считается заранее (async), не в
+    // синхронном .map() ниже.
+    const ticketsAggregateByZone = new Map<string, Awaited<ReturnType<typeof aggregateTicketOrders>>>();
+    for (const zs of zoneSubmissions) {
+      const zone = zoneById.get(zs.zoneId)!;
+      if (!isTicketsZone(zone)) continue;
+      const boundary = boundaryByZone.get(zone.id) ?? null;
+      ticketsAggregateByZone.set(zone.id, await aggregateTicketOrders(zone.id, boundary, now, tx));
+    }
 
-  // Возвраты/тестовые пуски (docs/spec/01-counters.md, п.3) — запрос
-  // пользователя 2026-07-24: раньше это было доверенное клиентское число
-  // (returnsCount в payload), теперь единственный источник — журнал
-  // ZoneReturnEvent (пункт нижнего бара "Счётчики"), та же граница "с
-  // момента предыдущей сдачи", что у остальных агрегатов выше. Только
-  // "counters" — у остальных режимов этого поля нет вовсе (см. комментарий
-  // у ZoneSubmission.returnsCount ниже), Map просто не заполняется для них,
-  // ?? 0 при чтении покрывает и это, и отсутствие записей.
-  const returnsCountByZone = new Map<string, number>();
-  for (const zs of zoneSubmissions) {
-    const zone = zoneById.get(zs.zoneId)!;
-    if (zone.accountingMode !== "counters") continue;
-    const boundary = await previousSubmissionBoundary(zone.id);
-    // Tap-зоны (запрос пользователя 2026-07-25) — источник теперь
-    // CounterTapEvent.voidedAt (привязан к конкретному тапу), ZoneReturnEvent
-    // для них больше не используется вовсе (см. voidedCountByZoneTariff выше,
-    // считает то же самое ПО ТАРИФУ для точного вычета в выручке; тут — сумма
-    // по всем тарифам зоны, только для отображения общего числа).
-    const count = isCountersTapAssistZone(zone)
-      ? await prisma.counterTapEvent.count({
-          where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now }, voidedAt: { not: null } },
-        })
-      : await prisma.zoneReturnEvent.count({
-          where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now } },
-        });
-    returnsCountByZone.set(zone.id, count);
-  }
+    // Возвраты/тестовые пуски (docs/spec/01-counters.md, п.3) — запрос
+    // пользователя 2026-07-24: раньше это было доверенное клиентское число
+    // (returnsCount в payload), теперь единственный источник — журнал
+    // ZoneReturnEvent (пункт нижнего бара "Счётчики"), та же граница "с
+    // момента предыдущей сдачи", что у остальных агрегатов выше. Только
+    // "counters" — у остальных режимов этого поля нет вовсе (см. комментарий
+    // у ZoneSubmission.returnsCount ниже), Map просто не заполняется для них,
+    // ?? 0 при чтении покрывает и это, и отсутствие записей.
+    const returnsCountByZone = new Map<string, number>();
+    for (const zs of zoneSubmissions) {
+      const zone = zoneById.get(zs.zoneId)!;
+      if (zone.accountingMode !== "counters") continue;
+      const boundary = boundaryByZone.get(zone.id) ?? null;
+      // Tap-зоны (запрос пользователя 2026-07-25) — источник теперь
+      // CounterTapEvent.voidedAt (привязан к конкретному тапу), ZoneReturnEvent
+      // для них больше не используется вовсе (см. voidedCountByZoneTariff выше,
+      // считает то же самое ПО ТАРИФУ для точного вычета в выручке; тут — сумма
+      // по всем тарифам зоны, только для отображения общего числа).
+      const count = isCountersTapAssistZone(zone)
+        ? await tx.counterTapEvent.count({
+            where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now }, voidedAt: { not: null } },
+          })
+        : await tx.zoneReturnEvent.count({
+            where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now } },
+          });
+      returnsCountByZone.set(zone.id, count);
+    }
 
-  // Расходы (запрос пользователя 2026-07-25: "чтобы не надо было запоминать
-  // до конца смены") — тот же принцип, что у Возвратов выше: единственный
-  // источник — журнал ZoneExpenseEvent (экран "Расходы"), не доверенный
-  // клиентский payload. Применимо к ЛЮБОМУ режиму учёта, не только
-  // "counters" — расход не завязан на режим зоны.
-  const expenseEventsByZone = new Map<string, { id: string; amount: number; categoryId: string | null; comment: string | null }[]>();
-  for (const zs of zoneSubmissions) {
-    const zone = zoneById.get(zs.zoneId)!;
-    const boundary = await previousSubmissionBoundary(zone.id);
-    const events = await prisma.zoneExpenseEvent.findMany({
-      where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now } },
-    });
-    expenseEventsByZone.set(
-      zone.id,
-      events.map((e) => ({ id: e.id, amount: Number(e.amount), categoryId: e.categoryId, comment: e.comment }))
-    );
-  }
+    // Расходы (запрос пользователя 2026-07-25: "чтобы не надо было запоминать
+    // до конца смены") — тот же принцип, что у Возвратов выше: единственный
+    // источник — журнал ZoneExpenseEvent (экран "Расходы"), не доверенный
+    // клиентский payload. Применимо к ЛЮБОМУ режиму учёта, не только
+    // "counters" — расход не завязан на режим зоны.
+    const expenseEventsByZone = new Map<string, { id: string; amount: number; categoryId: string | null; comment: string | null }[]>();
+    for (const zs of zoneSubmissions) {
+      const zone = zoneById.get(zs.zoneId)!;
+      const boundary = boundaryByZone.get(zone.id) ?? null;
+      const events = await tx.zoneExpenseEvent.findMany({
+        where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now } },
+      });
+      expenseEventsByZone.set(
+        zone.id,
+        events.map((e) => ({ id: e.id, amount: Number(e.amount), categoryId: e.categoryId, comment: e.comment }))
+      );
+    }
 
-  const summary = zoneSubmissions.map((zs) => {
-    const zone = zoneById.get(zs.zoneId)!;
+    const summary = zoneSubmissions.map((zs) => {
+      const zone = zoneById.get(zs.zoneId)!;
 
-    if (isStaysZone(zone) || isLaunchesZone(zone)) {
-      const agg = gameRoomAggregateByZone.get(zone.id)!;
-      const calculatedRevenue = agg.calculatedRevenue;
+      if (isStaysZone(zone) || isLaunchesZone(zone)) {
+        const agg = gameRoomAggregateByZone.get(zone.id)!;
+        const calculatedRevenue = agg.calculatedRevenue;
+        const actualCash = zs.cashAmount + zs.mobileAmount;
+        // abonementAmount вычитается из calculatedRevenue здесь — эта касса уже
+        // получила эти деньги раньше, при пополнении абонемента, не сейчас
+        // (реальный баг, найден пользователем 2026-07-18: без вычитания
+        // разница ложно показывала недостачу ровно на сумму пусков,
+        // оплаченных абонементом, каждый раз).
+        const difference = Math.round((actualCash + agg.abonementAmount - calculatedRevenue) * 100) / 100;
+        return {
+          zoneId: zs.zoneId,
+          zoneName: zone.name,
+          calculatedRevenue,
+          actualCash,
+          difference,
+          readingsText: "",
+          readingLines: [] as { assetName: string; tariffName: string; reading: number; delta: number }[],
+          returnsCount: 0,
+          cashAmount: zs.cashAmount,
+          mobileAmount: zs.mobileAmount,
+          // Справочно, в кассу НЕ входит — уже получена раньше, при пополнении
+          // абонемента (запрос пользователя 2026-07-17: "во всех отчётах и
+          // сводках... правильные цифры", "добавить Абонемент").
+          abonementAmount: agg.abonementAmount,
+          gameRoomLaunchCount: agg.count,
+          gameRoomTotalMinutes: agg.totalMinutes,
+          perAsset: agg.perAsset,
+          ticketsOrdersCount: null as number | null,
+          ticketsCount: null as number | null,
+          ticketsRedeemedCount: null as number | null,
+          ticketsExpiredCount: null as number | null,
+        };
+      }
+
+      if (isTicketsZone(zone)) {
+        // Билеты (docs/spec/10-tickets.md, "ДЕНЬГИ И СДАЧА ИТОГОВ") — касса
+        // ОДНОЙ ПАРОЙ ПОЛЕЙ на зону (не по активам, как у stays/launches выше —
+        // заказ мультиактивный, физически деньги по активам не разложить,
+        // осознанное расхождение). Способ оплаты заказа — справочная разбивка
+        // (agg.cash/mobile/abonementAmount), НЕ автоподстановка — те же
+        // zs.cashAmount/mobileAmount, что оператор ввёл вручную.
+        const agg = ticketsAggregateByZone.get(zone.id)!;
+        const calculatedRevenue = agg.totalAmount;
+        const actualCash = zs.cashAmount + zs.mobileAmount;
+        const difference = Math.round((actualCash + agg.abonementAmount - calculatedRevenue) * 100) / 100;
+        return {
+          zoneId: zs.zoneId,
+          zoneName: zone.name,
+          calculatedRevenue,
+          actualCash,
+          difference,
+          readingsText: "",
+          readingLines: [] as { assetName: string; tariffName: string; reading: number; delta: number }[],
+          returnsCount: 0,
+          cashAmount: zs.cashAmount,
+          mobileAmount: zs.mobileAmount,
+          abonementAmount: agg.abonementAmount,
+          gameRoomLaunchCount: null as number | null,
+          gameRoomTotalMinutes: null as number | null,
+          perAsset: [] as { assetName: string; count: number; amount: number }[],
+          ticketsOrdersCount: agg.ordersCount,
+          ticketsCount: agg.ticketsCount,
+          ticketsRedeemedCount: agg.redeemedCount,
+          ticketsExpiredCount: agg.expiredCount,
+        };
+      }
+
+      const tariffCalc = zone.tariffs.map((tariff) => {
+        const readingsForTariff = zs.readings.filter((r) => r.tariffId === tariff.id);
+        const sessions = readingsForTariff.reduce((sum, r) => {
+          if (zone.accountingMode === "launches") return sum + r.reading;
+          const key = `${r.assetId}:${tariff.id}`;
+          const previous = previousByKey.get(key) ?? initialByKey.get(key) ?? 0;
+          return sum + calcSessions(r.reading, previous);
+        }, 0);
+        return { tariffId: tariff.id, price: Number(tariff.price), sessions };
+      });
+
+      // "Счёт." — всегда валовая выручка по счётчикам, ФАКТ (запрос пользователя
+      // 2026-07-16: "счётчики должны показывать всегда факт", без отдельной
+      // строки "Валовая"). Разница — по-прежнему от net (за вычетом тестов):
+      // это то число, по которому владелец реально принимает решение "сошлось/
+      // не сошлось", и оно должно оставаться 0, когда тесты объясняют весь
+      // разрыв, даже если "Счёт." теперь визуально не равен кассе.
+      const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
+      // Tap-зоны (запрос пользователя 2026-07-25) — точный вычет ПО ТАРИФУ из
+      // voidedCountByZoneTariff вместо пропорционального calcZoneRevenue:
+      // теперь известно, у какого именно тарифа случился возврат/тест (тап
+      // привязан к конкретной записи), размазывать вычет по всем тарифам зоны
+      // больше не нужно и было бы менее точно, чем то, что уже известно.
+      const netRevenue = isCountersTapAssistZone(zone)
+        ? calcZoneGrossRevenue(
+            tariffCalc.map((tc) => ({
+              ...tc,
+              sessions: Math.max(tc.sessions - (voidedCountByZoneTariff.get(`${zone.id}:${tc.tariffId}`) ?? 0), 0),
+            }))
+          )
+        : calcZoneRevenue(tariffCalc, returnsCountByZone.get(zone.id) ?? 0);
       const actualCash = zs.cashAmount + zs.mobileAmount;
-      // abonementAmount вычитается из calculatedRevenue здесь — эта касса уже
-      // получила эти деньги раньше, при пополнении абонемента, не сейчас
-      // (реальный баг, найден пользователем 2026-07-18: без вычитания
-      // разница ложно показывала недостачу ровно на сумму пусков,
-      // оплаченных абонементом, каждый раз).
-      const difference = Math.round((actualCash + agg.abonementAmount - calculatedRevenue) * 100) / 100;
+      // Оплата балансом (docs/spec/01-counters.md) — у ОБЫЧНЫХ (ручных)
+      // "Счётчиков"/"Только касса" НЕ участвует в Разнице (решение 2026-07-25 —
+      // decoupled "Списать с баланса" вообще не привязано ни к какому
+      // сеансу/показанию, вычитать там нечего). У TAP-зон иначе (запрос
+      // пользователя 2026-07-25: "ошибочно включаешь оплату с Баланса в расчёт
+      // Разницы") — там оплата балансом происходит на КОНКРЕТНОМ тапе, который
+      // уже учтён как сеанс в netRevenue выше; не вычесть именно эту часть —
+      // получить фиктивную недостачу ровно на сумму баланса.
+      const counterAbonementAmount = counterAbonementByZone.get(zone.id) ?? 0;
+      const tapAbonementAmount = isCountersTapAssistZone(zone) ? (tapAbonementAmountByZone.get(zone.id) ?? 0) : 0;
+      // "Только касса": "Расчётной выручки и разницы не существует — сравнивать
+      // не с чем" (docs/spec/01-counters.md) — явно 0, а не actualCash−0 (аудит
+      // 2026-07-25: без этой ветки Разница молча равнялась ВСЕЙ кассе зоны;
+      // нигде в UI не показывается для cash_only, но лучше не оставлять
+      // бессмысленное число в ответе API — тот же принцип, что уже применён в
+      // /api/reports/counters/day/route.ts).
+      const difference =
+        zone.accountingMode === "cash_only"
+          ? 0
+          : Math.round((actualCash - (netRevenue - tapAbonementAmount)) * 100) / 100;
+
+      const readingsText = zone.assets
+        .map((asset) => {
+          const values = zs.readings
+            .filter((r) => r.assetId === asset.id)
+            .map((r) => r.reading)
+            .join("/");
+          return `${asset.name}: ${values}`;
+        })
+        .join(", ");
+
+      // Для сводки "по зоне" (docs/spec/telegram-summaries.md, Шаг 3, п.1):
+      // "<Актив> · <Тариф>: <показание> (+<дельта>)", полные имена — построчно
+      // по каждой введённой паре актив+тариф, не агрегируя.
+      const readingLines = zone.assets.flatMap((asset) =>
+        zone.tariffs
+          .map((tariff) => {
+            const reading = zs.readings.find((r) => r.assetId === asset.id && r.tariffId === tariff.id);
+            if (!reading) return null;
+            const key = `${asset.id}:${tariff.id}`;
+            const delta =
+              zone.accountingMode === "launches"
+                ? reading.reading
+                : calcSessions(reading.reading, previousByKey.get(key) ?? initialByKey.get(key) ?? 0);
+            return { assetName: asset.name, tariffName: tariff.name, reading: reading.reading, delta };
+          })
+          .filter((r): r is NonNullable<typeof r> => r !== null)
+      );
+
       return {
         zoneId: zs.zoneId,
         zoneName: zone.name,
         calculatedRevenue,
         actualCash,
         difference,
-        readingsText: "",
-        readingLines: [] as { assetName: string; tariffName: string; reading: number; delta: number }[],
-        returnsCount: 0,
+        readingsText,
+        readingLines,
+        returnsCount: returnsCountByZone.get(zone.id) ?? 0,
         cashAmount: zs.cashAmount,
         mobileAmount: zs.mobileAmount,
-        // Справочно, в кассу НЕ входит — уже получена раньше, при пополнении
-        // абонемента (запрос пользователя 2026-07-17: "во всех отчётах и
-        // сводках... правильные цифры", "добавить Абонемент").
-        abonementAmount: agg.abonementAmount,
-        gameRoomLaunchCount: agg.count,
-        gameRoomTotalMinutes: agg.totalMinutes,
-        perAsset: agg.perAsset,
+        abonementAmount: counterAbonementAmount,
+        gameRoomLaunchCount: null as number | null,
+        gameRoomTotalMinutes: null as number | null,
+        perAsset: [] as { assetName: string; count: number; amount: number }[],
         ticketsOrdersCount: null as number | null,
         ticketsCount: null as number | null,
         ticketsRedeemedCount: null as number | null,
         ticketsExpiredCount: null as number | null,
       };
-    }
-
-    if (isTicketsZone(zone)) {
-      // Билеты (docs/spec/10-tickets.md, "ДЕНЬГИ И СДАЧА ИТОГОВ") — касса
-      // ОДНОЙ ПАРОЙ ПОЛЕЙ на зону (не по активам, как у stays/launches выше —
-      // заказ мультиактивный, физически деньги по активам не разложить,
-      // осознанное расхождение). Способ оплаты заказа — справочная разбивка
-      // (agg.cash/mobile/abonementAmount), НЕ автоподстановка — те же
-      // zs.cashAmount/mobileAmount, что оператор ввёл вручную.
-      const agg = ticketsAggregateByZone.get(zone.id)!;
-      const calculatedRevenue = agg.totalAmount;
-      const actualCash = zs.cashAmount + zs.mobileAmount;
-      const difference = Math.round((actualCash + agg.abonementAmount - calculatedRevenue) * 100) / 100;
-      return {
-        zoneId: zs.zoneId,
-        zoneName: zone.name,
-        calculatedRevenue,
-        actualCash,
-        difference,
-        readingsText: "",
-        readingLines: [] as { assetName: string; tariffName: string; reading: number; delta: number }[],
-        returnsCount: 0,
-        cashAmount: zs.cashAmount,
-        mobileAmount: zs.mobileAmount,
-        abonementAmount: agg.abonementAmount,
-        gameRoomLaunchCount: null as number | null,
-        gameRoomTotalMinutes: null as number | null,
-        perAsset: [] as { assetName: string; count: number; amount: number }[],
-        ticketsOrdersCount: agg.ordersCount,
-        ticketsCount: agg.ticketsCount,
-        ticketsRedeemedCount: agg.redeemedCount,
-        ticketsExpiredCount: agg.expiredCount,
-      };
-    }
-
-    const tariffCalc = zone.tariffs.map((tariff) => {
-      const readingsForTariff = zs.readings.filter((r) => r.tariffId === tariff.id);
-      const sessions = readingsForTariff.reduce((sum, r) => {
-        if (zone.accountingMode === "launches") return sum + r.reading;
-        const key = `${r.assetId}:${tariff.id}`;
-        const previous = previousByKey.get(key) ?? initialByKey.get(key) ?? 0;
-        return sum + calcSessions(r.reading, previous);
-      }, 0);
-      return { tariffId: tariff.id, price: Number(tariff.price), sessions };
     });
 
-    // "Счёт." — всегда валовая выручка по счётчикам, ФАКТ (запрос пользователя
-    // 2026-07-16: "счётчики должны показывать всегда факт", без отдельной
-    // строки "Валовая"). Разница — по-прежнему от net (за вычетом тестов):
-    // это то число, по которому владелец реально принимает решение "сошлось/
-    // не сошлось", и оно должно оставаться 0, когда тесты объясняют весь
-    // разрыв, даже если "Счёт." теперь визуально не равен кассе.
-    const calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
-    // Tap-зоны (запрос пользователя 2026-07-25) — точный вычет ПО ТАРИФУ из
-    // voidedCountByZoneTariff вместо пропорционального calcZoneRevenue:
-    // теперь известно, у какого именно тарифа случился возврат/тест (тап
-    // привязан к конкретной записи), размазывать вычет по всем тарифам зоны
-    // больше не нужно и было бы менее точно, чем то, что уже известно.
-    const netRevenue = isCountersTapAssistZone(zone)
-      ? calcZoneGrossRevenue(
-          tariffCalc.map((tc) => ({
-            ...tc,
-            sessions: Math.max(tc.sessions - (voidedCountByZoneTariff.get(`${zone.id}:${tc.tariffId}`) ?? 0), 0),
-          }))
-        )
-      : calcZoneRevenue(tariffCalc, returnsCountByZone.get(zone.id) ?? 0);
-    const actualCash = zs.cashAmount + zs.mobileAmount;
-    // Оплата балансом (docs/spec/01-counters.md) — у ОБЫЧНЫХ (ручных)
-    // "Счётчиков"/"Только касса" НЕ участвует в Разнице (решение 2026-07-25 —
-    // decoupled "Списать с баланса" вообще не привязано ни к какому
-    // сеансу/показанию, вычитать там нечего). У TAP-зон иначе (запрос
-    // пользователя 2026-07-25: "ошибочно включаешь оплату с Баланса в расчёт
-    // Разницы") — там оплата балансом происходит на КОНКРЕТНОМ тапе, который
-    // уже учтён как сеанс в netRevenue выше; не вычесть именно эту часть —
-    // получить фиктивную недостачу ровно на сумму баланса.
-    const counterAbonementAmount = counterAbonementByZone.get(zone.id) ?? 0;
-    const tapAbonementAmount = isCountersTapAssistZone(zone) ? (tapAbonementAmountByZone.get(zone.id) ?? 0) : 0;
-    // "Только касса": "Расчётной выручки и разницы не существует — сравнивать
-    // не с чем" (docs/spec/01-counters.md) — явно 0, а не actualCash−0 (аудит
-    // 2026-07-25: без этой ветки Разница молча равнялась ВСЕЙ кассе зоны;
-    // нигде в UI не показывается для cash_only, но лучше не оставлять
-    // бессмысленное число в ответе API — тот же принцип, что уже применён в
-    // /api/reports/counters/day/route.ts).
-    const difference =
-      zone.accountingMode === "cash_only"
-        ? 0
-        : Math.round((actualCash - (netRevenue - tapAbonementAmount)) * 100) / 100;
+    // zoneId -> id только что созданной ZoneSubmission (реальный запрос
+    // пользователя 2026-07-25: "сохранение id [Telegram-сообщения]... чтобы
+    // такие ситуации можно было чинить") — нужен ПОСЛЕ транзакции, чтобы
+    // привязать externalMessageId отправленной сводки к конкретной строке
+    // (см. dispatchZoneSummary ниже), а после правки кассы через PATCH
+    // .../zone-submission/[id] было что редактировать в Telegram.
+    const zoneSubmissionIdByZone = new Map<string, string>();
 
-    const readingsText = zone.assets
-      .map((asset) => {
-        const values = zs.readings
-          .filter((r) => r.assetId === asset.id)
-          .map((r) => r.reading)
-          .join("/");
-        return `${asset.name}: ${values}`;
-      })
-      .join(", ");
-
-    // Для сводки "по зоне" (docs/spec/telegram-summaries.md, Шаг 3, п.1):
-    // "<Актив> · <Тариф>: <показание> (+<дельта>)", полные имена — построчно
-    // по каждой введённой паре актив+тариф, не агрегируя.
-    const readingLines = zone.assets.flatMap((asset) =>
-      zone.tariffs
-        .map((tariff) => {
-          const reading = zs.readings.find((r) => r.assetId === asset.id && r.tariffId === tariff.id);
-          if (!reading) return null;
-          const key = `${asset.id}:${tariff.id}`;
-          const delta =
-            zone.accountingMode === "launches"
-              ? reading.reading
-              : calcSessions(reading.reading, previousByKey.get(key) ?? initialByKey.get(key) ?? 0);
-          return { assetName: asset.name, tariffName: tariff.name, reading: reading.reading, delta };
-        })
-        .filter((r): r is NonNullable<typeof r> => r !== null)
-    );
-
-    return {
-      zoneId: zs.zoneId,
-      zoneName: zone.name,
-      calculatedRevenue,
-      actualCash,
-      difference,
-      readingsText,
-      readingLines,
-      returnsCount: returnsCountByZone.get(zone.id) ?? 0,
-      cashAmount: zs.cashAmount,
-      mobileAmount: zs.mobileAmount,
-      abonementAmount: counterAbonementAmount,
-      gameRoomLaunchCount: null as number | null,
-      gameRoomTotalMinutes: null as number | null,
-      perAsset: [] as { assetName: string; count: number; amount: number }[],
-      ticketsOrdersCount: null as number | null,
-      ticketsCount: null as number | null,
-      ticketsRedeemedCount: null as number | null,
-      ticketsExpiredCount: null as number | null,
-    };
-  });
-
-  let submission;
-  // zoneId -> id только что созданной ZoneSubmission (реальный запрос
-  // пользователя 2026-07-25: "сохранение id [Telegram-сообщения]... чтобы
-  // такие ситуации можно было чинить") — нужен ПОСЛЕ транзакции, чтобы
-  // привязать externalMessageId отправленной сводки к конкретной строке
-  // (см. dispatchZoneSummary ниже), а после правки кассы через PATCH
-  // .../zone-submission/[id] было что редактировать в Telegram.
-  const zoneSubmissionIdByZone = new Map<string, string>();
-  try {
-    submission = await prisma.$transaction(async (tx) => {
     const created = await tx.resultsSubmission.create({
       data: { tenantId: point.tenantId, pointId: point.id, operatorId: operator.id, idempotencyKey },
     });
@@ -620,6 +679,13 @@ export async function POST(request: Request) {
           returnsCount: returnsCountByZone.get(zone.id) ?? 0,
           cashAmount: zs.cashAmount,
           mobileAmount: zs.mobileAmount,
+          // Тот же now, что использован как until для всех агрегатов выше
+          // (аудит 2026-07-26) — раньше здесь был умолчательный @default(now())
+          // самой БД, физически чуть позже now: любой пуск/тап, закрывшийся в
+          // этом маленьком зазоре, не попадал НИ В ТЕКУЩУЮ, НИ В СЛЕДУЮЩУЮ
+          // сдачу (until следующей = createdAt этой), выручка терялась
+          // безвозвратно. Явный createdAt закрывает зазор до нуля.
+          createdAt: now,
         },
       });
       zoneSubmissionIdByZone.set(zs.zoneId, zoneSubmission.id);
@@ -726,8 +792,21 @@ export async function POST(request: Request) {
       }
     }
 
-    return created;
-    });
+    return { created, summary, zoneSubmissionIdByZone };
+  }
+
+  let txResult: Awaited<ReturnType<typeof runSubmission>>;
+  try {
+    // timeout выше дефолтных 5с Prisma (запрос пользователя не звучал, но
+    // необходимо технически) — транзакция теперь делает ВСЮ агрегацию, а не
+    // только запись, несколько зон в одной сдаче суммарно легко превысят
+    // дефолт под нагрузкой, приводя к спонтанным отказам без денежной
+    // причины. maxWait тоже поднят (аудит 2026-07-26, самопроверка) — теперь
+    // транзакция может реально ЖДАТЬ advisory-лок занятой зоны до её же
+    // timeout, а не только исполняться; дефолтные 2с ожидания свободного
+    // соединения были рассчитаны на короткую transaction-только-запись,
+    // которой раньше был этот код.
+    txResult = await prisma.$transaction(runSubmission, { timeout: 20000, maxWait: 20000 });
   } catch (err) {
     // Остаточная гонка на idempotencyKey (аудит 2026-07-25) — findUnique
     // выше это только быстрый оптимистичный отказ; два ПОЧТИ одновременных
@@ -743,6 +822,9 @@ export async function POST(request: Request) {
     }
     throw err;
   }
+  const submission = txResult.created;
+  const summary = txResult.summary;
+  const zoneSubmissionIdByZone = txResult.zoneSubmissionIdByZone;
 
   // Гасим накопленный "Аванс инкассации" сразу же, а не ждём следующей
   // инкассации (запрос пользователя 2026-07-25: "почему не вычесть эти 700 и

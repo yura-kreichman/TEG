@@ -721,6 +721,7 @@
     "removePhoto": "Прыбраць фота",
     "editTariff": "Змяніць назву і цану",
     "tariffsCardLabel": "Тарыфы · да 2",
+    "tariffsCardLabelUnlimited": "Тарыфы",
     "addTariffButton": "Дадаць тарыф",
     "addAssetButton": "Дадаць актыў",
     "newTariffTitle": "Новы тарыф",
@@ -1598,5 +1599,13 @@
     "newOrderButton": "Новы заказ",
     "noPriceLabel": "Няма цаны",
     "clearCartAction": "Ачысціць кошык"
+  },
+  "splitPayment": {
+    "title": "Разбіць аплату",
+    "remainingLabel": "Засталося размеркаваць:",
+    "addMethodButton": "Дадаць спосаб",
+    "selectWalletButton": "Выбраць кашалёк",
+    "walletSelectedLabel": "Кашалёк выбраны",
+    "submitButton": "Аплаціць"
   }
 }

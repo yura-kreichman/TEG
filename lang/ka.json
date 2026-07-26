@@ -721,6 +721,7 @@
     "removePhoto": "ფოტოს მოცილება",
     "editTariff": "სახელისა და ფასის შეცვლა",
     "tariffsCardLabel": "ტარიფები · 2-მდე",
+    "tariffsCardLabelUnlimited": "ტარიფები",
     "addTariffButton": "ტარიფის დამატება",
     "addAssetButton": "აქტივის დამატება",
     "newTariffTitle": "ახალი ტარიფი",
@@ -1598,5 +1599,13 @@
     "newOrderButton": "ახალი შეკვეთა",
     "noPriceLabel": "ფასი არ არის",
     "clearCartAction": "კალათის გასუფთავება"
+  },
+  "splitPayment": {
+    "title": "გადახდის დაყოფა",
+    "remainingLabel": "დარჩა გასანაწილებელი:",
+    "addMethodButton": "მეთოდის დამატება",
+    "selectWalletButton": "საფულის არჩევა",
+    "walletSelectedLabel": "საფულე არჩეულია",
+    "submitButton": "გადახდა"
   }
 }

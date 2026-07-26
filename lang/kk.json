@@ -721,6 +721,7 @@
     "removePhoto": "Фотоны алып тастау",
     "editTariff": "Атауы мен бағасын өзгерту",
     "tariffsCardLabel": "Тарифтер · 2-ге дейін",
+    "tariffsCardLabelUnlimited": "Тарифтер",
     "addTariffButton": "Тариф қосу",
     "addAssetButton": "Актив қосу",
     "newTariffTitle": "Жаңа тариф",
@@ -1598,5 +1599,13 @@
     "newOrderButton": "Жаңа тапсырыс",
     "noPriceLabel": "Бағасы жоқ",
     "clearCartAction": "Себетті тазалау"
+  },
+  "splitPayment": {
+    "title": "Төлемді бөлу",
+    "remainingLabel": "Бөлуге қалды:",
+    "addMethodButton": "Әдіс қосу",
+    "selectWalletButton": "Әмиянды таңдау",
+    "walletSelectedLabel": "Әмиян таңдалды",
+    "submitButton": "Төлеу"
   }
 }

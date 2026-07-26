@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCcw, Wallet, Trash2, MapPin, Layers, Banknote, CreditCard, History, Undo2 } from "lucide-react";
+import { ArrowLeftRight, RefreshCcw, Wallet, Trash2, MapPin, Layers, Banknote, CreditCard, History, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { ConfirmButton } from "@/components/confirm-button";
@@ -17,6 +17,8 @@ import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
 import { AbonementTopupFlow, type SpendZoneCtx } from "@/components/abonement-topup-flow";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
+import { SplitPaymentSheet } from "@/components/split-payment-sheet";
+import type { PaymentLegInput } from "@/lib/payment-split";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { Money } from "@/components/money";
 import { useI18n } from "@/components/i18n-provider";
@@ -28,6 +30,7 @@ import { ActionToast } from "@/components/action-toast";
 
 const TAP_ALL_ZONES = "all";
 const TAP_ZONE_FILTER_KEY = "countersTapZoneFilter";
+const TAP_SPLIT_METHODS = ["cash", "mobile", "abonement"] as const;
 
 interface CounterZone {
   id: string;
@@ -124,6 +127,12 @@ export default function OperatorCountersPage() {
   const [abonementTarget, setAbonementTarget] = useState<{ zoneId: string; assetId: string; tariffId: string; amount: number } | null>(
     null
   );
+  // Разбивка оплаты (запрос пользователя 2026-07-26) — та же логика захвата
+  // цели в момент клика, что и у "Пусков" (splitStartTarget), т.к. tapFlow
+  // обнуляется до открытия SplitPaymentSheet.
+  const [splitTapTarget, setSplitTapTarget] = useState<{ zoneId: string; assetId: string; tariffId: string; amount: number } | null>(
+    null
+  );
   // "Возврат/тест" для tap-зон (запрос пользователя 2026-07-25: "у конкретных
   // активов был выбран конкретный метод оплаты" — размазывать вычет
   // пропорционально между наличными/безналом было неправильно) — вместо
@@ -208,14 +217,15 @@ export default function OperatorCountersPage() {
     assetId: string,
     tariffId: string,
     paymentMethod?: "cash" | "mobile" | "abonement",
-    abonementWalletId?: string
+    abonementWalletId?: string,
+    legs?: PaymentLegInput[]
   ) {
     setTapSubmitting(true);
     try {
       const res = await fetch("/api/operator/counter-tap-events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ zoneId, assetId, tariffId, paymentMethod, abonementWalletId }),
+        body: JSON.stringify({ zoneId, assetId, tariffId, paymentMethod, abonementWalletId, legs }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
@@ -226,6 +236,7 @@ export default function OperatorCountersPage() {
       playConfirmChime();
       setTapFlow(null);
       setAbonementTarget(null);
+      setSplitTapTarget(null);
       loadTapEvents();
     } catch {
       playErrorChime();
@@ -685,6 +696,21 @@ export default function OperatorCountersPage() {
                     </PressableScale>
                   )}
                 </div>
+                <PressableScale className="w-fit">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto gap-1 px-0 text-muted-foreground underline underline-offset-2"
+                    onClick={() => {
+                      setSplitTapTarget({ zoneId: zone.id, assetId: tapFlow.assetId, tariffId: tapFlow.tariffId!, amount: tariff.price });
+                      setTapFlow(null);
+                    }}
+                  >
+                    <ArrowLeftRight className="size-3.5" />
+                    {t.splitPayment.title}
+                  </Button>
+                </PressableScale>
               </div>
             );
           })()}
@@ -699,6 +725,20 @@ export default function OperatorCountersPage() {
           if (!abonementTarget) return undefined;
           return logCounterTap(abonementTarget.zoneId, abonementTarget.assetId, abonementTarget.tariffId, "abonement", walletId);
         }}
+      />
+
+      <SplitPaymentSheet
+        open={splitTapTarget !== null}
+        onClose={() => setSplitTapTarget(null)}
+        total={splitTapTarget?.amount ?? 0}
+        allowedMethods={TAP_SPLIT_METHODS}
+        clientsEnabled={clientsEnabled}
+        submitting={tapSubmitting}
+        onSubmit={(legs) =>
+          splitTapTarget
+            ? logCounterTap(splitTapTarget.zoneId, splitTapTarget.assetId, splitTapTarget.tariffId, undefined, undefined, legs)
+            : undefined
+        }
       />
 
       {/* История тапов текущего периода (запрос пользователя 2026-07-25) —

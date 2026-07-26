@@ -32,15 +32,22 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operators/[
     return NextResponse.json({ error: "Точка не найдена" }, { status: 400 });
   }
 
-  await prisma.moneyOperation.create({
-    data: {
-      tenantId: owner.tenantId,
-      pointId: point.id,
-      type: "bonus_payout",
-      amount: -amountNumber,
-      performedByUserId: owner.user.id,
-      beneficiaryOperatorId: operator.id,
-    },
+  // Advisory-лок по operatorId (аудит 2026-07-26) — тот же класс бага, что и
+  // у /advance: форма на карточке оператора не была защищена от двойного
+  // клика/тапа, каждый CREATE безусловный, без идемпотентности — выплата
+  // премии реально задваивалась.
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${operator.id}))`;
+    await tx.moneyOperation.create({
+      data: {
+        tenantId: owner.tenantId,
+        pointId: point.id,
+        type: "bonus_payout",
+        amount: -amountNumber,
+        performedByUserId: owner.user.id,
+        beneficiaryOperatorId: operator.id,
+      },
+    });
   });
 
   return NextResponse.json({ balance: await calcOperatorBalance(operator.id) });

@@ -721,6 +721,7 @@
     "removePhoto": "Суратро нест кардан",
     "editTariff": "Ном ва нархро тағйир додан",
     "tariffsCardLabel": "Тарифҳо · то 2",
+    "tariffsCardLabelUnlimited": "Тарифҳо",
     "addTariffButton": "Тариф илова кардан",
     "addAssetButton": "Актив илова кардан",
     "newTariffTitle": "Тарифи нав",
@@ -1598,5 +1599,13 @@
     "newOrderButton": "Фармоиши нав",
     "noPriceLabel": "Нарх нест",
     "clearCartAction": "Тоза кардани сабад"
+  },
+  "splitPayment": {
+    "title": "Тақсим кардани пардохт",
+    "remainingLabel": "Барои тақсим кардан монд:",
+    "addMethodButton": "Илова кардани усул",
+    "selectWalletButton": "Интихоби ҳамён",
+    "walletSelectedLabel": "Ҳамён интихоб шуд",
+    "submitButton": "Пардохт"
   }
 }

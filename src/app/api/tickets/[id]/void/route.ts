@@ -61,6 +61,16 @@ export async function POST(request: Request, ctx: RouteContext<"/api/tickets/[id
   if (ticket.status === "voided") {
     return NextResponse.json({ error: "Билет уже аннулирован" }, { status: 400 });
   }
+  // Разбивка оплаты (запрос пользователя 2026-07-26) — только на весь заказ,
+  // поштучное аннулирование одного билета из разбитого заказа не имеет
+  // естественного соответствия одной доле, сервер его не допускает —
+  // используйте "Аннулировать заказ" целиком.
+  if (ticket.order.paymentMethod === "split") {
+    return NextResponse.json(
+      { error: "Заказ с разбивкой оплаты можно аннулировать только целиком" },
+      { status: 400 }
+    );
+  }
 
   const body = await request.json().catch(() => ({}));
   const reason: string | null = typeof body.reason === "string" && body.reason.trim() ? body.reason.trim() : null;

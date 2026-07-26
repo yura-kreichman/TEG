@@ -8,6 +8,8 @@ import { resolveLocale } from "@/lib/i18n";
 import { linkPendingFluentCartPurchases } from "@/lib/fluentcart-webhook";
 import { generateUniqueSlug } from "@/lib/instructions/slug";
 import { isReservedSlug, isSlugTaken } from "@/lib/landing/slug";
+import { isAuthRateLimited } from "@/lib/auth-rate-limit";
+import { getClientIp } from "@/lib/instructions/request-ip";
 
 // Новый тенант при регистрации всегда получает бесплатный пакет (пакеты
 // теперь управляются из Super Admin, docs/spec/06-super-admin.md) —
@@ -44,6 +46,16 @@ const FREE_TRIAL_DAYS = 30;
 const VALID_TIMEZONES = new Set(Intl.supportedValuesOf("timeZone"));
 
 export async function POST(request: Request) {
+  // Тот же паттерн, что у login/forgot-password (аудит 2026-07-27) —
+  // единственный из auth-роутов без rate-limit; капча сама по себе не
+  // одноразовая (stateless HMAC-токен с TTL 5 мин, один и тот же токен+ответ
+  // можно повторно слать любое число раз до истечения TTL) — без лимита это
+  // давало возможность массовой автоматической регистрации тенантов с одного
+  // IP.
+  if (isAuthRateLimited("register", getClientIp(request))) {
+    return NextResponse.json({ error: "Слишком много попыток. Попробуйте позже." }, { status: 429 });
+  }
+
   const { email, password, tenantName, captchaToken, captchaAnswer, timezone } = await request.json();
 
   if (!verifyCaptchaAnswer(captchaToken, captchaAnswer)) {

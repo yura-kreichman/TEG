@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowLeftRight,
   Banknote,
   Check,
   ChevronLeft,
@@ -27,6 +28,7 @@ import { SaveButton } from "@/components/ui/save-button";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
+import { SplitPaymentSheet } from "@/components/split-payment-sheet";
 import { useGoodsCart } from "@/components/operator-cart-context";
 import { Money } from "@/components/money";
 import { PrintButton } from "@/components/print/print-button";
@@ -39,7 +41,14 @@ import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import { playErrorChime } from "@/lib/beep";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { formatMoneyWithCurrency, parseMoneyInput } from "@/lib/format";
+import type { PaymentLegInput } from "@/lib/payment-split";
 import { cn } from "@/lib/utils";
+
+// Те же значения, что GOODS_PAYMENT_METHODS в src/lib/goods.ts — не
+// импортируем сам модуль сюда (серверный, тянет prisma/crypto в клиентский
+// бандл), значения продублированы, как и раньше делалось для похожих
+// констант в клиентских компонентах этого проекта.
+const GOODS_SPLIT_METHODS = ["cash", "mobile", "abonement"] as const;
 
 interface CategoryCtx {
   id: string;
@@ -105,6 +114,9 @@ export default function GoodsPage() {
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [abonementTarget, setAbonementTarget] = useState<{ amount: number } | null>(null);
+  // Разбивка оплаты (запрос пользователя 2026-07-26) — необязательный
+  // отдельный sheet поверх обычных трёх кнопок, см. SplitPaymentSheet.
+  const [splitOpen, setSplitOpen] = useState(false);
   // Модуль печати (запрос пользователя 2026-07-20) — квитанция по факту,
   // кнопка появляется в маленьком sheet сразу после успешной продажи,
   // никогда не печатается автоматически (оператор каждый раз решает сам).
@@ -112,7 +124,8 @@ export default function GoodsPage() {
   const [lastOrder, setLastOrder] = useState<{
     items: { goodsName: string; quantity: number; price: number; amount: number }[];
     total: number;
-    paymentMethod: "cash" | "mobile" | "abonement";
+    paymentMethod: "cash" | "mobile" | "abonement" | "split";
+    legs?: { method: string; amount: number }[];
   } | null>(null);
   const printAvailable = useOperatorPrintAvailable();
 
@@ -183,7 +196,7 @@ export default function GoodsPage() {
   const cartCount = currentCartLines.reduce((sum, l) => sum + l.quantity, 0);
   const cartTotal = currentCartLines.reduce((sum, l) => sum + l.price * l.quantity, 0);
 
-  async function sellCart(paymentMethod: "cash" | "mobile" | "abonement", walletId?: string) {
+  async function sellCart(paymentMethod: "cash" | "mobile" | "abonement", walletId?: string, legs?: PaymentLegInput[]) {
     if (currentCartLines.length === 0) return;
     setSubmitting(true);
     try {
@@ -194,6 +207,7 @@ export default function GoodsPage() {
           items: currentCartLines.map((l) => ({ goodsId: l.goodsId, quantity: l.quantity })),
           paymentMethod,
           walletId,
+          legs,
         }),
       });
       const data = await res.json();
@@ -221,13 +235,15 @@ export default function GoodsPage() {
             amount: s.amount,
           })),
           total: data.total,
-          paymentMethod,
+          paymentMethod: legs && legs.length > 0 ? "split" : paymentMethod,
+          legs: legs && legs.length > 0 ? legs : undefined,
         });
       }
       goodsCart.clearCart();
       setCartSheetOpen(false);
       setPaymentOpen(false);
       setAbonementTarget(null);
+      setSplitOpen(false);
       load();
     } catch {
       flashError(t.operatorApp.gameRoom.networkError);
@@ -263,7 +279,15 @@ export default function GoodsPage() {
               value: formatMoneyWithCurrency(item.price, locale, currency),
               large: order.items.length === 1,
             })),
-            { label: t.goods.receiptPaymentMethodLabel, value: paymentMethodLabel[order.paymentMethod] },
+            // Разбивка оплаты (запрос пользователя 2026-07-26) — своя строка
+            // на каждый способ вместо одной общей (PrintLine[] уже поддерживает
+            // произвольный список, инфраструктура печати не меняется).
+            ...(order.legs
+              ? order.legs.map((leg) => ({
+                  label: paymentMethodLabel[leg.method as "cash" | "mobile" | "abonement"],
+                  value: formatMoneyWithCurrency(leg.amount, locale, currency),
+                }))
+              : [{ label: t.goods.receiptPaymentMethodLabel, value: paymentMethodLabel[order.paymentMethod as "cash" | "mobile" | "abonement"] }]),
           ],
         },
       ],
@@ -653,6 +677,21 @@ export default function GoodsPage() {
               </PressableScale>
             )}
           </div>
+          <PressableScale className="w-fit">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-auto gap-1 px-0 text-muted-foreground underline underline-offset-2"
+              onClick={() => {
+                setPaymentOpen(false);
+                setSplitOpen(true);
+              }}
+            >
+              <ArrowLeftRight className="size-3.5" />
+              {t.splitPayment.title}
+            </Button>
+          </PressableScale>
         </div>
       </BottomSheet>
 
@@ -661,6 +700,16 @@ export default function GoodsPage() {
         onClose={() => setAbonementTarget(null)}
         amount={abonementTarget?.amount ?? 0}
         onConfirm={(walletId) => sellCart("abonement", walletId)}
+      />
+
+      <SplitPaymentSheet
+        open={splitOpen}
+        onClose={() => setSplitOpen(false)}
+        total={cartTotal}
+        allowedMethods={GOODS_SPLIT_METHODS}
+        clientsEnabled={goodsAllowBalancePayment}
+        submitting={submitting}
+        onSubmit={(legs) => sellCart("cash", undefined, legs)}
       />
 
       <BottomSheet

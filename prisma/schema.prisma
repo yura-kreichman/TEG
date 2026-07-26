@@ -72,7 +72,7 @@ model Tenant {
 
   // Интеграция с FluentCart (docs/spec/06-super-admin.md) — вебхук находит
   // тенанта по этому полю (создаёт нового, если ещё не было).
-  fluentcartCustomerId String?   @unique
+  fluentcartCustomerId  String?   @unique
   // order.id заказа, который последним перевёл тенанта в active (см.
   // syncTenantFromFluentCartEvent). Нужен, чтобы отличать "истекающее"
   // событие от ТЕКУЩЕГО заказа/подписки от такого же события у старого,
@@ -80,7 +80,7 @@ model Tenant {
   // дублирующий тестовый заказ) — без этого поля любое "истекающее" событие
   // от любого чужого заказа клиента слепо переводило тенанта в expired,
   // даже если реальная активная подписка осталась (найдено 2026-07-12).
-  fluentcartOrderId    String?
+  fluentcartOrderId     String?
   // Чисто информационное "действует до" из subscriptions[].next_billing_date
   // вебхука FluentCart (docs/fluentcart-webhook-schema.md §3) — FluentCart не
   // отдаёт отдельного "access end date" поля, только дату следующего
@@ -88,7 +88,7 @@ model Tenant {
   // — только для отображения в кабинете владельца. Отдельно от
   // subscriptionExpiresAt (тот — ручной/плановый жёсткий срок, выставляется
   // Super Admin'ом напрямую или планировщиком, самостоятельный механизм).
-  currentPeriodEnd     DateTime?
+  currentPeriodEnd      DateTime?
   // Момент получения ПОСЛЕДНЕГО фактически применённого вебхука FluentCart
   // (не создания WebhookEvent — самого syncTenantFromFluentCartEvent) —
   // защита от переупорядоченной доставки (найдено аудитом 2026-07-25):
@@ -102,7 +102,7 @@ model Tenant {
   // Точечный оверрайд числовых лимитов пакета для конкретного тенанта —
   // { maxPoints?, maxZones?, maxAssets?, maxOperators? } | null, поверх
   // package.*. См. getTenantLimits() в src/lib/packages.ts.
-  limitOverrides       Json?
+  limitOverrides        Json?
   // Ручной оверрайд Super Admin'ом (запрос пользователя 2026-07-17: "опция
   // установить владельцу пакет Unlimited без ограничений, которого нет в
   // пакетах") — снимает ВСЕ 4 лимита разом, полностью байпасит и package.*,
@@ -110,7 +110,7 @@ model Tenant {
   // Отдельное поле, а не строка в списке Package: намеренно НЕ покупаемый,
   // не создаваемый через FluentCart пакет — только ручной рубильник в
   // /admin/tenants/[id], как limitOverrides.
-  unlimited            Boolean   @default(false)
+  unlimited             Boolean   @default(false)
 
   // Контакты тенанта для платформенной поддержки — заполняет Super Admin в
   // админ-модуле, не сам владелец (докс 2026-07-10, "полные настройки
@@ -251,12 +251,12 @@ model Tenant {
   instructionsEnabled Boolean @default(true)
   // Задачи (нет отдельной спеки, модуль внутри 00-architecture.md) — гейтит
   // /tasks и инлайн-блок задач на главном экране PWA оператора.
-  tasksEnabled Boolean @default(true)
+  tasksEnabled        Boolean @default(true)
   // Лендинг (docs/spec/08-landing.md) — гейтит /settings/landing и публичную
   // витрину /s/{slug} (решение та же логика, что у Инструктажей выше: если
   // Владелец выключил, публичная страница не должна оставаться в индексации
   // и доступной по прямой ссылке).
-  landingEnabled Boolean @default(true)
+  landingEnabled      Boolean @default(true)
   // Товары (docs/spec/09-goods.md) — мастер-рубильник НАД существующим
   // Operator.goodsAccess: тот решает, у КАКОГО оператора есть доступ, этот —
   // есть ли модуль на тенанте вообще (владельческий nav-пункт "Товары" до сих
@@ -265,7 +265,7 @@ model Tenant {
   // сотрудника (запрос пользователя 2026-07-22: "не должны быть и
   // соответствующие тумблеры") — бессмысленно давать доступ к модулю,
   // которого на тенанте больше нет.
-  goodsEnabled Boolean @default(true)
+  goodsEnabled        Boolean @default(true)
   // "Рабочее время" сознательно НЕ гейтится (запрос пользователя 2026-07-22:
   // "невозможно отключить... кто же будет вводить итоги тогда") — модуль
   // живёт внутри Сотрудников, того же экрана, что обязателен для сдачи
@@ -278,7 +278,7 @@ model Tenant {
   // мастер-рубильник НАД goodsAllowBalancePayment тоже (запрос пользователя
   // 2026-07-22: "раз не будет клиентов то не будет и метода оплаты
   // Балансом" — везде, не только в Товарах).
-  clientsEnabled Boolean @default(true)
+  clientsEnabled      Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -490,8 +490,13 @@ model Operator {
   // только про продажу). default false — как и goodsAccess, включать явно.
   ticketsAccess Boolean @default(false)
 
+  // onDelete: Cascade (аудит 2026-07-26/27, полный повторный проход схемы) —
+  // тот же класс бага, что уже чинили у ResultsSubmission.operator/
+  // Goods.category и др. — Operator и его создатель (User) каскадно
+  // уносятся от Tenant НЕЗАВИСИМЫМИ цепочками, порядок между ними Postgres
+  // не гарантирует.
   createdByUserId String
-  createdBy       User   @relation("OperatorCreatedBy", fields: [createdByUserId], references: [id])
+  createdBy       User   @relation("OperatorCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
 
   // Цветовая метка оператора (docs/spec/05-work-time.md) — как Asset.colorTag,
   // атрибут карточки сотрудника, используется в табеле/сводках/отчётах.
@@ -811,7 +816,12 @@ model ZoneReturnEvent {
   point   Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
 
   operatorId String
-  operator   Operator @relation(fields: [operatorId], references: [id])
+  // onDelete: Cascade (аудит 2026-07-26/27) — тот же класс бага, что уже
+  // чинили у ResultsSubmission.operator: без него удаление тенанта падало бы
+  // FK-конфликтом на любом тенанте, хоть раз использовавшем "Возврат/тест" —
+  // Zone уже каскадно уносит эту запись, но Operator удаляется отдельной
+  // цепочкой от Tenant, порядок независимых каскадов Postgres не гарантирует.
+  operator   Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -838,7 +848,9 @@ model ZoneExpenseEvent {
   point   Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
 
   operatorId String
-  operator   Operator @relation(fields: [operatorId], references: [id])
+  // onDelete: Cascade — тот же класс бага, что у ResultsSubmission.operator
+  // (аудит 2026-07-26/27), см. комментарий у ZoneReturnEvent.operator выше.
+  operator   Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
 
   categoryId String?
   category   ExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -877,7 +889,9 @@ model CounterTapEvent {
   tariff   Tariff @relation(fields: [tariffId], references: [id], onDelete: Cascade)
 
   operatorId String
-  operator   Operator @relation(fields: [operatorId], references: [id])
+  // onDelete: Cascade — тот же класс бага, что у ResultsSubmission.operator
+  // (аудит 2026-07-26/27), см. комментарий у ZoneReturnEvent.operator выше.
+  operator   Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
 
   // Способ оплаты (запрос пользователя 2026-07-25: "разве не имеет смысл
   // спрашивать метод оплаты") — СПРАВОЧНАЯ пометка для cash/mobile, тот же
@@ -914,6 +928,8 @@ model CounterTapEvent {
 
   createdAt DateTime @default(now())
 
+  paymentLegs CounterTapEventPaymentLeg[]
+
   // "С последней сдачи по assetId+tariffId" — тот же горячий путь, что у
   // ZoneReturnEvent.zoneId+createdAt, но по паре актив+тариф (показание
   // считается per-паре, не per-зоне).
@@ -921,10 +937,32 @@ model CounterTapEvent {
   @@index([zoneId, createdAt])
 }
 
-// 1 или 2 тарифа на зону: свободное название + цена за сеанс. Те же правила
-// и тот же лимит действуют и у режима "Прибывания" (запрос пользователя
-// 2026-07-17: "здесь действуют те правила и лимит тарифов") — создаются
-// независимо от активов через обычную карточку "Тарифы"/"Добавить тариф",
+// Разбивка оплаты одного тапа (запрос пользователя 2026-07-26) — как и
+// CounterTapEvent.paymentMethod, cash/mobile-доли ЧИСТО СПРАВОЧНЫЕ (не
+// подставляются в кассу Сдачи итогов), доля method="abonement" списывается
+// сразу — тот же принцип, что LaunchPaymentLeg.
+model CounterTapEventPaymentLeg {
+  id    String          @id @default(cuid())
+  tapId String
+  tap   CounterTapEvent @relation(fields: [tapId], references: [id], onDelete: Cascade)
+
+  method   String // "cash" | "mobile" | "abonement"
+  amount   Decimal          @db.Decimal(10, 2)
+  walletId String? // только method="abonement"
+  wallet   AbonementWallet? @relation(fields: [walletId], references: [id])
+  order    Int
+
+  @@index([tapId])
+  @@index([walletId])
+}
+
+// Тариф зоны: свободное название + цена за сеанс. Лимит "максимум 2" — только
+// у accountingMode="counters" (аппаратное ограничение самих счётчиков, запрос
+// пользователя 2026-07-27: "Счётчики — это аппаратные устройства... в других
+// режимах учёта их нет"); у "Прибываний"/"Пусков"/"Только касса" тарифов
+// может быть сколько угодно (лимит был общим до 2026-07-27, решение
+// пересмотрено). Тарифы создаются независимо от активов через обычную
+// карточку "Тарифы"/"Добавить тариф",
 // просто с доп. полями pricingMode/durationMinutes/roundingMode/minAmount,
 // значимыми только когда зона в режиме "stays" (докс: "переиспользовать
 // существующую сущность Tariff" вместо отдельной LaunchPricing, а до этого —
@@ -1100,11 +1138,15 @@ model AbonementWallet {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  transactions     AbonementTransaction[]
-  launches         Launch[]
-  goodsSales       GoodsSale[]
-  ticketOrders     TicketOrder[]
-  counterTapEvents CounterTapEvent[]
+  transactions               AbonementTransaction[]
+  launches                   Launch[]
+  goodsSales                 GoodsSale[]
+  ticketOrders               TicketOrder[]
+  counterTapEvents           CounterTapEvent[]
+  goodsSalePaymentLegs       GoodsSalePaymentLeg[]
+  ticketOrderPaymentLegs     TicketOrderPaymentLeg[]
+  launchPaymentLegs          LaunchPaymentLeg[]
+  counterTapEventPaymentLegs CounterTapEventPaymentLeg[]
 
   // Один кошелёк на номер в рамках тенанта — общий на все точки.
   @@unique([tenantId, phone])
@@ -1226,7 +1268,11 @@ model Goods {
   tenantId   String
   tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   categoryId String
-  category   GoodsCategory @relation(fields: [categoryId], references: [id])
+  // onDelete: Cascade (аудит 2026-07-26/27) — тот же класс бага, что уже
+  // чинили у ResultsSubmission.operator: обе стороны каскадно уносятся от
+  // Tenant НЕЗАВИСИМЫМИ цепочками, порядок между ними Postgres не
+  // гарантирует.
+  category   GoodsCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   name     String
   photoUrl String?
@@ -1266,7 +1312,9 @@ model Goods {
 model GoodsStock {
   id      String @id @default(cuid())
   goodsId String
-  goods   Goods  @relation(fields: [goodsId], references: [id])
+  // onDelete: Cascade (аудит 2026-07-26/27) — тот же класс бага, см.
+  // комментарий у Goods.category выше.
+  goods   Goods  @relation(fields: [goodsId], references: [id], onDelete: Cascade)
   pointId String
   point   Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
 
@@ -1279,15 +1327,18 @@ model GoodsStock {
 model GoodsRestock {
   id      String @id @default(cuid())
   goodsId String
-  goods   Goods  @relation(fields: [goodsId], references: [id])
+  // onDelete: Cascade (аудит 2026-07-26/27) — тот же класс бага, см.
+  // комментарий у Goods.category выше.
+  goods   Goods  @relation(fields: [goodsId], references: [id], onDelete: Cascade)
   pointId String
   point   Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
 
   quantity          Int
   // Пополнение — только владелец (docs/spec/09-goods.md), без
-  // performedByOperatorId.
+  // performedByOperatorId. onDelete: Cascade — обязательное поле, SetNull
+  // невозможен (тот же класс бага, что и goodsId выше).
   performedByUserId String
-  performedByUser   User   @relation(fields: [performedByUserId], references: [id])
+  performedByUser   User   @relation(fields: [performedByUserId], references: [id], onDelete: Cascade)
 
   occurredAt DateTime @default(now())
 
@@ -1299,7 +1350,9 @@ model GoodsSale {
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   goodsId  String
-  goods    Goods  @relation(fields: [goodsId], references: [id])
+  // onDelete: Cascade (аудит 2026-07-26/27) — тот же класс бага, см.
+  // комментарий у Goods.category выше.
+  goods    Goods  @relation(fields: [goodsId], references: [id], onDelete: Cascade)
   pointId  String
   point    Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
 
@@ -1327,9 +1380,36 @@ model GoodsSale {
   createdAt  DateTime @default(now())
 
   abonementTransactions AbonementTransaction[]
+  paymentLegs           GoodsSalePaymentLeg[]
 
   @@index([pointId, occurredAt])
   @@index([goodsId])
+  @@index([walletId])
+}
+
+// Разбивка оплаты одной продажи на несколько способов (запрос пользователя
+// 2026-07-26: "иногда люди хотят немного наличными, часть безналом и часть с
+// баланса") — необязательная: GoodsSale без разбивки (подавляющее
+// большинство продаж) продолжает работать как раньше, с paymentMethod
+// напрямую и БЕЗ единой строки здесь (0 строк = старое поведение, тот же
+// приём, что у TariffOption для "По факту" без вариантов). Разбивка отмечена
+// на самой продаже через paymentMethod="split" (GOODS_PAYMENT_SPLIT
+// sentinel, src/lib/payment-split.ts) — тогда GoodsSale.walletId всегда
+// null (кошелёк теперь только на строке method="abonement" здесь), а сумма
+// amount у всех строк равна GoodsSale.amount.
+model GoodsSalePaymentLeg {
+  id     String    @id @default(cuid())
+  saleId String
+  sale   GoodsSale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  method   String // "cash" | "mobile" | "abonement"
+  amount   Decimal          @db.Decimal(10, 2)
+  walletId String? // только method="abonement"
+  wallet   AbonementWallet? @relation(fields: [walletId], references: [id])
+  // Порядок отображения/ввода — тот же приём, что TariffOption.order.
+  order    Int
+
+  @@index([saleId])
   @@index([walletId])
 }
 
@@ -1340,7 +1420,11 @@ model GoodsRevision {
   pointId    String
   point      Point         @relation(fields: [pointId], references: [id], onDelete: Cascade)
   categoryId String
-  category   GoodsCategory @relation(fields: [categoryId], references: [id])
+  // onDelete: Cascade (аудит 2026-07-26/27) — тот же класс бага, что уже
+  // чинили у ResultsSubmission.operator: обе стороны каскадно уносятся от
+  // Tenant НЕЗАВИСИМЫМИ цепочками, порядок между ними Postgres не
+  // гарантирует.
+  category   GoodsCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   performedByOperatorId String?
   performedByOperator   Operator? @relation(fields: [performedByOperatorId], references: [id])
@@ -1367,11 +1451,11 @@ model GoodsRevisionLine {
   id         String        @id @default(cuid())
   revisionId String
   revision   GoodsRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
-  goodsId String
+  goodsId    String
   // onDelete: Cascade — тот же фикс удаления тенанта, что у
   // ResultsSubmission.operator выше: без него удаление падало на любом
   // тенанте, хоть раз проводившем ревизию остатков Товаров.
-  goods Goods @relation(fields: [goodsId], references: [id], onDelete: Cascade)
+  goods      Goods         @relation(fields: [goodsId], references: [id], onDelete: Cascade)
 
   // Снапшот GoodsStock.quantity ДО выравнивания — сам GoodsStock тут же
   // перезаписывается на actualQuantity, поэтому "расчётное" нужно хранить
@@ -1479,14 +1563,15 @@ model TicketOrder {
   // onDelete: Cascade — тот же фикс удаления тенанта, что у
   // ResultsSubmission.operator выше: без него удаление падало на любом
   // тенанте, хоть раз продавшем билет.
-  soldByOperator Operator @relation(fields: [soldByOperatorId], references: [id], onDelete: Cascade)
-  soldAt         DateTime @default(now())
+  soldByOperator   Operator @relation(fields: [soldByOperatorId], references: [id], onDelete: Cascade)
+  soldAt           DateTime @default(now())
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   tickets               Ticket[]
   abonementTransactions AbonementTransaction[]
+  paymentLegs           TicketOrderPaymentLeg[]
 
   // Планировщик (src/lib/summary-scheduler.ts) шлёт клиенту в Telegram
   // напоминание "заказ скоро истечёт" ровно один раз за expiresAt — этот
@@ -1500,6 +1585,29 @@ model TicketOrder {
   @@index([expiresAt, expiryReminderSentAt])
 }
 
+// Разбивка оплаты заказа на несколько способов (запрос пользователя
+// 2026-07-26) — тот же принцип, что GoodsSalePaymentLeg: необязательная,
+// 0 строк = старое поведение (paymentMethod остаётся cash/mobile/abonement
+// напрямую). При разбивке TicketOrder.paymentMethod = "split", walletId
+// родителя — null (кошелёк только на доле method="abonement"). Разбивка —
+// НА ВЕСЬ ЗАКАЗ, не на билет; частичное (потетикетное) аннулирование
+// разбитого заказа сервер не допускает — только аннулирование заказа
+// целиком (см. voidTicketInTx, src/lib/tickets.ts).
+model TicketOrderPaymentLeg {
+  id          String      @id @default(cuid())
+  orderId     String
+  ticketOrder TicketOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  method   String // "cash" | "mobile" | "abonement"
+  amount   Decimal          @db.Decimal(10, 2)
+  walletId String? // только method="abonement"
+  wallet   AbonementWallet? @relation(fields: [walletId], references: [id])
+  order    Int
+
+  @@index([orderId])
+  @@index([walletId])
+}
+
 // Одна позиция заказа = один билет, гасится независимо от остальных билетов
 // того же заказа.
 model Ticket {
@@ -1508,7 +1616,9 @@ model Ticket {
   order   TicketOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   assetId String
-  asset   Asset  @relation(fields: [assetId], references: [id])
+  // onDelete: Cascade (аудит 2026-07-26/27) — тот же класс бага, см.
+  // комментарий у Goods.category выше.
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   variantNameSnapshot String
   priceSnapshot       Decimal @db.Decimal(10, 2)
@@ -1621,7 +1731,7 @@ model ResultsSubmission {
   // цепочкой (через Tenant напрямую) и Postgres не гарантирует порядок,
   // в котором сработают два независимых каскада — реальная ошибка,
   // найдена и воспроизведена прямым выполнением DELETE на аудите 2026-07-25.
-  operator Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  operator   Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
 
   submittedAt DateTime @default(now())
   createdAt   DateTime @default(now())
@@ -1652,7 +1762,9 @@ model ZoneSubmission {
   resultsSubmission   ResultsSubmission @relation(fields: [resultsSubmissionId], references: [id], onDelete: Cascade)
 
   zoneId String
-  zone   Zone   @relation(fields: [zoneId], references: [id])
+  // onDelete: Cascade (аудит 2026-07-26/27) — тот же класс бага, см.
+  // комментарий у Goods.category выше.
+  zone   Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
   returnsCount Int // возвраты/тестовые пуски, шт.
   cashAmount   Decimal @db.Decimal(10, 2)
@@ -1682,10 +1794,12 @@ model AssetReading {
   zoneSubmission   ZoneSubmission @relation(fields: [zoneSubmissionId], references: [id], onDelete: Cascade)
 
   assetId String
-  asset   Asset  @relation(fields: [assetId], references: [id])
+  // onDelete: Cascade (аудит 2026-07-26/27) — тот же класс бага, см.
+  // комментарий у Goods.category выше.
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   tariffId String
-  tariff   Tariff @relation(fields: [tariffId], references: [id])
+  tariff   Tariff @relation(fields: [tariffId], references: [id], onDelete: Cascade)
 
   // Показание счётчика, 4 разряда (0-9999); переполнение и расчёт разницы
   // по модулю 10000 — на уровне приложения, не в БД.
@@ -1868,6 +1982,7 @@ model Launch {
   zoneSubmission   ZoneSubmission? @relation(fields: [zoneSubmissionId], references: [id])
 
   abonementTransactions AbonementTransaction[]
+  paymentLegs           LaunchPaymentLeg[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1880,6 +1995,27 @@ model Launch {
   // Агрегат для сдачи итогов — завершённые пуски зоны за период.
   @@index([zoneId, endedAt])
   @@index([zoneSubmissionId])
+}
+
+// Разбивка оплаты пуска на несколько способов (запрос пользователя
+// 2026-07-26) — как и Launch.paymentMethod, ЧИСТО СПРАВОЧНАЯ (см. его
+// комментарий выше): наличные/безнал-доли НЕ журналируются отдельными
+// MoneyOperation и НЕ подставляются в кассу шага 4 мастера сдачи итогов —
+// только для разреза в aggregateGameRoomLaunches. Доля method="abonement"
+// списывается сразу, как и раньше для обычного paymentMethod="abonement".
+model LaunchPaymentLeg {
+  id       String @id @default(cuid())
+  launchId String
+  launch   Launch @relation(fields: [launchId], references: [id], onDelete: Cascade)
+
+  method   String // "cash" | "mobile" | "abonement"
+  amount   Decimal          @db.Decimal(10, 2)
+  walletId String? // только method="abonement"
+  wallet   AbonementWallet? @relation(fields: [walletId], references: [id])
+  order    Int
+
+  @@index([launchId])
+  @@index([walletId])
 }
 
 // ============================================================================
@@ -1990,7 +2126,9 @@ model Shift {
   // какой точки списывать привязанные к смене advance/bonus_payout — Operator
   // сам по себе не привязан к одной точке (роуминг-устройства).
   pointId String
-  point   Point  @relation(fields: [pointId], references: [id])
+  // onDelete: Cascade (аудит 2026-07-26/27) — тот же класс бага, см.
+  // комментарий у Goods.category выше.
+  point   Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
 
   // Смена через полночь: endAt физически на следующие сутки после startAt —
   // "дата смены" (для группировки/фильтров) всегда дата startAt.
@@ -2033,8 +2171,10 @@ model OperatorBalanceCarryover {
   amount  Decimal @db.Decimal(10, 2) // может быть отрицательным
   comment String?
 
+  // onDelete: Cascade — обязательное поле, SetNull невозможен (тот же класс
+  // бага, что и у Goods.category выше, аудит 2026-07-26/27).
   createdByUserId String
-  createdByUser   User   @relation(fields: [createdByUserId], references: [id])
+  createdByUser   User   @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -2179,8 +2319,8 @@ model ClientTelegramLink {
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  chatId String
-  phone  String
+  chatId   String
+  phone    String
   // Определён один раз при первой проверке контакта (message.from.language_code,
   // сматченный на ALL_LOCALES, иначе "en" — src/lib/telegram-client-i18n.ts).
   // Нужен ИМЕННО для проактивных сообщений (изменение баланса, напоминание об
@@ -2202,7 +2342,7 @@ model ClientTelegramLink {
 // каждом новом /start CLIENT-<slug> — если клиент передумал/зашёл по ссылке
 // другого тенанта, актуален всегда последний запрос.
 model ClientBotSession {
-  chatId          String   @id
+  chatId          String  @id
   pendingTenantId String?
 
   // Флоу саморегистрации (запрос пользователя 2026-07-25: "чтобы сами себя
@@ -2364,8 +2504,10 @@ model Task {
   note   String?
   status String  @default("todo")
 
+  // onDelete: Cascade — обязательное поле, SetNull невозможен (тот же класс
+  // бага, что и у Goods.category выше, аудит 2026-07-26/27).
   createdByUserId String
-  createdBy       User   @relation("TaskCreatedBy", fields: [createdByUserId], references: [id])
+  createdBy       User   @relation("TaskCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
 
   // Ответственные — операторы и/или сам Владелец (User); пусто в обоих
   // спискax = "видят все операторы" (см. prototype-tasks-v1.html, opVisible()).
