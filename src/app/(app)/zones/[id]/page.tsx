@@ -197,7 +197,7 @@ function RateOptionsEditor({
 
   return (
     <div className="flex flex-col gap-2">
-      <Label>{t.zoneDetail.gameRoomRateOptionsLabel}</Label>
+      <Label>{t.zoneDetail.gameRoomOptionsLabel}</Label>
       {options.map((opt, index) => (
         <div key={index} className="flex items-center gap-2 rounded-control border border-border p-2">
           <Input
@@ -982,12 +982,13 @@ export default function ZoneDetailPage() {
     );
   }
 
-  // Лимит "максимум 2" — только у Счётчиков, он аппаратно обоснован (запрос
-  // пользователя 2026-07-27: "Счётчики — это аппаратные устройства... в
-  // других режимах учёта их нет"). У Прибываний/Пусков/Только касса тарифов
-  // может быть сколько угодно — то же снято и на сервере, см.
-  // /api/zones/[id]/tariffs/route.ts.
-  const tariffLimitReached = zone.accountingMode === "counters" && zone.tariffs.length >= 2;
+  // Лимит "2" у Счётчиков — аппаратно обоснован (запрос пользователя
+  // 2026-07-27: "Счётчики — это аппаратные устройства"). У остальных режимов
+  // мягкий потолок "4" (решение того же дня, пересмотрено вечером) — не
+  // аппаратный, просто чтобы владелец не захламлял зону тарифами; то же
+  // число на сервере, см. /api/zones/[id]/tariffs/route.ts.
+  const tariffMax = zone.accountingMode === "counters" ? 2 : 4;
+  const tariffLimitReached = zone.tariffs.length >= tariffMax;
 
   // Тариф актива невалиден, если не выбран вообще, или выбранный тариф с тех
   // пор удалён (soft-delete — Asset.tariffId физически остаётся, но тариф
@@ -1195,7 +1196,7 @@ export default function ZoneDetailPage() {
           {zone.accountingMode !== "cash_only" && !isTicketsZone(zone) && (
           <SpringCard hover={false} className="flex flex-col gap-1">
             <h2 className="text-section-title">
-              {zone.accountingMode === "counters" ? t.zoneDetail.tariffsCardLabel : t.zoneDetail.tariffsCardLabelUnlimited}
+              {t.zoneDetail.tariffsCardLabel.replace("{max}", String(tariffMax))}
             </h2>
 
             {zone.tariffs.map((tariff) => (
