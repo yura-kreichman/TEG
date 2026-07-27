@@ -24,7 +24,6 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { BottomGlassNav, type BottomGlassNavItem } from "@/components/bottom-glass-nav";
 import { ImpersonationBanner } from "@/components/impersonation-banner";
 import { SubscriptionBanner } from "@/components/subscription-banner";
-import { TenantLogoWatermark } from "@/components/tenant-logo-watermark";
 import { PoweredByMark } from "@/components/powered-by-mark";
 import { BgEffectLayer, type BgEffect } from "@/components/bg-effects";
 import { useTextScale, textScaleZoom } from "@/components/text-scale-provider";
@@ -179,7 +178,6 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
   // Дефолт — всё включено, чтобы до ответа сервера бар не мигал пустыми
   // слотами (тот же приём, что list начинается с 0 у badge-счётчиков).
   const [enabledModules, setEnabledModules] = useState<EnabledModules>(DEFAULT_ENABLED_MODULES);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [bgEffect, setBgEffect] = useState<BgEffect>("waves");
 
   // Обновляем при каждой навигации — самый дешёвый способ не держать
@@ -209,10 +207,8 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
             goodsEnabled: data.goodsEnabled ?? true,
             clientsEnabled: data.clientsEnabled ?? true,
           });
-          // Логотип тенанта + фоновый эффект — тот же роут уже вызывался
-          // здесь ради модулей (запрос пользователя 2026-07-27), отдельные
-          // fetch-и не нужны.
-          setLogoUrl(data.logoUrl ?? null);
+          // Фоновый эффект — тот же роут уже вызывался здесь ради модулей
+          // (запрос пользователя 2026-07-27), отдельный fetch не нужен.
           setBgEffect((data.bgEffect ?? "waves") as BgEffect);
         });
     }
@@ -299,10 +295,13 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
           правильно — баг был только на десктопной ширине. */}
       <ImpersonationBanner />
       <SubscriptionBanner />
-      {/* Логотип тенанта водяным знаком + "Работает на RentOS" — и у
-          Владельца тоже (запрос пользователя 2026-07-27), тот же приём, что
-          в PWA Сотрудника: справа, не в потоке сайдбара. */}
-      <TenantLogoWatermark logoUrl={logoUrl} />
+      {/* Водяной знак логотипа — убран из кабинета Владельца целиком (запрос
+          пользователя 2026-07-27, после нескольких раундов правок z-index/
+          маски/непрозрачности: реальные JPG-логотипы без альфа-канала
+          всё равно давали заметное пятно, цепляющееся за непрозрачные
+          кнопки/вкладки без собственного стекинг-контекста). В PWA
+          Сотрудника (operator-branding-chrome.tsx) — остаётся. Фоновый
+          эффект (волны и т.п.) логотипа не касается, живёт отдельно. */}
       <BgEffectLayer effect={bgEffect} />
       <PoweredByMark className="pointer-events-none fixed bottom-2 right-3 hidden md:inline-flex" />
       <div className="flex flex-1 flex-col md:flex-row">

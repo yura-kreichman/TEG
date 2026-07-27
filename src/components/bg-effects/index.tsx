@@ -16,20 +16,20 @@ export { BG_EFFECT_VALUES, type BgEffect } from "./shared";
  * в рендер-цикле; @media (prefers-reduced-motion: reduce) отключает
  * анимацию на уровне globals.css.
  *
- * z-index: 1, не отрицательный — реальный баг, найден пользователем
- * 2026-07-27 (живой тест на планшете): отрицательный z-index прятался за
- * bg-surface-0 (полотно страницы), которое полностью непрозрачно на любом
- * устройстве, где в Настройки → Внешний вид → "Фон приложения" не выбран
- * узор — не связанная с этим эффектом настройка, но эффект молча гас
- * из-за неё. .nav-glass получил явный z-index: 10 (globals.css) именно
- * чтобы остаться выше — без этого при z-index: 1 здесь бар и декоративный
- * слой были бы на одном уровне (оба z-index: auto по умолчанию), порядок
- * между ними не гарантирован.
+ * z-index: -1 — реальный баг, найден пользователем 2026-07-27 дважды, в
+ * разные стороны: сначала отрицательный z-index прятался за bg-surface-0
+ * (полотно страницы, полностью непрозрачно на устройстве без выбранного
+ * "Фон приложения" — временно переводили на z-index: 1), но тогда эффект
+ * стал всплывать ПОВЕРХ карточек/плашек контента без собственного
+ * стекинг-контекста (запрос пользователя того же дня: "все анимации
+ * эффектов должны быть под плашками", живой скриншот — волны поверх
+ * "Тема"/"Размер текста"). "Под плашками" важнее, чем "видно при любом
+ * Фон приложения" — возвращаем строго отрицательный z-index.
  */
 export function BgEffectLayer({ effect }: { effect: BgEffect }) {
   if (effect === "none") return null;
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-x-0 bottom-0 h-32 overflow-hidden" style={{ zIndex: 1 }}>
+    <div aria-hidden className="pointer-events-none fixed inset-x-0 bottom-0 h-32 overflow-hidden" style={{ zIndex: -1 }}>
       {effect === "waves" && <WavesEffect />}
       {effect === "particles" && <ParticlesEffect />}
       {effect === "sparkles" && <SparklesEffect />}
