@@ -20,6 +20,7 @@ import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
 import { SplitPaymentSheet } from "@/components/split-payment-sheet";
 import type { PaymentLegInput } from "@/lib/payment-split";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
+import { colorTagGradient } from "@/lib/utils";
 import { Money } from "@/components/money";
 import { useI18n } from "@/components/i18n-provider";
 import { formatTime } from "@/lib/datetime-format";
@@ -478,7 +479,7 @@ export default function OperatorCountersPage() {
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-col gap-0.5 p-3">
+                      <div className="flex flex-col gap-0.5 p-3" style={{ background: colorTagGradient(a.colorTag) }}>
                         <span className="truncate text-[0.90625rem] font-bold tracking-[-0.01em]">{a.name}</span>
                         {tapZoneFilter === TAP_ALL_ZONES && tapZones.length > 1 && (
                           <span className="truncate text-[0.75rem] text-muted-foreground">{a.zoneName}</span>

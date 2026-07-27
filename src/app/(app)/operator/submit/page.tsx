@@ -37,7 +37,7 @@ import { playErrorChime } from "@/lib/beep";
 import type { PrintDocumentData, PrintSection } from "@/lib/print/receipt-document";
 import { formatMoneyWithCurrency, parseMoneyInput } from "@/lib/format";
 import { formatTime } from "@/lib/datetime-format";
-import { cn } from "@/lib/utils";
+import { cn, colorTagGradient } from "@/lib/utils";
 
 interface TariffCtx {
   id: string;
@@ -963,7 +963,7 @@ export default function SubmitResultsPage() {
                           style={{ backgroundColor: asset.colorTag }}
                         />
                       </div>
-                      <div className="flex flex-col gap-1 p-3">
+                      <div className="flex flex-col gap-1 p-3" style={{ background: colorTagGradient(asset.colorTag) }}>
                         <span className="text-[0.90625rem] font-bold tracking-[-0.01em]">{asset.name}</span>
                         <span className="text-xs leading-snug text-muted-foreground">
                           {filled

@@ -25,9 +25,10 @@ export function cn(...inputs: ClassValue[]) {
 // пользователя 2026-07-09: "используй везде лёгкие градиенты, изменяй
 // прозрачность в процентах немного" — первая версия с плоскими 20%
 // оказалась слишком выраженной). CSS Color Level 4 hex-альфа (#rrggbb + 2
-// hex-цифры) без rgba/color-mix парсинга; 26/0d ≈ 15%/5% — лёгкий переход,
-// не сплошной цвет.
+// hex-цифры) без rgba/color-mix парсинга; 40/0d ≈ 25%/5% — стартовый цвет
+// заметнее (запрос пользователя 2026-07-27), конечный по-прежнему почти
+// прозрачный, не сплошная заливка.
 export function colorTagGradient(colorTag: string | null | undefined): string | undefined {
   if (!colorTag || !/^#[0-9a-fA-F]{6}$/.test(colorTag)) return undefined
-  return `linear-gradient(135deg, ${colorTag}26, ${colorTag}0d)`
+  return `linear-gradient(135deg, ${colorTag}40, ${colorTag}0d)`
 }

@@ -29,7 +29,7 @@ import { isTicketsZone } from "@/lib/results-calc";
 import { unlockBeep, playErrorChime, playSaveDing } from "@/lib/beep";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import type { PaymentLegInput } from "@/lib/payment-split";
-import { cn } from "@/lib/utils";
+import { cn, colorTagGradient } from "@/lib/utils";
 
 // Те же значения, что TICKET_PAYMENT_METHODS в src/lib/tickets.ts — не
 // импортируем сам модуль сюда (серверный, тянет prisma в клиентский
@@ -804,7 +804,10 @@ export default function TicketsZonePage() {
                           </span>
                         )}
                       </div>
-                      <div className="flex shrink-0 flex-col gap-0 px-2 py-1.5">
+                      <div
+                        className="flex shrink-0 flex-col gap-0 px-2 py-1.5"
+                        style={{ background: colorTagGradient(a.colorTag) }}
+                      >
                         <span className="truncate text-[0.8125rem] font-bold leading-tight tracking-[-0.01em]">{a.name}</span>
                         {/* "Тайл неактивен С ПРИЧИНОЙ" (docs/spec/10-
                             tickets.md, "ЦЕНЫ — НА АКТИВАХ, НЕ ТАРИФЫ") — не

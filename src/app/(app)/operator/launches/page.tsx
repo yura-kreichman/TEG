@@ -24,7 +24,7 @@ import { useActionToast } from "@/hooks/use-action-toast";
 import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { formatMoneyWithCurrency } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { cn, colorTagGradient } from "@/lib/utils";
 
 interface TariffCtx {
   id: string;
@@ -424,7 +424,7 @@ export default function LaunchesZonePage() {
                         </span>
                       )}
                     </div>
-                    <div className="flex flex-col gap-0.5 p-3">
+                    <div className="flex flex-col gap-0.5 p-3" style={{ background: colorTagGradient(a.colorTag) }}>
                       <span className="truncate text-[0.90625rem] font-bold tracking-[-0.01em]">{a.name}</span>
                       {zoneFilter === ALL_ZONES && zones.length > 1 && (
                         <span className="truncate text-[0.75rem] text-muted-foreground">{a.zoneName}</span>

@@ -28,7 +28,7 @@ import { ActionToast } from "@/components/action-toast";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import type { PaymentLegInput } from "@/lib/payment-split";
-import { cn } from "@/lib/utils";
+import { cn, colorTagGradient } from "@/lib/utils";
 
 // Те же значения, что LAUNCH_PAYMENT_METHODS в src/lib/game-room.ts — не
 // импортируем сам модуль сюда (серверный), см. тот же приём в других
@@ -692,7 +692,10 @@ export default function StaysZonePage() {
           // пользователя 2026-07-18: "Батутные арены" с единственной "Ареной
           // синей" — нет смысла показывать выбор), достаточно значка,
           // цветовой метки и названия одной строкой, без кликабельного тайла.
-          <div className="mb-4 flex items-center gap-2.5 rounded-card border border-border bg-card p-3">
+          <div
+            className="mb-4 flex items-center gap-2.5 rounded-card border border-border bg-card p-3"
+            style={{ background: colorTagGradient(filteredAssets[0].colorTag) }}
+          >
             <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-control bg-muted">
               {filteredAssets[0].photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -703,10 +706,6 @@ export default function StaysZonePage() {
                 <MapPin className="size-5 text-muted-foreground" />
               )}
             </div>
-            <span
-              className="size-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: filteredAssets[0].colorTag }}
-            />
             <span className="truncate text-[0.90625rem] font-bold tracking-[-0.01em]">{filteredAssets[0].name}</span>
           </div>
         ) : (
@@ -715,7 +714,7 @@ export default function StaysZonePage() {
               {filteredAssets.map((a) => {
                 const active = a.id === selectedAssetId;
                 return (
-                    <PressableScale key={a.id}>
+                    <PressableScale key={a.id} className="relative">
                       <button
                         type="button"
                         onClick={() => {
@@ -740,26 +739,29 @@ export default function StaysZonePage() {
                             className="absolute left-2.5 top-2.5 size-4 rounded-full ring-[2.5px] ring-card"
                             style={{ backgroundColor: a.colorTag }}
                           />
-                          {/* Явная отметка выбранного актива (запрос
-                              пользователя 2026-07-18: "чтобы было очевидно
-                              какой актив выбран") — раньше единственным
-                              сигналом была тонкая цветная рамка тайла,
-                              недостаточно заметная. Размер и позиция — как у
-                              счётчика пусков на экране "Пуски" (тот же
-                              min-w-11/rounded-full/shadow-md в углу тайла). */}
-                          {active && (
-                            <span className="absolute right-2 top-2 flex size-11 items-center justify-center rounded-full bg-success text-success-foreground shadow-md ring-2 ring-card">
-                              <Check className="size-6" />
-                            </span>
-                          )}
                         </div>
-                        <div className="flex flex-col gap-0.5 p-3">
+                        <div className="flex flex-col gap-0.5 p-3" style={{ background: colorTagGradient(a.colorTag) }}>
                           <span className="truncate text-[0.90625rem] font-bold tracking-[-0.01em]">{a.name}</span>
                           {zoneFilter === ALL_ZONES && zones.length > 1 && (
                             <span className="truncate text-[0.75rem] text-muted-foreground">{a.zoneName}</span>
                           )}
                         </div>
                       </button>
+                      {/* Явная отметка выбранного актива (запрос
+                          пользователя 2026-07-18: "чтобы было очевидно какой
+                          актив выбран") — раньше единственным сигналом была
+                          тонкая цветная рамка тайла, недостаточно заметная.
+                          Позиция/размер — тот же "торчащий за угол" приём,
+                          что у бейджа привязки клиента и у "Сдачи итогов"
+                          (запрос пользователя 2026-07-27: "сдвинь на угол
+                          как иконка кошелька для единообразия"); снаружи
+                          <button>, не внутри — иначе обрезалось бы
+                          overflow-hidden фото-блока. */}
+                      {active && (
+                        <span className="absolute -right-2 -top-2 flex size-9 items-center justify-center rounded-full bg-success text-success-foreground shadow-md">
+                          <Check className="size-5" />
+                        </span>
+                      )}
                     </PressableScale>
                   );
                 })}
