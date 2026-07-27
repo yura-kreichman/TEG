@@ -1060,7 +1060,7 @@
     "collectionAmountLabel": "Importo consegnato al titolare",
     "switchOperator": "Cambia dipendente",
     "thermalPrinterTitle": "Stampante Bluetooth",
-    "thermalPrinterHint": "Stampa diretta che bypassa l'app ponte di terze parti — per stampanti termiche che si bloccano o stampano sfocato con la stampa di sistema normale.",
+    "thermalPrinterHint": "Stampa diretta che bypassa l'app ponte di terze parti — per stampanti termiche che si bloccano o stampano sfocato con la stampa di sistema normale. Dopo aver ricaricato la pagina, riconnetti di nuovo — il browser non può ancora ripristinarlo automaticamente.",
     "thermalPrinterStatusReady": "Stampante connessa",
     "thermalPrinterStatusUnpaired": "Stampante non associata",
     "thermalPrinterStatusConnecting": "Connessione…",

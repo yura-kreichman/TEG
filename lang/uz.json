@@ -1060,7 +1060,7 @@
     "collectionAmountLabel": "Egasiga topshirilgan summa",
     "switchOperator": "Xodimni almashtirish",
     "thermalPrinterTitle": "Bluetooth printer",
-    "thermalPrinterHint": "Uchinchi tomon ko'prik ilovasini chetlab o'tadigan to'g'ridan-to'g'ri chop etish — oddiy tizim chop etishda osilib qoladigan yoki xira chop etadigan termoprinterlar uchun.",
+    "thermalPrinterHint": "Uchinchi tomon ko'prik ilovasini chetlab o'tadigan to'g'ridan-to'g'ri chop etish — oddiy tizim chop etishda osilib qoladigan yoki xira chop etadigan termoprinterlar uchun. Sahifa qayta yuklangandan keyin qaytadan ulang — brauzer buni hozircha avtomatik tiklay olmaydi.",
     "thermalPrinterStatusReady": "Printer ulandi",
     "thermalPrinterStatusUnpaired": "Printer ulanmagan",
     "thermalPrinterStatusConnecting": "Ulanmoqda…",

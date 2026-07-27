@@ -5,7 +5,7 @@ import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { openPrintDocument, type PrintDocumentData, type PrintMethod, type ReceiptBranding } from "@/lib/print/receipt-document";
-import { useThermalPrinter } from "@/hooks/use-thermal-printer";
+import { PRINTER_NOT_PAIRED, useThermalPrinter } from "@/hooks/use-thermal-printer";
 import { useI18n } from "@/components/i18n-provider";
 
 // Кнопка печати — общий компонент для всех документов (квитанция/Z-отчёт/
@@ -58,16 +58,24 @@ export function PrintButton({
     // 2026-07-27: "с понятной ошибкой оператору, не тихим провалом"), иначе
     // Сотрудник решит, что чек напечатан, хотя реально ушёл в системный
     // диалог печати, который он выключил именно из-за этого режима.
+    //
+    // Проверка ЧЕРЕЗ вызов print() (а не через thermalPrinter.status ДО
+    // вызова) — реальный баг с реального устройства (2026-07-28): раньше
+    // здесь читался thermalPrinter.status этого же экземпляра хука ДО
+    // попытки печати, что было мёртвым кодом с самого начала (см.
+    // use-thermal-printer.ts) — теперь единственный источник истины про
+    // сопряжённое устройство — сам print(), синхронно из общего хранилища.
     if (printMethod === "bluetooth") {
-      if (thermalPrinter.status !== "ready") {
-        setError(thermalPrinter.errorMessage ?? t.operatorApp.thermalPrinterNotConnectedError);
-        setPrinting(false);
-        return;
-      }
       try {
         await thermalPrinter.print(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+        const message =
+          err instanceof Error && err.message === PRINTER_NOT_PAIRED
+            ? t.operatorApp.thermalPrinterNotConnectedError
+            : err instanceof Error
+              ? err.message
+              : String(err);
+        setError(message);
       }
       setTimeout(() => setPrinting(false), PRINT_COOLDOWN_MS);
       return;

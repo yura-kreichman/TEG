@@ -1060,7 +1060,7 @@
     "collectionAmountLabel": "Sahibkara verilən məbləğ",
     "switchOperator": "İşçini dəyiş",
     "thermalPrinterTitle": "Bluetooth printer",
-    "thermalPrinterHint": "Üçüncü tərəf körpü tətbiqini bypass edən birbaşa çap — adi sistem çapında dayanan və ya bulanıq çap edən termoprinterlər üçün.",
+    "thermalPrinterHint": "Üçüncü tərəf körpü tətbiqini bypass edən birbaşa çap — adi sistem çapında dayanan və ya bulanıq çap edən termoprinterlər üçün. Səhifə yenidən yükləndikdən sonra yenidən qoşun — brauzer bunu hələ avtomatik bərpa edə bilmir.",
     "thermalPrinterStatusReady": "Printer qoşulub",
     "thermalPrinterStatusUnpaired": "Printer əlaqələndirilməyib",
     "thermalPrinterStatusConnecting": "Qoşulur…",

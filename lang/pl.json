@@ -1060,7 +1060,7 @@
     "collectionAmountLabel": "Kwota przekazana właścicielowi",
     "switchOperator": "Zmień pracownika",
     "thermalPrinterTitle": "Drukarka Bluetooth",
-    "thermalPrinterHint": "Drukowanie bezpośrednie z pominięciem zewnętrznej aplikacji pośredniczącej — dla drukarek termicznych, które zawieszają się lub drukują niewyraźnie przy zwykłym drukowaniu systemowym.",
+    "thermalPrinterHint": "Drukowanie bezpośrednie z pominięciem zewnętrznej aplikacji pośredniczącej — dla drukarek termicznych, które zawieszają się lub drukują niewyraźnie przy zwykłym drukowaniu systemowym. Po odświeżeniu strony połącz ponownie — przeglądarka nie potrafi jeszcze przywrócić tego automatycznie.",
     "thermalPrinterStatusReady": "Drukarka podłączona",
     "thermalPrinterStatusUnpaired": "Drukarka niesparowana",
     "thermalPrinterStatusConnecting": "Łączenie…",

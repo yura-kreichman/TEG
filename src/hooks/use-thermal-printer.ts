@@ -1,80 +1,101 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import {
   buildEscPosCommands,
   columnsForPaperWidth,
   connectAndPrint,
   forgetSavedDevice,
+  getPairedDevice,
   getSavedDevice,
   isWebBluetoothSupported,
-  rememberDevice,
   requestThermalPrinter,
+  subscribePairedDevice,
 } from "@/lib/print/thermal-bluetooth";
 import type { PrintDocumentData, ReceiptPaperWidth } from "@/lib/print/receipt-document";
 
 export type ThermalPrinterStatus = "unsupported" | "unpaired" | "connecting" | "ready" | "error";
 
-// Единая точка UI для прямой Bluetooth-печати (2026-07-27) — см. thermal-
-// bluetooth.ts для причин архитектуры. "unsupported" — сам Web Bluetooth
-// недоступен в этом браузере (iOS Safari и т.п.), UI в этом случае просто не
-// предлагает Bluetooth-режим вообще, не пытается и не показывает ошибку.
-export function useThermalPrinter(paperWidth: ReceiptPaperWidth) {
-  const [status, setStatus] = useState<ThermalPrinterStatus>("unpaired");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+// Бросается из print(), когда устройство не сопряжено на ЭТОЙ странице —
+// вызывающая сторона (PrintButton и т.п.) ловит по message и подставляет
+// локализованный текст (t.operatorApp.thermalPrinterNotConnectedError),
+// здесь своей i18n-строки нет намеренно (хук вне React-компонента i18n не видит).
+export const PRINTER_NOT_PAIRED = "PRINTER_NOT_PAIRED";
 
-  /* eslint-disable react-hooks/set-state-in-effect */
+// Единая точка UI для прямой Bluetooth-печати (2026-07-27, переписано
+// 2026-07-28) — статус сопряжённого устройства читается из ОБЩЕГО хранилища
+// (thermal-bluetooth.ts, useSyncExternalStore), а не из локального
+// React-state этого хука. Реальный баг с реального устройства: раньше
+// каждая кнопка печати создавала свой ОТДЕЛЬНЫЙ экземпляр этого хука —
+// сопряжение через иконку/Настройки не было видно кнопке печати, та всегда
+// видела "не подключён", даже сразу после успешного выбора устройства.
+// "unsupported" — сам Web Bluetooth недоступен в этом браузере (iOS Safari
+// и т.п.), UI в этом случае просто не предлагает Bluetooth-режим вообще.
+export function useThermalPrinter(paperWidth: ReceiptPaperWidth) {
+  const device = useSyncExternalStore(subscribePairedDevice, getPairedDevice, () => null);
+  const [transient, setTransient] = useState<"connecting" | "error" | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const supported = isWebBluetoothSupported();
+
+  const status: ThermalPrinterStatus = !supported
+    ? "unsupported"
+    : transient === "connecting"
+      ? "connecting"
+      : transient === "error"
+        ? "error"
+        : device
+          ? "ready"
+          : "unpaired";
+
+  // Прогрессивное улучшение (см. thermal-bluetooth.ts): пробуем
+  // восстановить устройство через getDevices(), на случай если Chrome
+  // когда-нибудь включит это без флага — на большинстве реальных браузеров
+  // сейчас это no-op (getDevices недоступен), не единственный источник
+  // истины, просто попытка.
   useEffect(() => {
-    if (!isWebBluetoothSupported()) {
-      setStatus("unsupported");
-      return;
-    }
-    getSavedDevice().then((device) => setStatus(device ? "ready" : "unpaired"));
-  }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
+    if (supported) getSavedDevice();
+  }, [supported]);
 
   const pair = useCallback(async () => {
-    setStatus("connecting");
+    setTransient("connecting");
     setErrorMessage(null);
     try {
-      const device = await requestThermalPrinter();
-      rememberDevice(device);
-      setStatus("ready");
+      await requestThermalPrinter();
+      setTransient(null);
     } catch (err) {
       // NotFoundError — пользователь закрыл диалог выбора устройства сам
       // (или устройств не нашлось), не настоящая ошибка, просто возврат к
       // "не сопряжено" без сообщения.
       if (err instanceof Error && err.name === "NotFoundError") {
-        setStatus("unpaired");
+        setTransient(null);
         return;
       }
       setErrorMessage(err instanceof Error ? err.message : String(err));
-      setStatus("error");
+      setTransient("error");
     }
   }, []);
 
   const forget = useCallback(() => {
     forgetSavedDevice();
-    setStatus("unpaired");
+    setTransient(null);
     setErrorMessage(null);
   }, []);
 
   const print = useCallback(
     async (data: PrintDocumentData) => {
-      const device = await getSavedDevice();
-      if (!device) {
-        setStatus("unpaired");
-        throw new Error("Принтер не подключён");
+      const currentDevice = getPairedDevice();
+      if (!currentDevice) {
+        throw new Error(PRINTER_NOT_PAIRED);
       }
-      setStatus("connecting");
+      setTransient("connecting");
       setErrorMessage(null);
       try {
         const commands = buildEscPosCommands(data, columnsForPaperWidth(paperWidth));
-        await connectAndPrint(device, commands);
-        setStatus("ready");
+        await connectAndPrint(currentDevice, commands);
+        setTransient(null);
       } catch (err) {
         setErrorMessage(err instanceof Error ? err.message : String(err));
-        setStatus("error");
+        setTransient("error");
         throw err;
       }
     },

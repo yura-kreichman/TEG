@@ -33,6 +33,45 @@ const CANDIDATE_SERVICE_UUIDS = [
 
 const STORAGE_KEY = "rentos-thermal-bt-device-id";
 
+// Общее хранилище выбранного устройства на всю страницу (2026-07-28,
+// реальный баг с реального устройства: "выбираю принтер, но при печати
+// пишет «не подключён»") — причина была не в Bluetooth, а в том, что каждая
+// кнопка печати вызывала свой ОТДЕЛЬНЫЙ экземпляр useThermalPrinter с
+// собственным React-состоянием: сопряжение в одном месте (иконка/Настройки)
+// никак не было видно другому (кнопка печати). `BluetoothDevice` — не
+// сериализуемый объект, его нельзя просто положить в localStorage и
+// восстановить по id: единственный способ получить объект заново —
+// navigator.bluetooth.getDevices(), а он до сих пор скрыт за флагом Chrome
+// chrome://flags/#enable-web-bluetooth-new-permissions-backend (статус
+// chromestatus.com/feature/4797798639730688 на 2026-07-28: "In developer
+// trial", таргет M159) — на реальных браузерах пользователей это ВСЕГДА
+// пустой список, поэтому и восстановления после перезагрузки страницы не
+// бывает: это ограничение платформы, не баг здесь. Единственный НАДЁЖНЫЙ
+// источник живого объекта — та же вкладка/сессия, в которой отработал
+// requestDevice() — вот он и хранится тут, в памяти модуля, общий для всех
+// компонентов на странице.
+let pairedDevice: BluetoothDevice | null = null;
+const listeners = new Set<() => void>();
+
+function setPairedDevice(device: BluetoothDevice | null): void {
+  pairedDevice = device;
+  if (typeof localStorage !== "undefined") {
+    if (device) localStorage.setItem(STORAGE_KEY, device.id);
+    else localStorage.removeItem(STORAGE_KEY);
+  }
+  for (const listener of listeners) listener();
+}
+
+/** Текущее сопряжённое устройство (синхронно, для useSyncExternalStore). */
+export function getPairedDevice(): BluetoothDevice | null {
+  return pairedDevice;
+}
+
+export function subscribePairedDevice(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
 // Ширина строки в СИМВОЛАХ (не мм) — печатается моноширинным шрифтом самого
 // принтера, у него нет "мм", только столбцы. 32/48 — стандартные значения
 // для 58/80мм при обычном (не сжатом) шрифте большинства ESC/POS-контроллеров.
@@ -112,29 +151,39 @@ function isWebBluetoothSupported(): boolean {
 
 export { isWebBluetoothSupported };
 
-/** По прямому пользовательскому жесту (клик) — запрашивает выбор устройства. */
+/** По прямому пользовательскому жесту (клик) — запрашивает выбор устройства и запоминает его в общем хранилище. */
 export async function requestThermalPrinter(): Promise<BluetoothDevice> {
-  return navigator.bluetooth.requestDevice({
+  const device = await navigator.bluetooth.requestDevice({
     acceptAllDevices: true,
     optionalServices: CANDIDATE_SERVICE_UUIDS,
   });
+  setPairedDevice(device);
+  return device;
 }
 
-/** Ранее разрешённое устройство этого браузера — без нового prompt'а. */
+/**
+ * Устройство для печати прямо сейчас — из памяти (эта же вкладка/сессия),
+ * либо (прогрессивное улучшение на будущее, см. комментарий у pairedDevice
+ * выше) через getDevices(), если когда-нибудь станет доступен без флага —
+ * тогда восстановление после перезагрузки заработает само, без правок кода.
+ */
 export async function getSavedDevice(): Promise<BluetoothDevice | null> {
+  if (pairedDevice) return pairedDevice;
   if (!isWebBluetoothSupported() || typeof navigator.bluetooth.getDevices !== "function") return null;
   const savedId = localStorage.getItem(STORAGE_KEY);
   if (!savedId) return null;
-  const devices = await navigator.bluetooth.getDevices();
-  return devices.find((d) => d.id === savedId) ?? null;
-}
-
-export function rememberDevice(device: BluetoothDevice): void {
-  localStorage.setItem(STORAGE_KEY, device.id);
+  try {
+    const devices = await navigator.bluetooth.getDevices();
+    const found = devices.find((d) => d.id === savedId) ?? null;
+    if (found) setPairedDevice(found);
+    return found;
+  } catch {
+    return null;
+  }
 }
 
 export function forgetSavedDevice(): void {
-  localStorage.removeItem(STORAGE_KEY);
+  setPairedDevice(null);
 }
 
 class ThermalPrinterWriteError extends Error {}

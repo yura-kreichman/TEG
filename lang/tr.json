@@ -1060,7 +1060,7 @@
     "collectionAmountLabel": "Sahibe verilen tutar",
     "switchOperator": "Çalışan değiştir",
     "thermalPrinterTitle": "Bluetooth yazıcı",
-    "thermalPrinterHint": "Üçüncü taraf köprü uygulamasını atlayan doğrudan yazdırma — normal sistem yazdırmada takılıp kalan veya bulanık yazdıran termal yazıcılar için.",
+    "thermalPrinterHint": "Üçüncü taraf köprü uygulamasını atlayan doğrudan yazdırma — normal sistem yazdırmada takılıp kalan veya bulanık yazdıran termal yazıcılar için. Sayfa yeniden yüklendikten sonra tekrar bağlanın — tarayıcı bunu henüz otomatik olarak geri yükleyemiyor.",
     "thermalPrinterStatusReady": "Yazıcı bağlı",
     "thermalPrinterStatusUnpaired": "Yazıcı eşleştirilmedi",
     "thermalPrinterStatusConnecting": "Bağlanıyor…",

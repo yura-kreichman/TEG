@@ -22,7 +22,7 @@ import { ActionToast } from "@/components/action-toast";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
-import { useThermalPrinter } from "@/hooks/use-thermal-printer";
+import { PRINTER_NOT_PAIRED, useThermalPrinter } from "@/hooks/use-thermal-printer";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import { openPrintDocument, type PrintDocumentData } from "@/lib/print/receipt-document";
@@ -406,21 +406,23 @@ export default function TicketsZonePage() {
     };
   }
 
-  // Bluetooth-режим (2026-07-27) — та же логика, что у общего PrintButton
-  // (src/components/print/print-button.tsx): при выбранном Bluetooth, но не
-  // готовом принтере — понятная ошибка через уже существующий errorToast
-  // этой страницы, не тихий провал в системную печать.
+  // Bluetooth-режим (2026-07-27, исправлено 2026-07-28) — та же логика, что
+  // у общего PrintButton (src/components/print/print-button.tsx): проверка
+  // готовности принтера ЧЕРЕЗ вызов print(), не через status ДО вызова —
+  // см. use-thermal-printer.ts.
   async function printOrder(order: NonNullable<typeof lastOrder>) {
     const data = buildOrderReceiptData(order);
     if (printAvailable.printMethod === "bluetooth") {
-      if (thermalPrinter.status !== "ready") {
-        flashError(thermalPrinter.errorMessage ?? t.operatorApp.thermalPrinterNotConnectedError);
-        return;
-      }
       try {
         await thermalPrinter.print(data);
       } catch (err) {
-        flashError(err instanceof Error ? err.message : String(err));
+        const message =
+          err instanceof Error && err.message === PRINTER_NOT_PAIRED
+            ? t.operatorApp.thermalPrinterNotConnectedError
+            : err instanceof Error
+              ? err.message
+              : String(err);
+        flashError(message);
       }
       return;
     }

@@ -1060,7 +1060,7 @@
     "collectionAmountLabel": "Սեփականատիրոջը փոխանցված գումարը",
     "switchOperator": "Փոխել աշխատակցին",
     "thermalPrinterTitle": "Bluetooth տպիչ",
-    "thermalPrinterHint": "Ուղիղ տպում՝ շրջանցելով երրորդ կողմի կամրջող հավելվածը — կախվող կամ մշուշոտ տպող ջերմային տպիչների համար։",
+    "thermalPrinterHint": "Ուղիղ տպում՝ շրջանցելով երրորդ կողմի կամրջող հավելվածը — կախվող կամ մշուշոտ տպող ջերմային տպիչների համար։ Էջը վերաբեռնելուց հետո նորից միացրեք — դիտարկիչը դեռ չի կարող ինքնաշխատ վերականգնել սա։",
     "thermalPrinterStatusReady": "Տպիչը միացված է",
     "thermalPrinterStatusUnpaired": "Տպիչը զուգակցված չէ",
     "thermalPrinterStatusConnecting": "Միանում է…",

@@ -1060,7 +1060,7 @@
     "collectionAmountLabel": "Suma predată proprietarului",
     "switchOperator": "Schimbă angajatul",
     "thermalPrinterTitle": "Imprimantă Bluetooth",
-    "thermalPrinterHint": "Tipărire directă ce ocolește aplicația-punte terță — pentru imprimante termice care se blochează sau tipăresc neclar prin tipărirea obișnuită de sistem.",
+    "thermalPrinterHint": "Tipărire directă ce ocolește aplicația-punte terță — pentru imprimante termice care se blochează sau tipăresc neclar prin tipărirea obișnuită de sistem. După reîncărcarea paginii, conectați din nou — browserul nu poate restabili asta automat încă.",
     "thermalPrinterStatusReady": "Imprimantă conectată",
     "thermalPrinterStatusUnpaired": "Imprimantă neasociată",
     "thermalPrinterStatusConnecting": "Se conectează…",

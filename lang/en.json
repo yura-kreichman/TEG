@@ -1060,7 +1060,7 @@
     "collectionAmountLabel": "Amount handed to the owner",
     "switchOperator": "Switch employee",
     "thermalPrinterTitle": "Bluetooth printer",
-    "thermalPrinterHint": "Direct printing that bypasses the third-party bridge app — for thermal printers that hang or print blurry through regular system printing.",
+    "thermalPrinterHint": "Direct printing that bypasses the third-party bridge app — for thermal printers that hang or print blurry through regular system printing. After a page reload, connect again — the browser can't restore this automatically yet.",
     "thermalPrinterStatusReady": "Printer connected",
     "thermalPrinterStatusUnpaired": "Printer not paired",
     "thermalPrinterStatusConnecting": "Connecting…",
