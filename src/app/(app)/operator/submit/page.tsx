@@ -1046,7 +1046,7 @@ export default function SubmitResultsPage() {
                             style={{ backgroundColor: asset.colorTag }}
                           />
                         </div>
-                        <div className="flex flex-col gap-1 p-3">
+                        <div className="flex flex-col gap-1 p-3" style={{ background: colorTagGradient(asset.colorTag) }}>
                           <span className="text-[0.90625rem] font-bold tracking-[-0.01em]">{asset.name}</span>
                           <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs leading-snug text-muted-foreground">
                             {filled ? (
