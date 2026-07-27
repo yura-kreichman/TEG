@@ -115,10 +115,20 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/assets/[
   // больше нет, а осиротевший Launch по-прежнему учитывается в
   // countOpenLaunchesInZone и блокирует зоне следующую сдачу итогов без
   // какого-либо способа найти и закрыть его через UI.
-  const [readingCount, ticketCount, openLaunchCount] = await Promise.all([
+  //
+  // ЗАВЕРШЁННЫЙ, но ещё НЕ СДАННЫЙ пуск (isOpen:false, zoneSubmissionId
+  // ещё null) — тот же класс проблемы, реальный баг на проде (Керен Центр,
+  // зона "Халабуда", 2026-07-27): владелец удалил актив, у которого уже был
+  // завершённый пуск на 1.66, ещё не попавший в сдачу итогов. SET NULL
+  // обнулил assetId — сумма осталась в расчётной выручке зоны (она не
+  // фильтрует по assetId), но пропала из разбивки по активам везде
+  // (экран сдачи, Telegram-сводка) — оператор увидел необъяснимую "Разницу",
+  // хотя деньги были реальными, просто невидимыми без прямого запроса к БД.
+  const [readingCount, ticketCount, openLaunchCount, unsubmittedEndedLaunchCount] = await Promise.all([
     prisma.assetReading.count({ where: { assetId: id } }),
     prisma.ticket.count({ where: { assetId: id } }),
     prisma.launch.count({ where: { assetId: id, isOpen: true } }),
+    prisma.launch.count({ where: { assetId: id, isOpen: false, zoneSubmissionId: null } }),
   ]);
   if (readingCount > 0 || ticketCount > 0) {
     return NextResponse.json(
@@ -129,6 +139,14 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/assets/[
   if (openLaunchCount > 0) {
     return NextResponse.json(
       { error: `У этого актива ${openLaunchCount} активных пусков — заверши их, прежде чем удалить актив` },
+      { status: 409 }
+    );
+  }
+  if (unsubmittedEndedLaunchCount > 0) {
+    return NextResponse.json(
+      {
+        error: `У этого актива ${unsubmittedEndedLaunchCount} завершённых пусков ещё не попали в сдачу итогов — сначала сдай итоги по зоне, потом удаляй актив`,
+      },
       { status: 409 }
     );
   }

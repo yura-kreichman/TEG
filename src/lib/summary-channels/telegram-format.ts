@@ -343,9 +343,11 @@ export function formatZoneSummaryTelegram(
     if (settings.showCash || settings.showCalc || settings.showDiff || showReturnsFull) {
       lines.push("");
       if (settings.showCash) {
-        lines.push(
-          `💵 ${st.cash}: <b>${formatMoney(data.cashAmount, locale)}</b> · 💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`
-        );
+        // Наличные и Безнал раздельными строками, не через " · " (запрос
+        // пользователя 2026-07-27, тот же принцип, что уже применён в Кассе
+        // за день) — строк не жалко.
+        lines.push(`💵 ${st.cash}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
+        lines.push(`💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`);
         // Справочно, отдельной строкой, НЕ в кассе выше — уже получена
         // раньше, при пополнении абонемента (запрос пользователя 2026-07-17).
         if (data.abonementAmount > 0) {
