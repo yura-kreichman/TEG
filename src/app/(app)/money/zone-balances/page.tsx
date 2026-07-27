@@ -984,6 +984,7 @@ export default function ZoneBalancesPage() {
                 label={t.money.printCollectionSlipButton}
                 data={buildCollectionReceiptData(lastCollection)}
                 branding={printAvailable.branding}
+                printMethod={printAvailable.printMethod}
                 className="w-full gap-1.5 rounded-lg"
               />
             )}

@@ -576,6 +576,7 @@ export default function LaunchesZonePage() {
                 label={t.operatorApp.gameRoom.printReceiptButton}
                 data={buildTapReceiptData(lastTap)}
                 branding={printAvailable.branding}
+                printMethod={printAvailable.printMethod}
                 className="w-full gap-1.5 rounded-lg"
               />
             )}

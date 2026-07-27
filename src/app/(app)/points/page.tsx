@@ -25,7 +25,7 @@ import { TimeInput } from "@/components/time-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import type { ReceiptPaperWidth } from "@/lib/print/receipt-document";
+import type { PrintMethod, ReceiptPaperWidth } from "@/lib/print/receipt-document";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
@@ -51,6 +51,7 @@ interface PointDeviceInfo {
   roaming: boolean;
   hasPrinter: boolean;
   receiptPaperWidth: ReceiptPaperWidth;
+  printMethod: PrintMethod;
 }
 
 interface PointInfo {
@@ -121,6 +122,9 @@ export default function PointsPage() {
   // к тенанту целиком, поэтому и настройка тут, рядом с hasPrinter, а не в
   // Настройках → Система.
   const [deviceReceiptPaperWidth, setDeviceReceiptPaperWidth] = useState<ReceiptPaperWidth>("58");
+  // Способ печати ЭТОГО устройства (2026-07-27) — та же логика "рядом с
+  // hasPrinter/receiptPaperWidth", см. src/lib/print/thermal-bluetooth.ts.
+  const [devicePrintMethod, setDevicePrintMethod] = useState<PrintMethod>("browser");
   const [installLinks, setInstallLinks] = useState<Record<string, string>>({});
   const [qrOpenFor, setQrOpenFor] = useState<string | null>(null);
 
@@ -151,6 +155,7 @@ export default function PointsPage() {
   // устройстве есть принтер", автоопределения нет и быть не может.
   const [renameDeviceHasPrinter, setRenameDeviceHasPrinter] = useState(false);
   const [renameDeviceReceiptPaperWidth, setRenameDeviceReceiptPaperWidth] = useState<ReceiptPaperWidth>("58");
+  const [renameDevicePrintMethod, setRenameDevicePrintMethod] = useState<PrintMethod>("browser");
   const { saved: renameDeviceSaved, pulse: renameDevicePulse } = useSavePulse();
   const [copiedDeviceId, setCopiedDeviceId] = useState<string | null>(null);
 
@@ -243,6 +248,7 @@ export default function PointsPage() {
         roaming: deviceRoaming,
         hasPrinter: deviceHasPrinter,
         receiptPaperWidth: deviceReceiptPaperWidth,
+        printMethod: devicePrintMethod,
       }),
     });
     const data = await res.json();
@@ -254,6 +260,7 @@ export default function PointsPage() {
         setDeviceRoaming(false);
         setDeviceHasPrinter(false);
         setDeviceReceiptPaperWidth("58");
+        setDevicePrintMethod("browser");
         setDeviceSheetPointId(null);
       });
     }
@@ -395,6 +402,7 @@ export default function PointsPage() {
     setRenameDeviceRoaming(device.roaming);
     setRenameDeviceHasPrinter(device.hasPrinter);
     setRenameDeviceReceiptPaperWidth(device.receiptPaperWidth);
+    setRenameDevicePrintMethod(device.printMethod);
   }
 
   async function confirmRenameDevice() {
@@ -407,6 +415,7 @@ export default function PointsPage() {
         roaming: renameDeviceRoaming,
         hasPrinter: renameDeviceHasPrinter,
         receiptPaperWidth: renameDeviceReceiptPaperWidth,
+        printMethod: renameDevicePrintMethod,
       }),
     });
     await loadPoints();
@@ -729,6 +738,33 @@ export default function PointsPage() {
               </Select>
             </div>
           )}
+          {/* Способ печати ЭТОГО устройства (2026-07-27) — только для рулонных
+              термопринтеров (не A4), Bluetooth-режим по прямым ESC/POS-командам
+              не применим к лазерной/A4-печати. См. src/lib/print/thermal-bluetooth.ts. */}
+          {deviceHasPrinter && deviceReceiptPaperWidth !== "a4" && (
+            <div className="flex items-center justify-between gap-3 rounded-control border border-border p-3">
+              <div className="min-w-0">
+                <div className="text-body-airbnb">{t.settings.systemPrintMethodLabel}</div>
+                <div className="text-caption-airbnb">{t.settings.systemPrintMethodHint}</div>
+              </div>
+              <Select
+                value={devicePrintMethod}
+                onValueChange={(v) => v && setDevicePrintMethod(v as PrintMethod)}
+                items={[
+                  { value: "browser", label: t.settings.printMethodBrowser },
+                  { value: "bluetooth", label: t.settings.printMethodBluetooth },
+                ]}
+              >
+                <SelectTrigger className="h-9 w-auto shrink-0 gap-1.5 px-2.5">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="browser">{t.settings.printMethodBrowser}</SelectItem>
+                  <SelectItem value="bluetooth">{t.settings.printMethodBluetooth}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <PressableScale>
             <SaveButton type="submit" className="h-12 w-full" saved={createDeviceSaved} />
           </PressableScale>
@@ -946,6 +982,30 @@ export default function PointsPage() {
                     <SelectItem value="58">58мм</SelectItem>
                     <SelectItem value="80">80мм</SelectItem>
                     <SelectItem value="a4">A4</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {renameDeviceHasPrinter && renameDeviceReceiptPaperWidth !== "a4" && (
+              <div className="flex items-center justify-between gap-3 rounded-control border border-border p-3">
+                <div className="min-w-0">
+                  <div className="text-body-airbnb">{t.settings.systemPrintMethodLabel}</div>
+                  <div className="text-caption-airbnb">{t.settings.systemPrintMethodHint}</div>
+                </div>
+                <Select
+                  value={renameDevicePrintMethod}
+                  onValueChange={(v) => v && setRenameDevicePrintMethod(v as PrintMethod)}
+                  items={[
+                    { value: "browser", label: t.settings.printMethodBrowser },
+                    { value: "bluetooth", label: t.settings.printMethodBluetooth },
+                  ]}
+                >
+                  <SelectTrigger className="h-9 w-auto shrink-0 gap-1.5 px-2.5">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="browser">{t.settings.printMethodBrowser}</SelectItem>
+                    <SelectItem value="bluetooth">{t.settings.printMethodBluetooth}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
