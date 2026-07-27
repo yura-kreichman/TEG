@@ -404,11 +404,12 @@ export function formatDailyCashSummaryTelegram(
     }
 
     if (settings.showCash) {
-      // Разделительная точка между Налич./Безнал — тот же приём, что и везде
-      // в compact-режиме (запрос пользователя 2026-07-19).
-      parts.push(
-        `💵 ${st.cashCompact}: <b>${formatMoney(data.cashAmount, locale)}</b> · 💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`
-      );
+      // Наличные и Безнал раздельными строками (запрос пользователя
+      // 2026-07-27: "и в компактной сводке тоже" — та же правка, что уже
+      // сделали в full-режиме, объединённая строка через " · " переносилась
+      // посередине суммы на длинных значениях, читалось коряво).
+      parts.push(`💵 ${st.cashCompact}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
+      parts.push(`💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`);
       if (data.abonementAmount > 0) {
         parts.push(`🎫 ${st.abonementCompact}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
       }
