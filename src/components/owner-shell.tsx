@@ -268,27 +268,36 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
     // block для position: fixed, из-за чего bottom-sheet/bottom-nav (fixed
     // относительно вьюпорта) съехали бы вместе с масштабированным деревом.
     // zoom ведёт себя как настоящий зум браузера и сохраняет fixed-позиционирование.
-    <div className="flex min-h-full flex-1 flex-col md:flex-row" style={{ zoom: textScaleZoom(scale) }}>
+    <div className="flex min-h-full flex-1 flex-col" style={{ zoom: textScaleZoom(scale) }}>
+      {/* Баннеры — всегда полноширинная горизонтальная полоса сверху, не
+          часть md:flex-row ниже (реальный баг, найден пользователем
+          2026-07-27, скриншот: на десктопе баннер имперсонации становился
+          не полосой, а растянутой на всю высоту колонкой рядом с сайдбаром,
+          потому что раньше был прямым ребёнком md:flex-row вместе с aside/
+          контентом). На мобильном (flex-col) это по случайности выглядело
+          правильно — баг был только на десктопной ширине. */}
       <ImpersonationBanner />
       <SubscriptionBanner />
-      {/* sticky + h-screen — иначе на длинных страницах (например, Товары со
-          множеством категорий/списков) sidebar растягивался на всю высоту
-          контента-соседа (flex-row по умолчанию stretch), и ThemeToggle внизу
-          сайдбара оказывался за тысячи пикселей вниз, практически недоступным
-          без прокрутки всей страницы (запрос пользователя 2026-07-20:
-          "на компьютере не на всех страницах есть переключатель темы... в
-          Товарах он отсутствует" — на самом деле был в DOM везде, просто вне
-          видимой области на длинных страницах). */}
-      <aside className="hidden shrink-0 flex-col justify-between overflow-y-auto bg-surface-0 p-4 md:sticky md:top-0 md:flex md:h-screen md:w-56">
-        <nav className="flex flex-col gap-1">
-          {barItems.map(sidebarLink)}
-          <div className="my-1 border-t border-border" />
-          {moreItems.map(sidebarLink)}
-        </nav>
-        <ThemeToggle />
-      </aside>
+      <div className="flex flex-1 flex-col md:flex-row">
+        {/* sticky + h-screen — иначе на длинных страницах (например, Товары со
+            множеством категорий/списков) sidebar растягивался на всю высоту
+            контента-соседа (flex-row по умолчанию stretch), и ThemeToggle внизу
+            сайдбара оказывался за тысячи пикселей вниз, практически недоступным
+            без прокрутки всей страницы (запрос пользователя 2026-07-20:
+            "на компьютере не на всех страницах есть переключатель темы... в
+            Товарах он отсутствует" — на самом деле был в DOM везде, просто вне
+            видимой области на длинных страницах). */}
+        <aside className="hidden shrink-0 flex-col justify-between overflow-y-auto bg-surface-0 p-4 md:sticky md:top-0 md:flex md:h-screen md:w-56">
+          <nav className="flex flex-col gap-1">
+            {barItems.map(sidebarLink)}
+            <div className="my-1 border-t border-border" />
+            {moreItems.map(sidebarLink)}
+          </nav>
+          <ThemeToggle />
+        </aside>
 
-      <div className="flex flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
+        <div className="flex flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
+      </div>
 
       <BottomGlassNav
         items={bottomNavItems}

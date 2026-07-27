@@ -1117,19 +1117,15 @@ async function handleJoinCommand(chatId: string, lang: BotLang) {
   const tenantIds = joinableIds;
 
   if (tenantIds.length === 0) {
-    // "Уже состою" перевешивает "не настроена" — если хоть где-то клиент
-    // уже с нами, это и есть содержательный ответ, а не молчание о
-    // компаниях без группы вообще (их и так никогда не показывали в списке).
-    if (alreadyMemberNames.length > 0) {
-      await sendChatMessage(
-        chatId,
-        alreadyMemberNames.map((name) => `${name}: ${s.alreadyInGroup}`).join("\n")
-      ).catch(() => {});
-    } else if (notConfiguredNames.length > 0) {
-      await sendChatMessage(chatId, `${notConfiguredNames.join(", ")}: ${s.joinGroupNotConfigured}`).catch(() => {});
-    } else {
-      await sendChatMessage(chatId, s.joinGroupNotConfigured).catch(() => {});
-    }
+    // Человеческое предложение вместо "Имя: текст" построчно (запрос
+    // пользователя 2026-07-27: "Вы состоите в группе Керен Центра, но у
+    // КидсБурга группы нет" — оба факта в одном сообщении, не приоритет
+    // одного над другим). Каждая функция сама решает единственное/
+    // множественное число по длине списка.
+    const parts: string[] = [];
+    if (alreadyMemberNames.length > 0) parts.push(s.joinAlreadyList(alreadyMemberNames));
+    if (notConfiguredNames.length > 0) parts.push(s.joinNotConfiguredList(notConfiguredNames));
+    await sendChatMessage(chatId, parts.length > 0 ? parts.join(" ") : s.joinGroupNotConfigured).catch(() => {});
     return;
   }
   if (tenantIds.length === 1) {
@@ -1144,7 +1140,15 @@ async function handleJoinCommand(chatId: string, lang: BotLang) {
 
 async function sendJoinForTenant(chatId: string, tenantId: string, lang: BotLang) {
   const s = BOT_STRINGS[lang];
-  const group = await getTenantPublicGroup(tenantId);
+  // Имя тенанта — сразу, не только в ветке "не настроена": срабатывает и
+  // когда компания ровно одна (handleJoinCommand отправляет сюда напрямую,
+  // без выбора кнопкой), и когда клиент тапнул конкретную кнопку в списке —
+  // оба раза сообщение теперь называет компанию (запрос пользователя
+  // 2026-07-27: "если нажато КидсБург: 'У КидсБург нет группы пока'").
+  const [group, tenant] = await Promise.all([
+    getTenantPublicGroup(tenantId),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }),
+  ]);
   // group.enabled — тот же тумблер, что уже проверяют исходящие анонсы
   // (announceNewZone/Point/Asset, abonement-wallets/broadcast) — реальный
   // баг, найден пользователем 2026-07-25: Владелец выключил группу
@@ -1153,12 +1157,7 @@ async function sendJoinForTenant(chatId: string, tenantId: string, lang: BotLang
   // route.ts), а клиентам бот всё равно предлагал старую ссылку — эта
   // проверка раньше смотрела только на наличие inviteLink.
   if (!group?.inviteLink || !group.enabled) {
-    // Название компании в сообщении (запрос пользователя 2026-07-27) — этот
-    // путь теперь редкий (список выше уже отфильтрован tenantHasActiveGroup),
-    // срабатывает только при гонке между показом списка и тапом, но раз уж
-    // сообщение всё равно шлём — пусть говорит, у какой именно компании.
-    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
-    await sendChatMessage(chatId, tenant ? `${tenant.name}: ${s.joinGroupNotConfigured}` : s.joinGroupNotConfigured).catch(() => {});
+    await sendChatMessage(chatId, tenant ? s.joinNotConfiguredList([tenant.name]) : s.joinGroupNotConfigured).catch(() => {});
     return;
   }
   // Клиент уже состоит в группе (запрос пользователя 2026-07-25) — та же
@@ -1166,7 +1165,7 @@ async function sendJoinForTenant(chatId: string, tenantId: string, lang: BotLang
   // tenantHasActiveGroup); здесь дублируется на случай, если клиент всё
   // равно наберёт "/join" текстом руками, а не тапнет по меню.
   if (group.chatId && (await isChatMember(group.chatId, chatId))) {
-    await sendChatMessage(chatId, s.alreadyInGroup).catch(() => {});
+    await sendChatMessage(chatId, tenant ? s.joinAlreadyList([tenant.name]) : s.alreadyInGroup).catch(() => {});
     return;
   }
   await sendInlineKeyboard(chatId, s.joinGroupPrompt, [{ text: s.joinMenuButton, url: group.inviteLink }]).catch(() => {});
@@ -1180,35 +1179,56 @@ async function handleBonusCommand(chatId: string, lang: BotLang) {
   const s = BOT_STRINGS[lang];
   const links = await prisma.clientTelegramLink.findMany({ where: { chatId }, select: { tenantId: true } });
   const linkedTenantIds = [...new Set(links.map((l) => l.tenantId))];
-  const tenantIds: string[] = [];
-  for (const id of linkedTenantIds) {
-    if (await isModuleEnabled(id, "clientsEnabled")) tenantIds.push(id);
-  }
-
-  if (tenantIds.length === 0) {
+  if (linkedTenantIds.length === 0) {
     await sendChatMessage(chatId, s.servicesNotLinkedHint).catch(() => {});
     return;
   }
-  if (tenantIds.length === 1) {
-    await sendBonusForTenant(chatId, tenantIds[0], lang);
+
+  // Та же дыра, что была у /join (запрос пользователя 2026-07-27: "такое же
+  // может быть и с другими вопросами... у Владельца нет абонементов") —
+  // раньше список кнопок строился только по clientsEnabled, компания без
+  // единого абонемента на продажу всё равно попадала кнопкой и упиралась в
+  // безымянный noAbonementsAvailable. Теперь то же разделение на корзины,
+  // что у /join: можно показать / нечего показать (с именем компании).
+  const availableIds: string[] = [];
+  const notAvailableNames: string[] = [];
+  for (const id of linkedTenantIds) {
+    if (!(await isModuleEnabled(id, "clientsEnabled"))) continue;
+    if (await tenantHasAbonementsToSell(id)) {
+      availableIds.push(id);
+    } else {
+      const tenant = await prisma.tenant.findUnique({ where: { id }, select: { name: true } });
+      if (tenant) notAvailableNames.push(tenant.name);
+    }
+  }
+
+  if (availableIds.length === 0) {
+    await sendChatMessage(
+      chatId,
+      notAvailableNames.length > 0 ? s.noAbonementsList(notAvailableNames) : s.noAbonementsAvailable
+    ).catch(() => {});
+    return;
+  }
+  if (availableIds.length === 1) {
+    await sendBonusForTenant(chatId, availableIds[0], lang);
     return;
   }
 
-  const tenants = await prisma.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true } });
+  const tenants = await prisma.tenant.findMany({ where: { id: { in: availableIds } }, select: { id: true, name: true } });
   const buttons = tenants.map((t) => ({ text: t.name, callbackData: `${BONUS_TENANT_CALLBACK_PREFIX}${t.id}` }));
   await sendInlineKeyboard(chatId, s.chooseCompanyPrompt, buttons).catch(() => {});
 }
 
 async function sendBonusForTenant(chatId: string, tenantId: string, lang: BotLang) {
   const s = BOT_STRINGS[lang];
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, name: true, currency: true } });
+  if (!tenant) return;
   if (!(await isModuleEnabled(tenantId, "clientsEnabled"))) {
-    await sendChatMessage(chatId, s.noAbonementsAvailable).catch(() => {});
+    await sendChatMessage(chatId, s.noAbonementsList([tenant.name])).catch(() => {});
     return;
   }
-  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, currency: true } });
-  if (!tenant) return;
   const info = await buildAbonementsInfo(tenant, lang);
-  await sendChatMessage(chatId, info ?? s.noAbonementsAvailable).catch(() => {});
+  await sendChatMessage(chatId, info ?? s.noAbonementsList([tenant.name])).catch(() => {});
 }
 
 async function handleCallbackQuery(callbackQuery: {
