@@ -1603,6 +1603,7 @@
   "splitPayment": {
     "title": "Төлөмдү бөлүү",
     "remainingLabel": "Бөлүүгө калды:",
+    "amountPlaceholder": "Сумма",
     "addMethodButton": "Ыкма кошуу",
     "selectWalletButton": "Капчыкты тандоо",
     "walletSelectedLabel": "Капчык тандалды",

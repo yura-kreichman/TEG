@@ -1603,6 +1603,7 @@
   "splitPayment": {
     "title": "Split payment",
     "remainingLabel": "Remaining to allocate:",
+    "amountPlaceholder": "Amount",
     "addMethodButton": "Add method",
     "selectWalletButton": "Select wallet",
     "walletSelectedLabel": "Wallet selected",

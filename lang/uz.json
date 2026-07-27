@@ -1603,6 +1603,7 @@
   "splitPayment": {
     "title": "To'lovni bo'lish",
     "remainingLabel": "Taqsimlanishi kerak:",
+    "amountPlaceholder": "Summa",
     "addMethodButton": "Usul qo'shish",
     "selectWalletButton": "Hamyonni tanlash",
     "walletSelectedLabel": "Hamyon tanlandi",

@@ -1603,6 +1603,7 @@
   "splitPayment": {
     "title": "Ödənişi böl",
     "remainingLabel": "Bölüşdürülməli qalıb:",
+    "amountPlaceholder": "Məbləğ",
     "addMethodButton": "Üsul əlavə et",
     "selectWalletButton": "Cüzdan seç",
     "walletSelectedLabel": "Cüzdan seçildi",

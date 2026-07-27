@@ -1603,6 +1603,7 @@
   "splitPayment": {
     "title": "Podziel płatność",
     "remainingLabel": "Pozostało do rozdzielenia:",
+    "amountPlaceholder": "Kwota",
     "addMethodButton": "Dodaj metodę",
     "selectWalletButton": "Wybierz portfel",
     "walletSelectedLabel": "Portfel wybrany",

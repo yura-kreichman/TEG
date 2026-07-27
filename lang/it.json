@@ -1603,6 +1603,7 @@
   "splitPayment": {
     "title": "Dividi il pagamento",
     "remainingLabel": "Rimanente da distribuire:",
+    "amountPlaceholder": "Importo",
     "addMethodButton": "Aggiungi metodo",
     "selectWalletButton": "Seleziona portafoglio",
     "walletSelectedLabel": "Portafoglio selezionato",

@@ -1603,6 +1603,7 @@
   "splitPayment": {
     "title": "გადახდის დაყოფა",
     "remainingLabel": "დარჩა გასანაწილებელი:",
+    "amountPlaceholder": "თანხა",
     "addMethodButton": "მეთოდის დამატება",
     "selectWalletButton": "საფულის არჩევა",
     "walletSelectedLabel": "საფულე არჩეულია",

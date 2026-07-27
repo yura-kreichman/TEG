@@ -1603,6 +1603,7 @@
   "splitPayment": {
     "title": "Разбить оплату",
     "remainingLabel": "Осталось распределить:",
+    "amountPlaceholder": "Сумма",
     "addMethodButton": "Добавить способ",
     "selectWalletButton": "Выбрать кошелёк",
     "walletSelectedLabel": "Кошелёк выбран",

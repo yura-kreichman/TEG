@@ -1603,6 +1603,7 @@
   "splitPayment": {
     "title": "Բաժանել վճարումը",
     "remainingLabel": "Մնում է բաշխել՝",
+    "amountPlaceholder": "Գումար",
     "addMethodButton": "Ավելացնել եղանակ",
     "selectWalletButton": "Ընտրել դրամապանակը",
     "walletSelectedLabel": "Դրամապանակն ընտրված է",

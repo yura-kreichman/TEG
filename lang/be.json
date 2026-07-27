@@ -1603,6 +1603,7 @@
   "splitPayment": {
     "title": "Разбіць аплату",
     "remainingLabel": "Засталося размеркаваць:",
+    "amountPlaceholder": "Сума",
     "addMethodButton": "Дадаць спосаб",
     "selectWalletButton": "Выбраць кашалёк",
     "walletSelectedLabel": "Кашалёк выбраны",

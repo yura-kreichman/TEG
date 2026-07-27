@@ -62,6 +62,11 @@ export function SplitPaymentSheet({
   onSubmit,
 }: SplitPaymentSheetProps) {
   const t = useI18n();
+  const METHOD_LABEL: Record<SplitMethod, string> = {
+    cash: t.operatorApp.submit.cashLabel,
+    mobile: t.operatorApp.submit.mobileLabel,
+    abonement: t.operatorApp.abonement.paymentLabel,
+  };
   const [legs, setLegs] = useState<SplitLegDraft[]>([
     { method: "cash", amount: "" },
     { method: "mobile", amount: "" },
@@ -129,7 +134,7 @@ export function SplitPaymentSheet({
 
           <div className="flex flex-col gap-2">
             {legs.map((leg, index) => (
-              <div key={index} className="flex flex-col gap-1.5 rounded-control border border-border p-2.5">
+              <div key={index} className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5">
                   {allowedMethods
                     .filter((m) => m !== "abonement" || clientsEnabled)
@@ -137,24 +142,25 @@ export function SplitPaymentSheet({
                       const Icon = METHOD_ICON[m];
                       const active = leg.method === m;
                       return (
-                        <PressableScale key={m} className="flex-1">
+                        <PressableScale key={m}>
                           <Button
                             type="button"
                             variant={active ? "default" : "outline"}
-                            size="sm"
-                            className="w-full gap-1.5"
+                            size="icon"
+                            className="size-12"
                             onClick={() => setMethod(index, m)}
                           >
-                            <Icon className="size-3.5" />
+                            <Icon className="size-7" />
                           </Button>
                         </PressableScale>
                       );
                     })}
+                  <span className="shrink-0 truncate text-sm font-semibold">{METHOD_LABEL[leg.method]}</span>
                   <MoneyInput
-                    placeholder={t.zoneDetail.gameRoomOptionPricePlaceholder}
+                    placeholder={t.splitPayment.amountPlaceholder}
                     value={leg.amount}
                     onChange={(e) => update(index, { amount: e.target.value })}
-                    className="w-28 shrink-0"
+                    className="h-12"
                   />
                   {legs.length > 2 && (
                     <PressableScale>
@@ -162,6 +168,7 @@ export function SplitPaymentSheet({
                         type="button"
                         variant="outline"
                         size="icon"
+                        className="size-12"
                         aria-label={t.zoneDetail.gameRoomRemoveOptionLabel}
                         onClick={() => setLegs((prev) => prev.filter((_, i) => i !== index))}
                       >

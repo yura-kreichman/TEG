@@ -1603,6 +1603,7 @@
   "splitPayment": {
     "title": "Ödemeyi böl",
     "remainingLabel": "Dağıtılacak kalan:",
+    "amountPlaceholder": "Tutar",
     "addMethodButton": "Yöntem ekle",
     "selectWalletButton": "Cüzdan seç",
     "walletSelectedLabel": "Cüzdan seçildi",

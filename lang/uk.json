@@ -1603,6 +1603,7 @@
   "splitPayment": {
     "title": "Розбити оплату",
     "remainingLabel": "Залишилось розподілити:",
+    "amountPlaceholder": "Сума",
     "addMethodButton": "Додати спосіб",
     "selectWalletButton": "Вибрати гаманець",
     "walletSelectedLabel": "Гаманець обрано",

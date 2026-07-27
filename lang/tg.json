@@ -1603,6 +1603,7 @@
   "splitPayment": {
     "title": "Тақсим кардани пардохт",
     "remainingLabel": "Барои тақсим кардан монд:",
+    "amountPlaceholder": "Маблағ",
     "addMethodButton": "Илова кардани усул",
     "selectWalletButton": "Интихоби ҳамён",
     "walletSelectedLabel": "Ҳамён интихоб шуд",

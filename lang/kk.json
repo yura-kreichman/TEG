@@ -1603,6 +1603,7 @@
   "splitPayment": {
     "title": "Төлемді бөлу",
     "remainingLabel": "Бөлуге қалды:",
+    "amountPlaceholder": "Сома",
     "addMethodButton": "Әдіс қосу",
     "selectWalletButton": "Әмиянды таңдау",
     "walletSelectedLabel": "Әмиян таңдалды",
