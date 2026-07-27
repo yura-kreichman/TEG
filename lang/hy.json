@@ -29,7 +29,8 @@
     "chooseFile": "Ընտրել ֆայլ",
     "changeFile": "Փոխարինել ֆայլը",
     "loading": "Բեռնվում է…",
-    "ownerLabel": "Սեփականատեր"
+    "ownerLabel": "Սեփականատեր",
+    "poweredByLabel": "Աշխատում է"
   },
   "iconPicker": {
     "selectIcon": "Ընտրել պատկերակ",

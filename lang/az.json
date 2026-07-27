@@ -29,7 +29,8 @@
     "chooseFile": "Fayl seç",
     "changeFile": "Faylı dəyiş",
     "loading": "Yüklənir…",
-    "ownerLabel": "Sahib"
+    "ownerLabel": "Sahib",
+    "poweredByLabel": "İşlədilir"
   },
   "iconPicker": {
     "selectIcon": "Nişan seç",

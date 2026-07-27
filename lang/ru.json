@@ -29,7 +29,8 @@
     "chooseFile": "Выбрать файл",
     "changeFile": "Заменить файл",
     "loading": "Загрузка…",
-    "ownerLabel": "Владелец"
+    "ownerLabel": "Владелец",
+    "poweredByLabel": "Работает на"
   },
   "iconPicker": {
     "selectIcon": "Выбрать иконку",

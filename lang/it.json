@@ -29,7 +29,8 @@
     "chooseFile": "Scegli file",
     "changeFile": "Sostituisci file",
     "loading": "Caricamento…",
-    "ownerLabel": "Proprietario"
+    "ownerLabel": "Proprietario",
+    "poweredByLabel": "Realizzato con"
   },
   "iconPicker": {
     "selectIcon": "Scegli un'icona",

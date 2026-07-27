@@ -29,7 +29,8 @@
     "chooseFile": "Alege fișier",
     "changeFile": "Înlocuiește fișierul",
     "loading": "Se încarcă…",
-    "ownerLabel": "Proprietar"
+    "ownerLabel": "Proprietar",
+    "poweredByLabel": "Funcționează pe"
   },
   "iconPicker": {
     "selectIcon": "Alege o pictogramă",

@@ -29,7 +29,8 @@
     "chooseFile": "Файл интихоб кардан",
     "changeFile": "Файлро иваз кардан",
     "loading": "Боргирӣ…",
-    "ownerLabel": "Соҳиб"
+    "ownerLabel": "Соҳиб",
+    "poweredByLabel": "Дар асоси"
   },
   "iconPicker": {
     "selectIcon": "Иконка интихоб кардан",

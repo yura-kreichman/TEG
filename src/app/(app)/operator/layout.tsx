@@ -4,6 +4,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemeColorMeta } from "@/components/theme-color-meta";
 import { OperatorSwitchButton } from "@/components/operator-switch-button";
 import { OperatorBottomNav } from "@/components/operator-bottom-nav";
+import { OperatorBrandingChrome } from "@/components/operator-branding-chrome";
 import { TicketsCartProvider, GoodsCartProvider } from "@/components/operator-cart-context";
 import { OfflineSync } from "./offline-sync";
 
@@ -30,6 +31,7 @@ export default function OperatorLayout({ children }: { children: React.ReactNode
       <div className="flex flex-1 flex-col">
         <ThemeColorMeta />
         <OfflineSync />
+        <OperatorBrandingChrome />
         <div className="flex items-center justify-between gap-2 p-2">
           <OperatorSwitchButton />
           <ThemeToggle />

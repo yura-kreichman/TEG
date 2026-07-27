@@ -29,7 +29,8 @@
     "chooseFile": "Faylni tanlash",
     "changeFile": "Faylni almashtirish",
     "loading": "Yuklanmoqda…",
-    "ownerLabel": "Egasi"
+    "ownerLabel": "Egasi",
+    "poweredByLabel": "Asosida ishlaydi"
   },
   "iconPicker": {
     "selectIcon": "Belgini tanlash",

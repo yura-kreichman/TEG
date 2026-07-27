@@ -29,7 +29,8 @@
     "chooseFile": "ფაილის არჩევა",
     "changeFile": "ფაილის შეცვლა",
     "loading": "იტვირთება…",
-    "ownerLabel": "მფლობელი"
+    "ownerLabel": "მფლობელი",
+    "poweredByLabel": "მუშაობს"
   },
   "iconPicker": {
     "selectIcon": "ხატულის არჩევა",

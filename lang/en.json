@@ -29,7 +29,8 @@
     "chooseFile": "Choose file",
     "changeFile": "Replace file",
     "loading": "Loading…",
-    "ownerLabel": "Owner"
+    "ownerLabel": "Owner",
+    "poweredByLabel": "Powered by"
   },
   "iconPicker": {
     "selectIcon": "Choose an icon",

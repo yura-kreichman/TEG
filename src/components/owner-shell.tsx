@@ -24,6 +24,8 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { BottomGlassNav, type BottomGlassNavItem } from "@/components/bottom-glass-nav";
 import { ImpersonationBanner } from "@/components/impersonation-banner";
 import { SubscriptionBanner } from "@/components/subscription-banner";
+import { TenantLogoWatermark } from "@/components/tenant-logo-watermark";
+import { PoweredByMark } from "@/components/powered-by-mark";
 import { useTextScale, textScaleZoom } from "@/components/text-scale-provider";
 import { cn } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n";
@@ -176,6 +178,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
   // Дефолт — всё включено, чтобы до ответа сервера бар не мигал пустыми
   // слотами (тот же приём, что list начинается с 0 у badge-счётчиков).
   const [enabledModules, setEnabledModules] = useState<EnabledModules>(DEFAULT_ENABLED_MODULES);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   // Обновляем при каждой навигации — самый дешёвый способ не держать
   // отдельный стор ради одного badge-числа (список пунктов бара маленький,
@@ -204,6 +207,10 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
             goodsEnabled: data.goodsEnabled ?? true,
             clientsEnabled: data.clientsEnabled ?? true,
           });
+          // Логотип тенанта — тот же роут уже вызывался здесь ради модулей
+          // (запрос пользователя 2026-07-27: логотип-водяной знак и у
+          // Владельца тоже), отдельный fetch не нужен.
+          setLogoUrl(data.logoUrl ?? null);
         });
     }
     loadEnabledModules();
@@ -278,6 +285,11 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
           правильно — баг был только на десктопной ширине. */}
       <ImpersonationBanner />
       <SubscriptionBanner />
+      {/* Логотип тенанта водяным знаком + "Работает на RentOS" — и у
+          Владельца тоже (запрос пользователя 2026-07-27), тот же приём, что
+          в PWA Сотрудника: справа, не в потоке сайдбара. */}
+      <TenantLogoWatermark logoUrl={logoUrl} />
+      <PoweredByMark className="pointer-events-none fixed bottom-2 right-3 hidden md:inline-flex" />
       <div className="flex flex-1 flex-col md:flex-row">
         {/* sticky + h-screen — иначе на длинных страницах (например, Товары со
             множеством категорий/списков) sidebar растягивался на всю высоту

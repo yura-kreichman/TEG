@@ -29,7 +29,8 @@
     "chooseFile": "Файлды тандоо",
     "changeFile": "Файлды алмаштыруу",
     "loading": "Жүктөлүүдө…",
-    "ownerLabel": "Ээси"
+    "ownerLabel": "Ээси",
+    "poweredByLabel": "Иштейт"
   },
   "iconPicker": {
     "selectIcon": "Сүрөтчөнү тандоо",

@@ -29,7 +29,8 @@
     "chooseFile": "Wybierz plik",
     "changeFile": "Zmień plik",
     "loading": "Ładowanie…",
-    "ownerLabel": "Właściciel"
+    "ownerLabel": "Właściciel",
+    "poweredByLabel": "Działa na"
   },
   "iconPicker": {
     "selectIcon": "Wybierz ikonę",

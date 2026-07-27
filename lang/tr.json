@@ -29,7 +29,8 @@
     "chooseFile": "Dosya Seç",
     "changeFile": "Dosyayı Değiştir",
     "loading": "Yükleniyor…",
-    "ownerLabel": "Sahibi"
+    "ownerLabel": "Sahibi",
+    "poweredByLabel": "Altyapı"
   },
   "iconPicker": {
     "selectIcon": "Simge Seç",

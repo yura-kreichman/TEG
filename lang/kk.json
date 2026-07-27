@@ -29,7 +29,8 @@
     "chooseFile": "Файл таңдау",
     "changeFile": "Файлды ауыстыру",
     "loading": "Жүктелуде…",
-    "ownerLabel": "Иесі"
+    "ownerLabel": "Иесі",
+    "poweredByLabel": "Негізінде жұмыс істейді"
   },
   "iconPicker": {
     "selectIcon": "Иконка таңдау",
