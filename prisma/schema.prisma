@@ -126,6 +126,16 @@ model Tenant {
   locale       String @default("ru")
   accentScheme String @default("green")
 
+  // Приветственная шторка с предложением демо-данных при первом входе
+  // Владельца (запрос пользователя 2026-07-27) — показывается, пока у
+  // тенанта нет ни одной точки И это поле ещё null; ставится текущим
+  // временем при ЛЮБОМ выборе (и "Установить", и "Начну с нуля"), чтобы
+  // шторка не показывалась повторно. Осознанно НЕ отдельный флаг "есть ли
+  // демо-данные" — сами демо-сущности ничем не помечены, становятся обычными
+  // редактируемыми Точкой/Зонами/Сотрудником сразу же (решение пользователя:
+  // "не надо кнопка удалить демо данные, их не надо различать").
+  onboardingDismissedAt DateTime?
+
   // Фон приложения (docs/spec/03-design-system.md, "Фон приложения") —
   // только кабинет владельца, тот же оптимистичный save-механизм, что у
   // accentScheme выше. "none" = "Без фона" (текущее поведение), тот же
@@ -1153,6 +1163,10 @@ model AbonementWallet {
 
   transactions               AbonementTransaction[]
   launches                   Launch[]
+  // Справочная привязка "чей это ребёнок" на Launch.linkedClientWalletId
+  // (запрос пользователя 2026-07-27) — отдельная именованная связь от
+  // `launches` выше (та про реальное списание оплаты).
+  launchesLinkedAsClient     Launch[]              @relation("LaunchLinkedClient")
   goodsSales                 GoodsSale[]
   ticketOrders               TicketOrder[]
   counterTapEvents           CounterTapEvent[]
@@ -1982,6 +1996,16 @@ model Launch {
   // итогов — см. src/lib/abonement.ts.
   abonementWalletId String?
   abonementWallet   AbonementWallet? @relation(fields: [abonementWalletId], references: [id], onDelete: SetNull)
+
+  // Привязка "чей это ребёнок" (запрос пользователя 2026-07-27, только
+  // "Прибывания") — ОТДЕЛЬНОЕ поле от abonementWalletId выше: то означает
+  // "с этого кошелька реально списаны деньги", это — просто справочная
+  // метка для Сотрудника (телефон/имя/баланс контакта), никогда не влияет
+  // на способ оплаты и не участвует в расчёте выручки/разницы. Доступно,
+  // только пока у тенанта включён модуль Клиенты (clientsEnabled); ставится
+  // ПОСЛЕ старта, не в момент добавления браслета.
+  linkedClientWalletId String?
+  linkedClientWallet   AbonementWallet? @relation("LaunchLinkedClient", fields: [linkedClientWalletId], references: [id], onDelete: SetNull)
 
   startedByOperatorId String?
   startedByOperator   Operator? @relation("LaunchStartedBy", fields: [startedByOperatorId], references: [id])

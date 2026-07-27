@@ -65,6 +65,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/zones/[id]/l
   const launches = await prisma.launch.findMany({
     where: { zoneId: zone.id, OR: [{ isOpen: true }, { isOpen: false, paymentMethod: null }] },
     orderBy: { startedAt: "asc" },
+    include: { linkedClientWallet: { select: { id: true, phone: true, name: true, balance: true } } },
   });
 
   // Расчётная выручка по каждому активу за текущее окно (с последней сдачи
@@ -94,6 +95,9 @@ export async function GET(request: Request, ctx: RouteContext<"/api/zones/[id]/l
       minAmountSnapshot: l.minAmountSnapshot != null ? Number(l.minAmountSnapshot) : null,
       isOpen: l.isOpen,
       amount: l.amount != null ? Number(l.amount) : null,
+      linkedClient: l.linkedClientWallet
+        ? { id: l.linkedClientWallet.id, phone: l.linkedClientWallet.phone, name: l.linkedClientWallet.name, balance: Number(l.linkedClientWallet.balance) }
+        : null,
     })),
     ...(revenueByAsset ? { revenueByAsset } : {}),
   });

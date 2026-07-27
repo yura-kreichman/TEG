@@ -69,7 +69,7 @@ export async function GET(request: Request) {
   const telegramLinks = await prisma.clientTelegramLink.findMany({ where: { tenantId: owner.tenantId }, select: { phone: true } });
   const phonesWithTelegram = new Set(telegramLinks.map((l) => l.phone));
 
-  const list = wallets.map((w) => ({
+  let list = wallets.map((w) => ({
     id: w.id,
     phone: w.phone,
     name: w.name,
@@ -81,6 +81,14 @@ export async function GET(request: Request) {
     lastActivityAt: lastActivityMap.get(w.id) ?? w.createdAt,
     hasTelegram: phonesWithTelegram.has(w.phone),
   }));
+
+  // "Подключённые" (запрос пользователя 2026-07-27) — не сортировка, а
+  // фильтр (кто уже привязал Telegram-бота), но живёт в том же дропдауне,
+  // что и остальные варианты сортировки — проще всего отфильтровать список
+  // ДО среза .slice(0, 100) тем же полем hasTelegram, что уже посчитано выше.
+  if (sort === "telegram") {
+    list = list.filter((w) => w.hasTelegram);
+  }
 
   if (sort === "balance") {
     list.sort((a, b) => b.balance - a.balance);

@@ -1078,13 +1078,27 @@ async function handleJoinCommand(chatId: string, lang: BotLang) {
   const s = BOT_STRINGS[lang];
   const links = await prisma.clientTelegramLink.findMany({ where: { chatId }, select: { tenantId: true } });
   const linkedTenantIds = [...new Set(links.map((l) => l.tenantId))];
+  // Реальный баг, найден пользователем 2026-07-27: список компаний строился
+  // только по clientsEnabled — компанию без подключённой/включённой группы
+  // всё равно показывали кнопкой, тап неизбежно упирался в
+  // "Группа пока не подключена" (причём без указания, у какой именно
+  // компании — при нескольких одинаковых кнопках сообщения было не
+  // различить). Теперь та же проверка, что уже скрывает кнопку "Будем
+  // вместе" в обычном меню (tenantHasActiveGroup) — компания без рабочей
+  // группы просто не попадает в список вовсе.
   const tenantIds: string[] = [];
   for (const id of linkedTenantIds) {
-    if (await isModuleEnabled(id, "clientsEnabled")) tenantIds.push(id);
+    if ((await isModuleEnabled(id, "clientsEnabled")) && (await tenantHasActiveGroup(id, chatId))) {
+      tenantIds.push(id);
+    }
   }
 
   if (tenantIds.length === 0) {
-    await sendChatMessage(chatId, s.servicesNotLinkedHint).catch(() => {});
+    // Разные причины пустого списка: клиент вообще ни к одной компании не
+    // привязан (обычный кейс, старое сообщение) — или привязан, но ни у
+    // одной нет рабочей группы (новый кейс, тот же текст "не подключена",
+    // что и раньше было при тапе, просто теперь на шаг раньше).
+    await sendChatMessage(chatId, linkedTenantIds.length === 0 ? s.servicesNotLinkedHint : s.joinGroupNotConfigured).catch(() => {});
     return;
   }
   if (tenantIds.length === 1) {
@@ -1108,7 +1122,12 @@ async function sendJoinForTenant(chatId: string, tenantId: string, lang: BotLang
   // route.ts), а клиентам бот всё равно предлагал старую ссылку — эта
   // проверка раньше смотрела только на наличие inviteLink.
   if (!group?.inviteLink || !group.enabled) {
-    await sendChatMessage(chatId, s.joinGroupNotConfigured).catch(() => {});
+    // Название компании в сообщении (запрос пользователя 2026-07-27) — этот
+    // путь теперь редкий (список выше уже отфильтрован tenantHasActiveGroup),
+    // срабатывает только при гонке между показом списка и тапом, но раз уж
+    // сообщение всё равно шлём — пусть говорит, у какой именно компании.
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+    await sendChatMessage(chatId, tenant ? `${tenant.name}: ${s.joinGroupNotConfigured}` : s.joinGroupNotConfigured).catch(() => {});
     return;
   }
   // Клиент уже состоит в группе (запрос пользователя 2026-07-25) — та же

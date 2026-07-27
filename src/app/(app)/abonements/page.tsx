@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Gift, Search, ChevronRight, Wallet, Send, Megaphone, QrCode as QrCodeIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, Gift, Search, ChevronRight, Wallet, Send, Megaphone, FileDown, QrCode as QrCodeIcon } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { FilePickerButton } from "@/components/file-picker-button";
 import { compressImageFile } from "@/lib/client-image";
@@ -94,7 +94,7 @@ export default function AbonementsPage() {
   // балансу, активности и стажу") — "recent" (по умолчанию, недавно
   // созданные сверху) не показывается отдельным пунктом в переключателе,
   // это его исходное состояние.
-  const [walletSort, setWalletSort] = useState<"recent" | "balance" | "activity" | "tenure">("recent");
+  const [walletSort, setWalletSort] = useState<"recent" | "balance" | "activity" | "tenure" | "telegram">("recent");
   const [walletKebabTarget, setWalletKebabTarget] = useState<WalletInfo | null>(null);
   const [walletConfirmDelete, setWalletConfirmDelete] = useState(false);
   const { saved: walletDeleted, pulse: walletDeletePulse } = useSavePulse();
@@ -373,6 +373,22 @@ export default function AbonementsPage() {
           {tab === "wallets" && (
             <>
               <div className="mb-3 flex justify-end gap-2">
+                {/* Экспорт клиентов в CSV (запрос пользователя 2026-07-27) —
+                    Name/Phone/Balance, телефон с "+" (см. export/route.ts). */}
+                <PressableScale>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    className="rounded-lg"
+                    aria-label={t.abonements.exportButton}
+                    onClick={() => {
+                      window.location.href = "/api/abonement-wallets/export";
+                    }}
+                  >
+                    <FileDown className="size-4" />
+                  </Button>
+                </PressableScale>
                 {/* Общий QR для нового клиента — показать/дать отсканировать
                     на месте, без поиска его в списке (запрос пользователя
                     2026-07-25). Не показываем, если бот вообще не настроен
@@ -414,7 +430,10 @@ export default function AbonementsPage() {
                   </Button>
                 </PressableScale>
               </div>
-              <div className="mb-3 flex gap-2">
+              {/* На мобильном — в столбик (запрос пользователя 2026-07-27:
+                  на узких экранах вдвоём в одной строке текст поиска
+                  обрезался до "Поиск по теле..."), с sm: — снова в строку. */}
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row">
                 <div className="relative min-w-0 flex-1">
                   <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -445,9 +464,10 @@ export default function AbonementsPage() {
                     { value: "balance", label: t.abonements.sortBalance },
                     { value: "activity", label: t.abonements.sortActivity },
                     { value: "tenure", label: t.abonements.sortTenure },
+                    { value: "telegram", label: t.abonements.sortTelegram },
                   ]}
                 >
-                  <SelectTrigger className="h-12 w-44 shrink-0">
+                  <SelectTrigger className="h-12 w-full sm:w-44 sm:shrink-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent align="end">
@@ -455,6 +475,7 @@ export default function AbonementsPage() {
                     <SelectItem value="balance">{t.abonements.sortBalance}</SelectItem>
                     <SelectItem value="activity">{t.abonements.sortActivity}</SelectItem>
                     <SelectItem value="tenure">{t.abonements.sortTenure}</SelectItem>
+                    <SelectItem value="telegram">{t.abonements.sortTelegram}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

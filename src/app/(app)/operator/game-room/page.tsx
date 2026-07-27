@@ -18,9 +18,11 @@ import { useOperatorPrintAvailable } from "@/hooks/use-print";
 import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { isStaysZone } from "@/lib/results-calc";
+import { COLOR_TAG_PALETTE } from "@/lib/color-tag";
 import { estimateLiveAmount, formatMMSS, type LaunchPricingMode, type LaunchRoundingMode } from "@/lib/game-room-client";
 import { unlockBeep, playBeep, playConfirmChime, playCloseChime, playErrorChime } from "@/lib/beep";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
+import { LinkClientSheet, type LinkedClientInfo } from "@/components/link-client-sheet";
 import { SplitPaymentSheet } from "@/components/split-payment-sheet";
 import { ActionToast } from "@/components/action-toast";
 import { useActionToast } from "@/hooks/use-action-toast";
@@ -88,6 +90,10 @@ interface OpenLaunch {
   // не считается заново через estimateLiveAmount.
   isOpen: boolean;
   amount: number | null;
+  // "Чей это ребёнок" (запрос пользователя 2026-07-27) — справочная метка,
+  // не влияет на способ оплаты. null, пока не привязан или модуль Клиенты
+  // выключен.
+  linkedClient: LinkedClientInfo | null;
 }
 
 const SOUND_HINT_KEY = "gameRoomSoundHintSeen";
@@ -147,6 +153,7 @@ export default function StaysZonePage() {
   // (см. addFlow выше), "По факту" — здесь, перед самой остановкой.
   const [interacting, setInteracting] = useState<string | null>(null);
   const [stopPaymentTarget, setStopPaymentTarget] = useState<OpenLaunch | null>(null);
+  const [linkClientTarget, setLinkClientTarget] = useState<OpenLaunch | null>(null);
   const [stopping, setStopping] = useState(false);
   // Модуль печати (запрос пользователя 2026-07-20) — квитанция посещения,
   // кнопка появляется сразу после остановки пуска, только если и глобально
@@ -805,10 +812,13 @@ export default function StaysZonePage() {
                           type="button"
                           aria-label={t.operatorApp.gameRoom.resumeLaunchAction}
                           onClick={() => resumeLaunch(l.id)}
-                          className="flex aspect-square w-full grayscale flex-col items-center justify-center gap-1 rounded-card border-[1.5px] border-border bg-card p-2 text-center"
+                          className="flex aspect-4/5 w-full grayscale flex-col items-center justify-center gap-1 rounded-card border-[1.5px] border-border bg-card p-2 text-center"
                         >
-                          <span className="text-[0.6875rem] font-semibold text-muted-foreground">
-                            {t.operatorApp.gameRoom.wristbandNumberPrefix} {l.number}
+                          <span className="flex flex-col items-center leading-tight">
+                            <span className="text-[0.625rem] font-semibold text-muted-foreground">
+                              {t.operatorApp.gameRoom.wristbandNumberPrefix}
+                            </span>
+                            <span className="text-sm font-extrabold tabular-nums">{l.number}</span>
                           </span>
                           <Play className="size-9 text-muted-foreground" fill="currentColor" />
                           {l.amount != null && (
@@ -826,7 +836,7 @@ export default function StaysZonePage() {
                     return (
                       <div
                         key={l.id}
-                        className="flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-card border-[1.5px] border-primary bg-card p-2 text-center"
+                        className="flex aspect-4/5 w-full flex-col items-center justify-center gap-2 rounded-card border-[1.5px] border-primary bg-card p-2 text-center"
                       >
                         {l.pricingMode === "per_minute" && <Money value={liveAmount} className="text-lg font-extrabold" />}
                         <span className="text-[0.6875rem] font-semibold">{t.operatorApp.gameRoom.stopConfirmQuestion}</span>
@@ -888,39 +898,110 @@ export default function StaysZonePage() {
                   }
 
                   return (
-                    <PressableScale key={l.id}>
-                      <button
-                        type="button"
-                        onClick={() => setInteracting(l.id)}
-                        className={cn(
-                          "flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-card border-[1.5px] bg-card p-2 text-center",
-                          expired ? "border-destructive motion-safe:animate-pulse" : "border-primary"
-                        )}
-                      >
-                        <span className="text-[0.6875rem] font-semibold text-muted-foreground">
-                          {t.operatorApp.gameRoom.wristbandNumberPrefix} {l.number}
-                        </span>
-                        <span
+                    <div key={l.id} className="relative">
+                      <PressableScale>
+                        <button
+                          type="button"
+                          onClick={() => setInteracting(l.id)}
                           className={cn(
-                            "tabular-nums",
-                            l.pricingMode === "fixed"
-                              ? cn("text-2xl font-extrabold", expired && "text-destructive")
-                              : "text-sm font-semibold text-muted-foreground"
+                            "relative flex aspect-4/5 w-full flex-col items-center gap-1 overflow-hidden rounded-card border-[1.5px] bg-card px-2 pb-2 text-center",
+                            // Запас сверху под бейдж привязки клиента (реальный
+                            // баг, запрос пользователя 2026-07-27, живой
+                            // скриншот: "Посетитель" наезжал на иконку) —
+                            // отвязываем текст от геометрии бейджа через
+                            // гарантированный отступ, а не подгонкой размера
+                            // шрифта/центрирования. justify-start (не center)
+                            // — контент сразу после отступа, а не по центру
+                            // оставшегося места (запрос того же дня: "подними
+                            // чуть выше").
+                            clientsEnabled ? "justify-start pt-8" : "justify-center pt-2",
+                            expired ? "border-destructive motion-safe:animate-pulse" : "border-primary"
                           )}
                         >
-                          {expired ? t.operatorApp.gameRoom.expiredLabel : timeText}
-                        </span>
-                        {l.pricingMode === "per_minute" && (
-                          // size="display" — сумма растёт со временем ("По
-                          // факту", руб/мин), в маленьком квадратном тайле
-                          // 3+ значные суммы с копейками не влезали бы при
-                          // фиксированном text-2xl (запрос пользователя
-                          // 2026-07-26, живой скриншот). Тот же механизм
-                          // авто-уменьшения, что уже на Отчётах/Главной.
-                          <Money value={liveAmount} className="text-2xl font-extrabold" size="display" />
-                        )}
-                      </button>
-                    </PressableScale>
+                          {/* Цветовая метка — статичный цвет по номеру
+                              посетителя (запрос пользователя 2026-07-27), не
+                              случайный: та же фиксированная палитра, что у
+                              меток Оператора/Актива (COLOR_TAG_PALETTE),
+                              зациклена по номеру — у одного и того же номера
+                              всегда один и тот же цвет. Высота (h-7=28px) —
+                              не ниже границы фона бейджа привязки клиента
+                              (size-9 на -top-2, нижний край на 28px от верха
+                              тайла) — запрос того же дня. Без текста внутри —
+                              "Посетитель" на прежнем месте ниже, как и было. */}
+                          {clientsEnabled && (
+                            <span
+                              className="absolute inset-x-0 top-0 h-5.75 rounded-t-card"
+                              style={{ backgroundColor: COLOR_TAG_PALETTE[(l.number - 1) % COLOR_TAG_PALETTE.length] }}
+                            />
+                          )}
+                          {/* Название и номер в 2 строки, номер крупнее
+                              (запрос пользователя 2026-07-27) — в одну
+                              строку текст "Посетитель N" залезал на
+                              бейдж привязки клиента в углу тайла. */}
+                          <span className="flex flex-col items-center leading-tight">
+                            <span className="text-[0.625rem] font-semibold text-muted-foreground">
+                              {t.operatorApp.gameRoom.wristbandNumberPrefix}
+                            </span>
+                            <span className="text-sm font-extrabold tabular-nums">{l.number}</span>
+                          </span>
+                          <span
+                            className={cn(
+                              "tabular-nums",
+                              l.pricingMode === "fixed"
+                                ? cn("text-2xl font-extrabold", expired && "text-destructive")
+                                : "text-sm font-semibold text-muted-foreground"
+                            )}
+                          >
+                            {expired ? t.operatorApp.gameRoom.expiredLabel : timeText}
+                          </span>
+                          {l.pricingMode === "per_minute" && (
+                            // size="display" — сумма растёт со временем ("По
+                            // факту", руб/мин), в маленьком квадратном тайле
+                            // 3+ значные суммы с копейками не влезали бы при
+                            // фиксированном text-2xl (запрос пользователя
+                            // 2026-07-26, живой скриншот). Тот же механизм
+                            // авто-уменьшения, что уже на Отчётах/Главной.
+                            // Акцентный цвет суммы — запрос пользователя
+                            // 2026-07-27.
+                            <Money value={liveAmount} className="text-2xl font-extrabold text-primary" size="display" />
+                          )}
+                        </button>
+                      </PressableScale>
+                      {/* "Чей это ребёнок" (запрос пользователя 2026-07-27) —
+                          значок торчит за угол тайла (-right-2 -top-2), тот
+                          же приём, что у степпера списания с баланса и
+                          бейджа количества в корзине по всему проекту (не
+                          "внутри" угла, как было раньше). Отдельный
+                          <button>, не вложенный в тайл-<button> выше — сидит
+                          сверху как самостоятельный элемент, не всплывает
+                          клик на сам тайл. */}
+                      {clientsEnabled && (
+                        <PressableScale className="absolute -right-2 -top-2 z-10">
+                          <button
+                            type="button"
+                            aria-label={t.operatorApp.gameRoom.linkClientAction}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLinkClientTarget(l);
+                            }}
+                            className={cn(
+                              "flex size-9 items-center justify-center rounded-full shadow-md",
+                              // Серый — не привязан, акцентный — привязан
+                              // (запрос пользователя 2026-07-27) — цвет сам
+                              // по себе уже говорит о статусе. Заливка
+                              // "currentColor" на самой иконке убрана (тот
+                              // же день, скриншот) — на size-4 Wallet-иконка
+                              // с fill превращалась в нечитаемое пятно.
+                              l.linkedClient
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-muted-foreground"
+                            )}
+                          >
+                            <Wallet className="size-4" />
+                          </button>
+                        </PressableScale>
+                      )}
+                    </div>
                   );
                 })}
 
@@ -929,7 +1010,7 @@ export default function StaysZonePage() {
                     type="button"
                     onClick={handleAddTap}
                     disabled={addDisabled}
-                    className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-card border-[1.5px] border-dashed border-border p-2 text-center text-muted-foreground disabled:opacity-40"
+                    className="flex aspect-4/5 w-full flex-col items-center justify-center gap-1 rounded-card border-[1.5px] border-dashed border-border p-2 text-center text-muted-foreground disabled:opacity-40"
                   >
                     <Plus className="size-5" />
                     <span className="text-[0.75rem] font-semibold leading-tight">
@@ -1178,6 +1259,21 @@ export default function StaysZonePage() {
           return abonementTarget.kind === "start"
             ? startLaunch(abonementTarget.optionId, "abonement", walletId)
             : stopLaunch(abonementTarget.launch.id, "abonement", walletId);
+        }}
+      />
+
+      <LinkClientSheet
+        open={linkClientTarget !== null}
+        onClose={() => setLinkClientTarget(null)}
+        launchId={linkClientTarget?.id ?? null}
+        current={linkClientTarget?.linkedClient ?? null}
+        onLinked={() => {
+          setLinkClientTarget(null);
+          loadLaunches(selectedZoneId);
+        }}
+        onUnlinked={() => {
+          setLinkClientTarget(null);
+          loadLaunches(selectedZoneId);
         }}
       />
 
