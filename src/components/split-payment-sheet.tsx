@@ -127,7 +127,7 @@ export function SplitPaymentSheet({
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.splitPayment.title}</h2>
           <p className="text-caption-airbnb text-muted-foreground">
             {t.splitPayment.remainingLabel}{" "}
-            <span className={cn("font-bold tabular-nums", remaining !== 0 ? "text-destructive" : "text-primary")}>
+            <span className={cn("font-bold tabular-nums", canSubmit ? "text-primary" : "text-destructive")}>
               <Money value={remaining} />
             </span>
           </p>
@@ -215,6 +215,7 @@ export function SplitPaymentSheet({
           )}
 
           <ConfirmButton
+            variant="default"
             className="relative h-12 w-full font-semibold"
             disabled={!canSubmit || submitting}
             onConfirm={handleSubmit}
