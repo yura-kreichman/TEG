@@ -25,6 +25,7 @@ import { BottomGlassNav, type BottomGlassNavItem } from "@/components/bottom-gla
 import { ImpersonationBanner } from "@/components/impersonation-banner";
 import { SubscriptionBanner } from "@/components/subscription-banner";
 import { PoweredByMark } from "@/components/powered-by-mark";
+import { TenantLogoWatermark } from "@/components/tenant-logo-watermark";
 import { BgEffectLayer, type BgEffect } from "@/components/bg-effects";
 import { useTextScale, textScaleZoom } from "@/components/text-scale-provider";
 import { cn } from "@/lib/utils";
@@ -178,6 +179,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
   // Дефолт — всё включено, чтобы до ответа сервера бар не мигал пустыми
   // слотами (тот же приём, что list начинается с 0 у badge-счётчиков).
   const [enabledModules, setEnabledModules] = useState<EnabledModules>(DEFAULT_ENABLED_MODULES);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [bgEffect, setBgEffect] = useState<BgEffect>("waves");
 
   // Обновляем при каждой навигации — самый дешёвый способ не держать
@@ -207,8 +209,13 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
             goodsEnabled: data.goodsEnabled ?? true,
             clientsEnabled: data.clientsEnabled ?? true,
           });
-          // Фоновый эффект — тот же роут уже вызывался здесь ради модулей
-          // (запрос пользователя 2026-07-27), отдельный fetch не нужен.
+          // Логотип тенанта + фоновый эффект — тот же роут уже вызывался
+          // здесь ради модулей (запрос пользователя 2026-07-27), отдельные
+          // fetch-и не нужны. Логотип вернули (был убран тем же днём из-за
+          // z-index: 1 всплывавшего поверх карточек) — теперь на
+          // z-index: -1 (см. tenant-logo-watermark.tsx), строго под всеми
+          // плашками/контролами/тайлами, как и попросили в этот раз.
+          setLogoUrl(data.logoUrl ?? null);
           setBgEffect((data.bgEffect ?? "waves") as BgEffect);
         });
     }
@@ -295,13 +302,12 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
           правильно — баг был только на десктопной ширине. */}
       <ImpersonationBanner />
       <SubscriptionBanner />
-      {/* Водяной знак логотипа — убран из кабинета Владельца целиком (запрос
-          пользователя 2026-07-27, после нескольких раундов правок z-index/
-          маски/непрозрачности: реальные JPG-логотипы без альфа-канала
-          всё равно давали заметное пятно, цепляющееся за непрозрачные
-          кнопки/вкладки без собственного стекинг-контекста). В PWA
-          Сотрудника (operator-branding-chrome.tsx) — остаётся. Фоновый
-          эффект (волны и т.п.) логотипа не касается, живёт отдельно. */}
+      {/* Водяной знак логотипа — вернули (запрос пользователя 2026-07-27,
+          после того как z-index у TenantLogoWatermark исправили на -1,
+          строго под контентом — раньше при z-index: 1 логотип всплывал
+          поверх карточек/кнопок без собственного стекинг-контекста, из-за
+          чего его временно убирали отсюда целиком). */}
+      <TenantLogoWatermark logoUrl={logoUrl} />
       <BgEffectLayer effect={bgEffect} />
       <PoweredByMark className="pointer-events-none fixed bottom-2 right-3 hidden md:inline-flex" />
       <div className="flex flex-1 flex-col md:flex-row">
