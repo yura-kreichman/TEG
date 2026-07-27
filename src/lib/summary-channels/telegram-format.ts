@@ -85,7 +85,7 @@ const COMPACT_GRID_MAX_COLS = 2;
 // какая это точка, называть её незачем.
 function dailyCashHeaderLines(data: DailyCashSummaryData, timezone: string, st: SummaryText): string[] {
   const lines: string[] = [];
-  if (data.showPointName) lines.push(`<b>${data.pointName}</b>`);
+  if (data.showPointName) lines.push(`<b>${escapeTelegramHtml(data.pointName)}</b>`);
   lines.push(`💰 <b>${st.cashOnly.toUpperCase()} · ${formatDate(data.businessDate, timezone)}</b>`);
   return lines;
 }
@@ -102,8 +102,14 @@ function formatCompactGrid(items: { label: string; value: string }[]): string {
       Math.floor((COMPACT_GRID_TARGET_WIDTH + COMPACT_GRID_SEP.length) / (cellWidth + COMPACT_GRID_SEP.length))
     )
   );
-  const cells = items.map(
-    (it) => `${truncateLabel(it.label).padEnd(COMPACT_NAME_WIDTH)}: ${it.value.padStart(valueWidth)}`
+  // escapeTelegramHtml — ПОСЛЕДНИМ шагом, уже после truncate/padEnd (аудит
+  // 2026-07-27): имена активов/тарифов — свободный ввод владельца, "<"/">"/"&"
+  // в названии рушили отправку всей сводки (см. escapeTelegramHtml выше).
+  // Экранировать раньше нельзя — "&amp;" длиннее "&" на 4 символа, и padEnd,
+  // посчитанный по уже экранированной строке, сбил бы визуальное выравнивание
+  // колонок в <code>-блоке (Telegram рендерит &amp; обратно в один "&").
+  const cells = items.map((it) =>
+    escapeTelegramHtml(`${truncateLabel(it.label).padEnd(COMPACT_NAME_WIDTH)}: ${it.value.padStart(valueWidth)}`)
   );
   const rows: string[] = [];
   for (let i = 0; i < cells.length; i += cols) {
@@ -149,7 +155,7 @@ function diffEmoji(difference: number): string {
 function zoneHeader(data: ZoneSummaryData, showOperator: boolean, timezone: string): string {
   const colorPrefix = colorTagToEmoji(data.operatorColorTag);
   const operatorBit = showOperator
-    ? ` · ${colorPrefix ? `${colorPrefix} ` : ""}${data.operatorName}`
+    ? ` · ${colorPrefix ? `${colorPrefix} ` : ""}${escapeTelegramHtml(data.operatorName)}`
     : "";
   const date = formatSummaryDate(data.occurredAt, "/", timezone, false);
   // Жирным — только название зоны (запрос пользователя 2026-07-17: "во всех
@@ -158,7 +164,7 @@ function zoneHeader(data: ZoneSummaryData, showOperator: boolean, timezone: stri
   // название зоны, во ВСЕХ форматах (общая zoneHeader и для compact, и для
   // полного вида, оба вызывают её же), теперь вне тега.
   const fallbackEmoji = data.accountingMode === "counters" ? "🔢" : "🏁";
-  return `${data.zoneEmoji ?? fallbackEmoji} <b>${data.zoneName.toUpperCase()}</b>${operatorBit} · ${date}`;
+  return `${data.zoneEmoji ?? fallbackEmoji} <b>${escapeTelegramHtml(data.zoneName.toUpperCase())}</b>${operatorBit} · ${date}`;
 }
 
 // "Пусков: N · время: Xч Yм" — вместо блока показаний для зон
@@ -205,7 +211,8 @@ function formatPerAssetTallyFull(perAsset: ZoneSummaryData["perAsset"], locale: 
   const labelWidth = Math.max(...perAsset.map((a) => `${a.assetName}:`.length));
   const rows = perAsset.map((a) => {
     const label = `${a.assetName}:`.padEnd(labelWidth + 1);
-    return `${label}${String(a.count).padStart(3)}  (${formatMoney(a.amount, locale)})`;
+    // escapeTelegramHtml — после padEnd, см. комментарий в formatCompactGrid.
+    return escapeTelegramHtml(`${label}${String(a.count).padStart(3)}  (${formatMoney(a.amount, locale)})`);
   });
   return `<blockquote><code>${rows.join("\n")}</code></blockquote>`;
 }
@@ -327,7 +334,8 @@ export function formatZoneSummaryTelegram(
         if (settings.showReadings) row += String(r.reading).padStart(4);
         if (settings.showReadings && settings.showDelta) row += " ";
         if (settings.showDelta) row += `(+${r.delta})`;
-        return row;
+        // escapeTelegramHtml — после padEnd, см. комментарий в formatCompactGrid.
+        return escapeTelegramHtml(row);
       });
       // Цитата + code (фидбек пользователя 2026-07-09) — Telegram Bot API
       // поддерживает <blockquote> с вложенным <code>, многострочно через \n.
@@ -378,7 +386,10 @@ function formatZoneBreakdownRows(zoneBreakdown: DailyCashSummaryData["zoneBreakd
   // отдельную строку "Баланс" ниже и визуально намекал, что баланс
   // складывается с кассой зоны, хотя это не так (весь вечерний разбор про
   // то, что баланс у Счётчиков — отдельная, не смешивается с кассой).
-  return zoneBreakdown.map((z) => `${z.zoneName}:`.padEnd(labelWidth + 1) + formatMoney(z.revenue, locale)).join("\n");
+  // escapeTelegramHtml — после padEnd, см. комментарий в formatCompactGrid.
+  return zoneBreakdown
+    .map((z) => escapeTelegramHtml(`${z.zoneName}:`.padEnd(labelWidth + 1) + formatMoney(z.revenue, locale)))
+    .join("\n");
 }
 
 export function formatDailyCashSummaryTelegram(
@@ -494,7 +505,8 @@ export function formatShiftCloseSummaryTelegram(
   // Цветовой квадрат перед именем оператора (фидбек пользователя 2026-07-12) —
   // и в компактном, и в обычном виде; null (метка не задана) — без эмодзи.
   const colorPrefix = colorTagToEmoji(data.operatorColorTag);
-  const operatorLabel = colorPrefix ? `${colorPrefix} ${data.operatorName}` : data.operatorName;
+  const safeOperatorName = escapeTelegramHtml(data.operatorName);
+  const operatorLabel = colorPrefix ? `${colorPrefix} ${safeOperatorName}` : safeOperatorName;
 
   if (settings.compact) {
     // Не более 2 полей в строке (запрос пользователя 2026-07-14) — раньше

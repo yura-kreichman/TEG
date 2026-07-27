@@ -28,6 +28,16 @@ import { onResultsSubmission } from "@/lib/summary-channels/daily-cash-trigger";
 import { settleOutstandingCollectionAdvance } from "@/lib/zone-balance";
 import { localDateParts, zonedWallTimeToUtc } from "@/lib/business-day";
 
+// Аудит 2026-07-27 — см. комментарий у повторной проверки внутри runSubmission.
+class OpenLaunchesRaceError extends Error {
+  constructor(
+    public zoneName: string,
+    public openCount: number
+  ) {
+    super(`open launches race in zone ${zoneName}`);
+  }
+}
+
 interface ReadingInput {
   assetId: string;
   tariffId: string;
@@ -202,6 +212,27 @@ export async function POST(request: Request) {
     // (мультизонная сдача), но в разном порядке.
     for (const zoneId of [...zoneIds].sort()) {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${zoneId}))`;
+    }
+
+    // Повторная проверка открытых пусков — ПОСЛЕ захвата локов (аудит
+    // 2026-07-27, реальная гонка): первая проверка выше (строка ~170) идёт
+    // ДО входа в транзакцию, обычным SELECT без блокировки — между ней и
+    // захватом лока здесь проходит время (валидация категорий, чтение
+    // валидных categoryId и т.д.), за которое оператор на другом устройстве
+    // мог успеть стартовать новый пуск в той же зоне "Прибываний". Спека
+    // (docs/spec/04-game-room.md) обещает "без обхода" — без этой повторной
+    // проверки внутри залоченной транзакции обход был реально возможен, не
+    // только теоретически (окно расширяется тяжёлой работой транзакции для
+    // мультизонных сдач). Дублирования расчёта не происходит — просто читаем
+    // тот же count ещё раз, теперь уже под локом, который гарантирует, что
+    // никакой конкурентный старт пуска эту проверку больше не обгонит.
+    for (const zoneId of zoneIds) {
+      const zone = zoneById.get(zoneId)!;
+      if (!isStaysZone(zone)) continue;
+      const openCount = await countOpenLaunchesInZone(zoneId, tx);
+      if (openCount > 0) {
+        throw new OpenLaunchesRaceError(zone.name, openCount);
+      }
     }
 
     // Единый момент "сейчас" для всех агрегатов ниже (тапы Пусков/Прибываний,
@@ -814,6 +845,12 @@ export async function POST(request: Request) {
     // ретраях, но теоретически возможно) оба могли пройти его и упереться
     // в @@unique уже здесь, в самой записи. Тот же результат, что и обычное
     // повторное попадание — не задваиваем.
+    if (err instanceof OpenLaunchesRaceError) {
+      return NextResponse.json(
+        { error: `Заверши ${err.openCount} активных пуск${err.openCount === 1 ? "" : "ов"} в зоне «${err.zoneName}»` },
+        { status: 400 }
+      );
+    }
     if (idempotencyKey && err instanceof Error && "code" in err && (err as { code?: string }).code === "P2002") {
       const existing = await prisma.resultsSubmission.findUnique({ where: { idempotencyKey } });
       if (existing) {
@@ -833,7 +870,11 @@ export async function POST(request: Request) {
   // зон уже реальна, ждать отдельного нажатия "Инкассация" незачем. Функция
   // сама ничего не делает, если аванса нет (outstanding <= 0) — безопасно
   // вызывать после каждой сдачи, даже когда гасить нечего.
-  await settleOutstandingCollectionAdvance(point.tenantId, point.id, { performedByOperatorId: operator.id });
+  // submission.id передан явно (аудит 2026-07-27) — привязывает автопогашение
+  // к этой сдаче, чтобы её последующее удаление/правка (владельцем, пока она
+  // ещё последняя в цепочке) могли откатить и его тоже — см. комментарий у
+  // settleOutstandingCollectionAdvance.
+  await settleOutstandingCollectionAdvance(point.tenantId, point.id, { performedByOperatorId: operator.id }, submission.id);
 
   // "Сводка по зоне" (docs/spec/telegram-summaries.md) — одна сводка на каждую
   // выбранную зону, не одно сообщение на всю сдачу (замена старой единой

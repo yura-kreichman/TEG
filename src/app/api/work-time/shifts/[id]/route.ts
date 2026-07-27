@@ -7,6 +7,14 @@ import { resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
 import { chargeSelfServiceAdvanceToZones } from "@/lib/zone-balance";
 
+// Аудит 2026-07-27, второй раунд — см. комментарий у повторной проверки
+// овердрафта внутри транзакции ниже.
+class OverdraftExceededError extends Error {
+  constructor(public availableExcludingThisShift: number) {
+    super("OVERDRAFT_EXCEEDED");
+  }
+}
+
 interface ShiftCorrectionDiff {
   startAt: string;
   endAt: string | null;
@@ -134,105 +142,148 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
 
   let advanceDelta = 0;
   let overlapConflict = false;
-  await prisma.$transaction(async (tx) => {
-    // Лок по pointId (аудит 2026-07-25, повторная проверка) — два почти
-    // одновременных PATCH на одну смену иначе оба читали бы один и тот же
-    // currentAdvance/currentBonus ДО того, как другой успевал записать свой,
-    // и оба вызывали бы chargeSelfServiceAdvanceToZones каждый со своей
-    // дельтой от одной и той же устаревшей базы, реально задваивая или теряя
-    // часть зонного разнесения. Тот же паттерн, что у chargeSelfServiceAdvanceToZones/
-    // settleOutstandingCollectionAdvance в lib/zone-balance.ts.
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${shiftPointId}))`;
-    // Второй, независимый лок по operatorId — авторитетная защита от гонки
-    // пересечения смен (аудит 2026-07-25, финальный проход), см. комментарий
-    // у проверки выше. Разные ключи advisory-лока не конфликтуют друг с
-    // другом, порядок неважен.
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${shiftOperatorId}))`;
-    if (await hasOverlappingShift(shiftOperatorId, nextStartAt, nextEndAt ?? new Date(), shiftId, tx)) {
-      overlapConflict = true;
-      return;
-    }
-
-    // isOpen держим синхронно с endAt (см. Shift.isOpen в schema.prisma).
-    await tx.shift.update({
-      where: { id },
-      data: staysOpen
-        ? { startAt: nextStartAt }
-        : { startAt: nextStartAt, endAt: nextEndAt, isOpen: false },
-    });
-
-    // Свежее чтение под локом, не внешний linkedOps (прочитан ДО транзакции,
-    // мог устареть под гонкой выше).
-    const freshLinkedOps = await tx.moneyOperation.findMany({
-      where: { shiftId, type: { in: ["advance", "bonus_payout"] } },
-    });
-    const freshAdvanceOp = freshLinkedOps.find((o) => o.type === "advance");
-    const freshBonusOp = freshLinkedOps.find((o) => o.type === "bonus_payout");
-    const freshCurrentAdvance = Math.abs(Number(freshAdvanceOp?.amount ?? 0));
-    const freshCurrentBonus = Math.abs(Number(freshBonusOp?.amount ?? 0));
-
-    const syncLinkedOp = async (
-      existing: typeof freshAdvanceOp,
-      type: "advance" | "bonus_payout",
-      amount: number
-    ) => {
-      if (amount > 0) {
-        if (existing) {
-          await tx.moneyOperation.update({ where: { id: existing.id }, data: { amount: -amount } });
-        } else {
-          await tx.moneyOperation.create({
-            data: {
-              tenantId,
-              pointId: shiftPointId,
-              type,
-              amount: -amount,
-              performedByUserId: correctedByUserId,
-              beneficiaryOperatorId: shiftOperatorId,
-              shiftId,
-            },
-          });
-        }
-      } else if (existing) {
-        await tx.moneyOperation.delete({ where: { id: existing.id } });
+  let overdraftAvailable: number | null = null;
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Лок по pointId (аудит 2026-07-25, повторная проверка) — два почти
+      // одновременных PATCH на одну смену иначе оба читали бы один и тот же
+      // currentAdvance/currentBonus ДО того, как другой успевал записать свой,
+      // и оба вызывали бы chargeSelfServiceAdvanceToZones каждый со своей
+      // дельтой от одной и той же устаревшей базы, реально задваивая или теряя
+      // часть зонного разнесения. Тот же паттерн, что у chargeSelfServiceAdvanceToZones/
+      // settleOutstandingCollectionAdvance в lib/zone-balance.ts.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${shiftPointId}))`;
+      // Второй, независимый лок по operatorId — авторитетная защита от гонки
+      // пересечения смен (аудит 2026-07-25, финальный проход), см. комментарий
+      // у проверки выше. Разные ключи advisory-лока не конфликтуют друг с
+      // другом, порядок неважен.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${shiftOperatorId}))`;
+      if (await hasOverlappingShift(shiftOperatorId, nextStartAt, nextEndAt ?? new Date(), shiftId, tx)) {
+        overlapConflict = true;
+        return;
       }
-    };
 
-    await syncLinkedOp(freshAdvanceOp, "advance", nextAdvance);
-    await syncLinkedOp(freshBonusOp, "bonus_payout", nextBonus);
-
-    // Зонная дельта — ТОЛЬКО для self-service части (performedByOperatorId
-    // на существующей записи). Найдено аудитом 2026-07-25 (повторная
-    // проверка): владелец МОЖЕТ через эту же форму добавить аванс/премию,
-    // которых у смены раньше не было вовсе — ветка create выше пишет такую
-    // запись с performedByUserId (деньги владельца, не из кассы точки, тот
-    // же принцип, что /api/operators/[id]/work-time/advance/bonus), и она не
-    // должна списываться с зон. Правка СУММЫ у уже существующей
-    // self-service записи (создана в check-out/shifts POST с
-    // performedByOperatorId) сохраняет исходного исполнителя — update выше
-    // меняет только amount — поэтому её дельта законно остаётся
-    // self-service.
-    const advanceIsSelfService = freshAdvanceOp?.performedByOperatorId != null;
-    const bonusIsSelfService = freshBonusOp?.performedByOperatorId != null;
-    advanceDelta =
-      (advanceIsSelfService ? nextAdvance - freshCurrentAdvance : 0) +
-      (bonusIsSelfService ? nextBonus - freshCurrentBonus : 0);
-
-    if (changed) {
-      await tx.correctionLog.create({
-        data: {
-          entityType: "Shift",
-          entityId: id,
-          correctedByUserId,
-          beforeJson: JSON.parse(JSON.stringify(before)),
-          afterJson: JSON.parse(JSON.stringify(after)),
-          comment: typeof reason === "string" && reason.trim() ? reason.trim() : null,
-        },
+      // isOpen держим синхронно с endAt (см. Shift.isOpen в schema.prisma).
+      await tx.shift.update({
+        where: { id },
+        data: staysOpen
+          ? { startAt: nextStartAt }
+          : { startAt: nextStartAt, endAt: nextEndAt, isOpen: false },
       });
+
+      // Свежее чтение под локом, не внешний linkedOps (прочитан ДО транзакции,
+      // мог устареть под гонкой выше).
+      const freshLinkedOps = await tx.moneyOperation.findMany({
+        where: { shiftId, type: { in: ["advance", "bonus_payout"] } },
+      });
+      const freshAdvanceOp = freshLinkedOps.find((o) => o.type === "advance");
+      const freshBonusOp = freshLinkedOps.find((o) => o.type === "bonus_payout");
+      const freshCurrentAdvance = Math.abs(Number(freshAdvanceOp?.amount ?? 0));
+      const freshCurrentBonus = Math.abs(Number(freshBonusOp?.amount ?? 0));
+
+      // Повторная, авторитетная проверка овердрафта ПОД локом по operatorId
+      // (аудит 2026-07-27, второй раунд, реальная гонка) — проверка выше (до
+      // транзакции) была только быстрым оптимистичным отказом, как и у overlap
+      // выше по этому же файлу, но, в отличие от overlap, овердрафт никогда не
+      // перепроверялся внутри лока: два почти одновременных PATCH, оба
+      // увеличивающих аванс той же смены, могли оба пройти проверку против
+      // одного и того же устаревшего баланса ДО того, как любой из них
+      // закоммитит свою правку — суммарно проведя оператора глубже в минус,
+      // чем разрешает его овердрафт (или чем разрешено вовсе, если овердрафт
+      // выключен). calcOperatorBalance(tx) — то же самое чтение, что и выше,
+      // но теперь под локом и на СВЕЖИХ (freshCurrentAdvance) числах.
+      // throw, не return+флаг — tx.shift.update выше УЖЕ применён в этой же
+      // транзакции; return без исключения означал бы commit с применённым
+      // временем смены, но без синхронизации аванса — throw откатывает
+      // транзакцию целиком, как и задумано (ничего не применяется частично).
+      if (nextAdvance > freshCurrentAdvance) {
+        const shiftOperator = await tx.operator.findUnique({
+          where: { id: shiftOperatorId },
+          select: { overdraftAllowed: true },
+        });
+        const balance = await calcOperatorBalance(shiftOperatorId, undefined, tx);
+        const availableExcludingThisShift = balance.toPayOut + freshCurrentAdvance;
+        if (!shiftOperator?.overdraftAllowed && nextAdvance > availableExcludingThisShift) {
+          throw new OverdraftExceededError(availableExcludingThisShift);
+        }
+      }
+
+      const syncLinkedOp = async (
+        existing: typeof freshAdvanceOp,
+        type: "advance" | "bonus_payout",
+        amount: number
+      ) => {
+        if (amount > 0) {
+          if (existing) {
+            await tx.moneyOperation.update({ where: { id: existing.id }, data: { amount: -amount } });
+          } else {
+            await tx.moneyOperation.create({
+              data: {
+                tenantId,
+                pointId: shiftPointId,
+                type,
+                amount: -amount,
+                performedByUserId: correctedByUserId,
+                beneficiaryOperatorId: shiftOperatorId,
+                shiftId,
+              },
+            });
+          }
+        } else if (existing) {
+          await tx.moneyOperation.delete({ where: { id: existing.id } });
+        }
+      };
+
+      await syncLinkedOp(freshAdvanceOp, "advance", nextAdvance);
+      await syncLinkedOp(freshBonusOp, "bonus_payout", nextBonus);
+
+      // Зонная дельта — ТОЛЬКО для self-service части (performedByOperatorId
+      // на существующей записи). Найдено аудитом 2026-07-25 (повторная
+      // проверка): владелец МОЖЕТ через эту же форму добавить аванс/премию,
+      // которых у смены раньше не было вовсе — ветка create выше пишет такую
+      // запись с performedByUserId (деньги владельца, не из кассы точки, тот
+      // же принцип, что /api/operators/[id]/work-time/advance/bonus), и она не
+      // должна списываться с зон. Правка СУММЫ у уже существующей
+      // self-service записи (создана в check-out/shifts POST с
+      // performedByOperatorId) сохраняет исходного исполнителя — update выше
+      // меняет только amount — поэтому её дельта законно остаётся
+      // self-service.
+      const advanceIsSelfService = freshAdvanceOp?.performedByOperatorId != null;
+      const bonusIsSelfService = freshBonusOp?.performedByOperatorId != null;
+      advanceDelta =
+        (advanceIsSelfService ? nextAdvance - freshCurrentAdvance : 0) +
+        (bonusIsSelfService ? nextBonus - freshCurrentBonus : 0);
+
+      if (changed) {
+        await tx.correctionLog.create({
+          data: {
+            entityType: "Shift",
+            entityId: id,
+            correctedByUserId,
+            beforeJson: JSON.parse(JSON.stringify(before)),
+            afterJson: JSON.parse(JSON.stringify(after)),
+            comment: typeof reason === "string" && reason.trim() ? reason.trim() : null,
+          },
+        });
+      }
+    });
+  } catch (err) {
+    if (err instanceof OverdraftExceededError) {
+      overdraftAvailable = err.availableExcludingThisShift;
+    } else {
+      throw err;
     }
-  });
+  }
 
   if (overlapConflict) {
     return NextResponse.json({ error: "Смена пересекается с другой сменой этого оператора" }, { status: 409 });
+  }
+  if (overdraftAvailable !== null) {
+    const locale = await resolveLocale();
+    return NextResponse.json(
+      { error: `Аванс превышает доступный баланс к выдаче (${formatMoney(overdraftAvailable, locale)})` },
+      { status: 400 }
+    );
   }
 
   // Синхронизация уже разнесённых по зонам advance_settlement-записей

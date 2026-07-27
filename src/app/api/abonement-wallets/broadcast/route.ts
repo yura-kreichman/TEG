@@ -37,7 +37,20 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => ({}));
   const message: string = typeof body.message === "string" ? body.message.trim() : "";
-  const imageUrl: string | null = typeof body.imageUrl === "string" && body.imageUrl ? body.imageUrl : null;
+  // Префикс /uploads/{tenantId}/ обязателен (аудит 2026-07-27, реальная
+  // критичная дыра) — раньше imageUrl шёл в deleteUploadedImage() напрямую
+  // из тела запроса без единой проверки, в отличие от каждого другого
+  // потребителя загрузок в проекте (см. tenant/landing/gallery/route.ts,
+  // который проверяет тот же префикс на записи). Это позволяло Owner'у
+  // удалить чужой файл (логотип/фото другого тенанта, публично раздаётся по
+  // тому же пути на его лендинге) или, через "../" в самой строке, любой
+  // файл на сервере — второй слой защиты уже добавлен в deleteUploadedImage
+  // самой (path.resolve + проверка префикса UPLOADS_ROOT), но без ЭТОЙ
+  // проверки маршрут всё ещё позволял бы удалить ЧУЖОЙ, но легитимный файл
+  // внутри /uploads (просто не выйдя за его пределы).
+  const rawImageUrl: string | null = typeof body.imageUrl === "string" && body.imageUrl ? body.imageUrl : null;
+  const imageUrl: string | null =
+    rawImageUrl && rawImageUrl.startsWith(`/uploads/${owner.tenantId}/`) ? rawImageUrl : null;
   // "Всем" (по умолчанию — и клиентам, и в группу) | "clients" (только
   // личные сообщения) | "group" (только публичная группа) — запрос
   // пользователя 2026-07-24: выбор адресата рассылки, "в группу" доступно,

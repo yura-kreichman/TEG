@@ -20,8 +20,9 @@ import { PerformedByTag } from "@/components/performed-by-tag";
 import { PrintButton } from "@/components/print/print-button";
 import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
-import { formatPeriodLabel as formatPeriodLabelFor, isCurrentPeriod as isCurrentPeriodFor, periodRange, steppedAnchor } from "@/lib/period-nav";
+import { formatPeriodLabel as formatPeriodLabelFor, isCurrentPeriod as isCurrentPeriodFor, periodRange, steppedAnchor, tenantTodayAnchor } from "@/lib/period-nav";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useTenantTimezone } from "@/hooks/use-tenant-timezone";
 import { useOwnerPrintAvailable } from "@/hooks/use-print";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { formatMoneyWithCurrency } from "@/lib/format";
@@ -87,7 +88,10 @@ export default function AbonementWalletPage() {
   // 2026-07-24: "слишком большой список будет") — тот же приём, что у
   // /operators/[id] (period-nav.ts), только без переключателя неделя/месяц —
   // тут явно просили именно "переключатель месяцев".
-  const [anchor, setAnchor] = useState(() => new Date());
+  // timezone тенанта, не UTC/браузера (аудит 2026-07-27, второй раунд) — см.
+  // use-tenant-timezone.ts.
+  const timezone = useTenantTimezone();
+  const [anchor, setAnchor] = useState(() => tenantTodayAnchor(timezone));
 
   async function loadWallet(currentAnchor?: Date) {
     const { from, to } = periodRange("month", currentAnchor ?? anchor);
@@ -119,7 +123,7 @@ export default function AbonementWalletPage() {
     return formatPeriodLabelFor("month", anchor, t);
   }
   function isCurrentPeriod() {
-    return isCurrentPeriodFor("month", anchor);
+    return isCurrentPeriodFor("month", anchor, timezone);
   }
 
   async function save() {

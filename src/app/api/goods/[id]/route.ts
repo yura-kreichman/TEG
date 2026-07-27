@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { deleteUploadedImage } from "@/lib/uploads";
+import { deleteUploadedImage, isOwnUploadUrl } from "@/lib/uploads";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
 async function findOwnedGoods(tenantId: string, id: string) {
@@ -38,7 +38,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/goods/[id]
   const categoryId: string = typeof body.categoryId === "string" ? body.categoryId : goods.categoryId;
   const name: string = typeof body.name === "string" ? body.name.trim() : "";
   const price = Number(body.price);
-  const photoUrl: string | null = typeof body.photoUrl === "string" && body.photoUrl ? body.photoUrl : null;
+  // Аудит 2026-07-27 — см. isOwnUploadUrl.
+  const rawPhotoUrl: string | null = typeof body.photoUrl === "string" && body.photoUrl ? body.photoUrl : null;
+  const photoUrl: string | null = rawPhotoUrl && isOwnUploadUrl(owner.tenantId, rawPhotoUrl) ? rawPhotoUrl : null;
   const lowStockThreshold: number | null =
     body.lowStockThreshold === null || body.lowStockThreshold === undefined || body.lowStockThreshold === ""
       ? null

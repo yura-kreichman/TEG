@@ -120,6 +120,15 @@ export default function ZoneBalancesPage() {
   const [collectionZoneId, setCollectionZoneId] = useState("");
   const [collectionAmount, setCollectionAmount] = useState("");
   const [collectionError, setCollectionError] = useState<string | null>(null);
+  // collectionSubmitting/changeFundSubmitting/editCollectionSubmitting —
+  // аудит 2026-07-27, второй раунд, реальная гонка: у этих трёх денежных
+  // форм не было защиты от двойной отправки (в отличие от deleteCollection,
+  // у которой уже есть deletingCollection) — двойной тап/Enter+клик на
+  // медленной сети мог отправить два POST/PATCH до того, как первый ответ
+  // вернётся, реально задваивая инкассацию/размен/правку суммы.
+  const [collectionSubmitting, setCollectionSubmitting] = useState(false);
+  const [changeFundSubmitting, setChangeFundSubmitting] = useState(false);
+  const [editCollectionSubmitting, setEditCollectionSubmitting] = useState(false);
   // Уведомление, если инкассация довзыскала "пул" — аванс/премию, которые
   // сотрудник уже забрал с точки после прошлой инкассации (lib/zone-balance.ts,
   // найдено на реальных данных 2026-07-16: без этого владелец не понимал бы,
@@ -161,20 +170,25 @@ export default function ZoneBalancesPage() {
   }
 
   async function submitCollectionEdit() {
-    if (!editingCollection) return;
+    if (!editingCollection || editCollectionSubmitting) return;
+    setEditCollectionSubmitting(true);
     setEditCollectionError(null);
-    const res = await fetch(`/api/money/collections/${editingCollection.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: parseMoneyInput(editCollectionAmount) }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setEditCollectionError(data.error ?? t.money.collectionSaveError);
-      return;
+    try {
+      const res = await fetch(`/api/money/collections/${editingCollection.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: parseMoneyInput(editCollectionAmount) }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditCollectionError(data.error ?? t.money.collectionSaveError);
+        return;
+      }
+      await Promise.all([loadReport(), loadCollections()]);
+      editCollectionPulse(() => setEditingCollection(null));
+    } finally {
+      setEditCollectionSubmitting(false);
     }
-    await Promise.all([loadReport(), loadCollections()]);
-    editCollectionPulse(() => setEditingCollection(null));
   }
 
   async function deleteCollection() {
@@ -245,28 +259,34 @@ export default function ZoneBalancesPage() {
 
   async function handleChangeFund(event: FormEvent) {
     event.preventDefault();
+    if (changeFundSubmitting) return;
     setError(null);
     if (!changeFundTarget) return;
 
-    const url =
-      changeFundTarget === GOODS_POOL_ID
-        ? `/api/points/${pointId}/change-fund/goods`
-        : `/api/zones/${changeFundTarget}/change-fund`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: changeFundAmount }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error ?? "Не удалось провести размен");
-      return;
+    setChangeFundSubmitting(true);
+    try {
+      const url =
+        changeFundTarget === GOODS_POOL_ID
+          ? `/api/points/${pointId}/change-fund/goods`
+          : `/api/zones/${changeFundTarget}/change-fund`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: changeFundAmount }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Не удалось провести размен");
+        return;
+      }
+      await loadReport();
+      changeFundPulse(() => {
+        setChangeFundAmount("");
+        setChangeFundTarget(null);
+      });
+    } finally {
+      setChangeFundSubmitting(false);
     }
-    await loadReport();
-    changeFundPulse(() => {
-      setChangeFundAmount("");
-      setChangeFundTarget(null);
-    });
   }
 
   // Остатки/итог — только выбранной вверху точки (запрос пользователя
@@ -298,65 +318,73 @@ export default function ZoneBalancesPage() {
 
   async function handleCollection(event: FormEvent) {
     event.preventDefault();
+    if (collectionSubmitting) return;
     setCollectionError(null);
 
-    let res: Response | null;
-    if (collectionMode === "general") {
-      res = await fetch(`/api/points/${collectionPointId}/collection/general`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: parseMoneyInput(collectionAmount) }),
-      });
-    } else if (!collectionZoneId) {
+    if (collectionMode !== "general" && !collectionZoneId) {
       setCollectionError(t.operatorApp.selectZone);
       return;
-    } else if (collectionZoneId === ABONEMENT_POOL_ID || collectionZoneId === GOODS_POOL_ID) {
-      res = await fetch(`/api/points/${collectionPointId}/collection/pool`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pool: collectionZoneId === ABONEMENT_POOL_ID ? "abonement" : "goods",
-          amount: parseMoneyInput(collectionAmount),
-        }),
-      });
-    } else {
-      res = await fetch(`/api/zones/${collectionZoneId}/collection`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: parseMoneyInput(collectionAmount) }),
-      });
     }
 
-    const data = await res.json();
-    if (!res.ok) {
-      setCollectionError(data.error ?? "Не удалось провести инкассацию");
-      return;
-    }
-    if (data.settledPool > 0) {
-      setPoolSettledToast(data.settledPool);
-      setTimeout(() => setPoolSettledToast(null), 3000);
-    }
-    if (data.advance > 0) {
-      setAdvanceToast(data.advance);
-      setTimeout(() => setAdvanceToast(null), 4000);
-    }
-    const pointName = points.find((p) => p.id === collectionPointId)?.name ?? "";
-    const zoneName =
-      collectionMode !== "zone"
-        ? null
-        : collectionZoneId === ABONEMENT_POOL_ID
-          ? t.money.abonementCashLabel
-          : collectionZoneId === GOODS_POOL_ID
-            ? t.goods.navLabel
-            : (zonesForCollectionPoint.find((z) => z.zoneId === collectionZoneId)?.zoneName ?? null);
-    await Promise.all([loadReport(), loadCollections()]);
-    collectionPulse(() => {
-      setCollectionOpen(false);
-      setCollectionAmount("");
-      if (printAvailable.available) {
-        setLastCollection({ amount: parseMoneyInput(collectionAmount), pointName, zoneName });
+    setCollectionSubmitting(true);
+    try {
+      let res: Response;
+      if (collectionMode === "general") {
+        res = await fetch(`/api/points/${collectionPointId}/collection/general`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: parseMoneyInput(collectionAmount) }),
+        });
+      } else if (collectionZoneId === ABONEMENT_POOL_ID || collectionZoneId === GOODS_POOL_ID) {
+        res = await fetch(`/api/points/${collectionPointId}/collection/pool`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pool: collectionZoneId === ABONEMENT_POOL_ID ? "abonement" : "goods",
+            amount: parseMoneyInput(collectionAmount),
+          }),
+        });
+      } else {
+        res = await fetch(`/api/zones/${collectionZoneId}/collection`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: parseMoneyInput(collectionAmount) }),
+        });
       }
-    });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setCollectionError(data.error ?? "Не удалось провести инкассацию");
+        return;
+      }
+      if (data.settledPool > 0) {
+        setPoolSettledToast(data.settledPool);
+        setTimeout(() => setPoolSettledToast(null), 3000);
+      }
+      if (data.advance > 0) {
+        setAdvanceToast(data.advance);
+        setTimeout(() => setAdvanceToast(null), 4000);
+      }
+      const pointName = points.find((p) => p.id === collectionPointId)?.name ?? "";
+      const zoneName =
+        collectionMode !== "zone"
+          ? null
+          : collectionZoneId === ABONEMENT_POOL_ID
+            ? t.money.abonementCashLabel
+            : collectionZoneId === GOODS_POOL_ID
+              ? t.goods.navLabel
+              : (zonesForCollectionPoint.find((z) => z.zoneId === collectionZoneId)?.zoneName ?? null);
+      await Promise.all([loadReport(), loadCollections()]);
+      collectionPulse(() => {
+        setCollectionOpen(false);
+        setCollectionAmount("");
+        if (printAvailable.available) {
+          setLastCollection({ amount: parseMoneyInput(collectionAmount), pointName, zoneName });
+        }
+      });
+    } finally {
+      setCollectionSubmitting(false);
+    }
   }
 
   function buildCollectionReceiptData(c: NonNullable<typeof lastCollection>): PrintDocumentData {
@@ -803,7 +831,7 @@ export default function ZoneBalancesPage() {
                 required
               />
               <PressableScale>
-                <SaveButton type="submit" className="h-12" saved={changeFundSaved} />
+                <SaveButton type="submit" className="h-12" disabled={changeFundSubmitting} saved={changeFundSaved} />
               </PressableScale>
             </div>
           </div>
@@ -930,7 +958,7 @@ export default function ZoneBalancesPage() {
                     required
                   />
                   <PressableScale>
-                    <SaveButton type="submit" className="h-12" saved={collectionSaved} />
+                    <SaveButton type="submit" className="h-12" disabled={collectionSubmitting} saved={collectionSaved} />
                   </PressableScale>
                 </div>
               </div>
@@ -984,7 +1012,7 @@ export default function ZoneBalancesPage() {
                   onChange={(e) => setEditCollectionAmount(e.target.value)}
                 />
                 <PressableScale>
-                  <SaveButton className="h-14" onClick={submitCollectionEdit} saved={editCollectionSaved} />
+                  <SaveButton className="h-14" disabled={editCollectionSubmitting} onClick={submitCollectionEdit} saved={editCollectionSaved} />
                 </PressableScale>
               </div>
             </div>

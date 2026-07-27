@@ -36,6 +36,10 @@ export async function POST(request: Request) {
       pinHash: null,
       failedPinAttempts: 0,
       pinLockedUntil: null,
+      // Свежий пароль — снимаем и его блокировку тоже (аудит 2026-07-27,
+      // второй раунд), тот же принцип, что уже применён к ПИНу выше.
+      failedPasswordAttempts: 0,
+      passwordLockedUntil: null,
       resetTokenHash: null,
       resetTokenExpiresAt: null,
     },

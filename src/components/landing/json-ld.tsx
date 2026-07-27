@@ -69,6 +69,12 @@ export function LandingJsonLd({ data, baseUrl }: { data: LandingRenderData; base
 
   const jsonLd = { "@context": "https://schema.org", "@graph": [...organization, ...localBusinesses, ...images] };
 
-  // JSON-LD, не HTML — значения либо структурные числа/URL, либо экранируются JSON.stringify.
-  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />;
+  // JSON.stringify НЕ экранирует "</script>" — название тенанта/точки (owner-
+  // редактируемые строки, попадают сюда как name/address/city) со строкой
+  // "</script><script>..." закрыло бы этот тег раньше времени и включило бы
+  // произвольный HTML на полностью публичной, неавторизованной странице
+  // (реальная уязвимость, найдена аудитом 2026-07-27). "<" не меняет
+  // смысл JSON (валидный escape для "<"), но не даёт браузеру распознать тег.
+  const json = JSON.stringify(jsonLd).replace(/</g, "\\u003c");
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json }} />;
 }

@@ -21,6 +21,18 @@ export const ALLOWED_MARK_TYPES = new Set(["bold", "italic", "underline"]);
 
 const ALLOWED_HEADING_LEVELS = new Set([1, 2]);
 
+// Предел глубины вложенности (аудит 2026-07-27, второй раунд) — validateNode
+// рекурсировал без ограничения глубины; список внутри пункта списка внутри
+// списка... (bulletList → listItem → bulletList → ...) структурно разрешён
+// белым списком (это и есть обычная вложенность реальных списков), поэтому
+// не мог быть исключён по типу узла. Специально собранный JSON с десятками
+// тысяч уровней вложенности уронил бы validateNode переполнением стека
+// (RangeError) ДО проверки лимита длины текста в вызывающих роутах —
+// единственная возможная DoS-нагрузка (один запрос → 500), не утечка данных,
+// и только от аутентифицированного Owner (все write-пути защищены
+// requireOwner()), но дёшево закрыть.
+const MAX_NODE_DEPTH = 64;
+
 export interface PMNode {
   type: string;
   attrs?: Record<string, unknown>;
@@ -44,10 +56,11 @@ export function validateRichContent(value: unknown): value is PMNode {
   // кроме этой единственной позиции, не прошёл).
   if (!node.content) return true; // пустой документ — валиден (черновик)
   if (!Array.isArray(node.content)) return false;
-  return node.content.every(validateNode);
+  return node.content.every((child) => validateNode(child, 0));
 }
 
-function validateNode(node: unknown): boolean {
+function validateNode(node: unknown, depth: number): boolean {
+  if (depth > MAX_NODE_DEPTH) return false;
   if (!node || typeof node !== "object") return false;
   const n = node as PMNode;
 
@@ -72,7 +85,7 @@ function validateNode(node: unknown): boolean {
   if (n.content) {
     if (!Array.isArray(n.content)) return false;
     for (const child of n.content) {
-      if (!validateNode(child)) return false;
+      if (!validateNode(child, depth + 1)) return false;
     }
   }
 

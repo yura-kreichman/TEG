@@ -1,4 +1,5 @@
 import { toDateStr } from "@/lib/datetime-format";
+import { localDateParts } from "@/lib/business-day";
 import type { Dictionary } from "@/lib/i18n";
 
 // Week/month period navigation for the work-time tables — identical between
@@ -6,6 +7,21 @@ import type { Dictionary } from "@/lib/i18n";
 // owner's per-operator view (src/app/operators/[id]/page.tsx), previously
 // copy-pasted between the two.
 export type PeriodGranularity = "week" | "month";
+
+// `anchor`/значения, возвращаемые отсюда — ВСЕГДА "календарное значение":
+// год/месяц/день конкретного часового пояса тенанта, упакованные в Date как
+// будто это UTC-полночь (Date.UTC(y, m, d)). Дальше по всему модулю с ними
+// работают через getUTC*/Date.UTC — это НЕ настоящее UTC-время, а просто
+// способ хранить календарную тройку в объекте Date; такая арифметика сама по
+// себе корректна и не завязана на часовой пояс. Единственное место, где
+// часовой пояс тенанта реально нужен — превращение "текущего момента" в эту
+// календарную тройку, это и делает функция ниже (аудит 2026-07-27, второй
+// раунд — раньше `new Date()` использовался НАПРЯМУЮ, то есть бралась
+// календарная дата по UTC-времени сервера/браузера, а не по месту тенанта).
+export function tenantTodayAnchor(timezone: string): Date {
+  const { year, month, day } = localDateParts(new Date(), timezone);
+  return new Date(Date.UTC(year, month - 1, day));
+}
 
 export function periodRange(granularity: PeriodGranularity, anchor: Date): { from: string; to: string } {
   const a = new Date(anchor);
@@ -20,8 +36,8 @@ export function periodRange(granularity: PeriodGranularity, anchor: Date): { fro
   return { from: toDateStr(start), to: toDateStr(end) };
 }
 
-export function isCurrentPeriod(granularity: PeriodGranularity, anchor: Date): boolean {
-  const today = new Date();
+export function isCurrentPeriod(granularity: PeriodGranularity, anchor: Date, timezone: string): boolean {
+  const today = tenantTodayAnchor(timezone);
   if (granularity === "week") {
     const weekStart = (d: Date) => {
       const day = (d.getUTCDay() + 6) % 7;

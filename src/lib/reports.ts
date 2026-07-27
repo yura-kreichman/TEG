@@ -68,15 +68,29 @@ export function getPeriodRange(granularity: PeriodGranularity, anchor: Date, tod
   return { start, end };
 }
 
-/** Same-length period immediately before `start` — for the "vs previous period" delta. */
+/**
+ * Same-length period immediately before `start` — for the "vs previous
+ * period" delta.
+ *
+ * day/week — через addCalendarDays + zonedWallTimeToUtc (аудит 2026-07-27,
+ * второй раунд), не через ±24ч/±7×24ч в миллисекундах — год/month-ветки этой
+ * же функции уже делали это правильно, только day/week регрессировали к
+ * наивной арифметике. В день перехода на/с летнего времени реальные сутки
+ * длятся 23 или 25 часов — простое вычитание 24ч сдвигало границу на час
+ * относительно настоящей местной полуночи, из-за чего сравнение "период vs
+ * предыдущий период" (Отчёты/Деньги, гранулярность День/Неделя) искажалось
+ * на этот час раз в год, вокруг даты перехода.
+ */
 export function getPreviousPeriodRange(granularity: ReportGranularity, start: Date, timezone: string) {
+  const s = localDateParts(start, timezone);
   if (granularity === "day") {
-    return { start: new Date(start.getTime() - 24 * 60 * 60 * 1000), end: start };
+    const prev = addCalendarDays(s, -1);
+    return { start: zonedWallTimeToUtc(prev.year, prev.month, prev.day, 0, 0, timezone), end: start };
   }
   if (granularity === "week") {
-    return { start: new Date(start.getTime() - 7 * 24 * 60 * 60 * 1000), end: start };
+    const prev = addCalendarDays(s, -7);
+    return { start: zonedWallTimeToUtc(prev.year, prev.month, prev.day, 0, 0, timezone), end: start };
   }
-  const s = localDateParts(start, timezone);
   if (granularity === "year") {
     const prevYearStart = zonedWallTimeToUtc(s.year - 1, 1, 1, 0, 0, timezone);
     return { start: prevYearStart, end: start };

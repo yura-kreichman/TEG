@@ -76,9 +76,40 @@ export async function saveRemoteImageAsWebp(tenantId: string, buffer: Buffer): P
   return `/uploads/${tenantId}/${filename}`;
 }
 
-/** Best-effort cleanup when a photo/avatar is replaced or its owning record deleted. */
+/**
+ * Проверяет, что относительный URL загруженного файла действительно лежит в
+ * папке ЭТОГО тенанта (`/uploads/<tenantId>/...`) — защита от того, чтобы
+ * Owner одного тенанта не смог указать чужой (но легитимный) `/uploads/...`
+ * URL в поле photoUrl/avatarUrl/logoUrl (аудит 2026-07-27, найдено рядом с
+ * критичной дырой в deleteUploadedImage — тот же класс "клиентской строке
+ * доверяли без проверки", просто здесь риск ниже: не удаление, а просто
+ * "подсмотреть"/сослаться на чужую картинку). Используется на каждой записи
+ * этих полей, единообразно с tenant/landing/gallery/route.ts, которая уже
+ * делала эту проверку.
+ */
+export function isOwnUploadUrl(tenantId: string, url: string): boolean {
+  return url.startsWith(`/uploads/${tenantId}/`);
+}
+
+/**
+ * Best-effort cleanup when a photo/avatar is replaced or its owning record deleted.
+ *
+ * path.resolve + префикс-проверка (аудит 2026-07-27, реальная критичная дыра) —
+ * раньше здесь был только `path.join(process.cwd(), "public", relativeUrl)` без
+ * какой-либо проверки результата: `path.join` НЕ блокирует "../" сегменты, он
+ * их нормализует, поэтому `relativeUrl = "/uploads/../../../../.env"` (или
+ * глубже) давал путь ЗА пределами public/uploads — вплоть за пределы всего
+ * проекта. `/api/abonement-wallets/broadcast` передавал сюда `imageUrl` прямо
+ * из тела запроса клиента без единой проверки (см. её собственный фикс рядом),
+ * то есть это было не только теоретической дырой в примитиве, а реально
+ * достижимым arbitrary-file-delete для любого авторизованного Owner. Теперь
+ * итоговый путь обязан лежать строго внутри UPLOADS_ROOT — резолвим и
+ * сверяем префикс, независимо от того, что содержит сама строка.
+ */
 export async function deleteUploadedImage(relativeUrl: string | null | undefined) {
   if (!relativeUrl || !relativeUrl.startsWith("/uploads/")) return;
-  const filePath = path.join(process.cwd(), "public", relativeUrl);
+  const filePath = path.resolve(process.cwd(), "public", `.${relativeUrl}`);
+  const resolvedRoot = path.resolve(UPLOADS_ROOT);
+  if (filePath !== resolvedRoot && !filePath.startsWith(resolvedRoot + path.sep)) return;
   await unlink(filePath).catch(() => {});
 }

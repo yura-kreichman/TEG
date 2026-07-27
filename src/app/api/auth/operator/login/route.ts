@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
   const operator = await findOperatorByPin(device.point.tenantId, pin);
   if (!operator) {
-    await recordFailedDevicePin(device.id, device.failedPinAttempts);
+    await recordFailedDevicePin(device.id);
     return NextResponse.json({ error: "Неверный ПИН-код" }, { status: 401 });
   }
   if (device.failedPinAttempts > 0) await resetDevicePinLockout(device.id);

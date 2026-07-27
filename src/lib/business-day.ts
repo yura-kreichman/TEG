@@ -87,14 +87,35 @@ export function zonedWallTimeToUtc(
   }
 }
 
-/** Бизнес-день, которому принадлежит момент `at` при данной границе, в часовом поясе `timezone`. */
+/**
+ * Бизнес-день, которому принадлежит момент `at` при данной границе, в
+ * часовом поясе `timezone`.
+ *
+ * Соседний день считается через zonedWallTimeToUtc с ПЕРЕСЧИТАННЫМИ Y/M/D
+ * (Date.UTC(...day±1) корректно переносит через границу месяца/года), НЕ
+ * через ±24ч в миллисекундах (аудит 2026-07-27, второй раунд, реальный
+ * денежный баг — этот файл сам предупреждал в шапке, что при первом аудите
+ * 2026-07-12 эту часть сознательно отложили как "более рискованный кусок
+ * логики"). Простое ±24ч верно только вне перехода на/с летнего времени —
+ * в день перехода реальная длина суток 23 или 25 часов, а не 24: соседняя
+ * граница получалась сдвинутой на час относительно настоящей стенной
+ * границы этого дня, и час активности либо выпадал из ОБОИХ соседних окон
+ * [start,end), либо попадал в оба сразу — раз в год выручка/сдачи итогов
+ * пропадали или задваивались в дневных сводках "Касса за день". Тот же
+ * приём, что уже использует dayBoundsUtc (эта же функция файла).
+ */
 export function getBusinessDayBounds(boundaryTime: string, at: Date, timezone: string): { start: Date; end: Date } {
   const { hours, minutes } = parseBoundary(boundaryTime);
   const { year, month, day } = localDateParts(at, timezone);
   const boundaryToday = zonedWallTimeToUtc(year, month, day, hours, minutes, timezone);
 
-  const start = at >= boundaryToday ? boundaryToday : new Date(boundaryToday.getTime() - 24 * 60 * 60 * 1000);
-  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  function boundaryForDayOffset(offset: number): Date {
+    const d = new Date(Date.UTC(year, month - 1, day + offset));
+    return zonedWallTimeToUtc(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), hours, minutes, timezone);
+  }
+
+  const start = at >= boundaryToday ? boundaryToday : boundaryForDayOffset(-1);
+  const end = at >= boundaryToday ? boundaryForDayOffset(1) : boundaryToday;
   return { start, end };
 }
 

@@ -15,6 +15,8 @@ import { INSTRUCTION_ACK_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 const RATE_LIMIT_WINDOW_MINUTES = 10;
 const RATE_LIMIT_MAX_PER_IP = 5;
 
+class RateLimitExceededError extends Error {}
+
 const MIN_SIGNATURE_BYTES = 100; // отсекает заведомо пустой canvas, не более того — см. комментарий выше
 const MAX_SIGNATURE_BYTES = 500_000;
 
@@ -96,36 +98,57 @@ export async function POST(request: Request, ctx: RouteContext<"/api/public/inst
 
   const ip = getClientIp(request);
 
-  const recentCount = await prisma.acknowledgmentRecord.count({
-    where: {
-      instructionId: instruction.id,
-      ip,
-      createdAt: { gte: new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000) },
-    },
-  });
-  if (recentCount >= RATE_LIMIT_MAX_PER_IP) {
-    return NextResponse.json({ error: "Слишком много попыток, попробуйте позже" }, { status: 429 });
-  }
-
   const userAgent = request.headers.get("user-agent") ?? "";
   const { deviceLabel, browserLabel } = parseUserAgentLabels(userAgent);
 
-  const record = await prisma.acknowledgmentRecord.create({
-    data: {
-      instructionId: instruction.id,
-      versionId: version.id,
-      lastName: lastName.trim(),
-      firstName: firstName.trim(),
-      phone: phone.trim(),
-      birthDate: new Date(birthDate),
-      signaturePng: new Uint8Array(signaturePng),
-      readingSeconds: Math.round(readingSeconds),
-      ip,
-      userAgent,
-      deviceLabel,
-      browserLabel,
-    },
-  });
+  // pg_advisory_xact_lock, не голый count()-затем-create() (аудит 2026-07-27,
+  // реальная дыра): count и create раньше были двумя независимыми запросами —
+  // при N одновременных запросах с одного IP каждый читает один и тот же
+  // (низкий) count ДО того, как любой из них закоммитит свою запись, поэтому
+  // все N проходят проверку "< 5" разом — "5 за 10 минут" тормозило только
+  // последовательные попытки, не всплеск. Лочим по (instructionId, ip) на
+  // время транзакции — тот же приём, что уже используется для инкассации/
+  // сдачи итогов (advisory lock вместо уникального ограничения, т.к. лимит
+  // "скользящее окно", а не единственная запись).
+  let record;
+  try {
+    record = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${instruction.id}:${ip}`}))`;
+
+      const recentCount = await tx.acknowledgmentRecord.count({
+        where: {
+          instructionId: instruction.id,
+          ip,
+          createdAt: { gte: new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000) },
+        },
+      });
+      if (recentCount >= RATE_LIMIT_MAX_PER_IP) {
+        throw new RateLimitExceededError();
+      }
+
+      return tx.acknowledgmentRecord.create({
+        data: {
+          instructionId: instruction.id,
+          versionId: version.id,
+          lastName: lastName.trim(),
+          firstName: firstName.trim(),
+          phone: phone.trim(),
+          birthDate: new Date(birthDate),
+          signaturePng: new Uint8Array(signaturePng),
+          readingSeconds: Math.round(readingSeconds),
+          ip,
+          userAgent,
+          deviceLabel,
+          browserLabel,
+        },
+      });
+    });
+  } catch (err) {
+    if (err instanceof RateLimitExceededError) {
+      return NextResponse.json({ error: "Слишком много попыток, попробуйте позже" }, { status: 429 });
+    }
+    throw err;
+  }
 
   const instructionAckSettings =
     (await prisma.instructionAckSummarySettings.findUnique({ where: { tenantId: instruction.tenantId } })) ??

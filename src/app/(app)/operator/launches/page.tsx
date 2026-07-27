@@ -266,7 +266,15 @@ export default function LaunchesZonePage() {
           zoneName: zone.name,
           assetName: asset.name,
           tariffName: tariff.name,
-          amount: tariff.price,
+          // data.amount (реально начисленное на сервере), не tariff.price
+          // (аудит 2026-07-27, второй раунд, реальный денежный баг) —
+          // tariff.price читался из локального state зон, который обновляется
+          // только polling'ом/фокусом (useLiveRefetch, ~25с). Если владелец
+          // поменял цену тарифа в Настройках между двумя обновлениями этого
+          // экрана, оператор видел в подтверждении/на чеке СТАРУЮ цену, хотя
+          // сервер уже посчитал и записал НОВУЮ — расхождение между тем, что
+          // реально списано, и тем, что показано/распечатано.
+          amount: Number(data.amount),
           paymentMethod: legs ? "split" : paymentMethod,
           legs: legs && legs.length > 0 ? legs : undefined,
         });

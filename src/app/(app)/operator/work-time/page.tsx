@@ -26,6 +26,7 @@ import {
   isCurrentPeriod as isCurrentPeriodFor,
   periodRange as periodRangeFor,
   steppedAnchor,
+  tenantTodayAnchor,
   type PeriodGranularity,
 } from "@/lib/period-nav";
 
@@ -86,7 +87,13 @@ export default function WorkTimePage() {
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
   const [standaloneMoneyOps, setStandaloneMoneyOps] = useState<StandaloneMoneyOp[]>([]);
   const [granularity, setGranularity] = useState<PeriodGranularity>("month");
-  const [anchor, setAnchor] = useState(() => new Date());
+  // timezone тенанта — объявлено выше своего обычного места (было ниже, у
+  // остального состояния загрузки), чтобы anchor мог использовать актуальное
+  // значение сразу (аудит 2026-07-27, второй раунд): "UTC" тут — тот же
+  // временный плейсхолдер до ответа /api/operator/tenant-timezone в loadAll()
+  // ниже, реальное значение приходит туда же, где и раньше.
+  const [tenantTimezone, setTenantTimezone] = useState("UTC");
+  const [anchor, setAnchor] = useState(() => tenantTodayAnchor(tenantTimezone));
   const [defaultShiftStartTime, setDefaultShiftStartTime] = useState("10:00");
   const [earlyToleranceMinutes, setEarlyToleranceMinutes] = useState(120);
   const [lateToleranceMinutes, setLateToleranceMinutes] = useState(120);
@@ -109,7 +116,6 @@ export default function WorkTimePage() {
     playErrorChime();
     errorToast.flash(message, "error");
   }
-  const [tenantTimezone, setTenantTimezone] = useState("UTC");
 
   // Самостоятельный запрос аванса/премии посреди смены, без её закрытия —
   // только auto-режим (docs/spec/05-work-time.md, "АВАНС": «...или отдельно
@@ -165,7 +171,7 @@ export default function WorkTimePage() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function isCurrentPeriod() {
-    return isCurrentPeriodFor(granularity, anchor);
+    return isCurrentPeriodFor(granularity, anchor, tenantTimezone);
   }
 
   function stepPeriod(delta: number) {
@@ -367,7 +373,7 @@ export default function WorkTimePage() {
               type="button"
               onClick={() => {
                 setGranularity(g);
-                setAnchor(new Date());
+                setAnchor(tenantTodayAnchor(tenantTimezone));
               }}
               className={cn(
                 "rounded-full px-3 py-1.5 text-xs font-semibold",

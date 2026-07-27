@@ -4,10 +4,8 @@ import bcrypt from "bcryptjs";
 import {
   sessionCookieOptions,
   signExpiringToken,
-  signToken,
   verifyExpiringToken,
   verifySessionToken,
-  verifyToken,
 } from "@/lib/session-crypto";
 
 const SESSION_COOKIE = "session";
@@ -59,7 +57,20 @@ export function verifyPin(pin: string, hash: string) {
 
 export async function createSession(userId: string) {
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, signToken(userId), sessionCookieOptions(SESSION_MAX_AGE));
+  // signExpiringToken, не signToken (аудит 2026-07-27) — обычный signToken не
+  // несёт срок действия в самом значении, только в maxAge cookie: перехваченный
+  // сырой cookie (лог прокси, скриншот, бэкап устройства) оставался валидным
+  // НАВСЕГДА при прямом реплее без браузера, и сброс пароля через
+  // "Забыли пароль" не отзывал уже выданные такие токены (createSession
+  // выпускает НОВЫЙ, но подпись зависит только от userId — старый перехваченный
+  // токен для того же userId остаётся тем же самым валидным значением).
+  // Ограниченный embedded expiry не закрывает это до конца (подпись всё ещё не
+  // зависит от passwordHash), но сокращает окно эксплуатации с "навсегда" до
+  // ≤7 дней. verifySessionToken уже понимает оба формата (session-crypto.ts),
+  // поэтому уже выданные до этого фикса 2-частные cookie продолжают работать
+  // до истечения своего browser maxAge — миграция без принудительного разлогина.
+  const expiresAt = Date.now() + SESSION_MAX_AGE * 1000;
+  cookieStore.set(SESSION_COOKIE, signExpiringToken(userId, expiresAt), sessionCookieOptions(SESSION_MAX_AGE));
 }
 
 export async function destroySession() {
@@ -138,7 +149,16 @@ export async function endImpersonation() {
 
 export async function rememberOwnerDevice(userId: string) {
   const cookieStore = await cookies();
-  cookieStore.set(OWNER_DEVICE_COOKIE, signToken(userId), sessionCookieOptions(OWNER_DEVICE_MAX_AGE));
+  // signExpiringToken (аудит 2026-07-27) — тот же "перехваченный cookie живёт
+  // вечно" пробел, что и у createSession выше, но здесь ставки выше: этот
+  // cookie живёт год. verifySessionToken (не verifyToken) ниже — совместимый
+  // диспетчер формата, старые уже выданные 2-частные cookie не ломаются.
+  const expiresAt = Date.now() + OWNER_DEVICE_MAX_AGE * 1000;
+  cookieStore.set(
+    OWNER_DEVICE_COOKIE,
+    signExpiringToken(userId, expiresAt),
+    sessionCookieOptions(OWNER_DEVICE_MAX_AGE)
+  );
 }
 
 export async function forgetOwnerDevice() {
@@ -150,7 +170,7 @@ export async function getOwnerDeviceUserId(): Promise<string | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(OWNER_DEVICE_COOKIE)?.value;
   if (!token) return null;
-  return verifyToken(token);
+  return verifySessionToken(token);
 }
 
 export function hashResetToken(token: string) {

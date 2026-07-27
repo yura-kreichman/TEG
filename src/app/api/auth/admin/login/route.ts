@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createAdminSession, verifyPassword } from "@/lib/auth";
 import { isAuthRateLimited } from "@/lib/auth-rate-limit";
+import { isPinLockedOut, recordFailedPassword, remainingLockoutMinutes, resetPasswordLockout } from "@/lib/pin-lockout";
 import { getClientIp } from "@/lib/instructions/request-ip";
 
 // Отдельный вход для платформенного Super Admin (docs/spec/06-super-admin.md) —
@@ -26,10 +27,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Неверные учётные данные" }, { status: 401 });
   }
 
+  // Блокировка по попыткам пароля (аудит 2026-07-27, второй раунд) — самый
+  // чувствительный вход в проекте, тем более нуждается в этой защите, см.
+  // lib/pin-lockout.ts.
+  if (isPinLockedOut(user.passwordLockedUntil)) {
+    return NextResponse.json(
+      { error: `Слишком много попыток. Попробуйте через ${remainingLockoutMinutes(user.passwordLockedUntil!)} мин.` },
+      { status: 429 }
+    );
+  }
+
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) {
+    await recordFailedPassword(user.id);
     return NextResponse.json({ error: "Неверные учётные данные" }, { status: 401 });
   }
+  if (user.failedPasswordAttempts > 0) await resetPasswordLockout(user.id);
 
   await createAdminSession(user.id);
   return NextResponse.json({ id: user.id, login: user.login });

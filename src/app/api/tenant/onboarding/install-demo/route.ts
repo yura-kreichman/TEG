@@ -59,16 +59,44 @@ export async function POST() {
       // пакета), здесь просто несколько проверок подряд в одной транзакции.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${tenantId}))`;
 
-      async function assertLimit(
-        limitKey: "maxPoints" | "maxZones" | "maxAssets" | "maxOperators",
-        currentCount: number
-      ) {
+      // Серверная проверка "тенант заведомо пустой" (аудит 2026-07-27) —
+      // раньше это было только предположением в комментарии, ничем не
+      // подкреплённым в самом коде: маршрут можно было вызвать повторно
+      // (два открытых таба с ещё не обновлённым onboardingDismissedAt, или
+      // просто прямой запрос) сколько угодно раз, каждый раз создавая ещё
+      // один полный демо-бандл. Теперь первый же повторный вызов отклоняется
+      // явно, а не полагается только на лимиты пакета (см. assertLimit ниже
+      // — те тоже исправлены, но это отдельный, более прямой guard).
+      const existingPointCount = await tx.point.count({ where: { tenantId } });
+      if (existingPointCount > 0) {
+        throw new DemoInstallLimitError(
+          NextResponse.json({ error: "Демо-данные уже установлены" }, { status: 409 })
+        );
+      }
+
+      // currentCount теперь всегда РЕАЛЬНЫЙ счётчик (аудит 2026-07-27, второй
+      // раунд, реальная дыра) — раньше сюда передавались захардкоженные
+      // литералы (0/1), которые предполагали "тенант заведомо пустой на этом
+      // шаге", но ничто в самом роуте это не проверяло: маршрут вызываем
+      // сколько угодно раз (нет проверки onboardingDismissedAt/реального
+      // отсутствия точек на сервере — только в клиентском рендере шторки),
+      // и на КАЖДЫЙ повторный вызов лимит-проверки сравнивались с теми же
+      // фиктивными 0/1, вместо настоящего текущего количества — тенант мог
+      // бесконечно плодить точки/зоны/активы/операторов сверх пакета одним
+      // и тем же запросом.
+      async function assertLimit(limitKey: "maxPoints" | "maxZones" | "maxAssets" | "maxOperators") {
+        const currentCount = await ({
+          maxPoints: () => tx.point.count({ where: { tenantId } }),
+          maxZones: () => tx.zone.count({ where: { point: { tenantId } } }),
+          maxAssets: () => tx.asset.count({ where: { zone: { point: { tenantId } } } }),
+          maxOperators: () => tx.operator.count({ where: { tenantId } }),
+        })[limitKey]();
         const limitError = await checkPackageLimit(tenantId, limitKey, currentCount);
         if (limitError) throw new DemoInstallLimitError(limitError);
       }
 
       // Точка
-      await assertLimit("maxPoints", 0);
+      await assertLimit("maxPoints");
       const point = await tx.point.create({
         data: {
           tenantId,
@@ -81,7 +109,7 @@ export async function POST() {
       });
 
       // Зона "Счётчики" + актив + 2 тарифа
-      await assertLimit("maxZones", 0);
+      await assertLimit("maxZones");
       const zoneCounters = await tx.zone.create({
         data: {
           pointId: point.id,
@@ -97,7 +125,7 @@ export async function POST() {
       await tx.tariff.create({
         data: { zoneId: zoneCounters.id, name: ob.demoTariffVip, price: 150, order: 2 },
       });
-      await assertLimit("maxAssets", 0);
+      await assertLimit("maxAssets");
       await tx.asset.create({
         data: {
           zoneId: zoneCounters.id,
@@ -108,7 +136,7 @@ export async function POST() {
       });
 
       // Зона "Прибывания" + тариф "За вход" (2 варианта) + актив
-      await assertLimit("maxZones", 1);
+      await assertLimit("maxZones");
       const zoneStays = await tx.zone.create({
         data: {
           pointId: point.id,
@@ -133,7 +161,7 @@ export async function POST() {
           { tariffId: staysTariff.id, name: ob.demoOption60, durationMinutes: 60, price: 180, order: 1 },
         ],
       });
-      await assertLimit("maxAssets", 1);
+      await assertLimit("maxAssets");
       await tx.asset.create({
         data: {
           zoneId: zoneStays.id,
@@ -146,7 +174,7 @@ export async function POST() {
 
       // Сотрудник — allZonesAccess по умолчанию true (schema default), сразу
       // видит обе демо-зоны без дополнительной настройки доступа.
-      await assertLimit("maxOperators", 0);
+      await assertLimit("maxOperators");
       const operatorCount = await tx.operator.count({ where: { tenantId } });
       await tx.operator.create({
         data: {

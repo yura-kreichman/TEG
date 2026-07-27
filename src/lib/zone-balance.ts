@@ -506,7 +506,20 @@ type CollectionActor = { performedByUserId?: string; performedByOperatorId?: str
 export async function settleOutstandingCollectionAdvance(
   tenantId: string,
   pointId: string,
-  actor: CollectionActor
+  actor: CollectionActor,
+  // Опционально — только вызов из submit-results передаёт (аудит 2026-07-27,
+  // реальный денежный баг): без этой метки строки advance_settlement/
+  // collection_advance, созданные АВТОМАТИЧЕСКИ сразу после Сдачи итогов,
+  // были никак не связаны с породившей их сдачей. Владелец мог удалить/
+  // отредактировать эту (последнюю в цепочке, ещё редактируемую) сдачу через
+  // /api/reports/counters/zone-submission/[id] — тот роут откатывает только
+  // MoneyOperation с совпадающим resultsSubmissionId, поэтому откатывал
+  // revenue-строку, но НЕ трогал уже созданное автопогашение аванса — реальные
+  // деньги тихо и безвозвратно пропадали из учёта (аванс считался погашенным,
+  // хотя выручка, которой он был погашен, только что удалена). Ручные вызовы
+  // (owner/operator "Инкассация") не передают этот параметр — их нечего
+  // реверсировать, они не создаются автоматически внутри сдачи итогов.
+  resultsSubmissionId?: string
 ): Promise<number> {
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pointId}))`;
@@ -533,6 +546,7 @@ export async function settleOutstandingCollectionAdvance(
         amount: -Math.abs(shares[i]),
         performedByUserId: actor.performedByUserId,
         performedByOperatorId: actor.performedByOperatorId,
+        resultsSubmissionId: resultsSubmissionId ?? null,
       }))
       .filter((row) => row.amount !== 0);
 
@@ -546,9 +560,32 @@ export async function settleOutstandingCollectionAdvance(
         amount: settleable,
         performedByUserId: actor.performedByUserId,
         performedByOperatorId: actor.performedByOperatorId,
+        resultsSubmissionId: resultsSubmissionId ?? null,
       },
     });
 
     return settleable;
+  });
+}
+
+// Откат автопогашения "Аванса инкассации", привязанного к конкретной Сдаче
+// итогов (аудит 2026-07-27 — см. комментарий у resultsSubmissionId выше).
+// Удаляет ВСЕ advance_settlement/collection_advance строки этой сдачи, не
+// только по одной зоне — settleOutstandingCollectionAdvance вызывается ОДИН
+// раз на всю точку сразу после сдачи и распределяет погашение по всем зонам
+// точки пропорционально их балансу в тот момент; если владелец удаляет/
+// правит хотя бы одну зону из этой сдачи, входные данные того расчёта уже не
+// действительны — безопаснее полностью откатить весь автоматический эффект
+// (аванс снова считается непогашенным) и дать ему естественно
+// пересчитаться на следующей сдаче/инкассации, чем пытаться пересчитать его
+// частично здесь же. Вызывающая сторона сама решает, в той же транзакции
+// или нет — здесь только удаление, без advisory-lock (нет risk gonki: это
+// вызывается изнутри уже locked транзакции удаления/правки самой сдачи).
+export async function reverseResultsSubmissionAdvanceSettlement(
+  tx: Tx,
+  resultsSubmissionId: string
+): Promise<void> {
+  await tx.moneyOperation.deleteMany({
+    where: { resultsSubmissionId, type: { in: ["advance_settlement", "collection_advance"] } },
   });
 }

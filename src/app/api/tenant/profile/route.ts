@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { deleteUploadedImage } from "@/lib/uploads";
+import { deleteUploadedImage, isOwnUploadUrl } from "@/lib/uploads";
 import { generateUniqueSlug } from "@/lib/instructions/slug";
 import { isReservedSlug, isSlugTaken } from "@/lib/landing/slug";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
@@ -43,7 +43,9 @@ export async function PATCH(request: Request) {
   }
 
   if (logoUrl !== undefined) {
-    const nextLogoUrl = typeof logoUrl === "string" && logoUrl.trim() ? logoUrl.trim() : null;
+    const trimmedLogoUrl = typeof logoUrl === "string" && logoUrl.trim() ? logoUrl.trim() : null;
+    // Аудит 2026-07-27 — см. isOwnUploadUrl.
+    const nextLogoUrl = trimmedLogoUrl && isOwnUploadUrl(owner.tenantId, trimmedLogoUrl) ? trimmedLogoUrl : null;
     const current = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { logoUrl: true } });
     if (current?.logoUrl && current.logoUrl !== nextLogoUrl) {
       await deleteUploadedImage(current.logoUrl);

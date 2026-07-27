@@ -6,6 +6,7 @@ import { isZoneSubmissionEditable } from "@/lib/results-submission";
 import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { getZoneAbonementSpendAmount } from "@/lib/abonement";
+import { reverseResultsSubmissionAdvanceSettlement } from "@/lib/zone-balance";
 import { editChatMessage } from "@/lib/telegram-bot";
 import { formatZoneSummaryTelegram } from "@/lib/summary-channels/telegram-format";
 import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
@@ -300,6 +301,14 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/co
 
     const changed = JSON.stringify(before) !== JSON.stringify(after);
     if (changed) {
+      // Откатываем автопогашение "Аванса инкассации", если оно было
+      // привязано к этой сдаче — см. reverseResultsSubmissionAdvanceSettlement
+      // (аудит 2026-07-27, реальный денежный баг: правка кассы задним числом
+      // не пересчитывала уже проведённое автопогашение, аванс считался
+      // погашенным даже когда выручка, которой его погасили, уже не та).
+      // Безопасно вызывать даже когда settlement не было — deleteMany по
+      // несуществующим строкам просто ничего не делает.
+      await reverseResultsSubmissionAdvanceSettlement(tx, zoneSubmission.resultsSubmissionId);
       await tx.correctionLog.create({
         data: {
           entityType: "ZoneSubmission",
@@ -363,6 +372,10 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/reports/
       await tx.moneyOperation.deleteMany({
         where: { resultsSubmissionId: zoneSubmission.resultsSubmissionId, zoneId: zoneSubmission.zoneId },
       });
+
+      // Тот же откат автопогашения аванса, что и в PATCH выше — см.
+      // reverseResultsSubmissionAdvanceSettlement (аудит 2026-07-27).
+      await reverseResultsSubmissionAdvanceSettlement(tx, zoneSubmission.resultsSubmissionId);
 
       await tx.correctionLog.create({
         data: {

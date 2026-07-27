@@ -616,11 +616,21 @@ export default function TicketsZonePage() {
       const res = await fetch(`/api/tickets/${ticketId}/redeem`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
+        // flashError (глобальный тост), не только setSearchError — та
+        // локальная inline-ошибка рендерится ТОЛЬКО в нумпад-виде (аудит
+        // 2026-07-27, реальная дыра): внутри открытого найденного заказа
+        // (searchResult !== null, самый частый путь к гашению по номеру)
+        // ошибка сервера (уже погашен другим оператором, гашение выключено)
+        // была невидима вообще — с недавним фиксом ConfirmIconButton
+        // галочка "успеха" больше не улетает раньше времени, но без этого
+        // тоста оператор всё равно не узнал бы, ПОЧЕМУ действие не сработало.
+        flashError(data.error ?? t.operatorApp.gameRoom.networkError);
         setSearchError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       patchOrderTicket(orderId, ticketId, { status: data.status, redeemedAt: data.redeemedAt });
     } catch {
+      flashError(t.operatorApp.gameRoom.networkError);
       setSearchError(t.operatorApp.gameRoom.networkError);
     } finally {
       setRedeeming(null);
@@ -640,11 +650,14 @@ export default function TicketsZonePage() {
       const res = await fetch(`/api/tickets/${ticketId}/void`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
+        // flashError — см. комментарий в redeemTicket выше (аудит 2026-07-27).
+        flashError(data.error ?? t.operatorApp.gameRoom.networkError);
         setSearchError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
       patchOrderTicket(orderId, ticketId, { status: data.status });
     } catch {
+      flashError(t.operatorApp.gameRoom.networkError);
       setSearchError(t.operatorApp.gameRoom.networkError);
     } finally {
       setVoidingTicket(null);
@@ -658,6 +671,8 @@ export default function TicketsZonePage() {
       const res = await fetch(`/api/ticket-orders/${orderId}/void`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
+        // flashError — см. комментарий в redeemTicket выше (аудит 2026-07-27).
+        flashError(data.error ?? t.operatorApp.gameRoom.networkError);
         setSearchError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
@@ -665,6 +680,7 @@ export default function TicketsZonePage() {
         patchOrderTicket(orderId, ticketId, { status: "voided" });
       }
     } catch {
+      flashError(t.operatorApp.gameRoom.networkError);
       setSearchError(t.operatorApp.gameRoom.networkError);
     } finally {
       setVoidingOrder(null);
@@ -1624,7 +1640,15 @@ function OrderCard({
         })}
       </div>
       {!zone.ticketRedemptionEnabled && <p className="text-caption-airbnb text-muted-foreground">{t.tickets.redemptionDisabledHint}</p>}
-      {canVoid && liveTickets.length > 0 && (
+      {/* liveTickets.length, не tickets.length — реальная дыра (аудит
+          2026-07-27): "Аннулировать заказ" аннулирует ВЕСЬ заказ на сервере
+          (без фильтра по активу), но кнопка была видна, даже если заказ
+          содержит билеты ДРУГИХ активов, скрытые блокировкой актива
+          (selectedAssetIds) — оператор мог одним тапом аннулировать билеты,
+          которые даже не видел на экране. Требуем, чтобы ВСЕ живые билеты
+          заказа входили в видимый список (tickets), иначе кнопку не
+          показываем — как и раньше, ничего в остальном UI не меняем. */}
+      {canVoid && tickets.length > 0 && tickets.length === liveTickets.length && (
         <ConfirmButton
           variant="outline"
           className="h-9 w-full text-destructive"

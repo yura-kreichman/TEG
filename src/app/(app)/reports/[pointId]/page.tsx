@@ -25,6 +25,8 @@ import { formatMoneyCompact } from "@/lib/format";
 import { getCurrencySign } from "@/lib/currency";
 import { toDateStr } from "@/lib/datetime-format";
 import { cn } from "@/lib/utils";
+import { useTenantTimezone } from "@/hooks/use-tenant-timezone";
+import { tenantTodayAnchor } from "@/lib/period-nav";
 
 type Tab = "dynamics" | "zones" | "operators" | "calendar";
 type Granularity = "day" | "week" | "month" | "year";
@@ -104,9 +106,12 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   const [tab, setTab] = useState<Tab>("dynamics");
   const [mode, setMode] = useState<"granularity" | "custom">("granularity");
   const [granularity, setGranularity] = useState<Granularity>("month");
-  const [anchor, setAnchor] = useState(() => new Date());
-  const [customFrom, setCustomFrom] = useState(() => toDateStr(new Date()));
-  const [customTo, setCustomTo] = useState(() => toDateStr(new Date()));
+  // timezone тенанта, не UTC/часовой пояс браузера сервера (аудит 2026-07-27,
+  // второй раунд, реальный ежедневный баг) — см. use-tenant-timezone.ts.
+  const timezone = useTenantTimezone();
+  const [anchor, setAnchor] = useState(() => tenantTodayAnchor(timezone));
+  const [customFrom, setCustomFrom] = useState(() => toDateStr(tenantTodayAnchor(timezone)));
+  const [customTo, setCustomTo] = useState(() => toDateStr(tenantTodayAnchor(timezone)));
 
   const [dynamics, setDynamics] = useState<DynamicsData | null>(null);
   const [zones, setZones] = useState<ZonesData | null>(null);
@@ -187,7 +192,10 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
   // stepPeriod/isCurrentPeriod), запрос пользователя 2026-07-16/20 (теперь и
   // с "день", как на /money — тот же переключатель День/Неделя/Месяц/Год/Период).
   function isCurrentPeriod() {
-    const today = new Date();
+    // tenantTodayAnchor(timezone), не new Date() — аудит 2026-07-27, второй
+    // раунд: вызывается заново на каждый рендер с актуальным timezone, поэтому
+    // самокорректируется, как только реальный часовой пояс тенанта подгрузится.
+    const today = tenantTodayAnchor(timezone);
     if (granularity === "year") return anchor.getUTCFullYear() === today.getUTCFullYear();
     if (granularity === "month") {
       return anchor.getUTCFullYear() === today.getUTCFullYear() && anchor.getUTCMonth() === today.getUTCMonth();
@@ -307,7 +315,7 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
                 type="button"
                 onClick={() => {
                   setGranularity(g);
-                  setAnchor(new Date());
+                  setAnchor(tenantTodayAnchor(timezone));
                   setMode("granularity");
                 }}
                 className={cn(
@@ -373,7 +381,7 @@ export default function ReportsDashboardPage({ params }: { params: Promise<{ poi
                 type="date"
                 value={customTo}
                 min={customFrom}
-                max={toDateStr(new Date())}
+                max={toDateStr(tenantTodayAnchor(timezone))}
                 onChange={(e) => setCustomTo(e.target.value)}
                 className="h-9 flex-1 rounded-control border border-input bg-background px-2.5 text-caption-airbnb"
               />

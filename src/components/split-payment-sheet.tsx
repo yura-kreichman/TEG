@@ -159,7 +159,25 @@ export function SplitPaymentSheet({
                   <MoneyInput
                     placeholder={t.splitPayment.amountPlaceholder}
                     value={leg.amount}
-                    onChange={(e) => update(index, { amount: e.target.value })}
+                    onChange={(e) =>
+                      // walletId/walletLabel сбрасываются вместе с суммой у
+                      // доли "Баланс" (аудит 2026-07-27, второй раунд) —
+                      // кошелёк выбирается через AbonementPaymentSheet,
+                      // которая проверяет остаток ТОЛЬКО против суммы доли
+                      // НА МОМЕНТ выбора; правка суммы после уже не
+                      // перепроверяла остаток вообще (canSubmit смотрел
+                      // только на "кошелёк выбран", не "остатка хватает на
+                      // НОВУЮ сумму") — можно было отправить разбивку с
+                      // долей больше фактического баланса кошелька без
+                      // единого предупреждения на этом экране (сервер бы
+                      // всё равно отклонил, но без объяснения, откуда
+                      // ошибка). Сброс заставляет выбрать кошелёк заново —
+                      // тот же путь, что уже даёт правильную проверку.
+                      update(index, {
+                        amount: e.target.value,
+                        ...(leg.method === "abonement" ? { walletId: undefined, walletLabel: undefined } : {}),
+                      })
+                    }
                     className="h-12"
                   />
                   {legs.length > 2 && (

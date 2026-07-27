@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { pad, toDateStr } from "@/lib/datetime-format";
 import { Money } from "@/components/money";
 import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
+import { useTenantTimezone } from "@/hooks/use-tenant-timezone";
+import { tenantTodayAnchor } from "@/lib/period-nav";
 
 type Granularity = "day" | "week" | "month" | "year";
 
@@ -47,17 +49,21 @@ export default function MoneyPage() {
   // 2026-07-14, именно для этой страницы) — новое общепроектное правило
   // явно это переопределяет.
   const [granularity, setGranularity] = useState<Granularity>("month");
-  const [anchor, setAnchor] = useState(() => new Date());
+  // timezone тенанта, не UTC/браузера (аудит 2026-07-27, второй раунд —
+  // реальный ежедневный баг, тот же класс, что уже нашли и починили на
+  // /reports) — см. use-tenant-timezone.ts.
+  const timezone = useTenantTimezone();
+  const [anchor, setAnchor] = useState(() => tenantTodayAnchor(timezone));
   // Якорь всё равно резолвится на последний день/период с реальной выручкой
   // (запрос пользователя 2026-07-14), а не на сегодняшний пустой день/месяц —
   // это не завязано на конкретную granularity, просто исходная дата, от
   // которой считается текущий период. Резолвится один раз при монтировании,
   // до первой загрузки отчёта — иначе был бы виден "прыжок".
   const [anchorReady, setAnchorReady] = useState(false);
-  const [customFrom, setCustomFrom] = useState(() => toDateStr(new Date()));
-  const [customTo, setCustomTo] = useState(() => toDateStr(new Date()));
+  const [customFrom, setCustomFrom] = useState(() => toDateStr(tenantTodayAnchor(timezone)));
+  const [customTo, setCustomTo] = useState(() => toDateStr(tenantTodayAnchor(timezone)));
 
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const [calendarMonth, setCalendarMonth] = useState(() => tenantTodayAnchor(timezone));
   const [dayRevenue, setDayRevenue] = useState<Record<string, number>>({});
   const [pickDateOpen, setPickDateOpen] = useState(false);
 
@@ -110,7 +116,7 @@ export default function MoneyPage() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function isCalendarCurrentMonth() {
-    const today = new Date();
+    const today = tenantTodayAnchor(timezone);
     return (
       calendarMonth.getUTCFullYear() === today.getUTCFullYear() && calendarMonth.getUTCMonth() === today.getUTCMonth()
     );
@@ -150,12 +156,13 @@ export default function MoneyPage() {
     fetch("/api/reports/money/last-submission-date")
       .then((res) => res.json())
       .then((data: { date: string | null }) => {
-        if (data.date && data.date !== toDateStr(new Date())) {
+        if (data.date && data.date !== toDateStr(tenantTodayAnchor(timezone))) {
           setAnchor(new Date(`${data.date}T00:00:00.000Z`));
         }
         setAnchorReady(true);
       });
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timezone]);
 
   useEffect(() => {
     if (!anchorReady) return;
@@ -165,7 +172,7 @@ export default function MoneyPage() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function isCurrentPeriod() {
-    const today = new Date();
+    const today = tenantTodayAnchor(timezone);
     if (granularity === "year") return anchor.getUTCFullYear() === today.getUTCFullYear();
     if (granularity === "month") {
       return anchor.getUTCFullYear() === today.getUTCFullYear() && anchor.getUTCMonth() === today.getUTCMonth();
@@ -211,7 +218,7 @@ export default function MoneyPage() {
   // показываем ячейки будущих дней, текущий месяц обрезан сегодняшним числом.
   const calYear = calendarMonth.getUTCFullYear();
   const calMonth = calendarMonth.getUTCMonth() + 1;
-  const today = new Date();
+  const today = tenantTodayAnchor(timezone);
   const todayKey = toDateStr(today);
   const daysInCalMonth = new Date(Date.UTC(calYear, calMonth, 0)).getUTCDate();
   const calFirstWeekdayIndex = (new Date(Date.UTC(calYear, calMonth - 1, 1)).getUTCDay() + 6) % 7;
@@ -324,7 +331,7 @@ export default function MoneyPage() {
                 type="button"
                 onClick={() => {
                   setGranularity(g);
-                  setAnchor(new Date());
+                  setAnchor(tenantTodayAnchor(timezone));
                   setMode("granularity");
                 }}
                 className={cn(
@@ -404,7 +411,7 @@ export default function MoneyPage() {
                 type="date"
                 value={customTo}
                 min={customFrom}
-                max={toDateStr(new Date())}
+                max={toDateStr(tenantTodayAnchor(timezone))}
                 onChange={(e) => setCustomTo(e.target.value)}
                 className="h-9 flex-1 rounded-control border border-input bg-background px-2.5 text-caption-airbnb"
               />

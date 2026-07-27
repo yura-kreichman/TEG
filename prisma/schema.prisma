@@ -371,6 +371,17 @@ model User {
   failedPinAttempts Int       @default(0)
   pinLockedUntil    DateTime?
 
+  // Блокировка по попыткам подбора ПАРОЛЯ — тот же класс защиты, что уже
+  // есть у ПИНа выше, но раньше отсутствовал (аудит 2026-07-27, второй
+  // раунд): единственной защитой входа по email+паролю (и Owner, и Super
+  // Admin — оба используют этот же User.passwordHash) был in-memory
+  // rate-limit по IP (auth-rate-limit.ts), который сбрасывается при каждом
+  // рестарте/деплое контейнера и не имеет предела на АККАУНТ — атакующий с
+  // несколькими IP мог перебирать пароль конкретного известного email/login
+  // практически без ограничения. См. lib/pin-lockout.ts.
+  failedPasswordAttempts Int       @default(0)
+  passwordLockedUntil    DateTime?
+
   resetTokenHash      String?   @unique
   resetTokenExpiresAt DateTime?
 
@@ -578,6 +589,14 @@ model Operator {
   zoneReturnEvents      ZoneReturnEvent[]
   zoneExpenseEvents     ZoneExpenseEvent[]
   counterTapEvents      CounterTapEvent[]
+
+  // Аудит 2026-07-27: findOperatorByPin (lib/operator-auth.ts) выполняет
+  // prisma.operator.findMany({ where: { tenantId } }) на КАЖДУЮ попытку входа
+  // Сотрудника по ПИН, на каждом устройстве точки — без индекса на tenantId
+  // (relationMode="foreignKeys" не создаёт индекс на скалярную FK-колонку
+  // сам по себе) это full table scan по ВСЕМ тенантам платформы при каждом
+  // входе, не только по операторам своего тенанта.
+  @@index([tenantId])
 }
 
 // ============================================================================
@@ -649,6 +668,10 @@ model Point {
   zoneReturnEvents           ZoneReturnEvent[]
   zoneExpenseEvents          ZoneExpenseEvent[]
   counterTapEvents           CounterTapEvent[]
+
+  // Аудит 2026-07-27 — та же дыра, что у Operator.tenantId выше: каждый
+  // тенант-скоуплённый список точек владельца бил по всей таблице без индекса.
+  @@index([tenantId])
 }
 
 // Часы работы точки, по одной строке на день недели (docs/spec/08-landing.md,
@@ -830,6 +853,11 @@ model Zone {
   returnEvents        ZoneReturnEvent[]
   expenseEvents       ZoneExpenseEvent[]
   counterTapEvents    CounterTapEvent[]
+
+  // Аудит 2026-07-27 — та же дыра, что у Operator.tenantId/Point.tenantId
+  // выше: список зон точки (владелец, оператор — каждый экран с зонами)
+  // бил по всей таблице Zone без индекса на pointId.
+  @@index([pointId])
 }
 
 // Реальный возврат/тестовый пуск, отмеченный Сотрудником в моменте, режим
@@ -1721,6 +1749,11 @@ model Asset {
   abonementTransactions AbonementTransaction[]
   ticketVariants        TicketVariant[]
   tickets               Ticket[]
+
+  // Аудит 2026-07-27 — та же дыра: список активов зоны (submission-context,
+  // submit-results, reports/counters/day, operator/counter-tap-events и
+  // другие ≥16 мест) бил по всей таблице Asset без индекса на zoneId.
+  @@index([zoneId])
 }
 
 // Калибровочное показание счётчика (запрос пользователя 2026-07-14: "начинаю
@@ -2792,7 +2825,20 @@ model Landing {
   // (plaintext), НЕ хэш — в отличие от PointDevice.installTokenHash (тот
   // одноразовый, после активации показывать снова не нужно), эта ссылка
   // постоянная и владелец открывает её из кабинета многократно.
-  previewToken String @unique @default(cuid())
+  //
+  // gen_random_uuid(), не cuid() (аудит 2026-07-27) — cuid() спроектирован
+  // для уникальности (кодирует таймстамп + монотонный счётчик + короткий
+  // случайный хвост), не для использования как bearer-секрет: у него меньше
+  // энтропии, чем у настоящего криптослучайного значения, и часть значения
+  // предсказуема по времени создания тенанта. gen_random_uuid() — встроенная
+  // функция Postgres (13+, без расширений), 122 бита настоящей случайности.
+  // Точечный дефолт БД (dbgenerated), не application-level generateInstallToken-
+  // подобная функция — эта ссылка выдаётся неявно при первом создании Landing
+  // (prisma.landing.create({ data: { tenantId } })), без отдельного вызова кода
+  // на генерацию токена, поэтому естественное место — сам дефолт колонки.
+  // НЕ ротирует токены уже существующих Landing — менять их задним числом
+  // молча сломало бы уже сохранённые/отправленные клиентам превью-ссылки.
+  previewToken String @unique @default(dbgenerated("gen_random_uuid()::text"))
 
   // tagline — короткий однострочный слоган, plain text (санитизация только
   // при выводе). aboutText — с 2026-07-13 тот же формат, что Instruction.content

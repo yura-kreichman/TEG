@@ -28,8 +28,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Некорректная сумма" }, { status: 400 });
   }
 
-  const zone = await prisma.zone.findUnique({ where: { id: zoneId }, include: { point: true } });
-  if (!zone || zone.point.tenantId !== ctx.point.tenantId) {
+  // pointId/operatorsWithAccess — реальная дыра, найдена аудитом 2026-07-27
+  // (подтверждена независимо дважды): раньше проверялся только tenantId, то
+  // есть оператор устройства точки А мог провести инкассацию по зоне точки Б
+  // того же тенанта, без какого-либо отношения к ней — тот же паттерн
+  // scoping'а, что уже применён в zone-expense-events/zone-return-events/
+  // counter-tap-events (findTenantZone здесь не подходит — это owner-хелпер).
+  const zone = await prisma.zone.findFirst({
+    where: {
+      id: zoneId,
+      pointId: ctx.point.id,
+      ...(ctx.operator.allZonesAccess ? {} : { operatorsWithAccess: { some: { id: ctx.operator.id } } }),
+    },
+    include: { point: true },
+  });
+  if (!zone) {
     return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
   }
 

@@ -30,8 +30,10 @@ import {
   isCurrentPeriod as isCurrentPeriodFor,
   periodRange as periodRangeFor,
   steppedAnchor,
+  tenantTodayAnchor,
   type PeriodGranularity,
 } from "@/lib/period-nav";
+import { useTenantTimezone } from "@/hooks/use-tenant-timezone";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface Profile {
@@ -110,7 +112,10 @@ export default function OperatorCardPage() {
   const { saved: carryoverSaved, pulse: carryoverPulse } = useSavePulse();
 
   const [granularity, setGranularity] = useState<PeriodGranularity>("month");
-  const [anchor, setAnchor] = useState(() => new Date());
+  // timezone тенанта, не UTC/браузера (аудит 2026-07-27, второй раунд) — см.
+  // use-tenant-timezone.ts.
+  const timezone = useTenantTimezone();
+  const [anchor, setAnchor] = useState(() => tenantTodayAnchor(timezone));
 
   const [moneyForm, setMoneyForm] = useState<"advance" | "bonus" | null>(null);
   const [moneyAmount, setMoneyAmount] = useState("");
@@ -233,7 +238,7 @@ export default function OperatorCardPage() {
   }, [granularity, anchor]);
 
   function isCurrentPeriod() {
-    return isCurrentPeriodFor(granularity, anchor);
+    return isCurrentPeriodFor(granularity, anchor, timezone);
   }
 
   function stepPeriod(delta: number) {
@@ -550,7 +555,7 @@ export default function OperatorCardPage() {
                       type="button"
                       onClick={() => {
                         setGranularity(g);
-                        setAnchor(new Date());
+                        setAnchor(tenantTodayAnchor(timezone));
                       }}
                       className={cn(
                         "rounded-full px-3 py-1.5 text-xs font-semibold",

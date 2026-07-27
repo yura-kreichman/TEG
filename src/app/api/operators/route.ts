@@ -61,10 +61,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const operatorCount = await prisma.operator.count({ where: { tenantId: owner.tenantId } });
-  const limitError = await checkPackageLimit(owner.tenantId, "maxOperators", operatorCount);
-  if (limitError) return limitError;
-
   if (await isPinTakenInTenant(owner.tenantId, pin)) {
     return NextResponse.json(
       { error: "Такой ПИН-код уже занят другим оператором" },
@@ -72,20 +68,36 @@ export async function POST(request: Request) {
     );
   }
 
-  const operator = await prisma.operator.create({
-    data: {
-      tenantId: owner.tenantId,
-      name: name.trim(),
-      pin,
-      pinHash: await hashPin(pin),
-      createdByUserId: owner.user.id,
-      // Новый оператор — в конец списка, не перед существующими.
-      sortOrder: operatorCount,
-    },
+  // pg_advisory_xact_lock(hashtext(...)) — тот же паттерн, что уже применён
+  // в POST /api/points, /api/points/[id]/zones, /api/zones/[id]/assets
+  // (аудит 2026-07-24). Здесь его не было (аудит 2026-07-27, второй раунд,
+  // реальная гонка): два параллельных запроса у лимита N оба читали
+  // operatorCount=N-1 ДО того, как первый успевал создать оператора — оба
+  // проходили проверку, лимит пакета молча превышался навсегда.
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${owner.tenantId}))`;
+    const operatorCount = await tx.operator.count({ where: { tenantId: owner.tenantId } });
+    const limitError = await checkPackageLimit(owner.tenantId, "maxOperators", operatorCount);
+    if (limitError) return { ok: false as const, limitError };
+
+    const operator = await tx.operator.create({
+      data: {
+        tenantId: owner.tenantId,
+        name: name.trim(),
+        pin,
+        pinHash: await hashPin(pin),
+        createdByUserId: owner.user.id,
+        // Новый оператор — в конец списка, не перед существующими.
+        sortOrder: operatorCount,
+      },
+    });
+    return { ok: true as const, operator };
   });
 
+  if (!result.ok) return result.limitError;
+
   return NextResponse.json(
-    { id: operator.id, name: operator.name, active: operator.active },
+    { id: result.operator.id, name: result.operator.name, active: result.operator.active },
     { status: 201 }
   );
 }

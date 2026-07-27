@@ -83,6 +83,24 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
   // остаётся только в разделе Клиенты (там это и есть цель экрана).
   const [searchError, setSearchError] = useState<string | null>(null);
   const searchErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Аудит 2026-07-27, реальная дыра, независимо найдена в трёх модулях
+  // (Товары/Билеты/Прибывания-Пуски — все используют этот общий sheet):
+  // кнопка "Списать" не блокировалась на время запроса — в отличие от кнопок
+  // пополнения выше, у которых уже есть disabled={submitting}. onConfirm —
+  // это действие РОДИТЕЛЯ (sellCart/submitOrder/startLaunch/stopLaunch/
+  // logTap), сам компонент не знал, когда оно завершится, поэтому кнопка
+  // мгновенно возвращалась в кликабельное состояние без единого визуального
+  // признака "запрос летит" — двойной тап на медленной сети отправлял
+  // повторное списание/действие до того, как первое успевало завершиться.
+  const [spending, setSpending] = useState(false);
+  async function handleSpend(walletId: string) {
+    setSpending(true);
+    try {
+      await onConfirm(walletId);
+    } finally {
+      setSpending(false);
+    }
+  }
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -92,6 +110,7 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
       setPendingPlanId(null);
       setError(null);
       setSearchError(null);
+      setSpending(false);
     }
   }, [open]);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -271,7 +290,8 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
               <ConfirmButton
                 variant="default"
                 className="h-14 w-full gap-2 rounded-control font-bold"
-                onConfirm={() => onConfirm(found.id)}
+                disabled={spending}
+                onConfirm={() => handleSpend(found.id)}
               >
                 {confirmLabel ?? t.operatorApp.abonement.spendButton} <Money value={amount} />
               </ConfirmButton>

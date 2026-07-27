@@ -627,10 +627,23 @@ export default function SubmitResultsPage() {
     });
 
     async function queueForLater() {
-      await queueSubmission(payload);
-      setResult({ summary: clientSummary });
-      setQueued(true);
-      setSubmitting(false);
+      // try/catch вокруг queueSubmission (аудит 2026-07-27, второй раунд,
+      // реальная дыра) — раньше ничем не была обёрнута ни здесь, ни в
+      // вызывающих местах ниже: если запись в IndexedDB падает (квота,
+      // приватный режим Safari, залоченный профиль киоска), исключение
+      // улетало необработанным из onClick-обработчика — setSubmitting(false)
+      // не выполнялся (кнопка/спиннер зависали навсегда), setQueued(true) не
+      // выполнялся, введённые показания/касса/расходы терялись без единого
+      // следа, даже в виде "не сохранено" — оператору нечего было заметить.
+      try {
+        await queueSubmission(payload);
+        setResult({ summary: clientSummary });
+        setQueued(true);
+      } catch {
+        errorToast.flash(t.operatorApp.gameRoom.networkError, "error");
+      } finally {
+        setSubmitting(false);
+      }
     }
 
     if (!navigator.onLine) {

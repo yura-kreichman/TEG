@@ -315,7 +315,12 @@ async function handleNewChatMembers(message: {
 
   for (const member of message.new_chat_members) {
     if (member.is_bot) continue;
-    const text = `${s.groupWelcomeGreeting(member.first_name)}\n${s.groupWelcomeBody}`;
+    // escapeHtml (аудит 2026-07-27) — first_name это свободный ввод самого
+    // присоединившегося пользователя, единственное поле во всём файле,
+    // полностью подконтрольное анонимному внешнему человеку без всякого
+    // сотрудничества владельца тенанта — раньше уходило в HTML-сообщение
+    // необработанным.
+    const text = `${s.groupWelcomeGreeting(escapeHtml(member.first_name))}\n${s.groupWelcomeBody}`;
     const result = await sendInlineKeyboard(chatId, text, [{ text: s.groupWelcomeButton, url: deepLink }]).catch(() => null);
     // Сохраняем id сообщения — удалится, когда человек реально перейдёт по
     // кнопке в бота (запрос пользователя 2026-07-25: "чтобы не засорять
@@ -422,7 +427,22 @@ async function handleContact(message: {
   if (!contact) return;
   const lang = pickBotLang(message.from?.language_code);
 
-  if (message.from?.id != null && contact.user_id != null && contact.user_id !== message.from.id) {
+  // contact.user_id ОБЯЗАН присутствовать и совпадать (аудит 2026-07-27,
+  // реальная межтенантная утечка ПДн — второй раунд того же класса бага,
+  // что уже чинили 2026-07-25). Прежняя проверка пропускала сверку, если
+  // contact.user_id вообще отсутствовал (`!= null` было условием ВХОДА в
+  // проверку, а не обязательным требованием) — Telegram документирует это
+  // поле как опциональное, и оно РЕАЛЬНО отсутствует, когда пользователь
+  // прикладывает контакт, вручную сохранённый в телефонной книге и не
+  // привязанный к Telegram-аккаунту (в отличие от родной кнопки "Поделиться
+  // номером", которая всегда заполняет user_id для контакта самого
+  // отправителя). Значит нажатие кнопки "Поделиться номером" и выбор ЧУЖОГО
+  // локального контакта из телефонной книги давали неотличимый снаружи
+  // результат: contact без user_id — и старая проверка это молча пропускала,
+  // позволяя узнать баланс/историю чужого клиента по одному known номеру.
+  // Теперь user_id обязателен: его отсутствие тоже отклоняется, не только
+  // явное несовпадение.
+  if (contact.user_id == null || contact.user_id !== message.from?.id) {
     const s = BOT_STRINGS[lang];
     await sendChatMessage(chatId, s.contactMismatch).catch(() => {});
     return;
@@ -461,7 +481,8 @@ async function handleContact(message: {
   // разных прокатов на RentOS, отправляем отчёт по каждому найденному.
   const wallets = await prisma.abonementWallet.findMany({ where: { phone } });
   if (wallets.length === 0) {
-    await sendChatMessage(chatId, s.notFoundGeneric(contact.phone_number)).catch(() => {});
+    // escapeHtml — защита в глубину, см. комментарий у offerRegistration.
+    await sendChatMessage(chatId, s.notFoundGeneric(escapeHtml(contact.phone_number))).catch(() => {});
     return;
   }
 
@@ -497,7 +518,12 @@ async function offerRegistration(
     data: { pendingRegistrationTenantId: tenant.id, pendingRegistrationPhone: phone, awaitingRegistrationName: false },
   });
   const [showJoin, showBonus] = await Promise.all([tenantHasActiveGroup(tenant.id, chatId), tenantHasAbonementsToSell(tenant.id)]);
-  const text = `${s.notFoundTenant(rawPhone, escapeHtml(tenant.name))}\n\n${s.tapRegisterHint}`;
+  // escapeHtml(rawPhone) — защита в глубину (аудит 2026-07-27): основной
+  // вектор (чужой контакт без совпадающего user_id) уже отсекается раньше, в
+  // handleContact, но phone_number формально произвольная строка от клиента
+  // Telegram, дешевле экранировать и здесь, не полагаясь только на то, что
+  // Bot API всегда шлёт цифры.
+  const text = `${s.notFoundTenant(escapeHtml(rawPhone), escapeHtml(tenant.name))}\n\n${s.tapRegisterHint}`;
   await sendChatMessageWithMenu(chatId, text, s, { showRegister: true, showJoin, showBonus }).catch(() => {});
 }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { deleteUploadedImage } from "@/lib/uploads";
+import { deleteUploadedImage, isOwnUploadUrl } from "@/lib/uploads";
 import { getOpenShift, isTimeTrackingMode } from "@/lib/work-time";
 import { isLocale } from "@/lib/locales";
 
@@ -121,7 +121,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
   // молча "побеждало" и оставалось видимым). Установка одного всегда
   // очищает другое.
   if (avatarUrl !== undefined) {
-    const nextAvatarUrl = typeof avatarUrl === "string" && avatarUrl.trim() ? avatarUrl.trim() : null;
+    const trimmedAvatarUrl = typeof avatarUrl === "string" && avatarUrl.trim() ? avatarUrl.trim() : null;
+    // Аудит 2026-07-27 — см. isOwnUploadUrl.
+    const nextAvatarUrl = trimmedAvatarUrl && isOwnUploadUrl(owner.tenantId, trimmedAvatarUrl) ? trimmedAvatarUrl : null;
     if (operator.avatarUrl && operator.avatarUrl !== nextAvatarUrl) {
       await deleteUploadedImage(operator.avatarUrl);
     }
@@ -234,8 +236,25 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/operator
   // (аванс/премия ПОЛУЧЕНЫ этим оператором, а не проведены им) — onDelete:
   // SetNull, тоже не ловилось прежней проверкой: операция в журнале
   // оставалась, но обезличивалась (терялось "кому").
-  const [submissionCount, moneyOpCount, beneficiaryMoneyOpCount, shiftCount, balanceCarryoverCount, assignedTaskCount] =
-    await Promise.all([
+  // ticketOrderCount/zoneExpenseEventCount/counterTapEventCount/
+  // zoneReturnEventCount (аудит 2026-07-27) — те же 4 FK были переведены
+  // Restrict→Cascade миграцией 20260726215605_fix_remaining_tenant_delete_cascade_fks
+  // (чтобы не блокировать удаление ЦЕЛОГО тенанта), но этот точечный guard
+  // удаления ОДНОГО оператора не был расширен вместе с ними — оператор,
+  // ещё не доживший до ближайшей Сдачи итогов, мог продать билеты/провести
+  // события зоны, и всё это молча стиралось при его удалении.
+  const [
+    submissionCount,
+    moneyOpCount,
+    beneficiaryMoneyOpCount,
+    shiftCount,
+    balanceCarryoverCount,
+    assignedTaskCount,
+    ticketOrderCount,
+    zoneExpenseEventCount,
+    counterTapEventCount,
+    zoneReturnEventCount,
+  ] = await Promise.all([
       prisma.resultsSubmission.count({ where: { operatorId: id } }),
       prisma.moneyOperation.count({ where: { performedByOperatorId: id } }),
       prisma.moneyOperation.count({ where: { beneficiaryOperatorId: id } }),
@@ -247,6 +266,10 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/operator
       // операторам точки (правило "пусто в assignedOperators = видят все") —
       // без единого предупреждения владельцу (аудит 2026-07-24).
       prisma.task.count({ where: { assignedOperators: { some: { id } } } }),
+      prisma.ticketOrder.count({ where: { soldByOperatorId: id } }),
+      prisma.zoneExpenseEvent.count({ where: { operatorId: id } }),
+      prisma.counterTapEvent.count({ where: { operatorId: id } }),
+      prisma.zoneReturnEvent.count({ where: { operatorId: id } }),
     ]);
   if (
     submissionCount > 0 ||
@@ -254,7 +277,11 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/operator
     beneficiaryMoneyOpCount > 0 ||
     shiftCount > 0 ||
     balanceCarryoverCount > 0 ||
-    assignedTaskCount > 0
+    assignedTaskCount > 0 ||
+    ticketOrderCount > 0 ||
+    zoneExpenseEventCount > 0 ||
+    counterTapEventCount > 0 ||
+    zoneReturnEventCount > 0
   ) {
     return NextResponse.json(
       {

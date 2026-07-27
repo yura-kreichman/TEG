@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { deleteUploadedImage } from "@/lib/uploads";
+import { deleteUploadedImage, isOwnUploadUrl } from "@/lib/uploads";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 import { announceEntityActivated } from "@/lib/telegram-bot";
 
@@ -43,7 +43,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/assets/[id
     data.name = name.trim();
   }
   if (photoUrl !== undefined) {
-    const nextPhotoUrl = typeof photoUrl === "string" && photoUrl.trim() ? photoUrl.trim() : null;
+    const trimmedPhotoUrl = typeof photoUrl === "string" && photoUrl.trim() ? photoUrl.trim() : null;
+    // Аудит 2026-07-27 — см. isOwnUploadUrl.
+    const nextPhotoUrl = trimmedPhotoUrl && isOwnUploadUrl(owner.tenantId, trimmedPhotoUrl) ? trimmedPhotoUrl : null;
     if (asset.photoUrl && asset.photoUrl !== nextPhotoUrl) {
       await deleteUploadedImage(asset.photoUrl);
     }

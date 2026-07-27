@@ -10,7 +10,14 @@ import {
 } from "@/lib/auth";
 import { setAccentCookie } from "@/lib/accent";
 import { setBgStyleCookie } from "@/lib/bg-style";
-import { isPinLockedOut, recordFailedOwnerPin, remainingLockoutMinutes, resetOwnerPinLockout } from "@/lib/pin-lockout";
+import {
+  isPinLockedOut,
+  recordFailedOwnerPin,
+  remainingLockoutMinutes,
+  resetOwnerPinLockout,
+  recordFailedPassword,
+  resetPasswordLockout,
+} from "@/lib/pin-lockout";
 import { isAuthRateLimited } from "@/lib/auth-rate-limit";
 import { getClientIp } from "@/lib/instructions/request-ip";
 
@@ -73,7 +80,7 @@ export async function POST(request: Request) {
 
     const ok = await verifyPin(pin, user.pinHash);
     if (!ok) {
-      await recordFailedOwnerPin(user.id, user.failedPinAttempts);
+      await recordFailedOwnerPin(user.id);
       return NextResponse.json({ error: "Неверный ПИН-код" }, { status: 401 });
     }
     if (user.failedPinAttempts > 0) await resetOwnerPinLockout(user.id);
@@ -103,10 +110,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Неверные учётные данные" }, { status: 401 });
   }
 
+  // Блокировка по попыткам пароля (аудит 2026-07-27, второй раунд) — тот же
+  // приём, что уже применён к ПИНу выше в этом файле, см. lib/pin-lockout.ts.
+  if (isPinLockedOut(user.passwordLockedUntil)) {
+    return NextResponse.json(
+      { error: `Слишком много попыток. Попробуйте через ${remainingLockoutMinutes(user.passwordLockedUntil!)} мин.` },
+      { status: 429 }
+    );
+  }
+
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) {
+    await recordFailedPassword(user.id);
     return NextResponse.json({ error: "Неверные учётные данные" }, { status: 401 });
   }
+  if (user.failedPasswordAttempts > 0) await resetPasswordLockout(user.id);
 
   await createSession(user.id);
   await rememberOwnerDevice(user.id);

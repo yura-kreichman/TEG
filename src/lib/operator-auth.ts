@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "crypto";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { sessionCookieOptions, signToken, verifyToken } from "@/lib/session-crypto";
+import { sessionCookieOptions, signExpiringToken, verifySessionToken } from "@/lib/session-crypto";
 
 // Two distinct cookies for the operator (point-of-sale) flow, separate from the
 // Owner/Super Admin cookies in src/lib/auth.ts:
@@ -33,19 +33,35 @@ export function generateInstallToken() {
 
 export async function activatePointDevice(pointDeviceId: string) {
   const cookieStore = await cookies();
-  cookieStore.set(POINT_DEVICE_COOKIE, signToken(pointDeviceId), sessionCookieOptions(POINT_DEVICE_MAX_AGE));
+  // signExpiringToken (аудит 2026-07-27) — тот же класс бага, что и у
+  // Owner-сессии (src/lib/auth.ts): обычный signToken не несёт срок действия
+  // в самом значении, перехваченный сырой cookie (этот живёт год) оставался
+  // бы валиден навсегда при прямом реплее. verifySessionToken ниже понимает
+  // оба формата — уже активированные устройства не отваливаются.
+  const expiresAt = Date.now() + POINT_DEVICE_MAX_AGE * 1000;
+  cookieStore.set(
+    POINT_DEVICE_COOKIE,
+    signExpiringToken(pointDeviceId, expiresAt),
+    sessionCookieOptions(POINT_DEVICE_MAX_AGE)
+  );
 }
 
 async function getPointDeviceId(): Promise<string | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(POINT_DEVICE_COOKIE)?.value;
   if (!token) return null;
-  return verifyToken(token);
+  return verifySessionToken(token);
 }
 
 export async function createOperatorSession(operatorId: string) {
   const cookieStore = await cookies();
-  cookieStore.set(OPERATOR_SESSION_COOKIE, signToken(operatorId), sessionCookieOptions(OPERATOR_SESSION_MAX_AGE));
+  // signExpiringToken (аудит 2026-07-27) — см. комментарий у activatePointDevice.
+  const expiresAt = Date.now() + OPERATOR_SESSION_MAX_AGE * 1000;
+  cookieStore.set(
+    OPERATOR_SESSION_COOKIE,
+    signExpiringToken(operatorId, expiresAt),
+    sessionCookieOptions(OPERATOR_SESSION_MAX_AGE)
+  );
 }
 
 export async function destroyOperatorSession() {
@@ -57,7 +73,7 @@ export async function getOperatorSessionId(): Promise<string | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(OPERATOR_SESSION_COOKIE)?.value;
   if (!token) return null;
-  return verifyToken(token);
+  return verifySessionToken(token);
 }
 
 /**

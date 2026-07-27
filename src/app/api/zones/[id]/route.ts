@@ -288,13 +288,35 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/zones/[i
   // деньгами (TicketOrder.zoneId onDelete: Cascade) — DELETE каскадно уничтожал
   // бы их без единого предупреждения, теряя учёт уже полученных денег и
   // физически выданных клиенту билетов.
-  const [submissionCount, moneyOpCount, openLaunchCount, activeTicketCount] = await Promise.all([
-    prisma.zoneSubmission.count({ where: { zoneId: id } }),
-    prisma.moneyOperation.count({ where: { zoneId: id } }),
-    prisma.launch.count({ where: { zoneId: id, isOpen: true } }),
-    prisma.ticket.count({ where: { order: { zoneId: id }, status: "active" } }),
-  ]);
-  if (submissionCount > 0 || moneyOpCount > 0) {
+  // unreconciledTicketCount раньше считал только status:"active" — билет,
+  // уже погашенный (status:"redeemed"), но чья выручка ещё не попала ни в
+  // одну Сдачу итогов (это происходит только на следующей сверке зоны),
+  // проходил проверку беспрепятственно и терял уже собранные деньги при
+  // каскадном удалении. "voided" — единственный статус без финансовых
+  // последствий, его одного и исключаем (аудит 2026-07-27).
+  //
+  // pendingEventCount — ZoneReturnEvent/ZoneExpenseEvent/CounterTapEvent
+  // (Zone.onDelete: Cascade) — события, ещё не свёрнутые в Сдачу итогов,
+  // молча пропадали при удалении зоны без единой сдачи (аудит 2026-07-27).
+  // unsubmittedEndedLaunchCount (аудит 2026-07-27, второй раунд) — тот же
+  // пробел, что уже чинили для удаления Актива (assets/[id]/route.ts):
+  // завершённый, но ещё не свёрнутый в Сдачу итогов Launch — это реальная,
+  // уже собранная выручка (isOpen=false, zoneSubmissionId=null), а
+  // openLaunchCount ловит только ОТКРЫТЫЕ пуски.
+  const [submissionCount, moneyOpCount, openLaunchCount, unsubmittedEndedLaunchCount, unreconciledTicketCount, pendingEventCount] =
+    await Promise.all([
+      prisma.zoneSubmission.count({ where: { zoneId: id } }),
+      prisma.moneyOperation.count({ where: { zoneId: id } }),
+      prisma.launch.count({ where: { zoneId: id, isOpen: true } }),
+      prisma.launch.count({ where: { zoneId: id, isOpen: false, zoneSubmissionId: null } }),
+      prisma.ticket.count({ where: { order: { zoneId: id }, status: { not: "voided" } } }),
+      Promise.all([
+        prisma.zoneReturnEvent.count({ where: { zoneId: id } }),
+        prisma.zoneExpenseEvent.count({ where: { zoneId: id } }),
+        prisma.counterTapEvent.count({ where: { zoneId: id } }),
+      ]).then(([a, b, c]) => a + b + c),
+    ]);
+  if (submissionCount > 0 || moneyOpCount > 0 || unsubmittedEndedLaunchCount > 0 || pendingEventCount > 0) {
     return NextResponse.json(
       { error: "У этой зоны есть история сдач итогов/операций — её нельзя удалить." },
       { status: 409 }
@@ -306,9 +328,9 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/zones/[i
       { status: 409 }
     );
   }
-  if (activeTicketCount > 0) {
+  if (unreconciledTicketCount > 0) {
     return NextResponse.json(
-      { error: `Есть ${activeTicketCount} непогашенных билетов — их нельзя будет погасить после удаления зоны` },
+      { error: `Есть ${unreconciledTicketCount} непогашенных билетов — их нельзя будет погасить после удаления зоны` },
       { status: 409 }
     );
   }

@@ -29,7 +29,7 @@ export function ConfirmIconButton({
   label,
   silent,
 }: {
-  onConfirm: () => void;
+  onConfirm: () => unknown;
   disabled?: boolean;
   className?: string;
   label: string;
@@ -58,16 +58,23 @@ export function ConfirmIconButton({
             aria-label={t.common.confirm}
             disabled={disabled}
             onClick={(e) => {
-              // Тот же приём, что ConfirmButton — улетающая галочка через
-              // общий SaveSuccessOverlay ((app)/layout.tsx).
+              // Ждём результат onConfirm ПЕРЕД галочкой/звуком, не до него
+              // (аудит 2026-07-27) — тот же фикс, что уже применён в
+              // ConfirmButton 2026-07-24 (см. её комментарий), но пропущен
+              // здесь: галочка/"дзинь" улетали синхронно на самом тапе, ДО
+              // того, как запрос на аннулирование/удаление вообще стартовал —
+              // ложноположительный "успех" даже если сеть недоступна или
+              // сервер отклонил действие (например билет уже погашен другим
+              // оператором).
               const rect = e.currentTarget.getBoundingClientRect();
-              window.dispatchEvent(
-                new CustomEvent("save-success-fly", {
-                  detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, silent },
-                })
-              );
               setConfirming(false);
-              onConfirm();
+              Promise.resolve(onConfirm()).finally(() => {
+                window.dispatchEvent(
+                  new CustomEvent("save-success-fly", {
+                    detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, silent },
+                  })
+                );
+              });
             }}
             className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
           >

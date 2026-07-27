@@ -63,9 +63,23 @@ const SUBSCRIPTION_GATE_EXEMPT_PREFIXES = ["/api/auth/", "/api/webhooks/", "/api
 // "redirects runs before Proxy"), так что здесь старый путь уже не встретится.
 const SITE_PATH_RE = /^\/s\/([^/]+)\/?$/;
 const INSTRUCTION_PATH_RE = /^\/i\/([^/]+)\/([^/]+)\/?$/;
+// /s/{slug}/preview/{token} — не входит в SITE_PATH_RE (та же строка
+// комментария выше: сбор статистики/rate limit "не превью"), но полное
+// отсутствие throttling здесь было отдельной, самостоятельной дырой (аудит
+// 2026-07-27): guessing/brute-force токена черновика вообще не тормозился.
+// Считать визиты сюда по-прежнему не нужно — только троттлить попытки.
+const PREVIEW_PATH_RE = /^\/s\/([^/]+)\/preview\/([^/]+)\/?$/;
 
 export async function proxy(request: NextRequest, event: NextFetchEvent) {
   const { pathname } = request.nextUrl;
+
+  const previewMatch = PREVIEW_PATH_RE.exec(pathname);
+  if (previewMatch && request.method === "GET") {
+    const ip = getClientIp(request);
+    if (isRateLimited(ip)) {
+      return new NextResponse("Too Many Requests", { status: 429 });
+    }
+  }
 
   const siteMatch = SITE_PATH_RE.exec(pathname);
   const instructionMatch = INSTRUCTION_PATH_RE.exec(pathname);

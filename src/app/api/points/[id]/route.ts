@@ -156,15 +156,56 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/points/[
   //
   // openLaunchCount/activeTicketCount (аудит 2026-07-24) — тот же пробел, что
   // и у DELETE зоны, только по всей точке разом.
-  const [submissionCount, moneyOpCount, openLaunchCount, activeTicketCount] = await Promise.all([
+  //
+  // shiftCount/directMoneyOpCount/goods*Count (аудит 2026-07-27) — реальный
+  // пробел: MoneyOperation.pointId (advance/bonus_payout Рабочего времени) не
+  // проходит через zone.pointId и был невидим для этого guard'а; Shift и
+  // продажи/ревизии/пополнения/сверки Товаров каскадируются от Point
+  // (onDelete: Cascade, см. схему), но раньше не проверялись вообще — точку с
+  // полной зарплатной/товарной историей, но без единой Сдачи итогов, можно
+  // было удалить одним запросом без предупреждения.
+  // unsubmittedEndedLaunchCount (аудит 2026-07-27, второй раунд) — тот же
+  // пробел уже чинили у Актива и (только что) у Зоны: завершённый, но ещё не
+  // свёрнутый в Сдачу итогов Launch — реальная собранная выручка, невидимая
+  // openLaunchCount (тот ловит только открытые пуски).
+  const [
+    submissionCount,
+    zoneMoneyOpCount,
+    directMoneyOpCount,
+    openLaunchCount,
+    unsubmittedEndedLaunchCount,
+    activeTicketCount,
+    shiftCount,
+    goodsSaleCount,
+    goodsRevisionCount,
+    goodsReconciliationCount,
+    goodsRestockCount,
+  ] = await Promise.all([
     prisma.resultsSubmission.count({ where: { pointId: id } }),
     prisma.moneyOperation.count({ where: { zone: { pointId: id } } }),
+    prisma.moneyOperation.count({ where: { pointId: id } }),
     prisma.launch.count({ where: { zone: { pointId: id }, isOpen: true } }),
+    prisma.launch.count({ where: { zone: { pointId: id }, isOpen: false, zoneSubmissionId: null } }),
     prisma.ticket.count({ where: { order: { zone: { pointId: id } }, status: "active" } }),
+    prisma.shift.count({ where: { pointId: id } }),
+    prisma.goodsSale.count({ where: { pointId: id } }),
+    prisma.goodsRevision.count({ where: { pointId: id } }),
+    prisma.goodsReconciliation.count({ where: { pointId: id } }),
+    prisma.goodsRestock.count({ where: { pointId: id } }),
   ]);
-  if (submissionCount > 0 || moneyOpCount > 0) {
+  if (
+    submissionCount > 0 ||
+    zoneMoneyOpCount > 0 ||
+    directMoneyOpCount > 0 ||
+    unsubmittedEndedLaunchCount > 0 ||
+    shiftCount > 0 ||
+    goodsSaleCount > 0 ||
+    goodsRevisionCount > 0 ||
+    goodsReconciliationCount > 0 ||
+    goodsRestockCount > 0
+  ) {
     return NextResponse.json(
-      { error: "У этой точки есть история сдач итогов/операций — её нельзя удалить." },
+      { error: "У этой точки есть история сдач итогов/операций/смен/товаров — её нельзя удалить." },
       { status: 409 }
     );
   }

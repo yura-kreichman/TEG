@@ -155,6 +155,10 @@ export default function StaysZonePage() {
   const [stopPaymentTarget, setStopPaymentTarget] = useState<OpenLaunch | null>(null);
   const [linkClientTarget, setLinkClientTarget] = useState<OpenLaunch | null>(null);
   const [stopping, setStopping] = useState(false);
+  // resuming — аудит 2026-07-27, второй раунд: кнопка "Возобновить" была
+  // единственным действием на этом экране без защиты от двойного тапа (у
+  // старта/стопа она уже есть — starting/stopping выше).
+  const [resuming, setResuming] = useState<string | null>(null);
   // Модуль печати (запрос пользователя 2026-07-20) — квитанция посещения,
   // кнопка появляется сразу после остановки пуска, только если и глобально
   // включена печать (на устройстве), и в этой конкретной зоне владелец
@@ -530,6 +534,8 @@ export default function StaysZonePage() {
   // кнопкой "Возобновить" (серый + крупная иконка play), пока пуск ждёт
   // оплату.
   async function resumeLaunch(launchId: string) {
+    if (resuming) return;
+    setResuming(launchId);
     try {
       const res = await fetch(`/api/launches/${launchId}/resume`, { method: "POST" });
       if (!res.ok) {
@@ -540,6 +546,8 @@ export default function StaysZonePage() {
       loadLaunches(selectedZoneId);
     } catch {
       flashError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      setResuming(null);
     }
   }
 
@@ -805,16 +813,21 @@ export default function StaysZonePage() {
                   // (см. lockLaunch). Тайл целиком превращается в кнопку
                   // "Возобновить" — серый + крупная иконка play, тот же приём,
                   // что у деактивированных зон/активов (grayscale). Открыть
-                  // шторку оплаты заново можно не отсюда — она открывается
-                  // сама при следующем заходе на экран (см. эффект ниже).
+                  // шторку оплаты заново с ЭТОГО экрана нельзя — только тап
+                  // "Возобновить" (снимает заморозку, пуск снова идёт) и затем
+                  // повторное "Точно?"/lockLaunch (аудит 2026-07-27, второй
+                  // раунд: комментарий здесь раньше утверждал, что шторка
+                  // "открывается сама при следующем заходе на экран" — такого
+                  // эффекта в коде не существует, был неточным).
                   if (!l.isOpen) {
                     return (
                       <PressableScale key={l.id}>
                         <button
                           type="button"
                           aria-label={t.operatorApp.gameRoom.resumeLaunchAction}
+                          disabled={resuming === l.id}
                           onClick={() => resumeLaunch(l.id)}
-                          className="flex aspect-4/5 w-full grayscale flex-col items-center justify-center gap-1 rounded-card border-[1.5px] border-border bg-card p-2 text-center"
+                          className="flex aspect-4/5 w-full grayscale flex-col items-center justify-center gap-1 rounded-card border-[1.5px] border-border bg-card p-2 text-center disabled:opacity-60"
                         >
                           <span className="flex flex-col items-center leading-tight">
                             <span className="text-[0.625rem] font-semibold text-muted-foreground">
@@ -860,14 +873,28 @@ export default function StaysZonePage() {
                               disabled={stopping}
                               onClick={(e) => {
                                 setInteracting(null);
-                                // Сумма 0 — очевидная случайная опечатка
-                                // (тапнули и сразу остановили), запрос
-                                // пользователя 2026-07-27: не имеет смысла
-                                // спрашивать способ оплаты вовсе, закрываем
-                                // тем же путём, что "За вход" ниже (обычная
-                                // <button>, не ConfirmButton — событие шлём
-                                // вручную).
-                                if (l.pricingMode === "per_minute" && liveAmount > 0) {
+                                // ВСЕГДА lockLaunch для per_minute, не
+                                // "liveAmount > 0 ? lock : закрыть бесплатно
+                                // напрямую" (аудит 2026-07-27, второй раунд,
+                                // реальный денежный баг): liveAmount —
+                                // клиентская ОЦЕНКА (estimateLiveAmount,
+                                // локальный таймер устройства), а не то, что
+                                // реально посчитает сервер. При округлении
+                                // "вниз"/"к ближайшему" она читается ровно 0
+                                // первые ~30-60с пуска — если между тапом
+                                // оператора и обработкой на сервере реальное
+                                // время пересекло границу тарификации,
+                                // сервер посчитал бы РЕАЛЬНУЮ ненулевую сумму,
+                                // а старый код уже отправил бы stopLaunch с
+                                // paymentMethod="cash" НАПРЯМУЮ, без единого
+                                // подтверждения — непроверенный платёж наличными
+                                // проводился молча. lockLaunch всегда спрашивает
+                                // сервер за реальной суммой и открывает шторку
+                                // (см. stopPaymentTarget.amount === 0 ниже —
+                                // тот же однокнопочный "Закрыть бесплатно",
+                                // что и раньше, просто основан на подтверждённой
+                                // сервером сумме, а не на клиентской догадке).
+                                if (l.pricingMode === "per_minute") {
                                   lockLaunch(l);
                                 } else {
                                   // Улетающая галочка (реальный баг, найден
@@ -886,7 +913,11 @@ export default function StaysZonePage() {
                                       detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, silent: true },
                                     })
                                   );
-                                  stopLaunch(l.id, l.pricingMode === "per_minute" ? "cash" : undefined);
+                                  // pricingMode здесь всегда "fixed" ("За
+                                  // вход") — per_minute теперь всегда уходит
+                                  // в lockLaunch выше, эта ветка для него
+                                  // больше не достижима.
+                                  stopLaunch(l.id, undefined);
                                 }
                               }}
                               className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
