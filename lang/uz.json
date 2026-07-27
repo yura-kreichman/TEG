@@ -88,6 +88,15 @@
       "halftone": "Yarim ohang",
       "ribbons": "Lentalar"
     },
+    "bgEffectLabel": "Effekt",
+    "bgEffectNames": {
+      "none": "Effektsiz",
+      "waves": "To'lqinlar",
+      "particles": "Zarrachalar",
+      "sparkles": "Uchqunlar",
+      "aurora": "Yorqinlik",
+      "shimmer": "Yaltirash"
+    },
     "languageTitle": "Til va mintaqa",
     "languageHint": "Butun kompaniya uchun umumiy: interfeys tili, vaqt mintaqasi va valyuta.",
     "languageSectionLabel": "Til",

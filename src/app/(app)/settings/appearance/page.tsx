@@ -7,6 +7,7 @@ import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { AccentPicker } from "@/components/accent-picker";
 import { BgStylePicker } from "@/components/bg-style-picker";
+import { BgEffectPicker } from "@/components/bg-effect-picker";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TextSizeSlider } from "@/components/text-size-slider";
 
@@ -33,6 +34,15 @@ export default function AppearanceSettingsPage() {
               <SpringCard animate={false} hover={false} className="flex flex-col gap-2">
                 <span className="text-body-airbnb">{t.settings.bgStyleLabel}</span>
                 <BgStylePicker />
+                {/* Та же плашка, что "Фон приложения" (запрос пользователя
+                    2026-07-27) — эффект концептуально часть общего фонового
+                    оформления, не отдельная настройка. Начиналось как
+                    тумблер "Волны", выросло в выбор одного эффекта из
+                    нескольких (BgEffectPicker, Tenant.bgEffect). */}
+                <div className="flex flex-col gap-1.5 border-t border-border pt-3">
+                  <span className="text-body-airbnb">{t.settings.bgEffectLabel}</span>
+                  <BgEffectPicker />
+                </div>
               </SpringCard>
             </StaggerItem>
 

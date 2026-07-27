@@ -88,6 +88,15 @@
       "halftone": "Halftone",
       "ribbons": "Ribbons"
     },
+    "bgEffectLabel": "Effect",
+    "bgEffectNames": {
+      "none": "No effect",
+      "waves": "Waves",
+      "particles": "Particles",
+      "sparkles": "Sparkles",
+      "aurora": "Glow",
+      "shimmer": "Shimmer"
+    },
     "languageTitle": "Language & region",
     "languageHint": "Shared across the whole company: interface language, timezone and currency.",
     "languageSectionLabel": "Language",

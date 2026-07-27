@@ -88,6 +88,15 @@
       "halftone": "Կիսատոն",
       "ribbons": "Ժապավեններ"
     },
+    "bgEffectLabel": "Էֆեկտ",
+    "bgEffectNames": {
+      "none": "Առանց էֆեկտի",
+      "waves": "Ալիքներ",
+      "particles": "Մասնիկներ",
+      "sparkles": "Կայծեր",
+      "aurora": "Փայլ",
+      "shimmer": "Շող"
+    },
     "languageTitle": "Լեզու և տարածաշրջան",
     "languageHint": "Ընդհանուր ողջ ընկերության համար՝ ինտերֆեյսի լեզուն, ժամային գոտին և արժույթը։",
     "languageSectionLabel": "Լեզու",

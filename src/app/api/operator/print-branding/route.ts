@@ -26,6 +26,7 @@ export async function GET() {
       receiptShowLogo: true,
       receiptShowTenantName: true,
       receiptCompactHeader: true,
+      bgEffect: true,
     },
   });
 
@@ -36,6 +37,10 @@ export async function GET() {
     receiptShowLogo: tenant?.receiptShowLogo ?? true,
     receiptShowTenantName: tenant?.receiptShowTenantName ?? true,
     receiptCompactHeader: tenant?.receiptCompactHeader ?? false,
+    // Не про печать — переиспользует этот же роут ради tenantId-запроса,
+    // который PWA Сотрудника и так уже делает при монтировании (запрос
+    // пользователя 2026-07-27, тот же приём, что logoUrl выше).
+    bgEffect: tenant?.bgEffect ?? "waves",
     // Ширина рулона/тип принтера — с УСТРОЙСТВА, не с тенанта (запрос
     // пользователя 2026-07-26: печать физически привязана к конкретному
     // принтеру этого устройства, не к бизнесу целиком).

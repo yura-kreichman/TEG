@@ -88,6 +88,15 @@
       "halftone": "ნახევარტონი",
       "ribbons": "ლენტები"
     },
+    "bgEffectLabel": "ეფექტი",
+    "bgEffectNames": {
+      "none": "ეფექტის გარეშე",
+      "waves": "ტალღები",
+      "particles": "ნაწილაკები",
+      "sparkles": "ნაპერწკლები",
+      "aurora": "ციალი",
+      "shimmer": "ბზინვა"
+    },
     "languageTitle": "ენა და რეგიონი",
     "languageHint": "საერთო მთელი კომპანიისთვის: ინტერფეისის ენა, დროის სარტყელი და ვალუტა.",
     "languageSectionLabel": "ენა",

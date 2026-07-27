@@ -88,6 +88,15 @@
       "halftone": "Нимранг",
       "ribbons": "Навор"
     },
+    "bgEffectLabel": "Эффект",
+    "bgEffectNames": {
+      "none": "Бе эффект",
+      "waves": "Мавҷҳо",
+      "particles": "Заррачаҳо",
+      "sparkles": "Ҷарақаҳо",
+      "aurora": "Дурахш",
+      "shimmer": "Ялаққос"
+    },
     "languageTitle": "Забон ва минтақа",
     "languageHint": "Умумӣ барои тамоми ширкат: забони интерфейс, минтақаи вақт ва асъор.",
     "languageSectionLabel": "Забон",

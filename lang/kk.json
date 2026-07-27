@@ -88,6 +88,15 @@
       "halftone": "Жартылай тон",
       "ribbons": "Таспалар"
     },
+    "bgEffectLabel": "Эффект",
+    "bgEffectNames": {
+      "none": "Эффектсіз",
+      "waves": "Толқындар",
+      "particles": "Бөлшектер",
+      "sparkles": "Ұшқындар",
+      "aurora": "Жарқырау",
+      "shimmer": "Жылтыр"
+    },
     "languageTitle": "Тіл және аймақ",
     "languageHint": "Бүкіл компания үшін ортақ: интерфейс тілі, уақыт белдеуі және валюта.",
     "languageSectionLabel": "Тіл",

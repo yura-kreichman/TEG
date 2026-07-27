@@ -420,6 +420,129 @@
   pointer-events: none;
 }
 
+/* Волны под нижним баром (запрос пользователя 2026-07-27: "давай подумаем"
+   → 3 слоя акцентного цвета с разной прозрачностью) — только transform
+   (translateX), GPU-композиция, ноль layout/paint работы в кадре. Ширина
+   SVG-слоя — 200% контейнера, viewBox повторяет один и тот же путь дважды
+   подряд (0..1200 и 1200..2400) — translateX(-50%) сдвигает ровно на один
+   повтор и зацикливается бесшовно (wave-background.tsx). */
+@keyframes wave-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.wave-layer {
+  animation-name: wave-drift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wave-layer {
+    animation: none;
+  }
+}
+
+/* Остальные фоновые эффекты (запрос пользователя 2026-07-27: "все эффекты
+   на выбор, но не грузит процессор") — тот же принцип, что волны: только
+   transform/opacity, GPU-композиция, ноль JS. Каждый эффект — 3 слоя
+   акцентного цвета с разной прозрачностью (запрос того же дня: "три
+   степени акцентной схемы... так будет красиво"), см. ACCENT_LAYER_OPACITIES
+   в src/components/bg-effects/shared.ts. */
+/* --peak-opacity — задаётся инлайн-стилем на каждом элементе (3 степени
+   акцентной схемы), а не свойство opacity напрямую: opacity участвует В
+   САМОЙ анимации (0 в начале/конце, пик — в середине), и любое инлайн-
+   значение opacity было бы перекрыто анимацией на всё время её работы —
+   переменная в цикл анимации не попадает, кадры её просто читают. */
+@keyframes particle-rise {
+  from {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--peak-opacity, 1);
+  }
+  90% {
+    opacity: var(--peak-opacity, 1);
+  }
+  to {
+    transform: translateY(-12rem);
+    opacity: 0;
+  }
+}
+.particle-layer {
+  animation-name: particle-rise;
+  animation-timing-function: ease-in;
+  animation-iteration-count: infinite;
+}
+
+@keyframes sparkle-pulse {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: var(--peak-opacity, 1);
+  }
+}
+.sparkle-layer {
+  animation-name: sparkle-pulse;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes aurora-drift {
+  0% {
+    transform: translate(-25%, 0) scale(1);
+  }
+  50% {
+    transform: translate(25%, -12%) scale(1.25);
+  }
+  100% {
+    transform: translate(-25%, 0) scale(1);
+  }
+}
+.aurora-layer {
+  animation-name: aurora-drift;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+/* Реальный баг, найден пользователем 2026-07-27: "Блик" прерывался/не
+   выглядел цикличным — дважды (сначала -30%/130%, потом расчёт "своего" %
+   на полосу) не хватало, потому что translateX(%) считается от СОБСТВЕННОЙ
+   ширины анимируемого элемента, а формула, верная для любого сочетания
+   размеров полосы/контейнера/превью, через это не выводится. Настоящий
+   фикс — в shimmer.tsx: анимируется не сама полоса, а обёртка шириной
+   РОВНО с контейнер (inset-0), поэтому здесь снова простые симметричные
+   ±100% — для такой обёртки они уже математически точны в любом
+   контейнере, каким бы он ни был. */
+@keyframes shimmer-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+.shimmer-layer {
+  animation-name: shimmer-sweep;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .particle-layer,
+  .sparkle-layer,
+  .aurora-layer,
+  .shimmer-layer {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 /* Каждая страница кабинета оборачивает контент в непрозрачный bg-surface-0
    (per-page canvas div поверх .app-bg в потоке документа) — без этого
    правила слой .app-bg был бы физически невидим на любой странице, не

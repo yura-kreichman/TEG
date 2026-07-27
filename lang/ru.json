@@ -88,6 +88,15 @@
       "halftone": "Полутон",
       "ribbons": "Ленты"
     },
+    "bgEffectLabel": "Эффект",
+    "bgEffectNames": {
+      "none": "Без эффекта",
+      "waves": "Волны",
+      "particles": "Частицы",
+      "sparkles": "Искры",
+      "aurora": "Свечение",
+      "shimmer": "Блик"
+    },
     "languageTitle": "Язык и регион",
     "languageHint": "Общие для всей компании: язык интерфейса, часовой пояс и валюта.",
     "languageSectionLabel": "Язык",

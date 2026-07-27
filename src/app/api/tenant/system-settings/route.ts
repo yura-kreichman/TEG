@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { BG_EFFECT_VALUES } from "@/components/bg-effects";
 
 // Настройки → Система (запрос пользователя 2026-07-20) — страница задумана
 // расширяемой ("первый пункт там будет"). Тумблеры:
@@ -31,6 +32,7 @@ export async function GET() {
       goodsAllowBalancePayment: true,
       printingEnabled: true,
       expensesEnabled: true,
+      bgEffect: true,
       receiptShowLogo: true,
       receiptShowTenantName: true,
       receiptCompactHeader: true,
@@ -46,6 +48,7 @@ export async function GET() {
     goodsAllowBalancePayment: tenant?.goodsAllowBalancePayment ?? true,
     printingEnabled: tenant?.printingEnabled ?? false,
     expensesEnabled: tenant?.expensesEnabled ?? true,
+    bgEffect: tenant?.bgEffect ?? "waves",
     // Только для превью квитанции ниже на этой же странице — шапка (лого/
     // название) переиспользует уже существующие поля тенанта, отдельно не
     // редактируется здесь (запрос пользователя 2026-07-20).
@@ -76,6 +79,7 @@ export async function PATCH(request: Request) {
     goodsAllowBalancePayment?: boolean;
     printingEnabled?: boolean;
     expensesEnabled?: boolean;
+    bgEffect?: string;
     receiptShowLogo?: boolean;
     receiptShowTenantName?: boolean;
     receiptCompactHeader?: boolean;
@@ -108,6 +112,16 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
     }
     data[field] = body[field];
+  }
+
+  // bgEffect — строка из фиксированного набора (не boolean), свой отдельный
+  // if вместо цикла выше (запрос пользователя 2026-07-27: "Волны" выросли в
+  // выбор одного эффекта из нескольких, тот же принцип, что bgStyle).
+  if (body.bgEffect !== undefined) {
+    if (typeof body.bgEffect !== "string" || !BG_EFFECT_VALUES.includes(body.bgEffect)) {
+      return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
+    }
+    data.bgEffect = body.bgEffect;
   }
 
   await prisma.tenant.update({ where: { id: owner.tenantId }, data });

@@ -26,6 +26,7 @@ import { ImpersonationBanner } from "@/components/impersonation-banner";
 import { SubscriptionBanner } from "@/components/subscription-banner";
 import { TenantLogoWatermark } from "@/components/tenant-logo-watermark";
 import { PoweredByMark } from "@/components/powered-by-mark";
+import { BgEffectLayer, type BgEffect } from "@/components/bg-effects";
 import { useTextScale, textScaleZoom } from "@/components/text-scale-provider";
 import { cn } from "@/lib/utils";
 import type { Dictionary } from "@/lib/i18n";
@@ -179,6 +180,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
   // слотами (тот же приём, что list начинается с 0 у badge-счётчиков).
   const [enabledModules, setEnabledModules] = useState<EnabledModules>(DEFAULT_ENABLED_MODULES);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [bgEffect, setBgEffect] = useState<BgEffect>("waves");
 
   // Обновляем при каждой навигации — самый дешёвый способ не держать
   // отдельный стор ради одного badge-числа (список пунктов бара маленький,
@@ -207,10 +209,11 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
             goodsEnabled: data.goodsEnabled ?? true,
             clientsEnabled: data.clientsEnabled ?? true,
           });
-          // Логотип тенанта — тот же роут уже вызывался здесь ради модулей
-          // (запрос пользователя 2026-07-27: логотип-водяной знак и у
-          // Владельца тоже), отдельный fetch не нужен.
+          // Логотип тенанта + фоновый эффект — тот же роут уже вызывался
+          // здесь ради модулей (запрос пользователя 2026-07-27), отдельные
+          // fetch-и не нужны.
           setLogoUrl(data.logoUrl ?? null);
+          setBgEffect((data.bgEffect ?? "waves") as BgEffect);
         });
     }
     loadEnabledModules();
@@ -219,7 +222,18 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
     // обновляется мгновенно, без ожидания следующей полной перезагрузки
     // страницы (запрос пользователя 2026-07-22).
     window.addEventListener("tenant-modules-changed", loadEnabledModules);
-    return () => window.removeEventListener("tenant-modules-changed", loadEnabledModules);
+    // Фоновый эффект — сразу по выбору в пикере, без ожидания даже этого
+    // fetch-а (запрос пользователя 2026-07-27: "как и фон он должен сразу
+    // меняться") — bg-effect-picker.tsx шлёт CustomEvent с готовым
+    // значением синхронно с кликом.
+    function onBgEffectChanged(e: Event) {
+      setBgEffect((e as CustomEvent<BgEffect>).detail);
+    }
+    window.addEventListener("bg-effect-changed", onBgEffectChanged);
+    return () => {
+      window.removeEventListener("tenant-modules-changed", loadEnabledModules);
+      window.removeEventListener("bg-effect-changed", onBgEffectChanged);
+    };
   }, []);
 
   const available = [...PRIORITY_ITEMS]
@@ -289,6 +303,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
           Владельца тоже (запрос пользователя 2026-07-27), тот же приём, что
           в PWA Сотрудника: справа, не в потоке сайдбара. */}
       <TenantLogoWatermark logoUrl={logoUrl} />
+      <BgEffectLayer effect={bgEffect} />
       <PoweredByMark className="pointer-events-none fixed bottom-2 right-3 hidden md:inline-flex" />
       <div className="flex flex-1 flex-col md:flex-row">
         {/* sticky + h-screen — иначе на длинных страницах (например, Товары со

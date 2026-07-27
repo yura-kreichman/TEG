@@ -88,6 +88,15 @@
       "halftone": "Yarım ton",
       "ribbons": "Kurdeleler"
     },
+    "bgEffectLabel": "Efekt",
+    "bgEffectNames": {
+      "none": "Efekt yok",
+      "waves": "Dalgalar",
+      "particles": "Parçacıklar",
+      "sparkles": "Kıvılcımlar",
+      "aurora": "Parıltı",
+      "shimmer": "Işıltı"
+    },
     "languageTitle": "Dil ve bölge",
     "languageHint": "Tüm şirket için ortak: arayüz dili, saat dilimi ve para birimi.",
     "languageSectionLabel": "Dil",

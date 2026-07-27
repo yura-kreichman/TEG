@@ -88,6 +88,15 @@
       "halftone": "Паўтон",
       "ribbons": "Стужкі"
     },
+    "bgEffectLabel": "Эфект",
+    "bgEffectNames": {
+      "none": "Без эфекту",
+      "waves": "Хвалі",
+      "particles": "Часціцы",
+      "sparkles": "Іскры",
+      "aurora": "Ззянне",
+      "shimmer": "Водбліск"
+    },
     "languageTitle": "Мова і рэгіён",
     "languageHint": "Агульныя для ўсёй кампаніі: мова інтэрфейсу, часавы пояс і валюта.",
     "languageSectionLabel": "Мова",

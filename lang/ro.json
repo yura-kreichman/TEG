@@ -88,6 +88,15 @@
       "halftone": "Semiton",
       "ribbons": "Panglici"
     },
+    "bgEffectLabel": "Efect",
+    "bgEffectNames": {
+      "none": "Fără efect",
+      "waves": "Valuri",
+      "particles": "Particule",
+      "sparkles": "Scântei",
+      "aurora": "Strălucire",
+      "shimmer": "Licărire"
+    },
     "languageTitle": "Limbă și regiune",
     "languageHint": "Comune pentru toată compania: limba interfeței, fusul orar și moneda.",
     "languageSectionLabel": "Limbă",

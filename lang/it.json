@@ -88,6 +88,15 @@
       "halftone": "Retino",
       "ribbons": "Nastri"
     },
+    "bgEffectLabel": "Effetto",
+    "bgEffectNames": {
+      "none": "Nessun effetto",
+      "waves": "Onde",
+      "particles": "Particelle",
+      "sparkles": "Scintille",
+      "aurora": "Bagliore",
+      "shimmer": "Luccichio"
+    },
     "languageTitle": "Lingua e regione",
     "languageHint": "Condivisi da tutta l'azienda: lingua dell'interfaccia, fuso orario e valuta.",
     "languageSectionLabel": "Lingua",
