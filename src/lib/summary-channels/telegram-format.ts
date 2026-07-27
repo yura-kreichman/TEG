@@ -451,9 +451,11 @@ export function formatDailyCashSummaryTelegram(
 
   lines.push("");
   if (settings.showCash) {
-    lines.push(
-      `💵 ${st.cash}: <b>${formatMoney(data.cashAmount, locale)}</b> · 💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`
-    );
+    // Наличные и Безнал раздельными строками, не через " · " (запрос
+    // пользователя 2026-07-27) — в отличие от compact-режима, где место в
+    // дефиците и разделитель оправдан, здесь строк не жалко.
+    lines.push(`💵 ${st.cash}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
+    lines.push(`💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`);
     if (data.abonementAmount > 0) {
       lines.push(`🎫 ${st.abonement}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
     }

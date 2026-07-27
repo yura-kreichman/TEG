@@ -304,6 +304,22 @@ export default function StaysZonePage() {
   const selectedZoneId = selectedAsset?.zoneId ?? null;
 
   /* eslint-disable react-hooks/set-state-in-effect */
+  // Единственный актив в отфильтрованной зоне рендерится БЕЗ кликабельного
+  // тайла (запрос пользователя 2026-07-18: "выбирать не из чего") — тапнуть
+  // по нему и выставить selectedAssetId физически нечем. Реальный баг (нашла
+  // Катя, тенант "Керен Центр", зона "PROдлёнка+" — 2026-07-27): при
+  // переключении фильтра зоны на зону ровно с одним активом selectedAssetId
+  // молча оставался от ПРЕДЫДУЩЕЙ зоны — "Добавить браслет" тогда стартовал
+  // по чужому активу/тарифу (другая цена), а строка на экране выглядела
+  // "не реагирующей", хотя на самом деле была не кликабельна вовсе.
+  useEffect(() => {
+    if (filteredAssets.length === 1 && filteredAssets[0].id !== selectedAssetId) {
+      setSelectedAssetId(filteredAssets[0].id);
+      window.localStorage.setItem(ASSET_SELECTION_KEY, filteredAssets[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoneFilter, allAssets, selectedAssetId]);
+
   useEffect(() => {
     loadLaunches(selectedZoneId);
     if (!selectedZoneId) return;

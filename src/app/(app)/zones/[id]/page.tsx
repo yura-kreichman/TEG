@@ -199,7 +199,7 @@ function RateOptionsEditor({
     <div className="flex flex-col gap-2">
       <Label>{t.zoneDetail.gameRoomRateOptionsLabel}</Label>
       {options.map((opt, index) => (
-        <div key={index} className="flex items-center gap-2">
+        <div key={index} className="flex items-center gap-2 rounded-control border border-border p-2">
           <Input
             required
             placeholder={t.zoneDetail.gameRoomRateOptionNamePlaceholder}
@@ -1499,7 +1499,17 @@ export default function ZoneDetailPage() {
                 { key: "per_minute" as const, label: t.zoneDetail.gameRoomPricingModePerMinute },
               ]}
               value={tariffPricingMode}
-              onChange={setTariffPricingMode}
+              onChange={(mode) => {
+                setTariffPricingMode(mode);
+                // "По факту" сразу показывает редактор "Ставки" (запрос
+                // пользователя 2026-07-27: единообразно с "За вход", где
+                // "Варианты" видны сразу же, без промежуточного клика по
+                // "Добавить вариант") — старый режим "одна ставка без имени"
+                // остаётся доступен через "Вернуться к одной цене" ниже.
+                if (mode === "per_minute" && tariffRateOptions.length === 0) {
+                  setTariffRateOptions([EMPTY_RATE_OPTION]);
+                }
+              }}
             />
           )}
           {!(isStaysZone(zone) && tariffPricingMode === "fixed") &&
@@ -1601,7 +1611,17 @@ export default function ZoneDetailPage() {
                   { key: "per_minute" as const, label: t.zoneDetail.gameRoomPricingModePerMinute },
                 ]}
                 value={editTariffPricingMode}
-                onChange={setEditTariffPricingMode}
+                onChange={(mode) => {
+                  setEditTariffPricingMode(mode);
+                  // Тот же принцип, что у формы создания тарифа выше —
+                  // переключение на "По факту" сразу показывает "Ставки", не
+                  // трогает уже загруженные реальные данные существующего
+                  // тарифа (те приходят из openEditTariff), срабатывает
+                  // только при активном клике по табу.
+                  if (mode === "per_minute" && editTariffRateOptions.length === 0) {
+                    setEditTariffRateOptions([EMPTY_RATE_OPTION]);
+                  }
+                }}
               />
             )}
             {!(isStaysZone(zone) && editTariffPricingMode === "fixed") &&
