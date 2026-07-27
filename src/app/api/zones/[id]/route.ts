@@ -72,6 +72,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]"
     active: zone.active,
     printReceiptEnabled: zone.printReceiptEnabled,
     countersTapAssistEnabled: zone.countersTapAssistEnabled,
+    amountRoundingEnabled: zone.amountRoundingEnabled,
     ticketRedemptionEnabled: zone.ticketRedemptionEnabled,
     ticketLifetimeDays: zone.ticketLifetimeDays,
     pointId: zone.pointId,
@@ -106,6 +107,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     active,
     printReceiptEnabled,
     countersTapAssistEnabled,
+    amountRoundingEnabled,
     ticketRedemptionEnabled,
     ticketLifetimeDays,
   } = await request.json();
@@ -117,6 +119,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     active?: boolean;
     printReceiptEnabled?: boolean;
     countersTapAssistEnabled?: boolean;
+    amountRoundingEnabled?: boolean;
     ticketRedemptionEnabled?: boolean;
     ticketLifetimeDays?: number | null;
   } = {};
@@ -221,6 +224,16 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/zones/[id]
     // источник показания") — формула расчёта не меняется, следующая сдача
     // просто возьмёт предыдущее показание + тапы с момента переключения.
     data.countersTapAssistEnabled = countersTapAssistEnabled;
+  }
+  if (amountRoundingEnabled !== undefined) {
+    if (typeof amountRoundingEnabled !== "boolean") {
+      return NextResponse.json({ error: "Некорректное значение amountRoundingEnabled" }, { status: 400 });
+    }
+    // Как и countersTapAssistEnabled выше — можно менять в любой момент,
+    // даже после сдач итогов: влияет только на НОВЫЕ пуски, начиная с
+    // момента переключения, не пересчитывает уже сохранённые суммы задним
+    // числом.
+    data.amountRoundingEnabled = amountRoundingEnabled;
   }
   if (ticketRedemptionEnabled !== undefined) {
     if (typeof ticketRedemptionEnabled !== "boolean") {

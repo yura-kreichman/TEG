@@ -309,6 +309,9 @@ interface ZoneDetail {
   // показания считаются автоматически по тапам вместо ручного ввода, см.
   // isCountersTapAssistZone в lib/results-calc.ts.
   countersTapAssistEnabled: boolean;
+  // Только "Прибывания" + тариф "По факту" (запрос пользователя 2026-07-27) —
+  // округление суммы пуска до целой валютной единицы при остановке.
+  amountRoundingEnabled: boolean;
   // Только "Билеты" (docs/spec/10-tickets.md, "ГАШЕНИЕ"/"СРОК ЖИЗНИ").
   ticketRedemptionEnabled: boolean;
   ticketLifetimeDays: number | null;
@@ -525,6 +528,19 @@ export default function ZoneDetailPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ countersTapAssistEnabled: !zone.countersTapAssistEnabled }),
+    });
+    await loadZone();
+  }
+
+  // Округление суммы пуска "По факту" до целой валютной единицы (запрос
+  // пользователя 2026-07-27) — влияет только на НОВЫЕ пуски с момента
+  // переключения, ничего не пересчитывает задним числом.
+  async function toggleAmountRoundingEnabled() {
+    if (!zone) return;
+    await fetch(`/api/zones/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amountRoundingEnabled: !zone.amountRoundingEnabled }),
     });
     await loadZone();
   }
@@ -1107,7 +1123,7 @@ export default function ZoneDetailPage() {
               зоны с режимом Билеты на одной плашке"), эта — только для
               Прибываний/Пусков. */}
           {(isStaysZone(zone) || isLaunchesZone(zone)) && (
-            <SpringCard hover={false}>
+            <SpringCard hover={false} className="flex flex-col gap-3">
               <div className="flex items-center justify-between gap-3">
                 <span>
                   <span className="block text-body-airbnb">{t.zoneDetail.printReceiptLabel}</span>
@@ -1117,6 +1133,28 @@ export default function ZoneDetailPage() {
                 </span>
                 <Switch checked={zone.printReceiptEnabled} onCheckedChange={togglePrintReceiptEnabled} className="shrink-0" />
               </div>
+              {/* Только "Прибывания" — округление имеет смысл лишь для
+                  тарифа "По факту" (per_minute), а он существует только в
+                  этом режиме; у "Пусков" тарифы всегда плоские (цену вводит
+                  владелец), округлять там нечего (запрос пользователя
+                  2026-07-27). Та же плашка, что "Печать квитанции" — по
+                  просьбе владельца, вторая строка, тот же приём, что уже
+                  есть в карточке "Билеты" ниже. */}
+              {isStaysZone(zone) && (
+                <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
+                  <span>
+                    <span className="block text-body-airbnb">{t.zoneDetail.amountRoundingLabel}</span>
+                    <span className="mt-0.5 block text-caption-airbnb text-muted-foreground">
+                      {t.zoneDetail.amountRoundingHint}
+                    </span>
+                  </span>
+                  <Switch
+                    checked={zone.amountRoundingEnabled}
+                    onCheckedChange={toggleAmountRoundingEnabled}
+                    className="shrink-0"
+                  />
+                </div>
+              )}
             </SpringCard>
           )}
 

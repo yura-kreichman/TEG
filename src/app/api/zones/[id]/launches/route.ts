@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import {
   LAUNCH_PAYMENT_METHODS,
+  LAUNCH_LOCK_TIMEOUT_MS,
   MAX_PARALLEL_LAUNCHES,
   countOpenLaunches,
   findOperatorStaysZone,
@@ -39,8 +40,30 @@ export async function GET(request: Request, ctx: RouteContext<"/api/zones/[id]/l
     return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
   }
 
+  // Просроченная "заморозка" (дольше LAUNCH_LOCK_TIMEOUT_MS ждёт способ
+  // оплаты) — тихо возвращаем в идущий прямо здесь, тем же 6-секундным
+  // опросом экрана (запрос пользователя 2026-07-27: короткий тайм-аут вместо
+  // бессрочного "замри" — иначе Сотрудник мог бы зафиксировать заниженную
+  // сумму рано и не оплачивать её, забирая разницу мимо кассы, пока ребёнок
+  // физически продолжает играть). Та же защита есть в /stop на случай, если
+  // клиент успел отправить оплату буквально в момент истечения.
+  await prisma.launch.updateMany({
+    where: {
+      zoneId: zone.id,
+      isOpen: false,
+      paymentMethod: null,
+      endedAt: { lt: new Date(Date.now() - LAUNCH_LOCK_TIMEOUT_MS) },
+    },
+    data: { isOpen: true, endedAt: null, amount: null, endedByOperatorId: null },
+  });
+
+  // isOpen:true — обычные идущие пуски; isOpen:false + paymentMethod:null —
+  // "заморожены" через /api/launches/[id]/lock, ждут выбор способа оплаты
+  // (запрос пользователя 2026-07-27) — экран зоны должен продолжать их
+  // показывать (не как идущие, а с зафиксированной суммой), иначе оператор
+  // теряет их из виду до следующей перезагрузки/сдачи итогов.
   const launches = await prisma.launch.findMany({
-    where: { zoneId: zone.id, isOpen: true },
+    where: { zoneId: zone.id, OR: [{ isOpen: true }, { isOpen: false, paymentMethod: null }] },
     orderBy: { startedAt: "asc" },
   });
 
@@ -69,6 +92,8 @@ export async function GET(request: Request, ctx: RouteContext<"/api/zones/[id]/l
       durationMinutesSnapshot: l.durationMinutesSnapshot,
       roundingModeSnapshot: l.roundingModeSnapshot,
       minAmountSnapshot: l.minAmountSnapshot != null ? Number(l.minAmountSnapshot) : null,
+      isOpen: l.isOpen,
+      amount: l.amount != null ? Number(l.amount) : null,
     })),
     ...(revenueByAsset ? { revenueByAsset } : {}),
   });

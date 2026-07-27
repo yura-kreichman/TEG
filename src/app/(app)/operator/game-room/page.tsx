@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeftRight, Banknote, Check, CreditCard, Layers, MapPin, Plus, Wallet, X } from "lucide-react";
+import { ArrowLeftRight, Banknote, Check, CreditCard, Layers, MapPin, Play, Plus, Wallet, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Label } from "@/components/ui/label";
@@ -70,6 +70,7 @@ interface ZoneCtx {
   iconKey: string | null;
   assets: AssetCtx[];
   printReceiptEnabled: boolean;
+  amountRoundingEnabled: boolean;
 }
 
 interface OpenLaunch {
@@ -82,6 +83,11 @@ interface OpenLaunch {
   durationMinutesSnapshot: number | null;
   roundingModeSnapshot: LaunchRoundingMode | null;
   minAmountSnapshot: number | null;
+  // false — "заморожен" через /api/launches/[id]/lock, ждёт способ оплаты
+  // (запрос пользователя 2026-07-27); amount тогда уже зафиксирован сервером,
+  // не считается заново через estimateLiveAmount.
+  isOpen: boolean;
+  amount: number | null;
 }
 
 const SOUND_HINT_KEY = "gameRoomSoundHintSeen";
@@ -219,12 +225,20 @@ export default function StaysZonePage() {
         const stays: ZoneCtx[] = (data.zones ?? [])
           .filter(isStaysZone)
           .map(
-            (z: { id: string; name: string; iconKey: string | null; assets: AssetCtx[]; printReceiptEnabled: boolean }) => ({
+            (z: {
+              id: string;
+              name: string;
+              iconKey: string | null;
+              assets: AssetCtx[];
+              printReceiptEnabled: boolean;
+              amountRoundingEnabled: boolean;
+            }) => ({
               id: z.id,
               name: z.name,
               iconKey: z.iconKey,
               assets: z.assets ?? [],
               printReceiptEnabled: z.printReceiptEnabled,
+              amountRoundingEnabled: z.amountRoundingEnabled,
             })
           );
         if (stays.length === 0) {
@@ -302,6 +316,7 @@ export default function StaysZonePage() {
   const filteredAssets = zoneFilter === ALL_ZONES ? allAssets : allAssets.filter((a) => a.zoneId === zoneFilter);
   const selectedAsset = allAssets.find((a) => a.id === selectedAssetId) ?? null;
   const selectedZoneId = selectedAsset?.zoneId ?? null;
+  const selectedZone = zones.find((z) => z.id === selectedZoneId) ?? null;
 
   /* eslint-disable react-hooks/set-state-in-effect */
   // Единственный актив в отфильтрованной зоне рендерится БЕЗ кликабельного
@@ -477,6 +492,47 @@ export default function StaysZonePage() {
       flashError(t.operatorApp.gameRoom.networkError);
     } finally {
       setStopping(false);
+    }
+  }
+
+  // Фиксация суммы/времени "По факту" в момент открытия шторки выбора
+  // способа оплаты (запрос пользователя 2026-07-27) — иначе сумма растёт,
+  // пока Сотрудник/Клиент решают, чем платить. Сервер сам считает endedAt
+  // (см. /api/launches/[id]/lock) — не клиентское время.
+  async function lockLaunch(l: OpenLaunch) {
+    setStopping(true);
+    try {
+      const res = await fetch(`/api/launches/${l.id}/lock`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        flashError(data?.error ?? t.operatorApp.gameRoom.networkError);
+        return;
+      }
+      const data = await res.json();
+      setStopPaymentTarget({ ...l, isOpen: false, amount: Number(data.amount) });
+      loadLaunches(selectedZoneId);
+    } catch {
+      flashError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      setStopping(false);
+    }
+  }
+
+  // Возврат зафиксированного, но ещё не оплаченного пуска в идущий (запрос
+  // пользователя 2026-07-27: "передумал уходить") — тайл целиком становится
+  // кнопкой "Возобновить" (серый + крупная иконка play), пока пуск ждёт
+  // оплату.
+  async function resumeLaunch(launchId: string) {
+    try {
+      const res = await fetch(`/api/launches/${launchId}/resume`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        flashError(data?.error ?? t.operatorApp.gameRoom.networkError);
+        return;
+      }
+      loadLaunches(selectedZoneId);
+    } catch {
+      flashError(t.operatorApp.gameRoom.networkError);
     }
   }
 
@@ -728,12 +784,41 @@ export default function StaysZonePage() {
                     l.roundingModeSnapshot,
                     l.minAmountSnapshot,
                     new Date(l.startedAt),
-                    now
+                    now,
+                    selectedZone?.amountRoundingEnabled ?? false
                   );
                   const timeText =
                     l.pricingMode === "fixed" && l.durationMinutesSnapshot != null
                       ? formatMMSS(l.durationMinutesSnapshot * 60000 - elapsedMs)
                       : formatMMSS(elapsedMs);
+                  // Пуск "заморожен" (запрос пользователя 2026-07-27) — ждёт
+                  // способ оплаты, endedAt/amount уже зафиксированы сервером
+                  // (см. lockLaunch). Тайл целиком превращается в кнопку
+                  // "Возобновить" — серый + крупная иконка play, тот же приём,
+                  // что у деактивированных зон/активов (grayscale). Открыть
+                  // шторку оплаты заново можно не отсюда — она открывается
+                  // сама при следующем заходе на экран (см. эффект ниже).
+                  if (!l.isOpen) {
+                    return (
+                      <PressableScale key={l.id}>
+                        <button
+                          type="button"
+                          aria-label={t.operatorApp.gameRoom.resumeLaunchAction}
+                          onClick={() => resumeLaunch(l.id)}
+                          className="flex aspect-square w-full grayscale flex-col items-center justify-center gap-1 rounded-card border-[1.5px] border-border bg-card p-2 text-center"
+                        >
+                          <span className="text-[0.6875rem] font-semibold text-muted-foreground">
+                            {t.operatorApp.gameRoom.wristbandNumberPrefix} {l.number}
+                          </span>
+                          <Play className="size-9 text-muted-foreground" fill="currentColor" />
+                          {l.amount != null && (
+                            <Money value={l.amount} className="text-sm font-semibold text-muted-foreground" />
+                          )}
+                        </button>
+                      </PressableScale>
+                    );
+                  }
+
                   // "Точно?" — инлайн в тайле (запрос пользователя 2026-07-17).
                   // Способ оплаты "По факту" дальше уходит в отдельный bottom
                   // sheet (запрос того же дня), не остаётся в тайле.
@@ -763,16 +848,24 @@ export default function StaysZonePage() {
                               disabled={stopping}
                               onClick={(e) => {
                                 setInteracting(null);
-                                if (l.pricingMode === "per_minute") {
-                                  setStopPaymentTarget(l);
+                                // Сумма 0 — очевидная случайная опечатка
+                                // (тапнули и сразу остановили), запрос
+                                // пользователя 2026-07-27: не имеет смысла
+                                // спрашивать способ оплаты вовсе, закрываем
+                                // тем же путём, что "За вход" ниже (обычная
+                                // <button>, не ConfirmButton — событие шлём
+                                // вручную).
+                                if (l.pricingMode === "per_minute" && liveAmount > 0) {
+                                  lockLaunch(l);
                                 } else {
                                   // Улетающая галочка (реальный баг, найден
                                   // пользователем 2026-07-20: "у 'За вход'
                                   // при закрытии галочка не вылетает") — у
                                   // "По факту" её шлёт ConfirmButton в
                                   // stopPaymentTarget-шторке, а этот путь
-                                  // ("За вход", без выбора оплаты) — обычная
-                                  // <button>, событие не отправляла вообще.
+                                  // ("За вход", без выбора оплаты, и "По
+                                  // факту" с суммой 0) — обычная <button>,
+                                  // событие не отправляла бы сама.
                                   // silent: true — звук уже играет
                                   // playCloseChime() внутри stopLaunch().
                                   const rect = e.currentTarget.getBoundingClientRect();
@@ -781,7 +874,7 @@ export default function StaysZonePage() {
                                       detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, silent: true },
                                     })
                                   );
-                                  stopLaunch(l.id);
+                                  stopLaunch(l.id, l.pricingMode === "per_minute" ? "cash" : undefined);
                                 }
                               }}
                               className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
@@ -984,79 +1077,79 @@ export default function StaysZonePage() {
             </h2>
             <p className="text-caption-airbnb tabular-nums">
               {t.operatorApp.gameRoom.wristbandNumberPrefix} {stopPaymentTarget.number} ·{" "}
-              <Money
-                value={estimateLiveAmount(
-                  stopPaymentTarget.pricingMode,
-                  stopPaymentTarget.priceSnapshot,
-                  stopPaymentTarget.roundingModeSnapshot,
-                  stopPaymentTarget.minAmountSnapshot,
-                  new Date(stopPaymentTarget.startedAt),
-                  now
-                )}
-              />
+              <Money value={stopPaymentTarget.amount ?? 0} />
             </p>
-            <div className="flex flex-col gap-2">
+            {/* Сумма 0 — скорее всего случайный тап, платить не за что (запрос
+                пользователя 2026-07-27: "нет смысла выбирать метод оплаты и
+                что-то фиксировать") — вместо выбора способа сразу закрываем,
+                paymentMethod="cash" на нулевую сумму ни на что не влияет. */}
+            {stopPaymentTarget.amount === 0 ? (
               <ConfirmButton
                 className="relative h-12 w-full font-semibold"
                 disabled={stopping}
                 silent
                 onConfirm={() => stopLaunch(stopPaymentTarget.id, "cash")}
               >
-                <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                {t.operatorApp.submit.cashLabel}
+                {t.operatorApp.gameRoom.closeFreeLaunchButton}
               </ConfirmButton>
-              <ConfirmButton
-                className="relative h-12 w-full font-semibold"
-                disabled={stopping}
-                silent
-                onConfirm={() => stopLaunch(stopPaymentTarget.id, "mobile")}
-              >
-                <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                {t.operatorApp.submit.mobileLabel}
-              </ConfirmButton>
-              {clientsEnabled && (
-                <PressableScale>
-                  <Button
-                    type="button"
-                    variant="outline"
+            ) : (
+              <>
+                <div className="flex flex-col gap-2">
+                  <ConfirmButton
                     className="relative h-12 w-full font-semibold"
                     disabled={stopping}
+                    silent
+                    onConfirm={() => stopLaunch(stopPaymentTarget.id, "cash")}
+                  >
+                    <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                    {t.operatorApp.submit.cashLabel}
+                  </ConfirmButton>
+                  <ConfirmButton
+                    className="relative h-12 w-full font-semibold"
+                    disabled={stopping}
+                    silent
+                    onConfirm={() => stopLaunch(stopPaymentTarget.id, "mobile")}
+                  >
+                    <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                    {t.operatorApp.submit.mobileLabel}
+                  </ConfirmButton>
+                  {clientsEnabled && (
+                    <PressableScale>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="relative h-12 w-full font-semibold"
+                        disabled={stopping}
+                        onClick={() => {
+                          const launch = stopPaymentTarget;
+                          setStopPaymentTarget(null);
+                          setAbonementTarget({ kind: "stop", launch, amount: launch.amount ?? 0 });
+                        }}
+                      >
+                        <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                        {t.operatorApp.abonement.paymentLabel}
+                      </Button>
+                    </PressableScale>
+                  )}
+                </div>
+                <PressableScale className="w-fit">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto gap-1 px-0 text-muted-foreground underline underline-offset-2"
                     onClick={() => {
-                      const amount = estimateLiveAmount(
-                        stopPaymentTarget.pricingMode,
-                        stopPaymentTarget.priceSnapshot,
-                        stopPaymentTarget.roundingModeSnapshot,
-                        stopPaymentTarget.minAmountSnapshot,
-                        new Date(stopPaymentTarget.startedAt),
-                        now
-                      );
                       const launch = stopPaymentTarget;
                       setStopPaymentTarget(null);
-                      setAbonementTarget({ kind: "stop", launch, amount });
+                      setSplitStopTarget({ launch });
                     }}
                   >
-                    <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                    {t.operatorApp.abonement.paymentLabel}
+                    <ArrowLeftRight className="size-3.5" />
+                    {t.splitPayment.title}
                   </Button>
                 </PressableScale>
-              )}
-            </div>
-            <PressableScale className="w-fit">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-auto gap-1 px-0 text-muted-foreground underline underline-offset-2"
-                onClick={() => {
-                  const launch = stopPaymentTarget;
-                  setStopPaymentTarget(null);
-                  setSplitStopTarget({ launch });
-                }}
-              >
-                <ArrowLeftRight className="size-3.5" />
-                {t.splitPayment.title}
-              </Button>
-            </PressableScale>
+              </>
+            )}
           </div>
         )}
       </BottomSheet>
@@ -1064,18 +1157,7 @@ export default function StaysZonePage() {
       <SplitPaymentSheet
         open={splitStopTarget !== null}
         onClose={() => setSplitStopTarget(null)}
-        total={
-          splitStopTarget
-            ? estimateLiveAmount(
-                splitStopTarget.launch.pricingMode,
-                splitStopTarget.launch.priceSnapshot,
-                splitStopTarget.launch.roundingModeSnapshot,
-                splitStopTarget.launch.minAmountSnapshot,
-                new Date(splitStopTarget.launch.startedAt),
-                now
-              )
-            : 0
-        }
+        total={splitStopTarget ? (splitStopTarget.launch.amount ?? 0) : 0}
         allowedMethods={LAUNCH_SPLIT_METHODS}
         clientsEnabled={clientsEnabled}
         submitting={stopping}

@@ -3,7 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import {
   computeLaunchAmount,
+  roundToWholeCurrencyUnit,
   LAUNCH_PAYMENT_METHODS,
+  LAUNCH_LOCK_TIMEOUT_MS,
   type LaunchPricingMode,
   type LaunchRoundingMode,
 } from "@/lib/game-room";
@@ -28,8 +30,25 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
   if (!launch || launch.zone.pointId !== point.id) {
     return NextResponse.json({ error: "Пуск не найден" }, { status: 404 });
   }
-  if (!launch.isOpen) {
+  // !isOpen — либо УЖЕ полностью завершён (paymentMethod задан), либо только
+  // "заморожен" через /lock и ждёт способ оплаты (paymentMethod ещё null,
+  // см. lock/route.ts) — второе допустимо, сумма/endedAt уже зафиксированы
+  // там, здесь их не пересчитываем заново (см. isLocked ниже).
+  if (!launch.isOpen && launch.paymentMethod !== null) {
     return NextResponse.json({ error: "Пуск уже завершён" }, { status: 400 });
+  }
+  const isLocked = !launch.isOpen;
+  // Тайм-аут "заморозки" (запрос пользователя 2026-07-27, реальный риск
+  // злоупотребления: зафиксировать заниженную сумму рано и не оплачивать,
+  // забирая разницу мимо кассы наличными, пока ребёнок физически продолжает
+  // играть) — просроченную заморозку не принимаем, возвращаем пуск в идущий
+  // и просим повторить остановку заново с актуальным временем.
+  if (isLocked && launch.endedAt && Date.now() - launch.endedAt.getTime() > LAUNCH_LOCK_TIMEOUT_MS) {
+    await prisma.launch.updateMany({
+      where: { id, isOpen: false, paymentMethod: null },
+      data: { isOpen: true, endedAt: null, amount: null, endedByOperatorId: null },
+    });
+    return NextResponse.json({ error: "Пауза истекла — пуск возобновлён, остановите заново" }, { status: 409 });
   }
   if (!operator.allZonesAccess) {
     const hasAccess = await prisma.zone.findFirst({
@@ -96,18 +115,32 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
     }
   }
 
-  const endedAt = new Date();
-  const amount = computeLaunchAmount(
-    {
-      pricingMode: launch.pricingMode as LaunchPricingMode,
-      priceSnapshot: launch.priceSnapshot,
-      durationMinutesSnapshot: launch.durationMinutesSnapshot,
-      roundingModeSnapshot: launch.roundingModeSnapshot as LaunchRoundingMode | null,
-      minAmountSnapshot: launch.minAmountSnapshot,
-    },
-    launch.startedAt,
-    endedAt
-  );
+  // Уже "заморожен" (см. /api/launches/[id]/lock) — endedAt/amount там уже
+  // зафиксированы серверным временем в момент открытия шторки, здесь их не
+  // трогаем заново (иначе сумма продолжила бы расти, ровно то, что должно
+  // было прекратиться после заморозки). Иначе (обычный стоп "fixed" — тот
+  // никогда не проходит через /lock, у него цена и так известна заранее) —
+  // считаем как раньше.
+  const endedAt = isLocked ? launch.endedAt! : new Date();
+  let amount = isLocked
+    ? Number(launch.amount)
+    : computeLaunchAmount(
+        {
+          pricingMode: launch.pricingMode as LaunchPricingMode,
+          priceSnapshot: launch.priceSnapshot,
+          durationMinutesSnapshot: launch.durationMinutesSnapshot,
+          roundingModeSnapshot: launch.roundingModeSnapshot as LaunchRoundingMode | null,
+          minAmountSnapshot: launch.minAmountSnapshot,
+        },
+        launch.startedAt,
+        endedAt
+      );
+  // Округление суммы до целой валютной единицы (запрос пользователя
+  // 2026-07-27) — только "per_minute", "fixed" уже целая цена владельца;
+  // уже применено при заморозке, если isLocked — повторно не округляем.
+  if (!isLocked && launch.pricingMode === "per_minute" && launch.zone.amountRoundingEnabled) {
+    amount = roundToWholeCurrencyUnit(amount);
+  }
   if (legs) {
     try {
       validateSplitLegs(legs, amount, LAUNCH_PAYMENT_METHODS);
@@ -125,11 +158,15 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
       // CAS вместо обычного update (аудит 2026-07-25: проверка !launch.isOpen
       // выше читалась ДО транзакции — двойной клик "Стоп" на одном пуске с
       // оплатой балансом "По факту" мог пройти её дважды и дважды списать
-      // ту же сумму с кошелька через spendWalletTx). where с isOpen:true —
-      // если пуск уже остановлен параллельным запросом, updateMany затронет
-      // 0 строк.
+      // ту же сумму с кошелька через spendWalletTx) — если пуск уже
+      // остановлен/оплачен параллельным запросом, updateMany затронет 0
+      // строк. Два варианта where в зависимости от isLocked: обычный стоп
+      // требует ещё isOpen:true (переход из идущего), довершение уже
+      // "замороженного" пуска (см. /lock) требует isOpen:false +
+      // paymentMethod:null (переход из "ждёт оплату" в "оплачен") — иначе
+      // легитимный стоп уже "замороженного" пуска сам себя бы отклонял.
       const stopResult = await tx.launch.updateMany({
-        where: { id, isOpen: true },
+        where: isLocked ? { id, isOpen: false, paymentMethod: null } : { id, isOpen: true },
         data: { endedAt, isOpen: false, amount, endedByOperatorId: operator.id, paymentMethod, abonementWalletId },
       });
       if (stopResult.count === 0) throw new LaunchAlreadyStoppedError();

@@ -143,10 +143,31 @@ export async function findOperatorLaunchesZone(
   });
 }
 
-/** Для мягкой блокировки сдачи итогов — открытые пуски по всей зоне, любой актив. */
+/**
+ * Для мягкой блокировки сдачи итогов — открытые пуски по всей зоне, любой
+ * актив, ПЛЮС "заморожен, но не оплачен" (isOpen:false, paymentMethod:null,
+ * см. /api/launches/[id]/lock, запрос пользователя 2026-07-27) — если
+ * позволить сдачу пока такой пуск висит, граница следующей сдачи уйдёт за
+ * его endedAt и его сумма никогда ни в один агрегат не попадёт (тот же
+ * класс бага, что уже нашли на проде — Керен Центр, осиротевший пуск). В
+ * норме таких долго не бывает — короткий тайм-аут (см. LAUNCH_LOCK_TIMEOUT_MS)
+ * сам возвращает их в isOpen:true, если оператор не успел оплатить.
+ */
 export async function countOpenLaunchesInZone(zoneId: string, tx: Tx | typeof prisma = prisma) {
-  return tx.launch.count({ where: { zoneId, isOpen: true } });
+  return tx.launch.count({ where: { zoneId, OR: [{ isOpen: true }, { isOpen: false, paymentMethod: null }] } });
 }
+
+// Сколько "заморозка" (см. /api/launches/[id]/lock) держит сумму/время
+// зафиксированными, пока оператор выбирает способ оплаты, прежде чем
+// автоматически вернуть пуск в идущий (запрос пользователя 2026-07-27:
+// сначала "показывать бессрочно", затем пересмотрено в тот же вечер —
+// реальный риск злоупотребления, если держать бессрочно: Сотрудник мог бы
+// зафиксировать заниженную сумму рано, физически не забирая браслет у
+// ребёнка, и забрать разницу наличными мимо кассы. 30 секунд — с запасом
+// хватает потыкать способ оплаты, но не оставляет практически
+// эксплуатируемого окна (максимум украдкой "сэкономленного" — доля минуты
+// тарифа).
+export const LAUNCH_LOCK_TIMEOUT_MS = 30_000;
 
 export interface ExpiredLaunchInfo {
   count: number;
@@ -238,6 +259,27 @@ export function computeLaunchAmount(
   return Math.max(amount, minAmount);
 }
 
+/**
+ * Округление суммы пуска до целой валютной единицы — только
+ * Zone.amountRoundingEnabled, только "per_minute" (запрос пользователя
+ * 2026-07-27: "ребёнок зашёл на 30 секунд — нет смысла выставлять счёт в 30
+ * копеек"). Правило: < 50 копеек — вниз, >= 50 — вверх (ровная середина
+ * тоже вверх, уточнено тем же днём). Считается в целых копейках
+ * (Math.round(amount * 100)), а не сравнением дробной части напрямую —
+ * иначе граница .50 ловит погрешность плавающей точки (классический
+ * 0.1 + 0.2 !== 0.3). Применяется В МОМЕНТ РАСЧЁТА, до записи Launch.amount
+ * (см. /api/launches/[id]/stop/route.ts) — не как отображение поверх
+ * настоящей суммы, иначе расчётная выручка/касса/"Разница" разъедутся с
+ * тем, что реально записано (тот же класс проблемы, что уже нашли на
+ * проде — Керен Центр, осиротевший пуск, 2026-07-27).
+ */
+export function roundToWholeCurrencyUnit(amount: number): number {
+  const cents = Math.round(amount * 100);
+  const wholeUnits = Math.floor(cents / 100);
+  const remainderCents = cents - wholeUnits * 100;
+  return remainderCents >= 50 ? wholeUnits + 1 : wholeUnits;
+}
+
 export interface GameRoomAggregate {
   count: number;
   totalAmount: number;
@@ -274,6 +316,16 @@ export async function aggregateGameRoomLaunches(
       zoneId,
       voidedAt: null,
       endedAt: { not: null, lte: until, ...(since ? { gt: since } : {}) },
+      // paymentMethod ещё null — пуск только "заморожен" через
+      // /api/launches/[id]/lock, ждёт выбор способа оплаты (запрос
+      // пользователя 2026-07-27), НЕ завершён по-настоящему. Учитывать его
+      // в расчётной выручке раньше времени — тот же класс бага, что уже
+      // нашли на проде (Керен Центр, осиротевший пуск): пока он не оплачен,
+      // граница следующей сдачи может уйти дальше его endedAt и он никогда
+      // не попадёт ни в один агрегат — эта же причина уже блокирует сдачу
+      // итогов, пока такой пуск существует (см. countOpenLaunchesInZone
+      // ниже), поэтому его в принципе не должно быть тут на момент расчёта.
+      paymentMethod: { not: null },
     },
     select: { id: true, amount: true, startedAt: true, endedAt: true, paymentMethod: true },
   });
@@ -357,6 +409,10 @@ export async function gameRoomRevenueByAsset(
       zoneId,
       voidedAt: null,
       endedAt: { not: null, lte: until, ...(since ? { gt: since } : {}) },
+      // Тот же принцип, что у aggregateGameRoomLaunches выше — "заморожен",
+      // но ещё не оплачен (paymentMethod null) не должен попасть сюда
+      // раньше времени (запрос пользователя 2026-07-27).
+      paymentMethod: { not: null },
     },
     select: { id: true, assetId: true, amount: true, paymentMethod: true },
   });
