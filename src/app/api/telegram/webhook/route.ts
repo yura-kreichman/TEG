@@ -1078,36 +1078,57 @@ async function handleJoinCommand(chatId: string, lang: BotLang) {
   const s = BOT_STRINGS[lang];
   const links = await prisma.clientTelegramLink.findMany({ where: { chatId }, select: { tenantId: true } });
   const linkedTenantIds = [...new Set(links.map((l) => l.tenantId))];
+  if (linkedTenantIds.length === 0) {
+    await sendChatMessage(chatId, s.servicesNotLinkedHint).catch(() => {});
+    return;
+  }
+
   // Реальный баг, найден пользователем 2026-07-27: список компаний строился
   // только по clientsEnabled — компанию без подключённой/включённой группы
   // всё равно показывали кнопкой, тап неизбежно упирался в
-  // "Группа пока не подключена" (причём без указания, у какой именно
-  // компании — при нескольких одинаковых кнопках сообщения было не
-  // различить). Теперь та же проверка, что уже скрывает кнопку "Будем
-  // вместе" в обычном меню (tenantHasActiveGroup) — компания без рабочей
-  // группы просто не попадает в список вовсе.
-  const tenantIds: string[] = [];
+  // "Группа пока не подключена". Теперь компания без рабочей группы вообще
+  // не попадает в список. Но tenantHasActiveGroup (для кнопки "Будем
+  // вместе" в обычном меню) — ОДНА проверка на два разных состояния сразу:
+  // "не настроена" и "клиент уже состоит", оба схлопывались в один false.
+  // Из-за этого, если клиент уже состоит СРАЗУ во всех своих привязанных
+  // группах, список получался пустым и падал в "не подключена" — неверно и
+  // непонятно (запрос пользователя 2026-07-27: "если клиент состоит в
+  // обоих группах то при join будет просто пусто"). Здесь — три раздельные
+  // корзины на каждого тенанта вместо одного bool.
+  const joinableIds: string[] = [];
+  const alreadyMemberNames: string[] = [];
+  const notConfiguredNames: string[] = [];
   for (const id of linkedTenantIds) {
-    if ((await isModuleEnabled(id, "clientsEnabled")) && (await tenantHasActiveGroup(id, chatId))) {
-      tenantIds.push(id);
+    if (!(await isModuleEnabled(id, "clientsEnabled"))) continue;
+    const group = await getTenantPublicGroup(id);
+    if (!group?.inviteLink || !group.enabled) {
+      const tenant = await prisma.tenant.findUnique({ where: { id }, select: { name: true } });
+      if (tenant) notConfiguredNames.push(tenant.name);
+      continue;
+    }
+    const isMember = group.chatId ? await isChatMember(group.chatId, chatId) : false;
+    if (isMember) {
+      const tenant = await prisma.tenant.findUnique({ where: { id }, select: { name: true } });
+      if (tenant) alreadyMemberNames.push(tenant.name);
+    } else {
+      joinableIds.push(id);
     }
   }
+  const tenantIds = joinableIds;
 
   if (tenantIds.length === 0) {
-    // Разные причины пустого списка: клиент вообще ни к одной компании не
-    // привязан (обычный кейс, старое сообщение) — или привязан, но ни у
-    // одной нет рабочей группы (новый кейс, тот же текст "не подключена",
-    // что и раньше было при тапе, просто теперь на шаг раньше). Название(я)
-    // компании — реальный баг, найден пользователем 2026-07-27 (второй заход
-    // после первого фикса того же дня): при единственной привязанной
-    // компании сообщение уходило совсем без имени, было непонятно, о какой
-    // компании речь — тот же приём, что уже есть в sendJoinForTenant ниже.
-    if (linkedTenantIds.length === 0) {
-      await sendChatMessage(chatId, s.servicesNotLinkedHint).catch(() => {});
+    // "Уже состою" перевешивает "не настроена" — если хоть где-то клиент
+    // уже с нами, это и есть содержательный ответ, а не молчание о
+    // компаниях без группы вообще (их и так никогда не показывали в списке).
+    if (alreadyMemberNames.length > 0) {
+      await sendChatMessage(
+        chatId,
+        alreadyMemberNames.map((name) => `${name}: ${s.alreadyInGroup}`).join("\n")
+      ).catch(() => {});
+    } else if (notConfiguredNames.length > 0) {
+      await sendChatMessage(chatId, `${notConfiguredNames.join(", ")}: ${s.joinGroupNotConfigured}`).catch(() => {});
     } else {
-      const tenants = await prisma.tenant.findMany({ where: { id: { in: linkedTenantIds } }, select: { name: true } });
-      const names = tenants.map((t) => t.name).join(", ");
-      await sendChatMessage(chatId, names ? `${names}: ${s.joinGroupNotConfigured}` : s.joinGroupNotConfigured).catch(() => {});
+      await sendChatMessage(chatId, s.joinGroupNotConfigured).catch(() => {});
     }
     return;
   }
