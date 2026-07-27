@@ -1097,8 +1097,18 @@ async function handleJoinCommand(chatId: string, lang: BotLang) {
     // Разные причины пустого списка: клиент вообще ни к одной компании не
     // привязан (обычный кейс, старое сообщение) — или привязан, но ни у
     // одной нет рабочей группы (новый кейс, тот же текст "не подключена",
-    // что и раньше было при тапе, просто теперь на шаг раньше).
-    await sendChatMessage(chatId, linkedTenantIds.length === 0 ? s.servicesNotLinkedHint : s.joinGroupNotConfigured).catch(() => {});
+    // что и раньше было при тапе, просто теперь на шаг раньше). Название(я)
+    // компании — реальный баг, найден пользователем 2026-07-27 (второй заход
+    // после первого фикса того же дня): при единственной привязанной
+    // компании сообщение уходило совсем без имени, было непонятно, о какой
+    // компании речь — тот же приём, что уже есть в sendJoinForTenant ниже.
+    if (linkedTenantIds.length === 0) {
+      await sendChatMessage(chatId, s.servicesNotLinkedHint).catch(() => {});
+    } else {
+      const tenants = await prisma.tenant.findMany({ where: { id: { in: linkedTenantIds } }, select: { name: true } });
+      const names = tenants.map((t) => t.name).join(", ");
+      await sendChatMessage(chatId, names ? `${names}: ${s.joinGroupNotConfigured}` : s.joinGroupNotConfigured).catch(() => {});
+    }
     return;
   }
   if (tenantIds.length === 1) {
