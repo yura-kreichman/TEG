@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Gift, Search, ChevronRight, Wallet, Send, Megaphone, FileDown, QrCode as QrCodeIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, Gift, Search, ChevronRight, Wallet, Send, Megaphone, FileDown, QrCode as QrCodeIcon, Users } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { FilePickerButton } from "@/components/file-picker-button";
 import { compressImageFile } from "@/lib/client-image";
@@ -381,18 +381,28 @@ export default function AbonementsPage() {
             <>
               {/* Сводка счётчиков (запрос пользователя 2026-07-28) — всегда
                   про всю базу клиентов тенанта, не про текущий
-                  поиск/фильтр списка ниже (см. walletCounts). */}
+                  поиск/фильтр списка ниже (см. walletCounts). На всю ширину
+                  строки (justify-between), иконки — та же семантика, что и
+                  у per-карточки: Wallet у клиента с балансом, Send у
+                  подключённых через Telegram (запрос того же дня). */}
               {walletCounts && (
-                <p className="mb-3 text-caption-airbnb text-muted-foreground">
-                  {t.abonements.walletsCountTotal}{" "}
-                  <span className="font-semibold text-foreground">{walletCounts.total}</span>
-                  {" · "}
-                  {t.abonements.walletsCountConnected}{" "}
-                  <span className="font-semibold text-foreground">{walletCounts.connected}</span>
-                  {" · "}
-                  {t.abonements.walletsCountWithBalance}{" "}
-                  <span className="font-semibold text-foreground">{walletCounts.withBalance}</span>
-                </p>
+                <div className="mb-3 flex items-center justify-between gap-2 text-caption-airbnb text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <Users className="size-3.5 shrink-0" />
+                    {t.abonements.walletsCountTotal}{" "}
+                    <span className="font-semibold text-foreground">{walletCounts.total}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Send className="size-3.5 shrink-0" />
+                    {t.abonements.walletsCountConnected}{" "}
+                    <span className="font-semibold text-foreground">{walletCounts.connected}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Wallet className="size-3.5 shrink-0" />
+                    {t.abonements.walletsCountWithBalance}{" "}
+                    <span className="font-semibold text-foreground">{walletCounts.withBalance}</span>
+                  </span>
+                </div>
               )}
               <div className="mb-3 flex justify-end gap-2">
                 {/* Экспорт клиентов в CSV (запрос пользователя 2026-07-27) —
