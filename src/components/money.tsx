@@ -78,8 +78,14 @@ export function Money({
 
   return (
     <span
-      className={cn("tabular-nums", className)}
-      style={displayScale !== 1 ? { fontSize: `${displayScale}em` } : undefined}
+      className={cn("tabular-nums", size === "display" && "transition-[font-size] duration-200", className)}
+      // Стиль ставится ВСЕГДА при size="display" (не только когда
+      // displayScale !== 1) — запрос пользователя 2026-07-28: "чтобы не
+      // перепрыгивало" — сейчас суммы ещё маленькие (масштаб=1, скидки нет),
+      // но по мере роста бизнеса он начнёт применяться; без явного
+      // fontSize здесь переход от "нет style" к "есть style" не анимируется
+      // (transition не видит отсутствующее свойство как отправную точку).
+      style={size === "display" ? { fontSize: `${displayScale}em` } : undefined}
     >
       {formatted}
       {sign && (
