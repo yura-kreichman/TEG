@@ -69,6 +69,21 @@ export async function GET(request: Request) {
   const telegramLinks = await prisma.clientTelegramLink.findMany({ where: { tenantId: owner.tenantId }, select: { phone: true } });
   const phonesWithTelegram = new Set(telegramLinks.map((l) => l.phone));
 
+  // Сводка счётчиков (запрос пользователя 2026-07-28: "должно отображаться
+  // общее количество клиентов, подключённых и с хоть каким-то балансом") —
+  // намеренно НЕ зависит от q/sort (в т.ч. от sort=telegram-фильтра выше) и
+  // НЕ обрезается ни по take:1000 (защитный потолок списка), ни по
+  // .slice(0, 100) ниже — это отдельные настоящие агрегаты по всей базе
+  // клиентов тенанта, не "сколько видно на экране прямо сейчас".
+  const [totalCount, withBalanceCount] = await Promise.all([
+    prisma.abonementWallet.count({ where: { tenantId: owner.tenantId } }),
+    prisma.abonementWallet.count({ where: { tenantId: owner.tenantId, balance: { gt: 0 } } }),
+  ]);
+  const connectedCount = await prisma.abonementWallet.count({
+    where: { tenantId: owner.tenantId, phone: { in: [...phonesWithTelegram] } },
+  });
+  const counts = { total: totalCount, connected: connectedCount, withBalance: withBalanceCount };
+
   let list = wallets.map((w) => ({
     id: w.id,
     phone: w.phone,
@@ -101,5 +116,5 @@ export async function GET(request: Request) {
     list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
-  return NextResponse.json({ wallets: list.slice(0, 100) });
+  return NextResponse.json({ wallets: list.slice(0, 100), counts });
 }

@@ -89,6 +89,12 @@ export default function AbonementsPage() {
   // редактировать") — сама продажа/первое создание — через sheet "Продать",
   // тут только правка имени/телефона существующего и просмотр истории.
   const [wallets, setWallets] = useState<WalletInfo[]>([]);
+  // Сводка счётчиков (запрос пользователя 2026-07-28) — независимо от
+  // текущего поиска/фильтра списка, настоящие агрегаты по всей базе
+  // клиентов тенанта (см. /api/abonement-wallets/list, поле counts).
+  const [walletCounts, setWalletCounts] = useState<{ total: number; connected: number; withBalance: number } | null>(
+    null
+  );
   const [walletQuery, setWalletQuery] = useState("");
   // Сортировка списка абонентов (запрос пользователя 2026-07-18: "по
   // балансу, активности и стажу") — "recent" (по умолчанию, недавно
@@ -192,6 +198,7 @@ export default function AbonementsPage() {
     const res = await fetch(`/api/abonement-wallets/list${qs ? `?${qs}` : ""}`);
     const data = await res.json();
     setWallets(data.wallets ?? []);
+    if (data.counts) setWalletCounts(data.counts);
   }
 
   async function deleteWallet() {
@@ -372,6 +379,21 @@ export default function AbonementsPage() {
 
           {tab === "wallets" && (
             <>
+              {/* Сводка счётчиков (запрос пользователя 2026-07-28) — всегда
+                  про всю базу клиентов тенанта, не про текущий
+                  поиск/фильтр списка ниже (см. walletCounts). */}
+              {walletCounts && (
+                <p className="mb-3 text-caption-airbnb text-muted-foreground">
+                  {t.abonements.walletsCountTotal}{" "}
+                  <span className="font-semibold text-foreground">{walletCounts.total}</span>
+                  {" · "}
+                  {t.abonements.walletsCountConnected}{" "}
+                  <span className="font-semibold text-foreground">{walletCounts.connected}</span>
+                  {" · "}
+                  {t.abonements.walletsCountWithBalance}{" "}
+                  <span className="font-semibold text-foreground">{walletCounts.withBalance}</span>
+                </p>
+              )}
               <div className="mb-3 flex justify-end gap-2">
                 {/* Экспорт клиентов в CSV (запрос пользователя 2026-07-27) —
                     Name/Phone/Balance, телефон с "+" (см. export/route.ts). */}
