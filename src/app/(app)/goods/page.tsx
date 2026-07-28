@@ -1779,7 +1779,7 @@ export default function GoodsCabinetPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex min-w-0 flex-col tabular-nums">
                       <span className="text-caption-airbnb text-muted-foreground">{t.money.revenue}</span>
-                      <span className="text-[2rem] font-extrabold leading-none tracking-[-0.02em]">
+                      <span className="text-[clamp(1.375rem,7vw,2rem)] font-extrabold leading-none tracking-[-0.02em]">
                         <Money value={salesSummary.revenue} size="display" />
                       </span>
                     </div>

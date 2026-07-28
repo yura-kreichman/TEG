@@ -506,7 +506,7 @@ export default function OperatorCardPage() {
                   <p className="text-caption-airbnb">{t.operatorApp.workTime.toPayOutLabel}</p>
                   <p
                     className={cn(
-                      "text-[2.125rem] font-extrabold tabular-nums tracking-[-0.02em]",
+                      "text-[clamp(1.4375rem,7.5vw,2.125rem)] font-extrabold tabular-nums tracking-[-0.02em]",
                       balance.toPayOut < 0 && "text-destructive"
                     )}
                   >

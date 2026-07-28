@@ -342,7 +342,7 @@ export function OwnerDashboardCard({
                 <span className="text-caption-airbnb text-muted-foreground">
                   {t.operatorApp.submit.calculatedRevenue.replace(/:$/, "")}
                 </span>
-                <span className="text-[2rem] font-extrabold leading-none tracking-[-0.02em]">
+                <span className="text-[clamp(1.375rem,7vw,2rem)] font-extrabold leading-none tracking-[-0.02em]">
                   <Money value={liveRevenue.total} size="display" />
                 </span>
               </div>
@@ -456,7 +456,7 @@ export function OwnerDashboardCard({
                           заголовка карточки в Деньгах, что и вызвало вопрос). */}
                       <div className="flex min-w-0 flex-col tabular-nums">
                         <span className="text-caption-airbnb text-muted-foreground">{t.money.profit}</span>
-                        <span className="text-[2rem] font-extrabold leading-none tracking-[-0.02em]">
+                        <span className="text-[clamp(1.375rem,7vw,2rem)] font-extrabold leading-none tracking-[-0.02em]">
                           <Money value={summary.profit!} size="display" />
                         </span>
                       </div>
@@ -499,7 +499,7 @@ export function OwnerDashboardCard({
                         <div className="flex border-t border-border pt-3 tabular-nums">
                           <div className="flex-1">
                             <p className="text-caption-airbnb">{t.money.revenue}</p>
-                            <p className="text-[1rem] font-bold">
+                            <p className="text-[clamp(0.8125rem,3.5vw,1rem)] font-bold">
                               <Money value={summary.revenue!} size="display" displayScale={homeRevenueRowScale} />
                             </p>
                           </div>
@@ -525,7 +525,7 @@ export function OwnerDashboardCard({
                               <span>{t.money.expensesLink}</span>
                               <ChevronRight className="size-3 shrink-0" />
                             </p>
-                            <p className="text-[1rem] font-bold">
+                            <p className="text-[clamp(0.8125rem,3.5vw,1rem)] font-bold">
                               <Money value={Math.abs(summary.expenses!)} size="display" displayScale={homeRevenueRowScale} />
                             </p>
                           </div>

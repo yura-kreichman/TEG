@@ -554,7 +554,7 @@ export default function ZoneBalancesPage() {
           <SpringCard hover={false} className="flex items-start justify-between gap-3 border-primary/20 bg-primary/10">
             <div className="flex flex-col">
               <span className="text-caption-airbnb text-muted-foreground">{t.money.zoneBalancesTotalLabel}</span>
-              <span className="text-[2.75rem] font-extrabold leading-none tracking-[-0.02em] text-primary">
+              <span className="text-[clamp(1.875rem,9.5vw,2.75rem)] font-extrabold leading-none tracking-[-0.02em] text-primary">
                 <Money value={currentPointTotal?.total ?? 0} size="display" />
               </span>
             </div>

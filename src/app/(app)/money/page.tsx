@@ -425,7 +425,7 @@ export default function MoneyPage() {
             <div className="flex items-start justify-between gap-2">
               <div className="flex min-w-0 flex-col tabular-nums">
                 <span className="text-caption-airbnb text-muted-foreground">{t.money.profit}</span>
-                <span className="text-[2.125rem] font-extrabold leading-none tracking-[-0.02em]">
+                <span className="text-[clamp(1.4375rem,7.5vw,2.125rem)] font-extrabold leading-none tracking-[-0.02em]">
                   <Money value={report.business.profit} size="display" />
                 </span>
               </div>
@@ -470,20 +470,20 @@ export default function MoneyPage() {
                 <div className="flex border-t border-border pt-3.5 tabular-nums">
                   <div className="flex-1">
                     <p className="text-caption-airbnb">{t.money.revenue}</p>
-                    <p className="text-[1.0625rem] font-bold">
+                    <p className="text-[clamp(0.875rem,3.75vw,1.0625rem)] font-bold">
                       <Money value={report.business.revenue} size="display" displayScale={businessRowScale} />
                     </p>
                   </div>
                   <div className="flex-1 border-l border-border pl-4">
                     <p className="text-caption-airbnb">{t.money.expense}</p>
-                    <p className="text-[1.0625rem] font-bold">
+                    <p className="text-[clamp(0.875rem,3.75vw,1.0625rem)] font-bold">
                       <Money value={Math.abs(report.business.expense)} size="display" displayScale={businessRowScale} />
                     </p>
                   </div>
                   {report.business.salary !== 0 && (
                     <div className="flex-1 border-l border-border pl-4">
                       <p className="text-caption-airbnb">{t.money.salaryLabel}</p>
-                      <p className="text-[1.0625rem] font-bold">
+                      <p className="text-[clamp(0.875rem,3.75vw,1.0625rem)] font-bold">
                         <Money value={Math.abs(report.business.salary)} size="display" displayScale={businessRowScale} />
                       </p>
                     </div>
@@ -491,7 +491,7 @@ export default function MoneyPage() {
                   {report.business.difference !== 0 && (
                     <div className="flex-1 border-l border-border pl-4">
                       <p className="text-caption-airbnb">{t.money.difference}</p>
-                      <p className={cn("text-[1.0625rem] font-bold", report.business.difference >= 0 ? "text-primary" : "text-destructive")}>
+                      <p className={cn("text-[clamp(0.875rem,3.75vw,1.0625rem)] font-bold", report.business.difference >= 0 ? "text-primary" : "text-destructive")}>
                         {report.business.difference >= 0 ? "+" : ""}
                         <Money value={report.business.difference} size="display" displayScale={businessRowScale} />
                       </p>
