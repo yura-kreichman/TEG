@@ -520,8 +520,18 @@ export default function StaysZonePage() {
         return;
       }
       const data = await res.json();
-      setStopPaymentTarget({ ...l, isOpen: false, amount: Number(data.amount) });
+      const amount = Number(data.amount);
       loadLaunches(selectedZoneId);
+      // Сумма 0 — закрываем сразу после "Точно?", без bottom sheet выбора
+      // способа оплаты (реальный баг, найден пользователем 2026-07-28: сумма
+      // 0 всё равно показывала шторку с единственной кнопкой "Закрыть без
+      // оплаты" — лишний тап; договорённость раньше была "закрывается сразу").
+      // paymentMethod="cash" на нулевую сумму ни на что не влияет.
+      if (amount === 0) {
+        await stopLaunch(l.id, "cash");
+        return;
+      }
+      setStopPaymentTarget({ ...l, isOpen: false, amount });
     } catch {
       flashError(t.operatorApp.gameRoom.networkError);
     } finally {
@@ -1193,77 +1203,62 @@ export default function StaysZonePage() {
               {t.operatorApp.gameRoom.wristbandNumberPrefix} {stopPaymentTarget.number} ·{" "}
               <Money value={stopPaymentTarget.amount ?? 0} />
             </p>
-            {/* Сумма 0 — скорее всего случайный тап, платить не за что (запрос
-                пользователя 2026-07-27: "нет смысла выбирать метод оплаты и
-                что-то фиксировать") — вместо выбора способа сразу закрываем,
-                paymentMethod="cash" на нулевую сумму ни на что не влияет. */}
-            {stopPaymentTarget.amount === 0 ? (
+            {/* Сумма 0 сюда больше не попадает — lockLaunch() закрывает такой
+                пуск сразу, минуя эту шторку целиком (см. комментарий там). */}
+            <div className="flex flex-col gap-2">
               <ConfirmButton
                 className="relative h-12 w-full font-semibold"
                 disabled={stopping}
                 silent
                 onConfirm={() => stopLaunch(stopPaymentTarget.id, "cash")}
               >
-                {t.operatorApp.gameRoom.closeFreeLaunchButton}
+                <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                {t.operatorApp.submit.cashLabel}
               </ConfirmButton>
-            ) : (
-              <>
-                <div className="flex flex-col gap-2">
-                  <ConfirmButton
-                    className="relative h-12 w-full font-semibold"
-                    disabled={stopping}
-                    silent
-                    onConfirm={() => stopLaunch(stopPaymentTarget.id, "cash")}
-                  >
-                    <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                    {t.operatorApp.submit.cashLabel}
-                  </ConfirmButton>
-                  <ConfirmButton
-                    className="relative h-12 w-full font-semibold"
-                    disabled={stopping}
-                    silent
-                    onConfirm={() => stopLaunch(stopPaymentTarget.id, "mobile")}
-                  >
-                    <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                    {t.operatorApp.submit.mobileLabel}
-                  </ConfirmButton>
-                  {clientsEnabled && (
-                    <PressableScale>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="relative h-12 w-full font-semibold"
-                        disabled={stopping}
-                        onClick={() => {
-                          const launch = stopPaymentTarget;
-                          setStopPaymentTarget(null);
-                          setAbonementTarget({ kind: "stop", launch, amount: launch.amount ?? 0 });
-                        }}
-                      >
-                        <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                        {t.operatorApp.abonement.paymentLabel}
-                      </Button>
-                    </PressableScale>
-                  )}
-                </div>
-                <PressableScale className="w-fit">
+              <ConfirmButton
+                className="relative h-12 w-full font-semibold"
+                disabled={stopping}
+                silent
+                onConfirm={() => stopLaunch(stopPaymentTarget.id, "mobile")}
+              >
+                <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                {t.operatorApp.submit.mobileLabel}
+              </ConfirmButton>
+              {clientsEnabled && (
+                <PressableScale>
                   <Button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto gap-1 px-0 text-muted-foreground underline underline-offset-2"
+                    variant="outline"
+                    className="relative h-12 w-full font-semibold"
+                    disabled={stopping}
                     onClick={() => {
                       const launch = stopPaymentTarget;
                       setStopPaymentTarget(null);
-                      setSplitStopTarget({ launch });
+                      setAbonementTarget({ kind: "stop", launch, amount: launch.amount ?? 0 });
                     }}
                   >
-                    <ArrowLeftRight className="size-3.5" />
-                    {t.splitPayment.title}
+                    <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                    {t.operatorApp.abonement.paymentLabel}
                   </Button>
                 </PressableScale>
-              </>
-            )}
+              )}
+            </div>
+            <PressableScale className="w-fit">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto gap-1 px-0 text-muted-foreground underline underline-offset-2"
+                onClick={() => {
+                  const launch = stopPaymentTarget;
+                  setStopPaymentTarget(null);
+                  setSplitStopTarget({ launch });
+                }}
+              >
+                <ArrowLeftRight className="size-3.5" />
+                {t.splitPayment.title}
+              </Button>
+            </PressableScale>
           </div>
         )}
       </BottomSheet>

@@ -1168,7 +1168,6 @@
       "noAssetsYet": "The owner hasn't added any assets to this zone yet",
       "wristbandNumberPrefix": "Visitor",
       "resumeLaunchAction": "Resume",
-      "closeFreeLaunchButton": "Close without payment",
       "linkClientAction": "Customer",
       "linkClientAssignButton": "Link",
       "unlinkClientButton": "Remove link",
