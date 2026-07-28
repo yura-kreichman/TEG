@@ -548,10 +548,19 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
   return (
     <div className="flex flex-col gap-3">
       <SpringCard animate={false} hover={false}>
-        <div className="flex flex-wrap items-start gap-2.5">
+        {/* Без flex-wrap (реальный баг, найден пользователем 2026-07-28) —
+            раньше при недостатке ширины экрана Прибыль просто падала на
+            вторую строку, а Money's displayScale не помогал: он уменьшает
+            шрифт по ДЛИНЕ ЧИСЛА, не по ширине экрана — короткие суммы (обе
+            по 6 символов) оставались 100%, хотя на узком телефоне вместе с
+            зазором между блоками уже не помещались в ряд. text-[2rem]
+            заменён на clamp(), реагирующий на реальную ширину вьюпорта —
+            строго уже, чем 2rem, гарантированно влезает на любой телефон, на
+            широких экранах остаётся полным 2rem. */}
+        <div className="flex items-start gap-2.5">
           <div className="flex flex-col">
             <span className="text-caption-airbnb text-muted-foreground">{t.reports.revenueLabel}</span>
-            <span className="text-[2rem] font-extrabold leading-none tracking-[-0.02em] tabular-nums">
+            <span className="text-[clamp(1.375rem,7vw,2rem)] font-extrabold leading-none tracking-[-0.02em] tabular-nums">
               <Money value={data.total} size="display" displayScale={headlineDisplayScale} />
             </span>
           </div>
@@ -562,7 +571,7 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
               позиция Прибыли от этого не зависит. */}
           <div className="ml-10 flex flex-col">
             <span className="text-caption-airbnb text-muted-foreground">{t.reports.profitLabel}</span>
-            <span className="text-[2rem] font-extrabold leading-none tracking-[-0.02em] tabular-nums">
+            <span className="text-[clamp(1.375rem,7vw,2rem)] font-extrabold leading-none tracking-[-0.02em] tabular-nums">
               <Money value={data.profitAndLoss.profit} size="display" displayScale={headlineDisplayScale} />
             </span>
           </div>
