@@ -6,16 +6,13 @@ import { BackLink } from "@/components/back-link";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useI18n } from "@/components/i18n-provider";
 import type { Dictionary } from "@/lib/i18n";
 import { OwnerShell } from "@/components/owner-shell";
-import { useOwnerHasPrinterLocal, useOwnerPaperWidthLocal, useOwnerPrintMethodLocal } from "@/hooks/use-print";
-import { useThermalPrinter } from "@/hooks/use-thermal-printer";
+import { useOwnerHasPrinterLocal, useOwnerPaperWidthLocal } from "@/hooks/use-print";
 import { PrintButton } from "@/components/print/print-button";
-import { isWebBluetoothSupported } from "@/lib/print/thermal-bluetooth";
-import { buildReceiptHtml, type PrintDocumentData, type PrintMethod, type ReceiptPaperWidth } from "@/lib/print/receipt-document";
+import { buildReceiptHtml, type PrintDocumentData, type ReceiptPaperWidth } from "@/lib/print/receipt-document";
 import { cn } from "@/lib/utils";
 
 // Плашка "Модули" (запрос пользователя 2026-07-22) — множественный выбор,
@@ -120,17 +117,6 @@ export default function SystemSettingsPage() {
   // "у Владельца тоже нужна настройка, так как он тоже печатает из своего
   // приложения") — печать привязана к браузеру/устройству, не к тенанту.
   const [paperWidth, setPaperWidth] = useOwnerPaperWidthLocal();
-  // Способ печати (2026-07-27) — та же localStorage-логика, что paperWidth
-  // выше. Тумблер показывается только если сам браузер поддерживает Web
-  // Bluetooth (iOS Safari и т.п. — нет) — узнаём это только после монтирования
-  // (navigator недоступен при SSR), поэтому по умолчанию false и здесь, и на
-  // сервере, без риска рассинхрона гидратации.
-  const [printMethod, setPrintMethod] = useOwnerPrintMethodLocal();
-  const [supportsBluetoothPrint, setSupportsBluetoothPrint] = useState(false);
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => setSupportsBluetoothPrint(isWebBluetoothSupported()), []);
-  /* eslint-enable react-hooks/set-state-in-effect */
-  const thermalPrinter = useThermalPrinter(paperWidth);
 
   useEffect(() => {
     fetch("/api/tenant/system-settings")
@@ -346,63 +332,6 @@ export default function SystemSettingsPage() {
                     </Select>
                   </div>
 
-                  {/* Способ печати (2026-07-27) — только для рулонных
-                      термопринтеров (не A4) и только в браузерах с Web
-                      Bluetooth (iOS Safari его не поддерживает вообще —
-                      предлагать нечего). См. src/lib/print/thermal-bluetooth.ts. */}
-                  {supportsBluetoothPrint && paperWidth !== "a4" && (
-                    <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
-                      <div className="min-w-0">
-                        <div className="text-body-airbnb">{t.settings.systemPrintMethodLabel}</div>
-                        <div className="text-caption-airbnb">{t.settings.systemPrintMethodHint}</div>
-                      </div>
-                      <Select
-                        value={printMethod}
-                        onValueChange={(v) => v && setPrintMethod(v as PrintMethod)}
-                        items={[
-                          { value: "browser", label: t.settings.printMethodBrowser },
-                          { value: "bluetooth", label: t.settings.printMethodBluetooth },
-                        ]}
-                      >
-                        <SelectTrigger className="h-9 w-auto shrink-0 gap-1.5 px-2.5">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="browser">{t.settings.printMethodBrowser}</SelectItem>
-                          <SelectItem value="bluetooth">{t.settings.printMethodBluetooth}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {/* Сопряжение — на ЭТОМ браузере (запрос пользователя
-                      2026-07-27: разрешение Web Bluetooth привязано к
-                      origin+профилю браузера конкретного устройства, значит и
-                      кнопка нужна прямо тут, а не только у Сотрудника). */}
-                  {supportsBluetoothPrint && paperWidth !== "a4" && printMethod === "bluetooth" && (
-                    <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
-                      <div className="min-w-0 text-body-airbnb">
-                        {thermalPrinter.status === "ready" && t.operatorApp.thermalPrinterStatusReady}
-                        {thermalPrinter.status === "unpaired" && t.operatorApp.thermalPrinterStatusUnpaired}
-                        {thermalPrinter.status === "connecting" && t.operatorApp.thermalPrinterStatusConnecting}
-                        {thermalPrinter.status === "error" &&
-                          (thermalPrinter.errorMessage || t.operatorApp.thermalPrinterStatusError)}
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="shrink-0"
-                        disabled={thermalPrinter.status === "connecting"}
-                        onClick={thermalPrinter.status === "ready" ? thermalPrinter.forget : thermalPrinter.pair}
-                      >
-                        {thermalPrinter.status === "ready"
-                          ? t.operatorApp.thermalPrinterForgetButton
-                          : t.operatorApp.thermalPrinterPairButton}
-                      </Button>
-                    </div>
-                  )}
-
                   {/* Шапка — что показывать (запрос пользователя 2026-07-20).
                       Сами лого/название переиспользуют Tenant.logoUrl/name,
                       уже настраиваемые в другом месте — здесь только да/нет. */}
@@ -474,7 +403,6 @@ export default function SystemSettingsPage() {
                         label={t.settings.systemReceiptTestPrintButton}
                         data={samplePrintData(t)}
                         branding={{ tenantName, logoUrl, showLogo, showTenantName, compactHeader, paperWidth }}
-                        printMethod={printMethod}
                         className="gap-1.5 rounded-lg"
                       />
                     </div>

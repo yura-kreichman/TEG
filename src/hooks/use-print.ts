@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { PrintMethod, ReceiptBranding, ReceiptPaperWidth } from "@/lib/print/receipt-document";
+import type { ReceiptBranding, ReceiptPaperWidth } from "@/lib/print/receipt-document";
 
 // Владелец не привязан к PointDevice (входит email+паролем с любого
 // браузера, в отличие от Оператора, у которого есть активированное
@@ -48,29 +48,9 @@ export function useOwnerPaperWidthLocal() {
   return [paperWidth, setPaperWidth] as const;
 }
 
-// Способ печати у Владельца — та же логика "своё на каждый браузер", что и
-// paperWidth/hasPrinter выше (2026-07-27) — см. PrintMethod в receipt-document.ts.
-const OWNER_PRINT_METHOD_KEY = "rentos-owner-print-method";
-
-export function useOwnerPrintMethodLocal() {
-  const [printMethod, setPrintMethodState] = useState<PrintMethod>("browser");
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    const stored = localStorage.getItem(OWNER_PRINT_METHOD_KEY);
-    if (stored === "browser" || stored === "bluetooth") setPrintMethodState(stored);
-  }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
-  function setPrintMethod(value: PrintMethod) {
-    localStorage.setItem(OWNER_PRINT_METHOD_KEY, value);
-    setPrintMethodState(value);
-  }
-  return [printMethod, setPrintMethod] as const;
-}
-
 interface PrintAvailability {
   available: boolean;
   branding: ReceiptBranding;
-  printMethod: PrintMethod;
   /** Имя Сотрудника, напечатавшего документ (запрос пользователя 2026-07-20:
    * строка даты на квитанции должна сопровождаться исполнителем) — только у
    * Оператора (Владелец подставляет статичный t.common.ownerLabel сам, без
@@ -91,7 +71,6 @@ const EMPTY_BRANDING: ReceiptBranding = {
 export function useOwnerPrintAvailable(): PrintAvailability {
   const [hasPrinterLocal] = useOwnerHasPrinterLocal();
   const [paperWidthLocal] = useOwnerPaperWidthLocal();
-  const [printMethodLocal] = useOwnerPrintMethodLocal();
   const [state, setState] = useState<{ printingEnabled: boolean; branding: ReceiptBranding }>({
     printingEnabled: false,
     branding: EMPTY_BRANDING,
@@ -121,21 +100,14 @@ export function useOwnerPrintAvailable(): PrintAvailability {
   return {
     available: state.printingEnabled && hasPrinterLocal,
     branding: { ...state.branding, paperWidth: paperWidthLocal },
-    printMethod: printMethodLocal,
   };
 }
 
 /** Сотрудник: доступна ли печать на этом (активированном) устройстве прямо сейчас. */
 export function useOperatorPrintAvailable(): PrintAvailability {
-  const [state, setState] = useState<{
-    available: boolean;
-    branding: ReceiptBranding;
-    printMethod: PrintMethod;
-    operatorName: string | null;
-  }>({
+  const [state, setState] = useState<{ available: boolean; branding: ReceiptBranding; operatorName: string | null }>({
     available: false,
     branding: EMPTY_BRANDING,
-    printMethod: "browser",
     operatorName: null,
   });
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -154,7 +126,6 @@ export function useOperatorPrintAvailable(): PrintAvailability {
             compactHeader: data.receiptCompactHeader ?? false,
             paperWidth: data.receiptPaperWidth ?? "58",
           },
-          printMethod: data.printMethod === "bluetooth" ? "bluetooth" : "browser",
           operatorName: data.operatorName ?? null,
         });
       });

@@ -752,17 +752,6 @@ model PointDevice {
   // частый размер термо-рулона, прежнее поведение не меняется молча.
   receiptPaperWidth String @default("58")
 
-  // Способ печати ЭТОГО устройства — "browser" (текущий, по умолчанию:
-  // window.print() текущей страницы, см. receipt-document.ts) | "bluetooth"
-  // (2026-07-27: печать напрямую по Web Bluetooth настоящими ESC/POS-
-  // командами, в обход системной печати Android и любого стороннего моста —
-  // найдено, что сам Chrome растеризует страницу в PDF на DPI, не
-  // гарантированно совпадающем с печатающей головкой, это происходит ДО
-  // того, как что-либо от RentOS участвует, поэтому CSS-правки принципиально
-  // не могли это починить — см. src/lib/print/thermal-bluetooth.ts).
-  // default "browser" — ничего не меняет для уже существующих устройств.
-  printMethod String @default("browser")
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

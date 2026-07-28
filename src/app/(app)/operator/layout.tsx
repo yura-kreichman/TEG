@@ -5,7 +5,6 @@ import { ThemeColorMeta } from "@/components/theme-color-meta";
 import { OperatorSwitchButton } from "@/components/operator-switch-button";
 import { OperatorBottomNav } from "@/components/operator-bottom-nav";
 import { OperatorBrandingChrome } from "@/components/operator-branding-chrome";
-import { ThermalPrinterPairButton } from "@/components/thermal-printer-pair-button";
 import { TicketsCartProvider, GoodsCartProvider } from "@/components/operator-cart-context";
 import { OfflineSync } from "./offline-sync";
 
@@ -35,10 +34,7 @@ export default function OperatorLayout({ children }: { children: React.ReactNode
         <OperatorBrandingChrome />
         <div className="flex items-center justify-between gap-2 p-2">
           <OperatorSwitchButton />
-          <div className="flex items-center gap-2">
-            <ThermalPrinterPairButton />
-            <ThemeToggle />
-          </div>
+          <ThemeToggle />
         </div>
         {/* Корзины Билетов/Товаров — на уровне layout (запрос пользователя
             2026-07-21: "не должно сбрасываться при переключении между

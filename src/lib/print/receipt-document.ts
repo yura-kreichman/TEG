@@ -75,12 +75,6 @@ export interface ReceiptBranding {
 
 export type ReceiptPaperWidth = "58" | "80" | "a4";
 
-// Способ печати этого устройства/браузера (2026-07-27) — "browser" (текущий,
-// window.print() этой страницы, см. openPrintDocument ниже) | "bluetooth"
-// (прямая печать ESC/POS через Web Bluetooth, src/lib/print/thermal-bluetooth.ts —
-// обход системной печати Android и стороннего Print Service-моста целиком).
-export type PrintMethod = "browser" | "bluetooth";
-
 // Размер бумаги ЯВНО форсируется для "58"/"80" (запрос пользователя
 // 2026-07-26 — ОТКАТ решения "не форсируем" от 2026-07-20, см. ниже).
 // Реальный баг, найден на живой печати у Керен Центра, 80мм принтер,

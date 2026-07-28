@@ -56,7 +56,6 @@ export default function OperatorAbonementsPage() {
           arbitraryAmountNeedsPaymentMethod
           printAvailable={printAvailable.available}
           printBranding={printAvailable.branding}
-          printMethod={printAvailable.printMethod}
           toastErrors
         />
       </div>

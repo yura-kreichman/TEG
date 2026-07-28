@@ -4,9 +4,7 @@ import { useState } from "react";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PressableScale } from "@/components/motion/pressable-scale";
-import { openPrintDocument, type PrintDocumentData, type PrintMethod, type ReceiptBranding } from "@/lib/print/receipt-document";
-import { PRINTER_NOT_PAIRED, useThermalPrinter } from "@/hooks/use-thermal-printer";
-import { useI18n } from "@/components/i18n-provider";
+import { openPrintDocument, type PrintDocumentData, type ReceiptBranding } from "@/lib/print/receipt-document";
 
 // Кнопка печати — общий компонент для всех документов (квитанция/Z-отчёт/
 // слип инкассации/выписка баланса, запрос пользователя 2026-07-20). Печать —
@@ -31,75 +29,37 @@ export function PrintButton({
   label,
   data,
   branding,
-  printMethod = "browser",
   size = "sm",
   className,
 }: {
   label: string;
   data: PrintDocumentData;
   branding: ReceiptBranding;
-  /** "bluetooth" — печать напрямую по Web Bluetooth (2026-07-27), см. use-thermal-printer.ts.
-   *  По умолчанию "browser" — прежнее поведение, без единого изменения. */
-  printMethod?: PrintMethod;
   size?: "sm" | "default";
   className?: string;
 }) {
-  const t = useI18n();
   const [printing, setPrinting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const thermalPrinter = useThermalPrinter(branding.paperWidth);
 
-  async function handleClick() {
+  function handleClick() {
     if (printing) return;
     setPrinting(true);
-    setError(null);
-    // Bluetooth выбран, но принтер не готов (не сопряжён/не поддерживается/
-    // ошибка связи) — НЕ проваливаемся тихо в браузерную печать (план
-    // 2026-07-27: "с понятной ошибкой оператору, не тихим провалом"), иначе
-    // Сотрудник решит, что чек напечатан, хотя реально ушёл в системный
-    // диалог печати, который он выключил именно из-за этого режима.
-    //
-    // Проверка ЧЕРЕЗ вызов print() (а не через thermalPrinter.status ДО
-    // вызова) — реальный баг с реального устройства (2026-07-28): раньше
-    // здесь читался thermalPrinter.status этого же экземпляра хука ДО
-    // попытки печати, что было мёртвым кодом с самого начала (см.
-    // use-thermal-printer.ts) — теперь единственный источник истины про
-    // сопряжённое устройство — сам print(), синхронно из общего хранилища.
-    if (printMethod === "bluetooth") {
-      try {
-        await thermalPrinter.print(data);
-      } catch (err) {
-        const message =
-          err instanceof Error && err.message === PRINTER_NOT_PAIRED
-            ? t.operatorApp.thermalPrinterNotConnectedError
-            : err instanceof Error
-              ? err.message
-              : String(err);
-        setError(message);
-      }
-      setTimeout(() => setPrinting(false), PRINT_COOLDOWN_MS);
-      return;
-    }
     openPrintDocument(data, branding);
     setTimeout(() => setPrinting(false), PRINT_COOLDOWN_MS);
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <PressableScale>
-        <Button
-          type="button"
-          variant="outline"
-          size={size}
-          className={className ?? "gap-1.5"}
-          disabled={printing}
-          onClick={handleClick}
-        >
-          <Printer className="size-4" />
-          {label}
-        </Button>
-      </PressableScale>
-      {error && <p className="text-caption-airbnb text-destructive">{error}</p>}
-    </div>
+    <PressableScale>
+      <Button
+        type="button"
+        variant="outline"
+        size={size}
+        className={className ?? "gap-1.5"}
+        disabled={printing}
+        onClick={handleClick}
+      >
+        <Printer className="size-4" />
+        {label}
+      </Button>
+    </PressableScale>
   );
 }

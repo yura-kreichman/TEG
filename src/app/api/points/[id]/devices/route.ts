@@ -19,21 +19,16 @@ export async function POST(
     return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
   }
 
-  const { label, roaming, hasPrinter, receiptPaperWidth, printMethod } = await request.json().catch(() => ({
+  const { label, roaming, hasPrinter, receiptPaperWidth } = await request.json().catch(() => ({
     label: undefined,
     roaming: undefined,
     hasPrinter: undefined,
     receiptPaperWidth: undefined,
-    printMethod: undefined,
   }));
 
   // Только "58"/"80"/"a4" — любое другое значение молча сломало бы печать
   // (@page/.receipt в receipt-document.ts берут это напрямую в CSS).
   if (receiptPaperWidth !== undefined && !["58", "80", "a4"].includes(receiptPaperWidth)) {
-    return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
-  }
-  // "browser" | "bluetooth" (2026-07-27) — см. PrintMethod в receipt-document.ts.
-  if (printMethod !== undefined && !["browser", "bluetooth"].includes(printMethod)) {
     return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
   }
 
@@ -45,7 +40,6 @@ export async function POST(
       roaming: roaming === true,
       hasPrinter: hasPrinter === true,
       ...(receiptPaperWidth !== undefined ? { receiptPaperWidth } : {}),
-      ...(printMethod !== undefined ? { printMethod } : {}),
       installTokenHash: tokenHash,
       installTokenExpiresAt: new Date(Date.now() + INSTALL_TOKEN_TTL_MS),
     },

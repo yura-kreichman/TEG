@@ -782,7 +782,6 @@ export default function SubmitResultsPage() {
                 label={t.operatorApp.submit.printZReportButton}
                 data={buildZReportData(result.summary)}
                 branding={printAvailable.branding}
-                printMethod={printAvailable.printMethod}
                 className="w-full gap-1.5 rounded-lg"
               />
             )}

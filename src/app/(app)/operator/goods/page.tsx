@@ -919,7 +919,6 @@ export default function GoodsPage() {
                 label={t.goods.printReceiptButton}
                 data={buildSaleReceiptData(lastOrder)}
                 branding={printAvailable.branding}
-                printMethod={printAvailable.printMethod}
                 className="w-full gap-1.5 rounded-lg"
               />
             )}

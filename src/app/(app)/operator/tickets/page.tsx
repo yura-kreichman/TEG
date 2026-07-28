@@ -22,7 +22,6 @@ import { ActionToast } from "@/components/action-toast";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
-import { PRINTER_NOT_PAIRED, useThermalPrinter } from "@/hooks/use-thermal-printer";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import { openPrintDocument, type PrintDocumentData } from "@/lib/print/receipt-document";
@@ -129,7 +128,6 @@ export default function TicketsZonePage() {
   const locale = useLocale();
   const currency = useCurrency();
   const printAvailable = useOperatorPrintAvailable();
-  const thermalPrinter = useThermalPrinter(printAvailable.branding.paperWidth);
 
   const [zones, setZones] = useState<ZoneCtx[]>([]);
   const [zoneId, setZoneId] = useState<string | null>(null);
@@ -406,27 +404,8 @@ export default function TicketsZonePage() {
     };
   }
 
-  // Bluetooth-режим (2026-07-27, исправлено 2026-07-28) — та же логика, что
-  // у общего PrintButton (src/components/print/print-button.tsx): проверка
-  // готовности принтера ЧЕРЕЗ вызов print(), не через status ДО вызова —
-  // см. use-thermal-printer.ts.
-  async function printOrder(order: NonNullable<typeof lastOrder>) {
-    const data = buildOrderReceiptData(order);
-    if (printAvailable.printMethod === "bluetooth") {
-      try {
-        await thermalPrinter.print(data);
-      } catch (err) {
-        const message =
-          err instanceof Error && err.message === PRINTER_NOT_PAIRED
-            ? t.operatorApp.thermalPrinterNotConnectedError
-            : err instanceof Error
-              ? err.message
-              : String(err);
-        flashError(message);
-      }
-      return;
-    }
-    openPrintDocument(data, printAvailable.branding);
+  function printOrder(order: NonNullable<typeof lastOrder>) {
+    openPrintDocument(buildOrderReceiptData(order), printAvailable.branding);
   }
 
   // "Допечатать потерянный" (docs/spec/10-tickets.md, "ПЕЧАТЬ": "кнопка

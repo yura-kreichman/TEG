@@ -1330,7 +1330,6 @@ export default function StaysZonePage() {
                 label={t.operatorApp.gameRoom.printReceiptButton}
                 data={buildStayReceiptData(lastStopped)}
                 branding={printAvailable.branding}
-                printMethod={printAvailable.printMethod}
                 className="w-full gap-1.5 rounded-lg"
               />
             )}

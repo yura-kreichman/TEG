@@ -31,7 +31,7 @@ import type { PaymentLegInput } from "@/lib/payment-split";
 // с него же самого).
 const TOPUP_SPLIT_METHODS = ["cash", "mobile"] as const;
 import type { Dictionary } from "@/lib/i18n";
-import type { PrintDocumentData, PrintMethod, ReceiptBranding } from "@/lib/print/receipt-document";
+import type { PrintDocumentData, ReceiptBranding } from "@/lib/print/receipt-document";
 
 // Кнопки выбора (план/способ оплаты) должны читаться как кнопки, не как
 // плоские карточки списка (запрос пользователя 2026-07-17: "должны быть как
@@ -172,7 +172,6 @@ export interface AbonementTopupFlowProps {
   // внутри этого общего компонента.
   printAvailable?: boolean;
   printBranding?: ReceiptBranding;
-  printMethod?: PrintMethod;
   // Пункт нижнего бара "Счётчики" (запрос пользователя 2026-07-24) —
   // Сотрудник ищет клиента и сразу попадает на списание, без промежуточной
   // карточки клиента (пополнение/печать/смена имени — там не нужны, это
@@ -232,7 +231,6 @@ export function AbonementTopupFlow({
   zoneSpendEndpointFor,
   printAvailable,
   printBranding,
-  printMethod,
   spendOnlyMode,
   toastErrors,
 }: AbonementTopupFlowProps) {
@@ -1423,7 +1421,6 @@ export function AbonementTopupFlow({
                         label={t.abonements.printReceiptButton}
                         data={buildBalanceReceiptData(found)}
                         branding={printBranding}
-                        printMethod={printMethod}
                         className="w-full gap-1.5 rounded-lg"
                       />
                     </div>

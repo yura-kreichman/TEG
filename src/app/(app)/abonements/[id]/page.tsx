@@ -287,7 +287,6 @@ export default function AbonementWalletPage() {
                 label={t.abonements.printReceiptButton}
                 data={buildBalanceReceiptData()}
                 branding={printAvailable.branding}
-                printMethod={printAvailable.printMethod}
                 className="w-full gap-1.5 rounded-lg"
               />
             )}
