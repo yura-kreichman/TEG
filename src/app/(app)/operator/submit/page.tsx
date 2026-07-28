@@ -848,7 +848,7 @@ export default function SubmitResultsPage() {
                         type="button"
                         onClick={() => toggleZone(zone.id)}
                         className={cn(
-                          "relative flex w-full flex-col items-center gap-2.5 rounded-card border-[1.5px] px-3 py-5 text-center",
+                          "relative flex w-full flex-col items-center gap-2.5 rounded-card border-[1.5px] px-3 py-5 text-center shadow-card-rest",
                           selected ? "border-primary bg-primary/10" : "border-border bg-card"
                         )}
                       >
@@ -947,7 +947,7 @@ export default function SubmitResultsPage() {
                         if (!isCountersTapAssistZone(activeZone)) setAssetSheetId(asset.id);
                       }}
                       className={cn(
-                        "relative flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card text-left",
+                        "relative flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card text-left shadow-card-rest",
                         filled ? "border-success" : "border-border",
                         !asset.active && "grayscale",
                         isCountersTapAssistZone(activeZone) && "cursor-default"
@@ -1031,7 +1031,7 @@ export default function SubmitResultsPage() {
                         onClick={() => setAssetSheetId(asset.id)}
                         disabled={blocked}
                         className={cn(
-                          "relative flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card text-left",
+                          "relative flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card text-left shadow-card-rest",
                           filled ? "border-success" : "border-border",
                           "disabled:pointer-events-none disabled:grayscale disabled:opacity-40"
                         )}

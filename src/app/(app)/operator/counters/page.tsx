@@ -458,7 +458,7 @@ export default function OperatorCountersPage() {
                       type="button"
                       onClick={() => handleTapTileTap(a)}
                       disabled={!a.active || tapSubmitting}
-                      className="flex w-full flex-col overflow-hidden rounded-card border-[1.5px] border-border bg-card text-left disabled:opacity-40"
+                      className="flex w-full flex-col overflow-hidden rounded-card border-[1.5px] border-border bg-card text-left shadow-card-rest disabled:opacity-40"
                     >
                       <div className="relative flex h-24 w-full shrink-0 items-center justify-center overflow-hidden bg-muted">
                         {a.photoUrl ? (
@@ -575,7 +575,7 @@ export default function OperatorCountersPage() {
                     <button
                       type="button"
                       onClick={() => setReturnZone(zone)}
-                      className="relative flex w-full flex-col items-center gap-2.5 rounded-card border-[1.5px] border-border bg-card px-3 py-5 text-center"
+                      className="relative flex w-full flex-col items-center gap-2.5 rounded-card border-[1.5px] border-border bg-card px-3 py-5 text-center shadow-card-rest"
                     >
                       <div className="flex size-14 items-center justify-center rounded-control bg-muted text-muted-foreground/50">
                         {zone.iconKey ? <AssetOrZoneIcon iconKey={zone.iconKey} className="size-9" /> : <MapPin className="size-9" />}

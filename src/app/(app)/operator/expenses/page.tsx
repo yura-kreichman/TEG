@@ -242,7 +242,7 @@ export default function OperatorExpensesPage() {
                       type="button"
                       onClick={() => setFormZoneId(zone.id)}
                       className={cn(
-                        "relative flex w-full flex-col items-center gap-2.5 rounded-card border-[1.5px] px-3 py-5 text-center",
+                        "relative flex w-full flex-col items-center gap-2.5 rounded-card border-[1.5px] px-3 py-5 text-center shadow-card-rest",
                         selected ? "border-primary bg-primary/10" : "border-border bg-card"
                       )}
                     >

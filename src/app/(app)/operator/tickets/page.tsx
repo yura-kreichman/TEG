@@ -799,7 +799,7 @@ export default function TicketsZonePage() {
                       type="button"
                       disabled={!a.active || a.ticketVariants.length === 0}
                       onClick={() => setVariantSheetAssetId(a.id)}
-                      className="relative flex w-full flex-col overflow-hidden rounded-card border-[1.5px] border-border bg-card text-left disabled:opacity-40"
+                      className="relative flex w-full flex-col overflow-hidden rounded-card border-[1.5px] border-border bg-card text-left shadow-card-rest disabled:opacity-40"
                     >
                       <div className="relative flex h-20 w-full shrink-0 items-center justify-center overflow-hidden bg-muted">
                         {a.photoUrl ? (

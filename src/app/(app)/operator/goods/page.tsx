@@ -507,7 +507,7 @@ export default function GoodsPage() {
                     type="button"
                     disabled={submitting}
                     onClick={() => goodsCart.setQuantity(g.id, qty + 1)}
-                    className="flex w-full flex-col overflow-hidden rounded-card border-[1.5px] border-border bg-card text-left disabled:opacity-40"
+                    className="flex w-full flex-col overflow-hidden rounded-card border-[1.5px] border-border bg-card text-left shadow-card-rest disabled:opacity-40"
                   >
                     {/* Изображения товаров — 1:1 (информация пользователя
                         2026-07-19), object-cover заполняет квадрат ровно. */}
