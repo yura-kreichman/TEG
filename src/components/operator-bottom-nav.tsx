@@ -11,6 +11,7 @@ import { useI18n } from "@/components/i18n-provider";
 import { isCountersZone, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { unlockBeep, playBeep } from "@/lib/beep";
 import { useLiveRefetch } from "@/hooks/use-live-refetch";
+import { useGoodsCart } from "@/components/operator-cart-context";
 import { cn } from "@/lib/utils";
 
 const EXPIRY_POLL_MS = 6000;
@@ -50,6 +51,10 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
   const [hasTickets, setHasTickets] = useState(false);
   const [hasGoods, setHasGoods] = useState(false);
   const [hasZones, setHasZones] = useState(false);
+  // Зелёная точка на "Товары" (запрос пользователя 2026-07-28, "как в
+  // задачах") — корзина не пуста (хоть один товар с количеством > 0).
+  const goodsCart = useGoodsCart();
+  const goodsCartHasItems = Object.values(goodsCart.cart).some((qty) => qty > 0);
   const [moreOpen, setMoreOpen] = useState(false);
 
   function loadSubmissionContext() {
@@ -209,6 +214,7 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
             label: t.goods.navLabel,
             icon: ShoppingBag,
             active: pathname.startsWith("/operator/goods"),
+            badge: (goodsCartHasItems ? "green" : null) as "green" | null,
           },
         ]
       : []),
@@ -277,7 +283,16 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
           items={barItems}
           moreLabel={t.nav.more}
           moreActive={overflowItems.some((item) => item.active)}
-          moreBadge={null}
+          // Пункт с точкой (например, "Товары" с непустой корзиной) может
+          // оказаться спрятан в "Ещё" при 5+ пунктах — точка тогда
+          // поднимается на саму кнопку "Ещё", иначе её не увидеть вообще.
+          moreBadge={
+            overflowItems.some((item) => item.badge === "green")
+              ? "green"
+              : overflowItems.some((item) => item.badge === "red")
+                ? "red"
+                : null
+          }
           onMoreClick={() => setMoreOpen(true)}
           showMore={overflowItems.length > 0}
           hideOnDesktop={false}
@@ -296,7 +311,18 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
                 onClick={() => setMoreOpen(false)}
                 className="flex items-center gap-3 border-t border-border py-3.5 text-left text-body-airbnb first:border-t-0"
               >
-                <Icon className="size-4 shrink-0" />
+                <span className="relative shrink-0">
+                  <Icon className="size-4" />
+                  {item.badge && (
+                    <span
+                      className={cn(
+                        "absolute -right-0.5 -top-0.5 size-2 rounded-full",
+                        item.badge === "red" ? "bg-destructive" : "bg-success"
+                      )}
+                      style={{ boxShadow: "0 0 0 2px var(--card)" }}
+                    />
+                  )}
+                </span>
                 {item.label}
               </Link>
             );

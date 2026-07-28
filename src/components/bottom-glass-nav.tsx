@@ -11,6 +11,9 @@ export interface BottomGlassNavItem {
   label: string;
   icon: LucideIcon;
   active: boolean;
+  /** Точка-индикатор на иконке (запрос пользователя 2026-07-28, "как в
+   *  задачах") — та же пара цветов и тот же вид, что уже у значка "Ещё" ниже. */
+  badge?: "red" | "green" | null;
 }
 
 /**
@@ -64,7 +67,18 @@ export function BottomGlassNav({
                 item.active ? "font-semibold text-primary" : "text-nav-inactive font-medium"
               )}
             >
-              <Icon className="size-5" />
+              <span className="relative">
+                <Icon className="size-5" />
+                {item.badge && (
+                  <span
+                    className={cn(
+                      "absolute -right-0.5 -top-0.5 size-2 rounded-full",
+                      item.badge === "red" ? "bg-destructive" : "bg-success"
+                    )}
+                    style={{ boxShadow: "0 0 0 2px var(--nav-glass-bg)" }}
+                  />
+                )}
+              </span>
               {item.label}
             </Link>
           </PressableScale>
