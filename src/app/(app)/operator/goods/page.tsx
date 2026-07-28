@@ -532,8 +532,14 @@ export default function GoodsPage() {
                       )}
                     </div>
                     <div className="flex shrink-0 flex-col gap-0 px-2 py-1.5">
-                      <span className="truncate text-[0.8125rem] font-bold leading-tight tracking-[-0.01em]">{g.name}</span>
-                      <span className="truncate tabular-nums text-[0.75rem] font-semibold leading-tight text-primary">
+                      {/* min-h-[2lh] — резерв под 2 строки всегда (запрос
+                          пользователя 2026-07-28), чтобы короткие названия
+                          не давали тайл ниже соседних с длинным названием
+                          в той же сетке. Цена — отдельной строкой под
+                          названием, выровнена по правому краю (запрос того
+                          же дня). */}
+                      <span className="line-clamp-2 min-h-[2lh] text-[0.8125rem] font-bold leading-tight tracking-[-0.01em] wrap-break-word">{g.name}</span>
+                      <span className="text-right tabular-nums text-[0.75rem] font-semibold leading-tight text-primary">
                         <Money value={g.price} />
                       </span>
                     </div>
