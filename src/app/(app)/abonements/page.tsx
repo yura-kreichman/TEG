@@ -384,31 +384,25 @@ export default function AbonementsPage() {
                   поиск/фильтр списка ниже (см. walletCounts). По одной
                   строке (реальный баг, найден пользователем 2026-07-28:
                   в один ряд длинные подписи переносились и "кривило" всю
-                  строку) — каждая своей строкой, растянута на всю ширину
-                  (justify-between). Иконки — та же семантика, что и у
-                  per-карточки: Wallet у клиента с балансом, Send у
-                  подключённых через Telegram. */}
+                  строку). Число — сразу после двоеточия (запрос того же
+                  дня), не растянуто через justify-between на весь ряд.
+                  Иконки — та же семантика, что и у per-карточки: Wallet у
+                  клиента с балансом, Send у подключённых через Telegram. */}
               {walletCounts && (
                 <div className="mb-3 flex flex-col gap-1.5 text-caption-airbnb text-muted-foreground">
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1.5">
-                      <Users className="size-3.5 shrink-0" />
-                      {t.abonements.walletsCountTotal}
-                    </span>
+                  <span className="flex items-center gap-1.5">
+                    <Users className="size-3.5 shrink-0" />
+                    {t.abonements.walletsCountTotal}{" "}
                     <span className="font-semibold text-foreground">{walletCounts.total}</span>
                   </span>
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1.5">
-                      <Send className="size-3.5 shrink-0" />
-                      {t.abonements.walletsCountConnected}
-                    </span>
+                  <span className="flex items-center gap-1.5">
+                    <Send className="size-3.5 shrink-0" />
+                    {t.abonements.walletsCountConnected}{" "}
                     <span className="font-semibold text-foreground">{walletCounts.connected}</span>
                   </span>
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1.5">
-                      <Wallet className="size-3.5 shrink-0" />
-                      {t.abonements.walletsCountWithBalance}
-                    </span>
+                  <span className="flex items-center gap-1.5">
+                    <Wallet className="size-3.5 shrink-0" />
+                    {t.abonements.walletsCountWithBalance}{" "}
                     <span className="font-semibold text-foreground">{walletCounts.withBalance}</span>
                   </span>
                 </div>
