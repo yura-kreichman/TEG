@@ -1573,7 +1573,7 @@ export default function SubmitResultsPage() {
                           кнопка, просто уже по ширине и текст читается сверху
                           вниз, освобождает горизонтальное место полям слева. */}
                       <SaveButton
-                        className="h-full w-12 min-w-0 flex-col gap-1.5 rounded-control px-1 font-bold"
+                        className="h-full w-14 min-w-0 flex-col gap-1.5 rounded-control px-1 font-bold"
                         saved={assetSheetSaved}
                         onClick={() =>
                           pulseAssetSheet(() => {
@@ -1686,7 +1686,7 @@ export default function SubmitResultsPage() {
               </div>
               <PressableScale className="flex">
                 <SaveButton
-                  className="h-full w-12 min-w-0 flex-col gap-1.5 rounded-control px-1 font-bold"
+                  className="h-full w-14 min-w-0 flex-col gap-1.5 rounded-control px-1 font-bold"
                   saved={assetSheetSaved}
                   onClick={() => pulseAssetSheet(() => setAssetSheetId(null))}
                 >
