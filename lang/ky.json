@@ -790,7 +790,10 @@
     "gameRoomRoundingUpNote": "Узактыгы толук мүнөткө чейин жогору тегеректелет — пункт толук эмес мүнөттөрдө утулбайт.",
     "gameRoomRateOptionNamePlaceholder": "Аты (мисалы, Жумуш күндөрү)",
     "gameRoomAddRateVariantButton": "Дагы бир тариф кошуу",
-    "gameRoomUseSingleRateButton": "Бир баага кайтуу"
+    "gameRoomUseSingleRateButton": "Бир баага кайтуу",
+    "launchesTimedTariffHint": "Пуск тескери саноо менен жүрөт; актив токтотулганга/бошотулганга чейин бош эмес",
+    "launchesPricingModeInstant": "Таймерсиз",
+    "launchesPricingModeTimed": "Таймер менен"
   },
   "abonements": {
     "title": "Абонементтер",
@@ -1195,14 +1198,17 @@
       "networkError": "Сервер менен байланыш жок — пуcк жоголгон жок, кайра аракет кылыңыз",
       "zoneFilterLabel": "Аймак",
       "allZonesOption": "Бардык аймактар",
-      "expiredBannerLabel": "Таймер бүтүп баратат — активге өтүү"
+      "expiredBannerLabel": "Таймер бүтүп баратат: {name} — {zone}",
+      "expiredNowBannerLabel": "Убакыт бүттү: {name} — {zone}"
     },
     "tally": {
       "entryTitle": "Иштетүүлөр",
       "zoneFilterLabel": "Аймак",
       "allZonesOption": "Бардык аймактар",
       "receiptTitle": "Иштетүү квитанциясы",
-      "receiptDoneTitle": "Иштетүү эсепке алынды"
+      "receiptDoneTitle": "Иштетүү эсепке алынды",
+      "expiredLabel": "Убакыт бүттү",
+      "timedTariffHint": "Варианттар"
     },
     "counters": {
       "pickZoneTitle": "Аймакты тандаңыз",

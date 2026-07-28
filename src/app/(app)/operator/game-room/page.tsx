@@ -376,6 +376,17 @@ export default function StaysZonePage() {
     return now.getTime() >= expiresAt;
   }
 
+  // Последние 30 секунд до истечения — таймер уже становится красным и
+  // мигает, не только после самого истечения (запрос пользователя
+  // 2026-07-28, тот же порог, что и у глобального баннера/"Пусков"): "сам
+  // таймер тоже должен становиться красным при приближении времени".
+  function isNearExpiry(l: OpenLaunch): boolean {
+    if (l.pricingMode !== "fixed" || l.durationMinutesSnapshot == null) return false;
+    const expiresAt = new Date(l.startedAt).getTime() + l.durationMinutesSnapshot * 60000;
+    const remainingMs = expiresAt - now.getTime();
+    return remainingMs > 0 && remainingMs <= 30000;
+  }
+
   const launchesByAsset = useMemo(() => {
     const map = new Map<string, OpenLaunch[]>();
     for (const l of launches) {
@@ -804,6 +815,7 @@ export default function StaysZonePage() {
               <div className="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-3">
                 {selectedLaunches.map((l) => {
                   const expired = isExpired(l);
+                  const nearExpiry = isNearExpiry(l);
                   const elapsedMs = now.getTime() - new Date(l.startedAt).getTime();
                   const liveAmount = estimateLiveAmount(
                     l.pricingMode,
@@ -958,7 +970,11 @@ export default function StaysZonePage() {
                             // оставшегося места (запрос того же дня: "подними
                             // чуть выше").
                             clientsEnabled ? "justify-start pt-8" : "justify-center pt-2",
-                            expired ? "border-destructive motion-safe:animate-pulse" : "border-primary"
+                            // Мигает только сам таймер, не весь тайл (запрос
+                            // пользователя 2026-07-28: "не весь тайл, только
+                            // сам таймер") — рамка просто меняет цвет, и уже
+                            // за 30 секунд до истечения, не только после.
+                            expired || nearExpiry ? "border-destructive" : "border-primary"
                           )}
                         >
                           {/* Цветовая метка — статичный цвет по номеру
@@ -991,11 +1007,19 @@ export default function StaysZonePage() {
                             className={cn(
                               "tabular-nums",
                               l.pricingMode === "fixed"
-                                ? cn("text-2xl font-extrabold", expired && "text-destructive")
+                                ? cn(
+                                    "text-2xl font-extrabold",
+                                    (expired || nearExpiry) && "text-destructive motion-safe:animate-pulse"
+                                  )
                                 : "text-sm font-semibold text-muted-foreground"
                             )}
                           >
-                            {expired ? t.operatorApp.gameRoom.expiredLabel : timeText}
+                            {/* "Время вышло" не влезал в узкий тайл браслета
+                                (реальный баг, найден пользователем
+                                2026-07-28) — просто "00:00" (formatMMSS сам
+                                клампит отрицательное в 0), сигнал уже даёт
+                                пульсирующая красная рамка тайла (см. выше). */}
+                            {timeText}
                           </span>
                           {l.pricingMode === "per_minute" && (
                             // size="display" — сумма растёт со временем ("По

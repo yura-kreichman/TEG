@@ -790,7 +790,10 @@
     "gameRoomRoundingUpNote": "Durata se rotunjește în sus la minutul întreg — punctul nu pierde la minutele incomplete.",
     "gameRoomRateOptionNamePlaceholder": "Nume (de ex., Zile lucrătoare)",
     "gameRoomAddRateVariantButton": "Adaugă încă un tarif",
-    "gameRoomUseSingleRateButton": "Revino la un singur preț"
+    "gameRoomUseSingleRateButton": "Revino la un singur preț",
+    "launchesTimedTariffHint": "Pornirea rulează cu numărătoare inversă; activul este ocupat până la oprire/eliberare",
+    "launchesPricingModeInstant": "Fără cronometru",
+    "launchesPricingModeTimed": "Cu cronometru"
   },
   "abonements": {
     "title": "Abonamente",
@@ -1195,14 +1198,17 @@
       "networkError": "Fără conexiune la server — lansarea nu este pierdută, încearcă din nou",
       "zoneFilterLabel": "Zonă",
       "allZonesOption": "Toate zonele",
-      "expiredBannerLabel": "Cronometrul expiră — mergi la activ"
+      "expiredBannerLabel": "Cronometrul expiră: {name} — {zone}",
+      "expiredNowBannerLabel": "Timpul a expirat: {name} — {zone}"
     },
     "tally": {
       "entryTitle": "Curse",
       "zoneFilterLabel": "Zonă",
       "allZonesOption": "Toate zonele",
       "receiptTitle": "Chitanță pornire",
-      "receiptDoneTitle": "Pornire înregistrată"
+      "receiptDoneTitle": "Pornire înregistrată",
+      "expiredLabel": "Timpul a expirat",
+      "timedTariffHint": "Variante"
     },
     "counters": {
       "pickZoneTitle": "Selectați zona",

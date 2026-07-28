@@ -125,13 +125,31 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
   // в мастере сдачи итогов, там и так не до напоминаний).
   const [expiredCount, setExpiredCount] = useState(0);
   const [expiredAssetId, setExpiredAssetId] = useState<string | null>(null);
+  // Куда вести по тапу на баннер — "Прибывания" или "Пуски" (запрос
+  // пользователя 2026-07-28: та же таймерная механика "За вход" появилась и
+  // у "Пусков", у них разные экраны).
+  const [expiredZoneMode, setExpiredZoneMode] = useState<"stays" | "launches" | null>(null);
+  // Уже реально просрочен (не просто приближается) — баннер показывает
+  // другой текст (запрос пользователя 2026-07-28: "сообщение 'Истекает
+  // таймер' даже если таймер уже истёк" — надо различать).
+  const [expiredAlready, setExpiredAlready] = useState(false);
+  // Название актива — при двух одновременно истекающих таймерах (например
+  // один в "Прибываниях", другой в "Пусках") общий баннер на всю точку не
+  // давал понять, к какому именно активу идти (реальная жалоба пользователя
+  // 2026-07-28) — теперь называем конкретный.
+  const [expiredAssetName, setExpiredAssetName] = useState<string | null>(null);
+  const [expiredZoneName, setExpiredZoneName] = useState<string | null>(null);
   const alertTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (hidden || !hasStays) {
+    if (hidden || (!hasStays && !hasLaunches)) {
       setExpiredCount(0);
       setExpiredAssetId(null);
+      setExpiredZoneMode(null);
+      setExpiredAlready(false);
+      setExpiredAssetName(null);
+      setExpiredZoneName(null);
       return;
     }
     function checkExpired() {
@@ -141,13 +159,17 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
           if (!data) return;
           setExpiredCount(data.count ?? 0);
           setExpiredAssetId(data.firstAssetId ?? null);
+          setExpiredZoneMode(data.firstAssetZoneMode ?? null);
+          setExpiredAlready(data.firstIsExpired ?? false);
+          setExpiredAssetName(data.firstAssetName ?? null);
+          setExpiredZoneName(data.firstZoneName ?? null);
         })
         .catch(() => {});
     }
     checkExpired();
     const interval = setInterval(checkExpired, EXPIRY_POLL_MS);
     return () => clearInterval(interval);
-  }, [hidden, hasStays]);
+  }, [hidden, hasStays, hasLaunches]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Звук+вибрация сразу при обнаружении, затем повтор, пока не закрыты —
@@ -289,12 +311,17 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
         >
           <button
             type="button"
-            onClick={() => router.push(`/operator/game-room${expiredAssetId ? `?assetId=${expiredAssetId}` : ""}`)}
+            onClick={() => {
+              const base = expiredZoneMode === "launches" ? "/operator/launches" : "/operator/game-room";
+              router.push(`${base}${expiredAssetId ? `?assetId=${expiredAssetId}` : ""}`);
+            }}
             className="mx-auto flex w-full max-w-md items-center gap-2 rounded-control border border-destructive/40 bg-destructive/10 px-3.5 py-2.5 text-left shadow-floating motion-safe:animate-pulse md:max-w-xl lg:max-w-2xl"
           >
             <AlertTriangle className="size-4 shrink-0 text-destructive" />
             <span className="flex-1 truncate text-caption-airbnb font-bold text-destructive">
-              {t.operatorApp.gameRoom.expiredBannerLabel}
+              {(expiredAlready ? t.operatorApp.gameRoom.expiredNowBannerLabel : t.operatorApp.gameRoom.expiredBannerLabel)
+                .replace("{name}", expiredAssetName ?? "")
+                .replace("{zone}", expiredZoneName ?? "")}
             </span>
             <span className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-destructive text-[0.6875rem] font-bold text-white tabular-nums">
               {expiredCount}

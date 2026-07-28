@@ -790,7 +790,10 @@
     "gameRoomRoundingUpNote": "Տևողությունը կլորացվում է վերև՝ ամբողջ րոպեի, կետը չի կորցնում թերի րոպեների վրա։",
     "gameRoomRateOptionNamePlaceholder": "Անվանում (օր.՝ Աշխատանքային օրեր)",
     "gameRoomAddRateVariantButton": "Ավելացնել ևս մեկ սակագին",
-    "gameRoomUseSingleRateButton": "Վերադառնալ մեկ գնի"
+    "gameRoomUseSingleRateButton": "Վերադառնալ մեկ գնի",
+    "launchesTimedTariffHint": "Մեկնարկը գնում է հետհաշվարկով. ակտիվը զբաղված է կանգնեցնելուց/ազատելուց առաջ",
+    "launchesPricingModeInstant": "Առանց թայմերի",
+    "launchesPricingModeTimed": "Թայմերով"
   },
   "abonements": {
     "title": "Բաժանորդագրություններ",
@@ -1195,14 +1198,17 @@
       "networkError": "Կապ չկա սերվերի հետ․ մեկնարկը կորած չէ, փորձեք կրկին",
       "zoneFilterLabel": "Գոտի",
       "allZonesOption": "Բոլոր գոտիները",
-      "expiredBannerLabel": "Ժամանակաչափն ավարտվում է — անցնել ակտիվին"
+      "expiredBannerLabel": "Ժամանակաչափն ավարտվում է. {name} — {zone}",
+      "expiredNowBannerLabel": "Ժամանակը սպառվեց. {name} — {zone}"
     },
     "tally": {
       "entryTitle": "Երթեր",
       "zoneFilterLabel": "Գոտի",
       "allZonesOption": "Բոլոր գոտիները",
       "receiptTitle": "Մեկնարկի կտրոն",
-      "receiptDoneTitle": "Մեկնարկը հաշվառվեց"
+      "receiptDoneTitle": "Մեկնարկը հաշվառվեց",
+      "expiredLabel": "Ժամանակը սպառվեց",
+      "timedTariffHint": "Տարբերակներ"
     },
     "counters": {
       "pickZoneTitle": "Ընտրեք գոտին",

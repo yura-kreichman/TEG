@@ -790,7 +790,10 @@
     "gameRoomRoundingUpNote": "Давомнокӣ то дақиқаи пурра ба боло мудаввар мешавад — нуқта дар дақиқаҳои нопурра гум намекунад.",
     "gameRoomRateOptionNamePlaceholder": "Ном (масалан, Рӯзҳои корӣ)",
     "gameRoomAddRateVariantButton": "Илова кардани тарифи дигар",
-    "gameRoomUseSingleRateButton": "Бозгашт ба як нарх"
+    "gameRoomUseSingleRateButton": "Бозгашт ба як нарх",
+    "launchesTimedTariffHint": "Пуск бо шумориши баръакс мегузарад; актив то боздошт/озодшавӣ банд аст",
+    "launchesPricingModeInstant": "Бе таймер",
+    "launchesPricingModeTimed": "Бо таймер"
   },
   "abonements": {
     "title": "Обунамондҳо",
@@ -1195,14 +1198,17 @@
       "networkError": "Бо сервер алоқа нест — пуск гум нашудааст, бори дигар кӯшиш кунед",
       "zoneFilterLabel": "Минтақа",
       "allZonesOption": "Ҳамаи минтақаҳо",
-      "expiredBannerLabel": "Таймер тамом мешавад — гузариш ба дороӣ"
+      "expiredBannerLabel": "Таймер тамом мешавад: {name} — {zone}",
+      "expiredNowBannerLabel": "Вақт тамом шуд: {name} — {zone}"
     },
     "tally": {
       "entryTitle": "Оғозҳо",
       "zoneFilterLabel": "Минтақа",
       "allZonesOption": "Ҳамаи минтақаҳо",
       "receiptTitle": "Квитансияи оғоз",
-      "receiptDoneTitle": "Оғоз ба ҳисоб гирифта шуд"
+      "receiptDoneTitle": "Оғоз ба ҳисоб гирифта шуд",
+      "expiredLabel": "Вақт тамом шуд",
+      "timedTariffHint": "Вариантҳо"
     },
     "counters": {
       "pickZoneTitle": "Минтақаро интихоб кунед",

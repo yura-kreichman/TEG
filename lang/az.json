@@ -790,7 +790,10 @@
     "gameRoomRoundingUpNote": "Müddət tam dəqiqəyə qədər yuxarı yuvarlaqlaşdırılır — nöqtə natamam dəqiqələrdə itirmir.",
     "gameRoomRateOptionNamePlaceholder": "Ad (məsələn, İş günləri)",
     "gameRoomAddRateVariantButton": "Başqa tarif əlavə et",
-    "gameRoomUseSingleRateButton": "Tək qiymətə qayıt"
+    "gameRoomUseSingleRateButton": "Tək qiymətə qayıt",
+    "launchesTimedTariffHint": "Buraxılış geri sayımla gedir; dayandırılana/azad edilənə qədər aktiv məşğuldur",
+    "launchesPricingModeInstant": "Taymersiz",
+    "launchesPricingModeTimed": "Taymerlə"
   },
   "abonements": {
     "title": "Abonementlər",
@@ -1195,14 +1198,17 @@
       "networkError": "Serverlə əlaqə yoxdur — başlanğıc itmədi, yenidən cəhd edin",
       "zoneFilterLabel": "Zona",
       "allZonesOption": "Bütün zonalar",
-      "expiredBannerLabel": "Taymer bitir — aktivə keçin"
+      "expiredBannerLabel": "Taymer bitir: {name} — {zone}",
+      "expiredNowBannerLabel": "Vaxt bitdi: {name} — {zone}"
     },
     "tally": {
       "entryTitle": "Buraxılışlar",
       "zoneFilterLabel": "Zona",
       "allZonesOption": "Bütün zonalar",
       "receiptTitle": "Başlatma qəbzi",
-      "receiptDoneTitle": "Başlatma qeydə alındı"
+      "receiptDoneTitle": "Başlatma qeydə alındı",
+      "expiredLabel": "Vaxt bitdi",
+      "timedTariffHint": "Variantlar"
     },
     "counters": {
       "pickZoneTitle": "Zonanı seçin",

@@ -790,7 +790,10 @@
     "gameRoomRoundingUpNote": "Тривалість округляється вгору до повної хвилини — точка не втрачає на неповних хвилинах.",
     "gameRoomRateOptionNamePlaceholder": "Назва (наприклад, Будні)",
     "gameRoomAddRateVariantButton": "Додати ще тариф",
-    "gameRoomUseSingleRateButton": "Повернутися до однієї ціни"
+    "gameRoomUseSingleRateButton": "Повернутися до однієї ціни",
+    "launchesTimedTariffHint": "Пуск триває зі зворотним відліком; актив зайнятий до зупинки/звільнення",
+    "launchesPricingModeInstant": "Без таймера",
+    "launchesPricingModeTimed": "З таймером"
   },
   "abonements": {
     "title": "Абонементи",
@@ -1195,14 +1198,17 @@
       "networkError": "Немає звʼязку з сервером — пуск не втрачено, спробуйте ще раз",
       "zoneFilterLabel": "Зона",
       "allZonesOption": "Усі зони",
-      "expiredBannerLabel": "Таймер закінчується — перейти до активу"
+      "expiredBannerLabel": "Таймер закінчується: {name} — {zone}",
+      "expiredNowBannerLabel": "Час вийшов: {name} — {zone}"
     },
     "tally": {
       "entryTitle": "Заїзди",
       "zoneFilterLabel": "Зона",
       "allZonesOption": "Усі зони",
       "receiptTitle": "Квитанція запуску",
-      "receiptDoneTitle": "Запуск враховано"
+      "receiptDoneTitle": "Запуск враховано",
+      "expiredLabel": "Час вийшов",
+      "timedTariffHint": "Варіанти"
     },
     "counters": {
       "pickZoneTitle": "Виберіть зону",

@@ -790,7 +790,10 @@
     "gameRoomRoundingUpNote": "ხანგრძლივობა მრგვალდება ზემოთ სრულ წუთამდე — წერტილი არ კარგავს არასრულ წუთებზე.",
     "gameRoomRateOptionNamePlaceholder": "სახელი (მაგ., სამუშაო დღეები)",
     "gameRoomAddRateVariantButton": "კიდევ ერთი ტარიფის დამატება",
-    "gameRoomUseSingleRateButton": "დაბრუნება ერთ ფასზე"
+    "gameRoomUseSingleRateButton": "დაბრუნება ერთ ფასზე",
+    "launchesTimedTariffHint": "გაშვება მიდის უკუათვლით; აქტივი დაკავებულია შეჩერებამდე/გათავისუფლებამდე",
+    "launchesPricingModeInstant": "ტაიმერის გარეშე",
+    "launchesPricingModeTimed": "ტაიმერით"
   },
   "abonements": {
     "title": "აბონემენტები",
@@ -1195,14 +1198,17 @@
       "networkError": "სერვერთან კავშირი არ არის — გაშვება არ დაკარგულა, კიდევ სცადეთ",
       "zoneFilterLabel": "ზონა",
       "allZonesOption": "ყველა ზონა",
-      "expiredBannerLabel": "ტაიმერი იწურება — გადადით აქტივზე"
+      "expiredBannerLabel": "ტაიმერი იწურება: {name} — {zone}",
+      "expiredNowBannerLabel": "დრო ამოიწურა: {name} — {zone}"
     },
     "tally": {
       "entryTitle": "გაშვებები",
       "zoneFilterLabel": "ზონა",
       "allZonesOption": "ყველა ზონა",
       "receiptTitle": "გაშვების ქვითარი",
-      "receiptDoneTitle": "გაშვება აღირიცხა"
+      "receiptDoneTitle": "გაშვება აღირიცხა",
+      "expiredLabel": "დრო ამოიწურა",
+      "timedTariffHint": "ვარიანტები"
     },
     "counters": {
       "pickZoneTitle": "აირჩიეთ ზონა",

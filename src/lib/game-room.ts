@@ -139,7 +139,19 @@ export async function findOperatorLaunchesZone(
       accountingMode: "launches",
       ...(operator.allZonesAccess ? {} : { operatorsWithAccess: { some: { id: operator.id } } }),
     },
-    include: { assets: true, tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" } } },
+    include: {
+      assets: true,
+      // options — тариф "Пусков" может, как и "За вход" у "Прибываний", нести
+      // варианты длительность+цена (запрос пользователя 2026-07-28: "10 руб.
+      // за 10 минут, 15 руб. за 20 минут" — оператор выбирает вариант на
+      // тапе, тайл актива живёт с обратным отсчётом). Тариф без вариантов
+      // (pricingMode=null) продолжает работать как раньше — мгновенный тап.
+      tariffs: {
+        where: { deletedAt: null },
+        orderBy: { order: "asc" },
+        include: { options: { orderBy: { order: "asc" } } },
+      },
+    },
   });
 }
 
@@ -172,23 +184,45 @@ export const LAUNCH_LOCK_TIMEOUT_MS = 30_000;
 export interface ExpiredLaunchInfo {
   count: number;
   firstAssetId: string | null;
+  // Куда вести оператора из глобального баннера — зависит от того, в зоне
+  // какого режима найден первый просроченный пуск (запрос пользователя
+  // 2026-07-28: та же таймерная механика "За вход" появилась и у "Пусков",
+  // экраны у них разные — /operator/game-room и /operator/launches). null,
+  // если просроченных нет вовсе.
+  firstAssetZoneMode: "stays" | "launches" | null;
+  // Первый (самый срочный) пуск уже реально просрочен (время <= 0), а не
+  // просто приближается к концу — баннер показывает разный текст (запрос
+  // пользователя 2026-07-28: "внизу сообщение 'Истекает таймер' даже если
+  // таймер уже истёк" — нужно различать).
+  firstIsExpired: boolean;
+  // Название актива и зоны — баннер общий на ВСЮ точку, при двух
+  // одновременно истекающих таймерах (один в "Прибываниях", другой в
+  // "Пусках") было неясно, к какому активу и на какой экран идти (реальная
+  // жалоба пользователя 2026-07-28); называем оба, не просто "перейти к
+  // активу" — актив говорит, к чему подойти физически, зона — на какой
+  // экран переключиться.
+  firstAssetName: string | null;
+  firstZoneName: string | null;
 }
 
-// Предупреждать не только когда время УЖЕ вышло, но и за минуту до конца
-// (запрос пользователя 2026-07-17: "не только те, где время уже вышло, а и
-// те где до конца остаётся минута") — оператор успевает подойти к активу
-// заранее, а не только когда таймер уже красный.
-const NEAR_EXPIRY_WINDOW_MS = 60000;
+// Предупреждать не только когда время УЖЕ вышло, но и заранее, за 30 секунд
+// до конца (запрос пользователя 2026-07-17: "не только те, где время уже
+// вышло, а и те где до конца остаётся немного" — уточнено 2026-07-28: было
+// 60 секунд, "предупреждение должно начинаться за 30 секунд") — оператор
+// успевает подойти к активу заранее, а не только когда таймер уже красный.
+const NEAR_EXPIRY_WINDOW_MS = 30000;
 
 /**
- * Пуски "За вход" (pricingMode="fixed"), которым до конца остаётся минута
- * или меньше (включая уже просроченные), по ВСЕЙ точке — не по одной
- * выбранной зоне (запрос пользователя 2026-07-17: "не хватает
- * напоминания/звукового непрерывного уведомления... если ПОДОШЁЛ ТАЙМЕР К
- * КОНЦУ", независимо от того, на каком экране оператор сейчас находится).
- * "По факту" не участвует — там нет длительности, значит нет и истечения.
- * firstAssetId — для перехода из глобального баннера сразу к активу, тем же
- * приёмом, что "Перейти к активу" в мастере сдачи итогов.
+ * Пуски "За вход" (pricingMode="fixed"), которым до конца остаётся
+ * NEAR_EXPIRY_WINDOW_MS или меньше (включая уже просроченные), по ВСЕЙ
+ * точке — не по одной выбранной зоне (запрос пользователя 2026-07-17: "не
+ * хватает напоминания/звукового непрерывного уведомления... если ПОДОШЁЛ
+ * ТАЙМЕР К КОНЦУ", независимо от того, на каком экране оператор сейчас
+ * находится). Учитывает и "Прибывания", и "Пуски" (запрос пользователя
+ * 2026-07-28) — у обоих одна и та же таймерная механика "fixed"+варианты
+ * длительности. "По факту" не участвует — там нет длительности, значит нет
+ * и истечения. firstAssetId — для перехода из глобального баннера сразу к
+ * активу, тем же приёмом, что "Перейти к активу" в мастере сдачи итогов.
  */
 export async function findExpiredFixedLaunches(
   pointId: string,
@@ -198,12 +232,23 @@ export async function findExpiredFixedLaunches(
     where: {
       pointId,
       active: true,
-      accountingMode: "stays",
+      accountingMode: { in: ["stays", "launches"] },
       ...(operator.allZonesAccess ? {} : { operatorsWithAccess: { some: { id: operator.id } } }),
     },
-    select: { id: true },
+    select: { id: true, name: true, accountingMode: true },
   });
-  if (zones.length === 0) return { count: 0, firstAssetId: null };
+  if (zones.length === 0) {
+    return {
+      count: 0,
+      firstAssetId: null,
+      firstAssetZoneMode: null,
+      firstIsExpired: false,
+      firstAssetName: null,
+      firstZoneName: null,
+    };
+  }
+  const zoneModeById = new Map(zones.map((z) => [z.id, z.accountingMode as "stays" | "launches"]));
+  const zoneNameById = new Map(zones.map((z) => [z.id, z.name]));
 
   const launches = await prisma.launch.findMany({
     where: {
@@ -212,18 +257,25 @@ export async function findExpiredFixedLaunches(
       pricingMode: "fixed",
       durationMinutesSnapshot: { not: null },
     },
-    select: { assetId: true, startedAt: true, durationMinutesSnapshot: true },
+    select: { zoneId: true, assetId: true, startedAt: true, durationMinutesSnapshot: true, asset: { select: { name: true } } },
     orderBy: { startedAt: "asc" },
   });
 
   const now = Date.now();
-  const nearExpiry = launches.filter(
-    (l) =>
-      l.durationMinutesSnapshot != null &&
-      now >= l.startedAt.getTime() + l.durationMinutesSnapshot * 60000 - NEAR_EXPIRY_WINDOW_MS
-  );
+  const withExpiresAt = launches
+    .filter((l) => l.durationMinutesSnapshot != null)
+    .map((l) => ({ ...l, expiresAt: l.startedAt.getTime() + l.durationMinutesSnapshot! * 60000 }));
+  const nearExpiry = withExpiresAt.filter((l) => now >= l.expiresAt - NEAR_EXPIRY_WINDOW_MS);
 
-  return { count: nearExpiry.length, firstAssetId: nearExpiry[0]?.assetId ?? null };
+  const first = nearExpiry[0];
+  return {
+    count: nearExpiry.length,
+    firstAssetId: first?.assetId ?? null,
+    firstAssetZoneMode: first ? (zoneModeById.get(first.zoneId) ?? null) : null,
+    firstIsExpired: first ? now >= first.expiresAt : false,
+    firstAssetName: first?.asset?.name ?? null,
+    firstZoneName: first ? (zoneNameById.get(first.zoneId) ?? null) : null,
+  };
 }
 
 function roundMinutes(rawMinutes: number, mode: LaunchRoundingMode): number {

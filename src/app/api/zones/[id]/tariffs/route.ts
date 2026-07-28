@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { findTenantZone, requireOwner } from "@/lib/require-owner";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 import { LAUNCH_PRICING_MODES, smallestFreeNumber } from "@/lib/game-room";
-import { isStaysZone } from "@/lib/results-calc";
+import { isStaysZone, isLaunchesZone } from "@/lib/results-calc";
 
 export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/tariffs">) {
   const owner = await requireOwner();
@@ -110,6 +110,28 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
           return NextResponse.json({ error: "Некорректная цена" }, { status: 400 });
         }
       }
+    }
+  } else if (isLaunchesZone(zone) && pricingMode === "fixed") {
+    // "Пуски" с таймером (запрос пользователя 2026-07-28) — та же механика
+    // "За вход", что у "Прибываний": несколько вариантов длительность+цена
+    // на тариф, оператор выбирает на тапе, тайл актива живёт с обратным
+    // отсчётом. "По факту" для "Пусков" не предлагается — не запрашивалось,
+    // не имеет физического смысла для мгновенного тапа по машинке. Тариф без
+    // pricingMode (обычный запрос без этого поля) — прежний мгновенный тап,
+    // без изменений (см. финальный else ниже).
+    pricingModeValue = "fixed";
+    if (!Array.isArray(options) || options.length === 0) {
+      return NextResponse.json({ error: "Добавьте хотя бы один вариант" }, { status: 400 });
+    }
+    for (const opt of options) {
+      const o = opt as { name?: unknown; durationMinutes?: unknown; price?: unknown };
+      const nm = typeof o?.name === "string" ? o.name.trim() : "";
+      const d = Number(o?.durationMinutes);
+      const p = Number(o?.price);
+      if (!nm || !Number.isFinite(d) || d <= 0 || !Number.isFinite(p) || p < 0) {
+        return NextResponse.json({ error: "Некорректный вариант тарифа" }, { status: 400 });
+      }
+      optionsData.push({ durationMinutes: Math.round(d), price: p, order: optionsData.length, name: nm });
     }
   } else {
     priceNumber = Number(price);

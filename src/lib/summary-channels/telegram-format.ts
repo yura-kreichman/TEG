@@ -177,13 +177,16 @@ function formatGameRoomLine(data: ZoneSummaryData, st: SummaryText): string {
   return `🎮 ${st.launchesCountLabel}: <b>${count}</b> · ${st.launchesTimeLabel}: <b>${formatDuration(minutes)}</b>`;
 }
 
-// "Пусков: N" — без времени, в отличие от formatGameRoomLine (тапы
-// мгновенные, "Пуски" — accountingMode="launches", не сессия во времени, см.
-// docs/spec/01-counters.md). С момента запроса пользователя 2026-07-17
-// показания больше не вводятся вручную — расчёт всегда по реальным тапам.
+// "Пусков: N · время: Xч Yм" — та же формула, что formatGameRoomLine выше
+// (запрос пользователя 2026-07-28: "Пуски" теперь тоже могут быть
+// таймерными, время сессии стало осмысленным — раньше здесь намеренно не
+// было времени, "тапы мгновенные"). Для плоских мгновенных тарифов
+// (startedAt===endedAt) вклад в totalMinutes просто 0 — отдельной ветки не
+// требуется.
 function formatLaunchesTallyLine(data: ZoneSummaryData, st: SummaryText): string {
   const count = data.gameRoomLaunchCount ?? 0;
-  return `🎮 ${st.launchesCountLabel}: <b>${count}</b>`;
+  const minutes = data.gameRoomTotalMinutes ?? 0;
+  return `🎮 ${st.launchesCountLabel}: <b>${count}</b> · ${st.launchesTimeLabel}: <b>${formatDuration(minutes)}</b>`;
 }
 
 // "Заказов: N · Билетов: M" — Билеты (docs/spec/10-tickets.md) не имеют ни

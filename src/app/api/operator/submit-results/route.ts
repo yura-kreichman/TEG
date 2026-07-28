@@ -173,10 +173,14 @@ export async function POST(request: Request) {
 
   // Мягкая блокировка (docs/spec/04-game-room.md, "Деньги и сдача итогов") —
   // сдача по зоне "Прибываний" недоступна, пока в ней есть открытые пуски, без
-  // обхода. Проверяем ДО тяжёлого расчёта ниже, чтобы не тратить его впустую.
+  // обхода. С 2026-07-28 то же верно и для "Пусков" с таймерными тарифами
+  // (запрос пользователя: "10 руб. за 10 минут" — та же механика "За вход",
+  // открытый пуск должен быть завершён/освобождён до сдачи, иначе его сумма
+  // никогда не попадёт ни в один агрегат). Проверяем ДО тяжёлого расчёта
+  // ниже, чтобы не тратить его впустую.
   for (const zs of zoneSubmissions) {
     const zone = zoneById.get(zs.zoneId)!;
-    if (!isStaysZone(zone)) continue;
+    if (!isStaysZone(zone) && !isLaunchesZone(zone)) continue;
     const openCount = await countOpenLaunchesInZone(zone.id);
     if (openCount > 0) {
       return NextResponse.json(
@@ -228,7 +232,7 @@ export async function POST(request: Request) {
     // никакой конкурентный старт пуска эту проверку больше не обгонит.
     for (const zoneId of zoneIds) {
       const zone = zoneById.get(zoneId)!;
-      if (!isStaysZone(zone)) continue;
+      if (!isStaysZone(zone) && !isLaunchesZone(zone)) continue;
       const openCount = await countOpenLaunchesInZone(zoneId, tx);
       if (openCount > 0) {
         throw new OpenLaunchesRaceError(zone.name, openCount);
@@ -401,9 +405,11 @@ export async function POST(request: Request) {
   // Одна и та же функция для обоих режимов (запрос пользователя 2026-07-17:
   // "Пуски" тоже read-only calculated) — запрос зоно-скопирован, а Launch
   // "Прибываний" (assetId+tariffId=null) и "Пусков" (assetId+tariffId
-  // заполнены) взаимоисключающи по зоне, так что смешения не бывает;
-  // totalMinutes у "Пусков" всегда 0 (тап мгновенный, startedAt=endedAt) и
-  // просто не используется дальше.
+  // заполнены) взаимоисключающи по зоне, так что смешения не бывает.
+  // totalMinutes у ПЛОСКИХ (мгновенных) тарифов "Пусков" всегда 0
+  // (startedAt=endedAt), но с 2026-07-28 "Пуски" тоже могут быть
+  // таймерными — тогда totalMinutes реален и используется в Telegram/email
+  // сводках наравне с "Прибываниями" (см. summary-channels/*-format.ts).
     const gameRoomAggregateByZone = new Map<
       string,
       {

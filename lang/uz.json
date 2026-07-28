@@ -790,7 +790,10 @@
     "gameRoomRoundingUpNote": "Davomiyligi toʻliq daqiqagacha yuqoriga yaxlitlanadi — nuqta toʻliq boʻlmagan daqiqalarda yoʻqotmaydi.",
     "gameRoomRateOptionNamePlaceholder": "Nomi (masalan, Ish kunlari)",
     "gameRoomAddRateVariantButton": "Yana tarif qo'shish",
-    "gameRoomUseSingleRateButton": "Bitta narxga qaytish"
+    "gameRoomUseSingleRateButton": "Bitta narxga qaytish",
+    "launchesTimedTariffHint": "Ishga tushirish teskari sanoq bilan boradi; aktiv to'xtatilguncha/bo'shatilguncha band",
+    "launchesPricingModeInstant": "Taymersiz",
+    "launchesPricingModeTimed": "Taymer bilan"
   },
   "abonements": {
     "title": "Abonementlar",
@@ -1195,14 +1198,17 @@
       "networkError": "Server bilan aloqa yoʻq — pusk yoʻqolmadi, qayta urinib koʻring",
       "zoneFilterLabel": "Zona",
       "allZonesOption": "Barcha zonalar",
-      "expiredBannerLabel": "Taymer tugayapti — aktivga oʻtish"
+      "expiredBannerLabel": "Taymer tugayapti: {name} — {zone}",
+      "expiredNowBannerLabel": "Vaqt tugadi: {name} — {zone}"
     },
     "tally": {
       "entryTitle": "Yurishlar",
       "zoneFilterLabel": "Zona",
       "allZonesOption": "Barcha zonalar",
       "receiptTitle": "Ishga tushirish kvitansiyasi",
-      "receiptDoneTitle": "Ishga tushirish hisobga olindi"
+      "receiptDoneTitle": "Ishga tushirish hisobga olindi",
+      "expiredLabel": "Vaqt tugadi",
+      "timedTariffHint": "Variantlar"
     },
     "counters": {
       "pickZoneTitle": "Zonani tanlang",

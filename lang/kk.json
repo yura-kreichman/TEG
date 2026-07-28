@@ -790,7 +790,10 @@
     "gameRoomRoundingUpNote": "Ұзақтық толық минутқа дейін жоғары дөңгелектенеді — нүкте толық емес минуттарда ұтылмайды.",
     "gameRoomRateOptionNamePlaceholder": "Атауы (мысалы, Жұмыс күндері)",
     "gameRoomAddRateVariantButton": "Тағы бір тариф қосу",
-    "gameRoomUseSingleRateButton": "Бір бағаға оралу"
+    "gameRoomUseSingleRateButton": "Бір бағаға оралу",
+    "launchesTimedTariffHint": "Іске қосу кері санақпен жүреді; актив тоқтатылғанға/босатылғанға дейін бос емес",
+    "launchesPricingModeInstant": "Таймерсіз",
+    "launchesPricingModeTimed": "Таймермен"
   },
   "abonements": {
     "title": "Абонементтер",
@@ -1195,14 +1198,17 @@
       "networkError": "Сервермен байланыс жоқ — пуcк жоғалған жоқ, қайта көріңіз",
       "zoneFilterLabel": "Аймақ",
       "allZonesOption": "Барлық аймақтар",
-      "expiredBannerLabel": "Таймер бітуге жақын — активке өту"
+      "expiredBannerLabel": "Таймер бітуге жақын: {name} — {zone}",
+      "expiredNowBannerLabel": "Уақыт бітті: {name} — {zone}"
     },
     "tally": {
       "entryTitle": "Жүрістер",
       "zoneFilterLabel": "Аймақ",
       "allZonesOption": "Барлық аймақтар",
       "receiptTitle": "Іске қосу түбіртегі",
-      "receiptDoneTitle": "Іске қосу есепке алынды"
+      "receiptDoneTitle": "Іске қосу есепке алынды",
+      "expiredLabel": "Уақыт бітті",
+      "timedTariffHint": "Нұсқалар"
     },
     "counters": {
       "pickZoneTitle": "Аймақты таңдаңыз",

@@ -75,10 +75,14 @@ export function formatZoneSummaryEmail(
         rows.push({ label: st.launchesTimeLabel, value: formatDuration(data.gameRoomTotalMinutes ?? 0) });
       }
     } else if (data.accountingMode === "launches") {
-      // "Пуски" — без времени, тапы мгновенные (запрос пользователя
-      // 2026-07-17), в отличие от isGameRoom ("Прибывания") выше.
+      // "Пуски" — та же пара строк, что isGameRoom ("Прибывания") выше
+      // (запрос пользователя 2026-07-28: таймерные тарифы сделали время
+      // сессии осмысленным и для "Пусков", раньше здесь его намеренно не
+      // было — "тапы мгновенные"). У плоских мгновенных тарифов вклад в
+      // totalMinutes просто 0, отдельной ветки не требуется.
       if (settings.showReadings) {
         rows.push({ label: st.launchesCountLabel, value: String(data.gameRoomLaunchCount ?? 0) });
+        rows.push({ label: st.launchesTimeLabel, value: formatDuration(data.gameRoomTotalMinutes ?? 0) });
       }
     } else if (data.accountingMode === "tickets") {
       // Билеты (docs/spec/10-tickets.md) — ни показаний, ни разреза по

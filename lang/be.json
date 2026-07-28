@@ -790,7 +790,10 @@
     "gameRoomRoundingUpNote": "Працягласць акругляецца ўверх да поўнай хвіліны — кропка не губляе на няпоўных хвілінах.",
     "gameRoomRateOptionNamePlaceholder": "Назва (напрыклад, Будні)",
     "gameRoomAddRateVariantButton": "Дадаць яшчэ тарыф",
-    "gameRoomUseSingleRateButton": "Вярнуцца да адной цаны"
+    "gameRoomUseSingleRateButton": "Вярнуцца да адной цаны",
+    "launchesTimedTariffHint": "Пуск ідзе са зваротным адлікам; актыў заняты да спынення/вызвалення",
+    "launchesPricingModeInstant": "Без таймера",
+    "launchesPricingModeTimed": "З таймерам"
   },
   "abonements": {
     "title": "Абанементы",
@@ -1195,14 +1198,17 @@
       "networkError": "Няма сувязі з серверам — пуск не страчаны, паспрабуйце яшчэ раз",
       "zoneFilterLabel": "Зона",
       "allZonesOption": "Усе зоны",
-      "expiredBannerLabel": "Таймер сканчаецца — перайсці да актыву"
+      "expiredBannerLabel": "Таймер сканчаецца: {name} — {zone}",
+      "expiredNowBannerLabel": "Час выйшаў: {name} — {zone}"
     },
     "tally": {
       "entryTitle": "Пускі",
       "zoneFilterLabel": "Зона",
       "allZonesOption": "Усе зоны",
       "receiptTitle": "Квітанцыя пуску",
-      "receiptDoneTitle": "Пуск улічаны"
+      "receiptDoneTitle": "Пуск улічаны",
+      "expiredLabel": "Час выйшаў",
+      "timedTariffHint": "Варыянты"
     },
     "counters": {
       "pickZoneTitle": "Абярыце зону",

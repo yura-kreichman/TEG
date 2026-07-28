@@ -20,7 +20,15 @@ export async function GET() {
   const zones = await prisma.zone.findMany({
     where: zoneWhere,
     include: {
-      tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" as const } },
+      // options — тариф "Пусков" может нести варианты длительность+цена, та
+      // же механика "За вход", что у "Прибываний" (запрос пользователя
+      // 2026-07-28); у counters/cash_only/tickets тарифов с опциями не
+      // бывает, пустой массив там не мешает.
+      tariffs: {
+        where: { deletedAt: null },
+        orderBy: { order: "asc" as const },
+        include: { options: { orderBy: { order: "asc" as const } } },
+      },
       assets: { orderBy: { sortOrder: "asc" as const } },
     },
     orderBy: { createdAt: "asc" },
@@ -122,7 +130,16 @@ export async function GET() {
     ...(zone.accountingMode === "tickets"
       ? { ticketRedemptionEnabled: zone.ticketRedemptionEnabled, ticketLifetimeDays: zone.ticketLifetimeDays }
       : {}),
-    tariffs: zone.tariffs.map((t) => ({ id: t.id, name: t.name, price: t.price, order: t.order })),
+    tariffs: zone.tariffs.map((t) => ({
+      id: t.id,
+      name: t.name,
+      price: t.price,
+      order: t.order,
+      // Только "Пуски" — тариф с таймером (запрос пользователя 2026-07-28),
+      // null у обычных тарифов counters/launches/cash_only/tickets.
+      pricingMode: t.pricingMode,
+      options: t.options.map((o) => ({ id: o.id, name: o.name, durationMinutes: o.durationMinutes, price: Number(o.price) })),
+    })),
     assets: zone.assets.map((asset) => ({
       id: asset.id,
       name: asset.name,

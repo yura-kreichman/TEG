@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import {
   LAUNCH_PAYMENT_METHODS,
+  countOpenLaunches,
   findOperatorLaunchesZone,
   gameRoomRevenueByAsset,
   launchesRevenueByAssetAndTariff,
@@ -11,6 +12,8 @@ import {
 import { InsufficientBalanceError, spendWalletTx, notifyWalletBalanceChange } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 import { PAYMENT_SPLIT_METHOD, validateSplitLegs, InvalidPaymentSplitError, type PaymentLegInput } from "@/lib/payment-split";
+
+class AssetBusyError extends Error {}
 
 // "Пуски" (accountingMode="launches", запрос пользователя 2026-07-17:
 // "тапали по активам и пуски учитывались" — цифровая замена бумажной
@@ -39,7 +42,30 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/zones/[id]/
   // записям (assetId+amount+paymentMethod), тарифная привязка ей не важна.
   const revenueByAsset = await gameRoomRevenueByAsset(zone.id, boundary, now);
 
-  return NextResponse.json({ entries, revenueByAsset });
+  // Открытые (таймерные) пуски "Пусков" (запрос пользователя 2026-07-28) —
+  // тот же принцип "За вход" у "Прибываний": тариф с вариантами длительности
+  // не закрывает пуск мгновенно, а держит его открытым с обратным отсчётом,
+  // пока Сотрудник не остановит (досрочно) или не "освободит" актив тапом
+  // после истечения (см. POST ниже и /api/launches/[id]/stop). В отличие от
+  // "Прибываний" здесь не бывает больше одного открытого пуска на актив —
+  // тайл актива, а не список появляющихся браслетов.
+  const openLaunches = await prisma.launch.findMany({
+    where: { zoneId: zone.id, isOpen: true },
+    orderBy: { startedAt: "asc" },
+  });
+
+  return NextResponse.json({
+    entries,
+    revenueByAsset,
+    openLaunches: openLaunches.map((l) => ({
+      id: l.id,
+      assetId: l.assetId,
+      tariffId: l.tariffId,
+      startedAt: l.startedAt,
+      priceSnapshot: Number(l.priceSnapshot),
+      durationMinutesSnapshot: l.durationMinutesSnapshot,
+    })),
+  });
 }
 
 // Тап по активу — мгновенно учитывает один пуск: старт и стоп в один момент
@@ -64,6 +90,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   const body = await request.json().catch(() => ({}));
   const assetId: string | null = typeof body.assetId === "string" && body.assetId ? body.assetId : null;
   const tariffId: string | null = typeof body.tariffId === "string" && body.tariffId ? body.tariffId : null;
+  // Вариант длительности (запрос пользователя 2026-07-28) — только у
+  // тарифов "Пусков" с pricingMode="fixed" (та же механика "За вход", что у
+  // "Прибываний"). Обычный мгновенный тариф (pricingMode=null) его не
+  // требует — see "timed" branch check below.
+  const optionId: string | null = typeof body.optionId === "string" && body.optionId ? body.optionId : null;
   // Разбивка оплаты (аудит 2026-07-26: "по всем модулям, по всем методам
   // оплаты" — этот тап-режим "Пусков" остался единственным непокрытым) —
   // тот же приём, что у fixed-варианта /api/zones/[id]/launches: цена
@@ -87,11 +118,28 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     return NextResponse.json({ error: "Выберите тариф" }, { status: 400 });
   }
 
+  // Таймерный тариф "Пусков" (запрос пользователя 2026-07-28: "10 руб. за 10
+  // минут, 15 руб. за 20 минут") — вместо мгновенного тапа открывает пуск с
+  // обратным отсчётом (см. ветку транзакции ниже), закрывается позже через
+  // /api/launches/[id]/stop, не здесь.
+  const isTimed = tariff.pricingMode === "fixed";
+  let option: (typeof tariff.options)[number] | null = null;
+  if (isTimed) {
+    if (!optionId) {
+      return NextResponse.json({ error: "Выберите вариант тарифа" }, { status: 400 });
+    }
+    option = tariff.options.find((o) => o.id === optionId) ?? null;
+    if (!option) {
+      return NextResponse.json({ error: "Вариант тарифа не найден" }, { status: 400 });
+    }
+  }
+  const priceForPayment = isTimed ? Number(option!.price) : Number(tariff.price);
+
   let paymentMethod: string;
   let abonementWalletId: string | null = null;
   if (legs) {
     try {
-      validateSplitLegs(legs, Number(tariff.price), LAUNCH_PAYMENT_METHODS);
+      validateSplitLegs(legs, priceForPayment, LAUNCH_PAYMENT_METHODS);
     } catch (err) {
       if (err instanceof InvalidPaymentSplitError) {
         return NextResponse.json({ error: err.message }, { status: 400 });
@@ -123,26 +171,38 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   let launch;
   try {
     launch = await prisma.$transaction(async (tx) => {
+      if (isTimed) {
+        // Актив держит не больше одного открытого таймерного пуска разом
+        // (запрос пользователя 2026-07-28: "машинка физически одна и катает
+        // одного ребёнка за раз") — advisory-лок по assetId, тот же приём,
+        // что nextLaunchNumber у "Прибываний", проверка ПОСЛЕ захвата лока
+        // исключает гонку двух одновременных тапов по одному активу.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${assetId}))`;
+        const openCount = await countOpenLaunches(assetId, tx);
+        if (openCount > 0) throw new AssetBusyError();
+      }
+
       const created = await tx.launch.create({
         data: {
           zoneId: zone.id,
           assetId,
           tariffId: tariff.id,
-          // Число не показывается оператору в этом режиме (тап мгновенный, нет
-          // "текущего браслета/пуска" на экране) — 1 у каждой записи, реальный
-          // счётчик считается агрегатом (launchesRevenueByAssetAndTariff), не
-          // этим полем.
+          // Число не показывается оператору в этом режиме (нет "текущего
+          // браслета" на экране, тайл — сам актив) — 1 у каждой записи,
+          // реальный счётчик считается агрегатом
+          // (launchesRevenueByAssetAndTariff), не этим полем.
           number: 1,
           startedAt: now,
-          endedAt: now,
-          isOpen: false,
+          endedAt: isTimed ? null : now,
+          isOpen: isTimed,
           pricingMode: "fixed",
-          priceSnapshot: tariff.price,
-          amount: tariff.price,
+          priceSnapshot: isTimed ? option!.price : tariff.price,
+          durationMinutesSnapshot: isTimed ? option!.durationMinutes : null,
+          amount: isTimed ? null : tariff.price,
           paymentMethod,
           abonementWalletId: !legs && paymentMethod === "abonement" ? abonementWalletId : null,
           startedByOperatorId: operator.id,
-          endedByOperatorId: operator.id,
+          endedByOperatorId: isTimed ? null : operator.id,
         },
       });
 
@@ -185,6 +245,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     if (err instanceof InsufficientBalanceError) {
       return NextResponse.json({ error: "Недостаточно средств на абонементе" }, { status: 400 });
     }
+    if (err instanceof AssetBusyError) {
+      return NextResponse.json({ error: "Актив уже занят текущим пуском" }, { status: 409 });
+    }
     throw err;
   }
 
@@ -194,7 +257,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
       await notifyWalletBalanceChange(point.tenantId, abonementLeg.walletId!, -abonementLeg.amount).catch(() => {});
     }
   } else if (launch.paymentMethod === "abonement" && launch.abonementWalletId) {
-    await notifyWalletBalanceChange(point.tenantId, launch.abonementWalletId, -Number(launch.amount)).catch(() => {});
+    // priceSnapshot, не amount (null у ещё открытого таймерного пуска —
+    // сумма спишется/зафиксируется на старте всё равно, платёж уже прошёл
+    // выше в spendWalletTx, здесь только уведомление об изменении баланса).
+    await notifyWalletBalanceChange(point.tenantId, launch.abonementWalletId, -Number(launch.priceSnapshot)).catch(() => {});
   }
 
   return NextResponse.json(
@@ -202,7 +268,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
       id: launch.id,
       assetId: launch.assetId,
       tariffId: launch.tariffId,
-      amount: Number(launch.amount),
+      amount: launch.amount != null ? Number(launch.amount) : null,
+      isOpen: launch.isOpen,
+      startedAt: launch.startedAt,
+      durationMinutesSnapshot: launch.durationMinutesSnapshot,
+      priceSnapshot: Number(launch.priceSnapshot),
     },
     { status: 201 }
   );

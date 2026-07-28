@@ -74,25 +74,40 @@ export function ActionSheetItem({
   onClick,
   destructive = false,
   disabled = false,
+  trailing,
 }: {
   icon: LucideIcon;
   children: React.ReactNode;
   onClick: () => void;
   destructive?: boolean;
   disabled?: boolean;
+  // Элемент справа (например, Switch) вместо стрелки/только для рядов,
+  // которые переключают настройку, а не открывают следующий экран (запрос
+  // пользователя 2026-07-28: "Печать квитанции" в кебабе зоны). Рендерится
+  // ВНЕ <button>, чтобы клик по нему (свой интерактивный элемент) не
+  // всплывал в onClick самой строки — но тем же <button> для текста, что и
+  // у всех остальных пунктов, гарантированно с идентичным шрифтом (реальный
+  // баг, найден пользователем 2026-07-28: отдельный <div>-ряд с теми же на
+  // вид классами всё равно визуально отличался от соседних ActionSheetItem
+  // по неясной причине — переиспользование самого компонента снимает вопрос
+  // целиком, а не гадание, какого класса не хватает).
+  trailing?: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        "flex w-full items-center gap-3 border-t border-border py-3.5 text-left text-body-airbnb first:border-t-0 disabled:cursor-default disabled:text-muted-foreground/50",
-        destructive ? "text-destructive" : "text-foreground"
-      )}
-    >
-      <Icon className="size-4 shrink-0" />
-      {children}
-    </button>
+    <div className={cn("flex w-full items-center border-t border-border first:border-t-0", trailing && "gap-3")}>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className={cn(
+          "flex flex-1 items-center gap-3 py-3.5 text-left text-body-airbnb disabled:cursor-default disabled:text-muted-foreground/50",
+          destructive ? "text-destructive" : "text-foreground"
+        )}
+      >
+        <Icon className="size-4 shrink-0" />
+        {children}
+      </button>
+      {trailing}
+    </div>
   );
 }

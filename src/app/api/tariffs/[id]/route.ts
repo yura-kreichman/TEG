@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 import { LAUNCH_PRICING_MODES } from "@/lib/game-room";
-import { isStaysZone } from "@/lib/results-calc";
+import { isStaysZone, isLaunchesZone } from "@/lib/results-calc";
 
 async function findOwnedTariff(tenantId: string, id: string) {
   const tariff = await prisma.tariff.findUnique({
@@ -30,7 +30,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tariffs/[i
   const data: {
     name?: string;
     price?: string;
-    pricingMode?: string;
+    pricingMode?: string | null;
     roundingMode?: string | null;
     minAmount?: number | null;
   } = {};
@@ -52,11 +52,44 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tariffs/[i
   // у обычных зоновых тарифов (counters/launches) эти поля не применяются,
   // там цена приходит через price ниже, как и раньше.
   if (pricingMode !== undefined) {
-    if (!isStaysZone(tariff.zone)) {
-      return NextResponse.json({ error: "Этот тариф не принадлежит зоне режима «Прибывания»" }, { status: 400 });
+    // "Пуски" с таймером (запрос пользователя 2026-07-28) — тот же тип
+    // "fixed"/"За вход", что у "Прибываний", только без "per_minute"/"По
+    // факту" — для мгновенного тапа по активу нет физического смысла.
+    const zoneIsLaunches = isLaunchesZone(tariff.zone);
+    if (!isStaysZone(tariff.zone) && !zoneIsLaunches) {
+      return NextResponse.json({ error: "Этот тариф не принадлежит зоне режима «Прибывания» или «Пуски»" }, { status: 400 });
+    }
+    if (zoneIsLaunches && pricingMode === null) {
+      // "Пуски": переключение обратно с "С таймером" на "Без таймера"
+      // (реальный баг, найден пользователем 2026-07-28: раньше клиент в
+      // этом случае вовсе не отправлял pricingMode, а PATCH без него
+      // молчаливо НЕ трогал старое значение "fixed" — переключатель
+      // визуально сбрасывался, но в БД тариф оставался таймерным) — тариф
+      // становится обычным плоским, варианты удаляются, цена — из price
+      // ниже (обычным полем формы, не через options).
+      data.pricingMode = null;
+      data.roundingMode = null;
+      data.minAmount = null;
+      optionsData = [];
+      if (price !== undefined) {
+        const numericPrice = Number(price);
+        if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+          return NextResponse.json({ error: "Некорректная цена" }, { status: 400 });
+        }
+        data.price = String(price);
+      }
+      await prisma.$transaction(async (tx) => {
+        await tx.tariff.update({ where: { id }, data });
+        await tx.tariffOption.deleteMany({ where: { tariffId: id } });
+      });
+      await revalidateLandingForTenant(owner.tenantId);
+      return NextResponse.json({ ok: true });
     }
     if (!(LAUNCH_PRICING_MODES as readonly string[]).includes(pricingMode)) {
       return NextResponse.json({ error: "Некорректный тип тарифа" }, { status: 400 });
+    }
+    if (zoneIsLaunches && pricingMode !== "fixed") {
+      return NextResponse.json({ error: "У «Пусков» доступен только тип «С длительностью»" }, { status: 400 });
     }
     data.pricingMode = pricingMode;
     if (pricingMode === "fixed") {

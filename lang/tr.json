@@ -790,7 +790,10 @@
     "gameRoomRoundingUpNote": "Süre tam dakikaya yukarı yuvarlanır — nokta eksik dakikalarda kaybetmez.",
     "gameRoomRateOptionNamePlaceholder": "Ad (örn. Hafta içi)",
     "gameRoomAddRateVariantButton": "Başka bir tarife ekle",
-    "gameRoomUseSingleRateButton": "Tek fiyata dön"
+    "gameRoomUseSingleRateButton": "Tek fiyata dön",
+    "launchesTimedTariffHint": "Başlatma geri sayımla ilerler; varlık durdurulana/serbest bırakılana kadar meşguldür",
+    "launchesPricingModeInstant": "Zamanlayıcısız",
+    "launchesPricingModeTimed": "Zamanlayıcılı"
   },
   "abonements": {
     "title": "Abonelikler",
@@ -1195,14 +1198,17 @@
       "networkError": "Sunucuyla bağlantı yok — başlatma kaybolmadı, tekrar deneyin",
       "zoneFilterLabel": "Bölge",
       "allZonesOption": "Tüm bölgeler",
-      "expiredBannerLabel": "Süre bitmek üzere — varlığa git"
+      "expiredBannerLabel": "Süre bitmek üzere: {name} — {zone}",
+      "expiredNowBannerLabel": "Süre doldu: {name} — {zone}"
     },
     "tally": {
       "entryTitle": "Turlar",
       "zoneFilterLabel": "Bölge",
       "allZonesOption": "Tüm bölgeler",
       "receiptTitle": "Başlatma makbuzu",
-      "receiptDoneTitle": "Başlatma kaydedildi"
+      "receiptDoneTitle": "Başlatma kaydedildi",
+      "expiredLabel": "Süre doldu",
+      "timedTariffHint": "Seçenekler"
     },
     "counters": {
       "pickZoneTitle": "Bölge seçin",

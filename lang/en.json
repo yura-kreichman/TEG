@@ -790,7 +790,10 @@
     "gameRoomRoundingUpNote": "Duration is rounded up to the full minute — the point never loses money on partial minutes.",
     "gameRoomRateOptionNamePlaceholder": "Name (e.g. Weekdays)",
     "gameRoomAddRateVariantButton": "Add another rate",
-    "gameRoomUseSingleRateButton": "Switch back to a single price"
+    "gameRoomUseSingleRateButton": "Switch back to a single price",
+    "launchesTimedTariffHint": "Launch runs a countdown; asset is busy until stopped/released",
+    "launchesPricingModeInstant": "No timer",
+    "launchesPricingModeTimed": "With timer"
   },
   "abonements": {
     "title": "Subscriptions",
@@ -1195,14 +1198,17 @@
       "networkError": "No connection to the server — the launch is not lost, try again",
       "zoneFilterLabel": "Zone",
       "allZonesOption": "All zones",
-      "expiredBannerLabel": "Timer running out — go to asset"
+      "expiredBannerLabel": "Timer running out: {name} — {zone}",
+      "expiredNowBannerLabel": "Time's up: {name} — {zone}"
     },
     "tally": {
       "entryTitle": "Launches",
       "zoneFilterLabel": "Zone",
       "allZonesOption": "All zones",
       "receiptTitle": "Launch receipt",
-      "receiptDoneTitle": "Launch recorded"
+      "receiptDoneTitle": "Launch recorded",
+      "expiredLabel": "Time's up",
+      "timedTariffHint": "Variants"
     },
     "counters": {
       "pickZoneTitle": "Select zone",

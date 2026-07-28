@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Banknote, Check, Pencil, Camera, CircuitBoard, ClockPlus, ImagePlus, ListChecks, Ticket, Timer, Trash2, Plus, Pause, ChevronDown, ChevronUp, Smile, Gauge, TriangleAlert, type LucideIcon } from "lucide-react";
+import { Banknote, Check, Pencil, Camera, CircuitBoard, ClockPlus, ImagePlus, ListChecks, Printer, Ticket, Timer, Trash2, Plus, Pause, ChevronDown, ChevronUp, Smile, Gauge, TriangleAlert, type LucideIcon } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -379,6 +379,12 @@ export default function ZoneDetailPage() {
   // (tariffPrice), как раньше, пока владелец явно не нажмёт "добавить ещё
   // тариф" ниже.
   const [tariffRateOptions, setTariffRateOptions] = useState<RateOptionDraft[]>([]);
+  // "Пуски" с таймером (запрос пользователя 2026-07-28: "10 руб. за 10
+  // минут, 15 руб. за 20 минут") — та же механика "За вход", что у
+  // "Прибываний" (тот же tariffOptions/TariffOptionsEditor выше), выбор
+  // через SegmentedTabs "Без таймера"/"С таймером" (запрос пользователя,
+  // тот же приём, что и у "Прибываний", а не отдельный тумблер).
+  const [launchesPricingMode, setLaunchesPricingMode] = useState<"instant" | "timed">("instant");
 
   const [tariffKebab, setTariffKebab] = useState<TariffInfo | null>(null);
   const [tariffKebabView, setTariffKebabView] = useState<TariffKebabView>("edit");
@@ -393,6 +399,7 @@ export default function ZoneDetailPage() {
   const [editTariffPricingMode, setEditTariffPricingMode] = useState<"fixed" | "per_minute">("fixed");
   const [editTariffOptions, setEditTariffOptions] = useState<OptionDraft[]>([EMPTY_OPTION]);
   const [editTariffRateOptions, setEditTariffRateOptions] = useState<RateOptionDraft[]>([]);
+  const [editLaunchesPricingMode, setEditLaunchesPricingMode] = useState<"instant" | "timed">("instant");
 
   const [createAssetOpen, setCreateAssetOpen] = useState(false);
   const [assetName, setAssetName] = useState("");
@@ -621,7 +628,12 @@ export default function ZoneDetailPage() {
                       ? tariffRateOptions.map((o) => ({ ...o, price: parseMoneyInput(o.price) }))
                       : undefined,
               }
-            : {}),
+            : zone && isLaunchesZone(zone) && launchesPricingMode === "timed"
+              ? {
+                  pricingMode: "fixed",
+                  options: tariffOptions.map((o) => ({ ...o, price: parseMoneyInput(o.price) })),
+                }
+              : {}),
         }),
       });
       const data = await res.json();
@@ -636,6 +648,7 @@ export default function ZoneDetailPage() {
         setTariffPricingMode("fixed");
         setTariffOptions([EMPTY_OPTION]);
         setTariffRateOptions([]);
+        setLaunchesPricingMode("instant");
         setCreateTariffOpen(false);
       });
     } finally {
@@ -660,6 +673,7 @@ export default function ZoneDetailPage() {
         ? tariff.options.map((o) => ({ name: o.name ?? "", price: o.price }))
         : []
     );
+    setEditLaunchesPricingMode(tariff.pricingMode === "fixed" ? "timed" : "instant");
   }
 
   function openDeleteTariffConfirm(tariff: TariffInfo) {
@@ -689,7 +703,21 @@ export default function ZoneDetailPage() {
                       ? editTariffRateOptions.map((o) => ({ ...o, price: parseMoneyInput(o.price) }))
                       : [],
               }
-            : {}),
+            : zone && isLaunchesZone(zone)
+              ? editLaunchesPricingMode === "timed"
+                ? {
+                    pricingMode: "fixed",
+                    options: editTariffOptions.map((o) => ({ ...o, price: parseMoneyInput(o.price) })),
+                  }
+                : // "Без таймера" — явно отправляем pricingMode: null, а не
+                  // просто опускаем поле (реальный баг, найден пользователем
+                  // 2026-07-28: PATCH без pricingMode вообще не трогает его в
+                  // БД — тариф молча оставался "С таймером" со старыми
+                  // вариантами, хотя форма визуально показывала "Без
+                  // таймера"). Сервер (api/tariffs/[id]) уже умеет очищать
+                  // pricingMode на null — этого явного null и не хватало.
+                  { pricingMode: null }
+              : {}),
         }),
       });
       const data = await res.json();
@@ -1027,14 +1055,18 @@ export default function ZoneDetailPage() {
   // (минималка отдельно не показываем здесь, только в форме редактирования).
   function formatTariffPricingLabel(tariff: TariffInfo): string {
     if (tariff.pricingMode === "fixed") {
-      if (tariff.options.length === 0) return t.zoneDetail.gameRoomPricingModeFixed;
+      // "Пуски" называют этот вид тарифа "С таймером" (запрос пользователя
+      // 2026-07-28), не "За вход" — та надпись стайс-специфичная, хоть под
+      // капотом та же механика pricingMode="fixed".
+      const fixedLabel = zone && isLaunchesZone(zone) ? t.zoneDetail.launchesPricingModeTimed : t.zoneDetail.gameRoomPricingModeFixed;
+      if (tariff.options.length === 0) return fixedLabel;
       const list = tariff.options
         .map(
           (o) =>
             `${o.name ?? `${o.durationMinutes} ${t.operatorApp.workTime.minutesShort}`} — ${formatMoney(Number(o.price), locale)}${currencySign ?? ""}`
         )
         .join(", ");
-      return `${t.zoneDetail.gameRoomPricingModeFixed} · ${list}`;
+      return `${fixedLabel} · ${list}`;
     }
     if (tariff.options.length === 0) return t.zoneDetail.gameRoomPricingModePerMinute;
     const list = tariff.options.map((o) => `${o.name} — ${formatMoney(Number(o.price), locale)}${currencySign ?? ""}`).join(", ");
@@ -1113,71 +1145,37 @@ export default function ZoneDetailPage() {
             </SpringCard>
           )}
 
-          {/* Модуль печати (запрос пользователя 2026-07-20) — только для
-              "Прибываний"/"Пусков": там есть отдельное событие на
-              конкретного посетителя, которому можно предложить квитанцию. У
-              "Счётчики"/"Только касса" такого события нет — печатать
-              нечего на уровне одной операции (там свой Z-отчёт сдачи
-              итогов, без завязки на эту зонную настройку). У "Билетов" — своя
-              карточка ниже (запрос пользователя 2026-07-21: "все настройки
-              зоны с режимом Билеты на одной плашке"), эта — только для
-              Прибываний/Пусков. */}
-          {(isStaysZone(zone) || isLaunchesZone(zone)) && (
-            <SpringCard hover={false} className="flex flex-col gap-3">
+          {/* Округление суммы "По факту" — только "Прибывания" (запрос
+              пользователя 2026-07-27); "Печать квитанции" отсюда убрана
+              2026-07-28 и перенесена в кебаб-меню зоны (см. выше, сразу под
+              Активировать/Деактивировать) — "там это логичнее". */}
+          {isStaysZone(zone) && (
+            <SpringCard hover={false}>
               <div className="flex items-center justify-between gap-3">
                 <span>
-                  <span className="block text-body-airbnb">{t.zoneDetail.printReceiptLabel}</span>
+                  <span className="block text-body-airbnb">{t.zoneDetail.amountRoundingLabel}</span>
                   <span className="mt-0.5 block text-caption-airbnb text-muted-foreground">
-                    {t.zoneDetail.printReceiptHint}
+                    {t.zoneDetail.amountRoundingHint}
                   </span>
                 </span>
-                <Switch checked={zone.printReceiptEnabled} onCheckedChange={togglePrintReceiptEnabled} className="shrink-0" />
+                <Switch
+                  checked={zone.amountRoundingEnabled}
+                  onCheckedChange={toggleAmountRoundingEnabled}
+                  className="shrink-0"
+                />
               </div>
-              {/* Только "Прибывания" — округление имеет смысл лишь для
-                  тарифа "По факту" (per_minute), а он существует только в
-                  этом режиме; у "Пусков" тарифы всегда плоские (цену вводит
-                  владелец), округлять там нечего (запрос пользователя
-                  2026-07-27). Та же плашка, что "Печать квитанции" — по
-                  просьбе владельца, вторая строка, тот же приём, что уже
-                  есть в карточке "Билеты" ниже. */}
-              {isStaysZone(zone) && (
-                <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
-                  <span>
-                    <span className="block text-body-airbnb">{t.zoneDetail.amountRoundingLabel}</span>
-                    <span className="mt-0.5 block text-caption-airbnb text-muted-foreground">
-                      {t.zoneDetail.amountRoundingHint}
-                    </span>
-                  </span>
-                  <Switch
-                    checked={zone.amountRoundingEnabled}
-                    onCheckedChange={toggleAmountRoundingEnabled}
-                    className="shrink-0"
-                  />
-                </div>
-              )}
             </SpringCard>
           )}
 
-          {/* Билеты — все настройки зоны на одной карточке (запрос
-              пользователя 2026-07-21), было три отдельные плашки (печать /
-              заказы+гашение+срок). Срок жизни виден только при включённом
-              гашении (docs/spec/10-tickets.md, "ГАШЕНИЕ"/"СРОК ЖИЗНИ" — при
-              выключенном к заказам не применяется вовсе). */}
+          {/* Билеты — настройки зоны на одной карточке (запрос пользователя
+              2026-07-21). "Печать квитанции" отсюда убрана 2026-07-28,
+              перенесена в кебаб-меню зоны (см. выше). Срок жизни виден
+              только при включённом гашении (docs/spec/10-tickets.md,
+              "ГАШЕНИЕ"/"СРОК ЖИЗНИ" — при выключенном к заказам не
+              применяется вовсе). */}
           {isTicketsZone(zone) && (
-            <SpringCard hover={false} className="flex flex-col gap-3">
+            <SpringCard hover={false} className="flex flex-col gap-1">
               <div className="flex items-center justify-between gap-3">
-                <span>
-                  <span className="block text-body-airbnb">{t.zoneDetail.printTicketsLabel}</span>
-                  <span className="mt-0.5 block text-caption-airbnb text-muted-foreground">
-                    {t.zoneDetail.printReceiptHint}
-                  </span>
-                </span>
-                <Switch checked={zone.printReceiptEnabled} onCheckedChange={togglePrintReceiptEnabled} className="shrink-0" />
-              </div>
-              {/* Экран заказов зоны убран (запрос пользователя 2026-07-21:
-                  "у Владельца не нужны эти заказы") — был отдельной
-                  страницей /zones/[id]/orders, теперь удалена целиком. */}
-              <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
                 <span>
                   <span className="block text-body-airbnb">{t.zoneDetail.ticketRedemptionLabel}</span>
                   <span className="mt-0.5 block text-caption-airbnb text-muted-foreground">
@@ -1241,7 +1239,7 @@ export default function ZoneDetailPage() {
               <div key={tariff.id} className="flex items-center justify-between border-t border-border py-3 first:border-t-0">
                 <div className="min-w-0">
                   <div className="text-body-airbnb">{tariff.name}</div>
-                  {isStaysZone(zone) && tariff.pricingMode && (
+                  {(isStaysZone(zone) || isLaunchesZone(zone)) && tariff.pricingMode && (
                     <div className="text-caption-airbnb text-muted-foreground">{formatTariffPricingLabel(tariff)}</div>
                   )}
                 </div>
@@ -1443,6 +1441,22 @@ export default function ZoneDetailPage() {
             <ActionSheetItem icon={zone.active ? Pause : Check} onClick={toggleZoneActive}>
               {zone.active ? t.zoneDetail.deactivateZone : t.zoneDetail.activateZone}
             </ActionSheetItem>
+            {/* Печать квитанции — перенесена из отдельной плашки сюда, сразу
+                под Активировать/Деактивировать (запрос пользователя
+                2026-07-28: "там это логичнее") — тумблер, не переход, поэтому
+                через `trailing` у самого ActionSheetItem (запрос того же
+                дня: "шрифт отличается от остальных пунктов" — три попытки
+                подогнать классы кастомного ряда вручную не помогли, снято
+                переиспользованием буквально того же компонента). */}
+            {(isStaysZone(zone) || isLaunchesZone(zone) || isTicketsZone(zone)) && (
+              <ActionSheetItem
+                icon={Printer}
+                onClick={togglePrintReceiptEnabled}
+                trailing={<Switch checked={zone.printReceiptEnabled} onCheckedChange={togglePrintReceiptEnabled} />}
+              >
+                {isTicketsZone(zone) ? t.zoneDetail.printTicketsLabel : t.zoneDetail.printReceiptLabel}
+              </ActionSheetItem>
+            )}
             <ActionSheetItem icon={Pencil} onClick={() => setZoneKebabView("rename")}>
               {t.zoneDetail.renameZone}
             </ActionSheetItem>
@@ -1551,8 +1565,28 @@ export default function ZoneDetailPage() {
               }}
             />
           )}
+          {/* "Пуски" с таймером (запрос пользователя 2026-07-28, уточнено
+              тем же днём: "как в Посещениях 'С таймером'/'Без таймера'", не
+              тумблер) — SegmentedTabs, тот же приём, что у "Прибываний"
+              выше, сразу показывает TariffOptionsEditor ниже вместо
+              обычного поля цены. */}
+          {isLaunchesZone(zone) && (
+            <SegmentedTabs
+              shape="control"
+              options={[
+                { key: "instant" as const, label: t.zoneDetail.launchesPricingModeInstant },
+                { key: "timed" as const, label: t.zoneDetail.launchesPricingModeTimed },
+              ]}
+              value={launchesPricingMode}
+              onChange={setLaunchesPricingMode}
+            />
+          )}
+          {isLaunchesZone(zone) && launchesPricingMode === "timed" && (
+            <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.launchesTimedTariffHint}</p>
+          )}
           {!(isStaysZone(zone) && tariffPricingMode === "fixed") &&
-            !(isStaysZone(zone) && tariffPricingMode === "per_minute" && tariffRateOptions.length > 0) && (
+            !(isStaysZone(zone) && tariffPricingMode === "per_minute" && tariffRateOptions.length > 0) &&
+            !(isLaunchesZone(zone) && launchesPricingMode === "timed") && (
               <div className="flex flex-col gap-1">
                 <Label htmlFor="tariffPrice">
                   {isStaysZone(zone) ? t.zoneDetail.gameRoomRateLabel : t.zoneDetail.tariffPriceLabel}
@@ -1576,7 +1610,7 @@ export default function ZoneDetailPage() {
                       пользователя 2026-07-26: "интерфейс должен быть
                       единообразный, как «За вход»" — раньше "По факту" в
                       простом режиме имел свою вторую Save-кнопку тут же). */}
-                  {!isStaysZone(zone) && (
+                  {!isStaysZone(zone) && !(isLaunchesZone(zone) && launchesPricingMode === "timed") && (
                     <PressableScale>
                       <SaveButton type="submit" className="h-14 text-base font-bold" saved={addTariffSaved} disabled={savingTariff} />
                     </PressableScale>
@@ -1625,8 +1659,11 @@ export default function ZoneDetailPage() {
                 <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomRoundingUpNote}</p>
               )
             ))}
+          {isLaunchesZone(zone) && launchesPricingMode === "timed" && (
+            <TariffOptionsEditor options={tariffOptions} onChange={setTariffOptions} />
+          )}
           {tariffError && <p className="text-sm text-destructive">{tariffError}</p>}
-          {isStaysZone(zone) && (
+          {(isStaysZone(zone) || (isLaunchesZone(zone) && launchesPricingMode === "timed")) && (
             <PressableScale>
               <SaveButton type="submit" className="h-12 w-full" saved={addTariffSaved} disabled={savingTariff} />
             </PressableScale>
@@ -1663,8 +1700,23 @@ export default function ZoneDetailPage() {
                 }}
               />
             )}
+            {isLaunchesZone(zone) && (
+              <SegmentedTabs
+                shape="control"
+                options={[
+                  { key: "instant" as const, label: t.zoneDetail.launchesPricingModeInstant },
+                  { key: "timed" as const, label: t.zoneDetail.launchesPricingModeTimed },
+                ]}
+                value={editLaunchesPricingMode}
+                onChange={setEditLaunchesPricingMode}
+              />
+            )}
+            {isLaunchesZone(zone) && editLaunchesPricingMode === "timed" && (
+              <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.launchesTimedTariffHint}</p>
+            )}
             {!(isStaysZone(zone) && editTariffPricingMode === "fixed") &&
-              !(isStaysZone(zone) && editTariffPricingMode === "per_minute" && editTariffRateOptions.length > 0) && (
+              !(isStaysZone(zone) && editTariffPricingMode === "per_minute" && editTariffRateOptions.length > 0) &&
+              !(isLaunchesZone(zone) && editLaunchesPricingMode === "timed") && (
                 <div className="flex flex-col gap-1">
                   <Label htmlFor="editTariffPrice">
                     {isStaysZone(zone) ? t.zoneDetail.gameRoomRateLabel : t.zoneDetail.tariffPriceLabel}
@@ -1680,7 +1732,7 @@ export default function ZoneDetailPage() {
                       value={editTariffPrice}
                       onChange={(e) => setEditTariffPrice(e.target.value)}
                     />
-                    {!isStaysZone(zone) && (
+                    {!isStaysZone(zone) && !(isLaunchesZone(zone) && editLaunchesPricingMode === "timed") && (
                       <PressableScale>
                         <SaveButton
                           className="h-14 text-base font-bold"
@@ -1736,8 +1788,11 @@ export default function ZoneDetailPage() {
                   <p className="text-caption-airbnb text-muted-foreground">{t.zoneDetail.gameRoomRoundingUpNote}</p>
                 )
               ))}
+            {isLaunchesZone(zone) && editLaunchesPricingMode === "timed" && (
+              <TariffOptionsEditor options={editTariffOptions} onChange={setEditTariffOptions} />
+            )}
             {editTariffError && <p className="text-sm text-destructive">{editTariffError}</p>}
-            {isStaysZone(zone) && (
+            {(isStaysZone(zone) || (isLaunchesZone(zone) && editLaunchesPricingMode === "timed")) && (
               <PressableScale>
                 <SaveButton className="h-12 w-full" onClick={confirmEditTariff} saved={editTariffSaved} disabled={savingEditTariff} />
               </PressableScale>

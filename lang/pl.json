@@ -790,7 +790,10 @@
     "gameRoomRoundingUpNote": "Czas trwania jest zaokrąglany w górę do pełnej minuty — punkt nie traci na niepełnych minutach.",
     "gameRoomRateOptionNamePlaceholder": "Nazwa (np. Dni robocze)",
     "gameRoomAddRateVariantButton": "Dodaj kolejną stawkę",
-    "gameRoomUseSingleRateButton": "Wróć do jednej ceny"
+    "gameRoomUseSingleRateButton": "Wróć do jednej ceny",
+    "launchesTimedTariffHint": "Start trwa z odliczaniem; zasób jest zajęty do zatrzymania/zwolnienia",
+    "launchesPricingModeInstant": "Bez timera",
+    "launchesPricingModeTimed": "Z timerem"
   },
   "abonements": {
     "title": "Abonamenty",
@@ -1195,14 +1198,17 @@
       "networkError": "Brak połączenia z serwerem — uruchomienie nie zostało utracone, spróbuj ponownie",
       "zoneFilterLabel": "Strefa",
       "allZonesOption": "Wszystkie strefy",
-      "expiredBannerLabel": "Czas się kończy — przejdź do zasobu"
+      "expiredBannerLabel": "Czas się kończy: {name} — {zone}",
+      "expiredNowBannerLabel": "Czas minął: {name} — {zone}"
     },
     "tally": {
       "entryTitle": "Uruchomienia",
       "zoneFilterLabel": "Strefa",
       "allZonesOption": "Wszystkie strefy",
       "receiptTitle": "Potwierdzenie uruchomienia",
-      "receiptDoneTitle": "Uruchomienie zarejestrowane"
+      "receiptDoneTitle": "Uruchomienie zarejestrowane",
+      "expiredLabel": "Czas minął",
+      "timedTariffHint": "Warianty"
     },
     "counters": {
       "pickZoneTitle": "Wybierz strefę",

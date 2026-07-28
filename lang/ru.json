@@ -765,6 +765,9 @@
     "printReceiptHint": "Сотрудник сможет распечатать квитанцию посетителю после посещения/пуска",
     "amountRoundingLabel": "Округление суммы",
     "amountRoundingHint": "Сумма пуска «По факту» округляется до целой валютной единицы: меньше половины — вниз, от половины — вверх",
+    "launchesPricingModeInstant": "Без таймера",
+    "launchesPricingModeTimed": "С таймером",
+    "launchesTimedTariffHint": "Пуск идёт с обратным отсчётом; актив занят до остановки/освобождения",
     "ticketRedemptionLabel": "Гашение билетов",
     "ticketRedemptionHint": "Выключено — система знает только продажи, без статусов и гашения (\"по старинке\")",
     "ticketLifetimeLabel": "Срок жизни заказов, дней",
@@ -1195,14 +1198,17 @@
       "networkError": "Нет связи с сервером — пуск не потерян, попробуйте ещё раз",
       "zoneFilterLabel": "Зона",
       "allZonesOption": "Все зоны",
-      "expiredBannerLabel": "Истекает таймер «За вход» — перейти к активу"
+      "expiredBannerLabel": "Истекает таймер: {name} — {zone}",
+      "expiredNowBannerLabel": "Время вышло: {name} — {zone}"
     },
     "tally": {
       "entryTitle": "Пуски",
       "zoneFilterLabel": "Зона",
       "allZonesOption": "Все зоны",
       "receiptTitle": "Квитанция пуска",
-      "receiptDoneTitle": "Пуск учтён"
+      "receiptDoneTitle": "Пуск учтён",
+      "expiredLabel": "Время вышло",
+      "timedTariffHint": "Варианты"
     },
     "counters": {
       "pickZoneTitle": "Выберите зону",

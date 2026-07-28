@@ -790,7 +790,10 @@
     "gameRoomRoundingUpNote": "La durata viene arrotondata per eccesso al minuto intero — il punto non perde sui minuti parziali.",
     "gameRoomRateOptionNamePlaceholder": "Nome (es. Giorni feriali)",
     "gameRoomAddRateVariantButton": "Aggiungi un'altra tariffa",
-    "gameRoomUseSingleRateButton": "Torna a un prezzo unico"
+    "gameRoomUseSingleRateButton": "Torna a un prezzo unico",
+    "launchesTimedTariffHint": "L'avvio procede con un conto alla rovescia; l'asset è occupato finché non viene fermato/liberato",
+    "launchesPricingModeInstant": "Senza timer",
+    "launchesPricingModeTimed": "Con timer"
   },
   "abonements": {
     "title": "Abbonamenti",
@@ -1195,14 +1198,17 @@
       "networkError": "Nessuna connessione al server — l'avvio non è andato perso, riprova",
       "zoneFilterLabel": "Zona",
       "allZonesOption": "Tutte le zone",
-      "expiredBannerLabel": "Il timer sta per scadere — vai all'attivo"
+      "expiredBannerLabel": "Il timer sta per scadere: {name} — {zone}",
+      "expiredNowBannerLabel": "Tempo scaduto: {name} — {zone}"
     },
     "tally": {
       "entryTitle": "Avvii",
       "zoneFilterLabel": "Zona",
       "allZonesOption": "Tutte le zone",
       "receiptTitle": "Ricevuta avvio",
-      "receiptDoneTitle": "Avvio registrato"
+      "receiptDoneTitle": "Avvio registrato",
+      "expiredLabel": "Tempo scaduto",
+      "timedTariffHint": "Varianti"
     },
     "counters": {
       "pickZoneTitle": "Seleziona zona",
