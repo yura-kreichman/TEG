@@ -1500,14 +1500,36 @@ export default function SubmitResultsPage() {
               // в lib/reports.ts/submit-results/counters-day/home-summary/
               // readings, просто пропущен здесь).
               const diff = Math.round((actual + (revenue?.abonementAmount ?? 0) - calculated) * 100) / 100;
+              // Наличные/Безнал переехали в один ряд со своими полями ввода
+              // (запрос пользователя 2026-07-28), тот же приём
+              // размытия/тапа-подстановки, что у "Счётчиков"/"Билетов" —
+              // ключ tapHintRevealed теперь по активу, не по зоне (эта
+              // шторка — на актив, не на зону целиком).
+              const assetCashRevealed = tapHintRevealed[activeAsset.id]?.cash ?? false;
+              const assetMobileRevealed = tapHintRevealed[activeAsset.id]?.mobile ?? false;
+              const revealOrFillAssetCash = () => {
+                if (!assetCashRevealed) {
+                  setTapHintRevealed((prev) => ({ ...prev, [activeAsset.id]: { ...prev[activeAsset.id], cash: true } }));
+                } else if (revenue) {
+                  updateAssetCash(activeZone.id, activeAsset.id, "cash", String(revenue.cashAmount));
+                }
+              };
+              const revealOrFillAssetMobile = () => {
+                if (!assetMobileRevealed) {
+                  setTapHintRevealed((prev) => ({ ...prev, [activeAsset.id]: { ...prev[activeAsset.id], mobile: true } }));
+                } else if (revenue) {
+                  updateAssetCash(activeZone.id, activeAsset.id, "mobile", String(revenue.mobileAmount));
+                }
+              };
               return (
                 <>
-                  {/* Разбивка Наличные/Безнал — справа от суммы, тот же паттерн,
-                      что карточка "Бизнес: расходы и прибыль" на money/page.tsx
-                      (запрос пользователя 2026-07-17). Общее правило для "За
-                      вход" и "По факту", не только при ненулевых суммах —
-                      показывается всегда, когда есть расчёт по активу. */}
-                  <div className="flex items-start justify-between gap-2 rounded-control bg-muted p-3.5">
+                  {/* Расчётно — общий ориентир (наличные+безнал+баланс), без
+                      разбивки по способам рядом с ним — та теперь размытыми
+                      подсказками прямо у Наличные/Безнал ниже (запрос
+                      пользователя 2026-07-28). Баланс своего поля ввода не
+                      имеет (оплата произошла раньше, при пополнении), поэтому
+                      остаётся здесь единственной справочной строкой. */}
+                  <div className="flex items-center justify-between gap-2 rounded-control bg-muted p-3.5">
                     <div className="flex min-w-0 flex-col tabular-nums">
                       <span className="text-caption-airbnb text-muted-foreground">
                         {t.operatorApp.submit.calculatedRevenue}
@@ -1516,33 +1538,13 @@ export default function SubmitResultsPage() {
                         <Money value={calculated} />
                       </span>
                     </div>
-                    {revenue && (
-                      <div className="flex min-w-0 flex-col items-end gap-0.5 pt-1 text-right text-caption-airbnb tabular-nums">
-                        <span>
-                          {t.operatorApp.submit.cashLabel}:{" "}
-                          <span className="font-bold text-foreground">
-                            <Money value={revenue.cashAmount} />
-                          </span>
+                    {revenue && revenue.abonementAmount > 0 && (
+                      <span className="text-right text-caption-airbnb tabular-nums">
+                        {t.operatorApp.abonement.paymentLabel}:{" "}
+                        <span className="font-bold text-foreground">
+                          <Money value={revenue.abonementAmount} />
                         </span>
-                        <span>
-                          {t.operatorApp.submit.mobileLabel}:{" "}
-                          <span className="font-bold text-foreground">
-                            <Money value={revenue.mobileAmount} />
-                          </span>
-                        </span>
-                        {/* Третий способ оплаты — показывается только когда
-                            есть чем (запрос пользователя 2026-07-17), в
-                            отличие от наличных/безнала не захламляет sheet
-                            у зон, где абонементом ещё не пользовались. */}
-                        {revenue.abonementAmount > 0 && (
-                          <span>
-                            {t.operatorApp.abonement.paymentLabel}:{" "}
-                            <span className="font-bold text-foreground">
-                              <Money value={revenue.abonementAmount} />
-                            </span>
-                          </span>
-                        )}
-                      </div>
+                      </span>
                     )}
                   </div>
                   {/* Крупная кнопка "Сохранить" — на оба поля разом (запрос
@@ -1553,28 +1555,84 @@ export default function SubmitResultsPage() {
                     <div className="flex flex-1 flex-col gap-3">
                       <div className="flex flex-col gap-1">
                         <Label htmlFor="assetCash">{t.operatorApp.submit.cashLabel}</Label>
-                        <MoneyInput
-                          id="assetCash"
-                          autoFocus={activeAsset.active}
-                          disabled={!activeAsset.active}
-                          scale="lg"
-                          inputMode="numeric"
-                          className="h-14 rounded-control bg-muted text-lg font-bold"
-                          value={entry.cash}
-                          onChange={(e) => updateAssetCash(activeZone.id, activeAsset.id, "cash", e.target.value)}
-                        />
+                        <div className="flex items-center gap-2">
+                          {revenue && revenue.cashAmount > 0 && (
+                            <PressableScale className="shrink-0">
+                              <button
+                                type="button"
+                                onClick={revealOrFillAssetCash}
+                                className="flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-control px-2.5"
+                              >
+                                <span
+                                  className={cn(
+                                    "text-lg font-semibold tabular-nums leading-none text-muted-foreground/50 transition-[filter]",
+                                    !assetCashRevealed && "blur-sm select-none"
+                                  )}
+                                >
+                                  <Money value={revenue.cashAmount} />
+                                </span>
+                                <span
+                                  className={cn(
+                                    "text-[0.625rem] leading-none text-muted-foreground/40 transition-[filter]",
+                                    !assetCashRevealed && "blur-sm select-none"
+                                  )}
+                                >
+                                  {t.operatorApp.submit.tapHintCaption}
+                                </span>
+                              </button>
+                            </PressableScale>
+                          )}
+                          <MoneyInput
+                            id="assetCash"
+                            autoFocus={activeAsset.active}
+                            disabled={!activeAsset.active}
+                            scale="lg"
+                            inputMode="numeric"
+                            className="h-14 rounded-control bg-muted text-lg font-bold"
+                            value={entry.cash}
+                            onChange={(e) => updateAssetCash(activeZone.id, activeAsset.id, "cash", e.target.value)}
+                          />
+                        </div>
                       </div>
                       <div className="flex flex-col gap-1">
                         <Label htmlFor="assetMobile">{t.operatorApp.submit.mobileLabel}</Label>
-                        <MoneyInput
-                          id="assetMobile"
-                          disabled={!activeAsset.active}
-                          scale="lg"
-                          inputMode="numeric"
-                          className="h-14 rounded-control bg-muted text-lg font-bold"
-                          value={entry.mobile}
-                          onChange={(e) => updateAssetCash(activeZone.id, activeAsset.id, "mobile", e.target.value)}
-                        />
+                        <div className="flex items-center gap-2">
+                          {revenue && revenue.mobileAmount > 0 && (
+                            <PressableScale className="shrink-0">
+                              <button
+                                type="button"
+                                onClick={revealOrFillAssetMobile}
+                                className="flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-control px-2.5"
+                              >
+                                <span
+                                  className={cn(
+                                    "text-lg font-semibold tabular-nums leading-none text-muted-foreground/50 transition-[filter]",
+                                    !assetMobileRevealed && "blur-sm select-none"
+                                  )}
+                                >
+                                  <Money value={revenue.mobileAmount} />
+                                </span>
+                                <span
+                                  className={cn(
+                                    "text-[0.625rem] leading-none text-muted-foreground/40 transition-[filter]",
+                                    !assetMobileRevealed && "blur-sm select-none"
+                                  )}
+                                >
+                                  {t.operatorApp.submit.tapHintCaption}
+                                </span>
+                              </button>
+                            </PressableScale>
+                          )}
+                          <MoneyInput
+                            id="assetMobile"
+                            disabled={!activeAsset.active}
+                            scale="lg"
+                            inputMode="numeric"
+                            className="h-14 rounded-control bg-muted text-lg font-bold"
+                            value={entry.mobile}
+                            onChange={(e) => updateAssetCash(activeZone.id, activeAsset.id, "mobile", e.target.value)}
+                          />
+                        </div>
                       </div>
                     </div>
                     <PressableScale className="flex">
