@@ -18,7 +18,7 @@ import { IconPicker } from "@/components/icon-picker";
 import { ActiveStatusIcon } from "@/components/active-status-icon";
 import { TileIcon } from "@/components/tile-icon";
 import { useI18n } from "@/components/i18n-provider";
-import { cn } from "@/lib/utils";
+import { cn, colorTagTint } from "@/lib/utils";
 import { ZONE_ACCOUNTING_MODES, type ZoneAccountingMode } from "@/lib/results-calc";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import type { Dictionary } from "@/lib/i18n";
@@ -32,7 +32,7 @@ interface ZoneInfo {
   active: boolean;
   tariffs: { id: string; name: string; price: string }[];
   assets: { id: string }[];
-  operatorsWithAccess: { id: string; name: string }[];
+  operatorsWithAccess: { id: string; name: string; colorTag: string | null }[];
 }
 
 // "stays"/"tickets" — самостоятельные режимы учёта, рядоположные остальным
@@ -199,14 +199,32 @@ export default function PointDetailPage() {
                             найден пользователем тем же днём: "у Жени все
                             зоны и он не отображается" — они фактически
                             привязаны к каждой зоне, просто не через
-                            выборочный список). Одна строка: иконка Users +
-                            имена через " · " (запрос того же дня), без
-                            аватаров. Пусто — просто без строки. */}
+                            выборочный список). Иконка Users + имя каждого
+                            сотрудника отдельным чипом с фоном по его
+                            цветовой метке — плоская 25%-прозрачность
+                            (colorTagTint), не градиент (запрос того же дня:
+                            "оставь метки с прозрачностью, как был начальный
+                            уровень градиента, тогда не будет проблемы" —
+                            снимает и чёрную, и белую метку сразу, обычный
+                            text-muted-foreground остаётся читаемым без
+                            расчёта контраста/обводки). Без аватаров. Пусто —
+                            без строки. */}
                         {zone.operatorsWithAccess.length > 0 && (
-                          <p className="mt-3 flex items-center gap-1.5 text-caption-airbnb text-muted-foreground">
-                            <Users className="size-3.5 shrink-0" />
-                            <span className="truncate">{zone.operatorsWithAccess.map((op) => op.name).join(" · ")}</span>
-                          </p>
+                          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                            <Users className="size-3.5 shrink-0 text-muted-foreground" />
+                            {zone.operatorsWithAccess.map((op) => (
+                              <span
+                                key={op.id}
+                                className={cn(
+                                  "rounded-full px-2.5 py-1 text-xs font-semibold text-muted-foreground",
+                                  !op.colorTag && "bg-surface-0"
+                                )}
+                                style={op.colorTag ? { backgroundColor: colorTagTint(op.colorTag) } : undefined}
+                              >
+                                {op.name}
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </SpringCard>
                     </Link>

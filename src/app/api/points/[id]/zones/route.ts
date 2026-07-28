@@ -27,7 +27,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]
         // пользователя 2026-07-28: "вместо тарифов — какой сотрудник
         // привязан к этой зоне"). Операторы с allZonesAccess=true сюда не
         // попадают (эта связь пуста для них) — их добавляем отдельно ниже.
-        operatorsWithAccess: { where: { active: true }, select: { id: true, name: true } },
+        operatorsWithAccess: { where: { active: true }, select: { id: true, name: true, colorTag: true } },
       },
       orderBy: { createdAt: "asc" },
     }),
@@ -37,7 +37,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]
     // operatorsWithAccess (та связь только для ВЫБОРОЧНОГО доступа).
     prisma.operator.findMany({
       where: { tenantId: owner.tenantId, active: true, allZonesAccess: true },
-      select: { id: true, name: true },
+      select: { id: true, name: true, colorTag: true },
       orderBy: { name: "asc" },
     }),
   ]);

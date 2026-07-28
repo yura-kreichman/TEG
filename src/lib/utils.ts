@@ -32,3 +32,16 @@ export function colorTagGradient(colorTag: string | null | undefined): string | 
   if (!colorTag || !/^#[0-9a-fA-F]{6}$/.test(colorTag)) return undefined
   return `linear-gradient(135deg, ${colorTag}40, ${colorTag}0d)`
 }
+
+// Плоская (не градиентная) полупрозрачная заливка colorTag — тот же
+// стартовый уровень прозрачности, что и первая точка colorTagGradient (25%,
+// суффикс 40). Запрос пользователя 2026-07-28: "оставь метки с
+// прозрачностью, как был начальный уровень градиента, тогда не будет
+// проблемы" — решает и чёрную, и белую метку сразу: 25%-заливка поверх
+// фона карточки всегда достаточно светлая/тёмная, чтобы обычный
+// text-muted-foreground оставался читаемым без отдельного расчёта контраста
+// или обводки.
+export function colorTagTint(colorTag: string | null | undefined): string | undefined {
+  if (!colorTag || !/^#[0-9a-fA-F]{6}$/.test(colorTag)) return undefined
+  return `${colorTag}40`
+}
