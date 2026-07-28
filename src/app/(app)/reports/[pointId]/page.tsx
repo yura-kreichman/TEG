@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowDown, ArrowUp, Building2, ChevronLeft, ChevronRight, Frown, Gift, MapPin, Meh, ShoppingBag, Smile } from "lucide-react";
+import { Building2, ChevronLeft, ChevronRight, Frown, Gift, MapPin, Meh, ShoppingBag, Smile } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
@@ -460,23 +460,6 @@ function ReportsSkeleton() {
   );
 }
 
-function Delta({ percent, t }: { percent: number | null; t: ReturnType<typeof useI18n> }) {
-  if (percent === null) return null;
-  const up = percent >= 0;
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold",
-        up ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"
-      )}
-    >
-      {up ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />}
-      {up ? "+" : ""}
-      {percent}% {t.reports.vsPreviousPeriodSuffix}
-    </span>
-  );
-}
-
 // Минимальная ширина колонки графика (px) — при "Неделя"/"Год" (≤12 колонок)
 // не задействуется, flex растягивает их на всю ширину плашки как раньше; при
 // "Месяц" (до 31) колонки упираются в этот минимум и контейнер начинает
@@ -566,17 +549,12 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
           </div>
           {/* Прибыль — ощутимо дальше от выручки, ближе к середине плашки,
               не сразу вплотную (запрос пользователя 2026-07-16), поэтому
-              gap-10, а не gap-4. Delta прижата вправо через ml-auto —
-              независимо от того, есть ли она вообще (percent===null → null),
-              позиция Прибыли от этого не зависит. */}
+              gap-10, а не gap-4. */}
           <div className="ml-10 flex flex-col">
             <span className="text-caption-airbnb text-muted-foreground">{t.reports.profitLabel}</span>
             <span className="text-[clamp(1.375rem,7vw,2rem)] font-extrabold leading-none tracking-[-0.02em] tabular-nums">
               <Money value={data.profitAndLoss.profit} size="display" displayScale={headlineDisplayScale} />
             </span>
-          </div>
-          <div className="ml-auto">
-            <Delta percent={data.deltaPercent} t={t} />
           </div>
         </div>
 
