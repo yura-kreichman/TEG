@@ -177,11 +177,6 @@ export default function SubmitResultsPage() {
   const [tapPaymentBreakdownByZone, setTapPaymentBreakdownByZone] = useState<
     Record<string, { cashAmount: number; mobileAmount: number; abonementAmount: number }>
   >({});
-  // Подсказка скрыта "шумом" (как спойлер в Telegram, запрос пользователя
-  // 2026-07-25) — 1-й тап только раскрывает число под размытием, 2-й (уже
-  // видимое) — подставляет в поле. Заставляет сначала реально посмотреть на
-  // цифру, а не тапнуть не глядя. Ключ — zoneId, отдельно для Наличных/Безнала.
-  const [tapHintRevealed, setTapHintRevealed] = useState<Record<string, { cash?: boolean; mobile?: boolean }>>({});
   // Возвраты/тесты tap-зон по ТАРИФУ (ключ `${zoneId}:${tariffId}`) — реальный
   // баг, найден пользователем 2026-07-25: живой предпросмотр здесь считал
   // "Разницу" по старой формуле calcZoneRevenue(tariffCalc, form.returnsCount),
@@ -1135,22 +1130,12 @@ export default function SubmitResultsPage() {
                     mobileHint = raw.mobileAmount;
                   }
                 }
-                const cashRevealed = tapHintRevealed[activeZone.id]?.cash ?? false;
-                const mobileRevealed = tapHintRevealed[activeZone.id]?.mobile ?? false;
-                const revealOrFillCash = () => {
-                  if (!cashRevealed) {
-                    setTapHintRevealed((prev) => ({ ...prev, [activeZone.id]: { ...prev[activeZone.id], cash: true } }));
-                  } else {
-                    updateZoneField(activeZone.id, "cashAmount", String(cashHint));
-                  }
-                };
-                const revealOrFillMobile = () => {
-                  if (!mobileRevealed) {
-                    setTapHintRevealed((prev) => ({ ...prev, [activeZone.id]: { ...prev[activeZone.id], mobile: true } }));
-                  } else {
-                    updateZoneField(activeZone.id, "mobileAmount", String(mobileHint));
-                  }
-                };
+                // Тап сразу подставляет значение в поле (запрос пользователя
+                // 2026-07-28: "не будем делать изначально скрытым, пусть
+                // будет видно всегда") — раньше был промежуточный шаг
+                // "раскрыть размытие", больше не нужен, число видно сразу.
+                const fillCash = () => updateZoneField(activeZone.id, "cashAmount", String(cashHint));
+                const fillMobile = () => updateZoneField(activeZone.id, "mobileAmount", String(mobileHint));
                 return (
                   <>
                     <div className="flex flex-col gap-1">
@@ -1159,36 +1144,23 @@ export default function SubmitResultsPage() {
                         {t.operatorApp.submit.cashLabel}
                       </Label>
                       {/* Подсказка — ПЕРЕД полем ввода, вровень с ним по
-                          высоте (запрос пользователя 2026-07-25), скрыта
-                          "шумом" (как закрытые сообщения в Telegram) — 1-й тап
-                          только снимает размытие, 2-й, уже по видимому числу —
-                          подставляет в поле. Мелкая подпись "расчётно" —
-                          понятно, что это за число, даже пока оно ещё
-                          размыто. Приглушённый серый, без цветного фона даже
-                          раскрытая — остаётся подсказкой, не акцентной
-                          кнопкой. */}
+                          высоте (запрос пользователя 2026-07-25). Тап
+                          подставляет значение в поле. Мелкая подпись
+                          "расчётно" — понятно, что это за число. Приглушённый
+                          серый, без цветного фона — остаётся подсказкой, не
+                          акцентной кнопкой. */}
                       <div className="flex items-center gap-2">
                         {cashHint > 0 && (
                           <PressableScale className="shrink-0">
                             <button
                               type="button"
-                              onClick={revealOrFillCash}
+                              onClick={fillCash}
                               className="flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-control px-2.5"
                             >
-                              <span
-                                className={cn(
-                                  "text-lg font-semibold tabular-nums leading-none text-muted-foreground/50 transition-[filter]",
-                                  !cashRevealed && "blur-sm select-none"
-                                )}
-                              >
+                              <span className="text-lg font-semibold tabular-nums leading-none text-muted-foreground/50">
                                 <Money value={cashHint} />
                               </span>
-                              <span
-                                className={cn(
-                                  "text-[0.625rem] leading-none text-muted-foreground/40 transition-[filter]",
-                                  !cashRevealed && "blur-sm select-none"
-                                )}
-                              >
+                              <span className="text-[0.625rem] leading-none text-muted-foreground/40">
                                 {t.operatorApp.submit.tapHintCaption}
                               </span>
                             </button>
@@ -1214,23 +1186,13 @@ export default function SubmitResultsPage() {
                           <PressableScale className="shrink-0">
                             <button
                               type="button"
-                              onClick={revealOrFillMobile}
+                              onClick={fillMobile}
                               className="flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-control px-2.5"
                             >
-                              <span
-                                className={cn(
-                                  "text-lg font-semibold tabular-nums leading-none text-muted-foreground/50 transition-[filter]",
-                                  !mobileRevealed && "blur-sm select-none"
-                                )}
-                              >
+                              <span className="text-lg font-semibold tabular-nums leading-none text-muted-foreground/50">
                                 <Money value={mobileHint} />
                               </span>
-                              <span
-                                className={cn(
-                                  "text-[0.625rem] leading-none text-muted-foreground/40 transition-[filter]",
-                                  !mobileRevealed && "blur-sm select-none"
-                                )}
-                              >
+                              <span className="text-[0.625rem] leading-none text-muted-foreground/40">
                                 {t.operatorApp.submit.tapHintCaption}
                               </span>
                             </button>
@@ -1501,34 +1463,24 @@ export default function SubmitResultsPage() {
               // readings, просто пропущен здесь).
               const diff = Math.round((actual + (revenue?.abonementAmount ?? 0) - calculated) * 100) / 100;
               // Наличные/Безнал переехали в один ряд со своими полями ввода
-              // (запрос пользователя 2026-07-28), тот же приём
-              // размытия/тапа-подстановки, что у "Счётчиков"/"Билетов" —
-              // ключ tapHintRevealed теперь по активу, не по зоне (эта
-              // шторка — на актив, не на зону целиком).
-              const assetCashRevealed = tapHintRevealed[activeAsset.id]?.cash ?? false;
-              const assetMobileRevealed = tapHintRevealed[activeAsset.id]?.mobile ?? false;
-              const revealOrFillAssetCash = () => {
-                if (!assetCashRevealed) {
-                  setTapHintRevealed((prev) => ({ ...prev, [activeAsset.id]: { ...prev[activeAsset.id], cash: true } }));
-                } else if (revenue) {
-                  updateAssetCash(activeZone.id, activeAsset.id, "cash", String(revenue.cashAmount));
-                }
+              // (запрос пользователя 2026-07-28), тот же приём, что у
+              // "Счётчиков"/"Билетов" — тап сразу подставляет значение, без
+              // предварительного размытия (тот же запрос, "пусть будет видно
+              // всегда").
+              const fillAssetCash = () => {
+                if (revenue) updateAssetCash(activeZone.id, activeAsset.id, "cash", String(revenue.cashAmount));
               };
-              const revealOrFillAssetMobile = () => {
-                if (!assetMobileRevealed) {
-                  setTapHintRevealed((prev) => ({ ...prev, [activeAsset.id]: { ...prev[activeAsset.id], mobile: true } }));
-                } else if (revenue) {
-                  updateAssetCash(activeZone.id, activeAsset.id, "mobile", String(revenue.mobileAmount));
-                }
+              const fillAssetMobile = () => {
+                if (revenue) updateAssetCash(activeZone.id, activeAsset.id, "mobile", String(revenue.mobileAmount));
               };
               return (
                 <>
                   {/* Расчётно — общий ориентир (наличные+безнал+баланс), без
-                      разбивки по способам рядом с ним — та теперь размытыми
-                      подсказками прямо у Наличные/Безнал ниже (запрос
-                      пользователя 2026-07-28). Баланс своего поля ввода не
-                      имеет (оплата произошла раньше, при пополнении), поэтому
-                      остаётся здесь единственной справочной строкой. */}
+                      разбивки по способам рядом с ним — та теперь подсказками
+                      прямо у Наличные/Безнал ниже (запрос пользователя
+                      2026-07-28). Баланс своего поля ввода не имеет (оплата
+                      произошла раньше, при пополнении), поэтому остаётся
+                      здесь единственной справочной строкой. */}
                   <div className="flex items-center justify-between gap-2 rounded-control bg-muted p-3.5">
                     <div className="flex min-w-0 flex-col tabular-nums">
                       <span className="text-caption-airbnb text-muted-foreground">
@@ -1560,23 +1512,13 @@ export default function SubmitResultsPage() {
                             <PressableScale className="shrink-0">
                               <button
                                 type="button"
-                                onClick={revealOrFillAssetCash}
+                                onClick={fillAssetCash}
                                 className="flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-control px-2.5"
                               >
-                                <span
-                                  className={cn(
-                                    "text-lg font-semibold tabular-nums leading-none text-muted-foreground/50 transition-[filter]",
-                                    !assetCashRevealed && "blur-sm select-none"
-                                  )}
-                                >
+                                <span className="text-lg font-semibold tabular-nums leading-none text-muted-foreground/50">
                                   <Money value={revenue.cashAmount} />
                                 </span>
-                                <span
-                                  className={cn(
-                                    "text-[0.625rem] leading-none text-muted-foreground/40 transition-[filter]",
-                                    !assetCashRevealed && "blur-sm select-none"
-                                  )}
-                                >
+                                <span className="text-[0.625rem] leading-none text-muted-foreground/40">
                                   {t.operatorApp.submit.tapHintCaption}
                                 </span>
                               </button>
@@ -1601,23 +1543,13 @@ export default function SubmitResultsPage() {
                             <PressableScale className="shrink-0">
                               <button
                                 type="button"
-                                onClick={revealOrFillAssetMobile}
+                                onClick={fillAssetMobile}
                                 className="flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-control px-2.5"
                               >
-                                <span
-                                  className={cn(
-                                    "text-lg font-semibold tabular-nums leading-none text-muted-foreground/50 transition-[filter]",
-                                    !assetMobileRevealed && "blur-sm select-none"
-                                  )}
-                                >
+                                <span className="text-lg font-semibold tabular-nums leading-none text-muted-foreground/50">
                                   <Money value={revenue.mobileAmount} />
                                 </span>
-                                <span
-                                  className={cn(
-                                    "text-[0.625rem] leading-none text-muted-foreground/40 transition-[filter]",
-                                    !assetMobileRevealed && "blur-sm select-none"
-                                  )}
-                                >
+                                <span className="text-[0.625rem] leading-none text-muted-foreground/40">
                                   {t.operatorApp.submit.tapHintCaption}
                                 </span>
                               </button>
@@ -1636,8 +1568,12 @@ export default function SubmitResultsPage() {
                       </div>
                     </div>
                     <PressableScale className="flex">
+                      {/* Вертикальная (запрос пользователя 2026-07-28: "чтобы
+                          было больше места для расчётных сумм") — та же
+                          кнопка, просто уже по ширине и текст читается сверху
+                          вниз, освобождает горизонтальное место полям слева. */}
                       <SaveButton
-                        className="h-full min-w-[5.5rem] rounded-control px-5 font-bold"
+                        className="h-full w-12 min-w-0 flex-col gap-1.5 rounded-control px-1 font-bold"
                         saved={assetSheetSaved}
                         onClick={() =>
                           pulseAssetSheet(() => {
@@ -1645,7 +1581,9 @@ export default function SubmitResultsPage() {
                             setAssetSheetId(null);
                           })
                         }
-                      />
+                      >
+                        <span className="[writing-mode:vertical-rl] rotate-180">{t.common.save}</span>
+                      </SaveButton>
                     </PressableScale>
                   </div>
                   {hasEntry && (
@@ -1748,10 +1686,12 @@ export default function SubmitResultsPage() {
               </div>
               <PressableScale className="flex">
                 <SaveButton
-                  className="h-full min-w-[5.5rem] rounded-control px-5 font-bold"
+                  className="h-full w-12 min-w-0 flex-col gap-1.5 rounded-control px-1 font-bold"
                   saved={assetSheetSaved}
                   onClick={() => pulseAssetSheet(() => setAssetSheetId(null))}
-                />
+                >
+                  <span className="[writing-mode:vertical-rl] rotate-180">{t.common.save}</span>
+                </SaveButton>
               </PressableScale>
             </div>
           </div>
