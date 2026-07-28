@@ -712,7 +712,8 @@
       "tickets": "Білеты"
     },
     "zoneActiveChip": "Актыўная",
-    "zoneInactiveChip": "Неактыўная"
+    "zoneInactiveChip": "Неактыўная",
+    "noOperatorsAttached": "Няма супрацоўнікаў"
   },
   "zoneDetail": {
     "notFound": "Зона не знойдзена.",

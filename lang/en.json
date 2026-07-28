@@ -712,7 +712,8 @@
       "tickets": "Tickets"
     },
     "zoneActiveChip": "Active",
-    "zoneInactiveChip": "Inactive"
+    "zoneInactiveChip": "Inactive",
+    "noOperatorsAttached": "No employees"
   },
   "zoneDetail": {
     "notFound": "Zone not found.",

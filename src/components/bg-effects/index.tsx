@@ -25,11 +25,24 @@ export { BG_EFFECT_VALUES, type BgEffect } from "./shared";
  * эффектов должны быть под плашками", живой скриншот — волны поверх
  * "Тема"/"Размер текста"). "Под плашками" важнее, чем "видно при любом
  * Фон приложения" — возвращаем строго отрицательный z-index.
+ *
+ * transform: translateZ(0) — реальный баг, найден пользователем 2026-07-28
+ * ("на некоторых Android и в целом на Safari... чтобы увидеть эффект волны
+ * надо потянуть", видна серая заливка вместо эффекта до первого скролла) —
+ * классическая проблема WebKit/старого Chromium: position:fixed с
+ * отрицательным z-index иногда не промотируется в свой composited layer
+ * сразу при первой отрисовке, элемент физически не красится, пока
+ * какой-нибудь скролл/репейнт не форсирует это. translateZ(0) заставляет
+ * браузер создать слой сразу (тот же приём — TenantLogoWatermark, общий баг).
  */
 export function BgEffectLayer({ effect }: { effect: BgEffect }) {
   if (effect === "none") return null;
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-x-0 bottom-0 h-32 overflow-hidden" style={{ zIndex: -1 }}>
+    <div
+      aria-hidden
+      className="pointer-events-none fixed inset-x-0 bottom-0 h-32 overflow-hidden"
+      style={{ zIndex: -1, transform: "translateZ(0)" }}
+    >
       {effect === "waves" && <WavesEffect />}
       {effect === "particles" && <ParticlesEffect />}
       {effect === "sparkles" && <SparklesEffect />}

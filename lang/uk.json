@@ -712,7 +712,8 @@
       "tickets": "Квитки"
     },
     "zoneActiveChip": "Активна",
-    "zoneInactiveChip": "Неактивна"
+    "zoneInactiveChip": "Неактивна",
+    "noOperatorsAttached": "Немає співробітників"
   },
   "zoneDetail": {
     "notFound": "Зону не знайдено.",

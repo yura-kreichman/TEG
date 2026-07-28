@@ -689,6 +689,7 @@
     "nameLabel": "Название зоны",
     "iconLabel": "Иконка",
     "noTariffs": "Тарифы не заданы",
+    "noOperatorsAttached": "Нет сотрудников",
     "assetsCount": "актив(ов)",
     "noZones": "Пока нет ни одной зоны — добавьте первую ниже.",
     "newZoneTitle": "Новая зона",

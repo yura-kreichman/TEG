@@ -712,7 +712,8 @@
       "tickets": "Biletlər"
     },
     "zoneActiveChip": "Aktiv",
-    "zoneInactiveChip": "Qeyri-aktiv"
+    "zoneInactiveChip": "Qeyri-aktiv",
+    "noOperatorsAttached": "Əməkdaş yoxdur"
   },
   "zoneDetail": {
     "notFound": "Zona tapılmadı.",

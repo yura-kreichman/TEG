@@ -712,7 +712,8 @@
       "tickets": "Տոմսեր"
     },
     "zoneActiveChip": "Ակտիվ",
-    "zoneInactiveChip": "Ապաակտիվ"
+    "zoneInactiveChip": "Ապաակտիվ",
+    "noOperatorsAttached": "Աշխատակիցներ չկան"
   },
   "zoneDetail": {
     "notFound": "Գոտին չի գտնվել.",

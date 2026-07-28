@@ -712,7 +712,8 @@
       "tickets": "Biletler"
     },
     "zoneActiveChip": "Aktif",
-    "zoneInactiveChip": "Etkin değil"
+    "zoneInactiveChip": "Etkin değil",
+    "noOperatorsAttached": "Çalışan yok"
   },
   "zoneDetail": {
     "notFound": "Bölge bulunamadı.",

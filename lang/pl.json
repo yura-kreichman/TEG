@@ -712,7 +712,8 @@
       "tickets": "Bilety"
     },
     "zoneActiveChip": "Aktywny",
-    "zoneInactiveChip": "Nieaktywna"
+    "zoneInactiveChip": "Nieaktywna",
+    "noOperatorsAttached": "Brak pracowników"
   },
   "zoneDetail": {
     "notFound": "Strefa nie znaleziona.",

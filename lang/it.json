@@ -712,7 +712,8 @@
       "tickets": "Biglietti"
     },
     "zoneActiveChip": "Attiva",
-    "zoneInactiveChip": "Inattiva"
+    "zoneInactiveChip": "Inattiva",
+    "noOperatorsAttached": "Nessun dipendente"
   },
   "zoneDetail": {
     "notFound": "Zona non trovata.",

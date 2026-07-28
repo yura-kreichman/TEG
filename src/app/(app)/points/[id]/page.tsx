@@ -209,10 +209,20 @@ export default function PointDetailPage() {
                             text-muted-foreground остаётся читаемым без
                             расчёта контраста/обводки). Без аватаров. Пусто —
                             без строки. */}
-                        {zone.operatorsWithAccess.length > 0 && (
-                          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                            <Users className="size-3.5 shrink-0 text-muted-foreground" />
-                            {zone.operatorsWithAccess.map((op) => (
+                        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                          <Users className="size-3.5 shrink-0 text-muted-foreground" />
+                          {zone.operatorsWithAccess.length === 0 ? (
+                            // Иконка раньше просто не рендерилась вовсе при
+                            // пустом списке (реальный баг, найден
+                            // пользователем 2026-07-28: "иконка просто не
+                            // отображается") — теперь строка есть всегда,
+                            // пустой список — явный текст, не молчаливое
+                            // отсутствие.
+                            <span className="text-caption-airbnb text-muted-foreground">
+                              {t.zonesList.noOperatorsAttached}
+                            </span>
+                          ) : (
+                            zone.operatorsWithAccess.map((op) => (
                               <span
                                 key={op.id}
                                 className={cn(
@@ -223,9 +233,9 @@ export default function PointDetailPage() {
                               >
                                 {op.name}
                               </span>
-                            ))}
-                          </div>
-                        )}
+                            ))
+                          )}
+                        </div>
                       </SpringCard>
                     </Link>
                   </PressableScale>

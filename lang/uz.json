@@ -712,7 +712,8 @@
       "tickets": "Chiptalar"
     },
     "zoneActiveChip": "Faol",
-    "zoneInactiveChip": "Nofaol"
+    "zoneInactiveChip": "Nofaol",
+    "noOperatorsAttached": "Xodimlar yo'q"
   },
   "zoneDetail": {
     "notFound": "Zona topilmadi.",

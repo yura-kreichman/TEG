@@ -712,7 +712,8 @@
       "tickets": "Bilete"
     },
     "zoneActiveChip": "Activ",
-    "zoneInactiveChip": "Inactivă"
+    "zoneInactiveChip": "Inactivă",
+    "noOperatorsAttached": "Fără angajați"
   },
   "zoneDetail": {
     "notFound": "Zona nu a fost găsită.",

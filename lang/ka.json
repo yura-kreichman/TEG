@@ -712,7 +712,8 @@
       "tickets": "ბილეთები"
     },
     "zoneActiveChip": "აქტიური",
-    "zoneInactiveChip": "არააქტიური"
+    "zoneInactiveChip": "არააქტიური",
+    "noOperatorsAttached": "თანამშრომლები არ არიან"
   },
   "zoneDetail": {
     "notFound": "ზონა ვერ მოიძებნა.",

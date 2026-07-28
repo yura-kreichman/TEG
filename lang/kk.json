@@ -712,7 +712,8 @@
       "tickets": "Билеттер"
     },
     "zoneActiveChip": "Белсенді",
-    "zoneInactiveChip": "Белсенді емес"
+    "zoneInactiveChip": "Белсенді емес",
+    "noOperatorsAttached": "Қызметкерлер жоқ"
   },
   "zoneDetail": {
     "notFound": "Аймақ табылмады.",

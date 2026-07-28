@@ -712,7 +712,8 @@
       "tickets": "Билетҳо"
     },
     "zoneActiveChip": "Фаъол",
-    "zoneInactiveChip": "Ғайрифаъол"
+    "zoneInactiveChip": "Ғайрифаъол",
+    "noOperatorsAttached": "Кормандон нест"
   },
   "zoneDetail": {
     "notFound": "Минтақа ёфт нашуд.",
