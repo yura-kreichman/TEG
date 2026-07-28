@@ -730,7 +730,7 @@ export default function StaysZonePage() {
                           window.localStorage.setItem(ASSET_SELECTION_KEY, a.id);
                         }}
                         className={cn(
-                          "flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card text-left shadow-card-rest",
+                          "flex w-full flex-col overflow-hidden rounded-card border-[1.5px] bg-card text-left shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)]",
                           active ? "border-primary" : "border-border"
                         )}
                       >
@@ -827,7 +827,7 @@ export default function StaysZonePage() {
                           aria-label={t.operatorApp.gameRoom.resumeLaunchAction}
                           disabled={resuming === l.id}
                           onClick={() => resumeLaunch(l.id)}
-                          className="flex aspect-4/5 w-full grayscale flex-col items-center justify-center gap-1 rounded-card border-[1.5px] border-border bg-card p-2 text-center shadow-card-rest disabled:opacity-60"
+                          className="flex aspect-4/5 w-full grayscale flex-col items-center justify-center gap-1 rounded-card border-[1.5px] border-border bg-card p-2 text-center shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] disabled:opacity-60"
                         >
                           <span className="flex flex-col items-center leading-tight">
                             <span className="text-[0.625rem] font-semibold text-muted-foreground">
@@ -851,7 +851,7 @@ export default function StaysZonePage() {
                     return (
                       <div
                         key={l.id}
-                        className="flex aspect-4/5 w-full flex-col items-center justify-center gap-2 rounded-card border-[1.5px] border-primary bg-card p-2 text-center shadow-card-rest"
+                        className="flex aspect-4/5 w-full flex-col items-center justify-center gap-2 rounded-card border-[1.5px] border-primary bg-card p-2 text-center shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)]"
                       >
                         {l.pricingMode === "per_minute" && <Money value={liveAmount} className="text-lg font-extrabold" />}
                         <span className="text-[0.6875rem] font-semibold">{t.operatorApp.gameRoom.stopConfirmQuestion}</span>
@@ -937,7 +937,7 @@ export default function StaysZonePage() {
                           type="button"
                           onClick={() => setInteracting(l.id)}
                           className={cn(
-                            "relative flex aspect-4/5 w-full flex-col items-center gap-1 overflow-hidden rounded-card border-[1.5px] bg-card px-2 pb-2 text-center shadow-card-rest",
+                            "relative flex aspect-4/5 w-full flex-col items-center gap-1 overflow-hidden rounded-card border-[1.5px] bg-card px-2 pb-2 text-center shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)]",
                             // Запас сверху под бейдж привязки клиента (реальный
                             // баг, запрос пользователя 2026-07-27, живой
                             // скриншот: "Посетитель" наезжал на иконку) —
@@ -1043,7 +1043,7 @@ export default function StaysZonePage() {
                     type="button"
                     onClick={handleAddTap}
                     disabled={addDisabled}
-                    className="flex aspect-4/5 w-full flex-col items-center justify-center gap-1 rounded-card border-[1.5px] border-dashed border-border p-2 text-center text-muted-foreground shadow-card-rest disabled:opacity-40"
+                    className="flex aspect-4/5 w-full flex-col items-center justify-center gap-1 rounded-card border-[1.5px] border-dashed border-border p-2 text-center text-muted-foreground shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] disabled:opacity-40"
                   >
                     <Plus className="size-5" />
                     <span className="text-[0.75rem] font-semibold leading-tight">

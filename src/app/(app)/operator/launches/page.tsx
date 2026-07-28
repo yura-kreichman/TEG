@@ -407,7 +407,7 @@ export default function LaunchesZonePage() {
                     type="button"
                     onClick={() => handleTileTap(a)}
                     disabled={!a.active || submitting}
-                    className="flex w-full flex-col overflow-hidden rounded-card border-[1.5px] border-border bg-card text-left shadow-card-rest disabled:opacity-40"
+                    className="flex w-full flex-col overflow-hidden rounded-card border-[1.5px] border-border bg-card text-left shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] disabled:opacity-40"
                   >
                     <div className="relative flex h-24 w-full shrink-0 items-center justify-center overflow-hidden bg-muted">
                       {a.photoUrl ? (
