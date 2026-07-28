@@ -388,25 +388,51 @@ export default function AbonementsPage() {
                   дня), не растянуто через justify-between на весь ряд.
                   Иконки — та же семантика, что и у per-карточки: Wallet у
                   клиента с балансом, Send у подключённых через Telegram. */}
-              {walletCounts && (
-                <div className="mb-3 flex flex-col gap-1.5 text-caption-airbnb text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <Users className="size-3.5 shrink-0" />
-                    {t.abonements.walletsCountTotal}{" "}
-                    <span className="font-semibold text-foreground">{walletCounts.total}</span>
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Send className="size-3.5 shrink-0" />
-                    {t.abonements.walletsCountConnected}{" "}
-                    <span className="font-semibold text-foreground">{walletCounts.connected}</span>
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Wallet className="size-3.5 shrink-0" />
-                    {t.abonements.walletsCountWithBalance}{" "}
-                    <span className="font-semibold text-foreground">{walletCounts.withBalance}</span>
-                  </span>
-                </div>
-              )}
+              {/* QR — в том же ряду, что сводка счётчиков, справа (запрос
+                  пользователя 2026-07-28), крупнее прежнего (icon-sm ->
+                  icon-lg) — ml-auto прижимает его к правому краю независимо
+                  от того, успела ли уже загрузиться сводка (walletCounts
+                  может быть ещё null в момент первого рендера). */}
+              <div className="mb-3 flex items-center justify-between gap-3">
+                {walletCounts && (
+                  <div className="flex flex-col gap-1.5 text-caption-airbnb text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="size-3.5 shrink-0" />
+                      {t.abonements.walletsCountTotal}{" "}
+                      <span className="font-semibold text-foreground">{walletCounts.total}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Send className="size-3.5 shrink-0" />
+                      {t.abonements.walletsCountConnected}{" "}
+                      <span className="font-semibold text-foreground">{walletCounts.connected}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Wallet className="size-3.5 shrink-0" />
+                      {t.abonements.walletsCountWithBalance}{" "}
+                      <span className="font-semibold text-foreground">{walletCounts.withBalance}</span>
+                    </span>
+                  </div>
+                )}
+                {/* Общий QR для нового клиента — показать/дать отсканировать
+                    на месте, без поиска его в списке (запрос пользователя
+                    2026-07-25). Не показываем, если бот вообще не настроен
+                    (telegramBalanceLink тогда null) — тот же принцип, что и у
+                    кнопки в карточке конкретного клиента. */}
+                {telegramBalanceLink && (
+                  <PressableScale className="ml-auto shrink-0">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-lg"
+                      className="rounded-lg"
+                      aria-label={t.abonements.telegramBalanceButton}
+                      onClick={() => setGenericQrOpen(true)}
+                    >
+                      <QrCodeIcon className="size-5" />
+                    </Button>
+                  </PressableScale>
+                )}
+              </div>
               <div className="mb-3 flex justify-end gap-2">
                 {/* Экспорт клиентов в CSV (запрос пользователя 2026-07-27) —
                     Name/Phone/Balance, телефон с "+" (см. export/route.ts). */}
@@ -424,25 +450,6 @@ export default function AbonementsPage() {
                     <FileDown className="size-4" />
                   </Button>
                 </PressableScale>
-                {/* Общий QR для нового клиента — показать/дать отсканировать
-                    на месте, без поиска его в списке (запрос пользователя
-                    2026-07-25). Не показываем, если бот вообще не настроен
-                    (telegramBalanceLink тогда null) — тот же принцип, что и у
-                    кнопки в карточке конкретного клиента. */}
-                {telegramBalanceLink && (
-                  <PressableScale>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      className="rounded-lg"
-                      aria-label={t.abonements.telegramBalanceButton}
-                      onClick={() => setGenericQrOpen(true)}
-                    >
-                      <QrCodeIcon className="size-4" />
-                    </Button>
-                  </PressableScale>
-                )}
                 <PressableScale>
                   <Button
                     variant="outline"
