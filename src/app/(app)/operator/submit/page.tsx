@@ -1121,6 +1121,19 @@ export default function SubmitResultsPage() {
                     cashHint = raw.cashAmount;
                     mobileHint = raw.mobileAmount;
                   }
+                } else if (isTicketsZone(activeZone)) {
+                  // Билеты (запрос пользователя 2026-07-28: "перенести в один
+                  // ряд с полями ввода") — тот же приём, что уже был у
+                  // "Счётчиков" выше, просто источник другой: разбивка
+                  // способов оплаты проданных заказов (ticketsAggregateByZone),
+                  // не тапы. По докам (docs/spec/10-tickets.md) так и
+                  // задумывалось изначально — "подсказкой у полей кассы", это
+                  // раньше просто не было реализовано этим способом.
+                  const raw = ticketsAggregateByZone[activeZone.id];
+                  if (raw) {
+                    cashHint = raw.cashAmount;
+                    mobileHint = raw.mobileAmount;
+                  }
                 }
                 const cashRevealed = tapHintRevealed[activeZone.id]?.cash ?? false;
                 const mobileRevealed = tapHintRevealed[activeZone.id]?.mobile ?? false;
@@ -1315,40 +1328,23 @@ export default function SubmitResultsPage() {
                     <span className="text-[0.9375rem] font-bold tabular-nums">{activeForm.returnsCount || 0}</span>
                   </div>
                 )}
-                {/* Билеты — справочная разбивка способов оплаты заказов
-                    (докс: "показывается подсказкой у полей кассы, БЕЗ
-                    автоподстановки"), тот же принцип, что у Пусков/
-                    Прибываний. Каждый способ — отдельной строкой (запрос
-                    пользователя 2026-07-22: "а то идёт всё сплошным
-                    текстом"), тот же приём, что у карточки зоны на "Итогах
-                    по дням" (money/readings/page.tsx). */}
-                {isTicketsZone(activeZone) && ticketsAggregateByZone[activeZone.id] && (
-                  <div className="flex flex-col gap-1 text-caption-airbnb text-muted-foreground tabular-nums">
-                    <div className="flex items-center justify-between">
+                {/* Билеты — Наличные/Безнал переехали в один ряд с полями
+                    ввода выше (запрос пользователя 2026-07-28), тот же приём
+                    размытия/тапа, что у "Счётчиков" — см. cashHint/mobileHint
+                    в начале этого блока. Баланс своего поля ввода не имеет
+                    (оплата балансом идёт мимо кассы Наличные/Безнал), поэтому
+                    остаётся здесь отдельной справочной строкой. */}
+                {isTicketsZone(activeZone) &&
+                  ticketsAggregateByZone[activeZone.id] &&
+                  ticketsAggregateByZone[activeZone.id].abonementAmount > 0 && (
+                    <div className="flex items-center justify-between text-caption-airbnb text-muted-foreground tabular-nums">
                       <span className="flex items-center gap-1.5">
-                        <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
-                        {t.operatorApp.submit.cashLabel}
+                        <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
+                        {t.operatorApp.abonement.paymentLabel}
                       </span>
-                      <span><Money value={ticketsAggregateByZone[activeZone.id].cashAmount} /></span>
+                      <span><Money value={ticketsAggregateByZone[activeZone.id].abonementAmount} /></span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5">
-                        <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
-                        {t.operatorApp.submit.mobileLabel}
-                      </span>
-                      <span><Money value={ticketsAggregateByZone[activeZone.id].mobileAmount} /></span>
-                    </div>
-                    {ticketsAggregateByZone[activeZone.id].abonementAmount > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
-                          {t.operatorApp.abonement.paymentLabel}
-                        </span>
-                        <span><Money value={ticketsAggregateByZone[activeZone.id].abonementAmount} /></span>
-                      </div>
-                    )}
-                  </div>
-                )}
+                  )}
               </>
             )}
           </div>
