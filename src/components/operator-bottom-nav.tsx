@@ -23,6 +23,14 @@ const EXPIRY_ALERT_REPEAT_MS = 8000;
 // и тот же паттерн (первые N прямо в баре, остальное — в BottomSheet), что
 // уже есть у Владельца (owner-shell.tsx, BAR_SLOTS).
 const BAR_SLOTS = 4;
+// На md+ (планшет/широкий экран, запрос пользователя 2026-07-28: "на
+// мобильных как есть, на планшете и широких экранах адаптировался") —
+// слотов достаточно под ВСЕ возможные пункты бара разом (Главная +
+// Счётчики/Прибывания/Пуски/Билеты/Товары/Абоненты = максимум 7), "Ещё"
+// в таком случае не появляется вовсе. Тот же порог md (768px), что и у
+// сайдбара Владельца (owner-shell.tsx).
+const BAR_SLOTS_WIDE = 7;
+const WIDE_MEDIA_QUERY = "(min-width: 768px)";
 
 /**
  * Нижний бар PWA оператора (docs/spec/03-design-system.md, "Навигация":
@@ -51,6 +59,21 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
   const [hasTickets, setHasTickets] = useState(false);
   const [hasGoods, setHasGoods] = useState(false);
   const [hasZones, setHasZones] = useState(false);
+  // Адаптивное число слотов бара (запрос пользователя 2026-07-28) — SSR и
+  // первый клиентский рендер всегда false (совпадают, гидратация без
+  // рассинхрона), реальная ширина подставляется эффектом ниже, тем же
+  // приёмом, что и остальные локальные "своё на устройство" состояния в
+  // проекте (см. use-print.ts).
+  const [isWide, setIsWide] = useState(false);
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const mq = window.matchMedia(WIDE_MEDIA_QUERY);
+    setIsWide(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsWide(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
   // Зелёная точка на "Товары" (запрос пользователя 2026-07-28, "как в
   // задачах") — корзина не пуста (хоть один товар с количеством > 0).
   const goodsCart = useGoodsCart();
@@ -241,8 +264,9 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
       : []),
   ];
 
-  const barItems = items.slice(0, BAR_SLOTS);
-  const overflowItems = items.slice(BAR_SLOTS);
+  const effectiveBarSlots = isWide ? BAR_SLOTS_WIDE : BAR_SLOTS;
+  const barItems = items.slice(0, effectiveBarSlots);
+  const overflowItems = items.slice(effectiveBarSlots);
 
   return (
     <div

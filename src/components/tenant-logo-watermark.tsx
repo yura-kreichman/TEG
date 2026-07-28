@@ -46,13 +46,13 @@ export function TenantLogoWatermark({ logoUrl }: { logoUrl: string | null }) {
       src={logoUrl}
       alt=""
       aria-hidden
-      // top-10 — сразу под верхней панелью (Сменить сотрудника/переключатель
-      // темы, ~2.75rem высотой) — реальный баг, найден пользователем
-      // 2026-07-28: top-0 садил лого вровень с переключателем темы,
-      // визуально наезжало на него; top-16 (первая правка того же дня)
-      // оказался слишком низко, top-11 — чуть-чуть ещё многовато. w-48 —
-      // чуть крупнее прежнего w-40.
-      className="pointer-events-none fixed right-0 top-10 w-48 opacity-40 mix-blend-multiply dark:invert dark:mix-blend-screen"
+      // top-9 — почти вплотную под верхней панелью (Сменить
+      // сотрудника/переключатель темы, ~2.25rem реального контента без
+      // нижнего паддинга) — реальный баг, найден пользователем 2026-07-28:
+      // top-0 садил лого вровень с переключателем темы, визуально наезжало
+      // на него; top-16/top-11 (промежуточные правки того же дня) — ещё с
+      // запасом. w-48 — чуть крупнее прежнего w-40.
+      className="pointer-events-none fixed right-0 top-9 w-48 opacity-40 mix-blend-multiply dark:invert dark:mix-blend-screen"
       style={{
         zIndex: -1,
         maskImage: CORNER_FADE_MASK,
