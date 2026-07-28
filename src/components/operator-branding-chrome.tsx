@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { TenantLogoWatermark } from "@/components/tenant-logo-watermark";
 import { PoweredByMark } from "@/components/powered-by-mark";
 import { BgEffectLayer, type BgEffect } from "@/components/bg-effects";
+import { useLiveRefetch } from "@/hooks/use-live-refetch";
 
 /**
  * Декоративное фирменное оформление PWA Сотрудника (запрос пользователя
@@ -27,16 +28,57 @@ import { BgEffectLayer, type BgEffect } from "@/components/bg-effects";
 export function OperatorBrandingChrome() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [bgEffect, setBgEffect] = useState<BgEffect>("waves");
+  const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
+  function loadBranding() {
     fetch("/api/operator/print-branding")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         setLogoUrl(data?.logoUrl ?? null);
         setBgEffect((data?.bgEffect ?? "waves") as BgEffect);
+        setLoaded(true);
+        // Акцентная схема (реальный баг, найден пользователем 2026-07-28:
+        // "акцентная схема владельца не влияет на цвета у сотрудника") —
+        // раньше PWA Сотрудника получал её ТОЛЬКО в момент логина
+        // (cookie, api/auth/operator/login/route.ts), а сессия оператора
+        // может часами держаться открытой на терминале точки — смена
+        // владельцем схемы уже ЗАЛОГИНЕННЫЙ оператор не видел без
+        // повторного входа. Прямая DOM-мутация — тот же приём, что
+        // AccentPicker использует в кабинете владельца для мгновенного
+        // применения без перезагрузки страницы.
+        if (data?.accentScheme) {
+          document.documentElement.setAttribute("data-accent", data.accentScheme);
+        }
       })
       .catch(() => {});
-  }, []);
+  }
+
+  useEffect(loadBranding, []);
+  // useLiveRefetch — тот же приём, что держит остальные "живые" данные PWA
+  // Сотрудника свежими без перезахода (устройство-терминал точки может
+  // часами оставаться открытым на одном экране).
+  useLiveRefetch(loadBranding);
+
+  // Реальный баг, найден пользователем 2026-07-28 живыми скриншотами Safari
+  // (iOS): даже с translateZ(0) на самих слоях (bg-effects/index.tsx,
+  // tenant-logo-watermark.tsx) волны/логотип оставались невидимы, пока
+  // оператор не потянет страницу — известная особенность iOS Safari:
+  // position:fixed элементы, появившиеся/изменившиеся ПОСЛЕ первой отрисовки
+  // (а этот компонент — client-side, содержимое приходит асинхронным fetch
+  // выше), иногда не перерасчитываются до первого реального скролл-события,
+  // а не просто не промотируются в composited layer. Микро-скролл (1px
+  // вниз-вверх) сразу после того, как реальные данные приходят (loaded, не
+  // сравнение с дефолтами — тенант с ДЕЙСТВИТЕЛЬНО пустым логотипом и
+  // "waves" по умолчанию иначе никогда не получил бы этот пинок), форсирует
+  // пересчёт программно, не дожидаясь жеста пользователя.
+  useEffect(() => {
+    if (!loaded) return;
+    const raf = requestAnimationFrame(() => {
+      window.scrollTo(0, 1);
+      window.scrollTo(0, 0);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [loaded]);
 
   return (
     <>

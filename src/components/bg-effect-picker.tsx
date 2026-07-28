@@ -7,7 +7,7 @@ import { useI18n } from "@/components/i18n-provider";
 import { BG_EFFECT_VALUES, type BgEffect } from "@/components/bg-effects";
 import { WavesEffect } from "@/components/bg-effects/waves";
 import { ParticlesEffect } from "@/components/bg-effects/particles";
-import { SparklesEffect } from "@/components/bg-effects/sparkles";
+import { HyperspaceEffect } from "@/components/bg-effects/hyperspace";
 import { AuroraEffect } from "@/components/bg-effects/aurora";
 import { ShimmerEffect } from "@/components/bg-effects/shimmer";
 
@@ -21,7 +21,7 @@ function MiniEffectPreview({ effect }: { effect: Exclude<BgEffect, "none"> }) {
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       {effect === "waves" && <WavesEffect />}
       {effect === "particles" && <ParticlesEffect />}
-      {effect === "sparkles" && <SparklesEffect />}
+      {effect === "hyperspace" && <HyperspaceEffect />}
       {effect === "aurora" && <AuroraEffect />}
       {effect === "shimmer" && <ShimmerEffect />}
     </div>

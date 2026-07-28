@@ -487,18 +487,40 @@
   animation-iteration-count: infinite;
 }
 
-@keyframes sparkle-pulse {
-  0%,
-  100% {
+/* "Гиперпространство" (запрос пользователя 2026-07-28, заменяет "Искры") —
+   звёзды летят по прямой от нижнего центра контейнера наружу и вверх,
+   одновременно вырастая (scale). left/bottom в % (--dx/--dy), НЕ
+   transform: translate(%rem) — реальный баг, найден пользователем
+   2026-07-28: тот же контейнер используется и как настоящий фон (h-32 на
+   всю ширину экрана), и как крошечное превью в настройках (h-9 в узкой
+   колонке) — абсолютные rem/px вылетали далеко за пределы 36px-превью
+   почти мгновенно (звёзды были не видны там вовсе), а % у transform:
+   translate() считается от размера САМОЙ звезды (2-3px), не контейнера.
+   left/bottom в % — единственное, что одинаково пропорционально работает в
+   обоих масштабах: они всегда считаются от размера КОНТЕЙНЕРА. */
+@keyframes hyperspace-fly {
+  0% {
+    left: 50%;
+    bottom: 0%;
+    transform: translateX(-50%) scale(0.3);
     opacity: 0;
   }
-  50% {
+  12% {
     opacity: var(--peak-opacity, 1);
   }
+  85% {
+    opacity: var(--peak-opacity, 1);
+  }
+  100% {
+    left: var(--dx, 50%);
+    bottom: var(--dy, 90%);
+    transform: translateX(-50%) scale(2.2);
+    opacity: 0;
+  }
 }
-.sparkle-layer {
-  animation-name: sparkle-pulse;
-  animation-timing-function: ease-in-out;
+.hyperspace-layer {
+  animation-name: hyperspace-fly;
+  animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
 
@@ -544,7 +566,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .particle-layer,
-  .sparkle-layer,
+  .hyperspace-layer,
   .aurora-layer,
   .shimmer-layer {
     animation: none;

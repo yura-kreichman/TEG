@@ -93,9 +93,9 @@
       "none": "No effect",
       "waves": "Waves",
       "particles": "Particles",
-      "sparkles": "Sparkles",
       "aurora": "Glow",
-      "shimmer": "Shimmer"
+      "shimmer": "Shimmer",
+      "hyperspace": "Hyperspace"
     },
     "languageTitle": "Language & region",
     "languageHint": "Shared across the whole company: interface language, timezone and currency.",

@@ -93,9 +93,9 @@
       "none": "Efekt yok",
       "waves": "Dalgalar",
       "particles": "Parçacıklar",
-      "sparkles": "Kıvılcımlar",
       "aurora": "Parıltı",
-      "shimmer": "Işıltı"
+      "shimmer": "Işıltı",
+      "hyperspace": "Hiperuzay"
     },
     "languageTitle": "Dil ve bölge",
     "languageHint": "Tüm şirket için ortak: arayüz dili, saat dilimi ve para birimi.",

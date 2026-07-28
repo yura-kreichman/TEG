@@ -93,9 +93,9 @@
       "none": "Nessun effetto",
       "waves": "Onde",
       "particles": "Particelle",
-      "sparkles": "Scintille",
       "aurora": "Bagliore",
-      "shimmer": "Luccichio"
+      "shimmer": "Luccichio",
+      "hyperspace": "Iperspazio"
     },
     "languageTitle": "Lingua e regione",
     "languageHint": "Condivisi da tutta l'azienda: lingua dell'interfaccia, fuso orario e valuta.",

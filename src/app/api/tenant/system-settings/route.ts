@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { BG_EFFECT_VALUES } from "@/components/bg-effects";
+import { normalizeBgEffect } from "@/components/bg-effects/shared";
 
 // Настройки → Система (запрос пользователя 2026-07-20) — страница задумана
 // расширяемой ("первый пункт там будет"). Тумблеры:
@@ -48,7 +49,11 @@ export async function GET() {
     goodsAllowBalancePayment: tenant?.goodsAllowBalancePayment ?? true,
     printingEnabled: tenant?.printingEnabled ?? false,
     expensesEnabled: tenant?.expensesEnabled ?? true,
-    bgEffect: tenant?.bgEffect ?? "waves",
+    // normalizeBgEffect — старое сохранённое "sparkles" (удалённый эффект
+    // "Искры", заменён "Гиперпространством" 2026-07-28) трактуется как
+    // "hyperspace" при чтении; перезапишется настоящим значением при
+    // следующем сохранении через PATCH ниже.
+    bgEffect: normalizeBgEffect(tenant?.bgEffect),
     // Только для превью квитанции ниже на этой же странице — шапка (лого/
     // название) переиспользует уже существующие поля тенанта, отдельно не
     // редактируется здесь (запрос пользователя 2026-07-20).

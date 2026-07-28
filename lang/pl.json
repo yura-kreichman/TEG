@@ -93,9 +93,9 @@
       "none": "Bez efektu",
       "waves": "Fale",
       "particles": "Cząsteczki",
-      "sparkles": "Iskry",
       "aurora": "Poświata",
-      "shimmer": "Blask"
+      "shimmer": "Blask",
+      "hyperspace": "Nadprzestrzeń"
     },
     "languageTitle": "Język i region",
     "languageHint": "Wspólne dla całej firmy: język interfejsu, strefa czasowa i waluta.",

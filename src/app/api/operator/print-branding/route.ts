@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
+import { normalizeBgEffect } from "@/components/bg-effects/shared";
 
 // Доступна ли Сотруднику печать на ЭТОМ устройстве прямо сейчас (запрос
 // пользователя 2026-07-20) — оба условия разом: тенант включил печать
@@ -27,6 +28,7 @@ export async function GET() {
       receiptShowTenantName: true,
       receiptCompactHeader: true,
       bgEffect: true,
+      accentScheme: true,
     },
   });
 
@@ -40,7 +42,21 @@ export async function GET() {
     // Не про печать — переиспользует этот же роут ради tenantId-запроса,
     // который PWA Сотрудника и так уже делает при монтировании (запрос
     // пользователя 2026-07-27, тот же приём, что logoUrl выше).
-    bgEffect: tenant?.bgEffect ?? "waves",
+    // normalizeBgEffect — старое сохранённое "sparkles" (удалённый эффект
+    // "Искры", заменён "Гиперпространством" 2026-07-28) трактуется как
+    // "hyperspace" при чтении, тот же приём, что и api/tenant/
+    // system-settings/route.ts.
+    bgEffect: normalizeBgEffect(tenant?.bgEffect),
+    // Акцентная схема (реальный баг, найден пользователем 2026-07-28:
+    // "акцентная схема владельца не влияет на цвета у сотрудника") —
+    // раньше PWA Сотрудника получал её ТОЛЬКО в момент логина (cookie
+    // ставится в api/auth/operator/login/route.ts), а сессия оператора
+    // может держаться открытой на терминале часами (устройство-точка) — при
+    // смене схемы владельцем УЖЕ залогиненный оператор не видел изменение
+    // без повторного входа. Теперь опрашивается тем же useLiveRefetch, что
+    // и остальная "живая" информация PWA Сотрудника (см.
+    // operator-branding-chrome.tsx).
+    accentScheme: tenant?.accentScheme ?? "green",
     // Ширина рулона/тип принтера — с УСТРОЙСТВА, не с тенанта (запрос
     // пользователя 2026-07-26: печать физически привязана к конкретному
     // принтеру этого устройства, не к бизнесу целиком).

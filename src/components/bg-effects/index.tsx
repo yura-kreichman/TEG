@@ -1,7 +1,7 @@
 import type { BgEffect } from "./shared";
 import { WavesEffect } from "./waves";
 import { ParticlesEffect } from "./particles";
-import { SparklesEffect } from "./sparkles";
+import { HyperspaceEffect } from "./hyperspace";
 import { AuroraEffect } from "./aurora";
 import { ShimmerEffect } from "./shimmer";
 
@@ -45,7 +45,7 @@ export function BgEffectLayer({ effect }: { effect: BgEffect }) {
     >
       {effect === "waves" && <WavesEffect />}
       {effect === "particles" && <ParticlesEffect />}
-      {effect === "sparkles" && <SparklesEffect />}
+      {effect === "hyperspace" && <HyperspaceEffect />}
       {effect === "aurora" && <AuroraEffect />}
       {effect === "shimmer" && <ShimmerEffect />}
     </div>

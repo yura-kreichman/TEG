@@ -4,7 +4,7 @@ import { ACCENT_LAYER_OPACITIES, TOP_FADE_MASK } from "./shared";
 // акцентного цвета медленно "гуляют" по фону. Только transform (см.
 // .aurora-layer/@keyframes aurora-drift в globals.css) — opacity тут
 // анимацией не тронут, поэтому инлайн-стиль ниже задаёт его напрямую, без
-// --peak-opacity трюка (в отличие от particles/sparkles). blur — filter,
+// --peak-opacity трюка (в отличие от particles/hyperspace). blur — filter,
 // тоже GPU-слой, считается один раз на отрисовку кадра композитором, не
 // пересчитывается покадрово в JS.
 // Скорость — запрос пользователя 2026-07-27: "должно быть быстрее, не видно
