@@ -20,7 +20,31 @@ import { cn } from "@/lib/utils";
 // выглядел непропорционально огромным рядом с цифрами (фидбек
 // пользователя 2026-07-15 по живым скриншотам) — на этом масштабе знак
 // вдвое меньше цифр (0.5em), не 85%.
-export function Money({ value, className, size }: { value: number; className?: string; size?: "display" }) {
+// Вынесено из Money (запрос пользователя 2026-07-28) — когда рядом стоят
+// НЕСКОЛЬКО заголовочных чисел (например, Выручка/Прибыль на /reports),
+// каждое своим size="display" считает масштаб от СВОЕЙ длины — если суммы
+// разной разрядности, числа рендерятся разным font-size и визуально
+// "съезжают" относительно друг друга. Вызывающая сторона теперь может
+// посчитать один масштаб от самой длинной строки пары и передать его обоим
+// через displayScale, чтобы оба числа всегда были одного размера.
+export function computeMoneyDisplayScale(formattedLength: number): number {
+  return Math.max(0.55, 1 - Math.max(0, formattedLength - 6) * 0.08);
+}
+
+export function Money({
+  value,
+  className,
+  size,
+  displayScale: displayScaleOverride,
+}: {
+  value: number;
+  className?: string;
+  size?: "display";
+  /** Готовый масштаб (см. computeMoneyDisplayScale) — переопределяет
+   *  автовычисление по длине ЭТОГО числа, для группы чисел с общим
+   *  масштабом. Без size="display" не имеет эффекта. */
+  displayScale?: number;
+}) {
   const locale = useLocale();
   const currency = useCurrency();
   const sign = getCurrencySign(currency);
@@ -37,7 +61,8 @@ export function Money({ value, className, size }: { value: number; className?: s
   // не меняются), считается от длины уже отформатированной строки (с
   // пробелами-разделителями разрядов), не только от кол-ва цифр — именно
   // пробелы и добавляют реальную ширину при росте разряда.
-  const displayScale = size === "display" ? Math.max(0.55, 1 - Math.max(0, formatted.length - 6) * 0.08) : 1;
+  const displayScale =
+    size === "display" ? (displayScaleOverride ?? computeMoneyDisplayScale(formatted.length)) : 1;
 
   return (
     <span

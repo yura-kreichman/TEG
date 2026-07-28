@@ -20,8 +20,8 @@ import {
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n, useLocale, useCurrency } from "@/components/i18n-provider";
-import { Money } from "@/components/money";
-import { formatMoneyCompact } from "@/lib/format";
+import { Money, computeMoneyDisplayScale } from "@/components/money";
+import { formatMoney, formatMoneyCompact } from "@/lib/format";
 import { getCurrencySign } from "@/lib/currency";
 import { toDateStr } from "@/lib/datetime-format";
 import { cn } from "@/lib/utils";
@@ -535,6 +535,16 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
   const totalPoints = visibleBars.map((b, i) => `${xFor(i)},${yFor(b.total)}`).join(" ");
   const profitPoints = visibleBars.map((b, i) => `${xFor(i)},${yFor(b.profit)}`).join(" ");
 
+  // Выручка и Прибыль — один общий масштаб на двоих (запрос пользователя
+  // 2026-07-28: "смотри как сместились из-за того что суммы выросли") — при
+  // независимом size="display" у каждого числа своей длины разные суммы
+  // рендерились разным font-size и визуально "съезжали" друг относительно
+  // друга. Берём масштаб от ДЛИННЕЙШЕЙ из двух строк — короткая просто
+  // получает тот же (меньший) масштаб, обе всегда одного размера.
+  const headlineDisplayScale = computeMoneyDisplayScale(
+    Math.max(formatMoney(data.total, locale).length, formatMoney(data.profitAndLoss.profit, locale).length)
+  );
+
   return (
     <div className="flex flex-col gap-3">
       <SpringCard animate={false} hover={false}>
@@ -542,7 +552,7 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
           <div className="flex flex-col">
             <span className="text-caption-airbnb text-muted-foreground">{t.reports.revenueLabel}</span>
             <span className="text-[2rem] font-extrabold leading-none tracking-[-0.02em] tabular-nums">
-              <Money value={data.total} size="display" />
+              <Money value={data.total} size="display" displayScale={headlineDisplayScale} />
             </span>
           </div>
           {/* Прибыль — ощутимо дальше от выручки, ближе к середине плашки,
@@ -553,7 +563,7 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
           <div className="ml-10 flex flex-col">
             <span className="text-caption-airbnb text-muted-foreground">{t.reports.profitLabel}</span>
             <span className="text-[2rem] font-extrabold leading-none tracking-[-0.02em] tabular-nums">
-              <Money value={data.profitAndLoss.profit} size="display" />
+              <Money value={data.profitAndLoss.profit} size="display" displayScale={headlineDisplayScale} />
             </span>
           </div>
           <div className="ml-auto">
