@@ -1548,7 +1548,7 @@ function OrderCard({
   const liveTickets = order.tickets.filter((tk) => tk.status === "active");
   const tickets = liveTickets.filter((tk) => selectedAssetIds.includes(tk.assetId));
   return (
-    <div className="flex flex-col gap-3 rounded-card border border-border bg-card p-3.5">
+    <div className="flex flex-col gap-3 rounded-card border border-border bg-card p-3.5 shadow-card-rest">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-[1.0625rem] font-extrabold tabular-nums">

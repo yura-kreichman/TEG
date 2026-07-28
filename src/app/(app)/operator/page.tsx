@@ -522,7 +522,7 @@ export default function OperatorHomePage() {
             <button
               type="button"
               onClick={() => router.push("/operator/work-time")}
-              className="flex w-full items-center justify-between rounded-control border border-border bg-card px-4 py-3 text-left"
+              className="flex w-full items-center justify-between rounded-control border border-border bg-card px-4 py-3 text-left shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)]"
             >
               <span>
                 <span className="block text-caption-airbnb text-muted-foreground">

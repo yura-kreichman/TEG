@@ -1369,7 +1369,7 @@ export default function SubmitResultsPage() {
                   {items.map((expense) => (
                     <div
                       key={expense.id}
-                      className="flex items-center justify-between gap-3 rounded-card border border-border bg-card p-3"
+                      className="flex items-center justify-between gap-3 rounded-card border border-border bg-card p-3 shadow-card-rest"
                     >
                       <div className="min-w-0">
                         <p className="text-body-airbnb font-semibold">{expense.categoryName ?? t.operatorApp.submit.expensesTitle}</p>
@@ -1396,7 +1396,7 @@ export default function SubmitResultsPage() {
               return (
                 <div
                   key={zoneId}
-                  className="flex flex-col gap-1 rounded-card border border-border bg-card p-3 text-body-airbnb"
+                  className="flex flex-col gap-1 rounded-card border border-border bg-card p-3 text-body-airbnb shadow-card-rest"
                 >
                   <span className="font-semibold">{zone.name}</span>
                   {preview && (zone.accountingMode === "cash_only" || isStaysZone(zone) || isLaunchesZone(zone)) && (

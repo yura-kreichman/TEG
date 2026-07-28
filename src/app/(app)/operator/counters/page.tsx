@@ -516,7 +516,7 @@ export default function OperatorCountersPage() {
             <button
               type="button"
               onClick={openReturnSheet}
-              className="relative flex h-24 w-full flex-col items-center justify-center gap-1.5 rounded-control border-[1.5px] border-border bg-card p-2 text-center"
+              className="relative flex h-24 w-full flex-col items-center justify-center gap-1.5 rounded-control border-[1.5px] border-border bg-card p-2 text-center shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)]"
             >
               {events.length > 0 && (
                 <span className="absolute -right-2 -top-2 flex size-9 items-center justify-center rounded-full bg-muted text-lg font-extrabold tabular-nums text-muted-foreground shadow-md">
