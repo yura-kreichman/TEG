@@ -12,7 +12,7 @@ import {
   ChevronRight,
   MapPin,
   Pause,
-  Play,
+  Check,
   TabletSmartphone,
   ArrowLeftRight,
   PrinterCheck,
@@ -739,6 +739,9 @@ export default function PointsPage() {
         {pointKebab && pointKebabView === "menu" && (
           <div className="pt-2">
             <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">{pointKebab.name}</h2>
+            <ActionSheetItem icon={pointKebab.active ? Pause : Check} onClick={() => togglePointActive(pointKebab)}>
+              {pointKebab.active ? t.points.deactivatePoint : t.points.activatePoint}
+            </ActionSheetItem>
             <ActionSheetItem icon={Pencil} onClick={() => setPointKebabView("rename")}>
               {t.points.renamePoint}
             </ActionSheetItem>
@@ -747,9 +750,6 @@ export default function PointsPage() {
             </ActionSheetItem>
             <ActionSheetItem icon={MapPin} onClick={openLocationView}>
               {t.points.editLocationAction}
-            </ActionSheetItem>
-            <ActionSheetItem icon={pointKebab.active ? Pause : Play} onClick={() => togglePointActive(pointKebab)}>
-              {pointKebab.active ? t.points.deactivatePoint : t.points.activatePoint}
             </ActionSheetItem>
             <ActionSheetItem icon={Trash2} destructive onClick={() => setPointKebabView("confirm-delete")}>
               {t.points.deletePoint}

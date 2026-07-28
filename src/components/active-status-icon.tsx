@@ -1,6 +1,6 @@
 "use client";
 
-import { SquareCheckBig, TriangleAlert } from "lucide-react";
+import { Check, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { cn } from "@/lib/utils";
@@ -9,7 +9,9 @@ import { cn } from "@/lib/utils";
  * Иконка вместо текстовой плашки "Активен"/"Активна"/"Неактивен" по всему
  * проекту (запрос пользователя 2026-07-22: "абсолютно везде... заменить на
  * зелёную иконку square-check-big... если неактивно... иконка серая
- * triangle-alert") — тот же принцип, что уже был у Устройств (Точки →
+ * triangle-alert"; сменено 2026-07-28 на просто check (активно) и pause
+ * (неактивно, без круга) — "неактивно" не предупреждение об ошибке, а
+ * обычная пауза) — тот же принцип, что уже был у Устройств (Точки →
  * Устройства: активация без отдельного слова), теперь распространён на
  * Сотрудников, Точки, Зоны и сами Устройства (иконка активного устройства
  * была circle-check-big — заменена на square-check-big для единообразия;
@@ -40,7 +42,7 @@ export function ActiveStatusIcon({
   className?: string;
 }) {
   const label = active ? activeLabel : inactiveLabel;
-  const Icon = active ? SquareCheckBig : TriangleAlert;
+  const Icon = active ? Check : Pause;
 
   if (!onToggle) {
     return (

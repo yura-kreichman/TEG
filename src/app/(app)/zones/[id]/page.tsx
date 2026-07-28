@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Banknote, Check, Pencil, Camera, CircuitBoard, ClockPlus, ImagePlus, ListChecks, Ticket, Timer, Trash2, Plus, Pause, Play, ChevronDown, ChevronUp, Smile, Gauge, TriangleAlert, type LucideIcon } from "lucide-react";
+import { Banknote, Check, Pencil, Camera, CircuitBoard, ClockPlus, ImagePlus, ListChecks, Ticket, Timer, Trash2, Plus, Pause, ChevronDown, ChevronUp, Smile, Gauge, TriangleAlert, type LucideIcon } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -1440,6 +1440,9 @@ export default function ZoneDetailPage() {
         {zoneKebabView === "menu" && (
           <div className="pt-2">
             <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">{zone.name}</h2>
+            <ActionSheetItem icon={zone.active ? Pause : Check} onClick={toggleZoneActive}>
+              {zone.active ? t.zoneDetail.deactivateZone : t.zoneDetail.activateZone}
+            </ActionSheetItem>
             <ActionSheetItem icon={Pencil} onClick={() => setZoneKebabView("rename")}>
               {t.zoneDetail.renameZone}
             </ActionSheetItem>
@@ -1466,9 +1469,6 @@ export default function ZoneDetailPage() {
                 {t.zoneDetail.changeAccountingModeAction}
               </ActionSheetItem>
             )}
-            <ActionSheetItem icon={zone.active ? Pause : Play} onClick={toggleZoneActive}>
-              {zone.active ? t.zoneDetail.deactivateZone : t.zoneDetail.activateZone}
-            </ActionSheetItem>
             <ActionSheetItem icon={Trash2} destructive onClick={() => setZoneKebabView("confirm-delete")}>
               {t.zoneDetail.deleteZone}
             </ActionSheetItem>
@@ -1892,6 +1892,9 @@ export default function ZoneDetailPage() {
         {assetKebab && assetKebabView === "menu" && (
           <div className="pt-2">
             <h2 className="mb-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">{assetKebab.name}</h2>
+            <ActionSheetItem icon={assetKebab.active ? Pause : Check} onClick={toggleAssetActive}>
+              {assetKebab.active ? t.zoneDetail.deactivateAsset : t.zoneDetail.activateAsset}
+            </ActionSheetItem>
             <ActionSheetItem icon={Pencil} onClick={() => setAssetKebabView("edit")}>
               {t.zoneDetail.nameAndColorAction}
             </ActionSheetItem>
@@ -1910,9 +1913,6 @@ export default function ZoneDetailPage() {
             </ActionSheetItem>
             <ActionSheetItem icon={ImagePlus} onClick={() => setAssetKebabView("icon")}>
               {t.common.changeIcon}
-            </ActionSheetItem>
-            <ActionSheetItem icon={assetKebab.active ? Pause : Play} onClick={toggleAssetActive}>
-              {assetKebab.active ? t.zoneDetail.deactivateAsset : t.zoneDetail.activateAsset}
             </ActionSheetItem>
             <ActionSheetItem icon={Trash2} destructive onClick={() => setAssetKebabView("confirm-delete")}>
               {t.zoneDetail.deleteAssetAction}
