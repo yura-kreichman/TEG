@@ -824,7 +824,7 @@ export default function TicketsZonePage() {
                         className="flex shrink-0 flex-col gap-0 px-2 py-1.5"
                         style={{ background: colorTagGradient(a.colorTag) }}
                       >
-                        <span className="truncate text-[0.8125rem] font-bold leading-tight tracking-[-0.01em]">{a.name}</span>
+                        <span className="line-clamp-2 text-[0.8125rem] font-bold leading-tight tracking-[-0.01em] wrap-break-word">{a.name}</span>
                         {/* "Тайл неактивен С ПРИЧИНОЙ" (docs/spec/10-
                             tickets.md, "ЦЕНЫ — НА АКТИВАХ, НЕ ТАРИФЫ") — не
                             просто приглушённый тайл, видимая причина. */}
