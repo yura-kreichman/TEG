@@ -27,8 +27,20 @@ import { cn } from "@/lib/utils";
 // "съезжают" относительно друг друга. Вызывающая сторона теперь может
 // посчитать один масштаб от самой длинной строки пары и передать его обоим
 // через displayScale, чтобы оба числа всегда были одного размера.
-export function computeMoneyDisplayScale(formattedLength: number): number {
-  return Math.max(0.55, 1 - Math.max(0, formattedLength - 6) * 0.08);
+//
+// Параметры настраиваемые (тот же запрос, для карточки "Бизнес: расходы и
+// прибыль") — дефолты калиброваны под крупный заголовок (~2rem, 1-2 широкие
+// колонки); узкие колонки (3-4 в ряд, ~1rem шрифт) начинают переполняться
+// заметно раньше — там нужен более ранний порог и более резкое уменьшение,
+// вызывающая сторона передаёт свои thresholdLength/perCharReduction/minScale.
+export function computeMoneyDisplayScale(
+  formattedLength: number,
+  options?: { thresholdLength?: number; perCharReduction?: number; minScale?: number }
+): number {
+  const thresholdLength = options?.thresholdLength ?? 6;
+  const perCharReduction = options?.perCharReduction ?? 0.08;
+  const minScale = options?.minScale ?? 0.55;
+  return Math.max(minScale, 1 - Math.max(0, formattedLength - thresholdLength) * perCharReduction);
 }
 
 export function Money({

@@ -14,9 +14,10 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
-import { useI18n } from "@/components/i18n-provider";
+import { useI18n, useLocale } from "@/components/i18n-provider";
 import type { Dictionary } from "@/lib/i18n";
-import { Money } from "@/components/money";
+import { Money, computeMoneyDisplayScale } from "@/components/money";
+import { formatMoney } from "@/lib/format";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { SpringCard } from "@/components/spring-card";
@@ -143,6 +144,7 @@ export function OwnerDashboardCard({
   hasPin: boolean;
 }) {
   const t = useI18n();
+  const locale = useLocale();
   const router = useRouter();
 
   const [companyName, setCompanyName] = useState(tenantName ?? "");
@@ -479,40 +481,57 @@ export function OwnerDashboardCard({
                         )}
                       </div>
                     </div>
-                    <div className="flex border-t border-border pt-3 tabular-nums">
-                      <div className="flex-1">
-                        <p className="text-caption-airbnb">{t.money.revenue}</p>
-                        <p className="text-[1rem] font-bold">
-                          <Money value={summary.revenue!} />
-                        </p>
-                      </div>
-                      <div className="flex-1 border-l border-border pl-4">
-                        <p className="text-caption-airbnb">{t.home.submissionsCountLabel}</p>
-                        <p className="text-[1rem] font-bold">{summary.submissionsCount}</p>
-                      </div>
-                      {/* Отдельный переход на /money/expenses, а не общий /money
-                          карточки (запрос пользователя 2026-07-16) — div с
-                          preventDefault/stopPropagation, не вложенный <a>,
-                          чтобы не ломать HTML внутри уже кликабельной карточки. */}
-                      <div
-                        role="link"
-                        tabIndex={0}
-                        className="flex-1 border-l border-border pl-4"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          router.push(`/money/expenses${pointQuery}`);
-                        }}
-                      >
-                        <p className="flex items-center justify-between gap-0.5 text-caption-airbnb">
-                          <span>{t.money.expensesLink}</span>
-                          <ChevronRight className="size-3 shrink-0" />
-                        </p>
-                        <p className="text-[1rem] font-bold">
-                          <Money value={Math.abs(summary.expenses!)} />
-                        </p>
-                      </div>
-                    </div>
+                    {/* Выручка/Расходы — общий масштаб на двоих (запрос
+                        пользователя 2026-07-28), та же логика, что у
+                        аналогичной строки в Деньгах — узкая колонка, своя
+                        более резкая кривая уменьшения, чем у крупного
+                        заголовка Прибыль выше. "Кол-во сдач" по центру — не
+                        деньги, шрифт не трогаем. */}
+                    {(() => {
+                      const homeRevenueRowScale = computeMoneyDisplayScale(
+                        Math.max(
+                          formatMoney(summary.revenue!, locale).length,
+                          formatMoney(Math.abs(summary.expenses!), locale).length
+                        ),
+                        { thresholdLength: 4, perCharReduction: 0.1, minScale: 0.6 }
+                      );
+                      return (
+                        <div className="flex border-t border-border pt-3 tabular-nums">
+                          <div className="flex-1">
+                            <p className="text-caption-airbnb">{t.money.revenue}</p>
+                            <p className="text-[1rem] font-bold">
+                              <Money value={summary.revenue!} size="display" displayScale={homeRevenueRowScale} />
+                            </p>
+                          </div>
+                          <div className="flex-1 border-l border-border pl-4">
+                            <p className="text-caption-airbnb">{t.home.submissionsCountLabel}</p>
+                            <p className="text-[1rem] font-bold">{summary.submissionsCount}</p>
+                          </div>
+                          {/* Отдельный переход на /money/expenses, а не общий /money
+                              карточки (запрос пользователя 2026-07-16) — div с
+                              preventDefault/stopPropagation, не вложенный <a>,
+                              чтобы не ломать HTML внутри уже кликабельной карточки. */}
+                          <div
+                            role="link"
+                            tabIndex={0}
+                            className="flex-1 border-l border-border pl-4"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              router.push(`/money/expenses${pointQuery}`);
+                            }}
+                          >
+                            <p className="flex items-center justify-between gap-0.5 text-caption-airbnb">
+                              <span>{t.money.expensesLink}</span>
+                              <ChevronRight className="size-3 shrink-0" />
+                            </p>
+                            <p className="text-[1rem] font-bold">
+                              <Money value={Math.abs(summary.expenses!)} size="display" displayScale={homeRevenueRowScale} />
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     {!summary.isToday && (
                       <p className="mt-3 flex items-center gap-1.5 border-t border-border pt-3 text-caption-airbnb">
                         <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/40" />

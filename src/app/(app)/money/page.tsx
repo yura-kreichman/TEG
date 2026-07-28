@@ -12,10 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
-import { useI18n } from "@/components/i18n-provider";
+import { useI18n, useLocale } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 import { pad, toDateStr } from "@/lib/datetime-format";
-import { Money } from "@/components/money";
+import { Money, computeMoneyDisplayScale } from "@/components/money";
+import { formatMoney } from "@/lib/format";
 import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { useTenantTimezone } from "@/hooks/use-tenant-timezone";
 import { tenantTodayAnchor } from "@/lib/period-nav";
@@ -39,6 +40,7 @@ export default function MoneyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useI18n();
+  const locale = useLocale();
   const [checking, setChecking] = useState(true);
   const [report, setReport] = useState<Report | null>(null);
 
@@ -447,32 +449,58 @@ export default function MoneyPage() {
                 )}
               </div>
             </div>
-            <div className="flex border-t border-border pt-3.5 tabular-nums">
-              <div className="flex-1">
-                <p className="text-caption-airbnb">{t.money.revenue}</p>
-                <p className="text-[1.0625rem] font-bold"><Money value={report.business.revenue} /></p>
-              </div>
-              <div className="flex-1 border-l border-border pl-4">
-                <p className="text-caption-airbnb">{t.money.expense}</p>
-                <p className="text-[1.0625rem] font-bold"><Money value={Math.abs(report.business.expense)} /></p>
-              </div>
-              {report.business.salary !== 0 && (
-                <div className="flex-1 border-l border-border pl-4">
-                  <p className="text-caption-airbnb">{t.money.salaryLabel}</p>
-                  <p className="text-[1.0625rem] font-bold"><Money value={Math.abs(report.business.salary)} /></p>
+            {/* Выручка/Расходы/Зарплаты/Разница — общий масштаб на весь ряд
+                (запрос пользователя 2026-07-28) — узкие колонки (до 4 в ряд),
+                своя, более резкая кривая уменьшения, чем у крупного
+                заголовка Прибыль/Наличные выше: без неё длинная сумма просто
+                переносится на вторую строку внутри своей колонки, ряд
+                становится "рваным" по высоте. */}
+            {(() => {
+              const businessRowValues = [
+                report.business.revenue,
+                Math.abs(report.business.expense),
+                report.business.salary !== 0 ? Math.abs(report.business.salary) : null,
+                report.business.difference !== 0 ? report.business.difference : null,
+              ].filter((v): v is number => v !== null);
+              const businessRowScale = computeMoneyDisplayScale(
+                Math.max(...businessRowValues.map((v) => formatMoney(v, locale).length)),
+                { thresholdLength: 4, perCharReduction: 0.1, minScale: 0.6 }
+              );
+              return (
+                <div className="flex border-t border-border pt-3.5 tabular-nums">
+                  <div className="flex-1">
+                    <p className="text-caption-airbnb">{t.money.revenue}</p>
+                    <p className="text-[1.0625rem] font-bold">
+                      <Money value={report.business.revenue} size="display" displayScale={businessRowScale} />
+                    </p>
+                  </div>
+                  <div className="flex-1 border-l border-border pl-4">
+                    <p className="text-caption-airbnb">{t.money.expense}</p>
+                    <p className="text-[1.0625rem] font-bold">
+                      <Money value={Math.abs(report.business.expense)} size="display" displayScale={businessRowScale} />
+                    </p>
+                  </div>
+                  {report.business.salary !== 0 && (
+                    <div className="flex-1 border-l border-border pl-4">
+                      <p className="text-caption-airbnb">{t.money.salaryLabel}</p>
+                      <p className="text-[1.0625rem] font-bold">
+                        <Money value={Math.abs(report.business.salary)} size="display" displayScale={businessRowScale} />
+                      </p>
+                    </div>
+                  )}
+                  {report.business.difference !== 0 && (
+                    <div className="flex-1 border-l border-border pl-4">
+                      <p className="text-caption-airbnb">{t.money.difference}</p>
+                      <p className={cn("text-[1.0625rem] font-bold", report.business.difference >= 0 ? "text-primary" : "text-destructive")}>
+                        {report.business.difference >= 0 ? "+" : ""}
+                        <Money value={report.business.difference} size="display" displayScale={businessRowScale} />
+                      </p>
+                      <p className="text-[0.65625rem] leading-tight text-muted-foreground">{t.money.differenceHint}</p>
+                    </div>
+                  )}
                 </div>
-              )}
-              {report.business.difference !== 0 && (
-                <div className="flex-1 border-l border-border pl-4">
-                  <p className="text-caption-airbnb">{t.money.difference}</p>
-                  <p className={cn("text-[1.0625rem] font-bold", report.business.difference >= 0 ? "text-primary" : "text-destructive")}>
-                    {report.business.difference >= 0 ? "+" : ""}
-                    <Money value={report.business.difference} />
-                  </p>
-                  <p className="text-[0.65625rem] leading-tight text-muted-foreground">{t.money.differenceHint}</p>
-                </div>
-              )}
-            </div>
+              );
+            })()}
           </SpringCard>
 
           {/* Тот же пункт, что на Главной у Владельца (запрос пользователя
