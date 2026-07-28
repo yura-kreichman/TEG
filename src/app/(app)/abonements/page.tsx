@@ -381,25 +381,34 @@ export default function AbonementsPage() {
             <>
               {/* Сводка счётчиков (запрос пользователя 2026-07-28) — всегда
                   про всю базу клиентов тенанта, не про текущий
-                  поиск/фильтр списка ниже (см. walletCounts). На всю ширину
-                  строки (justify-between), иконки — та же семантика, что и
-                  у per-карточки: Wallet у клиента с балансом, Send у
-                  подключённых через Telegram (запрос того же дня). */}
+                  поиск/фильтр списка ниже (см. walletCounts). По одной
+                  строке (реальный баг, найден пользователем 2026-07-28:
+                  в один ряд длинные подписи переносились и "кривило" всю
+                  строку) — каждая своей строкой, растянута на всю ширину
+                  (justify-between). Иконки — та же семантика, что и у
+                  per-карточки: Wallet у клиента с балансом, Send у
+                  подключённых через Telegram. */}
               {walletCounts && (
-                <div className="mb-3 flex items-center justify-between gap-2 text-caption-airbnb text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <Users className="size-3.5 shrink-0" />
-                    {t.abonements.walletsCountTotal}{" "}
+                <div className="mb-3 flex flex-col gap-1.5 text-caption-airbnb text-muted-foreground">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="size-3.5 shrink-0" />
+                      {t.abonements.walletsCountTotal}
+                    </span>
                     <span className="font-semibold text-foreground">{walletCounts.total}</span>
                   </span>
-                  <span className="flex items-center gap-1.5">
-                    <Send className="size-3.5 shrink-0" />
-                    {t.abonements.walletsCountConnected}{" "}
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5">
+                      <Send className="size-3.5 shrink-0" />
+                      {t.abonements.walletsCountConnected}
+                    </span>
                     <span className="font-semibold text-foreground">{walletCounts.connected}</span>
                   </span>
-                  <span className="flex items-center gap-1.5">
-                    <Wallet className="size-3.5 shrink-0" />
-                    {t.abonements.walletsCountWithBalance}{" "}
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5">
+                      <Wallet className="size-3.5 shrink-0" />
+                      {t.abonements.walletsCountWithBalance}
+                    </span>
                     <span className="font-semibold text-foreground">{walletCounts.withBalance}</span>
                   </span>
                 </div>
