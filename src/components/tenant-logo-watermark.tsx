@@ -46,7 +46,11 @@ export function TenantLogoWatermark({ logoUrl }: { logoUrl: string | null }) {
       src={logoUrl}
       alt=""
       aria-hidden
-      className="pointer-events-none fixed right-0 top-0 w-40 opacity-40 mix-blend-multiply dark:invert dark:mix-blend-screen"
+      // top-16 — ниже верхней панели (Сменить сотрудника/переключатель темы,
+      // ~2.75rem высотой) — реальный баг, найден пользователем 2026-07-28:
+      // top-0 садил лого вровень с переключателем темы, визуально наезжало
+      // на него. w-48 — чуть крупнее прежнего w-40 (запрос того же дня).
+      className="pointer-events-none fixed right-0 top-16 w-48 opacity-40 mix-blend-multiply dark:invert dark:mix-blend-screen"
       style={{
         zIndex: -1,
         maskImage: CORNER_FADE_MASK,
