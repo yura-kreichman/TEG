@@ -50,6 +50,18 @@ const DEFAULT_ENABLED_MODULES: EnabledModules = {
   clientsEnabled: true,
 };
 
+// Реальный баг, найден пользователем 2026-07-28: "при переходе на другую
+// страницу первым эффектом нижнего бара открывается Волны, потом через
+// доли секунды появляется действительно выбранный эффект" — OwnerShell не
+// живёт в едином layout.tsx (в отличие от PWA Сотрудника), каждая страница
+// кабинета оборачивает контент в СВОЙ <OwnerShell>, так что компонент
+// перемонтируется на каждой навигации и bgEffect стартует заново со
+// значения по умолчанию "waves", пока не придёт fetch. Модульный кэш вне
+// компонента (переживает размонтирование, в отличие от useState) убирает
+// вспышку — второй и далее переход сразу стартует с последнего известного
+// значения.
+let cachedBgEffect: BgEffect | null = null;
+
 interface NavItemConfig {
   id: string;
   href: string;
@@ -178,7 +190,7 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
   // Дефолт — всё включено, чтобы до ответа сервера бар не мигал пустыми
   // слотами (тот же приём, что list начинается с 0 у badge-счётчиков).
   const [enabledModules, setEnabledModules] = useState<EnabledModules>(DEFAULT_ENABLED_MODULES);
-  const [bgEffect, setBgEffect] = useState<BgEffect>("waves");
+  const [bgEffect, setBgEffect] = useState<BgEffect>(cachedBgEffect ?? "waves");
 
   // Обновляем при каждой навигации — самый дешёвый способ не держать
   // отдельный стор ради одного badge-числа (список пунктов бара маленький,
@@ -209,7 +221,8 @@ export function OwnerShell({ children }: { children: React.ReactNode }) {
           });
           // Фоновый эффект — тот же роут уже вызывался здесь ради модулей
           // (запрос пользователя 2026-07-27), отдельный fetch не нужен.
-          setBgEffect((data.bgEffect ?? "waves") as BgEffect);
+          cachedBgEffect = (data.bgEffect ?? "waves") as BgEffect;
+          setBgEffect(cachedBgEffect);
         });
     }
     loadEnabledModules();

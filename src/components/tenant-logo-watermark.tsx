@@ -38,6 +38,14 @@
 // "сейчас видимы 20%, а надо наоборот").
 const CORNER_FADE_MASK = "linear-gradient(to bottom left, black 0%, black 80%, transparent 100%)";
 
+// data-tenant-logo-watermark — не стилевой хук, только маркер для
+// globals.css (html:has([data-tenant-logo-watermark])) — тот же
+// непрозрачный bg-surface-0, что гасил BgEffectLayer (см. комментарий там),
+// точно так же гасил и этот логотип на любой странице без выбранного
+// отдельно "Фон приложения" (реальный баг, найден пользователем 2026-07-28:
+// "на Safari логотип всё равно где-то далеко" — на самом деле не "далеко",
+// а почти невидим на сплошном сером, отчего расположение читалось как
+// случайное/оторванное от остального интерфейса).
 export function TenantLogoWatermark({ logoUrl }: { logoUrl: string | null }) {
   if (!logoUrl) return null;
   return (
@@ -46,6 +54,7 @@ export function TenantLogoWatermark({ logoUrl }: { logoUrl: string | null }) {
       src={logoUrl}
       alt=""
       aria-hidden
+      data-tenant-logo-watermark
       // top-12 — верхняя панель (Сменить сотрудника/переключатель темы) —
       // строка в нормальном потоке, p-2 (8px) + h-7 переключателя (28px) +
       // 8px ≈ 44px реальной высоты; top-9 (36px, прежнее значение) на самом
