@@ -17,13 +17,40 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]
     return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
   }
 
-  const zones = await prisma.zone.findMany({
-    where: { pointId },
-    include: { tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" } }, assets: { orderBy: { sortOrder: "asc" } } },
-    orderBy: { createdAt: "asc" },
+  const [zones, tenantOperators] = await Promise.all([
+    prisma.zone.findMany({
+      where: { pointId },
+      include: {
+        tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" } },
+        assets: { orderBy: { sortOrder: "asc" } },
+        // Сотрудники с ВЫБОРОЧНЫМ доступом, включающим эту зону (запрос
+        // пользователя 2026-07-28: "вместо тарифов — какой сотрудник
+        // привязан к этой зоне"). Операторы с allZonesAccess=true сюда не
+        // попадают (эта связь пуста для них) — их добавляем отдельно ниже.
+        operatorsWithAccess: { where: { active: true }, select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    // Операторы "со всеми зонами" — реальный баг, найден пользователем
+    // 2026-07-28: "у Жени все зоны и он не отображается" — они тоже
+    // фактически привязаны к каждой зоне точки, просто не через
+    // operatorsWithAccess (та связь только для ВЫБОРОЧНОГО доступа).
+    prisma.operator.findMany({
+      where: { tenantId: owner.tenantId, active: true, allZonesAccess: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  const zonesWithOperators = zones.map((zone) => {
+    // dedupe — на случай, если оператор с allZonesAccess=true всё ещё
+    // числится и в выборочном списке (устаревшие данные), не должен
+    // показаться дважды.
+    const byId = new Map([...tenantOperators, ...zone.operatorsWithAccess].map((op) => [op.id, op]));
+    return { ...zone, operatorsWithAccess: [...byId.values()] };
   });
 
-  return NextResponse.json({ zones, pointName: point.name, pointActive: point.active });
+  return NextResponse.json({ zones: zonesWithOperators, pointName: point.name, pointActive: point.active });
 }
 
 export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]/zones">) {

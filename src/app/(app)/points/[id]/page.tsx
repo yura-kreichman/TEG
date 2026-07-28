@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Banknote, Check, ChevronRight, CircuitBoard, ClockPlus, Plus, Ticket, Timer, type LucideIcon } from "lucide-react";
+import { Banknote, Check, ChevronRight, CircuitBoard, ClockPlus, Plus, Ticket, Timer, Users, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
@@ -15,12 +15,11 @@ import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconPicker } from "@/components/icon-picker";
-import { StatusChip } from "@/components/status-chip";
 import { ActiveStatusIcon } from "@/components/active-status-icon";
 import { TileIcon } from "@/components/tile-icon";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
-import { ZONE_ACCOUNTING_MODES, isStaysZone, isTicketsZone, type ZoneAccountingMode } from "@/lib/results-calc";
+import { ZONE_ACCOUNTING_MODES, type ZoneAccountingMode } from "@/lib/results-calc";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import type { Dictionary } from "@/lib/i18n";
 
@@ -33,6 +32,7 @@ interface ZoneInfo {
   active: boolean;
   tariffs: { id: string; name: string; price: string }[];
   assets: { id: string }[];
+  operatorsWithAccess: { id: string; name: string }[];
 }
 
 // "stays"/"tickets" — самостоятельные режимы учёта, рядоположные остальным
@@ -192,26 +192,21 @@ export default function PointDetailPage() {
                           </div>
                           <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
                         </div>
-                        {/* Билеты не участвуют в этом блоке — у них нет
-                            тарифов вовсе, цены на активах (docs/spec/10-
-                            tickets.md, "ЦЕНЫ — НА АКТИВАХ, НЕ ТАРИФЫ"); без
-                            исключения тут ложно показывался бы warning-чип
-                            "Нет тарифов" на КАЖДОЙ tickets-зоне. */}
-                        {zone.accountingMode !== "cash_only" && !isStaysZone(zone) && !isTicketsZone(zone) && (
-                          <div className="mt-3 flex flex-wrap gap-1.5">
-                            {zone.tariffs.length === 0 ? (
-                              <StatusChip variant="warning">{t.zonesList.noTariffs}</StatusChip>
-                            ) : (
-                              zone.tariffs.map((tariff) => (
-                                <span
-                                  key={tariff.id}
-                                  className="rounded-full bg-surface-0 px-2.5 py-1 text-xs font-semibold tabular-nums text-muted-foreground"
-                                >
-                                  {tariff.name} · {tariff.price}
-                                </span>
-                              ))
-                            )}
-                          </div>
+                        {/* Сотрудники, привязанные к зоне (запрос
+                            пользователя 2026-07-28: "вместо тарифов — какой
+                            сотрудник привязан к этой зоне") — включает и
+                            операторов с allZonesAccess=true (реальный баг,
+                            найден пользователем тем же днём: "у Жени все
+                            зоны и он не отображается" — они фактически
+                            привязаны к каждой зоне, просто не через
+                            выборочный список). Одна строка: иконка Users +
+                            имена через " · " (запрос того же дня), без
+                            аватаров. Пусто — просто без строки. */}
+                        {zone.operatorsWithAccess.length > 0 && (
+                          <p className="mt-3 flex items-center gap-1.5 text-caption-airbnb text-muted-foreground">
+                            <Users className="size-3.5 shrink-0" />
+                            <span className="truncate">{zone.operatorsWithAccess.map((op) => op.name).join(" · ")}</span>
+                          </p>
                         )}
                       </SpringCard>
                     </Link>
