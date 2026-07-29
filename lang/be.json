@@ -628,7 +628,7 @@
     "nameLabel": "Назва кропкі",
     "addressLabel": "Адрас (неабавязкова)",
     "iconLabel": "Іконка",
-    "addDeviceButton": "Стварыць прыладу/спасылку актывацыі",
+    "addDeviceButton": "Прывязаць прыладу",
     "deviceActivated": "Актыўна",
     "deviceAwaiting": "чакае актывацыі",
     "showQr": "Паказаць QR-код",
@@ -681,7 +681,10 @@
     "deactivatePoint": "Дэактываваць кропку",
     "activatePoint": "Актываваць кропку",
     "pointActiveChip": "Актыўная",
-    "pointInactiveChip": "Неактыўная"
+    "pointInactiveChip": "Неактыўная",
+    "bindCurrentDeviceButton": "Прывязаць гэтую прыладу",
+    "deviceBoundToast": "Прылада прывязана",
+    "newDeviceCurrentSub": "Прылада адразу актывуецца і будзе гатова для ўваходу аператара па PIN"
   },
   "zonesList": {
     "title": "Зоны",

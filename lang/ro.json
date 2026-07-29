@@ -628,7 +628,7 @@
     "nameLabel": "Numele punctului",
     "addressLabel": "Adresă (opțional)",
     "iconLabel": "Pictogramă",
-    "addDeviceButton": "Creează dispozitiv/link de activare",
+    "addDeviceButton": "Asociază dispozitivul",
     "deviceActivated": "Activ",
     "deviceAwaiting": "așteaptă activarea",
     "showQr": "Arată codul QR",
@@ -681,7 +681,10 @@
     "deactivatePoint": "Dezactivează punctul",
     "activatePoint": "Activează punctul",
     "pointActiveChip": "Activ",
-    "pointInactiveChip": "Inactiv"
+    "pointInactiveChip": "Inactiv",
+    "bindCurrentDeviceButton": "Asociază acest dispozitiv",
+    "deviceBoundToast": "Dispozitiv asociat",
+    "newDeviceCurrentSub": "Dispozitivul se activează imediat și va fi gata pentru autentificarea operatorului cu PIN"
   },
   "zonesList": {
     "title": "Zone",

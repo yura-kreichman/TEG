@@ -628,7 +628,7 @@
     "nameLabel": "Nöqtənin adı",
     "addressLabel": "Ünvan (məcburi deyil)",
     "iconLabel": "Nişan",
-    "addDeviceButton": "Cihaz/aktivləşdirmə keçidi yarat",
+    "addDeviceButton": "Cihazı bağla",
     "deviceActivated": "Aktiv",
     "deviceAwaiting": "aktivləşdirməni gözləyir",
     "showQr": "QR-kodu göstər",
@@ -681,7 +681,10 @@
     "deactivatePoint": "Nöqtəni deaktiv et",
     "activatePoint": "Nöqtəni aktivləşdir",
     "pointActiveChip": "Aktiv",
-    "pointInactiveChip": "Deaktiv"
+    "pointInactiveChip": "Deaktiv",
+    "bindCurrentDeviceButton": "Bu cihazı bağla",
+    "deviceBoundToast": "Cihaz bağlandı",
+    "newDeviceCurrentSub": "Cihaz dərhal aktivləşdirilir və operatorun PIN ilə girişi üçün hazır olacaq"
   },
   "zonesList": {
     "title": "Zonalar",

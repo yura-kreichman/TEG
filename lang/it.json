@@ -628,7 +628,7 @@
     "nameLabel": "Nome del punto",
     "addressLabel": "Indirizzo (facoltativo)",
     "iconLabel": "Icona",
-    "addDeviceButton": "Crea dispositivo/link di attivazione",
+    "addDeviceButton": "Collega dispositivo",
     "deviceActivated": "Attivo",
     "deviceAwaiting": "in attesa di attivazione",
     "showQr": "Mostra codice QR",
@@ -681,7 +681,10 @@
     "deactivatePoint": "Disattiva punto",
     "activatePoint": "Attiva punto",
     "pointActiveChip": "Attivo",
-    "pointInactiveChip": "Inattivo"
+    "pointInactiveChip": "Inattivo",
+    "bindCurrentDeviceButton": "Collega questo dispositivo",
+    "deviceBoundToast": "Dispositivo collegato",
+    "newDeviceCurrentSub": "Il dispositivo si attiva subito ed è pronto per l'accesso dell'operatore con PIN"
   },
   "zonesList": {
     "title": "Zone",

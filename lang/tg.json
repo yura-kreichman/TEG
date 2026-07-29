@@ -628,7 +628,7 @@
     "nameLabel": "Номи нуқта",
     "addressLabel": "Суроға (ихтиёрӣ)",
     "iconLabel": "Иконка",
-    "addDeviceButton": "Дастгоҳ/истиноди фаъолсозӣ эҷод кардан",
+    "addDeviceButton": "Пайваст кардани дастгоҳ",
     "deviceActivated": "Фаъол",
     "deviceAwaiting": "интизори фаъолсозӣ",
     "showQr": "QR-кодро нишон додан",
@@ -681,7 +681,10 @@
     "deactivatePoint": "Ғайрифаъол кардани нуқта",
     "activatePoint": "Фаъол кардани нуқта",
     "pointActiveChip": "Фаъол",
-    "pointInactiveChip": "Ғайрифаъол"
+    "pointInactiveChip": "Ғайрифаъол",
+    "bindCurrentDeviceButton": "Пайваст кардани ин дастгоҳ",
+    "deviceBoundToast": "Дастгоҳ пайваст шуд",
+    "newDeviceCurrentSub": "Дастгоҳ дарҳол фаъол мешавад ва барои воридшавии оператор бо PIN омода мешавад"
   },
   "zonesList": {
     "title": "Минтақаҳо",

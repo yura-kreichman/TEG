@@ -628,7 +628,7 @@
     "nameLabel": "Nokta adı",
     "addressLabel": "Adres (isteğe bağlı)",
     "iconLabel": "Simge",
-    "addDeviceButton": "Cihaz/etkinleştirme bağlantısı oluştur",
+    "addDeviceButton": "Cihazı bağla",
     "deviceActivated": "Etkin",
     "deviceAwaiting": "etkinleştirme bekleniyor",
     "showQr": "QR kodunu göster",
@@ -681,7 +681,10 @@
     "deactivatePoint": "Noktayı devre dışı bırak",
     "activatePoint": "Noktayı etkinleştir",
     "pointActiveChip": "Aktif",
-    "pointInactiveChip": "Devre dışı"
+    "pointInactiveChip": "Devre dışı",
+    "bindCurrentDeviceButton": "Bu cihazı bağla",
+    "deviceBoundToast": "Cihaz bağlandı",
+    "newDeviceCurrentSub": "Cihaz hemen etkinleşir ve operatörün PIN ile girişi için hazır olur"
   },
   "zonesList": {
     "title": "Bölgeler",

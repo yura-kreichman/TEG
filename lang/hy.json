@@ -628,7 +628,7 @@
     "nameLabel": "Կետի անվանում",
     "addressLabel": "Հասցե (ընտրովի)",
     "iconLabel": "Պատկերակ",
-    "addDeviceButton": "Ստեղծել սարք/ակտիվացման հղում",
+    "addDeviceButton": "Կապել սարքը",
     "deviceActivated": "Ակտիվ",
     "deviceAwaiting": "սպասում է ակտիվացման",
     "showQr": "Ցուցադրել QR-կոդը",
@@ -681,7 +681,10 @@
     "deactivatePoint": "Անջատել կետը",
     "activatePoint": "Ակտիվացնել կետը",
     "pointActiveChip": "Ակտիվ",
-    "pointInactiveChip": "Ապաակտիվ"
+    "pointInactiveChip": "Ապաակտիվ",
+    "bindCurrentDeviceButton": "Կապել այս սարքը",
+    "deviceBoundToast": "Սարքը կապվել է",
+    "newDeviceCurrentSub": "Սարքն անմիջապես ակտիվանում է և պատրաստ կլինի օպերատորի PIN-ով մուտքի համար"
   },
   "zonesList": {
     "title": "Գոտիներ",

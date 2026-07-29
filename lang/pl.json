@@ -628,7 +628,7 @@
     "nameLabel": "Nazwa punktu",
     "addressLabel": "Adres (opcjonalnie)",
     "iconLabel": "Ikona",
-    "addDeviceButton": "Utwórz urządzenie/link aktywacyjny",
+    "addDeviceButton": "Powiąż urządzenie",
     "deviceActivated": "Aktywne",
     "deviceAwaiting": "oczekuje na aktywację",
     "showQr": "Pokaż kod QR",
@@ -681,7 +681,10 @@
     "deactivatePoint": "Dezaktywuj punkt",
     "activatePoint": "Aktywuj punkt",
     "pointActiveChip": "Aktywny",
-    "pointInactiveChip": "Nieaktywny"
+    "pointInactiveChip": "Nieaktywny",
+    "bindCurrentDeviceButton": "Powiąż to urządzenie",
+    "deviceBoundToast": "Urządzenie powiązane",
+    "newDeviceCurrentSub": "Urządzenie od razu się aktywuje i będzie gotowe do logowania operatora PIN-em"
   },
   "zonesList": {
     "title": "Strefy",

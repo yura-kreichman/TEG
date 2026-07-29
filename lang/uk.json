@@ -628,7 +628,7 @@
     "nameLabel": "Назва точки",
     "addressLabel": "Адреса (необов'язково)",
     "iconLabel": "Іконка",
-    "addDeviceButton": "Створити пристрій/посилання активації",
+    "addDeviceButton": "Прив'язати пристрій",
     "deviceActivated": "Активний",
     "deviceAwaiting": "очікує активації",
     "showQr": "Показати QR-код",
@@ -681,7 +681,10 @@
     "deactivatePoint": "Деактивувати точку",
     "activatePoint": "Активувати точку",
     "pointActiveChip": "Активна",
-    "pointInactiveChip": "Неактивна"
+    "pointInactiveChip": "Неактивна",
+    "bindCurrentDeviceButton": "Прив'язати цей пристрій",
+    "deviceBoundToast": "Пристрій прив'язано",
+    "newDeviceCurrentSub": "Пристрій одразу активується і буде готовий до входу оператора за PIN"
   },
   "zonesList": {
     "title": "Зони",

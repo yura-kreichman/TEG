@@ -16,6 +16,7 @@ import {
   TabletSmartphone,
   ArrowLeftRight,
   PrinterCheck,
+  QrCode as QrCodeIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -111,6 +112,10 @@ export default function PointsPage() {
   const { saved: createSaved, pulse: createPulse } = useSavePulse();
 
   const [deviceSheetPointId, setDeviceSheetPointId] = useState<string | null>(null);
+  // "current" — Владелец сидит прямо за этим браузером и хочет привязать ЕГО
+  // (запрос пользователя 2026-07-29), не генерировать ссылку/QR для другого
+  // устройства — см. POST /api/points/[id]/devices/bind-current.
+  const [deviceBindMode, setDeviceBindMode] = useState<"link" | "current">("link");
   const { saved: createDeviceSaved, pulse: createDevicePulse } = useSavePulse();
   const [deviceLabel, setDeviceLabel] = useState("");
   const [deviceRoaming, setDeviceRoaming] = useState(false);
@@ -235,7 +240,11 @@ export default function PointsPage() {
   async function handleCreateDevice(event: FormEvent) {
     event.preventDefault();
     if (!deviceSheetPointId) return;
-    const res = await fetch(`/api/points/${deviceSheetPointId}/devices`, {
+    const endpoint =
+      deviceBindMode === "current"
+        ? `/api/points/${deviceSheetPointId}/devices/bind-current`
+        : `/api/points/${deviceSheetPointId}/devices`;
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -247,7 +256,11 @@ export default function PointsPage() {
     });
     const data = await res.json();
     if (res.ok) {
-      setInstallLinks((prev) => ({ ...prev, [data.id]: data.installLink }));
+      if (deviceBindMode === "link") {
+        setInstallLinks((prev) => ({ ...prev, [data.id]: data.installLink }));
+      } else {
+        flashToast(t.points.deviceBoundToast, "success");
+      }
       await loadPoints();
       createDevicePulse(() => {
         setDeviceLabel("");
@@ -534,11 +547,12 @@ export default function PointsPage() {
                                         единообразная иконка активности по всему проекту) —
                                         неактивированное устройство теперь тоже помечено, серым
                                         triangle-alert, а не молчанием, как раньше. Без onToggle
-                                        (не кнопка) — активация устройства это claim самим
-                                        оператором через код на физическом устройстве, у
-                                        Владельца нет действия "активировать"/"деактивировать"
-                                        устройство напрямую (есть только переименование и
-                                        удаление), поэтому тут просто индикатор. */}
+                                        (не кнопка) — активация УЖЕ СОЗДАННОГО устройства это
+                                        claim самим оператором через код на физическом устройстве
+                                        (или Владельцем через "Привязать это устройство" ниже, но
+                                        то создаёт НОВОЕ устройство сразу активированным, не
+                                        переключает статус существующего), поэтому тут просто
+                                        индикатор, не кнопка. */}
                                     <ActiveStatusIcon
                                       active={device.activated}
                                       activeLabel={t.points.deviceActivated}
@@ -616,22 +630,48 @@ export default function PointsPage() {
                         </div>
                       )}
 
-                      <PressableScale>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="mt-3 w-full gap-1.5 rounded-lg"
-                          onClick={() => {
-                            setDeviceSheetPointId(point.id);
-                            setDeviceLabel("");
-                            setDeviceRoaming(false);
-                          }}
-                        >
-                          <Plus />
-                          {t.points.addDeviceButton}
-                        </Button>
-                      </PressableScale>
+                      <div className="mt-3 flex gap-2">
+                        <PressableScale className="grow">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-1.5 rounded-lg"
+                            onClick={() => {
+                              setDeviceBindMode("link");
+                              setDeviceSheetPointId(point.id);
+                              setDeviceLabel("");
+                              setDeviceRoaming(false);
+                            }}
+                          >
+                            <QrCodeIcon />
+                            <Link2 />
+                            {t.points.addDeviceButton}
+                          </Button>
+                        </PressableScale>
+                        {/* "Привязать это устройство" (запрос пользователя 2026-07-29) —
+                            для случая, когда Владелец САМ сейчас сидит за этим браузером:
+                            без ссылки/QR, activatePointDevice ставит cookie сразу на ответ
+                            этого запроса (см. bind-current/route.ts). Ссылка/QR-кнопка
+                            слева не меняется — это добавочный, не замещающий путь. */}
+                        <PressableScale className="grow">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-1.5 rounded-lg"
+                            onClick={() => {
+                              setDeviceBindMode("current");
+                              setDeviceSheetPointId(point.id);
+                              setDeviceLabel("");
+                              setDeviceRoaming(false);
+                            }}
+                          >
+                            <TabletSmartphone />
+                            {t.points.bindCurrentDeviceButton}
+                          </Button>
+                        </PressableScale>
+                      </div>
                     </SpringCard>
                   </StaggerItem>
                 );
@@ -670,7 +710,9 @@ export default function PointsPage() {
         <form onSubmit={handleCreateDevice} className="flex flex-col gap-4 pt-2">
           <div>
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.newDeviceTitle}</h2>
-            <p className="text-caption-airbnb">{t.points.newDeviceSub}</p>
+            <p className="text-caption-airbnb">
+              {deviceBindMode === "current" ? t.points.newDeviceCurrentSub : t.points.newDeviceSub}
+            </p>
           </div>
           <div className="flex flex-col gap-1">
             <Label>

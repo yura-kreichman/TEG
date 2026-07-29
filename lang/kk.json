@@ -628,7 +628,7 @@
     "nameLabel": "Нүкте атауы",
     "addressLabel": "Мекенжай (міндетті емес)",
     "iconLabel": "Иконка",
-    "addDeviceButton": "Құрылғы/белсендіру сілтемесін жасау",
+    "addDeviceButton": "Құрылғыны байланыстыру",
     "deviceActivated": "Белсенді",
     "deviceAwaiting": "белсендіруді күтуде",
     "showQr": "QR-кодты көрсету",
@@ -681,7 +681,10 @@
     "deactivatePoint": "Нүктені белсенді емес ету",
     "activatePoint": "Нүктені белсендіру",
     "pointActiveChip": "Белсенді",
-    "pointInactiveChip": "Белсенді емес"
+    "pointInactiveChip": "Белсенді емес",
+    "bindCurrentDeviceButton": "Осы құрылғыны байланыстыру",
+    "deviceBoundToast": "Құрылғы байланыстырылды",
+    "newDeviceCurrentSub": "Құрылғы бірден іске қосылады және оператордың PIN арқылы кіруіне дайын болады"
   },
   "zonesList": {
     "title": "Аймақтар",

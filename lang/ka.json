@@ -628,7 +628,7 @@
     "nameLabel": "წერტილის სახელი",
     "addressLabel": "მისამართი (არასავალდებულო)",
     "iconLabel": "ხატულა",
-    "addDeviceButton": "მოწყობილობის/აქტივაციის ბმულის შექმნა",
+    "addDeviceButton": "მოწყობილობის მიბმა",
     "deviceActivated": "აქტიურია",
     "deviceAwaiting": "ელოდება აქტივაციას",
     "showQr": "QR-კოდის ჩვენება",
@@ -681,7 +681,10 @@
     "deactivatePoint": "წერტილის დეაქტივაცია",
     "activatePoint": "წერტილის აქტივაცია",
     "pointActiveChip": "აქტიური",
-    "pointInactiveChip": "არააქტიური"
+    "pointInactiveChip": "არააქტიური",
+    "bindCurrentDeviceButton": "ამ მოწყობილობის მიბმა",
+    "deviceBoundToast": "მოწყობილობა მიბმულია",
+    "newDeviceCurrentSub": "მოწყობილობა მაშინვე გააქტიურდება და მზად იქნება ოპერატორის PIN-შესვლისთვის"
   },
   "zonesList": {
     "title": "ზონები",

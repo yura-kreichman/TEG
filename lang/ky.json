@@ -628,7 +628,7 @@
     "nameLabel": "Чекиттин аты",
     "addressLabel": "Дарек (милдеттүү эмес)",
     "iconLabel": "Сүрөтчө",
-    "addDeviceButton": "Түзмөк/активдештирүү шилтемесин түзүү",
+    "addDeviceButton": "Түзмөктү байлоо",
     "deviceActivated": "Активдүү",
     "deviceAwaiting": "активдештирүүнү күтүүдө",
     "showQr": "QR-кодду көрсөтүү",
@@ -681,7 +681,10 @@
     "deactivatePoint": "Чекитти өчүрүү",
     "activatePoint": "Чекитти иштетүү",
     "pointActiveChip": "Активдүү",
-    "pointInactiveChip": "Активдүү эмес"
+    "pointInactiveChip": "Активдүү эмес",
+    "bindCurrentDeviceButton": "Ушул түзмөктү байлоо",
+    "deviceBoundToast": "Түзмөк байланды",
+    "newDeviceCurrentSub": "Түзмөк дароо активдешет жана оператордун PIN менен кирүүсүнө даяр болот"
   },
   "zonesList": {
     "title": "Аймактар",
