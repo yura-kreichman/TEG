@@ -283,8 +283,8 @@ export default function OperatorCardPage() {
 
   async function submitMoneyForm() {
     // Guard от двойной отправки (аудит 2026-07-26) — в отличие от
-    // операторских self-service путей (advance-request/check-out), которые
-    // уже защищены pg_advisory_xact_lock, эти owner-side роуты создают
+    // операторского self-service чек-аута (check-out), который уже защищён
+    // pg_advisory_xact_lock, эти owner-side роуты создают
     // MoneyOperation безусловным CREATE — двойной клик/тап реально задваивал
     // выплату. Кнопка ниже дополнительно получает disabled={moneySubmitting}.
     if (!moneyForm || moneySubmitting) return;
