@@ -621,7 +621,11 @@
     "operatorLoginTitle": "Вхід співробітника",
     "operatorDeviceUnknownHint": "Цей пристрій ще не прив'язаний до жодної точки. Зверніться до власника — він активує пристрій за встановлювальним посиланням/QR.",
     "pointLabel": "Точка",
-    "slugPreviewPrefix": "Адреса:"
+    "slugPreviewPrefix": "Адреса:",
+    "ownerLoginViaPinTitle": "Вхід власника",
+    "loginAsOwnerLink": "Увійти як Власник",
+    "backToOperatorLoginLink": "Назад до входу співробітника",
+    "loginAsOperatorLink": "Увійти як Співробітник"
   },
   "points": {
     "title": "Точки",

@@ -621,7 +621,11 @@
     "operatorLoginTitle": "Xodim kirishi",
     "operatorDeviceUnknownHint": "Bu qurilma hali birorta nuqtaga bogʻlanmagan. Egaga murojaat qiling — u faollashtirish havolasi/QR-kod orqali qurilmani faollashtiradi.",
     "pointLabel": "Nuqta",
-    "slugPreviewPrefix": "Manzil:"
+    "slugPreviewPrefix": "Manzil:",
+    "ownerLoginViaPinTitle": "Egasining kirishi",
+    "loginAsOwnerLink": "Egasi sifatida kirish",
+    "backToOperatorLoginLink": "Xodim kirishiga qaytish",
+    "loginAsOperatorLink": "Xodim sifatida kirish"
   },
   "points": {
     "title": "Nuqtalar",

@@ -621,7 +621,11 @@
     "operatorLoginTitle": "Воридшавии корманд",
     "operatorDeviceUnknownHint": "Ин дастгоҳ ҳанӯз ба ягон нуқта пайваст нашудааст. Ба соҳиб муроҷиат кунед — вай дастгоҳро тавассути истиноди насбкунӣ/QR фаъол мекунад.",
     "pointLabel": "Нуқта",
-    "slugPreviewPrefix": "Суроға:"
+    "slugPreviewPrefix": "Суроға:",
+    "ownerLoginViaPinTitle": "Воридшавии соҳиб",
+    "loginAsOwnerLink": "Ҳамчун Соҳиб ворид шав",
+    "backToOperatorLoginLink": "Бозгашт ба воридшавии корманд",
+    "loginAsOperatorLink": "Ҳамчун Корманд ворид шав"
   },
   "points": {
     "title": "Нуқтаҳо",

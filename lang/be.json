@@ -621,7 +621,11 @@
     "operatorLoginTitle": "Уваход супрацоўніка",
     "operatorDeviceUnknownHint": "Гэтая прылада яшчэ не прывязана ні да адной кропкі. Звярніцеся да ўладальніка — ён актывуе прыладу па ўсталявальнай спасылцы/QR.",
     "pointLabel": "Кропка",
-    "slugPreviewPrefix": "Адрас:"
+    "slugPreviewPrefix": "Адрас:",
+    "ownerLoginViaPinTitle": "Уваход уладальніка",
+    "loginAsOwnerLink": "Увайсці як уладальнік",
+    "backToOperatorLoginLink": "Назад да ўваходу супрацоўніка",
+    "loginAsOperatorLink": "Увайсці як супрацоўнік"
   },
   "points": {
     "title": "Кропкі",

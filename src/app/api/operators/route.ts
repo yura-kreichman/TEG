@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { checkPackageLimit } from "@/lib/packages";
 import { requireOwner } from "@/lib/require-owner";
 import { hashPin } from "@/lib/auth";
-import { isPinTakenInTenant } from "@/lib/operator-auth";
+import { isOwnerPinInTenant, isPinTakenInTenant } from "@/lib/operator-auth";
 
 export async function GET() {
   const owner = await requireOwner();
@@ -64,6 +64,15 @@ export async function POST(request: Request) {
   if (await isPinTakenInTenant(owner.tenantId, pin)) {
     return NextResponse.json(
       { error: "Такой ПИН-код уже занят другим оператором" },
+      { status: 409 }
+    );
+  }
+
+  // Не должен совпасть с личным ПИНом Владельца (см. комментарий у
+  // isOwnerPinInTenant в lib/operator-auth.ts).
+  if (await isOwnerPinInTenant(owner.tenantId, pin)) {
+    return NextResponse.json(
+      { error: "Этот ПИН-код совпадает с личным ПИН-кодом Владельца, выберите другой" },
       { status: 409 }
     );
   }

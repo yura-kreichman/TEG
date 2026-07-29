@@ -621,7 +621,11 @@
     "operatorLoginTitle": "Қызметкер кірісі",
     "operatorDeviceUnknownHint": "Бұл құрылғы әлі ешбір нүктеге байланыстырылмаған. Иесіне хабарласыңыз — ол құрылғыны орнату сілтемесі/QR арқылы белсендіреді.",
     "pointLabel": "Нүкте",
-    "slugPreviewPrefix": "Мекенжай:"
+    "slugPreviewPrefix": "Мекенжай:",
+    "ownerLoginViaPinTitle": "Иесінің кіруі",
+    "loginAsOwnerLink": "Иесі ретінде кіру",
+    "backToOperatorLoginLink": "Қызметкер кірісіне оралу",
+    "loginAsOperatorLink": "Қызметкер ретінде кіру"
   },
   "points": {
     "title": "Нүктелер",

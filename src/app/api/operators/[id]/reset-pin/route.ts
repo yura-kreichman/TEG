@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { hashPin } from "@/lib/auth";
-import { isPinTakenInTenant } from "@/lib/operator-auth";
+import { isOwnerPinInTenant, isPinTakenInTenant } from "@/lib/operator-auth";
 
 export async function POST(
   request: Request,
@@ -31,6 +31,16 @@ export async function POST(
   if (await isPinTakenInTenant(owner.tenantId, pin, id)) {
     return NextResponse.json(
       { error: "Такой ПИН-код уже занят другим оператором" },
+      { status: 409 }
+    );
+  }
+
+  // Не должен совпасть с личным ПИНом Владельца (см. комментарий у
+  // isOwnerPinInTenant) — ПИН оператора известен персоналу точки, ПИН
+  // Владельца открывает полный кабинет.
+  if (await isOwnerPinInTenant(owner.tenantId, pin)) {
+    return NextResponse.json(
+      { error: "Этот ПИН-код совпадает с личным ПИН-кодом Владельца, выберите другой" },
       { status: 409 }
     );
   }

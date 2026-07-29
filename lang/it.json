@@ -621,7 +621,11 @@
     "operatorLoginTitle": "Accesso dipendenti",
     "operatorDeviceUnknownHint": "Questo dispositivo non è ancora collegato a nessun punto. Contatta il titolare — può attivare il dispositivo tramite il link/codice QR di installazione.",
     "pointLabel": "Punto",
-    "slugPreviewPrefix": "Indirizzo:"
+    "slugPreviewPrefix": "Indirizzo:",
+    "ownerLoginViaPinTitle": "Accesso proprietario",
+    "loginAsOwnerLink": "Accedi come Proprietario",
+    "backToOperatorLoginLink": "Torna all'accesso dipendente",
+    "loginAsOperatorLink": "Accedi come Dipendente"
   },
   "points": {
     "title": "Punti",

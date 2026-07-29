@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import { AuthCard } from "@/components/auth-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { Button } from "@/components/ui/button";
@@ -15,11 +16,22 @@ type DeviceStatus = "checking" | "unknown" | "ready";
 
 export default function OperatorLoginPage() {
   const t = useI18n();
+  const searchParams = useSearchParams();
+  // Режим — из query (?as=owner), не React state (запрос пользователя
+  // 2026-07-29): переключатель теперь живёт в верхнем баре (OwnerLoginToggle,
+  // operator/layout.tsx) — соседний, не дочерний компонент этой страницы,
+  // общий стейт пришлось бы тащить через контекст ради одной кнопки, URL —
+  // источник истины, который читают оба места одинаково.
+  const loginMode = searchParams.get("as") === "owner" ? "owner" : "operator";
+
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatus>("checking");
   const [pointName, setPointName] = useState<string | null>(null);
   const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
   const errorToast = useActionToast();
+
+  const [ownerPin, setOwnerPin] = useState("");
+  const [ownerLoading, setOwnerLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/operator/me")
@@ -33,6 +45,35 @@ export default function OperatorLoginPage() {
         setDeviceStatus("ready");
       });
   }, []);
+
+  async function handleOwnerSubmit(event: FormEvent) {
+    event.preventDefault();
+    setOwnerLoading(true);
+
+    try {
+      // /api/auth/login с {pin} резолвит аккаунт ТОЛЬКО через owner_device
+      // cookie этого браузера (см. api/auth/login/route.ts) — не слепой пул,
+      // как у операторского ПИНа выше, поэтому переиспользуем эндпоинт как
+      // есть, не заводим отдельный.
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: ownerPin }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        playErrorChime();
+        errorToast.flash(data.error ?? "Не удалось войти", "error");
+        setOwnerPin("");
+        return;
+      }
+
+      window.location.href = "/";
+    } finally {
+      setOwnerLoading(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -74,13 +115,15 @@ export default function OperatorLoginPage() {
 
   return (
     <AuthCard className="flex flex-col gap-4">
-      <h1 className="text-screen-title">{t.auth.operatorLoginTitle}</h1>
+      <h1 className="text-screen-title">
+        {loginMode === "owner" ? t.auth.ownerLoginViaPinTitle : t.auth.operatorLoginTitle}
+      </h1>
 
-      {deviceStatus === "unknown" && (
+      {loginMode === "operator" && deviceStatus === "unknown" && (
         <p className="text-body-airbnb text-muted-foreground">{t.auth.operatorDeviceUnknownHint}</p>
       )}
 
-      {deviceStatus === "ready" && (
+      {loginMode === "operator" && deviceStatus === "ready" && (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {pointName && (
             <p className="text-body-airbnb text-muted-foreground">
@@ -113,6 +156,36 @@ export default function OperatorLoginPage() {
           </PressableScale>
         </form>
       )}
+
+      {/* Форма Владельца переиспользует /api/auth/login {pin} как есть — тот же
+          эндпоинт, что и ПИН-таб на /login, резолвит аккаунт только через
+          owner_device cookie ЭТОГО браузера, слепого угадывания нет. */}
+      {loginMode === "owner" && (
+        <form onSubmit={handleOwnerSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="owner-pin">{t.auth.pinLabel}</Label>
+            <Input
+              id="owner-pin"
+              type="password"
+              inputMode="numeric"
+              pattern="\d{4,6}"
+              required
+              autoComplete="off"
+              autoFocus
+              value={ownerPin}
+              onChange={(e) => setOwnerPin(e.target.value)}
+              className="h-14 border-2 text-lg tabular-nums"
+            />
+          </div>
+
+          <PressableScale>
+            <Button type="submit" disabled={ownerLoading} className="h-14 w-full rounded-control text-base font-bold">
+              {ownerLoading ? t.auth.loggingIn : t.auth.loginButton}
+            </Button>
+          </PressableScale>
+        </form>
+      )}
+
       <ActionToast message={errorToast.message} variant={errorToast.variant} />
     </AuthCard>
   );

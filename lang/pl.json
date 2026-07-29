@@ -621,7 +621,11 @@
     "operatorLoginTitle": "Logowanie pracownika",
     "operatorDeviceUnknownHint": "To urządzenie nie jest jeszcze przypisane do żadnego punktu. Skontaktuj się z właścicielem — aktywuje urządzenie za pomocą linku instalacyjnego/kodu QR.",
     "pointLabel": "Punkt",
-    "slugPreviewPrefix": "Adres:"
+    "slugPreviewPrefix": "Adres:",
+    "ownerLoginViaPinTitle": "Logowanie właściciela",
+    "loginAsOwnerLink": "Zaloguj się jako Właściciel",
+    "backToOperatorLoginLink": "Powrót do logowania pracownika",
+    "loginAsOperatorLink": "Zaloguj się jako Pracownik"
   },
   "points": {
     "title": "Punkty",

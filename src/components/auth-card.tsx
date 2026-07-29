@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { AuthLocalePicker } from "@/components/auth-locale-picker";
+import { OperatorLoginToggle } from "@/components/operator-login-toggle";
 
 const cardSpring = { type: "spring" as const, stiffness: 340, damping: 32 };
 
@@ -35,6 +36,19 @@ export function AuthCard({
 
   return (
     <div className="relative flex flex-1 flex-col items-center justify-center gap-4 bg-surface-0 px-4 pb-16">
+      {/* Тот же бар, что у верха PWA Сотрудника (operator/layout.tsx) —
+          запрос пользователя 2026-07-29, симметрия с OwnerLoginToggle там.
+          AuthCard общий на все pre-auth экраны (см. верхний комментарий),
+          поэтому строка всегда в разметке — OperatorLoginToggle сам решает,
+          показываться ли (только /login + устройство уже активировано как
+          точка), на остальных экранах строка просто пустая. absolute, не
+          обычный поток — контейнер здесь center-content (justify-center по
+          вертикали), а не top-to-bottom, как у operator/layout.tsx, иначе
+          бар оказался бы над логотипом внутри центрированного стека, а не
+          прижатым к настоящему краю экрана. */}
+      <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-2">
+        <OperatorLoginToggle />
+      </div>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/icon-library/pwa/RentOS-icon.svg" alt="" className="size-16" />
       <AuthLocalePicker />

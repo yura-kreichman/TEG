@@ -620,6 +620,10 @@
     "activateErrorHint": "Если устройство уже было активировано раньше, попробуйте войти напрямую.",
     "activateLinkMissing": "Ссылка активации отсутствует или неполная.",
     "operatorLoginTitle": "Вход сотрудника",
+    "ownerLoginViaPinTitle": "Вход владельца",
+    "loginAsOwnerLink": "Войти как Владелец",
+    "loginAsOperatorLink": "Войти как Сотрудник",
+    "backToOperatorLoginLink": "Назад ко входу сотрудника",
     "operatorDeviceUnknownHint": "Это устройство ещё не привязано ни к одной точке. Обратитесь к владельцу — он активирует устройство по установочной ссылке/QR.",
     "pointLabel": "Точка"
   },

@@ -621,7 +621,11 @@
     "operatorLoginTitle": "İşçi girişi",
     "operatorDeviceUnknownHint": "Bu cihaz hələ heç bir nöqtəyə bağlanmayıb. Sahibkarla əlaqə saxlayın — o, quraşdırma keçidi/QR ilə cihazı aktivləşdirəcək.",
     "pointLabel": "Nöqtə",
-    "slugPreviewPrefix": "Ünvan:"
+    "slugPreviewPrefix": "Ünvan:",
+    "ownerLoginViaPinTitle": "Sahibin girişi",
+    "loginAsOwnerLink": "Sahib kimi daxil ol",
+    "backToOperatorLoginLink": "Əməkdaş girişinə qayıt",
+    "loginAsOperatorLink": "Əməkdaş kimi daxil ol"
   },
   "points": {
     "title": "Nöqtələr",

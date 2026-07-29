@@ -621,7 +621,11 @@
     "operatorLoginTitle": "Աշխատակցի մուտք",
     "operatorDeviceUnknownHint": "Այս սարքը դեռ կապակցված չէ որևէ կետի հետ. Դիմեք սեփականատիրոջը — նա կակտիվացնի սարքը տեղադրման հղումով/QR-ով.",
     "pointLabel": "Կետ",
-    "slugPreviewPrefix": "Հասցե՝"
+    "slugPreviewPrefix": "Հասցե՝",
+    "ownerLoginViaPinTitle": "Սեփականատիրոջ մուտք",
+    "loginAsOwnerLink": "Մուտք գործել որպես Սեփականատեր",
+    "backToOperatorLoginLink": "Վերադառնալ աշխատակցի մուտքին",
+    "loginAsOperatorLink": "Մուտք գործել որպես Աշխատակից"
   },
   "points": {
     "title": "Կետեր",

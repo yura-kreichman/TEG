@@ -621,7 +621,11 @@
     "operatorLoginTitle": "Кызматкердин кириши",
     "operatorDeviceUnknownHint": "Бул түзмөк азырынча эч бир чекитке байланган эмес. Ээсине кайрылыңыз — ал орнотуу шилтемеси/QR аркылуу түзмөктү активдештирет.",
     "pointLabel": "Чекит",
-    "slugPreviewPrefix": "Дарек:"
+    "slugPreviewPrefix": "Дарек:",
+    "ownerLoginViaPinTitle": "Ээсинин кирүүсү",
+    "loginAsOwnerLink": "Ээси катары кирүү",
+    "backToOperatorLoginLink": "Кызматкердин кирүүсүнө кайтуу",
+    "loginAsOperatorLink": "Кызматкер катары кирүү"
   },
   "points": {
     "title": "Чекиттер",

@@ -621,7 +621,11 @@
     "operatorLoginTitle": "Autentificare angajat",
     "operatorDeviceUnknownHint": "Acest dispozitiv nu este asociat niciunui punct încă. Contactați proprietarul — el poate activa dispozitivul prin linkul/codul QR de instalare.",
     "pointLabel": "Punct",
-    "slugPreviewPrefix": "Adresă:"
+    "slugPreviewPrefix": "Adresă:",
+    "ownerLoginViaPinTitle": "Autentificare proprietar",
+    "loginAsOwnerLink": "Autentificare ca Proprietar",
+    "backToOperatorLoginLink": "Înapoi la autentificarea angajatului",
+    "loginAsOperatorLink": "Autentificare ca Angajat"
   },
   "points": {
     "title": "Puncte",

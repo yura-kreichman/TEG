@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUserId, hashPin } from "@/lib/auth";
+import { isPinTakenInTenant } from "@/lib/operator-auth";
 
 export async function POST(request: Request) {
   const userId = await getSessionUserId();
@@ -13,6 +14,18 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "ПИН-код должен состоять из 4-6 цифр" },
       { status: 400 }
+    );
+  }
+
+  // Обратная сторона проверки в api/operators (см. isOwnerPinInTenant там) —
+  // Владелец тоже не должен случайно взять себе ПИН, который уже выдан
+  // какому-то оператору (запрос пользователя 2026-07-29: "или наоборот, если
+  // владелец решит поменять"). tenantId у Owner всегда заполнен (см. схему).
+  const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { tenantId: true } });
+  if (currentUser?.tenantId && (await isPinTakenInTenant(currentUser.tenantId, pin))) {
+    return NextResponse.json(
+      { error: "Этот ПИН-код уже занят одним из операторов, выберите другой" },
+      { status: 409 }
     );
   }
 

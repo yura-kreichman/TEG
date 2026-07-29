@@ -621,7 +621,11 @@
     "operatorLoginTitle": "თანამშრომლის შესვლა",
     "operatorDeviceUnknownHint": "ეს მოწყობილობა ჯერ არცერთ წერტილზე არ არის მიბმული. მიმართეთ მფლობელს — მან უნდა გაააქტიუროს მოწყობილობა დაყენების ბმულით/QR-კოდით.",
     "pointLabel": "წერტილი",
-    "slugPreviewPrefix": "მისამართი:"
+    "slugPreviewPrefix": "მისამართი:",
+    "ownerLoginViaPinTitle": "მფლობელის შესვლა",
+    "loginAsOwnerLink": "შესვლა მფლობელად",
+    "backToOperatorLoginLink": "დაბრუნება თანამშრომლის შესვლაზე",
+    "loginAsOperatorLink": "შესვლა თანამშრომლად"
   },
   "points": {
     "title": "წერტილები",

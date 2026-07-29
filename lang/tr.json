@@ -621,7 +621,11 @@
     "operatorLoginTitle": "Çalışan girişi",
     "operatorDeviceUnknownHint": "Bu cihaz henüz herhangi bir noktaya bağlı değil. Sahiple iletişime geçin — cihazı kurulum bağlantısı/QR koduyla etkinleştirecektir.",
     "pointLabel": "Nokta",
-    "slugPreviewPrefix": "Adres:"
+    "slugPreviewPrefix": "Adres:",
+    "ownerLoginViaPinTitle": "Sahibin girişi",
+    "loginAsOwnerLink": "Sahibi olarak giriş yap",
+    "backToOperatorLoginLink": "Çalışan girişine dön",
+    "loginAsOperatorLink": "Çalışan olarak giriş yap"
   },
   "points": {
     "title": "Noktalar",

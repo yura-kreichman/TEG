@@ -149,3 +149,28 @@ export async function isPinTakenInTenant(
 
   return false;
 }
+
+// Реальный риск, найден пользователем 2026-07-29 (обсуждение "Войти как
+// Владелец" на экране входа Сотрудника): ПИН оператора — рабочий секрет,
+// известный персоналу точки, а ПИН Владельца открывает полный кабинет —
+// если они случайно совпадут, любой, кто знает ПИН оператора, сможет
+// зайти и Владельцем. Проверка в ОБЕ стороны: при назначении/смене ПИНа
+// оператору (см. api/operators/route.ts, api/operators/[id]/reset-pin) —
+// не должен совпасть с личным ПИНом ни одного Owner-пользователя этого
+// тенанта; и наоборот, при смене личного ПИНа Владельцем (api/auth/pin) —
+// не должен совпасть ни с одним операторским. Owner-пользователей у
+// тенанта в теории может быть больше одного (tenantId не @unique в
+// схеме) — проверяем всех, не только текущего.
+export async function isOwnerPinInTenant(tenantId: string, pin: string) {
+  const owners = await prisma.user.findMany({
+    where: { tenantId, role: "owner", pinHash: { not: null } },
+  });
+
+  for (const owner of owners) {
+    if (owner.pinHash && (await bcrypt.compare(pin, owner.pinHash))) {
+      return true;
+    }
+  }
+
+  return false;
+}

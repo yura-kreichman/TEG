@@ -621,7 +621,11 @@
     "operatorLoginTitle": "Employee sign-in",
     "operatorDeviceUnknownHint": "This device isn't linked to any point yet. Contact the owner — they can activate the device via the install link/QR code.",
     "pointLabel": "Point",
-    "slugPreviewPrefix": "Address:"
+    "slugPreviewPrefix": "Address:",
+    "ownerLoginViaPinTitle": "Owner login",
+    "loginAsOwnerLink": "Log in as Owner",
+    "backToOperatorLoginLink": "Back to employee login",
+    "loginAsOperatorLink": "Log in as Employee"
   },
   "points": {
     "title": "Points",
