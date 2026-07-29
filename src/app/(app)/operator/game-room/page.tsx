@@ -11,7 +11,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
-import { Money } from "@/components/money";
+import { Money, computeMoneyDisplayScale } from "@/components/money";
 import { PrintButton } from "@/components/print/print-button";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
@@ -26,7 +26,7 @@ import { LinkClientSheet, type LinkedClientInfo } from "@/components/link-client
 import { SplitPaymentSheet } from "@/components/split-payment-sheet";
 import { ActionToast } from "@/components/action-toast";
 import { useActionToast } from "@/hooks/use-action-toast";
-import { formatMoneyWithCurrency } from "@/lib/format";
+import { formatMoney, formatMoneyWithCurrency } from "@/lib/format";
 import type { PaymentLegInput } from "@/lib/payment-split";
 import { cn, colorTagGradient } from "@/lib/utils";
 
@@ -1006,12 +1006,33 @@ export default function StaysZonePage() {
                           <span
                             className={cn(
                               "tabular-nums",
+                              // sm:/md: — реальный баг, найден пользователем
+                              // 2026-07-29: "должен масштабироваться в
+                              // зависимости от размера экрана" — сетка тайлов
+                              // здесь auto-fill (grid-cols-[repeat(auto-fill,
+                              // minmax(5.5rem,1fr))]), сами тайлы физически
+                              // растут на широких экранах/планшетах, а текст
+                              // был фиксированного rem-размера и терялся в
+                              // выросшем тайле. Брейкпоинты — простая, но
+                              // достаточная замена: реального container query
+                              // в проекте пока нигде нет, вьюпорт здесь
+                              // (PWA Сотрудника без сайдбара) — годная замена
+                              // ширине контейнера.
                               l.pricingMode === "fixed"
                                 ? cn(
-                                    "text-2xl font-extrabold",
+                                    "text-2xl font-extrabold sm:text-3xl md:text-4xl",
                                     (expired || nearExpiry) && "text-destructive motion-safe:animate-pulse"
                                   )
-                                : "text-sm font-semibold text-muted-foreground"
+                                : // Крупнее и жирнее (реальный баг, найден
+                                  // пользователем 2026-07-29: "таймер очень
+                                  // маленький на мобильном, должен быть
+                                  // заметнее") — text-sm/muted читался как
+                                  // второстепенная подпись, хотя это
+                                  // рабочее время посетителя. Меньше суммы
+                                  // ниже — сумма остаётся главным акцентом
+                                  // тайла, но сам таймер теперь читается с
+                                  // одного взгляда.
+                                  "text-lg font-extrabold sm:text-xl md:text-2xl"
                             )}
                           >
                             {/* "Время вышло" не влезал в узкий тайл браслета
@@ -1030,7 +1051,40 @@ export default function StaysZonePage() {
                             // авто-уменьшения, что уже на Отчётах/Главной.
                             // Акцентный цвет суммы — запрос пользователя
                             // 2026-07-27.
-                            <Money value={liveAmount} className="text-2xl font-extrabold text-primary" size="display" />
+                            //
+                            // Дефолтный порог computeMoneyDisplayScale
+                            // (thresholdLength=6) калиброван под крупные
+                            // заголовки в 1-2 широкие колонки (см. комментарий
+                            // в money.tsx) — тут узкий тайл (3 в ряд), и
+                            // дефолт вообще не срабатывал на короткие
+                            // 1-2-значные суммы ("17", "6" — 1-2 символа,
+                            // ниже порога). Но сам displayScale считается
+                            // ТОЛЬКО от длины строки, не от реальной ширины
+                            // контейнера (money.tsx это не измеряет) —
+                            // поэтому даже с более ранним порогом короткое
+                            // "17" на действительно узком экране (реальный
+                            // баг, пользователь 2026-07-29: "на некоторых
+                            // устройствах где разрешение меньше сумма не
+                            // вмещается") всё равно не сжалось бы. База
+                            // уменьшена text-2xl → text-xl на мобильном
+                            // (гарантированно меньше на ЛЮБОМ телефоне, не
+                            // только на длинных суммах), threshold ниже — на
+                            // случай, если сумма всё же дорастёт до 3+
+                            // знаков за время посещения. sm:/md: — растёт
+                            // обратно на широких экранах/планшетах (тот же
+                            // реальный баг, что и у таймера выше — auto-fill
+                            // сетка физически расширяет тайлы, текст должен
+                            // расти вместе с ними).
+                            <Money
+                              value={liveAmount}
+                              className="text-xl font-extrabold text-primary sm:text-2xl md:text-3xl"
+                              size="display"
+                              displayScale={computeMoneyDisplayScale(formatMoney(liveAmount, locale).length, {
+                                thresholdLength: 2,
+                                perCharReduction: 0.12,
+                                minScale: 0.55,
+                              })}
+                            />
                           )}
                         </button>
                       </PressableScale>
