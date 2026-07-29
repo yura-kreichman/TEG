@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, ClipboardList, Wrench, CheckCircle2, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, ClipboardList, Wrench, CheckCircle2, MapPin, Users } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { SpringCard } from "@/components/spring-card";
@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useI18n } from "@/components/i18n-provider";
-import { cn } from "@/lib/utils";
+import { cn, colorTagTint } from "@/lib/utils";
 import { TASK_STATUSES, type TaskStatus } from "@/lib/tasks";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 
@@ -361,21 +361,39 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
                       </div>
                       <KebabButton onClick={() => setActionsFor(task)} label={t.tasks.actionsTitle} />
                     </div>
-                    <div className="mt-3 flex items-center justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {task.assignedOperators.length === 0 && task.assignedUsers.length === 0 ? (
-                          <span className="text-caption-airbnb">{t.tasks.allOperatorsChip}</span>
-                        ) : (
-                          <>
-                            {task.assignedOperators.map((op) => (
-                              <Avatar key={op.id} label={op.name} colorTag={op.colorTag} avatarUrl={op.avatarUrl} iconKey={op.iconKey} />
-                            ))}
-                            {task.assignedUsers.map((u) => (
-                              <Avatar key={u.id} label={t.tasks.meLabel} colorTag={null} />
-                            ))}
-                          </>
-                        )}
-                      </div>
+                    {/* Тот же вид, что у сотрудников, привязанных к зоне
+                        (points/[id]/page.tsx, запрос пользователя
+                        2026-07-29: "пусть отображаются так же") — иконка
+                        Users + имя чипом с плоской 25%-прозрачностью его
+                        цветовой метки (colorTagTint), без аватаров/иконок
+                        оператора. "Я" (assignedUsers, Владелец назначил
+                        себе) — тот же чип, без цветовой метки, падает на
+                        нейтральный bg-surface-0 fallback. */}
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                      <Users className="size-3.5 shrink-0 text-muted-foreground" />
+                      {task.assignedOperators.length === 0 && task.assignedUsers.length === 0 ? (
+                        <span className="text-caption-airbnb text-muted-foreground">{t.tasks.allOperatorsChip}</span>
+                      ) : (
+                        <>
+                          {task.assignedOperators.map((op) => (
+                            <span
+                              key={op.id}
+                              className={cn(
+                                "rounded-full px-2.5 py-1 text-xs font-semibold text-muted-foreground",
+                                !op.colorTag && "bg-surface-0"
+                              )}
+                              style={op.colorTag ? { backgroundColor: colorTagTint(op.colorTag) } : undefined}
+                            >
+                              {op.name}
+                            </span>
+                          ))}
+                          {task.assignedUsers.map((u) => (
+                            <span key={u.id} className="rounded-full bg-surface-0 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                              {t.tasks.meLabel}
+                            </span>
+                          ))}
+                        </>
+                      )}
                     </div>
                   </SpringCard>
                 </StaggerItem>
