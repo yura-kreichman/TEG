@@ -630,13 +630,20 @@ export default function PointsPage() {
                         </div>
                       )}
 
+                      {/* h-auto/flex-col/whitespace-normal (запрос пользователя 2026-07-29,
+                          живой скриншот: текст второй кнопки вылезал за карточку на узком
+                          экране) — переопределяют h-7/whitespace-nowrap базового size="sm",
+                          иконки в верхнем ряду, подпись переносится на 2 строки сама, не
+                          заданными вручную \n — так короче текст ("Привязать") не переносится
+                          зря, а более длинный ("Привязать это устройство") ложится на 2
+                          строки естественно на любой ширине экрана. */}
                       <div className="mt-3 flex gap-2">
                         <PressableScale className="grow">
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="w-full gap-1.5 rounded-lg"
+                            className="h-auto min-h-14 w-full flex-col gap-1 whitespace-normal rounded-lg py-2 text-center leading-tight"
                             onClick={() => {
                               setDeviceBindMode("link");
                               setDeviceSheetPointId(point.id);
@@ -644,8 +651,10 @@ export default function PointsPage() {
                               setDeviceRoaming(false);
                             }}
                           >
-                            <QrCodeIcon />
-                            <Link2 />
+                            <span className="flex items-center gap-1">
+                              <QrCodeIcon />
+                              <Link2 />
+                            </span>
                             {t.points.addDeviceButton}
                           </Button>
                         </PressableScale>
@@ -659,7 +668,7 @@ export default function PointsPage() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="w-full gap-1.5 rounded-lg"
+                            className="h-auto min-h-14 w-full flex-col gap-1 whitespace-normal rounded-lg py-2 text-center leading-tight"
                             onClick={() => {
                               setDeviceBindMode("current");
                               setDeviceSheetPointId(point.id);
