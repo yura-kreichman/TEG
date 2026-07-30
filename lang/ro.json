@@ -329,7 +329,18 @@
     "deleteOwnerConfirmPasswordLabel": "Parola dvs. de administrator",
     "deleteOwnerConfirmNamePrefix": "Introduceți numele companiei pentru confirmare:",
     "deleteOwnerConfirmNameHint": "Această acțiune nu poate fi anulată",
-    "deleteOwnerConfirmButton": "Șterge proprietarul definitiv"
+    "deleteOwnerConfirmButton": "Șterge proprietarul definitiv",
+    "unlimitedChip": "Nelimitat",
+    "registeredOnLabel": "Înregistrare:",
+    "statusExpiringSoon": "Expiră curând",
+    "filterPackageAll": "Toate pachetele",
+    "filterStatusAll": "Toate statusurile",
+    "sortByCreatedAt": "După data înregistrării",
+    "sortByPoints": "După numărul de puncte",
+    "sortByOperators": "După numărul de angajați",
+    "sortByName": "După nume",
+    "sortDirAsc": "Crescător",
+    "sortDirDesc": "Descrescător"
   },
   "dataCleanup": {
     "title": "Curățare date",

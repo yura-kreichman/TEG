@@ -11,7 +11,7 @@ export async function GET() {
   const [tenants, unmatchedWebhookCount] = await Promise.all([
     prisma.tenant.findMany({
       include: {
-        package: { select: { id: true, name: true } },
+        package: { select: { id: true, name: true, fluentcartProductId: true } },
         _count: { select: { points: true, operators: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -35,6 +35,7 @@ export async function GET() {
       operatorsCount: t._count.operators,
       createdAt: t.createdAt,
       fluentcartCustomerId: t.fluentcartCustomerId,
+      unlimited: t.unlimited,
     })),
     unmatchedWebhookCount,
   });

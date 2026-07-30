@@ -329,7 +329,18 @@
     "deleteOwnerConfirmPasswordLabel": "Administrator parolingiz",
     "deleteOwnerConfirmNamePrefix": "Tasdiqlash uchun kompaniya nomini kiriting:",
     "deleteOwnerConfirmNameHint": "Bu amalni bekor qilib boʻlmaydi",
-    "deleteOwnerConfirmButton": "Egasini butunlay oʻchirish"
+    "deleteOwnerConfirmButton": "Egasini butunlay oʻchirish",
+    "unlimitedChip": "Cheksiz",
+    "registeredOnLabel": "Ro'yxatdan o'tish:",
+    "statusExpiringSoon": "Tez orada tugaydi",
+    "filterPackageAll": "Barcha paketlar",
+    "filterStatusAll": "Barcha holatlar",
+    "sortByCreatedAt": "Ro'yxatdan o'tish sanasi bo'yicha",
+    "sortByPoints": "Nuqtalar soni bo'yicha",
+    "sortByOperators": "Xodimlar soni bo'yicha",
+    "sortByName": "Nomi bo'yicha",
+    "sortDirAsc": "O'sish bo'yicha",
+    "sortDirDesc": "Kamayish bo'yicha"
   },
   "dataCleanup": {
     "title": "Ma'lumotlarni tozalash",

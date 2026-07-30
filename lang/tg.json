@@ -329,7 +329,18 @@
     "deleteOwnerConfirmPasswordLabel": "Пароли администратори шумо",
     "deleteOwnerConfirmNamePrefix": "Барои тасдиқ номи ширкатро ворид кунед:",
     "deleteOwnerConfirmNameHint": "Ин амалро бекор кардан мумкин нест",
-    "deleteOwnerConfirmButton": "Соҳибро барои ҳамеша нест кардан"
+    "deleteOwnerConfirmButton": "Соҳибро барои ҳамеша нест кардан",
+    "unlimitedChip": "Бемаҳдуд",
+    "registeredOnLabel": "Бақайдгирӣ:",
+    "statusExpiringSoon": "Ба зудӣ анҷом меёбад",
+    "filterPackageAll": "Ҳамаи бастаҳо",
+    "filterStatusAll": "Ҳамаи мақомҳо",
+    "sortByCreatedAt": "Аз рӯи санаи бақайдгирӣ",
+    "sortByPoints": "Аз рӯи шумораи нуқтаҳо",
+    "sortByOperators": "Аз рӯи шумораи кормандон",
+    "sortByName": "Аз рӯи ном",
+    "sortDirAsc": "Афзоишӣ",
+    "sortDirDesc": "Камшавӣ"
   },
   "dataCleanup": {
     "title": "Тозакунии маълумот",

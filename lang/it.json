@@ -329,7 +329,18 @@
     "deleteOwnerConfirmPasswordLabel": "La tua password admin",
     "deleteOwnerConfirmNamePrefix": "Inserisci il nome dell'azienda per confermare:",
     "deleteOwnerConfirmNameHint": "Questa azione non può essere annullata",
-    "deleteOwnerConfirmButton": "Elimina definitivamente il titolare"
+    "deleteOwnerConfirmButton": "Elimina definitivamente il titolare",
+    "unlimitedChip": "Illimitato",
+    "registeredOnLabel": "Registrato:",
+    "statusExpiringSoon": "In scadenza",
+    "filterPackageAll": "Tutti i pacchetti",
+    "filterStatusAll": "Tutti gli stati",
+    "sortByCreatedAt": "Per data di registrazione",
+    "sortByPoints": "Per numero di punti",
+    "sortByOperators": "Per numero di dipendenti",
+    "sortByName": "Per nome",
+    "sortDirAsc": "Crescente",
+    "sortDirDesc": "Decrescente"
   },
   "dataCleanup": {
     "title": "Pulizia dati",

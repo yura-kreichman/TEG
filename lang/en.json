@@ -329,7 +329,18 @@
     "deleteOwnerConfirmPasswordLabel": "Your admin password",
     "deleteOwnerConfirmNamePrefix": "Enter the company name to confirm:",
     "deleteOwnerConfirmNameHint": "This action cannot be undone",
-    "deleteOwnerConfirmButton": "Delete owner permanently"
+    "deleteOwnerConfirmButton": "Delete owner permanently",
+    "unlimitedChip": "Unlimited",
+    "registeredOnLabel": "Registered:",
+    "statusExpiringSoon": "Expiring soon",
+    "filterPackageAll": "All packages",
+    "filterStatusAll": "All statuses",
+    "sortByCreatedAt": "By registration date",
+    "sortByPoints": "By number of points",
+    "sortByOperators": "By number of employees",
+    "sortByName": "By name",
+    "sortDirAsc": "Ascending",
+    "sortDirDesc": "Descending"
   },
   "dataCleanup": {
     "title": "Data cleanup",

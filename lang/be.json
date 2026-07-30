@@ -329,7 +329,18 @@
     "deleteOwnerConfirmPasswordLabel": "Ваш пароль адміністратара",
     "deleteOwnerConfirmNamePrefix": "Увядзіце назву кампаніі для пацверджання:",
     "deleteOwnerConfirmNameHint": "Гэтае дзеянне нельга адрабіць",
-    "deleteOwnerConfirmButton": "Выдаліць уладальніка назаўжды"
+    "deleteOwnerConfirmButton": "Выдаліць уладальніка назаўжды",
+    "unlimitedChip": "Безлімітны",
+    "registeredOnLabel": "Рэгістрацыя:",
+    "statusExpiringSoon": "Хутка сканчаецца",
+    "filterPackageAll": "Усе пакеты",
+    "filterStatusAll": "Усе статусы",
+    "sortByCreatedAt": "Па даце рэгістрацыі",
+    "sortByPoints": "Па колькасці кропак",
+    "sortByOperators": "Па колькасці супрацоўнікаў",
+    "sortByName": "Па назве",
+    "sortDirAsc": "Па ўзрастанні",
+    "sortDirDesc": "Па ўбыванні"
   },
   "dataCleanup": {
     "title": "Ачыстка дадзеных",

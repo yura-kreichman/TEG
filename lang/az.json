@@ -329,7 +329,18 @@
     "deleteOwnerConfirmPasswordLabel": "Administrator şifrəniz",
     "deleteOwnerConfirmNamePrefix": "Təsdiqləmək üçün şirkət adını daxil edin:",
     "deleteOwnerConfirmNameHint": "Bu əməliyyat geri qaytarıla bilməz",
-    "deleteOwnerConfirmButton": "Sahibkarı həmişəlik sil"
+    "deleteOwnerConfirmButton": "Sahibkarı həmişəlik sil",
+    "unlimitedChip": "Limitsiz",
+    "registeredOnLabel": "Qeydiyyat:",
+    "statusExpiringSoon": "Tezliklə bitir",
+    "filterPackageAll": "Bütün paketlər",
+    "filterStatusAll": "Bütün statuslar",
+    "sortByCreatedAt": "Qeydiyyat tarixinə görə",
+    "sortByPoints": "Nöqtələrin sayına görə",
+    "sortByOperators": "Əməkdaşların sayına görə",
+    "sortByName": "Ada görə",
+    "sortDirAsc": "Artan",
+    "sortDirDesc": "Azalan"
   },
   "dataCleanup": {
     "title": "Məlumatların təmizlənməsi",

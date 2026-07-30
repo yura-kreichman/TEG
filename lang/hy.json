@@ -329,7 +329,18 @@
     "deleteOwnerConfirmPasswordLabel": "Ձեր ադմինիստրատորի գաղտնաբառը",
     "deleteOwnerConfirmNamePrefix": "Հաստատելու համար մուտքագրեք ընկերության անունը.",
     "deleteOwnerConfirmNameHint": "Այս գործողությունը հնարավոր չէ չեղարկել",
-    "deleteOwnerConfirmButton": "Ջնջել սեփականատիրոջը ընդմիշտ"
+    "deleteOwnerConfirmButton": "Ջնջել սեփականատիրոջը ընդմիշտ",
+    "unlimitedChip": "Անսահմանափակ",
+    "registeredOnLabel": "Գրանցում.",
+    "statusExpiringSoon": "Շուտով ավարտվում է",
+    "filterPackageAll": "Բոլոր փաթեթները",
+    "filterStatusAll": "Բոլոր կարգավիճակները",
+    "sortByCreatedAt": "Ըստ գրանցման ամսաթվի",
+    "sortByPoints": "Ըստ կետերի քանակի",
+    "sortByOperators": "Ըստ աշխատակիցների քանակի",
+    "sortByName": "Ըստ անվան",
+    "sortDirAsc": "Աճման կարգով",
+    "sortDirDesc": "Նվազման կարգով"
   },
   "dataCleanup": {
     "title": "Տվյալների մաքրում",

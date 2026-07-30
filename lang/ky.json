@@ -329,7 +329,18 @@
     "deleteOwnerConfirmPasswordLabel": "Администратордун сырсөзүңүз",
     "deleteOwnerConfirmNamePrefix": "Ырастоо үчүн компания атын киргизиңиз:",
     "deleteOwnerConfirmNameHint": "Бул аракетти артка кайтарууга болбойт",
-    "deleteOwnerConfirmButton": "Ээсин биротоло өчүрүү"
+    "deleteOwnerConfirmButton": "Ээсин биротоло өчүрүү",
+    "unlimitedChip": "Чексиз",
+    "registeredOnLabel": "Каттоо:",
+    "statusExpiringSoon": "Жакында бүтөт",
+    "filterPackageAll": "Бардык пакеттер",
+    "filterStatusAll": "Бардык статустар",
+    "sortByCreatedAt": "Каттоо күнү боюнча",
+    "sortByPoints": "Пункттардын саны боюнча",
+    "sortByOperators": "Кызматкерлердин саны боюнча",
+    "sortByName": "Аты боюнча",
+    "sortDirAsc": "Өсүү боюнча",
+    "sortDirDesc": "Кемүү боюнча"
   },
   "dataCleanup": {
     "title": "Маалыматтарды тазалоо",

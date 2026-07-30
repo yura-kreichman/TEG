@@ -329,7 +329,18 @@
     "deleteOwnerConfirmPasswordLabel": "Әкімші құпия сөзіңіз",
     "deleteOwnerConfirmNamePrefix": "Растау үшін компания атауын енгізіңіз:",
     "deleteOwnerConfirmNameHint": "Бұл әрекетті болдырмау мүмкін емес",
-    "deleteOwnerConfirmButton": "Иесін мүлдем жою"
+    "deleteOwnerConfirmButton": "Иесін мүлдем жою",
+    "unlimitedChip": "Шексіз",
+    "registeredOnLabel": "Тіркелу:",
+    "statusExpiringSoon": "Жақында аяқталады",
+    "filterPackageAll": "Барлық пакеттер",
+    "filterStatusAll": "Барлық мәртебелер",
+    "sortByCreatedAt": "Тіркелу күні бойынша",
+    "sortByPoints": "Нүктелер саны бойынша",
+    "sortByOperators": "Қызметкерлер саны бойынша",
+    "sortByName": "Атауы бойынша",
+    "sortDirAsc": "Өсу бойынша",
+    "sortDirDesc": "Кему бойынша"
   },
   "dataCleanup": {
     "title": "Деректерді тазалау",

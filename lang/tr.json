@@ -329,7 +329,18 @@
     "deleteOwnerConfirmPasswordLabel": "Yönetici şifreniz",
     "deleteOwnerConfirmNamePrefix": "Onaylamak için şirket adını girin:",
     "deleteOwnerConfirmNameHint": "Bu işlem geri alınamaz",
-    "deleteOwnerConfirmButton": "Sahibi kalıcı olarak sil"
+    "deleteOwnerConfirmButton": "Sahibi kalıcı olarak sil",
+    "unlimitedChip": "Sınırsız",
+    "registeredOnLabel": "Kayıt:",
+    "statusExpiringSoon": "Yakında sona eriyor",
+    "filterPackageAll": "Tüm paketler",
+    "filterStatusAll": "Tüm durumlar",
+    "sortByCreatedAt": "Kayıt tarihine göre",
+    "sortByPoints": "Nokta sayısına göre",
+    "sortByOperators": "Çalışan sayısına göre",
+    "sortByName": "İsme göre",
+    "sortDirAsc": "Artan",
+    "sortDirDesc": "Azalan"
   },
   "dataCleanup": {
     "title": "Veri temizleme",

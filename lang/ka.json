@@ -329,7 +329,18 @@
     "deleteOwnerConfirmPasswordLabel": "თქვენი ადმინისტრატორის პაროლი",
     "deleteOwnerConfirmNamePrefix": "დასადასტურებლად შეიყვანეთ კომპანიის სახელი:",
     "deleteOwnerConfirmNameHint": "ამ მოქმედების გაუქმება შეუძლებელია",
-    "deleteOwnerConfirmButton": "მფლობელის სამუდამოდ წაშლა"
+    "deleteOwnerConfirmButton": "მფლობელის სამუდამოდ წაშლა",
+    "unlimitedChip": "ულიმიტო",
+    "registeredOnLabel": "რეგისტრაცია:",
+    "statusExpiringSoon": "მალე იწურება",
+    "filterPackageAll": "ყველა პაკეტი",
+    "filterStatusAll": "ყველა სტატუსი",
+    "sortByCreatedAt": "რეგისტრაციის თარიღით",
+    "sortByPoints": "წერტილების რაოდენობით",
+    "sortByOperators": "თანამშრომლების რაოდენობით",
+    "sortByName": "სახელით",
+    "sortDirAsc": "ზრდადობით",
+    "sortDirDesc": "კლებადობით"
   },
   "dataCleanup": {
     "title": "მონაცემების გასუფთავება",

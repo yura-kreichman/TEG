@@ -34,11 +34,21 @@ function sleep(ms: number) {
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
 // Нет реального биллинга (докс, план+лимиты без денег, 2026-07-10) — админ
-// вручную ставит дату окончания, а это просто переводит статус в expired,
-// когда она прошла. Один UPDATE ... WHERE на тик, без обхода тенантов в JS.
+// вручную ставит дату окончания (или она проставляется автоматически при
+// регистрации на Free, см. FREE_TRIAL_DAYS в api/auth/register/route.ts), а
+// это просто переводит статус в expired, когда она прошла. Один UPDATE ...
+// WHERE на тик, без обхода тенантов в JS.
+//
+// unlimited: false — реальный пробел, найден пользователем 2026-07-29:
+// "Free должен действовать месяц, если я не поставил ему осознанно
+// безлимит" — Tenant.unlimited (ручной рубильник Super Admin'а, снимает
+// лимиты ресурсов) раньше никак не влиял на этот таймер, тенант с
+// unlimited=true всё равно тихо переходил в expired через 30 дней. Теперь
+// unlimited защищает и от истечения подписки, не только от лимитов —
+// именно так это поле описано пользователю ("осознанно поставил безлимит").
 async function expireSubscriptions(now: Date) {
   await prisma.tenant.updateMany({
-    where: { subscriptionStatus: "active", subscriptionExpiresAt: { lt: now } },
+    where: { subscriptionStatus: "active", subscriptionExpiresAt: { lt: now }, unlimited: false },
     data: { subscriptionStatus: "expired" },
   });
 }
