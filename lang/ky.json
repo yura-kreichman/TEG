@@ -314,7 +314,6 @@
     "productIdFieldLabel": "Product ID (FluentCart)",
     "productIdFieldHint": "FluentCart'тагы товардын WordPress post ID'си — вебхук буйрутма үчүн пакетти ушул боюнча издейт.",
     "productIdFieldPlaceholder": "Байланган эмес",
-    "priceFieldLabel": "Айлык баасы",
     "maxPointsLabel": "Чекиттердин лимити",
     "maxZonesLabel": "Аймактардын лимити",
     "maxAssetsLabel": "Активдердин лимити",

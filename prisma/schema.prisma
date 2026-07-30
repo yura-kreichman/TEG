@@ -31,11 +31,15 @@ model Package {
   maxZones            Int
   maxAssets           Int
   maxOperators        Int
-  priceMonthly        Decimal  @db.Decimal(10, 2)
   // Привязка к продукту FluentCart (docs/spec/06-super-admin.md) — вебхук
   // ищет Package по этому полю, чтобы понять, на какой план переключить
-  // тенанта. Не источник истины по цене (это priceMonthly) — просто ключ
-  // сопоставления с биллингом.
+  // тенанта. Цена нигде в RentOS не хранится (решение пользователя
+  // 2026-07-29: "нужно ли указывать цену, если это всё равно делаем в
+  // FluentCart" — priceMonthly убран целиком, он дублировал реальный
+  // источник истины и мог разъехаться с ним) — этим же полем определяется
+  // "платный ли пакет" везде, где раньше проверяли priceMonthly > 0:
+  // null = бесплатный пакет (никогда не покупается через FluentCart, см.
+  // api/auth/register/route.ts), непустое значение = платный.
   fluentcartProductId String?  @unique
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt

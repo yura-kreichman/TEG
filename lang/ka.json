@@ -314,7 +314,6 @@
     "productIdFieldLabel": "Product ID (FluentCart)",
     "productIdFieldHint": "WordPress post ID პროდუქტისთვის FluentCart-ში — webhook ამით პოულობს პაკეტს შეკვეთისთვის.",
     "productIdFieldPlaceholder": "არ არის მიბმული",
-    "priceFieldLabel": "ფასი თვეში",
     "maxPointsLabel": "წერტილების ლიმიტი",
     "maxZonesLabel": "ზონების ლიმიტი",
     "maxAssetsLabel": "აქტივების ლიმიტი",

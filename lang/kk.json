@@ -314,7 +314,6 @@
     "productIdFieldLabel": "Product ID (FluentCart)",
     "productIdFieldHint": "FluentCart-тағы тауардың WordPress post ID — webhook тапсырыс үшін пакетті осы арқылы іздейді.",
     "productIdFieldPlaceholder": "Байланыстырылмаған",
-    "priceFieldLabel": "Айлық баға",
     "maxPointsLabel": "Нүктелер лимиті",
     "maxZonesLabel": "Аймақтар лимиті",
     "maxAssetsLabel": "Активтер лимиті",

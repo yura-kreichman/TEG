@@ -314,7 +314,6 @@
     "productIdFieldLabel": "Product ID (FluentCart)",
     "productIdFieldHint": "Ապրանքի WordPress post ID-ն FluentCart-ում — webhook-ը դրանով փնտրում է պատվերի փաթեթը.",
     "productIdFieldPlaceholder": "Կապակցված չէ",
-    "priceFieldLabel": "Գին ամսական",
     "maxPointsLabel": "Կետերի սահմանաչափ",
     "maxZonesLabel": "Գոտիների սահմանաչափ",
     "maxAssetsLabel": "Ակտիվների սահմանաչափ",

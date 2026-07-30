@@ -314,7 +314,6 @@
     "productIdFieldLabel": "Product ID (FluentCart)",
     "productIdFieldHint": "FluentCart-da məhsulun WordPress post ID-si — vebhuk sifariş üçün paketi bununla axtarır.",
     "productIdFieldPlaceholder": "Bağlanmayıb",
-    "priceFieldLabel": "Aylıq qiymət",
     "maxPointsLabel": "Nöqtə limiti",
     "maxZonesLabel": "Zona limiti",
     "maxAssetsLabel": "Aktiv limiti",

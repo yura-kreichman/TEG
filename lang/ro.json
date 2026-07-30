@@ -314,7 +314,6 @@
     "productIdFieldLabel": "Product ID (FluentCart)",
     "productIdFieldHint": "ID-ul postării WordPress al produsului din FluentCart — webhook-ul îl folosește pentru a potrivi o comandă cu un pachet.",
     "productIdFieldPlaceholder": "Nelegat",
-    "priceFieldLabel": "Preț pe lună",
     "maxPointsLabel": "Limită puncte",
     "maxZonesLabel": "Limită zone",
     "maxAssetsLabel": "Limită active",

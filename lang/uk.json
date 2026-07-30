@@ -314,7 +314,6 @@
     "productIdFieldLabel": "Product ID (FluentCart)",
     "productIdFieldHint": "WordPress post ID товару в FluentCart — вебхук шукає за ним пакет для замовлення.",
     "productIdFieldPlaceholder": "Не прив'язано",
-    "priceFieldLabel": "Ціна на місяць",
     "maxPointsLabel": "Ліміт точок",
     "maxZonesLabel": "Ліміт зон",
     "maxAssetsLabel": "Ліміт активів",

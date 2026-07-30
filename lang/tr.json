@@ -314,7 +314,6 @@
     "productIdFieldLabel": "Product ID (FluentCart)",
     "productIdFieldHint": "FluentCart'taki ürünün WordPress post ID'si — webhook, sipariş için paketi bununla arar.",
     "productIdFieldPlaceholder": "Bağlı değil",
-    "priceFieldLabel": "Aylık fiyat",
     "maxPointsLabel": "Nokta limiti",
     "maxZonesLabel": "Bölge limiti",
     "maxAssetsLabel": "Varlık limiti",

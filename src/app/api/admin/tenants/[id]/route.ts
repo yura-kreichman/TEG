@@ -297,11 +297,15 @@ export async function DELETE(request: Request, ctx: RouteContext<"/api/admin/ten
   if (typeof confirmText !== "string" || confirmText.trim() !== tenant.name) {
     return NextResponse.json({ error: "Название компании введено неверно" }, { status: 400 });
   }
-  // Free-пакет (priceMonthly = 0) не блокируем даже при болтающемся
-  // fluentcartCustomerId/active — реальных денег там нет, блокировка нужна
-  // только против удаления тенанта, за которого продолжат списывать оплату
-  // (решение пользователя 2026-07-12: "При подписке Free удалять").
-  const isPaidActive = Number(tenant.package.priceMonthly) > 0 && tenant.fluentcartCustomerId && tenant.subscriptionStatus === "active";
+  // Free-пакет (fluentcartProductId = null, см. schema.prisma) не блокируем
+  // даже при болтающемся fluentcartCustomerId/active — реальных денег там
+  // нет, блокировка нужна только против удаления тенанта, за которого
+  // продолжат списывать оплату (решение пользователя 2026-07-12: "При
+  // подписке Free удалять"). Раньше проверялось priceMonthly > 0 — поле
+  // убрано целиком 2026-07-29, "платный" теперь определяется тем же
+  // признаком, что и everywhere else в проекте: пакет привязан к продукту
+  // FluentCart.
+  const isPaidActive = Boolean(tenant.package.fluentcartProductId) && tenant.fluentcartCustomerId && tenant.subscriptionStatus === "active";
   if (isPaidActive) {
     return NextResponse.json(
       { error: "У тенанта активная платная подписка FluentCart — сначала отмените её в FluentCart, затем повторите удаление" },

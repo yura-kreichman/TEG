@@ -314,7 +314,6 @@
     "productIdFieldLabel": "Product ID (FluentCart)",
     "productIdFieldHint": "The FluentCart product's WordPress post ID — the webhook uses it to match an order to a package.",
     "productIdFieldPlaceholder": "Not linked",
-    "priceFieldLabel": "Price per month",
     "maxPointsLabel": "Points limit",
     "maxZonesLabel": "Zones limit",
     "maxAssetsLabel": "Assets limit",

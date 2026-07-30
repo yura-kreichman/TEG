@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
-import { parseMoneyInput } from "@/lib/format";
 
 interface PackageInfo {
   id: string;
@@ -25,7 +24,6 @@ interface PackageInfo {
   maxZones: number;
   maxAssets: number;
   maxOperators: number;
-  priceMonthly: string;
   fluentcartProductId: string | null;
   tenantsCount: number;
 }
@@ -36,7 +34,6 @@ const EMPTY_FORM = {
   maxZones: "10",
   maxAssets: "50",
   maxOperators: "10",
-  priceMonthly: "0",
   fluentcartProductId: "",
 };
 
@@ -91,7 +88,6 @@ export default function AdminPackagesPage() {
       maxZones: String(pkg.maxZones),
       maxAssets: String(pkg.maxAssets),
       maxOperators: String(pkg.maxOperators),
-      priceMonthly: pkg.priceMonthly,
       fluentcartProductId: pkg.fluentcartProductId ?? "",
     });
     setSaveError(null);
@@ -105,7 +101,6 @@ export default function AdminPackagesPage() {
       maxZones: Number(form.maxZones),
       maxAssets: Number(form.maxAssets),
       maxOperators: Number(form.maxOperators),
-      priceMonthly: parseMoneyInput(form.priceMonthly),
       fluentcartProductId: form.fluentcartProductId.trim() || null,
     };
     const res = await fetch(editingId ? `/api/admin/packages/${editingId}` : "/api/admin/packages", {
@@ -166,7 +161,7 @@ export default function AdminPackagesPage() {
                       <div className="min-w-0 grow">
                         <div className="text-card-title">{pkg.name}</div>
                         <p className="text-caption-airbnb tabular-nums">
-                          {pkg.priceMonthly} · {pkg.maxPoints} {t.admin.usagePoints.toLowerCase()} · {pkg.maxOperators}{" "}
+                          {pkg.maxPoints} {t.admin.usagePoints.toLowerCase()} · {pkg.maxOperators}{" "}
                           {t.admin.usageOperators.toLowerCase()} · {pkg.tenantsCount} {t.admin.tenantsCountSuffix}
                         </p>
                         {!pkg.fluentcartProductId && (
@@ -213,16 +208,6 @@ export default function AdminPackagesPage() {
               onChange={(e) => setForm((p) => ({ ...p, fluentcartProductId: e.target.value }))}
             />
             <p className="text-caption-airbnb text-muted-foreground">{t.admin.productIdFieldHint}</p>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="pkg-price">{t.admin.priceFieldLabel}</Label>
-            <Input
-              id="pkg-price"
-              inputMode="decimal"
-              className="tabular-nums"
-              value={form.priceMonthly}
-              onChange={(e) => setForm((p) => ({ ...p, priceMonthly: e.target.value }))}
-            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1">

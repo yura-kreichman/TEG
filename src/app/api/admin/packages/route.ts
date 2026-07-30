@@ -11,7 +11,10 @@ export async function GET() {
 
   const packages = await prisma.package.findMany({
     include: { _count: { select: { tenants: true } } },
-    orderBy: { priceMonthly: "asc" },
+    // Раньше сортировка была по priceMonthly (поле убрано 2026-07-29) — по
+    // лимиту точек as a разумный прокси "от меньшего пакета к большему",
+    // тот лимит обычно растёт вместе с ценой плана.
+    orderBy: { maxPoints: "asc" },
   });
 
   return NextResponse.json({
@@ -22,7 +25,6 @@ export async function GET() {
       maxZones: p.maxZones,
       maxAssets: p.maxAssets,
       maxOperators: p.maxOperators,
-      priceMonthly: p.priceMonthly.toString(),
       fluentcartProductId: p.fluentcartProductId,
       tenantsCount: p._count.tenants,
     })),

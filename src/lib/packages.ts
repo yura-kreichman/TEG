@@ -7,13 +7,14 @@ export interface PackagePayload {
   maxZones: number;
   maxAssets: number;
   maxOperators: number;
-  priceMonthly: number;
   fluentcartProductId: string | null;
 }
 
 // Модули больше не различаются по пакетам (фидбек пользователя 2026-07-12:
 // "во всех пакетах работают все модули... разница пакетов только в
-// лимитах") — валидация модулей убрана вместе с самим полем.
+// лимитах") — валидация модулей убрана вместе с самим полем. Цена (была
+// priceMonthly) убрана тем же приёмом 2026-07-29 — реальная цена только в
+// FluentCart, дублирующее число здесь могло разъехаться с ней.
 export function validatePackagePayload(body: unknown): PackagePayload | null {
   if (typeof body !== "object" || body === null) return null;
   const b = body as Record<string, unknown>;
@@ -22,8 +23,6 @@ export function validatePackagePayload(body: unknown): PackagePayload | null {
   for (const key of ["maxPoints", "maxZones", "maxAssets", "maxOperators"] as const) {
     if (typeof b[key] !== "number" || !Number.isInteger(b[key]) || (b[key] as number) < 0) return null;
   }
-  const price = Number(b.priceMonthly);
-  if (!Number.isFinite(price) || price < 0) return null;
   if (b.fluentcartProductId !== undefined && b.fluentcartProductId !== null && typeof b.fluentcartProductId !== "string") {
     return null;
   }
@@ -34,7 +33,6 @@ export function validatePackagePayload(body: unknown): PackagePayload | null {
     maxZones: b.maxZones as number,
     maxAssets: b.maxAssets as number,
     maxOperators: b.maxOperators as number,
-    priceMonthly: price,
     fluentcartProductId:
       typeof b.fluentcartProductId === "string" && b.fluentcartProductId.trim() ? b.fluentcartProductId.trim() : null,
   };

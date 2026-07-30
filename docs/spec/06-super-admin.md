@@ -154,7 +154,7 @@ model SystemSettings {
 
 **`/admin/plans`**
 - Список планов
-- CRUD: название, `fluentcartProductId`, лимиты, `priceNote`/`priceMonthly`
+- CRUD: название, `fluentcartProductId`, лимиты. Цена нигде в RentOS не хранится (решение 2026-07-29) — единственный источник истины на неё FluentCart, `fluentcartProductId` (пусто = бесплатный план) уже однозначно отличает платный план от бесплатного, дублирующее числовое поле только рисковало разъехаться с реальной ценой
 
 **`/admin/settings`**
 - Форма глобальных настроек: токен Telegram-бота, SMTP (host/port/user/password/from), дефолтная локаль/таймзона/валюта
