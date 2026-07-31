@@ -1309,6 +1309,7 @@
     "editAction": "Өңдеу",
     "linkAndQrAction": "Сілтеме және QR",
     "archiveAction": "Мұрағаттау",
+    "archiveError": "Мұрағаттау мүмкін болмады",
     "archiveConfirmTitle": "Нұсқаулықты мұрағаттау керек пе?",
     "archiveConfirmHint": "Жария сілтеме ашылмай қалады. Жиналған танысу жазбалары журналда қалады.",
     "deleteAction": "Жою",

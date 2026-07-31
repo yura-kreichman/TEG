@@ -1309,6 +1309,7 @@
     "editAction": "Edit",
     "linkAndQrAction": "Link and QR",
     "archiveAction": "Archive",
+    "archiveError": "Failed to archive",
     "archiveConfirmTitle": "Archive this instruction?",
     "archiveConfirmHint": "The public link will stop working. Already collected acknowledgment records stay in the log.",
     "deleteAction": "Delete",

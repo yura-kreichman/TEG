@@ -1309,6 +1309,7 @@
     "editAction": "Modifica",
     "linkAndQrAction": "Link e codice QR",
     "archiveAction": "Archivia",
+    "archiveError": "Impossibile archiviare",
     "archiveConfirmTitle": "Archiviare questa istruzione?",
     "archiveConfirmHint": "Il link pubblico smetterà di funzionare. Le prese visione già registrate restano nel registro.",
     "deleteAction": "Elimina",

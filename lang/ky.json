@@ -1309,6 +1309,7 @@
     "editAction": "Оңдоо",
     "linkAndQrAction": "Шилтеме жана QR",
     "archiveAction": "Архивдөө",
+    "archiveError": "Архивдөө мүмкүн болбоду",
     "archiveConfirmTitle": "Нускаманы архивдейсизби?",
     "archiveConfirmHint": "Ачык шилтеме иштебей калат. Мурда чогултулган таанышуу жазуулары журналда калат.",
     "deleteAction": "Өчүрүү",

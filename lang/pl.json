@@ -1309,6 +1309,7 @@
     "editAction": "Edytuj",
     "linkAndQrAction": "Link i QR",
     "archiveAction": "Archiwizuj",
+    "archiveError": "Nie udało się zarchiwizować",
     "archiveConfirmTitle": "Zarchiwizować instrukcję?",
     "archiveConfirmHint": "Publiczny link przestanie działać. Już zebrane wpisy zapoznania pozostaną w dzienniku.",
     "deleteAction": "Usuń",

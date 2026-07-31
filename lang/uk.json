@@ -1309,6 +1309,7 @@
     "editAction": "Редагувати",
     "linkAndQrAction": "Посилання і QR",
     "archiveAction": "Архівувати",
+    "archiveError": "Не вдалося архівувати",
     "archiveConfirmTitle": "Архівувати інструкцію?",
     "archiveConfirmHint": "Публічне посилання перестане відкриватися. Вже зібрані записи ознайомлень залишаться в журналі.",
     "deleteAction": "Видалити",

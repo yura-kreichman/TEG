@@ -1309,6 +1309,7 @@
     "editAction": "რედაქტირება",
     "linkAndQrAction": "ბმული და QR",
     "archiveAction": "დაარქივება",
+    "archiveError": "დაარქივება ვერ მოხერხდა",
     "archiveConfirmTitle": "დავაარქივოთ ინსტრუქცია?",
     "archiveConfirmHint": "საჯარო ბმული აღარ გაიხსნება. უკვე შეგროვებული გაცნობის ჩანაწერები დარჩება ჟურნალში.",
     "deleteAction": "წაშლა",

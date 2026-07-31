@@ -1309,6 +1309,7 @@
     "editAction": "Düzenle",
     "linkAndQrAction": "Bağlantı ve QR",
     "archiveAction": "Arşivle",
+    "archiveError": "Arşivlenemedi",
     "archiveConfirmTitle": "Yönerge arşivlensin mi?",
     "archiveConfirmHint": "Genel bağlantı artık açılmayacak. Zaten toplanmış onay kayıtları günlükte kalır.",
     "deleteAction": "Sil",

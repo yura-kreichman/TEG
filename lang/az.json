@@ -1309,6 +1309,7 @@
     "editAction": "Redaktə et",
     "linkAndQrAction": "Keçid və QR",
     "archiveAction": "Arxivləşdir",
+    "archiveError": "Arxivləşdirmək mümkün olmadı",
     "archiveConfirmTitle": "Təlimatı arxivləşdirmək istəyirsiniz?",
     "archiveConfirmHint": "Açıq keçid artıq açılmayacaq. Artıq toplanmış tanışlıq qeydləri jurnalda qalacaq.",
     "deleteAction": "Sil",

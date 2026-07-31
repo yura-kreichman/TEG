@@ -52,6 +52,7 @@ export default function InstructionsSettingsPage() {
   const { saved: instructionDeleted, pulse: instructionDeletePulse } = useSavePulse();
   const [kebabView, setKebabView] = useState<KebabView>("menu");
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
   const [qrTarget, setQrTarget] = useState<InstructionListItem | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -125,7 +126,13 @@ export default function InstructionsSettingsPage() {
 
   async function archiveInstruction() {
     if (!kebabTarget) return;
-    await fetch(`/api/instructions/${kebabTarget.id}/archive`, { method: "POST" });
+    setArchiveError(null);
+    const res = await fetch(`/api/instructions/${kebabTarget.id}/archive`, { method: "POST" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setArchiveError(data?.error ?? t.instructions.archiveError);
+      return;
+    }
     setKebabTarget(null);
     setKebabView("menu");
     loadInstructions();
@@ -397,6 +404,7 @@ export default function InstructionsSettingsPage() {
           setKebabTarget(null);
           setKebabView("menu");
           setDeleteError(null);
+          setArchiveError(null);
         }}
       >
         {kebabTarget && kebabView === "menu" && (
@@ -445,6 +453,7 @@ export default function InstructionsSettingsPage() {
           <div className="flex flex-col gap-3 pt-2">
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.instructions.archiveConfirmTitle}</h2>
             <p className="text-body-airbnb text-muted-foreground">{t.instructions.archiveConfirmHint}</p>
+            {archiveError && <p className="text-caption-airbnb text-destructive">{archiveError}</p>}
             <PressableScale>
               <Button type="button" variant="destructive" className="h-12 w-full" onClick={archiveInstruction}>
                 {t.instructions.archiveAction}

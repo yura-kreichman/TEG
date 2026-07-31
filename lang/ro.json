@@ -1309,6 +1309,7 @@
     "editAction": "Editează",
     "linkAndQrAction": "Link și QR",
     "archiveAction": "Arhivează",
+    "archiveError": "Nu s-a putut arhiva",
     "archiveConfirmTitle": "Arhivezi instrucțiunea?",
     "archiveConfirmHint": "Linkul public va înceta să funcționeze. Înregistrările deja colectate rămân în jurnal.",
     "deleteAction": "Șterge",

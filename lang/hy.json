@@ -1309,6 +1309,7 @@
     "editAction": "Խմբագրել",
     "linkAndQrAction": "Հղում և QR",
     "archiveAction": "Արխիվացնել",
+    "archiveError": "Չհաջողվեց արխիվացնել",
     "archiveConfirmTitle": "Արխիվացնե՞լ հրահանգը։",
     "archiveConfirmHint": "Հրապարակային հղումն այլևս չի բացվի։ Արդեն հավաքված ծանոթացման գրառումները կմնան մատյանում։",
     "deleteAction": "Ջնջել",

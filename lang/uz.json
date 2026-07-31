@@ -1309,6 +1309,7 @@
     "editAction": "Tahrirlash",
     "linkAndQrAction": "Havola va QR",
     "archiveAction": "Arxivlash",
+    "archiveError": "Arxivlab bo’lmadi",
     "archiveConfirmTitle": "Yo'riqnomani arxivlaysizmi?",
     "archiveConfirmHint": "Ochiq havola ishlamay qoladi. Allaqachon yig'ilgan tanishish yozuvlari jurnalda qoladi.",
     "deleteAction": "O'chirish",
