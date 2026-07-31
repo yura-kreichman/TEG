@@ -336,6 +336,7 @@ model Tenant {
   goodsCategories               GoodsCategory[]
   goods                         Goods[]
   goodsSales                    GoodsSale[]
+  goodsHeldOrders               GoodsHeldOrder[]
   goodsRevisions                GoodsRevision[]
   goodsReconciliations          GoodsReconciliation[]
 }
@@ -402,6 +403,7 @@ model User {
   abonementTransactions AbonementTransaction[]
   goodsRestocks         GoodsRestock[]
   goodsSales            GoodsSale[]
+  goodsHeldOrders       GoodsHeldOrder[]
   goodsRevisions        GoodsRevision[]
   goodsReconciliations  GoodsReconciliation[]
 }
@@ -586,6 +588,7 @@ model Operator {
   launchesEnded         Launch[]                   @relation("LaunchEndedBy")
   abonementTransactions AbonementTransaction[]
   goodsSales            GoodsSale[]
+  goodsHeldOrders       GoodsHeldOrder[]
   goodsRevisions        GoodsRevision[]
   goodsReconciliations  GoodsReconciliation[]
   ticketOrdersSold      TicketOrder[]
@@ -667,6 +670,7 @@ model Point {
   goodsStocks                GoodsStock[]
   goodsRestocks              GoodsRestock[]
   goodsSales                 GoodsSale[]
+  goodsHeldOrders            GoodsHeldOrder[]
   goodsRevisions             GoodsRevision[]
   goodsReconciliations       GoodsReconciliation[]
   zoneReturnEvents           ZoneReturnEvent[]
@@ -1209,7 +1213,7 @@ model AbonementWallet {
   // Справочная привязка "чей это ребёнок" на Launch.linkedClientWalletId
   // (запрос пользователя 2026-07-27) — отдельная именованная связь от
   // `launches` выше (та про реальное списание оплаты).
-  launchesLinkedAsClient     Launch[]              @relation("LaunchLinkedClient")
+  launchesLinkedAsClient     Launch[]                    @relation("LaunchLinkedClient")
   goodsSales                 GoodsSale[]
   ticketOrders               TicketOrder[]
   counterTapEvents           CounterTapEvent[]
@@ -1368,10 +1372,11 @@ model Goods {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  stock         GoodsStock[]
-  sales         GoodsSale[]
-  restocks      GoodsRestock[]
-  revisionLines GoodsRevisionLine[]
+  stock          GoodsStock[]
+  sales          GoodsSale[]
+  restocks       GoodsRestock[]
+  revisionLines  GoodsRevisionLine[]
+  heldOrderLines GoodsHeldOrderLine[]
 
   @@index([tenantId])
   @@index([categoryId])
@@ -1481,6 +1486,70 @@ model GoodsSalePaymentLeg {
 
   @@index([saleId])
   @@index([walletId])
+}
+
+// Отложенный заказ Товаров (запрос пользователя 2026-07-29: "клиент покупает
+// товары, но ещё сидит за столом, не надо сразу рассчитывать") — НЕ то же
+// самое, что TicketOrder (там оплата всегда сразу при продаже, откладывается
+// только погашение/использование). Здесь наоборот: остаток списывается сразу
+// при добавлении позиции (см. GoodsHeldOrderLine — тот же decrement, что и у
+// обычной продажи, просто GoodsSale ещё не создаётся), а способ оплаты и сам
+// факт оплаты — только когда Владелец/Сотрудник нажимает "Оплатить"; до
+// этого момента заказ НЕ существует в GoodsSale вообще, поэтому вся денежная
+// отчётность (Деньги/Отчёты/остаток кассы) не видит его и не требует правок —
+// открытый заказ буквально ещё не выручка. Отмена ("Удалить") возвращает
+// списанный остаток и удаляет заказ целиком — та же кнопка, что в обычной
+// корзине, просто теперь с реальным откатом склада, а не просто очисткой
+// формы (в отложенном заказе остаток уже физически списан, в отличие от
+// черновика корзины).
+model GoodsHeldOrder {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pointId  String
+  point    Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
+
+  // Номер на точку, тот же smallestFreeNumber-приём, что у TicketOrder.number
+  // (src/lib/game-room.ts) — "занят", пока строка существует: в отличие от
+  // Ticket, здесь нет частичного гашения, заказ атомарно открыт или закрыт
+  // (оплачен/отменён), поэтому отдельный счётчик "открытых позиций" не нужен.
+  number Int
+  // Своё имя заказа (запрос пользователя 2026-07-30: "Стол Васи" и т.п.) —
+  // необязательное, поверх номера, не вместо него: номер остаётся
+  // уникальным ключом на точку/цветовой меткой (COLOR_TAG_PALETTE по
+  // number), label — просто более узнаваемая подпись сверху.
+  label String?
+
+  performedByOperatorId String?
+  performedByOperator   Operator? @relation(fields: [performedByOperatorId], references: [id])
+  performedByUserId     String?
+  performedByUser       User?     @relation(fields: [performedByUserId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  lines GoodsHeldOrderLine[]
+
+  @@unique([pointId, number])
+  @@index([pointId])
+}
+
+model GoodsHeldOrderLine {
+  id      String         @id @default(cuid())
+  orderId String
+  order   GoodsHeldOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  goodsId String
+  // onDelete: Cascade — тот же класс бага, что и у Goods.category/GoodsSale.goods
+  // выше (аудит 2026-07-26/27): обе стороны каскадно уносятся от Tenant
+  // независимыми цепочками, порядок между ними Postgres не гарантирует.
+  goods   Goods          @relation(fields: [goodsId], references: [id], onDelete: Cascade)
+
+  quantity      Int
+  // Снапшот цены на момент добавления в заказ (паттерн GoodsSale.priceSnapshot) —
+  // смена цены товара, пока заказ открыт, не задевает уже добавленные позиции.
+  priceSnapshot Decimal @db.Decimal(10, 2)
+
+  @@index([orderId])
+  @@index([goodsId])
 }
 
 model GoodsRevision {

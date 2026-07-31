@@ -30,7 +30,8 @@
     "changeFile": "Replace file",
     "loading": "Loading…",
     "ownerLabel": "Owner",
-    "poweredByLabel": "Powered by"
+    "poweredByLabel": "Powered by",
+    "rename": "Rename"
   },
   "iconPicker": {
     "selectIcon": "Choose an icon",
@@ -1599,7 +1600,8 @@
     "noSalesYet": "No sales in this period",
     "purchasesTitle": "Sales",
     "voided": "Voided",
-    "catalogStockLabel": "Stock"
+    "catalogStockLabel": "Stock",
+    "heldOrderChipLabel": "Order"
   },
   "tickets": {
     "entryTitle": "Tickets",

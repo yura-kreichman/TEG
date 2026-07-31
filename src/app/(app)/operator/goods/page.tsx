@@ -10,6 +10,7 @@ import {
   ClipboardList,
   CreditCard,
   Minus,
+  Pencil,
   Plus,
   Search,
   ShoppingBag,
@@ -30,6 +31,8 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
 import { SplitPaymentSheet } from "@/components/split-payment-sheet";
 import { useGoodsCart } from "@/components/operator-cart-context";
+import { IconActionButton } from "@/components/kebab-menu";
+import { COLOR_TAG_PALETTE } from "@/lib/color-tag";
 import { Money } from "@/components/money";
 import { PrintButton } from "@/components/print/print-button";
 import { ActionToast } from "@/components/action-toast";
@@ -41,6 +44,7 @@ import { useLiveRefetch } from "@/hooks/use-live-refetch";
 import { playErrorChime } from "@/lib/beep";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { formatMoneyWithCurrency, parseMoneyInput } from "@/lib/format";
+import { formatTime } from "@/lib/datetime-format";
 import type { PaymentLegInput } from "@/lib/payment-split";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +68,15 @@ interface GoodsCtx {
   trackStock: boolean;
   stockQuantity: number | null;
   lowStock: boolean;
+}
+
+interface HeldOrderCtx {
+  id: string;
+  number: number;
+  label: string | null;
+  createdAt: string;
+  total: number;
+  lines: { goodsId: string; goodsName: string; quantity: number; priceSnapshot: number }[];
 }
 
 const ALL_CATEGORIES = "all";
@@ -129,6 +142,40 @@ export default function GoodsPage() {
   } | null>(null);
   const printAvailable = useOperatorPrintAvailable();
 
+  // Отложенные заказы (запрос пользователя 2026-07-29: "клиент покупает
+  // товары, но ещё сидит за столом, не надо сразу рассчитывать") — номер +
+  // цвет тот же приём, что у "Посетитель N" в Прибываниях (COLOR_TAG_PALETTE
+  // циклом по номеру), но список — с сервера (GoodsHeldOrder реально
+  // существует в БД, остаток уже списан при "Отложить", в отличие от
+  // черновика корзины, который чисто локальный до этого момента).
+  //
+  // editingHeldOrderId — реальный дизайн-разворот (запрос пользователя
+  // 2026-07-30: "эти товары должны как бы подниматься снова в корзину, и
+  // должна быть такая же механика с кнопкой Отложить обратно") — тап по
+  // чипу заказа поднимает его позиции ОБРАТНО в обычную корзину (goodsCart),
+  // дальше докупка — тем же тапом по тайлам каталога, что и всегда, "Отложить"
+  // синхронизирует правки заново (см. syncHeldOrderCart в lib/goods.ts).
+  // Отдельного sheet "только посмотреть" с поиском/списком больше нет —
+  // первая версия (поиск+список внутри sheet) была отклонена пользователем.
+  const [heldOrders, setHeldOrders] = useState<HeldOrderCtx[]>([]);
+  const [editingHeldOrderId, setEditingHeldOrderId] = useState<string | null>(null);
+  // payingHeldOrderId — тот же payment-method sheet ниже (paymentOpen),
+  // просто submitPayment смотрит на это поле и решает, куда слать оплату:
+  // draft-корзину (sellCart) или конкретный отложенный заказ (payHeldOrder).
+  const [payingHeldOrderId, setPayingHeldOrderId] = useState<string | null>(null);
+  // Сумма именно ИЗ ОТВЕТА синхронизации (запрос пользователя 2026-07-30) —
+  // не из heldOrders (тот обновляется отдельным фоновым GET, который может
+  // не успеть отработать раньше, чем откроется sheet выбора способа
+  // оплаты) — см. proceedToPayment.
+  const [payingHeldOrderTotal, setPayingHeldOrderTotal] = useState(0);
+  const [holding, setHolding] = useState(false);
+  // Переименование заказа (запрос пользователя 2026-07-30: "Стол Васи" и
+  // т.п.) — инлайн-редактирование заголовка внутри того же sheet корзины,
+  // пока editingHeldOrderId установлен.
+  const [renamingOrder, setRenamingOrder] = useState(false);
+  const [orderNameDraft, setOrderNameDraft] = useState("");
+  const [renamingSubmitting, setRenamingSubmitting] = useState(false);
+
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [revisionCategory, setRevisionCategory] = useState<string | null>(null);
   const [revisionQuantities, setRevisionQuantities] = useState<Record<string, string>>({});
@@ -176,6 +223,23 @@ export default function GoodsPage() {
   // пользователя 2026-07-22) — деактивация/активация товара Владельцем
   // должна отразиться у Сотрудника без перезахода на экран.
   useLiveRefetch(load);
+
+  function loadHeldOrders() {
+    fetch("/api/operator/goods/held-orders")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setHeldOrders(data.orders ?? []);
+      })
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    loadHeldOrders();
+  }, []);
+  // Другой оператор/устройство на этой же точке мог отложить/оплатить/
+  // отменить заказ — тот же приём, что у каталога выше (пункт может часами
+  // оставаться открытым).
+  useLiveRefetch(loadHeldOrders);
 
   const filteredGoods = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -251,6 +315,220 @@ export default function GoodsPage() {
       setSubmitting(false);
     }
   }
+
+  // Отложить текущую корзину — больше не отдельная кнопка (запрос
+  // пользователя 2026-07-31: "кнопка Отложить не нужна, при закрытии заказ
+  // может автоматически откладываться"), а неявное действие ПРИ ЗАКРЫТИИ
+  // sheet корзины (см. onClose ниже) — свежий черновик становится НОВЫМ
+  // пронумерованным заказом (POST), а корзина, поднятая из уже открытого
+  // заказа (editingHeldOrderId установлен тапом по чипу, см.
+  // openHeldOrderForEdit), синхронизирует ЕГО же содержимое (PUT,
+  // syncHeldOrderCart в lib/goods.ts — считает разницу, не пересоздаёт
+  // заказ целиком).
+  async function commitCart() {
+    if (currentCartLines.length === 0) return;
+    setHolding(true);
+    try {
+      const isEditing = Boolean(editingHeldOrderId);
+      const url = isEditing
+        ? `/api/operator/goods/held-orders/${editingHeldOrderId}/items`
+        : "/api/operator/goods/held-orders";
+      const res = await fetch(url, {
+        method: isEditing ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: currentCartLines.map((l) => ({ goodsId: l.goodsId, quantity: l.quantity })) }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        flashError(data.error ?? t.operatorApp.gameRoom.networkError);
+        return;
+      }
+      goodsCart.clearCart();
+      setEditingHeldOrderId(null);
+      setCartSheetOpen(false);
+      loadHeldOrders();
+      load();
+    } catch {
+      flashError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      setHolding(false);
+    }
+  }
+
+  // Тап по чипу заказа — поднимает его позиции обратно в обычную корзину
+  // (запрос пользователя 2026-07-30), дальше докупка тем же тапом по
+  // тайлам каталога, что и всегда. Несколько строк одного товара (могли
+  // накопиться за пару "докупок" ранее) суммируются в одно число — корзина
+  // всегда хранит "сколько штук", не отдельные порции.
+  //
+  // Sheet корзины НЕ открывается сам (реальный баг, найден пользователем
+  // 2026-07-30: пока sheet открыт, его backdrop перехватывает тапы по
+  // каталогу за собой — "докупить" физически невозможно). Оператор
+  // остаётся на экране каталога, тайлы сразу тапабельны, счётчик на
+  // плавающей кнопке корзины отражает поднятые позиции — тот же сигнал,
+  // что и у обычного черновика.
+  function openHeldOrderForEdit(order: HeldOrderCtx) {
+    goodsCart.clearCart();
+    const qtyByGoods = new Map<string, number>();
+    for (const line of order.lines) {
+      qtyByGoods.set(line.goodsId, (qtyByGoods.get(line.goodsId) ?? 0) + line.quantity);
+    }
+    for (const [goodsId, quantity] of qtyByGoods) {
+      goodsCart.setQuantity(goodsId, quantity);
+    }
+    setEditingHeldOrderId(order.id);
+  }
+
+  // "Оплатить" из корзины — если это правка уже открытого заказа, сначала
+  // синхронизирует текущее содержимое корзины на сервер (та же
+  // syncHeldOrderCart, что и у "Отложить" в commitCart, просто вместо
+  // закрытия сразу ведёт к оплате) и берёт СВЕЖУЮ сумму из ответа — иначе
+  // sheet выбора способа оплаты открылся бы со старой суммой заказа, если
+  // оператор что-то докупил прямо перед оплатой. Для свежего черновика —
+  // просто открывает sheet способа оплаты как раньше.
+  async function proceedToPayment() {
+    if (!editingHeldOrderId) {
+      setCartSheetOpen(false);
+      setPaymentOpen(true);
+      return;
+    }
+    setHolding(true);
+    try {
+      const res = await fetch(`/api/operator/goods/held-orders/${editingHeldOrderId}/items`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: currentCartLines.map((l) => ({ goodsId: l.goodsId, quantity: l.quantity })) }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        flashError(data.error ?? t.operatorApp.gameRoom.networkError);
+        return;
+      }
+      setPayingHeldOrderId(editingHeldOrderId);
+      setPayingHeldOrderTotal(data.total);
+      setEditingHeldOrderId(null);
+      goodsCart.clearCart();
+      setCartSheetOpen(false);
+      setPaymentOpen(true);
+      loadHeldOrders();
+    } catch {
+      flashError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      setHolding(false);
+    }
+  }
+
+  async function payHeldOrder(paymentMethod: "cash" | "mobile" | "abonement", walletId?: string, legs?: PaymentLegInput[]) {
+    if (!payingHeldOrderId) return;
+    const order = heldOrders.find((o) => o.id === payingHeldOrderId);
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/operator/goods/held-orders/${payingHeldOrderId}/pay`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentMethod, walletId, legs }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        flashError(data.error ?? t.operatorApp.gameRoom.networkError);
+        return;
+      }
+      if (printAvailable.available && order) {
+        const nameByGoodsId = new Map(order.lines.map((l) => [l.goodsId, l.goodsName]));
+        const soldItems: { id: string; goodsId: string; quantity: number; amount: number }[] = data.items ?? [];
+        setLastOrder({
+          items: soldItems.map((s) => ({
+            goodsName: nameByGoodsId.get(s.goodsId) ?? "",
+            quantity: s.quantity,
+            price: s.quantity > 0 ? s.amount / s.quantity : s.amount,
+            amount: s.amount,
+          })),
+          total: data.total,
+          paymentMethod: legs && legs.length > 0 ? "split" : paymentMethod,
+          legs: legs && legs.length > 0 ? legs : undefined,
+        });
+      }
+      setPayingHeldOrderId(null);
+      setPaymentOpen(false);
+      setAbonementTarget(null);
+      setSplitOpen(false);
+      loadHeldOrders();
+      load();
+    } catch {
+      flashError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Общая точка входа для sheet выбора способа оплаты (paymentOpen) ниже —
+  // решает, куда реально идёт платёж: в черновик корзины (обычная продажа)
+  // или в конкретный отложенный заказ, в зависимости от того, что было
+  // открыто последним ("Оплатить" в корзине против "Оплатить" в sheet
+  // заказа). Один и тот же UI выбора способа оплаты обслуживает оба случая.
+  function submitPayment(paymentMethod: "cash" | "mobile" | "abonement", walletId?: string, legs?: PaymentLegInput[]) {
+    if (payingHeldOrderId) {
+      payHeldOrder(paymentMethod, walletId, legs);
+    } else {
+      sellCart(paymentMethod, walletId, legs);
+    }
+  }
+
+  // "Удалить" на отложенном заказе — в отличие от очистки черновика,
+  // реально возвращает списанный остаток (см. cancelGoodsHeldOrder в
+  // lib/goods.ts). Сценарий "клиент ушёл не расплатившись" отдельно не
+  // рассматриваем (решение пользователя 2026-07-29) — это и есть ручное
+  // удаление, доступное самому оператору. Сбрасывает и корзину/режим
+  // редактирования — сама корзина сейчас показывает ИМЕННО отменяемый заказ.
+  async function cancelHeldOrder(orderId: string) {
+    try {
+      const res = await fetch(`/api/operator/goods/held-orders/${orderId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        flashError(data.error ?? t.operatorApp.gameRoom.networkError);
+        return;
+      }
+      goodsCart.clearCart();
+      setEditingHeldOrderId(null);
+      setCartSheetOpen(false);
+      loadHeldOrders();
+      load();
+    } catch {
+      flashError(t.operatorApp.gameRoom.networkError);
+    }
+  }
+
+  function openRenameOrder(order: HeldOrderCtx) {
+    setOrderNameDraft(order.label ?? "");
+    setRenamingOrder(true);
+  }
+
+  async function saveOrderName(orderId: string) {
+    setRenamingSubmitting(true);
+    try {
+      const res = await fetch(`/api/operator/goods/held-orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: orderNameDraft }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        flashError(data.error ?? t.operatorApp.gameRoom.networkError);
+        return;
+      }
+      setRenamingOrder(false);
+      loadHeldOrders();
+    } catch {
+      flashError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      setRenamingSubmitting(false);
+    }
+  }
+
+  const editingOrder = heldOrders.find((o) => o.id === editingHeldOrderId) ?? null;
+  // Итог для sheet выбора способа оплаты/AbonementPaymentSheet/SplitPaymentSheet —
+  // сумма отложенного заказа, если платим за него, иначе сумма черновика.
+  const activePaymentTotal = payingHeldOrderId ? payingHeldOrderTotal : cartTotal;
 
   const paymentMethodLabel: Record<"cash" | "mobile" | "abonement", string> = {
     cash: t.operatorApp.submit.cashLabel,
@@ -452,16 +730,25 @@ export default function GoodsPage() {
             )}
             {/* Корзина — та же иконка-кнопка, что у Билетов (запрос
                 пользователя 2026-07-21: "такой же принцип корзины"), всегда
-                видна, серая пока пуста. */}
+                видна, серая пока пуста. Пока корзина поднята из отложенного
+                заказа (editingHeldOrderId) — цвет кнопки берёт цвет ИМЕННО
+                этого заказа (запрос пользователя 2026-07-31), тот же
+                COLOR_TAG_PALETTE по номеру, что у чипа/бейджа заказа, чтобы
+                было видно, в какой заказ сейчас идёт докупка. */}
             <PressableScale>
               <button
                 type="button"
                 onClick={() => cartCount > 0 && setCartSheetOpen(true)}
                 disabled={cartCount === 0}
                 aria-label={t.tickets.cartTitle}
+                style={
+                  editingOrder
+                    ? { backgroundColor: COLOR_TAG_PALETTE[(editingOrder.number - 1) % COLOR_TAG_PALETTE.length] }
+                    : undefined
+                }
                 className={cn(
                   "relative flex size-10 shrink-0 items-center justify-center rounded-full",
-                  cartCount > 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  editingOrder ? "text-white" : cartCount > 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 )}
               >
                 <ShoppingCart className="size-5" />
@@ -552,11 +839,106 @@ export default function GoodsPage() {
 
       </div>
 
+      {/* Отложенные заказы (запрос пользователя 2026-07-29) — компактный
+          горизонтально-скроллящийся ряд кнопок ("больше как кнопки со
+          скроллингом, не большие тайлы"), сразу над нижним баром (тот же
+          bottom, что PoweredByMark в operator-branding-chrome.tsx — 4.5rem,
+          эмпирическая высота nav-glass). Только на этом экране, не глобально
+          (решение пользователя 2026-07-29). Цвет — тот же циклический
+          COLOR_TAG_PALETTE, что у "Посетитель N" в Прибываниях, по номеру
+          заказа, не имени/tenant-акценту. Скролл стрелками, не полосой
+          прокрутки (запрос пользователя 2026-07-30: "как в Категориях
+          товаров") — HeldOrdersRow ниже переиспользует тот же приём, что
+          CategoryChipsRow. */}
+      {heldOrders.length > 0 && (
+        <HeldOrdersRow orders={heldOrders} onSelect={openHeldOrderForEdit} t={t} />
+      )}
+
       {/* Корзина — позиции со степперами (тот же принцип, что у Билетов,
-          запрос пользователя 2026-07-21), минус на 1 убирает строку целиком. */}
-      <BottomSheet open={cartSheetOpen} onClose={() => setCartSheetOpen(false)}>
+          запрос пользователя 2026-07-21), минус на 1 убирает строку целиком.
+          Тот же sheet обслуживает и правку уже отложенного заказа (запрос
+          пользователя 2026-07-30: "товары должны как бы подниматься снова
+          в корзину" — openHeldOrderForEdit поднимает позиции заказа СЮДА,
+          не в отдельный sheet с поиском+списком, который был отклонён) —
+          заголовок/кнопка меняются в зависимости от editingOrder.
+          "Оплатить" — та же кнопка/функция, что и для свежего черновика
+          (proceedToPayment сама решает, куда слать: новый заказ или
+          синхронизация уже открытого).
+          Нет отдельной кнопки "Отложить" (запрос пользователя 2026-07-31) —
+          закрытие sheet ЛЮБЫМ способом (крестик/бэкдроп/свайп/Escape, всё
+          сводится к этому единственному onClose) само откладывает
+          непустую корзину: новый заказ, если черновик свежий, или синхронизация,
+          если это правка уже открытого. Если это была правка и корзину
+          опустошили начисто — значит заказ решили удалить, не оставлять
+          пустым "висящим". Явные "Оплатить"/"Удалить" остаются отдельными
+          кнопками — единственные два других исхода, о которых просил
+          пользователь ("иначе он должен либо оплатить, либо удалить"). */}
+      <BottomSheet
+        open={cartSheetOpen}
+        onClose={() => {
+          setRenamingOrder(false);
+          if (editingHeldOrderId && currentCartLines.length === 0) {
+            cancelHeldOrder(editingHeldOrderId);
+          } else if (currentCartLines.length > 0) {
+            commitCart();
+          } else {
+            setCartSheetOpen(false);
+          }
+        }}
+      >
         <div className="flex flex-col gap-3 pt-2">
-          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.tickets.cartTitle}</h2>
+          {renamingOrder && editingOrder ? (
+            <form
+              // pr-2 — реальный баг, найден пользователем 2026-07-31: крестик
+              // закрытия sheet абсолютно спозиционирован (right-3 + size-10 =
+              // 52px от края), а контейнер контента резервирует под него
+              // только pr-12 (48px) — при flex-1 на весь ряд кнопка-галочка
+              // вплотную к краю содержимого залезает на те недостающие 4px
+              // под крестик. Компенсируем прямо здесь, а не правкой BottomSheet
+              // (общий компонент для всех sheet проекта, трогать без нужды
+              // рискованно).
+              className="flex items-center gap-2 pr-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveOrderName(editingOrder.id);
+              }}
+            >
+              <Input
+                autoFocus
+                value={orderNameDraft}
+                onChange={(e) => setOrderNameDraft(e.target.value)}
+                placeholder={`${t.goods.heldOrderChipLabel} ${editingOrder.number}`}
+                // min-w-0 — реальный баг, найден пользователем 2026-07-30:
+                // Input сам по себе w-full, без min-w-0 flex-ребёнок
+                // игнорирует доступную ширину ряда (min-width:auto по
+                // умолчанию) и вылезает под крестик закрытия sheet вместо
+                // того чтобы ужаться под кнопку-галочку рядом.
+                className="h-10 min-w-0 flex-1"
+              />
+              <PressableScale className="shrink-0">
+                <Button type="submit" size="icon" disabled={renamingSubmitting} className="size-10 shrink-0 rounded-lg" aria-label={t.common.save}>
+                  <Check className="size-4" />
+                </Button>
+              </PressableScale>
+            </form>
+          ) : (
+            <div className="flex items-center justify-between gap-2">
+              {editingOrder ? (
+                <h2 className="flex min-w-0 items-center gap-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">
+                  <span
+                    className="flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                    style={{ backgroundColor: COLOR_TAG_PALETTE[(editingOrder.number - 1) % COLOR_TAG_PALETTE.length] }}
+                  >
+                    {editingOrder.number}
+                  </span>
+                  <span className="min-w-0 truncate">{editingOrder.label || `${t.goods.heldOrderChipLabel} ${editingOrder.number}`}</span>
+                  <IconActionButton icon={Pencil} onClick={() => openRenameOrder(editingOrder)} label={t.common.rename} />
+                </h2>
+              ) : (
+                <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.tickets.cartTitle}</h2>
+              )}
+            </div>
+          )}
           {currentCartLines.length === 0 ? (
             <p className="py-4 text-center text-body-airbnb text-muted-foreground">{t.tickets.cartEmpty}</p>
           ) : (
@@ -612,14 +994,7 @@ export default function GoodsPage() {
               </div>
               <div className="relative flex items-stretch gap-2">
                 <PressableScale className="flex flex-1">
-                  <Button
-                    type="button"
-                    className="h-12 w-full font-bold"
-                    onClick={() => {
-                      setCartSheetOpen(false);
-                      setPaymentOpen(true);
-                    }}
-                  >
+                  <Button type="button" className="h-12 w-full font-bold" disabled={holding} onClick={proceedToPayment}>
                     {t.tickets.payButton}
                   </Button>
                 </PressableScale>
@@ -629,11 +1004,18 @@ export default function GoodsPage() {
                     реальный баг, найден пользователем 2026-07-22 в Билетах
                     (тот же паттерн здесь): без него "Точно?" вылезал за
                     пределы узкого слота иконки корзины, теперь оверлей на
-                    весь ряд целиком, тот же приём, что у замка активов. */}
+                    весь ряд целиком, тот же приём, что у замка активов.
+                    Для правки отложенного заказа — реально отменяет ЕГО
+                    (cancelHeldOrder, возвращает остаток), не просто очистка
+                    локального черновика. */}
                 <ConfirmButton
                   className="h-12 shrink-0 px-3.5 text-destructive"
                   fillParent
                   onConfirm={() => {
+                    if (editingHeldOrderId) {
+                      cancelHeldOrder(editingHeldOrderId);
+                      return;
+                    }
                     goodsCart.clearCart();
                     // Пустую корзину смотреть незачем (запрос пользователя
                     // 2026-07-21) — sheet закрывается сам сразу после "Точно?".
@@ -649,18 +1031,18 @@ export default function GoodsPage() {
         </div>
       </BottomSheet>
 
-      <BottomSheet open={paymentOpen} onClose={() => setPaymentOpen(false)}>
+      <BottomSheet open={paymentOpen} onClose={() => { setPaymentOpen(false); setPayingHeldOrderId(null); }}>
         <div className="flex flex-col gap-3 pt-2">
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.gameRoom.paymentMethodTitle}</h2>
           <div className="flex flex-col gap-2">
-            <ConfirmButton className="relative h-12 w-full font-semibold" disabled={submitting} onConfirm={() => sellCart("cash")}>
+            <ConfirmButton className="relative h-12 w-full font-semibold" disabled={submitting} onConfirm={() => submitPayment("cash")}>
               <Banknote className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
               {t.operatorApp.submit.cashLabel}
             </ConfirmButton>
             <ConfirmButton
               className="relative h-12 w-full font-semibold"
               disabled={submitting}
-              onConfirm={() => sellCart("mobile")}
+              onConfirm={() => submitPayment("mobile")}
             >
               <CreditCard className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
               {t.operatorApp.submit.mobileLabel}
@@ -674,7 +1056,7 @@ export default function GoodsPage() {
                   disabled={submitting}
                   onClick={() => {
                     setPaymentOpen(false);
-                    setAbonementTarget({ amount: cartTotal });
+                    setAbonementTarget({ amount: activePaymentTotal });
                   }}
                 >
                   <Wallet className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
@@ -703,19 +1085,19 @@ export default function GoodsPage() {
 
       <AbonementPaymentSheet
         open={abonementTarget !== null}
-        onClose={() => setAbonementTarget(null)}
+        onClose={() => { setAbonementTarget(null); setPayingHeldOrderId(null); }}
         amount={abonementTarget?.amount ?? 0}
-        onConfirm={(walletId) => sellCart("abonement", walletId)}
+        onConfirm={(walletId) => submitPayment("abonement", walletId)}
       />
 
       <SplitPaymentSheet
         open={splitOpen}
-        onClose={() => setSplitOpen(false)}
-        total={cartTotal}
+        onClose={() => { setSplitOpen(false); setPayingHeldOrderId(null); }}
+        total={activePaymentTotal}
         allowedMethods={GOODS_SPLIT_METHODS}
         clientsEnabled={goodsAllowBalancePayment}
         submitting={submitting}
-        onSubmit={(legs) => sellCart("cash", undefined, legs)}
+        onSubmit={(legs) => submitPayment("cash", undefined, legs)}
       />
 
       <BottomSheet
@@ -795,44 +1177,13 @@ export default function GoodsPage() {
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.goods.reconciliationTitle}</h2>
           {reconcilePending === null ? null : (
             <>
-              {/* Тот же паттерн, что карточка актива в "Сдать итоги"
-                  (запрос пользователя 2026-07-19: "по аналогии как с
-                  Активами, единообразный интерфейс") — расчётная сумма
-                  крупно слева, разбивка по способам оплаты справа. */}
-              <div className="flex items-start justify-between gap-2 rounded-control bg-muted p-3.5">
-                <div className="flex min-w-0 flex-col tabular-nums">
-                  <span className="text-caption-airbnb text-muted-foreground">{t.operatorApp.submit.calculatedRevenue}</span>
-                  <span className="text-xl font-extrabold leading-none tracking-[-0.02em]">
-                    <Money value={reconcilePending.cash + reconcilePending.mobile + reconcilePending.abonement} />
-                  </span>
-                </div>
-                <div className="flex min-w-0 flex-col items-end gap-0.5 pt-1 text-right text-caption-airbnb tabular-nums">
-                  <span className="inline-flex items-center gap-1">
-                    <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
-                    {t.operatorApp.submit.cashLabel}:{" "}
-                    <span className="font-bold text-foreground">
-                      <Money value={reconcilePending.cash} />
-                    </span>
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
-                    {t.operatorApp.submit.mobileLabel}:{" "}
-                    <span className="font-bold text-foreground">
-                      <Money value={reconcilePending.mobile} />
-                    </span>
-                  </span>
-                  {reconcilePending.abonement > 0 && (
-                    <span className="inline-flex items-center gap-1">
-                      <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
-                      {t.operatorApp.abonement.paymentLabel}:{" "}
-                      <span className="font-bold text-foreground">
-                        <Money value={reconcilePending.abonement} />
-                      </span>
-                    </span>
-                  )}
-                </div>
-              </div>
-
+              {/* Расчётная подсказка — в ОДНОМ ряду с полем ввода, не
+                  отдельной карточкой сверху (запрос пользователя 2026-07-30:
+                  "как сделал в Сдаче итогов" — тот же паттерн, что уже
+                  применён в operator/submit/page.tsx для Счётчиков/Билетов:
+                  мелкое кликабельное число слева от поля, тап подставляет
+                  значение, поле по-прежнему вводится вручную — сверка факта
+                  с расчётом остаётся реальной проверкой, не самозаполнением). */}
               <div className="flex items-stretch gap-2">
                 <div className="flex flex-1 flex-col gap-3">
                   <div className="flex flex-col gap-1">
@@ -840,38 +1191,95 @@ export default function GoodsPage() {
                       <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
                       {t.operatorApp.submit.cashLabel}
                     </Label>
-                    <MoneyInput
-                      id="reconcileCash"
-                      autoFocus
-                      scale="lg"
-                      inputMode="numeric"
-                      className="h-14 rounded-control bg-muted text-lg font-bold"
-                      value={reconcileCash}
-                      onChange={(e) => setReconcileCash(e.target.value.replace(/[^\d.,]/g, ""))}
-                    />
+                    <div className="flex items-center gap-2">
+                      {reconcilePending.cash > 0 && (
+                        <PressableScale className="shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setReconcileCash(String(reconcilePending.cash))}
+                            className="flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-control px-2.5"
+                          >
+                            <span className="text-lg font-semibold tabular-nums leading-none text-muted-foreground/50">
+                              <Money value={reconcilePending.cash} />
+                            </span>
+                            <span className="text-[0.625rem] leading-none text-muted-foreground/40">
+                              {t.operatorApp.submit.tapHintCaption}
+                            </span>
+                          </button>
+                        </PressableScale>
+                      )}
+                      <MoneyInput
+                        id="reconcileCash"
+                        autoFocus
+                        scale="lg"
+                        inputMode="numeric"
+                        className="h-14 rounded-control bg-muted text-lg font-bold"
+                        value={reconcileCash}
+                        onChange={(e) => setReconcileCash(e.target.value.replace(/[^\d.,]/g, ""))}
+                      />
+                    </div>
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label htmlFor="reconcileMobile" className="flex items-center gap-1.5">
                       <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
                       {t.operatorApp.submit.mobileLabel}
                     </Label>
-                    <MoneyInput
-                      id="reconcileMobile"
-                      scale="lg"
-                      inputMode="numeric"
-                      className="h-14 rounded-control bg-muted text-lg font-bold"
-                      value={reconcileMobile}
-                      onChange={(e) => setReconcileMobile(e.target.value.replace(/[^\d.,]/g, ""))}
-                    />
+                    <div className="flex items-center gap-2">
+                      {reconcilePending.mobile > 0 && (
+                        <PressableScale className="shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setReconcileMobile(String(reconcilePending.mobile))}
+                            className="flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-control px-2.5"
+                          >
+                            <span className="text-lg font-semibold tabular-nums leading-none text-muted-foreground/50">
+                              <Money value={reconcilePending.mobile} />
+                            </span>
+                            <span className="text-[0.625rem] leading-none text-muted-foreground/40">
+                              {t.operatorApp.submit.tapHintCaption}
+                            </span>
+                          </button>
+                        </PressableScale>
+                      )}
+                      <MoneyInput
+                        id="reconcileMobile"
+                        scale="lg"
+                        inputMode="numeric"
+                        className="h-14 rounded-control bg-muted text-lg font-bold"
+                        value={reconcileMobile}
+                        onChange={(e) => setReconcileMobile(e.target.value.replace(/[^\d.,]/g, ""))}
+                      />
+                    </div>
                   </div>
+                  {/* Баланс абонемента — без ручного поля (списывается
+                      автоматически, сверять физически нечего), поэтому не
+                      попадает в пару "подсказка+поле" выше, просто короткая
+                      строка-справка, если есть чем. */}
+                  {reconcilePending.abonement > 0 && (
+                    <p className="inline-flex items-center gap-1 text-caption-airbnb text-muted-foreground">
+                      <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
+                      {t.operatorApp.abonement.paymentLabel}:{" "}
+                      <span className="font-bold text-foreground">
+                        <Money value={reconcilePending.abonement} />
+                      </span>
+                    </p>
+                  )}
                 </div>
                 <PressableScale className="flex">
+                  {/* Вертикальная (запрос пользователя 2026-07-30: "как в
+                      Сдаче итогов") — тот же приём, что уже применён в
+                      operator/submit/page.tsx (2026-07-28): узкая колонка
+                      (w-14) + текст в столбик (writing-mode: vertical-rl),
+                      освобождает горизонтальное место полям слева, не
+                      просто растянутая по высоте обычная кнопка. */}
                   <SaveButton
-                    className="h-full min-w-22 rounded-control px-5 font-bold"
+                    className="h-full w-14 min-w-0 flex-col gap-1.5 rounded-control px-1 font-bold"
                     saved={reconcileSaved}
                     disabled={reconcileSubmitting}
                     onClick={saveReconciliation}
-                  />
+                  >
+                    <span className="[writing-mode:vertical-rl] rotate-180">{t.common.save}</span>
+                  </SaveButton>
                 </PressableScale>
               </div>
 
@@ -1022,6 +1430,91 @@ function CategoryChipsRow({
             onClick={() => scrollByAmount(120)}
             aria-label={t.common.next}
             className="flex size-7 items-center justify-center rounded-full text-muted-foreground"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+        </PressableScale>
+      )}
+    </div>
+  );
+}
+
+// Отложенные заказы — та же схема скролла стрелками, что у CategoryChipsRow
+// выше (запрос пользователя 2026-07-30: "скроллинг без полосы, стрелочки по
+// бокам как в Категориях товаров"), только "белая плашка" зафиксирована над
+// нижним баром (position: fixed), а не в потоке страницы. Время создания —
+// второй строкой под номером/названием заказа (тот же запрос, "мелко") —
+// formatTime — локальное устройство-время оператора, тот же формат, что и
+// везде в проекте.
+function HeldOrdersRow({
+  orders,
+  onSelect,
+  t,
+}: {
+  orders: HeldOrderCtx[];
+  onSelect: (order: HeldOrderCtx) => void;
+  t: ReturnType<typeof useI18n>;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  function updateScrollState() {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }
+
+  useEffect(() => {
+    updateScrollState();
+  }, [orders]);
+
+  function scrollByAmount(delta: number) {
+    scrollRef.current?.scrollBy({ left: delta, behavior: "smooth" });
+  }
+
+  return (
+    <div
+      className="fixed inset-x-4 z-10 flex items-center gap-1 rounded-control bg-card p-1.5 shadow-card-rest"
+      style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }}
+    >
+      {canScrollLeft && (
+        <PressableScale className="shrink-0">
+          <button
+            type="button"
+            onClick={() => scrollByAmount(-120)}
+            aria-label={t.common.back}
+            className="flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+        </PressableScale>
+      )}
+      <div ref={scrollRef} onScroll={updateScrollState} className="scrollbar-none flex flex-1 gap-1.5 overflow-x-auto">
+        {orders.map((order) => (
+          <PressableScale key={order.id} className="shrink-0">
+            <button
+              type="button"
+              onClick={() => onSelect(order)}
+              className="flex shrink-0 flex-col items-center justify-center gap-0 rounded-2xl px-3.5 py-1.5 text-white shadow-sm"
+              style={{ backgroundColor: COLOR_TAG_PALETTE[(order.number - 1) % COLOR_TAG_PALETTE.length] }}
+            >
+              <span className="text-sm leading-tight font-bold whitespace-nowrap">
+                {order.label || `${t.goods.heldOrderChipLabel} ${order.number}`}
+              </span>
+              <span className="text-[0.75rem] leading-tight whitespace-nowrap opacity-80">{formatTime(order.createdAt)}</span>
+            </button>
+          </PressableScale>
+        ))}
+      </div>
+      {canScrollRight && (
+        <PressableScale className="shrink-0">
+          <button
+            type="button"
+            onClick={() => scrollByAmount(120)}
+            aria-label={t.common.next}
+            className="flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground"
           >
             <ChevronRight className="size-4" />
           </button>

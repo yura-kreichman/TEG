@@ -30,7 +30,8 @@
     "changeFile": "Faylı dəyiş",
     "loading": "Yüklənir…",
     "ownerLabel": "Sahib",
-    "poweredByLabel": "İşlədilir"
+    "poweredByLabel": "İşlədilir",
+    "rename": "Adını dəyiş"
   },
   "iconPicker": {
     "selectIcon": "Nişan seç",
@@ -1599,7 +1600,8 @@
     "noSalesYet": "Bu dövrdə satış yoxdur",
     "purchasesTitle": "Satışlar",
     "voided": "Ləğv edilib",
-    "catalogStockLabel": "Qalıq"
+    "catalogStockLabel": "Qalıq",
+    "heldOrderChipLabel": "Sifariş"
   },
   "tickets": {
     "entryTitle": "Biletlər",

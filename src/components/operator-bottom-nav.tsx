@@ -59,6 +59,12 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
   const [hasTickets, setHasTickets] = useState(false);
   const [hasGoods, setHasGoods] = useState(false);
   const [hasZones, setHasZones] = useState(false);
+  // Зелёная точка на "Товары" — не только у непустой корзины-черновика
+  // (goodsCartHasItems ниже), но и пока есть хоть один открытый
+  // отложенный заказ (запрос пользователя 2026-07-30: "как когда в
+  // Корзине есть товары, если есть неоплаченные заказы") — деньги за
+  // такой заказ ещё не собраны, тот же сигнал "тут есть незакрытое дело".
+  const [hasOpenHeldOrders, setHasOpenHeldOrders] = useState(false);
   // Адаптивное число слотов бара (запрос пользователя 2026-07-28) — SSR и
   // первый клиентский рендер всегда false (совпадают, гидратация без
   // рассинхрона), реальная ширина подставляется эффектом ниже, тем же
@@ -75,7 +81,8 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
   // Зелёная точка на "Товары" (запрос пользователя 2026-07-28, "как в
-  // задачах") — корзина не пуста (хоть один товар с количеством > 0).
+  // задачах") — корзина не пуста (хоть один товар с количеством > 0) ИЛИ
+  // (запрос 2026-07-30) есть открытый отложенный заказ, см. hasOpenHeldOrders.
   const goodsCart = useGoodsCart();
   const goodsCartHasItems = Object.values(goodsCart.cart).some((qty) => qty > 0);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -104,6 +111,16 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
       .catch(() => {});
   }
 
+  function loadHeldOrdersFlag() {
+    if (!hasGoods) return;
+    fetch("/api/operator/goods/held-orders")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setHasOpenHeldOrders((data.orders ?? []).length > 0);
+      })
+      .catch(() => {});
+  }
+
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     loadSubmissionContext();
@@ -116,6 +133,14 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
   // снял доступ к зоне/тумблер продажи, пункт бара должен пропасть без
   // перезахода.
   useLiveRefetch(loadSubmissionContext);
+  // Отдельный from — hasGoods известен только ПОСЛЕ первого ответа
+  // loadSubmissionContext выше (та же гонка, что и у остальных пунктов
+  // бара), поэтому не в одном useEffect с ним.
+  useEffect(() => {
+    loadHeldOrdersFlag();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasGoods]);
+  useLiveRefetch(loadHeldOrdersFlag);
 
   const hidden = pathname === "/operator/login" || pathname.startsWith("/operator/submit");
 
@@ -259,7 +284,7 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
             label: t.goods.navLabel,
             icon: ShoppingBag,
             active: pathname.startsWith("/operator/goods"),
-            badge: (goodsCartHasItems ? "green" : null) as "green" | null,
+            badge: (goodsCartHasItems || hasOpenHeldOrders ? "green" : null) as "green" | null,
           },
         ]
       : []),

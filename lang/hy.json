@@ -30,7 +30,8 @@
     "changeFile": "Փոխարինել ֆայլը",
     "loading": "Բեռնվում է…",
     "ownerLabel": "Սեփականատեր",
-    "poweredByLabel": "Աշխատում է"
+    "poweredByLabel": "Աշխատում է",
+    "rename": "Վերանվանել"
   },
   "iconPicker": {
     "selectIcon": "Ընտրել պատկերակ",
@@ -1599,7 +1600,8 @@
     "noSalesYet": "Այս ժամանակահատվածում վաճառքներ չկան",
     "purchasesTitle": "Վաճառքներ",
     "voided": "Չեղարկված",
-    "catalogStockLabel": "Մնացորդ"
+    "catalogStockLabel": "Մնացորդ",
+    "heldOrderChipLabel": "Պատվեր"
   },
   "tickets": {
     "entryTitle": "Տոմսեր",

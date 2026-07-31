@@ -12,6 +12,7 @@
   },
   "common": {
     "save": "Сохранить",
+    "rename": "Переименовать",
     "logout": "Выйти",
     "delete": "Удалить",
     "edit": "Изменить",
@@ -1540,6 +1541,7 @@
     "noResults": "Ничего не найдено",
     "quantityLabel": "Количество",
     "totalLabel": "Итого",
+    "heldOrderChipLabel": "Заказ",
     "lowStockBadge": "Мало",
     "allCategoriesLabel": "Все",
     "allCategoriesFilterLabel": "Все категории",

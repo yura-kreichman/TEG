@@ -30,7 +30,8 @@
     "changeFile": "ფაილის შეცვლა",
     "loading": "იტვირთება…",
     "ownerLabel": "მფლობელი",
-    "poweredByLabel": "მუშაობს"
+    "poweredByLabel": "მუშაობს",
+    "rename": "გადარქმევა"
   },
   "iconPicker": {
     "selectIcon": "ხატულის არჩევა",
@@ -1599,7 +1600,8 @@
     "noSalesYet": "ამ პერიოდში გაყიდვები არ არის",
     "purchasesTitle": "გაყიდვები",
     "voided": "გაუქმებული",
-    "catalogStockLabel": "ნაშთი"
+    "catalogStockLabel": "ნაშთი",
+    "heldOrderChipLabel": "შეკვეთა"
   },
   "tickets": {
     "entryTitle": "ბილეთები",

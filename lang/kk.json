@@ -30,7 +30,8 @@
     "changeFile": "Файлды ауыстыру",
     "loading": "Жүктелуде…",
     "ownerLabel": "Иесі",
-    "poweredByLabel": "Негізінде жұмыс істейді"
+    "poweredByLabel": "Негізінде жұмыс істейді",
+    "rename": "Атын өзгерту"
   },
   "iconPicker": {
     "selectIcon": "Иконка таңдау",
@@ -1599,7 +1600,8 @@
     "noSalesYet": "Бұл кезеңде сатылым жоқ",
     "purchasesTitle": "Сатылымдар",
     "voided": "Жойылған",
-    "catalogStockLabel": "Қалдық"
+    "catalogStockLabel": "Қалдық",
+    "heldOrderChipLabel": "Тапсырыс"
   },
   "tickets": {
     "entryTitle": "Билеттер",

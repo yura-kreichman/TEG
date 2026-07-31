@@ -30,7 +30,8 @@
     "changeFile": "Файлро иваз кардан",
     "loading": "Боргирӣ…",
     "ownerLabel": "Соҳиб",
-    "poweredByLabel": "Дар асоси"
+    "poweredByLabel": "Дар асоси",
+    "rename": "Аз нав ном гузоштан"
   },
   "iconPicker": {
     "selectIcon": "Иконка интихоб кардан",
@@ -1599,7 +1600,8 @@
     "noSalesYet": "Дар ин давра фурӯш нест",
     "purchasesTitle": "Фурӯшҳо",
     "voided": "Бекоршуда",
-    "catalogStockLabel": "Монда"
+    "catalogStockLabel": "Монда",
+    "heldOrderChipLabel": "Фармоиш"
   },
   "tickets": {
     "entryTitle": "Чиптаҳо",

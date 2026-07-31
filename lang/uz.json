@@ -30,7 +30,8 @@
     "changeFile": "Faylni almashtirish",
     "loading": "Yuklanmoqda…",
     "ownerLabel": "Egasi",
-    "poweredByLabel": "Asosida ishlaydi"
+    "poweredByLabel": "Asosida ishlaydi",
+    "rename": "Nomini o'zgartirish"
   },
   "iconPicker": {
     "selectIcon": "Belgini tanlash",
@@ -1599,7 +1600,8 @@
     "noSalesYet": "Bu davrda sotuv yoʻq",
     "purchasesTitle": "Sotuvlar",
     "voided": "Bekor qilingan",
-    "catalogStockLabel": "Qoldiq"
+    "catalogStockLabel": "Qoldiq",
+    "heldOrderChipLabel": "Buyurtma"
   },
   "tickets": {
     "entryTitle": "Chiptalar",

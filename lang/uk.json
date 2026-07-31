@@ -30,7 +30,8 @@
     "changeFile": "Замінити файл",
     "loading": "Завантаження…",
     "ownerLabel": "Власник",
-    "poweredByLabel": "Працює на"
+    "poweredByLabel": "Працює на",
+    "rename": "Перейменувати"
   },
   "iconPicker": {
     "selectIcon": "Вибрати іконку",
@@ -1599,7 +1600,8 @@
     "noSalesYet": "Продажів за цей період немає",
     "purchasesTitle": "Продажі",
     "voided": "Анульована",
-    "catalogStockLabel": "Залишок"
+    "catalogStockLabel": "Залишок",
+    "heldOrderChipLabel": "Замовлення"
   },
   "tickets": {
     "entryTitle": "Квитки",

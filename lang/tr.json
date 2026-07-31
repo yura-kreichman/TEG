@@ -30,7 +30,8 @@
     "changeFile": "Dosyayı Değiştir",
     "loading": "Yükleniyor…",
     "ownerLabel": "Sahibi",
-    "poweredByLabel": "Altyapı"
+    "poweredByLabel": "Altyapı",
+    "rename": "Yeniden adlandır"
   },
   "iconPicker": {
     "selectIcon": "Simge Seç",
@@ -1599,7 +1600,8 @@
     "noSalesYet": "Bu dönemde satış yok",
     "purchasesTitle": "Satışlar",
     "voided": "İptal edildi",
-    "catalogStockLabel": "Stok"
+    "catalogStockLabel": "Stok",
+    "heldOrderChipLabel": "Sipariş"
   },
   "tickets": {
     "entryTitle": "Biletler",

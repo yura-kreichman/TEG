@@ -30,7 +30,8 @@
     "changeFile": "Sostituisci file",
     "loading": "Caricamento…",
     "ownerLabel": "Proprietario",
-    "poweredByLabel": "Realizzato con"
+    "poweredByLabel": "Realizzato con",
+    "rename": "Rinomina"
   },
   "iconPicker": {
     "selectIcon": "Scegli un'icona",
@@ -1599,7 +1600,8 @@
     "noSalesYet": "Nessuna vendita in questo periodo",
     "purchasesTitle": "Vendite",
     "voided": "Annullata",
-    "catalogStockLabel": "Scorta"
+    "catalogStockLabel": "Scorta",
+    "heldOrderChipLabel": "Ordine"
   },
   "tickets": {
     "entryTitle": "Biglietti",

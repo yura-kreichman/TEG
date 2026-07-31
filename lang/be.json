@@ -30,7 +30,8 @@
     "changeFile": "Замяніць файл",
     "loading": "Загрузка…",
     "ownerLabel": "Уладальнік",
-    "poweredByLabel": "Працуе на"
+    "poweredByLabel": "Працуе на",
+    "rename": "Пераназваць"
   },
   "iconPicker": {
     "selectIcon": "Выбраць іконку",
@@ -1599,7 +1600,8 @@
     "noSalesYet": "Продажаў за гэты перыяд няма",
     "purchasesTitle": "Продажы",
     "voided": "Ануляваная",
-    "catalogStockLabel": "Астатак"
+    "catalogStockLabel": "Астатак",
+    "heldOrderChipLabel": "Заказ"
   },
   "tickets": {
     "entryTitle": "Білеты",

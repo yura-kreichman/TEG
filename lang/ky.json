@@ -30,7 +30,8 @@
     "changeFile": "Файлды алмаштыруу",
     "loading": "Жүктөлүүдө…",
     "ownerLabel": "Ээси",
-    "poweredByLabel": "Иштейт"
+    "poweredByLabel": "Иштейт",
+    "rename": "Атын өзгөртүү"
   },
   "iconPicker": {
     "selectIcon": "Сүрөтчөнү тандоо",
@@ -1599,7 +1600,8 @@
     "noSalesYet": "Бул мезгилде сатуу жок",
     "purchasesTitle": "Сатуулар",
     "voided": "Жокко чыгарылган",
-    "catalogStockLabel": "Калдык"
+    "catalogStockLabel": "Калдык",
+    "heldOrderChipLabel": "Заказ"
   },
   "tickets": {
     "entryTitle": "Билеттер",

@@ -30,7 +30,8 @@
     "changeFile": "Înlocuiește fișierul",
     "loading": "Se încarcă…",
     "ownerLabel": "Proprietar",
-    "poweredByLabel": "Funcționează pe"
+    "poweredByLabel": "Funcționează pe",
+    "rename": "Redenumește"
   },
   "iconPicker": {
     "selectIcon": "Alege o pictogramă",
@@ -1599,7 +1600,8 @@
     "noSalesYet": "Nu există vânzări în această perioadă",
     "purchasesTitle": "Vânzări",
     "voided": "Anulată",
-    "catalogStockLabel": "Stoc"
+    "catalogStockLabel": "Stoc",
+    "heldOrderChipLabel": "Comandă"
   },
   "tickets": {
     "entryTitle": "Bilete",

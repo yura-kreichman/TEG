@@ -30,7 +30,8 @@
     "changeFile": "Zmień plik",
     "loading": "Ładowanie…",
     "ownerLabel": "Właściciel",
-    "poweredByLabel": "Działa na"
+    "poweredByLabel": "Działa na",
+    "rename": "Zmień nazwę"
   },
   "iconPicker": {
     "selectIcon": "Wybierz ikonę",
@@ -1599,7 +1600,8 @@
     "noSalesYet": "Brak sprzedaży w tym okresie",
     "purchasesTitle": "Sprzedaż",
     "voided": "Anulowana",
-    "catalogStockLabel": "Stan"
+    "catalogStockLabel": "Stan",
+    "heldOrderChipLabel": "Zamówienie"
   },
   "tickets": {
     "entryTitle": "Bilety",

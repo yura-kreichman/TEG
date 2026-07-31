@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { InsufficientBalanceError, notifyWalletBalanceChange } from "@/lib/abonement";
 import { PAYMENT_SPLIT_METHOD, type PaymentLegInput, validateSplitLegs } from "@/lib/payment-split";
+import { smallestFreeNumber } from "@/lib/game-room";
 
 type Tx = Prisma.TransactionClient;
 
@@ -560,6 +561,299 @@ export async function voidGoodsSale(saleId: string, tenantId: string, userId: st
     await notifyWalletBalanceChange(tenantId, leg.walletId, leg.amount).catch(() => {});
   }
   return updated;
+}
+
+// Отложенные заказы (запрос пользователя 2026-07-29: "клиент покупает
+// товары, но ещё сидит за столом") — см. docstring GoodsHeldOrder в
+// schema.prisma. Остаток списывается сразу при "Отложить" (holdGoodsCart),
+// а не при оплате — payGoodsHeldOrder создаёт GoodsSale БЕЗ повторного
+// decrement, только оплату/журналирование (та же settleSaleLegsTx, что и
+// обычная продажа). cancelGoodsHeldOrder — единственное место, где остаток
+// возвращается: аналог "Удалить" у обычной корзины, но там, в отличие от
+// черновика, есть что реально откатывать.
+
+export interface HeldOrderCartItem {
+  goodsId: string;
+  quantity: number;
+}
+
+interface HoldCartParams {
+  tenantId: string;
+  pointId: string;
+  items: HeldOrderCartItem[];
+  actor: Actor;
+}
+
+/**
+ * "Отложить" — превращает текущую корзину в пронумерованный открытый заказ.
+ * Остаток списывается сразу (тот же decrement, что и sellOneItemTx), но
+ * вместо GoodsSale создаётся GoodsHeldOrderLine — денежная отчётность заказ
+ * не видит, пока его не оплатят (payGoodsHeldOrder) или явно не отменят
+ * (cancelGoodsHeldOrder).
+ */
+export async function holdGoodsCart(params: HoldCartParams) {
+  const { tenantId, pointId, items, actor } = params;
+  if (items.length === 0) throw new Error("EMPTY_CART");
+
+  return prisma.$transaction(async (tx) => {
+    // Номер — тот же приём, что nextLaunchNumber (game-room.ts): advisory-лок
+    // по pointId держит слот занятым до конца транзакции, наименьший
+    // свободный среди уже открытых заказов ЭТОЙ точки.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`goods-held-order:${pointId}`}))`;
+    const openOrders = await tx.goodsHeldOrder.findMany({ where: { pointId }, select: { number: true } });
+    const number = smallestFreeNumber(openOrders.map((o) => o.number));
+
+    const goodsRows = await tx.goods.findMany({
+      where: { id: { in: [...new Set(items.map((i) => i.goodsId))] }, tenantId, deletedAt: null, active: true },
+    });
+    const goodsById = new Map(goodsRows.map((g) => [g.id, g]));
+
+    const order = await tx.goodsHeldOrder.create({
+      data: { tenantId, pointId, number, performedByOperatorId: actor.operatorId, performedByUserId: actor.userId },
+    });
+
+    for (const item of items) {
+      const goods = goodsById.get(item.goodsId);
+      if (!goods) throw new Error("GOODS_NOT_FOUND");
+
+      if (goods.trackStock) {
+        // Тот же лок/приём, что и у обычной продажи (sellOneItemTx выше) —
+        // сериализует против других продаж/ревизий этого же товара на точке.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${item.goodsId}:${pointId}`}))`;
+        await tx.goodsStock.upsert({
+          where: { goodsId_pointId: { goodsId: item.goodsId, pointId } },
+          create: { goodsId: item.goodsId, pointId, quantity: -item.quantity },
+          update: { quantity: { decrement: item.quantity } },
+        });
+      }
+
+      await tx.goodsHeldOrderLine.create({
+        data: { orderId: order.id, goodsId: item.goodsId, quantity: item.quantity, priceSnapshot: goods.price },
+      });
+    }
+
+    return tx.goodsHeldOrder.findUniqueOrThrow({ where: { id: order.id }, include: { lines: true } });
+  });
+}
+
+interface PayHeldOrderParams {
+  tenantId: string;
+  pointId: string;
+  orderId: string;
+  paymentMethod: GoodsPaymentMethod;
+  walletId?: string;
+  legs?: PaymentLegInput[];
+  actor: Actor;
+}
+
+/**
+ * "Оплатить" на уже отложенном заказе — создаёт настоящие GoodsSale (по
+ * одной на позицию заказа, тот же принцип, что sellGoodsCart), но БЕЗ
+ * повторного списания остатка — он уже списан при holdGoodsCart. Дальше
+ * денежное журналирование (settleSaleLegsTx) полностью совпадает с обычной
+ * продажей корзины — с этого момента заказ обычная выручка, ничем не
+ * отличимая от прямой продажи в отчётах.
+ */
+export async function payGoodsHeldOrder(params: PayHeldOrderParams): Promise<SoldCartLine[]> {
+  const { tenantId, pointId, orderId, paymentMethod, walletId, legs, actor } = params;
+  const splitting = Boolean(legs && legs.length > 0);
+  if (!splitting && paymentMethod === "abonement" && !walletId) throw new Error("WALLET_REQUIRED");
+
+  const results = await prisma.$transaction(async (tx) => {
+    const order = await tx.goodsHeldOrder.findFirst({ where: { id: orderId, tenantId, pointId }, include: { lines: true } });
+    if (!order) throw new Error("ORDER_NOT_FOUND");
+    if (order.lines.length === 0) throw new Error("EMPTY_CART");
+
+    const created: { sale: { id: string }; goodsId: string; quantity: number; amount: number }[] = [];
+    for (const line of order.lines) {
+      const amount = Number(line.priceSnapshot) * line.quantity;
+      const sale = await tx.goodsSale.create({
+        data: {
+          tenantId,
+          pointId,
+          goodsId: line.goodsId,
+          quantity: line.quantity,
+          priceSnapshot: line.priceSnapshot,
+          amount,
+          paymentMethod: splitting ? PAYMENT_SPLIT_METHOD : paymentMethod,
+          walletId: !splitting && paymentMethod === "abonement" ? walletId : null,
+          performedByOperatorId: actor.operatorId,
+          performedByUserId: actor.userId,
+        },
+      });
+      created.push({ sale, goodsId: line.goodsId, quantity: line.quantity, amount });
+    }
+
+    if (splitting) {
+      validateSplitLegs(
+        legs!,
+        created.reduce((s, c) => s + c.amount, 0),
+        GOODS_PAYMENT_METHODS
+      );
+      const perItemLegs = allocateLegsAcrossItems(
+        legs!,
+        created.map((c) => c.amount)
+      );
+      for (let i = 0; i < created.length; i++) {
+        await settleSaleLegsTx(tx, {
+          tenantId,
+          pointId,
+          saleId: created[i]!.sale.id,
+          amount: created[i]!.amount,
+          paymentMethod,
+          walletId,
+          legs: perItemLegs[i],
+          actor,
+        });
+      }
+    } else {
+      for (const c of created) {
+        await settleSaleLegsTx(tx, { tenantId, pointId, saleId: c.sale.id, amount: c.amount, paymentMethod, walletId, actor });
+      }
+    }
+
+    // Заказ полностью выполнен — сами позиции больше не нужны, вся история
+    // теперь живёт в только что созданных GoodsSale (та же роль, что и у
+    // обычной продажи).
+    await tx.goodsHeldOrder.delete({ where: { id: orderId } });
+
+    return created.map((c) => ({ id: c.sale.id, goodsId: c.goodsId, quantity: c.quantity, amount: c.amount }));
+  });
+
+  if (splitting) {
+    const abonementLeg = legs!.find((l) => l.method === "abonement");
+    if (abonementLeg) {
+      await notifyWalletBalanceChange(tenantId, abonementLeg.walletId!, -abonementLeg.amount).catch(() => {});
+    }
+  } else if (paymentMethod === "abonement" && walletId) {
+    const total = results.reduce((sum, r) => sum + r.amount, 0);
+    await notifyWalletBalanceChange(tenantId, walletId, -total).catch(() => {});
+  }
+  return results;
+}
+
+/**
+ * "Удалить" на отложенном заказе — в отличие от простой очистки черновика
+ * корзины, здесь есть что реально откатывать: остаток уже был списан при
+ * holdGoodsCart. Возвращает его и удаляет заказ целиком (не void — заказ
+ * никогда не был выручкой, аннулировать нечего, см. docstring GoodsHeldOrder).
+ */
+export async function cancelGoodsHeldOrder(orderId: string, tenantId: string, pointId: string) {
+  await prisma.$transaction(async (tx) => {
+    const order = await tx.goodsHeldOrder.findFirst({ where: { id: orderId, tenantId, pointId }, include: { lines: true } });
+    if (!order) throw new Error("ORDER_NOT_FOUND");
+
+    for (const line of order.lines) {
+      const goods = await tx.goods.findUnique({ where: { id: line.goodsId }, select: { trackStock: true } });
+      if (goods?.trackStock) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${line.goodsId}:${pointId}`}))`;
+        await tx.goodsStock.upsert({
+          where: { goodsId_pointId: { goodsId: line.goodsId, pointId } },
+          create: { goodsId: line.goodsId, pointId, quantity: line.quantity },
+          update: { quantity: { increment: line.quantity } },
+        });
+      }
+    }
+
+    await tx.goodsHeldOrder.delete({ where: { id: orderId } });
+  });
+}
+
+interface SyncHeldOrderParams {
+  tenantId: string;
+  pointId: string;
+  orderId: string;
+  // ПОЛНОЕ желаемое содержимое заказа после правки, не дельта (запрос
+  // пользователя 2026-07-30: "докупить" — это не отдельный поиск+список,
+  // а те же товары заново поднимаются в обычную корзину, тем же тапом по
+  // тайлам каталога, что и всегда, "Отложить" снова сохраняет).
+  items: HeldOrderCartItem[];
+}
+
+/**
+ * Синхронизирует уже открытый заказ с новым содержимым корзины — считает
+ * разницу ПО ТОВАРУ (не по конкретной строке: у одного товара в заказе
+ * может быть несколько строк, см. ниже) между тем, что было, и тем, что
+ * должно стать, и трогает остаток/строки только на эту разницу:
+ * - выросло — decrement остатка на разницу, НОВАЯ строка на эту разницу по
+ *   сегодняшней цене (старые строки/их цены не трогаем — тот же принцип,
+ *   что и у обычной продажи: каждая "порция" держит цену на момент
+ *   добавления, не усредняем и не перезаписываем задним числом);
+ * - уменьшилось/пропало — возвращает остаток на разницу, срезает
+ *   количество с существующих строк этого товара (в порядке, в котором их
+ *   отдаёт БД — конкретная строка неважна, все строки одного товара
+ *   взаимозаменяемы), удаляя строку, если она обнулилась.
+ */
+export async function syncHeldOrderCart(params: SyncHeldOrderParams) {
+  const { tenantId, pointId, orderId, items } = params;
+
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.goodsHeldOrder.findFirst({ where: { id: orderId, tenantId, pointId }, include: { lines: true } });
+    if (!order) throw new Error("ORDER_NOT_FOUND");
+
+    const currentByGoods = new Map<string, number>();
+    for (const line of order.lines) {
+      currentByGoods.set(line.goodsId, (currentByGoods.get(line.goodsId) ?? 0) + line.quantity);
+    }
+    const desiredByGoods = new Map<string, number>();
+    for (const item of items) {
+      desiredByGoods.set(item.goodsId, (desiredByGoods.get(item.goodsId) ?? 0) + item.quantity);
+    }
+
+    const allGoodsIds = new Set([...currentByGoods.keys(), ...desiredByGoods.keys()]);
+    const goodsRows = await tx.goods.findMany({ where: { id: { in: [...allGoodsIds] }, tenantId } });
+    const goodsById = new Map(goodsRows.map((g) => [g.id, g]));
+
+    for (const goodsId of allGoodsIds) {
+      const current = currentByGoods.get(goodsId) ?? 0;
+      const desired = desiredByGoods.get(goodsId) ?? 0;
+      const delta = desired - current;
+      if (delta === 0) continue;
+
+      const goods = goodsById.get(goodsId);
+
+      if (delta > 0) {
+        if (!goods) throw new Error("GOODS_NOT_FOUND");
+        if (goods.trackStock) {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${goodsId}:${pointId}`}))`;
+          await tx.goodsStock.upsert({
+            where: { goodsId_pointId: { goodsId, pointId } },
+            create: { goodsId, pointId, quantity: -delta },
+            update: { quantity: { decrement: delta } },
+          });
+        }
+        await tx.goodsHeldOrderLine.create({
+          data: { orderId, goodsId, quantity: delta, priceSnapshot: goods.price },
+        });
+      } else {
+        let toRemove = -delta;
+        // trackStock читаем из уже удалённого/приостановленного товара тоже
+        // (goods может быть undefined, если товар исчез из каталога, пока
+        // заказ был открыт) — тогда просто срезаем строки без движения
+        // остатка, восстанавливать нечего.
+        if (goods?.trackStock) {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${goodsId}:${pointId}`}))`;
+          await tx.goodsStock.upsert({
+            where: { goodsId_pointId: { goodsId, pointId } },
+            create: { goodsId, pointId, quantity: toRemove },
+            update: { quantity: { increment: toRemove } },
+          });
+        }
+        for (const line of order.lines.filter((l) => l.goodsId === goodsId)) {
+          if (toRemove <= 0) break;
+          if (line.quantity <= toRemove) {
+            await tx.goodsHeldOrderLine.delete({ where: { id: line.id } });
+            toRemove -= line.quantity;
+          } else {
+            await tx.goodsHeldOrderLine.update({ where: { id: line.id }, data: { quantity: { decrement: toRemove } } });
+            toRemove = 0;
+          }
+        }
+      }
+    }
+
+    return tx.goodsHeldOrder.findUniqueOrThrow({ where: { id: orderId }, include: { lines: true } });
+  });
 }
 
 interface RevisionLineInput {
