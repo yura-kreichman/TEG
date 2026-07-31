@@ -311,6 +311,7 @@ model Tenant {
   users                         User[]
   operators                     Operator[]
   points                        Point[]
+  resultsSubmissions            ResultsSubmission[]
   moneyOps                      MoneyOperation[]
   expenseCategories             ExpenseCategory[]
   abonements                    Abonement[]
@@ -1875,7 +1876,16 @@ model AssetInitialReading {
 // Один "мастер" сдачи итогов — может быть несколько в день (пересменка).
 model ResultsSubmission {
   id       String @id @default(cuid())
+  // Денормализованное поле без своего FK на Tenant — реальный пробел, найден
+  // аудитом 2026-07-31: единственная тенант-scoping-целостность держалась
+  // только косвенно, через pointId→Point→tenantId/operatorId→Operator→
+  // tenantId. Само поле пишется один раз при создании и нигде не служит
+  // границей доступа (все запросы проверяют её через pointId/operatorId), но
+  // без реального FK Postgres не гарантирует его согласованность с ними —
+  // структурная неряшливость, не обнаруженная как эксплуатируемая. Проверено
+  // (аудит + прод): 0 осиротевших строк перед добавлением ограничения.
   tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   pointId  String
   point    Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
 
