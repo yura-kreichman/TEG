@@ -211,6 +211,18 @@ export async function syncTenantFromFluentCartEvent(
 
       if (isStaleOrder) {
         skippedReason = `stale event from order ${parsed.orderId}, tenant is currently on order ${tenant.fluentcartOrderId}`;
+      } else if (tenant.unlimited) {
+        // Тот же guard, что уже есть в summary-scheduler.ts (реальный баг,
+        // найден пользователем 2026-07-29: "Free должен действовать месяц,
+        // если я не поставил осознанно безлимит") — там его применили к
+        // истечению по таймеру, здесь пропустили: тенант с ручным
+        // unlimited=true (Super Admin поставил VIP/партнёру), у которого
+        // ЕСТЬ реальная подписка FluentCart, при её истечении вебхук всё
+        // равно переводил status в "expired" — а proxy.ts блокирует все
+        // мутации Владельца при expired/suspended независимо от unlimited,
+        // то есть "Безлимит" переставал защищать ровно в тот момент,
+        // когда должен был.
+        skippedReason = `tenant ${tenant.id} has unlimited=true — subscription expiry ignored`;
       } else {
         await prisma.tenant.update({
           where: { id: tenant.id },
