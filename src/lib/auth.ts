@@ -57,6 +57,18 @@ export function verifyPin(pin: string, hash: string) {
 
 export async function createSession(userId: string) {
   const cookieStore = await cookies();
+  // Сброс IMPERSONATION_COOKIE (аудит 2026-07-31) — реальный баг: Admin
+  // имперсонировал Owner'а A и не вышел явно (impersonation-cookie живёт
+  // ADMIN_SESSION_MAX_AGE = 2ч), затем на том же браузере ДРУГОЙ, ни при чём
+  // не причастный Owner B логинится обычным способом — createSession
+  // перезаписывает SESSION_COOKIE на B, но старый IMPERSONATION_COOKIE
+  // (валидный, указывает на админа) оставался нетронутым. /api/auth/impersonation
+  // видел оба валидных cookie и честно, но ложно репортил "вы имперсонируете
+  // тенант B" — а кнопка "выйти из режима" (endImpersonation) удаляла
+  // настоящую сессию B и перебрасывала на /admin. startImpersonation НЕ
+  // ходит через createSession (ставит оба cookie сама), поэтому этот сброс
+  // не задевает саму имперсонацию — только обычный логин/регистрацию.
+  cookieStore.delete(IMPERSONATION_COOKIE);
   // signExpiringToken, не signToken (аудит 2026-07-27) — обычный signToken не
   // несёт срок действия в самом значении, только в maxAge cookie: перехваченный
   // сырой cookie (лог прокси, скриншот, бэкап устройства) оставался валидным
