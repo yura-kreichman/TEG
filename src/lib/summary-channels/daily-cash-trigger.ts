@@ -113,13 +113,28 @@ export async function maybeSendDailyCashSummary(
  * Деактивированные зоны (Zone.active=false) не считаются ни в ожидаемых, ни
  * в отчитавшихся — временно закрытая зона (ремонт/сезон) не должна вечно
  * держать сводку в ожидании.
+ *
+ * Реальный баг, найден пользователем 2026-07-31 (Керен Центр): зона без
+ * НИ ОДНОГО оператора с доступом к ней (узкий allowedZones у всех операторов
+ * тенанта, ни у кого нет allZonesAccess) физически не может получить сдачу
+ * итогов НИКОГДА, но раньше всё равно считалась "ожидаемой" — покрытие
+ * оставалось < 100% навечно, реактивная отправка (maybeSendOnEvent) не
+ * срабатывала НИ РАЗУ, и единственным, что вообще уходило, оставалась
+ * принудительная сводка планировщика на границе дня — каждый день, с
+ * пугающим "не все данные могли поступить", даже когда всё, что операторы
+ * физически МОГЛИ закрыть, было закрыто. Тот же принцип, что и у
+ * Zone.active=false выше — зону, которую физически некому сдать, не считаем.
  */
 async function getZoneCoverage(
   pointId: string,
+  tenantId: string,
   bounds: { start: Date; end: Date }
 ): Promise<{ activeZones: number; coveredZones: number }> {
-  const [activeZones, coveredRows] = await Promise.all([
-    prisma.zone.count({ where: { pointId, active: true } }),
+  const [zones, coveredRows, hasAllZonesOperator] = await Promise.all([
+    prisma.zone.findMany({
+      where: { pointId, active: true },
+      select: { id: true, operatorsWithAccess: { select: { id: true }, take: 1 } },
+    }),
     prisma.zoneSubmission.findMany({
       where: {
         zone: { active: true },
@@ -128,8 +143,14 @@ async function getZoneCoverage(
       select: { zoneId: true },
       distinct: ["zoneId"],
     }),
+    // allZonesAccess не связан явной строкой в _OperatorAllowedZones (это и
+    // есть его смысл — доступ ко всем зонам без перечисления), поэтому его
+    // проверяем отдельно: если у тенанта есть хоть один такой оператор,
+    // абсолютно любая активная зона теоретически покрываема.
+    prisma.operator.findFirst({ where: { tenantId, allZonesAccess: true }, select: { id: true } }),
   ]);
-  return { activeZones, coveredZones: coveredRows.length };
+  const coverableZones = hasAllZonesOperator ? zones : zones.filter((z) => z.operatorsWithAccess.length > 0);
+  return { activeZones: coverableZones.length, coveredZones: coveredRows.length };
 }
 
 // "Все зоны отчитались" само по себе не значит "день закончился" — оператор
@@ -180,7 +201,7 @@ async function maybeSendOnEvent(
   if (settings.sendMode !== "event") return; // fixed — ждёт своего часа у планировщика
 
   const [{ activeZones, coveredZones }, openShifts] = await Promise.all([
-    getZoneCoverage(pointId, bounds),
+    getZoneCoverage(pointId, tenantId, bounds),
     hasOpenShiftsAtPoint(pointId),
   ]);
   if (activeZones === 0 || coveredZones < activeZones || openShifts) return;
