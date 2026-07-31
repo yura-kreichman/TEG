@@ -137,14 +137,33 @@ export async function POST(request: Request) {
   // тот же паттерн и комментарий в /api/operator/work-time/check-out.
   // Проверка выше — только быстрый оптимистичный отказ, не закрывает гонку
   // сама по себе.
+  //
+  // Личный баланс "к выдаче" (аудит 2026-07-31) — раньше был только
+  // оптимистичной проверкой ВЫШЕ (строки 90-108), без авторитетного повтора
+  // под локом, в отличие от кассы точки рядом. Реальная гонка: Владелец
+  // выдаёт ручной аванс с карточки оператора (тоже под локом по operatorId,
+  // см. /api/operators/[id]/work-time/advance) почти одновременно с тем, как
+  // сотрудник сам вводит смену с авансом — обе транзакции читали баланс ДО
+  // списания другой и обе проходили проверку, суммарно пробивая
+  // overdraftAllowed=false. Лок по operatorId — тем же порядком (сначала
+  // pointId, потом operatorId), что и везде в этом файле, чтобы не
+  // столкнуться в обратном порядке ни с одной другой транзакцией проекта.
   if (advanceAmount + bonusAmount > 0) {
     const result = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${point.id}))`;
       const freshBalance = await getPointCashBalance(point.id);
       if (advanceAmount + bonusAmount > freshBalance) {
-        return { ok: false as const, freshBalance };
+        return { ok: false as const, reason: "point" as const, freshBalance };
       }
       if (advanceAmount > 0) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${operator.id}))`;
+        const freshOperatorBalance = await calcOperatorBalance(operator.id, undefined, tx);
+        const rate = await getRateForDate(operator.id, startAt);
+        const { accrued } = calcShiftAccrual(startAt, endAt, rate);
+        const projectedToPayOut = freshOperatorBalance.toPayOut + accrued;
+        if (!operator.overdraftAllowed && advanceAmount > projectedToPayOut) {
+          return { ok: false as const, reason: "personal" as const, projectedToPayOut };
+        }
         await tx.moneyOperation.create({
           data: {
             tenantId: point.tenantId,
@@ -174,10 +193,11 @@ export async function POST(request: Request) {
     });
     if (!result.ok) {
       const locale = await resolveLocale();
-      return NextResponse.json(
-        { error: `Сумма превышает остаток кассы точки (${formatMoney(result.freshBalance, locale)})` },
-        { status: 400 }
-      );
+      const error =
+        result.reason === "point"
+          ? `Сумма превышает остаток кассы точки (${formatMoney(result.freshBalance, locale)})`
+          : `Аванс превышает доступный баланс к выдаче (${formatMoney(result.projectedToPayOut, locale)})`;
+      return NextResponse.json({ error }, { status: 400 });
     }
     // Сразу разносим по зонам (запрос пользователя 2026-07-25), не дожидаясь
     // следующей инкассации — см. комментарий у chargeSelfServiceAdvanceToZones

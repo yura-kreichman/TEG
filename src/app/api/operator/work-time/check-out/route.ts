@@ -120,9 +120,20 @@ export async function POST(request: Request) {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${shiftPointId}))`;
       const freshBalance = await getPointCashBalance(shiftPointId);
       if (advanceAmount + bonusAmount > freshBalance) {
-        return { ok: false as const, freshBalance };
+        return { ok: false as const, reason: "point" as const, freshBalance };
       }
       if (advanceAmount > 0) {
+        // Личный баланс "к выдаче" (аудит 2026-07-31) — тот же авторитетный
+        // повтор под локом, что и у кассы точки выше, раньше отсутствовал:
+        // см. подробный комментарий в /api/operator/work-time/shifts (тот же
+        // класс гонки с ручным авансом от Владельца). Лок по operatorId —
+        // ПОСЛЕ pointId, тем же порядком, что и там.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${operator.id}))`;
+        const freshOperatorBalance = await calcOperatorBalance(operator.id, undefined, tx);
+        const projectedToPayOut = freshOperatorBalance.toPayOut + accrued;
+        if (!operator.overdraftAllowed && advanceAmount > projectedToPayOut) {
+          return { ok: false as const, reason: "personal" as const, projectedToPayOut };
+        }
         await tx.moneyOperation.create({
           data: {
             tenantId: point.tenantId,
@@ -152,10 +163,11 @@ export async function POST(request: Request) {
     });
     if (!result.ok) {
       const locale = await resolveLocale();
-      return NextResponse.json(
-        { error: `Сумма превышает остаток кассы точки (${formatMoney(result.freshBalance, locale)})` },
-        { status: 400 }
-      );
+      const error =
+        result.reason === "point"
+          ? `Сумма превышает остаток кассы точки (${formatMoney(result.freshBalance, locale)})`
+          : `Аванс превышает доступный баланс к выдаче (${formatMoney(result.projectedToPayOut, locale)})`;
+      return NextResponse.json({ error }, { status: 400 });
     }
     // Сразу разносим по зонам (запрос пользователя 2026-07-25), не дожидаясь
     // следующей инкассации — см. комментарий у chargeSelfServiceAdvanceToZones
