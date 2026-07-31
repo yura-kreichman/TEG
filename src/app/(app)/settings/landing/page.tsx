@@ -373,7 +373,12 @@ export default function LandingSettingsPage() {
   }
 
   async function deleteVideo() {
-    await fetch("/api/tenant/landing/video", { method: "DELETE" });
+    const res = await fetch("/api/tenant/landing/video", { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setVideoError(data.error ?? "Не удалось удалить видео");
+      return;
+    }
     await load();
   }
 
@@ -407,16 +412,30 @@ export default function LandingSettingsPage() {
       setError(uploadData.error ?? "Не удалось загрузить фото");
       return;
     }
-    await fetch("/api/tenant/landing/gallery", {
+    const res = await fetch("/api/tenant/landing/gallery", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url: uploadData.url }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      // Реальный баг, найден аудитом 2026-07-31: файл уже успешно загружен
+      // (uploadRes выше проверен), но привязка фото к галерее могла 409
+      // (лимит 10 фото) — раньше это съедалось молча, владелец не понимал,
+      // почему фото "не появилось".
+      setError(data.error ?? "Не удалось добавить фото в галерею");
+      return;
+    }
     await load();
   }
 
   async function removeGalleryPhoto(id: string) {
-    await fetch(`/api/tenant/landing/gallery/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/tenant/landing/gallery/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Не удалось удалить фото");
+      return;
+    }
     await load();
   }
 
@@ -430,20 +449,30 @@ export default function LandingSettingsPage() {
       setError(uploadData.error ?? "Не удалось загрузить фото");
       return;
     }
-    await fetch(`/api/tenant/landing/zones/${zoneId}`, {
+    const res = await fetch(`/api/tenant/landing/zones/${zoneId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ photoUrl: uploadData.url }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Не удалось сохранить фото зоны");
+      return;
+    }
     await load();
   }
 
   async function removeZonePhoto(zoneId: string) {
-    await fetch(`/api/tenant/landing/zones/${zoneId}`, {
+    const res = await fetch(`/api/tenant/landing/zones/${zoneId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ photoUrl: null }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Не удалось удалить фото зоны");
+      return;
+    }
     await load();
   }
 
@@ -487,7 +516,12 @@ export default function LandingSettingsPage() {
   }
 
   async function unpublish() {
-    await fetch("/api/tenant/landing/unpublish", { method: "POST" });
+    const res = await fetch("/api/tenant/landing/unpublish", { method: "POST" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Не удалось снять с публикации");
+      return;
+    }
     await load();
   }
 

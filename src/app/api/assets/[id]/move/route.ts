@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { revalidateLandingForTenant } from "@/lib/landing/revalidate";
 
 // Перемещение актива вверх/вниз внутри своей зоны (фидбек пользователя
 // 2026-07-11: владелец должен уметь вручную задать порядок активов — влияет
@@ -44,6 +45,13 @@ export async function POST(request: Request, ctx: RouteContext<"/api/assets/[id]
     prisma.asset.update({ where: { id: current.id }, data: { sortOrder: neighbor.sortOrder } }),
     prisma.asset.update({ where: { id: neighbor.id }, data: { sortOrder: current.sortOrder } }),
   ]);
+
+  // Аудит 2026-07-31: единственная мутация актива, не ревалидирующая
+  // публичный Лендинг — get-render-data.ts сортирует "витрину" зоны по
+  // sortOrder, поэтому смена порядка активов меняла то, что должно
+  // показываться на публичной странице, но SSG-кэш оставался старым до
+  // следующей несвязанной правки.
+  await revalidateLandingForTenant(owner.tenantId);
 
   return NextResponse.json({ ok: true });
 }
