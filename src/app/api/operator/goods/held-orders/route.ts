@@ -19,7 +19,14 @@ export async function GET() {
 
   const orders = await prisma.goodsHeldOrder.findMany({
     where: { pointId: ctx.point.id },
-    include: { lines: { include: { goods: { select: { name: true } } } } },
+    include: {
+      lines: { include: { goods: { select: { name: true } } } },
+      // Привязка клиента (запрос пользователя 2026-07-31, "по тому же
+      // принципу, что в Посещениях") — та же справочная метка, что
+      // Launch.linkedClientWallet, нужна и в списке (иконка на чипе), и в
+      // sheet правки заказа.
+      linkedClientWallet: { select: { id: true, phone: true, name: true, balance: true } },
+    },
     // Сначала старые (запрос пользователя 2026-07-30) — не по номеру:
     // номер освобождается/переиспользуется (smallestFreeNumber), поэтому
     // порядок "по номеру" не совпадает с порядком "по времени открытия".
@@ -39,6 +46,14 @@ export async function GET() {
         quantity: l.quantity,
         priceSnapshot: Number(l.priceSnapshot),
       })),
+      linkedClient: o.linkedClientWallet
+        ? {
+            id: o.linkedClientWallet.id,
+            phone: o.linkedClientWallet.phone,
+            name: o.linkedClientWallet.name,
+            balance: Number(o.linkedClientWallet.balance),
+          }
+        : null,
     })),
   });
 }

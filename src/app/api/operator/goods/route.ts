@@ -55,6 +55,11 @@ export async function GET() {
     // тумблер Владельца, серверная проверка в /api/operator/goods/sale, тут
     // только чтобы скрыть кнопку "Баланс" в UI, не сама защита.
     goodsAllowBalancePayment: (tenant?.goodsAllowBalancePayment ?? true) && clientsEnabled,
+    // Привязка клиента к отложенному заказу (запрос пользователя 2026-07-31,
+    // "по тому же принципу, что в Посещениях") — та же серверная проверка
+    // повторяется в /api/operator/goods/held-orders/[id]/link-client, тут
+    // только чтобы скрыть иконку кошелька в UI, когда модуль отключён.
+    clientsEnabled,
     categories: categories.map((c) => ({ id: c.id, name: c.name })),
     goods: goodsSorted.map((g) => ({
       id: g.id,

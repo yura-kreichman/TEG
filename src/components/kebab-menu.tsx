@@ -48,18 +48,28 @@ export function IconActionButton({
   onClick,
   label,
   destructive = false,
+  active = false,
 }: {
   icon: LucideIcon;
   onClick: () => void;
   label: string;
   destructive?: boolean;
+  // Акцентный вид — тот же приём, что у значка "Чей это ребёнок" в
+  // Прибываниях/привязки клиента в Товарах (запрос пользователя 2026-07-31:
+  // "если клиент привязан, кнопка должна становиться синей") — та же
+  // геометрия/размер, что у обычной кнопки, просто заливка вместо outline.
+  active?: boolean;
 }) {
   return (
     <Button
       type="button"
       variant="outline"
       size="icon"
-      className={cn("size-8 shrink-0 rounded-lg border-border", destructive && "text-destructive hover:text-destructive")}
+      className={cn(
+        "size-8 shrink-0 rounded-lg border-border",
+        destructive && "text-destructive hover:text-destructive",
+        active && "border-transparent bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+      )}
       onClick={onClick}
       aria-label={label}
     >

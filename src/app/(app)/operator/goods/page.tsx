@@ -31,6 +31,7 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
 import { SplitPaymentSheet } from "@/components/split-payment-sheet";
 import { useGoodsCart } from "@/components/operator-cart-context";
+import { LinkClientSheet, type LinkedClientInfo } from "@/components/link-client-sheet";
 import { IconActionButton } from "@/components/kebab-menu";
 import { COLOR_TAG_PALETTE } from "@/lib/color-tag";
 import { Money } from "@/components/money";
@@ -77,6 +78,7 @@ interface HeldOrderCtx {
   createdAt: string;
   total: number;
   lines: { goodsId: string; goodsName: string; quantity: number; priceSnapshot: number }[];
+  linkedClient: LinkedClientInfo | null;
 }
 
 const ALL_CATEGORIES = "all";
@@ -113,6 +115,13 @@ export default function GoodsPage() {
   // Настройки → Система (запрос пользователя 2026-07-20) — глобальный
   // тумблер Владельца, серверная проверка — в /api/operator/goods/sale.
   const [goodsAllowBalancePayment, setGoodsAllowBalancePayment] = useState(true);
+  // Модуль Клиенты тенанта (запрос пользователя 2026-07-31: "по тому же
+  // принципу, что в Посещениях") — НЕ то же самое, что goodsAllowBalancePayment
+  // выше (тот — можно ли платить балансом абонемента в Товарах конкретно);
+  // привязка клиента к заказу — справочная метка, не способ оплаты, и должна
+  // зависеть только от самого модуля Клиенты, серверная проверка — в
+  // /api/operator/goods/held-orders/[id]/link-client.
+  const [clientLinkingEnabled, setClientLinkingEnabled] = useState(true);
 
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>(ALL_CATEGORIES);
@@ -175,6 +184,13 @@ export default function GoodsPage() {
   const [renamingOrder, setRenamingOrder] = useState(false);
   const [orderNameDraft, setOrderNameDraft] = useState("");
   const [renamingSubmitting, setRenamingSubmitting] = useState(false);
+  // Привязка клиента к заказу (запрос пользователя 2026-07-31, "абсолютно по
+  // тому же принципу, что в Посещениях") — та же кнопка-иконка рядом с
+  // карандашом переименования, тот же общий LinkClientSheet, что и у
+  // Прибываний, просто свой endpoint (см. импорт выше). Всегда про
+  // editingOrder — заказ уже должен существовать на сервере, чтобы было к
+  // чему привязывать (как и у Launch).
+  const [linkClientOpen, setLinkClientOpen] = useState(false);
 
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [revisionCategory, setRevisionCategory] = useState<string | null>(null);
@@ -209,6 +225,7 @@ export default function GoodsPage() {
         setGoods(data.goods ?? []);
         setRevisionAccess(Boolean(data.revisionAccess));
         setGoodsAllowBalancePayment(data.goodsAllowBalancePayment ?? true);
+        setClientLinkingEnabled(data.clientsEnabled ?? true);
       })
       .catch(() => flashError(t.operatorApp.gameRoom.networkError))
       .finally(() => setLoading(false));
@@ -933,6 +950,21 @@ export default function GoodsPage() {
                   </span>
                   <span className="min-w-0 truncate">{editingOrder.label || `${t.goods.heldOrderChipLabel} ${editingOrder.number}`}</span>
                   <IconActionButton icon={Pencil} onClick={() => openRenameOrder(editingOrder)} label={t.common.rename} />
+                  {/* Привязка клиента (запрос пользователя 2026-07-31,
+                      "абсолютно по тому же принципу, что в Посещениях") —
+                      тот же IconActionButton, тот же вид, что у карандаша
+                      переименования рядом ("по дизайну такая же, как
+                      редактировать"), но синяя, когда клиент уже привязан
+                      (запрос того же дня) — active-проп добавлен в сам
+                      IconActionButton, не локальный велосипед. */}
+                  {clientLinkingEnabled && (
+                    <IconActionButton
+                      icon={Wallet}
+                      onClick={() => setLinkClientOpen(true)}
+                      label={t.operatorApp.gameRoom.linkClientAction}
+                      active={Boolean(editingOrder.linkedClient)}
+                    />
+                  )}
                 </h2>
               ) : (
                 <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.tickets.cartTitle}</h2>
@@ -1098,6 +1130,24 @@ export default function GoodsPage() {
         clientsEnabled={goodsAllowBalancePayment}
         submitting={submitting}
         onSubmit={(legs) => submitPayment("cash", undefined, legs)}
+      />
+
+      {/* Привязка клиента к отложенному заказу (запрос пользователя
+          2026-07-31) — тот же общий LinkClientSheet, что и у Прибываний
+          (game-room/page.tsx), просто свой endpoint. */}
+      <LinkClientSheet
+        open={linkClientOpen}
+        onClose={() => setLinkClientOpen(false)}
+        endpoint={editingOrder ? `/api/operator/goods/held-orders/${editingOrder.id}/link-client` : null}
+        current={editingOrder?.linkedClient ?? null}
+        onLinked={() => {
+          setLinkClientOpen(false);
+          loadHeldOrders();
+        }}
+        onUnlinked={() => {
+          setLinkClientOpen(false);
+          loadHeldOrders();
+        }}
       />
 
       <BottomSheet
@@ -1491,21 +1541,38 @@ function HeldOrdersRow({
           </button>
         </PressableScale>
       )}
-      <div ref={scrollRef} onScroll={updateScrollState} className="scrollbar-none flex flex-1 gap-1.5 overflow-x-auto">
+      {/* pt-2 pr-1.5 — реальный баг, найден пользователем 2026-07-31: сам
+          ряд скроллится (overflow-x-auto), из-за чего браузер клипует и по
+          вертикали/правому краю тоже — значок кошелька, торчащий за угол
+          чипа (-right-1.5 -top-1.5), обрезался этой рамкой. Отступ вместо
+          уменьшения выступа значка — сохраняет тот же угловой приём, что у
+          Прибываний. */}
+      <div ref={scrollRef} onScroll={updateScrollState} className="scrollbar-none flex flex-1 gap-1.5 overflow-x-auto pt-2 pr-1.5">
         {orders.map((order) => (
-          <PressableScale key={order.id} className="shrink-0">
-            <button
-              type="button"
-              onClick={() => onSelect(order)}
-              className="flex shrink-0 flex-col items-center justify-center gap-0 rounded-2xl px-3.5 py-1.5 text-white shadow-sm"
-              style={{ backgroundColor: COLOR_TAG_PALETTE[(order.number - 1) % COLOR_TAG_PALETTE.length] }}
-            >
-              <span className="text-sm leading-tight font-bold whitespace-nowrap">
-                {order.label || `${t.goods.heldOrderChipLabel} ${order.number}`}
+          <div key={order.id} className="relative shrink-0">
+            <PressableScale className="shrink-0">
+              <button
+                type="button"
+                onClick={() => onSelect(order)}
+                className="flex shrink-0 flex-col items-center justify-center gap-0 rounded-2xl px-3.5 py-1.5 text-white shadow-sm"
+                style={{ backgroundColor: COLOR_TAG_PALETTE[(order.number - 1) % COLOR_TAG_PALETTE.length] }}
+              >
+                <span className="text-sm leading-tight font-bold whitespace-nowrap">
+                  {order.label || `${t.goods.heldOrderChipLabel} ${order.number}`}
+                </span>
+                <span className="text-[0.75rem] leading-tight whitespace-nowrap opacity-80">{formatTime(order.createdAt)}</span>
+              </button>
+            </PressableScale>
+            {/* Значок привязанного клиента — тот же угловой приём, что у
+                "Чей это ребёнок" на тайле Прибываний (запрос пользователя
+                2026-07-31), только тут чисто статусная метка (не сам тап-таргет
+                — привязка/отвязка идёт из sheet заказа, не отсюда). */}
+            {order.linkedClient && (
+              <span className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+                <Wallet className="size-3" />
               </span>
-              <span className="text-[0.75rem] leading-tight whitespace-nowrap opacity-80">{formatTime(order.createdAt)}</span>
-            </button>
-          </PressableScale>
+            )}
+          </div>
         ))}
       </div>
       {canScrollRight && (

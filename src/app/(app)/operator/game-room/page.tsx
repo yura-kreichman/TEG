@@ -1371,7 +1371,7 @@ export default function StaysZonePage() {
       <LinkClientSheet
         open={linkClientTarget !== null}
         onClose={() => setLinkClientTarget(null)}
-        launchId={linkClientTarget?.id ?? null}
+        endpoint={linkClientTarget ? `/api/launches/${linkClientTarget.id}/link-client` : null}
         current={linkClientTarget?.linkedClient ?? null}
         onLinked={() => {
           setLinkClientTarget(null);

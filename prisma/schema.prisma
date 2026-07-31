@@ -1214,6 +1214,9 @@ model AbonementWallet {
   // (запрос пользователя 2026-07-27) — отдельная именованная связь от
   // `launches` выше (та про реальное списание оплаты).
   launchesLinkedAsClient     Launch[]                    @relation("LaunchLinkedClient")
+  // Та же справочная привязка, но на отложенных заказах Товаров (запрос
+  // пользователя 2026-07-31) — GoodsHeldOrder.linkedClientWalletId.
+  goodsHeldOrdersLinkedAsClient GoodsHeldOrder[]         @relation("GoodsHeldOrderLinkedClient")
   goodsSales                 GoodsSale[]
   ticketOrders               TicketOrder[]
   counterTapEvents           CounterTapEvent[]
@@ -1524,6 +1527,15 @@ model GoodsHeldOrder {
   performedByOperator   Operator? @relation(fields: [performedByOperatorId], references: [id])
   performedByUserId     String?
   performedByUser       User?     @relation(fields: [performedByUserId], references: [id])
+
+  // Привязка клиента (запрос пользователя 2026-07-31: "по тому же принципу,
+  // что в Посещениях") — тот же приём, что Launch.linkedClientWalletId:
+  // отдельное от оплаты справочное поле (телефон/имя/баланс контакта), не
+  // означает "оплачено с этого кошелька" — тем и остаётся способ оплаты в
+  // payGoodsHeldOrder. Доступно, только пока у тенанта включён модуль
+  // Клиенты (clientsEnabled), как и у Посещений.
+  linkedClientWalletId String?
+  linkedClientWallet   AbonementWallet? @relation("GoodsHeldOrderLinkedClient", fields: [linkedClientWalletId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
 

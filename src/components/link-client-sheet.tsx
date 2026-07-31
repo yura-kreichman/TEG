@@ -22,7 +22,13 @@ export interface LinkedClientInfo {
 interface LinkClientSheetProps {
   open: boolean;
   onClose: () => void;
-  launchId: string | null;
+  // Базовый URL конкретного link-client роута сущности (например,
+  // `/api/launches/${id}/link-client` у Прибываний или
+  // `/api/operator/goods/held-orders/${id}/link-client` у Товаров, запрос
+  // пользователя 2026-07-31: "абсолютно по тому же принципу") — сам sheet
+  // ничего не знает про Launch/GoodsHeldOrder конкретно, просто GET
+  // (?phone=)/POST/DELETE по этому адресу, тот же контракт у обеих сторон.
+  endpoint: string | null;
   // Уже привязан — сразу открываем на просмотре, не на поиске.
   current: LinkedClientInfo | null;
   onLinked: (client: LinkedClientInfo) => void;
@@ -31,17 +37,19 @@ interface LinkClientSheetProps {
 
 /**
  * Привязка "чей это ребёнок" к идущему браслету "Прибываний" (запрос
- * пользователя 2026-07-27) — "Найти или Новый", тот же принцип, что и
- * везде в проекте для клиентов (AbonementPaymentSheet/abonement-topup-flow):
- * сначала явный поиск по телефону, оператор ВИДИТ результат, и только
- * тогда либо привязывает найденного, либо (если не нашли) заводит нового —
- * не молчаливое find-or-create одним действием. На шаге "Новый клиент" —
- * тот же стандартный интерфейс, что и везде в проекте (запрос пользователя
+ * пользователя 2026-07-27), позже переиспользована для отложенных заказов
+ * Товаров (запрос пользователя 2026-07-31, тот же принцип) — "Найти или
+ * Новый", тот же принцип, что и везде в проекте для клиентов
+ * (AbonementPaymentSheet/abonement-topup-flow): сначала явный поиск по
+ * телефону, оператор ВИДИТ результат, и только тогда либо привязывает
+ * найденного, либо (если не нашли) заводит нового — не молчаливое
+ * find-or-create одним действием. На шаге "Новый клиент" — тот же
+ * стандартный интерфейс, что и везде в проекте (запрос пользователя
  * 2026-07-27), поле "Имя" необязательно (t.operatorApp.abonement.nameLabel,
  * тот же ключ, что в abonement-topup-flow.tsx). Никак не влияет на способ
- * оплаты пуска.
+ * оплаты.
  */
-export function LinkClientSheet({ open, onClose, launchId, current, onLinked, onUnlinked }: LinkClientSheetProps) {
+export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, onUnlinked }: LinkClientSheetProps) {
   const t = useI18n();
   const [phone, setPhone] = useState("");
   const [searching, setSearching] = useState(false);
@@ -63,10 +71,10 @@ export function LinkClientSheet({ open, onClose, launchId, current, onLinked, on
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleSearch() {
-    if (!phone.trim() || searching) return;
+    if (!phone.trim() || searching || !endpoint) return;
     setSearching(true);
     setError(null);
-    fetch(`/api/launches/${launchId}/link-client?phone=${encodeURIComponent(phone)}`)
+    fetch(`${endpoint}?phone=${encodeURIComponent(phone)}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
@@ -80,11 +88,11 @@ export function LinkClientSheet({ open, onClose, launchId, current, onLinked, on
   }
 
   async function submitLink(body: { walletId: string } | { phone: string; name?: string }) {
-    if (!launchId || submitting) return;
+    if (!endpoint || submitting) return;
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/launches/${launchId}/link-client`, {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -103,10 +111,10 @@ export function LinkClientSheet({ open, onClose, launchId, current, onLinked, on
   }
 
   async function handleUnlink() {
-    if (!launchId || submitting) return;
+    if (!endpoint || submitting) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/launches/${launchId}/link-client`, { method: "DELETE" });
+      const res = await fetch(endpoint, { method: "DELETE" });
       if (res.ok) onUnlinked();
     } finally {
       setSubmitting(false);
