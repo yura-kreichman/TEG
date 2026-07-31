@@ -660,6 +660,15 @@ export async function payGoodsHeldOrder(params: PayHeldOrderParams): Promise<Sol
   if (!splitting && paymentMethod === "abonement" && !walletId) throw new Error("WALLET_REQUIRED");
 
   const results = await prisma.$transaction(async (tx) => {
+    // Лок по заказу (аудит 2026-07-31) — ДО чтения строк, тем же приёмом,
+    // что и у остальных критических секций проекта: без него Оплатить и
+    // Удалить/докупка на одном и том же заказе могли гоняться параллельно
+    // (второй delete/update бил по уже неактуальному состоянию — либо падал
+    // некрасивым 500 вместо чистого ORDER_NOT_FOUND, либо, у синхронизации
+    // корзины, портил остаток на разницу дважды). Один и тот же ключ во всех
+    // трёх функциях, мутирующих заказ (эта, cancelGoodsHeldOrder,
+    // syncHeldOrderCart), сериализует их между собой.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`held-order:${orderId}`}))`;
     const order = await tx.goodsHeldOrder.findFirst({ where: { id: orderId, tenantId, pointId }, include: { lines: true } });
     if (!order) throw new Error("ORDER_NOT_FOUND");
     if (order.lines.length === 0) throw new Error("EMPTY_CART");
@@ -740,6 +749,8 @@ export async function payGoodsHeldOrder(params: PayHeldOrderParams): Promise<Sol
  */
 export async function cancelGoodsHeldOrder(orderId: string, tenantId: string, pointId: string) {
   await prisma.$transaction(async (tx) => {
+    // Тот же лок и та же причина, что в payGoodsHeldOrder выше.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`held-order:${orderId}`}))`;
     const order = await tx.goodsHeldOrder.findFirst({ where: { id: orderId, tenantId, pointId }, include: { lines: true } });
     if (!order) throw new Error("ORDER_NOT_FOUND");
 
@@ -788,6 +799,16 @@ export async function syncHeldOrderCart(params: SyncHeldOrderParams) {
   const { tenantId, pointId, orderId, items } = params;
 
   return prisma.$transaction(async (tx) => {
+    // Лок по заказу (аудит 2026-07-31) — ДО чтения строк. Реальный баг без
+    // него: две одновременные синхронизации одного заказа (два оператора
+    // правят один "стол", или двойной сабмит при быстром повторном закрытии
+    // sheet корзины) считали дельту от ОДНОГО И ТОГО ЖЕ устаревшего снимка
+    // order.lines — вторая транзакция применяла decrement/delete к уже
+    // изменённой строке (могла увести quantity в минус) и одновременно ещё
+    // раз возвращала на склад то же количество, задваивая его. Лок
+    // сериализует все мутации конкретного заказа между собой (та же
+    // блокировка, что в payGoodsHeldOrder/cancelGoodsHeldOrder).
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`held-order:${orderId}`}))`;
     const order = await tx.goodsHeldOrder.findFirst({ where: { id: orderId, tenantId, pointId }, include: { lines: true } });
     if (!order) throw new Error("ORDER_NOT_FOUND");
 

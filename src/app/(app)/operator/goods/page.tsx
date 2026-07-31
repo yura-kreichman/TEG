@@ -178,6 +178,16 @@ export default function GoodsPage() {
   // оплаты) — см. proceedToPayment.
   const [payingHeldOrderTotal, setPayingHeldOrderTotal] = useState(0);
   const [holding, setHolding] = useState(false);
+  // Реальный баг, найден аудитом 2026-07-31: onClose sheet корзины
+  // (крестик/бэкдроп/Escape/свайп — 4 независимых источника, см.
+  // bottom-sheet.tsx) мог сработать дважды подряд быстрее, чем успевал
+  // прийти ответ сервера — commitCart/cancelHeldOrder/proceedToPayment
+  // выставляли holding для ВИДА (дизаблили кнопку "Оплатить"), но сами себя
+  // от повторного входа не защищали. Двойной сабмит создавал два заказа
+  // (двойное списание остатка) или гонял syncHeldOrderCart дважды на одном
+  // заказе. Ref, не state — проверка должна быть синхронной, до первого
+  // await, что state есть.
+  const holdActionInFlight = useRef(false);
   // Переименование заказа (запрос пользователя 2026-07-30: "Стол Васи" и
   // т.п.) — инлайн-редактирование заголовка внутри того же sheet корзины,
   // пока editingHeldOrderId установлен.
@@ -343,7 +353,8 @@ export default function GoodsPage() {
   // syncHeldOrderCart в lib/goods.ts — считает разницу, не пересоздаёт
   // заказ целиком).
   async function commitCart() {
-    if (currentCartLines.length === 0) return;
+    if (currentCartLines.length === 0 || holdActionInFlight.current) return;
+    holdActionInFlight.current = true;
     setHolding(true);
     try {
       const isEditing = Boolean(editingHeldOrderId);
@@ -369,6 +380,7 @@ export default function GoodsPage() {
       flashError(t.operatorApp.gameRoom.networkError);
     } finally {
       setHolding(false);
+      holdActionInFlight.current = false;
     }
   }
 
@@ -409,6 +421,8 @@ export default function GoodsPage() {
       setPaymentOpen(true);
       return;
     }
+    if (holdActionInFlight.current) return;
+    holdActionInFlight.current = true;
     setHolding(true);
     try {
       const res = await fetch(`/api/operator/goods/held-orders/${editingHeldOrderId}/items`, {
@@ -432,6 +446,7 @@ export default function GoodsPage() {
       flashError(t.operatorApp.gameRoom.networkError);
     } finally {
       setHolding(false);
+      holdActionInFlight.current = false;
     }
   }
 
@@ -498,6 +513,8 @@ export default function GoodsPage() {
   // удаление, доступное самому оператору. Сбрасывает и корзину/режим
   // редактирования — сама корзина сейчас показывает ИМЕННО отменяемый заказ.
   async function cancelHeldOrder(orderId: string) {
+    if (holdActionInFlight.current) return;
+    holdActionInFlight.current = true;
     try {
       const res = await fetch(`/api/operator/goods/held-orders/${orderId}`, { method: "DELETE" });
       if (!res.ok) {
@@ -512,6 +529,8 @@ export default function GoodsPage() {
       load();
     } catch {
       flashError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      holdActionInFlight.current = false;
     }
   }
 
