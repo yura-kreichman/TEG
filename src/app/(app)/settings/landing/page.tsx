@@ -214,6 +214,13 @@ export default function LandingSettingsPage() {
   const [videoUrlInput, setVideoUrlInput] = useState("");
   const [savingVideo, setSavingVideo] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
+  // Реальный баг, найден 2026-07-31 (Керен Центр, зона "Кто?Где?Куда?"):
+  // saveZoneCaption вообще не проверял res.ok — сервер честно отвечал 400
+  // (превышен лимит подписи / недопустимая структура после вставки текста),
+  // а Владелец видел просто "не сохраняется", без единой подсказки почему,
+  // десятки повторных попыток за час по логам nginx. По зоне, не общий
+  // error выше — сообщение должно быть рядом с конкретным редактором.
+  const [zoneCaptionErrors, setZoneCaptionErrors] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     const [landingRes, zonesRes, pointsRes, instructionsRes] = await Promise.all([
@@ -441,11 +448,32 @@ export default function LandingSettingsPage() {
   }
 
   async function saveZoneCaption(zoneId: string, caption: PMNode) {
-    await fetch(`/api/tenant/landing/zones/${zoneId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ caption }),
-    });
+    try {
+      const res = await fetch(`/api/tenant/landing/zones/${zoneId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caption }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        // Хардкод-фолбэк, не отдельный i18n-ключ — та же практика, что уже
+        // сложилась в этом файле для остальных сообщений об ошибках
+        // (videoError выше): реальный текст всегда приходит с сервера
+        // (data.error, тоже пока не через i18n — "Слишком длинная подпись"
+        // и т.п. в /api/tenant/landing/zones/[zoneId]/route.ts), фолбэк
+        // нужен только на случай ответа без тела.
+        setZoneCaptionErrors((prev) => ({ ...prev, [zoneId]: data.error ?? "Не удалось сохранить" }));
+        return;
+      }
+      setZoneCaptionErrors((prev) => {
+        if (!(zoneId in prev)) return prev;
+        const next = { ...prev };
+        delete next[zoneId];
+        return next;
+      });
+    } catch {
+      setZoneCaptionErrors((prev) => ({ ...prev, [zoneId]: "Не удалось сохранить" }));
+    }
   }
 
   async function publish() {
@@ -764,6 +792,9 @@ export default function LandingSettingsPage() {
                         onBlur={(json) => saveZoneCaption(zone.id, json)}
                         heightClassName="h-64 min-h-0"
                       />
+                      {zoneCaptionErrors[zone.id] && (
+                        <p className="text-sm text-destructive">{zoneCaptionErrors[zone.id]}</p>
+                      )}
                     </div>
                   );
                 })}
