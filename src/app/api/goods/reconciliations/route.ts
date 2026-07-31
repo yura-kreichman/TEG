@@ -58,7 +58,7 @@ export async function GET(request: Request) {
       take: 100,
       include: {
         point: { select: { name: true } },
-        performedByOperator: { select: { name: true, avatarUrl: true, iconKey: true } },
+        performedByOperator: { select: { name: true, avatarUrl: true, iconKey: true, colorTag: true } },
         performedByUser: { select: { id: true } },
       },
     }),
@@ -119,6 +119,7 @@ export async function GET(request: Request) {
       performedByOwner: !!r.performedByUser,
       performedByAvatarUrl: r.performedByOperator?.avatarUrl ?? null,
       performedByIconKey: r.performedByOperator?.iconKey ?? null,
+      performedByColorTag: r.performedByOperator?.colorTag ?? null,
       actualCash: Number(r.actualCash),
       actualMobile: Number(r.actualMobile),
       occurredAt: r.occurredAt,

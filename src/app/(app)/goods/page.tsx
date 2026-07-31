@@ -87,6 +87,7 @@ interface RevisionEntry {
   performedByOwner: boolean;
   performedByAvatarUrl: string | null;
   performedByIconKey: string | null;
+  performedByColorTag: string | null;
   occurredAt: string;
   groups: {
     categoryName: string;
@@ -99,6 +100,7 @@ interface OperatorInfo {
   name: string;
   avatarUrl: string | null;
   iconKey: string | null;
+  colorTag: string | null;
 }
 
 interface SaleEntry {
@@ -114,6 +116,7 @@ interface SaleEntry {
   performedByOwner: boolean;
   performedByAvatarUrl: string | null;
   performedByIconKey: string | null;
+  performedByColorTag: string | null;
   occurredAt: string;
   voidedAt: string | null;
 }
@@ -133,6 +136,7 @@ interface ReconciliationEntry {
   performedByOwner: boolean;
   performedByAvatarUrl: string | null;
   performedByIconKey: string | null;
+  performedByColorTag: string | null;
   actualCash: number;
   actualMobile: number;
   occurredAt: string;
@@ -857,12 +861,21 @@ export default function GoodsCabinetPage() {
       fetch("/api/operators")
         .then((res) => (res.ok ? res.json() : null))
         .then(
-          (data: { operators?: { id: string; name: string; avatarUrl: string | null; iconKey: string | null; goodsAccess: boolean }[] } | null) =>
+          (
+            data: {
+              operators?: { id: string; name: string; avatarUrl: string | null; iconKey: string | null; colorTag: string | null; goodsAccess: boolean }[];
+            } | null
+          ) =>
             // Только сотрудники, которым доступна продажа товаров (запрос
             // пользователя 2026-07-19: "в dropdown есть сотрудники, которым не
             // разрешена продажа товаров") — иначе фильтр предлагает выбрать
             // того, кто физически не мог совершить ни одной продажи товара.
-            data && setOperators((data.operators ?? []).filter((o) => o.goodsAccess).map((o) => ({ id: o.id, name: o.name, avatarUrl: o.avatarUrl, iconKey: o.iconKey })))
+            data &&
+            setOperators(
+              (data.operators ?? [])
+                .filter((o) => o.goodsAccess)
+                .map((o) => ({ id: o.id, name: o.name, avatarUrl: o.avatarUrl, iconKey: o.iconKey, colorTag: o.colorTag }))
+            )
         );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1287,7 +1300,7 @@ export default function GoodsCabinetPage() {
                     revisions.map((r) => (
                       <SpringCard key={r.id} hover={false} animate={false} className="flex flex-col gap-2">
                         <div className="flex items-center justify-between text-caption-airbnb text-muted-foreground">
-                          <PerformedByTag name={r.performedBy} isOwner={r.performedByOwner} avatarUrl={r.performedByAvatarUrl} iconKey={r.performedByIconKey} />
+                          <PerformedByTag name={r.performedBy} isOwner={r.performedByOwner} avatarUrl={r.performedByAvatarUrl} iconKey={r.performedByIconKey} colorTag={r.performedByColorTag} />
                           <span>{new Date(r.occurredAt).toLocaleString()}</span>
                         </div>
                         {r.groups.map((group, gi) => (
@@ -1501,7 +1514,7 @@ export default function GoodsCabinetPage() {
                         <div key={r.id} className="flex items-center justify-between gap-2 text-caption-airbnb tabular-nums">
                           <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
                             <span className="shrink-0">{new Date(r.occurredAt).toLocaleString()}</span>
-                            <PerformedByTag name={r.performedBy} isOwner={r.performedByOwner} avatarUrl={r.performedByAvatarUrl} iconKey={r.performedByIconKey} />
+                            <PerformedByTag name={r.performedBy} isOwner={r.performedByOwner} avatarUrl={r.performedByAvatarUrl} iconKey={r.performedByIconKey} colorTag={r.performedByColorTag} />
                           </span>
                           <span className="flex shrink-0 items-center gap-2">
                             <span className="inline-flex items-center gap-1">
@@ -1681,7 +1694,7 @@ export default function GoodsCabinetPage() {
                       ) : (
                         (() => {
                           const op = operators.find((o) => o.id === salesOperatorFilter);
-                          return op ? <PerformedByTag name={op.name} isOwner={false} avatarUrl={op.avatarUrl} iconKey={op.iconKey} /> : null;
+                          return op ? <PerformedByTag name={op.name} isOwner={false} avatarUrl={op.avatarUrl} iconKey={op.iconKey} colorTag={op.colorTag} /> : null;
                         })()
                       )}
                     </SelectValue>
@@ -1690,7 +1703,7 @@ export default function GoodsCabinetPage() {
                     <SelectItem value="all">{t.goods.allOperatorsLabel}</SelectItem>
                     {operators.map((o) => (
                       <SelectItem key={o.id} value={o.id}>
-                        <PerformedByTag name={o.name} isOwner={false} avatarUrl={o.avatarUrl} iconKey={o.iconKey} />
+                        <PerformedByTag name={o.name} isOwner={false} avatarUrl={o.avatarUrl} iconKey={o.iconKey} colorTag={o.colorTag} />
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1839,7 +1852,7 @@ export default function GoodsCabinetPage() {
                           {(s.performedBy || s.performedByOwner) && (
                             <span className="inline-flex items-center gap-1">
                               ·
-                              <PerformedByTag name={s.performedBy} isOwner={s.performedByOwner} avatarUrl={s.performedByAvatarUrl} iconKey={s.performedByIconKey} />
+                              <PerformedByTag name={s.performedBy} isOwner={s.performedByOwner} avatarUrl={s.performedByAvatarUrl} iconKey={s.performedByIconKey} colorTag={s.performedByColorTag} />
                             </span>
                           )}
                         </p>
@@ -2125,90 +2138,110 @@ export default function GoodsCabinetPage() {
       </BottomSheet>
 
       {/* ------- Sheets: Продажи ------- */}
-      {/* Тот же паттерн, что sheet "Сдать кассу" у Сотрудника
-          (/operator/goods, запрос пользователя 2026-07-19: "по аналогии как
-          у Сотрудника") — расчётная сумма крупно слева, разбивка справа,
-          поля Наличные/Безнал + растянутая кнопка справа, разница снизу; те
-          же ключи t.operatorApp.submit.*, не свои формулировки. */}
+      {/* Ровно тот же паттерн, что sheet "Сдать кассу" у Сотрудника
+          (/operator/goods, запрос пользователя 2026-07-31: "у Владельца эти
+          bottom sheets должны быть такие же как и у Сотрудника") — не просто
+          "по аналогии", а byte-в-byte та же структура: расчётная подсказка
+          мелким кликабельным числом СЛЕВА от каждого поля (тап подставляет
+          значение), не отдельной карточкой сверху; кнопка "Сохранить" —
+          узкая вертикальная колонка справа (writing-mode: vertical-rl), не
+          растянутая обычная кнопка. */}
       <BottomSheet open={reconcileSheetOpen} onClose={() => setReconcileSheetOpen(false)}>
         <div className="flex flex-col gap-4 pt-2">
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.goods.reconciliationTitle}</h2>
           {reconcilePending && (
-            <div className="flex items-start justify-between gap-2 rounded-control bg-muted p-3.5">
-              <div className="flex min-w-0 flex-col tabular-nums">
-                <span className="text-caption-airbnb text-muted-foreground">{t.operatorApp.submit.calculatedRevenue}</span>
-                <span className="text-xl font-extrabold leading-none tracking-[-0.02em]">
-                  <Money value={reconcilePending.cash + reconcilePending.mobile + reconcilePending.abonement} />
-                </span>
-              </div>
-              <div className="flex min-w-0 flex-col items-end gap-0.5 pt-1 text-right text-caption-airbnb tabular-nums">
-                <span className="inline-flex items-center gap-1">
-                  <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
-                  {t.operatorApp.submit.cashLabel}:{" "}
-                  <span className="font-bold text-foreground">
-                    <Money value={reconcilePending.cash} />
-                  </span>
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
-                  {t.operatorApp.submit.mobileLabel}:{" "}
-                  <span className="font-bold text-foreground">
-                    <Money value={reconcilePending.mobile} />
-                  </span>
-                </span>
+            <div className="flex items-stretch gap-2">
+              <div className="flex flex-1 flex-col gap-3">
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="ownerReconcileCash" className="flex items-center gap-1.5">
+                    <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+                    {t.operatorApp.submit.cashLabel}
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    {reconcilePending.cash > 0 && (
+                      <PressableScale className="shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setReconcileCash(String(reconcilePending.cash))}
+                          className="flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-control px-2.5"
+                        >
+                          <span className="text-lg font-semibold tabular-nums leading-none text-muted-foreground/50">
+                            <Money value={reconcilePending.cash} />
+                          </span>
+                          <span className="text-[0.625rem] leading-none text-muted-foreground/40">
+                            {t.operatorApp.submit.tapHintCaption}
+                          </span>
+                        </button>
+                      </PressableScale>
+                    )}
+                    <MoneyInput
+                      id="ownerReconcileCash"
+                      autoFocus
+                      scale="lg"
+                      inputMode="numeric"
+                      className="h-14 rounded-control bg-muted text-lg font-bold"
+                      value={reconcileCash}
+                      onChange={(e) => setReconcileCash(e.target.value.replace(/[^\d.,]/g, ""))}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="ownerReconcileMobile" className="flex items-center gap-1.5">
+                    <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+                    {t.operatorApp.submit.mobileLabel}
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    {reconcilePending.mobile > 0 && (
+                      <PressableScale className="shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setReconcileMobile(String(reconcilePending.mobile))}
+                          className="flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-control px-2.5"
+                        >
+                          <span className="text-lg font-semibold tabular-nums leading-none text-muted-foreground/50">
+                            <Money value={reconcilePending.mobile} />
+                          </span>
+                          <span className="text-[0.625rem] leading-none text-muted-foreground/40">
+                            {t.operatorApp.submit.tapHintCaption}
+                          </span>
+                        </button>
+                      </PressableScale>
+                    )}
+                    <MoneyInput
+                      id="ownerReconcileMobile"
+                      scale="lg"
+                      inputMode="numeric"
+                      className="h-14 rounded-control bg-muted text-lg font-bold"
+                      value={reconcileMobile}
+                      onChange={(e) => setReconcileMobile(e.target.value.replace(/[^\d.,]/g, ""))}
+                    />
+                  </div>
+                </div>
+                {/* Баланс абонемента — без ручного поля (списывается
+                    автоматически, сверять физически нечего), просто
+                    короткая строка-справка, если есть чем — тот же приём,
+                    что у Сотрудника. */}
                 {reconcilePending.abonement > 0 && (
-                  <span className="inline-flex items-center gap-1">
+                  <p className="inline-flex items-center gap-1 text-caption-airbnb text-muted-foreground">
                     <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
                     {t.operatorApp.abonement.paymentLabel}:{" "}
                     <span className="font-bold text-foreground">
                       <Money value={reconcilePending.abonement} />
                     </span>
-                  </span>
+                  </p>
                 )}
               </div>
+              <PressableScale className="flex">
+                <SaveButton
+                  className="h-full w-14 min-w-0 flex-col gap-1.5 rounded-control px-1 font-bold"
+                  saved={reconcileSaved}
+                  onClick={saveReconcile}
+                >
+                  <span className="[writing-mode:vertical-rl] rotate-180">{t.common.save}</span>
+                </SaveButton>
+              </PressableScale>
             </div>
           )}
-
-          <div className="flex items-stretch gap-2">
-            <div className="flex flex-1 flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="ownerReconcileCash" className="flex items-center gap-1.5">
-                  <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
-                  {t.operatorApp.submit.cashLabel}
-                </Label>
-                <MoneyInput
-                  id="ownerReconcileCash"
-                  autoFocus
-                  scale="lg"
-                  inputMode="numeric"
-                  className="h-14 rounded-control bg-muted text-lg font-bold"
-                  value={reconcileCash}
-                  onChange={(e) => setReconcileCash(e.target.value.replace(/[^\d.,]/g, ""))}
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="ownerReconcileMobile" className="flex items-center gap-1.5">
-                  <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
-                  {t.operatorApp.submit.mobileLabel}
-                </Label>
-                <MoneyInput
-                  id="ownerReconcileMobile"
-                  scale="lg"
-                  inputMode="numeric"
-                  className="h-14 rounded-control bg-muted text-lg font-bold"
-                  value={reconcileMobile}
-                  onChange={(e) => setReconcileMobile(e.target.value.replace(/[^\d.,]/g, ""))}
-                />
-              </div>
-            </div>
-            <PressableScale className="flex">
-              <SaveButton
-                className="h-full min-w-22 rounded-control px-5 font-bold"
-                saved={reconcileSaved}
-                onClick={saveReconcile}
-              />
-            </PressableScale>
-          </div>
 
           {reconcileDifference !== null && (
             <p

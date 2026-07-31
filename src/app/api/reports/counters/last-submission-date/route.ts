@@ -26,18 +26,33 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
   }
 
-  const submission = await prisma.resultsSubmission.findFirst({
-    where: { pointId },
-    orderBy: { submittedAt: "desc" },
-    select: { submittedAt: true },
-  });
+  // Сверки кассы Товаров — тоже кандидат на "последний день с данными"
+  // (реальный баг, найден пользователем 2026-07-31: сдал кассу Товаров, а
+  // экран при открытии всё равно показывал старую дату последней Сдачи
+  // итогов зоны, потому что этот эндпоинт вообще не знал про Товары —
+  // Товары не привязаны к режиму учёта "Счётчики"/к Сдаче итогов зоны).
+  const [submission, goodsReconciliation] = await Promise.all([
+    prisma.resultsSubmission.findFirst({
+      where: { pointId },
+      orderBy: { submittedAt: "desc" },
+      select: { submittedAt: true },
+    }),
+    prisma.goodsReconciliation.findFirst({
+      where: { pointId },
+      orderBy: { occurredAt: "desc" },
+      select: { occurredAt: true },
+    }),
+  ]);
+  const latest = [submission?.submittedAt, goodsReconciliation?.occurredAt]
+    .filter((d): d is Date => !!d)
+    .sort((a, b) => b.getTime() - a.getTime())[0];
 
   // Местная календарная дата тенанта, не сырой UTC (аудит 2026-07-24) — эта
   // дата напрямую становится значением ?date= у /api/reports/counters/day,
   // поэтому смещение на день здесь означало бы, что "Итоги дня" при обычном
   // открытии экрана (без выбора даты вручную) сразу показывали бы не тот
   // день, что реально сдавался последним.
-  if (!submission) return NextResponse.json({ date: null });
-  const { year, month, day } = localDateParts(submission.submittedAt, point.tenant.timezone ?? "UTC");
+  if (!latest) return NextResponse.json({ date: null });
+  const { year, month, day } = localDateParts(latest, point.tenant.timezone ?? "UTC");
   return NextResponse.json({ date: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}` });
 }

@@ -1,5 +1,6 @@
 import { Crown, Users } from "lucide-react";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
+import { cn, colorTagTint } from "@/lib/utils";
 
 // Мини-аватар сотрудника в списках продаж/ревизий/сверок/истории кошелька
 // (запрос пользователя 2026-07-19: "фото/иконку сотрудников") — тот же приём
@@ -13,21 +14,40 @@ import { AssetOrZoneIcon } from "@/components/icon-picker";
 // "достаточно только зелёной иконки... никаких фонов и надписей не надо") —
 // единый минимальный маркер "это сделал Владелец" по всему проекту, без
 // текста и без фоновой подложки под иконкой.
+//
+// colorTag — опциональный, опт-ин для конкретного места вызова (запрос
+// пользователя 2026-07-31: "во всём разделе Товары... как в Задачах, без
+// аватара но с фоном"), тот же вид, что у чипов сотрудников в Задачах/Зонах —
+// плашка с плоской 25%-прозрачностью цветовой метки вместо аватара/иконки.
+// Когда проп вообще не передан (остальные места вызова, Абонементы) —
+// поведение не меняется, старый приём аватар→иконка→Users остаётся.
 export function PerformedByTag({
   name,
   isOwner,
   avatarUrl,
   iconKey,
+  colorTag,
 }: {
   name: string | null;
   isOwner: boolean;
   avatarUrl: string | null;
   iconKey: string | null;
+  colorTag?: string | null;
 }) {
   if (isOwner) {
     return <Crown className="size-3.5 shrink-0 text-success" />;
   }
   if (!name) return null;
+  if (colorTag !== undefined) {
+    return (
+      <span
+        className={cn("rounded-full px-2.5 py-1 text-xs font-semibold text-muted-foreground", !colorTag && "bg-surface-0")}
+        style={colorTag ? { backgroundColor: colorTagTint(colorTag) } : undefined}
+      >
+        {name}
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center gap-1">
       {avatarUrl ? (

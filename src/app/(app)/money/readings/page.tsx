@@ -15,6 +15,7 @@ import {
   Pencil,
   Plus,
   RefreshCcw,
+  ShoppingBag,
   Trash2,
   TriangleAlert,
 } from "lucide-react";
@@ -160,6 +161,26 @@ interface AbonementSales {
   }[];
 }
 
+// Сверки кассы Товаров за день (запрос пользователя 2026-07-31) — отдельная
+// карточка ниже, по тому же принципу, что и "Продажи абонементов": деньги не
+// привязаны ни к одной зоне, не входят в Расчёт/Разницу зон выше. НЕ
+// привязано к режиму учёта "Счётчики" — Товары доступны на точке независимо
+// от того, какие режимы учёта у её зон (уточнение пользователя 2026-07-31),
+// поэтому карточка показывается всегда, когда за день была хотя бы одна
+// сверка, вне зависимости от cards/accountingMode.
+interface GoodsReconciliationEntry {
+  id: string;
+  occurredAt: string;
+  performedBy: string | null;
+  performedByOwner: boolean;
+  actualCash: number;
+  actualMobile: number;
+  calculatedCash: number;
+  calculatedMobile: number;
+  calculatedAbonement: number;
+  difference: number;
+}
+
 type ActionsView = "edit" | "confirm-delete";
 
 // "Возвраты/тестовые" содержательны только у "Счётчиков" и у legacy
@@ -210,6 +231,7 @@ export default function ReadingsCalendarPage() {
   // Продажи абонементов за день — отдельный "карман", не привязанный ни к
   // одной зоне (запрос пользователя 2026-07-18), грузится вместе с cards.
   const [abonementSales, setAbonementSales] = useState<AbonementSales | null>(null);
+  const [goodsReconciliations, setGoodsReconciliations] = useState<GoodsReconciliationEntry[]>([]);
   // День последней сдачи итогов — открывается по умолчанию (запрос
   // пользователя 2026-07-15), а не сегодняшний пустой день. Резолвится один
   // раз на каждую смену точки, до первой загрузки календаря — иначе был бы
@@ -327,6 +349,7 @@ export default function ReadingsCalendarPage() {
     const data = await res.json();
     setCards(data.cards ?? []);
     setAbonementSales(data.abonementSales ?? null);
+    setGoodsReconciliations(data.goodsReconciliations ?? []);
   }
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -703,12 +726,17 @@ export default function ReadingsCalendarPage() {
               {/* Заголовок — внутри акцентной плашки "Итоги дня" вместе с
                   цифрами (запрос пользователя 2026-07-19: "сделай внутри
                   плашки акцентной схемы"), но по смыслу описывает ОБА блока
-                  (Итоги дня + Абонементы ниже) — сами карточки/суммы
+                  (Итоги дня + Абонементы + Товары ниже) — сами карточки/суммы
                   остаются раздельными. Отдельный fallback ниже — редкий
-                  случай, когда за день были только продажи абонементов без
-                  сдач зон: тогда акцентной карточки нет, заголовок остаётся
-                  отдельным блоком, как раньше. */}
-              {selectedDate && cards !== null && cards.length === 0 && (abonementSales?.items.length ?? 0) > 0 && (
+                  случай, когда за день были только продажи абонементов и/или
+                  сверки Товаров без сдач зон (Товары независимы от режима
+                  учёта зон — уточнение пользователя 2026-07-31): тогда
+                  акцентной карточки нет, заголовок остаётся отдельным
+                  блоком, как раньше. */}
+              {selectedDate &&
+                cards !== null &&
+                cards.length === 0 &&
+                ((abonementSales?.items.length ?? 0) > 0 || goodsReconciliations.length > 0) && (
                 <div className="mt-3.5 flex items-center gap-2 px-1">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
                     <FileText className="size-4.5" />
@@ -894,10 +922,94 @@ export default function ReadingsCalendarPage() {
                 </SpringCard>
               )}
 
+              {/* Товары — отдельная карточка, тот же принцип, что и у
+                  "Продажи абонементов" выше: деньги не привязаны ни к одной
+                  зоне, не входят в Расчёт/Разницу зон. В отличие от
+                  абонементов — по содержанию ближе к самой сдаче зоны
+                  (Наличные/Безнал по факту, Расчётная касса, Разница), потому
+                  что у Товаров, как и у зон, есть реальная сверка "что
+                  ожидалось vs что по факту" (запрос пользователя 2026-07-31).
+                  За день может быть НЕСКОЛЬКО сверок — показываем списком, не
+                  сводкой (решение пользователя того же дня). НЕ зависит от
+                  режима учёта зон точки (уточнение пользователя 2026-07-31) —
+                  условие ниже сознательно не трогает cards/accountingMode. */}
+              {selectedDate && goodsReconciliations.length > 0 && (
+                <SpringCard hover={false} className="mt-3.5 flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                      <ShoppingBag className="size-4" />
+                    </div>
+                    <p className="text-card-title">{t.readings.goodsReconciliationsTitle}</p>
+                  </div>
+                  <div className="mt-1 flex flex-col border-t border-border">
+                    {goodsReconciliations.map((r) => (
+                      <div key={r.id} className="flex flex-col gap-1 border-b border-border py-2 tabular-nums last:border-b-0">
+                        <div className="flex items-center justify-between text-caption-airbnb text-muted-foreground">
+                          <span>{formatTime(r.occurredAt)}</span>
+                          <span>{r.performedByOwner ? t.common.ownerLabel : (r.performedBy ?? "")}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-caption-airbnb">
+                          <span className="flex items-center gap-1">
+                            <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+                            {t.operatorApp.submit.cashLabel}
+                          </span>
+                          <span className="text-foreground"><Money value={r.actualCash} /></span>
+                        </div>
+                        <div className="flex items-center justify-between text-caption-airbnb">
+                          <span className="flex items-center gap-1">
+                            <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+                            {t.operatorApp.submit.mobileLabel}
+                          </span>
+                          <span className="text-foreground"><Money value={r.actualMobile} /></span>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-border pt-1 text-caption-airbnb">
+                          <span>{t.operatorApp.submit.calculatedRevenue}</span>
+                          <span><Money value={r.calculatedCash + r.calculatedMobile} /></span>
+                        </div>
+                        <div className="flex items-center justify-between text-caption-airbnb">
+                          <span className="flex items-center gap-1.5">
+                            {t.operatorApp.submit.difference}
+                            {r.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
+                          </span>
+                          <span
+                            className={cn(
+                              "font-bold",
+                              r.difference === 0
+                                ? "text-muted-foreground"
+                                : r.difference > 0
+                                  ? "text-primary"
+                                  : "text-destructive"
+                            )}
+                          >
+                            {r.difference > 0 ? "+" : ""}
+                            <Money value={r.difference} />
+                          </span>
+                        </div>
+                        {/* Абонементная часть — деньги списаны с баланса
+                            раньше, при пополнении, касса их уже не ждёт (тот
+                            же принцип, что у abonementInDifference зон) —
+                            только справочная строка, не участвует в Разнице
+                            выше. */}
+                        {r.calculatedAbonement > 0 && (
+                          <div className="flex items-center justify-between text-caption-airbnb text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
+                              {t.operatorApp.abonement.paymentLabel}
+                            </span>
+                            <span><Money value={r.calculatedAbonement} /></span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </SpringCard>
+              )}
+
               {selectedDate && (
                 <div className="mt-3.5 flex flex-col gap-3">
                   {cards === null ? null : cards.length === 0 ? (
-                    (abonementSales?.items.length ?? 0) === 0 && (
+                    (abonementSales?.items.length ?? 0) === 0 &&
+                    goodsReconciliations.length === 0 && (
                       <p className="mt-1 text-body-airbnb text-muted-foreground">
                         {t.readings.noSubmissionsPrefix} {formatReadableDate(selectedDate)}
                       </p>

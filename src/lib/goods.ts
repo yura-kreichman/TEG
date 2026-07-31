@@ -940,21 +940,23 @@ export interface GoodsCashBreakdown {
 }
 
 /**
- * Расчётная выручка Товаров с прошлой сверки этой точки (docs/spec/09-goods.md,
- * "Сверка кассы") — сумма GoodsSale по способам оплаты, исключая
- * аннулированные. НЕ хранится нигде — считается на лету при каждом обращении
- * (тот же принцип, что ZoneSubmission.calculatedRevenue).
+ * Расчётная выручка Товаров за произвольное окно (сумма GoodsSale по
+ * способам оплаты, исключая аннулированные) — общий приём для
+ * calculateGoodsCashSince ниже (окно "с прошлой сверки по сейчас") и для
+ * карточки Товаров в "Итогах дня" Владельца (окно "между двумя соседними
+ * сверками", запрос пользователя 2026-07-31: "то же содержание, что у зон" —
+ * расчётная касса нужна не только для ТЕКУЩЕГО состояния, но и задним числом
+ * для КАЖДОЙ прошедшей сверки конкретного дня).
  */
-export async function calculateGoodsCashSince(
+async function calculateGoodsCashInWindow(
   tenantId: string,
-  pointId: string
-): Promise<GoodsCashBreakdown & { sinceReconciliationId: string | null }> {
-  const lastReconciliation = await prisma.goodsReconciliation.findFirst({
-    where: { tenantId, pointId },
-    orderBy: { occurredAt: "desc" },
-  });
-
-  const occurredFilter = lastReconciliation ? { occurredAt: { gt: lastReconciliation.occurredAt } } : {};
+  pointId: string,
+  sinceExclusive: Date | null,
+  untilInclusive: Date
+): Promise<GoodsCashBreakdown> {
+  const occurredFilter = {
+    occurredAt: { ...(sinceExclusive ? { gt: sinceExclusive } : {}), lte: untilInclusive },
+  };
 
   const sales = await prisma.goodsSale.groupBy({
     by: ["paymentMethod"],
@@ -984,8 +986,47 @@ export async function calculateGoodsCashSince(
     cash: byMethod.get("cash") ?? 0,
     mobile: byMethod.get("mobile") ?? 0,
     abonement: byMethod.get("abonement") ?? 0,
-    sinceReconciliationId: lastReconciliation?.id ?? null,
   };
+}
+
+/**
+ * Расчётная выручка Товаров с прошлой сверки этой точки (docs/spec/09-goods.md,
+ * "Сверка кассы") — сумма GoodsSale по способам оплаты, исключая
+ * аннулированные. НЕ хранится нигде — считается на лету при каждом обращении
+ * (тот же принцип, что ZoneSubmission.calculatedRevenue).
+ */
+export async function calculateGoodsCashSince(
+  tenantId: string,
+  pointId: string
+): Promise<GoodsCashBreakdown & { sinceReconciliationId: string | null }> {
+  const lastReconciliation = await prisma.goodsReconciliation.findFirst({
+    where: { tenantId, pointId },
+    orderBy: { occurredAt: "desc" },
+  });
+
+  const breakdown = await calculateGoodsCashInWindow(
+    tenantId,
+    pointId,
+    lastReconciliation?.occurredAt ?? null,
+    new Date()
+  );
+  return { ...breakdown, sinceReconciliationId: lastReconciliation?.id ?? null };
+}
+
+/**
+ * То же самое окно "с прошлой сверки", но ЗАДНИМ ЧИСЛОМ для КОНКРЕТНОЙ уже
+ * состоявшейся сверки — используется только карточкой "Товары" в "Итогах
+ * дня" Владельца (src/app/api/reports/counters/day/route.ts), чтобы
+ * показать расчётную кассу именно на момент КАЖДОЙ сверки того дня, а не
+ * только текущего "pending" состояния.
+ */
+export async function calculateGoodsCashBeforeReconciliation(
+  tenantId: string,
+  pointId: string,
+  sincePreviousExclusive: Date | null,
+  reconciliationOccurredAt: Date
+): Promise<GoodsCashBreakdown> {
+  return calculateGoodsCashInWindow(tenantId, pointId, sincePreviousExclusive, reconciliationOccurredAt);
 }
 
 export class ReconciliationChangedError extends Error {}

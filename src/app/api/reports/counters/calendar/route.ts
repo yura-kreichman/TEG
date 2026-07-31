@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
   const monthEnd = dayBoundsUtc(nextMonth.year, nextMonth.month, 1, timezone).start;
 
-  const [submissions, abonementSales] = await Promise.all([
+  const [submissions, abonementSales, goodsReconciliations] = await Promise.all([
     prisma.resultsSubmission.findMany({
       where: { pointId, submittedAt: { gte: monthStart, lt: monthEnd } },
       select: { submittedAt: true },
@@ -48,6 +48,15 @@ export async function GET(request: Request) {
       },
       select: { occurredAt: true },
     }),
+    // Дни со сверкой кассы Товаров, без единой Сдачи итогов зоны — тоже
+    // должны быть кликабельны (реальный баг, найден пользователем 2026-07-31:
+    // день был серым/недоступным в календаре именно потому, что этот
+    // эндпоинт не знал про Товары — они не привязаны к режиму учёта
+    // "Счётчики" зон точки).
+    prisma.goodsReconciliation.findMany({
+      where: { pointId, occurredAt: { gte: monthStart, lt: monthEnd } },
+      select: { occurredAt: true },
+    }),
   ]);
 
   const dateKey = (d: Date) => {
@@ -55,7 +64,11 @@ export async function GET(request: Request) {
     return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   };
   const activeDates = [
-    ...new Set([...submissions.map((s) => dateKey(s.submittedAt)), ...abonementSales.map((op) => dateKey(op.occurredAt))]),
+    ...new Set([
+      ...submissions.map((s) => dateKey(s.submittedAt)),
+      ...abonementSales.map((op) => dateKey(op.occurredAt)),
+      ...goodsReconciliations.map((r) => dateKey(r.occurredAt)),
+    ]),
   ].sort();
 
   return NextResponse.json({ activeDates });

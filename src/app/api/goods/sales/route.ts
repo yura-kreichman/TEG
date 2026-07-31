@@ -74,7 +74,7 @@ export async function GET(request: Request) {
     include: {
       goods: { select: { name: true, categoryId: true } },
       point: { select: { name: true, iconKey: true } },
-      performedByOperator: { select: { name: true, avatarUrl: true, iconKey: true } },
+      performedByOperator: { select: { name: true, avatarUrl: true, iconKey: true, colorTag: true } },
       performedByUser: { select: { id: true } },
     },
   });
@@ -180,6 +180,7 @@ export async function GET(request: Request) {
       performedByOwner: !!s.performedByUser,
       performedByAvatarUrl: s.performedByOperator?.avatarUrl ?? null,
       performedByIconKey: s.performedByOperator?.iconKey ?? null,
+      performedByColorTag: s.performedByOperator?.colorTag ?? null,
       occurredAt: s.occurredAt,
       voidedAt: s.voidedAt,
     })),

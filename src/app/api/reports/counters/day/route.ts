@@ -4,6 +4,8 @@ import { requireOwner } from "@/lib/require-owner";
 import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateTicketOrders, ticketRevenueByAssetVariant, listTicketOrdersForWindow, type TicketOrderWindowItem } from "@/lib/tickets";
+import { calculateGoodsCashBeforeReconciliation } from "@/lib/goods";
+import { round2 } from "@/lib/reports";
 import { dayBoundsUtc } from "@/lib/business-day";
 
 interface CorrectionDiff {
@@ -113,6 +115,52 @@ export async function GET(request: Request) {
   }
   const abonementSales = { ...abonementSalesTotals, items: [...abonementSaleItemsByPlan.values()] };
 
+  // Сверки кассы Товаров за эту дату+точку (запрос пользователя 2026-07-31:
+  // "Итоги дня" не показывали Товары вообще, хотя сверка там уже была) —
+  // отдельная карточка ниже, по аналогии с "Продажи абонементов" выше: эти
+  // деньги не привязаны ни к одной зоне и не входят в Расчёт/Разницу зон.
+  // Расчётная касса нужна для КАЖДОЙ сверки дня отдельно (их может быть
+  // несколько), не только текущего "pending" — окно "с прошлой сверки"
+  // строится по ПОЛНОЙ истории сверок точки (может уходить в предыдущие
+  // дни), тот же приём, что boundariesByZone/abonementAmountFor ниже.
+  const allGoodsReconciliations = await prisma.goodsReconciliation.findMany({
+    where: { pointId },
+    orderBy: { occurredAt: "asc" },
+    include: { performedByOperator: { select: { name: true } }, performedByUser: { select: { id: true } } },
+  });
+  const todaysGoodsReconciliations = allGoodsReconciliations.filter(
+    (r) => r.occurredAt >= dayStart && r.occurredAt < dayEnd
+  );
+  const goodsReconciliations = await Promise.all(
+    todaysGoodsReconciliations.map(async (r) => {
+      const idx = allGoodsReconciliations.findIndex((x) => x.id === r.id);
+      const previous = idx > 0 ? allGoodsReconciliations[idx - 1] : null;
+      const calculated = await calculateGoodsCashBeforeReconciliation(
+        owner.tenantId,
+        pointId,
+        previous?.occurredAt ?? null,
+        r.occurredAt
+      );
+      const actualCash = Number(r.actualCash);
+      const actualMobile = Number(r.actualMobile);
+      return {
+        id: r.id,
+        occurredAt: r.occurredAt,
+        performedBy: r.performedByOperator?.name ?? null,
+        performedByOwner: !!r.performedByUser,
+        actualCash,
+        actualMobile,
+        calculatedCash: round2(calculated.cash),
+        calculatedMobile: round2(calculated.mobile),
+        calculatedAbonement: round2(calculated.abonement),
+        // Абонемент — деньги списаны с баланса раньше, при пополнении, касса
+        // их уже не ждёт (тот же принцип, что abonementInDifference у зон
+        // ниже) — только информационная строка, не Разница.
+        difference: round2(actualCash + actualMobile - calculated.cash - calculated.mobile),
+      };
+    })
+  );
+
   const submissions = await prisma.resultsSubmission.findMany({
     where: { pointId, submittedAt: { gte: dayStart, lt: dayEnd } },
     include: {
@@ -130,7 +178,7 @@ export async function GET(request: Request) {
   });
 
   if (submissions.length === 0) {
-    return NextResponse.json({ cards: [], abonementSales });
+    return NextResponse.json({ cards: [], abonementSales, goodsReconciliations });
   }
 
   // "Прибывания" и тап-"Пуски" (после перехода на тапы, assetReadings
@@ -570,5 +618,5 @@ export async function GET(request: Request) {
     })
   );
 
-  return NextResponse.json({ cards, abonementSales });
+  return NextResponse.json({ cards, abonementSales, goodsReconciliations });
 }

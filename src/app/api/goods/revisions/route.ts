@@ -20,6 +20,7 @@ interface RevisionBatchOut {
   performedByOwner: boolean;
   performedByAvatarUrl: string | null;
   performedByIconKey: string | null;
+  performedByColorTag: string | null;
   occurredAt: Date;
   groups: { categoryName: string; lines: RevisionLineOut[] }[];
 }
@@ -75,7 +76,7 @@ export async function GET(request: Request) {
     include: {
       point: { select: { name: true } },
       category: { select: { name: true } },
-      performedByOperator: { select: { name: true, avatarUrl: true, iconKey: true } },
+      performedByOperator: { select: { name: true, avatarUrl: true, iconKey: true, colorTag: true } },
       performedByUser: { select: { id: true } },
       lines: { include: { goods: { select: { name: true } } } },
     },
@@ -102,6 +103,7 @@ export async function GET(request: Request) {
       performedByOwner: !!r.performedByUser,
       performedByAvatarUrl: r.performedByOperator?.avatarUrl ?? null,
       performedByIconKey: r.performedByOperator?.iconKey ?? null,
+      performedByColorTag: r.performedByOperator?.colorTag ?? null,
       occurredAt: r.occurredAt,
       groups: [{ categoryName: r.category.name, lines }],
     });
