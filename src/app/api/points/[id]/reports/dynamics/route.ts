@@ -219,8 +219,16 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       }
     }
   } else {
-    for (let d = new Date(start); d < end; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
-      const key = dateKey(d);
+    // Локальный календарный день через dayBoundsUtc, не "+24ч в мс" (аудит
+    // 2026-07-31) — тот же класс DST-бага, что getPreviousPeriodRange в
+    // lib/reports.ts уже чинит через addCalendarDays: в сутки перехода на
+    // летнее/зимнее время местные сутки длятся 23 или 25 часов, и наивное
+    // прибавление 24ч давало dateKey(d) дважды одну и ту же локальную дату
+    // (дубликат бара) либо пропускало последний день диапазона. Тот же
+    // приём, что уже используется в ветке "year" чуть выше.
+    let { year: dYear, month: dMonth, day: dDay } = localDateParts(start, timezone);
+    while (dayBoundsUtc(dYear, dMonth, dDay, timezone).start < end) {
+      const key = `${dYear}-${String(dMonth).padStart(2, "0")}-${String(dDay).padStart(2, "0")}`;
       const revenueForBar = byDay.get(key) ?? 0;
       const deductionsForBar = deductionsByDay.get(key) ?? 0;
       bars.push({
@@ -229,6 +237,10 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
         profit: round2(revenueForBar - deductionsForBar),
         hasData: activeDays.has(key),
       });
+      const next = new Date(Date.UTC(dYear, dMonth - 1, dDay + 1));
+      dYear = next.getUTCFullYear();
+      dMonth = next.getUTCMonth() + 1;
+      dDay = next.getUTCDate();
     }
   }
 

@@ -70,7 +70,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   });
   const zoneIds = zones.map((z) => z.id);
 
-  const [submissions, abonementOps] = await Promise.all([
+  const [submissions, abonementOps, goodsOps] = await Promise.all([
     zoneIds.length
       ? prisma.zoneSubmission.findMany({
           where: { zoneId: { in: zoneIds }, resultsSubmission: { submittedAt: { gte: start, lt: end } } },
@@ -91,6 +91,20 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       },
       select: { amount: true, occurredAt: true },
     }),
+    // Товарная выручка (аудит 2026-07-31) — тот же класс бага, что уже
+    // чинили в /api/reports/money/calendar 2026-07-24 ("товарная выручка...
+    // календарь Денег был единственным местом, которое их не учитывало") —
+    // этот, поточечный, календарь под тем же аудитом пропустили. Без неё
+    // день с продажами Товаров, но без сдач зон, показывался бы пустым, а
+    // смешанный день — заниженной суммой.
+    prisma.moneyOperation.findMany({
+      where: {
+        type: { in: ["goods_revenue", "goods_revenue_cashless"] },
+        occurredAt: { gte: start, lt: end },
+        ...(isAllPoints ? { tenantId: owner.tenantId } : { pointId }),
+      },
+      select: { amount: true, occurredAt: true },
+    }),
   ]);
 
   const byDay = new Map<string, number>();
@@ -99,6 +113,10 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     byDay.set(key, (byDay.get(key) ?? 0) + Number(s.cashAmount) + Number(s.mobileAmount));
   }
   for (const op of abonementOps) {
+    const key = dateKey(op.occurredAt);
+    byDay.set(key, (byDay.get(key) ?? 0) + Math.abs(Number(op.amount)));
+  }
+  for (const op of goodsOps) {
     const key = dateKey(op.occurredAt);
     byDay.set(key, (byDay.get(key) ?? 0) + Math.abs(Number(op.amount)));
   }
