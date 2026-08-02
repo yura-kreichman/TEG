@@ -2,17 +2,28 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronRight, ArrowUpDown } from "lucide-react";
 import { AdminShell } from "@/components/admin-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { StatusChip } from "@/components/status-chip";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DeleteButton } from "@/components/ui/delete-button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { BottomSheet } from "@/components/motion/bottom-sheet";
+import { PressableScale } from "@/components/motion/pressable-scale";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useI18n } from "@/components/i18n-provider";
 
 type SubscriptionStatus = "active" | "paused" | "suspended" | "expired";
+
+// Вердикт считает сервер (src/lib/admin/tenant-cleanup.ts), а не браузер —
+// тот же модуль решает, кого реально разрешено удалить в пачке, и два
+// независимых критерия неминуемо разъехались бы при первой правке.
+type CleanupVerdict = "deletable" | "abandoned" | "active";
 
 interface TenantInfo {
   id: string;
@@ -25,6 +36,8 @@ interface TenantInfo {
   createdAt: string;
   fluentcartCustomerId: string | null;
   unlimited: boolean;
+  cleanupVerdict: CleanupVerdict;
+  ageDays: number;
 }
 
 // Полный набор фильтров/сортировки (запрос пользователя 2026-07-29: "надо
@@ -58,16 +71,26 @@ export default function AdminTenantsPage() {
   const [checking, setChecking] = useState(true);
   const [tenants, setTenants] = useState<TenantInfo[]>([]);
   const [unmatchedWebhookCount, setUnmatchedWebhookCount] = useState(0);
+  const [cleanupMinAgeDays, setCleanupMinAgeDays] = useState(60);
 
   const [packageFilter, setPackageFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [unlimitedOnly, setUnlimitedOnly] = useState(false);
   const [notLinkedOnly, setNotLinkedOnly] = useState(false);
+  const [cleanupOnly, setCleanupOnly] = useState(false);
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  useEffect(() => {
-    fetch("/api/admin/tenants")
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [cleanupSheetOpen, setCleanupSheetOpen] = useState(false);
+  const [cleanupPassword, setCleanupPassword] = useState("");
+  const [cleanupError, setCleanupError] = useState<string | null>(null);
+  const [cleanupBusy, setCleanupBusy] = useState(false);
+  const [cleanupDone, setCleanupDone] = useState(false);
+  const [cleanupResult, setCleanupResult] = useState<{ deleted: number; skipped: number; failed: number } | null>(null);
+
+  const load = useCallback(() => {
+    return fetch("/api/admin/tenants")
       .then((res) => {
         if (res.status === 401) {
           router.replace("/admin/login");
@@ -79,9 +102,14 @@ export default function AdminTenantsPage() {
         if (!data) return;
         setTenants(data.tenants ?? []);
         setUnmatchedWebhookCount(data.unmatchedWebhookCount ?? 0);
+        if (typeof data.cleanupMinAgeDays === "number") setCleanupMinAgeDays(data.cleanupMinAgeDays);
         setChecking(false);
       });
   }, [router]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   // Список пакетов для фильтра — из реально существующих у тенантов
   // пакетов, не отдельным запросом (тот же набор, что и так уже пришёл).
@@ -101,6 +129,7 @@ export default function AdminTenantsPage() {
     }
     if (unlimitedOnly) list = list.filter((tenant) => tenant.unlimited);
     if (notLinkedOnly) list = list.filter(isRealNotLinked);
+    if (cleanupOnly) list = list.filter((tenant) => tenant.cleanupVerdict === "deletable");
 
     const sorted = [...list].sort((a, b) => {
       let cmp = 0;
@@ -111,7 +140,68 @@ export default function AdminTenantsPage() {
       return sortDir === "asc" ? cmp : -cmp;
     });
     return sorted;
-  }, [tenants, packageFilter, statusFilter, unlimitedOnly, notLinkedOnly, sortField, sortDir]);
+  }, [tenants, packageFilter, statusFilter, unlimitedOnly, notLinkedOnly, cleanupOnly, sortField, sortDir]);
+
+  const deletableCount = useMemo(
+    () => tenants.filter((tenant) => tenant.cleanupVerdict === "deletable").length,
+    [tenants]
+  );
+  // Выделение живёт только внутри режима очистки, поэтому считаем его по
+  // отфильтрованному списку: выключение фильтра снимает выделение (см.
+  // toggleCleanupFilter) — иначе можно было бы «унести» галочки в обычный
+  // список и удалить не глядя.
+  const selectedVisible = useMemo(
+    () => displayedTenants.filter((tenant) => selectedIds.has(tenant.id)),
+    [displayedTenants, selectedIds]
+  );
+
+  function toggleCleanupFilter() {
+    setCleanupOnly((on) => {
+      if (on) setSelectedIds(new Set());
+      return !on;
+    });
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function openCleanupSheet() {
+    setCleanupPassword("");
+    setCleanupError(null);
+    setCleanupDone(false);
+    setCleanupResult(null);
+    setCleanupSheetOpen(true);
+  }
+
+  async function confirmCleanup() {
+    setCleanupBusy(true);
+    setCleanupError(null);
+    const res = await fetch("/api/admin/tenants/cleanup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: selectedVisible.map((tenant) => tenant.id), password: cleanupPassword }),
+    });
+    const data = await res.json().catch(() => null);
+    setCleanupBusy(false);
+    if (!res.ok) {
+      setCleanupError(data?.error ?? "Не удалось удалить");
+      return;
+    }
+    setCleanupDone(true);
+    setCleanupResult({
+      deleted: data?.deleted?.length ?? 0,
+      skipped: data?.skipped?.length ?? 0,
+      failed: data?.failed?.length ?? 0,
+    });
+    setSelectedIds(new Set());
+    await load();
+  }
 
   if (checking) return null;
 
@@ -145,6 +235,36 @@ export default function AdminTenantsPage() {
             <p className="mb-3 text-caption-airbnb font-semibold text-warning">
               {t.admin.unmatchedWebhooksLabel}: {unmatchedWebhookCount}
             </p>
+          )}
+
+          {/* Потерянные регистрации (запрос пользователя 2026-08-02). Плашка
+              показывается, только когда таким кандидатам реально есть место
+              — пустой блок "0 кандидатов" висел бы на экране постоянно и
+              ничего не сообщал. Осознанно НЕ вычисляемый предупреждающий
+              баннер в духе "у вас проблема" (такие в проекте запрещены) —
+              это счётчик и кнопка перехода к списку, без оценок и тревоги. */}
+          {deletableCount > 0 && (
+            <SpringCard animate={false} className="mb-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-card-title">
+                    {t.admin.cleanupBannerTitle}: {deletableCount}
+                  </div>
+                  <p className="text-caption-airbnb">
+                    {t.admin.cleanupBannerText.replace("{days}", String(cleanupMinAgeDays))}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant={cleanupOnly ? "default" : "outline"}
+                  size="sm"
+                  className="rounded-lg"
+                  onClick={toggleCleanupFilter}
+                >
+                  {t.admin.cleanupFilter}
+                </Button>
+              </div>
+            </SpringCard>
           )}
 
           {/* Фильтры + сортировка (запрос пользователя 2026-07-29: "делать
@@ -245,7 +365,54 @@ export default function AdminTenantsPage() {
             >
               {t.admin.notLinkedChip}
             </Button>
+            {deletableCount > 0 && (
+              <Button
+                type="button"
+                variant={cleanupOnly ? "default" : "outline"}
+                size="sm"
+                className="rounded-lg"
+                onClick={toggleCleanupFilter}
+              >
+                {t.admin.cleanupFilter} · {deletableCount}
+              </Button>
+            )}
           </div>
+
+          {/* Панель выделения — только в режиме очистки. Вне его чекбоксов на
+              карточках нет вовсе: массовое удаление должно быть отдельным
+              осознанным режимом, а не постоянно доступной кнопкой рядом с
+              обычным просмотром списка. */}
+          {cleanupOnly && displayedTenants.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-lg"
+                onClick={() =>
+                  setSelectedIds(
+                    selectedVisible.length === displayedTenants.length
+                      ? new Set()
+                      : new Set(displayedTenants.map((tenant) => tenant.id))
+                  )
+                }
+              >
+                {selectedVisible.length === displayedTenants.length
+                  ? t.admin.cleanupClearSelection
+                  : t.admin.cleanupSelectAll}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="rounded-lg"
+                disabled={selectedVisible.length === 0}
+                onClick={openCleanupSheet}
+              >
+                {t.admin.cleanupDeleteSelected} · {selectedVisible.length}
+              </Button>
+            </div>
+          )}
 
           {displayedTenants.length === 0 ? (
             <p className="text-body-airbnb text-muted-foreground">{t.admin.noTenants}</p>
@@ -254,7 +421,17 @@ export default function AdminTenantsPage() {
               {displayedTenants.map((tenant) => (
                 <StaggerItem key={tenant.id}>
                   <SpringCard animate={false}>
-                    <Link href={`/admin/tenants/${tenant.id}`} className="flex items-center gap-3">
+                    {/* Чекбокс вне <Link>: иначе клик по нему уводил бы на
+                        карточку тенанта вместо выделения. */}
+                    <div className="flex items-center gap-3">
+                    {cleanupOnly && (
+                      <Checkbox
+                        checked={selectedIds.has(tenant.id)}
+                        onCheckedChange={() => toggleSelected(tenant.id)}
+                        aria-label={tenant.name}
+                      />
+                    )}
+                    <Link href={`/admin/tenants/${tenant.id}`} className="flex grow items-center gap-3">
                       <div className="min-w-0 grow">
                         <div className="flex items-center gap-2">
                           <div className="text-card-title">{tenant.name}</div>
@@ -279,6 +456,18 @@ export default function AdminTenantsPage() {
                               "unlimited: false" в WHERE) — видно прямо в списке,
                               чтобы не спутать с реальным кандидатом на удаление. */}
                           {tenant.unlimited && <StatusChip variant="accent">{t.admin.unlimitedChip}</StatusChip>}
+                          {/* Два разных исхода анализа "потерянных клиентов",
+                              намеренно разными по весу метками: "подлежит
+                              удалению" — пусто, удаление безопасно; "заброшен"
+                              — данные есть, это только пометка, в массовое
+                              удаление такие не попадают никогда (сервер их
+                              отсеивает повторной проверкой). */}
+                          {tenant.cleanupVerdict === "deletable" && (
+                            <StatusChip variant="warning">{t.admin.cleanupChip}</StatusChip>
+                          )}
+                          {tenant.cleanupVerdict === "abandoned" && (
+                            <StatusChip variant="neutral">{t.admin.cleanupAbandonedChip}</StatusChip>
+                          )}
                         </div>
                         {/* Название пакета выделено (запрос пользователя
                             2026-07-29) — при сканировании списка это самое
@@ -291,10 +480,12 @@ export default function AdminTenantsPage() {
                         </p>
                         <p className="text-caption-airbnb text-muted-foreground">
                           {t.admin.registeredOnLabel} {new Date(tenant.createdAt).toLocaleDateString()}
+                          {tenant.cleanupVerdict !== "active" && ` · ${tenant.ageDays} ${t.admin.cleanupAgeDays}`}
                         </p>
                       </div>
                       <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
                     </Link>
+                    </div>
                   </SpringCard>
                 </StaggerItem>
               ))}
@@ -302,6 +493,65 @@ export default function AdminTenantsPage() {
           )}
         </div>
       </div>
+
+      <BottomSheet open={cleanupSheetOpen} onClose={() => setCleanupSheetOpen(false)}>
+        <div className="flex flex-col gap-4 pt-2">
+          <div>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.admin.cleanupSheetTitle}</h2>
+            <p className="mt-1 text-caption-airbnb">
+              {t.admin.cleanupSheetText.replace("{count}", String(selectedVisible.length))}
+            </p>
+          </div>
+
+          {/* Итог показывается вместо формы: после удаления вводить пароль
+              заново незачем, а сообщить, что часть записей отсеялась на
+              сервере (успели ожить между показом списка и нажатием), нужно
+              обязательно — иначе расхождение "выбрал 12, удалилось 11"
+              выглядело бы как сбой. */}
+          {cleanupResult ? (
+            <div className="flex flex-col gap-1 text-body-airbnb">
+              <p>{t.admin.cleanupDoneDeleted.replace("{count}", String(cleanupResult.deleted))}</p>
+              {cleanupResult.skipped > 0 && (
+                <p className="text-muted-foreground">
+                  {t.admin.cleanupDoneSkipped.replace("{count}", String(cleanupResult.skipped))}
+                </p>
+              )}
+              {cleanupResult.failed > 0 && (
+                <p className="text-destructive">
+                  {t.admin.cleanupDoneFailed.replace("{count}", String(cleanupResult.failed))}
+                </p>
+              )}
+              <Button type="button" variant="outline" className="mt-3 h-12" onClick={() => setCleanupSheetOpen(false)}>
+                {t.common.close}
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="cleanupPassword">{t.admin.cleanupSheetPasswordLabel}</Label>
+                <Input
+                  id="cleanupPassword"
+                  type="password"
+                  value={cleanupPassword}
+                  onChange={(e) => setCleanupPassword(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              {cleanupError && <p className="text-sm text-destructive">{cleanupError}</p>}
+              <PressableScale>
+                <DeleteButton
+                  className="h-12 w-full"
+                  disabled={cleanupPassword.trim().length === 0 || cleanupBusy || selectedVisible.length === 0}
+                  onClick={confirmCleanup}
+                  deleted={cleanupDone}
+                >
+                  {t.admin.cleanupSheetButton}
+                </DeleteButton>
+              </PressableScale>
+            </>
+          )}
+        </div>
+      </BottomSheet>
     </AdminShell>
   );
 }

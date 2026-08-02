@@ -29,7 +29,40 @@ export { isLocale, LOCALE_NAMES, ALL_LOCALES } from "@/lib/locales";
 // поймает, только ручной аудит).
 export type Dictionary = typeof ru;
 
-const dictionaries: Record<Locale, Dictionary> = { ru, en, uk, ro, be, pl, it, uz, kk, tg, ky, hy, az, ka, tr };
+// Раздел admin (модуль Super Admin, /admin/*) намеренно ВСЕГДА берётся из
+// ru.json, каким бы ни был локаль пользователя — решение пользователя
+// 2026-07-29: "У Админа только один язык — русский". Это внутренний
+// инструмент оператора платформы, а не интерфейс тенанта, переводить его на
+// 15 языков смысла нет.
+//
+// До этого правило существовало только на словах, и выполнить его было
+// физически невозможно: Dictionary = typeof ru, поэтому ЛЮБОЙ новый admin-ключ
+// обязан был появиться во всех 15 файлах, иначе не компилировалось (упёрлись
+// 2026-08-02 при добавлении раздела "потерянные регистрации"). Подмена здесь
+// снимает это раз и навсегда: новые admin-строки заводятся только в ru.json,
+// остальные словари их не касаются вовсе. Уже переведённые admin-ключи в
+// прочих языках остаются в файлах как безобидное наследство — они просто
+// больше не используются.
+const withRuAdmin = <T extends Omit<Dictionary, "admin">>(dict: T): Dictionary =>
+  ({ ...dict, admin: ru.admin }) as Dictionary;
+
+const dictionaries: Record<Locale, Dictionary> = {
+  ru,
+  en: withRuAdmin(en),
+  uk: withRuAdmin(uk),
+  ro: withRuAdmin(ro),
+  be: withRuAdmin(be),
+  pl: withRuAdmin(pl),
+  it: withRuAdmin(it),
+  uz: withRuAdmin(uz),
+  kk: withRuAdmin(kk),
+  tg: withRuAdmin(tg),
+  ky: withRuAdmin(ky),
+  hy: withRuAdmin(hy),
+  az: withRuAdmin(az),
+  ka: withRuAdmin(ka),
+  tr: withRuAdmin(tr),
+};
 
 export function getDictionary(locale: string): Dictionary {
   return isLocale(locale) ? dictionaries[locale] : dictionaries.ru;

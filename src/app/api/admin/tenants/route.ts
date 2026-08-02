@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/require-super-admin";
+import { CLEANUP_INCLUDE, CLEANUP_MIN_AGE_DAYS, classifyTenant, countsOf, daysSince } from "@/lib/admin/tenant-cleanup";
 
 export async function GET() {
   const admin = await requireSuperAdmin();
@@ -10,10 +11,7 @@ export async function GET() {
 
   const [tenants, unmatchedWebhookCount] = await Promise.all([
     prisma.tenant.findMany({
-      include: {
-        package: { select: { id: true, name: true, fluentcartProductId: true } },
-        _count: { select: { points: true, operators: true } },
-      },
+      include: CLEANUP_INCLUDE,
       orderBy: { createdAt: "desc" },
     }),
     // Счётчик "непривязанных" вебхук-событий (доп. инструкция "связывание
@@ -36,7 +34,14 @@ export async function GET() {
       createdAt: t.createdAt,
       fluentcartCustomerId: t.fluentcartCustomerId,
       unlimited: t.unlimited,
+      // Анализ "потерянных клиентов" (см. src/lib/admin/tenant-cleanup.ts).
+      // Считается на сервере, а не в браузере: тот же модуль потом решает,
+      // кого реально можно удалить, и два независимых критерия разъехались
+      // бы при первой же правке.
+      cleanupVerdict: classifyTenant(t, countsOf(t)),
+      ageDays: daysSince(t.createdAt),
     })),
     unmatchedWebhookCount,
+    cleanupMinAgeDays: CLEANUP_MIN_AGE_DAYS,
   });
 }
