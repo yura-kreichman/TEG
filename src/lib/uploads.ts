@@ -8,7 +8,7 @@ import sharp from "sharp";
 // (docs/spec, gap flagged by user 2026-07-06). Fine for the current
 // self-hosted/dedicated-server deployment plan; would need swapping for object
 // storage if this ever moves to a horizontally-scaled multi-instance deploy.
-const UPLOADS_ROOT = path.join(process.cwd(), "public", "uploads");
+export const UPLOADS_ROOT = path.join(process.cwd(), "public", "uploads");
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 const ALLOWED_TYPES: Record<string, string> = {
