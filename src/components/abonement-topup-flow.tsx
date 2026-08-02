@@ -737,7 +737,13 @@ export function AbonementTopupFlow({
         ? t.abonements.historySpend
         : h.type === "refund"
           ? t.abonements.historyRefund
-          : t.abonements.historyAdjustment;
+          : // Перенос из другой системы (импорт клиентов, 2026-08-02) — своя
+            // подпись, а не общая "Корректировка": через полгода владелец не
+            // должен гадать, откуда у клиента взялся стартовый баланс, да и
+            // в споре с клиентом это первое, на что смотрят.
+            h.type === "migration"
+            ? t.abonements.historyMigration
+            : t.abonements.historyAdjustment;
   }
 
   // Итоговая строка операции — запрос пользователя 2026-07-24: "убери

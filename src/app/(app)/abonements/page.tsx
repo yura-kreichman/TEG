@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Gift, Search, ChevronRight, Wallet, Send, Megaphone, FileDown, QrCode as QrCodeIcon, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, Gift, Search, ChevronRight, Wallet, Send, Megaphone, FileDown, FileUp, QrCode as QrCodeIcon, Users } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { FilePickerButton } from "@/components/file-picker-button";
 import { compressImageFile } from "@/lib/client-image";
@@ -42,6 +42,16 @@ interface WalletInfo {
   name: string | null;
   balance: number;
   hasTelegram: boolean;
+}
+
+// Разбор файла импорта — счётчики и проблемные строки (см.
+// /api/abonement-wallets/import, шаг предпросмотра).
+interface ImportPreview {
+  newCount: number;
+  errorCount: number;
+  existingCount: number;
+  duplicateCount: number;
+  problems: { line: number; phone: string; name: string | null; error: string }[];
 }
 
 const EMPTY_FORM = { name: "", price: "", creditAmount: "" };
@@ -117,6 +127,17 @@ export default function AbonementsPage() {
   const [broadcastSending, setBroadcastSending] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState<{ sent: number; total: number; groupSent: boolean | null } | null>(null);
   const [broadcastError, setBroadcastError] = useState<string | null>(null);
+
+  // Импорт клиентов при переезде с другого ПО (запрос пользователя 2026-08-02).
+  // Файл держим в состоянии до конца: шаг записи отправляет его повторно —
+  // сервер разбирает файл заново и не верит разобранным строкам из браузера
+  // (иначе можно было бы прислать себе любые балансы в обход проверок).
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const [importResult, setImportResult] = useState<{ created: number; skipped: number } | null>(null);
   // Адресат рассылки — "в группу" доступен только когда публичная группа
   // подключена и включена (запрос пользователя 2026-07-24: "только если она
   // настроена"), иначе выбор вообще не показываем (нечего выбирать).
@@ -174,6 +195,58 @@ export default function AbonementsPage() {
     } finally {
       setBroadcastSending(false);
     }
+  }
+
+  function openImportSheet() {
+    setImportFile(null);
+    setImportPreview(null);
+    setImportResult(null);
+    setImportError(null);
+    setImportOpen(true);
+  }
+
+  // Шаг 1 — разбор без записи. Владелец видит, что именно поняла система,
+  // до того как что-то попадёт в базу: чужая выгрузка легко приезжает со
+  // сдвинутыми колонками или мусором вместо номеров.
+  async function previewImport(file: File) {
+    setImportFile(file);
+    setImportPreview(null);
+    setImportResult(null);
+    setImportError(null);
+    setImportBusy(true);
+
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/abonement-wallets/import", { method: "POST", body: form });
+    const data = await res.json().catch(() => null);
+    setImportBusy(false);
+
+    if (!res.ok) {
+      setImportError(data?.error ?? t.abonements.importFailed);
+      return;
+    }
+    setImportPreview(data);
+  }
+
+  // Шаг 2 — та же ручка с commit=1 и тем же файлом.
+  async function commitImport() {
+    if (!importFile) return;
+    setImportBusy(true);
+    setImportError(null);
+
+    const form = new FormData();
+    form.append("file", importFile);
+    form.append("commit", "1");
+    const res = await fetch("/api/abonement-wallets/import", { method: "POST", body: form });
+    const data = await res.json().catch(() => null);
+    setImportBusy(false);
+
+    if (!res.ok) {
+      setImportError(data?.error ?? t.abonements.importFailed);
+      return;
+    }
+    setImportResult(data);
+    await loadWallets();
   }
 
   async function loadAbonements() {
@@ -450,6 +523,22 @@ export default function AbonementsPage() {
                     <FileDown className="size-4" />
                   </Button>
                 </PressableScale>
+                {/* Импорт клиентов при переезде с другого ПО (запрос
+                    пользователя 2026-08-02) — рядом с экспортом, тот же
+                    формат файла. Иконкой, как экспорт: действие редкое,
+                    занимать словом место в этой строке незачем. */}
+                <PressableScale>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    className="rounded-lg"
+                    aria-label={t.abonements.importButton}
+                    onClick={openImportSheet}
+                  >
+                    <FileUp className="size-4" />
+                  </Button>
+                </PressableScale>
                 <PressableScale>
                   <Button
                     variant="outline"
@@ -680,6 +769,115 @@ export default function AbonementsPage() {
           url={telegramBalanceLink}
         />
       )}
+
+      <BottomSheet open={importOpen} onClose={() => setImportOpen(false)}>
+        <div className="flex flex-col gap-4 pt-2">
+          <div>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.abonements.importSheetTitle}</h2>
+            <p className="mt-1 text-caption-airbnb">{t.abonements.importSheetHint}</p>
+          </div>
+
+          {importResult ? (
+            <div className="flex flex-col gap-1 text-body-airbnb">
+              <p>{t.abonements.importDoneCreated.replace("{count}", String(importResult.created))}</p>
+              {importResult.skipped > 0 && (
+                <p className="text-muted-foreground">
+                  {t.abonements.importDoneSkipped.replace("{count}", String(importResult.skipped))}
+                </p>
+              )}
+              <Button type="button" variant="outline" className="mt-3 h-12" onClick={() => setImportOpen(false)}>
+                {t.common.close}
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* Образец — первым, до выбора файла: он и нужен тому, кто ещё
+                  не знает, как оформить выгрузку из старой системы. */}
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full gap-2"
+                  onClick={() => {
+                    window.location.href = "/api/abonement-wallets/import/template";
+                  }}
+                >
+                  <FileDown className="size-4" />
+                  {t.abonements.importTemplateButton}
+                </Button>
+              </PressableScale>
+
+              <div className="flex flex-col gap-1">
+                <FilePickerButton
+                  accept=".xlsx,.csv"
+                  icon={FileUp}
+                  hasFile={Boolean(importFile)}
+                  disabled={importBusy}
+                  onFileSelected={previewImport}
+                  className="w-full"
+                />
+                {importFile && <span className="text-caption-airbnb">{importFile.name}</span>}
+              </div>
+
+              {importPreview && (
+                <div className="flex flex-col gap-1 text-body-airbnb">
+                  <p className="font-semibold">
+                    {t.abonements.importPreviewNew.replace("{count}", String(importPreview.newCount))}
+                  </p>
+                  {importPreview.existingCount > 0 && (
+                    <p className="text-muted-foreground">
+                      {t.abonements.importPreviewExisting.replace("{count}", String(importPreview.existingCount))}
+                    </p>
+                  )}
+                  {importPreview.duplicateCount > 0 && (
+                    <p className="text-muted-foreground">
+                      {t.abonements.importPreviewDuplicates.replace("{count}", String(importPreview.duplicateCount))}
+                    </p>
+                  )}
+                  {importPreview.errorCount > 0 && (
+                    <p className="text-destructive">
+                      {t.abonements.importPreviewErrors.replace("{count}", String(importPreview.errorCount))}
+                    </p>
+                  )}
+                  {/* Номер строки — чтобы владелец нашёл её в своём Excel, а
+                      не искал вслепую по телефону. */}
+                  {importPreview.problems.length > 0 && (
+                    <ul className="mt-1 flex flex-col gap-0.5 text-caption-airbnb text-muted-foreground">
+                      {importPreview.problems.map((p) => (
+                        <li key={p.line}>
+                          {t.abonements.importLinePrefix} {p.line}: {p.phone || "—"} —{" "}
+                          {p.error === "phone"
+                            ? t.abonements.importErrorPhone
+                            : p.error === "balance"
+                              ? t.abonements.importErrorBalance
+                              : p.error === "duplicateInFile"
+                                ? t.abonements.importErrorDuplicate
+                                : t.abonements.importErrorExists}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              {importError && <p className="text-sm text-destructive">{importError}</p>}
+
+              <PressableScale>
+                <Button
+                  type="button"
+                  className="h-12 w-full"
+                  disabled={importBusy || !importPreview || importPreview.newCount === 0}
+                  onClick={commitImport}
+                >
+                  {importPreview
+                    ? t.abonements.importSubmit.replace("{count}", String(importPreview.newCount))
+                    : t.abonements.importSubmitEmpty}
+                </Button>
+              </PressableScale>
+            </>
+          )}
+        </div>
+      </BottomSheet>
 
       <BottomSheet open={broadcastOpen} onClose={() => setBroadcastOpen(false)}>
         <div className="flex flex-col gap-3 pt-2">

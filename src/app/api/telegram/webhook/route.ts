@@ -747,8 +747,19 @@ async function buildClientReport(
       // опций, что в Печатной выписке.
       const date = h.occurredAt.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" });
       const time = h.occurredAt.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+      // "migration" (перенос баланса при импорте клиентов, 2026-08-02) идёт
+      // в ту же ветку, что и "adjustment" — "Начисление". Клиенту не нужно
+      // знать, что владелец переехал с другого ПО; ему важно, что баланс
+      // начислен, а не потрачен. Новый ключ в telegram-client-i18n (15
+      // языков вручную) ради этого не заводим.
       const typeLabel =
-        h.type === "spend" ? s.typeSpend : h.type === "refund" ? s.typeRefund : h.type === "adjustment" ? s.typeAdjustment : s.typeTopup;
+        h.type === "spend"
+          ? s.typeSpend
+          : h.type === "refund"
+            ? s.typeRefund
+            : h.type === "adjustment" || h.type === "migration"
+              ? s.typeAdjustment
+              : s.typeTopup;
       // Количество (запрос пользователя 2026-07-24: "в Печатную сводку и
       // везде должно быть указано количество") — только у "Счётчиков", там
       // где реально можно списать несколько тарифов за раз.
