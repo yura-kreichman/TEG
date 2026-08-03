@@ -1150,6 +1150,7 @@
       "pointLabel": "Nokta",
       "changeRateTitle": "Ücreti değiştir",
       "carryoverLabel": "Devir",
+      "carryoverIncluded": "devir dahil",
       "carryoverAddButton": "Bakiye devri",
       "carryoverHint": "Bakiyede tek seferlik düzeltme — örneğin önceki sistemden devreden bakiyenin aktarılması. Negatif olabilir.",
       "moduleDisabledNote": "«Çalışma süresi» modülü şirketiniz için etkinleştirilmedi",

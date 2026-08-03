@@ -1150,6 +1150,7 @@
       "pointLabel": "Punkt",
       "changeRateTitle": "Zmień stawkę",
       "carryoverLabel": "Przeniesienie",
+      "carryoverIncluded": "w tym przeniesienie",
       "carryoverAddButton": "Przeniesienie salda",
       "carryoverHint": "Jednorazowa korekta salda — np. przeniesienie salda początkowego z poprzedniego systemu. Może być ujemna.",
       "moduleDisabledNote": "Moduł „Czas pracy” nie jest podłączony dla Twojej firmy",

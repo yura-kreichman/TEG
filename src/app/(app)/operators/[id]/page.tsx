@@ -99,6 +99,9 @@ export default function OperatorCardPage() {
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
   const [standaloneMoneyOps, setStandaloneMoneyOps] = useState<StandaloneMoneyOp[]>([]);
   const [carryoverTotal, setCarryoverTotal] = useState(0);
+  const [carryoverEntries, setCarryoverEntries] = useState<
+    { id: string; amount: number; comment: string | null; createdAt: string }[]
+  >([]);
   const [points, setPoints] = useState<PointOption[]>([]);
   // Ручной перенос баланса (docs/spec/05-work-time.md, "БАЛАНС") — API уже
   // существовал (POST .../work-time/carryover), но нигде в интерфейсе не
@@ -227,6 +230,7 @@ export default function OperatorCardPage() {
     setStandaloneMoneyOps(shiftsData.standaloneMoneyOps ?? []);
     const carryoverData = await carryoverRes.json();
     setCarryoverTotal(carryoverData.total ?? 0);
+    setCarryoverEntries(carryoverData.entries ?? []);
     const pointsData = await pointsRes.json();
     setPoints(pointsData.points ?? []);
     setChecking(false);
@@ -313,6 +317,17 @@ export default function OperatorCardPage() {
     setCarryoverComment("");
     setCarryoverError(null);
     setCarryoverOpen(true);
+  }
+
+  async function deleteCarryover(entryId: string) {
+    const res = await fetch(`/api/operators/${params.id}/work-time/carryover/${entryId}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setCarryoverError(data?.error ?? t.operatorApp.workTime.saveError);
+      return;
+    }
+    setCarryoverError(null);
+    await loadAll();
   }
 
   async function confirmCarryover() {
@@ -512,6 +527,16 @@ export default function OperatorCardPage() {
                   >
                     <Money value={balance.toPayOut} size="display" />
                   </p>
+                  {/* Перенос — постоянная составляющая "К выдаче", не событие
+                      периода: показываем прямо под главной цифрой, чтобы было
+                      видно, из чего она складывается, и чтобы разовый
+                      стартовый остаток не мозолил глаза в каждом месяце
+                      табеля (обратная связь пользователя 2026-08-02). */}
+                  {carryoverTotal !== 0 && (
+                    <p className="mt-0.5 text-caption-airbnb tabular-nums">
+                      {t.operatorApp.workTime.carryoverIncluded} <Money value={carryoverTotal} />
+                    </p>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-3 border-t border-border pt-3.5 tabular-nums sm:grid-cols-4">
                   <div>
@@ -685,12 +710,16 @@ export default function OperatorCardPage() {
                     )
                   )
                 )}
-                {carryoverTotal !== 0 && (
-                  <div className="flex items-center justify-between border-t border-border py-3">
-                    <span className="text-body-airbnb font-semibold">{t.operatorApp.workTime.carryoverLabel}</span>
-                    <span className="tabular-nums text-body-airbnb font-bold"><Money value={carryoverTotal} /></span>
-                  </div>
-                )}
+                {/* Строка переноса раньше жила здесь, внизу табеля (как и
+                    предписывала спека). Убрана оттуда по обратной связи
+                    пользователя 2026-08-02: табель фильтруется по неделе/
+                    месяцу, а перенос ни к какому периоду не привязан —
+                    запрос за ним уходит вообще без дат. Получалась разовая
+                    запись (стартовый остаток при переезде со старой системы
+                    учёта), которая показывалась В КАЖДОМ месяце и выглядела
+                    как ежемесячно повторяющаяся операция. Теперь она в
+                    карточке баланса, где и есть по смыслу — составляющая
+                    "К выдаче", а не событие месяца. */}
                 <PressableScale className="border-t border-border pt-3">
                   <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={openCarryover}>
                     <Plus />
@@ -760,6 +789,33 @@ export default function OperatorCardPage() {
         <div className="flex flex-col gap-4 pt-2">
           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.workTime.carryoverAddButton}</h2>
           <p className="text-body-airbnb text-muted-foreground">{t.operatorApp.workTime.carryoverHint}</p>
+
+          {/* Уже внесённые записи с возможностью удалить (обратная связь
+              пользователя 2026-08-02: раньше перенос можно было только
+              создать, и ошибочная запись оставалась в балансе навсегда). */}
+          {carryoverEntries.length > 0 && (
+            <div className="flex flex-col">
+              {carryoverEntries.map((entry) => (
+                <div key={entry.id} className="flex items-center gap-2 border-t border-border py-2.5 first:border-t-0">
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="tabular-nums text-body-airbnb font-semibold">
+                      <Money value={entry.amount} />
+                    </span>
+                    <span className="truncate text-caption-airbnb text-muted-foreground">
+                      {formatShiftDate(entry.createdAt)}
+                      {entry.comment ? ` · ${entry.comment}` : ""}
+                    </span>
+                  </div>
+                  <IconActionButton
+                    icon={Trash2}
+                    onClick={() => deleteCarryover(entry.id)}
+                    label={t.common.delete}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="flex flex-col gap-1">
             <Label htmlFor="carryoverAmount">{t.money.amountLabel}</Label>
             <MoneyInput

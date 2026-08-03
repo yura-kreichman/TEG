@@ -1150,6 +1150,7 @@
       "pointLabel": "Point",
       "changeRateTitle": "Change rate",
       "carryoverLabel": "Carryover",
+      "carryoverIncluded": "including carryover",
       "carryoverAddButton": "Balance carryover",
       "carryoverHint": "A one-off balance adjustment — e.g. carrying over a starting balance from a previous system. Can be negative.",
       "moduleDisabledNote": "The Work Time module isn't enabled for your company",

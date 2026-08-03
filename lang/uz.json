@@ -1150,6 +1150,7 @@
       "pointLabel": "Nuqta",
       "changeRateTitle": "Stavkani oʻzgartirish",
       "carryoverLabel": "Koʻchirma",
+      "carryoverIncluded": "shu jumladan ko‘chirma",
       "carryoverAddButton": "Balans koʻchirmasi",
       "carryoverHint": "Balansning bir martalik tuzatilishi — masalan, oldingi hisob tizimidan qoldiqni koʻchirish. Manfiy boʻlishi mumkin.",
       "moduleDisabledNote": "«Ish vaqti» moduli kompaniyangiz uchun ulanmagan",
