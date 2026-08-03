@@ -1150,7 +1150,6 @@
       "pointLabel": "Punct",
       "changeRateTitle": "Schimbă tariful",
       "carryoverLabel": "Report",
-      "carryoverIncluded": "inclusiv reportul",
       "carryoverAddButton": "Report sold",
       "carryoverHint": "Ajustare unică a soldului — de exemplu, reportul soldului dintr-un sistem anterior. Poate fi negativ.",
       "moduleDisabledNote": "Modulul „Timp de lucru” nu este activat pentru compania dvs.",

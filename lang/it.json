@@ -1150,7 +1150,6 @@
       "pointLabel": "Punto",
       "changeRateTitle": "Cambia tariffa",
       "carryoverLabel": "Riporto",
-      "carryoverIncluded": "incluso il riporto",
       "carryoverAddButton": "Riporto saldo",
       "carryoverHint": "Una rettifica una tantum del saldo — es. il riporto di un saldo iniziale da un sistema precedente. Può essere negativo.",
       "moduleDisabledNote": "Il modulo Orario di lavoro non è attivo per la tua azienda",

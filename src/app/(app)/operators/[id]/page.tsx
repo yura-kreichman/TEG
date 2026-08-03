@@ -98,7 +98,6 @@ export default function OperatorCardPage() {
   const [balance, setBalance] = useState<Balance | null>(null);
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
   const [standaloneMoneyOps, setStandaloneMoneyOps] = useState<StandaloneMoneyOp[]>([]);
-  const [carryoverTotal, setCarryoverTotal] = useState(0);
   const [carryoverEntries, setCarryoverEntries] = useState<
     { id: string; amount: number; comment: string | null; createdAt: string }[]
   >([]);
@@ -229,7 +228,6 @@ export default function OperatorCardPage() {
     setShifts(shiftsData.shifts ?? []);
     setStandaloneMoneyOps(shiftsData.standaloneMoneyOps ?? []);
     const carryoverData = await carryoverRes.json();
-    setCarryoverTotal(carryoverData.total ?? 0);
     setCarryoverEntries(carryoverData.entries ?? []);
     const pointsData = await pointsRes.json();
     setPoints(pointsData.points ?? []);
@@ -441,10 +439,28 @@ export default function OperatorCardPage() {
 
   // Смены и ручные авансы/премии (без смены) — одним хронологическим списком
   // (docs/spec/05-work-time.md: оператор/владелец должны видеть и то, и другое).
-  type HistoryItem = { kind: "shift"; date: string; shift: ShiftRow } | { kind: "op"; date: string; op: StandaloneMoneyOp };
+  type HistoryItem =
+    | { kind: "shift"; date: string; shift: ShiftRow }
+    | { kind: "op"; date: string; op: StandaloneMoneyOp }
+    | { kind: "carryover"; date: string; entry: { id: string; amount: number; comment: string | null } };
+
+  // Перенос — такое же датированное событие, как аванс или премия: он всегда
+  // знал свою дату (createdAt), просто раньше показывался ОДНОЙ БЕССРОЧНОЙ
+  // строкой внизу табеля, вне фильтра периода — из-за чего разовая запись
+  // всплывала в каждом месяце (обратная связь пользователя 2026-08-02).
+  // Теперь он идёт в общий хронологический список и виден только в своём
+  // периоде — ровно как авансы, которые тоже влияют на "К выдаче" всегда, а
+  // в табеле показываются только в своём месяце.
+  const { from: periodFrom, to: periodTo } = periodRangeFor(granularity, anchor);
+  const carryoverInPeriod = carryoverEntries.filter((entry) => {
+    const day = entry.createdAt.slice(0, 10);
+    return day >= periodFrom && day <= periodTo;
+  });
+
   const historyItems: HistoryItem[] = [
     ...shifts.map((s): HistoryItem => ({ kind: "shift", date: s.startAt, shift: s })),
     ...standaloneMoneyOps.map((o): HistoryItem => ({ kind: "op", date: o.occurredAt, op: o })),
+    ...carryoverInPeriod.map((e): HistoryItem => ({ kind: "carryover", date: e.createdAt, entry: e })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
@@ -527,16 +543,6 @@ export default function OperatorCardPage() {
                   >
                     <Money value={balance.toPayOut} size="display" />
                   </p>
-                  {/* Перенос — постоянная составляющая "К выдаче", не событие
-                      периода: показываем прямо под главной цифрой, чтобы было
-                      видно, из чего она складывается, и чтобы разовый
-                      стартовый остаток не мозолил глаза в каждом месяце
-                      табеля (обратная связь пользователя 2026-08-02). */}
-                  {carryoverTotal !== 0 && (
-                    <p className="mt-0.5 text-caption-airbnb tabular-nums">
-                      {t.operatorApp.workTime.carryoverIncluded} <Money value={carryoverTotal} />
-                    </p>
-                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-3 border-t border-border pt-3.5 tabular-nums sm:grid-cols-4">
                   <div>
@@ -617,7 +623,7 @@ export default function OperatorCardPage() {
 
               <SpringCard hover={false} className="flex flex-col gap-1">
                 <h2 className="text-section-title">{t.operatorApp.workTime.title}</h2>
-                {shifts.length === 0 && standaloneMoneyOps.length === 0 ? (
+                {historyItems.length === 0 ? (
                   <p className="py-3 text-body-airbnb text-muted-foreground">{t.operatorApp.workTime.noShifts}</p>
                 ) : (
                   historyItems.map((item) =>
@@ -686,7 +692,7 @@ export default function OperatorCardPage() {
                         </div>
                         <IconActionButton icon={Pencil} onClick={() => openShiftEdit(item.shift)} label={t.common.edit} />
                       </div>
-                    ) : (
+                    ) : item.kind === "op" ? (
                       <div
                         key={`op-${item.op.id}`}
                         className="flex items-center gap-2 border-t border-border py-3 first:border-t-0"
@@ -706,6 +712,30 @@ export default function OperatorCardPage() {
                           </span>
                         </div>
                         <IconActionButton icon={Pencil} onClick={() => openMoneyOpEdit(item.op)} label={t.common.edit} />
+                      </div>
+                    ) : (
+                      <div
+                        key={`carryover-${item.entry.id}`}
+                        className="flex items-center gap-2 border-t border-border py-3 first:border-t-0"
+                      >
+                        <div className="flex flex-1 items-center justify-between gap-2">
+                          <span className="min-w-0 text-body-airbnb font-semibold">
+                            {formatShiftDate(item.date)} · {t.operatorApp.workTime.carryoverLabel}
+                            {item.entry.comment ? (
+                              <span className="block truncate text-caption-airbnb font-normal text-muted-foreground">
+                                {item.entry.comment}
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="tabular-nums text-body-airbnb font-bold">
+                            <Money value={item.entry.amount} />
+                          </span>
+                        </div>
+                        <IconActionButton
+                          icon={Trash2}
+                          onClick={() => deleteCarryover(item.entry.id)}
+                          label={t.common.delete}
+                        />
                       </div>
                     )
                   )
