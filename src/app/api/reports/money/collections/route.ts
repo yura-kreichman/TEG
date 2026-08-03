@@ -74,7 +74,7 @@ export async function GET(request: Request) {
         occurredAt: { gte: monthStart, lt: monthEnd },
         ...(pointId ? { zone: { pointId } } : {}),
       },
-      include: { zone: { include: { point: true } } },
+      include: { zone: { include: { point: true } }, performedByOperator: { select: { name: true } } },
       orderBy: { occurredAt: "desc" },
     }),
     prisma.moneyOperation.findMany({
@@ -84,7 +84,7 @@ export async function GET(request: Request) {
         occurredAt: { gte: monthStart, lt: monthEnd },
         ...(pointId ? { pointId } : {}),
       },
-      include: { point: true },
+      include: { point: true, performedByOperator: { select: { name: true } } },
       orderBy: { occurredAt: "desc" },
     }),
     prisma.moneyOperation.findMany({
@@ -102,7 +102,7 @@ export async function GET(request: Request) {
         occurredAt: { gte: monthStart, lt: monthEnd },
         ...(pointId ? { pointId } : {}),
       },
-      include: { point: true },
+      include: { point: true, performedByOperator: { select: { name: true } } },
       orderBy: { occurredAt: "desc" },
     }),
     prisma.moneyOperation.findMany({
@@ -120,6 +120,31 @@ export async function GET(request: Request) {
     }),
   ]);
 
+  // Кто физически забрал деньги (обратная связь пользователя 2026-08-02:
+  // "когда Владелец забирает инкассацию, нигде не видно что он забрал").
+  // Данные лежали в каждой строке с самого начала — performedByUserId у
+  // владельца, performedByOperatorId у сотрудника, — просто никогда не
+  // выводились наружу. Никакой миграции для этого не нужно.
+  const performer = (op: { performedByUserId: string | null; performedByOperator?: { name: string } | null }) => ({
+    byOwner: op.performedByUserId !== null,
+    performerName: op.performedByOperator?.name ?? null,
+  });
+
+  // Ключ одного АКТА инкассации: все строки, записанные одной транзакцией
+  // (разбивка по зонам + свипы абонементов/товаров + "Аванс инкассации"),
+  // получают идентичный occurredAt — occurredAt объявлен в схеме как
+  // DEFAULT CURRENT_TIMESTAMP, а CURRENT_TIMESTAMP в PostgreSQL это время
+  // НАЧАЛА ТРАНЗАКЦИИ, одинаковое для всех операторов внутри неё. То есть
+  // группировка по метке — не эвристика "рядом по времени", а следствие
+  // способа записи; проверено на реальных данных прода (три зонные строки
+  // одной инкассации совпадают вплоть до миллисекунды, а три отдельные
+  // инкассации подряд с интервалом в полминуты имеют разные метки).
+  //
+  // В ключ входит и исполнитель, и точка — на случай двух инкассаций на
+  // разных точках, попавших в одну миллисекунду.
+  const actKey = (op: { occurredAt: Date; performedByUserId: string | null; performedByOperatorId: string | null }, point: string) =>
+    `${op.occurredAt.toISOString()}|${op.performedByUserId ?? op.performedByOperatorId ?? "?"}|${point}`;
+
   const collections = [
     // "collection" всегда зонная операция (только advance/bonus_payout из
     // 05-work-time.md — точечные) — фильтр защищает только от гипотетических
@@ -134,6 +159,8 @@ export async function GET(request: Request) {
         amount: Math.abs(Number(op.amount)),
         pool: null as "abonement" | "goods" | null,
         comment: op.comment,
+        ...performer(op),
+        actKey: actKey(op, op.zone!.point.name),
       })),
     ...poolOps
       .filter((op) => op.point !== null)
@@ -147,6 +174,8 @@ export async function GET(request: Request) {
         amount: Math.abs(Number(op.amount)),
         pool: (op.type === "collection_pool_sweep_abonement" ? "abonement" : "goods") as "abonement" | "goods",
         comment: op.comment,
+        ...performer(op),
+        actKey: actKey(op, op.point!.name),
       })),
     ...advanceOps
       .filter((op) => op.point !== null)
@@ -159,6 +188,8 @@ export async function GET(request: Request) {
         pool: "advance" as const,
         operatorName: null as string | null,
         comment: op.comment,
+        ...performer(op),
+        actKey: actKey(op, op.point!.name),
       })),
     ...takenOps
       .filter((op) => op.point !== null)
@@ -171,6 +202,11 @@ export async function GET(request: Request) {
         pool: (op.type === "advance" ? "advance_taken" : "bonus_taken") as "advance_taken" | "bonus_taken",
         operatorName: op.beneficiaryOperator?.name ?? op.performedByOperator?.name ?? null,
         comment: op.comment,
+        ...performer(op),
+        // Самообслуживание сотрудника — самостоятельное событие, а не часть
+        // акта инкассации: в свёртку не входит, у него уже есть своя подпись
+        // с именем ("Аванс забрал X").
+        actKey: null as string | null,
       })),
   ].sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1));
 

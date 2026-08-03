@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Check, ChevronLeft, ChevronRight, Coins, Gift, HandCoins, MapPin, Pencil, PiggyBank, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { Banknote, Check, ChevronLeft, ChevronRight, Coins, Crown, Gift, HandCoins, MapPin, Pencil, PiggyBank, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { Button } from "@/components/ui/button";
@@ -62,6 +62,15 @@ interface CollectionEntry {
   pool: "abonement" | "goods" | "advance" | "advance_taken" | "bonus_taken" | null;
   // Только у advance_taken/bonus_taken — кто забрал.
   operatorName?: string | null;
+  // Кто физически провёл инкассацию (обратная связь пользователя 2026-08-02:
+  // раньше в реестре этого не было видно вообще). byOwner — владелец, иначе
+  // performerName — имя сотрудника.
+  byOwner?: boolean;
+  performerName?: string | null;
+  // Ключ одного акта инкассации — общий у всех строк, записанных одной
+  // транзакцией (см. actKey в /api/reports/money/collections). null у
+  // самообслуживаемых авансов/премий: они не часть акта.
+  actKey?: string | null;
   // Владелец может пояснить происхождение записи (запрос пользователя
   // 2026-07-25: "чтобы я видел, что это был аванс Жени") — например, у
   // zone-level "collection", которая доразнесла старый самообслуживаемый
@@ -151,6 +160,10 @@ export default function ZoneBalancesPage() {
   // 'Остаток наличных по зонам'").
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [collections, setCollections] = useState<CollectionEntry[]>([]);
+  // Раскрытые акты инкассации (по умолчанию все свёрнуты — ради этого всё и
+  // затевалось: реестр должен читаться как список "кто и сколько забрал",
+  // а разбивка по зонам — по запросу).
+  const [expandedActs, setExpandedActs] = useState<Set<string>>(new Set());
 
   // Правка/удаление ошибочно внесённой инкассации (запрос пользователя
   // 2026-07-15) — тот же паттерн, что у авансов/премий сотрудника
@@ -446,6 +459,44 @@ export default function ZoneBalancesPage() {
     const lastGroup = collectionGroups[collectionGroups.length - 1];
     if (lastGroup && lastGroup.date === dateKey) lastGroup.items.push(c);
     else collectionGroups.push({ date: dateKey, items: [c] });
+  }
+
+  // Второй уровень: строки ОДНОГО акта инкассации (обратная связь
+  // пользователя 2026-08-02 — раньше инкассация на 1400 показывалась тремя
+  // безымянными строками по зонам, и того, что это один акт и сколько
+  // забрали всего, видно не было).
+  //
+  // Сумма акта — сумма его строк, то есть ровно то, что списано с касс зон
+  // и пулов этой операцией. В обычной работе это и есть введённая
+  // владельцем сумма: самообслуживаемые авансы сотрудника гасятся зонам
+  // сразу, отдельным типом advance_settlement (проверено на проде — метка
+  // погашения совпадает с самим авансом до миллисекунды), поэтому к моменту
+  // инкассации непогашенного долга нет. Если он всё-таки накопится (аванс
+  // превысил остатки зон и разнёсся не полностью), общая инкассация
+  // дораспределит его этими же строками — тогда сумма акта окажется больше
+  // физически взятого на величину такого хвоста. Отдельного поля с
+  // "введённой суммой" в журнале нет, восстановить её задним числом нельзя.
+  type CollectionAct = { key: string; items: CollectionEntry[]; total: number };
+  function splitIntoActs(items: CollectionEntry[]): CollectionAct[] {
+    const acts: CollectionAct[] = [];
+    const byKey = new Map<string, CollectionAct>();
+    for (const item of items) {
+      // Без actKey (самообслуживание сотрудника) — всегда собственная строка.
+      if (!item.actKey) {
+        acts.push({ key: item.id, items: [item], total: item.amount });
+        continue;
+      }
+      const existing = byKey.get(item.actKey);
+      if (existing) {
+        existing.items.push(item);
+        existing.total = Math.round((existing.total + item.amount) * 100) / 100;
+        continue;
+      }
+      const act: CollectionAct = { key: item.actKey, items: [item], total: item.amount };
+      byKey.set(item.actKey, act);
+      acts.push(act);
+    }
+    return acts;
   }
 
   if (checking) {
@@ -757,7 +808,80 @@ export default function ZoneBalancesPage() {
                       {formatGroupDate(group.date)}
                     </p>
                     <div className="flex flex-col">
-                      {group.items.map((c) => (
+                      {splitIntoActs(group.items).map((act) =>
+                        act.items.length > 1 ? (
+                          <div key={act.key} className="border-t border-border py-1.5 first:border-t-0">
+                            {/* Свёрнутый акт инкассации: одна строка вместо
+                                разбивки по зонам. Раскрывается тапом — внутри
+                                те же строки, что были раньше, со своей правкой. */}
+                            <button
+                              type="button"
+                              className="flex w-full items-center justify-between gap-2"
+                              onClick={() =>
+                                setExpandedActs((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(act.key)) next.delete(act.key);
+                                  else next.add(act.key);
+                                  return next;
+                                })
+                              }
+                            >
+                              <span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+                                {formatTime(act.items[0]!.occurredAt)} ·
+                                <Banknote className="size-3 shrink-0" />
+                                {t.money.collectionActLabel}
+                                {act.items[0]!.byOwner ? (
+                                  <Crown className="size-3 shrink-0 text-success" />
+                                ) : act.items[0]!.performerName ? (
+                                  <span className="truncate">· {act.items[0]!.performerName}</span>
+                                ) : null}
+                              </span>
+                              <span className="flex shrink-0 items-center gap-2">
+                                <span className="text-xs font-bold tabular-nums">
+                                  <Money value={act.total} />
+                                </span>
+                                <ChevronRight
+                                  className={cn(
+                                    "size-4 text-muted-foreground transition-transform",
+                                    expandedActs.has(act.key) && "rotate-90"
+                                  )}
+                                />
+                              </span>
+                            </button>
+                            {expandedActs.has(act.key) && (
+                              <div className="mt-1 flex flex-col pl-4">
+                                {act.items.map((c) => (
+                                  <div key={c.id} className="border-t border-border py-1.5 first:border-t-0">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+                                        {c.pool === "abonement" && <Gift className="size-3 shrink-0" />}
+                                        {c.pool === "goods" && <ShoppingBag className="size-3 shrink-0" />}
+                                        {c.pool === "advance" && <PiggyBank className="size-3 shrink-0" />}
+                                        {collectionEntryLabel(c)}
+                                      </span>
+                                      <span className="flex shrink-0 items-center gap-2">
+                                        <span className="text-xs font-bold tabular-nums">
+                                          <Money value={c.amount} />
+                                        </span>
+                                        <IconActionButton
+                                          icon={Pencil}
+                                          onClick={() => openCollectionEdit(c)}
+                                          label={t.money.editCollectionAction}
+                                        />
+                                      </span>
+                                    </div>
+                                    {c.comment && (
+                                      <p className="mt-0.5 truncate text-[0.6875rem] text-muted-foreground/70">
+                                        {c.comment}
+                                      </p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          act.items.map((c) => (
                         <div key={c.id} className="border-t border-border py-1.5 first:border-t-0">
                         <div className="flex items-center justify-between gap-2">
                           {/* Время — всегда первым (запрос пользователя
@@ -774,6 +898,18 @@ export default function ZoneBalancesPage() {
                               <HandCoins className="size-3 shrink-0" />
                             )}
                             {collectionEntryLabel(c)}
+                            {/* Кто забрал — то же, что в шапке свёрнутого
+                                акта, но для инкассаций из одной строки, где
+                                шапки нет. У advance_taken/bonus_taken имя уже
+                                внутри подписи ("Аванс забрал X"), повторять
+                                не нужно. */}
+                            {c.pool !== "advance_taken" &&
+                              c.pool !== "bonus_taken" &&
+                              (c.byOwner ? (
+                                <Crown className="size-3 shrink-0 text-success" />
+                              ) : c.performerName ? (
+                                <span className="truncate">· {c.performerName}</span>
+                              ) : null)}
                           </span>
                           <span className="flex shrink-0 items-center gap-2">
                             <span
@@ -804,7 +940,9 @@ export default function ZoneBalancesPage() {
                           <p className="mt-0.5 truncate pl-4 text-[0.6875rem] text-muted-foreground/70">{c.comment}</p>
                         )}
                         </div>
-                      ))}
+                          ))
+                        )
+                      )}
                     </div>
                   </div>
                 ))}
