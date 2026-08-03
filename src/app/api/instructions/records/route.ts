@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { estimateReadingMinutes, type PMNode } from "@/lib/instructions/content";
 import { isModuleEnabled } from "@/lib/tenant-modules";
+import { periodBoundsUtc } from "@/lib/business-day";
 import type { Prisma } from "@/generated/prisma/client";
 
 // Журнал ознакомлений (docs/spec/07-instructions.md) — фильтры по инструкции
@@ -27,9 +28,22 @@ export async function GET(request: Request) {
   };
   if (instructionId) where.instructionId = instructionId;
   if (from || to) {
+    // Границы дат — в календаре тенанта, не в сырой UTC-полночи сервера
+    // (см. periodBoundsUtc, тот же фикс 2026-08-02, что и у Рабочего
+    // времени): подписание, сделанное ночью, иначе попадало бы в
+    // предыдущий день журнала. Каждая граница считается независимо —
+    // здесь, в отличие от соседних экранов, "от" и "до" необязательны и
+    // могут прийти по одной.
+    const tenantForTz = await prisma.tenant.findUnique({
+      where: { id: owner.tenantId },
+      select: { timezone: true },
+    });
+    const timezone = tenantForTz?.timezone ?? "UTC";
     where.createdAt = {
-      ...(from ? { gte: new Date(`${from}T00:00:00.000Z`) } : {}),
-      ...(to ? { lte: new Date(`${to}T23:59:59.999Z`) } : {}),
+      ...(from ? { gte: periodBoundsUtc(from, from, timezone).from } : {}),
+      // lt следующей местной полуночи вместо lte 23:59:59.999 — так день
+      // "до" остаётся включительным, но без щели в последнюю миллисекунду.
+      ...(to ? { lt: periodBoundsUtc(to, to, timezone).to } : {}),
     };
   }
 

@@ -164,6 +164,32 @@ export function dayBoundsUtc(year: number, month: number, day: number, timezone:
   return { start, end };
 }
 
+/**
+ * [from, to) для пары дат "YYYY-MM-DD" из query-параметров экрана (фильтр
+ * неделя/месяц) — в календаре тенанта, обе даты включительно.
+ *
+ * Заведено 2026-08-02: роуты Рабочего времени (табель и сводка, владельца и
+ * оператора) разворачивали эти параметры в СЫРУЮ UTC-полночь
+ * (`new Date(\`${from}T00:00:00.000Z\`)`) — ровно тот класс бага, который
+ * аудит 2026-07-24 уже вычистил из report-роутов через dayBoundsUtc, но эти
+ * четыре тогда не попали в проход. Для тенанта восточнее UTC (все текущие —
+ * Europe/Chisinau и Europe/Moscow, +3) смена, начатая между полуночью и
+ * тремя часами ночи по месту, в UTC приходится ещё на предыдущие сутки и
+ * попадала в табель ПРЕДЫДУЩЕГО месяца. Для точек, работающих ночью, это не
+ * теория: businessDayBoundary у части тенантов выставлена на 01:00 и 22:00.
+ */
+export function periodBoundsUtc(fromDate: string, toDate: string, timezone: string): { from: Date; to: Date } {
+  const [fy, fm, fd] = fromDate.split("-").map(Number);
+  const [ty, tm, td] = toDate.split("-").map(Number);
+  return {
+    from: dayBoundsUtc(fy!, fm!, fd!, timezone).start,
+    // .end — полночь СЛЕДУЮЩЕГО местного дня: та же семантика "по toDate
+    // включительно", что была у прежнего "+24 часа", но корректная и в день
+    // перехода на/с летнего времени, когда сутки длятся 23 или 25 часов.
+    to: dayBoundsUtc(ty!, tm!, td!, timezone).end,
+  };
+}
+
 /** Только что миновала ли граница дня в минуту `at` по часовому поясу тенанта (для планировщика, тик раз в минуту). */
 export function isAtBoundaryMinute(boundaryTime: string, at: Date, timezone: string): boolean {
   const { hours, minutes } = parseBoundary(boundaryTime);

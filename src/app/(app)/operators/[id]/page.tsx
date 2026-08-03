@@ -99,7 +99,7 @@ export default function OperatorCardPage() {
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
   const [standaloneMoneyOps, setStandaloneMoneyOps] = useState<StandaloneMoneyOp[]>([]);
   const [carryoverEntries, setCarryoverEntries] = useState<
-    { id: string; amount: number; comment: string | null; createdAt: string }[]
+    { id: string; amount: number; comment: string | null; createdAt: string; localDate: string }[]
   >([]);
   const [points, setPoints] = useState<PointOption[]>([]);
   // Ручной перенос баланса (docs/spec/05-work-time.md, "БАЛАНС") — API уже
@@ -451,11 +451,13 @@ export default function OperatorCardPage() {
   // Теперь он идёт в общий хронологический список и виден только в своём
   // периоде — ровно как авансы, которые тоже влияют на "К выдаче" всегда, а
   // в табеле показываются только в своём месяце.
+  // localDate приходит с сервера в календаре тенанта (см. carryover-роут) —
+  // срез от ISO-строки здесь давал бы СЫРОЙ UTC-день и у тенанта восточнее
+  // UTC уводил бы ночные записи в предыдущий месяц.
   const { from: periodFrom, to: periodTo } = periodRangeFor(granularity, anchor);
-  const carryoverInPeriod = carryoverEntries.filter((entry) => {
-    const day = entry.createdAt.slice(0, 10);
-    return day >= periodFrom && day <= periodTo;
-  });
+  const carryoverInPeriod = carryoverEntries.filter(
+    (entry) => entry.localDate >= periodFrom && entry.localDate <= periodTo
+  );
 
   const historyItems: HistoryItem[] = [
     ...shifts.map((s): HistoryItem => ({ kind: "shift", date: s.startAt, shift: s })),

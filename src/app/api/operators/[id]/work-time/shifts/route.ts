@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantOperator, requireOwner } from "@/lib/require-owner";
 import { listShiftDetails, listStandaloneMoneyOps } from "@/lib/work-time";
+import { periodBoundsUtc } from "@/lib/business-day";
 
 // Табель оператора — владелец видит всех (docs/spec/05-work-time.md,
 // "ИНТЕРФЕЙС ВЛАДЕЛЬЦА"). "edited" — компактная отметка правки (иконка-карандаш),
@@ -20,13 +21,13 @@ export async function GET(request: Request, ctx: RouteContext<"/api/operators/[i
   const { searchParams } = new URL(request.url);
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
-  const period =
-    fromParam && toParam
-      ? {
-          from: new Date(`${fromParam}T00:00:00.000Z`),
-          to: new Date(new Date(`${toParam}T00:00:00.000Z`).getTime() + 24 * 60 * 60 * 1000),
-        }
-      : undefined;
+  // Границы недели/месяца — в календаре тенанта, не в сырой UTC-полночи
+  // сервера (см. periodBoundsUtc, фикс 2026-08-02).
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: owner.tenantId },
+    select: { timezone: true },
+  });
+  const period = fromParam && toParam ? periodBoundsUtc(fromParam, toParam, tenant?.timezone ?? "UTC") : undefined;
 
   const shifts = await listShiftDetails(operator.id, period, { includeOpen: true });
   const editedIds = new Set(

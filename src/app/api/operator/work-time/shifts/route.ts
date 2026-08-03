@@ -12,6 +12,7 @@ import {
   validateShift,
 } from "@/lib/work-time";
 import { chargeSelfServiceAdvanceToZones, getPointCashBalance } from "@/lib/zone-balance";
+import { periodBoundsUtc } from "@/lib/business-day";
 import { dispatchShiftCloseSummary } from "@/lib/summary-channels/dispatch";
 import { SHIFT_CLOSE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { resolveLocale } from "@/lib/i18n";
@@ -28,13 +29,12 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
-  const period =
-    fromParam && toParam
-      ? {
-          from: new Date(`${fromParam}T00:00:00.000Z`),
-          to: new Date(new Date(`${toParam}T00:00:00.000Z`).getTime() + 24 * 60 * 60 * 1000),
-        }
-      : undefined;
+  // Границы недели/месяца — в календаре тенанта (см. periodBoundsUtc).
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: ctx.operator.tenantId },
+    select: { timezone: true },
+  });
+  const period = fromParam && toParam ? periodBoundsUtc(fromParam, toParam, tenant?.timezone ?? "UTC") : undefined;
 
   const shifts = await listShiftDetails(ctx.operator.id, period);
   const standaloneMoneyOps = await listStandaloneMoneyOps(ctx.operator.id, period);

@@ -4,6 +4,7 @@ import { requireOwner } from "@/lib/require-owner";
 import { normalizePhone, hasTelegramLink, describeAbonementTransactionSource } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 import { getClientBalanceDeepLink } from "@/lib/telegram-bot";
+import { periodBoundsUtc } from "@/lib/business-day";
 
 async function findOwnedWallet(tenantId: string, id: string) {
   const wallet = await prisma.abonementWallet.findUnique({ where: { id } });
@@ -36,13 +37,16 @@ export async function GET(request: Request, ctx: RouteContext<"/api/abonement-wa
   const { searchParams } = new URL(request.url);
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
-  const occurredAt =
-    fromParam && toParam
-      ? {
-          gte: new Date(`${fromParam}T00:00:00.000Z`),
-          lt: new Date(new Date(`${toParam}T00:00:00.000Z`).getTime() + 24 * 60 * 60 * 1000),
-        }
-      : undefined;
+  // Границы месяца — в календаре тенанта, не в сырой UTC-полночи сервера
+  // (см. periodBoundsUtc, тот же фикс 2026-08-02, что и у Рабочего времени):
+  // операция клиента, проведённая ночью 1-го числа, иначе показывалась бы в
+  // предыдущем месяце его выписки.
+  const tenantForTz = await prisma.tenant.findUnique({
+    where: { id: owner.tenantId },
+    select: { timezone: true },
+  });
+  const period = fromParam && toParam ? periodBoundsUtc(fromParam, toParam, tenantForTz?.timezone ?? "UTC") : undefined;
+  const occurredAt = period ? { gte: period.from, lt: period.to } : undefined;
 
   const history = await prisma.abonementTransaction.findMany({
     where: { walletId: id, ...(occurredAt ? { occurredAt } : {}) },
