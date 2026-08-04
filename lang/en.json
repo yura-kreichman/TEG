@@ -1552,6 +1552,7 @@
     "shiftWord": "shift",
     "shiftWordCap": "Shift",
     "launchesCountLabel": "Launches",
+    "staysCountLabel": "Arrivals",
     "launchesTimeLabel": "time",
     "ticketsOrdersCountLabel": "Orders",
     "ticketsSoldCountLabel": "Tickets"

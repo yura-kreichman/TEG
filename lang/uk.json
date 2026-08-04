@@ -1552,6 +1552,7 @@
     "shiftWord": "зміна",
     "shiftWordCap": "Зміна",
     "launchesCountLabel": "Пусків",
+    "staysCountLabel": "Прибуттів",
     "launchesTimeLabel": "час",
     "ticketsOrdersCountLabel": "Замовлень",
     "ticketsSoldCountLabel": "Квитків"

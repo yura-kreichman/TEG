@@ -379,7 +379,15 @@ export async function aggregateGameRoomLaunches(
       // ниже), поэтому его в принципе не должно быть тут на момент расчёта.
       paymentMethod: { not: null },
     },
-    select: { id: true, amount: true, startedAt: true, endedAt: true, paymentMethod: true },
+    select: {
+      id: true,
+      amount: true,
+      startedAt: true,
+      endedAt: true,
+      paymentMethod: true,
+      pricingMode: true,
+      durationMinutesSnapshot: true,
+    },
   });
 
   let totalAmount = 0;
@@ -391,7 +399,24 @@ export async function aggregateGameRoomLaunches(
   for (const l of launches) {
     const amount = Number(l.amount ?? 0);
     totalAmount += amount;
-    if (l.endedAt) totalMinutes += (l.endedAt.getTime() - l.startedAt.getTime()) / 60000;
+    // Сколько времени засчитать пуску — зависит от того, за что взяли деньги
+    // (реальный случай на проде 2026-08-04, зона "Дворик": оплатили 300 ₽ за
+    // 2 часа вперёд, сотрудник закрыл таймер через ЧЕТЫРЕ СЕКУНДЫ — отсчитывать
+    // было нечего, время уже оплачено, — и в сводку ушло "время: 0 ч").
+    //
+    // "За вход" (pricingMode="fixed"): цена не зависит от того, пробыл гость
+    // 30 минут или 10, время оплачено на входе — значит осмысленная величина
+    // это ОПЛАЧЕННАЯ длительность (durationMinutesSnapshot), а не показания
+    // секундомера. Фактическое время тут вообще ни на что не влияет.
+    //
+    // "По факту" (pricingMode="per_minute"): деньги считаются ровно по
+    // отработанным минутам, поэтому засчитывается фактическая длительность —
+    // как и раньше.
+    if (l.pricingMode === "fixed" && l.durationMinutesSnapshot != null) {
+      totalMinutes += l.durationMinutesSnapshot;
+    } else if (l.endedAt) {
+      totalMinutes += (l.endedAt.getTime() - l.startedAt.getTime()) / 60000;
+    }
     if (l.paymentMethod === "cash") cashAmount += amount;
     else if (l.paymentMethod === "mobile") mobileAmount += amount;
     else if (l.paymentMethod === "abonement") abonementAmount += amount;

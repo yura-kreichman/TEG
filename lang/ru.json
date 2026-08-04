@@ -1568,6 +1568,7 @@
     "shiftWord": "смена",
     "shiftWordCap": "Смена",
     "launchesCountLabel": "Пусков",
+    "staysCountLabel": "Прибываний",
     "launchesTimeLabel": "время",
     "ticketsOrdersCountLabel": "Заказов",
     "ticketsSoldCountLabel": "Билетов"

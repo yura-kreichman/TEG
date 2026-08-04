@@ -1552,6 +1552,7 @@
     "shiftWord": "zmiana",
     "shiftWordCap": "Zmiana",
     "launchesCountLabel": "Uruchomień",
+    "staysCountLabel": "Przybyć",
     "launchesTimeLabel": "czas",
     "ticketsOrdersCountLabel": "Zamówień",
     "ticketsSoldCountLabel": "Biletów"

@@ -63,9 +63,9 @@ const COMPACT_GRID_TARGET_WIDTH = 42;
 // и тот же актив). Последний символ имени почти всегда и есть отличающая
 // часть в реальных названиях ("Гоночная 1"/"Гоночная 2", "Картинг 1"/
 // "Картинг 2") — простой slice(0,5) этого не видит, а 4+1 видит.
-function truncateLabel(name: string): string {
-  if (name.length <= COMPACT_NAME_WIDTH) return name;
-  return `${name.slice(0, COMPACT_NAME_WIDTH - 1)}${name.slice(-1)}`;
+function truncateLabel(name: string, width: number = COMPACT_NAME_WIDTH): string {
+  if (name.length <= width) return name;
+  return `${name.slice(0, width - 1)}${name.slice(-1)}`;
 }
 
 // В цитате (blockquote) — не больше 2 значений в строке (запрос пользователя
@@ -90,7 +90,14 @@ function dailyCashHeaderLines(data: DailyCashSummaryData, timezone: string, st: 
   return lines;
 }
 
-function formatCompactGrid(items: { label: string; value: string }[]): string {
+// fullNames — не резать имена, отдав им весь свободный остаток строки.
+// Включается ТОЛЬКО у Прибываний (обратная связь пользователя 2026-08-04:
+// "сокращать названия не надо только у режима Прибывания"): там актив, как
+// правило, один, колонка одна, и три четверти ширины простаивают, пока
+// "Посещение" превращается в "Посее". У Счётчиков наоборот — активов
+// несколько, они идут в две колонки, и обрезка нужна, иначе строка
+// переносится; там остаётся прежнее правило "4 первых символа + 1 последний".
+function formatCompactGrid(items: { label: string; value: string }[], fullNames = false): string {
   if (items.length === 0) return "";
   const valueWidth = Math.max(4, ...items.map((it) => it.value.length));
   const cellWidth = COMPACT_NAME_WIDTH + 2 + valueWidth; // +2 — ": "
@@ -108,8 +115,17 @@ function formatCompactGrid(items: { label: string; value: string }[]): string {
   // Экранировать раньше нельзя — "&amp;" длиннее "&" на 4 символа, и padEnd,
   // посчитанный по уже экранированной строке, сбил бы визуальное выравнивание
   // колонок в <code>-блоке (Telegram рендерит &amp; обратно в один "&").
+  // При fullNames имя получает весь свободный остаток строки, но по-прежнему
+  // не вылезает за бюджет ширины — перенос строки в <code>-блоке ломает
+  // выравнивание сильнее, чем обрезка.
+  const cellBudget = Math.floor((COMPACT_GRID_TARGET_WIDTH - (cols - 1) * COMPACT_GRID_SEP.length) / cols);
+  const longestLabel = Math.max(...items.map((it) => it.label.length));
+  const nameWidth = fullNames
+    ? Math.max(COMPACT_NAME_WIDTH, Math.min(longestLabel, cellBudget - 2 - valueWidth))
+    : COMPACT_NAME_WIDTH;
+
   const cells = items.map((it) =>
-    escapeTelegramHtml(`${truncateLabel(it.label).padEnd(COMPACT_NAME_WIDTH)}: ${it.value.padStart(valueWidth)}`)
+    escapeTelegramHtml(`${truncateLabel(it.label, nameWidth).padEnd(nameWidth)}: ${it.value.padStart(valueWidth)}`)
   );
   const rows: string[] = [];
   for (let i = 0; i < cells.length; i += cols) {
@@ -167,14 +183,24 @@ function zoneHeader(data: ZoneSummaryData, showOperator: boolean, timezone: stri
   return `${data.zoneEmoji ?? fallbackEmoji} <b>${escapeTelegramHtml(data.zoneName.toUpperCase())}</b>${operatorBit} · ${date}`;
 }
 
-// "Пусков: N · время: Xч Yм" — вместо блока показаний для зон
+// "Прибываний: N · ⏱ Xч Yм" — вместо блока показаний для зон
 // accountingMode="stays" (docs/spec/04-game-room.md, "Деньги и сдача
 // итогов": "Telegram/email-уведомлений по каждому отдельному пуску нет —
 // только агрегат в сводке сдачи итогов").
+//
+// Именно "Прибываний", не "Пусков" (обратная связь пользователя 2026-08-04):
+// раньше здесь стоял тот же ключ, что и у режима Пусков, и сводка называла
+// режим чужим словом — при том, что в настройках зоны, в спеке и в CLAUDE.md
+// он везде "Прибывания".
 function formatGameRoomLine(data: ZoneSummaryData, st: SummaryText): string {
   const count = data.gameRoomLaunchCount ?? 0;
   const minutes = data.gameRoomTotalMinutes ?? 0;
-  return `🎮 ${st.launchesCountLabel}: <b>${count}</b> · ${st.launchesTimeLabel}: <b>${formatDuration(minutes)}</b>`;
+  // Часы значком вместо слова "время" (обратная связь пользователя
+  // 2026-08-04) — в сводке и так тесно, а часы читаются мгновенно и на любом
+  // языке. Ключ launchesTimeLabel остаётся: его использует email-сводка, где
+  // строки идут таблицей "подпись — значение" и значок вместо подписи
+  // выглядел бы дырой в колонке.
+  return `🎮 ${st.staysCountLabel}: <b>${count}</b> · ⏱ <b>${formatDuration(minutes, true)}</b>`;
 }
 
 // "Пусков: N · время: Xч Yм" — та же формула, что formatGameRoomLine выше
@@ -186,7 +212,12 @@ function formatGameRoomLine(data: ZoneSummaryData, st: SummaryText): string {
 function formatLaunchesTallyLine(data: ZoneSummaryData, st: SummaryText): string {
   const count = data.gameRoomLaunchCount ?? 0;
   const minutes = data.gameRoomTotalMinutes ?? 0;
-  return `🎮 ${st.launchesCountLabel}: <b>${count}</b> · ${st.launchesTimeLabel}: <b>${formatDuration(minutes)}</b>`;
+  // Часы значком вместо слова "время" (обратная связь пользователя
+  // 2026-08-04) — в сводке и так тесно, а часы читаются мгновенно и на любом
+  // языке. Ключ launchesTimeLabel остаётся: его использует email-сводка, где
+  // строки идут таблицей "подпись — значение" и значок вместо подписи
+  // выглядел бы дырой в колонке.
+  return `🎮 ${st.launchesCountLabel}: <b>${count}</b> · ⏱ <b>${formatDuration(minutes, true)}</b>`;
 }
 
 // "Заказов: N · Билетов: M" — Билеты (docs/spec/10-tickets.md) не имеют ни
@@ -203,9 +234,13 @@ function formatTicketsLine(data: ZoneSummaryData, st: SummaryText): string {
 // у "Счётчиков" (запрос пользователя 2026-07-19: "в них нет Активов как мы
 // делали в режиме Счётчики"), но count+amount вместо "было→стало" — у пусков
 // нет непрерывного счётчика, только дискретные события.
-function formatPerAssetTallyCompact(perAsset: ZoneSummaryData["perAsset"]): string {
+// fullNames — только у Прибываний (см. formatCompactGrid). Имя передаётся
+// СЫРЫМ: обрезать его здесь заранее нельзя, иначе сетка получит уже
+// укороченную строку и растягивать будет нечего.
+function formatPerAssetTallyCompact(perAsset: ZoneSummaryData["perAsset"], fullNames = false): string {
   const grid = formatCompactGrid(
-    perAsset.map((a) => ({ label: truncateLabel(a.assetName), value: String(a.count) }))
+    perAsset.map((a) => ({ label: a.assetName, value: String(a.count) })),
+    fullNames
   );
   return `<blockquote><code>${grid}</code></blockquote>`;
 }
@@ -242,7 +277,8 @@ export function formatZoneSummaryTelegram(
       if (data.isGameRoom) {
         if (settings.showReadings) {
           parts.push(formatGameRoomLine(data, st));
-          if (data.perAsset.length > 0) parts.push(formatPerAssetTallyCompact(data.perAsset));
+          // Прибывания — имена активов целиком (см. formatCompactGrid).
+          if (data.perAsset.length > 0) parts.push(formatPerAssetTallyCompact(data.perAsset, true));
         }
       } else if (data.accountingMode === "launches") {
         if (settings.showReadings) {

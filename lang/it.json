@@ -1552,6 +1552,7 @@
     "shiftWord": "turno",
     "shiftWordCap": "Turno",
     "launchesCountLabel": "Avvii",
+    "staysCountLabel": "Arrivi",
     "launchesTimeLabel": "tempo",
     "ticketsOrdersCountLabel": "Ordini",
     "ticketsSoldCountLabel": "Biglietti"

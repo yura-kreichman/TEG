@@ -1552,6 +1552,7 @@
     "shiftWord": "smena",
     "shiftWordCap": "Smena",
     "launchesCountLabel": "Pusklar",
+    "staysCountLabel": "Kelishlar",
     "launchesTimeLabel": "vaqt",
     "ticketsOrdersCountLabel": "Buyurtmalar",
     "ticketsSoldCountLabel": "Chiptalar"

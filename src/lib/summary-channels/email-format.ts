@@ -71,7 +71,11 @@ export function formatZoneSummaryEmail(
   } else {
     if (data.isGameRoom) {
       if (settings.showReadings) {
-        rows.push({ label: st.launchesCountLabel, value: String(data.gameRoomLaunchCount ?? 0) });
+        // "Прибываний", не "Пусков" — тот же фикс терминологии, что в
+        // telegram-format.ts (обратная связь пользователя 2026-08-04). Слово
+        // "время" здесь остаётся: email-сводка — таблица "подпись — значение",
+        // и значок часов вместо подписи оставил бы дыру в колонке.
+        rows.push({ label: st.staysCountLabel, value: String(data.gameRoomLaunchCount ?? 0) });
         rows.push({ label: st.launchesTimeLabel, value: formatDuration(data.gameRoomTotalMinutes ?? 0) });
       }
     } else if (data.accountingMode === "launches") {
