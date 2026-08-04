@@ -1015,6 +1015,9 @@
   "readings": {
     "title": "Günlük sonuçlar",
     "daySummaryTitle": "Gün özeti",
+    "assetsSectionTitle": "Varlıklar",
+    "testRunsSectionTitle": "Test çalışmaları",
+    "salesSectionTitle": "Satışlar",
     "daySummaryHint": "Bölge teslimlerine ve aboneliklere göre",
     "pointCashWithAbonementLabel": "Nokta kasası aboneliklerle:",
     "abonementSalesTitle": "Abonelikler",

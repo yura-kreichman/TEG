@@ -1015,6 +1015,9 @@
   "readings": {
     "title": "Rezultate zilnice",
     "daySummaryTitle": "Rezumatul zilei",
+    "assetsSectionTitle": "Active",
+    "testRunsSectionTitle": "Rulări de test",
+    "salesSectionTitle": "Vânzări",
     "daySummaryHint": "Pe baza predărilor de zonă și a abonamentelor",
     "pointCashWithAbonementLabel": "Casa punctului cu abonamente:",
     "abonementSalesTitle": "Abonamente",

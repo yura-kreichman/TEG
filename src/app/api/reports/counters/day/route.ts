@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
+import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, isCountersTapAssistZone, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateTicketOrders, ticketRevenueByAssetVariant, listTicketOrdersForWindow, type TicketOrderWindowItem } from "@/lib/tickets";
 import { calculateGoodsCashBeforeReconciliation } from "@/lib/goods";
@@ -115,6 +115,83 @@ export async function GET(request: Request) {
   }
   const abonementSales = { ...abonementSalesTotals, items: [...abonementSaleItemsByPlan.values()] };
 
+  // Кто кому начислил абонемент (запрос пользователя 2026-08-04) —
+  // раскрывающийся список под разбивкой по планам выше. Разбивка остаётся:
+  // отменять июльское решение ("не надо полный список продаж") не требуется,
+  // это детализация по тапу, а не замена.
+  //
+  // Источник — AbonementTransaction, а НЕ MoneyOperation: только у неё есть
+  // одновременно клиент (walletId) и исполнитель. ВАЖНО: amount тут —
+  // ЗАЧИСЛЕННАЯ сумма, с бонусом плана ("заплати 1000 — получи 1200"), а не
+  // уплаченные деньги; уплаченные лежат в MoneyOperation и уже посчитаны в
+  // итогах выше. Смешивать их в одной строке нельзя, поэтому здесь честно
+  // показывается именно "начислено".
+  const abonementTopups = await prisma.abonementTransaction.findMany({
+    where: { pointId, type: "topup", occurredAt: { gte: dayStart, lt: dayEnd } },
+    orderBy: { occurredAt: "asc" },
+    select: {
+      id: true,
+      occurredAt: true,
+      amount: true,
+      paymentMethod: true,
+      abonement: { select: { name: true } },
+      wallet: { select: { name: true, phone: true } },
+      operator: { select: { name: true, colorTag: true } },
+      user: { select: { id: true } },
+    },
+  });
+  const abonementSaleEvents = abonementTopups.map((t) => ({
+    id: t.id,
+    occurredAt: t.occurredAt.toISOString(),
+    creditedAmount: Number(t.amount),
+    paymentMethod: t.paymentMethod,
+    planName: t.abonement?.name ?? null,
+    clientName: t.wallet?.name ?? null,
+    clientPhone: t.wallet?.phone ?? null,
+    performedBy: t.operator?.name ?? null,
+    // Email владельца наружу не отдаём — только флаг, клиент рисует корону
+    // (реальный баг 2026-07-20, см. abonement-wallets/[id]/route.ts).
+    performedByOwner: !!t.user,
+    // Чип с именем на фоне цветовой метки, как в Задачах (уточнение
+    // пользователя 2026-08-04) — не аватар: см. colorTag-вариант
+    // PerformedByTag.
+    performedByColorTag: t.operator?.colorTag ?? null,
+  }));
+
+  // Продажи Товаров за день (запрос пользователя 2026-08-04: "кто купил и кто
+  // продал"). До сих пор на экране дня были только СВЕРКИ кассы Товаров —
+  // самих продаж не было вовсе. Клиент заполнен не всегда: при оплате
+  // наличными без привязки к клиенту его просто нет, и это честное "—", а не
+  // пропуск данных.
+  const goodsSaleRows = await prisma.goodsSale.findMany({
+    where: { pointId, occurredAt: { gte: dayStart, lt: dayEnd } },
+    orderBy: { occurredAt: "asc" },
+    select: {
+      id: true,
+      occurredAt: true,
+      quantity: true,
+      amount: true,
+      paymentMethod: true,
+      goods: { select: { name: true } },
+      wallet: { select: { name: true, phone: true } },
+      performedByOperator: { select: { name: true, colorTag: true } },
+      performedByUserId: true,
+    },
+  });
+  const goodsSales = goodsSaleRows.map((g) => ({
+    id: g.id,
+    occurredAt: g.occurredAt.toISOString(),
+    goodsName: g.goods?.name ?? null,
+    quantity: g.quantity,
+    amount: Number(g.amount),
+    paymentMethod: g.paymentMethod,
+    clientName: g.wallet?.name ?? null,
+    clientPhone: g.wallet?.phone ?? null,
+    performedBy: g.performedByOperator?.name ?? null,
+    performedByOwner: !!g.performedByUserId,
+    performedByColorTag: g.performedByOperator?.colorTag ?? null,
+  }));
+
   // Сверки кассы Товаров за эту дату+точку (запрос пользователя 2026-07-31:
   // "Итоги дня" не показывали Товары вообще, хотя сверка там уже была) —
   // отдельная карточка ниже, по аналогии с "Продажи абонементов" выше: эти
@@ -178,7 +255,7 @@ export async function GET(request: Request) {
   });
 
   if (submissions.length === 0) {
-    return NextResponse.json({ cards: [], abonementSales, goodsReconciliations });
+    return NextResponse.json({ cards: [], abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales });
   }
 
   // "Прибывания" и тап-"Пуски" (после перехода на тапы, assetReadings
@@ -416,6 +493,53 @@ export async function GET(request: Request) {
     if (!latestLogByZoneSubmissionId.has(log.entityId)) latestLogByZoneSubmissionId.set(log.entityId, log);
   }
 
+  // История тестовых прогонов по каждой карточке (запрос пользователя
+  // 2026-08-04: "хотел бы видеть историю тестовых пусков раскрывающимся
+  // списком"). До сих пор на экране было только ЧИСЛО, хотя сами события
+  // пишутся с зоной, сотрудником и временем (ZoneReturnEvent).
+  //
+  // Окно — РОВНО то же, по которому считался сам счётчик при сдаче (см.
+  // submit-results): от предыдущей сдачи этой зоны до текущей. Брать
+  // календарный день нельзя: смена, начавшаяся вчера вечером, дала бы
+  // список, не сходящийся со счётчиком.
+  //
+  // У зон "Счётчики с подсказкой тапом" источник другой — погашенные
+  // CounterTapEvent (voidedAt), тот же выбор, что и в submit-results.
+  const returnEventsBySubmission = new Map<
+    string,
+    { occurredAt: string; performedBy: string | null; performedByOwner: boolean; performedByColorTag: string | null }[]
+  >();
+  for (const s of submissions) {
+    for (const zs of s.zoneSubmissions) {
+      const prev = await prisma.zoneSubmission.findFirst({
+        where: { zoneId: zs.zoneId, createdAt: { lt: zs.createdAt } },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      });
+      const window = { gt: prev?.createdAt ?? new Date(0), lte: zs.createdAt };
+      const events = isCountersTapAssistZone(zs.zone)
+        ? await prisma.counterTapEvent.findMany({
+            where: { zoneId: zs.zoneId, createdAt: window, voidedAt: { not: null } },
+            orderBy: { createdAt: "asc" },
+            select: { createdAt: true, operator: { select: { name: true, colorTag: true } } },
+          })
+        : await prisma.zoneReturnEvent.findMany({
+            where: { zoneId: zs.zoneId, createdAt: window },
+            orderBy: { createdAt: "asc" },
+            select: { createdAt: true, operator: { select: { name: true, colorTag: true } } },
+          });
+      returnEventsBySubmission.set(
+        zs.id,
+        events.map((e) => ({
+          occurredAt: e.createdAt.toISOString(),
+          performedBy: e.operator?.name ?? null,
+          performedByOwner: false, // тестовый прогон делает только Сотрудник
+          performedByColorTag: e.operator?.colorTag ?? null,
+        }))
+      );
+    }
+  }
+
   const cards = submissions.flatMap((s) =>
     s.zoneSubmissions.map((zs) => {
       const isLaunches = zs.zone.accountingMode === "launches";
@@ -618,5 +742,5 @@ export async function GET(request: Request) {
     })
   );
 
-  return NextResponse.json({ cards, abonementSales, goodsReconciliations });
+  return NextResponse.json({ cards, abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales });
 }

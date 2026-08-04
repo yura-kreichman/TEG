@@ -1015,6 +1015,9 @@
   "readings": {
     "title": "Күндер бойынша қорытынды",
     "daySummaryTitle": "Күн қорытындысы",
+    "assetsSectionTitle": "Активтер",
+    "testRunsSectionTitle": "Сынақ жүрістері",
+    "salesSectionTitle": "Сатулар",
     "daySummaryHint": "Аймақ тапсырулары және абонементтер бойынша",
     "pointCashWithAbonementLabel": "Нүкте кассасы абонементтермен:",
     "abonementSalesTitle": "Абонементтер",

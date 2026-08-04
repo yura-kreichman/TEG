@@ -1015,6 +1015,9 @@
   "readings": {
     "title": "Kunlik natijalar",
     "daySummaryTitle": "Kun natijasi",
+    "assetsSectionTitle": "Aktivlar",
+    "testRunsSectionTitle": "Sinov ishga tushirishlar",
+    "salesSectionTitle": "Sotuvlar",
     "daySummaryHint": "Zona topshiriqlari va abonementlar boʻyicha",
     "pointCashWithAbonementLabel": "Nuqta kassasi abonementlar bilan:",
     "abonementSalesTitle": "Abonementlar",

@@ -1015,6 +1015,9 @@
   "readings": {
     "title": "Daily results",
     "daySummaryTitle": "Day summary",
+    "assetsSectionTitle": "Assets",
+    "testRunsSectionTitle": "Test runs",
+    "salesSectionTitle": "Sales",
     "daySummaryHint": "By zone submissions and subscriptions",
     "pointCashWithAbonementLabel": "Point cash incl. subscriptions:",
     "abonementSalesTitle": "Subscriptions",

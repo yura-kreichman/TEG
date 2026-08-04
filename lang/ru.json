@@ -1031,6 +1031,9 @@
   "readings": {
     "title": "Итоги по дням",
     "daySummaryTitle": "Итоги дня",
+    "assetsSectionTitle": "Активы",
+    "testRunsSectionTitle": "Тестовые прогоны",
+    "salesSectionTitle": "Продажи",
     "daySummaryHint": "По сдачам зон и абонементов",
     "pointCashWithAbonementLabel": "Касса точки с абонементами:",
     "abonementSalesTitle": "Абонементы",

@@ -1015,6 +1015,9 @@
   "readings": {
     "title": "Riepiloghi giornalieri",
     "daySummaryTitle": "Riepilogo del giorno",
+    "assetsSectionTitle": "Attrezzature",
+    "testRunsSectionTitle": "Prove di test",
+    "salesSectionTitle": "Vendite",
     "daySummaryHint": "Per consegne zona e abbonamenti",
     "pointCashWithAbonementLabel": "Cassa del punto con abbonamenti:",
     "abonementSalesTitle": "Abbonamenti",

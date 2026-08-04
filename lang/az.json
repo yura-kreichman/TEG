@@ -1015,6 +1015,9 @@
   "readings": {
     "title": "Günlər üzrə yekunlar",
     "daySummaryTitle": "Günün yekunu",
+    "assetsSectionTitle": "Aktivlər",
+    "testRunsSectionTitle": "Sınaq buraxılışları",
+    "salesSectionTitle": "Satışlar",
     "daySummaryHint": "Zonaların hesabatları və abonementlər üzrə",
     "pointCashWithAbonementLabel": "Nöqtənin kassası abonementlərlə:",
     "abonementSalesTitle": "Abonementlər",

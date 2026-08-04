@@ -39,6 +39,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { useI18n, useLocale } from "@/components/i18n-provider";
 import type { Dictionary } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { PerformedByTag } from "@/components/performed-by-tag";
 import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, type ZoneAccountingMode } from "@/lib/results-calc";
 import { formatMoney, parseMoneyInput } from "@/lib/format";
 import { Money } from "@/components/money";
@@ -75,6 +76,14 @@ interface DayCard {
   mobileAmount: number;
   abonementAmount: number;
   returnsCount: number;
+  // Отдельные события тестовых прогонов, из которых сложился returnsCount
+  // выше (см. returnEventsBySubmission в /api/reports/counters/day).
+  returnEvents: {
+    occurredAt: string;
+    performedBy: string | null;
+    performedByOwner: boolean;
+    performedByColorTag: string | null;
+  }[];
   calculatedRevenue: number;
   netRevenue: number;
   difference: number;
@@ -168,6 +177,37 @@ interface AbonementSales {
 // от того, какие режимы учёта у её зон (уточнение пользователя 2026-07-31),
 // поэтому карточка показывается всегда, когда за день была хотя бы одна
 // сверка, вне зависимости от cards/accountingMode.
+// Кто кому начислил абонемент (запрос пользователя 2026-08-04). creditedAmount
+// — ЗАЧИСЛЕННАЯ сумма с бонусом плана, не уплаченные деньги: те в итогах выше.
+interface AbonementSaleEvent {
+  id: string;
+  occurredAt: string;
+  creditedAmount: number;
+  paymentMethod: string | null;
+  planName: string | null;
+  clientName: string | null;
+  clientPhone: string | null;
+  performedBy: string | null;
+  performedByOwner: boolean;
+  performedByColorTag: string | null;
+}
+
+// Кто кому продал товар. clientName заполнен не всегда — при оплате наличными
+// без привязки к клиенту его просто нет, и это честное "—".
+interface GoodsSaleEntry {
+  id: string;
+  occurredAt: string;
+  goodsName: string | null;
+  quantity: number;
+  amount: number;
+  paymentMethod: string;
+  clientName: string | null;
+  clientPhone: string | null;
+  performedBy: string | null;
+  performedByOwner: boolean;
+  performedByColorTag: string | null;
+}
+
 interface GoodsReconciliationEntry {
   id: string;
   occurredAt: string;
@@ -209,6 +249,63 @@ function lockedNoteFor(card: Pick<DayCard, "accountingMode">, t: Dictionary): st
   return card.accountingMode === "counters" ? t.readings.lockedNote : t.readings.lockedNoteMode;
 }
 
+// Порог сворачивания (решение пользователя 2026-08-04): список из трёх строк
+// и короче остаётся раскрытым — прятать его значило бы добавить тап на ровном
+// месте. Правило общее для всех блоков и всех режимов учёта, а не настройка
+// под каждый: у "Счётчиков" активы идут с подсписком тарифов и список длинный,
+// у "Прибываний"/тап-"Пусков" — одна строка на актив, и сворачивать нечего.
+// Так владельцу не приходится гадать, почему у одной зоны свёрнуто, а у
+// соседней нет — решает длина, а не режим.
+const COLLAPSE_FROM_ROWS = 4;
+
+/**
+ * Сворачиваемый блок "Итогов дня" — общий для активов, тестовых прогонов,
+ * продаж абонементов и продаж товаров (запрос пользователя 2026-08-04:
+ * "чтобы не было очень громоздко"). Один компонент на все четыре места
+ * специально: они должны вести себя одинаково, иначе экран снова расползётся
+ * на четыре разных представления о том, что такое "раскрыть".
+ */
+function CollapsibleRows({
+  title,
+  count,
+  icon,
+  children,
+}: {
+  title: string;
+  count: number;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(count < COLLAPSE_FROM_ROWS);
+  if (count === 0) return null;
+
+  // Короткий список рисуем без кнопки вовсе — сворачивать нечего, а лишний
+  // интерактивный заголовок только шумит.
+  if (count < COLLAPSE_FROM_ROWS) {
+    return <div className="mt-1.5 flex flex-col">{children}</div>;
+  }
+
+  return (
+    <div className="mt-1.5 flex flex-col">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center justify-between gap-2 py-1.5 text-caption-airbnb"
+      >
+        <span className="flex items-center gap-1.5 font-semibold">
+          {icon}
+          {title}
+        </span>
+        <span className="flex items-center gap-1 text-muted-foreground">
+          <span className="tabular-nums">{count}</span>
+          <ChevronRight className={cn("size-4 transition-transform", open && "rotate-90")} />
+        </span>
+      </button>
+      {open && <div className="flex flex-col">{children}</div>}
+    </div>
+  );
+}
+
 export default function ReadingsCalendarPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -232,6 +329,10 @@ export default function ReadingsCalendarPage() {
   // одной зоне (запрос пользователя 2026-07-18), грузится вместе с cards.
   const [abonementSales, setAbonementSales] = useState<AbonementSales | null>(null);
   const [goodsReconciliations, setGoodsReconciliations] = useState<GoodsReconciliationEntry[]>([]);
+  // Кто кому начислил абонемент и кто кому продал товар (запрос пользователя
+  // 2026-08-04) — построчная детализация под уже существующими итогами.
+  const [abonementSaleEvents, setAbonementSaleEvents] = useState<AbonementSaleEvent[]>([]);
+  const [goodsSales, setGoodsSales] = useState<GoodsSaleEntry[]>([]);
   // День последней сдачи итогов — открывается по умолчанию (запрос
   // пользователя 2026-07-15), а не сегодняшний пустой день. Резолвится один
   // раз на каждую смену точки, до первой загрузки календаря — иначе был бы
@@ -350,6 +451,8 @@ export default function ReadingsCalendarPage() {
     setCards(data.cards ?? []);
     setAbonementSales(data.abonementSales ?? null);
     setGoodsReconciliations(data.goodsReconciliations ?? []);
+    setAbonementSaleEvents(data.abonementSaleEvents ?? []);
+    setGoodsSales(data.goodsSales ?? []);
   }
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -919,6 +1022,44 @@ export default function ReadingsCalendarPage() {
                       </span>
                     </div>
                   )}
+                  {/* Кому и кто начислил (запрос пользователя 2026-08-04).
+                      Разбивка по планам выше остаётся нетронутой — июльское
+                      решение "не надо полный список продаж" в силе, это
+                      детализация по тапу, а не замена.
+                      Сумма здесь — НАЧИСЛЕННАЯ, с бонусом плана: "заплати
+                      1000 — получи 1200". Уплаченные деньги видны в итогах
+                      выше, из MoneyOperation. Это два разных числа, и
+                      смешивать их в одной строке нельзя. */}
+                  <CollapsibleRows
+                    title={t.readings.salesSectionTitle}
+                    count={abonementSaleEvents.length}
+                    icon={<Gift className="size-3.5 shrink-0" />}
+                  >
+                    {abonementSaleEvents.map((e) => (
+                      <div
+                        key={e.id}
+                        className="flex items-center justify-between gap-2 border-t border-border py-1.5 text-caption-airbnb"
+                      >
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <span className="tabular-nums text-muted-foreground">{formatTime(e.occurredAt)}</span>
+                          <span className="truncate text-foreground">{e.clientName ?? e.clientPhone ?? "—"}</span>
+                          {e.planName && <span className="truncate text-muted-foreground">· {e.planName}</span>}
+                        </span>
+                        <span className="flex shrink-0 items-center gap-2">
+                          <span className="tabular-nums text-foreground">
+                            <Money value={e.creditedAmount} />
+                          </span>
+                          <PerformedByTag
+                            name={e.performedBy}
+                            isOwner={e.performedByOwner}
+                            avatarUrl={null}
+                            iconKey={null}
+                            colorTag={e.performedByColorTag}
+                          />
+                        </span>
+                      </div>
+                    ))}
+                  </CollapsibleRows>
                 </SpringCard>
               )}
 
@@ -1002,6 +1143,50 @@ export default function ReadingsCalendarPage() {
                       </div>
                     ))}
                   </div>
+                  {/* Кто кому продал (запрос пользователя 2026-08-04). До сих
+                      пор на экране дня были только СВЕРКИ кассы Товаров —
+                      самих продаж не было вовсе. Клиент есть не всегда: при
+                      оплате наличными без привязки его просто нет, и там
+                      честное "—", а не выдуманный покупатель. */}
+                  <CollapsibleRows
+                    title={t.readings.salesSectionTitle}
+                    count={goodsSales.length}
+                    icon={<ShoppingBag className="size-3.5 shrink-0" />}
+                  >
+                    {goodsSales.map((g) => (
+                      <div
+                        key={g.id}
+                        className="flex items-center justify-between gap-2 border-t border-border py-1.5 text-caption-airbnb"
+                      >
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <span className="tabular-nums text-muted-foreground">{formatTime(g.occurredAt)}</span>
+                          <span className="truncate text-foreground">
+                            {g.goodsName ?? "—"}
+                            {g.quantity > 1 && ` ×${g.quantity}`}
+                          </span>
+                          {(g.clientName || g.clientPhone) && (
+                            <span className="truncate text-muted-foreground">· {g.clientName ?? g.clientPhone}</span>
+                          )}
+                        </span>
+                        <span className="flex shrink-0 items-center gap-2">
+                          <PaymentMethodIcon
+                            method={g.paymentMethod as "cash" | "mobile" | "abonement"}
+                            className="size-3.5 shrink-0"
+                          />
+                          <span className="tabular-nums text-foreground">
+                            <Money value={g.amount} />
+                          </span>
+                          <PerformedByTag
+                            name={g.performedBy}
+                            isOwner={g.performedByOwner}
+                            avatarUrl={null}
+                            iconKey={null}
+                            colorTag={g.performedByColorTag}
+                          />
+                        </span>
+                      </div>
+                    ))}
+                  </CollapsibleRows>
                 </SpringCard>
               )}
 
@@ -1064,6 +1249,15 @@ export default function ReadingsCalendarPage() {
                             )}
                             {card.zoneName}
                           </p>
+                          {/* Активы — сворачиваемым списком, если их больше
+                              трёх (решение пользователя 2026-08-04: "чтобы не
+                              было очень громоздко"). У "Счётчиков" на каждый
+                              актив идёт ещё подсписок тарифов, поэтому именно
+                              этот блок и делал карточку высокой. */}
+                          <CollapsibleRows
+                            title={t.readings.assetsSectionTitle}
+                            count={card.accountingMode === "cash_only" ? 0 : card.assets.length}
+                          >
                           {card.accountingMode !== "cash_only" &&
                             card.assets.map((asset) => (
                               <div key={asset.assetId} className="mt-1.5 flex items-center gap-2">
@@ -1112,6 +1306,7 @@ export default function ReadingsCalendarPage() {
                                 </div>
                               </div>
                             ))}
+                          </CollapsibleRows>
                           {/* "Прибывания"/тап-"Пуски" — из Launch, не из
                               assetReadings, поэтому card.assets тут всегда
                               пуст (реальный пробел, найден пользователем
@@ -1320,6 +1515,37 @@ export default function ReadingsCalendarPage() {
                             </span>
                             <span className="text-foreground">{card.returnsCount}</span>
                           </div>
+                          )}
+                          {/* История тестовых прогонов (запрос пользователя
+                              2026-08-04). Число выше остаётся — оно то, что
+                              реально сохранено в сдаче; список показывает, из
+                              чего оно сложилось. Расхождение возможно, если
+                              владелец правил число вручную через шторку
+                              редактирования: тогда счётчик — правда сдачи, а
+                              список — правда журнала событий, и подменять
+                              одно другим было бы враньём в обе стороны. */}
+                          {returnsApplicable(card) && (
+                            <CollapsibleRows
+                              title={t.readings.testRunsSectionTitle}
+                              count={card.returnEvents.length}
+                              icon={<RefreshCcw className="size-3.5 shrink-0" />}
+                            >
+                              {card.returnEvents.map((e, i) => (
+                                <div
+                                  key={`${e.occurredAt}-${i}`}
+                                  className="flex items-center justify-between gap-2 border-t border-border py-1.5 text-caption-airbnb"
+                                >
+                                  <span className="tabular-nums text-muted-foreground">{formatTime(e.occurredAt)}</span>
+                                  <PerformedByTag
+                                    name={e.performedBy}
+                                    isOwner={e.performedByOwner}
+                                    avatarUrl={null}
+                                    iconKey={null}
+                                    colorTag={e.performedByColorTag}
+                                  />
+                                </div>
+                              ))}
+                            </CollapsibleRows>
                           )}
                           {/* "Погашено X из Y · истекло Z" — только при
                               включённом гашении зоны (docs/spec/10-tickets.md,

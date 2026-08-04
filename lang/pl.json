@@ -1015,6 +1015,9 @@
   "readings": {
     "title": "Wyniki dzienne",
     "daySummaryTitle": "Podsumowanie dnia",
+    "assetsSectionTitle": "Zasoby",
+    "testRunsSectionTitle": "Przebiegi testowe",
+    "salesSectionTitle": "Sprzedaż",
     "daySummaryHint": "Wg rozliczeń stref i abonamentów",
     "pointCashWithAbonementLabel": "Kasa punktu z abonamentami:",
     "abonementSalesTitle": "Abonamenty",

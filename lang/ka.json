@@ -1015,6 +1015,9 @@
   "readings": {
     "title": "შედეგები დღეების მიხედვით",
     "daySummaryTitle": "დღის შედეგი",
+    "assetsSectionTitle": "აქტივები",
+    "testRunsSectionTitle": "ტესტური გაშვებები",
+    "salesSectionTitle": "გაყიდვები",
     "daySummaryHint": "ზონების ჩაბარებებისა და აბონემენტების მიხედვით",
     "pointCashWithAbonementLabel": "წერტილის სალარო აბონემენტებთან ერთად:",
     "abonementSalesTitle": "აბონემენტები",

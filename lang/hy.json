@@ -1015,6 +1015,9 @@
   "readings": {
     "title": "Ամփոփումներ ըստ օրերի",
     "daySummaryTitle": "Օրվա ամփոփում",
+    "assetsSectionTitle": "Ակտիվներ",
+    "testRunsSectionTitle": "Փորձնական գործարկումներ",
+    "salesSectionTitle": "Վաճառքներ",
     "daySummaryHint": "Գոտիների հանձնումների և բաժանորդագրությունների համաձայն",
     "pointCashWithAbonementLabel": "Կետի կանխիկը՝ ներառյալ բաժանորդագրությունները.",
     "abonementSalesTitle": "Բաժանորդագրություններ",

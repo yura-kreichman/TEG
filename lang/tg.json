@@ -1015,6 +1015,9 @@
   "readings": {
     "title": "Натиҷаҳо аз рӯи рӯзҳо",
     "daySummaryTitle": "Натиҷаи рӯз",
+    "assetsSectionTitle": "Активҳо",
+    "testRunsSectionTitle": "Санҷишҳо",
+    "salesSectionTitle": "Фурӯшҳо",
     "daySummaryHint": "Аз рӯи супоридани минтақаҳо ва обунамондҳо",
     "pointCashWithAbonementLabel": "Кассаи нуқта бо обунамондҳо:",
     "abonementSalesTitle": "Обунамондҳо",

@@ -1015,6 +1015,9 @@
   "readings": {
     "title": "Вынікі па днях",
     "daySummaryTitle": "Вынік дня",
+    "assetsSectionTitle": "Актывы",
+    "testRunsSectionTitle": "Тэставыя прагоны",
+    "salesSectionTitle": "Продажы",
     "daySummaryHint": "Па здачах зон і абанементаў",
     "pointCashWithAbonementLabel": "Каса кропкі з абанементамі:",
     "abonementSalesTitle": "Абанементы",
