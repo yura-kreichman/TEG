@@ -945,15 +945,25 @@ export async function POST(request: Request) {
           console.error("zone summary dispatch failed", err);
         }
       }
-    })();
-  }
 
-  // "Касса за день": в режиме event — отправить сразу, как только все активные
-  // зоны точки отчитались за сегодня; если сводка уже уходила — досдача
-  // (пересчитать и обновить/переслать). См. daily-cash-trigger.ts.
-  onResultsSubmission(point.id, point.tenantId, submission.submittedAt).catch((err) =>
-    console.error("daily cash trigger failed", err)
-  );
+      // "Касса за день" — ПОСЛЕ всех зонных сводок, внутри того же IIFE
+      // (обратная связь пользователя 2026-08-04, скриншот: КАССА пришла между
+      // "Батутами" и "Виртуалкой"). Раньше этот вызов стоял снаружи и
+      // запускался ПАРАЛЛЕЛЬНО циклу: цикл шлёт зоны последовательно, с
+      // паузами под рейт-лимит Telegram (~1 сообщение/сек, см. комментарий
+      // выше), а триггер кассы успевал обогнать его и вклиниться в середину.
+      // Данные при этом были верные — итог уже включал все зоны, — но читать
+      // ленту, где общий итог стоит перед последней зоной, невозможно.
+      await onResultsSubmission(point.id, point.tenantId, submission.submittedAt).catch((err) =>
+        console.error("daily cash trigger failed", err)
+      );
+    })();
+  } else {
+    // Зонные сводки выключены — ждать нечего, шлём кассу сразу.
+    onResultsSubmission(point.id, point.tenantId, submission.submittedAt).catch((err) =>
+      console.error("daily cash trigger failed", err)
+    );
+  }
 
   // Мягкое напоминание (docs/spec/05-work-time.md, "СВЯЗЬ СО СДАЧЕЙ ИТОГОВ") —
   // после сдачи итогов, если сегодня ещё не отмечен уход (нет смены с
