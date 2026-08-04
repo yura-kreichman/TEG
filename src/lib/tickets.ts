@@ -229,6 +229,11 @@ export interface TicketOrderWindowItem {
   expiresAt: Date | null;
   soldAt: Date;
   soldByOperatorName: string;
+  // Цветовая метка продавца — чтобы «Итоги дня» рисовали его тем же чипом
+  // PerformedByTag, что и продажи товаров/абонементов в соседних карточках.
+  // Владельца тут не бывает: soldByOperatorId в схеме обязателен, заказы
+  // оформляет только Сотрудник.
+  soldByOperatorColorTag: string | null;
   tickets: {
     id: string;
     assetId: string;
@@ -236,6 +241,11 @@ export interface TicketOrderWindowItem {
     priceSnapshot: number;
     status: string;
     redeemedAt: Date | null;
+    // Кто погасил. Гашение — отдельное событие, разнесённое с продажей по
+    // времени и по сотруднику (docs/spec/10-tickets.md), поэтому продавца
+    // заказа тут переиспользовать нельзя: это в общем случае разные люди.
+    redeemedByOperatorName: string | null;
+    redeemedByOperatorColorTag: string | null;
   }[];
 }
 
@@ -258,7 +268,10 @@ export async function listTicketOrdersForWindow(
   const orders = await tx.ticketOrder.findMany({
     where: { zoneId, soldAt: { lte: until, ...(since ? { gt: since } : {}) } },
     orderBy: { soldAt: "desc" },
-    include: { tickets: true, soldByOperator: { select: { name: true } } },
+    include: {
+      tickets: { include: { redeemedByOperator: { select: { name: true, colorTag: true } } } },
+      soldByOperator: { select: { name: true, colorTag: true } },
+    },
   });
   return orders.map((o) => ({
     id: o.id,
@@ -268,6 +281,7 @@ export async function listTicketOrdersForWindow(
     expiresAt: o.expiresAt,
     soldAt: o.soldAt,
     soldByOperatorName: o.soldByOperator.name,
+    soldByOperatorColorTag: o.soldByOperator.colorTag,
     tickets: o.tickets.map((t) => ({
       id: t.id,
       assetId: t.assetId,
@@ -275,6 +289,8 @@ export async function listTicketOrdersForWindow(
       priceSnapshot: Number(t.priceSnapshot),
       status: t.status,
       redeemedAt: t.redeemedAt,
+      redeemedByOperatorName: t.redeemedByOperator?.name ?? null,
+      redeemedByOperatorColorTag: t.redeemedByOperator?.colorTag ?? null,
     })),
   }));
 }

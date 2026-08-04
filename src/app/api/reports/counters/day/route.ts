@@ -203,7 +203,12 @@ export async function GET(request: Request) {
   const allGoodsReconciliations = await prisma.goodsReconciliation.findMany({
     where: { pointId },
     orderBy: { occurredAt: "asc" },
-    include: { performedByOperator: { select: { name: true } }, performedByUser: { select: { id: true } } },
+    include: {
+      // colorTag — чтобы исполнитель сверки рисовался тем же чипом
+      // PerformedByTag, что и строки продаж в этой же карточке.
+      performedByOperator: { select: { name: true, colorTag: true } },
+      performedByUser: { select: { id: true } },
+    },
   });
   const todaysGoodsReconciliations = allGoodsReconciliations.filter(
     (r) => r.occurredAt >= dayStart && r.occurredAt < dayEnd
@@ -225,6 +230,7 @@ export async function GET(request: Request) {
         occurredAt: r.occurredAt,
         performedBy: r.performedByOperator?.name ?? null,
         performedByOwner: !!r.performedByUser,
+        performedByColorTag: r.performedByOperator?.colorTag ?? null,
         actualCash,
         actualMobile,
         calculatedCash: round2(calculated.cash),

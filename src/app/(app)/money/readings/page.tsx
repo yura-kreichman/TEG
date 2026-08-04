@@ -16,6 +16,7 @@ import {
   Plus,
   RefreshCcw,
   ShoppingBag,
+  TicketCheck,
   Trash2,
   TriangleAlert,
 } from "lucide-react";
@@ -145,6 +146,7 @@ interface DayCard {
     expiresAt: string | null;
     soldAt: string;
     soldByOperatorName: string;
+    soldByOperatorColorTag: string | null;
     tickets: {
       id: string;
       assetId: string;
@@ -153,6 +155,8 @@ interface DayCard {
       priceSnapshot: number;
       status: string;
       redeemedAt: string | null;
+      redeemedByOperatorName: string | null;
+      redeemedByOperatorColorTag: string | null;
     }[];
   }[];
 }
@@ -216,6 +220,7 @@ interface GoodsReconciliationEntry {
   occurredAt: string;
   performedBy: string | null;
   performedByOwner: boolean;
+  performedByColorTag: string | null;
   actualCash: number;
   actualMobile: number;
   calculatedCash: number;
@@ -260,6 +265,20 @@ function lockedNoteFor(card: Pick<DayCard, "accountingMode">, t: Dictionary): st
 // Так владельцу не приходится гадать, почему у одной зоны свёрнуто, а у
 // соседней нет — решает длина, а не режим.
 const COLLAPSE_FROM_ROWS = 4;
+
+/**
+ * Погашенные билеты окна — те самые, что уже посчитаны в "Погашено X из Y"
+ * (см. aggregateTicketOrders): билеты заказов ЭТОГО окна со статусом
+ * "redeemed", независимо от того, когда именно их погасили. Считается из уже
+ * загруженных заказов, без отдельного запроса — список и число обязаны
+ * сходиться, а для этого им нужен один источник.
+ */
+function redeemedTicketsOf(card: DayCard) {
+  return card.ticketOrders
+    .flatMap((o) => o.tickets)
+    .filter((tk) => tk.status === "redeemed")
+    .sort((a, b) => (a.redeemedAt ?? "").localeCompare(b.redeemedAt ?? ""));
+}
 
 /**
  * Сворачиваемый блок "Итогов дня" — общий для активов, тестовых прогонов,
@@ -842,7 +861,10 @@ export default function ReadingsCalendarPage() {
               {selectedDate &&
                 cards !== null &&
                 cards.length === 0 &&
-                ((abonementSales?.items.length ?? 0) > 0 || goodsReconciliations.length > 0) && (
+                ((abonementSales?.items.length ?? 0) > 0 ||
+                  abonementSaleEvents.length > 0 ||
+                  goodsReconciliations.length > 0 ||
+                  goodsSales.length > 0) && (
                 <div className="mt-3.5 flex items-center gap-2 px-1">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
                     <FileText className="size-4.5" />
@@ -981,11 +1003,17 @@ export default function ReadingsCalendarPage() {
                   привязаны ни к одной зоне и не входят в Расчёт/Разницу
                   выше. Список планов по аналогии с активами ("Абонемент —
                   это Актив, Тариф — это стоимость абонемента"). */}
-              {selectedDate && abonementSales !== null && abonementSales.items.length > 0 && (
+              {/* Условие включает и построчные продажи: разбивка по планам
+                  строится ТОЛЬКО из операций с планом, а пополнение
+                  произвольной суммой плана не имеет вовсе — без второго
+                  слагаемого день с одними такими пополнениями не показывал бы
+                  ни карточку, ни список, хотя продажи были. */}
+              {selectedDate &&
+                ((abonementSales !== null && abonementSales.items.length > 0) || abonementSaleEvents.length > 0) && (
                 <SpringCard hover={false} className="mt-3.5 flex flex-col gap-1">
                   <p className="text-card-title">{t.readings.abonementSalesTitle}</p>
                   <div className="mt-1 flex flex-col border-t border-border tabular-nums">
-                    {abonementSales.items.map((item) => (
+                    {(abonementSales?.items ?? []).map((item) => (
                       <div
                         key={item.abonementId}
                         className="flex items-center gap-2 border-b border-border py-2 last:border-b-0"
@@ -1017,7 +1045,7 @@ export default function ReadingsCalendarPage() {
                       что уже видна в строке товара выше (запрос
                       пользователя 2026-07-19: "Наличные и безнал я добавил
                       бы в ту же строчку"). */}
-                  {abonementSales.items.length > 1 && (
+                  {abonementSales !== null && abonementSales.items.length > 1 && (
                     <div className="mt-1 flex items-center justify-between border-t border-border pt-2 text-caption-airbnb font-semibold tabular-nums">
                       <span className="text-foreground">
                         {t.operatorApp.submit.cashLabel}: <Money value={abonementSales.cash} /> ·{" "}
@@ -1077,7 +1105,11 @@ export default function ReadingsCalendarPage() {
                   сводкой (решение пользователя того же дня). НЕ зависит от
                   режима учёта зон точки (уточнение пользователя 2026-07-31) —
                   условие ниже сознательно не трогает cards/accountingMode. */}
-              {selectedDate && goodsReconciliations.length > 0 && (
+              {/* Продажи учитываются в условии наравне со сверками: сверка —
+                  отдельное событие и её за день может не быть вовсе, а
+                  продажи при этом были. Без второго слагаемого карточка
+                  пряталась целиком вместе с ними. */}
+              {selectedDate && (goodsReconciliations.length > 0 || goodsSales.length > 0) && (
                 <SpringCard hover={false} className="mt-3.5 flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
@@ -1085,12 +1117,23 @@ export default function ReadingsCalendarPage() {
                     </div>
                     <p className="text-card-title">{t.readings.goodsReconciliationsTitle}</p>
                   </div>
-                  <div className="mt-1 flex flex-col border-t border-border">
+                  <div
+                    className={cn("mt-1 flex flex-col", goodsReconciliations.length > 0 && "border-t border-border")}
+                  >
                     {goodsReconciliations.map((r) => (
                       <div key={r.id} className="flex flex-col gap-1 border-b border-border py-2 tabular-nums last:border-b-0">
-                        <div className="flex items-center justify-between text-caption-airbnb text-muted-foreground">
+                        <div className="flex items-center justify-between gap-2 text-caption-airbnb text-muted-foreground">
                           <span>{formatTime(r.occurredAt)}</span>
-                          <span>{r.performedByOwner ? t.common.ownerLabel : (r.performedBy ?? "")}</span>
+                          {/* Тот же чип, что и в строках продаж ниже: одна
+                              карточка не должна рисовать исполнителя двумя
+                              разными способами. */}
+                          <PerformedByTag
+                            name={r.performedBy}
+                            isOwner={r.performedByOwner}
+                            avatarUrl={null}
+                            iconKey={null}
+                            colorTag={r.performedByColorTag}
+                          />
                         </div>
                         <div className="flex items-center justify-between text-caption-airbnb">
                           <span className="flex items-center gap-1">
@@ -1316,7 +1359,14 @@ export default function ReadingsCalendarPage() {
                               2026-07-19 сразу следом за фиксом выручки для
                               этих же зон: "почему тут не делаешь разбивку по
                               активам?"). Count+amount вместо "было→стало" —
-                              у пусков нет непрерывного счётчика. */}
+                              у пусков нет непрерывного счётчика.
+                              Свёртка — та же и по тому же порогу, что у
+                              "Счётчиков" выше: правило по длине списка, а не
+                              по режиму учёта. */}
+                          <CollapsibleRows
+                            title={t.readings.assetsSectionTitle}
+                            count={card.accountingMode === "cash_only" ? 0 : card.liveAssets.length}
+                          >
                           {card.accountingMode !== "cash_only" &&
                             card.liveAssets.map((asset) => (
                               <div key={asset.assetId} className="mt-1.5 flex items-center gap-2">
@@ -1347,13 +1397,26 @@ export default function ReadingsCalendarPage() {
                                 </div>
                               </div>
                             ))}
+                          </CollapsibleRows>
                           {/* Поштучный список пусков — для аннулирования
                               владельцем прямо в карточке, тот же
                               компактный-строки-паттерн, что у заказов билетов
                               ниже (аудит 2026-07-25: раньше у "Прибываний"/
                               тап-"Пусков" не было вообще никакого способа
-                              исправить ошибочный/тестовый пуск). */}
+                              исправить ошибочный/тестовый пуск).
+                              Свёрнут по тому же порогу — за смену пусков
+                              бывают десятки, и именно этот список делал
+                              карточку бесконечной. Аннулирование остаётся на
+                              месте, просто в один тап дальше. */}
                           {card.liveLaunches.length > 0 && (
+                            <CollapsibleRows
+                              title={
+                                card.accountingMode === "stays"
+                                  ? t.zonesList.modeChip.stays
+                                  : t.zonesList.modeChip.launches
+                              }
+                              count={card.liveLaunches.length}
+                            >
                             <div className="mt-2 flex flex-col gap-1.5">
                               {card.liveLaunches.map((l) => (
                                 <div
@@ -1382,6 +1445,7 @@ export default function ReadingsCalendarPage() {
                                 </div>
                               ))}
                             </div>
+                            </CollapsibleRows>
                           )}
                           {card.liveLaunches.length > 0 && voidError && (
                             <p className="mt-2 text-sm text-destructive">{voidError}</p>
@@ -1390,13 +1454,20 @@ export default function ReadingsCalendarPage() {
                               заказов N · билетов M, дальше разрez по активам
                               и вариантам (одна строка на комбинацию, заказ
                               мультиактивный — не переиспользует ни assets,
-                              ни liveAssets выше). */}
+                              ни liveAssets выше).
+                              Строка "заказов N · билетов M" остаётся на виду
+                              всегда — это итог, а не элемент списка; сворачивается
+                              только разрез по активам, по общему порогу. */}
                           {card.accountingMode === "tickets" && (
                             <div className="mt-1.5 flex flex-col gap-1.5">
                               <p className="text-caption-airbnb font-semibold text-foreground">
                                 {t.tickets.ownerOrdersTitle}: {card.ticketsOrdersCount ?? 0} · {t.tickets.ticketsCountLabel}:{" "}
                                 {card.ticketsCount ?? 0}
                               </p>
+                              <CollapsibleRows
+                                title={t.readings.assetsSectionTitle}
+                                count={card.ticketAssets.length}
+                              >
                               {card.ticketAssets.map((a) => (
                                 <div
                                   key={`${a.assetId}:${a.variantName}`}
@@ -1413,6 +1484,7 @@ export default function ReadingsCalendarPage() {
                                   </span>
                                 </div>
                               ))}
+                              </CollapsibleRows>
                             </div>
                           )}
                           {/* Аннулирование заказов этого окна
@@ -1427,9 +1499,20 @@ export default function ReadingsCalendarPage() {
                               аннулирование заказа целиком, без захода внутрь.
                               Погашенные билеты не показываются вовсе, заказы,
                               где ПОГАШЕНЫ вообще все билеты, — тоже (те же
-                              причины, что раньше). */}
+                              причины, что раньше).
+                              Свёрнут по тому же порогу, что и остальные
+                              списки: правка и аннулирование остаются, просто
+                              в один тап дальше. */}
                           {card.accountingMode === "tickets" &&
                             card.ticketOrders.some((o) => o.tickets.some((tk) => tk.status !== "redeemed")) && (
+                              <CollapsibleRows
+                                title={t.tickets.ownerOrdersTitle}
+                                count={
+                                  card.ticketOrders.filter((o) =>
+                                    o.tickets.some((tk) => tk.status !== "redeemed")
+                                  ).length
+                                }
+                              >
                               <div className="mt-2 flex flex-col gap-1.5">
                                 {card.ticketOrders
                                   .filter((o) => o.tickets.some((tk) => tk.status !== "redeemed"))
@@ -1445,8 +1528,20 @@ export default function ReadingsCalendarPage() {
                                             {t.tickets.orderNumberLabel}
                                             <span className="text-primary">{o.number}</span>
                                           </p>
-                                          <p className="truncate text-xs text-muted-foreground">
-                                            {formatTime(o.soldAt)} · {o.soldByOperatorName}
+                                          {/* Продавец — тем же чипом, что и в
+                                              продажах товаров/абонементов:
+                                              одно и то же понятие не должно
+                                              выглядеть по-разному от карточки
+                                              к карточке. */}
+                                          <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+                                            {formatTime(o.soldAt)}
+                                            <PerformedByTag
+                                              name={o.soldByOperatorName}
+                                              isOwner={false}
+                                              avatarUrl={null}
+                                              iconKey={null}
+                                              colorTag={o.soldByOperatorColorTag}
+                                            />
                                           </p>
                                         </div>
                                         <Money value={o.totalSnapshot} className="shrink-0 text-caption-airbnb font-bold" />
@@ -1467,6 +1562,7 @@ export default function ReadingsCalendarPage() {
                                     );
                                   })}
                               </div>
+                              </CollapsibleRows>
                             )}
                           {card.accountingMode === "tickets" && voidError && (
                             <p className="mt-2 text-sm text-destructive">{voidError}</p>
@@ -1564,6 +1660,46 @@ export default function ReadingsCalendarPage() {
                                 {t.tickets.expiredStatusLabel.toLowerCase()}: {card.ticketsExpiredCount ?? 0}
                               </span>
                             </div>
+                          )}
+                          {/* Кто гасил — то же, чем для "Счётчиков" стал
+                              список тестовых прогонов: число выше объясняется
+                              построчно. Для "Билетов" это и есть "кто кого
+                              обслужил": продажа и использование разнесены по
+                              времени и по сотрудникам, продавца заказа тут
+                              переиспользовать нельзя.
+                              Окно то же, что у числа "Погашено X из Y" —
+                              билеты заказов ЭТОГО окна, независимо от того,
+                              когда их погасили; иначе список не сходился бы с
+                              числом над ним. */}
+                          {card.accountingMode === "tickets" && card.ticketRedemptionEnabled && (
+                            <CollapsibleRows
+                              title={t.tickets.redeemedStatusLabel}
+                              count={redeemedTicketsOf(card).length}
+                              icon={<TicketCheck className="size-3.5 shrink-0" />}
+                            >
+                              {redeemedTicketsOf(card).map((tk) => (
+                                <div
+                                  key={tk.id}
+                                  className="flex items-center justify-between gap-2 border-t border-border py-1.5 text-caption-airbnb"
+                                >
+                                  <span className="flex min-w-0 items-center gap-1.5">
+                                    <span className="tabular-nums text-muted-foreground">
+                                      {tk.redeemedAt ? formatTime(tk.redeemedAt) : "—"}
+                                    </span>
+                                    <span className="truncate text-foreground">
+                                      {tk.assetName} · {tk.variantNameSnapshot}
+                                    </span>
+                                  </span>
+                                  <PerformedByTag
+                                    name={tk.redeemedByOperatorName}
+                                    isOwner={false}
+                                    avatarUrl={null}
+                                    iconKey={null}
+                                    colorTag={tk.redeemedByOperatorColorTag}
+                                  />
+                                </div>
+                              ))}
+                            </CollapsibleRows>
                           )}
                           {card.accountingMode !== "cash_only" && (
                           <>
@@ -1825,8 +1961,15 @@ export default function ReadingsCalendarPage() {
                 {t.tickets.orderNumberLabel}
                 <span className="text-primary">{viewOrder.number}</span>
               </h2>
-              <p className="text-caption-airbnb text-muted-foreground">
-                {new Date(viewOrder.soldAt).toLocaleString(locale)} · {t.tickets.soldByLabel} {viewOrder.soldByOperatorName}
+              <p className="flex flex-wrap items-center gap-1.5 text-caption-airbnb text-muted-foreground">
+                {new Date(viewOrder.soldAt).toLocaleString(locale)} · {t.tickets.soldByLabel}
+                <PerformedByTag
+                  name={viewOrder.soldByOperatorName}
+                  isOwner={false}
+                  avatarUrl={null}
+                  iconKey={null}
+                  colorTag={viewOrder.soldByOperatorColorTag}
+                />
               </p>
             </div>
             <TicketOrderVoidList
