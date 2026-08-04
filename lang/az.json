@@ -1007,7 +1007,6 @@
     "deleteCollectionConfirm": "Bu inkassasiyanı silmək istəyirsiniz? Zona qalığı yenidən hesablanacaq. Geri qaytarıla bilməz.",
     "deleteCollectionError": "İnkassasiyanı silmək mümkün olmadı",
     "collectionAdvanceLabel": "Avans inkassasiya",
-    "zoneTakenAheadHint": "avans inkassasiya — yekunlar təhvil veriləndə bağlanacaq",
     "collectionAdvanceToastPrefix": "Avans inkassasiya kimi ayrıldı",
     "collectionAdvanceToastSuffix": "— nəticələr təqdim edildikdən sonra zona qalığında görünəcək"
   },

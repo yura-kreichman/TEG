@@ -1007,7 +1007,6 @@
     "deleteCollectionConfirm": "წავშალოთ ეს ინკასაცია? ზონის ნაშთი ხელახლა გამოითვლება. გაუქმება შეუძლებელია.",
     "deleteCollectionError": "ინკასაციის წაშლა ვერ მოხერხდა",
     "collectionAdvanceLabel": "წინასწარი ინკასაცია",
-    "zoneTakenAheadHint": "წინასწარი ინკასაცია — დაიხურება შედეგების ჩაბარებისას",
     "collectionAdvanceToastPrefix": "გამოყოფილია როგორც წინასწარი ინკასაცია",
     "collectionAdvanceToastSuffix": "— გამოჩნდება ზონის ნაშთში შედეგების ჩაბარების შემდეგ"
   },

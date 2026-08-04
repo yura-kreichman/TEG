@@ -1007,7 +1007,6 @@
     "deleteCollectionConfirm": "Delete this collection? The zone balance will be recalculated. This cannot be undone.",
     "deleteCollectionError": "Failed to delete the collection",
     "collectionAdvanceLabel": "Advance collection",
-    "zoneTakenAheadHint": "advance collection — clears when results are submitted",
     "collectionAdvanceToastPrefix": "Set aside as an advance collection",
     "collectionAdvanceToastSuffix": "— will appear in the zone balance once results are submitted"
   },

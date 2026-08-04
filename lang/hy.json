@@ -1007,7 +1007,6 @@
     "deleteCollectionConfirm": "Ջնջե՞լ այս ինկասացիան։ Գոտու մնացորդը կվերահաշվարկվի։ Հնարավոր չէ չեղարկել։",
     "deleteCollectionError": "Չհաջողվեց ջնջել ինկասացիան",
     "collectionAdvanceLabel": "Կանխավճարային հավաքագրում",
-    "zoneTakenAheadHint": "կանխավճարային հավաքագրում — կփակվի արդյունքները հանձնելիս",
     "collectionAdvanceToastPrefix": "Առանձնացվել է որպես կանխավճարային հավաքագրում",
     "collectionAdvanceToastSuffix": "— կհայտնվի գոտու մնացորդում արդյունքների հանձնումից հետո"
   },

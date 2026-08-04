@@ -1007,7 +1007,6 @@
     "deleteCollectionConfirm": "Выдаліць гэту інкасацыю? Астатак па зоне пералічыцца. Адмяніць нельга.",
     "deleteCollectionError": "Не ўдалося выдаліць інкасацыю",
     "collectionAdvanceLabel": "Авансавая інкасацыя",
-    "zoneTakenAheadHint": "авансавая інкасацыя — закрыецца пры здачы вынікаў",
     "collectionAdvanceToastPrefix": "Адкладзена як авансавая інкасацыя",
     "collectionAdvanceToastSuffix": "— з’явіцца ў рэштцы зоны пасля здачы вынікаў"
   },

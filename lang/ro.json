@@ -1007,7 +1007,6 @@
     "deleteCollectionConfirm": "Ștergi această colectare? Soldul zonei se va recalcula. Nu poate fi anulat.",
     "deleteCollectionError": "Nu s-a putut șterge colectarea",
     "collectionAdvanceLabel": "Colectare în avans",
-    "zoneTakenAheadHint": "colectare în avans — se închide la predarea totalurilor",
     "collectionAdvanceToastPrefix": "Pus deoparte ca o colectare în avans",
     "collectionAdvanceToastSuffix": "— va apărea în soldul zonei după trimiterea rezultatelor"
   },

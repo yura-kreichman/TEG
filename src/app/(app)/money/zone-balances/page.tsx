@@ -658,10 +658,17 @@ export default function ZoneBalancesPage() {
                   Минус здесь может появиться практически только от инкассации
                   вперёд: размен деньги в зону ДОБАВЛЯЕТ (всегда +), а расход
                   пишется внутри сдачи итогов, одной транзакцией с выручкой
-                  той же зоны. */}
+                  той же зоны.
+                  Подпись — РОВНО тот же t.money.collectionAdvanceLabel, что и
+                  у суммы справа и у строк реестра, без хвоста "закроется при
+                  сдаче итогов" (обратная связь пользователя 2026-08-04:
+                  "интерфейс должен быть единообразным"). Одно понятие — одно
+                  название везде; пояснять его в одном месте и не пояснять в
+                  двух других значило бы, что это три разные вещи. */}
               {currentPointTotal && currentPointTotal.total < 0 && (
-                <span className="mt-1 text-caption-airbnb text-muted-foreground">
-                  {t.money.zoneTakenAheadHint}
+                <span className="mt-1 flex items-center gap-1 text-caption-airbnb text-muted-foreground">
+                  <PiggyBank className="size-3.5 shrink-0" />
+                  {t.money.collectionAdvanceLabel}
                 </span>
               )}
             </div>

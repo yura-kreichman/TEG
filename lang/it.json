@@ -1007,7 +1007,6 @@
     "deleteCollectionConfirm": "Eliminare questo incasso? Il saldo della zona verrà ricalcolato. Non può essere annullato.",
     "deleteCollectionError": "Eliminazione dell'incasso non riuscita",
     "collectionAdvanceLabel": "Prelievo anticipato",
-    "zoneTakenAheadHint": "prelievo anticipato — si chiude alla consegna dei totali",
     "collectionAdvanceToastPrefix": "Messo da parte come prelievo anticipato",
     "collectionAdvanceToastSuffix": "— comparirà nel saldo della zona dopo l’invio dei risultati"
   },

@@ -1007,7 +1007,6 @@
     "deleteCollectionConfirm": "Ushbu inkassatsiyani oʻchirasizmi? Zona qoldigʻi qayta hisoblanadi. Bekor qilib boʻlmaydi.",
     "deleteCollectionError": "Inkassatsiyani oʻchirib bo'lmadi",
     "collectionAdvanceLabel": "Avans inkassatsiya",
-    "zoneTakenAheadHint": "avans inkassatsiya — yakun topshirilganda yopiladi",
     "collectionAdvanceToastPrefix": "Avans inkassatsiya sifatida ajratildi",
     "collectionAdvanceToastSuffix": "— natijalar topshirilgandan keyin zona qoldig‘ida paydo bo‘ladi"
   },
