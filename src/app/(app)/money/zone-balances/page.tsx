@@ -479,14 +479,14 @@ export default function ZoneBalancesPage() {
   // дораспределит его этими же строками — тогда сумма акта окажется больше
   // физически взятого на величину такого хвоста. Отдельного поля с
   // "введённой суммой" в журнале нет, восстановить её задним числом нельзя.
-  type CollectionAct = { key: string; items: CollectionEntry[]; total: number };
+  type CollectionAct = { key: string; kind: "collection" | "advance"; items: CollectionEntry[]; total: number };
   function splitIntoActs(items: CollectionEntry[]): CollectionAct[] {
     const acts: CollectionAct[] = [];
     const byKey = new Map<string, CollectionAct>();
     for (const item of items) {
       // Без actKey (самообслуживание сотрудника) — всегда собственная строка.
       if (!item.actKey) {
-        acts.push({ key: item.id, items: [item], total: item.amount });
+        acts.push({ key: item.id, kind: "collection", items: [item], total: item.amount });
         continue;
       }
       const existing = byKey.get(item.actKey);
@@ -495,11 +495,47 @@ export default function ZoneBalancesPage() {
         existing.total = Math.round((existing.total + item.amount) * 100) / 100;
         continue;
       }
-      const act: CollectionAct = { key: item.actKey, items: [item], total: item.amount };
+      const act: CollectionAct = { key: item.actKey, kind: "collection", items: [item], total: item.amount };
       byKey.set(item.actKey, act);
       acts.push(act);
     }
-    return acts;
+
+    // Второй проход — авансовая инкассация (обратная связь пользователя
+    // 2026-08-04 по скриншоту: "почему ты это не спрячешь под раскрывающийся
+    // список, как и обычная инкассация?").
+    //
+    // Забирая деньги вперёд по зонам, владелец жмёт кнопку отдельно на каждую
+    // зону, поэтому это ФОРМАЛЬНО разные акты с разными метками времени — в
+    // отличие от общей инкассации, где одна кнопка пишет все строки разом и
+    // они склеиваются по actKey. Для владельца же это один заход: "забрал
+    // сегодняшнее вперёд". Склеиваем такие одиночные строки по дню, точке и
+    // исполнителю — время каждой видно внутри раскрытого списка, так что
+    // ничего не теряется.
+    //
+    // Только одиночные: строка, уже входящая в многострочный акт, остаётся
+    // в нём (общая инкассация вперёд не уходит — там излишек режется в
+    // отдельный collection_advance, так что случай гипотетический, но правило
+    // должно быть однозначным).
+    const advanceGroups = new Map<string, CollectionAct>();
+    const result: CollectionAct[] = [];
+    for (const act of acts) {
+      const only = act.items.length === 1 ? act.items[0]! : null;
+      if (!only || !only.aheadAmount) {
+        result.push(act);
+        continue;
+      }
+      const key = `ahead|${only.occurredAt.slice(0, 10)}|${only.pointName}|${only.byOwner ? "owner" : (only.performerName ?? "?")}`;
+      const existing = advanceGroups.get(key);
+      if (existing) {
+        existing.items.push(only);
+        existing.total = Math.round((existing.total + only.amount) * 100) / 100;
+        continue;
+      }
+      const group: CollectionAct = { key, kind: "advance", items: [only], total: only.amount };
+      advanceGroups.set(key, group);
+      result.push(group);
+    }
+    return result;
   }
 
   if (checking) {
@@ -675,6 +711,13 @@ export default function ZoneBalancesPage() {
                     {/* Иконка зоны — запрос пользователя 2026-07-25: раз у
                         Абонементов/Товаров ниже есть иконка, у зон в этой же
                         плашке тоже должна быть, для единообразия. */}
+                    {/* Подписи "Авансовая инкассация — закроется при сдаче
+                        итогов" под каждым отрицательным остатком тут НЕ
+                        должно быть (обратная связь пользователя 2026-08-04,
+                        по скриншоту): сам минус уже это и означает, а три
+                        одинаковые подписи подряд занимают половину экрана и
+                        объясняют очевидное. Пояснение живёт в реестре
+                        инкассаций ниже, на строке самой операции. */}
                     <div className="min-w-0">
                       <p className="flex items-center gap-1.5 text-body-airbnb">
                         {zb.zoneIconKey ? (
@@ -684,34 +727,6 @@ export default function ZoneBalancesPage() {
                         )}
                         {zb.zoneName}
                       </p>
-                      {/* Минус по зоне сам по себе не авария: он означает, что
-                          из кассы зоны забрали больше, чем по ней проведено
-                          выручки — то есть деньги инкассировали ВПЕРЁД, до
-                          сдачи итогов. Сумма сойдётся сама, как только итоги
-                          сдадут; без подписи владелец видит голое
-                          отрицательное число и не отличает норму от недостачи.
-                          Называется той же "Авансовой инкассацией", что и
-                          излишек общей инкассации по точке (обратная связь
-                          пользователя 2026-08-04). Сначала я развёл эти два
-                          случая разными подписями, опираясь на разницу в
-                          УСТРОЙСТВЕ записи — точечная операция против минуса
-                          на зоне. Для владельца же это одно и то же действие
-                          с одним и тем же исходом: забрал вперёд, закроется
-                          итогами. Разные имена одного события — ровно то, от
-                          чего интерфейс кажется произвольным, а зона и так
-                          видна в самой строке.
-                          Именно "АВАНСОВАЯ ИНКАССАЦИЯ", не "аванс инкассации"
-                          (уточнение пользователя того же дня: "Аванс и
-                          инкассация разные вещи"): главное слово — инкассация,
-                          "авансовая" лишь её вид. Иначе строка читается как
-                          родственник ЗАРПЛАТНОГО аванса сотрудника, который
-                          живёт в этом же реестре строкой "Аванс · имя" и не
-                          имеет к инкассации никакого отношения. */}
-                      {displayBalance < 0 && (
-                        <p className="mt-0.5 pl-5.5 text-caption-airbnb text-muted-foreground">
-                          {t.money.zoneTakenAheadHint}
-                        </p>
-                      )}
                     </div>
                     <div className="flex items-center gap-3.5">
                       <span
@@ -859,10 +874,19 @@ export default function ZoneBalancesPage() {
                                 })
                               }
                             >
-                              <span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+                              <span
+                                className={cn(
+                                  "flex min-w-0 items-center gap-1 truncate text-xs",
+                                  act.kind === "advance" ? "text-warning" : "text-muted-foreground"
+                                )}
+                              >
                                 {formatTime(act.items[0]!.occurredAt)} ·
-                                <Banknote className="size-3 shrink-0" />
-                                {t.money.collectionActLabel}
+                                {act.kind === "advance" ? (
+                                  <PiggyBank className="size-3 shrink-0" />
+                                ) : (
+                                  <Banknote className="size-3 shrink-0" />
+                                )}
+                                {act.kind === "advance" ? t.money.collectionAdvanceLabel : t.money.collectionActLabel}
                                 {act.items[0]!.byOwner ? (
                                   <Crown className="size-3 shrink-0 text-success" />
                                 ) : act.items[0]!.performerName ? (
@@ -887,6 +911,13 @@ export default function ZoneBalancesPage() {
                                   <div key={c.id} className="border-t border-border py-1.5 first:border-t-0">
                                     <div className="flex items-center justify-between gap-2">
                                       <span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+                                        {/* Внутри группы аванса время нужно у
+                                            КАЖДОЙ строки: это были отдельные
+                                            нажатия в разные минуты, склеенные
+                                            только для показа. У обычного акта
+                                            наоборот — время одно на всех, оно
+                                            уже в шапке, дублировать незачем. */}
+                                        {act.kind === "advance" && <>{formatTime(c.occurredAt)} ·</>}
                                         {c.pool === "abonement" && <Gift className="size-3 shrink-0" />}
                                         {c.pool === "goods" && <ShoppingBag className="size-3 shrink-0" />}
                                         {c.pool === "advance" && <PiggyBank className="size-3 shrink-0" />}
@@ -903,7 +934,11 @@ export default function ZoneBalancesPage() {
                                         />
                                       </span>
                                     </div>
-                                    {c.aheadAmount ? (
+                                    {/* Подпись "Авансовая инкассация" внутри
+                                        группы аванса не повторяем — она уже в
+                                        шапке. Показываем только когда вперёд
+                                        взята ЧАСТЬ строки: тогда важна сумма. */}
+                                    {c.aheadAmount && (act.kind !== "advance" || c.aheadAmount < c.amount) ? (
                                       <p className="mt-0.5 text-[0.6875rem] text-warning">
                                         <PiggyBank className="mr-1 inline size-3" />
                                         {t.money.collectionAdvanceLabel}
