@@ -1005,8 +1005,7 @@
     "collectionsRegisterTitle": "Реестр инкассаций",
     "noCollections": "В этом месяце инкассаций не было",
     "collectionActLabel": "Инкассация",
-    "zoneTakenAheadHint": "взято вперёд — закроется при сдаче итогов",
-    "collectionTakenAheadLabel": "взято вперёд",
+    "zoneTakenAheadHint": "Авансовая инкассация — закроется при сдаче итогов",
     "editCollectionAction": "Изменить",
     "collectionSaveError": "Не удалось сохранить изменения",
     "deleteCollectionConfirm": "Удалить эту инкассацию? Остаток по зоне пересчитается. Отменить нельзя.",
@@ -1024,8 +1023,8 @@
     "noExpenseCategories": "Категорий пока нет",
     "newCategoryPlaceholder": "Новая категория",
     "categorySaveError": "Не удалось сохранить категорию",
-    "collectionAdvanceLabel": "Аванс инкассации",
-    "collectionAdvanceToastPrefix": "Отложено как аванс",
+    "collectionAdvanceLabel": "Авансовая инкассация",
+    "collectionAdvanceToastPrefix": "Отложено как авансовая инкассация",
     "collectionAdvanceToastSuffix": "— появится в остатке зоны после сдачи итогов"
   },
   "readings": {
@@ -1298,7 +1297,7 @@
       "noSpendZonesError": "Нет доступных зон для оплаты балансом",
       "spendOnlyNotFound": "Клиент не найден"
     },
-    "collectionAdvanceToastPrefix": "Отложено как аванс",
+    "collectionAdvanceToastPrefix": "Отложено как авансовая инкассация",
     "collectionAdvanceToastSuffix": "— появится в остатке зоны после сдачи итогов",
     "cashPointLabel": "Касса"
   },

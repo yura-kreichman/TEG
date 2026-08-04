@@ -989,8 +989,7 @@
     "collectionsRegisterTitle": "Инкассациялардын реестри",
     "noCollections": "Бул айда инкассация болгон жок",
     "collectionActLabel": "Инкассация",
-    "zoneTakenAheadHint": "алдын ала алынды — жыйынтык тапшырылганда жабылат",
-    "collectionTakenAheadLabel": "алдын ала алынды",
+    "zoneTakenAheadHint": "Аванстык инкассация — жыйынтык тапшырылганда жабылат",
     "advancesBonusesRegisterTitle": "Аванстар жана сыйлыктар",
     "noAdvancesBonuses": "Бул айда аванс жана сыйлык болгон жок",
     "difference": "Айырма",
@@ -1008,8 +1007,8 @@
     "collectionSaveError": "Өзгөртүүлөрдү сактоо мүмкүн болгон жок",
     "deleteCollectionConfirm": "Бул инкассацияны өчүрөсүзбү? Зонанын калдыгы кайра эсептелет. Жокко чыгарылбайт.",
     "deleteCollectionError": "Инкассацияны өчүрүү мүмкүн болгон жок",
-    "collectionAdvanceLabel": "Инкассация авансы",
-    "collectionAdvanceToastPrefix": "Аванс катары калтырылды",
+    "collectionAdvanceLabel": "Аванстык инкассация",
+    "collectionAdvanceToastPrefix": "Аванстык инкассация катары бөлүндү",
     "collectionAdvanceToastSuffix": "— жыйынтыктар тапшырылгандан кийин зона калдыгында пайда болот"
   },
   "readings": {
@@ -1282,7 +1281,7 @@
       "noSpendZonesError": "Баланс менен төлөө үчүн зона жок",
       "spendOnlyNotFound": "Кардар табылган жок"
     },
-    "collectionAdvanceToastPrefix": "Аванс катары калтырылды",
+    "collectionAdvanceToastPrefix": "Аванстык инкассация катары бөлүндү",
     "collectionAdvanceToastSuffix": "— жыйынтыктар тапшырылгандан кийин зона калдыгында пайда болот",
     "cashPointLabel": "Касса"
   },

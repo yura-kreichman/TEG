@@ -989,8 +989,7 @@
     "collectionsRegisterTitle": "Inkassatsiyalar reestri",
     "noCollections": "Bu oyda inkassatsiyalar boʻlmagan",
     "collectionActLabel": "Inkassatsiya",
-    "zoneTakenAheadHint": "oldindan olingan — yakun topshirilganda yopiladi",
-    "collectionTakenAheadLabel": "oldindan olingan",
+    "zoneTakenAheadHint": "Avans inkassatsiya — yakun topshirilganda yopiladi",
     "advancesBonusesRegisterTitle": "Avanslar va mukofotlar",
     "noAdvancesBonuses": "Bu oyda avans va mukofotlar boʻlmagan",
     "difference": "Farq",
@@ -1008,8 +1007,8 @@
     "collectionSaveError": "O'zgarishlarni saqlab bo'lmadi",
     "deleteCollectionConfirm": "Ushbu inkassatsiyani oʻchirasizmi? Zona qoldigʻi qayta hisoblanadi. Bekor qilib boʻlmaydi.",
     "deleteCollectionError": "Inkassatsiyani oʻchirib bo'lmadi",
-    "collectionAdvanceLabel": "Inkassatsiya avansi",
-    "collectionAdvanceToastPrefix": "Avans sifatida ajratildi",
+    "collectionAdvanceLabel": "Avans inkassatsiya",
+    "collectionAdvanceToastPrefix": "Avans inkassatsiya sifatida ajratildi",
     "collectionAdvanceToastSuffix": "— natijalar topshirilgandan keyin zona qoldig‘ida paydo bo‘ladi"
   },
   "readings": {
@@ -1282,7 +1281,7 @@
       "noSpendZonesError": "Balansdan toʻlash uchun mintaqa yoʻq",
       "spendOnlyNotFound": "Mijoz topilmadi"
     },
-    "collectionAdvanceToastPrefix": "Avans sifatida ajratildi",
+    "collectionAdvanceToastPrefix": "Avans inkassatsiya sifatida ajratildi",
     "collectionAdvanceToastSuffix": "— natijalar topshirilgandan keyin zona qoldig‘ida paydo bo‘ladi",
     "cashPointLabel": "Kassa"
   },

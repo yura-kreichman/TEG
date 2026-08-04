@@ -989,8 +989,7 @@
     "collectionsRegisterTitle": "Рэестр інкасацый",
     "noCollections": "У гэтым месяцы інкасацый не было",
     "collectionActLabel": "Інкасацыя",
-    "zoneTakenAheadHint": "узята наперад — закрыецца пры здачы вынікаў",
-    "collectionTakenAheadLabel": "узята наперад",
+    "zoneTakenAheadHint": "Авансавая інкасацыя — закрыецца пры здачы вынікаў",
     "advancesBonusesRegisterTitle": "Авансы і прэміі",
     "noAdvancesBonuses": "У гэтым месяцы авансаў і прэмій не было",
     "difference": "Розніца",
@@ -1008,8 +1007,8 @@
     "collectionSaveError": "Не ўдалося захаваць змены",
     "deleteCollectionConfirm": "Выдаліць гэту інкасацыю? Астатак па зоне пералічыцца. Адмяніць нельга.",
     "deleteCollectionError": "Не ўдалося выдаліць інкасацыю",
-    "collectionAdvanceLabel": "Аванс інкасацыі",
-    "collectionAdvanceToastPrefix": "Адкладзена як аванс",
+    "collectionAdvanceLabel": "Авансавая інкасацыя",
+    "collectionAdvanceToastPrefix": "Адкладзена як авансавая інкасацыя",
     "collectionAdvanceToastSuffix": "— з’явіцца ў рэштцы зоны пасля здачы вынікаў"
   },
   "readings": {
@@ -1282,7 +1281,7 @@
       "noSpendZonesError": "Няма даступных зон для аплаты балансам",
       "spendOnlyNotFound": "Кліента не знойдзена"
     },
-    "collectionAdvanceToastPrefix": "Адкладзена як аванс",
+    "collectionAdvanceToastPrefix": "Адкладзена як авансавая інкасацыя",
     "collectionAdvanceToastSuffix": "— з’явіцца ў рэштцы зоны пасля здачы вынікаў",
     "cashPointLabel": "Каса"
   },

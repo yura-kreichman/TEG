@@ -989,8 +989,7 @@
     "collectionsRegisterTitle": "Ինկասացիաների ռեեստր",
     "noCollections": "Այս ամիս ինկասացիաներ չեն եղել",
     "collectionActLabel": "Հավաքագրում",
-    "zoneTakenAheadHint": "վերցված է կանխավճարով — կփակվի արդյունքները հանձնելիս",
-    "collectionTakenAheadLabel": "վերցված է կանխավճարով",
+    "zoneTakenAheadHint": "Կանխավճարային հավաքագրում — կփակվի արդյունքները հանձնելիս",
     "advancesBonusesRegisterTitle": "Կանխավճարներ և պարգևատրումներ",
     "noAdvancesBonuses": "Այս ամիս կանխավճարներ և պարգևատրումներ չեն եղել",
     "difference": "Տարբերություն",
@@ -1008,8 +1007,8 @@
     "collectionSaveError": "Չհաջողվեց պահպանել փոփոխությունները",
     "deleteCollectionConfirm": "Ջնջե՞լ այս ինկասացիան։ Գոտու մնացորդը կվերահաշվարկվի։ Հնարավոր չէ չեղարկել։",
     "deleteCollectionError": "Չհաջողվեց ջնջել ինկասացիան",
-    "collectionAdvanceLabel": "Ինկասացիայի կանխավճար",
-    "collectionAdvanceToastPrefix": "Հետաձգվել է որպես կանխավճար",
+    "collectionAdvanceLabel": "Կանխավճարային հավաքագրում",
+    "collectionAdvanceToastPrefix": "Առանձնացվել է որպես կանխավճարային հավաքագրում",
     "collectionAdvanceToastSuffix": "— կհայտնվի գոտու մնացորդում արդյունքների հանձնումից հետո"
   },
   "readings": {
@@ -1282,7 +1281,7 @@
       "noSpendZonesError": "Հաշվեկշռով վճարման համար հասանելի գոտի չկա",
       "spendOnlyNotFound": "Հաճախորդը չի գտնվել"
     },
-    "collectionAdvanceToastPrefix": "Հետաձգվել է որպես կանխավճար",
+    "collectionAdvanceToastPrefix": "Առանձնացվել է որպես կանխավճարային հավաքագրում",
     "collectionAdvanceToastSuffix": "— կհայտնվի գոտու մնացորդում արդյունքների հանձնումից հետո",
     "cashPointLabel": "Դրամարկղ"
   },

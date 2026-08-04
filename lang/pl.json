@@ -989,8 +989,7 @@
     "collectionsRegisterTitle": "Rejestr inkas",
     "noCollections": "W tym miesiącu nie było inkas",
     "collectionActLabel": "Inkaso",
-    "zoneTakenAheadHint": "pobrane z góry — rozliczy się po przekazaniu wyników",
-    "collectionTakenAheadLabel": "pobrane z góry",
+    "zoneTakenAheadHint": "Inkaso zaliczkowe — rozliczy się po przekazaniu wyników",
     "advancesBonusesRegisterTitle": "Zaliczki i premie",
     "noAdvancesBonuses": "W tym miesiącu nie było zaliczek ani premii",
     "difference": "Różnica",
@@ -1008,8 +1007,8 @@
     "collectionSaveError": "Nie udało się zapisać zmian",
     "deleteCollectionConfirm": "Usunąć tę inkasację? Saldo strefy zostanie przeliczone. Nie można cofnąć.",
     "deleteCollectionError": "Nie udało się usunąć inkasacji",
-    "collectionAdvanceLabel": "Zaliczka inkasa",
-    "collectionAdvanceToastPrefix": "Odłożone jako zaliczka",
+    "collectionAdvanceLabel": "Inkaso zaliczkowe",
+    "collectionAdvanceToastPrefix": "Odłożone jako inkaso zaliczkowe",
     "collectionAdvanceToastSuffix": "— pojawi się w saldzie strefy po przesłaniu wyników"
   },
   "readings": {
@@ -1282,7 +1281,7 @@
       "noSpendZonesError": "Brak dostępnych stref do płatności z salda",
       "spendOnlyNotFound": "Nie znaleziono klienta"
     },
-    "collectionAdvanceToastPrefix": "Odłożone jako zaliczka",
+    "collectionAdvanceToastPrefix": "Odłożone jako inkaso zaliczkowe",
     "collectionAdvanceToastSuffix": "— pojawi się w saldzie strefy po przesłaniu wyników",
     "cashPointLabel": "Kasa"
   },

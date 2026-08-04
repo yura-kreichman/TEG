@@ -989,8 +989,7 @@
     "collectionsRegisterTitle": "Tahsilat kayıtları",
     "noCollections": "Bu ay tahsilat yapılmadı",
     "collectionActLabel": "Tahsilat",
-    "zoneTakenAheadHint": "peşin alındı — sonuçlar teslim edilince kapanır",
-    "collectionTakenAheadLabel": "peşin alındı",
+    "zoneTakenAheadHint": "Avans tahsilat — sonuçlar teslim edilince kapanır",
     "advancesBonusesRegisterTitle": "Avanslar ve primler",
     "noAdvancesBonuses": "Bu ay avans veya prim verilmedi",
     "difference": "Fark",
@@ -1008,8 +1007,8 @@
     "collectionSaveError": "Değişiklikler kaydedilemedi",
     "deleteCollectionConfirm": "Bu tahsilat silinsin mi? Bölge bakiyesi yeniden hesaplanacak. Geri alınamaz.",
     "deleteCollectionError": "Tahsilat silinemedi",
-    "collectionAdvanceLabel": "Tahsilat avansı",
-    "collectionAdvanceToastPrefix": "Avans olarak ayrıldı",
+    "collectionAdvanceLabel": "Avans tahsilat",
+    "collectionAdvanceToastPrefix": "Avans tahsilat olarak ayrıldı",
     "collectionAdvanceToastSuffix": "— sonuçlar teslim edildikten sonra bölge bakiyesinde görünecek"
   },
   "readings": {
@@ -1282,7 +1281,7 @@
       "noSpendZonesError": "Bakiyeyle ödeme için uygun bölge yok",
       "spendOnlyNotFound": "Müşteri bulunamadı"
     },
-    "collectionAdvanceToastPrefix": "Avans olarak ayrıldı",
+    "collectionAdvanceToastPrefix": "Avans tahsilat olarak ayrıldı",
     "collectionAdvanceToastSuffix": "— sonuçlar teslim edildikten sonra bölge bakiyesinde görünecek",
     "cashPointLabel": "Kasa"
   },

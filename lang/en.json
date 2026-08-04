@@ -989,8 +989,7 @@
     "collectionsRegisterTitle": "Collections register",
     "noCollections": "No collections this month",
     "collectionActLabel": "Collection",
-    "zoneTakenAheadHint": "taken in advance — clears when results are submitted",
-    "collectionTakenAheadLabel": "taken in advance",
+    "zoneTakenAheadHint": "Advance collection — clears when results are submitted",
     "advancesBonusesRegisterTitle": "Advances and bonuses",
     "noAdvancesBonuses": "No advances or bonuses this month",
     "difference": "Difference",
@@ -1008,8 +1007,8 @@
     "collectionSaveError": "Failed to save changes",
     "deleteCollectionConfirm": "Delete this collection? The zone balance will be recalculated. This cannot be undone.",
     "deleteCollectionError": "Failed to delete the collection",
-    "collectionAdvanceLabel": "Collection advance",
-    "collectionAdvanceToastPrefix": "Set aside as an advance",
+    "collectionAdvanceLabel": "Advance collection",
+    "collectionAdvanceToastPrefix": "Set aside as an advance collection",
     "collectionAdvanceToastSuffix": "— will appear in the zone balance once results are submitted"
   },
   "readings": {
@@ -1282,7 +1281,7 @@
       "noSpendZonesError": "No zones available for balance payment",
       "spendOnlyNotFound": "Client not found"
     },
-    "collectionAdvanceToastPrefix": "Set aside as an advance",
+    "collectionAdvanceToastPrefix": "Set aside as an advance collection",
     "collectionAdvanceToastSuffix": "— will appear in the zone balance once results are submitted",
     "cashPointLabel": "Register"
   },

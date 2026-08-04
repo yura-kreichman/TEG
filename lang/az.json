@@ -989,8 +989,7 @@
     "collectionsRegisterTitle": "İnkassasiyalar reyestri",
     "noCollections": "Bu ay inkassasiya olmayıb",
     "collectionActLabel": "İnkassasiya",
-    "zoneTakenAheadHint": "əvvəlcədən götürülüb — yekunlar təhvil veriləndə bağlanacaq",
-    "collectionTakenAheadLabel": "əvvəlcədən götürülüb",
+    "zoneTakenAheadHint": "Avans inkassasiya — yekunlar təhvil veriləndə bağlanacaq",
     "advancesBonusesRegisterTitle": "Avanslar və mükafatlar",
     "noAdvancesBonuses": "Bu ay avans və mükafat olmayıb",
     "difference": "Fərq",
@@ -1008,8 +1007,8 @@
     "collectionSaveError": "Dəyişikliklər saxlanıla bilmədi",
     "deleteCollectionConfirm": "Bu inkassasiyanı silmək istəyirsiniz? Zona qalığı yenidən hesablanacaq. Geri qaytarıla bilməz.",
     "deleteCollectionError": "İnkassasiyanı silmək mümkün olmadı",
-    "collectionAdvanceLabel": "İnkassasiya avansı",
-    "collectionAdvanceToastPrefix": "Avans kimi ayrıldı",
+    "collectionAdvanceLabel": "Avans inkassasiya",
+    "collectionAdvanceToastPrefix": "Avans inkassasiya kimi ayrıldı",
     "collectionAdvanceToastSuffix": "— nəticələr təqdim edildikdən sonra zona qalığında görünəcək"
   },
   "readings": {
@@ -1282,7 +1281,7 @@
       "noSpendZonesError": "Balansla ödəniş üçün əlçatan zona yoxdur",
       "spendOnlyNotFound": "Müştəri tapılmadı"
     },
-    "collectionAdvanceToastPrefix": "Avans kimi ayrıldı",
+    "collectionAdvanceToastPrefix": "Avans inkassasiya kimi ayrıldı",
     "collectionAdvanceToastSuffix": "— nəticələr təqdim edildikdən sonra zona qalığında görünəcək",
     "cashPointLabel": "Kassa"
   },

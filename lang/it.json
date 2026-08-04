@@ -989,8 +989,7 @@
     "collectionsRegisterTitle": "Registro incassi",
     "noCollections": "Nessun incasso questo mese",
     "collectionActLabel": "Prelievo",
-    "zoneTakenAheadHint": "prelevato in anticipo — si chiude alla consegna dei totali",
-    "collectionTakenAheadLabel": "prelevato in anticipo",
+    "zoneTakenAheadHint": "Prelievo anticipato — si chiude alla consegna dei totali",
     "advancesBonusesRegisterTitle": "Anticipi e bonus",
     "noAdvancesBonuses": "Nessun anticipo o bonus questo mese",
     "difference": "Differenza",
@@ -1008,8 +1007,8 @@
     "collectionSaveError": "Salvataggio delle modifiche non riuscito",
     "deleteCollectionConfirm": "Eliminare questo incasso? Il saldo della zona verrà ricalcolato. Non può essere annullato.",
     "deleteCollectionError": "Eliminazione dell'incasso non riuscita",
-    "collectionAdvanceLabel": "Anticipo incasso",
-    "collectionAdvanceToastPrefix": "Accantonato come anticipo",
+    "collectionAdvanceLabel": "Prelievo anticipato",
+    "collectionAdvanceToastPrefix": "Messo da parte come prelievo anticipato",
     "collectionAdvanceToastSuffix": "— comparirà nel saldo della zona dopo l’invio dei risultati"
   },
   "readings": {
@@ -1282,7 +1281,7 @@
       "noSpendZonesError": "Nessuna zona disponibile per il pagamento dal saldo",
       "spendOnlyNotFound": "Cliente non trovato"
     },
-    "collectionAdvanceToastPrefix": "Accantonato come anticipo",
+    "collectionAdvanceToastPrefix": "Messo da parte come prelievo anticipato",
     "collectionAdvanceToastSuffix": "— comparirà nel saldo della zona dopo l’invio dei risultati",
     "cashPointLabel": "Cassa"
   },

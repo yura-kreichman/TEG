@@ -989,8 +989,7 @@
     "collectionsRegisterTitle": "ინკასაციების რეესტრი",
     "noCollections": "ამ თვეში ინკასაციები არ ყოფილა",
     "collectionActLabel": "ინკასაცია",
-    "zoneTakenAheadHint": "აღებულია წინასწარ — დაიხურება შედეგების ჩაბარებისას",
-    "collectionTakenAheadLabel": "აღებულია წინასწარ",
+    "zoneTakenAheadHint": "წინასწარი ინკასაცია — დაიხურება შედეგების ჩაბარებისას",
     "advancesBonusesRegisterTitle": "ავანსები და პრემიები",
     "noAdvancesBonuses": "ამ თვეში ავანსები და პრემიები არ ყოფილა",
     "difference": "სხვაობა",
@@ -1008,8 +1007,8 @@
     "collectionSaveError": "ცვლილებების შენახვა ვერ მოხერხდა",
     "deleteCollectionConfirm": "წავშალოთ ეს ინკასაცია? ზონის ნაშთი ხელახლა გამოითვლება. გაუქმება შეუძლებელია.",
     "deleteCollectionError": "ინკასაციის წაშლა ვერ მოხერხდა",
-    "collectionAdvanceLabel": "ინკასაციის ავანსი",
-    "collectionAdvanceToastPrefix": "გადადებულია ავანსად",
+    "collectionAdvanceLabel": "წინასწარი ინკასაცია",
+    "collectionAdvanceToastPrefix": "გამოყოფილია როგორც წინასწარი ინკასაცია",
     "collectionAdvanceToastSuffix": "— გამოჩნდება ზონის ნაშთში შედეგების ჩაბარების შემდეგ"
   },
   "readings": {
@@ -1282,7 +1281,7 @@
       "noSpendZonesError": "ბალანსით გადახდისთვის ხელმისაწვდომი ზონა არ არის",
       "spendOnlyNotFound": "კლიენტი ვერ მოიძებნა"
     },
-    "collectionAdvanceToastPrefix": "გადადებულია ავანსად",
+    "collectionAdvanceToastPrefix": "გამოყოფილია როგორც წინასწარი ინკასაცია",
     "collectionAdvanceToastSuffix": "— გამოჩნდება ზონის ნაშთში შედეგების ჩაბარების შემდეგ",
     "cashPointLabel": "სალარო"
   },

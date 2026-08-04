@@ -989,8 +989,7 @@
     "collectionsRegisterTitle": "Registru de încasări",
     "noCollections": "Nicio încasare în această lună",
     "collectionActLabel": "Colectare",
-    "zoneTakenAheadHint": "luat în avans — se închide la predarea totalurilor",
-    "collectionTakenAheadLabel": "luat în avans",
+    "zoneTakenAheadHint": "Colectare în avans — se închide la predarea totalurilor",
     "advancesBonusesRegisterTitle": "Avansuri și prime",
     "noAdvancesBonuses": "Niciun avans sau primă în această lună",
     "difference": "Diferență",
@@ -1008,8 +1007,8 @@
     "collectionSaveError": "Nu s-au putut salva modificările",
     "deleteCollectionConfirm": "Ștergi această colectare? Soldul zonei se va recalcula. Nu poate fi anulat.",
     "deleteCollectionError": "Nu s-a putut șterge colectarea",
-    "collectionAdvanceLabel": "Avans de colectare",
-    "collectionAdvanceToastPrefix": "Pus deoparte ca avans",
+    "collectionAdvanceLabel": "Colectare în avans",
+    "collectionAdvanceToastPrefix": "Pus deoparte ca o colectare în avans",
     "collectionAdvanceToastSuffix": "— va apărea în soldul zonei după trimiterea rezultatelor"
   },
   "readings": {
@@ -1282,7 +1281,7 @@
       "noSpendZonesError": "Nu există zone disponibile pentru plata din sold",
       "spendOnlyNotFound": "Clientul nu a fost găsit"
     },
-    "collectionAdvanceToastPrefix": "Pus deoparte ca avans",
+    "collectionAdvanceToastPrefix": "Pus deoparte ca o colectare în avans",
     "collectionAdvanceToastSuffix": "— va apărea în soldul zonei după trimiterea rezultatelor",
     "cashPointLabel": "Casă"
   },
