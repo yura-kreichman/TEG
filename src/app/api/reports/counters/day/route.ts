@@ -704,6 +704,8 @@ export async function GET(request: Request) {
         mobileAmount: Number(zs.mobileAmount),
         abonementAmount,
         returnsCount: zs.returnsCount,
+        // Построчная история к счётчику выше (см. returnEventsBySubmission).
+        returnEvents: returnEventsBySubmission.get(zs.id) ?? [],
         calculatedRevenue,
         netRevenue,
         difference,

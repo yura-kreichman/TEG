@@ -78,7 +78,10 @@ interface DayCard {
   returnsCount: number;
   // Отдельные события тестовых прогонов, из которых сложился returnsCount
   // выше (см. returnEventsBySubmission в /api/reports/counters/day).
-  returnEvents: {
+  // Необязательное намеренно: тип описывает разобранный JSON, а не гарантию
+  // сервера — карточка из прошлой версии API (кеш браузера, недокатившийся
+  // деплой) не должна ронять весь экран, как это случилось 2026-08-04.
+  returnEvents?: {
     occurredAt: string;
     performedBy: string | null;
     performedByOwner: boolean;
@@ -1527,10 +1530,10 @@ export default function ReadingsCalendarPage() {
                           {returnsApplicable(card) && (
                             <CollapsibleRows
                               title={t.readings.testRunsSectionTitle}
-                              count={card.returnEvents.length}
+                              count={(card.returnEvents ?? []).length}
                               icon={<RefreshCcw className="size-3.5 shrink-0" />}
                             >
-                              {card.returnEvents.map((e, i) => (
+                              {(card.returnEvents ?? []).map((e, i) => (
                                 <div
                                   key={`${e.occurredAt}-${i}`}
                                   className="flex items-center justify-between gap-2 border-t border-border py-1.5 text-caption-airbnb"
