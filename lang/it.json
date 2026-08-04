@@ -1531,6 +1531,7 @@
     "differenceCompact": "Diff.",
     "calculated": "Incasso calcolato",
     "calculatedCompact": "Lett.",
+    "paidCompact": "Pagato",
     "cashOnly": "Cassa",
     "forcedIncompleteCompact": "Forzato — i dati potrebbero non essere completi",
     "forcedIncompleteFull": "Inviato forzatamente al limite del giorno — i dati potrebbero non essere completi.",

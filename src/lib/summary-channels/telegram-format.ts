@@ -192,6 +192,14 @@ function zoneHeader(data: ZoneSummaryData, showOperator: boolean, timezone: stri
 // раньше здесь стоял тот же ключ, что и у режима Пусков, и сводка называла
 // режим чужим словом — при том, что в настройках зоны, в спеке и в CLAUDE.md
 // он везде "Прибывания".
+// Записан ли способ оплаты у КАЖДОЙ операции зоны. У Прибываний/Пусков он
+// лежит в самом пуске (Launch.paymentMethod), у Билетов — в заказе. У
+// "Счётчиков"/"Только касса" такого нет: выручка берётся с показаний счётчика
+// за день, а нал/безнал сотрудник объявляет общими суммами при сдаче итогов.
+function hasPerOperationPaymentMethod(data: ZoneSummaryData): boolean {
+  return data.isGameRoom || data.accountingMode === "launches" || data.accountingMode === "tickets";
+}
+
 function formatGameRoomLine(data: ZoneSummaryData, st: SummaryText): string {
   const count = data.gameRoomLaunchCount ?? 0;
   const minutes = data.gameRoomTotalMinutes ?? 0;
@@ -302,24 +310,79 @@ export function formatZoneSummaryTelegram(
         // разница должна быть -370", но показанная compact-строка сравнивала
         // только cashAmount, без mobileAmount — расхождение было в отображении,
         // не в расчёте разницы (та всегда считалась правильно).
-        const actualCash = data.cashAmount + data.mobileAmount;
+        // Каждый способ оплаты — своей строкой, ниже их сумма "Оплачено"
+        // рядом со счётом (решение пользователя 2026-08-04 из трёх показанных
+        // раскладок). Раньше нал и безнал были слиты в одну "Кассу", а баланс
+        // висел отдельной строкой ниже — и сравнить с "Счёт." глазами было
+        // нечего: 184 против 326 не сходились, потому что 142 стояли не там.
+        //
+        // Слово "Касса" тут больше не используется СОЗНАТЕЛЬНО: оно означает
+        // физические деньги в ящике, а сумма, равная счёту, включает баланс
+        // абонемента — деньги, полученные раньше, при пополнении. Назвать её
+        // "Кассой" значило бы сломать сверку наличных.
+        const paidTotal = data.cashAmount + data.mobileAmount + data.abonementAmount;
         // HTML-сущности, не голые "<"/">" (реальный сбой отправки, найден
         // 2026-07-18 по продовым логам: "Bad Request: can't parse entities" —
         // Telegram с parse_mode="HTML" воспринимает голый "<" как начало
         // тега и роняет отправку целиком, зона не приходит вообще).
-        const cmp = actualCash < data.calculatedRevenue ? "&lt;" : actualCash > data.calculatedRevenue ? "&gt;" : "=";
+        // Знак берётся из УЖЕ ПОСЧИТАННОЙ разницы, а не из сравнения двух
+        // чисел этой строки (обратная связь пользователя 2026-08-04, скриншот
+        // Халабуды: "Касса: 184 < Счёт.: 326" при "Разн.: 0" — карточка
+        // противоречила сама себе). 142 из этих 326 клиенты заплатили
+        // балансом абонемента, недостачи не было; difference это знает, а
+        // сравнение cashAmount+mobileAmount с calculatedRevenue — нет.
+        //
+        // Третий заход на одни и те же грабли в этой строке: сперва тут
+        // забыли mobileAmount (2026-07-12), потом ту же слепоту к абонементу
+        // чинили в самом расчёте разницы (2026-07-18) — и знак остался
+        // последним местом, куда фикс не дошёл. Привязка к difference
+        // закрывает класс целиком: что бы ни появилось новым способом оплаты
+        // дальше, знак и строка "Разн." физически не смогут разойтись.
+        const cmp = data.difference < 0 ? "&lt;" : data.difference > 0 ? "&gt;" : "=";
+        // Разбивка по способам оплаты — только там, где способ известен ПО
+        // КАЖДОЙ операции: у Прибываний/Пусков он записан в самом пуске
+        // (Launch.paymentMethod), у Билетов — в заказе. В "Счётчиках" его
+        // нет: выручка считается по показаниям счётчика за день, а нал и
+        // безнал сотрудник объявляет общими суммами в конце смены —
+        // раскладывать их построчно значило бы выдавать объявленный итог за
+        // точную разбивку платежей (уточнение пользователя 2026-08-04: "в
+        // Счётчиках мы не знаем какой метод оплаты"). Баланс там при этом
+        // возможен (оплату балансом распространили на Счётчики 2026-07-20) и
+        // показывается своей строкой ниже, как и раньше.
+        const perMethodKnown = hasPerOperationPaymentMethod(data);
+
+        if (settings.showCash && perMethodKnown) {
+          // Только ненулевые — строка "Безнал: 0" в зоне, где безналом не
+          // платили, ничего не сообщает (тот же принцип, что у строки
+          // "Баланс" с 2026-07-17).
+          if (data.cashAmount > 0) parts.push(`💵 ${st.cashCompact}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
+          if (data.mobileAmount > 0) parts.push(`💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`);
+          if (data.abonementAmount > 0) {
+            parts.push(`🎫 ${st.abonementCompact}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
+          }
+        }
+
         const bits: string[] = [];
-        if (settings.showCash) bits.push(`💵 ${st.cashOnly}: <b>${formatMoney(actualCash, locale)}</b>`);
+        if (settings.showCash) {
+          // "Оплачено" (нал+безнал+баланс) — только у режимов с известным
+          // способом оплаты; в остальных остаётся прежняя "Касса" (нал+безнал),
+          // потому что баланс туда сознательно не входит: эти деньги касса
+          // получила раньше, при пополнении абонемента.
+          bits.push(
+            perMethodKnown
+              ? `💰 ${st.paidCompact}: <b>${formatMoney(paidTotal, locale)}</b>`
+              : `💵 ${st.cashOnly}: <b>${formatMoney(data.cashAmount + data.mobileAmount, locale)}</b>`
+          );
+        }
         if (settings.showCash && settings.showCalc) bits.push(cmp);
         if (settings.showCalc) bits.push(`🔢 ${st.calculatedCompact}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
         parts.push(bits.join("  "));
       }
-      // Справочно, НЕ в кассу выше (уже получена раньше, при пополнении
-      // абонемента, не сейчас) — условно, как остальные строки "Прибываний"/
-      // "Пусков", не захламляет сводки зон, где абонементом не пользовались
-      // (запрос пользователя 2026-07-17: "во всех отчётах и сводках должны
-      // быть правильные цифры", "добавить Абонемент").
-      if (settings.showCash && data.abonementAmount > 0) {
+      // Баланс отдельной строкой у режимов БЕЗ пооперационного способа оплаты
+      // (у остальных он уже показан выше, среди способов) — справочно, не в
+      // "Кассу": она получила эти деньги раньше, при пополнении абонемента
+      // (запрос пользователя 2026-07-17).
+      if (settings.showCash && !hasPerOperationPaymentMethod(data) && data.abonementAmount > 0) {
         parts.push(`🎫 ${st.abonementCompact}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
       }
       // Возвраты — понятие только "Счётчиков" (docs/spec/10-tickets.md: у

@@ -1547,6 +1547,7 @@
     "differenceCompact": "Разн.",
     "calculated": "Расчётная выручка",
     "calculatedCompact": "Счёт.",
+    "paidCompact": "Оплачено",
     "cashOnly": "Касса",
     "forcedIncompleteCompact": "Принудительно — не все данные могли поступить",
     "forcedIncompleteFull": "Отправлено принудительно по границе дня — не все данные могли поступить.",

@@ -1531,6 +1531,7 @@
     "differenceCompact": "Різн.",
     "calculated": "Розрахункова виручка",
     "calculatedCompact": "Показ.",
+    "paidCompact": "Сплачено",
     "cashOnly": "Каса",
     "forcedIncompleteCompact": "Примусово — не всі дані могли надійти",
     "forcedIncompleteFull": "Надіслано примусово на межі дня — не всі дані могли надійти.",
