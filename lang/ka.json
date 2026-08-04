@@ -989,6 +989,8 @@
     "collectionsRegisterTitle": "ინკასაციების რეესტრი",
     "noCollections": "ამ თვეში ინკასაციები არ ყოფილა",
     "collectionActLabel": "ინკასაცია",
+    "zoneTakenAheadHint": "აღებულია წინასწარ — დაიხურება შედეგების ჩაბარებისას",
+    "collectionTakenAheadLabel": "აღებულია წინასწარ",
     "advancesBonusesRegisterTitle": "ავანსები და პრემიები",
     "noAdvancesBonuses": "ამ თვეში ავანსები და პრემიები არ ყოფილა",
     "difference": "სხვაობა",

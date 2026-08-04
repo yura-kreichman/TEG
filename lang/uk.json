@@ -989,6 +989,8 @@
     "collectionsRegisterTitle": "Реєстр інкасацій",
     "noCollections": "Цього місяця інкасацій не було",
     "collectionActLabel": "Інкасація",
+    "zoneTakenAheadHint": "взято наперед — закриється при здачі підсумків",
+    "collectionTakenAheadLabel": "взято наперед",
     "advancesBonusesRegisterTitle": "Аванси і премії",
     "noAdvancesBonuses": "Цього місяця авансів і премій не було",
     "difference": "Різниця",

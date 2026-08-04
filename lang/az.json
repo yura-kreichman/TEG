@@ -989,6 +989,8 @@
     "collectionsRegisterTitle": "İnkassasiyalar reyestri",
     "noCollections": "Bu ay inkassasiya olmayıb",
     "collectionActLabel": "İnkassasiya",
+    "zoneTakenAheadHint": "əvvəlcədən götürülüb — yekunlar təhvil veriləndə bağlanacaq",
+    "collectionTakenAheadLabel": "əvvəlcədən götürülüb",
     "advancesBonusesRegisterTitle": "Avanslar və mükafatlar",
     "noAdvancesBonuses": "Bu ay avans və mükafat olmayıb",
     "difference": "Fərq",

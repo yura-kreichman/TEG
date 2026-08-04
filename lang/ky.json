@@ -989,6 +989,8 @@
     "collectionsRegisterTitle": "Инкассациялардын реестри",
     "noCollections": "Бул айда инкассация болгон жок",
     "collectionActLabel": "Инкассация",
+    "zoneTakenAheadHint": "алдын ала алынды — жыйынтык тапшырылганда жабылат",
+    "collectionTakenAheadLabel": "алдын ала алынды",
     "advancesBonusesRegisterTitle": "Аванстар жана сыйлыктар",
     "noAdvancesBonuses": "Бул айда аванс жана сыйлык болгон жок",
     "difference": "Айырма",

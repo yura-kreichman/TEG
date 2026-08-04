@@ -989,6 +989,8 @@
     "collectionsRegisterTitle": "Феҳристи инкассатсияҳо",
     "noCollections": "Дар ин моҳ инкассатсия набудааст",
     "collectionActLabel": "Инкассатсия",
+    "zoneTakenAheadHint": "пешакӣ гирифта шуд — ҳангоми супоридани ҷамъбаст пӯшида мешавад",
+    "collectionTakenAheadLabel": "пешакӣ гирифта шуд",
     "advancesBonusesRegisterTitle": "Пешпардохтҳо ва мукофотҳо",
     "noAdvancesBonuses": "Дар ин моҳ пешпардохт ва мукофот набудааст",
     "difference": "Фарқ",

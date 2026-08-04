@@ -1005,6 +1005,8 @@
     "collectionsRegisterTitle": "Реестр инкассаций",
     "noCollections": "В этом месяце инкассаций не было",
     "collectionActLabel": "Инкассация",
+    "zoneTakenAheadHint": "взято вперёд — закроется при сдаче итогов",
+    "collectionTakenAheadLabel": "взято вперёд",
     "editCollectionAction": "Изменить",
     "collectionSaveError": "Не удалось сохранить изменения",
     "deleteCollectionConfirm": "Удалить эту инкассацию? Остаток по зоне пересчитается. Отменить нельзя.",

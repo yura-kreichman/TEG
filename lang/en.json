@@ -989,6 +989,8 @@
     "collectionsRegisterTitle": "Collections register",
     "noCollections": "No collections this month",
     "collectionActLabel": "Collection",
+    "zoneTakenAheadHint": "taken in advance — clears when results are submitted",
+    "collectionTakenAheadLabel": "taken in advance",
     "advancesBonusesRegisterTitle": "Advances and bonuses",
     "noAdvancesBonuses": "No advances or bonuses this month",
     "difference": "Difference",

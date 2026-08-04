@@ -989,6 +989,8 @@
     "collectionsRegisterTitle": "Inkassatsiyalar reestri",
     "noCollections": "Bu oyda inkassatsiyalar boʻlmagan",
     "collectionActLabel": "Inkassatsiya",
+    "zoneTakenAheadHint": "oldindan olingan — yakun topshirilganda yopiladi",
+    "collectionTakenAheadLabel": "oldindan olingan",
     "advancesBonusesRegisterTitle": "Avanslar va mukofotlar",
     "noAdvancesBonuses": "Bu oyda avans va mukofotlar boʻlmagan",
     "difference": "Farq",

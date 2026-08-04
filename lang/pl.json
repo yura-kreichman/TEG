@@ -989,6 +989,8 @@
     "collectionsRegisterTitle": "Rejestr inkas",
     "noCollections": "W tym miesiącu nie było inkas",
     "collectionActLabel": "Inkaso",
+    "zoneTakenAheadHint": "pobrane z góry — rozliczy się po przekazaniu wyników",
+    "collectionTakenAheadLabel": "pobrane z góry",
     "advancesBonusesRegisterTitle": "Zaliczki i premie",
     "noAdvancesBonuses": "W tym miesiącu nie było zaliczek ani premii",
     "difference": "Różnica",

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { dayBoundsUtc } from "@/lib/business-day";
+import { affectsCashOnHand } from "@/lib/zone-balance";
 
 // Реестр инкассаций за месяц для компактного списка на странице «Остатки и
 // инкассации» — замена календарю "Выручка по дням". pointId (запрос
@@ -120,6 +121,52 @@ export async function GET(request: Request) {
     }),
   ]);
 
+  // Какая часть зонной инкассации была взята ВПЕРЁД — сверх того, что по
+  // зоне на тот момент проведено выручкой (обратная связь пользователя
+  // 2026-08-04). Инкассация ПО ЗОНЕ, в отличие от общей по точке, не режет
+  // сумму на "зонную часть + Аванс инкассации": владелец сам назвал зону,
+  // атрибуция настоящая, и уводить её в точечный аванс значило бы потерять
+  // адрес денег. Но и молчать нельзя — иначе на "Остатках по зонам" остаётся
+  // голый минус, неотличимый от недостачи.
+  //
+  // Считаем воспроизведением журнала: берём остаток зоны на начало месяца и
+  // идём по её операциям вперёд. Строка, уводящая текущий остаток ниже нуля,
+  // взята вперёд ровно на величину этого перелёта. Так помечаются и старые
+  // записи — отдельного поля в схеме для этого не нужно.
+  const zoneIds = [...new Set(zoneOps.map((op) => op.zoneId).filter((z): z is string => z !== null))];
+  const aheadByOpId = new Map<string, number>();
+  if (zoneIds.length > 0) {
+    const [openingOps, monthOps] = await Promise.all([
+      prisma.moneyOperation.findMany({
+        where: { zoneId: { in: zoneIds }, occurredAt: { lt: monthStart } },
+        select: { zoneId: true, amount: true, type: true },
+      }),
+      prisma.moneyOperation.findMany({
+        where: { zoneId: { in: zoneIds }, occurredAt: { gte: monthStart, lt: monthEnd } },
+        select: { id: true, zoneId: true, amount: true, type: true, occurredAt: true },
+        orderBy: { occurredAt: "asc" },
+      }),
+    ]);
+
+    const balance = new Map<string, number>();
+    for (const op of openingOps) {
+      if (!affectsCashOnHand(op.type)) continue;
+      balance.set(op.zoneId!, (balance.get(op.zoneId!) ?? 0) + Number(op.amount));
+    }
+    for (const op of monthOps) {
+      if (!affectsCashOnHand(op.type)) continue;
+      const before = balance.get(op.zoneId!) ?? 0;
+      const after = Math.round((before + Number(op.amount)) * 100) / 100;
+      balance.set(op.zoneId!, after);
+      // Интересуют только инкассации и только перелёт ниже нуля: часть,
+      // ушедшая в уже существовавший минус, вперёд не бралась — она уже
+      // была помечена той строкой, что этот минус создала.
+      if (op.type === "collection" && after < 0) {
+        aheadByOpId.set(op.id, Math.round((Math.min(0, before) - after) * 100) / 100);
+      }
+    }
+  }
+
   // Кто физически забрал деньги (обратная связь пользователя 2026-08-02:
   // "когда Владелец забирает инкассацию, нигде не видно что он забрал").
   // Данные лежали в каждой строке с самого начала — performedByUserId у
@@ -161,6 +208,7 @@ export async function GET(request: Request) {
         comment: op.comment,
         ...performer(op),
         actKey: actKey(op, op.zone!.point.name),
+        aheadAmount: aheadByOpId.get(op.id) ?? 0,
       })),
     ...poolOps
       .filter((op) => op.point !== null)

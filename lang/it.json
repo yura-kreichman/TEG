@@ -989,6 +989,8 @@
     "collectionsRegisterTitle": "Registro incassi",
     "noCollections": "Nessun incasso questo mese",
     "collectionActLabel": "Prelievo",
+    "zoneTakenAheadHint": "prelevato in anticipo — si chiude alla consegna dei totali",
+    "collectionTakenAheadLabel": "prelevato in anticipo",
     "advancesBonusesRegisterTitle": "Anticipi e bonus",
     "noAdvancesBonuses": "Nessun anticipo o bonus questo mese",
     "difference": "Differenza",

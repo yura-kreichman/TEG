@@ -989,6 +989,8 @@
     "collectionsRegisterTitle": "Tahsilat kayıtları",
     "noCollections": "Bu ay tahsilat yapılmadı",
     "collectionActLabel": "Tahsilat",
+    "zoneTakenAheadHint": "peşin alındı — sonuçlar teslim edilince kapanır",
+    "collectionTakenAheadLabel": "peşin alındı",
     "advancesBonusesRegisterTitle": "Avanslar ve primler",
     "noAdvancesBonuses": "Bu ay avans veya prim verilmedi",
     "difference": "Fark",

@@ -989,6 +989,8 @@
     "collectionsRegisterTitle": "Registru de încasări",
     "noCollections": "Nicio încasare în această lună",
     "collectionActLabel": "Colectare",
+    "zoneTakenAheadHint": "luat în avans — se închide la predarea totalurilor",
+    "collectionTakenAheadLabel": "luat în avans",
     "advancesBonusesRegisterTitle": "Avansuri și prime",
     "noAdvancesBonuses": "Niciun avans sau primă în această lună",
     "difference": "Diferență",

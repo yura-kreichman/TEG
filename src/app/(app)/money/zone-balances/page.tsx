@@ -71,6 +71,9 @@ interface CollectionEntry {
   // транзакцией (см. actKey в /api/reports/money/collections). null у
   // самообслуживаемых авансов/премий: они не часть акта.
   actKey?: string | null;
+  // Сколько из этой зонной инкассации взято ВПЕРЁД — сверх проведённой по
+  // зоне выручки (см. aheadByOpId там же). 0 — обычная инкассация.
+  aheadAmount?: number;
   // Владелец может пояснить происхождение записи (запрос пользователя
   // 2026-07-25: "чтобы я видел, что это был аванс Жени") — например, у
   // zone-level "collection", которая доразнесла старый самообслуживаемый
@@ -672,14 +675,30 @@ export default function ZoneBalancesPage() {
                     {/* Иконка зоны — запрос пользователя 2026-07-25: раз у
                         Абонементов/Товаров ниже есть иконка, у зон в этой же
                         плашке тоже должна быть, для единообразия. */}
-                    <p className="flex items-center gap-1.5 text-body-airbnb">
-                      {zb.zoneIconKey ? (
-                        <AssetOrZoneIcon iconKey={zb.zoneIconKey} className="size-4 shrink-0 text-muted-foreground" />
-                      ) : (
-                        <MapPin className="size-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-1.5 text-body-airbnb">
+                        {zb.zoneIconKey ? (
+                          <AssetOrZoneIcon iconKey={zb.zoneIconKey} className="size-4 shrink-0 text-muted-foreground" />
+                        ) : (
+                          <MapPin className="size-4 shrink-0 text-muted-foreground" />
+                        )}
+                        {zb.zoneName}
+                      </p>
+                      {/* Минус по зоне сам по себе не авария: он означает, что
+                          из кассы зоны забрали больше, чем по ней проведено
+                          выручки — обычно потому, что деньги инкассировали
+                          ВПЕРЁД, до сдачи итогов за сегодня (обратная связь
+                          пользователя 2026-08-04: "разве это не должно быть
+                          зафиксировано как Аванс инкассации?"). Сумма сойдётся
+                          сама, как только итоги сдадут. Без этой подписи
+                          владелец видит голое отрицательное число и не может
+                          отличить нормальную ситуацию от недостачи. */}
+                      {displayBalance < 0 && (
+                        <p className="mt-0.5 pl-5.5 text-caption-airbnb text-muted-foreground">
+                          {t.money.zoneTakenAheadHint}
+                        </p>
                       )}
-                      {zb.zoneName}
-                    </p>
+                    </div>
                     <div className="flex items-center gap-3.5">
                       <span
                         className={cn(
@@ -870,6 +889,12 @@ export default function ZoneBalancesPage() {
                                         />
                                       </span>
                                     </div>
+                                    {c.aheadAmount ? (
+                                      <p className="mt-0.5 text-[0.6875rem] text-warning">
+                                        {t.money.collectionTakenAheadLabel}
+                                        {c.aheadAmount < c.amount ? <> · <Money value={c.aheadAmount} /></> : null}
+                                      </p>
+                                    ) : null}
                                     {c.comment && (
                                       <p className="mt-0.5 truncate text-[0.6875rem] text-muted-foreground/70">
                                         {c.comment}
@@ -936,6 +961,17 @@ export default function ZoneBalancesPage() {
                             )}
                           </span>
                         </div>
+                        {/* Взято вперёд — та же мысль, что подпись под
+                            минусом зоны на плашке выше, но в момент, когда
+                            это произошло. Сумма указывается, только если
+                            вперёд взята ЧАСТЬ строки: когда вся, число уже
+                            стоит справа и дублировать его незачем. */}
+                        {c.aheadAmount ? (
+                          <p className="mt-0.5 pl-4 text-[0.6875rem] text-warning">
+                            {t.money.collectionTakenAheadLabel}
+                            {c.aheadAmount < c.amount ? <> · <Money value={c.aheadAmount} /></> : null}
+                          </p>
+                        ) : null}
                         {c.comment && (
                           <p className="mt-0.5 truncate pl-4 text-[0.6875rem] text-muted-foreground/70">{c.comment}</p>
                         )}

@@ -989,6 +989,8 @@
     "collectionsRegisterTitle": "Ինկասացիաների ռեեստր",
     "noCollections": "Այս ամիս ինկասացիաներ չեն եղել",
     "collectionActLabel": "Հավաքագրում",
+    "zoneTakenAheadHint": "վերցված է կանխավճարով — կփակվի արդյունքները հանձնելիս",
+    "collectionTakenAheadLabel": "վերցված է կանխավճարով",
     "advancesBonusesRegisterTitle": "Կանխավճարներ և պարգևատրումներ",
     "noAdvancesBonuses": "Այս ամիս կանխավճարներ և պարգևատրումներ չեն եղել",
     "difference": "Տարբերություն",
