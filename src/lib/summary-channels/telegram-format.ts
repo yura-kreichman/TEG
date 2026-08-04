@@ -351,10 +351,15 @@ export function formatZoneSummaryTelegram(
         // показывается своей строкой ниже, как и раньше.
         const perMethodKnown = hasPerOperationPaymentMethod(data);
 
-        if (settings.showCash && perMethodKnown) {
-          // Только ненулевые — строка "Безнал: 0" в зоне, где безналом не
-          // платили, ничего не сообщает (тот же принцип, что у строки
-          // "Баланс" с 2026-07-17).
+        // Разбивку показываем, только когда способов оплаты БОЛЬШЕ ОДНОГО:
+        // при единственном способе его строка дословно повторяла бы
+        // "Оплачено" ниже тем же числом (обратная связь пользователя
+        // 2026-08-04). Только ненулевые — "Безнал: 0" в зоне, где безналом
+        // не платили, ничего не сообщает (тот же принцип, что у строки
+        // "Баланс" с 2026-07-17).
+        const usedMethods = [data.cashAmount, data.mobileAmount, data.abonementAmount].filter((a) => a > 0).length;
+
+        if (settings.showCash && perMethodKnown && usedMethods > 1) {
           if (data.cashAmount > 0) parts.push(`💵 ${st.cashCompact}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
           if (data.mobileAmount > 0) parts.push(`💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`);
           if (data.abonementAmount > 0) {
