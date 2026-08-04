@@ -1007,6 +1007,7 @@
     "deleteCollectionConfirm": "Видалити цю інкасацію? Залишок по зоні перерахується. Скасувати не можна.",
     "deleteCollectionError": "Не вдалося видалити інкасацію",
     "collectionAdvanceLabel": "Авансова інкасація",
+    "zoneTakenAheadHint": "авансова інкасація — закриється при здачі підсумків",
     "collectionAdvanceToastPrefix": "Відкладено як авансова інкасація",
     "collectionAdvanceToastSuffix": "— з’явиться в залишку зони після здачі підсумків"
   },

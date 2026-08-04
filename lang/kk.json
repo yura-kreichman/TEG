@@ -1007,6 +1007,7 @@
     "deleteCollectionConfirm": "Осы инкассацияны жоюсыз ба? Аймақ қалдығы қайта есептеледі. Болдырмау мүмкін емес.",
     "deleteCollectionError": "Инкассацияны жою мүмкін болмады",
     "collectionAdvanceLabel": "Аванстық инкассация",
+    "zoneTakenAheadHint": "аванстық инкассация — қорытынды тапсырылғанда жабылады",
     "collectionAdvanceToastPrefix": "Аванстық инкассация ретінде бөлінді",
     "collectionAdvanceToastSuffix": "— нәтижелер тапсырылғаннан кейін аймақ қалдығында пайда болады"
   },

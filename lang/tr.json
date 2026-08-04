@@ -1007,6 +1007,7 @@
     "deleteCollectionConfirm": "Bu tahsilat silinsin mi? Bölge bakiyesi yeniden hesaplanacak. Geri alınamaz.",
     "deleteCollectionError": "Tahsilat silinemedi",
     "collectionAdvanceLabel": "Avans tahsilat",
+    "zoneTakenAheadHint": "avans tahsilat — sonuçlar teslim edilince kapanır",
     "collectionAdvanceToastPrefix": "Avans tahsilat olarak ayrıldı",
     "collectionAdvanceToastSuffix": "— sonuçlar teslim edildikten sonra bölge bakiyesinde görünecek"
   },

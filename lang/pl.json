@@ -1007,6 +1007,7 @@
     "deleteCollectionConfirm": "Usunąć tę inkasację? Saldo strefy zostanie przeliczone. Nie można cofnąć.",
     "deleteCollectionError": "Nie udało się usunąć inkasacji",
     "collectionAdvanceLabel": "Inkaso zaliczkowe",
+    "zoneTakenAheadHint": "inkaso zaliczkowe — rozliczy się po przekazaniu wyników",
     "collectionAdvanceToastPrefix": "Odłożone jako inkaso zaliczkowe",
     "collectionAdvanceToastSuffix": "— pojawi się w saldzie strefy po przesłaniu wyników"
   },

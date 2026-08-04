@@ -1023,6 +1023,7 @@
     "newCategoryPlaceholder": "Новая категория",
     "categorySaveError": "Не удалось сохранить категорию",
     "collectionAdvanceLabel": "Авансовая инкассация",
+    "zoneTakenAheadHint": "авансовая инкассация — закроется при сдаче итогов",
     "collectionAdvanceToastPrefix": "Отложено как авансовая инкассация",
     "collectionAdvanceToastSuffix": "— появится в остатке зоны после сдачи итогов"
   },

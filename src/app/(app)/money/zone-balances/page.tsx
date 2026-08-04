@@ -647,6 +647,23 @@ export default function ZoneBalancesPage() {
               <span className="text-[clamp(1.875rem,9.5vw,2.75rem)] font-extrabold leading-none tracking-[-0.02em] text-primary">
                 <Money value={currentPointTotal?.total ?? 0} size="display" />
               </span>
+              {/* Подпись к самой цифре, а НЕ вторая строка с суммой (обратная
+                  связь пользователя 2026-08-04). Отдельной строкой "Авансовая
+                  инкассация 500" здесь быть не может: эти деньги уже сидят
+                  внутри отрицательного Итога, и второе число показало бы ту
+                  же сумму дважды, да ещё с обратным знаком — непонятно,
+                  складывать её с Итогом или вычитать. Настоящий аванс справа
+                  (collectionAdvance) отдельной суммой уместен именно потому,
+                  что его тип исключён из наличных и в Итог он не входит.
+                  Минус здесь может появиться практически только от инкассации
+                  вперёд: размен деньги в зону ДОБАВЛЯЕТ (всегда +), а расход
+                  пишется внутри сдачи итогов, одной транзакцией с выручкой
+                  той же зоны. */}
+              {currentPointTotal && currentPointTotal.total < 0 && (
+                <span className="mt-1 text-caption-airbnb text-muted-foreground">
+                  {t.money.zoneTakenAheadHint}
+                </span>
+              )}
             </div>
             {currentPointTotal && currentPointTotal.collectionAdvance > 0 && (
               <div className="flex shrink-0 flex-col items-end text-right">

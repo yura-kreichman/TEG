@@ -1007,6 +1007,7 @@
     "deleteCollectionConfirm": "Бул инкассацияны өчүрөсүзбү? Зонанын калдыгы кайра эсептелет. Жокко чыгарылбайт.",
     "deleteCollectionError": "Инкассацияны өчүрүү мүмкүн болгон жок",
     "collectionAdvanceLabel": "Аванстык инкассация",
+    "zoneTakenAheadHint": "аванстык инкассация — жыйынтык тапшырылганда жабылат",
     "collectionAdvanceToastPrefix": "Аванстык инкассация катары бөлүндү",
     "collectionAdvanceToastSuffix": "— жыйынтыктар тапшырылгандан кийин зона калдыгында пайда болот"
   },
