@@ -940,6 +940,8 @@
     "localeHint": "Bu çalışanın kişisel dili — yalnızca onun için geçerlidir",
     "localeFollowTenant": "Şirket ile aynı",
     "overdraftHint": "Bu çalışanın bakiyesinin üzerinde avans almasına izin ver (eksiye düşebilir)",
+    "showDifferenceLabel": "Teslimde farkı görür",
+    "showDifferenceHint": "Kasa girilirken farkı anında göster. Kapalı — çalışan kasayı kör girer ve sonucu yalnızca gönderdikten sonra görür",
     "skipShiftStartWindowLabel": "Vardiya başlangıç saatinde kısıtlama yok",
     "skipShiftStartWindowHint": "Örneğin, düzensiz çalışma saatleri olan bir çalışan için — ortak izin verilen aralık ona uygulanmaz",
     "timeTrackingModeHint": "Manuel — çalışan giriş/çıkış saatini kendisi girer; Otomatik — saat sunucuda \"Vardiyayı başlat/bitir\" düğmesiyle kaydedilir",

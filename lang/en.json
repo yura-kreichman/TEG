@@ -940,6 +940,8 @@
     "localeHint": "This employee's personal language — overrides the company language only for them",
     "localeFollowTenant": "Same as company",
     "overdraftHint": "Allow this employee an advance beyond their balance (it goes negative)",
+    "showDifferenceLabel": "Sees difference on submit",
+    "showDifferenceHint": "Show the difference live while cash is being entered. Off — the employee enters cash blind and sees the result only after submitting",
     "skipShiftStartWindowLabel": "No shift-start time restriction",
     "skipShiftStartWindowHint": "For example, for an employee with an irregular schedule — the shared shift-start window won't apply to them",
     "timeTrackingModeHint": "Manual — the employee enters start/end time themselves; Auto — time is recorded via the \"Start/End shift\" button on the server",

@@ -23,6 +23,7 @@ import {
   ShoppingBag,
   Ticket,
   Globe,
+  Scale,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -62,6 +63,7 @@ interface Profile {
   allowedZones: { id: string; name: string }[];
   timeTrackingMode: "manual" | "auto";
   overdraftAllowed: boolean;
+  showDifferenceOnSubmit: boolean;
   skipShiftStartWindow: boolean;
   goodsAccess: boolean;
   revisionAccess: boolean;
@@ -309,6 +311,18 @@ export default function OperatorSettingsPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ overdraftAllowed: value }),
+    });
+  }
+
+  // Слепой ввод кассы (запрос пользователя 2026-08-04) — см. комментарий у
+  // Operator.showDifferenceOnSubmit в schema.prisma.
+  async function toggleShowDifference(value: boolean) {
+    if (!profile) return;
+    setProfile({ ...profile, showDifferenceOnSubmit: value });
+    await fetch(`/api/operators/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ showDifferenceOnSubmit: value }),
     });
   }
 
@@ -580,6 +594,20 @@ export default function OperatorSettingsPage() {
                 <div className="text-caption-airbnb">{t.operators.overdraftHint}</div>
               </div>
               <Switch checked={profile.overdraftAllowed} onCheckedChange={toggleOverdraft} className="shrink-0" />
+            </div>
+            {/* Разница при сдаче итогов — соседний по смыслу тумблер: оба про
+                то, насколько сотруднику доверены денежные решения на месте. */}
+            <div className="flex items-center gap-3 border-t border-border py-3.5">
+              <Scale className="size-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <div className="text-body-airbnb">{t.operators.showDifferenceLabel}</div>
+                <div className="text-caption-airbnb">{t.operators.showDifferenceHint}</div>
+              </div>
+              <Switch
+                checked={profile.showDifferenceOnSubmit}
+                onCheckedChange={toggleShowDifference}
+                className="shrink-0"
+              />
             </div>
             {profile.timeTrackingMode === "auto" && (
               <div className="flex items-center gap-3 border-t border-border py-3.5">

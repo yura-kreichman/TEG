@@ -210,6 +210,11 @@ export default function SubmitResultsPage() {
   // Владелец выключил тумблер, шаг "Расходы" не показываем вовсе (внести
   // расход и так неоткуда было — экран/API уже недоступны).
   const [expensesEnabled, setExpensesEnabled] = useState(true);
+  // Слепой ввод кассы (запрос пользователя 2026-08-04) — см. комментарий у
+  // Operator.showDifferenceOnSubmit в schema.prisma. По умолчанию false, пока
+  // контекст не загрузился: лучше на долю секунды НЕ показать разницу тому,
+  // кому положено, чем мигнуть ею тому, у кого слепой режим.
+  const [showDifferenceOnSubmit, setShowDifferenceOnSubmit] = useState(false);
 
   useEffect(() => {
     fetch("/api/operator/submission-context")
@@ -221,6 +226,7 @@ export default function SubmitResultsPage() {
         const data = await res.json();
         setZones(data.zones ?? []);
         setExpensesEnabled(data.expensesEnabled !== false);
+        setShowDifferenceOnSubmit(data.showDifferenceOnSubmit === true);
         setLoading(false);
       });
     fetch("/api/operator/zone-return-events")
@@ -1223,7 +1229,14 @@ export default function SubmitResultsPage() {
                     activeZone.accountingMode === "counters" || activeZone.accountingMode === "cash_only"
                       ? (counterAbonementByZone[activeZone.id] ?? 0)
                       : 0;
-                  if (!preview && abonementAmount <= 0) return null;
+                  // Слепой ввод — разницу при вводе не показываем вовсе (она
+                  // ждёт экрана "Принято"). "Баланс" при этом остаётся: это не
+                  // цель для подгонки, а нужный сотруднику факт — часть
+                  // выручки уже оплачена с баланса клиента, и без этой строки
+                  // он не поймёт, почему в ящике меньше (реальный баг
+                  // 2026-07-24, из-за которого строку и завели).
+                  const showDiffLive = showDifferenceOnSubmit;
+                  if ((!preview || !showDiffLive) && abonementAmount <= 0) return null;
                   return (
                     <div className="flex flex-col gap-1.5">
                       {/* "Расчётная выручка" убрана (запрос пользователя
@@ -1237,7 +1250,7 @@ export default function SubmitResultsPage() {
                           остального. Разница — половина строки, если Баланс
                           тоже есть; одна на всю строку, если Баланса нет. */}
                       <div className="flex items-center gap-4">
-                        {preview && (
+                        {preview && showDiffLive && (
                           <div className="flex flex-1 items-center justify-between gap-2">
                             <span className="flex items-center gap-1.5 font-semibold">
                               {t.operatorApp.submit.difference}

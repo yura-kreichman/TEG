@@ -940,6 +940,8 @@
     "localeHint": "Osobisty język tego pracownika — dotyczy tylko jego",
     "localeFollowTenant": "Jak w firmie",
     "overdraftHint": "Zezwól temu pracownikowi na zaliczkę ponad saldo (wejdzie na minus)",
+    "showDifferenceLabel": "Widzi różnicę przy przekazaniu",
+    "showDifferenceHint": "Pokazuj różnicę na bieżąco podczas wpisywania kasy. Wyłączone — pracownik wpisuje kasę na ślepo i widzi wynik dopiero po wysłaniu",
     "skipShiftStartWindowLabel": "Bez ograniczenia czasu rozpoczęcia zmiany",
     "skipShiftStartWindowHint": "Na przykład dla pracownika z nietypowym grafikiem — wspólne okno tolerancji nie będzie go dotyczyć",
     "timeTrackingModeHint": "Ręczny — pracownik sam wpisuje godzinę przyjścia/wyjścia; Auto — czas jest rejestrowany na serwerze przyciskiem „Rozpocznij/zakończ zmianę”",

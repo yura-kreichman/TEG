@@ -940,6 +940,8 @@
     "localeHint": "Bu işçinin şəxsi dili — yalnız ona aiddir",
     "localeFollowTenant": "Şirkət kimi",
     "overdraftHint": "Bu işçiyə balansdan artıq avans verməyə icazə ver (mənfiyə düşəcək)",
+    "showDifferenceLabel": "Təhvildə fərqi görür",
+    "showDifferenceHint": "Kassa daxil edilərkən fərqi dərhal göstər. Söndürülüb — işçi kassanı kor-koranə daxil edir və nəticəni yalnız göndərdikdən sonra görür",
     "skipShiftStartWindowLabel": "Növbənin başlama vaxtına məhdudiyyət yoxdur",
     "skipShiftStartWindowHint": "Məsələn, qeyri-standart qrafikli işçi üçün — ümumi növbə başlanğıcı diapazonu ona tətbiq olunmayacaq",
     "timeTrackingModeHint": "Manual — işçi gəliş/gediş vaxtını özü daxil edir; Avto — vaxt serverdə «Növbəni başlat/bitir» düyməsi ilə qeyd olunur",

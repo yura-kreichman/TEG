@@ -940,6 +940,8 @@
     "localeHint": "Ushbu xodimning shaxsiy tili — faqat unga tegishli",
     "localeFollowTenant": "Kompaniyadagidek",
     "overdraftHint": "Ushbu xodimga balansdan ortiqcha avans berishga ruxsat berish (minusga tushadi)",
+    "showDifferenceLabel": "Topshirishda farqni ko‘radi",
+    "showDifferenceHint": "Kassa kiritilayotganda farqni darhol ko‘rsatish. O‘chirilgan — xodim kassani ko‘r-ko‘rona kiritadi va natijani faqat yuborgandan keyin ko‘radi",
     "skipShiftStartWindowLabel": "Smena boshlanish vaqtiga cheklov yoʻq",
     "skipShiftStartWindowHint": "Masalan, notekis jadvalli xodim uchun — umumiy ruxsat etilgan oyna unga taalluqli boʻlmaydi",
     "timeTrackingModeHint": "Qo‘lda — xodim kelish/ketish vaqtini o‘zi kiritadi; Avto — vaqt serverda «Smenani boshlash/tugatish» tugmasi orqali qayd etiladi",

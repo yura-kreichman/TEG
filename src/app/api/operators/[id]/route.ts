@@ -37,6 +37,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/operators/[
     allowedZones: operator.allowedZones,
     timeTrackingMode: operator.timeTrackingMode,
     overdraftAllowed: operator.overdraftAllowed,
+    showDifferenceOnSubmit: operator.showDifferenceOnSubmit,
     skipShiftStartWindow: operator.skipShiftStartWindow,
     goodsAccess: operator.goodsAccess,
     revisionAccess: operator.revisionAccess,
@@ -74,6 +75,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
     colorTag,
     timeTrackingMode,
     overdraftAllowed,
+    showDifferenceOnSubmit,
     skipShiftStartWindow,
     goodsAccess,
     revisionAccess,
@@ -90,6 +92,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
     colorTag?: string | null;
     timeTrackingMode?: string;
     overdraftAllowed?: boolean;
+    showDifferenceOnSubmit?: boolean;
     skipShiftStartWindow?: boolean;
     goodsAccess?: boolean;
     revisionAccess?: boolean;
@@ -181,6 +184,12 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
       return NextResponse.json({ error: "Некорректное значение overdraftAllowed" }, { status: 400 });
     }
     data.overdraftAllowed = overdraftAllowed;
+  }
+  if (showDifferenceOnSubmit !== undefined) {
+    if (typeof showDifferenceOnSubmit !== "boolean") {
+      return NextResponse.json({ error: "Некорректное значение showDifferenceOnSubmit" }, { status: 400 });
+    }
+    data.showDifferenceOnSubmit = showDifferenceOnSubmit;
   }
   if (skipShiftStartWindow !== undefined) {
     if (typeof skipShiftStartWindow !== "boolean") {

@@ -940,6 +940,8 @@
     "localeHint": "Limba personală a acestui angajat — se aplică doar lui",
     "localeFollowTenant": "Ca la companie",
     "overdraftHint": "Permite acestui angajat un avans peste soldul său (devine negativ)",
+    "showDifferenceLabel": "Vede diferența la predare",
+    "showDifferenceHint": "Arată diferența în timp real la introducerea casei. Oprit — angajatul introduce casa orb și vede rezultatul doar după trimitere",
     "skipShiftStartWindowLabel": "Fără restricție de oră de început a turei",
     "skipShiftStartWindowHint": "De exemplu, pentru un angajat cu program neregulat — fereastra comună nu i se va aplica",
     "timeTrackingModeHint": "Manual — angajatul introduce singur ora de start/sfârșit; Automat — ora este înregistrată prin butonul „Începe/Termină tura” pe server",

@@ -940,6 +940,8 @@
     "localeHint": "La lingua personale di questo dipendente — si applica solo a lui",
     "localeFollowTenant": "Come l'azienda",
     "overdraftHint": "Consenti a questo dipendente un anticipo oltre il suo saldo (che diventa negativo)",
+    "showDifferenceLabel": "Vede la differenza alla consegna",
+    "showDifferenceHint": "Mostra la differenza in tempo reale durante l inserimento della cassa. Disattivato — il dipendente inserisce alla cieca e vede il risultato solo dopo l invio",
     "skipShiftStartWindowLabel": "Nessun limite orario di inizio turno",
     "skipShiftStartWindowHint": "Ad esempio, per un dipendente con orario irregolare — la finestra di inizio turno condivisa non si applicherà a lui",
     "timeTrackingModeHint": "Manuale — il dipendente inserisce da sé l'orario di inizio/fine; Automatico — l'orario viene registrato tramite il pulsante \"Inizia/Termina turno\" sul server",

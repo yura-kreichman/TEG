@@ -206,6 +206,10 @@ export async function GET() {
     expenseCategories,
     goodsAccess: operator.goodsAccess,
     ticketsAccess: operator.ticketsAccess,
+    // Видит ли сотрудник "Разницу" живьём при вводе кассы (см. комментарий у
+    // Operator.showDifferenceOnSubmit в schema.prisma). Выключено — слепой
+    // ввод: разница появляется только на экране "Принято", после отправки.
+    showDifferenceOnSubmit: operator.showDifferenceOnSubmit,
     // Настройки → Система → "Модули" (запрос пользователя 2026-07-22) —
     // гейтит видимость пункта "Клиенты" в нижнем баре (operator-bottom-nav.tsx),
     // тот же принцип, что goodsAccess выше.
