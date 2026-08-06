@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label";
 import { TimeInput } from "@/components/time-input";
 import { SavedCheckmark } from "@/components/ui/saved-checkmark";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { formatDuration } from "@/lib/datetime-format";
+import type { Dictionary } from "@/lib/i18n";
 import { toleranceCrossesBusinessDayBoundary } from "@/lib/business-day";
 
 type ToleranceField = "earlyToleranceMinutes" | "lateToleranceMinutes";
@@ -22,6 +25,77 @@ type FieldKey = "defaultShiftStartTime" | "businessDayBoundary" | ToleranceField
 // включённым тумблером.
 const MIDNIGHT = "00:00";
 const NIGHT_BOUNDARY = "06:00";
+
+/**
+ * Допуск — это ДЛИТЕЛЬНОСТЬ, и выбирается из закрытого списка, а не вводится
+ * свободно (требование пользователя 2026-08-06: "пользователь не должен иметь
+ * возможность выбрать время, которое не будет работать").
+ *
+ * Свободное поле ЧЧ:ММ этого обещать не может. Оно позволяло, например, 23
+ * часа — а если "раньше" и "позже" в сумме дают сутки и больше, проверка окна
+ * в isWithinShiftStartWindow выключается ЦЕЛИКОМ и возвращает "можно всегда".
+ * То есть внутри числового поля был спрятан рубильник, на который можно
+ * наступить случайно. Максимум списка — 9 часов, значит сумма физически не
+ * дотягивает до суток и та ветка недостижима.
+ *
+ * Второй неработающий вариант — нули с обеих сторон: окно шириной в одну
+ * минуту, начать смену практически невозможно. Поэтому ноль на одной стороне
+ * запрещён, когда на другой уже ноль ("не раньше времени" как политика —
+ * законно, но не с двух сторон сразу).
+ */
+const TOLERANCE_OPTIONS = [0, 15, 30, 45, 60, 90, 120, 180, 240, 360, 480, 540];
+
+function formatToleranceLabel(minutes: number, t: Dictionary): string {
+  if (minutes === 0) return t.settings.toleranceNone;
+  if (minutes < 60) return `${minutes} ${t.operatorApp.workTime.minutesShort}`;
+  return formatDuration(minutes, t);
+}
+
+function ToleranceSelect({
+  value,
+  otherValue,
+  onChange,
+  t,
+}: {
+  value: number;
+  otherValue: number;
+  onChange: (minutes: number) => void;
+  t: Dictionary;
+}) {
+  // Значение из прошлых версий могло быть любым (поле было свободным) — тогда
+  // показываем его как есть, отдельным пунктом, а не подменяем ближайшим:
+  // экран обязан показывать то, что реально сохранено.
+  const options = TOLERANCE_OPTIONS.includes(value)
+    ? TOLERANCE_OPTIONS
+    : [...TOLERANCE_OPTIONS, value].sort((a, b) => a - b);
+
+  // items обязателен, а не только children: SelectValue берёт ПОДПИСЬ выбранного
+  // пункта именно оттуда. Без него на кнопке оставалось сырое значение — "120"
+  // вместо "2 ч" (реальная ошибка, замечена пользователем 2026-08-06).
+  const items = options.map((m) => ({ value: String(m), label: formatToleranceLabel(m, t) }));
+
+  return (
+    <Select value={String(value)} onValueChange={(v) => v && onChange(Number(v))} items={items}>
+      <SelectTrigger className="h-10 w-auto shrink-0 gap-1.5 px-2.5">
+        <SelectValue />
+      </SelectTrigger>
+      {/* Две колонки и своя ширина вместо ширины кнопки: пунктов дюжина, а
+          кнопка узкая — список получался длинной ниткой в один символ. */}
+      <SelectContent align="end" className="grid w-auto min-w-60 grid-cols-2 gap-0.5">
+        {options.map((m) => (
+          <SelectItem
+            key={m}
+            value={String(m)}
+            disabled={m === 0 && otherValue === 0}
+            className="min-h-11 px-2.5"
+          >
+            {formatToleranceLabel(m, t)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 export default function WorkTimeSettingsPage() {
   const t = useI18n();
@@ -81,8 +155,7 @@ export default function WorkTimeSettingsPage() {
     savePatch(field, `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
   }
 
-  function saveTolerance(field: ToleranceField, hour: number, minute: number) {
-    const totalMinutes = hour * 60 + minute;
+  function saveTolerance(field: ToleranceField, totalMinutes: number) {
     if (field === "earlyToleranceMinutes") setEarlyMinutes(totalMinutes);
     else setLateMinutes(totalMinutes);
     savePatch(field, totalMinutes);
@@ -106,9 +179,11 @@ export default function WorkTimeSettingsPage() {
           <p className="mb-1 text-caption-airbnb">{t.settings.workTimeHint}</p>
 
           <SpringCard animate={false} hover={false} className="flex flex-col gap-3">
-            {/* Тот же контрол, что у допуска ниже (запрос пользователя
-                2026-08-06): колесо занимало пол-экрана и выглядело отдельной
-                механикой рядом с обычными полями времени в той же настройке. */}
+            {/* Время суток — значит TimeInput, тот же, что у фиксированного
+                времени отправки сводки (запрос пользователя 2026-08-06:
+                колесо занимало пол-экрана и было отдельной механикой). Допуск
+                ниже — уже не время, а длительность, поэтому там список.
+                Любое значение здесь рабочее: это просто час начала смены. */}
             <div>
               <div className="flex items-center justify-between gap-3">
                 <Label htmlFor="defaultShiftStart">{t.settings.defaultShiftStartLabel}</Label>
@@ -156,27 +231,21 @@ export default function WorkTimeSettingsPage() {
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
-              <Label htmlFor="earlyTolerance">{t.settings.earlierLabel}</Label>
-              <TimeInput
-                id="earlyTolerance"
-                className="h-10 w-fit"
-                value={`${String(Math.floor(earlyMinutes / 60)).padStart(2, "0")}:${String(earlyMinutes % 60).padStart(2, "0")}`}
-                onChange={(e) => {
-                  const [h, m] = e.target.value.split(":").map(Number);
-                  if (Number.isFinite(h) && Number.isFinite(m)) saveTolerance("earlyToleranceMinutes", h, m);
-                }}
+              <Label>{t.settings.earlierByLabel}</Label>
+              <ToleranceSelect
+                value={earlyMinutes}
+                otherValue={lateMinutes}
+                onChange={(m) => saveTolerance("earlyToleranceMinutes", m)}
+                t={t}
               />
             </div>
             <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="lateTolerance">{t.settings.laterLabel}</Label>
-              <TimeInput
-                id="lateTolerance"
-                className="h-10 w-fit"
-                value={`${String(Math.floor(lateMinutes / 60)).padStart(2, "0")}:${String(lateMinutes % 60).padStart(2, "0")}`}
-                onChange={(e) => {
-                  const [h, m] = e.target.value.split(":").map(Number);
-                  if (Number.isFinite(h) && Number.isFinite(m)) saveTolerance("lateToleranceMinutes", h, m);
-                }}
+              <Label>{t.settings.laterByLabel}</Label>
+              <ToleranceSelect
+                value={lateMinutes}
+                otherValue={earlyMinutes}
+                onChange={(m) => saveTolerance("lateToleranceMinutes", m)}
+                t={t}
               />
             </div>
             <SavedCheckmark
