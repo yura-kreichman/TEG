@@ -17,7 +17,7 @@ import { dispatchShiftCloseSummary } from "@/lib/summary-channels/dispatch";
 import { SHIFT_CLOSE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
-import { notifyDailyCashLateSubmission } from "@/lib/summary-channels/daily-cash-trigger";
+import { notifyDailyCashLateSubmission, onShiftClosed } from "@/lib/summary-channels/daily-cash-trigger";
 
 class ShiftOverlapError extends Error {}
 
@@ -257,6 +257,22 @@ export async function POST(request: Request) {
       console.error("daily cash late-submission notify failed", err)
     );
   }
+
+  // В РУЧНОМ режиме смена вводится целиком и сразу закрытой — отдельного
+  // "ухода" не существует, поэтому именно это создание и есть то самое
+  // закрытие рабочего времени, по которому теперь уходит "Касса за день"
+  // (решение пользователя 2026-08-06).
+  //
+  // РЕАЛЬНЫЙ БАГ, найден пользователем в тот же день: onShiftClosed висел
+  // только на check-out, то есть на авто-режиме. Женя сдал зоны, потом ввёл
+  // смену руками — и сводка не пришла ВООБЩЕ: на момент сдачи смены за день
+  // ещё не было (значит правило откатывалось к полному покрытию зон, а
+  // "Виртуалка" пустая и не сдавалась), а создание смены никакой первой
+  // отправки не запускало — notifyDailyCashLateSubmission выше сознательно
+  // молчит, когда отправлять ещё нечего.
+  onShiftClosed(point.id, point.tenantId, startAt).catch((err) =>
+    console.error("daily cash on-shift-closed failed", err)
+  );
 
   const shiftRow = { id: shift.id, startAt, endAt, minutes, rate, accrued, advanceAmount, bonusAmount };
   return NextResponse.json({ shift: shiftRow, warnings, noResultsToday, balance });
