@@ -79,6 +79,21 @@ export interface DailyCashZoneBreakdownLine {
   abonementAmount: number;
 }
 
+/**
+ * Что на точке не закрылось к границе бизнес-дня — сводка ушла по времени, а
+ * не потому что там закончили. Пустой массив = обычная отправка.
+ *
+ * Пометка называет то, чего не хватает, а не последствие (решение
+ * пользователя 2026-08-06: "типа Смены и сдачи итогов сегодня нет"): владелец
+ * из этого сразу видит, что поправить. Прежнее "Принудительно — не все данные
+ * могли поступить" не говорило ни что случилось, ни что делать.
+ *
+ * noSubmissions и zonesPending взаимоисключающи: либо сдач нет вовсе, либо
+ * они есть, но не по всем зонам. "Сдач нет" при включённом тумблере "Не
+ * отправлять без сдач" вообще недостижимо — сводка в такой день молчит.
+ */
+export type DailyCashPending = "openShift" | "noSubmissions" | "zonesPending";
+
 export interface DailyCashSummaryData {
   pointName: string;
   // У тенанта больше одной точки — тогда название точки имеет смысл
@@ -108,9 +123,8 @@ export interface DailyCashSummaryData {
   bonusesAndAdvances: number;
   zoneBreakdown: DailyCashZoneBreakdownLine[];
   cashOnHand: number;
-  // Предохранитель: смены/операторы, чья активность не укладывается в
-  // ожидаемое завершение дня (см. открытый вопрос в чате про "открытые смены").
-  forcedIncomplete: boolean;
+  // См. DailyCashPending выше. Пустой массив — пометки в сводке нет.
+  pending: DailyCashPending[];
 }
 
 export interface ShiftCloseSummaryData {

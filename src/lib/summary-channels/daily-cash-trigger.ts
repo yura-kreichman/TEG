@@ -4,6 +4,7 @@ import { getBusinessDayBounds, businessDateKey } from "@/lib/business-day";
 import { DAILY_CASH_SUMMARY_DEFAULTS, type DailyCashSummarySettingsData } from "@/lib/summary-settings";
 import { buildDailyCashSummaryData, hasActivityInBounds } from "./daily-cash-data";
 import { dispatchDailyCashSummary, getEnabledChannels } from "./dispatch";
+import type { DailyCashPending } from "./types";
 
 function isUniqueConstraintViolation(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
@@ -43,7 +44,7 @@ export async function maybeSendDailyCashSummary(
   tenantId: string,
   settings: DailyCashSummarySettingsData,
   bounds: { start: Date; end: Date },
-  forcedIncomplete: boolean,
+  forced: boolean,
   timezone: string
 ): Promise<void> {
   const businessDate = businessDateKey(bounds, timezone);
@@ -81,7 +82,24 @@ export async function maybeSendDailyCashSummary(
   }
   if (claimed.length === 0) return;
 
-  const data = await buildDailyCashSummaryData(pointId, bounds, forcedIncomplete);
+  // Что именно не закрылось — считаем здесь, а не в планировщике: тот знает
+  // только "пора, граница дня". Проверка в момент отправки, то есть ровно на
+  // границе, а не когда-то раньше.
+  //
+  // Если forced, но не закрылось ничего — пометки не будет вовсе, и это
+  // честнее, чем пометка без причины.
+  const pending: DailyCashPending[] = [];
+  if (forced) {
+    const [openShifts, coverage] = await Promise.all([
+      hasOpenShiftsAtPoint(pointId),
+      getZoneCoverage(pointId, tenantId, bounds),
+    ]);
+    if (openShifts) pending.push("openShift");
+    if (!active) pending.push("noSubmissions");
+    else if (coverage.activeZones === 0 || coverage.coveredZones < coverage.activeZones) pending.push("zonesPending");
+  }
+
+  const data = await buildDailyCashSummaryData(pointId, bounds, pending);
   if (!data) {
     await prisma.dailyCashSummaryDelivery.deleteMany({ where: { pointId, businessDate, channelType: { in: claimed } } });
     return;
@@ -335,7 +353,7 @@ export async function notifyDailyCashLateSubmission(pointId: string, tenantId: s
   if (existingDeliveries.length === 0) return; // ничего не отправляли — это Шаг обычной первой отправки, не досдача
 
   const settings = toSettingsData(settingsRow, businessDayBoundary);
-  const data = await buildDailyCashSummaryData(pointId, bounds, false);
+  const data = await buildDailyCashSummaryData(pointId, bounds, []);
   if (!data) return;
 
   const existingMessageIds: Partial<Record<"telegram" | "email", string>> = {};

@@ -1078,7 +1078,7 @@ async function handleKassaCommand(chatId: string, tenantId: string) {
   const businessDayBoundary = tenant.businessDayBoundary ?? DAILY_CASH_SUMMARY_DEFAULTS.businessDayBoundary;
   const timezone = tenant.timezone ?? "UTC";
   const bounds = getBusinessDayBounds(businessDayBoundary, new Date(), timezone);
-  const data = await Promise.all(points.map((p) => buildDailyCashSummaryData(p.id, bounds, false)));
+  const data = await Promise.all(points.map((p) => buildDailyCashSummaryData(p.id, bounds, [])));
 
   const money = (n: number) => formatMoneyWithCurrency(n, "ru", currency);
   const totals = { cash: 0, mobile: 0, abonement: 0 };

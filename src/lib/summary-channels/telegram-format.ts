@@ -1,5 +1,11 @@
 import type { ZoneSummarySettingsData, DailyCashSummarySettingsData, ShiftCloseSummarySettingsData } from "@/lib/summary-settings";
-import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData, InstructionAckData } from "./types";
+import type {
+  ZoneSummaryData,
+  DailyCashSummaryData,
+  DailyCashPending,
+  ShiftCloseSummaryData,
+  InstructionAckData,
+} from "./types";
 import { formatDuration, formatLocalTime, formatSummaryDate } from "./format-shared";
 import { colorTagToEmoji } from "@/lib/color-tag";
 import { formatMoney } from "@/lib/format";
@@ -83,6 +89,24 @@ const COMPACT_GRID_MAX_COLS = 2;
 // одна точка — строка вообще не показывается (data.showPointName, считается
 // в daily-cash-data.ts по количеству точек тенанта) — само собой разумеется,
 // какая это точка, называть её незачем.
+// Пометка "что не закрылось" одной строкой: перечисление того, чего реально не
+// хватает, а не намёк на последствие. Пусто — пометки нет вовсе.
+//
+// Со второго пункта первая буква строчная: это перечисление внутри одной
+// строки, а не отдельные предложения. В языках без регистра (հայերեն,
+// ქართული) toLocaleLowerCase — пустая операция, ломать нечего.
+function pendingNote(pending: DailyCashPending[], st: SummaryText, locale: Locale): string | null {
+  if (pending.length === 0) return null;
+  const label = (p: DailyCashPending) =>
+    p === "openShift" ? st.pendingOpenShift : p === "noSubmissions" ? st.pendingNoSubmissions : st.pendingZones;
+  return pending
+    .map((p, i) => {
+      const text = label(p);
+      return i === 0 ? text : text.charAt(0).toLocaleLowerCase(locale) + text.slice(1);
+    })
+    .join(" · ");
+}
+
 function dailyCashHeaderLines(data: DailyCashSummaryData, timezone: string, st: SummaryText): string[] {
   const lines: string[] = [];
   if (data.showPointName) lines.push(`<b>${escapeTelegramHtml(data.pointName)}</b>`);
@@ -507,11 +531,14 @@ export function formatDailyCashSummaryTelegram(
   st: SummaryText
 ): string {
   const total = data.cashAmount + data.mobileAmount - data.expenses;
+  // Одна и та же строка в обоих видах сводки: она и так короткая, укорачивать
+  // её отдельно для компактного вида нечем.
+  const note = pendingNote(data.pending, st, locale);
 
   if (settings.compact) {
     const parts: string[] = dailyCashHeaderLines(data, timezone, st);
 
-    if (data.forcedIncomplete) parts.push(`⚠️ ${st.forcedIncompleteCompact}`);
+    if (note) parts.push(`⚠️ ${note}`);
 
     // Разбивка по зонам — сразу под заголовком "КАССА" (запрос пользователя
     // 2026-07-16: "подними выше эти данные"), а не в самом низу под итогом —
@@ -562,8 +589,8 @@ export function formatDailyCashSummaryTelegram(
 
   const lines: string[] = dailyCashHeaderLines(data, timezone, st);
 
-  if (data.forcedIncomplete) {
-    lines.push("", `⚠️ ${st.forcedIncompleteFull}`);
+  if (note) {
+    lines.push("", `⚠️ ${note}`);
   }
 
   if (settings.showZoneBreakdown && data.zoneBreakdown.length > 0) {

@@ -48,7 +48,7 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): Dai
     bonusesAndAdvances: 0,
     zoneBreakdown,
     cashOnHand: 620,
-    forcedIncomplete: false,
+    pending: [],
   };
 }
 

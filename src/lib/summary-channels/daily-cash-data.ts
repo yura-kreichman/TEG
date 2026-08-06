@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getPointCashBalance } from "@/lib/zone-balance";
-import type { DailyCashSummaryData } from "./types";
+import type { DailyCashPending, DailyCashSummaryData } from "./types";
 
 /** Есть ли хоть одна сдача итогов на точке в границах бизнес-дня. */
 export async function hasActivityInBounds(pointId: string, bounds: { start: Date; end: Date }): Promise<boolean> {
@@ -26,7 +26,7 @@ export async function hasActivityInBounds(pointId: string, bounds: { start: Date
 export async function buildDailyCashSummaryData(
   pointId: string,
   bounds: { start: Date; end: Date },
-  forcedIncomplete: boolean
+  pending: DailyCashPending[]
 ): Promise<DailyCashSummaryData | null> {
   const point = await prisma.point.findUnique({ where: { id: pointId } });
   if (!point) return null;
@@ -152,7 +152,7 @@ export async function buildDailyCashSummaryData(
       abonementAmount: round2(zoneAbonementById.get(zoneId) ?? 0),
     })),
     cashOnHand: round2(cashOnHand),
-    forcedIncomplete,
+    pending,
   };
 }
 
