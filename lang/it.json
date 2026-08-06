@@ -110,7 +110,7 @@
     "defaultShiftStartLabel": "Inizio turno predefinito",
     "defaultShiftStartHint": "Precompilato nel modulo \"Aggiungi turno\" in modalità manuale",
     "worksPastMidnightLabel": "Lavorate dopo mezzanotte?",
-    "worksPastMidnightHint": "Allora la giornata di lavoro finisce al mattino: un turno dalla sera alle tre di notte conta come un solo giorno in tutti i report",
+    "worksPastMidnightHint": "Allora la giornata di lavoro finisce al mattino: sera e notte sono un solo giorno in tutti i report",
     "startWindowCardLabel": "Tolleranza inizio turno",
     "startWindowHint": "Di quanto prima o dopo l'orario predefinito un dipendente può iniziare il turno — condiviso tra modalità automatica e manuale",
     "earlierLabel": "Prima",

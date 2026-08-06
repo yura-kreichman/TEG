@@ -110,7 +110,7 @@
     "defaultShiftStartLabel": "Smena boshlanishi (standart)",
     "defaultShiftStartHint": "«Smena qoʻshish» shaklida qoʻlda rejimda avtomatik toʻldiriladi",
     "worksPastMidnightLabel": "Yarim kechadan keyin ishlaysizmi?",
-    "worksPastMidnightHint": "Unda ish kuni ertalab tugaydi: kechdan tungi uchgacha smena barcha hisobotlarda bir kun deb hisoblanadi",
+    "worksPastMidnightHint": "Unda ish kuni ertalab tugaydi: kech va tun barcha hisobotlarda bir kun",
     "startWindowCardLabel": "Smena boshlanish ruxsati",
     "startWindowHint": "Xodim standart vaqtdan qancha ertaroq yoki kechroq smenani boshlashi mumkin — avto va qoʻlda rejim uchun umumiy",
     "earlierLabel": "Ertaroq",

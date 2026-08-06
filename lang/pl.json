@@ -110,7 +110,7 @@
     "defaultShiftStartLabel": "Domyślny początek zmiany",
     "defaultShiftStartHint": "Podstawiane w formularzu „Dodaj zmianę” w trybie ręcznym",
     "worksPastMidnightLabel": "Pracujecie po północy?",
-    "worksPastMidnightHint": "Wtedy dzień pracy kończy się rano: zmiana od wieczora do trzeciej w nocy liczy się jako jeden dzień we wszystkich raportach",
+    "worksPastMidnightHint": "Wtedy dzień pracy kończy się rano: wieczór i noc to jeden dzień we wszystkich raportach",
     "startWindowCardLabel": "Tolerancja rozpoczęcia zmiany",
     "startWindowHint": "O ile wcześniej i później niż domyślny czas pracownik może rozpocząć zmianę — wspólne dla trybu auto i ręcznego",
     "earlierLabel": "Wcześniej",
