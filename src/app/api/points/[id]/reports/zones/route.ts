@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantDayContext } from "@/lib/tenant-day";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
 import { computeZoneSubmissionRevenues, resolvePeriodFromParams, round2, sumByKey } from "@/lib/reports";
 import { getTenantModuleFlags } from "@/lib/tenant-modules";
@@ -33,8 +34,8 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   const today = new Date();
   // Часовой пояс тенанта (аудит 2026-07-25, повторная проверка) — см.
   // комментарий у getPeriodRange в lib/reports.ts.
-  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });
-  const { start, end, granularity } = resolvePeriodFromParams(searchParams, today, tenant?.timezone ?? "UTC");
+  const { timezone, boundary } = await getTenantDayContext(owner.tenantId);
+  const { start, end, granularity } = resolvePeriodFromParams(searchParams, today, timezone, boundary);
 
   const zones = await prisma.zone.findMany({
     where: isAllPoints ? { point: { tenantId: owner.tenantId } } : { pointId },

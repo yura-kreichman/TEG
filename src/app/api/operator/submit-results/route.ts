@@ -26,7 +26,7 @@ import { dispatchZoneSummary } from "@/lib/summary-channels/dispatch";
 import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { onResultsSubmission } from "@/lib/summary-channels/daily-cash-trigger";
 import { settleOutstandingCollectionAdvance } from "@/lib/zone-balance";
-import { localDateParts, zonedWallTimeToUtc } from "@/lib/business-day";
+import { getBusinessDayBounds } from "@/lib/business-day";
 
 // Аудит 2026-07-27 — см. комментарий у повторной проверки внутри runSubmission.
 class OpenLaunchesRaceError extends Error {
@@ -973,11 +973,13 @@ export async function POST(request: Request) {
   // проход, тот же класс бага, что уже чинили в lib/business-day.ts/
   // lib/reports.ts) — мягкое напоминание, не блокирует ничего, но могло
   // ложно срабатывать/не срабатывать около полуночи для тенанта не в UTC.
-  const tenantForTz = await prisma.tenant.findUnique({ where: { id: point.tenantId }, select: { timezone: true } });
+  const tenantForTz = await prisma.tenant.findUnique({
+    where: { id: point.tenantId },
+    select: { timezone: true, businessDayBoundary: true },
+  });
   const timezone = tenantForTz?.timezone ?? "UTC";
-  const nowLocal = localDateParts(new Date(), timezone);
-  const dayStart = zonedWallTimeToUtc(nowLocal.year, nowLocal.month, nowLocal.day, 0, 0, timezone);
-  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+  const boundary = tenantForTz?.businessDayBoundary ?? "00:00";
+  const { start: dayStart, end: dayEnd } = getBusinessDayBounds(boundary, new Date(), timezone);
   const todayShift = await prisma.shift.findFirst({
     where: { operatorId: operator.id, startAt: { gte: dayStart, lt: dayEnd } },
     select: { id: true },

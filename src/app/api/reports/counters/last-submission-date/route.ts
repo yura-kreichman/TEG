@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { localDateParts } from "@/lib/business-day";
+import { businessDayOf } from "@/lib/business-day";
 
 // Дата последней сдачи итогов по точке — для дефолта на экране /money/readings
 // (запрос пользователя 2026-07-15: по умолчанию должен открываться последний
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Некорректные параметры" }, { status: 400 });
   }
 
-  const point = await prisma.point.findUnique({ where: { id: pointId }, include: { tenant: { select: { timezone: true } } } });
+  const point = await prisma.point.findUnique({ where: { id: pointId }, include: { tenant: { select: { timezone: true, businessDayBoundary: true } } } });
   if (!point || point.tenantId !== owner.tenantId) {
     return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
   }
@@ -53,6 +53,10 @@ export async function GET(request: Request) {
   // открытии экрана (без выбора даты вручную) сразу показывали бы не тот
   // день, что реально сдавался последним.
   if (!latest) return NextResponse.json({ date: null });
-  const { year, month, day } = localDateParts(latest, point.tenant.timezone ?? "UTC");
+  const { year, month, day } = businessDayOf(
+    latest,
+    point.tenant.timezone ?? "UTC",
+    point.tenant.businessDayBoundary ?? "00:00"
+  );
   return NextResponse.json({ date: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}` });
 }
