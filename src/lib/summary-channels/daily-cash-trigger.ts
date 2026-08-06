@@ -165,6 +165,35 @@ async function hasOpenShiftsAtPoint(pointId: string): Promise<boolean> {
   return openShift !== null;
 }
 
+/**
+ * Пользуется ли эта точка Рабочим временем в этот бизнес-день — то есть есть
+ * ли у нас вообще человеческий сигнал "день закончился". Если смен за день не
+ * было ни одной, закрытие смены никогда не наступит, и ждать его нельзя:
+ * такой точке остаётся прежнее правило полного покрытия зон.
+ *
+ * Пересечение с границами дня, а не startAt внутри них: смена, начатая до
+ * начала бизнес-дня и продолжающаяся в нём, — та же самая смена этой точки.
+ */
+async function hasShiftsInBounds(pointId: string, bounds: { start: Date; end: Date }): Promise<boolean> {
+  const shift = await prisma.shift.findFirst({
+    where: {
+      pointId,
+      startAt: { lt: bounds.end },
+      OR: [{ isOpen: true }, { endAt: { gt: bounds.start } }],
+    },
+    select: { id: true },
+  });
+  return shift !== null;
+}
+
+async function hasSubmissionsInBounds(pointId: string, bounds: { start: Date; end: Date }): Promise<boolean> {
+  const submission = await prisma.resultsSubmission.findFirst({
+    where: { pointId, submittedAt: { gte: bounds.start, lt: bounds.end } },
+    select: { id: true },
+  });
+  return submission !== null;
+}
+
 async function loadSettingsAndBounds(
   tenantId: string,
   at: Date
@@ -185,11 +214,33 @@ async function loadSettingsAndBounds(
 /**
  * Общая проверка "пора ли отправить сегодняшнюю Кассу за день впервые" —
  * общая для двух реактивных хуков ниже (onResultsSubmission/onShiftClosed).
- * Условие двойное (запрос пользователя 2026-07-14): все активные зоны
- * отчитались за сегодня И на точке не осталось ни одной открытой смены —
- * раньше проверялось только первое, из-за чего сводка могла уйти, пока
- * оператор ещё физически работает (успел один раз сдать итоги по каждой
- * зоне, но день ещё не закончен).
+ *
+ * Конец дня определяется закрытием рабочего времени, а НЕ покрытием зон
+ * (решение пользователя 2026-08-06). Прежнее правило "у каждой активной зоны
+ * есть сдача за сегодня" на реальных данных давало обратный эффект:
+ * — зона, в которой за день не было ни одного человека, физически не может
+ *   быть сдана (сдавать нечего) — КидсБург, "Виртуалка" 5 августа: сдано 2 из
+ *   3 зон, сводка по событию не ушла;
+ * — зона, к которой доступ есть только у сотрудника, который в этот день не
+ *   выходил, тоже висит в ожидании навсегда — Керен Центр, "Дворик" 5 августа:
+ *   работала Соня с доступом только к Халабуде.
+ * В обоих случаях единственным, что доходило, оставалась принудительная сводка
+ * на границе бизнес-дня — поздно и с пугающей пометкой "не все данные могли
+ * поступить" каждый день.
+ *
+ * Порог "сколько зон достаточно" сознательно НЕ вводится: сегодня третья зона
+ * пустая, а завтра именно она даст основную кассу. Закрытие рабочего времени —
+ * уже осознанное "я закончил", сделанное человеком, и ждать после него нечего.
+ *
+ * "Хотя бы одна сдача итогов" — не формальность, а защита от пересменки: тот,
+ * кто уходит в середине дня, зону передаёт, а кассу закрывает последний (Керен
+ * Центр, 30 и 31 июля: смены Соня→Катя встык, сдача одна, вечерняя). Без этого
+ * условия уход первого сотрудника отправлял бы "итог дня" в полдень.
+ *
+ * Точки без Рабочего времени (пункт hasShifts) сигнала "день закончился" не
+ * имеют вовсе — им остаётся прежнее правило полного покрытия зон, иначе сводка
+ * улетала бы после первой же сдачи (баг, который двойным условием и чинили
+ * 2026-07-14).
  */
 async function maybeSendOnEvent(
   pointId: string,
@@ -200,11 +251,16 @@ async function maybeSendOnEvent(
 ): Promise<void> {
   if (settings.sendMode !== "event") return; // fixed — ждёт своего часа у планировщика
 
-  const [{ activeZones, coveredZones }, openShifts] = await Promise.all([
+  const [{ activeZones, coveredZones }, openShifts, hasShifts, hasSubmissions] = await Promise.all([
     getZoneCoverage(pointId, tenantId, bounds),
     hasOpenShiftsAtPoint(pointId),
+    hasShiftsInBounds(pointId, bounds),
+    hasSubmissionsInBounds(pointId, bounds),
   ]);
-  if (activeZones === 0 || coveredZones < activeZones || openShifts) return;
+
+  if (openShifts) return; // кто-то ещё работает — день не закончен
+  if (!hasSubmissions) return; // отправлять нечего, и это же держит пересменку
+  if (!hasShifts && (activeZones === 0 || coveredZones < activeZones)) return;
 
   await maybeSendDailyCashSummary(pointId, tenantId, settings, bounds, false, timezone);
 }
