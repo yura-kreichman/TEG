@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { businessDateKey } from "@/lib/business-day";
 import { getPointCashBalance } from "@/lib/zone-balance";
 import type { DailyCashPending, DailyCashSummaryData } from "./types";
 
@@ -32,6 +33,21 @@ export async function buildDailyCashSummaryData(
   if (!point) return null;
 
   const pointCount = await prisma.point.count({ where: { tenantId: point.tenantId } });
+
+  // Дата в заголовке — та же, по которой сводка группируется и хранится
+  // (DailyCashSummaryDelivery.businessDate), а НЕ момент границы bounds.start.
+  //
+  // РЕАЛЬНЫЙ БАГ, найден пользователем 2026-08-06: у Керен Центра граница
+  // бизнес-дня 22:00, значит день 5 августа начинается 4 августа в 22:00 —
+  // и в сводке стояло "04/08", хотя работали пятого. При ранней границе
+  // (КидсБург, 01:00) совпадало случайно, поэтому и не замечалось.
+  // businessDateKey берёт дату посередине окна, то есть тот день, который
+  // люди и называют рабочим.
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: point.tenantId },
+    select: { timezone: true },
+  });
+  const businessDate = businessDateKey(bounds, tenant?.timezone ?? "UTC");
 
   const submissions = await prisma.resultsSubmission.findMany({
     where: { pointId, submittedAt: { gte: bounds.start, lt: bounds.end } },
@@ -135,7 +151,7 @@ export async function buildDailyCashSummaryData(
   return {
     pointName: point.name,
     showPointName: pointCount > 1,
-    businessDate: bounds.start,
+    businessDate,
     cashAmount: round2(cashAmount),
     mobileAmount: round2(mobileAmount),
     // Справочно — НЕ входит в cashAmount/mobileAmount/итог выше (уже получена

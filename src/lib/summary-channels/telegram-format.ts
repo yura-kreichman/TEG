@@ -6,7 +6,7 @@ import type {
   ShiftCloseSummaryData,
   InstructionAckData,
 } from "./types";
-import { formatDuration, formatLocalTime, formatSummaryDate } from "./format-shared";
+import { formatBusinessDate, formatDuration, formatLocalTime, formatSummaryDate } from "./format-shared";
 import { colorTagToEmoji } from "@/lib/color-tag";
 import { formatMoney } from "@/lib/format";
 import type { Locale } from "@/lib/locales";
@@ -89,6 +89,13 @@ const COMPACT_GRID_MAX_COLS = 2;
 // одна точка — строка вообще не показывается (data.showPointName, считается
 // в daily-cash-data.ts по количеству точек тенанта) — само собой разумеется,
 // какая это точка, называть её незачем.
+function dailyCashHeaderLines(data: DailyCashSummaryData, timezone: string, st: SummaryText): string[] {
+  const lines: string[] = [];
+  if (data.showPointName) lines.push(`<b>${escapeTelegramHtml(data.pointName)}</b>`);
+  lines.push(`💰 <b>${st.cashOnly.toUpperCase()} · ${formatBusinessDate(data.businessDate, "/")}</b>`);
+  return lines;
+}
+
 // Пометка "что не закрылось" одной строкой: перечисление того, чего реально не
 // хватает, а не намёк на последствие. Пусто — пометки нет вовсе.
 //
@@ -105,13 +112,6 @@ function pendingNote(pending: DailyCashPending[], st: SummaryText, locale: Local
       return i === 0 ? text : text.charAt(0).toLocaleLowerCase(locale) + text.slice(1);
     })
     .join(" · ");
-}
-
-function dailyCashHeaderLines(data: DailyCashSummaryData, timezone: string, st: SummaryText): string[] {
-  const lines: string[] = [];
-  if (data.showPointName) lines.push(`<b>${escapeTelegramHtml(data.pointName)}</b>`);
-  lines.push(`💰 <b>${st.cashOnly.toUpperCase()} · ${formatDate(data.businessDate, timezone)}</b>`);
-  return lines;
 }
 
 // fullNames — не резать имена, отдав им весь свободный остаток строки.

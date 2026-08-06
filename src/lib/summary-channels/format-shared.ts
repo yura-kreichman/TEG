@@ -63,6 +63,17 @@ export function formatSummaryDate(
   return includeWeekday ? `${day}${separator}${month} (${weekday})` : `${day}${separator}${month}`;
 }
 
+/**
+ * Дата бизнес-дня (businessDateKey — полночь UTC уже посчитанной календарной
+ * даты тенанта), а не момент времени. Именно поэтому БЕЗ перевода в часовой
+ * пояс: календарную дату переводить некуда, она уже локальная. Для поясов
+ * западнее UTC перевод сдвинул бы её на день назад — то же семейство ошибок,
+ * из-за которого сводка Керен Центра писала "04/08" за пятое августа.
+ */
+export function formatBusinessDate(d: Date, separator: "/" | "."): string {
+  return formatSummaryDate(d, separator, "UTC");
+}
+
 export function formatLocalTime(d: Date, timezone: string): string {
   const { hour, minute } = localParts(d, timezone);
   return `${hour}:${minute}`;

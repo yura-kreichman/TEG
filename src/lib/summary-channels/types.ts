@@ -101,7 +101,11 @@ export interface DailyCashSummaryData {
   // писать её название вообще" — иначе это лишняя, ничего не говорящая
   // строка). Считается в daily-cash-data.ts по факту, не настройка.
   showPointName: boolean;
-  businessDate: Date; // полночь UTC начала бизнес-дня
+  // Календарная дата бизнес-дня (businessDateKey — полночь UTC уже
+  // посчитанной локальной даты), а НЕ момент границы: при поздней границе
+  // (22:00) день начинается в предыдущих сутках, и сводка писала вчерашнее
+  // число. Форматировать только через formatBusinessDate.
+  businessDate: Date;
   cashAmount: number;
   mobileAmount: number;
   // Абонемент как способ оплаты пуска — НЕ входит в cashAmount/mobileAmount

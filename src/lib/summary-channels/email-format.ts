@@ -1,6 +1,6 @@
 import type { ZoneSummarySettingsData, DailyCashSummarySettingsData, ShiftCloseSummarySettingsData } from "@/lib/summary-settings";
 import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData, InstructionAckData } from "./types";
-import { formatDuration, formatLocalTime, formatSummaryDate } from "./format-shared";
+import { formatBusinessDate, formatDuration, formatLocalTime, formatSummaryDate } from "./format-shared";
 import { formatMoney } from "@/lib/format";
 import type { Locale } from "@/lib/locales";
 import type { Dictionary } from "@/lib/i18n";
@@ -153,7 +153,7 @@ export function formatDailyCashSummaryEmail(
   timezone: string,
   st: SummaryText
 ): { subject: string; html: string } {
-  const subject = `${st.dailyCashSubject} · ${data.pointName} · ${formatDate(data.businessDate, timezone)}`;
+  const subject = `${st.dailyCashSubject} · ${data.pointName} · ${formatBusinessDate(data.businessDate, ".")}`;
   const total = data.cashAmount + data.mobileAmount - data.expenses;
   const rows: EmailRow[] = [];
 
@@ -193,7 +193,7 @@ export function formatDailyCashSummaryEmail(
 
   return {
     subject,
-    html: wrapEmail(companyName, `${st.dailyCashSubject} · ${data.pointName}`, formatDate(data.businessDate, timezone), rows, locale),
+    html: wrapEmail(companyName, `${st.dailyCashSubject} · ${data.pointName}`, formatBusinessDate(data.businessDate, "."), rows, locale),
   };
 }
 
