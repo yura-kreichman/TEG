@@ -19,6 +19,7 @@ export async function GET(request: Request) {
     where: { id: ctx.point.tenantId },
     select: {
       timezone: true,
+      businessDayBoundary: true,
       defaultShiftStartTime: true,
       earlyToleranceMinutes: true,
       lateToleranceMinutes: true,
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
   // в календаре тенанта, не в сырой UTC-полночи сервера (см. periodBoundsUtc).
   const period =
     fromParam && toParam && /^\d{4}-\d{2}-\d{2}$/.test(fromParam) && /^\d{4}-\d{2}-\d{2}$/.test(toParam)
-      ? periodBoundsUtc(fromParam, toParam, tenant?.timezone ?? "UTC")
+      ? periodBoundsUtc(fromParam, toParam, tenant?.timezone ?? "UTC", tenant?.businessDayBoundary ?? "00:00")
       : undefined;
 
   const balance = await calcOperatorBalance(ctx.operator.id, period);

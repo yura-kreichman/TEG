@@ -43,9 +43,9 @@ export async function GET(request: Request, ctx: RouteContext<"/api/abonement-wa
   // предыдущем месяце его выписки.
   const tenantForTz = await prisma.tenant.findUnique({
     where: { id: owner.tenantId },
-    select: { timezone: true },
+    select: { timezone: true, businessDayBoundary: true },
   });
-  const period = fromParam && toParam ? periodBoundsUtc(fromParam, toParam, tenantForTz?.timezone ?? "UTC") : undefined;
+  const period = fromParam && toParam ? periodBoundsUtc(fromParam, toParam, tenantForTz?.timezone ?? "UTC", tenantForTz?.businessDayBoundary ?? "00:00") : undefined;
   const occurredAt = period ? { gte: period.from, lt: period.to } : undefined;
 
   const history = await prisma.abonementTransaction.findMany({

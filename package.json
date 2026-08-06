@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "admin:seed": "tsx scripts/admin-seed.ts",
-    "admin:reset-password": "tsx scripts/admin-reset-password.ts"
+    "admin:reset-password": "tsx scripts/admin-reset-password.ts",
+    "day:normalize-boundary": "tsx scripts/normalize-business-day-boundary.ts",
+    "day:compare-buckets": "tsx scripts/compare-day-buckets.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

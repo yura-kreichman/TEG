@@ -8,7 +8,7 @@
 // isAtBoundaryMinute/isAtTimeMinute как "более рискованный кусок логики" —
 // аудит перед реальным запуском был поводом наконец это закрыть).
 
-function parseBoundary(boundaryTime: string): { hours: number; minutes: number } {
+export function parseBoundary(boundaryTime: string): { hours: number; minutes: number } {
   const [hours, minutes] = boundaryTime.split(":").map(Number);
   return { hours, minutes };
 }
@@ -120,6 +120,20 @@ export function getBusinessDayBounds(boundaryTime: string, at: Date, timezone: s
 }
 
 /**
+ * Бизнес-день, предшествующий данному. Через момент "за миллисекунду до
+ * начала", а НЕ через минус 24 часа: в день перехода на/с летнего времени
+ * сутки длятся 23 или 25 часов, и вычитание 24ч сдвигало бы границу на час
+ * (тот же класс бага, что уже разобран в комментарии к getBusinessDayBounds).
+ */
+export function previousBusinessDayBounds(
+  boundaryTime: string,
+  bounds: { start: Date },
+  timezone: string
+): { start: Date; end: Date } {
+  return getBusinessDayBounds(boundaryTime, new Date(bounds.start.getTime() - 1), timezone);
+}
+
+/**
  * Дата (полночь UTC) для группировки/уникальности — "какой это бизнес-день",
  * в календаре ЧАСОВОГО ПОЯСА тенанта, не сырого UTC момента bounds.start.
  *
@@ -157,11 +171,58 @@ export function businessDateKey(bounds: { start: Date }, timezone: string): Date
  * соседних не полученных этим фиксом файлах, из-за чего одна и та же
  * операция могла попадать на РАЗНЫЕ числа на разных экранах владельца).
  */
-export function dayBoundsUtc(year: number, month: number, day: number, timezone: string): { start: Date; end: Date } {
-  const start = zonedWallTimeToUtc(year, month, day, 0, 0, timezone);
+export function dayBoundsUtc(
+  year: number,
+  month: number,
+  day: number,
+  timezone: string,
+  // Граница дня тенанта (решение пользователя 2026-08-06). "00:00" — обычный
+  // календарный день, как было всегда; у тенантов, работающих после полуночи,
+  // здесь стоит утренний час, и тогда день year/month/day идёт ОТ этого часа
+  // этой даты ДО того же часа следующей.
+  //
+  // Зачем это вообще: касса и показания снимаются ОДИН раз за смену, разложить
+  // их по часам нечем. У точки, закрывающейся в три ночи, календарный день
+  // отправлял весь вечер в следующую дату — суббота пустая, воскресенье
+  // двойное, сверка кассы превращалась в мусор (выручка без кассы в одном дне,
+  // касса без выручки в другом).
+  boundaryTime = "00:00"
+): { start: Date; end: Date } {
+  const { hours, minutes } = parseBoundary(boundaryTime);
+  const start = zonedWallTimeToUtc(year, month, day, hours, minutes, timezone);
   const next = new Date(Date.UTC(year, month - 1, day + 1));
-  const end = zonedWallTimeToUtc(next.getUTCFullYear(), next.getUTCMonth() + 1, next.getUTCDate(), 0, 0, timezone);
+  const end = zonedWallTimeToUtc(
+    next.getUTCFullYear(),
+    next.getUTCMonth() + 1,
+    next.getUTCDate(),
+    hours,
+    minutes,
+    timezone
+  );
   return { start, end };
+}
+
+/**
+ * Какому дню принадлежит момент `at` при данной границе — для раскладки строк
+ * по клеткам календаря и группировок "по дням". Пара к dayBoundsUtc выше:
+ * `businessDayOf` отвечает "в какую клетку", `dayBoundsUtc` — "какое окно у
+ * этой клетки", и они обязаны отвечать согласованно.
+ *
+ * Раньше календари звали localDateParts напрямую, то есть всегда считали
+ * календарный день, даже когда окно дня было другим.
+ */
+export function businessDayOf(
+  at: Date,
+  timezone: string,
+  boundaryTime = "00:00"
+): { year: number; month: number; day: number } {
+  const bounds = getBusinessDayBounds(boundaryTime, at, timezone);
+  // Полночь UTC уже посчитанной локальной даты -> обратно в Y/M/D. Читаем
+  // через businessDateKey, а не localDateParts(bounds.start), чтобы сдвиг на
+  // 12 часов внутрь окна (и весь его разбор в комментарии к businessDateKey)
+  // жил в одном месте.
+  const key = businessDateKey(bounds, timezone);
+  return { year: key.getUTCFullYear(), month: key.getUTCMonth() + 1, day: key.getUTCDate() };
 }
 
 /**
@@ -178,15 +239,20 @@ export function dayBoundsUtc(year: number, month: number, day: number, timezone:
  * попадала в табель ПРЕДЫДУЩЕГО месяца. Для точек, работающих ночью, это не
  * теория: businessDayBoundary у части тенантов выставлена на 01:00 и 22:00.
  */
-export function periodBoundsUtc(fromDate: string, toDate: string, timezone: string): { from: Date; to: Date } {
+export function periodBoundsUtc(
+  fromDate: string,
+  toDate: string,
+  timezone: string,
+  boundaryTime = "00:00"
+): { from: Date; to: Date } {
   const [fy, fm, fd] = fromDate.split("-").map(Number);
   const [ty, tm, td] = toDate.split("-").map(Number);
   return {
-    from: dayBoundsUtc(fy!, fm!, fd!, timezone).start,
-    // .end — полночь СЛЕДУЮЩЕГО местного дня: та же семантика "по toDate
+    from: dayBoundsUtc(fy!, fm!, fd!, timezone, boundaryTime).start,
+    // .end — граница СЛЕДУЮЩЕГО местного дня: та же семантика "по toDate
     // включительно", что была у прежнего "+24 часа", но корректная и в день
     // перехода на/с летнего времени, когда сутки длятся 23 или 25 часов.
-    to: dayBoundsUtc(ty!, tm!, td!, timezone).end,
+    to: dayBoundsUtc(ty!, tm!, td!, timezone, boundaryTime).end,
   };
 }
 

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { getBusinessDayBounds, isAtBoundaryMinute, isAtTimeMinute } from "@/lib/business-day";
+import { getBusinessDayBounds, isAtBoundaryMinute, isAtTimeMinute, previousBusinessDayBounds } from "@/lib/business-day";
+import { hasActivityInBounds } from "@/lib/summary-channels/daily-cash-data";
 import { maybeSendDailyCashSummary } from "@/lib/summary-channels/daily-cash-trigger";
 import { DAILY_CASH_SUMMARY_DEFAULTS, type DailyCashSummarySettingsData } from "@/lib/summary-settings";
 import { sendTicketExpiryReminders } from "@/lib/ticket-expiry-reminders";
@@ -23,14 +24,12 @@ function sleep(ms: number) {
 // процесс живёт постоянно — системный cron был бы избыточен для одной задачи).
 //
 // Тик раз в минуту:
-// 1. Режим "fixed" — если текущее время (UTC) совпадает с настроенным —
-//    отправить сводку за бизнес-день, который сейчас идёт.
-// 2. Предохранитель — если сейчас минута границы бизнес-дня, а день, который
-//    только что закончился, ещё не отправлен ни в одном режиме — принудительно
-//    отправить с пометкой "не все данные могли поступить" (см. ChatGPT-diff
-//    в чате: "открытых смен" как явного состояния не существует в модуле
-//    Смен — смена вводится целиком, поэтому это не "смена не закрыта", а
-//    более честная общая пометка).
+// 1. Режим "fixed" — если текущее время совпадает с настроенным, отправить
+//    сводку за прошедший день (см. разбор у самой ветки ниже: за текущий, если
+//    в нём уже есть сдачи, иначе за предыдущий).
+// 2. Предохранитель — только для режима "event": если сейчас минута границы
+//    бизнес-дня, а день, который только что закончился, так и не отправлен —
+//    отправить с пометкой, что именно не закрыли.
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
 // Нет реального биллинга (докс, план+лимиты без денег, 2026-07-10) — админ
@@ -82,11 +81,29 @@ async function tick() {
     for (const point of tenant.points) {
       try {
         if (settings.sendMode === "fixed" && isAtTimeMinute(settings.fixedTime, now, tenant.timezone)) {
-          await maybeSendDailyCashSummary(point.id, tenant.id, settings, bounds, false, tenant.timezone);
+          // "Присылать в 03:00" человек понимает как "итоги за прошедший
+          // день", а не "за день, который начался три часа назад и пока пуст"
+          // (реальная ловушка, найдена пользователем 2026-08-06: у тенанта,
+          // не работающего после полуночи, назначенное на ночь время не
+          // отправляло НИЧЕГО — окно текущего дня было пустым, а тумблер "Не
+          // отправлять без сдач" честно молчал).
+          //
+          // Поэтому: пустой текущий день + непустой предыдущий = отправляем
+          // предыдущий. Для тех, кто работает после полуночи, правило даёт тот
+          // же ответ само собой — у них в три ночи текущий бизнес-день и есть
+          // вчерашний, никаких исключений не нужно.
+          const prevBounds = previousBusinessDayBounds(settings.businessDayBoundary, bounds, tenant.timezone);
+          const target = (await hasActivityInBounds(point.id, bounds)) ? bounds : prevBounds;
+          await maybeSendDailyCashSummary(point.id, tenant.id, settings, target, false, tenant.timezone);
         }
 
-        if (isAtBoundaryMinute(settings.businessDayBoundary, now, tenant.timezone)) {
-          const prevBounds = { start: new Date(bounds.start.getTime() - 24 * 60 * 60 * 1000), end: bounds.start };
+        // Предохранитель на границе дня — только для отправки по событию: там
+        // условия могут не сложиться никогда (забыли закрыть смену). В
+        // фиксированном режиме гарантия — само назначенное время, и второй
+        // механизм только перебивал первый, присылая сводку на границе вместо
+        // выбранного владельцем часа.
+        if (settings.sendMode === "event" && isAtBoundaryMinute(settings.businessDayBoundary, now, tenant.timezone)) {
+          const prevBounds = previousBusinessDayBounds(settings.businessDayBoundary, bounds, tenant.timezone);
           await maybeSendDailyCashSummary(point.id, tenant.id, settings, prevBounds, true, tenant.timezone);
         }
       } catch (err) {

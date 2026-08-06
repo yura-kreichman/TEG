@@ -36,14 +36,15 @@ export async function GET(request: Request) {
     // могут прийти по одной.
     const tenantForTz = await prisma.tenant.findUnique({
       where: { id: owner.tenantId },
-      select: { timezone: true },
+      select: { timezone: true, businessDayBoundary: true },
     });
     const timezone = tenantForTz?.timezone ?? "UTC";
+    const boundary = tenantForTz?.businessDayBoundary ?? "00:00";
     where.createdAt = {
-      ...(from ? { gte: periodBoundsUtc(from, from, timezone).from } : {}),
+      ...(from ? { gte: periodBoundsUtc(from, from, timezone, boundary).from } : {}),
       // lt следующей местной полуночи вместо lte 23:59:59.999 — так день
       // "до" остаётся включительным, но без щели в последнюю миллисекунду.
-      ...(to ? { lt: periodBoundsUtc(to, to, timezone).to } : {}),
+      ...(to ? { lt: periodBoundsUtc(to, to, timezone, boundary).to } : {}),
     };
   }
 

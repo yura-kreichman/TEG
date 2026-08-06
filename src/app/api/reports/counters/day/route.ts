@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Некорректные параметры" }, { status: 400 });
   }
 
-  const point = await prisma.point.findUnique({ where: { id: pointId }, include: { tenant: { select: { timezone: true } } } });
+  const point = await prisma.point.findUnique({ where: { id: pointId }, include: { tenant: { select: { timezone: true, businessDayBoundary: true } } } });
   if (!point || point.tenantId !== owner.tenantId) {
     return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
   }
@@ -45,8 +45,9 @@ export async function GET(request: Request) {
   // не на выбранной владельцем в календаре — см. комментарий у dayBoundsUtc
   // в lib/business-day.ts).
   const timezone = point.tenant.timezone ?? "UTC";
+  const boundary = point.tenant.businessDayBoundary ?? "00:00";
   const [dateYear, dateMonth, dateDay] = date.split("-").map(Number);
-  const { start: dayStart, end: dayEnd } = dayBoundsUtc(dateYear, dateMonth, dateDay, timezone);
+  const { start: dayStart, end: dayEnd } = dayBoundsUtc(dateYear, dateMonth, dateDay, timezone, boundary);
 
   // Продажа абонементов (планов) за эту дату+точку — независимо от Сдачи
   // итогов (запрос пользователя 2026-07-18: "в Итогах дня и остатках на

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOwner } from "@/lib/require-owner";
 import {
   computeZoneSubmissionRevenues,
@@ -8,7 +9,7 @@ import {
   parseDateParam,
   type PeriodGranularity,
 } from "@/lib/reports";
-import { localDateParts, zonedWallTimeToUtc } from "@/lib/business-day";
+import { businessDayOf, parseBoundary, zonedWallTimeToUtc } from "@/lib/business-day";
 import {
   affectsCashOnHand,
   getOutstandingCollectionAdvance,
@@ -33,9 +34,9 @@ export async function GET(request: Request) {
   // Часовой пояс тенанта (аудит 2026-07-25, повторная проверка) — границы
   // периода должны совпадать с местным календарным днём владельца, не с
   // сырым UTC сервера, см. комментарий у getPeriodRange в lib/reports.ts.
-  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });
-  const timezone = tenant?.timezone ?? "UTC";
-  const todayLocal = localDateParts(today, timezone);
+  const { timezone, boundary } = await getTenantDayContext(owner.tenantId);
+  const { hours: bh, minutes: bm } = parseBoundary(boundary);
+  const todayLocal = businessDayOf(today, timezone, boundary);
   const todayNext = new Date(Date.UTC(todayLocal.year, todayLocal.month - 1, todayLocal.day + 1));
   const todayEnd = zonedWallTimeToUtc(
     todayNext.getUTCFullYear(),
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
   let granularity: PeriodGranularity | "custom";
   if (fromParts && toParts) {
     granularity = "custom";
-    start = zonedWallTimeToUtc(fromParts.year, fromParts.month, fromParts.day, 0, 0, timezone);
+    start = zonedWallTimeToUtc(fromParts.year, fromParts.month, fromParts.day, bh, bm, timezone);
     const nextDay = new Date(Date.UTC(toParts.year, toParts.month - 1, toParts.day + 1));
     end = zonedWallTimeToUtc(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate(), 0, 0, timezone);
     if (end > todayEnd) end = todayEnd;
@@ -72,7 +73,7 @@ export async function GET(request: Request) {
     const anchor = anchorParts
       ? zonedWallTimeToUtc(anchorParts.year, anchorParts.month, anchorParts.day, 12, 0, timezone)
       : today;
-    ({ start, end } = getPeriodRange(granularity, anchor, today, timezone));
+    ({ start, end } = getPeriodRange(granularity, anchor, today, timezone, boundary));
   }
 
   // Фильтр по точке — опциональный (запрос пользователя 2026-07-16: "по

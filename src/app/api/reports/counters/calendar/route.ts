@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { dayBoundsUtc, localDateParts } from "@/lib/business-day";
+import { businessDayOf, dayBoundsUtc } from "@/lib/business-day";
 
 // Which calendar days (within one month) had at least one "сдача итогов" for
 // a given point — drives the calendar highlighting in /money/readings.
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Некорректные параметры" }, { status: 400 });
   }
 
-  const point = await prisma.point.findUnique({ where: { id: pointId }, include: { tenant: { select: { timezone: true } } } });
+  const point = await prisma.point.findUnique({ where: { id: pointId }, include: { tenant: { select: { timezone: true, businessDayBoundary: true } } } });
   if (!point || point.tenantId !== owner.tenantId) {
     return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
   }
@@ -29,9 +29,10 @@ export async function GET(request: Request) {
   // класс бага, что и у /api/reports/counters/day — см. комментарий у
   // dayBoundsUtc в lib/business-day.ts).
   const timezone = point.tenant.timezone ?? "UTC";
-  const monthStart = dayBoundsUtc(year, month, 1, timezone).start;
+  const boundary = point.tenant.businessDayBoundary ?? "00:00";
+  const monthStart = dayBoundsUtc(year, month, 1, timezone, boundary).start;
   const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
-  const monthEnd = dayBoundsUtc(nextMonth.year, nextMonth.month, 1, timezone).start;
+  const monthEnd = dayBoundsUtc(nextMonth.year, nextMonth.month, 1, timezone, boundary).start;
 
   const [submissions, abonementSales, goodsReconciliations] = await Promise.all([
     prisma.resultsSubmission.findMany({
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
   ]);
 
   const dateKey = (d: Date) => {
-    const { year: y, month: m, day } = localDateParts(d, timezone);
+    const { year: y, month: m, day } = businessDayOf(d, timezone, boundary);
     return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   };
   const activeDates = [

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOwner } from "@/lib/require-owner";
 import { dayBoundsUtc } from "@/lib/business-day";
 import { affectsCashOnHand } from "@/lib/zone-balance";
@@ -61,11 +62,10 @@ export async function GET(request: Request) {
   // Часовой пояс тенанта, не сырой UTC сервера (аудит 2026-07-24, тот же
   // класс бага, что и у /api/reports/counters/day — см. комментарий у
   // dayBoundsUtc в lib/business-day.ts).
-  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });
-  const timezone = tenant?.timezone ?? "UTC";
-  const monthStart = dayBoundsUtc(year, month, 1, timezone).start;
+  const { timezone, boundary } = await getTenantDayContext(owner.tenantId);
+  const monthStart = dayBoundsUtc(year, month, 1, timezone, boundary).start;
   const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
-  const monthEnd = dayBoundsUtc(nextMonth.year, nextMonth.month, 1, timezone).start;
+  const monthEnd = dayBoundsUtc(nextMonth.year, nextMonth.month, 1, timezone, boundary).start;
 
   const [zoneOps, poolOps, advanceOps, takenOps] = await Promise.all([
     prisma.moneyOperation.findMany({

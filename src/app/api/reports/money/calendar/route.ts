@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOwner } from "@/lib/require-owner";
-import { dayBoundsUtc, localDateParts } from "@/lib/business-day";
+import { businessDayOf, dayBoundsUtc } from "@/lib/business-day";
 
 // Тенант-wide (в отличие от /api/reports/counters/calendar, который
 // точечный) — суммы выручки по дням месяца для календаря на странице Деньги.
@@ -24,11 +25,10 @@ export async function GET(request: Request) {
   // класс бага, что уже чинили для /api/reports/money — календарь мог
   // подсвечивать сумму на СОСЕДНЕМ числе относительно "Итогов дня"/
   // "Отчётов" для операций около полуночи по месту).
-  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });
-  const timezone = tenant?.timezone ?? "UTC";
-  const monthStart = dayBoundsUtc(year, month, 1, timezone).start;
+  const { timezone, boundary } = await getTenantDayContext(owner.tenantId);
+  const monthStart = dayBoundsUtc(year, month, 1, timezone, boundary).start;
   const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
-  const monthEnd = dayBoundsUtc(nextMonth.year, nextMonth.month, 1, timezone).start;
+  const monthEnd = dayBoundsUtc(nextMonth.year, nextMonth.month, 1, timezone, boundary).start;
 
   const operations = await prisma.moneyOperation.findMany({
     where: {
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
   for (const op of operations) {
     // Календарный день ПО МЕСТУ (тенант-таймзона), не op.occurredAt.toISOString()
     // (сырой UTC — тот же баг, что и у самих границ месяца выше).
-    const { year: y, month: m, day: d } = localDateParts(op.occurredAt, timezone);
+    const { year: y, month: m, day: d } = businessDayOf(op.occurredAt, timezone, boundary);
     const key = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     dayRevenue[key] = (dayRevenue[key] ?? 0) + Number(op.amount);
   }

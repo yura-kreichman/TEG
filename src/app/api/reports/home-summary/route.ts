@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOwner } from "@/lib/require-owner";
 import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateTicketOrders } from "@/lib/tickets";
-import { dayBoundsUtc, localDateParts } from "@/lib/business-day";
+import { businessDayOf, dayBoundsUtc } from "@/lib/business-day";
 import { PAYMENT_SPLIT_METHOD } from "@/lib/payment-split";
 
 interface WindowSummary {
@@ -23,17 +24,17 @@ interface WindowSummary {
 // (аудит 2026-07-24: реальный баг — сдача около полуночи по месту могла
 // попасть на карточку "23 июля" здесь и на "24 июля" в /api/reports/money за
 // тот же день, см. комментарий у dayBoundsUtc в lib/business-day.ts).
-function dayBoundsFor(d: Date, timezone: string): { start: Date; end: Date } {
-  const { year, month, day } = localDateParts(d, timezone);
-  return dayBoundsUtc(year, month, day, timezone);
+function dayBoundsFor(d: Date, timezone: string, boundary: string): { start: Date; end: Date } {
+  const { year, month, day } = businessDayOf(d, timezone, boundary);
+  return dayBoundsUtc(year, month, day, timezone, boundary);
 }
 
 // dayStart — местная полночь как момент UTC (например 21:00 UTC для
 // тенанта +3) — .toISOString().slice(0,10) читал бы UTC-дату этого момента,
 // т.е. предыдущее число (тот же баг, что и раньше сами границы). Нужна
 // именно местная календарная дата.
-function formatLocalDateKey(d: Date, timezone: string): string {
-  const { year, month, day } = localDateParts(d, timezone);
+function formatLocalDateKey(d: Date, timezone: string, boundary: string): string {
+  const { year, month, day } = businessDayOf(d, timezone, boundary);
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
@@ -300,9 +301,8 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const pointIdParam = searchParams.get("pointId");
 
-  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });
-  const timezone = tenant?.timezone ?? "UTC";
-  const todayStart = dayBoundsFor(new Date(), timezone).start;
+  const { timezone, boundary } = await getTenantDayContext(owner.tenantId);
+  const todayStart = dayBoundsFor(new Date(), timezone, boundary).start;
 
   if (pointIdParam) {
     const latest = await prisma.resultsSubmission.findFirst({
@@ -313,11 +313,11 @@ export async function GET(request: Request) {
     if (!latest) {
       return NextResponse.json({ hasData: false });
     }
-    const { start: dayStart, end: dayEnd } = dayBoundsFor(latest.submittedAt, timezone);
+    const { start: dayStart, end: dayEnd } = dayBoundsFor(latest.submittedAt, timezone, boundary);
     const summary = await computeWindowSummary(owner.tenantId, pointIdParam, dayStart, dayEnd);
     return NextResponse.json({
       hasData: true,
-      date: formatLocalDateKey(dayStart, timezone),
+      date: formatLocalDateKey(dayStart, timezone, boundary),
       isToday: dayStart.getTime() === todayStart.getTime(),
       ...roundSummary(summary),
     });
@@ -339,7 +339,7 @@ export async function GET(request: Request) {
         select: { submittedAt: true },
       });
       if (!latest) return null;
-      const { start: dayStart, end: dayEnd } = dayBoundsFor(latest.submittedAt, timezone);
+      const { start: dayStart, end: dayEnd } = dayBoundsFor(latest.submittedAt, timezone, boundary);
       const summary = await computeWindowSummary(owner.tenantId, p.id, dayStart, dayEnd);
       return { dayStart, summary };
     })
@@ -367,7 +367,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     hasData: true,
-    date: formatLocalDateKey(maxDayStart, timezone),
+    date: formatLocalDateKey(maxDayStart, timezone, boundary),
     isToday: maxDayStart.getTime() === todayStart.getTime(),
     ...roundSummary(combined),
   });

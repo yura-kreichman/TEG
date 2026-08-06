@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOwner, findTenantPoint } from "@/lib/require-owner";
 import { calculateGoodsCashSince, reconcileGoodsCash, ReconciliationChangedError } from "@/lib/goods";
 import { getPeriodRange, isPeriodGranularity, parseDateParam, round2 } from "@/lib/reports";
-import { dayBoundsUtc, localDateParts, zonedWallTimeToUtc } from "@/lib/business-day";
+import { businessDayOf, dayBoundsUtc, localDateParts, parseBoundary, zonedWallTimeToUtc } from "@/lib/business-day";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Сверка кассы Товаров (docs/spec/09-goods.md, "Сверка кассы") — НЕ
@@ -28,8 +29,8 @@ export async function GET(request: Request) {
   const today = new Date();
   // Часовой пояс тенанта (аудит 2026-07-25, повторная проверка) — см.
   // комментарий у getPeriodRange в lib/reports.ts.
-  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });
-  const timezone = tenant?.timezone ?? "UTC";
+  const { timezone, boundary } = await getTenantDayContext(owner.tenantId);
+  const { hours: bh, minutes: bm } = parseBoundary(boundary);
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
   const granularityParam = searchParams.get("granularity");
@@ -38,9 +39,9 @@ export async function GET(request: Request) {
   let start: Date;
   let end: Date;
   if (fromParts && toParts) {
-    start = zonedWallTimeToUtc(fromParts.year, fromParts.month, fromParts.day, 0, 0, timezone);
+    start = zonedWallTimeToUtc(fromParts.year, fromParts.month, fromParts.day, bh, bm, timezone);
     const nextDay = new Date(Date.UTC(toParts.year, toParts.month - 1, toParts.day + 1));
-    end = zonedWallTimeToUtc(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate(), 0, 0, timezone);
+    end = zonedWallTimeToUtc(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate(), bh, bm, timezone);
   } else {
     const granularity = isPeriodGranularity(granularityParam) ? granularityParam : "month";
     const anchorParam = searchParams.get("anchor");
@@ -48,7 +49,7 @@ export async function GET(request: Request) {
     const anchor = anchorParts
       ? zonedWallTimeToUtc(anchorParts.year, anchorParts.month, anchorParts.day, 12, 0, timezone)
       : today;
-    ({ start, end } = getPeriodRange(granularity, anchor, today, timezone));
+    ({ start, end } = getPeriodRange(granularity, anchor, today, timezone, boundary));
   }
 
   const [reconciliations, pending] = await Promise.all([
@@ -70,7 +71,7 @@ export async function GET(request: Request) {
   // Ключ дня — местная календарная дата тенанта, не сырой UTC (аудит
   // 2026-07-24, тот же класс бага, что и у /reports/points/[id]/reports/*).
   const dateKey = (d: Date) => {
-    const { year: y, month: m, day } = localDateParts(d, timezone);
+    const { year: y, month: m, day } = businessDayOf(d, timezone, boundary);
     return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   };
   const byDay = new Map<string, number>();
@@ -91,7 +92,7 @@ export async function GET(request: Request) {
     }
     for (const dayKey of activeDays) activeMonths.add(dayKey.slice(0, 7));
     let { year: mYear, month: mMonth } = localDateParts(start, timezone);
-    while (dayBoundsUtc(mYear, mMonth, 1, timezone).start < end) {
+    while (dayBoundsUtc(mYear, mMonth, 1, timezone, boundary).start < end) {
       const key = `${mYear}-${String(mMonth).padStart(2, "0")}`;
       bars.push({ date: `${key}-01`, total: round2(byMonth.get(key) ?? 0), hasData: activeMonths.has(key) });
       if (mMonth === 12) {

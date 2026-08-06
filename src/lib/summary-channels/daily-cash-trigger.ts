@@ -94,7 +94,12 @@ export async function maybeSendDailyCashSummary(
       hasOpenShiftsAtPoint(pointId),
       getZoneCoverage(pointId, tenantId, bounds),
     ]);
-    if (openShifts) pending.push("openShift");
+    // В режиме "в фиксированное время" незакрытая смена — не то, что нужно
+    // поправить: так работает круглосуточная точка, у которой один ушёл, а
+    // другой уже отметился, и нуля открытых смен не бывает вовсе. Отдельного
+    // ответа в настройках для них не заводим — достаточно не показывать
+    // пометку там, где сводку и так не ждут по событию.
+    if (openShifts && settings.sendMode !== "fixed") pending.push("openShift");
     if (!active) pending.push("noSubmissions");
     else if (coverage.activeZones === 0 || coverage.coveredZones < coverage.activeZones) pending.push("zonesPending");
   }

@@ -26,9 +26,9 @@ export async function GET(request: Request, ctx: RouteContext<"/api/operators/[i
   // соседний месяц вместе со своей суммой.
   const tenant = await prisma.tenant.findUnique({
     where: { id: owner.tenantId },
-    select: { timezone: true },
+    select: { timezone: true, businessDayBoundary: true },
   });
-  const period = fromParam && toParam ? periodBoundsUtc(fromParam, toParam, tenant?.timezone ?? "UTC") : undefined;
+  const period = fromParam && toParam ? periodBoundsUtc(fromParam, toParam, tenant?.timezone ?? "UTC", tenant?.businessDayBoundary ?? "00:00") : undefined;
 
   const balance = await calcOperatorBalance(operator.id, period);
   const currentRate = await getRateForDate(operator.id, new Date());

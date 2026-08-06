@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantDayContext } from "@/lib/tenant-day";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
 import { resolvePeriodFromParams, round2 } from "@/lib/reports";
-import { dayBoundsUtc, localDateParts } from "@/lib/business-day";
+import { businessDayOf, dayBoundsUtc, localDateParts } from "@/lib/business-day";
 
 export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/reports/calendar">) {
   const owner = await requireOwner();
@@ -35,9 +36,8 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   // внутри — усечение здесь заранее в UTC могло потерять "сегодня" по
   // месту для тенанта восточнее UTC в первые часы после местной полуночи,
   // но ещё до полуночи UTC, из-за чего today ошибочно читался как вчера).
-  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });
-  const timezone = tenant?.timezone ?? "UTC";
-  const { start, end, granularity } = resolvePeriodFromParams(searchParams, today, timezone);
+  const { timezone, boundary } = await getTenantDayContext(owner.tenantId);
+  const { start, end, granularity } = resolvePeriodFromParams(searchParams, today, timezone, boundary);
   // Ключ дня — местная календарная дата (аудит 2026-07-24): [start, end) уже
   // тенант-таймзонный (resolvePeriodFromParams), но группировка отдельных
   // операций/дней сетки внутри этого окна раньше читала СЫРОЙ UTC-календарь
@@ -45,7 +45,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   // это ещё вечер UTC дня X−1, и вся тепловая карта/названия ячеек
   // сдвигались на день относительно того же дня в "Итогах дня"/"Отчётах".
   const dateKey = (d: Date) => {
-    const { year: y, month: m, day } = localDateParts(d, timezone);
+    const { year: y, month: m, day } = businessDayOf(d, timezone, boundary);
     return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   };
   // День недели МЕСТНОЙ календарной даты (аудит 2026-07-25 — реальный баг,
@@ -60,7 +60,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   // отдельная точка со своим getUTCDay(). Y-M-D → UTC-полночь того же Y-M-D
   // даёт день недели корректно независимо от смещения тенанта.
   const localDayOfWeek = (d: Date): number => {
-    const { year: y, month: m, day } = localDateParts(d, timezone);
+    const { year: y, month: m, day } = businessDayOf(d, timezone, boundary);
     return (new Date(Date.UTC(y, m - 1, day)).getUTCDay() + 6) % 7;
   };
 
@@ -132,7 +132,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       monthTotals[m] += val;
     }
     const months = Array.from({ length: 12 }, (_, m) => {
-      const monthStart = dayBoundsUtc(year, m + 1, 1, timezone).start;
+      const monthStart = dayBoundsUtc(year, m + 1, 1, timezone, boundary).start;
       const hasData = monthStart < end;
       return { month: m, total: round2(hasData ? monthTotals[m] : 0), hasData };
     });

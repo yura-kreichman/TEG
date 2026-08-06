@@ -9,19 +9,32 @@ import { SpringCard } from "@/components/spring-card";
 import { Label } from "@/components/ui/label";
 import { TimeInput } from "@/components/time-input";
 import { SavedCheckmark } from "@/components/ui/saved-checkmark";
-import { WheelTimePicker } from "@/components/wheel-time-picker";
+import { Switch } from "@/components/ui/switch";
 import { toleranceCrossesBusinessDayBoundary } from "@/lib/business-day";
 
 type ToleranceField = "earlyToleranceMinutes" | "lateToleranceMinutes";
 type FieldKey = "defaultShiftStartTime" | "businessDayBoundary" | ToleranceField;
+
+// Два значения границы вместо свободного часа. Шесть утра покрывают весь
+// реальный диапазон детского проката: закрылись в три-четыре ночи, открылись
+// в десять. Точный час владельцу знать незачем — если однажды появится
+// случай, которому шести утра мало, поле добавится тогда, спрятанным за
+// включённым тумблером.
+const MIDNIGHT = "00:00";
+const NIGHT_BOUNDARY = "06:00";
 
 export default function WorkTimeSettingsPage() {
   const t = useI18n();
   const [checking, setChecking] = useState(true);
   const [startHour, setStartHour] = useState(10);
   const [startMinute, setStartMinute] = useState(0);
-  const [boundaryHour, setBoundaryHour] = useState(6);
-  const [boundaryMinute, setBoundaryMinute] = useState(0);
+  // Граница дня больше не спрашивается часами (решение пользователя
+  // 2026-08-06). Владелец отвечает на вопрос про свой бизнес — работаете ли
+  // после полуночи — а точный час хранится внутри: NIGHT_BOUNDARY при "да",
+  // полночь при "нет". Прежний WheelTimePicker давал 1440 вариантов, из
+  // которых верны единицы: у Керен Центра стояло 22:00 при закрытии в 20:10,
+  // то есть любая задержавшаяся сдача уехала бы в следующий день.
+  const [worksPastMidnight, setWorksPastMidnight] = useState(false);
   const [earlyMinutes, setEarlyMinutes] = useState(120);
   const [lateMinutes, setLateMinutes] = useState(120);
   const [savedField, setSavedField] = useState<FieldKey | null>(null);
@@ -33,9 +46,7 @@ export default function WorkTimeSettingsPage() {
         const [sh, sm] = String(data.defaultShiftStartTime ?? "10:00").split(":").map(Number);
         setStartHour(sh);
         setStartMinute(sm);
-        const [bh, bm] = String(data.businessDayBoundary ?? "06:00").split(":").map(Number);
-        setBoundaryHour(bh);
-        setBoundaryMinute(bm);
+        setWorksPastMidnight(String(data.businessDayBoundary ?? MIDNIGHT) !== MIDNIGHT);
         setEarlyMinutes(data.earlyToleranceMinutes ?? 120);
         setLateMinutes(data.lateToleranceMinutes ?? 120);
         setChecking(false);
@@ -55,6 +66,17 @@ export default function WorkTimeSettingsPage() {
     setTimeout(() => setSavedField((current) => (current === field ? null : current)), 1500);
   }
 
+  // Тумблеры по всему проекту сохраняются молча (см. Настройки → Система):
+  // сам сдвинувшийся переключатель и есть подтверждение, галочка рядом с ним
+  // была бы вторым сообщением об одном и том же.
+  async function saveSilently(field: FieldKey, value: string | number) {
+    await fetch("/api/tenant/work-time-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: value }),
+    });
+  }
+
   function saveTimeField(field: "defaultShiftStartTime" | "businessDayBoundary", hour: number, minute: number) {
     savePatch(field, `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
   }
@@ -67,7 +89,7 @@ export default function WorkTimeSettingsPage() {
   }
 
   const defaultShiftStartTime = `${String(startHour).padStart(2, "0")}:${String(startMinute).padStart(2, "0")}`;
-  const businessDayBoundary = `${String(boundaryHour).padStart(2, "0")}:${String(boundaryMinute).padStart(2, "0")}`;
+  const businessDayBoundary = worksPastMidnight ? NIGHT_BOUNDARY : MIDNIGHT;
   const crossesBoundary = useMemo(
     () => toleranceCrossesBusinessDayBoundary(defaultShiftStartTime, businessDayBoundary, earlyMinutes, lateMinutes),
     [defaultShiftStartTime, businessDayBoundary, earlyMinutes, lateMinutes]
@@ -84,39 +106,45 @@ export default function WorkTimeSettingsPage() {
           <p className="mb-1 text-caption-airbnb">{t.settings.workTimeHint}</p>
 
           <SpringCard animate={false} hover={false} className="flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col items-center gap-2 text-center">
-                <Label>{t.settings.defaultShiftStartLabel}</Label>
-                <WheelTimePicker
-                  hour={startHour}
-                  minute={startMinute}
-                  minuteStep={10}
-                  onChange={(v) => {
-                    setStartHour(v.hour);
-                    setStartMinute(v.minute);
-                    saveTimeField("defaultShiftStartTime", v.hour, v.minute);
+            {/* Тот же контрол, что у допуска ниже (запрос пользователя
+                2026-08-06): колесо занимало пол-экрана и выглядело отдельной
+                механикой рядом с обычными полями времени в той же настройке. */}
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="defaultShiftStart">{t.settings.defaultShiftStartLabel}</Label>
+                <TimeInput
+                  id="defaultShiftStart"
+                  className="h-10 w-fit"
+                  value={defaultShiftStartTime}
+                  onChange={(e) => {
+                    const [h, m] = e.target.value.split(":").map(Number);
+                    if (!Number.isFinite(h) || !Number.isFinite(m)) return;
+                    setStartHour(h);
+                    setStartMinute(m);
+                    saveTimeField("defaultShiftStartTime", h, m);
                   }}
                 />
-                <span className="text-caption-airbnb">{t.settings.defaultShiftStartHint}</span>
               </div>
-              <div className="flex flex-col items-center gap-2 text-center">
-                <Label>{t.settings.businessDayBoundaryLabel}</Label>
-                <WheelTimePicker
-                  hour={boundaryHour}
-                  minute={boundaryMinute}
-                  minuteStep={10}
-                  onChange={(v) => {
-                    setBoundaryHour(v.hour);
-                    setBoundaryMinute(v.minute);
-                    saveTimeField("businessDayBoundary", v.hour, v.minute);
-                  }}
-                />
-                <span className="text-caption-airbnb">{t.settings.businessDayBoundaryHint}</span>
-              </div>
+              <p className="mt-1 text-caption-airbnb">{t.settings.defaultShiftStartHint}</p>
             </div>
-            <SavedCheckmark
-              show={savedField === "defaultShiftStartTime" || savedField === "businessDayBoundary"}
-            />
+            {/* Вопрос про бизнес, а не про архитектуру. Подпись обязательна:
+                без неё непонятно, зачем спрашивают — и половина ответит
+                наугад, а от ответа зависит день во всех отчётах. */}
+            <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
+              <div className="min-w-0">
+                <div className="text-body-airbnb">{t.settings.worksPastMidnightLabel}</div>
+                <div className="text-caption-airbnb">{t.settings.worksPastMidnightHint}</div>
+              </div>
+              <Switch
+                checked={worksPastMidnight}
+                onCheckedChange={(v) => {
+                  setWorksPastMidnight(v);
+                  saveSilently("businessDayBoundary", v ? NIGHT_BOUNDARY : MIDNIGHT);
+                }}
+                className="shrink-0"
+              />
+            </div>
+            <SavedCheckmark show={savedField === "defaultShiftStartTime"} />
           </SpringCard>
 
           <SpringCard animate={false} hover={false} className="flex flex-col gap-3">

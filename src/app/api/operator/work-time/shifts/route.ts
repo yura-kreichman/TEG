@@ -32,9 +32,9 @@ export async function GET(request: Request) {
   // Границы недели/месяца — в календаре тенанта (см. periodBoundsUtc).
   const tenant = await prisma.tenant.findUnique({
     where: { id: ctx.operator.tenantId },
-    select: { timezone: true },
+    select: { timezone: true, businessDayBoundary: true },
   });
-  const period = fromParam && toParam ? periodBoundsUtc(fromParam, toParam, tenant?.timezone ?? "UTC") : undefined;
+  const period = fromParam && toParam ? periodBoundsUtc(fromParam, toParam, tenant?.timezone ?? "UTC", tenant?.businessDayBoundary ?? "00:00") : undefined;
 
   const shifts = await listShiftDetails(ctx.operator.id, period);
   const standaloneMoneyOps = await listStandaloneMoneyOps(ctx.operator.id, period);

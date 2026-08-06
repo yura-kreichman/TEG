@@ -6,7 +6,7 @@ import { BackLink } from "@/components/back-link";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { Switch } from "@/components/ui/switch";
-import { TimeSelect } from "@/components/time-select";
+import { TimeInput } from "@/components/time-input";
 import { TelegramPreviewBubble } from "@/components/telegram-preview-bubble";
 import { useI18n, useLocale } from "@/components/i18n-provider";
 import { OwnerShell } from "@/components/owner-shell";
@@ -187,11 +187,17 @@ export default function DailyCashSummaryEditorPage() {
                     <span className="block text-body-airbnb font-bold">{t.summaries.modeFixedName}</span>
                     <span className="mt-0.5 block text-caption-airbnb leading-relaxed">{t.summaries.modeFixedSub}</span>
                     {settings.sendMode === "fixed" && (
+                      // Тот же TimeInput, что во всех настройках времени
+                      // (запрос пользователя 2026-08-06): два дропдауна были
+                      // третьим способом ввести время в одном продукте.
                       <span className="mt-2 block" onClick={(e) => e.stopPropagation()}>
-                        <TimeSelect
-                          hour={fixedTime.hour}
-                          minute={fixedTime.minute}
-                          onChange={(v) => patch({ fixedTime: formatTime(v.hour, v.minute) })}
+                        <TimeInput
+                          className="h-10 w-fit"
+                          value={formatTime(fixedTime.hour, fixedTime.minute)}
+                          onChange={(e) => {
+                            const [h, m] = e.target.value.split(":").map(Number);
+                            if (Number.isFinite(h) && Number.isFinite(m)) patch({ fixedTime: formatTime(h, m) });
+                          }}
                         />
                       </span>
                     )}

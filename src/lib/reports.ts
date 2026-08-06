@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateTicketOrders, ticketRevenueByAssetVariant } from "@/lib/tickets";
-import { localDateParts, zonedWallTimeToUtc } from "@/lib/business-day";
+import { businessDayOf, localDateParts, parseBoundary, zonedWallTimeToUtc } from "@/lib/business-day";
 import { PAYMENT_SPLIT_METHOD } from "@/lib/payment-split";
 
 function addCalendarDays(parts: { year: number; month: number; day: number }, days: number) {
@@ -38,9 +38,20 @@ export const isReportGranularity = isPeriodGranularity;
  * реального местного дня на сутки, "Сегодня"/"Неделя"/"Месяц" в Отчётах
  * могли молча включать/исключать не те данные).
  */
-export function getPeriodRange(granularity: PeriodGranularity, anchor: Date, today: Date, timezone: string) {
-  const a = localDateParts(anchor, timezone);
-  const toUtc = (p: { year: number; month: number; day: number }) => zonedWallTimeToUtc(p.year, p.month, p.day, 0, 0, timezone);
+export function getPeriodRange(
+  granularity: PeriodGranularity,
+  anchor: Date,
+  today: Date,
+  timezone: string,
+  // Граница дня тенанта (решение пользователя 2026-08-06) — периоды режутся
+  // по ней, а не по полуночи: ночная смена 31-го числа иначе уезжает в
+  // следующий месяц вместе с начислением. "00:00" — прежнее поведение.
+  boundaryTime = "00:00"
+) {
+  const { hours: bh, minutes: bm } = parseBoundary(boundaryTime);
+  const a = businessDayOf(anchor, timezone, boundaryTime);
+  const toUtc = (p: { year: number; month: number; day: number }) =>
+    zonedWallTimeToUtc(p.year, p.month, p.day, bh, bm, timezone);
 
   let startParts: { year: number; month: number; day: number };
   let endParts: { year: number; month: number; day: number };
@@ -63,7 +74,7 @@ export function getPeriodRange(granularity: PeriodGranularity, anchor: Date, tod
   const start = toUtc(startParts);
   let end = toUtc(endParts);
 
-  const todayEnd = toUtc(addCalendarDays(localDateParts(today, timezone), 1));
+  const todayEnd = toUtc(addCalendarDays(businessDayOf(today, timezone, boundaryTime), 1));
   if (end > todayEnd) end = todayEnd;
   return { start, end };
 }
@@ -81,23 +92,31 @@ export function getPeriodRange(granularity: PeriodGranularity, anchor: Date, tod
  * предыдущий период" (Отчёты/Деньги, гранулярность День/Неделя) искажалось
  * на этот час раз в год, вокруг даты перехода.
  */
-export function getPreviousPeriodRange(granularity: ReportGranularity, start: Date, timezone: string) {
+export function getPreviousPeriodRange(
+  granularity: ReportGranularity,
+  start: Date,
+  timezone: string,
+  boundaryTime = "00:00"
+) {
+  const { hours: bh, minutes: bm } = parseBoundary(boundaryTime);
+  // start уже стоит НА границе дня, поэтому его локальная дата и есть дата
+  // начала периода — сдвигать внутрь окна не нужно.
   const s = localDateParts(start, timezone);
   if (granularity === "day") {
     const prev = addCalendarDays(s, -1);
-    return { start: zonedWallTimeToUtc(prev.year, prev.month, prev.day, 0, 0, timezone), end: start };
+    return { start: zonedWallTimeToUtc(prev.year, prev.month, prev.day, bh, bm, timezone), end: start };
   }
   if (granularity === "week") {
     const prev = addCalendarDays(s, -7);
-    return { start: zonedWallTimeToUtc(prev.year, prev.month, prev.day, 0, 0, timezone), end: start };
+    return { start: zonedWallTimeToUtc(prev.year, prev.month, prev.day, bh, bm, timezone), end: start };
   }
   if (granularity === "year") {
-    const prevYearStart = zonedWallTimeToUtc(s.year - 1, 1, 1, 0, 0, timezone);
+    const prevYearStart = zonedWallTimeToUtc(s.year - 1, 1, 1, bh, bm, timezone);
     return { start: prevYearStart, end: start };
   }
   const prevMonthY = s.month === 1 ? s.year - 1 : s.year;
   const prevMonthM = s.month === 1 ? 12 : s.month - 1;
-  const prevMonthStart = zonedWallTimeToUtc(prevMonthY, prevMonthM, 1, 0, 0, timezone);
+  const prevMonthStart = zonedWallTimeToUtc(prevMonthY, prevMonthM, 1, bh, bm, timezone);
   return { start: prevMonthStart, end: start };
 }
 
@@ -124,7 +143,8 @@ export function parseDateParam(value: string): { year: number; month: number; da
 export function resolvePeriodFromParams(
   searchParams: URLSearchParams,
   today: Date,
-  timezone: string
+  timezone: string,
+  boundaryTime = "00:00"
 ): { start: Date; end: Date; granularity: PeriodGranularity; isCustom: boolean } {
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
@@ -134,10 +154,12 @@ export function resolvePeriodFromParams(
     // Календарные даты, выбранные владельцем ("Период" from/to) — переводим
     // в местную полночь тенанта, не в UTC-полночь строки (тот же фикс, что
     // у getPeriodRange ниже): для тенанта западнее UTC "2026-07-25T00:00Z"
-    // это ещё 24 июля по месту.
-    const start = zonedWallTimeToUtc(fromParts.year, fromParts.month, fromParts.day, 0, 0, timezone);
+    // это ещё 24 июля по месту. Час — граница дня тенанта, а не полночь: иначе
+    // выбранный вручную период резал бы ночную смену пополам.
+    const { hours: bh, minutes: bm } = parseBoundary(boundaryTime);
+    const start = zonedWallTimeToUtc(fromParts.year, fromParts.month, fromParts.day, bh, bm, timezone);
     const endParts = addCalendarDays(toParts, 1);
-    const end = zonedWallTimeToUtc(endParts.year, endParts.month, endParts.day, 0, 0, timezone);
+    const end = zonedWallTimeToUtc(endParts.year, endParts.month, endParts.day, bh, bm, timezone);
     return { start, end, granularity: "day", isCustom: true };
   }
   const granularityParam = searchParams.get("granularity");
@@ -149,7 +171,7 @@ export function resolvePeriodFromParams(
   const anchor = anchorParts
     ? zonedWallTimeToUtc(anchorParts.year, anchorParts.month, anchorParts.day, 12, 0, timezone)
     : today;
-  const { start, end } = getPeriodRange(granularity, anchor, today, timezone);
+  const { start, end } = getPeriodRange(granularity, anchor, today, timezone, boundaryTime);
   return { start, end, granularity, isCustom: false };
 }
 

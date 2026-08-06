@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantDayContext } from "@/lib/tenant-day";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
 import {
   computeZoneSubmissionRevenues,
@@ -8,7 +9,7 @@ import {
   resolvePeriodFromParams,
   round2,
 } from "@/lib/reports";
-import { dayBoundsUtc, localDateParts } from "@/lib/business-day";
+import { businessDayOf, dayBoundsUtc, localDateParts } from "@/lib/business-day";
 
 export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/reports/dynamics">) {
   const owner = await requireOwner();
@@ -35,17 +36,16 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   const today = new Date();
   // Часовой пояс тенанта (аудит 2026-07-25, повторная проверка) — см.
   // комментарий у getPeriodRange в lib/reports.ts.
-  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });
-  const timezone = tenant?.timezone ?? "UTC";
-  const { start, end, granularity, isCustom } = resolvePeriodFromParams(searchParams, today, timezone);
+  const { timezone, boundary } = await getTenantDayContext(owner.tenantId);
+  const { start, end, granularity, isCustom } = resolvePeriodFromParams(searchParams, today, timezone, boundary);
   const { start: prevStart, end: prevEnd } = isCustom
     ? getPreviousCustomRange(start, end)
-    : getPreviousPeriodRange(granularity, start, timezone);
+    : getPreviousPeriodRange(granularity, start, timezone, boundary);
   // Ключ дня — местная календарная дата тенанта, не сырой UTC (аудит
   // 2026-07-24: тот же класс бага, что и у /reports/counters/day/calendar —
   // toISOString() читает UTC-дату момента, а не местную).
   const dateKey = (d: Date) => {
-    const { year: y, month: m, day } = localDateParts(d, timezone);
+    const { year: y, month: m, day } = businessDayOf(d, timezone, boundary);
     return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   };
 
@@ -201,7 +201,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     // тенант-таймзонной полуночи 1 января, для тенанта восточнее UTC это
     // ещё 31 декабря по UTC — старый цикл начинал бы с декабря прошлого года).
     let { year: mYear, month: mMonth } = localDateParts(start, timezone);
-    while (dayBoundsUtc(mYear, mMonth, 1, timezone).start < end) {
+    while (dayBoundsUtc(mYear, mMonth, 1, timezone, boundary).start < end) {
       const key = `${mYear}-${String(mMonth).padStart(2, "0")}`;
       const revenueForBar = byMonth.get(key) ?? 0;
       const deductionsForBar = deductionsByMonth.get(key) ?? 0;
@@ -227,7 +227,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     // (дубликат бара) либо пропускало последний день диапазона. Тот же
     // приём, что уже используется в ветке "year" чуть выше.
     let { year: dYear, month: dMonth, day: dDay } = localDateParts(start, timezone);
-    while (dayBoundsUtc(dYear, dMonth, dDay, timezone).start < end) {
+    while (dayBoundsUtc(dYear, dMonth, dDay, timezone, boundary).start < end) {
       const key = `${dYear}-${String(dMonth).padStart(2, "0")}-${String(dDay).padStart(2, "0")}`;
       const revenueForBar = byDay.get(key) ?? 0;
       const deductionsForBar = deductionsByDay.get(key) ?? 0;

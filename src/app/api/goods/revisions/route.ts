@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOwner, findTenantPoint } from "@/lib/require-owner";
 import { reviseGoodsStockBatch } from "@/lib/goods";
 import { getPeriodRange, isPeriodGranularity, parseDateParam } from "@/lib/reports";
-import { zonedWallTimeToUtc } from "@/lib/business-day";
+import { parseBoundary, zonedWallTimeToUtc } from "@/lib/business-day";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
 interface RevisionLineOut {
@@ -46,8 +47,8 @@ export async function GET(request: Request) {
   const today = new Date();
   // Часовой пояс тенанта (аудит 2026-07-25, повторная проверка) — см.
   // комментарий у getPeriodRange в lib/reports.ts.
-  const tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { timezone: true } });
-  const timezone = tenant?.timezone ?? "UTC";
+  const { timezone, boundary } = await getTenantDayContext(owner.tenantId);
+  const { hours: bh, minutes: bm } = parseBoundary(boundary);
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
   const granularityParam = searchParams.get("granularity");
@@ -56,9 +57,9 @@ export async function GET(request: Request) {
   let start: Date;
   let end: Date;
   if (fromParts && toParts) {
-    start = zonedWallTimeToUtc(fromParts.year, fromParts.month, fromParts.day, 0, 0, timezone);
+    start = zonedWallTimeToUtc(fromParts.year, fromParts.month, fromParts.day, bh, bm, timezone);
     const nextDay = new Date(Date.UTC(toParts.year, toParts.month - 1, toParts.day + 1));
-    end = zonedWallTimeToUtc(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate(), 0, 0, timezone);
+    end = zonedWallTimeToUtc(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate(), bh, bm, timezone);
   } else {
     const granularity = isPeriodGranularity(granularityParam) ? granularityParam : "month";
     const anchorParam = searchParams.get("anchor");
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
     const anchor = anchorParts
       ? zonedWallTimeToUtc(anchorParts.year, anchorParts.month, anchorParts.day, 12, 0, timezone)
       : today;
-    ({ start, end } = getPeriodRange(granularity, anchor, today, timezone));
+    ({ start, end } = getPeriodRange(granularity, anchor, today, timezone, boundary));
   }
 
   const revisions = await prisma.goodsRevision.findMany({
