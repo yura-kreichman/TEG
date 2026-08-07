@@ -114,7 +114,7 @@
     "startWindowCardLabel": "Tolleranza inizio turno",
     "startWindowHint": "Di quanto prima o dopo l'orario predefinito un dipendente può iniziare il turno — condiviso tra modalità automatica e manuale",
     "earlierByLabel": "Prima di",
-    "toleranceNone": "Non prima",
+    "toleranceNone": "Nessuno",
     "laterByLabel": "Dopo di",
     "startWindowBoundaryWarning": "La finestra di tolleranza attraversa il limite del giorno lavorativo — un turno iniziato in quella finestra anticipata finirà nel giorno lavorativo precedente nei report",
     "timezoneAuto": "Automatico",

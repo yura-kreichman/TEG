@@ -114,7 +114,7 @@
     "startWindowCardLabel": "Vardiya başlangıç toleransı",
     "startWindowHint": "Çalışanın varsayılan saatten ne kadar önce ve sonra vardiyaya başlayabileceği — otomatik ve manuel mod için ortaktır",
     "earlierByLabel": "Şu kadar önce",
-    "toleranceNone": "Daha önce değil",
+    "toleranceNone": "Yok",
     "laterByLabel": "Şu kadar sonra",
     "startWindowBoundaryWarning": "Tolerans iş günü sınırını aşıyor — bu erken pencerede başlayan vardiya raporlarda bir önceki iş gününe düşer",
     "timezoneAuto": "Otomatik",

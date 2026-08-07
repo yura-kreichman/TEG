@@ -114,7 +114,7 @@
     "startWindowCardLabel": "Smena boshlanish ruxsati",
     "startWindowHint": "Xodim standart vaqtdan qancha ertaroq yoki kechroq smenani boshlashi mumkin — avto va qoʻlda rejim uchun umumiy",
     "earlierByLabel": "Oldin",
-    "toleranceNone": "Oldin emas",
+    "toleranceNone": "Yo'q",
     "laterByLabel": "Keyin",
     "startWindowBoundaryWarning": "Ruxsat oraligʻi ish kuni chegarasidan oʻtib ketadi — shu erta oynada boshlangan smena hisobotlarda oldingi ish kuniga tushadi",
     "timezoneAuto": "Avto",
