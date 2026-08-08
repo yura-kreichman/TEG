@@ -237,11 +237,16 @@ function rentos_sso_start_url($to = '')
 function rentos_login_button_html()
 {
     // Куда человек шёл до того, как его попросили войти. Обычно приходит
-    // параметром redirect_to — тем же, каким его передаёт WordPress. На самой
-    // странице аккаунта параметра нет, и берём текущий адрес: у подпутей вида
-    // /account/subscriptions страница та же, а вернуть надо именно на подпуть.
+    // параметром redirect_to — тем же, каким его передаёт WordPress. Если
+    // параметра нет, возвращаем туда, где кнопку нажали: у подпутей вида
+    // /account/subscriptions страница та же, а вернуть надо именно на подпуть, и
+    // со страницы поддержки — на неё же.
+    //
+    // Исключение — wp-login.php: возвращать человека на служебный экран
+    // WordPress незачем, ему место в кабинете.
     $to = isset($_GET['redirect_to']) ? wp_unslash($_GET['redirect_to']) : '';
-    if (!$to && rentos_is_account_screen()) {
+    $isWpLogin = isset($GLOBALS['pagenow']) && $GLOBALS['pagenow'] === 'wp-login.php';
+    if (!$to && !is_admin() && !$isWpLogin) {
         $to = rentos_current_url();
     }
 
@@ -416,31 +421,18 @@ add_filter('render_block', function ($html, $block) {
         . '</div>';
 }, 10, 2);
 
-/**
- * Отдельный портал Fluent Support (страница из его же настроек) гостю показывает
- * свою форму входа. Уводим на «Аккаунт», запомнив адрес: вход в проекте один, и
- * человек должен вернуться туда, куда шёл.
+/*
+ * Страницу поддержки гостя НЕ уводим никуда — и это осознанно.
  *
- * Портал поддержки при ticket_link_portal = fluent_cart живёт внутри кабинета
- * заказов, поэтому для вошедшего эта страница — лишь legacy-вход.
+ * Сначала я поставил здесь редирект на «Аккаунт» и этим сломал живое: страница
+ * «Техническая поддержка» — публичная, на ней заголовок и список того, что даёт
+ * аккаунт, а гостя из футера уносило на экран входа, не дав ничего прочитать.
+ *
+ * Читать её незачем мешать: вход и оттуда идёт через тот же единый механизм.
+ * Портал Fluent Support при ticket_link_portal = fluent_cart живёт внутри
+ * кабинета заказов, поэтому гостю шорткод отдаёт нашу кнопку (login_message в
+ * global_business_settings), а вернёт она его туда же, на страницу поддержки.
  */
-add_action('template_redirect', function () {
-    if (is_user_logged_in() || !rentos_portal_page_id()) {
-        return;
-    }
-
-    $supportPageId = 0;
-    if (class_exists('\FluentSupport\App\Services\Helper')) {
-        $settings = \FluentSupport\App\Services\Helper::getOption('global_business_settings', []);
-        $supportPageId = is_array($settings) ? (int) ($settings['portal_page_id'] ?? 0) : 0;
-    }
-    if (!$supportPageId || get_queried_object_id() !== $supportPageId) {
-        return;
-    }
-
-    wp_safe_redirect(rentos_login_screen_url(rentos_current_url()));
-    exit;
-}, 5);
 
 /* ------------------------------------------------------------ сам вход */
 
