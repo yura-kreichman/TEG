@@ -11,6 +11,16 @@
 const WINDOW_MS = 5 * 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 10;
 
+// Ввод ПИН-кода — свой, куда более щедрый бюджет. Блокировки аккаунта и
+// устройства по неверным ПИНам больше нет (решение владельца 2026-08-08, см.
+// login-lockout.ts), и этот лимит остался единственным препятствием перебору.
+// Поэтому он подобран так, чтобы человек его не достигал никогда: 120 попыток
+// за 5 минут — это 24 в минуту, вчетверо быстрее, чем можно набрать ПИН
+// вручную, зато машинному перебору 10000 комбинаций требуются часы, а не
+// секунды. Один бюджет на IP, а не на устройство: у точки все планшеты часто
+// выходят в сеть через один адрес, и делить его между сотрудниками нельзя.
+export const PIN_ATTEMPTS_PER_WINDOW = 120;
+
 const buckets = new Map<string, Map<string, number[]>>();
 
 let lastSweep = Date.now();
@@ -26,7 +36,11 @@ function sweep(now: number) {
   }
 }
 
-export function isAuthRateLimited(purpose: string, ip: string): boolean {
+export function isAuthRateLimited(
+  purpose: string,
+  ip: string,
+  maxRequests: number = MAX_REQUESTS_PER_WINDOW
+): boolean {
   const now = Date.now();
   sweep(now);
 
@@ -40,5 +54,5 @@ export function isAuthRateLimited(purpose: string, ip: string): boolean {
   timestamps.push(now);
   hits.set(ip, timestamps);
 
-  return timestamps.length > MAX_REQUESTS_PER_WINDOW;
+  return timestamps.length > maxRequests;
 }

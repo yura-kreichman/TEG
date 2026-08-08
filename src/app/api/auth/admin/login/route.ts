@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createAdminSession, verifyPassword } from "@/lib/auth";
 import { isAuthRateLimited } from "@/lib/auth-rate-limit";
-import { isPinLockedOut, recordFailedPassword, remainingLockoutMinutes, resetPasswordLockout } from "@/lib/pin-lockout";
+import { isLockedOut, recordFailedPassword, remainingLockoutMinutes, resetPasswordLockout } from "@/lib/login-lockout";
 import { getClientIp } from "@/lib/instructions/request-ip";
 
 // Отдельный вход для платформенного Super Admin (docs/spec/06-super-admin.md) —
@@ -29,8 +29,8 @@ export async function POST(request: Request) {
 
   // Блокировка по попыткам пароля (аудит 2026-07-27, второй раунд) — самый
   // чувствительный вход в проекте, тем более нуждается в этой защите, см.
-  // lib/pin-lockout.ts.
-  if (isPinLockedOut(user.passwordLockedUntil)) {
+  // lib/login-lockout.ts.
+  if (isLockedOut(user.passwordLockedUntil)) {
     return NextResponse.json(
       { error: `Слишком много попыток. Попробуйте через ${remainingLockoutMinutes(user.passwordLockedUntil!)} мин.` },
       { status: 429 }

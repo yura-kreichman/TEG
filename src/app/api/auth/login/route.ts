@@ -11,14 +11,12 @@ import {
 import { setAccentCookie } from "@/lib/accent";
 import { setBgStyleCookie } from "@/lib/bg-style";
 import {
-  isPinLockedOut,
-  recordFailedOwnerPin,
+  isLockedOut,
   remainingLockoutMinutes,
-  resetOwnerPinLockout,
   recordFailedPassword,
   resetPasswordLockout,
-} from "@/lib/pin-lockout";
-import { isAuthRateLimited } from "@/lib/auth-rate-limit";
+} from "@/lib/login-lockout";
+import { isAuthRateLimited, PIN_ATTEMPTS_PER_WINDOW } from "@/lib/auth-rate-limit";
 import { getClientIp } from "@/lib/instructions/request-ip";
 
 async function syncAccentCookie(tenantId: string | null) {
@@ -37,14 +35,20 @@ const DEVICE_NOT_RECOGNIZED =
   "Это устройство ещё не привязано к аккаунту. Войдите с логином и паролем.";
 
 export async function POST(request: Request) {
-  // Единая на весь роут (обе вкладки — пароль и ПИН) — обе точки входа в
-  // один и тот же аккаунт, бюджет должен быть общим, не удваиваться при
-  // переключении вкладки (аудит 2026-07-24, см. lib/auth-rate-limit.ts).
-  if (isAuthRateLimited("owner-login", getClientIp(request))) {
+  const { email, password, pin } = await request.json();
+
+  // Бюджеты у вкладок разные, поэтому лимит считаем после разбора тела. Раньше
+  // он был общий на весь роут (аудит 2026-07-24) — при блокировке аккаунта это
+  // было верно, обе вкладки ведут в один аккаунт. Теперь у ПИНа блокировки нет
+  // и лимит для него единственная защита, но и достижим человеком он быть не
+  // должен: держать его наравне с паролем значило бы вернуть ту же блокировку
+  // другими словами.
+  const ip = getClientIp(request);
+  const purpose = typeof pin === "string" ? "owner-pin" : "owner-login";
+  const budget = typeof pin === "string" ? PIN_ATTEMPTS_PER_WINDOW : undefined;
+  if (isAuthRateLimited(purpose, ip, budget)) {
     return NextResponse.json({ error: "Слишком много попыток. Попробуйте позже." }, { status: 429 });
   }
-
-  const { email, password, pin } = await request.json();
 
   // PIN tab: no email — the account is resolved from this browser's owner_device cookie.
   if (typeof pin === "string") {
@@ -66,24 +70,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Блокировка по попыткам (аудит 2026-07-24, реальная дыра — поля были в
-    // схеме, но нигде не использовались, см. lib/pin-lockout.ts) — проверка
-    // ДО bcrypt.compare, не тратим время на сравнение уже заблокированного.
-    if (isPinLockedOut(user.pinLockedUntil)) {
-      return NextResponse.json(
-        {
-          error: `Слишком много попыток. Попробуйте через ${remainingLockoutMinutes(user.pinLockedUntil!)} мин или войдите с логином и паролем.`,
-        },
-        { status: 429 }
-      );
-    }
-
+    // Неверный ПИН ничего не блокирует — ни счётчика попыток, ни временной
+    // блокировки аккаунта (решение владельца 2026-08-08, см. login-lockout.ts).
     const ok = await verifyPin(pin, user.pinHash);
     if (!ok) {
-      await recordFailedOwnerPin(user.id);
       return NextResponse.json({ error: "Неверный ПИН-код" }, { status: 401 });
     }
-    if (user.failedPinAttempts > 0) await resetOwnerPinLockout(user.id);
 
     await createSession(user.id);
     await rememberOwnerDevice(user.id);
@@ -110,9 +102,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Неверные учётные данные" }, { status: 401 });
   }
 
-  // Блокировка по попыткам пароля (аудит 2026-07-27, второй раунд) — тот же
-  // приём, что уже применён к ПИНу выше в этом файле, см. lib/pin-lockout.ts.
-  if (isPinLockedOut(user.passwordLockedUntil)) {
+  // Блокировка по попыткам пароля (аудит 2026-07-27, второй раунд) — см.
+  // lib/login-lockout.ts, почему у пароля она есть, а у ПИНа нет.
+  if (isLockedOut(user.passwordLockedUntil)) {
     return NextResponse.json(
       { error: `Слишком много попыток. Попробуйте через ${remainingLockoutMinutes(user.passwordLockedUntil!)} мин.` },
       { status: 429 }
