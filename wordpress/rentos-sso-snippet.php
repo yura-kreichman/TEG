@@ -99,6 +99,17 @@ function rentos_t($key)
             'it_IT' => 'Torna alla home',
             'ro_RO' => 'Înapoi la pagina principală',
         ],
+        // Строка над кнопкой в портале поддержки. Раньше лежала прямо в
+        // настройках Fluent Support (login_message) — то есть одним русским
+        // текстом на все языки: TranslatePress её не подхватывал, и на /en/
+        // человек читал русское предложение.
+        'sign_in_hint_support' => [
+            'ru_RU' => 'Войдите через RentOS, чтобы открыть портал поддержки',
+            'en_US' => 'Sign in with RentOS to open the support portal',
+            'uk'    => 'Увійдіть через RentOS, щоб відкрити портал підтримки',
+            'it_IT' => 'Accedi con RentOS per aprire il portale di assistenza',
+            'ro_RO' => 'Conectați-vă cu RentOS pentru a deschide portalul de asistență',
+        ],
         'sign_in_hint' => [
             'ru_RU' => 'Подписка, платежи и поддержка — в вашем аккаунте RentOS',
             'en_US' => 'Your subscription, payments and support live in your RentOS account',
@@ -289,9 +300,21 @@ add_filter('login_form_bottom', function ($html) {
 add_filter('fluent_support/before_registration_form_close', function ($html) {
     return $html . rentos_login_button_html();
 });
-// Для произвольного места на странице Elementor.
-add_shortcode('rentos_login_button', function () {
-    return rentos_login_button_html();
+/**
+ * Для произвольного места на странице и для сообщения входа Fluent Support.
+ *
+ * hint="yes" добавляет строку-пояснение сверху. Она нужна в портале поддержки, а
+ * на wp-login.php лишняя — поэтому атрибут, а не всегда.
+ */
+add_shortcode('rentos_login_button', function ($atts) {
+    $atts = shortcode_atts(['hint' => 'no'], $atts, 'rentos_login_button');
+
+    $hint = '';
+    if ($atts['hint'] === 'yes' && !is_user_logged_in()) {
+        $hint = '<p style="margin:0 0 12px">' . esc_html(rentos_t('sign_in_hint_support')) . '</p>';
+    }
+
+    return $hint . rentos_login_button_html();
 });
 
 /*
@@ -356,9 +379,20 @@ function rentos_login_screen_url($redirectTo = '')
     return $redirectTo ? add_query_arg('redirect_to', $redirectTo, $url) : $url;
 }
 
+/**
+ * Текущий адрес целиком.
+ *
+ * Основание берём из option 'home', а НЕ из home_url(): TranslatePress
+ * подставляет в home_url() языковой префикс текущего запроса, а он уже есть в
+ * REQUEST_URI — на английской версии получалось /en/en/account/, и после входа
+ * человек попадал в никуда. Опция хранит адрес без префикса.
+ */
 function rentos_current_url()
 {
-    return home_url(isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '/');
+    $root = untrailingslashit((string) get_option('home'));
+    $uri = isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '/';
+
+    return $root . $uri;
 }
 
 /** Сейчас показывается страница аккаунта (включая её подпути вида /account/profile)? */
