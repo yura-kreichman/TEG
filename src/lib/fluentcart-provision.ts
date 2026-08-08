@@ -1,0 +1,142 @@
+import crypto from "node:crypto";
+import { prisma } from "@/lib/prisma";
+import { generateResetToken, hashPassword } from "@/lib/auth";
+import { getDefaultPackage } from "@/lib/free-package";
+import { generateUniqueSlug } from "@/lib/instructions/slug";
+import { isReservedSlug, isSlugTaken } from "@/lib/landing/slug";
+import { isEmailConfigured, sendEmail } from "@/lib/summary-channels/email-channel";
+
+/**
+ * Создание кабинета по факту оплаты в FluentCart (решение пользователя
+ * 2026-08-08).
+ *
+ * Раньше покупка кабинет не создавала: вебхук искал тенанта по
+ * fluentcartCustomerId/email, не находил и писал WebhookEvent.status="failed",
+ * а связывание оставалось ручной работой супер-админа. Клиент при этом уже
+ * заплатил и ждал, пока его свяжут. Обратный порядок (сначала
+ * зарегистрировался, потом купил) работал и работает сам — см.
+ * linkPendingFluentCartPurchases.
+ *
+ * Пароль здесь НЕ придумывается и не отправляется письмом. Владельцу уходит
+ * ссылка "задайте пароль" — тот же механизм reset-токена, что у забытого
+ * пароля, поэтому в базе не появляется ни одного пароля, который кто-то,
+ * кроме владельца, когда-либо видел.
+ */
+
+// Ссылка живёт неделю, а не час, как обычный сброс пароля: письмо после
+// покупки человек может открыть и на следующий день, и после выходных, а
+// повторно "забыл пароль" он запросить не сможет — он ещё не знает, что у
+// него вообще есть аккаунт.
+const PROVISION_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+export interface ProvisionInput {
+  email: string;
+  customerId: string | null;
+  /** Имя покупателя из FluentCart — станет названием компании, владелец переименует. */
+  customerName: string | null;
+  packageId: string | null;
+  /** Origin приложения для ссылки в письме (берётся из самого запроса вебхука). */
+  origin: string;
+}
+
+export type ProvisionResult =
+  | { created: true; tenantId: string; userId: string }
+  | { created: false; reason: string };
+
+/**
+ * Название компании: имя покупателя, если FluentCart его передал, иначе
+ * локальная часть email. Владелец переименует на первом же экране — важно не
+ * оставить поле пустым, оно видно в интерфейсе и в слаге публичных страниц.
+ */
+function tenantNameFrom(input: ProvisionInput): string {
+  const name = input.customerName?.trim();
+  if (name) return name;
+  const local = input.email.split("@")[0] ?? "";
+  return local.trim() || input.email;
+}
+
+export async function provisionTenantFromPurchase(input: ProvisionInput): Promise<ProvisionResult> {
+  // email на User уникален глобально, поэтому чужой не-владелец с тем же
+  // адресом (супер-админ с плейсхолдером, старый аккаунт) сделал бы create
+  // ниже падающим. Такой случай — на ручной разбор, не на автоматику.
+  const existing = await prisma.user.findUnique({ where: { email: input.email } });
+  if (existing) {
+    return {
+      created: false,
+      reason: `user ${input.email} exists with role ${existing.role} but no tenant matched — link manually`,
+    };
+  }
+
+  const pkg = input.packageId ? { id: input.packageId } : await getDefaultPackage();
+  const name = tenantNameFrom(input);
+  const slug = await generateUniqueSlug(name, async (candidate) => {
+    if (isReservedSlug(candidate)) return true;
+    return isSlugTaken(candidate);
+  });
+
+  const { token, tokenHash } = generateResetToken();
+
+  // Тенант и владелец — одной транзакцией: тенант без владельца это мусор,
+  // который потом некому ни открыть, ни удалить по email.
+  const { tenantId, userId } = await prisma.$transaction(async (tx) => {
+    const tenant = await tx.tenant.create({
+      data: {
+        name,
+        slug,
+        packageId: pkg.id,
+        // Статус и срок ставит сам вебхук, следом за этим созданием (ветка
+        // ACTIVATING_EVENTS) — здесь намеренно не дублируем, чтобы не было
+        // двух мест, решающих про подписку.
+        ...(input.customerId ? { fluentcartCustomerId: input.customerId } : {}),
+      },
+    });
+
+    const user = await tx.user.create({
+      data: {
+        email: input.email,
+        // Случайный хеш, который не соответствует ни одному известному
+        // паролю: войти можно только по ссылке ниже. Поле NOT NULL, поэтому
+        // "нет пароля" выражается именно так, а не null.
+        passwordHash: await hashPassword(crypto.randomBytes(32).toString("hex")),
+        role: "owner",
+        tenantId: tenant.id,
+        resetTokenHash: tokenHash,
+        resetTokenExpiresAt: new Date(Date.now() + PROVISION_TOKEN_TTL_MS),
+      },
+    });
+
+    return { tenantId: tenant.id, userId: user.id };
+  });
+
+  await sendWelcomeEmail(input.email, `${input.origin}/reset-password?token=${token}`).catch((err) =>
+    // Письмо — best-effort: кабинет уже создан и корректно связан с покупкой,
+    // а вход владелец при необходимости получит через "Забыли пароль".
+    console.error("fluentcart provision welcome email failed", err)
+  );
+
+  return { created: true, tenantId, userId };
+}
+
+// Текст на русском — как и у письма сброса пароля рядом (единственное другое
+// письмо auth-контура). Локаль тенанта на этот момент неизвестна: вебхук
+// приходит от FluentCart, а не из браузера покупателя.
+async function sendWelcomeEmail(email: string, link: string): Promise<void> {
+  if (!(await isEmailConfigured())) return;
+
+  const html = `<!DOCTYPE html>
+<html lang="ru">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:24px;background:#F6F7F5;font-family:system-ui,sans-serif;color:#1B1F1D;">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:20px;padding:24px;">
+    <p style="font-size:14px;margin:0 0 16px;">Спасибо за оплату — кабинет RentOS готов.</p>
+    <p style="margin:0 0 16px;">Осталось задать пароль, и можно начинать.</p>
+    <p style="margin:0 0 16px;">
+      <a href="${link}" style="display:inline-block;background:#1B7A5C;color:#fff;text-decoration:none;padding:12px 20px;border-radius:12px;font-weight:600;">Задать пароль</a>
+    </p>
+    <p style="font-size:12px;color:#6B7268;margin:0;">Ссылка действует 7 дней. Если она устареет — воспользуйтесь «Забыли пароль» на странице входа.</p>
+  </div>
+</body>
+</html>`;
+
+  await sendEmail([email], "RentOS — кабинет готов, задайте пароль", html);
+}

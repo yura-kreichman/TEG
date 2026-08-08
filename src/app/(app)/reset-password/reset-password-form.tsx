@@ -32,7 +32,17 @@ export default function ResetPasswordForm({ token }: { token: string }) {
       const res = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
+        // Часовой пояс браузера — как при регистрации. Нужен для кабинетов,
+        // созданных по факту покупки (см. lib/fluentcart-provision.ts): там
+        // браузера не было, и тенант остался на схемном "UTC", по которому
+        // считаются все дни и деньги. Сервер применит его только если пояс
+        // всё ещё дефолтный, так что обычному сбросу пароля это ничего не
+        // меняет.
+        body: JSON.stringify({
+          token,
+          password,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        }),
       });
       const data = await res.json();
 

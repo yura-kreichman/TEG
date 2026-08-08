@@ -10,30 +10,7 @@ import { generateUniqueSlug } from "@/lib/instructions/slug";
 import { isReservedSlug, isSlugTaken } from "@/lib/landing/slug";
 import { isAuthRateLimited } from "@/lib/auth-rate-limit";
 import { getClientIp } from "@/lib/instructions/request-ip";
-
-// Новый тенант при регистрации всегда получает бесплатный пакет (пакеты
-// теперь управляются из Super Admin, docs/spec/06-super-admin.md) —
-// определяется по fluentcartProductId=null, а не "первый созданный" (то
-// была ошибка: Starter уже не самый старый пакет в реальных данных) и не по
-// priceMonthly=0 (поле убрано целиком 2026-07-29 — дублировало реальный
-// источник истины, FluentCart). fluentcartProductId у Free намеренно не
-// привязан — этот пакет никогда не покупается через FluentCart, тем самым
-// null уже однозначно значит "бесплатный". Фолбэк на создание — только если
-// в свежей инсталляции вообще нет ни одного пакета.
-async function getDefaultPackage() {
-  const existing = await prisma.package.findFirst({ where: { fluentcartProductId: null } });
-  if (existing) return existing;
-
-  return prisma.package.create({
-    data: {
-      name: "Free",
-      maxPoints: 1,
-      maxZones: 2,
-      maxAssets: 10,
-      maxOperators: 3,
-    },
-  });
-}
+import { getDefaultPackage } from "@/lib/free-package";
 
 // Бесплатный период ограничен по времени (доп. решение пользователя
 // 2026-07-12) — summary-scheduler.ts уже переводит active в expired, когда

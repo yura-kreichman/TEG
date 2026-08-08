@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
+import { provisionTenantFromPurchase } from "@/lib/fluentcart-provision";
 
 function isRecordNotFound(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025";
@@ -33,6 +34,10 @@ export interface ParsedFluentCartEvent {
   productIds: string[];
   customerId: string | null;
   customerEmail: string | null;
+  // Имя покупателя — только чтобы у кабинета, созданного по факту покупки,
+  // было осмысленное название компании вместо локальной части email
+  // (см. lib/fluentcart-provision.ts). Владелец переименует.
+  customerName: string | null;
   orderId: string | null;
   // subscriptions[0].next_billing_date — только для информационного
   // отображения "действует до" в кабинете, НЕ источник правды для логики
@@ -83,6 +88,9 @@ export function parseFluentCartPayload(payload: unknown, eventType: string): Par
     ),
     customerId: firstString(customer.id, order.customer_id),
     customerEmail: firstString(customer.email),
+    // wp_fct_customers.first_name/last_name — сверено с реальной таблицей.
+    customerName:
+      [firstString(customer.first_name), firstString(customer.last_name)].filter(Boolean).join(" ").trim() || null,
     orderId: firstString(order.id),
     nextBillingDate: firstString(subscription?.next_billing_date),
     upgradedFromSubId:
@@ -124,7 +132,13 @@ export type SyncResult =
  */
 export async function syncTenantFromFluentCartEvent(
   parsed: ParsedFluentCartEvent,
-  eventReceivedAt: Date = new Date()
+  eventReceivedAt: Date = new Date(),
+  // Разрешение создать кабинет, если тенант не нашёлся (решение пользователя
+  // 2026-08-08). Передаётся ТОЛЬКО из роута вебхука: при реплее после
+  // регистрации (linkPendingFluentCartPurchases) тенант уже создан обычным
+  // путём, и второй создавать нечего — поэтому по умолчанию выключено, а не
+  // включено с оговоркой.
+  provision?: { origin: string }
 ): Promise<SyncResult> {
   const pkg = parsed.productIds.length
     ? await prisma.package.findFirst({ where: { fluentcartProductId: { in: parsed.productIds } } })
@@ -147,6 +161,28 @@ export async function syncTenantFromFluentCartEvent(
         where: { id: owner.tenantId },
         data: parsed.customerId ? { fluentcartCustomerId: parsed.customerId } : {},
       });
+    }
+  }
+
+  // Кабинета нет, но человек только что заплатил — создаём его и продолжаем
+  // обрабатывать событие обычным путём ниже, чтобы пакет и статус подписки
+  // ставились одним и тем же кодом, а не двумя.
+  //
+  // Только на активирующих событиях: создавать кабинет по отмене или возврату
+  // бессмысленно. И только при известном email — владельца без адреса не
+  // существует.
+  if (!tenant && provision && parsed.customerEmail && ACTIVATING_EVENTS.has(parsed.eventType)) {
+    const result = await provisionTenantFromPurchase({
+      email: parsed.customerEmail,
+      customerId: parsed.customerId,
+      customerName: parsed.customerName,
+      packageId: pkg?.id ?? null,
+      origin: provision.origin,
+    });
+    if (result.created) {
+      tenant = await prisma.tenant.findUnique({ where: { id: result.tenantId } });
+    } else {
+      return { matched: false, reason: result.reason };
     }
   }
 

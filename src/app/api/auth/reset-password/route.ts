@@ -4,8 +4,10 @@ import { createSession, hashPassword, hashResetToken, rememberOwnerDevice } from
 import { setAccentCookie } from "@/lib/accent";
 import { setBgStyleCookie } from "@/lib/bg-style";
 
+const VALID_TIMEZONES = new Set(Intl.supportedValuesOf("timeZone"));
+
 export async function POST(request: Request) {
-  const { token, password } = await request.json();
+  const { token, password, timezone } = await request.json();
 
   if (typeof token !== "string" || typeof password !== "string") {
     return NextResponse.json({ error: "token и password обязательны" }, { status: 400 });
@@ -50,8 +52,21 @@ export async function POST(request: Request) {
   if (user.tenantId) {
     const tenant = await prisma.tenant.findUnique({
       where: { id: user.tenantId },
-      select: { accentScheme: true, bgStyle: true },
+      select: { accentScheme: true, bgStyle: true, timezone: true },
     });
+    // Пояс подставляем ТОЛЬКО пока он схемный "UTC" — то есть его никто не
+    // выбирал. Так закрывается кабинет, созданный по факту покупки (там
+    // браузера не было, см. lib/fluentcart-provision.ts), и не затирается
+    // осознанно выставленный пояс у того, кто просто сбрасывает пароль,
+    // находясь в отпуске в другом часовом поясе.
+    if (
+      tenant?.timezone === "UTC" &&
+      typeof timezone === "string" &&
+      timezone !== "UTC" &&
+      VALID_TIMEZONES.has(timezone)
+    ) {
+      await prisma.tenant.update({ where: { id: user.tenantId }, data: { timezone } });
+    }
     if (tenant) {
       await setAccentCookie(tenant.accentScheme);
       await setBgStyleCookie(tenant.bgStyle);

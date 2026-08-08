@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseFluentCartPayload, syncTenantFromFluentCartEvent } from "@/lib/fluentcart-webhook";
 import { timingSafeEqualStrings } from "@/lib/timing-safe-equal";
+import { getRequestOrigin } from "@/lib/request-origin";
 
 // Приём вебхуков FluentCart (docs/spec/06-super-admin.md, п.5). Плагин
 // FluentCart (см. FluentCart/fluent-cart-pro/.../WebhookConnect.php) шлёт
@@ -36,7 +37,12 @@ export async function POST(request: Request) {
   const parsed = parseFluentCartPayload(payload, eventType);
 
   try {
-    const result = await syncTenantFromFluentCartEvent(parsed);
+    // origin берём из самого запроса вебхука — это и есть адрес приложения,
+    // на который FluentCart стучится, значит ссылка в письме будет рабочей и
+    // на проде, и локально, без отдельной переменной окружения.
+    const result = await syncTenantFromFluentCartEvent(parsed, new Date(), {
+      origin: getRequestOrigin(request),
+    });
 
     if (!result.matched) {
       // Ожидаемый случай (не серверная ошибка) — тенант ещё не привязан к
