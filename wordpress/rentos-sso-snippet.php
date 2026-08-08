@@ -333,27 +333,65 @@ add_shortcode('rentos_login_button', function ($atts) {
  * (FluentCart::renderCustomerPortalInFluentCartDashboard) и icon_svg не
  * передаёт. Дорисовываем фильтром, плагин не правим.
  *
- * Иконка — один path с fill="currentColor" и без прочих атрибутов: вывод
- * проходит через wp_kses со списком, где разрешены только svg, path и g
- * (fct_allowed_svg_tags), остальное вырезается молча. Та же гарнитура, что у
- * соседних пунктов, — Remix Icon, customer-service-2-line.
- *
- * Рисунок пересчитан из сетки 24 в сетку 20 намеренно. wp_kses приводит имена
- * атрибутов к нижнему регистру, а в списке разрешённых стоит viewBox — и
- * атрибут вылетает. Без него система координат равна width/height, поэтому
- * рисунок из 24 единиц был бы обрезан. Соседние иконки плагина живут в 20
- * единицах и того же не замечают.
+ * Рисунок — стандартный headset из Lucide (наушники с микрофоном), той же
+ * гарнитуры, что иконки в приложении. Взят как есть из пакета Spectre Icons:
+ * wp-content/plugins/spectre-icons/assets/iconpacks/lucide/headset.svg.
  */
 add_filter('fluent_cart/global_customer_menu_items', function ($items) {
     if (!isset($items['fluent-support']) || !empty($items['fluent-support']['icon_svg'])) {
         return $items;
     }
 
-    $items['fluent-support']['icon_svg'] = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">'
-        . '<path d="M16.6151 6.6667H17.5C18.4205 6.6667 19.1667 7.4129 19.1667 8.3333V11.6667C19.1667 12.5872 18.4205 13.3333 17.5 13.3333H16.6151C16.205 16.6219 13.3997 19.1667 10 19.1667V17.5C12.7614 17.5 15 15.2614 15 12.5V7.5C15 4.7386 12.7614 2.5 10 2.5C7.2386 2.5 5 4.7386 5 7.5V13.3333H2.5C1.5795 13.3333 0.8333 12.5872 0.8333 11.6667V8.3333C0.8333 7.4129 1.5795 6.6667 2.5 6.6667H3.3849C3.795 3.3781 6.6003 0.8333 10 0.8333C13.3997 0.8333 16.205 3.3781 16.6151 6.6667ZM2.5 8.3333V11.6667H3.3333V8.3333H2.5ZM16.6667 8.3333V11.6667H17.5V8.3333H16.6667ZM6.4662 13.1541L7.3497 11.7406C8.118 12.2218 9.0265 12.5 10 12.5C10.9735 12.5 11.882 12.2218 12.6503 11.7406L13.5338 13.1541C12.5093 13.7958 11.298 14.1667 10 14.1667C8.702 14.1667 7.4907 13.7958 6.4662 13.1541Z"/>'
+    $items['fluent-support']['icon_svg'] = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"'
+        . ' viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+        . ' stroke-linecap="round" stroke-linejoin="round">'
+        . '<path d="M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm0 0a9 9 0 1 1 18 0m0 0v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z"/>'
+        . '<path d="M21 16v2a4 4 0 0 1-4 4h-5"/>'
         . '</svg>';
 
     return $items;
+}, 20);
+
+/**
+ * Список тегов, по которому FluentCart чистит иконки меню, дополняем — иначе
+ * Lucide до экрана не доживает.
+ *
+ * Что именно вырезалось. `viewBox` в списке плагина записан в смешанном
+ * регистре, а `wp_kses` приводит имена атрибутов к нижнему — значит атрибут
+ * вылетал ВСЕГДА. Без него система координат равна width/height, и рисунок из
+ * 24 единиц обрезался до 20. Скругление концов линий (`stroke-linecap`,
+ * `stroke-linejoin`) в списке не значилось вовсе, и штриховая иконка получала
+ * рубленые торцы.
+ *
+ * Добавляем только атрибуты оформления. Ни ссылок, ни обработчиков событий, ни
+ * `foreignObject` — то, из-за чего SVG вообще чистят, остаётся запрещённым.
+ */
+add_filter('fct_allowed_svg_tags', function ($tags) {
+    if (!is_array($tags)) {
+        return $tags;
+    }
+
+    $strokeAttrs = [
+        'viewbox'          => true, // именно строчными: kses сравнивает уже приведённое имя
+        'fill'             => true,
+        'stroke'           => true,
+        'stroke-width'     => true,
+        'stroke-linecap'   => true,
+        'stroke-linejoin'  => true,
+    ];
+
+    foreach (['svg', 'path', 'g', 'circle', 'line', 'polyline', 'rect'] as $tag) {
+        $tags[$tag] = array_merge($tags[$tag] ?? [], $strokeAttrs);
+    }
+    // Геометрия фигур, которыми пользуется Lucide.
+    $tags['circle'] = array_merge($tags['circle'], ['cx' => true, 'cy' => true, 'r' => true]);
+    $tags['line'] = array_merge($tags['line'], ['x1' => true, 'y1' => true, 'x2' => true, 'y2' => true]);
+    $tags['polyline'] = array_merge($tags['polyline'], ['points' => true]);
+    $tags['rect'] = array_merge($tags['rect'], [
+        'x' => true, 'y' => true, 'width' => true, 'height' => true, 'rx' => true, 'ry' => true,
+    ]);
+
+    return $tags;
 }, 20);
 
 /**
