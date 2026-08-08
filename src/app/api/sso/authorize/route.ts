@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { getRequestOrigin } from "@/lib/request-origin";
 import { SSO_CODE_TTL_MS, generateSsoCode, isAllowedRedirectUri } from "@/lib/sso";
 
 /**
@@ -30,8 +31,12 @@ export async function GET(request: Request) {
     // Отправляем на вход и возвращаем ровно сюда же — со всеми исходными
     // параметрами, чтобы после входа человек не оказался в кабинете вместо
     // того, куда шёл.
+    // Публичный origin из заголовков, а НЕ new URL(request.url).origin: за
+    // nginx последний равен localhost:3000, и владельца уводило бы на
+    // https://localhost:3000/login (реальная ошибка, поймана проверкой
+    // задеплоенного эндпоинта 2026-08-08). Тот же helper, что у писем.
     const back = new URL(request.url);
-    const login = new URL("/login", back.origin);
+    const login = new URL("/login", getRequestOrigin(request));
     login.searchParams.set("next", `${back.pathname}${back.search}`);
     return NextResponse.redirect(login);
   }
