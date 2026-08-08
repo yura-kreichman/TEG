@@ -2551,6 +2551,14 @@ model TenantPublicGroup {
   announceNewPoints Boolean @default(false)
   announceNewAssets Boolean @default(false)
 
+  // Приветствие вступившему в группу — сообщение с кнопкой проверки баланса
+  // (см. handleNewChatMembers в api/telegram/webhook). По умолчанию true, в
+  // отличие от анонсов выше: приветствие работало с самого начала, и тумблер
+  // (запрос владельца 2026-08-08) добавлен, чтобы его можно было ВЫКЛЮЧИТЬ —
+  // значение по умолчанию сохраняет поведение у тех, у кого группа уже
+  // подключена.
+  welcomeNewMembers Boolean @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

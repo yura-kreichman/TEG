@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { MapPin, Package, Pencil, Send, Zap } from "lucide-react";
+import { MapPin, Package, Pencil, Send, UserPlus, Zap } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
@@ -23,6 +23,7 @@ interface PublicGroupStatus {
   announceNewZones: boolean;
   announceNewPoints: boolean;
   announceNewAssets: boolean;
+  welcomeNewMembers: boolean;
 }
 
 // Отдельный экран, а не строка в общем списке "Каналы доставки" (запрос
@@ -71,7 +72,14 @@ export default function PublicGroupSettingsPage() {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  function patch(partial: Partial<Pick<PublicGroupStatus, "enabled" | "announceNewZones" | "announceNewPoints" | "announceNewAssets">>) {
+  function patch(
+    partial: Partial<
+      Pick<
+        PublicGroupStatus,
+        "enabled" | "announceNewZones" | "announceNewPoints" | "announceNewAssets" | "welcomeNewMembers"
+      >
+    >
+  ) {
     setGroup((prev) => (prev ? { ...prev, ...partial } : prev));
     fetch("/api/tenant/public-group/telegram", {
       method: "PATCH",
@@ -221,6 +229,33 @@ export default function PublicGroupSettingsPage() {
                   <Switch
                     checked={group.announceNewAssets}
                     onCheckedChange={(v) => patch({ announceNewAssets: v })}
+                    className="shrink-0"
+                  />
+                </div>
+              </SpringCard>
+            </StaggerItem>
+
+            {/* Приветствие вступившему — отдельной картой, а не строкой в
+                «Автоанонсах»: там сообщение вызывает включение записи, здесь —
+                приход человека. Тумблер (запрос владельца 2026-08-08) выключает
+                только приветствие, рассылка в группу продолжает работать. */}
+            <StaggerItem>
+              <SpringCard animate={false} hover={false} className="flex flex-col">
+                <span className="mb-1 text-[0.6875rem] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+                  {t.summaries.welcomeCardLabel}
+                </span>
+                <p className="mb-2 text-caption-airbnb text-muted-foreground">{t.summaries.welcomeCardSub}</p>
+
+                <div className="flex items-center justify-between gap-3 py-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                      <UserPlus className="size-4" />
+                    </div>
+                    <div className="text-body-airbnb">{t.summaries.welcomeNewMembersLabel}</div>
+                  </div>
+                  <Switch
+                    checked={group.welcomeNewMembers}
+                    onCheckedChange={(v) => patch({ welcomeNewMembers: v })}
                     className="shrink-0"
                   />
                 </div>

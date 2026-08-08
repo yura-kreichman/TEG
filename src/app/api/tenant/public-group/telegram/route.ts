@@ -3,7 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
-const BOOLEAN_FIELDS = ["enabled", "announceNewZones", "announceNewPoints", "announceNewAssets"] as const;
+const BOOLEAN_FIELDS = [
+  "enabled",
+  "announceNewZones",
+  "announceNewPoints",
+  "announceNewAssets",
+  "welcomeNewMembers",
+] as const;
 type BooleanField = (typeof BOOLEAN_FIELDS)[number];
 
 // Тумблеры настроек группы — "вкл/выкл" самой рассылки (тот же принцип, что

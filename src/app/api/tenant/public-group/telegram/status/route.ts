@@ -44,5 +44,8 @@ export async function GET() {
     announceNewZones: group?.announceNewZones ?? false,
     announceNewPoints: group?.announceNewPoints ?? false,
     announceNewAssets: group?.announceNewAssets ?? false,
+    // Записи ещё нет — приветствие считается включённым, как и в схеме: оно
+    // работало до появления тумблера.
+    welcomeNewMembers: group?.welcomeNewMembers ?? true,
   });
 }

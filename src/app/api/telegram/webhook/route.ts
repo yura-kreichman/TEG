@@ -298,9 +298,12 @@ async function handleNewChatMembers(message: {
   const chatId = String(message.chat.id);
   const group = await prisma.tenantPublicGroup.findFirst({
     where: { chatId, chatStatus: "active", enabled: true },
-    select: { tenantId: true },
+    select: { tenantId: true, welcomeNewMembers: true },
   });
   if (!group) return;
+  // Приветствие можно выключить, не отвязывая группу и не выключая рассылку
+  // целиком (запрос владельца 2026-08-08) — тумблер отдельный от enabled.
+  if (!group.welcomeNewMembers) return;
 
   const tenant = await prisma.tenant.findUnique({ where: { id: group.tenantId }, select: { slug: true, locale: true } });
   if (!tenant?.slug) return;
