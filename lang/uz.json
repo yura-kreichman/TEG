@@ -639,6 +639,17 @@
     "backToOperatorLoginLink": "Xodim kirishiga qaytish",
     "loginAsOperatorLink": "Xodim sifatida kirish"
   },
+  "authEmail": {
+    "resetSubject": "RentOS — parolni tiklash",
+    "resetIntro": "RentOS parolini tiklash.",
+    "resetButton": "Parolni tiklash",
+    "resetNote": "Havola 1 soat amal qiladi. Agar tiklashni so'ramagan bo'lsangiz, bu xatni e'tiborsiz qoldiring.",
+    "welcomeSubject": "RentOS — kabinet tayyor, parol o'rnating",
+    "welcomeIntro": "To'lov uchun rahmat — RentOS kabineti tayyor.",
+    "welcomeLine": "Faqat parol o'rnatish qoldi.",
+    "welcomeButton": "Parol o'rnatish",
+    "welcomeNote": "Havola 7 kun amal qiladi. Muddati o'tsa, kirish sahifasidagi “Parolni unutdingizmi” dan foydalaning."
+  },
   "points": {
     "title": "Nuqtalar",
     "nameLabel": "Nuqta nomi",

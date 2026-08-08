@@ -639,6 +639,17 @@
     "backToOperatorLoginLink": "Back to employee login",
     "loginAsOperatorLink": "Log in as Employee"
   },
+  "authEmail": {
+    "resetSubject": "RentOS — password reset",
+    "resetIntro": "RentOS password recovery.",
+    "resetButton": "Reset password",
+    "resetNote": "The link is valid for 1 hour. If you didn't request a reset, ignore this email.",
+    "welcomeSubject": "RentOS — your account is ready, set a password",
+    "welcomeIntro": "Thank you for your payment — your RentOS account is ready.",
+    "welcomeLine": "Just set a password and you can start.",
+    "welcomeButton": "Set password",
+    "welcomeNote": "The link is valid for 7 days. If it expires, use “Forgot password” on the sign-in page."
+  },
   "points": {
     "title": "Points",
     "nameLabel": "Point name",

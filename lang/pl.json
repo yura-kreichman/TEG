@@ -639,6 +639,17 @@
     "backToOperatorLoginLink": "Powrót do logowania pracownika",
     "loginAsOperatorLink": "Zaloguj się jako Pracownik"
   },
+  "authEmail": {
+    "resetSubject": "RentOS — reset hasła",
+    "resetIntro": "Odzyskiwanie hasła RentOS.",
+    "resetButton": "Zresetuj hasło",
+    "resetNote": "Link jest ważny 1 godzinę. Jeśli nie prosiłeś o reset, zignoruj tę wiadomość.",
+    "welcomeSubject": "RentOS — konto gotowe, ustaw hasło",
+    "welcomeIntro": "Dziękujemy za płatność — konto RentOS jest gotowe.",
+    "welcomeLine": "Wystarczy ustawić hasło i można zaczynać.",
+    "welcomeButton": "Ustaw hasło",
+    "welcomeNote": "Link jest ważny 7 dni. Jeśli straci ważność, użyj „Nie pamiętam hasła” na stronie logowania."
+  },
   "points": {
     "title": "Punkty",
     "nameLabel": "Nazwa punktu",

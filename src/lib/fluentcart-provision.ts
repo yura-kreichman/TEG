@@ -5,6 +5,7 @@ import { getDefaultPackage } from "@/lib/free-package";
 import { generateUniqueSlug } from "@/lib/instructions/slug";
 import { isReservedSlug, isSlugTaken } from "@/lib/landing/slug";
 import { isEmailConfigured, sendEmail } from "@/lib/summary-channels/email-channel";
+import { dictionaryForUser, renderAuthEmail } from "@/lib/auth-email";
 
 /**
  * Создание кабинета по факту оплаты в FluentCart (решение пользователя
@@ -108,7 +109,7 @@ export async function provisionTenantFromPurchase(input: ProvisionInput): Promis
     return { tenantId: tenant.id, userId: user.id };
   });
 
-  await sendWelcomeEmail(input.email, `${input.origin}/reset-password?token=${token}`).catch((err) =>
+  await sendWelcomeEmail(userId, input.email, `${input.origin}/reset-password?token=${token}`).catch((err) =>
     // Письмо — best-effort: кабинет уже создан и корректно связан с покупкой,
     // а вход владелец при необходимости получит через "Забыли пароль".
     console.error("fluentcart provision welcome email failed", err)
@@ -117,26 +118,21 @@ export async function provisionTenantFromPurchase(input: ProvisionInput): Promis
   return { created: true, tenantId, userId };
 }
 
-// Текст на русском — как и у письма сброса пароля рядом (единственное другое
-// письмо auth-контура). Локаль тенанта на этот момент неизвестна: вебхук
-// приходит от FluentCart, а не из браузера покупателя.
-async function sendWelcomeEmail(email: string, link: string): Promise<void> {
+// Язык — тенанта, через общий dictionaryForUser (то же, что у письма сброса
+// пароля). У кабинета, созданного вебхуком, это язык по умолчанию: браузера
+// покупателя тут нет, а FluentCart язык заказа не передаёт — угадывать его по
+// стране плательщика было бы хуже, чем показать язык по умолчанию, который
+// владелец меняет одним переключателем в настройках.
+async function sendWelcomeEmail(userId: string, email: string, link: string): Promise<void> {
   if (!(await isEmailConfigured())) return;
 
-  const html = `<!DOCTYPE html>
-<html lang="ru">
-<head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:24px;background:#F6F7F5;font-family:system-ui,sans-serif;color:#1B1F1D;">
-  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:20px;padding:24px;">
-    <p style="font-size:14px;margin:0 0 16px;">Спасибо за оплату — кабинет RentOS готов.</p>
-    <p style="margin:0 0 16px;">Осталось задать пароль, и можно начинать.</p>
-    <p style="margin:0 0 16px;">
-      <a href="${link}" style="display:inline-block;background:#1B7A5C;color:#fff;text-decoration:none;padding:12px 20px;border-radius:12px;font-weight:600;">Задать пароль</a>
-    </p>
-    <p style="font-size:12px;color:#6B7268;margin:0;">Ссылка действует 7 дней. Если она устареет — воспользуйтесь «Забыли пароль» на странице входа.</p>
-  </div>
-</body>
-</html>`;
+  const t = await dictionaryForUser(userId);
+  const html = renderAuthEmail({
+    lines: [t.authEmail.welcomeIntro, t.authEmail.welcomeLine],
+    buttonLabel: t.authEmail.welcomeButton,
+    link,
+    note: t.authEmail.welcomeNote,
+  });
 
-  await sendEmail([email], "RentOS — кабинет готов, задайте пароль", html);
+  await sendEmail([email], t.authEmail.welcomeSubject, html);
 }

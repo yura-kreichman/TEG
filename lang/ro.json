@@ -639,6 +639,17 @@
     "backToOperatorLoginLink": "Înapoi la autentificarea angajatului",
     "loginAsOperatorLink": "Autentificare ca Angajat"
   },
+  "authEmail": {
+    "resetSubject": "RentOS — resetare parolă",
+    "resetIntro": "Recuperarea parolei RentOS.",
+    "resetButton": "Resetează parola",
+    "resetNote": "Linkul este valabil 1 oră. Dacă nu ați cerut resetarea, ignorați acest e-mail.",
+    "welcomeSubject": "RentOS — contul este gata, setați o parolă",
+    "welcomeIntro": "Vă mulțumim pentru plată — contul RentOS este gata.",
+    "welcomeLine": "Rămâne să setați o parolă și puteți începe.",
+    "welcomeButton": "Setează parola",
+    "welcomeNote": "Linkul este valabil 7 zile. Dacă expiră, folosiți „Am uitat parola” pe pagina de conectare."
+  },
   "points": {
     "title": "Puncte",
     "nameLabel": "Numele punctului",

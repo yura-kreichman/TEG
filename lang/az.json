@@ -639,6 +639,17 @@
     "backToOperatorLoginLink": "Əməkdaş girişinə qayıt",
     "loginAsOperatorLink": "Əməkdaş kimi daxil ol"
   },
+  "authEmail": {
+    "resetSubject": "RentOS — şifrənin sıfırlanması",
+    "resetIntro": "RentOS şifrənin bərpası.",
+    "resetButton": "Şifrəni sıfırla",
+    "resetNote": "Keçid 1 saat qüvvədədir. Sıfırlama tələb etməmisinizsə, bu məktubu nəzərə almayın.",
+    "welcomeSubject": "RentOS — kabinet hazırdır, şifrə təyin edin",
+    "welcomeIntro": "Ödəniş üçün təşəkkür edirik — RentOS kabineti hazırdır.",
+    "welcomeLine": "Yalnız şifrə təyin etmək qalır.",
+    "welcomeButton": "Şifrə təyin et",
+    "welcomeNote": "Keçid 7 gün qüvvədədir. Vaxtı keçərsə, giriş səhifəsində “Şifrəni unutdum”dan istifadə edin."
+  },
   "points": {
     "title": "Nöqtələr",
     "nameLabel": "Nöqtənin adı",

@@ -639,6 +639,17 @@
     "backToOperatorLoginLink": "Torna all'accesso dipendente",
     "loginAsOperatorLink": "Accedi come Dipendente"
   },
+  "authEmail": {
+    "resetSubject": "RentOS — reimpostazione password",
+    "resetIntro": "Recupero della password RentOS.",
+    "resetButton": "Reimposta password",
+    "resetNote": "Il link è valido per 1 ora. Se non hai richiesto la reimpostazione, ignora questa email.",
+    "welcomeSubject": "RentOS — il tuo account è pronto, imposta una password",
+    "welcomeIntro": "Grazie per il pagamento — il tuo account RentOS è pronto.",
+    "welcomeLine": "Basta impostare una password e puoi iniziare.",
+    "welcomeButton": "Imposta password",
+    "welcomeNote": "Il link è valido per 7 giorni. Se scade, usa “Password dimenticata” nella pagina di accesso."
+  },
   "points": {
     "title": "Punti",
     "nameLabel": "Nome del punto",

@@ -639,6 +639,17 @@
     "backToOperatorLoginLink": "Çalışan girişine dön",
     "loginAsOperatorLink": "Çalışan olarak giriş yap"
   },
+  "authEmail": {
+    "resetSubject": "RentOS — şifre sıfırlama",
+    "resetIntro": "RentOS şifre kurtarma.",
+    "resetButton": "Şifreyi sıfırla",
+    "resetNote": "Bağlantı 1 saat geçerlidir. Sıfırlama talep etmediyseniz bu e-postayı yok sayın.",
+    "welcomeSubject": "RentOS — hesabınız hazır, şifre belirleyin",
+    "welcomeIntro": "Ödemeniz için teşekkürler — RentOS hesabınız hazır.",
+    "welcomeLine": "Tek yapmanız gereken bir şifre belirlemek.",
+    "welcomeButton": "Şifre belirle",
+    "welcomeNote": "Bağlantı 7 gün geçerlidir. Süresi geçerse giriş sayfasında “Şifremi unuttum”u kullanın."
+  },
   "points": {
     "title": "Noktalar",
     "nameLabel": "Nokta adı",
