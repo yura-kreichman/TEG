@@ -99,6 +99,13 @@ function rentos_t($key)
             'it_IT' => 'Torna alla home',
             'ro_RO' => 'Înapoi la pagina principală',
         ],
+        'sign_in_hint' => [
+            'ru_RU' => 'Подписка, платежи и поддержка — в вашем аккаунте RentOS',
+            'en_US' => 'Your subscription, payments and support live in your RentOS account',
+            'uk'    => 'Підписка, платежі та підтримка — у вашому акаунті RentOS',
+            'it_IT' => 'Abbonamento, pagamenti e assistenza si trovano nel tuo account RentOS',
+            'ro_RO' => 'Abonamentul, plățile și asistența se află în contul tău RentOS',
+        ],
         'go_to_account' => [
             'ru_RU' => 'Перейти в Аккаунт',
             'en_US' => 'Go to my account',
@@ -216,27 +223,38 @@ function rentos_logo_svg($size = 20)
         . '</svg>';
 }
 
-function rentos_login_button_html()
+/** Адрес запуска входа. $to — куда вернуть человека после. */
+function rentos_sso_start_url($to = '')
 {
-    // Куда человек шёл до того, как его попросили войти. Приходит в адресе
-    // страницы входа — тем же параметром, каким его передаёт WordPress.
     $args = ['rentos_sso' => 'start'];
-    $to = isset($_GET['redirect_to']) ? wp_unslash($_GET['redirect_to']) : '';
     if ($to) {
         $args['to'] = $to;
     }
-    $url = add_query_arg($args, home_url('/'));
+
+    return add_query_arg($args, home_url('/'));
+}
+
+function rentos_login_button_html()
+{
+    // Куда человек шёл до того, как его попросили войти. Обычно приходит
+    // параметром redirect_to — тем же, каким его передаёт WordPress. На самой
+    // странице аккаунта параметра нет, и берём текущий адрес: у подпутей вида
+    // /account/subscriptions страница та же, а вернуть надо именно на подпуть.
+    $to = isset($_GET['redirect_to']) ? wp_unslash($_GET['redirect_to']) : '';
+    if (!$to && rentos_is_account_screen()) {
+        $to = rentos_current_url();
+    }
 
     // Уже вошёл — кнопка входа бессмысленна, но и пустое место вместо неё
-    // оставлять нельзя: страница входа выглядела бы сломанной. Ведём туда, куда
-    // человек шёл, иначе в портал заказов.
+    // оставлять нельзя: экран входа выглядел бы сломанным. Ведём туда, куда
+    // человек шёл, иначе в кабинет заказов.
     if (is_user_logged_in()) {
         $target = $to ? wp_validate_redirect($to, '') : '';
 
         return rentos_button_markup($target ?: rentos_after_login_url(), rentos_t('go_to_account'));
     }
 
-    return rentos_button_markup($url, rentos_t('login_button'));
+    return rentos_button_markup(rentos_sso_start_url($to), rentos_t('login_button'));
 }
 
 /** Стили внутри разметки, а не в теме: кнопка живёт и на wp-login.php. */
@@ -310,36 +328,53 @@ add_filter('fluent_cart/global_customer_menu_items', function ($items) {
     return $items;
 }, 20);
 
-/* ------------------------------------------- страница входа вместо wp-login */
+/* --------------------------------- «Аккаунт» — единственный экран входа */
 
-/** Наша страница входа на домене сайта. 0 — её нет, тогда ничего не подменяем. */
-function rentos_login_page_id()
+/*
+ * Отдельной страницы «Вход» больше нет (решение владельца 2026-08-08). Она была
+ * технической прокладкой: ни один пункт меню на неё не ссылался, а держала она
+ * одну кнопку. Вход и у FluentCart, и у Fluent Support теперь идёт через
+ * страницу «Аккаунт» — ту же, куда человек и шёл.
+ */
+
+/** Адрес экрана входа = сама страница аккаунта. */
+function rentos_login_screen_url($redirectTo = '')
 {
-    static $id = null;
-    if ($id === null) {
-        $page = get_page_by_path('login');
-        $id = ($page && $page->post_status === 'publish') ? (int) $page->ID : 0;
+    $portalId = rentos_portal_page_id();
+    if (!$portalId) {
+        // Страницы аккаунта нет — не подменяем ничего, пусть работает штатный вход.
+        return $redirectTo ? wp_login_url($redirectTo) : wp_login_url();
     }
-    return $id;
+
+    $url = get_permalink($portalId);
+
+    return $redirectTo ? add_query_arg('redirect_to', $redirectTo, $url) : $url;
 }
 
-function rentos_login_page_url($redirectTo = '')
+function rentos_current_url()
 {
-    $id = rentos_login_page_id();
-    $url = $id ? get_permalink($id) : wp_login_url();
-    if ($id && $redirectTo) {
-        $url = add_query_arg('redirect_to', $redirectTo, $url);
-    }
-    return $url;
+    return home_url(isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '/');
+}
+
+/** Сейчас показывается страница аккаунта (включая её подпути вида /account/profile)? */
+function rentos_is_account_screen()
+{
+    $portalId = rentos_portal_page_id();
+
+    return $portalId && get_queried_object_id() === $portalId;
 }
 
 /**
- * Публичные ссылки «войти» ведут на нашу страницу, а не на wp-login.php.
+ * Публичные ссылки «войти» ведут на «Аккаунт», а не на wp-login.php.
  *
  * Разделение по контексту, а не по роли: на сайте «войти» значит «войти
  * клиентом», в админке — «войти в WordPress». Поэтому wp-admin, сам wp-login.php,
  * AJAX и REST не трогаем: иначе истёкшая сессия администратора уводила бы его на
  * страницу, где нет ни поля пароля, ни смысла.
+ *
+ * На самой странице аккаунта «войти» означает уже не «иди туда», а «начинай
+ * вход»: ссылка на себя же была бы тупиком. Так подстрахован и случай, если
+ * подмена экрана ниже однажды перестанет срабатывать.
  */
 add_filter('login_url', function ($url, $redirect = '') {
     if (is_admin() || wp_doing_ajax() || wp_doing_cron() || (defined('REST_REQUEST') && REST_REQUEST)) {
@@ -348,29 +383,62 @@ add_filter('login_url', function ($url, $redirect = '') {
     if (isset($GLOBALS['pagenow']) && $GLOBALS['pagenow'] === 'wp-login.php') {
         return $url;
     }
-    if (!rentos_login_page_id()) {
+    if (!rentos_portal_page_id()) {
         return $url;
     }
-    return rentos_login_page_url($redirect);
+    if (rentos_is_account_screen()) {
+        return rentos_sso_start_url($redirect ?: rentos_current_url());
+    }
+
+    return rentos_login_screen_url($redirect);
 }, 10, 2);
 
 /**
- * Портал заказов гостю показывает свой экран входа со ссылкой на wp-login.php
- * (CustomerProfileHandler::render). Ссылку мы уже подменили фильтром выше, но
- * лишний экран с одной кнопкой не нужен — уводим на страницу входа сразу,
- * запомнив, куда человек шёл: адреса вида /account/subscriptions ведут на тот
- * же лист, поэтому берём полный адрес запроса, а не страницу.
+ * Гостю на странице аккаунта показываем свою кнопку вместо экрана входа
+ * FluentCart. Заменяем вывод блока целиком, а не правим его разметку: разметка
+ * чужая и меняется с версиями, а имя блока — публичный контракт.
+ *
+ * Проверять роль не нужно: сюда попадают только гости, а вошедший видит портал
+ * плагина как есть.
+ */
+add_filter('render_block', function ($html, $block) {
+    if (($block['blockName'] ?? '') !== 'fluent-cart/customer-profile') {
+        return $html;
+    }
+    if (is_user_logged_in()) {
+        return $html;
+    }
+
+    return '<div class="rentos-login-screen" style="max-width:420px;margin:48px auto;text-align:center">'
+        . '<h2 style="margin:0 0 8px">' . esc_html(rentos_t('sign_in_title')) . '</h2>'
+        . '<p style="margin:0 0 20px;color:#5b6472">' . esc_html(rentos_t('sign_in_hint')) . '</p>'
+        . rentos_login_button_html()
+        . '</div>';
+}, 10, 2);
+
+/**
+ * Отдельный портал Fluent Support (страница из его же настроек) гостю показывает
+ * свою форму входа. Уводим на «Аккаунт», запомнив адрес: вход в проекте один, и
+ * человек должен вернуться туда, куда шёл.
+ *
+ * Портал поддержки при ticket_link_portal = fluent_cart живёт внутри кабинета
+ * заказов, поэтому для вошедшего эта страница — лишь legacy-вход.
  */
 add_action('template_redirect', function () {
-    if (is_user_logged_in() || !rentos_login_page_id()) {
+    if (is_user_logged_in() || !rentos_portal_page_id()) {
         return;
     }
-    $portalId = rentos_portal_page_id();
-    if (!$portalId || get_queried_object_id() !== $portalId) {
+
+    $supportPageId = 0;
+    if (class_exists('\FluentSupport\App\Services\Helper')) {
+        $settings = \FluentSupport\App\Services\Helper::getOption('global_business_settings', []);
+        $supportPageId = is_array($settings) ? (int) ($settings['portal_page_id'] ?? 0) : 0;
+    }
+    if (!$supportPageId || get_queried_object_id() !== $supportPageId) {
         return;
     }
-    $current = home_url(isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '/');
-    wp_safe_redirect(rentos_login_page_url($current));
+
+    wp_safe_redirect(rentos_login_screen_url(rentos_current_url()));
     exit;
 }, 5);
 
