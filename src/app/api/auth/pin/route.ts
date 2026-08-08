@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUserId, hashPin } from "@/lib/auth";
 import { isPinTakenInTenant } from "@/lib/operator-auth";
+import { clearFailedPins, userPinKey } from "@/lib/pin-attempts";
 
 export async function POST(request: Request) {
   const userId = await getSessionUserId();
@@ -37,6 +38,10 @@ export async function POST(request: Request) {
       pinLockedUntil: null,
     },
   });
+
+  // Новый ПИН — старые промахи не в счёт: иначе владелец, сменивший ПИН именно
+  // потому, что путался в прежнем, унёс бы предел с собой.
+  clearFailedPins(userPinKey(userId));
 
   return NextResponse.json({ ok: true });
 }

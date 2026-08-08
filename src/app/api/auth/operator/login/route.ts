@@ -8,13 +8,18 @@ import { setAccentCookie } from "@/lib/accent";
 import { getPreAuthLocaleCookie } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 import { isAuthRateLimited, PIN_ATTEMPTS_PER_WINDOW } from "@/lib/auth-rate-limit";
+import {
+  clearFailedPins,
+  devicePinKey,
+  pinBlockedForMinutes,
+  recordFailedPin,
+} from "@/lib/pin-attempts";
 import { getClientIp } from "@/lib/instructions/request-ip";
 
 export async function POST(request: Request) {
-  // Единственное препятствие перебору ПИНа: блокировки устройства по неверным
-  // попыткам больше нет (решение владельца 2026-08-08, см. login-lockout.ts).
-  // Бюджет заведомо недостижим для человека — сотрудник, путающий ПИН, о нём
-  // не узнает; см. PIN_ATTEMPTS_PER_WINDOW.
+  // Верхний предел на весь адрес: у точки все планшеты часто выходят в сеть
+  // через один IP, поэтому бюджет здесь щедрый (см. PIN_ATTEMPTS_PER_WINDOW) —
+  // он ловит перебор с подменой устройства, а не сотрудника с опечаткой.
   if (isAuthRateLimited("operator-login", getClientIp(request), PIN_ATTEMPTS_PER_WINDOW)) {
     return NextResponse.json({ error: "Слишком много попыток. Попробуйте позже." }, { status: 429 });
   }
@@ -27,6 +32,18 @@ export async function POST(request: Request) {
     );
   }
 
+  // Предел неверных ПИНов на это устройство — окно, а не накопление за всё
+  // время (см. lib/pin-attempts.ts, там же разобран случай Park от 8 августа).
+  // Проверяем до сканирования операторов: заблокированному сравнивать незачем.
+  const attemptsKey = devicePinKey(device.id);
+  const blockedFor = pinBlockedForMinutes(attemptsKey);
+  if (blockedFor !== null) {
+    return NextResponse.json(
+      { error: `Слишком много неверных ПИН-кодов. Попробуйте через ${blockedFor} мин.` },
+      { status: 429 }
+    );
+  }
+
   const { pin } = await request.json();
   if (typeof pin !== "string" || !/^\d{4,6}$/.test(pin)) {
     return NextResponse.json({ error: "Введите ПИН-код" }, { status: 400 });
@@ -34,8 +51,10 @@ export async function POST(request: Request) {
 
   const operator = await findOperatorByPin(device.point.tenantId, pin);
   if (!operator) {
+    recordFailedPin(attemptsKey);
     return NextResponse.json({ error: "Неверный ПИН-код" }, { status: 401 });
   }
+  clearFailedPins(attemptsKey);
   // ПИН верный, но Сотрудник деактивирован — отдельная причина, не "неверный
   // ПИН" (реальный баг, найден пользователем 2026-07-22, см. комментарий у
   // findOperatorByPin).

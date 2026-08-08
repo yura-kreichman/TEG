@@ -17,6 +17,12 @@ import {
   resetPasswordLockout,
 } from "@/lib/login-lockout";
 import { isAuthRateLimited, PIN_ATTEMPTS_PER_WINDOW } from "@/lib/auth-rate-limit";
+import {
+  clearFailedPins,
+  pinBlockedForMinutes,
+  recordFailedPin,
+  userPinKey,
+} from "@/lib/pin-attempts";
 import { getClientIp } from "@/lib/instructions/request-ip";
 
 async function syncAccentCookie(tenantId: string | null) {
@@ -70,12 +76,26 @@ export async function POST(request: Request) {
       );
     }
 
-    // Неверный ПИН ничего не блокирует — ни счётчика попыток, ни временной
-    // блокировки аккаунта (решение владельца 2026-08-08, см. login-lockout.ts).
+    // Предел неверных ПИНов — окно, а не накопление за всё время (см.
+    // lib/pin-attempts.ts). У владельца точка входа — сам аккаунт: ПИН
+    // проверяется только против него, устройство уже опознано кукой.
+    const attemptsKey = userPinKey(user.id);
+    const blockedFor = pinBlockedForMinutes(attemptsKey);
+    if (blockedFor !== null) {
+      return NextResponse.json(
+        {
+          error: `Слишком много неверных ПИН-кодов. Попробуйте через ${blockedFor} мин или войдите с логином и паролем.`,
+        },
+        { status: 429 }
+      );
+    }
+
     const ok = await verifyPin(pin, user.pinHash);
     if (!ok) {
+      recordFailedPin(attemptsKey);
       return NextResponse.json({ error: "Неверный ПИН-код" }, { status: 401 });
     }
+    clearFailedPins(attemptsKey);
 
     await createSession(user.id);
     await rememberOwnerDevice(user.id);
