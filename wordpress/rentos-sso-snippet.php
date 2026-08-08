@@ -99,6 +99,13 @@ function rentos_t($key)
             'it_IT' => 'Torna alla home',
             'ro_RO' => 'Înapoi la pagina principală',
         ],
+        'go_to_account' => [
+            'ru_RU' => 'Перейти в Аккаунт',
+            'en_US' => 'Go to my account',
+            'uk'    => 'Перейти в Акаунт',
+            'it_IT' => 'Vai al mio account',
+            'ro_RO' => 'Mergi la contul meu',
+        ],
         'sign_in_title' => [
             'ru_RU' => 'Вход через RentOS',
             'en_US' => 'Sign in with RentOS',
@@ -211,9 +218,6 @@ function rentos_logo_svg($size = 20)
 
 function rentos_login_button_html()
 {
-    if (is_user_logged_in()) {
-        return '';
-    }
     // Куда человек шёл до того, как его попросили войти. Приходит в адресе
     // страницы входа — тем же параметром, каким его передаёт WordPress.
     $args = ['rentos_sso' => 'start'];
@@ -223,13 +227,28 @@ function rentos_login_button_html()
     }
     $url = add_query_arg($args, home_url('/'));
 
+    // Уже вошёл — кнопка входа бессмысленна, но и пустое место вместо неё
+    // оставлять нельзя: страница входа выглядела бы сломанной. Ведём туда, куда
+    // человек шёл, иначе в портал заказов.
+    if (is_user_logged_in()) {
+        $target = $to ? wp_validate_redirect($to, '') : '';
+
+        return rentos_button_markup($target ?: rentos_after_login_url(), rentos_t('go_to_account'));
+    }
+
+    return rentos_button_markup($url, rentos_t('login_button'));
+}
+
+/** Стили внутри разметки, а не в теме: кнопка живёт и на wp-login.php. */
+function rentos_button_markup($url, $label)
+{
     return '<div class="rentos-sso-wrap" style="margin:16px 0 8px">'
         . '<a class="rentos-sso-btn" href="' . esc_url($url) . '" '
         . 'style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;box-sizing:border-box;'
         . 'padding:11px 16px;border:1px solid #d5d8dd;border-radius:10px;background:#fff;color:#19283a;'
         . 'font-weight:600;font-size:14px;line-height:1.2;text-decoration:none">'
         . rentos_logo_svg(20)
-        . '<span>' . esc_html(rentos_t('login_button')) . '</span>'
+        . '<span>' . esc_html($label) . '</span>'
         . '</a></div>';
 }
 
