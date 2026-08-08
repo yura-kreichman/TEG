@@ -356,6 +356,45 @@ add_filter('fluent_cart/global_customer_menu_items', function ($items) {
     return $items;
 }, 20);
 
+/**
+ * Меню кабинета печатаем ровно один раз, сколько бы обработчиков ни подписалось.
+ *
+ * FluentCart на КАЖДУЮ отрисовку блока кабинета подписывает новый обработчик
+ * вывода меню (renderCustomerAppContainer) и не проверяет, есть ли он уже. Пока
+ * страница «Аккаунт» держала блок в двух местах — в контенте и в виджете
+ * Elementor — меню печаталось дважды подряд. Источник дубля убран, но вернуть
+ * его может любая правка: достаточно открыть страницу в редакторе Elementor.
+ *
+ * Поэтому страховка на самом выводе: перед печатью снимаем все лишние подписки,
+ * оставляя одну. Блокировать саму отрисовку блока было бы опаснее — за один
+ * запрос его обрабатывают и невидимо (SEO, выдержки), и по-настоящему, а какая
+ * отрисовка попадёт на страницу, заранее неизвестно: можно погасить нужную.
+ */
+add_action('fluent_cart/customer_menu', function () {
+    global $wp_filter;
+    if (empty($wp_filter['fluent_cart/customer_menu'])) {
+        return;
+    }
+
+    $kept = false;
+    foreach ($wp_filter['fluent_cart/customer_menu']->callbacks as $priority => $callbacks) {
+        foreach ($callbacks as $callback) {
+            $fn = $callback['function'];
+            if (!is_array($fn) || !is_object($fn[0]) || ($fn[1] ?? '') !== 'renderCustomerMenu') {
+                continue;
+            }
+            if ($kept) {
+                // remove_action, а не правка $wp_filter напрямую: WP_Hook ведёт
+                // свой учёт итерации, и снятие обработчика на ходу безопасно
+                // только через штатный вызов.
+                remove_action('fluent_cart/customer_menu', $fn, $priority);
+                continue;
+            }
+            $kept = true;
+        }
+    }
+}, 1);
+
 /* --------------------------------- «Аккаунт» — единственный экран входа */
 
 /*
