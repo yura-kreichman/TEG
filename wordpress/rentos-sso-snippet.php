@@ -38,6 +38,7 @@ function rentos_sso_secret()
 
 const RENTOS_CLIENT_ROLE = 'rentos_client';
 const RENTOS_STATE_COOKIE = 'rentos_sso_state';
+const RENTOS_TARGET_COOKIE = 'rentos_sso_to';
 
 /* --------------------------------------------------------------- строки */
 
@@ -213,7 +214,14 @@ function rentos_login_button_html()
     if (is_user_logged_in()) {
         return '';
     }
-    $url = add_query_arg('rentos_sso', 'start', home_url('/'));
+    // Куда человек шёл до того, как его попросили войти. Приходит в адресе
+    // страницы входа — тем же параметром, каким его передаёт WordPress.
+    $args = ['rentos_sso' => 'start'];
+    $to = isset($_GET['redirect_to']) ? wp_unslash($_GET['redirect_to']) : '';
+    if ($to) {
+        $args['to'] = $to;
+    }
+    $url = add_query_arg($args, home_url('/'));
 
     return '<div class="rentos-sso-wrap" style="margin:16px 0 8px">'
         . '<a class="rentos-sso-btn" href="' . esc_url($url) . '" '
@@ -252,6 +260,101 @@ add_shortcode('rentos_login_button', function () {
  * администратора, какой и был.
  */
 
+/* ------------------------------------------------------- мелочи портала */
+
+/**
+ * У пункта «Поддержка» в портале заказов не было иконки — на её месте пустое
+ * место. Свой раздел в портале FluentCart регистрирует сам Fluent Support
+ * (FluentCart::renderCustomerPortalInFluentCartDashboard) и icon_svg не
+ * передаёт. Дорисовываем фильтром, плагин не правим.
+ *
+ * Иконка — один path с fill="currentColor" и без прочих атрибутов: вывод
+ * проходит через wp_kses со списком, где разрешены только svg, path и g
+ * (fct_allowed_svg_tags), остальное вырезается молча. Та же гарнитура, что у
+ * соседних пунктов, — Remix Icon, customer-service-2-line.
+ *
+ * Рисунок пересчитан из сетки 24 в сетку 20 намеренно. wp_kses приводит имена
+ * атрибутов к нижнему регистру, а в списке разрешённых стоит viewBox — и
+ * атрибут вылетает. Без него система координат равна width/height, поэтому
+ * рисунок из 24 единиц был бы обрезан. Соседние иконки плагина живут в 20
+ * единицах и того же не замечают.
+ */
+add_filter('fluent_cart/global_customer_menu_items', function ($items) {
+    if (!isset($items['fluent-support']) || !empty($items['fluent-support']['icon_svg'])) {
+        return $items;
+    }
+
+    $items['fluent-support']['icon_svg'] = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">'
+        . '<path d="M16.6151 6.6667H17.5C18.4205 6.6667 19.1667 7.4129 19.1667 8.3333V11.6667C19.1667 12.5872 18.4205 13.3333 17.5 13.3333H16.6151C16.205 16.6219 13.3997 19.1667 10 19.1667V17.5C12.7614 17.5 15 15.2614 15 12.5V7.5C15 4.7386 12.7614 2.5 10 2.5C7.2386 2.5 5 4.7386 5 7.5V13.3333H2.5C1.5795 13.3333 0.8333 12.5872 0.8333 11.6667V8.3333C0.8333 7.4129 1.5795 6.6667 2.5 6.6667H3.3849C3.795 3.3781 6.6003 0.8333 10 0.8333C13.3997 0.8333 16.205 3.3781 16.6151 6.6667ZM2.5 8.3333V11.6667H3.3333V8.3333H2.5ZM16.6667 8.3333V11.6667H17.5V8.3333H16.6667ZM6.4662 13.1541L7.3497 11.7406C8.118 12.2218 9.0265 12.5 10 12.5C10.9735 12.5 11.882 12.2218 12.6503 11.7406L13.5338 13.1541C12.5093 13.7958 11.298 14.1667 10 14.1667C8.702 14.1667 7.4907 13.7958 6.4662 13.1541Z"/>'
+        . '</svg>';
+
+    return $items;
+}, 20);
+
+/* ------------------------------------------- страница входа вместо wp-login */
+
+/** Наша страница входа на домене сайта. 0 — её нет, тогда ничего не подменяем. */
+function rentos_login_page_id()
+{
+    static $id = null;
+    if ($id === null) {
+        $page = get_page_by_path('login');
+        $id = ($page && $page->post_status === 'publish') ? (int) $page->ID : 0;
+    }
+    return $id;
+}
+
+function rentos_login_page_url($redirectTo = '')
+{
+    $id = rentos_login_page_id();
+    $url = $id ? get_permalink($id) : wp_login_url();
+    if ($id && $redirectTo) {
+        $url = add_query_arg('redirect_to', $redirectTo, $url);
+    }
+    return $url;
+}
+
+/**
+ * Публичные ссылки «войти» ведут на нашу страницу, а не на wp-login.php.
+ *
+ * Разделение по контексту, а не по роли: на сайте «войти» значит «войти
+ * клиентом», в админке — «войти в WordPress». Поэтому wp-admin, сам wp-login.php,
+ * AJAX и REST не трогаем: иначе истёкшая сессия администратора уводила бы его на
+ * страницу, где нет ни поля пароля, ни смысла.
+ */
+add_filter('login_url', function ($url, $redirect = '') {
+    if (is_admin() || wp_doing_ajax() || wp_doing_cron() || (defined('REST_REQUEST') && REST_REQUEST)) {
+        return $url;
+    }
+    if (isset($GLOBALS['pagenow']) && $GLOBALS['pagenow'] === 'wp-login.php') {
+        return $url;
+    }
+    if (!rentos_login_page_id()) {
+        return $url;
+    }
+    return rentos_login_page_url($redirect);
+}, 10, 2);
+
+/**
+ * Портал заказов гостю показывает свой экран входа со ссылкой на wp-login.php
+ * (CustomerProfileHandler::render). Ссылку мы уже подменили фильтром выше, но
+ * лишний экран с одной кнопкой не нужен — уводим на страницу входа сразу,
+ * запомнив, куда человек шёл: адреса вида /account/subscriptions ведут на тот
+ * же лист, поэтому берём полный адрес запроса, а не страницу.
+ */
+add_action('template_redirect', function () {
+    if (is_user_logged_in() || !rentos_login_page_id()) {
+        return;
+    }
+    $portalId = rentos_portal_page_id();
+    if (!$portalId || get_queried_object_id() !== $portalId) {
+        return;
+    }
+    $current = home_url(isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '/');
+    wp_safe_redirect(rentos_login_page_url($current));
+    exit;
+}, 5);
+
 /* ------------------------------------------------------------ сам вход */
 
 function rentos_callback_url()
@@ -259,20 +362,56 @@ function rentos_callback_url()
     return add_query_arg('rentos_sso', 'callback', home_url('/'));
 }
 
-/** Куда отправлять клиента после входа — портал заказов FluentCart. */
+/** Портал заказов FluentCart — по настройке плагина, не по угаданному слагу. */
+function rentos_portal_page_id()
+{
+    $settings = get_option('fluent_cart_store_settings');
+    if (!is_array($settings) || empty($settings['customer_profile_page_id'])) {
+        return 0;
+    }
+    $pageId = (int) $settings['customer_profile_page_id'];
+
+    return ($pageId && get_post_status($pageId) === 'publish') ? $pageId : 0;
+}
+
+/**
+ * Куда отправлять после входа: туда, откуда человека попросили войти, иначе —
+ * в портал заказов.
+ *
+ * Цель мы храним в куке, а не тащим через приложение: адрес возврата
+ * (redirect_uri) приложение сверяет со своим белым списком и возвращает нам
+ * обратно для проверки, так что он должен оставаться неизменным.
+ */
 function rentos_after_login_url()
 {
-    if (function_exists('home_url')) {
-        $pageId = 0;
-        $settings = get_option('fluent_cart_store_settings');
-        if (is_array($settings) && !empty($settings['customer_profile_page_id'])) {
-            $pageId = (int) $settings['customer_profile_page_id'];
-        }
-        if ($pageId && get_post_status($pageId) === 'publish') {
-            return get_permalink($pageId);
-        }
+    $to = isset($_COOKIE[RENTOS_TARGET_COOKIE]) ? wp_unslash($_COOKIE[RENTOS_TARGET_COOKIE]) : '';
+    // wp_validate_redirect отсеивает чужие хосты — «//чужой.сайт» браузер
+    // понимает как адрес, а не как путь.
+    $to = $to ? wp_validate_redirect($to, '') : '';
+    if ($to) {
+        return $to;
     }
-    return home_url('/');
+
+    $portalId = rentos_portal_page_id();
+
+    return $portalId ? get_permalink($portalId) : home_url('/');
+}
+
+/** Запомнить или сбросить цель возврата. */
+function rentos_set_target_cookie($to)
+{
+    setcookie(RENTOS_TARGET_COOKIE, $to, [
+        'expires'  => $to ? time() + 600 : time() - 3600,
+        'path'     => '/',
+        'secure'   => is_ssl(),
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+    if (!$to) {
+        unset($_COOKIE[RENTOS_TARGET_COOKIE]);
+    } else {
+        $_COOKIE[RENTOS_TARGET_COOKIE] = $to;
+    }
 }
 
 add_action('template_redirect', function () {
@@ -292,6 +431,9 @@ add_action('template_redirect', function () {
 
 function rentos_sso_start()
 {
+    $to = isset($_GET['to']) ? wp_unslash($_GET['to']) : '';
+    rentos_set_target_cookie($to ? wp_validate_redirect($to, '') : '');
+
     if (is_user_logged_in()) {
         wp_safe_redirect(rentos_after_login_url());
         exit;
@@ -369,7 +511,11 @@ function rentos_sso_callback()
     wp_set_auth_cookie($user->ID, true, is_ssl());
     do_action('wp_login', $user->user_login, $user);
 
-    wp_safe_redirect(rentos_after_login_url());
+    // Адрес считаем до сброса куки — она и есть источник цели.
+    $target = rentos_after_login_url();
+    rentos_set_target_cookie('');
+
+    wp_safe_redirect($target);
     exit;
 }
 
