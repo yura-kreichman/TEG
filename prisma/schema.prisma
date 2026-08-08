@@ -407,6 +407,43 @@ model User {
   goodsHeldOrders       GoodsHeldOrder[]
   goodsRevisions        GoodsRevision[]
   goodsReconciliations  GoodsReconciliation[]
+  ssoCodes              SsoCode[]
+}
+
+/**
+ * Одноразовый код единого входа: RentOS — источник входа, rentos365.app
+ * (WordPress с FluentCart и Fluent Support) — потребитель (решение
+ * пользователя 2026-08-08).
+ *
+ * Почему таблица, а не самоподписанный токен без состояния: код обязан быть
+ * ОДНОразовым, а погасить можно только то, что где-то записано. Ссылка с кодом
+ * попадает в историю браузера и в логи веб-сервера — без гашения её хватило бы
+ * на повторный вход.
+ *
+ * Пароли между системами не передаются никогда: WordPress получает по этому
+ * коду только подтверждение "это владелец такого-то тенанта с таким-то email".
+ */
+model SsoCode {
+  id String @id @default(cuid())
+
+  // Хеш, а не сам код — тот же приём, что у User.resetTokenHash: утечка
+  // таблицы не даёт войти.
+  codeHash String @unique
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Куда возвращаемся после обмена. Хранится, чтобы обмен нельзя было
+  // выполнить в адрес, отличный от того, под который код выдавался.
+  redirectUri String
+
+  expiresAt DateTime
+  // Отметка гашения, а не удаление строки: повторную попытку с уже
+  // использованным кодом видно в логах, а не молча "код не найден".
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([expiresAt])
 }
 
 // Одна запись на браузер/устройство, подписавшееся на Web Push (фидбек

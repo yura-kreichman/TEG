@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { AuthCard } from "@/components/auth-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -11,11 +11,22 @@ import { Label } from "@/components/ui/label";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
+// Куда вернуть после входа. Только внутренний путь: "//злой.сайт" браузер
+// трактует как протокол-относительный адрес, то есть это был бы открытый
+// редирект. Нужен для единого входа — /api/sso/authorize отправляет сюда
+// незалогиненного владельца и ждёт его обратно (см. lib/sso.ts).
+function safeNext(value: string | null): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
+  return value;
+}
+
 type Mode = "pin" | "password";
 type DeviceStatus = "checking" | "known" | "unknown";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = safeNext(searchParams.get("next"));
   const t = useI18n();
   const [mode, setMode] = useState<Mode>("pin");
 
@@ -65,7 +76,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/");
+      router.push(next);
       router.refresh();
     } finally {
       setLoading(false);
@@ -90,7 +101,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/");
+      router.push(next);
       router.refresh();
     } finally {
       setLoading(false);
