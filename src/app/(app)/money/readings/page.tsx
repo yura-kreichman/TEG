@@ -794,57 +794,62 @@ export default function ReadingsCalendarPage() {
                 <p className="mt-4 text-caption-airbnb">{points[0]?.name}</p>
               )}
 
-              <SpringCard hover={false} className="mt-3.5 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <button
-                    type="button"
-                    aria-label={t.readings.prevMonth}
-                    onClick={() => goMonth(-1)}
-                    className="flex size-8 items-center justify-center rounded-control text-muted-foreground"
-                  >
-                    <ChevronLeft className="size-4.5" />
-                  </button>
-                  <p className="text-card-title">
-                    {t.readings.months[month - 1]} {year}
-                  </p>
-                  <button
-                    type="button"
-                    aria-label={t.readings.nextMonth}
-                    onClick={() => goMonth(1)}
-                    disabled={isCurrentMonth}
-                    className="flex size-8 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
-                  >
-                    <ChevronRight className="size-4.5" />
-                  </button>
-                </div>
+              {/* Календарь центрируется и ограничен по ширине: ячейки
+                  aspect-square, поэтому на широком экране карточка во всю
+                  ширину раздувала их до огромных квадратов (2026-08-08). */}
+              <SpringCard hover={false} className="mt-3.5">
+                <div className="mx-auto flex w-full max-w-sm flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      aria-label={t.readings.prevMonth}
+                      onClick={() => goMonth(-1)}
+                      className="flex size-8 items-center justify-center rounded-control text-muted-foreground"
+                    >
+                      <ChevronLeft className="size-4.5" />
+                    </button>
+                    <p className="text-card-title">
+                      {t.readings.months[month - 1]} {year}
+                    </p>
+                    <button
+                      type="button"
+                      aria-label={t.readings.nextMonth}
+                      onClick={() => goMonth(1)}
+                      disabled={isCurrentMonth}
+                      className="flex size-8 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
+                    >
+                      <ChevronRight className="size-4.5" />
+                    </button>
+                  </div>
 
-                <div className="grid grid-cols-7 gap-1 text-center">
-                  {t.readings.weekdays.map((w) => (
-                    <span key={w} className="text-caption-airbnb font-semibold">
-                      {w}
-                    </span>
-                  ))}
-                  {cells.map((date, i) => {
-                    if (!date) return <span key={`blank-${i}`} />;
-                    const active = activeDates.has(date);
-                    const day = Number(date.slice(-2));
-                    return (
-                      <button
-                        key={date}
-                        type="button"
-                        disabled={!active}
-                        onClick={() => openDay(date)}
-                        className={cn(
-                          "relative flex aspect-square items-center justify-center rounded-control text-base font-bold tabular-nums",
-                          active ? "bg-primary text-primary-foreground" : "text-muted-foreground/70",
-                          date === todayKey && !active && "text-foreground",
-                          date === selectedDate && active && "ring-2 ring-primary ring-offset-2 ring-offset-card"
-                        )}
-                      >
-                        {day}
-                      </button>
-                    );
-                  })}
+                  <div className="grid grid-cols-7 gap-1 text-center">
+                    {t.readings.weekdays.map((w) => (
+                      <span key={w} className="text-caption-airbnb font-semibold">
+                        {w}
+                      </span>
+                    ))}
+                    {cells.map((date, i) => {
+                      if (!date) return <span key={`blank-${i}`} />;
+                      const active = activeDates.has(date);
+                      const day = Number(date.slice(-2));
+                      return (
+                        <button
+                          key={date}
+                          type="button"
+                          disabled={!active}
+                          onClick={() => openDay(date)}
+                          className={cn(
+                            "relative flex aspect-square items-center justify-center rounded-control text-base font-bold tabular-nums",
+                            active ? "bg-primary text-primary-foreground" : "text-muted-foreground/70",
+                            date === todayKey && !active && "text-foreground",
+                            date === selectedDate && active && "ring-2 ring-primary ring-offset-2 ring-offset-card"
+                          )}
+                        >
+                          {day}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </SpringCard>
 
