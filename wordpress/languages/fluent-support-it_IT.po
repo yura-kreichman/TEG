@@ -1,0 +1,27 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0
+"
+"Content-Type: text/plain; charset=UTF-8
+"
+"Content-Transfer-Encoding: 8bit
+"
+"Language: it_IT
+"
+"X-Generator: RentOS manual
+"
+
+msgid "Not registered?"
+msgstr "Non sei registrato?"
+
+msgid "Create an account"
+msgstr "Crea un account"
+
+msgid "Forgot your password?"
+msgstr "Password dimenticata?"
+
+msgid "Reset password"
+msgstr "Reimposta la password"
+
+msgid "Support"
+msgstr "Assistenza"

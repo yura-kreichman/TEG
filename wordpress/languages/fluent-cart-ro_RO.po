@@ -1,0 +1,144 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0
+"
+"Content-Type: text/plain; charset=UTF-8
+"
+"Content-Transfer-Encoding: 8bit
+"
+"Language: ro_RO
+"
+"X-Generator: RentOS manual
+"
+
+msgid "Search products"
+msgstr "Caută produse"
+
+msgid "Minimum price"
+msgstr "Preț minim"
+
+msgid "Maximum price"
+msgstr "Preț maxim"
+
+msgid "View Options"
+msgstr "Vezi opțiuni"
+
+msgid "Login"
+msgstr "Autentificare"
+
+msgid "Please log in to access your customer portal."
+msgstr "Autentificați-vă pentru a accesa contul dumneavoastră."
+
+msgid "Dashboard"
+msgstr "Panou"
+
+msgid "Purchase History"
+msgstr "Istoric achiziții"
+
+msgid "Subscription Plans"
+msgstr "Planuri de abonament"
+
+msgid "Downloads"
+msgstr "Descărcări"
+
+msgid "Profile"
+msgstr "Profil"
+
+msgid "Your Recent Purchases"
+msgstr "Achizițiile tale recente"
+
+msgid "View all"
+msgstr "Vezi toate"
+
+msgid "Completed"
+msgstr "Finalizat"
+
+msgid "Items"
+msgstr "Articole"
+
+msgid "Item"
+msgstr "Articol"
+
+msgid "Status"
+msgstr "Stare"
+
+msgid "Amount"
+msgstr "Sumă"
+
+msgid "Search orders"
+msgstr "Caută comenzi"
+
+msgid "Press Enter to search"
+msgstr "Apăsați Enter pentru căutare"
+
+msgid "Plan"
+msgstr "Plan"
+
+msgid "Active"
+msgstr "Activ"
+
+msgid "Payment details"
+msgstr "Detalii de plată"
+
+msgid "Account Details"
+msgstr "Datele contului"
+
+msgid "Billing Address"
+msgstr "Adresă de facturare"
+
+msgid "Shipping Address"
+msgstr "Adresă de livrare"
+
+msgid "Add New Address"
+msgstr "Adaugă adresă"
+
+msgid "Save Profile"
+msgstr "Salvează profilul"
+
+msgid "Total"
+msgstr "Total"
+
+msgid "Total %s"
+msgstr "Total %s"
+
+msgid "%s / page"
+msgstr "%s / pagină"
+
+msgid "Page %1$s of %2$s"
+msgstr "Pagina %1$s din %2$s"
+
+msgid "Auto renews on %s"
+msgstr "Se reînnoiește automat pe %s"
+
+msgid "Manage and update your personal information."
+msgstr "Gestionați și actualizați datele personale."
+
+msgid "Provide or update the address where your billing statements and invoices will be sent."
+msgstr "Indicați sau actualizați adresa la care vor fi trimise facturile."
+
+msgid "Provide or update the address where your orders will be delivered."
+msgstr "Indicați sau actualizați adresa de livrare a comenzilor."
+
+msgid "per %s"
+msgstr "pe %s"
+
+msgid "year"
+msgstr "an"
+
+msgid "month"
+msgstr "lună"
+
+msgid "week"
+msgstr "săptămână"
+
+msgid "day"
+msgstr "zi"
+
+msgid "quarter"
+msgstr "trimestru"
+
+msgid "six month"
+msgstr "șase luni"
+
+msgid "until cancel"
+msgstr "până la anulare"

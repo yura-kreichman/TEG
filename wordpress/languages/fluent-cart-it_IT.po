@@ -1,0 +1,144 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0
+"
+"Content-Type: text/plain; charset=UTF-8
+"
+"Content-Transfer-Encoding: 8bit
+"
+"Language: it_IT
+"
+"X-Generator: RentOS manual
+"
+
+msgid "Search products"
+msgstr "Cerca prodotti"
+
+msgid "Minimum price"
+msgstr "Prezzo minimo"
+
+msgid "Maximum price"
+msgstr "Prezzo massimo"
+
+msgid "View Options"
+msgstr "Vedi opzioni"
+
+msgid "Login"
+msgstr "Accedi"
+
+msgid "Please log in to access your customer portal."
+msgstr "Accedi per aprire la tua area personale."
+
+msgid "Dashboard"
+msgstr "Pannello"
+
+msgid "Purchase History"
+msgstr "Storico acquisti"
+
+msgid "Subscription Plans"
+msgstr "Piani di abbonamento"
+
+msgid "Downloads"
+msgstr "Download"
+
+msgid "Profile"
+msgstr "Profilo"
+
+msgid "Your Recent Purchases"
+msgstr "I tuoi acquisti recenti"
+
+msgid "View all"
+msgstr "Vedi tutti"
+
+msgid "Completed"
+msgstr "Completato"
+
+msgid "Items"
+msgstr "Articoli"
+
+msgid "Item"
+msgstr "Articolo"
+
+msgid "Status"
+msgstr "Stato"
+
+msgid "Amount"
+msgstr "Importo"
+
+msgid "Search orders"
+msgstr "Cerca ordini"
+
+msgid "Press Enter to search"
+msgstr "Premi Invio per cercare"
+
+msgid "Plan"
+msgstr "Piano"
+
+msgid "Active"
+msgstr "Attivo"
+
+msgid "Payment details"
+msgstr "Dettagli di pagamento"
+
+msgid "Account Details"
+msgstr "Dati dell’account"
+
+msgid "Billing Address"
+msgstr "Indirizzo di fatturazione"
+
+msgid "Shipping Address"
+msgstr "Indirizzo di spedizione"
+
+msgid "Add New Address"
+msgstr "Aggiungi indirizzo"
+
+msgid "Save Profile"
+msgstr "Salva profilo"
+
+msgid "Total"
+msgstr "Totale"
+
+msgid "Total %s"
+msgstr "Totale %s"
+
+msgid "%s / page"
+msgstr "%s / pagina"
+
+msgid "Page %1$s of %2$s"
+msgstr "Pagina %1$s di %2$s"
+
+msgid "Auto renews on %s"
+msgstr "Si rinnova automaticamente il %s"
+
+msgid "Manage and update your personal information."
+msgstr "Gestisci e aggiorna i tuoi dati personali."
+
+msgid "Provide or update the address where your billing statements and invoices will be sent."
+msgstr "Indica o aggiorna l’indirizzo a cui inviare fatture e ricevute."
+
+msgid "Provide or update the address where your orders will be delivered."
+msgstr "Indica o aggiorna l’indirizzo di consegna degli ordini."
+
+msgid "per %s"
+msgstr "per %s"
+
+msgid "year"
+msgstr "anno"
+
+msgid "month"
+msgstr "mese"
+
+msgid "week"
+msgstr "settimana"
+
+msgid "day"
+msgstr "giorno"
+
+msgid "quarter"
+msgstr "trimestre"
+
+msgid "six month"
+msgstr "sei mesi"
+
+msgid "until cancel"
+msgstr "fino alla disdetta"

@@ -1,0 +1,144 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0
+"
+"Content-Type: text/plain; charset=UTF-8
+"
+"Content-Transfer-Encoding: 8bit
+"
+"Language: uk
+"
+"X-Generator: RentOS manual
+"
+
+msgid "Search products"
+msgstr "Пошук товарів"
+
+msgid "Minimum price"
+msgstr "Мінімальна ціна"
+
+msgid "Maximum price"
+msgstr "Максимальна ціна"
+
+msgid "View Options"
+msgstr "Переглянути варіанти"
+
+msgid "Login"
+msgstr "Увійти"
+
+msgid "Please log in to access your customer portal."
+msgstr "Увійдіть, щоб відкрити особистий кабінет."
+
+msgid "Dashboard"
+msgstr "Панель керування"
+
+msgid "Purchase History"
+msgstr "Історія покупок"
+
+msgid "Subscription Plans"
+msgstr "Плани підписки"
+
+msgid "Downloads"
+msgstr "Завантаження"
+
+msgid "Profile"
+msgstr "Профіль"
+
+msgid "Your Recent Purchases"
+msgstr "Ваші останні покупки"
+
+msgid "View all"
+msgstr "Переглянути всі"
+
+msgid "Completed"
+msgstr "Завершено"
+
+msgid "Items"
+msgstr "Позиції"
+
+msgid "Item"
+msgstr "Позиція"
+
+msgid "Status"
+msgstr "Статус"
+
+msgid "Amount"
+msgstr "Сума"
+
+msgid "Search orders"
+msgstr "Пошук замовлень"
+
+msgid "Press Enter to search"
+msgstr "Натисніть Enter для пошуку"
+
+msgid "Plan"
+msgstr "План"
+
+msgid "Active"
+msgstr "Активна"
+
+msgid "Payment details"
+msgstr "Деталі оплати"
+
+msgid "Account Details"
+msgstr "Дані акаунта"
+
+msgid "Billing Address"
+msgstr "Платіжна адреса"
+
+msgid "Shipping Address"
+msgstr "Адреса доставки"
+
+msgid "Add New Address"
+msgstr "Додати адресу"
+
+msgid "Save Profile"
+msgstr "Зберегти профіль"
+
+msgid "Total"
+msgstr "Усього"
+
+msgid "Total %s"
+msgstr "Усього %s"
+
+msgid "%s / page"
+msgstr "%s / сторінка"
+
+msgid "Page %1$s of %2$s"
+msgstr "Сторінка %1$s з %2$s"
+
+msgid "Auto renews on %s"
+msgstr "Автоматично поновлюється %s"
+
+msgid "Manage and update your personal information."
+msgstr "Керуйте своїми особистими даними та оновлюйте їх."
+
+msgid "Provide or update the address where your billing statements and invoices will be sent."
+msgstr "Вкажіть або оновіть адресу, на яку надсилатимуться рахунки."
+
+msgid "Provide or update the address where your orders will be delivered."
+msgstr "Вкажіть або оновіть адресу доставки замовлень."
+
+msgid "per %s"
+msgstr "на %s"
+
+msgid "year"
+msgstr "рік"
+
+msgid "month"
+msgstr "місяць"
+
+msgid "week"
+msgstr "тиждень"
+
+msgid "day"
+msgstr "день"
+
+msgid "quarter"
+msgstr "квартал"
+
+msgid "six month"
+msgstr "півроку"
+
+msgid "until cancel"
+msgstr "до скасування"
