@@ -38,8 +38,12 @@ yarn-error.log*
 # dev-server logs from local test runs
 dev-server.log
 
-# Claude Code local session/tool state — not shared project config
-.claude/
+# Claude Code local session/tool state — not shared project config.
+# Исключение: skills/ это правила проекта, а не состояние машины. Держим их в
+# репозитории, иначе они существуют в одном экземпляре на одном диске —
+# ровно та потеря, от которой уже страховались со сниппетом единого входа.
+.claude/*
+!.claude/skills/
 
 # vercel
 .vercel
