@@ -17,7 +17,13 @@ import { cookies, headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getSessionUserId } from "@/lib/auth";
 import { getActivatedPoint, getOperatorSessionId } from "@/lib/operator-auth";
-import { type Locale, isLocale } from "@/lib/locales";
+import {
+  type Locale,
+  isLocale,
+  PRE_AUTH_LOCALE_COOKIE,
+  PRE_AUTH_LOCALE_MAX_AGE,
+  LINK_LOCALE_HEADER,
+} from "@/lib/locales";
 
 export type { Locale };
 export { isLocale, LOCALE_NAMES, ALL_LOCALES } from "@/lib/locales";
@@ -72,9 +78,6 @@ export function getDictionary(locale: string): Dictionary {
 // yet). Deliberately lower priority than any real session/tenant locale below,
 // so a stale cookie from before signup never overrides an actual tenant
 // setting once one exists — see resolveLocale().
-const PRE_AUTH_LOCALE_COOKIE = "locale_pref";
-const PRE_AUTH_LOCALE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
-
 export async function setPreAuthLocaleCookie(locale: string) {
   const cookieStore = await cookies();
   cookieStore.set(PRE_AUTH_LOCALE_COOKIE, isLocale(locale) ? locale : "ru", {
@@ -157,6 +160,14 @@ export async function resolveLocale(): Promise<Locale> {
       if (tenant?.locale && isLocale(tenant.locale)) return tenant.locale;
     }
   }
+
+  // Язык, пришедший ссылкой с маркетингового сайта rentos365.app (?lang=xx,
+  // proxy.ts кладёт его в заголовок). Приоритет — как у куки: ниже реальной
+  // сессии/тенанта, но выше языка браузера. То есть владелец с русским
+  // кабинетом, кликнувший ссылку с английской версии сайта, останется на
+  // русском, а незалогиненный посетитель получит английскую регистрацию.
+  const linkLocale = headerStore.get(LINK_LOCALE_HEADER);
+  if (linkLocale && isLocale(linkLocale)) return linkLocale;
 
   const cookieLocale = await getPreAuthLocaleCookie();
   if (cookieLocale) return cookieLocale;

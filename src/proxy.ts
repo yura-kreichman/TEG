@@ -5,6 +5,12 @@ import { resolveTenantBySlug } from "@/lib/landing/resolve-tenant";
 import { isBotUserAgent, recordLandingVisit, pruneOldVisitorHashes } from "@/lib/landing/stats";
 import { isRateLimited } from "@/lib/landing/rate-limit";
 import { getClientIp } from "@/lib/instructions/request-ip";
+import {
+  isLocale,
+  PRE_AUTH_LOCALE_COOKIE,
+  PRE_AUTH_LOCALE_MAX_AGE,
+  LINK_LOCALE_HEADER,
+} from "@/lib/locales";
 
 // Marks pre-auth screens so resolveLocale() (src/lib/i18n.ts) ignores any
 // lingering session cookie for language purposes on these paths — found
@@ -134,14 +140,44 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   }
 
   if (!pathname.startsWith("/api/")) {
+    // Язык, пришедший ссылкой с маркетингового сайта rentos365.app. Там
+    // TranslatePress с пятью языками, и без этого посетитель с английской
+    // версии сайта попадал на регистрацию по-русски (найдено 2026-08-09).
+    // Параметр к ссылкам дописывает mu-плагин rentos-app-language-link.php
+    // на стороне WordPress; коды языков TranslatePress до "_" совпадают с
+    // локалями RentOS, включая украинский uk (слаг в адресе там "ua", но код
+    // языка — "uk", поэтому брать надо код, а не слаг).
+    const langParam = request.nextUrl.searchParams.get("lang");
+    const linkLocale = langParam && isLocale(langParam) ? langParam : null;
+
     const isPreAuthPage = PRE_AUTH_PATHS.some(
       (path) => pathname === path || pathname.startsWith(`${path}/`)
     );
-    if (!isPreAuthPage) return NextResponse.next();
+
+    if (!isPreAuthPage && !linkLocale) return NextResponse.next();
 
     const headers = new Headers(request.headers);
-    headers.set("x-pre-auth-page", "1");
-    return NextResponse.next({ request: { headers } });
+    if (isPreAuthPage) headers.set("x-pre-auth-page", "1");
+    // Заголовком, а не только кукой: кука из этого же ответа станет видна
+    // лишь со СЛЕДУЮЩЕГО запроса, и первая страница отрендерилась бы на
+    // старом языке. resolveLocale() читает заголовок там же, где куку.
+    if (linkLocale) headers.set(LINK_LOCALE_HEADER, linkLocale);
+
+    const response = NextResponse.next({ request: { headers } });
+
+    // Кука — чтобы выбранный язык пережил переход на следующие страницы
+    // приложения, где параметра в адресе уже не будет.
+    if (linkLocale) {
+      response.cookies.set(PRE_AUTH_LOCALE_COOKIE, linkLocale, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: PRE_AUTH_LOCALE_MAX_AGE,
+      });
+    }
+
+    return response;
   }
 
   const isMutating = request.method !== "GET" && request.method !== "HEAD";
