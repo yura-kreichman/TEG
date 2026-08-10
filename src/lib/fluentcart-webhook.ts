@@ -1,11 +1,48 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@/generated/prisma/client";
+import { Prisma, type Tenant } from "@/generated/prisma/client";
 import { provisionTenantFromPurchase } from "@/lib/fluentcart-provision";
+import { verifyTenantBillingToken } from "@/lib/billing-token";
 import { isLocale, type Locale } from "@/lib/locales";
 import { notifyPayment } from "@/lib/platform-notify";
 
 function isRecordNotFound(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025";
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
+}
+
+/**
+ * Запоминаем покупателя FluentCart на тенанте, чтобы следующие события того же
+ * человека (продление, отмена, возврат) находили кабинет сразу по customer_id —
+ * без токена, которого у продления не будет, и без email, который может быть
+ * чужим.
+ */
+async function bindCustomerId(tenant: Tenant, customerId: string | null): Promise<Tenant> {
+  if (!customerId || tenant.fluentcartCustomerId === customerId) return tenant;
+
+  try {
+    return await prisma.tenant.update({
+      where: { id: tenant.id },
+      data: { fluentcartCustomerId: customerId },
+    });
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err;
+    // Этот покупатель уже привязан к ДРУГОМУ кабинету — один человек завёл два
+    // и платит за оба из одного аккаунта FluentCart. Поле уникально, и молча
+    // перевесить его значило бы отвязать тот, первый кабинет от его собственной
+    // подписки: его продления перестали бы находиться. Оставляем как есть —
+    // текущее событие всё равно применится к тому тенанту, который нашёлся
+    // выше, а он в этом запросе главнее.
+    console.warn(
+      "fluentcart customer",
+      customerId,
+      "is already bound to another tenant — keeping the existing binding, tenant",
+      tenant.id
+    );
+    return tenant;
+  }
 }
 
 // Реальная структура payload сверена с исходниками плагина FluentCart
@@ -62,6 +99,11 @@ export interface ParsedFluentCartEvent {
   // сайта. Заказы, оформленные до появления плагина, поля не содержат —
   // отсюда null и прежний дефолт.
   locale: Locale | null;
+  // Подписанный идентификатор кабинета из ссылки "Управлять подпиской"
+  // (lib/billing-token.ts). Тем же mu-плагином, что и rentos_locale, только
+  // из query-параметра ссылки, а не из Referer. Приоритетнее email — это и
+  // есть защита от "заплатил с другого адреса, получил второй кабинет".
+  tenantToken: string | null;
 }
 
 function firstString(...values: unknown[]): string | null {
@@ -106,6 +148,7 @@ export function parseFluentCartPayload(payload: unknown, eventType: string): Par
     upgradedFromSubId:
       subscriptionConfig.is_upgraded === "yes" ? firstString(subscriptionConfig.upgraded_from_sub_id) : null,
     locale: parseLocale(p.rentos_locale),
+    tenantToken: firstString(p.rentos_tid),
   };
 }
 
@@ -148,10 +191,11 @@ export type SyncResult =
 /**
  * Применяет событие FluentCart к Tenant (docs/spec/06-super-admin.md, п.5;
  * доп. инструкция "связывание тенанта с FluentCart" 2026-07-12). Порядок
- * поиска: fluentcartCustomerId → email владельца (User.role=owner) → не
- * найден. Тенант при регистрации уже существует (сначала бесплатный план в
- * RentOS, оплата через FluentCart — позже) — здесь НИЧЕГО не создаётся
- * автоматически, только связывается по email при первом совпадении.
+ * поиска: токен кабинета из ссылки на оплату → fluentcartCustomerId → email
+ * владельца (User.role=owner) → не найден. Тенант при регистрации уже
+ * существует (сначала бесплатный план в RentOS, оплата через FluentCart —
+ * позже) — здесь НИЧЕГО не создаётся автоматически, только связывается при
+ * первом совпадении.
  * Бросает исключение только при настоящей внутренней ошибке — "тенант не
  * найден" это ожидаемый, не-исключительный результат (matched:false).
  */
@@ -169,9 +213,25 @@ export async function syncTenantFromFluentCartEvent(
     ? await prisma.package.findFirst({ where: { fluentcartProductId: { in: parsed.productIds } } })
     : null;
 
-  let tenant = parsed.customerId
-    ? await prisma.tenant.findUnique({ where: { fluentcartCustomerId: parsed.customerId } })
-    : null;
+  // Токен из ссылки "Управлять подпиской" — раньше email и раньше customer_id
+  // (решение пользователя 2026-08-10, см. lib/billing-token.ts). Именно он
+  // закрывает случай "кабинет заведён на личный адрес, платит бухгалтерия":
+  // адрес плательщика при живом токене больше ничего не решает. Токен приходит
+  // только с той покупки, которую человек начал ИЗ кабинета; у холодной покупки
+  // с сайта и у автопродлений его нет, и там всё работает как прежде.
+  const tokenTenantId = parsed.tenantToken ? verifyTenantBillingToken(parsed.tenantToken) : null;
+  if (parsed.tenantToken && !tokenTenantId) {
+    // Не ошибка обработки: просроченная (месяц на раздумья вышел) или битая
+    // ссылка просто откатывает нас на прежний поиск по email. Сам токен виден
+    // в payload сохранённого WebhookEvent, если понадобится разобраться.
+    console.warn("fluentcart webhook: tenant token present but invalid or expired");
+  }
+
+  let tenant = tokenTenantId ? await prisma.tenant.findUnique({ where: { id: tokenTenantId } }) : null;
+
+  if (!tenant && parsed.customerId) {
+    tenant = await prisma.tenant.findUnique({ where: { fluentcartCustomerId: parsed.customerId } });
+  }
 
   if (!tenant && parsed.customerEmail) {
     // Email владельца хранится на User (role=owner), не дублируется на
@@ -182,11 +242,12 @@ export async function syncTenantFromFluentCartEvent(
       select: { tenantId: true },
     });
     if (owner?.tenantId) {
-      tenant = await prisma.tenant.update({
-        where: { id: owner.tenantId },
-        data: parsed.customerId ? { fluentcartCustomerId: parsed.customerId } : {},
-      });
+      tenant = await prisma.tenant.findUnique({ where: { id: owner.tenantId } });
     }
+  }
+
+  if (tenant) {
+    tenant = await bindCustomerId(tenant, parsed.customerId);
   }
 
   // Кабинета нет, но человек только что заплатил — создаём его и продолжаем

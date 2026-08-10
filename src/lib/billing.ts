@@ -40,15 +40,30 @@ const SITE_LANG_PREFIX: Record<Locale, string> = {
 };
 
 /**
+ * Имя query-параметра с токеном кабинета (lib/billing-token.ts). Тем же именем
+ * он лежит в мете заказа и в теле вебхука — одно слово на все три системы,
+ * чтобы его можно было найти грепом и в приложении, и в mu-плагине сайта
+ * (wp-content/mu-plugins/rentos-checkout-token.php).
+ */
+export const BILLING_TOKEN_PARAM = "rentos_tid";
+
+/**
  * Страница цен на языке владельца ("Управлять подпиской", баннер неактивной
  * подписки). Путь везде остаётся английским `prices/`: слаги страниц у
  * TranslatePress переведены (`/ua/tsiny/`, `/it/prezzi/`, `/ro/preturi/`), но
  * он же сам делает 301 с непереведённого пути на переведённый — один лишний
  * редирект дешевле, чем зашитые в приложение слаги, которые молча сломаются
  * при первом же переименовании страницы на сайте.
+ *
+ * billingToken — подписанный идентификатор кабинета, чтобы оплата привязалась
+ * именно к нему, а не к кабинету с совпавшим email (см. lib/billing-token.ts).
+ * Необязателен: без него ссылка ведёт туда же, куда вела всегда, и покупка
+ * по-прежнему находит кабинет по email. 301 на переведённый слаг query-строку
+ * сохраняет — проверено на живом сайте 2026-08-10 для /ua/ и /it/.
  */
-export function pricingUrl(locale: Locale): string {
-  return `https://rentos365.app/${SITE_LANG_PREFIX[locale]}prices/`;
+export function pricingUrl(locale: Locale, billingToken?: string | null): string {
+  const base = `https://rentos365.app/${SITE_LANG_PREFIX[locale]}prices/`;
+  return billingToken ? `${base}?${BILLING_TOKEN_PARAM}=${encodeURIComponent(billingToken)}` : base;
 }
 
 // Ссылка "Работает на RentOS" в футере публичного Лендинга (docs/spec/

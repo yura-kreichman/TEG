@@ -5,6 +5,7 @@ import { CLEANUP_MIN_AGE_DAYS } from "@/lib/admin/tenant-cleanup";
 import { dictionaryForUser, localeForUser, renderAuthEmail } from "@/lib/auth-email";
 import { isEmailConfigured, sendEmail } from "@/lib/summary-channels/email-channel";
 import { pricingUrl } from "@/lib/billing";
+import { signTenantBillingToken } from "@/lib/billing-token";
 import { notifyTenantDeleted } from "@/lib/platform-notify";
 import type { Locale } from "@/lib/locales";
 
@@ -159,7 +160,7 @@ export async function runTenantPurgeCycle(now: Date = new Date()): Promise<{ war
       const firstNoticeAt = new Date(deadline.getTime() - FIRST_NOTICE_DAYS_BEFORE * DAY_MS);
 
       if (now >= finalNoticeAt && !tenant.deletionFinalNoticeSentAt) {
-        await sendDeletionNotice(owner.id, owner.email, deadline);
+        await sendDeletionNotice(tenant.id, owner.id, owner.email, deadline);
         await prisma.tenant.update({
           where: { id: tenant.id },
           // Первое письмо тоже отмечаем: тенант мог пересечь оба порога разом
@@ -169,7 +170,7 @@ export async function runTenantPurgeCycle(now: Date = new Date()): Promise<{ war
         });
         warned++;
       } else if (now >= firstNoticeAt && !tenant.deletionNoticeSentAt) {
-        await sendDeletionNotice(owner.id, owner.email, deadline);
+        await sendDeletionNotice(tenant.id, owner.id, owner.email, deadline);
         await prisma.tenant.update({ where: { id: tenant.id }, data: { deletionNoticeSentAt: now } });
         warned++;
       }
@@ -188,7 +189,7 @@ export function formatDeadline(deadline: Date, locale: Locale): string {
   return deadline.toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-async function sendDeletionNotice(userId: string, email: string, deadline: Date): Promise<void> {
+async function sendDeletionNotice(tenantId: string, userId: string, email: string, deadline: Date): Promise<void> {
   if (!(await isEmailConfigured())) return;
 
   const [t, locale] = await Promise.all([dictionaryForUser(userId), localeForUser(userId)]);
@@ -197,8 +198,11 @@ async function sendDeletionNotice(userId: string, email: string, deadline: Date)
     lines: [t.authEmail.deletionIntro, t.authEmail.deletionLine.replace("{date}", formatDeadline(deadline, locale))],
     buttonLabel: t.authEmail.deletionButton,
     // Ссылка ведёт на страницу цен той же языковой версии сайта, что и
-    // "Управлять подпиской" в кабинете.
-    link: pricingUrl(locale),
+    // "Управлять подпиской" в кабинете, и с тем же токеном кабинета: здесь он
+    // важнее всего остального: письмо получает владелец, у которого в кабинете
+    // уже есть данные, и оплата с адреса бухгалтерии не должна завести ему
+    // второй, пустой кабинет, пока этот удаляется по расписанию.
+    link: pricingUrl(locale, signTenantBillingToken(tenantId)),
     note: t.authEmail.deletionNote,
   });
 

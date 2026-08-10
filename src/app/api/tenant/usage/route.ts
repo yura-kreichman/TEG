@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { getTenantLimits } from "@/lib/packages";
 import { isPurgeProtected, purgeDeadline } from "@/lib/tenant-lifecycle";
+import { signTenantBillingToken } from "@/lib/billing-token";
 
 export async function GET() {
   const owner = await requireOwner();
@@ -50,6 +51,12 @@ export async function GET() {
     // JSON.stringify (стал бы null), max ниже в этом случае лишь запасное
     // значение на случай старого клиента, реальный источник — этот флаг.
     unlimited: tenant.unlimited,
+    // Подписанный идентификатор кабинета для ссылок на оплату
+    // (lib/billing-token.ts): и карточка плана, и баннер неактивной подписки —
+    // клиентские компоненты, подписать токен у себя они не могут, а этот ответ
+    // они оба и так запрашивают. Отдельный эндпоинт ради одной строки был бы
+    // лишним, а пропсами это пришлось бы тащить через весь OwnerShell.
+    billingToken: signTenantBillingToken(tenant.id),
     // packageMax — значение пакета без оверрайда, чтобы владелец видел не
     // только эффективный лимит (max), но и что часть сверх пакета выдал
     // Super Admin вручную (docs/spec/06-super-admin.md, п.6) — та же дельта,

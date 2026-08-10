@@ -21,6 +21,11 @@ export function SubscriptionBanner() {
   // финальное письмо (см. /api/tenant/usage). Отдельно от blocked: удаление
   // сообщение более срочное и перебивает обычное "подписка неактивна".
   const [deletionAt, setDeletionAt] = useState<string | null>(null);
+  // Подписанный идентификатор кабинета для ссылки на оплату: у баннера это
+  // особенно важно — по нему уходит платить владелец с УЖЕ истёкшей подпиской,
+  // то есть ровно тот, у кого в кабинете накоплены данные и кому второй, пустой
+  // кабинет от оплаты с чужого адреса навредил бы сильнее всего.
+  const [billingToken, setBillingToken] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/tenant/usage")
@@ -32,6 +37,9 @@ export function SubscriptionBanner() {
         }
         if (typeof data.deletionScheduledAt === "string") {
           setDeletionAt(data.deletionScheduledAt);
+        }
+        if (typeof data.billingToken === "string") {
+          setBillingToken(data.billingToken);
         }
       });
   }, []);
@@ -46,7 +54,7 @@ export function SubscriptionBanner() {
 
   return (
     <a
-      href={pricingUrl(locale)}
+      href={pricingUrl(locale, billingToken)}
       target="_blank"
       rel="noopener noreferrer"
       className={cn(

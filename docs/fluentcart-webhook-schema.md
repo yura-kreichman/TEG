@@ -63,6 +63,15 @@ $payloadBody = [
   Если RentOS хочет показывать «доступ до X» — это придётся считать самостоятельно (`next_billing_date` + `getSubscriptionsGracePeriodDays(billing_interval)`, 0 дней если `status === canceled`), FluentCart это значение не отдаёт.
 - **Grace period**: `SubscriptionHelper::getSubscriptionsGracePeriodDays()` — `{daily:1, weekly:3, monthly:7, quarterly:15, half_yearly:15, yearly:15}`, дефолт 7 при неизвестном интервале. Глобально, **без** оверрайда по товару. Промежуточного статуса вроде «grace/past_due» на время самого grace-периода cron не выставляет — подписка либо уже носит `past_due`/`failing` от гейтвея (дело гейтвея, не этого cron), либо остаётся как есть до истечения.
 
+## 3.1. Поля, которых у FluentCart нет — их добавляет сайт
+
+Два ключа верхнего уровня в payload **не принадлежат FluentCart** и в его исходниках не найдутся: их дописывают mu-плагины сайта через фильтр `fluent_cart/webhook/payload` (исходники — в `wordpress/mu-plugins/` этого репозитория). Оба необязательные: старые заказы и любой заказ, оформленный мимо этих путей, приходят без них, и обработка вебхука работает как работала.
+
+- **`rentos_locale`** (`rentos-checkout-locale.php`) — язык страницы оформления, снимается с `Referer`. Нужен, чтобы кабинет, созданный по факту оплаты, и письмо «задайте пароль» были на языке покупателя, а не на русском по умолчанию.
+- **`rentos_tid`** (`rentos-checkout-token.php`) — подписанный идентификатор кабинета из ссылки «Управлять подпиской» (`?rentos_tid=…`, генерация и проверка — `src/lib/billing-token.ts`). Вебхук ищет тенанта **по нему раньше, чем по `customer.id` и email**: это защита от «кабинет на личный адрес, платит бухгалтерия», при которой покупка заводила второй, пустой кабинет вместо продления существующего. Подпись проверяет только RentOS, секрет сайту не передаётся; просроченный или битый токен молча откатывает поиск на прежний путь по email.
+
+Механика доставки у обоих одна и та же и продиктована FluentCart: своих полей под произвольные данные у него нет (`order.config` перечисляет ключи жёстко, `order_meta` в тело вебхука не входит), а в момент `wp_ajax_*_fluent_cart_place_order` заказа ещё не существует. Поэтому значение снимается на этом хуке, на `shutdown` пишется в `OrderMeta` (заказ к тому моменту уже создан и связан с корзиной по `cart_hash`), а фильтр payload читает его из меты. У продлений свой заказ-потомок — оба плагина берут мету с `parent_id`, иначе автопродление приходило бы без этих полей.
+
 ## 4. Модели — что реально существует в БД FluentCart
 
 **Subscription** (`fct_subscriptions`) — колонки: `customer_id, parent_order_id, product_id, item_name, variation_id, billing_interval, signup_fee, quantity, recurring_amount, recurring_tax_total, recurring_total, bill_times, bill_count, expire_at, trial_ends_at, canceled_at, restored_at, collection_method, trial_days, vendor_customer_id, vendor_plan_id, vendor_subscription_id, next_billing_date, status, original_plan, vendor_response, current_payment_method, config`. `config` (JSON) — свободный бэг для метаданных жизненного цикла, включая апгрейды (см. §5).

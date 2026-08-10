@@ -19,6 +19,10 @@ interface Usage {
   // все 4 лимита разом, значения max/packageMax ниже в этом случае не несут
   // смысла (см. /api/tenant/usage), рендерим "∞" напрямую по этому флагу.
   unlimited: boolean;
+  // Подписанный идентификатор кабинета для ссылки на оплату — чтобы покупка
+  // привязалась именно к этому кабинету, даже если человек заплатит с другого
+  // email (см. src/lib/billing-token.ts).
+  billingToken: string | null;
   points: { used: number; max: number; packageMax: number };
   operators: { used: number; max: number; packageMax: number };
   zones: { used: number; max: number; packageMax: number };
@@ -148,7 +152,7 @@ export function PlanCard() {
       ))}
 
       <a
-        href={pricingUrl(locale)}
+        href={pricingUrl(locale, usage.billingToken)}
         target="_blank"
         rel="noopener noreferrer"
         className="mt-3 text-caption-airbnb font-semibold text-primary"
