@@ -44,6 +44,18 @@ export async function PATCH(request: Request) {
       ...current.vapid,
       ...(typeof body.vapid === "object" && body.vapid !== null ? body.vapid : {}),
     },
+    adminNotifications: {
+      ...current.adminNotifications,
+      // Только тумблеры: chatId/chatTitle форма не редактирует, их пишет
+      // привязка через бота (и стирает кнопка "Отвязать").
+      ...(typeof body.adminNotifications === "object" && body.adminNotifications !== null
+        ? {
+            newOwner: Boolean(body.adminNotifications.newOwner),
+            payment: Boolean(body.adminNotifications.payment),
+            deletion: Boolean(body.adminNotifications.deletion),
+          }
+        : {}),
+    },
   };
 
   await saveSystemSettingsConfig(next);

@@ -6,6 +6,7 @@ import { generateUniqueSlug } from "@/lib/instructions/slug";
 import { isReservedSlug, isSlugTaken } from "@/lib/landing/slug";
 import { isEmailConfigured, sendEmail } from "@/lib/summary-channels/email-channel";
 import { dictionaryForUser, renderAuthEmail } from "@/lib/auth-email";
+import { notifyNewOwner } from "@/lib/platform-notify";
 import type { Locale } from "@/lib/locales";
 
 /**
@@ -120,6 +121,19 @@ export async function provisionTenantFromPurchase(input: ProvisionInput): Promis
     });
 
     return { tenantId: tenant.id, userId: user.id };
+  });
+
+  // pkg здесь может быть просто { id } (когда пакет пришёл из вебхука), имя
+  // для уведомления берём из базы отдельным запросом — он всё равно один и
+  // только в момент создания кабинета.
+  const pkgName = (await prisma.package.findUnique({ where: { id: pkg.id }, select: { name: true } }))?.name ?? "";
+
+  await notifyNewOwner({
+    tenantId,
+    companyName: name,
+    email: input.email,
+    packageName: pkgName,
+    source: "purchase",
   });
 
   await sendWelcomeEmail(userId, input.email, `${input.origin}/reset-password?token=${token}`).catch((err) =>

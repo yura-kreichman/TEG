@@ -72,7 +72,7 @@ export async function POST(request: Request) {
         orderBy: { createdAt: "asc" },
         select: { email: true },
       });
-      await deleteTenantEverywhere(tenant.id, owner?.email ?? null);
+      await deleteTenantEverywhere(tenant.id, owner?.email ?? null, "manual");
       deleted.push(tenant.id);
     } catch {
       // Один упавший тенант не должен ронять всю пачку — остальные

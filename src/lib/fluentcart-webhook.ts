@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { provisionTenantFromPurchase } from "@/lib/fluentcart-provision";
 import { isLocale, type Locale } from "@/lib/locales";
+import { notifyPayment } from "@/lib/platform-notify";
 
 function isRecordNotFound(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025";
@@ -308,6 +309,20 @@ export async function syncTenantFromFluentCartEvent(
   } catch (err) {
     if (!isRecordNotFound(err)) throw err;
     return { matched: false, reason: `tenant ${tenant.id} was deleted during processing` };
+  }
+
+  // Уведомление Super Admin'у — только о событиях, которые реально что-то
+  // изменили: пропущенные как устаревшие или относящиеся к чужому заказу
+  // (skippedReason) в группу не идут, иначе ретраи FluentCart засоряли бы её
+  // сообщениями о том, чего не произошло.
+  if (!skippedReason) {
+    await notifyPayment({
+      tenantId: tenant.id,
+      companyName: tenant.name,
+      email: parsed.customerEmail,
+      packageName: pkg?.name ?? null,
+      eventType: parsed.eventType,
+    });
   }
 
   return {

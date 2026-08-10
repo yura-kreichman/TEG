@@ -8,12 +8,16 @@ import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/components/i18n-provider";
 
 interface SystemSettingsConfig {
   telegramBotToken: string;
   smtp: { host: string; port: string; user: string; password: string; from: string; fromName: string };
   vapid: { publicKey: string; privateKey: string; subject: string };
+  // chatId/chatTitle только читаются: их пишет привязка через бота, форма
+  // управляет лишь тумблерами (см. PATCH /api/admin/settings).
+  adminNotifications: { chatId: string; chatTitle: string; newOwner: boolean; payment: boolean; deletion: boolean };
 }
 
 export default function AdminSettingsPage() {
@@ -30,6 +34,12 @@ export default function AdminSettingsPage() {
 
   const [testTelegramStatus, setTestTelegramStatus] = useState<string | null>(null);
   const [testTelegramChecking, setTestTelegramChecking] = useState(false);
+
+  // Привязка группы платформы: код одноразовый и живёт 15 минут, поэтому
+  // держится только в состоянии страницы — перезагрузил, значит запросил новый.
+  const [bindCode, setBindCode] = useState<{ code: string; link: string | null } | null>(null);
+  const [groupStatus, setGroupStatus] = useState<string | null>(null);
+  const [groupBusy, setGroupBusy] = useState(false);
 
   const [vapidStatus, setVapidStatus] = useState<string | null>(null);
   const [vapidGenerating, setVapidGenerating] = useState(false);
@@ -180,6 +190,51 @@ export default function AdminSettingsPage() {
     }
   }
 
+  async function connectGroup() {
+    setGroupStatus(null);
+    setGroupBusy(true);
+    try {
+      const res = await fetch("/api/admin/settings/telegram-group", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setGroupStatus(data.error ?? t.admin.genericError);
+        return;
+      }
+      setBindCode({ code: data.code, link: data.link ?? null });
+    } finally {
+      setGroupBusy(false);
+    }
+  }
+
+  async function unbindGroup() {
+    setGroupStatus(null);
+    setGroupBusy(true);
+    try {
+      const res = await fetch("/api/admin/settings/telegram-group", { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setGroupStatus(data?.error ?? t.admin.genericError);
+        return;
+      }
+      setBindCode(null);
+      await load();
+    } finally {
+      setGroupBusy(false);
+    }
+  }
+
+  async function testGroup() {
+    setGroupStatus(null);
+    setGroupBusy(true);
+    try {
+      const res = await fetch("/api/admin/settings/telegram-group", { method: "PUT" });
+      const data = await res.json().catch(() => null);
+      setGroupStatus(res.ok ? t.admin.notifyTestSent : (data?.error ?? t.admin.genericError));
+    } finally {
+      setGroupBusy(false);
+    }
+  }
+
   if (checking || !config) return null;
 
   return (
@@ -205,6 +260,85 @@ export default function AdminSettingsPage() {
               </Button>
               {testTelegramStatus && <p className="text-caption-airbnb">{testTelegramStatus}</p>}
             </div>
+          </SpringCard>
+
+          <SpringCard animate={false}>
+            <div className="text-card-title">{t.admin.notifySectionTitle}</div>
+            <p className="mt-1 text-caption-airbnb">{t.admin.notifySectionSub}</p>
+
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              {config.adminNotifications.chatId ? (
+                <p className="text-caption-airbnb">
+                  {t.admin.notifyConnectedTo}{" "}
+                  <span className="font-semibold text-foreground">
+                    {config.adminNotifications.chatTitle || config.adminNotifications.chatId}
+                  </span>
+                </p>
+              ) : (
+                <p className="text-caption-airbnb">{t.admin.notifyNotConnected}</p>
+              )}
+
+              <Button type="button" variant="outline" size="sm" disabled={groupBusy} onClick={connectGroup}>
+                {t.admin.notifyConnectButton}
+              </Button>
+
+              {config.adminNotifications.chatId && (
+                <>
+                  <Button type="button" variant="outline" size="sm" disabled={groupBusy} onClick={testGroup}>
+                    {t.admin.notifyTestButton}
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" disabled={groupBusy} onClick={unbindGroup}>
+                    {t.admin.notifyUnbindButton}
+                  </Button>
+                </>
+              )}
+
+              {groupStatus && <p className="text-caption-airbnb">{groupStatus}</p>}
+            </div>
+
+            {/* Код показывается только что созданный — он одноразовый и живёт
+                15 минут, хранить его негде и незачем. */}
+            {bindCode && (
+              <div className="mt-3 rounded-card bg-surface-0 p-3">
+                <p className="text-caption-airbnb">{t.admin.notifyCodeHint}</p>
+                <p className="mt-1 text-card-title tracking-widest">{bindCode.code}</p>
+                {bindCode.link && (
+                  <a
+                    href={bindCode.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-block text-caption-airbnb font-semibold text-primary"
+                  >
+                    {t.admin.notifyOpenTelegram}
+                  </a>
+                )}
+              </div>
+            )}
+
+            <div className="mt-4 flex flex-col gap-3">
+              {(
+                [
+                  ["newOwner", t.admin.notifyEventNewOwner],
+                  ["payment", t.admin.notifyEventPayment],
+                  ["deletion", t.admin.notifyEventDeletion],
+                ] as const
+              ).map(([key, label]) => (
+                <label key={key} className="flex items-center justify-between gap-3">
+                  <span className="text-caption-airbnb">{label}</span>
+                  <Switch
+                    checked={config.adminNotifications[key]}
+                    onCheckedChange={(checked) =>
+                      setConfig({
+                        ...config,
+                        adminNotifications: { ...config.adminNotifications, [key]: checked },
+                      })
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+
+            <p className="mt-3 text-caption-airbnb">{t.admin.notifyTicketsHint}</p>
           </SpringCard>
 
           <SpringCard animate={false}>

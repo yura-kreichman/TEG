@@ -25,6 +25,7 @@ import { pickBotLang, BOT_STRINGS, greetingLine, type BotStringSet } from "@/lib
 import type { Locale } from "@/lib/locales";
 import { isLocale } from "@/lib/locales";
 import { timingSafeEqualStrings } from "@/lib/timing-safe-equal";
+import { getSystemSettingsConfig, patchSystemSettingsConfig } from "@/lib/system-settings";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Обработчик вебхука платформенного бота (docs/spec/telegram-summaries.md).
@@ -128,6 +129,42 @@ async function handleStartMessage(message: {
   const chatId = String(message.chat.id);
   const chatTitle = message.chat.title ?? null;
 
+  // Группа самой платформы (запрос пользователя 2026-08-10) — отдельной
+  // веткой целиком: у такого кода нет тенанта, а chatId сохраняется не в
+  // таблицу тенанта, а в системные настройки. Весь код ниже завязан на
+  // tenantId и для этого случая неприменим.
+  if (bindCode.purpose === "platform") {
+    if (message.chat.type === "private") {
+      await sendChatMessage(chatId, "Отправьте этот код в вашу группу, не сюда — добавьте бота в группу и напишите код там.").catch(() => {});
+      return;
+    }
+
+    // Тот же CAS, что и ниже: Telegram доставляет вебхук "at least once", и
+    // без него дубль апдейта подключал бы чат дважды.
+    const claimed = await prisma.telegramBindCode.updateMany({
+      where: { id: bindCode.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    if (claimed.count === 0) return;
+
+    const { adminNotifications } = await getSystemSettingsConfig();
+    const previousChatId = adminNotifications.chatId;
+    await patchSystemSettingsConfig({
+      adminNotifications: { ...adminNotifications, chatId, chatTitle: chatTitle ?? "" },
+    });
+
+    if (previousChatId && previousChatId !== chatId) {
+      await sendChatMessage(previousChatId, "Уведомления платформы переведены в другой чат").catch(() => {});
+    }
+    await sendChatMessage(chatId, "✅ Уведомления RentOS подключены к этому чату").catch(() => {});
+    return;
+  }
+
+  // Дальше — только привязки тенанта, у них tenantId есть всегда (null бывает
+  // ровно у "platform", обработанного выше).
+  const tenantId = bindCode.tenantId;
+  if (!tenantId) return;
+
   // Публичная группа клиентов (запрос пользователя 2026-07-24) обязана быть
   // настоящей группой, не личным чатом с ботом — deep-link "?startgroup="
   // всегда открывает выбор группы, но владелец теоретически мог отправить
@@ -162,10 +199,10 @@ async function handleStartMessage(message: {
       // Singleton на тенанта (TenantPublicGroup.tenantId unique) — истории
       // прошлых чатов нет по конструкции, просто перезаписываем; старый
       // chatId читаем ДО апдейта, только чтобы было куда послать "переехали".
-      const existingGroup = await tx.tenantPublicGroup.findUnique({ where: { tenantId: bindCode.tenantId } });
+      const existingGroup = await tx.tenantPublicGroup.findUnique({ where: { tenantId: tenantId } });
       await tx.tenantPublicGroup.upsert({
-        where: { tenantId: bindCode.tenantId },
-        create: { tenantId: bindCode.tenantId, chatId, chatTitle, chatStatus: "active" },
+        where: { tenantId: tenantId },
+        create: { tenantId: tenantId, chatId, chatTitle, chatStatus: "active" },
         update: { chatId, chatTitle, chatStatus: "active" },
       });
       return existingGroup?.chatId && existingGroup.chatId !== chatId ? existingGroup.chatId : null;
@@ -174,7 +211,7 @@ async function handleStartMessage(message: {
     // Пересвязка: если уже была активная привязка на другой чат — деактивируем
     // старую запись, а не перезаписываем (сохраняем историю, см. схему).
     const existing = await tx.tenantSummaryChannel.findFirst({
-      where: { tenantId: bindCode.tenantId, channelType: "telegram", pointId: null },
+      where: { tenantId: tenantId, channelType: "telegram", pointId: null },
     });
 
     if (existing && existing.chatId === chatId) {
@@ -206,7 +243,7 @@ async function handleStartMessage(message: {
     }
     await tx.tenantSummaryChannel.create({
       data: {
-        tenantId: bindCode.tenantId,
+        tenantId: tenantId,
         channelType: "telegram",
         enabled: true,
         chatId,
@@ -238,7 +275,7 @@ async function handleStartMessage(message: {
   if (bindCode.purpose === "public_group") {
     const link = await fetchChatInviteLink(chatId);
     if (link) {
-      await prisma.tenantPublicGroup.update({ where: { tenantId: bindCode.tenantId }, data: { inviteLink: link } }).catch(() => {});
+      await prisma.tenantPublicGroup.update({ where: { tenantId: tenantId }, data: { inviteLink: link } }).catch(() => {});
     }
   }
 }

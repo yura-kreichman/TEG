@@ -5,6 +5,7 @@ import { CLEANUP_MIN_AGE_DAYS } from "@/lib/admin/tenant-cleanup";
 import { dictionaryForUser, localeForUser, renderAuthEmail } from "@/lib/auth-email";
 import { isEmailConfigured, sendEmail } from "@/lib/summary-channels/email-channel";
 import { pricingUrl } from "@/lib/billing";
+import { notifyTenantDeleted } from "@/lib/platform-notify";
 import type { Locale } from "@/lib/locales";
 
 /**
@@ -74,7 +75,14 @@ export function purgeDeadline(createdAt: Date): Date {
  * ошибке удаления человек остался бы с живым кабинетом, но без учётной записи
  * на сайте и без возможности войти через единый вход.
  */
-export async function deleteTenantEverywhere(tenantId: string, ownerEmail: string | null): Promise<void> {
+export async function deleteTenantEverywhere(
+  tenantId: string,
+  ownerEmail: string | null,
+  reason: "auto" | "manual" = "auto"
+): Promise<void> {
+  // Имя читаем ДО удаления — после него сообщать будет уже нечего.
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+
   await prisma.tenant.delete({ where: { id: tenantId } });
 
   // Файлы (public/uploads/<tenantId>/, см. src/lib/uploads.ts) лежат на диске,
@@ -90,6 +98,8 @@ export async function deleteTenantEverywhere(tenantId: string, ownerEmail: strin
       console.error("site account deletion failed", ownerEmail, err)
     );
   }
+
+  await notifyTenantDeleted({ companyName: tenant?.name ?? tenantId, email: ownerEmail, reason });
 }
 
 /**

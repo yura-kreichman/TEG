@@ -11,6 +11,7 @@ import { isReservedSlug, isSlugTaken } from "@/lib/landing/slug";
 import { isAuthRateLimited } from "@/lib/auth-rate-limit";
 import { getClientIp } from "@/lib/instructions/request-ip";
 import { getDefaultPackage } from "@/lib/free-package";
+import { notifyNewOwner } from "@/lib/platform-notify";
 
 // Бесплатный период ограничен по времени (доп. решение пользователя
 // 2026-07-12) — summary-scheduler.ts уже переводит active в expired, когда
@@ -109,6 +110,21 @@ export async function POST(request: Request) {
   // покупку сразу же, вместо бесплатного пакета выше. См. комментарий у
   // linkPendingFluentCartPurchases в fluentcart-webhook.ts.
   await linkPendingFluentCartPurchases(email);
+
+  // Уведомление Super Admin'у в группу платформы (запрос пользователя
+  // 2026-08-10) — после связывания покупки, чтобы в сообщении был уже
+  // фактический пакет, а не бесплатный, если человек оплатил до регистрации.
+  const currentPackage = await prisma.tenant.findUnique({
+    where: { id: tenant.id },
+    select: { package: { select: { name: true } } },
+  });
+  await notifyNewOwner({
+    tenantId: tenant.id,
+    companyName: tenant.name,
+    email,
+    packageName: currentPackage?.package.name ?? pkg.name,
+    source: "registration",
+  });
 
   await createSession(user.id);
   await rememberOwnerDevice(user.id);

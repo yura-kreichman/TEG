@@ -26,6 +26,21 @@ export interface SystemSettingsConfig {
   // генерируется кнопкой в /admin/settings (POST .../generate-vapid-keys),
   // а не вручную — это ECDSA-пара, а не пароль, который можно придумать.
   vapid: { publicKey: string; privateKey: string; subject: string };
+  // Группа Super Admin'а в Telegram (запрос пользователя 2026-08-10) —
+  // уведомления о жизни платформы: новый Владелец, оплата, удаление кабинета.
+  // Шлёт тот же единый бот, что и всем остальным, поэтому здесь только chatId
+  // и тумблеры, токен один на всё и лежит выше.
+  //
+  // Тикетов в этом списке нет намеренно: они живут в Fluent Support на сайте,
+  // у него своя штатная интеграция с Telegram — ей отдаются тот же токен и
+  // тот же chatId, а не дублируется наш код.
+  adminNotifications: {
+    chatId: string;
+    chatTitle: string;
+    newOwner: boolean;
+    payment: boolean;
+    deletion: boolean;
+  };
 }
 
 const EMPTY: SystemSettingsConfig = {
@@ -33,6 +48,10 @@ const EMPTY: SystemSettingsConfig = {
   telegramBotUsername: "",
   smtp: { host: "", port: "", user: "", password: "", from: "", fromName: "" },
   vapid: { publicKey: "", privateKey: "", subject: "" },
+  // Тумблеры включены заранее: группу подключают ровно затем, чтобы получать
+  // эти уведомления, — заставлять после привязки включать их по одному значило
+  // бы, что первое время группа молчит без видимой причины.
+  adminNotifications: { chatId: "", chatTitle: "", newOwner: true, payment: true, deletion: true },
 };
 
 export async function getSystemSettingsConfig(): Promise<SystemSettingsConfig> {
@@ -43,6 +62,7 @@ export async function getSystemSettingsConfig(): Promise<SystemSettingsConfig> {
     telegramBotUsername: config.telegramBotUsername || EMPTY.telegramBotUsername,
     smtp: { ...EMPTY.smtp, ...(config.smtp ?? {}) },
     vapid: { ...EMPTY.vapid, ...(config.vapid ?? {}) },
+    adminNotifications: { ...EMPTY.adminNotifications, ...(config.adminNotifications ?? {}) },
   };
 }
 

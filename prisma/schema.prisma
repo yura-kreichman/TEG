@@ -2503,9 +2503,12 @@ model TenantSummaryChannel {
 // Криптослучайный, не последовательный, TTL 15 минут, гасится после первого
 // использования (usedAt) — не удаляется, чтобы не терять аудит-след попыток.
 model TelegramBindCode {
-  id       String @id @default(cuid())
-  tenantId String
-  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id String @id @default(cuid())
+  // null — привязка группы САМОЙ ПЛАТФОРМЫ (purpose "platform", уведомления
+  // Super Admin'у о новых Владельцах/оплатах/удалениях): у неё тенанта нет по
+  // определению, chatId уходит не в таблицу тенанта, а в SystemSettings.
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   code String @unique
 
@@ -2518,6 +2521,9 @@ model TelegramBindCode {
   // может быть 'рабочая' группа для сотрудников с итогами и т.п. и публичная
   // для клиентов", разные назначения одного и того же кода привязки решают,
   // в какую таблицу вебхук запишет chatId (см. handleStart в webhook/route.ts).
+  // "platform" (2026-08-10) — группа Super Admin'а: те же код и deep-link, но
+  // чат принадлежит платформе, а не тенанту, поэтому tenantId у такого кода
+  // null, а chatId сохраняется в SystemSettings.
   purpose String @default("summary")
 
   expiresAt DateTime

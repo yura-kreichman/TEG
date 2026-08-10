@@ -330,7 +330,7 @@ export async function DELETE(request: Request, ctx: RouteContext<"/api/admin/ten
       orderBy: { createdAt: "asc" },
       select: { email: true },
     });
-    await deleteTenantEverywhere(id, owner?.email ?? null);
+    await deleteTenantEverywhere(id, owner?.email ?? null, "manual");
   } catch (err) {
     // Раньше падало необработанным 500 на ЛЮБОМ тенанте, хоть раз сдавшем
     // итоги/продавшем билет/провёдшем ревизию Товаров — три FK
