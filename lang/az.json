@@ -562,6 +562,7 @@
     "planStatusPaused": "Fasilədə",
     "planStatusExpired": "Bitib",
     "planStatusSuspended": "Dayandırılıb",
+    "planStatusCanceled": "Ləğv edilib",
     "planExpiresPrefix": "Etibarlıdır",
     "nextBillingPrefix": "Növbəti ödəniş:",
     "limitPoints": "Nöqtələr",

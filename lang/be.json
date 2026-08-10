@@ -562,6 +562,7 @@
     "planStatusPaused": "На паўзе",
     "planStatusExpired": "Скончыўся",
     "planStatusSuspended": "Прыпынены",
+    "planStatusCanceled": "Скасаваны",
     "planExpiresPrefix": "Дзейнічае да",
     "nextBillingPrefix": "Наступнае спісанне:",
     "limitPoints": "Кропкі",

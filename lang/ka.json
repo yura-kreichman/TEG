@@ -562,6 +562,7 @@
     "planStatusPaused": "შეჩერებულია",
     "planStatusExpired": "ვადაგასულია",
     "planStatusSuspended": "დაბლოკილია",
+    "planStatusCanceled": "გაუქმებულია",
     "planExpiresPrefix": "მოქმედია",
     "nextBillingPrefix": "შემდეგი ჩამოწერა:",
     "limitPoints": "წერტილები",

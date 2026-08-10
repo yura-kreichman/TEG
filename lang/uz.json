@@ -562,6 +562,7 @@
     "planStatusPaused": "Pauzada",
     "planStatusExpired": "Tugagan",
     "planStatusSuspended": "Toʻxtatilgan",
+    "planStatusCanceled": "Bekor qilingan",
     "planExpiresPrefix": "Amal qilish muddati",
     "nextBillingPrefix": "Keyingi yechib olish:",
     "limitPoints": "Nuqtalar",

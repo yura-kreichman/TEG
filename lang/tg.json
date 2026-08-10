@@ -562,6 +562,7 @@
     "planStatusPaused": "Дар таваққуф",
     "planStatusExpired": "Ба анҷом расид",
     "planStatusSuspended": "Муваққатан қатъ шуд",
+    "planStatusCanceled": "Бекор карда шуд",
     "planExpiresPrefix": "То он амал мекунад",
     "nextBillingPrefix": "Хориҷшавии навбатӣ:",
     "limitPoints": "Нуқтаҳо",

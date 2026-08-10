@@ -562,6 +562,7 @@
     "planStatusPaused": "Кідіртілген",
     "planStatusExpired": "Мерзімі өтті",
     "planStatusSuspended": "Тоқтатылған",
+    "planStatusCanceled": "Бас тартылған",
     "planExpiresPrefix": "Жарамдылық мерзімі:",
     "nextBillingPrefix": "Келесі есептен шығару:",
     "limitPoints": "Нүктелер",

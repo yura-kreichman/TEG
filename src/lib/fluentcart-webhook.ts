@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { provisionTenantFromPurchase } from "@/lib/fluentcart-provision";
+import { isLocale, type Locale } from "@/lib/locales";
 
 function isRecordNotFound(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025";
@@ -52,6 +53,14 @@ export interface ParsedFluentCartEvent {
   // через обычную ACTIVATING_EVENTS-ветку ниже, upgradedFromSubId нужен
   // только чтобы пометить это в WebhookEvent для наглядности в админке.
   upgradedFromSubId: string | null;
+  // Язык страницы оформления заказа. Своего поля под язык у FluentCart нет,
+  // это добавляет mu-плагин сайта (wp-content/mu-plugins/rentos-checkout-locale.php)
+  // через фильтр fluent_cart/webhook/payload — до 2026-08-10 кабинет,
+  // созданный по факту оплаты, всегда получал язык по умолчанию, и письмо
+  // "кабинет готов" уходило на русском покупателю с любой языковой версии
+  // сайта. Заказы, оформленные до появления плагина, поля не содержат —
+  // отсюда null и прежний дефолт.
+  locale: Locale | null;
 }
 
 function firstString(...values: unknown[]): string | null {
@@ -95,7 +104,16 @@ export function parseFluentCartPayload(payload: unknown, eventType: string): Par
     nextBillingDate: firstString(subscription?.next_billing_date),
     upgradedFromSubId:
       subscriptionConfig.is_upgraded === "yes" ? firstString(subscriptionConfig.upgraded_from_sub_id) : null,
+    locale: parseLocale(p.rentos_locale),
   };
+}
+
+// Язык сайта — не язык RentOS: сайт живёт на пяти языках (ru/en/uk/it/ro), а
+// приложение на пятнадцати, и чужое значение сюда приходить не должно.
+// Незнакомое — как будто его и не было, кабинет получит язык по умолчанию.
+function parseLocale(value: unknown): Locale | null {
+  const raw = firstString(value);
+  return raw && isLocale(raw) ? raw : null;
 }
 
 // Имена событий — дословно из FluentCart\App\Helpers\Status::eventTriggers()
@@ -109,6 +127,12 @@ const ACTIVATING_EVENTS = new Set(["order_paid_done", "subscription_activated", 
 // subscription_expired_validity (после next_billing_date + grace period)
 // реально его обрывает. Событие всё равно логируется в WebhookEvent как
 // любое другое — просто не меняет Tenant.subscriptionStatus.
+// Отмена доступа не отзывает (см. комментарий выше) — но и делать вид, что
+// ничего не произошло, кабинет не должен: до 2026-08-10 владелец отменённой
+// подписки видел "Активен · Следующее списание 10.09", хотя списания уже не
+// будет. Событие только проставляет отметку об отмене, статус не трогает;
+// доступ обрывает потом subscription_eot/expired_validity из EXPIRING_EVENTS.
+const CANCELING_EVENTS = new Set(["subscription_canceled"]);
 const EXPIRING_EVENTS = new Set([
   "subscription_eot",
   "subscription_expired_validity",
@@ -178,6 +202,7 @@ export async function syncTenantFromFluentCartEvent(
       customerName: parsed.customerName,
       packageId: pkg?.id ?? null,
       origin: provision.origin,
+      locale: parsed.locale,
     });
     if (result.created) {
       tenant = await prisma.tenant.findUnique({ where: { id: result.tenantId } });
@@ -233,6 +258,20 @@ export async function syncTenantFromFluentCartEvent(
           // Запоминаем, какой заказ сейчас "авторитетный" — см. проверку ниже
           // и комментарий у поля в schema.prisma.
           fluentcartOrderId: parsed.orderId,
+          lastFluentcartEventAt: eventReceivedAt,
+          // Оплатили снова после отмены (или отмену отменили) — отметка
+          // снимается, иначе кабинет так и остался бы "Отменена" на живой
+          // подписке.
+          subscriptionCanceledAt: null,
+        },
+      });
+    } else if (CANCELING_EVENTS.has(parsed.eventType)) {
+      await prisma.tenant.update({
+        where: { id: tenant.id },
+        data: {
+          // currentPeriodEnd намеренно не трогаем: оплаченный период
+          // продолжается, и именно его дата показывается как "Действует до".
+          subscriptionCanceledAt: eventReceivedAt,
           lastFluentcartEventAt: eventReceivedAt,
         },
       });

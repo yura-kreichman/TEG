@@ -6,6 +6,7 @@ import { generateUniqueSlug } from "@/lib/instructions/slug";
 import { isReservedSlug, isSlugTaken } from "@/lib/landing/slug";
 import { isEmailConfigured, sendEmail } from "@/lib/summary-channels/email-channel";
 import { dictionaryForUser, renderAuthEmail } from "@/lib/auth-email";
+import type { Locale } from "@/lib/locales";
 
 /**
  * Создание кабинета по факту оплаты в FluentCart (решение пользователя
@@ -38,6 +39,13 @@ export interface ProvisionInput {
   packageId: string | null;
   /** Origin приложения для ссылки в письме (берётся из самого запроса вебхука). */
   origin: string;
+  /**
+   * Язык страницы, на которой человек оформил покупку (mu-плагин сайта кладёт
+   * его в вебхук полем rentos_locale). null — заказ старше этого плагина или
+   * язык сайта не совпал ни с одним языком RentOS; тогда остаётся дефолт
+   * модели, как было до 2026-08-10.
+   */
+  locale: Locale | null;
 }
 
 export type ProvisionResult =
@@ -89,6 +97,11 @@ export async function provisionTenantFromPurchase(input: ProvisionInput): Promis
         // ACTIVATING_EVENTS) — здесь намеренно не дублируем, чтобы не было
         // двух мест, решающих про подписку.
         ...(input.customerId ? { fluentcartCustomerId: input.customerId } : {}),
+        // Язык той версии сайта, где человек купил. Без него кабинет и письмо
+        // "задайте пароль" всегда были русскими — владелец сменит язык в
+        // настройках одним переключателем, но начинать с чужого языка не то,
+        // чего ждёт покупатель с /en/ или /ro/.
+        ...(input.locale ? { locale: input.locale } : {}),
       },
     });
 
@@ -119,10 +132,11 @@ export async function provisionTenantFromPurchase(input: ProvisionInput): Promis
 }
 
 // Язык — тенанта, через общий dictionaryForUser (то же, что у письма сброса
-// пароля). У кабинета, созданного вебхуком, это язык по умолчанию: браузера
-// покупателя тут нет, а FluentCart язык заказа не передаёт — угадывать его по
-// стране плательщика было бы хуже, чем показать язык по умолчанию, который
-// владелец меняет одним переключателем в настройках.
+// пароля). У кабинета, созданного вебхуком, это язык страницы оформления
+// заказа: своего поля под язык у FluentCart нет, его добавляет mu-плагин
+// сайта (rentos-checkout-locale.php) полем rentos_locale в теле вебхука.
+// Если поля нет (заказ старше плагина) — язык по умолчанию, как было раньше;
+// по стране плательщика язык не угадываем, это было бы хуже дефолта.
 async function sendWelcomeEmail(userId: string, email: string, link: string): Promise<void> {
   if (!(await isEmailConfigured())) return;
 

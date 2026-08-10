@@ -11,6 +11,10 @@ interface Usage {
   subscriptionStatus: "active" | "paused" | "suspended" | "expired";
   subscriptionExpiresAt: string | null;
   currentPeriodEnd: string | null;
+  // Отмена не отзывает доступ (статус остаётся active до конца оплаченного
+  // периода) — но и "Следующее списание" показывать больше нельзя, списания
+  // не будет. См. Tenant.subscriptionCanceledAt в schema.prisma.
+  subscriptionCanceledAt: string | null;
   // Ручной оверрайд Super Admin'а (запрос пользователя 2026-07-17) — снимает
   // все 4 лимита разом, значения max/packageMax ниже в этом случае не несут
   // смысла (см. /api/tenant/usage), рендерим "∞" напрямую по этому флагу.
@@ -36,8 +40,14 @@ export function PlanCard() {
 
   if (!usage) return null;
 
-  const planStatusLabel =
-    usage.subscriptionStatus === "paused"
+  // Отмена — не отдельный статус подписки, а отметка поверх активной (доступ
+  // до конца оплаченного периода), поэтому проверяется раньше самого статуса
+  // и только на нём: у истёкшей/приостановленной свои подписи важнее.
+  const isCanceled = usage.subscriptionCanceledAt !== null && usage.subscriptionStatus === "active";
+
+  const planStatusLabel = isCanceled
+    ? t.home.planStatusCanceled
+    : usage.subscriptionStatus === "paused"
       ? t.home.planStatusPaused
       : usage.subscriptionStatus === "expired"
         ? t.home.planStatusExpired
@@ -46,11 +56,14 @@ export function PlanCard() {
           : t.home.planStatusActive;
 
   const planStatusIsWarning =
+    isCanceled ||
     usage.subscriptionStatus === "paused" ||
     usage.subscriptionStatus === "expired" ||
     usage.subscriptionStatus === "suspended";
 
-  const planEndDate = usage.subscriptionExpiresAt;
+  // У отменённой подписки "действует до" — конец уже оплаченного периода из
+  // FluentCart; ручной срок Super Admin'а, если он выставлен, важнее.
+  const planEndDate = usage.subscriptionExpiresAt ?? (isCanceled ? usage.currentPeriodEnd : null);
 
   return (
     <SpringCard hover={false} className="flex flex-col gap-1">

@@ -33,6 +33,10 @@ export async function GET() {
     // Информационное, из вебхука FluentCart — см. Tenant.currentPeriodEnd в
     // schema.prisma и docs/fluentcart-webhook-schema.md §3.
     currentPeriodEnd: tenant.currentPeriodEnd,
+    // Подписка отменена, но оплаченный период идёт — карточка плана должна
+    // показать "Отменена · Действует до", а не "Активен · Следующее списание"
+    // (статус при этом остаётся active, доступ не отзывается).
+    subscriptionCanceledAt: tenant.subscriptionCanceledAt,
     // Ручной оверрайд Super Admin'а (запрос пользователя 2026-07-17) —
     // отдельным флагом, не через числовой max: Infinity не переживает
     // JSON.stringify (стал бы null), max ниже в этом случае лишь запасное

@@ -562,6 +562,7 @@
     "planStatusPaused": "Тыныгууда",
     "planStatusExpired": "Мөөнөтү бүттү",
     "planStatusSuspended": "Токтотулду",
+    "planStatusCanceled": "Жокко чыгарылды",
     "planExpiresPrefix": "Мөөнөтү",
     "nextBillingPrefix": "Кийинки эсептен алуу:",
     "limitPoints": "Чекиттер",

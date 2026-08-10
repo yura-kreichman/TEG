@@ -562,6 +562,7 @@
     "planStatusPaused": "Wstrzymany",
     "planStatusExpired": "Wygasł",
     "planStatusSuspended": "Zawieszony",
+    "planStatusCanceled": "Anulowany",
     "planExpiresPrefix": "Ważny do",
     "nextBillingPrefix": "Następne obciążenie:",
     "limitPoints": "Punkty",

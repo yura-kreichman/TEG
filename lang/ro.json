@@ -562,6 +562,7 @@
     "planStatusPaused": "În pauză",
     "planStatusExpired": "Expirat",
     "planStatusSuspended": "Suspendat",
+    "planStatusCanceled": "Anulat",
     "planExpiresPrefix": "Activ până la",
     "nextBillingPrefix": "Următoarea plată:",
     "limitPoints": "Puncte",

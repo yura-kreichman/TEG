@@ -562,6 +562,7 @@
     "planStatusPaused": "Paused",
     "planStatusExpired": "Expired",
     "planStatusSuspended": "Suspended",
+    "planStatusCanceled": "Canceled",
     "planExpiresPrefix": "Active until",
     "nextBillingPrefix": "Next billing:",
     "limitPoints": "Points",

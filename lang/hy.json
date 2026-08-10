@@ -562,6 +562,7 @@
     "planStatusPaused": "Դադարեցված է",
     "planStatusExpired": "Ավարտված է",
     "planStatusSuspended": "Կասեցված է",
+    "planStatusCanceled": "Չեղարկված է",
     "planExpiresPrefix": "Գործում է մինչև",
     "nextBillingPrefix": "Հաջորդ գանձումը.",
     "limitPoints": "Կետեր",

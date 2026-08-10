@@ -562,6 +562,7 @@
     "planStatusPaused": "Duraklatıldı",
     "planStatusExpired": "Süresi doldu",
     "planStatusSuspended": "Askıya alındı",
+    "planStatusCanceled": "İptal edildi",
     "planExpiresPrefix": "Şu tarihe kadar geçerli",
     "nextBillingPrefix": "Sonraki tahsilat:",
     "limitPoints": "Noktalar",
