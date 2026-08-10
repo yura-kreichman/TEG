@@ -563,6 +563,8 @@
     "planStatusExpired": "Scaduto",
     "planStatusSuspended": "Sospeso",
     "planStatusCanceled": "Annullato",
+    "deletionBanner": "L'account sarà eliminato il {date}",
+    "deletionBannerAction": "Rinnova",
     "planExpiresPrefix": "Attivo fino al",
     "nextBillingPrefix": "Prossimo addebito:",
     "limitPoints": "Punti",
@@ -652,7 +654,12 @@
     "welcomeIntro": "Grazie per il pagamento — il tuo account RentOS è pronto.",
     "welcomeLine": "Basta impostare una password e puoi iniziare.",
     "welcomeButton": "Imposta password",
-    "welcomeNote": "Il link è valido per 7 giorni. Se scade, usa “Password dimenticata” nella pagina di accesso."
+    "welcomeNote": "Il link è valido per 7 giorni. Se scade, usa “Password dimenticata” nella pagina di accesso.",
+    "deletionSubject": "RentOS — l'account sarà eliminato",
+    "deletionIntro": "Il periodo gratuito è terminato, l'account è in sola lettura.",
+    "deletionLine": "Se non rinnovi l'abbonamento, l'account e tutti i dati saranno eliminati definitivamente il {date}.",
+    "deletionButton": "Rinnova l'abbonamento",
+    "deletionNote": "Dopo il rinnovo l'accesso torna completo e i dati restano al loro posto."
   },
   "points": {
     "title": "Punti",

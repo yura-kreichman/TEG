@@ -563,6 +563,8 @@
     "planStatusExpired": "Bitib",
     "planStatusSuspended": "Dayandırılıb",
     "planStatusCanceled": "Ləğv edilib",
+    "deletionBanner": "Hesab {date} tarixində silinəcək",
+    "deletionBannerAction": "Yenilə",
     "planExpiresPrefix": "Etibarlıdır",
     "nextBillingPrefix": "Növbəti ödəniş:",
     "limitPoints": "Nöqtələr",
@@ -652,7 +654,12 @@
     "welcomeIntro": "Ödəniş üçün təşəkkür edirik — RentOS kabineti hazırdır.",
     "welcomeLine": "Yalnız şifrə təyin etmək qalır.",
     "welcomeButton": "Şifrə təyin et",
-    "welcomeNote": "Keçid 7 gün qüvvədədir. Vaxtı keçərsə, giriş səhifəsində “Şifrəni unutdum”dan istifadə edin."
+    "welcomeNote": "Keçid 7 gün qüvvədədir. Vaxtı keçərsə, giriş səhifəsində “Şifrəni unutdum”dan istifadə edin.",
+    "deletionSubject": "RentOS — hesab silinəcək",
+    "deletionIntro": "Pulsuz dövr başa çatdı, hesab yalnız oxuma rejimindədir.",
+    "deletionLine": "Abunəliyi yeniləməsəniz, hesab və bütün məlumatlar {date} tarixində birdəfəlik silinəcək.",
+    "deletionButton": "Abunəliyi yenilə",
+    "deletionNote": "Yeniləmədən sonra giriş tam bərpa olunur, məlumatlar yerində qalır."
   },
   "points": {
     "title": "Nöqtələr",

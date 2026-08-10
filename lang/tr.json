@@ -563,6 +563,8 @@
     "planStatusExpired": "Süresi doldu",
     "planStatusSuspended": "Askıya alındı",
     "planStatusCanceled": "İptal edildi",
+    "deletionBanner": "Hesap {date} tarihinde silinecek",
+    "deletionBannerAction": "Yenile",
     "planExpiresPrefix": "Şu tarihe kadar geçerli",
     "nextBillingPrefix": "Sonraki tahsilat:",
     "limitPoints": "Noktalar",
@@ -652,7 +654,12 @@
     "welcomeIntro": "Ödemeniz için teşekkürler — RentOS hesabınız hazır.",
     "welcomeLine": "Tek yapmanız gereken bir şifre belirlemek.",
     "welcomeButton": "Şifre belirle",
-    "welcomeNote": "Bağlantı 7 gün geçerlidir. Süresi geçerse giriş sayfasında “Şifremi unuttum”u kullanın."
+    "welcomeNote": "Bağlantı 7 gün geçerlidir. Süresi geçerse giriş sayfasında “Şifremi unuttum”u kullanın.",
+    "deletionSubject": "RentOS — hesabınız silinecek",
+    "deletionIntro": "Ücretsiz dönem sona erdi, hesap yalnızca okuma modunda.",
+    "deletionLine": "Aboneliği yenilemezseniz, hesap ve tüm veriler {date} tarihinde kalıcı olarak silinecek.",
+    "deletionButton": "Aboneliği yenile",
+    "deletionNote": "Yenilemenin ardından erişim tamamen geri gelir, verileriniz yerinde kalır."
   },
   "points": {
     "title": "Noktalar",

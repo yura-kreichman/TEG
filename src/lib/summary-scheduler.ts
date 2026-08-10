@@ -4,6 +4,7 @@ import { hasActivityInBounds } from "@/lib/summary-channels/daily-cash-data";
 import { maybeSendDailyCashSummary } from "@/lib/summary-channels/daily-cash-trigger";
 import { DAILY_CASH_SUMMARY_DEFAULTS, type DailyCashSummarySettingsData } from "@/lib/summary-settings";
 import { sendTicketExpiryReminders } from "@/lib/ticket-expiry-reminders";
+import { runTenantPurgeCycle } from "@/lib/tenant-lifecycle";
 
 // Небольшая пауза между отправками точек одного тика (запрос пользователя
 // 2026-07-18: "между отправками сводок... для уверенности") — единственное
@@ -55,6 +56,11 @@ async function expireSubscriptions(now: Date) {
 async function tick() {
   const now = new Date();
   await expireSubscriptions(now);
+  // Брошенные Free-кабинеты: два письма, затем удаление везде (решение
+  // пользователя 2026-08-10, src/lib/tenant-lifecycle.ts). Ошибка одного
+  // тенанта не должна ронять весь тик — внутри цикла свой try, здесь только
+  // страховка от падения самой выборки.
+  await runTenantPurgeCycle(now).catch((err) => console.error("tenant purge cycle failed", err));
   await sendTicketExpiryReminders(now).catch((err) => console.error("ticket expiry reminders tick failed", err));
 
   // Настройки материализуются лениво (см. GET /api/tenant/summary-settings/daily-cash —

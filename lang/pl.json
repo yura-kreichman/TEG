@@ -563,6 +563,8 @@
     "planStatusExpired": "Wygasł",
     "planStatusSuspended": "Zawieszony",
     "planStatusCanceled": "Anulowany",
+    "deletionBanner": "Konto zostanie usunięte {date}",
+    "deletionBannerAction": "Odnów",
     "planExpiresPrefix": "Ważny do",
     "nextBillingPrefix": "Następne obciążenie:",
     "limitPoints": "Punkty",
@@ -652,7 +654,12 @@
     "welcomeIntro": "Dziękujemy za płatność — konto RentOS jest gotowe.",
     "welcomeLine": "Wystarczy ustawić hasło i można zaczynać.",
     "welcomeButton": "Ustaw hasło",
-    "welcomeNote": "Link jest ważny 7 dni. Jeśli straci ważność, użyj „Nie pamiętam hasła” na stronie logowania."
+    "welcomeNote": "Link jest ważny 7 dni. Jeśli straci ważność, użyj „Nie pamiętam hasła” na stronie logowania.",
+    "deletionSubject": "RentOS — konto zostanie usunięte",
+    "deletionIntro": "Okres bezpłatny dobiegł końca, konto działa tylko do odczytu.",
+    "deletionLine": "Jeśli nie odnowisz subskrypcji, konto i wszystkie dane zostaną trwale usunięte {date}.",
+    "deletionButton": "Odnów subskrypcję",
+    "deletionNote": "Po odnowieniu dostęp wróci w pełni, a dane pozostaną na miejscu."
   },
   "points": {
     "title": "Punkty",

@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { rm } from "fs/promises";
-import path from "path";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/require-super-admin";
 import { verifyPassword } from "@/lib/auth";
 import { reclassifyForDeletion } from "@/lib/admin/tenant-cleanup";
+import { deleteTenantEverywhere } from "@/lib/tenant-lifecycle";
 
 // Массовое удаление "потерянных клиентов" (запрос пользователя 2026-08-02) —
 // пустых Free-регистраций старше порога. Отдельный роут, а не цикл по
@@ -66,12 +65,14 @@ export async function POST(request: Request) {
           comment: "Массовое удаление неактивных пустых регистраций из админ-модуля",
         },
       });
-      await prisma.tenant.delete({ where: { id: tenant.id } });
-      // Загруженные файлы лежат на диске, каскад Prisma их не трогает —
-      // см. тот же best-effort в DELETE /api/admin/tenants/[id].
-      await rm(path.join(process.cwd(), "public", "uploads", tenant.id), { recursive: true, force: true }).catch(
-        () => {}
-      );
+      // Одна и та же функция на все удаления (планировщик, эта пачка, ручное
+      // удаление): тенант + файлы на диске + учётная запись на сайте.
+      const owner = await prisma.user.findFirst({
+        where: { tenantId: tenant.id, role: "owner" },
+        orderBy: { createdAt: "asc" },
+        select: { email: true },
+      });
+      await deleteTenantEverywhere(tenant.id, owner?.email ?? null);
       deleted.push(tenant.id);
     } catch {
       // Один упавший тенант не должен ронять всю пачку — остальные

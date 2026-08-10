@@ -563,6 +563,8 @@
     "planStatusExpired": "Tugagan",
     "planStatusSuspended": "Toʻxtatilgan",
     "planStatusCanceled": "Bekor qilingan",
+    "deletionBanner": "Kabinet {date} sanasida oʻchiriladi",
+    "deletionBannerAction": "Yangilash",
     "planExpiresPrefix": "Amal qilish muddati",
     "nextBillingPrefix": "Keyingi yechib olish:",
     "limitPoints": "Nuqtalar",
@@ -652,7 +654,12 @@
     "welcomeIntro": "To'lov uchun rahmat — RentOS kabineti tayyor.",
     "welcomeLine": "Faqat parol o'rnatish qoldi.",
     "welcomeButton": "Parol o'rnatish",
-    "welcomeNote": "Havola 7 kun amal qiladi. Muddati o'tsa, kirish sahifasidagi “Parolni unutdingizmi” dan foydalaning."
+    "welcomeNote": "Havola 7 kun amal qiladi. Muddati o'tsa, kirish sahifasidagi “Parolni unutdingizmi” dan foydalaning.",
+    "deletionSubject": "RentOS — kabinet oʻchiriladi",
+    "deletionIntro": "Bepul davr tugadi, kabinet faqat oʻqish rejimida ishlaydi.",
+    "deletionLine": "Agar obunani yangilamasangiz, kabinet va barcha maʼlumotlar {date} sanasida butunlay oʻchiriladi.",
+    "deletionButton": "Obunani yangilash",
+    "deletionNote": "Yangilashdan soʻng kirish toʻliq tiklanadi, maʼlumotlar joyida qoladi."
   },
   "points": {
     "title": "Nuqtalar",

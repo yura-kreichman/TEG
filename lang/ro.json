@@ -563,6 +563,8 @@
     "planStatusExpired": "Expirat",
     "planStatusSuspended": "Suspendat",
     "planStatusCanceled": "Anulat",
+    "deletionBanner": "Contul va fi șters pe {date}",
+    "deletionBannerAction": "Reînnoiți",
     "planExpiresPrefix": "Activ până la",
     "nextBillingPrefix": "Următoarea plată:",
     "limitPoints": "Puncte",
@@ -652,7 +654,12 @@
     "welcomeIntro": "Vă mulțumim pentru plată — contul RentOS este gata.",
     "welcomeLine": "Rămâne să setați o parolă și puteți începe.",
     "welcomeButton": "Setează parola",
-    "welcomeNote": "Linkul este valabil 7 zile. Dacă expiră, folosiți „Am uitat parola” pe pagina de conectare."
+    "welcomeNote": "Linkul este valabil 7 zile. Dacă expiră, folosiți „Am uitat parola” pe pagina de conectare.",
+    "deletionSubject": "RentOS — contul va fi șters",
+    "deletionIntro": "Perioada gratuită s-a încheiat, contul funcționează doar în citire.",
+    "deletionLine": "Dacă nu reînnoiți abonamentul, contul și toate datele vor fi șterse definitiv pe {date}.",
+    "deletionButton": "Reînnoiți abonamentul",
+    "deletionNote": "După reînnoire accesul revine complet, iar datele rămân la locul lor."
   },
   "points": {
     "title": "Puncte",

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { getTenantLimits } from "@/lib/packages";
+import { isPurgeProtected, purgeDeadline } from "@/lib/tenant-lifecycle";
 
 export async function GET() {
   const owner = await requireOwner();
@@ -37,6 +38,13 @@ export async function GET() {
     // показать "Отменена · Действует до", а не "Активен · Следующее списание"
     // (статус при этом остаётся active, доступ не отзывается).
     subscriptionCanceledAt: tenant.subscriptionCanceledAt,
+    // Дата автоудаления брошенного Free-кабинета — только когда финальное
+    // письмо уже ушло (src/lib/tenant-lifecycle.ts). Пока предупреждения нет,
+    // поле null, и шапка кабинета молчит: показывать дату удаления всем
+    // Free-владельцам с первого дня значило бы пугать тех, кто просто
+    // пробует продукт.
+    deletionScheduledAt:
+      tenant.deletionFinalNoticeSentAt && !isPurgeProtected(tenant) ? purgeDeadline(tenant.createdAt) : null,
     // Ручной оверрайд Super Admin'а (запрос пользователя 2026-07-17) —
     // отдельным флагом, не через числовой max: Infinity не переживает
     // JSON.stringify (стал бы null), max ниже в этом случае лишь запасное

@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { rm } from "fs/promises";
-import path from "path";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { requireSuperAdmin } from "@/lib/require-super-admin";
 import { verifyPassword } from "@/lib/auth";
+import { deleteTenantEverywhere } from "@/lib/tenant-lifecycle";
 
 const SUBSCRIPTION_STATUSES = ["active", "paused", "suspended", "expired"] as const;
 
@@ -324,7 +323,14 @@ export async function DELETE(request: Request, ctx: RouteContext<"/api/admin/ten
     },
   });
   try {
-    await prisma.tenant.delete({ where: { id } });
+    // Удаление тенанта + файлов + учётной записи на сайте — одной функцией на
+    // все три места (здесь, массовая чистка, планировщик автоудаления).
+    const owner = await prisma.user.findFirst({
+      where: { tenantId: id, role: "owner" },
+      orderBy: { createdAt: "asc" },
+      select: { email: true },
+    });
+    await deleteTenantEverywhere(id, owner?.email ?? null);
   } catch (err) {
     // Раньше падало необработанным 500 на ЛЮБОМ тенанте, хоть раз сдавшем
     // итоги/продавшем билет/провёдшем ревизию Товаров — три FK
@@ -343,12 +349,6 @@ export async function DELETE(request: Request, ctx: RouteContext<"/api/admin/ten
     }
     throw err;
   }
-
-  // Загруженные файлы (public/uploads/<tenantId>/, см. src/lib/uploads.ts)
-  // лежат на диске, а не в БД — каскад Prisma их не трогает. Best-effort:
-  // тенант уже удалён, оставлять пустую/сиротскую папку хуже, чем не удалить
-  // её при редкой ошибке файловой системы.
-  await rm(path.join(process.cwd(), "public", "uploads", id), { recursive: true, force: true }).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }

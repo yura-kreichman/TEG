@@ -1,5 +1,5 @@
 import { getDictionary, type Dictionary } from "@/lib/i18n";
-import { isLocale } from "@/lib/locales";
+import { isLocale, type Locale } from "@/lib/locales";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -41,10 +41,19 @@ ${body}
  * умолчанию для всех.
  */
 export async function dictionaryForUser(userId: string): Promise<Dictionary> {
+  return getDictionary(await localeForUser(userId));
+}
+
+/**
+ * То же правило отдельно от словаря — письму бывает нужен сам код языка, а не
+ * только строки: ссылка на страницу цен ведёт на языковую версию сайта
+ * (pricingUrl), и дата в тексте форматируется по локали получателя.
+ */
+export async function localeForUser(userId: string): Promise<Locale> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { locale: true, tenant: { select: { locale: true } } },
   });
   const locale = [user?.locale, user?.tenant?.locale].find((l) => l && isLocale(l));
-  return getDictionary(locale ?? "ru");
+  return (locale as Locale | undefined) ?? "ru";
 }
