@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useI18n } from "@/components/i18n-provider";
+import { useI18n, useLocale } from "@/components/i18n-provider";
 import { SpringCard } from "@/components/spring-card";
 import { cn } from "@/lib/utils";
-import { PRICING_URL } from "@/lib/billing";
+import { pricingUrl } from "@/lib/billing";
 
 interface Usage {
   packageName: string;
@@ -30,6 +30,7 @@ interface Usage {
 // /api/tenant/usage, раньше это состояние жило в OwnerDashboardCard.
 export function PlanCard() {
   const t = useI18n();
+  const locale = useLocale();
   const [usage, setUsage] = useState<Usage | null>(null);
 
   useEffect(() => {
@@ -147,7 +148,7 @@ export function PlanCard() {
       ))}
 
       <a
-        href={PRICING_URL}
+        href={pricingUrl(locale)}
         target="_blank"
         rel="noopener noreferrer"
         className="mt-3 text-caption-airbnb font-semibold text-primary"

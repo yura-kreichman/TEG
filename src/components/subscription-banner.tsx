@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { CreditCard } from "lucide-react";
-import { useI18n } from "@/components/i18n-provider";
-import { PRICING_URL } from "@/lib/billing";
+import { useI18n, useLocale } from "@/components/i18n-provider";
+import { pricingUrl } from "@/lib/billing";
 
 /**
  * Баннер неактивной подписки (docs/spec/06-super-admin.md) — рендерится
@@ -14,6 +14,7 @@ import { PRICING_URL } from "@/lib/billing";
  */
 export function SubscriptionBanner() {
   const t = useI18n();
+  const locale = useLocale();
   const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
@@ -30,7 +31,7 @@ export function SubscriptionBanner() {
 
   return (
     <a
-      href={PRICING_URL}
+      href={pricingUrl(locale)}
       target="_blank"
       rel="noopener noreferrer"
       className="flex w-full items-center justify-center gap-2 bg-warning px-3 py-2 text-center text-caption-airbnb font-semibold text-warning-foreground"
