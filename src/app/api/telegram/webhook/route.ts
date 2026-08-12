@@ -15,7 +15,14 @@ import {
   CLIENT_START_PREFIX,
   escapeHtml,
 } from "@/lib/telegram-bot";
-import { describeAbonementTransactionSource, findWalletByPhone, normalizePhone } from "@/lib/abonement";
+import {
+  describeAbonementTransactionSource,
+  findWalletByPhone,
+  findWalletCandidatesByKey,
+  isSuffixMatch,
+  normalizePhone,
+  phoneMatchKey,
+} from "@/lib/abonement";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import type { CurrencyCode } from "@/lib/currency";
 import { getBusinessDayBounds } from "@/lib/business-day";
@@ -501,8 +508,40 @@ async function handleContact(message: {
     // Scoped-флоу — конкретная ссылка тенанта, ищем только там.
     const tenant = await prisma.tenant.findUnique({ where: { id: pendingTenantId }, select: { id: true, name: true, currency: true } });
     if (!tenant || !(await isModuleEnabled(tenant.id, "clientsEnabled"))) return;
+    // Три уровня, а не один (решение пользователя 2026-08-12) — оператор мог
+    // сохранить тот же номер короче: "77795928" или "077795928" вместо
+    // "37377795928", который отдаёт Telegram.
+    //
+    // 1. Точное совпадение — связываем, как было всегда.
+    // 2. Сохранённое является ОКОНЧАНИЕМ проверенного и кандидат ровно один —
+    //    почти наверняка тот же человек: связываем и заодно канонизируем
+    //    номер. Данные Telegram проверены (contact.user_id сверен выше), они
+    //    надёжнее набранного руками, поэтому запись чинится сама.
+    // 3. Совпал только хвост, но окончанием не является, либо кандидатов
+    //    несколько — НЕ связываем. Здесь подтверждать некому, а ошибка стоит
+    //    не дубликата, а показа чужого баланса. Заводим отдельный кошелёк
+    //    (offerRegistration) — это чинится оператором, утечка нет.
     const wallet = await findWalletByPhone(tenant.id, phone);
     if (!wallet) {
+      const candidates = await findWalletCandidatesByKey(tenant.id, phone);
+      const suffixMatches = candidates.filter((c) => isSuffixMatch(c.phone, phone));
+      if (suffixMatches.length === 1) {
+        const matched = suffixMatches[0]!;
+        // Канонизация номера может упереться в уже существующий кошелёк с
+        // этим же номером (гонка либо ручной дубликат) — тогда просто не
+        // трогаем запись и связываемся по тому, что есть: связь важнее
+        // косметики, а падать на уникальном индексе здесь нельзя.
+        const canonical = await prisma.abonementWallet
+          .update({ where: { id: matched.id }, data: { phone, phoneKey: phoneMatchKey(phone) } })
+          .catch(() => matched);
+        await prisma.clientTelegramLink.upsert({
+          where: { tenantId_chatId: { tenantId: tenant.id, chatId } },
+          create: { tenantId: tenant.id, chatId, phone: canonical.phone, language: lang },
+          update: { phone: canonical.phone, language: lang },
+        });
+        await sendClientReportWithMenu(chatId, tenant, canonical, lang);
+        return;
+      }
       await offerRegistration(chatId, tenant, phone, contact.phone_number, lang);
       return;
     }
@@ -519,6 +558,14 @@ async function handleContact(message: {
   // использовалась), ищем кошелёк с этим номером СРАЗУ по всем тенантам
   // платформы: один и тот же человек вполне может быть клиентом нескольких
   // разных прокатов на RentOS, отправляем отчёт по каждому найденному.
+  //
+  // ЗДЕСЬ ТОЛЬКО ТОЧНОЕ СОВПАДЕНИЕ (решение пользователя 2026-08-12).
+  // Нестрогое сопоставление по хвосту, разрешённое в scoped-флоу выше,
+  // опирается на то, что пространство ограничено одним тенантом. Тут
+  // пространство — все клиенты всех прокатов платформы, и совпадение восьми
+  // последних цифр перестаёт быть редкостью: включить его значило бы раздавать
+  // чужие балансы. Человек с коротко сохранённым номером просто зайдёт по
+  // ссылке своего проката — там сработает scoped-путь.
   const wallets = await prisma.abonementWallet.findMany({ where: { phone } });
   if (wallets.length === 0) {
     // escapeHtml — защита в глубину, см. комментарий у offerRegistration.
@@ -608,7 +655,9 @@ async function handleRegistrationName(chatId: string, tenantId: string, phone: s
   let wallet = await findWalletByPhone(tenant.id, phone);
   if (!wallet) {
     try {
-      wallet = await prisma.abonementWallet.create({ data: { tenantId: tenant.id, phone, name } });
+      wallet = await prisma.abonementWallet.create({
+        data: { tenantId: tenant.id, phone, phoneKey: phoneMatchKey(phone), name },
+      });
     } catch {
       // Параллельная доставка того же апдейта (Telegram "at least once")
       // могла создать кошелёк первой — просто забираем то, что уже создано.

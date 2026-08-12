@@ -54,7 +54,6 @@ export function PhoneInput({
 }: PhoneInputProps) {
   const [timezone, setTimezone] = useState<string>("Europe/Moscow");
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetch(timezoneEndpoint)
       .then((res) => (res.ok ? res.json() : null))
@@ -62,9 +61,7 @@ export function PhoneInput({
         if (typeof data?.timezone === "string") setTimezone(data.timezone);
       })
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timezoneEndpoint]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const { dialCode, flag } = dialInfoForTimezone(timezone);
 
@@ -76,7 +73,15 @@ export function PhoneInput({
   // отбрасывает "+" вместе с остальным форматированием) — сверяем и
   // склеиваем без "+", он только в отображаемом префиксе.
   const dialDigits = dialCode.replace("+", "");
-  const localPart = value.startsWith(dialDigits) ? value.slice(dialDigits.length) : value;
+  // Международный режим — значение начинается с "+": местный код к нему не
+  // относится, показываем строку целиком и гасим блок префикса, иначе рядом
+  // читалось бы "🇲🇩 +373" и "+39 333…" одновременно.
+  const isInternational = value.trim().startsWith("+");
+  const localPart = isInternational
+    ? value
+    : value.startsWith(dialDigits)
+      ? value.slice(dialDigits.length)
+      : value;
 
   // Автофокус — ТОЛЬКО на устройствах с мышью/клавиатурой (запрос
   // пользователя 2026-07-22: "не будет ли неудобно, что сразу и наш нумпад,
@@ -95,15 +100,17 @@ export function PhoneInput({
 
   return (
     <div className={cn("flex items-stretch gap-2", heightClassName)}>
-      <div
-        className={cn(
-          "flex shrink-0 items-center gap-1.5 rounded-control border border-input bg-muted px-3 text-body-airbnb font-semibold text-muted-foreground",
-          heightClassName
-        )}
-      >
-        <span aria-hidden>{flag}</span>
-        <span className="tabular-nums">{dialCode}</span>
-      </div>
+      {!isInternational && (
+        <div
+          className={cn(
+            "flex shrink-0 items-center gap-1.5 rounded-control border border-input bg-muted px-3 text-body-airbnb font-semibold text-muted-foreground",
+            heightClassName
+          )}
+        >
+          <span aria-hidden>{flag}</span>
+          <span className="tabular-nums">{dialCode}</span>
+        </div>
+      )}
       <Input
         ref={inputRef}
         id={id}
@@ -111,7 +118,15 @@ export function PhoneInput({
         inputMode="tel"
         value={localPart}
         onChange={(e) => {
-          const typed = e.target.value.replace(/[^\d\s()-]/g, "");
+          const typed = e.target.value.replace(/[^\d\s()+-]/g, "");
+          // Международный ввод: набрал "+" первым символом — берём строку как
+          // есть, целиком, без местного кода и без среза чего-либо (решение
+          // пользователя 2026-08-12). Так заводится турист/иностранец, для
+          // которого read-only префикс страны бизнеса был непреодолим.
+          if (typed.trim().startsWith("+")) {
+            onChange(typed);
+            return;
+          }
           // Ведущий "0" перед местным номером — обычная запись при
           // домашнем наборе (например, Молдова: "0 77795928"), но не часть
           // международного номера после кода страны — если не срезать,
@@ -120,7 +135,14 @@ export function PhoneInput({
           // кошелёк, и вместо пополнения создаётся дубликат (реальный баг,
           // найден пользователем 2026-07-17: "Юрий"/"Юрочка" — два разных
           // кошелька на один телефон).
-          onChange(dialDigits + typed.replace(/^0+/, ""));
+          //
+          // В зоне +7 (Россия, Казахстан) ту же роль играет НЕ ноль, а
+          // восьмёрка: местная запись "8 701 234 5678". Срез только нулей
+          // склеивал бы "7" + "87012345678" = двенадцатизначный несуществующий
+          // номер — найдено при разборе 2026-08-12, до первого тенанта из
+          // этой зоны выстрелить не успело.
+          const trunk = dialDigits === "7" ? /^8+/ : /^0+/;
+          onChange(dialDigits + typed.replace(trunk, ""));
         }}
         onKeyDown={onKeyDown}
         required={required}

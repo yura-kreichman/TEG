@@ -457,7 +457,15 @@ export default function SystemSettingsPage() {
                       <span className="text-body-airbnb">{t.settings.systemReceiptFooterLabel}</span>
                       <InfoTooltip text={t.settings.systemReceiptFooterHint} />
                     </div>
-                    <InstructionEditor content={footerContent} onChange={setFooterContent} />
+                    {/* Половина обычной высоты (фидбек пользователя
+                        2026-08-13: "слишком большой") — подвал квитанции это
+                        две-три строки, а не инструктаж на экран. Проп только
+                        здесь: сами Инструктажи остаются во весь рост. */}
+                    <InstructionEditor
+                      content={footerContent}
+                      onChange={setFooterContent}
+                      heightClassName="h-[30vh] min-h-40"
+                    />
                     <div className="flex justify-end">
                       <PressableScale>
                         <SaveButton onClick={saveFooter} saved={footerSaved} className="rounded-lg" />

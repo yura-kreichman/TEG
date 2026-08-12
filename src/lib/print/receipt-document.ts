@@ -358,10 +358,35 @@ function receiptCss(paperWidth: ReceiptPaperWidth): string {
     border-top: 1px dashed #999;
     font-size: 12.65px;
     line-height: 1.35;
+    /* Подвал всегда по центру (запрос пользователя 2026-08-13) — это
+       приписка ко всему документу, а не его содержание; исключение —
+       цитата ниже, у неё полоса слева, и центрирование оторвало бы текст
+       от этой полосы. */
+    text-align: center;
   }
   .receipt-footer p { margin: 0 0 3px; overflow-wrap: break-word; }
   .receipt-footer p:last-child { margin-bottom: 0; }
-  .receipt-footer ul, .receipt-footer ol { margin: 0 0 3px; padding-left: 16px; }
+  /* Списки по левому краю, как и цитата (запрос пользователя 2026-08-13):
+     при центрировании маркеры остаются на отступе, а текст уезжает в
+     середину — строки повисают вразнобой. Центрируется только сплошной
+     текст подвала. */
+  .receipt-footer ul, .receipt-footer ol {
+    margin: 0 0 3px;
+    padding-left: 16px;
+    text-align: left;
+  }
+  /* Цитата печаталась неотличимо от абзаца (фидбек пользователя 2026-08-13 по
+     реальной распечатке): тег <blockquote> рендерился, но своего стиля в
+     RECEIPT_CSS не имел, а браузерный дефолт (только левый отступ) на 58мм
+     не читается как цитата. Полоса слева, а не курсив: термопринтер печатает
+     курсив кириллицы плохо, а сплошная линия — это просто чёрные точки. */
+  .receipt-footer blockquote {
+    margin: 0 0 3px;
+    padding-left: 8px;
+    border-left: 2px solid #111;
+    text-align: left;
+  }
+  .receipt-footer hr { margin: 4px 0; border: 0; border-top: 1px solid #999; }
   .receipt-footer .rt-h1 { font-size: 15px; font-weight: 700; margin: 0 0 3px; }
   .receipt-footer .rt-h2 { font-size: 13.5px; font-weight: 700; margin: 0 0 3px; }
   /* Линия отреза (запрос пользователя 2026-07-20) — в конце каждой

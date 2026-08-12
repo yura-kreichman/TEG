@@ -1,6 +1,6 @@
 import readXlsxFile from "read-excel-file/node";
 import { prisma } from "@/lib/prisma";
-import { normalizePhone } from "@/lib/abonement";
+import { normalizePhone, phoneMatchKey } from "@/lib/abonement";
 
 // Импорт клиентов при переезде с другого ПО (запрос пользователя 2026-08-02).
 // Формат файла — ровно тот же, что у экспорта (/api/abonement-wallets/export):
@@ -236,7 +236,13 @@ export async function commitImport(
       // без него вся порция упала бы на уникальном индексе (tenantId, phone)
       // из-за одной чужой строки.
       await tx.abonementWallet.createMany({
-        data: toCreate.map((r) => ({ tenantId, phone: r.phone, name: r.name, balance: r.balance })),
+        data: toCreate.map((r) => ({
+          tenantId,
+          phone: r.phone,
+          phoneKey: phoneMatchKey(r.phone),
+          name: r.name,
+          balance: r.balance,
+        })),
         skipDuplicates: true,
       });
 

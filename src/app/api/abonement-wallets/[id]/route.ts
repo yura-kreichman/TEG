@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { normalizePhone, hasTelegramLink, describeAbonementTransactionSource } from "@/lib/abonement";
+import { normalizePhone, phoneMatchKey, hasTelegramLink, describeAbonementTransactionSource } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 import { getClientBalanceDeepLink } from "@/lib/telegram-bot";
 import { periodBoundsUtc } from "@/lib/business-day";
@@ -142,7 +142,12 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/abonement-
 
   await prisma.abonementWallet.update({
     where: { id },
-    data: { ...(phone !== undefined ? { phone } : {}), ...(name !== undefined ? { name } : {}) },
+    // phoneKey пересчитывается вместе с номером — иначе кошелёк остался бы
+    // findable по СТАРОМУ хвосту (и, что хуже, не находился бы по новому).
+    data: {
+      ...(phone !== undefined ? { phone, phoneKey: phoneMatchKey(phone) } : {}),
+      ...(name !== undefined ? { name } : {}),
+    },
   });
 
   // Смена номера — старая привязка Telegram-чата к СТАРОМУ номеру больше не

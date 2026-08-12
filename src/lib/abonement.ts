@@ -35,6 +35,58 @@ export function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "");
 }
 
+// Длина хвоста-ключа. Восемь — из-за Молдовы (национальный номер
+// восьмизначный); подробности у поля AbonementWallet.phoneKey в schema.prisma.
+const PHONE_KEY_LENGTH = 8;
+
+/** Ключ сопоставления: последние 8 цифр. Короткий номер даёт сам себя. */
+export function phoneMatchKey(raw: string): string {
+  const digits = normalizePhone(raw);
+  return digits.slice(-PHONE_KEY_LENGTH);
+}
+
+/**
+ * Строгий признак «это тот же номер, просто записанный короче»: сохранённое
+ * (без ведущих нулей — транковый префикс местного набора) целиком является
+ * ОКОНЧАНИЕМ проверенного международного номера.
+ *
+ * Зачем нужен отдельно от совпадения хвоста: у оператора кандидата
+ * подтверждает живой человек, а в боте подтверждать некому. Связать чужой
+ * кошелёк там — это не дубликат, а показ чужого баланса и возможность им
+ * расплатиться, поэтому одного совпадения последних 8 цифр мало.
+ *
+ * Два РАЗНЫХ настоящих номера так себя не ведут: оба полной длины, с разными
+ * кодами стран — ни один не окажется окончанием другого, они разойдутся в
+ * середине. А "77795928" и "077795928" — оба окончания "37377795928".
+ *
+ * Остаточный риск честно есть: короткий "77795928" теоретически является
+ * окончанием и российского "79177795928". В пределах одного тенанта это почти
+ * исключено (раз номер введён без кода страны, клиентура местная), но нулём
+ * назвать нельзя — см. обсуждение 2026-08-12.
+ */
+export function isSuffixMatch(storedPhone: string, verifiedPhone: string): boolean {
+  const stored = normalizePhone(storedPhone).replace(/^0+/, "");
+  const verified = normalizePhone(verifiedPhone);
+  if (!stored || !verified) return false;
+  if (stored === verified) return true;
+  return verified.length > stored.length && verified.endsWith(stored);
+}
+
+/**
+ * Кандидаты по хвосту в пределах тенанта. Именно кандидаты: совпадение хвоста
+ * означает «похоже», а не «это он» — решение принимает вызывающая сторона
+ * (оператор подтверждает, бот применяет isSuffixMatch выше).
+ */
+export async function findWalletCandidatesByKey(
+  tenantId: string,
+  rawPhone: string,
+  tx: Tx | typeof prisma = prisma
+) {
+  const key = phoneMatchKey(rawPhone);
+  if (!key) return [];
+  return tx.abonementWallet.findMany({ where: { tenantId, phoneKey: key } });
+}
+
 export async function findWalletByPhone(tenantId: string, rawPhone: string, tx: Tx | typeof prisma = prisma) {
   const phone = normalizePhone(rawPhone);
   if (!phone) return null;
@@ -307,7 +359,7 @@ export async function createWalletWithTopupArbitrary(
 
   const wallet = await prisma.$transaction(async (tx) => {
     const wallet = await tx.abonementWallet.create({
-      data: { tenantId, phone, name: name || null, balance: amount },
+      data: { tenantId, phone, phoneKey: phoneMatchKey(phone), name: name || null, balance: amount },
     });
 
     await tx.abonementTransaction.create({
@@ -370,7 +422,9 @@ export async function createWalletWithTopupArbitrary(
 export async function createWalletEmpty(rawPhone: string, name: string | null, tenantId: string) {
   const phone = normalizePhone(rawPhone);
   if (!phone) throw new Error("INVALID_PHONE");
-  return prisma.abonementWallet.create({ data: { tenantId, phone, name: name || null, balance: 0 } });
+  return prisma.abonementWallet.create({
+    data: { tenantId, phone, phoneKey: phoneMatchKey(phone), name: name || null, balance: 0 },
+  });
 }
 
 /**
@@ -392,7 +446,7 @@ export async function createWalletWithTopup(rawPhone: string, name: string | nul
     if (legs && legs.length > 0) validateSplitLegs(legs, Number(plan.price), ABONEMENT_TOPUP_PAYMENT_METHODS);
 
     const wallet = await tx.abonementWallet.create({
-      data: { tenantId, phone, name: name || null, balance: plan.creditAmount },
+      data: { tenantId, phone, phoneKey: phoneMatchKey(phone), name: name || null, balance: plan.creditAmount },
     });
 
     await tx.abonementTransaction.create({
@@ -489,7 +543,7 @@ export async function createWalletWithAdjustment(
 
   const wallet = await prisma.$transaction(async (tx) => {
     const wallet = await tx.abonementWallet.create({
-      data: { tenantId, phone, name: name || null, balance: amount },
+      data: { tenantId, phone, phoneKey: phoneMatchKey(phone), name: name || null, balance: amount },
     });
 
     await tx.abonementTransaction.create({
