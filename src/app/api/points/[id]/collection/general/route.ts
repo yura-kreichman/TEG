@@ -69,7 +69,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
   // списывали пересекающуюся долю, уводя зону в минус больше, чем реально
   // забрано наличных — тот же класс гонки, что уже закрыт для
   // chargeSelfServiceAdvanceToZones/settleOutstandingCollectionAdvance).
-  const { poolDeficit, advance } = await prisma.$transaction(async (tx) => {
+  const { poolDeficit, advance, breakdown } = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pointId}))`;
 
     const balanceByZone = await getZoneBalances(
@@ -161,7 +161,24 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
       });
     }
 
-    return { poolDeficit, advance };
+    // Разбивка наружу (запрос пользователя 2026-08-12) — для слипа
+    // инкассации: сумма делится между зонами, снимается с касс Абонементов и
+    // Товаров и превращается в «Аванс инкассации», и на бумажке должно быть
+    // видно, из чего она сложилась. Ничего дополнительно не считаем — всё
+    // это уже посчитано выше для самих проводок.
+    const zoneShares = zones
+      .map((zone, i) => ({ name: zone.name, amount: Math.abs(shares[i]) }))
+      .filter((z) => z.amount > 0);
+    return {
+      poolDeficit,
+      advance,
+      breakdown: {
+        zones: zoneShares,
+        abonement: abonementSweepPortion,
+        goods: goodsSweepPortion,
+        advance,
+      },
+    };
   });
 
   // В уведомлении — именно введённая сумма, не + poolDeficit (см. комментарий
@@ -169,5 +186,5 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
   // пользователем 2026-07-25).
   dispatchCollection(owner.tenantId, amountNumber, point.name, null).catch(() => {});
 
-  return NextResponse.json({ ok: true, settledPool: poolDeficit, advance });
+  return NextResponse.json({ ok: true, settledPool: poolDeficit, advance, breakdown });
 }

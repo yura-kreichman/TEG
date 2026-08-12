@@ -57,7 +57,7 @@ export async function POST(request: Request) {
   // /api/points/[id]/collection/general: двойной клик или гонка владелец+
   // оператор на одной точке читали одни и те же остатки до того, как первый
   // запрос успевал их списать).
-  const { poolDeficit, advance } = await prisma.$transaction(async (tx) => {
+  const { poolDeficit, advance, breakdown } = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${ctx.point.id}))`;
 
     const balanceByZone = await getZoneBalances(
@@ -141,12 +141,29 @@ export async function POST(request: Request) {
       });
     }
 
-    return { poolDeficit, advance };
+    // Разбивка наружу (запрос пользователя 2026-08-12) — для слипа
+    // инкассации: сумма делится между зонами, снимается с касс Абонементов и
+    // Товаров и превращается в «Аванс инкассации», и на бумажке должно быть
+    // видно, из чего она сложилась. Ничего дополнительно не считаем — всё
+    // это уже посчитано выше для самих проводок.
+    const zoneShares = zones
+      .map((zone, i) => ({ name: zone.name, amount: Math.abs(shares[i]) }))
+      .filter((z) => z.amount > 0);
+    return {
+      poolDeficit,
+      advance,
+      breakdown: {
+        zones: zoneShares,
+        abonement: abonementSweepPortion,
+        goods: goodsSweepPortion,
+        advance,
+      },
+    };
   });
 
   // В уведомлении — именно введённая сумма (см. комментарий у той же строки в
   // /api/zones/[id]/collection — тот же баг, найден пользователем 2026-07-25).
   dispatchCollection(ctx.point.tenantId, amountNumber, ctx.point.name, ctx.operator.name).catch(() => {});
 
-  return NextResponse.json({ ok: true, settledPool: poolDeficit, advance });
+  return NextResponse.json({ ok: true, settledPool: poolDeficit, advance, breakdown });
 }

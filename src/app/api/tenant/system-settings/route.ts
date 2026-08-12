@@ -4,6 +4,8 @@ import { requireOwner } from "@/lib/require-owner";
 import { BG_EFFECT_VALUES } from "@/components/bg-effects";
 import { normalizeBgEffect } from "@/components/bg-effects/shared";
 import { isSelfServicePayoutMode } from "@/lib/work-time";
+import { isRichContentEmpty, validateRichContent } from "@/lib/rich-text";
+import { Prisma } from "@/generated/prisma/client";
 
 // Настройки → Система (запрос пользователя 2026-07-20) — страница задумана
 // расширяемой ("первый пункт там будет"). Тумблеры:
@@ -13,13 +15,13 @@ import { isSelfServicePayoutMode } from "@/lib/work-time";
 //   фискальных чеков) — сам выбор принтера сюда не переедет, он привязан к
 //   устройству/точке, не к тенанту (см. комментарий у поля в schema.prisma).
 // - receiptShowLogo/receiptShowTenantName: что показывать в шапке квитанции.
-// - Футер квитанции УДАЛЁН целиком (запрос пользователя 2026-07-21) —
-//   реальный, так и не решённый баг: непустой футер 100% гарантированно
-//   портил печать на конкретном Bluetooth ESC/POS-мосту, независимо от
-//   формата текста (richtext/обычный) и длины документа — несколько раундов
-//   гипотез (см. историю в src/lib/print/receipt-document.ts до этой правки)
-//   ни разу не подтвердились на реальном устройстве. Решили не тратить
-//   больше времени на этот конкретный принтер/мост и убрать функцию.
+// - receiptFooterContent: подвал квитанции, richtext. ВОЗВРАЩЁН 2026-08-12
+//   после того, как был удалён целиком 2026-07-21 — тогда любой непустой
+//   подвал ломал печать на Bluetooth ESC/POS-мосту, и четыре круга гипотез
+//   реальное железо опровергло. Настоящая причина ТЕХ поломок нашлась
+//   2026-07-25 и к подвалу отношения не имела (преждевременный afterprint на
+//   Android стирал содержимое посреди задания). Полная история и условия
+//   отката — у поля Tenant.receiptFooterContent в prisma/schema.prisma.
 export async function GET() {
   const owner = await requireOwner();
   if (!owner) {
@@ -39,6 +41,7 @@ export async function GET() {
       receiptShowLogo: true,
       receiptShowTenantName: true,
       receiptCompactHeader: true,
+      receiptFooterContent: true,
       instructionsEnabled: true,
       tasksEnabled: true,
       landingEnabled: true,
@@ -70,6 +73,8 @@ export async function GET() {
     receiptShowLogo: tenant?.receiptShowLogo ?? true,
     receiptShowTenantName: tenant?.receiptShowTenantName ?? true,
     receiptCompactHeader: tenant?.receiptCompactHeader ?? false,
+    // Подвал квитанции (возвращён 2026-08-12) — null у тех, кто не заполнял.
+    receiptFooterContent: tenant?.receiptFooterContent ?? null,
     // Плашка "Модули" (запрос пользователя 2026-07-22) — первая на странице,
     // множественный выбор, см. schema.prisma у Tenant для полного объяснения
     // каждого поля.
@@ -97,6 +102,7 @@ export async function PATCH(request: Request) {
     receiptShowLogo?: boolean;
     receiptShowTenantName?: boolean;
     receiptCompactHeader?: boolean;
+    receiptFooterContent?: Prisma.InputJsonValue | typeof Prisma.DbNull;
     instructionsEnabled?: boolean;
     tasksEnabled?: boolean;
     landingEnabled?: boolean;
@@ -135,6 +141,22 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
     }
     data.selfServicePayoutMode = body.selfServicePayoutMode;
+  }
+
+  // Подвал квитанции — richtext, валидируется тем же белым списком узлов и
+  // марок, что Инструктажи и Лендинг. null приходит от кнопки "очистить":
+  // Prisma.DbNull, а не JS null — иначе Prisma поймёт это как JSON-значение
+  // null внутри колонки, а не как "поле пустое".
+  if (body.receiptFooterContent !== undefined) {
+    if (body.receiptFooterContent === null) {
+      data.receiptFooterContent = Prisma.DbNull;
+    } else if (validateRichContent(body.receiptFooterContent)) {
+      data.receiptFooterContent = isRichContentEmpty(body.receiptFooterContent)
+        ? Prisma.DbNull
+        : (body.receiptFooterContent as Prisma.InputJsonValue);
+    } else {
+      return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
+    }
   }
 
   // bgEffect — строка из фиксированного набора (не boolean), свой отдельный

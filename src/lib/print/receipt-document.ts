@@ -1,3 +1,5 @@
+import { isRichContentEmpty, type PMNode } from "@/lib/rich-text";
+
 // Общая инфраструктура печати (запрос пользователя 2026-07-20) — чистый
 // браузер, без доп. софта. Самодостаточная разметка/CSS (без Tailwind/
 // CSS-переменных приложения) переиспользуется в двух РАЗНЫХ местах со своей
@@ -56,8 +58,11 @@ export interface PrintDocumentData {
    * subtitle под ним (например, телефон), запрос пользователя 2026-07-20. */
   subtitle?: string | { primary: string; secondary?: string };
   sections: PrintSection[];
-  /** Итоговая строка — крупнее и жирным, отдельно от секций. */
-  totalLine?: PrintLine;
+  /** Итоговая строка — крупнее и жирным, отдельно от секций. Поставь
+   * `stacked: true`, если подпись длинная: тогда она встанет отдельной
+   * строкой, а сумма — под ней крупно, вместо того чтобы делить одну строку
+   * и ломаться на узком рулоне. */
+  totalLine?: PrintLine & { stacked?: boolean };
 }
 
 export interface ReceiptBranding {
@@ -76,6 +81,11 @@ export interface ReceiptBranding {
    * per-браузер у Владельца — см. use-print.ts). "a4" НЕ форсирует @page
    * size — см. комментарий у receiptCss ниже. */
   paperWidth: ReceiptPaperWidth;
+  /** Подвал квитанции (Настройки → Система) — ProseMirror JSON, произвольный
+   * текст Владельца внизу каждого документа. Возвращён 2026-08-12 после
+   * удаления 2026-07-21 — историю и условия отката см. у поля
+   * Tenant.receiptFooterContent в prisma/schema.prisma. */
+  footerContent?: PMNode | null;
 }
 
 export type ReceiptPaperWidth = "58" | "80" | "a4";
@@ -225,7 +235,8 @@ function receiptCss(paperWidth: ReceiptPaperWidth): string {
   .receipt-section,
   .receipt-line,
   .receipt-total,
-  .receipt-cut-line {
+  .receipt-cut-line,
+  .receipt-footer {
     break-inside: avoid;
     page-break-inside: avoid;
   }
@@ -314,6 +325,45 @@ function receiptCss(paperWidth: ReceiptPaperWidth): string {
     font-size: 18px;
     font-weight: 800;
   }
+  /* Итог в две строки: подпись сверху обычным кеглем, сумма под ней крупно
+     (запрос пользователя 2026-08-12, реальная распечатка — "К выдаче за всё
+     время" и "2 319,93 ₽" в одной flex-строке на 58мм не помещались, знак
+     валюты уезжал на следующую строку и сумма ломалась пополам). Отдельный
+     модификатор, а не правка .receipt-total: у коротких документов (чек,
+     слип инкассации) однострочный итог читается лучше и ломать его незачем. */
+  .receipt-total.stacked {
+    display: block;
+    text-align: center;
+  }
+  .receipt-total.stacked .label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .receipt-total.stacked .value {
+    display: block;
+    margin-top: 2px;
+    font-size: 26px;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Подвал квитанции. Кегль совпадает с .receipt-subtitle (строка даты) —
+     это тоже служебная приписка, а не содержание документа.
+     overflow-wrap: break-word обязателен — длинное «слово» без пробелов
+     (ссылка, номер) иначе вылезает за 58мм вместо переноса: обычный перенос
+     рвёт строку только по пробелам. */
+  .receipt-footer {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px dashed #999;
+    font-size: 12.65px;
+    line-height: 1.35;
+  }
+  .receipt-footer p { margin: 0 0 3px; overflow-wrap: break-word; }
+  .receipt-footer p:last-child { margin-bottom: 0; }
+  .receipt-footer ul, .receipt-footer ol { margin: 0 0 3px; padding-left: 16px; }
+  .receipt-footer .rt-h1 { font-size: 15px; font-weight: 700; margin: 0 0 3px; }
+  .receipt-footer .rt-h2 { font-size: 13.5px; font-weight: 700; margin: 0 0 3px; }
   /* Линия отреза (запрос пользователя 2026-07-20) — в конце каждой
      квитанции: иконка ножниц + чёрная пунктирная линия. Изначальные 2мм
      смотрелись слишком жирно (фидбек того же дня) — уменьшено до 0.5мм. */
@@ -342,6 +392,60 @@ function renderCutLineHtml(): string {
       <span class="receipt-cut-dash"></span>
     </div>
   `;
+}
+
+/**
+ * PMNode → строка HTML для подвала квитанции. Отдельно от
+ * components/landing/rich-text.tsx (тот отдаёт JSX для React-страницы) —
+ * здесь документ собирается как строка и React в этом пути нет вовсе.
+ *
+ * Набор узлов и марок — тот же белый список, что валидирует сервер
+ * (ALLOWED_CHILD_NODE_TYPES/ALLOWED_MARK_TYPES в lib/rich-text.ts). Всё
+ * незнакомое рендерится своим содержимым без обёртки: подвал должен
+ * деградировать в текст, а не исчезать, если редактор однажды научится
+ * новому узлу раньше этого файла.
+ */
+function renderFooterNode(node: PMNode): string {
+  const children = (node.content ?? []).map(renderFooterNode).join("");
+  switch (node.type) {
+    case "text": {
+      let html = escapeHtml(node.text ?? "");
+      for (const mark of node.marks ?? []) {
+        if (mark.type === "bold") html = `<strong>${html}</strong>`;
+        else if (mark.type === "italic") html = `<em>${html}</em>`;
+        else if (mark.type === "underline") html = `<u>${html}</u>`;
+      }
+      return html;
+    }
+    case "hardBreak":
+      return "<br>";
+    case "horizontalRule":
+      return "<hr>";
+    case "paragraph":
+      return `<p>${children}</p>`;
+    case "heading":
+      // Классы, а не настоящие h1/h2 — как на лендинге: в квитанции никакой
+      // семантики заголовков нет, нужен только размер.
+      return `<div class="${node.attrs?.level === 2 ? "rt-h2" : "rt-h1"}">${children}</div>`;
+    case "bulletList":
+      return `<ul>${children}</ul>`;
+    case "orderedList":
+      return `<ol>${children}</ol>`;
+    case "listItem":
+      return `<li>${children}</li>`;
+    case "blockquote":
+      return `<blockquote>${children}</blockquote>`;
+    default:
+      return children;
+  }
+}
+
+function renderFooterHtml(content: PMNode | null | undefined): string {
+  // isRichContentEmpty, а не проверка строки на пустоту: очищенное состояние
+  // ProseMirror — это `<p></p>`, непустая строка (реальный баг прошлой версии
+  // подвала, 2026-07-20: пустой подвал рисовал видимую рамку с отбивкой).
+  if (!content || isRichContentEmpty(content)) return "";
+  return `<div class="receipt-footer">${renderFooterNode(content)}</div>`;
 }
 
 function renderSection(section: PrintSection): string {
@@ -374,7 +478,7 @@ export function buildReceiptBodyHtml(data: PrintDocumentData, branding: ReceiptB
   const subtitle = renderSubtitle(data.subtitle);
   const sections = data.sections.map(renderSection).join("");
   const total = data.totalLine
-    ? `<div class="receipt-total"><span>${escapeHtml(data.totalLine.label)}</span><span>${escapeHtml(data.totalLine.value)}</span></div>`
+    ? `<div class="receipt-total${data.totalLine.stacked ? " stacked" : ""}"><span class="label">${escapeHtml(data.totalLine.label)}</span><span class="value">${escapeHtml(data.totalLine.value)}</span></div>`
     : "";
   const header = branding.compactHeader
     ? `
@@ -402,6 +506,9 @@ export function buildReceiptBodyHtml(data: PrintDocumentData, branding: ReceiptB
   // документа, после всего остального содержимого, не отдельным условием —
   // принтеру всё равно нечего печатать дальше, это финальный элемент.
   const cutLine = renderCutLineHtml();
+  // Подвал — между итогом и линией отреза: это приписка ко всему документу,
+  // а отрез по-прежнему остаётся последним, ниже него печатать нечего.
+  const footer = renderFooterHtml(branding.footerContent);
 
   return `
     <div class="receipt-paper">
@@ -409,6 +516,7 @@ export function buildReceiptBodyHtml(data: PrintDocumentData, branding: ReceiptB
         ${header}
         ${sections}
         ${total}
+        ${footer}
         ${cutLine}
       </div>
     </div>

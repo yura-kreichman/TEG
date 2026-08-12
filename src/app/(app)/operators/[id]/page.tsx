@@ -399,7 +399,10 @@ export default function OperatorCardPage() {
       // "за всё время" прямо в подписи итога — баланс скользящий, а блоки
       // выше period-scoped. Без этой оговорки сотрудник сложит начисленное
       // минус авансы, получит другое число и решит, что бумажка врёт.
-      totalLine: { label: t.operators.statementToPayOut, value: money(balance!.toPayOut) },
+      // stacked (запрос пользователя 2026-08-12 по реальной распечатке):
+      // подпись и сумма не влезали в одну строку на 58мм, знак валюты уезжал
+      // на следующую строку и число ломалось пополам.
+      totalLine: { label: t.operators.statementToPayOut, value: money(balance!.toPayOut), stacked: true },
     };
   }
 

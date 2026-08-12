@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
+import { InfoTooltip } from "@/components/info-tooltip";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -141,7 +142,13 @@ export default function PointDetailPage() {
         <div className="flex w-full max-w-2xl md:max-w-3xl lg:max-w-4xl flex-col gap-1">
           <BackLink label={t.zonesList.allPoints} href="/points" className="mb-2" />
           <div className="flex items-start justify-between gap-3">
-            <h1 className="text-screen-title">{t.zonesList.title}</h1>
+            {/* Та же справка, что у заголовка "Точки", но с другой стороны:
+                там объясняется, что точка содержит, здесь — что зона содержит
+                и чем отличается от актива. */}
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-screen-title">{t.zonesList.title}</h1>
+              <InfoTooltip text={t.zonesList.structureHint} />
+            </div>
             <PressableScale>
               <Button
                 variant="outline"

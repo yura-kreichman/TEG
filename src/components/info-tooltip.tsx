@@ -46,11 +46,14 @@ export function InfoTooltip({
 
   // useLayoutEffect, не useEffect — позицию надо посчитать до первой отрисовки
   // панели, иначе она успевает мигнуть в левом верхнем углу экрана.
+  //
+  // При закрытии позицию НЕ сбрасываем (это ещё и ловил бы
+  // react-hooks/set-state-in-effect): пересчёт при следующем открытии всё
+  // равно происходит в этом же layout-эффекте, то есть до кадра отрисовки —
+  // устаревшие координаты на экран попасть не успевают. Сброс же в null
+  // прямо во время exit-анимации схлопнул бы панель в угол на её глазах.
   useLayoutEffect(() => {
-    if (!open) {
-      setPosition(null);
-      return;
-    }
+    if (!open) return;
     const trigger = triggerRef.current;
     const panel = panelRef.current;
     if (!trigger || !panel) return;
@@ -141,7 +144,11 @@ export function InfoTooltip({
                   // иначе нечего было бы мерить (см. useLayoutEffect выше).
                   visibility: position ? "visible" : "hidden",
                 }}
-                className="fixed z-[60] w-max max-w-[min(20rem,calc(100vw-2rem))] rounded-control border border-border bg-popover px-3 py-2 text-caption-airbnb leading-snug text-popover-foreground shadow-floating"
+                // Кегль тот же, что у подписи контрола рядом (text-body-airbnb),
+                // а не caption (запрос пользователя 2026-08-12: "слишком мелко
+                // и не видно") — это связный текст на несколько строк, его
+                // читают, а не скользят взглядом, поэтому и leading-relaxed.
+                className="fixed z-60 w-max max-w-[min(22rem,calc(100vw-2rem))] rounded-control border border-border bg-popover px-3.5 py-2.5 text-body-airbnb leading-relaxed text-popover-foreground shadow-floating"
               >
                 {text}
               </motion.div>

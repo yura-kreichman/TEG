@@ -25,6 +25,11 @@ import { useActionToast } from "@/hooks/use-action-toast";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
 import { playErrorChime } from "@/lib/beep";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
+import {
+  breakdownToSlipLines,
+  buildCollectionSlipData,
+  type CollectionBreakdown,
+} from "@/lib/print/collection-slip";
 import type { SelfServicePayoutRights } from "@/lib/self-service-payout";
 
 interface ZoneOption {
@@ -137,7 +142,15 @@ export default function OperatorHomePage() {
   const { saved: collectionSaved, pulse: collectionPulse } = useSavePulse();
   // Модуль печати (запрос пользователя 2026-07-20) — слип инкассации, кнопка
   // печати по требованию сразу после успешной инкассации.
-  const [lastCollection, setLastCollection] = useState<{ amount: number; zoneName: string | null } | null>(null);
+  // breakdown приходит только от ОБЩЕЙ инкассации (по точке) — там сумма
+  // реально делится между зонами и пулами. У зонной и пуловой делить нечего:
+  // вся сумма относится к одной названной строке, и слип печатается без
+  // секции разбивки.
+  const [lastCollection, setLastCollection] = useState<{
+    amount: number;
+    zoneName: string | null;
+    breakdown: CollectionBreakdown | null;
+  } | null>(null);
 
   const [tasks, setTasks] = useState<OperatorTask[]>([]);
   const [doneToday, setDoneToday] = useState(0);
@@ -425,25 +438,32 @@ export default function OperatorHomePage() {
       setShowCollection(false);
       setCollectionAmount("");
       if (printAvailable.available) {
-        setLastCollection({ amount: parseMoneyInput(collectionAmount), zoneName });
+        setLastCollection({ amount: parseMoneyInput(collectionAmount), zoneName, breakdown: data.breakdown ?? null });
       }
     });
   }
 
   function buildCollectionReceiptData(c: NonNullable<typeof lastCollection>): PrintDocumentData {
-    return {
+    return buildCollectionSlipData({
       title: t.money.collectionSlipTitle,
       subtitle: `${new Date().toLocaleString(locale)}${printAvailable.operatorName ? ` · ${printAvailable.operatorName}` : ""}`,
-      sections: [
-        {
-          lines: [
-            { label: t.operatorApp.pointLabel, value: pointName ?? "" },
-            ...(c.zoneName ? [{ label: t.operatorApp.cashPointLabel, value: c.zoneName }] : []),
-          ],
-        },
-      ],
-      totalLine: { label: t.money.collectionAmountLabel, value: formatMoneyWithCurrency(c.amount, locale, currency) },
-    };
+      // Зонная инкассация: название зоны и есть адрес денег, оно встаёт
+      // строкой рядом с точкой. Общая — там зона не одна, адреса перечислены
+      // в разбивке ниже.
+      pointLabel: c.zoneName ? `${t.operatorApp.pointLabel} · ${t.operatorApp.cashPointLabel}` : t.operatorApp.pointLabel,
+      pointName: c.zoneName ? `${pointName ?? ""} · ${c.zoneName}` : (pointName ?? ""),
+      breakdownTitle: t.money.collectionBreakdownTitle,
+      lines: c.breakdown
+        ? breakdownToSlipLines(c.breakdown, {
+            abonement: t.money.abonementCashLabel,
+            goods: t.goods.navLabel,
+            advance: t.money.collectionAdvanceLabel,
+          })
+        : [],
+      totalLabel: t.money.collectionAmountLabel,
+      total: formatMoneyWithCurrency(c.amount, locale, currency),
+      formatMoney: (value) => formatMoneyWithCurrency(value, locale, currency),
+    });
   }
 
   function openCollection() {

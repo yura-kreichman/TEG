@@ -14,6 +14,11 @@ import type { Dictionary } from "@/lib/i18n";
 import { OwnerShell } from "@/components/owner-shell";
 import { useOwnerHasPrinterLocal, useOwnerPaperWidthLocal } from "@/hooks/use-print";
 import { PrintButton } from "@/components/print/print-button";
+import { InstructionEditor } from "@/components/instructions/instruction-editor";
+import { PressableScale } from "@/components/motion/pressable-scale";
+import { SaveButton } from "@/components/ui/save-button";
+import { useSavePulse } from "@/hooks/use-save-pulse";
+import { EMPTY_DOC, isRichContentEmpty, type PMNode } from "@/lib/rich-text";
 import { buildReceiptHtml, type PrintDocumentData, type ReceiptPaperWidth } from "@/lib/print/receipt-document";
 import { cn } from "@/lib/utils";
 
@@ -120,6 +125,21 @@ export default function SystemSettingsPage() {
   // тенанта + заголовок документа рядом с ним, а не раскладка в столбик по
   // центру — короче по высоте, заметно на рулоне термопринтера.
   const [compactHeader, setCompactHeader] = useState(false);
+  // Подвал квитанции (возвращён 2026-08-12) — richtext, сохраняется кнопкой.
+  const [footerContent, setFooterContent] = useState<PMNode>(EMPTY_DOC);
+  const { saved: footerSaved, pulse: footerPulse } = useSavePulse();
+
+  function saveFooter() {
+    // Пустой документ уходит как null — сервер положит Prisma.DbNull, и
+    // подвал перестанет рендериться вовсе (а не как пустая рамка с отбивкой,
+    // на чём эта функция уже спотыкалась в прошлой жизни).
+    const payload = isRichContentEmpty(footerContent) ? null : footerContent;
+    fetch("/api/tenant/system-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ receiptFooterContent: payload }),
+    }).then(() => footerPulse(() => {}));
+  }
   const [ownerHasPrinter, setOwnerHasPrinter] = useOwnerHasPrinterLocal();
   // Ширина рулона/тип принтера (запрос пользователя 2026-07-26, реальный
   // баг: "auto" в @page не подстраивается под физический рулон в
@@ -141,6 +161,7 @@ export default function SystemSettingsPage() {
           setShowLogo(data.receiptShowLogo ?? true);
           setShowTenantName(data.receiptShowTenantName ?? true);
           setCompactHeader(data.receiptCompactHeader ?? false);
+          setFooterContent(data.receiptFooterContent ?? EMPTY_DOC);
         }
         setChecking(false);
       });
@@ -193,6 +214,9 @@ export default function SystemSettingsPage() {
     showTenantName,
     compactHeader,
     paperWidth,
+    // Подвал в превью — живой, из редактора выше: превью и реальная печать
+    // собираются одной buildReceiptHtml, расходиться им нечем.
+    footerContent,
   });
 
   // Только булевы тумблеры: selfServicePayoutMode — режим из трёх значений,
@@ -421,6 +445,26 @@ export default function SystemSettingsPage() {
                     </div>
                   </div>
 
+                  {/* Подвал квитанции — произвольный текст Владельца внизу
+                      каждого документа. Тот же примитивный редактор, что в
+                      Инструктажах и Лендинге (запрос пользователя
+                      2026-08-12: "редактор футера как в лендинге").
+                      Сохраняется явной кнопкой, а не по каждому нажатию
+                      клавиши, — в отличие от тумблеров выше: набор текста
+                      иначе слал бы PATCH на каждый символ. */}
+                  <div className="flex flex-col gap-2 border-t border-border pt-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-body-airbnb">{t.settings.systemReceiptFooterLabel}</span>
+                      <InfoTooltip text={t.settings.systemReceiptFooterHint} />
+                    </div>
+                    <InstructionEditor content={footerContent} onChange={setFooterContent} />
+                    <div className="flex justify-end">
+                      <PressableScale>
+                        <SaveButton onClick={saveFooter} saved={footerSaved} className="rounded-lg" />
+                      </PressableScale>
+                    </div>
+                  </div>
+
                   <div className="border-t border-border pt-3">
                     <p className="mb-2 text-caption-airbnb text-muted-foreground">{t.settings.systemReceiptPreviewLabel}</p>
                     {/* Фон рисует сам HTML внутри iframe (RECEIPT_CSS,
@@ -455,7 +499,7 @@ export default function SystemSettingsPage() {
                       <PrintButton
                         label={t.settings.systemReceiptTestPrintButton}
                         data={samplePrintData(t)}
-                        branding={{ tenantName, logoUrl, showLogo, showTenantName, compactHeader, paperWidth }}
+                        branding={{ tenantName, logoUrl, showLogo, showTenantName, compactHeader, paperWidth, footerContent }}
                         className="gap-1.5 rounded-lg"
                       />
                     </div>

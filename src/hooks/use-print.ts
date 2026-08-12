@@ -75,7 +75,6 @@ export function useOwnerPrintAvailable(): PrintAvailability {
     printingEnabled: false,
     branding: EMPTY_BRANDING,
   });
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetch("/api/tenant/system-settings")
       .then((res) => (res.ok ? res.json() : null))
@@ -89,6 +88,7 @@ export function useOwnerPrintAvailable(): PrintAvailability {
             showLogo: data.receiptShowLogo ?? true,
             showTenantName: data.receiptShowTenantName ?? true,
             compactHeader: data.receiptCompactHeader ?? false,
+            footerContent: data.receiptFooterContent ?? null,
             // Заполняется ниже, отдельно от серверного fetch — источник
             // локальный (см. paperWidthLocal), не приходит с сервером.
             paperWidth: "58",
@@ -96,7 +96,6 @@ export function useOwnerPrintAvailable(): PrintAvailability {
         });
       });
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
   return {
     available: state.printingEnabled && hasPrinterLocal,
     branding: { ...state.branding, paperWidth: paperWidthLocal },
@@ -110,7 +109,6 @@ export function useOperatorPrintAvailable(): PrintAvailability {
     branding: EMPTY_BRANDING,
     operatorName: null,
   });
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetch("/api/operator/print-branding")
       .then((res) => (res.ok ? res.json() : null))
@@ -124,12 +122,12 @@ export function useOperatorPrintAvailable(): PrintAvailability {
             showLogo: data.receiptShowLogo ?? true,
             showTenantName: data.receiptShowTenantName ?? true,
             compactHeader: data.receiptCompactHeader ?? false,
+            footerContent: data.receiptFooterContent ?? null,
             paperWidth: data.receiptPaperWidth ?? "58",
           },
           operatorName: data.operatorName ?? null,
         });
       });
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
   return state;
 }

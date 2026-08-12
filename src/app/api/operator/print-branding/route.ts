@@ -27,6 +27,7 @@ export async function GET() {
       receiptShowLogo: true,
       receiptShowTenantName: true,
       receiptCompactHeader: true,
+      receiptFooterContent: true,
       bgEffect: true,
       accentScheme: true,
     },
@@ -39,6 +40,7 @@ export async function GET() {
     receiptShowLogo: tenant?.receiptShowLogo ?? true,
     receiptShowTenantName: tenant?.receiptShowTenantName ?? true,
     receiptCompactHeader: tenant?.receiptCompactHeader ?? false,
+    receiptFooterContent: tenant?.receiptFooterContent ?? null,
     // Не про печать — переиспользует этот же роут ради tenantId-запроса,
     // который PWA Сотрудника и так уже делает при монтировании (запрос
     // пользователя 2026-07-27, тот же приём, что logoUrl выше).

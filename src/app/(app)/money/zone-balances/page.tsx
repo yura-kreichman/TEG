@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { Banknote, Check, ChevronLeft, ChevronRight, Coins, Crown, Gift, HandCoins, MapPin, Pencil, PiggyBank, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
@@ -20,6 +20,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { PrintButton } from "@/components/print/print-button";
+import {
+  breakdownToSlipLines,
+  buildCollectionSlipData,
+  type CollectionBreakdown,
+} from "@/lib/print/collection-slip";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { formatTime } from "@/lib/datetime-format";
 import { cn } from "@/lib/utils";
@@ -154,7 +159,9 @@ export default function ZoneBalancesPage() {
   // Модуль печати (запрос пользователя 2026-07-20) — слип инкассации, кнопка
   // печати по требованию сразу после успешной инкассации, никогда не
   // автоматически.
-  const [lastCollection, setLastCollection] = useState<{ amount: number; pointName: string; zoneName: string | null } | null>(
+  // breakdown приходит только от ОБЩЕЙ инкассации по точке — у зонной и
+  // пуловой делить нечего, слип печатается без секции разбивки.
+  const [lastCollection, setLastCollection] = useState<{ amount: number; pointName: string; zoneName: string | null; breakdown: CollectionBreakdown | null } | null>(
     null
   );
 
@@ -395,7 +402,7 @@ export default function ZoneBalancesPage() {
         setCollectionOpen(false);
         setCollectionAmount("");
         if (printAvailable.available) {
-          setLastCollection({ amount: parseMoneyInput(collectionAmount), pointName, zoneName });
+          setLastCollection({ amount: parseMoneyInput(collectionAmount), pointName, zoneName, breakdown: data.breakdown ?? null });
         }
       });
     } finally {
@@ -404,19 +411,25 @@ export default function ZoneBalancesPage() {
   }
 
   function buildCollectionReceiptData(c: NonNullable<typeof lastCollection>): PrintDocumentData {
-    return {
+    return buildCollectionSlipData({
       title: t.money.collectionSlipTitle,
       subtitle: `${new Date().toLocaleString(locale)} · ${t.common.ownerLabel}`,
-      sections: [
-        {
-          lines: [
-            { label: t.money.pointLabel, value: c.pointName },
-            ...(c.zoneName ? [{ label: t.operatorApp.cashPointLabel, value: c.zoneName }] : []),
-          ],
-        },
-      ],
-      totalLine: { label: t.money.collectionAmountLabel, value: formatMoneyWithCurrency(c.amount, locale, currency) },
-    };
+      // Зонная инкассация: название зоны и есть адрес денег, оно встаёт
+      // строкой рядом с точкой. У общей адреса перечислены в разбивке ниже.
+      pointLabel: c.zoneName ? `${t.money.pointLabel} · ${t.operatorApp.cashPointLabel}` : t.money.pointLabel,
+      pointName: c.zoneName ? `${c.pointName} · ${c.zoneName}` : c.pointName,
+      breakdownTitle: t.money.collectionBreakdownTitle,
+      lines: c.breakdown
+        ? breakdownToSlipLines(c.breakdown, {
+            abonement: t.money.abonementCashLabel,
+            goods: t.goods.navLabel,
+            advance: t.money.collectionAdvanceLabel,
+          })
+        : [],
+      totalLabel: t.money.collectionAmountLabel,
+      total: formatMoneyWithCurrency(c.amount, locale, currency),
+      formatMoney: (value) => formatMoneyWithCurrency(value, locale, currency),
+    });
   }
 
   function isCalendarCurrentMonth() {
@@ -454,6 +467,36 @@ export default function ZoneBalancesPage() {
       return c.operatorName ? `${kind} · ${c.operatorName}` : kind;
     }
     return "";
+  }
+
+  /**
+   * Слип для уже проведённой инкассации — собирается из строк самого акта,
+   * без обращения к серверу: реестр уже отдаёт разбивку плоскими записями,
+   * склеенными по actKey, и это ровно те же зоны/пулы/аванс, что показывает
+   * свежий слип сразу после операции.
+   */
+  function buildActSlipData(act: { items: CollectionEntry[]; total: number }): PrintDocumentData {
+    const first = act.items[0]!;
+    return buildCollectionSlipData({
+      title: t.money.collectionSlipTitle,
+      // Дата САМОЙ инкассации, а не печати: бумажку могут распечатать
+      // назавтра, и «сегодня» на ней было бы прямой неправдой.
+      subtitle: `${new Date(first.occurredAt).toLocaleString(locale)}${
+        first.byOwner ? ` · ${t.common.ownerLabel}` : first.performerName ? ` · ${first.performerName}` : ""
+      }`,
+      pointLabel: t.money.pointLabel,
+      pointName: first.pointName,
+      breakdownTitle: t.money.collectionBreakdownTitle,
+      // Одна строка — это уже названный адрес денег, и он совпал бы с итогом:
+      // разбивку в этом случае не печатаем (см. buildCollectionSlipData).
+      lines:
+        act.items.length > 1
+          ? act.items.map((c) => ({ label: collectionEntryLabel(c), amount: c.amount }))
+          : [],
+      totalLabel: t.money.collectionAmountLabel,
+      total: formatMoneyWithCurrency(act.total, locale, currency),
+      formatMoney: (value) => formatMoneyWithCurrency(value, locale, currency),
+    });
   }
 
   const collectionGroups: { date: string; items: CollectionEntry[] }[] = [];
@@ -537,6 +580,11 @@ export default function ZoneBalancesPage() {
     }
     return result;
   }
+
+  // Самый свежий акт: группы идут от новой даты к старой, внутри группы акты
+  // тоже по убыванию времени — значит это первый акт первой группы. Только у
+  // него в реестре появляется кнопка печати.
+  const latestActKey = collectionGroups.length > 0 ? (splitIntoActs(collectionGroups[0]!.items)[0]?.key ?? null) : null;
 
   if (checking) {
     return (
@@ -880,8 +928,9 @@ export default function ZoneBalancesPage() {
                       {formatGroupDate(group.date)}
                     </p>
                     <div className="flex flex-col">
-                      {splitIntoActs(group.items).map((act) =>
-                        act.items.length > 1 ? (
+                      {splitIntoActs(group.items).map((act) => (
+                        <Fragment key={act.key}>
+                      {act.items.length > 1 ? (
                           <div key={act.key} className="border-t border-border py-1.5 first:border-t-0">
                             {/* Свёрнутый акт инкассации: одна строка вместо
                                 разбивки по зонам. Раскрывается тапом — внутри
@@ -1052,8 +1101,25 @@ export default function ZoneBalancesPage() {
                         )}
                         </div>
                           ))
-                        )
                       )}
+                      {/* Печать слипа задним числом — только у САМОЙ последней
+                          инкассации (решение пользователя 2026-08-12). Дальше
+                          в прошлое не идём сознательно: слип нужен в момент
+                          передачи денег из рук в руки, а кнопка у каждой
+                          строки реестра превратила бы историю в панель
+                          управления принтером. */}
+                      {act.key === latestActKey && printAvailable.available && (
+                        <div className="flex justify-end border-t border-border py-2">
+                          <PrintButton
+                            label={t.money.printCollectionSlipButton}
+                            data={buildActSlipData(act)}
+                            branding={printAvailable.branding}
+                            className="gap-1.5 rounded-lg"
+                          />
+                        </div>
+                      )}
+                        </Fragment>
+                      ))}
                     </div>
                   </div>
                 ))}
