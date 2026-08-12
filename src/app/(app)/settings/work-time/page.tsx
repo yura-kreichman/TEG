@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { BackLink } from "@/components/back-link";
+import { InfoTooltip } from "@/components/info-tooltip";
 import { useI18n } from "@/components/i18n-provider";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
@@ -189,7 +190,10 @@ export default function WorkTimeSettingsPage() {
                 Любое значение здесь рабочее: это просто час начала смены. */}
             <div>
               <div className="flex items-center justify-between gap-3">
-                <Label htmlFor="defaultShiftStart">{t.settings.defaultShiftStartLabel}</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="defaultShiftStart">{t.settings.defaultShiftStartLabel}</Label>
+                  <InfoTooltip text={t.settings.defaultShiftStartHint} />
+                </div>
                 <TimeInput
                   id="defaultShiftStart"
                   className="h-10 w-fit"
@@ -203,7 +207,6 @@ export default function WorkTimeSettingsPage() {
                   }}
                 />
               </div>
-              <p className="mt-1 text-caption-airbnb">{t.settings.defaultShiftStartHint}</p>
             </div>
             {/* Вопрос про бизнес, а не про архитектуру. Подпись обязательна:
                 без неё непонятно, зачем спрашивают — и половина ответит
@@ -227,10 +230,12 @@ export default function WorkTimeSettingsPage() {
 
           <SpringCard animate={false} hover={false} className="flex flex-col gap-3">
             <div>
-              <span className="mb-1 block text-[0.6875rem] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
-                {t.settings.startWindowCardLabel}
+              <span className="flex items-center gap-1.5">
+                <span className="text-[0.6875rem] font-bold tracking-[.08em] text-muted-foreground/70 uppercase">
+                  {t.settings.startWindowCardLabel}
+                </span>
+                <InfoTooltip text={t.settings.startWindowHint} />
               </span>
-              <p className="text-caption-airbnb">{t.settings.startWindowHint}</p>
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-border pt-3">

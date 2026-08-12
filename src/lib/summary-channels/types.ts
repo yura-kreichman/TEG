@@ -144,6 +144,13 @@ export interface ShiftCloseSummaryData {
   accrued: number;
   advanceAmount: number;
   bonusAmount: number;
+  /**
+   * Премия начислена в баланс, а не выдана наличными (режим
+   * Tenant.selfServicePayoutMode = "accrual", запрос пользователя
+   * 2026-08-12). Меняет только подпись строки в сводке: владельцу важно
+   * видеть, ушли деньги из кассы прямо сейчас или сотруднику записали долг.
+   */
+  bonusIsAccrual: boolean;
   toPayOut: number;
 }
 

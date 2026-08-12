@@ -102,7 +102,10 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   // Аванс намеренно не участвует — это не заработок, а уже выданные деньги.
   const bonusOps = await prisma.moneyOperation.findMany({
     where: {
-      type: "bonus_payout",
+      // Обе премии — и выданная наличными, и начисленная в баланс: для
+      // "Начислено" разницы нет, сотрудник заработал и то и другое
+      // (запрос пользователя 2026-08-12).
+      type: { in: ["bonus_payout", "bonus_accrual"] },
       occurredAt: { gte: start, lt: end },
       beneficiaryOperatorId: { not: null },
       ...(isAllPoints ? { tenantId: owner.tenantId } : { pointId }),

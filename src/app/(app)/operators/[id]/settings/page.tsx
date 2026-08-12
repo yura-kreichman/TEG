@@ -24,6 +24,7 @@ import {
   Ticket,
   Globe,
   Scale,
+  HandCoins,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -36,6 +37,12 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { ALL_LOCALES, LOCALE_FLAGS, LOCALE_NAMES, type Locale } from "@/lib/locales";
 import { BackLink } from "@/components/back-link";
+import { InfoTooltip } from "@/components/info-tooltip";
+import {
+  isSelfServicePayoutMode,
+  resolveSelfServicePayout,
+  type SelfServicePayoutMode,
+} from "@/lib/self-service-payout";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StatusChip } from "@/components/status-chip";
@@ -63,6 +70,7 @@ interface Profile {
   allowedZones: { id: string; name: string }[];
   timeTrackingMode: "manual" | "auto";
   overdraftAllowed: boolean;
+  selfServicePayoutAllowed: boolean;
   showDifferenceOnSubmit: boolean;
   skipShiftStartWindow: boolean;
   goodsAccess: boolean;
@@ -122,6 +130,12 @@ export default function OperatorSettingsPage() {
   // goodsAccess/revisionAccess прячутся целиком, если Владелец выключил
   // Товары на уровне тенанта, не только UI-скрытие самого раздела "Товары".
   const [goodsModuleEnabled, setGoodsModuleEnabled] = useState(true);
+  // Тенантный режим самообслуживания (Настройки → Система, запрос
+  // пользователя 2026-08-12) — нужен здесь, чтобы показать сотруднику статус
+  // всей компании в тултипе и погасить тумблер, когда самообслуживание
+  // выключено для всех: "надо отображать у Сотрудника какой сейчас статус у
+  // всего тенанта".
+  const [tenantPayoutMode, setTenantPayoutMode] = useState<SelfServicePayoutMode>("cash");
   const [currentRate, setCurrentRate] = useState<number | null>(null);
   const [allZones, setAllZones] = useState<ZoneOption[]>([]);
 
@@ -168,7 +182,13 @@ export default function OperatorSettingsPage() {
     setModuleEnabled(summaryRes.ok);
     if (summaryRes.ok) setCurrentRate((await summaryRes.json()).currentRate);
     if (zonesRes.ok) setAllZones((await zonesRes.json()).zones ?? []);
-    if (systemSettingsRes.ok) setGoodsModuleEnabled((await systemSettingsRes.json()).goodsEnabled ?? true);
+    if (systemSettingsRes.ok) {
+      const systemSettings = await systemSettingsRes.json();
+      setGoodsModuleEnabled(systemSettings.goodsEnabled ?? true);
+      setTenantPayoutMode(
+        isSelfServicePayoutMode(systemSettings.selfServicePayoutMode) ? systemSettings.selfServicePayoutMode : "cash"
+      );
+    }
     setChecking(false);
   }
 
@@ -311,6 +331,16 @@ export default function OperatorSettingsPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ overdraftAllowed: value }),
+    });
+  }
+
+  async function toggleSelfServicePayout(value: boolean) {
+    if (!profile) return;
+    setProfile({ ...profile, selfServicePayoutAllowed: value });
+    await fetch(`/api/operators/${params.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ selfServicePayoutAllowed: value }),
     });
   }
 
@@ -549,9 +579,9 @@ export default function OperatorSettingsPage() {
             />
             <div className="flex items-center gap-3 border-t border-border py-3.5">
               <Clock className="size-4 shrink-0 text-muted-foreground" />
-              <div className="min-w-0 flex-1">
-                <div className="text-body-airbnb">{t.operatorApp.workTime.timeTrackingModeLabel}</div>
-                <div className="text-caption-airbnb">{t.operators.timeTrackingModeHint}</div>
+              <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="text-body-airbnb">{t.operatorApp.workTime.timeTrackingModeLabel}</span>
+                <InfoTooltip text={t.operators.timeTrackingModeHint} />
               </div>
               <div className="flex shrink-0 overflow-hidden rounded-control border border-border bg-muted shadow-[inset_0_1px_2px_rgba(0,0,0,.08)]">
                 <button
@@ -587,21 +617,63 @@ export default function OperatorSettingsPage() {
             {timeTrackingError && (
               <p className="border-t border-border py-2 text-caption-airbnb text-destructive">{timeTrackingError}</p>
             )}
-            <div className="flex items-center gap-3 border-t border-border py-3.5">
-              <Wallet className="size-4 shrink-0 text-muted-foreground" />
-              <div className="min-w-0 flex-1">
-                <div className="text-body-airbnb">{t.operators.overdraftLabel}</div>
-                <div className="text-caption-airbnb">{t.operators.overdraftHint}</div>
+            {/* Самообслуживание: может ли сотрудник сам вносить аванс/премию
+                при завершении смены (запрос пользователя 2026-08-12). Режим
+                выбирает Владелец на весь тенант (Настройки → Система), здесь
+                только персональный ЗАПРЕТ поверх него — поэтому при
+                тенантном "forbidden" тумблер гаснет, но своё значение
+                сохраняет: включат тенант обратно — персональная настройка
+                останется той же, ничего не потеряно. */}
+            <div
+              className={cn(
+                "flex items-center gap-3 border-t border-border py-3.5",
+                tenantPayoutMode === "forbidden" && "opacity-50"
+              )}
+            >
+              <HandCoins className="size-4 shrink-0 text-muted-foreground" />
+              <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="text-body-airbnb">{t.operators.selfServicePayoutLabel}</span>
+                <InfoTooltip
+                  text={
+                    tenantPayoutMode === "forbidden"
+                      ? t.operators.selfServicePayoutTenantOffHint
+                      : tenantPayoutMode === "accrual"
+                        ? t.operators.selfServicePayoutTenantAccrualHint
+                        : t.operators.selfServicePayoutTenantCashHint
+                  }
+                />
               </div>
-              <Switch checked={profile.overdraftAllowed} onCheckedChange={toggleOverdraft} className="shrink-0" />
+              <Switch
+                checked={profile.selfServicePayoutAllowed}
+                disabled={tenantPayoutMode === "forbidden"}
+                onCheckedChange={toggleSelfServicePayout}
+                className="shrink-0"
+              />
             </div>
+            {/* Овердрафт — модификатор ЛИМИТА аванса, поэтому прячется
+                целиком там, где аванса нет вовсе: самообслуживание запрещено
+                (тенантом или лично) либо режим "только начисление", где
+                аванс сотруднику недоступен по устройству режима. Тот же
+                приём, что с goodsAccess/revisionAccess при выключенных
+                Товарах. На выдачу аванса ВЛАДЕЛЬЦЕМ ничего из этого не
+                влияет — она идёт мимо самообслуживания. */}
+            {resolveSelfServicePayout(tenantPayoutMode, profile.selfServicePayoutAllowed).canAdvance && (
+              <div className="flex items-center gap-3 border-t border-border py-3.5">
+                <Wallet className="size-4 shrink-0 text-muted-foreground" />
+                <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <span className="text-body-airbnb">{t.operators.overdraftLabel}</span>
+                  <InfoTooltip text={t.operators.overdraftHint} />
+                </div>
+                <Switch checked={profile.overdraftAllowed} onCheckedChange={toggleOverdraft} className="shrink-0" />
+              </div>
+            )}
             {/* Разница при сдаче итогов — соседний по смыслу тумблер: оба про
                 то, насколько сотруднику доверены денежные решения на месте. */}
             <div className="flex items-center gap-3 border-t border-border py-3.5">
               <Scale className="size-4 shrink-0 text-muted-foreground" />
-              <div className="min-w-0 flex-1">
-                <div className="text-body-airbnb">{t.operators.showDifferenceLabel}</div>
-                <div className="text-caption-airbnb">{t.operators.showDifferenceHint}</div>
+              <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="text-body-airbnb">{t.operators.showDifferenceLabel}</span>
+                <InfoTooltip text={t.operators.showDifferenceHint} />
               </div>
               <Switch
                 checked={profile.showDifferenceOnSubmit}
@@ -612,9 +684,9 @@ export default function OperatorSettingsPage() {
             {profile.timeTrackingMode === "auto" && (
               <div className="flex items-center gap-3 border-t border-border py-3.5">
                 <AlarmClockOff className="size-4 shrink-0 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-body-airbnb">{t.operators.skipShiftStartWindowLabel}</div>
-                  <div className="text-caption-airbnb">{t.operators.skipShiftStartWindowHint}</div>
+                <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <span className="text-body-airbnb">{t.operators.skipShiftStartWindowLabel}</span>
+                  <InfoTooltip text={t.operators.skipShiftStartWindowHint} />
                 </div>
                 <Switch
                   checked={profile.skipShiftStartWindow}
@@ -625,9 +697,9 @@ export default function OperatorSettingsPage() {
             )}
             <div className="flex items-center gap-3 border-t border-border py-3.5">
               <Globe className="size-4 shrink-0 text-muted-foreground" />
-              <div className="min-w-0 flex-1">
-                <div className="text-body-airbnb">{t.operators.localeLabel}</div>
-                <div className="text-caption-airbnb">{t.operators.localeHint}</div>
+              <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="text-body-airbnb">{t.operators.localeLabel}</span>
+                <InfoTooltip text={t.operators.localeHint} />
               </div>
               <Select
                 value={profile.locale ?? "tenant"}
@@ -659,9 +731,9 @@ export default function OperatorSettingsPage() {
             {goodsModuleEnabled && (
               <div className="flex items-center gap-3 border-t border-border py-3.5">
                 <ShoppingBag className="size-4 shrink-0 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-body-airbnb">{t.goods.navLabel}</div>
-                  <div className="text-caption-airbnb">{t.operators.goodsAccessHint}</div>
+                <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <span className="text-body-airbnb">{t.goods.navLabel}</span>
+                  <InfoTooltip text={t.operators.goodsAccessHint} />
                 </div>
                 <Switch checked={profile.goodsAccess} onCheckedChange={toggleGoodsAccess} className="shrink-0" />
               </div>
@@ -674,18 +746,18 @@ export default function OperatorSettingsPage() {
                 независимый пункт. */}
             {goodsModuleEnabled && profile.goodsAccess && (
               <div className="flex items-center gap-3 py-2.5 pl-7">
-                <div className="min-w-0 flex-1">
-                  <div className="text-caption-airbnb font-semibold">{t.goods.revisionTitle}</div>
-                  <div className="text-caption-airbnb text-muted-foreground">{t.operators.revisionAccessHint}</div>
+                <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <span className="text-caption-airbnb font-semibold">{t.goods.revisionTitle}</span>
+                  <InfoTooltip text={t.operators.revisionAccessHint} />
                 </div>
                 <Switch checked={profile.revisionAccess} onCheckedChange={toggleRevisionAccess} className="shrink-0" />
               </div>
             )}
             <div className="flex items-center gap-3 border-t border-border py-3.5">
               <Ticket className="size-4 shrink-0 text-muted-foreground" />
-              <div className="min-w-0 flex-1">
-                <div className="text-body-airbnb">{t.operators.ticketsAccessLabel}</div>
-                <div className="text-caption-airbnb">{t.operators.ticketsAccessHint}</div>
+              <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="text-body-airbnb">{t.operators.ticketsAccessLabel}</span>
+                <InfoTooltip text={t.operators.ticketsAccessHint} />
               </div>
               <Switch checked={profile.ticketsAccess} onCheckedChange={toggleTicketsAccess} className="shrink-0" />
             </div>
@@ -711,9 +783,9 @@ export default function OperatorSettingsPage() {
             {goodsModuleEnabled && (
               <div className="flex items-center gap-3 border-t border-border py-3.5 first:border-t-0">
                 <ShoppingBag className="size-4 shrink-0 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-body-airbnb">{t.goods.navLabel}</div>
-                  <div className="text-caption-airbnb">{t.operators.goodsAccessHint}</div>
+                <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <span className="text-body-airbnb">{t.goods.navLabel}</span>
+                  <InfoTooltip text={t.operators.goodsAccessHint} />
                 </div>
                 <Switch checked={profile.goodsAccess} onCheckedChange={toggleGoodsAccess} className="shrink-0" />
               </div>
@@ -726,18 +798,18 @@ export default function OperatorSettingsPage() {
                 независимый пункт. */}
             {goodsModuleEnabled && profile.goodsAccess && (
               <div className="flex items-center gap-3 py-2.5 pl-7">
-                <div className="min-w-0 flex-1">
-                  <div className="text-caption-airbnb font-semibold">{t.goods.revisionTitle}</div>
-                  <div className="text-caption-airbnb text-muted-foreground">{t.operators.revisionAccessHint}</div>
+                <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <span className="text-caption-airbnb font-semibold">{t.goods.revisionTitle}</span>
+                  <InfoTooltip text={t.operators.revisionAccessHint} />
                 </div>
                 <Switch checked={profile.revisionAccess} onCheckedChange={toggleRevisionAccess} className="shrink-0" />
               </div>
             )}
             <div className="flex items-center gap-3 border-t border-border py-3.5">
               <Ticket className="size-4 shrink-0 text-muted-foreground" />
-              <div className="min-w-0 flex-1">
-                <div className="text-body-airbnb">{t.operators.ticketsAccessLabel}</div>
-                <div className="text-caption-airbnb">{t.operators.ticketsAccessHint}</div>
+              <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="text-body-airbnb">{t.operators.ticketsAccessLabel}</span>
+                <InfoTooltip text={t.operators.ticketsAccessHint} />
               </div>
               <Switch checked={profile.ticketsAccess} onCheckedChange={toggleTicketsAccess} className="shrink-0" />
             </div>

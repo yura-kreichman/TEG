@@ -19,6 +19,7 @@ import {
   QrCode as QrCodeIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { InfoTooltip } from "@/components/info-tooltip";
 import { SaveButton } from "@/components/ui/save-button";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { Input } from "@/components/ui/input";
@@ -735,9 +736,9 @@ export default function PointsPage() {
             />
           </div>
           <div className="flex items-center justify-between rounded-control border border-border p-3">
-            <span>
-              <span className="block text-body-airbnb">{t.points.roamingLabel}</span>
-              <span className="mt-0.5 block text-caption-airbnb">{t.points.roamingHint}</span>
+            <span className="flex items-center gap-1.5">
+              <span className="text-body-airbnb">{t.points.roamingLabel}</span>
+              <InfoTooltip text={t.points.roamingHint} />
             </span>
             <Switch checked={deviceRoaming} onCheckedChange={setDeviceRoaming} className="shrink-0" />
           </div>
@@ -745,9 +746,9 @@ export default function PointsPage() {
               в форме редактирования уже созданного устройства — при СОЗДАНИИ
               нового его не было вовсе, значение всегда уходило false. */}
           <div className="flex items-center justify-between rounded-control border border-border p-3">
-            <span>
-              <span className="block text-body-airbnb">{t.points.hasPrinterLabel}</span>
-              <span className="mt-0.5 block text-caption-airbnb">{t.points.hasPrinterHint}</span>
+            <span className="flex items-center gap-1.5">
+              <span className="text-body-airbnb">{t.points.hasPrinterLabel}</span>
+              <InfoTooltip text={t.points.hasPrinterHint} />
             </span>
             <Switch checked={deviceHasPrinter} onCheckedChange={setDeviceHasPrinter} className="shrink-0" />
           </div>
@@ -756,9 +757,9 @@ export default function PointsPage() {
               настраивать. */}
           {deviceHasPrinter && (
             <div className="flex items-center justify-between gap-3 rounded-control border border-border p-3">
-              <div className="min-w-0">
-                <div className="text-body-airbnb">{t.settings.systemReceiptPaperWidthLabel}</div>
-                <div className="text-caption-airbnb">{t.settings.systemReceiptPaperWidthHint}</div>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span className="text-body-airbnb">{t.settings.systemReceiptPaperWidthLabel}</span>
+                <InfoTooltip text={t.settings.systemReceiptPaperWidthHint} />
               </div>
               <Select
                 value={deviceReceiptPaperWidth}
@@ -824,14 +825,19 @@ export default function PointsPage() {
                   <p className="text-caption-airbnb">{t.points.cityHint}</p>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label htmlFor="locMapsUrl">{t.points.mapsUrlLabel}</Label>
+                  {/* Подсказка ушла в ⓘ у подписи (запрос пользователя
+                      2026-08-12) — 140 символов под полем занимали на
+                      телефоне три строки формы. */}
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="locMapsUrl">{t.points.mapsUrlLabel}</Label>
+                    <InfoTooltip text={t.points.mapsUrlHint} />
+                  </div>
                   <Input
                     id="locMapsUrl"
                     placeholder="https://maps.app.goo.gl/… / yandex.ru/maps/…"
                     value={locMapsUrl}
                     onChange={(e) => setLocMapsUrl(e.target.value)}
                   />
-                  <p className="text-caption-airbnb">{t.points.mapsUrlHint}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
@@ -958,9 +964,9 @@ export default function PointsPage() {
                 устройства я не могу уже включить Роуминг") — то же поле
                 PointDevice.roaming, никакой переустановки PWA не требуется. */}
             <div className="flex items-center justify-between rounded-control border border-border p-3">
-              <span>
-                <span className="block text-body-airbnb">{t.points.roamingLabel}</span>
-                <span className="mt-0.5 block text-caption-airbnb">{t.points.roamingHint}</span>
+              <span className="flex items-center gap-1.5">
+                <span className="text-body-airbnb">{t.points.roamingLabel}</span>
+                <InfoTooltip text={t.points.roamingHint} />
               </span>
               <Switch checked={renameDeviceRoaming} onCheckedChange={setRenameDeviceRoaming} className="shrink-0" />
             </div>
@@ -969,17 +975,17 @@ export default function PointsPage() {
                 принтера автоматически. Владелец включает только там, где
                 физически стоит принтер, настроенный в ОС этого устройства. */}
             <div className="flex items-center justify-between rounded-control border border-border p-3">
-              <span>
-                <span className="block text-body-airbnb">{t.points.hasPrinterLabel}</span>
-                <span className="mt-0.5 block text-caption-airbnb">{t.points.hasPrinterHint}</span>
+              <span className="flex items-center gap-1.5">
+                <span className="text-body-airbnb">{t.points.hasPrinterLabel}</span>
+                <InfoTooltip text={t.points.hasPrinterHint} />
               </span>
               <Switch checked={renameDeviceHasPrinter} onCheckedChange={setRenameDeviceHasPrinter} className="shrink-0" />
             </div>
             {renameDeviceHasPrinter && (
               <div className="flex items-center justify-between gap-3 rounded-control border border-border p-3">
-                <div className="min-w-0">
-                  <div className="text-body-airbnb">{t.settings.systemReceiptPaperWidthLabel}</div>
-                  <div className="text-caption-airbnb">{t.settings.systemReceiptPaperWidthHint}</div>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className="text-body-airbnb">{t.settings.systemReceiptPaperWidthLabel}</span>
+                  <InfoTooltip text={t.settings.systemReceiptPaperWidthHint} />
                 </div>
                 <Select
                   value={renameDeviceReceiptPaperWidth}

@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { calcOperatorBalance, calcShiftAccrual, getRateForDate, hasOverlappingShift, validateShift } from "@/lib/work-time";
+import {
+  calcOperatorBalance,
+  calcShiftAccrual,
+  getRateForDate,
+  hasOverlappingShift,
+  validateShift,
+  WORK_TIME_MONEY_TYPES,
+} from "@/lib/work-time";
 import { sendPushToOperators } from "@/lib/push-notifications";
 import { resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
@@ -20,6 +27,7 @@ interface ShiftCorrectionDiff {
   endAt: string | null;
   advanceAmount: number;
   bonusAmount: number;
+  bonusAccruedAmount: number;
 }
 
 async function loadShift(id: string, tenantId: string) {
@@ -30,8 +38,17 @@ async function loadShift(id: string, tenantId: string) {
 
 async function loadLinkedMoneyOps(shiftId: string) {
   return prisma.moneyOperation.findMany({
-    where: { shiftId, type: { in: ["advance", "bonus_payout"] } },
+    where: { shiftId, type: { in: WORK_TIME_MONEY_TYPES } },
   });
+}
+
+// Знак, которым тип операции лежит в журнале: advance/bonus_payout физически
+// уменьшают кассу точки и хранятся отрицательными, bonus_accrual кассы не
+// касается вовсе и хранится положительным (см. MoneyOperation в
+// schema.prisma). Владельческая правка должна писать ровно тот же знак, что
+// и создание операции в PWA, иначе баланс уедет в другую сторону.
+function storedAmountFor(type: (typeof WORK_TIME_MONEY_TYPES)[number], amount: number): number {
+  return type === "bonus_accrual" ? amount : -amount;
 }
 
 // Правка смены — только владелец: время, премия, аванс
@@ -51,16 +68,26 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   const linkedOps = await loadLinkedMoneyOps(id);
   const currentAdvance = linkedOps.filter((o) => o.type === "advance").reduce((s, o) => s + Math.abs(Number(o.amount)), 0);
   const currentBonus = linkedOps.filter((o) => o.type === "bonus_payout").reduce((s, o) => s + Math.abs(Number(o.amount)), 0);
+  const currentBonusAccrued = linkedOps
+    .filter((o) => o.type === "bonus_accrual")
+    .reduce((s, o) => s + Math.abs(Number(o.amount)), 0);
 
   const body = await request.json();
-  const { startAt: startAtInput, endAt: endAtInput, advanceAmount: advanceInput, bonusAmount: bonusInput, reason } =
-    body as {
-      startAt?: string;
-      endAt?: string;
-      advanceAmount?: number;
-      bonusAmount?: number;
-      reason?: string;
-    };
+  const {
+    startAt: startAtInput,
+    endAt: endAtInput,
+    advanceAmount: advanceInput,
+    bonusAmount: bonusInput,
+    bonusAccruedAmount: bonusAccruedInput,
+    reason,
+  } = body as {
+    startAt?: string;
+    endAt?: string;
+    advanceAmount?: number;
+    bonusAmount?: number;
+    bonusAccruedAmount?: number;
+    reason?: string;
+  };
 
   // Открытая смена (docs/spec/05-work-time.md, "АВТО") — endAt ещё null, пока
   // оператор не нажал "Закончить смену". Раньше правка ВСЕГДА требовала и
@@ -92,7 +119,16 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
 
   const nextAdvance = advanceInput !== undefined ? Math.abs(Number(advanceInput)) : currentAdvance;
   const nextBonus = bonusInput !== undefined ? Math.abs(Number(bonusInput)) : currentBonus;
-  if (!Number.isFinite(nextAdvance) || !Number.isFinite(nextBonus) || nextAdvance < 0 || nextBonus < 0) {
+  const nextBonusAccrued =
+    bonusAccruedInput !== undefined ? Math.abs(Number(bonusAccruedInput)) : currentBonusAccrued;
+  if (
+    !Number.isFinite(nextAdvance) ||
+    !Number.isFinite(nextBonus) ||
+    !Number.isFinite(nextBonusAccrued) ||
+    nextAdvance < 0 ||
+    nextBonus < 0 ||
+    nextBonusAccrued < 0
+  ) {
     return NextResponse.json({ error: "Некорректная сумма" }, { status: 400 });
   }
 
@@ -108,7 +144,12 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
     // Баланс без учёта уже выданного по этой же смене аванса — иначе он бы
     // дважды вычитался (уже сидит в текущем toPayOut).
     const balance = await calcOperatorBalance(shift.operatorId);
-    const availableExcludingThisShift = balance.toPayOut + currentAdvance;
+    // Начисленная премия этой же смены уже сидит в toPayOut — если владелец
+    // правит её тем же запросом, лимит аванса должен считаться от НОВОГО
+    // значения, иначе правка "премия 1000 → 0" оставила бы аванс разрешённым
+    // по старому, уже несуществующему долгу.
+    const availableExcludingThisShift =
+      balance.toPayOut + currentAdvance - currentBonusAccrued + nextBonusAccrued;
     if (!shiftOperator?.overdraftAllowed && nextAdvance > availableExcludingThisShift) {
       const locale = await resolveLocale();
       return NextResponse.json(
@@ -125,12 +166,14 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
     endAt: shift.endAt?.toISOString() ?? null,
     advanceAmount: currentAdvance,
     bonusAmount: currentBonus,
+    bonusAccruedAmount: currentBonusAccrued,
   };
   const after: ShiftCorrectionDiff = {
     startAt: nextStartAt.toISOString(),
     endAt: nextEndAt?.toISOString() ?? null,
     advanceAmount: nextAdvance,
     bonusAmount: nextBonus,
+    bonusAccruedAmount: nextBonusAccrued,
   };
   const changed = JSON.stringify(before) !== JSON.stringify(after);
 
@@ -174,10 +217,11 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
       // Свежее чтение под локом, не внешний linkedOps (прочитан ДО транзакции,
       // мог устареть под гонкой выше).
       const freshLinkedOps = await tx.moneyOperation.findMany({
-        where: { shiftId, type: { in: ["advance", "bonus_payout"] } },
+        where: { shiftId, type: { in: WORK_TIME_MONEY_TYPES } },
       });
       const freshAdvanceOp = freshLinkedOps.find((o) => o.type === "advance");
       const freshBonusOp = freshLinkedOps.find((o) => o.type === "bonus_payout");
+      const freshBonusAccrualOp = freshLinkedOps.find((o) => o.type === "bonus_accrual");
       const freshCurrentAdvance = Math.abs(Number(freshAdvanceOp?.amount ?? 0));
       const freshCurrentBonus = Math.abs(Number(freshBonusOp?.amount ?? 0));
 
@@ -202,7 +246,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
           select: { overdraftAllowed: true },
         });
         const balance = await calcOperatorBalance(shiftOperatorId, undefined, tx);
-        const availableExcludingThisShift = balance.toPayOut + freshCurrentAdvance;
+        const freshCurrentBonusAccrued = Math.abs(Number(freshBonusAccrualOp?.amount ?? 0));
+        const availableExcludingThisShift =
+          balance.toPayOut + freshCurrentAdvance - freshCurrentBonusAccrued + nextBonusAccrued;
         if (!shiftOperator?.overdraftAllowed && nextAdvance > availableExcludingThisShift) {
           throw new OverdraftExceededError(availableExcludingThisShift);
         }
@@ -210,19 +256,22 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
 
       const syncLinkedOp = async (
         existing: typeof freshAdvanceOp,
-        type: "advance" | "bonus_payout",
+        type: (typeof WORK_TIME_MONEY_TYPES)[number],
         amount: number
       ) => {
         if (amount > 0) {
           if (existing) {
-            await tx.moneyOperation.update({ where: { id: existing.id }, data: { amount: -amount } });
+            await tx.moneyOperation.update({
+              where: { id: existing.id },
+              data: { amount: storedAmountFor(type, amount) },
+            });
           } else {
             await tx.moneyOperation.create({
               data: {
                 tenantId,
                 pointId: shiftPointId,
                 type,
-                amount: -amount,
+                amount: storedAmountFor(type, amount),
                 performedByUserId: correctedByUserId,
                 beneficiaryOperatorId: shiftOperatorId,
                 shiftId,
@@ -236,6 +285,10 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
 
       await syncLinkedOp(freshAdvanceOp, "advance", nextAdvance);
       await syncLinkedOp(freshBonusOp, "bonus_payout", nextBonus);
+      // Начисленная премия — та же синхронизация, но в зонное разнесение
+      // ниже она НЕ попадает ни при каких условиях: из кассы точки по ней
+      // ничего не уходило, разносить нечего (см. CASH_EXCLUDED_TYPES).
+      await syncLinkedOp(freshBonusAccrualOp, "bonus_accrual", nextBonusAccrued);
 
       // Зонная дельта — ТОЛЬКО для self-service части (performedByOperatorId
       // на существующей записи). Найдено аудитом 2026-07-25 (повторная
@@ -319,7 +372,17 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   const { minutes, accrued } = nextEndAt !== null ? calcShiftAccrual(nextStartAt, nextEndAt, rate) : { minutes: null, accrued: null };
 
   return NextResponse.json({
-    shift: { id, startAt: nextStartAt, endAt: nextEndAt, minutes, rate, accrued, advanceAmount: nextAdvance, bonusAmount: nextBonus },
+    shift: {
+      id,
+      startAt: nextStartAt,
+      endAt: nextEndAt,
+      minutes,
+      rate,
+      accrued,
+      advanceAmount: nextAdvance,
+      bonusAmount: nextBonus,
+      bonusAccruedAmount: nextBonusAccrued,
+    },
     warnings,
   });
 }
@@ -354,17 +417,23 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
   const linkedOps = await loadLinkedMoneyOps(id);
   const advanceOp = linkedOps.find((o) => o.type === "advance");
   const bonusOp = linkedOps.find((o) => o.type === "bonus_payout");
+  const bonusAccrualOp = linkedOps.find((o) => o.type === "bonus_accrual");
   const advanceAmount = Math.abs(Number(advanceOp?.amount ?? 0));
   const bonusAmount = Math.abs(Number(bonusOp?.amount ?? 0));
+  const bonusAccruedAmount = Math.abs(Number(bonusAccrualOp?.amount ?? 0));
   const before = {
     startAt: shift.startAt.toISOString(),
     endAt: shift.endAt?.toISOString() ?? null,
     advanceAmount,
     bonusAmount,
+    bonusAccruedAmount,
   };
 
   await prisma.$transaction(async (tx) => {
-    await tx.moneyOperation.deleteMany({ where: { shiftId: id, type: { in: ["advance", "bonus_payout"] } } });
+    // Вместе со сменой удаляется и начисленная премия: она живёт только как
+    // строка журнала, привязанная к смене, и без неё осталась бы навсегда
+    // завышать баланс "к выдаче" — след без источника.
+    await tx.moneyOperation.deleteMany({ where: { shiftId: id, type: { in: WORK_TIME_MONEY_TYPES } } });
     await tx.correctionLog.create({
       data: {
         entityType: "Shift",

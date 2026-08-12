@@ -660,7 +660,10 @@ export function formatShiftCloseSummaryTelegram(
     // выводить Аванс: 0") — в отличие от Премии ниже, которая по-прежнему
     // скрывается при 0 (не просили менять).
     if (settings.showAdvance) parts.push(`💵 ${st.advance}: ${formatMoney(data.advanceAmount, locale)}`);
-    if (settings.showBonus && data.bonusAmount > 0) parts.push(`🏆 ${st.bonusCompact}: ${formatMoney(data.bonusAmount, locale)}`);
+    if (settings.showBonus && data.bonusAmount > 0)
+      parts.push(
+        `🏆 ${data.bonusIsAccrual ? st.bonusAccruedCompact : st.bonusCompact}: ${formatMoney(data.bonusAmount, locale)}`
+      );
     if (settings.showTotal) parts.push(`💰 ${st.toPayOutCompact}: <b>${formatMoney(data.toPayOut, locale)}</b>`);
 
     // Не жирным (запрос пользователя 2026-07-17/18: "во всех сводках с
@@ -679,7 +682,8 @@ export function formatShiftCloseSummaryTelegram(
   if (settings.showPeriod) lines.push(`🕐 ${st.period}: ${formatLocalTime(data.startAt, timezone)} – ${formatLocalTime(data.endAt, timezone)}`);
   if (settings.showHours) lines.push(`▶️ ${st.hoursWorked}: ${formatDuration(data.minutes)}`);
   if (settings.showAdvance) lines.push(`💵 ${st.advance}: ${formatMoney(data.advanceAmount, locale)}`);
-  if (settings.showBonus && data.bonusAmount > 0) lines.push(`🏆 ${st.bonus}: ${formatMoney(data.bonusAmount, locale)}`);
+  if (settings.showBonus && data.bonusAmount > 0)
+    lines.push(`🏆 ${data.bonusIsAccrual ? st.bonusAccrued : st.bonus}: ${formatMoney(data.bonusAmount, locale)}`);
   if (settings.showTotal) lines.push(`💰 ${st.toPayOutFull}: <b>${formatMoney(data.toPayOut, locale)}</b>`);
 
   return lines.join("\n");

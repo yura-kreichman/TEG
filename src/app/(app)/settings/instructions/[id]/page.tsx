@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Send } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
+import { InfoTooltip } from "@/components/info-tooltip";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { Button } from "@/components/ui/button";
@@ -143,9 +144,9 @@ export default function InstructionEditorPage() {
           <InstructionEditor content={content} onChange={setContent} editable={instruction.status !== "archived"} />
 
           <SpringCard hover={false} className="mt-4 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-body-airbnb font-medium">{t.instructions.honestyCheckLabel}</div>
-              <div className="mt-0.5 text-caption-airbnb">{t.instructions.honestyCheckHint}</div>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="text-body-airbnb font-medium">{t.instructions.honestyCheckLabel}</span>
+              <InfoTooltip text={t.instructions.honestyCheckHint} />
             </div>
             <Switch checked={honestyCheck} onCheckedChange={setHonestyCheck} className="shrink-0" />
           </SpringCard>

@@ -7,6 +7,7 @@ import {
   getOpenShift,
   getRateForDate,
   hasNoResultsToday,
+  resolveSelfServicePayout,
   validateShift,
 } from "@/lib/work-time";
 import { chargeSelfServiceAdvanceToZones, getPointCashBalance } from "@/lib/zone-balance";
@@ -45,6 +46,33 @@ export async function POST(request: Request) {
   const advanceAmount = Math.abs(Number(body.advanceAmount) || 0);
   const bonusAmount = Math.abs(Number(body.bonusAmount) || 0);
 
+  // Право вносить аванс/премию самому (запрос пользователя 2026-08-12) —
+  // тенантный режим И персональный тумблер сотрудника. Проверка на сервере,
+  // а не только скрытие полей в PWA: /operator — публично доступный URL со
+  // входом по ПИН, форму можно отправить и мимо интерфейса. Тот же принцип,
+  // что у expensesEnabled в /api/operator/zone-expense-events.
+  const payoutTenant = await prisma.tenant.findUnique({
+    where: { id: point.tenantId },
+    select: { selfServicePayoutMode: true },
+  });
+  const payoutRights = resolveSelfServicePayout(
+    payoutTenant?.selfServicePayoutMode,
+    operator.selfServicePayoutAllowed
+  );
+  if (advanceAmount > 0 && !payoutRights.canAdvance) {
+    return NextResponse.json({ error: "Аванс сейчас недоступен — обратитесь к владельцу" }, { status: 403 });
+  }
+  if (bonusAmount > 0 && !payoutRights.canBonusCash && !payoutRights.canBonusAccrual) {
+    return NextResponse.json({ error: "Премия сейчас недоступна — обратитесь к владельцу" }, { status: 403 });
+  }
+  // В режиме "accrual" та же сумма премии из формы записывается не выдачей, а
+  // начислением: тип операции и знак решает сервер, PWA про это не знает и
+  // шлёт одно и то же поле bonusAmount (см. Tenant.selfServicePayoutMode).
+  const bonusIsAccrual = payoutRights.canBonusAccrual;
+  // Из кассы точки физически уходит только то, что выдано наличными —
+  // начисленная премия в кассовых проверках ниже не участвует вовсе.
+  const cashOutAmount = advanceAmount + (bonusIsAccrual ? 0 : bonusAmount);
+
   const startAt = openShift.startAt;
   const endAt = new Date();
   if (endAt <= startAt) {
@@ -54,7 +82,7 @@ export async function POST(request: Request) {
   const rate = await getRateForDate(operator.id, startAt);
   const { minutes, accrued } = calcShiftAccrual(startAt, endAt, rate);
 
-  if (advanceAmount > 0 || bonusAmount > 0) {
+  if (cashOutAmount > 0) {
     // Аванс И премия, которые сотрудник вводит САМ (без владельца рядом), —
     // физически берутся из кассы точки, обе ограничены её остатком, БЕЗ
     // исключений (решение пользователя 2026-07-15) — этот кап всегда жёсткий,
@@ -62,7 +90,7 @@ export async function POST(request: Request) {
     // проверка по личному балансу сотрудника + овердрафт — см.
     // /api/operators/[id]/work-time/advance и .../bonus.
     const pointBalance = await getPointCashBalance(shiftPointId);
-    if (advanceAmount + bonusAmount > pointBalance) {
+    if (cashOutAmount > pointBalance) {
       const locale = await resolveLocale();
       return NextResponse.json(
         { error: `Сумма превышает остаток кассы точки (${formatMoney(pointBalance, locale)})` },
@@ -119,7 +147,7 @@ export async function POST(request: Request) {
     const result = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${shiftPointId}))`;
       const freshBalance = await getPointCashBalance(shiftPointId);
-      if (advanceAmount + bonusAmount > freshBalance) {
+      if (cashOutAmount > freshBalance) {
         return { ok: false as const, reason: "point" as const, freshBalance };
       }
       if (advanceAmount > 0) {
@@ -151,8 +179,11 @@ export async function POST(request: Request) {
           data: {
             tenantId: point.tenantId,
             pointId: shiftPointId,
-            type: "bonus_payout",
-            amount: -bonusAmount,
+            // Начисленная премия хранится ПОЛОЖИТЕЛЬНОЙ: она не уменьшает
+            // кассу, а увеличивает долг компании (см. MoneyOperation в
+            // schema.prisma). Выданная — отрицательной, как и раньше.
+            type: bonusIsAccrual ? "bonus_accrual" : "bonus_payout",
+            amount: bonusIsAccrual ? bonusAmount : -bonusAmount,
             performedByOperatorId: operator.id,
             beneficiaryOperatorId: operator.id,
             shiftId: openShift.id,
@@ -176,12 +207,13 @@ export async function POST(request: Request) {
     // списаны из личного баланса сотрудника, при ошибке зонного разнесения
     // остаётся старый механизм-фолбэк (getPointPoolDeficit) на следующей
     // инкассации.
-    await chargeSelfServiceAdvanceToZones(
-      point.tenantId,
-      shiftPointId,
-      advanceAmount + bonusAmount,
-      operator.id
-    ).catch((err) => console.error("chargeSelfServiceAdvanceToZones failed (check-out)", err));
+    // cashOutAmount, не advance+bonus: начисленная премия из кассы точки не
+    // уходила, разносить по зонам нечего.
+    if (cashOutAmount > 0) {
+      await chargeSelfServiceAdvanceToZones(point.tenantId, shiftPointId, cashOutAmount, operator.id).catch((err) =>
+        console.error("chargeSelfServiceAdvanceToZones failed (check-out)", err)
+      );
+    }
   }
 
   const balance = await calcOperatorBalance(operator.id);
@@ -213,6 +245,7 @@ export async function POST(request: Request) {
         accrued,
         advanceAmount,
         bonusAmount,
+        bonusIsAccrual,
         toPayOut: balance.toPayOut,
       },
       shiftCloseSettings
@@ -221,7 +254,7 @@ export async function POST(request: Request) {
 
   // Смена с авансом/премией меняет остаток кассы точки — если сегодняшняя
   // "Касса за день" уже отправлена, это досдача (см. POST .../work-time/shifts).
-  if (advanceAmount > 0 || bonusAmount > 0) {
+  if (cashOutAmount > 0) {
     notifyDailyCashLateSubmission(shiftPointId, point.tenantId, startAt).catch((err) =>
       console.error("daily cash late-submission notify failed", err)
     );

@@ -25,6 +25,7 @@ import { useActionToast } from "@/hooks/use-action-toast";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
 import { playErrorChime } from "@/lib/beep";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
+import type { SelfServicePayoutRights } from "@/lib/self-service-payout";
 
 interface ZoneOption {
   id: string;
@@ -91,6 +92,15 @@ export default function OperatorHomePage() {
   const [checkoutSheetOpen, setCheckoutSheetOpen] = useState(false);
   const [checkoutAdvance, setCheckoutAdvance] = useState("");
   const [checkoutBonus, setCheckoutBonus] = useState("");
+  // Права самообслуживания (аванс/премия при завершении смены) — приходят
+  // уже разрешёнными с сервера, см. /api/auth/operator/me. До загрузки —
+  // "нельзя ничего", чтобы поле не мигнуло там, где сервер его отвергнет.
+  const [payoutRights, setPayoutRights] = useState<SelfServicePayoutRights>({
+    mode: "forbidden",
+    canAdvance: false,
+    canBonusCash: false,
+    canBonusAccrual: false,
+  });
   const { saved: checkoutSaved, pulse: checkoutPulse } = useSavePulse();
   // Ошибки Сотрудника — общий bounce-тост по центру экрана + звук ошибки
   // (запрос пользователя 2026-07-25: "везде... где это логично", тот же
@@ -150,6 +160,7 @@ export default function OperatorHomePage() {
         setRoaming(data.device.roaming === true);
         setWorkTimeEnabled(!!data.workTimeEnabled);
         setTimeTrackingMode(data.timeTrackingMode === "auto" ? "auto" : "manual");
+        if (data.selfServicePayout) setPayoutRights(data.selfServicePayout);
         setActiveShiftStartAt(data.activeShift?.startAt ?? null);
         setChecking(false);
         if (data.workTimeEnabled) {
@@ -884,30 +895,42 @@ export default function OperatorHomePage() {
             <p className="text-sm font-medium text-warning">{t.operatorApp.workTime.warningTooLong}</p>
           )}
 
+          {/* Поля по правам от сервера (запрос пользователя 2026-08-12). Сам
+              лист остаётся и когда оба поля скрыты: в нём интервал смены,
+              длительность и предупреждение о слишком длинной смене — он не
+              пустеет, подтверждение по-прежнему осмысленно. */}
           <div className="flex items-stretch gap-2">
             <div className="flex flex-1 flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="checkoutAdvance">{t.operatorApp.workTime.advanceFieldLabel}</Label>
-                <MoneyInput
-                  id="checkoutAdvance"
-                  scale="lg"
-                  className="h-14 text-lg"
-                  value={checkoutAdvance}
-                  onChange={(e) => setCheckoutAdvance(e.target.value)}
-                  placeholder="0"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="checkoutBonus">{t.operatorApp.workTime.bonusFieldLabel}</Label>
-                <MoneyInput
-                  id="checkoutBonus"
-                  scale="lg"
-                  className="h-14 text-lg"
-                  value={checkoutBonus}
-                  onChange={(e) => setCheckoutBonus(e.target.value)}
-                  placeholder="0"
-                />
-              </div>
+              {payoutRights.canAdvance && (
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="checkoutAdvance">{t.operatorApp.workTime.advanceFieldLabel}</Label>
+                  <MoneyInput
+                    id="checkoutAdvance"
+                    scale="lg"
+                    className="h-14 text-lg"
+                    value={checkoutAdvance}
+                    onChange={(e) => setCheckoutAdvance(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+              )}
+              {(payoutRights.canBonusCash || payoutRights.canBonusAccrual) && (
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="checkoutBonus">
+                    {payoutRights.canBonusAccrual
+                      ? t.operatorApp.workTime.bonusAccruedFieldLabel
+                      : t.operatorApp.workTime.bonusFieldLabel}
+                  </Label>
+                  <MoneyInput
+                    id="checkoutBonus"
+                    scale="lg"
+                    className="h-14 text-lg"
+                    value={checkoutBonus}
+                    onChange={(e) => setCheckoutBonus(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+              )}
             </div>
             <PressableScale className="flex">
               <SaveButton

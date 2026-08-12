@@ -27,6 +27,11 @@ export interface PrintLine {
    * (запрос пользователя 2026-07-20): у режимов с ровно одной позицией за
    * документ (Пуски, Товары) название — главное, что нужно разглядеть. */
   large?: boolean;
+  /** Мельче обычной строки — для длинных однотипных перечислений, где важна
+   * длина бумаги, а не читаемость каждой строки с расстояния (запрос
+   * пользователя 2026-08-12: список смен в Выписке по расчётам, до 31 строки
+   * за месяц — обычным кеглем это лишние 3 см рулона на ровном месте). */
+  small?: boolean;
 }
 
 export interface PrintSection {
@@ -298,6 +303,7 @@ function receiptCss(paperWidth: ReceiptPaperWidth): string {
   .receipt-line .value { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .receipt-line.bold { font-weight: 700; }
   .receipt-line.large { font-size: 17px; font-weight: 700; }
+  .receipt-line.small { font-size: 11.5px; padding: 0; }
   .receipt-total {
     display: flex;
     justify-content: space-between;
@@ -342,7 +348,7 @@ function renderSection(section: PrintSection): string {
   const title = section.title ? `<div class="receipt-section-title">${escapeHtml(section.title)}</div>` : "";
   const lines = section.lines
     .map((l) => {
-      const cls = [l.bold && "bold", l.large && "large"].filter(Boolean).join(" ");
+      const cls = [l.bold && "bold", l.large && "large", l.small && "small"].filter(Boolean).join(" ");
       return `<div class="receipt-line${cls ? ` ${cls}` : ""}"><span class="label">${escapeHtml(l.label)}</span><span class="value">${escapeHtml(l.value)}</span></div>`;
     })
     .join("");

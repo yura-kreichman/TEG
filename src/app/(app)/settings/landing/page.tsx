@@ -14,6 +14,7 @@ import {
   OkIcon,
   YoutubeIcon,
 } from "@/components/landing/social-icons";
+import { InfoTooltip } from "@/components/info-tooltip";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { Button } from "@/components/ui/button";
@@ -737,14 +738,14 @@ export default function LandingSettingsPage() {
               </SpringCard>
 
               <SpringCard hover={false} className="flex flex-col gap-4">
-                <div>
+                <div className="flex items-center gap-1.5">
                   <p className="text-body-airbnb font-semibold">{t.landing.zonesTitle}</p>
-                  <p className="text-caption-airbnb">{t.landing.zonesHint}</p>
+                  <InfoTooltip text={t.landing.zonesHint} />
                 </div>
                 <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
-                  <div>
+                  <div className="flex items-center gap-1.5">
                     <p className="text-body-airbnb font-semibold">{t.landing.showPricesToggleLabel}</p>
-                    <p className="text-caption-airbnb">{t.landing.showPricesHint}</p>
+                    <InfoTooltip text={t.landing.showPricesHint} />
                   </div>
                   <Switch checked={landing.showPrices} onCheckedChange={(v) => update("showPrices", v)} />
                 </div>
@@ -918,9 +919,9 @@ export default function LandingSettingsPage() {
               </SpringCard>
 
               <SpringCard hover={false} className="flex flex-col gap-3">
-                <div>
+                <div className="flex items-center gap-1.5">
                   <p className="text-body-airbnb font-semibold">{t.landing.seoVerificationTitle}</p>
-                  <p className="text-caption-airbnb">{t.landing.seoVerificationHint}</p>
+                  <InfoTooltip text={t.landing.seoVerificationHint} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="googleVerification">{t.landing.googleVerificationLabel}</Label>

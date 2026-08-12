@@ -21,6 +21,7 @@ import { Money } from "@/components/money";
 import { playErrorChime } from "@/lib/beep";
 import { cn } from "@/lib/utils";
 import { formatDuration as formatDurationBase, formatTime, nowInTimezone } from "@/lib/datetime-format";
+import type { SelfServicePayoutRights } from "@/lib/self-service-payout";
 import {
   formatPeriodLabel as formatPeriodLabelFor,
   isCurrentPeriod as isCurrentPeriodFor,
@@ -48,11 +49,12 @@ interface ShiftRow {
   accrued: number;
   advanceAmount: number;
   bonusAmount: number;
+  bonusAccruedAmount: number;
 }
 
 interface StandaloneMoneyOp {
   id: string;
-  type: "advance" | "bonus_payout";
+  type: "advance" | "bonus_payout" | "bonus_accrual";
   amount: number;
   occurredAt: string;
   comment: string | null;
@@ -101,6 +103,16 @@ export default function WorkTimePage() {
   // доступен только в режиме "manual"; в "auto" время фиксирует только
   // check-in/check-out на главном экране.
   const [timeTrackingMode, setTimeTrackingMode] = useState<"manual" | "auto">("manual");
+  // Права самообслуживания приходят с сервера уже разрешёнными (см.
+  // /api/auth/operator/me) — клиент только показывает или прячет поля.
+  // Пока не загрузились — считаем, что нельзя ничего: лучше на миг не
+  // показать поле, чем показать то, что сервер потом отвергнет.
+  const [payoutRights, setPayoutRights] = useState<SelfServicePayoutRights>({
+    mode: "forbidden",
+    canAdvance: false,
+    canBonusCash: false,
+    canBonusAccrual: false,
+  });
 
   const [formOpen, setFormOpen] = useState(false);
   const [startHour, setStartHour] = useState(9);
@@ -138,6 +150,7 @@ export default function WorkTimePage() {
     if (meRes.ok) {
       const meData = await meRes.json();
       setTimeTrackingMode(meData.timeTrackingMode === "auto" ? "auto" : "manual");
+      if (meData.selfServicePayout) setPayoutRights(meData.selfServicePayout);
     }
     if (timezoneRes.ok) {
       const timezoneData = await timezoneRes.json();
@@ -389,7 +402,9 @@ export default function WorkTimePage() {
                   <span className="tabular-nums text-caption-airbnb">
                     {formatTime(item.shift.startAt)}–{formatTime(item.shift.endAt)} · {formatDuration(item.shift.minutes)}
                   </span>
-                  {(item.shift.advanceAmount > 0 || item.shift.bonusAmount > 0) && (
+                  {(item.shift.advanceAmount > 0 ||
+                    item.shift.bonusAmount > 0 ||
+                    item.shift.bonusAccruedAmount > 0) && (
                     <div className="flex gap-3 text-xs tabular-nums">
                       {item.shift.advanceAmount > 0 && (
                         <span className="text-warning">
@@ -401,6 +416,11 @@ export default function WorkTimePage() {
                           {t.operatorApp.workTime.bonusInline} <Money value={item.shift.bonusAmount} />
                         </span>
                       )}
+                      {item.shift.bonusAccruedAmount > 0 && (
+                        <span className="text-success">
+                          {t.operatorApp.workTime.bonusAccruedInline} <Money value={item.shift.bonusAccruedAmount} />
+                        </span>
+                      )}
                     </div>
                   )}
                 </SpringCard>
@@ -408,7 +428,11 @@ export default function WorkTimePage() {
                 <SpringCard key={`op-${item.op.id}`} hover={false} className="flex flex-row items-center justify-between">
                   <span className="text-body-airbnb font-bold">
                     {formatShiftDate(item.op.occurredAt)} ·{" "}
-                    {item.op.type === "advance" ? t.operatorApp.workTime.advanceFieldLabel : t.operatorApp.workTime.bonusFieldLabel}
+                    {item.op.type === "advance"
+                      ? t.operatorApp.workTime.advanceFieldLabel
+                      : item.op.type === "bonus_accrual"
+                        ? t.operatorApp.workTime.bonusAccruedFieldLabel
+                        : t.operatorApp.workTime.bonusFieldLabel}
                   </span>
                   <span
                     className={cn(
@@ -455,30 +479,46 @@ export default function WorkTimePage() {
             </div>
           </div>
 
+          {/* Аванс/премия показываются по правам от сервера (запрос
+              пользователя 2026-08-12). Без объяснений, почему поля нет — так
+              решено сознательно (тот же принцип, что у "Расходов"): меньше
+              поводов спорить с сотрудником на точке. Когда запрещено и то и
+              другое, остаётся только время смены и кнопка сохранения. */}
           <div className="flex items-stretch gap-2">
             <div className="flex flex-1 flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="advanceInput">{t.operatorApp.workTime.advanceFieldLabel}</Label>
-                <MoneyInput
-                  id="advanceInput"
-                  scale="lg"
-                  className="h-14 text-lg"
-                  value={advanceAmount}
-                  onChange={(e) => setAdvanceAmount(e.target.value)}
-                  placeholder="0"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="bonusInput">{t.operatorApp.workTime.bonusFieldLabel}</Label>
-                <MoneyInput
-                  id="bonusInput"
-                  scale="lg"
-                  className="h-14 text-lg"
-                  value={bonusAmount}
-                  onChange={(e) => setBonusAmount(e.target.value)}
-                  placeholder="0"
-                />
-              </div>
+              {payoutRights.canAdvance && (
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="advanceInput">{t.operatorApp.workTime.advanceFieldLabel}</Label>
+                  <MoneyInput
+                    id="advanceInput"
+                    scale="lg"
+                    className="h-14 text-lg"
+                    value={advanceAmount}
+                    onChange={(e) => setAdvanceAmount(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+              )}
+              {(payoutRights.canBonusCash || payoutRights.canBonusAccrual) && (
+                <div className="flex flex-col gap-1">
+                  {/* Подпись меняется по режиму: в "Только начисление" премия
+                      не выдаётся на руки, а идёт в баланс — сотрудник должен
+                      понимать это до ввода суммы, а не удивляться потом. */}
+                  <Label htmlFor="bonusInput">
+                    {payoutRights.canBonusAccrual
+                      ? t.operatorApp.workTime.bonusAccruedFieldLabel
+                      : t.operatorApp.workTime.bonusFieldLabel}
+                  </Label>
+                  <MoneyInput
+                    id="bonusInput"
+                    scale="lg"
+                    className="h-14 text-lg"
+                    value={bonusAmount}
+                    onChange={(e) => setBonusAmount(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+              )}
             </div>
             <PressableScale className="flex">
               <SaveButton

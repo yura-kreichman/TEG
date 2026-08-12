@@ -88,7 +88,7 @@ async function cleanupShifts(tenantId: string) {
   // премий смен и без истории инкассаций (см. cleanupCollections) сама эта
   // зонная корректировка теряет смысл в любом случае.
   await prisma.moneyOperation.deleteMany({
-    where: { tenantId, type: { in: ["advance", "bonus_payout", "advance_settlement"] } },
+    where: { tenantId, type: { in: ["advance", "bonus_payout", "bonus_accrual", "advance_settlement"] } },
   });
   await prisma.operatorBalanceCarryover.deleteMany({ where: { tenantId } });
   await prisma.shift.deleteMany({ where: { tenantId } });

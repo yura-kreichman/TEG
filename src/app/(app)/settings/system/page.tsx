@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, FileText, Globe, ListChecks, ShoppingBag, Wallet, type LucideIcon } from "lucide-react";
 import { BackLink } from "@/components/back-link";
+import { InfoTooltip } from "@/components/info-tooltip";
+import { isSelfServicePayoutMode, type SelfServicePayoutMode } from "@/lib/self-service-payout";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { Switch } from "@/components/ui/switch";
@@ -34,10 +36,19 @@ const MODULE_TILES: { key: ModuleKey; icon: LucideIcon; label: (t: Dictionary) =
   { key: "clientsEnabled", icon: Wallet, label: (t) => t.abonements.walletsTitle },
 ];
 
+// Порядок значений — от самого разрешающего к самому ограничивающему, как
+// читается строка настройки сверху вниз в списке.
+const SELF_SERVICE_PAYOUT_OPTIONS: { value: SelfServicePayoutMode; label: (t: Dictionary) => string }[] = [
+  { value: "cash", label: (t) => t.settings.systemSelfServicePayoutCash },
+  { value: "accrual", label: (t) => t.settings.systemSelfServicePayoutAccrual },
+  { value: "forbidden", label: (t) => t.settings.systemSelfServicePayoutForbidden },
+];
+
 interface SystemSettings {
   goodsAllowBalancePayment: boolean;
   printingEnabled: boolean;
   expensesEnabled: boolean;
+  selfServicePayoutMode: SelfServicePayoutMode;
   instructionsEnabled: boolean;
   tasksEnabled: boolean;
   landingEnabled: boolean;
@@ -49,6 +60,7 @@ const DEFAULTS: SystemSettings = {
   goodsAllowBalancePayment: true,
   printingEnabled: false,
   expensesEnabled: true,
+  selfServicePayoutMode: "cash",
   instructionsEnabled: true,
   tasksEnabled: true,
   landingEnabled: true,
@@ -183,7 +195,9 @@ export default function SystemSettingsPage() {
     paperWidth,
   });
 
-  const rows: Array<{ key: keyof SystemSettings; label: string; sub: string }> = [
+  // Только булевы тумблеры: selfServicePayoutMode — режим из трёх значений,
+  // у него своя строка с dropdown'ом ниже.
+  const rows: Array<{ key: Exclude<keyof SystemSettings, "selfServicePayoutMode">; label: string; sub: string }> = [
     // "Оплата Товаров балансом" сама по себе бессмысленна, если выключен
     // модуль Товары (нечем платить) ИЛИ модуль Клиенты (нечем платить чем —
     // баланс — это Клиенты, запрос пользователя 2026-07-22: "проверь ещё раз
@@ -267,16 +281,55 @@ export default function SystemSettingsPage() {
             </StaggerItem>
 
             <StaggerItem>
+              {/* Подписи однострочные, подробности — в ⓘ (запрос пользователя
+                  2026-08-12: "длинные подсказки и тексты мешают" на мобильном).
+                  Правило деления: подпись говорит, ЧТО это; тултип — как это
+                  работает и что изменится при переключении. */}
               <SpringCard animate={false} hover={false} className="flex flex-col">
                 {rows.map((row) => (
                   <div key={row.key} className="flex items-center justify-between gap-3 border-t border-border py-3 first:border-t-0">
-                    <div className="min-w-0">
-                      <div className="text-body-airbnb">{row.label}</div>
-                      <div className="text-caption-airbnb">{row.sub}</div>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className="text-body-airbnb">{row.label}</span>
+                      <InfoTooltip text={row.sub} />
                     </div>
                     <Switch checked={settings[row.key]} onCheckedChange={(v) => patch({ [row.key]: v })} className="shrink-0" />
                   </div>
                 ))}
+
+                {/* Самообслуживание сотрудника — не тумблер, а выбор из трёх
+                    (запрос пользователя 2026-08-12). Dropdown, а не
+                    SegmentedTabs: три значения со словами на узком экране
+                    сжимаются и переносятся — ровно та же причина, по которой
+                    "Ширину рулона" ниже на этой же странице уже переделали из
+                    сегментов в dropdown ("не на всю ширину, пусть будет справа
+                    как тумблер"). */}
+                <div className="flex items-center justify-between gap-3 border-t border-border py-3">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span className="text-body-airbnb">{t.settings.systemSelfServicePayoutLabel}</span>
+                    <InfoTooltip text={t.settings.systemSelfServicePayoutHint} />
+                  </div>
+                  <Select
+                    value={settings.selfServicePayoutMode}
+                    onValueChange={(v) =>
+                      isSelfServicePayoutMode(v) && patch({ selfServicePayoutMode: v })
+                    }
+                    items={SELF_SERVICE_PAYOUT_OPTIONS.map((option) => ({
+                      value: option.value,
+                      label: option.label(t),
+                    }))}
+                  >
+                    <SelectTrigger className="h-9 w-auto shrink-0 gap-1.5 px-2.5">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SELF_SERVICE_PAYOUT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label(t)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </SpringCard>
             </StaggerItem>
 
@@ -289,9 +342,9 @@ export default function SystemSettingsPage() {
                   <h2 className="text-section-title">{t.settings.systemReceiptSectionTitle}</h2>
 
                   <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
-                    <div className="min-w-0">
-                      <div className="text-body-airbnb">{t.points.hasPrinterLabel}</div>
-                      <div className="text-caption-airbnb">{t.settings.systemOwnerHasPrinterHint}</div>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className="text-body-airbnb">{t.points.hasPrinterLabel}</span>
+                      <InfoTooltip text={t.settings.systemOwnerHasPrinterHint} />
                     </div>
                     <Switch checked={ownerHasPrinter} onCheckedChange={setOwnerHasPrinter} className="shrink-0" />
                   </div>
@@ -308,9 +361,9 @@ export default function SystemSettingsPage() {
                       "не на всю ширину, пусть будет справа как тумблер") —
                       не на всю ширину строки. */}
                   <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
-                    <div className="min-w-0">
-                      <div className="text-body-airbnb">{t.settings.systemReceiptPaperWidthLabel}</div>
-                      <div className="text-caption-airbnb">{t.settings.systemReceiptPaperWidthHint}</div>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className="text-body-airbnb">{t.settings.systemReceiptPaperWidthLabel}</span>
+                      <InfoTooltip text={t.settings.systemReceiptPaperWidthHint} />
                     </div>
                     <Select
                       value={paperWidth}
@@ -356,9 +409,9 @@ export default function SystemSettingsPage() {
                       />
                     </div>
                     <div className="flex items-center justify-between gap-3 py-2">
-                      <div className="min-w-0">
+                      <div className="flex min-w-0 items-center gap-1.5">
                         <span className="text-body-airbnb">{t.settings.systemReceiptCompactHeaderLabel}</span>
-                        <p className="text-caption-airbnb text-muted-foreground">{t.settings.systemReceiptCompactHeaderHint}</p>
+                        <InfoTooltip text={t.settings.systemReceiptCompactHeaderHint} />
                       </div>
                       <Switch
                         checked={compactHeader}

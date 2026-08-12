@@ -32,7 +32,14 @@ export async function GET(request: Request) {
   const operations = await prisma.moneyOperation.findMany({
     where: {
       tenantId: owner.tenantId,
-      type: { in: ["advance", "bonus_payout"] },
+      // bonus_accrual (премия начислена, но наличными не выдана — режим
+      // "Только начисление", запрос пользователя 2026-08-12) стоит здесь
+      // наравне с выданной: реестр отвечает на вопрос "что причиталось
+      // сотрудникам за месяц", и начисленная премия в нём обязана быть
+      // видна — иначе она нигде не показывается владельцу, кроме как
+      // сдвигом итогового баланса. В кассовых расчётах она при этом не
+      // участвует (CASH_EXCLUDED_TYPES, lib/zone-balance.ts).
+      type: { in: ["advance", "bonus_payout", "bonus_accrual"] },
       occurredAt: { gte: monthStart, lt: monthEnd },
     },
     include: { point: true, beneficiaryOperator: true },
@@ -44,7 +51,7 @@ export async function GET(request: Request) {
     .map((op) => ({
       id: op.id,
       occurredAt: op.occurredAt.toISOString(),
-      type: op.type as "advance" | "bonus_payout",
+      type: op.type as "advance" | "bonus_payout" | "bonus_accrual",
       amount: Math.abs(Number(op.amount)),
       pointName: op.point!.name,
       operatorName: op.beneficiaryOperator?.name ?? null,

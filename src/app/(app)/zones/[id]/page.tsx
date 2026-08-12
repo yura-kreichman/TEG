@@ -12,6 +12,7 @@ import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { OwnerShell } from "@/components/owner-shell";
+import { InfoTooltip } from "@/components/info-tooltip";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
@@ -1130,11 +1131,9 @@ export default function ZoneDetailPage() {
           {zone.accountingMode === "counters" && (
             <SpringCard hover={false}>
               <div className="flex items-center justify-between gap-3">
-                <span>
-                  <span className="block text-body-airbnb">{t.zoneDetail.countersTapAssistLabel}</span>
-                  <span className="mt-0.5 block text-caption-airbnb text-muted-foreground">
-                    {t.zoneDetail.countersTapAssistHint}
-                  </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-body-airbnb">{t.zoneDetail.countersTapAssistLabel}</span>
+                  <InfoTooltip text={t.zoneDetail.countersTapAssistHint} />
                 </span>
                 <Switch
                   checked={zone.countersTapAssistEnabled}
@@ -1152,11 +1151,9 @@ export default function ZoneDetailPage() {
           {isStaysZone(zone) && (
             <SpringCard hover={false}>
               <div className="flex items-center justify-between gap-3">
-                <span>
-                  <span className="block text-body-airbnb">{t.zoneDetail.amountRoundingLabel}</span>
-                  <span className="mt-0.5 block text-caption-airbnb text-muted-foreground">
-                    {t.zoneDetail.amountRoundingHint}
-                  </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-body-airbnb">{t.zoneDetail.amountRoundingLabel}</span>
+                  <InfoTooltip text={t.zoneDetail.amountRoundingHint} />
                 </span>
                 <Switch
                   checked={zone.amountRoundingEnabled}
@@ -1176,11 +1173,9 @@ export default function ZoneDetailPage() {
           {isTicketsZone(zone) && (
             <SpringCard hover={false} className="flex flex-col gap-1">
               <div className="flex items-center justify-between gap-3">
-                <span>
-                  <span className="block text-body-airbnb">{t.zoneDetail.ticketRedemptionLabel}</span>
-                  <span className="mt-0.5 block text-caption-airbnb text-muted-foreground">
-                    {t.zoneDetail.ticketRedemptionHint}
-                  </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-body-airbnb">{t.zoneDetail.ticketRedemptionLabel}</span>
+                  <InfoTooltip text={t.zoneDetail.ticketRedemptionHint} />
                 </span>
                 <Switch
                   checked={zone.ticketRedemptionEnabled}

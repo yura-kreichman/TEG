@@ -10,6 +10,26 @@ export function isTimeTrackingMode(value: unknown): value is TimeTrackingMode {
   return value === "manual" || value === "auto";
 }
 
+// Все типы операций модуля "Рабочее время" (те, что двигают баланс
+// оператора) — один список на весь проект, чтобы новый тип нельзя было
+// добавить в расчёт баланса и забыть в табеле или в списке ручных операций.
+// Без `as const`: Prisma ждёт мутабельный string[] в `type: { in: ... }` и
+// readonly-кортеж не принимает — тип элементов задаём явной аннотацией.
+export type WorkTimeMoneyType = "advance" | "bonus_payout" | "bonus_accrual";
+export const WORK_TIME_MONEY_TYPES: WorkTimeMoneyType[] = ["advance", "bonus_payout", "bonus_accrual"];
+
+// Правила самообслуживания (аванс/премия, которые сотрудник вносит сам) —
+// в отдельном lib/self-service-payout.ts: они нужны и клиентским экранам, а
+// этот файл тянет Prisma и в браузерный бандл попасть не может. Ре-экспорт
+// здесь — чтобы серверный код импортировал всё "рабочее время" из одного
+// места, как и раньше.
+export {
+  isSelfServicePayoutMode,
+  resolveSelfServicePayout,
+  type SelfServicePayoutMode,
+  type SelfServicePayoutRights,
+} from "@/lib/self-service-payout";
+
 const SHIFT_TOO_LONG_MS = 16 * 60 * 60 * 1000;
 
 // Открытая смена дольше 16 часов (docs/spec/05-work-time.md, "РЕЖИМ УЧЁТА
@@ -148,9 +168,19 @@ export interface OperatorBalance {
 
 // Баланс оператора (docs/spec/05-work-time.md, "БАЛАНС") — скользящий, без
 // периодов/обнуления:
-// К выдаче = Σ(начислено по ставке, ВЕСЬ журнал) − Σ(авансы, ВЕСЬ журнал) + перенос.
+// К выдаче = Σ(начислено по ставке, ВЕСЬ журнал) − Σ(авансы, ВЕСЬ журнал)
+//            + Σ(начисленные премии, ВЕСЬ журнал) + перенос.
 // Заработано за период — только информационный показатель для period, на
-// "к выдаче" не влияет; премия туда входит, в "к выдаче" — никогда (уже выдана).
+// "к выдаче" не влияет.
+//
+// Две премии ведут себя ПО-РАЗНОМУ, и в этом весь смысл их разделения
+// (запрос пользователя 2026-08-12):
+// - bonus_payout (выдана наличными) — в "заработано" входит, в "к выдаче"
+//   НЕТ: деньги уже на руках, компания больше ничего не должна.
+// - bonus_accrual (начислена, не выдана) — входит в ОБА: это долг компании,
+//   который сотрудник заберёт позже обычным авансом. Именно поэтому в режиме
+//   "accrual" аванс сотруднику недоступен — иначе он поднимал бы себе лимит
+//   аванса собственной премией (см. Tenant.selfServicePayoutMode).
 export async function calcOperatorBalance(
   operatorId: string,
   period?: { from: Date; to: Date },
@@ -162,7 +192,7 @@ export async function calcOperatorBalance(
     tx.shift.findMany({ where: { operatorId, isOpen: false } }),
     tx.operatorRate.findMany({ where: { operatorId }, orderBy: [{ effectiveFrom: "desc" }, { createdAt: "desc" }] }),
     tx.moneyOperation.findMany({
-      where: { beneficiaryOperatorId: operatorId, type: { in: ["advance", "bonus_payout"] } },
+      where: { beneficiaryOperatorId: operatorId, type: { in: WORK_TIME_MONEY_TYPES } },
     }),
     tx.operatorBalanceCarryover.findMany({ where: { operatorId } }),
   ]);
@@ -183,23 +213,31 @@ export async function calcOperatorBalance(
   let totalAdvances = 0;
   let periodAdvances = 0;
   let periodBonuses = 0;
+  let totalBonusAccruals = 0;
   for (const op of moneyOps) {
     // advance/bonus_payout хранятся отрицательными (уменьшают кассу точки,
     // как collection) — здесь нужна величина, знак сама операция уже несёт.
+    // bonus_accrual хранится положительным (кассу не трогает вовсе), но
+    // Math.abs одинаково верен для обоих — знак ниже задаём мы сами.
     const amount = Math.abs(Number(op.amount));
     const inPeriod = period ? op.occurredAt >= period.from && op.occurredAt < period.to : false;
     if (op.type === "advance") {
       totalAdvances += amount;
       if (inPeriod) periodAdvances += amount;
-    } else if (op.type === "bonus_payout" && inPeriod) {
-      periodBonuses += amount;
+    } else if (op.type === "bonus_payout") {
+      if (inPeriod) periodBonuses += amount;
+    } else if (op.type === "bonus_accrual") {
+      // В "к выдаче" — за весь журнал, в "заработано" — только за период:
+      // ровно так же, как начисление по ставке выше.
+      totalBonusAccruals += amount;
+      if (inPeriod) periodBonuses += amount;
     }
   }
 
   const totalCarryover = carryovers.reduce((sum, c) => sum + Number(c.amount), 0);
 
   return {
-    toPayOut: round2(totalAccrued - totalAdvances + totalCarryover),
+    toPayOut: round2(totalAccrued + totalBonusAccruals - totalAdvances + totalCarryover),
     earnedInPeriod: round2(periodAccrued + periodBonuses),
     rateEarnedInPeriod: round2(periodAccrued),
     advancesInPeriod: round2(periodAdvances),
@@ -216,6 +254,8 @@ export interface ShiftDetail {
   accrued: number | null;
   advanceAmount: number;
   bonusAmount: number;
+  /** Премия, начисленная в баланс без выдачи наличными (bonus_accrual). */
+  bonusAccruedAmount: number;
   open: boolean;
   // Открытая смена дольше 16 часов (docs/spec/05-work-time.md) — подсветка
   // "требует правки" в табеле владельца. Всегда false для open:false.
@@ -259,14 +299,15 @@ export async function listShiftDetails(
 
   const moneyOps = closedShifts.length
     ? await prisma.moneyOperation.findMany({
-        where: { shiftId: { in: closedShifts.map((s) => s.id) }, type: { in: ["advance", "bonus_payout"] } },
+        where: { shiftId: { in: closedShifts.map((s) => s.id) }, type: { in: WORK_TIME_MONEY_TYPES } },
       })
     : [];
-  const moneyByShift = new Map<string, { advance: number; bonus: number }>();
+  const moneyByShift = new Map<string, { advance: number; bonus: number; bonusAccrued: number }>();
   for (const op of moneyOps) {
-    const entry = moneyByShift.get(op.shiftId!) ?? { advance: 0, bonus: 0 };
+    const entry = moneyByShift.get(op.shiftId!) ?? { advance: 0, bonus: 0, bonusAccrued: 0 };
     const amount = Math.abs(Number(op.amount));
     if (op.type === "advance") entry.advance += amount;
+    else if (op.type === "bonus_accrual") entry.bonusAccrued += amount;
     else entry.bonus += amount;
     moneyByShift.set(op.shiftId!, entry);
   }
@@ -274,7 +315,7 @@ export async function listShiftDetails(
   const closedRows: ShiftDetail[] = closedShifts.map((shift) => {
     const rate = rateForDate(shift.startAt);
     const { minutes, accrued } = calcShiftAccrual(shift.startAt, shift.endAt!, rate);
-    const money = moneyByShift.get(shift.id) ?? { advance: 0, bonus: 0 };
+    const money = moneyByShift.get(shift.id) ?? { advance: 0, bonus: 0, bonusAccrued: 0 };
     return {
       id: shift.id,
       startAt: shift.startAt,
@@ -284,6 +325,7 @@ export async function listShiftDetails(
       accrued,
       advanceAmount: money.advance,
       bonusAmount: money.bonus,
+      bonusAccruedAmount: money.bonusAccrued,
       open: false,
       requiresEdit: false,
     };
@@ -300,6 +342,7 @@ export async function listShiftDetails(
     accrued: null,
     advanceAmount: 0,
     bonusAmount: 0,
+    bonusAccruedAmount: 0,
     open: true,
     requiresEdit: isShiftTooLong(openShift.startAt),
   };
@@ -308,7 +351,7 @@ export async function listShiftDetails(
 
 export interface StandaloneMoneyOp {
   id: string;
-  type: "advance" | "bonus_payout";
+  type: "advance" | "bonus_payout" | "bonus_accrual";
   amount: number;
   occurredAt: Date;
   comment: string | null;
@@ -326,14 +369,14 @@ export async function listStandaloneMoneyOps(
     where: {
       beneficiaryOperatorId: operatorId,
       shiftId: null,
-      type: { in: ["advance", "bonus_payout"] },
+      type: { in: WORK_TIME_MONEY_TYPES },
       ...(period ? { occurredAt: { gte: period.from, lt: period.to } } : {}),
     },
     orderBy: { occurredAt: "desc" },
   });
   return ops.map((op) => ({
     id: op.id,
-    type: op.type as "advance" | "bonus_payout",
+    type: op.type as "advance" | "bonus_payout" | "bonus_accrual",
     amount: Math.abs(Number(op.amount)),
     occurredAt: op.occurredAt,
     comment: op.comment,

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { BG_EFFECT_VALUES } from "@/components/bg-effects";
 import { normalizeBgEffect } from "@/components/bg-effects/shared";
+import { isSelfServicePayoutMode } from "@/lib/work-time";
 
 // Настройки → Система (запрос пользователя 2026-07-20) — страница задумана
 // расширяемой ("первый пункт там будет"). Тумблеры:
@@ -33,6 +34,7 @@ export async function GET() {
       goodsAllowBalancePayment: true,
       printingEnabled: true,
       expensesEnabled: true,
+      selfServicePayoutMode: true,
       bgEffect: true,
       receiptShowLogo: true,
       receiptShowTenantName: true,
@@ -49,6 +51,12 @@ export async function GET() {
     goodsAllowBalancePayment: tenant?.goodsAllowBalancePayment ?? true,
     printingEnabled: tenant?.printingEnabled ?? false,
     expensesEnabled: tenant?.expensesEnabled ?? true,
+    // Что Сотрудник вносит сам при завершении смены — режим из трёх, а не
+    // тумблер (запрос пользователя 2026-08-12): "cash" | "forbidden" |
+    // "accrual", см. комментарий у поля в schema.prisma.
+    selfServicePayoutMode: isSelfServicePayoutMode(tenant?.selfServicePayoutMode)
+      ? tenant.selfServicePayoutMode
+      : "cash",
     // normalizeBgEffect — старое сохранённое "sparkles" (удалённый эффект
     // "Искры", заменён "Гиперпространством" 2026-07-28) трактуется как
     // "hyperspace" при чтении; перезапишется настоящим значением при
@@ -84,6 +92,7 @@ export async function PATCH(request: Request) {
     goodsAllowBalancePayment?: boolean;
     printingEnabled?: boolean;
     expensesEnabled?: boolean;
+    selfServicePayoutMode?: string;
     bgEffect?: string;
     receiptShowLogo?: boolean;
     receiptShowTenantName?: boolean;
@@ -117,6 +126,15 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
     }
     data[field] = body[field];
+  }
+
+  // selfServicePayoutMode — как и bgEffect ниже, строка из фиксированного
+  // набора, поэтому мимо цикла булевых полей выше.
+  if (body.selfServicePayoutMode !== undefined) {
+    if (!isSelfServicePayoutMode(body.selfServicePayoutMode)) {
+      return NextResponse.json({ error: "Некорректное значение" }, { status: 400 });
+    }
+    data.selfServicePayoutMode = body.selfServicePayoutMode;
   }
 
   // bgEffect — строка из фиксированного набора (не boolean), свой отдельный

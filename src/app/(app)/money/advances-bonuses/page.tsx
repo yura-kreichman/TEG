@@ -15,7 +15,7 @@ import { Money } from "@/components/money";
 interface AdvanceBonusEntry {
   id: string;
   occurredAt: string;
-  type: "advance" | "bonus_payout";
+  type: "advance" | "bonus_payout" | "bonus_accrual";
   amount: number;
   pointName: string;
   operatorName: string | null;
@@ -154,7 +154,9 @@ export default function AdvancesBonusesRegisterPage() {
                             {formatTime(op.occurredAt)} ·{" "}
                             {op.type === "advance"
                               ? t.operatorApp.workTime.advanceFieldLabel
-                              : t.operatorApp.workTime.bonusFieldLabel}
+                              : op.type === "bonus_accrual"
+                                ? t.operatorApp.workTime.bonusAccruedFieldLabel
+                                : t.operatorApp.workTime.bonusFieldLabel}
                             {op.operatorName ? ` · ${op.operatorName}` : ""}
                             {showPointName ? ` (${op.pointName})` : ""}
                           </span>

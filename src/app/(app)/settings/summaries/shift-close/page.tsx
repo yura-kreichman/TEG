@@ -31,6 +31,10 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): Shi
     accrued: 628,
     advanceAmount: 1500,
     bonusAmount: 150,
+    // Превью показывает типовой случай — премию, выданную наличными; режим
+    // "Только начисление" меняет только подпись строки, разбирать его в
+    // образце незачем.
+    bonusIsAccrual: false,
     toPayOut: 778,
   };
 }

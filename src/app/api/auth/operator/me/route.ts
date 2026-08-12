@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getActivatedDevice, getOperatorSessionId } from "@/lib/operator-auth";
-import { getOpenShift, isShiftTooLong } from "@/lib/work-time";
+import { getOpenShift, isShiftTooLong, resolveSelfServicePayout } from "@/lib/work-time";
 
 export async function GET() {
   const device = await getActivatedDevice();
@@ -42,6 +42,12 @@ export async function GET() {
     operator: { id: operator.id, name: operator.name, avatarUrl: operator.avatarUrl, iconKey: operator.iconKey },
     workTimeEnabled,
     timeTrackingMode: operator.timeTrackingMode,
+    // Что сотруднику разрешено вносить самому при завершении смены (запрос
+    // пользователя 2026-08-12) — считается тем же resolveSelfServicePayout,
+    // что и серверная проверка в /api/operator/work-time/*, чтобы поля в
+    // форме и то, что реально примет сервер, не могли разъехаться. Отдаём
+    // готовые права, а не сырой режим: клиенту незачем знать правила.
+    selfServicePayout: resolveSelfServicePayout(tenant?.selfServicePayoutMode, operator.selfServicePayoutAllowed),
     activeShift: activeShift
       ? { id: activeShift.id, startAt: activeShift.startAt, tooLong: isShiftTooLong(activeShift.startAt) }
       : null,

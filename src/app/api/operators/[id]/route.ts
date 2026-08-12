@@ -37,6 +37,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/operators/[
     allowedZones: operator.allowedZones,
     timeTrackingMode: operator.timeTrackingMode,
     overdraftAllowed: operator.overdraftAllowed,
+    selfServicePayoutAllowed: operator.selfServicePayoutAllowed,
     showDifferenceOnSubmit: operator.showDifferenceOnSubmit,
     skipShiftStartWindow: operator.skipShiftStartWindow,
     goodsAccess: operator.goodsAccess,
@@ -75,6 +76,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
     colorTag,
     timeTrackingMode,
     overdraftAllowed,
+    selfServicePayoutAllowed,
     showDifferenceOnSubmit,
     skipShiftStartWindow,
     goodsAccess,
@@ -92,6 +94,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
     colorTag?: string | null;
     timeTrackingMode?: string;
     overdraftAllowed?: boolean;
+    selfServicePayoutAllowed?: boolean;
     showDifferenceOnSubmit?: boolean;
     skipShiftStartWindow?: boolean;
     goodsAccess?: boolean;
@@ -184,6 +187,15 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operators/
       return NextResponse.json({ error: "Некорректное значение overdraftAllowed" }, { status: 400 });
     }
     data.overdraftAllowed = overdraftAllowed;
+  }
+  // Персональный запрет самообслуживания (запрос пользователя 2026-08-12) —
+  // только запрещает; разрешить сверх режима тенанта не может, эффективное
+  // право считает resolveSelfServicePayout (src/lib/work-time.ts).
+  if (selfServicePayoutAllowed !== undefined) {
+    if (typeof selfServicePayoutAllowed !== "boolean") {
+      return NextResponse.json({ error: "Некорректное значение selfServicePayoutAllowed" }, { status: 400 });
+    }
+    data.selfServicePayoutAllowed = selfServicePayoutAllowed;
   }
   if (showDifferenceOnSubmit !== undefined) {
     if (typeof showDifferenceOnSubmit !== "boolean") {

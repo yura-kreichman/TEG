@@ -1,6 +1,7 @@
 "use client";
 
 import { BackLink } from "@/components/back-link";
+import { InfoTooltip } from "@/components/info-tooltip";
 import { useI18n } from "@/components/i18n-provider";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
@@ -55,9 +56,11 @@ export default function AppearanceSettingsPage() {
 
             <StaggerItem>
               <SpringCard animate={false} hover={false} className="flex flex-col gap-2">
-                <span className="text-body-airbnb">{t.settings.textSizeLabel}</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-body-airbnb">{t.settings.textSizeLabel}</span>
+                  <InfoTooltip text={t.settings.textSizeHint} />
+                </span>
                 <TextSizeSlider />
-                <p className="text-caption-airbnb">{t.settings.textSizeHint}</p>
               </SpringCard>
             </StaggerItem>
           </StaggerList>

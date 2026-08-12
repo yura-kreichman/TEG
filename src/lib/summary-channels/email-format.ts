@@ -214,7 +214,11 @@ export function formatShiftCloseSummaryEmail(
   // пользователя 2026-07-18: "если сотрудник не брал Аванс, то надо
   // выводить Аванс: 0"), в отличие от Премии ниже.
   if (settings.showAdvance) rows.push({ label: st.advance, value: formatMoney(data.advanceAmount, locale) });
-  if (settings.showBonus && data.bonusAmount > 0) rows.push({ label: st.bonus, value: formatMoney(data.bonusAmount, locale) });
+  if (settings.showBonus && data.bonusAmount > 0)
+    rows.push({
+      label: data.bonusIsAccrual ? st.bonusAccrued : st.bonus,
+      value: formatMoney(data.bonusAmount, locale),
+    });
   if (settings.showTotal) rows.push({ label: st.toPayOutFull, value: formatMoney(data.toPayOut, locale), bold: true });
 
   return {

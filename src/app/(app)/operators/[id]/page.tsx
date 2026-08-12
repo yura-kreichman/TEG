@@ -10,7 +10,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { Input } from "@/components/ui/input";
 import { TimeInput } from "@/components/time-input";
 import { MoneyInput } from "@/components/money-input";
-import { parseMoneyInput } from "@/lib/format";
+import { formatMoneyWithCurrency, parseMoneyInput } from "@/lib/format";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -21,7 +21,7 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconActionButton } from "@/components/kebab-menu";
 import { ActiveStatusIcon } from "@/components/active-status-icon";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
-import { useI18n } from "@/components/i18n-provider";
+import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { cn } from "@/lib/utils";
 import { formatDuration as formatDurationBase, formatTime } from "@/lib/datetime-format";
@@ -35,6 +35,9 @@ import {
 } from "@/lib/period-nav";
 import { useTenantTimezone } from "@/hooks/use-tenant-timezone";
 import { useSavePulse } from "@/hooks/use-save-pulse";
+import { useOwnerPrintAvailable } from "@/hooks/use-print";
+import { PrintButton } from "@/components/print/print-button";
+import type { PrintDocumentData } from "@/lib/print/receipt-document";
 
 interface Profile {
   id: string;
@@ -66,6 +69,7 @@ interface ShiftRow {
   accrued: number | null;
   advanceAmount: number;
   bonusAmount: number;
+  bonusAccruedAmount: number;
   edited: boolean;
   open: boolean;
   requiresEdit: boolean;
@@ -73,7 +77,7 @@ interface ShiftRow {
 
 interface StandaloneMoneyOp {
   id: string;
-  type: "advance" | "bonus_payout";
+  type: "advance" | "bonus_payout" | "bonus_accrual";
   amount: number;
   occurredAt: string;
   comment: string | null;
@@ -96,6 +100,12 @@ export default function OperatorCardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [moduleEnabled, setModuleEnabled] = useState(true);
   const [balance, setBalance] = useState<Balance | null>(null);
+  // Печать "Выписки по расчётам" — та же пара, что у Выписки баланса
+  // абонемента: кнопка появляется, только если у Владельца на ЭТОМ браузере/
+  // устройстве отмечен принтер и печать включена на тенанте.
+  const printAvailable = useOwnerPrintAvailable();
+  const locale = useLocale();
+  const currency = useCurrency();
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
   const [standaloneMoneyOps, setStandaloneMoneyOps] = useState<StandaloneMoneyOp[]>([]);
   const [carryoverEntries, setCarryoverEntries] = useState<
@@ -137,6 +147,11 @@ export default function OperatorCardPage() {
   const [closeShiftToo, setCloseShiftToo] = useState(false);
   const [editAdvance, setEditAdvance] = useState("");
   const [editBonus, setEditBonus] = useState("");
+  // Начисленная премия правится отдельным полем, а не тем же, что выданная:
+  // это разные деньги (одна ушла из кассы, вторая записана в долг), и слить
+  // их в одно поле значило бы позволить владельцу молча превратить одну в
+  // другую (запрос пользователя 2026-08-12).
+  const [editBonusAccrued, setEditBonusAccrued] = useState("");
   const [editReason, setEditReason] = useState("");
   const [editWarnings, setEditWarnings] = useState<string[]>([]);
   const [editError, setEditError] = useState<string | null>(null);
@@ -257,6 +272,137 @@ export default function OperatorCardPage() {
     return `${d.getDate()} ${t.readings.monthsGenitive[d.getMonth()]}`;
   }
 
+  /**
+   * "Выписка по расчётам" — бумажка, которую Владелец отдаёт сотруднику при
+   * расчёте (запрос пользователя 2026-08-12). НЕ расчётный листок: у того
+   * есть форма, установленная законом, и притворяться им нельзя — отсюда и
+   * название, и отсутствие места для подписи.
+   *
+   * Считает ровно то же и из того же, что уже показано на этом экране —
+   * никаких отдельных запросов и никакой собственной арифметики: бумажка,
+   * расходящаяся с экраном, хуже отсутствующей.
+   *
+   * Список смен — по одной сжатой строке мелким кеглем, без интервалов
+   * "с–по" (решение пользователя 2026-08-12, вариант B из трёх обсуждённых):
+   * часы и так стоят числом рядом, а интервал — самая длинная и наименее
+   * нужная часть строки. Авансы/премии вынесены из-под смен в свой блок —
+   * их за месяц обычно две-три, подстроками они раздували список вдвое.
+   */
+  function buildStatementData(): PrintDocumentData {
+    const closedShifts = shifts.filter((s) => !s.open && s.minutes !== null);
+    const totalMinutes = closedShifts.reduce((sum, s) => sum + (s.minutes ?? 0), 0);
+    const money = (value: number) => formatMoneyWithCurrency(value, locale, currency);
+
+    // Начисленная премия — подстрокой к общей сумме премий, и только если
+    // она вообще есть: в режиме "Из кассы точки" её не бывает, лишней
+    // строки у большинства тенантов не появится.
+    const bonusAccruedInPeriod =
+      closedShifts.reduce((sum, s) => sum + s.bonusAccruedAmount, 0) +
+      standaloneMoneyOps
+        .filter((op) => op.type === "bonus_accrual")
+        .reduce((sum, op) => sum + op.amount, 0);
+
+    const periodLines = [
+      { label: t.operators.statementShiftsCount, value: String(closedShifts.length) },
+      { label: t.operators.statementHours, value: formatDuration(totalMinutes) },
+      { label: t.operatorApp.workTime.rateLabel, value: money(balance!.currentRate) },
+      { label: t.operatorApp.workTime.rateAccruedLabel, value: money(balance!.rateEarnedInPeriod) },
+      { label: t.operatorApp.workTime.bonusesLabel, value: money(balance!.bonusesInPeriod) },
+      ...(bonusAccruedInPeriod > 0
+        ? [{ label: t.operators.statementBonusAccruedOf, value: money(bonusAccruedInPeriod), small: true }]
+        : []),
+      { label: t.operatorApp.workTime.advancesLabel, value: money(-balance!.advancesInPeriod) },
+    ];
+
+    // "Взято за период" — и привязанное к сменам, и разовые операции
+    // Владельца, одним хронологическим списком: сотруднику неважно, каким
+    // путём деньги были оформлены, важно когда и сколько он получил.
+    const taken: { date: string; label: string; value: number }[] = [
+      ...closedShifts.flatMap((s) => [
+        ...(s.advanceAmount > 0
+          ? [{ date: s.startAt, label: t.operatorApp.workTime.advanceFieldLabel, value: -s.advanceAmount }]
+          : []),
+        ...(s.bonusAmount > 0
+          ? [{ date: s.startAt, label: t.operatorApp.workTime.bonusFieldLabel, value: s.bonusAmount }]
+          : []),
+        ...(s.bonusAccruedAmount > 0
+          ? [{ date: s.startAt, label: t.operatorApp.workTime.bonusAccruedFieldLabel, value: s.bonusAccruedAmount }]
+          : []),
+      ]),
+      ...standaloneMoneyOps.map((op) => ({
+        date: op.occurredAt,
+        label:
+          op.type === "advance"
+            ? t.operatorApp.workTime.advanceFieldLabel
+            : op.type === "bonus_accrual"
+              ? t.operatorApp.workTime.bonusAccruedFieldLabel
+              : t.operatorApp.workTime.bonusFieldLabel,
+        value: op.type === "advance" ? -op.amount : op.amount,
+      })),
+    ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const { from: periodFrom, to: periodTo } = periodRangeFor(granularity, anchor);
+    const carryoverInPeriod = carryoverEntries.filter(
+      (e) => e.localDate >= periodFrom && e.localDate <= periodTo
+    );
+
+    const printedAt = new Date();
+    return {
+      title: `${t.operators.statementTitle} · ${formatPeriodLabel()}`,
+      subtitle: {
+        primary: profile!.name,
+        secondary: `${t.operators.statementPrintedAt} ${printedAt.toLocaleDateString(locale)} ${formatTime(printedAt.toISOString())}`,
+      },
+      sections: [
+        { title: t.operators.statementPeriodSection, lines: periodLines },
+        ...(closedShifts.length
+          ? [
+              {
+                title: t.operators.statementShiftsSection,
+                // Без обрезки по количеству (в отличие от Выписки баланса
+                // абонемента, где стоит лимит 20): молча потерять смены в
+                // бумажке про деньги нельзя, а больше 31 строки в месяце
+                // физически не бывает.
+                lines: [...closedShifts]
+                  .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
+                  .map((s) => ({
+                    label: `${new Date(s.startAt).getDate()} · ${formatDuration(s.minutes ?? 0)}`,
+                    value: money(s.accrued ?? 0),
+                    small: true,
+                  })),
+              },
+            ]
+          : []),
+        ...(taken.length
+          ? [
+              {
+                title: t.operators.statementTakenSection,
+                lines: taken.map((entry) => ({
+                  label: `${formatShiftDate(entry.date)} · ${entry.label}`,
+                  value: money(entry.value),
+                  small: true,
+                })),
+              },
+            ]
+          : []),
+        ...(carryoverInPeriod.length
+          ? [
+              {
+                lines: carryoverInPeriod.map((e) => ({
+                  label: t.operatorApp.workTime.carryoverLabel,
+                  value: money(e.amount),
+                })),
+              },
+            ]
+          : []),
+      ],
+      // "за всё время" прямо в подписи итога — баланс скользящий, а блоки
+      // выше period-scoped. Без этой оговорки сотрудник сложит начисленное
+      // минус авансы, получит другое число и решит, что бумажка врёт.
+      totalLine: { label: t.operators.statementToPayOut, value: money(balance!.toPayOut) },
+    };
+  }
+
   function formatDuration(minutes: number) {
     return formatDurationBase(minutes, t);
   }
@@ -368,6 +514,7 @@ export default function OperatorCardPage() {
     setCloseShiftToo(!shift.open);
     setEditAdvance(shift.advanceAmount ? String(shift.advanceAmount) : "");
     setEditBonus(shift.bonusAmount ? String(shift.bonusAmount) : "");
+    setEditBonusAccrued(shift.bonusAccruedAmount ? String(shift.bonusAccruedAmount) : "");
     setEditReason("");
     setEditWarnings([]);
     setEditError(null);
@@ -420,6 +567,7 @@ export default function OperatorCardPage() {
         ...(endAtIso ? { endAt: endAtIso } : {}),
         advanceAmount: editAdvance ? parseMoneyInput(editAdvance) : 0,
         bonusAmount: editBonus ? parseMoneyInput(editBonus) : 0,
+        bonusAccruedAmount: editBonusAccrued ? parseMoneyInput(editBonusAccrued) : 0,
         reason: editReason || undefined,
       }),
     });
@@ -578,6 +726,14 @@ export default function OperatorCardPage() {
                     </Button>
                   </PressableScale>
                 </div>
+                {printAvailable.available && profile && (
+                  <PrintButton
+                    label={t.operators.statementPrintButton}
+                    data={buildStatementData()}
+                    branding={printAvailable.branding}
+                    className="w-full gap-1.5 rounded-lg"
+                  />
+                )}
               </SpringCard>
 
               <div className="flex items-center justify-between">
@@ -670,7 +826,9 @@ export default function OperatorCardPage() {
                                 </span>
                               )}
                             </div>
-                            {(item.shift.advanceAmount > 0 || item.shift.bonusAmount > 0) && (
+                            {(item.shift.advanceAmount > 0 ||
+                              item.shift.bonusAmount > 0 ||
+                              item.shift.bonusAccruedAmount > 0) && (
                               <div className="flex flex-col items-end gap-0.5 text-xs tabular-nums">
                                 {item.shift.advanceAmount > 0 && (
                                   <span className="text-warning">
@@ -688,6 +846,17 @@ export default function OperatorCardPage() {
                                     </span>
                                   </span>
                                 )}
+                                {/* Начисленная премия — отдельной строкой, не
+                                    вместе с выданной: владельцу важно видеть,
+                                    ушли деньги из кассы или записан долг. */}
+                                {item.shift.bonusAccruedAmount > 0 && (
+                                  <span className="text-success">
+                                    {t.operatorApp.workTime.bonusAccruedInline}{" "}
+                                    <span className="font-bold">
+                                      <Money value={item.shift.bonusAccruedAmount} />
+                                    </span>
+                                  </span>
+                                )}
                               </div>
                             )}
                           </div>
@@ -702,7 +871,11 @@ export default function OperatorCardPage() {
                         <div className="flex flex-1 items-center justify-between">
                           <span className="text-body-airbnb font-semibold">
                             {formatShiftDate(item.op.occurredAt)} ·{" "}
-                            {item.op.type === "advance" ? t.operatorApp.workTime.advanceFieldLabel : t.operatorApp.workTime.bonusFieldLabel}
+                            {item.op.type === "advance"
+                              ? t.operatorApp.workTime.advanceFieldLabel
+                              : item.op.type === "bonus_accrual"
+                                ? t.operatorApp.workTime.bonusAccruedFieldLabel
+                                : t.operatorApp.workTime.bonusFieldLabel}
                           </span>
                           <span
                             className={cn(
@@ -930,6 +1103,23 @@ export default function OperatorCardPage() {
                 />
               </div>
             </div>
+            {/* Поле начисленной премии показывается, только если она у этой
+                смены есть: у подавляющего большинства смен (режим "Из кассы")
+                её нет и никогда не будет — незачем занимать место в листе
+                правки третьим всегда-нулевым полем. Появившуюся можно
+                поправить или обнулить. */}
+            {editingShift?.bonusAccruedAmount ? (
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="editBonusAccrued">{t.operatorApp.workTime.bonusAccruedFieldLabel}</Label>
+                <MoneyInput
+                  id="editBonusAccrued"
+                  className="h-12"
+                  value={editBonusAccrued}
+                  onChange={(e) => setEditBonusAccrued(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+            ) : null}
             <div className="flex flex-col gap-1">
               <Label htmlFor="editReason">
                 {t.readings.reasonLabel} <span className="font-normal text-muted-foreground">· {t.common.optional}</span>
