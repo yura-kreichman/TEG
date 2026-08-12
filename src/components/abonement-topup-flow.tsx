@@ -101,13 +101,6 @@ export interface AbonementTopupFlowProps {
   // Уже загруженный список планов — только когда allowPlanPurchase=true
   // (оператор, из /api/operator/abonement-plans).
   plans: AbonementCtx[];
-  // Часовой пояс тенанта для read-only префикса телефона — разный эндпоинт
-  // для владельца/оператора (см. PhoneInput) — компонент общий для обеих
-  // ролей, поэтому не может знать это сам, обязателен явный проп (реальный
-  // баг, найден пользователем 2026-07-19: было захардкожено на владельческий
-  // /api/tenant/timezone, у оператора он отвечал 401, и префикс молча
-  // откатывался на дефолт "RU +7" вместо реального часового пояса тенанта).
-  timezoneEndpoint: string;
   // GET ?phone= — поиск кошелька.
   searchEndpoint: string;
   // POST — создание кошелька + первое пополнение.
@@ -216,7 +209,6 @@ export interface SpendZoneCtx {
  */
 export function AbonementTopupFlow({
   plans,
-  timezoneEndpoint,
   searchEndpoint,
   createEndpoint,
   topupEndpointFor,
@@ -278,11 +270,6 @@ export function AbonementTopupFlow({
   );
 
   const [phone, setPhone] = useState("");
-  // Код страны отдельно (запрос пользователя 2026-07-22) — нужен нумпаду
-  // ниже, чтобы дописывать/стирать цифры ПОСЛЕ префикса, не трогая его;
-  // PhoneInput сам вычисляет его из часового пояса тенанта и отдаёт наверх
-  // через onDialInfo, чтобы не запрашивать timezone второй раз.
-  const [dialCode, setDialCode] = useState("+7");
   const [searching, setSearching] = useState(false);
   // undefined — ещё не искали, null — искали, не нашли, объект — нашли.
   const [found, setFound] = useState<WalletCtx | null | undefined>(initialWallet ?? undefined);
@@ -424,27 +411,23 @@ export function AbonementTopupFlow({
   }
 
   // Нумпад поверх PhoneInput (запрос пользователя 2026-07-22, тот же приём,
-  // что у поиска заказа в Билетах) — дописывает/стирает цифры ПОСЛЕ кода
-  // страны, физическая клавиатура при этом продолжает работать как обычно
-  // (PhoneInput остаётся настоящим <input>), нумпад — просто ещё один способ
-  // ввода для тач-устройств, не единственный.
-  const dialDigits = dialCode.replace("+", "");
+  // что у поиска заказа в Билетах) — физическая клавиатура при этом
+  // продолжает работать как обычно (PhoneInput остаётся настоящим <input>),
+  // нумпад просто ещё один способ ввода для тач-устройств.
+  //
+  // Работает с номером ЦЕЛИКОМ: код страны из поля убран (решение
+  // пользователя 2026-08-13, см. докстроку PhoneInput) — отрезать и
+  // приклеивать префикс больше не нужно и нечего.
   function tapPhoneDigit(digit: string) {
-    setPhone((v) => {
-      const local = v.startsWith(dialDigits) ? v.slice(dialDigits.length) : v;
-      return dialDigits + local + digit;
-    });
+    setPhone((v) => v + digit);
   }
   function backspacePhoneDigit() {
-    setPhone((v) => {
-      const local = v.startsWith(dialDigits) ? v.slice(dialDigits.length) : v;
-      return dialDigits + local.slice(0, -1);
-    });
+    setPhone((v) => v.slice(0, -1));
   }
   function clearPhoneLocal() {
-    setPhone(dialDigits);
+    setPhone("");
   }
-  const phoneLocal = phone.startsWith(dialDigits) ? phone.slice(dialDigits.length) : phone;
+  const phoneLocal = phone;
 
   function handleSearch() {
     if (!phone.trim() || searching) return;
@@ -1230,10 +1213,8 @@ export function AbonementTopupFlow({
             <PhoneInput
               id="topupPhone"
               autoFocus
-              timezoneEndpoint={timezoneEndpoint}
               value={phone}
               onChange={setPhone}
-              onDialInfo={({ dialCode }) => setDialCode(dialCode)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               heightClassName="h-14"
               sizeClassName="text-2xl font-extrabold tabular-nums"

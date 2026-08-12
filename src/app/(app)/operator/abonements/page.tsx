@@ -47,7 +47,6 @@ export default function OperatorAbonementsPage() {
         <h1 className="mb-4 text-[1.5rem] font-extrabold tracking-[-0.02em]">{t.abonements.walletsTitle}</h1>
         <AbonementTopupFlow
           plans={plans}
-          timezoneEndpoint="/api/operator/tenant-timezone"
           searchEndpoint="/api/operator/abonements"
           createEndpoint="/api/operator/abonements"
           topupEndpointFor={(walletId) => `/api/operator/abonements/${walletId}/topup`}

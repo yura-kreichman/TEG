@@ -158,7 +158,6 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
               <PhoneInput
                 id="linkClientPhone"
                 autoFocus
-                timezoneEndpoint="/api/operator/tenant-timezone"
                 value={phone}
                 onChange={setPhone}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}

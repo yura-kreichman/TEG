@@ -736,7 +736,6 @@ export default function AbonementsPage() {
         open={topupSheetOpen}
         onClose={() => setTopupSheetOpen(false)}
         plans={abonements}
-        timezoneEndpoint="/api/tenant/timezone"
         searchEndpoint="/api/abonement-wallets"
         createEndpoint="/api/abonement-wallets"
         topupEndpointFor={(walletId) => `/api/abonement-wallets/${walletId}/topup`}

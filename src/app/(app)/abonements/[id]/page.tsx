@@ -264,7 +264,6 @@ export default function AbonementWalletPage() {
               <Label htmlFor="wPhone">{t.abonements.phoneLabel}</Label>
               <PhoneInput
                 id="wPhone"
-                timezoneEndpoint="/api/tenant/timezone"
                 value={form.phone}
                 onChange={(phone) => setForm((p) => ({ ...p, phone }))}
               />
@@ -302,7 +301,6 @@ export default function AbonementWalletPage() {
               key={wallet.id}
               initialWallet={{ id: wallet.id, phone: wallet.phone, name: wallet.name, balance: wallet.balance }}
               plans={[]}
-              timezoneEndpoint="/api/tenant/timezone"
               searchEndpoint="/api/abonement-wallets"
               createEndpoint="/api/abonement-wallets"
               topupEndpointFor={(walletId) => `/api/abonement-wallets/${walletId}/topup`}

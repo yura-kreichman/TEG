@@ -250,7 +250,6 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
               <PhoneInput
                 id="abonementPhone"
                 autoFocus
-                timezoneEndpoint="/api/operator/tenant-timezone"
                 value={phone}
                 onChange={setPhone}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}

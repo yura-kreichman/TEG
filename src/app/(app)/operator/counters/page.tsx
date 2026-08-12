@@ -342,7 +342,6 @@ export default function OperatorCountersPage() {
           />
           <AbonementTopupFlow
             plans={[]}
-            timezoneEndpoint="/api/operator/tenant-timezone"
             searchEndpoint="/api/operator/abonements"
             createEndpoint="/api/operator/abonements"
             topupEndpointFor={(walletId) => `/api/operator/abonements/${walletId}/topup`}

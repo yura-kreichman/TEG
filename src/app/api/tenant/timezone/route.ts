@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { getAllowedTimezones } from "@/lib/locales";
+import { isSupportedTimezone } from "@/lib/locales";
 
-// Ограничено странами языков RentOS (фидбек 2026-07-12), а не всем списком
-// IANA-зон — см. LOCALE_TIMEZONES/getAllowedTimezones в lib/locales.ts.
-const VALID_TIMEZONES = new Set(getAllowedTimezones());
-
+// Принимается ЛЮБАЯ существующая зона IANA (запрос пользователя 2026-08-13).
+// Белый список стран наших языков стоял и здесь — покупатель из США не мог
+// выставить свой пояс даже прямым запросом; разбор в getAllowedTimezones
+// (lib/locales.ts).
 // Часовой пояс — общий для владельца и ВСЕХ его операторов (докстрока в
 // Tenant.timezone, docs/spec/00-architecture.md) — задаёт только владелец,
 // личного переопределения для оператора, в отличие от locale, нет.
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   const { timezone } = await request.json();
-  if (typeof timezone !== "string" || !VALID_TIMEZONES.has(timezone)) {
+  if (typeof timezone !== "string" || !isSupportedTimezone(timezone)) {
     return NextResponse.json({ error: "Некорректный часовой пояс" }, { status: 400 });
   }
 
