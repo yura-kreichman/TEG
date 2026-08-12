@@ -1322,6 +1322,8 @@
       "clientNotFoundLabel": "Nie znaleziono klienta o tym numerze telefonu",
       "searching": "Szukanie…",
       "nameLabel": "Imię (opcjonalnie)",
+      "similarTitle": "Podobni klienci",
+      "noName": "Bez imienia",
       "balanceLabel": "Saldo:",
       "insufficientBalance": "Niewystarczające saldo",
       "missingAmount": "brakuje",

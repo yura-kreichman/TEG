@@ -1322,6 +1322,8 @@
       "clientNotFoundLabel": "No client found with this phone number",
       "searching": "Searching…",
       "nameLabel": "Name (optional)",
+      "similarTitle": "Similar clients",
+      "noName": "No name",
       "balanceLabel": "Balance:",
       "insufficientBalance": "Insufficient balance",
       "missingAmount": "short by",

@@ -1322,6 +1322,8 @@
       "clientNotFoundLabel": "Мындай телефон номери менен кардар табылган жок",
       "searching": "Издөө…",
       "nameLabel": "Аты (милдеттүү эмес)",
+      "similarTitle": "Окшош кардарлар",
+      "noName": "Атсыз",
       "balanceLabel": "Баланс:",
       "insufficientBalance": "Баланс жетишсиз",
       "missingAmount": "жетишпейт",

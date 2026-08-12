@@ -1322,6 +1322,8 @@
       "clientNotFoundLabel": "ამ ტელეფონის ნომრით კლიენტი ვერ მოიძებნა",
       "searching": "იძებნება…",
       "nameLabel": "სახელი (არასავალდებულო)",
+      "similarTitle": "მსგავსი კლიენტები",
+      "noName": "უსახელო",
       "balanceLabel": "ბალანსი:",
       "insufficientBalance": "არასაკმარისი ბალანსი",
       "missingAmount": "აკლია",

@@ -1322,6 +1322,8 @@
       "clientNotFoundLabel": "Мұндай телефон нөмірімен клиент табылмады",
       "searching": "Іздеу…",
       "nameLabel": "Аты (міндетті емес)",
+      "similarTitle": "Ұқсас клиенттер",
+      "noName": "Атаусыз",
       "balanceLabel": "Баланс:",
       "insufficientBalance": "Баланс жеткіліксіз",
       "missingAmount": "жетіспейді",

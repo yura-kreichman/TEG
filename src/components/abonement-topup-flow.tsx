@@ -320,6 +320,10 @@ export function AbonementTopupFlow({
   // при каждой смене найденного клиента — новый номер телефона может быть
   // (не) привязан независимо от предыдущего найденного.
   const [foundHasTelegram, setFoundHasTelegram] = useState(false);
+  // Похожие по хвосту номера — показываются, когда точного совпадения нет
+  // (запрос пользователя 2026-08-13). Пустой массив = показывать нечего,
+  // сотрудник просто заводит нового клиента, как раньше.
+  const [similar, setSimilar] = useState<{ id: string; phone: string; name: string | null; balance: number }[]>([]);
   useEffect(() => {
     fetch("/api/tenant/telegram-balance-link")
       .then((res) => (res.ok ? res.json() : null))
@@ -464,12 +468,29 @@ export function AbonementTopupFlow({
           flashSearchNotFound(t.operatorApp.abonement.spendOnlyNotFound);
           return;
         }
+        setSimilar(data.similar ?? []);
         setFound(data.abonement);
       })
       .catch(() => {
         if (toastErrors) flashSearchNotFound(t.operatorApp.gameRoom.networkError);
         else setError(t.operatorApp.gameRoom.networkError);
       })
+      .finally(() => setSearching(false));
+  }
+
+  // Выбор похожего клиента: подставляем его ТОЧНЫЙ номер и повторяем поиск
+  // тем же путём, что и обычный ввод — так экран дальше ничем не отличается
+  // от случая, когда сотрудник набрал номер верно с первого раза.
+  function selectSimilar(exactPhone: string) {
+    setPhone(exactPhone);
+    setSimilar([]);
+    setSearching(true);
+    fetch(`${searchEndpoint}?phone=${encodeURIComponent(exactPhone)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.error) setFound(data.abonement);
+      })
+      .catch(() => {})
       .finally(() => setSearching(false));
   }
 
@@ -1286,6 +1307,37 @@ export function AbonementTopupFlow({
         </div>
       ) : (
         <>
+          {/* Похожие клиенты — до формы создания нового (запрос пользователя
+              2026-08-13). Один и тот же человек попадает в базу в разных
+              видах: с кодом страны и без, с транковым префиксом и без — а
+              сотрудник набирает так, как ему продиктовали, и точное
+              совпадение для него слишком строгое условие.
+              Выбирает человек, автоподстановки нет: совпадение хвоста значит
+              «похоже», а не «это он». */}
+          {isNew && similar.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <span className="text-section-title">{t.operatorApp.abonement.similarTitle}</span>
+              {similar.map((s) => (
+                <PressableScale key={s.id}>
+                  <button
+                    type="button"
+                    onClick={() => selectSimilar(s.phone)}
+                    className="flex w-full items-center justify-between gap-3 rounded-control border border-border bg-card px-3 py-2.5 text-left"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-body-airbnb font-semibold">
+                        {s.name || t.operatorApp.abonement.noName}
+                      </span>
+                      <span className="block truncate tabular-nums text-caption-airbnb">{s.phone}</span>
+                    </span>
+                    <span className="shrink-0 text-body-airbnb font-bold tabular-nums">
+                      <Money value={s.balance} />
+                    </span>
+                  </button>
+                </PressableScale>
+              ))}
+            </div>
+          )}
           {!initialWallet && (
             <>
               <BackLink label={t.common.back} onClick={() => setFound(undefined)} />

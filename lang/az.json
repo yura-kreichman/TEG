@@ -1322,6 +1322,8 @@
       "clientNotFoundLabel": "Bu telefon nömrəsi ilə müştəri tapılmadı",
       "searching": "Axtarılır…",
       "nameLabel": "Ad (istəyə bağlı)",
+      "similarTitle": "Oxşar müştərilər",
+      "noName": "Adsız",
       "balanceLabel": "Balans:",
       "insufficientBalance": "Balans kifayət etmir",
       "missingAmount": "çatışmır",

@@ -1322,6 +1322,8 @@
       "clientNotFoundLabel": "Bu telefon numarasıyla müşteri bulunamadı",
       "searching": "Aranıyor…",
       "nameLabel": "İsim (isteğe bağlı)",
+      "similarTitle": "Benzer müşteriler",
+      "noName": "İsimsiz",
       "balanceLabel": "Bakiye:",
       "insufficientBalance": "Yetersiz bakiye",
       "missingAmount": "eksik",

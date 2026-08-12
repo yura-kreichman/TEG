@@ -1322,6 +1322,8 @@
       "clientNotFoundLabel": "Nu s-a găsit niciun client cu acest număr de telefon",
       "searching": "Se caută…",
       "nameLabel": "Nume (opțional)",
+      "similarTitle": "Clienți similari",
+      "noName": "Fără nume",
       "balanceLabel": "Sold:",
       "insufficientBalance": "Sold insuficient",
       "missingAmount": "lipsesc",

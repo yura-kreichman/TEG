@@ -1322,6 +1322,8 @@
       "clientNotFoundLabel": "Այս հեռախոսահամարով հաճախորդ չի գտնվել",
       "searching": "Փնտրում ենք…",
       "nameLabel": "Անուն (ըստ ցանկության)",
+      "similarTitle": "Նման հաճախորդներ",
+      "noName": "Առանց անվան",
       "balanceLabel": "Մնացորդ.",
       "insufficientBalance": "Անբավարար մնացորդ",
       "missingAmount": "պակասում է",

@@ -1322,6 +1322,8 @@
       "clientNotFoundLabel": "Клієнта з таким телефоном не знайдено",
       "searching": "Пошук…",
       "nameLabel": "Ім'я (необов'язково)",
+      "similarTitle": "Схожі клієнти",
+      "noName": "Без імені",
       "balanceLabel": "Баланс:",
       "insufficientBalance": "Недостатньо коштів",
       "missingAmount": "не вистачає",

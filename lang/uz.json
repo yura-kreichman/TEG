@@ -1322,6 +1322,8 @@
       "clientNotFoundLabel": "Bunday telefon raqamli mijoz topilmadi",
       "searching": "Qidirilmoqda…",
       "nameLabel": "Ism (ixtiyoriy)",
+      "similarTitle": "O'xshash mijozlar",
+      "noName": "Ismsiz",
       "balanceLabel": "Balans:",
       "insufficientBalance": "Balans yetarli emas",
       "missingAmount": "yetishmayapti",

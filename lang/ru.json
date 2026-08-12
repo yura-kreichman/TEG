@@ -1352,6 +1352,8 @@
       "clientNotFoundLabel": "Клиент с таким телефоном не найден",
       "searching": "Ищем…",
       "nameLabel": "Имя (необязательно)",
+      "similarTitle": "Похожие клиенты",
+      "noName": "Без имени",
       "balanceLabel": "Баланс:",
       "insufficientBalance": "Недостаточно средств",
       "missingAmount": "не хватает",

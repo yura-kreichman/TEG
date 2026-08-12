@@ -8,6 +8,7 @@ import {
   createWalletWithTopupArbitrary,
   describeAbonementTransactionSource,
   findWalletByPhone,
+  findWalletCandidatesByKey,
   normalizePhone,
 } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
@@ -46,7 +47,21 @@ export async function GET(request: Request) {
 
   const wallet = await findWalletByPhone(point.tenantId, phone);
   if (!wallet) {
-    return NextResponse.json({ abonement: null });
+    // Точного совпадения нет — предлагаем похожих по хвосту номера (запрос
+    // пользователя 2026-08-13: "сотруднику будет тяжко писать точные
+    // совпадения"). Тот же клиент попадает в базу в разных видах: с кодом
+    // страны и без, с транковым префиксом и без — а сотрудник набирает так,
+    // как ему продиктовали.
+    //
+    // Именно КАНДИДАТЫ, а не автоподстановка: совпадение восьми цифр значит
+    // «похоже», а не «это он» (см. AbonementWallet.phoneKey в schema.prisma).
+    // Выбирает живой человек — этим касса и отличается от бота, где
+    // подтверждать некому и правило строже.
+    const candidates = await findWalletCandidatesByKey(point.tenantId, phone);
+    return NextResponse.json({
+      abonement: null,
+      similar: candidates.map((c) => ({ id: c.id, phone: c.phone, name: c.name, balance: Number(c.balance) })),
+    });
   }
 
   // Последние 20 операций (запрос пользователя 2026-07-24, было 10) —
