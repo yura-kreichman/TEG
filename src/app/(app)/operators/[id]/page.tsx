@@ -311,6 +311,15 @@ export default function OperatorCardPage() {
       ...(bonusAccruedInPeriod > 0
         ? [{ label: t.operators.statementBonusAccruedOf, value: money(bonusAccruedInPeriod), small: true }]
         : []),
+      // "Заработано" = по ставке + премии (фидбек пользователя 2026-08-13: на
+      // бумажке не было одной из главных сумм). Стоит ПОСЛЕ своих слагаемых и
+      // выделено жирным: это подытог периода, и читается он как сумма двух
+      // строк выше, а не как ещё одна равноправная строка.
+      //
+      // Не путать с итогом внизу: "Заработано" — за период, "К выдаче" —
+      // скользящий баланс за всё время. Именно поэтому вторая подписана
+      // явно, иначе они выглядели бы двумя версиями одного числа.
+      { label: t.operatorApp.workTime.earnedLabel, value: money(balance!.earnedInPeriod), bold: true },
       { label: t.operatorApp.workTime.advancesLabel, value: money(-balance!.advancesInPeriod) },
     ];
 

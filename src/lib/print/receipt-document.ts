@@ -312,7 +312,16 @@ function receiptCss(paperWidth: ReceiptPaperWidth): string {
   .receipt-line { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; font-size: 13.685px; }
   .receipt-line .label { color: #000; }
   .receipt-line .value { font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .receipt-line.bold { font-weight: 700; }
+  /* Жирная строка — подытог внутри секции (например «Заработано» в Выписке
+     по расчётам). Отбивка сверху и тонкая линия: на термопечати одна лишь
+     насыщенность шрифта различается плохо, особенно на 58мм, и без черты
+     подытог теряется среди своих же слагаемых (фидбек 2026-08-13). */
+  .receipt-line.bold {
+    font-weight: 700;
+    margin-top: 3px;
+    padding-top: 3px;
+    border-top: 1px solid #999;
+  }
   .receipt-line.large { font-size: 17px; font-weight: 700; }
   .receipt-line.small { font-size: 11.5px; padding: 0; }
   .receipt-total {
