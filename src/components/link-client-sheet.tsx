@@ -60,12 +60,16 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
   // искал 077942424 и 77942424, клиент сохранён как 37377942424, привязка
   // молча предлагала завести дубликат).
   const [similar, setSimilar] = useState<LinkedClientInfo[]>([]);
+  // Осознанное «всё равно завести нового» — сбрасывается на каждый поиск.
+  const [createAnyway, setCreateAnyway] = useState(false);
+  const suppressCreate = similar.length > 0 && !createAnyway;
 
   // Выбор кандидата: подставляем его точный номер и повторяем поиск — дальше
   // экран не отличается от случая, когда номер набрали верно сразу.
   function selectSimilar(exactPhone: string) {
     setPhone(exactPhone);
     setSimilar([]);
+    setCreateAnyway(false);
     setSearching(true);
     fetch(`${endpoint}?phone=${encodeURIComponent(exactPhone)}`)
       .then((res) => res.json())
@@ -84,6 +88,8 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
     if (!open) {
       setPhone("");
       setFound(undefined);
+      setSimilar([]);
+      setCreateAnyway(false);
       setName("");
       setError(null);
     }
@@ -102,6 +108,7 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
           return;
         }
         setSimilar(data.similar ?? []);
+        setCreateAnyway(false);
         setFound(data.client ?? null);
       })
       .catch(() => setError(t.operatorApp.gameRoom.networkError))
@@ -238,27 +245,46 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
                 ))}
               </div>
             )}
-            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.abonement.newTitle}</h2>
-            <p className="text-caption-airbnb text-muted-foreground">{phone}</p>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="linkClientName">{t.operatorApp.abonement.nameLabel}</Label>
-              <Input
-                id="linkClientName"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-12 rounded-control bg-muted"
-              />
-            </div>
-            <PressableScale>
-              <Button
-                type="button"
-                className="h-12 w-full font-semibold"
-                disabled={submitting}
-                onClick={() => submitLink({ phone, name: name.trim() || undefined })}
-              >
-                {t.operatorApp.gameRoom.linkClientAssignButton}
-              </Button>
-            </PressableScale>
+            {suppressCreate && (
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full rounded-lg"
+                  onClick={() => setCreateAnyway(true)}
+                >
+                  {t.operatorApp.abonement.createAnywayButton}
+                </Button>
+              </PressableScale>
+            )}
+            {/* Форма нового клиента прячется, пока есть похожие (решение
+                пользователя 2026-08-13) — иначе сотрудник пролистывает мимо
+                совпадения и заводит дубликат, как и случилось на проде. */}
+            {!suppressCreate && (
+              <>
+              <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.abonement.newTitle}</h2>
+              <p className="text-caption-airbnb text-muted-foreground">{phone}</p>
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="linkClientName">{t.operatorApp.abonement.nameLabel}</Label>
+                <Input
+                  id="linkClientName"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-12 rounded-control bg-muted"
+                />
+              </div>
+              <PressableScale>
+                <Button
+                  type="button"
+                  className="h-12 w-full font-semibold"
+                  disabled={submitting}
+                  onClick={() => submitLink({ phone, name: name.trim() || undefined })}
+                >
+                  {t.operatorApp.gameRoom.linkClientAssignButton}
+                </Button>
+              </PressableScale>
+              </>
+            )}
           </>
         ) : (
           <>

@@ -1324,6 +1324,7 @@
       "nameLabel": "Nume (opțional)",
       "similarTitle": "Clienți similari",
       "noName": "Fără nume",
+      "createAnywayButton": "Creează totuși unul nou",
       "balanceLabel": "Sold:",
       "insufficientBalance": "Sold insuficient",
       "missingAmount": "lipsesc",

@@ -1324,6 +1324,7 @@
       "nameLabel": "Ism (ixtiyoriy)",
       "similarTitle": "O'xshash mijozlar",
       "noName": "Ismsiz",
+      "createAnywayButton": "Baribir yangisini yaratish",
       "balanceLabel": "Balans:",
       "insufficientBalance": "Balans yetarli emas",
       "missingAmount": "yetishmayapti",

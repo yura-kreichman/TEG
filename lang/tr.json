@@ -1324,6 +1324,7 @@
       "nameLabel": "İsim (isteğe bağlı)",
       "similarTitle": "Benzer müşteriler",
       "noName": "İsimsiz",
+      "createAnywayButton": "Yine de yeni oluştur",
       "balanceLabel": "Bakiye:",
       "insufficientBalance": "Yetersiz bakiye",
       "missingAmount": "eksik",

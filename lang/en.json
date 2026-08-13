@@ -1324,6 +1324,7 @@
       "nameLabel": "Name (optional)",
       "similarTitle": "Similar clients",
       "noName": "No name",
+      "createAnywayButton": "Create a new one anyway",
       "balanceLabel": "Balance:",
       "insufficientBalance": "Insufficient balance",
       "missingAmount": "short by",

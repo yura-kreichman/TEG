@@ -1354,6 +1354,7 @@
       "nameLabel": "Имя (необязательно)",
       "similarTitle": "Похожие клиенты",
       "noName": "Без имени",
+      "createAnywayButton": "Всё равно создать нового",
       "balanceLabel": "Баланс:",
       "insufficientBalance": "Недостаточно средств",
       "missingAmount": "не хватает",

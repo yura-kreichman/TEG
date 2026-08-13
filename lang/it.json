@@ -1324,6 +1324,7 @@
       "nameLabel": "Nome (facoltativo)",
       "similarTitle": "Clienti simili",
       "noName": "Senza nome",
+      "createAnywayButton": "Crea comunque un nuovo",
       "balanceLabel": "Saldo:",
       "insufficientBalance": "Saldo insufficiente",
       "missingAmount": "mancano",

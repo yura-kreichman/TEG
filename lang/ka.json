@@ -1324,6 +1324,7 @@
       "nameLabel": "სახელი (არასავალდებულო)",
       "similarTitle": "მსგავსი კლიენტები",
       "noName": "უსახელო",
+      "createAnywayButton": "მაინც შექმენი ახალი",
       "balanceLabel": "ბალანსი:",
       "insufficientBalance": "არასაკმარისი ბალანსი",
       "missingAmount": "აკლია",

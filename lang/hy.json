@@ -1324,6 +1324,7 @@
       "nameLabel": "Անուն (ըստ ցանկության)",
       "similarTitle": "Նման հաճախորդներ",
       "noName": "Առանց անվան",
+      "createAnywayButton": "Այնուամենայնիվ ստեղծել նորը",
       "balanceLabel": "Մնացորդ.",
       "insufficientBalance": "Անբավարար մնացորդ",
       "missingAmount": "պակասում է",

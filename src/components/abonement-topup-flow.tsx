@@ -311,6 +311,9 @@ export function AbonementTopupFlow({
   // (запрос пользователя 2026-08-13). Пустой массив = показывать нечего,
   // сотрудник просто заводит нового клиента, как раньше.
   const [similar, setSimilar] = useState<{ id: string; phone: string; name: string | null; balance: number }[]>([]);
+  // Осознанное «всё равно завести нового» при наличии похожих — сбрасывается
+  // на каждый новый поиск, чтобы решение не переносилось на следующего клиента.
+  const [createAnyway, setCreateAnyway] = useState(false);
   useEffect(() => {
     fetch("/api/tenant/telegram-balance-link")
       .then((res) => (res.ok ? res.json() : null))
@@ -452,6 +455,7 @@ export function AbonementTopupFlow({
           return;
         }
         setSimilar(data.similar ?? []);
+        setCreateAnyway(false);
         setFound(data.abonement);
       })
       .catch(() => {
@@ -467,6 +471,7 @@ export function AbonementTopupFlow({
   function selectSimilar(exactPhone: string) {
     setPhone(exactPhone);
     setSimilar([]);
+    setCreateAnyway(false);
     setSearching(true);
     fetch(`${searchEndpoint}?phone=${encodeURIComponent(exactPhone)}`)
       .then((res) => res.json())
@@ -719,6 +724,9 @@ export function AbonementTopupFlow({
   }
 
   const isNew = found === null;
+  // Есть похожие и сотрудник ещё не подтвердил «всё равно новый» — форму
+  // создания не показываем вовсе (см. комментарий у неё в разметке ниже).
+  const suppressCreate = isNew && similar.length > 0 && !createAnyway;
 
   // Реальный баг, найден при самопроверке 2026-07-20: после пополнения/
   // списания found обновляется БЕЗ history (POST-ответы её не возвращают,
@@ -1322,252 +1330,274 @@ export function AbonementTopupFlow({
                 ))}
               </div>
             )}
-              {!isNew && editingName ? (
-                <div className="flex items-center gap-2">
-                  <Input
-                    autoFocus
-                    value={nameDraft}
-                    onChange={(e) => setNameDraft(e.target.value)}
-                    placeholder={t.operatorApp.abonement.nameLabel}
-                    className="h-10"
-                  />
-                  <PressableScale>
-                    <Button type="button" size="sm" disabled={savingName} onClick={saveName}>
-                      {t.common.save}
-                    </Button>
-                  </PressableScale>
-                  <PressableScale>
-                    <Button type="button" size="sm" variant="outline" onClick={() => setEditingName(false)}>
-                      {t.common.close}
-                    </Button>
-                  </PressableScale>
-                </div>
-              ) : (
-                <div
-                  className={cn(!isNew && "rounded-card border border-border bg-card p-4.5 shadow-card-rest")}
+            {suppressCreate && (
+              <PressableScale>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full rounded-lg"
+                  onClick={() => setCreateAnyway(true)}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
-                          {isNew ? t.operatorApp.abonement.newTitle : found?.name || phone}
-                        </h2>
-                        {!isNew && updateNameEndpointFor && (
-                          <PressableScale className="shrink-0">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="rounded-lg"
-                              onClick={() => {
-                                setNameDraft(found?.name ?? "");
-                                setEditingName(true);
-                              }}
-                              aria-label={t.common.edit}
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                          </PressableScale>
-                        )}
-                        {/* Значок статуса Telegram — виден всегда, когда бот
-                            вообще настроен (запрос пользователя 2026-07-23):
-                            пока клиент ещё не привязан — настоящая кнопка,
-                            той же формы, что у "Нового клиента"; привязал сам
-                            — просто чёрный неактивный значок, без рамки и
-                            без действия. */}
-                        {!isNew && found && telegramBalanceLink && (
-                          foundHasTelegram ? (
-                            <span className="ml-auto shrink-0 text-primary" aria-label={t.abonements.telegramLinkedLabel}>
-                              <Send className="size-5" />
-                            </span>
-                          ) : (
-                            <PressableScale className="ml-auto shrink-0">
+                  {t.operatorApp.abonement.createAnywayButton}
+                </Button>
+              </PressableScale>
+            )}
+              {/* Форма нового клиента прячется, пока есть похожие (решение
+                  пользователя 2026-08-13). Метка на кнопке не помогла бы: она
+                  не мешает пролистать вниз и нажать «Сохранить», а исходная
+                  проблема именно в этом — сотрудник не замечал совпадения и
+                  заводил дубликат. Чтобы завести нового при наличии похожих,
+                  теперь нужно осознанно нажать «Всё равно создать нового». */}
+              {!suppressCreate && (
+                <>
+                {!isNew && editingName ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      autoFocus
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      placeholder={t.operatorApp.abonement.nameLabel}
+                      className="h-10"
+                    />
+                    <PressableScale>
+                      <Button type="button" size="sm" disabled={savingName} onClick={saveName}>
+                        {t.common.save}
+                      </Button>
+                    </PressableScale>
+                    <PressableScale>
+                      <Button type="button" size="sm" variant="outline" onClick={() => setEditingName(false)}>
+                        {t.common.close}
+                      </Button>
+                    </PressableScale>
+                  </div>
+                ) : (
+                  <div
+                    className={cn(!isNew && "rounded-card border border-border bg-card p-4.5 shadow-card-rest")}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
+                            {isNew ? t.operatorApp.abonement.newTitle : found?.name || phone}
+                          </h2>
+                          {!isNew && updateNameEndpointFor && (
+                            <PressableScale className="shrink-0">
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="icon"
                                 className="rounded-lg"
-                                onClick={() => setQrOpen(true)}
-                                aria-label={t.abonements.telegramBalanceButton}
+                                onClick={() => {
+                                  setNameDraft(found?.name ?? "");
+                                  setEditingName(true);
+                                }}
+                                aria-label={t.common.edit}
                               >
-                                <QrCode className="size-4" />
+                                <Pencil className="size-4" />
                               </Button>
                             </PressableScale>
-                          )
+                          )}
+                          {/* Значок статуса Telegram — виден всегда, когда бот
+                              вообще настроен (запрос пользователя 2026-07-23):
+                              пока клиент ещё не привязан — настоящая кнопка,
+                              той же формы, что у "Нового клиента"; привязал сам
+                              — просто чёрный неактивный значок, без рамки и
+                              без действия. */}
+                          {!isNew && found && telegramBalanceLink && (
+                            foundHasTelegram ? (
+                              <span className="ml-auto shrink-0 text-primary" aria-label={t.abonements.telegramLinkedLabel}>
+                                <Send className="size-5" />
+                              </span>
+                            ) : (
+                              <PressableScale className="ml-auto shrink-0">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="rounded-lg"
+                                  onClick={() => setQrOpen(true)}
+                                  aria-label={t.abonements.telegramBalanceButton}
+                                >
+                                  <QrCode className="size-4" />
+                                </Button>
+                              </PressableScale>
+                            )
+                          )}
+                        </div>
+                        {/* Телефон вторичной строкой, когда есть имя — иначе он и так
+                            заголовок (найдено пользователем 2026-07-17: "здесь даже не
+                            пишется имя" — у существующего кошелька имя не показывалось
+                            вообще, только телефон в заголовке). */}
+                        {!isNew && found?.name && (
+                          <p className="text-caption-airbnb text-muted-foreground">{phone}</p>
                         )}
                       </div>
-                      {/* Телефон вторичной строкой, когда есть имя — иначе он и так
-                          заголовок (найдено пользователем 2026-07-17: "здесь даже не
-                          пишется имя" — у существующего кошелька имя не показывалось
-                          вообще, только телефон в заголовке). */}
-                      {!isNew && found?.name && (
-                        <p className="text-caption-airbnb text-muted-foreground">{phone}</p>
+                      {/* Баланс — сразу в шапке, крупными цифрами (запрос
+                          пользователя 2026-07-18: "перенеси баланс выше, в одну
+                          строку с именем"; раньше был отдельным блоком заметно
+                          ниже). */}
+                      {!isNew && found && (
+                        <div className="shrink-0 text-right">
+                          <p className="text-caption-airbnb text-muted-foreground">
+                            {t.operatorApp.abonement.balanceLabel}
+                          </p>
+                          <p className="text-2xl font-extrabold tabular-nums tracking-[-0.02em]">
+                            <Money value={found.balance} />
+                          </p>
+                        </div>
+                      )}
+                      {/* Новый клиент по определению ещё не мог привязать бота
+                          раньше (см. hasTelegramLink) — тут в одном ряду с
+                          заголовком, не проверяем foundHasTelegram. */}
+                      {isNew && telegramBalanceLink && (
+                        <PressableScale className="shrink-0">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="rounded-lg"
+                            aria-label={t.abonements.telegramBalanceButton}
+                            onClick={() => setQrOpen(true)}
+                          >
+                            <QrCode className="size-5" />
+                          </Button>
+                        </PressableScale>
                       )}
                     </div>
-                    {/* Баланс — сразу в шапке, крупными цифрами (запрос
-                        пользователя 2026-07-18: "перенеси баланс выше, в одну
-                        строку с именем"; раньше был отдельным блоком заметно
-                        ниже). */}
-                    {!isNew && found && (
-                      <div className="shrink-0 text-right">
-                        <p className="text-caption-airbnb text-muted-foreground">
-                          {t.operatorApp.abonement.balanceLabel}
-                        </p>
-                        <p className="text-2xl font-extrabold tabular-nums tracking-[-0.02em]">
-                          <Money value={found.balance} />
-                        </p>
+                    {/* Дата создания + "стаж" — разделительной линией под
+                        именем/балансом, всё в одной плашке (запрос пользователя
+                        2026-07-18). */}
+                    {!isNew && found?.createdAt && (
+                      <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-caption-airbnb text-muted-foreground">
+                        <span>
+                          {t.abonements.createdLabel} {formatCreatedDate(found.createdAt, locale)}
+                        </span>
+                        <span>
+                          {t.abonements.tenureLabel} {formatTenure(found.createdAt, t)}
+                        </span>
                       </div>
                     )}
-                    {/* Новый клиент по определению ещё не мог привязать бота
-                        раньше (см. hasTelegramLink) — тут в одном ряду с
-                        заголовком, не проверяем foundHasTelegram. */}
-                    {isNew && telegramBalanceLink && (
-                      <PressableScale className="shrink-0">
+                    {/* Выписка баланса — печать по требованию (модуль печати,
+                        запрос пользователя 2026-07-20), только когда снаружи
+                        явно передали printAvailable/printBranding (Оператор) —
+                        у Владельца эта кнопка уже есть на самой странице
+                        /abonements/[id], дублировать её тут не нужно. */}
+                    {!isNew && found && printAvailable && printBranding && (
+                      <div className="mt-3 border-t border-border pt-3">
+                        <PrintButton
+                          label={t.abonements.printReceiptButton}
+                          data={buildBalanceReceiptData(found)}
+                          branding={printBranding}
+                          className="w-full gap-1.5 rounded-lg"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+  
+            {isNew && !suppressCreate && (
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="topupName">{t.operatorApp.abonement.nameLabel}</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="topupName"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="h-12 flex-1 rounded-control bg-muted"
+                  />
+                  {/* Завести абонента без покупки плана прямо сейчас (запрос
+                      пользователя 2026-07-18: "может человек потом захочет") —
+                      отдельно от кнопок ниже, которые сразу списывают деньги за
+                      конкретный план. */}
+                  <PressableScale>
+                    <SaveButton
+                      className="h-12 shrink-0 px-5"
+                      saved={savedNew}
+                      disabled={!phone.trim()}
+                      onClick={handleSaveNew}
+                    />
+                  </PressableScale>
+                </div>
+              </div>
+            )}
+  
+            {/* Оплата балансом на месте — только Сотрудник, только для уже
+                найденного/созданного клиента (запрос пользователя 2026-07-20). */}
+            {allowZoneSpend && spendZones && spendZones.length > 0 && !isNew && found && (
+              <PressableScale>
+                <Button type="button" className="h-12 w-full gap-1.5 font-bold" onClick={openZoneSpend}>
+                  <Wallet className="size-4.5" />
+                  {t.operatorApp.abonement.spendTitle}
+                </Button>
+              </PressableScale>
+            )}
+  
+            {/* Продажа плана — только Сотрудник (запрос пользователя
+                2026-07-18: "Продаёт только сотрудник"), у Владельца секция
+                целиком скрыта. */}
+            {allowPlanPurchase && !suppressCreate && (
+              <>
+                <p className="text-caption-airbnb font-semibold text-foreground">
+                  {t.operatorApp.abonement.pickAbonementTitle}
+                </p>
+                {plans.length === 0 ? (
+                  <p className="text-caption-airbnb text-destructive">{t.operatorApp.abonement.noAbonementsError}</p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {plans.map((plan) => (
+                      <PressableScale key={plan.id}>
                         <Button
                           type="button"
                           variant="outline"
-                          size="icon"
-                          className="rounded-lg"
-                          aria-label={t.abonements.telegramBalanceButton}
-                          onClick={() => setQrOpen(true)}
+                          className={cn(
+                            "relative h-14 w-full justify-between pl-14 font-semibold",
+                            RAISED_OPTION_BUTTON_CLASS
+                          )}
+                          disabled={isNew && !phone.trim()}
+                          onClick={() => setPendingAction({ kind: "plan", plan })}
                         >
-                          <QrCode className="size-5" />
+                          <Gift className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
+                          <span>{plan.name ?? <Money value={plan.price} />}</span>
+                          <span className="tabular-nums">
+                            <Money value={plan.price} /> → <Money value={plan.creditAmount} />
+                          </span>
                         </Button>
                       </PressableScale>
-                    )}
+                    ))}
                   </div>
-                  {/* Дата создания + "стаж" — разделительной линией под
-                      именем/балансом, всё в одной плашке (запрос пользователя
-                      2026-07-18). */}
-                  {!isNew && found?.createdAt && (
-                    <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-caption-airbnb text-muted-foreground">
-                      <span>
-                        {t.abonements.createdLabel} {formatCreatedDate(found.createdAt, locale)}
-                      </span>
-                      <span>
-                        {t.abonements.tenureLabel} {formatTenure(found.createdAt, t)}
-                      </span>
-                    </div>
-                  )}
-                  {/* Выписка баланса — печать по требованию (модуль печати,
-                      запрос пользователя 2026-07-20), только когда снаружи
-                      явно передали printAvailable/printBranding (Оператор) —
-                      у Владельца эта кнопка уже есть на самой странице
-                      /abonements/[id], дублировать её тут не нужно. */}
-                  {!isNew && found && printAvailable && printBranding && (
-                    <div className="mt-3 border-t border-border pt-3">
-                      <PrintButton
-                        label={t.abonements.printReceiptButton}
-                        data={buildBalanceReceiptData(found)}
-                        branding={printBranding}
-                        className="w-full gap-1.5 rounded-lg"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-
-          {isNew && (
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="topupName">{t.operatorApp.abonement.nameLabel}</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="topupName"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="h-12 flex-1 rounded-control bg-muted"
-                />
-                {/* Завести абонента без покупки плана прямо сейчас (запрос
-                    пользователя 2026-07-18: "может человек потом захочет") —
-                    отдельно от кнопок ниже, которые сразу списывают деньги за
-                    конкретный план. */}
-                <PressableScale>
-                  <SaveButton
-                    className="h-12 shrink-0 px-5"
-                    saved={savedNew}
-                    disabled={!phone.trim()}
-                    onClick={handleSaveNew}
+                )}
+              </>
+            )}
+  
+            {allowArbitraryAmount && !suppressCreate && (
+              <div className="flex flex-col gap-2 border-t border-border pt-3">
+                <p className="text-caption-airbnb font-semibold text-foreground">{t.abonements.arbitraryAmountTitle}</p>
+                <div className="flex gap-2">
+                  <MoneyInput
+                    aria-label={t.abonements.arbitraryAmountTitle}
+                    inputMode="numeric"
+                    className="h-12 flex-1 bg-card"
+                    value={arbitraryAmount}
+                    onChange={(e) => setArbitraryAmount(e.target.value)}
+                    disabled={isNew && !phone.trim()}
                   />
-                </PressableScale>
-              </div>
-            </div>
-          )}
-
-          {/* Оплата балансом на месте — только Сотрудник, только для уже
-              найденного/созданного клиента (запрос пользователя 2026-07-20). */}
-          {allowZoneSpend && spendZones && spendZones.length > 0 && !isNew && found && (
-            <PressableScale>
-              <Button type="button" className="h-12 w-full gap-1.5 font-bold" onClick={openZoneSpend}>
-                <Wallet className="size-4.5" />
-                {t.operatorApp.abonement.spendTitle}
-              </Button>
-            </PressableScale>
-          )}
-
-          {/* Продажа плана — только Сотрудник (запрос пользователя
-              2026-07-18: "Продаёт только сотрудник"), у Владельца секция
-              целиком скрыта. */}
-          {allowPlanPurchase && (
-            <>
-              <p className="text-caption-airbnb font-semibold text-foreground">
-                {t.operatorApp.abonement.pickAbonementTitle}
-              </p>
-              {plans.length === 0 ? (
-                <p className="text-caption-airbnb text-destructive">{t.operatorApp.abonement.noAbonementsError}</p>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {plans.map((plan) => (
-                    <PressableScale key={plan.id}>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className={cn(
-                          "relative h-14 w-full justify-between pl-14 font-semibold",
-                          RAISED_OPTION_BUTTON_CLASS
-                        )}
-                        disabled={isNew && !phone.trim()}
-                        onClick={() => setPendingAction({ kind: "plan", plan })}
-                      >
-                        <Gift className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
-                        <span>{plan.name ?? <Money value={plan.price} />}</span>
-                        <span className="tabular-nums">
-                          <Money value={plan.price} /> → <Money value={plan.creditAmount} />
-                        </span>
-                      </Button>
-                    </PressableScale>
-                  ))}
+                  <PressableScale>
+                    <Button
+                      type="button"
+                      className="h-12 shrink-0 font-bold"
+                      disabled={submitting || !arbitraryAmount.trim() || (isNew && !phone.trim())}
+                      onClick={handleArbitraryButtonClick}
+                    >
+                      {t.abonements.arbitraryAmountButton}
+                    </Button>
+                  </PressableScale>
                 </div>
-              )}
-            </>
-          )}
-
-          {allowArbitraryAmount && (
-            <div className="flex flex-col gap-2 border-t border-border pt-3">
-              <p className="text-caption-airbnb font-semibold text-foreground">{t.abonements.arbitraryAmountTitle}</p>
-              <div className="flex gap-2">
-                <MoneyInput
-                  aria-label={t.abonements.arbitraryAmountTitle}
-                  inputMode="numeric"
-                  className="h-12 flex-1 bg-card"
-                  value={arbitraryAmount}
-                  onChange={(e) => setArbitraryAmount(e.target.value)}
-                  disabled={isNew && !phone.trim()}
-                />
-                <PressableScale>
-                  <Button
-                    type="button"
-                    className="h-12 shrink-0 font-bold"
-                    disabled={submitting || !arbitraryAmount.trim() || (isNew && !phone.trim())}
-                    onClick={handleArbitraryButtonClick}
-                  >
-                    {t.abonements.arbitraryAmountButton}
-                  </Button>
-                </PressableScale>
               </div>
-            </div>
-          )}
+            )}
+                </>
+              )}
         </>
       )}
 

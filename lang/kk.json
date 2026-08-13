@@ -1324,6 +1324,7 @@
       "nameLabel": "Аты (міндетті емес)",
       "similarTitle": "Ұқсас клиенттер",
       "noName": "Атаусыз",
+      "createAnywayButton": "Бәрібір жаңасын құру",
       "balanceLabel": "Баланс:",
       "insufficientBalance": "Баланс жеткіліксіз",
       "missingAmount": "жетіспейді",
