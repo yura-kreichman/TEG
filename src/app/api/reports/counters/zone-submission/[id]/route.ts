@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { requireOwner } from "@/lib/require-owner";
 import { isZoneSubmissionEditable } from "@/lib/results-submission";
-import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue } from "@/lib/results-calc";
+import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, countersPaidFromBalance } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
-import { getZoneAbonementSpendAmount } from "@/lib/abonement";
+import { getZoneAbonementSpendAmount, getZoneTapAbonementAmount } from "@/lib/abonement";
 import { reverseResultsSubmissionAdvanceSettlement } from "@/lib/zone-balance";
 import { editChatMessage } from "@/lib/telegram-bot";
 import { formatZoneSummaryTelegram } from "@/lib/summary-channels/telegram-format";
@@ -119,13 +119,26 @@ async function reEditZoneSummaryMessage(zoneSubmissionId: string, tenantId: stri
     );
   }
 
-  // Баланс — только информационная строка у "Счётчиков"/"Только касса"
-  // (запрос пользователя 2026-07-25, финальное решение) — в саму Разницу
-  // не подмешивается, эта функция обслуживает только эти два режима (см.
-  // isZoneSubmissionEditable в вызывающем коде).
-  const abonementAmount = await getZoneAbonementSpendAmount(zs.zoneId, boundary);
+  // Оплата балансом вычитается из расчётной выручки (2026-08-13, см.
+  // countersPaidFromBalance) — до этого была только информационной строкой, и
+  // Разница здесь расходилась с той, что видел Сотрудник при сдаче.
+  // TAP-зоны сюда тоже доходят (isZoneSubmissionEditable пускает любые
+  // "counters", последние в цепочке), поэтому источник выбирается как везде:
+  // тапы у tap-зон, весь зонный расход у ручных.
+  const abonementAmount = await getZoneAbonementSpendAmount(zs.zoneId, boundary, prisma, zs.createdAt);
+  const paidFromBalance = countersPaidFromBalance(zs.zone, {
+    zoneSpend: abonementAmount,
+    tapLinked: zs.zone.countersTapAssistEnabled
+      ? await getZoneTapAbonementAmount(
+          zs.zoneId,
+          new Map(zs.zone.tariffs.map((t) => [t.id, Number(t.price)])),
+          boundary,
+          zs.createdAt
+        )
+      : 0,
+  });
   const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
-  const difference = isCashOnly ? 0 : Math.round((actualCash - netRevenue) * 100) / 100;
+  const difference = isCashOnly ? 0 : Math.round((actualCash - (netRevenue - paidFromBalance)) * 100) / 100;
 
   const text = formatZoneSummaryTelegram(
     {

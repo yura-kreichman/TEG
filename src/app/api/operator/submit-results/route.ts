@@ -6,6 +6,7 @@ import {
   calcSessions,
   calcZoneGrossRevenue,
   calcZoneRevenue,
+  countersPaidFromBalance,
   isCountersTapAssistZone,
   isLaunchesZone,
   isStaysZone,
@@ -13,7 +14,7 @@ import {
   type ZoneAccountingMode,
 } from "@/lib/results-calc";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
-import { getZoneAbonementSpendAmount } from "@/lib/abonement";
+import { getZoneAbonementSpendAmount, getZoneTapAbonementAmount } from "@/lib/abonement";
 import {
   aggregateGameRoomLaunches,
   countOpenLaunchesInZone,
@@ -21,7 +22,6 @@ import {
   previousSubmissionBoundary,
 } from "@/lib/game-room";
 import { aggregateTicketOrders } from "@/lib/tickets";
-import { PAYMENT_SPLIT_METHOD } from "@/lib/payment-split";
 import { dispatchZoneSummary } from "@/lib/summary-channels/dispatch";
 import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { onResultsSubmission } from "@/lib/summary-channels/daily-cash-trigger";
@@ -341,44 +341,15 @@ export async function POST(request: Request) {
         voidedCountByZoneTariff.set(`${zone.id}:${vc.tariffId}`, vc._count._all);
       }
 
-      const abonementCounts = await tx.counterTapEvent.groupBy({
-        by: ["tariffId"],
-        where: {
-          zoneId: zone.id,
-          createdAt: { gt: boundary ?? new Date(0), lte: now },
-          paymentMethod: "abonement",
-          voidedAt: null,
-        },
-        _count: { _all: true },
-      });
+      // Разбивка оплаты (запрос пользователя 2026-07-26) — доля "Баланс"
+      // сплит-тапа тоже реально списана и учтена в netRevenue как полный
+      // сеанс, поэтому вычитается наравне с обычными абонементными тапами;
+      // всё это внутри getZoneTapAbonementAmount, общего с Отчётами.
       const priceByTariff = new Map(zone.tariffs.map((t) => [t.id, Number(t.price)]));
-      let zoneTapAbonementAmount = abonementCounts.reduce(
-        (sum, ac) => sum + ac._count._all * (priceByTariff.get(ac.tariffId) ?? 0),
-        0
+      tapAbonementAmountByZone.set(
+        zone.id,
+        await getZoneTapAbonementAmount(zone.id, priceByTariff, boundary, now, tx)
       );
-      // Разбивка оплаты (запрос пользователя 2026-07-26, аудит 2026-07-26) —
-      // доля "Баланс" сплит-тапа тоже реально списана и учтена в netRevenue
-      // как полный сеанс (см. tariffCalc выше), тот же вычет нужен и для неё,
-      // иначе Разница снова покажет фиктивную недостачу — тот же класс бага,
-      // что и у обычных абонементных тапов в комментарии выше.
-      const splitTapIds = (
-        await tx.counterTapEvent.findMany({
-          where: {
-            zoneId: zone.id,
-            createdAt: { gt: boundary ?? new Date(0), lte: now },
-            paymentMethod: PAYMENT_SPLIT_METHOD,
-            voidedAt: null,
-          },
-          select: { id: true },
-        })
-      ).map((t) => t.id);
-      if (splitTapIds.length > 0) {
-        const splitLegs = await tx.counterTapEventPaymentLeg.findMany({
-          where: { tapId: { in: splitTapIds }, method: "abonement" },
-        });
-        zoneTapAbonementAmount += splitLegs.reduce((sum, leg) => sum + Number(leg.amount), 0);
-      }
-      tapAbonementAmountByZone.set(zone.id, zoneTapAbonementAmount);
     }
 
     // Актив на ремонте (Asset.active=false) — read-only и на сервере, не
@@ -620,16 +591,14 @@ export async function POST(request: Request) {
           )
         : calcZoneRevenue(tariffCalc, returnsCountByZone.get(zone.id) ?? 0);
       const actualCash = zs.cashAmount + zs.mobileAmount;
-      // Оплата балансом (docs/spec/01-counters.md) — у ОБЫЧНЫХ (ручных)
-      // "Счётчиков"/"Только касса" НЕ участвует в Разнице (решение 2026-07-25 —
-      // decoupled "Списать с баланса" вообще не привязано ни к какому
-      // сеансу/показанию, вычитать там нечего). У TAP-зон иначе (запрос
-      // пользователя 2026-07-25: "ошибочно включаешь оплату с Баланса в расчёт
-      // Разницы") — там оплата балансом происходит на КОНКРЕТНОМ тапе, который
-      // уже учтён как сеанс в netRevenue выше; не вычесть именно эту часть —
-      // получить фиктивную недостачу ровно на сумму баланса.
+      // Оплата балансом — вычитается из расчётной выручки перед сравнением с
+      // кассой; какая именно часть, решает countersPaidFromBalance (там же
+      // разобрано, почему у tap-зон и ручных "Счётчиков" разные источники).
       const counterAbonementAmount = counterAbonementByZone.get(zone.id) ?? 0;
-      const tapAbonementAmount = isCountersTapAssistZone(zone) ? (tapAbonementAmountByZone.get(zone.id) ?? 0) : 0;
+      const paidFromBalance = countersPaidFromBalance(zone, {
+        zoneSpend: counterAbonementAmount,
+        tapLinked: tapAbonementAmountByZone.get(zone.id) ?? 0,
+      });
       // "Только касса": "Расчётной выручки и разницы не существует — сравнивать
       // не с чем" (docs/spec/01-counters.md) — явно 0, а не actualCash−0 (аудит
       // 2026-07-25: без этой ветки Разница молча равнялась ВСЕЙ кассе зоны;
@@ -639,7 +608,7 @@ export async function POST(request: Request) {
       const difference =
         zone.accountingMode === "cash_only"
           ? 0
-          : Math.round((actualCash - (netRevenue - tapAbonementAmount)) * 100) / 100;
+          : Math.round((actualCash - (netRevenue - paidFromBalance)) * 100) / 100;
 
       const readingsText = zone.assets
         .map((asset) => {

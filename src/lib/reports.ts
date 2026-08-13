@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
+import { getZoneAbonementSpendAmount, getZoneTapAbonementAmount } from "@/lib/abonement";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateTicketOrders, ticketRevenueByAssetVariant } from "@/lib/tickets";
 import { businessDayOf, localDateParts, parseBoundary, zonedWallTimeToUtc } from "@/lib/business-day";
@@ -247,6 +248,50 @@ export async function computeZoneSubmissionRevenues(
   // от реальных AssetReading как обычно (см. src/lib/asset-initial-readings.ts).
   const initialByKey = await getInitialReadingsMap([...assetIds]);
 
+  // Оплата балансом по ручным "Счётчикам" (2026-08-13, см.
+  // countersPaidFromBalance) — окно каждой сдачи считается от ПРЕДЫДУЩЕЙ сдачи
+  // той же зоны, поэтому нужна вся цепочка, а не только сдачи внутри [start,
+  // end): у самой ранней сдачи окна предшественник лежит левее start. Верхняя
+  // граница — createdAt самой сдачи, иначе более поздние списания задним
+  // числом меняли бы Разницу уже закрытой сдачи.
+  const balanceZoneIds = [
+    ...new Set(zoneSubmissions.filter((zs) => zoneById.get(zs.zoneId)?.accountingMode === "counters").map((zs) => zs.zoneId)),
+  ];
+  const balanceByZoneSubmission = new Map<string, number>();
+  if (balanceZoneIds.length > 0) {
+    const chain = await prisma.zoneSubmission.findMany({
+      where: { zoneId: { in: balanceZoneIds } },
+      select: { id: true, zoneId: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+    });
+    const previousByZoneSubmission = new Map<string, Date | null>();
+    const lastSeenByZone = new Map<string, Date>();
+    for (const row of chain) {
+      previousByZoneSubmission.set(row.id, lastSeenByZone.get(row.zoneId) ?? null);
+      lastSeenByZone.set(row.zoneId, row.createdAt);
+    }
+    await Promise.all(
+      zoneSubmissions
+        .filter((zs) => balanceZoneIds.includes(zs.zoneId))
+        .map(async (zs) => {
+          const zone = zoneById.get(zs.zoneId)!;
+          const since = previousByZoneSubmission.get(zs.id) ?? null;
+          // TAP-зона считает выручку из тапов — и вычитать надо оплату,
+          // привязанную к тапу; ручная считает из механического счётчика — там
+          // весь зонный расход баланса (см. countersPaidFromBalance).
+          const spend = zone.countersTapAssistEnabled
+            ? await getZoneTapAbonementAmount(
+                zs.zoneId,
+                new Map(zone.tariffs.map((t) => [t.id, Number(t.price)])),
+                since,
+                zs.createdAt
+              )
+            : await getZoneAbonementSpendAmount(zs.zoneId, since, prisma, zs.createdAt);
+          balanceByZoneSubmission.set(zs.id, spend);
+        })
+    );
+  }
+
   const runningPrevious = new Map<string, number>(initialByKey);
   const sessionsById = new Map<string, number>();
   for (const r of allReadings) {
@@ -443,6 +488,12 @@ export async function computeZoneSubmissionRevenues(
         sessions: zs.assetReadings.filter((r) => r.tariffId === tariff.id).reduce((sum, r) => sum + sessionsFor(r), 0),
       }));
       calculatedRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
+      // Уже нужного вида: какой источник брать для этой зоны (тапы или весь
+      // зонный расход), решено выше при заполнении balanceByZoneSubmission —
+      // по тому же правилу, что countersPaidFromBalance применяет на стороне
+      // сдачи. Пусто у legacy-"launches" с показаниями, попадающих в эту же
+      // ветку, — у них абонементных списаний на зоне не бывает.
+      abonementAmount = balanceByZoneSubmission.get(zs.id) ?? 0;
 
       perAsset = new Map<string, number>();
       const priceByTariff = new Map(zone.tariffs.map((t) => [t.id, Number(t.price)]));

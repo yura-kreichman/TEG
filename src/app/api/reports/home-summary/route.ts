@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOwner } from "@/lib/require-owner";
 import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
+import { getZoneAbonementSpendAmount, getZoneTapAbonementAmount } from "@/lib/abonement";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateTicketOrders } from "@/lib/tickets";
 import { businessDayOf, dayBoundsUtc } from "@/lib/business-day";
@@ -157,6 +158,45 @@ async function computeWindowSummary(
       ticketBoundariesByZone.set(row.zoneId, list);
     }
   }
+  // Оплата балансом по ручным "Счётчикам" (2026-08-13, см.
+  // countersPaidFromBalance) — тот же приём восстановления окна по всей
+  // истории сдач зоны, что у Билетов выше: списания "revenue_abonement" не
+  // привязаны к zoneSubmissionId, окно = (предыдущая сдача, эта сдача].
+  const counterZoneSubmissions = submissions
+    .flatMap((s) => s.zoneSubmissions)
+    .filter((zs) => zs.zone.accountingMode === "counters");
+  const counterZoneIds = [...new Set(counterZoneSubmissions.map((zs) => zs.zoneId))];
+  const balanceBySubmission = new Map<string, number>();
+  if (counterZoneIds.length) {
+    const chain = await prisma.zoneSubmission.findMany({
+      where: { zoneId: { in: counterZoneIds } },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, zoneId: true, createdAt: true },
+    });
+    const previousById = new Map<string, Date | null>();
+    const lastSeenByZone = new Map<string, Date>();
+    for (const row of chain) {
+      previousById.set(row.id, lastSeenByZone.get(row.zoneId) ?? null);
+      lastSeenByZone.set(row.zoneId, row.createdAt);
+    }
+    await Promise.all(
+      counterZoneSubmissions.map(async (zs) => {
+        const since = previousById.get(zs.id) ?? null;
+        // TAP-зона — только оплата, привязанная к тапу; ручная — весь зонный
+        // расход баланса (см. countersPaidFromBalance в lib/results-calc.ts).
+        const spend = zs.zone.countersTapAssistEnabled
+          ? await getZoneTapAbonementAmount(
+              zs.zoneId,
+              new Map(zs.zone.tariffs.map((t) => [t.id, Number(t.price)])),
+              since,
+              zs.createdAt
+            )
+          : await getZoneAbonementSpendAmount(zs.zoneId, since, prisma, zs.createdAt);
+        balanceBySubmission.set(zs.id, spend);
+      })
+    );
+  }
+
   const ticketRevenueBySubmission = new Map<string, { totalAmount: number; abonementAmount: number }>();
   await Promise.all(
     ticketZoneSubmissions.map(async (zs) => {
@@ -203,7 +243,8 @@ async function computeWindowSummary(
           .reduce((sum, r) => sum + (isLaunches ? r.reading : (sessionsById.get(r.id) ?? 0)), 0),
       }));
       const calculatedRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
-      totalDifference += actualCash - calculatedRevenue;
+      // Источник уже выбран по типу зоны выше (см. balanceBySubmission).
+      totalDifference += actualCash - (calculatedRevenue - (balanceBySubmission.get(zs.id) ?? 0));
     }
   }
 

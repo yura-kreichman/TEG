@@ -19,6 +19,7 @@ import {
   calcSessions,
   calcZoneGrossRevenue,
   calcZoneRevenue,
+  countersPaidFromBalance,
   isCountersTapAssistZone,
   isLaunchesZone,
   isStaysZone,
@@ -548,23 +549,12 @@ export default function SubmitResultsPage() {
         )
       : calcZoneRevenue(tariffCalc, Number(form.returnsCount || 0));
     const actualCash = parseMoneyInput(form.cashAmount) + parseMoneyInput(form.mobileAmount);
-    // Оплата балансом — у ОБЫЧНЫХ (ручных) "Счётчиков"/"Только касса" НЕ
-    // участвует в Разнице (правило 2026-07-25, для decoupled "Списать с
-    // баланса" — там списание вообще не связано ни с каким конкретным
-    // сеансом/показанием, поэтому "честно исключать" его из Разницы
-    // нечего). У TAP-зон — другое дело (найдено пользователем 2026-07-25 на
-    // живых данных, "ошибочно включаешь оплату с Баланса в расчёт Разницы"):
-    // там оплата балансом происходит НА КОНКРЕТНОМ тапе, который уже учтён
-    // как сеанс в netRevenue выше — если не вычесть именно эту часть,
-    // Разница показывает фиктивную недостачу ровно на сумму баланса, хотя
-    // деньги за неё никогда и не должны были попасть в кассу. Именно
-    // TAP-привязанная сумма (tapPaymentBreakdownByZone), НЕ весь
-    // counterAbonementByZone — та зонная сумма может включать и старые
-    // decoupled списания через "Списать с баланса", не привязанные ни к
-    // одному тапу, их эта поправка не касается.
     const counterAbonementAmount = counterAbonementByZone[zoneId] ?? 0;
-    const tapAbonementAmount = isCountersTapAssistZone(zone) ? (tapPaymentBreakdownByZone[zoneId]?.abonementAmount ?? 0) : 0;
-    const difference = Math.round((actualCash - (netRevenue - tapAbonementAmount)) * 100) / 100;
+    const paidFromBalance = countersPaidFromBalance(zone, {
+      zoneSpend: counterAbonementAmount,
+      tapLinked: tapPaymentBreakdownByZone[zoneId]?.abonementAmount ?? 0,
+    });
+    const difference = Math.round((actualCash - (netRevenue - paidFromBalance)) * 100) / 100;
     return { calculatedRevenue, netRevenue, actualCash, difference, abonementAmount: counterAbonementAmount };
   }
 

@@ -703,17 +703,76 @@ export async function spendWalletForZone(walletId: string, params: ZoneSpendPara
 export async function getZoneAbonementSpendAmount(
   zoneId: string,
   since: Date | null,
-  tx: Tx | typeof prisma = prisma
+  tx: Tx | typeof prisma = prisma,
+  // Верхняя граница окна (2026-08-13) — нужна только тем, кто пересчитывает
+  // УЖЕ СОСТОЯВШУЮСЯ сдачу: Отчёты и карточка сдачи иначе прихватывают
+  // списания, сделанные ПОСЛЕ неё, и задним числом меняют её Разницу. В
+  // момент самой сдачи (submit-results) верхней границы нет по смыслу —
+  // позже этого момента ничего ещё не существует.
+  until: Date | null = null
 ): Promise<number> {
   const ops = await tx.moneyOperation.findMany({
     where: {
       zoneId,
       type: "revenue_abonement",
-      ...(since ? { occurredAt: { gt: since } } : {}),
+      ...(since || until
+        ? { occurredAt: { ...(since ? { gt: since } : {}), ...(until ? { lte: until } : {}) } }
+        : {}),
     },
     select: { amount: true },
   });
   return Math.round(ops.reduce((sum, op) => sum + Number(op.amount), 0) * 100) / 100;
+}
+
+/**
+ * То же, что getZoneAbonementSpendAmount выше, но для зон с
+ * countersTapAssistEnabled: там расчётная выручка считается из ТАПОВ в
+ * приложении, поэтому вычитать из неё можно только оплату, привязанную к
+ * конкретному тапу — зонная сумма "revenue_abonement" включает и decoupled
+ * "Списать с баланса", тапа не создающее, и вычесть его значило бы показать
+ * фиктивный излишек (см. countersPaidFromBalance в lib/results-calc.ts).
+ *
+ * Вынесено в общий хелпер 2026-08-13: до этого тот же расчёт жил инлайном в
+ * submit-results/route.ts, из-за чего Отчёты, Главная и карточка сдачи у
+ * владельца показывали для tap-зон неисправленную Разницу — она расходилась
+ * с той, что Сотрудник видел при сдаче.
+ *
+ * Сеанс считается по цене ТАРИФА (тап не хранит сумму), доли сплит-оплаты —
+ * по реальным суммам ног (CounterTapEventPaymentLeg). Аннулированные тапы
+ * (voidedAt) не в счёт: они и в расчётную выручку не попали.
+ */
+export async function getZoneTapAbonementAmount(
+  zoneId: string,
+  priceByTariff: Map<string, number>,
+  since: Date | null,
+  until: Date | null = null,
+  tx: Tx | typeof prisma = prisma
+): Promise<number> {
+  const window = {
+    ...(since ? { gt: since } : {}),
+    ...(until ? { lte: until } : {}),
+  };
+  const createdAt = since || until ? { createdAt: window } : {};
+
+  const abonementCounts = await tx.counterTapEvent.groupBy({
+    by: ["tariffId"],
+    where: { zoneId, ...createdAt, paymentMethod: "abonement", voidedAt: null },
+    _count: { _all: true },
+  });
+  let total = abonementCounts.reduce((sum, ac) => sum + ac._count._all * (priceByTariff.get(ac.tariffId) ?? 0), 0);
+
+  const splitTaps = await tx.counterTapEvent.findMany({
+    where: { zoneId, ...createdAt, paymentMethod: PAYMENT_SPLIT_METHOD, voidedAt: null },
+    select: { id: true },
+  });
+  if (splitTaps.length > 0) {
+    const legs = await tx.counterTapEventPaymentLeg.findMany({
+      where: { tapId: { in: splitTaps.map((t) => t.id) }, method: "abonement" },
+      select: { amount: true },
+    });
+    total += legs.reduce((sum, leg) => sum + Number(leg.amount), 0);
+  }
+  return Math.round(total * 100) / 100;
 }
 
 interface SpendParams {
