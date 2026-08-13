@@ -11,7 +11,11 @@ import { useEffect, useRef } from "react";
 // время) вели себя идентично — решение пользователя 2026-07-16: "интерфейс
 // должен быть идентичен" — а позже тот же принцип распространили на удаление
 // ("тоже должна быть иконка, как и галочка при сохранении").
-export function useFlyOnShow<T extends HTMLElement>(show: boolean, eventName: string) {
+// silent — только для мест, где на то же действие уже звучит свой отдельный
+// звук (2026-08-13: "Закончить смену" играет playShiftEndChime, "дзинь"
+// сохранения поверх него был бы накладкой). Галочка/взрыв при этом остаются:
+// молчит только звук, не анимация.
+export function useFlyOnShow<T extends HTMLElement>(show: boolean, eventName: string, silent?: boolean) {
   const anchorRef = useRef<T>(null);
   const wasShown = useRef(false);
 
@@ -20,12 +24,12 @@ export function useFlyOnShow<T extends HTMLElement>(show: boolean, eventName: st
       const rect = anchorRef.current.getBoundingClientRect();
       window.dispatchEvent(
         new CustomEvent(eventName, {
-          detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+          detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, silent },
         })
       );
     }
     wasShown.current = show;
-  }, [show, eventName]);
+  }, [show, eventName, silent]);
 
   return anchorRef;
 }

@@ -25,7 +25,7 @@ import { Money } from "@/components/money";
 import { useI18n } from "@/components/i18n-provider";
 import { formatTime } from "@/lib/datetime-format";
 import { useSavePulse } from "@/hooks/use-save-pulse";
-import { unlockBeep, playConfirmChime, playErrorChime } from "@/lib/beep";
+import { unlockBeep, playConfirmChime, playErrorChime, playUndoTone } from "@/lib/beep";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { ActionToast } from "@/components/action-toast";
 
@@ -276,7 +276,12 @@ export default function OperatorCountersPage() {
   // та же логика, что deleteEvent у "Возвратов", но для tap-зон.
   async function deleteTap(id: string) {
     setRecentTaps((prev) => prev.filter((rt) => rt.id !== id));
-    await fetch(`/api/operator/counter-tap-events/${id}`, { method: "DELETE" }).catch(() => {});
+    // Звук отмены — только если сервер действительно удалил (2026-08-13).
+    // Строка исчезает оптимистично, ещё до ответа; озвучивать сам факт
+    // отправки запроса значило бы соврать при обрыве сети — ровно та же
+    // ошибка, что чинили в ConfirmIconButton 2026-07-27.
+    const res = await fetch(`/api/operator/counter-tap-events/${id}`, { method: "DELETE" }).catch(() => null);
+    if (res?.ok) playUndoTone();
     loadTapEvents();
   }
 
@@ -311,7 +316,9 @@ export default function OperatorCountersPage() {
 
   async function deleteEvent(id: string) {
     setEvents((prev) => prev.filter((e) => e.id !== id));
-    await fetch(`/api/operator/zone-return-events/${id}`, { method: "DELETE" }).catch(() => {});
+    // Звук — по факту удаления на сервере, см. комментарий в deleteTap выше.
+    const res = await fetch(`/api/operator/zone-return-events/${id}`, { method: "DELETE" }).catch(() => null);
+    if (res?.ok) playUndoTone();
   }
 
   if (loading) {

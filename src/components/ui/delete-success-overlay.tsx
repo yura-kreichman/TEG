@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { playUndoTone } from "@/lib/beep";
 
 // Крупный "взрыв" на месте удаления (запрос пользователя 2026-07-16: "как и
 // галочка при сохранении, только иконка мусорки должна взрываться") —
@@ -36,8 +37,15 @@ export function DeleteSuccessOverlay() {
 
   useEffect(() => {
     function handler(e: Event) {
-      const detail = (e as CustomEvent<{ x: number; y: number }>).detail;
+      const detail = (e as CustomEvent<{ x: number; y: number; silent?: boolean }>).detail;
       if (!detail) return;
+      // Звук отмены на каждое удаление — ровно тот же приём, что у
+      // playSaveDing в SaveSuccessOverlay (запрос пользователя 2026-08-13):
+      // единственный слушатель события даёт звук всем DeleteButton сразу,
+      // без правок в 16 местах вызова. Разблокировка AudioContext здесь не
+      // нужна — SaveSuccessOverlay уже вешает её на первый pointerdown
+      // документа, а оба оверлея смонтированы рядом в (app)/layout.tsx.
+      if (!detail.silent) playUndoTone();
       const id = ++nextId;
       setEvents((prev) => [...prev, { id, x: detail.x, y: detail.y }]);
       setTimeout(() => {

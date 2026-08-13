@@ -39,11 +39,11 @@ export function playBeep() {
   }
 }
 
-function playTone(startAt: number, freq: number, duration: number, peakGain: number) {
+function playTone(startAt: number, freq: number, duration: number, peakGain: number, type: OscillatorType = "sine") {
   if (!ctx) return;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
-  osc.type = "sine";
+  osc.type = type;
   osc.frequency.value = freq;
   gain.gain.setValueAtTime(0.0001, startAt);
   gain.gain.exponentialRampToValueAtTime(peakGain, startAt + 0.02);
@@ -104,6 +104,58 @@ export function playSaveDing() {
   const now = ctx.currentTime;
   playTone(now, 784, 0.16, 0.4); // G5
   playTone(now + 0.09, 988, 0.22, 0.45); // B5
+}
+
+// Начало и конец смены (docs/spec/05-work-time.md, режим учёта "Авто";
+// выбор пользователя 2026-08-13 из трёх кандидатов, прослушанных вживую) —
+// восходящее мажорное трезвучие и его точное зеркало. Три ноты, а не две:
+// смена начинается раз в день, сигнал не соревнуется с операционными
+// звуками пусков/сохранений и может позволить себе быть длиннее. Громкость
+// 0.7 — между "дзинем" (0.4) и пусками (unity gain): заметнее рядового
+// сохранения, но не перекрикивает сигнал истёкшего пуска. Эха нет
+// сознательно: эхо в этом приложении — почерк пусков, не смены.
+const SHIFT_NOTES = [523.25, 659.25, 784] as const; // C5 · E5 · G5
+const SHIFT_STEP = 0.14;
+const SHIFT_GAIN = 0.7;
+
+function playShiftTriad(descending: boolean) {
+  if (!ctx) unlockBeep();
+  if (!ctx) return;
+  if (ctx.state === "suspended") ctx.resume();
+
+  const now = ctx.currentTime;
+  const notes = descending ? [...SHIFT_NOTES].reverse() : [...SHIFT_NOTES];
+  notes.forEach((freq, i) => {
+    // Последняя нота длиннее остальных — иначе трезвучие обрывается, а не
+    // договаривает.
+    playTone(now + i * SHIFT_STEP, freq, i === notes.length - 1 ? 0.34 : 0.28, SHIFT_GAIN);
+  });
+}
+
+/** Трезвучие вверх C5→E5→G5 — сотрудник начал смену (check-in). */
+export function playShiftStartChime() {
+  playShiftTriad(false);
+}
+
+/** Те же три ноты вниз G5→E5→C5 — сотрудник закончил смену (check-out). */
+export function playShiftEndChime() {
+  playShiftTriad(true);
+}
+
+// Отмена/удаление (выбор пользователя 2026-08-13) — две короткие ноты вниз,
+// вдвое тише "дзиня" сохранения. Намеренно НЕ playErrorChime ниже: удаление
+// тапа, расхода или заказа — нормальная работа сотрудника, а не сбой, и
+// жужжащая square-волна читалась бы как "ты сломал". И намеренно не
+// playSaveDing: до 2026-08-13 аннулирование заказа звучало ровно как
+// продажа — единственный звук в приложении, который вводил в заблуждение.
+export function playUndoTone() {
+  if (!ctx) unlockBeep();
+  if (!ctx) return;
+  if (ctx.state === "suspended") ctx.resume();
+
+  const now = ctx.currentTime;
+  playTone(now, 493.88, 0.12, 0.3); // B4
+  playTone(now + 0.08, 392, 0.16, 0.3); // G4
 }
 
 // "Жужжащий" нисходящий сигнал ошибки (запрос пользователя 2026-07-21:

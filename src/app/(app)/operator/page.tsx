@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Check, ChevronRight, Gift, MapPin, ShoppingBag, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/confirm-button";
 import { SaveButton } from "@/components/ui/save-button";
 import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +24,7 @@ import { cn } from "@/lib/utils";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
-import { playErrorChime } from "@/lib/beep";
+import { playErrorChime, playShiftEndChime, playShiftStartChime, unlockBeep } from "@/lib/beep";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import {
   breakdownToSlipLines,
@@ -301,9 +302,16 @@ export default function OperatorHomePage() {
       const data = await res.json();
       if (!res.ok) {
         flashError(data.error ?? t.operatorApp.workTime.saveError);
-        return;
+        // false — ConfirmButton не пустит зелёную галочку: отказы здесь
+        // штатные (вне окна начала смены, смена уже открыта), и галочка
+        // поверх красного тоста читалась бы как "смена началась".
+        return false;
       }
       setActiveShiftStartAt(data.shift.startAt);
+      // Трезвучие вверх (выбор пользователя 2026-08-13) — единственная кнопка
+      // учёта времени, которая раньше молчала совсем, хотя "Закончить смену"
+      // звучала.
+      playShiftStartChime();
       setHomeNotice(data.noResultsToday ? { warnings: [], noResultsToday: true } : null);
     } finally {
       setCheckInOutBusy(false);
@@ -337,6 +345,9 @@ export default function OperatorHomePage() {
       }
       setActiveShiftStartAt(null);
       setToPayOut(data.balance.toPayOut);
+      // Те же три ноты вниз — пара к playShiftStartChime выше. SaveButton в
+      // шторке помечен silent, иначе поверх трезвучия лёг бы ещё и "дзинь".
+      playShiftEndChime();
       checkoutPulse(() => setCheckoutSheetOpen(false));
       if (data.warnings?.length || data.noResultsToday) {
         setHomeNotice({ warnings: data.warnings ?? [], noResultsToday: !!data.noResultsToday });
@@ -476,7 +487,13 @@ export default function OperatorHomePage() {
   if (checking) return null;
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-surface-0 px-4">
+    // onPointerDownCapture — та же ранняя разблокировка звука, что уже стоит
+    // в Счётчиках/Пусках/Билетах: "Начать смену" может быть самым первым
+    // тапом после запуска PWA, а браузер не даёт создать AudioContext до
+    // жеста. Общая разблокировка в SaveSuccessOverlay успевает по тому же
+    // тапу, но полагаться на порядок двух слушателей одного pointerdown
+    // ради звука раз в день — лишний риск.
+    <div className="flex flex-1 flex-col items-center justify-center bg-surface-0 px-4" onPointerDownCapture={() => unlockBeep()}>
       <SpringCard hover={false} className="w-full max-w-sm md:max-w-lg lg:max-w-xl">
         <div className="flex flex-col gap-2">
           {/* Аватар слева, "Привет," и имя в две строки по его высоте —
@@ -617,19 +634,31 @@ export default function OperatorHomePage() {
           )}
 
           {workTimeEnabled && timeTrackingMode === "auto" && !activeShiftStartAt && (
-            <PressableScale>
-              <Button
+            // Второй тап "Точно?" (запрос пользователя 2026-08-13) — раньше
+            // один тап сразу открывал смену, и это было несимметрично:
+            // закрытие защищено шторкой с авансом/премией, а открытие —
+            // ничем, хотя убрать случайно начатую смену сотрудник в режиме
+            // "Авто" не может вовсе (ручной ввод ему скрыт), это делает
+            // только владелец, а пуш о начале смены владельцу уже ушёл.
+            // fillParent, а не обычное состояние подтверждения: то жёстко
+            // h-12 и схлопнуло бы тайл вчетверо, сломав ряд сетки.
+            <div className="relative rounded-control">
+              <ConfirmButton
                 variant="outline"
                 disabled={checkInOutBusy}
+                fillParent
+                // Свой звук успеха — playShiftStartChime внутри handleCheckIn,
+                // "дзинь" поверх трезвучия был бы накладкой.
+                silent
                 className="flex h-24 w-full flex-col items-center justify-center gap-1 rounded-control border-2 p-2 text-center text-xs font-bold"
-                onClick={handleCheckIn}
+                onConfirm={handleCheckIn}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/api/icon-library/app-icons/Square%20Play%20Button.svg" alt="" className="size-6" />
                 <span className="leading-tight">{t.operatorApp.workTime.checkinButton}</span>
                 <span className="text-[0.6875rem] font-bold tabular-nums text-muted-foreground">{formatClock(now)}</span>
-              </Button>
-            </PressableScale>
+              </ConfirmButton>
+            </div>
           )}
 
           <PressableScale>
@@ -957,6 +986,7 @@ export default function OperatorHomePage() {
                 onClick={handleCheckOut}
                 disabled={checkInOutBusy}
                 saved={checkoutSaved}
+                silent
                 className="h-full min-w-22 rounded-control px-5 font-bold"
               />
             </PressableScale>

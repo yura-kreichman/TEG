@@ -8,7 +8,12 @@ import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
 interface ConfirmButtonProps {
-  onConfirm: () => void | Promise<unknown>;
+  /** Вернуть false — действие не удалось, галочка/звук успеха не сработают
+   * (2026-08-13, "Начать смену": сервер отказывает штатно — вне окна начала
+   * смены, смена уже открыта — и зелёная галочка поверх красного тоста с
+   * причиной читалась бы как "получилось"). Обычный void, как у всех
+   * остальных мест вызова, ведёт себя как раньше — успех. */
+  onConfirm: () => void | boolean | Promise<unknown>;
   disabled?: boolean;
   className?: string;
   variant?: React.ComponentProps<typeof Button>["variant"];
@@ -57,7 +62,12 @@ export function ConfirmButton({
       <div
         className={cn(
           fillParent
-            ? "absolute inset-0 z-10 flex items-center justify-center gap-3 rounded-lg border border-primary bg-card font-semibold"
+            // rounded-[inherit] — плашка лежит absolute inset-0 ровно по
+            // родителю, значит и скругление должна брать у него, а не
+            // хардкодить своё (2026-08-13: на тайле "Начать смену" родитель
+            // rounded-control 14px, прежний rounded-lg 10px оставлял по
+            // углам видимые серпы подложки).
+            ? "absolute inset-0 z-10 flex items-center justify-center gap-3 rounded-[inherit] border border-primary bg-card font-semibold"
             : "relative flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-primary bg-card font-semibold",
           !fillParent && className
         )}
@@ -99,13 +109,20 @@ export function ConfirmButton({
               // отправленном запросе.
               const rect = e.currentTarget.getBoundingClientRect();
               setConfirming(false);
-              Promise.resolve(onConfirm()).finally(() => {
-                window.dispatchEvent(
-                  new CustomEvent("save-success-fly", {
-                    detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, silent },
-                  })
-                );
-              });
+              Promise.resolve(onConfirm())
+                .then((ok) => {
+                  // Явный false от вызывающего экрана — отказ, галочка не
+                  // летит. Раньше здесь был .finally(), то есть галочка
+                  // улетала при любом исходе; для мест, что возвращают void
+                  // (все остальные), поведение не изменилось.
+                  if (ok === false) return;
+                  window.dispatchEvent(
+                    new CustomEvent("save-success-fly", {
+                      detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, silent },
+                    })
+                  );
+                })
+                .catch(() => {});
             }}
             className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
           >

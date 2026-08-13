@@ -47,11 +47,17 @@ import { checkPopAnimate, checkPopTransition } from "@/components/ui/check-pop-a
 export interface SaveButtonProps extends Omit<React.ComponentProps<typeof Button>, "children"> {
   children?: React.ReactNode;
   saved?: boolean;
+  /** Погасить "дзинь" сохранения там, где на то же действие уже звучит свой
+   * звук (Закончить смену — playShiftEndChime). Проп на месте вызова, а не
+   * жёсткий флаг внутри компонента: то же грабли, что были у ConfirmButton
+   * 2026-07-20, когда silent внутри компонента обеззвучил покупку абонемента.
+   * Галочка остаётся — молчит только звук. */
+  silent?: boolean;
 }
 
-function SaveButton({ children, saved, className, variant, ...props }: SaveButtonProps) {
+function SaveButton({ children, saved, silent, className, variant, ...props }: SaveButtonProps) {
   const t = useI18n();
-  const anchorRef = useFlyOnShow<HTMLSpanElement>(!!saved, "save-success-fly");
+  const anchorRef = useFlyOnShow<HTMLSpanElement>(!!saved, "save-success-fly", silent);
 
   return (
     <Button

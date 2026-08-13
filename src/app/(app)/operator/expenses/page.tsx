@@ -24,7 +24,7 @@ import { formatTime } from "@/lib/datetime-format";
 import { cn } from "@/lib/utils";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { useActionToast } from "@/hooks/use-action-toast";
-import { playErrorChime } from "@/lib/beep";
+import { playErrorChime, playUndoTone } from "@/lib/beep";
 
 interface ExpenseZone {
   id: string;
@@ -159,7 +159,11 @@ export default function OperatorExpensesPage() {
 
   async function deleteEvent(id: string) {
     setEvents((prev) => prev.filter((e) => e.id !== id));
-    await fetch(`/api/operator/zone-expense-events/${id}`, { method: "DELETE" }).catch(() => {});
+    // Звук отмены — только по успешному ответу: строка исчезает
+    // оптимистично, и "прозвучало" должно означать "расход удалён", а не
+    // "запрос ушёл" (тот же принцип, что в Счётчиках).
+    const res = await fetch(`/api/operator/zone-expense-events/${id}`, { method: "DELETE" }).catch(() => null);
+    if (res?.ok) playUndoTone();
   }
 
   if (loading) {

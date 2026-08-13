@@ -65,6 +65,11 @@ export function SaveSuccessOverlay() {
       // помечают событие silent (ConfirmButton — у него в части экранов уже
       // свой отдельный звук подтверждения, playConfirmChime/playCloseChime,
       // два звука подряд на одно действие звучали бы как накладка).
+      //
+      // Отмена/удаление сюда не приходит вовсе: у неё своя пара — событие
+      // "delete-success-explode", осколки и playUndoTone (см.
+      // delete-success-overlay.tsx). Ветки "но звук другой" здесь быть не
+      // должно, иначе два оверлея начнут делить одно событие.
       if (!detail.silent) playSaveDing();
       const id = ++nextId;
       setEvents((prev) => [...prev, { id, x: detail.x, y: detail.y, phase: "flying" }]);

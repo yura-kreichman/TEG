@@ -42,7 +42,7 @@ import { useSavePulse } from "@/hooks/use-save-pulse";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
 import { useLiveRefetch } from "@/hooks/use-live-refetch";
-import { playErrorChime } from "@/lib/beep";
+import { playErrorChime, playUndoTone } from "@/lib/beep";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { formatMoneyWithCurrency, parseMoneyInput } from "@/lib/format";
 import { formatTime } from "@/lib/datetime-format";
@@ -522,6 +522,10 @@ export default function GoodsPage() {
         flashError(data.error ?? t.operatorApp.gameRoom.networkError);
         return;
       }
+      // Звук отмены — только после успешного ответа: заказ реально
+      // возвращает списанный остаток, и "прозвучало" здесь означает
+      // "остаток вернулся", а не "запрос ушёл".
+      playUndoTone();
       goodsCart.clearCart();
       setEditingHeldOrderId(null);
       setCartSheetOpen(false);

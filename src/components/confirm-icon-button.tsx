@@ -21,6 +21,14 @@ import { cn } from "@/lib/utils";
  * целиком (имя актива, статус, кнопку "Погасить" — всё, что было в строке).
  * Родитель обязан быть `relative` — см. использования в tickets/page.tsx и
  * money/readings/page.tsx.
+ *
+ * Обратная связь об успехе — разлетающиеся осколки (DeleteSuccessOverlay,
+ * событие "delete-success-explode") и звук отмены, а НЕ улетающая зелёная
+ * галочка сохранения со своим "дзинем" (2026-08-13). До этого все четыре
+ * места вызова — аннулирование заказа, билета и пуска — и выглядели, и
+ * звучали ровно как успешная продажа. Разделение "сохранение — галочка в
+ * центр, удаление — взрыв на месте" принято 2026-07-16, этот компонент
+ * появился позже и в него не попал.
  */
 export function ConfirmIconButton({
   onConfirm,
@@ -70,7 +78,7 @@ export function ConfirmIconButton({
               setConfirming(false);
               Promise.resolve(onConfirm()).finally(() => {
                 window.dispatchEvent(
-                  new CustomEvent("save-success-fly", {
+                  new CustomEvent("delete-success-explode", {
                     detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, silent },
                   })
                 );
