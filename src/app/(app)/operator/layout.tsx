@@ -1,5 +1,6 @@
 import type { Viewport } from "next";
 import { ThemeProvider } from "@/components/theme-provider";
+import { getNonce } from "@/lib/nonce";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemeColorMeta } from "@/components/theme-color-meta";
 import { OperatorSwitchButton } from "@/components/operator-switch-button";
@@ -21,13 +22,18 @@ export const viewport: Viewport = {
 // своём устройстве, независимо от других (см. фидбек пользователя
 // 2026-07-09). PWA оператора по умолчанию тёмная (docs/spec/03-design-system.md),
 // это просто стартовое значение для устройства, где ещё ничего не выбирали.
-export default function OperatorLayout({ children }: { children: React.ReactNode }) {
+// nonce — см. комментарий в src/app/(app)/layout.tsx. Здесь цена пропущенного
+// nonce выше: PWA оператора по умолчанию тёмная, и без инлайнового скрипта
+// сотрудник на каждой загрузке получал бы вспышку белым экраном в тёмном зале.
+export default async function OperatorLayout({ children }: { children: React.ReactNode }) {
+  const nonce = await getNonce();
   return (
     <ThemeProvider
       attribute="class"
       defaultTheme="dark"
       enableSystem={false}
       storageKey="teg-theme-operator"
+      nonce={nonce}
     >
       <div className="flex flex-1 flex-col">
         <ThemeColorMeta />

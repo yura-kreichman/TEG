@@ -41,7 +41,15 @@ export async function POST(request: Request) {
       // Свежий пароль — снимаем и его блокировку тоже (аудит 2026-07-27,
       // второй раунд), тот же принцип, что уже применён к ПИНу выше.
       failedPasswordAttempts: 0,
+      failedPasswordFirstAt: null,
       passwordLockedUntil: null,
+      // Все ранее выданные сессии этого пользователя перестают приниматься
+      // (аудит 2026-08-13). Сброс пароля — ровно тот случай, ради которого
+      // отзыв и заводился: до этого человек, у которого увели куку, менял
+      // пароль и оставался с работающей чужой сессией. См.
+      // lib/session-revocation.ts — там же про порядок: отзыв ДО createSession,
+      // иначе новая сессия обесценит сама себя.
+      sessionsValidFrom: new Date(),
       resetTokenHash: null,
       resetTokenExpiresAt: null,
     },

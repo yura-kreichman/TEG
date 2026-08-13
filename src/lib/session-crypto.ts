@@ -16,21 +16,12 @@ export function sign(value: string) {
   return createHmac("sha256", getSecret()).update(value).digest("base64url");
 }
 
-export function signToken(id: string) {
-  return `${id}.${sign(id)}`;
-}
-
-export function verifyToken(token: string): string | null {
-  const [id, signature] = token.split(".");
-  if (!id || !signature) return null;
-
-  const expected = sign(id);
-  const a = Buffer.from(signature);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-
-  return id;
-}
+// signToken/verifyToken (бессрочный формат `id.signature`) удалены аудитом
+// 2026-08-13. Выпускать их перестали ещё 2026-07-27, но функция разбора
+// оставалась и продолжала их принимать — а токен без срока действия при
+// прямом реплее (без браузера, минуя maxAge cookie) валиден вечно. Ни один
+// вызывающий их больше не использует: session/admin_session — signSessionToken
+// ниже, owner_device/операторские/устройство точки — signExpiringToken.
 
 // Обычный signToken/verifyToken не несёт срок действия вообще — "таймаут"
 // сессии обеспечивает только maxAge cookie в браузере, а перехваченное сырое
@@ -59,15 +50,56 @@ export function verifyExpiringToken(token: string): string | null {
   return id;
 }
 
-// Диспетчер формата для cookie "session" — она несёт ЛИБО обычный
-// signToken (id.signature, 1 точка, обычный логин владельца), ЛИБО
-// signExpiringToken (id.expiresAt.signature, 2 точки, сессия имперсонации из
-// startImpersonation в lib/auth.ts — тот же короткий серверный таймаут, что у
-// собственной сессии админа). Общий для lib/auth.ts (getSessionUserId) и
-// edge-мидлвара (proxy.ts, который читает cookie напрямую, в обход
-// getSessionUserId, и раньше не понимал формат имперсонации вовсе).
+// Формат cookie "session" и "admin_session" (аудит 2026-08-13): к id и сроку
+// добавлено ВРЕМЯ ВЫДАЧИ. Оно нужно ровно для одного — чтобы смена пароля
+// могла разом обесценить все ранее выданные сессии: подпись зависит только от
+// userId, поэтому «выпустить новый токен» никогда не отзывало старый, и
+// перехваченное значение продолжало работать до конца своего срока даже после
+// того, как владелец сменил пароль именно из-за подозрения на перехват.
+// Сверка идёт с User.sessionsValidFrom в requireOwner/requireSuperAdmin — там,
+// где пользователь и так читается из базы, без лишнего запроса.
+export interface SessionTokenDetails {
+  userId: string;
+  issuedAtMs: number;
+}
+
+export function signSessionToken(id: string, issuedAtMs: number, expiresAtMs: number): string {
+  const payload = `${id}.${issuedAtMs}.${expiresAtMs}`;
+  return `${payload}.${sign(payload)}`;
+}
+
+export function verifySessionDetails(token: string): SessionTokenDetails | null {
+  const parts = token.split(".");
+  if (parts.length !== 4) return null;
+  const [id, issuedAtStr, expiresAtStr, signature] = parts as [string, string, string, string];
+  if (!id || !issuedAtStr || !expiresAtStr || !signature) return null;
+
+  const issuedAtMs = Number(issuedAtStr);
+  const expiresAtMs = Number(expiresAtStr);
+  if (!Number.isFinite(issuedAtMs) || !Number.isFinite(expiresAtMs)) return null;
+  if (Date.now() > expiresAtMs) return null;
+
+  const expected = sign(`${id}.${issuedAtStr}.${expiresAtStr}`);
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
+  return { userId: id, issuedAtMs };
+}
+
+// Только userId — для proxy.ts, который читает cookie напрямую (гейт подписки)
+// и про время выдачи ничего не решает.
+//
+// Прежние форматы больше НЕ принимаются. Раньше здесь стоял диспетчер: 1 точка
+// — бессрочный signToken, 2 точки — signExpiringToken. Бессрочные токены никто
+// не выпускает с 2026-07-27, их браузерный maxAge (7 дней) истёк ещё в начале
+// августа, а ветка разбора продолжала жить и принимать их — то есть кука,
+// перехваченная до той даты, оставалась годной НАВСЕГДА при прямом реплее без
+// браузера. Совместимость закончилась; при выкатке все текущие сессии
+// владельцев и админов станут недействительны один раз — это ожидаемо и
+// дешевле, чем держать открытой вечную дверь.
 export function verifySessionToken(token: string): string | null {
-  return token.split(".").length === 3 ? verifyExpiringToken(token) : verifyToken(token);
+  return verifySessionDetails(token)?.userId ?? null;
 }
 
 export function sessionCookieOptions(maxAge: number) {

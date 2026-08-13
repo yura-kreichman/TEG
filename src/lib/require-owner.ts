@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { getSessionUserId } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
+import { isSessionRevoked } from "@/lib/session-revocation";
 
 /**
  * Resolves the current session to an authenticated Owner and their tenant.
@@ -7,11 +8,12 @@ import { getSessionUserId } from "@/lib/auth";
  * an owner somehow has no tenant.
  */
 export async function requireOwner() {
-  const userId = await getSessionUserId();
-  if (!userId) return null;
+  const session = await getSession();
+  if (!session) return null;
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.user.findUnique({ where: { id: session.userId } });
   if (!user || user.role !== "owner" || !user.tenantId) return null;
+  if (isSessionRevoked(session, user.sessionsValidFrom)) return null;
 
   return { user, tenantId: user.tenantId };
 }

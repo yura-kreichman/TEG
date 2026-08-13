@@ -11,11 +11,17 @@ import {
 import { setAccentCookie } from "@/lib/accent";
 import { setBgStyleCookie } from "@/lib/bg-style";
 import {
+  clearFailedLoginAttempts,
+  equalizePasswordTiming,
   isLockedOut,
+  loginAttemptKey,
+  loginBlockedForMinutes,
+  recordFailedLoginAttempt,
   remainingLockoutMinutes,
   recordFailedPassword,
   resetPasswordLockout,
 } from "@/lib/login-lockout";
+import { findUserByEmail } from "@/lib/normalize-email";
 import { isAuthRateLimited, PIN_ATTEMPTS_PER_WINDOW } from "@/lib/auth-rate-limit";
 import {
   clearFailedPins,
@@ -129,13 +135,37 @@ export async function POST(request: Request) {
     );
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  // Предел по паре (введённый email + IP) — ПЕРВЫМ, до похода в базу за
+  // пользователем (аудит 2026-08-13). Порядок здесь и есть суть правки:
+  // считается ЛЮБОЙ введённый адрес, существующий или нет, поэтому 429
+  // приходит одинаково в обоих случаях и по ответу больше нельзя понять,
+  // заведён ли аккаунт. Раньше блокировка жила на найденном пользователе, и
+  // сам факт 429 означал «такой email есть». Почему предел теперь не на
+  // аккаунт целиком (им можно было запереть владельца снаружи) — в
+  // lib/login-lockout.ts.
+  const attemptKey = loginAttemptKey(email, ip);
+  const blockedFor = loginBlockedForMinutes(attemptKey);
+  if (blockedFor !== null) {
+    return NextResponse.json(
+      { error: `Слишком много попыток. Попробуйте через ${blockedFor} мин.` },
+      { status: 429 }
+    );
+  }
+
+  const user = await findUserByEmail(email);
   if (!user) {
+    // Проверка-пустышка той же стоимости, что настоящая (аудит 2026-08-13):
+    // без неё «такого email нет» отвечало мгновенно, а «email есть, пароль
+    // неверный» — через ~285 мс bcrypt'а, и эта разница измеряется по сети
+    // надёжно. Одинаковый текст ответа сам по себе ничего не скрывал.
+    await equalizePasswordTiming(password);
+    recordFailedLoginAttempt(attemptKey);
     return NextResponse.json({ error: "Неверные учётные данные" }, { status: 401 });
   }
 
-  // Блокировка по попыткам пароля (аудит 2026-07-27, второй раунд) — см.
-  // lib/login-lockout.ts, почему у пароля она есть, а у ПИНа нет.
+  // Второй уровень — блокировка аккаунта целиком (аудит 2026-07-27; порог
+  // поднят и добавлено окно 2026-08-13): страховка от распределённого
+  // перебора с многих адресов, до которой человек с опечатками не доходит.
   if (isLockedOut(user.passwordLockedUntil)) {
     return NextResponse.json(
       { error: `Слишком много попыток. Попробуйте через ${remainingLockoutMinutes(user.passwordLockedUntil!)} мин.` },
@@ -145,9 +175,11 @@ export async function POST(request: Request) {
 
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) {
+    recordFailedLoginAttempt(attemptKey);
     await recordFailedPassword(user.id);
     return NextResponse.json({ error: "Неверные учётные данные" }, { status: 401 });
   }
+  clearFailedLoginAttempts(attemptKey);
   if (user.failedPasswordAttempts > 0) await resetPasswordLockout(user.id);
 
   await createSession(user.id);

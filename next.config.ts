@@ -1,36 +1,9 @@
 import type { NextConfig } from "next";
 
-// Security-заголовки (найдено внешним SEO/security-отчётом sitechecker.pro
-// 2026-07-14: "Defence against XSS/clickjacking/MIME-sniffing attacks is not
-// implemented", "Web server discloses its version"). Сайт полностью
-// self-hosted — ни одного внешнего CDN/шрифта/аналитики (докс: собственная
-// статистика посещений, Inter грузится через next/font, не Google Fonts) —
-// единственный легитимный внешний источник на всём проекте: YouTube-плеер
-// секции видео Лендинга (public/landing-video.js, youtube-nocookie.com,
-// создаётся по клику, не в разметке). Это делает CSP короткой и безопасной
-// для site-wide применения, а не только для /s/[slug].
-// 'unsafe-inline' в style-src ОБЯЗАТЕЛЕН: next/image сам расставляет inline
-// style на каждый <img> (position/aspect для fill), плюс собственный код
-// местами использует style={{...}} (например ZoneIconGlyph, mask-image) —
-// без unsafe-inline это всё сломалось бы визуально на каждой странице.
-// 'unsafe-eval' в script-src — ТОЛЬКО в dev (Turbopack HMR/Fast Refresh на
-// некоторых платформах использует eval), в проде не нужен и не включён.
-const isDev = process.env.NODE_ENV !== "production";
-const CSP = [
-  `default-src 'self'`,
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
-  `style-src 'self' 'unsafe-inline'`,
-  `img-src 'self' data:`,
-  `font-src 'self' data:`,
-  `connect-src 'self'${isDev ? " ws:" : ""}`,
-  `frame-src 'self' https://www.youtube-nocookie.com`,
-  `frame-ancestors 'none'`,
-  `object-src 'none'`,
-  `base-uri 'self'`,
-  `form-action 'self'`,
-]
-  .join("; ")
-  .concat(";");
+// CSP переехала в src/lib/csp.ts и выдаётся из src/proxy.ts (аудит
+// 2026-08-13): она больше не константа, а строка со свежим одноразовым nonce
+// на каждый ответ, а статические headers() из этого файла nonce сформировать
+// не могут. Здесь остались только заголовки, у которых нет переменной части.
 
 const nextConfig: NextConfig = {
   // pdfkit грузит свои .afm файлы шрифтов по пути относительно __dirname во
@@ -80,10 +53,22 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
-          { key: "Content-Security-Policy", value: CSP },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // Аппаратные API, которые приложению не нужны ни на одной странице
+          // (аудит 2026-08-13). Не «дыра» сама по себе — страховка на случай
+          // внедрённого скрипта или встроенного iframe: без неё украденный
+          // скрипт может спросить у браузера камеру/микрофон/геопозицию от
+          // имени нашего домена, и человек увидит запрос, которому доверяет.
+          // Проверено грепом, что ни одного из этих API в проекте нет: сканера
+          // QR в PWA не существует, а печать и Web Push этой политикой не
+          // задеваются. Если когда-нибудь появится сканер — camera отсюда
+          // придётся убрать, иначе он молча не запустится.
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), midi=()",
+          },
         ],
       },
     ];

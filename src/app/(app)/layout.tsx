@@ -15,6 +15,7 @@ import { SaveSuccessOverlay } from "@/components/ui/save-success-overlay";
 import { DeleteSuccessOverlay } from "@/components/ui/delete-success-overlay";
 import { getDictionary, resolveLocale } from "@/lib/i18n";
 import { resolveTenantCurrency } from "@/lib/currency-resolve";
+import { getNonce } from "@/lib/nonce";
 
 // Per docs/design/prototype-owner-v2.html (approved 2026-07-07, supersedes the
 // prior Onest choice from the Airbnb-referenced pass): Inter with full Cyrillic
@@ -75,6 +76,7 @@ export default async function RootLayout({
   const locale = await resolveLocale();
   const dict = getDictionary(locale);
   const currency = await resolveTenantCurrency();
+  const nonce = await getNonce();
 
   return (
     <html
@@ -87,11 +89,19 @@ export default async function RootLayout({
         <AppBackground style={bgStyle} />
         <DisableContextMenu />
         <I18nProvider dict={dict} locale={locale} currency={currency}>
+          {/* nonce обязателен (аудит 2026-08-13): next-themes вставляет
+              ИНЛАЙНОВЫЙ скрипт, который выставляет класс темы до первой
+              отрисовки, а после замены 'unsafe-inline' на nonce в script-src
+              браузер выполнит инлайновый скрипт только с действующим nonce.
+              Без него скрипт молча блокируется — тема применяется уже после
+              гидратации, то есть возвращается ровно то мигание светлым, ради
+              устранения которого этот скрипт и существует. */}
           <ThemeProvider
             attribute="class"
             defaultTheme="light"
             enableSystem={false}
             storageKey="teg-theme-owner"
+            nonce={nonce}
           >
             <ThemeColorMeta />
             <NavProgressBar />

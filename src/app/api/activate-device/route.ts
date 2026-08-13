@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { activatePointDevice, hashInstallToken } from "@/lib/operator-auth";
+import { isAuthRateLimited } from "@/lib/auth-rate-limit";
+import { getClientIp } from "@/lib/instructions/request-ip";
 
 export async function POST(request: Request) {
+  // Единственный неавторизованный роут, который что-то ЗАПИСЫВАЕТ, и до аудита
+  // 2026-08-13 он был вообще без ограничителя: префикс /api/auth/ сюда не
+  // попадает, а свой лимит не ставился. Сам токен — 32 случайных байта, его не
+  // перебрать, но бесплатный неограниченный поток запросов к базе с публичного
+  // адреса стоит закрыть просто потому, что закрыть дёшево.
+  if (isAuthRateLimited("activate-device", getClientIp(request))) {
+    return NextResponse.json({ error: "Слишком много попыток. Попробуйте позже." }, { status: 429 });
+  }
+
   const { token } = await request.json();
   if (typeof token !== "string") {
     return NextResponse.json({ error: "token обязателен" }, { status: 400 });

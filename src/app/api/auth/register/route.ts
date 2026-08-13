@@ -12,6 +12,7 @@ import { isAuthRateLimited } from "@/lib/auth-rate-limit";
 import { getClientIp } from "@/lib/instructions/request-ip";
 import { getDefaultPackage } from "@/lib/free-package";
 import { notifyNewOwner } from "@/lib/platform-notify";
+import { findUserByEmail, normalizeEmail } from "@/lib/normalize-email";
 
 // Бесплатный период ограничен по времени (доп. решение пользователя
 // 2026-07-12) — summary-scheduler.ts уже переводит active в expired, когда
@@ -60,7 +61,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  // Регистр не учитывается (аудит 2026-08-13) — иначе "Ivan@mail.ru" заводил
+  // ВТОРОЙ аккаунт на тот же почтовый ящик, что "ivan@mail.ru", и эта самая
+  // проверка его молча пропускала. Подробности — в lib/normalize-email.ts.
+  // Дальше по роуту используется ТОЛЬКО normalizedEmail: и запись User.email,
+  // и привязка отложенных покупок FluentCart, которая ищет тоже по адресу.
+  const normalizedEmail = normalizeEmail(email);
+  const existing = await findUserByEmail(normalizedEmail);
   if (existing) {
     return NextResponse.json(
       { error: "Пользователь с таким email уже существует" },
@@ -98,7 +105,7 @@ export async function POST(request: Request) {
 
   const user = await prisma.user.create({
     data: {
-      email,
+      email: normalizedEmail,
       passwordHash: await hashPassword(password),
       role: "owner",
       tenantId: tenant.id,
@@ -109,7 +116,7 @@ export async function POST(request: Request) {
   // RentOS (доп. решение пользователя 2026-07-12) — подхватывает такую
   // покупку сразу же, вместо бесплатного пакета выше. См. комментарий у
   // linkPendingFluentCartPurchases в fluentcart-webhook.ts.
-  await linkPendingFluentCartPurchases(email);
+  await linkPendingFluentCartPurchases(normalizedEmail);
 
   // Уведомление Super Admin'у в группу платформы (запрос пользователя
   // 2026-08-10) — после связывания покупки, чтобы в сообщении был уже
@@ -121,7 +128,7 @@ export async function POST(request: Request) {
   await notifyNewOwner({
     tenantId: tenant.id,
     companyName: tenant.name,
-    email,
+    email: normalizedEmail,
     packageName: currentPackage?.package.name ?? pkg.name,
     source: "registration",
   });

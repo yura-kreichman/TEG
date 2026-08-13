@@ -4,8 +4,10 @@ import bcrypt from "bcryptjs";
 import {
   sessionCookieOptions,
   signExpiringToken,
+  signSessionToken,
   verifyExpiringToken,
-  verifySessionToken,
+  verifySessionDetails,
+  type SessionTokenDetails,
 } from "@/lib/session-crypto";
 
 const SESSION_COOKIE = "session";
@@ -81,8 +83,13 @@ export async function createSession(userId: string) {
   // ≤7 дней. verifySessionToken уже понимает оба формата (session-crypto.ts),
   // поэтому уже выданные до этого фикса 2-частные cookie продолжают работать
   // до истечения своего browser maxAge — миграция без принудительного разлогина.
-  const expiresAt = Date.now() + SESSION_MAX_AGE * 1000;
-  cookieStore.set(SESSION_COOKIE, signExpiringToken(userId, expiresAt), sessionCookieOptions(SESSION_MAX_AGE));
+  const issuedAt = Date.now();
+  const expiresAt = issuedAt + SESSION_MAX_AGE * 1000;
+  cookieStore.set(
+    SESSION_COOKIE,
+    signSessionToken(userId, issuedAt, expiresAt),
+    sessionCookieOptions(SESSION_MAX_AGE)
+  );
 }
 
 export async function destroySession() {
@@ -90,19 +97,27 @@ export async function destroySession() {
   cookieStore.delete(SESSION_COOKIE);
 }
 
-export async function getSessionUserId(): Promise<string | null> {
+// Полные данные сессии, включая время выдачи — его сверяет с
+// User.sessionsValidFrom тот, кто и так читает пользователя из базы
+// (requireOwner). Здесь запроса к базе намеренно нет.
+export async function getSession(): Promise<SessionTokenDetails | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  return verifySessionToken(token);
+  return verifySessionDetails(token);
+}
+
+export async function getSessionUserId(): Promise<string | null> {
+  return (await getSession())?.userId ?? null;
 }
 
 export async function createAdminSession(userId: string) {
   const cookieStore = await cookies();
-  const expiresAt = Date.now() + ADMIN_SESSION_MAX_AGE * 1000;
+  const issuedAt = Date.now();
+  const expiresAt = issuedAt + ADMIN_SESSION_MAX_AGE * 1000;
   cookieStore.set(
     ADMIN_SESSION_COOKIE,
-    signExpiringToken(userId, expiresAt),
+    signSessionToken(userId, issuedAt, expiresAt),
     sessionCookieOptions(ADMIN_SESSION_MAX_AGE)
   );
 }
@@ -112,11 +127,15 @@ export async function destroyAdminSession() {
   cookieStore.delete(ADMIN_SESSION_COOKIE);
 }
 
-export async function getAdminSessionUserId(): Promise<string | null> {
+export async function getAdminSession(): Promise<SessionTokenDetails | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   if (!token) return null;
-  return verifyExpiringToken(token);
+  return verifySessionDetails(token);
+}
+
+export async function getAdminSessionUserId(): Promise<string | null> {
+  return (await getAdminSession())?.userId ?? null;
 }
 
 // Начинает имперсонацию — Owner-сессия для ownerUserId (все существующие
@@ -131,10 +150,11 @@ export async function getAdminSessionUserId(): Promise<string | null> {
 // browser maxAge вообще, см. комментарий у signExpiringToken).
 export async function startImpersonation(adminUserId: string, ownerUserId: string) {
   const cookieStore = await cookies();
-  const expiresAt = Date.now() + ADMIN_SESSION_MAX_AGE * 1000;
+  const issuedAt = Date.now();
+  const expiresAt = issuedAt + ADMIN_SESSION_MAX_AGE * 1000;
   cookieStore.set(
     SESSION_COOKIE,
-    signExpiringToken(ownerUserId, expiresAt),
+    signSessionToken(ownerUserId, issuedAt, expiresAt),
     sessionCookieOptions(ADMIN_SESSION_MAX_AGE)
   );
   cookieStore.set(
@@ -182,7 +202,10 @@ export async function getOwnerDeviceUserId(): Promise<string | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(OWNER_DEVICE_COOKIE)?.value;
   if (!token) return null;
-  return verifySessionToken(token);
+  // verifyExpiringToken напрямую (аудит 2026-08-13): раньше здесь стоял
+  // диспетчер форматов ради ещё более старых 2-частных кук — их давно нет,
+  // а сам диспетчер теперь понимает только формат сессии, не этот.
+  return verifyExpiringToken(token);
 }
 
 export function hashResetToken(token: string) {

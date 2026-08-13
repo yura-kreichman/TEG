@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { MapPin, Phone, Share2, Play, X, ChevronLeft, ChevronRight } from "lucide-react";
 import type { LandingRenderData, LandingZonePointStatus } from "@/lib/landing/get-render-data";
+import { getNonce } from "@/lib/nonce";
 import { contactHref } from "@/lib/landing/contact-links";
 import { isIconFamily, type IconFamily } from "@/lib/icon-families";
 import {
@@ -622,8 +623,16 @@ export function LightboxSkeleton({ lp }: { lp: LP }) {
 // effect === "none" не рендерит вообще ничего: public/landing-effects.js не
 // запрашивается браузером. window.load + dynamic import — движок стартует
 // ПОСЛЕ полной загрузки страницы, не влияет на LCP.
-export function LandingEffectLoader({ effect }: { effect: LandingRenderData["effect"] }) {
+// nonce обязателен (аудит 2026-08-13): это единственный ИНЛАЙНОВЫЙ скрипт,
+// который проект пишет сам, а после замены 'unsafe-inline' на nonce в
+// script-src браузер выполнит инлайновый скрипт, только если у него есть
+// действующий nonce текущего ответа. Next проставляет его своим бутстрап-
+// скриптам сам, но разметку, написанную руками, он не трогает — поэтому
+// пробрасываем явно. Без этого пропадал бы эффект фона на Лендинге, причём
+// молча: страница осталась бы рабочей, просто без снега/конфетти.
+export async function LandingEffectLoader({ effect }: { effect: LandingRenderData["effect"] }) {
   if (effect === "none") return null;
+  const nonce = await getNonce();
   const script = `window.addEventListener('load',function(){import('/landing-effects.js').then(function(m){m.start(${JSON.stringify(effect)})})});`;
-  return <script type="module" dangerouslySetInnerHTML={{ __html: script }} />;
+  return <script type="module" nonce={nonce} dangerouslySetInnerHTML={{ __html: script }} />;
 }

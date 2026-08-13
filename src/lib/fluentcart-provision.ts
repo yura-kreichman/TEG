@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { prisma } from "@/lib/prisma";
+import { findUserByEmail } from "@/lib/normalize-email";
 import { generateResetToken, hashPassword } from "@/lib/auth";
 import { getDefaultPackage } from "@/lib/free-package";
 import { generateUniqueSlug } from "@/lib/instructions/slug";
@@ -69,7 +70,10 @@ export async function provisionTenantFromPurchase(input: ProvisionInput): Promis
   // email на User уникален глобально, поэтому чужой не-владелец с тем же
   // адресом (супер-админ с плейсхолдером, старый аккаунт) сделал бы create
   // ниже падающим. Такой случай — на ручной разбор, не на автоматику.
-  const existing = await prisma.user.findUnique({ where: { email: input.email } });
+  // Без учёта регистра (аудит 2026-08-13): FluentCart отдаёт адрес так, как
+  // его набрал покупатель, и точное сравнение заводило бы второй аккаунт на
+  // тот же ящик вместо честного «разобрать вручную». См. normalize-email.ts.
+  const existing = await findUserByEmail(input.email);
   if (existing) {
     return {
       created: false,

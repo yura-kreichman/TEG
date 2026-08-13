@@ -101,13 +101,33 @@ export async function getActivatedPoint() {
 
 /**
  * PIN is unique only within a tenant, and bcrypt hashes can't be looked up by
- * value (random salt), so identifying "which operator just typed this PIN" means
- * scanning the tenant's operators and bcrypt-comparing each. Tenants are capped
- * at ~50 operators, so this is a non-issue performance-wise.
+ * value (random salt), so identifying "which operator just typed this PIN" used
+ * to mean scanning the tenant's operators and bcrypt-comparing each.
  *
- * There's no operator-picker step before the PIN, so a wrong PIN can't be
- * attributed to a specific operator to lock out — see PointDevice's own
- * failedPinAttempts/pinLockedUntil for the actual lockout, applied by the caller.
+ * Почему так больше нельзя (аудит 2026-08-13, замерено, а не оценено на глаз):
+ * bcryptjs (чистый JS, не нативный bcrypt) на cost=12 даёт ~285 мс на ОДНО
+ * сравнение. Полный перебор на неверном ПИНе — это все сотрудники тенанта:
+ * при 50 сотрудниках 14,3 с CPU на один HTTP-запрос. Предел неверных ПИНов —
+ * 20 за 5 минут на устройство, то есть одно устройство точки могло заказать
+ * почти пять минут чистого CPU за пять минут; несколько планшетов клали
+ * приложение целиком. Плюс тайминг-канал: верный ПИН находится в среднем на
+ * середине списка, и время ответа выдавало позицию сотрудника в нём.
+ *
+ * Отбор кандидата теперь идёт индексом по Operator.pin — той самой колонке с
+ * ПИНом открытым текстом, которая и так существует с 2026-07-14 (Владелец
+ * может посмотреть ПИН сотрудника повторно). Новой утечки это не создаёт:
+ * значение уже лежало в этой строке, просто теперь по нему есть индекс
+ * (@@index([tenantId, pin]) в schema.prisma).
+ *
+ * bcrypt-проверка ОСТАЁТСЯ и остаётся единственным источником истины: pin —
+ * только индекс, доступ даёт исключительно совпадение с pinHash. Если бы кто-то
+ * правил pin в обход приложения, вход по нему всё равно не прошёл бы.
+ *
+ * Строки без pin (заведённые до появления колонки) индексом не находятся —
+ * для них остаётся прежний перебор, но только по ним, и на успешном входе
+ * колонка дозаполняется. То есть миграция доигрывается сама, по мере входов,
+ * без разового скрипта: восстановить pin можно только в момент, когда ПИН
+ * реально введён — из bcrypt-хеша он не достаётся by design.
  */
 // НЕ фильтрует по active — реальный баг, найден пользователем 2026-07-22
 // (после того как деактивация Сотрудника стала доступна одним тапом на
@@ -118,12 +138,19 @@ export async function getActivatedPoint() {
 // (/api/auth/operator/login) теперь сам проверяет operator.active и
 // показывает точную причину.
 export async function findOperatorByPin(tenantId: string, pin: string) {
-  const operators = await prisma.operator.findMany({
-    where: { tenantId },
-  });
+  const indexed = await prisma.operator.findFirst({ where: { tenantId, pin } });
+  if (indexed && (await bcrypt.compare(pin, indexed.pinHash))) {
+    return indexed;
+  }
 
-  for (const operator of operators) {
+  const legacy = await prisma.operator.findMany({ where: { tenantId, pin: null } });
+  for (const operator of legacy) {
     if (await bcrypt.compare(pin, operator.pinHash)) {
+      // Дозаполняем индексную колонку — этот сотрудник больше не попадёт в
+      // перебор. Не блокируем вход, если запись почему-то не удалась.
+      await prisma.operator
+        .update({ where: { id: operator.id }, data: { pin } })
+        .catch(() => {});
       return operator;
     }
   }
@@ -131,17 +158,26 @@ export async function findOperatorByPin(tenantId: string, pin: string) {
   return null;
 }
 
-/** Uniqueness check when an Owner assigns/changes an operator's PIN. */
+/**
+ * Uniqueness check when an Owner assigns/changes an operator's PIN.
+ * Тот же индексный отбор, что и у findOperatorByPin, с тем же остатком-перебором
+ * по строкам без открытой колонки — здесь он не на горячем пути (действие
+ * Владельца, не вход на точке), но лишние 14 секунд в форме тоже не нужны.
+ */
 export async function isPinTakenInTenant(
   tenantId: string,
   pin: string,
   excludeOperatorId?: string
 ) {
-  const operators = await prisma.operator.findMany({
-    where: { tenantId, ...(excludeOperatorId ? { id: { not: excludeOperatorId } } : {}) },
-  });
+  const exclude = excludeOperatorId ? { id: { not: excludeOperatorId } } : {};
 
-  for (const operator of operators) {
+  const indexed = await prisma.operator.findFirst({ where: { tenantId, pin, ...exclude } });
+  if (indexed && (await bcrypt.compare(pin, indexed.pinHash))) {
+    return true;
+  }
+
+  const legacy = await prisma.operator.findMany({ where: { tenantId, pin: null, ...exclude } });
+  for (const operator of legacy) {
     if (await bcrypt.compare(pin, operator.pinHash)) {
       return true;
     }

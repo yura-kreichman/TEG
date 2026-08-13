@@ -1,4 +1,6 @@
+import { randomUUID } from "crypto";
 import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server";
+import { buildCsp, NONCE_HEADER } from "@/lib/csp";
 import { verifySessionToken } from "@/lib/session-crypto";
 import { prisma } from "@/lib/prisma";
 import { resolveTenantBySlug } from "@/lib/landing/resolve-tenant";
@@ -77,13 +79,34 @@ const INSTRUCTION_PATH_RE = /^\/i\/([^/]+)\/([^/]+)\/?$/;
 const PREVIEW_PATH_RE = /^\/s\/([^/]+)\/preview\/([^/]+)\/?$/;
 
 export async function proxy(request: NextRequest, event: NextFetchEvent) {
+  // Одноразовый nonce на каждый ответ (аудит 2026-08-13) — им заменён
+  // 'unsafe-inline' в script-src, см. lib/csp.ts. Кладём его в заголовки
+  // ЗАПРОСА в двух видах: x-nonce читают наши серверные компоненты
+  // (lib/nonce.ts), а сам заголовок Content-Security-Policy разбирает Next и
+  // сам проставляет nonce своим бутстрап-скриптам — этот механизм описан в
+  // node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md и
+  // работает только если политика видна в ЗАПРОСЕ, не только в ответе.
+  const nonce = randomUUID();
+  const csp = buildCsp(nonce);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(NONCE_HEADER, nonce);
+  requestHeaders.set("Content-Security-Policy", csp);
+
+  // Один выход для всех return'ов ниже: политика обязана быть на КАЖДОМ
+  // ответе, а забыть её на одной ветке — ровно тот способ, которым такие
+  // заголовки и теряются.
+  const withCsp = (response: NextResponse) => {
+    response.headers.set("Content-Security-Policy", csp);
+    return response;
+  };
+
   const { pathname } = request.nextUrl;
 
   const previewMatch = PREVIEW_PATH_RE.exec(pathname);
   if (previewMatch && request.method === "GET") {
     const ip = getClientIp(request);
     if (isRateLimited(ip)) {
-      return new NextResponse("Too Many Requests", { status: 429 });
+      return withCsp(new NextResponse("Too Many Requests", { status: 429 }));
     }
   }
 
@@ -96,13 +119,13 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
     if (resolved.kind === "redirect") {
       const url = request.nextUrl.clone();
       url.pathname = siteMatch ? `/s/${resolved.currentSlug}` : `/i/${resolved.currentSlug}/${instructionMatch![2]}`;
-      return NextResponse.redirect(url, 301);
+      return withCsp(NextResponse.redirect(url, 301));
     }
 
     if (siteMatch && resolved.kind === "found" && request.method === "GET") {
       const ip = getClientIp(request);
       if (isRateLimited(ip)) {
-        return new NextResponse("Too Many Requests", { status: 429 });
+        return withCsp(new NextResponse("Too Many Requests", { status: 429 }));
       }
 
       const userAgent = request.headers.get("user-agent") ?? "";
@@ -154,9 +177,11 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
       (path) => pathname === path || pathname.startsWith(`${path}/`)
     );
 
-    if (!isPreAuthPage && !linkLocale) return NextResponse.next();
+    if (!isPreAuthPage && !linkLocale) {
+      return withCsp(NextResponse.next({ request: { headers: requestHeaders } }));
+    }
 
-    const headers = new Headers(request.headers);
+    const headers = new Headers(requestHeaders);
     if (isPreAuthPage) headers.set("x-pre-auth-page", "1");
     // Заголовком, а не только кукой: кука из этого же ответа станет видна
     // лишь со СЛЕДУЮЩЕГО запроса, и первая страница отрендерилась бы на
@@ -177,7 +202,7 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
       });
     }
 
-    return response;
+    return withCsp(response);
   }
 
   const isMutating = request.method !== "GET" && request.method !== "HEAD";
@@ -197,16 +222,18 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
           select: { subscriptionStatus: true },
         });
         if (tenant && SUBSCRIPTION_BLOCKED_STATUSES.has(tenant.subscriptionStatus)) {
-          return NextResponse.json(
-            { error: "Подписка не активна — доступ только на чтение. Оплатите тариф, чтобы продолжить." },
-            { status: 402 }
+          return withCsp(
+            NextResponse.json(
+              { error: "Подписка не активна — доступ только на чтение. Оплатите тариф, чтобы продолжить." },
+              { status: 402 }
+            )
           );
         }
       }
     }
   }
 
-  return NextResponse.next();
+  return withCsp(NextResponse.next({ request: { headers: requestHeaders } }));
 }
 
 export const config = {

@@ -41,7 +41,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Неверный текущий пароль" }, { status: 400 });
   }
 
-  const data: { login?: string; passwordHash?: string } = {};
+  const data: { login?: string; passwordHash?: string; sessionsValidFrom?: Date } = {};
 
   if (typeof newLogin === "string" && newLogin.trim() && newLogin.trim() !== admin.user.login) {
     data.login = newLogin.trim();
@@ -52,6 +52,11 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Новый пароль должен быть не короче 8 символов" }, { status: 400 });
     }
     data.passwordHash = await hashPassword(newPassword);
+    // Смена пароля обесценивает все ранее выданные сессии платформенной
+    // панели (аудит 2026-08-13) — включая текущую, поэтому админ после
+    // сохранения войдёт заново. Это и есть ожидаемое поведение: пароль тут
+    // меняют, когда подозревают, что доступ увели. См. lib/session-revocation.ts.
+    data.sessionsValidFrom = new Date();
   }
 
   if (Object.keys(data).length === 0) {

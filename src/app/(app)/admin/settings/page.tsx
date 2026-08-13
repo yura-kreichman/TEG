@@ -13,6 +13,10 @@ import { useI18n } from "@/components/i18n-provider";
 
 interface SystemSettingsConfig {
   telegramBotToken: string;
+  // Какие секреты уже сохранены (аудит 2026-08-13). Сами значения GET больше
+  // не отдаёт — поля приходят пустыми, и без этих флагов настроенная
+  // платформа выглядела бы в форме как ненастроенная.
+  secretsSet?: { telegramBotToken: boolean; smtpPassword: boolean; vapidPrivateKey: boolean };
   smtp: { host: string; port: string; user: string; password: string; from: string; fromName: string };
   vapid: { publicKey: string; privateKey: string; subject: string };
   // chatId/chatTitle только читаются: их пишет привязка через бота, форма
@@ -251,11 +255,12 @@ export default function AdminSettingsPage() {
               <Input
                 id="tg-token"
                 value={config.telegramBotToken}
+                placeholder={config.secretsSet?.telegramBotToken ? t.admin.secretSavedPlaceholder : undefined}
                 onChange={(e) => setConfig({ ...config, telegramBotToken: e.target.value })}
               />
             </div>
             <div className="mt-3 flex items-center gap-3">
-              <Button type="button" variant="outline" size="sm" disabled={testTelegramChecking || !config.telegramBotToken.trim()} onClick={testTelegramToken}>
+              <Button type="button" variant="outline" size="sm" disabled={testTelegramChecking || (!config.telegramBotToken.trim() && !config.secretsSet?.telegramBotToken)} onClick={testTelegramToken}>
                 {testTelegramChecking ? t.admin.testChecking : t.admin.testTelegramButton}
               </Button>
               {testTelegramStatus && <p className="text-caption-airbnb">{testTelegramStatus}</p>}
@@ -378,6 +383,7 @@ export default function AdminSettingsPage() {
                   id="smtp-password"
                   type="password"
                   value={config.smtp.password}
+                  placeholder={config.secretsSet?.smtpPassword ? t.admin.secretSavedPlaceholder : undefined}
                   onChange={(e) => setConfig({ ...config, smtp: { ...config.smtp, password: e.target.value } })}
                 />
               </div>

@@ -4,7 +4,10 @@ import { requireOwner } from "@/lib/require-owner";
 import { BG_EFFECT_VALUES } from "@/components/bg-effects";
 import { normalizeBgEffect } from "@/components/bg-effects/shared";
 import { isSelfServicePayoutMode } from "@/lib/work-time";
-import { isRichContentEmpty, validateRichContent } from "@/lib/rich-text";
+import { extractPlainText, isRichContentEmpty, validateRichContent } from "@/lib/rich-text";
+
+// Подвал квитанции — несколько строк, а не документ (в отличие от инструктажа).
+const MAX_RECEIPT_FOOTER_LENGTH = 2000;
 import { Prisma } from "@/generated/prisma/client";
 
 // Настройки → Система (запрос пользователя 2026-07-20) — страница задумана
@@ -151,6 +154,19 @@ export async function PATCH(request: Request) {
     if (body.receiptFooterContent === null) {
       data.receiptFooterContent = Prisma.DbNull;
     } else if (validateRichContent(body.receiptFooterContent)) {
+      // Предел длины (аудит 2026-08-13) — у инструктажей он был с самого
+      // начала (MAX_INSTRUCTION_CONTENT_LENGTH), а у подвала не появился:
+      // белый список узлов ограничивает ФОРМУ содержимого, но не его объём,
+      // и в JSONB-колонку можно было положить мегабайты, которые потом
+      // читаются на каждую печать квитанции. Подвал чека — это несколько
+      // строк «спасибо за визит», 2000 символов с запасом перекрывают любой
+      // осмысленный текст.
+      if (extractPlainText(body.receiptFooterContent).length > MAX_RECEIPT_FOOTER_LENGTH) {
+        return NextResponse.json(
+          { error: `Подвал квитанции длиннее ${MAX_RECEIPT_FOOTER_LENGTH} символов` },
+          { status: 400 }
+        );
+      }
       data.receiptFooterContent = isRichContentEmpty(body.receiptFooterContent)
         ? Prisma.DbNull
         : (body.receiptFooterContent as Prisma.InputJsonValue);

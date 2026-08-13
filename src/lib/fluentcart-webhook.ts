@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { normalizeEmail } from "@/lib/normalize-email";
 import { Prisma, type Tenant } from "@/generated/prisma/client";
 import { provisionTenantFromPurchase } from "@/lib/fluentcart-provision";
 import { verifyTenantBillingToken } from "@/lib/billing-token";
@@ -238,7 +239,11 @@ export async function syncTenantFromFluentCartEvent(
     // Tenant — одна точка правды, тот же путь, что уже использует карточка
     // тенанта в админке для ownerEmail.
     const owner = await prisma.user.findFirst({
-      where: { role: "owner", email: parsed.customerEmail },
+      // insensitive (аудит 2026-08-13): адрес приходит из FluentCart в том
+      // виде, как его набрал покупатель, а в User.email он мог быть сохранён
+      // в другом регистре — точное сравнение теряло тенант и покупка висела
+      // непривязанной. См. lib/normalize-email.ts.
+      where: { role: "owner", email: { equals: parsed.customerEmail, mode: "insensitive" } },
       select: { tenantId: true },
     });
     if (owner?.tenantId) {
@@ -413,7 +418,7 @@ export async function linkPendingFluentCartPurchases(email: string): Promise<num
   let linked = 0;
   for (const event of pending) {
     const parsed = parseFluentCartPayload(event.payload, event.eventType);
-    if (parsed.customerEmail !== email) continue;
+    if (normalizeEmail(parsed.customerEmail ?? "") !== normalizeEmail(email)) continue;
 
     const result = await syncTenantFromFluentCartEvent(parsed);
     if (result.matched) {

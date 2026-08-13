@@ -27,6 +27,28 @@ export async function POST(request: Request) {
       ? { userId: identity.userId, operatorId: null }
       : { userId: null, operatorId: identity.operatorId };
 
+  // endpoint уникален глобально, поэтому upsert по нему мог ПЕРЕХВАТИТЬ чужую
+  // строку (аудит 2026-08-13): зная endpoint чужой подписки (это URL push-
+  // сервиса, он попадает в логи, отладку, экспорт настроек браузера), любой
+  // авторизованный пользователь другого тенанта переписывал её на себя. Жертва
+  // переставала получать свои уведомления, а её браузер начинал получать чужие
+  // — то есть утечка содержимого уведомлений между тенантами.
+  //
+  // Существующую строку теперь можно обновить, только если она уже принадлежит
+  // тому же лицу. Чужую не трогаем и отвечаем 409, а не молча игнорируем:
+  // тихий «ок» на неудавшуюся подписку означал бы, что PWA считает себя
+  // подписанной, а уведомления не приходят.
+  const existing = await prisma.pushSubscription.findUnique({
+    where: { endpoint },
+    select: { userId: true, operatorId: true },
+  });
+  if (
+    existing &&
+    (existing.userId !== roleData.userId || existing.operatorId !== roleData.operatorId)
+  ) {
+    return NextResponse.json({ error: "Эта подписка принадлежит другому аккаунту" }, { status: 409 });
+  }
+
   await prisma.pushSubscription.upsert({
     where: { endpoint },
     create: { tenantId: identity.tenantId, endpoint, p256dh, auth, ...roleData },

@@ -242,6 +242,7 @@
     "smtpPortLabel": "Порт",
     "smtpUserLabel": "Пользователь",
     "smtpPasswordLabel": "Пароль",
+    "secretSavedPlaceholder": "Сохранено — введите новое, чтобы заменить",
     "smtpFromLabel": "От кого (email)",
     "smtpFromNameLabel": "Имя отправителя",
     "smtpFromNamePlaceholder": "RentOS",
