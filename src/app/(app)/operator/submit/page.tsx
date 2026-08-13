@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Home, MapPin, RefreshCcw, Send, TriangleAlert } from "lucide-react";
+import { useWakeLock } from "@/hooks/use-wake-lock";
 import { BackLink } from "@/components/back-link";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { Button } from "@/components/ui/button";
@@ -106,6 +107,13 @@ interface ExpenseEventCtx {
 type Step = { kind: "select" } | { kind: "zone"; zoneId: string } | { kind: "expenses" } | { kind: "review" };
 
 export default function SubmitResultsPage() {
+  // Экран не гаснет, пока идёт сдача итогов (запрос владельца 2026-08-13).
+  // Здесь дольше всего смотрят в экран, не касаясь его: сотрудник
+  // пересчитывает наличные и сверяет их с расчётом. Именно на этом шаге
+  // системное затемнение мешает больше всего — и именно тут ошибка от
+  // «отвлёкся, разбудил, потерял место» дороже всего.
+  useWakeLock();
+
   const router = useRouter();
   const t = useI18n();
   const locale = useLocale();

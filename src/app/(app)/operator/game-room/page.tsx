@@ -16,6 +16,7 @@ import { PrintButton } from "@/components/print/print-button";
 import { useLiveNow } from "@/hooks/use-live-now";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
 import { useLiveRefetch } from "@/hooks/use-live-refetch";
+import { useWakeLock } from "@/hooks/use-wake-lock";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { isStaysZone } from "@/lib/results-calc";
 import { COLOR_TAG_PALETTE } from "@/lib/color-tag";
@@ -318,6 +319,11 @@ export default function StaysZonePage() {
   // Держит список зон/активов свежим, пока экран часами не покидают (запрос
   // пользователя 2026-07-22) — не трогает сами живые пуски (loadLaunches
   // отдельно), только состав зон/активов/тумблеров.
+  // Экран не гаснет, пока открыт этот экран (запрос владельца 2026-08-13):
+  // здесь тикают таймеры пусков, и сотрудник смотрит на них, а не трогает
+  // планшет — системное затемнение гасит ровно то, ради чего экран открыт.
+  useWakeLock();
+
   useLiveRefetch(loadZones);
 
   const allAssets: AssetWithZone[] = useMemo(

@@ -24,6 +24,7 @@ import { ActionToast } from "@/components/action-toast";
 import { useOperatorPrintAvailable } from "@/hooks/use-print";
 import { useActionToast } from "@/hooks/use-action-toast";
 import { useLiveRefetch } from "@/hooks/use-live-refetch";
+import { useWakeLock } from "@/hooks/use-wake-lock";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
 import { formatMoneyWithCurrency } from "@/lib/format";
 import { cn, colorTagGradient } from "@/lib/utils";
@@ -252,6 +253,11 @@ export default function LaunchesZonePage() {
 
   // Держит список зон/активов/тарифов свежим, пока экран часами не покидают
   // (запрос пользователя 2026-07-22).
+  // Экран не гаснет, пока открыт этот экран (запрос владельца 2026-08-13):
+  // здесь тикают таймеры пусков, и сотрудник смотрит на них, а не трогает
+  // планшет — системное затемнение гасит ровно то, ради чего экран открыт.
+  useWakeLock();
+
   useLiveRefetch(loadZones);
 
   useEffect(() => {
