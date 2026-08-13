@@ -650,7 +650,8 @@
     "ownerLoginViaPinTitle": "Owner login",
     "loginAsOwnerLink": "Log in as Owner",
     "backToOperatorLoginLink": "Back to employee login",
-    "loginAsOperatorLink": "Log in as Employee"
+    "loginAsOperatorLink": "Log in as Employee",
+    "operatorDeviceUnknownFastPath": "Fastest way: the owner signs in with the button below on this very device, opens Points and taps “Bind this device” — no link or QR needed. If the device was already bound and the binding disappeared (browser data cleared or the app reinstalled), the owner can issue a new activation link from that device's menu — name and settings are kept."
   },
   "authEmail": {
     "resetSubject": "RentOS — password reset",
@@ -730,7 +731,9 @@
     "pointInactiveChip": "Inactive",
     "bindCurrentDeviceButton": "Bind this device",
     "deviceBoundToast": "Device bound",
-    "newDeviceCurrentSub": "The device activates immediately and will be ready for PIN operator login"
+    "newDeviceCurrentSub": "The device activates immediately and will be ready for PIN operator login",
+    "reissueDevice": "New activation link",
+    "confirmReissueDevice": "Issue a new activation link for this device? The current binding will be disabled: the device stops working until someone opens the new link. Name, point and printing settings are kept. Useful if browser data was cleared on the tablet or the app was reinstalled — and also to disable a lost device."
   },
   "zonesList": {
     "title": "Zones",

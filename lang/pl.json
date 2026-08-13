@@ -650,7 +650,8 @@
     "ownerLoginViaPinTitle": "Logowanie właściciela",
     "loginAsOwnerLink": "Zaloguj się jako Właściciel",
     "backToOperatorLoginLink": "Powrót do logowania pracownika",
-    "loginAsOperatorLink": "Zaloguj się jako Pracownik"
+    "loginAsOperatorLink": "Zaloguj się jako Pracownik",
+    "operatorDeviceUnknownFastPath": "Najszybszy sposób: właściciel loguje się przyciskiem poniżej na tym właśnie urządzeniu, otwiera Punkty i naciska „Powiąż to urządzenie” — link ani QR nie są potrzebne. Jeśli urządzenie było już powiązane, a powiązanie zniknęło (wyczyszczono dane przeglądarki lub przeinstalowano aplikację), właściciel może wydać nowy link aktywacyjny w menu tego samego urządzenia — nazwa i ustawienia zostaną zachowane."
   },
   "authEmail": {
     "resetSubject": "RentOS — reset hasła",
@@ -730,7 +731,9 @@
     "pointInactiveChip": "Nieaktywny",
     "bindCurrentDeviceButton": "Powiąż to urządzenie",
     "deviceBoundToast": "Urządzenie powiązane",
-    "newDeviceCurrentSub": "Urządzenie od razu się aktywuje i będzie gotowe do logowania operatora PIN-em"
+    "newDeviceCurrentSub": "Urządzenie od razu się aktywuje i będzie gotowe do logowania operatora PIN-em",
+    "reissueDevice": "Nowy link aktywacyjny",
+    "confirmReissueDevice": "Wydać nowy link aktywacyjny dla tego urządzenia? Bieżące powiązanie zostanie wyłączone: urządzenie przestanie działać, dopóki ktoś nie otworzy nowego linku. Nazwa, punkt i ustawienia drukowania zostaną zachowane. Przyda się, jeśli na tablecie wyczyszczono dane przeglądarki lub przeinstalowano aplikację — a także aby wyłączyć zgubione urządzenie."
   },
   "zonesList": {
     "title": "Strefy",

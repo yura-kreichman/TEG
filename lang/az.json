@@ -650,7 +650,8 @@
     "ownerLoginViaPinTitle": "Sahibin girişi",
     "loginAsOwnerLink": "Sahib kimi daxil ol",
     "backToOperatorLoginLink": "Əməkdaş girişinə qayıt",
-    "loginAsOperatorLink": "Əməkdaş kimi daxil ol"
+    "loginAsOperatorLink": "Əməkdaş kimi daxil ol",
+    "operatorDeviceUnknownFastPath": "Ən sürətli yol: sahib aşağıdakı düymə ilə məhz bu cihazda daxil olur, Nöqtələri açır və «Bu cihazı bağla» düyməsinə toxunur — link və QR lazım deyil. Cihaz artıq bağlanmışdısa və bağlantı itibsə (brauzer məlumatları silinib və ya tətbiq yenidən quraşdırılıb), sahib həmin cihazın menyusundan yeni aktivləşdirmə linki verə bilər — ad və parametrlər saxlanılır."
   },
   "authEmail": {
     "resetSubject": "RentOS — şifrənin sıfırlanması",
@@ -730,7 +731,9 @@
     "pointInactiveChip": "Deaktiv",
     "bindCurrentDeviceButton": "Bu cihazı bağla",
     "deviceBoundToast": "Cihaz bağlandı",
-    "newDeviceCurrentSub": "Cihaz dərhal aktivləşdirilir və operatorun PIN ilə girişi üçün hazır olacaq"
+    "newDeviceCurrentSub": "Cihaz dərhal aktivləşdirilir və operatorun PIN ilə girişi üçün hazır olacaq",
+    "reissueDevice": "Yeni aktivləşdirmə linki",
+    "confirmReissueDevice": "Bu cihaz üçün yeni aktivləşdirmə linki verilsin? Cari bağlantı söndürüləcək: yeni link açılana qədər cihaz işləməyəcək. Ad, nöqtə və çap parametrləri saxlanılır. Planşetdə brauzer məlumatları silinibsə və ya tətbiq yenidən quraşdırılıbsa — həmçinin itmiş cihazı söndürmək üçün faydalıdır."
   },
   "zonesList": {
     "title": "Zonalar",

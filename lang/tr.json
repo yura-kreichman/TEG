@@ -650,7 +650,8 @@
     "ownerLoginViaPinTitle": "Sahibin girişi",
     "loginAsOwnerLink": "Sahibi olarak giriş yap",
     "backToOperatorLoginLink": "Çalışan girişine dön",
-    "loginAsOperatorLink": "Çalışan olarak giriş yap"
+    "loginAsOperatorLink": "Çalışan olarak giriş yap",
+    "operatorDeviceUnknownFastPath": "En hızlı yol: sahip tam bu cihazda aşağıdaki düğmeyle giriş yapar, Noktalar'ı açar ve «Bu cihazı bağla»ya dokunur — bağlantıya da QR'a da gerek yok. Cihaz daha önce bağlıysa ve bağlama kaybolduysa (tarayıcı verileri temizlendi veya uygulama yeniden kuruldu), sahip aynı cihazın menüsünden yeni bir etkinleştirme bağlantısı verebilir — ad ve ayarlar korunur."
   },
   "authEmail": {
     "resetSubject": "RentOS — şifre sıfırlama",
@@ -730,7 +731,9 @@
     "pointInactiveChip": "Devre dışı",
     "bindCurrentDeviceButton": "Bu cihazı bağla",
     "deviceBoundToast": "Cihaz bağlandı",
-    "newDeviceCurrentSub": "Cihaz hemen etkinleşir ve operatörün PIN ile girişi için hazır olur"
+    "newDeviceCurrentSub": "Cihaz hemen etkinleşir ve operatörün PIN ile girişi için hazır olur",
+    "reissueDevice": "Yeni etkinleştirme bağlantısı",
+    "confirmReissueDevice": "Bu cihaz için yeni bir etkinleştirme bağlantısı verilsin mi? Mevcut bağlama devre dışı kalacak: yeni bağlantı açılana kadar cihaz çalışmayacak. Ad, nokta ve yazdırma ayarları korunur. Tablette tarayıcı verileri temizlendiyse veya uygulama yeniden kurulduysa — ayrıca kaybolan bir cihazı devre dışı bırakmak için de işe yarar."
   },
   "zonesList": {
     "title": "Bölgeler",

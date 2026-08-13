@@ -650,7 +650,8 @@
     "ownerLoginViaPinTitle": "Accesso proprietario",
     "loginAsOwnerLink": "Accedi come Proprietario",
     "backToOperatorLoginLink": "Torna all'accesso dipendente",
-    "loginAsOperatorLink": "Accedi come Dipendente"
+    "loginAsOperatorLink": "Accedi come Dipendente",
+    "operatorDeviceUnknownFastPath": "Il modo più rapido: il proprietario accede con il pulsante qui sotto proprio su questo dispositivo, apre Punti e tocca «Associa questo dispositivo» — non servono link né QR. Se il dispositivo era già associato e l'associazione è sparita (dati del browser cancellati o app reinstallata), il proprietario può emettere un nuovo link di attivazione dal menu dello stesso dispositivo — nome e impostazioni vengono mantenuti."
   },
   "authEmail": {
     "resetSubject": "RentOS — reimpostazione password",
@@ -730,7 +731,9 @@
     "pointInactiveChip": "Inattivo",
     "bindCurrentDeviceButton": "Collega questo dispositivo",
     "deviceBoundToast": "Dispositivo collegato",
-    "newDeviceCurrentSub": "Il dispositivo si attiva subito ed è pronto per l'accesso dell'operatore con PIN"
+    "newDeviceCurrentSub": "Il dispositivo si attiva subito ed è pronto per l'accesso dell'operatore con PIN",
+    "reissueDevice": "Nuovo link di attivazione",
+    "confirmReissueDevice": "Emettere un nuovo link di attivazione per questo dispositivo? L'associazione attuale verrà disattivata: il dispositivo smetterà di funzionare finché qualcuno non aprirà il nuovo link. Nome, punto e impostazioni di stampa vengono mantenuti. Utile se sul tablet sono stati cancellati i dati del browser o l'app è stata reinstallata — e anche per disattivare un dispositivo smarrito."
   },
   "zonesList": {
     "title": "Zone",

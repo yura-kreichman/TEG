@@ -6,6 +6,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import {
   Plus,
   Pencil,
+  RefreshCw,
   Trash2,
   Link2,
   ImagePlus,
@@ -95,7 +96,7 @@ function WEEKDAY_LABELS(t: ReturnType<typeof useI18n>): string[] {
 }
 
 type PointKebabView = "menu" | "rename" | "icon" | "location" | "confirm-delete";
-type DeviceKebabView = "rename" | "confirm-delete";
+type DeviceKebabView = "rename" | "confirm-delete" | "confirm-reissue";
 
 export default function PointsPage() {
   const router = useRouter();
@@ -435,6 +436,25 @@ export default function PointsPage() {
     setTimeout(() => setCopiedDeviceId((id) => (id === deviceId ? null : id)), 1500);
   }
 
+  // Новая ссылка активации для существующего устройства (запрос владельца
+  // 2026-08-13). Привязка живёт в httpOnly-куке, и её может стереть сам
+  // браузер — очисткой данных сайта или переустановкой PWA. Предотвратить
+  // это нельзя (см. комментарий в api/.../reissue/route.ts), поэтому делаем
+  // дешёвым возврат: устройство сохраняет имя, точку и настройки печати, а
+  // не заводится заново. Блок с QR и ссылкой ниже показывается сам, как
+  // только устройство снова стало неактивированным.
+  async function confirmReissueDevice() {
+    if (!deviceKebab) return;
+    const { pointId, device } = deviceKebab;
+    const res = await fetch(`/api/points/${pointId}/devices/${device.id}/reissue`, { method: "POST" });
+    if (!res.ok) return;
+    const data = await res.json();
+    setInstallLinks((prev) => ({ ...prev, [device.id]: data.installLink }));
+    setQrOpenFor(device.id);
+    await loadPoints();
+    setDeviceKebab(null);
+  }
+
   async function confirmDeleteDevice() {
     if (!deviceKebab) return;
     const { pointId, device } = deviceKebab;
@@ -596,6 +616,17 @@ export default function PointsPage() {
                                     onClick={() => openDeviceKebab(point.id, device, "rename")}
                                     label={t.points.renameDevice}
                                   />
+                                  {/* Перевыпуск ссылки — только у активированного:
+                                      у неактивированного ссылка и так на виду
+                                      ниже, второй способ её получить только
+                                      запутал бы. */}
+                                  {device.activated && (
+                                    <IconActionButton
+                                      icon={RefreshCw}
+                                      onClick={() => openDeviceKebab(point.id, device, "confirm-reissue")}
+                                      label={t.points.reissueDevice}
+                                    />
+                                  )}
                                   <IconActionButton
                                     icon={Trash2}
                                     onClick={() => openDeviceKebab(point.id, device, "confirm-delete")}
@@ -1025,6 +1056,23 @@ export default function PointsPage() {
             <p className="text-body-airbnb">{t.points.confirmDeleteDevice}</p>
             <PressableScale>
               <DeleteButton className="h-12 w-full" onClick={confirmDeleteDevice} deleted={deviceDeleted} />
+            </PressableScale>
+          </div>
+        )}
+
+        {/* Перевыпуск ссылки активации (запрос владельца 2026-08-13). С
+            подтверждением, а не одним тапом: действие ОТКЛЮЧАЕТ текущую
+            привязку — если планшет ещё работает, он выйдет из системы, пока
+            по новой ссылке не пройдут. Это же свойство делает перевыпуск
+            способом отключить потерянное устройство. */}
+        {deviceKebab && deviceKebabView === "confirm-reissue" && (
+          <div className="flex flex-col gap-3 pt-2">
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.reissueDevice}</h2>
+            <p className="text-body-airbnb">{t.points.confirmReissueDevice}</p>
+            <PressableScale>
+              <Button className="h-12 w-full" onClick={confirmReissueDevice}>
+                {t.points.reissueDevice}
+              </Button>
             </PressableScale>
           </div>
         )}

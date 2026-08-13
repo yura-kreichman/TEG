@@ -119,8 +119,17 @@ export default function OperatorLoginPage() {
         {loginMode === "owner" ? t.auth.ownerLoginViaPinTitle : t.auth.operatorLoginTitle}
       </h1>
 
+      {/* Второй абзац добавлен 2026-08-13 после реального случая: у точки
+          пропала привязка (браузер очистил куку — предотвратить это нельзя,
+          см. api/points/[id]/devices/[deviceId]/reissue/route.ts), и владелец
+          не знал, что вернуть её можно двумя тапами прямо здесь, без ссылки.
+          Текст говорит именно то, что нужно сделать СЕЙЧАС, а не только «кто
+          виноват». */}
       {loginMode === "operator" && deviceStatus === "unknown" && (
-        <p className="text-body-airbnb text-muted-foreground">{t.auth.operatorDeviceUnknownHint}</p>
+        <div className="flex flex-col gap-2">
+          <p className="text-body-airbnb text-muted-foreground">{t.auth.operatorDeviceUnknownHint}</p>
+          <p className="text-caption-airbnb text-muted-foreground">{t.auth.operatorDeviceUnknownFastPath}</p>
+        </div>
       )}
 
       {loginMode === "operator" && deviceStatus === "ready" && (

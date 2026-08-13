@@ -650,7 +650,8 @@
     "ownerLoginViaPinTitle": "Autentificare proprietar",
     "loginAsOwnerLink": "Autentificare ca Proprietar",
     "backToOperatorLoginLink": "Înapoi la autentificarea angajatului",
-    "loginAsOperatorLink": "Autentificare ca Angajat"
+    "loginAsOperatorLink": "Autentificare ca Angajat",
+    "operatorDeviceUnknownFastPath": "Cel mai rapid: proprietarul se autentifică cu butonul de mai jos chiar pe acest dispozitiv, deschide Puncte și apasă „Leagă acest dispozitiv” — fără link sau QR. Dacă dispozitivul era deja legat, iar legătura a dispărut (date de browser șterse sau aplicație reinstalată), proprietarul poate emite un link nou de activare din meniul aceluiași dispozitiv — numele și setările se păstrează."
   },
   "authEmail": {
     "resetSubject": "RentOS — resetare parolă",
@@ -730,7 +731,9 @@
     "pointInactiveChip": "Inactiv",
     "bindCurrentDeviceButton": "Asociază acest dispozitiv",
     "deviceBoundToast": "Dispozitiv asociat",
-    "newDeviceCurrentSub": "Dispozitivul se activează imediat și va fi gata pentru autentificarea operatorului cu PIN"
+    "newDeviceCurrentSub": "Dispozitivul se activează imediat și va fi gata pentru autentificarea operatorului cu PIN",
+    "reissueDevice": "Link nou de activare",
+    "confirmReissueDevice": "Emiteți un link nou de activare pentru acest dispozitiv? Legătura curentă va fi dezactivată: dispozitivul nu va mai funcționa până când cineva deschide noul link. Numele, punctul și setările de tipărire se păstrează. Util dacă datele browserului au fost șterse pe tabletă sau aplicația a fost reinstalată — și pentru a dezactiva un dispozitiv pierdut."
   },
   "zonesList": {
     "title": "Zone",

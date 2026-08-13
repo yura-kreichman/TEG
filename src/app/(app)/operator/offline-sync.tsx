@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { CloudOff, TriangleAlert } from "lucide-react";
-import { flushPendingSubmissions, getPendingSubmissions, type DroppedSubmission } from "@/lib/offline-submissions";
+import {
+  flushPendingSubmissions,
+  getPendingSubmissions,
+  requestPersistentStorage,
+  type DroppedSubmission,
+} from "@/lib/offline-submissions";
 import { useI18n } from "@/components/i18n-provider";
 
 // Ключ localStorage для "dropped" (аудит 2026-07-27, второй раунд, реальная
@@ -65,6 +70,15 @@ export function OfflineSync() {
     setDropped([]);
     saveStoredDropped([]);
   }
+
+  // Один раз при старте PWA — просим браузер не вычищать нашу IndexedDB сам
+  // при нехватке места (см. requestPersistentStorage). Здесь, а не в общем
+  // layout: постоянство нужно ровно ради очереди неотправленных сдач, а этот
+  // компонент за неё и отвечает. Результат не влияет ни на что — отказ просто
+  // оставляет прежнее поведение, поэтому ни state, ни обработки ошибок нет.
+  useEffect(() => {
+    void requestPersistentStorage();
+  }, []);
 
   useEffect(() => {
     async function sync() {

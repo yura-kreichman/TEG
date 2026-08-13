@@ -650,7 +650,8 @@
     "ownerLoginViaPinTitle": "Egasining kirishi",
     "loginAsOwnerLink": "Egasi sifatida kirish",
     "backToOperatorLoginLink": "Xodim kirishiga qaytish",
-    "loginAsOperatorLink": "Xodim sifatida kirish"
+    "loginAsOperatorLink": "Xodim sifatida kirish",
+    "operatorDeviceUnknownFastPath": "Eng tez yoʻl: egasi aynan shu qurilmada quyidagi tugma orqali kiradi, Nuqtalarni ochadi va «Shu qurilmani bogʻlash» tugmasini bosadi — havola ham, QR ham kerak emas. Agar qurilma avval bogʻlangan boʻlsa-yu, bogʻlanish yoʻqolgan boʻlsa (brauzer maʼlumotlari tozalangan yoki ilova qayta oʻrnatilgan), egasi oʻsha qurilma menyusidan yangi faollashtirish havolasini bera oladi — nomi va sozlamalari saqlanadi."
   },
   "authEmail": {
     "resetSubject": "RentOS — parolni tiklash",
@@ -730,7 +731,9 @@
     "pointInactiveChip": "Faol emas",
     "bindCurrentDeviceButton": "Shu qurilmani bog'lash",
     "deviceBoundToast": "Qurilma bog'landi",
-    "newDeviceCurrentSub": "Qurilma darhol faollashadi va operatorning PIN bilan kirishiga tayyor bo'ladi"
+    "newDeviceCurrentSub": "Qurilma darhol faollashadi va operatorning PIN bilan kirishiga tayyor bo'ladi",
+    "reissueDevice": "Yangi faollashtirish havolasi",
+    "confirmReissueDevice": "Ushbu qurilma uchun yangi faollashtirish havolasi berilsinmi? Joriy bogʻlanish oʻchiriladi: yangi havola ochilmaguncha qurilma ishlamaydi. Nomi, nuqtasi va chop etish sozlamalari saqlanadi. Planshetda brauzer maʼlumotlari tozalangan yoki ilova qayta oʻrnatilgan boʻlsa — shuningdek yoʻqolgan qurilmani oʻchirish uchun foydali."
   },
   "zonesList": {
     "title": "Zonalar",
