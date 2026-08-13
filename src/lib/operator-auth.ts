@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "crypto";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { sessionCookieOptions, signExpiringToken, verifySessionToken } from "@/lib/session-crypto";
+import { sessionCookieOptions, signExpiringToken, verifyExpiringToken } from "@/lib/session-crypto";
 
 // Two distinct cookies for the operator (point-of-sale) flow, separate from the
 // Owner/Super Admin cookies in src/lib/auth.ts:
@@ -50,7 +50,15 @@ async function getPointDeviceId(): Promise<string | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(POINT_DEVICE_COOKIE)?.value;
   if (!token) return null;
-  return verifySessionToken(token);
+  // verifyExpiringToken, а НЕ verifySessionToken (авария на проде 2026-08-13).
+  // Эта кука выдаётся signExpiringToken — три части. verifySessionToken в тот
+  // же день стал понимать ТОЛЬКО четырёхчастный формат сессии владельца, и
+  // разбор здесь начал возвращать null: устройства всех точек разом стали
+  // «не активированными», сотрудники не смогли войти, а владельцу пришлось бы
+  // выпускать новые ссылки активации. Куки при этом были и остаются валидными
+  // — их просто проверяли не той функцией. Формат этой куки не менялся, менять
+  // его тут нельзя: устройства активируются один раз и живут год.
+  return verifyExpiringToken(token);
 }
 
 export async function createOperatorSession(operatorId: string) {
@@ -73,7 +81,8 @@ export async function getOperatorSessionId(): Promise<string | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(OPERATOR_SESSION_COOKIE)?.value;
   if (!token) return null;
-  return verifySessionToken(token);
+  // verifyExpiringToken — см. комментарий у getPointDeviceId выше.
+  return verifyExpiringToken(token);
 }
 
 /**
