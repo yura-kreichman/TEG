@@ -76,6 +76,9 @@ interface DayCard {
   cashEditedBefore: number | null;
   mobileAmount: number;
   abonementAmount: number;
+  // Часть abonementAmount, которая участвует в Разнице — правило выбора живёт
+  // на сервере (countersPaidFromBalance), клиент его больше не повторяет.
+  abonementInDifference: number;
   returnsCount: number;
   // Отдельные события тестовых прогонов, из которых сложился returnsCount
   // выше (см. returnEventsBySubmission в /api/reports/counters/day).
@@ -608,12 +611,10 @@ export default function ReadingsCalendarPage() {
       cash: acc.cash + card.cashAmount,
       mobile: acc.mobile + card.mobileAmount,
       abonement: acc.abonement + card.abonementAmount,
-      // Баланс участвует в "Фактической кассе" только у "Прибываний"/
-      // "Пусков"/Билетов (запрос пользователя 2026-07-25, финальное
-      // решение) — у "Счётчиков"/"Только касса" это чисто информационная
-      // сумма, в кассу и разницу не подмешивается.
-      abonementInCash:
-        acc.abonementInCash + (card.accountingMode === "counters" || card.accountingMode === "cash_only" ? 0 : card.abonementAmount),
+      // Баланс прибавляется к "Фактической кассе" ровно там, где он учтён и
+      // в Разнице — иначе "касса − расчёт" на экране не сходится с показанной
+      // Разницей. Какая это часть, решает сервер (abonementInDifference).
+      abonementInCash: acc.abonementInCash + card.abonementInDifference,
       calculatedRevenue: acc.calculatedRevenue + card.calculatedRevenue,
       returnsCount: acc.returnsCount + card.returnsCount,
       difference: Math.round((acc.difference + card.difference) * 100) / 100,
@@ -708,11 +709,10 @@ export default function ReadingsCalendarPage() {
     const calculatedRevenue = isLiveZone ? card.calculatedRevenue : calcZoneGrossRevenue(tariffCalc);
     const netRevenue = isLiveZone ? card.netRevenue : calcZoneRevenue(tariffCalc, Number(editReturns || 0));
     const actualCash = parseMoneyInput(editCash) + parseMoneyInput(editMobile);
-    // Баланс — только у "Прибываний"/"Пусков"/Билетов (запрос пользователя
-    // 2026-07-25, финальное решение) — у "Счётчиков"/"Только касса" в
-    // Разницу не подмешивается вовсе.
-    const abonementInDifference = card.accountingMode === "counters" || card.accountingMode === "cash_only" ? 0 : card.abonementAmount;
-    const difference = Math.round((actualCash + abonementInDifference - netRevenue) * 100) / 100;
+    // Какая часть баланса участвует в Разнице — решено на сервере
+    // (countersPaidFromBalance); тут только применяем. Своя копия этого
+    // правила жила здесь до 2026-08-13 и разошлась с сервером.
+    const difference = Math.round((actualCash + card.abonementInDifference - netRevenue) * 100) / 100;
     return { calculatedRevenue, difference };
   }
 
@@ -1725,23 +1725,16 @@ export default function ReadingsCalendarPage() {
                           <div className="flex items-center justify-between text-body-airbnb font-bold">
                             <span className="text-foreground">{t.operatorApp.submit.actualCash}</span>
                             <span className="text-foreground">
-                              {/* Условие блока (accountingMode !== "cash_only")
-                                  пропускает и "Счётчики" тоже — реальный баг,
-                                  найден пользователем 2026-07-25: тут Баланс
-                                  безусловно прибавлялся к Фактической кассе
-                                  даже у "Счётчиков", хотя формула Разницы
-                                  ниже (card.difference, из API) для этого
-                                  режима его уже НЕ учитывает — числа
-                                  расходились. Тот же принцип, что и в
-                                  сводной карточке "Итоги дня" выше
+                              {/* Баланс прибавляется ровно в той части, что
+                                  учтена в Разнице ниже (card.difference, из
+                                  API) — иначе "касса − расчёт" на экране не
+                                  сходится с показанной Разницей. Условие
+                                  жило здесь копией с 2026-07-25 и разошлось
+                                  с сервером, когда правило поменялось;
+                                  теперь число приходит готовым. Тот же
+                                  принцип в сводной карточке "Итоги дня" выше
                                   (daySummary.abonementInCash). */}
-                              <Money
-                                value={
-                                  card.cashAmount +
-                                  card.mobileAmount +
-                                  (card.accountingMode === "counters" ? 0 : card.abonementAmount)
-                                }
-                              />
+                              <Money value={card.cashAmount + card.mobileAmount + card.abonementInDifference} />
                             </span>
                           </div>
                           <div className="flex items-center justify-between text-caption-airbnb">

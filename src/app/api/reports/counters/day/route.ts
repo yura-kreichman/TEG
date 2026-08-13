@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, isCountersTapAssistZone, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
+import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, countersPaidFromBalance, isCountersTapAssistZone, isCountersZone, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
+import { getZoneTapAbonementAmount } from "@/lib/abonement";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateTicketOrders, ticketRevenueByAssetVariant, listTicketOrdersForWindow, type TicketOrderWindowItem } from "@/lib/tickets";
 import { calculateGoodsCashBeforeReconciliation } from "@/lib/goods";
@@ -412,12 +413,42 @@ export async function GET(request: Request) {
     }
   }
 
-  function abonementAmountFor(zoneId: string, submissionCreatedAt: Date): number {
+  // Начало окна конкретной сдачи — предыдущая сдача той же зоны (или null,
+  // если эта первая). Отдельной функцией, потому что окно нужно не только
+  // сумме revenue_abonement ниже, но и разбивке оплаты по тапам (tap-зоны).
+  function windowStartFor(zoneId: string, submissionCreatedAt: Date): Date | null {
     const boundaries = boundariesByZone.get(zoneId);
-    const ops = abonementOpsByZone.get(zoneId);
-    if (!boundaries || !ops) return 0;
+    if (!boundaries) return null;
     const idx = boundaries.findIndex((d) => d.getTime() === submissionCreatedAt.getTime());
-    const windowStart = idx > 0 ? boundaries[idx - 1] : null;
+    return idx > 0 ? boundaries[idx - 1] : null;
+  }
+
+  // Оплата балансом, привязанная к КОНКРЕТНОМУ тапу — только для зон с
+  // countersTapAssistEnabled (у них расчётная выручка считается из тапов, см.
+  // countersPaidFromBalance). Считается заранее: карточки ниже собираются
+  // синхронно, а запрос асинхронный.
+  const tapBalanceBySubmission = new Map<string, number>();
+  await Promise.all(
+    submissions
+      .flatMap((s) => s.zoneSubmissions)
+      .filter((zs) => isCountersTapAssistZone(zs.zone))
+      .map(async (zs) => {
+        tapBalanceBySubmission.set(
+          zs.id,
+          await getZoneTapAbonementAmount(
+            zs.zoneId,
+            new Map(zs.zone.tariffs.map((t) => [t.id, Number(t.price)])),
+            windowStartFor(zs.zoneId, zs.createdAt),
+            zs.createdAt
+          )
+        );
+      })
+  );
+
+  function abonementAmountFor(zoneId: string, submissionCreatedAt: Date): number {
+    const ops = abonementOpsByZone.get(zoneId);
+    if (!ops) return 0;
+    const windowStart = windowStartFor(zoneId, submissionCreatedAt);
     const sum = ops
       .filter((op) => op.occurredAt <= submissionCreatedAt && (!windowStart || op.occurredAt > windowStart))
       .reduce((acc, op) => acc + op.amount, 0);
@@ -589,20 +620,26 @@ export async function GET(request: Request) {
       // при расчёте difference ниже — иначе разница ложно показывала бы
       // недостачу ровно на эту сумму каждый раз (реальный баг, найден
       // пользователем 2026-07-18 через собственный числовой пример). У
-      // "Счётчиков"/"Только касса" — НЕТ (запрос пользователя 2026-07-25,
-      // финальное решение после долгого разбора): там способ оплаты
-      // балансом фиксируется отдельным действием в баре "Счётчики", не в
-      // момент ввода кассы, поэтому касса не обязана его "честно исключать"
-      // сама, как это происходит у Прибываний/Пусков — Баланс просто не
-      // должен участвовать ни в Фактической кассе, ни в Разнице этих
-      // режимов вовсе, только в собственной информационной строке.
+      // "Счётчиков" — с 2026-08-13 ТОЖЕ вычитается (см.
+      // countersPaidFromBalance): правило 2026-07-25 "у Счётчиков баланс в
+      // Разнице не участвует" не выдержало живого дня — КидсБург, «Машинки»,
+      // шесть списаний на 455 за смену, Разница −455 на ровном месте.
+      // Механический счётчик крутится от самой поездки и способа оплаты не
+      // знает, значит оплата балансом уже сидит в расчётной выручке. У
+      // "Только касса" Разницы нет вовсе — там вычитать не из чего.
       const abonementAmount = isTickets
         ? (ticketData?.abonementAmount ?? 0)
         : ["stays", "launches", "counters", "cash_only"].includes(zs.zone.accountingMode)
           ? abonementAmountFor(zs.zoneId, zs.createdAt)
           : 0;
-      const abonementInDifference =
-        zs.zone.accountingMode === "counters" || zs.zone.accountingMode === "cash_only" ? 0 : abonementAmount;
+      const abonementInDifference = isCountersZone(zs.zone)
+        ? countersPaidFromBalance(zs.zone, {
+            zoneSpend: abonementAmount,
+            tapLinked: tapBalanceBySubmission.get(zs.id) ?? 0,
+          })
+        : zs.zone.accountingMode === "cash_only"
+          ? 0
+          : abonementAmount;
       // cash_only: "Расчётной выручки и разницы не существует — сравнивать
       // не с чем" (docs/spec/01-counters.md, "Расчёт") — без этой ветки
       // difference молча считался как actualCash+abonementAmount−0
@@ -710,6 +747,12 @@ export async function GET(request: Request) {
         cashEditedBefore,
         mobileAmount: Number(zs.mobileAmount),
         abonementAmount,
+        // Та часть abonementAmount, что реально участвует в Разнице
+        // (countersPaidFromBalance) — отдаётся отдельным полем, чтобы форма
+        // правки не выводила правило заново на клиенте: она пересчитывает
+        // Разницу вживую при вводе показаний, и до 2026-08-13 держала свою
+        // копию этого условия, которая разошлась с сервером.
+        abonementInDifference,
         returnsCount: zs.returnsCount,
         // Построчная история к счётчику выше (см. returnEventsBySubmission).
         returnEvents: returnEventsBySubmission.get(zs.id) ?? [],
