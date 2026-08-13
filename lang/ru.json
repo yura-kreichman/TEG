@@ -764,7 +764,9 @@
     "deactivatePoint": "Деактивировать точку",
     "activatePoint": "Активировать точку",
     "pointActiveChip": "Активна",
-    "pointInactiveChip": "Неактивна"
+    "pointInactiveChip": "Неактивна",
+    "openOperatorApp": "Открыть приложение сотрудника",
+    "deviceBoundNextStep": "Это устройство теперь терминал точки «{point}». Можно передавать его сотруднику — он войдёт по своему ПИН-коду."
   },
   "zonesList": {
     "title": "Зоны",

@@ -733,7 +733,9 @@
     "deviceBoundToast": "Cihaz bağlandı",
     "newDeviceCurrentSub": "Cihaz dərhal aktivləşdirilir və operatorun PIN ilə girişi üçün hazır olacaq",
     "reissueDevice": "Yeni aktivləşdirmə linki",
-    "confirmReissueDevice": "Bu cihaz üçün yeni aktivləşdirmə linki verilsin? Cari bağlantı söndürüləcək: yeni link açılana qədər cihaz işləməyəcək. Ad, nöqtə və çap parametrləri saxlanılır. Planşetdə brauzer məlumatları silinibsə və ya tətbiq yenidən quraşdırılıbsa — həmçinin itmiş cihazı söndürmək üçün faydalıdır."
+    "confirmReissueDevice": "Bu cihaz üçün yeni aktivləşdirmə linki verilsin? Cari bağlantı söndürüləcək: yeni link açılana qədər cihaz işləməyəcək. Ad, nöqtə və çap parametrləri saxlanılır. Planşetdə brauzer məlumatları silinibsə və ya tətbiq yenidən quraşdırılıbsa — həmçinin itmiş cihazı söndürmək üçün faydalıdır.",
+    "openOperatorApp": "İşçi tətbiqini aç",
+    "deviceBoundNextStep": "Bu cihaz artıq «{point}» nöqtəsinin terminalıdır. Onu işçiyə vermək olar — o, öz PIN kodu ilə daxil olacaq."
   },
   "zonesList": {
     "title": "Zonalar",

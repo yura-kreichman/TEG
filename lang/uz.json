@@ -733,7 +733,9 @@
     "deviceBoundToast": "Qurilma bog'landi",
     "newDeviceCurrentSub": "Qurilma darhol faollashadi va operatorning PIN bilan kirishiga tayyor bo'ladi",
     "reissueDevice": "Yangi faollashtirish havolasi",
-    "confirmReissueDevice": "Ushbu qurilma uchun yangi faollashtirish havolasi berilsinmi? Joriy bogʻlanish oʻchiriladi: yangi havola ochilmaguncha qurilma ishlamaydi. Nomi, nuqtasi va chop etish sozlamalari saqlanadi. Planshetda brauzer maʼlumotlari tozalangan yoki ilova qayta oʻrnatilgan boʻlsa — shuningdek yoʻqolgan qurilmani oʻchirish uchun foydali."
+    "confirmReissueDevice": "Ushbu qurilma uchun yangi faollashtirish havolasi berilsinmi? Joriy bogʻlanish oʻchiriladi: yangi havola ochilmaguncha qurilma ishlamaydi. Nomi, nuqtasi va chop etish sozlamalari saqlanadi. Planshetda brauzer maʼlumotlari tozalangan yoki ilova qayta oʻrnatilgan boʻlsa — shuningdek yoʻqolgan qurilmani oʻchirish uchun foydali.",
+    "openOperatorApp": "Xodim ilovasini ochish",
+    "deviceBoundNextStep": "Bu qurilma endi «{point}» nuqtasining terminali. Uni xodimga berish mumkin — u oʻz PIN-kodi bilan kiradi."
   },
   "zonesList": {
     "title": "Zonalar",

@@ -733,7 +733,9 @@
     "deviceBoundToast": "Device bound",
     "newDeviceCurrentSub": "The device activates immediately and will be ready for PIN operator login",
     "reissueDevice": "New activation link",
-    "confirmReissueDevice": "Issue a new activation link for this device? The current binding will be disabled: the device stops working until someone opens the new link. Name, point and printing settings are kept. Useful if browser data was cleared on the tablet or the app was reinstalled — and also to disable a lost device."
+    "confirmReissueDevice": "Issue a new activation link for this device? The current binding will be disabled: the device stops working until someone opens the new link. Name, point and printing settings are kept. Useful if browser data was cleared on the tablet or the app was reinstalled — and also to disable a lost device.",
+    "openOperatorApp": "Open the employee app",
+    "deviceBoundNextStep": "This device is now a terminal of “{point}”. You can hand it to an employee — they sign in with their PIN."
   },
   "zonesList": {
     "title": "Zones",

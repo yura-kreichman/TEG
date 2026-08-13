@@ -733,7 +733,9 @@
     "deviceBoundToast": "Dispositivo collegato",
     "newDeviceCurrentSub": "Il dispositivo si attiva subito ed è pronto per l'accesso dell'operatore con PIN",
     "reissueDevice": "Nuovo link di attivazione",
-    "confirmReissueDevice": "Emettere un nuovo link di attivazione per questo dispositivo? L'associazione attuale verrà disattivata: il dispositivo smetterà di funzionare finché qualcuno non aprirà il nuovo link. Nome, punto e impostazioni di stampa vengono mantenuti. Utile se sul tablet sono stati cancellati i dati del browser o l'app è stata reinstallata — e anche per disattivare un dispositivo smarrito."
+    "confirmReissueDevice": "Emettere un nuovo link di attivazione per questo dispositivo? L'associazione attuale verrà disattivata: il dispositivo smetterà di funzionare finché qualcuno non aprirà il nuovo link. Nome, punto e impostazioni di stampa vengono mantenuti. Utile se sul tablet sono stati cancellati i dati del browser o l'app è stata reinstallata — e anche per disattivare un dispositivo smarrito.",
+    "openOperatorApp": "Apri l'app del dipendente",
+    "deviceBoundNextStep": "Questo dispositivo è ora un terminale del punto «{point}». Puoi consegnarlo al dipendente: accederà con il suo PIN."
   },
   "zonesList": {
     "title": "Zone",

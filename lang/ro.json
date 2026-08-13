@@ -733,7 +733,9 @@
     "deviceBoundToast": "Dispozitiv asociat",
     "newDeviceCurrentSub": "Dispozitivul se activează imediat și va fi gata pentru autentificarea operatorului cu PIN",
     "reissueDevice": "Link nou de activare",
-    "confirmReissueDevice": "Emiteți un link nou de activare pentru acest dispozitiv? Legătura curentă va fi dezactivată: dispozitivul nu va mai funcționa până când cineva deschide noul link. Numele, punctul și setările de tipărire se păstrează. Util dacă datele browserului au fost șterse pe tabletă sau aplicația a fost reinstalată — și pentru a dezactiva un dispozitiv pierdut."
+    "confirmReissueDevice": "Emiteți un link nou de activare pentru acest dispozitiv? Legătura curentă va fi dezactivată: dispozitivul nu va mai funcționa până când cineva deschide noul link. Numele, punctul și setările de tipărire se păstrează. Util dacă datele browserului au fost șterse pe tabletă sau aplicația a fost reinstalată — și pentru a dezactiva un dispozitiv pierdut.",
+    "openOperatorApp": "Deschide aplicația angajatului",
+    "deviceBoundNextStep": "Acest dispozitiv este acum un terminal al punctului „{point}”. Îl puteți da angajatului — se va autentifica cu PIN-ul său."
   },
   "zonesList": {
     "title": "Zone",

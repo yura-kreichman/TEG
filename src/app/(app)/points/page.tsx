@@ -114,6 +114,10 @@ export default function PointsPage() {
   const { saved: createSaved, pulse: createPulse } = useSavePulse();
 
   const [deviceSheetPointId, setDeviceSheetPointId] = useState<string | null>(null);
+  // Точка, устройство которой только что привязали кнопкой «Привязать это
+  // устройство». Пока не null — шторка показывает не форму, а переход в
+  // приложение сотрудника (см. handleCreateDevice).
+  const [justBoundPointId, setJustBoundPointId] = useState<string | null>(null);
   // "current" — Владелец сидит прямо за этим браузером и хочет привязать ЕГО
   // (запрос пользователя 2026-07-29), не генерировать ссылку/QR для другого
   // устройства — см. POST /api/points/[id]/devices/bind-current.
@@ -262,8 +266,22 @@ export default function PointsPage() {
         setInstallLinks((prev) => ({ ...prev, [data.id]: data.installLink }));
       } else {
         flashToast(t.points.deviceBoundToast, "success");
+        // Привязали ИМЕННО ЭТОТ браузер — значит человек сейчас физически за
+        // тем устройством, которое только что стало терминалом точки, и
+        // следующий его шаг почти наверняка «отдать планшет сотруднику».
+        // Показываем переход явной кнопкой и НЕ закрываем шторку (запрос
+        // владельца 2026-08-13).
+        //
+        // Почему это не косметика. В установленном PWA нет адресной строки:
+        // из кабинета владельца попасть на /operator нельзя вообще ничем —
+        // ссылки в кабинете нет, а OperatorSwitchButton живёт только внутри
+        // самого /operator/*. То есть без этой кнопки владелец, вошедший в
+        // PWA, оказывается в тупике и лечится только переустановкой
+        // приложения. Ровно этот тупик владелец и поймал вживую.
+        setJustBoundPointId(deviceSheetPointId);
       }
       await loadPoints();
+      if (deviceBindMode === "current") return;
       createDevicePulse(() => {
         setDeviceLabel("");
         setDeviceRoaming(false);
@@ -754,7 +772,46 @@ export default function PointsPage() {
         </form>
       </BottomSheet>
 
-      <BottomSheet open={deviceSheetPointId !== null} onClose={() => setDeviceSheetPointId(null)}>
+      <BottomSheet
+        open={deviceSheetPointId !== null}
+        onClose={() => {
+          setDeviceSheetPointId(null);
+          setJustBoundPointId(null);
+        }}
+      >
+        {justBoundPointId !== null ? (
+          <div className="flex flex-col gap-3 pt-2">
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.deviceBoundToast}</h2>
+            <p className="text-body-airbnb">
+              {t.points.deviceBoundNextStep.replace(
+                "{point}",
+                points.find((p) => p.id === justBoundPointId)?.name ?? ""
+              )}
+            </p>
+            <PressableScale>
+              <Button className="h-12 w-full" onClick={() => router.push("/operator")}>
+                <TabletSmartphone />
+                {t.points.openOperatorApp}
+              </Button>
+            </PressableScale>
+            <PressableScale>
+              <Button
+                variant="outline"
+                className="h-12 w-full"
+                onClick={() => {
+                  setJustBoundPointId(null);
+                  setDeviceSheetPointId(null);
+                  setDeviceLabel("");
+                  setDeviceRoaming(false);
+                  setDeviceHasPrinter(false);
+                  setDeviceReceiptPaperWidth("58");
+                }}
+              >
+                {t.common.close}
+              </Button>
+            </PressableScale>
+          </div>
+        ) : (
         <form onSubmit={handleCreateDevice} className="flex flex-col gap-4 pt-2">
           <div>
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.points.newDeviceTitle}</h2>
@@ -823,6 +880,7 @@ export default function PointsPage() {
             <SaveButton type="submit" className="h-12 w-full" saved={createDeviceSaved} />
           </PressableScale>
         </form>
+        )}
       </BottomSheet>
 
       <BottomSheet open={pointKebab !== null && pointKebabView !== "icon"} onClose={() => setPointKebab(null)}>

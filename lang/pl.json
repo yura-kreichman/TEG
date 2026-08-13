@@ -733,7 +733,9 @@
     "deviceBoundToast": "Urządzenie powiązane",
     "newDeviceCurrentSub": "Urządzenie od razu się aktywuje i będzie gotowe do logowania operatora PIN-em",
     "reissueDevice": "Nowy link aktywacyjny",
-    "confirmReissueDevice": "Wydać nowy link aktywacyjny dla tego urządzenia? Bieżące powiązanie zostanie wyłączone: urządzenie przestanie działać, dopóki ktoś nie otworzy nowego linku. Nazwa, punkt i ustawienia drukowania zostaną zachowane. Przyda się, jeśli na tablecie wyczyszczono dane przeglądarki lub przeinstalowano aplikację — a także aby wyłączyć zgubione urządzenie."
+    "confirmReissueDevice": "Wydać nowy link aktywacyjny dla tego urządzenia? Bieżące powiązanie zostanie wyłączone: urządzenie przestanie działać, dopóki ktoś nie otworzy nowego linku. Nazwa, punkt i ustawienia drukowania zostaną zachowane. Przyda się, jeśli na tablecie wyczyszczono dane przeglądarki lub przeinstalowano aplikację — a także aby wyłączyć zgubione urządzenie.",
+    "openOperatorApp": "Otwórz aplikację pracownika",
+    "deviceBoundNextStep": "To urządzenie jest teraz terminalem punktu „{point}”. Możesz przekazać je pracownikowi — zaloguje się swoim kodem PIN."
   },
   "zonesList": {
     "title": "Strefy",

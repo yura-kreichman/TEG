@@ -733,7 +733,9 @@
     "deviceBoundToast": "Cihaz bağlandı",
     "newDeviceCurrentSub": "Cihaz hemen etkinleşir ve operatörün PIN ile girişi için hazır olur",
     "reissueDevice": "Yeni etkinleştirme bağlantısı",
-    "confirmReissueDevice": "Bu cihaz için yeni bir etkinleştirme bağlantısı verilsin mi? Mevcut bağlama devre dışı kalacak: yeni bağlantı açılana kadar cihaz çalışmayacak. Ad, nokta ve yazdırma ayarları korunur. Tablette tarayıcı verileri temizlendiyse veya uygulama yeniden kurulduysa — ayrıca kaybolan bir cihazı devre dışı bırakmak için de işe yarar."
+    "confirmReissueDevice": "Bu cihaz için yeni bir etkinleştirme bağlantısı verilsin mi? Mevcut bağlama devre dışı kalacak: yeni bağlantı açılana kadar cihaz çalışmayacak. Ad, nokta ve yazdırma ayarları korunur. Tablette tarayıcı verileri temizlendiyse veya uygulama yeniden kurulduysa — ayrıca kaybolan bir cihazı devre dışı bırakmak için de işe yarar.",
+    "openOperatorApp": "Çalışan uygulamasını aç",
+    "deviceBoundNextStep": "Bu cihaz artık «{point}» noktasının terminali. Çalışana verebilirsiniz — kendi PIN koduyla giriş yapacak."
   },
   "zonesList": {
     "title": "Bölgeler",
