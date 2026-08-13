@@ -451,6 +451,19 @@ export function AbonementTopupFlow({
         // пользователя 2026-07-25): found остаётся undefined, оператор
         // остаётся на экране поиска, номер сразу очищается.
         if (spendOnlyMode && !data.abonement) {
+          // Кандидаты по хвосту показываем и здесь (найдено при проверке
+          // глазами 2026-08-13): ранний выход выбрасывал их, как это же
+          // делала разбивка оплаты — сотрудник видел «не найден» на клиенте,
+          // который в базе есть, и не мог списать с его баланса.
+          //
+          // Заводить нового в этом пункте меню по-прежнему нельзя (решение
+          // пользователя 2026-07-24), поэтому форма создания не появляется —
+          // только список похожих, из которого можно выбрать.
+          const candidates = data.similar ?? [];
+          if (candidates.length > 0) {
+            setSimilar(candidates);
+            return;
+          }
           flashSearchNotFound(t.operatorApp.abonement.spendOnlyNotFound);
           return;
         }
@@ -1184,6 +1197,33 @@ export function AbonementTopupFlow({
         </>
       ) : found === undefined ? (
         <div className="relative flex flex-col gap-3">
+          {/* Похожие клиенты на самом экране поиска — нужны режиму «только
+              списание» (кнопка «Списать с баланса»), где found остаётся
+              undefined и до второго экрана дело не доходит вовсе. */}
+          {similar.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <span className="text-section-title">{t.operatorApp.abonement.similarTitle}</span>
+              {similar.map((s) => (
+                <PressableScale key={s.id}>
+                  <button
+                    type="button"
+                    onClick={() => selectSimilar(s.phone)}
+                    className="flex w-full items-center justify-between gap-3 rounded-control border border-border bg-card px-3 py-2.5 text-left"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-body-airbnb font-semibold">
+                        {s.name || t.operatorApp.abonement.noName}
+                      </span>
+                      <span className="block truncate tabular-nums text-caption-airbnb">{s.phone}</span>
+                    </span>
+                    <span className="shrink-0 text-body-airbnb font-bold tabular-nums">
+                      <Money value={s.balance} />
+                    </span>
+                  </button>
+                </PressableScale>
+              ))}
+            </div>
+          )}
           {/* "Клиент не найден" — zoom-in+bounce прямо над полем/нумпадом,
               не текстовая строка (запрос пользователя 2026-07-25: "такое же
               как в Билетах при поиске заказа"), тот же приём и разметка, что
