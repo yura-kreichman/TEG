@@ -55,6 +55,26 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
   const [searching, setSearching] = useState(false);
   // undefined — ещё не искали; null — искали, не нашли; объект — нашли.
   const [found, setFound] = useState<LinkedClientInfo | null | undefined>(undefined);
+  // Похожие по хвосту номера — показываются вместо голого «Новый клиент»,
+  // когда точного совпадения нет (реальный баг с прода 2026-08-13: сотрудник
+  // искал 077942424 и 77942424, клиент сохранён как 37377942424, привязка
+  // молча предлагала завести дубликат).
+  const [similar, setSimilar] = useState<LinkedClientInfo[]>([]);
+
+  // Выбор кандидата: подставляем его точный номер и повторяем поиск — дальше
+  // экран не отличается от случая, когда номер набрали верно сразу.
+  function selectSimilar(exactPhone: string) {
+    setPhone(exactPhone);
+    setSimilar([]);
+    setSearching(true);
+    fetch(`${endpoint}?phone=${encodeURIComponent(exactPhone)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.error) setFound(data.client ?? null);
+      })
+      .catch(() => {})
+      .finally(() => setSearching(false));
+  }
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +101,7 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
           setError(data.error);
           return;
         }
+        setSimilar(data.similar ?? []);
         setFound(data.client ?? null);
       })
       .catch(() => setError(t.operatorApp.gameRoom.networkError))
@@ -189,6 +210,34 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
                 стандартный интерфейс добавления клиента, что и везде в
                 проекте (запрос пользователя 2026-07-27), тот же ключ
                 nameLabel, не своя формулировка. */}
+            {/* Кандидаты — ВЫШЕ формы нового клиента: сотрудник должен
+                увидеть «такой клиент уже есть» раньше, чем кнопку завести
+                ещё одного. Автоподстановки нет — совпадение хвоста значит
+                «похоже», а не «это он», выбирает человек. */}
+            {similar.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <span className="text-section-title">{t.operatorApp.abonement.similarTitle}</span>
+                {similar.map((s) => (
+                  <PressableScale key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => selectSimilar(s.phone)}
+                      className="flex w-full items-center justify-between gap-3 rounded-control border border-border bg-card px-3 py-2.5 text-left"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-body-airbnb font-semibold">
+                          {s.name || t.operatorApp.abonement.noName}
+                        </span>
+                        <span className="block truncate tabular-nums text-caption-airbnb">{s.phone}</span>
+                      </span>
+                      <span className="shrink-0 text-body-airbnb font-bold tabular-nums">
+                        <Money value={s.balance} />
+                      </span>
+                    </button>
+                  </PressableScale>
+                ))}
+              </div>
+            )}
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.abonement.newTitle}</h2>
             <p className="text-caption-airbnb text-muted-foreground">{phone}</p>
             <div className="flex flex-col gap-1">

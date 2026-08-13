@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { isModuleEnabled } from "@/lib/tenant-modules";
-import { findWalletByPhone, createWalletEmpty, normalizePhone } from "@/lib/abonement";
+import { findWalletByPhone, findWalletCandidatesByKey, createWalletEmpty, normalizePhone } from "@/lib/abonement";
 
 async function checkAccess(id: string, opCtx: NonNullable<Awaited<ReturnType<typeof requireOperator>>>) {
   const { operator, point } = opCtx;
@@ -47,8 +47,14 @@ export async function GET(request: Request, ctx: RouteContext<"/api/launches/[id
     return NextResponse.json({ error: "Введите номер телефона" }, { status: 400 });
   }
   const wallet = await findWalletByPhone(opCtx.point.tenantId, phone);
+  // Похожие по хвосту номера, когда точного совпадения нет — тот же приём,
+  // что на экране Клиентов (запрос пользователя 2026-08-13, реальный баг с
+  // прода: сотрудник искал 077942424 и 77942424, клиент в базе сохранён как
+  // 37377942424, и привязка предлагала завести дубликат).
+  const similar = wallet ? [] : await findWalletCandidatesByKey(opCtx.point.tenantId, phone);
   return NextResponse.json({
     client: wallet ? { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance) } : null,
+    similar: similar.map((c) => ({ id: c.id, phone: c.phone, name: c.name, balance: Number(c.balance) })),
   });
 }
 

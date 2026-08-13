@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireOwner } from "@/lib/require-owner";
-import { createWalletEmpty, createWalletWithAdjustment, findWalletByPhone, normalizePhone } from "@/lib/abonement";
+import {
+  createWalletEmpty,
+  createWalletWithAdjustment,
+  findWalletByPhone,
+  findWalletCandidatesByKey,
+  normalizePhone,
+} from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Регистрация клиента и произвольное пополнение ВЛАДЕЛЬЦЕМ (запрос
@@ -26,7 +32,15 @@ export async function GET(request: Request) {
 
   const wallet = await findWalletByPhone(owner.tenantId, phone);
   if (!wallet) {
-    return NextResponse.json({ abonement: null });
+    // Похожие по хвосту — тот же приём, что у сотрудника (реальный баг с
+    // прода 2026-08-13). Список кошельков владельца ищет по вхождению
+    // подстроки и короткий номер находил и так, но ЭТОТ путь — точечный
+    // поиск по номеру — оставался строгим.
+    const candidates = await findWalletCandidatesByKey(owner.tenantId, phone);
+    return NextResponse.json({
+      abonement: null,
+      similar: candidates.map((c) => ({ id: c.id, phone: c.phone, name: c.name, balance: Number(c.balance) })),
+    });
   }
   return NextResponse.json({
     abonement: {
