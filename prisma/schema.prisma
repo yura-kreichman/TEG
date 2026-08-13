@@ -2470,11 +2470,21 @@ model MoneyOperation {
   // (src/app/api/reports/counters/zone-submission/[id]) ищет операцию по
   // конкретной сдаче+зоне.
   @@index([tenantId])
+  // Главный экран владельца (reports/home-summary) фильтрует ровно по этой
+  // паре — прибыль за день по тенанту (аудит производительности 2026-08-13).
+  // Одного [tenantId] мало: он отбирает ВСЕ операции тенанта за всё время,
+  // а лишнее по дате Postgres отбрасывает уже потом.
+  @@index([tenantId, occurredAt])
   @@index([resultsSubmissionId, zoneId])
   // Расчёт баланса оператора ("к выдаче"/"заработано за период") сканирует
   // все advance/bonus_payout конкретного получателя — горячий путь карточки
   // оператора и вкладки "Время" в PWA.
   @@index([beneficiaryOperatorId, type, occurredAt])
+  // Баланс зон (lib/zone-balance.ts) читает операции по списку зон на каждом
+  // открытии экрана оператора, БЕЗ границы по времени (аудит 2026-08-13).
+  // Индекса с ведущим zoneId не было вовсе: [resultsSubmissionId, zoneId]
+  // для этого запроса бесполезен.
+  @@index([zoneId, occurredAt])
   @@index([pointId])
   @@index([shiftId])
 }
@@ -2549,6 +2559,10 @@ model Shift {
 
   // Табель сортирует/фильтрует по оператору и дате — горячий путь.
   @@index([operatorId, startAt])
+  // «Есть ли открытая смена на точке» — проверяется при сдаче итогов и в
+  // сводках (lib/summary-channels/daily-cash-trigger.ts). Ведущего pointId
+  // не было: индекс по operatorId для этого вопроса не подходит.
+  @@index([pointId, isOpen])
 }
 
 // Перенос баланса — ручная запись владельца (стартовый баланс/корректировка),

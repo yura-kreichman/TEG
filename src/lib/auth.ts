@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "crypto";
 import { cookies } from "next/headers";
-import bcrypt from "bcryptjs";
+import { hashSecret, verifySecret } from "@/lib/password-hash";
 import {
   sessionCookieOptions,
   signExpiringToken,
@@ -42,19 +42,19 @@ const IMPERSONATION_COOKIE = "impersonation";
 export const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export function hashPassword(password: string) {
-  return bcrypt.hash(password, 12);
+  return hashSecret(password);
 }
 
 export function verifyPassword(password: string, hash: string) {
-  return bcrypt.compare(password, hash);
+  return verifySecret(password, hash);
 }
 
 export function hashPin(pin: string) {
-  return bcrypt.hash(pin, 12);
+  return hashSecret(pin);
 }
 
 export function verifyPin(pin: string, hash: string) {
-  return bcrypt.compare(pin, hash);
+  return verifySecret(pin, hash);
 }
 
 export async function createSession(userId: string) {

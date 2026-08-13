@@ -189,12 +189,19 @@ export async function calcOperatorBalance(
   const [shifts, rates, moneyOps, carryovers] = await Promise.all([
     // isOpen: открытая смена (docs/spec/05-work-time.md, "АВТО"), ещё не
     // начислена, не в этом расчёте: попадёт в баланс при check-out.
-    tx.shift.findMany({ where: { operatorId, isOpen: false } }),
+    // select только нужных полей (аудит производительности 2026-08-13).
+    // Скользящий баланс по замыслу считается от начала работы сотрудника
+    // (docs/spec/05-work-time.md), а OperatorBalanceCarryover — это
+    // КОРРЕКТИРОВКА, а не закрытие периода: границы, от которой можно было бы
+    // считать, в модели нет. Поэтому режем объём чтения, а не смысл расчёта —
+    // сумму денег это не меняет вообще никак.
+    tx.shift.findMany({ where: { operatorId, isOpen: false }, select: { startAt: true, endAt: true } }),
     tx.operatorRate.findMany({ where: { operatorId }, orderBy: [{ effectiveFrom: "desc" }, { createdAt: "desc" }] }),
     tx.moneyOperation.findMany({
       where: { beneficiaryOperatorId: operatorId, type: { in: WORK_TIME_MONEY_TYPES } },
+      select: { type: true, amount: true, occurredAt: true },
     }),
-    tx.operatorBalanceCarryover.findMany({ where: { operatorId } }),
+    tx.operatorBalanceCarryover.findMany({ where: { operatorId }, select: { amount: true } }),
   ]);
 
   function rateForDate(date: Date): number {

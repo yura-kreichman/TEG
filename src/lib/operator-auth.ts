@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "crypto";
 import { cookies } from "next/headers";
-import bcrypt from "bcryptjs";
+import { verifySecret } from "@/lib/password-hash";
 import { prisma } from "@/lib/prisma";
 import { sessionCookieOptions, signExpiringToken, verifyExpiringToken } from "@/lib/session-crypto";
 
@@ -148,13 +148,13 @@ export async function getActivatedPoint() {
 // показывает точную причину.
 export async function findOperatorByPin(tenantId: string, pin: string) {
   const indexed = await prisma.operator.findFirst({ where: { tenantId, pin } });
-  if (indexed && (await bcrypt.compare(pin, indexed.pinHash))) {
+  if (indexed && (await verifySecret(pin, indexed.pinHash))) {
     return indexed;
   }
 
   const legacy = await prisma.operator.findMany({ where: { tenantId, pin: null } });
   for (const operator of legacy) {
-    if (await bcrypt.compare(pin, operator.pinHash)) {
+    if (await verifySecret(pin, operator.pinHash)) {
       // Дозаполняем индексную колонку — этот сотрудник больше не попадёт в
       // перебор. Не блокируем вход, если запись почему-то не удалась.
       await prisma.operator
@@ -181,13 +181,13 @@ export async function isPinTakenInTenant(
   const exclude = excludeOperatorId ? { id: { not: excludeOperatorId } } : {};
 
   const indexed = await prisma.operator.findFirst({ where: { tenantId, pin, ...exclude } });
-  if (indexed && (await bcrypt.compare(pin, indexed.pinHash))) {
+  if (indexed && (await verifySecret(pin, indexed.pinHash))) {
     return true;
   }
 
   const legacy = await prisma.operator.findMany({ where: { tenantId, pin: null, ...exclude } });
   for (const operator of legacy) {
-    if (await bcrypt.compare(pin, operator.pinHash)) {
+    if (await verifySecret(pin, operator.pinHash)) {
       return true;
     }
   }
@@ -212,7 +212,7 @@ export async function isOwnerPinInTenant(tenantId: string, pin: string) {
   });
 
   for (const owner of owners) {
-    if (owner.pinHash && (await bcrypt.compare(pin, owner.pinHash))) {
+    if (owner.pinHash && (await verifySecret(pin, owner.pinHash))) {
       return true;
     }
   }

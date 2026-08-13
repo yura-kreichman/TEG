@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { normalizeEmail } from "@/lib/normalize-email";
+import { invalidateSubscriptionGate } from "@/lib/subscription-gate";
 import { Prisma, type Tenant } from "@/generated/prisma/client";
 import { provisionTenantFromPurchase } from "@/lib/fluentcart-provision";
 import { verifyTenantBillingToken } from "@/lib/billing-token";
@@ -376,6 +377,12 @@ export async function syncTenantFromFluentCartEvent(
     if (!isRecordNotFound(err)) throw err;
     return { matched: false, reason: `tenant ${tenant.id} was deleted during processing` };
   }
+
+  // Гейт подписки в прокси держит статус в памяти с коротким TTL (аудит
+  // производительности 2026-08-13). Сбрасываем ПОСЛЕ любой обработки события,
+  // а не в каждой ветке update отдельно: оплатил — должен писать сразу, а не
+  // ждать полминуты. См. lib/subscription-gate.ts.
+  invalidateSubscriptionGate();
 
   // Уведомление Super Admin'у — только о событиях, которые реально что-то
   // изменили: пропущенные как устаревшие или относящиеся к чужому заказу

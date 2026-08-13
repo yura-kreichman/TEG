@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { invalidateSubscriptionGate } from "@/lib/subscription-gate";
 import { getBusinessDayBounds, isAtBoundaryMinute, isAtTimeMinute, previousBusinessDayBounds } from "@/lib/business-day";
 import { hasActivityInBounds } from "@/lib/summary-channels/daily-cash-data";
 import { maybeSendDailyCashSummary } from "@/lib/summary-channels/daily-cash-trigger";
@@ -47,10 +48,14 @@ let intervalHandle: ReturnType<typeof setInterval> | null = null;
 // unlimited защищает и от истечения подписки, не только от лимитов —
 // именно так это поле описано пользователю ("осознанно поставил безлимит").
 async function expireSubscriptions(now: Date) {
-  await prisma.tenant.updateMany({
+  const changed = await prisma.tenant.updateMany({
     where: { subscriptionStatus: "active", subscriptionExpiresAt: { lt: now }, unlimited: false },
     data: { subscriptionStatus: "expired" },
   });
+  // Гейт подписки в прокси держит статус в памяти с коротким TTL (аудит
+  // производительности 2026-08-13) — без сброса истёкший владелец до
+  // полуминуты продолжал бы писать. См. lib/subscription-gate.ts.
+  if (changed.count > 0) invalidateSubscriptionGate();
 }
 
 async function tick() {

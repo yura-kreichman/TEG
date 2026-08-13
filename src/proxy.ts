@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server";
 import { buildCsp, NONCE_HEADER } from "@/lib/csp";
+import { getSubscriptionGateState } from "@/lib/subscription-gate";
 import { verifySessionToken } from "@/lib/session-crypto";
 import { prisma } from "@/lib/prisma";
 import { resolveTenantBySlug } from "@/lib/landing/resolve-tenant";
@@ -215,20 +216,25 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
     // гейт подписки молча пропускал бы все мутирующие запросы имперсонации.
     const userId = token ? verifySessionToken(token) : null;
     if (userId) {
-      const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, tenantId: true } });
-      if (user?.role === "owner" && user.tenantId) {
-        const tenant = await prisma.tenant.findUnique({
-          where: { id: user.tenantId },
-          select: { subscriptionStatus: true },
-        });
-        if (tenant && SUBSCRIPTION_BLOCKED_STATUSES.has(tenant.subscriptionStatus)) {
-          return withCsp(
-            NextResponse.json(
-              { error: "Подписка не активна — доступ только на чтение. Оплатите тариф, чтобы продолжить." },
-              { status: 402 }
-            )
-          );
-        }
+      // Одно обращение вместо двух SELECT'ов на КАЖДЫЙ мутирующий запрос
+      // (аудит производительности 2026-08-13) — состояние подписки живёт в
+      // памяти с коротким TTL и сбрасывается там, где меняется: вебхук
+      // FluentCart, действие Super Admin, ночной планировщик. Кэшируется
+      // именно биллинговый статус, а не право доступа — вход и права
+      // по-прежнему проверяются свежим чтением в requireOwner. Подробности —
+      // в lib/subscription-gate.ts.
+      const gate = await getSubscriptionGateState(userId);
+      if (
+        gate?.role === "owner" &&
+        gate.subscriptionStatus &&
+        SUBSCRIPTION_BLOCKED_STATUSES.has(gate.subscriptionStatus)
+      ) {
+        return withCsp(
+          NextResponse.json(
+            { error: "Подписка не активна — доступ только на чтение. Оплатите тариф, чтобы продолжить." },
+            { status: 402 }
+          )
+        );
       }
     }
   }

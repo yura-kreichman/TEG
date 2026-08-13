@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { invalidateTenantModuleFlags } from "@/lib/tenant-modules";
 import { requireOwner } from "@/lib/require-owner";
 import { BG_EFFECT_VALUES } from "@/components/bg-effects";
 import { normalizeBgEffect } from "@/components/bg-effects/shared";
 import { isSelfServicePayoutMode } from "@/lib/work-time";
 import { extractPlainText, isRichContentEmpty, validateRichContent } from "@/lib/rich-text";
 
+import { Prisma } from "@/generated/prisma/client";
+
 // Подвал квитанции — несколько строк, а не документ (в отличие от инструктажа).
 const MAX_RECEIPT_FOOTER_LENGTH = 2000;
-import { Prisma } from "@/generated/prisma/client";
 
 // Настройки → Система (запрос пользователя 2026-07-20) — страница задумана
 // расширяемой ("первый пункт там будет"). Тумблеры:
@@ -186,5 +188,9 @@ export async function PATCH(request: Request) {
   }
 
   await prisma.tenant.update({ where: { id: owner.tenantId }, data });
+  // Сброс кэша флагов модулей (аудит производительности 2026-08-13) — они
+  // читаются из памяти с TTL 30 с, и без явного сброса тумблер модуля
+  // применялся бы с задержкой до полуминуты. См. lib/short-cache.ts.
+  invalidateTenantModuleFlags(owner.tenantId);
   return NextResponse.json({ ok: true });
 }

@@ -180,8 +180,22 @@ export async function getPointCashBalance(
   const zoneIds = zones.map((z) => z.id);
 
   const [zoneOps, pointOps, zoneCollectionCutoff, abonementCutoff, goodsCutoff] = await Promise.all([
-    zoneIds.length ? client.moneyOperation.findMany({ where: { zoneId: { in: zoneIds } } }) : Promise.resolve([]),
-    client.moneyOperation.findMany({ where: { pointId } }),
+    // select только нужных полей (аудит производительности 2026-08-13):
+    // раньше тянулись все колонки каждой операции точки за всё время, а
+    // используются четыре. Границы по времени здесь быть не может — это
+    // остаток наличных "с начала", он и должен считаться от начала; удешевляем
+    // чтение, а не меняем смысл. Ведущий индекс [zoneId, occurredAt] добавлен
+    // той же правкой.
+    zoneIds.length
+      ? client.moneyOperation.findMany({
+          where: { zoneId: { in: zoneIds } },
+          select: { type: true, amount: true, occurredAt: true, performedByUserId: true },
+        })
+      : Promise.resolve([]),
+    client.moneyOperation.findMany({
+      where: { pointId },
+      select: { type: true, amount: true, occurredAt: true, performedByUserId: true },
+    }),
     getZoneCollectionCutoff(pointId, zoneIds, client),
     getPoolSweepCutoff(pointId, "collection_pool_sweep_abonement", client),
     getPoolSweepCutoff(pointId, "collection_pool_sweep_goods", client),

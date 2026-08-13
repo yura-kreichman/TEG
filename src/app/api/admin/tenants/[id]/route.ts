@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { invalidateSubscriptionGate } from "@/lib/subscription-gate";
+import { invalidateTenantModuleFlags } from "@/lib/tenant-modules";
 import { Prisma } from "@/generated/prisma/client";
 import { requireSuperAdmin } from "@/lib/require-super-admin";
 import { verifyPassword } from "@/lib/auth";
@@ -260,6 +262,13 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/admin/tena
       },
     }),
   ]);
+
+  // Гейт подписки в прокси держит статус в памяти с коротким TTL (аудит
+  // производительности 2026-08-13) — Super Admin, снявший блокировку вручную,
+  // должен увидеть эффект сразу, а не через полминуты. Заодно сбрасываем
+  // флаги модулей: их админка тоже может править. См. lib/short-cache.ts.
+  invalidateSubscriptionGate();
+  invalidateTenantModuleFlags(id);
 
   return NextResponse.json({ ok: true });
 }

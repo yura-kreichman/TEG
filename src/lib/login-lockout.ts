@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+import { verifySecret } from "@/lib/password-hash";
 import { prisma } from "@/lib/prisma";
 
 // Ограничение попыток входа по ПАРОЛЮ (Owner + Super Admin, оба через
@@ -185,5 +185,5 @@ const DUMMY_HASH = "$2b$12$RZ408b1VGwVQ0NpZdmQvDOCkkSz01Lfe/YXYMJOoS4MXg4voihFTm
  * Вызывается на ветке «пользователь не найден» перед общим 401.
  */
 export async function equalizePasswordTiming(password: string): Promise<void> {
-  await bcrypt.compare(password, DUMMY_HASH).catch(() => false);
+  await verifySecret(password, DUMMY_HASH).catch(() => false);
 }
