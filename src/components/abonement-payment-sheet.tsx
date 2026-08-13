@@ -72,6 +72,25 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
   // списывать, оператор просто выбирает другой способ оплаты; создание
   // нового клиента остаётся только в разделе Клиенты).
   const [found, setFound] = useState<WalletCtx | undefined>(undefined);
+  // Кандидаты по хвосту номера, когда точного совпадения нет.
+  const [similar, setSimilar] = useState<WalletCtx[]>([]);
+
+  // Выбор кандидата: подставляем его точный номер и повторяем поиск — дальше
+  // лист ведёт себя так же, как если бы номер набрали верно с первого раза.
+  function selectSimilar(exactPhone: string) {
+    setPhone(exactPhone);
+    setSimilar([]);
+    setSearching(true);
+    fetch(`/api/operator/abonements?phone=${encodeURIComponent(exactPhone)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error || !data.abonement) return;
+        setFound(data.abonement);
+        if (data.abonement.balance < amount) loadPlans();
+      })
+      .catch(() => {})
+      .finally(() => setSearching(false));
+  }
   const [plans, setPlans] = useState<AbonementCtx[] | null>(null);
   const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -149,9 +168,21 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
           return;
         }
         if (!data.abonement) {
+          // Похожие по хвосту номера — вместо голого «не найден» (реальный
+          // баг с прода 2026-08-13: сотрудник набирает номер так, как ему
+          // продиктовали, а клиент сохранён с кодом страны). Здесь это
+          // критичнее, чем на других экранах: не найдя кошелёк, оператор не
+          // может принять часть оплаты балансом и вынужден брать всю сумму
+          // деньгами — то есть баг тихо меняет способ расчёта.
+          const similar = (data.similar ?? []) as WalletCtx[];
+          if (similar.length > 0) {
+            setSimilar(similar);
+            return;
+          }
           flashSearchError(t.operatorApp.abonement.clientNotFoundLabel);
           return;
         }
+        setSimilar([]);
         setFound(data.abonement);
         if (data.abonement.balance < amount) loadPlans();
       })
@@ -222,6 +253,33 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
           </>
         ) : found === undefined ? (
           <div className="relative flex flex-col gap-3">
+            {/* Похожие клиенты — над полем поиска, до нумпада: сотрудник
+                видит найденное сразу, не пролистывая клавиатуру. Тап
+                подставляет точный номер и повторяет поиск. */}
+            {similar.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <span className="text-section-title">{t.operatorApp.abonement.similarTitle}</span>
+                {similar.map((s) => (
+                  <PressableScale key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => selectSimilar(s.phone)}
+                      className="flex w-full items-center justify-between gap-3 rounded-control border border-border bg-card px-3 py-2.5 text-left"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-body-airbnb font-semibold">
+                          {s.name || t.operatorApp.abonement.noName}
+                        </span>
+                        <span className="block truncate tabular-nums text-caption-airbnb">{s.phone}</span>
+                      </span>
+                      <span className="shrink-0 text-body-airbnb font-bold tabular-nums">
+                        <Money value={s.balance} />
+                      </span>
+                    </button>
+                  </PressableScale>
+                ))}
+              </div>
+            )}
             {/* "Клиент не найден" — тот же самогаснущий тост, что "Заказ не
                 найден" в Билетах (запрос пользователя 2026-07-22). */}
             <AnimatePresence>

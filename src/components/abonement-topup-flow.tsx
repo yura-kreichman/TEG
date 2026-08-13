@@ -1288,40 +1288,40 @@ export function AbonementTopupFlow({
         </div>
       ) : (
         <>
-          {/* Похожие клиенты — до формы создания нового (запрос пользователя
-              2026-08-13). Один и тот же человек попадает в базу в разных
-              видах: с кодом страны и без, с транковым префиксом и без — а
-              сотрудник набирает так, как ему продиктовали, и точное
-              совпадение для него слишком строгое условие.
-              Выбирает человек, автоподстановки нет: совпадение хвоста значит
-              «похоже», а не «это он». */}
-          {isNew && similar.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <span className="text-section-title">{t.operatorApp.abonement.similarTitle}</span>
-              {similar.map((s) => (
-                <PressableScale key={s.id}>
-                  <button
-                    type="button"
-                    onClick={() => selectSimilar(s.phone)}
-                    className="flex w-full items-center justify-between gap-3 rounded-control border border-border bg-card px-3 py-2.5 text-left"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-body-airbnb font-semibold">
-                        {s.name || t.operatorApp.abonement.noName}
-                      </span>
-                      <span className="block truncate tabular-nums text-caption-airbnb">{s.phone}</span>
-                    </span>
-                    <span className="shrink-0 text-body-airbnb font-bold tabular-nums">
-                      <Money value={s.balance} />
-                    </span>
-                  </button>
-                </PressableScale>
-              ))}
-            </div>
-          )}
           {!initialWallet && (
             <>
               <BackLink label={t.common.back} onClick={() => setFound(undefined)} />
+            {/* Похожие клиенты — до формы создания нового (запрос пользователя
+                2026-08-13). Один и тот же человек попадает в базу в разных
+                видах: с кодом страны и без, с транковым префиксом и без — а
+                сотрудник набирает так, как ему продиктовали, и точное
+                совпадение для него слишком строгое условие.
+                Выбирает человек, автоподстановки нет: совпадение хвоста значит
+                «похоже», а не «это он». */}
+            {isNew && similar.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <span className="text-section-title">{t.operatorApp.abonement.similarTitle}</span>
+                {similar.map((s) => (
+                  <PressableScale key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => selectSimilar(s.phone)}
+                      className="flex w-full items-center justify-between gap-3 rounded-control border border-border bg-card px-3 py-2.5 text-left"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-body-airbnb font-semibold">
+                          {s.name || t.operatorApp.abonement.noName}
+                        </span>
+                        <span className="block truncate tabular-nums text-caption-airbnb">{s.phone}</span>
+                      </span>
+                      <span className="shrink-0 text-body-airbnb font-bold tabular-nums">
+                        <Money value={s.balance} />
+                      </span>
+                    </button>
+                  </PressableScale>
+                ))}
+              </div>
+            )}
               {!isNew && editingName ? (
                 <div className="flex items-center gap-2">
                   <Input
