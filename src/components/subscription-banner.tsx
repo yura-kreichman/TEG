@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { CreditCard } from "lucide-react";
 import { useI18n, useLocale } from "@/components/i18n-provider";
-import { pricingUrl } from "@/lib/billing";
+import { pricingUrlWithLogin } from "@/lib/billing";
 import { cn } from "@/lib/utils";
 
 /**
@@ -54,7 +54,7 @@ export function SubscriptionBanner() {
 
   return (
     <a
-      href={pricingUrl(locale, billingToken)}
+      href={pricingUrlWithLogin(locale, billingToken)}
       target="_blank"
       rel="noopener noreferrer"
       className={cn(

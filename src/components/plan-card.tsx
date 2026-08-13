@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useI18n, useLocale } from "@/components/i18n-provider";
 import { SpringCard } from "@/components/spring-card";
 import { cn } from "@/lib/utils";
-import { pricingUrl } from "@/lib/billing";
+import { pricingUrlWithLogin } from "@/lib/billing";
 
 interface Usage {
   packageName: string;
@@ -152,7 +152,7 @@ export function PlanCard() {
       ))}
 
       <a
-        href={pricingUrl(locale, usage.billingToken)}
+        href={pricingUrlWithLogin(locale, usage.billingToken)}
         target="_blank"
         rel="noopener noreferrer"
         className="mt-3 text-caption-airbnb font-semibold text-primary"
