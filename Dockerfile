@@ -10,6 +10,12 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 FROM base AS build
+# Идентификатор сборки (запрос владельца 2026-08-13) — хеш коммита,
+# подставляет deploy/deploy.sh. Next дописывает его к адресам статики и
+# кладёт в data-dpl-id на <html>; клиент сравнивает его с ответом
+# /api/version и перезагружается, когда версия сменилась.
+ARG NEXT_DEPLOYMENT_ID=""
+ENV NEXT_DEPLOYMENT_ID=$NEXT_DEPLOYMENT_ID
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
@@ -17,6 +23,10 @@ RUN npm run build
 
 FROM base AS runner
 ENV NODE_ENV=production
+# То же значение и в рантайме: сервер обязан отдавать /api/version ровно ту
+# версию, с которой собрана статика, иначе клиент уйдёт в вечную перезагрузку.
+ARG NEXT_DEPLOYMENT_ID=""
+ENV NEXT_DEPLOYMENT_ID=$NEXT_DEPLOYMENT_ID
 RUN addgroup -S rentos && adduser -S rentos -G rentos
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next

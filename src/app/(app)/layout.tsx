@@ -5,6 +5,7 @@ import InstallAppBanner from "./install-app-banner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeColorMeta } from "@/components/theme-color-meta";
 import { DisableContextMenu } from "@/components/disable-context-menu";
+import { VersionWatcher } from "@/components/version-watcher";
 import { I18nProvider } from "@/components/i18n-provider";
 import { TextScaleProvider } from "@/components/text-scale-provider";
 import { getAccentCookie } from "@/lib/accent";
@@ -88,6 +89,11 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col">
         <AppBackground style={bgStyle} />
         <DisableContextMenu />
+        {/* Перезагрузка при появлении новой сборки (запрос владельца
+            2026-08-13). В общем layout, а не в PWA Сотрудника: кабинет
+            владельца тоже держат открытым подолгу, и устаревшая вкладка там
+            ломается ровно так же. */}
+        <VersionWatcher version={process.env.NEXT_DEPLOYMENT_ID ?? null} />
         <I18nProvider dict={dict} locale={locale} currency={currency}>
           {/* nonce обязателен (аудит 2026-08-13): next-themes вставляет
               ИНЛАЙНОВЫЙ скрипт, который выставляет класс темы до первой

@@ -55,7 +55,11 @@ services:
       retries: 5
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        # Хеш коммита из deploy/deploy.sh — см. комментарий в Dockerfile.
+        NEXT_DEPLOYMENT_ID: "${NEXT_DEPLOYMENT_ID:-}"
     restart: unless-stopped
     env_file:
       - .env
