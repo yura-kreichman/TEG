@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getImpersonatingAdminId, getSessionUserId } from "@/lib/auth";
+import { getImpersonatingAdminId, getSession } from "@/lib/auth";
+import { isSessionRevoked } from "@/lib/session-revocation";
 
 // Статус имперсонации для баннера в кабинете владельца (docs/spec/
 // 06-super-admin.md, п.4) — требует ОБА маркера сразу: маркер имперсонации
@@ -12,13 +13,15 @@ export async function GET() {
     return NextResponse.json({ impersonating: false });
   }
 
-  const ownerId = await getSessionUserId();
-  if (!ownerId) {
+  const session = await getSession();
+  if (!session) {
     return NextResponse.json({ impersonating: false });
   }
 
-  const owner = await prisma.user.findUnique({ where: { id: ownerId }, include: { tenant: true } });
-  if (!owner || owner.role !== "owner" || !owner.tenant) {
+  const owner = await prisma.user.findUnique({ where: { id: session.userId }, include: { tenant: true } });
+  // Отзыв сессий (второй проход аудита 2026-08-13) — иначе баннер
+  // имперсонации показывал бы название чужого тенанта по уже обесцененной куке.
+  if (!owner || owner.role !== "owner" || !owner.tenant || isSessionRevoked(session, owner.sessionsValidFrom)) {
     return NextResponse.json({ impersonating: false });
   }
 
