@@ -40,6 +40,22 @@ export async function GET(request: Request, ctx: RouteContext<"/api/operators/[i
   );
 
   const rows = shifts.map((s) => ({ ...s, edited: editedIds.has(s.id) }));
+
+  // Та же отметка правки для отдельных авансов/премий (2026-08-14): у смен
+  // корона была с самого начала, у этих строк — нет, хотя правятся они так же
+  // и тем же владельцем. Тип сущности другой ("MoneyOperation"), журнал тот же.
   const standaloneMoneyOps = await listStandaloneMoneyOps(operator.id, period);
-  return NextResponse.json({ shifts: rows, standaloneMoneyOps });
+  const editedOpIds = new Set(
+    (
+      await prisma.correctionLog.findMany({
+        where: { entityType: "MoneyOperation", entityId: { in: standaloneMoneyOps.map((op) => op.id) } },
+        select: { entityId: true },
+      })
+    ).map((c) => c.entityId)
+  );
+
+  return NextResponse.json({
+    shifts: rows,
+    standaloneMoneyOps: standaloneMoneyOps.map((op) => ({ ...op, edited: editedOpIds.has(op.id) })),
+  });
 }

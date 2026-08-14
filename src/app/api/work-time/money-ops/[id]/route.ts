@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { calcOperatorBalance } from "@/lib/work-time";
+import { calcOperatorBalance, WORK_TIME_MONEY_TYPES, type WorkTimeMoneyType } from "@/lib/work-time";
 import { resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
 
@@ -15,7 +15,13 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   }
   const { id } = await ctx.params;
   const op = await prisma.moneyOperation.findUnique({ where: { id } });
-  if (!op || op.tenantId !== owner.tenantId || (op.type !== "advance" && op.type !== "bonus_payout")) {
+  // bonus_accrual (режим "Только начисление", 2026-08-12) — тот же вид записи,
+  // что bonus_payout, просто деньги не выданы, а записаны в долг. Карточка
+  // сотрудника рисовала ему карандаш наравне с остальными, а этот роут
+  // отвечал "Операция не найдена" — кнопка была, действия не было (2026-08-14).
+  // Проверки овердрафта ему не нужны: из кассы точки ничего не уходит
+  // (affectsCashOnHand исключает этот тип), разносить по зонам нечего.
+  if (!op || op.tenantId !== owner.tenantId || !WORK_TIME_MONEY_TYPES.includes(op.type as WorkTimeMoneyType)) {
     return NextResponse.json({ error: "Операция не найдена" }, { status: 404 });
   }
 
@@ -78,7 +84,13 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
   }
   const { id } = await ctx.params;
   const op = await prisma.moneyOperation.findUnique({ where: { id } });
-  if (!op || op.tenantId !== owner.tenantId || (op.type !== "advance" && op.type !== "bonus_payout")) {
+  // bonus_accrual (режим "Только начисление", 2026-08-12) — тот же вид записи,
+  // что bonus_payout, просто деньги не выданы, а записаны в долг. Карточка
+  // сотрудника рисовала ему карандаш наравне с остальными, а этот роут
+  // отвечал "Операция не найдена" — кнопка была, действия не было (2026-08-14).
+  // Проверки овердрафта ему не нужны: из кассы точки ничего не уходит
+  // (affectsCashOnHand исключает этот тип), разносить по зонам нечего.
+  if (!op || op.tenantId !== owner.tenantId || !WORK_TIME_MONEY_TYPES.includes(op.type as WorkTimeMoneyType)) {
     return NextResponse.json({ error: "Операция не найдена" }, { status: 404 });
   }
 

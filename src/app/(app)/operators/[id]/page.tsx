@@ -81,6 +81,8 @@ interface StandaloneMoneyOp {
   amount: number;
   occurredAt: string;
   comment: string | null;
+  // Правил владелец — та же корона, что у смены выше (2026-08-14).
+  edited: boolean;
 }
 
 interface PointOption {
@@ -848,33 +850,55 @@ export default function OperatorCardPage() {
                             {(item.shift.advanceAmount > 0 ||
                               item.shift.bonusAmount > 0 ||
                               item.shift.bonusAccruedAmount > 0) && (
+                              // Сами суммы аванса/премии — кнопки, открывающие
+                              // ту же шторку правки смены (запрос пользователя
+                              // 2026-08-14: премия внутри смены своей кнопки не
+                              // имела вовсе, и убрать ошибочную можно было
+                              // только догадавшись, что она прячется за
+                              // карандашом смены — тот читается как "поправить
+                              // время"). Отдельной шторки нет намеренно: правка
+                              // премии обязана идти через тот же PATCH смены,
+                              // он один умеет вернуть деньги в зоны
+                              // компенсирующей записью.
                               <div className="flex flex-col items-end gap-0.5 text-xs tabular-nums">
                                 {item.shift.advanceAmount > 0 && (
-                                  <span className="text-warning">
+                                  <button
+                                    type="button"
+                                    onClick={() => openShiftEdit(item.shift)}
+                                    className="rounded text-warning underline decoration-dotted underline-offset-2"
+                                  >
                                     {t.operatorApp.workTime.advanceInline}{" "}
                                     <span className="font-bold">
                                       <Money value={item.shift.advanceAmount} />
                                     </span>
-                                  </span>
+                                  </button>
                                 )}
                                 {item.shift.bonusAmount > 0 && (
-                                  <span className="text-success">
+                                  <button
+                                    type="button"
+                                    onClick={() => openShiftEdit(item.shift)}
+                                    className="rounded text-success underline decoration-dotted underline-offset-2"
+                                  >
                                     {t.operatorApp.workTime.bonusInline}{" "}
                                     <span className="font-bold">
                                       <Money value={item.shift.bonusAmount} />
                                     </span>
-                                  </span>
+                                  </button>
                                 )}
                                 {/* Начисленная премия — отдельной строкой, не
                                     вместе с выданной: владельцу важно видеть,
                                     ушли деньги из кассы или записан долг. */}
                                 {item.shift.bonusAccruedAmount > 0 && (
-                                  <span className="text-success">
+                                  <button
+                                    type="button"
+                                    onClick={() => openShiftEdit(item.shift)}
+                                    className="rounded text-success underline decoration-dotted underline-offset-2"
+                                  >
                                     {t.operatorApp.workTime.bonusAccruedInline}{" "}
                                     <span className="font-bold">
                                       <Money value={item.shift.bonusAccruedAmount} />
                                     </span>
-                                  </span>
+                                  </button>
                                 )}
                               </div>
                             )}
@@ -888,13 +912,14 @@ export default function OperatorCardPage() {
                         className="flex items-center gap-2 border-t border-border py-3 first:border-t-0"
                       >
                         <div className="flex flex-1 items-center justify-between">
-                          <span className="text-body-airbnb font-semibold">
+                          <span className="flex items-center gap-1.5 text-body-airbnb font-semibold">
                             {formatShiftDate(item.op.occurredAt)} ·{" "}
                             {item.op.type === "advance"
                               ? t.operatorApp.workTime.advanceFieldLabel
                               : item.op.type === "bonus_accrual"
                                 ? t.operatorApp.workTime.bonusAccruedFieldLabel
                                 : t.operatorApp.workTime.bonusFieldLabel}
+                            {item.op.edited && <Crown className="size-3 shrink-0 text-success" />}
                           </span>
                           <span
                             className={cn(

@@ -19,6 +19,7 @@ interface AdvanceBonusEntry {
   amount: number;
   pointName: string;
   operatorName: string | null;
+  operatorId: string | null;
 }
 
 export default function AdvancesBonusesRegisterPage() {
@@ -145,10 +146,30 @@ export default function AdvancesBonusesRegisterPage() {
                       {formatGroupDate(group.date)}
                     </p>
                     <div className="flex flex-col">
+                      {/* Строка ведёт в карточку сотрудника, где аванс/премию
+                          можно поправить или убрать (запрос пользователя
+                          2026-08-14: тут их было видно, но сделать с ними
+                          ничего нельзя, и экран читался как тупик). Сам реестр
+                          остаётся отчётным — вторых кнопок правки в проекте не
+                          заводим, одна и та же операция должна править одним
+                          путём. */}
                       {group.items.map((op) => (
                         <div
                           key={op.id}
-                          className="flex items-center justify-between gap-2 border-t border-border py-1.5 first:border-t-0"
+                          role={op.operatorId ? "button" : undefined}
+                          tabIndex={op.operatorId ? 0 : undefined}
+                          onClick={op.operatorId ? () => router.push(`/operators/${op.operatorId}`) : undefined}
+                          onKeyDown={
+                            op.operatorId
+                              ? (e) => {
+                                  if (e.key === "Enter" || e.key === " ") router.push(`/operators/${op.operatorId}`);
+                                }
+                              : undefined
+                          }
+                          className={cn(
+                            "flex items-center justify-between gap-2 border-t border-border py-1.5 first:border-t-0",
+                            op.operatorId && "cursor-pointer rounded hover:bg-muted"
+                          )}
                         >
                           <span className="min-w-0 truncate text-xs text-muted-foreground">
                             {formatTime(op.occurredAt)} ·{" "}
