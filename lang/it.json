@@ -1057,6 +1057,7 @@
     "newCategoryPlaceholder": "Nuova categoria",
     "categorySaveError": "Salvataggio della categoria non riuscito",
     "editCollectionAction": "Modifica",
+    "collectionSettledCannotEdit": "Questo anticipo di incasso è già stato compensato da una consegna dei risultati e il collegamento con la compensazione non è stato registrato: l'importo non può più essere corretto. Registra invece una scrittura di rettifica.",
     "collectionSaveError": "Salvataggio delle modifiche non riuscito",
     "deleteCollectionConfirm": "Eliminare questo incasso? Il saldo della zona verrà ricalcolato. Non può essere annullato.",
     "deleteCollectionError": "Eliminazione dell'incasso non riuscita",

@@ -1057,6 +1057,7 @@
     "newCategoryPlaceholder": "Yeni kategori",
     "categorySaveError": "Kategori kaydedilemedi",
     "editCollectionAction": "Düzenle",
+    "collectionSettledCannotEdit": "Bu avans tahsilatı sonuç teslimi ile zaten kapatıldı ve kapatma ile bağlantı kaydedilmedi — tutar artık düzeltilemez. Düzeltmeyi ayrı bir işlemle yapın.",
     "collectionSaveError": "Değişiklikler kaydedilemedi",
     "deleteCollectionConfirm": "Bu tahsilat silinsin mi? Bölge bakiyesi yeniden hesaplanacak. Geri alınamaz.",
     "deleteCollectionError": "Tahsilat silinemedi",

@@ -559,6 +559,27 @@ export async function settleOutstandingCollectionAdvance(
     const settleable = Math.round(Math.min(outstanding, zonesRawSum) * 100) / 100;
     if (settleable <= 0) return 0;
 
+    // Адресат погашения — ради отката правки/удаления самой инкассации
+    // (schema.prisma, MoneyOperation.settlesOperationId). Ставим связь только
+    // когда непогашенная авансовая инкассация ровно одна: тогда очевидно, что
+    // всё это погашение относится к ней. Если их несколько, делить погашение
+    // между ними здесь было бы гаданием — оставляем null, а правку таких строк
+    // эндпоинт отклоняет явно.
+    const unsettled = await tx.moneyOperation.findMany({
+      where: { pointId, type: "collection_advance", amount: { lt: 0 } },
+      select: { id: true },
+    });
+    const settledIds = new Set(
+      (
+        await tx.moneyOperation.findMany({
+          where: { pointId, type: "collection_advance", settlesOperationId: { not: null } },
+          select: { settlesOperationId: true },
+        })
+      ).map((row) => row.settlesOperationId)
+    );
+    const open = unsettled.filter((row) => !settledIds.has(row.id));
+    const settlesOperationId = open.length === 1 ? open[0].id : null;
+
     const shares = distributeCollectionWhole(settleable, weights);
     const rows = zoneIds
       .map((zoneId, i) => ({
@@ -569,6 +590,7 @@ export async function settleOutstandingCollectionAdvance(
         performedByUserId: actor.performedByUserId,
         performedByOperatorId: actor.performedByOperatorId,
         resultsSubmissionId: resultsSubmissionId ?? null,
+        settlesOperationId,
       }))
       .filter((row) => row.amount !== 0);
 
@@ -583,11 +605,72 @@ export async function settleOutstandingCollectionAdvance(
         performedByUserId: actor.performedByUserId,
         performedByOperatorId: actor.performedByOperatorId,
         resultsSubmissionId: resultsSubmissionId ?? null,
+        settlesOperationId,
       },
     });
 
     return settleable;
   });
+}
+
+/**
+ * Можно ли править/удалять эту "Авансовую инкассацию" — и если нет, почему.
+ * Вызывается эндпоинтом реестра до правки (2026-08-14).
+ *
+ * Правка суммы обычной инкассации ничего не ломает: остатки зон считаются
+ * суммой всего журнала заново, а отсечки зависят от даты, не от суммы. Но у
+ * авансовой инкассации есть автопогашение (settleOutstandingCollectionAdvance
+ * выше), которое списало часть с зон отдельными строками. Не снять их вместе с
+ * исходной строкой — оставить зоны занижёнными навсегда.
+ *
+ * Три исхода:
+ * - "ok" — гасить нечего либо погашающие строки найдены и будут сняты;
+ * - "machine" — это сама строка погашения, а не инкассация владельца: править
+ *   её руками нельзя (PATCH к тому же принудительно делает сумму
+ *   отрицательной, что перевернуло бы знак компенсации);
+ * - "settled_unlinked" — строку погасили, но связь не сохранена: погашения до
+ *   миграции 2026-08-14 (бэкфила нет) и редчайший случай двух непогашенных
+ *   инкассаций сразу. Гадать, какую часть погашения снимать, хуже, чем отказать.
+ */
+export async function checkCollectionAdvanceEditable(
+  op: { id: string; type: string; amount: Prisma.Decimal | number; pointId: string | null; occurredAt: Date; settlesOperationId: string | null },
+  client: Tx | typeof prisma = prisma
+): Promise<"ok" | "machine" | "settled_unlinked"> {
+  if (op.type !== "collection_advance") return "ok";
+  if (op.settlesOperationId || Number(op.amount) > 0) return "machine";
+  if (!op.pointId) return "ok";
+
+  const linked = await client.moneyOperation.count({ where: { settlesOperationId: op.id } });
+  if (linked > 0) return "ok";
+
+  // Погашение без связи, случившееся ПОСЛЕ этой инкассации, могло погасить
+  // именно её. Более раннее — точно не могло (её тогда ещё не существовало),
+  // и новая инкассация на точке со старым погашением правится свободно.
+  const laterUnlinked = await client.moneyOperation.count({
+    where: {
+      pointId: op.pointId,
+      type: "collection_advance",
+      amount: { gt: 0 },
+      settlesOperationId: null,
+      occurredAt: { gt: op.occurredAt },
+    },
+  });
+  return laterUnlinked > 0 ? "settled_unlinked" : "ok";
+}
+
+/**
+ * Снимает автопогашение конкретной "Авансовой инкассации" — и зонные
+ * advance_settlement, и компенсирующую collection_advance. Вызывать в той же
+ * транзакции, что правку/удаление самой строки, под advisory-локом точки:
+ * иначе одновременная сдача итогов успеет погасить её заново по данным,
+ * которых через миг не станет.
+ *
+ * Дальше ничего пересчитывать не надо: непогашенный остаток аванса считается
+ * из истории заново (getOutstandingCollectionAdvance), и следующая сдача или
+ * инкассация погасит его уже от новой суммы.
+ */
+export async function reverseCollectionAdvanceSettlement(tx: Tx, advanceOperationId: string): Promise<void> {
+  await tx.moneyOperation.deleteMany({ where: { settlesOperationId: advanceOperationId } });
 }
 
 // Откат автопогашения "Аванса инкассации", привязанного к конкретной Сдаче

@@ -1057,6 +1057,7 @@
     "newCategoryPlaceholder": "Yangi kategoriya",
     "categorySaveError": "Kategoriyani saqlab bo'lmadi",
     "editCollectionAction": "Tahrirlash",
+    "collectionSettledCannotEdit": "Bu avans inkassatsiyasi yakunlarni topshirish bilan allaqachon yopilgan, yopilish bilan bogʻlanish esa saqlanmagan — summani tuzatib boʻlmaydi. Tuzatishni alohida amaliyot bilan oʻtkazing.",
     "collectionSaveError": "O'zgarishlarni saqlab bo'lmadi",
     "deleteCollectionConfirm": "Ushbu inkassatsiyani oʻchirasizmi? Zona qoldigʻi qayta hisoblanadi. Bekor qilib boʻlmaydi.",
     "deleteCollectionError": "Inkassatsiyani oʻchirib bo'lmadi",

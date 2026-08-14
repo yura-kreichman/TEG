@@ -1057,6 +1057,7 @@
     "newCategoryPlaceholder": "Categorie nouă",
     "categorySaveError": "Nu s-a putut salva categoria",
     "editCollectionAction": "Editează",
+    "collectionSettledCannotEdit": "Acest avans de colectare a fost deja compensat de o predare a rezultatelor, iar legătura cu compensarea nu a fost salvată — suma nu mai poate fi corectată. Faceți corecția printr-o operațiune separată.",
     "collectionSaveError": "Nu s-au putut salva modificările",
     "deleteCollectionConfirm": "Ștergi această colectare? Soldul zonei se va recalcula. Nu poate fi anulat.",
     "deleteCollectionError": "Nu s-a putut șterge colectarea",

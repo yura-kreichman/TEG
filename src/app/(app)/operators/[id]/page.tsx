@@ -18,7 +18,7 @@ import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
-import { IconActionButton } from "@/components/kebab-menu";
+import { IconActionButton, KebabButton } from "@/components/kebab-menu";
 import { ActiveStatusIcon } from "@/components/active-status-icon";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
@@ -680,8 +680,15 @@ export default function OperatorCardPage() {
                   </span>
                 </div>
               )}
-              <IconActionButton
-                icon={Pencil}
+              {/* Кебаб, а не карандаш (запрос пользователя 2026-08-14, тот же
+                  вид, что у карточки точки в /points и у зоны): кнопка ведёт
+                  на "Настройки сотрудника" — целый экран с тумблерами
+                  доступов, ПИНом и аватаром, — а карандаш в этом приложении
+                  означает правку одной записи (ниже он же у смены и у
+                  операции). Единственное отличие от точек/зон: здесь кебаб
+                  сразу уходит на экран, без промежуточной шторки со списком
+                  действий — сам экран настроек и есть этот список. */}
+              <KebabButton
                 onClick={() => router.push(`/operators/${params.id}/settings`)}
                 label={t.operators.actionsLabel}
               />

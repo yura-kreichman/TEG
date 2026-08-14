@@ -1057,6 +1057,7 @@
     "newCategoryPlaceholder": "Yeni kateqoriya",
     "categorySaveError": "Kateqoriyanı yadda saxlamaq mümkün olmadı",
     "editCollectionAction": "Dəyişdir",
+    "collectionSettledCannotEdit": "Bu avans inkassasiyası yekunların təhvili ilə artıq bağlanıb, bağlanma ilə əlaqə isə saxlanmayıb — məbləği düzəltmək mümkün deyil. Düzəlişi ayrıca əməliyyatla aparın.",
     "collectionSaveError": "Dəyişikliklər saxlanıla bilmədi",
     "deleteCollectionConfirm": "Bu inkassasiyanı silmək istəyirsiniz? Zona qalığı yenidən hesablanacaq. Geri qaytarıla bilməz.",
     "deleteCollectionError": "İnkassasiyanı silmək mümkün olmadı",

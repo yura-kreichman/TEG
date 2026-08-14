@@ -1057,6 +1057,7 @@
     "newCategoryPlaceholder": "New category",
     "categorySaveError": "Failed to save the category",
     "editCollectionAction": "Edit",
+    "collectionSettledCannotEdit": "This collection advance has already been settled by a results submission, and the link to that settlement was not recorded — the amount can no longer be corrected. Make an adjusting entry instead.",
     "collectionSaveError": "Failed to save changes",
     "deleteCollectionConfirm": "Delete this collection? The zone balance will be recalculated. This cannot be undone.",
     "deleteCollectionError": "Failed to delete the collection",

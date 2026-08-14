@@ -185,6 +185,15 @@ export default function ZoneBalancesPage() {
   const [deletingCollection, setDeletingCollection] = useState(false);
   const { saved: deletedCollection, pulse: deleteCollectionPulse } = useSavePulse();
 
+  // Отказ по коду переводим сами (правило i18n: строки UI — из /lang), сырой
+  // текст с сервера — только запасной вариант.
+  function collectionErrorText(data: { code?: string; error?: string }, fallback = t.money.collectionSaveError): string {
+    if (data.code === "collection_settled_unlinked" || data.code === "collection_machine_row") {
+      return t.money.collectionSettledCannotEdit;
+    }
+    return data.error ?? fallback;
+  }
+
   function openCollectionEdit(c: CollectionEntry) {
     setEditingCollection(c);
     setEditCollectionAmount(String(c.amount));
@@ -204,7 +213,7 @@ export default function ZoneBalancesPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setEditCollectionError(data.error ?? t.money.collectionSaveError);
+        setEditCollectionError(collectionErrorText(data));
         return;
       }
       await Promise.all([loadReport(), loadCollections()]);
@@ -221,7 +230,7 @@ export default function ZoneBalancesPage() {
     const res = await fetch(`/api/money/collections/${editingCollection.id}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json();
-      setEditCollectionError(data.error ?? t.money.deleteCollectionError);
+      setEditCollectionError(collectionErrorText(data, t.money.deleteCollectionError));
       setDeletingCollection(false);
       return;
     }

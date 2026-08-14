@@ -1057,6 +1057,7 @@
     "newCategoryPlaceholder": "Nowa kategoria",
     "categorySaveError": "Nie udało się zapisać kategorii",
     "editCollectionAction": "Edytuj",
+    "collectionSettledCannotEdit": "Ta zaliczkowa inkasacja została już rozliczona przez przekazanie wyników, a powiązanie z rozliczeniem nie zostało zapisane — kwoty nie można poprawić. Wprowadź korektę osobną operacją.",
     "collectionSaveError": "Nie udało się zapisać zmian",
     "deleteCollectionConfirm": "Usunąć tę inkasację? Saldo strefy zostanie przeliczone. Nie można cofnąć.",
     "deleteCollectionError": "Nie udało się usunąć inkasacji",
