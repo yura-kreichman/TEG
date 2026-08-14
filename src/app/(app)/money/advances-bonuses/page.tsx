@@ -181,13 +181,25 @@ export default function AdvancesBonusesRegisterPage() {
                             {op.operatorName ? ` · ${op.operatorName}` : ""}
                             {showPointName ? ` (${op.pointName})` : ""}
                           </span>
-                          <span
-                            className={cn(
-                              "shrink-0 text-xs font-bold tabular-nums",
-                              op.type === "advance" ? "text-warning" : "text-success"
+                          <span className="flex shrink-0 items-center gap-1">
+                            <span
+                              className={cn(
+                                "text-xs font-bold tabular-nums",
+                                op.type === "advance" ? "text-warning" : "text-success"
+                              )}
+                            >
+                              <Money value={op.amount} />
+                            </span>
+                            {/* Стрелка — тот же признак "ряд ведёт дальше", что
+                                у рядов Настроек и Денег (запрос пользователя
+                                2026-08-14). size-3.5, а не size-4 как там:
+                                строка здесь на text-xs, полноразмерная иконка
+                                перевешивала бы сам текст. Показывается только
+                                когда переход реально есть — иначе стрелка
+                                обещала бы то, чего не произойдёт. */}
+                            {op.operatorId && (
+                              <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
                             )}
-                          >
-                            <Money value={op.amount} />
                           </span>
                         </div>
                       ))}
