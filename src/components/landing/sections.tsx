@@ -475,7 +475,17 @@ export function ContactsSection({ data, lp, weekdayNames }: { data: LandingRende
           rel="noreferrer"
           className="lt-card mb-5 flex items-center gap-3 p-4"
         >
-          <TelegramIcon className="size-8 shrink-0" />
+          {/* Узнаваемый знак Telegram, а не монохромный глиф: фирменный синий
+              #2ABEE + белый самолётик. Hex вместо токена — осознанно: это
+              цвет чужого бренда, он не участвует в теме и не должен меняться
+              вместе с ней, тот же приём уже применён на экранах Telegram-
+              настроек. Белый кружок подложкой нужен потому, что самолётик в
+              этой иконке — вырез: без подложки на тёмных темах лендинга он
+              стал бы тёмным вместо белого. */}
+          <span className="relative flex size-8 shrink-0">
+            <span className="absolute inset-0.5 rounded-full bg-white" aria-hidden="true" />
+            <TelegramIcon className="relative size-8 text-[#2AABEE]" />
+          </span>
           <span className="min-w-0 flex-1">
             <span className="lt-card-title block text-base">{lp.telegramGroupTitle}</span>
             <span className="lt-muted-text block text-[0.8125rem]">{lp.telegramGroupText}</span>
