@@ -79,6 +79,34 @@ const INSTRUCTION_PATH_RE = /^\/i\/([^/]+)\/([^/]+)\/?$/;
 // Считать визиты сюда по-прежнему не нужно — только троттлить попытки.
 const PREVIEW_PATH_RE = /^\/s\/([^/]+)\/preview\/([^/]+)\/?$/;
 
+// Запрет индексации всего приложения (запрос владельца 2026-08-15: «закрой
+// my.rentos365.app от всех ботов, чтобы его ничего не дёргало»). robots.txt
+// это уже просил — но просил именно НЕ ХОДИТЬ, а адрес, на который ведёт
+// внешняя ссылка, поисковик может показать в выдаче и не заходя на него.
+// X-Robots-Tag закрывает вторую половину: страница, которую бот всё-таки
+// скачал (meta-externalagent в логах ходит по /register вопреки robots.txt),
+// в индекс не попадёт.
+//
+// Исключения — ровно три, и все обязательные:
+//   /s/{slug}    — Лендинг тенанта, docs/spec/08-landing.md прямо требует
+//                  индексации, sitemap, JSON-LD и Lighthouse SEO >= 90;
+//                  закрыть его значит отменить модуль целиком;
+//   /robots.txt  — правила обхода, сами себя запрещать не должны;
+//   /sitemap.xml — карта живых лендингов для поисковика.
+// Черновик лендинга /s/{slug}/preview/{token} исключением НЕ является: это
+// неопубликованная страница по секретной ссылке, ей в выдаче делать нечего.
+// Ассеты (_next/static, _next/image, favicon.ico) сюда не доходят вообще —
+// они исключены matcher'ом внизу файла.
+const ROBOTS_TAG = "noindex, nofollow, noarchive, nosnippet, noimageindex";
+const ROBOTS_TAG_EXEMPT = ["/robots.txt", "/sitemap.xml"];
+
+function setRobotsTag(request: NextRequest, response: NextResponse) {
+  const { pathname } = request.nextUrl;
+  const isPublicLanding = pathname.startsWith("/s/") && !PREVIEW_PATH_RE.test(pathname);
+  if (isPublicLanding || ROBOTS_TAG_EXEMPT.includes(pathname)) return;
+  response.headers.set("X-Robots-Tag", ROBOTS_TAG);
+}
+
 export async function proxy(request: NextRequest, event: NextFetchEvent) {
   // Одноразовый nonce на каждый ответ (аудит 2026-08-13) — им заменён
   // 'unsafe-inline' в script-src, см. lib/csp.ts. Кладём его в заголовки
@@ -98,6 +126,7 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   // заголовки и теряются.
   const withCsp = (response: NextResponse) => {
     response.headers.set("Content-Security-Policy", csp);
+    setRobotsTag(request, response);
     return response;
   };
 

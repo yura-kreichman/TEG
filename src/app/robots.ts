@@ -8,13 +8,68 @@ import type { MetadataRoute } from "next";
 // и то не её превью-ветка.
 const SITE_URL = process.env.SITE_URL ?? "http://localhost:3000";
 
+// Сборщики, которым на приложении не нужно ничего, включая лендинги (запрос
+// владельца 2026-08-15: «чтобы его ничего не дёргало»). Делятся на две
+// породы, и обе одинаково бесполезны для нас:
+//   — обучающие/ИИ-краулеры: качают контент в чужие модели и в выдачу не
+//     приводят никого;
+//   — коммерческие SEO-сканеры (Ahrefs, Semrush, Majestic и родня): ходят
+//     сплошняком по всем адресам ради чужих отчётов о ссылках.
+// Поисковикам, которые реально приводят посетителей на лендинг тенанта,
+// правило ниже не мешает — они попадают в общее правило и видят /s/.
+//
+// Google-Extended и Applebot-Extended — это НЕ поисковые роботы, а отдельные
+// имена для обучения моделей; запрет по ним на выдачу Google и Apple не
+// влияет.
+const SCRAPER_AGENTS = [
+  "GPTBot",
+  "OAI-SearchBot",
+  "ChatGPT-User",
+  "ClaudeBot",
+  "Claude-Web",
+  "anthropic-ai",
+  "CCBot",
+  "Google-Extended",
+  "Applebot-Extended",
+  "PerplexityBot",
+  "Perplexity-User",
+  "Bytespider",
+  "Amazonbot",
+  "meta-externalagent",
+  "FacebookBot",
+  "Diffbot",
+  "ImagesiftBot",
+  "Omgilibot",
+  "YouBot",
+  "cohere-ai",
+  "AI2Bot",
+  "Webzio-Extended",
+  "AhrefsBot",
+  "SemrushBot",
+  "MJ12bot",
+  "DotBot",
+  "DataForSeoBot",
+  "BLEXBot",
+  "SerpstatBot",
+  "Barkrowler",
+  "PetalBot",
+  "ZoominfoBot",
+  "magpie-crawler",
+];
+
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: {
-      userAgent: "*",
-      allow: "/s/",
-      disallow: ["/", "/s/*/preview/"],
-    },
+    rules: [
+      {
+        userAgent: "*",
+        allow: "/s/",
+        disallow: ["/", "/s/*/preview/"],
+      },
+      {
+        userAgent: SCRAPER_AGENTS,
+        disallow: "/",
+      },
+    ],
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }
