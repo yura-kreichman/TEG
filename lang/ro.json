@@ -1094,6 +1094,8 @@
     "salesSectionTitle": "Vânzări",
     "daySummaryHint": "Pe baza predărilor de zonă și a abonamentelor",
     "pointCashWithAbonementLabel": "Casa punctului cu abonamente:",
+    "cashLeftLabel": "Au rămas în numerar:",
+    "cashLeftTooltip": "Numerarul zilei minus cheltuielile și minus primele și avansurile pe care angajatul le-a luat din casă. Plățile prin card și cele din abonamente nu sunt incluse — acei bani nu sunt în casă. Nici colectările nu sunt luate în calcul: acesta este rezultatul zilei, nu soldul curent al punctului.",
     "abonementSalesTitle": "Abonamente",
     "goodsReconciliationsTitle": "Produse",
     "pointsEmptyHint": "Adăugați mai întâi un punct.",

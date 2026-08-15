@@ -29,6 +29,7 @@ import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { formatTime } from "@/lib/datetime-format";
 import { cn } from "@/lib/utils";
 import { Money } from "@/components/money";
+import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { formatMoneyWithCurrency, parseMoneyInput } from "@/lib/format";
 import { distributeCollectionWhole } from "@/lib/collection-split";
 import { useSavePulse } from "@/hooks/use-save-pulse";
@@ -729,17 +730,27 @@ export default function ZoneBalancesPage() {
                 </span>
               )}
             </div>
-            {currentPointTotal && currentPointTotal.collectionAdvance > 0 && (
-              <div className="flex shrink-0 flex-col items-end text-right">
-                <span className="flex items-center gap-1 text-caption-airbnb text-muted-foreground">
-                  <PiggyBank className="size-3.5 shrink-0" />
-                  {t.money.collectionAdvanceLabel}
+            <div className="flex shrink-0 flex-col items-end gap-1.5 text-right">
+              {/* Пометка "Наличные" в правом верхнем углу (запрос владельца
+                  2026-08-16): Итог считает только физические деньги в кассах —
+                  безнал и оплаты с абонементов в него не входят, и без подписи
+                  цифра читается как вся выручка точки. */}
+              <span className="flex items-center gap-1 text-caption-airbnb text-muted-foreground">
+                <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+                {t.operatorApp.submit.cashLabel}
+              </span>
+              {currentPointTotal && currentPointTotal.collectionAdvance > 0 && (
+                <span className="flex flex-col items-end">
+                  <span className="flex items-center gap-1 text-caption-airbnb text-muted-foreground">
+                    <PiggyBank className="size-3.5 shrink-0" />
+                    {t.money.collectionAdvanceLabel}
+                  </span>
+                  <span className="text-[1.0625rem] font-bold tabular-nums text-primary/70">
+                    <Money value={currentPointTotal.collectionAdvance} />
+                  </span>
                 </span>
-                <span className="text-[1.0625rem] font-bold tabular-nums text-primary/70">
-                  <Money value={currentPointTotal.collectionAdvance} />
-                </span>
-              </div>
-            )}
+              )}
+            </div>
           </SpringCard>
 
           <SpringCard hover={false} className="flex flex-col gap-1">

@@ -1094,6 +1094,8 @@
     "salesSectionTitle": "Satışlar",
     "daySummaryHint": "Bölge teslimlerine ve aboneliklere göre",
     "pointCashWithAbonementLabel": "Nokta kasası aboneliklerle:",
+    "cashLeftLabel": "Nakit kalan:",
+    "cashLeftTooltip": "Günün nakiti eksi giderler ve eksi çalışanın kasadan aldığı primler ile avanslar. Kartla ve abonmanla yapılan ödemeler dahil değildir — o para kasada yok. Tahsilatlar da sayılmaz: bu günün sonucu, noktanın güncel bakiyesi değil.",
     "abonementSalesTitle": "Abonelikler",
     "goodsReconciliationsTitle": "Ürünler",
     "pointsEmptyHint": "Önce bir nokta ekleyin.",

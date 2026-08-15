@@ -22,6 +22,7 @@ import {
   Trash2,
   TriangleAlert,
   Users,
+  Wallet,
 } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
@@ -384,6 +385,10 @@ export default function ReadingsCalendarPage() {
   // не по привязке к сдаче итогов, поэтому приходят отдельным полем, а не
   // внутри карточек зон.
   const [expenses, setExpenses] = useState<DayExpenses>({ total: 0, items: [] });
+  // Премии/авансы, взятые сотрудником из кассы точки за день — тот же состав,
+  // что в сводке "Касса за день" (решение владельца 2026-08-16: Итоги дня
+  // показывали грязную кассу и расходились со сводкой).
+  const [payouts, setPayouts] = useState(0);
   // День последней сдачи итогов — открывается по умолчанию (запрос
   // пользователя 2026-07-15), а не сегодняшний пустой день. Резолвится один
   // раз на каждую смену точки, до первой загрузки календаря — иначе был бы
@@ -505,6 +510,7 @@ export default function ReadingsCalendarPage() {
     setAbonementSaleEvents(data.abonementSaleEvents ?? []);
     setGoodsSales(data.goodsSales ?? []);
     setExpenses(data.expenses ?? { total: 0, items: [] });
+    setPayouts(data.payouts ?? 0);
   }
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -1016,16 +1022,47 @@ export default function ReadingsCalendarPage() {
                         значит показать недостачу там, где всё честно (тот же
                         класс ошибки, что уже был с абонементами). Показываем
                         только когда расходы за день были. */}
-                    {expenses.total > 0 && (
-                      <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
-                        <span className="flex items-center gap-1.5">
-                          <ShoppingCart className="size-3.5 shrink-0" />
-                          {t.summaryText.expenses}
-                        </span>
-                        <span className="font-bold text-foreground">
-                          −<Money value={expenses.total} />
-                        </span>
-                      </div>
+                    {/* Что ушло из кассы за день и сколько наличных реально
+                        осталось (решение владельца 2026-08-16: "фактическая
+                        касса грязными... это портит картину Итогов дня").
+                        Считаем от НАЛИЧНЫХ, а не от Фактической кассы: в ту
+                        входят безнал и оплата балансом, которых в ящике нет.
+                        Состав вычетов — тот же, что в сводке "Касса за день",
+                        иначе два экрана про один день говорили бы разное. */}
+                    {(expenses.total > 0 || payouts > 0) && (
+                      <>
+                        {expenses.total > 0 && (
+                          <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
+                            <span className="flex items-center gap-1.5">
+                              <ShoppingCart className="size-3.5 shrink-0" />
+                              {t.summaryText.expenses}
+                            </span>
+                            <span className="font-bold text-foreground">
+                              −<Money value={expenses.total} />
+                            </span>
+                          </div>
+                        )}
+                        {payouts > 0 && (
+                          <div className="flex items-center justify-between text-caption-airbnb">
+                            <span className="flex items-center gap-1.5">
+                              <Wallet className="size-3.5 shrink-0" />
+                              {t.summaryText.bonusesAndAdvances}
+                            </span>
+                            <span className="font-bold text-foreground">
+                              −<Money value={payouts} />
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between border-t border-border pt-1.5">
+                          <span className="flex items-center gap-1.5 text-caption-airbnb">
+                            {t.readings.cashLeftLabel}
+                            <InfoTooltip text={t.readings.cashLeftTooltip} />
+                          </span>
+                          <span className="text-[1.5625rem] font-bold leading-none text-foreground">
+                            <Money value={Math.round((daySummary.cash - expenses.total - payouts) * 100) / 100} />
+                          </span>
+                        </div>
+                      </>
                     )}
                     {/* Отдельная строка — сколько всего денег физически на
                       точке за день, включая продажи абонементов (запрос

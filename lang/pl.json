@@ -1094,6 +1094,8 @@
     "salesSectionTitle": "Sprzedaż",
     "daySummaryHint": "Wg rozliczeń stref i abonamentów",
     "pointCashWithAbonementLabel": "Kasa punktu z abonamentami:",
+    "cashLeftLabel": "Zostało gotówką:",
+    "cashLeftTooltip": "Gotówka za dzień minus wydatki i minus premie oraz zaliczki, które pracownik wziął z kasy. Płatności bezgotówkowe i z karnetów nie są wliczone — tych pieniędzy nie ma w kasie. Inkasacje też nie są uwzględnione: to wynik dnia, a nie bieżące saldo punktu.",
     "abonementSalesTitle": "Abonamenty",
     "goodsReconciliationsTitle": "Towary",
     "pointsEmptyHint": "Najpierw dodaj punkt.",

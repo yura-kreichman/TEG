@@ -1094,6 +1094,8 @@
     "salesSectionTitle": "Satışlar",
     "daySummaryHint": "Zonaların hesabatları və abonementlər üzrə",
     "pointCashWithAbonementLabel": "Nöqtənin kassası abonementlərlə:",
+    "cashLeftLabel": "Nağd qalıq:",
+    "cashLeftTooltip": "Günün nağd pulu, xərclər və işçinin kassadan götürdüyü mükafat və avanslar çıxılmaqla. Nağdsız ödənişlər və abunə ilə ödənişlər daxil deyil — o pul kassada yoxdur. İnkassasiyalar da nəzərə alınmır: bu günün nəticəsidir, nöqtənin cari qalığı deyil.",
     "abonementSalesTitle": "Abonementlər",
     "goodsReconciliationsTitle": "Mallar",
     "pointsEmptyHint": "Əvvəlcə nöqtə əlavə edin.",

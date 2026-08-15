@@ -281,6 +281,23 @@ export async function GET(request: Request) {
     },
     orderBy: { occurredAt: "asc" },
   });
+  // Премии/авансы, которые сотрудник взял САМ из кассы точки — тот же фильтр,
+  // что в сводке "Касса за день" (lib/summary-channels/daily-cash-data.ts):
+  // только performedByOperatorId, потому что владельческие выданы не из кассы
+  // точки, и bonus_accrual сюда не попадает по типу — начисленная в баланс
+  // премия денег из ящика не забирает. Иначе цифры двух экранов про один и
+  // тот же день разошлись бы.
+  const payoutOps = await prisma.moneyOperation.findMany({
+    where: {
+      type: { in: ["advance", "bonus_payout"] },
+      pointId,
+      performedByOperatorId: { not: null },
+      occurredAt: { gte: dayStart, lt: dayEnd },
+    },
+    select: { amount: true },
+  });
+  const payouts = round2(payoutOps.reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0));
+
   const expenses = {
     total: round2(expenseOps.reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0)),
     items: expenseOps.map((op) => ({
@@ -296,7 +313,7 @@ export async function GET(request: Request) {
   };
 
   if (submissions.length === 0) {
-    return NextResponse.json({ cards: [], abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales, expenses });
+    return NextResponse.json({ cards: [], abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales, expenses, payouts });
   }
 
   // "Прибывания" и тап-"Пуски" (после перехода на тапы, assetReadings
@@ -846,5 +863,5 @@ export async function GET(request: Request) {
     })
   );
 
-  return NextResponse.json({ cards, abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales, expenses });
+  return NextResponse.json({ cards, abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales, expenses, payouts });
 }

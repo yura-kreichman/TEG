@@ -1094,6 +1094,8 @@
     "salesSectionTitle": "Sales",
     "daySummaryHint": "By zone submissions and subscriptions",
     "pointCashWithAbonementLabel": "Point cash incl. subscriptions:",
+    "cashLeftLabel": "Cash left:",
+    "cashLeftTooltip": "Cash for the day minus expenses and minus the bonuses and advances the employee took from the till. Card payments and payments from passes are not included — that money is not in the till. Collections are not counted either: this is the day's result, not the current balance at the location.",
     "abonementSalesTitle": "Subscriptions",
     "goodsReconciliationsTitle": "Goods",
     "pointsEmptyHint": "Add a point first.",

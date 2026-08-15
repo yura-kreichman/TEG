@@ -1094,6 +1094,8 @@
     "salesSectionTitle": "Vendite",
     "daySummaryHint": "Per consegne zona e abbonamenti",
     "pointCashWithAbonementLabel": "Cassa del punto con abbonamenti:",
+    "cashLeftLabel": "Rimasto in contanti:",
+    "cashLeftTooltip": "Contanti della giornata meno le spese e meno premi e anticipi che il dipendente ha preso dalla cassa. Pagamenti elettronici e con abbonamento non sono inclusi — quei soldi non sono in cassa. Nemmeno gli incassi sono considerati: questo è il risultato del giorno, non il saldo attuale del punto.",
     "abonementSalesTitle": "Abbonamenti",
     "goodsReconciliationsTitle": "Prodotti",
     "pointsEmptyHint": "Aggiungi prima un punto.",

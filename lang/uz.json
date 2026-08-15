@@ -1094,6 +1094,8 @@
     "salesSectionTitle": "Sotuvlar",
     "daySummaryHint": "Zona topshiriqlari va abonementlar boʻyicha",
     "pointCashWithAbonementLabel": "Nuqta kassasi abonementlar bilan:",
+    "cashLeftLabel": "Naqd qoldi:",
+    "cashLeftTooltip": "Kunlik naqd pul minus xarajatlar va minus xodim kassadan olgan mukofot hamda avanslar. Naqdsiz va abonement orqali toʻlovlar kirmaydi — u pul kassada yoʻq. Inkassatsiyalar ham hisobga olinmagan: bu kun yakuni, nuqtaning joriy qoldigʻi emas.",
     "abonementSalesTitle": "Abonementlar",
     "goodsReconciliationsTitle": "Tovarlar",
     "pointsEmptyHint": "Avval nuqta qoʻshing.",
