@@ -1058,8 +1058,17 @@ export default function ReadingsCalendarPage() {
                             {t.readings.cashLeftLabel}
                             <InfoTooltip text={t.readings.cashLeftTooltip} />
                           </span>
+                          {/* size="display" — шрифт ужимается по длине числа
+                              (запрос владельца 2026-08-16: "если будет
+                              1 000 000, то не вместится"). Тот же механизм,
+                              что у заголовочных сумм в Отчётах; фиксированный
+                              размер оставлять нельзя — семизначная сумма
+                              ломает строку. */}
                           <span className="text-[1.5625rem] font-bold leading-none text-foreground">
-                            <Money value={Math.round((daySummary.cash - expenses.total - payouts) * 100) / 100} />
+                            <Money
+                              value={Math.round((daySummary.cash - expenses.total - payouts) * 100) / 100}
+                              size="display"
+                            />
                           </span>
                         </div>
                       </>
@@ -1076,9 +1085,13 @@ export default function ReadingsCalendarPage() {
                       <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
                         <span>{t.readings.pointCashWithAbonementLabel}</span>
                         {/* Сумма — вдвое крупнее подписи (0.78125rem × 2 =
-                            1.5625rem), запрос пользователя 2026-07-19. */}
+                            1.5625rem), запрос пользователя 2026-07-19.
+                            size="display" — та же защита от длинных чисел, что
+                            у "Осталось наличными" выше (2026-08-16): эта сумма
+                            заведомо больше, значит переполнится раньше. */}
                         <span className="text-[1.5625rem] font-bold leading-none text-foreground">
                           <Money
+                            size="display"
                             value={
                               daySummary.cash +
                               daySummary.mobile +
