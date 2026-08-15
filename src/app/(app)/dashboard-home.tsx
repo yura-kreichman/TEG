@@ -52,8 +52,8 @@ export function WelcomeCard() {
       {/* Стеклянный блик по логотипу главного экрана — виден только здесь
           (первый экран приветствия), на AuthCard логотип статичный.
           Клип по rounded-[10%] повторяет скругление самого артворка
-          (rx=55.01 на viewBox 546.99 в RentOS-icon.svg), чтобы блик не
-          вылезал за силуэт иконки прямоугольными углами. */}
+          (rx=77.47 на viewBox 770.4 в RentOS-icon.svg — ровно 10,05%), чтобы
+          блик не вылезал за силуэт иконки прямоугольными углами. */}
       <div className="relative size-24 overflow-hidden rounded-[10%]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/icon-library/pwa/RentOS-icon.svg" alt="" className="size-full" />
