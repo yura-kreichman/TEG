@@ -34,7 +34,7 @@ async function reEditExpenseAlert(operationId: string, tenantId: string): Promis
     where: { id: operationId },
     include: {
       expenseCategory: { select: { name: true } },
-      zone: { select: { name: true } },
+      zone: { select: { name: true, telegramEmoji: true } },
       performedByOperator: { select: { name: true, colorTag: true } },
     },
   });
@@ -57,6 +57,8 @@ async function reEditExpenseAlert(operationId: string, tenantId: string): Promis
       amount: Math.abs(Number(op.amount)),
       categoryName: op.expenseCategory?.name ?? null,
       zoneName: op.zone?.name ?? "",
+      zoneEmoji: op.zone?.telegramEmoji ?? null,
+      comment: op.comment,
     },
     getDictionary(locale).summaryText,
     locale,
@@ -96,7 +98,8 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/expe
       return NextResponse.json({ error: "Категория не найдена" }, { status: 400 });
     }
   }
-  if (zoneId !== op.zoneId) {
+  const zoneChanged = zoneId !== op.zoneId;
+  if (zoneChanged) {
     const zone = await prisma.zone.findFirst({
       where: { id: zoneId, point: { tenantId: owner.tenantId } },
       select: { id: true },
@@ -106,14 +109,36 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/expe
     }
   }
 
+  // Куда расход попадёт после смены зоны (вопрос владельца 2026-08-15: "а
+  // нельзя перенести расход в ту зону, куда перенесли в сдаче итогов").
+  // Сдача итогов — общая на все зоны, сданные разом: если новая зона входит
+  // в ТУ ЖЕ сдачу, расход остаётся закрытым ею, просто меняет кассу — и из
+  // отчёта по этой сдаче никуда не пропадает. Если не входит (перенос в зону
+  // другой точки или в зону, которую тогда не сдавали) — привязку снимаем, и
+  // расход закроется ближайшей сдачей новой зоны.
+  let nextResultsSubmissionId = op.resultsSubmissionId;
+  if (zoneChanged && op.resultsSubmissionId) {
+    const coveredBySameSubmission = await prisma.zoneSubmission.findFirst({
+      where: { resultsSubmissionId: op.resultsSubmissionId, zoneId },
+      select: { id: true },
+    });
+    nextResultsSubmissionId = coveredBySameSubmission ? op.resultsSubmissionId : null;
+  }
+
   const before = {
     amount: Math.abs(Number(op.amount)),
     categoryId: op.expenseCategoryId,
     comment: op.comment,
     zoneId: op.zoneId,
+    resultsSubmissionId: op.resultsSubmissionId,
   };
-  const after = { amount: amountNumber, categoryId, comment, zoneId };
-  const zoneChanged = before.zoneId !== after.zoneId;
+  const after = {
+    amount: amountNumber,
+    categoryId,
+    comment,
+    zoneId,
+    resultsSubmissionId: nextResultsSubmissionId,
+  };
   const unchanged =
     before.amount === after.amount &&
     before.categoryId === after.categoryId &&
@@ -129,13 +154,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/expe
         expenseCategoryId: categoryId,
         comment,
         zoneId,
-        // Смена зоны разрывает связь со сдачей: сдача закрывает расходы СВОЕЙ
-        // зоны (её и ищут по паре resultsSubmissionId+zoneId — см. удаление
-        // сдачи), и расход, уехавший в другую зону, к ней больше не относится.
-        // Он возвращается в "текущий период" новой зоны и закроется её
-        // ближайшей сдачей — деньги при этом уже учтены, меняется только то,
-        // из какой кассы они списаны.
-        ...(zoneChanged ? { resultsSubmissionId: null } : {}),
+        resultsSubmissionId: nextResultsSubmissionId,
       },
     });
     await tx.correctionLog.create({

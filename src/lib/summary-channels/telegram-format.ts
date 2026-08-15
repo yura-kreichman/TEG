@@ -720,18 +720,26 @@ export function formatExpenseAlertHeader(data: ExpenseAlertData, st: SummaryText
   return `🛒 ${st.expenseAlertTitle} — ${date}, ${formatLocalTime(data.occurredAt, timezone)}`;
 }
 
-// Третья строка: "Категория · Зона", без категории — одна зона. Названия
-// пользовательские, поэтому каждое подрезается: в Push-уведомлении на строку
-// приходится примерно столько символов, дальше система обрежет сама — и
-// обрежет ЗОНУ целиком, если категорию не ограничить.
+// Третья строка: "Категория {эмодзи зоны} Зона", без категории — эмодзи и
+// зона. Названия пользовательские, поэтому каждое подрезается: в
+// Push-уведомлении на строку приходится примерно столько символов, дальше
+// система обрежет сама — и обрежет ЗОНУ целиком, если категорию не
+// ограничить. Комментарий сотрудника подрезается щедрее: это единственное
+// место, где он вообще виден владельцу без захода в кабинет.
 const ALERT_NAME_LIMIT = 28;
+const ALERT_COMMENT_LIMIT = 80;
+// 🏁 — тот же запасной эмодзи, что у заголовка сводки по зоне, если владелец
+// не выбрал зоне свой (Zone.telegramEmoji).
+const DEFAULT_ZONE_EMOJI = "🏁";
 
-function clampName(value: string): string {
-  return value.length > ALERT_NAME_LIMIT ? `${value.slice(0, ALERT_NAME_LIMIT - 1).trimEnd()}…` : value;
+function clamp(value: string, limit: number): string {
+  return value.length > limit ? `${value.slice(0, limit - 1).trimEnd()}…` : value;
 }
 
-export function formatExpenseAlertContext(data: ExpenseAlertData): string {
-  return [data.categoryName, data.zoneName].filter(Boolean).map((v) => clampName(v as string)).join(" · ");
+function expenseContext(data: ExpenseAlertData, limit = ALERT_NAME_LIMIT): string {
+  const emoji = data.zoneEmoji || DEFAULT_ZONE_EMOJI;
+  const zone = `${emoji} ${clamp(data.zoneName, limit)}`;
+  return data.categoryName ? `${clamp(data.categoryName, limit)} ${zone}` : zone;
 }
 
 export function formatExpenseAlertLines(
@@ -741,8 +749,10 @@ export function formatExpenseAlertLines(
 ): string[] {
   const mark = colorTagToEmoji(data.operatorColorTag);
   const lines = [`${mark ? `${mark} ` : ""}${data.operatorName}: ${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}`];
-  const context = formatExpenseAlertContext(data);
-  if (context) lines.push(context);
+  lines.push(expenseContext(data));
+  // В Push цитаты и курсива нет — комментарий идёт обычной строкой, кавычки
+  // отделяют его от названий выше.
+  if (data.comment) lines.push(`«${clamp(data.comment, ALERT_COMMENT_LIMIT)}»`);
   return lines;
 }
 
@@ -758,10 +768,14 @@ export function formatExpenseAlertTelegram(
   const lines = [
     `🛒 <b>${st.expenseAlertTitle}</b> — ${formatSummaryDate(data.occurredAt, "/", timezone, false)}, ${formatLocalTime(data.occurredAt, timezone)}`,
     `${mark ? `${mark} ` : ""}${name}: <b>${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}</b>`,
+    // Названия в Telegram не подрезаем — ширина сообщения там не ограничена,
+    // усечение нужно только шторке уведомлений телефона (Number.MAX_SAFE_INTEGER
+    // как "без предела" вместо второй копии сборки строки).
+    escapeTelegramHtml(expenseContext(data, Number.MAX_SAFE_INTEGER)),
   ];
-  // В Telegram названия не подрезаем — ширина сообщения там не ограничена,
-  // усечение нужно только шторке уведомлений телефона.
-  const context = [data.categoryName, data.zoneName].filter(Boolean).join(" · ");
-  if (context) lines.push(escapeTelegramHtml(context));
+  // Комментарий сотрудника — цитатой курсивом (формат владельца 2026-08-15):
+  // это его собственные слова, а не поле карточки, и визуально они не должны
+  // мешаться с названиями выше. <blockquote> Telegram поддерживает в HTML.
+  if (data.comment) lines.push(`<blockquote><i>${escapeTelegramHtml(data.comment)}</i></blockquote>`);
   return lines.join("\n");
 }

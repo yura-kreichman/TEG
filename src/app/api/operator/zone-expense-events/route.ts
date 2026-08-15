@@ -128,7 +128,7 @@ export async function POST(request: Request) {
       active: true,
       ...(operator.allZonesAccess ? {} : { operatorsWithAccess: { some: { id: operator.id } } }),
     },
-    select: { id: true, name: true },
+    select: { id: true, name: true, telegramEmoji: true },
   });
   if (!zone) {
     return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
@@ -173,6 +173,8 @@ export async function POST(request: Request) {
       amount: Math.abs(Number(operation.amount)),
       categoryName: category?.name ?? null,
       zoneName: zone.name,
+      zoneEmoji: zone.telegramEmoji,
+      comment,
     })
       .then(async (results) => {
         // id сообщения — чтобы правка расхода владельцем переписала его на

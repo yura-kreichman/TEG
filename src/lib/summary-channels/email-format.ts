@@ -270,11 +270,16 @@ export function formatExpenseAlertEmail(
   ];
   // "Категория · Зона" — заголовком письма, а не строкой таблицы: подписи
   // "Категория"/"Зона" владелец просил не писать (2026-08-15), а строка
-  // таблицы без метки выглядит обрывком.
+  // таблицы без метки выглядит обрывком. Эмодзи зоны здесь не нужен — он
+  // заменяет иконку там, где картинки нет, а в письме заголовок и так
+  // набран крупно.
   const context = [data.categoryName, data.zoneName].filter(Boolean).join(" · ");
   const when = `${formatDate(data.occurredAt, timezone)} ${formatLocalTime(data.occurredAt, timezone)}`;
+  const subtitle = data.comment
+    ? `${st.expenseAlertTitle} · ${when} · «${data.comment}»`
+    : `${st.expenseAlertTitle} · ${when}`;
   return {
     subject,
-    html: wrapEmail(companyName, context || when, `${st.expenseAlertTitle} · ${when}`, rows, locale),
+    html: wrapEmail(companyName, context || when, subtitle, rows, locale),
   };
 }
