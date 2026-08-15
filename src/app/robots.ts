@@ -71,7 +71,13 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/s/",
+        // /sitemap.xml в Allow обязателен: под `Disallow: /` попадает и сама
+        // карта сайта, а заблокированную в robots.txt карту поисковик не
+        // читает — строка `Sitemap:` внизу файла звала бы на адрес, который
+        // сама же и запрещает (найдено 2026-08-15). Правило работает по
+        // самому длинному совпадению, поэтому явный Allow длиннее общего
+        // Disallow и побеждает.
+        allow: ["/s/", "/sitemap.xml"],
         disallow: ["/", "/s/*/preview/"],
       },
       {
