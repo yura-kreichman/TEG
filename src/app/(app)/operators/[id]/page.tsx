@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
+import { InfoTooltip } from "@/components/info-tooltip";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconActionButton, KebabButton } from "@/components/kebab-menu";
@@ -705,7 +706,10 @@ export default function OperatorCardPage() {
             <>
               <SpringCard hover={false} className="flex flex-col gap-4">
                 <div>
-                  <p className="text-caption-airbnb">{t.operatorApp.workTime.toPayOutLabel}</p>
+                  <p className="flex items-center gap-1.5 text-caption-airbnb">
+                    {t.operatorApp.workTime.toPayOutLabel}
+                    <InfoTooltip text={t.operatorApp.workTime.toPayOutTooltip} />
+                  </p>
                   <p
                     className={cn(
                       "text-[clamp(1.4375rem,7.5vw,2.125rem)] font-extrabold tabular-nums tracking-[-0.02em]",
@@ -865,7 +869,7 @@ export default function OperatorCardPage() {
                                   <button
                                     type="button"
                                     onClick={() => openShiftEdit(item.shift)}
-                                    className="rounded text-warning underline decoration-dotted underline-offset-2"
+                                    className="rounded text-warning"
                                   >
                                     {t.operatorApp.workTime.advanceInline}{" "}
                                     <span className="font-bold">
@@ -877,7 +881,7 @@ export default function OperatorCardPage() {
                                   <button
                                     type="button"
                                     onClick={() => openShiftEdit(item.shift)}
-                                    className="rounded text-success underline decoration-dotted underline-offset-2"
+                                    className="rounded text-success"
                                   >
                                     {t.operatorApp.workTime.bonusInline}{" "}
                                     <span className="font-bold">
@@ -892,12 +896,16 @@ export default function OperatorCardPage() {
                                   <button
                                     type="button"
                                     onClick={() => openShiftEdit(item.shift)}
-                                    className="rounded text-success underline decoration-dotted underline-offset-2"
+                                    className="inline-flex items-center gap-1 rounded text-success"
                                   >
                                     {t.operatorApp.workTime.bonusAccruedInline}{" "}
                                     <span className="font-bold">
                                       <Money value={item.shift.bonusAccruedAmount} />
                                     </span>
+                                    {/* Тултип внутри той же строки, а не
+                                        отдельным рядом: контейнер flex-col, и
+                                        снаружи иконка уехала бы под сумму. */}
+                                    <InfoTooltip text={t.operatorApp.workTime.bonusAccruedTooltip} />
                                   </button>
                                 )}
                               </div>

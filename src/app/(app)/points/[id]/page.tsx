@@ -268,7 +268,14 @@ export default function PointDetailPage() {
             <IconPicker value={iconKey} onChange={setIconKey} />
           </div>
           <div className="flex flex-col gap-1">
-            <Label>{t.zonesList.accountingModeLabel}</Label>
+            {/* Единственный необратимый выбор в приложении: после первой сдачи
+                итогов режим фиксируется навсегда, а подписи режимов — по
+                четыре слова (запрос пользователя 2026-08-14: "там очень
+                коротко описано"). */}
+            <Label className="flex items-center gap-1.5">
+              {t.zonesList.accountingModeLabel}
+              <InfoTooltip text={t.zonesList.accountingModeTooltip} />
+            </Label>
             <div className="rounded-control border border-border">
               {ZONE_ACCOUNTING_MODES.map((mode) => {
                 const ModeIcon = ACCOUNTING_MODE_ICON[mode];

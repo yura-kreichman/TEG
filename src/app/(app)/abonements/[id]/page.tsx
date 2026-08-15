@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
+import { InfoTooltip } from "@/components/info-tooltip";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { Money } from "@/components/money";
@@ -296,7 +297,14 @@ export default function AbonementWalletPage() {
           </SpringCard>
 
           <SpringCard hover={false}>
-            <p className="mb-2 text-card-title">{t.abonements.topupSheetTitle}</p>
+            {/* Самое контринтуитивное место приложения: владелец начисляет
+                сумму, у клиента она появляется, а в кассе и отчётах — ноль
+                (решение 2026-07-18, "нигде не должно учитываться"). Без
+                пояснения выглядит как пропавшие деньги. */}
+            <p className="mb-2 flex items-center gap-1.5 text-card-title">
+              {t.abonements.topupSheetTitle}
+              <InfoTooltip text={t.abonements.ownerTopupTooltip} />
+            </p>
             <AbonementTopupFlow
               key={wallet.id}
               initialWallet={{ id: wallet.id, phone: wallet.phone, name: wallet.name, balance: wallet.balance }}

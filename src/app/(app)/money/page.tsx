@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Building2, Calendar as CalendarIcon, CalendarDays, ChevronLeft, ChevronRight, HandCoins, MapPin, RefreshCcw, ShoppingCart } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
+import { InfoTooltip } from "@/components/info-tooltip";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -424,7 +425,10 @@ export default function MoneyPage() {
             <h2 className="text-section-title">{t.money.businessTitle}</h2>
             <div className="flex items-start justify-between gap-2">
               <div className="flex min-w-0 flex-col tabular-nums">
-                <span className="text-caption-airbnb text-muted-foreground">{t.money.profit}</span>
+                <span className="flex items-center gap-1.5 text-caption-airbnb text-muted-foreground">
+                  {t.money.profit}
+                  <InfoTooltip text={t.reports.profitTooltip} />
+                </span>
                 <span className="text-[clamp(1.4375rem,7.5vw,2.125rem)] font-extrabold leading-none tracking-[-0.02em]">
                   <Money value={report.business.profit} size="display" />
                 </span>

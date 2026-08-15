@@ -16,6 +16,7 @@ import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { IconActionButton } from "@/components/kebab-menu";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
+import { InfoTooltip } from "@/components/info-tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
@@ -67,6 +68,8 @@ interface CollectionEntry {
   pool: "abonement" | "goods" | "advance" | "advance_taken" | "bonus_taken" | null;
   // Только у advance_taken/bonus_taken — кто забрал.
   operatorName?: string | null;
+  // Он же id — строка ведёт в его карточку, где эту запись можно поправить.
+  operatorId?: string | null;
   // Кто физически провёл инкассацию (обратная связь пользователя 2026-08-02:
   // раньше в реестре этого не было видно вообще). byOwner — владелец, иначе
   // performerName — имя сотрудника.
@@ -700,7 +703,10 @@ export default function ZoneBalancesPage() {
               меньше и выравняй по правому краю, а не рядом с Итогом"). */}
           <SpringCard hover={false} className="flex items-start justify-between gap-3 border-primary/20 bg-primary/10">
             <div className="flex flex-col">
-              <span className="text-caption-airbnb text-muted-foreground">{t.money.zoneBalancesTotalLabel}</span>
+              <span className="flex items-center gap-1.5 text-caption-airbnb text-muted-foreground">
+                {t.money.zoneBalancesTotalLabel}
+                <InfoTooltip text={t.money.zoneBalanceTooltip} />
+              </span>
               <span className="text-[clamp(1.875rem,9.5vw,2.75rem)] font-extrabold leading-none tracking-[-0.02em] text-primary">
                 <Money value={currentPointTotal?.total ?? 0} size="display" />
               </span>
@@ -1004,6 +1010,7 @@ export default function ZoneBalancesPage() {
                                         {c.pool === "goods" && <ShoppingBag className="size-3 shrink-0" />}
                                         {c.pool === "advance" && <PiggyBank className="size-3 shrink-0" />}
                                         {collectionEntryLabel(c)}
+                                        {c.pool === "advance" && <InfoTooltip text={t.money.collectionAdvanceTooltip} />}
                                       </span>
                                       <span className="flex shrink-0 items-center gap-2">
                                         <span className="text-xs font-bold tabular-nums">
@@ -1055,6 +1062,7 @@ export default function ZoneBalancesPage() {
                               <HandCoins className="size-3 shrink-0" />
                             )}
                             {collectionEntryLabel(c)}
+                            {c.pool === "advance" && <InfoTooltip text={t.money.collectionAdvanceTooltip} />}
                             {/* Кто забрал — то же, что в шапке свёрнутого
                                 акта, но для инкассаций из одной строки, где
                                 шапки нет. У advance_taken/bonus_taken имя уже
@@ -1083,7 +1091,22 @@ export default function ZoneBalancesPage() {
                                 живёт на карточке сотрудника, "Авансы и
                                 премии") — эта строка тут только для
                                 прозрачности, откуда взялась просадка по
-                                зонам. */}
+                                зонам. Вместо карандаша — стрелка туда, где
+                                правка и живёт (запрос пользователя
+                                2026-08-14), тот же приём, что в реестре
+                                "Авансы и премии". */}
+                            {(c.pool === "advance_taken" || c.pool === "bonus_taken") && c.operatorId && (
+                              <PressableScale>
+                                <button
+                                  type="button"
+                                  aria-label={c.operatorName ?? t.operators.title}
+                                  onClick={() => router.push(`/operators/${c.operatorId}`)}
+                                  className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground"
+                                >
+                                  <ChevronRight className="size-4" />
+                                </button>
+                              </PressableScale>
+                            )}
                             {c.pool !== "advance_taken" && c.pool !== "bonus_taken" && (
                               <IconActionButton
                                 icon={Pencil}

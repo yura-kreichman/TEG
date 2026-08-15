@@ -190,7 +190,6 @@
     "tabZones": "Kasy",
     "tabOperators": "Pracownicy",
     "tabCalendar": "Kalendarz",
-    "vsPreviousPeriodSuffix": "do poprzedniego okresu",
     "cashLabel": "Gotówka",
     "mobileLabel": "Bezgotówkowo",
     "abonementLabel": "Saldo",
@@ -222,7 +221,8 @@
     "compactMillionSuffix": "mln",
     "chartScrollLeft": "Przewiń w lewo",
     "chartScrollRight": "Przewiń w prawo",
-    "genericError": "Nie udało się załadować raportu"
+    "genericError": "Nie udało się załadować raportu",
+    "profitTooltip": "Zysk = przychód − wydatki − wynagrodzenia. Do wynagrodzeń wliczają się zaliczki i premie wypłacone gotówką; premie tylko naliczone nie wchodzą, dopóki nie zostaną wypłacone. Płatność z salda klienta nie liczy się drugi raz do przychodu — te pieniądze zaksięgowano przy doładowaniu."
   },
   "admin": {
     "loginTitle": "Logowanie administratora",
@@ -743,7 +743,6 @@
     "allPoints": "Wszystkie punkty",
     "nameLabel": "Nazwa strefy",
     "iconLabel": "Ikona",
-    "noTariffs": "Taryfy nie ustawione",
     "assetsCount": "zasób(ów)",
     "noZones": "Nie ma jeszcze żadnej strefy — dodaj pierwszą poniżej.",
     "newZoneTitle": "Nowa strefa",
@@ -768,7 +767,8 @@
     },
     "zoneActiveChip": "Aktywny",
     "zoneInactiveChip": "Nieaktywna",
-    "noOperatorsAttached": "Brak pracowników"
+    "noOperatorsAttached": "Brak pracowników",
+    "accountingModeTooltip": "Tryb decyduje, jak pracownik codziennie wprowadza dane. „Liczniki” — zapisuje wskazania urządzeń, a system bierze różnicę wobec poprzedniego rozliczenia. „Uruchomienia” — zaznacza każdą sesję dotknięciem. „Pobyty” — włącza i wyłącza minutnik, cena liczy się od czasu. „Bilety” — sprzedaje zamówienia, kasowanie opcjonalne. „Tylko kasa” — wpisuje jedną kwotę, bez zasobów i taryf. Tryb można zmieniać, dopóki strefa nie ma pierwszego rozliczenia; po nim zostaje zablokowany na stałe."
   },
   "zoneDetail": {
     "notFound": "Strefa nie znaleziona.",
@@ -817,7 +817,6 @@
     "countersTapAssistLabel": "Odczyty z sesji",
     "countersTapAssistHint": "Odczyt jest obliczany automatycznie na podstawie sesji pracownika — zamiast ręcznego wpisywania przy rozliczeniu",
     "printReceiptLabel": "Drukowanie potwierdzenia",
-    "printReceiptHint": "Pracownik będzie mógł wydrukować potwierdzenie dla gościa po wizycie/uruchomieniu",
     "amountRoundingLabel": "Zaokrąglanie kwoty",
     "amountRoundingHint": "Kwota sesji „w czasie rzeczywistym” jest zaokrąglana do pełnej jednostki waluty: mniej niż połowa — w dół, połowa i więcej — w górę",
     "printTicketsLabel": "Drukowanie biletów",
@@ -849,7 +848,11 @@
     "gameRoomUseSingleRateButton": "Wróć do jednej ceny",
     "launchesTimedTariffHint": "Start trwa z odliczaniem; zasób jest zajęty do zatrzymania/zwolnienia",
     "launchesPricingModeInstant": "Bez timera",
-    "launchesPricingModeTimed": "Z timerem"
+    "launchesPricingModeTimed": "Z timerem",
+    "assetsTooltip": "Zasób to pojedyncza fizyczna jednostka w strefie: konkretny samochodzik, trampolina, konsola. Wyniki rozlicza się osobno dla każdego zasobu, więc każdy ma własną historię i własne wskazania. Zepsuty zasób dezaktywuj, a nie usuwaj: usunięcie zabiera też jego wcześniejsze rozliczenia.",
+    "tariffsTooltipCounters": "Taryfa to cena jednej sesji. Przychód liczy się tak: (wskazanie teraz − wskazanie przy poprzednim rozliczeniu) × cena. Taryf może być kilka, gdy zasób ma różne tryby pracy — na przykład zwykła i druga prędkość: każda ma własny licznik i własną cenę.",
+    "tariffsTooltipLaunches": "Taryfa to cena jednego uruchomienia. „Bez minutnika” — pracownik po prostu zaznacza sesję dotknięciem. „Z minutnikiem” — uruchomienie idzie z odliczaniem, a zasób jest zajęty, dopóki nie zostanie zatrzymany lub zwolniony.",
+    "tariffsTooltipStays": "Taryfa to cena pobytu. „Za wejście” — stała kwota, niezależnie od tego, jak długo ktoś zostanie. „Za faktyczny czas” — cena za minutę: system sam liczy czas od startu do zatrzymania i zaokrągla w górę do pełnej minuty."
   },
   "abonements": {
     "title": "Abonamenty",
@@ -937,7 +940,8 @@
     "tenureDays": "dni",
     "tenureMonths": "mies.",
     "tenureYears": "lat",
-    "historyRefund": "Zwrot"
+    "historyRefund": "Zwrot",
+    "ownerTopupTooltip": "Doładowanie przez właściciela nigdzie nie jest księgowane: pieniądze pojawiają się na saldzie klienta, ale nie trafiają do kasy punktu, raportów ani podsumowań. To prezent lub rekompensata, nie sprzedaż. Abonamenty sprzedaje tylko pracownik — tam płatność przechodzi przez kasę."
   },
   "operators": {
     "title": "Pracownicy",
@@ -1017,8 +1021,6 @@
     "zoneBalancesLinkHint": "Ile powinno być w punkcie i historia inkas",
     "zoneBalancesTotalLabel": "Suma",
     "abonementCashLabel": "Abonamenty",
-    "abonementSoldTitle": "Sprzedaż abonamentów",
-    "abonementSoldHint": "Wg sprzedaży abonamentów",
     "recordCollectionButton": "Dodaj inkaso",
     "collectionAmountLabel": "Kwota inkasa",
     "collectionSlipTitle": "Dokument inkasa",
@@ -1063,7 +1065,9 @@
     "deleteCollectionError": "Nie udało się usunąć inkasacji",
     "collectionAdvanceLabel": "Inkaso zaliczkowe",
     "collectionAdvanceToastPrefix": "Odłożone jako inkaso zaliczkowe",
-    "collectionAdvanceToastSuffix": "— pojawi się w saldzie strefy po przesłaniu wyników"
+    "collectionAdvanceToastSuffix": "— pojawi się w saldzie strefy po przesłaniu wyników",
+    "zoneBalanceTooltip": "Saldo to suma całego dziennika strefy od samego początku, a nie za wybrany okres. Rośnie od przychodów, a maleje przez inkasa, wydatki i zaliczkę, którą pracownik wziął z kasy punktu.",
+    "collectionAdvanceTooltip": "Pojawia się, gdy zabrałeś więcej, niż w tamtej chwili było w strefach — na przykład razem z utargiem, którego pracownik jeszcze nie rozliczył. Nadwyżka nie jest przypisana do strefy: czeka na przyszły przychód i zostaje pokryta najbliższym rozliczeniem."
   },
   "readings": {
     "title": "Wyniki dzienne",
@@ -1076,7 +1080,6 @@
     "abonementSalesTitle": "Abonamenty",
     "goodsReconciliationsTitle": "Towary",
     "pointsEmptyHint": "Najpierw dodaj punkt.",
-    "operatorLabel": "Pracownik",
     "noSubmissionsPrefix": "Brak danych za",
     "prevMonth": "Poprzedni miesiąc",
     "nextMonth": "Następny miesiąc",
@@ -1126,7 +1129,6 @@
       "listopada",
       "grudnia"
     ],
-    "backToHome": "Strona główna",
     "lastSubmissionNote": "ostatnie rozliczenie",
     "editedByOwner": "Zmienione przez właściciela",
     "wasLabel": "było",
@@ -1143,7 +1145,9 @@
     "saveError": "Nie udało się zapisać zmian",
     "deleteConfirmTitle": "Usunąć rozliczenie?",
     "deleteConfirmBody": "Odczyty, sumy i wpisy w dzienniku finansów dotyczące tego rozliczenia zostaną usunięte. Czynność trafi do dziennika zmian. Nie można jej cofnąć.",
-    "deleteError": "Nie udało się usunąć rozliczenia"
+    "deleteError": "Nie udało się usunąć rozliczenia",
+    "differenceTooltip": "Różnica = kasa faktyczna − (przychód wyliczony − zapłacone saldem). Płatność saldem się odejmuje, bo te pieniądze wpłynęły wcześniej, przy doładowaniu przez klienta, i nie mogły trafić do kasy tego rozliczenia. Zero znaczy, że się zgadza.",
+    "actualCashTooltip": "Wchodzą tu gotówka, płatności bezgotówkowe i ta część płatności saldem, którą uwzględnia Różnica. Dlatego kwota może przewyższać pieniądze fizycznie leżące w kasie — o wartość płatności z abonamentów."
   },
   "operatorApp": {
     "greeting": "Cześć,",
@@ -1215,7 +1219,9 @@
       "carryoverHint": "Jednorazowa korekta salda — np. przeniesienie salda początkowego z poprzedniego systemu. Może być ujemna.",
       "moduleDisabledNote": "Moduł „Czas pracy” nie jest podłączony dla Twojej firmy",
       "deleteShiftConfirm": "Usunąć tę zmianę? Czynności nie można cofnąć. Usunąć można tylko ostatnią zmianę pracownika.",
-      "deleteMoneyOpConfirm": "Usunąć ten wpis? Czynności nie można cofnąć."
+      "deleteMoneyOpConfirm": "Usunąć ten wpis? Czynności nie można cofnąć.",
+      "toPayOutTooltip": "Do wypłaty = zarobione według stawki + premie − już wypłacone zaliczki, plus przeniesienie z poprzedniego okresu. Premie naliczone też się tu liczą, choć nie wypłacono ich jeszcze gotówką.",
+      "bonusAccruedTooltip": "Premia naliczona trafia do salda „do wypłaty” pracownika, ale nie została wydana gotówką — kasa punktu jej nie odczuła. Zwykła premia przeciwnie: już wyszła z kasy gotówką."
     },
     "submit": {
       "stepLabel": "Krok",
@@ -1241,7 +1247,6 @@
       "calculatedRevenue": "Obliczony przychód:",
       "difference": "Różnica:",
       "expensesTitle": "Wydatki",
-      "expensesReadOnlyHint": "Wprowadzane wcześniej na Ekranie głównym przyciskiem „Wydatki” — tu tylko podgląd.",
       "expensesEmpty": "Na razie brak wydatków.",
       "amountPlaceholder": "Kwota",
       "commentPlaceholder": "Komentarz (opcjonalnie)",
@@ -1288,7 +1293,6 @@
       "paymentMethodTitle": "Sposób płatności",
       "stopConfirmQuestion": "Na pewno?",
       "stopConfirmButton": "Zakończ",
-      "expiredLabel": "Czas minął",
       "soundHintBody": "Dźwięk i wibracja włączą się, gdy czas uruchomienia się skończy — trzymaj aplikację otwartą",
       "noPricingError": "Taryfa strefy nie została jeszcze ustawiona przez właściciela",
       "assetInactiveHint": "Zasób jest wstrzymany — nie można dodać nowego gościa",
@@ -1305,7 +1309,6 @@
       "allZonesOption": "Wszystkie strefy",
       "receiptTitle": "Potwierdzenie uruchomienia",
       "receiptDoneTitle": "Uruchomienie zarejestrowane",
-      "expiredLabel": "Czas minął",
       "timedTariffHint": "Warianty"
     },
     "counters": {

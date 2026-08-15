@@ -1226,8 +1226,25 @@ export default function ZoneDetailPage() {
               docs/spec/10-tickets.md, "ЦЕНЫ — НА АКТИВАХ, НЕ ТАРИФЫ". */}
           {zone.accountingMode !== "cash_only" && !isTicketsZone(zone) && (
           <SpringCard hover={false} className="flex flex-col gap-1">
-            <h2 className="text-section-title">
+            {/* Текст тултипа зависит от режима: у "Счётчиков" тариф — цена
+                сеанса и умножается на разницу показаний, у "Пусков" к нему
+                добавляется таймер, у "Прибываний" это вообще цена за минуту
+                (запрос пользователя 2026-08-14: "в разных режимах там разный
+                список вариантов и возможности"). Единый текст соврал бы в
+                двух режимах из трёх. Билеты и "Только касса" сюда не доходят —
+                у них карточки тарифов нет вовсе (условие выше), и объяснение
+                для них живёт в тултипе режима учёта. */}
+            <h2 className="flex items-center gap-1.5 text-section-title">
               {t.zoneDetail.tariffsCardLabel.replace("{max}", String(tariffMax))}
+              <InfoTooltip
+                text={
+                  isStaysZone(zone)
+                    ? t.zoneDetail.tariffsTooltipStays
+                    : isLaunchesZone(zone)
+                      ? t.zoneDetail.tariffsTooltipLaunches
+                      : t.zoneDetail.tariffsTooltipCounters
+                }
+              />
             </h2>
 
             {zone.tariffs.map((tariff) => (
@@ -1277,8 +1294,12 @@ export default function ZoneDetailPage() {
               везде (запрос пользователя 2026-07-16: "как в других зонах"). */}
           {zone.accountingMode !== "cash_only" && (
           <SpringCard hover={false} className="flex flex-col gap-1">
-            <h2 className="text-section-title">
+            {/* Объяснение "что такое актив" было только на списке зон
+                (zonesList.structureHint) — то есть не там, где владелец
+                действительно заводит активы (запрос пользователя 2026-08-14). */}
+            <h2 className="flex items-center gap-1.5 text-section-title">
               {t.zoneDetail.assetsTitle} · {zone.assets.length}
+              <InfoTooltip text={t.zoneDetail.assetsTooltip} />
             </h2>
 
             {zone.assets.map((asset, index) => (
@@ -1485,8 +1506,9 @@ export default function ZoneDetailPage() {
         )}
         {zoneKebabView === "mode" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
+            <h2 className="flex items-center gap-1.5 text-[1.1875rem] font-extrabold tracking-[-0.01em]">
               {t.zoneDetail.changeAccountingModeAction}
+              <InfoTooltip text={t.zonesList.accountingModeTooltip} />
             </h2>
             <div className="rounded-control border border-border">
               {ZONE_ACCOUNTING_MODES.map((mode) => {

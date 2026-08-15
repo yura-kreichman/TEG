@@ -190,7 +190,6 @@
     "tabZones": "Kassalar",
     "tabOperators": "Xodimlar",
     "tabCalendar": "Kalendar",
-    "vsPreviousPeriodSuffix": "oldingi davrga nisbatan",
     "cashLabel": "Naqd pul",
     "mobileLabel": "Naqdsiz",
     "abonementLabel": "Balans",
@@ -222,7 +221,8 @@
     "compactMillionSuffix": "mln",
     "chartScrollLeft": "Chapga aylantirish",
     "chartScrollRight": "O'ngga aylantirish",
-    "genericError": "Hisobotni yuklab boʻlmadi"
+    "genericError": "Hisobotni yuklab boʻlmadi",
+    "profitTooltip": "Foyda = tushum − xarajatlar − ish haqi. Ish haqiga naqd berilgan avanslar va mukofotlar kiradi; hisoblangan mukofotlar berilmaguncha kirmaydi. Mijoz balansidan to'lov tushumga ikkinchi marta sanalmaydi — bu pul abonement to'ldirilganda hisobga olingan."
   },
   "admin": {
     "loginTitle": "Administrator kirishi",
@@ -743,7 +743,6 @@
     "allPoints": "Barcha nuqtalar",
     "nameLabel": "Zona nomi",
     "iconLabel": "Belgi",
-    "noTariffs": "Tariflar belgilanmagan",
     "assetsCount": "aktiv(lar)",
     "noZones": "Hali birorta ham zona yoʻq — pastda birinchisini qoʻshing.",
     "newZoneTitle": "Yangi zona",
@@ -768,7 +767,8 @@
     },
     "zoneActiveChip": "Faol",
     "zoneInactiveChip": "Nofaol",
-    "noOperatorsAttached": "Xodimlar yo'q"
+    "noOperatorsAttached": "Xodimlar yo'q",
+    "accountingModeTooltip": "Rejim xodim har kuni ma'lumotni qanday kiritishini hal qiladi. «Hisoblagichlar» — asbob ko'rsatkichlarini yozadi, tizim o'tgan topshirish bilan farqni oladi. «Ishga tushirishlar» — har seansni bosish bilan belgilaydi. «Tashriflar» — taymerni yoqadi va o'chiradi, narx vaqt bo'yicha hisoblanadi. «Chiptalar» — buyurtma sotadi, o'chirish ixtiyoriy. «Faqat kassa» — aktiv va tariflarsiz bitta summa kiritadi. Rejimni zona bo'yicha birorta yakun topshirilmaguncha o'zgartirish mumkin; birinchisidan keyin u butunlay qulflanadi."
   },
   "zoneDetail": {
     "notFound": "Zona topilmadi.",
@@ -817,7 +817,6 @@
     "countersTapAssistLabel": "Seanslar boʻyicha koʻrsatkichlar",
     "countersTapAssistHint": "Koʻrsatkich xodimning seanslariga qarab avtomatik hisoblanadi — natijalarni topshirishda qoʻlda kiritish oʻrniga",
     "printReceiptLabel": "Kvitansiyani chop etish",
-    "printReceiptHint": "Xodim tashrif/ishga tushirishdan keyin mehmonga kvitansiya chop eta oladi",
     "amountRoundingLabel": "Summani yaxlitlash",
     "amountRoundingHint": "„Amalda” pusk summasi butun valyuta birligigacha yaxlitlanadi: yarmidan kam — pastga, yarmi va undan ko'p — yuqoriga",
     "printTicketsLabel": "Chiptalarni chop etish",
@@ -849,7 +848,11 @@
     "gameRoomUseSingleRateButton": "Bitta narxga qaytish",
     "launchesTimedTariffHint": "Ishga tushirish teskari sanoq bilan boradi; aktiv to'xtatilguncha/bo'shatilguncha band",
     "launchesPricingModeInstant": "Taymersiz",
-    "launchesPricingModeTimed": "Taymer bilan"
+    "launchesPricingModeTimed": "Taymer bilan",
+    "assetsTooltip": "Aktiv — zona ichidagi bitta jismoniy birlik: aniq mashina, batut, konsol. Yakunlar har aktiv bo'yicha alohida topshiriladi, shuning uchun har birining o'z tarixi va o'z ko'rsatkichlari bor. Buzilgan aktivni o'chirmang, faolsizlantiring: o'chirish u bilan birga o'tgan topshirishlarni ham olib ketadi.",
+    "tariffsTooltipCounters": "Tarif — bitta seansning narxi. Tushum shunday hisoblanadi: (hozirgi ko'rsatkich − o'tgan topshirishdagi ko'rsatkich) × narx. Aktivda turli ish rejimlari bo'lsa, tariflar bir nechta bo'lishi mumkin — masalan, oddiy va ikkinchi tezlik: har birining o'z hisoblagichi va o'z narxi bor.",
+    "tariffsTooltipLaunches": "Tarif — bitta ishga tushirishning narxi. «Taymersiz» — xodim seansni shunchaki bosib belgilaydi. «Taymer bilan» — ishga tushirish teskari sanoq bilan boradi va aktiv to'xtatilgunicha yoki bo'shatilgunicha band hisoblanadi.",
+    "tariffsTooltipStays": "Tarif — bo'lish narxi. «Kirish uchun» — odam qancha turishidan qat'i nazar, qat'iy summa. «Amaldagi bo'yicha» — bir daqiqa narxi: tizim boshlanishdan to'xtashgacha vaqtni o'zi sanab, to'liq daqiqagacha yuqoriga yaxlitlaydi."
   },
   "abonements": {
     "title": "Abonementlar",
@@ -937,7 +940,8 @@
     "tenureDays": "kun",
     "tenureMonths": "oy",
     "tenureYears": "yil",
-    "historyRefund": "Qaytarish"
+    "historyRefund": "Qaytarish",
+    "ownerTopupTooltip": "Egasining hisoblashi hech qayerda hisobga olinmaydi: pul mijoz balansida paydo bo'ladi, lekin nuqta kassasiga, hisobotlarga va xulosalarga tushmaydi. Bu sovg'a yoki tovon, sotuv emas. Abonementni faqat xodim sotadi — u yerda to'lov kassa orqali o'tadi."
   },
   "operators": {
     "title": "Xodimlar",
@@ -1017,8 +1021,6 @@
     "zoneBalancesLinkHint": "Nuqtada qancha boʻlishi kerak va inkassatsiyalar tarixi",
     "zoneBalancesTotalLabel": "Jami",
     "abonementCashLabel": "Abonementlar",
-    "abonementSoldTitle": "Abonement sotuvlari",
-    "abonementSoldHint": "Abonement sotuvi boʻyicha",
     "recordCollectionButton": "Inkassatsiya kiritish",
     "collectionAmountLabel": "Inkassatsiya summasi",
     "collectionSlipTitle": "Inkassatsiya hujjati",
@@ -1063,7 +1065,9 @@
     "deleteCollectionError": "Inkassatsiyani oʻchirib bo'lmadi",
     "collectionAdvanceLabel": "Avans inkassatsiya",
     "collectionAdvanceToastPrefix": "Avans inkassatsiya sifatida ajratildi",
-    "collectionAdvanceToastSuffix": "— natijalar topshirilgandan keyin zona qoldig‘ida paydo bo‘ladi"
+    "collectionAdvanceToastSuffix": "— natijalar topshirilgandan keyin zona qoldig‘ida paydo bo‘ladi",
+    "zoneBalanceTooltip": "Qoldiq — zona jurnalining eng boshidan boshlab umumiy summasi, tanlangan davr uchun emas. U tushumdan o'sadi va inkassatsiya, xarajatlar hamda xodim nuqta kassasidan olgan avans bilan kamayadi.",
+    "collectionAdvanceTooltip": "Siz o'sha paytda zonalarda bo'lganidan ko'proq olganingizda paydo bo'ladi — masalan, xodim hali topshirmagan tushum bilan birga. Ortiqcha summa zonaga bog'lanmaydi, kelajakdagi tushumni kutadi va eng yaqin yakun topshirishda yopiladi."
   },
   "readings": {
     "title": "Kunlik natijalar",
@@ -1076,7 +1080,6 @@
     "abonementSalesTitle": "Abonementlar",
     "goodsReconciliationsTitle": "Tovarlar",
     "pointsEmptyHint": "Avval nuqta qoʻshing.",
-    "operatorLabel": "Xodim",
     "noSubmissionsPrefix": "Ma'lumot yoʻq:",
     "prevMonth": "Oldingi oy",
     "nextMonth": "Keyingi oy",
@@ -1126,7 +1129,6 @@
       "noyabr",
       "dekabr"
     ],
-    "backToHome": "Bosh sahifa",
     "lastSubmissionNote": "oxirgi topshiriq",
     "editedByOwner": "Egasi tomonidan oʻzgartirilgan",
     "wasLabel": "boʻlgan edi",
@@ -1143,7 +1145,9 @@
     "saveError": "Oʻzgarishlarni saqlab boʻlmadi",
     "deleteConfirmTitle": "Topshiriqni oʻchirasizmi?",
     "deleteConfirmBody": "Ushbu topshiriq boʻyicha koʻrsatkichlar, summalar va pul jurnalidagi yozuvlar oʻchiriladi. Amal oʻzgarishlar jurnaliga tushadi. Bekor qilib boʻlmaydi.",
-    "deleteError": "Topshiriqni oʻchirib boʻlmadi"
+    "deleteError": "Topshiriqni oʻchirib boʻlmadi",
+    "differenceTooltip": "Farq = haqiqiy kassa − (hisobiy tushum − balansdan to'langan). Balansdan to'lov ayriladi, chunki bu pul avvalroq, mijoz to'ldirganda kelgan va bu topshirish kassasiga tusha olmaydi. Nol — «to'g'ri keldi» degani.",
+    "actualCashTooltip": "Bunga naqd, naqdsiz va Farqda hisobga olingan balansdan to'lovning qismi kiradi. Shuning uchun summa kassada jismonan turgan puldan abonementlardan to'langan miqdorga ko'p bo'lishi mumkin."
   },
   "operatorApp": {
     "greeting": "Salom,",
@@ -1215,7 +1219,9 @@
       "carryoverHint": "Balansning bir martalik tuzatilishi — masalan, oldingi hisob tizimidan qoldiqni koʻchirish. Manfiy boʻlishi mumkin.",
       "moduleDisabledNote": "«Ish vaqti» moduli kompaniyangiz uchun ulanmagan",
       "deleteShiftConfirm": "Ushbu smenani oʻchirasizmi? Amalni bekor qilib boʻlmaydi. Faqat xodimning oxirgi smenasini oʻchirish mumkin.",
-      "deleteMoneyOpConfirm": "Ushbu yozuvni oʻchirasizmi? Amalni bekor qilib boʻlmaydi."
+      "deleteMoneyOpConfirm": "Ushbu yozuvni oʻchirasizmi? Amalni bekor qilib boʻlmaydi.",
+      "toPayOutTooltip": "Berishga = stavka bo'yicha ishlangan + mukofotlar − berilgan avanslar, plyus o'tgan davrdan o'tkazma. Hisoblangan mukofotlar ham kiradi, garchi ular hali naqd berilmagan bo'lsa ham.",
+      "bonusAccruedTooltip": "Hisoblangan mukofot xodimning «Berishga» balansiga yozilgan, lekin naqd berilmagan — nuqta kassasi uni sezmadi. Oddiy mukofot esa aksincha, kassadan naqd chiqib ketgan."
     },
     "submit": {
       "stepLabel": "Qadam",
@@ -1241,7 +1247,6 @@
       "calculatedRevenue": "Hisoblangan tushum:",
       "difference": "Farq:",
       "expensesTitle": "Xarajatlar",
-      "expensesReadOnlyHint": "Bosh sahifada \"Xarajatlar\" tugmasi orqali oldindan kiritiladi — bu yerda faqat ko'rish.",
       "expensesEmpty": "Hozircha xarajatlar yo'q.",
       "amountPlaceholder": "Summa",
       "commentPlaceholder": "Izoh (ixtiyoriy)",
@@ -1288,7 +1293,6 @@
       "paymentMethodTitle": "To'lov usuli",
       "stopConfirmQuestion": "Aniqmi?",
       "stopConfirmButton": "Yakunlash",
-      "expiredLabel": "Vaqt tugadi",
       "soundHintBody": "Pusk vaqti tugaganda tovush va tebranish ishlaydi — ilovani ochiq tuting",
       "noPricingError": "Zona tarifi hali egasi tomonidan belgilanmagan",
       "assetInactiveHint": "Aktiv pauzada — yangi mehmon qo'shib bo'lmaydi",
@@ -1305,7 +1309,6 @@
       "allZonesOption": "Barcha zonalar",
       "receiptTitle": "Ishga tushirish kvitansiyasi",
       "receiptDoneTitle": "Ishga tushirish hisobga olindi",
-      "expiredLabel": "Vaqt tugadi",
       "timedTariffHint": "Variantlar"
     },
     "counters": {

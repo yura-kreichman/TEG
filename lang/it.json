@@ -190,7 +190,6 @@
     "tabZones": "Casse",
     "tabOperators": "Dipendenti",
     "tabCalendar": "Calendario",
-    "vsPreviousPeriodSuffix": "rispetto al periodo precedente",
     "cashLabel": "Contanti",
     "mobileLabel": "Non in contanti",
     "abonementLabel": "Saldo",
@@ -222,7 +221,8 @@
     "compactMillionSuffix": "M",
     "chartScrollLeft": "Scorri a sinistra",
     "chartScrollRight": "Scorri a destra",
-    "genericError": "Impossibile caricare il report"
+    "genericError": "Impossibile caricare il report",
+    "profitTooltip": "Utile = ricavi − spese − stipendi. Negli stipendi rientrano anticipi e premi erogati in contanti; i premi solo accantonati non entrano finché non vengono pagati. I pagamenti dal saldo del cliente non si contano due volte nei ricavi: quel denaro è già stato registrato alla ricarica."
   },
   "admin": {
     "loginTitle": "Accesso amministratore",
@@ -743,7 +743,6 @@
     "allPoints": "Tutti i punti",
     "nameLabel": "Nome zona",
     "iconLabel": "Icona",
-    "noTariffs": "Nessuna tariffa impostata",
     "assetsCount": "bene/i",
     "noZones": "Ancora nessuna zona — aggiungi la prima qui sotto.",
     "newZoneTitle": "Nuova zona",
@@ -768,7 +767,8 @@
     },
     "zoneActiveChip": "Attiva",
     "zoneInactiveChip": "Inattiva",
-    "noOperatorsAttached": "Nessun dipendente"
+    "noOperatorsAttached": "Nessun dipendente",
+    "accountingModeTooltip": "La modalità decide come il personale inserisce i dati ogni giorno. “Contatori” — registra le letture degli strumenti e il sistema calcola la differenza rispetto alla consegna precedente. “Avvii” — segna ogni sessione con un tocco. “Permanenze” — avvia e ferma un timer, il prezzo segue il tempo. “Biglietti” — vende ordini, con annullo facoltativo. “Solo cassa” — inserisce un unico importo, senza asset né tariffe. Puoi cambiare modalità finché la zona non ha la prima consegna dei risultati; dopo di essa resta bloccata per sempre."
   },
   "zoneDetail": {
     "notFound": "Zona non trovata.",
@@ -817,7 +817,6 @@
     "countersTapAssistLabel": "Letture da sessioni",
     "countersTapAssistHint": "La lettura viene calcolata automaticamente dalle sessioni del dipendente — invece dell'inserimento manuale alla chiusura cassa",
     "printReceiptLabel": "Stampa ricevuta",
-    "printReceiptHint": "Il dipendente potrà stampare una ricevuta per il visitatore dopo la visita/avvio",
     "amountRoundingLabel": "Arrotondamento importo",
     "amountRoundingHint": "L'importo della sessione \"a consumo\" viene arrotondato all'unità di valuta intera: meno della metà — per difetto, dalla metà in su — per eccesso",
     "printTicketsLabel": "Stampa biglietti",
@@ -849,7 +848,11 @@
     "gameRoomUseSingleRateButton": "Torna a un prezzo unico",
     "launchesTimedTariffHint": "L'avvio procede con un conto alla rovescia; l'asset è occupato finché non viene fermato/liberato",
     "launchesPricingModeInstant": "Senza timer",
-    "launchesPricingModeTimed": "Con timer"
+    "launchesPricingModeTimed": "Con timer",
+    "assetsTooltip": "Un asset è una singola unità fisica dentro la zona: quella macchinina, quel tappeto elastico, quella console. I risultati si consegnano per singolo asset, quindi ognuno conserva la propria storia e le proprie letture. Disattiva un asset guasto invece di eliminarlo: l’eliminazione porta via anche le sue consegne passate.",
+    "tariffsTooltipCounters": "La tariffa è il prezzo di una sessione. Il ricavo si calcola come (lettura attuale − lettura alla consegna precedente) × prezzo. Le tariffe possono essere più d’una se l’asset ha modalità diverse — per esempio velocità normale e seconda velocità: ciascuna ha il proprio contatore e il proprio prezzo.",
+    "tariffsTooltipLaunches": "La tariffa è il prezzo di un avvio. “Senza timer” — il personale registra la sessione con un tocco. “Con timer” — l’avvio parte con un conto alla rovescia e l’asset risulta occupato finché non viene fermato o liberato.",
+    "tariffsTooltipStays": "La tariffa è il prezzo della permanenza. “A ingresso” — un importo fisso, per quanto a lungo resti la persona. “A consumo” — prezzo al minuto: il sistema conta il tempo dallo start allo stop e arrotonda per eccesso al minuto intero."
   },
   "abonements": {
     "title": "Abbonamenti",
@@ -937,7 +940,8 @@
     "tenureDays": "gg",
     "tenureMonths": "mesi",
     "tenureYears": "anni",
-    "historyRefund": "Rimborso"
+    "historyRefund": "Rimborso",
+    "ownerTopupTooltip": "La ricarica fatta dal titolare non viene contabilizzata da nessuna parte: il denaro compare sul saldo del cliente ma non entra nella cassa del punto, né nei report o nei riepiloghi. È un omaggio o un rimborso, non una vendita. Solo il personale vende i piani, e lì il pagamento passa dalla cassa."
   },
   "operators": {
     "title": "Dipendenti",
@@ -1017,8 +1021,6 @@
     "zoneBalancesLinkHint": "Quanto dovrebbe esserci sul posto, e cronologia degli incassi",
     "zoneBalancesTotalLabel": "Totale",
     "abonementCashLabel": "Abbonamenti",
-    "abonementSoldTitle": "Vendite abbonamenti",
-    "abonementSoldHint": "Per vendite abbonamenti",
     "recordCollectionButton": "Registra incasso",
     "collectionAmountLabel": "Importo incassato",
     "collectionSlipTitle": "Distinta di versamento",
@@ -1063,7 +1065,9 @@
     "deleteCollectionError": "Eliminazione dell'incasso non riuscita",
     "collectionAdvanceLabel": "Prelievo anticipato",
     "collectionAdvanceToastPrefix": "Messo da parte come prelievo anticipato",
-    "collectionAdvanceToastSuffix": "— comparirà nel saldo della zona dopo l’invio dei risultati"
+    "collectionAdvanceToastSuffix": "— comparirà nel saldo della zona dopo l’invio dei risultati",
+    "zoneBalanceTooltip": "Il saldo è la somma dell’intero registro della zona dall’inizio, non del periodo selezionato. Cresce con i ricavi e cala con i prelievi, le spese e l’anticipo che un dipendente ha preso dalla cassa del punto.",
+    "collectionAdvanceTooltip": "Compare quando hai prelevato più di quanto risultava allora nelle zone — per esempio insieme a incassi non ancora consegnati dal personale. L’eccedenza non viene legata ad alcuna zona: attende gli incassi futuri e si compensa con la prima consegna dei risultati."
   },
   "readings": {
     "title": "Riepiloghi giornalieri",
@@ -1076,7 +1080,6 @@
     "abonementSalesTitle": "Abbonamenti",
     "goodsReconciliationsTitle": "Prodotti",
     "pointsEmptyHint": "Aggiungi prima un punto.",
-    "operatorLabel": "Dipendente",
     "noSubmissionsPrefix": "Nessun dato per",
     "prevMonth": "Mese precedente",
     "nextMonth": "Mese successivo",
@@ -1126,7 +1129,6 @@
       "novembre",
       "dicembre"
     ],
-    "backToHome": "Home",
     "lastSubmissionNote": "ultima chiusura",
     "editedByOwner": "Modificato dal titolare",
     "wasLabel": "era",
@@ -1143,7 +1145,9 @@
     "saveError": "Impossibile salvare le modifiche",
     "deleteConfirmTitle": "Eliminare questa chiusura?",
     "deleteConfirmBody": "Le letture, gli importi e le voci del registro soldi di questa chiusura verranno eliminati. Questa azione viene registrata e non può essere annullata.",
-    "deleteError": "Impossibile eliminare la chiusura"
+    "deleteError": "Impossibile eliminare la chiusura",
+    "differenceTooltip": "Differenza = cassa effettiva − (ricavo calcolato − pagato con saldo). Il pagamento con saldo si sottrae perché quel denaro è entrato prima, quando il cliente ha ricaricato, e non poteva finire nella cassa di questa consegna. Zero significa che torna.",
+    "actualCashTooltip": "Qui rientrano contanti, pagamenti elettronici e la parte dei pagamenti con saldo conteggiata nella Differenza. Perciò l’importo può superare il denaro fisicamente in cassa, della quota pagata dai saldi dei clienti."
   },
   "operatorApp": {
     "greeting": "Ciao,",
@@ -1215,7 +1219,9 @@
       "carryoverHint": "Una rettifica una tantum del saldo — es. il riporto di un saldo iniziale da un sistema precedente. Può essere negativo.",
       "moduleDisabledNote": "Il modulo Orario di lavoro non è attivo per la tua azienda",
       "deleteShiftConfirm": "Eliminare questo turno? Non può essere annullato. Può essere eliminato solo il turno più recente del dipendente.",
-      "deleteMoneyOpConfirm": "Eliminare questa voce? Non può essere annullato."
+      "deleteMoneyOpConfirm": "Eliminare questa voce? Non può essere annullato.",
+      "toPayOutTooltip": "Da liquidare = maturato a tariffa oraria + premi − anticipi già erogati, più il riporto dal periodo precedente. Rientrano anche i premi accantonati, benché non ancora pagati in contanti.",
+      "bonusAccruedTooltip": "Il premio accantonato entra nel saldo “da liquidare” del dipendente ma non è stato consegnato in contanti: la cassa del punto non l’ha visto. Il premio ordinario, invece, è già uscito dalla cassa in contanti."
     },
     "submit": {
       "stepLabel": "Passaggio",
@@ -1241,7 +1247,6 @@
       "calculatedRevenue": "Incasso calcolato:",
       "difference": "Differenza:",
       "expensesTitle": "Spese",
-      "expensesReadOnlyHint": "Inserita in anticipo dalla Home tramite il pulsante \"Spese\" — qui solo visualizzazione.",
       "expensesEmpty": "Ancora nessuna spesa.",
       "amountPlaceholder": "Importo",
       "commentPlaceholder": "Commento (facoltativo)",
@@ -1288,7 +1293,6 @@
       "paymentMethodTitle": "Metodo di pagamento",
       "stopConfirmQuestion": "Sicuro?",
       "stopConfirmButton": "Termina",
-      "expiredLabel": "Tempo scaduto",
       "soundHintBody": "Suono e vibrazione scatteranno quando il tempo dell'avvio scade — tieni l'app aperta",
       "noPricingError": "La tariffa della zona non è ancora stata impostata dal proprietario",
       "assetInactiveHint": "L'attivo è in pausa — non è possibile aggiungere un nuovo visitatore",
@@ -1305,7 +1309,6 @@
       "allZonesOption": "Tutte le zone",
       "receiptTitle": "Ricevuta avvio",
       "receiptDoneTitle": "Avvio registrato",
-      "expiredLabel": "Tempo scaduto",
       "timedTariffHint": "Varianti"
     },
     "counters": {

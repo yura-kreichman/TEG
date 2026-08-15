@@ -190,7 +190,6 @@
     "tabZones": "Registers",
     "tabOperators": "Employees",
     "tabCalendar": "Calendar",
-    "vsPreviousPeriodSuffix": "vs previous period",
     "cashLabel": "Cash",
     "mobileLabel": "Cashless",
     "abonementLabel": "Balance",
@@ -222,7 +221,8 @@
     "compactMillionSuffix": "M",
     "chartScrollLeft": "Scroll left",
     "chartScrollRight": "Scroll right",
-    "genericError": "Couldn't load the report"
+    "genericError": "Couldn't load the report",
+    "profitTooltip": "Profit = revenue − expenses − payroll. Payroll covers advances and bonuses handed out in cash; accrued bonuses stay out until they are actually paid. Payments from a customer balance are not counted in revenue twice — that money was recorded when the plan was topped up."
   },
   "admin": {
     "loginTitle": "Admin sign-in",
@@ -743,7 +743,6 @@
     "allPoints": "All points",
     "nameLabel": "Zone name",
     "iconLabel": "Icon",
-    "noTariffs": "No tariffs set",
     "assetsCount": "asset(s)",
     "noZones": "No zones yet — add the first one below.",
     "newZoneTitle": "New zone",
@@ -768,7 +767,8 @@
     },
     "zoneActiveChip": "Active",
     "zoneInactiveChip": "Inactive",
-    "noOperatorsAttached": "No employees"
+    "noOperatorsAttached": "No employees",
+    "accountingModeTooltip": "The mode decides how your staff enters data every day. “Counters” — they record meter readings and the system takes the difference from the previous submission. “Sessions” — they tap once per session. “Stays” — they start and stop a timer, and the price follows the time. “Tickets” — they sell orders, with optional redemption. “Cash only” — they enter a single amount, with no assets or tariffs. You can change the mode until the zone has its first results submission; after that it is locked for good."
   },
   "zoneDetail": {
     "notFound": "Zone not found.",
@@ -817,7 +817,6 @@
     "countersTapAssistLabel": "Session-based readings",
     "countersTapAssistHint": "The reading is calculated automatically from the employee's sessions — instead of manual entry at results submission",
     "printReceiptLabel": "Print receipt",
-    "printReceiptHint": "The employee will be able to print a receipt for the visitor after a stay/launch",
     "amountRoundingLabel": "Amount rounding",
     "amountRoundingHint": "The \"actual time\" launch amount is rounded to the nearest whole currency unit: below half — down, half and above — up",
     "printTicketsLabel": "Print tickets",
@@ -849,7 +848,11 @@
     "gameRoomUseSingleRateButton": "Switch back to a single price",
     "launchesTimedTariffHint": "Launch runs a countdown; asset is busy until stopped/released",
     "launchesPricingModeInstant": "No timer",
-    "launchesPricingModeTimed": "With timer"
+    "launchesPricingModeTimed": "With timer",
+    "assetsTooltip": "An asset is a single physical unit inside the zone: one particular car, trampoline or console. Results are submitted per asset, so each keeps its own history and its own readings. Deactivate a broken asset instead of deleting it — deleting also removes its past submissions.",
+    "tariffsTooltipCounters": "A tariff is the price of one session. Revenue is calculated as (current reading − reading at the previous submission) × price. You can have several tariffs when an asset has different modes — say, normal and second speed: each has its own meter and its own price.",
+    "tariffsTooltipLaunches": "A tariff is the price of one session. “No timer” — staff simply tap to log the session. “With timer” — the session runs on a countdown and the asset counts as busy until it is stopped or released.",
+    "tariffsTooltipStays": "A tariff is the price of a stay. “Per entry” — a flat amount no matter how long the visit lasts. “Per actual time” — a per-minute price: the system counts the time from start to stop and rounds up to a whole minute."
   },
   "abonements": {
     "title": "Subscriptions",
@@ -937,7 +940,8 @@
     "tenureDays": "d",
     "tenureMonths": "mo",
     "tenureYears": "yr",
-    "historyRefund": "Refund"
+    "historyRefund": "Refund",
+    "ownerTopupTooltip": "An owner top-up is not accounted for anywhere: the money appears on the customer’s balance but never reaches the point’s till, the reports or the summaries. It is a gift or a compensation, not a sale. Only staff sell plans — there the payment goes through the till."
   },
   "operators": {
     "title": "Employees",
@@ -1017,8 +1021,6 @@
     "zoneBalancesLinkHint": "How much should be on-site, and collection history",
     "zoneBalancesTotalLabel": "Total",
     "abonementCashLabel": "Subscriptions",
-    "abonementSoldTitle": "Subscription sales",
-    "abonementSoldHint": "By subscription sales",
     "recordCollectionButton": "Record collection",
     "collectionAmountLabel": "Collection amount",
     "collectionSlipTitle": "Collection slip",
@@ -1063,7 +1065,9 @@
     "deleteCollectionError": "Failed to delete the collection",
     "collectionAdvanceLabel": "Advance collection",
     "collectionAdvanceToastPrefix": "Set aside as an advance collection",
-    "collectionAdvanceToastSuffix": "— will appear in the zone balance once results are submitted"
+    "collectionAdvanceToastSuffix": "— will appear in the zone balance once results are submitted",
+    "zoneBalanceTooltip": "The balance is the sum of the zone’s entire ledger from the very beginning, not for the selected period. It grows with revenue and shrinks with collections, expenses and any advance a staff member took from the point’s till.",
+    "collectionAdvanceTooltip": "Appears when you took more than the zones held at that moment — for example, together with revenue the staff had not submitted yet. The surplus is not tied to any zone: it waits for future revenue and is settled by the next results submission."
   },
   "readings": {
     "title": "Daily results",
@@ -1076,7 +1080,6 @@
     "abonementSalesTitle": "Subscriptions",
     "goodsReconciliationsTitle": "Goods",
     "pointsEmptyHint": "Add a point first.",
-    "operatorLabel": "Employee",
     "noSubmissionsPrefix": "No data for",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
@@ -1126,7 +1129,6 @@
       "November",
       "December"
     ],
-    "backToHome": "Home",
     "lastSubmissionNote": "latest submission",
     "editedByOwner": "Edited by owner",
     "wasLabel": "was",
@@ -1143,7 +1145,9 @@
     "saveError": "Couldn't save the changes",
     "deleteConfirmTitle": "Delete this submission?",
     "deleteConfirmBody": "The readings, amounts, and money-journal entries for this submission will be deleted. This action is logged and cannot be undone.",
-    "deleteError": "Couldn't delete the submission"
+    "deleteError": "Couldn't delete the submission",
+    "differenceTooltip": "Difference = actual cash − (calculated revenue − paid from balance). Balance payments are subtracted because that money arrived earlier, when the customer topped up, and could not reach the till of this submission. Zero means it adds up.",
+    "actualCashTooltip": "This includes cash, card payments and the part of balance payments counted in the Difference. So the figure can exceed the money physically in the till — by the amount paid from customer balances."
   },
   "operatorApp": {
     "greeting": "Hello,",
@@ -1215,7 +1219,9 @@
       "carryoverHint": "A one-off balance adjustment — e.g. carrying over a starting balance from a previous system. Can be negative.",
       "moduleDisabledNote": "The Work Time module isn't enabled for your company",
       "deleteShiftConfirm": "Delete this shift? This can't be undone. Only the employee's most recent shift can be deleted.",
-      "deleteMoneyOpConfirm": "Delete this entry? This can't be undone."
+      "deleteMoneyOpConfirm": "Delete this entry? This can't be undone.",
+      "toPayOutTooltip": "To pay out = earned at the hourly rate + bonuses − advances already handed out, plus the carry-over from the previous period. Accrued bonuses are included too, even though they have not been paid in cash yet.",
+      "bonusAccruedTooltip": "An accrued bonus is added to the staff member’s “to pay out” balance but was never handed over in cash — the point’s till never saw it. A regular bonus, by contrast, has already left the till as cash."
     },
     "submit": {
       "stepLabel": "Step",
@@ -1241,7 +1247,6 @@
       "calculatedRevenue": "Calculated revenue:",
       "difference": "Difference:",
       "expensesTitle": "Expenses",
-      "expensesReadOnlyHint": "Logged in advance from Home via the \"Expenses\" button — view only here.",
       "expensesEmpty": "No expenses yet.",
       "amountPlaceholder": "Amount",
       "commentPlaceholder": "Comment (optional)",
@@ -1288,7 +1293,6 @@
       "paymentMethodTitle": "Payment method",
       "stopConfirmQuestion": "Are you sure?",
       "stopConfirmButton": "Finish",
-      "expiredLabel": "Time's up",
       "soundHintBody": "Sound and vibration fire when a launch's time runs out — keep the app open",
       "noPricingError": "The zone's tariff hasn't been set by the owner yet",
       "assetInactiveHint": "The asset is paused — a new visitor can't be added",
@@ -1305,7 +1309,6 @@
       "allZonesOption": "All zones",
       "receiptTitle": "Launch receipt",
       "receiptDoneTitle": "Launch recorded",
-      "expiredLabel": "Time's up",
       "timedTariffHint": "Variants"
     },
     "counters": {

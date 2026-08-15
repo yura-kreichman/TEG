@@ -190,7 +190,6 @@
     "tabZones": "Kasalar",
     "tabOperators": "Çalışanlar",
     "tabCalendar": "Takvim",
-    "vsPreviousPeriodSuffix": "önceki döneme göre",
     "cashLabel": "Nakit",
     "mobileLabel": "Kartlı",
     "abonementLabel": "Bakiye",
@@ -222,7 +221,8 @@
     "compactMillionSuffix": "M",
     "chartScrollLeft": "Sola kaydır",
     "chartScrollRight": "Sağa kaydır",
-    "genericError": "Rapor yüklenemedi"
+    "genericError": "Rapor yüklenemedi",
+    "profitTooltip": "Kâr = gelir − giderler − maaşlar. Maaşlara nakit verilen avanslar ve primler dahildir; yalnızca tahakkuk eden primler ödenene kadar girmez. Müşteri bakiyesinden yapılan ödeme gelire ikinci kez sayılmaz — o para abonelik yüklemesinde kaydedilmiştir."
   },
   "admin": {
     "loginTitle": "Yönetici girişi",
@@ -743,7 +743,6 @@
     "allPoints": "Tüm noktalar",
     "nameLabel": "Bölge adı",
     "iconLabel": "Simge",
-    "noTariffs": "Tarife belirlenmedi",
     "assetsCount": "varlık",
     "noZones": "Henüz hiç bölge yok — aşağıdan ilkini ekleyin.",
     "newZoneTitle": "Yeni bölge",
@@ -768,7 +767,8 @@
     },
     "zoneActiveChip": "Aktif",
     "zoneInactiveChip": "Etkin değil",
-    "noOperatorsAttached": "Çalışan yok"
+    "noOperatorsAttached": "Çalışan yok",
+    "accountingModeTooltip": "Mod, çalışanın verileri her gün nasıl gireceğini belirler. “Sayaçlar” — cihaz okumalarını kaydeder, sistem önceki teslimle farkı alır. “Başlatmalar” — her seansı dokunuşla işaretler. “Konaklamalar” — zamanlayıcıyı başlatıp durdurur, fiyat süreye göre hesaplanır. “Biletler” — sipariş satar, iptal isteğe bağlıdır. “Yalnızca kasa” — varlık ve tarife olmadan tek bir tutar girer. Mod, bölgede ilk sonuç teslimi olana kadar değiştirilebilir; ilkinden sonra kalıcı olarak sabitlenir."
   },
   "zoneDetail": {
     "notFound": "Bölge bulunamadı.",
@@ -817,7 +817,6 @@
     "countersTapAssistLabel": "Seanslarla okumalar",
     "countersTapAssistHint": "Okuma, sonuç teslimindeki manuel giriş yerine çalışanın seanslarına göre otomatik hesaplanır",
     "printReceiptLabel": "Makbuz yazdırma",
-    "printReceiptHint": "Çalışan ziyaret/başlatmadan sonra ziyaretçiye makbuz yazdırabilecek",
     "amountRoundingLabel": "Tutar yuvarlama",
     "amountRoundingHint": "„Gerçek süre” başlatma tutarı tam para birimine yuvarlanır: yarımdan az — aşağı, yarım ve üzeri — yukarı",
     "printTicketsLabel": "Bilet yazdırma",
@@ -849,7 +848,11 @@
     "gameRoomUseSingleRateButton": "Tek fiyata dön",
     "launchesTimedTariffHint": "Başlatma geri sayımla ilerler; varlık durdurulana/serbest bırakılana kadar meşguldür",
     "launchesPricingModeInstant": "Zamanlayıcısız",
-    "launchesPricingModeTimed": "Zamanlayıcılı"
+    "launchesPricingModeTimed": "Zamanlayıcılı",
+    "assetsTooltip": "Varlık, bölge içindeki tek bir fiziksel birimdir: belirli bir araba, trambolin ya da konsol. Sonuçlar her varlık için ayrı teslim edilir, bu yüzden her birinin kendi geçmişi ve kendi okumaları olur. Bozuk varlığı silmek yerine devre dışı bırakın: silmek geçmiş teslimlerini de götürür.",
+    "tariffsTooltipCounters": "Tarife, bir seansın fiyatıdır. Gelir şöyle hesaplanır: (şu anki okuma − önceki teslimdeki okuma) × fiyat. Varlığın farklı çalışma modları varsa tarife birden fazla olabilir — örneğin normal ve ikinci hız: her birinin kendi sayacı ve kendi fiyatı olur.",
+    "tariffsTooltipLaunches": "Tarife, bir başlatmanın fiyatıdır. “Zamanlayıcısız” — çalışan seansı dokunarak işaretler. “Zamanlayıcılı” — başlatma geri sayımla ilerler ve varlık durdurulana ya da serbest bırakılana kadar meşgul sayılır.",
+    "tariffsTooltipStays": "Tarife, kalış fiyatıdır. “Girişe göre” — kişi ne kadar kalırsa kalsın sabit bir tutar. “Gerçekleşene göre” — dakika fiyatı: sistem süreyi başlangıçtan durdurmaya kadar kendi sayar ve tam dakikaya yukarı yuvarlar."
   },
   "abonements": {
     "title": "Abonelikler",
@@ -937,7 +940,8 @@
     "tenureDays": "gün",
     "tenureMonths": "ay",
     "tenureYears": "yıl",
-    "historyRefund": "İade"
+    "historyRefund": "İade",
+    "ownerTopupTooltip": "Sahibin yüklemesi hiçbir yerde muhasebeleşmez: para müşterinin bakiyesinde görünür ama noktanın kasasına, raporlara ve özetlere girmez. Bu bir hediye ya da telafidir, satış değil. Abonelikleri yalnızca çalışan satar — orada ödeme kasadan geçer."
   },
   "operators": {
     "title": "Çalışanlar",
@@ -1017,8 +1021,6 @@
     "zoneBalancesLinkHint": "Noktada ne kadar olması gerektiği ve tahsilat geçmişi",
     "zoneBalancesTotalLabel": "Toplam",
     "abonementCashLabel": "Abonelikler",
-    "abonementSoldTitle": "Abonelik satışları",
-    "abonementSoldHint": "Abonelik satışlarına göre",
     "recordCollectionButton": "Tahsilat ekle",
     "collectionAmountLabel": "Tahsilat tutarı",
     "collectionSlipTitle": "Tahsilat belgesi",
@@ -1063,7 +1065,9 @@
     "deleteCollectionError": "Tahsilat silinemedi",
     "collectionAdvanceLabel": "Avans tahsilat",
     "collectionAdvanceToastPrefix": "Avans tahsilat olarak ayrıldı",
-    "collectionAdvanceToastSuffix": "— sonuçlar teslim edildikten sonra bölge bakiyesinde görünecek"
+    "collectionAdvanceToastSuffix": "— sonuçlar teslim edildikten sonra bölge bakiyesinde görünecek",
+    "zoneBalanceTooltip": "Bakiye, bölgenin tüm defterinin en baştan toplamıdır; seçilen dönemin değil. Gelirle büyür; tahsilat, gider ve çalışanın noktanın kasasından aldığı avansla azalır.",
+    "collectionAdvanceTooltip": "O anda bölgelerde bulunandan fazlasını aldığınızda ortaya çıkar — örneğin çalışanın henüz teslim etmediği gelirle birlikte. Fazlalık hiçbir bölgeye bağlanmaz: gelecekteki geliri bekler ve en yakın sonuç tesliminde kapanır."
   },
   "readings": {
     "title": "Günlük sonuçlar",
@@ -1076,7 +1080,6 @@
     "abonementSalesTitle": "Abonelikler",
     "goodsReconciliationsTitle": "Ürünler",
     "pointsEmptyHint": "Önce bir nokta ekleyin.",
-    "operatorLabel": "Çalışan",
     "noSubmissionsPrefix": "Veri yok:",
     "prevMonth": "Önceki ay",
     "nextMonth": "Sonraki ay",
@@ -1126,7 +1129,6 @@
       "Kasım",
       "Aralık"
     ],
-    "backToHome": "Ana sayfa",
     "lastSubmissionNote": "son teslim",
     "editedByOwner": "Sahip tarafından değiştirildi",
     "wasLabel": "önceki",
@@ -1143,7 +1145,9 @@
     "saveError": "Değişiklikler kaydedilemedi",
     "deleteConfirmTitle": "Teslim silinsin mi?",
     "deleteConfirmBody": "Bu teslime ait okumalar, tutarlar ve para defteri kayıtları silinecek. İşlem değişiklik günlüğüne kaydedilecek. Geri alınamaz.",
-    "deleteError": "Teslim silinemedi"
+    "deleteError": "Teslim silinemedi",
+    "differenceTooltip": "Fark = fiili kasa − (hesaplanan gelir − bakiyeden ödenen). Bakiyeden ödeme çıkarılır, çünkü o para daha önce, müşteri yükleme yaptığında girmiştir ve bu teslimin kasasına giremez. Sıfır, tuttuğu anlamına gelir.",
+    "actualCashTooltip": "Buna nakit, nakit olmayan ödemeler ve Fark’ta sayılan bakiye ödemelerinin payı dahildir. Bu yüzden tutar, kasada fiilen bulunan paradan abonelerden ödenen kadar fazla olabilir."
   },
   "operatorApp": {
     "greeting": "Merhaba,",
@@ -1215,7 +1219,9 @@
       "carryoverHint": "Bakiyede tek seferlik düzeltme — örneğin önceki sistemden devreden bakiyenin aktarılması. Negatif olabilir.",
       "moduleDisabledNote": "«Çalışma süresi» modülü şirketiniz için etkinleştirilmedi",
       "deleteShiftConfirm": "Bu vardiya silinsin mi? Bu işlem geri alınamaz. Yalnızca çalışanın son vardiyası silinebilir.",
-      "deleteMoneyOpConfirm": "Bu kayıt silinsin mi? Bu işlem geri alınamaz."
+      "deleteMoneyOpConfirm": "Bu kayıt silinsin mi? Bu işlem geri alınamaz.",
+      "toPayOutTooltip": "Ödenecek = saatlik ücretle kazanılan + primler − daha önce verilen avanslar, artı önceki dönemden devir. Tahakkuk eden primler de buraya dahildir, henüz nakit ödenmemiş olsalar bile.",
+      "bonusAccruedTooltip": "Tahakkuk eden prim, çalışanın “ödenecek” bakiyesine yazılır ama nakit verilmemiştir — noktanın kasası bunu görmez. Normal prim ise tersine, kasadan nakit olarak çoktan çıkmıştır."
     },
     "submit": {
       "stepLabel": "Adım",
@@ -1241,7 +1247,6 @@
       "calculatedRevenue": "Hesaplanan gelir:",
       "difference": "Fark:",
       "expensesTitle": "Giderler",
-      "expensesReadOnlyHint": "Ana Sayfa'daki \"Giderler\" düğmesiyle önceden girilir — burada sadece görüntülenir.",
       "expensesEmpty": "Henüz gider yok.",
       "amountPlaceholder": "Tutar",
       "commentPlaceholder": "Yorum (isteğe bağlı)",
@@ -1288,7 +1293,6 @@
       "paymentMethodTitle": "Ödeme yöntemi",
       "stopConfirmQuestion": "Emin misiniz?",
       "stopConfirmButton": "Bitir",
-      "expiredLabel": "Süre doldu",
       "soundHintBody": "Başlatmanın süresi dolduğunda ses ve titreşim çalışır — uygulamayı açık tutun",
       "noPricingError": "Bölge tarifesi henüz sahibi tarafından ayarlanmadı",
       "assetInactiveHint": "Varlık duraklatıldı — yeni ziyaretçi eklenemez",
@@ -1305,7 +1309,6 @@
       "allZonesOption": "Tüm bölgeler",
       "receiptTitle": "Başlatma makbuzu",
       "receiptDoneTitle": "Başlatma kaydedildi",
-      "expiredLabel": "Süre doldu",
       "timedTariffHint": "Seçenekler"
     },
     "counters": {

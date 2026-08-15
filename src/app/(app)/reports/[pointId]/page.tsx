@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Building2, ChevronLeft, ChevronRight, Frown, Gift, MapPin, Meh, ShoppingBag, Smile } from "lucide-react";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
+import { InfoTooltip } from "@/components/info-tooltip";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import {
@@ -551,7 +552,10 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
               не сразу вплотную (запрос пользователя 2026-07-16), поэтому
               gap-10, а не gap-4. */}
           <div className="ml-10 flex flex-col">
-            <span className="text-caption-airbnb text-muted-foreground">{t.reports.profitLabel}</span>
+            <span className="flex items-center gap-1.5 text-caption-airbnb text-muted-foreground">
+              {t.reports.profitLabel}
+              <InfoTooltip text={t.reports.profitTooltip} />
+            </span>
             <span className="text-[clamp(1.375rem,7vw,2rem)] font-extrabold leading-none tracking-[-0.02em] tabular-nums">
               <Money value={data.profitAndLoss.profit} size="display" displayScale={headlineDisplayScale} />
             </span>

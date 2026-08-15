@@ -190,7 +190,6 @@
     "tabZones": "Case",
     "tabOperators": "Angajați",
     "tabCalendar": "Calendar",
-    "vsPreviousPeriodSuffix": "față de perioada anterioară",
     "cashLabel": "Numerar",
     "mobileLabel": "Fără numerar",
     "abonementLabel": "Sold",
@@ -222,7 +221,8 @@
     "compactMillionSuffix": "M",
     "chartScrollLeft": "Derulare la stânga",
     "chartScrollRight": "Derulare la dreapta",
-    "genericError": "Raportul nu a putut fi încărcat"
+    "genericError": "Raportul nu a putut fi încărcat",
+    "profitTooltip": "Profit = încasări − cheltuieli − salarii. În salarii intră avansurile și primele date în numerar; primele doar acordate contabil nu intră până nu sunt plătite. Plata din soldul clientului nu se numără a doua oară în încasări — banii aceia au fost înregistrați la alimentare."
   },
   "admin": {
     "loginTitle": "Autentificare administrator",
@@ -743,7 +743,6 @@
     "allPoints": "Toate punctele",
     "nameLabel": "Numele zonei",
     "iconLabel": "Pictogramă",
-    "noTariffs": "Niciun tarif setat",
     "assetsCount": "activ(e)",
     "noZones": "Nicio zonă încă — adăugați prima mai jos.",
     "newZoneTitle": "Zonă nouă",
@@ -768,7 +767,8 @@
     },
     "zoneActiveChip": "Activ",
     "zoneInactiveChip": "Inactivă",
-    "noOperatorsAttached": "Fără angajați"
+    "noOperatorsAttached": "Fără angajați",
+    "accountingModeTooltip": "Modul decide cum introduce angajatul datele în fiecare zi. „Contoare” — notează indicațiile aparatelor, iar sistemul ia diferența față de predarea anterioară. „Porniri” — marchează fiecare sesiune printr-o atingere. „Sosiri” — pornește și oprește un cronometru, prețul se calculează după timp. „Bilete” — vinde comenzi, validarea fiind opțională. „Doar casă” — introduce o singură sumă, fără active și tarife. Modul poate fi schimbat cât timp zona nu are nicio predare a rezultatelor; după prima, rămâne fixat definitiv."
   },
   "zoneDetail": {
     "notFound": "Zona nu a fost găsită.",
@@ -817,7 +817,6 @@
     "countersTapAssistLabel": "Citiri prin sesiuni",
     "countersTapAssistHint": "Citirea este calculată automat din sesiunile angajatului — în loc de introducere manuală la predarea rezultatelor",
     "printReceiptLabel": "Imprimare chitanță",
-    "printReceiptHint": "Angajatul va putea imprima o chitanță pentru vizitator după vizită/pornire",
     "amountRoundingLabel": "Rotunjirea sumei",
     "amountRoundingHint": "Suma sesiunii „pe bază de timp” este rotunjită la unitatea monetară întreagă: sub jumătate — în jos, jumătate și peste — în sus",
     "printTicketsLabel": "Imprimare bilete",
@@ -849,7 +848,11 @@
     "gameRoomUseSingleRateButton": "Revino la un singur preț",
     "launchesTimedTariffHint": "Pornirea rulează cu numărătoare inversă; activul este ocupat până la oprire/eliberare",
     "launchesPricingModeInstant": "Fără cronometru",
-    "launchesPricingModeTimed": "Cu cronometru"
+    "launchesPricingModeTimed": "Cu cronometru",
+    "assetsTooltip": "Un activ este o singură unitate fizică din zonă: o anumită mașinuță, trambulină sau consolă. Rezultatele se predau pe fiecare activ separat, așa că fiecare își păstrează istoricul și indicațiile proprii. Dezactivați un activ stricat în loc să îl ștergeți: ștergerea îi ia și predările anterioare.",
+    "tariffsTooltipCounters": "Tariful este prețul unei sesiuni. Încasarea se calculează astfel: (indicația curentă − indicația de la predarea anterioară) × preț. Pot exista mai multe tarife dacă activul are moduri diferite de funcționare — de exemplu viteza obișnuită și a doua: fiecare cu contorul și prețul său.",
+    "tariffsTooltipLaunches": "Tariful este prețul unei porniri. „Fără cronometru” — angajatul doar marchează sesiunea printr-o atingere. „Cu cronometru” — pornirea merge în numărătoare inversă, iar activul e considerat ocupat până când e oprit sau eliberat.",
+    "tariffsTooltipStays": "Tariful este prețul șederii. „La intrare” — o sumă fixă, oricât ar sta persoana. „După timpul real” — preț pe minut: sistemul numără singur timpul de la pornire la oprire și rotunjește în sus la minutul întreg."
   },
   "abonements": {
     "title": "Abonamente",
@@ -937,7 +940,8 @@
     "tenureDays": "zile",
     "tenureMonths": "luni",
     "tenureYears": "ani",
-    "historyRefund": "Rambursare"
+    "historyRefund": "Rambursare",
+    "ownerTopupTooltip": "Alimentarea făcută de proprietar nu se contabilizează nicăieri: banii apar în soldul clientului, dar nu ajung în casa punctului, în rapoarte sau în sinteze. Este un cadou sau o compensație, nu o vânzare. Abonamentele le vinde doar angajatul — acolo plata trece prin casă."
   },
   "operators": {
     "title": "Angajați",
@@ -1017,8 +1021,6 @@
     "zoneBalancesLinkHint": "Cât ar trebui să fie pe punct și istoricul încasărilor",
     "zoneBalancesTotalLabel": "Total",
     "abonementCashLabel": "Abonamente",
-    "abonementSoldTitle": "Vânzări de abonamente",
-    "abonementSoldHint": "Pe baza vânzărilor de abonamente",
     "recordCollectionButton": "Adaugă o încasare",
     "collectionAmountLabel": "Suma încasării",
     "collectionSlipTitle": "Document de încasare",
@@ -1063,7 +1065,9 @@
     "deleteCollectionError": "Nu s-a putut șterge colectarea",
     "collectionAdvanceLabel": "Colectare în avans",
     "collectionAdvanceToastPrefix": "Pus deoparte ca o colectare în avans",
-    "collectionAdvanceToastSuffix": "— va apărea în soldul zonei după trimiterea rezultatelor"
+    "collectionAdvanceToastSuffix": "— va apărea în soldul zonei după trimiterea rezultatelor",
+    "zoneBalanceTooltip": "Soldul este suma întregului registru al zonei de la bun început, nu pe perioada selectată. Crește din încasări și scade prin colectări, cheltuieli și avansul luat de angajat din casa punctului.",
+    "collectionAdvanceTooltip": "Apare când ați ridicat mai mult decât se afla atunci în zone — de exemplu, împreună cu încasări pe care angajatul nu le predase încă. Surplusul nu se leagă de nicio zonă: așteaptă încasările viitoare și se stinge la următoarea predare a rezultatelor."
   },
   "readings": {
     "title": "Rezultate zilnice",
@@ -1076,7 +1080,6 @@
     "abonementSalesTitle": "Abonamente",
     "goodsReconciliationsTitle": "Produse",
     "pointsEmptyHint": "Adăugați mai întâi un punct.",
-    "operatorLabel": "Angajat",
     "noSubmissionsPrefix": "Nicio dată pentru",
     "prevMonth": "Luna precedentă",
     "nextMonth": "Luna următoare",
@@ -1126,7 +1129,6 @@
       "noiembrie",
       "decembrie"
     ],
-    "backToHome": "Acasă",
     "lastSubmissionNote": "ultima predare",
     "editedByOwner": "Modificat de proprietar",
     "wasLabel": "a fost",
@@ -1143,7 +1145,9 @@
     "saveError": "Nu s-au putut salva modificările",
     "deleteConfirmTitle": "Ștergeți această predare?",
     "deleteConfirmBody": "Citirile, sumele și înregistrările din jurnalul de bani pentru această predare vor fi șterse. Acțiunea este înregistrată și nu poate fi anulată.",
-    "deleteError": "Nu s-a putut șterge predarea"
+    "deleteError": "Nu s-a putut șterge predarea",
+    "differenceTooltip": "Diferența = casa efectivă − (încasarea calculată − plătit din sold). Plata din sold se scade pentru că acei bani au intrat mai devreme, când clientul a alimentat, și nu puteau ajunge în casa acestei predări. Zero înseamnă că se potrivește.",
+    "actualCashTooltip": "Aici intră numerarul, plățile prin card și partea din plățile cu sold luată în calcul la Diferență. De aceea suma poate depăși banii aflați fizic în casă, cu valoarea plăților din abonamente."
   },
   "operatorApp": {
     "greeting": "Salut,",
@@ -1215,7 +1219,9 @@
       "carryoverHint": "Ajustare unică a soldului — de exemplu, reportul soldului dintr-un sistem anterior. Poate fi negativ.",
       "moduleDisabledNote": "Modulul „Timp de lucru” nu este activat pentru compania dvs.",
       "deleteShiftConfirm": "Ștergeți această tură? Acțiunea este ireversibilă. Se poate șterge doar ultima tură a angajatului.",
-      "deleteMoneyOpConfirm": "Ștergeți această înregistrare? Acțiunea este ireversibilă."
+      "deleteMoneyOpConfirm": "Ștergeți această înregistrare? Acțiunea este ireversibilă.",
+      "toPayOutTooltip": "De plătit = câștigat la tarif + prime − avansurile deja acordate, plus reportul din perioada anterioară. Primele doar acordate contabil intră și ele aici, deși nu au fost plătite încă în numerar.",
+      "bonusAccruedTooltip": "Prima acordată contabil intră în soldul „de plătit” al angajatului, dar nu a fost dată în numerar — casa punctului nu a simțit-o. Prima obișnuită, dimpotrivă, a ieșit deja din casă în numerar."
     },
     "submit": {
       "stepLabel": "Pasul",
@@ -1241,7 +1247,6 @@
       "calculatedRevenue": "Venit calculat:",
       "difference": "Diferență:",
       "expensesTitle": "Cheltuieli",
-      "expensesReadOnlyHint": "Se introduce în avans din Acasă, prin butonul „Cheltuieli” — aici doar vizualizare.",
       "expensesEmpty": "Încă nu există cheltuieli.",
       "amountPlaceholder": "Sumă",
       "commentPlaceholder": "Comentariu (opțional)",
@@ -1288,7 +1293,6 @@
       "paymentMethodTitle": "Metodă de plată",
       "stopConfirmQuestion": "Sigur?",
       "stopConfirmButton": "Finalizează",
-      "expiredLabel": "Timpul a expirat",
       "soundHintBody": "Sunetul și vibrația se declanșează când timpul lansării expiră — ține aplicația deschisă",
       "noPricingError": "Tariful zonei nu a fost încă setat de proprietar",
       "assetInactiveHint": "Activul este în pauză — nu se poate adăuga un vizitator nou",
@@ -1305,7 +1309,6 @@
       "allZonesOption": "Toate zonele",
       "receiptTitle": "Chitanță pornire",
       "receiptDoneTitle": "Pornire înregistrată",
-      "expiredLabel": "Timpul a expirat",
       "timedTariffHint": "Variante"
     },
     "counters": {

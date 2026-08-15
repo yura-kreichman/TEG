@@ -249,6 +249,11 @@ export async function GET(request: Request) {
         amount: Math.abs(Number(op.amount)),
         pool: (op.type === "advance" ? "advance_taken" : "bonus_taken") as "advance_taken" | "bonus_taken",
         operatorName: op.beneficiaryOperator?.name ?? op.performedByOperator?.name ?? null,
+        // Переход в карточку сотрудника (запрос пользователя 2026-08-14) —
+        // правка и удаление этих строк живут именно там, отсюда они только
+        // видны. Тот же приём, что в реестре "Авансы и премии". Получатель, а
+        // не исполнитель: строка про то, ЧЕЙ это аванс, а не кто его провёл.
+        operatorId: op.beneficiaryOperatorId,
         comment: op.comment,
         ...performer(op),
         // Самообслуживание сотрудника — самостоятельное событие, а не часть

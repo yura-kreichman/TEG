@@ -23,6 +23,7 @@ import {
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
+import { InfoTooltip } from "@/components/info-tooltip";
 import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconActionButton } from "@/components/kebab-menu";
@@ -941,7 +942,10 @@ export default function ReadingsCalendarPage() {
                         точки, важнее валовой Расчётной выручки выше (запрос
                         пользователя 2026-07-19). */}
                     <div className="flex items-center justify-between text-body-airbnb font-bold">
-                      <span className="text-foreground">{t.operatorApp.submit.actualCash}</span>
+                      <span className="flex items-center gap-1.5 text-foreground">
+                        {t.operatorApp.submit.actualCash}
+                        <InfoTooltip text={t.readings.actualCashTooltip} />
+                      </span>
                       <span className="text-foreground">
                         <Money value={daySummary.cash + daySummary.mobile + daySummary.abonementInCash} />
                       </span>
@@ -957,6 +961,10 @@ export default function ReadingsCalendarPage() {
                     <div className="flex items-center justify-between text-caption-airbnb">
                       <span className="flex items-center gap-1.5">
                         {t.operatorApp.submit.difference}
+                        {/* Предупреждающий треугольник остаётся отдельно и
+                            рядом: это сигнал «не сошлось», а не справка, и
+                            прятать его в тултип нельзя. */}
+                        <InfoTooltip text={t.readings.differenceTooltip} />
                         {daySummary.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
                       </span>
                       <span
@@ -1265,11 +1273,18 @@ export default function ReadingsCalendarPage() {
                                   минимальный вид короны, что и везде. */}
                               {card.edited && <Crown className="size-3.5 shrink-0 text-success" />}
                             </div>
-                            <p className="text-caption-airbnb">
-                              {t.readings.operatorLabel}: {card.operatorName}
-                              {card.accountingMode === "counters" &&
-                                card.editable &&
-                                ` · ${t.readings.lastSubmissionNote}`}
+                            {/* Иконка вместо слова "Сотрудник:" (запрос
+                                пользователя 2026-08-14). Именно простая
+                                иконка Users и имя — без фото и без выбранной
+                                сотрудником иконки (уточнение того же дня),
+                                поэтому avatarUrl/iconKey передаём пустыми, а
+                                не тянем с сервера. isOwner всегда false:
+                                сдачу итогов проводит только Сотрудник. */}
+                            <p className="flex flex-wrap items-center gap-x-1.5 text-caption-airbnb">
+                              <PerformedByTag name={card.operatorName} isOwner={false} avatarUrl={null} iconKey={null} />
+                              {card.accountingMode === "counters" && card.editable && (
+                                <span>· {t.readings.lastSubmissionNote}</span>
+                              )}
                             </p>
                           </div>
                           <div className="flex shrink-0 items-center gap-1.5">

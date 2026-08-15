@@ -190,7 +190,6 @@
     "tabZones": "Kassalar",
     "tabOperators": "İşçilər",
     "tabCalendar": "Təqvim",
-    "vsPreviousPeriodSuffix": "əvvəlki dövrlə müqayisədə",
     "cashLabel": "Nağd",
     "mobileLabel": "Nağdsız",
     "abonementLabel": "Balans",
@@ -222,7 +221,8 @@
     "compactMillionSuffix": "M",
     "chartScrollLeft": "Sola sürüşdür",
     "chartScrollRight": "Sağa sürüşdür",
-    "genericError": "Hesabatı yükləmək mümkün olmadı"
+    "genericError": "Hesabatı yükləmək mümkün olmadı",
+    "profitTooltip": "Mənfəət = gəlir − xərclər − əməkhaqqı. Əməkhaqqına nağd verilmiş avanslar və mükafatlar daxildir; hesablanmış mükafatlar verilənə qədər daxil olmur. Müştəri balansından ödəniş gəlirə ikinci dəfə sayılmır — bu pul abunə artırılanda nəzərə alınıb."
   },
   "admin": {
     "loginTitle": "Administrator girişi",
@@ -743,7 +743,6 @@
     "allPoints": "Bütün nöqtələr",
     "nameLabel": "Zonanın adı",
     "iconLabel": "Nişan",
-    "noTariffs": "Tariflər təyin edilməyib",
     "assetsCount": "aktiv",
     "noZones": "Hələ heç bir zona yoxdur — aşağıda birincisini əlavə edin.",
     "newZoneTitle": "Yeni zona",
@@ -768,7 +767,8 @@
     },
     "zoneActiveChip": "Aktiv",
     "zoneInactiveChip": "Qeyri-aktiv",
-    "noOperatorsAttached": "Əməkdaş yoxdur"
+    "noOperatorsAttached": "Əməkdaş yoxdur",
+    "accountingModeTooltip": "Rejim işçinin hər gün məlumatı necə daxil edəcəyini müəyyən edir. «Sayğaclar» — cihaz göstəricilərini yazır, sistem keçən təhvillə fərqi götürür. «Buraxılışlar» — hər seansı toxunuşla qeyd edir. «Gəlişlər» — taymeri yandırıb söndürür, qiymət vaxta görə hesablanır. «Biletlər» — sifariş satır, ödəmə istəyə görə. «Yalnız kassa» — aktiv və tarifsiz bir məbləğ daxil edir. Rejimi zona üzrə heç bir yekun təhvili olmayana qədər dəyişmək olar; birincidən sonra o həmişəlik sabitlənir."
   },
   "zoneDetail": {
     "notFound": "Zona tapılmadı.",
@@ -817,7 +817,6 @@
     "countersTapAssistLabel": "Seanslarla göstəricilər",
     "countersTapAssistHint": "Göstərici işçinin seanslarına əsasən avtomatik hesablanır — nəticələrin təhvilində əl ilə daxil etmək əvəzinə",
     "printReceiptLabel": "Qəbz çapı",
-    "printReceiptHint": "İşçi qonaq üçün baş çəkmə/başlatmadan sonra qəbz çap edə biləcək",
     "amountRoundingLabel": "Məbləğin yuvarlaqlaşdırılması",
     "amountRoundingHint": "«Faktiki» pusk məbləği tam valyuta vahidinə yuvarlaqlaşdırılır: yarımdan az — aşağı, yarım və çox — yuxarı",
     "printTicketsLabel": "Biletlərin çapı",
@@ -849,7 +848,11 @@
     "gameRoomUseSingleRateButton": "Tək qiymətə qayıt",
     "launchesTimedTariffHint": "Buraxılış geri sayımla gedir; dayandırılana/azad edilənə qədər aktiv məşğuldur",
     "launchesPricingModeInstant": "Taymersiz",
-    "launchesPricingModeTimed": "Taymerlə"
+    "launchesPricingModeTimed": "Taymerlə",
+    "assetsTooltip": "Aktiv — zona daxilindəki bir fiziki vahiddir: konkret maşın, batut, konsol. Yekunlar hər aktiv üzrə ayrıca təhvil verilir, ona görə hər birinin öz tarixçəsi və öz göstəriciləri var. Sınmış aktivi silmək əvəzinə deaktiv edin: silmə onunla birlikdə keçmiş təhvilləri də aparır.",
+    "tariffsTooltipCounters": "Tarif — bir seansın qiymətidir. Gəlir belə hesablanır: (indiki göstərici − keçən təhvildəki göstərici) × qiymət. Aktivin müxtəlif iş rejimləri varsa, tarif bir neçə ola bilər — məsələn, adi və ikinci sürət: hər birinin öz sayğacı və öz qiyməti var.",
+    "tariffsTooltipLaunches": "Tarif — bir buraxılışın qiymətidir. «Taymersiz» — işçi seansı sadəcə toxunuşla qeyd edir. «Taymerlə» — buraxılış geri sayımla gedir və aktiv dayandırılana və ya azad edilənə qədər məşğul sayılır.",
+    "tariffsTooltipStays": "Tarif — qalma qiymətidir. «Giriş üçün» — insan nə qədər qalmasından asılı olmayaraq sabit məbləğ. «Faktiki üzrə» — bir dəqiqənin qiyməti: sistem başlanğıcdan dayanmaya qədər vaxtı özü sayır və tam dəqiqəyə qədər yuxarı yuvarlaqlaşdırır."
   },
   "abonements": {
     "title": "Abonementlər",
@@ -937,7 +940,8 @@
     "tenureDays": "gün",
     "tenureMonths": "ay",
     "tenureYears": "il",
-    "historyRefund": "Geri qaytarma"
+    "historyRefund": "Geri qaytarma",
+    "ownerTopupTooltip": "Sahibin hesablaması heç yerdə nəzərə alınmır: pul müştərinin balansında görünür, lakin nöqtə kassasına, hesabatlara və icmallara düşmür. Bu hədiyyə və ya kompensasiyadır, satış deyil. Abunəni yalnız işçi satır — orada ödəniş kassadan keçir."
   },
   "operators": {
     "title": "İşçilər",
@@ -1017,8 +1021,6 @@
     "zoneBalancesLinkHint": "Nöqtədə nə qədər olmalıdır və inkassasiya tarixçəsi",
     "zoneBalancesTotalLabel": "Cəmi",
     "abonementCashLabel": "Abonementlər",
-    "abonementSoldTitle": "Abonement satışları",
-    "abonementSoldHint": "Abonement satışları üzrə",
     "recordCollectionButton": "İnkassasiya əlavə et",
     "collectionAmountLabel": "İnkassasiya məbləği",
     "collectionSlipTitle": "İnkassasiya sənədi",
@@ -1063,7 +1065,9 @@
     "deleteCollectionError": "İnkassasiyanı silmək mümkün olmadı",
     "collectionAdvanceLabel": "Avans inkassasiya",
     "collectionAdvanceToastPrefix": "Avans inkassasiya kimi ayrıldı",
-    "collectionAdvanceToastSuffix": "— nəticələr təqdim edildikdən sonra zona qalığında görünəcək"
+    "collectionAdvanceToastSuffix": "— nəticələr təqdim edildikdən sonra zona qalığında görünəcək",
+    "zoneBalanceTooltip": "Qalıq — zonanın bütün jurnalının lap əvvəldən cəmidir, seçilmiş dövr üzrə deyil. O, gəlirdən artır və inkassasiya, xərclər və işçinin nöqtə kassasından götürdüyü avansla azalır.",
+    "collectionAdvanceTooltip": "O an zonalarda olandan çox götürdüyünüz zaman yaranır — məsələn, işçinin hələ təhvil vermədiyi gəlirlə birlikdə. Artıq məbləğ zonaya bağlanmır, gələcək gəliri gözləyir və ən yaxın yekun təhvili ilə bağlanır."
   },
   "readings": {
     "title": "Günlər üzrə yekunlar",
@@ -1076,7 +1080,6 @@
     "abonementSalesTitle": "Abonementlər",
     "goodsReconciliationsTitle": "Mallar",
     "pointsEmptyHint": "Əvvəlcə nöqtə əlavə edin.",
-    "operatorLabel": "İşçi",
     "noSubmissionsPrefix": "Məlumat yoxdur:",
     "prevMonth": "Əvvəlki ay",
     "nextMonth": "Növbəti ay",
@@ -1126,7 +1129,6 @@
       "noyabr",
       "dekabr"
     ],
-    "backToHome": "Ana səhifə",
     "lastSubmissionNote": "son hesabat",
     "editedByOwner": "Sahibkar tərəfindən dəyişdirilib",
     "wasLabel": "əvvəl",
@@ -1143,7 +1145,9 @@
     "saveError": "Dəyişiklikləri yadda saxlamaq mümkün olmadı",
     "deleteConfirmTitle": "Hesabat silinsin?",
     "deleteConfirmBody": "Bu hesabata aid göstəricilər, məbləğlər və pul jurnalındakı yazılar silinəcək. Əməliyyat dəyişikliklər jurnalına düşəcək. Geri qaytarmaq mümkün deyil.",
-    "deleteError": "Hesabatı silmək mümkün olmadı"
+    "deleteError": "Hesabatı silmək mümkün olmadı",
+    "differenceTooltip": "Fərq = faktiki kassa − (hesabi gəlir − balansdan ödənilən). Balansdan ödəniş çıxılır, çünki bu pul daha əvvəl, müştəri artıranda gəlib və bu təhvilin kassasına düşə bilməzdi. Sıfır «uyğun gəldi» deməkdir.",
+    "actualCashTooltip": "Buraya nağd, nağdsız və Fərqdə nəzərə alınan balansdan ödənişin hissəsi daxildir. Ona görə məbləğ kassada fiziki olan puldan abunələrdən ödənilən qədər çox ola bilər."
   },
   "operatorApp": {
     "greeting": "Salam,",
@@ -1215,7 +1219,9 @@
       "carryoverHint": "Balansın birdəfəlik korreksiyası — məsələn, əvvəlki uçot sistemindən qalıq balansın köçürülməsi. Mənfi ola bilər.",
       "moduleDisabledNote": "«İş vaxtı» modulu şirkətiniz üçün qoşulmayıb",
       "deleteShiftConfirm": "Bu növbə silinsin? Əməliyyat geri qaytarıla bilməz. Yalnız işçinin son növbəsini silmək mümkündür.",
-      "deleteMoneyOpConfirm": "Bu yazı silinsin? Əməliyyat geri qaytarıla bilməz."
+      "deleteMoneyOpConfirm": "Bu yazı silinsin? Əməliyyat geri qaytarıla bilməz.",
+      "toPayOutTooltip": "Verilməyə = dərəcə üzrə qazanılan + mükafatlar − artıq verilmiş avanslar, üstəgəl keçən dövrdən köçürmə. Hesablanmış mükafatlar da bura daxildir, hərçənd hələ nağd verilməyib.",
+      "bonusAccruedTooltip": "Hesablanmış mükafat işçinin «Verilməyə» balansına yazılıb, lakin nağd verilməyib — nöqtə kassası onu görmədi. Adi mükafat isə əksinə, artıq kassadan nağd çıxıb."
     },
     "submit": {
       "stepLabel": "Addım",
@@ -1241,7 +1247,6 @@
       "calculatedRevenue": "Hesablanmış gəlir:",
       "difference": "Fərq:",
       "expensesTitle": "Xərclər",
-      "expensesReadOnlyHint": "Əvvəlcədən Əsas səhifədə \"Xərclər\" düyməsi ilə daxil edilir — burada yalnız baxış.",
       "expensesEmpty": "Hələ xərc yoxdur.",
       "amountPlaceholder": "Məbləğ",
       "commentPlaceholder": "Şərh (məcburi deyil)",
@@ -1288,7 +1293,6 @@
       "paymentMethodTitle": "Ödəniş üsulu",
       "stopConfirmQuestion": "Əminsiniz?",
       "stopConfirmButton": "Bitir",
-      "expiredLabel": "Vaxt bitdi",
       "soundHintBody": "Başlanğıcın vaxtı bitəndə səs və titrəyiş işə düşəcək — tətbiqi açıq saxlayın",
       "noPricingError": "Zona tarifi hələ sahibi tərəfindən təyin edilməyib",
       "assetInactiveHint": "Aktiv fasilədədir — yeni ziyarətçi əlavə etmək mümkün deyil",
@@ -1305,7 +1309,6 @@
       "allZonesOption": "Bütün zonalar",
       "receiptTitle": "Başlatma qəbzi",
       "receiptDoneTitle": "Başlatma qeydə alındı",
-      "expiredLabel": "Vaxt bitdi",
       "timedTariffHint": "Variantlar"
     },
     "counters": {
