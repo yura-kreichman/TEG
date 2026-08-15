@@ -536,7 +536,9 @@
     "instructionAckCardTitle": "Прохождение инструктажа",
     "instructionAckCardSub": "когда сотрудник подписывает инструктаж",
     "expenseCardTitle": "Новый расход",
-    "expenseCardSub": "когда сотрудник вносит расход"
+    "expenseCardSub": "когда сотрудник вносит расход",
+    "collectionCardTitle": "Инкассация",
+    "collectionCardSub": "когда сдают наличные из касс"
   },
   "pushSettings": {
     "title": "Push-уведомления",
@@ -1667,6 +1669,8 @@
     "shiftCloseSubject": "Закрытие смены",
     "instructionAckSubject": "Ознакомление",
     "expenseAlertTitle": "РАСХОД",
+    "collectionAlertTitle": "ИНКАССАЦИЯ",
+    "goodsLabel": "Товары",
     "instructionAckEmailWho": "Кто",
     "shiftClosedSuffix": "смена закрыта",
     "shiftWord": "смена",

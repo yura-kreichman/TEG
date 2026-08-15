@@ -505,7 +505,9 @@
     "instructionAckCardTitle": "Гузарондани дастурамал",
     "instructionAckCardSub": "вақте ки корманд дастурамалро имзо мекунад",
     "expenseCardTitle": "Хароҷоти нав",
-    "expenseCardSub": "вақте корманд хароҷот ворид мекунад"
+    "expenseCardSub": "вақте корманд хароҷот ворид мекунад",
+    "collectionCardTitle": "Инкассатсия",
+    "collectionCardSub": "вақте пули нақдро аз хазина месупоранд"
   },
   "pushSettings": {
     "title": "Огоҳиномаҳои Push",
@@ -1636,6 +1638,8 @@
     "shiftCloseSubject": "Хотимаи смена",
     "instructionAckSubject": "Шиносшавӣ",
     "expenseAlertTitle": "ХАРОҶОТ",
+    "collectionAlertTitle": "ИНКАССАТСИЯ",
+    "goodsLabel": "Молҳо",
     "instructionAckEmailWho": "Кӣ",
     "shiftClosedSuffix": "навбат хотима ёфт",
     "shiftWord": "навбат",

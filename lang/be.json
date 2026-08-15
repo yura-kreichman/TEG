@@ -505,7 +505,9 @@
     "instructionAckCardTitle": "Праходжанне інструктажу",
     "instructionAckCardSub": "калі супрацоўнік падпісвае інструктаж",
     "expenseCardTitle": "Новы расход",
-    "expenseCardSub": "калі супрацоўнік уносіць расход"
+    "expenseCardSub": "калі супрацоўнік уносіць расход",
+    "collectionCardTitle": "Інкасацыя",
+    "collectionCardSub": "калі здаюць наяўныя з кас"
   },
   "pushSettings": {
     "title": "Push-апавяшчэнні",
@@ -1636,6 +1638,8 @@
     "shiftCloseSubject": "Закрыццё змены",
     "instructionAckSubject": "Азнаямленне",
     "expenseAlertTitle": "РАСХОД",
+    "collectionAlertTitle": "ІНКАСАЦЫЯ",
+    "goodsLabel": "Тавары",
     "instructionAckEmailWho": "Хто",
     "shiftClosedSuffix": "змена закрыта",
     "shiftWord": "змена",

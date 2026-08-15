@@ -505,7 +505,9 @@
     "instructionAckCardTitle": "Հրահանգի անցում",
     "instructionAckCardSub": "երբ աշխատակիցը ստորագրում է հրահանգը",
     "expenseCardTitle": "Նոր ծախս",
-    "expenseCardSub": "երբ աշխատակիցը ծախս է մուտքագրում"
+    "expenseCardSub": "երբ աշխատակիցը ծախս է մուտքագրում",
+    "collectionCardTitle": "Ինկասացիա",
+    "collectionCardSub": "երբ հանձնում են կանխիկը դրամարկղերից"
   },
   "pushSettings": {
     "title": "Push-ծանուցումներ",
@@ -1636,6 +1638,8 @@
     "shiftCloseSubject": "Հերթափոխի փակում",
     "instructionAckSubject": "Ծանոթացում",
     "expenseAlertTitle": "ԾԱԽՍ",
+    "collectionAlertTitle": "ԻՆԿԱՍԱՑԻԱ",
+    "goodsLabel": "Ապրանքներ",
     "instructionAckEmailWho": "Ով",
     "shiftClosedSuffix": "հերթափոխը փակված է",
     "shiftWord": "հերթափոխ",

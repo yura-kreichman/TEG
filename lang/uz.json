@@ -505,7 +505,9 @@
     "instructionAckCardTitle": "Yoʻriqnoma bilan tanishish",
     "instructionAckCardSub": "xodim yoʻriqnomani imzolaganda",
     "expenseCardTitle": "Yangi xarajat",
-    "expenseCardSub": "xodim xarajat kiritganda"
+    "expenseCardSub": "xodim xarajat kiritganda",
+    "collectionCardTitle": "Inkassatsiya",
+    "collectionCardSub": "kassadan naqd pul topshirilganda"
   },
   "pushSettings": {
     "title": "Push-bildirishnomalar",
@@ -1636,6 +1638,8 @@
     "shiftCloseSubject": "Smena yakuni",
     "instructionAckSubject": "Tanishish",
     "expenseAlertTitle": "XARAJAT",
+    "collectionAlertTitle": "INKASSATSIYA",
+    "goodsLabel": "Tovarlar",
     "instructionAckEmailWho": "Kim",
     "shiftClosedSuffix": "smena yakunlandi",
     "shiftWord": "smena",

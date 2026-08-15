@@ -505,7 +505,9 @@
     "instructionAckCardTitle": "ინსტრუქტაჟის გავლა",
     "instructionAckCardSub": "როცა თანამშრომელი აწერს ხელს ინსტრუქციას",
     "expenseCardTitle": "ახალი ხარჯი",
-    "expenseCardSub": "როცა თანამშრომელი ხარჯს შეიტანს"
+    "expenseCardSub": "როცა თანამშრომელი ხარჯს შეიტანს",
+    "collectionCardTitle": "ინკასაცია",
+    "collectionCardSub": "როცა სალაროდან ნაღდ ფულს აბარებენ"
   },
   "pushSettings": {
     "title": "Push-შეტყობინებები",
@@ -1636,6 +1638,8 @@
     "shiftCloseSubject": "ცვლის დახურვა",
     "instructionAckSubject": "გაცნობა",
     "expenseAlertTitle": "ხარჯი",
+    "collectionAlertTitle": "ინკასაცია",
+    "goodsLabel": "საქონელი",
     "instructionAckEmailWho": "ვინ",
     "shiftClosedSuffix": "ცვლა დახურულია",
     "shiftWord": "ცვლა",

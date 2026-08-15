@@ -505,7 +505,9 @@
     "instructionAckCardTitle": "Presa visione istruzione",
     "instructionAckCardSub": "quando un dipendente firma un'istruzione",
     "expenseCardTitle": "Nuova spesa",
-    "expenseCardSub": "quando il dipendente registra una spesa"
+    "expenseCardSub": "quando il dipendente registra una spesa",
+    "collectionCardTitle": "Incasso",
+    "collectionCardSub": "quando si consegna il contante delle casse"
   },
   "pushSettings": {
     "title": "Notifiche push",
@@ -1636,6 +1638,8 @@
     "shiftCloseSubject": "Fine turno",
     "instructionAckSubject": "Presa visione",
     "expenseAlertTitle": "SPESA",
+    "collectionAlertTitle": "INCASSO",
+    "goodsLabel": "Prodotti",
     "instructionAckEmailWho": "Chi",
     "shiftClosedSuffix": "turno chiuso",
     "shiftWord": "turno",

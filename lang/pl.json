@@ -505,7 +505,9 @@
     "instructionAckCardTitle": "Ukończenie instruktażu",
     "instructionAckCardSub": "gdy pracownik podpisze instruktaż",
     "expenseCardTitle": "Nowy wydatek",
-    "expenseCardSub": "gdy pracownik dodaje wydatek"
+    "expenseCardSub": "gdy pracownik dodaje wydatek",
+    "collectionCardTitle": "Inkasacja",
+    "collectionCardSub": "gdy przekazywana jest gotówka z kas"
   },
   "pushSettings": {
     "title": "Powiadomienia push",
@@ -1636,6 +1638,8 @@
     "shiftCloseSubject": "Zamknięcie zmiany",
     "instructionAckSubject": "Potwierdzenie",
     "expenseAlertTitle": "WYDATEK",
+    "collectionAlertTitle": "INKASACJA",
+    "goodsLabel": "Towary",
     "instructionAckEmailWho": "Kto",
     "shiftClosedSuffix": "zmiana zamknięta",
     "shiftWord": "zmiana",

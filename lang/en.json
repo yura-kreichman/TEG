@@ -505,7 +505,9 @@
     "instructionAckCardTitle": "Instruction acknowledgment",
     "instructionAckCardSub": "when an employee signs an instruction",
     "expenseCardTitle": "New expense",
-    "expenseCardSub": "when an employee records an expense"
+    "expenseCardSub": "when an employee records an expense",
+    "collectionCardTitle": "Collection",
+    "collectionCardSub": "when cash is handed over"
   },
   "pushSettings": {
     "title": "Push notifications",
@@ -1636,6 +1638,8 @@
     "shiftCloseSubject": "Shift close",
     "instructionAckSubject": "Acknowledgment",
     "expenseAlertTitle": "EXPENSE",
+    "collectionAlertTitle": "COLLECTION",
+    "goodsLabel": "Goods",
     "instructionAckEmailWho": "Who",
     "shiftClosedSuffix": "shift closed",
     "shiftWord": "shift",

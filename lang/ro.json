@@ -505,7 +505,9 @@
     "instructionAckCardTitle": "Finalizarea instruirii",
     "instructionAckCardSub": "când un angajat semnează o instrucțiune",
     "expenseCardTitle": "Cheltuială nouă",
-    "expenseCardSub": "când angajatul înregistrează o cheltuială"
+    "expenseCardSub": "când angajatul înregistrează o cheltuială",
+    "collectionCardTitle": "Colectare",
+    "collectionCardSub": "când se predau banii din case"
   },
   "pushSettings": {
     "title": "Notificări push",
@@ -1636,6 +1638,8 @@
     "shiftCloseSubject": "Închidere tură",
     "instructionAckSubject": "Confirmare",
     "expenseAlertTitle": "CHELTUIALĂ",
+    "collectionAlertTitle": "COLECTARE",
+    "goodsLabel": "Produse",
     "instructionAckEmailWho": "Cine",
     "shiftClosedSuffix": "tură închisă",
     "shiftWord": "tură",
