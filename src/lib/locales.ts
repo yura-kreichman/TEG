@@ -67,6 +67,29 @@ export const LOCALE_FLAGS: Record<Locale, string> = {
 };
 
 
+// Локаль в формате Open Graph — протокол требует `язык_ТЕРРИТОРИЯ`
+// (og:locale, "language_TERRITORY"), а голый код языка Facebook и прочие
+// потребители карточки просто игнорируют. Лендинг до 2026-08-15 отдавал
+// `ru` вместо `ru_RU`. Территория выбрана по основной стране языка — точнее
+// платформа всё равно не знает: страна тенанта нигде не хранится.
+export const OG_LOCALES: Record<Locale, string> = {
+  ru: "ru_RU",
+  en: "en_US",
+  uk: "uk_UA",
+  ro: "ro_RO",
+  be: "be_BY",
+  pl: "pl_PL",
+  it: "it_IT",
+  uz: "uz_UZ",
+  kk: "kk_KZ",
+  tg: "tg_TJ",
+  ky: "ky_KG",
+  hy: "hy_AM",
+  az: "az_AZ",
+  ka: "ka_GE",
+  tr: "tr_TR",
+};
+
 export const ALL_LOCALES = Object.keys(LOCALE_NAMES) as Locale[];
 
 export function isLocale(value: string): value is Locale {
