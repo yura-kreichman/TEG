@@ -107,6 +107,18 @@ export const INSTRUCTION_ACK_SUMMARY_DEFAULTS: InstructionAckSummarySettingsData
   enabled: true,
 };
 
+// "Новый расход" (запрос владельца 2026-08-15) — то же устройство, что у
+// инструктажа выше: одно поле, состав сообщения не настраивается. Уведомление
+// уходит в момент ввода расхода Сотрудником; тумблер Push на то же событие —
+// отдельный (PushNotificationSettingsData.expense ниже).
+export interface ExpenseSummarySettingsData {
+  enabled: boolean;
+}
+
+export const EXPENSE_SUMMARY_DEFAULTS: ExpenseSummarySettingsData = {
+  enabled: true,
+};
+
 // Какие типы сводок дублируются коротким Push-уведомлением на устройство(а)
 // владельца, если хотя бы одно активно подписано (фидбек пользователя
 // 2026-07-12). Не влияет на то, отправляется ли сама сводка по
@@ -119,6 +131,7 @@ export interface PushNotificationSettingsData {
   shiftCheckin: boolean;
   instructionAck: boolean;
   collection: boolean;
+  expense: boolean;
 }
 
 export const PUSH_NOTIFICATION_DEFAULTS: PushNotificationSettingsData = {
@@ -128,4 +141,5 @@ export const PUSH_NOTIFICATION_DEFAULTS: PushNotificationSettingsData = {
   shiftCheckin: true,
   instructionAck: true,
   collection: true,
+  expense: true,
 };

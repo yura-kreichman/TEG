@@ -503,7 +503,9 @@
     "previewNoTariff": "Tarife oluşturulmadı",
     "previewNoOperator": "Çalışan oluşturulmadı",
     "instructionAckCardTitle": "Talimatın tamamlanması",
-    "instructionAckCardSub": "çalışan bir talimatı imzaladığında"
+    "instructionAckCardSub": "çalışan bir talimatı imzaladığında",
+    "expenseCardTitle": "Yeni gider",
+    "expenseCardSub": "çalışan gider girdiğinde"
   },
   "pushSettings": {
     "title": "Push bildirimleri",
@@ -532,6 +534,8 @@
     "instructionAckSub": "bir çalışan talimatı imzaladığında",
     "collectionLabel": "Tahsilat",
     "collectionSub": "bir tahsilat kaydedildiğinde",
+    "expenseLabel": "Yeni gider",
+    "expenseSub": "çalışan gider girdiğinde",
     "errors": {
       "notSupported": "Bu tarayıcı push bildirimlerini desteklemiyor.",
       "permissionDenied": "Tarayıcıda bildirim izni reddedildi — site ayarlarından manuel olarak etkinleştirin.",
@@ -1068,6 +1072,10 @@
     "collectionSaveError": "Değişiklikler kaydedilemedi",
     "deleteCollectionConfirm": "Bu tahsilat silinsin mi? Bölge bakiyesi yeniden hesaplanacak. Geri alınamaz.",
     "deleteCollectionError": "Tahsilat silinemedi",
+    "editExpenseAction": "Düzenle",
+    "editExpenseTitle": "Gider",
+    "expenseSaveError": "Gider kaydedilemedi",
+    "deleteExpenseConfirm": "Bu gider silinsin mi? Bölge bakiyesi yeniden hesaplanacak. Geri alınamaz.",
     "collectionAdvanceLabel": "Avans tahsilat",
     "collectionAdvanceToastPrefix": "Avans tahsilat olarak ayrıldı",
     "collectionAdvanceToastSuffix": "— sonuçlar teslim edildikten sonra bölge bakiyesinde görünecek",
@@ -1256,6 +1264,8 @@
       "amountPlaceholder": "Tutar",
       "commentPlaceholder": "Yorum (isteğe bağlı)",
       "addExpense": "Gider ekle",
+      "expenseAfterSubmitTitle": "Bu bölgenin sonuçları zaten teslim edildi",
+      "expenseAfterSubmitHint": "Gider bir sonraki sonuç teslimine girecek. Paranın bugünkü kasadan çıkması için giderleri sonuçları teslim etmeden önce ekleyin.",
       "reviewTitle": "Göndermeden önce kontrol edin",
       "actualCash": "Fiili kasa:",
       "zReportTitle": "Z-raporu",
@@ -1625,6 +1635,7 @@
     "dailyCashSubject": "Günlük kasa özeti",
     "shiftCloseSubject": "Vardiya kapanışı",
     "instructionAckSubject": "Onay",
+    "expenseAlertTitle": "GİDER",
     "instructionAckEmailWho": "Kim",
     "shiftClosedSuffix": "vardiya kapatıldı",
     "shiftWord": "vardiya",

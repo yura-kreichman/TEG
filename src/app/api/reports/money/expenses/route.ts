@@ -4,9 +4,16 @@ import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOwner } from "@/lib/require-owner";
 import { dayBoundsUtc } from "@/lib/business-day";
 
-// Тенант-wide реестр расходов (ExpenseEntry) за месяц — список отдельных
-// записей с категорией и комментарием (запрос пользователя 2026-07-14),
-// в отличие от бизнес-карточки "Деньги", которая показывает только сумму.
+// Тенант-wide реестр расходов за месяц — список отдельных записей с
+// категорией и комментарием (запрос пользователя 2026-07-14), в отличие от
+// бизнес-карточки "Деньги", которая показывает только сумму.
+//
+// Источник — сам журнал (MoneyOperation type="expense"), а не производная
+// ExpenseEntry, привязанная к сдаче итогов (переведено 2026-08-15). Прежний
+// источник показывал ТОЛЬКО расходы, успевшие войти в сдачу: внесённый после
+// сдачи расход не существовал для владельца нигде — ни здесь, ни в прибыли,
+// ни в сводке — до следующей сдачи, которая ставила его чужой датой. Реальный
+// случай в этот день: расход в 22:46 при сдаче в 22:22.
 export async function GET(request: Request) {
   const owner = await requireOwner();
   if (!owner) {
@@ -29,23 +36,25 @@ export async function GET(request: Request) {
   const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
   const monthEnd = dayBoundsUtc(nextMonth.year, nextMonth.month, 1, timezone, boundary).start;
 
-  const entries = await prisma.expenseEntry.findMany({
+  const operations = await prisma.moneyOperation.findMany({
     where: {
-      zoneSubmission: { zone: { point: { tenantId: owner.tenantId } } },
-      createdAt: { gte: monthStart, lt: monthEnd },
+      tenantId: owner.tenantId,
+      type: "expense",
+      occurredAt: { gte: monthStart, lt: monthEnd },
     },
-    include: { category: true, zoneSubmission: { include: { zone: { include: { point: true } } } } },
-    orderBy: { createdAt: "desc" },
+    include: { expenseCategory: true, zone: { include: { point: true } } },
+    orderBy: { occurredAt: "desc" },
   });
 
-  const expenses = entries.map((e) => ({
-    id: e.id,
-    occurredAt: e.createdAt.toISOString(),
-    zoneName: e.zoneSubmission.zone.name,
-    pointName: e.zoneSubmission.zone.point.name,
-    categoryName: e.category?.name ?? null,
-    comment: e.comment,
-    amount: Math.abs(Number(e.amount)),
+  const expenses = operations.map((op) => ({
+    id: op.id,
+    occurredAt: op.occurredAt.toISOString(),
+    zoneName: op.zone?.name ?? "",
+    pointName: op.zone?.point.name ?? "",
+    categoryId: op.expenseCategoryId,
+    categoryName: op.expenseCategory?.name ?? null,
+    comment: op.comment,
+    amount: Math.abs(Number(op.amount)),
   }));
 
   // Название точки в строке имеет смысл, только если точек больше одной

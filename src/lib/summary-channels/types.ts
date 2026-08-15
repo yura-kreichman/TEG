@@ -169,3 +169,17 @@ export interface InstructionAckData {
   instructionTitle: string;
   readingMinutes: number;
 }
+
+// Новый расход, внесённый Сотрудником (запрос владельца 2026-08-15) — тоже
+// не сводка, а мгновенное уведомление о действии: две строки жёсткого
+// формата, заданного владельцем, состав не настраивается.
+//   🛒 РАСХОД — 15/08, 22:46
+//   🟥 Женя: 350 MDL
+// colorTag — цветовая метка карточки сотрудника (COLOR_TAG_PALETTE), тот же
+// эмодзи-квадрат, что уже стоит рядом с именем в сводке закрытия смены.
+export interface ExpenseAlertData {
+  occurredAt: Date;
+  operatorName: string;
+  operatorColorTag: string | null;
+  amount: number;
+}

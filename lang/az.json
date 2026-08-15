@@ -503,7 +503,9 @@
     "previewNoTariff": "Tarif yaradılmayıb",
     "previewNoOperator": "İşçi yaradılmayıb",
     "instructionAckCardTitle": "Təlimatın keçilməsi",
-    "instructionAckCardSub": "işçi təlimatı imzaladıqda"
+    "instructionAckCardSub": "işçi təlimatı imzaladıqda",
+    "expenseCardTitle": "Yeni xərc",
+    "expenseCardSub": "işçi xərc daxil etdikdə"
   },
   "pushSettings": {
     "title": "Push bildirişlər",
@@ -532,6 +534,8 @@
     "instructionAckSub": "işçi təlimatı imzalayanda",
     "collectionLabel": "İnkassasiya",
     "collectionSub": "inkassasiya təhvil verildikdə",
+    "expenseLabel": "Yeni xərc",
+    "expenseSub": "işçi xərc daxil etdikdə",
     "errors": {
       "notSupported": "Bu brauzer push bildirişlərini dəstəkləmir.",
       "permissionDenied": "Bildirişlərə icazə brauzerdə rədd edilib — sayt tənzimləmələrində əl ilə aktivləşdirin.",
@@ -1068,6 +1072,10 @@
     "collectionSaveError": "Dəyişikliklər saxlanıla bilmədi",
     "deleteCollectionConfirm": "Bu inkassasiyanı silmək istəyirsiniz? Zona qalığı yenidən hesablanacaq. Geri qaytarıla bilməz.",
     "deleteCollectionError": "İnkassasiyanı silmək mümkün olmadı",
+    "editExpenseAction": "Dəyişdir",
+    "editExpenseTitle": "Xərc",
+    "expenseSaveError": "Xərci saxlamaq mümkün olmadı",
+    "deleteExpenseConfirm": "Bu xərci silmək istəyirsiniz? Zona qalığı yenidən hesablanacaq. Geri qaytarıla bilməz.",
     "collectionAdvanceLabel": "Avans inkassasiya",
     "collectionAdvanceToastPrefix": "Avans inkassasiya kimi ayrıldı",
     "collectionAdvanceToastSuffix": "— nəticələr təqdim edildikdən sonra zona qalığında görünəcək",
@@ -1256,6 +1264,8 @@
       "amountPlaceholder": "Məbləğ",
       "commentPlaceholder": "Şərh (məcburi deyil)",
       "addExpense": "Xərc əlavə et",
+      "expenseAfterSubmitTitle": "Bu zona üzrə nəticələr artıq təhvil verilib",
+      "expenseAfterSubmitHint": "Xərc növbəti təhvilə düşəcək. Pulun bugünkü kassadan çıxması üçün xərcləri nəticələri təhvil verməzdən əvvəl əlavə edin.",
       "reviewTitle": "Göndərmədən əvvəl yoxlayın",
       "actualCash": "Faktiki kassa:",
       "zReportTitle": "Z-hesabat",
@@ -1625,6 +1635,7 @@
     "dailyCashSubject": "Günlük kassa xülasəsi",
     "shiftCloseSubject": "Növbənin bağlanması",
     "instructionAckSubject": "Tanışlıq",
+    "expenseAlertTitle": "XƏRC",
     "instructionAckEmailWho": "Kim",
     "shiftClosedSuffix": "növbə bağlandı",
     "shiftWord": "növbə",

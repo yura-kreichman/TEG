@@ -503,7 +503,9 @@
     "previewNoTariff": "Тариф эҷод нашудааст",
     "previewNoOperator": "Корманд эҷод нашудааст",
     "instructionAckCardTitle": "Гузарондани дастурамал",
-    "instructionAckCardSub": "вақте ки корманд дастурамалро имзо мекунад"
+    "instructionAckCardSub": "вақте ки корманд дастурамалро имзо мекунад",
+    "expenseCardTitle": "Хароҷоти нав",
+    "expenseCardSub": "вақте корманд хароҷот ворид мекунад"
   },
   "pushSettings": {
     "title": "Огоҳиномаҳои Push",
@@ -532,6 +534,8 @@
     "instructionAckSub": "вақте ки корманд дастурамалро имзо мекунад",
     "collectionLabel": "Инкассатсия",
     "collectionSub": "вақте ки инкассатсия сабт мешавад",
+    "expenseLabel": "Хароҷоти нав",
+    "expenseSub": "вақте корманд хароҷот ворид мекунад",
     "errors": {
       "notSupported": "Ин браузер огоҳиномаҳои push-ро дастгирӣ намекунад.",
       "permissionDenied": "Иҷозат барои огоҳиномаҳо дар браузер рад карда шуд — онро дар танзимоти сайт дастӣ фаъол кунед.",
@@ -1068,6 +1072,10 @@
     "collectionSaveError": "Тағйиротро захира кардан ғайриимкон аст",
     "deleteCollectionConfirm": "Ин инкассатсияро нест мекунед? Бақияи минтақа аз нав ҳисоб карда мешавад. Бекор кардан ғайриимкон аст.",
     "deleteCollectionError": "Инкассатсияро нест кардан ғайриимкон аст",
+    "editExpenseAction": "Тағйир додан",
+    "editExpenseTitle": "Хароҷот",
+    "expenseSaveError": "Хароҷотро захира кардан ғайриимкон аст",
+    "deleteExpenseConfirm": "Ин хароҷотро нест мекунед? Бақияи минтақа аз нав ҳисоб карда мешавад. Бекор кардан ғайриимкон аст.",
     "collectionAdvanceLabel": "Инкассатсияи пешакӣ",
     "collectionAdvanceToastPrefix": "Ҳамчун инкассатсияи пешакӣ ҷудо карда шуд",
     "collectionAdvanceToastSuffix": "— пас аз супоридани натиҷаҳо дар бақияи минтақа пайдо мешавад",
@@ -1256,6 +1264,8 @@
       "amountPlaceholder": "Маблағ",
       "commentPlaceholder": "Шарҳ (ихтиёрӣ)",
       "addExpense": "Хароҷот илова кардан",
+      "expenseAfterSubmitTitle": "Натиҷаҳо аз рӯи ин минтақа аллакай супорида шудаанд",
+      "expenseAfterSubmitHint": "Хароҷот ба супориши навбатӣ дохил мешавад. Барои он ки пул аз хазинаи имрӯза барояд, хароҷотро пеш аз супоридани натиҷаҳо ворид кунед.",
       "reviewTitle": "Пеш аз фиристодан тафтиш кунед",
       "actualCash": "Кассаи воқеӣ:",
       "zReportTitle": "Ҳисоботи Z",
@@ -1625,6 +1635,7 @@
     "dailyCashSubject": "Хулосаи кассаи рӯзона",
     "shiftCloseSubject": "Хотимаи смена",
     "instructionAckSubject": "Шиносшавӣ",
+    "expenseAlertTitle": "ХАРОҶОТ",
     "instructionAckEmailWho": "Кӣ",
     "shiftClosedSuffix": "навбат хотима ёфт",
     "shiftWord": "навбат",

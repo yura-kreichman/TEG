@@ -503,7 +503,9 @@
     "previewNoTariff": "Taryfa nie została utworzona",
     "previewNoOperator": "Pracownik nie został utworzony",
     "instructionAckCardTitle": "Ukończenie instruktażu",
-    "instructionAckCardSub": "gdy pracownik podpisze instruktaż"
+    "instructionAckCardSub": "gdy pracownik podpisze instruktaż",
+    "expenseCardTitle": "Nowy wydatek",
+    "expenseCardSub": "gdy pracownik dodaje wydatek"
   },
   "pushSettings": {
     "title": "Powiadomienia push",
@@ -532,6 +534,8 @@
     "instructionAckSub": "gdy pracownik podpisuje instrukcję",
     "collectionLabel": "Inkasacja",
     "collectionSub": "gdy zostaje zarejestrowana inkasacja",
+    "expenseLabel": "Nowy wydatek",
+    "expenseSub": "gdy pracownik dodaje wydatek",
     "errors": {
       "notSupported": "Ta przeglądarka nie obsługuje powiadomień push.",
       "permissionDenied": "Zgoda na powiadomienia została odrzucona w przeglądarce — włącz ją ręcznie w ustawieniach witryny.",
@@ -1068,6 +1072,10 @@
     "collectionSaveError": "Nie udało się zapisać zmian",
     "deleteCollectionConfirm": "Usunąć tę inkasację? Saldo strefy zostanie przeliczone. Nie można cofnąć.",
     "deleteCollectionError": "Nie udało się usunąć inkasacji",
+    "editExpenseAction": "Edytuj",
+    "editExpenseTitle": "Wydatek",
+    "expenseSaveError": "Nie udało się zapisać wydatku",
+    "deleteExpenseConfirm": "Usunąć ten wydatek? Saldo strefy zostanie przeliczone. Nie można cofnąć.",
     "collectionAdvanceLabel": "Inkaso zaliczkowe",
     "collectionAdvanceToastPrefix": "Odłożone jako inkaso zaliczkowe",
     "collectionAdvanceToastSuffix": "— pojawi się w saldzie strefy po przesłaniu wyników",
@@ -1256,6 +1264,8 @@
       "amountPlaceholder": "Kwota",
       "commentPlaceholder": "Komentarz (opcjonalnie)",
       "addExpense": "Dodaj wydatek",
+      "expenseAfterSubmitTitle": "Wyniki dla tej strefy są już zdane",
+      "expenseAfterSubmitHint": "Wydatek trafi do następnego rozliczenia. Aby pieniądze zeszły z dzisiejszej kasy, dodawaj wydatki przed zdaniem wyników.",
       "reviewTitle": "Sprawdź przed wysłaniem",
       "actualCash": "Rzeczywista kasa:",
       "zReportTitle": "Raport Z",
@@ -1625,6 +1635,7 @@
     "dailyCashSubject": "Dzienne podsumowanie kasy",
     "shiftCloseSubject": "Zamknięcie zmiany",
     "instructionAckSubject": "Potwierdzenie",
+    "expenseAlertTitle": "WYDATEK",
     "instructionAckEmailWho": "Kto",
     "shiftClosedSuffix": "zmiana zamknięta",
     "shiftWord": "zmiana",

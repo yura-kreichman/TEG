@@ -503,7 +503,9 @@
     "previewNoTariff": "No tariff created yet",
     "previewNoOperator": "No employee created yet",
     "instructionAckCardTitle": "Instruction acknowledgment",
-    "instructionAckCardSub": "when an employee signs an instruction"
+    "instructionAckCardSub": "when an employee signs an instruction",
+    "expenseCardTitle": "New expense",
+    "expenseCardSub": "when an employee records an expense"
   },
   "pushSettings": {
     "title": "Push notifications",
@@ -532,6 +534,8 @@
     "instructionAckSub": "when an employee signs an instruction",
     "collectionLabel": "Collection",
     "collectionSub": "when a cash collection is recorded",
+    "expenseLabel": "New expense",
+    "expenseSub": "when an employee records an expense",
     "errors": {
       "notSupported": "This browser doesn't support push notifications.",
       "permissionDenied": "Notification permission was denied in the browser — enable it manually in site settings.",
@@ -1068,6 +1072,10 @@
     "collectionSaveError": "Failed to save changes",
     "deleteCollectionConfirm": "Delete this collection? The zone balance will be recalculated. This cannot be undone.",
     "deleteCollectionError": "Failed to delete the collection",
+    "editExpenseAction": "Edit",
+    "editExpenseTitle": "Expense",
+    "expenseSaveError": "Failed to save the expense",
+    "deleteExpenseConfirm": "Delete this expense? The zone balance will be recalculated. This cannot be undone.",
     "collectionAdvanceLabel": "Advance collection",
     "collectionAdvanceToastPrefix": "Set aside as an advance collection",
     "collectionAdvanceToastSuffix": "— will appear in the zone balance once results are submitted",
@@ -1256,6 +1264,8 @@
       "amountPlaceholder": "Amount",
       "commentPlaceholder": "Comment (optional)",
       "addExpense": "Add expense",
+      "expenseAfterSubmitTitle": "Results for this zone are already submitted",
+      "expenseAfterSubmitHint": "The expense will go into the next results submission. To take the money out of today's cash, add expenses before submitting results.",
       "reviewTitle": "Review before submitting",
       "actualCash": "Actual cash:",
       "zReportTitle": "Z-report",
@@ -1625,6 +1635,7 @@
     "dailyCashSubject": "Daily cash summary",
     "shiftCloseSubject": "Shift close",
     "instructionAckSubject": "Acknowledgment",
+    "expenseAlertTitle": "EXPENSE",
     "instructionAckEmailWho": "Who",
     "shiftClosedSuffix": "shift closed",
     "shiftWord": "shift",

@@ -5,6 +5,7 @@ import type {
   DailyCashPending,
   ShiftCloseSummaryData,
   InstructionAckData,
+  ExpenseAlertData,
 } from "./types";
 import { formatBusinessDate, formatDuration, formatLocalTime, formatSummaryDate } from "./format-shared";
 import { colorTagToEmoji } from "@/lib/color-tag";
@@ -696,4 +697,32 @@ export function formatInstructionAckTelegram(data: InstructionAckData, st: Summa
   // приложение не хранит, а безличная формулировка "инструктаж пройден"
   // (SummaryText.instructionPassed) не требует согласования ни в одном языке.
   return `✅ <b>${name}</b> · «${title}» · ${data.readingMinutes} ${minutesShort} · ${st.instructionPassed}`;
+}
+
+/**
+ * Новый расход — формат задан владельцем 2026-08-15, ровно две строки:
+ *   🛒 РАСХОД — 15/08, 22:46
+ *   🟥 Женя: 350 MDL
+ * Дата без дня недели (в отличие от сводок): уведомление приходит в момент
+ * события, "какой сегодня день" владельцу и так известно, а короткая шапка
+ * целиком помещается в заголовок Push-уведомления (dispatch.ts шлёт эти же
+ * две строки как title/body).
+ */
+export function formatExpenseAlertHeader(data: ExpenseAlertData, st: SummaryText, timezone: string): string {
+  const date = formatSummaryDate(data.occurredAt, "/", timezone, false);
+  return `🛒 ${st.expenseAlertTitle} — ${date}, ${formatLocalTime(data.occurredAt, timezone)}`;
+}
+
+export function formatExpenseAlertLine(data: ExpenseAlertData, locale: Locale): string {
+  const mark = colorTagToEmoji(data.operatorColorTag);
+  return `${mark ? `${mark} ` : ""}${data.operatorName}: ${formatMoney(data.amount, locale)}`;
+}
+
+export function formatExpenseAlertTelegram(data: ExpenseAlertData, st: SummaryText, locale: Locale, timezone: string): string {
+  const mark = colorTagToEmoji(data.operatorColorTag);
+  const name = escapeTelegramHtml(data.operatorName);
+  return [
+    `🛒 <b>${st.expenseAlertTitle}</b> — ${formatSummaryDate(data.occurredAt, "/", timezone, false)}, ${formatLocalTime(data.occurredAt, timezone)}`,
+    `${mark ? `${mark} ` : ""}${name}: <b>${formatMoney(data.amount, locale)}</b>`,
+  ].join("\n");
 }

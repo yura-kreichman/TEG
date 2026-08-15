@@ -503,7 +503,9 @@
     "previewNoTariff": "ტარიფი არ არის შექმნილი",
     "previewNoOperator": "თანამშრომელი არ არის შექმნილი",
     "instructionAckCardTitle": "ინსტრუქტაჟის გავლა",
-    "instructionAckCardSub": "როცა თანამშრომელი აწერს ხელს ინსტრუქციას"
+    "instructionAckCardSub": "როცა თანამშრომელი აწერს ხელს ინსტრუქციას",
+    "expenseCardTitle": "ახალი ხარჯი",
+    "expenseCardSub": "როცა თანამშრომელი ხარჯს შეიტანს"
   },
   "pushSettings": {
     "title": "Push-შეტყობინებები",
@@ -532,6 +534,8 @@
     "instructionAckSub": "როცა თანამშრომელი ხელს აწერს ინსტრუქციას",
     "collectionLabel": "ინკასაცია",
     "collectionSub": "როცა ფიქსირდება ინკასაცია",
+    "expenseLabel": "ახალი ხარჯი",
+    "expenseSub": "როცა თანამშრომელი ხარჯს შეიტანს",
     "errors": {
       "notSupported": "ეს ბრაუზერი push-შეტყობინებებს არ უჭერს მხარს.",
       "permissionDenied": "შეტყობინებების ნებართვა ბრაუზერში უარყოფილია — ჩართეთ ის საიტის პარამეტრებში ხელით.",
@@ -1068,6 +1072,10 @@
     "collectionSaveError": "ცვლილებების შენახვა ვერ მოხერხდა",
     "deleteCollectionConfirm": "წავშალოთ ეს ინკასაცია? ზონის ნაშთი ხელახლა გამოითვლება. გაუქმება შეუძლებელია.",
     "deleteCollectionError": "ინკასაციის წაშლა ვერ მოხერხდა",
+    "editExpenseAction": "შეცვლა",
+    "editExpenseTitle": "ხარჯი",
+    "expenseSaveError": "ხარჯის შენახვა ვერ მოხერხდა",
+    "deleteExpenseConfirm": "წავშალოთ ეს ხარჯი? ზონის ნაშთი ხელახლა გამოითვლება. გაუქმება შეუძლებელია.",
     "collectionAdvanceLabel": "წინასწარი ინკასაცია",
     "collectionAdvanceToastPrefix": "გამოყოფილია როგორც წინასწარი ინკასაცია",
     "collectionAdvanceToastSuffix": "— გამოჩნდება ზონის ნაშთში შედეგების ჩაბარების შემდეგ",
@@ -1256,6 +1264,8 @@
       "amountPlaceholder": "თანხა",
       "commentPlaceholder": "კომენტარი (არასავალდებულო)",
       "addExpense": "ხარჯის დამატება",
+      "expenseAfterSubmitTitle": "ამ ზონის შედეგები უკვე ჩაბარებულია",
+      "expenseAfterSubmitHint": "ხარჯი მოხვდება შემდეგ ჩაბარებაში. რომ ფული დღევანდელი სალაროდან გავიდეს, ხარჯები შეიტანეთ შედეგების ჩაბარებამდე.",
       "reviewTitle": "გადაამოწმეთ გაგზავნამდე",
       "actualCash": "ფაქტობრივი სალარო:",
       "zReportTitle": "Z-ანგარიში",
@@ -1625,6 +1635,7 @@
     "dailyCashSubject": "დღიური სალაროს შეჯამება",
     "shiftCloseSubject": "ცვლის დახურვა",
     "instructionAckSubject": "გაცნობა",
+    "expenseAlertTitle": "ხარჯი",
     "instructionAckEmailWho": "ვინ",
     "shiftClosedSuffix": "ცვლა დახურულია",
     "shiftWord": "ცვლა",

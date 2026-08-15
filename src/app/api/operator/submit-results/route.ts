@@ -62,7 +62,8 @@ export async function POST(request: Request) {
   const body = await request.json();
   const zoneSubmissions: ZoneSubmissionInput[] = body.zoneSubmissions ?? [];
   // Расходы (запрос пользователя 2026-07-25) — client payload больше не
-  // читается вовсе, единственный источник — ZoneExpenseEvent (см. ниже).
+  // читается вовсе, единственный источник — уже созданные Сотрудником
+  // операции журнала (см. ниже).
   const idempotencyKey: string | null = typeof body.idempotencyKey === "string" && body.idempotencyKey ? body.idempotencyKey : null;
 
   if (!Array.isArray(zoneSubmissions) || zoneSubmissions.length === 0) {
@@ -190,14 +191,10 @@ export async function POST(request: Request) {
     }
   }
 
-  // Категория расхода — не доверяем сырому categoryId от клиента, только
-  // сверенный список категорий этого тенанта (иначе можно было бы подсунуть
-  // чужой id и получить FK-ошибку транзакции целиком).
-  const validCategoryIds = new Set(
-    (await prisma.expenseCategory.findMany({ where: { tenantId: point.tenantId }, select: { id: true } })).map(
-      (c) => c.id
-    )
-  );
+  // Сверки категорий расхода здесь больше нет: категорию выбирает Сотрудник
+  // в момент ввода, и проверяет её принадлежность тенанту тот же роут
+  // (api/operator/zone-expense-events) — сдача итогов лишь привязывает к себе
+  // готовые операции и их полей не касается.
 
   // Единая точка чтения ОКНА агрегации ("с прошлой сдачи по сейчас") и
   // записи самой сдачи — раньше окно (previousReadings, тапы, Прибывания/
@@ -472,19 +469,25 @@ export async function POST(request: Request) {
 
     // Расходы (запрос пользователя 2026-07-25: "чтобы не надо было запоминать
     // до конца смены") — тот же принцип, что у Возвратов выше: единственный
-    // источник — журнал ZoneExpenseEvent (экран "Расходы"), не доверенный
-    // клиентский payload. Применимо к ЛЮБОМУ режиму учёта, не только
-    // "counters" — расход не завязан на режим зоны.
-    const expenseEventsByZone = new Map<string, { id: string; amount: number; categoryId: string | null; comment: string | null }[]>();
+    // источник — экран "Расходы", не доверенный клиентский payload. Применимо
+    // к ЛЮБОМУ режиму учёта, не только "counters" — расход не завязан на
+    // режим зоны.
+    //
+    // С 2026-08-15 расход УЖЕ операция журнала с момента ввода (см. schema.prisma
+    // на месте удалённого ZoneExpenseEvent), поэтому сдача ничего не создаёт —
+    // она только собирает ещё не привязанные строки зоны, чтобы ниже
+    // проставить им свой resultsSubmissionId. Граница "с прошлой сдачи" тут
+    // больше не нужна: непривязанность и есть эта граница.
+    const expenseOpsByZone = new Map<string, { id: string; amount: number }[]>();
     for (const zs of zoneSubmissions) {
       const zone = zoneById.get(zs.zoneId)!;
-      const boundary = boundaryByZone.get(zone.id) ?? null;
-      const events = await tx.zoneExpenseEvent.findMany({
-        where: { zoneId: zone.id, createdAt: { gt: boundary ?? new Date(0), lte: now } },
+      const ops = await tx.moneyOperation.findMany({
+        where: { type: "expense", zoneId: zone.id, resultsSubmissionId: null, occurredAt: { lte: now } },
+        select: { id: true, amount: true },
       });
-      expenseEventsByZone.set(
+      expenseOpsByZone.set(
         zone.id,
-        events.map((e) => ({ id: e.id, amount: Number(e.amount), categoryId: e.categoryId, comment: e.comment }))
+        ops.map((o) => ({ id: o.id, amount: Math.abs(Number(o.amount)) }))
       );
     }
 
@@ -737,32 +740,21 @@ export async function POST(request: Request) {
         }
       }
 
-      // Расходы — из журнала ZoneExpenseEvent (см. expenseEventsByZone выше),
-      // не из клиентского payload (запрос пользователя 2026-07-25). Записи
-      // этого окна переносим в ExpenseEntry/MoneyOperation как раньше, сам
-      // журнал не трогаем — он естественно "закрывается" следующим окном
-      // (previousSubmissionBoundary сдвигается на эту сдачу).
-      const zoneExpenses = expenseEventsByZone.get(zs.zoneId) ?? [];
-      for (const expense of zoneExpenses) {
-        const categoryId = expense.categoryId && validCategoryIds.has(expense.categoryId) ? expense.categoryId : null;
-        await tx.expenseEntry.create({
-          data: {
-            zoneSubmissionId: zoneSubmission.id,
-            categoryId,
-            amount: expense.amount,
-            comment: expense.comment,
-          },
-        });
-        await tx.moneyOperation.create({
-          data: {
-            tenantId: point.tenantId,
-            zoneId: zs.zoneId,
-            type: "expense",
-            amount: -Math.abs(expense.amount),
-            performedByOperatorId: operator.id,
-            comment: expense.comment,
-            resultsSubmissionId: created.id,
-          },
+      // Расходы — операции журнала, созданные Сотрудником на экране "Расходы"
+      // ещё до сдачи (см. expenseOpsByZone выше), не клиентский payload
+      // (запрос пользователя 2026-07-25). Сдача их не создаёт, а закрывает:
+      // проставляет свою ссылку, после чего они уходят с экрана Сотрудника и
+      // становятся неудаляемыми им.
+      //
+      // resultsSubmissionId: null в where — тот же CAS, что у пусков выше:
+      // список собран ДО транзакции, и параллельная сдача по той же зоне
+      // могла увидеть те же строки. Проигравшая просто затронет 0 строк
+      // вместо того, чтобы переподписать чужой расход на себя.
+      const zoneExpenseOps = expenseOpsByZone.get(zs.zoneId) ?? [];
+      if (zoneExpenseOps.length > 0) {
+        await tx.moneyOperation.updateMany({
+          where: { id: { in: zoneExpenseOps.map((o) => o.id) }, resultsSubmissionId: null },
+          data: { resultsSubmissionId: created.id },
         });
       }
 

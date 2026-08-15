@@ -534,7 +534,9 @@
     "previewNoTariff": "Тариф не создан",
     "previewNoOperator": "Сотрудник не создан",
     "instructionAckCardTitle": "Прохождение инструктажа",
-    "instructionAckCardSub": "когда сотрудник подписывает инструктаж"
+    "instructionAckCardSub": "когда сотрудник подписывает инструктаж",
+    "expenseCardTitle": "Новый расход",
+    "expenseCardSub": "когда сотрудник вносит расход"
   },
   "pushSettings": {
     "title": "Push-уведомления",
@@ -563,6 +565,8 @@
     "instructionAckSub": "когда сотрудник подписывает инструктаж",
     "collectionLabel": "Инкассация",
     "collectionSub": "при внесении инкассации",
+    "expenseLabel": "Новый расход",
+    "expenseSub": "когда сотрудник вносит расход",
     "errors": {
       "notSupported": "Этот браузер не поддерживает push-уведомления.",
       "permissionDenied": "Разрешение на уведомления отклонено в браузере — включите его в настройках сайта вручную.",
@@ -1086,6 +1090,10 @@
     "collectionSaveError": "Не удалось сохранить изменения",
     "deleteCollectionConfirm": "Удалить эту инкассацию? Остаток по зоне пересчитается. Отменить нельзя.",
     "deleteCollectionError": "Не удалось удалить инкассацию",
+    "editExpenseAction": "Изменить",
+    "editExpenseTitle": "Расход",
+    "expenseSaveError": "Не удалось сохранить расход",
+    "deleteExpenseConfirm": "Удалить этот расход? Остаток по зоне пересчитается. Отменить нельзя.",
     "advancesBonusesRegisterTitle": "Авансы и премии",
     "noAdvancesBonuses": "В этом месяце авансов и премий не было",
     "difference": "Разница",
@@ -1287,6 +1295,8 @@
       "amountPlaceholder": "Сумма",
       "commentPlaceholder": "Комментарий (необязательно)",
       "addExpense": "Добавить расход",
+      "expenseAfterSubmitTitle": "Итоги по этой зоне уже сданы",
+      "expenseAfterSubmitHint": "Расход войдёт в следующую сдачу. Чтобы деньги ушли из сегодняшней кассы, вносите расход до сдачи итогов.",
       "reviewTitle": "Проверьте перед отправкой",
       "actualCash": "Фактическая касса:",
       "zReportTitle": "Z-отчёт сдачи итогов",
@@ -1656,6 +1666,7 @@
     "dailyCashSubject": "Касса за день",
     "shiftCloseSubject": "Закрытие смены",
     "instructionAckSubject": "Ознакомление",
+    "expenseAlertTitle": "РАСХОД",
     "instructionAckEmailWho": "Кто",
     "shiftClosedSuffix": "смена закрыта",
     "shiftWord": "смена",

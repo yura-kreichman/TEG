@@ -503,7 +503,9 @@
     "previewNoTariff": "Nessuna tariffa creata ancora",
     "previewNoOperator": "Nessun dipendente creato ancora",
     "instructionAckCardTitle": "Presa visione istruzione",
-    "instructionAckCardSub": "quando un dipendente firma un'istruzione"
+    "instructionAckCardSub": "quando un dipendente firma un'istruzione",
+    "expenseCardTitle": "Nuova spesa",
+    "expenseCardSub": "quando il dipendente registra una spesa"
   },
   "pushSettings": {
     "title": "Notifiche push",
@@ -532,6 +534,8 @@
     "instructionAckSub": "quando un dipendente firma un'istruzione",
     "collectionLabel": "Incasso",
     "collectionSub": "quando viene registrato un incasso",
+    "expenseLabel": "Nuova spesa",
+    "expenseSub": "quando il dipendente registra una spesa",
     "errors": {
       "notSupported": "Questo browser non supporta le notifiche push.",
       "permissionDenied": "Il permesso per le notifiche è stato negato nel browser — attivalo manualmente nelle impostazioni del sito.",
@@ -1068,6 +1072,10 @@
     "collectionSaveError": "Salvataggio delle modifiche non riuscito",
     "deleteCollectionConfirm": "Eliminare questo incasso? Il saldo della zona verrà ricalcolato. Non può essere annullato.",
     "deleteCollectionError": "Eliminazione dell'incasso non riuscita",
+    "editExpenseAction": "Modifica",
+    "editExpenseTitle": "Spesa",
+    "expenseSaveError": "Salvataggio della spesa non riuscito",
+    "deleteExpenseConfirm": "Eliminare questa spesa? Il saldo della zona verrà ricalcolato. Non può essere annullato.",
     "collectionAdvanceLabel": "Prelievo anticipato",
     "collectionAdvanceToastPrefix": "Messo da parte come prelievo anticipato",
     "collectionAdvanceToastSuffix": "— comparirà nel saldo della zona dopo l’invio dei risultati",
@@ -1256,6 +1264,8 @@
       "amountPlaceholder": "Importo",
       "commentPlaceholder": "Commento (facoltativo)",
       "addExpense": "Aggiungi spesa",
+      "expenseAfterSubmitTitle": "I risultati di questa zona sono già stati inviati",
+      "expenseAfterSubmitHint": "La spesa entrerà nella prossima chiusura. Perché il denaro esca dalla cassa di oggi, inserisci le spese prima di inviare i risultati.",
       "reviewTitle": "Rivedi prima di inviare",
       "actualCash": "Contanti effettivi:",
       "zReportTitle": "Rapporto Z",
@@ -1625,6 +1635,7 @@
     "dailyCashSubject": "Riepilogo cassa giornaliero",
     "shiftCloseSubject": "Fine turno",
     "instructionAckSubject": "Presa visione",
+    "expenseAlertTitle": "SPESA",
     "instructionAckEmailWho": "Chi",
     "shiftClosedSuffix": "turno chiuso",
     "shiftWord": "turno",

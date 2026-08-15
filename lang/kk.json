@@ -503,7 +503,9 @@
     "previewNoTariff": "Тариф құрылмаған",
     "previewNoOperator": "Қызметкер құрылмаған",
     "instructionAckCardTitle": "Нұсқаулықтан өту",
-    "instructionAckCardSub": "қызметкер нұсқаулыққа қол қойғанда"
+    "instructionAckCardSub": "қызметкер нұсқаулыққа қол қойғанда",
+    "expenseCardTitle": "Жаңа шығыс",
+    "expenseCardSub": "қызметкер шығыс енгізгенде"
   },
   "pushSettings": {
     "title": "Push-хабарландырулар",
@@ -532,6 +534,8 @@
     "instructionAckSub": "қызметкер нұсқаулыққа қол қойғанда",
     "collectionLabel": "Инкассация",
     "collectionSub": "инкассация тапсырылғанда",
+    "expenseLabel": "Жаңа шығыс",
+    "expenseSub": "қызметкер шығыс енгізгенде",
     "errors": {
       "notSupported": "Бұл браузер push-хабарландыруларды қолдамайды.",
       "permissionDenied": "Хабарландыруларға рұқсат браузерде қабылданбады — оны сайт баптауларынан қолмен қосыңыз.",
@@ -1068,6 +1072,10 @@
     "collectionSaveError": "Өзгерістерді сақтау мүмкін болмады",
     "deleteCollectionConfirm": "Осы инкассацияны жоюсыз ба? Аймақ қалдығы қайта есептеледі. Болдырмау мүмкін емес.",
     "deleteCollectionError": "Инкассацияны жою мүмкін болмады",
+    "editExpenseAction": "Өзгерту",
+    "editExpenseTitle": "Шығыс",
+    "expenseSaveError": "Шығысты сақтау мүмкін болмады",
+    "deleteExpenseConfirm": "Осы шығысты жоясыз ба? Аймақ қалдығы қайта есептеледі. Болдырмау мүмкін емес.",
     "collectionAdvanceLabel": "Аванстық инкассация",
     "collectionAdvanceToastPrefix": "Аванстық инкассация ретінде бөлінді",
     "collectionAdvanceToastSuffix": "— нәтижелер тапсырылғаннан кейін аймақ қалдығында пайда болады",
@@ -1256,6 +1264,8 @@
       "amountPlaceholder": "Сома",
       "commentPlaceholder": "Пікір (міндетті емес)",
       "addExpense": "Шығыс қосу",
+      "expenseAfterSubmitTitle": "Бұл аймақ бойынша қорытынды тапсырылған",
+      "expenseAfterSubmitHint": "Шығыс келесі тапсыруға кіреді. Ақша бүгінгі кассадан шығуы үшін шығысты қорытынды тапсырғанға дейін енгізіңіз.",
       "reviewTitle": "Жіберер алдында тексеріңіз",
       "actualCash": "Нақты касса:",
       "zReportTitle": "Z-есеп",
@@ -1625,6 +1635,7 @@
     "dailyCashSubject": "Күнделікті касса қорытындысы",
     "shiftCloseSubject": "Ауысымды жабу",
     "instructionAckSubject": "Танысу",
+    "expenseAlertTitle": "ШЫҒЫС",
     "instructionAckEmailWho": "Кім",
     "shiftClosedSuffix": "ауысым жабылды",
     "shiftWord": "ауысым",

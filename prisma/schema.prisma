@@ -393,6 +393,7 @@ model Tenant {
   dailyCashSummarySettings      DailyCashSummarySettings?
   shiftCloseSummarySettings     ShiftCloseSummarySettings?
   instructionAckSummarySettings InstructionAckSummarySettings?
+  expenseSummarySettings        ExpenseSummarySettings?
   dailyCashSummaryDeliveries    DailyCashSummaryDelivery[]
   tasks                         Task[]
   pushSubscriptions             PushSubscription[]
@@ -594,6 +595,10 @@ model PushNotificationSettings {
   // "владелец должен получать push об инкассации"), тот же принцип, что
   // shiftCheckin — короткое мгновенное уведомление, не сводка.
   collection        Boolean @default(true)
+  // Новый расход, внесённый Сотрудником (запрос владельца 2026-08-15) — та же
+  // пара тумблеров, что у инкассации: этот на Push, соседний на Telegram/email
+  // (ExpenseSummarySettings.enabled).
+  expense           Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -763,7 +768,6 @@ model Operator {
   ticketOrdersSold      TicketOrder[]
   ticketsRedeemed       Ticket[]                   @relation("TicketRedeemedBy")
   zoneReturnEvents      ZoneReturnEvent[]
-  zoneExpenseEvents     ZoneExpenseEvent[]
   counterTapEvents      CounterTapEvent[]
 
   // Аудит 2026-07-27: findOperatorByPin (lib/operator-auth.ts) выполняет
@@ -851,7 +855,6 @@ model Point {
   goodsRevisions             GoodsRevision[]
   goodsReconciliations       GoodsReconciliation[]
   zoneReturnEvents           ZoneReturnEvent[]
-  zoneExpenseEvents          ZoneExpenseEvent[]
   counterTapEvents           CounterTapEvent[]
 
   // Аудит 2026-07-27 — та же дыра, что у Operator.tenantId выше: каждый
@@ -1043,7 +1046,6 @@ model Zone {
   launches            Launch[]
   ticketOrders        TicketOrder[]
   returnEvents        ZoneReturnEvent[]
-  expenseEvents       ZoneExpenseEvent[]
   counterTapEvents    CounterTapEvent[]
 
   // Аудит 2026-07-27 — та же дыра, что у Operator.tenantId/Point.tenantId
@@ -1085,37 +1087,17 @@ model ZoneReturnEvent {
   @@index([zoneId, createdAt])
 }
 
-// Расход, зафиксированный Сотрудником в моменте, а не "из головы" на мастере
-// сдачи итогов (запрос пользователя 2026-07-25: "чтобы не надо было
-// запоминать до конца смены") — тот же принцип, что ZoneReturnEvent выше:
-// отдельный экран "Расходы" (доступен любому Сотруднику, не завязан на
-// режим учёта зоны, в отличие от "Счётчики" в баре), сдача итогов только
-// суммирует записи ЭТОЙ модели за текущий период (previousSubmissionBoundary)
-// и переносит их в ExpenseEntry/MoneyOperation, как раньше. "Раз не внёс —
-// проехали", поправить можно только здесь, до сдачи.
-model ZoneExpenseEvent {
-  id     String @id @default(cuid())
-  zoneId String
-  zone   Zone   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
-
-  pointId String
-  point   Point  @relation(fields: [pointId], references: [id], onDelete: Cascade)
-
-  operatorId String
-  // onDelete: Cascade — тот же класс бага, что у ResultsSubmission.operator
-  // (аудит 2026-07-26/27), см. комментарий у ZoneReturnEvent.operator выше.
-  operator   Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
-
-  categoryId String?
-  category   ExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-
-  amount  Decimal @db.Decimal(10, 2)
-  comment String?
-
-  createdAt DateTime @default(now())
-
-  @@index([zoneId, createdAt])
-}
+// Расход Сотрудника — это MoneyOperation type="expense" с самого момента
+// ввода, отдельной модели-журнала у него больше нет (решение пользователя
+// 2026-08-15). Раньше здесь жил ZoneExpenseEvent: расход копился в нём и
+// становился операцией только на сдаче итогов. Реальный случай в тот день —
+// сотрудник внёс расход через 24 минуты ПОСЛЕ сдачи, и для владельца тех
+// денег не существовало нигде: ни в реестре, ни в прибыли, ни в сводке, — до
+// следующей сдачи, которая поставила бы их чужой датой. Деньги физически
+// вынуты из кассы в момент ввода, поэтому и в учёте признаются тогда же.
+// "Текущий период" (что видит и может удалить Сотрудник) = операции с
+// resultsSubmissionId = null; сдача итогов их не создаёт, а только
+// проставляет им свою ссылку — см. api/operator/submit-results.
 
 // Тап "Пуск" по активу в зоне "Счётчики" с включённым
 // Zone.countersTapAssistEnabled (запрос пользователя 2026-07-25: "то, что
@@ -2148,7 +2130,6 @@ model ZoneSubmission {
   createdAt DateTime @default(now())
 
   assetReadings AssetReading[]
-  expenses      ExpenseEntry[]
   // Пуски режима "Прибывания", вошедшие в агрегат этой сдачи (docs/spec/
   // 04-game-room.md) — заполняется только у зон accountingMode="stays".
   launches      Launch[]
@@ -2196,26 +2177,12 @@ model ExpenseCategory {
 
   createdAt DateTime @default(now())
 
-  expenseEntries ExpenseEntry[]
-  expenseEvents  ZoneExpenseEvent[]
+  // Расходы этой категории — прямо на операциях журнала (см. комментарий у
+  // MoneyOperation.expenseCategory). Отдельной ExpenseEntry, дублировавшей
+  // сумму/комментарий операции ради одной лишь категории, больше нет.
+  expenseOperations MoneyOperation[]
 
   @@index([tenantId])
-}
-
-model ExpenseEntry {
-  id               String         @id @default(cuid())
-  zoneSubmissionId String
-  zoneSubmission   ZoneSubmission @relation(fields: [zoneSubmissionId], references: [id], onDelete: Cascade)
-
-  categoryId String?
-  category   ExpenseCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-
-  amount  Decimal @db.Decimal(10, 2)
-  comment String?
-
-  createdAt DateTime @default(now())
-
-  @@index([categoryId])
 }
 
 // Правки записей — только владелец. Журнал: кто, когда, было → стало.
@@ -2456,7 +2423,22 @@ model MoneyOperation {
 
   comment String?
 
-  // Ссылка на сдачу итогов, если операция создана автоматически ею (revenue/expense).
+  // Категория расхода — только у type="expense" (Настройки → Расходы). Живёт
+  // прямо здесь с 2026-08-15: до этого категория была единственным, чего не
+  // хватало операции, чтобы показать реестр расходов владельца, и ради неё
+  // держалась таблица-двойник ExpenseEntry со своей копией суммы и
+  // комментария. onDelete: SetNull — удаление категории не трогает сами
+  // деньги, строка просто остаётся без категории (то же правило, что было у
+  // ExpenseEntry.categoryId).
+  expenseCategoryId String?
+  expenseCategory   ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id], onDelete: SetNull)
+
+  // Ссылка на сдачу итогов. У revenue/revenue_cashless — сдача, которая их
+  // создала. У expense — сдача, которая ЗАКРЫЛА расход, введённый
+  // Сотрудником раньше: null означает "внесён, но ещё не вошёл ни в одну
+  // сдачу" (в учёте и у владельца он при этом уже виден, см. комментарий на
+  // месте удалённого ZoneExpenseEvent) — по этому же признаку экран "Расходы"
+  // в PWA показывает текущий период и разрешает удаление.
   resultsSubmissionId String?
 
   // Ссылка на смену, если аванс/премия введены прямо в форме смены (тот же
@@ -2492,6 +2474,9 @@ model MoneyOperation {
   // а лишнее по дате Postgres отбрасывает уже потом.
   @@index([tenantId, occurredAt])
   @@index([resultsSubmissionId, zoneId])
+  // Удаление категории расхода обнуляет ссылку у всех своих операций
+  // (унаследовано от @@index([categoryId]) на бывшей ExpenseEntry).
+  @@index([expenseCategoryId])
   // Расчёт баланса оператора ("к выдаче"/"заработано за период") сканирует
   // все advance/bonus_payout конкретного получателя — горячий путь карточки
   // оператора и вкладки "Время" в PWA.
@@ -2895,6 +2880,22 @@ model ShiftCloseSummarySettings {
 // модель, не поле на Instruction — это тенант-wide переключатель канала
 // уведомления, не свойство конкретной инструкции.
 model InstructionAckSummarySettings {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  enabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Тумблер уведомления "Новый расход" (запрос владельца 2026-08-15) — то же
+// устройство, что у InstructionAckSummarySettings выше: одно поле, состав
+// сообщения не настраивается (одна строка: сумма · зона · категория ·
+// сотрудник). Уведомление уходит в момент ввода расхода Сотрудником, а не на
+// сдаче итогов — как и сама операция расхода (см. 02-money.md).
+model ExpenseSummarySettings {
   id       String @id @default(cuid())
   tenantId String @unique
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)

@@ -503,7 +503,9 @@
     "previewNoTariff": "Тарыф не створаны",
     "previewNoOperator": "Супрацоўнік не створаны",
     "instructionAckCardTitle": "Праходжанне інструктажу",
-    "instructionAckCardSub": "калі супрацоўнік падпісвае інструктаж"
+    "instructionAckCardSub": "калі супрацоўнік падпісвае інструктаж",
+    "expenseCardTitle": "Новы расход",
+    "expenseCardSub": "калі супрацоўнік уносіць расход"
   },
   "pushSettings": {
     "title": "Push-апавяшчэнні",
@@ -532,6 +534,8 @@
     "instructionAckSub": "калі супрацоўнік падпісвае інструктаж",
     "collectionLabel": "Інкасацыя",
     "collectionSub": "калі ўносіцца інкасацыя",
+    "expenseLabel": "Новы расход",
+    "expenseSub": "калі супрацоўнік уносіць расход",
     "errors": {
       "notSupported": "Гэты браўзер не падтрымлівае push-апавяшчэнні.",
       "permissionDenied": "Дазвол на апавяшчэнні адхілены ў браўзеры — уключыце яго ў наладах сайта ўручную.",
@@ -1068,6 +1072,10 @@
     "collectionSaveError": "Не ўдалося захаваць змены",
     "deleteCollectionConfirm": "Выдаліць гэту інкасацыю? Астатак па зоне пералічыцца. Адмяніць нельга.",
     "deleteCollectionError": "Не ўдалося выдаліць інкасацыю",
+    "editExpenseAction": "Змяніць",
+    "editExpenseTitle": "Расход",
+    "expenseSaveError": "Не ўдалося захаваць расход",
+    "deleteExpenseConfirm": "Выдаліць гэты расход? Астатак па зоне пералічыцца. Адмяніць нельга.",
     "collectionAdvanceLabel": "Авансавая інкасацыя",
     "collectionAdvanceToastPrefix": "Адкладзена як авансавая інкасацыя",
     "collectionAdvanceToastSuffix": "— з’явіцца ў рэштцы зоны пасля здачы вынікаў",
@@ -1256,6 +1264,8 @@
       "amountPlaceholder": "Сума",
       "commentPlaceholder": "Каментарый (неабавязкова)",
       "addExpense": "Дадаць расход",
+      "expenseAfterSubmitTitle": "Вынікі па гэтай зоне ўжо зданыя",
+      "expenseAfterSubmitHint": "Расход трапіць у наступную здачу вынікаў. Каб грошы пайшлі з сённяшняй касы, уносьце расходы да здачы вынікаў.",
       "reviewTitle": "Праверце перад адпраўкай",
       "actualCash": "Фактычная каса:",
       "zReportTitle": "Z-справаздача",
@@ -1625,6 +1635,7 @@
     "dailyCashSubject": "Каса за дзень",
     "shiftCloseSubject": "Закрыццё змены",
     "instructionAckSubject": "Азнаямленне",
+    "expenseAlertTitle": "РАСХОД",
     "instructionAckEmailWho": "Хто",
     "shiftClosedSuffix": "змена закрыта",
     "shiftWord": "змена",

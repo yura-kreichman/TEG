@@ -9,12 +9,18 @@ import { SpringCard } from "@/components/spring-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SaveButton } from "@/components/ui/save-button";
+import { DeleteButton } from "@/components/ui/delete-button";
+import { MoneyInput } from "@/components/money-input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { IconActionButton } from "@/components/kebab-menu";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { useI18n } from "@/components/i18n-provider";
 import { Money } from "@/components/money";
 import { formatTime } from "@/lib/datetime-format";
+import { parseMoneyInput } from "@/lib/format";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 
 interface ExpenseEntry {
@@ -22,6 +28,7 @@ interface ExpenseEntry {
   occurredAt: string;
   zoneName: string;
   pointName: string;
+  categoryId: string | null;
   categoryName: string | null;
   comment: string | null;
   amount: number;
@@ -47,6 +54,70 @@ export default function ExpensesRegisterPage() {
   const { saved: categorySaved, pulse: categoryPulse } = useSavePulse();
   const [newCategoryName, setNewCategoryName] = useState("");
   const [categoryError, setCategoryError] = useState<string | null>(null);
+
+  // Правка/удаление ошибочно внесённого расхода (запрос пользователя
+  // 2026-08-15) — тот же паттерн, что у инкассаций (money/zone-balances) и
+  // авансов/премий. Сотруднику своя запись доступна только до сдачи итогов,
+  // владельцу — всегда.
+  const [editing, setEditing] = useState<ExpenseEntry | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [editCategoryId, setEditCategoryId] = useState("");
+  const [editComment, setEditComment] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const { saved: editSaved, pulse: editPulse } = useSavePulse();
+  const { saved: deleted, pulse: deletePulse } = useSavePulse();
+
+  function openEdit(expense: ExpenseEntry) {
+    setEditing(expense);
+    setEditAmount(String(expense.amount));
+    setEditCategoryId(expense.categoryId ?? "");
+    setEditComment(expense.comment ?? "");
+    setEditError(null);
+    setConfirmDelete(false);
+  }
+
+  async function submitEdit() {
+    if (!editing || editSubmitting) return;
+    setEditSubmitting(true);
+    setEditError(null);
+    try {
+      const res = await fetch(`/api/money/expenses/${editing.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: parseMoneyInput(editAmount),
+          categoryId: editCategoryId || null,
+          comment: editComment.trim() || null,
+        }),
+      });
+      if (!res.ok) {
+        setEditError((await res.json()).error ?? t.money.expenseSaveError);
+        return;
+      }
+      await loadExpenses();
+      editPulse(() => setEditing(null));
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
+  async function deleteExpense() {
+    if (!editing) return;
+    setDeleting(true);
+    setEditError(null);
+    const res = await fetch(`/api/money/expenses/${editing.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      setEditError((await res.json()).error ?? t.money.expenseSaveError);
+      setDeleting(false);
+      return;
+    }
+    setDeleting(false);
+    await loadExpenses();
+    deletePulse(() => setEditing(null));
+  }
 
   async function loadExpenses() {
     const year = calendarMonth.getUTCFullYear();
@@ -254,6 +325,7 @@ export default function ExpensesRegisterPage() {
                             )}
                           </span>
                           <span className="shrink-0 text-xs font-bold tabular-nums"><Money value={e.amount} /></span>
+                          <IconActionButton icon={Pencil} onClick={() => openEdit(e)} label={t.money.editExpenseAction} />
                         </div>
                       ))}
                     </div>
@@ -264,6 +336,79 @@ export default function ExpensesRegisterPage() {
           </SpringCard>
         </div>
       </div>
+
+      <BottomSheet open={editing !== null} onClose={() => setEditing(null)}>
+        {editing && (
+          <div className="flex flex-col gap-4 pt-2">
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.money.editExpenseTitle}</h2>
+            <p className="-mt-2 text-caption-airbnb text-muted-foreground">
+              {formatTime(editing.occurredAt)} · {editing.zoneName}
+              {showPointName ? ` (${editing.pointName})` : ""}
+            </p>
+
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="editExpenseAmount">{t.money.amountLabel}</Label>
+              <MoneyInput
+                id="editExpenseAmount"
+                autoFocus
+                scale="lg"
+                className="h-14 text-lg"
+                value={editAmount}
+                onChange={(e) => setEditAmount(e.target.value)}
+              />
+            </div>
+
+            {categories.length > 0 && (
+              <Select
+                value={editCategoryId || null}
+                onValueChange={(v) => setEditCategoryId(v ?? "")}
+                items={categories.map((c) => ({ value: c.id, label: c.name }))}
+              >
+                <SelectTrigger className="h-10 text-sm">
+                  <SelectValue placeholder={t.operatorApp.submit.categoryPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            <Input
+              placeholder={t.operatorApp.submit.commentPlaceholder}
+              value={editComment}
+              onChange={(e) => setEditComment(e.target.value)}
+            />
+
+            <PressableScale className="w-full">
+              <SaveButton className="h-12 w-full" disabled={editSubmitting} onClick={submitEdit} saved={editSaved} />
+            </PressableScale>
+
+            {editError && <p className="text-sm text-destructive">{editError}</p>}
+
+            {confirmDelete ? (
+              <div className="flex flex-col gap-2 border-t border-border pt-4">
+                <p className="text-body-airbnb">{t.money.deleteExpenseConfirm}</p>
+                <PressableScale>
+                  <DeleteButton className="h-12 w-full" disabled={deleting} onClick={deleteExpense} deleted={deleted} />
+                </PressableScale>
+              </div>
+            ) : (
+              <div className="border-t border-border pt-4">
+                <PressableScale>
+                  <Button variant="destructive" className="w-full gap-1.5" onClick={() => setConfirmDelete(true)}>
+                    <Trash2 className="size-4" />
+                    {t.common.delete}
+                  </Button>
+                </PressableScale>
+              </div>
+            )}
+          </div>
+        )}
+      </BottomSheet>
 
       <BottomSheet open={categoriesOpen} onClose={() => setCategoriesOpen(false)}>
         <div className="flex flex-col gap-3 pt-2">

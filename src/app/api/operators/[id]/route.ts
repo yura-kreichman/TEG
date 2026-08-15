@@ -257,8 +257,9 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/operator
   // (аванс/премия ПОЛУЧЕНЫ этим оператором, а не проведены им) — onDelete:
   // SetNull, тоже не ловилось прежней проверкой: операция в журнале
   // оставалась, но обезличивалась (терялось "кому").
-  // ticketOrderCount/zoneExpenseEventCount/counterTapEventCount/
-  // zoneReturnEventCount (аудит 2026-07-27) — те же 4 FK были переведены
+  // ticketOrderCount/counterTapEventCount/zoneReturnEventCount (аудит
+  // 2026-07-27; расходы отсюда ушли 2026-08-15 — теперь это обычные операции
+  // журнала и их ловит moneyOpCount) — те же FK были переведены
   // Restrict→Cascade миграцией 20260726215605_fix_remaining_tenant_delete_cascade_fks
   // (чтобы не блокировать удаление ЦЕЛОГО тенанта), но этот точечный guard
   // удаления ОДНОГО оператора не был расширен вместе с ними — оператор,
@@ -272,7 +273,6 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/operator
     balanceCarryoverCount,
     assignedTaskCount,
     ticketOrderCount,
-    zoneExpenseEventCount,
     counterTapEventCount,
     zoneReturnEventCount,
   ] = await Promise.all([
@@ -288,7 +288,6 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/operator
       // без единого предупреждения владельцу (аудит 2026-07-24).
       prisma.task.count({ where: { assignedOperators: { some: { id } } } }),
       prisma.ticketOrder.count({ where: { soldByOperatorId: id } }),
-      prisma.zoneExpenseEvent.count({ where: { operatorId: id } }),
       prisma.counterTapEvent.count({ where: { operatorId: id } }),
       prisma.zoneReturnEvent.count({ where: { operatorId: id } }),
     ]);
@@ -300,7 +299,6 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/operator
     balanceCarryoverCount > 0 ||
     assignedTaskCount > 0 ||
     ticketOrderCount > 0 ||
-    zoneExpenseEventCount > 0 ||
     counterTapEventCount > 0 ||
     zoneReturnEventCount > 0
   ) {

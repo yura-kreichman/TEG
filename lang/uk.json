@@ -503,7 +503,9 @@
     "previewNoTariff": "Тариф ще не створено",
     "previewNoOperator": "Співробітника ще не створено",
     "instructionAckCardTitle": "Проходження інструктажу",
-    "instructionAckCardSub": "коли співробітник підписує інструктаж"
+    "instructionAckCardSub": "коли співробітник підписує інструктаж",
+    "expenseCardTitle": "Нова витрата",
+    "expenseCardSub": "коли співробітник вносить витрату"
   },
   "pushSettings": {
     "title": "Push-сповіщення",
@@ -532,6 +534,8 @@
     "instructionAckSub": "коли співробітник підписує інструктаж",
     "collectionLabel": "Інкасація",
     "collectionSub": "коли вноситься інкасація",
+    "expenseLabel": "Нова витрата",
+    "expenseSub": "коли співробітник вносить витрату",
     "errors": {
       "notSupported": "Цей браузер не підтримує push-сповіщення.",
       "permissionDenied": "Дозвіл на сповіщення відхилено в браузері — увімкніть його вручну в налаштуваннях сайту.",
@@ -1068,6 +1072,10 @@
     "collectionSaveError": "Не вдалося зберегти зміни",
     "deleteCollectionConfirm": "Видалити цю інкасацію? Залишок по зоні перерахується. Скасувати не можна.",
     "deleteCollectionError": "Не вдалося видалити інкасацію",
+    "editExpenseAction": "Змінити",
+    "editExpenseTitle": "Витрата",
+    "expenseSaveError": "Не вдалося зберегти витрату",
+    "deleteExpenseConfirm": "Видалити цю витрату? Залишок по зоні перерахується. Скасувати не можна.",
     "collectionAdvanceLabel": "Авансова інкасація",
     "collectionAdvanceToastPrefix": "Відкладено як авансова інкасація",
     "collectionAdvanceToastSuffix": "— з’явиться в залишку зони після здачі підсумків",
@@ -1256,6 +1264,8 @@
       "amountPlaceholder": "Сума",
       "commentPlaceholder": "Коментар (необов'язково)",
       "addExpense": "Додати витрату",
+      "expenseAfterSubmitTitle": "Підсумки по цій зоні вже здано",
+      "expenseAfterSubmitHint": "Витрата увійде в наступну здачу підсумків. Щоб гроші пішли з сьогоднішньої каси, вносьте витрати до здачі підсумків.",
       "reviewTitle": "Перевірте перед відправкою",
       "actualCash": "Фактична каса:",
       "zReportTitle": "Z-звіт",
@@ -1625,6 +1635,7 @@
     "dailyCashSubject": "Каса за день",
     "shiftCloseSubject": "Закриття зміни",
     "instructionAckSubject": "Ознайомлення",
+    "expenseAlertTitle": "ВИТРАТА",
     "instructionAckEmailWho": "Хто",
     "shiftClosedSuffix": "зміну закрито",
     "shiftWord": "зміна",

@@ -503,7 +503,9 @@
     "previewNoTariff": "Սակագինը ստեղծված չէ",
     "previewNoOperator": "Աշխատակիցը ստեղծված չէ",
     "instructionAckCardTitle": "Հրահանգի անցում",
-    "instructionAckCardSub": "երբ աշխատակիցը ստորագրում է հրահանգը"
+    "instructionAckCardSub": "երբ աշխատակիցը ստորագրում է հրահանգը",
+    "expenseCardTitle": "Նոր ծախս",
+    "expenseCardSub": "երբ աշխատակիցը ծախս է մուտքագրում"
   },
   "pushSettings": {
     "title": "Push-ծանուցումներ",
@@ -532,6 +534,8 @@
     "instructionAckSub": "երբ աշխատակիցը ստորագրում է հրահանգը",
     "collectionLabel": "Ինկասացիա",
     "collectionSub": "երբ գրանցվում է ինկասացիա",
+    "expenseLabel": "Նոր ծախս",
+    "expenseSub": "երբ աշխատակիցը ծախս է մուտքագրում",
     "errors": {
       "notSupported": "Այս բրաուզերը չի աջակցում push-ծանուցումներ.",
       "permissionDenied": "Ծանուցումների թույլտվությունը մերժված է բրաուզերում — միացրեք այն ձեռքով կայքի կարգավորումներում.",
@@ -1068,6 +1072,10 @@
     "collectionSaveError": "Չհաջողվեց պահպանել փոփոխությունները",
     "deleteCollectionConfirm": "Ջնջե՞լ այս ինկասացիան։ Գոտու մնացորդը կվերահաշվարկվի։ Հնարավոր չէ չեղարկել։",
     "deleteCollectionError": "Չհաջողվեց ջնջել ինկասացիան",
+    "editExpenseAction": "Փոփոխել",
+    "editExpenseTitle": "Ծախս",
+    "expenseSaveError": "Չհաջողվեց պահպանել ծախսը",
+    "deleteExpenseConfirm": "Ջնջե՞լ այս ծախսը։ Գոտու մնացորդը կվերահաշվարկվի։ Հնարավոր չէ չեղարկել։",
     "collectionAdvanceLabel": "Կանխավճարային հավաքագրում",
     "collectionAdvanceToastPrefix": "Առանձնացվել է որպես կանխավճարային հավաքագրում",
     "collectionAdvanceToastSuffix": "— կհայտնվի գոտու մնացորդում արդյունքների հանձնումից հետո",
@@ -1256,6 +1264,8 @@
       "amountPlaceholder": "Գումար",
       "commentPlaceholder": "Մեկնաբանություն (ընտրովի)",
       "addExpense": "Ավելացնել ծախս",
+      "expenseAfterSubmitTitle": "Այս գոտու արդյունքներն արդեն հանձնված են",
+      "expenseAfterSubmitHint": "Ծախսը կմտնի հաջորդ հանձնման մեջ։ Որպեսզի գումարը դուրս գա այսօրվա դրամարկղից, ծախսերը մուտքագրեք արդյունքները հանձնելուց առաջ։",
       "reviewTitle": "Ստուգեք՝ մինչ ուղարկելը",
       "actualCash": "Փաստացի դրամարկղ.",
       "zReportTitle": "Z-հաշվետվություն",
@@ -1625,6 +1635,7 @@
     "dailyCashSubject": "Օրական դրամարկղի ամփոփագիր",
     "shiftCloseSubject": "Հերթափոխի փակում",
     "instructionAckSubject": "Ծանոթացում",
+    "expenseAlertTitle": "ԾԱԽՍ",
     "instructionAckEmailWho": "Ով",
     "shiftClosedSuffix": "հերթափոխը փակված է",
     "shiftWord": "հերթափոխ",

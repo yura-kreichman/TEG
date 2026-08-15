@@ -295,9 +295,10 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/zones/[i
   // каскадном удалении. "voided" — единственный статус без финансовых
   // последствий, его одного и исключаем (аудит 2026-07-27).
   //
-  // pendingEventCount — ZoneReturnEvent/ZoneExpenseEvent/CounterTapEvent
-  // (Zone.onDelete: Cascade) — события, ещё не свёрнутые в Сдачу итогов,
-  // молча пропадали при удалении зоны без единой сдачи (аудит 2026-07-27).
+  // pendingEventCount — ZoneReturnEvent/CounterTapEvent (Zone.onDelete:
+  // Cascade) — события, ещё не свёрнутые в Сдачу итогов, молча пропадали при
+  // удалении зоны без единой сдачи (аудит 2026-07-27). Расходов здесь больше
+  // нет: с 2026-08-15 они сразу операции журнала и ловятся moneyOpCount.
   // unsubmittedEndedLaunchCount (аудит 2026-07-27, второй раунд) — тот же
   // пробел, что уже чинили для удаления Актива (assets/[id]/route.ts):
   // завершённый, но ещё не свёрнутый в Сдачу итогов Launch — это реальная,
@@ -312,9 +313,8 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/zones/[i
       prisma.ticket.count({ where: { order: { zoneId: id }, status: { not: "voided" } } }),
       Promise.all([
         prisma.zoneReturnEvent.count({ where: { zoneId: id } }),
-        prisma.zoneExpenseEvent.count({ where: { zoneId: id } }),
         prisma.counterTapEvent.count({ where: { zoneId: id } }),
-      ]).then(([a, b, c]) => a + b + c),
+      ]).then(([a, b]) => a + b),
     ]);
   if (submissionCount > 0 || moneyOpCount > 0 || unsubmittedEndedLaunchCount > 0 || pendingEventCount > 0) {
     return NextResponse.json(

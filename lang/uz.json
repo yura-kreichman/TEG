@@ -503,7 +503,9 @@
     "previewNoTariff": "Tarif yaratilmagan",
     "previewNoOperator": "Xodim yaratilmagan",
     "instructionAckCardTitle": "Yoʻriqnoma bilan tanishish",
-    "instructionAckCardSub": "xodim yoʻriqnomani imzolaganda"
+    "instructionAckCardSub": "xodim yoʻriqnomani imzolaganda",
+    "expenseCardTitle": "Yangi xarajat",
+    "expenseCardSub": "xodim xarajat kiritganda"
   },
   "pushSettings": {
     "title": "Push-bildirishnomalar",
@@ -532,6 +534,8 @@
     "instructionAckSub": "xodim yo'riqnomani imzolaganda",
     "collectionLabel": "Inkassatsiya",
     "collectionSub": "inkassatsiya amalga oshirilganda",
+    "expenseLabel": "Yangi xarajat",
+    "expenseSub": "xodim xarajat kiritganda",
     "errors": {
       "notSupported": "Ushbu brauzer push-bildirishnomalarni qoʻllab-quvvatlamaydi.",
       "permissionDenied": "Bildirishnomalarga ruxsat brauzerda rad etilgan — sayt sozlamalarida qoʻlda yoqing.",
@@ -1068,6 +1072,10 @@
     "collectionSaveError": "O'zgarishlarni saqlab bo'lmadi",
     "deleteCollectionConfirm": "Ushbu inkassatsiyani oʻchirasizmi? Zona qoldigʻi qayta hisoblanadi. Bekor qilib boʻlmaydi.",
     "deleteCollectionError": "Inkassatsiyani oʻchirib bo'lmadi",
+    "editExpenseAction": "Tahrirlash",
+    "editExpenseTitle": "Xarajat",
+    "expenseSaveError": "Xarajatni saqlab boʻlmadi",
+    "deleteExpenseConfirm": "Ushbu xarajatni oʻchirasizmi? Zona qoldigʻi qayta hisoblanadi. Bekor qilib boʻlmaydi.",
     "collectionAdvanceLabel": "Avans inkassatsiya",
     "collectionAdvanceToastPrefix": "Avans inkassatsiya sifatida ajratildi",
     "collectionAdvanceToastSuffix": "— natijalar topshirilgandan keyin zona qoldig‘ida paydo bo‘ladi",
@@ -1256,6 +1264,8 @@
       "amountPlaceholder": "Summa",
       "commentPlaceholder": "Izoh (ixtiyoriy)",
       "addExpense": "Xarajat qoʻshish",
+      "expenseAfterSubmitTitle": "Bu zona boʻyicha natijalar allaqachon topshirilgan",
+      "expenseAfterSubmitHint": "Xarajat keyingi topshiriqqa kiradi. Pul bugungi kassadan chiqishi uchun xarajatni natijalarni topshirishdan oldin kiriting.",
       "reviewTitle": "Yuborishdan oldin tekshiring",
       "actualCash": "Haqiqiy kassa:",
       "zReportTitle": "Z-hisobot",
@@ -1625,6 +1635,7 @@
     "dailyCashSubject": "Kunlik kassa xulosasi",
     "shiftCloseSubject": "Smena yakuni",
     "instructionAckSubject": "Tanishish",
+    "expenseAlertTitle": "XARAJAT",
     "instructionAckEmailWho": "Kim",
     "shiftClosedSuffix": "smena yakunlandi",
     "shiftWord": "smena",

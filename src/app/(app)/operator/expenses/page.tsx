@@ -30,6 +30,10 @@ interface ExpenseZone {
   id: string;
   name: string;
   iconKey: string | null;
+  // Итоги по зоне уже сданы в этом рабочем дне — расход всё равно запишется и
+  // владельцу будет виден сразу, но в кассу войдёт только следующей сдачей
+  // (см. подсказку в форме ниже).
+  submittedToday: boolean;
 }
 
 interface ExpenseCategory {
@@ -279,6 +283,18 @@ export default function OperatorExpensesPage() {
                   </PressableScale>
                 );
               })}
+            </div>
+          )}
+
+          {/* Подсказка "уже сдано" — не блокирует и не прячется за иконкой
+              (в PWA сотрудника тултипов нет): расход запишется и владельцу
+              будет виден сразу, но в кассу этого дня уже не попадёт. */}
+          {formZoneId && zones.find((z) => z.id === formZoneId)?.submittedToday && (
+            <div className="rounded-control border border-border bg-muted/60 px-3.5 py-3">
+              <p className="text-body-airbnb font-semibold">{t.operatorApp.submit.expenseAfterSubmitTitle}</p>
+              <p className="mt-0.5 text-caption-airbnb text-muted-foreground">
+                {t.operatorApp.submit.expenseAfterSubmitHint}
+              </p>
             </div>
           )}
 

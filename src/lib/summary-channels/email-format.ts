@@ -1,5 +1,11 @@
 import type { ZoneSummarySettingsData, DailyCashSummarySettingsData, ShiftCloseSummarySettingsData } from "@/lib/summary-settings";
-import type { ZoneSummaryData, DailyCashSummaryData, ShiftCloseSummaryData, InstructionAckData } from "./types";
+import type {
+  ZoneSummaryData,
+  DailyCashSummaryData,
+  ShiftCloseSummaryData,
+  InstructionAckData,
+  ExpenseAlertData,
+} from "./types";
 import { formatBusinessDate, formatDuration, formatLocalTime, formatSummaryDate } from "./format-shared";
 import { formatMoney } from "@/lib/format";
 import type { Locale } from "@/lib/locales";
@@ -242,4 +248,31 @@ export function formatInstructionAckEmail(
     { label: readingTimeLabel, value: `${data.readingMinutes} ${minutesShort}` },
   ];
   return { subject, html: wrapEmail(companyName, data.instructionTitle, instructionAckTitle, rows, locale) };
+}
+
+// Новый расход — тот же состав, что в Telegram/Push (формат владельца
+// 2026-08-15): кто и сколько, время события в шапке. Цветовой метки здесь
+// нет — эмодзи-квадрат уместен в мессенджере, но не в строке письма.
+export function formatExpenseAlertEmail(
+  data: ExpenseAlertData,
+  companyName: string,
+  locale: Locale,
+  st: SummaryText,
+  timezone: string
+): { subject: string; html: string } {
+  const subject = `${st.expenseAlertTitle} · ${formatMoney(data.amount, locale)}`;
+  const rows: EmailRow[] = [
+    { label: st.operatorLabel, value: data.operatorName },
+    { label: st.expenses, value: formatMoney(data.amount, locale), bold: true },
+  ];
+  return {
+    subject,
+    html: wrapEmail(
+      companyName,
+      `${formatDate(data.occurredAt, timezone)} ${formatLocalTime(data.occurredAt, timezone)}`,
+      st.expenseAlertTitle,
+      rows,
+      locale
+    ),
+  };
 }

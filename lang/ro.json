@@ -503,7 +503,9 @@
     "previewNoTariff": "Niciun tarif creat încă",
     "previewNoOperator": "Niciun angajat creat încă",
     "instructionAckCardTitle": "Finalizarea instruirii",
-    "instructionAckCardSub": "când un angajat semnează o instrucțiune"
+    "instructionAckCardSub": "când un angajat semnează o instrucțiune",
+    "expenseCardTitle": "Cheltuială nouă",
+    "expenseCardSub": "când angajatul înregistrează o cheltuială"
   },
   "pushSettings": {
     "title": "Notificări push",
@@ -532,6 +534,8 @@
     "instructionAckSub": "când un angajat semnează o instrucțiune",
     "collectionLabel": "Colectare",
     "collectionSub": "când este înregistrată o colectare de numerar",
+    "expenseLabel": "Cheltuială nouă",
+    "expenseSub": "când angajatul înregistrează o cheltuială",
     "errors": {
       "notSupported": "Acest browser nu suportă notificări push.",
       "permissionDenied": "Permisiunea pentru notificări a fost refuzată în browser — activați-o manual în setările site-ului.",
@@ -1068,6 +1072,10 @@
     "collectionSaveError": "Nu s-au putut salva modificările",
     "deleteCollectionConfirm": "Ștergi această colectare? Soldul zonei se va recalcula. Nu poate fi anulat.",
     "deleteCollectionError": "Nu s-a putut șterge colectarea",
+    "editExpenseAction": "Editează",
+    "editExpenseTitle": "Cheltuială",
+    "expenseSaveError": "Nu s-a putut salva cheltuiala",
+    "deleteExpenseConfirm": "Ștergi această cheltuială? Soldul zonei se va recalcula. Nu poate fi anulat.",
     "collectionAdvanceLabel": "Colectare în avans",
     "collectionAdvanceToastPrefix": "Pus deoparte ca o colectare în avans",
     "collectionAdvanceToastSuffix": "— va apărea în soldul zonei după trimiterea rezultatelor",
@@ -1256,6 +1264,8 @@
       "amountPlaceholder": "Sumă",
       "commentPlaceholder": "Comentariu (opțional)",
       "addExpense": "Adaugă cheltuială",
+      "expenseAfterSubmitTitle": "Rezultatele pentru această zonă au fost deja predate",
+      "expenseAfterSubmitHint": "Cheltuiala va intra în următoarea predare a rezultatelor. Ca banii să iasă din casa de azi, adaugă cheltuielile înainte de predarea rezultatelor.",
       "reviewTitle": "Verificați înainte de trimitere",
       "actualCash": "Numerar efectiv:",
       "zReportTitle": "Raport Z",
@@ -1625,6 +1635,7 @@
     "dailyCashSubject": "Rezumat casă zilnic",
     "shiftCloseSubject": "Închidere tură",
     "instructionAckSubject": "Confirmare",
+    "expenseAlertTitle": "CHELTUIALĂ",
     "instructionAckEmailWho": "Cine",
     "shiftClosedSuffix": "tură închisă",
     "shiftWord": "tură",

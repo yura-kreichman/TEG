@@ -382,6 +382,19 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/reports/
 
   try {
     await prisma.$transaction(async (tx) => {
+      // Расходы удаление сдачи НЕ уносит, а отвязывает (2026-08-15): сдача их
+      // больше не создаёт — Сотрудник внёс их сам, ещё до неё, и деньги из
+      // кассы вынуты по-настоящему. Удалять их вместе со сдачей значило бы
+      // стирать чужие траты за компанию; отвязанные, они возвращаются в
+      // "текущий период" зоны и войдут в следующую сдачу.
+      await tx.moneyOperation.updateMany({
+        where: {
+          resultsSubmissionId: zoneSubmission.resultsSubmissionId,
+          zoneId: zoneSubmission.zoneId,
+          type: "expense",
+        },
+        data: { resultsSubmissionId: null },
+      });
       await tx.moneyOperation.deleteMany({
         where: { resultsSubmissionId: zoneSubmission.resultsSubmissionId, zoneId: zoneSubmission.zoneId },
       });

@@ -100,6 +100,7 @@ export default function PushSettingsPage() {
     { key: "shiftCheckin", label: t.pushSettings.shiftCheckinLabel, sub: t.pushSettings.shiftCheckinSub },
     { key: "instructionAck", label: t.pushSettings.instructionAckLabel, sub: t.pushSettings.instructionAckSub },
     { key: "collection", label: t.pushSettings.collectionLabel, sub: t.pushSettings.collectionSub },
+    { key: "expense", label: t.pushSettings.expenseLabel, sub: t.pushSettings.expenseSub },
   ];
 
   if (checking) return null;

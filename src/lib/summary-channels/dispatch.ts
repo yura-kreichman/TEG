@@ -6,17 +6,27 @@ import { isLocale, type Locale } from "@/lib/locales";
 import { getDictionary, type Dictionary } from "@/lib/i18n";
 import {
   formatDailyCashSummaryEmail,
+  formatExpenseAlertEmail,
   formatInstructionAckEmail,
   formatShiftCloseSummaryEmail,
   formatZoneSummaryEmail,
 } from "./email-format";
 import {
   formatDailyCashSummaryTelegram,
+  formatExpenseAlertHeader,
+  formatExpenseAlertLine,
+  formatExpenseAlertTelegram,
   formatInstructionAckTelegram,
   formatShiftCloseSummaryTelegram,
   formatZoneSummaryTelegram,
 } from "./telegram-format";
-import type { DailyCashSummaryData, InstructionAckData, ShiftCloseSummaryData, ZoneSummaryData } from "./types";
+import type {
+  DailyCashSummaryData,
+  ExpenseAlertData,
+  InstructionAckData,
+  ShiftCloseSummaryData,
+  ZoneSummaryData,
+} from "./types";
 import {
   PUSH_NOTIFICATION_DEFAULTS,
   type DailyCashSummarySettingsData,
@@ -321,4 +331,44 @@ export async function dispatchCollection(
     body: `${who} · ${label} · ${formatMoney(amount, tenant.locale)}`,
     url: "/money",
   }).catch((err) => console.error("push dispatch failed", { kind: "collection", tenantId, err }));
+}
+
+/**
+ * Новый расход, внесённый Сотрудником (запрос владельца 2026-08-15). Два
+ * независимых тумблера, как и просили: Telegram/email — ExpenseSummarySettings
+ * .enabled (проверяет вызывающий роут), Push — PushNotificationSettings.expense.
+ *
+ * Push повторяет ровно те же две строки, что уходят в Telegram, только без
+ * HTML: шапка "🛒 РАСХОД — дата, время" заголовком, "🟥 Имя: сумма" телом.
+ */
+export async function dispatchExpenseAlert(tenantId: string, data: ExpenseAlertData): Promise<DispatchResult[]> {
+  const channels = await getEnabledChannels(tenantId);
+  const results: DispatchResult[] = [];
+  const tenant = await getTenantInfo(tenantId);
+  const st = tenant.t.summaryText;
+
+  for (const channel of channels) {
+    if (channel.channelType === "telegram" && channel.chatStatus === "active" && channel.chatId) {
+      const text = formatExpenseAlertTelegram(data, st, tenant.locale, tenant.timezone);
+      const result = await sendChatMessage(channel.chatId, text);
+      results.push(toDispatchResult("telegram", result));
+    } else if (channel.channelType === "email") {
+      const addresses = parseEmailAddresses(channel.emailAddresses);
+      if (addresses.length === 0) continue;
+      const { subject, html } = formatExpenseAlertEmail(data, tenant.name, tenant.locale, st, tenant.timezone);
+      const result = await sendEmail(addresses, subject, html);
+      results.push({ channelType: "email", ok: result.ok, error: result.error });
+    }
+  }
+
+  if (await pushEnabledFor(tenantId, "expense")) {
+    await sendPushToTenant(tenantId, {
+      title: formatExpenseAlertHeader(data, st, tenant.timezone),
+      body: formatExpenseAlertLine(data, tenant.locale),
+      url: "/money/expenses",
+    }).catch((err) => console.error("push dispatch failed", { kind: "expense", tenantId, err }));
+  }
+
+  logFailures("expense", tenantId, results);
+  return results;
 }
