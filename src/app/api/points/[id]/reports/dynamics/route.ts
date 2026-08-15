@@ -246,7 +246,11 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
 
   return NextResponse.json({
     pointName,
-    period: { granularity, start: start.toISOString(), end: end.toISOString() },
+    // isCustom наружу (2026-08-16): произвольный период тоже приходит сюда с
+    // granularity="day" — по нему строятся дневные столбцы, — и экран, скрывая
+    // график для режима "День", заодно прятал его у периода из двух недель.
+    // Различить эти два случая по одному granularity нельзя.
+    period: { granularity, isCustom, start: start.toISOString(), end: end.toISOString() },
     total: round2(total),
     cash: round2(totalCash),
     mobile: round2(totalMobile),

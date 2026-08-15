@@ -41,7 +41,10 @@ const GOODS_POOL_ID = "__goods__";
 
 interface DynamicsData {
   pointName: string;
-  period: { granularity: Granularity };
+  // isCustom — произвольный период "с … по …". Приходит с granularity="day"
+  // (столбцы дневные), поэтому отличить его от режима "День" можно только по
+  // этому флагу — см. условие показа графика ниже.
+  period: { granularity: Granularity; isCustom?: boolean };
   total: number;
   cash: number;
   mobile: number;
@@ -568,7 +571,7 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
             скрывался сам через visibleBars.length > 1 ниже), но легенда и
             пустая область под неё оставались — убраны целиком для этого
             режима, не только линия. */}
-        {data.period.granularity !== "day" && (
+        {(data.period.granularity !== "day" || data.period.isCustom) && (
           <>
             <div className="mt-2 flex items-center gap-3 text-caption-airbnb text-muted-foreground">
               <span className="flex items-center gap-1.5">
@@ -689,12 +692,13 @@ function DynamicsTab({ data, t }: { data: DynamicsData; t: ReturnType<typeof use
                     undefined,
                     data.period.granularity === "year" ? { month: "short" } : { weekday: "short" }
                   )}
-                  {/* Число дня под днём недели — только "Месяц" (запрос
-                      пользователя 2026-07-25: "чт/пт/сб... на разных неделях
-                      выглядят одинаково, число помогает понять, какой именно
-                      день"), без месяца — тот и так виден в переключателе
+                  {/* Число дня под днём недели — "Месяц" (запрос пользователя
+                      2026-07-25: "чт/пт/сб... на разных неделях выглядят
+                      одинаково, число помогает понять, какой именно день") и
+                      произвольный период, где недель тем более может быть
+                      несколько. Без месяца — тот и так виден в переключателе
                       периода выше. */}
-                  {data.period.granularity === "month" && (
+                  {(data.period.granularity === "month" || data.period.isCustom) && (
                     <div className="tabular-nums">{Number(b.date.slice(8, 10))}</div>
                   )}
                 </div>
