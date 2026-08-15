@@ -6,7 +6,6 @@ import { ChevronLeft, ChevronRight, Crown, Pencil, Plus, Trash2 } from "lucide-r
 import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
-import { DeleteButton } from "@/components/ui/delete-button";
 import { Input } from "@/components/ui/input";
 import { TimeInput } from "@/components/time-input";
 import { MoneyInput } from "@/components/money-input";
@@ -159,16 +158,12 @@ export default function OperatorCardPage() {
   const [editWarnings, setEditWarnings] = useState<string[]>([]);
   const [editError, setEditError] = useState<string | null>(null);
   const [confirmDeleteShift, setConfirmDeleteShift] = useState(false);
-  const [deletingShift, setDeletingShift] = useState(false);
-  const { saved: shiftDeleted, pulse: shiftDeletePulse } = useSavePulse();
   const { saved: shiftSaved, pulse: shiftPulse } = useSavePulse();
 
   const [editingMoneyOp, setEditingMoneyOp] = useState<StandaloneMoneyOp | null>(null);
   const [editMoneyOpAmount, setEditMoneyOpAmount] = useState("");
   const [editMoneyOpError, setEditMoneyOpError] = useState<string | null>(null);
   const [confirmDeleteMoneyOp, setConfirmDeleteMoneyOp] = useState(false);
-  const [deletingMoneyOp, setDeletingMoneyOp] = useState(false);
-  const { saved: moneyOpDeleted, pulse: moneyOpDeletePulse } = useSavePulse();
   const { saved: moneyOpSaved, pulse: moneyOpPulse } = useSavePulse();
 
   function openMoneyOpEdit(op: StandaloneMoneyOp) {
@@ -197,18 +192,15 @@ export default function OperatorCardPage() {
 
   async function deleteMoneyOp() {
     if (!editingMoneyOp) return;
-    setDeletingMoneyOp(true);
     setEditMoneyOpError(null);
     const res = await fetch(`/api/work-time/money-ops/${editingMoneyOp.id}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json();
       setEditMoneyOpError(data.error ?? t.operatorApp.workTime.saveError);
-      setDeletingMoneyOp(false);
       return;
     }
-    setDeletingMoneyOp(false);
     await loadAll();
-    moneyOpDeletePulse(() => setEditingMoneyOp(null));
+    setEditingMoneyOp(null);
   }
 
   async function loadAll() {
@@ -538,18 +530,15 @@ export default function OperatorCardPage() {
 
   async function deleteShift() {
     if (!editingShift) return;
-    setDeletingShift(true);
     setEditError(null);
     const res = await fetch(`/api/work-time/shifts/${editingShift.id}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json();
       setEditError(data.error ?? t.operatorApp.workTime.saveError);
-      setDeletingShift(false);
       return;
     }
-    setDeletingShift(false);
     await loadAll();
-    shiftDeletePulse(() => setEditingShift(null));
+    setEditingShift(null);
   }
 
   async function submitShiftEdit() {
@@ -1185,38 +1174,27 @@ export default function OperatorCardPage() {
             ))}
             {editError && <p className="text-sm text-destructive">{editError}</p>}
 
-            {confirmDeleteShift && shifts[0]?.id === editingShift.id ? (
-              <div className="flex flex-col gap-2 border-t border-border pt-4">
-                <p className="text-body-airbnb">{t.operatorApp.workTime.deleteShiftConfirm}</p>
-                <PressableScale>
-                  <DeleteButton
-                    className="h-12 w-full"
-                    disabled={deletingShift}
-                    onClick={deleteShift}
-                    deleted={shiftDeleted}
-                  />
-                </PressableScale>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                {shifts[0]?.id === editingShift.id && (
-                  <PressableScale>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      className="h-12 shrink-0 gap-1.5 px-4"
-                      onClick={() => setConfirmDeleteShift(true)}
-                    >
-                      <Trash2 className="size-4" />
-                      {t.common.delete}
-                    </Button>
-                  </PressableScale>
-                )}
-                <PressableScale className="min-w-0 flex-1">
-                  <SaveButton className="h-12 w-full" onClick={submitShiftEdit} saved={shiftSaved} />
-                </PressableScale>
-              </div>
+            {/* Сохранение — широкой кнопкой, удаление одной иконкой рядом
+                (запрос владельца 2026-08-16: привести подобные шторки к
+                единому виду). Разделителя над подтверждением нет — он ничего
+                не отделял. */}
+            {confirmDeleteShift && shifts[0]?.id === editingShift.id && (
+              <p className="text-body-airbnb">{t.operatorApp.workTime.deleteShiftConfirm}</p>
             )}
+            <div className="flex items-center gap-2">
+              <PressableScale className="min-w-0 flex-1">
+                <SaveButton className="h-12 w-full" onClick={submitShiftEdit} saved={shiftSaved} />
+              </PressableScale>
+              {shifts[0]?.id === editingShift.id && (
+                <IconActionButton
+                  icon={Trash2}
+                  onClick={() => (confirmDeleteShift ? deleteShift() : setConfirmDeleteShift(true))}
+                  label={t.common.delete}
+                  destructive
+                  active={confirmDeleteShift}
+                />
+              )}
+            </div>
           </div>
         )}
       </BottomSheet>
@@ -1229,44 +1207,32 @@ export default function OperatorCardPage() {
             </h2>
             <div className="flex flex-col gap-1">
               <Label htmlFor="editMoneyOpAmount">{t.money.amountLabel}</Label>
-              <div className="flex items-center gap-2">
-                <MoneyInput
-                  id="editMoneyOpAmount"
-                  autoFocus
-                  scale="lg"
-                  className="h-14 flex-1 text-lg"
-                  value={editMoneyOpAmount}
-                  onChange={(e) => setEditMoneyOpAmount(e.target.value)}
-                />
-                <PressableScale>
-                  <SaveButton className="h-14" onClick={submitMoneyOpEdit} saved={moneyOpSaved} />
-                </PressableScale>
-              </div>
+              <MoneyInput
+                id="editMoneyOpAmount"
+                autoFocus
+                scale="lg"
+                className="h-14 text-lg"
+                value={editMoneyOpAmount}
+                onChange={(e) => setEditMoneyOpAmount(e.target.value)}
+              />
             </div>
             {editMoneyOpError && <p className="text-sm text-destructive">{editMoneyOpError}</p>}
 
-            {confirmDeleteMoneyOp ? (
-              <div className="flex flex-col gap-2 border-t border-border pt-4">
-                <p className="text-body-airbnb">{t.operatorApp.workTime.deleteMoneyOpConfirm}</p>
-                <PressableScale>
-                  <DeleteButton
-                    className="h-12 w-full"
-                    disabled={deletingMoneyOp}
-                    onClick={deleteMoneyOp}
-                    deleted={moneyOpDeleted}
-                  />
-                </PressableScale>
-              </div>
-            ) : (
-              <div className="border-t border-border pt-4">
-                <PressableScale>
-                  <Button variant="destructive" className="w-full gap-1.5" onClick={() => setConfirmDeleteMoneyOp(true)}>
-                    <Trash2 className="size-4" />
-                    {t.common.delete}
-                  </Button>
-                </PressableScale>
-              </div>
-            )}
+            {/* Та же раскладка, что у правки смены выше: широкая "Сохранить",
+                удаление иконкой (запрос владельца 2026-08-16). */}
+            {confirmDeleteMoneyOp && <p className="text-body-airbnb">{t.operatorApp.workTime.deleteMoneyOpConfirm}</p>}
+            <div className="flex items-center gap-2">
+              <PressableScale className="min-w-0 flex-1">
+                <SaveButton className="h-12 w-full" onClick={submitMoneyOpEdit} saved={moneyOpSaved} />
+              </PressableScale>
+              <IconActionButton
+                icon={Trash2}
+                onClick={() => (confirmDeleteMoneyOp ? deleteMoneyOp() : setConfirmDeleteMoneyOp(true))}
+                label={t.common.delete}
+                destructive
+                active={confirmDeleteMoneyOp}
+              />
+            </div>
           </div>
         )}
       </BottomSheet>

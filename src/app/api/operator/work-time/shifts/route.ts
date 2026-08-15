@@ -19,6 +19,7 @@ import { SHIFT_CLOSE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
 import { notifyDailyCashLateSubmission, onShiftClosed } from "@/lib/summary-channels/daily-cash-trigger";
+import { rememberShiftSummaryMessage } from "@/lib/summary-channels/resync";
 
 class ShiftOverlapError extends Error {}
 
@@ -275,7 +276,12 @@ export async function POST(request: Request) {
         toPayOut: balance.toPayOut,
       },
       shiftCloseSettings
-    ).catch((err) => console.error("shift close summary dispatch failed", err));
+    )
+      // id сообщения — чтобы позднейшая правка смены или её аванса/премии
+      // переписала эту сводку, а не оставила её врать в чате (требование
+      // владельца 2026-08-16, см. lib/summary-channels/resync.ts).
+      .then((results) => rememberShiftSummaryMessage(shift.id, results))
+      .catch((err) => console.error("shift close summary dispatch failed", err));
   }
 
   // Смена с авансом/премией меняет остаток кассы точки — если сегодняшняя

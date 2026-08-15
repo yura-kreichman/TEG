@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronRight, Clock, DollarSign, FileText, Pencil, Send, ShoppingCart, Zap } from "lucide-react";
+import { ChevronRight, Clock, DollarSign, FileText, Landmark, Pencil, Send, ShoppingCart, Zap } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
@@ -35,16 +35,18 @@ export default function StaffTelegramSettingsPage() {
   const [shiftCloseEnabled, setShiftCloseEnabled] = useState(false);
   const [instructionAckEnabled, setInstructionAckEnabled] = useState(false);
   const [expenseEnabled, setExpenseEnabled] = useState(false);
+  const [collectionEnabled, setCollectionEnabled] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
 
   async function loadAll() {
-    const [tgRes, zoneRes, dcRes, scRes, iaRes, exRes] = await Promise.all([
+    const [tgRes, zoneRes, dcRes, scRes, iaRes, exRes, colRes] = await Promise.all([
       fetch("/api/tenant/summary-channels/telegram/status"),
       fetch("/api/tenant/summary-settings/zone"),
       fetch("/api/tenant/summary-settings/daily-cash"),
       fetch("/api/tenant/summary-settings/shift-close"),
       fetch("/api/tenant/summary-settings/instruction-ack"),
       fetch("/api/tenant/summary-settings/expense"),
+      fetch("/api/tenant/summary-settings/collection"),
     ]);
     if (tgRes.status === 401) {
       router.replace("/login");
@@ -56,6 +58,7 @@ export default function StaffTelegramSettingsPage() {
     setShiftCloseEnabled((await scRes.json()).enabled);
     setInstructionAckEnabled((await iaRes.json()).enabled);
     setExpenseEnabled((await exRes.json()).enabled);
+    setCollectionEnabled((await colRes.json()).enabled);
     setChecking(false);
   }
 
@@ -105,6 +108,15 @@ export default function StaffTelegramSettingsPage() {
   async function toggleExpense(next: boolean) {
     setExpenseEnabled(next);
     await fetch("/api/tenant/summary-settings/expense", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: next }),
+    });
+  }
+
+  async function toggleCollection(next: boolean) {
+    setCollectionEnabled(next);
+    await fetch("/api/tenant/summary-settings/collection", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ enabled: next }),
@@ -261,6 +273,21 @@ export default function StaffTelegramSettingsPage() {
                   <div className="text-caption-airbnb">{t.summaries.expenseCardSub}</div>
                 </div>
                 <Switch checked={expenseEnabled} onCheckedChange={toggleExpense} className="shrink-0" />
+              </SpringCard>
+            </StaggerItem>
+
+            {/* Инкассация (запрос владельца 2026-08-16) — раньше о ней знал
+                только Push, в чате команды её не было видно. */}
+            <StaggerItem>
+              <SpringCard animate={false} className="flex items-center gap-3.5">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Landmark className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-body-airbnb font-bold">{t.summaries.collectionCardTitle}</div>
+                  <div className="text-caption-airbnb">{t.summaries.collectionCardSub}</div>
+                </div>
+                <Switch checked={collectionEnabled} onCheckedChange={toggleCollection} className="shrink-0" />
               </SpringCard>
             </StaggerItem>
           </StaggerList>

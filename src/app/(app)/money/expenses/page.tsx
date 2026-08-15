@@ -11,10 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SaveButton } from "@/components/ui/save-button";
-import { DeleteButton } from "@/components/ui/delete-button";
 import { MoneyInput } from "@/components/money-input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { IconActionButton } from "@/components/kebab-menu";
+import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { useI18n } from "@/components/i18n-provider";
@@ -46,6 +46,7 @@ interface ExpenseCategory {
 interface ZoneOption {
   id: string;
   name: string;
+  iconKey: string | null;
   pointName: string;
 }
 
@@ -78,9 +79,7 @@ export default function ExpensesRegisterPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const { saved: editSaved, pulse: editPulse } = useSavePulse();
-  const { saved: deleted, pulse: deletePulse } = useSavePulse();
 
   function openEdit(expense: ExpenseEntry) {
     setEditing(expense);
@@ -120,17 +119,14 @@ export default function ExpensesRegisterPage() {
 
   async function deleteExpense() {
     if (!editing) return;
-    setDeleting(true);
     setEditError(null);
     const res = await fetch(`/api/money/expenses/${editing.id}`, { method: "DELETE" });
     if (!res.ok) {
       setEditError((await res.json()).error ?? t.money.expenseSaveError);
-      setDeleting(false);
       return;
     }
-    setDeleting(false);
     await loadExpenses();
-    deletePulse(() => setEditing(null));
+    setEditing(null);
   }
 
   async function loadExpenses() {
@@ -342,13 +338,12 @@ export default function ExpensesRegisterPage() {
                           className="flex items-center justify-between gap-2 border-t border-border py-1.5 first:border-t-0"
                         >
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-body-airbnb font-semibold">
-                              {e.categoryName ?? t.money.editExpenseTitle}
-                            </span>
-                            <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                              <span className="truncate">
-                                {formatTime(e.occurredAt)} · {e.zoneName}
-                                {showPointName ? ` (${e.pointName})` : ""}
+                            {/* Комментарий — под иконкой сразу за категорией
+                                (уточнение владельца 2026-08-16): он относится
+                                к самой трате, а не к строке времени/зоны. */}
+                            <span className="flex min-w-0 items-center gap-1">
+                              <span className="truncate text-body-airbnb font-semibold">
+                                {e.categoryName ?? t.money.editExpenseTitle}
                               </span>
                               {e.comment && (
                                 <InfoTooltip
@@ -358,6 +353,12 @@ export default function ExpensesRegisterPage() {
                                   className="size-4"
                                 />
                               )}
+                            </span>
+                            <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                              <span className="truncate">
+                                {formatTime(e.occurredAt)} · {e.zoneName}
+                                {showPointName ? ` (${e.pointName})` : ""}
+                              </span>
                               {e.operatorName && (
                                 <span className="inline-flex shrink-0 items-center gap-1">
                                   <Users className="size-3.5 shrink-0" />
@@ -394,24 +395,22 @@ export default function ExpensesRegisterPage() {
                 за разделителем внизу. */}
             <div className="flex flex-col gap-1">
               <Label htmlFor="editExpenseAmount">{t.money.amountLabel}</Label>
-              <div className="flex items-center gap-2">
-                <MoneyInput
-                  id="editExpenseAmount"
-                  autoFocus
-                  scale="lg"
-                  className="h-14 flex-1 text-lg"
-                  value={editAmount}
-                  onChange={(e) => setEditAmount(e.target.value)}
-                />
-                <PressableScale>
-                  <SaveButton className="h-14" disabled={editSubmitting} onClick={submitEdit} saved={editSaved} />
-                </PressableScale>
-              </div>
+              <MoneyInput
+                id="editExpenseAmount"
+                autoFocus
+                scale="lg"
+                className="h-14 text-lg"
+                value={editAmount}
+                onChange={(e) => setEditAmount(e.target.value)}
+              />
             </div>
 
             {zones.length > 0 && (
               <div className="flex flex-col gap-1">
                 <Label>{t.operatorApp.selectZone}</Label>
+                {/* Иконки зон в списке касс (запрос владельца 2026-08-16) —
+                    те же, что на плитках зон; в триггере показываем иконку
+                    выбранной, тем же приёмом, что выбор точки на Главной. */}
                 <Select
                   value={editZoneId || null}
                   onValueChange={(v) => setEditZoneId(v ?? "")}
@@ -420,13 +419,31 @@ export default function ExpensesRegisterPage() {
                     label: showPointName ? `${z.name} · ${z.pointName}` : z.name,
                   }))}
                 >
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder={t.operatorApp.selectZone} />
+                  <SelectTrigger>
+                    <SelectValue placeholder={t.operatorApp.selectZone}>
+                      <span className="flex min-w-0 items-center gap-2">
+                        {(() => {
+                          const current = zones.find((z) => z.id === editZoneId);
+                          if (!current) return null;
+                          return (
+                            <>
+                              <AssetOrZoneIcon iconKey={current.iconKey} className="size-5 shrink-0" />
+                              <span className="truncate">
+                                {showPointName ? `${current.name} · ${current.pointName}` : current.name}
+                              </span>
+                            </>
+                          );
+                        })()}
+                      </span>
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {zones.map((z) => (
                       <SelectItem key={z.id} value={z.id}>
-                        {showPointName ? `${z.name} · ${z.pointName}` : z.name}
+                        <span className="flex min-w-0 items-center gap-2">
+                          <AssetOrZoneIcon iconKey={z.iconKey} className="size-5 shrink-0" />
+                          <span className="truncate">{showPointName ? `${z.name} · ${z.pointName}` : z.name}</span>
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -468,23 +485,29 @@ export default function ExpensesRegisterPage() {
 
             {editError && <p className="text-sm text-destructive">{editError}</p>}
 
-            {confirmDelete ? (
-              <div className="flex flex-col gap-2 border-t border-border pt-4">
-                <p className="text-body-airbnb">{t.money.deleteExpenseConfirm}</p>
-                <PressableScale>
-                  <DeleteButton className="h-12 w-full" disabled={deleting} onClick={deleteExpense} deleted={deleted} />
-                </PressableScale>
-              </div>
-            ) : (
-              <div className="border-t border-border pt-4">
-                <PressableScale>
-                  <Button variant="destructive" className="w-full gap-1.5" onClick={() => setConfirmDelete(true)}>
-                    <Trash2 className="size-4" />
-                    {t.common.delete}
-                  </Button>
-                </PressableScale>
-              </div>
-            )}
+            {/* Единый вид шторок правки (запрос владельца 2026-08-16):
+                широкая "Сохранить", удаление одной иконкой рядом. Первый тап
+                по мусорке показывает вопрос и заливает её красным, второй —
+                удаляет. Отдельной широкой кнопки удаления нет. */}
+            {confirmDelete && <p className="text-body-airbnb">{t.money.deleteExpenseConfirm}</p>}
+            <div className="flex items-center gap-2">
+              <PressableScale className="min-w-0 flex-1">
+                <SaveButton
+                  type="button"
+                  className="h-12 w-full"
+                  disabled={editSubmitting}
+                  onClick={submitEdit}
+                  saved={editSaved}
+                />
+              </PressableScale>
+              <IconActionButton
+                icon={Trash2}
+                onClick={() => (confirmDelete ? deleteExpense() : setConfirmDelete(true))}
+                label={t.common.delete}
+                destructive
+                active={confirmDelete}
+              />
+            </div>
           </div>
         )}
       </BottomSheet>

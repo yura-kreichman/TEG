@@ -394,6 +394,7 @@ model Tenant {
   shiftCloseSummarySettings     ShiftCloseSummarySettings?
   instructionAckSummarySettings InstructionAckSummarySettings?
   expenseSummarySettings        ExpenseSummarySettings?
+  collectionSummarySettings     CollectionSummarySettings?
   dailyCashSummaryDeliveries    DailyCashSummaryDelivery[]
   tasks                         Task[]
   pushSubscriptions             PushSubscription[]
@@ -2441,6 +2442,14 @@ model MoneyOperation {
   // выключен, канал не подключён) или расход создан до этого поля.
   expenseAlertMessageId String?
 
+  // id Telegram-сообщения "Инкассация" (запрос владельца 2026-08-16).
+  // Проставляется ВСЕМ операциям одной инкассации — общая инкассация точки
+  // распадается на несколько строк (доля каждой зоны + пулы товаров и
+  // абонементов), а сообщение о ней одно. Общий id и есть признак группы:
+  // правка любой строки пересобирает сообщение по всем операциям с этим же
+  // id. null — сообщение не отправлялось или инкассация старше поля.
+  collectionAlertMessageId String?
+
   // Ссылка на сдачу итогов. У revenue/revenue_cashless — сдача, которая их
   // создала. У expense — сдача, которая ЗАКРЫЛА расход, введённый
   // Сотрудником раньше: null означает "внесён, но ещё не вошёл ни в одну
@@ -2565,6 +2574,15 @@ model Shift {
   // check-out/правка → false+дата) — держать в актуальном состоянии только
   // тем кодом, что пишет endAt.
   isOpen Boolean @default(false)
+
+  // id отправленной Telegram-сводки "Закрытие смены" — чтобы правка смены
+  // владельцем (время, привязанные аванс/премия) переписывала её на месте, а
+  // не оставляла в чате устаревшие часы и суммы (требование владельца
+  // 2026-08-16: "любые правки должны редактировать все сообщения"). Тот же
+  // приём, что ZoneSubmission.telegramSummaryMessageId и
+  // MoneyOperation.expenseAlertMessageId. null — сводка не отправлялась
+  // (тумблер выключен, канал не подключён) или смена закрыта до этого поля.
+  telegramSummaryMessageId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2888,6 +2906,21 @@ model ShiftCloseSummarySettings {
 // модель, не поле на Instruction — это тенант-wide переключатель канала
 // уведомления, не свойство конкретной инструкции.
 model InstructionAckSummarySettings {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  enabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Тумблер сообщения "Инкассация" в Telegram/email (запрос владельца
+// 2026-08-16). До этого инкассация уходила ТОЛЬКО коротким Push — в чате
+// команды её не было видно вовсе. Устройство то же, что у расхода и
+// инструктажа ниже: одно поле, состав сообщения не настраивается.
+model CollectionSummarySettings {
   id       String @id @default(cuid())
   tenantId String @unique
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)

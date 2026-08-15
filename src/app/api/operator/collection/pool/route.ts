@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
-import { dispatchCollection } from "@/lib/summary-channels/dispatch";
+import { announceCollection } from "@/lib/collection-alert";
 import { getPointAbonementCashTotal, getPointGoodsCashTotal } from "@/lib/zone-balance";
 import { formatMoney } from "@/lib/format";
 import { resolveLocale } from "@/lib/i18n";
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     if (amountNumber > freshAvailable) {
       return { ok: false as const, available: freshAvailable };
     }
-    await tx.moneyOperation.create({
+    const created = await tx.moneyOperation.create({
       data: {
         tenantId: ctx.point.tenantId,
         pointId: ctx.point.id,
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
         performedByOperatorId: ctx.operator.id,
       },
     });
-    return { ok: true as const };
+    return { ok: true as const, operationId: created.id, occurredAt: created.occurredAt };
   });
   if (!result.ok) {
     const locale = await resolveLocale();
@@ -61,7 +61,20 @@ export async function POST(request: Request) {
     );
   }
 
-  dispatchCollection(ctx.point.tenantId, amountNumber, ctx.point.name, ctx.operator.name).catch(() => {});
+  // Пуловая инкассация — зон в разбивке нет, вся сумма из кассы Товаров или
+  // Абонементов (2026-08-16).
+  announceCollection({
+    tenantId: ctx.point.tenantId,
+    operationIds: [result.operationId],
+    occurredAt: result.occurredAt,
+    operatorName: ctx.operator.name,
+    operatorColorTag: ctx.operator.colorTag,
+    amount: amountNumber,
+    isAdvance: false,
+    zones: [],
+    goodsAmount: pool === "goods" ? amountNumber : 0,
+    abonementAmount: pool === "abonement" ? amountNumber : 0,
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }

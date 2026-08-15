@@ -4,6 +4,7 @@ import { requireOwner } from "@/lib/require-owner";
 import { calcOperatorBalance, WORK_TIME_MONEY_TYPES, type WorkTimeMoneyType } from "@/lib/work-time";
 import { resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
+import { resyncAfterMoneyOpChange } from "@/lib/summary-channels/resync";
 
 // Правка суммы отдельного (не привязанного к смене) аванса/премии —
 // docs/spec/05-work-time.md, "АВАНС"/"ПРЕМИЯ": "владелец может редактировать".
@@ -67,6 +68,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
         },
       }),
     ]);
+    // Сводка смены и "Касса за день" содержат эту сумму — догоняем их
+    // (требование владельца 2026-08-16, lib/summary-channels/resync.ts).
+    await resyncAfterMoneyOpChange(op);
   }
 
   return NextResponse.json({
@@ -110,6 +114,8 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
     }),
     prisma.moneyOperation.delete({ where: { id } }),
   ]);
+
+  await resyncAfterMoneyOpChange(op);
 
   return NextResponse.json({
     balance: beneficiaryOperatorId ? await calcOperatorBalance(beneficiaryOperatorId) : null,

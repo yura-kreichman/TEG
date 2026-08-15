@@ -12,6 +12,8 @@ import {
   formatZoneSummaryEmail,
 } from "./email-format";
 import {
+  formatCollectionAlertPush,
+  formatCollectionAlertTelegram,
   formatDailyCashSummaryTelegram,
   formatExpenseAlertHeader,
   formatExpenseAlertLines,
@@ -21,6 +23,7 @@ import {
   formatZoneSummaryTelegram,
 } from "./telegram-format";
 import type {
+  CollectionAlertData,
   DailyCashSummaryData,
   ExpenseAlertData,
   InstructionAckData,
@@ -220,15 +223,19 @@ export async function dispatchDailyCashSummary(
     }
   }
 
-  // Досдача редактирует уже отправленное сообщение (см. комментарий к
-  // функции) — push на каждое такое обновление превратился бы в спам
-  // уведомлениями на телефоне владельца, поэтому шлём только на самую
-  // первую отправку за business-day, не на editMessageText-обновления.
+  // Push уходит и на обновление тоже (требование владельца 2026-08-16: "если
+  // происходят обновления в ТГ, то Push должны отправляться свежие").
+  // Отредактировать уже доставленное уведомление нельзя, поэтому на месте
+  // правки/досдачи приходит новое, с 🔄 в заголовке — чтобы владелец видел,
+  // что это не второй день, а исправленные цифры того же. Прежнее правило
+  // "push только на первую отправку" отменено сознательно: цифры в шторке
+  // расходились с чатом, и это оказалось хуже лишнего уведомления.
   const isUpdate = !!existingMessageIds.telegram || !!existingMessageIds.email;
-  if (!isUpdate && (await pushEnabledFor(tenantId, "dailyCashSummary"))) {
+  if (await pushEnabledFor(tenantId, "dailyCashSummary")) {
     const total = data.cashAmount + data.mobileAmount - data.expenses;
+    const subject = data.showPointName ? `${st.dailyCashSubject} · ${data.pointName}` : st.dailyCashSubject;
     await sendPushToTenant(tenantId, {
-      title: data.showPointName ? `${st.dailyCashSubject} · ${data.pointName}` : st.dailyCashSubject,
+      title: isUpdate ? `${subject} 🔄` : subject,
       body: `${st.totalCompact}: ${formatMoney(total, tenant.locale)}`,
       url: "/money",
     }).catch((err) => console.error("push dispatch failed", { kind: "dailyCash", tenantId, err }));
@@ -337,6 +344,49 @@ export async function dispatchCollection(
     body: `${who} · ${label} · ${formatMoney(amount, tenant.locale)}`,
     url: "/money",
   }).catch((err) => console.error("push dispatch failed", { kind: "collection", tenantId, err }));
+}
+
+/**
+ * Инкассация полноценным сообщением в Telegram/email (запрос владельца
+ * 2026-08-16) — до этого о ней знал только Push, в чате команды её не было
+ * видно вовсе. Тумблер Telegram/email проверяет вызывающий роут
+ * (CollectionSummarySettings.enabled), Push — pushEnabledFor здесь; это те же
+ * две независимые ручки, что у расхода.
+ */
+export async function dispatchCollectionAlert(
+  tenantId: string,
+  data: CollectionAlertData
+): Promise<DispatchResult[]> {
+  const channels = await getEnabledChannels(tenantId);
+  const results: DispatchResult[] = [];
+  const tenant = await getTenantInfo(tenantId);
+  const st = tenant.t.summaryText;
+
+  for (const channel of channels) {
+    if (channel.channelType === "telegram" && channel.chatStatus === "active" && channel.chatId) {
+      const text = formatCollectionAlertTelegram(data, st, tenant.locale, tenant.timezone, tenant.currency);
+      const result = await sendChatMessage(channel.chatId, text);
+      results.push(toDispatchResult("telegram", result));
+    } else if (channel.channelType === "email") {
+      const addresses = parseEmailAddresses(channel.emailAddresses);
+      if (addresses.length === 0) continue;
+      const { title, body } = formatCollectionAlertPush(data, st, tenant.locale, tenant.timezone, tenant.currency);
+      // Письмо об инкассации — те же две строки, без отдельной таблицы полей:
+      // состав сообщения владелец не настраивает, разбивать нечего.
+      const result = await sendEmail(addresses, title, `<p>${title}</p><p>${body.replace(/\n/g, "<br>")}</p>`);
+      results.push({ channelType: "email", ok: result.ok, error: result.error });
+    }
+  }
+
+  if (await pushEnabledFor(tenantId, "collection")) {
+    const { title, body } = formatCollectionAlertPush(data, st, tenant.locale, tenant.timezone, tenant.currency);
+    await sendPushToTenant(tenantId, { title, body, url: "/money/zone-balances" }).catch((err) =>
+      console.error("push dispatch failed", { kind: "collectionAlert", tenantId, err })
+    );
+  }
+
+  logFailures("collectionAlert", tenantId, results);
+  return results;
 }
 
 /**

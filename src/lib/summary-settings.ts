@@ -119,6 +119,17 @@ export const EXPENSE_SUMMARY_DEFAULTS: ExpenseSummarySettingsData = {
   enabled: true,
 };
 
+// "Инкассация" в Telegram/email (запрос владельца 2026-08-16) — до этого
+// инкассация уходила только Push'ем. Тумблер Push на то же событие остаётся
+// отдельным (PushNotificationSettingsData.collection).
+export interface CollectionSummarySettingsData {
+  enabled: boolean;
+}
+
+export const COLLECTION_SUMMARY_DEFAULTS: CollectionSummarySettingsData = {
+  enabled: true,
+};
+
 // Какие типы сводок дублируются коротким Push-уведомлением на устройство(а)
 // владельца, если хотя бы одно активно подписано (фидбек пользователя
 // 2026-07-12). Не влияет на то, отправляется ли сама сводка по

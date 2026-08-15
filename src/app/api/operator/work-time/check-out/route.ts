@@ -14,6 +14,7 @@ import { chargeSelfServiceAdvanceToZones, getPointCashBalance } from "@/lib/zone
 import { dispatchShiftCloseSummary } from "@/lib/summary-channels/dispatch";
 import { SHIFT_CLOSE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { notifyDailyCashLateSubmission, onShiftClosed } from "@/lib/summary-channels/daily-cash-trigger";
+import { rememberShiftSummaryMessage } from "@/lib/summary-channels/resync";
 import { resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
 
@@ -249,7 +250,11 @@ export async function POST(request: Request) {
         toPayOut: balance.toPayOut,
       },
       shiftCloseSettings
-    ).catch((err) => console.error("shift close summary dispatch failed", err));
+    )
+      // См. тот же вызов в POST .../work-time/shifts: сохраняем id сводки для
+      // будущих правок (lib/summary-channels/resync.ts).
+      .then((results) => rememberShiftSummaryMessage(openShift.id, results))
+      .catch((err) => console.error("shift close summary dispatch failed", err));
   }
 
   // Смена с авансом/премией меняет остаток кассы точки — если сегодняшняя

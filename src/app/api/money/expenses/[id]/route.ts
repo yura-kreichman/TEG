@@ -5,6 +5,7 @@ import { editChatMessage } from "@/lib/telegram-bot";
 import { getDictionary } from "@/lib/i18n";
 import { isLocale, type Locale } from "@/lib/locales";
 import { formatExpenseAlertTelegram } from "@/lib/summary-channels/telegram-format";
+import { resyncAfterMoneyOpChange, sendUpdatedPush } from "@/lib/summary-channels/resync";
 
 /**
  * Правка/удаление расхода владельцем прямо в реестре (запрос пользователя
@@ -69,6 +70,9 @@ async function reEditExpenseAlert(operationId: string, tenantId: string): Promis
     tenant?.currency ?? null
   );
   await editChatMessage(channel.chatId, op.expenseAlertMessageId, text);
+  // И свежий Push поверх исправленного сообщения (требование владельца
+  // 2026-08-16) — отредактировать уже доставленное уведомление нельзя.
+  await sendUpdatedPush(tenantId, "expense", getDictionary(locale).pushSettings.expenseLabel, text);
 }
 
 export async function PATCH(request: Request, ctx: RouteContext<"/api/money/expenses/[id]">) {
@@ -176,6 +180,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/expe
   // владельца 2026-08-15) — best-effort, как у сводки по зоне: правка
   // сохранена независимо от того, жив ли ещё чат и сообщение в нём.
   await reEditExpenseAlert(id, owner.tenantId).catch(() => {});
+  // Плюс общие сообщения, которые эту сумму суммируют, — "Касса за день"
+  // (lib/summary-channels/resync.ts).
+  await resyncAfterMoneyOpChange({ ...op, zoneId, occurredAt: op.occurredAt });
 
   return NextResponse.json({ ok: true });
 }
@@ -208,6 +215,8 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/money/ex
     });
     await tx.moneyOperation.delete({ where: { id } });
   });
+
+  await resyncAfterMoneyOpChange(op);
 
   return NextResponse.json({ ok: true });
 }

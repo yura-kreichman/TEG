@@ -25,6 +25,9 @@ export interface ZoneAssetTallyLine {
 }
 
 export interface ZoneSummaryData {
+  // Сдачу правил Владелец — 👑 рядом с именем сотрудника (требование
+  // владельца 2026-08-16: единый маркер правки во всех сообщениях Telegram).
+  editedByOwner?: boolean;
   pointName: string;
   zoneName: string;
   // Zone.telegramEmoji — Unicode-эмодзи в заголовке Telegram-сводки, выбран
@@ -132,6 +135,9 @@ export interface DailyCashSummaryData {
 }
 
 export interface ShiftCloseSummaryData {
+  // Смену или её аванс/премию правил Владелец — 👑 рядом с именем (см.
+  // ZoneSummaryData.editedByOwner).
+  editedByOwner?: boolean;
   operatorName: string;
   // Цветовая метка оператора (Operator.colorTag, #rrggbb) — telegram-format.ts
   // показывает соответствующий эмодзи цветного квадрата рядом с именем
@@ -152,6 +158,33 @@ export interface ShiftCloseSummaryData {
    */
   bonusIsAccrual: boolean;
   toPayOut: number;
+}
+
+/**
+ * Инкассация (запрос владельца 2026-08-16). Формат задан владельцем:
+ *   🏦 ИНКАССАЦИЯ — 16/08, 00:30
+ *   🟩 Женя: 1 500 ₽
+ *   🎠 Машинки 700 ₽ · 🤸 Батуты 500 ₽ · 🛍 Товары 200 ₽ · 🎟 Абонементы 100 ₽
+ * Авансовая инкассация (сотрудник сдал больше, чем было в кассе — берётся
+ * вперёд) помечается прямо в шапке: "ИНКАССАЦИЯ (Аванс)".
+ *
+ * Строк разбивки может не быть вовсе (зонная инкассация одной зоны — тогда
+ * там одна строка), а товары/абонементы появляются, только если из этих касс
+ * что-то забрали.
+ */
+export interface CollectionAlertData {
+  occurredAt: Date;
+  // null — инкассацию проводил сам Владелец из кабинета; форматтер ставит 👑
+  // вместо имени (тот же приём, что в остальных местах).
+  operatorName: string | null;
+  operatorColorTag: string | null;
+  amount: number;
+  isAdvance: boolean;
+  zones: { name: string; emoji: string | null; amount: number }[];
+  goodsAmount: number;
+  abonementAmount: number;
+  // Инкассацию правил Владелец — 👑 рядом с именем сотрудника.
+  editedByOwner?: boolean;
 }
 
 export interface ChannelSendResult {

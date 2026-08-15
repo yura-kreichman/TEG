@@ -10,7 +10,7 @@ import {
   splitCollectionAmountDetailed,
 } from "@/lib/zone-balance";
 import { distributeCollectionWhole } from "@/lib/collection-split";
-import { dispatchCollection } from "@/lib/summary-channels/dispatch";
+import { announceCollection } from "@/lib/collection-alert";
 
 // Общая инкассация (запрос пользователя 2026-07-15): к моменту, когда
 // владелец приходит собирать деньги, наличные всех зон точки часто уже
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
   // /api/points/[id]/collection/general: двойной клик или гонка владелец+
   // оператор на одной точке читали одни и те же остатки до того, как первый
   // запрос успевал их списать).
-  const { poolDeficit, advance, breakdown } = await prisma.$transaction(async (tx) => {
+  const { poolDeficit, advance, breakdown, operationIds, zoneShares } = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${ctx.point.id}))`;
 
     const balanceByZone = await getZoneBalances(
@@ -101,14 +101,20 @@ export async function POST(request: Request) {
       }))
       .filter((row) => row.amount !== 0);
 
-    if (rows.length > 0) {
-      await tx.moneyOperation.createMany({ data: rows });
+    // По одной create вместо createMany — нужны id созданных строк: им всем
+    // проставляется общий collectionAlertMessageId, по которому правка любой
+    // из них пересобирает сообщение об инкассации (2026-08-16). Зон на точке
+    // единицы, разница в стоимости запросов здесь несущественна.
+    const operationIds: string[] = [];
+    for (const row of rows) {
+      const created = await tx.moneyOperation.create({ data: row });
+      operationIds.push(created.id);
     }
     // Абонементы/товары наличными — реальной суммой, СВОИМ типом каждый, в
     // Реестр инкассаций раздельными строками (см. owner-версию для полного
     // объяснения).
     if (abonementSweepPortion > 0) {
-      await tx.moneyOperation.create({
+      const created = await tx.moneyOperation.create({
         data: {
           tenantId: ctx.point.tenantId,
           pointId: ctx.point.id,
@@ -117,9 +123,10 @@ export async function POST(request: Request) {
           performedByOperatorId: ctx.operator.id,
         },
       });
+      operationIds.push(created.id);
     }
     if (goodsSweepPortion > 0) {
-      await tx.moneyOperation.create({
+      const created = await tx.moneyOperation.create({
         data: {
           tenantId: ctx.point.tenantId,
           pointId: ctx.point.id,
@@ -128,9 +135,10 @@ export async function POST(request: Request) {
           performedByOperatorId: ctx.operator.id,
         },
       });
+      operationIds.push(created.id);
     }
     if (advance > 0) {
-      await tx.moneyOperation.create({
+      const created = await tx.moneyOperation.create({
         data: {
           tenantId: ctx.point.tenantId,
           pointId: ctx.point.id,
@@ -139,6 +147,7 @@ export async function POST(request: Request) {
           performedByOperatorId: ctx.operator.id,
         },
       });
+      operationIds.push(created.id);
     }
 
     // Разбивка наружу (запрос пользователя 2026-08-12) — для слипа
@@ -147,13 +156,15 @@ export async function POST(request: Request) {
     // видно, из чего она сложилась. Ничего дополнительно не считаем — всё
     // это уже посчитано выше для самих проводок.
     const zoneShares = zones
-      .map((zone, i) => ({ name: zone.name, amount: Math.abs(shares[i]) }))
+      .map((zone, i) => ({ name: zone.name, emoji: zone.telegramEmoji, amount: Math.abs(shares[i]) }))
       .filter((z) => z.amount > 0);
     return {
       poolDeficit,
       advance,
+      operationIds,
+      zoneShares,
       breakdown: {
-        zones: zoneShares,
+        zones: zoneShares.map(({ name, amount }) => ({ name, amount })),
         abonement: abonementSweepPortion,
         goods: goodsSweepPortion,
         advance,
@@ -163,7 +174,20 @@ export async function POST(request: Request) {
 
   // В уведомлении — именно введённая сумма (см. комментарий у той же строки в
   // /api/zones/[id]/collection — тот же баг, найден пользователем 2026-07-25).
-  dispatchCollection(ctx.point.tenantId, amountNumber, ctx.point.name, ctx.operator.name).catch(() => {});
+  announceCollection({
+    tenantId: ctx.point.tenantId,
+    operationIds,
+    occurredAt: new Date(),
+    operatorName: ctx.operator.name,
+    operatorColorTag: ctx.operator.colorTag,
+    amount: amountNumber,
+    // "(Аванс)" в шапке — сотрудник сдал больше, чем было в кассах, разницу
+    // взяли вперёд (запрос владельца 2026-08-16).
+    isAdvance: advance > 0,
+    zones: zoneShares,
+    goodsAmount: breakdown.goods,
+    abonementAmount: breakdown.abonement,
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true, settledPool: poolDeficit, advance, breakdown });
 }

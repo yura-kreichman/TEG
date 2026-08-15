@@ -21,6 +21,10 @@ export async function GET() {
     zones: zones.map((zone) => ({
       id: zone.id,
       name: zone.name,
+      // Иконка зоны — для выпадающих списков выбора кассы (реестр расходов,
+      // запрос владельца 2026-08-16): в списке "из какой кассы" зоны узнаются
+      // по значку так же, как на плитках.
+      iconKey: zone.iconKey,
       pointId: zone.pointId,
       pointName: zone.point.name,
     })),

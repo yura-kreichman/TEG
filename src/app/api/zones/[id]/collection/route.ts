@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantZone, requireOwner } from "@/lib/require-owner";
 import { getZonePoolShare, settleOutstandingCollectionAdvance } from "@/lib/zone-balance";
-import { dispatchCollection } from "@/lib/summary-channels/dispatch";
+import { announceCollection } from "@/lib/collection-alert";
 
 // Инкассация по конкретной зоне, но вносит владелец (запрос пользователя
 // 2026-07-15: "как и у Сотрудника") — та же операция collection, что и у
@@ -56,11 +56,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   // и тот же getZonePoolShare ДО того, как первый его "погашает", и оба
   // добавляют одну и ту же долю пула — та же точка, что уже 2026-07-25
   // закрыта для settleOutstandingCollectionAdvance/chargeSelfServiceAdvanceToZones).
-  const poolShare = await prisma.$transaction(async (tx) => {
+  const { poolShare, operationId, occurredAt } = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${zone.pointId}))`;
 
     const poolShare = await getZonePoolShare(zone.pointId, zoneId, tx);
-    await tx.moneyOperation.create({
+    const created = await tx.moneyOperation.create({
       data: {
         tenantId: owner.tenantId,
         zoneId,
@@ -69,7 +69,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
         performedByUserId: owner.user.id,
       },
     });
-    return poolShare;
+    return { poolShare, operationId: created.id, occurredAt: created.occurredAt };
   });
 
   // В уведомлении — именно введённая сумма (сколько физически забрали сейчас),
@@ -77,7 +77,20 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   // зоне уже забранного раньше аванса/премии (реальный баг, найден
   // пользователем 2026-07-25: push показывал "забрал 955", хотя физически
   // забрали 700, poolShare/poolDeficit добавлялся молча).
-  dispatchCollection(owner.tenantId, amountNumber, zone.name, null).catch(() => {});
+  // operatorName: null — инкассацию провёл сам Владелец, в сообщении вместо
+  // имени 👑 (2026-08-16).
+  announceCollection({
+    tenantId: owner.tenantId,
+    operationIds: [operationId],
+    occurredAt,
+    operatorName: null,
+    operatorColorTag: null,
+    amount: amountNumber,
+    isAdvance: false,
+    zones: [{ name: zone.name, emoji: zone.telegramEmoji, amount: amountNumber }],
+    goodsAmount: 0,
+    abonementAmount: 0,
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true, settledPool: poolShare });
 }

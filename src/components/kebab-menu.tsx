@@ -67,8 +67,17 @@ export function IconActionButton({
       size="icon"
       className={cn(
         "size-8 shrink-0 rounded-lg border-border",
-        destructive && "text-destructive hover:text-destructive",
-        active && "border-transparent bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+        destructive && !active && "text-destructive hover:text-destructive",
+        active &&
+          !destructive &&
+          "border-transparent bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+        // Взведённое удаление — заливка destructive (запрос владельца
+        // 2026-08-16: "при повторном вопросе иконка должна становиться сильно
+        // красной"): пока кнопка просто красная линией, второй тап ничем не
+        // отличается от первого на вид, и подтверждение читается как случайность.
+        active &&
+          destructive &&
+          "border-transparent bg-destructive text-white hover:bg-destructive hover:text-white"
       )}
       onClick={onClick}
       aria-label={label}

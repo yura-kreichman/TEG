@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { checkCollectionAdvanceEditable, reverseCollectionAdvanceSettlement } from "@/lib/zone-balance";
+import { resyncAfterMoneyOpChange } from "@/lib/summary-channels/resync";
 
 // Отказ в правке "Авансовой инкассации": код клиент переводит сам
 // (money.collectionSettledCannotEdit), строка — запасной вариант, если он
@@ -69,6 +70,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/coll
         },
       });
     });
+    // "Касса за день" считает остаток наличных на точке — правка инкассации
+    // его меняет (требование владельца 2026-08-16).
+    await resyncAfterMoneyOpChange(op);
   }
 
   return NextResponse.json({ ok: true });
@@ -110,6 +114,8 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/money/co
     });
     await tx.moneyOperation.delete({ where: { id } });
   });
+
+  await resyncAfterMoneyOpChange(op);
 
   return NextResponse.json({ ok: true });
 }

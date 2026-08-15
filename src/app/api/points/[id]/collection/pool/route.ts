@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
-import { dispatchCollection } from "@/lib/summary-channels/dispatch";
+import { announceCollection } from "@/lib/collection-alert";
 import { getPointAbonementCashTotal, getPointGoodsCashTotal } from "@/lib/zone-balance";
 import { formatMoney } from "@/lib/format";
 import { resolveLocale } from "@/lib/i18n";
@@ -56,7 +56,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     if (amountNumber > freshAvailable) {
       return { ok: false as const, available: freshAvailable };
     }
-    await tx.moneyOperation.create({
+    const created = await tx.moneyOperation.create({
       data: {
         tenantId: owner.tenantId,
         pointId,
@@ -65,7 +65,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
         performedByUserId: owner.user.id,
       },
     });
-    return { ok: true as const };
+    return { ok: true as const, operationId: created.id, occurredAt: created.occurredAt };
   });
   if (!result.ok) {
     const locale = await resolveLocale();
@@ -75,7 +75,18 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     );
   }
 
-  dispatchCollection(owner.tenantId, amountNumber, point.name, null).catch(() => {});
+  announceCollection({
+    tenantId: owner.tenantId,
+    operationIds: [result.operationId],
+    occurredAt: result.occurredAt,
+    operatorName: null,
+    operatorColorTag: null,
+    amount: amountNumber,
+    isAdvance: false,
+    zones: [],
+    goodsAmount: pool === "goods" ? amountNumber : 0,
+    abonementAmount: pool === "abonement" ? amountNumber : 0,
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }

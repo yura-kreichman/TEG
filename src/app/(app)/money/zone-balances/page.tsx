@@ -7,7 +7,6 @@ import { BackLink } from "@/components/back-link";
 import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
-import { DeleteButton } from "@/components/ui/delete-button";
 import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -185,8 +184,6 @@ export default function ZoneBalancesPage() {
   const [editCollectionAmount, setEditCollectionAmount] = useState("");
   const [editCollectionError, setEditCollectionError] = useState<string | null>(null);
   const [confirmDeleteCollection, setConfirmDeleteCollection] = useState(false);
-  const [deletingCollection, setDeletingCollection] = useState(false);
-  const { saved: deletedCollection, pulse: deleteCollectionPulse } = useSavePulse();
 
   // Отказ по коду переводим сами (правило i18n: строки UI — из /lang), сырой
   // текст с сервера — только запасной вариант.
@@ -228,18 +225,15 @@ export default function ZoneBalancesPage() {
 
   async function deleteCollection() {
     if (!editingCollection) return;
-    setDeletingCollection(true);
     setEditCollectionError(null);
     const res = await fetch(`/api/money/collections/${editingCollection.id}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json();
       setEditCollectionError(collectionErrorText(data, t.money.deleteCollectionError));
-      setDeletingCollection(false);
       return;
     }
-    setDeletingCollection(false);
     await Promise.all([loadReport(), loadCollections()]);
-    deleteCollectionPulse(() => setEditingCollection(null));
+    setEditingCollection(null);
   }
 
   async function loadPoints() {
@@ -1373,44 +1367,37 @@ export default function ZoneBalancesPage() {
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.collection}</h2>
             <div className="flex flex-col gap-1">
               <Label htmlFor="editCollectionAmount">{t.money.amountLabel}</Label>
-              <div className="flex items-center gap-2">
-                <MoneyInput
-                  id="editCollectionAmount"
-                  autoFocus
-                  scale="lg"
-                  className="h-14 flex-1 text-lg"
-                  value={editCollectionAmount}
-                  onChange={(e) => setEditCollectionAmount(e.target.value)}
-                />
-                <PressableScale>
-                  <SaveButton className="h-14" disabled={editCollectionSubmitting} onClick={submitCollectionEdit} saved={editCollectionSaved} />
-                </PressableScale>
-              </div>
+              <MoneyInput
+                id="editCollectionAmount"
+                autoFocus
+                scale="lg"
+                className="h-14 text-lg"
+                value={editCollectionAmount}
+                onChange={(e) => setEditCollectionAmount(e.target.value)}
+              />
             </div>
             {editCollectionError && <p className="text-sm text-destructive">{editCollectionError}</p>}
 
-            {confirmDeleteCollection ? (
-              <div className="flex flex-col gap-2 border-t border-border pt-4">
-                <p className="text-body-airbnb">{t.money.deleteCollectionConfirm}</p>
-                <PressableScale>
-                  <DeleteButton
-                    className="h-12 w-full"
-                    disabled={deletingCollection}
-                    onClick={deleteCollection}
-                    deleted={deletedCollection}
-                  />
-                </PressableScale>
-              </div>
-            ) : (
-              <div className="border-t border-border pt-4">
-                <PressableScale>
-                  <Button variant="destructive" className="w-full gap-1.5" onClick={() => setConfirmDeleteCollection(true)}>
-                    <Trash2 className="size-4" />
-                    {t.common.delete}
-                  </Button>
-                </PressableScale>
-              </div>
-            )}
+            {/* Единый вид шторок правки (запрос владельца 2026-08-16): широкая
+                "Сохранить" внизу, удаление одной иконкой рядом. */}
+            {confirmDeleteCollection && <p className="text-body-airbnb">{t.money.deleteCollectionConfirm}</p>}
+            <div className="flex items-center gap-2">
+              <PressableScale className="min-w-0 flex-1">
+                <SaveButton
+                  className="h-12 w-full"
+                  disabled={editCollectionSubmitting}
+                  onClick={submitCollectionEdit}
+                  saved={editCollectionSaved}
+                />
+              </PressableScale>
+              <IconActionButton
+                icon={Trash2}
+                onClick={() => (confirmDeleteCollection ? deleteCollection() : setConfirmDeleteCollection(true))}
+                label={t.common.delete}
+                destructive
+                active={confirmDeleteCollection}
+              />
+            </div>
           </div>
         )}
       </BottomSheet>

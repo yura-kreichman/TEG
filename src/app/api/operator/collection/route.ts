@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { getZonePoolShare, settleOutstandingCollectionAdvance } from "@/lib/zone-balance";
-import { dispatchCollection } from "@/lib/summary-channels/dispatch";
+import { announceCollection } from "@/lib/collection-alert";
 
 // Инкассация: оператор вводит сумму, переданную владельцу; касса уменьшается.
 // Подтверждение владельцем не требуется (docs/spec/02-money.md). К введённой
@@ -56,11 +56,11 @@ export async function POST(request: Request) {
   // Чтение доли пула и запись collection — единая locked-транзакция (аудит
   // 2026-07-24, тот же гоночный сценарий, что у owner-версии — см. комментарий
   // в /api/zones/[id]/collection).
-  const poolShare = await prisma.$transaction(async (tx) => {
+  const { poolShare, operationId, occurredAt } = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${zone.pointId}))`;
 
     const poolShare = await getZonePoolShare(zone.pointId, zoneId, tx);
-    await tx.moneyOperation.create({
+    const operation = await tx.moneyOperation.create({
       data: {
         tenantId: ctx.point.tenantId,
         zoneId,
@@ -69,12 +69,23 @@ export async function POST(request: Request) {
         performedByOperatorId: ctx.operator.id,
       },
     });
-    return poolShare;
+    return { poolShare, operationId: operation.id, occurredAt: operation.occurredAt };
   });
 
   // В уведомлении — именно введённая сумма (см. комментарий у той же строки в
   // /api/zones/[id]/collection — тот же баг, найден пользователем 2026-07-25).
-  dispatchCollection(ctx.point.tenantId, amountNumber, zone.name, ctx.operator.name).catch(() => {});
+  announceCollection({
+    tenantId: ctx.point.tenantId,
+    operationIds: [operationId],
+    occurredAt,
+    operatorName: ctx.operator.name,
+    operatorColorTag: ctx.operator.colorTag,
+    amount: amountNumber,
+    isAdvance: false,
+    zones: [{ name: zone.name, emoji: zone.telegramEmoji, amount: amountNumber }],
+    goodsAmount: 0,
+    abonementAmount: 0,
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true, settledPool: poolShare });
 }

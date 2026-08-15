@@ -6,6 +6,7 @@ import type {
   ShiftCloseSummaryData,
   InstructionAckData,
   ExpenseAlertData,
+  CollectionAlertData,
 } from "./types";
 import { formatBusinessDate, formatDuration, formatLocalTime, formatSummaryDate } from "./format-shared";
 import { colorTagToEmoji } from "@/lib/color-tag";
@@ -196,8 +197,11 @@ function diffEmoji(difference: number): string {
 // Закрытие смены день недели по-прежнему показывают через formatDate().
 function zoneHeader(data: ZoneSummaryData, showOperator: boolean, timezone: string): string {
   const colorPrefix = colorTagToEmoji(data.operatorColorTag);
+  // 👑 после имени — сдачу правил Владелец (требование владельца 2026-08-16:
+  // единый маркер правки во всех сообщениях, ровно как иконка-корона в
+  // кабинете). Метка сотрудника при этом остаётся: кто сдавал — не меняется.
   const operatorBit = showOperator
-    ? ` · ${colorPrefix ? `${colorPrefix} ` : ""}${escapeTelegramHtml(data.operatorName)}`
+    ? ` · ${colorPrefix ? `${colorPrefix} ` : ""}${escapeTelegramHtml(data.operatorName)}${data.editedByOwner ? " 👑" : ""}`
     : "";
   const date = formatSummaryDate(data.occurredAt, "/", timezone, false);
   // Жирным — только название зоны (запрос пользователя 2026-07-17: "во всех
@@ -641,7 +645,8 @@ export function formatShiftCloseSummaryTelegram(
   // Цветовой квадрат перед именем оператора (фидбек пользователя 2026-07-12) —
   // и в компактном, и в обычном виде; null (метка не задана) — без эмодзи.
   const colorPrefix = colorTagToEmoji(data.operatorColorTag);
-  const safeOperatorName = escapeTelegramHtml(data.operatorName);
+  // 👑 после имени — смену или её аванс/премию правил Владелец (см. zoneHeader).
+  const safeOperatorName = `${escapeTelegramHtml(data.operatorName)}${data.editedByOwner ? " 👑" : ""}`;
   const operatorLabel = colorPrefix ? `${colorPrefix} ${safeOperatorName}` : safeOperatorName;
 
   if (settings.compact) {
@@ -747,13 +752,82 @@ export function formatExpenseAlertLines(
   locale: Locale,
   currency: string | null | undefined
 ): string[] {
-  const mark = data.editedByOwner ? "👑" : colorTagToEmoji(data.operatorColorTag);
-  const lines = [`${mark ? `${mark} ` : ""}${data.operatorName}: ${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}`];
+  // Цветовая метка сотрудника остаётся на месте, 👑 добавляется ПОСЛЕ имени
+  // (уточнение владельца 2026-08-16): корона говорит "запись правил
+  // Владелец", а не "это его запись" — кто потратил деньги, видно по-прежнему.
+  const mark = colorTagToEmoji(data.operatorColorTag);
+  const crown = data.editedByOwner ? " 👑" : "";
+  const lines = [`${mark ? `${mark} ` : ""}${data.operatorName}${crown}: ${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}`];
   lines.push(expenseContext(data));
   // В Push цитаты и курсива нет — комментарий идёт обычной строкой, кавычки
   // отделяют его от названий выше.
   if (data.comment) lines.push(`«${clamp(data.comment, ALERT_COMMENT_LIMIT)}»`);
   return lines;
+}
+
+/**
+ * Инкассация — формат владельца 2026-08-16, три строки:
+ *   🏦 ИНКАССАЦИЯ (Аванс) — 16/08, 00:30
+ *   🟩 Женя 👑: 1 500 ₽
+ *   🎠 Машинки 700 ₽ · 🛍 Товары 200 ₽
+ * Третья строка — из каких касс собраны деньги: зоны своими эмодзи (те же,
+ * что в сводке по зоне), пулы товаров и абонементов — фиксированными.
+ * Владелец сам провёл инкассацию — вместо имени 👑 (имени у него нет, в
+ * отличие от правки чужой записи, где имя остаётся).
+ */
+const GOODS_EMOJI = "🛍";
+const ABONEMENT_EMOJI = "🎟";
+
+function collectionParts(data: CollectionAlertData, st: SummaryText, locale: Locale, currency: string | null | undefined): string[] {
+  const money = (v: number) => formatMoneyWithCurrency(v, locale, currency as CurrencyCode | null);
+  const parts = data.zones
+    .filter((z) => z.amount > 0)
+    .map((z) => `${z.emoji || DEFAULT_ZONE_EMOJI} ${z.name} ${money(z.amount)}`);
+  if (data.goodsAmount > 0) parts.push(`${GOODS_EMOJI} ${st.goodsLabel} ${money(data.goodsAmount)}`);
+  if (data.abonementAmount > 0) parts.push(`${ABONEMENT_EMOJI} ${st.abonementSold} ${money(data.abonementAmount)}`);
+  return parts;
+}
+
+function collectionWho(data: CollectionAlertData): string {
+  if (!data.operatorName) return "👑";
+  const mark = colorTagToEmoji(data.operatorColorTag);
+  return `${mark ? `${mark} ` : ""}${data.operatorName}${data.editedByOwner ? " 👑" : ""}`;
+}
+
+export function formatCollectionAlertTelegram(
+  data: CollectionAlertData,
+  st: SummaryText,
+  locale: Locale,
+  timezone: string,
+  currency: string | null | undefined
+): string {
+  const title = data.isAdvance ? `${st.collectionAlertTitle} (${st.advance})` : st.collectionAlertTitle;
+  const when = `${formatSummaryDate(data.occurredAt, "/", timezone, false)}, ${formatLocalTime(data.occurredAt, timezone)}`;
+  const lines = [
+    `🏦 <b>${escapeTelegramHtml(title)}</b> — ${when}`,
+    `${escapeTelegramHtml(collectionWho(data))}: <b>${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}</b>`,
+  ];
+  const parts = collectionParts(data, st, locale, currency);
+  if (parts.length > 0) lines.push(escapeTelegramHtml(parts.join(" · ")));
+  return lines.join("\n");
+}
+
+/** Те же строки для Push — без HTML, шапка отдельно от тела. */
+export function formatCollectionAlertPush(
+  data: CollectionAlertData,
+  st: SummaryText,
+  locale: Locale,
+  timezone: string,
+  currency: string | null | undefined
+): { title: string; body: string } {
+  const title = data.isAdvance ? `${st.collectionAlertTitle} (${st.advance})` : st.collectionAlertTitle;
+  const when = `${formatSummaryDate(data.occurredAt, "/", timezone, false)}, ${formatLocalTime(data.occurredAt, timezone)}`;
+  const bodyLines = [
+    `${collectionWho(data)}: ${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}`,
+  ];
+  const parts = collectionParts(data, st, locale, currency);
+  if (parts.length > 0) bodyLines.push(parts.join(" · "));
+  return { title: `🏦 ${title} — ${when}`, body: bodyLines.join("\n") };
 }
 
 export function formatExpenseAlertTelegram(
@@ -763,8 +837,8 @@ export function formatExpenseAlertTelegram(
   timezone: string,
   currency: string | null | undefined
 ): string {
-  const mark = data.editedByOwner ? "👑" : colorTagToEmoji(data.operatorColorTag);
-  const name = escapeTelegramHtml(data.operatorName);
+  const mark = colorTagToEmoji(data.operatorColorTag);
+  const name = `${escapeTelegramHtml(data.operatorName)}${data.editedByOwner ? " 👑" : ""}`;
   const lines = [
     `🛒 <b>${st.expenseAlertTitle}</b> — ${formatSummaryDate(data.occurredAt, "/", timezone, false)}, ${formatLocalTime(data.occurredAt, timezone)}`,
     `${mark ? `${mark} ` : ""}${name}: <b>${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}</b>`,

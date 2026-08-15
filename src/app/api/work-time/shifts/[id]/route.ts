@@ -13,6 +13,7 @@ import { sendPushToOperators } from "@/lib/push-notifications";
 import { resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
 import { chargeSelfServiceAdvanceToZones } from "@/lib/zone-balance";
+import { resyncDailyCashForPoint, resyncShiftCloseMessage } from "@/lib/summary-channels/resync";
 
 // Аудит 2026-07-27, второй раунд — см. комментарий у повторной проверки
 // овердрафта внутри транзакции ниже.
@@ -371,6 +372,11 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   // неизвестен), не считаем их задним числом от "сейчас".
   const { minutes, accrued } = nextEndAt !== null ? calcShiftAccrual(nextStartAt, nextEndAt, rate) : { minutes: null, accrued: null };
 
+  // Сводка "Закрытие смены" в чате и "Касса за день" точки содержат эти же
+  // часы и суммы — догоняем их (требование владельца 2026-08-16).
+  await resyncShiftCloseMessage(id);
+  await resyncDailyCashForPoint(shift.pointId, owner.tenantId, nextStartAt);
+
   return NextResponse.json({
     shift: {
       id,
@@ -463,6 +469,10 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
       console.error("chargeSelfServiceAdvanceToZones failed (shift delete)", err)
     );
   }
+
+  // Саму сводку смены пересобирать уже не из чего — смены нет; "Касса за
+  // день" точки остаётся и обязана перестать показывать её суммы.
+  await resyncDailyCashForPoint(shift.pointId, owner.tenantId, shift.startAt);
 
   return NextResponse.json({ ok: true });
 }

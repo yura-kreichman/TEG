@@ -12,6 +12,7 @@ import { formatZoneSummaryTelegram } from "@/lib/summary-channels/telegram-forma
 import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { isLocale, type Locale } from "@/lib/locales";
 import { getDictionary } from "@/lib/i18n";
+import { resyncDailyCashForZone, sendUpdatedPush } from "@/lib/summary-channels/resync";
 
 interface CorrectionDiff {
   cashAmount: number;
@@ -162,6 +163,9 @@ async function reEditZoneSummaryMessage(zoneSubmissionId: string, tenantId: stri
       returnsCount: zs.returnsCount,
       operatorName: zs.resultsSubmission.operator.name,
       operatorColorTag: zs.resultsSubmission.operator.colorTag,
+      // Сюда попадаем только по правке владельца — отсюда 👑 рядом с именем
+      // (требование владельца 2026-08-16).
+      editedByOwner: true,
     },
     settings,
     locale,
@@ -169,6 +173,11 @@ async function reEditZoneSummaryMessage(zoneSubmissionId: string, tenantId: stri
     st
   );
   await editChatMessage(channel.chatId, zs.telegramSummaryMessageId, text).catch(() => {});
+  // Push с уже поправленными цифрами: сообщение в чате исправлено, но у
+  // владельца в шторке телефона всё ещё висит старое (требование владельца
+  // 2026-08-16: "если происходят обновления в ТГ, то Push должны отправляться
+  // свежие").
+  await sendUpdatedPush(tenantId, "zoneSummary", getDictionary(locale).pushSettings.zoneLabel, text);
 }
 
 // Правка последней сдачи по зоне (docs/spec/01-counters.md, «Прозрачность»):
@@ -339,6 +348,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/co
   // независимо от того, получится ли обновить Telegram (запрос пользователя
   // 2026-07-25).
   await reEditZoneSummaryMessage(id, owner.tenantId).catch(() => {});
+  // И "Касса за день" точки — она суммирует кассу всех зон, правка сдачи её
+  // меняет (требование владельца 2026-08-16).
+  await resyncDailyCashForZone(zoneSubmission.zoneId, owner.tenantId, zoneSubmission.createdAt);
 
   return NextResponse.json({ ok: true });
 }
@@ -432,6 +444,11 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/reports/
     }
     throw err;
   }
+
+  // Саму сводку по зоне пересобирать уже не из чего — сдачи нет; а вот
+  // "Касса за день" точки продолжает существовать и обязана перестать
+  // показывать удалённые деньги (требование владельца 2026-08-16).
+  await resyncDailyCashForZone(zoneSubmission.zoneId, owner.tenantId, zoneSubmission.createdAt);
 
   return NextResponse.json({ ok: true });
 }

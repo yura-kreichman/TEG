@@ -10,7 +10,7 @@ import {
   splitCollectionAmountDetailed,
 } from "@/lib/zone-balance";
 import { distributeCollectionWhole } from "@/lib/collection-split";
-import { dispatchCollection } from "@/lib/summary-channels/dispatch";
+import { announceCollection } from "@/lib/collection-alert";
 
 // Общая инкассация точки, но вносит владелец (запрос пользователя
 // 2026-07-15: "как и у Сотрудника") — тот же принцип, что у оператора
@@ -69,7 +69,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
   // списывали пересекающуюся долю, уводя зону в минус больше, чем реально
   // забрано наличных — тот же класс гонки, что уже закрыт для
   // chargeSelfServiceAdvanceToZones/settleOutstandingCollectionAdvance).
-  const { poolDeficit, advance, breakdown } = await prisma.$transaction(async (tx) => {
+  const { poolDeficit, advance, breakdown, operationIds, zoneShares } = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pointId}))`;
 
     const balanceByZone = await getZoneBalances(
@@ -115,8 +115,13 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
       }))
       .filter((row) => row.amount !== 0);
 
-    if (rows.length > 0) {
-      await tx.moneyOperation.createMany({ data: rows });
+    // По одной create вместо createMany — нужны id созданных строк: им всем
+    // проставляется общий collectionAlertMessageId, по которому правка любой
+    // из них пересобирает сообщение об инкассации (2026-08-16).
+    const operationIds: string[] = [];
+    for (const row of rows) {
+      const created = await tx.moneyOperation.create({ data: row });
+      operationIds.push(created.id);
     }
     // Абонементы/товары наличными физически забраны — реальной суммой, СВОИМ
     // типом каждый (не "collection_advance": та копится как ЖДУЩИЙ будущей
@@ -126,7 +131,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     // раньше здесь писался один нулевой маркер без видимой суммы). Заодно
     // двигают СВОИ, независимые отсечки (lib/zone-balance.ts, getPoolSweepCutoff).
     if (abonementSweepPortion > 0) {
-      await tx.moneyOperation.create({
+      const created = await tx.moneyOperation.create({
         data: {
           tenantId: owner.tenantId,
           pointId,
@@ -135,9 +140,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
           performedByUserId: owner.user.id,
         },
       });
+      operationIds.push(created.id);
     }
     if (goodsSweepPortion > 0) {
-      await tx.moneyOperation.create({
+      const created = await tx.moneyOperation.create({
         data: {
           tenantId: owner.tenantId,
           pointId,
@@ -146,11 +152,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
           performedByUserId: owner.user.id,
         },
       });
+      operationIds.push(created.id);
     }
     // "Аванс инкассации" — то, для чего пока нет ни зоны, ни пула, ждёт будущей
     // выручки (см. "Аванс инкассации" в lib/zone-balance.ts).
     if (advance > 0) {
-      await tx.moneyOperation.create({
+      const created = await tx.moneyOperation.create({
         data: {
           tenantId: owner.tenantId,
           pointId,
@@ -159,6 +166,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
           performedByUserId: owner.user.id,
         },
       });
+      operationIds.push(created.id);
     }
 
     // Разбивка наружу (запрос пользователя 2026-08-12) — для слипа
@@ -167,13 +175,15 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     // видно, из чего она сложилась. Ничего дополнительно не считаем — всё
     // это уже посчитано выше для самих проводок.
     const zoneShares = zones
-      .map((zone, i) => ({ name: zone.name, amount: Math.abs(shares[i]) }))
+      .map((zone, i) => ({ name: zone.name, emoji: zone.telegramEmoji, amount: Math.abs(shares[i]) }))
       .filter((z) => z.amount > 0);
     return {
       poolDeficit,
       advance,
+      operationIds,
+      zoneShares,
       breakdown: {
-        zones: zoneShares,
+        zones: zoneShares.map(({ name, amount }) => ({ name, amount })),
         abonement: abonementSweepPortion,
         goods: goodsSweepPortion,
         advance,
@@ -184,7 +194,18 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
   // В уведомлении — именно введённая сумма, не + poolDeficit (см. комментарий
   // у той же строки в /api/zones/[id]/collection — тот же баг, найден
   // пользователем 2026-07-25).
-  dispatchCollection(owner.tenantId, amountNumber, point.name, null).catch(() => {});
+  announceCollection({
+    tenantId: owner.tenantId,
+    operationIds,
+    occurredAt: new Date(),
+    operatorName: null,
+    operatorColorTag: null,
+    amount: amountNumber,
+    isAdvance: advance > 0,
+    zones: zoneShares,
+    goodsAmount: breakdown.goods,
+    abonementAmount: breakdown.abonement,
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true, settledPool: poolDeficit, advance, breakdown });
 }
