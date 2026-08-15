@@ -50,6 +50,9 @@ export interface LandingRenderData {
   metaTitleOverride: string | null;
   metaDescriptionOverride: string | null;
   googleSiteVerification: string | null;
+  // Момент последней правки лендинга — уходит в JSON-LD как dateModified
+  // (сигнал свежести страницы) и в lastmod карты сайта.
+  updatedAt: Date;
   rulesInstruction: { slug: string; title: string } | null;
   galleryPhotos: { id: string; url: string }[];
   zones: Array<{
@@ -220,6 +223,7 @@ export async function getLandingRenderData(tenantId: string): Promise<LandingRen
     metaTitleOverride: landing.metaTitleOverride,
     metaDescriptionOverride: landing.metaDescriptionOverride,
     googleSiteVerification: landing.googleSiteVerification,
+    updatedAt: landing.updatedAt,
     rulesInstruction,
     galleryPhotos: galleryPhotos.map((p) => ({ id: p.id, url: p.url })),
     zones,
