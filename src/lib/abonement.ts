@@ -741,6 +741,115 @@ export async function getZoneAbonementSpendAmount(
  * по реальным суммам ног (CounterTapEventPaymentLeg). Аннулированные тапы
  * (voidedAt) не в счёт: они и в расчётную выручку не попали.
  */
+export interface CountersBalanceSubmission {
+  id: string;
+  zoneId: string;
+  /** Конец окна — момент самой сдачи. */
+  createdAt: Date;
+  /** Начало окна — предыдущая сдача этой зоны, null для самой первой. */
+  since: Date | null;
+}
+
+/**
+ * То же, что getZoneAbonementSpendAmount/getZoneTapAbonementAmount, но сразу
+ * для СПИСКА сдач — одним запросом на все, вместо запроса на каждую.
+ *
+ * Появилось по жалобе на скорость (2026-08-14): отчёты за месяц вызывали эти
+ * функции в цикле по сдачам, а их на живой точке 79 за 30 дней — значит 79
+ * лишних round-trip к базе на одно открытие экрана. Тот же приём, что уже
+ * применён в /api/reports/counters/day (abonementOpsByZone): читаем операции
+ * зон один раз и раскладываем по окнам в памяти.
+ *
+ * Какой источник брать для зоны, решает countersTapAssistEnabled — ровно как
+ * в countersPaidFromBalance (lib/results-calc.ts): у tap-зон засчитывается
+ * только оплата, привязанная к тапу, у ручных — весь расход баланса зоны.
+ */
+export async function getCountersBalanceBySubmission(
+  submissions: CountersBalanceSubmission[],
+  zoneById: Map<string, { countersTapAssistEnabled: boolean; tariffs: { id: string; price: Prisma.Decimal | number }[] }>,
+  client: Tx | typeof prisma = prisma
+): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  if (submissions.length === 0) return result;
+
+  const manual = submissions.filter((s) => !zoneById.get(s.zoneId)?.countersTapAssistEnabled);
+  const tapped = submissions.filter((s) => zoneById.get(s.zoneId)?.countersTapAssistEnabled);
+  // Верхняя граница общая на всю выборку: дальше самой поздней сдачи ни одно
+  // окно не тянется, а лишние строки — лишний трафик из базы.
+  const until = new Date(Math.max(...submissions.map((s) => s.createdAt.getTime())));
+
+  const inWindow = (at: Date, s: CountersBalanceSubmission) => (!s.since || at > s.since) && at <= s.createdAt;
+
+  if (manual.length > 0) {
+    const ops = await client.moneyOperation.findMany({
+      where: {
+        zoneId: { in: [...new Set(manual.map((s) => s.zoneId))] },
+        type: "revenue_abonement",
+        occurredAt: { lte: until },
+      },
+      select: { zoneId: true, amount: true, occurredAt: true },
+    });
+    const byZone = new Map<string, { amount: number; occurredAt: Date }[]>();
+    for (const op of ops) {
+      if (!op.zoneId) continue;
+      const list = byZone.get(op.zoneId) ?? [];
+      list.push({ amount: Number(op.amount), occurredAt: op.occurredAt });
+      byZone.set(op.zoneId, list);
+    }
+    for (const s of manual) {
+      const sum = (byZone.get(s.zoneId) ?? [])
+        .filter((op) => inWindow(op.occurredAt, s))
+        .reduce((acc, op) => acc + op.amount, 0);
+      result.set(s.id, Math.round(sum * 100) / 100);
+    }
+  }
+
+  if (tapped.length > 0) {
+    const taps = await client.counterTapEvent.findMany({
+      where: {
+        zoneId: { in: [...new Set(tapped.map((s) => s.zoneId))] },
+        voidedAt: null,
+        paymentMethod: { in: ["abonement", PAYMENT_SPLIT_METHOD] },
+        createdAt: { lte: until },
+      },
+      select: { id: true, zoneId: true, tariffId: true, createdAt: true, paymentMethod: true },
+    });
+    const splitIds = taps.filter((t) => t.paymentMethod === PAYMENT_SPLIT_METHOD).map((t) => t.id);
+    const legTotals = new Map<string, number>();
+    if (splitIds.length > 0) {
+      const legs = await client.counterTapEventPaymentLeg.findMany({
+        where: { tapId: { in: splitIds }, method: "abonement" },
+        select: { tapId: true, amount: true },
+      });
+      for (const leg of legs) legTotals.set(leg.tapId, (legTotals.get(leg.tapId) ?? 0) + Number(leg.amount));
+    }
+    const byZone = new Map<string, typeof taps>();
+    for (const tap of taps) {
+      const list = byZone.get(tap.zoneId) ?? [];
+      list.push(tap);
+      byZone.set(tap.zoneId, list);
+    }
+    for (const s of tapped) {
+      const priceByTariff = new Map(
+        (zoneById.get(s.zoneId)?.tariffs ?? []).map((t) => [t.id, Number(t.price)])
+      );
+      const sum = (byZone.get(s.zoneId) ?? [])
+        .filter((tap) => inWindow(tap.createdAt, s))
+        .reduce(
+          (acc, tap) =>
+            acc +
+            (tap.paymentMethod === PAYMENT_SPLIT_METHOD
+              ? (legTotals.get(tap.id) ?? 0)
+              : (priceByTariff.get(tap.tariffId) ?? 0)),
+          0
+        );
+      result.set(s.id, Math.round(sum * 100) / 100);
+    }
+  }
+
+  return result;
+}
+
 export async function getZoneTapAbonementAmount(
   zoneId: string,
   priceByTariff: Map<string, number>,

@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
-import { getZoneAbonementSpendAmount, getZoneTapAbonementAmount } from "@/lib/abonement";
+import { getCountersBalanceBySubmission } from "@/lib/abonement";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
-import { aggregateTicketOrders, ticketRevenueByAssetVariant } from "@/lib/tickets";
+import { aggregateTicketOrdersBySubmission, ticketRevenueByAssetVariant } from "@/lib/tickets";
 import { businessDayOf, localDateParts, parseBoundary, zonedWallTimeToUtc } from "@/lib/business-day";
 import { PAYMENT_SPLIT_METHOD } from "@/lib/payment-split";
 
@@ -259,8 +259,12 @@ export async function computeZoneSubmissionRevenues(
   ];
   const balanceByZoneSubmission = new Map<string, number>();
   if (balanceZoneIds.length > 0) {
+    // Граница сверху (аудит 2026-08-14): цепочка нужна только чтобы найти
+    // предшественника каждой сдачи ОКНА — всё, что позже самой поздней из
+    // них, бесполезно. Без границы запрос рос бы вместе с историей вечно.
+    const latestInWindow = new Date(Math.max(...zoneSubmissions.map((zs) => zs.createdAt.getTime())));
     const chain = await prisma.zoneSubmission.findMany({
-      where: { zoneId: { in: balanceZoneIds } },
+      where: { zoneId: { in: balanceZoneIds }, createdAt: { lte: latestInWindow } },
       select: { id: true, zoneId: true, createdAt: true },
       orderBy: { createdAt: "asc" },
     });
@@ -270,26 +274,21 @@ export async function computeZoneSubmissionRevenues(
       previousByZoneSubmission.set(row.id, lastSeenByZone.get(row.zoneId) ?? null);
       lastSeenByZone.set(row.zoneId, row.createdAt);
     }
-    await Promise.all(
+    // Один запрос на все сдачи, а не по запросу на каждую (жалоба на скорость
+    // 2026-08-14: на живой точке 79 сдач за месяц — столько же лишних
+    // round-trip было на одно открытие отчёта).
+    const spendBySubmission = await getCountersBalanceBySubmission(
       zoneSubmissions
         .filter((zs) => balanceZoneIds.includes(zs.zoneId))
-        .map(async (zs) => {
-          const zone = zoneById.get(zs.zoneId)!;
-          const since = previousByZoneSubmission.get(zs.id) ?? null;
-          // TAP-зона считает выручку из тапов — и вычитать надо оплату,
-          // привязанную к тапу; ручная считает из механического счётчика — там
-          // весь зонный расход баланса (см. countersPaidFromBalance).
-          const spend = zone.countersTapAssistEnabled
-            ? await getZoneTapAbonementAmount(
-                zs.zoneId,
-                new Map(zone.tariffs.map((t) => [t.id, Number(t.price)])),
-                since,
-                zs.createdAt
-              )
-            : await getZoneAbonementSpendAmount(zs.zoneId, since, prisma, zs.createdAt);
-          balanceByZoneSubmission.set(zs.id, spend);
-        })
+        .map((zs) => ({
+          id: zs.id,
+          zoneId: zs.zoneId,
+          createdAt: zs.createdAt,
+          since: previousByZoneSubmission.get(zs.id) ?? null,
+        })),
+      zoneById
     );
+    for (const [id, spend] of spendBySubmission) balanceByZoneSubmission.set(id, spend);
   }
 
   const runningPrevious = new Map<string, number>(initialByKey);
@@ -417,8 +416,14 @@ export async function computeZoneSubmissionRevenues(
   const ticketZoneIds = zones.filter((z) => isTicketsZone(z)).map((z) => z.id);
   const ticketBoundariesByZone = new Map<string, Date[]>();
   if (ticketZoneIds.length) {
+    // Граница сверху (аудит 2026-08-14) — см. тот же приём у цепочки баланса
+    // выше: всё, что позже самой поздней сдачи окна, для поиска
+    // предшественника бесполезно, а без границы запрос растёт с историей.
+    const latestTicketSubmission = new Date(
+      Math.max(...zoneSubmissions.filter((zs) => ticketZoneIds.includes(zs.zoneId)).map((zs) => zs.createdAt.getTime()))
+    );
     const allTicketZoneSubmissions = await prisma.zoneSubmission.findMany({
-      where: { zoneId: { in: ticketZoneIds } },
+      where: { zoneId: { in: ticketZoneIds }, createdAt: { lte: latestTicketSubmission } },
       orderBy: { createdAt: "asc" },
       select: { zoneId: true, createdAt: true },
     });
@@ -436,14 +441,22 @@ export async function computeZoneSubmissionRevenues(
   const ticketZoneSubmissions = zoneSubmissions.filter((zs) => isTicketsZone(zoneById.get(zs.zoneId)!));
   const ticketAggregateBySubmission = new Map<string, { totalAmount: number; abonementAmount: number }>();
   const ticketAssetTotalsBySubmission = new Map<string, Map<string, number>>();
+  // Агрегат — одним чтением на все сдачи (аудит 2026-08-14), разрез по
+  // активам пока остаётся поштучным: он нужен только для раскрытой карточки
+  // и данных читает заметно меньше.
+  const ticketAggregates = await aggregateTicketOrdersBySubmission(
+    ticketZoneSubmissions.map((zs) => {
+      const { start, end } = ticketWindowFor(zs.zoneId, zs.createdAt);
+      return { id: zs.id, zoneId: zs.zoneId, since: start, until: end };
+    })
+  );
+  for (const [id, agg] of ticketAggregates) {
+    ticketAggregateBySubmission.set(id, { totalAmount: agg.totalAmount, abonementAmount: agg.abonementAmount });
+  }
   await Promise.all(
     ticketZoneSubmissions.map(async (zs) => {
       const { start, end } = ticketWindowFor(zs.zoneId, zs.createdAt);
-      const [agg, breakdown] = await Promise.all([
-        aggregateTicketOrders(zs.zoneId, start, end),
-        ticketRevenueByAssetVariant(zs.zoneId, start, end),
-      ]);
-      ticketAggregateBySubmission.set(zs.id, { totalAmount: agg.totalAmount, abonementAmount: agg.abonementAmount });
+      const breakdown = await ticketRevenueByAssetVariant(zs.zoneId, start, end);
       const perAssetTotals = new Map<string, number>();
       for (const b of breakdown) perAssetTotals.set(b.assetId, (perAssetTotals.get(b.assetId) ?? 0) + b.amount);
       ticketAssetTotalsBySubmission.set(zs.id, perAssetTotals);

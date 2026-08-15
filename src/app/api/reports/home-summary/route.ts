@@ -3,9 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOwner } from "@/lib/require-owner";
 import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
-import { getZoneAbonementSpendAmount, getZoneTapAbonementAmount } from "@/lib/abonement";
+import { getCountersBalanceBySubmission } from "@/lib/abonement";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
-import { aggregateTicketOrders } from "@/lib/tickets";
+import { aggregateTicketOrdersBySubmission } from "@/lib/tickets";
 import { businessDayOf, dayBoundsUtc } from "@/lib/business-day";
 import { PAYMENT_SPLIT_METHOD } from "@/lib/payment-split";
 
@@ -147,8 +147,12 @@ async function computeWindowSummary(
   const ticketZoneIds = [...new Set(ticketZoneSubmissions.map((zs) => zs.zoneId))];
   const ticketBoundariesByZone = new Map<string, Date[]>();
   if (ticketZoneIds.length) {
+    // Граница сверху — см. lib/reports.ts, тот же приём.
+    const latestTicketSubmission = new Date(
+      Math.max(...ticketZoneSubmissions.map((zs) => zs.createdAt.getTime()))
+    );
     const allTicketZoneSubmissions = await prisma.zoneSubmission.findMany({
-      where: { zoneId: { in: ticketZoneIds } },
+      where: { zoneId: { in: ticketZoneIds }, createdAt: { lte: latestTicketSubmission } },
       orderBy: { createdAt: "asc" },
       select: { zoneId: true, createdAt: true },
     });
@@ -179,34 +183,32 @@ async function computeWindowSummary(
       previousById.set(row.id, lastSeenByZone.get(row.zoneId) ?? null);
       lastSeenByZone.set(row.zoneId, row.createdAt);
     }
-    await Promise.all(
-      counterZoneSubmissions.map(async (zs) => {
-        const since = previousById.get(zs.id) ?? null;
-        // TAP-зона — только оплата, привязанная к тапу; ручная — весь зонный
-        // расход баланса (см. countersPaidFromBalance в lib/results-calc.ts).
-        const spend = zs.zone.countersTapAssistEnabled
-          ? await getZoneTapAbonementAmount(
-              zs.zoneId,
-              new Map(zs.zone.tariffs.map((t) => [t.id, Number(t.price)])),
-              since,
-              zs.createdAt
-            )
-          : await getZoneAbonementSpendAmount(zs.zoneId, since, prisma, zs.createdAt);
-        balanceBySubmission.set(zs.id, spend);
-      })
+    // Один запрос на все сдачи дня, не по запросу на каждую — см. тот же
+    // разбор в lib/reports.ts.
+    const spendBySubmission = await getCountersBalanceBySubmission(
+      counterZoneSubmissions.map((zs) => ({
+        id: zs.id,
+        zoneId: zs.zoneId,
+        createdAt: zs.createdAt,
+        since: previousById.get(zs.id) ?? null,
+      })),
+      new Map(counterZoneSubmissions.map((zs) => [zs.zoneId, zs.zone]))
     );
+    for (const [id, spend] of spendBySubmission) balanceBySubmission.set(id, spend);
   }
 
   const ticketRevenueBySubmission = new Map<string, { totalAmount: number; abonementAmount: number }>();
-  await Promise.all(
-    ticketZoneSubmissions.map(async (zs) => {
+  // Одним чтением на все сдачи дня (аудит 2026-08-14).
+  const ticketAggregates = await aggregateTicketOrdersBySubmission(
+    ticketZoneSubmissions.map((zs) => {
       const boundaries = ticketBoundariesByZone.get(zs.zoneId) ?? [];
       const idx = boundaries.findIndex((d) => d.getTime() === zs.createdAt.getTime());
-      const start = idx > 0 ? boundaries[idx - 1] : null;
-      const agg = await aggregateTicketOrders(zs.zoneId, start, zs.createdAt);
-      ticketRevenueBySubmission.set(zs.id, { totalAmount: agg.totalAmount, abonementAmount: agg.abonementAmount });
+      return { id: zs.id, zoneId: zs.zoneId, since: idx > 0 ? boundaries[idx - 1] : null, until: zs.createdAt };
     })
   );
+  for (const [id, agg] of ticketAggregates) {
+    ticketRevenueBySubmission.set(id, { totalAmount: agg.totalAmount, abonementAmount: agg.abonementAmount });
+  }
 
   let totalDifference = 0;
   // Тесты/возвраты за день — сумма по всем сдачам (запрос пользователя

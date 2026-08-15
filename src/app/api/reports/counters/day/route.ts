@@ -4,7 +4,7 @@ import { requireOwner } from "@/lib/require-owner";
 import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, countersPaidFromBalance, isCountersTapAssistZone, isCountersZone, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { getZoneTapAbonementAmount } from "@/lib/abonement";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
-import { aggregateTicketOrders, ticketRevenueByAssetVariant, listTicketOrdersForWindow, type TicketOrderWindowItem } from "@/lib/tickets";
+import { aggregateTicketOrdersBySubmission, ticketRevenueByAssetVariant, listTicketOrdersForWindow, type TicketOrderWindowItem } from "@/lib/tickets";
 import { calculateGoodsCashBeforeReconciliation } from "@/lib/goods";
 import { round2 } from "@/lib/reports";
 import { dayBoundsUtc } from "@/lib/business-day";
@@ -468,8 +468,17 @@ export async function GET(request: Request) {
   ];
   const ticketBoundariesByZone = new Map<string, Date[]>();
   if (ticketZoneIds.length) {
+    // Граница сверху — см. lib/reports.ts, тот же приём.
+    const latestTicketSubmission = new Date(
+      Math.max(
+        ...submissions
+          .flatMap((s) => s.zoneSubmissions)
+          .filter((zs) => ticketZoneIds.includes(zs.zoneId))
+          .map((zs) => zs.createdAt.getTime())
+      )
+    );
     const allTicketZoneSubmissions = await prisma.zoneSubmission.findMany({
-      where: { zoneId: { in: ticketZoneIds } },
+      where: { zoneId: { in: ticketZoneIds }, createdAt: { lte: latestTicketSubmission } },
       orderBy: { createdAt: "asc" },
       select: { zoneId: true, createdAt: true },
     });
@@ -493,14 +502,24 @@ export async function GET(request: Request) {
       orders: TicketOrderWindowItem[];
     }
   >();
+  // Агрегат — одним чтением на все сдачи (аудит 2026-08-14); разрез по активам
+  // и полные заказы остаются поштучными: они нужны для раскрытой карточки и
+  // читают заметно меньше.
+  const ticketAggregates = await aggregateTicketOrdersBySubmission(
+    ticketZoneSubmissions.map((zs) => {
+      const boundaries = ticketBoundariesByZone.get(zs.zoneId) ?? [];
+      const idx = boundaries.findIndex((d) => d.getTime() === zs.createdAt.getTime());
+      return { id: zs.id, zoneId: zs.zoneId, since: idx > 0 ? boundaries[idx - 1] : null, until: zs.createdAt };
+    })
+  );
   await Promise.all(
     ticketZoneSubmissions.map(async (zs) => {
       const boundaries = ticketBoundariesByZone.get(zs.zoneId) ?? [];
       const idx = boundaries.findIndex((d) => d.getTime() === zs.createdAt.getTime());
       const start = idx > 0 ? boundaries[idx - 1] : null;
       const end = zs.createdAt;
-      const [agg, breakdown, orders] = await Promise.all([
-        aggregateTicketOrders(zs.zoneId, start, end),
+      const agg = ticketAggregates.get(zs.id)!;
+      const [breakdown, orders] = await Promise.all([
         ticketRevenueByAssetVariant(zs.zoneId, start, end),
         // Полные заказы окна — для аннулирования владельцем прямо в
         // карточке (запрос пользователя 2026-07-21).

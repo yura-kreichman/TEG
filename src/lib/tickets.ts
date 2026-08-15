@@ -187,6 +187,116 @@ export async function aggregateTicketOrders(
   };
 }
 
+export interface TicketAggregateWindow {
+  id: string;
+  zoneId: string;
+  /** Конец окна — момент сдачи. */
+  until: Date;
+  /** Начало окна — предыдущая сдача этой зоны, null для первой. */
+  since: Date | null;
+}
+
+/**
+ * aggregateTicketOrders сразу для СПИСКА сдач — одним чтением билетов на все,
+ * вместо чтения на каждую (аудит производительности 2026-08-14: Отчёты,
+ * Главная и «Итоги по дням» вызывали его в цикле по сдачам, а сдач на живой
+ * точке под сотню за месяц).
+ *
+ * Считает ровно то же, что функция выше, и намеренно повторяет её логику
+ * построчно, а не оборачивает: разбивка сплит-оплаты идёт ПО ЗАКАЗУ, и
+ * вытащить её в общий помощник, не сломав это правило, не выйдет.
+ */
+export async function aggregateTicketOrdersBySubmission(
+  windows: TicketAggregateWindow[],
+  tx: Tx | typeof prisma = prisma
+): Promise<Map<string, TicketOrderAggregate>> {
+  const result = new Map<string, TicketOrderAggregate>();
+  if (windows.length === 0) return result;
+
+  const until = new Date(Math.max(...windows.map((w) => w.until.getTime())));
+  const tickets = await tx.ticket.findMany({
+    where: {
+      status: { not: "voided" },
+      order: { zoneId: { in: [...new Set(windows.map((w) => w.zoneId))] }, soldAt: { lte: until } },
+    },
+    select: {
+      priceSnapshot: true,
+      status: true,
+      orderId: true,
+      order: { select: { paymentMethod: true, expiresAt: true, zoneId: true, soldAt: true } },
+    },
+  });
+
+  const splitOrderIds = [
+    ...new Set(tickets.filter((t) => t.order.paymentMethod === PAYMENT_SPLIT_METHOD).map((t) => t.orderId)),
+  ];
+  const legsByOrder = new Map<string, { method: string; amount: number }[]>();
+  if (splitOrderIds.length > 0) {
+    const legs = await tx.ticketOrderPaymentLeg.findMany({ where: { orderId: { in: splitOrderIds } } });
+    for (const leg of legs) {
+      const list = legsByOrder.get(leg.orderId) ?? [];
+      list.push({ method: leg.method, amount: Number(leg.amount) });
+      legsByOrder.set(leg.orderId, list);
+    }
+  }
+
+  const byZone = new Map<string, typeof tickets>();
+  for (const t of tickets) {
+    const list = byZone.get(t.order.zoneId) ?? [];
+    list.push(t);
+    byZone.set(t.order.zoneId, list);
+  }
+
+  const now = new Date();
+  for (const w of windows) {
+    const inWindow = (byZone.get(w.zoneId) ?? []).filter(
+      (t) => t.order.soldAt <= w.until && (!w.since || t.order.soldAt > w.since)
+    );
+    const orderIds = new Set<string>();
+    const splitInWindow = new Set<string>();
+    let totalAmount = 0;
+    let cashAmount = 0;
+    let mobileAmount = 0;
+    let abonementAmount = 0;
+    let redeemedCount = 0;
+    let expiredCount = 0;
+
+    for (const t of inWindow) {
+      orderIds.add(t.orderId);
+      const amount = Number(t.priceSnapshot);
+      totalAmount += amount;
+      if (t.order.paymentMethod === "cash") cashAmount += amount;
+      else if (t.order.paymentMethod === "mobile") mobileAmount += amount;
+      else if (t.order.paymentMethod === "abonement") abonementAmount += amount;
+      else if (t.order.paymentMethod === PAYMENT_SPLIT_METHOD) splitInWindow.add(t.orderId);
+
+      if (t.status === "redeemed") redeemedCount += 1;
+      else if (isTicketExpired({ status: t.status }, t.order, now)) expiredCount += 1;
+    }
+
+    for (const orderId of splitInWindow) {
+      for (const leg of legsByOrder.get(orderId) ?? []) {
+        if (leg.method === "cash") cashAmount += leg.amount;
+        else if (leg.method === "mobile") mobileAmount += leg.amount;
+        else if (leg.method === "abonement") abonementAmount += leg.amount;
+      }
+    }
+
+    result.set(w.id, {
+      ordersCount: orderIds.size,
+      ticketsCount: inWindow.length,
+      totalAmount: Math.round(totalAmount * 100) / 100,
+      cashAmount: Math.round(cashAmount * 100) / 100,
+      mobileAmount: Math.round(mobileAmount * 100) / 100,
+      abonementAmount: Math.round(abonementAmount * 100) / 100,
+      redeemedCount,
+      expiredCount,
+    });
+  }
+
+  return result;
+}
+
 export interface TicketAssetVariantBreakdown {
   assetId: string;
   variantName: string;
