@@ -163,7 +163,7 @@ async function reEditZoneSummaryMessage(zoneSubmissionId: string, tenantId: stri
       returnsCount: zs.returnsCount,
       operatorName: zs.resultsSubmission.operator.name,
       operatorColorTag: zs.resultsSubmission.operator.colorTag,
-      // Сюда попадаем только по правке владельца — отсюда 👑 рядом с именем
+      // Сюда попадаем только по правке владельца — отсюда ♛ рядом с именем
       // (требование владельца 2026-08-16).
       editedByOwner: true,
     },
