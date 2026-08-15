@@ -128,17 +128,21 @@ export async function POST(request: Request) {
       active: true,
       ...(operator.allZonesAccess ? {} : { operatorsWithAccess: { some: { id: operator.id } } }),
     },
-    select: { id: true },
+    select: { id: true, name: true },
   });
   if (!zone) {
     return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
   }
 
+  // Имя категории нужно и для проверки принадлежности тенанту, и для строки
+  // "Категория · Зона" в уведомлении владельцу — один запрос на оба.
+  let category: { id: string; name: string } | null = null;
   if (categoryId) {
-    const category = await prisma.expenseCategory.findUnique({ where: { id: categoryId } });
-    if (!category || category.tenantId !== point.tenantId) {
+    const found = await prisma.expenseCategory.findUnique({ where: { id: categoryId } });
+    if (!found || found.tenantId !== point.tenantId) {
       return NextResponse.json({ error: "Категория не найдена" }, { status: 400 });
     }
+    category = { id: found.id, name: found.name };
   }
 
   // Отрицательная сумма и zoneId без pointId — как у расходов, которые
@@ -167,7 +171,22 @@ export async function POST(request: Request) {
       operatorName: operator.name,
       operatorColorTag: operator.colorTag ?? null,
       amount: Math.abs(Number(operation.amount)),
-    }).catch((err) => console.error("expense alert dispatch failed", err));
+      categoryName: category?.name ?? null,
+      zoneName: zone.name,
+    })
+      .then(async (results) => {
+        // id сообщения — чтобы правка расхода владельцем переписала его на
+        // месте (api/money/expenses/[id]). Пишем после ответа Telegram,
+        // отдельным update: сам расход к этому моменту уже сохранён и от
+        // судьбы уведомления не зависит.
+        const messageId = results.find((r) => r.channelType === "telegram" && r.externalMessageId)?.externalMessageId;
+        if (messageId) {
+          await prisma.moneyOperation
+            .update({ where: { id: operation.id }, data: { expenseAlertMessageId: messageId } })
+            .catch(() => {});
+        }
+      })
+      .catch((err) => console.error("expense alert dispatch failed", err));
   }
 
   return NextResponse.json({

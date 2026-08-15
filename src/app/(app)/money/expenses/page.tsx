@@ -26,6 +26,7 @@ import { useSavePulse } from "@/hooks/use-save-pulse";
 interface ExpenseEntry {
   id: string;
   occurredAt: string;
+  zoneId: string | null;
   zoneName: string;
   pointName: string;
   categoryId: string | null;
@@ -37,6 +38,12 @@ interface ExpenseEntry {
 interface ExpenseCategory {
   id: string;
   name: string;
+}
+
+interface ZoneOption {
+  id: string;
+  name: string;
+  pointName: string;
 }
 
 export default function ExpensesRegisterPage() {
@@ -59,9 +66,11 @@ export default function ExpensesRegisterPage() {
   // 2026-08-15) — тот же паттерн, что у инкассаций (money/zone-balances) и
   // авансов/премий. Сотруднику своя запись доступна только до сдачи итогов,
   // владельцу — всегда.
+  const [zones, setZones] = useState<ZoneOption[]>([]);
   const [editing, setEditing] = useState<ExpenseEntry | null>(null);
   const [editAmount, setEditAmount] = useState("");
   const [editCategoryId, setEditCategoryId] = useState("");
+  const [editZoneId, setEditZoneId] = useState("");
   const [editComment, setEditComment] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
@@ -74,6 +83,7 @@ export default function ExpensesRegisterPage() {
     setEditing(expense);
     setEditAmount(String(expense.amount));
     setEditCategoryId(expense.categoryId ?? "");
+    setEditZoneId(expense.zoneId ?? "");
     setEditComment(expense.comment ?? "");
     setEditError(null);
     setConfirmDelete(false);
@@ -90,6 +100,7 @@ export default function ExpensesRegisterPage() {
         body: JSON.stringify({
           amount: parseMoneyInput(editAmount),
           categoryId: editCategoryId || null,
+          zoneId: editZoneId || null,
           comment: editComment.trim() || null,
         }),
       });
@@ -141,6 +152,16 @@ export default function ExpensesRegisterPage() {
     }
   }
 
+  // Зоны тенанта — для смены зоны расхода (запрос владельца 2026-08-15:
+  // сотрудник вполне мог записать трату не в ту кассу).
+  async function loadZones() {
+    const res = await fetch("/api/zones");
+    if (res.ok) {
+      const data = await res.json();
+      setZones(data.zones ?? []);
+    }
+  }
+
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     loadExpenses();
@@ -149,6 +170,7 @@ export default function ExpensesRegisterPage() {
 
   useEffect(() => {
     loadCategories();
+    loadZones();
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -341,10 +363,7 @@ export default function ExpensesRegisterPage() {
         {editing && (
           <div className="flex flex-col gap-4 pt-2">
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.money.editExpenseTitle}</h2>
-            <p className="-mt-2 text-caption-airbnb text-muted-foreground">
-              {formatTime(editing.occurredAt)} · {editing.zoneName}
-              {showPointName ? ` (${editing.pointName})` : ""}
-            </p>
+            <p className="-mt-2 text-caption-airbnb text-muted-foreground">{formatTime(editing.occurredAt)}</p>
 
             <div className="flex flex-col gap-1">
               <Label htmlFor="editExpenseAmount">{t.money.amountLabel}</Label>
@@ -357,6 +376,28 @@ export default function ExpensesRegisterPage() {
                 onChange={(e) => setEditAmount(e.target.value)}
               />
             </div>
+
+            {zones.length > 0 && (
+              <Select
+                value={editZoneId || null}
+                onValueChange={(v) => setEditZoneId(v ?? "")}
+                items={zones.map((z) => ({
+                  value: z.id,
+                  label: showPointName ? `${z.name} · ${z.pointName}` : z.name,
+                }))}
+              >
+                <SelectTrigger className="h-10 text-sm">
+                  <SelectValue placeholder={t.operatorApp.selectZone} />
+                </SelectTrigger>
+                <SelectContent>
+                  {zones.map((z) => (
+                    <SelectItem key={z.id} value={z.id}>
+                      {showPointName ? `${z.name} · ${z.pointName}` : z.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
             {categories.length > 0 && (
               <Select

@@ -9,7 +9,8 @@ import type {
 } from "./types";
 import { formatBusinessDate, formatDuration, formatLocalTime, formatSummaryDate } from "./format-shared";
 import { colorTagToEmoji } from "@/lib/color-tag";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, formatMoneyWithCurrency } from "@/lib/format";
+import type { CurrencyCode } from "@/lib/currency";
 import type { Locale } from "@/lib/locales";
 import type { Dictionary } from "@/lib/i18n";
 
@@ -700,29 +701,67 @@ export function formatInstructionAckTelegram(data: InstructionAckData, st: Summa
 }
 
 /**
- * Новый расход — формат задан владельцем 2026-08-15, ровно две строки:
+ * Новый расход — формат задан владельцем 2026-08-15, ровно три строки:
  *   🛒 РАСХОД — 15/08, 22:46
- *   🟥 Женя: 350 MDL
+ *   🟩 Женя: 350 ₽
+ *   Выплата стажёру · Машинки
  * Дата без дня недели (в отличие от сводок): уведомление приходит в момент
  * события, "какой сегодня день" владельцу и так известно, а короткая шапка
- * целиком помещается в заголовок Push-уведомления (dispatch.ts шлёт эти же
- * две строки как title/body).
+ * целиком помещается в заголовок Push-уведомления (dispatch.ts шлёт первую
+ * строку как title, остальные две — как body).
+ *
+ * Сумма — со знаком валюты тенанта, если он выбран (formatMoneyWithCurrency,
+ * тот же вывод, что у <Money> в кабинете): в сводках знак опускается, там
+ * валюта ясна из контекста таблицы, а здесь это одинокая цифра в шторке
+ * уведомлений телефона.
  */
 export function formatExpenseAlertHeader(data: ExpenseAlertData, st: SummaryText, timezone: string): string {
   const date = formatSummaryDate(data.occurredAt, "/", timezone, false);
   return `🛒 ${st.expenseAlertTitle} — ${date}, ${formatLocalTime(data.occurredAt, timezone)}`;
 }
 
-export function formatExpenseAlertLine(data: ExpenseAlertData, locale: Locale): string {
-  const mark = colorTagToEmoji(data.operatorColorTag);
-  return `${mark ? `${mark} ` : ""}${data.operatorName}: ${formatMoney(data.amount, locale)}`;
+// Третья строка: "Категория · Зона", без категории — одна зона. Названия
+// пользовательские, поэтому каждое подрезается: в Push-уведомлении на строку
+// приходится примерно столько символов, дальше система обрежет сама — и
+// обрежет ЗОНУ целиком, если категорию не ограничить.
+const ALERT_NAME_LIMIT = 28;
+
+function clampName(value: string): string {
+  return value.length > ALERT_NAME_LIMIT ? `${value.slice(0, ALERT_NAME_LIMIT - 1).trimEnd()}…` : value;
 }
 
-export function formatExpenseAlertTelegram(data: ExpenseAlertData, st: SummaryText, locale: Locale, timezone: string): string {
+export function formatExpenseAlertContext(data: ExpenseAlertData): string {
+  return [data.categoryName, data.zoneName].filter(Boolean).map((v) => clampName(v as string)).join(" · ");
+}
+
+export function formatExpenseAlertLines(
+  data: ExpenseAlertData,
+  locale: Locale,
+  currency: string | null | undefined
+): string[] {
+  const mark = colorTagToEmoji(data.operatorColorTag);
+  const lines = [`${mark ? `${mark} ` : ""}${data.operatorName}: ${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}`];
+  const context = formatExpenseAlertContext(data);
+  if (context) lines.push(context);
+  return lines;
+}
+
+export function formatExpenseAlertTelegram(
+  data: ExpenseAlertData,
+  st: SummaryText,
+  locale: Locale,
+  timezone: string,
+  currency: string | null | undefined
+): string {
   const mark = colorTagToEmoji(data.operatorColorTag);
   const name = escapeTelegramHtml(data.operatorName);
-  return [
+  const lines = [
     `🛒 <b>${st.expenseAlertTitle}</b> — ${formatSummaryDate(data.occurredAt, "/", timezone, false)}, ${formatLocalTime(data.occurredAt, timezone)}`,
-    `${mark ? `${mark} ` : ""}${name}: <b>${formatMoney(data.amount, locale)}</b>`,
-  ].join("\n");
+    `${mark ? `${mark} ` : ""}${name}: <b>${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}</b>`,
+  ];
+  // В Telegram названия не подрезаем — ширина сообщения там не ограничена,
+  // усечение нужно только шторке уведомлений телефона.
+  const context = [data.categoryName, data.zoneName].filter(Boolean).join(" · ");
+  if (context) lines.push(escapeTelegramHtml(context));
+  return lines.join("\n");
 }

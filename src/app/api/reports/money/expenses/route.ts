@@ -49,6 +49,7 @@ export async function GET(request: Request) {
   const expenses = operations.map((op) => ({
     id: op.id,
     occurredAt: op.occurredAt.toISOString(),
+    zoneId: op.zoneId,
     zoneName: op.zone?.name ?? "",
     pointName: op.zone?.point.name ?? "",
     categoryId: op.expenseCategoryId,

@@ -2433,6 +2433,14 @@ model MoneyOperation {
   expenseCategoryId String?
   expenseCategory   ExpenseCategory? @relation(fields: [expenseCategoryId], references: [id], onDelete: SetNull)
 
+  // id Telegram-сообщения "Новый расход", если уведомление уходило (тот же
+  // приём и та же причина, что у ZoneSubmission.telegramSummaryMessageId):
+  // владелец правит расход — сумму, категорию, зону — и уже отправленное
+  // сообщение переписывается на месте (запрос владельца 2026-08-15), а не
+  // остаётся врать в чате. null — уведомление не отправлялось (тумблер
+  // выключен, канал не подключён) или расход создан до этого поля.
+  expenseAlertMessageId String?
+
   // Ссылка на сдачу итогов. У revenue/revenue_cashless — сдача, которая их
   // создала. У expense — сдача, которая ЗАКРЫЛА расход, введённый
   // Сотрудником раньше: null означает "внесён, но ещё не вошёл ни в одну

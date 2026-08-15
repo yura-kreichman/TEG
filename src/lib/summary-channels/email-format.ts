@@ -7,7 +7,8 @@ import type {
   ExpenseAlertData,
 } from "./types";
 import { formatBusinessDate, formatDuration, formatLocalTime, formatSummaryDate } from "./format-shared";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, formatMoneyWithCurrency } from "@/lib/format";
+import type { CurrencyCode } from "@/lib/currency";
 import type { Locale } from "@/lib/locales";
 import type { Dictionary } from "@/lib/i18n";
 
@@ -258,21 +259,22 @@ export function formatExpenseAlertEmail(
   companyName: string,
   locale: Locale,
   st: SummaryText,
-  timezone: string
+  timezone: string,
+  currency: string | null | undefined
 ): { subject: string; html: string } {
-  const subject = `${st.expenseAlertTitle} · ${formatMoney(data.amount, locale)}`;
+  const amount = formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null);
+  const subject = `${st.expenseAlertTitle} · ${amount}`;
   const rows: EmailRow[] = [
     { label: st.operatorLabel, value: data.operatorName },
-    { label: st.expenses, value: formatMoney(data.amount, locale), bold: true },
+    { label: st.expenses, value: amount, bold: true },
   ];
+  // "Категория · Зона" — заголовком письма, а не строкой таблицы: подписи
+  // "Категория"/"Зона" владелец просил не писать (2026-08-15), а строка
+  // таблицы без метки выглядит обрывком.
+  const context = [data.categoryName, data.zoneName].filter(Boolean).join(" · ");
+  const when = `${formatDate(data.occurredAt, timezone)} ${formatLocalTime(data.occurredAt, timezone)}`;
   return {
     subject,
-    html: wrapEmail(
-      companyName,
-      `${formatDate(data.occurredAt, timezone)} ${formatLocalTime(data.occurredAt, timezone)}`,
-      st.expenseAlertTitle,
-      rows,
-      locale
-    ),
+    html: wrapEmail(companyName, context || when, `${st.expenseAlertTitle} · ${when}`, rows, locale),
   };
 }

@@ -14,7 +14,7 @@ import {
 import {
   formatDailyCashSummaryTelegram,
   formatExpenseAlertHeader,
-  formatExpenseAlertLine,
+  formatExpenseAlertLines,
   formatExpenseAlertTelegram,
   formatInstructionAckTelegram,
   formatShiftCloseSummaryTelegram,
@@ -65,16 +65,22 @@ export async function getEnabledChannels(tenantId: string) {
 // найден 2026-07-15: время смены показывалось в сыром UTC сервера, а не в
 // поясе тенанта, см. format-shared.ts) — всё нужно почти в каждой из функций
 // ниже, один запрос вместо нескольких.
-async function getTenantInfo(tenantId: string): Promise<{ name: string; locale: Locale; timezone: string; t: Dictionary }> {
+async function getTenantInfo(
+  tenantId: string
+): Promise<{ name: string; locale: Locale; timezone: string; currency: string | null; t: Dictionary }> {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
-    select: { name: true, locale: true, timezone: true },
+    // currency — только для уведомления "Новый расход" (2026-08-15): одинокая
+    // сумма в шторке телефона без знака валюты не читается, в отличие от
+    // таблиц сводок, где валюта ясна из контекста.
+    select: { name: true, locale: true, timezone: true, currency: true },
   });
   const locale = tenant?.locale && isLocale(tenant.locale) ? tenant.locale : "ru";
   return {
     name: tenant?.name ?? "RentOS",
     locale,
     timezone: tenant?.timezone ?? "UTC",
+    currency: tenant?.currency ?? null,
     t: getDictionary(locale),
   };
 }
@@ -349,13 +355,20 @@ export async function dispatchExpenseAlert(tenantId: string, data: ExpenseAlertD
 
   for (const channel of channels) {
     if (channel.channelType === "telegram" && channel.chatStatus === "active" && channel.chatId) {
-      const text = formatExpenseAlertTelegram(data, st, tenant.locale, tenant.timezone);
+      const text = formatExpenseAlertTelegram(data, st, tenant.locale, tenant.timezone, tenant.currency);
       const result = await sendChatMessage(channel.chatId, text);
       results.push(toDispatchResult("telegram", result));
     } else if (channel.channelType === "email") {
       const addresses = parseEmailAddresses(channel.emailAddresses);
       if (addresses.length === 0) continue;
-      const { subject, html } = formatExpenseAlertEmail(data, tenant.name, tenant.locale, st, tenant.timezone);
+      const { subject, html } = formatExpenseAlertEmail(
+        data,
+        tenant.name,
+        tenant.locale,
+        st,
+        tenant.timezone,
+        tenant.currency
+      );
       const result = await sendEmail(addresses, subject, html);
       results.push({ channelType: "email", ok: result.ok, error: result.error });
     }
@@ -364,7 +377,7 @@ export async function dispatchExpenseAlert(tenantId: string, data: ExpenseAlertD
   if (await pushEnabledFor(tenantId, "expense")) {
     await sendPushToTenant(tenantId, {
       title: formatExpenseAlertHeader(data, st, tenant.timezone),
-      body: formatExpenseAlertLine(data, tenant.locale),
+      body: formatExpenseAlertLines(data, tenant.locale, tenant.currency).join("\n"),
       url: "/money/expenses",
     }).catch((err) => console.error("push dispatch failed", { kind: "expense", tenantId, err }));
   }
