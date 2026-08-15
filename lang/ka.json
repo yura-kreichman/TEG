@@ -538,6 +538,8 @@
     "collectionSub": "როცა ფიქსირდება ინკასაცია",
     "expenseLabel": "ახალი ხარჯი",
     "expenseSub": "როცა თანამშრომელი ხარჯს შეიტანს",
+    "testPushTitle": "სატესტო შეტყობინება",
+    "testPushBody": "თუ ამას ხედავთ — push-შეტყობინებები მუშაობს.",
     "errors": {
       "notSupported": "ეს ბრაუზერი push-შეტყობინებებს არ უჭერს მხარს.",
       "permissionDenied": "შეტყობინებების ნებართვა ბრაუზერში უარყოფილია — ჩართეთ ის საიტის პარამეტრებში ხელით.",
@@ -1216,6 +1218,8 @@
       "saveError": "ცვლის შენახვა ვერ მოხერხდა",
       "noShifts": "ცვლები ჯერ არ არის",
       "shiftInProgress": "ცვლა მიმდინარეობს",
+      "pushShiftTimeUpdatedTitle": "ცვლის დრო განახლდა",
+      "pushShiftTimeUpdatedBody": "მფლობელმა შეასწორა თქვენი ცვლის დაწყების დრო.",
       "requiresEditBadge": "საჭიროებს შესწორებას",
       "hoursShort": "სთ",
       "minutesShort": "წთ",

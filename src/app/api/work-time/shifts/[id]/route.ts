@@ -10,7 +10,7 @@ import {
   WORK_TIME_MONEY_TYPES,
 } from "@/lib/work-time";
 import { sendPushToOperators } from "@/lib/push-notifications";
-import { resolveLocale } from "@/lib/i18n";
+import { getDictionary, resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
 import { chargeSelfServiceAdvanceToZones } from "@/lib/zone-balance";
 import { resyncDailyCashForPoint, resyncShiftCloseMessage } from "@/lib/summary-channels/resync";
@@ -360,9 +360,13 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   // (postMessage от Service Worker, см. src/app/(app)/operator/page.tsx) —
   // она перезапросит своё состояние и подхватит новое время сразу же.
   if (staysOpen && changed) {
+    // Текст — из словаря тенанта, не захардкожен по-русски (2026-08-16:
+    // "убедись, что все сводки и Push переводятся"); ✏️ в заголовке — тот же
+    // приём, что у остальных уведомлений: тип события виден до чтения текста.
+    const t = getDictionary(await resolveLocale()).operatorApp.workTime;
     await sendPushToOperators([shift.operatorId], {
-      title: "Время смены обновлено",
-      body: "Владелец поправил время начала вашей смены.",
+      title: `✏️ ${t.pushShiftTimeUpdatedTitle}`,
+      body: t.pushShiftTimeUpdatedBody,
       url: "/operator",
     });
   }

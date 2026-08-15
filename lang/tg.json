@@ -538,6 +538,8 @@
     "collectionSub": "вақте ки инкассатсия сабт мешавад",
     "expenseLabel": "Хароҷоти нав",
     "expenseSub": "вақте корманд хароҷот ворид мекунад",
+    "testPushTitle": "Огоҳии озмоишӣ",
+    "testPushBody": "Агар инро бинед — огоҳиҳои push кор мекунанд.",
     "errors": {
       "notSupported": "Ин браузер огоҳиномаҳои push-ро дастгирӣ намекунад.",
       "permissionDenied": "Иҷозат барои огоҳиномаҳо дар браузер рад карда шуд — онро дар танзимоти сайт дастӣ фаъол кунед.",
@@ -1216,6 +1218,8 @@
       "saveError": "Смена нигоҳ дошта нашуд",
       "noShifts": "То ҳол смена нест",
       "shiftInProgress": "Смена дар ҷараён аст",
+      "pushShiftTimeUpdatedTitle": "Вақти баст нав карда шуд",
+      "pushShiftTimeUpdatedBody": "Соҳиб вақти оғози басти шуморо ислоҳ кард.",
       "requiresEditBadge": "Ислоҳ талаб мекунад",
       "hoursShort": "соат",
       "minutesShort": "дақ",

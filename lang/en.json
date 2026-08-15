@@ -538,6 +538,8 @@
     "collectionSub": "when a cash collection is recorded",
     "expenseLabel": "New expense",
     "expenseSub": "when an employee records an expense",
+    "testPushTitle": "Test notification",
+    "testPushBody": "If you see this — push notifications work.",
     "errors": {
       "notSupported": "This browser doesn't support push notifications.",
       "permissionDenied": "Notification permission was denied in the browser — enable it manually in site settings.",
@@ -1216,6 +1218,8 @@
       "saveError": "Couldn't save the shift",
       "noShifts": "No shifts yet",
       "shiftInProgress": "Shift in progress",
+      "pushShiftTimeUpdatedTitle": "Shift time updated",
+      "pushShiftTimeUpdatedBody": "The owner adjusted your shift start time.",
       "requiresEditBadge": "Needs editing",
       "hoursShort": "h",
       "minutesShort": "min",

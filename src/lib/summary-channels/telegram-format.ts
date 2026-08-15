@@ -197,11 +197,11 @@ function diffEmoji(difference: number): string {
 // Закрытие смены день недели по-прежнему показывают через formatDate().
 function zoneHeader(data: ZoneSummaryData, showOperator: boolean, timezone: string): string {
   const colorPrefix = colorTagToEmoji(data.operatorColorTag);
-  // 👑 после имени — сдачу правил Владелец (требование владельца 2026-08-16:
+  // ♛ после имени — сдачу правил Владелец (требование владельца 2026-08-16:
   // единый маркер правки во всех сообщениях, ровно как иконка-корона в
   // кабинете). Метка сотрудника при этом остаётся: кто сдавал — не меняется.
   const operatorBit = showOperator
-    ? ` · ${colorPrefix ? `${colorPrefix} ` : ""}${escapeTelegramHtml(data.operatorName)}${data.editedByOwner ? " 👑" : ""}`
+    ? ` · ${colorPrefix ? `${colorPrefix} ` : ""}${escapeTelegramHtml(data.operatorName)}${data.editedByOwner ? " ♛" : ""}`
     : "";
   const date = formatSummaryDate(data.occurredAt, "/", timezone, false);
   // Жирным — только название зоны (запрос пользователя 2026-07-17: "во всех
@@ -645,8 +645,8 @@ export function formatShiftCloseSummaryTelegram(
   // Цветовой квадрат перед именем оператора (фидбек пользователя 2026-07-12) —
   // и в компактном, и в обычном виде; null (метка не задана) — без эмодзи.
   const colorPrefix = colorTagToEmoji(data.operatorColorTag);
-  // 👑 после имени — смену или её аванс/премию правил Владелец (см. zoneHeader).
-  const safeOperatorName = `${escapeTelegramHtml(data.operatorName)}${data.editedByOwner ? " 👑" : ""}`;
+  // ♛ после имени — смену или её аванс/премию правил Владелец (см. zoneHeader).
+  const safeOperatorName = `${escapeTelegramHtml(data.operatorName)}${data.editedByOwner ? " ♛" : ""}`;
   const operatorLabel = colorPrefix ? `${colorPrefix} ${safeOperatorName}` : safeOperatorName;
 
   if (settings.compact) {
@@ -752,11 +752,11 @@ export function formatExpenseAlertLines(
   locale: Locale,
   currency: string | null | undefined
 ): string[] {
-  // Цветовая метка сотрудника остаётся на месте, 👑 добавляется ПОСЛЕ имени
+  // Цветовая метка сотрудника остаётся на месте, ♛ добавляется ПОСЛЕ имени
   // (уточнение владельца 2026-08-16): корона говорит "запись правил
   // Владелец", а не "это его запись" — кто потратил деньги, видно по-прежнему.
   const mark = colorTagToEmoji(data.operatorColorTag);
-  const crown = data.editedByOwner ? " 👑" : "";
+  const crown = data.editedByOwner ? " ♛" : "";
   const lines = [`${mark ? `${mark} ` : ""}${data.operatorName}${crown}: ${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}`];
   lines.push(expenseContext(data));
   // В Push цитаты и курсива нет — комментарий идёт обычной строкой, кавычки
@@ -768,11 +768,11 @@ export function formatExpenseAlertLines(
 /**
  * Инкассация — формат владельца 2026-08-16, три строки:
  *   🏦 ИНКАССАЦИЯ (Аванс) — 16/08, 00:30
- *   🟩 Женя 👑: 1 500 ₽
+ *   🟩 Женя ♛: 1 500 ₽
  *   🎠 Машинки 700 ₽ · 🛍 Товары 200 ₽
  * Третья строка — из каких касс собраны деньги: зоны своими эмодзи (те же,
  * что в сводке по зоне), пулы товаров и абонементов — фиксированными.
- * Владелец сам провёл инкассацию — вместо имени 👑 (имени у него нет, в
+ * Владелец сам провёл инкассацию — вместо имени ♛ (имени у него нет, в
  * отличие от правки чужой записи, где имя остаётся).
  */
 const GOODS_EMOJI = "🛍";
@@ -789,9 +789,9 @@ function collectionParts(data: CollectionAlertData, st: SummaryText, locale: Loc
 }
 
 function collectionWho(data: CollectionAlertData): string {
-  if (!data.operatorName) return "👑";
+  if (!data.operatorName) return "♛";
   const mark = colorTagToEmoji(data.operatorColorTag);
-  return `${mark ? `${mark} ` : ""}${data.operatorName}${data.editedByOwner ? " 👑" : ""}`;
+  return `${mark ? `${mark} ` : ""}${data.operatorName}${data.editedByOwner ? " ♛" : ""}`;
 }
 
 export function formatCollectionAlertTelegram(
@@ -838,7 +838,7 @@ export function formatExpenseAlertTelegram(
   currency: string | null | undefined
 ): string {
   const mark = colorTagToEmoji(data.operatorColorTag);
-  const name = `${escapeTelegramHtml(data.operatorName)}${data.editedByOwner ? " 👑" : ""}`;
+  const name = `${escapeTelegramHtml(data.operatorName)}${data.editedByOwner ? " ♛" : ""}`;
   const lines = [
     `🛒 <b>${st.expenseAlertTitle}</b> — ${formatSummaryDate(data.occurredAt, "/", timezone, false)}, ${formatLocalTime(data.occurredAt, timezone)}`,
     `${mark ? `${mark} ` : ""}${name}: <b>${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}</b>`,

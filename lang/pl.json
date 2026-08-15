@@ -538,6 +538,8 @@
     "collectionSub": "gdy zostaje zarejestrowana inkasacja",
     "expenseLabel": "Nowy wydatek",
     "expenseSub": "gdy pracownik dodaje wydatek",
+    "testPushTitle": "Powiadomienie testowe",
+    "testPushBody": "Jeśli to widzisz — powiadomienia push działają.",
     "errors": {
       "notSupported": "Ta przeglądarka nie obsługuje powiadomień push.",
       "permissionDenied": "Zgoda na powiadomienia została odrzucona w przeglądarce — włącz ją ręcznie w ustawieniach witryny.",
@@ -1216,6 +1218,8 @@
       "saveError": "Nie udało się zapisać zmiany",
       "noShifts": "Brak jeszcze zmian",
       "shiftInProgress": "Zmiana trwa",
+      "pushShiftTimeUpdatedTitle": "Godzina zmiany zaktualizowana",
+      "pushShiftTimeUpdatedBody": "Właściciel poprawił godzinę rozpoczęcia Twojej zmiany.",
       "requiresEditBadge": "Wymaga poprawki",
       "hoursShort": "godz.",
       "minutesShort": "min",

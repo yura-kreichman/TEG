@@ -538,6 +538,8 @@
     "collectionSub": "quando viene registrato un incasso",
     "expenseLabel": "Nuova spesa",
     "expenseSub": "quando il dipendente registra una spesa",
+    "testPushTitle": "Notifica di prova",
+    "testPushBody": "Se vedi questo — le notifiche push funzionano.",
     "errors": {
       "notSupported": "Questo browser non supporta le notifiche push.",
       "permissionDenied": "Il permesso per le notifiche è stato negato nel browser — attivalo manualmente nelle impostazioni del sito.",
@@ -1216,6 +1218,8 @@
       "saveError": "Impossibile salvare il turno",
       "noShifts": "Ancora nessun turno",
       "shiftInProgress": "Turno in corso",
+      "pushShiftTimeUpdatedTitle": "Orario del turno aggiornato",
+      "pushShiftTimeUpdatedBody": "Il titolare ha corretto l'orario di inizio del tuo turno.",
       "requiresEditBadge": "Da correggere",
       "hoursShort": "h",
       "minutesShort": "min",

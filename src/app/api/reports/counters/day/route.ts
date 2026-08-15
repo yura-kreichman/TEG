@@ -262,8 +262,41 @@ export async function GET(request: Request) {
     orderBy: { submittedAt: "desc" },
   });
 
+  // Расходы дня (запрос владельца 2026-08-16) — из журнала по времени
+  // операции, а НЕ по привязке к сдаче итогов. Это принципиально: расход,
+  // внесённый сотрудником уже после сдачи, всё равно относится к тому дню,
+  // когда деньги ушли из кассы, — иначе "Итоги дня" расходились бы с
+  // реестром расходов ровно на такие записи. Отсюда же следует, что расходы
+  // показываются даже в день без единой сдачи (см. ранний возврат ниже).
+  const expenseOps = await prisma.moneyOperation.findMany({
+    where: {
+      type: "expense",
+      occurredAt: { gte: dayStart, lt: dayEnd },
+      zone: { pointId },
+    },
+    include: {
+      zone: { select: { name: true } },
+      expenseCategory: { select: { name: true } },
+      performedByOperator: { select: { name: true } },
+    },
+    orderBy: { occurredAt: "asc" },
+  });
+  const expenses = {
+    total: round2(expenseOps.reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0)),
+    items: expenseOps.map((op) => ({
+      id: op.id,
+      occurredAt: op.occurredAt.toISOString(),
+      amount: Math.abs(Number(op.amount)),
+      zoneId: op.zoneId,
+      zoneName: op.zone?.name ?? "",
+      categoryName: op.expenseCategory?.name ?? null,
+      comment: op.comment,
+      operatorName: op.performedByOperator?.name ?? null,
+    })),
+  };
+
   if (submissions.length === 0) {
-    return NextResponse.json({ cards: [], abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales });
+    return NextResponse.json({ cards: [], abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales, expenses });
   }
 
   // "Прибывания" и тап-"Пуски" (после перехода на тапы, assetReadings
@@ -813,5 +846,5 @@ export async function GET(request: Request) {
     })
   );
 
-  return NextResponse.json({ cards, abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales });
+  return NextResponse.json({ cards, abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales, expenses });
 }

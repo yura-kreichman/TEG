@@ -569,6 +569,8 @@
     "collectionSub": "при внесении инкассации",
     "expenseLabel": "Новый расход",
     "expenseSub": "когда сотрудник вносит расход",
+    "testPushTitle": "Тестовое уведомление",
+    "testPushBody": "Если вы это видите — push-уведомления работают.",
     "errors": {
       "notSupported": "Этот браузер не поддерживает push-уведомления.",
       "permissionDenied": "Разрешение на уведомления отклонено в браузере — включите его в настройках сайта вручную.",
@@ -1247,6 +1249,8 @@
       "saveError": "Не удалось сохранить смену",
       "noShifts": "Смен пока нет",
       "shiftInProgress": "Смена идёт",
+      "pushShiftTimeUpdatedTitle": "Время смены обновлено",
+      "pushShiftTimeUpdatedBody": "Владелец поправил время начала вашей смены.",
       "requiresEditBadge": "Требует правки",
       "hoursShort": "ч",
       "minutesShort": "мин",

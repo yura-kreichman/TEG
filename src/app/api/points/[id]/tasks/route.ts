@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
 import { TASK_SELECT, isTaskStatus } from "@/lib/tasks";
 import { sendPushToOperators } from "@/lib/push-notifications";
+import { getDictionary, resolveLocale } from "@/lib/i18n";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
 export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]/tasks">) {
@@ -115,8 +116,9 @@ async function notifyOperatorsOfNewTask(
     });
     targetOperatorIds = operators.map((o) => o.id);
   }
+  // Заголовок — из словаря тенанта, не захардкожен по-русски (2026-08-16).
   await sendPushToOperators(targetOperatorIds, {
-    title: "🗒️ Новая задача",
+    title: `🗒️ ${getDictionary(await resolveLocale()).tasks.newTaskTitle}`,
     body: taskTitle,
     url: "/operator",
   });

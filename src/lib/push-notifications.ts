@@ -112,7 +112,7 @@ export type SendTestPushResult =
 // тенанта: тест нужен, чтобы проверить своё устройство, а не разбудить
 // пуш-уведомлением чужие устройства других Owner-аккаунтов тенанта (если
 // их несколько).
-export async function sendTestPushToUser(userId: string): Promise<SendTestPushResult> {
+export async function sendTestPushToUser(userId: string, text?: { title: string; body: string }): Promise<SendTestPushResult> {
   const config = await loadVapidConfig();
   if (!config) return { ok: false, error: "notConfigured" };
   webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
@@ -120,9 +120,12 @@ export async function sendTestPushToUser(userId: string): Promise<SendTestPushRe
   const subscriptions = await prisma.pushSubscription.findMany({ where: { userId } });
   if (subscriptions.length === 0) return { ok: false, error: "noSubscriptions" };
 
+  // Текст приходит из словаря тенанта (роут знает локаль) — здесь только
+  // запасной русский на случай старого вызова без него (2026-08-16: все Push
+  // переводятся).
   const sent = await sendToSubscriptions(subscriptions, {
-    title: "🔔 Тестовое уведомление",
-    body: "Если вы это видите — push-уведомления работают.",
+    title: `🔔 ${text?.title ?? "Тестовое уведомление"}`,
+    body: text?.body ?? "Если вы это видите — push-уведомления работают.",
   });
   return sent > 0 ? { ok: true, sent } : { ok: false, error: "allFailed" };
 }

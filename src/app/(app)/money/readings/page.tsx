@@ -11,14 +11,17 @@ import {
   Info,
   Lock,
   MapPin,
+  MessageSquareMore,
   Minus,
   Pencil,
   Plus,
   RefreshCcw,
   ShoppingBag,
+  ShoppingCart,
   TicketCheck,
   Trash2,
   TriangleAlert,
+  Users,
 } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
@@ -205,6 +208,24 @@ interface AbonementSaleEvent {
 
 // Кто кому продал товар. clientName заполнен не всегда — при оплате наличными
 // без привязки к клиенту его просто нет, и это честное "—".
+// Расходы дня — плоский список операций журнала за выбранную дату (запрос
+// владельца 2026-08-16). В арифметику кассы/разницы не входят: деньги ушли
+// ПОСЛЕ того, как попали в кассу, и вычитание их из фактической кассы
+// показывало бы недостачу там, где всё сходится.
+interface DayExpenses {
+  total: number;
+  items: {
+    id: string;
+    occurredAt: string;
+    amount: number;
+    zoneId: string | null;
+    zoneName: string;
+    categoryName: string | null;
+    comment: string | null;
+    operatorName: string | null;
+  }[];
+}
+
 interface GoodsSaleEntry {
   id: string;
   occurredAt: string;
@@ -359,6 +380,10 @@ export default function ReadingsCalendarPage() {
   // 2026-08-04) — построчная детализация под уже существующими итогами.
   const [abonementSaleEvents, setAbonementSaleEvents] = useState<AbonementSaleEvent[]>([]);
   const [goodsSales, setGoodsSales] = useState<GoodsSaleEntry[]>([]);
+  // Расходы дня (запрос владельца 2026-08-16) — считаются по времени операции,
+  // не по привязке к сдаче итогов, поэтому приходят отдельным полем, а не
+  // внутри карточек зон.
+  const [expenses, setExpenses] = useState<DayExpenses>({ total: 0, items: [] });
   // День последней сдачи итогов — открывается по умолчанию (запрос
   // пользователя 2026-07-15), а не сегодняшний пустой день. Резолвится один
   // раз на каждую смену точки, до первой загрузки календаря — иначе был бы
@@ -479,6 +504,7 @@ export default function ReadingsCalendarPage() {
     setGoodsReconciliations(data.goodsReconciliations ?? []);
     setAbonementSaleEvents(data.abonementSaleEvents ?? []);
     setGoodsSales(data.goodsSales ?? []);
+    setExpenses(data.expenses ?? { total: 0, items: [] });
   }
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -981,6 +1007,26 @@ export default function ReadingsCalendarPage() {
                         <Money value={daySummary.difference} />
                       </span>
                     </div>
+                    {/* Расходы дня (запрос владельца 2026-08-16) — СПРАВОЧНАЯ
+                        строка за чертой, ниже Разницы: в Фактическую кассу,
+                        Расчётную выручку и Разницу они не входят и входить не
+                        должны. Разница отвечает на вопрос "сходится ли касса
+                        со счётчиками", а расход — это уже потраченные деньги,
+                        которые в кассу успели попасть; вычесть их оттуда
+                        значит показать недостачу там, где всё честно (тот же
+                        класс ошибки, что уже был с абонементами). Показываем
+                        только когда расходы за день были. */}
+                    {expenses.total > 0 && (
+                      <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
+                        <span className="flex items-center gap-1.5">
+                          <ShoppingCart className="size-3.5 shrink-0" />
+                          {t.summaryText.expenses}
+                        </span>
+                        <span className="font-bold text-foreground">
+                          −<Money value={expenses.total} />
+                        </span>
+                      </div>
+                    )}
                     {/* Отдельная строка — сколько всего денег физически на
                       точке за день, включая продажи абонементов (запрос
                       пользователя 2026-07-19: "пусть будет видно Фактическая
@@ -1122,6 +1168,62 @@ export default function ReadingsCalendarPage() {
                   отдельное событие и её за день может не быть вовсе, а
                   продажи при этом были. Без второго слагаемого карточка
                   пряталась целиком вместе с ними. */}
+              {/* Расходы дня — своей карточкой, рядом с Абонементами и
+                  Товарами (запрос владельца 2026-08-16). Живут отдельно от
+                  сдач зон по той же причине, что и остальные два блока: это
+                  не сверка кассы со счётчиками, а самостоятельные денежные
+                  события дня. Показываются и в день без единой сдачи —
+                  деньги ушли, и это факт дня. */}
+              {selectedDate && expenses.items.length > 0 && (
+                <SpringCard hover={false} className="mt-3.5 flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
+                      <ShoppingCart className="size-4" />
+                    </div>
+                    <p className="text-card-title">{t.summaryText.expenses}</p>
+                  </div>
+                  <div className="mt-1 flex flex-col border-t border-border">
+                    {expenses.items.map((e) => (
+                      <div key={e.id} className="flex items-center justify-between gap-2 border-b border-border py-2 last:border-b-0">
+                        <span className="min-w-0 flex-1">
+                          <span className="flex min-w-0 items-center gap-1">
+                            <span className="truncate text-body-airbnb font-semibold">
+                              {e.categoryName ?? t.money.editExpenseTitle}
+                            </span>
+                            {e.comment && (
+                              <InfoTooltip
+                                icon={MessageSquareMore}
+                                text={e.comment}
+                                ariaLabel={t.operatorApp.submit.commentPlaceholder}
+                                className="size-4"
+                              />
+                            )}
+                          </span>
+                          <span className="flex min-w-0 items-center gap-1.5 text-caption-airbnb text-muted-foreground">
+                            <span className="truncate">
+                              {formatTime(e.occurredAt)} · {e.zoneName}
+                            </span>
+                            {e.operatorName && (
+                              <span className="inline-flex shrink-0 items-center gap-1">
+                                <Users className="size-3.5 shrink-0" />
+                                <span className="truncate">{e.operatorName}</span>
+                              </span>
+                            )}
+                          </span>
+                        </span>
+                        <span className="shrink-0 font-bold tabular-nums">
+                          −<Money value={e.amount} />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between border-t border-border pt-2 text-body-airbnb font-bold tabular-nums">
+                    <span>{t.goods.totalLabel}</span>
+                    <span>−<Money value={expenses.total} /></span>
+                  </div>
+                </SpringCard>
+              )}
+
               {selectedDate && (goodsReconciliations.length > 0 || goodsSales.length > 0) && (
                 <SpringCard hover={false} className="mt-3.5 flex flex-col gap-1">
                   <div className="flex items-center gap-2">

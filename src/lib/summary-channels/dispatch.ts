@@ -38,6 +38,7 @@ import {
   type ZoneSummarySettingsData,
 } from "@/lib/summary-settings";
 import { sendPushToTenant } from "@/lib/push-notifications";
+import { colorTagToEmoji } from "@/lib/color-tag";
 
 // Оркестратор доставки — единственное место, где "структурированные данные +
 // настройки" превращаются в реальные отправки по включённым каналам тенанта
@@ -174,8 +175,11 @@ export async function dispatchShiftCloseSummary(
   }
 
   if (await pushEnabledFor(tenantId, "shiftCloseSummary")) {
+    // ⏹ и цветовая метка сотрудника — как у начала смены (запрос владельца
+    // 2026-08-16): пара "▶️ начал / ⏹ закрыл" читается в шторке без текста.
+    const mark = colorTagToEmoji(data.operatorColorTag);
     await sendPushToTenant(tenantId, {
-      title: `${data.operatorName} · ${st.shiftClosedSuffix}`,
+      title: `⏹ ${mark ? `${mark} ` : ""}${data.operatorName} · ${st.shiftClosedSuffix}`,
       body: `${st.toPayOutCompact}: ${formatMoney(data.toPayOut, tenant.locale)}`,
       url: "/operators",
     }).catch((err) => console.error("push dispatch failed", { kind: "shiftClose", tenantId, err }));
@@ -233,7 +237,8 @@ export async function dispatchDailyCashSummary(
   const isUpdate = !!existingMessageIds.telegram || !!existingMessageIds.email;
   if (await pushEnabledFor(tenantId, "dailyCashSummary")) {
     const total = data.cashAmount + data.mobileAmount - data.expenses;
-    const subject = data.showPointName ? `${st.dailyCashSubject} · ${data.pointName}` : st.dailyCashSubject;
+    // 💰 — тот же значок, что в шапке самой сводки в Telegram.
+    const subject = data.showPointName ? `💰 ${st.dailyCashSubject} · ${data.pointName}` : `💰 ${st.dailyCashSubject}`;
     await sendPushToTenant(tenantId, {
       title: isUpdate ? `${subject} 🔄` : subject,
       body: `${st.totalCompact}: ${formatMoney(total, tenant.locale)}`,
@@ -295,7 +300,8 @@ export async function dispatchInstructionAcknowledgment(tenantId: string, data: 
 
   if (await pushEnabledFor(tenantId, "instructionAck")) {
     await sendPushToTenant(tenantId, {
-      title: tenant.t.pushSettings.instructionAckLabel,
+      // ✅ — тот же значок, что в самом сообщении об ознакомлении.
+      title: `✅ ${tenant.t.pushSettings.instructionAckLabel}`,
       body: `${data.fullName} · «${data.instructionTitle}» · ${data.readingMinutes} ${tenant.t.instructions.minutesShort}`,
       url: "/settings/instructions",
     }).catch((err) => console.error("push dispatch failed", { kind: "instructionAck", tenantId, err }));
@@ -310,41 +316,32 @@ export async function dispatchInstructionAcknowledgment(tenantId: string, data: 
 // без Telegram/email: это не "сводка" с настраиваемым составом, а короткое
 // мгновенное уведомление, тот же принцип, что у InstructionAck, но ещё проще
 // (сам вызывающий код — check-in route — уже гарантирует Авто-режим).
-export async function dispatchShiftCheckin(tenantId: string, operatorName: string, pointName: string, operatorId: string): Promise<void> {
+export async function dispatchShiftCheckin(
+  tenantId: string,
+  operatorName: string,
+  pointName: string,
+  operatorId: string,
+  operatorColorTag: string | null = null
+): Promise<void> {
   if (!(await pushEnabledFor(tenantId, "shiftCheckin"))) return;
   const tenant = await getTenantInfo(tenantId);
+  // ▶️ в заголовке и цветовая метка сотрудника перед именем (запрос владельца
+  // 2026-08-16) — в шторке уведомлений это единственное, по чему тип события
+  // и человек опознаются с одного взгляда, без чтения текста. Метка — тот же
+  // эмодзи-квадрат, что рядом с именем в сводках.
+  const mark = colorTagToEmoji(operatorColorTag);
   await sendPushToTenant(tenantId, {
-    title: tenant.t.pushSettings.shiftCheckinLabel,
-    body: `${operatorName} · ${pointName}`,
+    title: `▶️ ${tenant.t.pushSettings.shiftCheckinLabel}`,
+    body: `${mark ? `${mark} ` : ""}${operatorName} · ${pointName}`,
     url: `/operators/${operatorId}`,
   }).catch((err) => console.error("push dispatch failed", { kind: "shiftCheckin", tenantId, err }));
 }
 
-// Инкассация (запрос пользователя 2026-07-17: "владелец должен получать
-// push об инкассации") — только push, тот же принцип, что shiftCheckin:
-// короткое мгновенное уведомление о действии, не настраиваемая сводка.
-// Вне зависимости от того, кто провёл инкассацию — Сотрудник или сам
-// Владелец (запрос пользователя 2026-07-22: "оно должно быть вне
-// зависимости кто её вводит" — раньше владельческие инкассации,
-// zones/[id]/collection и points/[id]/collection/general, вообще не слали
-// push, решение 2026-07-17 пересмотрено). actorName===null — инкассацию
-// провёл сам владелец, подставляем переведённую роль (тот же приём, что
-// abonement-wallets/[id]/route.ts: клиент не получает email напрямую).
-export async function dispatchCollection(
-  tenantId: string,
-  amount: number,
-  label: string,
-  actorName: string | null
-): Promise<void> {
-  if (!(await pushEnabledFor(tenantId, "collection"))) return;
-  const tenant = await getTenantInfo(tenantId);
-  const who = actorName ?? tenant.t.common.ownerLabel;
-  await sendPushToTenant(tenantId, {
-    title: tenant.t.pushSettings.collectionLabel,
-    body: `${who} · ${label} · ${formatMoney(amount, tenant.locale)}`,
-    url: "/money",
-  }).catch((err) => console.error("push dispatch failed", { kind: "collection", tenantId, err }));
-}
+// Прежняя dispatchCollection (только Push, одна строка "кто · где · сколько")
+// удалена 2026-08-16: инкассация стала полноценным сообщением, и все шесть
+// роутов зовут dispatchCollectionAlert ниже через lib/collection-alert.ts.
+// Два пути уведомления об одном событии — гарантированный источник
+// расхождений, поэтому старый убран, а не оставлен "на всякий случай".
 
 /**
  * Инкассация полноценным сообщением в Telegram/email (запрос владельца

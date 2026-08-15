@@ -538,6 +538,8 @@
     "collectionSub": "bir tahsilat kaydedildiğinde",
     "expenseLabel": "Yeni gider",
     "expenseSub": "çalışan gider girdiğinde",
+    "testPushTitle": "Test bildirimi",
+    "testPushBody": "Bunu görüyorsanız — push bildirimleri çalışıyor.",
     "errors": {
       "notSupported": "Bu tarayıcı push bildirimlerini desteklemiyor.",
       "permissionDenied": "Tarayıcıda bildirim izni reddedildi — site ayarlarından manuel olarak etkinleştirin.",
@@ -1216,6 +1218,8 @@
       "saveError": "Vardiya kaydedilemedi",
       "noShifts": "Henüz vardiya yok",
       "shiftInProgress": "Vardiya devam ediyor",
+      "pushShiftTimeUpdatedTitle": "Vardiya saati güncellendi",
+      "pushShiftTimeUpdatedBody": "Sahip, vardiya başlangıç saatinizi düzeltti.",
       "requiresEditBadge": "Düzeltme gerekiyor",
       "hoursShort": "sa",
       "minutesShort": "dk",

@@ -538,6 +538,8 @@
     "collectionSub": "коли вноситься інкасація",
     "expenseLabel": "Нова витрата",
     "expenseSub": "коли співробітник вносить витрату",
+    "testPushTitle": "Тестове сповіщення",
+    "testPushBody": "Якщо ви це бачите — push-сповіщення працюють.",
     "errors": {
       "notSupported": "Цей браузер не підтримує push-сповіщення.",
       "permissionDenied": "Дозвіл на сповіщення відхилено в браузері — увімкніть його вручну в налаштуваннях сайту.",
@@ -1216,6 +1218,8 @@
       "saveError": "Не вдалося зберегти зміну",
       "noShifts": "Змін поки немає",
       "shiftInProgress": "Зміна триває",
+      "pushShiftTimeUpdatedTitle": "Час зміни оновлено",
+      "pushShiftTimeUpdatedBody": "Власник виправив час початку вашої зміни.",
       "requiresEditBadge": "Потребує правки",
       "hoursShort": "год",
       "minutesShort": "хв",

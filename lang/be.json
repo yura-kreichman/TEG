@@ -538,6 +538,8 @@
     "collectionSub": "калі ўносіцца інкасацыя",
     "expenseLabel": "Новы расход",
     "expenseSub": "калі супрацоўнік уносіць расход",
+    "testPushTitle": "Тэставае паведамленне",
+    "testPushBody": "Калі вы гэта бачыце — push-паведамленні працуюць.",
     "errors": {
       "notSupported": "Гэты браўзер не падтрымлівае push-апавяшчэнні.",
       "permissionDenied": "Дазвол на апавяшчэнні адхілены ў браўзеры — уключыце яго ў наладах сайта ўручную.",
@@ -1216,6 +1218,8 @@
       "saveError": "Не ўдалося захаваць змену",
       "noShifts": "Змен пакуль няма",
       "shiftInProgress": "Змена ідзе",
+      "pushShiftTimeUpdatedTitle": "Час змены абноўлены",
+      "pushShiftTimeUpdatedBody": "Уладальнік паправіў час пачатку вашай змены.",
       "requiresEditBadge": "Патрабуе праўкі",
       "hoursShort": "гадз",
       "minutesShort": "хв",

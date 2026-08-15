@@ -538,6 +538,8 @@
     "collectionSub": "инкассация тапшырылганда",
     "expenseLabel": "Жаңы чыгаша",
     "expenseSub": "кызматкер чыгаша киргизгенде",
+    "testPushTitle": "Сынак билдирүүсү",
+    "testPushBody": "Муну көрсөңүз — push-билдирүүлөр иштейт.",
     "errors": {
       "notSupported": "Бул браузер push-билдирүүлөрдү колдобойт.",
       "permissionDenied": "Билдирүүлөргө уруксат браузерде четке кагылды — аны сайттын жөндөөлөрүндө кол менен күйгүзүңүз.",
@@ -1216,6 +1218,8 @@
       "saveError": "Сменаны сактоо мүмкүн болгон жок",
       "noShifts": "Азырынча смена жок",
       "shiftInProgress": "Смена жүрүүдө",
+      "pushShiftTimeUpdatedTitle": "Смена убагы жаңыртылды",
+      "pushShiftTimeUpdatedBody": "Ээси сменаңыздын башталуу убагын оңдоду.",
       "requiresEditBadge": "Оңдоону талап кылат",
       "hoursShort": "с",
       "minutesShort": "мүн",

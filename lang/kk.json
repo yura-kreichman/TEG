@@ -538,6 +538,8 @@
     "collectionSub": "инкассация тапсырылғанда",
     "expenseLabel": "Жаңа шығыс",
     "expenseSub": "қызметкер шығыс енгізгенде",
+    "testPushTitle": "Сынақ хабарламасы",
+    "testPushBody": "Мұны көрсеңіз — push-хабарламалар жұмыс істейді.",
     "errors": {
       "notSupported": "Бұл браузер push-хабарландыруларды қолдамайды.",
       "permissionDenied": "Хабарландыруларға рұқсат браузерде қабылданбады — оны сайт баптауларынан қолмен қосыңыз.",
@@ -1216,6 +1218,8 @@
       "saveError": "Ауысымды сақтау мүмкін болмады",
       "noShifts": "Әзірге ауысымдар жоқ",
       "shiftInProgress": "Ауысым жүріп жатыр",
+      "pushShiftTimeUpdatedTitle": "Ауысым уақыты жаңартылды",
+      "pushShiftTimeUpdatedBody": "Иесі ауысымыңыздың басталу уақытын түзетті.",
       "requiresEditBadge": "Түзету қажет",
       "hoursShort": "сағ",
       "minutesShort": "мин",

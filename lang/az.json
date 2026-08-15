@@ -538,6 +538,8 @@
     "collectionSub": "inkassasiya təhvil verildikdə",
     "expenseLabel": "Yeni xərc",
     "expenseSub": "işçi xərc daxil etdikdə",
+    "testPushTitle": "Test bildirişi",
+    "testPushBody": "Bunu görürsünüzsə — push bildirişləri işləyir.",
     "errors": {
       "notSupported": "Bu brauzer push bildirişlərini dəstəkləmir.",
       "permissionDenied": "Bildirişlərə icazə brauzerdə rədd edilib — sayt tənzimləmələrində əl ilə aktivləşdirin.",
@@ -1216,6 +1218,8 @@
       "saveError": "Növbəni yadda saxlamaq mümkün olmadı",
       "noShifts": "Hələ növbə yoxdur",
       "shiftInProgress": "Növbə davam edir",
+      "pushShiftTimeUpdatedTitle": "Növbə vaxtı yeniləndi",
+      "pushShiftTimeUpdatedBody": "Sahibkar növbənizin başlama vaxtını dəyişdi.",
       "requiresEditBadge": "Düzəliş tələb edir",
       "hoursShort": "saat",
       "minutesShort": "dəq",

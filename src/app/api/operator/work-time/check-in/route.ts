@@ -88,7 +88,7 @@ export async function POST() {
     tenant?.businessDayBoundary ?? "06:00"
   );
 
-  dispatchShiftCheckin(point.tenantId, operator.name, point.name, operator.id).catch((err) =>
+  dispatchShiftCheckin(point.tenantId, operator.name, point.name, operator.id, operator.colorTag).catch((err) =>
     console.error("shift checkin push dispatch failed", err)
   );
 

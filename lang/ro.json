@@ -538,6 +538,8 @@
     "collectionSub": "când este înregistrată o colectare de numerar",
     "expenseLabel": "Cheltuială nouă",
     "expenseSub": "când angajatul înregistrează o cheltuială",
+    "testPushTitle": "Notificare de test",
+    "testPushBody": "Dacă vezi asta — notificările push funcționează.",
     "errors": {
       "notSupported": "Acest browser nu suportă notificări push.",
       "permissionDenied": "Permisiunea pentru notificări a fost refuzată în browser — activați-o manual în setările site-ului.",
@@ -1216,6 +1218,8 @@
       "saveError": "Nu s-a putut salva tura",
       "noShifts": "Încă nu există ture",
       "shiftInProgress": "Tură în curs",
+      "pushShiftTimeUpdatedTitle": "Ora turei a fost modificată",
+      "pushShiftTimeUpdatedBody": "Proprietarul a corectat ora de început a turei tale.",
       "requiresEditBadge": "Necesită corectare",
       "hoursShort": "h",
       "minutesShort": "min",

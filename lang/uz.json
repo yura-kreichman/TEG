@@ -538,6 +538,8 @@
     "collectionSub": "inkassatsiya amalga oshirilganda",
     "expenseLabel": "Yangi xarajat",
     "expenseSub": "xodim xarajat kiritganda",
+    "testPushTitle": "Sinov bildirishnomasi",
+    "testPushBody": "Buni ko'rsangiz — push bildirishnomalar ishlaydi.",
     "errors": {
       "notSupported": "Ushbu brauzer push-bildirishnomalarni qoʻllab-quvvatlamaydi.",
       "permissionDenied": "Bildirishnomalarga ruxsat brauzerda rad etilgan — sayt sozlamalarida qoʻlda yoqing.",
@@ -1216,6 +1218,8 @@
       "saveError": "Smenani saqlab boʻlmadi",
       "noShifts": "Hali smenalar yoʻq",
       "shiftInProgress": "Smena davom etmoqda",
+      "pushShiftTimeUpdatedTitle": "Smena vaqti yangilandi",
+      "pushShiftTimeUpdatedBody": "Egasi smenangiz boshlanish vaqtini tuzatdi.",
       "requiresEditBadge": "Tahrirlash kerak",
       "hoursShort": "soat",
       "minutesShort": "daq",
