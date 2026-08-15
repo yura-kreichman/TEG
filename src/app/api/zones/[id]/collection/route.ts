@@ -78,7 +78,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   // пользователем 2026-07-25: push показывал "забрал 955", хотя физически
   // забрали 700, poolShare/poolDeficit добавлялся молча).
   // operatorName: null — инкассацию провёл сам Владелец, в сообщении вместо
-  // имени 🜲 (2026-08-16).
+  // имени 👑 (2026-08-16).
   announceCollection({
     tenantId: owner.tenantId,
     operationIds: [operationId],
