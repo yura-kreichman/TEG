@@ -1484,7 +1484,10 @@
     "fleetStripLabel": "Дастгоҳҳои мо: {zoneName}",
     "lightboxCloseLabel": "Пӯшидан",
     "lightboxPrevLabel": "Акси қаблӣ",
-    "lightboxNextLabel": "Акси навбатӣ"
+    "lightboxNextLabel": "Акси навбатӣ",
+    "telegramGroupTitle": "Гурӯҳ дар Telegram",
+    "telegramGroupText": "Аксияҳо, хабарҳо ва ҷавоб ба саволҳо",
+    "telegramGroupButton": "Ҳамроҳ шудан"
   },
   "landing": {
     "settingsTitle": "Лендинг",

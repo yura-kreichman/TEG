@@ -1484,7 +1484,10 @@
     "fleetStripLabel": "Біздің парк: {zoneName}",
     "lightboxCloseLabel": "Жабу",
     "lightboxPrevLabel": "Алдыңғы фото",
-    "lightboxNextLabel": "Келесі фото"
+    "lightboxNextLabel": "Келесі фото",
+    "telegramGroupTitle": "Telegram тобы",
+    "telegramGroupText": "Акциялар, жаңалықтар және сұрақтарға жауаптар",
+    "telegramGroupButton": "Қосылу"
   },
   "landing": {
     "settingsTitle": "Лендинг",

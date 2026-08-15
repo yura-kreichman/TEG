@@ -1484,7 +1484,10 @@
     "fleetStripLabel": "Bizim parkımız: {zoneName}",
     "lightboxCloseLabel": "Bağla",
     "lightboxPrevLabel": "Əvvəlki foto",
-    "lightboxNextLabel": "Növbəti foto"
+    "lightboxNextLabel": "Növbəti foto",
+    "telegramGroupTitle": "Telegram qrupu",
+    "telegramGroupText": "Aksiyalar, xəbərlər və suallara cavablar",
+    "telegramGroupButton": "Qoşul"
   },
   "landing": {
     "settingsTitle": "Lendinq",

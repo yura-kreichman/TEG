@@ -1484,7 +1484,10 @@
     "fleetStripLabel": "Nasz park: {zoneName}",
     "lightboxCloseLabel": "Zamknij",
     "lightboxPrevLabel": "Poprzednie zdjęcie",
-    "lightboxNextLabel": "Następne zdjęcie"
+    "lightboxNextLabel": "Następne zdjęcie",
+    "telegramGroupTitle": "Grupa na Telegramie",
+    "telegramGroupText": "Promocje, nowości i odpowiedzi na pytania",
+    "telegramGroupButton": "Dołącz"
   },
   "landing": {
     "settingsTitle": "Landing",

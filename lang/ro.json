@@ -1484,7 +1484,10 @@
     "fleetStripLabel": "Parcul nostru: {zoneName}",
     "lightboxCloseLabel": "Închide",
     "lightboxPrevLabel": "Foto anterioară",
-    "lightboxNextLabel": "Foto următoare"
+    "lightboxNextLabel": "Foto următoare",
+    "telegramGroupTitle": "Grup pe Telegram",
+    "telegramGroupText": "Oferte, noutăți și răspunsuri la întrebări",
+    "telegramGroupButton": "Alătură-te"
   },
   "landing": {
     "settingsTitle": "Landing",

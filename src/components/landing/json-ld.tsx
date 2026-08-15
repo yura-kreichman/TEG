@@ -24,6 +24,16 @@ export function LandingJsonLd({ data, baseUrl }: { data: LandingRenderData; base
     .map((kind) => (data.contacts[kind] ? contactHref(kind, data.contacts[kind]!) : null))
     .filter((v): v is string => !!v);
 
+  // Клиентская группа Telegram — тоже канал компании, но в sameAs уходит
+  // только ПУБЛИЧНЫЙ адрес вида t.me/name. Ссылка-приглашение в закрытую
+  // группу (t.me/+хеш, старая форма t.me/joinchat/...) — это одноразовый
+  // ключ доступа, а не профиль: в структурированных данных ему не место, да
+  // и владелец может отозвать её в любой момент.
+  const groupUrl = data.telegramGroupUrl;
+  if (groupUrl && !/t\.me\/(\+|joinchat\/)/.test(groupUrl) && !sameAs.includes(groupUrl)) {
+    sameAs.push(groupUrl);
+  }
+
   // Идентификаторы узлов графа. Без них поисковик видит несколько разрозненных
   // сущностей и сам гадает, одна это компания или разные; со ссылками @id —
   // читает связный граф "сайт → страница → компания → точки → фотографии".

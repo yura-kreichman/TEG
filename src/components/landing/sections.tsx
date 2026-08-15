@@ -454,11 +454,37 @@ export function ContactsSection({ data, lp, weekdayNames }: { data: LandingRende
     .map(([kind, value]) => ({ kind, value }))
     .filter((c): c is { kind: keyof typeof CONTACT_ICONS; value: string } => !!c.value)
     .sort((a, b) => (a.kind === "phone" ? -1 : b.kind === "phone" ? 1 : 0));
-  if (data.points.length === 0 && entries.length === 0) return null;
+  // Группа тоже держит секцию живой: тенант без точек и контактов, но с
+  // подключённой группой, иначе потерял бы единственный способ связи.
+  if (data.points.length === 0 && entries.length === 0 && !data.telegramGroupUrl) return null;
 
   return (
     <section id="contacts" className="lt-wrap landing-reveal py-7">
       <SectionHeading>{lp.contactsTitle}</SectionHeading>
+      {/* Приглашение в клиентскую группу Telegram — ПЕРЕД карточками точек
+          (запрос владельца 2026-08-15): первым в секции читается как
+          приглашение, а среди чипов контактов внизу потерялось бы. Ссылка
+          берётся из подключённой группы (TenantPublicGroup.inviteLink), сам
+          лендинг про неё ничего не спрашивает. Кликабельна вся карточка, не
+          только кнопка — на телефоне это заметно удобнее. Внутри только
+          span'ы: <p> внутри <a> дало бы невалидную вложенность. */}
+      {data.telegramGroupUrl && (
+        <a
+          href={data.telegramGroupUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="lt-card mb-5 flex items-center gap-3 p-4"
+        >
+          <TelegramIcon className="size-8 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="lt-card-title block text-base">{lp.telegramGroupTitle}</span>
+            <span className="lt-muted-text block text-[0.8125rem]">{lp.telegramGroupText}</span>
+          </span>
+          <span className="lt-btn lt-btn-primary inline-flex shrink-0 items-center px-4 py-2 text-sm font-semibold">
+            {lp.telegramGroupButton}
+          </span>
+        </a>
+      )}
       {data.points.length > 0 && (
         <div className="mb-6 flex flex-col gap-5">
           {data.points.map((point) => {

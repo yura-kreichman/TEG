@@ -1610,7 +1610,10 @@
     "fleetStripLabel": "Наш парк: {zoneName}",
     "lightboxCloseLabel": "Закрыть",
     "lightboxPrevLabel": "Предыдущее фото",
-    "lightboxNextLabel": "Следующее фото"
+    "lightboxNextLabel": "Следующее фото",
+    "telegramGroupTitle": "Группа в Telegram",
+    "telegramGroupText": "Акции, новости и ответы на вопросы",
+    "telegramGroupButton": "Вступить"
   },
   "summaryText": {
     "cash": "Наличные",

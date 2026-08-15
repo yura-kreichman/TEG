@@ -1484,7 +1484,10 @@
     "fleetStripLabel": "Наш парк: {zoneName}",
     "lightboxCloseLabel": "Закрыць",
     "lightboxPrevLabel": "Папярэдняе фота",
-    "lightboxNextLabel": "Наступнае фота"
+    "lightboxNextLabel": "Наступнае фота",
+    "telegramGroupTitle": "Група ў Telegram",
+    "telegramGroupText": "Акцыі, навіны і адказы на пытанні",
+    "telegramGroupButton": "Далучыцца"
   },
   "landing": {
     "settingsTitle": "Лендынг",

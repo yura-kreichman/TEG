@@ -1484,7 +1484,10 @@
     "fleetStripLabel": "Il nostro parco giochi: {zoneName}",
     "lightboxCloseLabel": "Chiudi",
     "lightboxPrevLabel": "Foto precedente",
-    "lightboxNextLabel": "Foto successiva"
+    "lightboxNextLabel": "Foto successiva",
+    "telegramGroupTitle": "Gruppo Telegram",
+    "telegramGroupText": "Offerte, novità e risposte alle domande",
+    "telegramGroupButton": "Iscriviti"
   },
   "landing": {
     "settingsTitle": "Pagina Landing",

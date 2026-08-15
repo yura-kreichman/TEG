@@ -1484,7 +1484,10 @@
     "fleetStripLabel": "ჩვენი ტექნიკა: {zoneName}",
     "lightboxCloseLabel": "დახურვა",
     "lightboxPrevLabel": "წინა ფოტო",
-    "lightboxNextLabel": "შემდეგი ფოტო"
+    "lightboxNextLabel": "შემდეგი ფოტო",
+    "telegramGroupTitle": "Telegram ჯგუფი",
+    "telegramGroupText": "აქციები, სიახლეები და პასუხები კითხვებზე",
+    "telegramGroupButton": "შეერთება"
   },
   "landing": {
     "settingsTitle": "ლენდინგი",

@@ -1484,7 +1484,10 @@
     "fleetStripLabel": "Bizning parkimiz: {zoneName}",
     "lightboxCloseLabel": "Yopish",
     "lightboxPrevLabel": "Oldingi surat",
-    "lightboxNextLabel": "Keyingi surat"
+    "lightboxNextLabel": "Keyingi surat",
+    "telegramGroupTitle": "Telegram guruhi",
+    "telegramGroupText": "Aksiyalar, yangiliklar va savollarga javoblar",
+    "telegramGroupButton": "Qo‘shilish"
   },
   "landing": {
     "settingsTitle": "Landing",

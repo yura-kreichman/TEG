@@ -1484,7 +1484,10 @@
     "fleetStripLabel": "Our fleet: {zoneName}",
     "lightboxCloseLabel": "Close",
     "lightboxPrevLabel": "Previous photo",
-    "lightboxNextLabel": "Next photo"
+    "lightboxNextLabel": "Next photo",
+    "telegramGroupTitle": "Telegram group",
+    "telegramGroupText": "Offers, news and answers to your questions",
+    "telegramGroupButton": "Join"
   },
   "landing": {
     "settingsTitle": "Landing page",

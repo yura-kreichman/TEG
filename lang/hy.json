@@ -1484,7 +1484,10 @@
     "fleetStripLabel": "Մեր տեխնիկան․ {zoneName}",
     "lightboxCloseLabel": "Փակել",
     "lightboxPrevLabel": "Նախորդ լուսանկարը",
-    "lightboxNextLabel": "Հաջորդ լուսանկարը"
+    "lightboxNextLabel": "Հաջորդ լուսանկարը",
+    "telegramGroupTitle": "Telegram խումբ",
+    "telegramGroupText": "Ակցիաներ, նորություններ և հարցերի պատասխաններ",
+    "telegramGroupButton": "Միանալ"
   },
   "landing": {
     "settingsTitle": "Լենդինգ",

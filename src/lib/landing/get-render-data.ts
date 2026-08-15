@@ -50,6 +50,10 @@ export interface LandingRenderData {
   metaTitleOverride: string | null;
   metaDescriptionOverride: string | null;
   googleSiteVerification: string | null;
+  // Ссылка-приглашение в клиентскую группу Telegram — берётся из
+  // TenantPublicGroup, куда владелец её уже вписал, подключая бота. null,
+  // если группа не подключена/выключена: кнопки на странице тогда нет.
+  telegramGroupUrl: string | null;
   // Момент последней правки лендинга — уходит в JSON-LD как dateModified
   // (сигнал свежести страницы) и в lastmod карты сайта.
   updatedAt: Date;
@@ -107,7 +111,7 @@ export async function getLandingRenderData(tenantId: string): Promise<LandingRen
   const dict = getDictionary(tenant.locale);
   const lp = dict.landingPublic;
 
-  const [points, galleryPhotos, zoneContents] = await Promise.all([
+  const [points, galleryPhotos, zoneContents, publicGroup] = await Promise.all([
     // Деактивированные точки/зоны (докс: сезонность, решение пользователя
     // 2026-07-13) не показываются на Лендинге вообще — ни в "Где нас
     // найти", ни в "Прокат"/ленте активов их зон. Раньше здесь была реальная
@@ -132,10 +136,30 @@ export async function getLandingRenderData(tenantId: string): Promise<LandingRen
       ? prisma.landingGalleryPhoto.findMany({ where: { landingId: landing.id }, orderBy: { sortOrder: "asc" } })
       : Promise.resolve([]),
     prisma.landingZoneContent.findMany({ where: { landingId: landing.id } }),
+    // Группа в Telegram для клиентов (запрос владельца 2026-08-15). Отдельного
+    // поля у лендинга НЕТ и заводить его нельзя: владелец уже подключил группу
+    // в Telegram-настройках, добавив туда бота RentOS, и ссылку-приглашение
+    // вписал там же — спрашивать её второй раз значило бы держать два
+    // источника правды, которые однажды разъедутся.
+    prisma.tenantPublicGroup.findUnique({
+      where: { tenantId },
+      select: { enabled: true, chatId: true, chatStatus: true, inviteLink: true },
+    }),
   ]);
 
   const zoneContentByZoneId = new Map(zoneContents.map((zc) => [zc.zoneId, zc]));
   const primaryCity = points.find((p) => p.city)?.city ?? null;
+
+  // Кнопка «Группа в Telegram» на странице — только когда группа РЕАЛЬНО
+  // подключена (запрос владельца 2026-08-15: «только если группа для клиентов
+  // добавлена»), а не просто когда в поле что-то лежит. Условий четыре, и
+  // каждое отсекает свой случай: бот добавлен в группу (chatId), не выгнан из
+  // неё (chatStatus), группа не выключена тумблером — выключил, значит и
+  // звать в неё новых людей незачем, — и владелец вписал приглашение.
+  const telegramGroupUrl =
+    publicGroup?.enabled && publicGroup.chatId && publicGroup.chatStatus !== "inactive" && publicGroup.inviteLink
+      ? publicGroup.inviteLink
+      : null;
 
   const zones = points.flatMap((point) =>
     point.zones.map((zone) => {
@@ -223,6 +247,7 @@ export async function getLandingRenderData(tenantId: string): Promise<LandingRen
     metaTitleOverride: landing.metaTitleOverride,
     metaDescriptionOverride: landing.metaDescriptionOverride,
     googleSiteVerification: landing.googleSiteVerification,
+    telegramGroupUrl,
     updatedAt: landing.updatedAt,
     rulesInstruction,
     galleryPhotos: galleryPhotos.map((p) => ({ id: p.id, url: p.url })),

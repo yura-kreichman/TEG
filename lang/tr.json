@@ -1484,7 +1484,10 @@
     "fleetStripLabel": "Filomuz: {zoneName}",
     "lightboxCloseLabel": "Kapat",
     "lightboxPrevLabel": "Önceki fotoğraf",
-    "lightboxNextLabel": "Sonraki fotoğraf"
+    "lightboxNextLabel": "Sonraki fotoğraf",
+    "telegramGroupTitle": "Telegram grubu",
+    "telegramGroupText": "Kampanyalar, haberler ve sorulara yanıtlar",
+    "telegramGroupButton": "Katıl"
   },
   "landing": {
     "settingsTitle": "Landing",
