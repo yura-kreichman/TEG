@@ -63,10 +63,24 @@ export function generateBindCode(): string {
   return `RT-${code}`;
 }
 
-export async function getBindDeepLink(code: string): Promise<string | null> {
+// adminRights — штатный параметр Telegram (core.telegram.org/api/links,
+// "Bot add-to-group links"): перечисленные через "+" права запрашиваются
+// прямо в диалоге добавления, человек видит переключатель и подтверждает их
+// одним движением. Без него бот добавляется обычным участником.
+//
+// Заведено 2026-08-15 по вопросу владельца «а мы информируем, что боту нужны
+// права администратора?». Не информировали — и не могли бы: шторка обещает
+// «без токенов и настроек, один тап», объяснение прав туда не вписывается.
+// Клиентской группе право нужно ровно одно, invite_users: без него
+// exportChatInviteLink отвечает отказом, ссылка-приглашение не приезжает,
+// /join говорит «группа не настроена» и кнопки на лендинге не появляется —
+// причём владелец никак не свяжет это с правами. Остальные права (удаление
+// сообщений, закрепление, блокировка участников) боту не нужны и не просятся.
+export async function getBindDeepLink(code: string, adminRights?: string): Promise<string | null> {
   const username = await getBotUsername();
   if (!username) return null;
-  return `https://t.me/${username}?startgroup=${encodeURIComponent(code)}`;
+  const admin = adminRights ? `&admin=${adminRights}` : "";
+  return `https://t.me/${username}?startgroup=${encodeURIComponent(code)}${admin}`;
 }
 
 // Префикс payload'а в /start для клиентского флоу "узнать баланс", в отличие

@@ -23,7 +23,11 @@ export async function POST() {
   }
 
   const { code, expiresAt } = await createBindCode(owner.tenantId, "public_group");
-  const deepLink = await getBindDeepLink(code);
+  // invite_users запрашивается только здесь, у клиентской группы: без этого
+  // права Telegram не отдаёт ссылку-приглашение, а на ней держатся и команда
+  // /join, и кнопка «Группа в Telegram» на лендинге. Рабочему чату сотрудников
+  // (summary-channels) права администратора не нужны — там ссылку не берём.
+  const deepLink = await getBindDeepLink(code, "invite_users");
 
   return NextResponse.json({ code, deepLink, expiresAt });
 }
