@@ -23,11 +23,20 @@ export async function POST() {
   }
 
   const { code, expiresAt } = await createBindCode(owner.tenantId, "public_group");
-  // invite_users запрашивается только здесь, у клиентской группы: без этого
-  // права Telegram не отдаёт ссылку-приглашение, а на ней держатся и команда
-  // /join, и кнопка «Группа в Telegram» на лендинге. Рабочему чату сотрудников
-  // (summary-channels) права администратора не нужны — там ссылку не берём.
-  const deepLink = await getBindDeepLink(code, "invite_users");
+  // Два права, и оба под конкретную функцию бота именно в КЛИЕНТСКОЙ группе:
+  //   invite_users    — без него exportChatInviteLink отвечает отказом, и
+  //                     тогда нет ни ссылки-приглашения, ни ответа /join, ни
+  //                     кнопки «Группа в Telegram» на лендинге;
+  //   delete_messages — бот стирает своё приветствие новому участнику, когда
+  //                     тот перешёл по кнопке в бота (webhook, cleanupPending-
+  //                     WelcomeMessage): иначе группа зарастает приветствиями.
+  //                     По документации на СВОИ сообщения права не нужны, но
+  //                     удаление у нас best-effort и ошибки глушит — молчаливый
+  //                     отказ в супергруппе мы бы не заметили, а мусор копился
+  //                     бы в клиентской группе тенанта.
+  // Рабочему чату сотрудников (summary-channels) не нужно ни то, ни другое:
+  // там бот только отправляет сводки.
+  const deepLink = await getBindDeepLink(code, "invite_users+delete_messages");
 
   return NextResponse.json({ code, deepLink, expiresAt });
 }
