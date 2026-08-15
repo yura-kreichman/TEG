@@ -768,7 +768,12 @@
     "zoneActiveChip": "Active",
     "zoneInactiveChip": "Inactive",
     "noOperatorsAttached": "No employees",
-    "accountingModeTooltip": "The mode decides how your staff enters data every day. “Counters” — they record meter readings and the system takes the difference from the previous submission. “Sessions” — they tap once per session. “Stays” — they start and stop a timer, and the price follows the time. “Tickets” — they sell orders, with optional redemption. “Cash only” — they enter a single amount, with no assets or tariffs. You can change the mode until the zone has its first results submission; after that it is locked for good."
+    "accountingModeTooltip": "Pick by how your staff will record the zone’s work — details are in the ⓘ next to each mode. You can change the mode until the zone has its first results submission; after that it is locked for good.",
+    "accountingModeCountersTooltip": "The machine counts sessions itself, on a mechanical counter that only goes up. Staff record nothing during the day: at the results submission they copy the number off the counter once, and the system takes the difference from the previous submission and multiplies it by the tariff price. No more than two tariffs — that is the device’s limit: two tariffs mean two keys and two separate counters on it.",
+    "accountingModeLaunchesTooltip": "Staff log each ride with a tap on the asset — a digital replacement for the notebook with tally marks. The system knows the ride count itself; nothing is entered by hand. A tariff can be plain (the tap counts the ride right away) or timed (the tap starts a countdown and the asset stays busy until stopped). Up to four tariffs per zone.",
+    "accountingModeStaysTooltip": "Real-time tracking: staff open a visit at the entrance and close it at the exit, one per visitor. Fits places where the length of the visit matters: the price can be flat per entry or per minute. The owner does not watch individual visits — only the shift total.",
+    "accountingModeTicketsTooltip": "Selling tickets as orders. Sale and use are separated in time: a ticket sold today can be redeemed tomorrow, and by a different staff member. Redemption can be turned off entirely, and then the system only knows about sales. Prices are not set by tariffs but on the assets themselves: each has its own ticket options.",
+    "accountingModeCashOnlyTooltip": "No assets, no tariffs. Staff enter a single amount per shift — cash and card. There is no calculated revenue, so there is nothing to compare the Difference against: the system simply records what was handed in."
   },
   "zoneDetail": {
     "notFound": "Zone not found.",
@@ -850,7 +855,7 @@
     "launchesPricingModeInstant": "No timer",
     "launchesPricingModeTimed": "With timer",
     "assetsTooltip": "An asset is a single physical unit inside the zone: one particular car, trampoline or console. Results are submitted per asset, so each keeps its own history and its own readings. Deactivate a broken asset instead of deleting it — deleting also removes its past submissions.",
-    "tariffsTooltipCounters": "A tariff is the price of one session. Revenue is calculated as (current reading − reading at the previous submission) × price. You can have several tariffs when an asset has different modes — say, normal and second speed: each has its own meter and its own price.",
+    "tariffsTooltipCounters": "A tariff is the price of one session. Revenue = (current reading − reading at the previous submission) × price. No more than two tariffs, and that limit comes from the device, not the app: a second tariff means a second key and a second counter on it.",
     "tariffsTooltipLaunches": "A tariff is the price of one session. “No timer” — staff simply tap to log the session. “With timer” — the session runs on a countdown and the asset counts as busy until it is stopped or released.",
     "tariffsTooltipStays": "A tariff is the price of a stay. “Per entry” — a flat amount no matter how long the visit lasts. “Per actual time” — a per-minute price: the system counts the time from start to stop and rounds up to a whole minute."
   },
@@ -1220,7 +1225,7 @@
       "moduleDisabledNote": "The Work Time module isn't enabled for your company",
       "deleteShiftConfirm": "Delete this shift? This can't be undone. Only the employee's most recent shift can be deleted.",
       "deleteMoneyOpConfirm": "Delete this entry? This can't be undone.",
-      "toPayOutTooltip": "To pay out = earned at the hourly rate + bonuses − advances already handed out, plus the carry-over from the previous period. Accrued bonuses are included too, even though they have not been paid in cash yet.",
+      "toPayOutTooltip": "Counted over the entire employment, not the selected period: earned at the hourly rate + accrued bonuses − advances handed out + manual balance carry-overs. A bonus paid in cash is not included at all — it is already in hand. That is why “Earned”, “Bonuses” and “Advances” next to it, which cover the selected period, do not add up to this figure directly.",
       "bonusAccruedTooltip": "An accrued bonus is added to the staff member’s “to pay out” balance but was never handed over in cash — the point’s till never saw it. A regular bonus, by contrast, has already left the till as cash."
     },
     "submit": {

@@ -768,7 +768,12 @@
     "zoneActiveChip": "Attiva",
     "zoneInactiveChip": "Inattiva",
     "noOperatorsAttached": "Nessun dipendente",
-    "accountingModeTooltip": "La modalità decide come il personale inserisce i dati ogni giorno. “Contatori” — registra le letture degli strumenti e il sistema calcola la differenza rispetto alla consegna precedente. “Avvii” — segna ogni sessione con un tocco. “Permanenze” — avvia e ferma un timer, il prezzo segue il tempo. “Biglietti” — vende ordini, con annullo facoltativo. “Solo cassa” — inserisce un unico importo, senza asset né tariffe. Puoi cambiare modalità finché la zona non ha la prima consegna dei risultati; dopo di essa resta bloccata per sempre."
+    "accountingModeTooltip": "Scegli in base a come il personale registrerà il lavoro della zona: i dettagli sono nella ⓘ accanto a ogni modalità. Puoi cambiare modalità finché la zona non ha la prima consegna dei risultati; dopo resta bloccata per sempre.",
+    "accountingModeCountersTooltip": "L’attrazione conta le sessioni da sola, con un contatore meccanico che solo sale. Durante la giornata il personale non registra nulla: alla consegna dei risultati trascrive una volta il numero dal contatore, e il sistema calcola la differenza rispetto alla consegna precedente moltiplicandola per il prezzo della tariffa. Non più di due tariffe: è il limite del dispositivo, due tariffe significano due chiavi e due contatori separati su di esso.",
+    "accountingModeLaunchesTooltip": "Il personale registra ogni giro con un tocco sull’asset: la versione digitale del quaderno con le stanghette. Il numero di giri lo conosce il sistema, non si inserisce a mano. La tariffa può essere semplice (il tocco conta subito il giro) o a tempo (il tocco avvia un conto alla rovescia e l’asset resta occupato fino allo stop). Fino a quattro tariffe per zona.",
+    "accountingModeStaysTooltip": "Tracciamento in tempo reale: il personale apre la visita all’ingresso e la chiude all’uscita, una per visitatore. Adatto dove conta quanto a lungo si resta: il prezzo può essere fisso a ingresso oppure al minuto. Il titolare non segue le singole visite, gli resta il totale del turno.",
+    "accountingModeTicketsTooltip": "Vendita di biglietti tramite ordini. Vendita e utilizzo sono separati nel tempo: un biglietto venduto oggi può essere annullato domani, e da un altro dipendente. L’annullo si può disattivare del tutto, e allora il sistema conosce solo le vendite. I prezzi non stanno nelle tariffe ma sugli asset stessi: ciascuno ha le proprie varianti di biglietto.",
+    "accountingModeCashOnlyTooltip": "Né asset né tariffe. Il personale inserisce un unico importo per turno: contanti e pagamenti elettronici. Non esiste un ricavo calcolato, quindi non c’è nulla con cui confrontare la Differenza: il sistema registra soltanto quanto è stato consegnato."
   },
   "zoneDetail": {
     "notFound": "Zona non trovata.",
@@ -850,7 +855,7 @@
     "launchesPricingModeInstant": "Senza timer",
     "launchesPricingModeTimed": "Con timer",
     "assetsTooltip": "Un asset è una singola unità fisica dentro la zona: quella macchinina, quel tappeto elastico, quella console. I risultati si consegnano per singolo asset, quindi ognuno conserva la propria storia e le proprie letture. Disattiva un asset guasto invece di eliminarlo: l’eliminazione porta via anche le sue consegne passate.",
-    "tariffsTooltipCounters": "La tariffa è il prezzo di una sessione. Il ricavo si calcola come (lettura attuale − lettura alla consegna precedente) × prezzo. Le tariffe possono essere più d’una se l’asset ha modalità diverse — per esempio velocità normale e seconda velocità: ciascuna ha il proprio contatore e il proprio prezzo.",
+    "tariffsTooltipCounters": "La tariffa è il prezzo di una sessione. Ricavo = (lettura attuale − lettura alla consegna precedente) × prezzo. Non più di due tariffe, e il limite è del dispositivo, non del programma: la seconda tariffa significa una seconda chiave e un secondo contatore su di esso.",
     "tariffsTooltipLaunches": "La tariffa è il prezzo di un avvio. “Senza timer” — il personale registra la sessione con un tocco. “Con timer” — l’avvio parte con un conto alla rovescia e l’asset risulta occupato finché non viene fermato o liberato.",
     "tariffsTooltipStays": "La tariffa è il prezzo della permanenza. “A ingresso” — un importo fisso, per quanto a lungo resti la persona. “A consumo” — prezzo al minuto: il sistema conta il tempo dallo start allo stop e arrotonda per eccesso al minuto intero."
   },
@@ -1220,7 +1225,7 @@
       "moduleDisabledNote": "Il modulo Orario di lavoro non è attivo per la tua azienda",
       "deleteShiftConfirm": "Eliminare questo turno? Non può essere annullato. Può essere eliminato solo il turno più recente del dipendente.",
       "deleteMoneyOpConfirm": "Eliminare questa voce? Non può essere annullato.",
-      "toPayOutTooltip": "Da liquidare = maturato a tariffa oraria + premi − anticipi già erogati, più il riporto dal periodo precedente. Rientrano anche i premi accantonati, benché non ancora pagati in contanti.",
+      "toPayOutTooltip": "Si calcola sull’intero periodo di lavoro, non sull’intervallo selezionato: maturato a tariffa oraria + premi accantonati − anticipi erogati + riporti manuali del saldo. Il premio pagato in contanti non rientra affatto: è già stato consegnato. Per questo “Maturato”, “Premi” e “Anticipi” qui accanto, riferiti all’intervallo scelto, non tornano direttamente con questa cifra.",
       "bonusAccruedTooltip": "Il premio accantonato entra nel saldo “da liquidare” del dipendente ma non è stato consegnato in contanti: la cassa del punto non l’ha visto. Il premio ordinario, invece, è già uscito dalla cassa in contanti."
     },
     "submit": {

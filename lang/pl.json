@@ -768,7 +768,12 @@
     "zoneActiveChip": "Aktywny",
     "zoneInactiveChip": "Nieaktywna",
     "noOperatorsAttached": "Brak pracowników",
-    "accountingModeTooltip": "Tryb decyduje, jak pracownik codziennie wprowadza dane. „Liczniki” — zapisuje wskazania urządzeń, a system bierze różnicę wobec poprzedniego rozliczenia. „Uruchomienia” — zaznacza każdą sesję dotknięciem. „Pobyty” — włącza i wyłącza minutnik, cena liczy się od czasu. „Bilety” — sprzedaje zamówienia, kasowanie opcjonalne. „Tylko kasa” — wpisuje jedną kwotę, bez zasobów i taryf. Tryb można zmieniać, dopóki strefa nie ma pierwszego rozliczenia; po nim zostaje zablokowany na stałe."
+    "accountingModeTooltip": "Wybierz według tego, jak pracownik będzie odnotowywał pracę strefy: szczegóły w ⓘ przy każdym trybie. Tryb można zmieniać, dopóki strefa nie ma pierwszego rozliczenia; potem zostaje zablokowany na stałe.",
+    "accountingModeCountersTooltip": "Urządzenie samo liczy sesje — mechanicznym licznikiem, który tylko rośnie. W ciągu dnia pracownik niczego nie zaznacza: przy rozliczeniu raz przepisuje liczbę z licznika, a system bierze różnicę wobec poprzedniego rozliczenia i mnoży przez cenę taryfy. Nie więcej niż dwie taryfy — to limit urządzenia: dwie taryfy oznaczają dwa klucze i dwa osobne liczniki na nim.",
+    "accountingModeLaunchesTooltip": "Pracownik zaznacza każdy przejazd dotknięciem zasobu — cyfrowy zamiennik zeszytu z kreskami. Liczbę przejazdów system zna sam, nie trzeba jej wpisywać. Taryfa bywa prosta (dotknięcie od razu zalicza przejazd) albo z czasem (dotknięcie uruchamia odliczanie, zasób jest zajęty do zatrzymania). Do czterech taryf na strefę.",
+    "accountingModeStaysTooltip": "Ewidencja w czasie rzeczywistym: pracownik otwiera wizytę przy wejściu i zamyka przy wyjściu, osobno dla każdego gościa. Pasuje tam, gdzie liczy się długość pobytu: cena bywa stała za wejście albo minutowa. Właściciel nie śledzi pojedynczych wizyt — zostaje mu podsumowanie zmiany.",
+    "accountingModeTicketsTooltip": "Sprzedaż biletów zamówieniami. Sprzedaż i wykorzystanie są rozdzielone w czasie: bilet sprzedany dziś można skasować jutro — i przez innego pracownika. Kasowanie można całkiem wyłączyć, wtedy system zna tylko sprzedaż. Ceny ustala się nie taryfami, lecz na samych zasobach: każdy ma własne warianty biletów.",
+    "accountingModeCashOnlyTooltip": "Ani zasobów, ani taryf. Pracownik wpisuje jedną kwotę na zmianę — gotówka i płatności bezgotówkowe. Nie ma przychodu wyliczonego, więc Różnicy nie ma z czym porównać: system po prostu odnotowuje, ile oddano."
   },
   "zoneDetail": {
     "notFound": "Strefa nie znaleziona.",
@@ -850,7 +855,7 @@
     "launchesPricingModeInstant": "Bez timera",
     "launchesPricingModeTimed": "Z timerem",
     "assetsTooltip": "Zasób to pojedyncza fizyczna jednostka w strefie: konkretny samochodzik, trampolina, konsola. Wyniki rozlicza się osobno dla każdego zasobu, więc każdy ma własną historię i własne wskazania. Zepsuty zasób dezaktywuj, a nie usuwaj: usunięcie zabiera też jego wcześniejsze rozliczenia.",
-    "tariffsTooltipCounters": "Taryfa to cena jednej sesji. Przychód liczy się tak: (wskazanie teraz − wskazanie przy poprzednim rozliczeniu) × cena. Taryf może być kilka, gdy zasób ma różne tryby pracy — na przykład zwykła i druga prędkość: każda ma własny licznik i własną cenę.",
+    "tariffsTooltipCounters": "Taryfa to cena jednej sesji. Przychód = (wskazanie teraz − wskazanie przy poprzednim rozliczeniu) × cena. Nie więcej niż dwie taryfy, a to limit urządzenia, nie programu: druga taryfa oznacza drugi klucz i drugi licznik na nim.",
     "tariffsTooltipLaunches": "Taryfa to cena jednego uruchomienia. „Bez minutnika” — pracownik po prostu zaznacza sesję dotknięciem. „Z minutnikiem” — uruchomienie idzie z odliczaniem, a zasób jest zajęty, dopóki nie zostanie zatrzymany lub zwolniony.",
     "tariffsTooltipStays": "Taryfa to cena pobytu. „Za wejście” — stała kwota, niezależnie od tego, jak długo ktoś zostanie. „Za faktyczny czas” — cena za minutę: system sam liczy czas od startu do zatrzymania i zaokrągla w górę do pełnej minuty."
   },
@@ -1220,7 +1225,7 @@
       "moduleDisabledNote": "Moduł „Czas pracy” nie jest podłączony dla Twojej firmy",
       "deleteShiftConfirm": "Usunąć tę zmianę? Czynności nie można cofnąć. Usunąć można tylko ostatnią zmianę pracownika.",
       "deleteMoneyOpConfirm": "Usunąć ten wpis? Czynności nie można cofnąć.",
-      "toPayOutTooltip": "Do wypłaty = zarobione według stawki + premie − już wypłacone zaliczki, plus przeniesienie z poprzedniego okresu. Premie naliczone też się tu liczą, choć nie wypłacono ich jeszcze gotówką.",
+      "toPayOutTooltip": "Liczy się za cały czas pracy, a nie za wybrany okres: zarobione według stawki + premie naliczone − wypłacone zaliczki + ręczne przeniesienia salda. Premia wypłacona gotówką w ogóle się tu nie liczy — jest już w ręku. Dlatego „Zarobione”, „Premie” i „Zaliczki” obok, pokazane za okres, nie zgadzają się wprost z tą kwotą.",
       "bonusAccruedTooltip": "Premia naliczona trafia do salda „do wypłaty” pracownika, ale nie została wydana gotówką — kasa punktu jej nie odczuła. Zwykła premia przeciwnie: już wyszła z kasy gotówką."
     },
     "submit": {

@@ -768,7 +768,12 @@
     "zoneActiveChip": "Faol",
     "zoneInactiveChip": "Nofaol",
     "noOperatorsAttached": "Xodimlar yo'q",
-    "accountingModeTooltip": "Rejim xodim har kuni ma'lumotni qanday kiritishini hal qiladi. «Hisoblagichlar» — asbob ko'rsatkichlarini yozadi, tizim o'tgan topshirish bilan farqni oladi. «Ishga tushirishlar» — har seansni bosish bilan belgilaydi. «Tashriflar» — taymerni yoqadi va o'chiradi, narx vaqt bo'yicha hisoblanadi. «Chiptalar» — buyurtma sotadi, o'chirish ixtiyoriy. «Faqat kassa» — aktiv va tariflarsiz bitta summa kiritadi. Rejimni zona bo'yicha birorta yakun topshirilmaguncha o'zgartirish mumkin; birinchisidan keyin u butunlay qulflanadi."
+    "accountingModeTooltip": "Xodim zona ishini qanday belgilashiga qarab tanlang: tafsilotlar har rejim yonidagi ⓘ ichida. Rejimni zona bo'yicha birorta topshirish bo'lmaguncha o'zgartirish mumkin; birinchisidan keyin u butunlay qulflanadi.",
+    "accountingModeCountersTooltip": "Attraksion seanslarni o'zi sanaydi — faqat o'sadigan mexanik hisoblagich bilan. Kun davomida xodim hech narsa belgilamaydi: yakun topshirishda u hisoblagichdagi sonni bir marta ko'chirib yozadi, tizim esa o'tgan topshirish bilan farqni olib, tarif narxiga ko'paytiradi. Tarif ikkitadan oshmaydi — bu qurilmaning chegarasi: ikki tarif undagi ikki kalit va ikki alohida hisoblagichni bildiradi.",
+    "accountingModeLaunchesTooltip": "Xodim har yurishni aktivga bosib belgilaydi — plyus qo'yiladigan daftarning raqamli o'rnini bosuvchisi. Yurishlar sonini tizim o'zi biladi, qo'lda kiritish shart emas. Tarif oddiy (bosish darhol yurishni hisoblaydi) yoki davomiylikli (bosish teskari sanoqni boshlaydi, aktiv to'xtaguncha band) bo'ladi. Zonaga to'rttagacha tarif.",
+    "accountingModeStaysTooltip": "Real vaqtdagi hisob: xodim tashrifni kirishda ochadi va chiqishda yopadi, har mehmon bo'yicha alohida. Odam qancha turgani muhim joylarga mos: narx kirish uchun qat'iy yoki daqiqali bo'ladi. Ega alohida tashriflarni kuzatmaydi — unga smena yakuni qoladi.",
+    "accountingModeTicketsTooltip": "Chiptalarni buyurtma bilan sotish. Sotish va foydalanish vaqt bo'yicha ajratilgan: chiptani bugun sotib, ertaga — boshqa xodim o'chirishi mumkin. O'chirishni butunlay o'chirib qo'yish mumkin, u holda tizim faqat sotuvni biladi. Narxlar tarif bilan emas, aktivlarning o'zida beriladi: har birining o'z chipta variantlari bor.",
+    "accountingModeCashOnlyTooltip": "Na aktiv, na tarif. Xodim smenaga bitta summa kiritadi — naqd va naqdsiz. Hisobiy tushum yo'q, shuning uchun Farqni ham solishtirishga narsa yo'q: tizim shunchaki qancha topshirilganini qayd etadi."
   },
   "zoneDetail": {
     "notFound": "Zona topilmadi.",
@@ -850,7 +855,7 @@
     "launchesPricingModeInstant": "Taymersiz",
     "launchesPricingModeTimed": "Taymer bilan",
     "assetsTooltip": "Aktiv — zona ichidagi bitta jismoniy birlik: aniq mashina, batut, konsol. Yakunlar har aktiv bo'yicha alohida topshiriladi, shuning uchun har birining o'z tarixi va o'z ko'rsatkichlari bor. Buzilgan aktivni o'chirmang, faolsizlantiring: o'chirish u bilan birga o'tgan topshirishlarni ham olib ketadi.",
-    "tariffsTooltipCounters": "Tarif — bitta seansning narxi. Tushum shunday hisoblanadi: (hozirgi ko'rsatkich − o'tgan topshirishdagi ko'rsatkich) × narx. Aktivda turli ish rejimlari bo'lsa, tariflar bir nechta bo'lishi mumkin — masalan, oddiy va ikkinchi tezlik: har birining o'z hisoblagichi va o'z narxi bor.",
+    "tariffsTooltipCounters": "Tarif — bitta seansning narxi. Tushum = (hozirgi ko'rsatkich − o'tgan topshirishdagi ko'rsatkich) × narx. Tarif ikkitadan oshmaydi va bu dasturning emas, qurilmaning chegarasi: ikkinchi tarif undagi ikkinchi kalit va ikkinchi hisoblagichni bildiradi.",
     "tariffsTooltipLaunches": "Tarif — bitta ishga tushirishning narxi. «Taymersiz» — xodim seansni shunchaki bosib belgilaydi. «Taymer bilan» — ishga tushirish teskari sanoq bilan boradi va aktiv to'xtatilgunicha yoki bo'shatilgunicha band hisoblanadi.",
     "tariffsTooltipStays": "Tarif — bo'lish narxi. «Kirish uchun» — odam qancha turishidan qat'i nazar, qat'iy summa. «Amaldagi bo'yicha» — bir daqiqa narxi: tizim boshlanishdan to'xtashgacha vaqtni o'zi sanab, to'liq daqiqagacha yuqoriga yaxlitlaydi."
   },
@@ -1220,7 +1225,7 @@
       "moduleDisabledNote": "«Ish vaqti» moduli kompaniyangiz uchun ulanmagan",
       "deleteShiftConfirm": "Ushbu smenani oʻchirasizmi? Amalni bekor qilib boʻlmaydi. Faqat xodimning oxirgi smenasini oʻchirish mumkin.",
       "deleteMoneyOpConfirm": "Ushbu yozuvni oʻchirasizmi? Amalni bekor qilib boʻlmaydi.",
-      "toPayOutTooltip": "Berishga = stavka bo'yicha ishlangan + mukofotlar − berilgan avanslar, plyus o'tgan davrdan o'tkazma. Hisoblangan mukofotlar ham kiradi, garchi ular hali naqd berilmagan bo'lsa ham.",
+      "toPayOutTooltip": "Tanlangan davr uchun emas, butun ish vaqti uchun hisoblanadi: stavka bo'yicha ishlangan + hisoblangan mukofotlar − berilgan avanslar + balansning qo'lda o'tkazmalari. Naqd berilgan mukofot bunga umuman kirmaydi — u allaqachon qo'lda. Shuning uchun yonidagi davr uchun ko'rsatilgan «Ishlangan», «Mukofotlar» va «Avanslar» bu summa bilan to'g'ridan-to'g'ri to'g'ri kelmaydi.",
       "bonusAccruedTooltip": "Hisoblangan mukofot xodimning «Berishga» balansiga yozilgan, lekin naqd berilmagan — nuqta kassasi uni sezmadi. Oddiy mukofot esa aksincha, kassadan naqd chiqib ketgan."
     },
     "submit": {

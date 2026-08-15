@@ -768,7 +768,12 @@
     "zoneActiveChip": "Activ",
     "zoneInactiveChip": "Inactivă",
     "noOperatorsAttached": "Fără angajați",
-    "accountingModeTooltip": "Modul decide cum introduce angajatul datele în fiecare zi. „Contoare” — notează indicațiile aparatelor, iar sistemul ia diferența față de predarea anterioară. „Porniri” — marchează fiecare sesiune printr-o atingere. „Sosiri” — pornește și oprește un cronometru, prețul se calculează după timp. „Bilete” — vinde comenzi, validarea fiind opțională. „Doar casă” — introduce o singură sumă, fără active și tarife. Modul poate fi schimbat cât timp zona nu are nicio predare a rezultatelor; după prima, rămâne fixat definitiv."
+    "accountingModeTooltip": "Alegeți după modul în care angajatul va înregistra activitatea zonei: detaliile sunt în ⓘ de lângă fiecare mod. Modul poate fi schimbat cât timp zona nu are nicio predare a rezultatelor; după prima rămâne fixat definitiv.",
+    "accountingModeCountersTooltip": "Aparatul își numără singur sesiunile, cu un contor mecanic care doar crește. În timpul zilei angajatul nu notează nimic: la predarea rezultatelor copiază o singură dată numărul de pe contor, iar sistemul ia diferența față de predarea anterioară și o înmulțește cu prețul tarifului. Cel mult două tarife — este limita aparatului: două tarife înseamnă două chei și două contoare separate pe el.",
+    "accountingModeLaunchesTooltip": "Angajatul marchează fiecare tură printr-o atingere pe activ — înlocuitorul digital al caietului cu liniuțe. Numărul de ture îl știe sistemul, nu se introduce manual. Tariful poate fi simplu (atingerea contorizează imediat tura) sau cu durată (atingerea pornește o numărătoare inversă, activul rămâne ocupat până la oprire). Până la patru tarife pe zonă.",
+    "accountingModeStaysTooltip": "Evidență în timp real: angajatul deschide vizita la intrare și o închide la ieșire, separat pentru fiecare vizitator. Potrivit acolo unde contează cât stă persoana: prețul poate fi fix la intrare sau pe minut. Proprietarul nu urmărește vizitele individuale — îi rămâne totalul turei.",
+    "accountingModeTicketsTooltip": "Vânzarea biletelor prin comenzi. Vânzarea și utilizarea sunt separate în timp: un bilet vândut azi poate fi validat mâine, și de alt angajat. Validarea poate fi oprită complet, iar atunci sistemul cunoaște doar vânzările. Prețurile nu se dau prin tarife, ci pe activele înseși: fiecare are propriile variante de bilet.",
+    "accountingModeCashOnlyTooltip": "Nici active, nici tarife. Angajatul introduce o singură sumă pe tură — numerar și card. Nu există încasare calculată, deci nici Diferența nu are cu ce fi comparată: sistemul doar consemnează cât s-a predat."
   },
   "zoneDetail": {
     "notFound": "Zona nu a fost găsită.",
@@ -850,7 +855,7 @@
     "launchesPricingModeInstant": "Fără cronometru",
     "launchesPricingModeTimed": "Cu cronometru",
     "assetsTooltip": "Un activ este o singură unitate fizică din zonă: o anumită mașinuță, trambulină sau consolă. Rezultatele se predau pe fiecare activ separat, așa că fiecare își păstrează istoricul și indicațiile proprii. Dezactivați un activ stricat în loc să îl ștergeți: ștergerea îi ia și predările anterioare.",
-    "tariffsTooltipCounters": "Tariful este prețul unei sesiuni. Încasarea se calculează astfel: (indicația curentă − indicația de la predarea anterioară) × preț. Pot exista mai multe tarife dacă activul are moduri diferite de funcționare — de exemplu viteza obișnuită și a doua: fiecare cu contorul și prețul său.",
+    "tariffsTooltipCounters": "Tariful este prețul unei sesiuni. Încasare = (indicația curentă − indicația de la predarea anterioară) × preț. Cel mult două tarife, iar limita vine de la aparat, nu de la program: al doilea tarif înseamnă a doua cheie și al doilea contor pe el.",
     "tariffsTooltipLaunches": "Tariful este prețul unei porniri. „Fără cronometru” — angajatul doar marchează sesiunea printr-o atingere. „Cu cronometru” — pornirea merge în numărătoare inversă, iar activul e considerat ocupat până când e oprit sau eliberat.",
     "tariffsTooltipStays": "Tariful este prețul șederii. „La intrare” — o sumă fixă, oricât ar sta persoana. „După timpul real” — preț pe minut: sistemul numără singur timpul de la pornire la oprire și rotunjește în sus la minutul întreg."
   },
@@ -1220,7 +1225,7 @@
       "moduleDisabledNote": "Modulul „Timp de lucru” nu este activat pentru compania dvs.",
       "deleteShiftConfirm": "Ștergeți această tură? Acțiunea este ireversibilă. Se poate șterge doar ultima tură a angajatului.",
       "deleteMoneyOpConfirm": "Ștergeți această înregistrare? Acțiunea este ireversibilă.",
-      "toPayOutTooltip": "De plătit = câștigat la tarif + prime − avansurile deja acordate, plus reportul din perioada anterioară. Primele doar acordate contabil intră și ele aici, deși nu au fost plătite încă în numerar.",
+      "toPayOutTooltip": "Se calculează pe toată perioada de lucru, nu pe intervalul selectat: câștigat la tarif + prime acordate contabil − avansuri plătite + reportări manuale de sold. Prima dată în numerar nu intră deloc — este deja la angajat. De aceea „Câștigat”, „Prime” și „Avansuri” de alături, care acoperă intervalul ales, nu se potrivesc direct cu această sumă.",
       "bonusAccruedTooltip": "Prima acordată contabil intră în soldul „de plătit” al angajatului, dar nu a fost dată în numerar — casa punctului nu a simțit-o. Prima obișnuită, dimpotrivă, a ieșit deja din casă în numerar."
     },
     "submit": {

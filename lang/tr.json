@@ -768,7 +768,12 @@
     "zoneActiveChip": "Aktif",
     "zoneInactiveChip": "Etkin değil",
     "noOperatorsAttached": "Çalışan yok",
-    "accountingModeTooltip": "Mod, çalışanın verileri her gün nasıl gireceğini belirler. “Sayaçlar” — cihaz okumalarını kaydeder, sistem önceki teslimle farkı alır. “Başlatmalar” — her seansı dokunuşla işaretler. “Konaklamalar” — zamanlayıcıyı başlatıp durdurur, fiyat süreye göre hesaplanır. “Biletler” — sipariş satar, iptal isteğe bağlıdır. “Yalnızca kasa” — varlık ve tarife olmadan tek bir tutar girer. Mod, bölgede ilk sonuç teslimi olana kadar değiştirilebilir; ilkinden sonra kalıcı olarak sabitlenir."
+    "accountingModeTooltip": "Çalışanın bölgenin işini nasıl kaydedeceğine göre seçin: ayrıntılar her modun yanındaki ⓘ içinde. Mod, bölgede ilk sonuç teslimi olana kadar değiştirilebilir; sonrasında kalıcı olarak sabitlenir.",
+    "accountingModeCountersTooltip": "Makine seansları kendi sayar; yalnızca artan mekanik bir sayaçla. Gün boyunca çalışan hiçbir şey işaretlemez: sonuç tesliminde sayaçtaki sayıyı bir kez yazar, sistem de önceki teslimle farkı alıp tarife fiyatıyla çarpar. En fazla iki tarife — bu cihazın sınırıdır: iki tarife, üzerindeki iki anahtar ve iki ayrı sayaç demektir.",
+    "accountingModeLaunchesTooltip": "Çalışan her turu varlığa dokunarak işaretler — çetele defterinin dijital karşılığı. Tur sayısını sistem kendi bilir, elle girmeye gerek yoktur. Tarife düz (dokunuş turu hemen sayar) ya da süreli (dokunuş geri sayımı başlatır, varlık durdurulana kadar meşguldür) olabilir. Bölge başına dört tarifeye kadar.",
+    "accountingModeStaysTooltip": "Gerçek zamanlı takip: çalışan ziyareti girişte açar, çıkışta kapatır; her ziyaretçi için ayrı. Kalış süresinin önemli olduğu yerlere uygundur: fiyat girişe göre sabit ya da dakikalık olabilir. Sahibi tek tek ziyaretleri izlemez, ona vardiya toplamı kalır.",
+    "accountingModeTicketsTooltip": "Biletlerin siparişlerle satışı. Satış ve kullanım zamanda ayrılmıştır: bugün satılan bir bilet yarın, üstelik başka bir çalışan tarafından kullanılabilir. Kullanım tamamen kapatılabilir; o zaman sistem yalnızca satışları bilir. Fiyatlar tarifelerle değil, varlıkların kendisinde belirlenir: her birinin kendi bilet seçenekleri vardır.",
+    "accountingModeCashOnlyTooltip": "Ne varlık ne tarife. Çalışan vardiya başına tek bir tutar girer: nakit ve nakit olmayan. Hesaplanan gelir yoktur, dolayısıyla Fark’ı karşılaştıracak bir şey de yoktur: sistem yalnızca ne kadar teslim edildiğini kaydeder."
   },
   "zoneDetail": {
     "notFound": "Bölge bulunamadı.",
@@ -850,7 +855,7 @@
     "launchesPricingModeInstant": "Zamanlayıcısız",
     "launchesPricingModeTimed": "Zamanlayıcılı",
     "assetsTooltip": "Varlık, bölge içindeki tek bir fiziksel birimdir: belirli bir araba, trambolin ya da konsol. Sonuçlar her varlık için ayrı teslim edilir, bu yüzden her birinin kendi geçmişi ve kendi okumaları olur. Bozuk varlığı silmek yerine devre dışı bırakın: silmek geçmiş teslimlerini de götürür.",
-    "tariffsTooltipCounters": "Tarife, bir seansın fiyatıdır. Gelir şöyle hesaplanır: (şu anki okuma − önceki teslimdeki okuma) × fiyat. Varlığın farklı çalışma modları varsa tarife birden fazla olabilir — örneğin normal ve ikinci hız: her birinin kendi sayacı ve kendi fiyatı olur.",
+    "tariffsTooltipCounters": "Tarife, bir seansın fiyatıdır. Gelir = (şu anki okuma − önceki teslimdeki okuma) × fiyat. En fazla iki tarife ve bu sınır programın değil, cihazın: ikinci tarife, üzerindeki ikinci anahtar ve ikinci sayaç demektir.",
     "tariffsTooltipLaunches": "Tarife, bir başlatmanın fiyatıdır. “Zamanlayıcısız” — çalışan seansı dokunarak işaretler. “Zamanlayıcılı” — başlatma geri sayımla ilerler ve varlık durdurulana ya da serbest bırakılana kadar meşgul sayılır.",
     "tariffsTooltipStays": "Tarife, kalış fiyatıdır. “Girişe göre” — kişi ne kadar kalırsa kalsın sabit bir tutar. “Gerçekleşene göre” — dakika fiyatı: sistem süreyi başlangıçtan durdurmaya kadar kendi sayar ve tam dakikaya yukarı yuvarlar."
   },
@@ -1220,7 +1225,7 @@
       "moduleDisabledNote": "«Çalışma süresi» modülü şirketiniz için etkinleştirilmedi",
       "deleteShiftConfirm": "Bu vardiya silinsin mi? Bu işlem geri alınamaz. Yalnızca çalışanın son vardiyası silinebilir.",
       "deleteMoneyOpConfirm": "Bu kayıt silinsin mi? Bu işlem geri alınamaz.",
-      "toPayOutTooltip": "Ödenecek = saatlik ücretle kazanılan + primler − daha önce verilen avanslar, artı önceki dönemden devir. Tahakkuk eden primler de buraya dahildir, henüz nakit ödenmemiş olsalar bile.",
+      "toPayOutTooltip": "Seçilen dönem için değil, tüm çalışma süresi için hesaplanır: saatlik ücretle kazanılan + tahakkuk eden primler − verilen avanslar + elle yapılan bakiye devirleri. Nakit ödenen prim buraya hiç girmez — o zaten elde. Bu yüzden yanındaki, dönem için gösterilen “Kazanılan”, “Primler” ve “Avanslar” bu tutarla doğrudan tutmaz.",
       "bonusAccruedTooltip": "Tahakkuk eden prim, çalışanın “ödenecek” bakiyesine yazılır ama nakit verilmemiştir — noktanın kasası bunu görmez. Normal prim ise tersine, kasadan nakit olarak çoktan çıkmıştır."
     },
     "submit": {

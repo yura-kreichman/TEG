@@ -57,6 +57,16 @@ const ACCOUNTING_MODE_HINT: Record<ZoneAccountingMode, (t: Dictionary) => string
   stays: (t) => t.zonesList.accountingModeStaysHint,
   tickets: (t) => t.zonesList.accountingModeTicketsHint,
 };
+// Подробное описание каждого режима (запрос пользователя 2026-08-14: "сделал
+// общий tooltip, но я бы сделал отдельно на каждый") — подпись в четыре слова
+// остаётся в строке, весь разбор прячется в ⓘ рядом с ней.
+const ACCOUNTING_MODE_TOOLTIP: Record<ZoneAccountingMode, (t: Dictionary) => string> = {
+  counters: (t) => t.zonesList.accountingModeCountersTooltip,
+  launches: (t) => t.zonesList.accountingModeLaunchesTooltip,
+  cash_only: (t) => t.zonesList.accountingModeCashOnlyTooltip,
+  stays: (t) => t.zonesList.accountingModeStaysTooltip,
+  tickets: (t) => t.zonesList.accountingModeTicketsTooltip,
+};
 // Иконки режимов учёта (запрос пользователя 2026-07-18) — "Прибывания" тот
 // же Timer, что и одноимённый пункт нижнего бара Сотрудника (единообразие).
 const ACCOUNTING_MODE_ICON: Record<ZoneAccountingMode, LucideIcon> = {
@@ -1514,19 +1524,27 @@ export default function ZoneDetailPage() {
               {ZONE_ACCOUNTING_MODES.map((mode) => {
                 const ModeIcon = ACCOUNTING_MODE_ICON[mode];
                 return (
-                  <button
+                  // ⓘ вынесена ИЗ кнопки выбора: у тултипа свой <button>, а
+                  // кнопка внутри кнопки — невалидная вложенность, и тап по
+                  // подсказке менял бы режим зоны заодно.
+                  <div
                     key={mode}
-                    type="button"
-                    onClick={() => changeAccountingMode(mode)}
-                    className="flex w-full items-center gap-3 border-t border-border px-3 py-2.5 text-left first:border-t-0"
+                    className="flex w-full items-center gap-3 border-t border-border px-3 py-2.5 first:border-t-0"
                   >
-                    <ModeIcon className="size-5 shrink-0 text-muted-foreground" />
-                    <span className="grow">
-                      <span className="block text-body-airbnb">{ACCOUNTING_MODE_LABEL[mode](t)}</span>
-                      <span className="block text-caption-airbnb">{ACCOUNTING_MODE_HINT[mode](t)}</span>
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => changeAccountingMode(mode)}
+                      className="flex grow items-center gap-3 text-left"
+                    >
+                      <ModeIcon className="size-5 shrink-0 text-muted-foreground" />
+                      <span className="grow">
+                        <span className="block text-body-airbnb">{ACCOUNTING_MODE_LABEL[mode](t)}</span>
+                        <span className="block text-caption-airbnb">{ACCOUNTING_MODE_HINT[mode](t)}</span>
+                      </span>
+                    </button>
                     {zone.accountingMode === mode && <Check className="size-4 shrink-0 text-primary" />}
-                  </button>
+                    <InfoTooltip text={ACCOUNTING_MODE_TOOLTIP[mode](t)} />
+                  </div>
                 );
               })}
             </div>

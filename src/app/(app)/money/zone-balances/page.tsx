@@ -1045,8 +1045,18 @@ export default function ZoneBalancesPage() {
                             )}
                           </div>
                         ) : (
-                          act.items.map((c) => (
-                        <div key={c.id} className="border-t border-border py-1.5 first:border-t-0">
+                          act.items.map((c) => {
+                        // Аванс/премия, взятые сотрудником: вся строка — ссылка
+                        // в его карточку (запрос пользователя 2026-08-14), как
+                        // шапка свёрнутого акта выше целиком раскрывает акт.
+                        // Тот же <button className="flex w-full ..."> и та же
+                        // голая иконка size-4 без обёртки: обёрнутая в кнопку
+                        // size-8 стрелка вставала на 8px левее соседней и
+                        // ломала колонку.
+                        const takenByOperator =
+                          (c.pool === "advance_taken" || c.pool === "bonus_taken") && !!c.operatorId;
+                        const rowContent = (
+                          <>
                         <div className="flex items-center justify-between gap-2">
                           {/* Время — всегда первым (запрос пользователя
                               2026-07-25: "хочу чтобы время было в ряд") —
@@ -1095,18 +1105,7 @@ export default function ZoneBalancesPage() {
                                 правка и живёт (запрос пользователя
                                 2026-08-14), тот же приём, что в реестре
                                 "Авансы и премии". */}
-                            {(c.pool === "advance_taken" || c.pool === "bonus_taken") && c.operatorId && (
-                              <PressableScale>
-                                <button
-                                  type="button"
-                                  aria-label={c.operatorName ?? t.operators.title}
-                                  onClick={() => router.push(`/operators/${c.operatorId}`)}
-                                  className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground"
-                                >
-                                  <ChevronRight className="size-4" />
-                                </button>
-                              </PressableScale>
-                            )}
+                            {takenByOperator && <ChevronRight className="size-4 shrink-0 text-muted-foreground" />}
                             {c.pool !== "advance_taken" && c.pool !== "bonus_taken" && (
                               <IconActionButton
                                 icon={Pencil}
@@ -1131,8 +1130,33 @@ export default function ZoneBalancesPage() {
                         {c.comment && (
                           <p className="mt-0.5 truncate pl-4 text-[0.6875rem] text-muted-foreground/70">{c.comment}</p>
                         )}
-                        </div>
-                          ))
+                          </>
+                        );
+                        return (
+                          <div key={c.id} className="border-t border-border py-1.5 first:border-t-0">
+                            {/* role="button" на div, а не сам <button>: внутри
+                                строки есть <p> с комментарием и суммой,
+                                взятой вперёд, а <p> внутри <button> —
+                                невалидная вложенность. Тот же приём, что в
+                                реестре "Авансы и премии". */}
+                            {takenByOperator ? (
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                className="cursor-pointer"
+                                onClick={() => router.push(`/operators/${c.operatorId}`)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") router.push(`/operators/${c.operatorId}`);
+                                }}
+                              >
+                                {rowContent}
+                              </div>
+                            ) : (
+                              rowContent
+                            )}
+                          </div>
+                        );
+                          })
                       )}
                       {/* Печать слипа задним числом — только у САМОЙ последней
                           инкассации (решение пользователя 2026-08-12). Дальше

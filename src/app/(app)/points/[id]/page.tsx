@@ -47,6 +47,16 @@ const ACCOUNTING_MODE_LABEL: Record<ZoneAccountingMode, (t: Dictionary) => strin
   stays: (t) => t.zonesList.accountingModeStays,
   tickets: (t) => t.zonesList.accountingModeTickets,
 };
+// Подробный разбор режима — тот же текст, что в шторке смены режима на
+// карточке зоны; карта объявлена там и переиспользуется, чтобы описания не
+// разъехались между двумя экранами.
+const ACCOUNTING_MODE_TOOLTIP: Record<ZoneAccountingMode, (t: Dictionary) => string> = {
+  counters: (t) => t.zonesList.accountingModeCountersTooltip,
+  launches: (t) => t.zonesList.accountingModeLaunchesTooltip,
+  cash_only: (t) => t.zonesList.accountingModeCashOnlyTooltip,
+  stays: (t) => t.zonesList.accountingModeStaysTooltip,
+  tickets: (t) => t.zonesList.accountingModeTicketsTooltip,
+};
 const ACCOUNTING_MODE_HINT: Record<ZoneAccountingMode, (t: Dictionary) => string> = {
   counters: (t) => t.zonesList.accountingModeCountersHint,
   launches: (t) => t.zonesList.accountingModeLaunchesHint,
@@ -280,19 +290,25 @@ export default function PointDetailPage() {
               {ZONE_ACCOUNTING_MODES.map((mode) => {
                 const ModeIcon = ACCOUNTING_MODE_ICON[mode];
                 return (
-                  <button
+                  // ⓘ снаружи кнопки выбора — см. тот же ряд в zones/[id].
+                  <div
                     key={mode}
-                    type="button"
-                    onClick={() => setAccountingMode(mode)}
-                    className="flex w-full items-center gap-3 border-t border-border px-3 py-2.5 text-left first:border-t-0"
+                    className="flex w-full items-center gap-3 border-t border-border px-3 py-2.5 first:border-t-0"
                   >
-                    <ModeIcon className="size-5 shrink-0 text-muted-foreground" />
-                    <span className="grow">
-                      <span className="block text-body-airbnb">{ACCOUNTING_MODE_LABEL[mode](t)}</span>
-                      <span className="block text-caption-airbnb">{ACCOUNTING_MODE_HINT[mode](t)}</span>
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAccountingMode(mode)}
+                      className="flex grow items-center gap-3 text-left"
+                    >
+                      <ModeIcon className="size-5 shrink-0 text-muted-foreground" />
+                      <span className="grow">
+                        <span className="block text-body-airbnb">{ACCOUNTING_MODE_LABEL[mode](t)}</span>
+                        <span className="block text-caption-airbnb">{ACCOUNTING_MODE_HINT[mode](t)}</span>
+                      </span>
+                    </button>
                     {accountingMode === mode && <Check className="size-4 shrink-0 text-primary" />}
-                  </button>
+                    <InfoTooltip text={ACCOUNTING_MODE_TOOLTIP[mode](t)} />
+                  </div>
                 );
               })}
             </div>

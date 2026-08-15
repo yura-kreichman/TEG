@@ -768,7 +768,12 @@
     "zoneActiveChip": "Aktiv",
     "zoneInactiveChip": "Qeyri-aktiv",
     "noOperatorsAttached": "Əməkdaş yoxdur",
-    "accountingModeTooltip": "Rejim işçinin hər gün məlumatı necə daxil edəcəyini müəyyən edir. «Sayğaclar» — cihaz göstəricilərini yazır, sistem keçən təhvillə fərqi götürür. «Buraxılışlar» — hər seansı toxunuşla qeyd edir. «Gəlişlər» — taymeri yandırıb söndürür, qiymət vaxta görə hesablanır. «Biletlər» — sifariş satır, ödəmə istəyə görə. «Yalnız kassa» — aktiv və tarifsiz bir məbləğ daxil edir. Rejimi zona üzrə heç bir yekun təhvili olmayana qədər dəyişmək olar; birincidən sonra o həmişəlik sabitlənir."
+    "accountingModeTooltip": "İşçinin zona işini necə qeyd edəcəyinə görə seçin: təfərrüatlar hər rejimin yanındakı ⓘ-dədir. Rejimi zona üzrə heç bir təhvil olmayana qədər dəyişmək olar; birincidən sonra o həmişəlik sabitlənir.",
+    "accountingModeCountersTooltip": "Attraksion seansları özü sayır — yalnız artan mexaniki sayğacla. Gün ərzində işçi heç nə qeyd etmir: yekun təhvilində o, sayğacdakı rəqəmi bir dəfə köçürür, sistem isə keçən təhvillə fərqi götürüb tarif qiymətinə vurur. Tarif ikidən çox olmur — bu cihazın həddidir: iki tarif onun üzərindəki iki açar və iki ayrı sayğac deməkdir.",
+    "accountingModeLaunchesTooltip": "İşçi hər gedişi aktivə toxunmaqla qeyd edir — plyuslu dəftərin rəqəmsal əvəzi. Gedişlərin sayını sistem özü bilir, əllə daxil etmək lazım deyil. Tarif sadə (toxunuş dərhal gedişi sayır) və ya müddətli (toxunuş geri sayımı başladır, aktiv dayanana qədər məşğuldur) olur. Zonaya dörd tarifə qədər.",
+    "accountingModeStaysTooltip": "Real vaxt uçotu: işçi girişdə ziyarəti açır və çıxışda bağlayır, hər ziyarətçi üzrə ayrıca. İnsanın nə qədər qalması vacib olan yerlərə uyğundur: qiymət giriş üçün sabit və ya dəqiqəlik olur. Sahib ayrı-ayrı ziyarətlərə baxmır — ona növbənin yekunu qalır.",
+    "accountingModeTicketsTooltip": "Biletlərin sifarişlərlə satışı. Satış və istifadə vaxta görə ayrılıb: bileti bu gün satmaq, sabah isə — başqa işçi tərəfindən ödəmək olar. Ödəməni tamamilə söndürmək olar, onda sistem yalnız satışları bilir. Qiymətlər tariflərlə deyil, aktivlərin özündə verilir: hər birinin öz bilet variantları var.",
+    "accountingModeCashOnlyTooltip": "Nə aktiv, nə tarif. İşçi növbəyə bir məbləğ daxil edir — nağd və nağdsız. Hesabi gəlir yoxdur, ona görə Fərqi müqayisə etməyə də bir şey yoxdur: sistem sadəcə nə qədər təhvil verildiyini qeyd edir."
   },
   "zoneDetail": {
     "notFound": "Zona tapılmadı.",
@@ -850,7 +855,7 @@
     "launchesPricingModeInstant": "Taymersiz",
     "launchesPricingModeTimed": "Taymerlə",
     "assetsTooltip": "Aktiv — zona daxilindəki bir fiziki vahiddir: konkret maşın, batut, konsol. Yekunlar hər aktiv üzrə ayrıca təhvil verilir, ona görə hər birinin öz tarixçəsi və öz göstəriciləri var. Sınmış aktivi silmək əvəzinə deaktiv edin: silmə onunla birlikdə keçmiş təhvilləri də aparır.",
-    "tariffsTooltipCounters": "Tarif — bir seansın qiymətidir. Gəlir belə hesablanır: (indiki göstərici − keçən təhvildəki göstərici) × qiymət. Aktivin müxtəlif iş rejimləri varsa, tarif bir neçə ola bilər — məsələn, adi və ikinci sürət: hər birinin öz sayğacı və öz qiyməti var.",
+    "tariffsTooltipCounters": "Tarif — bir seansın qiymətidir. Gəlir = (indiki göstərici − keçən təhvildəki göstərici) × qiymət. Tarif ikidən çox olmur və bu proqramın yox, cihazın həddidir: ikinci tarif onun üzərindəki ikinci açar və ikinci sayğac deməkdir.",
     "tariffsTooltipLaunches": "Tarif — bir buraxılışın qiymətidir. «Taymersiz» — işçi seansı sadəcə toxunuşla qeyd edir. «Taymerlə» — buraxılış geri sayımla gedir və aktiv dayandırılana və ya azad edilənə qədər məşğul sayılır.",
     "tariffsTooltipStays": "Tarif — qalma qiymətidir. «Giriş üçün» — insan nə qədər qalmasından asılı olmayaraq sabit məbləğ. «Faktiki üzrə» — bir dəqiqənin qiyməti: sistem başlanğıcdan dayanmaya qədər vaxtı özü sayır və tam dəqiqəyə qədər yuxarı yuvarlaqlaşdırır."
   },
@@ -1220,7 +1225,7 @@
       "moduleDisabledNote": "«İş vaxtı» modulu şirkətiniz üçün qoşulmayıb",
       "deleteShiftConfirm": "Bu növbə silinsin? Əməliyyat geri qaytarıla bilməz. Yalnız işçinin son növbəsini silmək mümkündür.",
       "deleteMoneyOpConfirm": "Bu yazı silinsin? Əməliyyat geri qaytarıla bilməz.",
-      "toPayOutTooltip": "Verilməyə = dərəcə üzrə qazanılan + mükafatlar − artıq verilmiş avanslar, üstəgəl keçən dövrdən köçürmə. Hesablanmış mükafatlar da bura daxildir, hərçənd hələ nağd verilməyib.",
+      "toPayOutTooltip": "Seçilmiş dövr üzrə deyil, bütün iş müddəti üzrə hesablanır: dərəcə üzrə qazanılan + hesablanmış mükafatlar − verilmiş avanslar + balansın əl ilə köçürmələri. Nağd verilmiş mükafat bura ümumiyyətlə daxil deyil — o artıq əldədir. Ona görə yanındakı, dövr üzrə göstərilən «Qazanılan», «Mükafatlar» və «Avanslar» bu məbləğlə birbaşa uyğun gəlmir.",
       "bonusAccruedTooltip": "Hesablanmış mükafat işçinin «Verilməyə» balansına yazılıb, lakin nağd verilməyib — nöqtə kassası onu görmədi. Adi mükafat isə əksinə, artıq kassadan nağd çıxıb."
     },
     "submit": {
