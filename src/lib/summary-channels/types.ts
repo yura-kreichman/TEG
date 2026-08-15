@@ -25,7 +25,7 @@ export interface ZoneAssetTallyLine {
 }
 
 export interface ZoneSummaryData {
-  // Сдачу правил Владелец — ♛ рядом с именем сотрудника (требование
+  // Сдачу правил Владелец — 🜲 рядом с именем сотрудника (требование
   // владельца 2026-08-16: единый маркер правки во всех сообщениях Telegram).
   editedByOwner?: boolean;
   pointName: string;
@@ -135,7 +135,7 @@ export interface DailyCashSummaryData {
 }
 
 export interface ShiftCloseSummaryData {
-  // Смену или её аванс/премию правил Владелец — ♛ рядом с именем (см.
+  // Смену или её аванс/премию правил Владелец — 🜲 рядом с именем (см.
   // ZoneSummaryData.editedByOwner).
   editedByOwner?: boolean;
   operatorName: string;
@@ -174,7 +174,7 @@ export interface ShiftCloseSummaryData {
  */
 export interface CollectionAlertData {
   occurredAt: Date;
-  // null — инкассацию проводил сам Владелец из кабинета; форматтер ставит ♛
+  // null — инкассацию проводил сам Владелец из кабинета; форматтер ставит 🜲
   // вместо имени (тот же приём, что в остальных местах).
   operatorName: string | null;
   operatorColorTag: string | null;
@@ -183,7 +183,7 @@ export interface CollectionAlertData {
   zones: { name: string; emoji: string | null; amount: number }[];
   goodsAmount: number;
   abonementAmount: number;
-  // Инкассацию правил Владелец — ♛ рядом с именем сотрудника.
+  // Инкассацию правил Владелец — 🜲 рядом с именем сотрудника.
   editedByOwner?: boolean;
 }
 
@@ -227,7 +227,7 @@ export interface ExpenseAlertData {
   zoneEmoji: string | null;
   comment: string | null;
   // Расход правил Владелец — тогда вместо цветовой метки сотрудника рядом с
-  // его именем встаёт ♛ (запрос владельца 2026-08-16), тот же единый маркер
+  // его именем встаёт 🜲 (запрос владельца 2026-08-16), тот же единый маркер
   // "это сделал Владелец", что иконка-корона в кабинете (PerformedByTag).
   // Имя вносившего при этом остаётся: кто потратил деньги — не меняется от
   // того, что запись потом поправили.

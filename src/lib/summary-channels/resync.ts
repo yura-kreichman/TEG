@@ -51,7 +51,7 @@ export async function rememberShiftSummaryMessage(
  * Push с уже поправленными данными (требование владельца 2026-08-16: "если
  * происходят обновления в ТГ, то Push должны отправляться свежие").
  * Сообщение в чате правится на месте, а Push отредактировать нельзя — вместо
- * этого уходит новый, с ♛ в заголовке: владелец должен понимать, что это не
+ * этого уходит новый, с 🜲 в заголовке: владелец должен понимать, что это не
  * второе событие, а исправление прежнего.
  *
  * Текст берётся тот же, что ушёл в Telegram, только без HTML-разметки —
@@ -73,7 +73,7 @@ export async function sendUpdatedPush(
       .map((line) => line.trim())
       .filter(Boolean)
       .join("\n");
-    await sendPushToTenant(tenantId, { title: `${title} ♛`, body });
+    await sendPushToTenant(tenantId, { title: `${title} 🜲`, body });
   } catch (err) {
     console.error("updated push failed", { tenantId, kind, err });
   }
@@ -233,7 +233,7 @@ export async function resyncShiftCloseMessage(shiftId: string): Promise<void> {
     const locale: Locale = tenant?.locale && isLocale(tenant.locale) ? tenant.locale : "ru";
     const text = formatShiftCloseSummaryTelegram(
       {
-        // Сюда приходят только правки владельца — отсюда ♛ рядом с именем.
+        // Сюда приходят только правки владельца — отсюда 🜲 рядом с именем.
         editedByOwner: true,
         operatorName: shift.operator.name,
         operatorColorTag: shift.operator.colorTag,
