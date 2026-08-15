@@ -175,6 +175,7 @@ export async function POST(request: Request) {
       zoneName: zone.name,
       zoneEmoji: zone.telegramEmoji,
       comment,
+      editedByOwner: false,
     })
       .then(async (results) => {
         // id сообщения — чтобы правка расхода владельцем переписала его на

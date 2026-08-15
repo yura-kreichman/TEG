@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Pencil, Plus, Settings2, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown, MessageSquareMore, Pencil, Plus, Settings2, Trash2, Users, X } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
@@ -18,6 +18,7 @@ import { IconActionButton } from "@/components/kebab-menu";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { useI18n } from "@/components/i18n-provider";
+import { InfoTooltip } from "@/components/info-tooltip";
 import { Money } from "@/components/money";
 import { formatTime } from "@/lib/datetime-format";
 import { parseMoneyInput } from "@/lib/format";
@@ -33,6 +34,8 @@ interface ExpenseEntry {
   categoryName: string | null;
   comment: string | null;
   amount: number;
+  operatorName: string | null;
+  editedByOwner: boolean;
 }
 
 interface ExpenseCategory {
@@ -329,22 +332,40 @@ export default function ExpensesRegisterPage() {
                       {formatGroupDate(group.date)}
                     </p>
                     <div className="flex flex-col">
+                      {/* Первой строкой — категория (это главное, что владелец
+                          ищет глазами), второй — время, зона, комментарий под
+                          ⓘ-иконкой, кто внёс и корона правки. Запрос владельца
+                          2026-08-16. */}
                       {group.items.map((e) => (
                         <div
                           key={e.id}
                           className="flex items-center justify-between gap-2 border-t border-border py-1.5 first:border-t-0"
                         >
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-xs text-muted-foreground">
-                              {formatTime(e.occurredAt)} · {e.zoneName}
-                              {showPointName ? ` (${e.pointName})` : ""}
-                              {e.categoryName ? ` · ${e.categoryName}` : ""}
+                            <span className="block truncate text-body-airbnb font-semibold">
+                              {e.categoryName ?? t.money.editExpenseTitle}
                             </span>
-                            {e.comment && (
-                              <span className="block truncate text-[0.6875rem] text-muted-foreground/70">
-                                {e.comment}
+                            <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                              <span className="truncate">
+                                {formatTime(e.occurredAt)} · {e.zoneName}
+                                {showPointName ? ` (${e.pointName})` : ""}
                               </span>
-                            )}
+                              {e.comment && (
+                                <InfoTooltip
+                                  icon={MessageSquareMore}
+                                  text={e.comment}
+                                  ariaLabel={t.operatorApp.submit.commentPlaceholder}
+                                  className="size-4"
+                                />
+                              )}
+                              {e.operatorName && (
+                                <span className="inline-flex shrink-0 items-center gap-1">
+                                  <Users className="size-3.5 shrink-0" />
+                                  <span className="truncate">{e.operatorName}</span>
+                                </span>
+                              )}
+                              {e.editedByOwner && <Crown className="size-3.5 shrink-0 text-success" />}
+                            </span>
                           </span>
                           <span className="shrink-0 text-xs font-bold tabular-nums"><Money value={e.amount} /></span>
                           <IconActionButton icon={Pencil} onClick={() => openEdit(e)} label={t.money.editExpenseAction} />
@@ -363,70 +384,87 @@ export default function ExpensesRegisterPage() {
         {editing && (
           <div className="flex flex-col gap-4 pt-2">
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.money.editExpenseTitle}</h2>
-            <p className="-mt-2 text-caption-airbnb text-muted-foreground">{formatTime(editing.occurredAt)}</p>
+            <p className="-mt-2 text-caption-airbnb text-muted-foreground">
+              {formatTime(editing.occurredAt)}
+              {editing.operatorName ? ` · ${editing.operatorName}` : ""}
+            </p>
 
+            {/* Раскладка — как у правки инкассации и аванса/премии: подпись над
+                контролом, сумма в одну строку с кнопкой сохранения, удаление
+                за разделителем внизу. */}
             <div className="flex flex-col gap-1">
               <Label htmlFor="editExpenseAmount">{t.money.amountLabel}</Label>
-              <MoneyInput
-                id="editExpenseAmount"
-                autoFocus
-                scale="lg"
-                className="h-14 text-lg"
-                value={editAmount}
-                onChange={(e) => setEditAmount(e.target.value)}
-              />
+              <div className="flex items-center gap-2">
+                <MoneyInput
+                  id="editExpenseAmount"
+                  autoFocus
+                  scale="lg"
+                  className="h-14 flex-1 text-lg"
+                  value={editAmount}
+                  onChange={(e) => setEditAmount(e.target.value)}
+                />
+                <PressableScale>
+                  <SaveButton className="h-14" disabled={editSubmitting} onClick={submitEdit} saved={editSaved} />
+                </PressableScale>
+              </div>
             </div>
 
             {zones.length > 0 && (
-              <Select
-                value={editZoneId || null}
-                onValueChange={(v) => setEditZoneId(v ?? "")}
-                items={zones.map((z) => ({
-                  value: z.id,
-                  label: showPointName ? `${z.name} · ${z.pointName}` : z.name,
-                }))}
-              >
-                <SelectTrigger className="h-10 text-sm">
-                  <SelectValue placeholder={t.operatorApp.selectZone} />
-                </SelectTrigger>
-                <SelectContent>
-                  {zones.map((z) => (
-                    <SelectItem key={z.id} value={z.id}>
-                      {showPointName ? `${z.name} · ${z.pointName}` : z.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-col gap-1">
+                <Label>{t.operatorApp.selectZone}</Label>
+                <Select
+                  value={editZoneId || null}
+                  onValueChange={(v) => setEditZoneId(v ?? "")}
+                  items={zones.map((z) => ({
+                    value: z.id,
+                    label: showPointName ? `${z.name} · ${z.pointName}` : z.name,
+                  }))}
+                >
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder={t.operatorApp.selectZone} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {zones.map((z) => (
+                      <SelectItem key={z.id} value={z.id}>
+                        {showPointName ? `${z.name} · ${z.pointName}` : z.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
 
             {categories.length > 0 && (
-              <Select
-                value={editCategoryId || null}
-                onValueChange={(v) => setEditCategoryId(v ?? "")}
-                items={categories.map((c) => ({ value: c.id, label: c.name }))}
-              >
-                <SelectTrigger className="h-10 text-sm">
-                  <SelectValue placeholder={t.operatorApp.submit.categoryPlaceholder} />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-col gap-1">
+                <Label>{t.money.expenseCategoriesTitle}</Label>
+                <Select
+                  value={editCategoryId || null}
+                  onValueChange={(v) => setEditCategoryId(v ?? "")}
+                  items={categories.map((c) => ({ value: c.id, label: c.name }))}
+                >
+                  <SelectTrigger className="h-11">
+                    <SelectValue placeholder={t.operatorApp.submit.categoryPlaceholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
 
-            <Input
-              placeholder={t.operatorApp.submit.commentPlaceholder}
-              value={editComment}
-              onChange={(e) => setEditComment(e.target.value)}
-            />
-
-            <PressableScale className="w-full">
-              <SaveButton className="h-12 w-full" disabled={editSubmitting} onClick={submitEdit} saved={editSaved} />
-            </PressableScale>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="editExpenseComment">{t.operatorApp.submit.commentPlaceholder}</Label>
+              <Input
+                id="editExpenseComment"
+                className="h-11"
+                value={editComment}
+                onChange={(e) => setEditComment(e.target.value)}
+              />
+            </div>
 
             {editError && <p className="text-sm text-destructive">{editError}</p>}
 
@@ -485,20 +523,20 @@ export default function ExpensesRegisterPage() {
                   ) : (
                     <>
                       <span className="min-w-0 flex-1 truncate text-body-airbnb">{category.name}</span>
-                      <button
-                        type="button"
+                      {/* Те же кнопки-иконки, что во всех остальных списках
+                          (запрос владельца 2026-08-16): голые Pencil/Trash2
+                          здесь остались с более ранней версии проекта. */}
+                      <IconActionButton
+                        icon={Pencil}
                         onClick={() => startRenameCategory(category)}
-                        className="flex size-8 shrink-0 items-center justify-center text-muted-foreground"
-                      >
-                        <Pencil className="size-4" />
-                      </button>
-                      <button
-                        type="button"
+                        label={t.common.edit}
+                      />
+                      <IconActionButton
+                        icon={Trash2}
                         onClick={() => deleteCategory(category.id)}
-                        className="flex size-8 shrink-0 items-center justify-center text-destructive"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
+                        label={t.common.delete}
+                        destructive
+                      />
                     </>
                   )}
                 </div>

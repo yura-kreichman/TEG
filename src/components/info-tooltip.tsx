@@ -33,11 +33,19 @@ export function InfoTooltip({
   text,
   className,
   ariaLabel,
+  icon: Icon = Info,
 }: {
   text: React.ReactNode;
   className?: string;
   /** Для скринридера, если подписи рядом недостаточно. */
   ariaLabel?: string;
+  /**
+   * Иконка-триггер. По умолчанию ⓘ — «подробнее об этом контроле». Другая
+   * иконка нужна там, где тултип раскрывает не пояснение, а сам спрятанный
+   * контент: комментарий сотрудника к расходу открывается message-square-more
+   * (запрос владельца 2026-08-16), и ⓘ там читалась бы как справка.
+   */
+  icon?: React.ComponentType<{ className?: string }>;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -124,7 +132,7 @@ export function InfoTooltip({
           className
         )}
       >
-        <Info className="size-3.5" />
+        <Icon className="size-3.5" />
       </button>
       {typeof document !== "undefined" &&
         createPortal(

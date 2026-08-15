@@ -59,6 +59,9 @@ async function reEditExpenseAlert(operationId: string, tenantId: string): Promis
       zoneName: op.zone?.name ?? "",
       zoneEmoji: op.zone?.telegramEmoji ?? null,
       comment: op.comment,
+      // Сюда попадаем только из PATCH владельца — сообщение переписывается
+      // именно потому, что он расход поправил.
+      editedByOwner: true,
     },
     getDictionary(locale).summaryText,
     locale,

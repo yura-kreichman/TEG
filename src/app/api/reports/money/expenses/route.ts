@@ -42,9 +42,27 @@ export async function GET(request: Request) {
       type: "expense",
       occurredAt: { gte: monthStart, lt: monthEnd },
     },
-    include: { expenseCategory: true, zone: { include: { point: true } } },
+    include: {
+      expenseCategory: true,
+      zone: { include: { point: true } },
+      performedByOperator: { select: { name: true } },
+    },
     orderBy: { occurredAt: "desc" },
   });
+
+  // "Правил Владелец" — по журналу правок, а не по полю на самой операции:
+  // CorrectionLog и так пишется на каждую правку/удаление (тот же источник,
+  // что у инкассаций), отдельный флаг был бы вторым местом правды. Один
+  // запрос на весь месяц, не по строке на расход.
+  const correctedIds = new Set(
+    (
+      await prisma.correctionLog.findMany({
+        where: { entityType: "MoneyOperation", entityId: { in: operations.map((op) => op.id) } },
+        select: { entityId: true },
+        distinct: ["entityId"],
+      })
+    ).map((c) => c.entityId)
+  );
 
   const expenses = operations.map((op) => ({
     id: op.id,
@@ -56,6 +74,8 @@ export async function GET(request: Request) {
     categoryName: op.expenseCategory?.name ?? null,
     comment: op.comment,
     amount: Math.abs(Number(op.amount)),
+    operatorName: op.performedByOperator?.name ?? null,
+    editedByOwner: correctedIds.has(op.id),
   }));
 
   // Название точки в строке имеет смысл, только если точек больше одной

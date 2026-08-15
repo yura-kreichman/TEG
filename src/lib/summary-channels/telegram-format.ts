@@ -747,7 +747,7 @@ export function formatExpenseAlertLines(
   locale: Locale,
   currency: string | null | undefined
 ): string[] {
-  const mark = colorTagToEmoji(data.operatorColorTag);
+  const mark = data.editedByOwner ? "👑" : colorTagToEmoji(data.operatorColorTag);
   const lines = [`${mark ? `${mark} ` : ""}${data.operatorName}: ${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}`];
   lines.push(expenseContext(data));
   // В Push цитаты и курсива нет — комментарий идёт обычной строкой, кавычки
@@ -763,7 +763,7 @@ export function formatExpenseAlertTelegram(
   timezone: string,
   currency: string | null | undefined
 ): string {
-  const mark = colorTagToEmoji(data.operatorColorTag);
+  const mark = data.editedByOwner ? "👑" : colorTagToEmoji(data.operatorColorTag);
   const name = escapeTelegramHtml(data.operatorName);
   const lines = [
     `🛒 <b>${st.expenseAlertTitle}</b> — ${formatSummaryDate(data.occurredAt, "/", timezone, false)}, ${formatLocalTime(data.occurredAt, timezone)}`,
