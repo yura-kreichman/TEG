@@ -1094,8 +1094,6 @@
     "salesSectionTitle": "Sprzedaż",
     "daySummaryHint": "Wg rozliczeń stref i abonamentów",
     "pointCashWithAbonementLabel": "Kasa punktu z abonamentami:",
-    "expectedInCashLabel": "Oczekiwano w pieniądzach:",
-    "expectedInCashTooltip": "Przychód obliczony minus to, co opłacono z salda. Z tą kwotą porównywana jest rzeczywista kasa — różnica między nimi to Różnica poniżej.",
     "cashLeftLabel": "Zostało gotówką:",
     "cashLeftTooltip": "Gotówka za dzień minus wydatki i minus premie oraz zaliczki, które pracownik wziął z kasy. Płatności bezgotówkowe i z salda nie są wliczone — tych pieniędzy nie ma w kasie. Inkasacje też nie są uwzględnione: to wynik dnia, a nie bieżące saldo punktu.",
     "abonementSalesTitle": "Abonamenty",
@@ -1167,7 +1165,7 @@
     "deleteConfirmTitle": "Usunąć rozliczenie?",
     "deleteConfirmBody": "Odczyty, sumy i wpisy w dzienniku finansów dotyczące tego rozliczenia zostaną usunięte. Czynność trafi do dziennika zmian. Nie można jej cofnąć.",
     "deleteError": "Nie udało się usunąć rozliczenia",
-    "differenceTooltip": "Różnica = rzeczywista kasa − (przychód obliczony − opłacone z salda). Płatności z salda są odejmowane: te pieniądze wpłynęły wcześniej, przy doładowaniu salda, i nie mogły trafić do kasy tego rozliczenia. Zero oznacza, że się zgadza.",
+    "differenceTooltip": "Różnica = rzeczywista kasa − przychód obliczony. To, co opłacono z salda, nie wchodzi do przychodu obliczonego: te pieniądze wpłynęły wcześniej, przy doładowaniu salda, i nie mogły trafić do kasy tego rozliczenia. Zero oznacza, że się zgadza.",
     "actualCashTooltip": "Tylko prawdziwe pieniądze — gotówka i karta. Płatności z salda nie są wliczane: te pieniądze wpłynęły wcześniej, przy doładowaniu salda, a wykorzystanie salda obniża oczekiwany przychód, zamiast zasilać kasę."
   },
   "operatorApp": {

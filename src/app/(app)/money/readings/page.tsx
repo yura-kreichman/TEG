@@ -963,8 +963,18 @@ export default function ReadingsCalendarPage() {
                       </div>
                     )}
                     <div className="flex items-center justify-between border-t border-border pt-1.5 text-caption-airbnb">
+                      {/* Оплаченное с баланса вычтено (решение владельца
+                          2026-08-16: «расчётная выручка тоже не должна
+                          учитывать оплату по балансу, нет смысла») — экран
+                          показывает только то, что ждём ДЕНЬГАМИ, и тогда
+                          «расчётная минус фактическая» прямо равна Разнице
+                          ниже, без промежуточных строк. В самих счётчиках
+                          валовая выручка не меняется — это только отображение
+                          денежной части (docs/spec/01-counters.md). */}
                       <span>{t.operatorApp.submit.calculatedRevenue}</span>
-                      <span><Money value={daySummary.calculatedRevenue} /></span>
+                      <span>
+                        <Money value={Math.round((daySummary.calculatedRevenue - daySummary.abonementInCash) * 100) / 100} />
+                      </span>
                     </div>
                     {/* Фактическая — сумма Наличные+Безнал+Баланс, чтобы не
                         складывать их в уме при сравнении с Расчётной
@@ -985,19 +995,6 @@ export default function ReadingsCalendarPage() {
                         "касса минус расчётная" на экране не сходилось бы с
                         Разницей. Само значение — касса минус разница, это
                         тождество, лишних данных не требует. */}
-                    {daySummary.abonementInCash > 0 && (
-                      <div className="flex items-center justify-between text-caption-airbnb">
-                        <span className="flex items-center gap-1.5">
-                          {t.readings.expectedInCashLabel}
-                          <InfoTooltip text={t.readings.expectedInCashTooltip} />
-                        </span>
-                        <span>
-                          <Money
-                            value={Math.round((daySummary.cash + daySummary.mobile - daySummary.difference) * 100) / 100}
-                          />
-                        </span>
-                      </div>
-                    )}
                     <div className="flex items-center justify-between text-body-airbnb font-bold">
                       <span className="flex items-center gap-1.5 text-foreground">
                         {t.operatorApp.submit.actualCash}
@@ -1901,8 +1898,12 @@ export default function ReadingsCalendarPage() {
                           {card.accountingMode !== "cash_only" && (
                           <>
                           <div className="flex items-center justify-between border-t border-border pt-1.5 text-caption-airbnb">
+                            {/* Без оплаченного с баланса — как в сводной
+                                карточке дня выше (2026-08-16). */}
                             <span>{t.operatorApp.submit.calculatedRevenue}</span>
-                            <span><Money value={card.calculatedRevenue} /></span>
+                            <span>
+                              <Money value={Math.round((card.calculatedRevenue - card.abonementInDifference) * 100) / 100} />
+                            </span>
                           </div>
                           {/* Фактическая — сумма Наличные+Безнал+Баланс, чтобы
                               не складывать их в уме (запрос пользователя

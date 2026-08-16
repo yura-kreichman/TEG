@@ -1094,8 +1094,6 @@
     "salesSectionTitle": "Sotuvlar",
     "daySummaryHint": "Zona topshiriqlari va abonementlar boʻyicha",
     "pointCashWithAbonementLabel": "Nuqta kassasi abonementlar bilan:",
-    "expectedInCashLabel": "Pul bilan kutilgan:",
-    "expectedInCashTooltip": "Hisoblangan tushum minus balansdan toʻlangani. Haqiqiy kassa aynan shu summa bilan solishtiriladi — ular orasidagi tafovut quyidagi Farqdir.",
     "cashLeftLabel": "Naqd qoldi:",
     "cashLeftTooltip": "Kunlik naqd pul minus xarajatlar va minus xodim kassadan olgan mukofot hamda avanslar. Naqdsiz va balansdan toʻlovlar kirmaydi — u pul kassada yoʻq. Inkassatsiyalar ham hisobga olinmagan: bu kun yakuni, nuqtaning joriy qoldigʻi emas.",
     "abonementSalesTitle": "Abonementlar",
@@ -1167,7 +1165,7 @@
     "deleteConfirmTitle": "Topshiriqni oʻchirasizmi?",
     "deleteConfirmBody": "Ushbu topshiriq boʻyicha koʻrsatkichlar, summalar va pul jurnalidagi yozuvlar oʻchiriladi. Amal oʻzgarishlar jurnaliga tushadi. Bekor qilib boʻlmaydi.",
     "deleteError": "Topshiriqni oʻchirib boʻlmadi",
-    "differenceTooltip": "Farq = haqiqiy kassa − (hisoblangan tushum − balansdan toʻlangan). Balansdan toʻlovlar ayiriladi: u pul avvalroq, balans toʻldirilganda kelgan va bu topshiriqning kassasiga tusha olmasdi. Nol «toʻgʻri keldi» degani.",
+    "differenceTooltip": "Farq = haqiqiy kassa − hisoblangan tushum. Balansdan toʻlangani hisoblangan tushumga kirmaydi: u pul avvalroq, balans toʻldirilganda kelgan va bu topshiriqning kassasiga tusha olmasdi. Nol «toʻgʻri keldi» degani.",
     "actualCashTooltip": "Faqat haqiqiy pul — naqd va naqdsiz. Balansdan toʻlovlar kirmaydi: u pul avvalroq, balans toʻldirilganda kelgan, balansni sarflash esa kassani toʻldirmay, kutilayotgan tushumni kamaytiradi."
   },
   "operatorApp": {
