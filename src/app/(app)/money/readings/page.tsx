@@ -1004,6 +1004,23 @@ export default function ReadingsCalendarPage() {
                         <Money value={daySummary.cash + daySummary.mobile} size="display" />
                       </span>
                     </div>
+                    {/* Расходы дня — сразу под Фактической кассой (решение
+                        владельца 2026-08-16): деньги вынули из неё же, и
+                        читать это надо рядом, а не через Разницу. В саму
+                        кассу и в Разницу они не входят — те отвечают за
+                        сверку со счётчиками, а расход к моменту сдачи уже
+                        вычтен сотрудником из введённого остатка. */}
+                    {expenses.total > 0 && (
+                      <div className="flex items-center justify-between text-caption-airbnb">
+                        <span className="flex items-center gap-1.5">
+                          <ShoppingCart className="size-3.5 shrink-0" />
+                          {t.summaryText.expenses}
+                        </span>
+                        <span className="font-bold text-foreground">
+                          −<Money value={expenses.total} />
+                        </span>
+                      </div>
+                    )}
                     {/* Разница сверяется с ЧИСТОЙ выручкой (за вычетом
                         тестов/возвратов) — сама эта чистая выручка отдельной
                         строкой не показывается: она математически совпадает
@@ -1035,37 +1052,19 @@ export default function ReadingsCalendarPage() {
                         <Money value={daySummary.difference} />
                       </span>
                     </div>
-                    {/* Расходы дня (запрос владельца 2026-08-16) — СПРАВОЧНАЯ
-                        строка за чертой, ниже Разницы: в Фактическую кассу,
-                        Расчётную выручку и Разницу они не входят и входить не
-                        должны. Разница отвечает на вопрос "сходится ли касса
-                        со счётчиками", а расход — это уже потраченные деньги,
-                        которые в кассу успели попасть; вычесть их оттуда
-                        значит показать недостачу там, где всё честно (тот же
-                        класс ошибки, что уже был с абонементами). Показываем
-                        только когда расходы за день были. */}
                     {/* Что ушло из кассы за день и сколько наличных реально
                         осталось (решение владельца 2026-08-16: "фактическая
                         касса грязными... это портит картину Итогов дня").
                         Считаем от НАЛИЧНЫХ, а не от Фактической кассы: в ту
                         входят безнал и оплата балансом, которых в ящике нет.
                         Состав вычетов — тот же, что в сводке "Касса за день",
-                        иначе два экрана про один день говорили бы разное. */}
+                        иначе два экрана про один день говорили бы разное.
+                        Сами расходы стоят выше, под Фактической кассой, —
+                        здесь они только участвуют в подсчёте остатка. */}
                     {(expenses.total > 0 || payouts > 0) && (
                       <>
-                        {expenses.total > 0 && (
-                          <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
-                            <span className="flex items-center gap-1.5">
-                              <ShoppingCart className="size-3.5 shrink-0" />
-                              {t.summaryText.expenses}
-                            </span>
-                            <span className="font-bold text-foreground">
-                              −<Money value={expenses.total} />
-                            </span>
-                          </div>
-                        )}
                         {payouts > 0 && (
-                          <div className="flex items-center justify-between text-caption-airbnb">
+                          <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
                             <span className="flex items-center gap-1.5">
                               <Wallet className="size-3.5 shrink-0" />
                               {t.summaryText.bonusesAndAdvances}
