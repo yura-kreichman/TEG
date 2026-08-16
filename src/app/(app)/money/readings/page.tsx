@@ -234,6 +234,9 @@ interface GoodsSaleEntry {
   quantity: number;
   amount: number;
   paymentMethod: string;
+  // Балансовая часть продажи: вся сумма у оплаты балансом, доля — у
+  // разбитой оплаты, 0 у остальных (считает сервер).
+  abonementAmount: number;
   clientName: string | null;
   clientPhone: string | null;
   performedBy: string | null;
@@ -1293,14 +1296,43 @@ export default function ReadingsCalendarPage() {
                       неё убран (2026-08-16). Сумма и счёт, подробности — по
                       стрелке в разделе Товары. */}
                   {goodsReconciliations.length === 0 && goodsSales.length > 0 && (
-                    <div className="mt-1 flex items-center justify-between border-t border-border pt-2 text-caption-airbnb tabular-nums">
-                      <span className="text-muted-foreground">
-                        {t.readings.salesSectionTitle} · {goodsSales.length}
-                      </span>
-                      <span className="font-semibold text-foreground">
-                        <Money value={goodsSales.reduce((sum, g) => sum + g.amount, 0)} />
-                      </span>
-                    </div>
+                    <>
+                      <div className="mt-1 flex items-center justify-between border-t border-border pt-2 text-caption-airbnb tabular-nums">
+                        <span className="text-muted-foreground">
+                          {t.readings.salesSectionTitle} · {goodsSales.length}
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          <Money
+                            value={
+                              Math.round(
+                                goodsSales.reduce((sum, g) => sum + g.amount - (g.abonementAmount ?? 0), 0) * 100
+                              ) / 100
+                            }
+                          />
+                        </span>
+                      </div>
+                      {/* Товар можно оплатить и балансом — это не деньги в
+                          кассе (правило владельца: баланс уже получен раньше,
+                          при пополнении), поэтому отдельной строкой, как в
+                          сверке кассы ниже. */}
+                      {goodsSales.some((g) => (g.abonementAmount ?? 0) > 0) && (
+                        <div className="flex items-center justify-between text-caption-airbnb tabular-nums text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
+                            {t.operatorApp.abonement.paymentLabel}
+                          </span>
+                          <span>
+                            <Money
+                              value={
+                                Math.round(
+                                  goodsSales.reduce((sum, g) => sum + (g.abonementAmount ?? 0), 0) * 100
+                                ) / 100
+                              }
+                            />
+                          </span>
+                        </div>
+                      )}
+                    </>
                   )}
                   <div
                     className={cn("mt-1 flex flex-col", goodsReconciliations.length > 0 && "border-t border-border")}

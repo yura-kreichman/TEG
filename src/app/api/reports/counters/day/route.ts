@@ -178,6 +178,11 @@ export async function GET(request: Request) {
       wallet: { select: { name: true, phone: true } },
       performedByOperator: { select: { name: true, colorTag: true } },
       performedByUserId: true,
+      voidedAt: true,
+      // Доли разбитой оплаты — без них продажа "split" считалась бы деньгами
+      // целиком, включая часть, оплаченную балансом (правка владельца
+      // 2026-08-16: "даже при оплате долями должна быть честной").
+      paymentLegs: { select: { method: true, amount: true } },
     },
   });
   const goodsSales = goodsSaleRows.map((g) => ({
@@ -187,6 +192,18 @@ export async function GET(request: Request) {
     quantity: g.quantity,
     amount: Number(g.amount),
     paymentMethod: g.paymentMethod,
+    // Сколько из этой продажи ушло с баланса клиента: у "abonement" — вся
+    // сумма, у разбитой оплаты — только её балансовая доля, у остальных 0.
+    // Считаем здесь, а не на клиенте: доли лежат в отдельной таблице, и без
+    // них "split" целиком уходил в деньги (правка владельца 2026-08-16).
+    abonementAmount:
+      g.paymentMethod === "abonement"
+        ? Number(g.amount)
+        : round2(
+            g.paymentLegs
+              .filter((leg) => leg.method === "abonement")
+              .reduce((sum, leg) => sum + Number(leg.amount), 0)
+          ),
     clientName: g.wallet?.name ?? null,
     clientPhone: g.wallet?.phone ?? null,
     performedBy: g.performedByOperator?.name ?? null,
