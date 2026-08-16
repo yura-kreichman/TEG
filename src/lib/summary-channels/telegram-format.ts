@@ -886,9 +886,11 @@ export function formatGoodsAlertLines(
   );
   lines.push(`${st.cash}: ${money(data.actualCash)}`);
   lines.push(`${st.mobile}: ${money(data.actualMobile)}`);
+  // Баланс — сразу за остальными способами оплаты (правка владельца
+  // 2026-08-16): в самом низу сообщения было непонятно, что это за число.
+  if (data.calculatedAbonement > 0) lines.push(`${st.abonement}: ${money(data.calculatedAbonement)}`);
   lines.push(`${st.calculated}: ${money(data.calculatedCash + data.calculatedMobile)}`);
   lines.push(`${st.difference}: ${data.difference > 0 ? "+" : ""}${money(data.difference)}`);
-  if (data.calculatedAbonement > 0) lines.push(`${st.abonement}: ${money(data.calculatedAbonement)}`);
   return lines;
 }
 
@@ -912,10 +914,12 @@ export function formatGoodsAlertTelegram(
   lines.push(`${mark ? `${mark} ` : ""}${name}${point}`);
   lines.push(`${st.cash}: <b>${money(data.actualCash)}</b>`);
   lines.push(`${st.mobile}: <b>${money(data.actualMobile)}</b>`);
+  // Баланс идёт следом за наличными и безналом — это тоже способ оплаты, и
+  // в конце сообщения он читался как отдельная непонятная сумма.
+  if (data.calculatedAbonement > 0) lines.push(`${st.abonement}: ${money(data.calculatedAbonement)}`);
   lines.push(`${st.calculated}: ${money(data.calculatedCash + data.calculatedMobile)}`);
   lines.push(
     `${st.difference}: <b>${data.difference > 0 ? "+" : ""}${money(data.difference)}</b>`
   );
-  if (data.calculatedAbonement > 0) lines.push(`${st.abonement}: ${money(data.calculatedAbonement)}`);
   return lines.join("\n");
 }
