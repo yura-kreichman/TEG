@@ -255,6 +255,10 @@ export async function GET(request: Request) {
           zone: { include: { tariffs: true, assets: { orderBy: { sortOrder: "asc" } } } },
           assetReadings: true,
         },
+        // Карточки зон в порядке, который задал владелец (Zone.sortOrder,
+        // /api/zones/[id]/move) — до 2026-08-16 порядка не было вовсе, зоны
+        // шли как лягут строки в БД.
+        orderBy: [{ zone: { sortOrder: "asc" } }, { zone: { createdAt: "asc" } }],
       },
     },
     // Newest submission first — that's the one an owner is most likely checking

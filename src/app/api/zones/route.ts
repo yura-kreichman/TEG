@@ -14,7 +14,7 @@ export async function GET() {
   const zones = await prisma.zone.findMany({
     where: { point: { tenantId: owner.tenantId } },
     include: { point: { select: { name: true } } },
-    orderBy: [{ point: { createdAt: "asc" } }, { createdAt: "asc" }],
+    orderBy: [{ point: { createdAt: "asc" } }, { sortOrder: "asc" }, { createdAt: "asc" }],
   });
 
   return NextResponse.json({

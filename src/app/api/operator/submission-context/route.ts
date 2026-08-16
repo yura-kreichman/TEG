@@ -31,7 +31,7 @@ export async function GET() {
       },
       assets: { orderBy: { sortOrder: "asc" as const } },
     },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
 
   // Previous reading per (assetId, tariffId): the latest AssetReading recorded

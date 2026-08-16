@@ -42,7 +42,7 @@ export async function GET() {
     prisma.zone.findMany({
       where: zoneWhere,
       select: { id: true, name: true, iconKey: true },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     }),
     prisma.expenseCategory.findMany({
       where: { tenantId: point.tenantId },

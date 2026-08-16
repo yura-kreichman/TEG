@@ -113,6 +113,7 @@ export async function POST() {
       const zoneCounters = await tx.zone.create({
         data: {
           pointId: point.id,
+          sortOrder: 0,
           name: t.zonesList.accountingModeCounters,
           iconKey: ICON_ZONE_COUNTERS,
           accountingMode: "counters",
@@ -140,6 +141,7 @@ export async function POST() {
       const zoneStays = await tx.zone.create({
         data: {
           pointId: point.id,
+          sortOrder: 1,
           name: t.zonesList.accountingModeStays,
           iconKey: ICON_ZONE_STAYS,
           accountingMode: "stays",

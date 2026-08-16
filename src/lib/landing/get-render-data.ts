@@ -124,7 +124,7 @@ export async function getLandingRenderData(tenantId: string): Promise<LandingRen
         openingHours: { orderBy: { weekday: "asc" } },
         zones: {
           where: { active: true },
-          orderBy: { createdAt: "asc" },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
           include: {
             tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" } },
             assets: { orderBy: { sortOrder: "asc" } },

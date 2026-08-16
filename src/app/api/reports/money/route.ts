@@ -86,7 +86,7 @@ export async function GET(request: Request) {
     prisma.zone.findMany({
       where: { point: { tenantId: owner.tenantId, ...(pointIdParam ? { id: pointIdParam } : {}) } },
       include: { point: true },
-      orderBy: [{ point: { createdAt: "asc" } }, { createdAt: "asc" }],
+      orderBy: [{ point: { createdAt: "asc" } }, { sortOrder: "asc" }, { createdAt: "asc" }],
     }),
     prisma.point.findMany({
       where: { tenantId: owner.tenantId, ...(pointIdParam ? { id: pointIdParam } : {}) },

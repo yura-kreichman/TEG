@@ -39,7 +39,7 @@ export async function GET() {
   const [allZones, pointCount, tenant, fallbackOperator] = await Promise.all([
     prisma.zone.findMany({
       where: { point: { tenantId: owner.tenantId } },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       include: {
         point: true,
         tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" } },

@@ -46,7 +46,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     return NextResponse.json({ error: "Некорректная сумма" }, { status: 400 });
   }
 
-  const zones = await prisma.zone.findMany({ where: { pointId } });
+  const zones = await prisma.zone.findMany({ where: { pointId }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] });
   if (zones.length === 0) {
     return NextResponse.json({ error: "На точке нет зон" }, { status: 400 });
   }

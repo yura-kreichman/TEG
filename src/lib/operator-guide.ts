@@ -132,7 +132,7 @@ export async function buildOperatorGuide(params: {
         printReceiptEnabled: true,
         tariffs: { where: { deletedAt: null }, select: { pricingMode: true } },
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     }),
     prisma.tenant.findUnique({
       where: { id: point.tenantId },

@@ -35,7 +35,7 @@ export async function GET() {
   const zones = await prisma.zone.findMany({
     where: { ...zoneWhere, accountingMode: "counters", countersTapAssistEnabled: false },
     select: { id: true, name: true, iconKey: true },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
   if (zones.length === 0) {
     return NextResponse.json({ zones: [], events: [] });

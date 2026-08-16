@@ -11,7 +11,6 @@ import {
   Info,
   Lock,
   MapPin,
-  MessageSquareMore,
   Minus,
   Pencil,
   Plus,
@@ -21,7 +20,6 @@ import {
   TicketCheck,
   Trash2,
   TriangleAlert,
-  Users,
   Wallet,
 } from "lucide-react";
 import { BackLink } from "@/components/back-link";
@@ -1247,42 +1245,30 @@ export default function ReadingsCalendarPage() {
                   деньги ушли, и это факт дня. */}
               {selectedDate && expenses.items.length > 0 && (
                 <SpringCard hover={false} className="mt-3.5 flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
-                      <ShoppingCart className="size-4" />
-                    </div>
-                    <p className="text-card-title">{t.summaryText.expenses}</p>
-                  </div>
-                  <div className="mt-1 flex flex-col border-t border-border">
+                  {/* Заголовок без иконки-кружка и строки в одну линию
+                      (решение владельца 2026-08-16: "плашка должна быть
+                      компактной, единообразно с Товарами и Абонементами").
+                      На что именно потрачено, здесь не пишем — категория и
+                      комментарий видны в разделе Расходы, а Итоги дня — про
+                      суммы, а не про разбор каждой траты. */}
+                  <p className="text-card-title">{t.summaryText.expenses}</p>
+                  <div className="mt-1 flex flex-col border-t border-border tabular-nums">
                     {expenses.items.map((e) => (
-                      <div key={e.id} className="flex items-center justify-between gap-2 border-b border-border py-2 last:border-b-0">
-                        <span className="min-w-0 flex-1">
-                          <span className="flex min-w-0 items-center gap-1">
-                            <span className="truncate text-body-airbnb font-semibold">
-                              {e.categoryName ?? t.money.editExpenseTitle}
-                            </span>
-                            {e.comment && (
-                              <InfoTooltip
-                                icon={MessageSquareMore}
-                                text={e.comment}
-                                ariaLabel={t.operatorApp.submit.commentPlaceholder}
-                                className="size-4"
-                              />
-                            )}
-                          </span>
-                          <span className="flex min-w-0 items-center gap-1.5 text-caption-airbnb text-muted-foreground">
-                            <span className="truncate">
-                              {formatTime(e.occurredAt)} · {e.zoneName}
-                            </span>
-                            {e.operatorName && (
-                              <span className="inline-flex shrink-0 items-center gap-1">
-                                <Users className="size-3.5 shrink-0" />
-                                <span className="truncate">{e.operatorName}</span>
-                              </span>
-                            )}
-                          </span>
+                      <div
+                        key={e.id}
+                        className="flex items-center justify-between gap-2 border-b border-border py-2 text-caption-airbnb last:border-b-0"
+                      >
+                        <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                          <span className="shrink-0 text-muted-foreground">{formatTime(e.occurredAt)}</span>
+                          {/* Зона крупнее остальной строки (просьба владельца
+                              2026-08-16) — это главное, что читают в строке
+                              расхода: из какой кассы ушли деньги. */}
+                          <span className="truncate text-body-airbnb font-semibold text-foreground">{e.zoneName}</span>
+                          {e.operatorName && (
+                            <span className="truncate text-muted-foreground">· {e.operatorName}</span>
+                          )}
                         </span>
-                        <span className="shrink-0 font-bold tabular-nums">
+                        <span className="shrink-0 font-semibold text-foreground">
                           −<Money value={e.amount} />
                         </span>
                       </div>
@@ -1297,12 +1283,10 @@ export default function ReadingsCalendarPage() {
 
               {selectedDate && (goodsReconciliations.length > 0 || goodsSales.length > 0) && (
                 <SpringCard hover={false} className="mt-3.5 flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
-                      <ShoppingBag className="size-4" />
-                    </div>
-                    <p className="text-card-title">{t.readings.goodsReconciliationsTitle}</p>
-                  </div>
+                  {/* Заголовок без иконки-кружка — как у Абонементов и
+                      Расходов (решение владельца 2026-08-16 о единообразии
+                      плашек в Итогах дня). */}
+                  <p className="text-card-title">{t.readings.goodsReconciliationsTitle}</p>
                   <div
                     className={cn("mt-1 flex flex-col", goodsReconciliations.length > 0 && "border-t border-border")}
                   >

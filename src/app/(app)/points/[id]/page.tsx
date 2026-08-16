@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { Banknote, Check, ChevronRight, CircuitBoard, ClockPlus, Plus, Ticket, Timer, Users, type LucideIcon } from "lucide-react";
+import { Banknote, Check, ChevronDown, ChevronRight, ChevronUp, CircuitBoard, ClockPlus, Plus, Ticket, Timer, Users, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
@@ -114,6 +114,19 @@ export default function PointDetailPage() {
   }, [params.id]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // Порядок зон внутри точки — ручной, задаёт владелец (запрос 2026-08-16,
+  // тот же приём, что у активов в карточке зоны). Порядок сквозной: Итоги
+  // дня, дропдауны выбора зоны у владельца и в PWA, разбивка по зонам в
+  // сводках и инкассациях, остатки по кассам, лендинг.
+  async function moveZone(id: string, direction: "up" | "down") {
+    await fetch(`/api/zones/${id}/move`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ direction }),
+    });
+    await loadZones();
+  }
+
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
     setError(null);
@@ -180,7 +193,7 @@ export default function PointDetailPage() {
             <p className="text-body-airbnb text-muted-foreground">{t.zonesList.noZones}</p>
           ) : (
             <StaggerList className="flex flex-col gap-3.5">
-              {zones.map((zone) => (
+              {zones.map((zone, index) => (
                 <StaggerItem key={zone.id}>
                   <PressableScale>
                     <Link href={`/zones/${zone.id}`} className="block">
@@ -206,6 +219,39 @@ export default function PointDetailPage() {
                               {zone.accountingMode !== "cash_only" &&
                                 ` · ${t.zonesList.modeChip[zone.accountingMode]}`}
                             </p>
+                          </div>
+                          {/* Порядок зон — теми же кнопками, что у активов
+                              внутри зоны (запрос владельца 2026-08-16).
+                              Карточка целиком ссылка, поэтому клик по
+                              стрелке гасим: иначе переход на страницу зоны
+                              съел бы перестановку. */}
+                          <div className="flex shrink-0 flex-col">
+                            <button
+                              type="button"
+                              disabled={index === 0}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                moveZone(zone.id, "up");
+                              }}
+                              aria-label={t.common.moveUp}
+                              className="flex size-6 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
+                            >
+                              <ChevronUp className="size-4" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={index === zones.length - 1}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                moveZone(zone.id, "down");
+                              }}
+                              aria-label={t.common.moveDown}
+                              className="flex size-6 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
+                            >
+                              <ChevronDown className="size-4" />
+                            </button>
                           </div>
                           <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
                         </div>

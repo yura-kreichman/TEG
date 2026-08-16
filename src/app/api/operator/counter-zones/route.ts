@@ -27,7 +27,7 @@ export async function GET() {
   const zones = await prisma.zone.findMany({
     where: { ...zoneWhere, accountingMode: { in: ["counters", "cash_only"] } },
     include: { tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" } } },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
 
   return NextResponse.json({

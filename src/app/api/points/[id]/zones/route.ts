@@ -29,7 +29,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]
         // попадают (эта связь пуста для них) — их добавляем отдельно ниже.
         operatorsWithAccess: { where: { active: true }, select: { id: true, name: true, colorTag: true } },
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     }),
     // Операторы "со всеми зонами" — реальный баг, найден пользователем
     // 2026-07-28: "у Жени все зоны и он не отображается" — они тоже
@@ -83,9 +83,18 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     const limitError = await checkPackageLimit(owner.tenantId, "maxZones", zoneCount);
     if (limitError) return { ok: false as const, limitError };
 
+    // В конец списка точки (порядок задаёт владелец кнопками вверх/вниз,
+    // /api/zones/[id]/move) — новая зона не должна вклиниваться в середину.
+    const lastZone = await tx.zone.findFirst({
+      where: { pointId },
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    });
+
     const zone = await tx.zone.create({
       data: {
         pointId,
+        sortOrder: (lastZone?.sortOrder ?? -1) + 1,
         name: name.trim(),
         iconKey: typeof iconKey === "string" && iconKey.trim() ? iconKey.trim() : null,
         accountingMode: resolvedAccountingMode,

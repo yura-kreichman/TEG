@@ -37,7 +37,7 @@ export async function GET() {
       tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" }, select: { id: true, name: true, price: true } },
       assets: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true, iconKey: true, photoUrl: true, colorTag: true, active: true } },
     },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
   if (zones.length === 0) {
     return NextResponse.json({ zones: [], counts: [] });

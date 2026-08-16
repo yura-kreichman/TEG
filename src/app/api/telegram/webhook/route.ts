@@ -1093,7 +1093,7 @@ async function sendServicesForPoint(chatId: string, pointId: string, lang: BotLa
       tenant: { select: { slug: true, landingEnabled: true, landing: { select: { status: true } } } },
       zones: {
         where: { active: true },
-        orderBy: { createdAt: "asc" },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
         select: {
           name: true,
           telegramEmoji: true,

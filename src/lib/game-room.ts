@@ -236,6 +236,9 @@ export async function findExpiredFixedLaunches(
       ...(operator.allZonesAccess ? {} : { operatorsWithAccess: { some: { id: operator.id } } }),
     },
     select: { id: true, name: true, accountingMode: true },
+    // Порядок задаёт владелец (Zone.sortOrder, /api/zones/[id]/move) — тот же
+    // во всех списках зон, здесь от него зависит, какая зона считается первой.
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
   if (zones.length === 0) {
     return {
