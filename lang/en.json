@@ -1094,6 +1094,8 @@
     "salesSectionTitle": "Sales",
     "daySummaryHint": "By zone submissions and subscriptions",
     "pointCashWithAbonementLabel": "Point cash incl. subscriptions:",
+    "expectedInCashLabel": "Expected in money:",
+    "expectedInCashTooltip": "Calculated revenue minus what was paid from pass balances. This is the amount the actual cash is compared with — the gap between them is the Difference below.",
     "cashLeftLabel": "Cash left:",
     "cashLeftTooltip": "Cash for the day minus expenses and minus the bonuses and advances the employee took from the till. Card payments and payments from passes are not included — that money is not in the till. Collections are not counted either: this is the day's result, not the current balance at the location.",
     "abonementSalesTitle": "Subscriptions",
@@ -1166,7 +1168,7 @@
     "deleteConfirmBody": "The readings, amounts, and money-journal entries for this submission will be deleted. This action is logged and cannot be undone.",
     "deleteError": "Couldn't delete the submission",
     "differenceTooltip": "Difference = actual cash − (calculated revenue − paid from balance). Balance payments are subtracted because that money arrived earlier, when the customer topped up, and could not reach the till of this submission. Zero means it adds up.",
-    "actualCashTooltip": "This includes cash, card payments and the part of balance payments counted in the Difference. So the figure can exceed the money physically in the till — by the amount paid from customer balances."
+    "actualCashTooltip": "Real money only — cash and card. Payments from a pass balance are not included: that money came in earlier, when the pass was topped up, and spending the balance lowers the expected revenue instead of adding to the till."
   },
   "operatorApp": {
     "greeting": "Hello,",

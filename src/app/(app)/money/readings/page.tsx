@@ -973,13 +973,38 @@ export default function ReadingsCalendarPage() {
                         подтверждения. Крупнее и жирным — это реальная касса
                         точки, важнее валовой Расчётной выручки выше (запрос
                         пользователя 2026-07-19). */}
+                    {/* Оплата балансом в Фактическую кассу НЕ входит (решение
+                        владельца 2026-08-16: "этих денег нет в помине... баланс
+                        это уже не деньги, а виртуальная валюта"). Деньги за
+                        абонемент тенант получил раньше, при пополнении, и там
+                        они прошли наличными или безналом. В сверке баланс
+                        по-прежнему участвует, но с другой стороны уравнения:
+                        difference = касса − (расчётная − баланс), то есть он
+                        уменьшает ОЖИДАЕМУЮ денежную выручку. Её и показываем
+                        отдельной строкой, когда балансом платили: без неё
+                        "касса минус расчётная" на экране не сходилось бы с
+                        Разницей. Само значение — касса минус разница, это
+                        тождество, лишних данных не требует. */}
+                    {daySummary.abonementInCash > 0 && (
+                      <div className="flex items-center justify-between text-caption-airbnb">
+                        <span className="flex items-center gap-1.5">
+                          {t.readings.expectedInCashLabel}
+                          <InfoTooltip text={t.readings.expectedInCashTooltip} />
+                        </span>
+                        <span>
+                          <Money
+                            value={Math.round((daySummary.cash + daySummary.mobile - daySummary.difference) * 100) / 100}
+                          />
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between text-body-airbnb font-bold">
                       <span className="flex items-center gap-1.5 text-foreground">
                         {t.operatorApp.submit.actualCash}
                         <InfoTooltip text={t.readings.actualCashTooltip} />
                       </span>
                       <span className="text-foreground">
-                        <Money value={daySummary.cash + daySummary.mobile + daySummary.abonementInCash} />
+                        <Money value={daySummary.cash + daySummary.mobile} size="display" />
                       </span>
                     </div>
                     {/* Разница сверяется с ЧИСТОЙ выручкой (за вычетом
@@ -1892,16 +1917,13 @@ export default function ReadingsCalendarPage() {
                           <div className="flex items-center justify-between text-body-airbnb font-bold">
                             <span className="text-foreground">{t.operatorApp.submit.actualCash}</span>
                             <span className="text-foreground">
-                              {/* Баланс прибавляется ровно в той части, что
-                                  учтена в Разнице ниже (card.difference, из
-                                  API) — иначе "касса − расчёт" на экране не
-                                  сходится с показанной Разницей. Условие
-                                  жило здесь копией с 2026-07-25 и разошлось
-                                  с сервером, когда правило поменялось;
-                                  теперь число приходит готовым. Тот же
-                                  принцип в сводной карточке "Итоги дня" выше
-                                  (daySummary.abonementInCash). */}
-                              <Money value={card.cashAmount + card.mobileAmount + card.abonementInDifference} />
+                              {/* Только настоящие деньги — наличные и безнал
+                                  (решение владельца 2026-08-16, см. тот же
+                                  разбор у сводной карточки "Итоги дня" выше).
+                                  Оплаченное балансом стоит отдельной строкой
+                                  и в кассу не прибавляется: в сверке оно
+                                  вычитается из ожидаемой выручки. */}
+                              <Money value={card.cashAmount + card.mobileAmount} />
                             </span>
                           </div>
                           <div className="flex items-center justify-between text-caption-airbnb">

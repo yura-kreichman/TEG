@@ -1094,6 +1094,8 @@
     "salesSectionTitle": "Satışlar",
     "daySummaryHint": "Bölge teslimlerine ve aboneliklere göre",
     "pointCashWithAbonementLabel": "Nokta kasası aboneliklerle:",
+    "expectedInCashLabel": "Parayla beklenen:",
+    "expectedInCashTooltip": "Hesaplanan gelir eksi abonman bakiyesinden ödenen tutar. Gerçek kasa bu tutarla karşılaştırılır — aradaki fark aşağıdaki Fark'tır.",
     "cashLeftLabel": "Nakit kalan:",
     "cashLeftTooltip": "Günün nakiti eksi giderler ve eksi çalışanın kasadan aldığı primler ile avanslar. Kartla ve abonmanla yapılan ödemeler dahil değildir — o para kasada yok. Tahsilatlar da sayılmaz: bu günün sonucu, noktanın güncel bakiyesi değil.",
     "abonementSalesTitle": "Abonelikler",
@@ -1166,7 +1168,7 @@
     "deleteConfirmBody": "Bu teslime ait okumalar, tutarlar ve para defteri kayıtları silinecek. İşlem değişiklik günlüğüne kaydedilecek. Geri alınamaz.",
     "deleteError": "Teslim silinemedi",
     "differenceTooltip": "Fark = fiili kasa − (hesaplanan gelir − bakiyeden ödenen). Bakiyeden ödeme çıkarılır, çünkü o para daha önce, müşteri yükleme yaptığında girmiştir ve bu teslimin kasasına giremez. Sıfır, tuttuğu anlamına gelir.",
-    "actualCashTooltip": "Buna nakit, nakit olmayan ödemeler ve Fark’ta sayılan bakiye ödemelerinin payı dahildir. Bu yüzden tutar, kasada fiilen bulunan paradan abonelerden ödenen kadar fazla olabilir."
+    "actualCashTooltip": "Sadece gerçek para — nakit ve kart. Abonman bakiyesinden ödemeler dahil değildir: o para daha önce, abonman yüklenirken girdi; bakiyeden harcama kasayı artırmaz, beklenen geliri azaltır."
   },
   "operatorApp": {
     "greeting": "Merhaba,",

@@ -1094,6 +1094,8 @@
     "salesSectionTitle": "Vânzări",
     "daySummaryHint": "Pe baza predărilor de zonă și a abonamentelor",
     "pointCashWithAbonementLabel": "Casa punctului cu abonamente:",
+    "expectedInCashLabel": "Se aștepta în bani:",
+    "expectedInCashTooltip": "Venitul calculat minus ce s-a plătit din soldul abonamentelor. Cu această sumă se compară casa reală — diferența dintre ele este Diferența de mai jos.",
     "cashLeftLabel": "Au rămas în numerar:",
     "cashLeftTooltip": "Numerarul zilei minus cheltuielile și minus primele și avansurile pe care angajatul le-a luat din casă. Plățile prin card și cele din abonamente nu sunt incluse — acei bani nu sunt în casă. Nici colectările nu sunt luate în calcul: acesta este rezultatul zilei, nu soldul curent al punctului.",
     "abonementSalesTitle": "Abonamente",
@@ -1166,7 +1168,7 @@
     "deleteConfirmBody": "Citirile, sumele și înregistrările din jurnalul de bani pentru această predare vor fi șterse. Acțiunea este înregistrată și nu poate fi anulată.",
     "deleteError": "Nu s-a putut șterge predarea",
     "differenceTooltip": "Diferența = casa efectivă − (încasarea calculată − plătit din sold). Plata din sold se scade pentru că acei bani au intrat mai devreme, când clientul a alimentat, și nu puteau ajunge în casa acestei predări. Zero înseamnă că se potrivește.",
-    "actualCashTooltip": "Aici intră numerarul, plățile prin card și partea din plățile cu sold luată în calcul la Diferență. De aceea suma poate depăși banii aflați fizic în casă, cu valoarea plăților din abonamente."
+    "actualCashTooltip": "Doar bani reali — numerar și card. Plățile din soldul abonamentului nu sunt incluse: acei bani au intrat mai devreme, la alimentarea abonamentului, iar consumul soldului reduce venitul așteptat, nu completează casa."
   },
   "operatorApp": {
     "greeting": "Salut,",

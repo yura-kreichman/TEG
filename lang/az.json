@@ -1094,6 +1094,8 @@
     "salesSectionTitle": "Satışlar",
     "daySummaryHint": "Zonaların hesabatları və abonementlər üzrə",
     "pointCashWithAbonementLabel": "Nöqtənin kassası abonementlərlə:",
+    "expectedInCashLabel": "Pulla gözlənilirdi:",
+    "expectedInCashTooltip": "Hesablanmış gəlir, abunə balansından ödənilən məbləğ çıxılmaqla. Faktiki kassa məhz bu məbləğlə tutuşdurulur — aralarındakı fərq aşağıdakı Fərqdir.",
     "cashLeftLabel": "Nağd qalıq:",
     "cashLeftTooltip": "Günün nağd pulu, xərclər və işçinin kassadan götürdüyü mükafat və avanslar çıxılmaqla. Nağdsız ödənişlər və abunə ilə ödənişlər daxil deyil — o pul kassada yoxdur. İnkassasiyalar da nəzərə alınmır: bu günün nəticəsidir, nöqtənin cari qalığı deyil.",
     "abonementSalesTitle": "Abonementlər",
@@ -1166,7 +1168,7 @@
     "deleteConfirmBody": "Bu hesabata aid göstəricilər, məbləğlər və pul jurnalındakı yazılar silinəcək. Əməliyyat dəyişikliklər jurnalına düşəcək. Geri qaytarmaq mümkün deyil.",
     "deleteError": "Hesabatı silmək mümkün olmadı",
     "differenceTooltip": "Fərq = faktiki kassa − (hesabi gəlir − balansdan ödənilən). Balansdan ödəniş çıxılır, çünki bu pul daha əvvəl, müştəri artıranda gəlib və bu təhvilin kassasına düşə bilməzdi. Sıfır «uyğun gəldi» deməkdir.",
-    "actualCashTooltip": "Buraya nağd, nağdsız və Fərqdə nəzərə alınan balansdan ödənişin hissəsi daxildir. Ona görə məbləğ kassada fiziki olan puldan abunələrdən ödənilən qədər çox ola bilər."
+    "actualCashTooltip": "Yalnız real pul — nağd və kart. Abunə balansından ödənişlər daxil deyil: o pul əvvəl, abunə doldurularkən daxil olub; balansdan xərcləmə kassanı artırmır, gözlənilən gəliri azaldır."
   },
   "operatorApp": {
     "greeting": "Salam,",

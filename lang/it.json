@@ -1094,6 +1094,8 @@
     "salesSectionTitle": "Vendite",
     "daySummaryHint": "Per consegne zona e abbonamenti",
     "pointCashWithAbonementLabel": "Cassa del punto con abbonamenti:",
+    "expectedInCashLabel": "Atteso in denaro:",
+    "expectedInCashTooltip": "Ricavo calcolato meno quanto pagato con il saldo degli abbonamenti. È con questa cifra che si confronta la cassa reale — lo scarto tra le due è la Differenza qui sotto.",
     "cashLeftLabel": "Rimasto in contanti:",
     "cashLeftTooltip": "Contanti della giornata meno le spese e meno premi e anticipi che il dipendente ha preso dalla cassa. Pagamenti elettronici e con abbonamento non sono inclusi — quei soldi non sono in cassa. Nemmeno gli incassi sono considerati: questo è il risultato del giorno, non il saldo attuale del punto.",
     "abonementSalesTitle": "Abbonamenti",
@@ -1166,7 +1168,7 @@
     "deleteConfirmBody": "Le letture, gli importi e le voci del registro soldi di questa chiusura verranno eliminati. Questa azione viene registrata e non può essere annullata.",
     "deleteError": "Impossibile eliminare la chiusura",
     "differenceTooltip": "Differenza = cassa effettiva − (ricavo calcolato − pagato con saldo). Il pagamento con saldo si sottrae perché quel denaro è entrato prima, quando il cliente ha ricaricato, e non poteva finire nella cassa di questa consegna. Zero significa che torna.",
-    "actualCashTooltip": "Qui rientrano contanti, pagamenti elettronici e la parte dei pagamenti con saldo conteggiata nella Differenza. Perciò l’importo può superare il denaro fisicamente in cassa, della quota pagata dai saldi dei clienti."
+    "actualCashTooltip": "Solo denaro reale — contanti e carta. I pagamenti dal saldo dell'abbonamento non sono inclusi: quel denaro è entrato prima, alla ricarica, e l'uso del saldo riduce il ricavo atteso invece di aumentare la cassa."
   },
   "operatorApp": {
     "greeting": "Ciao,",

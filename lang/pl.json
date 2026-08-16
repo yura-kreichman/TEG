@@ -1094,6 +1094,8 @@
     "salesSectionTitle": "Sprzedaż",
     "daySummaryHint": "Wg rozliczeń stref i abonamentów",
     "pointCashWithAbonementLabel": "Kasa punktu z abonamentami:",
+    "expectedInCashLabel": "Oczekiwano w pieniądzach:",
+    "expectedInCashTooltip": "Przychód obliczony minus to, co opłacono z salda karnetów. Z tą kwotą porównywana jest rzeczywista kasa — różnica między nimi to Różnica poniżej.",
     "cashLeftLabel": "Zostało gotówką:",
     "cashLeftTooltip": "Gotówka za dzień minus wydatki i minus premie oraz zaliczki, które pracownik wziął z kasy. Płatności bezgotówkowe i z karnetów nie są wliczone — tych pieniędzy nie ma w kasie. Inkasacje też nie są uwzględnione: to wynik dnia, a nie bieżące saldo punktu.",
     "abonementSalesTitle": "Abonamenty",
@@ -1166,7 +1168,7 @@
     "deleteConfirmBody": "Odczyty, sumy i wpisy w dzienniku finansów dotyczące tego rozliczenia zostaną usunięte. Czynność trafi do dziennika zmian. Nie można jej cofnąć.",
     "deleteError": "Nie udało się usunąć rozliczenia",
     "differenceTooltip": "Różnica = kasa faktyczna − (przychód wyliczony − zapłacone saldem). Płatność saldem się odejmuje, bo te pieniądze wpłynęły wcześniej, przy doładowaniu przez klienta, i nie mogły trafić do kasy tego rozliczenia. Zero znaczy, że się zgadza.",
-    "actualCashTooltip": "Wchodzą tu gotówka, płatności bezgotówkowe i ta część płatności saldem, którą uwzględnia Różnica. Dlatego kwota może przewyższać pieniądze fizycznie leżące w kasie — o wartość płatności z abonamentów."
+    "actualCashTooltip": "Tylko prawdziwe pieniądze — gotówka i karta. Płatności z salda karnetu nie są wliczane: te pieniądze wpłynęły wcześniej, przy doładowaniu karnetu, a wykorzystanie salda obniża oczekiwany przychód, zamiast zasilać kasę."
   },
   "operatorApp": {
     "greeting": "Cześć,",
