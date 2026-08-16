@@ -283,17 +283,24 @@ export function mapTelegramApiError(result: TelegramApiResult): string {
 // "чтобы не засорять группу") — best-effort: сообщение могло быть уже
 // удалено вручную, бот мог потерять права и т.п., в этих случаях просто
 // молча ничего не происходит, отдельно не сообщаем об ошибке никому.
-export async function deleteChatMessage(chatId: string, messageId: string): Promise<void> {
+export async function deleteChatMessage(chatId: string, messageId: string): Promise<boolean> {
   const token = await getBotToken();
-  if (!token) return;
+  if (!token) return false;
   try {
-    await fetch(`https://api.telegram.org/bot${token}/deleteMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${token}/deleteMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: chatId, message_id: Number(messageId) }),
     });
+    // Telegram разрешает боту удалять СВОИ сообщения только первые 48 часов
+    // (Bot API, deleteMessage) — дальше приходит ok:false. Возвращаем
+    // результат, чтобы вызывающий код мог отступить на "переписать пометкой"
+    // вместо молчаливой потери (решение владельца 2026-08-16: "я бы их всех
+    // просто удалял" — удаляем, где Telegram позволяет).
+    const json = (await res.json().catch(() => null)) as { ok?: boolean } | null;
+    return !!json?.ok;
   } catch {
-    // ignore
+    return false;
   }
 }
 

@@ -1663,6 +1663,8 @@
     "expenseAlertTitle": "EXPENSE",
     "goodsAlertTitle": "GOODS",
     "goodsAlertVoided": "Reconciliation voided",
+    "submissionVoided": "Results submission deleted",
+    "shiftVoided": "Shift deleted",
     "collectionAlertTitle": "COLLECTION",
     "goodsLabel": "Goods",
     "instructionAckEmailWho": "Who",

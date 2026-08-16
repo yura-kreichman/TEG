@@ -5,7 +5,7 @@ import { editChatMessage } from "@/lib/telegram-bot";
 import { calculateGoodsCashBeforeReconciliation } from "@/lib/goods";
 import { dispatchGoodsAlert } from "@/lib/summary-channels/dispatch";
 import { formatGoodsAlertTelegram } from "@/lib/summary-channels/telegram-format";
-import { sendUpdatedPush } from "@/lib/summary-channels/resync";
+import { removeOrMarkMessage, sendUpdatedPush } from "@/lib/summary-channels/resync";
 import type { GoodsReconciliationAlertData } from "@/lib/summary-channels/types";
 
 /**
@@ -121,6 +121,14 @@ export async function resyncGoodsAlert(
     tenant?.timezone ?? "UTC",
     tenant?.currency ?? null
   );
-  if (channel?.chatId) await editChatMessage(channel.chatId, built.messageId, text);
+  if (channel?.chatId) {
+    if (options.voided) {
+      // Сверки больше нет — сообщение удаляем; пометка остаётся только когда
+      // Telegram удалить не дал (решение владельца 2026-08-16).
+      await removeOrMarkMessage(channel.chatId, built.messageId, text);
+    } else {
+      await editChatMessage(channel.chatId, built.messageId, text);
+    }
+  }
   await sendUpdatedPush(built.tenantId, "goods", dict.pushSettings.goodsLabel, text);
 }

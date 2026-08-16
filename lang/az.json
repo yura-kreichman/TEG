@@ -1663,6 +1663,8 @@
     "expenseAlertTitle": "XƏRC",
     "goodsAlertTitle": "MALLAR",
     "goodsAlertVoided": "Uzlaşma ləğv edildi",
+    "submissionVoided": "Yekunların təhvili silindi",
+    "shiftVoided": "Növbə silindi",
     "collectionAlertTitle": "İNKASSASİYA",
     "goodsLabel": "Mallar",
     "instructionAckEmailWho": "Kim",

@@ -1663,6 +1663,8 @@
     "expenseAlertTitle": "РАСХОД",
     "goodsAlertTitle": "ТАВАРЫ",
     "goodsAlertVoided": "Зверка ануляваная",
+    "submissionVoided": "Здача вынікаў выдалена",
+    "shiftVoided": "Змена выдалена",
     "collectionAlertTitle": "ІНКАСАЦЫЯ",
     "goodsLabel": "Тавары",
     "instructionAckEmailWho": "Хто",

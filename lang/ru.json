@@ -1694,6 +1694,8 @@
     "expenseAlertTitle": "РАСХОД",
     "goodsAlertTitle": "ТОВАРЫ",
     "goodsAlertVoided": "Сверка аннулирована",
+    "submissionVoided": "Сдача итогов удалена",
+    "shiftVoided": "Смена удалена",
     "collectionAlertTitle": "ИНКАССАЦИЯ",
     "goodsLabel": "Товары",
     "instructionAckEmailWho": "Кто",

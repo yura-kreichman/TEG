@@ -1663,6 +1663,8 @@
     "expenseAlertTitle": "XARAJAT",
     "goodsAlertTitle": "MAHSULOTLAR",
     "goodsAlertVoided": "Solishtirish bekor qilindi",
+    "submissionVoided": "Yakunlarni topshirish oʻchirildi",
+    "shiftVoided": "Smena oʻchirildi",
     "collectionAlertTitle": "INKASSATSIYA",
     "goodsLabel": "Tovarlar",
     "instructionAckEmailWho": "Kim",

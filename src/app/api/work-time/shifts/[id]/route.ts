@@ -439,6 +439,10 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
     bonusAccruedAmount,
   };
 
+  // Сообщение о закрытии смены переписываем ДО удаления: после него текст
+  // собирать не из чего (правка владельца 2026-08-16).
+  await resyncShiftCloseMessage(id, { voided: true }).catch(() => {});
+
   await prisma.$transaction(async (tx) => {
     // Вместе со сменой удаляется и начисленная премия: она живёт только как
     // строка журнала, привязанная к смене, и без неё осталась бы навсегда

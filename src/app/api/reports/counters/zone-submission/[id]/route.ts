@@ -12,7 +12,7 @@ import { formatZoneSummaryTelegram } from "@/lib/summary-channels/telegram-forma
 import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { isLocale, type Locale } from "@/lib/locales";
 import { getDictionary } from "@/lib/i18n";
-import { resyncDailyCashForZone, sendUpdatedPush } from "@/lib/summary-channels/resync";
+import { removeOrMarkMessage, resyncDailyCashForZone, sendUpdatedPush } from "@/lib/summary-channels/resync";
 
 interface CorrectionDiff {
   cashAmount: number;
@@ -40,7 +40,11 @@ async function loadZoneSubmission(id: string, tenantId: string) {
 // counters/cash_only (остальные режимы через этот роут вообще не
 // редактируются, см. isZoneSubmissionEditable). Best-effort — падение здесь
 // не должно ронять саму правку, которая к этому моменту уже сохранена.
-async function reEditZoneSummaryMessage(zoneSubmissionId: string, tenantId: string): Promise<void> {
+async function reEditZoneSummaryMessage(
+  zoneSubmissionId: string,
+  tenantId: string,
+  options: { voided?: boolean } = {}
+): Promise<void> {
   const zs = await prisma.zoneSubmission.findUnique({
     where: { id: zoneSubmissionId },
     include: {
@@ -184,12 +188,25 @@ async function reEditZoneSummaryMessage(zoneSubmissionId: string, tenantId: stri
     timezone,
     st
   );
-  await editChatMessage(channel.chatId, zs.telegramSummaryMessageId, text).catch(() => {});
+  // Удаление сдачи: сообщение остаётся в чате (Telegram не отдаёт удалять
+  // старше 48 часов), но прямо говорит, что записи больше нет — иначе в
+  // чате навсегда висели бы цифры, которых в системе уже нет (правка
+  // владельца 2026-08-16, тот же приём, что у сверки кассы Товаров).
+  const finalText = options.voided
+    ? `<i>${getDictionary(locale).summaryText.submissionVoided}</i>\n${text}`
+    : text;
+  if (options.voided) {
+    // Удаляем сообщение целиком, а пометку оставляем только если Telegram
+    // удалить не дал (решение владельца 2026-08-16).
+    await removeOrMarkMessage(channel.chatId, zs.telegramSummaryMessageId, finalText);
+  } else {
+    await editChatMessage(channel.chatId, zs.telegramSummaryMessageId, text).catch(() => {});
+  }
   // Push с уже поправленными цифрами: сообщение в чате исправлено, но у
   // владельца в шторке телефона всё ещё висит старое (требование владельца
   // 2026-08-16: "если происходят обновления в ТГ, то Push должны отправляться
   // свежие").
-  await sendUpdatedPush(tenantId, "zoneSummary", getDictionary(locale).pushSettings.zoneLabel, text);
+  await sendUpdatedPush(tenantId, "zoneSummary", getDictionary(locale).pushSettings.zoneLabel, finalText);
 }
 
 // Правка последней сдачи по зоне (docs/spec/01-counters.md, «Прозрачность»):
@@ -403,6 +420,12 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/reports/
       zoneSubmission.assetReadings.map((r) => [`${r.assetId}:${r.tariffId}`, r.reading])
     ),
   };
+
+  // Сообщение в чате переписываем ДО удаления: после него собирать текст уже
+  // не из чего, а удалить сообщение Telegram не даст — старше 48 часов оно не
+  // удаляется (правка владельца 2026-08-16: раньше в чате навсегда оставались
+  // цифры удалённой сдачи).
+  await reEditZoneSummaryMessage(id, owner.tenantId, { voided: true }).catch(() => {});
 
   try {
     await prisma.$transaction(async (tx) => {

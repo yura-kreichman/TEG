@@ -1663,6 +1663,8 @@
     "expenseAlertTitle": "ШЫҒЫС",
     "goodsAlertTitle": "ТАУАРЛАР",
     "goodsAlertVoided": "Салыстыру жойылды",
+    "submissionVoided": "Қорытынды тапсыру жойылды",
+    "shiftVoided": "Ауысым жойылды",
     "collectionAlertTitle": "ИНКАССАЦИЯ",
     "goodsLabel": "Тауарлар",
     "instructionAckEmailWho": "Кім",

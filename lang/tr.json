@@ -1663,6 +1663,8 @@
     "expenseAlertTitle": "GİDER",
     "goodsAlertTitle": "ÜRÜNLER",
     "goodsAlertVoided": "Mutabakat iptal edildi",
+    "submissionVoided": "Gün sonu teslimi silindi",
+    "shiftVoided": "Vardiya silindi",
     "collectionAlertTitle": "TAHSİLAT",
     "goodsLabel": "Ürünler",
     "instructionAckEmailWho": "Kim",

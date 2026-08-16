@@ -1663,6 +1663,8 @@
     "expenseAlertTitle": "ВИТРАТА",
     "goodsAlertTitle": "ТОВАРИ",
     "goodsAlertVoided": "Звірку анульовано",
+    "submissionVoided": "Здачу підсумків видалено",
+    "shiftVoided": "Зміну видалено",
     "collectionAlertTitle": "ІНКАСАЦІЯ",
     "goodsLabel": "Товари",
     "instructionAckEmailWho": "Хто",

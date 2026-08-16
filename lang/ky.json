@@ -1663,6 +1663,8 @@
     "expenseAlertTitle": "ЧЫГАША",
     "goodsAlertTitle": "ТОВАРЛАР",
     "goodsAlertVoided": "Салыштыруу жокко чыгарылды",
+    "submissionVoided": "Жыйынтык тапшыруу жок кылынды",
+    "shiftVoided": "Смена жок кылынды",
     "collectionAlertTitle": "ИНКАССАЦИЯ",
     "goodsLabel": "Товарлар",
     "instructionAckEmailWho": "Ким",

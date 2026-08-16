@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { editChatMessage } from "@/lib/telegram-bot";
+import { deleteChatMessage, editChatMessage } from "@/lib/telegram-bot";
 import { getDictionary } from "@/lib/i18n";
 import { isLocale, type Locale } from "@/lib/locales";
 import { calcOperatorBalance, calcShiftAccrual, getRateForDate, WORK_TIME_MONEY_TYPES } from "@/lib/work-time";
@@ -197,7 +197,10 @@ export async function resyncAfterMoneyOpChange(op: {
  * текущий скользящий баланс сотрудника, он к моменту правки мог измениться и
  * по другим причинам.
  */
-export async function resyncShiftCloseMessage(shiftId: string): Promise<void> {
+export async function resyncShiftCloseMessage(
+  shiftId: string,
+  options: { voided?: boolean } = {}
+): Promise<void> {
   try {
     const shift = await prisma.shift.findUnique({
       where: { id: shiftId },
@@ -254,9 +257,36 @@ export async function resyncShiftCloseMessage(shiftId: string): Promise<void> {
       tenant?.timezone ?? "UTC",
       getDictionary(locale).summaryText
     );
-    await editChatMessage(channel.chatId, shift.telegramSummaryMessageId, text);
-    await sendUpdatedPush(tenantId, "shiftCloseSummary", getDictionary(locale).pushSettings.shiftCloseLabel, text);
+    // Удаление смены: сообщение остаётся в чате с пометкой — стереть его
+    // Telegram не даст (старше 48 часов), а молча оставленные цифры
+    // удалённой смены хуже (правка владельца 2026-08-16).
+    const finalText = options.voided
+      ? `<i>${getDictionary(locale).summaryText.shiftVoided}</i>\n${text}`
+      : text;
+    if (options.voided) {
+      await removeOrMarkMessage(channel.chatId, shift.telegramSummaryMessageId, finalText);
+    } else {
+      await editChatMessage(channel.chatId, shift.telegramSummaryMessageId, finalText);
+    }
+    await sendUpdatedPush(tenantId, "shiftCloseSummary", getDictionary(locale).pushSettings.shiftCloseLabel, finalText);
   } catch (err) {
     console.error("shift close resync failed", { shiftId, err });
   }
+}
+
+/**
+ * Сообщение о событии, которого больше нет (удалили сдачу итогов, смену,
+ * сверку кассы Товаров). Решение владельца 2026-08-16: "я бы их всех просто
+ * удалял" — сначала пробуем удалить, и только если Telegram не дал (его
+ * лимит — 48 часов на удаление своих сообщений), переписываем пометкой.
+ * Молча оставлять цифры удалённой записи нельзя в любом случае.
+ */
+export async function removeOrMarkMessage(
+  chatId: string,
+  messageId: string,
+  markedText: string
+): Promise<void> {
+  const deleted = await deleteChatMessage(chatId, messageId);
+  if (deleted) return;
+  await editChatMessage(chatId, messageId, markedText).catch(() => {});
 }
