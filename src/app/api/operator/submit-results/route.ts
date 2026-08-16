@@ -765,13 +765,23 @@ export async function POST(request: Request) {
         });
       }
 
-      if (zs.cashAmount > 0) {
+      // В журнал идёт ПОЛУЧЕННАЯ выручка, а не введённый остаток: сотрудник
+      // вводит то, что осталось в кассе после своих трат (решение владельца
+      // 2026-08-16), значит потраченное нужно вернуть обратно — иначе расход
+      // вычитается дважды, внутри введённой суммы и операцией расхода, и
+      // остаток зоны занижается на его сумму.
+      //
+      // Проверяется на цифрах: получил 1000, купил на 350, ввёл 650.
+      // revenue 1000 − expense 350 = 650 в кассе ✓. Без прибавки было бы
+      // revenue 650 − 350 = 300, то есть на 350 меньше, чем в ящике.
+      const cashReceived = Math.round((zs.cashAmount + expensesOf(zs.zoneId)) * 100) / 100;
+      if (cashReceived > 0) {
         await tx.moneyOperation.create({
           data: {
             tenantId: point.tenantId,
             zoneId: zs.zoneId,
             type: "revenue",
-            amount: zs.cashAmount,
+            amount: cashReceived,
             performedByOperatorId: operator.id,
             resultsSubmissionId: created.id,
           },
