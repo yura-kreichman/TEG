@@ -1006,7 +1006,10 @@ export async function spendWalletForTicketOrderTx(tx: Tx, walletId: string, para
 export async function voidAbonementSale(transactionId: string, tenantId: string, userId: string) {
   const { walletId, credited } = await prisma.$transaction(async (tx) => {
     const sale = await tx.abonementTransaction.findFirst({
-      where: { id: transactionId, type: "topup", wallet: { tenantId } },
+      // adjustment — начисление владельцем из кабинета: денег за ним нет,
+      // отменяется одним лишь возвратом баланса (запрос 2026-08-16, реестр
+      // показывает начисления наравне с продажами).
+      where: { id: transactionId, type: { in: ["topup", "adjustment"] }, wallet: { tenantId } },
       include: { abonement: { select: { price: true } }, moneyOperations: true },
     });
     if (!sale) throw new Error("SALE_NOT_FOUND");
@@ -1041,6 +1044,9 @@ export async function voidAbonementSale(transactionId: string, tenantId: string,
           },
         });
       }
+    } else if (sale.type === "adjustment") {
+      // Начисление владельцем кассы не касалось — компенсировать нечего,
+      // достаточно возврата баланса выше.
     } else {
       // Продажа старше 2026-08-16 и не попала в бэкфилл миграции: связи с
       // деньгами нет. Восстанавливаем сумму по прайсу плана (для

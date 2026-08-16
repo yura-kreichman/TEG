@@ -27,6 +27,11 @@ export async function GET(request: Request) {
   const pointId = searchParams.get("pointId");
   const from = searchParams.get("from"); // YYYY-MM-DD
   const to = searchParams.get("to");
+  // "owner" — продажи, проведённые владельцем из кабинета (у них нет
+  // operatorId, поэтому отдельным значением, а не id).
+  const performedBy = searchParams.get("performedBy");
+  const planId = searchParams.get("planId");
+  const q = (searchParams.get("q") ?? "").trim();
 
   const occurredAt: { gte?: Date; lt?: Date } = {};
   if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) occurredAt.gte = new Date(`${from}T00:00:00.000Z`);
@@ -38,9 +43,22 @@ export async function GET(request: Request) {
 
   const sales = await prisma.abonementTransaction.findMany({
     where: {
-      type: "topup",
-      wallet: { tenantId: owner.tenantId },
+      // "adjustment" — начисление владельцем из кабинета (запрос 2026-08-16):
+      // денег в кассу не приносит, но баланс клиента меняет ровно так же, и
+      // видеть его владелец должен в том же реестре.
+      type: { in: ["topup", "adjustment"] },
+      wallet: {
+        tenantId: owner.tenantId,
+        // Поиск по клиенту — имя или телефон, как в списке Клиентов.
+        ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" as const } }, { phone: { contains: q } }] } : {}),
+      },
       ...(pointId ? { pointId } : {}),
+      ...(planId ? { abonementId: planId } : {}),
+      ...(performedBy === "owner"
+        ? { userId: { not: null } }
+        : performedBy
+          ? { operatorId: performedBy }
+          : {}),
       ...(occurredAt.gte || occurredAt.lt ? { occurredAt } : {}),
     },
     orderBy: { occurredAt: "desc" },
@@ -58,7 +76,27 @@ export async function GET(request: Request) {
     },
   });
 
+  // Итог по отфильтрованному списку — сколько денег и сколько начислено:
+  // владелец смотрит реестр за период именно ради суммы.
+  const totals = sales.reduce(
+    (acc, s) => {
+      if (s.voidedAt) return acc; // аннулированные в итог не входят
+      acc.count += 1;
+      acc.credited += Number(s.amount);
+      acc.paid += s.moneyOperations
+        .filter((op) => Number(op.amount) > 0)
+        .reduce((sum, op) => sum + Number(op.amount), 0);
+      return acc;
+    },
+    { count: 0, paid: 0, credited: 0 }
+  );
+
   return NextResponse.json({
+    totals: {
+      count: totals.count,
+      paid: Math.round(totals.paid * 100) / 100,
+      credited: Math.round(totals.credited * 100) / 100,
+    },
     sales: sales.map((s) => {
       // Уплачено = сумма связанных операций (при разбивке их несколько).
       // Компенсации аннулирования тоже связаны с этой продажей и приходят
@@ -69,6 +107,9 @@ export async function GET(request: Request) {
       return {
         id: s.id,
         occurredAt: s.occurredAt.toISOString(),
+        // "adjustment" — начисление владельцем, у него нет ни плана, ни
+        // денег: экран показывает его отдельной пометкой, а не как продажу.
+        kind: s.type === "adjustment" ? ("adjustment" as const) : ("sale" as const),
         planName: s.abonement?.name ?? null,
         creditedAmount: Number(s.amount),
         // null — старая продажа без связи с деньгами (см. бэкфилл миграции):

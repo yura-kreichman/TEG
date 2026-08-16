@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Pencil, Trash2, Gift, Search, ChevronRight, Wallet, Send, Megaphone, FileDown, FileUp, QrCode as QrCodeIcon, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, Gift, Search, ChevronLeft, ChevronRight, Wallet, Send, Megaphone, FileDown, FileUp, QrCode as QrCodeIcon, Users } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { FilePickerButton } from "@/components/file-picker-button";
 import { compressImageFile } from "@/lib/client-image";
@@ -28,6 +28,14 @@ import { InstructionQrSheet } from "@/components/instructions/instruction-qr-she
 import { useI18n } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { cn } from "@/lib/utils";
+import {
+  formatSalesPeriodLabel,
+  isSalesPeriodCurrent,
+  salesPeriodDateStr,
+  salesPeriodRange,
+  stepSalesPeriodAnchor,
+  type SalesPeriodGranularity,
+} from "@/lib/sales-period";
 
 interface AbonementInfo {
   id: string;
@@ -51,6 +59,9 @@ interface WalletInfo {
 interface SaleInfo {
   id: string;
   occurredAt: string;
+  // "adjustment" — начисление владельцем из кабинета: без плана и без денег,
+  // но баланс клиента меняет так же, поэтому живёт в том же реестре.
+  kind: "sale" | "adjustment";
   planName: string | null;
   creditedAmount: number;
   paidAmount: number | null;
@@ -184,7 +195,20 @@ export default function AbonementsPage() {
 
   // Таб "Продажи" (запрос владельца 2026-08-16).
   const [sales, setSales] = useState<SaleInfo[]>([]);
+  const [salesTotals, setSalesTotals] = useState<{ count: number; paid: number; credited: number } | null>(null);
   const [salesLoading, setSalesLoading] = useState(false);
+  // Фильтры — тот же набор и тот же вид, что в реестре продаж Товаров
+  // (запрос владельца 2026-08-16): период, точка, сотрудник, поиск клиента.
+  const [salesMode, setSalesMode] = useState<"granularity" | "custom">("granularity");
+  const [salesGranularity, setSalesGranularity] = useState<SalesPeriodGranularity>("month");
+  const [salesAnchor, setSalesAnchor] = useState(() => new Date());
+  const [salesCustomFrom, setSalesCustomFrom] = useState(() => salesPeriodDateStr(new Date()));
+  const [salesCustomTo, setSalesCustomTo] = useState(() => salesPeriodDateStr(new Date()));
+  const [salesPointFilter, setSalesPointFilter] = useState<string>("all");
+  const [salesPerformerFilter, setSalesPerformerFilter] = useState<string>("all");
+  const [salesQuery, setSalesQuery] = useState("");
+  const [salesPoints, setSalesPoints] = useState<{ id: string; name: string }[]>([]);
+  const [salesOperators, setSalesOperators] = useState<{ id: string; name: string }[]>([]);
   const [voidTarget, setVoidTarget] = useState<SaleInfo | null>(null);
   const [voiding, setVoiding] = useState(false);
   const [voidError, setVoidError] = useState<string | null>(null);
@@ -318,9 +342,20 @@ export default function AbonementsPage() {
   async function loadSales() {
     setSalesLoading(true);
     try {
-      const res = await fetch("/api/abonement-sales");
+      const params = new URLSearchParams();
+      const range =
+        salesMode === "custom"
+          ? { from: salesCustomFrom, to: salesCustomTo }
+          : salesPeriodRange(salesGranularity, salesAnchor);
+      params.set("from", range.from);
+      params.set("to", range.to);
+      if (salesPointFilter !== "all") params.set("pointId", salesPointFilter);
+      if (salesPerformerFilter !== "all") params.set("performedBy", salesPerformerFilter);
+      if (salesQuery.trim()) params.set("q", salesQuery.trim());
+      const res = await fetch(`/api/abonement-sales?${params.toString()}`);
       const data = await res.json();
       setSales(data.sales ?? []);
+      setSalesTotals(data.totals ?? null);
     } finally {
       setSalesLoading(false);
     }
@@ -375,8 +410,32 @@ export default function AbonementsPage() {
   }, []);
 
   useEffect(() => {
-    if (tab === "sales") loadSales();
-  }, [tab]);
+    if (tab !== "sales") return;
+    loadSales();
+    // Точки и сотрудники для селектов — один раз при первом открытии таба.
+    if (salesPoints.length === 0) {
+      fetch("/api/points")
+        .then((res) => res.json())
+        .then((data) => setSalesPoints(data.points ?? []))
+        .catch(() => {});
+    }
+    if (salesOperators.length === 0) {
+      fetch("/api/operators")
+        .then((res) => res.json())
+        .then((data) => setSalesOperators((data.operators ?? []).map((o: { id: string; name: string }) => ({ id: o.id, name: o.name }))))
+        .catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, salesMode, salesGranularity, salesAnchor, salesCustomFrom, salesCustomTo, salesPointFilter, salesPerformerFilter]);
+
+  // Поиск — с задержкой, чтобы не бить в API на каждую букву (тот же приём,
+  // что в списке клиентов рядом).
+  useEffect(() => {
+    if (tab !== "sales") return;
+    const timer = setTimeout(() => loadSales(), 350);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [salesQuery]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function openNew() {
@@ -538,6 +597,166 @@ export default function AbonementsPage() {
               аннулированием и продажей заново. */}
           {tab === "sales" && (
             <>
+              {/* Период — те же пять кнопок, что в Товарах и Деньгах. */}
+              <div className="mb-3 grid grid-cols-5 gap-1">
+                {(["day", "week", "month", "year"] as const).map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => {
+                      setSalesGranularity(g);
+                      setSalesAnchor(new Date());
+                      setSalesMode("granularity");
+                    }}
+                    className={cn(
+                      "rounded-full px-1 py-1.5 text-center text-[0.6875rem] font-semibold sm:text-xs",
+                      salesMode === "granularity" && g === salesGranularity
+                        ? "bg-primary/10 text-primary"
+                        : "bg-surface-0 text-muted-foreground"
+                    )}
+                  >
+                    {g === "day"
+                      ? t.money.periodDay
+                      : g === "week"
+                        ? t.money.periodWeek
+                        : g === "month"
+                          ? t.money.periodMonth
+                          : t.money.periodYear}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setSalesMode("custom")}
+                  className={cn(
+                    "rounded-full px-1 py-1.5 text-center text-[0.6875rem] font-semibold sm:text-xs",
+                    salesMode === "custom" ? "bg-primary/10 text-primary" : "bg-surface-0 text-muted-foreground"
+                  )}
+                >
+                  {t.money.periodCustom}
+                </button>
+              </div>
+
+              {salesMode === "granularity" ? (
+                <div className="mb-3 flex items-center justify-between">
+                  <button
+                    type="button"
+                    aria-label={t.money.prevPeriod}
+                    onClick={() => setSalesAnchor(stepSalesPeriodAnchor(salesGranularity, salesAnchor, -1))}
+                    className="flex size-8 items-center justify-center rounded-control text-muted-foreground"
+                  >
+                    <ChevronLeft className="size-4.5" />
+                  </button>
+                  <p className="text-caption-airbnb font-semibold text-foreground">
+                    {formatSalesPeriodLabel(salesGranularity, salesAnchor, t)}
+                  </p>
+                  <button
+                    type="button"
+                    aria-label={t.money.nextPeriod}
+                    onClick={() => setSalesAnchor(stepSalesPeriodAnchor(salesGranularity, salesAnchor, 1))}
+                    disabled={isSalesPeriodCurrent(salesGranularity, salesAnchor)}
+                    className="flex size-8 items-center justify-center rounded-control text-muted-foreground disabled:opacity-30"
+                  >
+                    <ChevronRight className="size-4.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="mb-3 flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={salesCustomFrom}
+                    max={salesCustomTo}
+                    onChange={(e) => setSalesCustomFrom(e.target.value)}
+                    className="h-9 flex-1 rounded-control border border-input bg-background px-2.5 text-caption-airbnb"
+                  />
+                  <span className="text-caption-airbnb text-muted-foreground">—</span>
+                  <input
+                    type="date"
+                    value={salesCustomTo}
+                    min={salesCustomFrom}
+                    onChange={(e) => setSalesCustomTo(e.target.value)}
+                    className="h-9 flex-1 rounded-control border border-input bg-background px-2.5 text-caption-airbnb"
+                  />
+                </div>
+              )}
+
+              <div className="mb-3 flex flex-col gap-2">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={salesQuery}
+                    onChange={(e) => setSalesQuery(e.target.value)}
+                    placeholder={t.abonements.walletsSearchPlaceholder}
+                    className="pl-9"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Точка — только когда их больше одной: на одиночной
+                      точке селект выбирать нечего. */}
+                  {salesPoints.length > 1 && (
+                    <Select
+                      value={salesPointFilter}
+                      onValueChange={(v) => v && setSalesPointFilter(v)}
+                      items={[
+                        { value: "all", label: t.money.allPoints },
+                        ...salesPoints.map((p) => ({ value: p.id, label: p.name })),
+                      ]}
+                    >
+                      <SelectTrigger className="h-11 w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t.money.allPoints}</SelectItem>
+                        {salesPoints.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <Select
+                    value={salesPerformerFilter}
+                    onValueChange={(v) => v && setSalesPerformerFilter(v)}
+                    items={[
+                      { value: "all", label: t.goods.allOperatorsLabel },
+                      { value: "owner", label: t.common.ownerLabel },
+                      ...salesOperators.map((o) => ({ value: o.id, label: o.name })),
+                    ]}
+                  >
+                    <SelectTrigger className="h-11 w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t.goods.allOperatorsLabel}</SelectItem>
+                      {/* Владелец отдельным пунктом: его начисления и продажи
+                          не привязаны ни к какому сотруднику. */}
+                      <SelectItem value="owner">{t.common.ownerLabel}</SelectItem>
+                      {salesOperators.map((o) => (
+                        <SelectItem key={o.id} value={o.id}>
+                          {o.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {salesTotals && salesTotals.count > 0 && (
+                <SpringCard hover={false} className="mb-3.5">
+                  <div className="flex items-baseline justify-between gap-2 tabular-nums">
+                    <span className="text-caption-airbnb text-muted-foreground">
+                      {t.abonements.salesTab} · {salesTotals.count}
+                    </span>
+                    <span className="text-[1.375rem] font-extrabold">
+                      <Money value={salesTotals.paid} />
+                    </span>
+                  </div>
+                  <p className="text-caption-airbnb text-muted-foreground">
+                    {t.abonements.saleCreditedLabel}: <Money value={salesTotals.credited} />
+                  </p>
+                </SpringCard>
+              )}
+
               {salesLoading ? (
                 <SkeletonListRows count={4} />
               ) : sales.length === 0 ? (
@@ -550,7 +769,14 @@ export default function AbonementsPage() {
                         <div className="flex items-start gap-3">
                           <div className="min-w-0 grow">
                             <div className="flex items-center gap-1.5">
-                              <p className="truncate text-card-title">{s.planName ?? t.abonements.title}</p>
+                              {/* Начисление владельцем — без плана и без
+                                  денег, поэтому подписано своим ярлыком, а не
+                                  выдуманным названием абонемента. */}
+                              <p className="truncate text-card-title">
+                                {s.kind === "adjustment"
+                                  ? t.abonements.arbitraryAmountTitle
+                                  : (s.planName ?? t.abonements.title)}
+                              </p>
                               {s.voidedAt && (
                                 <span className="shrink-0 text-caption-airbnb text-destructive">
                                   {t.abonements.saleVoided}
