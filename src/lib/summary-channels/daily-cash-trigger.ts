@@ -5,6 +5,9 @@ import { DAILY_CASH_SUMMARY_DEFAULTS, type DailyCashSummarySettingsData } from "
 import { buildDailyCashSummaryData, hasActivityInBounds } from "./daily-cash-data";
 import { dispatchDailyCashSummary, getEnabledChannels } from "./dispatch";
 import type { DailyCashPending } from "./types";
+import { getDictionary } from "@/lib/i18n";
+import { isLocale } from "@/lib/locales";
+import { removeOrMarkMessage } from "./resync";
 
 function isUniqueConstraintViolation(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
@@ -358,6 +361,33 @@ export async function notifyDailyCashLateSubmission(pointId: string, tenantId: s
   if (existingDeliveries.length === 0) return; // ничего не отправляли — это Шаг обычной первой отправки, не досдача
 
   const settings = toSettingsData(settingsRow, businessDayBoundary);
+
+  // День опустел: удалили единственную сдачу итогов, и суммировать в сводке
+  // больше нечего. Пересобирать её бессмысленно — сообщение уходит вместе с
+  // данными (решение владельца 2026-08-16, тот же принцип, что у остальных
+  // сводок; при отказе Telegram удалять — пометка).
+  if (!(await hasActivityInBounds(pointId, bounds))) {
+    const telegramDelivery = existingDeliveries.find((d) => d.channelType === "telegram" && d.externalMessageId);
+    if (telegramDelivery?.externalMessageId) {
+      const [channel, tenant] = await Promise.all([
+        prisma.tenantSummaryChannel.findFirst({
+          where: { tenantId, channelType: "telegram", pointId: null, enabled: true, chatStatus: "active" },
+        }),
+        prisma.tenant.findUnique({ where: { id: tenantId }, select: { locale: true } }),
+      ]);
+      const locale = tenant?.locale && isLocale(tenant.locale) ? tenant.locale : "ru";
+      if (channel?.chatId) {
+        await removeOrMarkMessage(
+          channel.chatId,
+          telegramDelivery.externalMessageId,
+          `<i>${getDictionary(locale).summaryText.dailyCashVoided}</i>`
+        ).catch(() => {});
+      }
+      await prisma.dailyCashSummaryDelivery.deleteMany({ where: { pointId, businessDate } });
+    }
+    return;
+  }
+
   const data = await buildDailyCashSummaryData(pointId, bounds, []);
   if (!data) return;
 

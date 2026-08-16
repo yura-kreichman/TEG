@@ -5,7 +5,7 @@ import { editChatMessage } from "@/lib/telegram-bot";
 import { getDictionary } from "@/lib/i18n";
 import { isLocale, type Locale } from "@/lib/locales";
 import { formatExpenseAlertTelegram } from "@/lib/summary-channels/telegram-format";
-import { resyncAfterMoneyOpChange, sendUpdatedPush } from "@/lib/summary-channels/resync";
+import { removeOrMarkMessage, resyncAfterMoneyOpChange, sendUpdatedPush } from "@/lib/summary-channels/resync";
 
 /**
  * Правка/удаление расхода владельцем прямо в реестре (запрос пользователя
@@ -274,6 +274,32 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/money/ex
     });
     await tx.moneyOperation.delete({ where: { id } });
   });
+
+  // Своё сообщение "Новый расход" уходит вместе с записью (решение владельца
+  // 2026-08-16) — раньше оно оставалось в чате навсегда, с суммой, которой в
+  // системе уже нет.
+  if (op.expenseAlertMessageId) {
+    const [channel, tenant] = await Promise.all([
+      prisma.tenantSummaryChannel.findFirst({
+        where: {
+          tenantId: owner.tenantId,
+          channelType: "telegram",
+          pointId: null,
+          enabled: true,
+          chatStatus: "active",
+        },
+      }),
+      prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { locale: true } }),
+    ]);
+    const locale: Locale = tenant?.locale && isLocale(tenant.locale) ? tenant.locale : "ru";
+    if (channel?.chatId) {
+      await removeOrMarkMessage(
+        channel.chatId,
+        op.expenseAlertMessageId,
+        `<i>${getDictionary(locale).summaryText.expenseVoided}</i>`
+      ).catch(() => {});
+    }
+  }
 
   await resyncAfterMoneyOpChange(op);
 

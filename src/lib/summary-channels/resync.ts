@@ -129,7 +129,24 @@ export async function resyncCollectionAlert(messageId: string, tenantId: string)
       },
       orderBy: { occurredAt: "asc" },
     });
-    if (ops.length === 0) return;
+    if (ops.length === 0) {
+      // Удалили последнюю строку акта — пересобирать больше нечего, и
+      // сообщение должно уйти вместе с записью (решение владельца
+      // 2026-08-16: распространить принцип удаления на все сводки).
+      const emptyChannel = await prisma.tenantSummaryChannel.findFirst({
+        where: { tenantId, channelType: "telegram", pointId: null, enabled: true, chatStatus: "active" },
+      });
+      const emptyTenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { locale: true } });
+      const emptyLocale: Locale = emptyTenant?.locale && isLocale(emptyTenant.locale) ? emptyTenant.locale : "ru";
+      if (emptyChannel?.chatId) {
+        await removeOrMarkMessage(
+          emptyChannel.chatId,
+          messageId,
+          `<i>${getDictionary(emptyLocale).summaryText.collectionVoided}</i>`
+        );
+      }
+      return;
+    }
 
     const [channel, tenant] = await Promise.all([
       prisma.tenantSummaryChannel.findFirst({
