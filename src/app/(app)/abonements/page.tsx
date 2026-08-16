@@ -537,14 +537,17 @@ export default function AbonementsPage() {
               2026-07-18: "слишком большой экран получается", тот же приём,
               что в "Отчётах") — планы и кошельки клиентов правятся отдельно,
               смешивать в один список незачем. */}
+          {/* Сетка 2 колонки, как в Товарах и Отчётах (правка владельца
+              2026-08-16: три таба в одну строку не помещались и "кривили"
+              бар). Порядок — Клиенты, Продажи, Абонементы: длинное
+              "Абонементы" уходит во вторую строку и занимает её целиком
+              (последний элемент растянут на обе колонки). */}
           <SegmentedTabs
-            className="mb-4 grid grid-cols-3"
-            equalWidth
-            size="sm"
+            className="mb-4 grid grid-cols-2 [&>*:last-child]:col-span-2"
             options={[
               { key: "wallets", label: t.abonements.walletsTitle },
-              { key: "abonements", label: t.abonements.title },
               { key: "sales", label: t.abonements.salesTab },
+              { key: "abonements", label: t.abonements.title },
             ]}
             value={tab}
             onChange={setTab}
