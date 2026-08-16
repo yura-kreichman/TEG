@@ -1569,6 +1569,7 @@ function OrderCard({
               avatarUrl={null}
               iconKey={null}
               colorTag={order.soldByOperatorColorTag ?? null}
+              showIcon
             />
           </p>
         </div>

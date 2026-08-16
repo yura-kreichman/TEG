@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, ChevronLeft, ChevronRight, ClipboardList, MapPin, Pencil, Plus, Search, Settings2, ShoppingBag, Trash2, TriangleAlert, Users, Wallet2, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ClipboardList, MapPin, Pencil, Plus, Search, Settings2, ShoppingBag, Trash2, TriangleAlert, Wallet2, X } from "lucide-react";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { PerformedByTag } from "@/components/performed-by-tag";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
@@ -30,6 +30,7 @@ import { useActionToast } from "@/hooks/use-action-toast";
 import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { compressImageFile } from "@/lib/client-image";
 import { formatMoneyCompact, parseMoneyInput } from "@/lib/format";
+import { formatTime } from "@/lib/datetime-format";
 import { playSaveDing } from "@/lib/beep";
 import { cn } from "@/lib/utils";
 
@@ -798,6 +799,20 @@ export default function GoodsCabinetPage() {
   const [confirmDeleteReconciliation, setConfirmDeleteReconciliation] = useState(false);
   const { saved: reconciliationDeleted, pulse: reconciliationDeletePulse } = useSavePulse();
 
+  // Группы по дням — как в реестрах Расходов и Абонементов (решение
+  // владельца 2026-08-16 о едином виде списков).
+  const saleGroups: { date: string; items: SaleEntry[] }[] = [];
+  for (const s of sales) {
+    const dateKey = String(s.occurredAt).slice(0, 10);
+    const lastGroup = saleGroups[saleGroups.length - 1];
+    if (lastGroup && lastGroup.date === dateKey) lastGroup.items.push(s);
+    else saleGroups.push({ date: dateKey, items: [s] });
+  }
+
+  function formatSaleGroupDate(dateStr: string) {
+    const d = new Date(dateStr + "T00:00:00Z");
+    return d.getUTCDate() + " " + t.readings.monthsGenitive[d.getUTCMonth()];
+  }
   function loadSales() {
     setLoadingSales(true);
     const params = new URLSearchParams();
@@ -1302,7 +1317,7 @@ export default function GoodsCabinetPage() {
                     revisions.map((r) => (
                       <SpringCard key={r.id} hover={false} animate={false} className="flex flex-col gap-2">
                         <div className="flex items-center justify-between text-caption-airbnb text-muted-foreground">
-                          <PerformedByTag name={r.performedBy} isOwner={r.performedByOwner} avatarUrl={r.performedByAvatarUrl} iconKey={r.performedByIconKey} colorTag={r.performedByColorTag} />
+                          <PerformedByTag name={r.performedBy} isOwner={r.performedByOwner} avatarUrl={r.performedByAvatarUrl} iconKey={r.performedByIconKey} colorTag={r.performedByColorTag} showIcon />
                           <span>{new Date(r.occurredAt).toLocaleString()}</span>
                         </div>
                         {r.groups.map((group, gi) => (
@@ -1516,7 +1531,7 @@ export default function GoodsCabinetPage() {
                         <div key={r.id} className="flex items-center justify-between gap-2 text-caption-airbnb tabular-nums">
                           <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
                             <span className="shrink-0">{new Date(r.occurredAt).toLocaleString()}</span>
-                            <PerformedByTag name={r.performedBy} isOwner={r.performedByOwner} avatarUrl={r.performedByAvatarUrl} iconKey={r.performedByIconKey} colorTag={r.performedByColorTag} />
+                            <PerformedByTag name={r.performedBy} isOwner={r.performedByOwner} avatarUrl={r.performedByAvatarUrl} iconKey={r.performedByIconKey} colorTag={r.performedByColorTag} showIcon />
                           </span>
                           <span className="flex shrink-0 items-center gap-2">
                             <span className="inline-flex items-center gap-1">
@@ -1709,7 +1724,7 @@ export default function GoodsCabinetPage() {
                       ) : (
                         (() => {
                           const op = operators.find((o) => o.id === salesOperatorFilter);
-                          return op ? <PerformedByTag name={op.name} isOwner={false} avatarUrl={op.avatarUrl} iconKey={op.iconKey} colorTag={op.colorTag} /> : null;
+                          return op ? <PerformedByTag name={op.name} isOwner={false} avatarUrl={op.avatarUrl} iconKey={op.iconKey} colorTag={op.colorTag} showIcon /> : null;
                         })()
                       )}
                     </SelectValue>
@@ -1718,7 +1733,7 @@ export default function GoodsCabinetPage() {
                     <SelectItem value="all">{t.goods.allOperatorsLabel}</SelectItem>
                     {operators.map((o) => (
                       <SelectItem key={o.id} value={o.id}>
-                        <PerformedByTag name={o.name} isOwner={false} avatarUrl={o.avatarUrl} iconKey={o.iconKey} colorTag={o.colorTag} />
+                        <PerformedByTag name={o.name} isOwner={false} avatarUrl={o.avatarUrl} iconKey={o.iconKey} colorTag={o.colorTag} showIcon />
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1835,59 +1850,60 @@ export default function GoodsCabinetPage() {
               {loadingSales ? null : sales.length === 0 ? (
                 <p className="py-4 text-center text-body-airbnb text-muted-foreground">{t.goods.noSalesYet}</p>
               ) : (
-                <SpringCard hover={false} className="flex flex-col gap-2">
-                  <h2 className="text-card-title">{t.goods.purchasesTitle}</h2>
-                  {sales.map((s) => (
-                    <div
-                      key={s.id}
-                      className={cn(
-                        "flex items-center gap-2 border-t border-border pt-2.5 first:border-t-0 first:pt-0",
-                        s.voidedAt && "opacity-40"
-                      )}
-                    >
-                      <PaymentMethodIcon method={s.paymentMethod} className="size-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-body-airbnb font-semibold">
-                          {s.goodsName} × {s.quantity}
-                          {s.voidedAt && ` · ${t.goods.voided}`}
-                        </p>
-                        <p className="flex flex-wrap items-center gap-x-1 text-caption-airbnb text-muted-foreground">
-                          <span>{new Date(s.occurredAt).toLocaleString()}</span>
-                          {!pointId && (
-                            <span className="inline-flex items-center gap-1">
-                              ·
-                              {s.pointIconKey ? (
-                                <AssetOrZoneIcon iconKey={s.pointIconKey} className="size-3.5 shrink-0" />
-                              ) : (
-                                <MapPin className="size-3.5 shrink-0" />
-                              )}
-                              {s.pointName}
+                /* Группы по дням и строки — единый вид со всеми реестрами
+                   проекта (решение владельца 2026-08-16: Расходы, Абонементы,
+                   Товары выглядят одинаково). */
+                <SpringCard hover={false} className="flex flex-col gap-3">
+                  {saleGroups.map((group) => (
+                    <div key={group.date}>
+                      <p className="mb-1 text-caption-airbnb font-semibold text-muted-foreground">
+                        {formatSaleGroupDate(group.date)}
+                      </p>
+                      <div className="flex flex-col">
+                        {group.items.map((s) => (
+                          <div
+                            key={s.id}
+                            className={cn(
+                              "flex items-center justify-between gap-2 border-t border-border py-1.5 first:border-t-0",
+                              s.voidedAt && "opacity-60"
+                            )}
+                          >
+                            <span className="min-w-0 flex-1">
+                              <span className="flex min-w-0 items-center gap-1.5">
+                                <PaymentMethodIcon method={s.paymentMethod} className="size-3.5 shrink-0 text-muted-foreground" />
+                                <span className="truncate text-body-airbnb font-semibold">
+                                  {s.goodsName}
+                                  {s.quantity > 1 ? " × " + s.quantity : ""}
+                                </span>
+                                {s.voidedAt && (
+                                  <span className="shrink-0 text-xs text-destructive">{t.goods.voided}</span>
+                                )}
+                              </span>
+                              <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
+                                <span className="tabular-nums">{formatTime(s.occurredAt)}</span>
+                                {!pointId && <span className="truncate">· {s.pointName}</span>}
+                                {/* Кому продали; без привязки к кошельку —
+                                    гость (запрос владельца 2026-08-16). */}
+                                <span className="truncate">· {s.clientName ?? s.clientPhone ?? t.goods.guestLabel}</span>
+                                <PerformedByTag
+                                  name={s.performedBy}
+                                  isOwner={s.performedByOwner}
+                                  avatarUrl={s.performedByAvatarUrl}
+                                  iconKey={s.performedByIconKey}
+                                  colorTag={s.performedByColorTag}
+                                  showIcon
+                                />
+                              </span>
                             </span>
-                          )}
-                          {(s.performedBy || s.performedByOwner) && (
-                            <span className="inline-flex items-center gap-1">
-                              ·
-                              <PerformedByTag name={s.performedBy} isOwner={s.performedByOwner} avatarUrl={s.performedByAvatarUrl} iconKey={s.performedByIconKey} colorTag={s.performedByColorTag} />
+                            <span className="shrink-0 text-xs font-bold tabular-nums">
+                              <Money value={s.amount} />
                             </span>
-                          )}
-                        </p>
-                        {/* Кому продали (запрос владельца 2026-08-16). Без
-                            привязки к кошельку это гость — пишем прямо, а не
-                            оставляем пустоту: иначе непонятно, потеряли
-                            клиента или его и не было. */}
-                        <p className="flex items-center gap-1 text-caption-airbnb text-muted-foreground">
-                          <Users className="size-3.5 shrink-0" />
-                          <span className="truncate">
-                            {s.clientName ?? s.clientPhone ?? t.goods.guestLabel}
-                          </span>
-                        </p>
+                            {!s.voidedAt && (
+                              <IconActionButton icon={Trash2} onClick={() => setVoidTarget(s)} label={t.goods.voidAction} destructive />
+                            )}
+                          </div>
+                        ))}
                       </div>
-                      <span className="shrink-0 font-bold tabular-nums">
-                        <Money value={s.amount} />
-                      </span>
-                      {!s.voidedAt && (
-                        <IconActionButton icon={Trash2} onClick={() => setVoidTarget(s)} label={t.goods.voidAction} destructive />
-                      )}
                     </div>
                   ))}
                 </SpringCard>

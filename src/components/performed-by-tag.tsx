@@ -27,24 +27,46 @@ export function PerformedByTag({
   avatarUrl,
   iconKey,
   colorTag,
+  showIcon,
 }: {
   name: string | null;
   isOwner: boolean;
   avatarUrl: string | null;
   iconKey: string | null;
   colorTag?: string | null;
+  // Рисовать иконку сотрудников слева от чипа — для одиночных упоминаний в
+  // реестрах. В списках сотрудников иконку ставит вызывающий код, одну на всех.
+  showIcon?: boolean;
 }) {
   if (isOwner) {
     return <Crown className="size-3.5 shrink-0 text-success" />;
   }
   if (!name) return null;
   if (colorTag !== undefined) {
-    return (
+    // Подложка поуже прежних px-2.5/py-1 (правка владельца 2026-08-16: "фон
+    // под именем сделать немного меньше") — в плотных реестрах чип занимал
+    // слишком много места.
+    //
+    // Иконка — СНАРУЖИ подложки (уточнение того же дня): сотрудников в строке
+    // может быть несколько, и тогда иконка одна на весь список, а не по одной
+    // в каждом чипе. Поэтому showIcon включают только там, где чип одиночный;
+    // списки (Задачи, зоны точки) рисуют иконку сами.
+    const chip = (
       <span
-        className={cn("rounded-full px-2.5 py-1 text-xs font-semibold text-muted-foreground", !colorTag && "bg-surface-0")}
+        className={cn(
+          "rounded-full px-2 py-0.5 text-xs font-semibold text-muted-foreground",
+          !colorTag && "bg-surface-0"
+        )}
         style={colorTag ? { backgroundColor: colorTagTint(colorTag) } : undefined}
       >
         {name}
+      </span>
+    );
+    if (!showIcon) return chip;
+    return (
+      <span className="inline-flex items-center gap-1">
+        <Users className="size-3.5 shrink-0 text-muted-foreground" />
+        {chip}
       </span>
     );
   }

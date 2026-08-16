@@ -370,6 +370,7 @@ export default function ExpensesRegisterPage() {
                                 avatarUrl={null}
                                 iconKey={null}
                                 colorTag={e.operatorColorTag}
+                                showIcon
                               />
                               {e.editedByOwner && <Crown className="size-3.5 shrink-0 text-success" />}
                             </span>

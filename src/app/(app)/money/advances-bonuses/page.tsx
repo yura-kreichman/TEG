@@ -190,6 +190,7 @@ export default function AdvancesBonusesRegisterPage() {
                             avatarUrl={null}
                             iconKey={null}
                             colorTag={op.operatorColorTag}
+                            showIcon
                           />
                           <span className="flex shrink-0 items-center gap-1">
                             <span

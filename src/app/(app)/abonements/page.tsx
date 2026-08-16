@@ -12,6 +12,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/money-input";
 import { parseMoneyInput } from "@/lib/format";
+import { formatTime } from "@/lib/datetime-format";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
@@ -206,10 +207,8 @@ export default function AbonementsPage() {
   const [salesCustomFrom, setSalesCustomFrom] = useState(() => salesPeriodDateStr(new Date()));
   const [salesCustomTo, setSalesCustomTo] = useState(() => salesPeriodDateStr(new Date()));
   const [salesPointFilter, setSalesPointFilter] = useState<string>("all");
-  const [salesPerformerFilter, setSalesPerformerFilter] = useState<string>("all");
   const [salesQuery, setSalesQuery] = useState("");
   const [salesPoints, setSalesPoints] = useState<{ id: string; name: string }[]>([]);
-  const [salesOperators, setSalesOperators] = useState<{ id: string; name: string }[]>([]);
   const [voidTarget, setVoidTarget] = useState<SaleInfo | null>(null);
   const [voiding, setVoiding] = useState(false);
   const [voidError, setVoidError] = useState<string | null>(null);
@@ -351,7 +350,6 @@ export default function AbonementsPage() {
       params.set("from", range.from);
       params.set("to", range.to);
       if (salesPointFilter !== "all") params.set("pointId", salesPointFilter);
-      if (salesPerformerFilter !== "all") params.set("performedBy", salesPerformerFilter);
       if (salesQuery.trim()) params.set("q", salesQuery.trim());
       const res = await fetch(`/api/abonement-sales?${params.toString()}`);
       const data = await res.json();
@@ -386,6 +384,20 @@ export default function AbonementsPage() {
     }
   }
 
+  // Группировка по дням — как в реестре Расходов (решение владельца
+  // 2026-08-16: единый список, а не карточка на каждую продажу).
+  const saleGroups: { date: string; items: SaleInfo[] }[] = [];
+  for (const s of sales) {
+    const dateKey = s.occurredAt.slice(0, 10);
+    const lastGroup = saleGroups[saleGroups.length - 1];
+    if (lastGroup && lastGroup.date === dateKey) lastGroup.items.push(s);
+    else saleGroups.push({ date: dateKey, items: [s] });
+  }
+
+  function formatSaleGroupDate(dateStr: string) {
+    const d = new Date(dateStr + "T00:00:00Z");
+    return d.getUTCDate() + " " + t.readings.monthsGenitive[d.getUTCMonth()];
+  }
   async function deleteWallet() {
     if (!walletKebabTarget) return;
     await fetch(`/api/abonement-wallets/${walletKebabTarget.id}`, { method: "DELETE" });
@@ -420,14 +432,8 @@ export default function AbonementsPage() {
         .then((data) => setSalesPoints(data.points ?? []))
         .catch(() => {});
     }
-    if (salesOperators.length === 0) {
-      fetch("/api/operators")
-        .then((res) => res.json())
-        .then((data) => setSalesOperators((data.operators ?? []).map((o: { id: string; name: string }) => ({ id: o.id, name: o.name }))))
-        .catch(() => {});
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, salesMode, salesGranularity, salesAnchor, salesCustomFrom, salesCustomTo, salesPointFilter, salesPerformerFilter]);
+  }, [tab, salesMode, salesGranularity, salesAnchor, salesCustomFrom, salesCustomTo, salesPointFilter]);
 
   // Поиск — с задержкой, чтобы не бить в API на каждую букву (тот же приём,
   // что в списке клиентов рядом).
@@ -715,30 +721,6 @@ export default function AbonementsPage() {
                       </SelectContent>
                     </Select>
                   )}
-                  <Select
-                    value={salesPerformerFilter}
-                    onValueChange={(v) => v && setSalesPerformerFilter(v)}
-                    items={[
-                      { value: "all", label: t.goods.allOperatorsLabel },
-                      { value: "owner", label: t.common.ownerLabel },
-                      ...salesOperators.map((o) => ({ value: o.id, label: o.name })),
-                    ]}
-                  >
-                    <SelectTrigger className="h-11 w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t.goods.allOperatorsLabel}</SelectItem>
-                      {/* Владелец отдельным пунктом: его начисления и продажи
-                          не привязаны ни к какому сотруднику. */}
-                      <SelectItem value="owner">{t.common.ownerLabel}</SelectItem>
-                      {salesOperators.map((o) => (
-                        <SelectItem key={o.id} value={o.id}>
-                          {o.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
 
@@ -763,56 +745,67 @@ export default function AbonementsPage() {
               ) : sales.length === 0 ? (
                 <p className="text-body-airbnb text-muted-foreground">{t.abonements.noSales}</p>
               ) : (
-                <StaggerList className="flex flex-col gap-3.5">
-                  {sales.map((s) => (
-                    <StaggerItem key={s.id}>
-                      <SpringCard animate={false} className={cn(s.voidedAt && "opacity-60")}>
-                        <div className="flex items-start gap-3">
-                          <div className="min-w-0 grow">
-                            <div className="flex items-center gap-1.5">
-                              {/* Начисление владельцем — без плана и без
-                                  денег, поэтому подписано своим ярлыком, а не
-                                  выдуманным названием абонемента. */}
-                              <p className="truncate text-card-title">
-                                {s.kind === "adjustment"
-                                  ? t.abonements.arbitraryAmountTitle
-                                  : (s.planName ?? t.abonements.title)}
-                              </p>
-                              {s.voidedAt && (
-                                <span className="shrink-0 text-caption-airbnb text-destructive">
-                                  {t.abonements.saleVoided}
+                /* Единый список, как в реестре Расходов (решение владельца
+                   2026-08-16): группы по дням, внутри — строки, а не
+                   отдельные карточки на каждую продажу. */
+                <SpringCard hover={false} animate={false} className="flex flex-col gap-3">
+                  {saleGroups.map((group) => (
+                    <div key={group.date}>
+                      <p className="mb-1 text-caption-airbnb font-semibold text-muted-foreground">
+                        {formatSaleGroupDate(group.date)}
+                      </p>
+                      <div className="flex flex-col">
+                        {group.items.map((s) => (
+                          <div
+                            key={s.id}
+                            className={cn(
+                              "flex items-center justify-between gap-2 border-t border-border py-1.5 first:border-t-0",
+                              s.voidedAt && "opacity-60"
+                            )}
+                          >
+                            <span className="min-w-0 flex-1">
+                              <span className="flex min-w-0 items-center gap-1.5">
+                                {/* Название плана — размером строки реестра,
+                                    не заголовком карточки (правка владельца
+                                    2026-08-16: "слишком большое"). */}
+                                <span className="truncate text-body-airbnb font-semibold">
+                                  {s.kind === "adjustment"
+                                    ? t.abonements.arbitraryAmountTitle
+                                    : (s.planName ?? t.abonements.title)}
+                                </span>
+                                {s.voidedAt && (
+                                  <span className="shrink-0 text-xs text-destructive">{t.abonements.saleVoided}</span>
+                                )}
+                              </span>
+                              <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
+                                {/* Время без секунд, дата — в шапке группы
+                                    (правка владельца 2026-08-16). */}
+                                <span className="tabular-nums">{formatTime(s.occurredAt)}</span>
+                                <span className="truncate">· {s.clientName ?? s.clientPhone}</span>
+                                {s.pointName && <span className="truncate">· {s.pointName}</span>}
+                                <PerformedByTag
+                                  name={s.performedBy}
+                                  isOwner={s.performedByOwner}
+                                  avatarUrl={null}
+                                  iconKey={null}
+                                  colorTag={s.performedByColorTag}
+                                  showIcon
+                                />
+                              </span>
+                            </span>
+                            {/* У продажи справа — уплаченные деньги, у
+                                начисления владельца денег нет вовсе, поэтому
+                                там стоит начисленная сумма: прочерк владельцу
+                                ничего не говорил (правка 2026-08-16). */}
+                            <span className="shrink-0 text-right text-xs tabular-nums">
+                              <span className="font-bold">
+                                <Money value={s.paidAmount ?? s.creditedAmount} />
+                              </span>
+                              {s.kind === "sale" && s.paidAmount !== null && s.creditedAmount !== s.paidAmount && (
+                                <span className="block text-muted-foreground">
+                                  {t.abonements.saleCreditedLabel}: <Money value={s.creditedAmount} />
                                 </span>
                               )}
-                            </div>
-                            <p className="flex flex-wrap items-center gap-x-1.5 text-caption-airbnb text-muted-foreground">
-                              <span className="tabular-nums">{new Date(s.occurredAt).toLocaleString()}</span>
-                              <span>· {s.clientName ?? s.clientPhone}</span>
-                              {s.pointName && <span>· {s.pointName}</span>}
-                            </p>
-                            <p className="flex flex-wrap items-center gap-x-1.5 text-caption-airbnb text-muted-foreground">
-                              {/* Единый чип сотрудника по всему проекту
-                                  (решение владельца 2026-08-16): имя на
-                                  тусклом фоне цветовой метки, у владельца —
-                                  корона. Раньше здесь при владельце рисовалась
-                                  иконка с пустым именем. */}
-                              <PerformedByTag
-                                name={s.performedBy}
-                                isOwner={s.performedByOwner}
-                                avatarUrl={null}
-                                iconKey={null}
-                                colorTag={s.performedByColorTag}
-                              />
-                              {/* Начислено и уплачено — разные суммы, когда у
-                                  плана есть бонус; показываем обе, иначе
-                                  непонятно, почему в кассе меньше. */}
-                              <span>
-                                · {t.abonements.saleCreditedLabel}: <Money value={s.creditedAmount} />
-                              </span>
-                            </p>
-                          </div>
-                          <div className="flex shrink-0 flex-col items-end gap-1.5">
-                            <span className="font-bold tabular-nums">
-                              {s.paidAmount === null ? "—" : <Money value={s.paidAmount} />}
                             </span>
                             {!s.voidedAt && (
                               <IconActionButton
@@ -826,11 +819,11 @@ export default function AbonementsPage() {
                               />
                             )}
                           </div>
-                        </div>
-                      </SpringCard>
-                    </StaggerItem>
+                        ))}
+                      </div>
+                    </div>
                   ))}
-                </StaggerList>
+                </SpringCard>
               )}
             </>
           )}

@@ -1312,6 +1312,7 @@ export default function ReadingsCalendarPage() {
                             avatarUrl={null}
                             iconKey={null}
                             colorTag={r.performedByColorTag}
+                            showIcon
                           />
                         </div>
                         <div className="flex items-center justify-between text-caption-airbnb">
@@ -1415,7 +1416,7 @@ export default function ReadingsCalendarPage() {
                                 не тянем с сервера. isOwner всегда false:
                                 сдачу итогов проводит только Сотрудник. */}
                             <p className="flex flex-wrap items-center gap-x-1.5 text-caption-airbnb">
-                              <PerformedByTag name={card.operatorName} isOwner={false} avatarUrl={null} iconKey={null} colorTag={card.operatorColorTag} />
+                              <PerformedByTag name={card.operatorName} isOwner={false} avatarUrl={null} iconKey={null} colorTag={card.operatorColorTag} showIcon />
                               {card.accountingMode === "counters" && card.editable && (
                                 <span>· {t.readings.lastSubmissionNote}</span>
                               )}
@@ -1698,6 +1699,7 @@ export default function ReadingsCalendarPage() {
                                               avatarUrl={null}
                                               iconKey={null}
                                               colorTag={o.soldByOperatorColorTag}
+                                              showIcon
                                             />
                                           </p>
                                         </div>
@@ -1798,6 +1800,7 @@ export default function ReadingsCalendarPage() {
                                     avatarUrl={null}
                                     iconKey={null}
                                     colorTag={e.performedByColorTag}
+                                    showIcon
                                   />
                                 </div>
                               ))}
@@ -1853,6 +1856,7 @@ export default function ReadingsCalendarPage() {
                                     avatarUrl={null}
                                     iconKey={null}
                                     colorTag={tk.redeemedByOperatorColorTag}
+                                    showIcon
                                   />
                                 </div>
                               ))}
@@ -2120,6 +2124,7 @@ export default function ReadingsCalendarPage() {
                   avatarUrl={null}
                   iconKey={null}
                   colorTag={viewOrder.soldByOperatorColorTag}
+                  showIcon
                 />
               </p>
             </div>

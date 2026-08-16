@@ -990,6 +990,7 @@ export default function ZoneBalancesPage() {
                                   avatarUrl={null}
                                   iconKey={null}
                                   colorTag={act.items[0]!.performerColorTag ?? null}
+                                  showIcon
                                 />
                               </span>
                               <span className="flex shrink-0 items-center gap-2">
@@ -1098,6 +1099,7 @@ export default function ZoneBalancesPage() {
                                   avatarUrl={null}
                                   iconKey={null}
                                   colorTag={c.performerColorTag ?? null}
+                                  showIcon
                                 />
                               )}
                           </span>

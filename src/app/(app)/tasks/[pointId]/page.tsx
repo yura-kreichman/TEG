@@ -370,6 +370,9 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
                         оператора. "Я" (assignedUsers, Владелец назначил
                         себе) — тот же чип, без цветовой метки, падает на
                         нейтральный bg-surface-0 fallback. */}
+                    {/* Иконка снаружи и одна на весь список — исполнителей у
+                        задачи может быть несколько (правило владельца
+                        2026-08-16, этот экран и есть эталон). */}
                     <div className="mt-3 flex flex-wrap items-center gap-1.5">
                       <Users className="size-3.5 shrink-0 text-muted-foreground" />
                       {task.assignedOperators.length === 0 && task.assignedUsers.length === 0 ? (

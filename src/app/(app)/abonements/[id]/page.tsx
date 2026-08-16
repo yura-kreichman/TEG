@@ -370,7 +370,7 @@ export default function AbonementWalletPage() {
                         {(h.performedByOwner || h.performedBy) && (
                           <>
                             <span>·</span>
-                            <PerformedByTag name={h.performedBy} isOwner={h.performedByOwner} avatarUrl={null} iconKey={null} colorTag={h.performedByColorTag} />
+                            <PerformedByTag name={h.performedBy} isOwner={h.performedByOwner} avatarUrl={null} iconKey={null} colorTag={h.performedByColorTag} showIcon />
                           </>
                         )}
                       </p>

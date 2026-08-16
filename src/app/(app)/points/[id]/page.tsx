@@ -274,6 +274,8 @@ export default function PointDetailPage() {
                             расчёта контраста/обводки). Без аватаров. Пусто —
                             без строки. */}
                         <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                          {/* Одна иконка на весь список сотрудников зоны
+                              (правило владельца 2026-08-16, эталон — Задачи). */}
                           <Users className="size-3.5 shrink-0 text-muted-foreground" />
                           {zone.operatorsWithAccess.length === 0 ? (
                             // Иконка раньше просто не рендерилась вовсе при
