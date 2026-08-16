@@ -925,6 +925,7 @@
     "saleVoidText": "Деньги уйдут из выручки дня, а начисленный баланс спишется с клиента. Отменить это действие нельзя.",
     "saleVoidNegativeWarning": "Баланс клиента станет отрицательным:",
     "saleCreditedLabel": "начислено",
+    "giftsLabel": "Начислено владельцем",
     "noSales": "Продаж пока нет",
     "walletsSearchPlaceholder": "Поиск по телефону или имени",
     "walletsCountTotal": "Всего клиентов:",

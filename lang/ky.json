@@ -894,6 +894,7 @@
     "saleVoidText": "Акча күндүн түшүмүнөн чыгат, эсептелген баланс кардардан алынат. Бул аракетти кайтарууга болбойт.",
     "saleVoidNegativeWarning": "Кардардын балансы терс болот:",
     "saleCreditedLabel": "эсептелген",
+    "giftsLabel": "Ээси эсептеген",
     "noSales": "Азырынча сатуу жок",
     "walletsSearchPlaceholder": "Телефон же аты боюнча издөө",
     "walletsCountTotal": "Баары кардар:",

@@ -197,7 +197,7 @@ export default function AbonementsPage() {
 
   // Таб "Продажи" (запрос владельца 2026-08-16).
   const [sales, setSales] = useState<SaleInfo[]>([]);
-  const [salesTotals, setSalesTotals] = useState<{ count: number; paid: number; credited: number } | null>(null);
+  const [salesTotals, setSalesTotals] = useState<{ count: number; paid: number; credited: number; giftCount: number; gifted: number } | null>(null);
   const [salesLoading, setSalesLoading] = useState(false);
   // Фильтры — тот же набор и тот же вид, что в реестре продаж Товаров
   // (запрос владельца 2026-08-16): период, точка, сотрудник, поиск клиента.
@@ -727,19 +727,41 @@ export default function AbonementsPage() {
                 </div>
               </div>
 
-              {salesTotals && salesTotals.count > 0 && (
+              {salesTotals && (salesTotals.count > 0 || salesTotals.giftCount > 0) && (
                 <SpringCard hover={false} className="mb-3.5">
-                  <div className="flex items-baseline justify-between gap-2 tabular-nums">
-                    <span className="text-caption-airbnb text-muted-foreground">
-                      {t.abonements.salesTab} · {salesTotals.count}
-                    </span>
-                    <span className="text-[1.375rem] font-extrabold">
-                      <Money value={salesTotals.paid} />
-                    </span>
-                  </div>
-                  <p className="text-caption-airbnb text-muted-foreground">
-                    {t.abonements.saleCreditedLabel}: <Money value={salesTotals.credited} />
-                  </p>
+                  {salesTotals.count > 0 && (
+                    <>
+                      <div className="flex items-baseline justify-between gap-2 tabular-nums">
+                        <span className="text-caption-airbnb text-muted-foreground">
+                          {t.abonements.salesTab} · {salesTotals.count}
+                        </span>
+                        <span className="text-[1.375rem] font-extrabold">
+                          <Money value={salesTotals.paid} />
+                        </span>
+                      </div>
+                      <p className="text-caption-airbnb text-muted-foreground">
+                        {t.abonements.saleCreditedLabel}: <Money value={salesTotals.credited} />
+                      </p>
+                    </>
+                  )}
+                  {/* Начисления владельца — отдельной строкой и НЕ в продажах
+                      (правка владельца 2026-08-16: "это же подарок"): денег
+                      за ними нет, и в счёт продаж они не входят. */}
+                  {salesTotals.giftCount > 0 && (
+                    <p
+                      className={cn(
+                        "flex items-center justify-between gap-2 text-caption-airbnb text-muted-foreground tabular-nums",
+                        salesTotals.count > 0 && "mt-1.5 border-t border-border pt-1.5"
+                      )}
+                    >
+                      <span>
+                        {t.abonements.giftsLabel} · {salesTotals.giftCount}
+                      </span>
+                      <span className="font-semibold text-foreground">
+                        <Money value={salesTotals.gifted} />
+                      </span>
+                    </p>
+                  )}
                 </SpringCard>
               )}
 

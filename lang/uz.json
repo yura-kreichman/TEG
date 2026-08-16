@@ -894,6 +894,7 @@
     "saleVoidText": "Pul kun tushumidan chiqadi, hisoblangan balans mijozdan qaytarib olinadi. Bu amalni ortga qaytarib boʻlmaydi.",
     "saleVoidNegativeWarning": "Mijoz balansi manfiy boʻladi:",
     "saleCreditedLabel": "hisoblandi",
+    "giftsLabel": "Egasi tomonidan hisoblangan",
     "noSales": "Hozircha sotuvlar yoʻq",
     "walletsSearchPlaceholder": "Telefon yoki ism boʻyicha qidirish",
     "walletsCountTotal": "Jami mijozlar:",

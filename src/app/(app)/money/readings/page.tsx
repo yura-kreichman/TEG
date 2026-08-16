@@ -20,7 +20,7 @@ import {
   ShoppingCart,
   TicketCheck,
   Trash2,
-  TriangleAlert,
+  TriangleAlert,
   Wallet,
 } from "lucide-react";
 import { BackLink } from "@/components/back-link";
@@ -1170,16 +1170,22 @@ export default function ReadingsCalendarPage() {
                             плашка должна читаться так же, как Расходы. */}
                         <div className="min-w-0 flex-1 text-caption-airbnb">
                           <span className="font-semibold text-foreground">{item.name ?? t.abonements.title}</span>
-                          <span className="text-muted-foreground">
-                            {" "}
-                            ·{" "}
-                            {[
-                              item.cashCount > 0 && `${item.cashCount} ${t.operatorApp.submit.cashLabel.toLowerCase()}`,
-                              item.mobileCount > 0 && `${item.mobileCount} ${t.operatorApp.submit.mobileLabel.toLowerCase()}`,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </span>
+                          {/* Метод оплаты — иконкой и подписью, количество
+                              через × (правка владельца 2026-08-16): было
+                              "1 безнал" текстом, что читалось хуже и не
+                              совпадало с остальными строками проекта. */}
+                          {item.cashCount > 0 && (
+                            <span className="ml-1.5 inline-flex items-center gap-1 text-muted-foreground">
+                              <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+                              {t.operatorApp.submit.cashLabel} ×{item.cashCount}
+                            </span>
+                          )}
+                          {item.mobileCount > 0 && (
+                            <span className="ml-1.5 inline-flex items-center gap-1 text-muted-foreground">
+                              <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+                              {t.operatorApp.submit.mobileLabel} ×{item.mobileCount}
+                            </span>
+                          )}
                         </div>
                         <span className="shrink-0 font-semibold text-foreground">
                           <Money value={item.cashAmount + item.mobileAmount} />

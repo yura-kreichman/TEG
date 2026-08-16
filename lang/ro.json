@@ -894,6 +894,7 @@
     "saleVoidText": "Banii ies din încasările zilei, iar soldul creditat este retras de la client. Acțiunea nu poate fi anulată.",
     "saleVoidNegativeWarning": "Soldul clientului va deveni negativ:",
     "saleCreditedLabel": "creditat",
+    "giftsLabel": "Creditat de proprietar",
     "noSales": "Încă nu există vânzări",
     "walletsSearchPlaceholder": "Caută după telefon sau nume",
     "walletsCountTotal": "Total clienți:",

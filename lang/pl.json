@@ -894,6 +894,7 @@
     "saleVoidText": "Pieniądze znikną z utargu dnia, a doładowane saldo zostanie odjęte klientowi. Nie można tego cofnąć.",
     "saleVoidNegativeWarning": "Saldo klienta stanie się ujemne:",
     "saleCreditedLabel": "doładowano",
+    "giftsLabel": "Doładowane przez właściciela",
     "noSales": "Brak sprzedaży",
     "walletsSearchPlaceholder": "Szukaj po telefonie lub imieniu",
     "walletsCountTotal": "Łącznie klientów:",

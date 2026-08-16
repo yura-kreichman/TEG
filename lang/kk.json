@@ -894,6 +894,7 @@
     "saleVoidText": "Ақша күн түсімінен шығады, есептелген баланс клиенттен алынады. Бұл әрекетті қайтару мүмкін емес.",
     "saleVoidNegativeWarning": "Клиент балансы теріс болады:",
     "saleCreditedLabel": "есептелген",
+    "giftsLabel": "Иесі есептеген",
     "noSales": "Әзірге сатылым жоқ",
     "walletsSearchPlaceholder": "Телефон немесе аты бойынша іздеу",
     "walletsCountTotal": "Барлығы клиент:",

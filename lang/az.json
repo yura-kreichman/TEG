@@ -894,6 +894,7 @@
     "saleVoidText": "Pul günün gəlirindən çıxır, hesablanmış balans müştəridən geri alınır. Bu əməliyyat geri qaytarılmır.",
     "saleVoidNegativeWarning": "Müştərinin balansı mənfi olacaq:",
     "saleCreditedLabel": "hesablanıb",
+    "giftsLabel": "Sahib tərəfindən hesablanıb",
     "noSales": "Hələ satış yoxdur",
     "walletsSearchPlaceholder": "Telefon və ya ad üzrə axtar",
     "walletsCountTotal": "Ümumi müştəri:",

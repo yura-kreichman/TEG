@@ -894,6 +894,7 @@
     "saleVoidText": "Il denaro esce dall'incasso del giorno e il saldo accreditato viene tolto al cliente. L'azione non è reversibile.",
     "saleVoidNegativeWarning": "Il saldo del cliente diventerà negativo:",
     "saleCreditedLabel": "accreditato",
+    "giftsLabel": "Accreditato dal titolare",
     "noSales": "Nessuna vendita",
     "walletsSearchPlaceholder": "Cerca per telefono o nome",
     "walletsCountTotal": "Clienti totali:",

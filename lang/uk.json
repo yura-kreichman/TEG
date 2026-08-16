@@ -894,6 +894,7 @@
     "saleVoidText": "Гроші підуть із виручки дня, а нарахований баланс спишеться з клієнта. Скасувати цю дію не можна.",
     "saleVoidNegativeWarning": "Баланс клієнта стане відʼємним:",
     "saleCreditedLabel": "нараховано",
+    "giftsLabel": "Нараховано власником",
     "noSales": "Продажів поки немає",
     "walletsSearchPlaceholder": "Пошук за телефоном або ім'ям",
     "walletsCountTotal": "Усього клієнтів:",

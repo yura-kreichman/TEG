@@ -894,6 +894,7 @@
     "saleVoidText": "The money leaves the day's revenue and the credited balance is taken back from the client. This cannot be undone.",
     "saleVoidNegativeWarning": "The client balance will go negative:",
     "saleCreditedLabel": "credited",
+    "giftsLabel": "Credited by owner",
     "noSales": "No sales yet",
     "walletsSearchPlaceholder": "Search by phone or name",
     "walletsCountTotal": "Total clients:",

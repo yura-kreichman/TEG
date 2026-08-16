@@ -894,6 +894,7 @@
     "saleVoidText": "Para günün cirosundan çıkar ve yüklenen bakiye müşteriden geri alınır. Bu işlem geri alınamaz.",
     "saleVoidNegativeWarning": "Müşteri bakiyesi eksiye düşecek:",
     "saleCreditedLabel": "yüklendi",
+    "giftsLabel": "Sahibi tarafından yüklendi",
     "noSales": "Henüz satış yok",
     "walletsSearchPlaceholder": "Telefon veya isimle ara",
     "walletsCountTotal": "Toplam müşteri:",

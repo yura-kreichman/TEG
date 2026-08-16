@@ -894,6 +894,7 @@
     "saleVoidText": "Грошы пойдуць з выручкі дня, а налічаны баланс спішацца з кліента. Скасаваць гэта нельга.",
     "saleVoidNegativeWarning": "Баланс кліента стане адмоўным:",
     "saleCreditedLabel": "налічана",
+    "giftsLabel": "Налічана ўладальнікам",
     "noSales": "Продажаў пакуль няма",
     "walletsSearchPlaceholder": "Пошук па тэлефоне ці імені",
     "walletsCountTotal": "Усяго кліентаў:",

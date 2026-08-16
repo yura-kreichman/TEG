@@ -76,11 +76,19 @@ export async function GET(request: Request) {
     },
   });
 
-  // Итог по отфильтрованному списку — сколько денег и сколько начислено:
-  // владелец смотрит реестр за период именно ради суммы.
+  // Итог по отфильтрованному списку. Начисления владельца (type=adjustment)
+  // в продажи НЕ входят вовсе — ни в счёт, ни в сумму, ни в "начислено"
+  // (правка владельца 2026-08-16: "это же подарок"): денег за ними нет, и
+  // смешивать подаренный баланс с проданным — значит завышать и то, и
+  // другое. Они считаются отдельно, своей строкой.
   const totals = sales.reduce(
     (acc, s) => {
       if (s.voidedAt) return acc; // аннулированные в итог не входят
+      if (s.type === "adjustment") {
+        acc.giftCount += 1;
+        acc.gifted += Number(s.amount);
+        return acc;
+      }
       acc.count += 1;
       acc.credited += Number(s.amount);
       acc.paid += s.moneyOperations
@@ -88,7 +96,7 @@ export async function GET(request: Request) {
         .reduce((sum, op) => sum + Number(op.amount), 0);
       return acc;
     },
-    { count: 0, paid: 0, credited: 0 }
+    { count: 0, paid: 0, credited: 0, giftCount: 0, gifted: 0 }
   );
 
   return NextResponse.json({
@@ -96,6 +104,8 @@ export async function GET(request: Request) {
       count: totals.count,
       paid: Math.round(totals.paid * 100) / 100,
       credited: Math.round(totals.credited * 100) / 100,
+      giftCount: totals.giftCount,
+      gifted: Math.round(totals.gifted * 100) / 100,
     },
     sales: sales.map((s) => {
       // Уплачено = сумма связанных операций (при разбивке их несколько).
