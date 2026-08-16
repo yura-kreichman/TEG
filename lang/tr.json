@@ -507,7 +507,9 @@
     "expenseCardTitle": "Yeni gider",
     "expenseCardSub": "çalışan gider girdiğinde",
     "collectionCardTitle": "Tahsilat",
-    "collectionCardSub": "kasadan nakit teslim edildiğinde"
+    "collectionCardSub": "kasadan nakit teslim edildiğinde",
+    "goodsCardTitle": "Ürünler kasa teslimi",
+    "goodsCardSub": "Mutabakatta nakit, kart ve fark"
   },
   "pushSettings": {
     "title": "Push bildirimleri",
@@ -537,6 +539,8 @@
     "collectionLabel": "Tahsilat",
     "collectionSub": "bir tahsilat kaydedildiğinde",
     "expenseLabel": "Yeni gider",
+    "goodsLabel": "Ürünler kasa teslimi",
+    "goodsSub": "Çalışan Ürünler kasasını teslim ettiğinde",
     "expenseSub": "çalışan gider girdiğinde",
     "testPushTitle": "Test bildirimi",
     "testPushBody": "Bunu görüyorsanız — push bildirimleri çalışıyor.",
@@ -1657,6 +1661,8 @@
     "shiftCloseSubject": "Vardiya kapanışı",
     "instructionAckSubject": "Onay",
     "expenseAlertTitle": "GİDER",
+    "goodsAlertTitle": "ÜRÜNLER",
+    "goodsAlertVoided": "Mutabakat iptal edildi",
     "collectionAlertTitle": "TAHSİLAT",
     "goodsLabel": "Ürünler",
     "instructionAckEmailWho": "Kim",

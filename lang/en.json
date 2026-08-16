@@ -507,7 +507,9 @@
     "expenseCardTitle": "New expense",
     "expenseCardSub": "when an employee records an expense",
     "collectionCardTitle": "Collection",
-    "collectionCardSub": "when cash is handed over"
+    "collectionCardSub": "when cash is handed over",
+    "goodsCardTitle": "Goods cash handover",
+    "goodsCardSub": "Cash, card and difference at reconciliation"
   },
   "pushSettings": {
     "title": "Push notifications",
@@ -537,6 +539,8 @@
     "collectionLabel": "Collection",
     "collectionSub": "when a cash collection is recorded",
     "expenseLabel": "New expense",
+    "goodsLabel": "Goods cash handover",
+    "goodsSub": "When an employee hands over the goods till",
     "expenseSub": "when an employee records an expense",
     "testPushTitle": "Test notification",
     "testPushBody": "If you see this — push notifications work.",
@@ -1657,6 +1661,8 @@
     "shiftCloseSubject": "Shift close",
     "instructionAckSubject": "Acknowledgment",
     "expenseAlertTitle": "EXPENSE",
+    "goodsAlertTitle": "GOODS",
+    "goodsAlertVoided": "Reconciliation voided",
     "collectionAlertTitle": "COLLECTION",
     "goodsLabel": "Goods",
     "instructionAckEmailWho": "Who",

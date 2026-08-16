@@ -130,6 +130,18 @@ export const COLLECTION_SUMMARY_DEFAULTS: CollectionSummarySettingsData = {
   enabled: true,
 };
 
+// "Сдача кассы Товаров" в Telegram/email (запрос владельца 2026-08-16) — до
+// этого сверка кассы Товаров нигде не уведомляла, хотя это такое же кассовое
+// событие, как сдача итогов зоны. Тумблер Push отдельный
+// (PushNotificationSettingsData.goods).
+export interface GoodsSummarySettingsData {
+  enabled: boolean;
+}
+
+export const GOODS_SUMMARY_DEFAULTS: GoodsSummarySettingsData = {
+  enabled: true,
+};
+
 // Какие типы сводок дублируются коротким Push-уведомлением на устройство(а)
 // владельца, если хотя бы одно активно подписано (фидбек пользователя
 // 2026-07-12). Не влияет на то, отправляется ли сама сводка по
@@ -143,6 +155,8 @@ export interface PushNotificationSettingsData {
   instructionAck: boolean;
   collection: boolean;
   expense: boolean;
+  // Сдача кассы Товаров (запрос владельца 2026-08-16).
+  goods: boolean;
 }
 
 export const PUSH_NOTIFICATION_DEFAULTS: PushNotificationSettingsData = {
@@ -153,4 +167,5 @@ export const PUSH_NOTIFICATION_DEFAULTS: PushNotificationSettingsData = {
   instructionAck: true,
   collection: true,
   expense: true,
+  goods: true,
 };

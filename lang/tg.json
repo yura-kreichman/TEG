@@ -507,7 +507,9 @@
     "expenseCardTitle": "Хароҷоти нав",
     "expenseCardSub": "вақте корманд хароҷот ворид мекунад",
     "collectionCardTitle": "Инкассатсия",
-    "collectionCardSub": "вақте пули нақдро аз хазина месупоранд"
+    "collectionCardSub": "вақте пули нақдро аз хазина месупоранд",
+    "goodsCardTitle": "Супоридани хазинаи Молҳо",
+    "goodsCardSub": "Нақд, корт ва фарқ ҳангоми муқоиса"
   },
   "pushSettings": {
     "title": "Огоҳиномаҳои Push",
@@ -537,6 +539,8 @@
     "collectionLabel": "Инкассатсия",
     "collectionSub": "вақте ки инкассатсия сабт мешавад",
     "expenseLabel": "Хароҷоти нав",
+    "goodsLabel": "Супоридани хазинаи Молҳо",
+    "goodsSub": "Вақте корманд хазинаи Молҳоро месупорад",
     "expenseSub": "вақте корманд хароҷот ворид мекунад",
     "testPushTitle": "Огоҳии озмоишӣ",
     "testPushBody": "Агар инро бинед — огоҳиҳои push кор мекунанд.",
@@ -1657,6 +1661,8 @@
     "shiftCloseSubject": "Хотимаи смена",
     "instructionAckSubject": "Шиносшавӣ",
     "expenseAlertTitle": "ХАРОҶОТ",
+    "goodsAlertTitle": "МОЛҲО",
+    "goodsAlertVoided": "Муқоиса бекор карда шуд",
     "collectionAlertTitle": "ИНКАССАТСИЯ",
     "goodsLabel": "Молҳо",
     "instructionAckEmailWho": "Кӣ",

@@ -507,7 +507,9 @@
     "expenseCardTitle": "Yangi xarajat",
     "expenseCardSub": "xodim xarajat kiritganda",
     "collectionCardTitle": "Inkassatsiya",
-    "collectionCardSub": "kassadan naqd pul topshirilganda"
+    "collectionCardSub": "kassadan naqd pul topshirilganda",
+    "goodsCardTitle": "Mahsulotlar kassasini topshirish",
+    "goodsCardSub": "Solishtirishda naqd, karta va farq"
   },
   "pushSettings": {
     "title": "Push-bildirishnomalar",
@@ -537,6 +539,8 @@
     "collectionLabel": "Inkassatsiya",
     "collectionSub": "inkassatsiya amalga oshirilganda",
     "expenseLabel": "Yangi xarajat",
+    "goodsLabel": "Mahsulotlar kassasini topshirish",
+    "goodsSub": "Xodim Mahsulotlar kassasini topshirganda",
     "expenseSub": "xodim xarajat kiritganda",
     "testPushTitle": "Sinov bildirishnomasi",
     "testPushBody": "Buni ko'rsangiz — push bildirishnomalar ishlaydi.",
@@ -1657,6 +1661,8 @@
     "shiftCloseSubject": "Smena yakuni",
     "instructionAckSubject": "Tanishish",
     "expenseAlertTitle": "XARAJAT",
+    "goodsAlertTitle": "MAHSULOTLAR",
+    "goodsAlertVoided": "Solishtirish bekor qilindi",
     "collectionAlertTitle": "INKASSATSIYA",
     "goodsLabel": "Tovarlar",
     "instructionAckEmailWho": "Kim",

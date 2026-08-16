@@ -126,6 +126,20 @@ export async function GET(request: Request) {
         // экран показывает прочерк, а не выдуманную сумму.
         paidAmount: s.moneyOperations.length > 0 ? paid : null,
         paymentMethod: s.paymentMethod,
+        // Методы оплаты для иконок в строке (запрос владельца 2026-08-16):
+        // при разбивке их два — часть наличными, часть безналом. Берём из
+        // связанных операций, а не из paymentMethod: там у разбивки лежит
+        // "split", по которому конкретные методы не восстановить.
+        methods: (() => {
+          const fromOps = [...new Set(
+            s.moneyOperations
+              .filter((op) => Number(op.amount) > 0)
+              .map((op) => (op.type === "abonement_topup_cashless" ? "mobile" : "cash"))
+          )];
+          if (fromOps.length > 0) return fromOps;
+          // Старые записи без связи с деньгами и начисления владельца.
+          return s.paymentMethod && s.paymentMethod !== "split" ? [s.paymentMethod] : [];
+        })(),
         walletId: s.wallet.id,
         clientName: s.wallet.name,
         clientPhone: s.wallet.phone,

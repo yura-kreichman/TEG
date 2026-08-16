@@ -507,7 +507,9 @@
     "expenseCardTitle": "Նոր ծախս",
     "expenseCardSub": "երբ աշխատակիցը ծախս է մուտքագրում",
     "collectionCardTitle": "Ինկասացիա",
-    "collectionCardSub": "երբ հանձնում են կանխիկը դրամարկղերից"
+    "collectionCardSub": "երբ հանձնում են կանխիկը դրամարկղերից",
+    "goodsCardTitle": "Ապրանքների դրամարկղի հանձնում",
+    "goodsCardSub": "Կանխիկ, անկանխիկ և տարբերություն համադրման ժամանակ"
   },
   "pushSettings": {
     "title": "Push-ծանուցումներ",
@@ -537,6 +539,8 @@
     "collectionLabel": "Ինկասացիա",
     "collectionSub": "երբ գրանցվում է ինկասացիա",
     "expenseLabel": "Նոր ծախս",
+    "goodsLabel": "Ապրանքների դրամարկղի հանձնում",
+    "goodsSub": "Երբ աշխատակիցը հանձնում է ապրանքների դրամարկղը",
     "expenseSub": "երբ աշխատակիցը ծախս է մուտքագրում",
     "testPushTitle": "Փորձնական ծանուցում",
     "testPushBody": "Եթե տեսնում եք սա — push-ծանուցումներն աշխատում են։",
@@ -1657,6 +1661,8 @@
     "shiftCloseSubject": "Հերթափոխի փակում",
     "instructionAckSubject": "Ծանոթացում",
     "expenseAlertTitle": "ԾԱԽՍ",
+    "goodsAlertTitle": "ԱՊՐԱՆՔՆԵՐ",
+    "goodsAlertVoided": "Համադրումը չեղարկված է",
     "collectionAlertTitle": "ԻՆԿԱՍԱՑԻԱ",
     "goodsLabel": "Ապրանքներ",
     "instructionAckEmailWho": "Ով",

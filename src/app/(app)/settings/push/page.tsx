@@ -101,6 +101,7 @@ export default function PushSettingsPage() {
     { key: "instructionAck", label: t.pushSettings.instructionAckLabel, sub: t.pushSettings.instructionAckSub },
     { key: "collection", label: t.pushSettings.collectionLabel, sub: t.pushSettings.collectionSub },
     { key: "expense", label: t.pushSettings.expenseLabel, sub: t.pushSettings.expenseSub },
+    { key: "goods", label: t.pushSettings.goodsLabel, sub: t.pushSettings.goodsSub },
   ];
 
   if (checking) return null;

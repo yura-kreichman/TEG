@@ -507,7 +507,9 @@
     "expenseCardTitle": "Новы расход",
     "expenseCardSub": "калі супрацоўнік уносіць расход",
     "collectionCardTitle": "Інкасацыя",
-    "collectionCardSub": "калі здаюць наяўныя з кас"
+    "collectionCardSub": "калі здаюць наяўныя з кас",
+    "goodsCardTitle": "Здача касы Тавараў",
+    "goodsCardSub": "Наяўныя, безнаяўныя і рознасць пры зверцы"
   },
   "pushSettings": {
     "title": "Push-апавяшчэнні",
@@ -537,6 +539,8 @@
     "collectionLabel": "Інкасацыя",
     "collectionSub": "калі ўносіцца інкасацыя",
     "expenseLabel": "Новы расход",
+    "goodsLabel": "Здача касы Тавараў",
+    "goodsSub": "Калі супрацоўнік здаў касу Тавараў",
     "expenseSub": "калі супрацоўнік уносіць расход",
     "testPushTitle": "Тэставае паведамленне",
     "testPushBody": "Калі вы гэта бачыце — push-паведамленні працуюць.",
@@ -1657,6 +1661,8 @@
     "shiftCloseSubject": "Закрыццё змены",
     "instructionAckSubject": "Азнаямленне",
     "expenseAlertTitle": "РАСХОД",
+    "goodsAlertTitle": "ТАВАРЫ",
+    "goodsAlertVoided": "Зверка ануляваная",
     "collectionAlertTitle": "ІНКАСАЦЫЯ",
     "goodsLabel": "Тавары",
     "instructionAckEmailWho": "Хто",

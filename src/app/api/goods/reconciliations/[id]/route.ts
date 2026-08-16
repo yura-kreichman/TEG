@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { isModuleEnabled } from "@/lib/tenant-modules";
+import { resyncGoodsAlert } from "@/lib/goods-alert";
 
 async function findOwnedReconciliation(tenantId: string, id: string) {
   const reconciliation = await prisma.goodsReconciliation.findUnique({ where: { id } });
@@ -36,6 +37,10 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/goods/reco
   }
 
   await prisma.goodsReconciliation.update({ where: { id }, data: { actualCash, actualMobile } });
+  // Уже отправленное уведомление приводим в соответствие с правкой (сквозное
+  // правило проекта 2026-08-16) — best-effort: правка сохранена независимо от
+  // того, жив ли ещё чат и сообщение в нём.
+  await resyncGoodsAlert(id).catch(() => {});
   return NextResponse.json({ ok: true });
 }
 
@@ -57,6 +62,10 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/goods/re
     return NextResponse.json({ error: "Сдача кассы не найдена" }, { status: 404 });
   }
 
+  // Сообщение переписываем ДО удаления: после него данные для текста собрать
+  // уже неоткуда, а стереть сообщение в Telegram нельзя — старше 48 часов оно
+  // не удаляется, и молча оставленные неверные цифры хуже пометки.
+  await resyncGoodsAlert(id, { voided: true }).catch(() => {});
   await prisma.goodsReconciliation.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

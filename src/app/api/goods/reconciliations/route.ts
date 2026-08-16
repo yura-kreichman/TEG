@@ -6,6 +6,7 @@ import { calculateGoodsCashSince, reconcileGoodsCash, ReconciliationChangedError
 import { getPeriodRange, isPeriodGranularity, parseDateParam, round2 } from "@/lib/reports";
 import { businessDayOf, dayBoundsUtc, localDateParts, parseBoundary, zonedWallTimeToUtc } from "@/lib/business-day";
 import { isModuleEnabled } from "@/lib/tenant-modules";
+import { announceGoodsReconciliation } from "@/lib/goods-alert";
 
 // Сверка кассы Товаров (docs/spec/09-goods.md, "Сверка кассы") — НЕ
 // привязана к ResultsSubmission. GET отдаёт историю + расчётную кассу с
@@ -161,6 +162,10 @@ export async function POST(request: Request) {
       actor: { userId: owner.user.id },
       expectedSinceReconciliationId: sinceReconciliationId,
     });
+    // Уведомление владельцу о сдаче кассы Товаров (запрос 2026-08-16) —
+    // fire-and-forget, как у расхода: недоступный канал не должен ронять
+    // саму сдачу, она к этому моменту уже записана.
+    void announceGoodsReconciliation(reconciliation.id).catch(() => {});
     return NextResponse.json({ id: reconciliation.id }, { status: 201 });
   } catch (err) {
     if (err instanceof ReconciliationChangedError) {

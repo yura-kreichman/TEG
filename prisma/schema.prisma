@@ -395,6 +395,7 @@ model Tenant {
   instructionAckSummarySettings InstructionAckSummarySettings?
   expenseSummarySettings        ExpenseSummarySettings?
   collectionSummarySettings     CollectionSummarySettings?
+  goodsSummarySettings          GoodsSummarySettings?
   dailyCashSummaryDeliveries    DailyCashSummaryDelivery[]
   tasks                         Task[]
   pushSubscriptions             PushSubscription[]
@@ -600,6 +601,7 @@ model PushNotificationSettings {
   // пара тумблеров, что у инкассации: этот на Push, соседний на Telegram/email
   // (ExpenseSummarySettings.enabled).
   expense           Boolean @default(true)
+  goods             Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1848,6 +1850,11 @@ model GoodsReconciliation {
   actualCash   Decimal @db.Decimal(10, 2)
   actualMobile Decimal @db.Decimal(10, 2)
 
+  // id сообщения в Telegram (запрос владельца 2026-08-16: сдача кассы Товаров
+  // уходит уведомлением) — по нему сообщение переписывается при правке и при
+  // аннулировании сверки, тот же приём, что у MoneyOperation.expenseAlertMessageId.
+  alertMessageId String?
+
   occurredAt DateTime @default(now())
 
   @@index([pointId, occurredAt])
@@ -2970,6 +2977,20 @@ model CollectionSummarySettings {
 // сотрудник). Уведомление уходит в момент ввода расхода Сотрудником, а не на
 // сдаче итогов — как и сама операция расхода (см. 02-money.md).
 model ExpenseSummarySettings {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  enabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Тумблер уведомления "Сдача кассы Товаров" (запрос владельца 2026-08-16) —
+// то же устройство, что у ExpenseSummarySettings/CollectionSummarySettings
+// выше: одно поле, состав сообщения не настраивается.
+model GoodsSummarySettings {
   id       String @id @default(cuid())
   tenantId String @unique
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)

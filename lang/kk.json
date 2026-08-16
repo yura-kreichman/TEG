@@ -507,7 +507,9 @@
     "expenseCardTitle": "Жаңа шығыс",
     "expenseCardSub": "қызметкер шығыс енгізгенде",
     "collectionCardTitle": "Инкассация",
-    "collectionCardSub": "кассадан қолма-қол ақша тапсырғанда"
+    "collectionCardSub": "кассадан қолма-қол ақша тапсырғанда",
+    "goodsCardTitle": "Тауарлар кассасын тапсыру",
+    "goodsCardSub": "Салыстыру кезіндегі қолма-қол, карта және айырма"
   },
   "pushSettings": {
     "title": "Push-хабарландырулар",
@@ -537,6 +539,8 @@
     "collectionLabel": "Инкассация",
     "collectionSub": "инкассация тапсырылғанда",
     "expenseLabel": "Жаңа шығыс",
+    "goodsLabel": "Тауарлар кассасын тапсыру",
+    "goodsSub": "Қызметкер Тауарлар кассасын тапсырғанда",
     "expenseSub": "қызметкер шығыс енгізгенде",
     "testPushTitle": "Сынақ хабарламасы",
     "testPushBody": "Мұны көрсеңіз — push-хабарламалар жұмыс істейді.",
@@ -1657,6 +1661,8 @@
     "shiftCloseSubject": "Ауысымды жабу",
     "instructionAckSubject": "Танысу",
     "expenseAlertTitle": "ШЫҒЫС",
+    "goodsAlertTitle": "ТАУАРЛАР",
+    "goodsAlertVoided": "Салыстыру жойылды",
     "collectionAlertTitle": "ИНКАССАЦИЯ",
     "goodsLabel": "Тауарлар",
     "instructionAckEmailWho": "Кім",

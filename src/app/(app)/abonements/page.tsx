@@ -24,6 +24,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconActionButton } from "@/components/kebab-menu";
 import { Money } from "@/components/money";
+import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { PerformedByTag } from "@/components/performed-by-tag";
 import { AbonementTopupSheet } from "@/components/abonement-topup-sheet";
 import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
@@ -68,6 +69,9 @@ interface SaleInfo {
   creditedAmount: number;
   paidAmount: number | null;
   paymentMethod: string | null;
+  // Методы оплаты продажи: при разбивке их два — часть наличными, часть
+  // безналом (запрос владельца 2026-08-16).
+  methods: string[];
   walletId: string;
   clientName: string | null;
   clientPhone: string;
@@ -798,6 +802,17 @@ export default function AbonementsPage() {
                                     ? t.abonements.arbitraryAmountTitle
                                     : (s.planName ?? t.abonements.title)}
                                 </span>
+                                {/* Иконки методов сразу после названия: при
+                                    разбивке оплаты их два — часть наличными,
+                                    часть безналом (запрос владельца
+                                    2026-08-16). */}
+                                {(s.methods ?? []).map((m) => (
+                                  <PaymentMethodIcon
+                                    key={m}
+                                    method={m as "cash" | "mobile" | "abonement"}
+                                    className="size-3.5 shrink-0 text-muted-foreground"
+                                  />
+                                ))}
                                 {s.voidedAt && (
                                   <span className="shrink-0 text-xs text-destructive">{t.abonements.saleVoided}</span>
                                 )}
@@ -807,7 +822,10 @@ export default function AbonementsPage() {
                                     (правка владельца 2026-08-16). */}
                                 <span className="tabular-nums">{formatTime(s.occurredAt)}</span>
                                 <span className="truncate">· {s.clientName ?? s.clientPhone}</span>
-                                {s.pointName && <span className="truncate">· {s.pointName}</span>}
+                                {/* Точка в строке не пишется (правка владельца
+                                    2026-08-16): при одной точке это шум, при
+                                    нескольких для неё есть выбор фильтром
+                                    выше — как в Отчётах. */}
                                 <PerformedByTag
                                   name={s.performedBy}
                                   isOwner={s.performedByOwner}

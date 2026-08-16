@@ -538,7 +538,9 @@
     "expenseCardTitle": "Новый расход",
     "expenseCardSub": "когда сотрудник вносит расход",
     "collectionCardTitle": "Инкассация",
-    "collectionCardSub": "когда сдают наличные из касс"
+    "collectionCardSub": "когда сдают наличные из касс",
+    "goodsCardTitle": "Сдача кассы Товаров",
+    "goodsCardSub": "Наличные, безнал и разница при сверке"
   },
   "pushSettings": {
     "title": "Push-уведомления",
@@ -568,6 +570,8 @@
     "collectionLabel": "Инкассация",
     "collectionSub": "при внесении инкассации",
     "expenseLabel": "Новый расход",
+    "goodsLabel": "Сдача кассы Товаров",
+    "goodsSub": "Когда сотрудник сдал кассу Товаров",
     "expenseSub": "когда сотрудник вносит расход",
     "testPushTitle": "Тестовое уведомление",
     "testPushBody": "Если вы это видите — push-уведомления работают.",
@@ -1688,6 +1692,8 @@
     "shiftCloseSubject": "Закрытие смены",
     "instructionAckSubject": "Ознакомление",
     "expenseAlertTitle": "РАСХОД",
+    "goodsAlertTitle": "ТОВАРЫ",
+    "goodsAlertVoided": "Сверка аннулирована",
     "collectionAlertTitle": "ИНКАССАЦИЯ",
     "goodsLabel": "Товары",
     "instructionAckEmailWho": "Кто",

@@ -507,7 +507,9 @@
     "expenseCardTitle": "Cheltuială nouă",
     "expenseCardSub": "când angajatul înregistrează o cheltuială",
     "collectionCardTitle": "Colectare",
-    "collectionCardSub": "când se predau banii din case"
+    "collectionCardSub": "când se predau banii din case",
+    "goodsCardTitle": "Predarea casei de mărfuri",
+    "goodsCardSub": "Numerar, card și diferența la reconciliere"
   },
   "pushSettings": {
     "title": "Notificări push",
@@ -537,6 +539,8 @@
     "collectionLabel": "Colectare",
     "collectionSub": "când este înregistrată o colectare de numerar",
     "expenseLabel": "Cheltuială nouă",
+    "goodsLabel": "Predarea casei de mărfuri",
+    "goodsSub": "Când angajatul predă casa de mărfuri",
     "expenseSub": "când angajatul înregistrează o cheltuială",
     "testPushTitle": "Notificare de test",
     "testPushBody": "Dacă vezi asta — notificările push funcționează.",
@@ -1657,6 +1661,8 @@
     "shiftCloseSubject": "Închidere tură",
     "instructionAckSubject": "Confirmare",
     "expenseAlertTitle": "CHELTUIALĂ",
+    "goodsAlertTitle": "MĂRFURI",
+    "goodsAlertVoided": "Reconciliere anulată",
     "collectionAlertTitle": "COLECTARE",
     "goodsLabel": "Produse",
     "instructionAckEmailWho": "Cine",

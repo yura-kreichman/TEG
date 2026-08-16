@@ -507,7 +507,9 @@
     "expenseCardTitle": "Yeni xərc",
     "expenseCardSub": "işçi xərc daxil etdikdə",
     "collectionCardTitle": "İnkassasiya",
-    "collectionCardSub": "kassadan nağd pul təhvil veriləndə"
+    "collectionCardSub": "kassadan nağd pul təhvil veriləndə",
+    "goodsCardTitle": "Mallar kassasının təhvili",
+    "goodsCardSub": "Uzlaşmada nağd, kart və fərq"
   },
   "pushSettings": {
     "title": "Push bildirişlər",
@@ -537,6 +539,8 @@
     "collectionLabel": "İnkassasiya",
     "collectionSub": "inkassasiya təhvil verildikdə",
     "expenseLabel": "Yeni xərc",
+    "goodsLabel": "Mallar kassasının təhvili",
+    "goodsSub": "İşçi Mallar kassasını təhvil verəndə",
     "expenseSub": "işçi xərc daxil etdikdə",
     "testPushTitle": "Test bildirişi",
     "testPushBody": "Bunu görürsünüzsə — push bildirişləri işləyir.",
@@ -1657,6 +1661,8 @@
     "shiftCloseSubject": "Növbənin bağlanması",
     "instructionAckSubject": "Tanışlıq",
     "expenseAlertTitle": "XƏRC",
+    "goodsAlertTitle": "MALLAR",
+    "goodsAlertVoided": "Uzlaşma ləğv edildi",
     "collectionAlertTitle": "İNKASSASİYA",
     "goodsLabel": "Mallar",
     "instructionAckEmailWho": "Kim",

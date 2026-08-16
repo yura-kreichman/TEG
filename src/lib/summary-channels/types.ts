@@ -233,3 +233,32 @@ export interface ExpenseAlertData {
   // того, что запись потом поправили.
   editedByOwner: boolean;
 }
+
+/**
+ * Сдача кассы Товаров (запрос владельца 2026-08-16) — уведомление в момент
+ * сверки, по тому же принципу, что расход и инкассация: событие происходит
+ * само по себе, вне сдачи итогов зон.
+ *
+ * Кроме сумм показываем РАЗНИЦУ: наличные и безнал сами по себе не отвечают
+ * на главный вопрос "сошлось ли", а именно ради него сверку и читают.
+ * Балансовая часть в разницу не входит (деньги получены раньше, при
+ * пополнении) — отдельной справочной строкой, и только когда она была.
+ */
+export interface GoodsReconciliationAlertData {
+  occurredAt: Date;
+  operatorName: string;
+  operatorColorTag: string | null;
+  actualCash: number;
+  actualMobile: number;
+  calculatedCash: number;
+  calculatedMobile: number;
+  calculatedAbonement: number;
+  difference: number;
+  // Показывается, только когда у тенанта больше одной точки — иначе шум.
+  pointName: string | null;
+  // Правка владельцем — ♛ рядом с именем, тот же маркер, что у расхода.
+  editedByOwner: boolean;
+  // Сверку удалили: сообщение остаётся в чате, но переписывается пометкой —
+  // Telegram не даёт удалять сообщения старше 48 часов.
+  voided: boolean;
+}

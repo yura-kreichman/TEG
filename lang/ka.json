@@ -507,7 +507,9 @@
     "expenseCardTitle": "ახალი ხარჯი",
     "expenseCardSub": "როცა თანამშრომელი ხარჯს შეიტანს",
     "collectionCardTitle": "ინკასაცია",
-    "collectionCardSub": "როცა სალაროდან ნაღდ ფულს აბარებენ"
+    "collectionCardSub": "როცა სალაროდან ნაღდ ფულს აბარებენ",
+    "goodsCardTitle": "საქონლის სალაროს ჩაბარება",
+    "goodsCardSub": "ნაღდი, უნაღდო და სხვაობა შედარებისას"
   },
   "pushSettings": {
     "title": "Push-შეტყობინებები",
@@ -537,6 +539,8 @@
     "collectionLabel": "ინკასაცია",
     "collectionSub": "როცა ფიქსირდება ინკასაცია",
     "expenseLabel": "ახალი ხარჯი",
+    "goodsLabel": "საქონლის სალაროს ჩაბარება",
+    "goodsSub": "როცა თანამშრომელი აბარებს საქონლის სალაროს",
     "expenseSub": "როცა თანამშრომელი ხარჯს შეიტანს",
     "testPushTitle": "სატესტო შეტყობინება",
     "testPushBody": "თუ ამას ხედავთ — push-შეტყობინებები მუშაობს.",
@@ -1657,6 +1661,8 @@
     "shiftCloseSubject": "ცვლის დახურვა",
     "instructionAckSubject": "გაცნობა",
     "expenseAlertTitle": "ხარჯი",
+    "goodsAlertTitle": "საქონელი",
+    "goodsAlertVoided": "შედარება გაუქმებულია",
     "collectionAlertTitle": "ინკასაცია",
     "goodsLabel": "საქონელი",
     "instructionAckEmailWho": "ვინ",

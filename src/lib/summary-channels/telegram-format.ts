@@ -7,6 +7,7 @@ import type {
   InstructionAckData,
   ExpenseAlertData,
   CollectionAlertData,
+  GoodsReconciliationAlertData,
 } from "./types";
 import { formatBusinessDate, formatDuration, formatLocalTime, formatSummaryDate } from "./format-shared";
 import { colorTagToEmoji } from "@/lib/color-tag";
@@ -851,5 +852,70 @@ export function formatExpenseAlertTelegram(
   // это его собственные слова, а не поле карточки, и визуально они не должны
   // мешаться с названиями выше. <blockquote> Telegram поддерживает в HTML.
   if (data.comment) lines.push(`<blockquote><i>${escapeTelegramHtml(data.comment)}</i></blockquote>`);
+  return lines.join("\n");
+}
+
+/**
+ * Сдача кассы Товаров (запрос владельца 2026-08-16). Формат — как у расхода и
+ * инкассации: иконка + заголовок + дата/время, затем метка и имя сотрудника,
+ * затем суммы по строкам.
+ *
+ * Разница в сообщении есть всегда, а не только при расхождении: "0" — это
+ * ответ "сошлось", ради которого сводку и открывают, и его отсутствие
+ * читалось бы как "данных нет". Балансовая часть — только когда была: в
+ * разницу она не входит, деньги за неё получены раньше, при пополнении.
+ */
+export function formatGoodsAlertHeader(data: GoodsReconciliationAlertData, st: SummaryText, timezone: string): string {
+  const date = formatSummaryDate(data.occurredAt, "/", timezone, false);
+  return `🛍 ${st.goodsAlertTitle} — ${date}, ${formatLocalTime(data.occurredAt, timezone)}`;
+}
+
+export function formatGoodsAlertLines(
+  data: GoodsReconciliationAlertData,
+  st: SummaryText,
+  locale: Locale,
+  currency: string | null | undefined
+): string[] {
+  const money = (value: number) => formatMoneyWithCurrency(value, locale, currency as CurrencyCode | null);
+  const mark = colorTagToEmoji(data.operatorColorTag);
+  const crown = data.editedByOwner ? " ♛" : "";
+  const lines: string[] = [];
+  if (data.voided) lines.push(st.goodsAlertVoided);
+  lines.push(
+    `${mark ? `${mark} ` : ""}${data.operatorName}${crown}${data.pointName ? ` · ${data.pointName}` : ""}`
+  );
+  lines.push(`${st.cash}: ${money(data.actualCash)}`);
+  lines.push(`${st.mobile}: ${money(data.actualMobile)}`);
+  lines.push(`${st.calculated}: ${money(data.calculatedCash + data.calculatedMobile)}`);
+  lines.push(`${st.difference}: ${data.difference > 0 ? "+" : ""}${money(data.difference)}`);
+  if (data.calculatedAbonement > 0) lines.push(`${st.abonement}: ${money(data.calculatedAbonement)}`);
+  return lines;
+}
+
+export function formatGoodsAlertTelegram(
+  data: GoodsReconciliationAlertData,
+  st: SummaryText,
+  locale: Locale,
+  timezone: string,
+  currency: string | null | undefined
+): string {
+  const money = (value: number) => formatMoneyWithCurrency(value, locale, currency as CurrencyCode | null);
+  const mark = colorTagToEmoji(data.operatorColorTag);
+  const name = `${escapeTelegramHtml(data.operatorName)}${data.editedByOwner ? " ♛" : ""}`;
+  const point = data.pointName ? ` · ${escapeTelegramHtml(data.pointName)}` : "";
+  const lines = [
+    `🛍 <b>${st.goodsAlertTitle}</b> — ${formatSummaryDate(data.occurredAt, "/", timezone, false)}, ${formatLocalTime(data.occurredAt, timezone)}`,
+  ];
+  // Аннулированная сверка: сообщение остаётся в чате (Telegram не даёт
+  // удалять старше 48 часов), но текст прямо говорит, что записи больше нет.
+  if (data.voided) lines.push(`<i>${escapeTelegramHtml(st.goodsAlertVoided)}</i>`);
+  lines.push(`${mark ? `${mark} ` : ""}${name}${point}`);
+  lines.push(`${st.cash}: <b>${money(data.actualCash)}</b>`);
+  lines.push(`${st.mobile}: <b>${money(data.actualMobile)}</b>`);
+  lines.push(`${st.calculated}: ${money(data.calculatedCash + data.calculatedMobile)}`);
+  lines.push(
+    `${st.difference}: <b>${data.difference > 0 ? "+" : ""}${money(data.difference)}</b>`
+  );
+  if (data.calculatedAbonement > 0) lines.push(`${st.abonement}: ${money(data.calculatedAbonement)}`);
   return lines.join("\n");
 }

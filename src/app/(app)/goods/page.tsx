@@ -99,6 +99,9 @@ interface SaleEntry {
   quantity: number;
   amount: number;
   paymentMethod: string;
+  // Методы для иконок: у разбивки их до трёх — нал, безнал, баланс
+  // (запрос владельца 2026-08-16).
+  methods?: string[];
   performedBy: string | null;
   performedByOwner: boolean;
   performedByAvatarUrl: string | null;
@@ -1870,11 +1873,21 @@ export default function GoodsCabinetPage() {
                           >
                             <span className="min-w-0 flex-1">
                               <span className="flex min-w-0 items-center gap-1.5">
-                                <PaymentMethodIcon method={s.paymentMethod} className="size-3.5 shrink-0 text-muted-foreground" />
                                 <span className="truncate text-body-airbnb font-semibold">
                                   {s.goodsName}
                                   {s.quantity > 1 ? " × " + s.quantity : ""}
                                 </span>
+                                {/* Иконки методов — ПОСЛЕ названия, и их может
+                                    быть до трёх при разбивке оплаты: нал,
+                                    безнал, баланс (правка владельца
+                                    2026-08-16). */}
+                                {(s.methods ?? [s.paymentMethod]).map((m) => (
+                                  <PaymentMethodIcon
+                                    key={m}
+                                    method={m}
+                                    className="size-3.5 shrink-0 text-muted-foreground"
+                                  />
+                                ))}
                                 {s.voidedAt && (
                                   <span className="shrink-0 text-xs text-destructive">{t.goods.voided}</span>
                                 )}

@@ -507,7 +507,9 @@
     "expenseCardTitle": "Нова витрата",
     "expenseCardSub": "коли співробітник вносить витрату",
     "collectionCardTitle": "Інкасація",
-    "collectionCardSub": "коли здають готівку з кас"
+    "collectionCardSub": "коли здають готівку з кас",
+    "goodsCardTitle": "Здача каси Товарів",
+    "goodsCardSub": "Готівка, безготівка та різниця при звірці"
   },
   "pushSettings": {
     "title": "Push-сповіщення",
@@ -537,6 +539,8 @@
     "collectionLabel": "Інкасація",
     "collectionSub": "коли вноситься інкасація",
     "expenseLabel": "Нова витрата",
+    "goodsLabel": "Здача каси Товарів",
+    "goodsSub": "Коли співробітник здав касу Товарів",
     "expenseSub": "коли співробітник вносить витрату",
     "testPushTitle": "Тестове сповіщення",
     "testPushBody": "Якщо ви це бачите — push-сповіщення працюють.",
@@ -1657,6 +1661,8 @@
     "shiftCloseSubject": "Закриття зміни",
     "instructionAckSubject": "Ознайомлення",
     "expenseAlertTitle": "ВИТРАТА",
+    "goodsAlertTitle": "ТОВАРИ",
+    "goodsAlertVoided": "Звірку анульовано",
     "collectionAlertTitle": "ІНКАСАЦІЯ",
     "goodsLabel": "Товари",
     "instructionAckEmailWho": "Хто",

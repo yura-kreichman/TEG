@@ -507,7 +507,9 @@
     "expenseCardTitle": "Nowy wydatek",
     "expenseCardSub": "gdy pracownik dodaje wydatek",
     "collectionCardTitle": "Inkasacja",
-    "collectionCardSub": "gdy przekazywana jest gotówka z kas"
+    "collectionCardSub": "gdy przekazywana jest gotówka z kas",
+    "goodsCardTitle": "Rozliczenie kasy Towarów",
+    "goodsCardSub": "Gotówka, karta i różnica przy rozliczeniu"
   },
   "pushSettings": {
     "title": "Powiadomienia push",
@@ -537,6 +539,8 @@
     "collectionLabel": "Inkasacja",
     "collectionSub": "gdy zostaje zarejestrowana inkasacja",
     "expenseLabel": "Nowy wydatek",
+    "goodsLabel": "Rozliczenie kasy Towarów",
+    "goodsSub": "Gdy pracownik rozliczy kasę Towarów",
     "expenseSub": "gdy pracownik dodaje wydatek",
     "testPushTitle": "Powiadomienie testowe",
     "testPushBody": "Jeśli to widzisz — powiadomienia push działają.",
@@ -1657,6 +1661,8 @@
     "shiftCloseSubject": "Zamknięcie zmiany",
     "instructionAckSubject": "Potwierdzenie",
     "expenseAlertTitle": "WYDATEK",
+    "goodsAlertTitle": "TOWARY",
+    "goodsAlertVoided": "Rozliczenie anulowane",
     "collectionAlertTitle": "INKASACJA",
     "goodsLabel": "Towary",
     "instructionAckEmailWho": "Kto",

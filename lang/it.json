@@ -507,7 +507,9 @@
     "expenseCardTitle": "Nuova spesa",
     "expenseCardSub": "quando il dipendente registra una spesa",
     "collectionCardTitle": "Incasso",
-    "collectionCardSub": "quando si consegna il contante delle casse"
+    "collectionCardSub": "quando si consegna il contante delle casse",
+    "goodsCardTitle": "Consegna cassa Prodotti",
+    "goodsCardSub": "Contanti, carta e differenza alla verifica"
   },
   "pushSettings": {
     "title": "Notifiche push",
@@ -537,6 +539,8 @@
     "collectionLabel": "Incasso",
     "collectionSub": "quando viene registrato un incasso",
     "expenseLabel": "Nuova spesa",
+    "goodsLabel": "Consegna cassa Prodotti",
+    "goodsSub": "Quando il dipendente consegna la cassa Prodotti",
     "expenseSub": "quando il dipendente registra una spesa",
     "testPushTitle": "Notifica di prova",
     "testPushBody": "Se vedi questo — le notifiche push funzionano.",
@@ -1657,6 +1661,8 @@
     "shiftCloseSubject": "Fine turno",
     "instructionAckSubject": "Presa visione",
     "expenseAlertTitle": "SPESA",
+    "goodsAlertTitle": "PRODOTTI",
+    "goodsAlertVoided": "Riconciliazione annullata",
     "collectionAlertTitle": "INCASSO",
     "goodsLabel": "Prodotti",
     "instructionAckEmailWho": "Chi",

@@ -18,6 +18,9 @@ import {
   formatExpenseAlertHeader,
   formatExpenseAlertLines,
   formatExpenseAlertTelegram,
+  formatGoodsAlertTelegram,
+  formatGoodsAlertHeader,
+  formatGoodsAlertLines,
   formatInstructionAckTelegram,
   formatShiftCloseSummaryTelegram,
   formatZoneSummaryTelegram,
@@ -29,8 +32,10 @@ import type {
   InstructionAckData,
   ShiftCloseSummaryData,
   ZoneSummaryData,
+  GoodsReconciliationAlertData,
 } from "./types";
 import {
+  GOODS_SUMMARY_DEFAULTS,
   PUSH_NOTIFICATION_DEFAULTS,
   type DailyCashSummarySettingsData,
   type PushNotificationSettingsData,
@@ -431,4 +436,64 @@ export async function dispatchExpenseAlert(tenantId: string, data: ExpenseAlertD
 
   logFailures("expense", tenantId, results);
   return results;
+}
+
+/**
+ * Сдача кассы Товаров (запрос владельца 2026-08-16) — Telegram/email + Push,
+ * со своим тумблером, как у расхода и инкассации.
+ *
+ * Возвращает id отправленного Telegram-сообщения: по нему сверка правится и
+ * аннулируется — сообщение переписывается на месте, а не отправляется заново
+ * (сквозное правило проекта, см. lib/summary-channels/resync.ts).
+ */
+export async function dispatchGoodsAlert(
+  tenantId: string,
+  data: GoodsReconciliationAlertData
+): Promise<{ results: DispatchResult[]; telegramMessageId: string | null }> {
+  const settings = await prisma.goodsSummarySettings.findUnique({ where: { tenantId } });
+  if (settings ? !settings.enabled : !GOODS_SUMMARY_DEFAULTS.enabled) {
+    // Тумблер выключен — молчим и в Telegram, и в почте. Push остаётся своим
+    // тумблером ниже: владелец мог отключить чат, но оставить уведомления.
+    if (await pushEnabledFor(tenantId, "goods")) await sendGoodsPush(tenantId, data);
+    return { results: [], telegramMessageId: null };
+  }
+
+  const channels = await getEnabledChannels(tenantId);
+  const results: DispatchResult[] = [];
+  const tenant = await getTenantInfo(tenantId);
+  const st = tenant.t.summaryText;
+  let telegramMessageId: string | null = null;
+
+  for (const channel of channels) {
+    if (channel.channelType === "telegram" && channel.chatStatus === "active" && channel.chatId) {
+      const text = formatGoodsAlertTelegram(data, st, tenant.locale, tenant.timezone, tenant.currency);
+      const result = await sendChatMessage(channel.chatId, text);
+      if (result.ok && result.messageId) telegramMessageId = String(result.messageId);
+      results.push(toDispatchResult("telegram", result));
+    } else if (channel.channelType === "email") {
+      const addresses = parseEmailAddresses(channel.emailAddresses);
+      if (addresses.length === 0) continue;
+      const subject = `${st.goodsAlertTitle} · ${formatGoodsAlertHeader(data, st, tenant.timezone)}`;
+      const html = formatGoodsAlertLines(data, st, tenant.locale, tenant.currency)
+        .map((line) => `<p style="margin:0 0 6px">${line}</p>`)
+        .join("");
+      const result = await sendEmail(addresses, subject, html);
+      results.push({ channelType: "email", ok: result.ok, error: result.error });
+    }
+  }
+
+  if (await pushEnabledFor(tenantId, "goods")) await sendGoodsPush(tenantId, data);
+
+  logFailures("goods", tenantId, results);
+  return { results, telegramMessageId };
+}
+
+async function sendGoodsPush(tenantId: string, data: GoodsReconciliationAlertData): Promise<void> {
+  const tenant = await getTenantInfo(tenantId);
+  const st = tenant.t.summaryText;
+  await sendPushToTenant(tenantId, {
+    title: formatGoodsAlertHeader(data, st, tenant.timezone),
+    body: formatGoodsAlertLines(data, st, tenant.locale, tenant.currency).join("\n"),
+    url: "/money/readings",
+  }).catch((err) => console.error("push dispatch failed", { kind: "goods", tenantId, err }));
 }

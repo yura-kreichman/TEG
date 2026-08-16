@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireOperator } from "@/lib/require-operator";
 import { calculateGoodsCashSince, reconcileGoodsCash, ReconciliationChangedError } from "@/lib/goods";
 import { isModuleEnabled } from "@/lib/tenant-modules";
+import { announceGoodsReconciliation } from "@/lib/goods-alert";
 
 // Сверка кассы — оператор только с тумблером goodsAccess
 // (docs/spec/09-goods.md, "Доступ"), по своей точке (устройство).
@@ -46,6 +47,10 @@ export async function POST(request: Request) {
       actor: { operatorId: ctx.operator.id },
       expectedSinceReconciliationId: sinceReconciliationId,
     });
+    // Уведомление владельцу о сдаче кассы Товаров (запрос 2026-08-16) —
+    // fire-and-forget, как у расхода: недоступный канал не должен ронять
+    // саму сдачу, она к этому моменту уже записана.
+    void announceGoodsReconciliation(reconciliation.id).catch(() => {});
     return NextResponse.json({ id: reconciliation.id }, { status: 201 });
   } catch (err) {
     if (err instanceof ReconciliationChangedError) {

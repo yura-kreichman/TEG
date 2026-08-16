@@ -95,10 +95,21 @@ export async function GET(request: Request) {
   // Разбивка оплаты (аудит 2026-07-26) — без этого сплит-продажи не попадали
   // ни в одну из 3 корзин выше, и cash+mobile+abonement переставали сходиться
   // с revenue ровно на сумму сплит-продаж.
-  const splitSaleIds = nonVoided.filter((s) => s.paymentMethod === "split").map((s) => s.id);
+  // Доли нужны и для сумм, и для иконок методов в строке (запрос владельца
+  // 2026-08-16: "их может быть и 3 — нал/безнал/баланс"), поэтому держим их
+  // разложенными по продаже. Берём по ВСЕМ продажам списка, включая
+  // аннулированные: иконки у них тоже рисуются, а в суммы попадают только
+  // неаннулированные — фильтр ниже.
+  const splitSaleIds = sales.filter((s) => s.paymentMethod === "split").map((s) => s.id);
+  const legsBySale = new Map<string, { method: string; amount: number }[]>();
   if (splitSaleIds.length > 0) {
     const legs = await prisma.goodsSalePaymentLeg.findMany({ where: { saleId: { in: splitSaleIds } } });
+    const voidedIds = new Set(sales.filter((s) => s.voidedAt).map((s) => s.id));
     for (const leg of legs) {
+      const list = legsBySale.get(leg.saleId) ?? [];
+      list.push({ method: leg.method, amount: Number(leg.amount) });
+      legsBySale.set(leg.saleId, list);
+      if (voidedIds.has(leg.saleId)) continue;
       const amount = Number(leg.amount);
       if (leg.method === "cash") cash += amount;
       else if (leg.method === "mobile") mobile += amount;
@@ -185,6 +196,12 @@ export async function GET(request: Request) {
       quantity: s.quantity,
       amount: Number(s.amount),
       paymentMethod: s.paymentMethod,
+      // Методы для иконок в строке: у разбивки их до трёх — наличные,
+      // безнал и баланс (запрос владельца 2026-08-16).
+      methods:
+        s.paymentMethod === "split"
+          ? [...new Set((legsBySale.get(s.id) ?? []).map((leg) => leg.method))]
+          : [s.paymentMethod],
       performedBy: s.performedByOperator?.name ?? null,
       performedByOwner: !!s.performedByUser,
       performedByAvatarUrl: s.performedByOperator?.avatarUrl ?? null,
