@@ -1166,7 +1166,7 @@
     "deleteConfirmBody": "Ushbu topshiriq boʻyicha koʻrsatkichlar, summalar va pul jurnalidagi yozuvlar oʻchiriladi. Amal oʻzgarishlar jurnaliga tushadi. Bekor qilib boʻlmaydi.",
     "deleteError": "Topshiriqni oʻchirib boʻlmadi",
     "differenceTooltip": "Farq = haqiqiy kassa − hisoblangan tushum. Balansdan toʻlangani hisoblangan tushumga kirmaydi: u pul avvalroq, balans toʻldirilganda kelgan va bu topshiriqning kassasiga tusha olmasdi. Nol «toʻgʻri keldi» degani.",
-    "actualCashTooltip": "Faqat haqiqiy pul — naqd va naqdsiz. Balansdan toʻlovlar kirmaydi: u pul avvalroq, balans toʻldirilganda kelgan, balansni sarflash esa kassani toʻldirmay, kutilayotgan tushumni kamaytiradi."
+    "actualCashTooltip": "Xodim topshirgan naqd va naqdsiz pul. Xarajatlar allaqachon hisobga olingan: xodim xarajatlardan keyin kassada qolgan summani kiritadi. Balansdan toʻlov kirmaydi — u pul avvalroq, balans toʻldirilganda kelgan."
   },
   "operatorApp": {
     "greeting": "Salom,",

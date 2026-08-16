@@ -1166,7 +1166,7 @@
     "deleteConfirmBody": "Le letture, gli importi e le voci del registro soldi di questa chiusura verranno eliminati. Questa azione viene registrata e non può essere annullata.",
     "deleteError": "Impossibile eliminare la chiusura",
     "differenceTooltip": "Differenza = cassa reale − ricavo calcolato. Quanto pagato dal saldo non rientra nel ricavo calcolato: quel denaro è entrato prima, alla ricarica del saldo, e non poteva finire nella cassa di questa chiusura. Zero significa che torna tutto.",
-    "actualCashTooltip": "Solo denaro reale — contanti e carta. I pagamenti dal saldo non sono inclusi: quel denaro è entrato prima, alla ricarica del saldo, e l'uso del saldo riduce il ricavo atteso invece di aumentare la cassa."
+    "actualCashTooltip": "Contanti e pagamenti elettronici consegnati dal dipendente. Le spese sono già considerate: il dipendente inserisce ciò che resta in cassa dopo le spese. Il pagamento dal saldo non è incluso — quel denaro è entrato prima, alla ricarica del saldo."
   },
   "operatorApp": {
     "greeting": "Ciao,",

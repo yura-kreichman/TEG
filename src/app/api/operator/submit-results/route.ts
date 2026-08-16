@@ -207,6 +207,16 @@ export async function POST(request: Request) {
   // в ОДНОЙ транзакции, под advisory-локом по каждой зоне, взятым САМЫМ
   // первым действием: вторая сдача той же зоны ждёт коммита первой и лишь
   // потом видит её как свою границу — окна больше не пересекаются.
+  // Часовой пояс/граница бизнес-дня тенанта — нужны внутри транзакции, чтобы
+  // ограничить сбор расходов текущим днём (см. expenseOpsByZone ниже), и ещё
+  // раз после неё для напоминания об уходе. Читаем один раз здесь.
+  const tenantForTz = await prisma.tenant.findUnique({
+    where: { id: point.tenantId },
+    select: { timezone: true, businessDayBoundary: true },
+  });
+  const tenantTimezone = tenantForTz?.timezone ?? "UTC";
+  const tenantDayBoundary = tenantForTz?.businessDayBoundary ?? "00:00";
+
   async function runSubmission(tx: Prisma.TransactionClient) {
     // Сортировка — фиксированный порядок захвата локов исключает deadlock
     // между двумя сдачами, каждая из которых закрывает те же несколько зон
@@ -476,13 +486,29 @@ export async function POST(request: Request) {
     // С 2026-08-15 расход УЖЕ операция журнала с момента ввода (см. schema.prisma
     // на месте удалённого ZoneExpenseEvent), поэтому сдача ничего не создаёт —
     // она только собирает ещё не привязанные строки зоны, чтобы ниже
-    // проставить им свой resultsSubmissionId. Граница "с прошлой сдачи" тут
-    // больше не нужна: непривязанность и есть эта граница.
+    // проставить им свой resultsSubmissionId.
+    //
+    // Окно — ТЕКУЩИЙ бизнес-день, а не "всё непривязанное" (решение владельца
+    // 2026-08-16). Одной непривязанности мало: расход, внесённый уже ПОСЛЕ
+    // сдачи, остаётся ничьим до конца времён и раньше прилипал к следующей
+    // сдаче — она прибавляла его к своей выручке (см. cashReceived ниже) и
+    // показывала излишек в Разнице, хотя у сотрудника всё сошлось, а в Итогах
+    // своего дня тот расход уже был учтён. Тот же эффект давали дни простоя:
+    // "три дня дождя, потом сотрудник начал день с покупки тряпки" — расходы
+    // непроработанных дней приклеились бы к первой же рабочей сдаче. Днём
+    // ограничен и список расходов у сотрудника (api/operator/zone-expense-events),
+    // так что сдача берёт ровно то, что он видел на экране.
+    const businessDayStart = getBusinessDayBounds(tenantDayBoundary, now, tenantTimezone).start;
     const expenseOpsByZone = new Map<string, { id: string; amount: number }[]>();
     for (const zs of zoneSubmissions) {
       const zone = zoneById.get(zs.zoneId)!;
       const ops = await tx.moneyOperation.findMany({
-        where: { type: "expense", zoneId: zone.id, resultsSubmissionId: null, occurredAt: { lte: now } },
+        where: {
+          type: "expense",
+          zoneId: zone.id,
+          resultsSubmissionId: null,
+          occurredAt: { gte: businessDayStart, lte: now },
+        },
         select: { id: true, amount: true },
       });
       expenseOpsByZone.set(
@@ -951,13 +977,7 @@ export async function POST(request: Request) {
   // проход, тот же класс бага, что уже чинили в lib/business-day.ts/
   // lib/reports.ts) — мягкое напоминание, не блокирует ничего, но могло
   // ложно срабатывать/не срабатывать около полуночи для тенанта не в UTC.
-  const tenantForTz = await prisma.tenant.findUnique({
-    where: { id: point.tenantId },
-    select: { timezone: true, businessDayBoundary: true },
-  });
-  const timezone = tenantForTz?.timezone ?? "UTC";
-  const boundary = tenantForTz?.businessDayBoundary ?? "00:00";
-  const { start: dayStart, end: dayEnd } = getBusinessDayBounds(boundary, new Date(), timezone);
+  const { start: dayStart, end: dayEnd } = getBusinessDayBounds(tenantDayBoundary, new Date(), tenantTimezone);
   const todayShift = await prisma.shift.findFirst({
     where: { operatorId: operator.id, startAt: { gte: dayStart, lt: dayEnd } },
     select: { id: true },

@@ -1166,7 +1166,7 @@
     "deleteConfirmBody": "Bu teslime ait okumalar, tutarlar ve para defteri kayıtları silinecek. İşlem değişiklik günlüğüne kaydedilecek. Geri alınamaz.",
     "deleteError": "Teslim silinemedi",
     "differenceTooltip": "Fark = gerçek kasa − hesaplanan gelir. Bakiyeden ödenen tutar hesaplanan gelire dahil değildir: o para daha önce, bakiye yüklenirken girdi ve bu teslimin kasasına giremezdi. Sıfır, her şeyin tuttuğu anlamına gelir.",
-    "actualCashTooltip": "Sadece gerçek para — nakit ve kart. Bakiyeden ödemeler dahil değildir: o para daha önce, bakiye yüklenirken girdi; bakiyeden harcama kasayı artırmaz, beklenen geliri azaltır."
+    "actualCashTooltip": "Çalışanın teslim ettiği nakit ve kart. Giderler zaten hesaba katılmıştır: çalışan, harcamalardan sonra kasada kalanı girer. Bakiyeden ödeme dahil değildir — o para daha önce, bakiye yüklenirken girdi."
   },
   "operatorApp": {
     "greeting": "Merhaba,",

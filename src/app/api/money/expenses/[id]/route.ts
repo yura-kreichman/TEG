@@ -164,6 +164,65 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/expe
         resultsSubmissionId: nextResultsSubmissionId,
       },
     });
+
+    // Расход переехал в другую зону — вместе с ним переезжает и прибавка,
+    // которую сдача внесла в выручку зоны (решение владельца 2026-08-16).
+    // При сдаче в журнал пишется "получено наличными" = сданный остаток +
+    // расходы ЭТОЙ зоны (api/operator/submit-results, cashReceived), поэтому
+    // без переноса выручка старой зоны остаётся завышенной на сумму расхода,
+    // а новой — заниженной: общая касса точки и Разница сходятся, а разрез по
+    // зонам в Отчётах врёт.
+    //
+    // Переносим ИСТОРИЧЕСКУЮ сумму (какой расход был на момент сдачи), а не
+    // новую: правка суммы намеренно оставляет выручку нетронутой и проявляется
+    // как недостача/излишек в Разнице — тут меняется только адрес расхода.
+    if (zoneChanged && op.resultsSubmissionId) {
+      const moved = Math.abs(Number(op.amount));
+      const previousRevenue = await tx.moneyOperation.findFirst({
+        where: { type: "revenue", resultsSubmissionId: op.resultsSubmissionId, zoneId: op.zoneId },
+        select: { id: true, amount: true },
+      });
+      if (previousRevenue) {
+        const left = Math.round((Number(previousRevenue.amount) - moved) * 100) / 100;
+        // Ноль остаётся, когда вся касса зоны ушла в этот расход — операцию
+        // с нулевой суммой в журнале не держим.
+        if (left > 0) {
+          await tx.moneyOperation.update({ where: { id: previousRevenue.id }, data: { amount: left } });
+        } else {
+          await tx.moneyOperation.delete({ where: { id: previousRevenue.id } });
+        }
+      }
+      // Принимающая сторона — только если расход остался в той же сдаче
+      // (nextResultsSubmissionId её сохранил). Ушёл в зону другой точки или
+      // другой сдачи — прибавлять некуда и не нужно: там деньги брали из
+      // своей кассы, и её остаток честно уменьшается на этот расход.
+      if (nextResultsSubmissionId) {
+        const receivingRevenue = await tx.moneyOperation.findFirst({
+          where: { type: "revenue", resultsSubmissionId: nextResultsSubmissionId, zoneId },
+          select: { id: true, amount: true },
+        });
+        if (receivingRevenue) {
+          await tx.moneyOperation.update({
+            where: { id: receivingRevenue.id },
+            data: { amount: Math.round((Number(receivingRevenue.amount) + moved) * 100) / 100 },
+          });
+        } else {
+          // Зона сдала ноль наличными — операции выручки у неё нет вовсе
+          // (сдача создаёт её только при cashReceived > 0). Заводим: эти
+          // деньги в зоне получены и тут же потрачены.
+          await tx.moneyOperation.create({
+            data: {
+              tenantId: owner.tenantId,
+              zoneId,
+              type: "revenue",
+              amount: moved,
+              occurredAt: op.occurredAt,
+              resultsSubmissionId: nextResultsSubmissionId,
+            },
+          });
+        }
+      }
+    }
     await tx.correctionLog.create({
       data: {
         entityType: "MoneyOperation",

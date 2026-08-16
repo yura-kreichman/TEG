@@ -65,7 +65,18 @@ export async function GET() {
   const bounds = getBusinessDayBounds(day.boundary, new Date(), day.timezone);
   const [rawEvents, submittedZones] = await Promise.all([
     prisma.moneyOperation.findMany({
-      where: { type: "expense", zoneId: { in: zoneIds }, resultsSubmissionId: null },
+      // Два условия разом (правило владельца 2026-08-16): расход виден, пока
+      // не сдал итоги, — а если внесён уже ПОСЛЕ сдачи, то до конца бизнес-
+      // дня, дальше список чистый. Без второго условия непривязанные записи
+      // копились бы у сотрудника бесконечно: сдача забирает только те, что
+      // были до неё, а всё, что после, оставалось в списке навсегда — и
+      // недельной давности расход можно было бы удалить задним числом.
+      where: {
+        type: "expense",
+        zoneId: { in: zoneIds },
+        resultsSubmissionId: null,
+        occurredAt: { gte: bounds.start, lt: bounds.end },
+      },
       orderBy: { occurredAt: "desc" },
       take: 200,
       include: { expenseCategory: { select: { name: true } } },

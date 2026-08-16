@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
+import { getTenantDayContext } from "@/lib/tenant-day";
+import { getBusinessDayBounds } from "@/lib/business-day";
 
 /**
  * Отменить случайную запись расхода — та же логика, что у
@@ -26,13 +28,22 @@ export async function DELETE(request: Request, ctx: RouteContext<"/api/operator/
   // разрешает заполнить только одно из zoneId/pointId).
   const operation = await prisma.moneyOperation.findFirst({
     where: { id, type: "expense", zone: { pointId: point.id } },
-    select: { id: true, resultsSubmissionId: true },
+    select: { id: true, resultsSubmissionId: true, occurredAt: true },
   });
   if (!operation) {
     return NextResponse.json({ error: "Запись не найдена" }, { status: 404 });
   }
   if (operation.resultsSubmissionId) {
     return NextResponse.json({ error: "Эта запись уже учтена в сдаче итогов" }, { status: 409 });
+  }
+  // Своим днём и ограничены: расход, внесённый после сдачи, сотрудник видит
+  // до конца бизнес-дня (правило владельца 2026-08-16) — раз из списка он
+  // ушёл, то и удалить его отсюда нельзя, иначе по прямому id можно было бы
+  // стереть запись недельной давности. Дальше — только Владелец в реестре.
+  const day = await getTenantDayContext(point.tenantId);
+  const bounds = getBusinessDayBounds(day.boundary, new Date(), day.timezone);
+  if (operation.occurredAt < bounds.start || operation.occurredAt >= bounds.end) {
+    return NextResponse.json({ error: "Этот расход уже вне текущего дня" }, { status: 409 });
   }
 
   await prisma.moneyOperation.delete({ where: { id } });
