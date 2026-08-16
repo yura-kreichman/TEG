@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AlertTriangle, CircuitBoard, ClockPlus, Home, ShoppingBag, Ticket, Timer, Wallet } from "lucide-react";
+import { AlertTriangle, BookOpen, CircuitBoard, ClockPlus, Home, ShoppingBag, Ticket, Timer, Wallet } from "lucide-react";
 import { BottomGlassNav, type BottomGlassNavItem } from "@/components/bottom-glass-nav";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -309,6 +309,15 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
           },
         ]
       : []),
+    // «Как работать» — памятка под этого сотрудника (решение владельца
+    // 2026-08-16). Последним пунктом: она нужна редко, а места в баре мало —
+    // пусть уходит в «Ещё», не вытесняя рабочие экраны.
+    {
+      href: "/operator/guide",
+      label: t.operatorGuide.navLabel,
+      icon: BookOpen,
+      active: pathname.startsWith("/operator/guide"),
+    },
   ];
 
   const effectiveBarSlots = isWide ? BAR_SLOTS_WIDE : BAR_SLOTS;
