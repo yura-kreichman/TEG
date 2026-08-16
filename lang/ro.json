@@ -1506,7 +1506,9 @@
     "lightboxNextLabel": "Foto următoare",
     "telegramGroupTitle": "Grup pe Telegram",
     "telegramGroupText": "Oferte, noutăți și răspunsuri la întrebări",
-    "telegramGroupButton": "Alătură-te"
+    "telegramGroupButton": "Alătură-te",
+    "websiteTitle": "Site-ul nostru",
+    "websiteButton": "Vizitează"
   },
   "landing": {
     "settingsTitle": "Landing",
@@ -1566,6 +1568,7 @@
     "vkLabel": "VK",
     "okLabel": "OK",
     "youtubeLabel": "YouTube",
+    "websiteLabel": "Site web",
     "rulesTitle": "Reguli de vizitare",
     "rulesNoneOption": "Nu afișa",
     "noPublishedInstructionsHint": "Nicio instrucțiune publicată încă — secțiunea „Instrucțiuni”",

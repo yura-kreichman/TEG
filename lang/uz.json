@@ -1506,7 +1506,9 @@
     "lightboxNextLabel": "Keyingi surat",
     "telegramGroupTitle": "Telegram guruhi",
     "telegramGroupText": "Aksiyalar, yangiliklar va savollarga javoblar",
-    "telegramGroupButton": "Qo‘shilish"
+    "telegramGroupButton": "Qo‘shilish",
+    "websiteTitle": "Bizning saytimiz",
+    "websiteButton": "Oʻtish"
   },
   "landing": {
     "settingsTitle": "Landing",
@@ -1566,6 +1568,7 @@
     "vkLabel": "VK",
     "okLabel": "OK",
     "youtubeLabel": "YouTube",
+    "websiteLabel": "Sayt",
     "rulesTitle": "Tashrif qoidalari",
     "rulesNoneOption": "Ko'rsatmaslik",
     "noPublishedInstructionsHint": "Hali chop etilgan yo'riqnoma yo'q — «Yo'riqnomalar» bo'limi",

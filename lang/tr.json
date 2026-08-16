@@ -1506,7 +1506,9 @@
     "lightboxNextLabel": "Sonraki fotoğraf",
     "telegramGroupTitle": "Telegram grubu",
     "telegramGroupText": "Kampanyalar, haberler ve sorulara yanıtlar",
-    "telegramGroupButton": "Katıl"
+    "telegramGroupButton": "Katıl",
+    "websiteTitle": "Web sitemiz",
+    "websiteButton": "Git"
   },
   "landing": {
     "settingsTitle": "Landing",
@@ -1566,6 +1568,7 @@
     "vkLabel": "VK",
     "okLabel": "OK",
     "youtubeLabel": "YouTube",
+    "websiteLabel": "Web sitesi",
     "rulesTitle": "Ziyaret kuralları",
     "rulesNoneOption": "Gösterme",
     "noPublishedInstructionsHint": "Henüz yayınlanmış yönerge yok — \"Yönergeler\" bölümü",

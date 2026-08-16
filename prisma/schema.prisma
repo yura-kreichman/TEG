@@ -3276,6 +3276,15 @@ model Landing {
   rulesInstructionId String?
   rulesInstruction   Instruction? @relation(fields: [rulesInstructionId], references: [id], onDelete: SetNull)
 
+  // Основной сайт компании, если он есть (запрос владельца 2026-08-16) —
+  // отдельным полем, а не ещё одним contact*: те хранят СЫРОЙ ввод (ник,
+  // номер), а ссылку из них строит contactHref по шаблону соцсети. Здесь
+  // шаблона нет, хранится готовый нормализованный URL (схема дописывается на
+  // сохранении, принимаются только http/https). Показывается на лендинге
+  // карточкой в "Контактах" — сразу под приглашением в клиентскую группу
+  // Telegram, и уходит в Organization.sameAs структурированных данных.
+  websiteUrl String?
+
   contactPhone     String?
   contactTelegram  String?
   contactViber     String?

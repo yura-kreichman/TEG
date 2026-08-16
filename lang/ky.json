@@ -1506,7 +1506,9 @@
     "lightboxNextLabel": "Кийинки сүрөт",
     "telegramGroupTitle": "Telegram тобу",
     "telegramGroupText": "Акциялар, жаңылыктар жана суроолорго жооптор",
-    "telegramGroupButton": "Кошулуу"
+    "telegramGroupButton": "Кошулуу",
+    "websiteTitle": "Биздин сайт",
+    "websiteButton": "Өтүү"
   },
   "landing": {
     "settingsTitle": "Лендинг",
@@ -1566,6 +1568,7 @@
     "vkLabel": "VK",
     "okLabel": "OK",
     "youtubeLabel": "YouTube",
+    "websiteLabel": "Сайт",
     "rulesTitle": "Келүү эрежелери",
     "rulesNoneOption": "Көрсөтпөө",
     "noPublishedInstructionsHint": "Жарыяланган нускама жок — «Нускамалар» бөлүмү",

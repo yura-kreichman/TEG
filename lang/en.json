@@ -1506,7 +1506,9 @@
     "lightboxNextLabel": "Next photo",
     "telegramGroupTitle": "Telegram group",
     "telegramGroupText": "Offers, news and answers to your questions",
-    "telegramGroupButton": "Join"
+    "telegramGroupButton": "Join",
+    "websiteTitle": "Our website",
+    "websiteButton": "Visit"
   },
   "landing": {
     "settingsTitle": "Landing page",
@@ -1566,6 +1568,7 @@
     "vkLabel": "VK",
     "okLabel": "OK",
     "youtubeLabel": "YouTube",
+    "websiteLabel": "Website",
     "rulesTitle": "Visiting rules",
     "rulesNoneOption": "Don't show",
     "noPublishedInstructionsHint": "No published instructions yet — see the Instructions section",

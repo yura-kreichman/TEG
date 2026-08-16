@@ -1506,7 +1506,9 @@
     "lightboxNextLabel": "Наступнае фота",
     "telegramGroupTitle": "Група ў Telegram",
     "telegramGroupText": "Акцыі, навіны і адказы на пытанні",
-    "telegramGroupButton": "Далучыцца"
+    "telegramGroupButton": "Далучыцца",
+    "websiteTitle": "Наш сайт",
+    "websiteButton": "Перайсці"
   },
   "landing": {
     "settingsTitle": "Лендынг",
@@ -1566,6 +1568,7 @@
     "vkLabel": "VK",
     "okLabel": "OK",
     "youtubeLabel": "YouTube",
+    "websiteLabel": "Сайт",
     "rulesTitle": "Правілы наведвання",
     "rulesNoneOption": "Не паказваць",
     "noPublishedInstructionsHint": "Няма ніводнай апублікаванай інструкцыі — раздзел «Інструктажы»",

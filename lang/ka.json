@@ -1506,7 +1506,9 @@
     "lightboxNextLabel": "შემდეგი ფოტო",
     "telegramGroupTitle": "Telegram ჯგუფი",
     "telegramGroupText": "აქციები, სიახლეები და პასუხები კითხვებზე",
-    "telegramGroupButton": "შეერთება"
+    "telegramGroupButton": "შეერთება",
+    "websiteTitle": "ჩვენი ვებგვერდი",
+    "websiteButton": "გადასვლა"
   },
   "landing": {
     "settingsTitle": "ლენდინგი",
@@ -1566,6 +1568,7 @@
     "vkLabel": "VK",
     "okLabel": "OK",
     "youtubeLabel": "YouTube",
+    "websiteLabel": "ვებგვერდი",
     "rulesTitle": "ვიზიტის წესები",
     "rulesNoneOption": "არ გამოჩნდეს",
     "noPublishedInstructionsHint": "გამოქვეყნებული ინსტრუქცია ჯერ არ არის — „ინსტრუქციები“ განყოფილება",

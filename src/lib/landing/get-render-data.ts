@@ -47,6 +47,9 @@ export interface LandingRenderData {
     ok: string | null;
     youtube: string | null;
   };
+  // Основной сайт компании, если владелец его указал (запрос 2026-08-16) —
+  // готовый URL, нормализованный при сохранении.
+  websiteUrl: string | null;
   metaTitleOverride: string | null;
   metaDescriptionOverride: string | null;
   googleSiteVerification: string | null;
@@ -247,6 +250,7 @@ export async function getLandingRenderData(tenantId: string): Promise<LandingRen
     metaTitleOverride: landing.metaTitleOverride,
     metaDescriptionOverride: landing.metaDescriptionOverride,
     googleSiteVerification: landing.googleSiteVerification,
+    websiteUrl: landing.websiteUrl,
     telegramGroupUrl,
     updatedAt: landing.updatedAt,
     rulesInstruction,

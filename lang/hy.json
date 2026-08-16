@@ -1506,7 +1506,9 @@
     "lightboxNextLabel": "Հաջորդ լուսանկարը",
     "telegramGroupTitle": "Telegram խումբ",
     "telegramGroupText": "Ակցիաներ, նորություններ և հարցերի պատասխաններ",
-    "telegramGroupButton": "Միանալ"
+    "telegramGroupButton": "Միանալ",
+    "websiteTitle": "Մեր կայքը",
+    "websiteButton": "Անցնել"
   },
   "landing": {
     "settingsTitle": "Լենդինգ",
@@ -1566,6 +1568,7 @@
     "vkLabel": "VK",
     "okLabel": "OK",
     "youtubeLabel": "YouTube",
+    "websiteLabel": "Կայք",
     "rulesTitle": "Այցելության կանոններ",
     "rulesNoneOption": "Չցուցադրել",
     "noPublishedInstructionsHint": "Հրապարակված հրահանգներ դեռ չկան — «Հրահանգներ» բաժին",

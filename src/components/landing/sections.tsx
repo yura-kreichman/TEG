@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { MapPin, Phone, Share2, Play, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { MapPin, Phone, Share2, Play, X, ChevronLeft, ChevronRight, Globe } from "lucide-react";
 import type { LandingRenderData, LandingZonePointStatus } from "@/lib/landing/get-render-data";
 import { getNonce } from "@/lib/nonce";
 import { contactHref } from "@/lib/landing/contact-links";
@@ -455,8 +455,22 @@ export function ContactsSection({ data, lp, weekdayNames }: { data: LandingRende
     .filter((c): c is { kind: keyof typeof CONTACT_ICONS; value: string } => !!c.value)
     .sort((a, b) => (a.kind === "phone" ? -1 : b.kind === "phone" ? 1 : 0));
   // Группа тоже держит секцию живой: тенант без точек и контактов, но с
-  // подключённой группой, иначе потерял бы единственный способ связи.
-  if (data.points.length === 0 && entries.length === 0 && !data.telegramGroupUrl) return null;
+  // подключённой группой, иначе потерял бы единственный способ связи. То же
+  // и с основным сайтом.
+  if (data.points.length === 0 && entries.length === 0 && !data.telegramGroupUrl && !data.websiteUrl) return null;
+
+  // Домен без схемы и www — подпись под заголовком карточки сайта (решение
+  // владельца 2026-08-16: показывать именно домен, чтобы посетитель видел,
+  // куда уходит). URL уже нормализован при сохранении, но публичная страница
+  // всё равно не должна падать на кривом значении из базы.
+  let websiteHost: string | null = null;
+  if (data.websiteUrl) {
+    try {
+      websiteHost = new URL(data.websiteUrl).hostname.replace(/^www\./, "");
+    } catch {
+      websiteHost = null;
+    }
+  }
 
   return (
     <section id="contacts" className="lt-wrap landing-reveal py-7">
@@ -492,6 +506,30 @@ export function ContactsSection({ data, lp, weekdayNames }: { data: LandingRende
           </span>
           <span className="lt-btn lt-btn-primary inline-flex shrink-0 items-center px-4 py-2 text-sm font-semibold">
             {lp.telegramGroupButton}
+          </span>
+        </a>
+      )}
+      {/* Основной сайт компании — сразу под приглашением в группу (запрос
+          владельца 2026-08-16), той же карточкой. Иконка — свой глобус из
+          набора: favicon чужого сайта был бы запросом к внешнему домену, а
+          их на этой странице должно быть ноль (CLAUDE.md, приёмка Лендинга).
+          Группы может не быть — тогда карточка просто первая в секции. */}
+      {data.websiteUrl && websiteHost && (
+        <a
+          href={data.websiteUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="lt-card mb-5 flex items-center gap-3 p-4"
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center">
+            <Globe className="size-7" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="lt-card-title block text-base">{lp.websiteTitle}</span>
+            <span className="lt-muted-text block truncate text-[0.8125rem]">{websiteHost}</span>
+          </span>
+          <span className="lt-btn inline-flex shrink-0 items-center px-4 py-2 text-sm font-semibold">
+            {lp.websiteButton}
           </span>
         </a>
       )}

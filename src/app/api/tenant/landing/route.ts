@@ -81,6 +81,7 @@ export async function PATCH(request: Request) {
     metaTitleOverride,
     metaDescriptionOverride,
     googleSiteVerification,
+    websiteUrl,
     ...rest
   } = body as Record<string, unknown>;
 
@@ -214,6 +215,35 @@ export async function PATCH(request: Request) {
       data.rulesInstruction = { connect: { id: rulesInstructionId } };
     }
   }
+  // Основной сайт (запрос владельца 2026-08-16) — отдельно от SOCIAL_FIELDS
+  // ниже: там значение хранится как есть, а тут нужен настоящий URL.
+  // Владелец пишет "mysite.md" или "www.mysite.md" куда чаще, чем полную
+  // ссылку, поэтому схему дописываем сами. Протокол — ТОЛЬКО http/https:
+  // карточка на лендинге кликабельна целиком, и "javascript:..." в этом поле
+  // стал бы исполняемым кодом на публичной странице.
+  if (websiteUrl !== undefined) {
+    if (websiteUrl === null || (typeof websiteUrl === "string" && !websiteUrl.trim())) {
+      data.websiteUrl = null;
+    } else if (typeof websiteUrl !== "string" || websiteUrl.length > 200) {
+      return NextResponse.json({ error: "Некорректный адрес сайта" }, { status: 400 });
+    } else {
+      const raw = websiteUrl.trim();
+      const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+      let parsed: URL;
+      try {
+        parsed = new URL(withScheme);
+      } catch {
+        return NextResponse.json({ error: "Некорректный адрес сайта" }, { status: 400 });
+      }
+      // Домен без точки ("localhost", случайное слово) сайтом не является —
+      // ссылка вела бы в никуда прямо с публичной страницы.
+      if ((parsed.protocol !== "http:" && parsed.protocol !== "https:") || !parsed.hostname.includes(".")) {
+        return NextResponse.json({ error: "Некорректный адрес сайта" }, { status: 400 });
+      }
+      data.websiteUrl = parsed.toString();
+    }
+  }
+
   for (const field of SOCIAL_FIELDS) {
     const value = rest[field];
     if (value === undefined) continue;

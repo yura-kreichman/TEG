@@ -1506,7 +1506,9 @@
     "lightboxNextLabel": "Növbəti foto",
     "telegramGroupTitle": "Telegram qrupu",
     "telegramGroupText": "Aksiyalar, xəbərlər və suallara cavablar",
-    "telegramGroupButton": "Qoşul"
+    "telegramGroupButton": "Qoşul",
+    "websiteTitle": "Veb saytımız",
+    "websiteButton": "Keçid"
   },
   "landing": {
     "settingsTitle": "Lendinq",
@@ -1566,6 +1568,7 @@
     "vkLabel": "VK",
     "okLabel": "OK",
     "youtubeLabel": "YouTube",
+    "websiteLabel": "Veb sayt",
     "rulesTitle": "Ziyarət qaydaları",
     "rulesNoneOption": "Göstərmə",
     "noPublishedInstructionsHint": "Heç bir dərc edilmiş təlimat yoxdur — «Təlimatlar» bölməsi",

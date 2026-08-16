@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ImagePlus, ExternalLink, Copy, Check, MapPin, Phone, CheckCircle2, AlertCircle, Video, Eye, QrCode, EyeOff, Send, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, ImagePlus, ExternalLink, Copy, Check, MapPin, Phone, CheckCircle2, AlertCircle, Video, Eye, QrCode, EyeOff, Send, ChevronLeft, ChevronRight, Globe } from "lucide-react";
 import {
   TelegramIcon,
   ViberIcon,
@@ -144,6 +144,7 @@ interface LandingData {
   contactTelegram: string | null;
   contactViber: string | null;
   contactWhatsapp: string | null;
+  websiteUrl: string | null;
   contactInstagram: string | null;
   contactFacebook: string | null;
   contactTiktok: string | null;
@@ -191,6 +192,10 @@ const CONTACT_FIELDS = [
   { key: "contactVk", labelKey: "vkLabel", icon: VkIcon },
   { key: "contactOk", labelKey: "okLabel", icon: OkIcon },
   { key: "contactYoutube", labelKey: "youtubeLabel", icon: YoutubeIcon },
+  // Основной сайт компании (запрос владельца 2026-08-16) — последним в том же
+  // списке: для владельца это такой же контакт, хотя хранится и валидируется
+  // отдельно от contact* (см. Landing.websiteUrl и PATCH /api/tenant/landing).
+  { key: "websiteUrl", labelKey: "websiteLabel", icon: Globe },
 ] as const;
 
 export default function LandingSettingsPage() {
@@ -277,6 +282,7 @@ export default function LandingSettingsPage() {
           contactTelegram: landing.contactTelegram,
           contactViber: landing.contactViber,
           contactWhatsapp: landing.contactWhatsapp,
+          websiteUrl: landing.websiteUrl,
           contactInstagram: landing.contactInstagram,
           contactFacebook: landing.contactFacebook,
           contactTiktok: landing.contactTiktok,

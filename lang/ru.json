@@ -1565,6 +1565,7 @@
     "vkLabel": "VK",
     "okLabel": "OK",
     "youtubeLabel": "YouTube",
+    "websiteLabel": "Сайт",
     "rulesTitle": "Правила посещения",
     "rulesNoneOption": "Не показывать",
     "noPublishedInstructionsHint": "Нет ни одной опубликованной инструкции — раздел «Инструктажи»",
@@ -1632,7 +1633,9 @@
     "lightboxNextLabel": "Следующее фото",
     "telegramGroupTitle": "Группа в Telegram",
     "telegramGroupText": "Акции, новости и ответы на вопросы",
-    "telegramGroupButton": "Вступить"
+    "telegramGroupButton": "Вступить",
+    "websiteTitle": "Наш сайт",
+    "websiteButton": "Перейти"
   },
   "summaryText": {
     "cash": "Наличные",
