@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -20,6 +21,7 @@ import {
   TicketCheck,
   Trash2,
   TriangleAlert,
+  Users,
   Wallet,
 } from "lucide-react";
 import { BackLink } from "@/components/back-link";
@@ -1139,7 +1141,14 @@ export default function ReadingsCalendarPage() {
               {selectedDate &&
                 ((abonementSales !== null && abonementSales.items.length > 0) || abonementSaleEvents.length > 0) && (
                 <SpringCard hover={false} className="mt-3.5 flex flex-col gap-1">
-                  <p className="text-card-title">{t.readings.abonementSalesTitle}</p>
+                  {/* Единый вид заголовков плашек дня — иконка без фоновой
+                      подложки и шрифт мельче карточного (решение владельца
+                      2026-08-16): Абонементы, Товары, Расходы выглядят
+                      одинаково. */}
+                  <p className="flex items-center gap-1.5 text-body-airbnb font-bold">
+                    <Gift className="size-4 shrink-0 text-muted-foreground" />
+                    {t.readings.abonementSalesTitle}
+                  </p>
                   <div className="mt-1 flex flex-col border-t border-border tabular-nums">
                     {(abonementSales?.items ?? []).map((item) => (
                       <div
@@ -1245,27 +1254,48 @@ export default function ReadingsCalendarPage() {
                   деньги ушли, и это факт дня. */}
               {selectedDate && expenses.items.length > 0 && (
                 <SpringCard hover={false} className="mt-3.5 flex flex-col gap-1">
-                  {/* Заголовок без иконки-кружка и строки в одну линию
-                      (решение владельца 2026-08-16: "плашка должна быть
-                      компактной, единообразно с Товарами и Абонементами").
-                      На что именно потрачено, здесь не пишем — категория и
-                      комментарий видны в разделе Расходы, а Итоги дня — про
-                      суммы, а не про разбор каждой траты. */}
-                  <p className="text-card-title">{t.summaryText.expenses}</p>
+                  {/* Тот же заголовок, что у Абонементов и Товаров, плюс
+                      стрелка в реестр расходов (запрос владельца
+                      2026-08-16): из Итогов дня туда переходят чаще всего —
+                      там правят, удаляют и видят комментарии. */}
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="flex items-center gap-1.5 text-body-airbnb font-bold">
+                      <ShoppingCart className="size-4 shrink-0 text-muted-foreground" />
+                      {t.summaryText.expenses}
+                    </p>
+                    <Link
+                      href="/money/expenses"
+                      aria-label={t.summaryText.expenses}
+                      className="flex size-8 shrink-0 items-center justify-center rounded-control text-muted-foreground"
+                    >
+                      <ChevronRight className="size-4.5" />
+                    </Link>
+                  </div>
                   <div className="mt-1 flex flex-col border-t border-border tabular-nums">
                     {expenses.items.map((e) => (
                       <div
                         key={e.id}
                         className="flex items-center justify-between gap-2 border-b border-border py-2 text-caption-airbnb last:border-b-0"
                       >
-                        <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                          <span className="shrink-0 text-muted-foreground">{formatTime(e.occurredAt)}</span>
-                          {/* Зона крупнее остальной строки (просьба владельца
-                              2026-08-16) — это главное, что читают в строке
-                              расхода: из какой кассы ушли деньги. */}
-                          <span className="truncate text-body-airbnb font-semibold text-foreground">{e.zoneName}</span>
-                          {e.operatorName && (
-                            <span className="truncate text-muted-foreground">· {e.operatorName}</span>
+                        <span className="flex min-w-0 flex-1 flex-col">
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <span className="shrink-0 text-muted-foreground">{formatTime(e.occurredAt)}</span>
+                            <span className="truncate text-foreground">{e.zoneName}</span>
+                            {/* Иконка рядом с именем, не аватар — единый приём
+                                по всему проекту (правило владельца, повторено
+                                2026-08-16). */}
+                            {e.operatorName && (
+                              <span className="inline-flex min-w-0 shrink items-center gap-1 text-muted-foreground">
+                                <Users className="size-3.5 shrink-0" />
+                                <span className="truncate">{e.operatorName}</span>
+                              </span>
+                            )}
+                          </span>
+                          {/* Категория — второй строкой и мельче (запрос
+                              владельца 2026-08-16): в самой строке важнее
+                              зона и сумма, а "на что" уточняет. */}
+                          {e.categoryName && (
+                            <span className="truncate text-xs text-muted-foreground">{e.categoryName}</span>
                           )}
                         </span>
                         <span className="shrink-0 font-semibold text-foreground">
@@ -1283,10 +1313,10 @@ export default function ReadingsCalendarPage() {
 
               {selectedDate && (goodsReconciliations.length > 0 || goodsSales.length > 0) && (
                 <SpringCard hover={false} className="mt-3.5 flex flex-col gap-1">
-                  {/* Заголовок без иконки-кружка — как у Абонементов и
-                      Расходов (решение владельца 2026-08-16 о единообразии
-                      плашек в Итогах дня). */}
-                  <p className="text-card-title">{t.readings.goodsReconciliationsTitle}</p>
+                  <p className="flex items-center gap-1.5 text-body-airbnb font-bold">
+                    <ShoppingBag className="size-4 shrink-0 text-muted-foreground" />
+                    {t.readings.goodsReconciliationsTitle}
+                  </p>
                   <div
                     className={cn("mt-1 flex flex-col", goodsReconciliations.length > 0 && "border-t border-border")}
                   >
@@ -1420,8 +1450,13 @@ export default function ReadingsCalendarPage() {
                       <SpringCard key={card.zoneSubmissionId} hover={false} className="flex flex-col gap-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 grow">
+                            {/* Дата — мелким, наравне со временем (правка
+                                владельца 2026-08-16): крупным в карточке
+                                должно читаться НАЗВАНИЕ ЗОНЫ ниже, а дата у
+                                всех карточек дня и так одна — она выбрана в
+                                календаре над списком. */}
                             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                              <span className="text-body-airbnb font-bold">{formatReadableDate(selectedDate)}</span>
+                              <span className="text-caption-airbnb">{formatReadableDate(selectedDate)}</span>
                               <span className="text-caption-airbnb tabular-nums">{formatTime(card.submittedAt)}</span>
                               {/* Только иконка, без фона и подписи (запрос
                                   пользователя 2026-07-22: "везде по проекту
@@ -1466,9 +1501,12 @@ export default function ReadingsCalendarPage() {
                         </div>
 
                         <div className="mt-3 border-t border-border pt-3">
-                          <p className="flex items-center gap-1.5 text-caption-airbnb font-bold">
+                          {/* Название зоны — главное в карточке (правка
+                              владельца 2026-08-16), поэтому размер тот, что
+                              раньше занимала дата. */}
+                          <p className="flex items-center gap-1.5 text-body-airbnb font-bold">
                             {card.zoneIconKey && (
-                              <AssetOrZoneIcon iconKey={card.zoneIconKey} className="size-4 shrink-0 text-muted-foreground" />
+                              <AssetOrZoneIcon iconKey={card.zoneIconKey} className="size-4.5 shrink-0 text-muted-foreground" />
                             )}
                             {card.zoneName}
                           </p>
