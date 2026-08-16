@@ -75,7 +75,7 @@ export async function GET(request: Request) {
         occurredAt: { gte: monthStart, lt: monthEnd },
         ...(pointId ? { zone: { pointId } } : {}),
       },
-      include: { zone: { include: { point: true } }, performedByOperator: { select: { name: true } } },
+      include: { zone: { include: { point: true } }, performedByOperator: { select: { name: true, colorTag: true } } },
       orderBy: { occurredAt: "desc" },
     }),
     prisma.moneyOperation.findMany({
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
         occurredAt: { gte: monthStart, lt: monthEnd },
         ...(pointId ? { pointId } : {}),
       },
-      include: { point: true, performedByOperator: { select: { name: true } } },
+      include: { point: true, performedByOperator: { select: { name: true, colorTag: true } } },
       orderBy: { occurredAt: "desc" },
     }),
     prisma.moneyOperation.findMany({
@@ -103,7 +103,7 @@ export async function GET(request: Request) {
         occurredAt: { gte: monthStart, lt: monthEnd },
         ...(pointId ? { pointId } : {}),
       },
-      include: { point: true, performedByOperator: { select: { name: true } } },
+      include: { point: true, performedByOperator: { select: { name: true, colorTag: true } } },
       orderBy: { occurredAt: "desc" },
     }),
     prisma.moneyOperation.findMany({
@@ -172,9 +172,10 @@ export async function GET(request: Request) {
   // Данные лежали в каждой строке с самого начала — performedByUserId у
   // владельца, performedByOperatorId у сотрудника, — просто никогда не
   // выводились наружу. Никакой миграции для этого не нужно.
-  const performer = (op: { performedByUserId: string | null; performedByOperator?: { name: string } | null }) => ({
+  const performer = (op: { performedByUserId: string | null; performedByOperator?: { name: string; colorTag?: string | null } | null }) => ({
     byOwner: op.performedByUserId !== null,
     performerName: op.performedByOperator?.name ?? null,
+    performerColorTag: op.performedByOperator?.colorTag ?? null,
   });
 
   // Ключ одного АКТА инкассации: все строки, записанные одной транзакцией

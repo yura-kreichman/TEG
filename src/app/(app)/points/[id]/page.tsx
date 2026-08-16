@@ -19,7 +19,8 @@ import { IconPicker } from "@/components/icon-picker";
 import { ActiveStatusIcon } from "@/components/active-status-icon";
 import { TileIcon } from "@/components/tile-icon";
 import { useI18n } from "@/components/i18n-provider";
-import { cn, colorTagTint } from "@/lib/utils";
+import { PerformedByTag } from "@/components/performed-by-tag";
+import { cn } from "@/lib/utils";
 import { ZONE_ACCOUNTING_MODES, type ZoneAccountingMode } from "@/lib/results-calc";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import type { Dictionary } from "@/lib/i18n";
@@ -285,17 +286,18 @@ export default function PointDetailPage() {
                               {t.zonesList.noOperatorsAttached}
                             </span>
                           ) : (
+                            // Единый чип сотрудника (решение владельца
+                            // 2026-08-16) — тот же компонент, что в реестрах,
+                            // вместо собственной копии разметки.
                             zone.operatorsWithAccess.map((op) => (
-                              <span
+                              <PerformedByTag
                                 key={op.id}
-                                className={cn(
-                                  "rounded-full px-2.5 py-1 text-xs font-semibold text-muted-foreground",
-                                  !op.colorTag && "bg-surface-0"
-                                )}
-                                style={op.colorTag ? { backgroundColor: colorTagTint(op.colorTag) } : undefined}
-                              >
-                                {op.name}
-                              </span>
+                                name={op.name}
+                                isOwner={false}
+                                avatarUrl={null}
+                                iconKey={null}
+                                colorTag={op.colorTag}
+                              />
                             ))
                           )}
                         </div>

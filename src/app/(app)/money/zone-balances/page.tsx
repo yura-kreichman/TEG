@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useState, type FormEvent } from "react";
-import { Banknote, Check, ChevronLeft, ChevronRight, Coins, Crown, Gift, HandCoins, MapPin, Pencil, PiggyBank, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { Banknote, Check, ChevronLeft, ChevronRight, Coins, Gift, HandCoins, MapPin, Pencil, PiggyBank, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
 import { formatTime } from "@/lib/datetime-format";
 import { cn } from "@/lib/utils";
 import { Money } from "@/components/money";
+import { PerformedByTag } from "@/components/performed-by-tag";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { formatMoneyWithCurrency, parseMoneyInput } from "@/lib/format";
 import { distributeCollectionWhole } from "@/lib/collection-split";
@@ -75,6 +76,7 @@ interface CollectionEntry {
   // performerName — имя сотрудника.
   byOwner?: boolean;
   performerName?: string | null;
+  performerColorTag?: string | null;
   // Ключ одного акта инкассации — общий у всех строк, записанных одной
   // транзакцией (см. actKey в /api/reports/money/collections). null у
   // самообслуживаемых авансов/премий: они не часть акта.
@@ -980,11 +982,15 @@ export default function ZoneBalancesPage() {
                                   <Banknote className="size-3 shrink-0" />
                                 )}
                                 {act.kind === "advance" ? t.money.collectionAdvanceLabel : t.money.collectionActLabel}
-                                {act.items[0]!.byOwner ? (
-                                  <Crown className="size-3 shrink-0 text-success" />
-                                ) : act.items[0]!.performerName ? (
-                                  <span className="truncate">· {act.items[0]!.performerName}</span>
-                                ) : null}
+                                {/* Единый чип сотрудника проекта (решение
+                                    владельца 2026-08-16). */}
+                                <PerformedByTag
+                                  name={act.items[0]!.performerName ?? null}
+                                  isOwner={!!act.items[0]!.byOwner}
+                                  avatarUrl={null}
+                                  iconKey={null}
+                                  colorTag={act.items[0]!.performerColorTag ?? null}
+                                />
                               </span>
                               <span className="flex shrink-0 items-center gap-2">
                                 <span className="text-xs font-bold tabular-nums">
@@ -1085,11 +1091,15 @@ export default function ZoneBalancesPage() {
                                 не нужно. */}
                             {c.pool !== "advance_taken" &&
                               c.pool !== "bonus_taken" &&
-                              (c.byOwner ? (
-                                <Crown className="size-3 shrink-0 text-success" />
-                              ) : c.performerName ? (
-                                <span className="truncate">· {c.performerName}</span>
-                              ) : null)}
+                              (
+                                <PerformedByTag
+                                  name={c.performerName ?? null}
+                                  isOwner={!!c.byOwner}
+                                  avatarUrl={null}
+                                  iconKey={null}
+                                  colorTag={c.performerColorTag ?? null}
+                                />
+                              )}
                           </span>
                           <span className="flex shrink-0 items-center gap-2">
                             <span

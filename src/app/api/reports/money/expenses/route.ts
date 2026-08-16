@@ -45,7 +45,7 @@ export async function GET(request: Request) {
     include: {
       expenseCategory: true,
       zone: { include: { point: true } },
-      performedByOperator: { select: { name: true } },
+      performedByOperator: { select: { name: true, colorTag: true } },
     },
     orderBy: { occurredAt: "desc" },
   });
@@ -75,6 +75,9 @@ export async function GET(request: Request) {
     comment: op.comment,
     amount: Math.abs(Number(op.amount)),
     operatorName: op.performedByOperator?.name ?? null,
+    // Цветовая метка — для единого чипа сотрудника (решение владельца
+    // 2026-08-16: одинаковое представление во всех реестрах проекта).
+    operatorColorTag: op.performedByOperator?.colorTag ?? null,
     editedByOwner: correctedIds.has(op.id),
   }));
 

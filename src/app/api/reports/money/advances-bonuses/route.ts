@@ -55,6 +55,7 @@ export async function GET(request: Request) {
       amount: Math.abs(Number(op.amount)),
       pointName: op.point!.name,
       operatorName: op.beneficiaryOperator?.name ?? null,
+      operatorColorTag: op.beneficiaryOperator?.colorTag ?? null,
       // Чтобы строка вела в карточку сотрудника (2026-08-14): сам реестр
       // остаётся отчётным, без правки — иначе те же аванс/премия правились бы
       // из двух мест разными путями. Ровно этим сегодня отличились Разница и

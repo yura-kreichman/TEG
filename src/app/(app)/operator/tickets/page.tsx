@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeftRight, Banknote, Check, ChevronDown, CreditCard, Delete, Layers, Lock, LockOpen, MapPin, Minus, Plus, Printer, Search, ShoppingCart, Ticket, Trash2, TriangleAlert, Wallet, X } from "lucide-react";
 import { BackLink } from "@/components/back-link";
+import { PerformedByTag } from "@/components/performed-by-tag";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { ConfirmIconButton } from "@/components/confirm-icon-button";
@@ -82,6 +83,7 @@ interface OrderDetail {
   openTicketsCount: number;
   soldAt: string;
   soldByOperatorName: string;
+  soldByOperatorColorTag?: string | null;
   tickets: OrderTicket[];
   // Разбивка оплаты (аудит 2026-07-26) — раньше отсутствовала здесь, из-за
   // чего поиск по номеру/лента "Заказы" и допечатка чека теряли разбивку
@@ -1560,7 +1562,14 @@ function OrderCard({
             <span className="text-primary">{order.number}</span>
           </p>
           <p className="text-caption-airbnb text-muted-foreground">
-            {new Date(order.soldAt).toLocaleString(locale)} · {order.soldByOperatorName}
+            {new Date(order.soldAt).toLocaleString(locale)}{" "}
+            <PerformedByTag
+              name={order.soldByOperatorName}
+              isOwner={false}
+              avatarUrl={null}
+              iconKey={null}
+              colorTag={order.soldByOperatorColorTag ?? null}
+            />
           </p>
         </div>
         <div className="flex shrink-0 items-start gap-2">

@@ -249,7 +249,7 @@ export async function GET(request: Request) {
   const submissions = await prisma.resultsSubmission.findMany({
     where: { pointId, submittedAt: { gte: dayStart, lt: dayEnd } },
     include: {
-      operator: { select: { name: true } },
+      operator: { select: { name: true, colorTag: true } },
       zoneSubmissions: {
         include: {
           zone: { include: { tariffs: true, assets: { orderBy: { sortOrder: "asc" } } } },
@@ -281,7 +281,7 @@ export async function GET(request: Request) {
     include: {
       zone: { select: { name: true } },
       expenseCategory: { select: { name: true } },
-      performedByOperator: { select: { name: true } },
+      performedByOperator: { select: { name: true, colorTag: true } },
     },
     orderBy: { occurredAt: "asc" },
   });
@@ -324,6 +324,9 @@ export async function GET(request: Request) {
       categoryName: op.expenseCategory?.name ?? null,
       comment: op.comment,
       operatorName: op.performedByOperator?.name ?? null,
+      // Цветовая метка — для чипа сотрудника (единый контрол Итогов дня,
+      // решение владельца 2026-08-16: "как в Задачах, тусклым цветом метки").
+      operatorColorTag: op.performedByOperator?.colorTag ?? null,
     })),
   };
 
@@ -828,6 +831,7 @@ export async function GET(request: Request) {
         accountingMode: zs.zone.accountingMode,
         submittedAt: s.submittedAt,
         operatorName: s.operator.name,
+        operatorColorTag: s.operator.colorTag,
         editable,
         edited,
         cashAmount: Number(zs.cashAmount),

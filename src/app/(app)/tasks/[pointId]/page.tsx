@@ -18,7 +18,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useI18n } from "@/components/i18n-provider";
-import { cn, colorTagTint } from "@/lib/utils";
+import { PerformedByTag } from "@/components/performed-by-tag";
+import { cn } from "@/lib/utils";
 import { TASK_STATUSES, type TaskStatus } from "@/lib/tasks";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 
@@ -375,17 +376,19 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
                         <span className="text-caption-airbnb text-muted-foreground">{t.tasks.allOperatorsChip}</span>
                       ) : (
                         <>
+                          {/* Тот же компонент, что во всех реестрах проекта
+                              (решение владельца 2026-08-16 о едином контроле
+                              сотрудника) — раньше здесь была своя копия той
+                              же разметки. */}
                           {task.assignedOperators.map((op) => (
-                            <span
+                            <PerformedByTag
                               key={op.id}
-                              className={cn(
-                                "rounded-full px-2.5 py-1 text-xs font-semibold text-muted-foreground",
-                                !op.colorTag && "bg-surface-0"
-                              )}
-                              style={op.colorTag ? { backgroundColor: colorTagTint(op.colorTag) } : undefined}
-                            >
-                              {op.name}
-                            </span>
+                              name={op.name}
+                              isOwner={false}
+                              avatarUrl={null}
+                              iconKey={null}
+                              colorTag={op.colorTag}
+                            />
                           ))}
                           {task.assignedUsers.map((u) => (
                             <span key={u.id} className="rounded-full bg-surface-0 px-2.5 py-1 text-xs font-semibold text-muted-foreground">

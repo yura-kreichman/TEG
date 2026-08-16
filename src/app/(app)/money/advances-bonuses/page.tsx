@@ -11,6 +11,7 @@ import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/datetime-format";
 import { Money } from "@/components/money";
+import { PerformedByTag } from "@/components/performed-by-tag";
 
 interface AdvanceBonusEntry {
   id: string;
@@ -19,6 +20,7 @@ interface AdvanceBonusEntry {
   amount: number;
   pointName: string;
   operatorName: string | null;
+  operatorColorTag: string | null;
   operatorId: string | null;
 }
 
@@ -178,9 +180,17 @@ export default function AdvancesBonusesRegisterPage() {
                               : op.type === "bonus_accrual"
                                 ? t.operatorApp.workTime.bonusAccruedFieldLabel
                                 : t.operatorApp.workTime.bonusFieldLabel}
-                            {op.operatorName ? ` · ${op.operatorName}` : ""}
                             {showPointName ? ` (${op.pointName})` : ""}
                           </span>
+                          {/* Сотрудник — единым чипом проекта, а не текстом
+                              через точку (решение владельца 2026-08-16). */}
+                          <PerformedByTag
+                            name={op.operatorName}
+                            isOwner={false}
+                            avatarUrl={null}
+                            iconKey={null}
+                            colorTag={op.operatorColorTag}
+                          />
                           <span className="flex shrink-0 items-center gap-1">
                             <span
                               className={cn(

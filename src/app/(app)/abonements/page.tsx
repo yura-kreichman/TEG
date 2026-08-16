@@ -23,6 +23,7 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { IconActionButton } from "@/components/kebab-menu";
 import { Money } from "@/components/money";
+import { PerformedByTag } from "@/components/performed-by-tag";
 import { AbonementTopupSheet } from "@/components/abonement-topup-sheet";
 import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
 import { useI18n } from "@/components/i18n-provider";
@@ -789,12 +790,18 @@ export default function AbonementsPage() {
                               {s.pointName && <span>· {s.pointName}</span>}
                             </p>
                             <p className="flex flex-wrap items-center gap-x-1.5 text-caption-airbnb text-muted-foreground">
-                              {(s.performedBy || s.performedByOwner) && (
-                                <span className="inline-flex items-center gap-1">
-                                  <Users className="size-3.5 shrink-0" />
-                                  {s.performedBy}
-                                </span>
-                              )}
+                              {/* Единый чип сотрудника по всему проекту
+                                  (решение владельца 2026-08-16): имя на
+                                  тусклом фоне цветовой метки, у владельца —
+                                  корона. Раньше здесь при владельце рисовалась
+                                  иконка с пустым именем. */}
+                              <PerformedByTag
+                                name={s.performedBy}
+                                isOwner={s.performedByOwner}
+                                avatarUrl={null}
+                                iconKey={null}
+                                colorTag={s.performedByColorTag}
+                              />
                               {/* Начислено и уплачено — разные суммы, когда у
                                   плана есть бонус; показываем обе, иначе
                                   непонятно, почему в кассе меньше. */}

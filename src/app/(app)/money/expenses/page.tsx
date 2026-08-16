@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Crown, MessageSquareMore, Pencil, Plus, Settings2, Trash2, Users, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown, MessageSquareMore, Pencil, Plus, Settings2, Trash2, X } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
@@ -20,6 +20,7 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { useI18n } from "@/components/i18n-provider";
 import { InfoTooltip } from "@/components/info-tooltip";
 import { Money } from "@/components/money";
+import { PerformedByTag } from "@/components/performed-by-tag";
 import { formatTime } from "@/lib/datetime-format";
 import { parseMoneyInput } from "@/lib/format";
 import { useSavePulse } from "@/hooks/use-save-pulse";
@@ -35,6 +36,7 @@ interface ExpenseEntry {
   comment: string | null;
   amount: number;
   operatorName: string | null;
+  operatorColorTag: string | null;
   editedByOwner: boolean;
 }
 
@@ -359,12 +361,16 @@ export default function ExpensesRegisterPage() {
                                 {formatTime(e.occurredAt)} · {e.zoneName}
                                 {showPointName ? ` (${e.pointName})` : ""}
                               </span>
-                              {e.operatorName && (
-                                <span className="inline-flex shrink-0 items-center gap-1">
-                                  <Users className="size-3.5 shrink-0" />
-                                  <span className="truncate">{e.operatorName}</span>
-                                </span>
-                              )}
+                              {/* Единый чип сотрудника по всему проекту —
+                                  имя на тусклом фоне его цветовой метки
+                                  (решение владельца 2026-08-16). */}
+                              <PerformedByTag
+                                name={e.operatorName}
+                                isOwner={false}
+                                avatarUrl={null}
+                                iconKey={null}
+                                colorTag={e.operatorColorTag}
+                              />
                               {e.editedByOwner && <Crown className="size-3.5 shrink-0 text-success" />}
                             </span>
                           </span>

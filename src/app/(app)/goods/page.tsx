@@ -2,21 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  ShoppingBag,
-  MapPin,
-  ChevronLeft,
-  ChevronRight,
-  Wallet2,
-  Settings2,
-  X,
-  ClipboardList,
-  Check,
-  TriangleAlert,
-} from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, ClipboardList, MapPin, Pencil, Plus, Search, Settings2, ShoppingBag, Trash2, TriangleAlert, Users, Wallet2, X } from "lucide-react";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { PerformedByTag } from "@/components/performed-by-tag";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
@@ -117,6 +103,10 @@ interface SaleEntry {
   performedByAvatarUrl: string | null;
   performedByIconKey: string | null;
   performedByColorTag: string | null;
+  // Клиент продажи (запрос владельца 2026-08-16); null — гость, покупка без
+  // привязки к кошельку.
+  clientName: string | null;
+  clientPhone: string | null;
   occurredAt: string;
   voidedAt: string | null;
 }
@@ -753,6 +743,10 @@ export default function GoodsCabinetPage() {
   const [salesGoodsFilter, setSalesGoodsFilter] = useState<string>("all");
   const [salesOperatorFilter, setSalesOperatorFilter] = useState<string>("all");
   const [salesMethodFilter, setSalesMethodFilter] = useState<string>("all");
+  // Поиск по клиенту (запрос владельца 2026-08-16) — тот же, что в реестре
+  // продаж абонементов; продажи без привязки к кошельку в него не попадают,
+  // они гостевые.
+  const [salesClientQuery, setSalesClientQuery] = useState("");
   // Товары в фильтре "Продаж" сужены до выбранной категории (запрос
   // пользователя 2026-07-19) — тот же принцип, что categoryId у самого
   // Goods, товар физически не может принадлежать сразу двум категориям.
@@ -819,6 +813,7 @@ export default function GoodsCabinetPage() {
     if (salesGoodsFilter !== "all") params.set("goodsId", salesGoodsFilter);
     if (salesOperatorFilter !== "all") params.set("operatorId", salesOperatorFilter);
     if (salesMethodFilter !== "all") params.set("paymentMethod", salesMethodFilter);
+    if (salesClientQuery.trim()) params.set("q", salesClientQuery.trim());
     fetch(`/api/goods/sales?${params}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -886,7 +881,7 @@ export default function GoodsCabinetPage() {
         );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, salesMode, salesGranularity, salesAnchor, salesCustomFrom, salesCustomTo, pointId, salesCategoryFilter, salesGoodsFilter, salesOperatorFilter, salesMethodFilter]);
+  }, [tab, salesMode, salesGranularity, salesAnchor, salesCustomFrom, salesCustomTo, pointId, salesCategoryFilter, salesGoodsFilter, salesOperatorFilter, salesMethodFilter, salesClientQuery]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function isSalesCurrentPeriod() {
@@ -1665,6 +1660,19 @@ export default function GoodsCabinetPage() {
                 </Select>
               )}
 
+              {/* Поиск по клиенту (запрос владельца 2026-08-16) — тот же, что
+                  в реестре продаж абонементов. Гостевые продажи под него не
+                  попадают: у них нет кошелька, искать не по чему. */}
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={salesClientQuery}
+                  onChange={(e) => setSalesClientQuery(e.target.value)}
+                  placeholder={t.abonements.walletsSearchPlaceholder}
+                  className="pl-9"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <Select
                   value={salesCategoryFilter}
@@ -1862,6 +1870,16 @@ export default function GoodsCabinetPage() {
                               <PerformedByTag name={s.performedBy} isOwner={s.performedByOwner} avatarUrl={s.performedByAvatarUrl} iconKey={s.performedByIconKey} colorTag={s.performedByColorTag} />
                             </span>
                           )}
+                        </p>
+                        {/* Кому продали (запрос владельца 2026-08-16). Без
+                            привязки к кошельку это гость — пишем прямо, а не
+                            оставляем пустоту: иначе непонятно, потеряли
+                            клиента или его и не было. */}
+                        <p className="flex items-center gap-1 text-caption-airbnb text-muted-foreground">
+                          <Users className="size-3.5 shrink-0" />
+                          <span className="truncate">
+                            {s.clientName ?? s.clientPhone ?? t.goods.guestLabel}
+                          </span>
                         </p>
                       </div>
                       <span className="shrink-0 font-bold tabular-nums">

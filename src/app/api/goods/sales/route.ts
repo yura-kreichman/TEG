@@ -61,12 +61,19 @@ export async function GET(request: Request) {
   const operatorId = searchParams.get("operatorId");
   const paymentMethod = searchParams.get("paymentMethod");
   const includeVoided = searchParams.get("includeVoided") === "1";
+  // Поиск по клиенту (запрос владельца 2026-08-16) — продажа может быть
+  // привязана к кошельку (оплата балансом или просто отмеченный клиент);
+  // без привязки это гость, и в поиск такие строки не попадают.
+  const q = (searchParams.get("q") ?? "").trim();
   if (pointId) where.pointId = pointId;
   if (goodsId) where.goodsId = goodsId;
   if (categoryId) where.goods = { categoryId };
   if (operatorId) where.performedByOperatorId = operatorId;
   if (paymentMethod) where.paymentMethod = paymentMethod;
   if (!includeVoided) where.voidedAt = null;
+  if (q) {
+    where.wallet = { OR: [{ name: { contains: q, mode: "insensitive" } }, { phone: { contains: q } }] };
+  }
 
   const sales = await prisma.goodsSale.findMany({
     where,
@@ -77,6 +84,7 @@ export async function GET(request: Request) {
       point: { select: { name: true, iconKey: true } },
       performedByOperator: { select: { name: true, avatarUrl: true, iconKey: true, colorTag: true } },
       performedByUser: { select: { id: true } },
+      wallet: { select: { id: true, name: true, phone: true } },
     },
   });
 
@@ -182,6 +190,9 @@ export async function GET(request: Request) {
       performedByAvatarUrl: s.performedByOperator?.avatarUrl ?? null,
       performedByIconKey: s.performedByOperator?.iconKey ?? null,
       performedByColorTag: s.performedByOperator?.colorTag ?? null,
+      // Клиент продажи; null — гость (покупка без привязки к кошельку).
+      clientName: s.wallet?.name ?? null,
+      clientPhone: s.wallet?.phone ?? null,
       occurredAt: s.occurredAt,
       voidedAt: s.voidedAt,
     })),

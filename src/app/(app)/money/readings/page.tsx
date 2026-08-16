@@ -20,8 +20,7 @@ import {
   ShoppingCart,
   TicketCheck,
   Trash2,
-  TriangleAlert,
-  Users,
+  TriangleAlert,
   Wallet,
 } from "lucide-react";
 import { BackLink } from "@/components/back-link";
@@ -75,6 +74,7 @@ interface DayCard {
   accountingMode: ZoneAccountingMode;
   submittedAt: string;
   operatorName: string;
+  operatorColorTag: string | null;
   editable: boolean;
   edited: { at: string; reason: string | null } | null;
   cashAmount: number;
@@ -1266,7 +1266,7 @@ export default function ReadingsCalendarPage() {
 
               {selectedDate && (goodsReconciliations.length > 0 || goodsSales.length > 0) && (
                 <SpringCard hover={false} className="mt-3.5 flex flex-col gap-1">
-                  {/* Стрелка — сразу во вкладку продаж Товаров (запрос
+                  {/* Стрелка — сразу во вкладку "Продажи" Товаров (запрос
                       владельца 2026-08-16), не в Каталог: из Итогов дня
                       смотрят именно продажи. */}
                   <div className="flex items-center justify-between gap-2">
@@ -1275,8 +1275,8 @@ export default function ReadingsCalendarPage() {
                       {t.readings.goodsReconciliationsTitle}
                     </p>
                     <Link
-                      href="/goods?tab=cash"
-                      aria-label={t.goods.salesTab}
+                      href="/goods?tab=purchases"
+                      aria-label={t.goods.purchasesTitle}
                       className="flex size-8 shrink-0 items-center justify-center rounded-control text-muted-foreground"
                     >
                       <ChevronRight className="size-4.5" />
@@ -1301,21 +1301,18 @@ export default function ReadingsCalendarPage() {
                   >
                     {goodsReconciliations.map((r) => (
                       <div key={r.id} className="flex flex-col gap-1 border-b border-border py-2 tabular-nums last:border-b-0">
-                        {/* Время и сотрудник — как в строке расхода
-                            (решение владельца 2026-08-16): иконка рядом с
-                            именем, не чип-аватар. */}
+                        {/* Сотрудник — единый чип проекта: имя на тусклом
+                            фоне его цветовой метки (решение владельца
+                            2026-08-16, "как в Задачах"). */}
                         <div className="flex min-w-0 items-center gap-1.5 text-caption-airbnb text-muted-foreground">
                           <span className="shrink-0">{formatTime(r.occurredAt)}</span>
-                          {(r.performedBy || r.performedByOwner) && (
-                            <span className="inline-flex min-w-0 items-center gap-1">
-                              {r.performedByOwner ? (
-                                <Crown className="size-3.5 shrink-0" />
-                              ) : (
-                                <Users className="size-3.5 shrink-0" />
-                              )}
-                              <span className="truncate">{r.performedBy}</span>
-                            </span>
-                          )}
+                          <PerformedByTag
+                            name={r.performedBy}
+                            isOwner={r.performedByOwner}
+                            avatarUrl={null}
+                            iconKey={null}
+                            colorTag={r.performedByColorTag}
+                          />
                         </div>
                         <div className="flex items-center justify-between text-caption-airbnb">
                           <span className="flex items-center gap-1">
@@ -1373,7 +1370,7 @@ export default function ReadingsCalendarPage() {
                   </div>
                   {/* Реестра продаж здесь больше нет (решение владельца
                       2026-08-16): смотреть и править продажи — в разделе
-                      Товары, вкладка "Кассы", куда ведёт стрелка в заголовке.
+                      Товары, вкладка "Продажи", куда ведёт стрелка в заголовке.
                       Список появился здесь 2026-08-04, когда полноценного
                       реестра ещё не было; теперь он только дублировал бы его
                       без возможности что-то исправить. В Итогах дня остаётся
@@ -1418,7 +1415,7 @@ export default function ReadingsCalendarPage() {
                                 не тянем с сервера. isOwner всегда false:
                                 сдачу итогов проводит только Сотрудник. */}
                             <p className="flex flex-wrap items-center gap-x-1.5 text-caption-airbnb">
-                              <PerformedByTag name={card.operatorName} isOwner={false} avatarUrl={null} iconKey={null} />
+                              <PerformedByTag name={card.operatorName} isOwner={false} avatarUrl={null} iconKey={null} colorTag={card.operatorColorTag} />
                               {card.accountingMode === "counters" && card.editable && (
                                 <span>· {t.readings.lastSubmissionNote}</span>
                               )}

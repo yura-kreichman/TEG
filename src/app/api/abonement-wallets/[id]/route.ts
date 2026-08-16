@@ -55,7 +55,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/abonement-wa
     include: {
       abonement: { select: { name: true, price: true, creditAmount: true } },
       point: { select: { name: true } },
-      operator: { select: { name: true } },
+      operator: { select: { name: true, colorTag: true } },
       user: { select: { id: true } },
       launch: { select: { zone: { select: { name: true } } } },
       goodsSale: { select: { goods: { select: { name: true } } } },
@@ -96,6 +96,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/abonement-wa
       // строки-емейла, клиент сам подставляет переведённую роль (t.common.
       // ownerLabel), как и везде в квитанциях/этом же экране.
       performedBy: h.operator?.name ?? null,
+      performedByColorTag: h.operator?.colorTag ?? null,
       performedByOwner: !!h.user,
     })),
   });

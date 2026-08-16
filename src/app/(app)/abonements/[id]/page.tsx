@@ -45,6 +45,7 @@ interface WalletHistoryEntry {
   pointName: string | null;
   performedBy: string | null;
   performedByOwner: boolean;
+  performedByColorTag: string | null;
 }
 
 interface WalletDetail {
@@ -369,7 +370,7 @@ export default function AbonementWalletPage() {
                         {(h.performedByOwner || h.performedBy) && (
                           <>
                             <span>·</span>
-                            <PerformedByTag name={h.performedBy} isOwner={h.performedByOwner} avatarUrl={null} iconKey={null} />
+                            <PerformedByTag name={h.performedBy} isOwner={h.performedByOwner} avatarUrl={null} iconKey={null} colorTag={h.performedByColorTag} />
                           </>
                         )}
                       </p>

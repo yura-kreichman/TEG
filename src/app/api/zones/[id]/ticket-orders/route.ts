@@ -28,7 +28,7 @@ function serializeOrder(o: {
   expiresAt: Date | null;
   openTicketsCount: number;
   soldAt: Date;
-  soldByOperator: { name: string };
+  soldByOperator: { name: string; colorTag: string | null };
   tickets: {
     id: string;
     assetId: string;
@@ -48,6 +48,9 @@ function serializeOrder(o: {
     openTicketsCount: o.openTicketsCount,
     soldAt: o.soldAt,
     soldByOperatorName: o.soldByOperator.name,
+    // Цветовая метка — для единого чипа сотрудника (решение владельца
+    // 2026-08-16): в PWA заказ показывает, кто его продал.
+    soldByOperatorColorTag: o.soldByOperator.colorTag ?? null,
     tickets: o.tickets.map((t) => ({
       id: t.id,
       assetId: t.assetId,
@@ -140,7 +143,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/zones/[id]/t
     const order = await prisma.ticketOrder.findFirst({
       where: { zoneId, number },
       orderBy: { soldAt: "desc" },
-      include: { tickets: true, soldByOperator: { select: { name: true } }, paymentLegs: true },
+      include: { tickets: true, soldByOperator: { select: { name: true, colorTag: true } }, paymentLegs: true },
     });
     if (!order) {
       return NextResponse.json({ error: "Заказ не найден" }, { status: 404 });
@@ -160,7 +163,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/zones/[id]/t
     where: { zoneId, openTicketsCount: { gt: 0 } },
     orderBy: { soldAt: "desc" },
     take: limit,
-    include: { tickets: true, soldByOperator: { select: { name: true } }, paymentLegs: true },
+    include: { tickets: true, soldByOperator: { select: { name: true, colorTag: true } }, paymentLegs: true },
   });
 
   return NextResponse.json({ orders: orders.map(serializeOrder) });
@@ -362,6 +365,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
       openTicketsCount: order.openTicketsCount,
       soldAt: order.soldAt,
       soldByOperatorName: operator.name,
+      soldByOperatorColorTag: operator.colorTag ?? null,
       tickets: tickets.map((t) => ({
         id: t.id,
         assetId: t.assetId,
