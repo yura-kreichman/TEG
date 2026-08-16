@@ -222,7 +222,7 @@
     "chartScrollLeft": "Scorri a sinistra",
     "chartScrollRight": "Scorri a destra",
     "genericError": "Impossibile caricare il report",
-    "profitTooltip": "Utile = ricavi − spese − stipendi. Negli stipendi rientrano anticipi e premi erogati in contanti; i premi solo accantonati non entrano finché non vengono pagati. I pagamenti dal saldo del cliente non si contano due volte nei ricavi: quel denaro è già stato registrato alla ricarica."
+    "profitTooltip": "Utile = ricavo − spese − stipendi. Negli stipendi rientrano anticipi e premi pagati in contanti; i premi maturati non contano finché non vengono pagati. Il pagamento dal saldo non conta due volte come ricavo — quel denaro è stato registrato alla ricarica del saldo."
   },
   "admin": {
     "loginTitle": "Accesso amministratore",
@@ -1095,9 +1095,9 @@
     "daySummaryHint": "Per consegne zona e abbonamenti",
     "pointCashWithAbonementLabel": "Cassa del punto con abbonamenti:",
     "expectedInCashLabel": "Atteso in denaro:",
-    "expectedInCashTooltip": "Ricavo calcolato meno quanto pagato con il saldo degli abbonamenti. È con questa cifra che si confronta la cassa reale — lo scarto tra le due è la Differenza qui sotto.",
+    "expectedInCashTooltip": "Ricavo calcolato meno quanto pagato dal saldo. È con questa cifra che si confronta la cassa reale — lo scarto tra le due è la Differenza qui sotto.",
     "cashLeftLabel": "Rimasto in contanti:",
-    "cashLeftTooltip": "Contanti della giornata meno le spese e meno premi e anticipi che il dipendente ha preso dalla cassa. Pagamenti elettronici e con abbonamento non sono inclusi — quei soldi non sono in cassa. Nemmeno gli incassi sono considerati: questo è il risultato del giorno, non il saldo attuale del punto.",
+    "cashLeftTooltip": "Contanti della giornata meno le spese e meno premi e anticipi che il dipendente ha preso dalla cassa. I pagamenti elettronici e quelli dal saldo non sono inclusi — quei soldi non sono in cassa. Nemmeno gli incassi sono considerati: questo è il risultato del giorno, non il saldo attuale del punto.",
     "abonementSalesTitle": "Abbonamenti",
     "goodsReconciliationsTitle": "Prodotti",
     "pointsEmptyHint": "Aggiungi prima un punto.",
@@ -1167,8 +1167,8 @@
     "deleteConfirmTitle": "Eliminare questa chiusura?",
     "deleteConfirmBody": "Le letture, gli importi e le voci del registro soldi di questa chiusura verranno eliminati. Questa azione viene registrata e non può essere annullata.",
     "deleteError": "Impossibile eliminare la chiusura",
-    "differenceTooltip": "Differenza = cassa effettiva − (ricavo calcolato − pagato con saldo). Il pagamento con saldo si sottrae perché quel denaro è entrato prima, quando il cliente ha ricaricato, e non poteva finire nella cassa di questa consegna. Zero significa che torna.",
-    "actualCashTooltip": "Solo denaro reale — contanti e carta. I pagamenti dal saldo dell'abbonamento non sono inclusi: quel denaro è entrato prima, alla ricarica, e l'uso del saldo riduce il ricavo atteso invece di aumentare la cassa."
+    "differenceTooltip": "Differenza = cassa reale − (ricavo calcolato − pagato dal saldo). I pagamenti dal saldo si sottraggono: quel denaro è entrato prima, alla ricarica del saldo, e non poteva finire nella cassa di questa chiusura. Zero significa che torna tutto.",
+    "actualCashTooltip": "Solo denaro reale — contanti e carta. I pagamenti dal saldo non sono inclusi: quel denaro è entrato prima, alla ricarica del saldo, e l'uso del saldo riduce il ricavo atteso invece di aumentare la cassa."
   },
   "operatorApp": {
     "greeting": "Ciao,",

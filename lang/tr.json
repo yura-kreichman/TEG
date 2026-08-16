@@ -222,7 +222,7 @@
     "chartScrollLeft": "Sola kaydır",
     "chartScrollRight": "Sağa kaydır",
     "genericError": "Rapor yüklenemedi",
-    "profitTooltip": "Kâr = gelir − giderler − maaşlar. Maaşlara nakit verilen avanslar ve primler dahildir; yalnızca tahakkuk eden primler ödenene kadar girmez. Müşteri bakiyesinden yapılan ödeme gelire ikinci kez sayılmaz — o para abonelik yüklemesinde kaydedilmiştir."
+    "profitTooltip": "Kâr = gelir − giderler − maaşlar. Maaşlara nakit ödenen avans ve primler dahildir; tahakkuk eden primler ödenene kadar sayılmaz. Bakiyeden ödeme gelire ikinci kez sayılmaz — o para bakiye yüklenirken kaydedildi."
   },
   "admin": {
     "loginTitle": "Yönetici girişi",
@@ -1095,9 +1095,9 @@
     "daySummaryHint": "Bölge teslimlerine ve aboneliklere göre",
     "pointCashWithAbonementLabel": "Nokta kasası aboneliklerle:",
     "expectedInCashLabel": "Parayla beklenen:",
-    "expectedInCashTooltip": "Hesaplanan gelir eksi abonman bakiyesinden ödenen tutar. Gerçek kasa bu tutarla karşılaştırılır — aradaki fark aşağıdaki Fark'tır.",
+    "expectedInCashTooltip": "Hesaplanan gelir eksi bakiyeden ödenen tutar. Gerçek kasa bu tutarla karşılaştırılır — aradaki fark aşağıdaki Fark'tır.",
     "cashLeftLabel": "Nakit kalan:",
-    "cashLeftTooltip": "Günün nakiti eksi giderler ve eksi çalışanın kasadan aldığı primler ile avanslar. Kartla ve abonmanla yapılan ödemeler dahil değildir — o para kasada yok. Tahsilatlar da sayılmaz: bu günün sonucu, noktanın güncel bakiyesi değil.",
+    "cashLeftTooltip": "Günün nakiti eksi giderler ve eksi çalışanın kasadan aldığı primler ile avanslar. Kartla ve bakiyeden yapılan ödemeler dahil değildir — o para kasada yok. Tahsilatlar da sayılmaz: bu günün sonucu, noktanın güncel bakiyesi değil.",
     "abonementSalesTitle": "Abonelikler",
     "goodsReconciliationsTitle": "Ürünler",
     "pointsEmptyHint": "Önce bir nokta ekleyin.",
@@ -1167,8 +1167,8 @@
     "deleteConfirmTitle": "Teslim silinsin mi?",
     "deleteConfirmBody": "Bu teslime ait okumalar, tutarlar ve para defteri kayıtları silinecek. İşlem değişiklik günlüğüne kaydedilecek. Geri alınamaz.",
     "deleteError": "Teslim silinemedi",
-    "differenceTooltip": "Fark = fiili kasa − (hesaplanan gelir − bakiyeden ödenen). Bakiyeden ödeme çıkarılır, çünkü o para daha önce, müşteri yükleme yaptığında girmiştir ve bu teslimin kasasına giremez. Sıfır, tuttuğu anlamına gelir.",
-    "actualCashTooltip": "Sadece gerçek para — nakit ve kart. Abonman bakiyesinden ödemeler dahil değildir: o para daha önce, abonman yüklenirken girdi; bakiyeden harcama kasayı artırmaz, beklenen geliri azaltır."
+    "differenceTooltip": "Fark = gerçek kasa − (hesaplanan gelir − bakiyeden ödenen). Bakiyeden ödemeler çıkarılır: o para daha önce, bakiye yüklenirken girdi ve bu teslimin kasasına giremezdi. Sıfır, her şeyin tuttuğu anlamına gelir.",
+    "actualCashTooltip": "Sadece gerçek para — nakit ve kart. Bakiyeden ödemeler dahil değildir: o para daha önce, bakiye yüklenirken girdi; bakiyeden harcama kasayı artırmaz, beklenen geliri azaltır."
   },
   "operatorApp": {
     "greeting": "Merhaba,",

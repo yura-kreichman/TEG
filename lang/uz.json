@@ -222,7 +222,7 @@
     "chartScrollLeft": "Chapga aylantirish",
     "chartScrollRight": "O'ngga aylantirish",
     "genericError": "Hisobotni yuklab boʻlmadi",
-    "profitTooltip": "Foyda = tushum − xarajatlar − ish haqi. Ish haqiga naqd berilgan avanslar va mukofotlar kiradi; hisoblangan mukofotlar berilmaguncha kirmaydi. Mijoz balansidan to'lov tushumga ikkinchi marta sanalmaydi — bu pul abonement to'ldirilganda hisobga olingan."
+    "profitTooltip": "Foyda = tushum − xarajatlar − ish haqi. Ish haqiga naqd berilgan avans va mukofotlar kiradi; hisoblangan mukofotlar berilmaguncha kirmaydi. Balansdan toʻlov tushumga ikkinchi marta yozilmaydi — u pul balans toʻldirilganda hisobga olingan."
   },
   "admin": {
     "loginTitle": "Administrator kirishi",
@@ -1095,9 +1095,9 @@
     "daySummaryHint": "Zona topshiriqlari va abonementlar boʻyicha",
     "pointCashWithAbonementLabel": "Nuqta kassasi abonementlar bilan:",
     "expectedInCashLabel": "Pul bilan kutilgan:",
-    "expectedInCashTooltip": "Hisoblangan tushum minus abonement balansidan toʻlangani. Haqiqiy kassa aynan shu summa bilan solishtiriladi — ular orasidagi tafovut quyidagi Farqdir.",
+    "expectedInCashTooltip": "Hisoblangan tushum minus balansdan toʻlangani. Haqiqiy kassa aynan shu summa bilan solishtiriladi — ular orasidagi tafovut quyidagi Farqdir.",
     "cashLeftLabel": "Naqd qoldi:",
-    "cashLeftTooltip": "Kunlik naqd pul minus xarajatlar va minus xodim kassadan olgan mukofot hamda avanslar. Naqdsiz va abonement orqali toʻlovlar kirmaydi — u pul kassada yoʻq. Inkassatsiyalar ham hisobga olinmagan: bu kun yakuni, nuqtaning joriy qoldigʻi emas.",
+    "cashLeftTooltip": "Kunlik naqd pul minus xarajatlar va minus xodim kassadan olgan mukofot hamda avanslar. Naqdsiz va balansdan toʻlovlar kirmaydi — u pul kassada yoʻq. Inkassatsiyalar ham hisobga olinmagan: bu kun yakuni, nuqtaning joriy qoldigʻi emas.",
     "abonementSalesTitle": "Abonementlar",
     "goodsReconciliationsTitle": "Tovarlar",
     "pointsEmptyHint": "Avval nuqta qoʻshing.",
@@ -1167,8 +1167,8 @@
     "deleteConfirmTitle": "Topshiriqni oʻchirasizmi?",
     "deleteConfirmBody": "Ushbu topshiriq boʻyicha koʻrsatkichlar, summalar va pul jurnalidagi yozuvlar oʻchiriladi. Amal oʻzgarishlar jurnaliga tushadi. Bekor qilib boʻlmaydi.",
     "deleteError": "Topshiriqni oʻchirib boʻlmadi",
-    "differenceTooltip": "Farq = haqiqiy kassa − (hisobiy tushum − balansdan to'langan). Balansdan to'lov ayriladi, chunki bu pul avvalroq, mijoz to'ldirganda kelgan va bu topshirish kassasiga tusha olmaydi. Nol — «to'g'ri keldi» degani.",
-    "actualCashTooltip": "Faqat haqiqiy pul — naqd va naqdsiz. Balansdan toʻlovlar kirmaydi: u pul avvalroq, abonement toʻldirilganda kelgan, balansni sarflash esa kassani toʻldirmay, kutilayotgan tushumni kamaytiradi."
+    "differenceTooltip": "Farq = haqiqiy kassa − (hisoblangan tushum − balansdan toʻlangan). Balansdan toʻlovlar ayiriladi: u pul avvalroq, balans toʻldirilganda kelgan va bu topshiriqning kassasiga tusha olmasdi. Nol «toʻgʻri keldi» degani.",
+    "actualCashTooltip": "Faqat haqiqiy pul — naqd va naqdsiz. Balansdan toʻlovlar kirmaydi: u pul avvalroq, balans toʻldirilganda kelgan, balansni sarflash esa kassani toʻldirmay, kutilayotgan tushumni kamaytiradi."
   },
   "operatorApp": {
     "greeting": "Salom,",

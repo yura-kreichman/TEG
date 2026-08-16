@@ -222,7 +222,7 @@
     "chartScrollLeft": "Sola sürüşdür",
     "chartScrollRight": "Sağa sürüşdür",
     "genericError": "Hesabatı yükləmək mümkün olmadı",
-    "profitTooltip": "Mənfəət = gəlir − xərclər − əməkhaqqı. Əməkhaqqına nağd verilmiş avanslar və mükafatlar daxildir; hesablanmış mükafatlar verilənə qədər daxil olmur. Müştəri balansından ödəniş gəlirə ikinci dəfə sayılmır — bu pul abunə artırılanda nəzərə alınıb."
+    "profitTooltip": "Mənfəət = gəlir − xərclər − əməkhaqqı. Əməkhaqqına nağd verilən avans və mükafatlar daxildir; hesablanmış mükafatlar verilənə qədər sayılmır. Balansdan ödəniş gəlirə ikinci dəfə yazılmır — o pul balans doldurularkən uçota alınıb."
   },
   "admin": {
     "loginTitle": "Administrator girişi",
@@ -1095,9 +1095,9 @@
     "daySummaryHint": "Zonaların hesabatları və abonementlər üzrə",
     "pointCashWithAbonementLabel": "Nöqtənin kassası abonementlərlə:",
     "expectedInCashLabel": "Pulla gözlənilirdi:",
-    "expectedInCashTooltip": "Hesablanmış gəlir, abunə balansından ödənilən məbləğ çıxılmaqla. Faktiki kassa məhz bu məbləğlə tutuşdurulur — aralarındakı fərq aşağıdakı Fərqdir.",
+    "expectedInCashTooltip": "Hesablanmış gəlir, balansdan ödənilən məbləğ çıxılmaqla. Faktiki kassa məhz bu məbləğlə tutuşdurulur — aralarındakı fərq aşağıdakı Fərqdir.",
     "cashLeftLabel": "Nağd qalıq:",
-    "cashLeftTooltip": "Günün nağd pulu, xərclər və işçinin kassadan götürdüyü mükafat və avanslar çıxılmaqla. Nağdsız ödənişlər və abunə ilə ödənişlər daxil deyil — o pul kassada yoxdur. İnkassasiyalar da nəzərə alınmır: bu günün nəticəsidir, nöqtənin cari qalığı deyil.",
+    "cashLeftTooltip": "Günün nağd pulu, xərclər və işçinin kassadan götürdüyü mükafat və avanslar çıxılmaqla. Nağdsız ödənişlər və balansdan ödənişlər daxil deyil — o pul kassada yoxdur. İnkassasiyalar da nəzərə alınmır: bu günün nəticəsidir, nöqtənin cari qalığı deyil.",
     "abonementSalesTitle": "Abonementlər",
     "goodsReconciliationsTitle": "Mallar",
     "pointsEmptyHint": "Əvvəlcə nöqtə əlavə edin.",
@@ -1167,8 +1167,8 @@
     "deleteConfirmTitle": "Hesabat silinsin?",
     "deleteConfirmBody": "Bu hesabata aid göstəricilər, məbləğlər və pul jurnalındakı yazılar silinəcək. Əməliyyat dəyişikliklər jurnalına düşəcək. Geri qaytarmaq mümkün deyil.",
     "deleteError": "Hesabatı silmək mümkün olmadı",
-    "differenceTooltip": "Fərq = faktiki kassa − (hesabi gəlir − balansdan ödənilən). Balansdan ödəniş çıxılır, çünki bu pul daha əvvəl, müştəri artıranda gəlib və bu təhvilin kassasına düşə bilməzdi. Sıfır «uyğun gəldi» deməkdir.",
-    "actualCashTooltip": "Yalnız real pul — nağd və kart. Abunə balansından ödənişlər daxil deyil: o pul əvvəl, abunə doldurularkən daxil olub; balansdan xərcləmə kassanı artırmır, gözlənilən gəliri azaldır."
+    "differenceTooltip": "Fərq = faktiki kassa − (hesablanmış gəlir − balansdan ödənilən). Balansdan ödənişlər çıxılır: o pul əvvəl, balans doldurularkən daxil olub və bu təhvilin kassasına düşə bilməzdi. Sıfır «uyğun gəldi» deməkdir.",
+    "actualCashTooltip": "Yalnız real pul — nağd və kart. Balansdan ödənişlər daxil deyil: o pul əvvəl, balans doldurularkən daxil olub; balansdan xərcləmə kassanı artırmır, gözlənilən gəliri azaldır."
   },
   "operatorApp": {
     "greeting": "Salam,",
