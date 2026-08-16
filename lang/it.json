@@ -1179,6 +1179,8 @@
     "deleteConfirmBody": "Le letture, gli importi e le voci del registro soldi di questa chiusura verranno eliminati. Questa azione viene registrata e non può essere annullata.",
     "deleteError": "Impossibile eliminare la chiusura",
     "differenceTooltip": "Differenza = cassa reale − ricavo calcolato. Quanto pagato dal saldo non rientra nel ricavo calcolato: quel denaro è entrato prima, alla ricarica del saldo, e non poteva finire nella cassa di questa chiusura. Zero significa che torna tutto.",
+    "goodsDifferenceTooltip": "Quanto ha consegnato il dipendente meno quanto il sistema ha calcolato dalle vendite di Prodotti. Zero significa che torna; meno è un ammanco, più significa che è stato consegnato di più. Il pagamento dal saldo non è incluso: quel denaro è entrato prima, alla ricarica.",
+    "goodsNotHandedOver": "Cassa non consegnata",
     "actualCashTooltip": "Contanti e pagamenti elettronici consegnati dal dipendente. Le spese sono già considerate: il dipendente inserisce ciò che resta in cassa dopo le spese. Il pagamento dal saldo non è incluso — quel denaro è entrato prima, alla ricarica del saldo."
   },
   "operatorApp": {

@@ -1179,6 +1179,8 @@
     "deleteConfirmBody": "Odczyty, sumy i wpisy w dzienniku finansów dotyczące tego rozliczenia zostaną usunięte. Czynność trafi do dziennika zmian. Nie można jej cofnąć.",
     "deleteError": "Nie udało się usunąć rozliczenia",
     "differenceTooltip": "Różnica = rzeczywista kasa − przychód obliczony. To, co opłacono z salda, nie wchodzi do przychodu obliczonego: te pieniądze wpłynęły wcześniej, przy doładowaniu salda, i nie mogły trafić do kasy tego rozliczenia. Zero oznacza, że się zgadza.",
+    "goodsDifferenceTooltip": "Ile pracownik przekazał minus to, co system naliczył ze sprzedaży Towarów. Zero oznacza zgodność; minus to niedobór, plus — oddano więcej. Płatność z salda nie jest wliczana: te pieniądze wpłynęły wcześniej, przy doładowaniu.",
+    "goodsNotHandedOver": "Kasa nierozliczona",
     "actualCashTooltip": "Gotówka i płatności kartą przekazane przez pracownika. Wydatki są już uwzględnione: pracownik wpisuje to, co zostało w kasie po wydatkach. Płatność z salda nie jest wliczona — te pieniądze wpłynęły wcześniej, przy doładowaniu salda."
   },
   "operatorApp": {

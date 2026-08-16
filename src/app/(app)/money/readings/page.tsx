@@ -384,6 +384,14 @@ export default function ReadingsCalendarPage() {
   // 2026-08-04) — построчная детализация под уже существующими итогами.
   const [abonementSaleEvents, setAbonementSaleEvents] = useState<AbonementSaleEvent[]>([]);
   const [goodsSales, setGoodsSales] = useState<GoodsSaleEntry[]>([]);
+  // Продажи Товаров дня по способам оплаты — показываются, пока кассу не
+  // сдали (вопрос владельца 2026-08-16): владелец видит ожидаемую кассу.
+  const [goodsSalesTotals, setGoodsSalesTotals] = useState<{
+    count: number;
+    cash: number;
+    mobile: number;
+    abonement: number;
+  } | null>(null);
   // Расходы дня (запрос владельца 2026-08-16) — считаются по времени операции,
   // не по привязке к сдаче итогов, поэтому приходят отдельным полем, а не
   // внутри карточек зон.
@@ -512,6 +520,7 @@ export default function ReadingsCalendarPage() {
     setGoodsReconciliations(data.goodsReconciliations ?? []);
     setAbonementSaleEvents(data.abonementSaleEvents ?? []);
     setGoodsSales(data.goodsSales ?? []);
+    setGoodsSalesTotals(data.goodsSalesTotals ?? null);
     setExpenses(data.expenses ?? { total: 0, items: [] });
     setPayouts(data.payouts ?? 0);
   }
@@ -1172,23 +1181,26 @@ export default function ReadingsCalendarPage() {
                         {/* Без иконки-кружка (решение владельца 2026-08-16):
                             плашка должна читаться так же, как Расходы. */}
                         <div className="min-w-0 flex-1 text-caption-airbnb">
-                          <span className="font-semibold text-foreground">{item.name ?? t.abonements.title}</span>
-                          {/* Метод оплаты — иконкой и подписью, количество
-                              через × (правка владельца 2026-08-16): было
-                              "1 безнал" текстом, что читалось хуже и не
-                              совпадало с остальными строками проекта. */}
-                          {item.cashCount > 0 && (
-                            <span className="ml-1.5 inline-flex items-center gap-1 text-muted-foreground">
-                              <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
-                              {t.operatorApp.submit.cashLabel} ×{item.cashCount}
-                            </span>
-                          )}
-                          {item.mobileCount > 0 && (
-                            <span className="ml-1.5 inline-flex items-center gap-1 text-muted-foreground">
-                              <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
-                              {t.operatorApp.submit.mobileLabel} ×{item.mobileCount}
-                            </span>
-                          )}
+                          {/* Название плана — своей строкой, методы оплаты —
+                              следующей (правка владельца 2026-08-16): в одну
+                              строку длинное название и метод не помещались. */}
+                          <div className="truncate font-semibold text-foreground">
+                            {item.name ?? t.abonements.title}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-2 text-muted-foreground">
+                            {item.cashCount > 0 && (
+                              <span className="inline-flex items-center gap-1">
+                                <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+                                {t.operatorApp.submit.cashLabel} ×{item.cashCount}
+                              </span>
+                            )}
+                            {item.mobileCount > 0 && (
+                              <span className="inline-flex items-center gap-1">
+                                <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+                                {t.operatorApp.submit.mobileLabel} ×{item.mobileCount}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <span className="shrink-0 font-semibold text-foreground">
                           <Money value={item.cashAmount + item.mobileAmount} />
@@ -1295,44 +1307,57 @@ export default function ReadingsCalendarPage() {
                       без этой строки карточка осталась бы пустой — реестр из
                       неё убран (2026-08-16). Сумма и счёт, подробности — по
                       стрелке в разделе Товары. */}
-                  {goodsReconciliations.length === 0 && goodsSales.length > 0 && (
-                    <>
-                      <div className="mt-1 flex items-center justify-between border-t border-border pt-2 text-caption-airbnb tabular-nums">
+                  {/* Кассу ещё не сдавали: показываем, что продано и сколько
+                      денег ждём — по способам оплаты, как в самой сверке
+                      (вопрос владельца 2026-08-16: "не будет сегодняшней
+                      продажи товаров с расчётной кассой?"). Разницы тут нет и
+                      быть не может — сверять пока не с чем. */}
+                  {goodsReconciliations.length === 0 && goodsSalesTotals && goodsSalesTotals.count > 0 && (
+                    <div className="mt-1 flex flex-col gap-1 border-t border-border pt-2 tabular-nums">
+                      <div className="flex items-center justify-between text-caption-airbnb">
                         <span className="text-muted-foreground">
-                          {t.readings.salesSectionTitle} · {goodsSales.length}
+                          {t.readings.salesSectionTitle} · {goodsSalesTotals.count}
                         </span>
-                        <span className="font-semibold text-foreground">
-                          <Money
-                            value={
-                              Math.round(
-                                goodsSales.reduce((sum, g) => sum + g.amount - (g.abonementAmount ?? 0), 0) * 100
-                              ) / 100
-                            }
-                          />
+                        <span className="text-muted-foreground">{t.readings.goodsNotHandedOver}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-caption-airbnb">
+                        <span className="flex items-center gap-1">
+                          <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
+                          {t.operatorApp.submit.cashLabel}
+                        </span>
+                        <span className="text-foreground">
+                          <Money value={goodsSalesTotals.cash} />
                         </span>
                       </div>
-                      {/* Товар можно оплатить и балансом — это не деньги в
-                          кассе (правило владельца: баланс уже получен раньше,
-                          при пополнении), поэтому отдельной строкой, как в
-                          сверке кассы ниже. */}
-                      {goodsSales.some((g) => (g.abonementAmount ?? 0) > 0) && (
-                        <div className="flex items-center justify-between text-caption-airbnb tabular-nums text-muted-foreground">
+                      <div className="flex items-center justify-between text-caption-airbnb">
+                        <span className="flex items-center gap-1">
+                          <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
+                          {t.operatorApp.submit.mobileLabel}
+                        </span>
+                        <span className="text-foreground">
+                          <Money value={goodsSalesTotals.mobile} />
+                        </span>
+                      </div>
+                      {/* Баланс — не деньги в кассе, поэтому и здесь отдельной
+                          строкой и только когда им платили. */}
+                      {goodsSalesTotals.abonement > 0 && (
+                        <div className="flex items-center justify-between text-caption-airbnb text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <PaymentMethodIcon method="abonement" className="size-3.5 shrink-0" />
                             {t.operatorApp.abonement.paymentLabel}
                           </span>
                           <span>
-                            <Money
-                              value={
-                                Math.round(
-                                  goodsSales.reduce((sum, g) => sum + (g.abonementAmount ?? 0), 0) * 100
-                                ) / 100
-                              }
-                            />
+                            <Money value={goodsSalesTotals.abonement} />
                           </span>
                         </div>
                       )}
-                    </>
+                      <div className="flex items-center justify-between border-t border-border pt-1 text-caption-airbnb">
+                        <span>{t.operatorApp.submit.calculatedRevenue}</span>
+                        <span className="font-semibold text-foreground">
+                          <Money value={Math.round((goodsSalesTotals.cash + goodsSalesTotals.mobile) * 100) / 100} />
+                        </span>
+                      </div>
+                    </div>
                   )}
                   <div
                     className={cn("mt-1 flex flex-col", goodsReconciliations.length > 0 && "border-t border-border")}
@@ -1374,6 +1399,10 @@ export default function ReadingsCalendarPage() {
                         <div className="flex items-center justify-between text-caption-airbnb">
                           <span className="flex items-center gap-1.5">
                             {t.operatorApp.submit.difference}
+                            {/* Тултип — вопрос владельца 2026-08-16 ("зачем
+                                поле Разница?"): строка должна объяснять себя
+                                сама, как у зон выше. */}
+                            <InfoTooltip text={t.readings.goodsDifferenceTooltip} />
                             {r.difference !== 0 && <TriangleAlert className="size-3.5 shrink-0 text-warning" />}
                           </span>
                           <span

@@ -1179,6 +1179,8 @@
     "deleteConfirmBody": "Bu hesabata aid göstəricilər, məbləğlər və pul jurnalındakı yazılar silinəcək. Əməliyyat dəyişikliklər jurnalına düşəcək. Geri qaytarmaq mümkün deyil.",
     "deleteError": "Hesabatı silmək mümkün olmadı",
     "differenceTooltip": "Fərq = faktiki kassa − hesablanmış gəlir. Balansdan ödənilən hesablanmış gəlirə daxil deyil: o pul əvvəl, balans doldurularkən daxil olub və bu təhvilin kassasına düşə bilməzdi. Sıfır «uyğun gəldi» deməkdir.",
+    "goodsDifferenceTooltip": "İşçinin təhvil verdiyi məbləğdən sistemin Mal satışları üzrə hesabladığı məbləğin çıxılması. Sıfır uyğunluq deməkdir; mənfi çatışmazlıq, müsbət isə artıq təhvildir. Balansdan ödəniş daxil deyil: o pul əvvəl, doldurularkən daxil olub.",
+    "goodsNotHandedOver": "Kassa təhvil verilməyib",
     "actualCashTooltip": "İşçinin təhvil verdiyi nağd və kart ödənişləri. Xərclər artıq nəzərə alınıb: işçi xərclərdən sonra kassada qalanı daxil edir. Balansdan ödəniş daxil deyil — o pul əvvəl, balans doldurularkən daxil olub."
   },
   "operatorApp": {

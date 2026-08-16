@@ -211,6 +211,32 @@ export async function GET(request: Request) {
     performedByColorTag: g.performedByOperator?.colorTag ?? null,
   }));
 
+  // Продажи Товаров за день в разрезе способов оплаты — нужны, когда кассу
+  // ещё НЕ сдавали (вопрос владельца 2026-08-16): плашка показывает ожидаемую
+  // кассу до сверки. Доли разбитой оплаты разбираются здесь же, иначе такая
+  // продажа целиком легла бы в наличные.
+  const goodsSalesTotals = goodsSaleRows.reduce(
+    (acc, g) => {
+      if (g.voidedAt) return acc;
+      acc.count += 1;
+      if (g.paymentMethod === "split") {
+        for (const leg of g.paymentLegs) {
+          const amount = Number(leg.amount);
+          if (leg.method === "cash") acc.cash += amount;
+          else if (leg.method === "mobile") acc.mobile += amount;
+          else if (leg.method === "abonement") acc.abonement += amount;
+        }
+        return acc;
+      }
+      const amount = Number(g.amount);
+      if (g.paymentMethod === "cash") acc.cash += amount;
+      else if (g.paymentMethod === "mobile") acc.mobile += amount;
+      else if (g.paymentMethod === "abonement") acc.abonement += amount;
+      return acc;
+    },
+    { count: 0, cash: 0, mobile: 0, abonement: 0 }
+  );
+
   // Сверки кассы Товаров за эту дату+точку (запрос пользователя 2026-07-31:
   // "Итоги дня" не показывали Товары вообще, хотя сверка там уже была) —
   // отдельная карточка ниже, по аналогии с "Продажи абонементов" выше: эти
@@ -348,7 +374,7 @@ export async function GET(request: Request) {
   };
 
   if (submissions.length === 0) {
-    return NextResponse.json({ cards: [], abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales, expenses, payouts });
+    return NextResponse.json({ cards: [], abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales, goodsSalesTotals, expenses, payouts });
   }
 
   // "Прибывания" и тап-"Пуски" (после перехода на тапы, assetReadings
@@ -902,5 +928,5 @@ export async function GET(request: Request) {
     })
   );
 
-  return NextResponse.json({ cards, abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales, expenses, payouts });
+  return NextResponse.json({ cards, abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales, goodsSalesTotals, expenses, payouts });
 }

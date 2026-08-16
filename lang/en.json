@@ -1179,6 +1179,8 @@
     "deleteConfirmBody": "The readings, amounts, and money-journal entries for this submission will be deleted. This action is logged and cannot be undone.",
     "deleteError": "Couldn't delete the submission",
     "differenceTooltip": "Difference = actual cash − calculated revenue. What was paid from a balance is not part of the calculated revenue: that money came in earlier, when the balance was topped up, and could not reach this submission's till. Zero means everything adds up.",
+    "goodsDifferenceTooltip": "What the employee handed over minus what the system counted from goods sales. Zero means it matches; minus is a shortfall, plus means more was handed in. Payments from a balance are excluded: that money came in earlier, at top-up.",
+    "goodsNotHandedOver": "Till not handed over",
     "actualCashTooltip": "Cash and card handed over by the employee. Expenses are already accounted for: the employee enters what is left in the till after spending. Payments from a balance are not included — that money came in earlier, when the balance was topped up."
   },
   "operatorApp": {

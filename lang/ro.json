@@ -1179,6 +1179,8 @@
     "deleteConfirmBody": "Citirile, sumele și înregistrările din jurnalul de bani pentru această predare vor fi șterse. Acțiunea este înregistrată și nu poate fi anulată.",
     "deleteError": "Nu s-a putut șterge predarea",
     "differenceTooltip": "Diferența = casa reală − venitul calculat. Ce s-a plătit din sold nu intră în venitul calculat: acei bani au intrat mai devreme, la alimentarea soldului, și nu puteau ajunge în casa acestei predări. Zero înseamnă că totul se potrivește.",
+    "goodsDifferenceTooltip": "Cât a predat angajatul minus ce a calculat sistemul din vânzările de mărfuri. Zero înseamnă că se potrivește; minus este lipsă, plus înseamnă că s-a predat mai mult. Plata din sold nu intră aici: acei bani au intrat mai devreme, la alimentare.",
+    "goodsNotHandedOver": "Casa nu a fost predată",
     "actualCashTooltip": "Numerarul și plățile cu cardul predate de angajat. Cheltuielile sunt deja luate în calcul: angajatul introduce restul din casă după cheltuieli. Plata din sold nu este inclusă — acei bani au intrat mai devreme, la alimentarea soldului."
   },
   "operatorApp": {
