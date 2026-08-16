@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Pencil, Trash2, Gift, Search, ChevronRight, Wallet, Send, Megaphone, FileDown, FileUp, QrCode as QrCodeIcon, Users } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { FilePickerButton } from "@/components/file-picker-button";
@@ -44,6 +44,28 @@ interface WalletInfo {
   hasTelegram: boolean;
 }
 
+// Строка реестра продаж (таб "Продажи", /api/abonement-sales). paidAmount —
+// уплаченные деньги, creditedAmount — начисленное на баланс: у плана с
+// бонусом это разные числа. paidAmount = null у продаж старше 2026-08-16,
+// которые не удалось связать с деньгами при бэкфилле.
+interface SaleInfo {
+  id: string;
+  occurredAt: string;
+  planName: string | null;
+  creditedAmount: number;
+  paidAmount: number | null;
+  paymentMethod: string | null;
+  walletId: string;
+  clientName: string | null;
+  clientPhone: string;
+  walletBalance: number;
+  pointName: string | null;
+  performedBy: string | null;
+  performedByOwner: boolean;
+  performedByColorTag: string | null;
+  voidedAt: string | null;
+}
+
 // Разбор файла импорта — счётчики и проблемные строки (см.
 // /api/abonement-wallets/import, шаг предпросмотра).
 interface ImportPreview {
@@ -79,7 +101,15 @@ export default function AbonementsPage() {
   // одной длинной странице. "wallets" по умолчанию — это то, чем владелец
   // пользуется чаще день в день (поиск/правка абонента), планы правятся
   // редко.
-  const [tab, setTab] = useState<"wallets" | "abonements">("wallets");
+  // Третий таб "Продажи" (запрос владельца 2026-08-16) — реестр проданных
+  // абонементов: до него правка продажи была невозможна нигде, а Итоги дня
+  // показывали список только за один день и без действий. Открывается и
+  // ссылкой (?tab=sales) — из Итогов дня туда ведёт стрелка в заголовке.
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<"wallets" | "abonements" | "sales">(() => {
+    const requested = searchParams.get("tab");
+    return requested === "abonements" || requested === "sales" ? requested : "wallets";
+  });
 
   const [abonements, setAbonements] = useState<AbonementInfo[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -151,6 +181,14 @@ export default function AbonementsPage() {
   // без ?phone= отдаёт именно его, никакой отдельной ручки не нужно.
   const [genericQrOpen, setGenericQrOpen] = useState(false);
   const [telegramBalanceLink, setTelegramBalanceLink] = useState<string | null>(null);
+
+  // Таб "Продажи" (запрос владельца 2026-08-16).
+  const [sales, setSales] = useState<SaleInfo[]>([]);
+  const [salesLoading, setSalesLoading] = useState(false);
+  const [voidTarget, setVoidTarget] = useState<SaleInfo | null>(null);
+  const [voiding, setVoiding] = useState(false);
+  const [voidError, setVoidError] = useState<string | null>(null);
+  const { saved: voided, pulse: voidPulse } = useSavePulse();
 
   async function handleBroadcastImageUpload(file: File) {
     setBroadcastImageUploading(true);
@@ -274,6 +312,44 @@ export default function AbonementsPage() {
     if (data.counts) setWalletCounts(data.counts);
   }
 
+  // Реестр продаж — грузится только при открытии своего таба: владелец чаще
+  // заходит в Клиенты за поиском абонента, лишний запрос на каждый визит ни
+  // к чему.
+  async function loadSales() {
+    setSalesLoading(true);
+    try {
+      const res = await fetch("/api/abonement-sales");
+      const data = await res.json();
+      setSales(data.sales ?? []);
+    } finally {
+      setSalesLoading(false);
+    }
+  }
+
+  async function voidSale() {
+    if (!voidTarget || voiding) return;
+    setVoiding(true);
+    setVoidError(null);
+    try {
+      const res = await fetch(`/api/abonement-sales/${voidTarget.id}/void`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        // Текст ошибки приходит с сервера (например, "продажа уже
+        // аннулирована"); общего запасного ключа в словаре нет — при пустом
+        // ответе показываем заголовок действия, а не пустую строку.
+        setVoidError(data?.error ?? t.abonements.saleVoidAction);
+        return;
+      }
+      await loadSales();
+      // Балансы клиентов изменились — список кошельков рядом не должен
+      // показывать старые цифры.
+      await loadWallets(walletQuery, walletSort);
+      voidPulse(() => setVoidTarget(null));
+    } finally {
+      setVoiding(false);
+    }
+  }
+
   async function deleteWallet() {
     if (!walletKebabTarget) return;
     await fetch(`/api/abonement-wallets/${walletKebabTarget.id}`, { method: "DELETE" });
@@ -297,6 +373,10 @@ export default function AbonementsPage() {
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (tab === "sales") loadSales();
+  }, [tab]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function openNew() {
@@ -392,12 +472,13 @@ export default function AbonementsPage() {
               что в "Отчётах") — планы и кошельки клиентов правятся отдельно,
               смешивать в один список незачем. */}
           <SegmentedTabs
-            className="mb-4 grid grid-cols-2"
+            className="mb-4 grid grid-cols-3"
             equalWidth
             size="sm"
             options={[
               { key: "wallets", label: t.abonements.walletsTitle },
               { key: "abonements", label: t.abonements.title },
+              { key: "sales", label: t.abonements.salesTab },
             ]}
             value={tab}
             onChange={setTab}
@@ -440,6 +521,77 @@ export default function AbonementsPage() {
                               label={t.abonements.deleteAbonement}
                               destructive
                             />
+                          </div>
+                        </div>
+                      </SpringCard>
+                    </StaggerItem>
+                  ))}
+                </StaggerList>
+              )}
+            </>
+          )}
+
+          {/* Реестр продаж абонементов (запрос владельца 2026-08-16). Правки
+              тут нет и не будет: продажа связывает деньги и начисленный
+              баланс прайсом плана, и менять одно без другого — значит
+              оставить запись, которую нечем объяснить. Ошибку исправляют
+              аннулированием и продажей заново. */}
+          {tab === "sales" && (
+            <>
+              {salesLoading ? (
+                <SkeletonListRows count={4} />
+              ) : sales.length === 0 ? (
+                <p className="text-body-airbnb text-muted-foreground">{t.abonements.noSales}</p>
+              ) : (
+                <StaggerList className="flex flex-col gap-3.5">
+                  {sales.map((s) => (
+                    <StaggerItem key={s.id}>
+                      <SpringCard animate={false} className={cn(s.voidedAt && "opacity-60")}>
+                        <div className="flex items-start gap-3">
+                          <div className="min-w-0 grow">
+                            <div className="flex items-center gap-1.5">
+                              <p className="truncate text-card-title">{s.planName ?? t.abonements.title}</p>
+                              {s.voidedAt && (
+                                <span className="shrink-0 text-caption-airbnb text-destructive">
+                                  {t.abonements.saleVoided}
+                                </span>
+                              )}
+                            </div>
+                            <p className="flex flex-wrap items-center gap-x-1.5 text-caption-airbnb text-muted-foreground">
+                              <span className="tabular-nums">{new Date(s.occurredAt).toLocaleString()}</span>
+                              <span>· {s.clientName ?? s.clientPhone}</span>
+                              {s.pointName && <span>· {s.pointName}</span>}
+                            </p>
+                            <p className="flex flex-wrap items-center gap-x-1.5 text-caption-airbnb text-muted-foreground">
+                              {(s.performedBy || s.performedByOwner) && (
+                                <span className="inline-flex items-center gap-1">
+                                  <Users className="size-3.5 shrink-0" />
+                                  {s.performedBy}
+                                </span>
+                              )}
+                              {/* Начислено и уплачено — разные суммы, когда у
+                                  плана есть бонус; показываем обе, иначе
+                                  непонятно, почему в кассе меньше. */}
+                              <span>
+                                · {t.abonements.saleCreditedLabel}: <Money value={s.creditedAmount} />
+                              </span>
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end gap-1.5">
+                            <span className="font-bold tabular-nums">
+                              {s.paidAmount === null ? "—" : <Money value={s.paidAmount} />}
+                            </span>
+                            {!s.voidedAt && (
+                              <IconActionButton
+                                icon={Trash2}
+                                onClick={() => {
+                                  setVoidError(null);
+                                  setVoidTarget(s);
+                                }}
+                                label={t.abonements.saleVoidAction}
+                                destructive
+                              />
+                            )}
                           </div>
                         </div>
                       </SpringCard>
@@ -758,6 +910,29 @@ export default function AbonementsPage() {
             <DeleteButton className="h-12 w-full" onClick={deleteWallet} deleted={walletDeleted} />
           </PressableScale>
         </div>
+      </BottomSheet>
+
+      {/* Аннулирование продажи. Предупреждение о минусе — не запрет
+          (решение владельца 2026-08-16): клиент мог уже потратить эти
+          деньги, но запрет означал бы, что ошибочную продажу нельзя
+          отменить вовсе. Тот же принцип, что у зонной инкассации в минус. */}
+      <BottomSheet open={voidTarget !== null} onClose={() => setVoidTarget(null)}>
+        {voidTarget && (
+          <div className="flex flex-col gap-3 pt-2">
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.abonements.saleVoidTitle}</h2>
+            <p className="text-body-airbnb">{t.abonements.saleVoidText}</p>
+            {voidTarget.walletBalance - voidTarget.creditedAmount < 0 && (
+              <p className="flex flex-wrap items-center gap-1.5 text-body-airbnb font-semibold text-destructive">
+                {t.abonements.saleVoidNegativeWarning}{" "}
+                <Money value={Math.round((voidTarget.walletBalance - voidTarget.creditedAmount) * 100) / 100} />
+              </p>
+            )}
+            {voidError && <p className="text-body-airbnb text-destructive">{voidError}</p>}
+            <PressableScale>
+              <DeleteButton className="h-12 w-full" onClick={voidSale} deleted={voided} />
+            </PressableScale>
+          </div>
+        )}
       </BottomSheet>
 
       {telegramBalanceLink && (

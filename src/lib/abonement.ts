@@ -220,7 +220,9 @@ export async function topUpWallet(walletId: string, params: TopupParams) {
     if (claimed.count === 0) throw new Error("WALLET_NOT_FOUND");
     const wallet = await tx.abonementWallet.findUniqueOrThrow({ where: { id: walletId } });
 
-    await tx.abonementTransaction.create({
+    // Ссылку на транзакцию получают все созданные ниже операции оплаты —
+    // по ней владелец аннулирует продажу в реестре (2026-08-16).
+    const topupTx = await tx.abonementTransaction.create({
       data: {
         walletId,
         type: "topup",
@@ -240,6 +242,7 @@ export async function topUpWallet(walletId: string, params: TopupParams) {
             tenantId,
             pointId,
             abonementId: plan.id,
+            abonementTransactionId: topupTx.id,
             type: abonementTopupMoneyType(leg.method as AbonementTopupPaymentMethod),
             amount: leg.amount,
             performedByOperatorId: actor.operatorId,
@@ -253,6 +256,7 @@ export async function topUpWallet(walletId: string, params: TopupParams) {
           tenantId,
           pointId,
           abonementId: plan.id,
+          abonementTransactionId: topupTx.id,
           type: abonementTopupMoneyType(paymentMethod),
           amount: plan.price,
           performedByOperatorId: actor.operatorId,
@@ -301,7 +305,7 @@ export async function topUpWalletArbitrary(walletId: string, params: ArbitraryTo
     if (claimed.count === 0) throw new Error("WALLET_NOT_FOUND");
     const wallet = await tx.abonementWallet.findUniqueOrThrow({ where: { id: walletId } });
 
-    await tx.abonementTransaction.create({
+    const topupTx = await tx.abonementTransaction.create({
       data: {
         walletId,
         type: "topup",
@@ -319,6 +323,7 @@ export async function topUpWalletArbitrary(walletId: string, params: ArbitraryTo
           data: {
             tenantId,
             pointId,
+            abonementTransactionId: topupTx.id,
             type: abonementTopupMoneyType(leg.method as AbonementTopupPaymentMethod),
             amount: leg.amount,
             performedByOperatorId: actor.operatorId,
@@ -331,6 +336,7 @@ export async function topUpWalletArbitrary(walletId: string, params: ArbitraryTo
         data: {
           tenantId,
           pointId,
+          abonementTransactionId: topupTx.id,
           type: abonementTopupMoneyType(paymentMethod),
           amount,
           performedByOperatorId: actor.operatorId,
@@ -362,7 +368,7 @@ export async function createWalletWithTopupArbitrary(
       data: { tenantId, phone, phoneKey: phoneMatchKey(phone), name: name || null, balance: amount },
     });
 
-    await tx.abonementTransaction.create({
+    const topupTx = await tx.abonementTransaction.create({
       data: {
         walletId: wallet.id,
         type: "topup",
@@ -380,6 +386,7 @@ export async function createWalletWithTopupArbitrary(
           data: {
             tenantId,
             pointId,
+            abonementTransactionId: topupTx.id,
             type: abonementTopupMoneyType(leg.method as AbonementTopupPaymentMethod),
             amount: leg.amount,
             performedByOperatorId: actor.operatorId,
@@ -392,6 +399,7 @@ export async function createWalletWithTopupArbitrary(
         data: {
           tenantId,
           pointId,
+          abonementTransactionId: topupTx.id,
           type: abonementTopupMoneyType(paymentMethod),
           amount,
           performedByOperatorId: actor.operatorId,
@@ -449,7 +457,7 @@ export async function createWalletWithTopup(rawPhone: string, name: string | nul
       data: { tenantId, phone, phoneKey: phoneMatchKey(phone), name: name || null, balance: plan.creditAmount },
     });
 
-    await tx.abonementTransaction.create({
+    const topupTx = await tx.abonementTransaction.create({
       data: {
         walletId: wallet.id,
         type: "topup",
@@ -469,6 +477,7 @@ export async function createWalletWithTopup(rawPhone: string, name: string | nul
             tenantId,
             pointId,
             abonementId: plan.id,
+            abonementTransactionId: topupTx.id,
             type: abonementTopupMoneyType(leg.method as AbonementTopupPaymentMethod),
             amount: leg.amount,
             performedByOperatorId: actor.operatorId,
@@ -482,6 +491,7 @@ export async function createWalletWithTopup(rawPhone: string, name: string | nul
           tenantId,
           pointId,
           abonementId: plan.id,
+          abonementTransactionId: topupTx.id,
           type: abonementTopupMoneyType(paymentMethod),
           amount: plan.price,
           performedByOperatorId: actor.operatorId,
@@ -975,4 +985,89 @@ export async function spendWalletForTicketOrderTx(tx: Tx, walletId: string, para
   });
 
   return tx.abonementWallet.findUniqueOrThrow({ where: { id: walletId } });
+}
+
+/**
+ * Аннулирование продажи абонемента владельцем в реестре продаж (решение
+ * владельца 2026-08-16: "абонементы можно только удалять, править нельзя" —
+ * начисленный баланс и уплаченные деньги связаны прайсом плана, и правка
+ * одного без другого даёт запись, которую нечем объяснить).
+ *
+ * Ничего не удаляется физически, тот же приём, что у voidGoodsSale: запись
+ * помечается voidedAt, деньги снимаются компенсирующими операциями с
+ * отрицательной суммой, баланс кошелька уменьшается на НАЧИСЛЕННОЕ (amount
+ * транзакции — оно могло быть больше уплаченного, если у плана есть бонус).
+ *
+ * Баланс уходит в минус, если клиент успел потратить эти деньги — сознательно
+ * разрешено (решение владельца 2026-08-16, предупреждение показывается на
+ * подтверждении): запрет означал бы, что ошибочную продажу нельзя отменить
+ * вовсе. Тот же принцип, что у зонной инкассации в минус.
+ */
+export async function voidAbonementSale(transactionId: string, tenantId: string, userId: string) {
+  const { walletId, credited } = await prisma.$transaction(async (tx) => {
+    const sale = await tx.abonementTransaction.findFirst({
+      where: { id: transactionId, type: "topup", wallet: { tenantId } },
+      include: { abonement: { select: { price: true } }, moneyOperations: true },
+    });
+    if (!sale) throw new Error("SALE_NOT_FOUND");
+
+    // CAS вместо read-check + безусловного update — та же защита от двойного
+    // клика, что в voidGoodsSale (lib/goods.ts).
+    const claimed = await tx.abonementTransaction.updateMany({
+      where: { id: transactionId, voidedAt: null },
+      data: { voidedAt: new Date() },
+    });
+    if (claimed.count === 0) throw new Error("ALREADY_VOIDED");
+
+    const credited = Number(sale.amount);
+    await tx.abonementWallet.update({
+      where: { id: sale.walletId },
+      data: { balance: { decrement: credited } },
+    });
+
+    if (sale.moneyOperations.length > 0) {
+      // Обычный путь: на каждую оплаченную долю — своя компенсация тем же
+      // типом, чтобы наличные снялись с наличных, а безнал с безнала.
+      for (const op of sale.moneyOperations) {
+        await tx.moneyOperation.create({
+          data: {
+            tenantId,
+            pointId: op.pointId,
+            abonementId: op.abonementId,
+            abonementTransactionId: sale.id,
+            type: op.type,
+            amount: -Number(op.amount),
+            performedByUserId: userId,
+          },
+        });
+      }
+    } else {
+      // Продажа старше 2026-08-16 и не попала в бэкфилл миграции: связи с
+      // деньгами нет. Восстанавливаем сумму по прайсу плана (для
+      // произвольного пополнения оплата равна зачислению) и снимаем её тем
+      // способом, которым платили. Разбивку оплаты так не восстановить —
+      // такие продажи аннулировать нельзя, иначе доли разъедутся.
+      if (sale.paymentMethod === PAYMENT_SPLIT_METHOD) throw new Error("LEGACY_SPLIT");
+      const paid = sale.abonement ? Number(sale.abonement.price) : credited;
+      if (paid > 0) {
+        await tx.moneyOperation.create({
+          data: {
+            tenantId,
+            pointId: sale.pointId,
+            abonementId: sale.abonementId,
+            abonementTransactionId: sale.id,
+            type: abonementTopupMoneyType((sale.paymentMethod ?? "cash") as AbonementTopupPaymentMethod),
+            amount: -paid,
+            performedByUserId: userId,
+          },
+        });
+      }
+    }
+
+    return { walletId: sale.walletId, credited };
+  });
+
+  // Клиенту — то же уведомление, что и при любом изменении баланса: деньги с
+  // его счёта сняли, он должен об этом узнать.
+  await notifyWalletBalanceChange(tenantId, walletId, -credited).catch(() => {});
 }

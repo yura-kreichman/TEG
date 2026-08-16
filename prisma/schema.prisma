@@ -1498,6 +1498,21 @@ model AbonementTransaction {
   occurredAt DateTime @default(now())
   createdAt  DateTime @default(now())
 
+  // Аннулирование продажи абонемента владельцем в реестре продаж (решение
+  // владельца 2026-08-16: "абонементы можно только удалять, править нельзя"
+  // — начисленный баланс и уплаченные деньги связаны прайсом плана, и
+  // правка одного без другого даёт запись, которую нечем объяснить). Тот же
+  // приём, что у GoodsSale.voidedAt: строка остаётся в истории с пометкой,
+  // баланс кошелька уменьшается на начисленное, а деньги снимаются
+  // компенсирующими MoneyOperation — ничего не удаляется физически.
+  voidedAt DateTime?
+
+  // Деньги, полученные за это пополнение (несколько строк при разбивке
+  // оплаты). До 2026-08-16 связи не было вовсе — операция и транзакция
+  // сходились только по времени и точке, поэтому аннулировать продажу было
+  // не за что зацепиться.
+  moneyOperations MoneyOperation[]
+
   @@index([walletId, occurredAt])
   @@index([launchId])
   @@index([goodsSaleId])
@@ -2417,6 +2432,14 @@ model MoneyOperation {
   abonementId String?
   abonement   Abonement? @relation(fields: [abonementId], references: [id], onDelete: SetNull)
 
+  // Какое именно пополнение оплачено этой операцией (2026-08-16) — нужно,
+  // чтобы владелец мог аннулировать продажу в реестре: без ссылки деньги и
+  // начисление баланса связывались только временем и точкой, а при разбивке
+  // оплаты долей вообще было не найти. У старых записей null — там сумма
+  // берётся из прайса плана, см. voidAbonementSale.
+  abonementTransactionId String?
+  abonementTransaction   AbonementTransaction? @relation(fields: [abonementTransactionId], references: [id], onDelete: SetNull)
+
   type   String
   amount Decimal @db.Decimal(10, 2)
 
@@ -2503,6 +2526,7 @@ model MoneyOperation {
   // Удаление категории расхода обнуляет ссылку у всех своих операций
   // (унаследовано от @@index([categoryId]) на бывшей ExpenseEntry).
   @@index([expenseCategoryId])
+  @@index([abonementTransactionId])
   // Расчёт баланса оператора ("к выдаче"/"заработано за период") сканирует
   // все advance/bonus_payout конкретного получателя — горячий путь карточки
   // оператора и вкладки "Время" в PWA.

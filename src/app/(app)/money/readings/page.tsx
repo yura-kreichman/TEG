@@ -1145,19 +1145,29 @@ export default function ReadingsCalendarPage() {
                       подложки и шрифт мельче карточного (решение владельца
                       2026-08-16): Абонементы, Товары, Расходы выглядят
                       одинаково. */}
-                  <p className="flex items-center gap-1.5 text-body-airbnb font-bold">
-                    <Gift className="size-4 shrink-0 text-muted-foreground" />
-                    {t.readings.abonementSalesTitle}
-                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="flex items-center gap-1.5 text-body-airbnb font-bold">
+                      <Gift className="size-4 shrink-0 text-muted-foreground" />
+                      {t.readings.abonementSalesTitle}
+                    </p>
+                    {/* Стрелка — в реестр продаж абонементов (модуль Клиенты,
+                        таб "Продажи"), где владелец их и аннулирует. */}
+                    <Link
+                      href="/abonements?tab=sales"
+                      aria-label={t.abonements.salesTab}
+                      className="flex size-8 shrink-0 items-center justify-center rounded-control text-muted-foreground"
+                    >
+                      <ChevronRight className="size-4.5" />
+                    </Link>
+                  </div>
                   <div className="mt-1 flex flex-col border-t border-border tabular-nums">
                     {(abonementSales?.items ?? []).map((item) => (
                       <div
                         key={item.abonementId}
                         className="flex items-center gap-2 border-b border-border py-2 last:border-b-0"
                       >
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-primary/10 text-primary">
-                          <Gift className="size-4" />
-                        </div>
+                        {/* Без иконки-кружка (решение владельца 2026-08-16):
+                            плашка должна читаться так же, как Расходы. */}
                         <div className="min-w-0 flex-1 text-caption-airbnb">
                           <span className="font-semibold text-foreground">{item.name ?? t.abonements.title}</span>
                           <span className="text-muted-foreground">
@@ -1190,44 +1200,10 @@ export default function ReadingsCalendarPage() {
                       </span>
                     </div>
                   )}
-                  {/* Кому и кто начислил (запрос пользователя 2026-08-04).
-                      Разбивка по планам выше остаётся нетронутой — июльское
-                      решение "не надо полный список продаж" в силе, это
-                      детализация по тапу, а не замена.
-                      Сумма здесь — НАЧИСЛЕННАЯ, с бонусом плана: "заплати
-                      1000 — получи 1200". Уплаченные деньги видны в итогах
-                      выше, из MoneyOperation. Это два разных числа, и
-                      смешивать их в одной строке нельзя. */}
-                  <CollapsibleRows
-                    title={t.readings.salesSectionTitle}
-                    count={abonementSaleEvents.length}
-                    icon={<Gift className="size-3.5 shrink-0" />}
-                  >
-                    {abonementSaleEvents.map((e) => (
-                      <div
-                        key={e.id}
-                        className="flex items-center justify-between gap-2 border-t border-border py-1.5 text-caption-airbnb"
-                      >
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          <span className="tabular-nums text-muted-foreground">{formatTime(e.occurredAt)}</span>
-                          <span className="truncate text-foreground">{e.clientName ?? e.clientPhone ?? "—"}</span>
-                          {e.planName && <span className="truncate text-muted-foreground">· {e.planName}</span>}
-                        </span>
-                        <span className="flex shrink-0 items-center gap-2">
-                          <span className="tabular-nums text-foreground">
-                            <Money value={e.creditedAmount} />
-                          </span>
-                          <PerformedByTag
-                            name={e.performedBy}
-                            isOwner={e.performedByOwner}
-                            avatarUrl={null}
-                            iconKey={null}
-                            colorTag={e.performedByColorTag}
-                          />
-                        </span>
-                      </div>
-                    ))}
-                  </CollapsibleRows>
+                  {/* Списка продаж здесь больше нет (решение владельца
+                      2026-08-16): в плашке — только итоги по планам, а сами
+                      продажи с клиентами и аннулированием живут в модуле
+                      Клиенты, таб "Продажи", куда ведёт стрелка в заголовке. */}
                 </SpringCard>
               )}
 
@@ -1271,42 +1247,19 @@ export default function ReadingsCalendarPage() {
                       <ChevronRight className="size-4.5" />
                     </Link>
                   </div>
-                  <div className="mt-1 flex flex-col border-t border-border tabular-nums">
-                    {expenses.items.map((e) => (
-                      <div
-                        key={e.id}
-                        className="flex items-center justify-between gap-2 border-b border-border py-2 text-caption-airbnb last:border-b-0"
-                      >
-                        <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <span className="shrink-0 text-muted-foreground">{formatTime(e.occurredAt)}</span>
-                            <span className="truncate text-foreground">{e.zoneName}</span>
-                            {/* Иконка рядом с именем, не аватар — единый приём
-                                по всему проекту (правило владельца, повторено
-                                2026-08-16). */}
-                            {e.operatorName && (
-                              <span className="inline-flex min-w-0 shrink items-center gap-1 text-muted-foreground">
-                                <Users className="size-3.5 shrink-0" />
-                                <span className="truncate">{e.operatorName}</span>
-                              </span>
-                            )}
-                          </span>
-                          {/* Категория — второй строкой и мельче (запрос
-                              владельца 2026-08-16): в самой строке важнее
-                              зона и сумма, а "на что" уточняет. */}
-                          {e.categoryName && (
-                            <span className="truncate text-xs text-muted-foreground">{e.categoryName}</span>
-                          )}
-                        </span>
-                        <span className="shrink-0 font-semibold text-foreground">
-                          −<Money value={e.amount} />
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between border-t border-border pt-2 text-body-airbnb font-bold tabular-nums">
-                    <span>{t.goods.totalLabel}</span>
-                    <span>−<Money value={expenses.total} /></span>
+                  {/* Только итог: список расходов с зонами, категориями и
+                      комментариями живёт в реестре, куда ведёт стрелка выше
+                      (решение владельца 2026-08-16 — три плашки дня
+                      показывают итоги, подробности и правки на своих
+                      страницах). Счёт записей — чтобы было видно, из
+                      скольких трат сложилась сумма. */}
+                  <div className="mt-1 flex items-center justify-between border-t border-border pt-2 text-caption-airbnb tabular-nums">
+                    <span className="text-muted-foreground">
+                      {t.goods.totalLabel} · {expenses.items.length}
+                    </span>
+                    <span className="font-bold text-foreground">
+                      −<Money value={expenses.total} />
+                    </span>
                   </div>
                 </SpringCard>
               )}
@@ -1329,23 +1282,40 @@ export default function ReadingsCalendarPage() {
                       <ChevronRight className="size-4.5" />
                     </Link>
                   </div>
+                  {/* День, где продажи были, а кассу Товаров ещё не сдавали:
+                      без этой строки карточка осталась бы пустой — реестр из
+                      неё убран (2026-08-16). Сумма и счёт, подробности — по
+                      стрелке в разделе Товары. */}
+                  {goodsReconciliations.length === 0 && goodsSales.length > 0 && (
+                    <div className="mt-1 flex items-center justify-between border-t border-border pt-2 text-caption-airbnb tabular-nums">
+                      <span className="text-muted-foreground">
+                        {t.readings.salesSectionTitle} · {goodsSales.length}
+                      </span>
+                      <span className="font-semibold text-foreground">
+                        <Money value={goodsSales.reduce((sum, g) => sum + g.amount, 0)} />
+                      </span>
+                    </div>
+                  )}
                   <div
                     className={cn("mt-1 flex flex-col", goodsReconciliations.length > 0 && "border-t border-border")}
                   >
                     {goodsReconciliations.map((r) => (
                       <div key={r.id} className="flex flex-col gap-1 border-b border-border py-2 tabular-nums last:border-b-0">
-                        <div className="flex items-center justify-between gap-2 text-caption-airbnb text-muted-foreground">
-                          <span>{formatTime(r.occurredAt)}</span>
-                          {/* Тот же чип, что и в строках продаж ниже: одна
-                              карточка не должна рисовать исполнителя двумя
-                              разными способами. */}
-                          <PerformedByTag
-                            name={r.performedBy}
-                            isOwner={r.performedByOwner}
-                            avatarUrl={null}
-                            iconKey={null}
-                            colorTag={r.performedByColorTag}
-                          />
+                        {/* Время и сотрудник — как в строке расхода
+                            (решение владельца 2026-08-16): иконка рядом с
+                            именем, не чип-аватар. */}
+                        <div className="flex min-w-0 items-center gap-1.5 text-caption-airbnb text-muted-foreground">
+                          <span className="shrink-0">{formatTime(r.occurredAt)}</span>
+                          {(r.performedBy || r.performedByOwner) && (
+                            <span className="inline-flex min-w-0 items-center gap-1">
+                              {r.performedByOwner ? (
+                                <Crown className="size-3.5 shrink-0" />
+                              ) : (
+                                <Users className="size-3.5 shrink-0" />
+                              )}
+                              <span className="truncate">{r.performedBy}</span>
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center justify-between text-caption-airbnb">
                           <span className="flex items-center gap-1">
@@ -1401,50 +1371,13 @@ export default function ReadingsCalendarPage() {
                       </div>
                     ))}
                   </div>
-                  {/* Кто кому продал (запрос пользователя 2026-08-04). До сих
-                      пор на экране дня были только СВЕРКИ кассы Товаров —
-                      самих продаж не было вовсе. Клиент есть не всегда: при
-                      оплате наличными без привязки его просто нет, и там
-                      честное "—", а не выдуманный покупатель. */}
-                  <CollapsibleRows
-                    title={t.readings.salesSectionTitle}
-                    count={goodsSales.length}
-                    icon={<ShoppingBag className="size-3.5 shrink-0" />}
-                  >
-                    {goodsSales.map((g) => (
-                      <div
-                        key={g.id}
-                        className="flex items-center justify-between gap-2 border-t border-border py-1.5 text-caption-airbnb"
-                      >
-                        <span className="flex min-w-0 items-center gap-1.5">
-                          <span className="tabular-nums text-muted-foreground">{formatTime(g.occurredAt)}</span>
-                          <span className="truncate text-foreground">
-                            {g.goodsName ?? "—"}
-                            {g.quantity > 1 && ` ×${g.quantity}`}
-                          </span>
-                          {(g.clientName || g.clientPhone) && (
-                            <span className="truncate text-muted-foreground">· {g.clientName ?? g.clientPhone}</span>
-                          )}
-                        </span>
-                        <span className="flex shrink-0 items-center gap-2">
-                          <PaymentMethodIcon
-                            method={g.paymentMethod as "cash" | "mobile" | "abonement"}
-                            className="size-3.5 shrink-0"
-                          />
-                          <span className="tabular-nums text-foreground">
-                            <Money value={g.amount} />
-                          </span>
-                          <PerformedByTag
-                            name={g.performedBy}
-                            isOwner={g.performedByOwner}
-                            avatarUrl={null}
-                            iconKey={null}
-                            colorTag={g.performedByColorTag}
-                          />
-                        </span>
-                      </div>
-                    ))}
-                  </CollapsibleRows>
+                  {/* Реестра продаж здесь больше нет (решение владельца
+                      2026-08-16): смотреть и править продажи — в разделе
+                      Товары, вкладка "Кассы", куда ведёт стрелка в заголовке.
+                      Список появился здесь 2026-08-04, когда полноценного
+                      реестра ещё не было; теперь он только дублировал бы его
+                      без возможности что-то исправить. В Итогах дня остаётся
+                      сверка кассы Товаров — она про день, а не про товар. */}
                 </SpringCard>
               )}
 
