@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Plus,
   Pencil,
@@ -335,7 +335,14 @@ const EMPTY_GOODS_FORM = {
 export default function GoodsCabinetPage() {
   const t = useI18n();
   const router = useRouter();
-  const [tab, setTab] = useState<"catalog" | "stock" | "cash" | "purchases">("catalog");
+  const searchParams = useSearchParams();
+  // Вкладку можно открыть ссылкой (?tab=cash) — из Итогов дня владелец
+  // переходит стрелкой сразу к продажам (запрос 2026-08-16), а не в
+  // Каталог, откуда надо ещё раз тапать.
+  const [tab, setTab] = useState<"catalog" | "stock" | "cash" | "purchases">(() => {
+    const requested = searchParams.get("tab");
+    return requested === "stock" || requested === "cash" || requested === "purchases" ? requested : "catalog";
+  });
 
   // ------- Каталог -------
   const [categories, setCategories] = useState<CategoryInfo[]>([]);

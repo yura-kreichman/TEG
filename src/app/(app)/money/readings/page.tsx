@@ -1313,10 +1313,22 @@ export default function ReadingsCalendarPage() {
 
               {selectedDate && (goodsReconciliations.length > 0 || goodsSales.length > 0) && (
                 <SpringCard hover={false} className="mt-3.5 flex flex-col gap-1">
-                  <p className="flex items-center gap-1.5 text-body-airbnb font-bold">
-                    <ShoppingBag className="size-4 shrink-0 text-muted-foreground" />
-                    {t.readings.goodsReconciliationsTitle}
-                  </p>
+                  {/* Стрелка — сразу во вкладку продаж Товаров (запрос
+                      владельца 2026-08-16), не в Каталог: из Итогов дня
+                      смотрят именно продажи. */}
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="flex items-center gap-1.5 text-body-airbnb font-bold">
+                      <ShoppingBag className="size-4 shrink-0 text-muted-foreground" />
+                      {t.readings.goodsReconciliationsTitle}
+                    </p>
+                    <Link
+                      href="/goods?tab=cash"
+                      aria-label={t.goods.salesTab}
+                      className="flex size-8 shrink-0 items-center justify-center rounded-control text-muted-foreground"
+                    >
+                      <ChevronRight className="size-4.5" />
+                    </Link>
+                  </div>
                   <div
                     className={cn("mt-1 flex flex-col", goodsReconciliations.length > 0 && "border-t border-border")}
                   >
