@@ -1272,6 +1272,7 @@
       "amountPlaceholder": "Kwota",
       "commentPlaceholder": "Komentarz (opcjonalnie)",
       "addExpense": "Dodaj wydatek",
+      "cashAfterExpensesHint": "Wpisz, ile gotówki zostało w kasie. Wydatki uwzględnimy sami:",
       "expenseAfterSubmitTitle": "Wyniki dla tej strefy są już zdane",
       "expenseAfterSubmitHint": "Wydatek trafi do następnego rozliczenia. Aby pieniądze zeszły z dzisiejszej kasy, dodawaj wydatki przed zdaniem wyników.",
       "reviewTitle": "Sprawdź przed wysłaniem",

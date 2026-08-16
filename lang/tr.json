@@ -1272,6 +1272,7 @@
       "amountPlaceholder": "Tutar",
       "commentPlaceholder": "Yorum (isteğe bağlı)",
       "addExpense": "Gider ekle",
+      "cashAfterExpensesHint": "Kasada ne kadar nakit kaldığını girin. Giderleri biz hesaba katarız:",
       "expenseAfterSubmitTitle": "Bu bölgenin sonuçları zaten teslim edildi",
       "expenseAfterSubmitHint": "Gider bir sonraki sonuç teslimine girecek. Paranın bugünkü kasadan çıkması için giderleri sonuçları teslim etmeden önce ekleyin.",
       "reviewTitle": "Göndermeden önce kontrol edin",

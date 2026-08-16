@@ -1272,6 +1272,7 @@
       "amountPlaceholder": "Amount",
       "commentPlaceholder": "Comment (optional)",
       "addExpense": "Add expense",
+      "cashAfterExpensesHint": "Enter how much cash is left in the till. We will account for the expenses ourselves:",
       "expenseAfterSubmitTitle": "Results for this zone are already submitted",
       "expenseAfterSubmitHint": "The expense will go into the next results submission. To take the money out of today's cash, add expenses before submitting results.",
       "reviewTitle": "Review before submitting",

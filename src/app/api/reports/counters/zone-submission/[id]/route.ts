@@ -138,8 +138,20 @@ async function reEditZoneSummaryMessage(zoneSubmissionId: string, tenantId: stri
         )
       : 0,
   });
+  // + расходы, закрытые этой сдачей: сотрудник вводит в кассу остаток после
+  // трат (решение владельца 2026-08-16), поэтому для сверки со счётчиками их
+  // возвращаем обратно — иначе сводка после правки показала бы недостачу на
+  // сумму расходов там, где касса сошлась.
+  const expensesInSubmission = (
+    await prisma.moneyOperation.findMany({
+      where: { type: "expense", zoneId: zs.zoneId, resultsSubmissionId: zs.resultsSubmissionId },
+      select: { amount: true },
+    })
+  ).reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0);
   const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
-  const difference = isCashOnly ? 0 : Math.round((actualCash - (netRevenue - paidFromBalance)) * 100) / 100;
+  const difference = isCashOnly
+    ? 0
+    : Math.round((actualCash + expensesInSubmission - (netRevenue - paidFromBalance)) * 100) / 100;
 
   const text = formatZoneSummaryTelegram(
     {

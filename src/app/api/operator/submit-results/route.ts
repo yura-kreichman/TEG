@@ -491,6 +491,13 @@ export async function POST(request: Request) {
       );
     }
 
+    // Расходы, которые сотрудник внёс за этот период: он вводит в кассу
+    // ОСТАТОК (деньги уже потрачены), поэтому для сверки со счётчиками их
+    // возвращаем обратно — решение владельца 2026-08-16: «сотрудник не должен
+    // ничего держать в голове».
+    const expensesOf = (zoneId: string) =>
+      (expenseOpsByZone.get(zoneId) ?? []).reduce((sum, e) => sum + e.amount, 0);
+
     const summary = zoneSubmissions.map((zs) => {
       const zone = zoneById.get(zs.zoneId)!;
 
@@ -503,7 +510,7 @@ export async function POST(request: Request) {
         // (реальный баг, найден пользователем 2026-07-18: без вычитания
         // разница ложно показывала недостачу ровно на сумму пусков,
         // оплаченных абонементом, каждый раз).
-        const difference = Math.round((actualCash + agg.abonementAmount - calculatedRevenue) * 100) / 100;
+        const difference = Math.round((actualCash + expensesOf(zs.zoneId) + agg.abonementAmount - calculatedRevenue) * 100) / 100;
         return {
           zoneId: zs.zoneId,
           zoneName: zone.name,
@@ -539,7 +546,7 @@ export async function POST(request: Request) {
         const agg = ticketsAggregateByZone.get(zone.id)!;
         const calculatedRevenue = agg.totalAmount;
         const actualCash = zs.cashAmount + zs.mobileAmount;
-        const difference = Math.round((actualCash + agg.abonementAmount - calculatedRevenue) * 100) / 100;
+        const difference = Math.round((actualCash + expensesOf(zs.zoneId) + agg.abonementAmount - calculatedRevenue) * 100) / 100;
         return {
           zoneId: zs.zoneId,
           zoneName: zone.name,
@@ -611,7 +618,7 @@ export async function POST(request: Request) {
       const difference =
         zone.accountingMode === "cash_only"
           ? 0
-          : Math.round((actualCash - (netRevenue - paidFromBalance)) * 100) / 100;
+          : Math.round((actualCash + expensesOf(zs.zoneId) - (netRevenue - paidFromBalance)) * 100) / 100;
 
       const readingsText = zone.assets
         .map((asset) => {

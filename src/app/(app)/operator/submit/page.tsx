@@ -1179,6 +1179,28 @@ export default function SubmitResultsPage() {
                           onChange={(e) => updateZoneField(activeZone.id, "cashAmount", e.target.value)}
                         />
                       </div>
+                      {/* Расходы этой зоны за период — сотрудник вводит то,
+                          что РЕАЛЬНО осталось в кассе, а потраченное сервер
+                          прибавит сам при сверке (решение владельца
+                          2026-08-16: «сотрудник не должен ничего держать в
+                          голове, можно легко забыть»). Показываем сумму, чтобы
+                          он видел: его траты учтены и пересчитывать их в уме
+                          не нужно. */}
+                      {(() => {
+                        const zoneExpenses = (expenseEventsByZone[activeZone.id] ?? []).reduce(
+                          (sum, e) => sum + e.amount,
+                          0
+                        );
+                        if (zoneExpenses <= 0) return null;
+                        return (
+                          <p className="text-caption-airbnb text-muted-foreground">
+                            {t.operatorApp.submit.cashAfterExpensesHint}{" "}
+                            <span className="font-semibold tabular-nums">
+                              <Money value={zoneExpenses} />
+                            </span>
+                          </p>
+                        );
+                      })()}
                     </div>
                     <div className="flex flex-col gap-1">
                       <Label htmlFor="mobile" className="flex items-center gap-1.5">

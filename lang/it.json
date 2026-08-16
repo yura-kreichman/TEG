@@ -1272,6 +1272,7 @@
       "amountPlaceholder": "Importo",
       "commentPlaceholder": "Commento (facoltativo)",
       "addExpense": "Aggiungi spesa",
+      "cashAfterExpensesHint": "Inserisci quanti contanti sono rimasti in cassa. Le spese le calcoliamo noi:",
       "expenseAfterSubmitTitle": "I risultati di questa zona sono già stati inviati",
       "expenseAfterSubmitHint": "La spesa entrerà nella prossima chiusura. Perché il denaro esca dalla cassa di oggi, inserisci le spese prima di inviare i risultati.",
       "reviewTitle": "Rivedi prima di inviare",

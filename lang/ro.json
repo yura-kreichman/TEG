@@ -1272,6 +1272,7 @@
       "amountPlaceholder": "Sumă",
       "commentPlaceholder": "Comentariu (opțional)",
       "addExpense": "Adaugă cheltuială",
+      "cashAfterExpensesHint": "Introdu cât numerar a rămas în casă. Cheltuielile le luăm noi în calcul:",
       "expenseAfterSubmitTitle": "Rezultatele pentru această zonă au fost deja predate",
       "expenseAfterSubmitHint": "Cheltuiala va intra în următoarea predare a rezultatelor. Ca banii să iasă din casa de azi, adaugă cheltuielile înainte de predarea rezultatelor.",
       "reviewTitle": "Verificați înainte de trimitere",

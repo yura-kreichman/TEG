@@ -230,6 +230,26 @@ export async function computeZoneSubmissionRevenues(
   });
   if (zoneSubmissions.length === 0) return [];
 
+  // Расходы, закрытые каждой сдачей (решение владельца 2026-08-16). Сотрудник
+  // вводит в кассу то, что РЕАЛЬНО осталось в ящике, — деньги на моющее
+  // средство он уже потратил и держать их в голове не должен. Значит для
+  // сверки со счётчиками их надо вернуть обратно: потраченное тоже было
+  // выручкой, просто не долежало до конца смены. Без этого разница уходила бы
+  // в минус ровно на сумму расходов при идеально сошедшейся кассе.
+  const expenseOps = await prisma.moneyOperation.findMany({
+    where: {
+      type: "expense",
+      zoneId: { in: zoneIds },
+      resultsSubmissionId: { in: [...new Set(zoneSubmissions.map((zs) => zs.resultsSubmissionId))] },
+    },
+    select: { zoneId: true, amount: true, resultsSubmissionId: true },
+  });
+  const expensesByZoneSubmission = new Map<string, number>();
+  for (const op of expenseOps) {
+    const key = `${op.resultsSubmissionId}:${op.zoneId}`;
+    expensesByZoneSubmission.set(key, (expensesByZoneSubmission.get(key) ?? 0) + Math.abs(Number(op.amount)));
+  }
+
   const assetIds = new Set<string>();
   for (const zs of zoneSubmissions) {
     const zone = zoneById.get(zs.zoneId);
@@ -535,10 +555,13 @@ export async function computeZoneSubmissionRevenues(
     // кассу его cash_only-зон (тот же класс бага, что уже пофикшен в
     // /api/reports/counters/day/route.ts — найден при том же аудите
     // 2026-07-22, исправление отложено и забыто).
+    // + расходы этой сдачи: в кассу введён остаток ПОСЛЕ трат, а сверять со
+    // счётчиками надо всё, что через кассу прошло (см. загрузку выше).
+    const expensesInSubmission = expensesByZoneSubmission.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0;
     const difference =
       zone.accountingMode === "cash_only"
         ? 0
-        : Math.round((actualTotal + abonementAmount - calculatedRevenue) * 100) / 100;
+        : Math.round((actualTotal + expensesInSubmission + abonementAmount - calculatedRevenue) * 100) / 100;
 
     return {
       zoneSubmissionId: zs.id,

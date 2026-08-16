@@ -1272,6 +1272,7 @@
       "amountPlaceholder": "Summa",
       "commentPlaceholder": "Izoh (ixtiyoriy)",
       "addExpense": "Xarajat qoʻshish",
+      "cashAfterExpensesHint": "Kassada qancha naqd pul qolganini kiriting. Xarajatlarni oʻzimiz hisobga olamiz:",
       "expenseAfterSubmitTitle": "Bu zona boʻyicha natijalar allaqachon topshirilgan",
       "expenseAfterSubmitHint": "Xarajat keyingi topshiriqqa kiradi. Pul bugungi kassadan chiqishi uchun xarajatni natijalarni topshirishdan oldin kiriting.",
       "reviewTitle": "Yuborishdan oldin tekshiring",

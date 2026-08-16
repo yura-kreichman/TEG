@@ -298,6 +298,17 @@ export async function GET(request: Request) {
   });
   const payouts = round2(payoutOps.reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0));
 
+  // Расходы в разрезе «сдача+зона» — сотрудник вводит в кассу ОСТАТОК после
+  // трат (решение владельца 2026-08-16), поэтому для сверки со счётчиками их
+  // возвращают обратно в difference ниже. Берём из тех же операций дня, но
+  // группируем по привязке к сдаче, а не по времени.
+  const expensesBySubmissionZone = new Map<string, number>();
+  for (const op of expenseOps) {
+    if (!op.resultsSubmissionId) continue;
+    const key = op.resultsSubmissionId + ":" + op.zoneId;
+    expensesBySubmissionZone.set(key, (expensesBySubmissionZone.get(key) ?? 0) + Math.abs(Number(op.amount)));
+  }
+
   const expenses = {
     total: round2(expenseOps.reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0)),
     items: expenseOps.map((op) => ({
@@ -718,10 +729,13 @@ export async function GET(request: Request) {
       // ВСЕМ card без исключений — реальный баг, найден при аудите
       // 2026-07-22: касса cash_only-зоны просачивалась в итоговую "Разницу"
       // дня, искажая её на точках, где есть и cash_only, и другие зоны.
+      // + расходы этой сдачи: в кассу введён остаток после трат (2026-08-16).
+      const expensesInThisSubmission =
+        expensesBySubmissionZone.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0;
       const difference =
         zs.zone.accountingMode === "cash_only"
           ? 0
-          : Math.round((actualCash + abonementInDifference - netRevenue) * 100) / 100;
+          : Math.round((actualCash + expensesInThisSubmission + abonementInDifference - netRevenue) * 100) / 100;
 
       // Держать в синхроне с src/lib/isZoneSubmissionEditable — только
       // cash_only всегда редактируема (нет цепочки зависимостей), counters

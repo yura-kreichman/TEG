@@ -1272,6 +1272,7 @@
       "amountPlaceholder": "Məbləğ",
       "commentPlaceholder": "Şərh (məcburi deyil)",
       "addExpense": "Xərc əlavə et",
+      "cashAfterExpensesHint": "Kassada nə qədər nağd qaldığını daxil edin. Xərcləri özümüz nəzərə alacağıq:",
       "expenseAfterSubmitTitle": "Bu zona üzrə nəticələr artıq təhvil verilib",
       "expenseAfterSubmitHint": "Xərc növbəti təhvilə düşəcək. Pulun bugünkü kassadan çıxması üçün xərcləri nəticələri təhvil verməzdən əvvəl əlavə edin.",
       "reviewTitle": "Göndərmədən əvvəl yoxlayın",
