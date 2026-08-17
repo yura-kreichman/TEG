@@ -391,7 +391,19 @@ export async function GET(request: Request) {
   const liveLaunches = liveZoneSubmissionIds.length
     ? await prisma.launch.findMany({
         where: { zoneSubmissionId: { in: liveZoneSubmissionIds }, voidedAt: null },
-        select: { id: true, zoneSubmissionId: true, assetId: true, amount: true, startedAt: true, endedAt: true, paymentMethod: true },
+        select: {
+          id: true,
+          zoneSubmissionId: true,
+          assetId: true,
+          amount: true,
+          startedAt: true,
+          endedAt: true,
+          paymentMethod: true,
+          // Кто запустил (правка владельца 2026-08-17) — поле писалось с
+          // самого начала, но не читалось ни одним запросом, и в Итогах дня
+          // это был единственный список без чипа сотрудника.
+          startedByOperator: { select: { name: true, colorTag: true } },
+        },
       })
     : [];
   const liveRevenueBySubmission = new Map<string, number>();
@@ -408,7 +420,16 @@ export async function GET(request: Request) {
   // Билетов — см. /api/launches/[id]/void).
   const liveLaunchDetailsBySubmission = new Map<
     string,
-    { id: string; assetId: string; startedAt: string; endedAt: string | null; amount: number; paymentMethod: string | null }[]
+    {
+      id: string;
+      assetId: string;
+      startedAt: string;
+      endedAt: string | null;
+      amount: number;
+      paymentMethod: string | null;
+      performedBy: string | null;
+      performedByColorTag: string | null;
+    }[]
   >();
   for (const l of liveLaunches) {
     if (!l.zoneSubmissionId) continue;
@@ -424,6 +445,8 @@ export async function GET(request: Request) {
       endedAt: l.endedAt?.toISOString() ?? null,
       amount: Number(l.amount ?? 0),
       paymentMethod: l.paymentMethod,
+      performedBy: l.startedByOperator?.name ?? null,
+      performedByColorTag: l.startedByOperator?.colorTag ?? null,
     });
     liveLaunchDetailsBySubmission.set(l.zoneSubmissionId, details);
     if (!l.assetId) continue;

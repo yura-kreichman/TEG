@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown, Plus, X } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -50,12 +50,16 @@ interface ShiftRow {
   advanceAmount: number;
   bonusAmount: number;
   bonusAccruedAmount: number;
+  // Смену правил Владелец — корона, как в его карточке сотрудника
+  // (правка владельца 2026-08-17).
+  edited?: boolean;
 }
 
 interface StandaloneMoneyOp {
   id: string;
   type: "advance" | "bonus_payout" | "bonus_accrual";
   amount: number;
+  edited?: boolean;
   occurredAt: string;
   comment: string | null;
 }
@@ -396,7 +400,10 @@ export default function WorkTimePage() {
               item.kind === "shift" ? (
                 <SpringCard key={`shift-${item.shift.id}`} hover={false} className="flex flex-col gap-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-body-airbnb font-bold">{formatShiftDate(item.shift.startAt)}</span>
+                    <span className="flex items-center gap-1.5 text-body-airbnb font-bold">
+                      {formatShiftDate(item.shift.startAt)}
+                      {item.shift.edited && <Crown className="size-3.5 shrink-0 text-success" />}
+                    </span>
                     <span className="text-body-airbnb font-bold tabular-nums"><Money value={item.shift.accrued} /></span>
                   </div>
                   <span className="tabular-nums text-caption-airbnb">
@@ -426,13 +433,14 @@ export default function WorkTimePage() {
                 </SpringCard>
               ) : (
                 <SpringCard key={`op-${item.op.id}`} hover={false} className="flex flex-row items-center justify-between">
-                  <span className="text-body-airbnb font-bold">
+                  <span className="flex items-center gap-1.5 text-body-airbnb font-bold">
                     {formatShiftDate(item.op.occurredAt)} ·{" "}
                     {item.op.type === "advance"
                       ? t.operatorApp.workTime.advanceFieldLabel
                       : item.op.type === "bonus_accrual"
                         ? t.operatorApp.workTime.bonusAccruedFieldLabel
                         : t.operatorApp.workTime.bonusFieldLabel}
+                    {item.op.edited && <Crown className="size-3.5 shrink-0 text-success" />}
                   </span>
                   <span
                     className={cn(

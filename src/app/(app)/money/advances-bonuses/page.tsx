@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
@@ -21,6 +21,12 @@ interface AdvanceBonusEntry {
   pointName: string;
   operatorName: string | null;
   operatorColorTag: string | null;
+  // Кто провёл выплату: владелец из кабинета, сам сотрудник или другой
+  // сотрудник (правка владельца 2026-08-17).
+  issuedByOwner?: boolean;
+  issuedBySelf?: boolean;
+  issuedByName?: string | null;
+  issuedByColorTag?: string | null;
   operatorId: string | null;
 }
 
@@ -192,6 +198,22 @@ export default function AdvancesBonusesRegisterPage() {
                             colorTag={op.operatorColorTag}
                             showIcon
                           />
+                          {/* Кто выдал (правка владельца 2026-08-17): у
+                              владельца — корона, у "взял сам" второй чип не
+                              нужен (это тот же человек), у выдачи другим
+                              сотрудником — его чип. */}
+                          {op.issuedByOwner ? (
+                            <Crown className="size-3.5 shrink-0 text-success" />
+                          ) : !op.issuedBySelf && op.issuedByName ? (
+                            <PerformedByTag
+                              name={op.issuedByName}
+                              isOwner={false}
+                              avatarUrl={null}
+                              iconKey={null}
+                              colorTag={op.issuedByColorTag ?? null}
+                              showIcon
+                            />
+                          ) : null}
                           <span className="flex shrink-0 items-center gap-1">
                             <span
                               className={cn(

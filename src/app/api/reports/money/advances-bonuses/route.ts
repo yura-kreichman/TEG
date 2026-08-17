@@ -42,7 +42,7 @@ export async function GET(request: Request) {
       type: { in: ["advance", "bonus_payout", "bonus_accrual"] },
       occurredAt: { gte: monthStart, lt: monthEnd },
     },
-    include: { point: true, beneficiaryOperator: true },
+    include: { point: true, beneficiaryOperator: true, performedByOperator: { select: { id: true, name: true, colorTag: true } }, performedByUser: { select: { id: true } } },
     orderBy: { occurredAt: "desc" },
   });
 
@@ -61,6 +61,13 @@ export async function GET(request: Request) {
       // из двух мест разными путями. Ровно этим сегодня отличились Разница и
       // оплата балансом: одна формула в семи местах разошлась сама с собой.
       operatorId: op.beneficiaryOperatorId,
+      // Кто провёл выплату (правка владельца 2026-08-17): владелец из
+      // кабинета — корона; сотрудник взял сам — тот же человек, что и
+      // получатель, второй чип не нужен; иначе выдал другой сотрудник.
+      issuedByOwner: !!op.performedByUserId,
+      issuedBySelf: !!op.performedByOperatorId && op.performedByOperatorId === op.beneficiaryOperatorId,
+      issuedByName: op.performedByOperator?.name ?? null,
+      issuedByColorTag: op.performedByOperator?.colorTag ?? null,
     }));
 
   // Название точки в строке имеет смысл, только если точек больше одной

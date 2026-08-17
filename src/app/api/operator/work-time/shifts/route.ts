@@ -40,7 +40,26 @@ export async function GET(request: Request) {
 
   const shifts = await listShiftDetails(ctx.operator.id, period);
   const standaloneMoneyOps = await listStandaloneMoneyOps(ctx.operator.id, period);
-  return NextResponse.json({ shifts, standaloneMoneyOps });
+
+  // Отметка "правил Владелец" — та же, что у него самого в карточке
+  // сотрудника (правка владельца 2026-08-17): сотрудник должен видеть, что
+  // его смену или аванс поправили, а не гадать, почему изменились цифры.
+  const [editedShiftIds, editedOpIds] = await Promise.all([
+    prisma.correctionLog
+      .findMany({ where: { entityType: "Shift", entityId: { in: shifts.map((sh) => sh.id) } }, select: { entityId: true } })
+      .then((rows) => new Set(rows.map((r) => r.entityId))),
+    prisma.correctionLog
+      .findMany({
+        where: { entityType: "MoneyOperation", entityId: { in: standaloneMoneyOps.map((op) => op.id) } },
+        select: { entityId: true },
+      })
+      .then((rows) => new Set(rows.map((r) => r.entityId))),
+  ]);
+
+  return NextResponse.json({
+    shifts: shifts.map((sh) => ({ ...sh, edited: editedShiftIds.has(sh.id) })),
+    standaloneMoneyOps: standaloneMoneyOps.map((op) => ({ ...op, edited: editedOpIds.has(op.id) })),
+  });
 }
 
 export async function POST(request: Request) {

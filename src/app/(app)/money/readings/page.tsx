@@ -132,6 +132,8 @@ interface DayCard {
     endedAt: string | null;
     amount: number;
     paymentMethod: string | null;
+    performedBy?: string | null;
+    performedByColorTag?: string | null;
   }[];
   // Билеты (docs/spec/10-tickets.md, "Отчёты") — только у accountingMode
   // "tickets", null у остальных режимов. ticketAssets — разрез по активам и
@@ -1652,9 +1654,22 @@ export default function ReadingsCalendarPage() {
                                     <p className="truncate text-caption-airbnb font-semibold text-foreground">
                                       {l.assetName}
                                     </p>
-                                    <p className="truncate text-xs text-muted-foreground">
-                                      {formatTime(l.startedAt)}
-                                      {l.endedAt ? ` – ${formatTime(l.endedAt)}` : ""}
+                                    {/* Кто запустил (правка владельца
+                                        2026-08-17): единственный список в
+                                        карточке, где сотрудника не было. */}
+                                    <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
+                                      <span className="truncate">
+                                        {formatTime(l.startedAt)}
+                                        {l.endedAt ? ` – ${formatTime(l.endedAt)}` : ""}
+                                      </span>
+                                      <PerformedByTag
+                                        name={l.performedBy ?? null}
+                                        isOwner={false}
+                                        avatarUrl={null}
+                                        iconKey={null}
+                                        colorTag={l.performedByColorTag ?? null}
+                                        showIcon
+                                      />
                                     </p>
                                   </div>
                                   {l.paymentMethod && (
