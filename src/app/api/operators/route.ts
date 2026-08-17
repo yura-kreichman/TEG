@@ -26,7 +26,7 @@ export async function GET() {
       goodsAccess: true,
       createdAt: true,
     },
-    orderBy: { sortOrder: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
 
   // Для мигающего значка "открыта смена" в авто-режиме (docs/spec/05-work-time.md)

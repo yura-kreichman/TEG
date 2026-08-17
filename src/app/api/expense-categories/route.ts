@@ -10,7 +10,7 @@ export async function GET() {
 
   const categories = await prisma.expenseCategory.findMany({
     where: { tenantId: owner.tenantId },
-    orderBy: { sortOrder: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
 
   return NextResponse.json({ categories });

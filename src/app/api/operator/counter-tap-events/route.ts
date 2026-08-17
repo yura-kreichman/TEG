@@ -35,7 +35,7 @@ export async function GET() {
       name: true,
       iconKey: true,
       tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" }, select: { id: true, name: true, price: true } },
-      assets: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true, iconKey: true, photoUrl: true, colorTag: true, active: true } },
+      assets: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], select: { id: true, name: true, iconKey: true, photoUrl: true, colorTag: true, active: true } },
     },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });

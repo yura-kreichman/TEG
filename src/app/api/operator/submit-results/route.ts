@@ -92,7 +92,7 @@ export async function POST(request: Request) {
   // из /api/operator/submission-context, который уже её не отдаёт).
   const zones = await prisma.zone.findMany({
     where: { id: { in: zoneIds }, pointId: point.id, active: true },
-    include: { tariffs: { where: { deletedAt: null } }, assets: { orderBy: { sortOrder: "asc" } } },
+    include: { tariffs: { where: { deletedAt: null } }, assets: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] } },
   });
   const zoneById = new Map(zones.map((z) => [z.id, z]));
 

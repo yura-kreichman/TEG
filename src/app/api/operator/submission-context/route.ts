@@ -29,7 +29,7 @@ export async function GET() {
         orderBy: { order: "asc" as const },
         include: { options: { orderBy: { order: "asc" as const } } },
       },
-      assets: { orderBy: { sortOrder: "asc" as const } },
+      assets: { orderBy: [{ sortOrder: "asc" as const }, { createdAt: "asc" as const }] },
     },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
@@ -93,7 +93,7 @@ export async function GET() {
   // при вводе расхода на шаге "Расходы" мастера сдачи итогов.
   const expenseCategories = await prisma.expenseCategory.findMany({
     where: { tenantId: point.tenantId },
-    orderBy: { sortOrder: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     select: { id: true, name: true },
   });
 

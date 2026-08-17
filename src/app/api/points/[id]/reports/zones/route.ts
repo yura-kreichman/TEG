@@ -40,7 +40,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   const zones = await prisma.zone.findMany({
     where: isAllPoints ? { point: { tenantId: owner.tenantId } } : { pointId },
     include: {
-      assets: { orderBy: { sortOrder: "asc" } },
+      assets: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
       tariffs: { where: { deletedAt: null } },
       // Имя точки — нужно только в режиме "Все точки", чтобы отличать
       // одноимённые зоны разных точек в списке (запрос пользователя

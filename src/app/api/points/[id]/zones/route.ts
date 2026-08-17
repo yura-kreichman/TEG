@@ -22,7 +22,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/points/[id]
       where: { pointId },
       include: {
         tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" } },
-        assets: { orderBy: { sortOrder: "asc" } },
+        assets: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
         // Сотрудники с ВЫБОРОЧНЫМ доступом, включающим эту зону (запрос
         // пользователя 2026-07-28: "вместо тарифов — какой сотрудник
         // привязан к этой зоне"). Операторы с allZonesAccess=true сюда не

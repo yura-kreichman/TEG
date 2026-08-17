@@ -295,7 +295,7 @@ export async function GET(request: Request) {
       operator: { select: { name: true, colorTag: true } },
       zoneSubmissions: {
         include: {
-          zone: { include: { tariffs: true, assets: { orderBy: { sortOrder: "asc" } } } },
+          zone: { include: { tariffs: true, assets: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] } } },
           assetReadings: true,
         },
         // Карточки зон в порядке, который задал владелец (Zone.sortOrder,

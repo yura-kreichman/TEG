@@ -130,7 +130,7 @@ export async function getLandingRenderData(tenantId: string): Promise<LandingRen
           orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
           include: {
             tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" } },
-            assets: { orderBy: { sortOrder: "asc" } },
+            assets: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
           },
         },
       },

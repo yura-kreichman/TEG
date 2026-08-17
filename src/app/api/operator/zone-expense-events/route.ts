@@ -47,7 +47,7 @@ export async function GET() {
     prisma.expenseCategory.findMany({
       where: { tenantId: point.tenantId },
       select: { id: true, name: true },
-      orderBy: { sortOrder: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     }),
     getTenantDayContext(point.tenantId),
   ]);
