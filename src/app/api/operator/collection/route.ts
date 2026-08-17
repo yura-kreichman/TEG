@@ -76,6 +76,7 @@ export async function POST(request: Request) {
   // /api/zones/[id]/collection — тот же баг, найден пользователем 2026-07-25).
   announceCollection({
     tenantId: ctx.point.tenantId,
+    pointId: ctx.point.id,
     operationIds: [operationId],
     occurredAt,
     operatorName: ctx.operator.name,

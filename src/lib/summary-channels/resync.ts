@@ -11,6 +11,7 @@ import {
 import { sendPushToTenant } from "@/lib/push-notifications";
 import { formatCollectionAlertTelegram, formatShiftCloseSummaryTelegram } from "./telegram-format";
 import { notifyDailyCashLateSubmission } from "./daily-cash-trigger";
+import { pointNameIfMany } from "./dispatch";
 
 /**
  * Пересборка уже отправленных Telegram-сообщений после правки (требование
@@ -171,6 +172,21 @@ export async function resyncCollectionAlert(messageId: string, tenantId: string)
     const st = getDictionary(locale).summaryText;
     const data = {
       occurredAt: first.occurredAt,
+      // Точка отдельной строкой, когда их несколько (правило владельца
+      // 2026-08-17) — берём её у зоны первой строки инкассации.
+      pointName: await pointNameIfMany(
+        tenantId,
+        first.pointId
+          ? (await prisma.point.findUnique({ where: { id: first.pointId }, select: { name: true } }))?.name ?? null
+          : first.zoneId
+            ? (
+                await prisma.zone.findUnique({
+                  where: { id: first.zoneId },
+                  select: { point: { select: { name: true } } },
+                })
+              )?.point.name ?? null
+            : null
+      ),
       operatorName: first.performedByOperator?.name ?? null,
       operatorColorTag: first.performedByOperator?.colorTag ?? null,
       // Сумма — та, что в журнале сейчас: восстановить изначально введённую
@@ -253,6 +269,11 @@ export async function resyncShiftCloseMessage(
     const locale: Locale = tenant?.locale && isLocale(tenant.locale) ? tenant.locale : "ru";
     const text = formatShiftCloseSummaryTelegram(
       {
+        // Точка отдельной строкой, когда их несколько (правило владельца 2026-08-17).
+        pointName: await pointNameIfMany(
+          tenantId,
+          (await prisma.point.findUnique({ where: { id: shift.pointId }, select: { name: true } }))?.name ?? null
+        ),
         // Сюда приходят только правки владельца — отсюда ♛ рядом с именем.
         editedByOwner: true,
         operatorName: shift.operator.name,

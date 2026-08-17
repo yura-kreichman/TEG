@@ -11,7 +11,7 @@ import {
   validateShift,
 } from "@/lib/work-time";
 import { chargeSelfServiceAdvanceToZones, getPointCashBalance } from "@/lib/zone-balance";
-import { dispatchShiftCloseSummary } from "@/lib/summary-channels/dispatch";
+import { dispatchShiftCloseSummary, pointNameIfMany } from "@/lib/summary-channels/dispatch";
 import { SHIFT_CLOSE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { notifyDailyCashLateSubmission, onShiftClosed } from "@/lib/summary-channels/daily-cash-trigger";
 import { rememberShiftSummaryMessage } from "@/lib/summary-channels/resync";
@@ -237,6 +237,7 @@ export async function POST(request: Request) {
     dispatchShiftCloseSummary(
       point.tenantId,
       {
+        pointName: await pointNameIfMany(point.tenantId, point.name),
         operatorName: operator.name,
         operatorColorTag: operator.colorTag,
         startAt,

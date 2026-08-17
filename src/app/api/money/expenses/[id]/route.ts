@@ -5,6 +5,7 @@ import { editChatMessage } from "@/lib/telegram-bot";
 import { getDictionary } from "@/lib/i18n";
 import { isLocale, type Locale } from "@/lib/locales";
 import { formatExpenseAlertTelegram } from "@/lib/summary-channels/telegram-format";
+import { pointNameIfMany } from "@/lib/summary-channels/dispatch";
 import { removeOrMarkMessage, resyncAfterMoneyOpChange, sendUpdatedPush } from "@/lib/summary-channels/resync";
 
 /**
@@ -57,6 +58,7 @@ async function reEditExpenseAlert(operationId: string, tenantId: string): Promis
       operatorColorTag: op.performedByOperator?.colorTag ?? null,
       amount: Math.abs(Number(op.amount)),
       categoryName: op.expenseCategory?.name ?? null,
+      pointName: await pointNameIfMany(tenantId, op.zone ? (await prisma.zone.findUnique({ where: { id: op.zone ? op.zoneId! : "" }, select: { point: { select: { name: true } } } }))?.point.name ?? null : null),
       zoneName: op.zone?.name ?? "",
       zoneEmoji: op.zone?.telegramEmoji ?? null,
       comment: op.comment,

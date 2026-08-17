@@ -196,6 +196,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
   // пользователем 2026-07-25).
   announceCollection({
     tenantId: owner.tenantId,
+    pointId,
     operationIds,
     occurredAt: new Date(),
     operatorName: null,

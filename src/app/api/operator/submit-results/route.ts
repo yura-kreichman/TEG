@@ -908,6 +908,9 @@ export async function POST(request: Request) {
             point.tenantId,
             {
               pointName: point.name,
+              // Название точки отдельной строкой — только когда их несколько
+              // (правило владельца 2026-08-17).
+              showPointName: (await prisma.point.count({ where: { tenantId: point.tenantId } })) > 1,
               zoneName: s.zoneName,
               zoneEmoji: zone.telegramEmoji,
               accountingMode: zone.accountingMode as ZoneAccountingMode,

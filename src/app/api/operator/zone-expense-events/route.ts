@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { getTenantDayContext } from "@/lib/tenant-day";
 import { getBusinessDayBounds } from "@/lib/business-day";
-import { dispatchExpenseAlert } from "@/lib/summary-channels/dispatch";
+import { dispatchExpenseAlert, pointNameIfMany } from "@/lib/summary-channels/dispatch";
 import { EXPENSE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 
 /**
@@ -183,6 +183,7 @@ export async function POST(request: Request) {
       operatorColorTag: operator.colorTag ?? null,
       amount: Math.abs(Number(operation.amount)),
       categoryName: category?.name ?? null,
+      pointName: await pointNameIfMany(point.tenantId, point.name),
       zoneName: zone.name,
       zoneEmoji: zone.telegramEmoji,
       comment,

@@ -29,6 +29,9 @@ export interface ZoneSummaryData {
   // владельца 2026-08-16: единый маркер правки во всех сообщениях Telegram).
   editedByOwner?: boolean;
   pointName: string;
+  // Показывать ли название точки отдельной строкой — только когда у
+  // тенанта их больше одной (правило владельца 2026-08-17).
+  showPointName?: boolean;
   zoneName: string;
   // Zone.telegramEmoji — Unicode-эмодзи в заголовке Telegram-сводки, выбран
   // владельцем отдельно от SVG-иконки (фидбек пользователя 2026-07-12).
@@ -135,6 +138,12 @@ export interface DailyCashSummaryData {
 }
 
 export interface ShiftCloseSummaryData {
+  // Название точки отдельной строкой — ТОЛЬКО когда у тенанта их больше
+  // одной (правило владельца 2026-08-17: "это касается абсолютно всех
+  // сообщений в Телеграм"). null — точка одна, строку не показываем: она
+  // ничего не сообщает.
+  pointName?: string | null;
+
   // Смену или её аванс/премию правил Владелец — ♛ рядом с именем (см.
   // ZoneSummaryData.editedByOwner).
   editedByOwner?: boolean;
@@ -173,6 +182,12 @@ export interface ShiftCloseSummaryData {
  * что-то забрали.
  */
 export interface CollectionAlertData {
+  // Название точки отдельной строкой — ТОЛЬКО когда у тенанта их больше
+  // одной (правило владельца 2026-08-17: "это касается абсолютно всех
+  // сообщений в Телеграм"). null — точка одна, строку не показываем: она
+  // ничего не сообщает.
+  pointName?: string | null;
+
   occurredAt: Date;
   // null — инкассацию проводил сам Владелец из кабинета; форматтер ставит ♛
   // вместо имени (тот же приём, что в остальных местах).
@@ -198,6 +213,12 @@ export interface ChannelSendResult {
 // компактного/детального режима) — одно простое сообщение на каждое
 // подписание, по всем включённым каналам без отдельного тумблера типа.
 export interface InstructionAckData {
+  // Название точки отдельной строкой — ТОЛЬКО когда у тенанта их больше
+  // одной (правило владельца 2026-08-17: "это касается абсолютно всех
+  // сообщений в Телеграм"). null — точка одна, строку не показываем: она
+  // ничего не сообщает.
+  pointName?: string | null;
+
   fullName: string;
   instructionTitle: string;
   readingMinutes: number;
@@ -218,6 +239,12 @@ export interface InstructionAckData {
 // colorTag — цветовая метка карточки сотрудника (COLOR_TAG_PALETTE), тот же
 // эмодзи-квадрат, что уже стоит рядом с именем в сводке закрытия смены.
 export interface ExpenseAlertData {
+  // Название точки отдельной строкой — ТОЛЬКО когда у тенанта их больше
+  // одной (правило владельца 2026-08-17: "это касается абсолютно всех
+  // сообщений в Телеграм"). null — точка одна, строку не показываем: она
+  // ничего не сообщает.
+  pointName?: string | null;
+
   occurredAt: Date;
   operatorName: string;
   operatorColorTag: string | null;

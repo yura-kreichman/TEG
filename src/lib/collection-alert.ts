@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { dispatchCollectionAlert } from "@/lib/summary-channels/dispatch";
+import { dispatchCollectionAlert, pointNameIfMany } from "@/lib/summary-channels/dispatch";
 import { COLLECTION_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 
 /**
@@ -15,9 +15,18 @@ import { COLLECTION_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
  * Ничего не бросает: инкассация к этому моменту уже проведена, и недоступный
  * чат не должен превращаться в ошибку операции.
  */
+async function pointNameForCollection(tenantId: string, pointId: string | null): Promise<string | null> {
+  if (!pointId) return null;
+  const point = await prisma.point.findUnique({ where: { id: pointId }, select: { name: true } });
+  return pointNameIfMany(tenantId, point?.name ?? null);
+}
+
 export async function announceCollection(params: {
   tenantId: string;
   operationIds: string[];
+  // Точка инкассации — в сообщение попадёт отдельной строкой, но только
+  // когда точек у тенанта несколько (правило владельца 2026-08-17).
+  pointId?: string | null;
   occurredAt: Date;
   operatorName: string | null;
   operatorColorTag: string | null;
@@ -33,6 +42,7 @@ export async function announceCollection(params: {
 
     const results = await dispatchCollectionAlert(params.tenantId, {
       occurredAt: params.occurredAt,
+      pointName: await pointNameForCollection(params.tenantId, params.pointId ?? null),
       operatorName: params.operatorName,
       operatorColorTag: params.operatorColorTag,
       amount: params.amount,

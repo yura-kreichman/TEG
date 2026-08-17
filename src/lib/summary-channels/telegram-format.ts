@@ -93,6 +93,13 @@ const COMPACT_GRID_MAX_COLS = 2;
 // одна точка — строка вообще не показывается (data.showPointName, считается
 // в daily-cash-data.ts по количеству точек тенанта) — само собой разумеется,
 // какая это точка, называть её незачем.
+// Название точки отдельной строкой — во всех уведомлениях одинаково
+// (правило владельца 2026-08-17). Пусто, когда точка одна: pointName туда
+// просто не кладут.
+function pointLine(pointName: string | null | undefined): string[] {
+  return pointName ? [`<b>${escapeTelegramHtml(pointName)}</b>`] : [];
+}
+
 function dailyCashHeaderLines(data: DailyCashSummaryData, timezone: string, st: SummaryText): string[] {
   const lines: string[] = [];
   if (data.showPointName) lines.push(`<b>${escapeTelegramHtml(data.pointName)}</b>`);
@@ -301,8 +308,11 @@ export function formatZoneSummaryTelegram(
   timezone: string,
   st: SummaryText
 ): string {
+  // Точка первой строкой, когда их несколько (правило владельца 2026-08-17)
+  // — иначе непонятно, какая зона какой точки отчиталась.
+  const pointPrefix = data.showPointName ? pointLine(data.pointName) : [];
   if (settings.compact) {
-    const parts: string[] = [zoneHeader(data, settings.showOperator, timezone)];
+    const parts: string[] = [...pointPrefix, zoneHeader(data, settings.showOperator, timezone)];
 
     if (data.accountingMode === "cash_only") {
       parts.push(`💵 ${st.cashOnly}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
@@ -440,7 +450,7 @@ export function formatZoneSummaryTelegram(
     return parts.join("\n");
   }
 
-  const lines: string[] = [zoneHeader(data, settings.showOperator, timezone)];
+  const lines: string[] = [...pointPrefix, zoneHeader(data, settings.showOperator, timezone)];
 
   if (data.accountingMode === "cash_only") {
     lines.push("", `💵 ${st.cashOnly}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
@@ -685,7 +695,11 @@ export function formatShiftCloseSummaryTelegram(
     return [header, ...rows].join("\n");
   }
 
-  const lines: string[] = [`${operatorLabel} · ${st.shiftWord} ${formatDate(data.startAt, timezone)}`, ""];
+  const lines: string[] = [
+    ...pointLine(data.pointName),
+    `${operatorLabel} · ${st.shiftWord} ${formatDate(data.startAt, timezone)}`,
+    "",
+  ];
 
   if (settings.showPeriod) lines.push(`🕐 ${st.period}: ${formatLocalTime(data.startAt, timezone)} – ${formatLocalTime(data.endAt, timezone)}`);
   if (settings.showHours) lines.push(`▶️ ${st.hoursWorked}: ${formatDuration(data.minutes)}`);
@@ -703,7 +717,10 @@ export function formatInstructionAckTelegram(data: InstructionAckData, st: Summa
   // Без спрягаемого глагола ("ознакомился"/"ознакомилась") — пол сотрудника
   // приложение не хранит, а безличная формулировка "инструктаж пройден"
   // (SummaryText.instructionPassed) не требует согласования ни в одном языке.
-  return `✅ <b>${name}</b> · «${title}» · ${data.readingMinutes} ${minutesShort} · ${st.instructionPassed}`;
+  return [
+    ...pointLine(data.pointName),
+    `✅ <b>${name}</b> · «${title}» · ${data.readingMinutes} ${minutesShort} · ${st.instructionPassed}`,
+  ].join("\n");
 }
 
 /**
@@ -806,10 +823,14 @@ export function formatCollectionAlertTelegram(
   const when = `${formatSummaryDate(data.occurredAt, "/", timezone, false)}, ${formatLocalTime(data.occurredAt, timezone)}`;
   const lines = [
     `🏦 <b>${escapeTelegramHtml(title)}</b> — ${when}`,
+    ...pointLine(data.pointName),
     `${escapeTelegramHtml(collectionWho(data))}: <b>${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}</b>`,
   ];
-  const parts = collectionParts(data, st, locale, currency);
-  if (parts.length > 0) lines.push(escapeTelegramHtml(parts.join(" · ")));
+  // Каждая зона своей строкой (правка владельца 2026-08-17): в одну строку
+  // через " · " они переносились и читались слитно.
+  for (const part of collectionParts(data, st, locale, currency)) {
+    lines.push(escapeTelegramHtml(part));
+  }
   return lines.join("\n");
 }
 
@@ -826,8 +847,7 @@ export function formatCollectionAlertPush(
   const bodyLines = [
     `${collectionWho(data)}: ${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}`,
   ];
-  const parts = collectionParts(data, st, locale, currency);
-  if (parts.length > 0) bodyLines.push(parts.join(" · "));
+  for (const part of collectionParts(data, st, locale, currency)) bodyLines.push(part);
   return { title: `🏦 ${title} — ${when}`, body: bodyLines.join("\n") };
 }
 
@@ -842,6 +862,7 @@ export function formatExpenseAlertTelegram(
   const name = `${escapeTelegramHtml(data.operatorName)}${data.editedByOwner ? " ♛" : ""}`;
   const lines = [
     `🛒 <b>${st.expenseAlertTitle}</b> — ${formatSummaryDate(data.occurredAt, "/", timezone, false)}, ${formatLocalTime(data.occurredAt, timezone)}`,
+    ...pointLine(data.pointName),
     `${mark ? `${mark} ` : ""}${name}: <b>${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}</b>`,
     // Названия в Telegram не подрезаем — ширина сообщения там не ограничена,
     // усечение нужно только шторке уведомлений телефона (Number.MAX_SAFE_INTEGER
@@ -881,9 +902,8 @@ export function formatGoodsAlertLines(
   const crown = data.editedByOwner ? " ♛" : "";
   const lines: string[] = [];
   if (data.voided) lines.push(st.goodsAlertVoided);
-  lines.push(
-    `${mark ? `${mark} ` : ""}${data.operatorName}${crown}${data.pointName ? ` · ${data.pointName}` : ""}`
-  );
+  if (data.pointName) lines.push(data.pointName);
+  lines.push(`${mark ? `${mark} ` : ""}${data.operatorName}${crown}`);
   lines.push(`${st.cash}: ${money(data.actualCash)}`);
   lines.push(`${st.mobile}: ${money(data.actualMobile)}`);
   // Баланс — сразу за остальными способами оплаты (правка владельца
@@ -904,14 +924,15 @@ export function formatGoodsAlertTelegram(
   const money = (value: number) => formatMoneyWithCurrency(value, locale, currency as CurrencyCode | null);
   const mark = colorTagToEmoji(data.operatorColorTag);
   const name = `${escapeTelegramHtml(data.operatorName)}${data.editedByOwner ? " ♛" : ""}`;
-  const point = data.pointName ? ` · ${escapeTelegramHtml(data.pointName)}` : "";
+
   const lines = [
     `🛍 <b>${st.goodsAlertTitle}</b> — ${formatSummaryDate(data.occurredAt, "/", timezone, false)}, ${formatLocalTime(data.occurredAt, timezone)}`,
   ];
   // Аннулированная сверка: сообщение остаётся в чате (Telegram не даёт
   // удалять старше 48 часов), но текст прямо говорит, что записи больше нет.
   if (data.voided) lines.push(`<i>${escapeTelegramHtml(st.goodsAlertVoided)}</i>`);
-  lines.push(`${mark ? `${mark} ` : ""}${name}${point}`);
+  lines.push(...pointLine(data.pointName));
+  lines.push(`${mark ? `${mark} ` : ""}${name}`);
   lines.push(`${st.cash}: <b>${money(data.actualCash)}</b>`);
   lines.push(`${st.mobile}: <b>${money(data.actualMobile)}</b>`);
   // Баланс идёт следом за наличными и безналом — это тоже способ оплаты, и

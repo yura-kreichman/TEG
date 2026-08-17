@@ -14,7 +14,7 @@ import {
 } from "@/lib/work-time";
 import { chargeSelfServiceAdvanceToZones, getPointCashBalance } from "@/lib/zone-balance";
 import { periodBoundsUtc } from "@/lib/business-day";
-import { dispatchShiftCloseSummary } from "@/lib/summary-channels/dispatch";
+import { dispatchShiftCloseSummary, pointNameIfMany } from "@/lib/summary-channels/dispatch";
 import { SHIFT_CLOSE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
@@ -263,6 +263,7 @@ export async function POST(request: Request) {
     dispatchShiftCloseSummary(
       point.tenantId,
       {
+        pointName: await pointNameIfMany(point.tenantId, point.name),
         operatorName: operator.name,
         operatorColorTag: operator.colorTag,
         startAt,

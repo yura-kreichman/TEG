@@ -65,6 +65,7 @@ export async function POST(request: Request) {
   // Абонементов (2026-08-16).
   announceCollection({
     tenantId: ctx.point.tenantId,
+    pointId: ctx.point.id,
     operationIds: [result.operationId],
     occurredAt: result.occurredAt,
     operatorName: ctx.operator.name,

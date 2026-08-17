@@ -160,6 +160,7 @@ async function reEditZoneSummaryMessage(
   const text = formatZoneSummaryTelegram(
     {
       pointName: point.name,
+      showPointName: (await prisma.point.count({ where: { tenantId } })) > 1,
       zoneName: zs.zone.name,
       zoneEmoji: zs.zone.telegramEmoji,
       accountingMode: zs.zone.accountingMode as import("@/lib/results-calc").ZoneAccountingMode,

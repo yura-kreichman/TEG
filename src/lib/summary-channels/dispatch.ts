@@ -102,6 +102,18 @@ async function getTenantInfo(
 // PushNotificationSettings.<type>; сам dispatch вызывается только когда
 // settings.enabled для этого типа сводки уже true (см. вызовы в
 // submit-results/work-time-shifts/check-out), повторно это здесь не проверяем.
+/**
+ * Название точки для уведомления — только когда у тенанта их больше одной
+ * (правило владельца 2026-08-17: "если у Владельца больше одной Точки, то
+ * должно быть отдельной строкой название точки"). При единственной точке
+ * возвращает null, и форматтер строку не рисует: она ничего не сообщает.
+ */
+export async function pointNameIfMany(tenantId: string, pointName: string | null | undefined): Promise<string | null> {
+  if (!pointName) return null;
+  const count = await prisma.point.count({ where: { tenantId } });
+  return count > 1 ? pointName : null;
+}
+
 async function pushEnabledFor(tenantId: string, key: keyof PushNotificationSettingsData): Promise<boolean> {
   const settings = await prisma.pushNotificationSettings.findUnique({ where: { tenantId } });
   return settings ? settings[key] : PUSH_NOTIFICATION_DEFAULTS[key];
@@ -337,7 +349,11 @@ export async function dispatchShiftCheckin(
   const mark = colorTagToEmoji(operatorColorTag);
   await sendPushToTenant(tenantId, {
     title: `▶️ ${tenant.t.pushSettings.shiftCheckinLabel}`,
-    body: `${mark ? `${mark} ` : ""}${operatorName} · ${pointName}`,
+    // Точка — отдельной строкой и только когда их несколько (правило
+    // владельца 2026-08-17).
+    body: [await pointNameIfMany(tenantId, pointName), `${mark ? `${mark} ` : ""}${operatorName}`]
+      .filter(Boolean)
+      .join("\n"),
     url: `/operators/${operatorId}`,
   }).catch((err) => console.error("push dispatch failed", { kind: "shiftCheckin", tenantId, err }));
 }

@@ -77,6 +77,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
 
   announceCollection({
     tenantId: owner.tenantId,
+    pointId,
     operationIds: [result.operationId],
     occurredAt: result.occurredAt,
     operatorName: null,
