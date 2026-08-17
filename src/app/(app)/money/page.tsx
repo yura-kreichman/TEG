@@ -468,26 +468,30 @@ export default function MoneyPage() {
               ].filter((v): v is number => v !== null);
               const businessRowScale = computeMoneyDisplayScale(
                 Math.max(...businessRowValues.map((v) => formatMoney(v, locale).length)),
-                { thresholdLength: 4, perCharReduction: 0.1, minScale: 0.6 }
+                // Ужимаем только по-настоящему длинные суммы (правка владельца
+                // 2026-08-17: "несмотря на небольшие суммы текст мелкий") —
+                // раньше уменьшение начиналось уже с 5 символов, то есть
+                // практически всегда.
+                { thresholdLength: 8, perCharReduction: 0.07, minScale: 0.6 }
               );
               return (
                 <div className="flex border-t border-border pt-3.5 tabular-nums">
                   <div className="flex-1">
                     <p className="text-caption-airbnb">{t.money.revenue}</p>
-                    <p className="text-[clamp(0.875rem,3.75vw,1.0625rem)] font-bold">
+                    <p className="text-[clamp(1rem,4.5vw,1.25rem)] font-bold">
                       <Money value={report.business.revenue} size="display" displayScale={businessRowScale} />
                     </p>
                   </div>
                   <div className="flex-1 border-l border-border pl-4">
                     <p className="text-caption-airbnb">{t.money.expense}</p>
-                    <p className="text-[clamp(0.875rem,3.75vw,1.0625rem)] font-bold">
+                    <p className="text-[clamp(1rem,4.5vw,1.25rem)] font-bold">
                       <Money value={Math.abs(report.business.expense)} size="display" displayScale={businessRowScale} />
                     </p>
                   </div>
                   {report.business.salary !== 0 && (
                     <div className="flex-1 border-l border-border pl-4">
                       <p className="text-caption-airbnb">{t.money.salaryLabel}</p>
-                      <p className="text-[clamp(0.875rem,3.75vw,1.0625rem)] font-bold">
+                      <p className="text-[clamp(1rem,4.5vw,1.25rem)] font-bold">
                         <Money value={Math.abs(report.business.salary)} size="display" displayScale={businessRowScale} />
                       </p>
                     </div>
@@ -495,11 +499,13 @@ export default function MoneyPage() {
                   {report.business.difference !== 0 && (
                     <div className="flex-1 border-l border-border pl-4">
                       <p className="text-caption-airbnb">{t.money.difference}</p>
-                      <p className={cn("text-[clamp(0.875rem,3.75vw,1.0625rem)] font-bold", report.business.difference >= 0 ? "text-primary" : "text-destructive")}>
+                      <p className={cn("text-[clamp(1rem,4.5vw,1.25rem)] font-bold", report.business.difference >= 0 ? "text-primary" : "text-destructive")}>
                         {report.business.difference >= 0 ? "+" : ""}
                         <Money value={report.business.difference} size="display" displayScale={businessRowScale} />
                       </p>
-                      <p className="text-[0.65625rem] leading-tight text-muted-foreground">{t.money.differenceHint}</p>
+                      {/* Пояснение "Факт минус расчёт по счётчикам" убрано
+                          (решение владельца 2026-08-17): мелкая подпись под
+                          числом занимала место и ужимала весь ряд. */}
                     </div>
                   )}
                 </div>

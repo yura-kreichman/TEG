@@ -1086,9 +1086,12 @@ export default function StaysZonePage() {
                               className="text-xl font-extrabold text-primary sm:text-2xl md:text-3xl"
                               size="display"
                               displayScale={computeMoneyDisplayScale(formatMoney(liveAmount, locale).length, {
-                                thresholdLength: 2,
-                                perCharReduction: 0.12,
-                                minScale: 0.55,
+                                // Плашка узкая, но прежние пороги ужимали сумму
+                                // до предела уже на 12 000 ₽ (правка владельца
+                                // 2026-08-17).
+                                thresholdLength: 5,
+                                perCharReduction: 0.09,
+                                minScale: 0.6,
                               })}
                             />
                           )}

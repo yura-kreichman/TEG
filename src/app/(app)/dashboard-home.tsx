@@ -493,7 +493,10 @@ export function OwnerDashboardCard({
                           formatMoney(summary.revenue!, locale).length,
                           formatMoney(Math.abs(summary.expenses!), locale).length
                         ),
-                        { thresholdLength: 4, perCharReduction: 0.1, minScale: 0.6 }
+                        // Ужимаем только по-настоящему длинные суммы (правка
+                        // владельца 2026-08-17): при прежнем пороге в 4 символа
+                        // текст мельчал уже с полутора тысяч.
+                        { thresholdLength: 8, perCharReduction: 0.07, minScale: 0.6 }
                       );
                       return (
                         <div className="flex border-t border-border pt-3 tabular-nums">
