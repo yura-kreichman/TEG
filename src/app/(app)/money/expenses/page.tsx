@@ -392,9 +392,18 @@ export default function ExpensesRegisterPage() {
         {editing && (
           <div className="flex flex-col gap-4 pt-2">
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.money.editExpenseTitle}</h2>
-            <p className="-mt-2 text-caption-airbnb text-muted-foreground">
+            {/* Сотрудник — тем же чипом, что в строке реестра над шторкой
+                (правка владельца 2026-08-17): имя шло голым текстом. */}
+            <p className="-mt-2 flex items-center gap-1.5 text-caption-airbnb text-muted-foreground">
               {formatTime(editing.occurredAt)}
-              {editing.operatorName ? ` · ${editing.operatorName}` : ""}
+              <PerformedByTag
+                name={editing.operatorName}
+                isOwner={false}
+                avatarUrl={null}
+                iconKey={null}
+                colorTag={editing.operatorColorTag}
+                showIcon
+              />
             </p>
 
             {/* Раскладка — как у правки инкассации и аванса/премии: подпись над

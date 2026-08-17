@@ -393,10 +393,18 @@ export default function TasksKanbanPage({ params }: { params: Promise<{ pointId:
                               colorTag={op.colorTag}
                             />
                           ))}
+                          {/* Тот же компонент, что у чипов сотрудников рядом
+                              (правка владельца 2026-08-17): свой <span> имел
+                              прежние отступы и был выше соседей в ряду. */}
                           {task.assignedUsers.map((u) => (
-                            <span key={u.id} className="rounded-full bg-surface-0 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-                              {t.tasks.meLabel}
-                            </span>
+                            <PerformedByTag
+                              key={u.id}
+                              name={t.tasks.meLabel}
+                              isOwner={false}
+                              avatarUrl={null}
+                              iconKey={null}
+                              colorTag={null}
+                            />
                           ))}
                         </>
                       )}

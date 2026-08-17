@@ -250,6 +250,9 @@ export async function GET(request: Request) {
         amount: Math.abs(Number(op.amount)),
         pool: (op.type === "advance" ? "advance_taken" : "bonus_taken") as "advance_taken" | "bonus_taken",
         operatorName: op.beneficiaryOperator?.name ?? op.performedByOperator?.name ?? null,
+        // Цветовая метка — для единого чипа сотрудника (правка владельца
+        // 2026-08-17: в реестре имя выводилось голым текстом внутри подписи).
+        operatorColorTag: op.beneficiaryOperator?.colorTag ?? op.performedByOperator?.colorTag ?? null,
         // Переход в карточку сотрудника (запрос пользователя 2026-08-14) —
         // правка и удаление этих строк живут именно там, отсюда они только
         // видны. Тот же приём, что в реестре "Авансы и премии". Получатель, а

@@ -69,6 +69,7 @@ interface CollectionEntry {
   pool: "abonement" | "goods" | "advance" | "advance_taken" | "bonus_taken" | null;
   // Только у advance_taken/bonus_taken — кто забрал.
   operatorName?: string | null;
+  operatorColorTag?: string | null;
   // Он же id — строка ведёт в его карточку, где эту запись можно поправить.
   operatorId?: string | null;
   // Кто физически провёл инкассацию (обратная связь пользователя 2026-08-02:
@@ -463,7 +464,10 @@ export default function ZoneBalancesPage() {
   // Подпись строки реестра для нового типа "забрал сам" (запрос пользователя
   // 2026-07-25) — имя + Аванс/Премия, а не просто одно из двух: без имени
   // непонятно, кто именно взял, если сотрудников на точке несколько.
-  function collectionEntryLabel(c: CollectionEntry): string {
+  // withName — только для печатного слипа: там чипов нет, и имя должно
+  // остаться в тексте. На экране имя показывает единый чип сотрудника
+  // (правка владельца 2026-08-17).
+  function collectionEntryLabel(c: CollectionEntry, withName = false): string {
     if (c.zoneName) return c.zoneName;
     if (c.pool === "abonement") return t.money.abonementCashLabel;
     if (c.pool === "goods") return t.goods.navLabel;
@@ -473,7 +477,7 @@ export default function ZoneBalancesPage() {
       // "Аванс · Женя", не "Женя · Аванс" (запрос пользователя 2026-07-25:
       // сначала что произошло, потом кто) — иконка перед этим текстом, время
       // перед иконкой, см. рендер ниже.
-      return c.operatorName ? `${kind} · ${c.operatorName}` : kind;
+      return withName && c.operatorName ? `${kind} · ${c.operatorName}` : kind;
     }
     return "";
   }
@@ -500,7 +504,7 @@ export default function ZoneBalancesPage() {
       // разбивку в этом случае не печатаем (см. buildCollectionSlipData).
       lines:
         act.items.length > 1
-          ? act.items.map((c) => ({ label: collectionEntryLabel(c), amount: c.amount }))
+          ? act.items.map((c) => ({ label: collectionEntryLabel(c, true), amount: c.amount }))
           : [],
       totalLabel: t.money.collectionAmountLabel,
       total: formatMoneyWithCurrency(act.total, locale, currency),
@@ -1090,18 +1094,27 @@ export default function ZoneBalancesPage() {
                                 шапки нет. У advance_taken/bonus_taken имя уже
                                 внутри подписи ("Аванс забрал X"), повторять
                                 не нужно. */}
-                            {c.pool !== "advance_taken" &&
-                              c.pool !== "bonus_taken" &&
-                              (
-                                <PerformedByTag
-                                  name={c.performerName ?? null}
-                                  isOwner={!!c.byOwner}
-                                  avatarUrl={null}
-                                  iconKey={null}
-                                  colorTag={c.performerColorTag ?? null}
-                                  showIcon
-                                />
-                              )}
+                            {/* Единый чип сотрудника во всех реестрах (правка
+                                владельца 2026-08-17): у строк "забрал сам"
+                                имя раньше шло текстом внутри подписи. Здесь
+                                это получатель аванса/премии, у остальных
+                                строк — тот, кто провёл инкассацию. */}
+                            <PerformedByTag
+                              name={
+                                c.pool === "advance_taken" || c.pool === "bonus_taken"
+                                  ? (c.operatorName ?? null)
+                                  : (c.performerName ?? null)
+                              }
+                              isOwner={c.pool === "advance_taken" || c.pool === "bonus_taken" ? false : !!c.byOwner}
+                              avatarUrl={null}
+                              iconKey={null}
+                              colorTag={
+                                c.pool === "advance_taken" || c.pool === "bonus_taken"
+                                  ? (c.operatorColorTag ?? null)
+                                  : (c.performerColorTag ?? null)
+                              }
+                              showIcon
+                            />
                           </span>
                           <span className="flex shrink-0 items-center gap-2">
                             <span
