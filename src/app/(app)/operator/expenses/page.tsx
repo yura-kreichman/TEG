@@ -18,6 +18,7 @@ import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { Skeleton, SkeletonListRows } from "@/components/ui/skeleton";
 import { Money } from "@/components/money";
+import { PerformedByTag } from "@/components/performed-by-tag";
 import { ActionToast } from "@/components/action-toast";
 import { useI18n } from "@/components/i18n-provider";
 import { formatTime } from "@/lib/datetime-format";
@@ -48,6 +49,8 @@ interface ExpenseEvent {
   amount: number;
   categoryName: string | null;
   comment: string | null;
+  performedBy?: string | null;
+  performedByColorTag?: string | null;
   createdAt: string;
 }
 
@@ -217,10 +220,22 @@ export default function OperatorExpensesPage() {
                         <div className="truncate text-body-airbnb font-semibold">
                           {e.categoryName ?? t.operatorApp.submit.expensesTitle}
                         </div>
-                        <p className="truncate text-caption-airbnb text-muted-foreground">
-                          {formatTime(e.createdAt)}
-                          {zones.length > 1 ? ` · ${e.zoneName}` : ""}
-                          {e.comment ? ` · ${e.comment}` : ""}
+                        {/* Кто внёс — список общий на точку, и удалить запись
+                            может любой (правка владельца 2026-08-17). */}
+                        <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-caption-airbnb text-muted-foreground">
+                          <span className="truncate">
+                            {formatTime(e.createdAt)}
+                            {zones.length > 1 ? ` · ${e.zoneName}` : ""}
+                            {e.comment ? ` · ${e.comment}` : ""}
+                          </span>
+                          <PerformedByTag
+                            name={e.performedBy ?? null}
+                            isOwner={false}
+                            avatarUrl={null}
+                            iconKey={null}
+                            colorTag={e.performedByColorTag ?? null}
+                            showIcon
+                          />
                         </p>
                       </div>
                       <span className="shrink-0 tabular-nums font-bold">

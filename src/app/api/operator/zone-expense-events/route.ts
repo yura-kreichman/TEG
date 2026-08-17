@@ -79,7 +79,13 @@ export async function GET() {
       },
       orderBy: { occurredAt: "desc" },
       take: 200,
-      include: { expenseCategory: { select: { name: true } } },
+      include: {
+        expenseCategory: { select: { name: true } },
+        // Кто внёс расход (правка владельца 2026-08-17): список общий на
+        // точку, и удалить запись может любой сотрудник — он должен видеть,
+        // чужая она или своя.
+        performedByOperator: { select: { name: true, colorTag: true } },
+      },
     }),
     prisma.zoneSubmission.findMany({
       where: { zoneId: { in: zoneIds }, createdAt: { gte: bounds.start, lt: bounds.end } },
@@ -103,6 +109,8 @@ export async function GET() {
       categoryName: e.expenseCategory?.name ?? null,
       comment: e.comment,
       createdAt: e.occurredAt,
+      performedBy: e.performedByOperator?.name ?? null,
+      performedByColorTag: e.performedByOperator?.colorTag ?? null,
     })),
   });
 }

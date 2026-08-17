@@ -21,6 +21,8 @@ export async function GET() {
     where: { pointId: ctx.point.id },
     include: {
       lines: { include: { goods: { select: { name: true } } } },
+      // Кто отложил заказ — список общий на точку (правка владельца 2026-08-17).
+      performedByOperator: { select: { name: true, colorTag: true } },
       // Привязка клиента (запрос пользователя 2026-07-31, "по тому же
       // принципу, что в Посещениях") — та же справочная метка, что
       // Launch.linkedClientWallet, нужна и в списке (иконка на чипе), и в
@@ -39,6 +41,8 @@ export async function GET() {
       number: o.number,
       label: o.label,
       createdAt: o.createdAt,
+      performedBy: o.performedByOperator?.name ?? null,
+      performedByColorTag: o.performedByOperator?.colorTag ?? null,
       total: o.lines.reduce((sum, l) => sum + Number(l.priceSnapshot) * l.quantity, 0),
       lines: o.lines.map((l) => ({
         goodsId: l.goodsId,

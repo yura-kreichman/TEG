@@ -20,6 +20,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
+import { PerformedByTag } from "@/components/performed-by-tag";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +77,8 @@ interface HeldOrderCtx {
   number: number;
   label: string | null;
   createdAt: string;
+  performedBy?: string | null;
+  performedByColorTag?: string | null;
   total: number;
   lines: { goodsId: string; goodsName: string; quantity: number; priceSnapshot: number }[];
   linkedClient: LinkedClientInfo | null;
@@ -991,6 +994,21 @@ export default function GoodsPage() {
                 </h2>
               ) : (
                 <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.tickets.cartTitle}</h2>
+              )}
+              {/* Кто отложил заказ — заказы общие на точку, и продолжить
+                  чужой может любой сотрудник (правка владельца 2026-08-17).
+                  В самой ленте чипов места нет, поэтому здесь. */}
+              {editingOrder?.performedBy && (
+                <p className="mt-1 flex items-center gap-1.5 text-caption-airbnb text-muted-foreground">
+                  <PerformedByTag
+                    name={editingOrder.performedBy}
+                    isOwner={false}
+                    avatarUrl={null}
+                    iconKey={null}
+                    colorTag={editingOrder.performedByColorTag ?? null}
+                    showIcon
+                  />
+                </p>
               )}
             </div>
           )}

@@ -20,6 +20,7 @@ import { AbonementPaymentSheet } from "@/components/abonement-payment-sheet";
 import { SplitPaymentSheet } from "@/components/split-payment-sheet";
 import type { PaymentLegInput } from "@/lib/payment-split";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
+import { PerformedByTag } from "@/components/performed-by-tag";
 import { colorTagGradient } from "@/lib/utils";
 import { Money } from "@/components/money";
 import { useI18n } from "@/components/i18n-provider";
@@ -67,6 +68,8 @@ interface ReturnEvent {
   zoneId: string;
   zoneName: string;
   createdAt: string;
+  performedBy?: string | null;
+  performedByColorTag?: string | null;
 }
 
 interface RecentTap {
@@ -79,6 +82,8 @@ interface RecentTap {
   paymentMethod: "cash" | "mobile" | "abonement" | null;
   voidedAt: string | null;
   createdAt: string;
+  performedBy?: string | null;
+  performedByColorTag?: string | null;
 }
 
 /**
@@ -554,7 +559,19 @@ export default function OperatorCountersPage() {
                       </div>
                       <div className="min-w-0 grow">
                         <div className="truncate text-body-airbnb font-semibold">{e.zoneName}</div>
-                        <p className="text-caption-airbnb text-muted-foreground">{formatTime(e.createdAt)}</p>
+                        {/* Кто отметил — журнал общий на зону (правка
+                            владельца 2026-08-17). */}
+                        <p className="flex flex-wrap items-center gap-x-1.5 text-caption-airbnb text-muted-foreground">
+                          {formatTime(e.createdAt)}
+                          <PerformedByTag
+                            name={e.performedBy ?? null}
+                            isOwner={false}
+                            avatarUrl={null}
+                            iconKey={null}
+                            colorTag={e.performedByColorTag ?? null}
+                            showIcon
+                          />
+                        </p>
                       </div>
                       <IconActionButton icon={Trash2} onClick={() => deleteEvent(e.id)} label={t.common.delete} destructive />
                     </div>
@@ -770,9 +787,20 @@ export default function OperatorCountersPage() {
                       <div className="truncate text-body-airbnb font-semibold">
                         {tap.assetName} · {tap.tariffName}
                       </div>
-                      <p className="text-caption-airbnb text-muted-foreground">
-                        {formatTime(tap.createdAt)}
-                        {tap.voidedAt && ` · ${t.operatorApp.counters.tapVoidedLabel}`}
+                      <p className="flex flex-wrap items-center gap-x-1.5 text-caption-airbnb text-muted-foreground">
+                        <span>
+                          {formatTime(tap.createdAt)}
+                          {tap.voidedAt && ` · ${t.operatorApp.counters.tapVoidedLabel}`}
+                        </span>
+                        {/* Кто тапнул — отменить тап может любой сотрудник зоны. */}
+                        <PerformedByTag
+                          name={tap.performedBy ?? null}
+                          isOwner={false}
+                          avatarUrl={null}
+                          iconKey={null}
+                          colorTag={tap.performedByColorTag ?? null}
+                          showIcon
+                        />
                       </p>
                     </div>
                     <IconActionButton

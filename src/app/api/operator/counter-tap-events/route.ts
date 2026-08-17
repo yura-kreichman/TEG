@@ -54,7 +54,18 @@ export async function GET() {
       OR: zones.map((z) => ({ zoneId: z.id, createdAt: { gt: boundaryByZone.get(z.id) ?? new Date(0) } })),
     },
     orderBy: { createdAt: "desc" },
-    select: { id: true, zoneId: true, assetId: true, tariffId: true, paymentMethod: true, voidedAt: true, createdAt: true },
+    select: {
+      id: true,
+      zoneId: true,
+      assetId: true,
+      tariffId: true,
+      paymentMethod: true,
+      voidedAt: true,
+      createdAt: true,
+      // Кто тапнул — список общий на зону, и отменить тап может любой
+      // сотрудник (правка владельца 2026-08-17).
+      operator: { select: { name: true, colorTag: true } },
+    },
   });
 
   // Показание считает ВСЕ тапы (запрос пользователя 2026-07-25: реальный
@@ -149,6 +160,8 @@ export async function GET() {
       paymentMethod: e.paymentMethod,
       voidedAt: e.voidedAt,
       createdAt: e.createdAt,
+      performedBy: e.operator?.name ?? null,
+      performedByColorTag: e.operator?.colorTag ?? null,
     })),
     // Кнопка "Баланс" на способе оплаты тапа (запрос пользователя 2026-07-25) —
     // тот же тумблер, что уже гейтит "Списать с баланса"/весь модуль Клиенты.

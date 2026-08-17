@@ -48,6 +48,8 @@ export async function GET() {
     where: { zoneId: { in: zones.map((z) => z.id) } },
     orderBy: { createdAt: "desc" },
     take: 200,
+    // Автор отметки — список общий на зону (правка владельца 2026-08-17).
+    include: { operator: { select: { name: true, colorTag: true } } },
   });
   // Только текущий (ещё не сданный) период каждой зоны — события до её
   // последней сдачи относятся к уже закрытому периоду, показывать их тут
@@ -66,6 +68,9 @@ export async function GET() {
       zoneId: e.zoneId,
       zoneName: zoneById.get(e.zoneId)?.name ?? "",
       createdAt: e.createdAt,
+      // Кто отметил возврат — список общий на зону (правка владельца 2026-08-17).
+      performedBy: e.operator?.name ?? null,
+      performedByColorTag: e.operator?.colorTag ?? null,
     })),
   });
 }
