@@ -41,10 +41,22 @@ export async function POST(request: Request, ctx: RouteContext<"/api/assets/[id]
 
   const current = siblings[index];
   const neighbor = siblings[swapIndex];
-  await prisma.$transaction([
-    prisma.asset.update({ where: { id: current.id }, data: { sortOrder: neighbor.sortOrder } }),
-    prisma.asset.update({ where: { id: neighbor.id }, data: { sortOrder: current.sortOrder } }),
-  ]);
+  // Дубли sortOrder делают обмен местами бессмысленным — см. тот же разбор в
+  // /api/operators/[id]/move (2026-08-16).
+  if (current.sortOrder === neighbor.sortOrder) {
+    await prisma.$transaction(
+      siblings.map((s, i) => prisma.asset.update({ where: { id: s.id }, data: { sortOrder: i } }))
+    );
+    await prisma.$transaction([
+      prisma.asset.update({ where: { id: current.id }, data: { sortOrder: swapIndex } }),
+      prisma.asset.update({ where: { id: neighbor.id }, data: { sortOrder: index } }),
+    ]);
+  } else {
+    await prisma.$transaction([
+      prisma.asset.update({ where: { id: current.id }, data: { sortOrder: neighbor.sortOrder } }),
+      prisma.asset.update({ where: { id: neighbor.id }, data: { sortOrder: current.sortOrder } }),
+    ]);
+  }
 
   // Аудит 2026-07-31: единственная мутация актива, не ревалидирующая
   // публичный Лендинг — get-render-data.ts сортирует "витрину" зоны по

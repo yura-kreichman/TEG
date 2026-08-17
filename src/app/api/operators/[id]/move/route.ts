@@ -43,10 +43,26 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operators/[
 
   const current = siblings[index];
   const neighbor = siblings[swapIndex];
-  await prisma.$transaction([
-    prisma.operator.update({ where: { id: current.id }, data: { sortOrder: neighbor.sortOrder } }),
-    prisma.operator.update({ where: { id: neighbor.id }, data: { sortOrder: current.sortOrder } }),
-  ]);
+  // Одинаковый sortOrder у соседей — обмен местами не сдвинул бы ничего, и
+  // стрелка выглядела бы сломанной (реальный случай, найден владельцем
+  // 2026-08-16: у двух сотрудников КидсБурга стояло sortOrder=1, и порядок не
+  // менялся вовсе). В этом случае сначала раздаём позиции заново по текущему
+  // видимому порядку и только потом меняем пару местами — тот же приём, что
+  // в /api/zones/[id]/move.
+  if (current.sortOrder === neighbor.sortOrder) {
+    await prisma.$transaction(
+      siblings.map((s, i) => prisma.operator.update({ where: { id: s.id }, data: { sortOrder: i } }))
+    );
+    await prisma.$transaction([
+      prisma.operator.update({ where: { id: current.id }, data: { sortOrder: swapIndex } }),
+      prisma.operator.update({ where: { id: neighbor.id }, data: { sortOrder: index } }),
+    ]);
+  } else {
+    await prisma.$transaction([
+      prisma.operator.update({ where: { id: current.id }, data: { sortOrder: neighbor.sortOrder } }),
+      prisma.operator.update({ where: { id: neighbor.id }, data: { sortOrder: current.sortOrder } }),
+    ]);
+  }
 
   return NextResponse.json({ ok: true });
 }
