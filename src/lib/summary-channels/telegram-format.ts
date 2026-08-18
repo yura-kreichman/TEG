@@ -784,26 +784,28 @@ export function formatExpenseAlertLines(
 }
 
 /**
- * Инкассация — формат владельца 2026-08-16, три строки:
+ * Инкассация — формат владельца 2026-08-16:
  *   🏦 ИНКАССАЦИЯ (Аванс) — 16/08, 00:30
  *   🟩 Женя ♛: 1 500 ₽
- *   🎠 Машинки 700 ₽ · 🛍 Товары 200 ₽
- * Третья строка — из каких касс собраны деньги: зоны своими эмодзи (те же,
- * что в сводке по зоне), пулы товаров и абонементов — фиксированными.
+ *   > Машинки: 700
+ *   > Товары:  200
+ * Ниже шапки — из каких касс собраны деньги, моноширинным блоком в цитате,
+ * как разбивка по зонам в «Кассе за день» (правка владельца 2026-08-18).
  * Владелец сам провёл инкассацию — вместо имени ♛ (имени у него нет, в
  * отличие от правки чужой записи, где имя остаётся).
  */
-const GOODS_EMOJI = "🛍";
-const ABONEMENT_EMOJI = "🎟";
+/** Источники денег инкассации — зоны, пул товаров, пул абонементов. */
+function collectionSources(data: CollectionAlertData, st: SummaryText): { label: string; amount: number }[] {
+  const rows = data.zones.filter((z) => z.amount > 0).map((z) => ({ label: z.name, amount: z.amount }));
+  if (data.goodsAmount > 0) rows.push({ label: st.goodsLabel, amount: data.goodsAmount });
+  if (data.abonementAmount > 0) rows.push({ label: st.abonementSold, amount: data.abonementAmount });
+  return rows;
+}
 
+/** Push — моноширинного блока там нет: имя и сумма обычной строкой, без иконок. */
 function collectionParts(data: CollectionAlertData, st: SummaryText, locale: Locale, currency: string | null | undefined): string[] {
   const money = (v: number) => formatMoneyWithCurrency(v, locale, currency as CurrencyCode | null);
-  const parts = data.zones
-    .filter((z) => z.amount > 0)
-    .map((z) => `${z.emoji || DEFAULT_ZONE_EMOJI} ${z.name} ${money(z.amount)}`);
-  if (data.goodsAmount > 0) parts.push(`${GOODS_EMOJI} ${st.goodsLabel} ${money(data.goodsAmount)}`);
-  if (data.abonementAmount > 0) parts.push(`${ABONEMENT_EMOJI} ${st.abonementSold} ${money(data.abonementAmount)}`);
-  return parts;
+  return collectionSources(data, st).map((r) => `${r.label} ${money(r.amount)}`);
 }
 
 function collectionWho(data: CollectionAlertData): string {
@@ -826,10 +828,18 @@ export function formatCollectionAlertTelegram(
     ...pointLine(data.pointName),
     `${escapeTelegramHtml(collectionWho(data))}: <b>${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}</b>`,
   ];
-  // Каждая зона своей строкой (правка владельца 2026-08-17): в одну строку
-  // через " · " они переносились и читались слитно.
-  for (const part of collectionParts(data, st, locale, currency)) {
-    lines.push(escapeTelegramHtml(part));
+  // Источники — тем же блоком, что разбивка по зонам в сводке «Касса за
+  // день» (правка владельца 2026-08-18: «один в один и без иконок»):
+  // <blockquote><code>, имена выровнены в столбик, символ валюты не
+  // повторяем — он уже стоит в строке с общей суммой выше.
+  const sources = collectionSources(data, st);
+  if (sources.length > 0) {
+    const labelWidth = Math.max(...sources.map((r) => `${r.label}:`.length));
+    // escapeTelegramHtml — после padEnd, см. комментарий в formatCompactGrid.
+    const rows = sources
+      .map((r) => escapeTelegramHtml(`${r.label}:`.padEnd(labelWidth + 1) + formatMoney(r.amount, locale)))
+      .join("\n");
+    lines.push(`<blockquote><code>${rows}</code></blockquote>`);
   }
   return lines.join("\n");
 }
