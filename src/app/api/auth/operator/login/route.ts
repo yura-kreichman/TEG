@@ -5,7 +5,7 @@ import {
   getActivatedDevice,
 } from "@/lib/operator-auth";
 import { setAccentCookie } from "@/lib/accent";
-import { getPreAuthLocaleCookie } from "@/lib/i18n";
+import { clearPreAuthLocaleCookie } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 import { isAuthRateLimited, PIN_ATTEMPTS_PER_WINDOW } from "@/lib/auth-rate-limit";
 import {
@@ -64,14 +64,14 @@ export async function POST(request: Request) {
 
   await createOperatorSession(operator.id);
 
-  // Whatever language the operator picked on the login screen (see
-  // AuthLocalePicker) becomes their persisted personal preference — otherwise
-  // it silently reverted to the tenant's language the instant they logged in
-  // (found 2026-07-10, "у Оператора не переключается язык").
-  const preAuthLocale = await getPreAuthLocaleCookie();
-  if (preAuthLocale && preAuthLocale !== operator.locale) {
-    await prisma.operator.update({ where: { id: operator.id }, data: { locale: preAuthLocale } });
-  }
+  // Язык сотрудника — только то, что задал Владелец в его карточке (по
+  // умолчанию язык компании). Раньше сюда записывался выбор с экрана входа,
+  // и это выходило боком: устройство точки общее, кука с выбором живёт год,
+  // и один случайный тап по переключателю 17.08.2026 переучил на английский
+  // и Женю, и Ивана — причём при каждом входе заново, отменяя правки
+  // Владельца в карточке. Куку стираем, чтобы следующий человек увидел
+  // экран входа на языке компании.
+  await clearPreAuthLocaleCookie();
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: device.point.tenantId },

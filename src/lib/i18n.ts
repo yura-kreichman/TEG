@@ -89,6 +89,17 @@ export async function setPreAuthLocaleCookie(locale: string) {
   });
 }
 
+/**
+ * Стирание куки после входа сотрудника (правка владельца 2026-08-19).
+ * Устройство точки общее: выбор языка на экране входа — это выбор одного
+ * человека на один вход, а не настройка планшета на год. Пока кука жила,
+ * она переучивала на свой язык каждого следующего вошедшего.
+ */
+export async function clearPreAuthLocaleCookie() {
+  const cookieStore = await cookies();
+  cookieStore.delete(PRE_AUTH_LOCALE_COOKIE);
+}
+
 export async function getPreAuthLocaleCookie(): Promise<Locale | null> {
   const cookieStore = await cookies();
   const value = cookieStore.get(PRE_AUTH_LOCALE_COOKIE)?.value;
@@ -171,6 +182,21 @@ export async function resolveLocale(): Promise<Locale> {
 
   const cookieLocale = await getPreAuthLocaleCookie();
   if (cookieLocale) return cookieLocale;
+
+  // Экран входа на устройстве, привязанном к точке (правка владельца
+  // 2026-08-19): язык компании, а не язык браузера планшета. Ниже куки —
+  // явный выбор в переключателе на самом экране должен побеждать, иначе
+  // переключатель выглядит нерабочим (тот же баг, что чинили 2026-07-10).
+  if (isPreAuthPage) {
+    const devicePoint = await getActivatedPoint();
+    if (devicePoint) {
+      const deviceTenant = await prisma.tenant.findUnique({
+        where: { id: devicePoint.tenantId },
+        select: { locale: true },
+      });
+      if (deviceTenant?.locale && isLocale(deviceTenant.locale)) return deviceTenant.locale;
+    }
+  }
 
   const detected = detectLocaleFromAcceptLanguage(headerStore.get("accept-language"));
   if (detected) return detected;
