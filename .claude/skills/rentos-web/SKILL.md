@@ -1181,6 +1181,50 @@ H5 16 вес 600, H6 14 вес 600 — все цвета `#070050`, шрифт I
 (в WP Rocket мёртв, считается в облаке) или своей асинхронной загрузкой стилей — это уже свой код
 поверх чужой разметки и риск FOUC. Без разрешения владельца не делать.
 
+## Правка статей документации скриптом (2026-08-22) — три мины подряд
+
+**`wp_kses` вырезает инлайновые `<svg>` при сохранении из CLI.** У скрипта нет пользователя
+с `unfiltered_html`, фильтры `content_save_pre` активны, а `svg`/`path`/`rect`/`circle` в
+`wp_kses_allowed_html('post')` НЕ входят (проверено). Статья сохраняется «успешно», иконки
+молча исчезают, на их месте остаётся двойной пробел. Перед любым `wp_insert_post`/
+`wp_update_post` с разметкой: `kses_remove_filters();` … `kses_init_filters();`.
+
+**`wp_update_post` переписывает `post_content` целиком, даже если меняешь только
+`menu_order`.** Так одним проходом сортировки я снял иконки с четырёх ЧУЖИХ статей
+(328, 330, 432, 485) и заметил это только по словарю TranslatePress. Правишь одно поле —
+правь его `wp_update_post` с уже снятым kses либо прямым `$wpdb->update` по `wp_posts`.
+
+Аудит пострадавших: искать след вырезанной иконки — двойной пробел, пробел перед знаком
+препинания и **пустые скобки `()`** (последний случай первый проход пропустил). Ревизии не
+спасут: они создаются уже из порезанного контента.
+
+**`$id` в глобальной области скрипта — это `$GLOBALS['id']` WordPress.** Любой хук, дёрнувший
+`setup_postdata`, перезапишет её посреди скрипта: у меня `$id` из 2296 стал 330 и порядок
+статей записался с чужой записью внутри. Имена переменных в скриптах с `wp-load.php` — только
+свои (`$rentosPostId`), не `$id`/`$post`/`$posts`.
+
+### Порядок статей внутри рубрики BetterDocs
+
+Хранится **термином**, а не записями: мета `_docs_order` у термина `doc_category` —
+список id через запятую (`Core/Query.php::get_docs_order_by_terms`). Записи, которых в
+списке НЕТ, плагин ставит **в начало** — поэтому новая статья вылезает первой, а
+`menu_order` записи на витрину не влияет вовсе (он работает только как запасной путь,
+когда меты нет). Настройка `alphabetically_order_post = betterdocs_order` — это про
+этот же список. Правится `update_term_meta($termId, '_docs_order', '326,327,2296,…')`.
+
+### Иконки в статьях и TranslatePress
+
+TP режет абзац на сегменты по `<svg>`: «текст до иконки» и «текст после» — две записи
+словаря, иконка остаётся в разметке нетронутой. **Но если иконки в контенте нет** (см.
+kses выше), абзац регистрируется ОДНОЙ строкой, и перевод заменяет узел целиком.
+Вставить `<svg>` в перевод нельзя — TP вырезает разметку из переведённой строки
+(проверено). Обернуть иконку в `<span data-no-translation>` тоже не выход: kses оставит
+пустой span. Единственный рабочий порядок: сначала сохранить контент с иконками (kses
+снят), потом отрисовать страницы на всех языках, и только потом переводить сегменты.
+
+Проверка после перевода: сравнить число `<svg>` в теле статьи на русской и языковой
+версии — должно совпадать.
+
 ## BetterDocs: где что настраивается (2026-08-11)
 
 Три разных механизма на трёх страницах — путаница стоила двух неверных заходов.
@@ -1867,3 +1911,145 @@ curl -s "$U" | grep -c 'нужное-правило'
 `.e-con.e-parent:nth-of-type(n+4):not(.e-lazyloaded) * { background-image: none !important }`
 в CSS и **ноль** секций с классом `e-lazyloaded` после полной прокрутки. Проверять после
 обновлений Elementor: `wp option get elementor_lazy_load_background_images` должно быть пусто.
+
+## WP 7.1 уронил сайт через WP Rocket: ключи хуков стали числами (2026-08-20)
+
+Симптом: белый экран на всём сайте, WordPress ушёл в режим восстановления и предложил отключить WP Rocket.
+
+```
+Uncaught TypeError: substr(): Argument #1 ($string) must be of type string, int given
+  in .../plugins/wp-rocket/inc/ThirdParty/Plugins/CDN/Cloudflare.php:562
+  substr(8221, -24)  ← Cloudflare->unregister_callback('deleted_post', 'purgeCacheByRel...')
+  ← Cloudflare->unregister_cloudflare_clean_on_post('')  на do_action('init')
+```
+
+**Причина — в ядре, не в плагине.** WordPress 7.1 переписал `_wp_filter_build_unique_id()`
+(`wp-includes/plugin.php`, «@since 7.1.0 Uses spl_object_id() instead of spl_object_hash() for
+performance»). Для замыканий ключ теперь `(string) spl_object_id($cb)` — то есть `"6939"`. PHP
+приводит числовые строки к int в ключах массива, и ключ становится **целым числом**. Раньше
+`spl_object_hash()` давал 32 hex-символа с ведущими нулями — строкой оставался всегда.
+
+Замыкания на `deleted_post` вешает Elementor 4.2.3 (три штуки: `atomic-widget-styles.php:33`,
+`atomic-global-styles.php:37`, elementor-pro `notes/document-events.php:25`). WP Rocket 3.23.1.1
+обходит `$wp_filter['deleted_post']->callbacks[10]` и делает `substr( $key, ... )` под
+`declare(strict_types=1)` — на первом же числовом ключе фатал. Хук `init` в
+`Cloudflare::get_subscribed_events()` **безусловный**: официальный плагин Cloudflare не нужен,
+чтобы всё легло. Падало на каждом запросе, включая `wp-login.php` и wp-cli.
+
+Что сделано:
+
+1. Патч плагина, `Cloudflare.php:562` → `substr( (string) $key, - strlen( $method ) )`.
+   Бэкап оригинала: `/var/www/md33/data/Cloudflare.php.bak-2026-08-20`.
+   Обновления WP Rocket его затрут — на 2026-08-20 3.23.1.1 последняя, фикса сверху нет.
+2. mu-плагин `rentos-wp-rocket-cf-guard.php` — страховка от затирания: на `init` с приоритетом
+   `-PHP_INT_MAX` снимает сам колбэк `unregister_cloudflare_clean_on_post`, пока не определена
+   константа `CLOUDFLARE_PLUGIN_DIR` (без плагина Cloudflare он всё равно бессмысленный).
+
+**Если снова полезет что-то похожее** — грепать не только WP Rocket:
+`grep -rn 'wp_filter' --include=*.php plugins mu-plugins themes | grep -E 'substr\(|strlen\(|strpos\('`.
+На 2026-08-20 других мест на сайте не было.
+
+**Грабли моего же разбора:** heredoc, уходящий в `ssh "cat > файл"`, схлопнул двойной обратный
+слэш в строке с классом WP_Rocket и оставил незакрытую кавычку — сайт лёг уже на моём mu-плагине
+на две минуты.
+Любой файл, залитый на сервер, сразу проверять `/opt/php83/bin/php -l`, а строки с обратным
+слэшем не писать вовсе (здесь помог `strncmp( get_class( $o ), "WP_Rocket", 9 )`).
+
+## Elementor 4.2.3 сносил ВЕСЬ CSS сайта на каждом запросе (2026-08-20)
+
+Симптом: страницы грузятся 5–10 с, в браузере «падают стили» — 404 на `post-*.css`.
+
+Цепочка, снятая по стеку вызовов (зонд на `update_post_metadata` / `delete_post_metadata`
+для `_elementor_css` плюс `elementor/core/files/clear_cache`):
+
+1. **`elementor-pro/elementor-pro.php` на этом сайте — взломанная сборка.** Функция
+   `elementor_pro_initialize_local_environment()` подделывает лицензию
+   (`'license' => 'valid'`, `'tier' => 'agency'`) и перехватывает `pre_http_request`
+   к `my.elementor.com/api/v2/lic`.
+2. Она висит на `init:10` и на КАЖДОМ запросе делает
+   `update_option( '_elementor_pro_license_v2_data', … )`, где
+   `timeout = strtotime('+12 hours', current_time('timestamp'))` — значение пересчитывается
+   каждый раз, поэтому запись происходит всегда, а не «когда изменилось».
+3. Elementor **4.2.3** добавил в `modules/atomic-widgets/styles/atomic-widget-styles.php:36`
+   `add_action( 'update_option__elementor_pro_license_v2_data', fn() => Plugin::$instance->files_manager->clear_cache() );`
+4. `clear_cache()` → `delete_post_meta_by_key('_elementor_css')` + очистка
+   `uploads/elementor/css/` целиком.
+
+Итог: CSS всего сайта пересобирался при каждом обращении, а файл, на который ссылалась
+только что отданная разметка, удалял следующий запрос — отсюда 404 у браузера.
+
+Лечится mu-плагином `rentos-elementor-css-flush-guard.php`: на `init:9` (между регистрацией
+хуков Elementor на `init:0` и записью опции на `init:10`) снимает
+`remove_all_actions` с `update_option__elementor_pro_license_v2_data` и
+`delete_option__…`. Штатная инвалидация (`elementor/document/after_save`,
+`elementor/core/files/clear_cache`, `deleted_post`) не трогается.
+
+**Диагностика в одну команду** — если правки не видны или страницы медленные:
+
+```
+SELECT COUNT(*) FROM wp_postmeta WHERE meta_key='_elementor_css'
+```
+
+Ноль строк при живом сайте на Elementor = кэш сносится на каждом запросе. Здоровое
+значение — по строке на каждую отрисованную запись (у нас 15). Второй признак:
+`ls uploads/elementor/css/` то пустой, то с файлами.
+
+**Не путать с настоящей уборкой кэша.** Симптом «пустой кэш» легко списать на своё же
+`rm -rf wp-content/cache/*` и уйти греть кэш — прогрев не поможет, следующий же запрос
+всё обнулит. Сначала убедиться, что `_elementor_css` переживает три запроса подряд,
+и только потом чистить и греть.
+
+Сопутствующее: обновление Elementor Pro в тот же день вернуло эксперимент
+`elementor_experiment-e_optimized_markup` в `active` (его отключали 12 августа).
+Проверка — сравнить число `elementor-widget-container` с числом виджетов в разметке:
+было 28 против 39, после отключения стало 71.
+
+## Счётчик в CTA главной (2026-08-22)
+
+В CTA главной (post 2, контейнер `ce5338c`) справа стоит виджет **«Счётчик»**
+Elementor `c9a3e17`: «36+ / успешных бизнесов уже работают в RentOS».
+
+**Число само растёт раз в месяц.** Поле «Конечное число» привязано динамическим
+тегом **«Шорткод»** к `[rentos_counter start=36 since=2026-08 step=1]` —
+mu-плагин `rentos-counter-shortcode.php` (копия в репозитории). Всё, что
+настраивается, лежит в атрибутах шорткода, то есть правится из панели Elementor
+без правки кода: `start` — сколько было в месяц `since`, `step` — прибавка,
+`max` — потолок. Статичное значение поля остаётся запасным, если тег отвалится.
+
+Проверка, что рисует именно тег, а не запасное значение: временно поставить в
+`ending_number` другое число и посмотреть отрендеренный `data-to-value`.
+
+### Грабли виджета «Счётчик»
+
+- **`number_position` пишет в CSS битое `text-align:{{VALUE}}`.** Значение из
+  `selectors_dictionary` подставляется одним проходом, а вложенный `{{VALUE}}`
+  внутри уже подставленной строки не раскрывается. Настройку просто не задавать:
+  без неё центрирование даёт дефолт CSS-переменных
+  (`--counter-prefix-grow: 1` / `--counter-suffix-grow: 1`). Три счётчика в hero
+  (`881765a`, `a39ced2`, `bc8903a`) этим болеют с прошлых правок — правило
+  невалидное, браузер его отбрасывает, остальное в блоке применяется.
+- **`number_color` и `title_color` имеют глобальный цвет по умолчанию**
+  («Первый» и «Второй»), поэтому на тёмной секции без
+  `"__globals__": {"number_color": "", "title_color": ""}` цифра остаётся
+  тёмно-синей на тёмно-синем.
+- **У подписи нет штатного `text-align`.** `title_horizontal_alignment` меняет
+  только `justify-content`, то есть центрирует блок целиком: как только текст
+  переносится, строки внутри прижимаются влево (на телефоне это заметно сразу).
+  Лечится содержимым поля «Заголовок» —
+  `<span style="text-align:center">…</span>`; `wp_kses_post` этот стиль
+  пропускает, TranslatePress берёт текстовый узел внутри span, поэтому переводы
+  не слетают.
+- Разметка счётчика — подпись ПЕРВОЙ, число вторым, а `.elementor-counter`
+  идёт `column-reverse`: визуально число сверху.
+
+### Запись виджета мимо MCP
+
+`add-free-widget` / `update-element` из EMCP пересобирают элементы и **стирают
+`interactions` у всей страницы** (на главной они есть). Поэтому виджет добавлялся
+PHP-скриптом прямо в `_elementor_data`. Два условия:
+
+- кодировать `wp_json_encode( $data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES )` —
+  редактор пишет именно так, иначе перезапись раздувает мету на 20 КБ;
+- писать `wp_slash( ... )` и после этого чистить `_elementor_css`,
+  `_elementor_element_cache`, `_elementor_element_cache_unique_id` и опции
+  `elementor_atomic_cache_validity__*`.
