@@ -52,6 +52,24 @@ const RENTOS_UPTIME_FOOTER_ID = 118;     // шаблон подвала Elemento
 const RENTOS_UPTIME_SEED = '2026-07-11';
 
 /**
+ * Дни ДО запуска монитора, за которые работа сервиса подтверждена журналом
+ * прод-базы: в эти сутки в приложении заводились пуски, операции и сдачи
+ * итогов, то есть сервис реально обслуживал клиентов.
+ *
+ * Снято запросом к прод-базе 2026-08-22: активность есть каждый день с
+ * 14.07.2026 по 21.08.2026, кроме 20.07.2026 (пустые сутки). Замеров за этот
+ * период нет и быть не может — монитор запущен 22.08.2026, — поэтому на
+ * графике такие дни рисуются ОТДЕЛЬНЫМ, более светлым оттенком: это
+ * свидетельство работы, а не измеренная доступность.
+ *
+ * Список сам «состарится»: окно графика в 30 дней уедет вперёд, и эти даты из
+ * него выпадут.
+ */
+const RENTOS_UPTIME_LOG_FROM = '2026-07-14';
+const RENTOS_UPTIME_LOG_TO   = '2026-08-21';
+const RENTOS_UPTIME_LOG_SKIP = '2026-07-20';
+
+/**
  * Шаг замеров в секундах — должен совпадать с расписанием check.sh в crontab.
  * Пересчёт бьёт время на корзины этого размера: корзина без замера считается
  * недоступностью, поэтому рассинхрон с cron'ом сразу испортит статистику.
@@ -318,12 +336,19 @@ function rentos_uptime_build_stats() {
 		}
 	}
 
+	// Дни, подтверждённые журналом прод-базы (см. RENTOS_UPTIME_LOG_*).
+	$logFrom = (int) floor( ( strtotime( RENTOS_UPTIME_LOG_FROM . ' 12:00:00' ) + $tzOffset ) / DAY_IN_SECONDS );
+	$logTo   = (int) floor( ( strtotime( RENTOS_UPTIME_LOG_TO . ' 12:00:00' ) + $tzOffset ) / DAY_IN_SECONDS );
+	$logSkip = (int) floor( ( strtotime( RENTOS_UPTIME_LOG_SKIP . ' 12:00:00' ) + $tzOffset ) / DAY_IN_SECONDS );
+
 	$days = array();
 	for ( $d = RENTOS_UPTIME_WINDOW - 1; $d >= 0; $d-- ) {
 		$day = $today - $d;
 
 		if ( $day < $firstDay || empty( $dayAll[ $day ] ) ) {
-			$days[] = null; // до начала наблюдений — данных нет
+			// Замеров нет. Если работа за эти сутки подтверждена журналом —
+			// рисуем светлым столбиком, иначе оставляем пустое место.
+			$days[] = ( $day >= $logFrom && $day <= $logTo && $day !== $logSkip ) ? 'log' : null;
 			continue;
 		}
 
@@ -468,8 +493,13 @@ function rentos_uptime_chart( $days ) {
 
 	foreach ( $days as $ratio ) {
 		if ( null === $ratio ) {
-			$color  = '#E5E3F5'; // нет данных
+			$color  = '#E5E3F5'; // нет ни замеров, ни следов в журнале
 			$height = 6;
+		} elseif ( 'log' === $ratio ) {
+			// Работа подтверждена журналом прод-базы, но замеров нет —
+			// светлее измеренных дней, чтобы не выдавать одно за другое.
+			$color  = '#A7E7C0';
+			$height = $h;
 		} else {
 			if ( $ratio >= 0.999 ) {
 				$color = '#22C55E';
@@ -539,6 +569,20 @@ function rentos_uptime_wrap( $line, $stats, $lang ) {
 			isset( $captions[ $lang ] ) ? $captions[ $lang ] : $captions['en'],
 			count( $stats['days'] )
 		);
+
+		// Если на графике есть дни «из журнала», это надо назвать: иначе
+		// светлые столбики читались бы как измеренная доступность.
+		if ( in_array( 'log', $stats['days'], true ) ) {
+			$legends = array(
+				'ru' => 'светлым — по журналу работы',
+				'uk' => 'світлим — за журналом роботи',
+				'en' => 'lighter bars come from the service log',
+				'it' => 'le barre chiare vengono dal registro',
+				'ro' => 'barele deschise vin din jurnal',
+			);
+
+			$caption .= ' · ' . ( isset( $legends[ $lang ] ) ? $legends[ $lang ] : $legends['en'] );
+		}
 
 		$body .= rentos_uptime_chart( $stats['days'] )
 			. '<div style="font-size:11px;opacity:.75">' . esc_html( $caption ) . '</div>';
