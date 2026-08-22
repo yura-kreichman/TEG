@@ -9,9 +9,11 @@
  * SELECT 1 к Postgres) и дописывает строку «время,код» в samples.csv.
  * Файл лежит вне корня сайта.
  *
- * Раз в СУТКИ этот плагин пересчитывает окно и кладёт готовые числа в опцию
- * (решение владельца 2026-08-22: не грузить сервер). Шорткод только печатает
- * их — на запрос посетителя ничего не считается.
+ * Пересчёт окна — раз в СУТКИ (решение владельца 2026-08-22: не грузить
+ * сервер). Задание при этом висит ежечасно и почти всегда выходит сразу: так
+ * первые числа появляются через час после запуска монитора, а не через сутки.
+ * Шорткод только печатает
+ * готовые числа — на запрос посетителя файл не читается.
  *
  * Как считаем:
  *  - время бьётся на корзины по 5 минут (RENTOS_UPTIME_STEP), ровно по шагу
@@ -34,7 +36,8 @@ const RENTOS_UPTIME_FILE      = '/var/www/md33/data/rentos-uptime/samples.csv';
 const RENTOS_UPTIME_OPTION    = 'rentos_uptime_stats';
 const RENTOS_UPTIME_WINDOW    = 30;      // дней в окне
 const RENTOS_UPTIME_KEEP_DAYS = 45;      // сколько храним замеров
-const RENTOS_UPTIME_MIN_HOURS = 24;      // до этого строку не показываем вовсе
+const RENTOS_UPTIME_MIN_HOURS = 1;       // меньше часа замеров — считать нечего
+const RENTOS_UPTIME_PCT_HOURS = 24;      // процент показываем, только набрав сутки
 const RENTOS_UPTIME_FOOTER_ID = 118;     // шаблон подвала Elementor
 
 /**
@@ -53,19 +56,37 @@ add_action(
 	function () {
 		$event = function_exists( 'wp_get_scheduled_event' ) ? wp_get_scheduled_event( 'rentos_uptime_refresh' ) : false;
 
-		// Раньше пересчёт стоял ежечасно — переводим на суточный.
-		if ( $event && 'daily' !== $event->schedule ) {
+		if ( $event && 'hourly' !== $event->schedule ) {
 			wp_clear_scheduled_hook( 'rentos_uptime_refresh' );
 			$event = false;
 		}
 
 		if ( ! $event && ! wp_next_scheduled( 'rentos_uptime_refresh' ) ) {
-			wp_schedule_event( time() + 300, 'daily', 'rentos_uptime_refresh' );
+			wp_schedule_event( time() + 120, 'hourly', 'rentos_uptime_refresh' );
 		}
 	}
 );
 
-add_action( 'rentos_uptime_refresh', 'rentos_uptime_recalculate' );
+add_action( 'rentos_uptime_refresh', 'rentos_uptime_maybe_recalculate' );
+
+/**
+ * Задание срабатывает раз в час, но РАБОТУ делает раз в сутки: разбор файла
+ * замеров и возможная уборка кэша — тяжёлое, владелец просил не чаще суток.
+ * Частый вызов нужен ровно для одного: чтобы первые числа появились через час
+ * после запуска монитора, а не через сутки. Пустой проход стоит одного чтения
+ * опции.
+ */
+function rentos_uptime_maybe_recalculate() {
+	$stats = get_option( RENTOS_UPTIME_OPTION );
+
+	if ( is_array( $stats ) && ! empty( $stats['updated'] ) ) {
+		if ( time() - (int) $stats['updated'] < DAY_IN_SECONDS - 5 * MINUTE_IN_SECONDS ) {
+			return;
+		}
+	}
+
+	rentos_uptime_recalculate();
+}
 
 function rentos_uptime_recalculate() {
 	$stats = rentos_uptime_build_stats();
@@ -81,10 +102,12 @@ function rentos_uptime_recalculate() {
 	// Строка в подвале меняется редко (процент — до десятых, дни — раз в
 	// сутки), поэтому чистим кэш только когда меняется то, что видно.
 	$sameText = is_array( $previous )
-		&& isset( $previous['percent'], $previous['days_ok'], $previous['window_days'] )
+		&& isset( $previous['percent'], $previous['days_ok'], $previous['window_days'], $previous['since'] )
 		&& $previous['percent'] === $stats['percent']
 		&& (int) $previous['days_ok'] === (int) $stats['days_ok']
-		&& (int) $previous['window_days'] === (int) $stats['window_days'];
+		&& (int) $previous['window_days'] === (int) $stats['window_days']
+		// Начало «полосы без сбоев» — от него шорткод считает дни при отрисовке.
+		&& (int) $previous['since'] === (int) $stats['since'];
 
 	if ( $sameText ) {
 		return;
@@ -233,12 +256,17 @@ function rentos_uptime_build_stats() {
 	$window  = (int) floor( $totalBuckets / $bucketsInDay );
 
 	return array(
-		'percent'      => number_format( $percent, 1, '.', '' ),
-		'days_ok'      => $daysOk,
-		'window_days'  => max( 1, $window ),
-		'down_minutes' => (int) round( $downBuckets * $step / 60 ),
-		'samples'      => count( $keepLines ),
-		'updated'      => $now,
+		// Момент последнего сбоя (или начала наблюдений). Сколько с тех пор
+		// прошло, шорткод считает сам при отрисовке — это бесплатно и не
+		// требует пересчёта всей статистики.
+		'since'         => $since,
+		'percent'       => number_format( $percent, 1, '.', '' ),
+		'days_ok'       => $daysOk,
+		'window_days'   => max( 1, $window ),
+		'window_hours'  => (int) floor( $totalBuckets * $step / HOUR_IN_SECONDS ),
+		'down_minutes'  => (int) round( $downBuckets * $step / 60 ),
+		'samples'       => count( $keepLines ),
+		'updated'       => $now,
 	);
 }
 
@@ -284,71 +312,110 @@ function rentos_uptime_last_sample_ok() {
  * Вывод
  * ---------------------------------------------------------------------- */
 
+
+/**
+ * «5 дн.» / «1 day» / «1 zi» — единицы с правильным числом. Русский и
+ * украинский сокращаем («дн.», «ч.»), там склонения не нужны; у английского,
+ * итальянского и румынского форма зависит от числа.
+ */
+function rentos_uptime_unit( $n, $unit, $lang ) {
+	$forms = array(
+		'ru' => array( 'day' => array( '%d дн.', '%d дн.' ), 'hour' => array( '%d ч.', '%d ч.' ) ),
+		'uk' => array( 'day' => array( '%d дн.', '%d дн.' ), 'hour' => array( '%d год.', '%d год.' ) ),
+		'en' => array( 'day' => array( '%d day', '%d days' ), 'hour' => array( '%d hour', '%d hours' ) ),
+		'it' => array( 'day' => array( '%d giorno', '%d giorni' ), 'hour' => array( '%d ora', '%d ore' ) ),
+		'ro' => array( 'day' => array( '%d zi', '%d zile' ), 'hour' => array( '%d oră', '%d ore' ) ),
+	);
+
+	$set = isset( $forms[ $lang ] ) ? $forms[ $lang ] : $forms['en'];
+
+	return sprintf( 1 === (int) $n ? $set[ $unit ][0] : $set[ $unit ][1], (int) $n );
+}
+
+/**
+ * Сколько прошло с последнего сбоя. Считается ПРИ ОТРИСОВКЕ (это просто
+ * вычитание, никаких файлов), поэтому суточный пересчёт не мешает строке
+ * оставаться свежей.
+ */
+function rentos_uptime_streak_text( $since, $lang ) {
+	$elapsed = max( 0, time() - (int) $since );
+	$days    = (int) floor( $elapsed / DAY_IN_SECONDS );
+	$hours   = (int) floor( $elapsed / HOUR_IN_SECONDS );
+
+	if ( $days >= 1 ) {
+		$value = rentos_uptime_unit( $days, 'day', $lang );
+	} elseif ( $hours >= 1 ) {
+		$value = rentos_uptime_unit( $hours, 'hour', $lang );
+	} else {
+		return ''; // меньше часа — писать нечего
+	}
+
+	$forms = array(
+		'ru' => 'без сбоев %s',
+		'uk' => 'без збоїв %s',
+		'en' => '%s without incidents',
+		'it' => '%s senza guasti',
+		'ro' => '%s fără incidente',
+	);
+
+	return sprintf( isset( $forms[ $lang ] ) ? $forms[ $lang ] : $forms['en'], $value );
+}
+
 add_shortcode(
 	'rentos_uptime',
 	function () {
-		$stats  = get_option( RENTOS_UPTIME_OPTION );
-		$locale = determine_locale();
-		$lang   = substr( (string) determine_locale(), 0, 2 );
+		$stats = get_option( RENTOS_UPTIME_OPTION );
+		$lang  = substr( (string) determine_locale(), 0, 2 );
 
-		// Первые сутки статистики ещё нет. Показываем только то, что реально
-		// знаем: последний замер минуту назад прошёл. Если и он неудачный —
-		// не пишем ничего, врать про «работает» во время аварии нельзя.
-		if ( ! is_array( $stats ) || ! isset( $stats['percent'] ) ) {
-			if ( ! rentos_uptime_last_sample_ok() ) {
-				return '';
+		$labels = array(
+			'ru' => 'Сервис работает',
+			'en' => 'Service is up',
+			'uk' => 'Сервіс працює',
+			'it' => 'Servizio attivo',
+			'ro' => 'Serviciul funcționează',
+		);
+
+		$percentForms = array(
+			'ru' => 'доступность %1$s%% за %2$s',
+			'uk' => 'доступність %1$s%% за %2$s',
+			'en' => '%1$s%% uptime over %2$s',
+			'it' => 'disponibilità %1$s%% su %2$s',
+			'ro' => 'disponibilitate %1$s%% în %2$s',
+		);
+
+		// Последний замер должен быть свежим и удачным — иначе не пишем ничего:
+		// врать про «работает» во время аварии нельзя.
+		if ( ! rentos_uptime_last_sample_ok() ) {
+			return '';
+		}
+
+		$parts = array( isset( $labels[ $lang ] ) ? $labels[ $lang ] : $labels['en'] );
+
+		if ( is_array( $stats ) && isset( $stats['percent'], $stats['since'] ) ) {
+			// Процент показываем, только когда набрались сутки замеров:
+			// «доступность 100% за 2 часа» — не статистика, а самообман.
+			if ( (int) $stats['window_hours'] >= RENTOS_UPTIME_PCT_HOURS ) {
+				// «100,0%» выглядит нелепо — целые проценты пишем без десятых.
+				$percent = rtrim( rtrim( (string) $stats['percent'], '0' ), '.' );
+				if ( '' === $percent ) {
+					$percent = '0';
+				}
+
+				if ( in_array( $lang, array( 'ru', 'uk', 'it', 'ro' ), true ) ) {
+					$percent = str_replace( '.', ',', $percent );
+				}
+
+				$form    = isset( $percentForms[ $lang ] ) ? $percentForms[ $lang ] : $percentForms['en'];
+				$parts[] = sprintf( $form, $percent, rentos_uptime_unit( (int) $stats['window_days'], 'day', $lang ) );
 			}
 
-			$short = array(
-				'ru' => 'Сервис работает',
-				'en' => 'Service is up',
-				'uk' => 'Сервіс працює',
-				'it' => 'Servizio attivo',
-				'ro' => 'Serviciul funcționează',
-			);
-
-			$text = isset( $short[ $lang ] ) ? $short[ $lang ] : $short['en'];
-
-			return '<span data-no-translation><span style="color:#22C55E">&#9679;</span> ' . esc_html( $text ) . '</span>';
+			$streak = rentos_uptime_streak_text( $stats['since'], $lang );
+			if ( '' !== $streak ) {
+				$parts[] = $streak;
+			}
 		}
 
-		// Строка собирается здесь и помечается data-no-translation: числа в ней
-		// меняются, и словарь TranslatePress на них разъезжался бы. Языки
-		// прописаны прямо тут — тот же приём, что в rentos-fluentauth-i18n.php.
-		$templates = array(
-			'ru' => 'Сервис работает · доступность %1$s%% за %2$d дн. · без сбоев %3$d дн.',
-			'en' => 'Service is up · %1$s%% uptime over %2$d days · %3$d days without incidents',
-			'uk' => 'Сервіс працює · доступність %1$s%% за %2$d дн. · без збоїв %3$d дн.',
-			'it' => 'Servizio attivo · disponibilità %1$s%% su %2$d giorni · %3$d giorni senza guasti',
-			'ro' => 'Serviciul funcționează · disponibilitate %1$s%% în %2$d zile · %3$d zile fără incidente',
-		);
-
-		// Сбой был меньше суток назад — про «без сбоев 0 дн.» не пишем,
-		// оставляем только процент (он этот сбой уже честно учёл).
-		if ( (int) $stats['days_ok'] < 1 ) {
-			$templates = array(
-				'ru' => 'Сервис работает · доступность %1$s%% за %2$d дн.',
-				'en' => 'Service is up · %1$s%% uptime over %2$d days',
-				'uk' => 'Сервіс працює · доступність %1$s%% за %2$d дн.',
-				'it' => 'Servizio attivo · disponibilità %1$s%% su %2$d giorni',
-				'ro' => 'Serviciul funcționează · disponibilitate %1$s%% în %2$d zile',
-			);
-		}
-
-		$template = isset( $templates[ $lang ] ) ? $templates[ $lang ] : $templates['en'];
-
-		// Десятичный разделитель по языку.
-		$percent = in_array( $lang, array( 'ru', 'uk', 'it', 'ro' ), true )
-			? str_replace( '.', ',', $stats['percent'] )
-			: $stats['percent'];
-
-		$text = sprintf(
-			$template,
-			$percent,
-			(int) $stats['window_days'],
-			(int) $stats['days_ok']
-		);
-
-		return '<span data-no-translation><span style="color:#22C55E">&#9679;</span> ' . esc_html( $text ) . '</span>';
+		return '<span data-no-translation><span style="color:#22C55E">&#9679;</span> '
+			. esc_html( implode( ' · ', $parts ) ) . '</span>';
 	}
 );
