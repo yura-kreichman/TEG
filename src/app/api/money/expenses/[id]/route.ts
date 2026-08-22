@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { editChatMessage } from "@/lib/telegram-bot";
-import { getDictionary } from "@/lib/i18n";
-import { isLocale, type Locale } from "@/lib/locales";
-import { formatExpenseAlertTelegram } from "@/lib/summary-channels/telegram-format";
-import { pointNameIfMany } from "@/lib/summary-channels/dispatch";
-import { removeOrMarkMessage, resyncAfterMoneyOpChange, sendUpdatedPush } from "@/lib/summary-channels/resync";
+import { removeExpenseAlert, resyncExpenseAlert } from "@/lib/expense-alert";
+import { resyncAfterMoneyOpChange } from "@/lib/summary-channels/resync";
 
 /**
  * Правка/удаление расхода владельцем прямо в реестре (запрос пользователя
@@ -23,58 +19,6 @@ async function loadExpense(id: string, tenantId: string) {
   const op = await prisma.moneyOperation.findUnique({ where: { id } });
   if (!op || op.tenantId !== tenantId || op.type !== "expense") return null;
   return op;
-}
-
-/**
- * Переписывает уже отправленное Telegram-сообщение "Новый расход" после
- * правки (запрос владельца 2026-08-15) — тот же приём и та же best-effort
- * логика, что у reEditZoneSummaryMessage: падение здесь не должно ронять
- * саму правку, она к этому моменту уже сохранена.
- */
-async function reEditExpenseAlert(operationId: string, tenantId: string): Promise<void> {
-  const op = await prisma.moneyOperation.findUnique({
-    where: { id: operationId },
-    include: {
-      expenseCategory: { select: { name: true } },
-      zone: { select: { name: true, telegramEmoji: true } },
-      performedByOperator: { select: { name: true, colorTag: true } },
-    },
-  });
-  if (!op?.expenseAlertMessageId) return;
-
-  const [channel, tenant] = await Promise.all([
-    prisma.tenantSummaryChannel.findFirst({
-      where: { tenantId, channelType: "telegram", pointId: null, enabled: true, chatStatus: "active" },
-    }),
-    prisma.tenant.findUnique({ where: { id: tenantId }, select: { locale: true, timezone: true, currency: true } }),
-  ]);
-  if (!channel?.chatId) return;
-
-  const locale: Locale = tenant?.locale && isLocale(tenant.locale) ? tenant.locale : "ru";
-  const text = formatExpenseAlertTelegram(
-    {
-      occurredAt: op.occurredAt,
-      operatorName: op.performedByOperator?.name ?? "",
-      operatorColorTag: op.performedByOperator?.colorTag ?? null,
-      amount: Math.abs(Number(op.amount)),
-      categoryName: op.expenseCategory?.name ?? null,
-      pointName: await pointNameIfMany(tenantId, op.zone ? (await prisma.zone.findUnique({ where: { id: op.zone ? op.zoneId! : "" }, select: { point: { select: { name: true } } } }))?.point.name ?? null : null),
-      zoneName: op.zone?.name ?? "",
-      zoneEmoji: op.zone?.telegramEmoji ?? null,
-      comment: op.comment,
-      // Сюда попадаем только из PATCH владельца — сообщение переписывается
-      // именно потому, что он расход поправил.
-      editedByOwner: true,
-    },
-    getDictionary(locale).summaryText,
-    locale,
-    tenant?.timezone ?? "UTC",
-    tenant?.currency ?? null
-  );
-  await editChatMessage(channel.chatId, op.expenseAlertMessageId, text);
-  // И свежий Push поверх исправленного сообщения (требование владельца
-  // 2026-08-16) — отредактировать уже доставленное уведомление нельзя.
-  await sendUpdatedPush(tenantId, "expense", getDictionary(locale).pushSettings.expenseLabel, text);
 }
 
 export async function PATCH(request: Request, ctx: RouteContext<"/api/money/expenses/[id]">) {
@@ -240,7 +184,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/expe
   // Уже отправленное уведомление приводим в соответствие с правкой (запрос
   // владельца 2026-08-15) — best-effort, как у сводки по зоне: правка
   // сохранена независимо от того, жив ли ещё чат и сообщение в нём.
-  await reEditExpenseAlert(id, owner.tenantId).catch(() => {});
+  await resyncExpenseAlert(id, owner.tenantId, { editedByOwner: true }).catch(() => {});
   // Плюс общие сообщения, которые эту сумму суммируют, — "Касса за день"
   // (lib/summary-channels/resync.ts).
   await resyncAfterMoneyOpChange({ ...op, zoneId, occurredAt: op.occurredAt });
@@ -280,28 +224,7 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/money/ex
   // Своё сообщение "Новый расход" уходит вместе с записью (решение владельца
   // 2026-08-16) — раньше оно оставалось в чате навсегда, с суммой, которой в
   // системе уже нет.
-  if (op.expenseAlertMessageId) {
-    const [channel, tenant] = await Promise.all([
-      prisma.tenantSummaryChannel.findFirst({
-        where: {
-          tenantId: owner.tenantId,
-          channelType: "telegram",
-          pointId: null,
-          enabled: true,
-          chatStatus: "active",
-        },
-      }),
-      prisma.tenant.findUnique({ where: { id: owner.tenantId }, select: { locale: true } }),
-    ]);
-    const locale: Locale = tenant?.locale && isLocale(tenant.locale) ? tenant.locale : "ru";
-    if (channel?.chatId) {
-      await removeOrMarkMessage(
-        channel.chatId,
-        op.expenseAlertMessageId,
-        `<i>${getDictionary(locale).summaryText.expenseVoided}</i>`
-      ).catch(() => {});
-    }
-  }
+  await removeExpenseAlert(op.expenseAlertMessageId, owner.tenantId);
 
   await resyncAfterMoneyOpChange(op);
 

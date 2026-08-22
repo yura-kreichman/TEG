@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Check, MapPin, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import { Check, MapPin, Pencil, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +73,10 @@ export default function OperatorExpensesPage() {
   const [loading, setLoading] = useState(true);
 
   const [sheetOpen, setSheetOpen] = useState(false);
+  // id правимой записи; null — форма создаёт новый расход. Правка своей
+  // записи до сдачи итогов (требование владельца 2026-08-19): раньше опечатку
+  // в сумме приходилось лечить удалением и повторным вводом.
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formZoneId, setFormZoneId] = useState("");
   const [formAmount, setFormAmount] = useState("");
   const [formCategoryId, setFormCategoryId] = useState("");
@@ -109,10 +113,20 @@ export default function OperatorExpensesPage() {
   }, []);
 
   function openSheet() {
+    setEditingId(null);
     setFormZoneId(zones.length === 1 ? zones[0].id : "");
     setFormAmount("");
     setFormCategoryId("");
     setFormComment("");
+    setSheetOpen(true);
+  }
+
+  function openEdit(event: ExpenseEvent) {
+    setEditingId(event.id);
+    setFormZoneId(event.zoneId);
+    setFormAmount(String(event.amount));
+    setFormCategoryId(categories.find((c) => c.name === event.categoryName)?.id ?? "");
+    setFormComment(event.comment ?? "");
     setSheetOpen(true);
   }
 
@@ -129,16 +143,19 @@ export default function OperatorExpensesPage() {
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/operator/zone-expense-events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          zoneId: formZoneId,
-          amount,
-          categoryId: formCategoryId || null,
-          comment: formComment.trim() || null,
-        }),
-      });
+      const res = await fetch(
+        editingId ? `/api/operator/zone-expense-events/${editingId}` : "/api/operator/zone-expense-events",
+        {
+          method: editingId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            zoneId: formZoneId,
+            amount,
+            categoryId: formCategoryId || null,
+            comment: formComment.trim() || null,
+          }),
+        }
+      );
       const data = await res.json();
       if (!res.ok) {
         flashError(data.error ?? t.operatorApp.workTime.saveError);
@@ -146,6 +163,24 @@ export default function OperatorExpensesPage() {
       }
       const zone = zones.find((z) => z.id === formZoneId);
       const category = categories.find((c) => c.id === formCategoryId);
+      if (editingId) {
+        setEvents((prev) =>
+          prev.map((e) =>
+            e.id === editingId
+              ? {
+                  ...e,
+                  zoneId: formZoneId,
+                  zoneName: zone?.name ?? e.zoneName,
+                  amount: data.amount ?? amount,
+                  categoryName: category?.name ?? null,
+                  comment: formComment.trim() || null,
+                }
+              : e
+          )
+        );
+        formPulse(() => setSheetOpen(false));
+        return;
+      }
       setEvents((prev) => [
         {
           id: data.id,
@@ -241,6 +276,7 @@ export default function OperatorExpensesPage() {
                       <span className="shrink-0 tabular-nums font-bold">
                         <Money value={e.amount} />
                       </span>
+                      <IconActionButton icon={Pencil} onClick={() => openEdit(e)} label={t.common.edit} />
                       <IconActionButton icon={Trash2} onClick={() => deleteEvent(e.id)} label={t.common.delete} destructive />
                     </div>
                   </SpringCard>
@@ -253,7 +289,9 @@ export default function OperatorExpensesPage() {
 
       <BottomSheet open={sheetOpen} onClose={() => !saving && setSheetOpen(false)}>
         <div className="flex flex-col gap-4 pt-2">
-          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.submit.addExpense}</h2>
+          <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
+            {editingId ? t.money.editExpenseTitle : t.operatorApp.submit.addExpense}
+          </h2>
 
           {zones.length > 1 && (
             <div className="grid grid-cols-3 gap-3">
