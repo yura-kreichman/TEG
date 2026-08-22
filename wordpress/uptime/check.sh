@@ -1,8 +1,9 @@
 #!/bin/sh
-# Замер доступности RentOS: раз в минуту из crontab пользователя md33.
+# Замер доступности RentOS: раз в 5 минут из crontab пользователя md33.
 #
-#   * * * * * /bin/sh /var/www/md33/data/rentos-uptime/check.sh >/dev/null 2>&1
+#   */5 * * * * /bin/sh /var/www/md33/data/rentos-uptime/check.sh >/dev/null 2>&1
 #
+# Шаг обязан совпадать с RENTOS_UPTIME_STEP в mu-плагине.
 # Пишем в CSV одну строку на замер: unix-время и код ответа. Файл лежит ВНЕ
 # корня сайта (/var/www/md33/data/, а не .../data/www/), наружу не отдаётся.
 # Прореживает файл агрегатор в mu-плагине rentos-uptime.php.

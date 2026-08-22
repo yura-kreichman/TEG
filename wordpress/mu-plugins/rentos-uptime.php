@@ -4,21 +4,24 @@
  * Description: Шорткод [rentos_uptime] для подвала: измеренная доступность my.rentos365.app и число дней без сбоев.
  * Version: 1.0
  *
- * Откуда данные: скрипт rentos-uptime/check.sh раз в минуту дёргает
+ * Откуда данные: скрипт rentos-uptime/check.sh раз в 5 минут дёргает
  * https://my.rentos365.app/api/health (там не «процесс жив», а реальный
  * SELECT 1 к Postgres) и дописывает строку «время,код» в samples.csv.
  * Файл лежит вне корня сайта.
  *
- * Раз в час этот плагин пересчитывает окно и кладёт готовые числа в опцию.
- * Шорткод только печатает их — на запрос посетителя ничего не считается.
+ * Раз в СУТКИ этот плагин пересчитывает окно и кладёт готовые числа в опцию
+ * (решение владельца 2026-08-22: не грузить сервер). Шорткод только печатает
+ * их — на запрос посетителя ничего не считается.
  *
  * Как считаем:
- *  - минута «плохая», если замер не 2xx ИЛИ замера за эту минуту нет вовсе
+ *  - время бьётся на корзины по 5 минут (RENTOS_UPTIME_STEP), ровно по шагу
+ *    замеров; корзина «плохая», если замер не 2xx ИЛИ замера за неё нет вовсе
  *    (нет замера = машина не работала, cron тоже не работал);
- *  - одиночная плохая минута НЕ считается сбоем — это подтверждение вторым
+ *  - одиночная плохая корзина НЕ считается сбоем — это подтверждение вторым
  *    замером, как делают все мониторинги, и заодно наши деплои с их
  *    30–60 секундами 502 не портят статистику (решение владельца 2026-08-22);
- *  - сбоем считается серия из двух и более плохих минут подряд;
+ *  - сбоем считается серия из двух и более плохих корзин подряд, то есть
+ *    недоступность дольше пяти минут;
  *  - процент округляем ВНИЗ до одного знака: лучше показать меньше, чем
  *    приписать себе лишнего.
  */
@@ -34,15 +37,30 @@ const RENTOS_UPTIME_KEEP_DAYS = 45;      // сколько храним заме
 const RENTOS_UPTIME_MIN_HOURS = 24;      // до этого строку не показываем вовсе
 const RENTOS_UPTIME_FOOTER_ID = 118;     // шаблон подвала Elementor
 
+/**
+ * Шаг замеров в секундах — должен совпадать с расписанием check.sh в crontab.
+ * Пересчёт бьёт время на корзины этого размера: корзина без замера считается
+ * недоступностью, поэтому рассинхрон с cron'ом сразу испортит статистику.
+ */
+const RENTOS_UPTIME_STEP = 300; // 5 минут
+
 /* -------------------------------------------------------------------------
- * Пересчёт раз в час
+ * Пересчёт раз в сутки (решение владельца 2026-08-22: не грузить сервер)
  * ---------------------------------------------------------------------- */
 
 add_action(
 	'init',
 	function () {
-		if ( ! wp_next_scheduled( 'rentos_uptime_refresh' ) ) {
-			wp_schedule_event( time() + 300, 'hourly', 'rentos_uptime_refresh' );
+		$event = function_exists( 'wp_get_scheduled_event' ) ? wp_get_scheduled_event( 'rentos_uptime_refresh' ) : false;
+
+		// Раньше пересчёт стоял ежечасно — переводим на суточный.
+		if ( $event && 'daily' !== $event->schedule ) {
+			wp_clear_scheduled_hook( 'rentos_uptime_refresh' );
+			$event = false;
+		}
+
+		if ( ! $event && ! wp_next_scheduled( 'rentos_uptime_refresh' ) ) {
+			wp_schedule_event( time() + 300, 'daily', 'rentos_uptime_refresh' );
 		}
 	}
 );
@@ -110,11 +128,13 @@ function rentos_uptime_build_stats() {
 		return null;
 	}
 
-	$now       = time();
-	$nowMinute = (int) floor( $now / 60 );
-	$keepFrom  = $now - RENTOS_UPTIME_KEEP_DAYS * DAY_IN_SECONDS;
+	$now         = time();
+	$step        = RENTOS_UPTIME_STEP;
+	$nowBucket   = (int) floor( $now / $step );
+	$keepFrom    = $now - RENTOS_UPTIME_KEEP_DAYS * DAY_IN_SECONDS;
+	$bucketsInDay = (int) floor( DAY_IN_SECONDS / $step );
 
-	$byMinute   = array();
+	$byBucket   = array();
 	$firstStamp = null;
 	$keepLines  = array();
 
@@ -144,12 +164,12 @@ function rentos_uptime_build_stats() {
 			$firstStamp = $stamp;
 		}
 
-		$minute = (int) floor( $stamp / 60 );
+		$bucket = (int) floor( $stamp / $step );
 
-		// В минуте может оказаться два замера: плохой перевешивает.
+		// В корзину может попасть несколько замеров: плохой перевешивает.
 		$ok = ( $code >= 200 && $code < 300 );
-		if ( ! isset( $byMinute[ $minute ] ) || ! $ok ) {
-			$byMinute[ $minute ] = $ok;
+		if ( ! isset( $byBucket[ $bucket ] ) || ! $ok ) {
+			$byBucket[ $bucket ] = $ok;
 		}
 	}
 
@@ -167,30 +187,30 @@ function rentos_uptime_build_stats() {
 		}
 	}
 
-	$windowStartMinute = max(
-		(int) floor( $firstStamp / 60 ),
-		$nowMinute - RENTOS_UPTIME_WINDOW * 24 * 60
+	$windowStart = max(
+		(int) floor( $firstStamp / $step ),
+		$nowBucket - RENTOS_UPTIME_WINDOW * $bucketsInDay
 	);
 
-	// Последнюю минуту не берём: замер за неё может ещё не успеть записаться.
-	$lastMinute   = $nowMinute - 1;
-	$totalMinutes = $lastMinute - $windowStartMinute + 1;
+	// Последнюю корзину не берём: замер за неё может ещё не успеть записаться.
+	$lastBucket   = $nowBucket - 1;
+	$totalBuckets = $lastBucket - $windowStart + 1;
 
-	if ( $totalMinutes < RENTOS_UPTIME_MIN_HOURS * 60 ) {
+	if ( $totalBuckets * $step < RENTOS_UPTIME_MIN_HOURS * HOUR_IN_SECONDS ) {
 		return null; // данных пока мало, строку не показываем
 	}
 
-	$downMinutes    = 0;
+	$downBuckets    = 0;
 	$runLength      = 0;
 	$lastIncidentAt = null;
 
-	for ( $minute = $windowStartMinute; $minute <= $lastMinute; $minute++ ) {
-		$ok = isset( $byMinute[ $minute ] ) ? $byMinute[ $minute ] : false;
+	for ( $bucket = $windowStart; $bucket <= $lastBucket; $bucket++ ) {
+		$ok = isset( $byBucket[ $bucket ] ) ? $byBucket[ $bucket ] : false;
 
 		if ( $ok ) {
 			if ( $runLength >= 2 ) {
-				$downMinutes   += $runLength;
-				$lastIncidentAt = ( $minute - 1 ) * 60;
+				$downBuckets   += $runLength;
+				$lastIncidentAt = ( $bucket - 1 ) * $step;
 			}
 			$runLength = 0;
 			continue;
@@ -201,22 +221,22 @@ function rentos_uptime_build_stats() {
 
 	// Незакрытая серия на конце окна.
 	if ( $runLength >= 2 ) {
-		$downMinutes   += $runLength;
-		$lastIncidentAt = $lastMinute * 60;
+		$downBuckets   += $runLength;
+		$lastIncidentAt = $lastBucket * $step;
 	}
 
-	$ratio   = ( $totalMinutes - $downMinutes ) / $totalMinutes;
+	$ratio   = ( $totalBuckets - $downBuckets ) / $totalBuckets;
 	$percent = floor( $ratio * 1000 ) / 10; // вниз, до десятых
 
 	$since   = null === $lastIncidentAt ? $firstStamp : $lastIncidentAt;
 	$daysOk  = (int) floor( ( $now - $since ) / DAY_IN_SECONDS );
-	$window  = (int) floor( $totalMinutes / ( 24 * 60 ) );
+	$window  = (int) floor( $totalBuckets / $bucketsInDay );
 
 	return array(
 		'percent'      => number_format( $percent, 1, '.', '' ),
 		'days_ok'      => $daysOk,
 		'window_days'  => max( 1, $window ),
-		'down_minutes' => $downMinutes,
+		'down_minutes' => (int) round( $downBuckets * $step / 60 ),
 		'samples'      => count( $keepLines ),
 		'updated'      => $now,
 	);
@@ -252,8 +272,8 @@ function rentos_uptime_last_sample_ok() {
 
 	list( $stamp, $code ) = array_pad( explode( ',', end( $lines ), 2 ), 2, '0' );
 
-	// Замер старше пяти минут — значит сборщик встал, молчим.
-	if ( time() - (int) $stamp > 5 * MINUTE_IN_SECONDS ) {
+	// Замер старше двух шагов — значит сборщик встал, молчим.
+	if ( time() - (int) $stamp > 2 * RENTOS_UPTIME_STEP + MINUTE_IN_SECONDS ) {
 		return false;
 	}
 
