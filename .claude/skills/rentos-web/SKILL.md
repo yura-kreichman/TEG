@@ -1902,7 +1902,16 @@ U=$(curl -s https://rentos365.app/features/ | grep -o "href='[^']*post-239.css[^
 curl -s "$U" | grep -c 'нужное-правило'
 ```
 
-Чистить всегда все три: `rm -rf wp-content/cache/{background-css,min,wp-rocket/rentos365.app}/*`.
+Чистить всегда все три: `rm -rf wp-content/cache/{background-css,min}/* wp-content/cache/wp-rocket/rentos365.app*/*`.
+
+**Звёздочка после `rentos365.app` обязательна.** У залогиненных WP Rocket держит
+СВОЙ каталог верхнего уровня — `wp-rocket/rentos365.app-<логин>-<хеш>/`, и путь
+`wp-rocket/rentos365.app/*` его не задевает. Владелец ходит по сайту под своей
+учётной записью, поэтому после «полной» уборки он один продолжает видеть старую
+страницу — и это выглядит как глюк вёрстки, а не как кэш: старый HTML (виджеты
+без новых обёрток) плюс уже новый CSS дают развалившийся макет. Проверено
+2026-08-22: 2,3 МБ протухшей копии на `rentos365.app-yura_kr-…`, публичная копия
+при этом была свежей.
 
 ### Возврат мины: `elementor_lazy_load_background_images`
 
