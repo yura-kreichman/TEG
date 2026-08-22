@@ -352,7 +352,11 @@ function rentos_uptime_build_stats() {
 			continue;
 		}
 
-		$days[] = round( $dayOk[ $day ] / $dayAll[ $day ], 4 );
+		// Храним ЧИСЛО неудачных корзин, а не долю. Доля в начале суток врёт:
+		// пока замеров всего два десятка, одна осечка от деплоя даёт 96%, то
+		// есть день красится как авария. Абсолютные пять минут простоя
+		// выглядят одинаково и утром, и вечером.
+		$days[] = (int) ( $dayAll[ $day ] - $dayOk[ $day ] );
 	}
 
 	// Медиана, а не среднее: одна подвисшая проверка не должна портить картину.
@@ -485,16 +489,16 @@ function rentos_uptime_sparkline( $days ) {
 
 	$out = '';
 
-	foreach ( $days as $ratio ) {
-		if ( null === $ratio ) {
+	foreach ( $days as $bad ) {
+		if ( null === $bad ) {
 			$out .= '·';               // данных нет
-		} elseif ( 'log' === $ratio ) {
+		} elseif ( 'log' === $bad ) {
 			$out .= '▒';               // по журналу работы, без замеров
-		} elseif ( $ratio >= 0.9999 ) {
+		} elseif ( 0 === (int) $bad ) {
 			$out .= '█';
-		} elseif ( $ratio >= 0.99 ) {
+		} elseif ( (int) $bad <= 2 ) {
 			$out .= '▆';               // деплой или единичная осечка
-		} elseif ( $ratio >= 0.95 ) {
+		} elseif ( (int) $bad <= 12 ) {
 			$out .= '▄';
 		} else {
 			$out .= '▂';
@@ -523,30 +527,31 @@ function rentos_uptime_chart( $days ) {
 	$bars = '';
 	$x    = 0;
 
-	foreach ( $days as $ratio ) {
-		if ( null === $ratio ) {
+	foreach ( $days as $bad ) {
+		if ( null === $bad ) {
 			$color  = '#E5E3F5'; // нет ни замеров, ни следов в журнале
 			$height = 6;
-		} elseif ( 'log' === $ratio ) {
+		} elseif ( 'log' === $bad ) {
 			// Работа подтверждена журналом прод-базы, но замеров нет —
 			// светлее измеренных дней, чтобы не выдавать одно за другое.
 			$color  = '#A7E7C0';
 			$height = $h;
 		} else {
-			// Высота ступенями, а не линейно по доле. Линейно провал от
-			// деплоя (одна неудачная проверка из 288) даёт 25,9 px вместо 26 —
-			// то есть не виден вообще, а владелец просил, чтобы такие дни
-			// «палочка была чуть ниже» (2026-08-22).
-			if ( $ratio >= 0.9999 ) {
+			// Ступени по МИНУТАМ простоя, а не по доле: деплой это всегда
+			// «одна-две неудачные проверки», сколько бы замеров ни было в
+			// сутках. Владелец просил, чтобы такой день был «чуть ниже».
+			$bad = (int) $bad;
+
+			if ( 0 === $bad ) {
 				$color  = '#22C55E';
-				$height = $h;            // ни одной неудачной проверки
-			} elseif ( $ratio >= 0.99 ) {
-				$color  = '#22C55E';     // деплой или единичная осечка
+				$height = $h;
+			} elseif ( $bad <= 2 ) {          // до 10 минут — деплой, осечка
+				$color  = '#22C55E';
 				$height = (int) round( $h * 0.75 );
-			} elseif ( $ratio >= 0.95 ) {
+			} elseif ( $bad <= 12 ) {         // до часа
 				$color  = '#F59E0B';
 				$height = (int) round( $h * 0.55 );
-			} elseif ( $ratio >= 0.8 ) {
+			} elseif ( $bad <= 48 ) {         // до четырёх часов
 				$color  = '#F59E0B';
 				$height = (int) round( $h * 0.4 );
 			} else {
@@ -627,6 +632,30 @@ function rentos_uptime_wrap( $line, $stats, $lang ) {
 			$caption .= ' · ' . ( isset( $legends[ $lang ] ) ? $legends[ $lang ] : $legends['en'] );
 		}
 
+		// Короткие просадки — это выкладка обновлений, и смотрящий должен это
+		// понимать, иначе читает их как аварии (правка владельца 2026-08-22).
+		// Приписку даём, только если такие дни на графике ЕСТЬ и они мелкие:
+		// называть обновлением настоящий простой было бы враньём.
+		$hasSmallDip = false;
+		foreach ( $stats['days'] as $bad ) {
+			if ( is_int( $bad ) && $bad > 0 && $bad <= 2 ) {
+				$hasSmallDip = true;
+				break;
+			}
+		}
+
+		if ( $hasSmallDip ) {
+			$dips = array(
+				'ru' => 'Небольшие просадки — выкладка обновлений.',
+				'uk' => 'Невеликі просадки — викладення оновлень.',
+				'en' => 'Small dips are software updates.',
+				'it' => 'I piccoli cali sono aggiornamenti del software.',
+				'ro' => 'Scăderile mici sunt actualizări de software.',
+			);
+
+			$body .= '<span style="display:block">' . esc_html( isset( $dips[ $lang ] ) ? $dips[ $lang ] : $dips['en'] ) . '</span>';
+		}
+
 		$body .= rentos_uptime_chart( $stats['days'] )
 			. '<span style="display:block;font-size:11px;opacity:.75">' . esc_html( $caption ) . '</span>';
 	}
@@ -645,10 +674,17 @@ function rentos_uptime_wrap( $line, $stats, $lang ) {
 		. ' aria-label="' . esc_attr( $word ) . '" style="vertical-align:-2px">'
 		. '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
 
+	// Переключатель-флажок: тап по значку открывает карточку, повторный —
+	// закрывает (правка владельца 2026-08-22; на :focus-within обратный тап не
+	// закрывал, фокус оставался на элементе). Наведение мышью работает
+	// отдельным правилом и флажка не требует. Скрипта по-прежнему ноль.
+	$toggleId = 'rentos-status-toggle';
+
 	return '<span class="rentos-status" data-no-translation>'
-		. '<span class="rentos-status__line" tabindex="0">'
+		. '<input type="checkbox" id="' . $toggleId . '" class="rentos-status__toggle">'
+		. '<span class="rentos-status__line">'
 		. '<span style="color:#22C55E">&#9679;</span> ' . esc_html( $line ) . ' '
-		. '<span style="color:#802BE3">' . $icon . '</span>'
+		. '<label for="' . $toggleId . '" class="rentos-status__icon">' . $icon . '</label>'
 		. '</span>'
 		. '<span class="rentos-status__pop">' . $body . '</span>'
 		. '</span>';
