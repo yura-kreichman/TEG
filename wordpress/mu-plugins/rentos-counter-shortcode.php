@@ -28,6 +28,53 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Значение считается при ГЕНЕРАЦИИ страницы, а страницы лежат в кэше
+ * (WP Rocket + кэш отрисовки Elementor), причём срок жизни кэша на этом сайте
+ * отключён — сам он не протухает. Без уборки счётчик замер бы на старом числе
+ * навсегда. Поэтому раз в сутки сверяем расчётное значение с запомненным и
+ * чистим кэш только в тот день, когда число реально изменилось, — то есть
+ * фактически раз в неделю.
+ */
+const RENTOS_COUNTER_PAGES  = array( 2, 239, 21 ); // Главная, Возможности, Цены
+const RENTOS_COUNTER_OPTION = 'rentos_counter_last_value';
+
+add_action(
+	'init',
+	function () {
+		if ( ! wp_next_scheduled( 'rentos_counter_refresh' ) ) {
+			wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'rentos_counter_refresh' );
+		}
+	}
+);
+
+add_action(
+	'rentos_counter_refresh',
+	function () {
+		$value = do_shortcode( '[rentos_counter]' );
+
+		if ( (string) get_option( RENTOS_COUNTER_OPTION ) === (string) $value ) {
+			return;
+		}
+
+		update_option( RENTOS_COUNTER_OPTION, $value, false );
+
+		// Кэш отрисованных элементов Elementor держит старое число даже после
+		// уборки WP Rocket — чистить надо оба.
+		foreach ( RENTOS_COUNTER_PAGES as $postId ) {
+			delete_post_meta( $postId, '_elementor_element_cache' );
+			delete_post_meta( $postId, '_elementor_element_cache_unique_id' );
+			delete_post_meta( $postId, '_elementor_css' );
+		}
+
+		if ( function_exists( 'rocket_clean_domain' ) ) {
+			// Полная уборка, потому что у каждой страницы пять языковых копий
+			// плюс отдельные копии для мобильных и для залогиненных.
+			rocket_clean_domain();
+		}
+	}
+);
+
 add_shortcode(
 	'rentos_counter',
 	function ( $atts ) {
