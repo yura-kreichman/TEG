@@ -959,7 +959,17 @@ export default function StaysZonePage() {
                   }
 
                   return (
-                    <div key={l.id} className="relative">
+                    // @container — размеры текста внутри тайла считаются от
+                    // ШИРИНЫ САМОГО ТАЙЛА (cqw), а не от ширины экрана
+                    // (реальный баг, найден пользователем 2026-08-22, живой
+                    // скриншот: "27:49" распирало тайл до самых краёв).
+                    // Сетка тут auto-fill minmax(5.5rem,1fr) — на широком
+                    // экране растёт КОЛИЧЕСТВО колонок, а сами тайлы остаются
+                    // почти теми же; прежние sm:/md: брейкпоинты вьюпорта
+                    // при этом честно увеличивали шрифт — таймер перерастал
+                    // тайл. Container query — единственная величина, которая
+                    // здесь совпадает с реальной геометрией.
+                    <div key={l.id} className="@container relative">
                       <PressableScale>
                         <button
                           type="button"
@@ -1004,29 +1014,40 @@ export default function StaysZonePage() {
                               строку текст "Посетитель N" залезал на
                               бейдж привязки клиента в углу тайла. */}
                           <span className="flex flex-col items-center leading-tight">
-                            <span className="text-[0.625rem] font-semibold text-muted-foreground">
+                            {/* clamp(...,cqw,...) — нижняя граница держит
+                                прежний размер на телефоне (там 8cqw заведомо
+                                меньше 0.625rem), верхняя не даёт подписи
+                                разрастись на широком тайле планшета. */}
+                            <span className="text-[clamp(0.625rem,8cqw,0.875rem)] font-semibold text-muted-foreground">
                               {t.operatorApp.gameRoom.wristbandNumberPrefix}
                             </span>
-                            <span className="text-sm font-extrabold tabular-nums">{l.number}</span>
+                            <span className="text-[clamp(0.875rem,11cqw,1.25rem)] font-extrabold tabular-nums">
+                              {l.number}
+                            </span>
                           </span>
                           <span
                             className={cn(
                               "tabular-nums",
-                              // sm:/md: — реальный баг, найден пользователем
-                              // 2026-07-29: "должен масштабироваться в
-                              // зависимости от размера экрана" — сетка тайлов
-                              // здесь auto-fill (grid-cols-[repeat(auto-fill,
-                              // minmax(5.5rem,1fr))]), сами тайлы физически
-                              // растут на широких экранах/планшетах, а текст
-                              // был фиксированного rem-размера и терялся в
-                              // выросшем тайле. Брейкпоинты — простая, но
-                              // достаточная замена: реального container query
-                              // в проекте пока нигде нет, вьюпорт здесь
-                              // (PWA Сотрудника без сайдбара) — годная замена
-                              // ширине контейнера.
+                              // Размер — от ширины ТАЙЛА (cqw, см. @container
+                              // на обёртке выше), не от вьюпорта. Прежние
+                              // sm:/md: (правка 2026-07-29) исходили из того,
+                              // что на широком экране растут сами тайлы — а
+                              // растёт число колонок: на десктопе тайл
+                              // оставался ~105px, а шрифт уходил в text-4xl
+                              // (36px), и "27:49" (~2.8em у Inter с
+                              // tabular-nums) переставало помещаться в
+                              // ширину за вычетом px-2 (реальный баг,
+                              // пользователь 2026-08-22, живой скриншот).
+                              // 26cqw — с запасом: даже на минимальном тайле
+                              // 5.5rem строка занимает ~88% доступной ширины.
                               l.pricingMode === "fixed"
                                 ? cn(
-                                    "text-2xl font-extrabold sm:text-3xl md:text-4xl",
+                                    // leading-none — у арбитрарного text-[...]
+                                    // Tailwind не проставляет line-height (в
+                                    // отличие от text-2xl/3xl/4xl), иначе
+                                    // строка унаследовала бы 1.5 от html и
+                                    // выросла бы по высоте в тайле.
+                                    "text-[clamp(1.25rem,26cqw,2.5rem)] font-extrabold leading-none",
                                     (expired || nearExpiry) && "text-destructive motion-safe:animate-pulse"
                                   )
                                 : // Крупнее и жирнее (реальный баг, найден
@@ -1038,7 +1059,7 @@ export default function StaysZonePage() {
                                   // ниже — сумма остаётся главным акцентом
                                   // тайла, но сам таймер теперь читается с
                                   // одного взгляда.
-                                  "text-lg font-extrabold sm:text-xl md:text-2xl"
+                                  "text-[clamp(1rem,18cqw,1.75rem)] font-extrabold leading-none"
                             )}
                           >
                             {/* "Время вышло" не влезал в узкий тайл браслета
@@ -1076,24 +1097,37 @@ export default function StaysZonePage() {
                             // (гарантированно меньше на ЛЮБОМ телефоне, не
                             // только на длинных суммах), threshold ниже — на
                             // случай, если сумма всё же дорастёт до 3+
-                            // знаков за время посещения. sm:/md: — растёт
-                            // обратно на широких экранах/планшетах (тот же
-                            // реальный баг, что и у таймера выше — auto-fill
-                            // сетка физически расширяет тайлы, текст должен
-                            // расти вместе с ними).
-                            <Money
-                              value={liveAmount}
-                              className="text-xl font-extrabold text-primary sm:text-2xl md:text-3xl"
-                              size="display"
-                              displayScale={computeMoneyDisplayScale(formatMoney(liveAmount, locale).length, {
-                                // Плашка узкая, но прежние пороги ужимали сумму
-                                // до предела уже на 12 000 ₽ (правка владельца
-                                // 2026-08-17).
-                                thresholdLength: 5,
-                                perCharReduction: 0.09,
-                                minScale: 0.6,
-                              })}
-                            />
+                            // знаков за время посещения. Базовый размер —
+                            // в cqw от ширины тайла (как у таймера выше),
+                            // а displayScale поверх него ужимает длинные
+                            // суммы.
+                            //
+                            // font-size стоит на ОБЁРТКЕ, а не на самом
+                            // <Money> (реальный баг, найден 2026-08-22 при
+                            // разборе масштабирования): при size="display"
+                            // Money всегда ставит инлайновый
+                            // style={{fontSize: `${displayScale}em`}} — а
+                            // инлайн-стиль перебивает класс, и `em` в
+                            // font-size считается от РОДИТЕЛЯ, поэтому
+                            // text-xl/sm:/md: прямо на Money не действовали
+                            // вообще: сумма рисовалась унаследованным
+                            // размером кнопки. Остальные вызовы
+                            // size="display" в проекте так и сделаны —
+                            // размер на внешнем <span> (см. operator/page.tsx).
+                            <span className="text-[clamp(1rem,22cqw,2rem)] font-extrabold leading-none text-primary">
+                              <Money
+                                value={liveAmount}
+                                size="display"
+                                displayScale={computeMoneyDisplayScale(formatMoney(liveAmount, locale).length, {
+                                  // Плашка узкая, но прежние пороги ужимали
+                                  // сумму до предела уже на 12 000 ₽ (правка
+                                  // владельца 2026-08-17).
+                                  thresholdLength: 5,
+                                  perCharReduction: 0.09,
+                                  minScale: 0.6,
+                                })}
+                              />
+                            </span>
                           )}
                         </button>
                       </PressableScale>
