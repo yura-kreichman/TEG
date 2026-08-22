@@ -1,0 +1,24 @@
+#!/bin/sh
+# Замер доступности RentOS: раз в минуту из crontab пользователя md33.
+#
+#   * * * * * /bin/sh /var/www/md33/data/rentos-uptime/check.sh >/dev/null 2>&1
+#
+# Пишем в CSV одну строку на замер: unix-время и код ответа. Файл лежит ВНЕ
+# корня сайта (/var/www/md33/data/, а не .../data/www/), наружу не отдаётся.
+# Прореживает файл агрегатор в mu-плагине rentos-uptime.php.
+#
+# Проверяем публичный адрес, а не localhost: так в замер попадает вся цепочка
+# nginx → контейнер → Postgres, то есть ровно то, что видит клиент.
+# /api/health не просто отвечает 200, а дёргает базу (SELECT 1).
+
+DIR=/var/www/md33/data/rentos-uptime
+URL=https://my.rentos365.app/api/health
+
+mkdir -p "$DIR"
+
+code=$(curl -s -o /dev/null -m 8 -w '%{http_code}' "$URL" 2>/dev/null)
+
+# curl не дозвонился — код пустой; пишем 0, чтобы минута считалась неудачной.
+[ -z "$code" ] && code=0
+
+printf '%s,%s\n' "$(date +%s)" "$code" >> "$DIR/samples.csv"
