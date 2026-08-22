@@ -592,15 +592,12 @@ function rentos_uptime_wrap( $line, $stats, $lang ) {
 	$word  = isset( $more[ $lang ] ) ? $more[ $lang ] : $more['en'];
 	$lines = explode( "\n", rentos_uptime_tooltip( $stats, $lang ) );
 
+	// Всё содержимое — строчные элементы: виджет «Текстовый редактор» кладёт
+	// вывод внутрь <p>, и первый же <div> заставил бы парсер закрыть абзац.
 	$body = '';
 	foreach ( $lines as $text ) {
-		$body .= '<div>' . esc_html( $text ) . '</div>';
+		$body .= '<span style="display:block">' . esc_html( $text ) . '</span>';
 	}
-
-	// Подсказка при наведении: те же данные, что и в раскрытом блоке, включая
-	// график — но символами, потому что в нативный tooltip картинку не
-	// вставить, а своё окно на :hover требует CSS, которого на сайте нельзя.
-	$hover = array_merge( array( $line ), $lines );
 
 	if ( is_array( $stats ) && ! empty( $stats['days'] ) ) {
 		$captions = array(
@@ -616,11 +613,9 @@ function rentos_uptime_wrap( $line, $stats, $lang ) {
 			count( $stats['days'] )
 		);
 
-		// Если на графике есть дни «из журнала», это надо назвать: иначе
-		// светлые столбики читались бы как измеренная доступность.
-		$hasLog = in_array( 'log', $stats['days'], true );
-
-		if ( $hasLog ) {
+		// Дни «из журнала» надо назвать: иначе светлые столбики читались бы
+		// как измеренная доступность.
+		if ( in_array( 'log', $stats['days'], true ) ) {
 			$legends = array(
 				'ru' => 'светлым — по журналу работы',
 				'uk' => 'світлим — за журналом роботи',
@@ -633,23 +628,30 @@ function rentos_uptime_wrap( $line, $stats, $lang ) {
 		}
 
 		$body .= rentos_uptime_chart( $stats['days'] )
-			. '<div style="font-size:11px;opacity:.75">' . esc_html( $caption ) . '</div>';
-
-		$hover[] = rentos_uptime_sparkline( $stats['days'] );
-		$hover[] = $caption;
+			. '<span style="display:block;font-size:11px;opacity:.75">' . esc_html( $caption ) . '</span>';
 	}
 
-	$title = esc_attr( implode( "\n", $hover ) );
+	// Карточка всплывает на наведении, а на тач-устройствах — по тапу, через
+	// :focus-within (поэтому у строки tabindex). Оформление — в Custom CSS
+	// набора Elementor, класс .rentos-status: согласованное исключение из
+	// запрета на свой CSS (владелец, 2026-08-22) — нативный tooltip его не
+	// устроил, на телефоне он не существует вовсе.
+	// Значок «i» вместо слова (правка владельца 2026-08-22). Рисуем инлайновым
+	// SVG в стиле Lucide — той же библиотеки, что и остальные иконки сайта:
+	// шрифтовых значков тут нет, а «ⓘ» из юникода в разных шрифтах выглядит
+	// по-разному. aria-label оставляет смысл программам чтения.
+	$icon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+		. ' stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img"'
+		. ' aria-label="' . esc_attr( $word ) . '" style="vertical-align:-2px">'
+		. '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
 
-	// max-width:100% обязателен: без него раскрытый блок берёт ширину по
-	// max-width содержимого (560px) и на телефоне уезжает за край колонки.
-	return '<details data-no-translation style="display:inline-block;text-align:left;max-width:100%">'
-		. '<summary title="' . $title . '" style="cursor:pointer;list-style:none;text-align:center">'
+	return '<span class="rentos-status" data-no-translation>'
+		. '<span class="rentos-status__line" tabindex="0">'
 		. '<span style="color:#22C55E">&#9679;</span> ' . esc_html( $line ) . ' '
-		. '<span style="color:#802BE3;text-decoration:underline">' . esc_html( $word ) . '</span>'
-		. '</summary>'
-		. '<div style="margin-top:8px;max-width:560px;line-height:1.6">' . $body . '</div>'
-		. '</details>';
+		. '<span style="color:#802BE3">' . $icon . '</span>'
+		. '</span>'
+		. '<span class="rentos-status__pop">' . $body . '</span>'
+		. '</span>';
 }
 
 /**
