@@ -17,9 +17,16 @@ URL=https://my.rentos365.app/api/health
 
 mkdir -p "$DIR"
 
-code=$(curl -s -o /dev/null -m 8 -w '%{http_code}' "$URL" 2>/dev/null)
+# Третьим полем пишем время ответа в секундах — из него считается медиана
+# отклика в подвале. Строки из двух полей (замеры до 2026-08-22) читаются
+# по-прежнему, время у них просто отсутствует.
+out=$(curl -s -o /dev/null -m 8 -w '%{http_code} %{time_total}' "$URL" 2>/dev/null)
 
-# curl не дозвонился — код пустой; пишем 0, чтобы минута считалась неудачной.
+code=$(echo "$out" | cut -d' ' -f1)
+secs=$(echo "$out" | cut -d' ' -f2)
+
+# curl не дозвонился — вывод пустой; пишем 0, чтобы замер считался неудачным.
 [ -z "$code" ] && code=0
+[ -z "$secs" ] && secs=0
 
-printf '%s,%s\n' "$(date +%s)" "$code" >> "$DIR/samples.csv"
+printf '%s,%s,%s\n' "$(date +%s)" "$code" "$secs" >> "$DIR/samples.csv"

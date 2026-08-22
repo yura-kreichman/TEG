@@ -91,7 +91,14 @@ function rentos_uptime_maybe_recalculate() {
 	$stats = get_option( RENTOS_UPTIME_OPTION );
 
 	if ( is_array( $stats ) && ! empty( $stats['updated'] ) ) {
-		if ( time() - (int) $stats['updated'] < DAY_IN_SECONDS - 5 * MINUTE_IN_SECONDS ) {
+		$age = time() - (int) $stats['updated'];
+
+		// Медиана отклика требует хотя бы часа замеров. Пока её нет, разрешаем
+		// пересчёт раз в час — иначе первая цифра появилась бы только через
+		// сутки. Как появилась — снова раз в сутки.
+		$limit = empty( $stats['response'] ) ? HOUR_IN_SECONDS - MINUTE_IN_SECONDS : DAY_IN_SECONDS - 5 * MINUTE_IN_SECONDS;
+
+		if ( $age < $limit ) {
 			return;
 		}
 	}
@@ -119,7 +126,8 @@ function rentos_uptime_recalculate() {
 		// Начало «полосы без сбоев» — от него шорткод считает дни при отрисовке.
 		&& (int) $previous['since'] === (int) $stats['since']
 		// И сами дни: они растут каждые сутки, даже когда всё остальное стоит.
-		&& (int) $previous['streak_days'] === (int) $stats['streak_days'];
+		&& (int) $previous['streak_days'] === (int) $stats['streak_days']
+		&& ( isset( $previous['response'] ) ? $previous['response'] : null ) === $stats['response'];
 
 	if ( $sameText ) {
 		return;
@@ -172,6 +180,7 @@ function rentos_uptime_build_stats() {
 	$byBucket   = array();
 	$firstStamp = null;
 	$keepLines  = array();
+	$times      = array();
 
 	$fh = fopen( RENTOS_UPTIME_FILE, 'r' );
 	if ( ! $fh ) {
@@ -184,16 +193,18 @@ function rentos_uptime_build_stats() {
 			continue;
 		}
 
-		list( $stamp, $code ) = array_pad( explode( ',', $line, 2 ), 2, '0' );
+		// Третье поле (время ответа) появилось 2026-08-22; у старых строк его нет.
+		list( $stamp, $code, $secs ) = array_pad( explode( ',', $line, 3 ), 3, '' );
 
 		$stamp = (int) $stamp;
 		$code  = (int) $code;
+		$secs  = ( '' === $secs ) ? null : (float) $secs;
 
 		if ( $stamp <= 0 || $stamp < $keepFrom ) {
 			continue; // слишком старое — в новый файл не переносим
 		}
 
-		$keepLines[] = $stamp . ',' . $code;
+		$keepLines[] = null === $secs ? $stamp . ',' . $code : $stamp . ',' . $code . ',' . $secs;
 
 		if ( null === $firstStamp || $stamp < $firstStamp ) {
 			$firstStamp = $stamp;
@@ -205,6 +216,12 @@ function rentos_uptime_build_stats() {
 		$ok = ( $code >= 200 && $code < 300 );
 		if ( ! isset( $byBucket[ $bucket ] ) || ! $ok ) {
 			$byBucket[ $bucket ] = $ok;
+		}
+
+		// Время ответа берём только у удачных замеров: секунды таймаута
+		// испортили бы медиану.
+		if ( $ok && null !== $secs && $secs > 0 ) {
+			$times[] = $secs;
 		}
 	}
 
@@ -277,7 +294,20 @@ function rentos_uptime_build_stats() {
 	$daysOk  = (int) floor( ( $now - $since ) / DAY_IN_SECONDS );
 	$window  = (int) floor( $totalBuckets / $bucketsInDay );
 
+	// Медиана, а не среднее: одна подвисшая проверка не должна портить картину.
+	$median = null;
+	if ( count( $times ) >= 12 ) { // меньше часа замеров — рано о чём-то говорить
+		sort( $times );
+		$mid    = (int) floor( count( $times ) / 2 );
+		$median = count( $times ) % 2
+			? $times[ $mid ]
+			: ( $times[ $mid - 1 ] + $times[ $mid ] ) / 2;
+	}
+
 	return array(
+		// Медиана времени ответа в секундах, округлённая ВВЕРХ до сотых —
+		// как и с процентом, приписывать себе лучшее не будем.
+		'response'      => null === $median ? null : number_format( ceil( $median * 100 ) / 100, 2, '.', '' ),
 		// Момент последнего сбоя (или базовая дата). Сколько с тех пор прошло,
 		// шорткод считает сам при отрисовке — это бесплатно и не требует
 		// пересчёта всей статистики.
@@ -462,6 +492,27 @@ add_shortcode(
 
 				$form    = isset( $percentForms[ $lang ] ) ? $percentForms[ $lang ] : $percentForms['en'];
 				$parts[] = sprintf( $form, $percent, rentos_uptime_unit( (int) $stats['window_days'], 'day', $lang ) );
+			}
+
+			// Медиана отклика — цифра, понятная клиенту («кабинет открывается
+			// мгновенно»), в отличие от загрузки сервера.
+			if ( ! empty( $stats['response'] ) ) {
+				$responseForms = array(
+					'ru' => 'отклик сервера %s с',
+					'uk' => 'відгук сервера %s с',
+					'en' => '%s s server response',
+					'it' => 'risposta del server %s s',
+					'ro' => 'răspuns server %s s',
+				);
+
+				$value = in_array( $lang, array( 'ru', 'uk', 'it', 'ro' ), true )
+					? str_replace( '.', ',', $stats['response'] )
+					: $stats['response'];
+
+				$parts[] = sprintf(
+					isset( $responseForms[ $lang ] ) ? $responseForms[ $lang ] : $responseForms['en'],
+					$value
+				);
 			}
 
 			$streak = rentos_uptime_streak_text( $stats['since'], $lang );
