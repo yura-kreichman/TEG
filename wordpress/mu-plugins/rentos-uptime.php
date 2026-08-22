@@ -41,6 +41,17 @@ const RENTOS_UPTIME_PCT_HOURS = 24;      // процент показываем,
 const RENTOS_UPTIME_FOOTER_ID = 118;     // шаблон подвала Elementor
 
 /**
+ * Последний известный перерыв ДО начала наблюдений. Отсчёт «без сбоев» ведётся
+ * от него, пока монитор не зафиксирует настоящий сбой — тогда счётчик
+ * сбрасывается на измеренную дату и дальше живёт только на замерах.
+ *
+ * 11 июля 2026 — день, когда поднялась прод-база (том Docker с Postgres создан
+ * 2026-07-11 20:13); раньше этой даты сервиса в проде не существовало, первый
+ * коммит репозитория — 7 июля 2026.
+ */
+const RENTOS_UPTIME_SEED = '2026-07-11';
+
+/**
  * Шаг замеров в секундах — должен совпадать с расписанием check.sh в crontab.
  * Пересчёт бьёт время на корзины этого размера: корзина без замера считается
  * недоступностью, поэтому рассинхрон с cron'ом сразу испортит статистику.
@@ -102,12 +113,13 @@ function rentos_uptime_recalculate() {
 	// Строка в подвале меняется редко (процент — до десятых, дни — раз в
 	// сутки), поэтому чистим кэш только когда меняется то, что видно.
 	$sameText = is_array( $previous )
-		&& isset( $previous['percent'], $previous['days_ok'], $previous['window_days'], $previous['since'] )
+		&& isset( $previous['percent'], $previous['streak_days'], $previous['window_days'], $previous['since'] )
 		&& $previous['percent'] === $stats['percent']
-		&& (int) $previous['days_ok'] === (int) $stats['days_ok']
 		&& (int) $previous['window_days'] === (int) $stats['window_days']
 		// Начало «полосы без сбоев» — от него шорткод считает дни при отрисовке.
-		&& (int) $previous['since'] === (int) $stats['since'];
+		&& (int) $previous['since'] === (int) $stats['since']
+		// И сами дни: они растут каждые сутки, даже когда всё остальное стоит.
+		&& (int) $previous['streak_days'] === (int) $stats['streak_days'];
 
 	if ( $sameText ) {
 		return;
@@ -251,15 +263,29 @@ function rentos_uptime_build_stats() {
 	$ratio   = ( $totalBuckets - $downBuckets ) / $totalBuckets;
 	$percent = floor( $ratio * 1000 ) / 10; // вниз, до десятых
 
-	$since   = null === $lastIncidentAt ? $firstStamp : $lastIncidentAt;
+	// Сбоя в замерах не было — отсчёт ведём от последнего известного перерыва
+	// до начала наблюдений (RENTOS_UPTIME_SEED), а не от первого замера:
+	// иначе счётчик обнулялся бы каждый раз, когда монитор переставили.
+	$seed = rentos_uptime_seed_timestamp();
+
+	if ( null === $lastIncidentAt ) {
+		$since = ( $seed && $seed < $firstStamp ) ? $seed : $firstStamp;
+	} else {
+		$since = $lastIncidentAt;
+	}
+
 	$daysOk  = (int) floor( ( $now - $since ) / DAY_IN_SECONDS );
 	$window  = (int) floor( $totalBuckets / $bucketsInDay );
 
 	return array(
-		// Момент последнего сбоя (или начала наблюдений). Сколько с тех пор
-		// прошло, шорткод считает сам при отрисовке — это бесплатно и не
-		// требует пересчёта всей статистики.
+		// Момент последнего сбоя (или базовая дата). Сколько с тех пор прошло,
+		// шорткод считает сам при отрисовке — это бесплатно и не требует
+		// пересчёта всей статистики.
 		'since'         => $since,
+		'has_incident'  => null !== $lastIncidentAt,
+		// Дни без сбоев на момент пересчёта — по ним ловим, что видимая строка
+		// изменилась, и чистим кэш (раз в сутки, когда число подрастает).
+		'streak_days'   => $daysOk,
 		'percent'       => number_format( $percent, 1, '.', '' ),
 		'days_ok'       => $daysOk,
 		'window_days'   => max( 1, $window ),
@@ -312,6 +338,19 @@ function rentos_uptime_last_sample_ok() {
  * Вывод
  * ---------------------------------------------------------------------- */
 
+
+/**
+ * Базовая дата отсчёта «без сбоев» в отметке времени часового пояса сайта.
+ */
+function rentos_uptime_seed_timestamp() {
+	if ( ! RENTOS_UPTIME_SEED ) {
+		return 0;
+	}
+
+	$dt = date_create_immutable( RENTOS_UPTIME_SEED . ' 00:00:00', wp_timezone() );
+
+	return $dt ? (int) $dt->getTimestamp() : 0;
+}
 
 /**
  * «5 дн.» / «1 day» / «1 zi» — единицы с правильным числом. Русский и
@@ -391,7 +430,23 @@ add_shortcode(
 
 		$parts = array( isset( $labels[ $lang ] ) ? $labels[ $lang ] : $labels['en'] );
 
-		if ( is_array( $stats ) && isset( $stats['percent'], $stats['since'] ) ) {
+		// Пока статистики нет (первый час замеров), «без сбоев» всё равно
+		// считаем — от базовой даты.
+		if ( ! is_array( $stats ) || ! isset( $stats['since'] ) ) {
+			$seed = rentos_uptime_seed_timestamp();
+
+			if ( $seed ) {
+				$streak = rentos_uptime_streak_text( $seed, $lang );
+				if ( '' !== $streak ) {
+					$parts[] = $streak;
+				}
+			}
+
+			return '<span data-no-translation><span style="color:#22C55E">&#9679;</span> '
+				. esc_html( implode( ' · ', $parts ) ) . '</span>';
+		}
+
+		if ( isset( $stats['percent'], $stats['since'] ) ) {
 			// Процент показываем, только когда набрались сутки замеров:
 			// «доступность 100% за 2 часа» — не статистика, а самообман.
 			if ( (int) $stats['window_hours'] >= RENTOS_UPTIME_PCT_HOURS ) {
