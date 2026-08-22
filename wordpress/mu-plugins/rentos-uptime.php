@@ -313,6 +313,8 @@ function rentos_uptime_build_stats() {
 		// пересчёта всей статистики.
 		'since'         => $since,
 		'has_incident'  => null !== $lastIncidentAt,
+		// С какого момента вообще идут замеры — для расшифровки в подсказке.
+		'monitor_since' => $firstStamp,
 		// Дни без сбоев на момент пересчёта — по ним ловим, что видимая строка
 		// изменилась, и чистим кэш (раз в сутки, когда число подрастает).
 		'streak_days'   => $daysOk,
@@ -368,6 +370,73 @@ function rentos_uptime_last_sample_ok() {
  * Вывод
  * ---------------------------------------------------------------------- */
 
+
+/**
+ * Расшифровка для всплывающей подсказки — обычный атрибут title, без единой
+ * строчки JS и CSS. Отдельной страницы «Состояние сервиса» решили не заводить
+ * (запрос владельца 2026-08-22: «чтобы не плодить страницы»), поэтому весь
+ * контекст — как меряем, с какого числа, что считаем сбоем — живёт здесь.
+ */
+function rentos_uptime_tooltip( $stats, $lang ) {
+	$step = (int) round( RENTOS_UPTIME_STEP / 60 );
+
+	$monitorSince = ( is_array( $stats ) && ! empty( $stats['monitor_since'] ) )
+		? wp_date( 'd.m.Y', (int) $stats['monitor_since'] )
+		: wp_date( 'd.m.Y' );
+
+	$lastIncident = ( is_array( $stats ) && ! empty( $stats['has_incident'] ) )
+		? wp_date( 'd.m.Y', (int) $stats['since'] )
+		: null;
+
+	$seedDate = wp_date( 'd.m.Y', rentos_uptime_seed_timestamp() );
+
+	$texts = array(
+		'ru' => array(
+			sprintf( 'Проверяем my.rentos365.app каждые %d минут, замеры ведём с %s.', $step, $monitorSince ),
+			sprintf( 'Сбоем считаем недоступность дольше %d минут — короткие обновления в счёт не идут.', $step ),
+			null === $lastIncident
+				? sprintf( 'Сбоев не зафиксировано; отсчёт ведём с запуска сервиса %s.', $seedDate )
+				: sprintf( 'Последний сбой: %s.', $lastIncident ),
+			'Время ответа — медиана по замерам с самого сервера.',
+		),
+		'en' => array(
+			sprintf( 'We check my.rentos365.app every %d minutes; measurements started on %s.', $step, $monitorSince ),
+			sprintf( 'An incident means being unavailable for more than %d minutes — short updates do not count.', $step ),
+			null === $lastIncident
+				? sprintf( 'No incidents recorded; counting from the service launch on %s.', $seedDate )
+				: sprintf( 'Last incident: %s.', $lastIncident ),
+			'Response time is the median measured from the server itself.',
+		),
+		'uk' => array(
+			sprintf( 'Перевіряємо my.rentos365.app кожні %d хвилин, заміри ведемо з %s.', $step, $monitorSince ),
+			sprintf( 'Збоєм вважаємо недоступність довше %d хвилин — короткі оновлення не рахуються.', $step ),
+			null === $lastIncident
+				? sprintf( 'Збоїв не зафіксовано; відлік ведемо від запуску сервісу %s.', $seedDate )
+				: sprintf( 'Останній збій: %s.', $lastIncident ),
+			'Час відповіді — медіана за замірами із самого сервера.',
+		),
+		'it' => array(
+			sprintf( 'Controlliamo my.rentos365.app ogni %d minuti; le misurazioni partono dal %s.', $step, $monitorSince ),
+			sprintf( 'Consideriamo guasto un’indisponibilità superiore a %d minuti: i brevi aggiornamenti non contano.', $step ),
+			null === $lastIncident
+				? sprintf( 'Nessun guasto registrato; contiamo dal lancio del servizio il %s.', $seedDate )
+				: sprintf( 'Ultimo guasto: %s.', $lastIncident ),
+			'Il tempo di risposta è la mediana misurata dal server stesso.',
+		),
+		'ro' => array(
+			sprintf( 'Verificăm my.rentos365.app la fiecare %d minute; măsurătorile au început pe %s.', $step, $monitorSince ),
+			sprintf( 'Considerăm incident indisponibilitatea mai lungă de %d minute — actualizările scurte nu contează.', $step ),
+			null === $lastIncident
+				? sprintf( 'Niciun incident înregistrat; numărăm de la lansarea serviciului pe %s.', $seedDate )
+				: sprintf( 'Ultimul incident: %s.', $lastIncident ),
+			'Timpul de răspuns este mediana măsurată de pe server.',
+		),
+	);
+
+	$lines = isset( $texts[ $lang ] ) ? $texts[ $lang ] : $texts['en'];
+
+	return implode( "\n", array_filter( $lines ) );
+}
 
 /**
  * Базовая дата отсчёта «без сбоев» в отметке времени часового пояса сайта.
@@ -472,7 +541,7 @@ add_shortcode(
 				}
 			}
 
-			return '<span data-no-translation><span style="color:#22C55E">&#9679;</span> '
+			return '<span data-no-translation title="' . esc_attr( rentos_uptime_tooltip( $stats, $lang ) ) . '" style="cursor:help"><span style="color:#22C55E">&#9679;</span> '
 				. esc_html( implode( ' · ', $parts ) ) . '</span>';
 		}
 
@@ -521,7 +590,7 @@ add_shortcode(
 			}
 		}
 
-		return '<span data-no-translation><span style="color:#22C55E">&#9679;</span> '
+		return '<span data-no-translation title="' . esc_attr( rentos_uptime_tooltip( $stats, $lang ) ) . '" style="cursor:help"><span style="color:#22C55E">&#9679;</span> '
 			. esc_html( implode( ' · ', $parts ) ) . '</span>';
 	}
 );
