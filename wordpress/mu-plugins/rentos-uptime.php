@@ -372,70 +372,41 @@ function rentos_uptime_last_sample_ok() {
 
 
 /**
- * Расшифровка для всплывающей подсказки — обычный атрибут title, без единой
- * строчки JS и CSS. Отдельной страницы «Состояние сервиса» решили не заводить
- * (запрос владельца 2026-08-22: «чтобы не плодить страницы»), поэтому весь
- * контекст — как меряем, с какого числа, что считаем сбоем — живёт здесь.
+ * Расшифровка под строкой состояния. Держим её КОРОТКОЙ: две строки, без дат и
+ * без объяснений методики (правка владельца 2026-08-22 — предыдущая версия из
+ * четырёх строк с датами и определением сбоя была признана перегруженной).
+ * Вместо «время ответа считается так-то» — сама цифра.
  */
 function rentos_uptime_tooltip( $stats, $lang ) {
 	$step = (int) round( RENTOS_UPTIME_STEP / 60 );
 
-	$monitorSince = ( is_array( $stats ) && ! empty( $stats['monitor_since'] ) )
-		? wp_date( 'd.m.Y', (int) $stats['monitor_since'] )
-		: wp_date( 'd.m.Y' );
-
-	$lastIncident = ( is_array( $stats ) && ! empty( $stats['has_incident'] ) )
-		? wp_date( 'd.m.Y', (int) $stats['since'] )
-		: null;
-
-	$seedDate = wp_date( 'd.m.Y', rentos_uptime_seed_timestamp() );
-
-	$texts = array(
-		'ru' => array(
-			sprintf( 'Проверяем my.rentos365.app каждые %d минут, замеры ведём с %s.', $step, $monitorSince ),
-			sprintf( 'Сбоем считаем недоступность дольше %d минут — короткие обновления в счёт не идут.', $step ),
-			null === $lastIncident
-				? sprintf( 'Сбоев не зафиксировано; отсчёт ведём с запуска сервиса %s.', $seedDate )
-				: sprintf( 'Последний сбой: %s.', $lastIncident ),
-			'Время ответа — медиана по замерам с самого сервера.',
-		),
-		'en' => array(
-			sprintf( 'We check my.rentos365.app every %d minutes; measurements started on %s.', $step, $monitorSince ),
-			sprintf( 'An incident means being unavailable for more than %d minutes — short updates do not count.', $step ),
-			null === $lastIncident
-				? sprintf( 'No incidents recorded; counting from the service launch on %s.', $seedDate )
-				: sprintf( 'Last incident: %s.', $lastIncident ),
-			'Response time is the median measured from the server itself.',
-		),
-		'uk' => array(
-			sprintf( 'Перевіряємо my.rentos365.app кожні %d хвилин, заміри ведемо з %s.', $step, $monitorSince ),
-			sprintf( 'Збоєм вважаємо недоступність довше %d хвилин — короткі оновлення не рахуються.', $step ),
-			null === $lastIncident
-				? sprintf( 'Збоїв не зафіксовано; відлік ведемо від запуску сервісу %s.', $seedDate )
-				: sprintf( 'Останній збій: %s.', $lastIncident ),
-			'Час відповіді — медіана за замірами із самого сервера.',
-		),
-		'it' => array(
-			sprintf( 'Controlliamo my.rentos365.app ogni %d minuti; le misurazioni partono dal %s.', $step, $monitorSince ),
-			sprintf( 'Consideriamo guasto un’indisponibilità superiore a %d minuti: i brevi aggiornamenti non contano.', $step ),
-			null === $lastIncident
-				? sprintf( 'Nessun guasto registrato; contiamo dal lancio del servizio il %s.', $seedDate )
-				: sprintf( 'Ultimo guasto: %s.', $lastIncident ),
-			'Il tempo di risposta è la mediana misurata dal server stesso.',
-		),
-		'ro' => array(
-			sprintf( 'Verificăm my.rentos365.app la fiecare %d minute; măsurătorile au început pe %s.', $step, $monitorSince ),
-			sprintf( 'Considerăm incident indisponibilitatea mai lungă de %d minute — actualizările scurte nu contează.', $step ),
-			null === $lastIncident
-				? sprintf( 'Niciun incident înregistrat; numărăm de la lansarea serviciului pe %s.', $seedDate )
-				: sprintf( 'Ultimul incident: %s.', $lastIncident ),
-			'Timpul de răspuns este mediana măsurată de pe server.',
-		),
+	$checkForms = array(
+		'ru' => 'Проверяем my.rentos365.app каждые %d минут.',
+		'uk' => 'Перевіряємо my.rentos365.app кожні %d хвилин.',
+		'en' => 'We check my.rentos365.app every %d minutes.',
+		'it' => 'Controlliamo my.rentos365.app ogni %d minuti.',
+		'ro' => 'Verificăm my.rentos365.app la fiecare %d minute.',
 	);
 
-	$lines = isset( $texts[ $lang ] ) ? $texts[ $lang ] : $texts['en'];
+	$responseForms = array(
+		'ru' => 'Время ответа: %s с.',
+		'uk' => 'Час відповіді: %s с.',
+		'en' => 'Response time: %s s.',
+		'it' => 'Tempo di risposta: %s s.',
+		'ro' => 'Timp de răspuns: %s s.',
+	);
 
-	return implode( "\n", array_filter( $lines ) );
+	$lines = array( sprintf( isset( $checkForms[ $lang ] ) ? $checkForms[ $lang ] : $checkForms['en'], $step ) );
+
+	if ( is_array( $stats ) && ! empty( $stats['response'] ) ) {
+		$value = in_array( $lang, array( 'ru', 'uk', 'it', 'ro' ), true )
+			? str_replace( '.', ',', $stats['response'] )
+			: $stats['response'];
+
+		$lines[] = sprintf( isset( $responseForms[ $lang ] ) ? $responseForms[ $lang ] : $responseForms['en'], $value );
+	}
+
+	return implode( "\n", $lines );
 }
 
 /**
@@ -600,26 +571,9 @@ add_shortcode(
 				$parts[] = sprintf( $form, $percent, rentos_uptime_unit( (int) $stats['window_days'], 'day', $lang ) );
 			}
 
-			// Медиана отклика — цифра, понятная клиенту («кабинет открывается
-			// мгновенно»), в отличие от загрузки сервера.
-			if ( ! empty( $stats['response'] ) ) {
-				$responseForms = array(
-					'ru' => 'отклик сервера %s с',
-					'uk' => 'відгук сервера %s с',
-					'en' => '%s s server response',
-					'it' => 'risposta del server %s s',
-					'ro' => 'răspuns server %s s',
-				);
-
-				$value = in_array( $lang, array( 'ru', 'uk', 'it', 'ro' ), true )
-					? str_replace( '.', ',', $stats['response'] )
-					: $stats['response'];
-
-				$parts[] = sprintf(
-					isset( $responseForms[ $lang ] ) ? $responseForms[ $lang ] : $responseForms['en'],
-					$value
-				);
-			}
+			// Время ответа В СТРОКЕ не печатаем: оно переехало в расшифровку под
+			// «подробнее» (правка владельца 2026-08-22 — строка и так длинная,
+			// а цифра дублировалась бы в двух местах).
 
 			$streak = rentos_uptime_streak_text( $stats['since'], $lang );
 			if ( '' !== $streak ) {
