@@ -4,6 +4,7 @@ import { invalidateSubscriptionGate } from "@/lib/subscription-gate";
 import { invalidateTenantModuleFlags } from "@/lib/tenant-modules";
 import { Prisma } from "@/generated/prisma/client";
 import { requireSuperAdmin } from "@/lib/require-super-admin";
+import { describeTenantRegion } from "@/lib/admin/tenant-region";
 import { verifyPassword } from "@/lib/auth";
 import { deleteTenantEverywhere } from "@/lib/tenant-lifecycle";
 
@@ -66,6 +67,9 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/admin/tenan
     subscriptionExpiresAt: tenant.subscriptionExpiresAt,
     currentPeriodEnd: tenant.currentPeriodEnd,
     contactPhone: tenant.contactPhone,
+    region: describeTenantRegion(tenant.timezone),
+    locale: tenant.locale,
+    currency: tenant.currency,
     adminNote: tenant.adminNote,
     ownerEmail: owner?.email ?? null,
     createdAt: tenant.createdAt,

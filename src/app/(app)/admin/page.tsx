@@ -34,6 +34,9 @@ interface TenantInfo {
   pointsCount: number;
   operatorsCount: number;
   createdAt: string;
+  // Откуда клиент (запрос владельца 2026-08-22): страна и местное время
+  // выводятся из часового пояса, который Владелец задаёт себе сам.
+  region: { label: string; timezone: string; localTime: string };
   fluentcartCustomerId: string | null;
   unlimited: boolean;
   cleanupVerdict: CleanupVerdict;
@@ -478,6 +481,7 @@ export default function AdminTenantsPage() {
                           {tenant.pointsCount} {t.admin.pointsSuffix} · {tenant.operatorsCount}{" "}
                           {t.admin.operatorsSuffix}
                         </p>
+                        <p className="text-caption-airbnb text-muted-foreground">{tenant.region.label}</p>
                         <p className="text-caption-airbnb text-muted-foreground">
                           {t.admin.registeredOnLabel} {new Date(tenant.createdAt).toLocaleDateString()}
                           {tenant.cleanupVerdict !== "active" && ` · ${tenant.ageDays} ${t.admin.cleanupAgeDays}`}

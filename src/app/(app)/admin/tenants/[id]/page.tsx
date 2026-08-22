@@ -54,6 +54,9 @@ interface TenantDetail {
   subscriptionStatus: SubscriptionStatus;
   subscriptionExpiresAt: string | null;
   contactPhone: string | null;
+  region: { label: string; timezone: string; country: string | null; localTime: string };
+  locale: string;
+  currency: string | null;
   adminNote: string | null;
   ownerEmail: string | null;
   package: PackageOption;
@@ -343,6 +346,19 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
               <div className="flex flex-col gap-1">
                 <Label>{t.admin.ownerEmailLabel}</Label>
                 <p className="text-body-airbnb">{tenant.ownerEmail ?? "—"}</p>
+              </div>
+              {/* Регион — рядом с контактами, а не в лимитах: он нужен ровно
+                  тогда же, когда телефон и почта, — чтобы понять, откуда
+                  клиент и не звонить ему в ночь (запрос владельца
+                  2026-08-22). Поле не редактируемое: пояс задаёт сам
+                  Владелец в своих Настройках. */}
+              <div className="flex flex-col gap-1">
+                <Label>{t.admin.regionLabel}</Label>
+                <p className="text-body-airbnb">{tenant.region.label}</p>
+                <p className="text-caption-airbnb text-muted-foreground">
+                  {tenant.region.timezone} · {t.admin.regionLocaleLabel} {tenant.locale}
+                  {tenant.currency ? ` · ${tenant.currency}` : ""}
+                </p>
               </div>
               <div className="flex flex-col gap-1">
                 <Label htmlFor="contactPhone">{t.admin.contactPhoneLabel}</Label>

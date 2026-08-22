@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/require-super-admin";
 import { CLEANUP_INCLUDE, CLEANUP_MIN_AGE_DAYS, classifyTenant, countsOf, daysSince } from "@/lib/admin/tenant-cleanup";
+import { describeTenantRegion } from "@/lib/admin/tenant-region";
 
 export async function GET() {
   const admin = await requireSuperAdmin();
@@ -32,6 +33,9 @@ export async function GET() {
       pointsCount: t._count.points,
       operatorsCount: t._count.operators,
       createdAt: t.createdAt,
+      // Откуда клиент (запрос владельца 2026-08-22) — считаем на сервере,
+      // чтобы список и карточка тенанта говорили одно и то же.
+      region: describeTenantRegion(t.timezone),
       fluentcartCustomerId: t.fluentcartCustomerId,
       unlimited: t.unlimited,
       // Анализ "потерянных клиентов" (см. src/lib/admin/tenant-cleanup.ts).

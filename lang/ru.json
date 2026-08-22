@@ -336,6 +336,8 @@
     "historyTitle": "История изменений",
     "contactsTitle": "Контакты",
     "ownerEmailLabel": "Email владельца (логин)",
+    "regionLabel": "Регион",
+    "regionLocaleLabel": "язык",
     "contactPhoneLabel": "Телефон",
     "adminNoteLabel": "Заметка администратора",
     "adminNotePlaceholder": "Видна только вам, владелец её не видит",
