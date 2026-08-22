@@ -1,28 +1,27 @@
 <?php
 /**
- * Plugin Name: RentOS — счётчик, растущий по месяцам
- * Description: Шорткод [rentos_counter] для динамического тега Elementor: число, которое само прибавляется на шаг раз в месяц.
- * Version: 1.0
+ * Plugin Name: RentOS — счётчик, растущий сам
+ * Description: Шорткод [rentos_counter] для динамического тега Elementor: число, которое само прибавляется на шаг раз в неделю или раз в месяц.
+ * Version: 1.1
  *
- * Зачем: в CTA главной стоит виджет «Счётчик» Elementor, у которого поле
- * «Конечное число» привязано динамическим тегом «Шорткод» к этому шорткоду.
- * Всё, что настраивается, живёт в атрибутах прямо в панели Elementor —
+ * Зачем: в CTA главной стоит штатный виджет «Счётчик» Elementor, у которого
+ * поле «Конечное число» привязано штатным динамическим тегом «Шорткод» к этому
+ * шорткоду. Всё, что настраивается, живёт в атрибутах прямо в панели Elementor —
  * файл трогать не нужно:
  *
- *   [rentos_counter start=36 since=2026-08 step=1]
+ *   [rentos_counter start=36 since=2026-08-22 period=week step=1]
  *
- *   start — сколько было на месяц since (по умолчанию 36)
- *   since — базовый месяц в виде ГГГГ-ММ (по умолчанию 2026-08)
- *   step  — на сколько прибавлять каждый следующий месяц (по умолчанию 1)
- *   max   — потолок, 0 = без потолка
+ *   start  — сколько было на дату since (по умолчанию 36)
+ *   since  — базовая дата: ГГГГ-ММ-ДД для недель, ГГГГ-ММ для месяцев
+ *   period — week (по умолчанию) или month
+ *   step   — на сколько прибавлять каждый период (по умолчанию 1)
+ *   max    — потолок, 0 = без потолка
  *
- * То есть в августе 2026 шорткод отдаёт 36, в сентябре 37, в октябре 38 и так далее.
- * Захочет владелец поставить реальное число — правит start и since в поле
- * динамического тега, без правки кода.
+ * То есть при period=week число растёт на 1 каждые 7 дней от даты since.
  *
  * Важно про кэш: значение попадает в разметку при её генерации, поэтому смена
- * месяца видна на сайте после того, как обновится кэш страницы (WP Rocket +
- * кэш отрисовки Elementor). Для счётчика с шагом «раз в месяц» это некритично.
+ * недели видна на сайте после того, как обновится кэш страницы (WP Rocket +
+ * кэш отрисовки Elementor).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -34,32 +33,46 @@ add_shortcode(
 	function ( $atts ) {
 		$atts = shortcode_atts(
 			array(
-				'start' => 36,
-				'since' => '2026-08',
-				'step'  => 1,
-				'max'   => 0,
+				'start'  => 36,
+				'since'  => '2026-08-22',
+				'period' => 'week',
+				'step'   => 1,
+				'max'    => 0,
 			),
 			$atts,
 			'rentos_counter'
 		);
 
-		$start = (int) $atts['start'];
-		$step  = (int) $atts['step'];
-		$max   = (int) $atts['max'];
+		$start  = (int) $atts['start'];
+		$step   = (int) $atts['step'];
+		$max    = (int) $atts['max'];
+		$period = strtolower( trim( (string) $atts['period'] ) );
+		$since  = trim( (string) $atts['since'] );
 
-		// Базовый месяц. Кривое значение — отдаём стартовое число, а не ноль:
-		// на странице лучше честное «36», чем пустой счётчик.
-		if ( ! preg_match( '/^(\d{4})-(\d{1,2})$/', trim( (string) $atts['since'] ), $m ) ) {
+		// Кривая дата — отдаём стартовое число, а не ноль: на странице лучше
+		// честное «36», чем пустой счётчик.
+		if ( preg_match( '/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $since, $m ) ) {
+			$since_ymd = sprintf( '%04d-%02d-%02d', $m[1], $m[2], $m[3] );
+		} elseif ( preg_match( '/^(\d{4})-(\d{1,2})$/', $since, $m ) ) {
+			$since_ymd = sprintf( '%04d-%02d-01', $m[1], $m[2] );
+		} else {
 			return (string) $start;
 		}
 
-		$base_months = (int) $m[1] * 12 + (int) $m[2];
+		// current_time() с форматом отдаёт дату в часовом поясе сайта —
+		// именно она решает, наступил ли новый период.
+		$today_ymd = current_time( 'Y-m-d' );
 
-		// current_time() с форматом отдаёт время в часовом поясе сайта —
-		// именно оно определяет, наступил ли новый месяц.
-		$now_months = (int) current_time( 'Y' ) * 12 + (int) current_time( 'n' );
+		if ( 'month' === $period ) {
+			$since_months = (int) substr( $since_ymd, 0, 4 ) * 12 + (int) substr( $since_ymd, 5, 2 );
+			$today_months = (int) substr( $today_ymd, 0, 4 ) * 12 + (int) substr( $today_ymd, 5, 2 );
+			$elapsed      = $today_months - $since_months;
+		} else {
+			$days    = ( strtotime( $today_ymd . ' 00:00:00' ) - strtotime( $since_ymd . ' 00:00:00' ) ) / DAY_IN_SECONDS;
+			$elapsed = (int) floor( $days / 7 );
+		}
 
-		$value = $start + max( 0, $now_months - $base_months ) * $step;
+		$value = $start + max( 0, $elapsed ) * $step;
 
 		if ( $max > 0 ) {
 			$value = min( $value, $max );
