@@ -473,6 +473,38 @@ function rentos_uptime_tooltip( $stats, $lang ) {
 }
 
 /**
+ * Тот же график, но символами — для всплывающей подсказки. В нативный tooltip
+ * (атрибут title) картинку не вставить, а рисовать своё окно на :hover нельзя:
+ * на сайте запрещён собственный CSS. Блочные символы решают задачу без единой
+ * строчки стилей: высота символа = доступность дня.
+ */
+function rentos_uptime_sparkline( $days ) {
+	if ( ! is_array( $days ) || ! $days ) {
+		return '';
+	}
+
+	$out = '';
+
+	foreach ( $days as $ratio ) {
+		if ( null === $ratio ) {
+			$out .= '·';               // данных нет
+		} elseif ( 'log' === $ratio ) {
+			$out .= '▒';               // по журналу работы, без замеров
+		} elseif ( $ratio >= 0.9999 ) {
+			$out .= '█';
+		} elseif ( $ratio >= 0.99 ) {
+			$out .= '▆';               // деплой или единичная осечка
+		} elseif ( $ratio >= 0.95 ) {
+			$out .= '▄';
+		} else {
+			$out .= '▂';
+		}
+	}
+
+	return $out;
+}
+
+/**
  * Полоска доступности по дням — инлайновый SVG, который рисует сервер. Никакого
  * JS и никаких библиотек: 30 столбиков, зелёный = день без сбоев, бледный =
  * дней ещё не было (до запуска монитора). Так график осмысленно выглядит уже
@@ -501,16 +533,26 @@ function rentos_uptime_chart( $days ) {
 			$color  = '#A7E7C0';
 			$height = $h;
 		} else {
-			if ( $ratio >= 0.999 ) {
-				$color = '#22C55E';
+			// Высота ступенями, а не линейно по доле. Линейно провал от
+			// деплоя (одна неудачная проверка из 288) даёт 25,9 px вместо 26 —
+			// то есть не виден вообще, а владелец просил, чтобы такие дни
+			// «палочка была чуть ниже» (2026-08-22).
+			if ( $ratio >= 0.9999 ) {
+				$color  = '#22C55E';
+				$height = $h;            // ни одной неудачной проверки
 			} elseif ( $ratio >= 0.99 ) {
-				$color = '#F59E0B';
+				$color  = '#22C55E';     // деплой или единичная осечка
+				$height = (int) round( $h * 0.75 );
+			} elseif ( $ratio >= 0.95 ) {
+				$color  = '#F59E0B';
+				$height = (int) round( $h * 0.55 );
+			} elseif ( $ratio >= 0.8 ) {
+				$color  = '#F59E0B';
+				$height = (int) round( $h * 0.4 );
 			} else {
-				$color = '#EF4444';
+				$color  = '#EF4444';
+				$height = (int) round( $h * 0.28 );
 			}
-
-			// Даже у плохого дня оставляем видимый огрызок.
-			$height = max( 6, (int) round( $h * max( 0.2, $ratio ) ) );
 		}
 
 		$bars .= sprintf(
@@ -555,7 +597,11 @@ function rentos_uptime_wrap( $line, $stats, $lang ) {
 		$body .= '<div>' . esc_html( $text ) . '</div>';
 	}
 
-	// График доступности по дням плюс подпись к нему.
+	// Подсказка при наведении: те же данные, что и в раскрытом блоке, включая
+	// график — но символами, потому что в нативный tooltip картинку не
+	// вставить, а своё окно на :hover требует CSS, которого на сайте нельзя.
+	$hover = array_merge( array( $line ), $lines );
+
 	if ( is_array( $stats ) && ! empty( $stats['days'] ) ) {
 		$captions = array(
 			'ru' => 'Доступность по дням, %d дней',
@@ -572,7 +618,9 @@ function rentos_uptime_wrap( $line, $stats, $lang ) {
 
 		// Если на графике есть дни «из журнала», это надо назвать: иначе
 		// светлые столбики читались бы как измеренная доступность.
-		if ( in_array( 'log', $stats['days'], true ) ) {
+		$hasLog = in_array( 'log', $stats['days'], true );
+
+		if ( $hasLog ) {
 			$legends = array(
 				'ru' => 'светлым — по журналу работы',
 				'uk' => 'світлим — за журналом роботи',
@@ -586,12 +634,17 @@ function rentos_uptime_wrap( $line, $stats, $lang ) {
 
 		$body .= rentos_uptime_chart( $stats['days'] )
 			. '<div style="font-size:11px;opacity:.75">' . esc_html( $caption ) . '</div>';
+
+		$hover[] = rentos_uptime_sparkline( $stats['days'] );
+		$hover[] = $caption;
 	}
+
+	$title = esc_attr( implode( "\n", $hover ) );
 
 	// max-width:100% обязателен: без него раскрытый блок берёт ширину по
 	// max-width содержимого (560px) и на телефоне уезжает за край колонки.
 	return '<details data-no-translation style="display:inline-block;text-align:left;max-width:100%">'
-		. '<summary style="cursor:pointer;list-style:none;text-align:center">'
+		. '<summary title="' . $title . '" style="cursor:pointer;list-style:none;text-align:center">'
 		. '<span style="color:#22C55E">&#9679;</span> ' . esc_html( $line ) . ' '
 		. '<span style="color:#802BE3;text-decoration:underline">' . esc_html( $word ) . '</span>'
 		. '</summary>'
