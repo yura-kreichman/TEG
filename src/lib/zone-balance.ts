@@ -565,19 +565,38 @@ export async function settleOutstandingCollectionAdvance(
     // всё это погашение относится к ней. Если их несколько, делить погашение
     // между ними здесь было бы гаданием — оставляем null, а правку таких строк
     // эндпоинт отклоняет явно.
-    const unsettled = await tx.moneyOperation.findMany({
-      where: { pointId, type: "collection_advance", amount: { lt: 0 } },
-      select: { id: true },
+    //
+    // "Погашена" считается ПО ДЕНЬГАМ, а не по наличию ссылки (найдено на
+    // проде КидсБурга 2026-08-22). Раньше закрытыми признавались только те
+    // авансы, на которые кто-то ссылается, — но погашение без ссылки (а его
+    // и создаёт эта же ветка, когда открытых авансов больше одного) никого не
+    // закрывало. Один такой случай — и дальше открытыми числятся ВСЕ авансы
+    // точки за всю историю, включая давно погашенные: связь больше никогда не
+    // проставляется, а /api/money/collections/[id] отвечает на правку
+    // "погашение не связано со строкой". Самоподдерживающийся тупик: владелец
+    // навсегда терял возможность исправить ошибочную сумму инкассации.
+    // Гасим по FIFO — в порядке возникновения долга, как их и гасит жизнь.
+    const advanceOps = await tx.moneyOperation.findMany({
+      where: { pointId, type: "collection_advance" },
+      select: { id: true, amount: true },
+      orderBy: { occurredAt: "asc" },
     });
-    const settledIds = new Set(
-      (
-        await tx.moneyOperation.findMany({
-          where: { pointId, type: "collection_advance", settlesOperationId: { not: null } },
-          select: { settlesOperationId: true },
-        })
-      ).map((row) => row.settlesOperationId)
-    );
-    const open = unsettled.filter((row) => !settledIds.has(row.id));
+    const debts: { id: string; left: number }[] = [];
+    for (const op of advanceOps) {
+      const amount = Number(op.amount);
+      if (amount < 0) {
+        debts.push({ id: op.id, left: -amount });
+        continue;
+      }
+      let repay = amount;
+      for (const debt of debts) {
+        if (repay <= 0) break;
+        const covered = Math.min(debt.left, repay);
+        debt.left = Math.round((debt.left - covered) * 100) / 100;
+        repay = Math.round((repay - covered) * 100) / 100;
+      }
+    }
+    const open = debts.filter((debt) => debt.left > 0);
     const settlesOperationId = open.length === 1 ? open[0].id : null;
 
     const shares = distributeCollectionWhole(settleable, weights);
