@@ -54,6 +54,22 @@ async function loadEditableExpense(id: string, pointId: string, tenantId: string
   if (operation.occurredAt < bounds.start || operation.occurredAt >= bounds.end) {
     return { error: NextResponse.json({ error: "Этот расход уже вне текущего дня" }, { status: 409 }) };
   }
+  // Инкассация зоны после этого расхода — та же граница, что у списка
+  // (соседний route.ts) и у сдачи итогов: владелец забрал кассу, уже
+  // уменьшенную на эту сумму, менять её задним числом сотруднику нельзя.
+  if (operation.zoneId) {
+    const collectionAfter = await prisma.moneyOperation.findFirst({
+      where: {
+        type: "collection",
+        zoneId: operation.zoneId,
+        occurredAt: { gt: operation.occurredAt, lt: bounds.end },
+      },
+      select: { id: true },
+    });
+    if (collectionAfter) {
+      return { error: NextResponse.json({ error: "Эти деньги уже забраны инкассацией" }, { status: 409 }) };
+    }
+  }
   return { operation };
 }
 

@@ -103,6 +103,10 @@ interface ExpenseEventCtx {
   categoryName: string | null;
   comment: string | null;
   createdAt: string;
+  // false — деньги на этот расход забрала инкассация посреди дня: в сверку
+  // кассы он не входит (src/lib/expense-compensation.ts). Показываем его в
+  // списке всё равно — сотрудник должен видеть все свои траты за день.
+  countedInReconciliation: boolean;
 }
 
 type Step = { kind: "select" } | { kind: "zone"; zoneId: string } | { kind: "expenses" } | { kind: "review" };
@@ -259,6 +263,7 @@ export default function SubmitResultsPage() {
             categoryName: e.categoryName,
             comment: e.comment,
             createdAt: e.createdAt,
+            countedInReconciliation: e.countedInReconciliation !== false,
           });
         }
         setExpenseEventsByZone(byZone);
@@ -507,6 +512,21 @@ export default function SubmitResultsPage() {
     const form = zoneForms[zoneId];
     if (!zone || !form) return null;
 
+    // Расходы зоны за период — ОБЯЗАТЕЛЬНОЕ слагаемое Разницы, ровно как на
+    // сервере (api/operator/submit-results, expensesOf): сотрудник вводит
+    // ОСТАТОК кассы, потраченное из неё уже вышло (решение владельца
+    // 2026-08-16). Без них экран показывал недостачу ровно на сумму трат —
+    // 22.08 у КидсБурга это −460 при том, что у сотрудника всё сошлось, и
+    // сервер той же сдаче честно посчитал 0. Найдено при разборе расхождения
+    // 2026-08-22: клиент и сервер считали одну и ту же Разницу по разным
+    // формулам.
+    // countedInReconciliation — тот же критерий, что применит сервер
+    // (src/lib/expense-compensation.ts): расход, деньги на который забрала
+    // инкассация посреди дня, в сверку не входит.
+    const zoneExpenses = (expenseEventsByZone[zoneId] ?? [])
+      .filter((e) => e.countedInReconciliation)
+      .reduce((sum, e) => sum + e.amount, 0);
+
     // Билеты — расчёт из серверного агрегата (ticketsAggregateByZone, заказы
     // с момента предыдущей сдачи), не из tariffCalc ниже — та формула только
     // для тарифов/показаний counters-подобных зон, у Билетов zone.tariffs
@@ -517,7 +537,8 @@ export default function SubmitResultsPage() {
       const calculatedRevenue = agg?.totalAmount ?? 0;
       const abonementAmount = agg?.abonementAmount ?? 0;
       const actualCash = parseMoneyInput(form.cashAmount) + parseMoneyInput(form.mobileAmount);
-      const difference = Math.round((actualCash + abonementAmount - calculatedRevenue) * 100) / 100;
+      const difference =
+        Math.round((actualCash + zoneExpenses + abonementAmount - calculatedRevenue) * 100) / 100;
       return { calculatedRevenue, netRevenue: calculatedRevenue, actualCash, difference, abonementAmount };
     }
 
@@ -554,7 +575,7 @@ export default function SubmitResultsPage() {
       zoneSpend: counterAbonementAmount,
       tapLinked: tapPaymentBreakdownByZone[zoneId]?.abonementAmount ?? 0,
     });
-    const difference = Math.round((actualCash - (netRevenue - paidFromBalance)) * 100) / 100;
+    const difference = Math.round((actualCash + zoneExpenses - (netRevenue - paidFromBalance)) * 100) / 100;
     return { calculatedRevenue, netRevenue, actualCash, difference, abonementAmount: counterAbonementAmount };
   }
 
@@ -1187,10 +1208,12 @@ export default function SubmitResultsPage() {
                           он видел: его траты учтены и пересчитывать их в уме
                           не нужно. */}
                       {(() => {
-                        const zoneExpenses = (expenseEventsByZone[activeZone.id] ?? []).reduce(
-                          (sum, e) => sum + e.amount,
-                          0
-                        );
+                        // Только те, что сервер действительно прибавит — иначе
+                        // подсказка обещала бы вернуть и деньги, уже уехавшие
+                        // с инкассацией (src/lib/expense-compensation.ts).
+                        const zoneExpenses = (expenseEventsByZone[activeZone.id] ?? [])
+                          .filter((e) => e.countedInReconciliation)
+                          .reduce((sum, e) => sum + e.amount, 0);
                         if (zoneExpenses <= 0) return null;
                         return (
                           <p className="text-caption-airbnb text-muted-foreground">

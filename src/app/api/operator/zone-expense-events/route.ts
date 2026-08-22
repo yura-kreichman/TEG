@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { getTenantDayContext } from "@/lib/tenant-day";
 import { getBusinessDayBounds } from "@/lib/business-day";
+import { getExpenseCompensation } from "@/lib/expense-compensation";
 import { dispatchExpenseAlert, pointNameIfMany } from "@/lib/summary-channels/dispatch";
 import { EXPENSE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 
@@ -63,7 +64,7 @@ export async function GET() {
   // календарный: у точек, закрывающихся после полуночи, сдача в 01:00 — это
   // всё ещё вчерашний рабочий день.
   const bounds = getBusinessDayBounds(day.boundary, new Date(), day.timezone);
-  const [rawEvents, submittedZones] = await Promise.all([
+  const [rawEvents, submittedZones, compensation] = await Promise.all([
     prisma.moneyOperation.findMany({
       // Два условия разом (правило владельца 2026-08-16): расход виден, пока
       // не сдал итоги, — а если внесён уже ПОСЛЕ сдачи, то до конца бизнес-
@@ -92,6 +93,13 @@ export async function GET() {
       select: { zoneId: true },
       distinct: ["zoneId"],
     }),
+    // Какие расходы вернутся в выручку при сдаче итогов — тем же критерием,
+    // что и сама сдача (src/lib/expense-compensation.ts). Владелец может
+    // приехать и забрать кассу посреди дня: расход, сделанный ДО его приезда,
+    // оплачен деньгами, которые уехали с ним, и в вечернюю сверку он уже не
+    // попадёт. Из списка такой расход НЕ убираем (сотрудник должен видеть все
+    // свои траты за день), но помечаем — и PWA не считает его в Разнице.
+    getExpenseCompensation(point.id, bounds.start, new Date(), prisma),
   ]);
 
   const submittedZoneIds = new Set(submittedZones.map((z) => z.zoneId));
@@ -111,6 +119,9 @@ export async function GET() {
       createdAt: e.occurredAt,
       performedBy: e.performedByOperator?.name ?? null,
       performedByColorTag: e.performedByOperator?.colorTag ?? null,
+      // false — деньги на этот расход уже уехали с инкассацией: в вечернюю
+      // сверку он не войдёт, и PWA не прибавляет его к Разнице.
+      countedInReconciliation: compensation.compensableIds.has(e.id),
     })),
   });
 }

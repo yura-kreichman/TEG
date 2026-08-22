@@ -26,6 +26,7 @@ import { dispatchZoneSummary } from "@/lib/summary-channels/dispatch";
 import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { onResultsSubmission } from "@/lib/summary-channels/daily-cash-trigger";
 import { settleOutstandingCollectionAdvance } from "@/lib/zone-balance";
+import { getExpenseCompensation } from "@/lib/expense-compensation";
 import { getBusinessDayBounds } from "@/lib/business-day";
 
 // Аудит 2026-07-27 — см. комментарий у повторной проверки внутри runSubmission.
@@ -498,31 +499,30 @@ export async function POST(request: Request) {
     // непроработанных дней приклеились бы к первой же рабочей сдаче. Днём
     // ограничен и список расходов у сотрудника (api/operator/zone-expense-events),
     // так что сдача берёт ровно то, что он видел на экране.
+    //
+    // Какие именно расходы вернутся в выручку, решает getExpenseCompensation
+    // (src/lib/expense-compensation.ts) — общий критерий для сдачи итогов,
+    // списка расходов у сотрудника и Разницы, которую PWA считает до
+    // отправки. Там же разобрано, почему одного начала бизнес-дня мало:
+    // инкассация посреди дня забирает кассу, уже уменьшенную на расход.
+    //
+    // Привязка (resultsSubmissionId ниже) и компенсация — РАЗНЫЕ множества:
+    // расход, закрытый инкассацией, сдача всё равно забирает себе, иначе он
+    // навсегда остаётся непривязанным и сотрудник смог бы удалить его завтра.
     const businessDayStart = getBusinessDayBounds(tenantDayBoundary, now, tenantTimezone).start;
+    const compensation = await getExpenseCompensation(point.id, businessDayStart, now, tx);
     const expenseOpsByZone = new Map<string, { id: string; amount: number }[]>();
-    for (const zs of zoneSubmissions) {
-      const zone = zoneById.get(zs.zoneId)!;
-      const ops = await tx.moneyOperation.findMany({
-        where: {
-          type: "expense",
-          zoneId: zone.id,
-          resultsSubmissionId: null,
-          occurredAt: { gte: businessDayStart, lte: now },
-        },
-        select: { id: true, amount: true },
-      });
-      expenseOpsByZone.set(
-        zone.id,
-        ops.map((o) => ({ id: o.id, amount: Math.abs(Number(o.amount)) }))
-      );
+    for (const expense of compensation.all) {
+      const list = expenseOpsByZone.get(expense.zoneId) ?? [];
+      list.push({ id: expense.id, amount: expense.amount });
+      expenseOpsByZone.set(expense.zoneId, list);
     }
 
     // Расходы, которые сотрудник внёс за этот период: он вводит в кассу
     // ОСТАТОК (деньги уже потрачены), поэтому для сверки со счётчиками их
     // возвращаем обратно — решение владельца 2026-08-16: «сотрудник не должен
     // ничего держать в голове».
-    const expensesOf = (zoneId: string) =>
-      (expenseOpsByZone.get(zoneId) ?? []).reduce((sum, e) => sum + e.amount, 0);
+    const expensesOf = (zoneId: string) => compensation.compensatedByZone.get(zoneId) ?? 0;
 
     const summary = zoneSubmissions.map((zs) => {
       const zone = zoneById.get(zs.zoneId)!;
