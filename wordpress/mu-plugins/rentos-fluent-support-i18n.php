@@ -34,14 +34,14 @@ function rentos_fs_i18n_templates()
         'en' => [
             'ticket_created_email_to_customer' => [
                 'body' => '<p>Hello, <strong>{{customer.first_name|there}}</strong>!</p>'
-                    . '<p>We have received your ticket &ldquo;<strong>{{ticket.title}}</strong>&rdquo; (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>) — it is already with our support team.</p>'
+                    . '<p>We have received your ticket &ldquo;<strong>{{ticket.title}}</strong>&rdquo; (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>) — it is already with our support team.</p>'
                     . '<h4><a href="{{ticket.public_url}}">Open ticket</a></h4>'
                     . '<p>We will reply to this address. If you would like to add anything, open the ticket using the link above.</p>'
                     . '<hr /><p>Best regards,<br />{{business.name}}</p>',
             ],
             'ticket_replied_by_agent_email_to_customer' => [
                 'body' => '<p>Hello, <strong>{{customer.first_name|there}}</strong>!</p>'
-                    . '<p>There is a reply to your ticket &ldquo;<strong>{{ticket.title}}</strong>&rdquo; (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>):</p>'
+                    . '<p>There is a reply to your ticket &ldquo;<strong>{{ticket.title}}</strong>&rdquo; (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>):</p>'
                     . '<div style="' . $quote . '">{{response.full_content}}</div>'
                     . '<h4><a href="{{ticket.public_url}}">Open ticket</a></h4>'
                     . '<p>To answer, open the ticket using the link above — that way your reply stays in the conversation.</p>'
@@ -49,21 +49,21 @@ function rentos_fs_i18n_templates()
             ],
             'ticket_closed_by_agent_email_to_customer' => [
                 'body' => '<p>Hello, <strong>{{customer.first_name|there}}</strong>!</p>'
-                    . '<p>Your ticket &ldquo;<strong>{{ticket.title}}</strong>&rdquo; (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>) has been closed.</p>'
+                    . '<p>Your ticket &ldquo;<strong>{{ticket.title}}</strong>&rdquo; (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>) has been closed.</p>'
                     . '<p>If the question is still open, write to us in the ticket and it will become active again.</p>'
                     . '<h4><a href="{{ticket.public_url}}">Open ticket</a></h4>'
                     . '<hr /><p>Best regards,<br />{{business.name}}</p>',
             ],
             'ticket_created_by_agent_email_to_customer' => [
                 'body' => '<p>Hello, <strong>{{customer.first_name|there}}</strong>!</p>'
-                    . '<p>Our support team has opened the ticket &ldquo;<strong>{{ticket.title}}</strong>&rdquo; (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>) about your question.</p>'
+                    . '<p>Our support team has opened the ticket &ldquo;<strong>{{ticket.title}}</strong>&rdquo; (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>) about your question.</p>'
                     . '<h4><a href="{{ticket.public_url}}">Open ticket</a></h4>'
                     . '<hr /><p>Best regards,<br />{{business.name}}</p>',
             ],
             'ticket_created_by_agent_on_behalf_email_to_customer' => [
-                'subject' => 'Your ticket has been created (#{{ticket.id}})',
+                'subject' => 'Your ticket has been created (#{{ticket.public_id}})',
                 'body'    => '<p>Hello, <strong>{{customer.first_name|there}}</strong>!</p>'
-                    . '<p>Our support team has opened a ticket for you — &ldquo;<strong>{{ticket.title}}</strong>&rdquo; (#{{ticket.id}}):</p>'
+                    . '<p>Our support team has opened a ticket for you — &ldquo;<strong>{{ticket.title}}</strong>&rdquo; (#{{ticket.public_id}}):</p>'
                     . '<div style="' . $quote . '">{{response.full_content}}</div>'
                     . '<h4><a href="{{ticket.public_url}}">Open ticket</a></h4>'
                     . '<hr /><p>Best regards,<br />{{business.name}}</p>',
@@ -73,14 +73,14 @@ function rentos_fs_i18n_templates()
         'uk' => [
             'ticket_created_email_to_customer' => [
                 'body' => '<p>Вітаємо, <strong>{{customer.first_name|колего}}</strong>!</p>'
-                    . '<p>Ми отримали вашу заявку «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>) — вона вже у службі підтримки.</p>'
+                    . '<p>Ми отримали вашу заявку «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>) — вона вже у службі підтримки.</p>'
                     . '<h4><a href="{{ticket.public_url}}">Відкрити заявку</a></h4>'
                     . '<p>Відповідь надійде на цю адресу. Якщо треба щось додати — відкрийте заявку за посиланням вище.</p>'
                     . '<hr /><p>З повагою,<br />{{business.name}}</p>',
             ],
             'ticket_replied_by_agent_email_to_customer' => [
                 'body' => '<p>Вітаємо, <strong>{{customer.first_name|колего}}</strong>!</p>'
-                    . '<p>На вашу заявку «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>) надійшла відповідь:</p>'
+                    . '<p>На вашу заявку «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>) надійшла відповідь:</p>'
                     . '<div style="' . $quote . '">{{response.full_content}}</div>'
                     . '<h4><a href="{{ticket.public_url}}">Відкрити заявку</a></h4>'
                     . '<p>Щоб відповісти — відкрийте заявку за посиланням вище: так відповідь залишиться у листуванні.</p>'
@@ -88,21 +88,21 @@ function rentos_fs_i18n_templates()
             ],
             'ticket_closed_by_agent_email_to_customer' => [
                 'body' => '<p>Вітаємо, <strong>{{customer.first_name|колего}}</strong>!</p>'
-                    . '<p>Вашу заявку «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>) закрито.</p>'
+                    . '<p>Вашу заявку «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>) закрито.</p>'
                     . '<p>Якщо питання лишилося — напишіть нам у заявці, і вона знову стане активною.</p>'
                     . '<h4><a href="{{ticket.public_url}}">Відкрити заявку</a></h4>'
                     . '<hr /><p>З повагою,<br />{{business.name}}</p>',
             ],
             'ticket_created_by_agent_email_to_customer' => [
                 'body' => '<p>Вітаємо, <strong>{{customer.first_name|колего}}</strong>!</p>'
-                    . '<p>Служба підтримки створила заявку «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>) за вашим питанням.</p>'
+                    . '<p>Служба підтримки створила заявку «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>) за вашим питанням.</p>'
                     . '<h4><a href="{{ticket.public_url}}">Відкрити заявку</a></h4>'
                     . '<hr /><p>З повагою,<br />{{business.name}}</p>',
             ],
             'ticket_created_by_agent_on_behalf_email_to_customer' => [
-                'subject' => 'Заявку створено (#{{ticket.id}})',
+                'subject' => 'Заявку створено (#{{ticket.public_id}})',
                 'body'    => '<p>Вітаємо, <strong>{{customer.first_name|колего}}</strong>!</p>'
-                    . '<p>Служба підтримки створила для вас заявку «<strong>{{ticket.title}}</strong>» (#{{ticket.id}}):</p>'
+                    . '<p>Служба підтримки створила для вас заявку «<strong>{{ticket.title}}</strong>» (#{{ticket.public_id}}):</p>'
                     . '<div style="' . $quote . '">{{response.full_content}}</div>'
                     . '<h4><a href="{{ticket.public_url}}">Відкрити заявку</a></h4>'
                     . '<hr /><p>З повагою,<br />{{business.name}}</p>',
@@ -112,14 +112,14 @@ function rentos_fs_i18n_templates()
         'it' => [
             'ticket_created_email_to_customer' => [
                 'body' => '<p>Buongiorno, <strong>{{customer.first_name|gentile cliente}}</strong>!</p>'
-                    . '<p>Abbiamo ricevuto la tua richiesta «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>): è già in carico al nostro supporto.</p>'
+                    . '<p>Abbiamo ricevuto la tua richiesta «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>): è già in carico al nostro supporto.</p>'
                     . '<h4><a href="{{ticket.public_url}}">Apri la richiesta</a></h4>'
                     . '<p>Risponderemo a questo indirizzo. Se vuoi aggiungere qualcosa, apri la richiesta dal link qui sopra.</p>'
                     . '<hr /><p>Cordiali saluti,<br />{{business.name}}</p>',
             ],
             'ticket_replied_by_agent_email_to_customer' => [
                 'body' => '<p>Buongiorno, <strong>{{customer.first_name|gentile cliente}}</strong>!</p>'
-                    . '<p>È arrivata una risposta alla tua richiesta «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>):</p>'
+                    . '<p>È arrivata una risposta alla tua richiesta «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>):</p>'
                     . '<div style="' . $quote . '">{{response.full_content}}</div>'
                     . '<h4><a href="{{ticket.public_url}}">Apri la richiesta</a></h4>'
                     . '<p>Per rispondere apri la richiesta dal link qui sopra: così la risposta resta nella conversazione.</p>'
@@ -127,21 +127,21 @@ function rentos_fs_i18n_templates()
             ],
             'ticket_closed_by_agent_email_to_customer' => [
                 'body' => '<p>Buongiorno, <strong>{{customer.first_name|gentile cliente}}</strong>!</p>'
-                    . '<p>La tua richiesta «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>) è stata chiusa.</p>'
+                    . '<p>La tua richiesta «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>) è stata chiusa.</p>'
                     . '<p>Se la questione è ancora aperta, scrivici nella richiesta e tornerà attiva.</p>'
                     . '<h4><a href="{{ticket.public_url}}">Apri la richiesta</a></h4>'
                     . '<hr /><p>Cordiali saluti,<br />{{business.name}}</p>',
             ],
             'ticket_created_by_agent_email_to_customer' => [
                 'body' => '<p>Buongiorno, <strong>{{customer.first_name|gentile cliente}}</strong>!</p>'
-                    . '<p>Il nostro supporto ha aperto la richiesta «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>) sulla tua domanda.</p>'
+                    . '<p>Il nostro supporto ha aperto la richiesta «<strong>{{ticket.title}}</strong>» (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>) sulla tua domanda.</p>'
                     . '<h4><a href="{{ticket.public_url}}">Apri la richiesta</a></h4>'
                     . '<hr /><p>Cordiali saluti,<br />{{business.name}}</p>',
             ],
             'ticket_created_by_agent_on_behalf_email_to_customer' => [
-                'subject' => 'La tua richiesta è stata creata (#{{ticket.id}})',
+                'subject' => 'La tua richiesta è stata creata (#{{ticket.public_id}})',
                 'body'    => '<p>Buongiorno, <strong>{{customer.first_name|gentile cliente}}</strong>!</p>'
-                    . '<p>Il nostro supporto ha aperto per te la richiesta «<strong>{{ticket.title}}</strong>» (#{{ticket.id}}):</p>'
+                    . '<p>Il nostro supporto ha aperto per te la richiesta «<strong>{{ticket.title}}</strong>» (#{{ticket.public_id}}):</p>'
                     . '<div style="' . $quote . '">{{response.full_content}}</div>'
                     . '<h4><a href="{{ticket.public_url}}">Apri la richiesta</a></h4>'
                     . '<hr /><p>Cordiali saluti,<br />{{business.name}}</p>',
@@ -151,14 +151,14 @@ function rentos_fs_i18n_templates()
         'ro' => [
             'ticket_created_email_to_customer' => [
                 'body' => '<p>Bună ziua, <strong>{{customer.first_name|stimate client}}</strong>!</p>'
-                    . '<p>Am primit solicitarea dumneavoastră „<strong>{{ticket.title}}</strong>” (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>) — este deja la echipa de suport.</p>'
+                    . '<p>Am primit solicitarea dumneavoastră „<strong>{{ticket.title}}</strong>” (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>) — este deja la echipa de suport.</p>'
                     . '<h4><a href="{{ticket.public_url}}">Deschideți solicitarea</a></h4>'
                     . '<p>Vă vom răspunde la această adresă. Dacă doriți să adăugați ceva, deschideți solicitarea din linkul de mai sus.</p>'
                     . '<hr /><p>Cu stimă,<br />{{business.name}}</p>',
             ],
             'ticket_replied_by_agent_email_to_customer' => [
                 'body' => '<p>Bună ziua, <strong>{{customer.first_name|stimate client}}</strong>!</p>'
-                    . '<p>Ați primit un răspuns la solicitarea „<strong>{{ticket.title}}</strong>” (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>):</p>'
+                    . '<p>Ați primit un răspuns la solicitarea „<strong>{{ticket.title}}</strong>” (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>):</p>'
                     . '<div style="' . $quote . '">{{response.full_content}}</div>'
                     . '<h4><a href="{{ticket.public_url}}">Deschideți solicitarea</a></h4>'
                     . '<p>Pentru a răspunde, deschideți solicitarea din linkul de mai sus: astfel răspunsul rămâne în conversație.</p>'
@@ -166,21 +166,21 @@ function rentos_fs_i18n_templates()
             ],
             'ticket_closed_by_agent_email_to_customer' => [
                 'body' => '<p>Bună ziua, <strong>{{customer.first_name|stimate client}}</strong>!</p>'
-                    . '<p>Solicitarea dumneavoastră „<strong>{{ticket.title}}</strong>” (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>) a fost închisă.</p>'
+                    . '<p>Solicitarea dumneavoastră „<strong>{{ticket.title}}</strong>” (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>) a fost închisă.</p>'
                     . '<p>Dacă întrebarea a rămas, scrieți-ne în solicitare și aceasta va redeveni activă.</p>'
                     . '<h4><a href="{{ticket.public_url}}">Deschideți solicitarea</a></h4>'
                     . '<hr /><p>Cu stimă,<br />{{business.name}}</p>',
             ],
             'ticket_created_by_agent_email_to_customer' => [
                 'body' => '<p>Bună ziua, <strong>{{customer.first_name|stimate client}}</strong>!</p>'
-                    . '<p>Echipa de suport a deschis solicitarea „<strong>{{ticket.title}}</strong>” (<a href="{{ticket.public_url}}">#{{ticket.id}}</a>) pentru întrebarea dumneavoastră.</p>'
+                    . '<p>Echipa de suport a deschis solicitarea „<strong>{{ticket.title}}</strong>” (<a href="{{ticket.public_url}}">#{{ticket.public_id}}</a>) pentru întrebarea dumneavoastră.</p>'
                     . '<h4><a href="{{ticket.public_url}}">Deschideți solicitarea</a></h4>'
                     . '<hr /><p>Cu stimă,<br />{{business.name}}</p>',
             ],
             'ticket_created_by_agent_on_behalf_email_to_customer' => [
-                'subject' => 'Solicitarea a fost creată (#{{ticket.id}})',
+                'subject' => 'Solicitarea a fost creată (#{{ticket.public_id}})',
                 'body'    => '<p>Bună ziua, <strong>{{customer.first_name|stimate client}}</strong>!</p>'
-                    . '<p>Echipa de suport a deschis pentru dumneavoastră solicitarea „<strong>{{ticket.title}}</strong>” (#{{ticket.id}}):</p>'
+                    . '<p>Echipa de suport a deschis pentru dumneavoastră solicitarea „<strong>{{ticket.title}}</strong>” (#{{ticket.public_id}}):</p>'
                     . '<div style="' . $quote . '">{{response.full_content}}</div>'
                     . '<h4><a href="{{ticket.public_url}}">Deschideți solicitarea</a></h4>'
                     . '<hr /><p>Cu stimă,<br />{{business.name}}</p>',
@@ -304,7 +304,7 @@ add_filter('fluent_support/parse_smartcode_data', function ($template, $data) {
 
 /**
  * Подмена ТЕМЫ. Переводится ровно одна: у остальных писем клиенту тема — это
- * 'Re: {{ticket.title}} #{{ticket.id}}', то есть слова самого обратившегося, переводить
+ * 'Re: {{ticket.title}} #{{ticket.public_id}}', то есть слова самого обратившегося, переводить
  * в ней нечего.
  */
 add_filter('fluent_support/ticket_email_subject', function ($subject, $ticket, $emailType) {
@@ -316,9 +316,9 @@ add_filter('fluent_support/ticket_email_subject', function ($subject, $ticket, $
     }
 
     // Тему плагин разбирает ДО этого фильтра, поэтому подстановки в переводе
-    // раскрываем сами — иначе в письмо ушло бы сырое '{{ticket.id}}'.
+    // раскрываем сами — иначе в письмо ушло бы сырое '{{ticket.public_id}}'.
     return str_replace(
-        ['{{ticket.id}}', '{{ticket.title}}'],
+        ['{{ticket.public_id}}', '{{ticket.title}}'],
         [$ticket->id, $ticket->title],
         $translations[$language][$emailType]['subject']
     );
