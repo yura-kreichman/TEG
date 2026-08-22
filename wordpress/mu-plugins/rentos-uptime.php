@@ -294,6 +294,42 @@ function rentos_uptime_build_stats() {
 	$daysOk  = (int) floor( ( $now - $since ) / DAY_IN_SECONDS );
 	$window  = (int) floor( $totalBuckets / $bucketsInDay );
 
+	// Доступность по календарным дням — для полоски-графика в расшифровке.
+	// День без единого замера остаётся null и рисуется бледной заглушкой:
+	// так график выглядит осмысленно с первого дня, а не как одинокий столбик.
+	$tzOffset = wp_timezone()->getOffset( new DateTimeImmutable( '@' . $now ) );
+	$today    = (int) floor( ( $now + $tzOffset ) / DAY_IN_SECONDS );
+	$firstDay = (int) floor( ( $firstStamp + $tzOffset ) / DAY_IN_SECONDS );
+
+	$dayOk = array();
+	$dayAll = array();
+
+	for ( $bucket = $windowStart; $bucket <= $lastBucket; $bucket++ ) {
+		$day = (int) floor( ( $bucket * $step + $tzOffset ) / DAY_IN_SECONDS );
+
+		if ( ! isset( $dayAll[ $day ] ) ) {
+			$dayAll[ $day ] = 0;
+			$dayOk[ $day ]  = 0;
+		}
+
+		$dayAll[ $day ]++;
+		if ( ! empty( $byBucket[ $bucket ] ) ) {
+			$dayOk[ $day ]++;
+		}
+	}
+
+	$days = array();
+	for ( $d = RENTOS_UPTIME_WINDOW - 1; $d >= 0; $d-- ) {
+		$day = $today - $d;
+
+		if ( $day < $firstDay || empty( $dayAll[ $day ] ) ) {
+			$days[] = null; // до начала наблюдений — данных нет
+			continue;
+		}
+
+		$days[] = round( $dayOk[ $day ] / $dayAll[ $day ], 4 );
+	}
+
 	// Медиана, а не среднее: одна подвисшая проверка не должна портить картину.
 	$median = null;
 	if ( count( $times ) >= 12 ) { // меньше часа замеров — рано о чём-то говорить
@@ -308,6 +344,8 @@ function rentos_uptime_build_stats() {
 		// Медиана времени ответа в секундах, округлённая ВВЕРХ до сотых —
 		// как и с процентом, приписывать себе лучшее не будем.
 		'response'      => null === $median ? null : number_format( ceil( $median * 100 ) / 100, 2, '.', '' ),
+		// Доступность по дням для графика: 30 значений, oldest → newest.
+		'days'          => $days,
 		// Момент последнего сбоя (или базовая дата). Сколько с тех пор прошло,
 		// шорткод считает сам при отрисовке — это бесплатно и не требует
 		// пересчёта всей статистики.
@@ -410,6 +448,57 @@ function rentos_uptime_tooltip( $stats, $lang ) {
 }
 
 /**
+ * Полоска доступности по дням — инлайновый SVG, который рисует сервер. Никакого
+ * JS и никаких библиотек: 30 столбиков, зелёный = день без сбоев, бледный =
+ * дней ещё не было (до запуска монитора). Так график осмысленно выглядит уже
+ * в первый день и заполняется сам.
+ */
+function rentos_uptime_chart( $days ) {
+	if ( ! is_array( $days ) || ! $days ) {
+		return '';
+	}
+
+	$barW = 5;
+	$gap  = 2;
+	$h    = 26;
+	$w    = count( $days ) * ( $barW + $gap ) - $gap;
+
+	$bars = '';
+	$x    = 0;
+
+	foreach ( $days as $ratio ) {
+		if ( null === $ratio ) {
+			$color  = '#E5E3F5'; // нет данных
+			$height = 6;
+		} else {
+			if ( $ratio >= 0.999 ) {
+				$color = '#22C55E';
+			} elseif ( $ratio >= 0.99 ) {
+				$color = '#F59E0B';
+			} else {
+				$color = '#EF4444';
+			}
+
+			// Даже у плохого дня оставляем видимый огрызок.
+			$height = max( 6, (int) round( $h * max( 0.2, $ratio ) ) );
+		}
+
+		$bars .= sprintf(
+			'<rect x="%d" y="%d" width="%d" height="%d" rx="2" fill="%s"/>',
+			$x,
+			$h - $height,
+			$barW,
+			$height,
+			$color
+		);
+
+		$x += $barW + $gap;
+	}
+
+	return '<svg width="' . $w . '" height="' . $h . '" viewBox="0 0 ' . $w . ' ' . $h . '" role="img" aria-hidden="true" style="display:block;margin:6px 0 2px">' . $bars . '</svg>';
+}
+
+/**
  * Обёртка строки состояния: сама строка плюс кликабельное «подробнее», которое
  * раскрывает расшифровку прямо в подвале.
  *
@@ -434,6 +523,25 @@ function rentos_uptime_wrap( $line, $stats, $lang ) {
 	$body = '';
 	foreach ( $lines as $text ) {
 		$body .= '<div>' . esc_html( $text ) . '</div>';
+	}
+
+	// График доступности по дням плюс подпись к нему.
+	if ( is_array( $stats ) && ! empty( $stats['days'] ) ) {
+		$captions = array(
+			'ru' => 'Доступность по дням, %d дней',
+			'uk' => 'Доступність за днями, %d днів',
+			'en' => 'Daily uptime, %d days',
+			'it' => 'Disponibilità giornaliera, %d giorni',
+			'ro' => 'Disponibilitate zilnică, %d zile',
+		);
+
+		$caption = sprintf(
+			isset( $captions[ $lang ] ) ? $captions[ $lang ] : $captions['en'],
+			count( $stats['days'] )
+		);
+
+		$body .= rentos_uptime_chart( $stats['days'] )
+			. '<div style="font-size:11px;opacity:.75">' . esc_html( $caption ) . '</div>';
 	}
 
 	// max-width:100% обязателен: без него раскрытый блок берёт ширину по
@@ -554,9 +662,10 @@ add_shortcode(
 		}
 
 		if ( isset( $stats['percent'], $stats['since'] ) ) {
-			// Процент показываем, только когда набрались сутки замеров:
-			// «доступность 100% за 2 часа» — не статистика, а самообман.
-			if ( (int) $stats['window_hours'] >= RENTOS_UPTIME_PCT_HOURS ) {
+			// Окно называем честно: пока суток не набралось — в часах. Прятать
+			// процент до суток оказалось хуже: владелец открывал расшифровку и
+			// не видел ни одной цифры (2026-08-22).
+			{
 				// «100,0%» выглядит нелепо — целые проценты пишем без десятых.
 				$percent = rtrim( rtrim( (string) $stats['percent'], '0' ), '.' );
 				if ( '' === $percent ) {
@@ -567,8 +676,13 @@ add_shortcode(
 					$percent = str_replace( '.', ',', $percent );
 				}
 
+				$windowHours = (int) $stats['window_hours'];
+				$windowUnit  = $windowHours >= RENTOS_UPTIME_PCT_HOURS
+					? rentos_uptime_unit( (int) $stats['window_days'], 'day', $lang )
+					: rentos_uptime_unit( max( 1, $windowHours ), 'hour', $lang );
+
 				$form    = isset( $percentForms[ $lang ] ) ? $percentForms[ $lang ] : $percentForms['en'];
-				$parts[] = sprintf( $form, $percent, rentos_uptime_unit( (int) $stats['window_days'], 'day', $lang ) );
+				$parts[] = sprintf( $form, $percent, $windowUnit );
 			}
 
 			// Время ответа В СТРОКЕ не печатаем: оно переехало в расшифровку под
