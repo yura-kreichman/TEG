@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin } from "@/lib/require-super-admin";
 import { CLEANUP_INCLUDE, CLEANUP_MIN_AGE_DAYS, classifyTenant, countsOf, daysSince } from "@/lib/admin/tenant-cleanup";
 import { describeTenantRegion } from "@/lib/admin/tenant-region";
+import { PURGE_AFTER_DAYS, purgeScheduleFor } from "@/lib/tenant-lifecycle";
 
 export async function GET() {
   const admin = await requireSuperAdmin();
@@ -24,28 +25,37 @@ export async function GET() {
   ]);
 
   return NextResponse.json({
-    tenants: tenants.map((t) => ({
-      id: t.id,
-      name: t.name,
-      subscriptionStatus: t.subscriptionStatus,
-      subscriptionExpiresAt: t.subscriptionExpiresAt,
-      package: t.package,
-      pointsCount: t._count.points,
-      operatorsCount: t._count.operators,
-      createdAt: t.createdAt,
-      // Откуда клиент (запрос владельца 2026-08-22) — считаем на сервере,
-      // чтобы список и карточка тенанта говорили одно и то же.
-      region: describeTenantRegion(t.timezone),
-      fluentcartCustomerId: t.fluentcartCustomerId,
-      unlimited: t.unlimited,
-      // Анализ "потерянных клиентов" (см. src/lib/admin/tenant-cleanup.ts).
-      // Считается на сервере, а не в браузере: тот же модуль потом решает,
-      // кого реально можно удалить, и два независимых критерия разъехались
-      // бы при первой же правке.
-      cleanupVerdict: classifyTenant(t, countsOf(t)),
-      ageDays: daysSince(t.createdAt),
-    })),
+    tenants: tenants.map((t) => {
+      const purge = purgeScheduleFor(t);
+      return {
+        id: t.id,
+        name: t.name,
+        subscriptionStatus: t.subscriptionStatus,
+        subscriptionExpiresAt: t.subscriptionExpiresAt,
+        package: t.package,
+        pointsCount: t._count.points,
+        operatorsCount: t._count.operators,
+        createdAt: t.createdAt,
+        // Откуда клиент (запрос владельца 2026-08-22) — считаем на сервере,
+        // чтобы список и карточка тенанта говорили одно и то же.
+        region: describeTenantRegion(t.timezone),
+        fluentcartCustomerId: t.fluentcartCustomerId,
+        unlimited: t.unlimited,
+        // Анализ "потерянных клиентов" (см. src/lib/admin/tenant-cleanup.ts).
+        // Считается на сервере, а не в браузере: тот же модуль потом решает,
+        // кого реально можно удалить, и два независимых критерия разъехались
+        // бы при первой же правке.
+        cleanupVerdict: classifyTenant(t, countsOf(t)),
+        ageDays: daysSince(t.createdAt),
+        // Дата автоудаления Free-кабинета (запрос владельца 2026-08-22) —
+        // null у всех, кого автоудаление не касается. Считает
+        // purgeScheduleFor() тем же предикатом, которым удаляет планировщик.
+        purgeAt: purge?.at ?? null,
+        purgeInDays: purge?.daysLeft ?? null,
+      };
+    }),
     unmatchedWebhookCount,
     cleanupMinAgeDays: CLEANUP_MIN_AGE_DAYS,
+    purgeAfterDays: PURGE_AFTER_DAYS,
   });
 }

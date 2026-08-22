@@ -17,6 +17,7 @@ import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useI18n } from "@/components/i18n-provider";
+import { cn } from "@/lib/utils";
 
 type SubscriptionStatus = "active" | "paused" | "suspended" | "expired";
 
@@ -41,6 +42,11 @@ interface TenantInfo {
   unlimited: boolean;
   cleanupVerdict: CleanupVerdict;
   ageDays: number;
+  // Когда кабинет удалится сам (src/lib/tenant-lifecycle.ts). null у всех,
+  // кого автоудаление не касается: платный пакет, любой след оплаты,
+  // безлимит, сезонная пауза. Считает сервер — см. комментарий там же.
+  purgeAt: string | null;
+  purgeInDays: number | null;
 }
 
 // Полный набор фильтров/сортировки (запрос пользователя 2026-07-29: "надо
@@ -53,6 +59,14 @@ type SortField = "createdAt" | "points" | "operators" | "name";
 type SortDir = "asc" | "desc";
 
 const EXPIRING_SOON_DAYS = 7;
+
+// Только порог подсветки строки автоудаления — сама дата приходит с сервера
+// (purgeAt/purgeInDays). Совпадает с FINAL_NOTICE_DAYS_BEFORE из
+// src/lib/tenant-lifecycle.ts не случайно: подсвечивается ровно та неделя, в
+// которую владельцу уходит второе, последнее письмо. Константу оттуда не
+// импортируем — этот файл клиентский, а tenant-lifecycle тянет prisma, fs и
+// почту; расхождение здесь стоит цвета текста, но не поведения.
+const FINAL_NOTICE_DAYS = 7;
 
 function isExpiringSoon(dateStr: string | null): boolean {
   if (!dateStr) return false;
@@ -486,6 +500,26 @@ export default function AdminTenantsPage() {
                           {t.admin.registeredOnLabel} {new Date(tenant.createdAt).toLocaleDateString()}
                           {tenant.cleanupVerdict !== "active" && ` · ${tenant.ageDays} ${t.admin.cleanupAgeDays}`}
                         </p>
+                        {/* Дата автоудаления Free-кабинета (запрос владельца
+                            2026-08-22). Обычным приглушённым текстом, как и
+                            соседние строки: это факт расписания, а не тревога
+                            — предупреждающие баннеры в проекте запрещены.
+                            Цветом выделяется только последняя неделя, ровно
+                            та, в которую владельцу уходит второе письмо
+                            (FINAL_NOTICE_DAYS_BEFORE). */}
+                        {tenant.purgeAt !== null && (
+                          <p
+                            className={cn(
+                              "text-caption-airbnb",
+                              (tenant.purgeInDays ?? 0) <= FINAL_NOTICE_DAYS ? "text-warning" : "text-muted-foreground"
+                            )}
+                          >
+                            {t.admin.purgeAtLabel} {new Date(tenant.purgeAt).toLocaleDateString()} ·{" "}
+                            {(tenant.purgeInDays ?? 0) <= 0
+                              ? t.admin.purgeToday
+                              : t.admin.purgeCountdown.replace("{days}", String(tenant.purgeInDays))}
+                          </p>
+                        )}
                       </div>
                       <ChevronRight className="size-4.5 shrink-0 text-muted-foreground" />
                     </Link>

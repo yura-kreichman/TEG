@@ -6,6 +6,7 @@ import {
   formatDeadline,
   isPurgeProtected,
   purgeDeadline,
+  purgeScheduleFor,
   type PurgeCandidate,
 } from "./tenant-lifecycle";
 
@@ -65,6 +66,42 @@ describe("purgeDeadline", () => {
     // Иначе владелец получил бы письмо про удаление раньше, чем у него вообще
     // закончился бесплатный период — FREE_TRIAL_DAYS = 30 в api/auth/register.
     expect(PURGE_AFTER_DAYS - FIRST_NOTICE_DAYS_BEFORE).toBeGreaterThanOrEqual(30);
+  });
+});
+
+// Строка «Удаление кабинета: дата · через N дн.» в админ-модуле берётся
+// отсюда. Ошибка тут — это обещанная владельцу дата, которая не наступит,
+// поэтому защиты проверяются тем же поимённым набором, что и выше.
+describe("purgeScheduleFor", () => {
+  const now = new Date("2026-03-01T12:00:00.000Z");
+  const freshFree: PurgeCandidate = {
+    createdAt: new Date("2026-03-01T00:00:00.000Z"),
+    unlimited: false,
+    subscriptionStatus: "active",
+    fluentcartCustomerId: null,
+    package: { fluentcartProductId: null },
+  };
+
+  it("Free без следов оплаты — дата и остаток дней", () => {
+    const schedule = purgeScheduleFor(freshFree, now);
+    expect(schedule?.at.toISOString()).toBe(purgeDeadline(freshFree.createdAt).toISOString());
+    expect(schedule?.daysLeft).toBe(PURGE_AFTER_DAYS);
+  });
+
+  it("защищённым кабинетам даты нет вовсе — иначе админка обещала бы неправду", () => {
+    expect(purgeScheduleFor({ ...freshFree, unlimited: true }, now)).toBeNull();
+    expect(purgeScheduleFor({ ...freshFree, subscriptionStatus: "paused" }, now)).toBeNull();
+    expect(purgeScheduleFor({ ...freshFree, fluentcartCustomerId: "42" }, now)).toBeNull();
+    expect(purgeScheduleFor({ ...freshFree, package: { fluentcartProductId: "12" } }, now)).toBeNull();
+  });
+
+  it("остаток округляется вверх: четыре часа до дедлайна — это «через 1 дн.», не «через 0»", () => {
+    const almostDue = { ...freshFree, createdAt: new Date(now.getTime() - (PURGE_AFTER_DAYS * DAY_MS - 4 * 3_600_000)) };
+    expect(purgeScheduleFor(almostDue, now)?.daysLeft).toBe(1);
+  });
+
+  it("просроченный кабинет не уходит в минус", () => {
+    expect(purgeScheduleFor({ ...freshFree, createdAt: daysAgo(PURGE_AFTER_DAYS + 5) })?.daysLeft).toBe(0);
   });
 });
 

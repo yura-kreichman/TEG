@@ -6,7 +6,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { requireSuperAdmin } from "@/lib/require-super-admin";
 import { describeTenantRegion } from "@/lib/admin/tenant-region";
 import { verifyPassword } from "@/lib/auth";
-import { deleteTenantEverywhere } from "@/lib/tenant-lifecycle";
+import { PURGE_AFTER_DAYS, deleteTenantEverywhere, purgeScheduleFor } from "@/lib/tenant-lifecycle";
 
 const SUBSCRIPTION_STATUSES = ["active", "paused", "suspended", "expired"] as const;
 
@@ -60,10 +60,18 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/admin/tenan
     }),
   ]);
 
+  // Дата автоудаления Free-кабинета (запрос владельца 2026-08-22) — той же
+  // функцией, что и в списке владельцев, чтобы список и карточка не могли
+  // назвать разные даты.
+  const purge = purgeScheduleFor(tenant);
+
   return NextResponse.json({
     id: tenant.id,
     name: tenant.name,
     subscriptionStatus: tenant.subscriptionStatus,
+    purgeAt: purge?.at ?? null,
+    purgeInDays: purge?.daysLeft ?? null,
+    purgeAfterDays: PURGE_AFTER_DAYS,
     subscriptionExpiresAt: tenant.subscriptionExpiresAt,
     currentPeriodEnd: tenant.currentPeriodEnd,
     contactPhone: tenant.contactPhone,

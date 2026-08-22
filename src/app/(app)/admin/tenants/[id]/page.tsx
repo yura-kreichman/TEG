@@ -53,6 +53,12 @@ interface TenantDetail {
   name: string;
   subscriptionStatus: SubscriptionStatus;
   subscriptionExpiresAt: string | null;
+  // Автоудаление брошенного Free-кабинета (src/lib/tenant-lifecycle.ts).
+  // null — кабинета это не касается: платный пакет, след оплаты, безлимит
+  // или сезонная пауза. Считает сервер, тем же предикатом, что и планировщик.
+  purgeAt: string | null;
+  purgeInDays: number | null;
+  purgeAfterDays: number;
   contactPhone: string | null;
   region: { label: string; timezone: string; country: string | null; localTime: string };
   locale: string;
@@ -314,6 +320,23 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
                 </div>
               </div>
               <p className="text-caption-airbnb">{t.admin.expiryHint}</p>
+              {/* Когда кабинет удалится сам (запрос владельца 2026-08-22).
+                  Строка появляется только у тех, кого автоудаление реально
+                  касается, — у платных, безлимитных и на паузе purgeAt
+                  приходит null, и обещать им дату было бы враньём. */}
+              {tenant.purgeAt !== null && (
+                <div className="flex flex-col gap-1">
+                  <p className="text-body-airbnb font-semibold">
+                    {t.admin.purgeAtLabel} {new Date(tenant.purgeAt).toLocaleDateString()} ·{" "}
+                    {(tenant.purgeInDays ?? 0) <= 0
+                      ? t.admin.purgeToday
+                      : t.admin.purgeCountdown.replace("{days}", String(tenant.purgeInDays))}
+                  </p>
+                  <p className="text-caption-airbnb">
+                    {t.admin.purgeHint.replace("{days}", String(tenant.purgeAfterDays))}
+                  </p>
+                </div>
+              )}
             </div>
           </SpringCard>
 
