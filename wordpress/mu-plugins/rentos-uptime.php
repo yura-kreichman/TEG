@@ -439,6 +439,44 @@ function rentos_uptime_tooltip( $stats, $lang ) {
 }
 
 /**
+ * Обёртка строки состояния: сама строка плюс кликабельное «подробнее», которое
+ * раскрывает расшифровку прямо в подвале.
+ *
+ * Родной <details> — раскрытие без единой строчки JS и CSS. Нативной подсказки
+ * (title) оказалось мало: она требует секунду наведения ровно по тексту, и в
+ * тонкой строке подвала владелец её просто не увидел (2026-08-22). Слово
+ * «подробнее» покрашено в акцент и подчёркнуто — выглядит как ссылка, то есть
+ * очевидно кликабельно.
+ */
+function rentos_uptime_wrap( $line, $stats, $lang ) {
+	$more = array(
+		'ru' => 'подробнее',
+		'uk' => 'докладніше',
+		'en' => 'details',
+		'it' => 'dettagli',
+		'ro' => 'detalii',
+	);
+
+	$word  = isset( $more[ $lang ] ) ? $more[ $lang ] : $more['en'];
+	$lines = explode( "\n", rentos_uptime_tooltip( $stats, $lang ) );
+
+	$body = '';
+	foreach ( $lines as $text ) {
+		$body .= '<div>' . esc_html( $text ) . '</div>';
+	}
+
+	// max-width:100% обязателен: без него раскрытый блок берёт ширину по
+	// max-width содержимого (560px) и на телефоне уезжает за край колонки.
+	return '<details data-no-translation style="display:inline-block;text-align:left;max-width:100%">'
+		. '<summary style="cursor:pointer;list-style:none;text-align:center">'
+		. '<span style="color:#22C55E">&#9679;</span> ' . esc_html( $line ) . ' '
+		. '<span style="color:#802BE3;text-decoration:underline">' . esc_html( $word ) . '</span>'
+		. '</summary>'
+		. '<div style="margin-top:8px;max-width:560px;line-height:1.6">' . $body . '</div>'
+		. '</details>';
+}
+
+/**
  * Базовая дата отсчёта «без сбоев» в отметке времени часового пояса сайта.
  */
 function rentos_uptime_seed_timestamp() {
@@ -541,8 +579,7 @@ add_shortcode(
 				}
 			}
 
-			return '<span data-no-translation title="' . esc_attr( rentos_uptime_tooltip( $stats, $lang ) ) . '" style="cursor:help"><span style="color:#22C55E">&#9679;</span> '
-				. esc_html( implode( ' · ', $parts ) ) . '</span>';
+			return rentos_uptime_wrap( implode( ' · ', $parts ), $stats, $lang );
 		}
 
 		if ( isset( $stats['percent'], $stats['since'] ) ) {
@@ -590,7 +627,6 @@ add_shortcode(
 			}
 		}
 
-		return '<span data-no-translation title="' . esc_attr( rentos_uptime_tooltip( $stats, $lang ) ) . '" style="cursor:help"><span style="color:#22C55E">&#9679;</span> '
-			. esc_html( implode( ' · ', $parts ) ) . '</span>';
+		return rentos_uptime_wrap( implode( ' · ', $parts ), $stats, $lang );
 	}
 );
