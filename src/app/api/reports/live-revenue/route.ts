@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
-import { aggregateGameRoomLaunches, previousSubmissionBoundary } from "@/lib/game-room";
+import { aggregateGameRoomLaunches, aggregateOpenPrepaidLaunches, previousSubmissionBoundary } from "@/lib/game-room";
 import { aggregateTicketOrders } from "@/lib/tickets";
 import { round2 } from "@/lib/reports";
 
@@ -63,10 +63,27 @@ export async function GET(request: Request) {
   const perZone = await Promise.all(
     scopedZones.map(async (zone) => {
       const since = await previousSubmissionBoundary(zone.id);
-      const agg = isTicketsZone(zone)
-        ? await aggregateTicketOrders(zone.id, since, now)
-        : await aggregateGameRoomLaunches(zone.id, since, now);
-      return { zone, agg };
+      if (isTicketsZone(zone)) {
+        return { zone, agg: await aggregateTicketOrders(zone.id, since, now) };
+      }
+      // Идущие браслеты "За вход" — деньги за них уже в кассе (оплата берётся
+      // при старте), поэтому в живую карточку они входят наравне с закрытыми
+      // (запрос пользователя 2026-08-23). Только здесь, не в сдаче итогов —
+      // см. aggregateOpenPrepaidLaunches в lib/game-room.ts.
+      const [closed, openPrepaid] = await Promise.all([
+        aggregateGameRoomLaunches(zone.id, since, now),
+        aggregateOpenPrepaidLaunches(zone.id, since, now),
+      ]);
+      return {
+        zone,
+        agg: {
+          ...closed,
+          totalAmount: round2(closed.totalAmount + openPrepaid.totalAmount),
+          cashAmount: round2(closed.cashAmount + openPrepaid.cashAmount),
+          mobileAmount: round2(closed.mobileAmount + openPrepaid.mobileAmount),
+          abonementAmount: round2(closed.abonementAmount + openPrepaid.abonementAmount),
+        },
+      };
     })
   );
 
@@ -81,10 +98,9 @@ export async function GET(request: Request) {
       // баланса клиентом, повторный учёт при трате был бы двойным счётом
       // (реальный баг, найден пользователем на этой же карточке). Не просто
       // "cash + mobile" — так тоже потерялась бы часть настоящей выручки:
-      // у тарифа "За вход" (fixed) paymentMethod вообще не спрашивается
-      // (null), эта сумма есть только в totalAmount, не в cash/mobile
-      // (см. GameRoomAggregate/TicketOrderAggregate — то же "totalAmount
-      // может быть больше cash+mobile+abonement" уже задокументировано там).
+      // totalAmount может быть больше cash+mobile+abonement у старых пусков
+      // "За вход" без способа оплаты (до 2026-07-17 он у них не спрашивался,
+      // см. GameRoomAggregate/TicketOrderAggregate — там то же самое).
       const zoneTotal = agg.totalAmount - agg.abonementAmount;
       total += zoneTotal;
       cash += agg.cashAmount;

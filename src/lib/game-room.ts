@@ -340,10 +340,11 @@ export interface GameRoomAggregate {
   totalAmount: number;
   totalMinutes: number;
   launchIds: string[];
-  // Разбивка totalAmount по способу оплаты — только у "per_minute"/"По
-  // факту" (у "fixed"/"За вход" paymentMethod не спрашивается, эти суммы в
-  // разбивку не попадают, поэтому cashAmount+mobileAmount+abonementAmount
-  // может быть МЕНЬШЕ totalAmount — это ожидаемо). Чисто справочная
+  // Разбивка totalAmount по способу оплаты — есть у обоих видов тарифа
+  // ("За вход" спрашивает способ при СТАРТЕ, "По факту" при остановке).
+  // cashAmount+mobileAmount+abonementAmount бывает МЕНЬШЕ totalAmount только
+  // у старых пусков "За вход" (до 2026-07-17 способ у них не спрашивался
+  // вовсе и остался null) — это ожидаемо. Чисто справочная
   // величина: НЕ подставляется в поля кассы шага 4 мастера сдачи итогов
   // (запрос пользователя 2026-07-17: подстановка стёрла бы контроль
   // недостачи через "Разницу"). abonementAmount — запрос того же дня, третий
@@ -591,4 +592,91 @@ export async function previousSubmissionBoundary(zoneId: string, tx: Tx | typeof
     select: { createdAt: true },
   });
   return last?.createdAt ?? null;
+}
+
+export interface OpenPrepaidAggregate {
+  count: number;
+  totalAmount: number;
+  cashAmount: number;
+  mobileAmount: number;
+  abonementAmount: number;
+}
+
+/**
+ * Агрегат ОТКРЫТЫХ пусков "За вход" (pricingMode="fixed") — тех, за которые
+ * деньги уже взяты при СТАРТЕ (docs/spec/04-game-room.md, "Оплата": цена
+ * известна заранее, способ оплаты спрашивается в момент выдачи браслета),
+ * но браслет ещё не закрыт (запрос пользователя 2026-08-23: "в тарифе 'За
+ * вход' деньги берут сразу — может их сразу и показывать владельцу").
+ *
+ * ТОЛЬКО для живой карточки Главной (api/reports/live-revenue) — намеренно
+ * ОТДЕЛЬНАЯ функция, а не флаг в aggregateGameRoomLaunches: от той зависит
+ * сдача итогов, и открытый пуск в расчётной выручке СДАЧИ был бы багом —
+ * сумма попала бы в сданное окно, а сам пуск потом ещё раз в следующее (он
+ * привязывается к сдаче по endedAt).
+ *
+ * Двойного счёта в самой карточке нет: множества не пересекаются
+ * (endedAt=null против endedAt!=null), а окно у обеих функций одно и то же —
+ * граница между стартом и стопом сдвинуться не может, потому что сдача
+ * итогов зоны блокируется, пока в ней есть хоть один открытый пуск
+ * (countOpenLaunchesInZone, api/operator/submit-results). Число при закрытии
+ * браслета тоже не прыгнет: у "fixed" computeLaunchAmount возвращает ровно
+ * priceSnapshot — ту же сумму, что показана здесь.
+ *
+ * "По факту" (per_minute) сюда НЕ входит: пока браслет открыт, сумма не
+ * окончательна и деньги ещё не взяты — показывать её владельцу как выручку
+ * нельзя.
+ */
+export async function aggregateOpenPrepaidLaunches(
+  zoneId: string,
+  since: Date | null,
+  until: Date,
+  tx: Tx | typeof prisma = prisma
+): Promise<OpenPrepaidAggregate> {
+  const launches = await tx.launch.findMany({
+    where: {
+      zoneId,
+      voidedAt: null,
+      isOpen: true,
+      pricingMode: "fixed",
+      // Страховка от старых записей: у "За вход" способ оплаты проставляется
+      // при создании пуска, без него деньги не считаются взятыми.
+      paymentMethod: { not: null },
+      startedAt: { lte: until, ...(since ? { gt: since } : {}) },
+    },
+    // amount заполняется только на стопе — у идущего пуска "За вход"
+    // фактическая сумма это priceSnapshot (снапшот цены выбранного варианта).
+    select: { id: true, priceSnapshot: true, paymentMethod: true },
+  });
+
+  let totalAmount = 0;
+  let cashAmount = 0;
+  let mobileAmount = 0;
+  let abonementAmount = 0;
+  const splitLaunchIds: string[] = [];
+  for (const l of launches) {
+    const amount = Number(l.priceSnapshot ?? 0);
+    totalAmount += amount;
+    if (l.paymentMethod === "cash") cashAmount += amount;
+    else if (l.paymentMethod === "mobile") mobileAmount += amount;
+    else if (l.paymentMethod === "abonement") abonementAmount += amount;
+    else if (l.paymentMethod === PAYMENT_SPLIT_METHOD) splitLaunchIds.push(l.id);
+  }
+  if (splitLaunchIds.length > 0) {
+    const legs = await tx.launchPaymentLeg.findMany({ where: { launchId: { in: splitLaunchIds } } });
+    for (const leg of legs) {
+      const legAmount = Number(leg.amount);
+      if (leg.method === "cash") cashAmount += legAmount;
+      else if (leg.method === "mobile") mobileAmount += legAmount;
+      else if (leg.method === "abonement") abonementAmount += legAmount;
+    }
+  }
+
+  return {
+    count: launches.length,
+    totalAmount: Math.round(totalAmount * 100) / 100,
+    cashAmount: Math.round(cashAmount * 100) / 100,
+    mobileAmount: Math.round(mobileAmount * 100) / 100,
+    abonementAmount: Math.round(abonementAmount * 100) / 100,
+  };
 }
