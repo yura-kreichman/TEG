@@ -1095,7 +1095,7 @@
     "editExpenseTitle": "Expense",
     "expenseSaveError": "Failed to save the expense",
     "deleteExpenseConfirm": "Delete this expense? The zone balance will be recalculated. This cannot be undone.",
-    "collectionAdvanceLabel": "Advance collection",
+    "collectionAdvanceLabel": "Collection (advance)",
     "collectionAdvanceToastPrefix": "Set aside as an advance collection",
     "collectionAdvanceToastSuffix": "— will appear in the zone balance once results are submitted",
     "zoneBalanceTooltip": "The balance is the sum of the zone’s entire ledger from the very beginning, not for the selected period. It grows with revenue and shrinks with collections, expenses and any advance a staff member took from the point’s till."

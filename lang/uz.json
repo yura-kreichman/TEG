@@ -1095,7 +1095,7 @@
     "editExpenseTitle": "Xarajat",
     "expenseSaveError": "Xarajatni saqlab boʻlmadi",
     "deleteExpenseConfirm": "Ushbu xarajatni oʻchirasizmi? Zona qoldigʻi qayta hisoblanadi. Bekor qilib boʻlmaydi.",
-    "collectionAdvanceLabel": "Avans inkassatsiya",
+    "collectionAdvanceLabel": "Inkassatsiya (avans)",
     "collectionAdvanceToastPrefix": "Avans inkassatsiya sifatida ajratildi",
     "collectionAdvanceToastSuffix": "— natijalar topshirilgandan keyin zona qoldig‘ida paydo bo‘ladi",
     "zoneBalanceTooltip": "Qoldiq — zona jurnalining eng boshidan boshlab umumiy summasi, tanlangan davr uchun emas. U tushumdan o'sadi va inkassatsiya, xarajatlar hamda xodim nuqta kassasidan olgan avans bilan kamayadi."

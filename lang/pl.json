@@ -1095,7 +1095,7 @@
     "editExpenseTitle": "Wydatek",
     "expenseSaveError": "Nie udało się zapisać wydatku",
     "deleteExpenseConfirm": "Usunąć ten wydatek? Saldo strefy zostanie przeliczone. Nie można cofnąć.",
-    "collectionAdvanceLabel": "Inkaso zaliczkowe",
+    "collectionAdvanceLabel": "Inkaso (zaliczka)",
     "collectionAdvanceToastPrefix": "Odłożone jako inkaso zaliczkowe",
     "collectionAdvanceToastSuffix": "— pojawi się w saldzie strefy po przesłaniu wyników",
     "zoneBalanceTooltip": "Saldo to suma całego dziennika strefy od samego początku, a nie za wybrany okres. Rośnie od przychodów, a maleje przez inkasa, wydatki i zaliczkę, którą pracownik wziął z kasy punktu."

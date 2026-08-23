@@ -1095,7 +1095,7 @@
     "editExpenseTitle": "Gider",
     "expenseSaveError": "Gider kaydedilemedi",
     "deleteExpenseConfirm": "Bu gider silinsin mi? Bölge bakiyesi yeniden hesaplanacak. Geri alınamaz.",
-    "collectionAdvanceLabel": "Avans tahsilat",
+    "collectionAdvanceLabel": "Tahsilat (avans)",
     "collectionAdvanceToastPrefix": "Avans tahsilat olarak ayrıldı",
     "collectionAdvanceToastSuffix": "— sonuçlar teslim edildikten sonra bölge bakiyesinde görünecek",
     "zoneBalanceTooltip": "Bakiye, bölgenin tüm defterinin en baştan toplamıdır; seçilen dönemin değil. Gelirle büyür; tahsilat, gider ve çalışanın noktanın kasasından aldığı avansla azalır."

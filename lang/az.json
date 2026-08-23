@@ -1095,7 +1095,7 @@
     "editExpenseTitle": "Xərc",
     "expenseSaveError": "Xərci saxlamaq mümkün olmadı",
     "deleteExpenseConfirm": "Bu xərci silmək istəyirsiniz? Zona qalığı yenidən hesablanacaq. Geri qaytarıla bilməz.",
-    "collectionAdvanceLabel": "Avans inkassasiya",
+    "collectionAdvanceLabel": "İnkassasiya (avans)",
     "collectionAdvanceToastPrefix": "Avans inkassasiya kimi ayrıldı",
     "collectionAdvanceToastSuffix": "— nəticələr təqdim edildikdən sonra zona qalığında görünəcək",
     "zoneBalanceTooltip": "Qalıq — zonanın bütün jurnalının lap əvvəldən cəmidir, seçilmiş dövr üzrə deyil. O, gəlirdən artır və inkassasiya, xərclər və işçinin nöqtə kassasından götürdüyü avansla azalır."

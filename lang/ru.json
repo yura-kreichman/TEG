@@ -1133,7 +1133,7 @@
     "noExpenseCategories": "Категорий пока нет",
     "newCategoryPlaceholder": "Новая категория",
     "categorySaveError": "Не удалось сохранить категорию",
-    "collectionAdvanceLabel": "Авансовая инкассация",
+    "collectionAdvanceLabel": "Инкассация (аванс)",
     "collectionAdvanceToastPrefix": "Отложено как авансовая инкассация",
     "collectionAdvanceToastSuffix": "— появится в остатке зоны после сдачи итогов",
     "zoneBalanceTooltip": "Остаток — сумма всего журнала зоны с самого начала, а не за выбранный период. Он растёт от выручки и уменьшается инкассацией, расходами и авансом, который сотрудник взял из кассы точки."

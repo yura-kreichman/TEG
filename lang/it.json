@@ -1095,7 +1095,7 @@
     "editExpenseTitle": "Spesa",
     "expenseSaveError": "Salvataggio della spesa non riuscito",
     "deleteExpenseConfirm": "Eliminare questa spesa? Il saldo della zona verrà ricalcolato. Non può essere annullato.",
-    "collectionAdvanceLabel": "Prelievo anticipato",
+    "collectionAdvanceLabel": "Prelievo (anticipo)",
     "collectionAdvanceToastPrefix": "Messo da parte come prelievo anticipato",
     "collectionAdvanceToastSuffix": "— comparirà nel saldo della zona dopo l’invio dei risultati",
     "zoneBalanceTooltip": "Il saldo è la somma dell’intero registro della zona dall’inizio, non del periodo selezionato. Cresce con i ricavi e cala con i prelievi, le spese e l’anticipo che un dipendente ha preso dalla cassa del punto."

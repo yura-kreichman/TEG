@@ -1095,7 +1095,7 @@
     "editExpenseTitle": "Cheltuială",
     "expenseSaveError": "Nu s-a putut salva cheltuiala",
     "deleteExpenseConfirm": "Ștergi această cheltuială? Soldul zonei se va recalcula. Nu poate fi anulat.",
-    "collectionAdvanceLabel": "Colectare în avans",
+    "collectionAdvanceLabel": "Colectare (avans)",
     "collectionAdvanceToastPrefix": "Pus deoparte ca o colectare în avans",
     "collectionAdvanceToastSuffix": "— va apărea în soldul zonei după trimiterea rezultatelor",
     "zoneBalanceTooltip": "Soldul este suma întregului registru al zonei de la bun început, nu pe perioada selectată. Crește din încasări și scade prin colectări, cheltuieli și avansul luat de angajat din casa punctului."
