@@ -14,3 +14,5 @@ public/uploads
 .env.*
 !.env.example
 npm-debug.log*
+wordpress
+db-backups
