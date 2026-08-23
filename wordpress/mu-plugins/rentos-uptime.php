@@ -506,11 +506,11 @@ function rentos_uptime_tooltip( $stats, $lang ) {
 	$step = (int) round( RENTOS_UPTIME_STEP / 60 );
 
 	$checkForms = array(
-		'ru' => 'Проверяем my.rentos365.app каждые %d минут.',
-		'uk' => 'Перевіряємо my.rentos365.app кожні %d хвилин.',
-		'en' => 'We check my.rentos365.app every %d minutes.',
-		'it' => 'Controlliamo my.rentos365.app ogni %d minuti.',
-		'ro' => 'Verificăm my.rentos365.app la fiecare %d minute.',
+		'ru' => 'Проверка my.rentos365.app каждые %d минут.',
+		'uk' => 'Перевірка my.rentos365.app кожні %d хвилин.',
+		'en' => 'my.rentos365.app is checked every %d minutes.',
+		'it' => 'my.rentos365.app viene controllato ogni %d minuti.',
+		'ro' => 'my.rentos365.app este verificat la fiecare %d minute.',
 	);
 
 	$responseForms = array(
@@ -688,11 +688,11 @@ function rentos_uptime_wrap( $line, $stats, $lang ) {
 
 		if ( $hasSmallDip ) {
 			$dips = array(
-				'ru' => 'Небольшие просадки — выкладка обновлений.',
-				'uk' => 'Невеликі просадки — викладення оновлень.',
-				'en' => 'Small dips are software updates.',
-				'it' => 'I piccoli cali sono aggiornamenti del software.',
-				'ro' => 'Scăderile mici sunt actualizări de software.',
+				'ru' => 'Просадки: обновления',
+				'uk' => 'Просадки: оновлення',
+				'en' => 'Dips: updates',
+				'it' => 'Cali: aggiornamenti',
+				'ro' => 'Scăderi: actualizări',
 			);
 
 			$body .= '<span style="display:block">' . esc_html( isset( $dips[ $lang ] ) ? $dips[ $lang ] : $dips['en'] ) . '</span>';
