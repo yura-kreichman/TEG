@@ -2155,11 +2155,28 @@ PHP-скриптом прямо в `_elementor_data`. Два условия:
 проставляются руками. Ряду добавлен `flex_wrap: wrap` — на телефоне строка
 уходит под ссылки, а не выдавливает их за край.
 
-**Сбор.** `/var/www/md33/data/rentos-uptime/check.sh` из crontab пользователя
+**Сбор.** `www/rentos365.app/uptime-monitor/check.sh` из crontab пользователя
 `md33` раз в 5 минут дёргает `https://my.rentos365.app/api/health` (эндпоинт не
 просто отвечает 200, а делает `SELECT 1` к Postgres) и дописывает
-`время,код` в `samples.csv`. Файл лежит ВНЕ корня сайта. Копия скрипта —
-`wordpress/uptime/check.sh` в репозитории.
+`время,код` в `samples.csv`. Копия скрипта — `wordpress/uptime/check.sh`
+в репозитории.
+
+**Каталог лежит В КОРНЕ сайта и закрыт правилом nginx** (перенесён туда
+2026-08-23 по просьбе владельца — до этого висел в домашней папке под именем
+`rentos-uptime` и выглядел бесхозным). Раз он в docroot, `samples.csv` и сам
+скрипт отдавались бы по HTTP, поэтому рядом заведён
+`/etc/nginx/vhosts-resources/rentos365.app/20-uptime-monitor.conf` с
+`location ^~ /uptime-monitor/ { deny all; }`. **Префикс `^~` обязателен** — иначе
+вложенный regex-location панели выигрывает у обычного префиксного, те же грабли,
+что уже ловили шесть раз на my.rentos365.app. Проверка после любой возни в панели
+ISPmanager: `curl -o /dev/null -w '%{http_code}' https://rentos365.app/uptime-monitor/samples.csv`
+должен давать **403**.
+
+Сосед по той же схеме — сторож шаблона INTRO SMS: живёт в
+`www/sms.3300.md/template-guard/` (тоже перенесён из домашней папки, где
+назывался `rentos-custom` и сбивал с толку — к RentOS он отношения не имеет),
+закрыт `20-template-guard.conf` с тем же `deny all`. Пути внутри скрипта
+считаются от `$SITE`, не от `$HOME`.
 
 **Счёт** — `wordpress/mu-plugins/rentos-uptime.php`. Задание висит **ежечасно**, но
 работу делает **раз в сутки**: разбор файла и уборка кэша тяжёлые, а частый вызов

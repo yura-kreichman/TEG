@@ -4,10 +4,11 @@
  * Description: Шорткод [rentos_uptime] для подвала: измеренная доступность my.rentos365.app и число дней без сбоев.
  * Version: 1.0
  *
- * Откуда данные: скрипт rentos-uptime/check.sh раз в 5 минут дёргает
+ * Откуда данные: скрипт uptime-monitor/check.sh раз в 5 минут дёргает
  * https://my.rentos365.app/api/health (там не «процесс жив», а реальный
  * SELECT 1 к Postgres) и дописывает строку «время,код» в samples.csv.
- * Файл лежит вне корня сайта.
+ * Файл лежит в корне сайта, но закрыт от HTTP правилом nginx
+ * (vhosts-resources/rentos365.app/20-uptime-monitor.conf, deny all).
  *
  * Пересчёт окна — раз в СУТКИ (решение владельца 2026-08-22: не грузить
  * сервер). Задание при этом висит ежечасно и почти всегда выходит сразу: так
@@ -32,7 +33,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-const RENTOS_UPTIME_FILE      = '/var/www/md33/data/rentos-uptime/samples.csv';
+const RENTOS_UPTIME_FILE      = '/var/www/md33/data/www/rentos365.app/uptime-monitor/samples.csv';
 const RENTOS_UPTIME_OPTION    = 'rentos_uptime_stats';
 const RENTOS_UPTIME_WINDOW    = 30;      // дней в окне
 const RENTOS_UPTIME_KEEP_DAYS = 45;      // сколько храним замеров
@@ -506,11 +507,11 @@ function rentos_uptime_tooltip( $stats, $lang ) {
 	$step = (int) round( RENTOS_UPTIME_STEP / 60 );
 
 	$checkForms = array(
-		'ru' => 'Проверка my.rentos365.app каждые %d минут.',
-		'uk' => 'Перевірка my.rentos365.app кожні %d хвилин.',
-		'en' => 'my.rentos365.app is checked every %d minutes.',
-		'it' => 'my.rentos365.app viene controllato ogni %d minuti.',
-		'ro' => 'my.rentos365.app este verificat la fiecare %d minute.',
+		'ru' => 'Проверка: my.rentos365.app - %d мин.',
+		'uk' => 'Перевірка: my.rentos365.app - %d хв.',
+		'en' => 'Check: my.rentos365.app - %d min.',
+		'it' => 'Controllo: my.rentos365.app - %d min.',
+		'ro' => 'Verificare: my.rentos365.app - %d min.',
 	);
 
 	$responseForms = array(
@@ -644,33 +645,6 @@ function rentos_uptime_wrap( $line, $stats, $lang ) {
 	}
 
 	if ( is_array( $stats ) && ! empty( $stats['days'] ) ) {
-		$captions = array(
-			'ru' => 'Доступность по дням, %d дней',
-			'uk' => 'Доступність за днями, %d днів',
-			'en' => 'Daily uptime, %d days',
-			'it' => 'Disponibilità giornaliera, %d giorni',
-			'ro' => 'Disponibilitate zilnică, %d zile',
-		);
-
-		$caption = sprintf(
-			isset( $captions[ $lang ] ) ? $captions[ $lang ] : $captions['en'],
-			count( $stats['days'] )
-		);
-
-		// Дни «из журнала» надо назвать: иначе светлые столбики читались бы
-		// как измеренная доступность.
-		if ( in_array( 'log', $stats['days'], true ) ) {
-			$legends = array(
-				'ru' => 'светлым — по журналу работы',
-				'uk' => 'світлим — за журналом роботи',
-				'en' => 'lighter bars come from the service log',
-				'it' => 'le barre chiare vengono dal registro',
-				'ro' => 'barele deschise vin din jurnal',
-			);
-
-			$caption .= ' · ' . ( isset( $legends[ $lang ] ) ? $legends[ $lang ] : $legends['en'] );
-		}
-
 		// Короткие просадки — это выкладка обновлений, и смотрящий должен это
 		// понимать, иначе читает их как аварии (правка владельца 2026-08-22).
 		// Приписку даём, только если такие дни на графике ЕСТЬ и они мелкие:
@@ -688,18 +662,17 @@ function rentos_uptime_wrap( $line, $stats, $lang ) {
 
 		if ( $hasSmallDip ) {
 			$dips = array(
-				'ru' => 'Просадки: обновления',
-				'uk' => 'Просадки: оновлення',
-				'en' => 'Dips: updates',
-				'it' => 'Cali: aggiornamenti',
-				'ro' => 'Scăderi: actualizări',
+				'ru' => 'Просадки: обновления.',
+				'uk' => 'Просадки: оновлення.',
+				'en' => 'Dips: updates.',
+				'it' => 'Cali: aggiornamenti.',
+				'ro' => 'Scăderi: actualizări.',
 			);
 
 			$body .= '<span style="display:block">' . esc_html( isset( $dips[ $lang ] ) ? $dips[ $lang ] : $dips['en'] ) . '</span>';
 		}
 
-		$body .= rentos_uptime_chart( $stats['days'] )
-			. '<span style="display:block;font-size:11px;opacity:.75">' . esc_html( $caption ) . '</span>';
+		$body .= rentos_uptime_chart( $stats['days'] );
 	}
 
 	// Карточка всплывает на наведении, а на тач-устройствах — по тапу, через

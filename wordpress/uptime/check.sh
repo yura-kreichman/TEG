@@ -1,7 +1,7 @@
 #!/bin/sh
 # Замер доступности RentOS: раз в 5 минут из crontab пользователя md33.
 #
-#   */5 * * * * /bin/sh /var/www/md33/data/rentos-uptime/check.sh >/dev/null 2>&1
+#   */5 * * * * /bin/sh /var/www/md33/data/www/rentos365.app/uptime-monitor/check.sh >/dev/null 2>&1
 #
 # Шаг обязан совпадать с RENTOS_UPTIME_STEP в mu-плагине.
 # Пишем в CSV одну строку на замер: unix-время и код ответа. Файл лежит ВНЕ
@@ -12,7 +12,7 @@
 # nginx → контейнер → Postgres, то есть ровно то, что видит клиент.
 # /api/health не просто отвечает 200, а дёргает базу (SELECT 1).
 
-DIR=/var/www/md33/data/rentos-uptime
+DIR=/var/www/md33/data/www/rentos365.app/uptime-monitor
 URL=https://my.rentos365.app/api/health
 
 mkdir -p "$DIR"
