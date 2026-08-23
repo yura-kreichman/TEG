@@ -1096,8 +1096,7 @@
     "collectionAdvanceLabel": "Colectare în avans",
     "collectionAdvanceToastPrefix": "Pus deoparte ca o colectare în avans",
     "collectionAdvanceToastSuffix": "— va apărea în soldul zonei după trimiterea rezultatelor",
-    "zoneBalanceTooltip": "Soldul este suma întregului registru al zonei de la bun început, nu pe perioada selectată. Crește din încasări și scade prin colectări, cheltuieli și avansul luat de angajat din casa punctului.",
-    "collectionAdvanceTooltip": "Apare când ați ridicat mai mult decât se afla atunci în zone — de exemplu, împreună cu încasări pe care angajatul nu le predase încă. Surplusul nu se leagă de nicio zonă: așteaptă încasările viitoare și se stinge la următoarea predare a rezultatelor."
+    "zoneBalanceTooltip": "Soldul este suma întregului registru al zonei de la bun început, nu pe perioada selectată. Crește din încasări și scade prin colectări, cheltuieli și avansul luat de angajat din casa punctului."
   },
   "readings": {
     "title": "Rezultate zilnice",

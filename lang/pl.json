@@ -1096,8 +1096,7 @@
     "collectionAdvanceLabel": "Inkaso zaliczkowe",
     "collectionAdvanceToastPrefix": "Odłożone jako inkaso zaliczkowe",
     "collectionAdvanceToastSuffix": "— pojawi się w saldzie strefy po przesłaniu wyników",
-    "zoneBalanceTooltip": "Saldo to suma całego dziennika strefy od samego początku, a nie za wybrany okres. Rośnie od przychodów, a maleje przez inkasa, wydatki i zaliczkę, którą pracownik wziął z kasy punktu.",
-    "collectionAdvanceTooltip": "Pojawia się, gdy zabrałeś więcej, niż w tamtej chwili było w strefach — na przykład razem z utargiem, którego pracownik jeszcze nie rozliczył. Nadwyżka nie jest przypisana do strefy: czeka na przyszły przychód i zostaje pokryta najbliższym rozliczeniem."
+    "zoneBalanceTooltip": "Saldo to suma całego dziennika strefy od samego początku, a nie za wybrany okres. Rośnie od przychodów, a maleje przez inkasa, wydatki i zaliczkę, którą pracownik wziął z kasy punktu."
   },
   "readings": {
     "title": "Wyniki dzienne",

@@ -1096,8 +1096,7 @@
     "collectionAdvanceLabel": "Prelievo anticipato",
     "collectionAdvanceToastPrefix": "Messo da parte come prelievo anticipato",
     "collectionAdvanceToastSuffix": "— comparirà nel saldo della zona dopo l’invio dei risultati",
-    "zoneBalanceTooltip": "Il saldo è la somma dell’intero registro della zona dall’inizio, non del periodo selezionato. Cresce con i ricavi e cala con i prelievi, le spese e l’anticipo che un dipendente ha preso dalla cassa del punto.",
-    "collectionAdvanceTooltip": "Compare quando hai prelevato più di quanto risultava allora nelle zone — per esempio insieme a incassi non ancora consegnati dal personale. L’eccedenza non viene legata ad alcuna zona: attende gli incassi futuri e si compensa con la prima consegna dei risultati."
+    "zoneBalanceTooltip": "Il saldo è la somma dell’intero registro della zona dall’inizio, non del periodo selezionato. Cresce con i ricavi e cala con i prelievi, le spese e l’anticipo che un dipendente ha preso dalla cassa del punto."
   },
   "readings": {
     "title": "Riepiloghi giornalieri",

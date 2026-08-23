@@ -1096,8 +1096,7 @@
     "collectionAdvanceLabel": "Avans tahsilat",
     "collectionAdvanceToastPrefix": "Avans tahsilat olarak ayrıldı",
     "collectionAdvanceToastSuffix": "— sonuçlar teslim edildikten sonra bölge bakiyesinde görünecek",
-    "zoneBalanceTooltip": "Bakiye, bölgenin tüm defterinin en baştan toplamıdır; seçilen dönemin değil. Gelirle büyür; tahsilat, gider ve çalışanın noktanın kasasından aldığı avansla azalır.",
-    "collectionAdvanceTooltip": "O anda bölgelerde bulunandan fazlasını aldığınızda ortaya çıkar — örneğin çalışanın henüz teslim etmediği gelirle birlikte. Fazlalık hiçbir bölgeye bağlanmaz: gelecekteki geliri bekler ve en yakın sonuç tesliminde kapanır."
+    "zoneBalanceTooltip": "Bakiye, bölgenin tüm defterinin en baştan toplamıdır; seçilen dönemin değil. Gelirle büyür; tahsilat, gider ve çalışanın noktanın kasasından aldığı avansla azalır."
   },
   "readings": {
     "title": "Günlük sonuçlar",

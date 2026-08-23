@@ -1096,8 +1096,7 @@
     "collectionAdvanceLabel": "Avans inkassatsiya",
     "collectionAdvanceToastPrefix": "Avans inkassatsiya sifatida ajratildi",
     "collectionAdvanceToastSuffix": "— natijalar topshirilgandan keyin zona qoldig‘ida paydo bo‘ladi",
-    "zoneBalanceTooltip": "Qoldiq — zona jurnalining eng boshidan boshlab umumiy summasi, tanlangan davr uchun emas. U tushumdan o'sadi va inkassatsiya, xarajatlar hamda xodim nuqta kassasidan olgan avans bilan kamayadi.",
-    "collectionAdvanceTooltip": "Siz o'sha paytda zonalarda bo'lganidan ko'proq olganingizda paydo bo'ladi — masalan, xodim hali topshirmagan tushum bilan birga. Ortiqcha summa zonaga bog'lanmaydi, kelajakdagi tushumni kutadi va eng yaqin yakun topshirishda yopiladi."
+    "zoneBalanceTooltip": "Qoldiq — zona jurnalining eng boshidan boshlab umumiy summasi, tanlangan davr uchun emas. U tushumdan o'sadi va inkassatsiya, xarajatlar hamda xodim nuqta kassasidan olgan avans bilan kamayadi."
   },
   "readings": {
     "title": "Kunlik natijalar",

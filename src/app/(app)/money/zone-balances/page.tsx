@@ -1026,7 +1026,6 @@ export default function ZoneBalancesPage() {
                                         {c.pool === "goods" && <ShoppingBag className="size-3 shrink-0" />}
                                         {c.pool === "advance" && <PiggyBank className="size-3 shrink-0" />}
                                         {collectionEntryLabel(c)}
-                                        {c.pool === "advance" && <InfoTooltip text={t.money.collectionAdvanceTooltip} />}
                                       </span>
                                       <span className="flex shrink-0 items-center gap-2">
                                         <span className="text-xs font-bold tabular-nums">
@@ -1088,7 +1087,6 @@ export default function ZoneBalancesPage() {
                               <HandCoins className="size-3 shrink-0" />
                             )}
                             {collectionEntryLabel(c)}
-                            {c.pool === "advance" && <InfoTooltip text={t.money.collectionAdvanceTooltip} />}
                             {/* Кто забрал — то же, что в шапке свёрнутого
                                 акта, но для инкассаций из одной строки, где
                                 шапки нет. У advance_taken/bonus_taken имя уже

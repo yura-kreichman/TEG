@@ -1096,8 +1096,7 @@
     "collectionAdvanceLabel": "Advance collection",
     "collectionAdvanceToastPrefix": "Set aside as an advance collection",
     "collectionAdvanceToastSuffix": "— will appear in the zone balance once results are submitted",
-    "zoneBalanceTooltip": "The balance is the sum of the zone’s entire ledger from the very beginning, not for the selected period. It grows with revenue and shrinks with collections, expenses and any advance a staff member took from the point’s till.",
-    "collectionAdvanceTooltip": "Appears when you took more than the zones held at that moment — for example, together with revenue the staff had not submitted yet. The surplus is not tied to any zone: it waits for future revenue and is settled by the next results submission."
+    "zoneBalanceTooltip": "The balance is the sum of the zone’s entire ledger from the very beginning, not for the selected period. It grows with revenue and shrinks with collections, expenses and any advance a staff member took from the point’s till."
   },
   "readings": {
     "title": "Daily results",

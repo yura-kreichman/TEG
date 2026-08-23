@@ -1096,8 +1096,7 @@
     "collectionAdvanceLabel": "Avans inkassasiya",
     "collectionAdvanceToastPrefix": "Avans inkassasiya kimi ayrıldı",
     "collectionAdvanceToastSuffix": "— nəticələr təqdim edildikdən sonra zona qalığında görünəcək",
-    "zoneBalanceTooltip": "Qalıq — zonanın bütün jurnalının lap əvvəldən cəmidir, seçilmiş dövr üzrə deyil. O, gəlirdən artır və inkassasiya, xərclər və işçinin nöqtə kassasından götürdüyü avansla azalır.",
-    "collectionAdvanceTooltip": "O an zonalarda olandan çox götürdüyünüz zaman yaranır — məsələn, işçinin hələ təhvil vermədiyi gəlirlə birlikdə. Artıq məbləğ zonaya bağlanmır, gələcək gəliri gözləyir və ən yaxın yekun təhvili ilə bağlanır."
+    "zoneBalanceTooltip": "Qalıq — zonanın bütün jurnalının lap əvvəldən cəmidir, seçilmiş dövr üzrə deyil. O, gəlirdən artır və inkassasiya, xərclər və işçinin nöqtə kassasından götürdüyü avansla azalır."
   },
   "readings": {
     "title": "Günlər üzrə yekunlar",
