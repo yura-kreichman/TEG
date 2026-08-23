@@ -810,6 +810,7 @@
     "deleteTariffAction": "Ջնջել սակագինը",
     "confirmDeleteTariff": "Ջնջե՞լ այս սակագինը",
     "nameAndColorAction": "Անվանում և գունային նշան",
+    "nameColorAndTariffAction": "Անվանում, գույն և սակագին",
     "replacePhoto": "Փոխարինել լուսանկարը",
     "deleteAssetAction": "Ջնջել ակտիվը",
     "confirmDeleteAsset": "Ջնջե՞լ այս ակտիվը",

@@ -847,6 +847,7 @@
     "deleteTariffAction": "Удалить тариф",
     "confirmDeleteTariff": "Удалить этот тариф?",
     "nameAndColorAction": "Название и цветовая метка",
+    "nameColorAndTariffAction": "Название, цвет и тариф",
     "replacePhoto": "Заменить фото",
     "deleteAssetAction": "Удалить актив",
     "confirmDeleteAsset": "Удалить этот актив?",

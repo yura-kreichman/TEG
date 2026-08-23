@@ -1084,6 +1084,15 @@ export default function ZoneDetailPage() {
     return `${t.zoneDetail.gameRoomPricingModePerMinute} · ${list}`;
   }
 
+  // Подпись пункта кебаба и заголовка того же шита. У "Прибываний" в форме
+  // есть третье поле — тариф актива (см. isStaysZone ниже по разметке),
+  // поэтому "Название и цветовая метка" там недоговаривает: пункт называется
+  // "Название, цвет и тариф" ровно там, где тариф в форме и правда есть
+  // (запрос пользователя 2026-08-22).
+  const assetEditActionLabel = isStaysZone(zone)
+    ? t.zoneDetail.nameColorAndTariffAction
+    : t.zoneDetail.nameAndColorAction;
+
   const HeaderModeIcon = ACCOUNTING_MODE_ICON[zone.accountingMode];
 
   return (
@@ -1986,7 +1995,7 @@ export default function ZoneDetailPage() {
               {assetKebab.active ? t.zoneDetail.deactivateAsset : t.zoneDetail.activateAsset}
             </ActionSheetItem>
             <ActionSheetItem icon={Pencil} onClick={() => setAssetKebabView("edit")}>
-              {t.zoneDetail.nameAndColorAction}
+              {assetEditActionLabel}
             </ActionSheetItem>
             {zone.accountingMode === "counters" && (
               <ActionSheetItem icon={Gauge} onClick={openInitialReading}>
@@ -2011,7 +2020,7 @@ export default function ZoneDetailPage() {
         )}
         {assetKebab && assetKebabView === "edit" && (
           <div className="flex flex-col gap-3 pt-2">
-            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.zoneDetail.nameAndColorAction}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{assetEditActionLabel}</h2>
             <div className="flex flex-col gap-1">
               <Label htmlFor="editAssetName">{t.zoneDetail.assetNameLabel}</Label>
               <Input id="editAssetName" autoFocus value={editAssetName} onChange={(e) => setEditAssetName(e.target.value)} />

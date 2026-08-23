@@ -810,6 +810,7 @@
     "deleteTariffAction": "Șterge tariful",
     "confirmDeleteTariff": "Ștergeți acest tarif?",
     "nameAndColorAction": "Nume și etichetă de culoare",
+    "nameColorAndTariffAction": "Nume, culoare și tarif",
     "replacePhoto": "Înlocuiește foto",
     "deleteAssetAction": "Șterge activul",
     "confirmDeleteAsset": "Ștergeți acest activ?",

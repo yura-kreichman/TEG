@@ -810,6 +810,7 @@
     "deleteTariffAction": "Тарифти өчүрүү",
     "confirmDeleteTariff": "Бул тариф өчүрүлсүнбү?",
     "nameAndColorAction": "Аталышы жана түс белгиси",
+    "nameColorAndTariffAction": "Аталышы, түсү жана тариф",
     "replacePhoto": "Сүрөттү алмаштыруу",
     "deleteAssetAction": "Активди өчүрүү",
     "confirmDeleteAsset": "Бул актив өчүрүлсүнбү?",

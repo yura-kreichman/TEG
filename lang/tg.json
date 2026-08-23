@@ -810,6 +810,7 @@
     "deleteTariffAction": "Тарифро нест кардан",
     "confirmDeleteTariff": "Ин тариф нест карда шавад?",
     "nameAndColorAction": "Ном ва нишони ранга",
+    "nameColorAndTariffAction": "Ном, ранг ва тариф",
     "replacePhoto": "Суратро иваз кардан",
     "deleteAssetAction": "Активро нест кардан",
     "confirmDeleteAsset": "Ин актив нест карда шавад?",

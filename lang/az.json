@@ -810,6 +810,7 @@
     "deleteTariffAction": "Tarifi sil",
     "confirmDeleteTariff": "Bu tarif silinsin?",
     "nameAndColorAction": "Ad və rəng etiketi",
+    "nameColorAndTariffAction": "Ad, rəng və tarif",
     "replacePhoto": "Şəkli dəyiş",
     "deleteAssetAction": "Aktivi sil",
     "confirmDeleteAsset": "Bu aktiv silinsin?",

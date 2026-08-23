@@ -810,6 +810,7 @@
     "deleteTariffAction": "Delete tariff",
     "confirmDeleteTariff": "Delete this tariff?",
     "nameAndColorAction": "Name and color tag",
+    "nameColorAndTariffAction": "Name, color and tariff",
     "replacePhoto": "Replace photo",
     "deleteAssetAction": "Delete asset",
     "confirmDeleteAsset": "Delete this asset?",

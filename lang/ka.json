@@ -810,6 +810,7 @@
     "deleteTariffAction": "ტარიფის წაშლა",
     "confirmDeleteTariff": "წავშალოთ ეს ტარიფი?",
     "nameAndColorAction": "სახელი და ფერადი ნიშანი",
+    "nameColorAndTariffAction": "სახელი, ფერი და ტარიფი",
     "replacePhoto": "ფოტოს შეცვლა",
     "deleteAssetAction": "აქტივის წაშლა",
     "confirmDeleteAsset": "წავშალოთ ეს აქტივი?",

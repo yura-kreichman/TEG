@@ -810,6 +810,7 @@
     "deleteTariffAction": "Elimina tariffa",
     "confirmDeleteTariff": "Eliminare questa tariffa?",
     "nameAndColorAction": "Nome e colore identificativo",
+    "nameColorAndTariffAction": "Nome, colore e tariffa",
     "replacePhoto": "Sostituisci foto",
     "deleteAssetAction": "Elimina bene",
     "confirmDeleteAsset": "Eliminare questo bene?",

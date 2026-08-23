@@ -810,6 +810,7 @@
     "deleteTariffAction": "Видалити тариф",
     "confirmDeleteTariff": "Видалити цей тариф?",
     "nameAndColorAction": "Назва і кольорова мітка",
+    "nameColorAndTariffAction": "Назва, колір і тариф",
     "replacePhoto": "Замінити фото",
     "deleteAssetAction": "Видалити актив",
     "confirmDeleteAsset": "Видалити цей актив?",
