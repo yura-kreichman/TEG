@@ -210,6 +210,26 @@ async function computeWindowSummary(
     ticketRevenueBySubmission.set(id, { totalAmount: agg.totalAmount, abonementAmount: agg.abonementAmount });
   }
 
+  // Расходы, закрытые каждой сдачей (решение владельца 2026-08-16): сотрудник
+  // вводит в кассу ОСТАТОК после трат, поэтому для сверки со счётчиками их
+  // возвращают обратно в Разницу. Тот же расчёт, что в lib/reports.ts (экран
+  // "Деньги") и api/reports/counters/day ("Итоги дня") — эта карточка была
+  // единственным местом, где прибавку забыли, и Главная показывала недостачу
+  // ровно на сумму расходов там, где остальные экраны показывали ноль
+  // (найдено 2026-08-23 при разборе вопроса клиента).
+  const submissionExpenseOps = await prisma.moneyOperation.findMany({
+    where: {
+      type: "expense",
+      resultsSubmissionId: { in: submissions.map((s) => s.id) },
+    },
+    select: { zoneId: true, amount: true, resultsSubmissionId: true },
+  });
+  const expensesByZoneSubmission = new Map<string, number>();
+  for (const op of submissionExpenseOps) {
+    const key = `${op.resultsSubmissionId}:${op.zoneId}`;
+    expensesByZoneSubmission.set(key, (expensesByZoneSubmission.get(key) ?? 0) + Math.abs(Number(op.amount)));
+  }
+
   let totalDifference = 0;
   // Тесты/возвраты за день — сумма по всем сдачам (запрос пользователя
   // 2026-07-18: "в обоих должны быть видны Тесты/возвраты"), не только у
@@ -220,11 +240,13 @@ async function computeWindowSummary(
       if (zs.zone.accountingMode === "cash_only") continue;
       totalReturns += zs.returnsCount;
       const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
+      const expensesInSubmission =
+        expensesByZoneSubmission.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0;
 
       if (isStaysZone(zs.zone) || (isLaunchesZone(zs.zone) && zs.assetReadings.length === 0)) {
         const calculatedRevenue = liveRevenueBySubmission.get(zs.id) ?? 0;
         const abonementAmount = liveAbonementBySubmission.get(zs.id) ?? 0;
-        totalDifference += actualCash + abonementAmount - calculatedRevenue;
+        totalDifference += actualCash + expensesInSubmission + abonementAmount - calculatedRevenue;
         continue;
       }
 
@@ -232,7 +254,7 @@ async function computeWindowSummary(
         const ticketRevenue = ticketRevenueBySubmission.get(zs.id);
         const calculatedRevenue = ticketRevenue?.totalAmount ?? 0;
         const abonementAmount = ticketRevenue?.abonementAmount ?? 0;
-        totalDifference += actualCash + abonementAmount - calculatedRevenue;
+        totalDifference += actualCash + expensesInSubmission + abonementAmount - calculatedRevenue;
         continue;
       }
 
@@ -246,7 +268,8 @@ async function computeWindowSummary(
       }));
       const calculatedRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
       // Источник уже выбран по типу зоны выше (см. balanceBySubmission).
-      totalDifference += actualCash - (calculatedRevenue - (balanceBySubmission.get(zs.id) ?? 0));
+      totalDifference +=
+        actualCash + expensesInSubmission - (calculatedRevenue - (balanceBySubmission.get(zs.id) ?? 0));
     }
   }
 
