@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "../globals.css";
 import InstallAppBanner from "./install-app-banner";
-import { ThemeProvider } from "@/components/theme-provider";
+import { AppThemeProvider } from "@/components/app-theme-provider";
 import { ThemeColorMeta } from "@/components/theme-color-meta";
 import { DisableContextMenu } from "@/components/disable-context-menu";
 import { VersionWatcher } from "@/components/version-watcher";
@@ -95,6 +95,10 @@ export default async function RootLayout({
             ломается ровно так же. */}
         <VersionWatcher version={process.env.NEXT_DEPLOYMENT_ID ?? null} />
         <I18nProvider dict={dict} locale={locale} currency={currency}>
+          {/* Тема выбирается по разделу (AppThemeProvider): кабинет/вход/
+              админка — светлая, PWA Сотрудника — тёмная. Провайдер тут
+              ОДИН на всё приложение: вложенный next-themes-провайдер молча
+              не работает, см. комментарий в app-theme-provider.tsx. */}
           {/* nonce обязателен (аудит 2026-08-13): next-themes вставляет
               ИНЛАЙНОВЫЙ скрипт, который выставляет класс темы до первой
               отрисовки, а после замены 'unsafe-inline' на nonce в script-src
@@ -102,20 +106,14 @@ export default async function RootLayout({
               Без него скрипт молча блокируется — тема применяется уже после
               гидратации, то есть возвращается ровно то мигание светлым, ради
               устранения которого этот скрипт и существует. */}
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            enableSystem={false}
-            storageKey="teg-theme-owner"
-            nonce={nonce}
-          >
+          <AppThemeProvider nonce={nonce}>
             <ThemeColorMeta />
             <NavProgressBar />
             <InstallAppBanner />
             <SaveSuccessOverlay />
             <DeleteSuccessOverlay />
             <TextScaleProvider>{children}</TextScaleProvider>
-          </ThemeProvider>
+          </AppThemeProvider>
         </I18nProvider>
       </body>
     </html>

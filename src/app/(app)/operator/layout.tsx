@@ -1,6 +1,4 @@
 import type { Viewport } from "next";
-import { ThemeProvider } from "@/components/theme-provider";
-import { getNonce } from "@/lib/nonce";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ThemeColorMeta } from "@/components/theme-color-meta";
 import { OperatorSwitchButton } from "@/components/operator-switch-button";
@@ -20,40 +18,35 @@ export const viewport: Viewport = {
 // storageKey отдельный от кабинета владельца), никакого тенантного дефолта
 // владелец не назначает — каждый оператор переключает светлую/тёмную сам на
 // своём устройстве, независимо от других (см. фидбек пользователя
-// 2026-07-09). PWA оператора по умолчанию тёмная (docs/spec/03-design-system.md),
-// это просто стартовое значение для устройства, где ещё ничего не выбирали.
-// nonce — см. комментарий в src/app/(app)/layout.tsx. Здесь цена пропущенного
-// nonce выше: PWA оператора по умолчанию тёмная, и без инлайнового скрипта
-// сотрудник на каждой загрузке получал бы вспышку белым экраном в тёмном зале.
-export default async function OperatorLayout({ children }: { children: React.ReactNode }) {
-  const nonce = await getNonce();
+// 2026-07-09). PWA оператора по умолчанию тёмная (docs/spec/03-design-system.md).
+//
+// Сам ThemeProvider здесь больше НЕ рендерится (2026-08-23): вложенный
+// next-themes-провайдер — пустышка, и «тёмная по умолчанию» с отдельным
+// ключом хранения тут молча не работали, а переключатель темы в PWA красил
+// заодно кабинет владельца, экраны входа/регистрации и админку на этом
+// устройстве. Выбор раздела переехал в src/components/app-theme-provider.tsx
+// (там же полный разбор), провайдер на всё приложение теперь ровно один — в
+// корневом layout.tsx, вместе со своим nonce.
+export default function OperatorLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="dark"
-      enableSystem={false}
-      storageKey="teg-theme-operator"
-      nonce={nonce}
-    >
-      <div className="flex flex-1 flex-col">
-        <ThemeColorMeta />
-        <OfflineSync />
-        <OperatorBrandingChrome />
-        <div className="flex items-center justify-between gap-2 p-2">
-          <OperatorSwitchButton />
-          <OwnerLoginToggle />
-          <ThemeToggle />
-        </div>
-        {/* Корзины Билетов/Товаров — на уровне layout (запрос пользователя
-            2026-07-21: "не должно сбрасываться при переключении между
-            пунктами меню"), этот layout не перемонтируется между /operator/*
-            страницами, в отличие от самих страниц. */}
-        <TicketsCartProvider>
-          <GoodsCartProvider>
-            <OperatorBottomNav>{children}</OperatorBottomNav>
-          </GoodsCartProvider>
-        </TicketsCartProvider>
+    <div className="flex flex-1 flex-col">
+      <ThemeColorMeta />
+      <OfflineSync />
+      <OperatorBrandingChrome />
+      <div className="flex items-center justify-between gap-2 p-2">
+        <OperatorSwitchButton />
+        <OwnerLoginToggle />
+        <ThemeToggle />
       </div>
-    </ThemeProvider>
+      {/* Корзины Билетов/Товаров — на уровне layout (запрос пользователя
+          2026-07-21: "не должно сбрасываться при переключении между
+          пунктами меню"), этот layout не перемонтируется между /operator/*
+          страницами, в отличие от самих страниц. */}
+      <TicketsCartProvider>
+        <GoodsCartProvider>
+          <OperatorBottomNav>{children}</OperatorBottomNav>
+        </GoodsCartProvider>
+      </TicketsCartProvider>
+    </div>
   );
 }
