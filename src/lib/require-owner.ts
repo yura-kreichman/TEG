@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { getImpersonatingAdminId, getSession } from "@/lib/auth";
 import { isSessionRevoked } from "@/lib/session-revocation";
 
 /**
@@ -14,6 +14,20 @@ export async function requireOwner() {
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
   if (!user || user.role !== "owner" || !user.tenantId) return null;
   if (isSessionRevoked(session, user.sessionsValidFrom)) return null;
+
+  // Тумблер «Доступ техподдержки» (запрос владельца 2026-08-23) — обрывает
+  // УЖЕ НАЧАТУЮ имперсонацию, а не только запрещает начать новую: владелец
+  // выключает доступ ровно в тот момент, когда видит, что в кабинете кто-то
+  // есть, и ждать истечения 2-часовой сессии админа тут нечестно. Лишний
+  // запрос к тенанту делается только внутри имперсонированной сессии (кука
+  // есть) — обычный вход владельца платит за это лишь чтением куки.
+  if (await getImpersonatingAdminId()) {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: user.tenantId },
+      select: { supportAccessEnabled: true },
+    });
+    if (!tenant?.supportAccessEnabled) return null;
+  }
 
   return { user, tenantId: user.tenantId };
 }

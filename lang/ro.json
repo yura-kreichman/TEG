@@ -121,6 +121,8 @@
     "currencyHint": "Simbolul monedei lângă sumele de bani în panou și aplicația angajatului.",
     "currencySectionLabel": "Monedă",
     "currencyNoneLabel": "Fără monedă",
+    "supportAccessLabel": "Acces asistență tehnică",
+    "supportAccessHint": "Permite echipei de suport RentOS să intre în contul tău pentru ajutor și diagnostic. Dezactivează-l și nimeni nu mai poate intra, nici administratorul platformei; poți reactiva accesul oricând de aici.",
     "systemTitle": "Sistem",
     "systemHint": "Setări generale valabile pentru tot tenantul.",
     "systemGoodsBalancePaymentLabel": "Plata Produselor din sold",

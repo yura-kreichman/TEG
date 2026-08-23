@@ -121,6 +121,8 @@
     "currencyHint": "Currency sign shown next to money amounts in the owner cabinet and operator app.",
     "currencySectionLabel": "Currency",
     "currencyNoneLabel": "No currency",
+    "supportAccessLabel": "Support access",
+    "supportAccessHint": "Lets RentOS support sign in to your account to help and diagnose issues. Turn it off and no one can sign in, including the platform administrator; you can restore access here at any time.",
     "systemTitle": "System",
     "systemHint": "General settings affecting the whole tenant.",
     "systemGoodsBalancePaymentLabel": "Pay for Goods with balance",

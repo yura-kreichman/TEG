@@ -121,6 +121,8 @@
     "currencyHint": "Simbolo di valuta mostrato accanto agli importi nel gestionale del titolare e nell'app dell'operatore.",
     "currencySectionLabel": "Valuta",
     "currencyNoneLabel": "Nessuna valuta",
+    "supportAccessLabel": "Accesso dell'assistenza",
+    "supportAccessHint": "Consente all'assistenza RentOS di accedere al tuo account per aiutarti e fare diagnosi. Disattivalo e nessuno potrà accedere, nemmeno l'amministratore della piattaforma; puoi riattivarlo qui in qualsiasi momento.",
     "systemTitle": "Sistema",
     "systemHint": "Impostazioni generali valide per l'intero tenant.",
     "systemGoodsBalancePaymentLabel": "Pagamento Prodotti dal saldo",

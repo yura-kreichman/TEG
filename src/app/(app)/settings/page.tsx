@@ -6,6 +6,7 @@ import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { PlanCard } from "@/components/plan-card";
+import { SupportAccessCard } from "@/components/support-access-card";
 import { useI18n } from "@/components/i18n-provider";
 
 export default function SettingsPage() {
@@ -76,6 +77,10 @@ export default function SettingsPage() {
           </StaggerList>
 
           <PlanCard />
+          {/* Под карточкой плана (запрос владельца 2026-08-23) — доступ
+              платформенной техподдержки в кабинет, соседствует с планом и
+              подпиской, а не с тумблерами экрана «Система». */}
+          <SupportAccessCard />
         </div>
       </div>
     </OwnerShell>

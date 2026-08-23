@@ -121,6 +121,8 @@
     "currencyHint": "Kabinet va xodim ilovasida pul summalarining yonidagi valyuta belgisi.",
     "currencySectionLabel": "Valyuta",
     "currencyNoneLabel": "Valyutasiz",
+    "supportAccessLabel": "Texnik yordam kirishi",
+    "supportAccessHint": "RentOS qo'llab-quvvatlash xizmatiga yordam va tashxis uchun kabinetingizga kirishga ruxsat beradi. O'chirsangiz, hech kim, hatto platforma administratori ham kira olmaydi; kirishni istalgan vaqtda shu yerda qaytarish mumkin.",
     "systemTitle": "Tizim",
     "systemHint": "Butun tenantga tegishli umumiy sozlamalar.",
     "systemGoodsBalancePaymentLabel": "Tovarlar uchun balansdan toʻlash",

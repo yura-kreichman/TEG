@@ -84,6 +84,10 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/admin/tenan
     package: tenant.package,
     fluentcartCustomerId: tenant.fluentcartCustomerId,
     unlimited: tenant.unlimited,
+    // Тумблер владельца «Доступ техподдержки» (запрос владельца 2026-08-23) —
+    // только для чтения: Super Admin видит, что вход закрыт, но снять запрет
+    // из админ-модуля не может, это решение владельца.
+    supportAccessEnabled: tenant.supportAccessEnabled,
     limitOverrides: (tenant.limitOverrides as LimitOverrides | null) ?? {},
     usage: {
       points: pointsCount,

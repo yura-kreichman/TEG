@@ -12,6 +12,21 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/admin/tena
   }
 
   const { id } = await ctx.params;
+
+  // Тумблер «Доступ техподдержки» в Настройках владельца (запрос владельца
+  // 2026-08-23) — выключенный запрещает вход в кабинет от имени владельца.
+  // Проверка серверная, а не только скрытая кнопка в /admin/tenants/[id].
+  const tenant = await prisma.tenant.findUnique({
+    where: { id },
+    select: { supportAccessEnabled: true },
+  });
+  if (!tenant) {
+    return NextResponse.json({ error: "Владелец не найден" }, { status: 404 });
+  }
+  if (!tenant.supportAccessEnabled) {
+    return NextResponse.json({ error: "Владелец закрыл доступ техподдержки" }, { status: 403 });
+  }
+
   const owner = await prisma.user.findFirst({
     where: { tenantId: id, role: "owner" },
     orderBy: { createdAt: "asc" },

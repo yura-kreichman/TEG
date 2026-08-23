@@ -121,6 +121,8 @@
     "currencyHint": "Kabinde ve çalışan uygulamasında para tutarlarının yanındaki para birimi işareti.",
     "currencySectionLabel": "Para birimi",
     "currencyNoneLabel": "Para birimi yok",
+    "supportAccessLabel": "Teknik destek erişimi",
+    "supportAccessHint": "RentOS destek ekibinin yardım ve tanılama için hesabınıza girmesine izin verir. Kapatırsanız platform yöneticisi dahil kimse giremez; erişimi istediğiniz zaman buradan geri açabilirsiniz.",
     "systemTitle": "Sistem",
     "systemHint": "Tüm kiracıyı etkileyen genel ayarlar.",
     "systemGoodsBalancePaymentLabel": "Ürünler için bakiyeden ödeme",

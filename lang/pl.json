@@ -121,6 +121,8 @@
     "currencyHint": "Znak waluty przy kwotach pieniężnych w panelu i aplikacji pracownika.",
     "currencySectionLabel": "Waluta",
     "currencyNoneLabel": "Bez waluty",
+    "supportAccessLabel": "Dostęp wsparcia technicznego",
+    "supportAccessHint": "Pozwala wsparciu RentOS logować się do Twojego panelu w celu pomocy i diagnostyki. Wyłącz je, a nikt nie będzie mógł się zalogować, także administrator platformy; dostęp możesz przywrócić tutaj w każdej chwili.",
     "systemTitle": "System",
     "systemHint": "Ogólne ustawienia dotyczące całego najemcy.",
     "systemGoodsBalancePaymentLabel": "Płatność za Towary z salda",

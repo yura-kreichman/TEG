@@ -121,6 +121,8 @@
     "currencyHint": "Kabinetdə və işçi tətbiqində pul məbləğlərinin yanındakı valyuta işarəsi.",
     "currencySectionLabel": "Valyuta",
     "currencyNoneLabel": "Valyuta yoxdur",
+    "supportAccessLabel": "Texniki dəstək girişi",
+    "supportAccessHint": "RentOS dəstək xidmətinə kömək və diaqnostika üçün kabinetinizə daxil olmağa icazə verir. Söndürsəniz, heç kim, o cümlədən platforma administratoru da daxil ola bilməz; girişi istənilən vaxt buradan geri qaytara bilərsiniz.",
     "systemTitle": "Sistem",
     "systemHint": "Bütün tenantə aid ümumi tənzimləmələr.",
     "systemGoodsBalancePaymentLabel": "Mallar üçün balansdan ödəniş",

@@ -68,6 +68,7 @@ interface TenantDetail {
   package: PackageOption;
   fluentcartCustomerId: string | null;
   unlimited: boolean;
+  supportAccessEnabled: boolean;
   limitOverrides: Partial<Record<LimitKey, number>>;
   usage: { points: number; zones: number; assets: number; operators: number };
   history: HistoryEntry[];
@@ -257,9 +258,17 @@ export default function AdminTenantDetailPage({ params }: { params: Promise<{ id
               <ChevronLeft className="size-4" />
               {t.admin.backToTenants}
             </button>
-            <Button variant="outline" size="sm" onClick={impersonate}>
-              {t.admin.impersonateButton}
-            </Button>
+            {/* Вход «как владелец» доступен, только пока владелец сам его не
+                закрыл тумблером «Доступ техподдержки» в своих Настройках
+                (запрос владельца 2026-08-23). Кнопка неактивна, а не спрятана —
+                иначе непонятно, почему её нет. Сам запрет держит сервер. */}
+            {tenant.supportAccessEnabled ? (
+              <Button variant="outline" size="sm" onClick={impersonate}>
+                {t.admin.impersonateButton}
+              </Button>
+            ) : (
+              <span className="text-caption-airbnb text-muted-foreground">{t.admin.supportAccessClosed}</span>
+            )}
           </div>
           {impersonateError && <p className="text-sm text-destructive">{impersonateError}</p>}
 

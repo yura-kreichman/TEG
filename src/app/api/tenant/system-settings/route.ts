@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { invalidateTenantModuleFlags } from "@/lib/tenant-modules";
 import { requireOwner } from "@/lib/require-owner";
+import { getImpersonatingAdminId } from "@/lib/auth";
 import { BG_EFFECT_VALUES } from "@/components/bg-effects";
 import { normalizeBgEffect } from "@/components/bg-effects/shared";
 import { isSelfServicePayoutMode } from "@/lib/work-time";
@@ -41,6 +42,7 @@ export async function GET() {
       goodsAllowBalancePayment: true,
       printingEnabled: true,
       expensesEnabled: true,
+      supportAccessEnabled: true,
       selfServicePayoutMode: true,
       bgEffect: true,
       receiptShowLogo: true,
@@ -59,6 +61,11 @@ export async function GET() {
     goodsAllowBalancePayment: tenant?.goodsAllowBalancePayment ?? true,
     printingEnabled: tenant?.printingEnabled ?? false,
     expensesEnabled: tenant?.expensesEnabled ?? true,
+    // Доступ техподдержки (запрос владельца 2026-08-23) — тумблер живёт не
+    // на этой странице, а на главной Настроек под карточкой плана
+    // (src/components/support-access-card.tsx), но поле тенантное и читается
+    // тем же роутом, что остальные тумблеры кабинета.
+    supportAccessEnabled: tenant?.supportAccessEnabled ?? true,
     // Что Сотрудник вносит сам при завершении смены — режим из трёх, а не
     // тумблер (запрос пользователя 2026-08-12): "cash" | "forbidden" |
     // "accrual", см. комментарий у поля в schema.prisma.
@@ -98,10 +105,20 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}));
+
+  // Доступ техподдержки снимает и возвращает только сам Владелец: из
+  // имперсонированной сессии (Super Admin вошёл «как владелец») этот тумблер
+  // не переключается — иначе тот, кого запрет ограничивает, мог бы снять его
+  // сам. Остальные поля роута из имперсонации по-прежнему доступны — техподдержка
+  // за тем и заходит, чтобы помочь с настройками.
+  if (body.supportAccessEnabled !== undefined && (await getImpersonatingAdminId())) {
+    return NextResponse.json({ error: "Недоступно в режиме техподдержки" }, { status: 403 });
+  }
   const data: {
     goodsAllowBalancePayment?: boolean;
     printingEnabled?: boolean;
     expensesEnabled?: boolean;
+    supportAccessEnabled?: boolean;
     selfServicePayoutMode?: string;
     bgEffect?: string;
     receiptShowLogo?: boolean;
@@ -122,6 +139,7 @@ export async function PATCH(request: Request) {
     "goodsAllowBalancePayment",
     "printingEnabled",
     "expensesEnabled",
+    "supportAccessEnabled",
     "receiptShowLogo",
     "receiptShowTenantName",
     "receiptCompactHeader",
