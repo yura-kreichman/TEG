@@ -435,13 +435,20 @@ export async function computeZoneSubmissionRevenues(
   // /api/reports/counters/day/route.ts.
   const ticketZoneIds = zones.filter((z) => isTicketsZone(z)).map((z) => z.id);
   const ticketBoundariesByZone = new Map<string, Date[]>();
-  if (ticketZoneIds.length) {
+  // Времена сдач ИМЕННО билетных зон внутри окна. Проверять надо их, а не
+  // ticketZoneIds: у тенанта может быть зона "Билеты", по которой в этом
+  // периоде не сдавали итогов — тогда массив пуст, Math.max() возвращает
+  // -Infinity, new Date(-Infinity) даёт Invalid Date, и Prisma роняет ВЕСЬ
+  // экран "Деньги"/"Отчёты" в 500 (реальный баг, найден 2026-08-23: у
+  // тенанта с билетной зоной падал любой период, где по ней не было сдач).
+  const ticketSubmissionTimes = zoneSubmissions
+    .filter((zs) => ticketZoneIds.includes(zs.zoneId))
+    .map((zs) => zs.createdAt.getTime());
+  if (ticketZoneIds.length && ticketSubmissionTimes.length) {
     // Граница сверху (аудит 2026-08-14) — см. тот же приём у цепочки баланса
     // выше: всё, что позже самой поздней сдачи окна, для поиска
     // предшественника бесполезно, а без границы запрос растёт с историей.
-    const latestTicketSubmission = new Date(
-      Math.max(...zoneSubmissions.filter((zs) => ticketZoneIds.includes(zs.zoneId)).map((zs) => zs.createdAt.getTime()))
-    );
+    const latestTicketSubmission = new Date(Math.max(...ticketSubmissionTimes));
     const allTicketZoneSubmissions = await prisma.zoneSubmission.findMany({
       where: { zoneId: { in: ticketZoneIds }, createdAt: { lte: latestTicketSubmission } },
       orderBy: { createdAt: "asc" },
