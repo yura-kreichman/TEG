@@ -1887,5 +1887,13 @@
     "mistakeText": "Zdane wyniki poprawia tylko właściciel — powiedz mu, co poprawić. Nie zdawaj wyników drugi raz.",
     "offlineTitle": "Brak internetu",
     "offlineText": "Zdanie wyników zapisze się w aplikacji i wyśle się samo, gdy pojawi się połączenie. Nie zamykaj do tego czasu aplikacji."
+  },
+  "changelog": {
+    "title": "Lista zmian",
+    "subtitle": "Co zmieniło się w RentOS",
+    "version": "Wersja",
+    "typeFeat": "Nowe",
+    "typeImpr": "Ulepszone",
+    "typeFix": "Poprawione"
   }
 }

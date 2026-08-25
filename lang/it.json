@@ -1887,5 +1887,13 @@
     "mistakeText": "I risultati consegnati li corregge solo il proprietario — digli cosa sistemare. Non consegnare i risultati una seconda volta.",
     "offlineTitle": "Niente internet",
     "offlineText": "La consegna dei risultati viene salvata nell’app e partirà da sola quando ci sarà connessione. Fino ad allora non chiudere l’app."
+  },
+  "changelog": {
+    "title": "Registro modifiche",
+    "subtitle": "Cosa è cambiato in RentOS",
+    "version": "Versione",
+    "typeFeat": "Novità",
+    "typeImpr": "Migliorato",
+    "typeFix": "Corretto"
   }
 }

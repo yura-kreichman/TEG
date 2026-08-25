@@ -18,6 +18,15 @@ fi
 export NEXT_DEPLOYMENT_ID="$(git --git-dir=/srv/git/rentos.git rev-parse --short HEAD 2>/dev/null || date +%s)"
 echo "Версия сборки: $NEXT_DEPLOYMENT_ID"
 
+# Дамп истории коммитов для сборщика публичной истории изменений
+# (changelog/README.md). Внутри образа .git нет, а рабочее дерево — чекаут без
+# .git (deploy/post-receive), поэтому историю берём из голого репозитория и
+# кладём в контекст сборки обычным файлом. Разделители \x1f/\x1e —
+# тело коммита многострочное, и любой печатный разделитель в нём может
+# встретиться. scripts/build-changelog.mjs читает этот файл при сборке образа.
+git --git-dir=/srv/git/rentos.git log --reverse --date=short \
+  --pretty=$'%H\x1f%ad\x1f%B\x1e' > changelog/commits.txt
+
 docker compose -f docker-compose.prod.yml build app db
 docker compose -f docker-compose.prod.yml up -d db
 docker compose -f docker-compose.prod.yml run --rm app npx prisma migrate deploy

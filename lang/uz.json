@@ -1887,5 +1887,13 @@
     "mistakeText": "Topshirilgan yakunlarni faqat egasi tuzatadi — nimani tuzatish kerakligini unga ayt. Yakunlarni ikkinchi marta topshirma.",
     "offlineTitle": "Internet yo‘q",
     "offlineText": "Yakunlar ilovada saqlanadi va aloqa paydo bo‘lishi bilan o‘zi jo‘naydi. Shungacha ilovani yopma."
+  },
+  "changelog": {
+    "title": "O'zgarishlar tarixi",
+    "subtitle": "RentOS'da nima o'zgardi",
+    "version": "Versiya",
+    "typeFeat": "Yangi",
+    "typeImpr": "Yaxshilandi",
+    "typeFix": "Tuzatildi"
   }
 }

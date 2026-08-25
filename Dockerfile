@@ -19,6 +19,10 @@ ENV NEXT_DEPLOYMENT_ID=$NEXT_DEPLOYMENT_ID
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
+# Публичная история изменений собирается здесь, а не на хосте: node есть только
+# в этом слое. Дамп коммитов кладёт в контекст deploy/deploy.sh — в образе .git
+# нет вовсе (changelog/README.md).
+RUN node scripts/build-changelog.mjs
 RUN npm run build
 
 FROM base AS runner

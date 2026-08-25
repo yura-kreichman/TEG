@@ -1887,5 +1887,13 @@
     "mistakeText": "Teslim edilen sonuçları yalnızca işletme sahibi düzeltir — neyin düzeltileceğini ona söyle. Sonuçları ikinci kez teslim etme.",
     "offlineTitle": "İnternet yok",
     "offlineText": "Sonuçlar uygulamada saklanır ve bağlantı geldiğinde kendiliğinden gönderilir. O ana kadar uygulamayı kapatma."
+  },
+  "changelog": {
+    "title": "Değişiklik günlüğü",
+    "subtitle": "RentOS'ta neler değişti",
+    "version": "Sürüm",
+    "typeFeat": "Yeni",
+    "typeImpr": "İyileştirildi",
+    "typeFix": "Düzeltildi"
   }
 }

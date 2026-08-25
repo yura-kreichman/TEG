@@ -20,7 +20,8 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@lang/*": ["./lang/*"]
+      "@lang/*": ["./lang/*"],
+      "@changelog/*": ["./changelog/*"]
     }
   },
   "include": [

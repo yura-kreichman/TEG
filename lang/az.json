@@ -1887,5 +1887,13 @@
     "mistakeText": "Təhvil verilmiş nəticələri yalnız sahib düzəldir — ona nəyi düzəltmək lazım olduğunu de. Nəticələri ikinci dəfə təhvil vermə.",
     "offlineTitle": "İnternet yoxdur",
     "offlineText": "Nəticələr tətbiqdə saxlanacaq və əlaqə yarananda özü göndəriləcək. O vaxta qədər tətbiqi bağlama."
+  },
+  "changelog": {
+    "title": "Dəyişikliklər tarixçəsi",
+    "subtitle": "RentOS-da nə dəyişdi",
+    "version": "Versiya",
+    "typeFeat": "Yeni",
+    "typeImpr": "Təkmilləşdirildi",
+    "typeFix": "Düzəldildi"
   }
 }

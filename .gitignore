@@ -67,3 +67,6 @@ next-env.d.ts
 # checkout on purpose so ISPmanager's existing site file-backup sweeps them
 # up automatically; never meant to be committed
 /db-backups/
+
+# Дамп истории коммитов для сборщика changelog — создаётся на сервере при деплое.
+changelog/commits.txt

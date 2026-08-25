@@ -1,0 +1,1272 @@
+{
+  "note": "СГЕНЕРИРОВАННЫЙ ФАЙЛ. Правьте changelog/seed.json или трейлер Changelog: в коммите — см. changelog/README.md.",
+  "version": "1.22.1",
+  "anchor": {
+    "sha": "a2a9267fd58a63b74273d7394be676ca98849e64",
+    "day": "2026-08-25"
+  },
+  "releases": [
+    {
+      "version": "1.22.1",
+      "day": "2026-08-25",
+      "entries": [
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Выбор точки: удалённая точка, оставшаяся в памяти браузера, больше не приводит к пустому экрану.",
+            "en": "Location picker: a deleted location left in browser storage no longer leaves you with a blank screen."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.22.0",
+      "day": "2026-08-23",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Настройки: тумблер «Доступ техподдержки» под карточкой плана — владелец сам решает, когда открыть кабинет для помощи.",
+            "en": "Settings: a Support access toggle under the plan card — the owner decides when to open the account for assistance."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Счётчики: идущие браслеты с тарифом «За вход» сразу видны в выручке на Главной, не дожидаясь окончания.",
+            "en": "Counters: wristbands still running on an entry-fee rate now show up in the home-screen revenue right away, without waiting for them to finish."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Счётчики: расходы и «Разница» учитывают инкассацию, сделанную посреди дня.",
+            "en": "Counters: expenses and the Difference figure now account for a collection made in the middle of the day."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Деньги: «Разница» на Главной считает расходы так же, как остальные экраны.",
+            "en": "Money: the Difference figure on the home screen counts expenses the same way every other screen does."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Деньги: раздел открывается и в периодах, где не было продаж билетов.",
+            "en": "Money: the section opens in periods with no ticket sales as well."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Инкассации: старую запись снова можно поправить — зачтённый аванс больше не блокирует правку.",
+            "en": "Collections: an earlier record can be edited again — a settled advance no longer blocks the change."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Оформление: тёмная тема приложения сотрудника больше не влияет на кабинет владельца.",
+            "en": "Appearance: the employee app's dark theme no longer bleeds into the owner's account."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Зоны: у «Прибываний» пункт меню назван «Название, цвет и тариф» — по тому, что он на самом деле открывает.",
+            "en": "Zones: for Stays, the menu item is now called Name, colour and rate — matching what it actually opens."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.21.0",
+      "day": "2026-08-22",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Расходы: сотрудник может поправить свой расход, а сообщение в Telegram обновится следом.",
+            "en": "Expenses: an employee can edit their own expense, and the Telegram message updates to match."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Прибывания: таймер на тайле масштабируется по ширине плитки и читается на любом экране.",
+            "en": "Stays: the timer on a tile scales to the tile's width and stays readable on any screen."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.20.2",
+      "day": "2026-08-19",
+      "entries": [
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Язык сотрудника задаёт владелец, а экран входа устройства показывается на языке компании.",
+            "en": "The owner sets each employee's language, and the device login screen appears in the company's language."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Памятка «Как работать» переведена на 14 языков.",
+            "en": "The How it works guide is now available in 14 languages."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.20.1",
+      "day": "2026-08-17",
+      "entries": [
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Списки держат порядок, заданный владельцем, — стрелки перестановки работают предсказуемо.",
+            "en": "Lists keep the order the owner set, and the reordering arrows behave predictably."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "В общих списках приложения сотрудника видно, кто внёс запись.",
+            "en": "Shared lists in the employee app show who created each record."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Сообщения об инкассации перечисляют зоны по строкам, точка — отдельной строкой.",
+            "en": "Collection messages list zones line by line, with the location on its own line."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.20.0",
+      "day": "2026-08-16",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Telegram: расходы и инкассации приходят отдельными сообщениями; правка переписывает уже отправленное, а удаление записи убирает сообщение.",
+            "en": "Telegram: expenses and collections arrive as their own messages; an edit rewrites the message already sent, and deleting the record removes it."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "«Как работать»: памятка собирается под каждого сотрудника из его настроек и доступа.",
+            "en": "How it works: the guide is assembled for each employee from their own settings and access."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Реестры: продажи, расходы и начисления собраны единым списком с фильтрами и поиском.",
+            "en": "Registers: sales, expenses and payouts are gathered into one list with filters and search."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Итоги дня: чистый остаток наличными и ожидаемая касса Товаров ещё до сдачи.",
+            "en": "Day summary: the net cash on hand, plus the expected Goods takings before they are handed over."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Правки, сделанные владельцем, помечены знаком ♛ во всех сообщениях и реестрах.",
+            "en": "Changes made by the owner are marked with ♛ across messages and registers."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Отчёты: график «Динамика» строится и по произвольному периоду.",
+            "en": "Reports: the Dynamics chart is drawn for custom periods too."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.19.0",
+      "day": "2026-08-15",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Кабинет: подсказки ⓘ у показателей — что именно считает каждая цифра.",
+            "en": "Owner account: ⓘ hints next to the figures explain exactly what each number counts."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Расходы: сумма учитывается в момент ввода, а не откладывается до сдачи итогов.",
+            "en": "Expenses: the amount is counted the moment it is entered, instead of waiting for the results submission."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Лендинг: кнопка «Группа в Telegram» подтягивается из уже подключённой группы.",
+            "en": "Landing page: the Telegram group button is taken from the group already connected."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Новый логотип во всех иконках приложения.",
+            "en": "A new logo across every app icon."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Лендинг: фотографии зон и разметка страницы приведены к требованиям поисковиков.",
+            "en": "Landing page: zone photos and page markup now meet search engines' requirements."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.18.1",
+      "day": "2026-08-14",
+      "entries": [
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Инкассации: правка авансовой инкассации больше не занижает остатки зон.",
+            "en": "Collections: editing an advance collection no longer understates the zone balances."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Рабочее время: премию сотруднику можно поправить и убрать.",
+            "en": "Work time: an employee bonus can be edited or removed."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Клиенты: владелец снова может пополнить баланс произвольной суммой.",
+            "en": "Clients: the owner can top up a balance with any amount again."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Переход из кабинета на сайт сохраняет вход — владелец не превращается в гостя.",
+            "en": "Moving from the account to the website keeps you signed in — the owner is no longer treated as a guest."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.18.0",
+      "day": "2026-08-13",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Рабочее время: владелец выбирает, что сотрудник может взять из кассы сам — аванс, премию или ничего.",
+            "en": "Work time: the owner chooses what an employee may take from the till themselves — an advance, a bonus, or nothing."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Клиенты: клиент узнаётся по номеру телефона, даже если он записан с другим кодом страны, а касса подсказывает похожие номера.",
+            "en": "Clients: a client is recognised by phone number even when it was saved with a different country code, and the till suggests close matches."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Устройства: экран не гаснет там, где идут таймеры, и во время сдачи итогов.",
+            "en": "Devices: the screen stays awake where timers are running and during a results submission."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Устройства: планшет сам перезагружает приложение, когда выходит обновление.",
+            "en": "Devices: the tablet reloads the app on its own when an update ships."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Инкассация: слип показывает, из чего сложилась сумма.",
+            "en": "Collections: the slip shows what the amount is made up of."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Скорость: вход, настройки и длинные списки открываются заметно быстрее.",
+            "en": "Speed: signing in, settings and long lists open noticeably faster."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Настройки: часовой пояс выбирается для любой страны, а не только для стран языков RentOS.",
+            "en": "Settings: the time zone can be chosen for any country, not just the ones behind RentOS's languages."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Точки: потерянную привязку устройства можно вернуть, не заводя новое.",
+            "en": "Locations: a lost device binding can be restored without registering a new device."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Безопасность: проверки прав усилены по итогам аудита — отозванная сессия больше ничего не меняет.",
+            "en": "Security: permission checks strengthened after an audit — a revoked session can no longer change anything."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.17.1",
+      "day": "2026-08-10",
+      "entries": [
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Язык, выбранный на сайте, сохраняется при переходе в кабинет.",
+            "en": "The language chosen on the website carries over into the account."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Подписка: «Управлять подпиской» открывает страницу цен на языке владельца.",
+            "en": "Subscription: Manage subscription opens the pricing page in the owner's language."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Брошенные бесплатные кабинеты удаляются сами, с предупреждениями заранее.",
+            "en": "Abandoned free accounts are removed automatically, with warnings sent in advance."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Оплата с другого адреса больше не заводит второй, пустой кабинет.",
+            "en": "Paying from a different email address no longer creates a second, empty account."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.17.0",
+      "day": "2026-08-08",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Единый вход: переход из кабинета на сайт и обратно без повторного ввода пароля.",
+            "en": "Single sign-on: move between the account and the website without entering your password again."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Покупка на сайте сразу создаёт кабинет — ждать ручной привязки не нужно.",
+            "en": "A purchase on the website creates the account straight away — no manual linking to wait for."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Письма о входе и восстановлении приходят на языке владельца.",
+            "en": "Sign-in and recovery emails arrive in the owner's language."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Вход: обычная опечатка в ПИН-коде больше не запирает устройство надолго.",
+            "en": "Sign-in: a simple typo in the PIN no longer locks the device out for long."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Итоги по дням: календарь на большом экране не растягивается на всю карточку.",
+            "en": "Daily results: on a wide screen the calendar no longer stretches across the whole card."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.16.1",
+      "day": "2026-08-06",
+      "entries": [
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Бизнес-день: граница дня задаётся тумблером, и все экраны считают по ней.",
+            "en": "Business day: the day boundary is set with a toggle, and every screen counts by it."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Касса за день: конец дня определяется закрытым рабочим временем, а не покрытием зон.",
+            "en": "Daily takings: the end of the day is determined by closed working time rather than zone coverage."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Рабочее время: допуск начала смены выбирается из списка длительностей.",
+            "en": "Work time: the early-start allowance is picked from a list of durations."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Сводка кассы приходит и после ручного ввода смены, с правильной датой при поздней границе дня.",
+            "en": "The takings summary also arrives after a manually entered shift, with the right date when the day boundary is late."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.16.0",
+      "day": "2026-08-04",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Сдача итогов: слепой ввод кассы — сотрудник вводит свою сумму, не видя расчётную. Включается владельцем.",
+            "en": "Results submission: blind cash entry — the employee enters their own figure without seeing the calculated one. Enabled by the owner."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Итоги дня: длинные списки сворачиваются, и видно, кто кого обслуживал.",
+            "en": "Day summary: long lists collapse, and it is clear who served whom."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Сводка Прибываний: оплаченное время и разбивка по способам оплаты.",
+            "en": "Stays summary: paid time and a breakdown by payment method."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Инкассация по зоне вперёд: минус в остатке зоны подписан и объяснён.",
+            "en": "Collecting a zone in advance: the negative zone balance is labelled and explained."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.15.1",
+      "day": "2026-08-03",
+      "entries": [
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Клиенты: список можно импортировать при переезде с другого учёта.",
+            "en": "Clients: the list can be imported when moving over from other software."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Рабочее время: перенос остатка показывается только в своём месяце.",
+            "en": "Work time: a carried-over balance is shown only in the month it belongs to."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Реестр инкассаций: видно, кто забрал деньги и сколько за один раз.",
+            "en": "Collection register: it shows who took the money and how much at a time."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Периоды во всех отчётах считаются в часовом поясе компании.",
+            "en": "Periods in every report are counted in the company's time zone."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.15.0",
+      "day": "2026-07-31",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Товары: отложенные заказы — тайлы столов, докупка тем же тапом, оплата или отмена позже.",
+            "en": "Goods: held orders — table tiles, add more with the same tap, pay or cancel later."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Товары: карточка сверок в «Итогах дня» и сдача кассы сотрудником.",
+            "en": "Goods: a reconciliation card in the day summary, and cash handover by the employee."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Товары и Прибывания: к заказу привязывается клиент.",
+            "en": "Goods and Stays: an order can be tied to a client."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Лендинг и Инструктажи: если сохранить не удалось, об этом говорится, а не проходит молча.",
+            "en": "Landing page and Instructions: when saving fails you are told, instead of it passing silently."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.14.1",
+      "day": "2026-07-29",
+      "entries": [
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Точки: владелец привязывает текущее устройство прямо из кабинета, без ссылки и QR.",
+            "en": "Locations: the owner binds the current device straight from the account, with no link or QR code."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Вход: отдельные кнопки «Войти как Владелец» и «Войти как Сотрудник».",
+            "en": "Sign-in: separate Sign in as owner and Sign in as employee buttons."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Прибывания: таймер и сумма на тайле крупнее и подстраиваются под ширину экрана.",
+            "en": "Stays: the timer and amount on a tile are larger and adapt to the screen width."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.14.0",
+      "day": "2026-07-28",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Внешний вид: логотип компании водяным знаком в приложении сотрудника.",
+            "en": "Appearance: the company logo as a watermark in the employee app."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Внешний вид: фоновые эффекты — волны, частицы, гиперпространство, свечение и блик.",
+            "en": "Appearance: background effects — waves, particles, hyperspace, glow and shine."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Клиенты: сводка «всего / подключено / с балансом» над списком и экспорт в Excel.",
+            "en": "Clients: a total / connected / with balance summary above the list, plus export to Excel."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Крупные суммы подстраиваются под ширину экрана и не разъезжаются между собой.",
+            "en": "Large amounts adapt to the screen width and stay aligned with one another."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Билеты и Товары: длинные названия помещаются в тайл в две строки.",
+            "en": "Tickets and Goods: long names fit onto a tile across two lines."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Пуски: тарифы с таймером — та же механика «За вход», что у Прибываний.",
+            "en": "Launches: timed rates — the same entry-fee mechanics as in Stays."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.13.0",
+      "day": "2026-07-27",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Оплата: сумма делится между наличными, безналом и балансом в любой пропорции.",
+            "en": "Payment: an amount can be split between cash, card and balance in any proportion."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Счётчики: показания можно набирать тапами по сеансам вместо ручного ввода.",
+            "en": "Counters: readings can be tapped in session by session instead of typed."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Прибывания: несколько именованных тарифов на «За вход» и «По факту».",
+            "en": "Stays: several named rates for entry-fee and pay-as-you-go pricing."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Прибывания: округление суммы «По факту» до целой единицы, тумблером зоны.",
+            "en": "Stays: pay-as-you-go amounts can be rounded to whole units, per zone."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Онбординг: новый владелец проходит первичную настройку по шагам.",
+            "en": "Onboarding: a new owner is walked through the initial setup step by step."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Активы: тайл окрашен градиентом по своей цветовой метке во всех разделах.",
+            "en": "Assets: a tile is tinted by its colour tag across every screen."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Безопасность: уточнены права на денежные операции и правку записей.",
+            "en": "Security: permissions for money operations and record edits have been tightened."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.12.0",
+      "day": "2026-07-25",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Расходы: сотрудник фиксирует расход сразу, не дожидаясь сдачи итогов.",
+            "en": "Expenses: an employee records an expense immediately, without waiting for the results submission."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Сводки: отправленное в Telegram сообщение правится задним числом, а не дублируется.",
+            "en": "Summaries: a message already sent to Telegram is edited in place rather than duplicated."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Абонементы: выручка признаётся при пополнении баланса, а не при трате.",
+            "en": "Subscriptions: revenue is recognised when the balance is topped up, not when it is spent."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Деньги: прибыль считается за вычетом авансов и премий.",
+            "en": "Money: profit is calculated net of advances and bonuses."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Отчёты: раздел «Сотрудники» показывает заработок за период — ставку вместе с премиями.",
+            "en": "Reports: the Employees section shows earnings for the period — pay together with bonuses."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Сдача итогов: шаг «Расходы» не показывается, когда расходов нет.",
+            "en": "Results submission: the Expenses step is skipped when there are none."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.11.0",
+      "day": "2026-07-24",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Клиенты: публичная группа в Telegram — новые тарифы и товары объявляются в ней сами.",
+            "en": "Clients: a public Telegram group — new rates and goods are announced there automatically."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Счётчики: у сотрудника появился журнал возвратов и тестовых прогонов и списание с баланса.",
+            "en": "Counters: the employee now has a log of refunds and test runs, and can charge a client's balance."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "«Разница» не тревожит значком, когда разрыв целиком объясняется оплатой с баланса.",
+            "en": "The Difference figure stops flagging a gap that is fully explained by balance payments."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Рассылка клиентам обращается по имени.",
+            "en": "Client broadcasts address people by name."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Безопасность: усилены ограничения на подбор ПИН-кодов и паролей.",
+            "en": "Security: stronger limits on guessing PINs and passwords."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.10.1",
+      "day": "2026-07-23",
+      "entries": [
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Реестр инкассаций: видно комментарий, авансовые инкассации и то, что сотрудник взял себе.",
+            "en": "Collection register: comments, advance collections and what the employee took for themselves are all visible."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Остатки по зонам: Абонементы и Товары показываются всегда, когда модули включены.",
+            "en": "Zone balances: Subscriptions and Goods are always shown when those modules are on."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Аванс и премия сотрудника разносятся по зонам сразу, а не на следующей инкассации.",
+            "en": "An employee's advance or bonus is spread across zones straight away, not at the next collection."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Отчёты: границы периодов считаются по часовому поясу компании.",
+            "en": "Reports: period boundaries are counted in the company's time zone."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Безопасность: сплошная проверка расчётов и прав доступа — данные компании доступны только её людям.",
+            "en": "Security: a full review of calculations and access rights — a company's data is available only to its own people."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.10.0",
+      "day": "2026-07-22",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Клиенты: Telegram-бот показывает клиенту его баланс — достаточно поделиться номером телефона.",
+            "en": "Clients: a Telegram bot shows clients their balance — sharing a phone number is enough."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Клиенты: QR подключения бота прямо на карточке клиента.",
+            "en": "Clients: the bot's connection QR code sits right on the client card."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Клиенты: владелец может отправить сообщение всем подключённым клиентам, в том числе с картинкой.",
+            "en": "Clients: the owner can message every connected client, with an image if needed."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Telegram: команда /kassa показывает кассу с разбивкой по способам оплаты.",
+            "en": "Telegram: the /kassa command shows the takings broken down by payment method."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.9.1",
+      "day": "2026-07-22",
+      "entries": [
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Точки, зоны, активы, сотрудники и товары включаются и выключаются одним тапом.",
+            "en": "Locations, zones, assets, employees and goods are switched on and off with a single tap."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Настройки: Инструктажи, Задачи, Лендинг, Товары и Клиентов можно отключить, если они не нужны.",
+            "en": "Settings: Instructions, Tasks, Landing page, Goods and Clients can be turned off if you do not need them."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Владелец отмечен единой иконкой-короной вместо подписи.",
+            "en": "The owner is marked with a single crown icon instead of a text label."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Печать: тихая печать на Windows настраивается через реестр и запускается вместе с системой.",
+            "en": "Printing: silent printing on Windows is configured through the registry and starts with the system."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.9.0",
+      "day": "2026-07-21",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Билеты: продажа заказами с несколькими билетами, гашение и срок жизни, аннулирование поштучно или всем заказом.",
+            "en": "Tickets: sell orders containing several tickets, with redemption, expiry, and voiding one by one or by whole order."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Билеты: экран продажи и заказов в приложении сотрудника, печать всех билетов заказа одной кнопкой.",
+            "en": "Tickets: a sales and orders screen in the employee app, printing every ticket in an order with one button."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Билеты: номер заказа выделен акцентным цветом везде, где встречается.",
+            "en": "Tickets: the order number is highlighted in the accent colour wherever it appears."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.8.0",
+      "day": "2026-07-20",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Печать: квитанции на термопринтер шириной 58 мм, с предпросмотром в натуральную величину.",
+            "en": "Printing: receipts for a 58 mm thermal printer, with a life-size preview."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Звук подтверждения при сохранении и при учёте пуска.",
+            "en": "A confirmation sound when something is saved and when a launch is recorded."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Деньги и Отчёты: способы оплаты помечены иконками.",
+            "en": "Money and Reports: payment methods are marked with icons."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Отчёты: период День / Неделя / Месяц / Год / Произвольный, как в остальных разделах.",
+            "en": "Reports: Day / Week / Month / Year / Custom periods, matching the rest of the app."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Интерфейс: индикатор загрузки при переходах и заглушки на тяжёлых экранах.",
+            "en": "Interface: a loading indicator on navigation and placeholders on heavy screens."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.7.0",
+      "day": "2026-07-19",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Товары: каталог, продажа сотрудником, мягкие остатки и ревизия одним экраном.",
+            "en": "Goods: a catalogue, sales by the employee, soft stock levels and a stocktake on a single screen."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Счётчики: оплата балансом клиента, включается тумблером в настройках.",
+            "en": "Counters: payment from a client's balance, enabled with a toggle in settings."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Итоги дня: «Фактическая касса» — наличные, безнал и баланс одной суммой.",
+            "en": "Day summary: Actual takings — cash, card and balance as one figure."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Итоги дня: видно, из чего складывается разрыв между расчётной и чистой выручкой.",
+            "en": "Day summary: it is clear what makes up the gap between calculated and net revenue."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.6.0",
+      "day": "2026-07-18",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Абонементы: планы пополнения, кошелёк клиента по номеру телефона, оплата покупок балансом.",
+            "en": "Subscriptions: top-up plans, a client wallet keyed to a phone number, and paying for purchases from the balance."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Абонементы: карточка клиента с историей операций и поиском по списку.",
+            "en": "Subscriptions: a client card with transaction history and search across the list."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Деньги: раздел «Итоги по дням».",
+            "en": "Money: a Daily results section."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Отчёты: выручка с баланса отдельной строкой рядом с наличными и безналом.",
+            "en": "Reports: balance revenue on its own line next to cash and card."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.5.0",
+      "day": "2026-07-17",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Прибывания: пуски в реальном времени — старт и стоп в один-два тапа, живой таймер, свой тариф с историей у каждого актива.",
+            "en": "Stays: launches in real time — start and stop in one or two taps, a live timer, and each asset with its own rate and rate history."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Прибывания: экран «Сейчас на точке» в кабинете и список пусков с правкой времени и аннулированием.",
+            "en": "Stays: a Currently on site screen in the owner's account, plus a list of launches with time editing and voiding."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Пуски: учёт тапом по активу вместо ручного ввода — замена бумажной тетрадки.",
+            "en": "Launches: recorded by tapping the asset instead of typing — a replacement for the paper tally book."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.4.0",
+      "day": "2026-07-16",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Деньги: аванс и премия берутся из кассы по понятному правилу и разносятся по зонам.",
+            "en": "Money: advances and bonuses are taken from the till by a clear rule and spread across zones."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Зоны и активы: деактивация на ремонт — точка, зона или актив выключаются каскадом.",
+            "en": "Zones and assets: deactivation for maintenance — a location, zone or asset switches off in a cascade."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Отчёты и Деньги: фильтр по точке, включая сводный режим «Все точки».",
+            "en": "Reports and Money: a location filter, including an All locations roll-up."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Отчёты: тепловая карта дней и график выручки и прибыли.",
+            "en": "Reports: a heat map of days and a revenue-and-profit chart."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Интерфейс на итальянском языке.",
+            "en": "The interface is available in Italian."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Сводки: компактный формат для Telegram — короткие подписи вместо полных слов.",
+            "en": "Summaries: a compact Telegram format with short labels instead of full words."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.3.0",
+      "day": "2026-07-15",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Деньги: суммы во всей системе печатаются в валюте компании единым форматом.",
+            "en": "Money: amounts are shown in the company's currency in one consistent format throughout."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Деньги: инкассация по зоне и общая — и у владельца, и у сотрудника; реестр объединён с остатками.",
+            "en": "Money: collections per zone and in total, for both owner and employee; the register is merged with the balances view."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Деньги: реестр расходов с категориями.",
+            "en": "Money: an expense register with categories."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Главная: карточка «Разница» между расчётной выручкой и фактической кассой.",
+            "en": "Home: a Difference card between calculated revenue and actual takings."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Внешний вид: фон приложения из пресетов и переключатель светлой и тёмной темы.",
+            "en": "Appearance: preset app backgrounds and a light/dark theme switch."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Отчёты: период выбирается календарём, включая помесячную сетку года.",
+            "en": "Reports: the period is chosen from a calendar, including a month grid for the year."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.2.0",
+      "day": "2026-07-14",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Точки: устройство привязывается к точке по QR-коду, список обновляется сам после активации.",
+            "en": "Locations: a device is bound to a location by QR code, and the list refreshes itself once it is activated."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Счётчики: начальные показания при калибровке — актив можно завести в середине месяца.",
+            "en": "Counters: starting readings at calibration — an asset can be added mid-month."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Рабочее время: открытую смену можно поправить, не закрывая её.",
+            "en": "Work time: an open shift can be edited without closing it."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Задачи: push-уведомление о новой задаче.",
+            "en": "Tasks: a push notification when a new task appears."
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Интерфейс: единый стиль кнопок, тумблеров и загрузки файлов по всему кабинету.",
+            "en": "Interface: one consistent style for buttons, toggles and file uploads across the account."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.1.0",
+      "day": "2026-07-13",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Лендинг: публичная страница компании по короткому адресу — зоны, фотографии и рассказ о себе.",
+            "en": "Landing page: a public company page at a short address — zones, photos and your own story."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Лендинг: редактор с оформлением текста для описаний зон и раздела «О нас».",
+            "en": "Landing page: a formatting editor for zone descriptions and the About section."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Лендинг: чеклист SEO в кабинете и подтверждение прав на сайт для поисковиков.",
+            "en": "Landing page: an SEO checklist in the account and site-ownership verification for search engines."
+          }
+        }
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "day": "2026-07-12",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Счётчики: зоны, активы и тарифы, мастер сдачи итогов с расчётом выручки.",
+            "en": "Counters: zones, assets and rates, with a guided results submission that calculates revenue."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Деньги: единый журнал операций, кассы точек и инкассации.",
+            "en": "Money: a single operations journal, per-location tills and collections."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Рабочее время: смены, ставки, авансы и премии, скользящий баланс сотрудника.",
+            "en": "Work time: shifts, pay rates, advances and bonuses, and a running employee balance."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Задачи: доска поручений по точкам с тремя статусами.",
+            "en": "Tasks: a board of assignments by location with three statuses."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Инструктажи: инструкции с версиями, подписание по ссылке без входа, журнал ознакомлений.",
+            "en": "Instructions: versioned documents, signing by link without logging in, and an acknowledgement log."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Приложение сотрудника ставится на устройство как PWA, а сдача итогов доживает до сети, если связь пропала.",
+            "en": "The employee app installs on a device as a PWA, and a results submission survives until the connection is back."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Сводки в Telegram и на почту, push-уведомления владельцу.",
+            "en": "Telegram and email summaries, plus push notifications for the owner."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Интерфейс на 14 языках, часовой пояс — свой у каждой компании.",
+            "en": "The interface in 14 languages, with each company setting its own time zone."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1887,5 +1887,13 @@
     "mistakeText": "Rezultatele predate le corectează doar proprietarul — spune-i ce trebuie îndreptat. Nu preda rezultatele a doua oară.",
     "offlineTitle": "Fără internet",
     "offlineText": "Predarea rezultatelor se salvează în aplicație și pleacă singură când apare conexiunea. Nu închide aplicația până atunci."
+  },
+  "changelog": {
+    "title": "Jurnal de modificări",
+    "subtitle": "Ce s-a schimbat în RentOS",
+    "version": "Versiune",
+    "typeFeat": "Nou",
+    "typeImpr": "Îmbunătățit",
+    "typeFix": "Corectat"
   }
 }

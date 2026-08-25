@@ -1887,5 +1887,13 @@
     "mistakeText": "Only the owner can edit submitted results — tell them what to fix. Do not submit the results a second time.",
     "offlineTitle": "No internet",
     "offlineText": "The submitted results are saved in the app and will go through on their own once there is a connection. Do not close the app until then."
+  },
+  "changelog": {
+    "title": "Changelog",
+    "subtitle": "What has changed in RentOS",
+    "version": "Version",
+    "typeFeat": "New",
+    "typeImpr": "Improved",
+    "typeFix": "Fixed"
   }
 }
