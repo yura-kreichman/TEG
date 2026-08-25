@@ -1,11 +1,24 @@
 {
   "note": "СГЕНЕРИРОВАННЫЙ ФАЙЛ. Правьте changelog/seed.json или трейлер Changelog: в коммите — см. changelog/README.md.",
-  "version": "1.22.1",
+  "version": "1.23.0",
   "anchor": {
-    "sha": "aae080106696f8c7f2848cdfbd0114b5f691379b",
+    "sha": "10873efc57ca1d3c8ce6774f156bef44148c3123",
     "day": "2026-08-25"
   },
   "releases": [
+    {
+      "version": "1.23.0",
+      "day": "2026-08-25",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Настройки — внизу экрана видно версию приложения и ссылку на историю изменений.",
+            "en": "Settings — the app version and a link to the changelog now sit at the bottom of the screen."
+          }
+        }
+      ]
+    },
     {
       "version": "1.22.1",
       "day": "2026-08-25",
