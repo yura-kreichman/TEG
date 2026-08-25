@@ -28,6 +28,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const seedPath = join(root, "changelog", "seed.json");
 const dumpPath = join(root, "changelog", "commits.txt");
 const outPath = join(root, "changelog", "releases.json");
+// Отдельный крошечный файл с одним номером — его импортирует КЛИЕНТСКИЙ
+// компонент строки версии в Настройках. Импорт releases.json туда утащил бы
+// всю историю в бандл браузера (десятки килобайт) ради одной строки.
+const versionPath = join(root, "changelog", "version.json");
 
 // Разделители внутри дампа: \x1f между полями, \x1e между коммитами. Обычные
 // символы (|, ;, ---) здесь не годятся — тело коммита многострочное и вполне
@@ -175,6 +179,8 @@ writeFileSync(
     2
   ) + "\n"
 );
+
+writeFileSync(versionPath, JSON.stringify({ version: releases[0]?.version ?? "1.0.0" }, null, 2) + "\n");
 
 const entryCount = releases.reduce((n, r) => n + r.entries.length, 0);
 console.log(

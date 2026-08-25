@@ -7,6 +7,7 @@ import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { PlanCard } from "@/components/plan-card";
 import { SupportAccessCard } from "@/components/support-access-card";
+import { AppVersionLine } from "@/components/app-version-line";
 import { useI18n } from "@/components/i18n-provider";
 
 export default function SettingsPage() {
@@ -81,6 +82,9 @@ export default function SettingsPage() {
               платформенной техподдержки в кабинет, соседствует с планом и
               подпиской, а не с тумблерами экрана «Система». */}
           <SupportAccessCard />
+          {/* Версия приложения — последней строкой экрана: справочная мелочь,
+              которую ищут внизу настроек, а не среди разделов. */}
+          <AppVersionLine />
         </div>
       </div>
     </OwnerShell>

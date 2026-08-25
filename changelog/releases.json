@@ -2,7 +2,7 @@
   "note": "СГЕНЕРИРОВАННЫЙ ФАЙЛ. Правьте changelog/seed.json или трейлер Changelog: в коммите — см. changelog/README.md.",
   "version": "1.22.1",
   "anchor": {
-    "sha": "a2a9267fd58a63b74273d7394be676ca98849e64",
+    "sha": "aae080106696f8c7f2848cdfbd0114b5f691379b",
     "day": "2026-08-25"
   },
   "releases": [
