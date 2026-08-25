@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: RentOS — доступность сервиса
- * Description: Шорткод [rentos_uptime] для подвала: измеренная доступность my.rentos365.app и число дней без сбоев.
+ * Description: Шорткод [rentos_uptime] для подвала: измеренная доступность my.rentos365.app, число дней без сбоев и текущая версия приложения со ссылкой на историю изменений.
  * Version: 1.0
  *
  * Откуда данные: скрипт uptime-monitor/check.sh раз в 5 минут дёргает
@@ -40,6 +40,20 @@ const RENTOS_UPTIME_KEEP_DAYS = 45;      // сколько храним заме
 const RENTOS_UPTIME_MIN_HOURS = 1;       // меньше часа замеров — считать нечего
 const RENTOS_UPTIME_PCT_HOURS = 24;      // процент показываем, только набрав сутки
 const RENTOS_UPTIME_FOOTER_ID = 118;     // шаблон подвала Elementor
+
+/**
+ * Версия приложения второй строкой под состоянием (запрос владельца
+ * 2026-08-25). Живёт здесь, а не отдельным плагином: та же строка подвала, тот
+ * же шаблон, тот же кэш и то же часовое задание — разносить это по двум файлам
+ * значило бы держать две копии одной и той же осторожности с уборкой кэша.
+ *
+ * Номер НЕ проставляется руками: единственный источник — /api/version самого
+ * приложения, который отдаёт версию из собранной истории изменений
+ * (changelog/README.md в репозитории RentOS).
+ */
+const RENTOS_VERSION_OPTION   = 'rentos_app_version';
+const RENTOS_VERSION_ENDPOINT = 'https://my.rentos365.app/api/version';
+const RENTOS_VERSION_PAGE     = 'https://my.rentos365.app/changelog';
 
 /**
  * Последний известный перерыв ДО начала наблюдений. Отсчёт «без сбоев» ведётся
@@ -146,6 +160,11 @@ add_action(
 );
 
 add_action( 'rentos_uptime_refresh', 'rentos_uptime_maybe_recalculate' );
+
+// Версию спрашиваем на каждом часовом тике, без суточного тормоза: это один
+// лёгкий запрос, а не разбор файла замеров. Уборка кэша при этом всё равно
+// случается редко — только когда номер реально сменился (см. функцию).
+add_action( 'rentos_uptime_refresh', 'rentos_version_fetch' );
 
 /**
  * Задание срабатывает раз в час, но РАБОТУ делает раз в сутки: разбор файла
@@ -702,7 +721,10 @@ function rentos_uptime_wrap( $line, $stats, $lang ) {
 		. '<label for="' . $toggleId . '" class="rentos-status__icon">' . $icon . '</label>'
 		. '</span>'
 		. '<span class="rentos-status__pop">' . $body . '</span>'
-		. '</span>';
+		. '</span>'
+		// Версия — СНАРУЖИ .rentos-status: всплывающая карточка позиционируется
+		// относительно этого элемента, и блок внутри него сдвинул бы её.
+		. rentos_version_line();
 }
 
 /**
@@ -766,6 +788,117 @@ function rentos_uptime_streak_text( $since, $lang ) {
 	return sprintf( isset( $forms[ $lang ] ) ? $forms[ $lang ] : $forms['en'], $value );
 }
 
+/* -------------------------------------------------------------------------
+ * Версия приложения
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Тянет номер версии у приложения и кладёт в опцию.
+ *
+ * Приложение недоступно или ответило чем-то неожиданным — молча оставляем
+ * прошлое значение. Пустая строка выглядела бы как поломка сайта, хотя сайт-то
+ * как раз жив; устаревший на час номер не врёт ни о чём важном.
+ */
+function rentos_version_fetch() {
+	$response = wp_remote_get(
+		RENTOS_VERSION_ENDPOINT,
+		array(
+			'timeout' => 8,
+			'headers' => array( 'Accept' => 'application/json' ),
+		)
+	);
+
+	if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+		return;
+	}
+
+	$data = json_decode( wp_remote_retrieve_body( $response ), true );
+	if ( ! is_array( $data ) || empty( $data['version'] ) ) {
+		return;
+	}
+
+	// Строгая форма «1.2.3»: любой лишний символ здесь означал бы, что мы
+	// разбираем не тот ответ, а мусору в подвале сайта делать нечего.
+	$version = (string) $data['version'];
+	if ( ! preg_match( '/^\d+\.\d+\.\d+$/', $version ) ) {
+		return;
+	}
+
+	$previous = get_option( RENTOS_VERSION_OPTION );
+	update_option( RENTOS_VERSION_OPTION, array( 'version' => $version, 'checked' => time() ), false );
+
+	// Номер меняется не чаще раза в сутки, поэтому полная уборка кэша ради него
+	// — редкая операция. Пока номер тот же, не трогаем ничего: ровно тот же
+	// принцип, что и у чисел доступности выше.
+	if ( is_array( $previous ) && isset( $previous['version'] ) && $previous['version'] === $version ) {
+		return;
+	}
+
+	delete_post_meta( RENTOS_UPTIME_FOOTER_ID, '_elementor_element_cache' );
+	delete_post_meta( RENTOS_UPTIME_FOOTER_ID, '_elementor_element_cache_unique_id' );
+
+	if ( function_exists( 'rocket_clean_domain' ) ) {
+		rocket_clean_domain();
+	}
+
+	rentos_uptime_warm_cache();
+}
+
+/**
+ * Строка «Версия: 1.22.1 — Обновления» отдельным блоком под состоянием.
+ *
+ * Отдельной строкой, а не через « · » в общей: строка состояния и так длинная
+ * («Сервис работает · доступность 100% за 30 дн. · без сбоев 3 дн.»), и на
+ * телефоне четвёртый кусок гнал бы её на третий перенос.
+ *
+ * Номер вместе с подписью помечен data-no-translation: строку мы собираем по
+ * языкам сами, а словарь TranslatePress запомнил бы номер версии как
+ * переводимый текст и оставил на страницах старый.
+ */
+function rentos_version_line() {
+	$stored = get_option( RENTOS_VERSION_OPTION );
+
+	if ( ! is_array( $stored ) || empty( $stored['version'] ) ) {
+		return '';
+	}
+
+	$lang = substr( (string) determine_locale(), 0, 2 );
+
+	// «Версия» — с большой буквы (решение владельца 2026-08-25).
+	$labels = array(
+		'ru' => 'Версия',
+		'en' => 'Version',
+		'uk' => 'Версія',
+		'it' => 'Versione',
+		'ro' => 'Versiune',
+	);
+
+	// Слово-ссылка: по-русски и по-украински — своё, в остальных языках
+	// международное «Changelog» (решение владельца 2026-08-25).
+	$links = array(
+		'ru' => 'Обновления',
+		'uk' => 'Оновлення',
+		'en' => 'Changelog',
+		'it' => 'Changelog',
+		'ro' => 'Changelog',
+	);
+
+	$label = isset( $labels[ $lang ] ) ? $labels[ $lang ] : $labels['en'];
+	$link  = isset( $links[ $lang ] ) ? $links[ $lang ] : $links['en'];
+
+	// Язык передаём параметром: страница живёт на другом домене и о
+	// TranslatePress ничего не знает — тот же приём, что у ссылок в
+	// rentos-app-language-link.php.
+	$href = add_query_arg( 'lang', $lang, RENTOS_VERSION_PAGE );
+
+	// Новая вкладка (решение владельца 2026-08-25): уход на приложение не
+	// должен закрывать страницу, которую человек читал.
+	return '<span class="rentos-version" data-no-translation style="display:block">'
+		. esc_html( $label ) . ': ' . esc_html( $stored['version'] ) . ' — '
+		. '<a href="' . esc_url( $href ) . '" target="_blank" rel="noopener">' . esc_html( $link ) . '</a>'
+		. '</span>';
+}
+
 add_shortcode(
 	'rentos_uptime',
 	function () {
@@ -788,10 +921,12 @@ add_shortcode(
 			'ro' => 'disponibilitate %1$s%% în %2$s',
 		);
 
-		// Последний замер должен быть свежим и удачным — иначе не пишем ничего:
-		// врать про «работает» во время аварии нельзя.
+		// Последний замер должен быть свежим и удачным — иначе про состояние не
+		// пишем ничего: врать про «работает» во время аварии нельзя. Версию при
+		// этом показываем: она к состоянию сервиса отношения не имеет, и её
+		// исчезновение читалось бы как ещё одна поломка.
 		if ( ! rentos_uptime_last_sample_ok() ) {
-			return '';
+			return rentos_version_line();
 		}
 
 		$parts = array( isset( $labels[ $lang ] ) ? $labels[ $lang ] : $labels['en'] );
