@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useState, type FormEvent } from "react";
 import { Banknote, Check, ChevronLeft, ChevronRight, Coins, Gift, HandCoins, MapPin, Pencil, PiggyBank, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { BackLink } from "@/components/back-link";
-import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
+import { reconcilePointId, usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { MoneyInput } from "@/components/money-input";
@@ -249,21 +249,26 @@ export default function ZoneBalancesPage() {
     const data = await res.json();
     const list = data.points ?? [];
     setPoints(list);
-    setPointId((prev) => prev ?? list[0]?.id ?? null);
+    setPointId((prev) => reconcilePointId(prev, list, "first"));
   }
 
+  // setChecking(false) в finally — см. money/readings/page.tsx: иначе сбой
+  // запроса оставляет экран в скелетоне навсегда.
   async function loadReport() {
-    const res = await fetch("/api/reports/money");
-    if (res.status === 401) {
-      router.replace("/login");
-      return;
+    try {
+      const res = await fetch("/api/reports/money");
+      if (res.status === 401) {
+        router.replace("/login");
+        return;
+      }
+      const data = await res.json();
+      setZoneBalances(data.zoneBalances ?? []);
+      setPointTotals(data.pointTotals ?? []);
+      setClientsEnabled(!!data.clientsEnabled);
+      setGoodsEnabled(!!data.goodsEnabled);
+    } finally {
+      setChecking(false);
     }
-    const data = await res.json();
-    setZoneBalances(data.zoneBalances ?? []);
-    setPointTotals(data.pointTotals ?? []);
-    setClientsEnabled(!!data.clientsEnabled);
-    setGoodsEnabled(!!data.goodsEnabled);
-    setChecking(false);
   }
 
   async function loadCollections() {

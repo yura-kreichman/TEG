@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { compressImageFile } from "@/lib/client-image";
 import { useSlugPreview } from "@/lib/use-slug-preview";
 import { useSavePulse } from "@/hooks/use-save-pulse";
-import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
+import { reconcilePointId, usePersistedPointId } from "@/hooks/use-persisted-point-id";
 
 function formatRelativeDay(dateStr: string, isToday: boolean, t: Dictionary): string {
   if (isToday) return t.home.today;
@@ -191,14 +191,18 @@ export function OwnerDashboardCard({
     fetch("/api/points")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data)
-          setPoints(
-            (data.points ?? []).map((p: { id: string; name: string; iconKey: string | null }) => ({
-              id: p.id,
-              name: p.name,
-              iconKey: p.iconKey,
-            }))
-          );
+        if (!data) return;
+        const list = (data.points ?? []).map((p: { id: string; name: string; iconKey: string | null }) => ({
+          id: p.id,
+          name: p.name,
+          iconKey: p.iconKey,
+        }));
+        setPoints(list);
+        // Сохранённая точка могла остаться от другого владельца в этом же
+        // браузере (или быть удалена) — тогда сводка молча считалась бы по
+        // чужому/несуществующему id. Здесь null означает «Все точки», это и
+        // есть безопасный откат.
+        setPointId((prev) => reconcilePointId(prev, list, "all"));
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

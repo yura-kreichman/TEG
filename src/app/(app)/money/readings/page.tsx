@@ -37,7 +37,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { DeleteButton } from "@/components/ui/delete-button";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { SaveButton } from "@/components/ui/save-button";
-import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
+import { reconcilePointId, usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PressableScale } from "@/components/motion/pressable-scale";
@@ -491,17 +491,24 @@ export default function ReadingsCalendarPage() {
     }
   }
 
+  // setChecking(false) в finally, а не последней строкой: любой сбой запроса
+  // (сеть моргнула, ответ не JSON, 401 с редиректом) оставлял экран в
+  // скелетоне НАВСЕГДА — визуально неотличимо от «вечно грузится»
+  // (реальный баг, найден пользователем 2026-08-25).
   async function loadPoints() {
-    const res = await fetch("/api/points");
-    if (res.status === 401) {
-      router.replace("/login");
-      return;
+    try {
+      const res = await fetch("/api/points");
+      if (res.status === 401) {
+        router.replace("/login");
+        return;
+      }
+      const data = await res.json();
+      const list: PointOption[] = data.points ?? [];
+      setPoints(list);
+      setPointId((prev) => reconcilePointId(prev, list, "first"));
+    } finally {
+      setChecking(false);
     }
-    const data = await res.json();
-    const list: PointOption[] = data.points ?? [];
-    setPoints(list);
-    setPointId((prev) => prev ?? list[0]?.id ?? null);
-    setChecking(false);
   }
 
   async function loadCalendar() {
@@ -549,10 +556,23 @@ export default function ReadingsCalendarPage() {
           setCards(null);
           loadDay(data.date);
         }
-        setDateReadyForPointId(pointId);
-      });
+      })
+      // dateReady снимает скелетон, поэтому выставляться он обязан в ЛЮБОМ
+      // исходе, включая отклонённый промис (2026-08-25: без finally оборванный
+      // запрос оставлял экран в скелетоне навсегда).
+      .catch(() => {})
+      .finally(() => setDateReadyForPointId(pointId));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pointId]);
+
+  // Страховка от гонки: usePersistedPointId читает localStorage в собственном
+  // эффекте, который может отработать ПОСЛЕ ответа /api/points — тогда уже
+  // согласованное значение снова перетирается сохранённым (возможно, чужим).
+  useEffect(() => {
+    if (!points.length) return;
+    setPointId((prev) => reconcilePointId(prev, points, "first"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [points, pointId]);
 
   useEffect(() => {
     if (!dateReady) return;

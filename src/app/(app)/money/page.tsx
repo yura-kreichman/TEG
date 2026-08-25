@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { pad, toDateStr } from "@/lib/datetime-format";
 import { Money, computeMoneyDisplayScale } from "@/components/money";
 import { formatMoney } from "@/lib/format";
-import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
+import { reconcilePointId, usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { useTenantTimezone } from "@/hooks/use-tenant-timezone";
 import { tenantTodayAnchor } from "@/lib/period-nav";
 
@@ -86,14 +86,16 @@ export default function MoneyPage() {
     fetch("/api/points")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data)
-          setPoints(
-            (data.points ?? []).map((p: { id: string; name: string; iconKey: string | null }) => ({
-              id: p.id,
-              name: p.name,
-              iconKey: p.iconKey,
-            }))
-          );
+        if (!data) return;
+        const list = (data.points ?? []).map((p: { id: string; name: string; iconKey: string | null }) => ({
+          id: p.id,
+          name: p.name,
+          iconKey: p.iconKey,
+        }));
+        setPoints(list);
+        // См. dashboard-home: сохранённая точка могла принадлежать другому
+        // владельцу (localStorage общий на домен) — откатываемся на «Все точки».
+        setPointId((prev) => reconcilePointId(prev, list, "all"));
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -139,31 +141,40 @@ export default function MoneyPage() {
     setPickDateOpen(false);
   }
 
+  // setChecking(false) в finally — см. money/readings/page.tsx: без этого
+  // любой сбой запроса оставлял экран в скелетоне навсегда.
   async function loadReport() {
-    const pointParam = pointId ? `&pointId=${pointId}` : "";
-    const url =
-      mode === "custom"
-        ? `/api/reports/money?from=${customFrom}&to=${customTo}${pointParam}`
-        : `/api/reports/money?granularity=${granularity}&anchor=${toDateStr(anchor)}${pointParam}`;
-    const res = await fetch(url);
-    if (res.status === 401) {
-      router.replace("/login");
-      return;
+    try {
+      const pointParam = pointId ? `&pointId=${pointId}` : "";
+      const url =
+        mode === "custom"
+          ? `/api/reports/money?from=${customFrom}&to=${customTo}${pointParam}`
+          : `/api/reports/money?granularity=${granularity}&anchor=${toDateStr(anchor)}${pointParam}`;
+      const res = await fetch(url);
+      if (res.status === 401) {
+        router.replace("/login");
+        return;
+      }
+      setReport(await res.json());
+    } finally {
+      setChecking(false);
     }
-    setReport(await res.json());
-    setChecking(false);
   }
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetch("/api/reports/money/last-submission-date")
-      .then((res) => res.json())
-      .then((data: { date: string | null }) => {
-        if (data.date && data.date !== toDateStr(tenantTodayAnchor(timezone))) {
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { date: string | null } | null) => {
+        if (data?.date && data.date !== toDateStr(tenantTodayAnchor(timezone))) {
           setAnchor(new Date(`${data.date}T00:00:00.000Z`));
         }
-        setAnchorReady(true);
-      });
+      })
+      // anchorReady открывает загрузку отчёта, а до неё экран — скелетон:
+      // выставляется в любом исходе, иначе 401/500/обрыв вешали экран навсегда
+      // (res.json() на HTML-ответе бросал, и .then просто не выполнялся).
+      .catch(() => {})
+      .finally(() => setAnchorReady(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timezone]);
 

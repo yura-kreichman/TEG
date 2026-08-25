@@ -27,7 +27,7 @@ import { Money } from "@/components/money";
 import { useI18n, useLocale } from "@/components/i18n-provider";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { useActionToast } from "@/hooks/use-action-toast";
-import { usePersistedPointId } from "@/hooks/use-persisted-point-id";
+import { reconcilePointId, usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { compressImageFile } from "@/lib/client-image";
 import { formatMoneyCompact, parseMoneyInput } from "@/lib/format";
 import { formatTime } from "@/lib/datetime-format";
@@ -591,7 +591,7 @@ export default function GoodsCabinetPage() {
       .then((data) => {
         if (!data) return;
         setPoints(data.points ?? []);
-        setPointId((prev) => prev ?? data.points?.[0]?.id ?? null);
+        setPointId((prev) => reconcilePointId(prev, data.points ?? [], "first"));
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
