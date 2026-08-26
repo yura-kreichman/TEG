@@ -1133,7 +1133,7 @@ function LandingStats() {
     setLoading(true);
     const periodParam =
       mode === "custom" ? `from=${customFrom}&to=${customTo}` : `granularity=${granularity}&anchor=${toDateStr(anchor)}`;
-    const res = await fetch(`/api/tenant/landing/stats?${periodParam}`);
+    const res = await fetch(`/api/tenant/landing/audience?${periodParam}`);
     if (res.ok) setData(await res.json());
     setLoading(false);
   }, [mode, granularity, anchor, customFrom, customTo]);
