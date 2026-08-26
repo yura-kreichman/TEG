@@ -810,17 +810,24 @@ export async function GET(request: Request) {
           ? 0
           : Math.round((actualCash + expensesInThisSubmission + abonementInDifference - netRevenue) * 100) / 100;
 
-      // Держать в синхроне с src/lib/isZoneSubmissionEditable — только
-      // cash_only всегда редактируема (нет цепочки зависимостей), counters
-      // редактируема пока остаётся последним звеном цепочки показаний;
-      // stays/launches(тап)/tickets НЕ редактируемы вовсе (аудит 2026-07-24:
-      // окно агрегации следующей сдачи зависит от факта существования этой
-      // строки — удаление задваивает уже сданную выручку, см. комментарий у
-      // isZoneSubmissionEditable).
-      const editable =
-        zs.zone.accountingMode === "cash_only" ||
-        (zs.zone.accountingMode === "counters" &&
-          zs.assetReadings.every((r) => lastReadingIdByKey.get(`${r.assetId}:${r.tariffId}`) === r.id));
+      // Держать в синхроне с getZoneSubmissionEditability (src/lib/results-submission.ts):
+      // цепочка показаний есть только у counters, и пока сдача — её последнее
+      // звено, правится всё. Касса правится и у живых зон (stays/launches-тап/
+      // tickets): на цепочки она не влияет вовсе. Удаление у них закрыто —
+      // окно агрегации следующей сдачи считается от факта существования этой
+      // строки, и удаление задваивает уже сданную выручку (аудит 2026-07-24).
+      const isLastLinkOfChain =
+        zs.zone.accountingMode !== "counters" ||
+        zs.assetReadings.every((r) => lastReadingIdByKey.get(`${r.assetId}:${r.tariffId}`) === r.id);
+      // isLiveZone выше — это Прибывания и тап-Пуски; Билеты живут в своём
+      // флаге, но по правам ведут себя так же.
+      const isLiveOrTickets = isLiveZone || isTickets;
+      const editable = isLastLinkOfChain;
+      const deletable = isLastLinkOfChain && !isLiveOrTickets;
+      // Что именно даёт править форма: у живых зон показаний нет, и возвраты
+      // к ним неприменимы — только наличные и безнал (сервер это же и
+      // проверяет, см. PATCH .../zone-submission/[id]).
+      const editableFields: "all" | "cash" = isLiveOrTickets ? "cash" : "all";
 
       const log = latestLogByZoneSubmissionId.get(zs.id);
       const before = log?.beforeJson as CorrectionDiff | undefined;
@@ -899,6 +906,8 @@ export async function GET(request: Request) {
         operatorName: s.operator.name,
         operatorColorTag: s.operator.colorTag,
         editable,
+        deletable,
+        editableFields,
         edited,
         cashAmount: Number(zs.cashAmount),
         cashEditedBefore,

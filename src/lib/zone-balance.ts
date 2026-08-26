@@ -534,7 +534,7 @@ export async function settleOutstandingCollectionAdvance(
   // collection_advance, созданные АВТОМАТИЧЕСКИ сразу после Сдачи итогов,
   // были никак не связаны с породившей их сдачей. Владелец мог удалить/
   // отредактировать эту (последнюю в цепочке, ещё редактируемую) сдачу через
-  // /api/reports/counters/zone-submission/[id] — тот роут откатывает только
+  // /api/reports/submissions/zone-submission/[id] — тот роут откатывает только
   // MoneyOperation с совпадающим resultsSubmissionId, поэтому откатывал
   // revenue-строку, но НЕ трогал уже созданное автопогашение аванса — реальные
   // деньги тихо и безвозвратно пропадали из учёта (аванс считался погашенным,

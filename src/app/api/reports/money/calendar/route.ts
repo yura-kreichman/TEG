@@ -4,7 +4,7 @@ import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOwner } from "@/lib/require-owner";
 import { businessDayOf, dayBoundsUtc } from "@/lib/business-day";
 
-// Тенант-wide (в отличие от /api/reports/counters/calendar, который
+// Тенант-wide (в отличие от /api/reports/submissions/calendar, который
 // точечный) — суммы выручки по дням месяца для календаря на странице Деньги.
 export async function GET(request: Request) {
   const owner = await requireOwner();

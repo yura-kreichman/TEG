@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   }
 
   // Часовой пояс тенанта, не сырой UTC сервера (аудит 2026-07-24, тот же
-  // класс бага, что и у /api/reports/counters/day — см. комментарий у
+  // класс бага, что и у /api/reports/submissions/day — см. комментарий у
   // dayBoundsUtc в lib/business-day.ts).
   const { timezone, boundary } = await getTenantDayContext(owner.tenantId);
   const monthStart = dayBoundsUtc(year, month, 1, timezone, boundary).start;

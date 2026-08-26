@@ -42,7 +42,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     ? getPreviousCustomRange(start, end)
     : getPreviousPeriodRange(granularity, start, timezone, boundary);
   // Ключ дня — местная календарная дата тенанта, не сырой UTC (аудит
-  // 2026-07-24: тот же класс бага, что и у /reports/counters/day/calendar —
+  // 2026-07-24: тот же класс бага, что и у /reports/submissions/day/calendar —
   // toISOString() читает UTC-дату момента, а не местную).
   const dateKey = (d: Date) => {
     const { year: y, month: m, day } = businessDayOf(d, timezone, boundary);

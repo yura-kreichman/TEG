@@ -91,7 +91,7 @@ function serializeOrder(o: {
  * экрана "Заказы") здесь БОЛЬШЕ НЕ ИСПОЛЬЗУЕТСЯ — тот экран удалён (запрос
  * пользователя 2026-07-21: "у Владельца не нужны эти заказы"), аннулирование
  * теперь живёт прямо в карточке «Итоги дня» на своих данных (money/readings,
- * /api/reports/counters/day), не через этот роут.
+ * /api/reports/submissions/day), не через этот роут.
  */
 export async function GET(request: Request, ctx: RouteContext<"/api/zones/[id]/ticket-orders">) {
   const { id: zoneId } = await ctx.params;

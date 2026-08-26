@@ -92,7 +92,7 @@ export async function buildDailyCashSummaryData(
   // признаётся сразу при трате, не при сдаче итогов (запрос пользователя
   // 2026-07-17), поэтому её нет в zs.cashAmount/mobileAmount выше. Для
   // фиксированного окна бизнес-дня (в отличие от цепочки сдач в
-  // /api/reports/counters/day) достаточно просто просуммировать за bounds —
+  // /api/reports/submissions/day) достаточно просто просуммировать за bounds —
   // без per-submission "предыдущая сдача" привязки.
   const abonementOps = await prisma.moneyOperation.findMany({
     where: { type: "revenue_abonement", occurredAt: { gte: bounds.start, lt: bounds.end }, zone: { pointId } },

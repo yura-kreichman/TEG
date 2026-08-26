@@ -162,7 +162,7 @@ export default function OperatorCountersPage() {
   }
 
   function loadTapEvents() {
-    fetch("/api/operator/counter-tap-events")
+    fetch("/api/operator/tap-events")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!data) return;
@@ -183,7 +183,7 @@ export default function OperatorCountersPage() {
   useEffect(() => {
     loadEvents();
     loadTapEvents();
-    fetch("/api/operator/counter-zones")
+    fetch("/api/operator/tap-zones")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => setSpendZones(data?.zones ?? []));
   }, []);
@@ -228,7 +228,7 @@ export default function OperatorCountersPage() {
   ) {
     setTapSubmitting(true);
     try {
-      const res = await fetch("/api/operator/counter-tap-events", {
+      const res = await fetch("/api/operator/tap-events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ zoneId, assetId, tariffId, paymentMethod, abonementWalletId, legs }),
@@ -259,7 +259,7 @@ export default function OperatorCountersPage() {
     setTapHistoryBusyId(tap.id);
     const nextVoided = !tap.voidedAt;
     try {
-      const res = await fetch(`/api/operator/counter-tap-events/${tap.id}`, {
+      const res = await fetch(`/api/operator/tap-events/${tap.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ voided: nextVoided }),
@@ -285,7 +285,7 @@ export default function OperatorCountersPage() {
     // Строка исчезает оптимистично, ещё до ответа; озвучивать сам факт
     // отправки запроса значило бы соврать при обрыве сети — ровно та же
     // ошибка, что чинили в ConfirmIconButton 2026-07-27.
-    const res = await fetch(`/api/operator/counter-tap-events/${id}`, { method: "DELETE" }).catch(() => null);
+    const res = await fetch(`/api/operator/tap-events/${id}`, { method: "DELETE" }).catch(() => null);
     if (res?.ok) playUndoTone();
     loadTapEvents();
   }

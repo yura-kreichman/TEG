@@ -126,7 +126,7 @@ export async function POST(request: Request) {
   // assetId+tariffId без учёта зоны вовсе).
   // Диапазон/знак входных чисел (аудит 2026-07-25, финальный проход) —
   // раньше не проверялись вообще, в отличие от PATCH-двойника
-  // (reports/counters/zone-submission/[id]/route.ts), который жёстко
+  // (reports/submissions/zone-submission/[id]/route.ts), который жёстко
   // требует то же самое: reading — целое 0–9999 (4-разрядный счётчик,
   // отрицательное/пятизначное значение проходило через модульную формулу
   // calcSessions с переполнением-wraparound и давало произвольно большое
@@ -640,7 +640,7 @@ export async function POST(request: Request) {
       // 2026-07-25: без этой ветки Разница молча равнялась ВСЕЙ кассе зоны;
       // нигде в UI не показывается для cash_only, но лучше не оставлять
       // бессмысленное число в ответе API — тот же принцип, что уже применён в
-      // /api/reports/counters/day/route.ts).
+      // /api/reports/submissions/day/route.ts).
       const difference =
         zone.accountingMode === "cash_only"
           ? 0

@@ -16,7 +16,7 @@ function isRecordNotFound(err: unknown): boolean {
  * при сдаче итогов), не ретроактивная правка. Только события ТЕКУЩЕГО
  * периода зоны.
  */
-export async function DELETE(request: Request, ctx: RouteContext<"/api/operator/counter-tap-events/[id]">) {
+export async function DELETE(request: Request, ctx: RouteContext<"/api/operator/tap-events/[id]">) {
   const opCtx = await requireOperator();
   if (!opCtx) {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
@@ -140,7 +140,7 @@ export async function DELETE(request: Request, ctx: RouteContext<"/api/operator/
  * от DELETE — обратимо (снять пометку так же легко, как поставить), это не
  * "убрать ошибку", а "пометить как не-выручку".
  */
-export async function PATCH(request: Request, ctx: RouteContext<"/api/operator/counter-tap-events/[id]">) {
+export async function PATCH(request: Request, ctx: RouteContext<"/api/operator/tap-events/[id]">) {
   const opCtx = await requireOperator();
   if (!opCtx) {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });

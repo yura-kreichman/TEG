@@ -231,15 +231,15 @@ export function OperatorBottomNav({ children }: { children: React.ReactNode }) {
     // "Клиенты" (запрос пользователя 2026-07-24: "немного не единообразный
     // интерфейс... надо запоминать, что если по Счётчикам, то заходить в
     // Клиенты"; заодно сдача итогов больше не просит вспоминать возвраты из
-    // головы — см. /operator/counters и submit/page.tsx). Та же иконка, что
+    // головы — см. /operator/taps и submit/page.tsx). Та же иконка, что
     // у режима в кабинете владельца (points/[id]/page.tsx ACCOUNTING_MODE_ICON).
     ...(hasCounters
       ? [
           {
-            href: "/operator/counters",
+            href: "/operator/taps",
             label: t.zonesList.accountingModeCounters,
             icon: CircuitBoard,
-            active: pathname.startsWith("/operator/counters"),
+            active: pathname.startsWith("/operator/taps"),
           },
         ]
       : []),

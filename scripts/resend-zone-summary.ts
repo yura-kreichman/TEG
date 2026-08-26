@@ -83,7 +83,7 @@ async function main() {
 
   // Предыдущая сдача ЭТОЙ ЖЕ зоны, строго до текущей — от неё считаются
   // дельты показаний и окно расхода абонементов (та же логика, что в
-  // src/app/api/reports/counters/zone-submission/[id]/route.ts).
+  // src/app/api/reports/submissions/zone-submission/[id]/route.ts).
   const previous = await prisma.zoneSubmission.findFirst({
     where: { zoneId: zs.zoneId, createdAt: { lt: zs.createdAt } },
     orderBy: { createdAt: "desc" },

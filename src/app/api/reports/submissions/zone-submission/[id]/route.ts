@@ -2,17 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { requireOwner } from "@/lib/require-owner";
-import { isZoneSubmissionEditable } from "@/lib/results-submission";
-import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, countersPaidFromBalance } from "@/lib/results-calc";
-import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
-import { getZoneAbonementSpendAmount, getZoneTapAbonementAmount } from "@/lib/abonement";
+import { getZoneSubmissionEditability } from "@/lib/results-submission";
 import { reverseResultsSubmissionAdvanceSettlement } from "@/lib/zone-balance";
-import { editChatMessage } from "@/lib/telegram-bot";
-import { formatZoneSummaryTelegram } from "@/lib/summary-channels/telegram-format";
-import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
-import { isLocale, type Locale } from "@/lib/locales";
-import { getDictionary } from "@/lib/i18n";
-import { removeOrMarkMessage, resyncDailyCashForZone, sendUpdatedPush } from "@/lib/summary-channels/resync";
+import { resyncDailyCashForZone } from "@/lib/summary-channels/resync";
+import { resyncZoneSummaryMessage } from "@/lib/summary-channels/zone-summary-message";
 
 interface CorrectionDiff {
   cashAmount: number;
@@ -34,187 +27,11 @@ async function loadZoneSubmission(id: string, tenantId: string) {
   return zoneSubmission;
 }
 
-// Пересчитывает и редактирует уже отправленную Telegram-сводку по зоне после
-// правки кассы/показаний (запрос пользователя 2026-07-25: "на будущее сделай
-// сохранение id... чтобы такие ситуации можно было чинить") — только
-// counters/cash_only (остальные режимы через этот роут вообще не
-// редактируются, см. isZoneSubmissionEditable). Best-effort — падение здесь
-// не должно ронять саму правку, которая к этому моменту уже сохранена.
-async function reEditZoneSummaryMessage(
-  zoneSubmissionId: string,
-  tenantId: string,
-  options: { voided?: boolean } = {}
-): Promise<void> {
-  const zs = await prisma.zoneSubmission.findUnique({
-    where: { id: zoneSubmissionId },
-    include: {
-      zone: { include: { tariffs: { where: { deletedAt: null } }, assets: { orderBy: { sortOrder: "asc" } } } },
-      assetReadings: true,
-      resultsSubmission: { include: { operator: { select: { name: true, colorTag: true } } } },
-    },
-  });
-  if (!zs?.telegramSummaryMessageId) return;
-
-  const [channel, zoneSummarySettings, point, tenant] = await Promise.all([
-    prisma.tenantSummaryChannel.findFirst({
-      where: { tenantId, channelType: "telegram", pointId: null, enabled: true, chatStatus: "active" },
-    }),
-    prisma.zoneSummarySettings.findUnique({ where: { tenantId } }),
-    prisma.point.findFirst({ where: { zones: { some: { id: zs.zoneId } } } }),
-    prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, locale: true, timezone: true } }),
-  ]);
-  if (!channel?.chatId || !point) return;
-
-  const settings = zoneSummarySettings ?? ZONE_SUMMARY_DEFAULTS;
-  if (!settings.enabled) return;
-
-  const locale: Locale = tenant?.locale && isLocale(tenant.locale) ? tenant.locale : "ru";
-  const timezone = tenant?.timezone ?? "UTC";
-  const st = getDictionary(locale).summaryText;
-
-  // Предыдущая сдача ЭТОЙ ЖЕ зоны, СТРОГО до текущей (previousSubmissionBoundary
-  // из game-room.ts берёт "последнюю", а здесь текущая сдача сама и есть
-  // последняя — нужна именно предыдущая, отсюда отдельный запрос).
-  const previous = await prisma.zoneSubmission.findFirst({
-    where: { zoneId: zs.zoneId, createdAt: { lt: zs.createdAt } },
-    orderBy: { createdAt: "desc" },
-    select: { createdAt: true },
-  });
-  const boundary = previous?.createdAt ?? null;
-
-  const isCashOnly = zs.zone.accountingMode === "cash_only";
-  let calculatedRevenue = 0;
-  let netRevenue = 0;
-  let readingLines: { assetName: string; tariffName: string; reading: number; delta: number }[] = [];
-
-  if (!isCashOnly) {
-    const previousReadings = await prisma.assetReading.findMany({
-      where: { assetId: { in: zs.zone.assets.map((a) => a.id) }, zoneSubmissionId: { not: zs.id } },
-      orderBy: { createdAt: "desc" },
-    });
-    const previousByKey = new Map<string, number>();
-    for (const r of previousReadings) {
-      const key = `${r.assetId}:${r.tariffId}`;
-      if (!previousByKey.has(key)) previousByKey.set(key, r.reading);
-    }
-    const initialByKey = await getInitialReadingsMap(zs.zone.assets.map((a) => a.id));
-
-    const tariffCalc = zs.zone.tariffs.map((tariff) => {
-      const readingsForTariff = zs.assetReadings.filter((r) => r.tariffId === tariff.id);
-      const sessions = readingsForTariff.reduce((sum, r) => {
-        const key = `${r.assetId}:${tariff.id}`;
-        const previousReading = previousByKey.get(key) ?? initialByKey.get(key) ?? 0;
-        return sum + calcSessions(r.reading, previousReading);
-      }, 0);
-      return { tariffId: tariff.id, price: Number(tariff.price), sessions };
-    });
-    calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
-    netRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
-
-    readingLines = zs.zone.assets.flatMap((asset) =>
-      zs.zone.tariffs
-        .map((tariff) => {
-          const reading = zs.assetReadings.find((r) => r.assetId === asset.id && r.tariffId === tariff.id);
-          if (!reading) return null;
-          const key = `${asset.id}:${tariff.id}`;
-          const previousReading = previousByKey.get(key) ?? initialByKey.get(key) ?? 0;
-          return { assetName: asset.name, tariffName: tariff.name, reading: reading.reading, delta: calcSessions(reading.reading, previousReading) };
-        })
-        .filter((r): r is NonNullable<typeof r> => r !== null)
-    );
-  }
-
-  // Оплата балансом вычитается из расчётной выручки (2026-08-13, см.
-  // countersPaidFromBalance) — до этого была только информационной строкой, и
-  // Разница здесь расходилась с той, что видел Сотрудник при сдаче.
-  // TAP-зоны сюда тоже доходят (isZoneSubmissionEditable пускает любые
-  // "counters", последние в цепочке), поэтому источник выбирается как везде:
-  // тапы у tap-зон, весь зонный расход у ручных.
-  const abonementAmount = await getZoneAbonementSpendAmount(zs.zoneId, boundary, prisma, zs.createdAt);
-  const paidFromBalance = countersPaidFromBalance(zs.zone, {
-    zoneSpend: abonementAmount,
-    tapLinked: zs.zone.countersTapAssistEnabled
-      ? await getZoneTapAbonementAmount(
-          zs.zoneId,
-          new Map(zs.zone.tariffs.map((t) => [t.id, Number(t.price)])),
-          boundary,
-          zs.createdAt
-        )
-      : 0,
-  });
-  // + расходы, закрытые этой сдачей: сотрудник вводит в кассу остаток после
-  // трат (решение владельца 2026-08-16), поэтому для сверки со счётчиками их
-  // возвращаем обратно — иначе сводка после правки показала бы недостачу на
-  // сумму расходов там, где касса сошлась.
-  const expensesInSubmission = (
-    await prisma.moneyOperation.findMany({
-      where: { type: "expense", zoneId: zs.zoneId, resultsSubmissionId: zs.resultsSubmissionId },
-      select: { amount: true },
-    })
-  ).reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0);
-  const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
-  const difference = isCashOnly
-    ? 0
-    : Math.round((actualCash + expensesInSubmission - (netRevenue - paidFromBalance)) * 100) / 100;
-
-  const text = formatZoneSummaryTelegram(
-    {
-      pointName: point.name,
-      showPointName: (await prisma.point.count({ where: { tenantId } })) > 1,
-      zoneName: zs.zone.name,
-      zoneEmoji: zs.zone.telegramEmoji,
-      accountingMode: zs.zone.accountingMode as import("@/lib/results-calc").ZoneAccountingMode,
-      isGameRoom: false,
-      gameRoomLaunchCount: null,
-      gameRoomTotalMinutes: null,
-      occurredAt: zs.createdAt,
-      readings: readingLines,
-      perAsset: [],
-      ticketsOrdersCount: null,
-      ticketsCount: null,
-      cashAmount: Number(zs.cashAmount),
-      mobileAmount: Number(zs.mobileAmount),
-      abonementAmount,
-      calculatedRevenue,
-      difference,
-      returnsCount: zs.returnsCount,
-      operatorName: zs.resultsSubmission.operator.name,
-      operatorColorTag: zs.resultsSubmission.operator.colorTag,
-      // Сюда попадаем только по правке владельца — отсюда ♛ рядом с именем
-      // (требование владельца 2026-08-16).
-      editedByOwner: true,
-    },
-    settings,
-    locale,
-    timezone,
-    st
-  );
-  // Удаление сдачи: сообщение остаётся в чате (Telegram не отдаёт удалять
-  // старше 48 часов), но прямо говорит, что записи больше нет — иначе в
-  // чате навсегда висели бы цифры, которых в системе уже нет (правка
-  // владельца 2026-08-16, тот же приём, что у сверки кассы Товаров).
-  const finalText = options.voided
-    ? `<i>${getDictionary(locale).summaryText.submissionVoided}</i>\n${text}`
-    : text;
-  if (options.voided) {
-    // Удаляем сообщение целиком, а пометку оставляем только если Telegram
-    // удалить не дал (решение владельца 2026-08-16).
-    await removeOrMarkMessage(channel.chatId, zs.telegramSummaryMessageId, finalText);
-  } else {
-    await editChatMessage(channel.chatId, zs.telegramSummaryMessageId, text).catch(() => {});
-  }
-  // Push с уже поправленными цифрами: сообщение в чате исправлено, но у
-  // владельца в шторке телефона всё ещё висит старое (требование владельца
-  // 2026-08-16: "если происходят обновления в ТГ, то Push должны отправляться
-  // свежие").
-  await sendUpdatedPush(tenantId, "zoneSummary", getDictionary(locale).pushSettings.zoneLabel, finalText);
-}
-
 // Правка последней сдачи по зоне (docs/spec/01-counters.md, «Прозрачность»):
 // показания по тарифам, касса/моб./возвраты — с необязательной причиной,
 // журналируется в CorrectionLog, привязанная MoneyOperation (revenue) держится
 // в синхроне с новой суммой наличных.
-export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/counters/zone-submission/[id]">) {
+export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/submissions/zone-submission/[id]">) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
@@ -226,17 +43,14 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/co
     return NextResponse.json({ error: "Сдача не найдена" }, { status: 404 });
   }
 
-  if (!(await isZoneSubmissionEditable(id, zoneSubmission.zone.accountingMode))) {
-    // Для counters причина — незакрытая цепочка показаний; для остальных
-    // не-cash_only режимов правка/удаление недоступны структурно (см.
-    // комментарий у isZoneSubmissionEditable) — разные причины требуют
-    // разного сообщения, иначе владелец решит подождать несуществующую
-    // "более позднюю сдачу".
-    const error =
-      zoneSubmission.zone.accountingMode === "counters"
-        ? "Есть более поздняя сдача по одному из активов этой зоны — сначала удалите её."
-        : "Сдачи этого режима учёта нельзя редактировать или удалять.";
-    return NextResponse.json({ error }, { status: 409 });
+  const editability = await getZoneSubmissionEditability(id, zoneSubmission.zone.accountingMode);
+  if (!editability.canEditCash) {
+    // Сюда доходит только counters с незакрытой цепочкой показаний: у
+    // остальных режимов касса правится всегда (см. getZoneSubmissionEditability).
+    return NextResponse.json(
+      { error: "Есть более поздняя сдача по одному из активов этой зоны — сначала удалите её." },
+      { status: 409 }
+    );
   }
 
   const body = await request.json();
@@ -275,6 +89,17 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/co
         return NextResponse.json({ error: "Показание должно быть числом 0–9999" }, { status: 400 });
       }
       nextReadings[key] = value;
+    }
+  }
+
+  // «Живые» зоны (stays/launches-тап/tickets): показаний у них нет, возвраты
+  // неприменимы — правится только касса. Сверяем по фактическому изменению, а
+  // не по наличию полей в теле: форма шлёт свой драфт целиком, и отказывать
+  // на неизменившемся значении значило бы ломать штатную правку кассы.
+  if (!editability.canEditReadings) {
+    const readingsChanged = Object.entries(nextReadings).some(([key, value]) => before.readings[key] !== value);
+    if (readingsChanged || nextReturns !== before.returnsCount) {
+      return NextResponse.json({ error: "В этом режиме учёта правится только касса." }, { status: 400 });
     }
   }
 
@@ -377,7 +202,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/co
   // Best-effort, вне транзакции (сетевой вызов) — правка кассы уже сохранена
   // независимо от того, получится ли обновить Telegram (запрос пользователя
   // 2026-07-25).
-  await reEditZoneSummaryMessage(id, owner.tenantId).catch(() => {});
+  await resyncZoneSummaryMessage(id, owner.tenantId).catch(() => {});
   // И "Касса за день" точки — она суммирует кассу всех зон, правка сдачи её
   // меняет (требование владельца 2026-08-16).
   await resyncDailyCashForZone(zoneSubmission.zoneId, owner.tenantId, zoneSubmission.createdAt);
@@ -388,7 +213,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/co
 // Удаление последней сдачи по зоне — необратимо, попадает в CorrectionLog как
 // снимок «до» без «после». MoneyOperation-и (revenue/expense), созданные этой
 // сдачей, удаляются вместе с ней, чтобы не оставлять денежный след без записи.
-export async function DELETE(_request: Request, ctx: RouteContext<"/api/reports/counters/zone-submission/[id]">) {
+export async function DELETE(_request: Request, ctx: RouteContext<"/api/reports/submissions/zone-submission/[id]">) {
   const owner = await requireOwner();
   if (!owner) {
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
@@ -400,16 +225,14 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/reports/
     return NextResponse.json({ error: "Сдача не найдена" }, { status: 404 });
   }
 
-  if (!(await isZoneSubmissionEditable(id, zoneSubmission.zone.accountingMode))) {
-    // Для counters причина — незакрытая цепочка показаний; для остальных
-    // не-cash_only режимов правка/удаление недоступны структурно (см.
-    // комментарий у isZoneSubmissionEditable) — разные причины требуют
-    // разного сообщения, иначе владелец решит подождать несуществующую
-    // "более позднюю сдачу".
+  if (!(await getZoneSubmissionEditability(id, zoneSubmission.zone.accountingMode)).canDelete) {
+    // Причины разные, и владельцу их нельзя путать: у counters надо дождаться
+    // (удалить более позднюю сдачу), у живых зон ждать нечего — удаление там
+    // задваивает выручку и закрыто навсегда (см. getZoneSubmissionEditability).
     const error =
       zoneSubmission.zone.accountingMode === "counters"
         ? "Есть более поздняя сдача по одному из активов этой зоны — сначала удалите её."
-        : "Сдачи этого режима учёта нельзя редактировать или удалять.";
+        : "Сдачи этого режима учёта нельзя удалять — можно поправить кассу.";
     return NextResponse.json({ error }, { status: 409 });
   }
 
@@ -426,7 +249,7 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/reports/
   // не из чего, а удалить сообщение Telegram не даст — старше 48 часов оно не
   // удаляется (правка владельца 2026-08-16: раньше в чате навсегда оставались
   // цифры удалённой сдачи).
-  await reEditZoneSummaryMessage(id, owner.tenantId, { voided: true }).catch(() => {});
+  await resyncZoneSummaryMessage(id, owner.tenantId, { voided: true }).catch(() => {});
 
   try {
     await prisma.$transaction(async (tx) => {

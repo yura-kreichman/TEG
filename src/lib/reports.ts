@@ -203,7 +203,7 @@ export interface ZoneSubmissionRevenue {
 /**
  * Recomputes calculatedRevenue/difference and per-asset/per-tariff revenue
  * shares for every zone-submission of the given zones within [start, end) —
- * same chain-walking approach as /api/reports/counters/day (sessions/previous
+ * same chain-walking approach as /api/reports/submissions/day (sessions/previous
  * reading are never persisted, only raw AssetReading.reading values are).
  * Walks each asset+tariff's FULL history (not just the window) so sessions at
  * the window's start are still diffed against the correct previous reading.
@@ -432,7 +432,7 @@ export async function computeZoneSubmissionRevenues(
   // ВСЕЙ истории сдач зоны (не только внутри текущего периода отчёта, иначе
   // первая сдача периода не знала бы своей настоящей предыдущей границы),
   // тот же приём, что boundariesByZone/abonementAmountFor в
-  // /api/reports/counters/day/route.ts.
+  // /api/reports/submissions/day/route.ts.
   const ticketZoneIds = zones.filter((z) => isTicketsZone(z)).map((z) => z.id);
   const ticketBoundariesByZone = new Map<string, Date[]>();
   // Времена сдач ИМЕННО билетных зон внутри окна. Проверять надо их, а не
@@ -560,7 +560,7 @@ export async function computeZoneSubmissionRevenues(
     // функции, но /api/points/[id]/reports/{operators,zones,dynamics} — нет,
     // из-за чего "Разница" оператора в Отчётах → Сотрудники ложно включала
     // кассу его cash_only-зон (тот же класс бага, что уже пофикшен в
-    // /api/reports/counters/day/route.ts — найден при том же аудите
+    // /api/reports/submissions/day/route.ts — найден при том же аудите
     // 2026-07-22, исправление отложено и забыто).
     // + расходы этой сдачи: в кассу введён остаток ПОСЛЕ трат, а сверять со
     // счётчиками надо всё, что через кассу прошло (см. загрузку выше).

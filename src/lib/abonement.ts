@@ -767,7 +767,7 @@ export interface CountersBalanceSubmission {
  * Появилось по жалобе на скорость (2026-08-14): отчёты за месяц вызывали эти
  * функции в цикле по сдачам, а их на живой точке 79 за 30 дней — значит 79
  * лишних round-trip к базе на одно открытие экрана. Тот же приём, что уже
- * применён в /api/reports/counters/day (abonementOpsByZone): читаем операции
+ * применён в /api/reports/submissions/day (abonementOpsByZone): читаем операции
  * зон один раз и раскладываем по окнам в памяти.
  *
  * Какой источник брать для зоны, решает countersTapAssistEnabled — ровно как

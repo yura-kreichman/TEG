@@ -1,30 +1,52 @@
 import { prisma } from "@/lib/prisma";
 
 /**
- * A zone-submission can only be corrected/deleted while it's still the last
- * link in the chain for every asset+tariff it touched — editing an earlier
- * entry would silently move the "previous reading" baseline a later
- * submission already calculated its sessions from (docs/spec/01-counters.md,
- * "Прозрачность"). Only "counters" zones have this AssetReading-based chain.
+ * Что владельцу разрешено делать с уже сданной зоной-сдачей. Три разных
+ * права, а не одно: цена ошибки у них разная.
  *
- * "stays"/"launches"(tap)/"tickets" have a DIFFERENT, undocumented chain: the
- * aggregation window for the NEXT submission of the same zone is computed
- * from the most recent still-existing ZoneSubmission row
- * (previousSubmissionBoundary in game-room.ts / ticketBoundariesByZone in
- * reports/counters/day/route.ts) — not from a per-record FK. Deleting/editing
- * such a submission was previously allowed unconditionally ("always
- * editable", same as cash_only) — found by audit 2026-07-24 to silently wipe
- * the collected cash's MoneyOperation AND widen the next submission's window
- * back, double-counting the same already-collected Launch/Ticket revenue.
- * docs/spec/01-counters.md, "Прозрачность" is explicit that these modes
- * shouldn't have an edit/delete history UI at all — only "cash_only" has no
- * chain of any kind and stays always editable. Pass `accountingMode` if the
- * caller already has it (avoids an extra lookup); otherwise it's fetched here.
+ * `canEditReadings` — правка показаний счётчиков. Опасна вне последнего
+ * звена цепочки: показание это база, от которой СЛЕДУЮЩАЯ сдача посчитала
+ * свои сеансы, и сдвиг задним числом молча переписал бы её выручку
+ * (docs/spec/01-counters.md, «Прозрачность»). Цепочка на AssetReading есть
+ * только у "counters".
+ *
+ * `canDelete` — удаление всей записи. У "stays"/"launches"(тап)/"tickets"
+ * своя, недокументированная цепочка: окно агрегации следующей сдачи той же
+ * зоны считается от самой поздней СУЩЕСТВУЮЩЕЙ строки ZoneSubmission
+ * (previousSubmissionBoundary в game-room.ts, ticketBoundariesByZone в
+ * reports/submissions/day/route.ts), а не по FK на конкретную запись. Аудит
+ * 2026-07-24 нашёл, что удаление такой сдачи расширяет окно назад и
+ * задваивает уже собранную выручку пусков/билетов — поэтому им нельзя.
+ *
+ * `canEditCash` — правка наличных и безнала. Не задевает НИ ОДНУ из этих
+ * цепочек: в "stays"/"launches"/"tickets" касса вообще не участвует в
+ * расчёте выручки, это «сколько реально в ящике» против того, что насчитала
+ * система. Аудит 2026-07-24 закрыл её заодно с удалением, скопом — и это
+ * оставило владельца без всякого выхода, когда сотрудник ошибся с суммой:
+ * реальный случай 2026-08-26 (Керен Центр, зона «Халабуда» — сотрудник сдал
+ * итоги с нулевой кассой, поправить было нечем). Правка кассы разрешена
+ * везде, где сдача существует; для "counters" — по тому же правилу
+ * последнего звена, что и показания, потому что там правится одна форма
+ * целиком.
+ *
+ * Спека (01-counters.md, «Прозрачность») говорит, что в "stays"/"launches"/
+ * "cash_only"/"tickets" «любая сдача редактируется/удаляется» — в части
+ * удаления это расхождение с кодом СОЗНАТЕЛЬНОЕ (см. аудит выше), спека
+ * приведена к коду отдельной правкой того же дня.
+ *
+ * `accountingMode` можно передать, если вызывающий его уже знает — иначе
+ * будет лишний запрос.
  */
-export async function isZoneSubmissionEditable(
+export interface ZoneSubmissionEditability {
+  canEditCash: boolean;
+  canEditReadings: boolean;
+  canDelete: boolean;
+}
+
+export async function getZoneSubmissionEditability(
   zoneSubmissionId: string,
   accountingMode?: string
-): Promise<boolean> {
+): Promise<ZoneSubmissionEditability> {
   let mode = accountingMode;
   if (mode === undefined) {
     const zoneSubmission = await prisma.zoneSubmission.findUnique({
@@ -33,14 +55,18 @@ export async function isZoneSubmissionEditable(
     });
     mode = zoneSubmission?.zone.accountingMode;
   }
-  if (mode === "cash_only") return true;
-  if (mode !== "counters") return false;
+
+  // Никакой цепочки нет вовсе — правится и удаляется свободно.
+  if (mode === "cash_only") return { canEditCash: true, canEditReadings: true, canDelete: true };
+
+  // Живые зоны: касса правится, показаний нет, удаление задваивает выручку.
+  if (mode !== "counters") return { canEditCash: true, canEditReadings: false, canDelete: false };
 
   const readings = await prisma.assetReading.findMany({
     where: { zoneSubmissionId },
     select: { assetId: true, tariffId: true, createdAt: true },
   });
-  if (readings.length === 0) return true;
+  if (readings.length === 0) return { canEditCash: true, canEditReadings: true, canDelete: true };
 
   // One query for all touched asset+tariff pairs instead of one count per
   // reading — the (assetId, tariffId, createdAt) index makes each OR branch
@@ -57,5 +83,6 @@ export async function isZoneSubmissionEditable(
     select: { id: true },
   });
 
-  return laterReading === null;
+  const isLastLink = laterReading === null;
+  return { canEditCash: isLastLink, canEditReadings: isLastLink, canDelete: isLastLink };
 }

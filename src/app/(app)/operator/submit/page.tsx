@@ -349,7 +349,7 @@ export default function SubmitResultsPage() {
     // код (previewFor, isAssetFilled, handleSubmit) работает НЕ ЗНАЯ, что
     // источник другой, изменений там не требуется.
     if (isCountersTapAssistZone(zone)) {
-      fetch("/api/operator/counter-tap-events")
+      fetch("/api/operator/tap-events")
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           const counts: { assetId: string; tariffId: string; count: number }[] = data?.counts ?? [];

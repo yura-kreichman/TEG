@@ -29,7 +29,7 @@ export async function GET() {
 
   // countersTapAssistEnabled: false (запрос пользователя 2026-07-25) — у
   // tap-зон "Возврат/тест" теперь привязывается к КОНКРЕТНОМУ тапу
-  // (CounterTapEvent.voidedAt, см. /api/operator/counter-tap-events), этот
+  // (CounterTapEvent.voidedAt, см. /api/operator/tap-events), этот
   // зонный журнал для них больше не источник истины вовсе — без фильтра
   // Сотрудник мог бы создать запись, которая тихо не влияла бы на расчёт.
   const zones = await prisma.zone.findMany({

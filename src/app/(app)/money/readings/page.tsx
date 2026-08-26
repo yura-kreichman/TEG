@@ -76,6 +76,13 @@ interface DayCard {
   operatorName: string;
   operatorColorTag: string | null;
   editable: boolean;
+  // Удаление живых зон (Прибывания/Билеты/тап-Пуски) закрыто навсегда, хотя
+  // касса у них правится: окно следующей сдачи считается от факта
+  // существования этой строки (см. getZoneSubmissionEditability).
+  deletable: boolean;
+  // "cash" — у живых зон правятся только Наличные/Безнал, показаний и
+  // возвратов у них нет.
+  editableFields: "all" | "cash";
   edited: { at: string; reason: string | null } | null;
   cashAmount: number;
   cashEditedBefore: number | null;
@@ -86,7 +93,7 @@ interface DayCard {
   abonementInDifference: number;
   returnsCount: number;
   // Отдельные события тестовых прогонов, из которых сложился returnsCount
-  // выше (см. returnEventsBySubmission в /api/reports/counters/day).
+  // выше (см. returnEventsBySubmission в /api/reports/submissions/day).
   // Необязательное намеренно: тип описывает разобранный JSON, а не гарантию
   // сервера — карточка из прошлой версии API (кеш браузера, недокатившийся
   // деплой) не должна ронять весь экран, как это случилось 2026-08-04.
@@ -513,7 +520,7 @@ export default function ReadingsCalendarPage() {
 
   async function loadCalendar() {
     if (!pointId) return;
-    const res = await fetch(`/api/reports/counters/calendar?pointId=${pointId}&year=${year}&month=${month}`);
+    const res = await fetch(`/api/reports/submissions/calendar?pointId=${pointId}&year=${year}&month=${month}`);
     if (!res.ok) return;
     const data = await res.json();
     setActiveDates(new Set<string>(data.activeDates ?? []));
@@ -521,7 +528,7 @@ export default function ReadingsCalendarPage() {
 
   async function loadDay(date: string) {
     if (!pointId) return;
-    const res = await fetch(`/api/reports/counters/day?pointId=${pointId}&date=${date}`);
+    const res = await fetch(`/api/reports/submissions/day?pointId=${pointId}&date=${date}`);
     if (!res.ok) return;
     const data = await res.json();
     setCards(data.cards ?? []);
@@ -545,7 +552,7 @@ export default function ReadingsCalendarPage() {
       setDateReadyForPointId(null);
       return;
     }
-    fetch(`/api/reports/counters/last-submission-date?pointId=${pointId}`)
+    fetch(`/api/reports/submissions/last-submission-date?pointId=${pointId}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data: { date: string | null } | null) => {
         if (data?.date) {
@@ -629,7 +636,7 @@ export default function ReadingsCalendarPage() {
 
   async function confirmEdit() {
     if (!actionsFor) return;
-    const res = await fetch(`/api/reports/counters/zone-submission/${actionsFor.zoneSubmissionId}`, {
+    const res = await fetch(`/api/reports/submissions/zone-submission/${actionsFor.zoneSubmissionId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -653,7 +660,7 @@ export default function ReadingsCalendarPage() {
     if (!actionsFor || deleting) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/reports/counters/zone-submission/${actionsFor.zoneSubmissionId}`, {
+      const res = await fetch(`/api/reports/submissions/zone-submission/${actionsFor.zoneSubmissionId}`, {
         method: "DELETE",
       });
       if (!res.ok) {
@@ -758,7 +765,7 @@ export default function ReadingsCalendarPage() {
     // для них нет ничего "показаниевого" редактируемого, только
     // наличные/безнал/возвраты) — берём уже посчитанное сервером значение,
     // а не 0 из пустого tariffCalc (тот же реальный баг, найден пользователем
-    // 2026-07-19, что и в самом /api/reports/counters/day).
+    // 2026-07-19, что и в самом /api/reports/submissions/day).
     // Билеты — тоже "живая" зона в этом смысле: у неё нет показаний, редактируется
     // только касса, а calculatedRevenue считается по заказам, не по card.tariffs
     // (у tickets-зон он всегда пуст) — без этой ветки превью в форме
@@ -1515,12 +1522,18 @@ export default function ReadingsCalendarPage() {
                             {card.editable ? (
                               <>
                                 <IconActionButton icon={Pencil} onClick={() => openEdit(card)} label={t.readings.editAction} />
-                                <IconActionButton
-                                  icon={Trash2}
-                                  onClick={() => openDeleteConfirm(card)}
-                                  label={t.readings.deleteAction}
-                                  destructive
-                                />
+                                {/* Удаление показываем только там, где оно
+                                    действительно возможно: у живых зон касса
+                                    правится, а удаление задваивает выручку и
+                                    закрыто на сервере — кнопка вела бы к 409. */}
+                                {card.deletable && (
+                                  <IconActionButton
+                                    icon={Trash2}
+                                    onClick={() => openDeleteConfirm(card)}
+                                    label={t.readings.deleteAction}
+                                    destructive
+                                  />
+                                )}
                               </>
                             ) : (
                               // Заблокированная сдача (не последняя в цепочке) — вместо
