@@ -108,23 +108,86 @@ interface TelegramApiResult {
   messageId?: string;
 }
 
+const TELEGRAM_MAX_ATTEMPTS = 3;
+const TELEGRAM_RETRY_DELAYS_MS = [1000, 3000]; // между попытками 1 и 2, 2 и 3
+const TELEGRAM_MAX_RETRY_AFTER_S = 30; // потолок ожидания по 429 — дольше ждать дороже, чем отдать ошибку
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Повторяем ТОЛЬКО то, что имеет шанс пройти со второй попытки: обрыв сети
+// (status 0 — fetch бросил), 429 (лимит: в группу Bot API пускает не больше
+// 20 сообщений в минуту, core.telegram.org/bots/faq) и 5xx на стороне
+// Telegram. 400/401/403 — окончательные ответы («чат не найден», «бот удалён
+// из чата», негодный токен): повтор их не исправит, только задержит ответ.
+function isRetryableTelegramStatus(status: number): boolean {
+  return status === 0 || status === 429 || status >= 500;
+}
+
+/**
+ * Реальный инцидент 2026-08-26 (владелец КидсБург, сдача итогов): один
+ * `fetch failed / ECONNRESET` по дороге к api.telegram.org — и сводка по зоне
+ * «Машинки» не пришла НИКОГДА. Повторов не было ни одного, а само исключение
+ * из fetch пробивало наверх мимо каналов: вместе с Telegram терялись email и
+ * Push этой же зоны, потому что цикл каналов в dispatch обрывался на первой
+ * же ошибке.
+ *
+ * Поэтому здесь два правила, оба обязательны:
+ *   1. Наружу НИКОГДА не летит исключение — сетевой сбой это обычный
+ *      `{ ok: false, status: 0 }`, такой же результат, как «чат не найден».
+ *      Вызывающий код (dispatch.ts) на нём продолжает работу, а не падает.
+ *   2. Повтор с паузой на сбоях, которые лечатся временем (см.
+ *      isRetryableTelegramStatus), включая уважение `retry_after` из
+ *      ResponseParameters — Telegram сам говорит, сколько ждать.
+ *
+ * Ретрай sendMessage не идемпотентен: если соединение оборвалось уже ПОСЛЕ
+ * того, как Telegram принял сообщение, повтор даст дубль в чате. Это
+ * сознательный размен — дубль владелец видит и понимает, молчаливую пропажу
+ * зонной сводки он не видит вообще.
+ */
 async function callTelegramApi(method: string, body: Record<string, unknown>): Promise<TelegramApiResult> {
   const token = await getBotToken();
   if (!token) return { ok: false, status: 0, description: "bot not configured" };
 
-  const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const status = res.status;
-  const data = await res.json().catch(() => null);
-  if (res.ok) {
-    const messageId = data?.result?.message_id;
-    return { ok: true, status, messageId: messageId != null ? String(messageId) : undefined };
+  let last: TelegramApiResult = { ok: false, status: 0, description: "no attempt" };
+
+  for (let attempt = 1; attempt <= TELEGRAM_MAX_ATTEMPTS; attempt++) {
+    let retryAfterMs: number | null = null;
+
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const status = res.status;
+      const data = await res.json().catch(() => null);
+      if (res.ok) {
+        const messageId = data?.result?.message_id;
+        return { ok: true, status, messageId: messageId != null ? String(messageId) : undefined };
+      }
+
+      last = { ok: false, status, description: data?.description };
+      if (!isRetryableTelegramStatus(status)) return last;
+
+      const retryAfter: unknown = data?.parameters?.retry_after;
+      if (typeof retryAfter === "number" && retryAfter > 0) {
+        if (retryAfter > TELEGRAM_MAX_RETRY_AFTER_S) return last;
+        retryAfterMs = retryAfter * 1000;
+      }
+    } catch (err) {
+      // fetch бросает только на транспортных ошибках (ECONNRESET, обрыв DNS
+      // и т.п.) — HTTP-ответ с 4xx/5xx сюда не попадает, он разбирается выше.
+      last = { ok: false, status: 0, description: err instanceof Error ? err.message : String(err) };
+    }
+
+    if (attempt === TELEGRAM_MAX_ATTEMPTS) break;
+    console.warn("telegram api retry", { method, attempt, status: last.status, description: last.description });
+    await sleep(retryAfterMs ?? TELEGRAM_RETRY_DELAYS_MS[attempt - 1]);
   }
 
-  return { ok: false, status, description: data?.description };
+  return last;
 }
 
 export async function sendChatMessage(chatId: string, text: string): Promise<TelegramApiResult> {

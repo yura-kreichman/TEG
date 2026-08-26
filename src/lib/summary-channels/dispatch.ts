@@ -124,9 +124,13 @@ async function pushEnabledFor(tenantId: string, key: keyof PushNotificationSetti
 // логирования здесь такие сбои были бы полностью невидимы (вызывающий код
 // делает dispatch(...).catch(...) не глядя на результат — см. вызовы в
 // submit-results/work-time-shifts). Одно место логирования на все три типа.
-function logFailures(kind: string, tenantId: string, results: DispatchResult[]) {
+// subject — что именно не доехало ("Машинки", имя сотрудника): без него в
+// логе остаётся только тип сводки, и пропавшее сообщение приходится искать
+// сверкой с БД по времени (инцидент 26 августа с зонной сводкой).
+function logFailures(kind: string, tenantId: string, results: DispatchResult[], subject?: string) {
   for (const r of results) {
-    if (!r.ok) console.error(`summary dispatch failed`, { kind, tenantId, channelType: r.channelType, error: r.error });
+    if (!r.ok)
+      console.error(`summary dispatch failed`, { kind, tenantId, subject, channelType: r.channelType, error: r.error });
   }
 }
 
@@ -163,7 +167,7 @@ export async function dispatchZoneSummary(
     }).catch((err) => console.error("push dispatch failed", { kind: "zone", tenantId, err }));
   }
 
-  logFailures("zone", tenantId, results);
+  logFailures("zone", tenantId, results, data.zoneName);
   return results;
 }
 

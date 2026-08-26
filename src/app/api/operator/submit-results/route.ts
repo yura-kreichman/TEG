@@ -949,7 +949,16 @@ export async function POST(request: Request) {
               .catch(() => {});
           }
         } catch (err) {
-          console.error("zone summary dispatch failed", err);
+          // Название зоны и точка в логе обязательны: 26 августа сводка по
+          // «Машинкам» не дошла (ECONNRESET к api.telegram.org), а в логе
+          // была голая "zone summary dispatch failed" — какая именно зона
+          // потерялась, приходилось выяснять по времени и сверкой с БД.
+          console.error("zone summary dispatch failed", {
+            tenantId: point.tenantId,
+            pointName: point.name,
+            zoneName: s.zoneName,
+            err,
+          });
         }
       }
 
