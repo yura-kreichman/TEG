@@ -1,11 +1,45 @@
 {
   "note": "СГЕНЕРИРОВАННЫЙ ФАЙЛ. Правьте changelog/seed.json или трейлер Changelog: в коммите — см. changelog/README.md.",
-  "version": "1.23.0",
+  "version": "1.24.0",
   "anchor": {
-    "sha": "10873efc57ca1d3c8ce6774f156bef44148c3123",
-    "day": "2026-08-25"
+    "sha": "945990af3855ab762941563e45861e227d086074",
+    "day": "2026-08-26"
   },
   "releases": [
+    {
+      "version": "1.24.0",
+      "day": "2026-08-26",
+      "entries": [
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Сводки по зонам в Telegram доходят даже при обрыве связи — отправка повторяется сама.",
+            "en": "Zone summaries in Telegram now arrive even when the connection drops — sending retries on its own."
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Прибывания и Билеты — владелец может поправить наличные и безнал у сдачи итогов, если сотрудник ошибся с суммой.",
+            "en": "Stays and Tickets — the owner can correct the cash and card amounts of a results submission when the operator got them wrong."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Итоги по дням открываются и в браузерах с включённым блокировщиком рекламы.",
+            "en": "Daily results now open in browsers with an ad blocker enabled."
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Лендинг — статистика посещений показывается и в браузерах с включённым блокировщиком рекламы.",
+            "en": "Landing — visit statistics now show in browsers with an ad blocker enabled."
+          }
+        }
+      ]
+    },
     {
       "version": "1.23.0",
       "day": "2026-08-25",
