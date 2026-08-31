@@ -134,10 +134,14 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   }
 
   if (nextAdvance > currentAdvance) {
-    // Правку суммы вносит владелец — как и ручной аванс из карточки
-    // сотрудника, это не забор денег из кассы точки (решение пользователя
-    // 2026-07-15), проверка по личному балансу "к выдаче" + овердрафт, а не
-    // по остатку кассы.
+    // Проверка — по личному балансу "к выдаче" + овердрафт, БЕЗ жёсткого
+    // потолка по остатку кассы точки. С 2026-08-31 такой аванс списывается
+    // с кассы (см. syncLinkedOp ниже), но кап здесь всё равно не тот, что у
+    // самообслуживания в PWA: там сотрудник берёт деньги ПРЯМО СЕЙЧАС и
+    // физически не может взять больше, чем в кассе лежит, а владелец
+    // задним числом записывает уже случившийся факт — остаток кассы с тех
+    // пор мог смениться инкассацией, и отказ по нему заблокировал бы
+    // правдивую запись.
     const shiftOperator = await prisma.operator.findUnique({
       where: { id: shift.operatorId },
       select: { overdraftAllowed: true },
@@ -273,8 +277,27 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
                 pointId: shiftPointId,
                 type,
                 amount: storedAmountFor(type, amount),
+                // ОБА исполнителя (решение владельца 2026-08-31, реальный
+                // случай КидсБурга 30 августа): аванс/премию, дописанные в
+                // смену, сотрудник в тот день реально забрал из кассы точки —
+                // просто не отметил в PWA на check-out. performedByOperatorId
+                // говорит "деньги вышли из этой кассы" (его и смотрит
+                // getPointCashBalance), performedByUserId — "запись внёс
+                // владелец" (корона в реестрах). Отдельный аванс из карточки
+                // сотрудника (/api/operators/[id]/work-time/advance, без
+                // смены) остаётся прежним — только performedByUserId, деньги
+                // владельца, кассы точки не касаются (решение 2026-07-15).
+                // bonus_accrual исполнителя-сотрудника не получает: из кассы
+                // по нему не уходило ничего (CASH_EXCLUDED_TYPES).
+                performedByOperatorId: type === "bonus_accrual" ? null : shiftOperatorId,
                 performedByUserId: correctedByUserId,
                 beneficiaryOperatorId: shiftOperatorId,
+                // Дата события — день смены, а не момент правки. Иначе
+                // вписанный сегодня вчерашний аванс попадал в СЕГОДНЯШНИЙ
+                // бизнес-день: ни "Касса за день" за вчера, ни реестры за
+                // тот день его не видели (та же правка 2026-08-31).
+                // Открытая смена конца ещё не имеет — тогда начало.
+                occurredAt: nextEndAt ?? nextStartAt,
                 shiftId,
               },
             });
@@ -291,22 +314,30 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
       // ничего не уходило, разносить нечего (см. CASH_EXCLUDED_TYPES).
       await syncLinkedOp(freshBonusAccrualOp, "bonus_accrual", nextBonusAccrued);
 
-      // Зонная дельта — ТОЛЬКО для self-service части (performedByOperatorId
-      // на существующей записи). Найдено аудитом 2026-07-25 (повторная
-      // проверка): владелец МОЖЕТ через эту же форму добавить аванс/премию,
-      // которых у смены раньше не было вовсе — ветка create выше пишет такую
-      // запись с performedByUserId (деньги владельца, не из кассы точки, тот
-      // же принцип, что /api/operators/[id]/work-time/advance/bonus), и она не
-      // должна списываться с зон. Правка СУММЫ у уже существующей
-      // self-service записи (создана в check-out/shifts POST с
-      // performedByOperatorId) сохраняет исходного исполнителя — update выше
-      // меняет только amount — поэтому её дельта законно остаётся
-      // self-service.
-      const advanceIsSelfService = freshAdvanceOp?.performedByOperatorId != null;
-      const bonusIsSelfService = freshBonusOp?.performedByOperatorId != null;
+      // Зонная дельта — только для тех записей, деньги по которым реально
+      // вышли из кассы точки (performedByOperatorId). Правка СУММЫ у уже
+      // существующей записи сохраняет исходного исполнителя — update выше
+      // меняет только amount — поэтому её дельта наследует его же.
+      //
+      // Ветка create теперь тоже даёт "из кассы" (решение владельца
+      // 2026-08-31, см. syncLinkedOp выше), поэтому её дельта разносится по
+      // зонам наравне. До этой правки аванс, ВПЕРВЫЕ дописанный владельцем в
+      // смену, не списывался ни с кассы точки, ни с зон вовсе — остаток
+      // оставался завышенным, а "Касса за день" за тот день пересобиралась
+      // побайтово прежней и Telegram её не менял.
+      //
+      // Записи, созданные ДО этой правки (только performedByUserId), по
+      // зонам не разносились — их дельта не разносится и сейчас, иначе
+      // вернулась бы часть суммы, которой там никогда не было.
+      const advanceFromPointCash = freshAdvanceOp
+        ? freshAdvanceOp.performedByOperatorId != null
+        : nextAdvance > 0;
+      const bonusFromPointCash = freshBonusOp
+        ? freshBonusOp.performedByOperatorId != null
+        : nextBonus > 0;
       advanceDelta =
-        (advanceIsSelfService ? nextAdvance - freshCurrentAdvance : 0) +
-        (bonusIsSelfService ? nextBonus - freshCurrentBonus : 0);
+        (advanceFromPointCash ? nextAdvance - freshCurrentAdvance : 0) +
+        (bonusFromPointCash ? nextBonus - freshCurrentBonus : 0);
 
       if (changed) {
         await tx.correctionLog.create({
@@ -379,7 +410,11 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   // Сводка "Закрытие смены" в чате и "Касса за день" точки содержат эти же
   // часы и суммы — догоняем их (требование владельца 2026-08-16).
   await resyncShiftCloseMessage(id);
-  await resyncDailyCashForPoint(shift.pointId, owner.tenantId, nextStartAt);
+  // Момент КОНЦА смены, а не начала: часов смены в "Кассе за день" нет вовсе,
+  // её задевают только аванс/премия — а они датируются концом смены (и при
+  // check-out, и в syncLinkedOp выше). У ночной смены начало и конец лежат в
+  // разных бизнес-днях, и прежний nextStartAt обновлял не ту сводку.
+  await resyncDailyCashForPoint(shift.pointId, owner.tenantId, nextEndAt ?? nextStartAt);
 
   return NextResponse.json({
     shift: {
@@ -464,9 +499,10 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
   // Возврат уже разнесённых по зонам advance_settlement-записей — та же
   // причина, что у PATCH выше: удаление смены обнуляет личный баланс
   // сотрудника по авансу/премии, но без этого зонные остатки кассы навсегда
-  // остались бы заниженными на уже списанную сумму. ТОЛЬКО self-service
-  // часть (performedByOperatorId) — запись, добавленная владельцем через
-  // PATCH (performedByUserId), никогда не списывалась с зон и не должна
+  // остались бы заниженными на уже списанную сумму. ТОЛЬКО то, что реально
+  // ушло из кассы точки (performedByOperatorId) — старая запись, добавленная
+  // владельцем через PATCH до 2026-08-31 (только performedByUserId), никогда
+  // не списывалась с зон и не должна
   // возвращаться туда же (аудит 2026-07-25, повторная проверка, тот же
   // принцип, что и в PATCH выше).
   const deletedTotal =
@@ -479,8 +515,10 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
   }
 
   // Саму сводку смены пересобирать уже не из чего — смены нет; "Касса за
-  // день" точки остаётся и обязана перестать показывать её суммы.
-  await resyncDailyCashForPoint(shift.pointId, owner.tenantId, shift.startAt);
+  // день" точки остаётся и обязана перестать показывать её суммы. Конец
+  // смены, а не начало — там же датированы удалённые аванс/премия (см. тот
+  // же вызов в PATCH выше).
+  await resyncDailyCashForPoint(shift.pointId, owner.tenantId, shift.endAt ?? shift.startAt);
 
   return NextResponse.json({ ok: true });
 }

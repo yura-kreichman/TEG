@@ -159,16 +159,28 @@ async function getPoolSweepCutoff(
 // привязанные к точке целиком (аванс/премия — из общей кассы точки, не
 // конкретной зоны). Источник денег на аванс/премию зависит от двух вещей
 // (решение пользователя 2026-07-15/16, docs/spec/05-work-time.md):
-// 1. Владелец вносит вручную из карточки сотрудника (performedByUserId) —
-//    деньги не из кассы точки (уже забраны инкассацией, или переданы
-//    отдельно, например переводом на карту) — кассы точки не касается,
-//    остаток не уменьшает, вне зависимости от даты.
-// 2. Сотрудник вводит сам (performedByOperatorId, без performedByUserId) —
+// 1. Владелец вносит вручную из карточки сотрудника (только
+//    performedByUserId, performedByOperatorId пуст) — деньги не из кассы
+//    точки (уже забраны инкассацией, или переданы отдельно, например
+//    переводом на карту) — кассы точки не касается, остаток не уменьшает,
+//    вне зависимости от даты.
+// 2. Деньги ушли из кассы точки в руки сотрудника (performedByOperatorId) —
 //    физически берёт из кассы точки, но только если это произошло ПОСЛЕ
 //    последней инкассации на точке — актуален только "хвост" после неё.
 //    Найдено и проверено на реальных данных 2026-07-16: аванс/премия
 //    оператора от предыдущего дня не должны тянуть остаток в минус, если
 //    после них уже прошла инкассация.
+//
+// Признак — именно performedByOperatorId, а НЕ отсутствие performedByUserId
+// (правка владельца 2026-08-31, реальный случай КидсБурга): аванс, который
+// владелец дописывает в уже закрытую СМЕНУ, — это деньги, которые сотрудник
+// в тот день реально забрал из кассы, просто не отметил в PWA. Такая запись
+// теперь несёт ОБА поля: performedByOperatorId (из чьих рук ушли деньги) и
+// performedByUserId (кто внёс запись) — см. syncLinkedOp в
+// /api/work-time/shifts/[id]. Старая проверка "if (performedByUserId)
+// continue" пропускала её мимо кассы, и остаток точки не уменьшался вовсе.
+// Для всех записей, созданных до этой правки, условие эквивалентно прежнему:
+// у аванса/премии всегда было заполнено ровно одно из двух полей.
 // Используется и для отображения (docs/spec/05-work-time.md), и для
 // валидации максимального самостоятельного аванса/премии сотрудника —
 // единая цифра, на которую опираются оба места.
@@ -194,7 +206,7 @@ export async function getPointCashBalance(
       : Promise.resolve([]),
     client.moneyOperation.findMany({
       where: { pointId },
-      select: { type: true, amount: true, occurredAt: true, performedByUserId: true },
+      select: { type: true, amount: true, occurredAt: true, performedByOperatorId: true },
     }),
     getZoneCollectionCutoff(pointId, zoneIds, client),
     getPoolSweepCutoff(pointId, "collection_pool_sweep_abonement", client),
@@ -209,7 +221,7 @@ export async function getPointCashBalance(
   for (const op of pointOps) {
     if (!affectsCashOnHand(op.type)) continue;
     if (op.type === "advance" || op.type === "bonus_payout") {
-      if (op.performedByUserId) continue;
+      if (!op.performedByOperatorId) continue;
       if (zoneCollectionCutoff && op.occurredAt <= zoneCollectionCutoff) continue;
     }
     // Абонементные/товарные наличные, собранные ДО СВОЕЙ ПОСЛЕДНЕЙ инкассации
