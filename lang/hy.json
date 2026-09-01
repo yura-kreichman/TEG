@@ -859,6 +859,7 @@
     "gameRoomOptionsLabel": "Տարբերակներ",
     "gameRoomOptionNamePlaceholder": "Անվանում (օր.՝ 1 ժամ)",
     "gameRoomOptionDurationPlaceholder": "Րոպե",
+    "gameRoomOptionUnlimitedLabel": "Առանց ժամանակի սահմանափակման",
     "gameRoomOptionPricePlaceholder": "Գին",
     "gameRoomAddOptionButton": "Ավելացնել տարբերակ",
     "gameRoomRemoveOptionLabel": "Ջնջել տարբերակը",

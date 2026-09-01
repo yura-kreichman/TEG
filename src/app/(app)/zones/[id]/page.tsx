@@ -79,7 +79,8 @@ const ACCOUNTING_MODE_ICON: Record<ZoneAccountingMode, LucideIcon> = {
 
 interface TariffOptionInfo {
   id: string;
-  durationMinutes: number;
+  // null — «без ограничения времени» (запрос пользователя 2026-09-01).
+  durationMinutes: number | null;
   price: string;
   // Только "per_minute" — название ставки ("Будни"/"Выходные"), null у "fixed".
   name: string | null;
@@ -94,9 +95,14 @@ interface TariffOptionInfo {
 interface OptionDraft {
   name: string;
   durationMinutes: string;
+  // Отдельный флаг, а не «пустая строка = безлимит» (решение пользователя
+  // 2026-09-01): пустое поле у только что добавленного варианта означает «ещё
+  // не заполнил», и молча превращать его в бесконечность нельзя. В базу при
+  // включённом флаге уходит null.
+  unlimited: boolean;
   price: string;
 }
-const EMPTY_OPTION: OptionDraft = { name: "", durationMinutes: "", price: "" };
+const EMPTY_OPTION: OptionDraft = { name: "", durationMinutes: "", unlimited: false, price: "" };
 
 // Список вариантов "За вход" (длительность+цена) в форме тарифа — можно
 // добавлять/удалять/редактировать (запрос пользователя 2026-07-17: "1 час,
@@ -143,16 +149,41 @@ function TariffOptionsEditor({
             )}
           </div>
           <div className="flex items-center gap-2">
+            {/* Безлимит (запрос пользователя 2026-09-01) — кнопка ∞ рядом с
+                полем, а не отдельной строкой с чекбоксом: строка на каждый
+                вариант выросла бы в высоту на всю форму, а места по ширине
+                хватает — на телефоне 360px полям остаётся по 127px.
+                Состояние читается по САМОМУ полю: оно гаснет и показывает ∞,
+                поэтому иконка без подписи не остаётся единственным признаком. */}
             <Input
               type="number"
               inputMode="numeric"
               min="1"
-              required
-              placeholder={t.zoneDetail.gameRoomOptionDurationPlaceholder}
-              value={opt.durationMinutes}
+              required={!opt.unlimited}
+              disabled={opt.unlimited}
+              placeholder={
+                opt.unlimited ? "∞" : t.zoneDetail.gameRoomOptionDurationPlaceholder
+              }
+              value={opt.unlimited ? "" : opt.durationMinutes}
               onChange={(e) => update(index, { durationMinutes: e.target.value })}
               className="flex-1"
             />
+            <PressableScale>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label={t.zoneDetail.gameRoomOptionUnlimitedLabel}
+                title={t.zoneDetail.gameRoomOptionUnlimitedLabel}
+                onClick={() => update(index, { unlimited: !opt.unlimited })}
+                className={cn(
+                  "shrink-0 text-lg font-extrabold",
+                  opt.unlimited && "border-primary bg-primary text-primary-foreground"
+                )}
+              >
+                ∞
+              </Button>
+            </PressableScale>
             <MoneyInput
               required
               placeholder={t.zoneDetail.gameRoomOptionPricePlaceholder}
@@ -642,7 +673,15 @@ export default function ZoneDetailPage() {
             : zone && isLaunchesZone(zone) && launchesPricingMode === "timed"
               ? {
                   pricingMode: "fixed",
-                  options: tariffOptions.map((o) => ({ ...o, price: parseMoneyInput(o.price) })),
+                  // durationMinutes: null при включённом ∞ — поле в форме лишь
+                  // ПОКАЗЫВАЕТСЯ пустым, а в черновике может остаться прежнее
+                  // число, и без этой замены оно уехало бы на сервер, отменив
+                  // безлимит молча.
+                  options: tariffOptions.map((o) => ({
+                    ...o,
+                    durationMinutes: o.unlimited ? null : o.durationMinutes,
+                    price: parseMoneyInput(o.price),
+                  })),
                 }
               : {}),
         }),
@@ -676,7 +715,12 @@ export default function ZoneDetailPage() {
     setEditTariffPricingMode(tariff.pricingMode ?? "fixed");
     setEditTariffOptions(
       tariff.pricingMode === "fixed" && tariff.options.length > 0
-        ? tariff.options.map((o) => ({ name: o.name ?? "", durationMinutes: String(o.durationMinutes), price: o.price }))
+        ? tariff.options.map((o) => ({
+            name: o.name ?? "",
+            durationMinutes: o.durationMinutes == null ? "" : String(o.durationMinutes),
+            unlimited: o.durationMinutes == null,
+            price: o.price,
+          }))
         : [EMPTY_OPTION]
     );
     setEditTariffRateOptions(
@@ -718,7 +762,12 @@ export default function ZoneDetailPage() {
               ? editLaunchesPricingMode === "timed"
                 ? {
                     pricingMode: "fixed",
-                    options: editTariffOptions.map((o) => ({ ...o, price: parseMoneyInput(o.price) })),
+                    // См. тот же комментарий у создания тарифа выше.
+                    options: editTariffOptions.map((o) => ({
+                      ...o,
+                      durationMinutes: o.unlimited ? null : o.durationMinutes,
+                      price: parseMoneyInput(o.price),
+                    })),
                   }
                 : // "Без таймера" — явно отправляем pricingMode: null, а не
                   // просто опускаем поле (реальный баг, найден пользователем
@@ -1074,7 +1123,7 @@ export default function ZoneDetailPage() {
       const list = tariff.options
         .map(
           (o) =>
-            `${o.name ?? `${o.durationMinutes} ${t.operatorApp.workTime.minutesShort}`} — ${formatMoney(Number(o.price), locale)}${currencySign ?? ""}`
+            `${o.name ?? (o.durationMinutes == null ? "∞" : `${o.durationMinutes} ${t.operatorApp.workTime.minutesShort}`)} — ${formatMoney(Number(o.price), locale)}${currencySign ?? ""}`
         )
         .join(", ");
       return `${fixedLabel} · ${list}`;

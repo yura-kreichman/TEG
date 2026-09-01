@@ -900,6 +900,7 @@
     "gameRoomOptionsLabel": "Варианты",
     "gameRoomOptionNamePlaceholder": "Название (например, 1 час)",
     "gameRoomOptionDurationPlaceholder": "Минут",
+    "gameRoomOptionUnlimitedLabel": "Без ограничения времени",
     "gameRoomOptionPricePlaceholder": "Цена",
     "gameRoomAddOptionButton": "Добавить вариант",
     "gameRoomRemoveOptionLabel": "Удалить вариант",

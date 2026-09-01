@@ -859,6 +859,7 @@
     "gameRoomOptionsLabel": "Warianty",
     "gameRoomOptionNamePlaceholder": "Nazwa (np. 1 godzina)",
     "gameRoomOptionDurationPlaceholder": "Minut",
+    "gameRoomOptionUnlimitedLabel": "Bez limitu czasu",
     "gameRoomOptionPricePlaceholder": "Cena",
     "gameRoomAddOptionButton": "Dodaj wariant",
     "gameRoomRemoveOptionLabel": "Usuń wariant",

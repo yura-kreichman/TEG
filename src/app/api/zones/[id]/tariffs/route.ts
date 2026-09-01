@@ -63,7 +63,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   let pricingModeValue: string | null = null;
   let roundingModeValue: string | null = null;
   let priceNumber = 0;
-  const optionsData: { durationMinutes: number; price: number; order: number; name?: string }[] = [];
+  const optionsData: { durationMinutes: number | null; price: number; order: number; name?: string }[] = [];
 
   if (isStaysZone(zone)) {
     if (!(LAUNCH_PRICING_MODES as readonly string[]).includes(pricingMode)) {
@@ -80,12 +80,22 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
       for (const opt of options) {
         const o = opt as { name?: unknown; durationMinutes?: unknown; price?: unknown };
         const nm = typeof o?.name === "string" ? o.name.trim() : "";
-        const d = Number(o?.durationMinutes);
         const p = Number(o?.price);
-        if (!nm || !Number.isFinite(d) || d <= 0 || !Number.isFinite(p) || p < 0) {
+        // Безлимит (запрос пользователя 2026-09-01) — durationMinutes
+        // приходит null/пустым, значит «без ограничения времени». Ноль и
+        // отрицательные по-прежнему отвергаем: ноль занят под ставки «По
+        // факту», а «0 минут» не имеет смысла как длительность.
+        const unlimited = o?.durationMinutes == null || o?.durationMinutes === "";
+        const d = unlimited ? null : Number(o?.durationMinutes);
+        if (!nm || (d !== null && (!Number.isFinite(d) || d <= 0)) || !Number.isFinite(p) || p < 0) {
           return NextResponse.json({ error: "Некорректный вариант тарифа" }, { status: 400 });
         }
-        optionsData.push({ durationMinutes: Math.round(d), price: p, order: optionsData.length, name: nm });
+        optionsData.push({
+          durationMinutes: d === null ? null : Math.round(d),
+          price: p,
+          order: optionsData.length,
+          name: nm,
+        });
       }
     } else {
       roundingModeValue = "up";
@@ -126,12 +136,23 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     for (const opt of options) {
       const o = opt as { name?: unknown; durationMinutes?: unknown; price?: unknown };
       const nm = typeof o?.name === "string" ? o.name.trim() : "";
-      const d = Number(o?.durationMinutes);
       const p = Number(o?.price);
-      if (!nm || !Number.isFinite(d) || d <= 0 || !Number.isFinite(p) || p < 0) {
+      // Безлимит доступен и здесь (запрос пользователя 2026-09-01: «любого
+      // тарифа, где есть продолжительность»). У Пусков он означает не то же
+      // самое, что плоский тариф: плоский закрывает пуск мгновенно
+      // (startedAt === endedAt), а безлимитный держит актив занятым, пока
+      // сотрудник не остановит — «машинка катает, сколько катает».
+      const unlimited = o?.durationMinutes == null || o?.durationMinutes === "";
+      const d = unlimited ? null : Number(o?.durationMinutes);
+      if (!nm || (d !== null && (!Number.isFinite(d) || d <= 0)) || !Number.isFinite(p) || p < 0) {
         return NextResponse.json({ error: "Некорректный вариант тарифа" }, { status: 400 });
       }
-      optionsData.push({ durationMinutes: Math.round(d), price: p, order: optionsData.length, name: nm });
+      optionsData.push({
+        durationMinutes: d === null ? null : Math.round(d),
+        price: p,
+        order: optionsData.length,
+        name: nm,
+      });
     }
   } else {
     priceNumber = Number(price);

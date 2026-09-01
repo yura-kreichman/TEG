@@ -859,6 +859,7 @@
     "gameRoomOptionsLabel": "Варианттар",
     "gameRoomOptionNamePlaceholder": "Аты (мисалы, 1 саат)",
     "gameRoomOptionDurationPlaceholder": "Мүнөт",
+    "gameRoomOptionUnlimitedLabel": "Убакыт чектөөсүз",
     "gameRoomOptionPricePlaceholder": "Баа",
     "gameRoomAddOptionButton": "Вариант кошуу",
     "gameRoomRemoveOptionLabel": "Вариантты өчүрүү",

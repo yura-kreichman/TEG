@@ -859,6 +859,7 @@
     "gameRoomOptionsLabel": "Вариантҳо",
     "gameRoomOptionNamePlaceholder": "Ном (масалан, 1 соат)",
     "gameRoomOptionDurationPlaceholder": "Дақиқа",
+    "gameRoomOptionUnlimitedLabel": "Бидуни маҳдудияти вақт",
     "gameRoomOptionPricePlaceholder": "Нарх",
     "gameRoomAddOptionButton": "Илова кардани вариант",
     "gameRoomRemoveOptionLabel": "Нест кардани вариант",

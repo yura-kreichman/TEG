@@ -39,7 +39,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tariffs/[i
   // опции"), проще, чем точечный diff по id, и достаточно для реалистичных
   // 2-4 вариантов на тариф. undefined — не трогать options вообще (например,
   // PATCH только name).
-  let optionsData: { durationMinutes: number; price: number; order: number; name?: string }[] | undefined;
+  let optionsData: { durationMinutes: number | null; price: number; order: number; name?: string }[] | undefined;
 
   if (name !== undefined) {
     if (typeof name !== "string" || name.trim().length === 0) {
@@ -100,12 +100,21 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/tariffs/[i
       for (const opt of options) {
         const o = opt as { name?: unknown; durationMinutes?: unknown; price?: unknown };
         const nm = typeof o?.name === "string" ? o.name.trim() : "";
-        const d = Number(o?.durationMinutes);
         const p = Number(o?.price);
-        if (!nm || !Number.isFinite(d) || d <= 0 || !Number.isFinite(p) || p < 0) {
+        // Безлимит (запрос пользователя 2026-09-01) — пустая длительность
+        // значит «без ограничения времени». Ноль отвергаем: он занят под
+        // именованные ставки «По факту» ниже.
+        const unlimited = o?.durationMinutes == null || o?.durationMinutes === "";
+        const d = unlimited ? null : Number(o?.durationMinutes);
+        if (!nm || (d !== null && (!Number.isFinite(d) || d <= 0)) || !Number.isFinite(p) || p < 0) {
           return NextResponse.json({ error: "Некорректный вариант тарифа" }, { status: 400 });
         }
-        optionsData.push({ durationMinutes: Math.round(d), price: p, order: optionsData.length, name: nm });
+        optionsData.push({
+          durationMinutes: d === null ? null : Math.round(d),
+          price: p,
+          order: optionsData.length,
+          name: nm,
+        });
       }
       data.roundingMode = null;
       data.minAmount = null;

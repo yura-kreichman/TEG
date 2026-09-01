@@ -859,6 +859,7 @@
     "gameRoomOptionsLabel": "Варіанти",
     "gameRoomOptionNamePlaceholder": "Назва (наприклад, 1 година)",
     "gameRoomOptionDurationPlaceholder": "Хвилин",
+    "gameRoomOptionUnlimitedLabel": "Без обмеження часу",
     "gameRoomOptionPricePlaceholder": "Ціна",
     "gameRoomAddOptionButton": "Додати варіант",
     "gameRoomRemoveOptionLabel": "Видалити варіант",

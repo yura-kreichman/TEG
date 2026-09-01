@@ -859,6 +859,7 @@
     "gameRoomOptionsLabel": "Seçenekler",
     "gameRoomOptionNamePlaceholder": "Ad (örn. 1 saat)",
     "gameRoomOptionDurationPlaceholder": "Dakika",
+    "gameRoomOptionUnlimitedLabel": "Süre sınırı yok",
     "gameRoomOptionPricePlaceholder": "Fiyat",
     "gameRoomAddOptionButton": "Seçenek ekle",
     "gameRoomRemoveOptionLabel": "Seçeneği sil",

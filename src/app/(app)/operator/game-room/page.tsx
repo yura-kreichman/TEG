@@ -38,7 +38,8 @@ const LAUNCH_SPLIT_METHODS = ["cash", "mobile", "abonement"] as const;
 
 interface AssetTariffOption {
   id: string;
-  durationMinutes: number;
+  // null — «без ограничения времени» (запрос пользователя 2026-09-01).
+  durationMinutes: number | null;
   price: number;
   // Только "per_minute" — название ставки ("Будни"/"Выходные"), null у "fixed".
   name: string | null;
@@ -838,6 +839,13 @@ export default function StaysZonePage() {
                     now,
                     selectedZone?.amountRoundingEnabled ?? false
                   );
+                  // Безлимитный вариант «За вход» (durationMinutesSnapshot ===
+                  // null, запрос пользователя 2026-09-01) идёт по той же ветке
+                  // «время вверх», что и «По факту» — обратному отсчёту не от
+                  // чего считать. Значок ∞ добавлен отдельной строкой ниже, а
+                  // не в само число: он статичен, а число — единственное, что
+                  // отличает браслеты друг от друга на экране.
+                  const unlimitedStay = l.pricingMode === "fixed" && l.durationMinutesSnapshot == null;
                   const timeText =
                     l.pricingMode === "fixed" && l.durationMinutesSnapshot != null
                       ? formatMMSS(l.durationMinutesSnapshot * 60000 - elapsedMs)
@@ -1092,6 +1100,20 @@ export default function StaysZonePage() {
                                 пульсирующая красная рамка тайла (см. выше). */}
                             {timeText}
                           </span>
+                          {/* ∞ у безлимитного «За вход» — отдельной строкой под
+                              временем, на месте, где у «По факту» стоит сумма
+                              (у «За вход» её нет: цена известна и оплачена на
+                              старте, поэтому строка свободна). Крупный, но
+                              приглушённый: он статичен и не должен спорить с
+                              числом выше. */}
+                          {unlimitedStay && (
+                            <span
+                              aria-label={t.zoneDetail.gameRoomOptionUnlimitedLabel}
+                              className="text-[clamp(1rem,22cqw,2rem)] font-extrabold leading-none text-muted-foreground"
+                            >
+                              ∞
+                            </span>
+                          )}
                           {l.pricingMode === "per_minute" && (
                             // size="display" — сумма растёт со временем ("По
                             // факту", руб/мин), в маленьком квадратном тайле
@@ -1237,7 +1259,13 @@ export default function StaysZonePage() {
                     disabled={starting}
                     onClick={() => setAddFlow({ stage: "payment", optionId: opt.id })}
                   >
-                    <span>{opt.name ?? `${opt.durationMinutes} ${t.operatorApp.workTime.minutesShort}`}</span>
+                    {/* Безлимитный вариант подписан ∞ вместо длительности. */}
+                    <span>
+                      {opt.name ??
+                        (opt.durationMinutes == null
+                          ? "∞"
+                          : `${opt.durationMinutes} ${t.operatorApp.workTime.minutesShort}`)}
+                    </span>
                     <Money value={opt.price} />
                   </Button>
                 </PressableScale>

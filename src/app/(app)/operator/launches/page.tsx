@@ -32,7 +32,7 @@ import { cn, colorTagGradient } from "@/lib/utils";
 interface TariffOptionCtx {
   id: string;
   name: string | null;
-  durationMinutes: number;
+  durationMinutes: number | null;
   price: number;
 }
 
@@ -56,7 +56,7 @@ interface OpenLaunch {
   tariffId: string;
   startedAt: string;
   priceSnapshot: number;
-  durationMinutesSnapshot: number;
+  durationMinutesSnapshot: number | null;
 }
 
 interface AssetCtx {
@@ -402,6 +402,12 @@ export default function LaunchesZonePage() {
   }
 
   function isLaunchExpired(l: OpenLaunch): boolean {
+    // Безлимитный тариф (durationMinutesSnapshot === null, запрос
+    // пользователя 2026-09-01) не истекает никогда. Проверка обязательна:
+    // в JavaScript `null * 60000` это НОЛЬ, а не NaN, поэтому без неё
+    // expiresAt совпал бы с моментом старта и пуск считался бы истёкшим
+    // мгновенно — с писком, вибрацией и красным пульсирующим тайлом.
+    if (l.durationMinutesSnapshot == null) return false;
     const expiresAt = new Date(l.startedAt).getTime() + l.durationMinutesSnapshot * 60000;
     return now.getTime() >= expiresAt;
   }
@@ -410,6 +416,8 @@ export default function LaunchesZonePage() {
   // запрос пользователя 2026-07-28) — разово на каждый пуск.
   useEffect(() => {
     for (const l of openLaunches) {
+      // Безлимитный пуск не сигналит — истекать нечему.
+      if (l.durationMinutesSnapshot == null) continue;
       const expiresAt = new Date(l.startedAt).getTime() + l.durationMinutesSnapshot * 60000;
       if (now.getTime() >= expiresAt && !alertedRef.current.has(l.id)) {
         alertedRef.current.add(l.id);
@@ -541,15 +549,24 @@ export default function LaunchesZonePage() {
               const count = countByAsset.get(a.id) ?? 0;
               const openLaunch = openLaunchByAsset.get(a.id);
               const expired = openLaunch ? isLaunchExpired(openLaunch) : false;
-              const remainingMs = openLaunch
-                ? new Date(openLaunch.startedAt).getTime() + openLaunch.durationMinutesSnapshot * 60000 - now.getTime()
-                : 0;
+              // Безлимитный пуск (durationMinutesSnapshot === null) — остатка
+              // нет по определению; считаем время, прошедшее с начала, и
+              // показываем его вверх, как у «Прибываний».
+              const unlimited = openLaunch != null && openLaunch.durationMinutesSnapshot == null;
+              const elapsedMs = openLaunch ? now.getTime() - new Date(openLaunch.startedAt).getTime() : 0;
+              const remainingMs =
+                openLaunch && openLaunch.durationMinutesSnapshot != null
+                  ? new Date(openLaunch.startedAt).getTime() + openLaunch.durationMinutesSnapshot * 60000 - now.getTime()
+                  : 0;
               const interactingHere = openLaunch !== undefined && interacting === openLaunch.id;
               // Последние 30 секунд до истечения — тайл тоже начинает
               // мигать, не только после самого истечения (запрос
               // пользователя 2026-07-28: "когда время приближается, он
               // должен тоже немного мигать").
-              const nearExpiry = openLaunch !== undefined && !expired && remainingMs <= 30000;
+              // !unlimited обязательно: у безлимитного remainingMs равен нулю
+              // по построению выше, и без этой проверки тайл мигал бы
+              // «вот-вот истечёт» с первой же секунды.
+              const nearExpiry = openLaunch !== undefined && !expired && !unlimited && remainingMs <= 30000;
 
               // "Точно?" — на весь тайл, тот же приём, что у "Прибываний"
               // при досрочной остановке (запрос пользователя 2026-07-28: "не
@@ -635,7 +652,11 @@ export default function LaunchesZonePage() {
                         "bg-[color-mix(in_oklab,var(--primary)_35%,var(--card))] text-primary"
                   )}
                 >
-                  {formatMMSS(Math.max(0, remainingMs))}
+                  {/* Безлимит: время идёт ВВЕРХ, а не обратным отсчётом, и
+                      рядом ∞ — плашка никогда не покраснеет, но сколько актив
+                      уже занят, видеть надо (решение пользователя
+                      2026-09-01). */}
+                  {unlimited ? `∞ ${formatMMSS(elapsedMs)}` : formatMMSS(Math.max(0, remainingMs))}
                 </span>
               ) : (
                 // Счётчик пусков — значительно крупнее прежнего (запрос
@@ -734,7 +755,8 @@ export default function LaunchesZonePage() {
                       setTapFlow({ zoneId: tapFlow.zoneId, assetId: tapFlow.assetId, tariffId: tapFlow.tariffId, optionId: opt.id })
                     }
                   >
-                    <span>{opt.name ?? formatMMSS(opt.durationMinutes * 60000)}</span>
+                    {/* Безлимитный вариант подписан ∞ вместо длительности. */}
+                    <span>{opt.name ?? (opt.durationMinutes == null ? "∞" : formatMMSS(opt.durationMinutes * 60000))}</span>
                     <Money value={opt.price} />
                   </Button>
                 </PressableScale>

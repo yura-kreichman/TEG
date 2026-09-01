@@ -859,6 +859,7 @@
     "gameRoomOptionsLabel": "Variantlar",
     "gameRoomOptionNamePlaceholder": "Ad (məsələn, 1 saat)",
     "gameRoomOptionDurationPlaceholder": "Dəqiqə",
+    "gameRoomOptionUnlimitedLabel": "Vaxt məhdudiyyəti yoxdur",
     "gameRoomOptionPricePlaceholder": "Qiymət",
     "gameRoomAddOptionButton": "Variant əlavə et",
     "gameRoomRemoveOptionLabel": "Variantı sil",

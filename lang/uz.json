@@ -859,6 +859,7 @@
     "gameRoomOptionsLabel": "Variantlar",
     "gameRoomOptionNamePlaceholder": "Nomi (masalan, 1 soat)",
     "gameRoomOptionDurationPlaceholder": "Daqiqa",
+    "gameRoomOptionUnlimitedLabel": "Vaqt cheklovisiz",
     "gameRoomOptionPricePlaceholder": "Narx",
     "gameRoomAddOptionButton": "Variant qo'shish",
     "gameRoomRemoveOptionLabel": "Variantni o'chirish",

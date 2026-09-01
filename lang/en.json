@@ -859,6 +859,7 @@
     "gameRoomOptionsLabel": "Options",
     "gameRoomOptionNamePlaceholder": "Name (e.g. 1 hour)",
     "gameRoomOptionDurationPlaceholder": "Minutes",
+    "gameRoomOptionUnlimitedLabel": "No time limit",
     "gameRoomOptionPricePlaceholder": "Price",
     "gameRoomAddOptionButton": "Add option",
     "gameRoomRemoveOptionLabel": "Remove option",

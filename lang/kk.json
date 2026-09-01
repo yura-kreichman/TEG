@@ -859,6 +859,7 @@
     "gameRoomOptionsLabel": "Нұсқалар",
     "gameRoomOptionNamePlaceholder": "Атауы (мысалы, 1 сағат)",
     "gameRoomOptionDurationPlaceholder": "Минут",
+    "gameRoomOptionUnlimitedLabel": "Уақыт шектеуінсіз",
     "gameRoomOptionPricePlaceholder": "Баға",
     "gameRoomAddOptionButton": "Нұсқа қосу",
     "gameRoomRemoveOptionLabel": "Нұсқаны жою",

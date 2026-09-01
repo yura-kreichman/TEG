@@ -859,6 +859,7 @@
     "gameRoomOptionsLabel": "Варыянты",
     "gameRoomOptionNamePlaceholder": "Назва (напрыклад, 1 гадзіна)",
     "gameRoomOptionDurationPlaceholder": "Хвілін",
+    "gameRoomOptionUnlimitedLabel": "Без абмежавання часу",
     "gameRoomOptionPricePlaceholder": "Цана",
     "gameRoomAddOptionButton": "Дадаць варыянт",
     "gameRoomRemoveOptionLabel": "Выдаліць варыянт",

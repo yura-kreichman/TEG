@@ -859,6 +859,7 @@
     "gameRoomOptionsLabel": "ვარიანტები",
     "gameRoomOptionNamePlaceholder": "სახელი (მაგ., 1 საათი)",
     "gameRoomOptionDurationPlaceholder": "წუთი",
+    "gameRoomOptionUnlimitedLabel": "დროის შეზღუდვის გარეშე",
     "gameRoomOptionPricePlaceholder": "ფასი",
     "gameRoomAddOptionButton": "ვარიანტის დამატება",
     "gameRoomRemoveOptionLabel": "ვარიანტის წაშლა",

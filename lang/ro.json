@@ -859,6 +859,7 @@
     "gameRoomOptionsLabel": "Variante",
     "gameRoomOptionNamePlaceholder": "Nume (de ex., 1 oră)",
     "gameRoomOptionDurationPlaceholder": "Minute",
+    "gameRoomOptionUnlimitedLabel": "Fără limită de timp",
     "gameRoomOptionPricePlaceholder": "Preț",
     "gameRoomAddOptionButton": "Adaugă variantă",
     "gameRoomRemoveOptionLabel": "Șterge varianta",
