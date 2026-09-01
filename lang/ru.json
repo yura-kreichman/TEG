@@ -608,6 +608,7 @@
     "renameCompanySlugWarning": "Название компании также используется для адреса постоянных ссылок (Инструктажи, Лендинг).",
     "latestResultsLabel": "Последние итоги",
     "liveRevenueTitle": "Выручка сейчас",
+    "liveNowLabel": "Идут сейчас",
     "today": "сегодня",
     "yesterday": "вчера",
     "toMoneyLink": "В «Деньги»",

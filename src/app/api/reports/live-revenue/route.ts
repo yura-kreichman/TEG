@@ -87,6 +87,25 @@ export async function GET(request: Request) {
     })
   );
 
+  // Занятость «прямо сейчас» — сколько браслетов/пусков идёт в зоне (запрос
+  // владельца Игроленда 2026-09-01: «сколько сейчас детей в Лабиринте»).
+  // Это АГРЕГАТ, а не список отдельных пусков: спека 04-game-room.md
+  // запрещает владельцу следить за пусками поштучно, и одно число этого не
+  // нарушает — оно про вместимость зоны, а не про конкретного ребёнка.
+  //
+  // Одним groupBy на все зоны сразу, а не запросом на зону: карточка Главной
+  // и так делает по два агрегата на зону выше.
+  const staysAndLaunchZoneIds = scopedZones.filter((z) => !isTicketsZone(z)).map((z) => z.id);
+  const openByZone = new Map<string, number>();
+  if (staysAndLaunchZoneIds.length > 0) {
+    const grouped = await prisma.launch.groupBy({
+      by: ["zoneId"],
+      where: { zoneId: { in: staysAndLaunchZoneIds }, isOpen: true, voidedAt: null },
+      _count: { _all: true },
+    });
+    for (const g of grouped) openByZone.set(g.zoneId, g._count._all);
+  }
+
   let total = 0;
   let cash = 0;
   let mobile = 0;
@@ -117,13 +136,19 @@ export async function GET(request: Request) {
         pointName: points.length > 1 ? zone.point.name : null,
         iconKey: zone.iconKey,
         total: round2(zoneTotal),
+        openCount: openByZone.get(zone.id) ?? 0,
       };
     })
     // Нулевая выручка — не показываем строку вовсе (запрос пользователя
     // 2026-07-25, аудит: "нули нам не нужны") — зона без единого
     // завершённого пуска/билета с прошлой сдачи не несёт информации.
-    .filter((z) => z.total > 0)
-    .sort((a, b) => b.total - a.total);
+    //
+    // ИСКЛЮЧЕНИЕ — идущие прямо сейчас (2026-09-01): у тарифа «По факту»
+    // сумма появляется только на стопе, поэтому зона, где сеансы идут, но
+    // ещё ни один не закрыт, имеет ровно нулевую выручку. Без этой поправки
+    // счётчик занятости пропадал бы именно там, где он и нужен.
+    .filter((z) => z.total > 0 || z.openCount > 0)
+    .sort((a, b) => b.total - a.total || b.openCount - a.openCount);
 
   return NextResponse.json({
     points,

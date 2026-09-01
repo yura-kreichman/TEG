@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { motion } from "framer-motion";
-import { Building2, CalendarDays, ChevronRight, ImagePlus, KeyRound, ListChecks, LogOut, MapPin, Pencil, RefreshCcw } from "lucide-react";
+import { Building2, CalendarDays, ChevronRight, ImagePlus, KeyRound, ListChecks, LogOut, MapPin, Pencil, RefreshCcw, UsersRound } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
 import { Input } from "@/components/ui/input";
@@ -115,7 +115,16 @@ interface LiveRevenue {
   total: number;
   cash: number;
   mobile: number;
-  zones: { zoneId: string; zoneName: string; pointName: string | null; iconKey: string | null; total: number }[];
+  zones: {
+    zoneId: string;
+    zoneName: string;
+    pointName: string | null;
+    iconKey: string | null;
+    total: number;
+    // Сколько браслетов/пусков идёт прямо сейчас (запрос владельца Игроленда
+    // 2026-09-01: «сколько сейчас детей в Лабиринте»). Ноль — не показываем.
+    openCount: number;
+  }[];
 }
 
 interface Summary {
@@ -372,8 +381,25 @@ export function OwnerDashboardCard({
                         {z.pointName && <span className="text-muted-foreground"> · {z.pointName}</span>}
                       </span>
                     </span>
-                    <span className="shrink-0 font-bold text-foreground">
-                      <Money value={z.total} />
+                    <span className="flex shrink-0 items-center gap-2">
+                      {/* Занятость «прямо сейчас» — сколько идёт в зоне. Это
+                          агрегат, а не список пусков: спека запрещает
+                          владельцу следить за пусками поштучно, одно число
+                          этого не нарушает. Ноль не показываем — пустая зона
+                          не несёт информации, как и нулевая выручка рядом. */}
+                      {z.openCount > 0 && (
+                        <span
+                          title={t.home.liveNowLabel}
+                          aria-label={`${t.home.liveNowLabel}: ${z.openCount}`}
+                          className="inline-flex items-center gap-1 rounded-full bg-primary/12 px-2 py-0.5 font-bold text-primary"
+                        >
+                          <UsersRound className="size-3.5 shrink-0" />
+                          {z.openCount}
+                        </span>
+                      )}
+                      <span className="font-bold text-foreground">
+                        <Money value={z.total} />
+                      </span>
                     </span>
                   </div>
                 ))}
