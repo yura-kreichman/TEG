@@ -6,6 +6,7 @@ import type { CurrencyCode } from "@/lib/currency";
 import { BOT_STRINGS, greetingLine } from "@/lib/telegram-client-i18n";
 import type { Locale } from "@/lib/locales";
 import { PAYMENT_SPLIT_METHOD, validateSplitLegs, type PaymentLegInput } from "@/lib/payment-split";
+import { normalizePhone, classifyClientQuery, CLIENT_SEARCH_LIMIT } from "@/lib/client-query";
 
 // Модуль "Абонементы" (запрос пользователя 2026-07-17) — Abonement — это
 // ТАРИФ-ПЛАН владельца ("заплатить price → зачислить creditAmount"), БЕЗ
@@ -30,10 +31,17 @@ export type AbonementTopupPaymentMethod = (typeof ABONEMENT_TOPUP_PAYMENT_METHOD
 
 type Tx = Prisma.TransactionClient;
 
-/** Только цифры — так "+7 999 123-45-67" и "79991234567" считаются одним номером. */
-export function normalizePhone(raw: string): string {
-  return raw.replace(/\D/g, "");
-}
+// Разбор строки поиска живёт в lib/client-query.ts — он нужен и клиентским
+// компонентам, а этот файл тянет prisma. normalizePhone ("+7 999 123-45-67"
+// и "79991234567" — один номер) переехал туда же и ре-экспортируется здесь,
+// чтобы прежние импорты не переписывать.
+export {
+  normalizePhone,
+  PHONE_SEARCH_MIN_DIGITS,
+  PHONE_CREATE_MIN_DIGITS,
+  CLIENT_SEARCH_LIMIT,
+  isCreatableClientPhone,
+} from "@/lib/client-query";
 
 // Длина хвоста-ключа. Восемь — из-за Молдовы (национальный номер
 // восьмизначный); подробности у поля AbonementWallet.phoneKey в schema.prisma.
@@ -91,6 +99,107 @@ export async function findWalletByPhone(tenantId: string, rawPhone: string, tx: 
   const phone = normalizePhone(rawPhone);
   if (!phone) return null;
   return tx.abonementWallet.findUnique({ where: { tenantId_phone: { tenantId, phone } } });
+}
+
+export interface ClientSearchOutcome {
+  /** Как разобрали запрос — см. classifyClientQuery. */
+  kind: "empty" | "name" | "tooShort" | "tail" | "phone";
+  /** Только для kind="phone": совпал номер целиком. */
+  exact: Awaited<ReturnType<typeof findWalletByPhone>>;
+  candidates: Awaited<ReturnType<typeof findWalletCandidatesByKey>>;
+  /** Совпадений больше потолка — показываем часть и просим уточнить. */
+  truncated: boolean;
+}
+
+/**
+ * Единый поиск клиента для всех экранов сотрудника и владельца (запрос
+ * пользователя 2026-09-01: искать по последним четырём цифрам номера и по
+ * имени/фамилии). Собирает три уже существовавших по отдельности приёма в
+ * одну точку, чтобы поиск в Прибываниях, Товарах, Билетах и Клиентах вёл
+ * себя одинаково.
+ *
+ * ГЛАВНОЕ ПРАВИЛО: точное совпадение возвращается ТОЛЬКО когда набран номер
+ * целиком (kind="phone"). Хвост из четырёх цифр и имя всегда дают список
+ * кандидатов — даже если совпадение ровно одно. Четыре цифры это 10^4
+ * вариантов: у тенанта с несколькими тысячами клиентов единственное
+ * совпадение перестаёт быть доказательством, а с выбранного кошелька потом
+ * списываются деньги. Личность подтверждает живой человек у кассы — этим
+ * касса и отличается от бота, где правило строже (isSuffixMatch выше) и
+ * ослаблять его нельзя.
+ *
+ * Поиск по имени идёт по словам через И: "петров иван" находит "Иван
+ * Петров". Отдельных полей "Имя"/"Фамилия" у кошелька нет и не нужно — имя
+ * одно свободное поле, подстрока закрывает оба случая.
+ */
+export async function searchWallets(
+  tenantId: string,
+  rawQuery: string,
+  tx: Tx | typeof prisma = prisma
+): Promise<ClientSearchOutcome> {
+  const query = rawQuery.trim();
+  const kind = classifyClientQuery(query);
+
+  if (kind === "empty" || kind === "tooShort") {
+    return { kind, exact: null, candidates: [], truncated: false };
+  }
+
+  if (kind === "phone") {
+    const exact = await findWalletByPhone(tenantId, query, tx);
+    if (exact) return { kind, exact, candidates: [], truncated: false };
+    // Прежнее поведение без изменений: кандидаты по равенству phoneKey
+    // (последние 8 цифр), индекс [tenantId, phoneKey].
+    const candidates = await findWalletCandidatesByKey(tenantId, query, tx);
+    return { kind, exact: null, candidates, truncated: false };
+  }
+
+  // Ни хвост номера, ни подстрока имени btree-индексом не берутся — это
+  // всегда скан, поэтому запрос обязан быть скоуплен на тенанта и обрезан
+  // потолком. На базе в тысячи кошельков это доли миллисекунды; если у
+  // какого-то тенанта база вырастет на порядки, лечится pg_trgm, а не
+  // ослаблением правил выше.
+  const where: Prisma.AbonementWalletWhereInput =
+    kind === "tail"
+      ? { tenantId, phone: { endsWith: normalizePhone(query) } }
+      : {
+          tenantId,
+          AND: query
+            .split(/\s+/)
+            .filter(Boolean)
+            .map((word) => ({ name: { contains: word, mode: "insensitive" as const } })),
+        };
+
+  const rows = await tx.abonementWallet.findMany({
+    where,
+    orderBy: kind === "tail" ? { phone: "asc" } : { name: "asc" },
+    take: CLIENT_SEARCH_LIMIT + 1,
+  });
+
+  return {
+    kind,
+    exact: null,
+    candidates: rows.slice(0, CLIENT_SEARCH_LIMIT),
+    truncated: rows.length > CLIENT_SEARCH_LIMIT,
+  };
+}
+
+/**
+ * Отдать кандидата наружу. Баланс — ТОЛЬКО когда сотрудник набрал номер
+ * целиком (решение пользователя 2026-09-01). При поиске по четырём цифрам
+ * или по имени в список регулярно попадают посторонние: сумма на счету не
+ * помогает опознать человека, а показывать чужие деньги незачем. После
+ * выбора кандидата экран повторяет поиск по его полному номеру — там баланс
+ * появляется, как и раньше.
+ */
+export function serializeCandidate(
+  wallet: { id: string; phone: string; name: string | null; balance: unknown },
+  withBalance: boolean
+) {
+  return {
+    id: wallet.id,
+    phone: wallet.phone,
+    name: wallet.name,
+    ...(withBalance ? { balance: Number(wallet.balance) } : {}),
+  };
 }
 
 // Уже привязал Telegram-бота (запрос пользователя 2026-07-23: "если клиент

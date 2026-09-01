@@ -10,7 +10,9 @@ import { Label } from "@/components/ui/label";
 import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { Money } from "@/components/money";
-import { PhoneInput } from "@/components/phone-input";
+import { ClientSearchInput } from "@/components/client-search-input";
+import { DigitPad } from "@/components/digit-pad";
+import { isSearchableClientQuery } from "@/lib/client-query";
 import { useI18n } from "@/components/i18n-provider";
 import { playErrorChime } from "@/lib/beep";
 
@@ -19,6 +21,19 @@ interface WalletCtx {
   phone: string;
   name: string | null;
   balance: number;
+}
+
+/**
+ * Кандидат из списка. Баланс приходит ТОЛЬКО когда искали по полному номеру
+ * (см. serializeCandidate в lib/abonement.ts): при поиске по четырём цифрам
+ * или по имени в список регулярно попадают посторонние, и сумма на их счету
+ * опознать человека не помогает.
+ */
+interface CandidateCtx {
+  id: string;
+  phone: string;
+  name: string | null;
+  balance?: number;
 }
 
 interface AbonementCtx {
@@ -63,7 +78,10 @@ interface AbonementPaymentSheetProps {
 export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent, confirmLabel }: AbonementPaymentSheetProps) {
   const t = useI18n();
 
-  const [phone, setPhone] = useState("");
+  // Строка поиска: номер целиком, последние 4+ цифр или имя (запрос
+  // пользователя 2026-09-01) — что именно, решает содержимое, см.
+  // classifyClientQuery в lib/client-query.ts.
+  const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   // undefined — ещё не искали, объект — нашли. "Не нашли" здесь не отдельное
   // состояние found — это всплывающий тост (см. flashSearchError ниже), а не
@@ -72,16 +90,20 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
   // списывать, оператор просто выбирает другой способ оплаты; создание
   // нового клиента остаётся только в разделе Клиенты).
   const [found, setFound] = useState<WalletCtx | undefined>(undefined);
-  // Кандидаты по хвосту номера, когда точного совпадения нет.
-  const [similar, setSimilar] = useState<WalletCtx[]>([]);
+  // Кандидаты, когда точного совпадения нет.
+  const [similar, setSimilar] = useState<CandidateCtx[]>([]);
+  // Как сервер разобрал запрос: "phone" — набрали номер целиком, тогда
+  // кандидаты это «похожие»; "tail"/"name" — просто «найденные».
+  const [searchKind, setSearchKind] = useState<string | null>(null);
+  const [truncated, setTruncated] = useState(false);
 
   // Выбор кандидата: подставляем его точный номер и повторяем поиск — дальше
   // лист ведёт себя так же, как если бы номер набрали верно с первого раза.
   function selectSimilar(exactPhone: string) {
-    setPhone(exactPhone);
+    setQuery(exactPhone);
     setSimilar([]);
     setSearching(true);
-    fetch(`/api/operator/abonements?phone=${encodeURIComponent(exactPhone)}`)
+    fetch(`/api/operator/abonements?q=${encodeURIComponent(exactPhone)}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.error || !data.abonement) return;
@@ -124,8 +146,11 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) {
-      setPhone("");
+      setQuery("");
       setFound(undefined);
+      setSimilar([]);
+      setSearchKind(null);
+      setTruncated(false);
       setPendingPlanId(null);
       setError(null);
       setSearchError(null);
@@ -144,7 +169,7 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
   function flashSearchError(message: string) {
     playErrorChime();
     setSearchError(message);
-    setPhone("");
+    setQuery("");
     if (searchErrorTimerRef.current) clearTimeout(searchErrorTimerRef.current);
     searchErrorTimerRef.current = setTimeout(() => setSearchError(null), 2500);
   }
@@ -157,10 +182,10 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
   }
 
   function handleSearch() {
-    if (!phone.trim() || searching) return;
+    if (!isSearchableClientQuery(query) || searching) return;
     setSearching(true);
     setError(null);
-    fetch(`/api/operator/abonements?phone=${encodeURIComponent(phone)}`)
+    fetch(`/api/operator/abonements?q=${encodeURIComponent(query)}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
@@ -174,15 +199,18 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
           // критичнее, чем на других экранах: не найдя кошелёк, оператор не
           // может принять часть оплаты балансом и вынужден брать всю сумму
           // деньгами — то есть баг тихо меняет способ расчёта.
-          const similar = (data.similar ?? []) as WalletCtx[];
+          const similar = (data.similar ?? []) as CandidateCtx[];
           if (similar.length > 0) {
             setSimilar(similar);
+            setSearchKind(data.kind ?? null);
+            setTruncated(Boolean(data.truncated));
             return;
           }
           flashSearchError(t.operatorApp.abonement.clientNotFoundLabel);
           return;
         }
         setSimilar([]);
+        setTruncated(false);
         setFound(data.abonement);
         if (data.abonement.balance < amount) loadPlans();
       })
@@ -258,7 +286,11 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
                 подставляет точный номер и повторяет поиск. */}
             {similar.length > 0 && (
               <div className="flex flex-col gap-2">
-                <span className="text-section-title">{t.operatorApp.abonement.similarTitle}</span>
+                <span className="text-section-title">
+                  {searchKind === "phone"
+                    ? t.operatorApp.abonement.similarTitle
+                    : t.operatorApp.abonement.matchesTitle}
+                </span>
                 {similar.map((s) => (
                   <PressableScale key={s.id}>
                     <button
@@ -272,12 +304,21 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
                         </span>
                         <span className="block truncate tabular-nums text-caption-airbnb">{s.phone}</span>
                       </span>
-                      <span className="shrink-0 text-body-airbnb font-bold tabular-nums">
-                        <Money value={s.balance} />
-                      </span>
+                      {/* Баланс — только у кандидатов из поиска по полному
+                          номеру, см. CandidateCtx выше. */}
+                      {s.balance != null && (
+                        <span className="shrink-0 text-body-airbnb font-bold tabular-nums">
+                          <Money value={s.balance} />
+                        </span>
+                      )}
                     </button>
                   </PressableScale>
                 ))}
+                {truncated && (
+                  <span className="text-caption-airbnb text-muted-foreground">
+                    {t.operatorApp.abonement.tooManyMatches}
+                  </span>
+                )}
               </div>
             )}
             {/* "Клиент не найден" — тот же самогаснущий тост, что "Заказ не
@@ -304,22 +345,27 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
             </AnimatePresence>
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.abonement.searchTitle}</h2>
             <div className="flex flex-col gap-1">
-              <Label htmlFor="abonementPhone">{t.operatorApp.abonement.phoneLabel}</Label>
-              <PhoneInput
-                id="abonementPhone"
+              <Label htmlFor="abonementQuery">{t.operatorApp.abonement.searchLabel}</Label>
+              <ClientSearchInput
+                id="abonementQuery"
                 autoFocus
-                value={phone}
-                onChange={setPhone}
+                value={query}
+                onChange={setQuery}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 heightClassName="h-14"
-                sizeClassName="text-2xl font-extrabold tabular-nums"
+                sizeClassName="text-2xl font-extrabold"
               />
             </div>
+            {/* Нумпад — чтобы номер по-прежнему набирался крупными кнопками:
+                поле стало текстовым ради поиска по имени (см.
+                ClientSearchInput), и без нумпада самый частый путь уехал бы
+                на буквенную клавиатуру планшета. */}
+            <DigitPad value={query} onChange={setQuery} />
             <PressableScale>
               <Button
                 type="button"
                 className="relative h-12 w-full pl-14 font-bold"
-                disabled={searching || !phone.trim()}
+                disabled={searching || !isSearchableClientQuery(query)}
                 onClick={handleSearch}
               >
                 <Search className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
@@ -330,11 +376,13 @@ export function AbonementPaymentSheet({ open, onClose, amount, onConfirm, silent
         ) : (
           <>
             <BackLink label={t.common.back} onClick={() => setFound(undefined)} />
-            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{found.name || phone}</h2>
+            {/* Номер берём у найденного кошелька, а не из строки поиска: там
+                теперь может лежать хвост номера или имя. */}
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{found.name || found.phone}</h2>
             {/* Телефон вторичной строкой, когда есть имя (тот же приём, что
                 в Клиентах, abonement-topup-flow.tsx) — иначе он и так
                 заголовок. */}
-            {found.name && <p className="text-caption-airbnb text-muted-foreground">{phone}</p>}
+            {found.name && <p className="text-caption-airbnb text-muted-foreground">{found.phone}</p>}
 
             <div className="flex items-center justify-between rounded-control bg-muted p-3.5">
               <span className="text-caption-airbnb text-muted-foreground">{t.operatorApp.abonement.balanceLabel}</span>

@@ -10,6 +10,9 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
 import { Money } from "@/components/money";
 import { PhoneInput } from "@/components/phone-input";
+import { ClientSearchInput } from "@/components/client-search-input";
+import { DigitPad } from "@/components/digit-pad";
+import { isCreatableClientPhone, isSearchableClientQuery } from "@/lib/client-query";
 import { useI18n } from "@/components/i18n-provider";
 
 export interface LinkedClientInfo {
@@ -17,6 +20,19 @@ export interface LinkedClientInfo {
   phone: string;
   name: string | null;
   balance: number;
+}
+
+/**
+ * Кандидат из списка. Баланс приходит ТОЛЬКО когда искали по полному номеру
+ * (см. serializeCandidate в lib/abonement.ts) — при поиске по четырём цифрам
+ * или по имени в список регулярно попадают посторонние, и показывать их
+ * деньги незачем.
+ */
+interface ClientCandidate {
+  id: string;
+  phone: string;
+  name: string | null;
+  balance?: number;
 }
 
 interface LinkClientSheetProps {
@@ -27,7 +43,7 @@ interface LinkClientSheetProps {
   // `/api/operator/goods/held-orders/${id}/link-client` у Товаров, запрос
   // пользователя 2026-07-31: "абсолютно по тому же принципу") — сам sheet
   // ничего не знает про Launch/GoodsHeldOrder конкретно, просто GET
-  // (?phone=)/POST/DELETE по этому адресу, тот же контракт у обеих сторон.
+  // (?q=)/POST/DELETE по этому адресу, тот же контракт у обеих сторон.
   endpoint: string | null;
   // Уже привязан — сразу открываем на просмотре, не на поиске.
   current: LinkedClientInfo | null;
@@ -48,30 +64,44 @@ interface LinkClientSheetProps {
  * 2026-07-27), поле "Имя" необязательно (t.operatorApp.abonement.nameLabel,
  * тот же ключ, что в abonement-topup-flow.tsx). Никак не влияет на способ
  * оплаты.
+ *
+ * Ищем по номеру целиком, по последним 4+ цифрам или по имени (запрос
+ * пользователя 2026-09-01) — что именно, решает содержимое строки, см.
+ * classifyClientQuery в lib/client-query.ts.
  */
 export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, onUnlinked }: LinkClientSheetProps) {
   const t = useI18n();
-  const [phone, setPhone] = useState("");
+  const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   // undefined — ещё не искали; null — искали, не нашли; объект — нашли.
   const [found, setFound] = useState<LinkedClientInfo | null | undefined>(undefined);
-  // Похожие по хвосту номера — показываются вместо голого «Новый клиент»,
-  // когда точного совпадения нет (реальный баг с прода 2026-08-13: сотрудник
-  // искал 077942424 и 77942424, клиент сохранён как 37377942424, привязка
-  // молча предлагала завести дубликат).
-  const [similar, setSimilar] = useState<LinkedClientInfo[]>([]);
+  // Кандидаты — показываются вместо голого «Новый клиент», когда точного
+  // совпадения нет (реальный баг с прода 2026-08-13: сотрудник искал
+  // 077942424 и 77942424, клиент сохранён как 37377942424, привязка молча
+  // предлагала завести дубликат).
+  const [similar, setSimilar] = useState<ClientCandidate[]>([]);
+  // Как сервер разобрал запрос: "phone" — набрали номер целиком, тогда
+  // кандидаты это «похожие»; "tail"/"name" — искали по хвосту или имени,
+  // тогда это просто «найденные».
+  const [searchKind, setSearchKind] = useState<string | null>(null);
+  const [truncated, setTruncated] = useState(false);
   // Осознанное «всё равно завести нового» — сбрасывается на каждый поиск.
   const [createAnyway, setCreateAnyway] = useState(false);
+  // Номер НОВОГО клиента — отдельно от строки поиска: искать можно по
+  // четырём цифрам или по имени, а завести кошелёк по такой строке нельзя
+  // (см. PHONE_CREATE_MIN_DIGITS). Когда искали полным номером,
+  // подставляется он — сотруднику ничего не приходится набирать заново.
+  const [newPhone, setNewPhone] = useState("");
   const suppressCreate = similar.length > 0 && !createAnyway;
 
   // Выбор кандидата: подставляем его точный номер и повторяем поиск — дальше
   // экран не отличается от случая, когда номер набрали верно сразу.
   function selectSimilar(exactPhone: string) {
-    setPhone(exactPhone);
+    setQuery(exactPhone);
     setSimilar([]);
     setCreateAnyway(false);
     setSearching(true);
-    fetch(`${endpoint}?phone=${encodeURIComponent(exactPhone)}`)
+    fetch(`${endpoint}?q=${encodeURIComponent(exactPhone)}`)
       .then((res) => res.json())
       .then((data) => {
         if (!data.error) setFound(data.client ?? null);
@@ -86,10 +116,13 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) {
-      setPhone("");
+      setQuery("");
       setFound(undefined);
       setSimilar([]);
+      setSearchKind(null);
+      setTruncated(false);
       setCreateAnyway(false);
+      setNewPhone("");
       setName("");
       setError(null);
     }
@@ -97,10 +130,10 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleSearch() {
-    if (!phone.trim() || searching || !endpoint) return;
+    if (!isSearchableClientQuery(query) || searching || !endpoint) return;
     setSearching(true);
     setError(null);
-    fetch(`${endpoint}?phone=${encodeURIComponent(phone)}`)
+    fetch(`${endpoint}?q=${encodeURIComponent(query)}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
@@ -108,7 +141,11 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
           return;
         }
         setSimilar(data.similar ?? []);
+        setSearchKind(data.kind ?? null);
+        setTruncated(Boolean(data.truncated));
         setCreateAnyway(false);
+        // Номер для нового клиента — только если искали именно номером.
+        setNewPhone(isCreatableClientPhone(query) ? query : "");
         setFound(data.client ?? null);
       })
       .catch(() => setError(t.operatorApp.gameRoom.networkError))
@@ -182,22 +219,26 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
           <>
             <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.abonement.searchTitle}</h2>
             <div className="flex flex-col gap-1">
-              <Label htmlFor="linkClientPhone">{t.operatorApp.abonement.phoneLabel}</Label>
-              <PhoneInput
-                id="linkClientPhone"
+              <Label htmlFor="linkClientQuery">{t.operatorApp.abonement.searchLabel}</Label>
+              <ClientSearchInput
+                id="linkClientQuery"
                 autoFocus
-                value={phone}
-                onChange={setPhone}
+                value={query}
+                onChange={setQuery}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 heightClassName="h-14"
-                sizeClassName="text-2xl font-extrabold tabular-nums"
+                sizeClassName="text-2xl font-extrabold"
               />
             </div>
+            {/* Нумпад — чтобы номер по-прежнему набирался крупными кнопками:
+                поле стало текстовым ради поиска по имени, и без него самый
+                частый путь уехал бы на буквенную клавиатуру планшета. */}
+            <DigitPad value={query} onChange={setQuery} />
             <PressableScale>
               <Button
                 type="button"
                 className="relative h-12 w-full pl-14 font-bold"
-                disabled={searching || !phone.trim()}
+                disabled={searching || !isSearchableClientQuery(query)}
                 onClick={handleSearch}
               >
                 <Search className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
@@ -223,7 +264,11 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
                 «похоже», а не «это он», выбирает человек. */}
             {similar.length > 0 && (
               <div className="flex flex-col gap-2">
-                <span className="text-section-title">{t.operatorApp.abonement.similarTitle}</span>
+                <span className="text-section-title">
+                  {searchKind === "phone"
+                    ? t.operatorApp.abonement.similarTitle
+                    : t.operatorApp.abonement.matchesTitle}
+                </span>
                 {similar.map((s) => (
                   <PressableScale key={s.id}>
                     <button
@@ -237,12 +282,19 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
                         </span>
                         <span className="block truncate tabular-nums text-caption-airbnb">{s.phone}</span>
                       </span>
-                      <span className="shrink-0 text-body-airbnb font-bold tabular-nums">
-                        <Money value={s.balance} />
-                      </span>
+                      {s.balance != null && (
+                        <span className="shrink-0 text-body-airbnb font-bold tabular-nums">
+                          <Money value={s.balance} />
+                        </span>
+                      )}
                     </button>
                   </PressableScale>
                 ))}
+                {truncated && (
+                  <span className="text-caption-airbnb text-muted-foreground">
+                    {t.operatorApp.abonement.tooManyMatches}
+                  </span>
+                )}
               </div>
             )}
             {suppressCreate && (
@@ -263,7 +315,19 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
             {!suppressCreate && (
               <>
               <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.abonement.newTitle}</h2>
-              <p className="text-caption-airbnb text-muted-foreground">{phone}</p>
+              {/* Номер — редактируемое поле, а не строка с запросом: искали
+                  могли по хвосту или по имени, и завести кошелёк по такой
+                  строке нельзя. Когда искали полным номером, он уже
+                  подставлен. */}
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="linkClientNewPhone">{t.operatorApp.abonement.phoneLabel}</Label>
+                <PhoneInput
+                  id="linkClientNewPhone"
+                  value={newPhone}
+                  onChange={setNewPhone}
+                  sizeClassName="tabular-nums"
+                />
+              </div>
               <div className="flex flex-col gap-1">
                 <Label htmlFor="linkClientName">{t.operatorApp.abonement.nameLabel}</Label>
                 <Input
@@ -277,8 +341,8 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
                 <Button
                   type="button"
                   className="h-12 w-full font-semibold"
-                  disabled={submitting}
-                  onClick={() => submitLink({ phone, name: name.trim() || undefined })}
+                  disabled={submitting || !isCreatableClientPhone(newPhone)}
+                  onClick={() => submitLink({ phone: newPhone, name: name.trim() || undefined })}
                 >
                   {t.operatorApp.gameRoom.linkClientAssignButton}
                 </Button>

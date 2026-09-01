@@ -8,8 +8,9 @@ import {
   createWalletWithTopupArbitrary,
   describeAbonementTransactionSource,
   findWalletByPhone,
-  findWalletCandidatesByKey,
-  normalizePhone,
+  isCreatableClientPhone,
+  searchWallets,
+  serializeCandidate,
 } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 import { InvalidPaymentSplitError, type PaymentLegInput } from "@/lib/payment-split";
@@ -40,27 +41,35 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const phone = searchParams.get("phone") ?? "";
-  if (!normalizePhone(phone)) {
-    return NextResponse.json({ error: "Введите номер телефона" }, { status: 400 });
+  // q — телефон целиком, хвост номера от 4 цифр или имя (запрос пользователя
+  // 2026-09-01). phone оставлен как синоним: PWA сотрудника кэшируется, и
+  // сразу после деплоя на планшетах какое-то время живёт прежняя сборка,
+  // которая шлёт ?phone=.
+  const query = searchParams.get("q") ?? searchParams.get("phone") ?? "";
+  const result = await searchWallets(point.tenantId, query);
+  if (result.kind === "empty") {
+    return NextResponse.json({ error: "Введите номер телефона или имя" }, { status: 400 });
+  }
+  if (result.kind === "tooShort") {
+    return NextResponse.json({ error: "Введите минимум 4 цифры номера или имя" }, { status: 400 });
   }
 
-  const wallet = await findWalletByPhone(point.tenantId, phone);
+  const wallet = result.exact;
   if (!wallet) {
-    // Точного совпадения нет — предлагаем похожих по хвосту номера (запрос
-    // пользователя 2026-08-13: "сотруднику будет тяжко писать точные
-    // совпадения"). Тот же клиент попадает в базу в разных видах: с кодом
-    // страны и без, с транковым префиксом и без — а сотрудник набирает так,
-    // как ему продиктовали.
+    // Кандидаты вместо точного совпадения (запрос пользователя 2026-08-13:
+    // "сотруднику будет тяжко писать точные совпадения"). Тот же клиент
+    // попадает в базу в разных видах: с кодом страны и без, с транковым
+    // префиксом и без — а сотрудник набирает так, как ему продиктовали.
     //
-    // Именно КАНДИДАТЫ, а не автоподстановка: совпадение восьми цифр значит
+    // Именно КАНДИДАТЫ, а не автоподстановка: совпадение хвоста значит
     // «похоже», а не «это он» (см. AbonementWallet.phoneKey в schema.prisma).
     // Выбирает живой человек — этим касса и отличается от бота, где
     // подтверждать некому и правило строже.
-    const candidates = await findWalletCandidatesByKey(point.tenantId, phone);
     return NextResponse.json({
       abonement: null,
-      similar: candidates.map((c) => ({ id: c.id, phone: c.phone, name: c.name, balance: Number(c.balance) })),
+      kind: result.kind,
+      truncated: result.truncated,
+      similar: result.candidates.map((c) => serializeCandidate(c, result.kind === "phone")),
     });
   }
 
@@ -128,8 +137,11 @@ export async function POST(request: Request) {
   // Безнал, см. тот же принцип в .../[id]/topup/route.ts.
   const legs = parseLegs(body.legs);
 
-  if (!normalizePhone(phone)) {
-    return NextResponse.json({ error: "Введите номер телефона" }, { status: 400 });
+  // Новый кошелёк — только по полному номеру (см. PHONE_CREATE_MIN_DIGITS):
+  // строка поиска теперь может быть хвостом из 4 цифр или именем, и без
+  // этой проверки «4242» или «Иван» уехали бы в базу как телефон клиента.
+  if (!isCreatableClientPhone(phone)) {
+    return NextResponse.json({ error: "Для нового клиента введите номер целиком" }, { status: 400 });
   }
 
   const existing = await findWalletByPhone(point.tenantId, phone);

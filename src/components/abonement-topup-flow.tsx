@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowBigRight, ArrowLeftRight, Banknote, Check, CreditCard, Delete, Gift, MapPin, Minus, Pencil, Plus, QrCode, Search, Send, Trash2, TriangleAlert, Wallet } from "lucide-react";
+import { ArrowBigRight, ArrowLeftRight, Banknote, Check, CreditCard, Gift, MapPin, Minus, Pencil, Plus, QrCode, Search, Send, TriangleAlert, Wallet } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { InstructionQrSheet } from "@/components/instructions/instruction-qr-sheet";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,9 @@ import { PressableScale } from "@/components/motion/pressable-scale";
 import { Money } from "@/components/money";
 import { MoneyInput } from "@/components/money-input";
 import { PhoneInput } from "@/components/phone-input";
+import { ClientSearchInput } from "@/components/client-search-input";
+import { DigitPad } from "@/components/digit-pad";
+import { isCreatableClientPhone, isSearchableClientQuery } from "@/lib/client-query";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { PrintButton } from "@/components/print/print-button";
 import { ActionToast } from "@/components/action-toast";
@@ -258,7 +261,7 @@ export function AbonementTopupFlow({
   function flashSearchNotFound(message: string) {
     playErrorChime();
     setSearchFlash(message);
-    clearPhoneLocal();
+    setQuery("");
     if (searchFlashTimerRef.current) clearTimeout(searchFlashTimerRef.current);
     searchFlashTimerRef.current = setTimeout(() => setSearchFlash(null), 2500);
   }
@@ -269,7 +272,15 @@ export function AbonementTopupFlow({
     []
   );
 
-  const [phone, setPhone] = useState("");
+  // Строка поиска: номер целиком, последние 4+ цифр или имя (запрос
+  // пользователя 2026-09-01) — что именно, решает содержимое, см.
+  // classifyClientQuery в lib/client-query.ts.
+  const [query, setQuery] = useState("");
+  // Номер НОВОГО клиента — отдельное поле, не строка поиска: искать можно по
+  // хвосту или по имени, а завести кошелёк по такой строке нельзя (см.
+  // PHONE_CREATE_MIN_DIGITS). Когда искали полным номером, он подставляется
+  // сюда сам, и сотруднику ничего не приходится набирать заново.
+  const [newPhone, setNewPhone] = useState("");
   const [searching, setSearching] = useState(false);
   // undefined — ещё не искали, null — искали, не нашли, объект — нашли.
   const [found, setFound] = useState<WalletCtx | null | undefined>(initialWallet ?? undefined);
@@ -307,10 +318,15 @@ export function AbonementTopupFlow({
   // при каждой смене найденного клиента — новый номер телефона может быть
   // (не) привязан независимо от предыдущего найденного.
   const [foundHasTelegram, setFoundHasTelegram] = useState(false);
-  // Похожие по хвосту номера — показываются, когда точного совпадения нет
-  // (запрос пользователя 2026-08-13). Пустой массив = показывать нечего,
-  // сотрудник просто заводит нового клиента, как раньше.
-  const [similar, setSimilar] = useState<{ id: string; phone: string; name: string | null; balance: number }[]>([]);
+  // Кандидаты — показываются, когда точного совпадения нет (запрос
+  // пользователя 2026-08-13). Пустой массив = показывать нечего, сотрудник
+  // просто заводит нового клиента, как раньше. Баланс приходит ТОЛЬКО когда
+  // искали полным номером (см. serializeCandidate в lib/abonement.ts).
+  const [similar, setSimilar] = useState<{ id: string; phone: string; name: string | null; balance?: number }[]>([]);
+  // Как сервер разобрал запрос: "phone" — номер целиком, тогда кандидаты это
+  // «похожие»; "tail"/"name" — просто «найденные».
+  const [searchKind, setSearchKind] = useState<string | null>(null);
+  const [truncated, setTruncated] = useState(false);
   // Осознанное «всё равно завести нового» при наличии похожих — сбрасывается
   // на каждый новый поиск, чтобы решение не переносилось на следующего клиента.
   const [createAnyway, setCreateAnyway] = useState(false);
@@ -364,14 +380,14 @@ export function AbonementTopupFlow({
   const { saved: savedNew, pulse: pulseSavedNew } = useSavePulse();
 
   async function handleSaveNew() {
-    if (!phone.trim() || savingNew) return;
+    if (!isCreatableClientPhone(newPhone) || savingNew) return;
     setSavingNew(true);
     setError(null);
     try {
       const res = await fetch(createEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, name: name.trim() || undefined }),
+        body: JSON.stringify({ phone: newPhone, name: name.trim() || undefined }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -413,30 +429,16 @@ export function AbonementTopupFlow({
     }
   }
 
-  // Нумпад поверх PhoneInput (запрос пользователя 2026-07-22, тот же приём,
-  // что у поиска заказа в Билетах) — физическая клавиатура при этом
-  // продолжает работать как обычно (PhoneInput остаётся настоящим <input>),
-  // нумпад просто ещё один способ ввода для тач-устройств.
-  //
-  // Работает с номером ЦЕЛИКОМ: код страны из поля убран (решение
-  // пользователя 2026-08-13, см. докстроку PhoneInput) — отрезать и
-  // приклеивать префикс больше не нужно и нечего.
-  function tapPhoneDigit(digit: string) {
-    setPhone((v) => v + digit);
-  }
-  function backspacePhoneDigit() {
-    setPhone((v) => v.slice(0, -1));
-  }
-  function clearPhoneLocal() {
-    setPhone("");
-  }
-  const phoneLocal = phone;
+  // Нумпад вынесен в общий компонент DigitPad (2026-09-01) — он же теперь
+  // стоит в шторках оплаты балансом и привязки клиента: поле поиска стало
+  // текстовым ради поиска по имени, и цифры должны остаться на крупных
+  // кнопках, а не уехать на буквенную клавиатуру планшета.
 
   function handleSearch() {
-    if (!phone.trim() || searching) return;
+    if (!isSearchableClientQuery(query) || searching) return;
     setSearching(true);
     if (!toastErrors) setError(null);
-    fetch(`${searchEndpoint}?phone=${encodeURIComponent(phone)}`)
+    fetch(`${searchEndpoint}?q=${encodeURIComponent(query)}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
@@ -462,13 +464,19 @@ export function AbonementTopupFlow({
           const candidates = data.similar ?? [];
           if (candidates.length > 0) {
             setSimilar(candidates);
+            setSearchKind(data.kind ?? null);
+            setTruncated(Boolean(data.truncated));
             return;
           }
           flashSearchNotFound(t.operatorApp.abonement.spendOnlyNotFound);
           return;
         }
         setSimilar(data.similar ?? []);
+        setSearchKind(data.kind ?? null);
+        setTruncated(Boolean(data.truncated));
         setCreateAnyway(false);
+        // Номер для нового клиента — только если искали именно номером.
+        setNewPhone(isCreatableClientPhone(query) ? query : "");
         setFound(data.abonement);
       })
       .catch(() => {
@@ -482,11 +490,12 @@ export function AbonementTopupFlow({
   // тем же путём, что и обычный ввод — так экран дальше ничем не отличается
   // от случая, когда сотрудник набрал номер верно с первого раза.
   function selectSimilar(exactPhone: string) {
-    setPhone(exactPhone);
+    setQuery(exactPhone);
+    setNewPhone(exactPhone);
     setSimilar([]);
     setCreateAnyway(false);
     setSearching(true);
-    fetch(`${searchEndpoint}?phone=${encodeURIComponent(exactPhone)}`)
+    fetch(`${searchEndpoint}?q=${encodeURIComponent(exactPhone)}`)
       .then((res) => res.json())
       .then((data) => {
         if (!data.error) setFound(data.abonement);
@@ -502,7 +511,7 @@ export function AbonementTopupFlow({
       const res = await fetch(createEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, name: name.trim() || undefined, abonementId: plan.id, paymentMethod, legs }),
+        body: JSON.stringify({ phone: newPhone, name: name.trim() || undefined, abonementId: plan.id, paymentMethod, legs }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -555,7 +564,7 @@ export function AbonementTopupFlow({
       const res = await fetch(createEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, name: name.trim() || undefined, amount, paymentMethod, legs }),
+        body: JSON.stringify({ phone: newPhone, name: name.trim() || undefined, amount, paymentMethod, legs }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -704,7 +713,7 @@ export function AbonementTopupFlow({
       const res = await fetch(isNew ? createEndpoint : topupEndpointFor(found!.id), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(isNew ? { phone, name: name.trim() || undefined, amount } : { amount }),
+        body: JSON.stringify(isNew ? { phone: newPhone, name: name.trim() || undefined, amount } : { amount }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -749,7 +758,7 @@ export function AbonementTopupFlow({
   // Владельца, где эта кнопка не рендерится вовсе, лишний запрос не нужен).
   async function refreshHistoryIfPrintable() {
     if (!printAvailable || !found?.phone) return;
-    const res = await fetch(`${searchEndpoint}?phone=${encodeURIComponent(found.phone)}`);
+    const res = await fetch(`${searchEndpoint}?q=${encodeURIComponent(found.phone)}`);
     if (!res.ok) return;
     const data = await res.json();
     if (data.abonement) setFound(data.abonement);
@@ -914,7 +923,7 @@ export function AbonementTopupFlow({
                   // Следующий клиент — заново с поиска (запрос пользователя
                   // 2026-07-24), а не карточка только что списанного.
                   setFound(undefined);
-                  setPhone("");
+                  setQuery("");
                 } else {
                   refreshHistoryIfPrintable();
                 }
@@ -946,7 +955,7 @@ export function AbonementTopupFlow({
                 else if (spendOnlyMode) {
                   setZoneSpendOpen(false);
                   setFound(undefined);
-                  setPhone("");
+                  setQuery("");
                 } else setZoneSpendOpen(false);
               }}
             />
@@ -1202,7 +1211,11 @@ export function AbonementTopupFlow({
               undefined и до второго экрана дело не доходит вовсе. */}
           {similar.length > 0 && (
             <div className="flex flex-col gap-2">
-              <span className="text-section-title">{t.operatorApp.abonement.similarTitle}</span>
+              <span className="text-section-title">
+                {searchKind === "phone"
+                  ? t.operatorApp.abonement.similarTitle
+                  : t.operatorApp.abonement.matchesTitle}
+              </span>
               {similar.map((s) => (
                 <PressableScale key={s.id}>
                   <button
@@ -1216,12 +1229,21 @@ export function AbonementTopupFlow({
                       </span>
                       <span className="block truncate tabular-nums text-caption-airbnb">{s.phone}</span>
                     </span>
-                    <span className="shrink-0 text-body-airbnb font-bold tabular-nums">
-                      <Money value={s.balance} />
-                    </span>
+                    {/* Баланс — только у кандидатов из поиска по полному
+                        номеру, см. тип similar выше. */}
+                    {s.balance != null && (
+                      <span className="shrink-0 text-body-airbnb font-bold tabular-nums">
+                        <Money value={s.balance} />
+                      </span>
+                    )}
                   </button>
                 </PressableScale>
               ))}
+              {truncated && (
+                <span className="text-caption-airbnb text-muted-foreground">
+                  {t.operatorApp.abonement.tooManyMatches}
+                </span>
+              )}
             </div>
           )}
           {/* "Клиент не найден" — zoom-in+bounce прямо над полем/нумпадом,
@@ -1257,69 +1279,28 @@ export function AbonementTopupFlow({
               телефону не привязан к точке, пикер нужен только дальше, для
               выбора и оплаты плана, там и показывается). */}
           <div className="flex flex-col gap-1">
-            <Label htmlFor="topupPhone">{t.operatorApp.abonement.phoneLabel}</Label>
-            <PhoneInput
-              id="topupPhone"
+            <Label htmlFor="topupQuery">{t.operatorApp.abonement.searchLabel}</Label>
+            <ClientSearchInput
+              id="topupQuery"
               autoFocus
-              value={phone}
-              onChange={setPhone}
+              value={query}
+              onChange={setQuery}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               heightClassName="h-14"
-              sizeClassName="text-2xl font-extrabold tabular-nums"
+              sizeClassName="text-2xl font-extrabold"
             />
           </div>
           {/* Нумпад — дополнительный способ ввода для тач-устройств (запрос
               пользователя 2026-07-22), не единственный: поле выше остаётся
-              настоящим input, с клавиатуры печатать можно и без нумпада. */}
-          <div className="grid grid-cols-3 gap-2">
-            {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((k) => (
-              <PressableScale key={k}>
-                <button
-                  type="button"
-                  onClick={() => tapPhoneDigit(k)}
-                  className="flex h-14 w-full items-center justify-center rounded-control border border-border bg-background text-xl font-bold tabular-nums shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] active:shadow-[0_1px_2px_rgba(0,0,0,.13),inset_0_1px_0_rgba(255,255,255,.13),inset_0_-1px_2px_rgba(0,0,0,.1)] dark:border-input dark:bg-input/30"
-                >
-                  {k}
-                </button>
-              </PressableScale>
-            ))}
-            <PressableScale>
-              <button
-                type="button"
-                disabled={!phoneLocal}
-                onClick={clearPhoneLocal}
-                aria-label={t.common.delete}
-                className="flex h-14 w-full items-center justify-center rounded-control border border-border bg-background text-muted-foreground shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] active:shadow-[0_1px_2px_rgba(0,0,0,.13),inset_0_1px_0_rgba(255,255,255,.13),inset_0_-1px_2px_rgba(0,0,0,.1)] disabled:opacity-40 dark:border-input dark:bg-input/30"
-              >
-                <Trash2 className="size-5" />
-              </button>
-            </PressableScale>
-            <PressableScale>
-              <button
-                type="button"
-                onClick={() => tapPhoneDigit("0")}
-                className="flex h-14 w-full items-center justify-center rounded-control border border-border bg-background text-xl font-bold tabular-nums shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] active:shadow-[0_1px_2px_rgba(0,0,0,.13),inset_0_1px_0_rgba(255,255,255,.13),inset_0_-1px_2px_rgba(0,0,0,.1)] dark:border-input dark:bg-input/30"
-              >
-                0
-              </button>
-            </PressableScale>
-            <PressableScale>
-              <button
-                type="button"
-                disabled={!phoneLocal}
-                onClick={backspacePhoneDigit}
-                aria-label={t.common.back}
-                className="flex h-14 w-full items-center justify-center rounded-control border border-border bg-background shadow-[0_2px_5px_rgba(0,0,0,.15),inset_0_1px_0_rgba(255,255,255,.18),inset_0_-1px_2px_rgba(0,0,0,.09)] active:shadow-[0_1px_2px_rgba(0,0,0,.13),inset_0_1px_0_rgba(255,255,255,.13),inset_0_-1px_2px_rgba(0,0,0,.1)] disabled:opacity-40 dark:border-input dark:bg-input/30"
-              >
-                <Delete className="size-5" />
-              </button>
-            </PressableScale>
-          </div>
+              настоящим input, с клавиатуры печатать можно и без нумпада.
+              Вынесен в общий DigitPad 2026-09-01, теперь тот же нумпад стоит
+              и в шторках оплаты балансом и привязки клиента. */}
+          <DigitPad value={query} onChange={setQuery} />
           <PressableScale>
             <Button
               type="button"
               className="relative h-12 w-full pl-14 font-bold"
-              disabled={searching || !phone.trim()}
+              disabled={searching || !isSearchableClientQuery(query)}
               onClick={handleSearch}
             >
               {/* Иконка поиска, как на кнопках способа оплаты (запрос
@@ -1348,7 +1329,11 @@ export function AbonementTopupFlow({
                 «похоже», а не «это он». */}
             {isNew && similar.length > 0 && (
               <div className="flex flex-col gap-2">
-                <span className="text-section-title">{t.operatorApp.abonement.similarTitle}</span>
+                <span className="text-section-title">
+                  {searchKind === "phone"
+                    ? t.operatorApp.abonement.similarTitle
+                    : t.operatorApp.abonement.matchesTitle}
+                </span>
                 {similar.map((s) => (
                   <PressableScale key={s.id}>
                     <button
@@ -1362,12 +1347,21 @@ export function AbonementTopupFlow({
                         </span>
                         <span className="block truncate tabular-nums text-caption-airbnb">{s.phone}</span>
                       </span>
-                      <span className="shrink-0 text-body-airbnb font-bold tabular-nums">
-                        <Money value={s.balance} />
-                      </span>
+                      {/* Баланс — только у кандидатов из поиска по полному
+                          номеру, см. тип similar выше. */}
+                      {s.balance != null && (
+                        <span className="shrink-0 text-body-airbnb font-bold tabular-nums">
+                          <Money value={s.balance} />
+                        </span>
+                      )}
                     </button>
                   </PressableScale>
                 ))}
+                {truncated && (
+                  <span className="text-caption-airbnb text-muted-foreground">
+                    {t.operatorApp.abonement.tooManyMatches}
+                  </span>
+                )}
               </div>
             )}
             {suppressCreate && (
@@ -1418,7 +1412,9 @@ export function AbonementTopupFlow({
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
                           <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
-                            {isNew ? t.operatorApp.abonement.newTitle : found?.name || phone}
+                            {/* Номер берём у кошелька, а не из строки поиска:
+                                там теперь может лежать хвост номера или имя. */}
+                            {isNew ? t.operatorApp.abonement.newTitle : found?.name || found?.phone}
                           </h2>
                           {!isNew && updateNameEndpointFor && (
                             <PressableScale className="shrink-0">
@@ -1469,7 +1465,7 @@ export function AbonementTopupFlow({
                             пишется имя" — у существующего кошелька имя не показывалось
                             вообще, только телефон в заголовке). */}
                         {!isNew && found?.name && (
-                          <p className="text-caption-airbnb text-muted-foreground">{phone}</p>
+                          <p className="text-caption-airbnb text-muted-foreground">{found.phone}</p>
                         )}
                       </div>
                       {/* Баланс — сразу в шапке, крупными цифрами (запрос
@@ -1538,29 +1534,45 @@ export function AbonementTopupFlow({
             )}
   
             {isNew && !suppressCreate && (
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="topupName">{t.operatorApp.abonement.nameLabel}</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="topupName"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="h-12 flex-1 rounded-control bg-muted"
+              <>
+                {/* Номер нового клиента — отдельное редактируемое поле, а не
+                    строка поиска: искать теперь можно по последним четырём
+                    цифрам или по имени, а завести кошелёк по такой строке
+                    нельзя (см. PHONE_CREATE_MIN_DIGITS). Когда искали полным
+                    номером, он уже подставлен, и набирать заново не нужно. */}
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="topupNewPhone">{t.operatorApp.abonement.phoneLabel}</Label>
+                  <PhoneInput
+                    id="topupNewPhone"
+                    value={newPhone}
+                    onChange={setNewPhone}
+                    sizeClassName="tabular-nums"
                   />
-                  {/* Завести абонента без покупки плана прямо сейчас (запрос
-                      пользователя 2026-07-18: "может человек потом захочет") —
-                      отдельно от кнопок ниже, которые сразу списывают деньги за
-                      конкретный план. */}
-                  <PressableScale>
-                    <SaveButton
-                      className="h-12 shrink-0 px-5"
-                      saved={savedNew}
-                      disabled={!phone.trim()}
-                      onClick={handleSaveNew}
-                    />
-                  </PressableScale>
                 </div>
-              </div>
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="topupName">{t.operatorApp.abonement.nameLabel}</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="topupName"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="h-12 flex-1 rounded-control bg-muted"
+                    />
+                    {/* Завести абонента без покупки плана прямо сейчас (запрос
+                        пользователя 2026-07-18: "может человек потом захочет") —
+                        отдельно от кнопок ниже, которые сразу списывают деньги за
+                        конкретный план. */}
+                    <PressableScale>
+                      <SaveButton
+                        className="h-12 shrink-0 px-5"
+                        saved={savedNew}
+                        disabled={!isCreatableClientPhone(newPhone)}
+                        onClick={handleSaveNew}
+                      />
+                    </PressableScale>
+                  </div>
+                </div>
+              </>
             )}
   
             {/* Оплата балансом на месте — только Сотрудник, только для уже
@@ -1609,7 +1621,7 @@ export function AbonementTopupFlow({
                             "relative h-14 w-full justify-between pl-14 font-semibold",
                             RAISED_OPTION_BUTTON_CLASS
                           )}
-                          disabled={isNew && !phone.trim()}
+                          disabled={isNew && !isCreatableClientPhone(newPhone)}
                           onClick={() => setPendingAction({ kind: "plan", plan })}
                         >
                           <Gift className="absolute left-3 top-1/2 size-8 -translate-y-1/2" />
@@ -1635,13 +1647,13 @@ export function AbonementTopupFlow({
                     className="h-12 flex-1 bg-card"
                     value={arbitraryAmount}
                     onChange={(e) => setArbitraryAmount(e.target.value)}
-                    disabled={isNew && !phone.trim()}
+                    disabled={isNew && !isCreatableClientPhone(newPhone)}
                   />
                   <PressableScale>
                     <Button
                       type="button"
                       className="h-12 shrink-0 font-bold"
-                      disabled={submitting || !arbitraryAmount.trim() || (isNew && !phone.trim())}
+                      disabled={submitting || !arbitraryAmount.trim() || (isNew && !isCreatableClientPhone(newPhone))}
                       onClick={handleArbitraryButtonClick}
                     >
                       {t.abonements.arbitraryAmountButton}

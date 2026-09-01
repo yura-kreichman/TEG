@@ -4,8 +4,9 @@ import {
   createWalletEmpty,
   createWalletWithAdjustment,
   findWalletByPhone,
-  findWalletCandidatesByKey,
-  normalizePhone,
+  isCreatableClientPhone,
+  searchWallets,
+  serializeCandidate,
 } from "@/lib/abonement";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
@@ -25,21 +26,28 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const phone = searchParams.get("phone") ?? "";
-  if (!normalizePhone(phone)) {
-    return NextResponse.json({ error: "Введите номер телефона" }, { status: 400 });
+  // q — номер целиком, хвост от 4 цифр или имя (запрос пользователя
+  // 2026-09-01); phone — прежнее имя параметра, оставлено синонимом.
+  const query = searchParams.get("q") ?? searchParams.get("phone") ?? "";
+  const result = await searchWallets(owner.tenantId, query);
+  if (result.kind === "empty") {
+    return NextResponse.json({ error: "Введите номер телефона или имя" }, { status: 400 });
+  }
+  if (result.kind === "tooShort") {
+    return NextResponse.json({ error: "Введите минимум 4 цифры номера или имя" }, { status: 400 });
   }
 
-  const wallet = await findWalletByPhone(owner.tenantId, phone);
+  const wallet = result.exact;
   if (!wallet) {
-    // Похожие по хвосту — тот же приём, что у сотрудника (реальный баг с
-    // прода 2026-08-13). Список кошельков владельца ищет по вхождению
-    // подстроки и короткий номер находил и так, но ЭТОТ путь — точечный
-    // поиск по номеру — оставался строгим.
-    const candidates = await findWalletCandidatesByKey(owner.tenantId, phone);
+    // Кандидаты вместо точного совпадения — тот же приём, что у сотрудника
+    // (реальный баг с прода 2026-08-13). Список кошельков владельца ищет по
+    // вхождению подстроки и короткий номер находил и так, но ЭТОТ путь —
+    // точечный поиск по номеру — оставался строгим.
     return NextResponse.json({
       abonement: null,
-      similar: candidates.map((c) => ({ id: c.id, phone: c.phone, name: c.name, balance: Number(c.balance) })),
+      kind: result.kind,
+      truncated: result.truncated,
+      similar: result.candidates.map((c) => serializeCandidate(c, result.kind === "phone")),
     });
   }
   return NextResponse.json({
@@ -70,8 +78,10 @@ export async function POST(request: Request) {
   // createWalletWithAdjustment.
   const amount: number | null = body.amount != null ? Number(body.amount) : null;
 
-  if (!normalizePhone(phone)) {
-    return NextResponse.json({ error: "Введите номер телефона" }, { status: 400 });
+  // Новый кошелёк — только по полному номеру (см. PHONE_CREATE_MIN_DIGITS):
+  // строка поиска теперь может быть хвостом номера или именем.
+  if (!isCreatableClientPhone(phone)) {
+    return NextResponse.json({ error: "Для нового клиента введите номер целиком" }, { status: 400 });
   }
 
   const existing = await findWalletByPhone(owner.tenantId, phone);

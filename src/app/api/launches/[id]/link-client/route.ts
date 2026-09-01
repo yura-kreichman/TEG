@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { isModuleEnabled } from "@/lib/tenant-modules";
-import { findWalletByPhone, findWalletCandidatesByKey, createWalletEmpty, normalizePhone } from "@/lib/abonement";
+import { createWalletEmpty, isCreatableClientPhone, searchWallets, serializeCandidate } from "@/lib/abonement";
 
 async function checkAccess(id: string, opCtx: NonNullable<Awaited<ReturnType<typeof requireOperator>>>) {
   const { operator, point } = opCtx;
@@ -42,19 +42,28 @@ export async function GET(request: Request, ctx: RouteContext<"/api/launches/[id
   const access = await checkAccess(id, opCtx);
   if (access) return NextResponse.json({ error: access.error }, { status: access.status });
 
-  const phone = new URL(request.url).searchParams.get("phone") ?? "";
-  if (!normalizePhone(phone)) {
-    return NextResponse.json({ error: "Введите номер телефона" }, { status: 400 });
+  const params = new URL(request.url).searchParams;
+  // q — номер целиком, хвост от 4 цифр или имя (запрос пользователя
+  // 2026-09-01); phone — прежнее имя параметра, оставлено синонимом ради
+  // кэшированной сборки PWA на планшетах точки.
+  const query = params.get("q") ?? params.get("phone") ?? "";
+  const result = await searchWallets(opCtx.point.tenantId, query);
+  if (result.kind === "empty") {
+    return NextResponse.json({ error: "Введите номер телефона или имя" }, { status: 400 });
   }
-  const wallet = await findWalletByPhone(opCtx.point.tenantId, phone);
-  // Похожие по хвосту номера, когда точного совпадения нет — тот же приём,
-  // что на экране Клиентов (запрос пользователя 2026-08-13, реальный баг с
-  // прода: сотрудник искал 077942424 и 77942424, клиент в базе сохранён как
+  if (result.kind === "tooShort") {
+    return NextResponse.json({ error: "Введите минимум 4 цифры номера или имя" }, { status: 400 });
+  }
+  const wallet = result.exact;
+  // Кандидаты, когда точного совпадения нет — тот же приём, что на экране
+  // Клиентов (запрос пользователя 2026-08-13, реальный баг с прода:
+  // сотрудник искал 077942424 и 77942424, клиент в базе сохранён как
   // 37377942424, и привязка предлагала завести дубликат).
-  const similar = wallet ? [] : await findWalletCandidatesByKey(opCtx.point.tenantId, phone);
   return NextResponse.json({
     client: wallet ? { id: wallet.id, phone: wallet.phone, name: wallet.name, balance: Number(wallet.balance) } : null,
-    similar: similar.map((c) => ({ id: c.id, phone: c.phone, name: c.name, balance: Number(c.balance) })),
+    kind: result.kind,
+    truncated: result.truncated,
+    similar: result.candidates.map((c) => serializeCandidate(c, result.kind === "phone")),
   });
 }
 
@@ -86,14 +95,17 @@ export async function POST(request: Request, ctx: RouteContext<"/api/launches/[i
     if (!wallet || wallet.tenantId !== point.tenantId) {
       return NextResponse.json({ error: "Клиент не найден" }, { status: 404 });
     }
-  } else if (typeof phone === "string" && normalizePhone(phone)) {
     // "Новый" — тот же стандартный экран "Новый клиент", что и везде в
     // проекте (запрос пользователя 2026-07-27: "нужен стандартный интерфейс
-    // добавления нового клиента"), имя опционально.
+    // добавления нового клиента"), имя опционально. Только по ПОЛНОМУ номеру
+    // (см. PHONE_CREATE_MIN_DIGITS): строка поиска теперь может быть хвостом
+    // из четырёх цифр или именем, и без этой проверки «4242» или «Иван»
+    // уехали бы в базу как телефон клиента.
+  } else if (typeof phone === "string" && isCreatableClientPhone(phone)) {
     const trimmedName = typeof name === "string" ? name.trim() : "";
     wallet = await createWalletEmpty(phone, trimmedName || null, point.tenantId);
   } else {
-    return NextResponse.json({ error: "Введите номер телефона" }, { status: 400 });
+    return NextResponse.json({ error: "Для нового клиента введите номер целиком" }, { status: 400 });
   }
 
   await prisma.launch.update({ where: { id }, data: { linkedClientWalletId: wallet.id } });
