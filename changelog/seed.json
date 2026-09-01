@@ -868,13 +868,6 @@
             "ru": "Владелец отмечен единой иконкой-короной вместо подписи.",
             "en": "The owner is marked with a single crown icon instead of a text label."
           }
-        },
-        {
-          "type": "impr",
-          "text": {
-            "ru": "Печать: тихая печать на Windows настраивается через реестр и запускается вместе с системой.",
-            "en": "Printing: silent printing on Windows is configured through the registry and starts with the system."
-          }
         }
       ]
     },
@@ -1023,13 +1016,6 @@
           "text": {
             "ru": "Прибывания: пуски в реальном времени — старт и стоп в один-два тапа, живой таймер, свой тариф с историей у каждого актива.",
             "en": "Stays: launches in real time — start and stop in one or two taps, a live timer, and each asset with its own rate and rate history."
-          }
-        },
-        {
-          "type": "feat",
-          "text": {
-            "ru": "Прибывания: экран «Сейчас на точке» в кабинете и список пусков с правкой времени и аннулированием.",
-            "en": "Stays: a Currently on site screen in the owner's account, plus a list of launches with time editing and voiding."
           }
         },
         {
