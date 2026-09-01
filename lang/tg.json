@@ -1316,6 +1316,8 @@
       "voidLaunchAction": "Оғозро бекор кардан",
       "noAssetsYet": "Соҳиб то ҳол ба ин минтақа дороиҳо илова накардааст",
       "wristbandNumberPrefix": "Меҳмон",
+      "labelFieldLabel": "Қайд",
+      "labelFieldPlaceholder": "Макс дар футболкаи сабз",
       "resumeLaunchAction": "Идома додан",
       "linkClientAction": "Мизоҷ",
       "linkClientAssignButton": "Пайваст кардан",

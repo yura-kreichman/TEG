@@ -1316,6 +1316,8 @@
       "voidLaunchAction": "Анулювати запуск",
       "noAssetsYet": "Власник ще не додав активи до цієї зони",
       "wristbandNumberPrefix": "Відвідувач",
+      "labelFieldLabel": "Помітка",
+      "labelFieldPlaceholder": "Максим у зеленій футболці",
       "resumeLaunchAction": "Відновити",
       "linkClientAction": "Клієнт",
       "linkClientAssignButton": "Прив'язати",

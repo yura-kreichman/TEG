@@ -1316,6 +1316,8 @@
       "voidLaunchAction": "Anulează pornirea",
       "noAssetsYet": "Proprietarul nu a adăugat încă active în această zonă",
       "wristbandNumberPrefix": "Vizitator",
+      "labelFieldLabel": "Notiță",
+      "labelFieldPlaceholder": "Max în tricou verde",
       "resumeLaunchAction": "Reia",
       "linkClientAction": "Client",
       "linkClientAssignButton": "Asociază",

@@ -1316,6 +1316,8 @@
       "voidLaunchAction": "გაშვების გაუქმება",
       "noAssetsYet": "მფლობელს ჯერ არ დაუმატებია აქტივები ამ ზონაში",
       "wristbandNumberPrefix": "სტუმარი",
+      "labelFieldLabel": "შენიშვნა",
+      "labelFieldPlaceholder": "მაქსი მწვანე მაისურში",
       "resumeLaunchAction": "გაგრძელება",
       "linkClientAction": "კლიენტი",
       "linkClientAssignButton": "მიბმა",

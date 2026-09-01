@@ -1316,6 +1316,8 @@
       "voidLaunchAction": "Anuluj uruchomienie",
       "noAssetsYet": "Właściciel nie dodał jeszcze żadnych zasobów do tej strefy",
       "wristbandNumberPrefix": "Gość",
+      "labelFieldLabel": "Notatka",
+      "labelFieldPlaceholder": "Maks w zielonej koszulce",
       "resumeLaunchAction": "Wznów",
       "linkClientAction": "Klient",
       "linkClientAssignButton": "Powiąż",

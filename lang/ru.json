@@ -1354,6 +1354,8 @@
       "voidLaunchAction": "Аннулировать пуск",
       "noAssetsYet": "Владелец ещё не добавил активы в эту зону",
       "wristbandNumberPrefix": "Посетитель",
+      "labelFieldLabel": "Пометка",
+      "labelFieldPlaceholder": "Максим в зелёной футболке",
       "resumeLaunchAction": "Возобновить",
       "linkClientAction": "Клиент",
       "linkClientAssignButton": "Привязать",

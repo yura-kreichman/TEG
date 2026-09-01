@@ -1316,6 +1316,8 @@
       "voidLaunchAction": "Ануляваць пуск",
       "noAssetsYet": "Уладальнік яшчэ не дадаў актывы ў гэтую зону",
       "wristbandNumberPrefix": "Наведнік",
+      "labelFieldLabel": "Пазнака",
+      "labelFieldPlaceholder": "Максім у зялёнай футболцы",
       "resumeLaunchAction": "Аднавіць",
       "linkClientAction": "Кліент",
       "linkClientAssignButton": "Прывязаць",

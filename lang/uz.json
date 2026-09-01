@@ -1316,6 +1316,8 @@
       "voidLaunchAction": "Ishga tushirishni bekor qilish",
       "noAssetsYet": "Egasi bu zonaga hali aktivlar qo'shmagan",
       "wristbandNumberPrefix": "Mehmon",
+      "labelFieldLabel": "Izoh",
+      "labelFieldPlaceholder": "Yashil futbolkadagi Maks",
       "resumeLaunchAction": "Davom ettirish",
       "linkClientAction": "Mijoz",
       "linkClientAssignButton": "Bog'lash",

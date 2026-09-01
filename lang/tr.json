@@ -1316,6 +1316,8 @@
       "voidLaunchAction": "Başlatmayı iptal et",
       "noAssetsYet": "Sahip bu bölgeye henüz varlık eklemedi",
       "wristbandNumberPrefix": "Ziyaretçi",
+      "labelFieldLabel": "Not",
+      "labelFieldPlaceholder": "Yeşil tişörtlü Max",
       "resumeLaunchAction": "Devam ettir",
       "linkClientAction": "Müşteri",
       "linkClientAssignButton": "Bağla",

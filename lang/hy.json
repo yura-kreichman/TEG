@@ -1316,6 +1316,8 @@
       "voidLaunchAction": "Չեղարկել մեկնարկը",
       "noAssetsYet": "Սեփականատերը դեռ այս գոտում ակտիվներ չի ավելացրել",
       "wristbandNumberPrefix": "Այցելու",
+      "labelFieldLabel": "Նշում",
+      "labelFieldPlaceholder": "Մաքսը կանաչ շապիկով",
       "resumeLaunchAction": "Վերսկսել",
       "linkClientAction": "Հաճախորդ",
       "linkClientAssignButton": "Կապել",

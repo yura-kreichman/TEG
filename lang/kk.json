@@ -1316,6 +1316,8 @@
       "voidLaunchAction": "Іске қосуды күшін жою",
       "noAssetsYet": "Иесі бұл аймаққа әлі активтер қоспаған",
       "wristbandNumberPrefix": "Келуші",
+      "labelFieldLabel": "Белгі",
+      "labelFieldPlaceholder": "Жасыл футболкадағы Макс",
       "resumeLaunchAction": "Жалғастыру",
       "linkClientAction": "Клиент",
       "linkClientAssignButton": "Байланыстыру",

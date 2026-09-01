@@ -12,6 +12,8 @@ import { Money } from "@/components/money";
 import { PhoneInput } from "@/components/phone-input";
 import { ClientSearchInput } from "@/components/client-search-input";
 import { DigitPad } from "@/components/digit-pad";
+import { SaveButton } from "@/components/ui/save-button";
+import { useSavePulse } from "@/hooks/use-save-pulse";
 import { isCreatableClientPhone, isSearchableClientQuery } from "@/lib/client-query";
 import { useI18n } from "@/components/i18n-provider";
 
@@ -49,6 +51,20 @@ interface LinkClientSheetProps {
   current: LinkedClientInfo | null;
   onLinked: (client: LinkedClientInfo) => void;
   onUnlinked: () => void;
+  /**
+   * Пометка — своя подпись на браслете поверх номера (запрос пользователя
+   * 2026-09-01: «Максим в зелёной футболке»). PATCH { label } по этому
+   * адресу. Не передан — блок пометки не рендерится: в Товарах то же поле
+   * `label` уже правится своей кнопкой-карандашом в шторке заказа (запрос
+   * пользователя 2026-07-30, «Стол Васи»), второго места для одного и того
+   * же поля быть не должно.
+   *
+   * Независима от привязки клиента, как и у отложенного заказа: можно
+   * поставить и то и другое, одно другое не стирает.
+   */
+  labelEndpoint?: string | null;
+  currentLabel?: string | null;
+  onLabelSaved?: (label: string | null) => void;
 }
 
 /**
@@ -69,7 +85,17 @@ interface LinkClientSheetProps {
  * пользователя 2026-09-01) — что именно, решает содержимое строки, см.
  * classifyClientQuery в lib/client-query.ts.
  */
-export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, onUnlinked }: LinkClientSheetProps) {
+export function LinkClientSheet({
+  open,
+  onClose,
+  endpoint,
+  current,
+  onLinked,
+  onUnlinked,
+  labelEndpoint,
+  currentLabel,
+  onLabelSaved,
+}: LinkClientSheetProps) {
   const t = useI18n();
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
@@ -112,6 +138,35 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Пометка — отдельное поле и отдельное сохранение, поиск клиента её не
+  // трогает и наоборот.
+  const [labelDraft, setLabelDraft] = useState(currentLabel ?? "");
+  const [savingLabel, setSavingLabel] = useState(false);
+  const { saved: labelSaved, pulse: pulseLabelSaved } = useSavePulse();
+
+  async function handleSaveLabel() {
+    if (!labelEndpoint || savingLabel) return;
+    setSavingLabel(true);
+    setError(null);
+    try {
+      const res = await fetch(labelEndpoint, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: labelDraft }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? t.operatorApp.gameRoom.networkError);
+        return;
+      }
+      pulseLabelSaved();
+      onLabelSaved?.(data.label ?? null);
+    } catch {
+      setError(t.operatorApp.gameRoom.networkError);
+    } finally {
+      setSavingLabel(false);
+    }
+  }
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -127,6 +182,11 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
       setError(null);
     }
   }, [open]);
+  // Черновик пометки следует за открываемым браслетом: шторка одна на все
+  // тайлы, и без этого в неё попадала бы метка предыдущего.
+  useEffect(() => {
+    if (open) setLabelDraft(currentLabel ?? "");
+  }, [open, currentLabel]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleSearch() {
@@ -189,7 +249,37 @@ export function LinkClientSheet({ open, onClose, endpoint, current, onLinked, on
   return (
     <BottomSheet open={open} onClose={onClose}>
       <div className="flex flex-col gap-3 pt-2">
-        {current ? (
+        {/* Пометка — над поиском клиента и во всех состояниях шторки: это
+            независимое поле, а не альтернатива клиенту (запрос пользователя
+            2026-09-01). Пустая строка сбрасывает подпись к «Посетитель N»,
+            тот же смысл пустого значения, что у переименования отложенного
+            заказа Товаров. */}
+        {labelEndpoint && (
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="launchLabel">{t.operatorApp.gameRoom.labelFieldLabel}</Label>
+            <div className="flex gap-2">
+              <Input
+                id="launchLabel"
+                value={labelDraft}
+                onChange={(e) => setLabelDraft(e.target.value.slice(0, 60))}
+                onKeyDown={(e) => e.key === "Enter" && handleSaveLabel()}
+                placeholder={t.operatorApp.gameRoom.labelFieldPlaceholder}
+                className="h-12 flex-1 rounded-control bg-muted"
+              />
+              <PressableScale>
+                <SaveButton
+                  className="h-12 shrink-0 px-5"
+                  saved={labelSaved}
+                  disabled={savingLabel || labelDraft.trim() === (currentLabel ?? "").trim()}
+                  onClick={handleSaveLabel}
+                />
+              </PressableScale>
+            </div>
+          </div>
+        )}
+        {/* Весь блок клиента — только когда роут поиска передан: у тенанта с
+            выключенным модулем Клиенты в шторке остаётся одна пометка. */}
+        {endpoint === null ? null : current ? (
           <>
             <h2 className="flex flex-wrap items-baseline gap-x-2 text-[1.1875rem] font-extrabold tracking-[-0.01em]">
               <span>{current.name || current.phone}</span>

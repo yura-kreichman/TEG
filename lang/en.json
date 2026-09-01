@@ -1316,6 +1316,8 @@
       "voidLaunchAction": "Void launch",
       "noAssetsYet": "The owner hasn't added any assets to this zone yet",
       "wristbandNumberPrefix": "Visitor",
+      "labelFieldLabel": "Note",
+      "labelFieldPlaceholder": "Max in a green T-shirt",
       "resumeLaunchAction": "Resume",
       "linkClientAction": "Customer",
       "linkClientAssignButton": "Link",

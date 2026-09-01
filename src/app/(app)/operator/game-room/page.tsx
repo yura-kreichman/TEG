@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeftRight, Banknote, Check, CreditCard, Layers, MapPin, Play, Plus, Wallet, X } from "lucide-react";
+import { ArrowLeftRight, Banknote, Check, CreditCard, Layers, MapPin, Play, Plus, Tag, Wallet, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/confirm-button";
 import { Label } from "@/components/ui/label";
@@ -91,6 +91,12 @@ interface OpenLaunch {
   // не считается заново через estimateLiveAmount.
   isOpen: boolean;
   amount: number | null;
+  // Своя подпись браслета поверх номера (запрос пользователя 2026-09-01:
+  // «Максим в зелёной футболке»). Поле Launch.label существует с 16 июля и
+  // принималось стартом пуска, но интерфейс его не показывал и не правил;
+  // ставится и снимается через PATCH /api/launches/[id]. Независима от
+  // linkedClient ниже — можно и подписать, и привязать клиента.
+  label: string | null;
   // "Чей это ребёнок" (запрос пользователя 2026-07-27) — справочная метка,
   // не влияет на способ оплаты. null, пока не привязан или модуль Клиенты
   // выключен.
@@ -985,7 +991,10 @@ export default function StaysZonePage() {
                             // — контент сразу после отступа, а не по центру
                             // оставшегося места (запрос того же дня: "подними
                             // чуть выше").
-                            clientsEnabled ? "justify-start pt-8" : "justify-center pt-2",
+                            // Отступ безусловный с 2026-09-01: значок теперь
+                            // рендерится всегда (за ним и пометка тоже), а
+                            // не только при включённом модуле Клиенты.
+                            "justify-start pt-8",
                             // Мигает только сам таймер, не весь тайл (запрос
                             // пользователя 2026-07-28: "не весь тайл, только
                             // сам таймер") — рамка просто меняет цвет, и уже
@@ -1003,23 +1012,37 @@ export default function StaysZonePage() {
                               (size-9 на -top-2, нижний край на 28px от верха
                               тайла) — запрос того же дня. Без текста внутри —
                               "Посетитель" на прежнем месте ниже, как и было. */}
-                          {clientsEnabled && (
-                            <span
-                              className="absolute inset-x-0 top-0 h-5.75 rounded-t-card"
-                              style={{ backgroundColor: COLOR_TAG_PALETTE[(l.number - 1) % COLOR_TAG_PALETTE.length] }}
-                            />
-                          )}
+                          <span
+                            className="absolute inset-x-0 top-0 h-5.75 rounded-t-card"
+                            style={{ backgroundColor: COLOR_TAG_PALETTE[(l.number - 1) % COLOR_TAG_PALETTE.length] }}
+                          />
                           {/* Название и номер в 2 строки, номер крупнее
                               (запрос пользователя 2026-07-27) — в одну
                               строку текст "Посетитель N" залезал на
                               бейдж привязки клиента в углу тайла. */}
-                          <span className="flex flex-col items-center leading-tight">
+                          <span className="flex w-full flex-col items-center leading-tight">
                             {/* clamp(...,cqw,...) — нижняя граница держит
                                 прежний размер на телефоне (там 8cqw заведомо
                                 меньше 0.625rem), верхняя не даёт подписи
-                                разрастись на широком тайле планшета. */}
-                            <span className="text-[clamp(0.625rem,8cqw,0.875rem)] font-semibold text-muted-foreground">
-                              {t.operatorApp.gameRoom.wristbandNumberPrefix}
+                                разрастись на широком тайле планшета.
+                                Пометка/имя клиента встают НА МЕСТО слова
+                                «Посетитель», а не отдельной строкой ниже
+                                (запрос пользователя 2026-09-01: "проверь,
+                                чтобы всё вмещалось"): тайл aspect-4/5 с
+                                pt-8 под бейдж уже занят под завязку —
+                                таймер и сумма съедают почти всю оставшуюся
+                                высоту, и лишняя строка обрезалась бы по
+                                overflow-hidden. Слово «Посетитель» тут
+                                наименее полезное: оно одинаково на всех
+                                тайлах, а номер под ним остаётся на месте и
+                                держит опознание браслета. */}
+                            <span
+                              className={cn(
+                                "block w-full truncate text-[clamp(0.625rem,8cqw,0.875rem)] font-semibold",
+                                l.label || l.linkedClient?.name ? "text-foreground" : "text-muted-foreground"
+                              )}
+                            >
+                              {l.label || l.linkedClient?.name || t.operatorApp.gameRoom.wristbandNumberPrefix}
                             </span>
                             <span className="text-[clamp(0.875rem,11cqw,1.25rem)] font-extrabold tabular-nums">
                               {l.number}
@@ -1139,32 +1162,38 @@ export default function StaysZonePage() {
                           <button>, не вложенный в тайл-<button> выше — сидит
                           сверху как самостоятельный элемент, не всплывает
                           клик на сам тайл. */}
-                      {clientsEnabled && (
-                        <PressableScale className="absolute -right-2 -top-2 z-10">
-                          <button
-                            type="button"
-                            aria-label={t.operatorApp.gameRoom.linkClientAction}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setLinkClientTarget(l);
-                            }}
-                            className={cn(
-                              "flex size-9 items-center justify-center rounded-full shadow-md",
-                              // Серый — не привязан, акцентный — привязан
-                              // (запрос пользователя 2026-07-27) — цвет сам
-                              // по себе уже говорит о статусе. Заливка
-                              // "currentColor" на самой иконке убрана (тот
-                              // же день, скриншот) — на size-4 Wallet-иконка
-                              // с fill превращалась в нечитаемое пятно.
-                              l.linkedClient
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted text-muted-foreground"
-                            )}
-                          >
-                            <Wallet className="size-4" />
-                          </button>
-                        </PressableScale>
-                      )}
+                      {/* Значок рендерится ВСЕГДА, а не только при включённом
+                          модуле Клиенты (найдено при самопроверке
+                          2026-09-01): за ним теперь и пометка тоже, а она к
+                          модулю Клиенты отношения не имеет — без этого у
+                          тенанта с выключенными Клиентами подписать браслет
+                          было бы негде вовсе. Иконка по той же причине
+                          нейтральная (Tag), а не Wallet: за значком «кто
+                          это» — пометка и/или клиент. */}
+                      <PressableScale className="absolute -right-2 -top-2 z-10">
+                        <button
+                          type="button"
+                          aria-label={t.operatorApp.gameRoom.labelFieldLabel}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLinkClientTarget(l);
+                          }}
+                          className={cn(
+                            "flex size-9 items-center justify-center rounded-full shadow-md",
+                            // Серый — пусто, акцентный — что-то указано
+                            // (запрос пользователя 2026-07-27) — цвет сам
+                            // по себе уже говорит о статусе. Заливка
+                            // "currentColor" на самой иконке убрана (тот
+                            // же день, скриншот) — на size-4 иконка
+                            // с fill превращалась в нечитаемое пятно.
+                            l.label || l.linkedClient
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          <Tag className="size-4" />
+                        </button>
+                      </PressableScale>
                     </div>
                   );
                 })}
@@ -1414,7 +1443,9 @@ export default function StaysZonePage() {
       <LinkClientSheet
         open={linkClientTarget !== null}
         onClose={() => setLinkClientTarget(null)}
-        endpoint={linkClientTarget ? `/api/launches/${linkClientTarget.id}/link-client` : null}
+        // Модуль Клиенты выключен — поиск клиента в шторке не рендерится
+        // вовсе, остаётся только пометка (она от модуля не зависит).
+        endpoint={linkClientTarget && clientsEnabled ? `/api/launches/${linkClientTarget.id}/link-client` : null}
         current={linkClientTarget?.linkedClient ?? null}
         onLinked={() => {
           setLinkClientTarget(null);
@@ -1422,6 +1453,16 @@ export default function StaysZonePage() {
         }}
         onUnlinked={() => {
           setLinkClientTarget(null);
+          loadLaunches(selectedZoneId);
+        }}
+        // Пометка на браслете (запрос пользователя 2026-09-01). Шторка не
+        // закрывается после сохранения — сотрудник может тут же привязать и
+        // клиента, это независимые поля; обновляем только цель, чтобы поле
+        // не считало себя изменённым и подпись сразу уехала на тайл.
+        labelEndpoint={linkClientTarget ? `/api/launches/${linkClientTarget.id}` : null}
+        currentLabel={linkClientTarget?.label ?? null}
+        onLabelSaved={(label) => {
+          setLinkClientTarget((prev) => (prev ? { ...prev, label } : prev));
           loadLaunches(selectedZoneId);
         }}
       />

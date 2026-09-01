@@ -1316,6 +1316,8 @@
       "voidLaunchAction": "Иштетүүнү күчүн жоюу",
       "noAssetsYet": "Ээси бул зонага азырынча активдерди кошо элек",
       "wristbandNumberPrefix": "Келүүчү",
+      "labelFieldLabel": "Белги",
+      "labelFieldPlaceholder": "Жашыл футболкачан Макс",
       "resumeLaunchAction": "Улантуу",
       "linkClientAction": "Клиент",
       "linkClientAssignButton": "Байланыштыруу",

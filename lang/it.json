@@ -1316,6 +1316,8 @@
       "voidLaunchAction": "Annulla avvio",
       "noAssetsYet": "Il proprietario non ha ancora aggiunto elementi a questa zona",
       "wristbandNumberPrefix": "Visitatore",
+      "labelFieldLabel": "Nota",
+      "labelFieldPlaceholder": "Max con la maglietta verde",
       "resumeLaunchAction": "Riprendi",
       "linkClientAction": "Cliente",
       "linkClientAssignButton": "Collega",
