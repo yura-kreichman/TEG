@@ -1,0 +1,1470 @@
+{
+  "_note": "Переводы сегментов статей документации для TranslatePress. Ключ — ТОЧНЫЙ русский оригинал из wp_trp_dictionary_ru_ru_*.original, применяется скриптом docs-translations.php по совпадению original, а не по id (id в языковых таблицах разные). Собрано вручную 2026-09-01, машинный перевод не использовался: DeepL ломает продуктовые термины. Глоссарий: Счётчики/Counters/Лічильники/Contatori/Contoare, Пуски/Launches/Заїзди/Corse/Curse, Прибывания/Stays/Перебування/Soggiorni/Șederi, Билеты/Tickets/Квитки/Biglietti/Bilete, Товары/Products/Товари/Prodotti/Produse, Сдача итогов/Results submission/Здача підсумків/Chiusura di giornata/Închiderea zilei, Сотрудник/Employee/Співробітник/Dipendente/Angajat.",
+
+  "Печать в RentOS идёт обычным диалогом печати браузера — отдельной программы ставить не нужно. Настройка состоит из двух частей:": {
+    "en": "Printing in RentOS goes through the browser's usual print dialog — no separate program to install. Setup has two parts:",
+    "uk": "Друк у RentOS іде звичайним діалогом друку браузера — окрему програму встановлювати не потрібно. Налаштування складається з двох частин:",
+    "it": "La stampa in RentOS passa dalla normale finestra di stampa del browser: non serve installare alcun programma. La configurazione ha due parti:",
+    "ro": "Tipărirea în RentOS folosește dialogul obișnuit de tipărire al browserului — nu trebuie instalat niciun program separat. Configurarea are două părți:"
+  },
+  "что печатать": {
+    "en": "what to print",
+    "uk": "що друкувати",
+    "it": "cosa stampare",
+    "ro": "ce se tipărește"
+  },
+  "чем печатать": {
+    "en": "what to print with",
+    "uk": "чим друкувати",
+    "it": "con cosa stampare",
+    "ro": "cu ce se tipărește"
+  },
+  "задаёт владелец один раз для всей компании, а": {
+    "en": "is set by the owner once for the whole company, while",
+    "uk": "задає власник один раз для всієї компанії, а",
+    "it": "lo imposta il titolare una volta per tutta l'azienda, mentre",
+    "ro": "este stabilit de proprietar o singură dată pentru toată compania, iar"
+  },
+  "— каждое устройство отдельно.": {
+    "en": "— each device separately.",
+    "uk": "— кожен пристрій окремо.",
+    "it": "— ogni dispositivo separatamente.",
+    "ro": "— fiecare dispozitiv separat."
+  },
+  "Шаг 1. Включить печать в компании": {
+    "en": "Step 1. Turn printing on for the company",
+    "uk": "Крок 1. Увімкнути друк у компанії",
+    "it": "Passo 1. Attivare la stampa per l'azienda",
+    "ro": "Pasul 1. Activați tipărirea pentru companie"
+  },
+  "Настройки → «Система» → тумблер": {
+    "en": "Settings → System → the toggle",
+    "uk": "Налаштування → «Система» → перемикач",
+    "it": "Impostazioni → «Sistema» → l'interruttore",
+    "ro": "Setări → «Sistem» → comutatorul"
+  },
+  ". Он включает саму возможность печатать квитанции; сам принтер настраивается отдельно, на точке или устройстве.": {
+    "en": ". It enables the ability to print receipts at all; the printer itself is configured separately, at the location or on the device.",
+    "uk": ". Він вмикає саму можливість друкувати квитанції; сам принтер налаштовується окремо, на точці або пристрої.",
+    "it": ". Attiva la possibilità stessa di stampare le ricevute; la stampante si configura a parte, presso la sede o sul dispositivo.",
+    "ro": ". Activează însăși posibilitatea de a tipări bonuri; imprimanta se configurează separat, la punct sau pe dispozitiv."
+  },
+  "Ниже — раздел": {
+    "en": "Below is the section",
+    "uk": "Нижче — розділ",
+    "it": "Più sotto c'è la sezione",
+    "ro": "Mai jos este secțiunea"
+  },
+  ", общий вид документа для всей компании:": {
+    "en": ", the document's overall look for the whole company:",
+    "uk": ", загальний вигляд документа для всієї компанії:",
+    "it": ", l'aspetto generale del documento per tutta l'azienda:",
+    "ro": ", aspectul general al documentului pentru toată compania:"
+  },
+  "— показывать логотип, показывать название компании и «Компактная шапка» (лого слева, название и заголовок рядом с ним — так документ короче по высоте на термопринтере).": {
+    "en": "— show the logo, show the company name, and «Compact header» (logo on the left, name and title next to it — this makes the document shorter on a thermal printer).",
+    "uk": "— показувати логотип, показувати назву компанії та «Компактна шапка» (лого ліворуч, назва й заголовок поруч із ним — так документ коротший за висотою на термопринтері).",
+    "it": "— mostrare il logo, mostrare il nome dell'azienda e «Intestazione compatta» (logo a sinistra, nome e titolo accanto: così il documento è più corto sulla stampante termica).",
+    "ro": "— afișarea siglei, afișarea numelui companiei și «Antet compact» (sigla în stânga, numele și titlul alături — astfel documentul este mai scurt pe imprimanta termică)."
+  },
+  "Подвал квитанции": {
+    "en": "Receipt footer",
+    "uk": "Підвал квитанції",
+    "it": "Piè di pagina della ricevuta",
+    "ro": "Subsolul bonului"
+  },
+  "— произвольный текст внизу каждого печатного документа: реквизиты, условия возврата, «спасибо за визит». Оставьте пустым, чтобы подвала не было вовсе.": {
+    "en": "— free text at the bottom of every printed document: company details, return terms, «thank you for your visit». Leave it empty for no footer at all.",
+    "uk": "— довільний текст унизу кожного друкованого документа: реквізити, умови повернення, «дякуємо за візит». Залиште порожнім, щоб підвалу не було зовсім.",
+    "it": "— testo libero in fondo a ogni documento stampato: dati aziendali, condizioni di reso, «grazie della visita». Lascialo vuoto per non avere alcun piè di pagina.",
+    "ro": "— text liber în partea de jos a fiecărui document tipărit: date de identificare, condiții de returnare, «vă mulțumim pentru vizită». Lăsați gol pentru a nu avea subsol deloc."
+  },
+  "Ширина рулона": {
+    "en": "Roll width",
+    "uk": "Ширина рулона",
+    "it": "Larghezza del rotolo",
+    "ro": "Lățimea rolei"
+  },
+  "— укажите реальную ширину бумаги вашего принтера, иначе печать обрежется по бокам.": {
+    "en": "— enter the actual paper width of your printer, otherwise the print will be cut off at the sides.",
+    "uk": "— вкажіть реальну ширину паперу вашого принтера, інакше друк обріжеться з боків.",
+    "it": "— indica la larghezza reale della carta della tua stampante, altrimenti la stampa verrà tagliata ai lati.",
+    "ro": "— indicați lățimea reală a hârtiei imprimantei, altfel tipărirea va fi tăiată pe laterale."
+  },
+  "«Предпросмотр квитанции»": {
+    "en": "«Receipt preview»",
+    "uk": "«Попередній перегляд квитанції»",
+    "it": "«Anteprima della ricevuta»",
+    "ro": "«Previzualizarea bonului»"
+  },
+  "показывает документ в натуральную величину, а": {
+    "en": "shows the document at actual size, and",
+    "uk": "показує документ у натуральну величину, а",
+    "it": "mostra il documento a grandezza naturale, mentre",
+    "ro": "afișează documentul la mărime naturală, iar"
+  },
+  "«Тестовая печать»": {
+    "en": "«Test print»",
+    "uk": "«Тестовий друк»",
+    "it": "«Stampa di prova»",
+    "ro": "«Tipărire de test»"
+  },
+  "отправляет его на принтер — проверьте до первого клиента.": {
+    "en": "sends it to the printer — check this before your first customer.",
+    "uk": "надсилає його на принтер — перевірте до першого клієнта.",
+    "it": "lo invia alla stampante: verifica prima del primo cliente.",
+    "ro": "îl trimite la imprimantă — verificați înainte de primul client."
+  },
+  "Шаг 2. Отметить принтер на устройстве": {
+    "en": "Step 2. Mark the printer on the device",
+    "uk": "Крок 2. Позначити принтер на пристрої",
+    "it": "Passo 2. Segnalare la stampante sul dispositivo",
+    "ro": "Pasul 2. Marcați imprimanta pe dispozitiv"
+  },
+  "Печать привязана к браузеру и устройству, а не к компании: у кассового планшета принтер есть, у телефона владельца — обычно нет. Поэтому на каждом устройстве отдельно включается тумблер": {
+    "en": "Printing is tied to the browser and the device, not to the company: the till tablet has a printer, the owner's phone usually does not. That is why each device separately turns on the toggle",
+    "uk": "Друк прив'язаний до браузера й пристрою, а не до компанії: у касового планшета принтер є, у телефона власника — зазвичай немає. Тому на кожному пристрої окремо вмикається перемикач",
+    "it": "La stampa è legata al browser e al dispositivo, non all'azienda: il tablet di cassa ha una stampante, il telefono del titolare di solito no. Per questo su ogni dispositivo si attiva separatamente l'interruttore",
+    "ro": "Tipărirea este legată de browser și de dispozitiv, nu de companie: tableta de la casă are imprimantă, telefonul proprietarului de obicei nu. De aceea, pe fiecare dispozitiv se activează separat comutatorul"
+  },
+  "«Есть принтер»": {
+    "en": "«Printer available»",
+    "uk": "«Є принтер»",
+    "it": "«Stampante presente»",
+    "ro": "«Există imprimantă»"
+  },
+  "— у сотрудника в его настройках, у владельца в том же разделе «Система». Пока он выключен, кнопки печати просто не показываются, чтобы не мешать.": {
+    "en": "— for the employee in their settings, for the owner in the same «System» section. While it is off, the print buttons simply do not appear, so they don't get in the way.",
+    "uk": "— у співробітника в його налаштуваннях, у власника в тому ж розділі «Система». Поки він вимкнений, кнопки друку просто не показуються, щоб не заважати.",
+    "it": "— per il dipendente nelle sue impostazioni, per il titolare nella stessa sezione «Sistema». Finché è spento, i pulsanti di stampa semplicemente non compaiono, per non intralciare.",
+    "ro": "— la angajat în setările sale, la proprietar în aceeași secțiune «Sistem». Cât timp este oprit, butoanele de tipărire pur și simplu nu apar, ca să nu încurce."
+  },
+  "Дешёвым Bluetooth-принтерам нужно приложение-сервис печати — например ESCPOS Bluetooth Print Service. Без него система вообще не видит принтер, и дело не в RentOS.": {
+    "en": "Cheap Bluetooth printers need a print service app — for example ESCPOS Bluetooth Print Service. Without it the system does not see the printer at all, and RentOS has nothing to do with it.",
+    "uk": "Дешевим Bluetooth-принтерам потрібен застосунок-сервіс друку — наприклад ESCPOS Bluetooth Print Service. Без нього система взагалі не бачить принтер, і річ не в RentOS.",
+    "it": "Le stampanti Bluetooth economiche richiedono un'app di servizio di stampa, ad esempio ESCPOS Bluetooth Print Service. Senza di essa il sistema non vede affatto la stampante, e non dipende da RentOS.",
+    "ro": "Imprimantele Bluetooth ieftine au nevoie de o aplicație-serviciu de tipărire — de exemplu ESCPOS Bluetooth Print Service. Fără ea sistemul nu vede deloc imprimanta, iar RentOS nu are nicio legătură."
+  },
+  "Проверьте «Ширину рулона» в настройках квитанции: она должна совпадать с реальной бумагой. Драйвер по умолчанию считает лист A4 и печатает по его полям.": {
+    "en": "Check «Roll width» in the receipt settings: it must match the actual paper. By default the driver assumes an A4 sheet and prints to its margins.",
+    "uk": "Перевірте «Ширину рулона» в налаштуваннях квитанції: вона має збігатися з реальним папером. Драйвер за замовчуванням вважає аркуш A4 і друкує за його полями.",
+    "it": "Controlla «Larghezza del rotolo» nelle impostazioni della ricevuta: deve corrispondere alla carta reale. Per impostazione predefinita il driver presume un foglio A4 e stampa secondo i suoi margini.",
+    "ro": "Verificați «Lățimea rolei» în setările bonului: trebuie să corespundă hârtiei reale. Implicit, driverul presupune o coală A4 și tipărește după marginile ei."
+  },
+  "Включите «Компактную шапку» и уберите логотип — на узком рулоне это заметно экономит бумагу.": {
+    "en": "Turn on «Compact header» and remove the logo — on a narrow roll this saves a noticeable amount of paper.",
+    "uk": "Увімкніть «Компактну шапку» та приберіть логотип — на вузькому рулоні це помітно економить папір.",
+    "it": "Attiva «Intestazione compatta» e togli il logo: su un rotolo stretto si risparmia parecchia carta.",
+    "ro": "Activați «Antet compact» și eliminați sigla — pe o rolă îngustă acest lucru economisește vizibil hârtie."
+  },
+  "Квитанция — на экране завершённой продажи и посещения, билеты — кнопкой «Печать билетов» в заказе, выписка баланса — в карточке клиента, итоги инкассации — в реестре инкассаций. Все они появляются только при включённом тумблере «Есть принтер» на этом устройстве.": {
+    "en": "The receipt is on the screen of a completed sale or stay, tickets are under «Print tickets» in the order, the balance statement is in the client card, and cash-collection totals are in the collections register. All of them appear only when the «Printer available» toggle is on for this device.",
+    "uk": "Квитанція — на екрані завершеного продажу та перебування, квитки — кнопкою «Друк квитків» у замовленні, виписка балансу — у картці клієнта, підсумки інкасації — у реєстрі інкасацій. Усі вони з'являються лише за увімкненого перемикача «Є принтер» на цьому пристрої.",
+    "it": "La ricevuta è nella schermata della vendita o del soggiorno completato, i biglietti si stampano con «Stampa biglietti» nell'ordine, l'estratto del saldo è nella scheda del cliente e i totali del prelievo sono nel registro dei prelievi. Compaiono tutti solo con l'interruttore «Stampante presente» attivo su questo dispositivo.",
+    "ro": "Bonul este pe ecranul vânzării sau al șederii finalizate, biletele — prin butonul «Tipărire bilete» din comandă, extrasul de sold — în fișa clientului, totalurile colectării — în registrul colectărilor. Toate apar doar cu comutatorul «Există imprimantă» activat pe acest dispozitiv."
+  },
+
+  "При сдаче итогов сотрудник вводит фактическую кассу — сколько денег реально в ящике. Рядом приложение показывает «Разницу» между этой суммой и расчётной выручкой. Удобно, но у этого есть обратная сторона: видя расчётную сумму, недобросовестный сотрудник может просто подогнать под неё свой ввод, и недостача не всплывёт никогда.": {
+    "en": "At the results submission the employee enters the actual cash — how much money is really in the drawer. Next to it the app shows the «Difference» between that sum and the calculated revenue. Convenient, but it has a flip side: seeing the calculated sum, a dishonest employee can simply match their entry to it, and a shortfall will never surface.",
+    "uk": "Під час здачі підсумків співробітник вводить фактичну касу — скільки грошей реально в шухляді. Поруч застосунок показує «Різницю» між цією сумою та розрахунковою виручкою. Зручно, але є зворотний бік: бачачи розрахункову суму, недобросовісний співробітник може просто підігнати під неї свій ввід, і нестача не спливе ніколи.",
+    "it": "Alla chiusura di giornata il dipendente inserisce la cassa effettiva: quanti soldi ci sono davvero nel cassetto. Accanto l'app mostra la «Differenza» tra quella somma e l'incasso calcolato. Comodo, ma c'è il rovescio della medaglia: vedendo la somma calcolata, un dipendente disonesto può semplicemente adattarvi il proprio inserimento, e un ammanco non emergerà mai.",
+    "ro": "La închiderea zilei angajatul introduce casa efectivă — câți bani sunt realmente în sertar. Alături aplicația arată «Diferența» dintre această sumă și încasarea calculată. Comod, dar are și un revers: văzând suma calculată, un angajat necinstit își poate pur și simplu potrivi introducerea după ea, iar lipsa nu va ieși niciodată la iveală."
+  },
+  "Поэтому «Разницу» можно скрыть до отправки. Это называется слепым вводом и настраивается": {
+    "en": "That is why the «Difference» can be hidden until submission. This is called blind entry and is configured",
+    "uk": "Тому «Різницю» можна приховати до відправлення. Це називається сліпим введенням і налаштовується",
+    "it": "Per questo la «Differenza» può essere nascosta fino all'invio. Si chiama inserimento cieco e si configura",
+    "ro": "De aceea «Diferența» poate fi ascunsă până la trimitere. Aceasta se numește introducere oarbă și se configurează"
+  },
+  "для каждого сотрудника отдельно": {
+    "en": "for each employee separately",
+    "uk": "для кожного співробітника окремо",
+    "it": "per ogni dipendente separatamente",
+    "ro": "pentru fiecare angajat separat"
+  },
+  "— кому-то доверяете полностью, кого-то только приняли.": {
+    "en": "— some you trust completely, some you have only just hired.",
+    "uk": "— комусь довіряєте повністю, когось щойно взяли на роботу.",
+    "it": "— di qualcuno ti fidi completamente, qualcun altro è appena stato assunto.",
+    "ro": "— în cineva aveți încredere deplină, pe altcineva tocmai l-ați angajat."
+  },
+  "Откройте «Сотрудники» → карточка нужного сотрудника.": {
+    "en": "Open «Employees» → the card of the employee you need.",
+    "uk": "Відкрийте «Співробітники» → картку потрібного співробітника.",
+    "it": "Apri «Dipendenti» → la scheda del dipendente che ti serve.",
+    "ro": "Deschideți «Angajați» → fișa angajatului dorit."
+  },
+  "Найдите тумблер": {
+    "en": "Find the toggle",
+    "uk": "Знайдіть перемикач",
+    "it": "Trova l'interruttore",
+    "ro": "Găsiți comutatorul"
+  },
+  "«Видит разницу при сдаче»": {
+    "en": "«Sees the difference at submission»",
+    "uk": "«Бачить різницю під час здачі»",
+    "it": "«Vede la differenza alla chiusura»",
+    "ro": "«Vede diferența la închidere»"
+  },
+  "его — и сотрудник вводит кассу вслепую, а результат видит только после отправки.": {
+    "en": "it — and the employee enters the cash blind, seeing the result only after submitting.",
+    "uk": "його — і співробітник вводить касу наосліп, а результат бачить лише після відправлення.",
+    "it": "— e il dipendente inserisce la cassa alla cieca, vedendo il risultato solo dopo l'invio.",
+    "ro": "— iar angajatul introduce casa în orb și vede rezultatul abia după trimitere."
+  },
+  "Включённый тумблер (по умолчанию) — прежнее поведение: «Разница» считается сразу при вводе.": {
+    "en": "The toggle on (the default) is the previous behaviour: the «Difference» is calculated right as you type.",
+    "uk": "Увімкнений перемикач (за замовчуванням) — попередня поведінка: «Різниця» рахується одразу під час введення.",
+    "it": "L'interruttore attivo (impostazione predefinita) è il comportamento precedente: la «Differenza» viene calcolata già durante l'inserimento.",
+    "ro": "Comutatorul activat (implicit) este comportamentul anterior: «Diferența» se calculează chiar în timpul introducerii."
+  },
+  "Что это меняет на практике": {
+    "en": "What this changes in practice",
+    "uk": "Що це змінює на практиці",
+    "it": "Che cosa cambia in pratica",
+    "ro": "Ce schimbă acest lucru în practică"
+  },
+  "Сотрудник по-прежнему видит всё, что нужно для работы: свои пуски, продажи, расходы. Скрывается только подсказка «столько должно быть» в момент пересчёта денег. Сама сдача итогов, расчёт выручки и все отчёты работают одинаково при любом положении тумблера.": {
+    "en": "The employee still sees everything needed for work: their launches, sales, expenses. Only the «this is how much it should be» hint is hidden at the moment of counting the money. The results submission itself, the revenue calculation and all reports work the same whichever way the toggle is set.",
+    "uk": "Співробітник, як і раніше, бачить усе потрібне для роботи: свої заїзди, продажі, витрати. Ховається лише підказка «стільки має бути» в момент перерахунку грошей. Сама здача підсумків, розрахунок виручки й усі звіти працюють однаково за будь-якого положення перемикача.",
+    "it": "Il dipendente continua a vedere tutto ciò che serve per lavorare: le proprie corse, le vendite, le spese. Viene nascosto solo il suggerimento «ecco quanto dovrebbe essere» nel momento in cui si contano i soldi. La chiusura di giornata, il calcolo dell'incasso e tutti i report funzionano allo stesso modo in qualunque posizione dell'interruttore.",
+    "ro": "Angajatul vede în continuare tot ce îi trebuie pentru lucru: cursele proprii, vânzările, cheltuielile. Se ascunde doar indiciul «atât ar trebui să fie» în momentul numărării banilor. Închiderea zilei, calculul încasărilor și toate rapoartele funcționează la fel, indiferent de poziția comutatorului."
+  },
+  "Владелец видит «Разницу» всегда — и на Главной, и в «Итогах по дням», и в сводке, которая приходит в Telegram.": {
+    "en": "The owner always sees the «Difference» — on the Home screen, in «Daily totals», and in the summary that arrives in Telegram.",
+    "uk": "Власник бачить «Різницю» завжди — і на Головній, і в «Підсумках за днями», і у зведенні, яке приходить у Telegram.",
+    "it": "Il titolare vede sempre la «Differenza»: nella schermata principale, nei «Totali giornalieri» e nel riepilogo che arriva su Telegram.",
+    "ro": "Proprietarul vede întotdeauna «Diferența» — și pe ecranul principal, și în «Totalurile pe zile», și în rezumatul care ajunge pe Telegram."
+  },
+  "Это не всегда воровство: чаще так проявляется забытый расход, неучтённый размен или продажа, проведённая мимо приложения. Посмотрите «Итоги по дням» за несколько смен подряд — систематический сдвиг виден сразу.": {
+    "en": "It is not always theft: more often it is a forgotten expense, an unrecorded float, or a sale put through outside the app. Look at «Daily totals» over several shifts in a row — a systematic shift shows up immediately.",
+    "uk": "Це не завжди крадіжка: частіше так виявляється забута витрата, неврахований розмін або продаж, проведений повз застосунок. Подивіться «Підсумки за днями» за кілька змін поспіль — систематичний зсув видно одразу.",
+    "it": "Non è sempre un furto: più spesso si tratta di una spesa dimenticata, di un fondo cassa non registrato o di una vendita fatta fuori dall'app. Guarda i «Totali giornalieri» per alcuni turni di fila: uno scostamento sistematico si vede subito.",
+    "ro": "Nu este întotdeauna furt: mai des este o cheltuială uitată, un fond de rest neînregistrat sau o vânzare făcută pe lângă aplicație. Priviți «Totalurile pe zile» pentru câteva schimburi la rând — o abatere sistematică se vede imediat."
+  },
+  "Тумблер поштучный: выключите его одному, у остальных всё останется как было.": {
+    "en": "The toggle is per person: turn it off for one employee and everyone else stays as before.",
+    "uk": "Перемикач поштучний: вимкніть його одному, в решти все залишиться як було.",
+    "it": "L'interruttore è individuale: disattivalo per uno e per tutti gli altri resta come prima.",
+    "ro": "Comutatorul este individual: dezactivați-l pentru unul singur și pentru ceilalți rămâne ca înainte."
+  },
+
+  "Иногда разобраться с вопросом быстрее, если поддержка посмотрит на ваш кабинет своими глазами — цифры, настройки зон, историю операций. Чтобы это было возможно только с вашего ведома, вход поддержки закрывается тумблером, и управляете им вы.": {
+    "en": "Sometimes an issue is sorted out faster if support looks at your account with their own eyes — the figures, the zone settings, the operation history. So that this is possible only with your knowledge, support access is closed off by a toggle, and you are the one who controls it.",
+    "uk": "Іноді розібратися з питанням швидше, якщо підтримка подивиться на ваш кабінет власними очима — цифри, налаштування зон, історію операцій. Щоб це було можливо лише з вашого відома, вхід підтримки закривається перемикачем, і керуєте ним ви.",
+    "it": "A volte una questione si risolve più in fretta se l'assistenza guarda il tuo account con i propri occhi: i numeri, le impostazioni delle aree, lo storico delle operazioni. Perché ciò sia possibile solo con il tuo consenso, l'accesso dell'assistenza è chiuso da un interruttore che controlli tu.",
+    "ro": "Uneori o problemă se lămurește mai repede dacă suportul se uită la contul dumneavoastră cu proprii ochi — cifrele, setările zonelor, istoricul operațiunilor. Pentru ca acest lucru să fie posibil doar cu știrea dumneavoastră, accesul suportului este închis printr-un comutator pe care îl controlați dumneavoastră."
+  },
+  "Откройте Настройки — тумблер": {
+    "en": "Open Settings — the toggle",
+    "uk": "Відкрийте Налаштування — перемикач",
+    "it": "Apri le Impostazioni — l'interruttore",
+    "ro": "Deschideți Setări — comutatorul"
+  },
+  "«Доступ техподдержки»": {
+    "en": "«Support access»",
+    "uk": "«Доступ техпідтримки»",
+    "it": "«Accesso dell'assistenza»",
+    "ro": "«Acces asistență tehnică»"
+  },
+  "под карточкой вашего плана.": {
+    "en": "under your plan card.",
+    "uk": "під карткою вашого плану.",
+    "it": "sotto la scheda del tuo piano.",
+    "ro": "sub fișa planului dumneavoastră."
+  },
+  "Включите его на время разбора вопроса.": {
+    "en": "Turn it on for the time it takes to sort the question out.",
+    "uk": "Увімкніть його на час розгляду питання.",
+    "it": "Attivalo per il tempo necessario a risolvere la questione.",
+    "ro": "Activați-l pe durata analizării problemei."
+  },
+  "Когда вопрос решён — выключите. Вернуть доступ можно в любой момент там же.": {
+    "en": "Once the question is resolved, turn it off. You can restore access at any time in the same place.",
+    "uk": "Коли питання вирішено — вимкніть. Повернути доступ можна будь-коли там само.",
+    "it": "Quando la questione è risolta, disattivalo. Puoi ripristinare l'accesso in qualsiasi momento nello stesso punto.",
+    "ro": "Când problema este rezolvată, dezactivați-l. Puteți reda accesul oricând, în același loc."
+  },
+  "Что это значит": {
+    "en": "What this means",
+    "uk": "Що це означає",
+    "it": "Che cosa significa",
+    "ro": "Ce înseamnă acest lucru"
+  },
+  "Включённый тумблер разрешает поддержке RentOS входить в ваш кабинет для помощи и диагностики.": {
+    "en": "The toggle on allows RentOS support to sign in to your account for help and diagnostics.",
+    "uk": "Увімкнений перемикач дозволяє підтримці RentOS входити у ваш кабінет для допомоги та діагностики.",
+    "it": "L'interruttore attivo consente all'assistenza RentOS di accedere al tuo account per aiuto e diagnostica.",
+    "ro": "Comutatorul activat permite asistenței RentOS să intre în contul dumneavoastră pentru ajutor și diagnosticare."
+  },
+  "Выключенный — закрывает вход всем, включая администратора платформы.": {
+    "en": "Off, it closes access to everyone, including the platform administrator.",
+    "uk": "Вимкнений — закриває вхід усім, включно з адміністратором платформи.",
+    "it": "Spento, chiude l'accesso a tutti, compreso l'amministratore della piattaforma.",
+    "ro": "Dezactivat, închide accesul tuturor, inclusiv administratorului platformei."
+  },
+  "Это не формальность и не галочка «мы обещаем не смотреть»: пока тумблер выключен, войти технически не может никто.": {
+    "en": "This is not a formality or a «we promise not to look» checkbox: while the toggle is off, technically no one can sign in.",
+    "uk": "Це не формальність і не галочка «ми обіцяємо не дивитися»: поки перемикач вимкнений, увійти технічно не може ніхто.",
+    "it": "Non è una formalità né una casella «promettiamo di non guardare»: finché l'interruttore è spento, tecnicamente non può accedere nessuno.",
+    "ro": "Nu este o formalitate și nici o bifă «promitem că nu ne uităm»: cât timp comutatorul este oprit, tehnic nu poate intra nimeni."
+  },
+  "Данные компании при этом никуда не деваются и продолжают работать как обычно — закрывается именно чужой вход, а не ваш.": {
+    "en": "Your company data does not go anywhere and keeps working as usual — what is closed is someone else's access, not yours.",
+    "uk": "Дані компанії при цьому нікуди не зникають і продовжують працювати як звичайно — закривається саме чужий вхід, а не ваш.",
+    "it": "I dati dell'azienda non spariscono e continuano a funzionare come sempre: a essere chiuso è l'accesso altrui, non il tuo.",
+    "ro": "Datele companiei nu dispar nicăieri și funcționează ca de obicei — se închide accesul altcuiva, nu al dumneavoastră."
+  },
+  "Включайте на время конкретного разбора и выключайте сразу после. Ничего не сломается: тумблер переключается сколько угодно раз.": {
+    "en": "Turn it on for a specific investigation and off right afterwards. Nothing will break: the toggle can be switched any number of times.",
+    "uk": "Вмикайте на час конкретного розгляду й вимикайте одразу після. Нічого не зламається: перемикач перемикається скільки завгодно разів.",
+    "it": "Attivalo per una verifica specifica e disattivalo subito dopo. Non si rompe nulla: l'interruttore si può commutare quante volte vuoi.",
+    "ro": "Activați-l pentru o analiză concretă și dezactivați-l imediat după. Nu se strică nimic: comutatorul poate fi comutat de oricâte ori."
+  },
+  "Скорее всего тумблер выключен — это самая частая причина. Проверьте его перед тем, как описывать проблему словами.": {
+    "en": "Most likely the toggle is off — that is the most common reason. Check it before describing the problem in words.",
+    "uk": "Найімовірніше перемикач вимкнений — це найчастіша причина. Перевірте його, перш ніж описувати проблему словами.",
+    "it": "Molto probabilmente l'interruttore è spento: è la causa più frequente. Controllalo prima di descrivere il problema a parole.",
+    "ro": "Cel mai probabil comutatorul este oprit — este cea mai frecventă cauză. Verificați-l înainte de a descrie problema în cuvinte."
+  },
+
+  "Если вы переходите в RentOS с другой программы, тетради или таблицы, клиентов и их балансы не нужно заводить по одному — есть импорт файлом.": {
+    "en": "If you are moving to RentOS from another program, a notebook or a spreadsheet, you do not need to add clients and their balances one by one — there is a file import.",
+    "uk": "Якщо ви переходите в RentOS з іншої програми, зошита або таблиці, клієнтів і їхні баланси не потрібно заводити по одному — є імпорт файлом.",
+    "it": "Se stai passando a RentOS da un altro programma, da un quaderno o da un foglio di calcolo, non devi inserire i clienti e i loro saldi uno per uno: esiste l'importazione da file.",
+    "ro": "Dacă treceți la RentOS de la alt program, de la un caiet sau de la un tabel, nu trebuie să introduceți clienții și soldurile lor unul câte unul — există importul din fișier."
+  },
+  "Как это делается": {
+    "en": "How it is done",
+    "uk": "Як це робиться",
+    "it": "Come si fa",
+    "ro": "Cum se face"
+  },
+  "«Импорт клиентов»": {
+    "en": "«Import clients»",
+    "uk": "«Імпорт клієнтів»",
+    "it": "«Importa clienti»",
+    "ro": "«Import clienți»"
+  },
+  "«Скачать образец»": {
+    "en": "«Download the template»",
+    "uk": "«Завантажити зразок»",
+    "it": "«Scarica il modello»",
+    "ro": "«Descărcați modelul»"
+  },
+  "и заполните его своими данными. Файл принимается в формате": {
+    "en": "and fill it in with your data. The file is accepted in the format",
+    "uk": "і заповніть його своїми даними. Файл приймається у форматі",
+    "it": "e compilalo con i tuoi dati. Il file è accettato nel formato",
+    "ro": "și completați-l cu datele dumneavoastră. Fișierul este acceptat în formatul"
+  },
+  "— ровно в том виде, что у образца.": {
+    "en": "— exactly in the shape of the template.",
+    "uk": "— саме в такому вигляді, як у зразка.",
+    "it": "— esattamente nella forma del modello.",
+    "ro": "— exact în forma modelului."
+  },
+  "Загрузите заполненный файл. До записи в базу приложение покажет разбор: сколько строк": {
+    "en": "Upload the filled-in file. Before writing anything to the database the app shows a breakdown: how many rows",
+    "uk": "Завантажте заповнений файл. До запису в базу застосунок покаже розбір: скільки рядків",
+    "it": "Carica il file compilato. Prima di scrivere nel database l'app mostra un'analisi: quante righe",
+    "ro": "Încărcați fișierul completat. Înainte de a scrie în bază, aplicația arată o analiză: câte rânduri"
+  },
+  "будет добавлено": {
+    "en": "will be added",
+    "uk": "буде додано",
+    "it": "verranno aggiunte",
+    "ro": "vor fi adăugate"
+  },
+  "уже есть и будет пропущено": {
+    "en": "already exist and will be skipped",
+    "uk": "уже є і буде пропущено",
+    "it": "esistono già e verranno saltate",
+    "ro": "există deja și vor fi omise"
+  },
+  "повторов внутри самого файла": {
+    "en": "duplicates inside the file itself",
+    "uk": "повторів усередині самого файла",
+    "it": "duplicati all'interno del file stesso",
+    "ro": "duplicate în interiorul fișierului"
+  },
+  "строк с ошибками": {
+    "en": "rows with errors",
+    "uk": "рядків з помилками",
+    "it": "righe con errori",
+    "ro": "rânduri cu erori"
+  },
+  "— с номером строки и причиной («непонятный телефон», «непонятный баланс»).": {
+    "en": "— with the row number and the reason («unclear phone», «unclear balance»).",
+    "uk": "— з номером рядка та причиною («незрозумілий телефон», «незрозумілий баланс»).",
+    "it": "— con il numero di riga e il motivo («telefono non riconosciuto», «saldo non riconosciuto»).",
+    "ro": "— cu numărul rândului și motivul («telefon neclar», «sold neclar»)."
+  },
+  "Если разбор устраивает — нажмите «Импортировать». Ничего не записывается, пока вы не подтвердите.": {
+    "en": "If the breakdown looks right, press «Import». Nothing is written until you confirm.",
+    "uk": "Якщо розбір влаштовує — натисніть «Імпортувати». Нічого не записується, доки ви не підтвердите.",
+    "it": "Se l'analisi ti convince, premi «Importa». Nulla viene scritto finché non confermi.",
+    "ro": "Dacă analiza vă convine, apăsați «Importă». Nimic nu se scrie până nu confirmați."
+  },
+  "Что важно знать про балансы": {
+    "en": "What matters about balances",
+    "uk": "Що важливо знати про баланси",
+    "it": "Che cosa è importante sapere sui saldi",
+    "ro": "Ce este important de știut despre solduri"
+  },
+  "Балансы переносятся как есть и не попадают в выручку.": {
+    "en": "Balances are carried over as they are and do not count as revenue.",
+    "uk": "Баланси переносяться як є і не потрапляють у виручку.",
+    "it": "I saldi vengono trasferiti così come sono e non finiscono nell'incasso.",
+    "ro": "Soldurile sunt transferate ca atare și nu intră în încasări."
+  },
+  "Это принципиально: деньги за эти абонементы клиенты заплатили вам раньше и в другой системе, поэтому импорт не должен изображать сегодняшние продажи. В истории операций клиента такое зачисление подписано «Перенос из другой системы» — его всегда видно отдельно от настоящих пополнений.": {
+    "en": "This matters: clients paid you for those passes earlier and in another system, so the import must not pretend to be today's sales. In the client's operation history such a credit is labelled «Transfer from another system» — it is always visible separately from real top-ups.",
+    "uk": "Це принципово: гроші за ці абонементи клієнти заплатили вам раніше і в іншій системі, тому імпорт не повинен зображати сьогоднішні продажі. В історії операцій клієнта таке зарахування підписане «Перенесення з іншої системи» — його завжди видно окремо від справжніх поповнень.",
+    "it": "È un punto essenziale: i clienti ti hanno pagato quegli abbonamenti prima e in un altro sistema, quindi l'importazione non deve spacciarsi per vendite di oggi. Nello storico delle operazioni del cliente tale accredito è indicato come «Trasferimento da un altro sistema» e resta sempre distinto dalle ricariche reali.",
+    "ro": "Acest lucru este esențial: banii pentru aceste abonamente clienții vi i-au plătit mai devreme și în alt sistem, deci importul nu trebuie să pară vânzări de azi. În istoricul operațiunilor clientului o astfel de alimentare este marcată «Transfer din alt sistem» — se vede întotdeauna separat de alimentările reale."
+  },
+  "Строка будет пропущена, существующий клиент и его баланс не изменятся. Импорт ничего не перезаписывает — он только добавляет.": {
+    "en": "The row will be skipped; the existing client and their balance stay unchanged. The import overwrites nothing — it only adds.",
+    "uk": "Рядок буде пропущено, наявний клієнт і його баланс не зміняться. Імпорт нічого не перезаписує — він лише додає.",
+    "it": "La riga verrà saltata; il cliente esistente e il suo saldo restano invariati. L'importazione non sovrascrive nulla: aggiunge soltanto.",
+    "ro": "Rândul va fi omis, clientul existent și soldul său nu se modifică. Importul nu suprascrie nimic — doar adaugă."
+  },
+  "Так и импортируйте. RentOS узнаёт клиента по номеру, даже если он записан с другим кодом страны, а при поиске подсказывает похожие номера.": {
+    "en": "Import them as they are. RentOS recognises a client by their number even when it is written with a different country code, and suggests similar numbers when you search.",
+    "uk": "Так і імпортуйте. RentOS упізнає клієнта за номером, навіть якщо він записаний з іншим кодом країни, а під час пошуку підказує схожі номери.",
+    "it": "Importali così come sono. RentOS riconosce il cliente dal numero anche se è scritto con un prefisso internazionale diverso, e nella ricerca suggerisce numeri simili.",
+    "ro": "Importați-le așa cum sunt. RentOS recunoaște clientul după număr chiar dacă este scris cu alt prefix de țară, iar la căutare sugerează numere asemănătoare."
+  },
+  "Исправьте их в файле и загрузите его снова — уже добавленные клиенты повторно не создадутся, они попадут в «уже есть, пропустим».": {
+    "en": "Fix them in the file and upload it again — clients already added will not be created twice, they will fall into «already exist, will skip».",
+    "uk": "Виправте їх у файлі та завантажте його знову — вже додані клієнти повторно не створяться, вони потраплять у «вже є, пропустимо».",
+    "it": "Correggile nel file e ricaricalo: i clienti già aggiunti non verranno creati di nuovo, finiranno in «esistono già, li saltiamo».",
+    "ro": "Corectați-le în fișier și încărcați-l din nou — clienții deja adăugați nu se vor crea a doua oară, vor intra la «există deja, îi omitem»."
+  },
+  "Экспорт в Excel — там же, в разделе «Клиенты».": {
+    "en": "Export to Excel is in the same place, in the «Clients» section.",
+    "uk": "Експорт в Excel — там само, у розділі «Клієнти».",
+    "it": "L'esportazione in Excel è nello stesso posto, nella sezione «Clienti».",
+    "ro": "Exportul în Excel este în același loc, în secțiunea «Clienți»."
+  },
+
+  "Счётчик на активе считает все сеансы подряд — он не знает, платил клиент или нет. А сеансы бывают бесплатные: механик проверил машинку после ремонта, ребёнок сел и сразу расплакался и деньги вернули, сотрудник прогнал круг перед открытием.": {
+    "en": "The counter on an asset counts every session in a row — it does not know whether the client paid. And some sessions are free: a mechanic tested the car after a repair, a child got in, burst into tears and the money was refunded, an employee ran a lap before opening.",
+    "uk": "Лічильник на активі рахує всі сеанси поспіль — він не знає, платив клієнт чи ні. А сеанси бувають безкоштовні: механік перевірив машинку після ремонту, дитина сіла і одразу розплакалася, і гроші повернули, співробітник проїхав коло перед відкриттям.",
+    "it": "Il contatore sull'asset conta tutte le sessioni di fila: non sa se il cliente ha pagato. E alcune sessioni sono gratuite: il meccanico ha provato la macchinina dopo la riparazione, un bambino si è seduto, è scoppiato a piangere e i soldi sono stati restituiti, un dipendente ha fatto un giro prima dell'apertura.",
+    "ro": "Contorul de pe activ numără toate sesiunile la rând — nu știe dacă clientul a plătit. Iar unele sesiuni sunt gratuite: mecanicul a verificat mașinuța după reparație, un copil s-a așezat, a izbucnit în plâns și banii au fost returnați, un angajat a făcut un tur înainte de deschidere."
+  },
+  "Если такие сеансы не отметить, приложение посчитает их выручкой, и вечером появится «Разница», которой на самом деле нет.": {
+    "en": "If such sessions are not marked, the app will count them as revenue, and in the evening a «Difference» will appear that does not really exist.",
+    "uk": "Якщо такі сеанси не позначити, застосунок порахує їх виручкою, і ввечері з'явиться «Різниця», якої насправді немає.",
+    "it": "Se queste sessioni non vengono segnalate, l'app le conterà come incasso e la sera comparirà una «Differenza» che in realtà non esiste.",
+    "ro": "Dacă astfel de sesiuni nu sunt marcate, aplicația le va socoti drept încasări, iar seara va apărea o «Diferență» care de fapt nu există."
+  },
+  "Как отметить": {
+    "en": "How to mark them",
+    "uk": "Як позначити",
+    "it": "Come segnalarle",
+    "ro": "Cum se marchează"
+  },
+  "При сдаче итогов по зоне «Счётчики», рядом с показаниями, есть поле": {
+    "en": "At the results submission for a «Counters» zone, next to the readings, there is a field",
+    "uk": "Під час здачі підсумків по зоні «Лічильники», поруч із показаннями, є поле",
+    "it": "Alla chiusura di giornata per un'area «Contatori», accanto alle letture, c'è il campo",
+    "ro": "La închiderea zilei pentru o zonă «Contoare», lângă indicații, există câmpul"
+  },
+  "«Возвраты/тестовые пуски»": {
+    "en": "«Refunds / test runs»",
+    "uk": "«Повернення/тестові заїзди»",
+    "it": "«Rimborsi / corse di prova»",
+    "ro": "«Returnări / curse de test»"
+  },
+  "— впишите туда количество таких сеансов. Приложение вычтет их из расчётной выручки:": {
+    "en": "— enter the number of such sessions there. The app will subtract them from the calculated revenue:",
+    "uk": "— впишіть туди кількість таких сеансів. Застосунок відніме їх від розрахункової виручки:",
+    "it": "— inserisci lì il numero di tali sessioni. L'app le sottrarrà dall'incasso calcolato:",
+    "ro": "— introduceți acolo numărul acestor sesiuni. Aplicația le va scădea din încasarea calculată:"
+  },
+  "сеансы × цена": {
+    "en": "sessions × price",
+    "uk": "сеанси × ціна",
+    "it": "sessioni × prezzo",
+    "ro": "sesiuni × preț"
+  },
+  "считаются уже без них.": {
+    "en": "are counted without them.",
+    "uk": "рахуються вже без них.",
+    "it": "vengono calcolate senza di esse.",
+    "ro": "se calculează deja fără ele."
+  },
+  "Указывается именно": {
+    "en": "What you enter is the",
+    "uk": "Вказується саме",
+    "it": "Si indica proprio",
+    "ro": "Se indică tocmai"
+  },
+  ", а не сумма — цену приложение возьмёт из тарифа само.": {
+    "en": ", not the amount — the app takes the price from the tariff itself.",
+    "uk": ", а не сума — ціну застосунок візьме з тарифу сам.",
+    "it": ", non l'importo: il prezzo l'app lo prende da sé dalla tariffa.",
+    "ro": ", nu suma — prețul aplicația îl ia singură din tarif."
+  },
+  "Где это потом видно": {
+    "en": "Where you see it afterwards",
+    "uk": "Де це потім видно",
+    "it": "Dove si vede poi",
+    "ro": "Unde se vede apoi"
+  },
+  "В сводке по зоне — строкой «Возвраты/тесты», если владелец включил её показ в настройках сводки.": {
+    "en": "In the zone summary, as a «Refunds/tests» line, if the owner enabled it in the summary settings.",
+    "uk": "У зведенні по зоні — рядком «Повернення/тести», якщо власник увімкнув його показ у налаштуваннях зведення.",
+    "it": "Nel riepilogo dell'area, come riga «Rimborsi/prove», se il titolare ne ha attivato la visualizzazione nelle impostazioni del riepilogo.",
+    "ro": "În rezumatul pe zonă, ca rând «Returnări/teste», dacă proprietarul a activat afișarea lui în setările rezumatului."
+  },
+  "В «Итогах по дням» — отдельным разделом «Тестовые прогоны», чтобы возвраты не растворялись в общей выручке.": {
+    "en": "In «Daily totals», as a separate «Test runs» section, so that refunds do not dissolve into the overall revenue.",
+    "uk": "У «Підсумках за днями» — окремим розділом «Тестові прогони», щоб повернення не розчинялися в загальній виручці.",
+    "it": "Nei «Totali giornalieri», come sezione separata «Corse di prova», perché i rimborsi non si dissolvano nell'incasso complessivo.",
+    "ro": "În «Totalurile pe zile», ca secțiune separată «Curse de test», ca returnările să nu se dizolve în încasarea generală."
+  },
+  "Так остаётся видно и то, что сеансы были, и то, что денег за них не брали.": {
+    "en": "This way it stays visible both that the sessions happened and that no money was taken for them.",
+    "uk": "Так залишається видно і те, що сеанси були, і те, що грошей за них не брали.",
+    "it": "Così resta visibile sia che le sessioni ci sono state, sia che per esse non è stato preso denaro.",
+    "ro": "Astfel rămâne vizibil și că sesiunile au avut loc, și că pentru ele nu s-au luat bani."
+  },
+  "Это повод посмотреть на актив: либо он требует постоянной проверки и его пора чинить, либо сеансы отмечаются тестовыми не всегда обоснованно. Число за период видно в сводке по зоне.": {
+    "en": "That is a reason to look at the asset: either it needs constant checking and it is time to repair it, or sessions are marked as tests not always with good reason. The number for the period is visible in the zone summary.",
+    "uk": "Це привід подивитися на актив: або він потребує постійної перевірки і його час лагодити, або сеанси позначаються тестовими не завжди обґрунтовано. Число за період видно у зведенні по зоні.",
+    "it": "È un motivo per guardare l'asset: o richiede controlli continui ed è ora di ripararlo, oppure le sessioni vengono segnate come prove non sempre a ragione. Il numero per il periodo si vede nel riepilogo dell'area.",
+    "ro": "Este un motiv să vă uitați la activ: fie necesită verificări permanente și e timpul să fie reparat, fie sesiunile sunt marcate ca teste nu întotdeauna întemeiat. Numărul pe perioadă se vede în rezumatul pe zonă."
+  },
+  "Владелец может исправить сдачу итогов — см. статью про исправление сдачи итогов.": {
+    "en": "The owner can correct a results submission — see the article on correcting a results submission.",
+    "uk": "Власник може виправити здачу підсумків — див. статтю про виправлення здачі підсумків.",
+    "it": "Il titolare può correggere una chiusura di giornata: vedi l'articolo sulla correzione della chiusura di giornata.",
+    "ro": "Proprietarul poate corecta închiderea zilei — vezi articolul despre corectarea închiderii zilei."
+  },
+  "Поле считает целые сеансы. Частичный возврат проведите как расход с комментарием — так сумма будет учтена точно.": {
+    "en": "The field counts whole sessions. Put a partial refund through as an expense with a comment — that way the amount is accounted for exactly.",
+    "uk": "Поле рахує цілі сеанси. Часткове повернення проведіть як витрату з коментарем — так сума буде врахована точно.",
+    "it": "Il campo conta sessioni intere. Registra un rimborso parziale come spesa con un commento: così l'importo sarà contabilizzato con precisione.",
+    "ro": "Câmpul numără sesiuni întregi. Returnarea parțială înregistrați-o ca cheltuială cu un comentariu — astfel suma va fi contabilizată exact."
+  },
+
+  "В рабочий чат Telegram, куда приходят сводки, можно спросить кассу в любой момент — не дожидаясь вечерней сводки и не открывая кабинет.": {
+    "en": "In the working Telegram chat where the summaries arrive you can ask for the till at any moment — without waiting for the evening summary and without opening the account.",
+    "uk": "У робочий чат Telegram, куди приходять зведення, можна запитати касу будь-коли — не чекаючи вечірнього зведення і не відкриваючи кабінет.",
+    "it": "Nella chat di lavoro su Telegram dove arrivano i riepiloghi puoi chiedere la cassa in qualsiasi momento, senza aspettare il riepilogo serale e senza aprire l'account.",
+    "ro": "În chatul de lucru din Telegram unde ajung rezumatele puteți cere casa în orice moment — fără să așteptați rezumatul de seară și fără să deschideți contul."
+  },
+  "Как пользоваться": {
+    "en": "How to use it",
+    "uk": "Як користуватися",
+    "it": "Come si usa",
+    "ro": "Cum se folosește"
+  },
+  "Напишите в чат": {
+    "en": "Type in the chat",
+    "uk": "Напишіть у чат",
+    "it": "Scrivi in chat",
+    "ro": "Scrieți în chat"
+  },
+  "— бот ответит кассой за день с разбивкой по способам оплаты. Команда подсказывается в меню бота прямо в этом чате, набирать её по памяти не нужно.": {
+    "en": "— the bot replies with the day's till broken down by payment method. The command is suggested in the bot menu right in this chat, so you do not need to type it from memory.",
+    "uk": "— бот відповість касою за день із розбивкою за способами оплати. Команда підказується в меню бота просто в цьому чаті, набирати її з пам'яті не потрібно.",
+    "it": "— il bot risponde con la cassa della giornata suddivisa per metodo di pagamento. Il comando è suggerito nel menu del bot proprio in questa chat, non serve digitarlo a memoria.",
+    "ro": "— botul răspunde cu casa zilei defalcată pe metode de plată. Comanda este sugerată în meniul botului chiar în acest chat, nu trebuie tastată din memorie."
+  },
+  "Работает она": {
+    "en": "It works",
+    "uk": "Працює вона",
+    "it": "Funziona",
+    "ro": "Ea funcționează"
+  },
+  "только в том чате, который вы привязали для сводок": {
+    "en": "only in the chat you linked for summaries",
+    "uk": "лише в тому чаті, який ви прив'язали для зведень",
+    "it": "solo nella chat che hai collegato per i riepiloghi",
+    "ro": "doar în chatul pe care l-ați legat pentru rezumate"
+  },
+  ". Это осознанно: чат со сводками — рабочий, доступ к нему вы контролируете сами.": {
+    "en": ". This is deliberate: the summaries chat is a working one, and you control access to it yourself.",
+    "uk": ". Це свідомо: чат зі зведеннями — робочий, доступ до нього ви контролюєте самі.",
+    "it": ". È una scelta voluta: la chat dei riepiloghi è di lavoro e l'accesso lo controlli tu.",
+    "ro": ". Este intenționat: chatul cu rezumate este unul de lucru, iar accesul la el îl controlați dumneavoastră."
+  },
+  "Чего в этом чате намеренно нет": {
+    "en": "What is deliberately absent from this chat",
+    "uk": "Чого в цьому чаті навмисно немає",
+    "it": "Che cosa manca di proposito in questa chat",
+    "ro": "Ce lipsește intenționat din acest chat"
+  },
+  "Балансы клиентов через бота в рабочем чате не смотрятся — такой возможности нет вовсе, а не «спрятана за настройкой». Причина простая: чат общий, и баланс конкретного человека не должен быть виден всем, кто в нём состоит. Баланс клиента смотрят в кабинете или в приложении сотрудника, а сам клиент — в своём личном чате с ботом.": {
+    "en": "Client balances are not viewed through the bot in the working chat — there is no such capability at all, rather than it being «hidden behind a setting». The reason is simple: the chat is shared, and one person's balance should not be visible to everyone in it. A client's balance is viewed in the owner's account or in the employee app, and by the client themselves in their private chat with the bot.",
+    "uk": "Баланси клієнтів через бота в робочому чаті не дивляться — такої можливості немає зовсім, а не «прихована за налаштуванням». Причина проста: чат спільний, і баланс конкретної людини не має бути видний усім, хто в ньому перебуває. Баланс клієнта дивляться в кабінеті або в застосунку співробітника, а сам клієнт — у своєму особистому чаті з ботом.",
+    "it": "I saldi dei clienti non si consultano tramite il bot nella chat di lavoro: tale possibilità non esiste affatto, non è «nascosta dietro un'impostazione». Il motivo è semplice: la chat è condivisa e il saldo di una persona non deve essere visibile a tutti i presenti. Il saldo del cliente si consulta nell'account del titolare o nell'app del dipendente, e dal cliente stesso nella sua chat privata con il bot.",
+    "ro": "Soldurile clienților nu se consultă prin bot în chatul de lucru — o astfel de posibilitate nu există deloc, nu este «ascunsă după o setare». Motivul este simplu: chatul este comun, iar soldul unei anumite persoane nu trebuie să fie vizibil tuturor celor din el. Soldul clientului se consultă în cont sau în aplicația angajatului, iar de către client — în chatul său privat cu botul."
+  },
+  "Клиентская группа — это отдельная история: туда бот объявляет новые тарифы и товары, и команды кассы там не работают.": {
+    "en": "The client group is a separate story: there the bot announces new tariffs and products, and till commands do not work in it.",
+    "uk": "Клієнтська група — це окрема історія: туди бот оголошує нові тарифи й товари, і команди каси там не працюють.",
+    "it": "Il gruppo clienti è un'altra storia: lì il bot annuncia nuove tariffe e prodotti, e i comandi di cassa non funzionano.",
+    "ro": "Grupul de clienți este o poveste separată: acolo botul anunță tarife și produse noi, iar comenzile de casă nu funcționează."
+  },
+  "Проверьте, что пишете именно в привязанный чат сводок, и что подключение живо — в настройках Telegram-сводок в кабинете это видно.": {
+    "en": "Check that you are writing in the linked summaries chat and that the connection is alive — this is visible in the Telegram summary settings in your account.",
+    "uk": "Перевірте, що пишете саме в прив'язаний чат зведень і що підключення живе — у налаштуваннях Telegram-зведень у кабінеті це видно.",
+    "it": "Verifica di scrivere proprio nella chat dei riepiloghi collegata e che la connessione sia attiva: lo si vede nelle impostazioni dei riepiloghi Telegram nell'account.",
+    "ro": "Verificați că scrieți exact în chatul de rezumate legat și că legătura este activă — acest lucru se vede în setările rezumatelor Telegram din cont."
+  },
+  "Настройте сводку «Касса за день» — она придёт сама, в заданное время. Команда нужна для случая «интересно прямо сейчас».": {
+    "en": "Set up the «Daily till» summary — it arrives on its own, at the time you choose. The command is for the «curious right now» case.",
+    "uk": "Налаштуйте зведення «Каса за день» — воно прийде саме, у заданий час. Команда потрібна для випадку «цікаво прямо зараз».",
+    "it": "Imposta il riepilogo «Cassa del giorno»: arriva da solo, all'ora stabilita. Il comando serve per il caso «mi interessa proprio adesso».",
+    "ro": "Configurați rezumatul «Casa pe zi» — vine singur, la ora stabilită. Comanda este pentru cazul «mă interesează chiar acum»."
+  },
+
+  "Клиент не всегда платит одним способом: часть наличными, остаток картой, или доплата с абонемента, потому что на балансе не хватило. Для этого у любого экрана оплаты есть «Разбить оплату» — сумма делится между способами в любой пропорции.": {
+    "en": "A client does not always pay by one method: part in cash, the rest by card, or a top-up from a pass because the balance fell short. For this, every payment screen has «Split the payment» — the amount is divided between methods in any proportion.",
+    "uk": "Клієнт не завжди платить одним способом: частина готівкою, решта карткою, або доплата з абонемента, бо на балансі не вистачило. Для цього на будь-якому екрані оплати є «Розділити оплату» — сума ділиться між способами в будь-якій пропорції.",
+    "it": "Il cliente non paga sempre con un solo metodo: una parte in contanti, il resto con carta, oppure un'integrazione dall'abbonamento perché il saldo non bastava. Per questo ogni schermata di pagamento ha «Dividi il pagamento»: l'importo si ripartisce tra i metodi in qualsiasi proporzione.",
+    "ro": "Clientul nu plătește întotdeauna printr-o singură metodă: o parte în numerar, restul cu cardul, sau o completare din abonament pentru că soldul nu a ajuns. Pentru asta, orice ecran de plată are «Împarte plata» — suma se împarte între metode în orice proporție."
+  },
+  "Где это есть": {
+    "en": "Where you will find it",
+    "uk": "Де це є",
+    "it": "Dove si trova",
+    "ro": "Unde se găsește"
+  },
+  "Везде, где приложение спрашивает способ оплаты: Товары, Билеты, Прибывания (и на запуске «За вход», и на завершении «По факту»), Пуски, Счётчики. Кнопка называется одинаково —": {
+    "en": "Everywhere the app asks for a payment method: Products, Tickets, Stays (both when starting «Per entry» and when finishing «Actual time»), Launches, Counters. The button is called the same everywhere —",
+    "uk": "Скрізь, де застосунок питає спосіб оплати: Товари, Квитки, Перебування (і на запуску «За вхід», і на завершенні «За фактом»), Заїзди, Лічильники. Кнопка називається однаково —",
+    "it": "Ovunque l'app chieda il metodo di pagamento: Prodotti, Biglietti, Soggiorni (sia all'avvio «Per ingresso» sia alla chiusura «A consuntivo»), Corse, Contatori. Il pulsante ha sempre lo stesso nome —",
+    "ro": "Peste tot unde aplicația întreabă metoda de plată: Produse, Bilete, Șederi (și la pornirea «Per intrare», și la finalizarea «După timpul efectiv»), Curse, Contoare. Butonul se numește la fel —"
+  },
+  "«Разбить оплату»": {
+    "en": "«Split the payment»",
+    "uk": "«Розділити оплату»",
+    "it": "«Dividi il pagamento»",
+    "ro": "«Împarte plata»"
+  },
+  ", рядом с обычными кнопками способа.": {
+    "en": ", next to the usual method buttons.",
+    "uk": ", поруч зі звичайними кнопками способу.",
+    "it": ", accanto ai consueti pulsanti dei metodi.",
+    "ro": ", lângă butoanele obișnuite ale metodelor."
+  },
+  "Дойдите до выбора способа оплаты и нажмите": {
+    "en": "Get to the payment method choice and press",
+    "uk": "Дійдіть до вибору способу оплати й натисніть",
+    "it": "Arriva alla scelta del metodo di pagamento e premi",
+    "ro": "Ajungeți la alegerea metodei de plată și apăsați"
+  },
+  "Впишите сумму первой доли и выберите её способ. Сверху видно": {
+    "en": "Enter the amount of the first share and choose its method. At the top you can see",
+    "uk": "Впишіть суму першої частки й виберіть її спосіб. Згори видно",
+    "it": "Inserisci l'importo della prima quota e scegli il suo metodo. In alto vedi",
+    "ro": "Introduceți suma primei părți și alegeți metoda ei. Sus se vede"
+  },
+  "«Осталось распределить:»": {
+    "en": "«Left to allocate:»",
+    "uk": "«Залишилося розподілити:»",
+    "it": "«Da ripartire:»",
+    "ro": "«Rămas de repartizat:»"
+  },
+  "— сколько ещё не покрыто.": {
+    "en": "— how much is still uncovered.",
+    "uk": "— скільки ще не покрито.",
+    "it": "— quanto non è ancora coperto.",
+    "ro": "— cât nu este încă acoperit."
+  },
+  "«Добавить способ»": {
+    "en": "«Add a method»",
+    "uk": "«Додати спосіб»",
+    "it": "«Aggiungi metodo»",
+    "ro": "«Adaugă metodă»"
+  },
+  "и повторите для остатка. Долей может быть сколько нужно.": {
+    "en": "and repeat for the remainder. There can be as many shares as you need.",
+    "uk": "і повторіть для залишку. Часток може бути скільки потрібно.",
+    "it": "e ripeti per il resto. Le quote possono essere quante ne servono.",
+    "ro": "și repetați pentru rest. Pot fi oricâte părți este nevoie."
+  },
+  "Для доли с баланса нажмите": {
+    "en": "For a share from the balance press",
+    "uk": "Для частки з балансу натисніть",
+    "it": "Per una quota dal saldo premi",
+    "ro": "Pentru o parte din sold apăsați"
+  },
+  "«Выбрать кошелёк»": {
+    "en": "«Choose a wallet»",
+    "uk": "«Вибрати гаманець»",
+    "it": "«Scegli il portafoglio»",
+    "ro": "«Alegeți portofelul»"
+  },
+  "и найдите клиента — по номеру, последним четырём цифрам или имени.": {
+    "en": "and find the client — by the number, the last four digits, or the name.",
+    "uk": "і знайдіть клієнта — за номером, останніми чотирма цифрами або іменем.",
+    "it": "e trova il cliente: per numero, per le ultime quattro cifre o per nome.",
+    "ro": "și găsiți clientul — după număr, după ultimele patru cifre sau după nume."
+  },
+  "Когда «Осталось распределить» дошло до нуля —": {
+    "en": "When «Left to allocate» has reached zero —",
+    "uk": "Коли «Залишилося розподілити» дійшло до нуля —",
+    "it": "Quando «Da ripartire» è arrivato a zero —",
+    "ro": "Când «Rămas de repartizat» a ajuns la zero —"
+  },
+  "Как это попадает в отчёты": {
+    "en": "How this lands in the reports",
+    "uk": "Як це потрапляє у звіти",
+    "it": "Come finisce nei report",
+    "ro": "Cum ajunge acest lucru în rapoarte"
+  },
+  "Разбивка — не отдельный «способ оплаты», а честное разнесение денег: наличная доля идёт в наличную кассу точки, безналичная — в безнал, доля с баланса списывается с кошелька клиента сразу, как обычная оплата балансом. Поэтому касса, «Разница» и отчёты по способам оплаты сходятся так же, как при обычной оплате.": {
+    "en": "A split is not a separate «payment method» but an honest allocation of the money: the cash share goes into the location's cash till, the cashless share into cashless, and the balance share is deducted from the client's wallet straight away, like an ordinary balance payment. That is why the till, the «Difference» and the payment-method reports add up exactly as with an ordinary payment.",
+    "uk": "Розділення — не окремий «спосіб оплати», а чесне рознесення грошей: готівкова частка йде в готівкову касу точки, безготівкова — в безготівку, частка з балансу списується з гаманця клієнта одразу, як звичайна оплата балансом. Тому каса, «Різниця» і звіти за способами оплати сходяться так само, як при звичайній оплаті.",
+    "it": "La divisione non è un «metodo di pagamento» a sé, ma un'onesta ripartizione del denaro: la quota in contanti va nella cassa contanti della sede, quella elettronica nell'elettronico, e la quota dal saldo viene addebitata subito sul portafoglio del cliente come un normale pagamento a saldo. Per questo la cassa, la «Differenza» e i report per metodo di pagamento tornano esattamente come con un pagamento ordinario.",
+    "ro": "Împărțirea nu este o «metodă de plată» separată, ci o repartizare corectă a banilor: partea în numerar merge în casa de numerar a punctului, cea prin card — la plăți fără numerar, iar partea din sold se scade imediat din portofelul clientului, ca o plată obișnuită din sold. De aceea casa, «Diferența» și rapoartele pe metode de plată se potrivesc exact ca la o plată obișnuită."
+  },
+  "Значит «Осталось распределить» ещё не ноль — доли в сумме не покрывают чек. Допишите остаток или поправьте суммы.": {
+    "en": "It means «Left to allocate» is not zero yet — the shares do not add up to the bill. Add the remainder or adjust the amounts.",
+    "uk": "Отже «Залишилося розподілити» ще не нуль — частки в сумі не покривають чек. Допишіть залишок або виправте суми.",
+    "it": "Significa che «Da ripartire» non è ancora zero: le quote non coprono lo scontrino. Aggiungi il resto o correggi gli importi.",
+    "ro": "Înseamnă că «Rămas de repartizat» nu este încă zero — părțile însumate nu acoperă bonul. Adăugați restul sau corectați sumele."
+  },
+  "Приложение покажет, сколько не хватает, и предложит пополнить подходящим абонементом — можно закрыть недостачу и продолжить, не выходя из оплаты.": {
+    "en": "The app will show how much is missing and offer a suitable pass to top up with — you can cover the shortfall and continue without leaving the payment.",
+    "uk": "Застосунок покаже, скільки не вистачає, і запропонує поповнити відповідним абонементом — можна закрити нестачу й продовжити, не виходячи з оплати.",
+    "it": "L'app mostrerà quanto manca e proporrà l'abbonamento adatto per la ricarica: puoi coprire l'ammanco e proseguire senza uscire dal pagamento.",
+    "ro": "Aplicația va arăta cât lipsește și va propune abonamentul potrivit pentru alimentare — puteți acoperi lipsa și continua fără să ieșiți din plată."
+  },
+  "Закройте окно разбивки и выберите обычную кнопку способа — ничего не сохранится, пока вы не нажали «Оплатить».": {
+    "en": "Close the split window and choose an ordinary method button — nothing is saved until you press «Pay».",
+    "uk": "Закрийте вікно розділення й виберіть звичайну кнопку способу — нічого не збережеться, доки ви не натиснули «Оплатити».",
+    "it": "Chiudi la finestra della divisione e scegli un normale pulsante di metodo: nulla viene salvato finché non premi «Paga».",
+    "ro": "Închideți fereastra de împărțire și alegeți un buton obișnuit de metodă — nimic nu se salvează până nu apăsați «Plătește»."
+  },
+
+  "Вопрос «сколько у меня осталось?» — самый частый на кассе. Чтобы не отвечать на него вручную, клиент один раз подключает Telegram-бота вашей компании и дальше смотрит баланс сам, в любое время.": {
+    "en": "«How much do I have left?» is the most common question at the till. To avoid answering it by hand, the client connects your company's Telegram bot once and then checks the balance themselves, any time.",
+    "uk": "Питання «скільки в мене залишилося?» — найчастіше на касі. Щоб не відповідати на нього вручну, клієнт один раз підключає Telegram-бота вашої компанії й далі дивиться баланс сам, будь-коли.",
+    "it": "«Quanto mi resta?» è la domanda più frequente alla cassa. Per non rispondere a mano, il cliente collega una volta il bot Telegram della tua azienda e poi controlla il saldo da solo, in qualsiasi momento.",
+    "ro": "Întrebarea «cât mi-a mai rămas?» este cea mai frecventă la casă. Ca să nu răspundeți manual, clientul conectează o singură dată botul Telegram al companiei dumneavoastră și apoi își vede soldul singur, oricând."
+  },
+  "Как подключить клиента": {
+    "en": "How to connect a client",
+    "uk": "Як підключити клієнта",
+    "it": "Come collegare un cliente",
+    "ro": "Cum se conectează un client"
+  },
+  "Найдите клиента в разделе «Клиенты» (или продайте ему абонемент — экран успеха покажет то же самое).": {
+    "en": "Find the client in the «Clients» section (or sell them a pass — the success screen shows the same thing).",
+    "uk": "Знайдіть клієнта в розділі «Клієнти» (або продайте йому абонемент — екран успіху покаже те саме).",
+    "it": "Trova il cliente nella sezione «Clienti» (oppure vendigli un abbonamento: la schermata di conferma mostra la stessa cosa).",
+    "ro": "Găsiți clientul în secțiunea «Clienți» (sau vindeți-i un abonament — ecranul de succes arată același lucru)."
+  },
+  "«Баланс в Telegram»": {
+    "en": "«Balance in Telegram»",
+    "uk": "«Баланс у Telegram»",
+    "it": "«Saldo su Telegram»",
+    "ro": "«Sold în Telegram»"
+  },
+  "— появится QR-код.": {
+    "en": "— a QR code will appear.",
+    "uk": "— з'явиться QR-код.",
+    "it": "— comparirà un codice QR.",
+    "ro": "— va apărea un cod QR."
+  },
+  "Клиент наводит камеру телефона, открывается бот. Он нажимает кнопку": {
+    "en": "The client points their phone camera at it and the bot opens. They press the button",
+    "uk": "Клієнт наводить камеру телефона, відкривається бот. Він натискає кнопку",
+    "it": "Il cliente inquadra con la fotocamera del telefono e si apre il bot. Preme il pulsante",
+    "ro": "Clientul îndreaptă camera telefonului, se deschide botul. Apasă butonul"
+  },
+  "«Поделиться номером»": {
+    "en": "«Share my number»",
+    "uk": "«Поділитися номером»",
+    "it": "«Condividi il numero»",
+    "ro": "«Partajează numărul»"
+  },
+  "Дальше бот показывает ему баланс по первому запросу и": {
+    "en": "From then on the bot shows them the balance on request and",
+    "uk": "Далі бот показує йому баланс на перший запит і",
+    "it": "Da quel momento il bot gli mostra il saldo su richiesta e",
+    "ro": "Mai departe botul îi arată soldul la prima cerere și"
+  },
+  "сам присылает уведомление при каждом изменении": {
+    "en": "sends a notification itself on every change",
+    "uk": "сам надсилає сповіщення за кожної зміни",
+    "it": "invia da sé una notifica a ogni variazione",
+    "ro": "trimite singur o notificare la fiecare modificare"
+  },
+  ": пополнили абонемент, списали за посещение — клиент видит это без вашего участия.": {
+    "en": ": a pass was topped up, a visit was charged — the client sees it without any involvement from you.",
+    "uk": ": поповнили абонемент, списали за відвідування — клієнт бачить це без вашої участі.",
+    "it": ": abbonamento ricaricato, visita addebitata — il cliente lo vede senza il tuo intervento.",
+    "ro": ": abonamentul a fost alimentat, vizita a fost taxată — clientul vede asta fără implicarea dumneavoastră."
+  },
+  "Почему именно кнопка «Поделиться номером»": {
+    "en": "Why the «Share my number» button specifically",
+    "uk": "Чому саме кнопка «Поділитися номером»",
+    "it": "Perché proprio il pulsante «Condividi il numero»",
+    "ro": "De ce anume butonul «Partajează numărul»"
+  },
+  "Так Telegram сам подтверждает, что номер принадлежит этому аккаунту. Если бы номер вводили текстом, любой мог бы набрать чужой и увидеть чужой баланс. По этой же причине бот связывает чат с кошельком только при надёжном совпадении номера — в сомнительном случае он заведёт отдельный кошелёк, а не покажет чужие деньги.": {
+    "en": "This way Telegram itself confirms that the number belongs to that account. If the number were typed in as text, anyone could enter someone else's and see their balance. For the same reason the bot links a chat to a wallet only on a reliable number match — in a doubtful case it will create a separate wallet rather than show someone else's money.",
+    "uk": "Так Telegram сам підтверджує, що номер належить цьому акаунту. Якби номер вводили текстом, будь-хто міг би набрати чужий і побачити чужий баланс. З цієї ж причини бот пов'язує чат із гаманцем лише за надійного збігу номера — у сумнівному випадку він заведе окремий гаманець, а не покаже чужі гроші.",
+    "it": "Così è Telegram stesso a confermare che il numero appartiene a quell'account. Se il numero si digitasse come testo, chiunque potrebbe inserire quello altrui e vederne il saldo. Per lo stesso motivo il bot collega una chat a un portafoglio solo con una corrispondenza sicura del numero: nel dubbio creerà un portafoglio separato invece di mostrare i soldi di un altro.",
+    "ro": "Astfel, Telegram însuși confirmă că numărul aparține acelui cont. Dacă numărul s-ar introduce ca text, oricine ar putea tasta numărul altcuiva și i-ar vedea soldul. Din același motiv botul leagă chatul de portofel doar la o potrivire sigură a numărului — în caz de dubiu va crea un portofel separat, în loc să arate banii altcuiva."
+  },
+  "Тогда кнопки QR у него не будет — приложение не предлагает подключить то, что уже подключено. В списке клиентов такие отмечены значком.": {
+    "en": "Then there will be no QR button for them — the app does not offer to connect what is already connected. In the client list such clients are marked with an icon.",
+    "uk": "Тоді кнопки QR у нього не буде — застосунок не пропонує підключити те, що вже підключено. У списку клієнтів такі позначені значком.",
+    "it": "In tal caso il pulsante QR non comparirà: l'app non propone di collegare ciò che è già collegato. Nell'elenco clienti questi sono contrassegnati da un'icona.",
+    "ro": "Atunci butonul QR nu va apărea — aplicația nu propune să conectezi ceea ce este deja conectat. În lista de clienți aceștia sunt marcați cu o pictogramă."
+  },
+  "Заведите его новый номер как нового клиента и переведите баланс — кошелёк привязан к номеру, это его ключ.": {
+    "en": "Add their new number as a new client and transfer the balance — the wallet is tied to the number, that is its key.",
+    "uk": "Заведіть його новий номер як нового клієнта й перекажіть баланс — гаманець прив'язаний до номера, це його ключ.",
+    "it": "Registra il suo nuovo numero come nuovo cliente e trasferisci il saldo: il portafoglio è legato al numero, che ne è la chiave.",
+    "ro": "Înregistrați noul lui număr ca un client nou și transferați soldul — portofelul este legat de număr, acesta este cheia lui."
+  },
+  "Скорее всего у человека два кошелька: например, номер однажды записали с кодом страны, а однажды без. Найдите оба в списке клиентов и оставьте один.": {
+    "en": "Most likely the person has two wallets: for example, the number was once written with the country code and once without. Find both in the client list and keep one.",
+    "uk": "Найімовірніше в людини два гаманці: наприклад, номер одного разу записали з кодом країни, а іншого — без. Знайдіть обидва у списку клієнтів і залиште один.",
+    "it": "Molto probabilmente la persona ha due portafogli: ad esempio il numero è stato scritto una volta con il prefisso internazionale e una volta senza. Trovali entrambi nell'elenco clienti e tienine uno.",
+    "ro": "Cel mai probabil persoana are două portofele: de exemplu, numărul a fost scris o dată cu prefixul de țară și o dată fără. Găsiți-le pe amândouă în lista de clienți și păstrați unul."
+  },
+  "Для этого есть отдельная рассылка по подключённым клиентам, в том числе с картинкой — см. статью про рассылку в Telegram.": {
+    "en": "There is a separate broadcast to connected clients for that, including with an image — see the article on Telegram broadcasts.",
+    "uk": "Для цього є окрема розсилка по підключених клієнтах, зокрема з картинкою — див. статтю про розсилку в Telegram.",
+    "it": "Per questo esiste un invio dedicato ai clienti collegati, anche con immagine: vedi l'articolo sugli invii su Telegram.",
+    "ro": "Pentru asta există o difuzare separată către clienții conectați, inclusiv cu imagine — vezi articolul despre difuzarea în Telegram."
+  },
+  "Оплата балансом.": {
+    "en": "Payment from the balance.",
+    "uk": "Оплата балансом.",
+    "it": "Pagamento a saldo.",
+    "ro": "Plata din sold."
+  },
+
+  "Тарифы RentOS отличаются": {
+    "en": "RentOS plans differ",
+    "uk": "Тарифи RentOS відрізняються",
+    "it": "I piani RentOS si differenziano",
+    "ro": "Planurile RentOS diferă"
+  },
+  "только числовыми лимитами": {
+    "en": "only by numeric limits",
+    "uk": "лише числовими лімітами",
+    "it": "solo per limiti numerici",
+    "ro": "doar prin limite numerice"
+  },
+  "— точки, зоны, активы, сотрудники. Все модули доступны на любом плане: ни Товары, ни Билеты, ни Инструктажи не спрятаны за более дорогой тариф.": {
+    "en": "— locations, zones, assets, employees. Every module is available on any plan: neither Products, nor Tickets, nor Briefings are hidden behind a more expensive plan.",
+    "uk": "— точки, зони, активи, співробітники. Усі модулі доступні на будь-якому плані: ні Товари, ні Квитки, ні Інструктажі не сховані за дорожчим тарифом.",
+    "it": "— sedi, aree, asset, dipendenti. Tutti i moduli sono disponibili con qualsiasi piano: né Prodotti, né Biglietti, né Istruzioni sono nascosti dietro una tariffa più cara.",
+    "ro": "— puncte, zone, active, angajați. Toate modulele sunt disponibile în orice plan: nici Produse, nici Bilete, nici Instructaje nu sunt ascunse după un tarif mai scump."
+  },
+  "Где смотреть свой план": {
+    "en": "Where to see your plan",
+    "uk": "Де дивитися свій план",
+    "it": "Dove vedere il tuo piano",
+    "ro": "Unde vă vedeți planul"
+  },
+  "в Настройках. В ней видно:": {
+    "en": "in Settings. It shows:",
+    "uk": "у Налаштуваннях. У ній видно:",
+    "it": "nelle Impostazioni. Vi si vede:",
+    "ro": "în Setări. În ea se vede:"
+  },
+  "— «Активен», «На паузе», «Истёк», «Приостановлен» или «Отменена»;": {
+    "en": "— «Active», «Paused», «Expired», «Suspended» or «Cancelled»;",
+    "uk": "— «Активний», «На паузі», «Минув», «Призупинено» або «Скасована»;",
+    "it": "— «Attivo», «In pausa», «Scaduto», «Sospeso» o «Annullato»;",
+    "ro": "— «Activ», «În pauză», «Expirat», «Suspendat» sau «Anulată»;"
+  },
+  "«Действует до»": {
+    "en": "«Valid until»",
+    "uk": "«Діє до»",
+    "it": "«Valido fino al»",
+    "ro": "«Valabil până la»"
+  },
+  "«Следующее списание»": {
+    "en": "«Next charge»",
+    "uk": "«Наступне списання»",
+    "it": "«Prossimo addebito»",
+    "ro": "«Următoarea debitare»"
+  },
+  "— в зависимости от того, продлевается подписка или уже отменена;": {
+    "en": "— depending on whether the subscription renews or has already been cancelled;",
+    "uk": "— залежно від того, чи продовжується підписка, чи вже скасована;",
+    "it": "— a seconda che l'abbonamento si rinnovi o sia già stato annullato;",
+    "ro": "— în funcție de faptul dacă abonamentul se reînnoiește sau a fost deja anulat;"
+  },
+  "четыре счётчика лимитов": {
+    "en": "four limit counters",
+    "uk": "чотири лічильники лімітів",
+    "it": "quattro contatori dei limiti",
+    "ro": "patru contoare ale limitelor"
+  },
+  "— Точки, Сотрудники, Зоны, Активы: сколько занято из скольких.": {
+    "en": "— Locations, Employees, Zones, Assets: how many are used out of how many.",
+    "uk": "— Точки, Співробітники, Зони, Активи: скільки зайнято зі скількох.",
+    "it": "— Sedi, Dipendenti, Aree, Asset: quanti sono occupati su quanti.",
+    "ro": "— Puncte, Angajați, Zone, Active: câte sunt ocupate din câte."
+  },
+  "Оплата, смена и отмена": {
+    "en": "Payment, changing and cancelling",
+    "uk": "Оплата, зміна та скасування",
+    "it": "Pagamento, cambio e annullamento",
+    "ro": "Plata, schimbarea și anularea"
+  },
+  "Всё это живёт на стороне магазина: ссылка": {
+    "en": "All of this lives on the store side: the link",
+    "uk": "Усе це живе на боці магазину: посилання",
+    "it": "Tutto questo vive sul lato negozio: il link",
+    "ro": "Toate acestea se află de partea magazinului: linkul"
+  },
+  "«Управлять подпиской»": {
+    "en": "«Manage subscription»",
+    "uk": "«Керувати підпискою»",
+    "it": "«Gestisci l'abbonamento»",
+    "ro": "«Gestionați abonamentul»"
+  },
+  "в той же карточке открывает ваш личный кабинет покупателя. Там оплата, история платежей, смена периода и отмена.": {
+    "en": "in the same card opens your customer account. Payment, payment history, changing the billing period and cancelling all live there.",
+    "uk": "у тій самій картці відкриває ваш особистий кабінет покупця. Там оплата, історія платежів, зміна періоду та скасування.",
+    "it": "nella stessa scheda apre il tuo account cliente. Lì trovi pagamento, storico dei pagamenti, cambio di periodo e annullamento.",
+    "ro": "din aceeași fișă deschide contul dumneavoastră de client. Acolo sunt plata, istoricul plăților, schimbarea perioadei și anularea."
+  },
+  "Отменить можно самому и в любой момент": {
+    "en": "You can cancel yourself and at any moment",
+    "uk": "Скасувати можна самому й будь-коли",
+    "it": "Puoi annullare da solo e in qualsiasi momento",
+    "ro": "Puteți anula singur și în orice moment"
+  },
+  "— доступ сохраняется до конца оплаченного периода, деньги за начатый период не сгорают раньше срока.": {
+    "en": "— access is kept until the end of the paid period, and money for a started period does not burn out early.",
+    "uk": "— доступ зберігається до кінця оплаченого періоду, гроші за розпочатий період не згоряють раніше строку.",
+    "it": "— l'accesso resta fino alla fine del periodo pagato e il denaro del periodo iniziato non si perde prima del termine.",
+    "ro": "— accesul se păstrează până la sfârșitul perioadei plătite, iar banii pentru perioada începută nu se pierd înainte de termen."
+  },
+  "Месяц ↔ год меняется после покупки": {
+    "en": "Monthly ↔ yearly can be switched after purchase",
+    "uk": "Місяць ↔ рік змінюється після покупки",
+    "it": "Mensile ↔ annuale si cambia dopo l'acquisto",
+    "ro": "Lunar ↔ anual se schimbă după cumpărare"
+  },
+  ", с пересчётом остатка. Такие переходы связывают периоды одного и того же тарифа.": {
+    "en": ", with the remainder recalculated. Such switches connect periods of one and the same plan.",
+    "uk": ", з перерахунком залишку. Такі переходи пов'язують періоди одного й того самого тарифу.",
+    "it": ", con ricalcolo del residuo. Questi passaggi collegano periodi dello stesso piano.",
+    "ro": ", cu recalcularea restului. Astfel de treceri leagă perioade ale aceluiași plan."
+  },
+  "Переход между тарифами": {
+    "en": "Switching between plans",
+    "uk": "Перехід між тарифами",
+    "it": "Il passaggio tra piani",
+    "ro": "Trecerea între planuri"
+  },
+  "(например Starter → Pro) кнопкой в кабинете покупателя не делается — это разные товары. Напишите нам, поможем перевести.": {
+    "en": "(for example Starter → Pro) is not done with a button in the customer account — these are different products. Write to us and we will help you move.",
+    "uk": "(наприклад Starter → Pro) кнопкою в кабінеті покупця не робиться — це різні товари. Напишіть нам, допоможемо перевести.",
+    "it": "(ad esempio Starter → Pro) non si fa con un pulsante nell'account cliente: sono prodotti diversi. Scrivici e ti aiuteremo a passare.",
+    "ro": "(de exemplu Starter → Pro) nu se face cu un buton din contul de client — sunt produse diferite. Scrieți-ne și vă ajutăm să treceți."
+  },
+  "Что происходит при превышении лимита": {
+    "en": "What happens when a limit is exceeded",
+    "uk": "Що відбувається при перевищенні ліміту",
+    "it": "Che cosa succede al superamento di un limite",
+    "ro": "Ce se întâmplă la depășirea unei limite"
+  },
+  "Лимит не выключает уже работающее: точки, зоны и активы, которые вы завели, продолжают работать. Ограничивается создание нового сверх лимита — приложение скажет, какой именно лимит достигнут.": {
+    "en": "A limit does not switch off what already works: the locations, zones and assets you have created keep running. What is restricted is creating new ones beyond the limit — the app will say exactly which limit has been reached.",
+    "uk": "Ліміт не вимикає вже наявне: точки, зони й активи, які ви завели, продовжують працювати. Обмежується створення нового понад ліміт — застосунок скаже, який саме ліміт досягнуто.",
+    "it": "Un limite non spegne ciò che già funziona: sedi, aree e asset che hai creato continuano a funzionare. Viene limitata la creazione di nuovi oltre il limite: l'app dirà quale limite è stato raggiunto.",
+    "ro": "O limită nu oprește ceea ce funcționează deja: punctele, zonele și activele pe care le-ați creat continuă să funcționeze. Se limitează crearea de noi elemente peste limită — aplicația va spune exact ce limită a fost atinsă."
+  },
+  "Если подписка перестала быть активной, кабинет переходит": {
+    "en": "If the subscription stops being active, the account switches",
+    "uk": "Якщо підписка перестала бути активною, кабінет переходить",
+    "it": "Se l'abbonamento smette di essere attivo, l'account passa",
+    "ro": "Dacă abonamentul nu mai este activ, contul trece"
+  },
+  "в режим только для чтения": {
+    "en": "to read-only mode",
+    "uk": "у режим лише для читання",
+    "it": "in modalità di sola lettura",
+    "ro": "în modul doar citire"
+  },
+  ": данные видны и никуда не пропадают, но новые записи не создаются. В шапке появляется полоса «Подписка не активна — доступ только для чтения» с кнопкой «Оплатить».": {
+    "en": ": the data is visible and goes nowhere, but new records are not created. A bar appears at the top: «Subscription is not active — read-only access», with a «Pay» button.",
+    "uk": ": дані видно і вони нікуди не зникають, але нові записи не створюються. У шапці з'являється смуга «Підписка не активна — доступ лише для читання» з кнопкою «Оплатити».",
+    "it": ": i dati restano visibili e non spariscono, ma non si creano nuove registrazioni. In alto compare la barra «Abbonamento non attivo — accesso in sola lettura» con il pulsante «Paga».",
+    "ro": ": datele sunt vizibile și nu dispar nicăieri, dar nu se creează înregistrări noi. În antet apare bara «Abonamentul nu este activ — acces doar pentru citire» cu butonul «Plătește»."
+  },
+  "Брошенные бесплатные кабинеты удаляются автоматически вместе с данными; предупреждения приходят на почту владельца заранее — за 23 и за 7 дней. Оплата или пауза отменяют удаление, а в кабинете в это время видна полоса с кнопкой «Продлить».": {
+    "en": "Abandoned free accounts are deleted automatically along with their data; warnings are sent to the owner's email in advance — 23 and 7 days before. Payment or a pause cancels the deletion, and meanwhile a bar with a «Renew» button is visible in the account.",
+    "uk": "Покинуті безкоштовні кабінети видаляються автоматично разом із даними; попередження приходять на пошту власника заздалегідь — за 23 і за 7 днів. Оплата або пауза скасовують видалення, а в кабінеті в цей час видно смугу з кнопкою «Продовжити».",
+    "it": "Gli account gratuiti abbandonati vengono eliminati automaticamente insieme ai dati; gli avvisi arrivano in anticipo all'e-mail del titolare, 23 e 7 giorni prima. Il pagamento o una pausa annullano l'eliminazione, e nel frattempo nell'account è visibile una barra con il pulsante «Rinnova».",
+    "ro": "Conturile gratuite abandonate se șterg automat împreună cu datele; avertizările ajung din timp pe e-mailul proprietarului — cu 23 și cu 7 zile înainte. Plata sau o pauză anulează ștergerea, iar în cont se vede între timp o bară cu butonul «Prelungește»."
+  },
+  "Проверьте, что оплата шла с того же адреса, на который зарегистрирован кабинет. Если адреса разные — напишите нам, свяжем вручную.": {
+    "en": "Check that the payment came from the same email the account is registered to. If the addresses differ, write to us and we will link them manually.",
+    "uk": "Перевірте, що оплата йшла з тієї самої адреси, на яку зареєстрований кабінет. Якщо адреси різні — напишіть нам, зв'яжемо вручну.",
+    "it": "Verifica che il pagamento sia arrivato dallo stesso indirizzo con cui è registrato l'account. Se gli indirizzi sono diversi, scrivici e li collegheremo manualmente.",
+    "ro": "Verificați că plata a venit de la aceeași adresă pe care este înregistrat contul. Dacă adresele diferă, scrieți-ne și le vom lega manual."
+  },
+  "Есть пауза подписки — данные сохраняются, автоудаление не действует.": {
+    "en": "There is a subscription pause — the data is kept and auto-deletion does not apply.",
+    "uk": "Є пауза підписки — дані зберігаються, автовидалення не діє.",
+    "it": "Esiste la pausa dell'abbonamento: i dati vengono conservati e l'eliminazione automatica non si applica.",
+    "ro": "Există pauza abonamentului — datele se păstrează, ștergerea automată nu se aplică."
+  },
+
+  "Планшет на точке работает часами без присмотра, поэтому несколько вещей RentOS делает сам — знать о них полезно, чтобы не искать поломку там, где её нет.": {
+    "en": "A tablet at the location runs for hours unattended, so RentOS does several things by itself — it is useful to know about them so you do not look for a fault where there is none.",
+    "uk": "Планшет на точці працює годинами без нагляду, тому кілька речей RentOS робить сам — знати про них корисно, щоб не шукати поломку там, де її немає.",
+    "it": "Il tablet in sede funziona per ore senza sorveglianza, perciò RentOS fa alcune cose da sé: è utile conoscerle per non cercare un guasto dove non c'è.",
+    "ro": "Tableta de la punct funcționează ore întregi nesupravegheată, de aceea RentOS face singur câteva lucruri — este util să le știți, ca să nu căutați o defecțiune acolo unde nu există."
+  },
+  "Приложение обновляется само": {
+    "en": "The app updates itself",
+    "uk": "Застосунок оновлюється сам",
+    "it": "L'app si aggiorna da sé",
+    "ro": "Aplicația se actualizează singură"
+  },
+  "Когда выходит новая версия, устройство перезагружает приложение самостоятельно. Специально ничего нажимать не нужно, и «почистить кэш» тоже не нужно. Если сотрудник говорит, что кнопка из инструкции у него не появилась, — почти всегда дело в том, что открыта старая вкладка: достаточно закрыть и открыть приложение заново.": {
+    "en": "When a new version comes out, the device reloads the app on its own. You do not need to press anything special, and there is no need to «clear the cache» either. If an employee says a button from the instructions has not appeared for them, it is almost always an old tab left open: closing and reopening the app is enough.",
+    "uk": "Коли виходить нова версія, пристрій перезавантажує застосунок самостійно. Спеціально нічого натискати не потрібно, і «почистити кеш» теж не потрібно. Якщо співробітник каже, що кнопка з інструкції в нього не з'явилася, — майже завжди річ у тому, що відкрита стара вкладка: досить закрити й відкрити застосунок заново.",
+    "it": "Quando esce una nuova versione, il dispositivo ricarica l'app da solo. Non serve premere nulla di particolare né «svuotare la cache». Se un dipendente dice che un pulsante delle istruzioni non gli è comparso, quasi sempre è rimasta aperta una vecchia scheda: basta chiudere e riaprire l'app.",
+    "ro": "Când apare o versiune nouă, dispozitivul reîncarcă aplicația de unul singur. Nu trebuie apăsat nimic special și nici «curățat cache-ul». Dacă un angajat spune că un buton din instrucțiuni nu i-a apărut, aproape întotdeauna e vorba de o filă veche rămasă deschisă: e suficient să închidă și să redeschidă aplicația."
+  },
+  "Экран не гаснет там, где это важно": {
+    "en": "The screen stays on where it matters",
+    "uk": "Екран не гасне там, де це важливо",
+    "it": "Lo schermo non si spegne dove conta",
+    "ro": "Ecranul nu se stinge acolo unde contează"
+  },
+  "На экранах с идущими таймерами (Прибывания, Пуски) и во время сдачи итогов RentOS удерживает экран включённым. Иначе планшет затемнялся бы ровно тогда, когда на него смотрят и не трогают руками. На остальных экранах устройство ведёт себя как обычно.": {
+    "en": "On screens with running timers (Stays, Launches) and during the results submission RentOS keeps the screen awake. Otherwise the tablet would dim exactly when people are looking at it without touching it. On other screens the device behaves as usual.",
+    "uk": "На екранах із таймерами, що йдуть (Перебування, Заїзди), і під час здачі підсумків RentOS утримує екран увімкненим. Інакше планшет затемнювався б саме тоді, коли на нього дивляться й не торкаються руками. На решті екранів пристрій поводиться як звичайно.",
+    "it": "Nelle schermate con timer attivi (Soggiorni, Corse) e durante la chiusura di giornata RentOS tiene lo schermo acceso. Altrimenti il tablet si oscurerebbe proprio quando lo si guarda senza toccarlo. Nelle altre schermate il dispositivo si comporta come al solito.",
+    "ro": "Pe ecranele cu cronometre active (Șederi, Curse) și în timpul închiderii zilei RentOS menține ecranul aprins. Altfel tableta s-ar întuneca exact atunci când oamenii se uită la ea fără să o atingă. Pe celelalte ecrane dispozitivul se comportă ca de obicei."
+  },
+  "Если привязка устройства потерялась": {
+    "en": "If the device binding is lost",
+    "uk": "Якщо прив'язка пристрою загубилася",
+    "it": "Se il collegamento del dispositivo si perde",
+    "ro": "Dacă legarea dispozitivului s-a pierdut"
+  },
+  "Сотрудники входят с устройства, привязанного к точке. Привязка может слететь — например, если чистили данные браузера. Заводить новое устройство при этом не нужно: потерянную привязку можно вернуть, а владелец может привязать текущее устройство прямо из кабинета, без ссылки и QR-кода.": {
+    "en": "Employees sign in from a device bound to the location. The binding can be lost — for example if browser data was cleared. You do not need to add a new device for that: a lost binding can be restored, and the owner can bind the current device straight from the account, without a link or a QR code.",
+    "uk": "Співробітники входять із пристрою, прив'язаного до точки. Прив'язка може злетіти — наприклад, якщо чистили дані браузера. Заводити новий пристрій при цьому не потрібно: втрачену прив'язку можна повернути, а власник може прив'язати поточний пристрій просто з кабінету, без посилання та QR-коду.",
+    "it": "I dipendenti accedono da un dispositivo collegato alla sede. Il collegamento può saltare, ad esempio se sono stati cancellati i dati del browser. Non serve registrare un nuovo dispositivo: il collegamento perduto si può ripristinare e il titolare può collegare il dispositivo attuale direttamente dall'account, senza link né codice QR.",
+    "ro": "Angajații intră de pe un dispozitiv legat de punct. Legarea se poate pierde — de exemplu dacă au fost șterse datele browserului. Nu trebuie adăugat un dispozitiv nou: legarea pierdută poate fi readusă, iar proprietarul poate lega dispozitivul curent direct din cont, fără link și fără cod QR."
+  },
+  "Проверьте привязку устройства к точке: ПИН работает только на привязанном устройстве. Обычная опечатка в ПИН-коде надолго устройство не запирает.": {
+    "en": "Check the device's binding to the location: a PIN works only on a bound device. An ordinary typo in the PIN does not lock the device for long.",
+    "uk": "Перевірте прив'язку пристрою до точки: ПІН працює лише на прив'язаному пристрої. Звичайна помилка в ПІН-коді надовго пристрій не блокує.",
+    "it": "Controlla il collegamento del dispositivo alla sede: il PIN funziona solo su un dispositivo collegato. Un normale errore di digitazione del PIN non blocca il dispositivo a lungo.",
+    "ro": "Verificați legarea dispozitivului de punct: PIN-ul funcționează doar pe un dispozitiv legat. O greșeală obișnuită de tastare a PIN-ului nu blochează dispozitivul pentru mult timp."
+  },
+  "Установите его на устройство как приложение (PWA) — см. отдельную статью. Так у него будет свой значок, полный экран и работа при плохой связи.": {
+    "en": "Install it on the device as an app (PWA) — see the separate article. That way it gets its own icon, a full screen, and works on a poor connection.",
+    "uk": "Встановіть його на пристрій як застосунок (PWA) — див. окрему статтю. Так у нього буде свій значок, повний екран і робота за поганого зв'язку.",
+    "it": "Installala sul dispositivo come app (PWA): vedi l'articolo dedicato. Così avrà una propria icona, lo schermo intero e funzionerà anche con una connessione scarsa.",
+    "ro": "Instalați-o pe dispozitiv ca aplicație (PWA) — vezi articolul separat. Astfel va avea propria pictogramă, ecran complet și va funcționa la conexiune slabă."
+  },
+  "Сдача доживает до сети: приложение отправит её, когда связь вернётся, повторять ввод не нужно.": {
+    "en": "A submission survives until the network returns: the app will send it when the connection is back, and you do not need to enter it again.",
+    "uk": "Здача доживає до мережі: застосунок надішле її, коли зв'язок повернеться, повторювати введення не потрібно.",
+    "it": "La chiusura sopravvive fino al ritorno della rete: l'app la invierà quando la connessione torna, non serve reinserirla.",
+    "ro": "Închiderea rezistă până revine rețeaua: aplicația o va trimite când legătura revine, nu trebuie reintrodusă."
+  },
+
+  "Эта страница — оглавление для сотрудника: что делать в первый день и куда смотреть дальше. Подробности каждого шага — в отдельных статьях по ссылкам внутри разделов.": {
+    "en": "This page is a table of contents for the employee: what to do on the first day and where to look next. The details of each step are in separate articles linked inside the sections.",
+    "uk": "Ця сторінка — зміст для співробітника: що робити першого дня і куди дивитися далі. Подробиці кожного кроку — в окремих статтях за посиланнями всередині розділів.",
+    "it": "Questa pagina è un indice per il dipendente: che cosa fare il primo giorno e dove guardare poi. I dettagli di ogni passo sono in articoli separati, collegati all'interno delle sezioni.",
+    "ro": "Această pagină este un cuprins pentru angajat: ce să facă în prima zi și unde să se uite mai departe. Detaliile fiecărui pas sunt în articole separate, prin linkurile din secțiuni."
+  },
+  "Вход по ПИН-коду с устройства точки — email и пароль сотруднику не нужны. ПИН выдаёт владелец, он же его меняет. Если точек несколько, точка переключается там же, при входе.": {
+    "en": "Sign in with a PIN from the location's device — an employee needs no email or password. The owner issues the PIN and changes it. If there are several locations, the location is switched right there, at sign-in.",
+    "uk": "Вхід за ПІН-кодом із пристрою точки — email і пароль співробітнику не потрібні. ПІН видає власник, він же його змінює. Якщо точок кілька, точка перемикається там само, під час входу.",
+    "it": "Accesso con PIN dal dispositivo della sede: al dipendente non servono e-mail né password. Il PIN lo assegna e lo cambia il titolare. Se le sedi sono più di una, la sede si cambia lì stesso, all'accesso.",
+    "ro": "Autentificare prin PIN de pe dispozitivul punctului — angajatului nu îi trebuie e-mail și parolă. PIN-ul îl dă proprietarul, tot el îl schimbă. Dacă sunt mai multe puncte, punctul se schimbă tot acolo, la autentificare."
+  },
+  "2. Посмотреть свою памятку": {
+    "en": "2. Look at your own guide",
+    "uk": "2. Подивитися свою пам'ятку",
+    "it": "2. Guardare il proprio promemoria",
+    "ro": "2. Consultați-vă memoratorul"
+  },
+  "В приложении есть раздел": {
+    "en": "The app has a section",
+    "uk": "У застосунку є розділ",
+    "it": "Nell'app c'è la sezione",
+    "ro": "În aplicație există secțiunea"
+  },
+  "«Как работать»": {
+    "en": "«How to work»",
+    "uk": "«Як працювати»",
+    "it": "«Come lavorare»",
+    "ro": "«Cum se lucrează»"
+  },
+  "— памятка, собранная лично под вас: из настроек, которые задал владелец, и из того, к чему у вас есть доступ. У разных сотрудников она разная, и это нормально.": {
+    "en": "— a guide put together personally for you: from the settings the owner has chosen and from what you have access to. It differs from employee to employee, and that is normal.",
+    "uk": "— пам'ятка, зібрана особисто під вас: із налаштувань, які задав власник, і з того, до чого у вас є доступ. У різних співробітників вона різна, і це нормально.",
+    "it": "— un promemoria costruito personalmente per te: dalle impostazioni scelte dal titolare e da ciò a cui hai accesso. È diverso per ogni dipendente, ed è normale.",
+    "ro": "— un memorator alcătuit personal pentru dumneavoastră: din setările stabilite de proprietar și din ceea ce aveți acces. La angajați diferiți este diferit, și asta e normal."
+  },
+  "3. Разобраться со своей зоной": {
+    "en": "3. Get to know your zone",
+    "uk": "3. Розібратися зі своєю зоною",
+    "it": "3. Capire la propria area",
+    "ro": "3. Lămuriți-vă cu zona dumneavoastră"
+  },
+  "Дальше зависит от того, как считает ваша зона — режим выбирает владелец:": {
+    "en": "What comes next depends on how your zone counts — the mode is chosen by the owner:",
+    "uk": "Далі залежить від того, як рахує ваша зона — режим обирає власник:",
+    "it": "Il seguito dipende da come conta la tua area: la modalità la sceglie il titolare:",
+    "ro": "Mai departe depinde de cum socotește zona dumneavoastră — modul îl alege proprietarul:"
+  },
+  "— сеансы считает прибор, вы вводите показания при сдаче итогов.": {
+    "en": "— the device counts the sessions, you enter the readings at the results submission.",
+    "uk": "— сеанси рахує прилад, ви вводите показання під час здачі підсумків.",
+    "it": "— le sessioni le conta l'apparecchio, tu inserisci le letture alla chiusura di giornata.",
+    "ro": "— sesiunile le numără aparatul, dumneavoastră introduceți indicațiile la închiderea zilei."
+  },
+  "— вы запускаете и останавливаете время каждого посетителя.": {
+    "en": "— you start and stop the time of every visitor.",
+    "uk": "— ви запускаєте й зупиняєте час кожного відвідувача.",
+    "it": "— avvii e fermi il tempo di ogni visitatore.",
+    "ro": "— porniți și opriți timpul fiecărui vizitator."
+  },
+  "— учёт тапом по активу вместо бумажной тетрадки.": {
+    "en": "— counting by tapping the asset instead of a paper notebook.",
+    "uk": "— облік тапом по активу замість паперового зошита.",
+    "it": "— conteggio con un tocco sull'asset al posto del quaderno di carta.",
+    "ro": "— evidență printr-o atingere pe activ, în locul caietului de hârtie."
+  },
+  "— продажа заказами, гашение при входе.": {
+    "en": "— selling in orders, redeeming at the entrance.",
+    "uk": "— продаж замовленнями, гасіння на вході.",
+    "it": "— vendita per ordini, convalida all'ingresso.",
+    "ro": "— vânzare prin comenzi, validare la intrare."
+  },
+  "— вводится итоговая сумма за смену.": {
+    "en": "— the total amount for the shift is entered.",
+    "uk": "— вводиться підсумкова сума за зміну.",
+    "it": "— si inserisce l'importo totale del turno.",
+    "ro": "— se introduce suma totală pe tură."
+  },
+  "4. Знать про деньги": {
+    "en": "4. Know about the money",
+    "uk": "4. Знати про гроші",
+    "it": "4. Sapere dei soldi",
+    "ro": "4. Să știți despre bani"
+  },
+  "Три вещи, которые чаще всего забывают и из-за которых вечером не сходится касса:": {
+    "en": "Three things people forget most often, and because of which the till does not add up in the evening:",
+    "uk": "Три речі, які найчастіше забувають і через які ввечері не сходиться каса:",
+    "it": "Tre cose che si dimenticano più spesso e per cui la sera la cassa non torna:",
+    "ro": "Trei lucruri care se uită cel mai des și din cauza cărora seara casa nu se potrivește:"
+  },
+  "вносится сразу, как взяли деньги из ящика, а не потом «по памяти»;": {
+    "en": "is entered as soon as the money is taken from the drawer, not later «from memory»;",
+    "uk": "вноситься одразу, як узяли гроші з шухляди, а не потім «по пам'яті»;",
+    "it": "si registra appena si prendono i soldi dal cassetto, non dopo «a memoria»;",
+    "ro": "se introduce imediat ce s-au luat banii din sertar, nu apoi «din memorie»;"
+  },
+  "отмечают, когда деньги забрали с точки;": {
+    "en": "is recorded when the money has been taken from the location;",
+    "uk": "відмічають, коли гроші забрали з точки;",
+    "it": "si registra quando i soldi vengono portati via dalla sede;",
+    "ro": "se marchează atunci când banii au fost luați de la punct;"
+  },
+  "возвраты и тестовые прогоны": {
+    "en": "refunds and test runs",
+    "uk": "повернення й тестові прогони",
+    "it": "rimborsi e corse di prova",
+    "ro": "returnări și curse de test"
+  },
+  "в Счётчиках указывают при сдаче итогов, иначе они посчитаются выручкой.": {
+    "en": "in Counters are entered at the results submission, otherwise they will count as revenue.",
+    "uk": "у Лічильниках указують під час здачі підсумків, інакше вони порахуються виручкою.",
+    "it": "nei Contatori si indicano alla chiusura di giornata, altrimenti verranno conteggiati come incasso.",
+    "ro": "în Contoare se indică la închiderea zilei, altfel vor fi socotite ca încasări."
+  },
+  "5. Сдать итоги в конце смены": {
+    "en": "5. Submit the results at the end of the shift",
+    "uk": "5. Здати підсумки наприкінці зміни",
+    "it": "5. Fare la chiusura di giornata a fine turno",
+    "ro": "5. Închideți ziua la sfârșitul turei"
+  },
+  "Мастер сдачи итогов проведёт по шагам и посчитает выручку. Если зона не отправляется — скорее всего остались незавершённые посещения, приложение подскажет какие.": {
+    "en": "The submission wizard walks you through the steps and calculates the revenue. If a zone will not submit, most likely some stays are still open — the app will point out which ones.",
+    "uk": "Майстер здачі підсумків проведе по кроках і порахує виручку. Якщо зона не відправляється — найімовірніше залишилися незавершені перебування, застосунок підкаже які.",
+    "it": "La procedura guidata di chiusura ti accompagna passo passo e calcola l'incasso. Se un'area non si invia, molto probabilmente restano soggiorni non conclusi: l'app indicherà quali.",
+    "ro": "Asistentul de închidere vă conduce pas cu pas și calculează încasarea. Dacă zona nu se trimite, cel mai probabil au rămas șederi neîncheiate — aplicația va indica exact care."
+  },
+  "Это «Разница» — у неё есть отдельная статья с разбором обычных причин, и почти всегда дело в учёте, а не в деньгах.": {
+    "en": "That is the «Difference» — it has its own article going through the usual causes, and it is almost always a matter of bookkeeping rather than money.",
+    "uk": "Це «Різниця» — у неї є окрема стаття з розбором звичайних причин, і майже завжди річ в обліку, а не в грошах.",
+    "it": "È la «Differenza»: ha un articolo dedicato che analizza le cause abituali, e quasi sempre è una questione di registrazioni, non di soldi.",
+    "ro": "Aceasta este «Diferența» — are un articol separat cu analiza cauzelor obișnuite, și aproape întotdeauna este o chestiune de evidență, nu de bani."
+  },
+  "Доступ к разделам выдаёт владелец поштучно: Товары, Билеты, расходы, инкассации. Если раздела нет — он вам не открыт, это не поломка.": {
+    "en": "Access to sections is granted by the owner one by one: Products, Tickets, expenses, cash collections. If a section is missing, it has not been opened for you — this is not a fault.",
+    "uk": "Доступ до розділів видає власник поштучно: Товари, Квитки, витрати, інкасації. Якщо розділу немає — він вам не відкритий, це не поломка.",
+    "it": "L'accesso alle sezioni lo concede il titolare una per una: Prodotti, Biglietti, spese, prelievi. Se una sezione non c'è, non ti è stata aperta: non è un guasto.",
+    "ro": "Accesul la secțiuni îl acordă proprietarul individual: Produse, Bilete, cheltuieli, colectări. Dacă o secțiune lipsește, nu v-a fost deschisă — nu este o defecțiune."
+  },
+
+  "«Разница» — это расхождение между расчётной выручкой и фактической кассой.": {
+    "en": "The «Difference» is the gap between the calculated revenue and the actual till.",
+    "uk": "«Різниця» — це розбіжність між розрахунковою виручкою та фактичною касою.",
+    "it": "La «Differenza» è lo scarto tra l'incasso calcolato e la cassa effettiva.",
+    "ro": "«Diferența» este discrepanța dintre încasarea calculată și casa efectivă."
+  },
+  "Расчётную считает приложение: показания счётчиков, пуски, посещения, проданные билеты и товары, умноженные на тарифы. Фактическую вводит сотрудник при сдаче итогов — сколько денег реально в ящике.": {
+    "en": "The calculated one is worked out by the app: counter readings, launches, stays, tickets and products sold, multiplied by the tariffs. The actual one is entered by the employee at the results submission — how much money is really in the drawer.",
+    "uk": "Розрахункову рахує застосунок: показання лічильників, заїзди, перебування, продані квитки й товари, помножені на тарифи. Фактичну вводить співробітник під час здачі підсумків — скільки грошей реально в шухляді.",
+    "it": "Quello calcolato lo determina l'app: letture dei contatori, corse, soggiorni, biglietti e prodotti venduti, moltiplicati per le tariffe. Quella effettiva la inserisce il dipendente alla chiusura di giornata: quanti soldi ci sono davvero nel cassetto.",
+    "ro": "Pe cea calculată o determină aplicația: indicațiile contoarelor, cursele, șederile, biletele și produsele vândute, înmulțite cu tarifele. Pe cea efectivă o introduce angajatul la închiderea zilei — câți bani sunt realmente în sertar."
+  },
+  "Если всё записано верно, эти два числа совпадают. Разница показывает, что где-то они разошлись, и её видно на Главной, в «Итогах по дням» и в сводке, которая приходит в Telegram.": {
+    "en": "If everything is recorded correctly, these two numbers match. The difference shows that somewhere they diverged, and it is visible on the Home screen, in «Daily totals» and in the summary that arrives in Telegram.",
+    "uk": "Якщо все записано правильно, ці два числа збігаються. Різниця показує, що десь вони розійшлися, і її видно на Головній, у «Підсумках за днями» і у зведенні, яке приходить у Telegram.",
+    "it": "Se tutto è registrato correttamente, questi due numeri coincidono. La differenza mostra che da qualche parte si sono scostati, ed è visibile nella schermata principale, nei «Totali giornalieri» e nel riepilogo che arriva su Telegram.",
+    "ro": "Dacă totul este înregistrat corect, aceste două numere coincid. Diferența arată că undeva s-au despărțit și se vede pe ecranul principal, în «Totalurile pe zile» și în rezumatul care ajunge pe Telegram."
+  },
+  "Разница — не всегда воровство": {
+    "en": "A difference is not always theft",
+    "uk": "Різниця — не завжди крадіжка",
+    "it": "Una differenza non è sempre un furto",
+    "ro": "O diferență nu înseamnă întotdeauna furt"
+  },
+  "Гораздо чаще она объясняется учётом, а не людьми. Проверяйте по порядку:": {
+    "en": "Far more often it is explained by bookkeeping rather than by people. Check in this order:",
+    "uk": "Значно частіше вона пояснюється обліком, а не людьми. Перевіряйте по порядку:",
+    "it": "Molto più spesso si spiega con le registrazioni, non con le persone. Controlla nell'ordine:",
+    "ro": "Mult mai des se explică prin evidență, nu prin oameni. Verificați pe rând:"
+  },
+  "Сотрудник взял деньги из ящика на бензин или ремонт. Если расход внесён — приложение это учтёт; если нет, касса окажется меньше расчёта ровно на эту сумму.": {
+    "en": "An employee took money from the drawer for fuel or a repair. If the expense is recorded, the app accounts for it; if not, the till comes out lower than the calculation by exactly that amount.",
+    "uk": "Співробітник узяв гроші з шухляди на бензин або ремонт. Якщо витрату внесено — застосунок це врахує; якщо ні, каса виявиться меншою за розрахунок рівно на цю суму.",
+    "it": "Un dipendente ha preso soldi dal cassetto per il carburante o una riparazione. Se la spesa è registrata, l'app ne tiene conto; se no, la cassa risulterà inferiore al calcolo esattamente di quell'importo.",
+    "ro": "Un angajat a luat bani din sertar pentru benzină sau o reparație. Dacă cheltuiala este înregistrată, aplicația o ia în calcul; dacă nu, casa va fi mai mică decât calculul exact cu acea sumă."
+  },
+  "Инкассация посреди дня.": {
+    "en": "A cash collection in the middle of the day.",
+    "uk": "Інкасація посеред дня.",
+    "it": "Un prelievo a metà giornata.",
+    "ro": "O colectare în mijlocul zilei."
+  },
+  "Деньги забрали до сдачи итогов — они больше не в ящике.": {
+    "en": "The money was taken before the results submission — it is no longer in the drawer.",
+    "uk": "Гроші забрали до здачі підсумків — вони більше не в шухляді.",
+    "it": "I soldi sono stati portati via prima della chiusura di giornata: non sono più nel cassetto.",
+    "ro": "Banii au fost luați înainte de închiderea zilei — nu mai sunt în sertar."
+  },
+  "В кассу добавили мелочь для сдачи — денег больше, чем выручки.": {
+    "en": "Small change was added to the till for giving change — there is more money than revenue.",
+    "uk": "У касу додали дрібні для здачі — грошей більше, ніж виручки.",
+    "it": "In cassa sono stati aggiunti spiccioli per il resto: c'è più denaro che incasso.",
+    "ro": "În casă s-au adăugat mărunțiș pentru rest — sunt mai mulți bani decât încasări."
+  },
+  "Клиент расплатился абонементом: выручка есть, а живых денег в ящике не прибавилось. Это законное расхождение, и приложение его понимает — значок тревоги не показывается, когда разрыв целиком объясняется балансом.": {
+    "en": "A client paid with a pass: there is revenue, but no extra cash appeared in the drawer. This is a legitimate discrepancy and the app understands it — no warning icon is shown when the gap is fully explained by the balance.",
+    "uk": "Клієнт розплатився абонементом: виручка є, а живих грошей у шухляді не додалося. Це законна розбіжність, і застосунок її розуміє — значок тривоги не показується, коли розрив цілком пояснюється балансом.",
+    "it": "Un cliente ha pagato con l'abbonamento: l'incasso c'è, ma nel cassetto non è entrato denaro contante. È uno scarto legittimo e l'app lo riconosce: l'icona di avviso non compare quando il divario è interamente spiegato dal saldo.",
+    "ro": "Un client a plătit cu abonamentul: încasarea există, dar în sertar nu s-au adăugat bani. Este o discrepanță legitimă, iar aplicația o înțelege — pictograma de avertizare nu apare atunci când diferența se explică integral prin sold."
+  },
+  "Аванс или премия,": {
+    "en": "An advance or a bonus,",
+    "uk": "Аванс або премія,",
+    "it": "Un anticipo o un premio,",
+    "ro": "Un avans sau o primă,"
+  },
+  "взятые сотрудником из кассы.": {
+    "en": "taken by the employee from the till.",
+    "uk": "узяті співробітником з каси.",
+    "it": "prelevati dal dipendente dalla cassa.",
+    "ro": "luate de angajat din casă."
+  },
+  "Если ни одно из этого не подходит, остаётся два варианта: незаписанная продажа (провели мимо приложения) или недостача.": {
+    "en": "If none of these fits, two options remain: an unrecorded sale (put through outside the app) or a shortfall.",
+    "uk": "Якщо жодне з цього не підходить, залишається два варіанти: незаписаний продаж (провели повз застосунок) або нестача.",
+    "it": "Se nessuna di queste spiegazioni regge, restano due possibilità: una vendita non registrata (fatta fuori dall'app) o un ammanco.",
+    "ro": "Dacă niciuna dintre acestea nu se potrivește, rămân două variante: o vânzare neînregistrată (făcută pe lângă aplicație) sau o lipsă."
+  },
+  "Как искать причину": {
+    "en": "How to look for the cause",
+    "uk": "Як шукати причину",
+    "it": "Come cercare la causa",
+    "ro": "Cum se caută cauza"
+  },
+  "Откройте «Деньги» → «Итоги по дням» за нужный день — там видно, из чего сложилась касса и где разрыв.": {
+    "en": "Open «Money» → «Daily totals» for the day in question — there you can see what the till was made up of and where the gap is.",
+    "uk": "Відкрийте «Гроші» → «Підсумки за днями» за потрібний день — там видно, з чого склалася каса і де розрив.",
+    "it": "Apri «Denaro» → «Totali giornalieri» per il giorno che ti interessa: lì si vede di che cosa è composta la cassa e dov'è il divario.",
+    "ro": "Deschideți «Bani» → «Totalurile pe zile» pentru ziua dorită — acolo se vede din ce s-a compus casa și unde este diferența."
+  },
+  "Посмотрите несколько смен подряд.": {
+    "en": "Look at several shifts in a row.",
+    "uk": "Подивіться кілька змін поспіль.",
+    "it": "Guarda più turni di fila.",
+    "ro": "Priviți câteva ture la rând."
+  },
+  "Разовая разница — почти всегда учёт, систематическая в одну сторону — повод разбираться.": {
+    "en": "A one-off difference is almost always bookkeeping; a systematic one in the same direction is a reason to look into it.",
+    "uk": "Разова різниця — майже завжди облік, систематична в один бік — привід розбиратися.",
+    "it": "Una differenza isolata è quasi sempre una questione di registrazioni; una sistematica nella stessa direzione è un motivo per indagare.",
+    "ro": "O diferență izolată ține aproape întotdeauna de evidență; una sistematică în aceeași direcție este un motiv de verificat."
+  },
+  "Сравните по сотрудникам: если расхождение идёт только в чьи-то смены, это уже не случайность.": {
+    "en": "Compare by employee: if the discrepancy appears only in someone's shifts, that is no longer a coincidence.",
+    "uk": "Порівняйте за співробітниками: якщо розбіжність іде лише в чиїсь зміни, це вже не випадковість.",
+    "it": "Confronta per dipendente: se lo scarto compare solo nei turni di qualcuno, non è più un caso.",
+    "ro": "Comparați pe angajați: dacă discrepanța apare doar în turele cuiva, nu mai este o întâmplare."
+  },
+  "Выключите ему тумблер «Видит разницу при сдаче» — тогда он вводит кассу, не видя расчётной суммы, и подогнать ввод под неё не получится.": {
+    "en": "Turn off their «Sees the difference at submission» toggle — then they enter the till without seeing the calculated amount, and matching the entry to it becomes impossible.",
+    "uk": "Вимкніть йому перемикач «Бачить різницю під час здачі» — тоді він вводить касу, не бачачи розрахункової суми, і підігнати ввід під неї не вийде.",
+    "it": "Disattiva per lui l'interruttore «Vede la differenza alla chiusura»: così inserisce la cassa senza vedere l'importo calcolato e non potrà adattarvi il proprio inserimento.",
+    "ro": "Dezactivați-i comutatorul «Vede diferența la închidere» — atunci introduce casa fără să vadă suma calculată și nu va putea să-și potrivească introducerea după ea."
+  },
+  "Владелец может поправить наличные и безнал у уже сданных итогов — исправление останется в истории.": {
+    "en": "The owner can correct the cash and cashless figures of an already submitted result — the correction stays in the history.",
+    "uk": "Власник може виправити готівку й безготівку у вже зданих підсумках — виправлення залишиться в історії.",
+    "it": "Il titolare può correggere contanti ed elettronico di una chiusura già inviata: la correzione resta nello storico.",
+    "ro": "Proprietarul poate corecta numerarul și plățile fără numerar la o închidere deja trimisă — corectura rămâne în istoric."
+  },
+  "Это оплата балансом, см. выше — она законна и в подсказке к «Разнице» так и написано.": {
+    "en": "That is a balance payment, see above — it is legitimate, and the «Difference» hint says exactly that.",
+    "uk": "Це оплата балансом, див. вище — вона законна, і в підказці до «Різниці» так і написано.",
+    "it": "È un pagamento a saldo, vedi sopra: è legittimo, e il suggerimento della «Differenza» lo dice esattamente.",
+    "ro": "Aceasta este o plată din sold, vezi mai sus — este legitimă, iar indiciul de la «Diferență» exact asta spune."
+  },
+
+  "Чтобы не путать браслеты между собой — дайте посещению свою подпись: значок": {
+    "en": "To avoid mixing wristbands up, give the stay a label of your own: the icon",
+    "uk": "Щоб не плутати браслети між собою — дайте перебуванню свій підпис: значок",
+    "it": "Per non confondere i braccialetti, dai al soggiorno un'etichetta tua: l'icona",
+    "ro": "Ca să nu încurcați brățările între ele, dați șederii o etichetă proprie: pictograma"
+  },
+  "на тайле → поле «Пометка» → «Сохранить». Например «Максим в зелёной футболке». Подпись встаёт на место слова «Посетитель» прямо на тайле, номер браслета остаётся на месте; пустая строка возвращает обычную надпись.": {
+    "en": "on the tile → the «Label» field → «Save». For example «Max in a green T-shirt». The label takes the place of the word «Visitor» right on the tile, the wristband number stays where it is; an empty string brings the usual caption back.",
+    "uk": "на тайлі → поле «Помітка» → «Зберегти». Наприклад «Максим у зеленій футболці». Підпис стає на місце слова «Відвідувач» просто на тайлі, номер браслета залишається на місці; порожній рядок повертає звичайний напис.",
+    "it": "sulla tessera → il campo «Nota» → «Salva». Ad esempio «Max con la maglietta verde». L'etichetta prende il posto della parola «Visitatore» direttamente sulla tessera, il numero del braccialetto resta al suo posto; una stringa vuota ripristina la dicitura abituale.",
+    "ro": "de pe dală → câmpul «Notiță» → «Salvează». De exemplu «Max în tricou verde». Eticheta ia locul cuvântului «Vizitator» chiar pe dală, numărul brățării rămâne la locul lui; un șir gol readuce inscripția obișnuită."
+  },
+  "Там же по желанию привяжите клиента с балансом — «Найти или Новый». Это просто для справки, на оплату не влияет и никак не связано с пометкой: можно поставить и то, и другое.": {
+    "en": "In the same place you may optionally link a client with a balance — «Find or New». This is for reference only, does not affect payment and is in no way tied to the label: you can set both.",
+    "uk": "Там само за бажанням прив'яжіть клієнта з балансом — «Знайти або Новий». Це просто для довідки, на оплату не впливає й ніяк не пов'язане з поміткою: можна поставити і те, і інше.",
+    "it": "Nello stesso punto puoi, se vuoi, collegare un cliente con saldo: «Trova o Nuovo». È solo a titolo informativo, non incide sul pagamento e non è in alcun modo legato alla nota: puoi impostare entrambe le cose.",
+    "ro": "Tot acolo puteți lega opțional un client cu sold — «Găsește sau Nou». Este doar informativ, nu influențează plata și nu are nicio legătură cu notița: puteți pune și una, și alta."
+  },
+  "Тайл узкий, поэтому длинная подпись обрезается — ставьте отличительное слово первым: «Максим, зелёная футболка», а не «мальчик в зелёной футболке Максим». Целиком её всегда видно, если открыть значок пометки.": {
+    "en": "The tile is narrow, so a long label gets truncated — put the distinguishing word first: «Max, green T-shirt» rather than «the boy in the green T-shirt Max». You can always see it in full by opening the label icon.",
+    "uk": "Тайл вузький, тому довгий підпис обрізається — ставте відмітне слово першим: «Максим, зелена футболка», а не «хлопчик у зеленій футболці Максим». Повністю її завжди видно, якщо відкрити значок помітки.",
+    "it": "La tessera è stretta, quindi un'etichetta lunga viene troncata: metti per prima la parola distintiva, «Max, maglietta verde» e non «il bambino con la maglietta verde Max». Per intero la vedi sempre aprendo l'icona della nota.",
+    "ro": "Dala este îngustă, așa că o etichetă lungă se trunchiază — puneți primul cuvântul distinctiv: «Max, tricou verde», nu «băiatul în tricou verde Max». Integral o vedeți oricând deschizând pictograma notiței."
+  },
+  "Она доступна, пока у компании включён модуль «Клиенты». Пометка работает всегда, независимо от него.": {
+    "en": "It is available while the company has the «Clients» module enabled. The label always works, regardless of it.",
+    "uk": "Вона доступна, поки в компанії увімкнений модуль «Клієнти». Помітка працює завжди, незалежно від нього.",
+    "it": "È disponibile finché l'azienda ha attivo il modulo «Clienti». La nota funziona sempre, indipendentemente da esso.",
+    "ro": "Este disponibilă cât timp compania are activat modulul «Clienți». Notița funcționează întotdeauna, independent de el."
+  },
+
+  "Раздел «Клиенты» — поиск клиента по телефону или имени, продажа абонемента (пополнение баланса) и списание баланса за покупку.": {
+    "en": "The «Clients» section — finding a client by phone or name, selling a pass (topping up the balance) and charging the balance for a purchase.",
+    "uk": "Розділ «Клієнти» — пошук клієнта за телефоном або іменем, продаж абонемента (поповнення балансу) і списання балансу за покупку.",
+    "it": "La sezione «Clienti»: ricerca di un cliente per telefono o nome, vendita di un abbonamento (ricarica del saldo) e addebito del saldo per un acquisto.",
+    "ro": "Secțiunea «Clienți» — căutarea clientului după telefon sau nume, vânzarea unui abonament (alimentarea soldului) și debitarea soldului pentru o achiziție."
+  },
+  "Откройте «Клиенты» и наберите в поле «Телефон или имя» одно из трёх: номер целиком,": {
+    "en": "Open «Clients» and type one of three things into the «Phone or name» field: the whole number,",
+    "uk": "Відкрийте «Клієнти» й наберіть у полі «Телефон або ім'я» одне з трьох: номер цілком,",
+    "it": "Apri «Clienti» e digita nel campo «Telefono o nome» una di tre cose: il numero intero,",
+    "ro": "Deschideți «Clienți» și tastați în câmpul «Telefon sau nume» unul din trei lucruri: numărul întreg,"
+  },
+  "последние четыре цифры": {
+    "en": "the last four digits",
+    "uk": "останні чотири цифри",
+    "it": "le ultime quattro cifre",
+    "ro": "ultimele patru cifre"
+  },
+  "«Найти». Цифры удобно набирать кнопками под полем, имя — обычной клавиатурой.": {
+    "en": "«Find». Digits are easiest to enter with the buttons under the field, a name with the ordinary keyboard.",
+    "uk": "«Знайти». Цифри зручно набирати кнопками під полем, ім'я — звичайною клавіатурою.",
+    "it": "«Trova». Le cifre conviene digitarle con i pulsanti sotto il campo, il nome con la tastiera normale.",
+    "ro": "«Găsește». Cifrele se tastează comod cu butoanele de sub câmp, numele — cu tastatura obișnuită."
+  },
+  "Если точного совпадения нет — появится список найденных клиентов, выберите нужного. По четырём цифрам и по имени список показывается всегда, даже когда совпадение одно: короткий запрос может совпасть и с чужим номером, поэтому выбирает человек, а не программа. Баланс в списке намеренно не показан — он появится, когда вы выберете клиента.": {
+    "en": "If there is no exact match, a list of found clients appears — choose the right one. For four digits and for a name the list is always shown, even when there is only one match: a short query can also match someone else's number, so a person chooses, not the program. The balance is deliberately not shown in the list — it appears once you select a client.",
+    "uk": "Якщо точного збігу немає — з'явиться список знайдених клієнтів, виберіть потрібного. За чотирма цифрами і за іменем список показується завжди, навіть коли збіг один: короткий запит може збігтися й із чужим номером, тому вибирає людина, а не програма. Баланс у списку навмисно не показано — він з'явиться, коли ви виберете клієнта.",
+    "it": "Se non c'è una corrispondenza esatta compare un elenco dei clienti trovati: scegli quello giusto. Con quattro cifre e con il nome l'elenco viene mostrato sempre, anche quando la corrispondenza è una sola: una query breve può coincidere anche con il numero di un altro, perciò sceglie una persona, non il programma. Il saldo nell'elenco non è mostrato di proposito: comparirà quando selezionerai il cliente.",
+    "ro": "Dacă nu există o potrivire exactă, apare o listă a clienților găsiți — alegeți-l pe cel potrivit. După patru cifre și după nume lista se afișează întotdeauna, chiar și când potrivirea este una singură: o interogare scurtă poate coincide și cu numărul altcuiva, de aceea alege omul, nu programul. Soldul în listă nu este afișat intenționat — va apărea când selectați clientul."
+  },
+  "Если клиента ещё нет — можно сразу завести (имя необязательно) и сохранить без продажи абонемента. Номер нового клиента вводится": {
+    "en": "If the client does not exist yet, you can add them right away (the name is optional) and save without selling a pass. The new client's number is entered",
+    "uk": "Якщо клієнта ще немає — можна одразу завести (ім'я необов'язкове) і зберегти без продажу абонемента. Номер нового клієнта вводиться",
+    "it": "Se il cliente non esiste ancora, puoi registrarlo subito (il nome è facoltativo) e salvare senza vendere un abbonamento. Il numero del nuovo cliente si inserisce",
+    "ro": "Dacă clientul încă nu există, îl puteți adăuga imediat (numele este opțional) și salva fără vânzarea unui abonament. Numărul noului client se introduce"
+  },
+  ": по четырём цифрам или по имени завести нельзя — такой «номер» потом не совпал бы ни с Telegram-ботом клиента, ни с его следующим визитом.": {
+    "en": ": you cannot create one from four digits or a name — such a «number» would later match neither the client's Telegram bot nor their next visit.",
+    "uk": ": за чотирма цифрами або за іменем завести не можна — такий «номер» потім не збігся б ні з Telegram-ботом клієнта, ні з його наступним візитом.",
+    "it": ": non si può crearlo da quattro cifre o da un nome — un simile «numero» poi non coinciderebbe né con il bot Telegram del cliente né con la sua visita successiva.",
+    "ro": ": nu se poate crea după patru cifre sau după nume — un asemenea «număr» nu s-ar potrivi apoi nici cu botul Telegram al clientului, nici cu vizita lui următoare."
+  },
+  "клиента. Нажмите": {
+    "en": "the client. Press",
+    "uk": "клієнта. Натисніть",
+    "it": "il cliente. Premi",
+    "ro": "clientul. Apăsați"
+  },
+  "Проще всего — прямо в момент продажи (Товары, Пуски, Прибывания, Счётчики): при выборе способа оплаты нажмите «Баланс» и найдите клиента там же — тем же поиском по номеру, последним цифрам или имени.": {
+    "en": "The simplest way is right at the moment of sale (Products, Launches, Stays, Counters): when choosing the payment method press «Balance» and find the client right there — with the same search by number, last digits or name.",
+    "uk": "Найпростіше — просто в момент продажу (Товари, Заїзди, Перебування, Лічильники): під час вибору способу оплати натисніть «Баланс» і знайдіть клієнта там само — тим самим пошуком за номером, останніми цифрами або іменем.",
+    "it": "Il modo più semplice è direttamente al momento della vendita (Prodotti, Corse, Soggiorni, Contatori): nella scelta del metodo di pagamento premi «Saldo» e trova il cliente lì stesso, con la stessa ricerca per numero, ultime cifre o nome.",
+    "ro": "Cel mai simplu este chiar în momentul vânzării (Produse, Curse, Șederi, Contoare): la alegerea metodei de plată apăsați «Sold» și găsiți clientul tot acolo — cu aceeași căutare după număr, ultimele cifre sau nume."
+  },
+  "Имя — необязательное поле, и если при заведении его не вписали, клиент ищется только по номеру. Найдите его по телефону и допишите имя карандашом рядом с именем в карточке — дальше он будет находиться и по имени.": {
+    "en": "The name is an optional field, and if it was not filled in when the client was created, the client is only found by number. Find them by phone and add the name using the pencil next to the name in the card — after that they will also be found by name.",
+    "uk": "Ім'я — необов'язкове поле, і якщо під час заведення його не вписали, клієнт шукається лише за номером. Знайдіть його за телефоном і допишіть ім'я олівцем поруч з іменем у картці — далі він знаходитиметься і за іменем.",
+    "it": "Il nome è un campo facoltativo e, se non è stato inserito alla registrazione, il cliente si trova solo per numero. Trovalo per telefono e aggiungi il nome con la matita accanto al nome nella scheda: da quel momento sarà trovato anche per nome.",
+    "ro": "Numele este un câmp opțional și, dacă nu a fost completat la creare, clientul se găsește doar după număr. Găsiți-l după telefon și adăugați numele cu creionul de lângă nume din fișă — după aceea va fi găsit și după nume."
+  },
+  "Так и бывает: четыре цифры совпадают у разных номеров. Уточните запрос — наберите больше цифр или имя. Если совпадений слишком много, приложение прямо попросит уточнить.": {
+    "en": "That happens: four digits coincide across different numbers. Narrow the query — type more digits or a name. If there are too many matches, the app will ask you directly to narrow it down.",
+    "uk": "Так і буває: чотири цифри збігаються в різних номерів. Уточніть запит — наберіть більше цифр або ім'я. Якщо збігів забагато, застосунок прямо попросить уточнити.",
+    "it": "Succede: quattro cifre coincidono in numeri diversi. Affina la ricerca digitando più cifre o un nome. Se le corrispondenze sono troppe, l'app ti chiederà esplicitamente di precisare.",
+    "ro": "Se întâmplă: patru cifre coincid la numere diferite. Precizați interogarea — tastați mai multe cifre sau numele. Dacă potrivirile sunt prea multe, aplicația vă va cere direct să precizați."
+  },
+
+  "Если настраиваете устройство, на котором сейчас работаете, — нажмите «Привязать это устройство»: оно активируется сразу, и это же устройство запомнит вас лично (пригодится для статьи «Как войти как": {
+    "en": "If you are setting up the device you are working on right now, press «Bind this device»: it is activated immediately and that same device will remember you personally (useful for the article «How to sign in as",
+    "uk": "Якщо налаштовуєте пристрій, на якому зараз працюєте, — натисніть «Прив'язати цей пристрій»: він активується одразу, і цей самий пристрій запам'ятає вас особисто (стане в пригоді для статті «Як увійти як",
+    "it": "Se stai configurando il dispositivo su cui stai lavorando ora, premi «Collega questo dispositivo»: si attiva subito e lo stesso dispositivo ti ricorderà personalmente (utile per l'articolo «Come accedere come",
+    "ro": "Dacă configurați dispozitivul pe care lucrați acum, apăsați «Leagă acest dispozitiv»: se activează imediat, iar același dispozitiv vă va reține personal (util pentru articolul «Cum să intrați ca"
+  },
+  "Как настроить печать квитанций и билетов": {
+    "en": "How to set up printing of receipts and tickets",
+    "uk": "Як налаштувати друк квитанцій і квитків",
+    "it": "Come configurare la stampa di ricevute e biglietti",
+    "ro": "Cum se configurează tipărirea bonurilor și biletelor"
+  },
+  "Устройства на точке: обновления, экран и восстановление привязки": {
+    "en": "Devices at the location: updates, screen and restoring the binding",
+    "uk": "Пристрої на точці: оновлення, екран і відновлення прив'язки",
+    "it": "Dispositivi in sede: aggiornamenti, schermo e ripristino del collegamento",
+    "ro": "Dispozitivele la punct: actualizări, ecran și restabilirea legării"
+  }
+}
