@@ -1466,5 +1466,746 @@
     "uk": "Пристрої на точці: оновлення, екран і відновлення прив'язки",
     "it": "Dispositivi in sede: aggiornamenti, schermo e ripristino del collegamento",
     "ro": "Dispozitivele la punct: actualizări, ecran și restabilirea legării"
+  },
+
+  "В RentOS несколько слов используются в строго определённом смысле. Если их не знать, остальные статьи читаются тяжело. Здесь они собраны в одном месте — простыми словами и с примерами.": {
+    "en": "In RentOS a few words are used in a strictly defined sense. Without knowing them the other articles are hard to read. Here they are gathered in one place — in plain words and with examples.",
+    "uk": "У RentOS кілька слів вживаються в чітко визначеному значенні. Якщо їх не знати, решта статей читається важко. Тут вони зібрані в одному місці — простими словами і з прикладами.",
+    "it": "In RentOS alcune parole hanno un significato preciso. Senza conoscerle, gli altri articoli si leggono a fatica. Qui sono raccolte in un unico posto, con parole semplici ed esempi.",
+    "ro": "În RentOS câteva cuvinte se folosesc într-un sens strict definit. Fără să le cunoașteți, celelalte articole se citesc greu. Aici sunt adunate într-un singur loc — în cuvinte simple și cu exemple."
+  },
+  "Из чего состоит ваш бизнес в системе": {
+    "en": "What your business is made of in the system",
+    "uk": "З чого складається ваш бізнес у системі",
+    "it": "Di che cosa è fatta la tua attività nel sistema",
+    "ro": "Din ce este alcătuită afacerea dumneavoastră în sistem"
+  },
+  "— это вы целиком. Один кабинет, одна подписка, свои сотрудники и настройки.": {
+    "en": "— is you as a whole. One account, one subscription, your own employees and settings.",
+    "uk": "— це ви цілком. Один кабінет, одна підписка, свої співробітники й налаштування.",
+    "it": "— sei tu nel complesso. Un account, un abbonamento, i tuoi dipendenti e le tue impostazioni.",
+    "ro": "— sunteți dumneavoastră în întregime. Un cont, un abonament, angajații și setările proprii."
+  },
+  "— физическое место, где вы работаете: парк, торговый центр, набережная. Если у вас две площадки в разных концах города — это две точки. Если одна — точка тоже одна, просто она у вас единственная.": {
+    "en": "— the physical place where you work: a park, a shopping centre, a promenade. If you have two sites at opposite ends of town, that is two locations. If you have one, there is one location too — it is simply your only one.",
+    "uk": "— фізичне місце, де ви працюєте: парк, торговий центр, набережна. Якщо у вас два майданчики в різних кінцях міста — це дві точки. Якщо один — точка теж одна, просто вона у вас єдина.",
+    "it": "— il luogo fisico in cui lavori: un parco, un centro commerciale, un lungomare. Se hai due sedi ai lati opposti della città, sono due sedi. Se ne hai una, la sede è una: semplicemente è l'unica.",
+    "ro": "— locul fizic unde lucrați: un parc, un centru comercial, o faleză. Dacă aveți două amplasamente în capete diferite ale orașului, acestea sunt două puncte. Dacă aveți unul, punctul este tot unul — pur și simplu este singurul."
+  },
+  "— участок внутри точки, где стоит что-то однотипное и считается одинаково: «Электромобили», «Батут», «Игровая комната». Зона важна потому, что именно у неё задаётся способ подсчёта и цены.": {
+    "en": "— a part of a location where something of one kind stands and is counted the same way: «Electric cars», «Trampoline», «Playroom». A zone matters because it is where the counting method and the prices are set.",
+    "uk": "— ділянка всередині точки, де стоїть щось однотипне й рахується однаково: «Електромобілі», «Батут», «Ігрова кімната». Зона важлива тому, що саме в неї задається спосіб підрахунку та ціни.",
+    "it": "— una parte della sede dove sta qualcosa dello stesso tipo e si conta allo stesso modo: «Auto elettriche», «Trampolino», «Sala giochi». L'area conta perché è lì che si impostano il metodo di conteggio e i prezzi.",
+    "ro": "— o porțiune din interiorul punctului unde se află ceva de același fel și se numără la fel: «Mașinuțe electrice», «Trambulină», «Sala de joacă». Zona este importantă pentru că la ea se stabilesc metoda de numărare și prețurile."
+  },
+  "— конкретная штука, которая приносит деньги: машинка №3, батут, отдельная комната, аттракцион. Активы живут внутри зоны. Пять машинок — это пять активов в одной зоне «Электромобили».": {
+    "en": "— a specific thing that brings in money: car No. 3, a trampoline, a separate room, a ride. Assets live inside a zone. Five cars are five assets in one «Electric cars» zone.",
+    "uk": "— конкретна річ, яка приносить гроші: машинка №3, батут, окрема кімната, атракціон. Активи живуть усередині зони. П'ять машинок — це п'ять активів в одній зоні «Електромобілі».",
+    "it": "— la cosa concreta che porta denaro: l'auto n. 3, un trampolino, una stanza separata, una giostra. Gli asset vivono dentro un'area. Cinque automobiline sono cinque asset in un'unica area «Auto elettriche».",
+    "ro": "— lucrul concret care aduce bani: mașinuța nr. 3, o trambulină, o cameră separată, un carusel. Activele trăiesc în interiorul unei zone. Cinci mașinuțe înseamnă cinci active într-o singură zonă «Mașinuțe electrice»."
+  },
+  "Проще всего запомнить так:": {
+    "en": "The easiest way to remember it:",
+    "uk": "Найпростіше запам'ятати так:",
+    "it": "Il modo più semplice per ricordarlo:",
+    "ro": "Cel mai ușor de reținut așa:"
+  },
+  "точка — это адрес, зона — это вид развлечения, актив — это отдельная единица": {
+    "en": "a location is an address, a zone is a type of entertainment, an asset is a single unit",
+    "uk": "точка — це адреса, зона — це вид розваги, актив — це окрема одиниця",
+    "it": "la sede è un indirizzo, l'area è un tipo di intrattenimento, l'asset è una singola unità",
+    "ro": "punctul este o adresă, zona este un tip de distracție, activul este o unitate separată"
+  },
+  "Деньги и цены": {
+    "en": "Money and prices",
+    "uk": "Гроші та ціни",
+    "it": "Denaro e prezzi",
+    "ro": "Bani și prețuri"
+  },
+  "— цена. Задаётся у зоны, а потом привязывается к активам. Один тариф может использоваться несколькими активами сразу.": {
+    "en": "— the price. It is set on the zone and then attached to assets. One tariff can be used by several assets at once.",
+    "uk": "— ціна. Задається в зоні, а потім прив'язується до активів. Один тариф може використовуватися кількома активами одразу.",
+    "it": "— il prezzo. Si imposta sull'area e poi si collega agli asset. Una tariffa può essere usata da più asset contemporaneamente.",
+    "ro": "— prețul. Se stabilește la zonă și apoi se leagă de active. Un tarif poate fi folosit de mai multe active deodată."
+  },
+  "— деньги в ящике и деньги, пришедшие картой или переводом. Безнал в кассе не лежит, поэтому в подсчётах эти два вида всегда разделены.": {
+    "en": "— money in the drawer and money that arrived by card or transfer. Cashless money is not in the till, so in the calculations these two are always kept apart.",
+    "uk": "— гроші в шухляді і гроші, що прийшли карткою або переказом. Безготівка в касі не лежить, тому в підрахунках ці два види завжди розділені.",
+    "it": "— i soldi nel cassetto e i soldi arrivati con carta o bonifico. L'elettronico non sta in cassa, perciò nei conteggi i due tipi restano sempre separati.",
+    "ro": "— banii din sertar și banii veniți prin card sau transfer. Banii fără numerar nu stau în casă, de aceea în calcule aceste două tipuri sunt mereu separate."
+  },
+  "— деньги клиента, лежащие у вас заранее. Клиент один раз пополняет баланс и потом расплачивается им, не доставая кошелёк.": {
+    "en": "— the client's money held with you in advance. The client tops the balance up once and then pays with it without reaching for their wallet.",
+    "uk": "— гроші клієнта, що лежать у вас заздалегідь. Клієнт один раз поповнює баланс і потім розплачується ним, не дістаючи гаманець.",
+    "it": "— il denaro del cliente depositato da te in anticipo. Il cliente ricarica il saldo una volta e poi paga con quello, senza tirare fuori il portafoglio.",
+    "ro": "— banii clientului aflați la dumneavoastră din timp. Clientul alimentează soldul o dată și apoi plătește cu el, fără să scoată portofelul."
+  },
+  "— план пополнения баланса: «заплатить 500 — получить 600». Само слово в RentOS означает именно план, а не человека.": {
+    "en": "— a balance top-up plan: «pay 500 — get 600». In RentOS the word itself means exactly that plan, not a person.",
+    "uk": "— план поповнення балансу: «заплатити 500 — отримати 600». Саме слово в RentOS означає саме план, а не людину.",
+    "it": "— un piano di ricarica del saldo: «paghi 500, ricevi 600». In RentOS la parola indica proprio il piano, non una persona.",
+    "ro": "— un plan de alimentare a soldului: «plătești 500 — primești 600». În RentOS cuvântul înseamnă tocmai planul, nu o persoană."
+  },
+  "— вы забрали деньги с точки. После неё в кассе точки их больше нет.": {
+    "en": "— you have taken the money away from the location. After it, the money is no longer in the location's till.",
+    "uk": "— ви забрали гроші з точки. Після неї в касі точки їх більше немає.",
+    "it": "— hai portato via il denaro dalla sede. Dopo di essa il denaro non è più nella cassa della sede.",
+    "ro": "— ați luat banii de la punct. După ea, banii nu mai sunt în casa punctului."
+  },
+  "— наоборот, вы положили в кассу мелочь, чтобы было чем давать сдачу. Это не выручка.": {
+    "en": "— the opposite: you put small change into the till so there is something to give change with. This is not revenue.",
+    "uk": "— навпаки, ви поклали в касу дрібні, щоб було чим давати здачу. Це не виручка.",
+    "it": "— al contrario, hai messo spiccioli in cassa per poter dare il resto. Non è un incasso.",
+    "ro": "— invers, ați pus mărunțiș în casă ca să aveți cu ce da rest. Aceasta nu este încasare."
+  },
+  "Как система считает": {
+    "en": "How the system counts",
+    "uk": "Як система рахує",
+    "it": "Come conta il sistema",
+    "ro": "Cum socotește sistemul"
+  },
+  "— способ, которым зона считает работу. Их пять, и выбирается он у зоны один раз:": {
+    "en": "— the way a zone counts its work. There are five of them and it is chosen for the zone once:",
+    "uk": "— спосіб, яким зона рахує роботу. Їх п'ять, і обирається він у зоні один раз:",
+    "it": "— il modo in cui un'area conta il lavoro. Sono cinque e si sceglie una volta sola per l'area:",
+    "ro": "— modul în care zona socotește activitatea. Sunt cinci și se alege o singură dată pentru zonă:"
+  },
+  "— на активе стоит прибор, который сам считает поездки. Сотрудник переписывает показания в конце смены.": {
+    "en": "— the asset has a device that counts the rides itself. The employee copies the readings down at the end of the shift.",
+    "uk": "— на активі стоїть прилад, який сам рахує поїздки. Співробітник переписує показання наприкінці зміни.",
+    "it": "— sull'asset c'è un apparecchio che conta da sé i giri. Il dipendente trascrive le letture a fine turno.",
+    "ro": "— pe activ există un aparat care numără singur cursele. Angajatul transcrie indicațiile la sfârșitul turei."
+  },
+  "— прибора нет, сотрудник отмечает каждую поездку нажатием в приложении. Замена бумажной тетрадки.": {
+    "en": "— there is no device; the employee marks every ride with a tap in the app. A replacement for the paper notebook.",
+    "uk": "— приладу немає, співробітник відмічає кожну поїздку натисканням у застосунку. Заміна паперового зошита.",
+    "it": "— non c'è alcun apparecchio: il dipendente segna ogni giro con un tocco nell'app. Sostituisce il quaderno di carta.",
+    "ro": "— nu există aparat, angajatul marchează fiecare cursă printr-o apăsare în aplicație. Înlocuiește caietul de hârtie."
+  },
+  "— время. Ребёнок пришёл, сотрудник запустил таймер, ушёл — остановил.": {
+    "en": "— time. A child arrives, the employee starts the timer; the child leaves, the employee stops it.",
+    "uk": "— час. Дитина прийшла, співробітник запустив таймер, пішла — зупинив.",
+    "it": "— il tempo. Il bambino arriva, il dipendente avvia il timer; se ne va, lo ferma.",
+    "ro": "— timpul. Copilul a venit, angajatul a pornit cronometrul, a plecat — l-a oprit."
+  },
+  "— продаются заказами заранее, гасятся на входе.": {
+    "en": "— sold in orders in advance, redeemed at the entrance.",
+    "uk": "— продаються замовленнями заздалегідь, гасяться на вході.",
+    "it": "— si vendono in anticipo per ordini e si convalidano all'ingresso.",
+    "ro": "— se vând din timp prin comenzi, se validează la intrare."
+  },
+  "— ничего не считаем поштучно, сотрудник вводит итоговую сумму.": {
+    "en": "— nothing is counted piece by piece; the employee enters the total amount.",
+    "uk": "— нічого не рахуємо поштучно, співробітник вводить підсумкову суму.",
+    "it": "— non si conta nulla pezzo per pezzo: il dipendente inserisce l'importo totale.",
+    "ro": "— nu se numără nimic bucată cu bucată, angajatul introduce suma totală."
+  },
+  "— одна поездка или один заезд. Это то, что считает счётчик на активе.": {
+    "en": "— one ride or one run. This is what the counter on the asset counts.",
+    "uk": "— одна поїздка або один заїзд. Це те, що рахує лічильник на активі.",
+    "it": "— un giro o una corsa. È ciò che conta il contatore sull'asset.",
+    "ro": "— o cursă sau o tură. Este ceea ce numără contorul de pe activ."
+  },
+  "Расчётная выручка": {
+    "en": "Calculated revenue",
+    "uk": "Розрахункова виручка",
+    "it": "Incasso calcolato",
+    "ro": "Încasare calculată"
+  },
+  "— сколько должно быть по подсчётам системы: количество × цена.": {
+    "en": "— how much there should be by the system's calculation: quantity × price.",
+    "uk": "— скільки має бути за підрахунками системи: кількість × ціна.",
+    "it": "— quanto dovrebbe esserci secondo i calcoli del sistema: quantità × prezzo.",
+    "ro": "— cât ar trebui să fie după calculele sistemului: cantitate × preț."
+  },
+  "Фактическая касса": {
+    "en": "Actual till",
+    "uk": "Фактична каса",
+    "it": "Cassa effettiva",
+    "ro": "Casa efectivă"
+  },
+  "— сколько денег реально оказалось.": {
+    "en": "— how much money there actually turned out to be.",
+    "uk": "— скільки грошей реально виявилося.",
+    "it": "— quanto denaro si è effettivamente trovato.",
+    "ro": "— câți bani au ieșit în realitate."
+  },
+  "— расхождение между этими двумя числами. У неё есть отдельная статья.": {
+    "en": "— the gap between these two numbers. It has its own article.",
+    "uk": "— розбіжність між цими двома числами. У неї є окрема стаття.",
+    "it": "— lo scarto tra questi due numeri. Ha un articolo dedicato.",
+    "ro": "— discrepanța dintre aceste două numere. Are un articol separat."
+  },
+  "отдельная статья": {
+    "en": "a separate article",
+    "uk": "окрема стаття",
+    "it": "un articolo dedicato",
+    "ro": "un articol separat"
+  },
+  "Два слова, которые часто путают": {
+    "en": "Two words people often confuse",
+    "uk": "Два слова, які часто плутають",
+    "it": "Due parole che si confondono spesso",
+    "ro": "Două cuvinte care se confundă des"
+  },
+  ". Сотрудник в конце работы вводит показания и фактическую кассу, зона закрывается, выручка посчитана.": {
+    "en": ". At the end of the work the employee enters the readings and the actual till, the zone closes, the revenue is calculated.",
+    "uk": ". Співробітник наприкінці роботи вводить показання й фактичну касу, зона закривається, виручка порахована.",
+    "it": ". A fine lavoro il dipendente inserisce le letture e la cassa effettiva, l'area si chiude, l'incasso è calcolato.",
+    "ro": ". La finalul lucrului angajatul introduce indicațiile și casa efectivă, zona se închide, încasarea este calculată."
+  },
+  "рабочее время человека": {
+    "en": "a person's working time",
+    "uk": "робочий час людини",
+    "it": "l'orario di lavoro di una persona",
+    "ro": "timpul de lucru al unui om"
+  },
+  ". Во сколько сотрудник пришёл, во сколько ушёл, сколько ему причитается.": {
+    "en": ". What time the employee came in, what time they left, how much they are owed.",
+    "uk": ". О котрій співробітник прийшов, о котрій пішов, скільки йому належить.",
+    "it": ". A che ora il dipendente è arrivato, a che ora è andato via, quanto gli spetta.",
+    "ro": ". La ce oră a venit angajatul, la ce oră a plecat, cât i se cuvine."
+  },
+  "Это разные вещи, и в RentOS они никогда не смешиваются. Сдать итоги можно несколько раз за смену; можно закрыть смену, не сдав итоги.": {
+    "en": "These are different things, and in RentOS they never mix. You can submit results several times during a shift; you can close a shift without submitting results.",
+    "uk": "Це різні речі, і в RentOS вони ніколи не змішуються. Здати підсумки можна кілька разів за зміну; можна закрити зміну, не здавши підсумки.",
+    "it": "Sono cose diverse e in RentOS non si mescolano mai. Puoi fare la chiusura più volte in un turno; puoi chiudere il turno senza aver fatto la chiusura di giornata.",
+    "ro": "Sunt lucruri diferite și în RentOS nu se amestecă niciodată. Puteți închide ziua de mai multe ori într-o tură; puteți încheia tura fără să fi închis ziua."
+  },
+  "Люди и доступы": {
+    "en": "People and access",
+    "uk": "Люди та доступи",
+    "it": "Persone e accessi",
+    "ro": "Oameni și accesuri"
+  },
+  "— вы. Входите по почте и паролю или по своему ПИН-коду, видите кабинет с отчётами и настройками.": {
+    "en": "— you. You sign in with an email and password or with your own PIN, and see the account with reports and settings.",
+    "uk": "— ви. Входите за поштою та паролем або за своїм ПІН-кодом, бачите кабінет зі звітами й налаштуваннями.",
+    "it": "— tu. Accedi con e-mail e password o con il tuo PIN e vedi l'account con report e impostazioni.",
+    "ro": "— dumneavoastră. Intrați cu e-mail și parolă sau cu PIN-ul propriu și vedeți contul cu rapoarte și setări."
+  },
+  "— человек на точке. У него нет ни почты, ни пароля: он входит коротким ПИН-кодом с рабочего устройства и видит только рабочую программу.": {
+    "en": "— the person at the location. They have neither an email nor a password: they sign in with a short PIN from the work device and see only the working app.",
+    "uk": "— людина на точці. У неї немає ні пошти, ні пароля: вона входить коротким ПІН-кодом з робочого пристрою й бачить лише робочу програму.",
+    "it": "— la persona in sede. Non ha né e-mail né password: accede con un PIN breve dal dispositivo di lavoro e vede solo l'app operativa.",
+    "ro": "— omul de la punct. Nu are nici e-mail, nici parolă: intră cu un PIN scurt de pe dispozitivul de lucru și vede doar programul de lucru."
+  },
+  "— планшет или телефон, привязанный к точке. Пока устройство не привязано, войти по ПИН-коду с него нельзя.": {
+    "en": "— a tablet or phone bound to a location. Until the device is bound, you cannot sign in with a PIN from it.",
+    "uk": "— планшет або телефон, прив'язаний до точки. Поки пристрій не прив'язаний, увійти за ПІН-кодом з нього не можна.",
+    "it": "— un tablet o un telefono collegato a una sede. Finché il dispositivo non è collegato, non si può accedere con il PIN da esso.",
+    "ro": "— o tabletă sau un telefon legat de un punct. Cât timp dispozitivul nu este legat, nu se poate intra cu PIN de pe el."
+  },
+  "— часть системы, которую можно выключить, если она не нужна: Товары, Билеты, Клиенты, Задачи, Инструктажи, Лендинг. Выключенный модуль просто исчезает из меню и никому не мешает. На цену подписки это не влияет — тарифы отличаются только количеством точек, зон, активов и сотрудников.": {
+    "en": "— a part of the system you can switch off if you do not need it: Products, Tickets, Clients, Tasks, Briefings, Landing page. A disabled module simply disappears from the menu and bothers no one. It does not affect the subscription price — plans differ only in the number of locations, zones, assets and employees.",
+    "uk": "— частина системи, яку можна вимкнути, якщо вона не потрібна: Товари, Квитки, Клієнти, Завдання, Інструктажі, Лендинг. Вимкнений модуль просто зникає з меню й нікому не заважає. На ціну підписки це не впливає — тарифи відрізняються лише кількістю точок, зон, активів і співробітників.",
+    "it": "— una parte del sistema che puoi disattivare se non ti serve: Prodotti, Biglietti, Clienti, Attività, Istruzioni, Landing. Un modulo disattivato semplicemente sparisce dal menu e non dà fastidio a nessuno. Non incide sul prezzo dell'abbonamento: i piani si differenziano solo per numero di sedi, aree, asset e dipendenti.",
+    "ro": "— o parte a sistemului pe care o puteți opri dacă nu vă trebuie: Produse, Bilete, Clienți, Sarcini, Instructaje, Landing. Un modul oprit pur și simplu dispare din meniu și nu deranjează pe nimeni. Nu influențează prețul abonamentului — planurile diferă doar prin numărul de puncte, zone, active și angajați."
+  },
+  "Слова про устройства": {
+    "en": "Words about devices",
+    "uk": "Слова про пристрої",
+    "it": "Parole sui dispositivi",
+    "ro": "Cuvinte despre dispozitive"
+  },
+  "Приложение (PWA)": {
+    "en": "The app (PWA)",
+    "uk": "Застосунок (PWA)",
+    "it": "L'app (PWA)",
+    "ro": "Aplicația (PWA)"
+  },
+  "— RentOS можно поставить на планшет так, что у него будет свой значок и полный экран, как у обычной программы. Отдельно ничего скачивать не нужно.": {
+    "en": "— RentOS can be installed on a tablet so that it has its own icon and a full screen, like an ordinary program. Nothing needs to be downloaded separately.",
+    "uk": "— RentOS можна поставити на планшет так, що в нього буде свій значок і повний екран, як у звичайної програми. Окремо нічого завантажувати не потрібно.",
+    "it": "— RentOS si può installare sul tablet in modo che abbia una propria icona e lo schermo intero, come un normale programma. Non serve scaricare nulla a parte.",
+    "ro": "— RentOS poate fi instalat pe tabletă astfel încât să aibă propria pictogramă și ecran complet, ca un program obișnuit. Nu trebuie descărcat nimic separat."
+  },
+  "— квадратная картинка, которую наводят камерой телефона. Мы используем её там, где иначе пришлось бы диктовать длинную ссылку.": {
+    "en": "— a square picture you point your phone camera at. We use it where otherwise a long link would have to be dictated.",
+    "uk": "— квадратна картинка, на яку наводять камеру телефона. Ми використовуємо її там, де інакше довелося б диктувати довге посилання.",
+    "it": "— un'immagine quadrata da inquadrare con la fotocamera del telefono. La usiamo dove altrimenti bisognerebbe dettare un link lungo.",
+    "ro": "— o imagine pătrată pe care o încadrați cu camera telefonului. O folosim acolo unde altfel ar trebui dictat un link lung."
+  },
+
+  "Первая помощь по самым частым «оно не работает». Почти всё лечится за минуту и не требует ничьей помощи. Идите по порядку — от простого к сложному.": {
+    "en": "First aid for the most common «it does not work». Almost everything is fixed in a minute and needs no one's help. Go in order — from simple to complex.",
+    "uk": "Перша допомога за найчастішими «воно не працює». Майже все лікується за хвилину й не потребує нічиєї допомоги. Ідіть по порядку — від простого до складного.",
+    "it": "Primo soccorso per i più comuni «non funziona». Quasi tutto si risolve in un minuto e non richiede l'aiuto di nessuno. Procedi in ordine, dal semplice al complesso.",
+    "ro": "Primul ajutor pentru cele mai frecvente «nu merge». Aproape totul se rezolvă într-un minut și nu are nevoie de ajutorul nimănui. Mergeți pe rând — de la simplu la complex."
+  },
+  "Сначала два простых действия": {
+    "en": "Two simple actions first",
+    "uk": "Спочатку дві прості дії",
+    "it": "Prima due azioni semplici",
+    "ro": "Mai întâi două acțiuni simple"
+  },
+  "1. Закройте и снова откройте приложение.": {
+    "en": "1. Close the app and open it again.",
+    "uk": "1. Закрийте і знову відкрийте застосунок.",
+    "it": "1. Chiudi l'app e riaprila.",
+    "ro": "1. Închideți și redeschideți aplicația."
+  },
+  "Не «сверните», а именно закройте и запустите заново. Это чинит примерно половину случаев: на устройстве осталась открыта старая версия страницы.": {
+    "en": "Do not just «minimise» it — actually close it and start it again. This fixes about half of all cases: an old version of the page was left open on the device.",
+    "uk": "Не «згорніть», а саме закрийте й запустіть заново. Це лагодить приблизно половину випадків: на пристрої залишилася відкрита стара версія сторінки.",
+    "it": "Non «minimizzarla»: chiudila davvero e riavviala. Questo risolve circa la metà dei casi: sul dispositivo era rimasta aperta una vecchia versione della pagina.",
+    "ro": "Nu o «minimizați», ci chiar închideți-o și porniți-o din nou. Asta rezolvă cam jumătate din cazuri: pe dispozitiv rămăsese deschisă o versiune veche a paginii."
+  },
+  "2. Проверьте интернет.": {
+    "en": "2. Check the internet.",
+    "uk": "2. Перевірте інтернет.",
+    "it": "2. Controlla la connessione.",
+    "ro": "2. Verificați internetul."
+  },
+  "Откройте на том же планшете любой сайт. Если не открывается — дело не в RentOS, а в связи: Wi-Fi отключился, кончился трафик, роутер завис.": {
+    "en": "Open any website on the same tablet. If it does not open, the problem is not RentOS but the connection: the Wi-Fi dropped, the data ran out, the router froze.",
+    "uk": "Відкрийте на тому ж планшеті будь-який сайт. Якщо не відкривається — річ не в RentOS, а у зв'язку: Wi-Fi відключився, скінчився трафік, роутер завис.",
+    "it": "Apri un sito qualsiasi sullo stesso tablet. Se non si apre, il problema non è RentOS ma la connessione: il Wi-Fi è caduto, i dati sono finiti, il router si è bloccato.",
+    "ro": "Deschideți orice site pe aceeași tabletă. Dacă nu se deschide, problema nu este RentOS, ci conexiunea: Wi-Fi-ul a picat, s-a terminat traficul, routerul s-a blocat."
+  },
+  "«Кнопки, о которой написано в инструкции, у меня нет»": {
+    "en": "«I do not have the button the instructions mention»",
+    "uk": "«Кнопки, про яку написано в інструкції, у мене немає»",
+    "it": "«Non ho il pulsante di cui parlano le istruzioni»",
+    "ro": "«Nu am butonul despre care scrie în instrucțiuni»"
+  },
+  "Три причины, по убыванию частоты:": {
+    "en": "Three reasons, in descending order of frequency:",
+    "uk": "Три причини, за спаданням частоти:",
+    "it": "Tre motivi, in ordine di frequenza decrescente:",
+    "ro": "Trei motive, în ordinea descrescătoare a frecvenței:"
+  },
+  "Открыта старая версия.": {
+    "en": "An old version is open.",
+    "uk": "Відкрита стара версія.",
+    "it": "È aperta una vecchia versione.",
+    "ro": "Este deschisă o versiune veche."
+  },
+  "Закройте и откройте приложение — см. выше.": {
+    "en": "Close and open the app — see above.",
+    "uk": "Закрийте й відкрийте застосунок — див. вище.",
+    "it": "Chiudi e riapri l'app: vedi sopra.",
+    "ro": "Închideți și deschideți aplicația — vezi mai sus."
+  },
+  "Раздел вам не открыт.": {
+    "en": "The section has not been opened for you.",
+    "uk": "Розділ вам не відкритий.",
+    "it": "La sezione non ti è stata aperta.",
+    "ro": "Secțiunea nu v-a fost deschisă."
+  },
+  "Доступы сотруднику владелец выдаёт поштучно: Товары, Билеты, расходы, инкассации. Нет раздела — значит не выдан, это не поломка.": {
+    "en": "The owner grants an employee access one item at a time: Products, Tickets, expenses, cash collections. No section means it was not granted — this is not a fault.",
+    "uk": "Доступи співробітнику власник видає поштучно: Товари, Квитки, витрати, інкасації. Немає розділу — значить не виданий, це не поломка.",
+    "it": "Il titolare concede gli accessi al dipendente uno per uno: Prodotti, Biglietti, spese, prelievi. Se una sezione non c'è, non è stata concessa: non è un guasto.",
+    "ro": "Proprietarul acordă accesurile angajatului bucată cu bucată: Produse, Bilete, cheltuieli, colectări. Lipsa unei secțiuni înseamnă că nu a fost acordată — nu este o defecțiune."
+  },
+  "Модуль выключен у всей компании.": {
+    "en": "The module is switched off for the whole company.",
+    "uk": "Модуль вимкнений у всієї компанії.",
+    "it": "Il modulo è disattivato per tutta l'azienda.",
+    "ro": "Modulul este oprit pentru toată compania."
+  },
+  "Владелец может выключить целую часть системы в Настройках, и тогда её не видит никто.": {
+    "en": "The owner can switch off a whole part of the system in Settings, and then nobody sees it.",
+    "uk": "Власник може вимкнути цілу частину системи в Налаштуваннях, і тоді її не бачить ніхто.",
+    "it": "Il titolare può disattivare un'intera parte del sistema nelle Impostazioni, e allora non la vede nessuno.",
+    "ro": "Proprietarul poate opri o parte întreagă a sistemului din Setări, și atunci nu o vede nimeni."
+  },
+  "«Сотрудник не может войти»": {
+    "en": "«The employee cannot sign in»",
+    "uk": "«Співробітник не може увійти»",
+    "it": "«Il dipendente non riesce ad accedere»",
+    "ro": "«Angajatul nu poate intra»"
+  },
+  "Вход по ПИН-коду работает только с устройства, привязанного к точке. Если ПИН не принимается:": {
+    "en": "PIN sign-in works only from a device bound to a location. If the PIN is not accepted:",
+    "uk": "Вхід за ПІН-кодом працює лише з пристрою, прив'язаного до точки. Якщо ПІН не приймається:",
+    "it": "L'accesso con PIN funziona solo da un dispositivo collegato a una sede. Se il PIN non viene accettato:",
+    "ro": "Autentificarea cu PIN funcționează doar de pe un dispozitiv legat de un punct. Dacă PIN-ul nu este acceptat:"
+  },
+  "убедитесь, что вводится ПИН": {
+    "en": "make sure the PIN being entered is that of",
+    "uk": "переконайтеся, що вводиться ПІН",
+    "it": "assicurati che il PIN inserito sia quello",
+    "ro": "asigurați-vă că se introduce PIN-ul"
+  },
+  ", а не владельца — это разные коды;": {
+    "en": ", not the owner's — these are different codes;",
+    "uk": ", а не власника — це різні коди;",
+    "it": ", non quello del titolare: sono codici diversi;",
+    "ro": ", nu al proprietarului — sunt coduri diferite;"
+  },
+  "проверьте, что устройство ещё привязано к точке: привязка слетает, если чистили данные браузера. Заводить новое устройство при этом не нужно;": {
+    "en": "check that the device is still bound to the location: the binding is lost if browser data was cleared. You do not need to add a new device for this;",
+    "uk": "перевірте, що пристрій ще прив'язаний до точки: прив'язка злітає, якщо чистили дані браузера. Заводити новий пристрій при цьому не потрібно;",
+    "it": "verifica che il dispositivo sia ancora collegato alla sede: il collegamento salta se sono stati cancellati i dati del browser. Non serve registrare un nuovo dispositivo;",
+    "ro": "verificați dacă dispozitivul este încă legat de punct: legarea se pierde dacă au fost șterse datele browserului. Nu trebuie adăugat un dispozitiv nou;"
+  },
+  "после нескольких неверных попыток вход ненадолго блокируется — подождите пару минут.": {
+    "en": "after several wrong attempts sign-in is briefly blocked — wait a couple of minutes.",
+    "uk": "після кількох невірних спроб вхід ненадовго блокується — зачекайте пару хвилин.",
+    "it": "dopo alcuni tentativi errati l'accesso si blocca per poco: aspetta un paio di minuti.",
+    "ro": "după câteva încercări greșite autentificarea se blochează pentru scurt timp — așteptați câteva minute."
+  },
+  "«Ничего не печатается»": {
+    "en": "«Nothing prints»",
+    "uk": "«Нічого не друкується»",
+    "it": "«Non stampa nulla»",
+    "ro": "«Nu se tipărește nimic»"
+  },
+  "RentOS печатает через обычный диалог печати устройства и": {
+    "en": "RentOS prints through the device's usual print dialog and",
+    "uk": "RentOS друкує через звичайний діалог друку пристрою і",
+    "it": "RentOS stampa tramite la normale finestra di stampa del dispositivo e",
+    "ro": "RentOS tipărește prin dialogul obișnuit de tipărire al dispozitivului și"
+  },
+  "не сообщает об ошибках принтера": {
+    "en": "does not report printer errors",
+    "uk": "не повідомляє про помилки принтера",
+    "it": "non segnala gli errori della stampante",
+    "ro": "nu raportează erorile imprimantei"
+  },
+  "— если ничего не вышло, причина почти всегда в самом принтере: нет бумаги, разрядился, отключился по Bluetooth. Проверьте принтер, а потом настройки печати.": {
+    "en": "— if nothing came out, the reason is almost always the printer itself: out of paper, out of battery, disconnected over Bluetooth. Check the printer first, then the print settings.",
+    "uk": "— якщо нічого не вийшло, причина майже завжди в самому принтері: немає паперу, розрядився, відключився по Bluetooth. Перевірте принтер, а потім налаштування друку.",
+    "it": "— se non è uscito nulla, la causa è quasi sempre la stampante stessa: carta finita, batteria scarica, disconnessa via Bluetooth. Controlla prima la stampante, poi le impostazioni di stampa.",
+    "ro": "— dacă nu a ieșit nimic, cauza este aproape întotdeauna imprimanta însăși: nu are hârtie, s-a descărcat, s-a deconectat prin Bluetooth. Verificați imprimanta, apoi setările de tipărire."
+  },
+  "«Не приходят сводки в Telegram»": {
+    "en": "«Telegram summaries do not arrive»",
+    "uk": "«Не приходять зведення в Telegram»",
+    "it": "«Non arrivano i riepiloghi su Telegram»",
+    "ro": "«Nu ajung rezumatele în Telegram»"
+  },
+  "Проверьте в настройках, что чат по-прежнему подключён. Ещё одна частая причина: сводка приходит, но выглядит одинаково со вчерашней — значит данные и правда не менялись, а не «сообщение застряло».": {
+    "en": "Check in the settings that the chat is still connected. Another common reason: the summary does arrive but looks the same as yesterday's — which means the data really has not changed, rather than «the message got stuck».",
+    "uk": "Перевірте в налаштуваннях, що чат і далі підключений. Ще одна часта причина: зведення приходить, але виглядає однаково з учорашнім — отже дані справді не змінювалися, а не «повідомлення застрягло».",
+    "it": "Controlla nelle impostazioni che la chat sia ancora collegata. Un'altra causa frequente: il riepilogo arriva ma è identico a quello di ieri, il che significa che i dati davvero non sono cambiati, non che «il messaggio si è bloccato».",
+    "ro": "Verificați în setări dacă chatul este în continuare conectat. Altă cauză frecventă: rezumatul ajunge, dar arată la fel ca cel de ieri — înseamnă că datele chiar nu s-au schimbat, nu că «mesajul s-a blocat»."
+  },
+  "«Цифры не сходятся»": {
+    "en": "«The numbers do not add up»",
+    "uk": "«Цифри не сходяться»",
+    "it": "«I numeri non tornano»",
+    "ro": "«Cifrele nu se potrivesc»"
+  },
+  "Если фактическая касса разошлась с расчётной — это «Разница», и у неё есть": {
+    "en": "If the actual till differs from the calculated one, that is the «Difference», and it has",
+    "uk": "Якщо фактична каса розійшлася з розрахунковою — це «Різниця», і в неї є",
+    "it": "Se la cassa effettiva diverge da quella calcolata, è la «Differenza», e ha",
+    "ro": "Dacă casa efectivă diferă de cea calculată, aceasta este «Diferența», și are"
+  },
+  ". Почти всегда причина в учёте, а не в деньгах: забытый расход, неотмеченный размен, оплата с баланса клиента.": {
+    "en": ". Almost always the cause is bookkeeping rather than money: a forgotten expense, an unrecorded float, a payment from a client's balance.",
+    "uk": ". Майже завжди причина в обліку, а не в грошах: забута витрата, невідмічений розмін, оплата з балансу клієнта.",
+    "it": ". Quasi sempre la causa sta nelle registrazioni e non nel denaro: una spesa dimenticata, un fondo cassa non registrato, un pagamento dal saldo del cliente.",
+    "ro": ". Aproape întotdeauna cauza ține de evidență, nu de bani: o cheltuială uitată, un fond de rest nemarcat, o plată din soldul clientului."
+  },
+  "«Белый экран» или страница не открывается": {
+    "en": "A «white screen» or the page does not open",
+    "uk": "«Білий екран» або сторінка не відкривається",
+    "it": "«Schermata bianca» o la pagina non si apre",
+    "ro": "«Ecran alb» sau pagina nu se deschide"
+  },
+  "Изредка виноват": {
+    "en": "Occasionally the culprit is",
+    "uk": "Зрідка винен",
+    "it": "Ogni tanto il colpevole è",
+    "ro": "Rareori vinovat este"
+  },
+  "блокировщик рекламы": {
+    "en": "an ad blocker",
+    "uk": "блокувальник реклами",
+    "it": "un blocco della pubblicità",
+    "ro": "un blocant de reclame"
+  },
+  "в браузере: он вырезает часть страницы, и та не догружается. Попробуйте открыть RentOS в другом браузере — если там всё работает, дело в блокировщике, и его нужно отключить для этого адреса.": {
+    "en": "in the browser: it cuts out part of the page and the page does not finish loading. Try opening RentOS in another browser — if everything works there, the blocker is to blame and must be disabled for this address.",
+    "uk": "у браузері: він вирізає частину сторінки, і та не догружається. Спробуйте відкрити RentOS в іншому браузері — якщо там усе працює, річ у блокувальнику, і його треба вимкнути для цієї адреси.",
+    "it": "nel browser: ritaglia una parte della pagina e questa non finisce di caricarsi. Prova ad aprire RentOS in un altro browser: se lì funziona tutto, la colpa è del blocco e va disattivato per questo indirizzo.",
+    "ro": "din browser: taie o parte din pagină și aceasta nu se mai încarcă complet. Încercați să deschideți RentOS în alt browser — dacă acolo merge tot, vinovat este blocantul și trebuie dezactivat pentru această adresă."
+  },
+  "Чего делать точно не надо": {
+    "en": "What you definitely should not do",
+    "uk": "Чого робити точно не треба",
+    "it": "Che cosa non si deve assolutamente fare",
+    "ro": "Ce nu trebuie făcut în niciun caz"
+  },
+  "Не «чистить кэш»": {
+    "en": "Do not «clear the cache»",
+    "uk": "Не «чистити кеш»",
+    "it": "Non «svuotare la cache»",
+    "ro": "Nu «curățați cache-ul»"
+  },
+  "— приложение обновляется само, а очистка данных браузера сотрёт привязку устройства к точке, и сотрудник не сможет войти.": {
+    "en": "— the app updates itself, and clearing browser data will erase the device's binding to the location, after which the employee will not be able to sign in.",
+    "uk": "— застосунок оновлюється сам, а очищення даних браузера зітре прив'язку пристрою до точки, і співробітник не зможе увійти.",
+    "it": "— l'app si aggiorna da sé, mentre cancellare i dati del browser eliminerà il collegamento del dispositivo alla sede e il dipendente non potrà più accedere.",
+    "ro": "— aplicația se actualizează singură, iar ștergerea datelor browserului va șterge legarea dispozitivului de punct, iar angajatul nu va mai putea intra."
+  },
+  "Не заводить второй кабинет": {
+    "en": "Do not create a second account",
+    "uk": "Не заводити другий кабінет",
+    "it": "Non creare un secondo account",
+    "ro": "Nu creați un al doilea cont"
+  },
+  ", если что-то не открывается. Данные останутся в первом, и их придётся объединять руками.": {
+    "en": "if something will not open. The data stays in the first one and would have to be merged by hand.",
+    "uk": ", якщо щось не відкривається. Дані залишаться в першому, і їх доведеться об'єднувати руками.",
+    "it": "se qualcosa non si apre. I dati resteranno nel primo e andrebbero uniti a mano.",
+    "ro": ", dacă ceva nu se deschide. Datele vor rămâne în primul și ar trebui unite manual."
+  },
+  "Не удалять точку, зону или актив": {
+    "en": "Do not delete a location, zone or asset",
+    "uk": "Не видаляти точку, зону або актив",
+    "it": "Non eliminare una sede, un'area o un asset",
+    "ro": "Nu ștergeți punctul, zona sau activul"
+  },
+  ", чтобы «пересоздать заново» — вместе с ними уйдёт история. Если объект временно не работает, его можно просто выключить.": {
+    "en": "in order to «recreate it from scratch» — the history goes with them. If something is temporarily out of service, it can simply be switched off.",
+    "uk": ", щоб «перестворити заново» — разом із ними піде історія. Якщо об'єкт тимчасово не працює, його можна просто вимкнути.",
+    "it": "per «ricrearli da zero»: con essi se ne va lo storico. Se un oggetto è temporaneamente fuori servizio, si può semplicemente disattivare.",
+    "ro": ", ca să le «recreați de la zero» — odată cu ele dispare istoricul. Dacă un obiect nu funcționează temporar, poate fi pur și simplu oprit."
+  },
+  "Если ничего не помогло": {
+    "en": "If nothing helped",
+    "uk": "Якщо нічого не допомогло",
+    "it": "Se nulla ha funzionato",
+    "ro": "Dacă nimic nu a ajutat"
+  },
+  "Напишите нам — как это сделать и что приложить, описано в": {
+    "en": "Write to us — how to do it and what to attach is described in",
+    "uk": "Напишіть нам — як це зробити і що додати, описано в",
+    "it": "Scrivici: come farlo e che cosa allegare è descritto in",
+    "ro": "Scrieți-ne — cum se face și ce trebuie atașat este descris în"
+  },
+  "отдельной статье": {
+    "en": "a separate article",
+    "uk": "окремій статті",
+    "it": "un articolo dedicato",
+    "ro": "un articol separat"
+  },
+  ". Одно замечание заранее: чтобы мы могли посмотреть ваш кабинет своими глазами, нужен включённый тумблер «Доступ техподдержки».": {
+    "en": ". One note in advance: for us to look at your account with our own eyes, the «Support access» toggle must be on.",
+    "uk": ". Одне зауваження заздалегідь: щоб ми могли подивитися ваш кабінет власними очима, потрібен увімкнений перемикач «Доступ техпідтримки».",
+    "it": ". Una precisazione: perché possiamo guardare il tuo account con i nostri occhi, l'interruttore «Accesso dell'assistenza» deve essere attivo.",
+    "ro": ". O precizare din start: pentru ca noi să vă putem privi contul cu proprii ochi, comutatorul «Acces asistență tehnică» trebuie să fie activat."
+  },
+
+  "Чем понятнее описан вопрос, тем быстрее ответ. Здесь — что приложить к обращению, чтобы не переписываться неделю.": {
+    "en": "The clearer the question is described, the faster the answer. Here is what to attach to your request so that you do not exchange messages for a week.",
+    "uk": "Що зрозуміліше описане питання, то швидша відповідь. Тут — що додати до звернення, щоб не листуватися тиждень.",
+    "it": "Più chiaramente è descritta la domanda, più rapida è la risposta. Ecco che cosa allegare alla richiesta per non scriversi per una settimana.",
+    "ro": "Cu cât întrebarea este descrisă mai clar, cu atât răspunsul vine mai repede. Iată ce să atașați la solicitare ca să nu vă scrieți o săptămână."
+  },
+  "Что написать": {
+    "en": "What to write",
+    "uk": "Що написати",
+    "it": "Che cosa scrivere",
+    "ro": "Ce să scrieți"
+  },
+  "Три вещи, и этого почти всегда достаточно:": {
+    "en": "Three things, and that is almost always enough:",
+    "uk": "Три речі, і цього майже завжди достатньо:",
+    "it": "Tre cose, e quasi sempre bastano:",
+    "ro": "Trei lucruri, și acestea sunt aproape întotdeauna suficiente:"
+  },
+  "Что вы делали.": {
+    "en": "What you were doing.",
+    "uk": "Що ви робили.",
+    "it": "Che cosa stavi facendo.",
+    "ro": "Ce făceați."
+  },
+  "«Сотрудник сдавал итоги по зоне Батут» — понятнее, чем «не работает».": {
+    "en": "«The employee was submitting results for the Trampoline zone» is clearer than «it does not work».",
+    "uk": "«Співробітник здавав підсумки по зоні Батут» — зрозуміліше, ніж «не працює».",
+    "it": "«Il dipendente stava facendo la chiusura per l'area Trampolino» è più chiaro di «non funziona».",
+    "ro": "«Angajatul închidea ziua pentru zona Trambulină» este mai clar decât «nu merge»."
+  },
+  "Что ожидали увидеть и что увидели вместо этого.": {
+    "en": "What you expected to see and what you saw instead.",
+    "uk": "Що очікували побачити і що побачили натомість.",
+    "it": "Che cosa ti aspettavi di vedere e che cosa hai visto invece.",
+    "ro": "Ce vă așteptați să vedeți și ce ați văzut în schimb."
+  },
+  "Когда это было": {
+    "en": "When it happened",
+    "uk": "Коли це було",
+    "it": "Quando è successo",
+    "ro": "Când s-a întâmplat"
+  },
+  "— дата и примерное время. По ним мы находим нужную запись.": {
+    "en": "— the date and the approximate time. That is how we find the right record.",
+    "uk": "— дата й приблизний час. За ними ми знаходимо потрібний запис.",
+    "it": "— la data e l'ora approssimativa. È così che troviamo la registrazione giusta.",
+    "ro": "— data și ora aproximativă. După ele găsim înregistrarea potrivită."
+  },
+  "Полезно добавить, у кого именно это происходит: у вас в кабинете или у сотрудника на планшете. Это разные программы, и ищем мы в разных местах.": {
+    "en": "It helps to add where exactly it happens: in your account or on the employee's tablet. These are different programs and we look in different places.",
+    "uk": "Корисно додати, у кого саме це відбувається: у вас у кабінеті чи у співробітника на планшеті. Це різні програми, і шукаємо ми в різних місцях.",
+    "it": "È utile aggiungere dove succede esattamente: nel tuo account o sul tablet del dipendente. Sono programmi diversi e cerchiamo in posti diversi.",
+    "ro": "Este util să adăugați la cine anume se întâmplă: la dumneavoastră în cont sau la angajat pe tabletă. Sunt programe diferite și căutăm în locuri diferite."
+  },
+  "Приложите снимок экрана": {
+    "en": "Attach a screenshot",
+    "uk": "Додайте знімок екрана",
+    "it": "Allega uno screenshot",
+    "ro": "Atașați o captură de ecran"
+  },
+  "Снимок экрана («скриншот») экономит больше всего времени — на нём сразу видно и цифры, и то, какая версия открыта. Как его сделать:": {
+    "en": "A screenshot saves the most time — it shows both the figures and which version is open. How to take one:",
+    "uk": "Знімок екрана («скриншот») заощаджує найбільше часу — на ньому одразу видно й цифри, і те, яка версія відкрита. Як його зробити:",
+    "it": "Uno screenshot fa risparmiare più tempo di tutto: mostra sia i numeri sia quale versione è aperta. Come farlo:",
+    "ro": "O captură de ecran economisește cel mai mult timp — pe ea se văd și cifrele, și ce versiune este deschisă. Cum se face:"
+  },
+  "Android-планшет или телефон:": {
+    "en": "Android tablet or phone:",
+    "uk": "Android-планшет або телефон:",
+    "it": "Tablet o telefono Android:",
+    "ro": "Tabletă sau telefon Android:"
+  },
+  "одновременно нажать и подержать кнопку питания и кнопку громкости вниз. Снимок попадёт в галерею.": {
+    "en": "press and hold the power button and the volume-down button at the same time. The shot goes to the gallery.",
+    "uk": "одночасно натиснути й потримати кнопку живлення та кнопку гучності вниз. Знімок потрапить у галерею.",
+    "it": "premi e tieni premuti insieme il tasto di accensione e il tasto volume giù. Lo scatto finisce nella galleria.",
+    "ro": "apăsați și țineți simultan butonul de pornire și butonul de volum jos. Captura ajunge în galerie."
+  },
+  "iPhone или iPad:": {
+    "en": "iPhone or iPad:",
+    "uk": "iPhone або iPad:",
+    "it": "iPhone o iPad:",
+    "ro": "iPhone sau iPad:"
+  },
+  "одновременно нажать кнопку питания и кнопку громкости вверх (на старых моделях — питание и круглую кнопку «Домой»).": {
+    "en": "press the power button and the volume-up button at the same time (on older models — power and the round «Home» button).",
+    "uk": "одночасно натиснути кнопку живлення та кнопку гучності вгору (на старих моделях — живлення й круглу кнопку «Додому»).",
+    "it": "premi insieme il tasto di accensione e il tasto volume su (sui modelli più vecchi: accensione e il tasto rotondo «Home»).",
+    "ro": "apăsați simultan butonul de pornire și butonul de volum sus (pe modelele vechi — pornire și butonul rotund «Home»)."
+  },
+  "Компьютер с Windows:": {
+    "en": "Windows computer:",
+    "uk": "Комп'ютер з Windows:",
+    "it": "Computer con Windows:",
+    "ro": "Calculator cu Windows:"
+  },
+  "клавиши Windows + Shift + S, выделить нужный кусок экрана мышкой, затем вставить картинку в письмо.": {
+    "en": "the Windows + Shift + S keys, select the part of the screen you need with the mouse, then paste the image into your message.",
+    "uk": "клавіші Windows + Shift + S, виділити потрібний шматок екрана мишкою, потім вставити картинку в лист.",
+    "it": "i tasti Windows + Shift + S, seleziona con il mouse la parte di schermo che ti serve, poi incolla l'immagine nel messaggio.",
+    "ro": "tastele Windows + Shift + S, selectați cu mouse-ul porțiunea de ecran dorită, apoi lipiți imaginea în mesaj."
+  },
+  "весь экран целиком": {
+    "en": "the whole screen",
+    "uk": "весь екран цілком",
+    "it": "tutto lo schermo",
+    "ro": "tot ecranul"
+  },
+  ", а не один участок: часто причина видна как раз по краям — в шапке, в названии зоны, в дате.": {
+    "en": ", not just one area: often the cause is visible exactly at the edges — in the header, in the zone name, in the date.",
+    "uk": ", а не одну ділянку: часто причина видна саме по краях — у шапці, у назві зони, у даті.",
+    "it": ", non una sola porzione: spesso la causa si vede proprio ai bordi — nell'intestazione, nel nome dell'area, nella data.",
+    "ro": ", nu doar o porțiune: adesea cauza se vede tocmai pe margini — în antet, în numele zonei, în dată."
+  },
+  "Откройте доступ, если просим посмотреть": {
+    "en": "Open access if we ask to look",
+    "uk": "Відкрийте доступ, якщо просимо подивитися",
+    "it": "Apri l'accesso se ti chiediamo di guardare",
+    "ro": "Deschideți accesul dacă vă cerem să ne uităm"
+  },
+  "Иногда быстрее один раз посмотреть, чем десять раз переспросить. Для этого в Настройках есть тумблер": {
+    "en": "Sometimes it is faster to look once than to ask ten times. For this there is a toggle in Settings",
+    "uk": "Іноді швидше один раз подивитися, ніж десять разів перепитати. Для цього в Налаштуваннях є перемикач",
+    "it": "A volte è più veloce guardare una volta che chiedere dieci volte. Per questo nelle Impostazioni c'è l'interruttore",
+    "ro": "Uneori e mai rapid să ne uităm o dată decât să întrebăm de zece ori. Pentru asta, în Setări există comutatorul"
+  },
+  ": пока он выключен, войти в ваш кабинет не может никто, включая администратора платформы.": {
+    "en": ": while it is off, nobody can sign in to your account, including the platform administrator.",
+    "uk": ": поки він вимкнений, увійти у ваш кабінет не може ніхто, включно з адміністратором платформи.",
+    "it": ": finché è spento, nessuno può accedere al tuo account, compreso l'amministratore della piattaforma.",
+    "ro": ": cât timp este oprit, nimeni nu poate intra în contul dumneavoastră, inclusiv administratorul platformei."
+  },
+  "Порядок простой: включили на время разбора — мы посмотрели — выключили. Подробнее в статье": {
+    "en": "The order is simple: turned on for the investigation — we looked — turned off. More detail in the article",
+    "uk": "Порядок простий: увімкнули на час розгляду — ми подивилися — вимкнули. Докладніше у статті",
+    "it": "L'ordine è semplice: attivato per la verifica, abbiamo guardato, disattivato. Maggiori dettagli nell'articolo",
+    "ro": "Ordinea este simplă: ați activat pe durata analizei — noi ne-am uitat — ați dezactivat. Mai multe în articolul"
+  },
+  "про доступ техподдержки": {
+    "en": "about support access",
+    "uk": "про доступ техпідтримки",
+    "it": "sull'accesso dell'assistenza",
+    "ro": "despre accesul asistenței tehnice"
+  },
+  "Чего можно не делать": {
+    "en": "What you need not do",
+    "uk": "Чого можна не робити",
+    "it": "Che cosa puoi evitare di fare",
+    "ro": "Ce nu este nevoie să faceți"
+  },
+  "Не нужно пересказывать текст ошибки своими словами": {
+    "en": "There is no need to retell the error text in your own words",
+    "uk": "Не потрібно переказувати текст помилки своїми словами",
+    "it": "Non serve raccontare il testo dell'errore con parole tue",
+    "ro": "Nu trebuie să repovestiți textul erorii cu cuvintele dumneavoastră"
+  },
+  "— лучше снимок. В формулировке легко потерять то самое слово, по которому всё понятно.": {
+    "en": "— a screenshot is better. It is easy to lose in paraphrase the very word that makes everything clear.",
+    "uk": "— краще знімок. У формулюванні легко втратити те саме слово, за яким усе зрозуміло.",
+    "it": "— meglio uno screenshot. Nel parafrasare è facile perdere proprio la parola che chiarisce tutto.",
+    "ro": "— mai bine o captură. În reformulare se pierde ușor tocmai cuvântul din care se înțelege totul."
+  },
+  "Не нужно ничего удалять и пересоздавать": {
+    "en": "There is no need to delete and recreate anything",
+    "uk": "Не потрібно нічого видаляти й перестворювати",
+    "it": "Non serve eliminare e ricreare nulla",
+    "ro": "Nu trebuie să ștergeți și să recreați nimic"
+  },
+  "«чтобы попробовать». Это чаще усложняет разбор, чем помогает: вместе с объектом уходит история.": {
+    "en": "«just to try». More often that complicates the investigation than helps: the history goes along with the object.",
+    "uk": "«щоб спробувати». Це частіше ускладнює розгляд, ніж допомагає: разом із об'єктом іде історія.",
+    "it": "«tanto per provare». Più spesso complica l'analisi che aiutarla: con l'oggetto se ne va lo storico.",
+    "ro": "«ca să încercați». Asta complică analiza mai des decât ajută: odată cu obiectul dispare istoricul."
+  },
+  "Не нужно ждать": {
+    "en": "There is no need to wait",
+    "uk": "Не потрібно чекати",
+    "it": "Non serve aspettare",
+    "ro": "Nu trebuie să așteptați"
+  },
+  ", если деньги считаются неверно. Чем свежее случай, тем проще его найти.": {
+    "en": "if the money is counted incorrectly. The fresher the case, the easier it is to find.",
+    "uk": ", якщо гроші рахуються неправильно. Що свіжіший випадок, то простіше його знайти.",
+    "it": "se il denaro viene conteggiato in modo errato. Più il caso è recente, più è facile trovarlo.",
+    "ro": ", dacă banii sunt socotiți greșit. Cu cât cazul este mai proaspăt, cu atât e mai ușor de găsit."
+  },
+  "Перед тем как писать": {
+    "en": "Before you write",
+    "uk": "Перед тим як писати",
+    "it": "Prima di scrivere",
+    "ro": "Înainte de a scrie"
+  },
+  "Загляните в статью": {
+    "en": "Have a look at the article",
+    "uk": "Загляньте у статтю",
+    "it": "Dai un'occhiata all'articolo",
+    "ro": "Consultați articolul"
+  },
+  "«Что делать, если что-то не работает»": {
+    "en": "«What to do if something does not work»",
+    "uk": "«Що робити, якщо щось не працює»",
+    "it": "«Che cosa fare se qualcosa non funziona»",
+    "ro": "«Ce să faceți dacă ceva nu merge»"
+  },
+  "Что делать, если что-то не работает": {
+    "en": "What to do if something does not work",
+    "uk": "Що робити, якщо щось не працює",
+    "it": "Che cosa fare se qualcosa non funziona",
+    "ro": "Ce să faceți dacă ceva nu merge"
+  },
+  ". Половина обращений закрывается там первым же пунктом: закрыть и открыть приложение заново.": {
+    "en": ". Half of all requests are closed there by the very first point: close the app and open it again.",
+    "uk": ". Половина звернень закривається там першим же пунктом: закрити й відкрити застосунок заново.",
+    "it": ". Metà delle richieste si chiude lì già al primo punto: chiudere e riaprire l'app.",
+    "ro": ". Jumătate dintre solicitări se închid acolo chiar de la primul punct: închideți și redeschideți aplicația."
   }
 }
