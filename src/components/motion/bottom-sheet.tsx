@@ -64,18 +64,39 @@ export function BottomSheet({ open, onClose, children, className }: BottomSheetP
                 if (info.offset.y > 100 || info.velocity.y > 500) onClose();
               }}
             >
-              <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-muted-foreground/30" />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={onClose}
-                aria-label={t.common.close}
-                className="absolute top-3 right-3 z-10 size-10 shrink-0 rounded-lg border-border"
-              >
-                <X className="size-5" />
-              </Button>
-              <div className="overflow-y-auto py-1 pr-12 pb-4 pl-4">{children}</div>
+              {/* Шапка шторки: полоска-ручка по центру, крестик справа — обе
+                  в собственной строке НАД содержимым.
+
+                  Крестик стоит В ПОТОКЕ (правка 2026-09-01, запрос
+                  пользователя со скриншотом). До этого он висел
+                  `absolute top-3 right-3` поверх содержимого, и место под
+                  него резервировалось несимметричными полями контейнера
+                  (`pr-12 pl-4`). Отсюда три беды разом: содержимое было
+                  сдвинуто влево (16px слева против 48px справа) и не
+                  занимало ширину шторки; крестик торчал ПРАВЕЕ всех кнопок
+                  и полей (его край в 12px от края шторки против 48px у
+                  контента); и он стоял на одной высоте с первой строкой
+                  содержимого, а не над ней.
+
+                  Полоска-ручка позиционируется абсолютом, а не в потоке:
+                  ей нужен центр шторки, а крестик в том же ряду сместил бы
+                  её влево. Высоту ряда задаёт сама кнопка. */}
+              <div className="relative flex shrink-0 items-center justify-end px-4 pt-2">
+                <div className="absolute top-2 left-1/2 h-1.5 w-10 -translate-x-1/2 rounded-full bg-muted-foreground/30" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={onClose}
+                  aria-label={t.common.close}
+                  className="size-10 shrink-0 rounded-lg border-border"
+                >
+                  <X className="size-5" />
+                </Button>
+              </div>
+              {/* Поля симметричные — содержимое занимает всю ширину шторки, и
+                  его правый край совпадает с правым краем крестика выше. */}
+              <div className="overflow-y-auto px-4 pb-4">{children}</div>
             </motion.div>
           </div>
         </>
