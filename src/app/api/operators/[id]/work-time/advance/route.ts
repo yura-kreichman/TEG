@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { chargeSelfServiceAdvanceToZones } from "@/lib/zone-balance";
 import { prisma } from "@/lib/prisma";
 import { findTenantOperator, requireOwner } from "@/lib/require-owner";
 import { calcOperatorBalance } from "@/lib/work-time";
@@ -31,13 +32,16 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operators/[
     return NextResponse.json({ error: "Точка не найдена" }, { status: 400 });
   }
 
-  // Владелец вносит аванс вручную — деньги не из кассы точки (решение
-  // пользователя 2026-07-15: уже забраны инкассацией, или переданы отдельно,
-  // например переводом на карту), поэтому кассу точки эта операция не
-  // затрагивает и не проверяется по её остатку. Проверка — как раньше, по
-  // личному балансу сотрудника "к выдаче" + овердрафт. У самого сотрудника
-  // (self-service в PWA) наоборот: без овердрафта, но по остатку кассы точки —
-  // см. /api/operator/work-time/check-out и .../shifts.
+  // Деньги ИЗ КАССЫ ТОЧКИ (решение владельца 2026-09-02) — разбор и живой
+  // пример КидсБурга в комментарии к премии, /bonus/route.ts. До этого
+  // действовало обратное правило от 2026-07-15 («уже забраны инкассацией или
+  // переданы отдельно»), и касса точки на такую выплату не реагировала вовсе.
+  //
+  // Проверка остаётся по личному балансу сотрудника «к выдаче» + овердрафт, а
+  // не по остатку кассы: у владельца рядом с ящиком свои резоны выдать вперёд,
+  // и жёсткий кап тут не его случай. У самого сотрудника (self-service в PWA)
+  // наоборот — без овердрафта, но строго по остатку кассы точки, см.
+  // /api/operator/work-time/check-out и .../shifts.
   //
   // Advisory-лок по operatorId (аудит 2026-07-26) — раньше проверка баланса и
   // создание MoneyOperation были обычным read-then-write без блокировки, а
@@ -46,6 +50,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operators/[
   // проходили проверку — выплата реально задваивалась. Тот же приём, что уже
   // применён к кассе точки в operator/work-time/shifts/[id]/route.ts.
   const result = await prisma.$transaction(async (tx) => {
+    // Лок точки — деньги теперь уходят из её кассы и разносятся по зонам той
+    // же транзакцией; без него инкассация в зазор списала бы их второй раз.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${point.id}))`;
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${operator.id}))`;
     const balance = await calcOperatorBalance(operator.id, undefined, tx);
     if (!operator.overdraftAllowed && amountNumber > balance.toPayOut) {
@@ -58,9 +65,15 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operators/[
         type: "advance",
         amount: -amountNumber,
         performedByUserId: owner.user.id,
+        // Деньги ИЗ КАССЫ ТОЧКИ (решение владельца 2026-09-02) — разбор и
+        // живой пример КидсБурга в комментарии к премии, /bonus/route.ts.
+        // Оба поля: кто внёс запись и из чьих рук ушли деньги. Правило
+        // работает только вперёд, прошлые записи не трогаем.
+        performedByOperatorId: operator.id,
         beneficiaryOperatorId: operator.id,
       },
     });
+    await chargeSelfServiceAdvanceToZones(owner.tenantId, point.id, amountNumber, operator.id, tx);
     return { ok: true as const };
   });
   if (!result.ok) {
