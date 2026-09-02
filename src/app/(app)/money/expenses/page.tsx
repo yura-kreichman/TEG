@@ -21,7 +21,7 @@ import { useI18n } from "@/components/i18n-provider";
 import { InfoTooltip } from "@/components/info-tooltip";
 import { Money } from "@/components/money";
 import { PerformedByTag } from "@/components/performed-by-tag";
-import { formatTime } from "@/lib/datetime-format";
+import { formatTime , localDayKey } from "@/lib/datetime-format";
 import { parseMoneyInput } from "@/lib/format";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 
@@ -247,7 +247,7 @@ export default function ExpensesRegisterPage() {
 
   const expenseGroups: { date: string; items: ExpenseEntry[] }[] = [];
   for (const e of expenses) {
-    const dateKey = e.occurredAt.slice(0, 10);
+    const dateKey = localDayKey(e.occurredAt);
     const lastGroup = expenseGroups[expenseGroups.length - 1];
     if (lastGroup && lastGroup.date === dateKey) lastGroup.items.push(e);
     else expenseGroups.push({ date: dateKey, items: [e] });

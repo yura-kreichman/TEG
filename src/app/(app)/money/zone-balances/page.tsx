@@ -26,7 +26,7 @@ import {
   type CollectionBreakdown,
 } from "@/lib/print/collection-slip";
 import { useCurrency, useI18n, useLocale } from "@/components/i18n-provider";
-import { formatTime } from "@/lib/datetime-format";
+import { formatTime , localDayKey } from "@/lib/datetime-format";
 import { cn } from "@/lib/utils";
 import { Money } from "@/components/money";
 import { PerformedByTag } from "@/components/performed-by-tag";
@@ -560,7 +560,7 @@ export default function ZoneBalancesPage() {
 
   const collectionGroups: { date: string; items: CollectionEntry[] }[] = [];
   for (const c of collections) {
-    const dateKey = c.occurredAt.slice(0, 10);
+    const dateKey = localDayKey(c.occurredAt);
     const lastGroup = collectionGroups[collectionGroups.length - 1];
     if (lastGroup && lastGroup.date === dateKey) lastGroup.items.push(c);
     else collectionGroups.push({ date: dateKey, items: [c] });

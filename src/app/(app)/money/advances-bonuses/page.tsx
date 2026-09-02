@@ -9,7 +9,7 @@ import { SpringCard } from "@/components/spring-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
-import { formatTime } from "@/lib/datetime-format";
+import { formatTime , localDayKey } from "@/lib/datetime-format";
 import { Money } from "@/components/money";
 import { PerformedByTag } from "@/components/performed-by-tag";
 
@@ -81,7 +81,7 @@ export default function AdvancesBonusesRegisterPage() {
 
   const advanceBonusGroups: { date: string; items: AdvanceBonusEntry[] }[] = [];
   for (const op of advancesBonuses) {
-    const dateKey = op.occurredAt.slice(0, 10);
+    const dateKey = localDayKey(op.occurredAt);
     const lastGroup = advanceBonusGroups[advanceBonusGroups.length - 1];
     if (lastGroup && lastGroup.date === dateKey) lastGroup.items.push(op);
     else advanceBonusGroups.push({ date: dateKey, items: [op] });

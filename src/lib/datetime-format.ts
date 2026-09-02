@@ -46,3 +46,17 @@ export function formatDuration(minutes: number, t: Dictionary) {
     ? `${h} ${t.operatorApp.workTime.hoursShort} ${m} ${t.operatorApp.workTime.minutesShort}`
     : `${h} ${t.operatorApp.workTime.hoursShort}`;
 }
+
+/**
+ * Ключ дня для группировки списков — по МЕСТНОЙ дате устройства.
+ *
+ * `iso.slice(0, 10)` берёт календарную дату из UTC-момента, а время каждой
+ * строки рисуется местное (formatTime выше): операция в 02:00 по Кишинёву
+ * оказывалась под вчерашним заголовком (генеральная проверка финансов
+ * 2026-09-02). Реестры Денег, Товаров и Клиентов копировали срез строки
+ * каждый у себя — один помощник вместо четырёх копий.
+ */
+export function localDayKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}

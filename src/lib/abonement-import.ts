@@ -1,4 +1,5 @@
 import readXlsxFile from "read-excel-file/node";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone, phoneMatchKey } from "@/lib/abonement";
 
@@ -232,31 +233,38 @@ export async function commitImport(
       const toCreate = chunk.filter((r) => !taken.has(r.phone));
       if (toCreate.length === 0) return 0;
 
-      // skipDuplicates — страховка на ту же гонку в оставшиеся миллисекунды:
-      // без него вся порция упала бы на уникальном индексе (tenantId, phone)
-      // из-за одной чужой строки.
-      await tx.abonementWallet.createMany({
-        data: toCreate.map((r) => ({
-          tenantId,
-          phone: r.phone,
-          phoneKey: phoneMatchKey(r.phone),
-          name: r.name,
-          balance: r.balance,
-        })),
-        skipDuplicates: true,
-      });
+      // ПОШТУЧНОЕ создание вместо createMany + skipDuplicates (генеральная
+      // проверка финансов 2026-09-02). createMany не возвращает id, поэтому
+      // кошельки добирались запросом ПО ТЕЛЕФОНАМ — и в выборку попадали
+      // чужие, созданные параллельным импортом или продажей в те же
+      // миллисекунды. Стартовый баланс тогда приписывался чужому кошельку,
+      // своему не начислялся вовсе, а счётчик «создано» всё равно считал
+      // строку своей.
+      //
+      // Здесь мы точно знаем, что создали: конфликт уникального индекса
+      // (tenantId, phone) означает «кошелёк уже есть» — такую строку
+      // пропускаем, как и раньше, но из счётчика тоже.
+      const created: { walletId: string; amount: number }[] = [];
+      for (const r of toCreate) {
+        try {
+          const wallet = await tx.abonementWallet.create({
+            data: {
+              tenantId,
+              phone: r.phone,
+              phoneKey: phoneMatchKey(r.phone),
+              name: r.name,
+              balance: r.balance,
+            },
+            select: { id: true },
+          });
+          created.push({ walletId: wallet.id, amount: r.balance });
+        } catch (err) {
+          if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") continue;
+          throw err;
+        }
+      }
 
-      // createMany не возвращает id — добираем их отдельным запросом по тем
-      // же телефонам, чтобы привязать транзакции истории.
-      const wallets = await tx.abonementWallet.findMany({
-        where: { tenantId, phone: { in: toCreate.map((r) => r.phone) } },
-        select: { id: true, phone: true },
-      });
-      const idByPhone = new Map(wallets.map((w) => [w.phone, w.id]));
-
-      const historyRows = toCreate
-        .map((r) => ({ walletId: idByPhone.get(r.phone), amount: r.balance }))
-        .filter((r): r is { walletId: string; amount: number } => Boolean(r.walletId))
+      const historyRows = created
         // Нулевой стартовый баланс — клиент переехал, но денег на нём не
         // было: строка в истории про перенос нуля только засоряет выписку.
         .filter((r) => r.amount > 0)
@@ -264,6 +272,7 @@ export async function commitImport(
 
       if (historyRows.length > 0) await tx.abonementTransaction.createMany({ data: historyRows });
 
+      return created.length;
       return toCreate.length;
     });
 

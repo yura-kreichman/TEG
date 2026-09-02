@@ -195,11 +195,13 @@ export async function calcOperatorBalance(
     // КОРРЕКТИРОВКА, а не закрытие периода: границы, от которой можно было бы
     // считать, в модели нет. Поэтому режем объём чтения, а не смысл расчёта —
     // сумму денег это не меняет вообще никак.
-    tx.shift.findMany({ where: { operatorId, isOpen: false }, select: { startAt: true, endAt: true } }),
+    tx.shift.findMany({ where: { operatorId, isOpen: false }, select: { id: true, startAt: true, endAt: true } }),
     tx.operatorRate.findMany({ where: { operatorId }, orderBy: [{ effectiveFrom: "desc" }, { createdAt: "desc" }] }),
     tx.moneyOperation.findMany({
       where: { beneficiaryOperatorId: operatorId, type: { in: WORK_TIME_MONEY_TYPES } },
-      select: { type: true, amount: true, occurredAt: true },
+      // shiftId — чтобы аванс/премия смены попадали в тот же период, что и
+      // сама смена (см. attributedAt ниже).
+      select: { type: true, amount: true, occurredAt: true, shiftId: true },
     }),
     tx.operatorBalanceCarryover.findMany({ where: { operatorId }, select: { amount: true } }),
   ]);
@@ -217,6 +219,10 @@ export async function calcOperatorBalance(
     if (period && shift.startAt >= period.from && shift.startAt < period.to) periodAccrued += accrued;
   }
 
+  // Начало смены по её id — чтобы аванс/премия смены относились к тому же
+  // периоду, что и сама смена (см. ниже).
+  const shiftStartById = new Map(shifts.map((sh) => [sh.id, sh.startAt]));
+
   let totalAdvances = 0;
   let periodAdvances = 0;
   let periodBonuses = 0;
@@ -227,7 +233,16 @@ export async function calcOperatorBalance(
     // bonus_accrual хранится положительным (кассу не трогает вовсе), но
     // Math.abs одинаково верен для обоих — знак ниже задаём мы сами.
     const amount = Math.abs(Number(op.amount));
-    const inPeriod = period ? op.occurredAt >= period.from && op.occurredAt < period.to : false;
+    // Операция СМЕНЫ относится к периоду по началу самой смены, а не по
+    // моменту записи (генеральная проверка финансов 2026-09-02). Смена и её
+    // аванс — одно событие, но occurredAt у аванса это момент check-out:
+    // ночная смена, начатая 31-го и закрытая 1-го, раскладывалась по разным
+    // периодам, и «Авансы за период» спорили со строкой смены в табеле.
+    // Аванс/премия БЕЗ привязки к смене (владелец выдал отдельно) относятся к
+    // периоду по своему occurredAt — у них другой смены и нет.
+    const shiftStart = op.shiftId ? shiftStartById.get(op.shiftId) : undefined;
+    const attributedAt = shiftStart ?? op.occurredAt;
+    const inPeriod = period ? attributedAt >= period.from && attributedAt < period.to : false;
     if (op.type === "advance") {
       totalAdvances += amount;
       if (inPeriod) periodAdvances += amount;
