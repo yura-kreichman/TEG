@@ -701,6 +701,40 @@ export class InsufficientBalanceError extends Error {
   }
 }
 
+/**
+ * Списание с кошелька обязано быть строго положительным.
+ *
+ * Найдено генеральной проверкой финансов 2026-09-02. Все три функции списания
+ * проверяли только достаточность баланса — `balance: { gte: amount }`. При
+ * отрицательной сумме это условие истинно ВСЕГДА (любой баланс ≥ −1000), а
+ * `decrement: -1000` баланс не уменьшает, а УВЕЛИЧИВАЕТ. Плюс в журнал уходит
+ * `revenue_abonement` с минусом. То есть один запрос дорисовывал клиенту
+ * тысячу на счёт и минус тысячу в выручку.
+ *
+ * Дыра была достижима: валидация долей оплаты (validateSplitLegs) в старте
+ * пуска стоит ВНУТРИ ветки тарифа «За вход», где цена известна заранее, — у
+ * «По факту» цены на старте нет, ветка пропускается, а доли всё равно
+ * принимаются и списываются.
+ *
+ * Проверка здесь, а не только в роутах, сознательно: это последний рубеж перед
+ * записью в баланс, и он закрывает класс целиком — включая те вызовы, которые
+ * появятся потом. Роут пусть тоже валидирует, но не вместо этого.
+ */
+export class InvalidSpendAmountError extends Error {
+  constructor() {
+    super("INVALID_SPEND_AMOUNT");
+  }
+}
+
+// Ноль РАЗРЕШЁН намеренно. На проде живут тарифы с нулевой ценой (проверено
+// 2026-09-02: 7 тарифов и 2 варианта), и списание нуля — это отметка
+// бесплатного посещения на клиенте, законный сценарий. Денег ноль не создаёт.
+// Запрещён только минус: он проходит проверку достаточности баланса всегда и
+// превращает decrement в increment.
+function assertSpendable(amount: number): void {
+  if (!Number.isFinite(amount) || amount < 0) throw new InvalidSpendAmountError();
+}
+
 // Ровно один вариант: "Счётчики" — оплата привязана к зоне+тарифам, без
 // актива (запрос пользователя 2026-07-24: на экране "Списать с баланса"
 // выбор конкретного актива — чистое трение без пользы для денег зоны, сумма
@@ -778,6 +812,7 @@ export async function spendWalletForZone(walletId: string, params: ZoneSpendPara
       txLines.push({ tariffId: null, amount: target.amount, quantity: null });
     }
 
+    assertSpendable(totalAmount);
     const updated = await tx.abonementWallet.updateMany({
       where: { id: walletId, tenantId, balance: { gte: totalAmount } },
       data: { balance: { decrement: totalAmount } },
@@ -1027,6 +1062,7 @@ interface SpendParams {
  */
 export async function spendWalletTx(tx: Tx, walletId: string, params: SpendParams) {
   const { tenantId, zoneId, launchId, pointId, operatorId, amount } = params;
+  assertSpendable(amount);
   const updated = await tx.abonementWallet.updateMany({
     where: { id: walletId, tenantId, balance: { gte: amount } },
     data: { balance: { decrement: amount } },
@@ -1073,6 +1109,7 @@ interface TicketOrderSpendParams {
  */
 export async function spendWalletForTicketOrderTx(tx: Tx, walletId: string, params: TicketOrderSpendParams) {
   const { tenantId, zoneId, ticketOrderId, pointId, operatorId, amount } = params;
+  assertSpendable(amount);
   const updated = await tx.abonementWallet.updateMany({
     where: { id: walletId, tenantId, balance: { gte: amount } },
     data: { balance: { decrement: amount } },
