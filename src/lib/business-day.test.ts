@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { businessDayOf, dayBoundsUtc, periodBoundsUtc } from "./business-day";
+import { getPeriodRange, getPreviousPeriodRange } from "./reports";
 
 // Границы недели/месяца в табеле Рабочего времени. До 2026-08-02 они брались
 // сырой UTC-полночью, из-за чего у тенанта восточнее UTC ночная смена уезжала
@@ -101,6 +102,35 @@ describe("businessDayOf", () => {
     expect(submission >= bounds.start && submission < bounds.end).toBe(true);
   });
 
+  // Прежний тест проверял согласованность только на "06:00" — и потому не
+  // видел, что при вечерней границе окно уезжало ровно на сутки. У Керен
+  // Центра граница 21:00, то есть боевой тенант жил с этим каждый день:
+  // Главная показывала нули и завтрашнюю дату, календарь был сдвинут на
+  // клетку. Здесь проходим весь круг часов, включая полдень — водораздел.
+  it.each(["00:00", "01:00", "06:00", "11:59", "12:00", "18:00", "21:00", "22:00", "23:30"])(
+    "businessDayOf и dayBoundsUtc согласованы при границе %s",
+    (boundary) => {
+      // Сутки с шагом в час: любой момент обязан попадать в окно своей клетки.
+      for (let hour = 0; hour < 24; hour++) {
+        const at = new Date(Date.UTC(2026, 7, 15, hour, 30));
+        const { year, month, day } = businessDayOf(at, CHISINAU, boundary);
+        const bounds = dayBoundsUtc(year, month, day, CHISINAU, boundary);
+        expect({ boundary, hour, inside: at >= bounds.start && at < bounds.end }).toEqual({
+          boundary,
+          hour,
+          inside: true,
+        });
+      }
+    }
+  );
+
+  it("вечерняя граница: день начинается накануне — решение владельца 2026-08-06", () => {
+    // «Пятое августа» у Керен Центра идёт с 4 августа 21:00 до 5 августа 21:00.
+    const bounds = dayBoundsUtc(2026, 8, 5, CHISINAU, "21:00");
+    expect(bounds.start.toISOString()).toBe("2026-08-04T18:00:00.000Z");
+    expect(bounds.end.toISOString()).toBe("2026-08-05T18:00:00.000Z");
+  });
+
   it("вечер до полуночи остаётся своим днём", () => {
     const evening = new Date("2026-08-08T19:10:00.000Z"); // 22:10 субботы по месту
     expect(businessDayOf(evening, CHISINAU, NIGHT)).toEqual({ year: 2026, month: 8, day: 8 });
@@ -126,5 +156,57 @@ describe("границы месяца при ночной работе", () => {
 
     expect(submission >= august.from && submission < august.to).toBe(true);
     expect(submission >= september.from && submission < september.to).toBe(false);
+  });
+});
+
+// Периоды Отчётов/Денег при ВЕЧЕРНЕЙ границе (Керен Центр, 21:00). Раньше
+// getPeriodRange и getPreviousPeriodRange пересчитывали дату «в этот час»
+// вперёд, а ярлык дня businessDayOf брал назад — период «День» не содержал
+// собственный якорь, «предыдущий месяц» уезжал на месяц, «предыдущий год» —
+// на год. Проверялось только на утренних границах, где обе стороны совпадают.
+describe("периоды при вечерней границе дня", () => {
+  const EVENING = "21:00";
+
+  it("период «День» содержит момент, по которому он выбран", () => {
+    const at = new Date("2026-08-15T20:30:00.000Z"); // 23:30 15 августа по месту
+    const today = new Date("2026-08-20T09:00:00.000Z");
+    const { start, end } = getPeriodRange("day", at, today, CHISINAU, EVENING);
+    expect(at >= start && at < end).toBe(true);
+  });
+
+  it("период «Месяц» содержит момент, по которому он выбран", () => {
+    const at = new Date("2026-08-15T20:30:00.000Z");
+    const today = new Date("2026-08-20T09:00:00.000Z");
+    const { start, end } = getPeriodRange("month", at, today, CHISINAU, EVENING);
+    expect(at >= start && at < end).toBe(true);
+  });
+
+  it("предыдущий месяц — ровно предыдущий, а не позапрошлый", () => {
+    const anchor = new Date("2026-08-15T09:00:00.000Z");
+    const today = new Date("2026-08-20T09:00:00.000Z");
+    const august = getPeriodRange("month", anchor, today, CHISINAU, EVENING);
+    const july = getPreviousPeriodRange("month", august.start, CHISINAU, EVENING);
+
+    expect(july.end.getTime()).toBe(august.start.getTime());
+    // Июль у этого тенанта идёт с 30 июня 21:00 до 31 июля 21:00.
+    expect(july.start.toISOString()).toBe("2026-06-30T18:00:00.000Z");
+  });
+
+  it("предыдущий день примыкает к текущему без дыры и нахлёста", () => {
+    const anchor = new Date("2026-08-15T09:00:00.000Z");
+    const today = new Date("2026-08-20T09:00:00.000Z");
+    const day = getPeriodRange("day", anchor, today, CHISINAU, EVENING);
+    const prev = getPreviousPeriodRange("day", day.start, CHISINAU, EVENING);
+
+    expect(prev.end.getTime()).toBe(day.start.getTime());
+    expect(day.start.getTime() - prev.start.getTime()).toBe(24 * 60 * 60 * 1000);
+  });
+
+  it("утренняя граница ведёт себя ровно как раньше", () => {
+    const anchor = new Date("2026-08-15T09:00:00.000Z");
+    const today = new Date("2026-08-20T09:00:00.000Z");
+    const { start, end } = getPeriodRange("day", anchor, today, CHISINAU, NIGHT);
+    expect(start.toISOString()).toBe("2026-08-15T03:00:00.000Z");
+    expect(end.toISOString()).toBe("2026-08-16T03:00:00.000Z");
   });
 });

@@ -189,12 +189,35 @@ export function dayBoundsUtc(
   boundaryTime = "00:00"
 ): { start: Date; end: Date } {
   const { hours, minutes } = parseBoundary(boundaryTime);
-  const start = zonedWallTimeToUtc(year, month, day, hours, minutes, timezone);
-  const next = new Date(Date.UTC(year, month - 1, day + 1));
+  // ВЕЧЕРНЯЯ граница отсчитывается назад, а не вперёд (генеральная проверка
+  // финансов 2026-09-02). У Керен Центра граница 21:00, и «пятое августа» там
+  // начинается ЧЕТВЁРТОГО в 21:00 — это решение владельца от 2026-08-06, из-за
+  // него businessDateKey и берёт дату посередине окна. dayBoundsUtc же всегда
+  // отсчитывала вперёд, [D 21:00, D+1 21:00), то есть возвращала окно на сутки
+  // позже собственного ярлыка. Пара businessDayOf → dayBoundsUtc, которую обе
+  // функции обещают в своих комментариях, для этого тенанта не сходилась
+  // вовсе: сдача в 23:30 не попадала ни в свою карточку «Итоги дня», ни в свою
+  // клетку календаря — Главная показывала нули и завтрашнюю дату.
+  // Совпадало только при ранней границе (06:00 у КидсБурга), поэтому и жило.
+  //
+  // Полдень как водораздел — тот же признак, по которому businessDateKey
+  // выбирает ярлык: сдвиг на 12 часов внутрь окна уходит на следующую дату
+  // ровно тогда, когда граница 12:00 или позже.
+  const startsPreviousDay = hours >= 12;
+  const first = new Date(Date.UTC(year, month - 1, day - (startsPreviousDay ? 1 : 0)));
+  const second = new Date(Date.UTC(year, month - 1, day + (startsPreviousDay ? 0 : 1)));
+  const start = zonedWallTimeToUtc(
+    first.getUTCFullYear(),
+    first.getUTCMonth() + 1,
+    first.getUTCDate(),
+    hours,
+    minutes,
+    timezone
+  );
   const end = zonedWallTimeToUtc(
-    next.getUTCFullYear(),
-    next.getUTCMonth() + 1,
-    next.getUTCDate(),
+    second.getUTCFullYear(),
+    second.getUTCMonth() + 1,
+    second.getUTCDate(),
     hours,
     minutes,
     timezone

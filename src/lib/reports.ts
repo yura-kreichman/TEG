@@ -3,7 +3,7 @@ import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZo
 import { getCountersBalanceBySubmission } from "@/lib/abonement";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateTicketOrdersBySubmission, ticketRevenueByAssetVariant } from "@/lib/tickets";
-import { businessDayOf, localDateParts, parseBoundary, zonedWallTimeToUtc } from "@/lib/business-day";
+import { businessDayOf, dayBoundsUtc, periodBoundsUtc, zonedWallTimeToUtc } from "@/lib/business-day";
 import { PAYMENT_SPLIT_METHOD } from "@/lib/payment-split";
 
 function addCalendarDays(parts: { year: number; month: number; day: number }, days: number) {
@@ -49,10 +49,13 @@ export function getPeriodRange(
   // следующий месяц вместе с начислением. "00:00" — прежнее поведение.
   boundaryTime = "00:00"
 ) {
-  const { hours: bh, minutes: bm } = parseBoundary(boundaryTime);
   const a = businessDayOf(anchor, timezone, boundaryTime);
+  // Через dayBoundsUtc, а не zonedWallTimeToUtc напрямую: при ВЕЧЕРНЕЙ границе
+  // день D начинается накануне (у Керен Центра граница 21:00), и прямой
+  // пересчёт «D в этот час» давал окно на сутки позже своего ярлыка — период
+  // «День» не содержал даже собственный якорь. Разбор — у dayBoundsUtc.
   const toUtc = (p: { year: number; month: number; day: number }) =>
-    zonedWallTimeToUtc(p.year, p.month, p.day, bh, bm, timezone);
+    dayBoundsUtc(p.year, p.month, p.day, timezone, boundaryTime).start;
 
   let startParts: { year: number; month: number; day: number };
   let endParts: { year: number; month: number; day: number };
@@ -84,7 +87,7 @@ export function getPeriodRange(
  * Same-length period immediately before `start` — for the "vs previous
  * period" delta.
  *
- * day/week — через addCalendarDays + zonedWallTimeToUtc (аудит 2026-07-27,
+ * day/week — через addCalendarDays + dayBoundsUtc (аудит 2026-07-27,
  * второй раунд), не через ±24ч/±7×24ч в миллисекундах — год/month-ветки этой
  * же функции уже делали это правильно, только day/week регрессировали к
  * наивной арифметике. В день перехода на/с летнего времени реальные сутки
@@ -99,26 +102,28 @@ export function getPreviousPeriodRange(
   timezone: string,
   boundaryTime = "00:00"
 ) {
-  const { hours: bh, minutes: bm } = parseBoundary(boundaryTime);
-  // start уже стоит НА границе дня, поэтому его локальная дата и есть дата
-  // начала периода — сдвигать внутрь окна не нужно.
-  const s = localDateParts(start, timezone);
+  // start стоит НА границе дня — но при вечерней границе это граница ПРЕДЫДУЩЕЙ
+  // календарной даты (у Керен Центра 21:00: месяц начинается 31-го числа в
+  // 21:00). Прежний localDateParts читал именно её и уводил «предыдущий месяц»
+  // на месяц назад, а «предыдущий год» — на год. businessDayOf возвращает
+  // ярлык дня, который в этот момент начинается, и совпадает с localDateParts
+  // при любой утренней границе — то есть для всех прежних тенантов ничего не
+  // меняется.
+  const s = businessDayOf(start, timezone, boundaryTime);
+  const toUtc = (p: { year: number; month: number; day: number }) =>
+    dayBoundsUtc(p.year, p.month, p.day, timezone, boundaryTime).start;
   if (granularity === "day") {
-    const prev = addCalendarDays(s, -1);
-    return { start: zonedWallTimeToUtc(prev.year, prev.month, prev.day, bh, bm, timezone), end: start };
+    return { start: toUtc(addCalendarDays(s, -1)), end: start };
   }
   if (granularity === "week") {
-    const prev = addCalendarDays(s, -7);
-    return { start: zonedWallTimeToUtc(prev.year, prev.month, prev.day, bh, bm, timezone), end: start };
+    return { start: toUtc(addCalendarDays(s, -7)), end: start };
   }
   if (granularity === "year") {
-    const prevYearStart = zonedWallTimeToUtc(s.year - 1, 1, 1, bh, bm, timezone);
-    return { start: prevYearStart, end: start };
+    return { start: toUtc({ year: s.year - 1, month: 1, day: 1 }), end: start };
   }
   const prevMonthY = s.month === 1 ? s.year - 1 : s.year;
   const prevMonthM = s.month === 1 ? 12 : s.month - 1;
-  const prevMonthStart = zonedWallTimeToUtc(prevMonthY, prevMonthM, 1, bh, bm, timezone);
-  return { start: prevMonthStart, end: start };
+  return { start: toUtc({ year: prevMonthY, month: prevMonthM, day: 1 }), end: start };
 }
 
 /** Same-length window immediately before [start, end) — for custom (non-named) period "vs previous" deltas. */
@@ -157,10 +162,10 @@ export function resolvePeriodFromParams(
     // у getPeriodRange ниже): для тенанта западнее UTC "2026-07-25T00:00Z"
     // это ещё 24 июля по месту. Час — граница дня тенанта, а не полночь: иначе
     // выбранный вручную период резал бы ночную смену пополам.
-    const { hours: bh, minutes: bm } = parseBoundary(boundaryTime);
-    const start = zonedWallTimeToUtc(fromParts.year, fromParts.month, fromParts.day, bh, bm, timezone);
-    const endParts = addCalendarDays(toParts, 1);
-    const end = zonedWallTimeToUtc(endParts.year, endParts.month, endParts.day, bh, bm, timezone);
+    // Через periodBoundsUtc (то есть через dayBoundsUtc), а не пересчётом «эта
+    // дата в этот час»: при вечерней границе день начинается накануне, и
+    // прямой пересчёт давал период на сутки позже выбранного в календаре.
+    const { from: start, to: end } = periodBoundsUtc(fromParam!, toParam!, timezone, boundaryTime);
     return { start, end, granularity: "day", isCustom: true };
   }
   const granularityParam = searchParams.get("granularity");
