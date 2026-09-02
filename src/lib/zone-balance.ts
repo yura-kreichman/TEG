@@ -422,12 +422,27 @@ export async function chargeSelfServiceAdvanceToZones(
   tenantId: string,
   pointId: string,
   amount: number,
-  performedByOperatorId: string
+  performedByOperatorId: string,
+  // Транзакция вызывающего. Раньше функция ВСЕГДА открывала свою — и между
+  // коммитом транзакции, списавшей аванс, и захватом лока здесь точку не
+  // держал никто (генеральная проверка финансов 2026-09-02, С19). Инкассация,
+  // попавшая в этот зазор, списывала те же деньги внутри poolDeficit, а
+  // запоздавшее разнесение списывало их второй раз: зона −300 при пустом
+  // ящике. Восстановиться нельзя — после аварии deficit = max(0, 0) = 0, и
+  // механизм-фолбэк бессилен.
+  //
+  // Передавать транзакцию ОБЯЗАТЕЛЬНО, если вызывающий уже держит
+  // pg_advisory_xact_lock по этой же точке: лок берётся на транзакцию, а
+  // вложенный prisma.$transaction — это другое соединение, и получился бы
+  // самодедлок до таймаута.
+  client?: Tx
 ): Promise<void> {
   if (amount === 0) return;
 
-  await prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pointId}))`;
+  const run = async (tx: Tx) => {
+    // Свой лок берём только когда работаем в собственной транзакции: у
+    // вызывающего он уже взят, повторный захват на том же соединении не нужен.
+    if (!client) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pointId}))`;
 
     const zones = await tx.zone.findMany({ where: { pointId }, select: { id: true } });
     if (zones.length === 0) return;
@@ -451,7 +466,10 @@ export async function chargeSelfServiceAdvanceToZones(
     if (rows.length > 0) {
       await tx.moneyOperation.createMany({ data: rows });
     }
-  });
+  };
+
+  if (client) await run(client);
+  else await prisma.$transaction(run);
 }
 
 // Сколько из остатка кассы точки — продажи абонементов наличными, ещё НЕ

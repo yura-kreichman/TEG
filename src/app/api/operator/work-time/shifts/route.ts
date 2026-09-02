@@ -233,6 +233,15 @@ export async function POST(request: Request) {
           },
         });
       }
+      // Разнесение по зонам — ТОЙ ЖЕ транзакцией и под тем же локом
+      // (генеральная проверка финансов 2026-09-02, С19). Раньше вызывалось
+      // после коммита и открывало свою: в зазор успевала инкассация, списывала
+      // те же деньги через poolDeficit, и запоздавшее разнесение списывало их
+      // второй раз — зона уходила в минус при пустом ящике, необратимо.
+      // cashOutAmount: начисленная премия из кассы не уходила, разносить нечего.
+      if (cashOutAmount > 0) {
+        await chargeSelfServiceAdvanceToZones(point.tenantId, point.id, cashOutAmount, operator.id, tx);
+      }
       return { ok: true as const };
     });
     if (!result.ok) {
@@ -242,16 +251,6 @@ export async function POST(request: Request) {
           ? `Сумма превышает остаток кассы точки (${formatMoney(result.freshBalance, locale)})`
           : `Аванс превышает доступный баланс к выдаче (${formatMoney(result.projectedToPayOut, locale)})`;
       return NextResponse.json({ error }, { status: 400 });
-    }
-    // Сразу разносим по зонам (запрос пользователя 2026-07-25), не дожидаясь
-    // следующей инкассации — см. комментарий у chargeSelfServiceAdvanceToZones
-    // в lib/zone-balance.ts. Вызов ПОСЛЕ обеих записей выше — важен порядок.
-    // Не блокирует ответ при сбое — см. комментарий в check-out/route.ts.
-    // cashOutAmount: начисленная премия из кассы не уходила, разносить нечего.
-    if (cashOutAmount > 0) {
-      await chargeSelfServiceAdvanceToZones(point.tenantId, point.id, cashOutAmount, operator.id).catch((err) =>
-        console.error("chargeSelfServiceAdvanceToZones failed (shifts)", err)
-      );
     }
   }
 

@@ -119,44 +119,31 @@ export async function POST(request: Request) {
   }
 
   const warnings = validateShift(startAt, endAt);
-  // Атомарный "compare-and-swap" вместо обычного update (реальный баг,
-  // найден пользователем 2026-07-18 на проде: два почти одновременных
-  // запроса check-out — 12мс друг от друга — оба видели смену открытой и
-  // ОБА создали премию/аванс, задвоив реальные деньги оператора). WHERE
-  // isOpen:true гарантирует, что если смену уже закрыл параллельный запрос,
-  // updateMany затронет 0 строк — PostgreSQL сериализует конкурентные
-  // UPDATE на одну и ту же строку на уровне блокировки, второй запрос ждёт
-  // коммита первого и видит уже актуальный isOpen:false.
-  const closeResult = await prisma.shift.updateMany({
-    where: { id: openShift.id, isOpen: true },
-    data: { endAt, isOpen: false },
-  });
-  if (closeResult.count === 0) {
-    return NextResponse.json({ error: "Смена уже закрыта" }, { status: 409 });
-  }
+  // Закрытие смены и её деньги — ОДНА транзакция (генеральная проверка
+  // финансов 2026-09-02, С19). Раньше смена закрывалась отдельным updateMany,
+  // а деньги писались независимой транзакцией ниже: штатный отказ внутри неё
+  // (превышен остаток кассы или личный баланс) оставлял смену закрытой БЕЗ
+  // денежной операции, а повторить было нельзя — второй заход упирался в 409.
+  // Касса точки и «к выдаче» сотрудника оставались завышенными навсегда.
+  const closed = await prisma.$transaction(async (tx) => {
+    // Лок точки берём ДО обновления строки смены и держим до конца — тем же
+    // порядком (pointId, затем operatorId), что и остальной денежный код.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${shiftPointId}))`;
+    // Атомарный "compare-and-swap" сохранён: WHERE isOpen:true по-прежнему
+    // отсекает параллельный check-out (реальный баг 2026-07-18 — два запроса
+    // в 12 мс друг от друга задваивали премию).
+    const closeResult = await tx.shift.updateMany({
+      where: { id: openShift.id, isOpen: true },
+      data: { endAt, isOpen: false },
+    });
+    if (closeResult.count === 0) return { ok: false as const, reason: "closed" as const };
 
-  // Авторитетная, атомарная проверка потолка — та же блокировка по pointId,
-  // что у chargeSelfServiceAdvanceToZones/settleOutstandingCollectionAdvance
-  // (lib/zone-balance.ts). Проверка выше (до закрытия смены) — только
-  // быстрый оптимистичный отказ для типового случая; она сама по себе не
-  // закрывает гонку (найдено аудитом 2026-07-25: два почти одновременных
-  // check-out на разных операторов одной точки могли оба прочитать один и
-  // тот же pointBalance ДО того, как другой успевал списать свой аванс, и
-  // оба пройти проверку, вместе превысив кассу). Здесь — авторитетный повтор
-  // ровно перед самой записью, под локом.
-  if (advanceAmount + bonusAmount > 0) {
-    const result = await prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${shiftPointId}))`;
-      const freshBalance = await getPointCashBalance(shiftPointId);
+    if (advanceAmount + bonusAmount > 0) {
+      const freshBalance = await getPointCashBalance(shiftPointId, tx);
       if (cashOutAmount > freshBalance) {
         return { ok: false as const, reason: "point" as const, freshBalance };
       }
       if (advanceAmount > 0) {
-        // Личный баланс "к выдаче" (аудит 2026-07-31) — тот же авторитетный
-        // повтор под локом, что и у кассы точки выше, раньше отсутствовал:
-        // см. подробный комментарий в /api/operator/work-time/shifts (тот же
-        // класс гонки с ручным авансом от Владельца). Лок по operatorId —
-        // ПОСЛЕ pointId, тем же порядком, что и там.
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${operator.id}))`;
         const freshOperatorBalance = await calcOperatorBalance(operator.id, undefined, tx);
         const projectedToPayOut = freshOperatorBalance.toPayOut + accrued;
@@ -191,31 +178,30 @@ export async function POST(request: Request) {
           },
         });
       }
-      return { ok: true as const };
-    });
-    if (!result.ok) {
-      const locale = await resolveLocale();
-      const error =
-        result.reason === "point"
-          ? `Сумма превышает остаток кассы точки (${formatMoney(result.freshBalance, locale)})`
-          : `Аванс превышает доступный баланс к выдаче (${formatMoney(result.projectedToPayOut, locale)})`;
-      return NextResponse.json({ error }, { status: 400 });
+      // Разнесение по зонам — ТОЙ ЖЕ транзакцией и под тем же локом. Раньше
+      // функция открывала свою, и в зазоре между коммитами инкассация успевала
+      // списать те же деньги через poolDeficit, а разнесение списывало их
+      // второй раз. cashOutAmount, не advance+bonus: начисленная премия из
+      // кассы точки не уходила, разносить нечего.
+      if (cashOutAmount > 0) {
+        await chargeSelfServiceAdvanceToZones(point.tenantId, shiftPointId, cashOutAmount, operator.id, tx);
+      }
     }
-    // Сразу разносим по зонам (запрос пользователя 2026-07-25), не дожидаясь
-    // следующей инкассации — см. комментарий у chargeSelfServiceAdvanceToZones
-    // в lib/zone-balance.ts. Вызов ПОСЛЕ обеих записей выше — важен порядок.
-    // Не блокирует ответ при сбое (см. .catch ниже) — деньги уже честно
-    // списаны из личного баланса сотрудника, при ошибке зонного разнесения
-    // остаётся старый механизм-фолбэк (getPointPoolDeficit) на следующей
-    // инкассации.
-    // cashOutAmount, не advance+bonus: начисленная премия из кассы точки не
-    // уходила, разносить по зонам нечего.
-    if (cashOutAmount > 0) {
-      await chargeSelfServiceAdvanceToZones(point.tenantId, shiftPointId, cashOutAmount, operator.id).catch((err) =>
-        console.error("chargeSelfServiceAdvanceToZones failed (check-out)", err)
-      );
+    return { ok: true as const };
+  });
+
+  if (!closed.ok) {
+    if (closed.reason === "closed") {
+      return NextResponse.json({ error: "Смена уже закрыта" }, { status: 409 });
     }
+    const locale = await resolveLocale();
+    const error =
+      closed.reason === "point"
+        ? `Сумма превышает остаток кассы точки (${formatMoney(closed.freshBalance, locale)})`
+        : `Аванс превышает доступный баланс к выдаче (${formatMoney(closed.projectedToPayOut, locale)})`;
+    return NextResponse.json({ error }, { status: 400 });
   }
+
 
   const balance = await calcOperatorBalance(operator.id);
   const tenantForTz = await prisma.tenant.findUnique({

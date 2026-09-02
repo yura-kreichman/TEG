@@ -351,6 +351,20 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
           },
         });
       }
+
+      // Синхронизация уже разнесённых по зонам advance_settlement-записей
+      // (аудит 2026-07-25: правка суммы аванса владельцем меняла личный баланс
+      // сотрудника корректно, но зонные остатки навсегда оставались на уровне
+      // ДО правки — функция не хранит связь с конкретной сменой, поэтому
+      // корректируем ДЕЛЬТОЙ, тем же вызовом, что и при первом взятии).
+      //
+      // ВНУТРИ транзакции и под уже взятым здесь локом точки (генеральная
+      // проверка финансов 2026-09-02, С19): раньше вызов стоял после коммита и
+      // открывал свою транзакцию — в зазор успевала инкассация и списывала те
+      // же деньги вторым разом.
+      if (advanceDelta !== 0) {
+        await chargeSelfServiceAdvanceToZones(tenantId, shiftPointId, advanceDelta, shiftOperatorId, tx);
+      }
     });
   } catch (err) {
     if (err instanceof OverdraftExceededError) {
@@ -368,19 +382,6 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
     return NextResponse.json(
       { error: `Аванс превышает доступный баланс к выдаче (${formatMoney(overdraftAvailable, locale)})` },
       { status: 400 }
-    );
-  }
-
-  // Синхронизация уже разнесённых по зонам advance_settlement-записей
-  // (аудит 2026-07-25: правка суммы аванса/премии владельцем меняла личный
-  // баланс сотрудника корректно, но зонные остатки кассы навсегда оставались
-  // на уровне ДО правки — chargeSelfServiceAdvanceToZones не хранит связь с
-  // конкретной сменой, поэтому корректируем ДЕЛЬТОЙ, тем же вызовом, что и
-  // при первом взятии). ПОСЛЕ основной транзакции — тот же порядок, что и в
-  // check-out/shifts POST (см. комментарий у самой функции).
-  if (advanceDelta !== 0) {
-    await chargeSelfServiceAdvanceToZones(tenantId, shiftPointId, advanceDelta, shiftOperatorId).catch((err) =>
-      console.error("chargeSelfServiceAdvanceToZones failed (shift edit)", err)
     );
   }
 
@@ -478,7 +479,36 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
   // собирать не из чего (правка владельца 2026-08-16).
   await resyncShiftCloseMessage(id, { voided: true }).catch(() => {});
 
+  // Возврат уже разнесённых по зонам advance_settlement-записей: удаление
+  // смены обнуляет личный баланс сотрудника по авансу/премии, но без этого
+  // зонные остатки кассы навсегда остались бы заниженными на уже списанную
+  // сумму. ТОЛЬКО то, что реально ушло из кассы точки
+  // (performedByOperatorId) — запись, добавленная владельцем через PATCH до
+  // 2026-08-31 (только performedByUserId), с зон никогда не списывалась и
+  // возвращаться туда не должна (аудит 2026-07-25).
+  // ВСЁ удаление — одна транзакция под локом точки (генеральная проверка
+  // финансов 2026-09-02, С19). Раньше DELETE не брал advisory-лок вообще —
+  // при том что PATCH в этом же файле берёт два и нарочно перечитывает
+  // операции под локом с комментарием ровно про этот класс. Возврат в зоны
+  // при этом шёл ОТДЕЛЬНОЙ транзакцией уже после коммита: в зазор успевала
+  // инкассация, и одни и те же деньги списывались дважды.
   await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${shift.pointId}))`;
+
+    // Операции перечитываем ПОД ЛОКОМ, а не берём снимок, сделанный до
+    // транзакции. DELETE не запрещает удалять ОТКРЫТУЮ смену: если сотрудник
+    // закроет её в зазоре, её аванс и премия появятся уже после снимка —
+    // deleteMany ниже их снесёт, а возврат в зоны посчитал бы ноль, и зонные
+    // остатки навсегда остались бы заниженными.
+    const freshOps = await tx.moneyOperation.findMany({
+      where: { shiftId: id, type: { in: WORK_TIME_MONEY_TYPES } },
+      select: { type: true, amount: true, performedByOperatorId: true },
+    });
+    const freshAdvance = freshOps.find((o) => o.type === "advance");
+    const freshBonus = freshOps.find((o) => o.type === "bonus_payout");
+    const deletedTotal =
+      (freshAdvance?.performedByOperatorId != null ? Math.abs(Number(freshAdvance.amount)) : 0) +
+      (freshBonus?.performedByOperatorId != null ? Math.abs(Number(freshBonus.amount)) : 0);
     // Вместе со сменой удаляется и начисленная премия: она живёт только как
     // строка журнала, привязанная к смене, и без неё осталась бы навсегда
     // завышать баланс "к выдаче" — след без источника.
@@ -494,25 +524,10 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
       },
     });
     await tx.shift.delete({ where: { id } });
+    if (deletedTotal > 0) {
+      await chargeSelfServiceAdvanceToZones(owner.tenantId, shift.pointId, -deletedTotal, shift.operatorId, tx);
+    }
   });
-
-  // Возврат уже разнесённых по зонам advance_settlement-записей — та же
-  // причина, что у PATCH выше: удаление смены обнуляет личный баланс
-  // сотрудника по авансу/премии, но без этого зонные остатки кассы навсегда
-  // остались бы заниженными на уже списанную сумму. ТОЛЬКО то, что реально
-  // ушло из кассы точки (performedByOperatorId) — старая запись, добавленная
-  // владельцем через PATCH до 2026-08-31 (только performedByUserId), никогда
-  // не списывалась с зон и не должна
-  // возвращаться туда же (аудит 2026-07-25, повторная проверка, тот же
-  // принцип, что и в PATCH выше).
-  const deletedTotal =
-    (advanceOp?.performedByOperatorId != null ? advanceAmount : 0) +
-    (bonusOp?.performedByOperatorId != null ? bonusAmount : 0);
-  if (deletedTotal > 0) {
-    await chargeSelfServiceAdvanceToZones(owner.tenantId, shift.pointId, -deletedTotal, shift.operatorId).catch((err) =>
-      console.error("chargeSelfServiceAdvanceToZones failed (shift delete)", err)
-    );
-  }
 
   // Саму сводку смены пересобирать уже не из чего — смены нет; "Касса за
   // день" точки остаётся и обязана перестать показывать её суммы. Конец
