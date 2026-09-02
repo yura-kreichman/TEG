@@ -5,6 +5,7 @@ import { calcOperatorBalance, WORK_TIME_MONEY_TYPES, type WorkTimeMoneyType } fr
 import { resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
 import { resyncAfterMoneyOpChange } from "@/lib/summary-channels/resync";
+import { chargeSelfServiceAdvanceToZones } from "@/lib/zone-balance";
 
 // Правка суммы отдельного (не привязанного к смене) аванса/премии —
 // docs/spec/05-work-time.md, "АВАНС"/"ПРЕМИЯ": "владелец может редактировать".
@@ -55,9 +56,10 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   }
 
   if (before !== amountNumber) {
-    await prisma.$transaction([
-      prisma.moneyOperation.update({ where: { id }, data: { amount: -amountNumber } }),
-      prisma.correctionLog.create({
+    await prisma.$transaction(async (tx) => {
+      if (op.pointId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${op.pointId}))`;
+      await tx.moneyOperation.update({ where: { id }, data: { amount: -amountNumber } });
+      await tx.correctionLog.create({
         data: {
           entityType: "MoneyOperation",
           entityId: id,
@@ -66,8 +68,29 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
           afterJson: { amount: amountNumber },
           comment: typeof reason === "string" && reason.trim() ? reason.trim() : null,
         },
-      }),
-    ]);
+      });
+      // Дельту надо разнести по зонам (перепроверка 2026-09-03). Смена-версия
+      // этой правки так и делает (work-time/shifts/[id]), а отдельная — нет, и
+      // деньги зависали в журнале зон навсегда: аванс 300 разнесён как −300,
+      // правка на 100 уменьшила кассу точки на 100, а зоны так и остались с
+      // −300. Дефицит при этом уже нулевой — отсечку сдвинули сами
+      // advance_settlement, — и добрать разницу было нечем.
+      //
+      // Только для тех типов, что реально уходят из кассы: bonus_accrual в
+      // ней не участвует вовсе (CASH_EXCLUDED_TYPES).
+      if (op.pointId && op.beneficiaryOperatorId && op.type !== "bonus_accrual") {
+        const delta = Math.round((amountNumber - before) * 100) / 100;
+        if (delta !== 0) {
+          await chargeSelfServiceAdvanceToZones(
+            owner.tenantId,
+            op.pointId,
+            delta,
+            op.beneficiaryOperatorId,
+            tx
+          );
+        }
+      }
+    });
     // Сводка смены и "Касса за день" содержат эту сумму — догоняем их
     // (требование владельца 2026-08-16, lib/summary-channels/resync.ts).
     await resyncAfterMoneyOpChange(op);
@@ -101,8 +124,9 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
   const before = { type: op.type, amount: Math.abs(Number(op.amount)) };
   const beneficiaryOperatorId = op.beneficiaryOperatorId;
 
-  await prisma.$transaction([
-    prisma.correctionLog.create({
+  await prisma.$transaction(async (tx) => {
+    if (op.pointId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${op.pointId}))`;
+    await tx.correctionLog.create({
       data: {
         entityType: "MoneyOperation",
         entityId: id,
@@ -111,9 +135,16 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
         afterJson: { deleted: true },
         comment: null,
       },
-    }),
-    prisma.moneyOperation.delete({ where: { id } }),
-  ]);
+    });
+    await tx.moneyOperation.delete({ where: { id } });
+    // Возвращаем зонам то, что было на них разнесено (перепроверка
+    // 2026-09-03) — иначе после удаления аванса касса точки растёт, а зоны
+    // остаются списанными навсегда. Отрицательная сумма разворачивает
+    // разнесение, ровно как это делает удаление смены.
+    if (op.pointId && beneficiaryOperatorId && op.type !== "bonus_accrual") {
+      await chargeSelfServiceAdvanceToZones(owner.tenantId, op.pointId, -before.amount, beneficiaryOperatorId, tx);
+    }
+  });
 
   await resyncAfterMoneyOpChange(op);
 

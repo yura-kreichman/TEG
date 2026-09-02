@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
-import { getZonePoolShare, settleOutstandingCollectionAdvance, settleZonePoolRemainder } from "@/lib/zone-balance";
+import { getZonePoolAllocation, settleOutstandingCollectionAdvance, settleZonePoolRemainder } from "@/lib/zone-balance";
 import { announceCollection } from "@/lib/collection-alert";
 
 // Инкассация: оператор вводит сумму, переданную владельцу; касса уменьшается.
@@ -59,7 +59,11 @@ export async function POST(request: Request) {
   const { poolShare, operationId, occurredAt } = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${zone.pointId}))`;
 
-    const poolShare = await getZonePoolShare(zone.pointId, zoneId, tx);
+    // Снимок долей пула ДО записи инкассации (С21/С23). После неё отсечка
+    // аванса сдвигается, дефицит схлопывается в ноль, и доли соседних зон
+    // посчитать уже нечем — именно так они и зависали навсегда.
+    const poolAllocation = await getZonePoolAllocation(zone.pointId, tx);
+    const poolShare = poolAllocation.get(zoneId) ?? 0;
     const operation = await tx.moneyOperation.create({
       data: {
         tenantId: ctx.point.tenantId,
@@ -76,7 +80,7 @@ export async function POST(request: Request) {
     // Доли ОСТАЛЬНЫХ зон — той же транзакцией (С21/С23). Иначе после этой
     // инкассации отсечка аванса сдвигается, дефицит схлопывается в ноль, и
     // долг соседних зон не спишется уже никогда. Разбор — у самой функции.
-    await settleZonePoolRemainder(ctx.point.tenantId, zone.pointId, zoneId, ctx.operator.id, tx);
+    await settleZonePoolRemainder(ctx.point.tenantId, poolAllocation, zoneId, ctx.operator.id, tx);
     return { poolShare, operationId: operation.id, occurredAt: operation.occurredAt };
   });
 

@@ -135,10 +135,17 @@ export async function DELETE(request: Request, ctx: RouteContext<"/api/operator/
   let refundedAmount = 0;
   try {
     await prisma.$transaction(async (tx) => {
-      const refund = await refundTapPayment(tx, event, { id: point.id, tenantId: point.tenantId }, operator.id);
-      refundedWalletId = refund.walletId;
-      refundedAmount = refund.amount;
-    await tx.counterTapEvent.delete({ where: { id } });
+      // Возврат только если он ЕЩЁ НЕ СДЕЛАН. Пометка «Возврат/тест» уже
+      // возвращает деньги (С6), а кнопка «Удалить» рядом с ней не пропадает —
+      // сотрудник мог нажать обе подряд и зачислить клиенту двойную цену, с
+      // двумя минусовыми revenue_abonement в журнале. Найдено перепроверкой
+      // 2026-09-03: общий помощник закрыл одну дыру и открыл эту.
+      if (!event.voidedAt) {
+        const refund = await refundTapPayment(tx, event, { id: point.id, tenantId: point.tenantId }, operator.id);
+        refundedWalletId = refund.walletId;
+        refundedAmount = refund.amount;
+      }
+      await tx.counterTapEvent.delete({ where: { id } });
     });
   } catch (err) {
     // Гонка DELETE+DELETE/DELETE+PATCH одного и того же тапа (аудит

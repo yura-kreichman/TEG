@@ -741,7 +741,14 @@ export default function SubmitResultsPage() {
   // повторного запроса к серверу.
   function buildZReportData(summary: NonNullable<typeof result>["summary"]): PrintDocumentData {
     const sections: PrintSection[] = summary.map((s) => {
-      const isCashOnly = zones.find((z) => z.id === s.zoneId)?.accountingMode === "cash_only";
+      // Скрываем Расчёт/Разницу не только у «Только кассы», но и у Прибываний
+              // с Пусками (перепроверка 2026-09-03): у них выручка живёт в пусках,
+              // а офлайн клиент их не знает и считает по пустому tariffCalc — то
+              // есть показывал «Расчётная 0» и «Разница = вся касса». Сервер при
+              // разборе очереди посчитает верно, но сотрудник видел бы неправду.
+              const zoneMode = zones.find((z) => z.id === s.zoneId);
+              const isCashOnly =
+                zoneMode?.accountingMode === "cash_only" || isStaysZone(zoneMode ?? { accountingMode: "" }) || isLaunchesZone(zoneMode ?? { accountingMode: "" });
       return {
         title: s.zoneName,
         lines: [
@@ -802,7 +809,14 @@ export default function SubmitResultsPage() {
               // шаге "Проверка" ниже (реальный пред­существующий пробел,
               // найден аудитом 2026-07-20: этот экран после отправки
               // показывал их безусловно для любой зоны).
-              const isCashOnly = zones.find((z) => z.id === s.zoneId)?.accountingMode === "cash_only";
+              // Скрываем Расчёт/Разницу не только у «Только кассы», но и у Прибываний
+              // с Пусками (перепроверка 2026-09-03): у них выручка живёт в пусках,
+              // а офлайн клиент их не знает и считает по пустому tariffCalc — то
+              // есть показывал «Расчётная 0» и «Разница = вся касса». Сервер при
+              // разборе очереди посчитает верно, но сотрудник видел бы неправду.
+              const zoneMode = zones.find((z) => z.id === s.zoneId);
+              const isCashOnly =
+                zoneMode?.accountingMode === "cash_only" || isStaysZone(zoneMode ?? { accountingMode: "" }) || isLaunchesZone(zoneMode ?? { accountingMode: "" });
               return (
               <div
                 key={s.zoneId}
@@ -1584,7 +1598,23 @@ export default function SubmitResultsPage() {
               // абонементную сумму актива — тот же класс, что уже пофикшен
               // в lib/reports.ts/submit-results/counters-day/home-summary/
               // readings, просто пропущен здесь).
-              const diff = Math.round((actual + (revenue?.abonementAmount ?? 0) - calculated) * 100) / 100;
+              // Размен владельца лежит в ящике один раз на всю зону, а касса
+              // здесь вводится по активам — раскладываем его пропорционально
+              // введённым наличным (перепроверка 2026-09-03). Без этого
+              // поасетная «Разница» показывала излишек ровно на размен: блок с
+              // его вычитанием стоит в ветке «Счётчиков» и до Прибываний с
+              // Пусками не доходит, хотя зонная сумма на сервер уходит уже
+              // очищенной. Сумма долей по активам равна зонному вычету.
+              const zoneCashEntered = Object.values(activeForm.assetCash).reduce(
+                (sum, e) => sum + parseMoneyInput(e.cash),
+                0
+              );
+              const fundShare =
+                activeZone.changeFundAmount > 0 && zoneCashEntered > 0
+                  ? (activeZone.changeFundAmount * parseMoneyInput(entry.cash)) / zoneCashEntered
+                  : 0;
+              const diff =
+                Math.round((actual - fundShare + (revenue?.abonementAmount ?? 0) - calculated) * 100) / 100;
               // Наличные/Безнал переехали в один ряд со своими полями ввода
               // (запрос пользователя 2026-07-28), тот же приём, что у
               // "Счётчиков"/"Билетов" — тап сразу подставляет значение, без

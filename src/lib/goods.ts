@@ -715,6 +715,14 @@ export async function payGoodsHeldOrder(params: PayHeldOrderParams): Promise<Sol
           quantity: line.quantity,
           priceSnapshot: line.priceSnapshot,
           amount,
+          // Флаг учёта остатка переносится СО СТРОКИ ЗАКАЗА, а не берётся у
+          // товара заново. Остаток списался ещё при откладывании, а строки
+          // заказа сейчас удаляются вместе с ним — после этого узнать,
+          // списывался ли он, было бы неоткуда, и аннулирование оплаченного
+          // отложенного заказа возвращало бы штуки по нынешним настройкам
+          // товара. Четвёртое место создания продажи, пропущенное при первой
+          // правке. NULL у строк, отложенных до 2026-09-02.
+          stockTracked: line.stockTracked,
           paymentMethod: splitting ? PAYMENT_SPLIT_METHOD : paymentMethod,
           walletId: !splitting && paymentMethod === "abonement" ? walletId : null,
           performedByOperatorId: actor.operatorId,

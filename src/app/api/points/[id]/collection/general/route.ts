@@ -104,6 +104,14 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
       goodsCash
     );
     const shares = distributeCollectionWhole(zonePortion + poolDeficit, weights);
+    // Доля пула отдельно от введённой суммы (С51): в amount строки лежит
+    // «введённое + непогашенный аванс», а уведомление показывает ВВЕДЁННОЕ —
+    // «сколько физически забрали сейчас». Пересборка сообщения после правки
+    // складывала сырые суммы журнала и печатала «955 вместо 700». Разность
+    // двух разбивок, а не отдельная — только так доли сходятся по копейкам с
+    // теми, что реально записаны.
+    const sharesWithoutPool = distributeCollectionWhole(zonePortion, weights);
+    const poolShares = shares.map((v, i) => Math.round((v - (sharesWithoutPool[i] ?? 0)) * 100) / 100);
 
     const rows = zones
       .map((zone, i) => ({
@@ -111,6 +119,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
         zoneId: zone.id,
         type: "collection",
         amount: -Math.abs(shares[i]),
+        poolShareAmount: poolShares[i] ?? 0,
         performedByUserId: owner.user.id,
       }))
       .filter((row) => row.amount !== 0);

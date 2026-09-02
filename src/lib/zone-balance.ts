@@ -715,18 +715,22 @@ export async function getZonePoolShare(
  * которую инкассировали, уходила в ложный минус. Общая инкассация всегда
  * гасила дефицит целиком — теперь так же делает и зонная.
  *
- * Вызывать ВНУТРИ транзакции инкассации, ПОСЛЕ создания её собственной
- * записи: доля этой зоны уже включена в сумму инкассации, повторно её писать
- * нельзя. Тип строк — advance_settlement, как у обычного разнесения аванса.
+ * Принимает ГОТОВЫЙ снимок долей, а не считает их сам. Это принципиально:
+ * запись инкассации сдвигает отсечку аванса, тот выпадает из остатка точки, и
+ * пересчитанный после неё дефицит выходит нулевым — функция писала бы пустой
+ * набор строк, то есть не делала бы ровно того, ради чего заведена. Снимок
+ * берётся ДО создания записи, под тем же локом.
+ *
+ * Доля самой инкассируемой зоны сюда не попадает: она уже включена в сумму
+ * инкассации. Тип строк — advance_settlement, как у обычного разнесения.
  */
 export async function settleZonePoolRemainder(
   tenantId: string,
-  pointId: string,
+  allocation: Map<string, number>,
   collectedZoneId: string,
   performedByOperatorId: string | null,
   tx: Tx
 ): Promise<void> {
-  const allocation = await getZonePoolAllocation(pointId, tx);
   const rows = [...allocation.entries()]
     .filter(([zoneId, amount]) => zoneId !== collectedZoneId && amount > 0)
     .map(([zoneId, amount]) => ({

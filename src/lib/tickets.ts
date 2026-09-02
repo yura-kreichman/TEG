@@ -74,7 +74,7 @@ export async function findOperatorTicketsZone(
  * пока другой в том же заказе ещё "жив".
  */
 export function isTicketOrderExpired(order: { expiresAt: Date | null }, now: Date = new Date()): boolean {
-  return order.expiresAt != null && order.expiresAt < now;
+  return order.expiresAt != null && order.expiresAt <= now;
 }
 
 /** "Истёк ли" конкретный билет — активный билет заказа, чей срок истёк. Билеты
@@ -103,15 +103,14 @@ export function isTicketExpired(
  */
 export function computeTicketExpiresAt(soldAt: Date, lifetimeDays: number, timezone: string): Date {
   const { year, month, day } = localDateParts(soldAt, timezone);
-  const shifted = new Date(Date.UTC(year, month - 1, day + lifetimeDays));
-  return zonedWallTimeToUtc(
-    shifted.getUTCFullYear(),
-    shifted.getUTCMonth() + 1,
-    shifted.getUTCDate(),
-    23,
-    59,
-    timezone
-  );
+  // Граница — НАЧАЛО СЛЕДУЮЩЕГО местного дня, а не 23:59 последнего (С61).
+  // Секунд у zonedWallTimeToUtc нет вовсе, поэтому 23:59 отрезало последнюю
+  // минуту напечатанного дня: билет с датой «16.08» с 23:59:00 до 23:59:59
+  // уже получал «Срок истёк», хотя на бумаге у клиента ещё сегодня. Начало
+  // следующего дня и сравнение через `expiresAt <= now` (isTicketExpired)
+  // дают ровно календарный день, без потерянного хвоста.
+  const shifted = new Date(Date.UTC(year, month - 1, day + lifetimeDays + 1));
+  return zonedWallTimeToUtc(shifted.getUTCFullYear(), shifted.getUTCMonth() + 1, shifted.getUTCDate(), 0, 0, timezone);
 }
 
 export interface TicketOrderAggregate {
@@ -160,13 +159,16 @@ export async function aggregateTicketOrders(
       priceSnapshot: true,
       status: true,
       orderId: true,
-      order: { select: { paymentMethod: true, expiresAt: true } },
+      order: { select: { paymentMethod: true, expiresAt: true, totalSnapshot: true } },
     },
   });
 
   const now = new Date();
   const orderIds = new Set<string>();
   const splitOrderIds = new Set<string>();
+  // Сколько денег заказа попало в окно — для пропорции долей (С27).
+  const countedByOrder = new Map<string, number>();
+  const totalByOrder = new Map<string, number>();
   let totalAmount = 0;
   let cashAmount = 0;
   let mobileAmount = 0;
@@ -185,19 +187,44 @@ export async function aggregateTicketOrders(
     // ЗАКАЗУ, не по билету, ниже (частичное аннулирование разбитого заказа
     // запрещено сервером, поэтому пока у заказа есть хоть один незачёркнутый
     // билет в окне — это ВЕСЬ его исходный набор долей, без пропорций).
-    else if (t.order.paymentMethod === PAYMENT_SPLIT_METHOD) splitOrderIds.add(t.orderId);
+    else if (t.order.paymentMethod === PAYMENT_SPLIT_METHOD) {
+      splitOrderIds.add(t.orderId);
+      countedByOrder.set(t.orderId, (countedByOrder.get(t.orderId) ?? 0) + amount);
+      totalByOrder.set(t.orderId, Number(t.order.totalSnapshot));
+    }
 
     if (t.status === "redeemed") redeemedCount += 1;
     else if (isTicketExpired({ status: t.status }, t.order, now)) expiredCount += 1;
   }
 
   if (splitOrderIds.size > 0) {
-    const legs = await tx.ticketOrderPaymentLeg.findMany({ where: { orderId: { in: [...splitOrderIds] } } });
+    const legs = await tx.ticketOrderPaymentLeg.findMany({ where: { orderId: { in: [...splitOrderIds] } }, orderBy: { order: "asc" } });
+    // Доли — ПРОПОРЦИОНАЛЬНО сумме билетов заказа, попавших в окно (С27). При
+    // любом попавшем билете к окну прибавлялись доли ЗАКАЗА ЦЕЛИКОМ: если
+    // часть билетов уже отменена, итог считался по уцелевшим, а разбивка — по
+    // всем, и «нал + безнал + баланс» переставало сходиться с «Итого».
+    // Остаток округления — на последнюю долю, как у долей корзины Товаров.
+    const byOrder = new Map<string, { method: string; amount: number }[]>();
     for (const leg of legs) {
-      const amount = Number(leg.amount);
-      if (leg.method === "cash") cashAmount += amount;
-      else if (leg.method === "mobile") mobileAmount += amount;
-      else if (leg.method === "abonement") abonementAmount += amount;
+      const list = byOrder.get(leg.orderId) ?? [];
+      list.push({ method: leg.method, amount: Number(leg.amount) });
+      byOrder.set(leg.orderId, list);
+    }
+    for (const [orderId, list] of byOrder) {
+      const counted = countedByOrder.get(orderId) ?? 0;
+      const orderTotal = totalByOrder.get(orderId) ?? 0;
+      const ratio = orderTotal > 0 ? counted / orderTotal : 0;
+      let allocated = 0;
+      list.forEach((leg, i) => {
+        const share =
+          i === list.length - 1
+            ? Math.round((counted - allocated) * 100) / 100
+            : Math.round(leg.amount * ratio * 100) / 100;
+        allocated += share;
+        if (leg.method === "cash") cashAmount += share;
+        else if (leg.method === "mobile") mobileAmount += share;
+        else if (leg.method === "abonement") abonementAmount += share;
+      });
     }
   }
 

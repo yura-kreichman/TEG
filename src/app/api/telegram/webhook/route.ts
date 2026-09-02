@@ -745,8 +745,11 @@ async function buildAbonementsInfo(tenant: { id: string; currency: string | null
   const pointNames = points.map((p) => escapeHtml(p.name)).join(", ");
   const lines = [s.abonementsIntro(pointNames)];
   for (const plan of plans) {
-    const priceStr = formatMoneyWithCurrency(Number(plan.price), "ru", currency);
-    const creditStr = formatMoneyWithCurrency(Number(plan.creditAmount), "ru", currency);
+    // Язык КЛИЕНТА, не жёсткое "ru" (С89): текст бота переведён на все его
+    // языки, а суммы печатались с русской группировкой разрядов и русским
+    // разделителем — румын получал перевод с чужим форматом чисел.
+    const priceStr = formatMoneyWithCurrency(Number(plan.price), lang, currency);
+    const creditStr = formatMoneyWithCurrency(Number(plan.creditAmount), lang, currency);
     // Безымянный план (Abonement.name опционален) — тот же фоллбэк, что уже
     // используют владельческие/операторские экраны (plan.name ?? цена).
     // Экранируем ДО подстановки в HTML-шаблон abonementLine (запрос
@@ -800,7 +803,7 @@ async function buildClientReport(
   const lines = [
     greetingLine(wallet.name ? escapeHtml(wallet.name) : null, s),
     ...(isMultiTenant ? [s.companyLine(escapeHtml(tenant.name))] : []),
-    `${s.yourBalance}: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`,
+    `${s.yourBalance}: <b>${formatMoneyWithCurrency(Number(wallet.balance), lang, currency)}</b>`,
   ];
 
   // Обогащённая история (запрос пользователя 2026-07-23: раньше строка была
@@ -863,7 +866,7 @@ async function buildClientReport(
       const label = h.type === "spend" ? (detail ?? typeLabel) : detail ? `${typeLabel} · ${detail}` : typeLabel;
       // Сумма — жирным (запрос пользователя 2026-07-25: "красивое
       // форматирование... суммы жирным"), остальное обычным текстом.
-      lines.push(`${date} ${time}  ${label}  <b>${sign}${formatMoneyWithCurrency(Number(h.amount), "ru", currency)}</b>`);
+      lines.push(`${date} ${time}  ${label}  <b>${sign}${formatMoneyWithCurrency(Number(h.amount), lang, currency)}</b>`);
     }
   }
 
