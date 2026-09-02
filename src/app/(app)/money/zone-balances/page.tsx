@@ -322,7 +322,10 @@ export default function ZoneBalancesPage() {
         setError(data.error ?? "Не удалось провести размен");
         return;
       }
-      await loadReport();
+      // Реестр тоже: с 2026-09-02 размен стоит в «Движении денег» строкой, и
+      // без loadCollections новая строка появлялась только после F5. Раньше
+      // обработчику хватало остатков — в реестре размена просто не было.
+      await Promise.all([loadReport(), loadCollections()]);
       changeFundPulse(() => {
         setChangeFundAmount("");
         setChangeFundTarget(null);
