@@ -8,6 +8,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { smallestFreeNumber, previousSubmissionBoundary, LAUNCH_PAYMENT_METHODS } from "@/lib/game-room";
 import { PAYMENT_SPLIT_METHOD } from "@/lib/payment-split";
+import { localDateParts, zonedWallTimeToUtc } from "@/lib/business-day";
 
 type Tx = Prisma.TransactionClient;
 
@@ -86,13 +87,31 @@ export function isTicketExpired(
   return ticket.status === "active" && isTicketOrderExpired(order, now);
 }
 
-/** Конец дня (23:59:59.999) для снапшота expiresAt при продаже — "дата
- * продажи + дни; конец дня" (docs/spec/10-tickets.md, "СРОК ЖИЗНИ"). */
-export function computeTicketExpiresAt(soldAt: Date, lifetimeDays: number): Date {
-  const d = new Date(soldAt);
-  d.setDate(d.getDate() + lifetimeDays);
-  d.setHours(23, 59, 59, 999);
-  return d;
+/**
+ * Срок жизни билета: конец дня «дата продажи + lifetimeDays» в поясе ТЕНАНТА.
+ *
+ * Раньше считалось через setDate/setHours — то есть в поясе процесса Node
+ * (генеральная проверка финансов 2026-09-02, С16). У молдавского тенанта
+ * сервер живёт в UTC, и билет сгорал в 23:59:59 UTC, то есть в 02:59 по
+ * местному времени следующего дня — не в ту полночь, что напечатана на самом
+ * билете. Спека (docs/spec/10-tickets.md:35) говорит «конец дня», и это
+ * очевидно день тенанта: дата уходит клиенту на бумаге.
+ *
+ * Считаем через zonedWallTimeToUtc, а сдвиг дня — пересчётом Y/M/D, а не
+ * прибавкой 24 часов: сутки не всегда 24 часа (переход на летнее время), и
+ * этот же файл-помощник об этом предупреждает в шапке.
+ */
+export function computeTicketExpiresAt(soldAt: Date, lifetimeDays: number, timezone: string): Date {
+  const { year, month, day } = localDateParts(soldAt, timezone);
+  const shifted = new Date(Date.UTC(year, month - 1, day + lifetimeDays));
+  return zonedWallTimeToUtc(
+    shifted.getUTCFullYear(),
+    shifted.getUTCMonth() + 1,
+    shifted.getUTCDate(),
+    23,
+    59,
+    timezone
+  );
 }
 
 export interface TicketOrderAggregate {

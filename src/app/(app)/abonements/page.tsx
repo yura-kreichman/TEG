@@ -392,15 +392,26 @@ export default function AbonementsPage() {
   // 2026-08-16: единый список, а не карточка на каждую продажу).
   const saleGroups: { date: string; items: SaleInfo[] }[] = [];
   for (const s of sales) {
-    const dateKey = s.occurredAt.slice(0, 10);
+    // Заголовок дня — по МЕСТНОЙ дате устройства, а не по UTC-дате ISO-строки
+    // (генеральная проверка финансов 2026-09-02, С15). `.slice(0, 10)` берёт
+    // календарную дату из UTC-момента: продажа в 02:00 по Кишинёву показывала
+    // над собой вчерашнее число, потому что в UTC это ещё 23:00. Сервер к
+    // этому моменту уже режет период по границе дня тенанта — оставь здесь
+    // UTC, и строка приезжала бы в правильное окно, но под чужим заголовком.
+    const local = new Date(s.occurredAt);
+    const dateKey = `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, "0")}-${String(
+      local.getDate()
+    ).padStart(2, "0")}`;
     const lastGroup = saleGroups[saleGroups.length - 1];
     if (lastGroup && lastGroup.date === dateKey) lastGroup.items.push(s);
     else saleGroups.push({ date: dateKey, items: [s] });
   }
 
   function formatSaleGroupDate(dateStr: string) {
-    const d = new Date(dateStr + "T00:00:00Z");
-    return d.getUTCDate() + " " + t.readings.monthsGenitive[d.getUTCMonth()];
+    // Ключ уже местный (см. группировку выше) — разбираем его как местную
+    // дату, а не как UTC-полночь, иначе подпись снова уехала бы на день.
+    const [, m, d] = dateStr.split("-").map(Number);
+    return d + " " + t.readings.monthsGenitive[m - 1];
   }
   async function deleteWallet() {
     if (!walletKebabTarget) return;

@@ -39,12 +39,18 @@ export async function GET(request: Request) {
   const { hours: bh, minutes: bm } = parseBoundary(boundary);
   const todayLocal = businessDayOf(today, timezone, boundary);
   const todayNext = new Date(Date.UTC(todayLocal.year, todayLocal.month - 1, todayLocal.day + 1));
+  // Граница дня тенанта, НЕ полночь (генеральная проверка финансов
+  // 2026-09-02, С14). Начало периода ниже считается по bh/bm, а конец брался
+  // по 0:00 — при границе 06:00 и часовом поясе +3 «сегодня» заканчивалось на
+  // шесть часов раньше, чем начинался завтрашний день, и операции ночного
+  // хвоста не попадали ни в один период. Симптом менялся каждую ночь: после
+  // местной полуночи todayEnd оказывался В ПРОШЛОМ относительно now.
   const todayEnd = zonedWallTimeToUtc(
     todayNext.getUTCFullYear(),
     todayNext.getUTCMonth() + 1,
     todayNext.getUTCDate(),
-    0,
-    0,
+    bh,
+    bm,
     timezone
   );
 
@@ -63,7 +69,12 @@ export async function GET(request: Request) {
     granularity = "custom";
     start = zonedWallTimeToUtc(fromParts.year, fromParts.month, fromParts.day, bh, bm, timezone);
     const nextDay = new Date(Date.UTC(toParts.year, toParts.month - 1, toParts.day + 1));
-    end = zonedWallTimeToUtc(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate(), 0, 0, timezone);
+    // bh/bm с ОБЕИХ сторон — как во всех остальных роутах
+    // (resolvePeriodFromParams, goods/sales, revisions). Раньше конец
+    // произвольного диапазона резался полуночью, и сдача, сделанная после
+    // местной полуночи, но до границы дня, выпадала и из выбранного периода,
+    // и из следующего.
+    end = zonedWallTimeToUtc(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate(), bh, bm, timezone);
     if (end > todayEnd) end = todayEnd;
     if (start > end) start = end;
   } else {

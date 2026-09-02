@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
+import { getTenantDayContext } from "@/lib/tenant-day";
+import { periodBoundsUtc } from "@/lib/business-day";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
 /**
@@ -33,12 +35,22 @@ export async function GET(request: Request) {
   const planId = searchParams.get("planId");
   const q = (searchParams.get("q") ?? "").trim();
 
+  // Дни режутся по границе дня ТЕНАНТА, а не по UTC-полуночи (генеральная
+  // проверка финансов 2026-09-02, С15). Раньше здесь стояло
+  // `new Date(\`${from}T00:00:00.000Z\`)`: при поясе +3 и границе 06:00 в
+  // реестр за 15-е попадали операции, которые по дню тенанта относятся к
+  // 14-му, и выпадали операции раннего утра 16-го. Одна и та же продажа в
+  // «Итогах дня» и в реестре «Клиенты → Продажи» показывалась в разных днях.
+  // Соседний /api/abonement-wallets/[id] период считает правильно — здесь был
+  // единственный отставший.
+  const { timezone, boundary } = await getTenantDayContext(owner.tenantId);
   const occurredAt: { gte?: Date; lt?: Date } = {};
-  if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) occurredAt.gte = new Date(`${from}T00:00:00.000Z`);
-  if (to && /^\d{4}-\d{2}-\d{2}$/.test(to)) {
-    const end = new Date(`${to}T00:00:00.000Z`);
-    end.setUTCDate(end.getUTCDate() + 1);
-    occurredAt.lt = end;
+  const validFrom = from && /^\d{4}-\d{2}-\d{2}$/.test(from) ? from : null;
+  const validTo = to && /^\d{4}-\d{2}-\d{2}$/.test(to) ? to : null;
+  if (validFrom || validTo) {
+    const bounds = periodBoundsUtc(validFrom ?? validTo!, validTo ?? validFrom!, timezone, boundary);
+    if (validFrom) occurredAt.gte = bounds.from;
+    if (validTo) occurredAt.lt = bounds.to;
   }
 
   const sales = await prisma.abonementTransaction.findMany({

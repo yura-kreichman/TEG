@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOperator } from "@/lib/require-operator";
 import { requireOwner, findTenantZone } from "@/lib/require-owner";
 import {
@@ -266,9 +267,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   const now = new Date();
   // Срок жизни — только при включённом гашении (докс, "СРОК ЖИЗНИ"); при
   // выключенном гашении или ticketLifetimeDays=null — бессрочно.
+  // Пояс ТЕНАНТА, не сервера (генеральная проверка финансов 2026-09-02, С16):
+  // дата сгорания печатается на билете и должна совпадать с местной полночью.
+  const { timezone } = await getTenantDayContext(point.tenantId);
   const expiresAt =
     zone.ticketRedemptionEnabled && zone.ticketLifetimeDays != null
-      ? computeTicketExpiresAt(now, zone.ticketLifetimeDays)
+      ? computeTicketExpiresAt(now, zone.ticketLifetimeDays, timezone)
       : null;
 
   let result;
