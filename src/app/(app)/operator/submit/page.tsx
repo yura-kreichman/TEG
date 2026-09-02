@@ -60,6 +60,25 @@ interface AssetCtx {
   active: boolean;
   previousReadings: Record<string, number>;
 }
+/**
+ * Выручка наличными из того, что сотрудник пересчитал в ящике.
+ *
+ * Поле мастера просит «сколько наличных осталось в кассе» — то есть ВЕСЬ
+ * ящик. А в ящике лежит ещё и размен, который положил ВЛАДЕЛЕЦ (вносится
+ * только им, из «Остатков и инкассаций»). Сотрудник об этих деньгах знать не
+ * обязан и раньше не знал вовсе: до 2026-09-02 в мастере сдачи слова
+ * «размен» не было.
+ *
+ * Поэтому вычитаем здесь, а не просим сотрудника считать в уме, и не меняем
+ * формулу сверки: в базу уходит уже очищенная выручка, и «Разница» сходится
+ * сама. Одна и та же функция используется и для предпросмотра «Разницы», и
+ * для отправки — иначе экран и сервер снова посчитали бы по-разному (этот
+ * класс расхождения уже ловили 2026-08-22 на расходах).
+ */
+function revenueCashOf(cashAmount: string, changeFundAmount: number): number {
+  return Math.max(0, parseMoneyInput(cashAmount) - (changeFundAmount || 0));
+}
+
 interface ZoneCtx {
   id: string;
   name: string;
@@ -539,7 +558,7 @@ export default function SubmitResultsPage() {
       const agg = ticketsAggregateByZone[zoneId];
       const calculatedRevenue = agg?.totalAmount ?? 0;
       const abonementAmount = agg?.abonementAmount ?? 0;
-      const actualCash = parseMoneyInput(form.cashAmount) + parseMoneyInput(form.mobileAmount);
+      const actualCash = revenueCashOf(form.cashAmount, zone.changeFundAmount) + parseMoneyInput(form.mobileAmount);
       const difference =
         Math.round((actualCash + zoneExpenses + abonementAmount - calculatedRevenue) * 100) / 100;
       return { calculatedRevenue, netRevenue: calculatedRevenue, actualCash, difference, abonementAmount };
@@ -613,7 +632,9 @@ export default function SubmitResultsPage() {
       return {
         zoneId,
         returnsCount: Number(form.returnsCount || 0),
-        cashAmount: parseMoneyInput(form.cashAmount),
+        // Размен вычтен: в поле сотрудник вводит ВЕСЬ ящик, а выручкой
+        // деньги владельца не являются (см. revenueCashOf).
+        cashAmount: revenueCashOf(form.cashAmount, zone.changeFundAmount),
         mobileAmount: parseMoneyInput(form.mobileAmount),
         readings,
       };
@@ -1162,7 +1183,13 @@ export default function SubmitResultsPage() {
                 // 2026-07-28: "не будем делать изначально скрытым, пусть
                 // будет видно всегда") — раньше был промежуточный шаг
                 // "раскрыть размытие", больше не нужен, число видно сразу.
-                const fillCash = () => updateZoneField(activeZone.id, "cashAmount", String(cashHint));
+                // Подсказка-подстановка предлагает то, что должно ЛЕЖАТЬ В
+                // ЯЩИКЕ, а не расчётную выручку: поле просит весь ящик, а в
+                // нём вместе с выручкой лежит размен владельца. Без этого тап
+                // по подсказке подставлял бы сумму без размена, а вычитание
+                // ниже отняло бы его второй раз (разбор 2026-09-02).
+                const cashHintInTill = cashHint > 0 ? cashHint + activeZone.changeFundAmount : 0;
+                const fillCash = () => updateZoneField(activeZone.id, "cashAmount", String(cashHintInTill));
                 const fillMobile = () => updateZoneField(activeZone.id, "mobileAmount", String(mobileHint));
                 return (
                   <>
@@ -1186,7 +1213,7 @@ export default function SubmitResultsPage() {
                               className="flex h-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-control px-2.5"
                             >
                               <span className="text-lg font-semibold tabular-nums leading-none text-muted-foreground/50">
-                                <Money value={cashHint} />
+                                <Money value={cashHintInTill} />
                               </span>
                               <span className="text-[0.625rem] leading-none text-muted-foreground/40">
                                 {t.operatorApp.submit.tapHintCaption}
@@ -1228,23 +1255,27 @@ export default function SubmitResultsPage() {
                         );
                       })()}
                       {/* Размен в кассе (разбор с владельцем Игроленда
-                          2026-09-02) — деньги владельца, положенные на сдачу.
-                          Физически они в ящике, но выручкой не являются, и
-                          сверка их не вычитает: если включить их в сумму,
-                          «Разница» покажет излишек ровно на размен.
-                          Раньше об этом не говорилось нигде — сам размен живёт
-                          в «Остатках и инкассациях», куда сотрудник не ходит.
-                          Подсказка, а НЕ автоматическое вычитание: из данных
-                          невозможно узнать, пересчитывает сотрудник весь ящик
-                          или уже отложил размен, и вычесть вслепую значило бы
-                          выдумать недостачу. */}
+                          2026-09-02). Деньги кладёт ВЛАДЕЛЕЦ — сотрудник их не
+                          вносил и знать о них не обязан, поэтому вычитаем сами
+                          и показываем арифметику, а не просим считать в уме.
+                          Поле выше просит весь ящик, размен в нём лежит. */}
                       {activeZone.changeFundAmount > 0 && (
-                        <p className="text-caption-airbnb text-muted-foreground">
-                          {t.operatorApp.submit.changeFundInTillHint}{" "}
-                          <span className="font-semibold tabular-nums text-foreground">
-                            <Money value={activeZone.changeFundAmount} />
+                        <div className="flex flex-col gap-0.5 rounded-control bg-muted/60 px-3 py-2 text-caption-airbnb">
+                          <span className="flex items-center justify-between gap-2 text-muted-foreground">
+                            <span>{t.operatorApp.submit.changeFundInTillLabel}</span>
+                            <span className="font-semibold tabular-nums">
+                              −<Money value={activeZone.changeFundAmount} />
+                            </span>
                           </span>
-                        </p>
+                          <span className="flex items-center justify-between gap-2">
+                            <span className="text-muted-foreground">
+                              {t.operatorApp.submit.changeFundRevenueLabel}
+                            </span>
+                            <span className="font-bold tabular-nums text-foreground">
+                              <Money value={revenueCashOf(activeForm.cashAmount, activeZone.changeFundAmount)} />
+                            </span>
+                          </span>
+                        </div>
                       )}
                     </div>
                     <div className="flex flex-col gap-1">
