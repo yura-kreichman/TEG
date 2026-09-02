@@ -138,7 +138,31 @@ export async function resyncZoneSummaryMessage(
       return { tariffId: tariff.id, price: Number(tariff.price), sessions };
     });
     calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
-    netRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
+    // Тап-зона — ТОЧНЫЙ вычет по тарифу, как в сдаче итогов и как теперь в
+    // reports.ts (генеральная проверка финансов 2026-09-02, С5). У тап-зоны
+    // returnsCount в сдаче всегда 0, и пропорциональный calcZoneRevenue давал
+    // другую Разницу, чем сама сдача. Особенно заметно было в чате: первичная
+    // сводка уходит с точными числами, а ПЕРЕСБОРКА после правки кассы
+    // считала иначе — цифра менялась, хотя выручка не менялась.
+    const voidedTaps = zs.zone.countersTapAssistEnabled
+      ? await prisma.counterTapEvent.groupBy({
+          by: ["tariffId"],
+          where: {
+            zoneId: zs.zoneId,
+            voidedAt: { not: null },
+            createdAt: { gt: boundary ?? new Date(0), lte: zs.createdAt },
+          },
+          _count: { _all: true },
+        })
+      : [];
+    const voidedByTariff = new Map(voidedTaps.map((v) => [v.tariffId, v._count._all]));
+    netRevenue =
+      voidedByTariff.size > 0
+        ? tariffCalc.reduce(
+            (sum, tc) => sum + Math.max(tc.sessions - (voidedByTariff.get(tc.tariffId) ?? 0), 0) * tc.price,
+            0
+          )
+        : calcZoneRevenue(tariffCalc, zs.returnsCount);
 
     readingLines = zs.zone.assets.flatMap((asset) =>
       zs.zone.tariffs
