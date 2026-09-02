@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
+import { getOutstandingCollectionAdvance } from "@/lib/zone-balance";
 
 type Tx = Prisma.TransactionClient;
 
@@ -52,7 +53,7 @@ export async function getExpenseCompensation(
   now: Date,
   client: Tx | typeof prisma = prisma
 ): Promise<ExpenseCompensation> {
-  const [rawExpenses, collections, advanceOps] = await Promise.all([
+  const [rawExpenses, collections] = await Promise.all([
     client.moneyOperation.findMany({
       where: {
         type: "expense",
@@ -66,10 +67,6 @@ export async function getExpenseCompensation(
     client.moneyOperation.findMany({
       where: { type: "collection", zone: { pointId }, occurredAt: { gte: windowStart, lte: now } },
       select: { zoneId: true, occurredAt: true },
-    }),
-    client.moneyOperation.findMany({
-      where: { pointId, type: "collection_advance", occurredAt: { gte: windowStart, lte: now } },
-      select: { amount: true },
     }),
   ]);
 
@@ -89,9 +86,24 @@ export async function getExpenseCompensation(
     if (!known || op.occurredAt > known) lastCollectionByZone.set(op.zoneId, op.occurredAt);
   }
 
-  // Хранится отрицательным (деньги покинули точку), погашения — плюсом:
-  // сумма по окну и есть "сколько ещё взято сверх кассы и не разнесено".
-  let advanceBudget = Math.max(0, -advanceOps.reduce((sum, op) => sum + Number(op.amount), 0));
+  // НЕПОГАШЕННЫЙ остаток «Аванса инкассации», а не сумма по окну бизнес-дня
+  // (генеральная проверка финансов 2026-09-02, С13).
+  //
+  // Положительные строки этого типа — не «меньше взяли», а АВТОПОГАШЕНИЕ
+  // долга, возможно вчерашнего (settleOutstandingCollectionAdvance). Сумма по
+  // окну складывала сегодняшнее погашение чужого долга с сегодняшним новым
+  // авансом и уходила в минус:
+  //
+  //   вчера   collection_advance −1000
+  //   сегодня 09:00 сдача пишет  +1000   (гасит ВЧЕРАШНИЙ долг)
+  //           12:00 расход 300
+  //           14:00 инкассация сверх остатков → −400
+  //   окно = [+1000, −400] → max(0, −600) = 0   вместо 400
+  //
+  // Расход 300 отбрасывался: выручка зоны писалась 200 вместо 500, у
+  // сотрудника возникала ложная недостача. getOutstandingCollectionAdvance
+  // читает историю без окна и отвечает ровно на нужный вопрос.
+  let advanceBudget = await getOutstandingCollectionAdvance(pointId, client);
 
   const compensableIds = new Set<string>();
   const compensatedByZone = new Map<string, number>();

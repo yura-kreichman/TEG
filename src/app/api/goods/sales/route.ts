@@ -88,7 +88,21 @@ export async function GET(request: Request) {
     },
   });
 
-  const nonVoided = sales.filter((s) => !s.voidedAt);
+  // Итоги и график — по ВСЕМУ периоду, а не по первым 300 строкам списка
+  // (генеральная проверка финансов 2026-09-02, С9). Шапка строилась из того же
+  // обрезанного массива, и при 14 продажах в день месяц без сверки давал
+  // 45 000 вместо 63 000 — при том что соседняя вкладка «Кассы» считает
+  // groupBy без лимита и показывает верное число. Признака «показаны первые
+  // 300» на экране нет вовсе, так что владелец видел просто заниженный итог.
+  //
+  // Отдельный запрос с тощим select: строки списка тянут связи (товар, точка,
+  // сотрудник, клиент), а для арифметики нужны четыре поля.
+  const allSales = await prisma.goodsSale.findMany({
+    where,
+    select: { id: true, quantity: true, amount: true, paymentMethod: true, voidedAt: true, occurredAt: true },
+  });
+
+  const nonVoided = allSales.filter((s) => !s.voidedAt);
   let cash = nonVoided.filter((s) => s.paymentMethod === "cash").reduce((sum, s) => sum + Number(s.amount), 0);
   let mobile = nonVoided.filter((s) => s.paymentMethod === "mobile").reduce((sum, s) => sum + Number(s.amount), 0);
   let abonement = nonVoided.filter((s) => s.paymentMethod === "abonement").reduce((sum, s) => sum + Number(s.amount), 0);
@@ -100,11 +114,14 @@ export async function GET(request: Request) {
   // разложенными по продаже. Берём по ВСЕМ продажам списка, включая
   // аннулированные: иконки у них тоже рисуются, а в суммы попадают только
   // неаннулированные — фильтр ниже.
-  const splitSaleIds = sales.filter((s) => s.paymentMethod === "split").map((s) => s.id);
+  // По ВСЕМ продажам периода (С9): иначе доли сплит-продаж за пределами
+  // первых 300 не попадали бы в суммы. Для иконок в строках это безвредно —
+  // лишние записи просто не запрашиваются по id.
+  const splitSaleIds = allSales.filter((s) => s.paymentMethod === "split").map((s) => s.id);
   const legsBySale = new Map<string, { method: string; amount: number }[]>();
   if (splitSaleIds.length > 0) {
     const legs = await prisma.goodsSalePaymentLeg.findMany({ where: { saleId: { in: splitSaleIds } } });
-    const voidedIds = new Set(sales.filter((s) => s.voidedAt).map((s) => s.id));
+    const voidedIds = new Set(allSales.filter((s) => s.voidedAt).map((s) => s.id));
     for (const leg of legs) {
       const list = legsBySale.get(leg.saleId) ?? [];
       list.push({ method: leg.method, amount: Number(leg.amount) });

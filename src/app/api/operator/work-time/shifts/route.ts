@@ -192,16 +192,23 @@ export async function POST(request: Request) {
   if (advanceAmount + bonusAmount > 0) {
     const result = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${point.id}))`;
-      const freshBalance = await getPointCashBalance(point.id);
-      if (cashOutAmount > freshBalance) {
+      // С tx, а не мимо него: авторитетная проверка под локом обязана читать
+      // данные ТОЙ ЖЕ транзакции, иначе лок защищает не то, что проверяется.
+      const freshBalance = await getPointCashBalance(point.id, tx);
+      // cashOutAmount > 0 — см. С11 в check-out: в режиме «Только начисление»
+      // из кассы не уходит ничего, и без обёртки премия терялась при
+      // отрицательной кассе точки.
+      if (cashOutAmount > 0 && cashOutAmount > freshBalance) {
         return { ok: false as const, reason: "point" as const, freshBalance };
       }
       if (advanceAmount > 0) {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${operator.id}))`;
         const freshOperatorBalance = await calcOperatorBalance(operator.id, undefined, tx);
-        const rate = await getRateForDate(operator.id, startAt);
-        const { accrued } = calcShiftAccrual(startAt, endAt, rate);
-        const projectedToPayOut = freshOperatorBalance.toPayOut + accrued;
+        // БЕЗ прибавки accrued (С10): смена создана выше, строкой 166, и уже
+        // закрыта — её начисление внутри toPayOut. Прибавка считала его
+        // дважды и делала авторитетную проверку мягче оптимистичной ровно на
+        // смену зарплаты, при том что существует она именно ради строгости.
+        const projectedToPayOut = freshOperatorBalance.toPayOut;
         if (!operator.overdraftAllowed && advanceAmount > projectedToPayOut) {
           return { ok: false as const, reason: "personal" as const, projectedToPayOut };
         }

@@ -140,13 +140,27 @@ export async function POST(request: Request) {
 
     if (advanceAmount + bonusAmount > 0) {
       const freshBalance = await getPointCashBalance(shiftPointId, tx);
-      if (cashOutAmount > freshBalance) {
+      // Условие cashOutAmount > 0 обязательно (С11): в режиме «Только
+      // начисление» из кассы не уходит ничего, и без него проверка
+      // вырождалась в «ноль больше остатка» — при отрицательной кассе точки
+      // (её уводят расходы, они остаток не проверяют) начисленная премия
+      // просто терялась. Вместе с ней пропадала сводка закрытия смены, а
+      // повторить было нельзя: смена уже закрыта, второй заход даёт 409.
+      // Оптимистичная проверка выше такую обёртку имеет с самого начала.
+      if (cashOutAmount > 0 && cashOutAmount > freshBalance) {
         return { ok: false as const, reason: "point" as const, freshBalance };
       }
       if (advanceAmount > 0) {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${operator.id}))`;
         const freshOperatorBalance = await calcOperatorBalance(operator.id, undefined, tx);
-        const projectedToPayOut = freshOperatorBalance.toPayOut + accrued;
+        // БЕЗ прибавки accrued (генеральная проверка финансов 2026-09-02, С10).
+        // Оптимистичная проверка выше читает баланс, пока смена ещё открыта, и
+        // там прибавка обязательна: calcOperatorBalance считает только ЗАКРЫТЫЕ
+        // смены. Здесь смена уже закрыта этой же транзакцией, её начисление
+        // внутри toPayOut — прибавка учитывала его дважды и делала
+        // авторитетную проверку мягче оптимистичной ровно на смену зарплаты.
+        // Эталон — work-time/shifts/[id]/route.ts.
+        const projectedToPayOut = freshOperatorBalance.toPayOut;
         if (!operator.overdraftAllowed && advanceAmount > projectedToPayOut) {
           return { ok: false as const, reason: "personal" as const, projectedToPayOut };
         }

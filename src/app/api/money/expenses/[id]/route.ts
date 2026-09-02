@@ -123,11 +123,29 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/expe
     // новую: правка суммы намеренно оставляет выручку нетронутой и проявляется
     // как недостача/излишек в Разнице — тут меняется только адрес расхода.
     if (zoneChanged && op.resultsSubmissionId) {
-      const moved = Math.abs(Number(op.amount));
+      const requested = Math.abs(Number(op.amount));
       const previousRevenue = await tx.moneyOperation.findFirst({
         where: { type: "revenue", resultsSubmissionId: op.resultsSubmissionId, zoneId: op.zoneId },
         select: { id: true, amount: true },
       });
+      // ПЕРЕНОС СИММЕТРИЧЕН (генеральная проверка финансов 2026-09-02, С12).
+      // Донору сумма снималась с обрезкой, а приёмнику прибавлялась полная —
+      // и разница возникала из ниоткуда:
+      //
+      //   зона A сдала 100 нал, расход 300 не компенсирован
+      //   было:  revenue A (100) удаляется, revenue B 800 → 1100
+      //          выручка сдачи 900 → 1100, то есть +200 фантома
+      //   у донора нет выручки вовсе → фантомом становилась ВСЯ сумма
+      //
+      // Знать, компенсировался ли расход, здесь нельзя: признак нигде не
+      // хранится (это корень С4), а getExpenseCompensation смотрит только
+      // НЕпривязанные расходы — наш уже привязан к сдаче. Поэтому опираемся
+      // не на статус, а на инвариант: переносим ровно столько, сколько у
+      // донора реально есть. Сумма по всем зонам остаётся неизменной при
+      // любом раскладе — а именно её и ломал прежний код.
+      const moved = previousRevenue
+        ? Math.min(requested, Math.max(0, Number(previousRevenue.amount)))
+        : 0;
       if (previousRevenue) {
         const left = Math.round((Number(previousRevenue.amount) - moved) * 100) / 100;
         // Ноль остаётся, когда вся касса зоны ушла в этот расход — операцию
@@ -142,7 +160,9 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/expe
       // (nextResultsSubmissionId её сохранил). Ушёл в зону другой точки или
       // другой сдачи — прибавлять некуда и не нужно: там деньги брали из
       // своей кассы, и её остаток честно уменьшается на этот расход.
-      if (nextResultsSubmissionId) {
+      // moved === 0 — переносить нечего: у донора этих денег в выручке не
+      // было. Создавать их приёмнику значило бы напечатать их из воздуха.
+      if (nextResultsSubmissionId && moved > 0) {
         const receivingRevenue = await tx.moneyOperation.findFirst({
           where: { type: "revenue", resultsSubmissionId: nextResultsSubmissionId, zoneId },
           select: { id: true, amount: true },
