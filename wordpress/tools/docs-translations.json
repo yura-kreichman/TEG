@@ -1,6 +1,5 @@
 {
   "_note": "Переводы сегментов статей документации для TranslatePress. Ключ — ТОЧНЫЙ русский оригинал из wp_trp_dictionary_ru_ru_*.original, применяется скриптом docs-translations.php по совпадению original, а не по id (id в языковых таблицах разные). Собрано вручную 2026-09-01, машинный перевод не использовался: DeepL ломает продуктовые термины. Глоссарий: Счётчики/Counters/Лічильники/Contatori/Contoare, Пуски/Launches/Заїзди/Corse/Curse, Прибывания/Stays/Перебування/Soggiorni/Șederi, Билеты/Tickets/Квитки/Biglietti/Bilete, Товары/Products/Товари/Prodotti/Produse, Сдача итогов/Results submission/Здача підсумків/Chiusura di giornata/Închiderea zilei, Сотрудник/Employee/Співробітник/Dipendente/Angajat.",
-
   "Печать в RentOS идёт обычным диалогом печати браузера — отдельной программы ставить не нужно. Настройка состоит из двух частей:": {
     "en": "Printing in RentOS goes through the browser's usual print dialog — no separate program to install. Setup has two parts:",
     "uk": "Друк у RentOS іде звичайним діалогом друку браузера — окрему програму встановлювати не потрібно. Налаштування складається з двох частин:",
@@ -163,7 +162,6 @@
     "it": "La ricevuta è nella schermata della vendita o del soggiorno completato, i biglietti si stampano con «Stampa biglietti» nell'ordine, l'estratto del saldo è nella scheda del cliente e i totali del prelievo sono nel registro dei prelievi. Compaiono tutti solo con l'interruttore «Stampante presente» attivo su questo dispositivo.",
     "ro": "Bonul este pe ecranul vânzării sau al șederii finalizate, biletele — prin butonul «Tipărire bilete» din comandă, extrasul de sold — în fișa clientului, totalurile colectării — în registrul colectărilor. Toate apar doar cu comutatorul «Există imprimantă» activat pe acest dispozitiv."
   },
-
   "При сдаче итогов сотрудник вводит фактическую кассу — сколько денег реально в ящике. Рядом приложение показывает «Разницу» между этой суммой и расчётной выручкой. Удобно, но у этого есть обратная сторона: видя расчётную сумму, недобросовестный сотрудник может просто подогнать под неё свой ввод, и недостача не всплывёт никогда.": {
     "en": "At the results submission the employee enters the actual cash — how much money is really in the drawer. Next to it the app shows the «Difference» between that sum and the calculated revenue. Convenient, but it has a flip side: seeing the calculated sum, a dishonest employee can simply match their entry to it, and a shortfall will never surface.",
     "uk": "Під час здачі підсумків співробітник вводить фактичну касу — скільки грошей реально в шухляді. Поруч застосунок показує «Різницю» між цією сумою та розрахунковою виручкою. Зручно, але є зворотний бік: бачачи розрахункову суму, недобросовісний співробітник може просто підігнати під неї свій ввід, і нестача не спливе ніколи.",
@@ -248,7 +246,6 @@
     "it": "L'interruttore è individuale: disattivalo per uno e per tutti gli altri resta come prima.",
     "ro": "Comutatorul este individual: dezactivați-l pentru unul singur și pentru ceilalți rămâne ca înainte."
   },
-
   "Иногда разобраться с вопросом быстрее, если поддержка посмотрит на ваш кабинет своими глазами — цифры, настройки зон, историю операций. Чтобы это было возможно только с вашего ведома, вход поддержки закрывается тумблером, и управляете им вы.": {
     "en": "Sometimes an issue is sorted out faster if support looks at your account with their own eyes — the figures, the zone settings, the operation history. So that this is possible only with your knowledge, support access is closed off by a toggle, and you are the one who controls it.",
     "uk": "Іноді розібратися з питанням швидше, якщо підтримка подивиться на ваш кабінет власними очима — цифри, налаштування зон, історію операцій. Щоб це було можливо лише з вашого відома, вхід підтримки закривається перемикачем, і керуєте ним ви.",
@@ -327,7 +324,6 @@
     "it": "Molto probabilmente l'interruttore è spento: è la causa più frequente. Controllalo prima di descrivere il problema a parole.",
     "ro": "Cel mai probabil comutatorul este oprit — este cea mai frecventă cauză. Verificați-l înainte de a descrie problema în cuvinte."
   },
-
   "Если вы переходите в RentOS с другой программы, тетради или таблицы, клиентов и их балансы не нужно заводить по одному — есть импорт файлом.": {
     "en": "If you are moving to RentOS from another program, a notebook or a spreadsheet, you do not need to add clients and their balances one by one — there is a file import.",
     "uk": "Якщо ви переходите в RentOS з іншої програми, зошита або таблиці, клієнтів і їхні баланси не потрібно заводити по одному — є імпорт файлом.",
@@ -448,7 +444,6 @@
     "it": "L'esportazione in Excel è nello stesso posto, nella sezione «Clienti».",
     "ro": "Exportul în Excel este în același loc, în secțiunea «Clienți»."
   },
-
   "Счётчик на активе считает все сеансы подряд — он не знает, платил клиент или нет. А сеансы бывают бесплатные: механик проверил машинку после ремонта, ребёнок сел и сразу расплакался и деньги вернули, сотрудник прогнал круг перед открытием.": {
     "en": "The counter on an asset counts every session in a row — it does not know whether the client paid. And some sessions are free: a mechanic tested the car after a repair, a child got in, burst into tears and the money was refunded, an employee ran a lap before opening.",
     "uk": "Лічильник на активі рахує всі сеанси поспіль — він не знає, платив клієнт чи ні. А сеанси бувають безкоштовні: механік перевірив машинку після ремонту, дитина сіла і одразу розплакалася, і гроші повернули, співробітник проїхав коло перед відкриттям.",
@@ -551,7 +546,6 @@
     "it": "Il campo conta sessioni intere. Registra un rimborso parziale come spesa con un commento: così l'importo sarà contabilizzato con precisione.",
     "ro": "Câmpul numără sesiuni întregi. Returnarea parțială înregistrați-o ca cheltuială cu un comentariu — astfel suma va fi contabilizată exact."
   },
-
   "В рабочий чат Telegram, куда приходят сводки, можно спросить кассу в любой момент — не дожидаясь вечерней сводки и не открывая кабинет.": {
     "en": "In the working Telegram chat where the summaries arrive you can ask for the till at any moment — without waiting for the evening summary and without opening the account.",
     "uk": "У робочий чат Telegram, куди приходять зведення, можна запитати касу будь-коли — не чекаючи вечірнього зведення і не відкриваючи кабінет.",
@@ -624,7 +618,6 @@
     "it": "Imposta il riepilogo «Cassa del giorno»: arriva da solo, all'ora stabilita. Il comando serve per il caso «mi interessa proprio adesso».",
     "ro": "Configurați rezumatul «Casa pe zi» — vine singur, la ora stabilită. Comanda este pentru cazul «mă interesează chiar acum»."
   },
-
   "Клиент не всегда платит одним способом: часть наличными, остаток картой, или доплата с абонемента, потому что на балансе не хватило. Для этого у любого экрана оплаты есть «Разбить оплату» — сумма делится между способами в любой пропорции.": {
     "en": "A client does not always pay by one method: part in cash, the rest by card, or a top-up from a pass because the balance fell short. For this, every payment screen has «Split the payment» — the amount is divided between methods in any proportion.",
     "uk": "Клієнт не завжди платить одним способом: частина готівкою, решта карткою, або доплата з абонемента, бо на балансі не вистачило. Для цього на будь-якому екрані оплати є «Розділити оплату» — сума ділиться між способами в будь-якій пропорції.",
@@ -745,7 +738,6 @@
     "it": "Chiudi la finestra della divisione e scegli un normale pulsante di metodo: nulla viene salvato finché non premi «Paga».",
     "ro": "Închideți fereastra de împărțire și alegeți un buton obișnuit de metodă — nimic nu se salvează până nu apăsați «Plătește»."
   },
-
   "Вопрос «сколько у меня осталось?» — самый частый на кассе. Чтобы не отвечать на него вручную, клиент один раз подключает Telegram-бота вашей компании и дальше смотрит баланс сам, в любое время.": {
     "en": "«How much do I have left?» is the most common question at the till. To avoid answering it by hand, the client connects your company's Telegram bot once and then checks the balance themselves, any time.",
     "uk": "Питання «скільки в мене залишилося?» — найчастіше на касі. Щоб не відповідати на нього вручну, клієнт один раз підключає Telegram-бота вашої компанії й далі дивиться баланс сам, будь-коли.",
@@ -848,7 +840,6 @@
     "it": "Pagamento a saldo.",
     "ro": "Plata din sold."
   },
-
   "Тарифы RentOS отличаются": {
     "en": "RentOS plans differ",
     "uk": "Тарифи RentOS відрізняються",
@@ -1023,7 +1014,6 @@
     "it": "Esiste la pausa dell'abbonamento: i dati vengono conservati e l'eliminazione automatica non si applica.",
     "ro": "Există pauza abonamentului — datele se păstrează, ștergerea automată nu se aplică."
   },
-
   "Планшет на точке работает часами без присмотра, поэтому несколько вещей RentOS делает сам — знать о них полезно, чтобы не искать поломку там, где её нет.": {
     "en": "A tablet at the location runs for hours unattended, so RentOS does several things by itself — it is useful to know about them so you do not look for a fault where there is none.",
     "uk": "Планшет на точці працює годинами без нагляду, тому кілька речей RentOS робить сам — знати про них корисно, щоб не шукати поломку там, де її немає.",
@@ -1084,7 +1074,6 @@
     "it": "La chiusura sopravvive fino al ritorno della rete: l'app la invierà quando la connessione torna, non serve reinserirla.",
     "ro": "Închiderea rezistă până revine rețeaua: aplicația o va trimite când legătura revine, nu trebuie reintrodusă."
   },
-
   "Эта страница — оглавление для сотрудника: что делать в первый день и куда смотреть дальше. Подробности каждого шага — в отдельных статьях по ссылкам внутри разделов.": {
     "en": "This page is a table of contents for the employee: what to do on the first day and where to look next. The details of each step are in separate articles linked inside the sections.",
     "uk": "Ця сторінка — зміст для співробітника: що робити першого дня і куди дивитися далі. Подробиці кожного кроку — в окремих статтях за посиланнями всередині розділів.",
@@ -1223,7 +1212,6 @@
     "it": "L'accesso alle sezioni lo concede il titolare una per una: Prodotti, Biglietti, spese, prelievi. Se una sezione non c'è, non ti è stata aperta: non è un guasto.",
     "ro": "Accesul la secțiuni îl acordă proprietarul individual: Produse, Bilete, cheltuieli, colectări. Dacă o secțiune lipsește, nu v-a fost deschisă — nu este o defecțiune."
   },
-
   "«Разница» — это расхождение между расчётной выручкой и фактической кассой.": {
     "en": "The «Difference» is the gap between the calculated revenue and the actual till.",
     "uk": "«Різниця» — це розбіжність між розрахунковою виручкою та фактичною касою.",
@@ -1350,7 +1338,6 @@
     "it": "È un pagamento a saldo, vedi sopra: è legittimo, e il suggerimento della «Differenza» lo dice esattamente.",
     "ro": "Aceasta este o plată din sold, vezi mai sus — este legitimă, iar indiciul de la «Diferență» exact asta spune."
   },
-
   "Чтобы не путать браслеты между собой — дайте посещению свою подпись: значок": {
     "en": "To avoid mixing wristbands up, give the stay a label of your own: the icon",
     "uk": "Щоб не плутати браслети між собою — дайте перебуванню свій підпис: значок",
@@ -1381,7 +1368,6 @@
     "it": "È disponibile finché l'azienda ha attivo il modulo «Clienti». La nota funziona sempre, indipendentemente da esso.",
     "ro": "Este disponibilă cât timp compania are activat modulul «Clienți». Notița funcționează întotdeauna, independent de el."
   },
-
   "Раздел «Клиенты» — поиск клиента по телефону или имени, продажа абонемента (пополнение баланса) и списание баланса за покупку.": {
     "en": "The «Clients» section — finding a client by phone or name, selling a pass (topping up the balance) and charging the balance for a purchase.",
     "uk": "Розділ «Клієнти» — пошук клієнта за телефоном або іменем, продаж абонемента (поповнення балансу) і списання балансу за покупку.",
@@ -1448,7 +1434,6 @@
     "it": "Succede: quattro cifre coincidono in numeri diversi. Affina la ricerca digitando più cifre o un nome. Se le corrispondenze sono troppe, l'app ti chiederà esplicitamente di precisare.",
     "ro": "Se întâmplă: patru cifre coincid la numere diferite. Precizați interogarea — tastați mai multe cifre sau numele. Dacă potrivirile sunt prea multe, aplicația vă va cere direct să precizați."
   },
-
   "Если настраиваете устройство, на котором сейчас работаете, — нажмите «Привязать это устройство»: оно активируется сразу, и это же устройство запомнит вас лично (пригодится для статьи «Как войти как": {
     "en": "If you are setting up the device you are working on right now, press «Bind this device»: it is activated immediately and that same device will remember you personally (useful for the article «How to sign in as",
     "uk": "Якщо налаштовуєте пристрій, на якому зараз працюєте, — натисніть «Прив'язати цей пристрій»: він активується одразу, і цей самий пристрій запам'ятає вас особисто (стане в пригоді для статті «Як увійти як",
@@ -1467,7 +1452,6 @@
     "it": "Dispositivi in sede: aggiornamenti, schermo e ripristino del collegamento",
     "ro": "Dispozitivele la punct: actualizări, ecran și restabilirea legării"
   },
-
   "В RentOS несколько слов используются в строго определённом смысле. Если их не знать, остальные статьи читаются тяжело. Здесь они собраны в одном месте — простыми словами и с примерами.": {
     "en": "In RentOS a few words are used in a strictly defined sense. Without knowing them the other articles are hard to read. Here they are gathered in one place — in plain words and with examples.",
     "uk": "У RentOS кілька слів вживаються в чітко визначеному значенні. Якщо їх не знати, решта статей читається важко. Тут вони зібрані в одному місці — простими словами і з прикладами.",
@@ -1726,7 +1710,6 @@
     "it": "— un'immagine quadrata da inquadrare con la fotocamera del telefono. La usiamo dove altrimenti bisognerebbe dettare un link lungo.",
     "ro": "— o imagine pătrată pe care o încadrați cu camera telefonului. O folosim acolo unde altfel ar trebui dictat un link lung."
   },
-
   "Первая помощь по самым частым «оно не работает». Почти всё лечится за минуту и не требует ничьей помощи. Идите по порядку — от простого к сложному.": {
     "en": "First aid for the most common «it does not work». Almost everything is fixed in a minute and needs no one's help. Go in order — from simple to complex.",
     "uk": "Перша допомога за найчастішими «воно не працює». Майже все лікується за хвилину й не потребує нічиєї допомоги. Ідіть по порядку — від простого до складного.",
@@ -1991,7 +1974,6 @@
     "it": ". Una precisazione: perché possiamo guardare il tuo account con i nostri occhi, l'interruttore «Accesso dell'assistenza» deve essere attivo.",
     "ro": ". O precizare din start: pentru ca noi să vă putem privi contul cu proprii ochi, comutatorul «Acces asistență tehnică» trebuie să fie activat."
   },
-
   "Чем понятнее описан вопрос, тем быстрее ответ. Здесь — что приложить к обращению, чтобы не переписываться неделю.": {
     "en": "The clearer the question is described, the faster the answer. Here is what to attach to your request so that you do not exchange messages for a week.",
     "uk": "Що зрозуміліше описане питання, то швидша відповідь. Тут — що додати до звернення, щоб не листуватися тиждень.",
@@ -2207,5 +2189,293 @@
     "uk": ". Половина звернень закривається там першим же пунктом: закрити й відкрити застосунок заново.",
     "it": ". Metà delle richieste si chiude lì già al primo punto: chiudere e riaprire l'app.",
     "ro": ". Jumătate dintre solicitări se închid acolo chiar de la primul punct: închideți și redeschideți aplicația."
+  },
+  "Размен — это ваши собственные наличные, которые вы кладёте в кассу, чтобы было чем давать сдачу.": {
+    "en": "The change fund is your own cash that you put into the till so there is something to give change with.",
+    "uk": "Розмін — це ваша власна готівка, яку ви кладете в касу, щоб було чим давати решту.",
+    "it": "Il fondo cassa è il tuo contante personale che metti in cassa per avere di che dare il resto.",
+    "ro": "Fondul de rest este numerarul dumneavoastră propriu pe care îl puneți în casă ca să aveți cu ce da restul."
+  },
+  "Это не выручка": {
+    "en": "This is not revenue",
+    "uk": "Це не виручка",
+    "it": "Non è un incasso",
+    "ro": "Aceștia nu sunt încasări"
+  },
+  ": деньги пришли не от клиентов, а от вас, и в заработок они не попадают никогда.": {
+    "en": ": the money came not from clients but from you, and it never counts towards earnings.",
+    "uk": ": гроші прийшли не від клієнтів, а від вас, і в заробіток вони не потрапляють ніколи.",
+    "it": ": il denaro non arriva dai clienti ma da te, e non entra mai nel guadagno.",
+    "ro": ": banii nu au venit de la clienți, ci de la dumneavoastră, și nu intră niciodată în câștig."
+  },
+  "Как внести": {
+    "en": "How to add it",
+    "uk": "Як внести",
+    "it": "Come inserirlo",
+    "ro": "Cum îl introduceți"
+  },
+  "Вносит размен": {
+    "en": "The change fund is added by",
+    "uk": "Вносить розмін",
+    "it": "Il fondo cassa lo inserisce",
+    "ro": "Fondul de rest îl introduce"
+  },
+  "только владелец": {
+    "en": "the owner only",
+    "uk": "тільки власник",
+    "it": "solo il titolare",
+    "ro": "doar proprietarul"
+  },
+  "— у сотрудника такой кнопки нет.": {
+    "en": "— the employee has no such button.",
+    "uk": "— у співробітника такої кнопки немає.",
+    "it": ": il dipendente non ha questo pulsante.",
+    "ro": "— angajatul nu are acest buton."
+  },
+  "Что происходит дальше": {
+    "en": "What happens next",
+    "uk": "Що відбувається далі",
+    "it": "Che cosa succede dopo",
+    "ro": "Ce se întâmplă mai departe"
+  },
+  "При сдаче итогов размен вычитается сам.": {
+    "en": "At the results submission the change fund is subtracted automatically.",
+    "uk": "Під час здачі підсумків розмін віднімається сам.",
+    "it": "Alla chiusura di giornata il fondo cassa viene sottratto da solo.",
+    "ro": "La închiderea zilei fondul de rest se scade singur."
+  },
+  "Сотрудник вечером пересчитывает весь ящик целиком, как обычно, и вводит эту сумму. Приложение показывает ему прямо под полем:": {
+    "en": "In the evening the employee counts the whole drawer as usual and enters that amount. The app shows right under the field:",
+    "uk": "Співробітник увечері перераховує всю шухляду цілком, як завжди, і вводить цю суму. Застосунок показує йому просто під полем:",
+    "it": "La sera il dipendente conta l'intero cassetto come al solito e inserisce quella somma. L'app gli mostra proprio sotto il campo:",
+    "ro": "Seara angajatul numără tot sertarul, ca de obicei, și introduce această sumă. Aplicația îi arată chiar sub câmp:"
+  },
+  "Размен владельца": {
+    "en": "Owner's change float",
+    "uk": "Розмін власника",
+    "it": "Fondo cassa del titolare",
+    "ro": "Fondul de rest al proprietarului"
+  },
+  "— сколько из этих денег ваши;": {
+    "en": "— how much of that money is yours;",
+    "uk": "— скільки з цих грошей ваші;",
+    "it": ": quanta parte di quel denaro è tua;",
+    "ro": "— cât din acești bani sunt ai dumneavoastră;"
+  },
+  "Выручка наличными": {
+    "en": "Cash revenue",
+    "uk": "Виручка готівкою",
+    "it": "Incasso in contanti",
+    "ro": "Încasări în numerar"
+  },
+  "— сколько осталось после вычета.": {
+    "en": "— how much is left after the subtraction.",
+    "uk": "— скільки залишилося після віднімання.",
+    "it": ": quanto resta dopo la sottrazione.",
+    "ro": "— cât rămâne după scădere."
+  },
+  "Считать в уме сотруднику ничего не нужно, и «Разница» не покажет ложный излишек на сумму вашего размена.": {
+    "en": "The employee does not have to do any mental arithmetic, and the «Difference» will not show a false surplus equal to your change fund.",
+    "uk": "Рахувати подумки співробітнику нічого не потрібно, і «Різниця» не покаже хибний надлишок на суму вашого розміну.",
+    "it": "Il dipendente non deve fare alcun calcolo a mente e la «Differenza» non mostrerà un falso surplus pari al tuo fondo cassa.",
+    "ro": "Angajatul nu trebuie să calculeze nimic în minte, iar «Diferența» nu va arăta un plus fals egal cu fondul dumneavoastră de rest."
+  },
+  "В «Итогах дня»": {
+    "en": "In the «Day summary»",
+    "uk": "У «Підсумку дня»",
+    "it": "Nel «Riepilogo del giorno»",
+    "ro": "În «Rezumatul zilei»"
+  },
+  "размен стоит отдельной строкой — рядом с наличными и безналом, но вне выручки. Так видно, сколько денег в кассе ваших, а сколько заработано.": {
+    "en": "the change fund is a separate line — next to cash and card, but outside revenue. This shows how much of the money in the till is yours and how much was earned.",
+    "uk": "розмін стоїть окремим рядком — поруч із готівкою та безготівкою, але поза виручкою. Так видно, скільки грошей у касі ваших, а скільки зароблено.",
+    "it": "il fondo cassa è una riga a parte, accanto a contanti e carta ma fuori dall'incasso. Così si vede quanto denaro in cassa è tuo e quanto è stato guadagnato.",
+    "ro": "fondul de rest apare pe un rând separat — lângă numerar și card, dar în afara încasărilor. Astfel se vede cât din banii din casă sunt ai dumneavoastră și cât s-a câștigat."
+  },
+  "Инкассация забирает размен вместе с выручкой.": {
+    "en": "A cash collection takes the change fund along with the revenue.",
+    "uk": "Інкасація забирає розмін разом із виручкою.",
+    "it": "Il prelievo porta via il fondo cassa insieme all'incasso.",
+    "ro": "Colectarea ia fondul de rest împreună cu încasările."
+  },
+  "Отдельного «неприкосновенного» разменного фонда в RentOS нет: это реальные деньги в ящике, и следующая инкассация вынесет их вместе с остальным. Если размен нужен на завтра — оставьте его в кассе и внесите заново.": {
+    "en": "RentOS has no separate «untouchable» change fund: this is real money in the drawer, and the next cash collection will take it out with everything else. If you need a change fund for tomorrow, leave it in the till and add it again.",
+    "uk": "Окремого «недоторканного» розмінного фонду в RentOS немає: це реальні гроші в шухляді, і наступна інкасація винесе їх разом з рештою. Якщо розмін потрібен на завтра — залиште його в касі та внесіть заново.",
+    "it": "In RentOS non esiste un fondo di resto «intoccabile» separato: sono soldi veri nel cassetto e il prelievo successivo li porterà via insieme al resto. Se ti serve il fondo cassa per domani, lascialo in cassa e inseriscilo di nuovo.",
+    "ro": "În RentOS nu există un fond de rest «intangibil» separat: sunt bani reali din sertar, iar următoarea colectare îi va scoate împreună cu restul. Dacă aveți nevoie de fond de rest pentru mâine, lăsați-l în casă și introduceți-l din nou."
+  },
+  "Как исправить или удалить": {
+    "en": "How to correct or delete it",
+    "uk": "Як виправити або видалити",
+    "it": "Come correggerlo o eliminarlo",
+    "ro": "Cum îl corectați sau ștergeți"
+  },
+  "Размен виден в «Движении денег» — списке под остатками, там же, где инкассации и авансы. Найдите нужную запись (у неё значок монет), откройте её и либо измените сумму, либо удалите.": {
+    "en": "The change fund appears in «Cash movements» — the list under the balances, where cash collections and advances are. Find the entry you need (it has a coin icon), open it and either change the amount or delete it.",
+    "uk": "Розмін видно в «Русі грошей» — списку під залишками, там само, де інкасації та аванси. Знайдіть потрібний запис (у нього значок монет), відкрийте його і або змініть суму, або видаліть.",
+    "it": "Il fondo cassa è visibile in «Movimenti di cassa», l'elenco sotto i saldi, dove ci sono prelievi e anticipi. Trova la voce che ti serve (ha l'icona delle monete), aprila e cambia l'importo oppure eliminala.",
+    "ro": "Fondul de rest se vede în «Mișcarea banilor» — lista de sub solduri, acolo unde sunt colectările și avansurile. Găsiți înregistrarea dorită (are pictograma cu monede), deschideți-o și fie modificați suma, fie o ștergeți."
+  },
+  "Остатки кассы пересчитаются сразу. Правка остаётся в истории изменений.": {
+    "en": "The till balances are recalculated at once. The correction stays in the change history.",
+    "uk": "Залишки каси перерахуються одразу. Правка залишається в історії змін.",
+    "it": "I saldi di cassa vengono ricalcolati subito. La modifica resta nella cronologia delle correzioni.",
+    "ro": "Soldurile casei se recalculează imediat. Modificarea rămâne în istoricul schimbărilor."
+  },
+  "&#8230;сотрудник не знает про размен?": {
+    "en": "&#8230;the employee does not know about the change fund?",
+    "uk": "&#8230;співробітник не знає про розмін?",
+    "it": "&#8230;il dipendente non sa del fondo cassa?",
+    "ro": "&#8230;angajatul nu știe despre fondul de rest?"
+  },
+  "И не должен: он просто считает ящик. Приложение само покажет ему, сколько из этой суммы ваши деньги.": {
+    "en": "And they do not need to: they simply count the drawer. The app itself will show them how much of that amount is your money.",
+    "uk": "І не мусить: він просто рахує шухляду. Застосунок сам покаже йому, скільки з цієї суми — ваші гроші.",
+    "it": "E non deve: si limita a contare il cassetto. L'app stessa gli mostrerà quanta parte di quella somma sono i tuoi soldi.",
+    "ro": "Și nici nu trebuie: el doar numără sertarul. Aplicația îi va arăta singură cât din această sumă sunt banii dumneavoastră."
+  },
+  "&#8230;внесли размен не в ту зону?": {
+    "en": "&#8230;you added the change fund to the wrong zone?",
+    "uk": "&#8230;внесли розмін не в ту зону?",
+    "it": "&#8230;hai inserito il fondo cassa nell'area sbagliata?",
+    "ro": "&#8230;ați introdus fondul de rest în zona greșită?"
+  },
+  "Удалите запись в «Движении денег» и внесите заново в нужную кассу — размен привязан к конкретной кассе, а не к точке целиком.": {
+    "en": "Delete the entry in «Cash movements» and add it again to the right till — the change fund belongs to a specific till, not to the whole location.",
+    "uk": "Видаліть запис у «Русі грошей» і внесіть заново в потрібну касу — розмін прив'язаний до конкретної каси, а не до точки загалом.",
+    "it": "Elimina la voce in «Movimenti di cassa» e inseriscila di nuovo nella cassa giusta: il fondo cassa è legato a una cassa specifica, non all'intera sede.",
+    "ro": "Ștergeți înregistrarea din «Mișcarea banilor» și introduceți-o din nou la casa corectă — fondul de rest este legat de o casă anume, nu de punctul întreg."
+  },
+  "&#8230;касса не сходится ровно на сумму размена?": {
+    "en": "&#8230;the till is off by exactly the change fund amount?",
+    "uk": "&#8230;каса не сходиться рівно на суму розміну?",
+    "it": "&#8230;la cassa non torna esattamente per l'importo del fondo cassa?",
+    "ro": "&#8230;casa nu se potrivește exact cu suma fondului de rest?"
+  },
+  "Проверьте дату: вычитается размен, внесённый после предыдущей сдачи итогов. Если вы положили деньги неделю назад, а сдач с тех пор было несколько, он уже учтён в первой из них.": {
+    "en": "Check the date: the change fund that is subtracted is the one added after the previous results submission. If you put the money in a week ago and there have been several submissions since, it was already accounted for in the first of them.",
+    "uk": "Перевірте дату: віднімається розмін, внесений після попередньої здачі підсумків. Якщо ви поклали гроші тиждень тому, а здач відтоді було кілька, він уже врахований у першій із них.",
+    "it": "Controlla la data: viene sottratto il fondo cassa inserito dopo la chiusura di giornata precedente. Se hai messo i soldi una settimana fa e da allora ci sono state più chiusure, è già stato conteggiato nella prima.",
+    "ro": "Verificați data: se scade fondul de rest introdus după închiderea zilei precedente. Dacă ați pus banii acum o săptămână și de atunci au fost mai multe închideri, el a fost deja luat în calcul la prima dintre ele."
+  },
+  "Безлимитный вариант.": {
+    "en": "Unlimited option.",
+    "uk": "Безлімітний варіант.",
+    "it": "Opzione illimitata.",
+    "ro": "Varianta nelimitată."
+  },
+  "Если время не ограничено — нажмите кнопку": {
+    "en": "If the time is not limited, press the",
+    "uk": "Якщо час не обмежений — натисніть кнопку",
+    "it": "Se il tempo non è limitato, premi il pulsante",
+    "ro": "Dacă timpul nu este limitat — apăsați butonul"
+  },
+  "∞": {
+    "en": "∞",
+    "uk": "∞",
+    "it": "∞",
+    "ro": "∞"
+  },
+  "справа от поля длительности. Поле погаснет и покажет ∞, а кнопка станет цветной. Например: «Целый день» — 500 ₽ без ограничения времени. Так же можно снять безлимит — нажмите ∞ ещё раз и введите минуты.": {
+    "en": "to the right of the duration field. The field will dim and show ∞, and the button will turn coloured. For example: «All day» — 500 ₽ with no time limit. You can remove the unlimited setting the same way: press ∞ again and enter the minutes.",
+    "uk": "праворуч від поля тривалості. Поле згасне і покаже ∞, а кнопка стане кольоровою. Наприклад: «Цілий день» — 500 ₽ без обмеження часу. Так само можна зняти безліміт — натисніть ∞ ще раз і введіть хвилини.",
+    "it": "a destra del campo della durata. Il campo si spegnerà mostrando ∞ e il pulsante diventerà colorato. Per esempio: «Tutto il giorno» — 500 ₽ senza limite di tempo. Allo stesso modo puoi togliere l'illimitato: premi di nuovo ∞ e inserisci i minuti.",
+    "ro": "din dreapta câmpului de durată. Câmpul se va stinge și va afișa ∞, iar butonul va deveni colorat. De exemplu: «Toată ziua» — 500 ₽ fără limită de timp. La fel puteți scoate nelimitatul — apăsați ∞ încă o dată și introduceți minutele."
+  },
+  "&#8230;выбран безлимитный вариант — что видит сотрудник?": {
+    "en": "&#8230;an unlimited option is selected — what does the employee see?",
+    "uk": "&#8230;обрано безлімітний варіант — що бачить співробітник?",
+    "it": "&#8230;è selezionata l'opzione illimitata: che cosa vede il dipendente?",
+    "ro": "&#8230;este aleasă varianta nelimitată — ce vede angajatul?"
+  },
+  "На плашке вместо обратного отсчёта стоит ∞ и время идёт вверх: видно, сколько ребёнок уже здесь. Плашка не покраснеет и не будет напоминать об окончании — закрыть прибывание сотрудник решает сам.": {
+    "en": "On the tile there is ∞ instead of a countdown and the time counts up: you can see how long the child has already been there. The tile will not turn red and will not remind about the end — the employee decides when to close the stay.",
+    "uk": "На плашці замість зворотного відліку стоїть ∞, і час іде вгору: видно, скільки дитина вже тут. Плашка не почервоніє і не нагадуватиме про закінчення — закрити перебування співробітник вирішує сам.",
+    "it": "Sulla scheda, al posto del conto alla rovescia, c'è ∞ e il tempo scorre in avanti: si vede da quanto tempo il bambino è lì. La scheda non diventerà rossa e non ricorderà la fine: è il dipendente a decidere quando chiudere il soggiorno.",
+    "ro": "Pe plăcuță, în loc de numărătoare inversă, stă ∞ și timpul curge în sus: se vede de cât timp este copilul acolo. Plăcuța nu se va înroși și nu va aminti despre încheiere — angajatul decide singur când închide șederea."
+  },
+  "&#8230;цена у безлимита должна расти со временем?": {
+    "en": "&#8230;the unlimited price should grow with time?",
+    "uk": "&#8230;ціна безліміту має зростати з часом?",
+    "it": "&#8230;il prezzo dell'illimitato deve crescere con il tempo?",
+    "ro": "&#8230;prețul nelimitatului trebuie să crească odată cu timpul?"
+  },
+  "Тогда это не безлимит, а тариф «По факту»: там сумма считается по цене за минуту.": {
+    "en": "Then it is not unlimited but the «Actual time» rate: there the amount is calculated from the price per minute.",
+    "uk": "Тоді це не безліміт, а тариф «За фактом»: там сума рахується за ціною за хвилину.",
+    "it": "Allora non è illimitato ma la tariffa «A consuntivo»: lì l'importo si calcola sul prezzo al minuto.",
+    "ro": "Atunci nu este nelimitat, ci tariful «După timpul efectiv»: acolo suma se calculează după prețul pe minut."
+  },
+  "&#8230;раньше оставляли длительность пустой?": {
+    "en": "&#8230;you used to leave the duration empty?",
+    "uk": "&#8230;раніше залишали тривалість порожньою?",
+    "it": "&#8230;prima lasciavi la durata vuota?",
+    "ro": "&#8230;înainte lăsați durata goală?"
+  },
+  "Раньше пустое поле означало ноль минут, теперь — безлимит. Проверьте свои варианты: если где-то длительность не задана, а вы имели в виду конкретное время, впишите минуты.": {
+    "en": "An empty field used to mean zero minutes; now it means unlimited. Check your options: if a duration is not set somewhere but you meant a specific time, enter the minutes.",
+    "uk": "Раніше порожнє поле означало нуль хвилин, тепер — безліміт. Перевірте свої варіанти: якщо десь тривалість не задана, а ви мали на увазі конкретний час, впишіть хвилини.",
+    "it": "Prima il campo vuoto significava zero minuti, ora significa illimitato. Controlla le tue opzioni: se da qualche parte la durata non è impostata ma intendevi un tempo preciso, inserisci i minuti.",
+    "ro": "Înainte, câmpul gol însemna zero minute, acum înseamnă nelimitat. Verificați variantele: dacă undeva durata nu este setată, dar dumneavoastră aveați în vedere un timp anume, introduceți minutele."
+  },
+  "Чтобы вариант шёл без ограничения по времени, нажмите кнопку": {
+    "en": "To make an option run with no time limit, press the",
+    "uk": "Щоб варіант ішов без обмеження за часом, натисніть кнопку",
+    "it": "Perché un'opzione vada senza limite di tempo, premi il pulsante",
+    "ro": "Pentru ca varianta să meargă fără limită de timp, apăsați butonul"
+  },
+  "справа от поля длительности — поле погаснет и покажет ∞. У сотрудника такой пуск идёт с секундомером вверх вместо обратного отсчёта, и остановить его он решает сам.": {
+    "en": "to the right of the duration field — the field will dim and show ∞. For the employee such a launch runs with a stopwatch counting up instead of a countdown, and they decide when to stop it.",
+    "uk": "праворуч від поля тривалості — поле згасне і покаже ∞. У співробітника такий заїзд іде із секундоміром угору замість зворотного відліку, і зупинити його він вирішує сам.",
+    "it": "a destra del campo della durata: il campo si spegnerà mostrando ∞. Per il dipendente una corsa così va con un cronometro in avanti invece del conto alla rovescia, ed è lui a decidere quando fermarla.",
+    "ro": "din dreapta câmpului de durată — câmpul se va stinge și va afișa ∞. La angajat o astfel de cursă merge cu cronometrul în sus în loc de numărătoare inversă, iar el decide singur când o oprește."
+  },
+  "&#8230;чем безлимит отличается от «Без таймера»?": {
+    "en": "&#8230;how is unlimited different from «No timer»?",
+    "uk": "&#8230;чим безліміт відрізняється від «Без таймера»?",
+    "it": "&#8230;in che cosa l'illimitato è diverso da «Senza timer»?",
+    "ro": "&#8230;prin ce diferă nelimitatul de «Fără cronometru»?"
+  },
+  "«Без таймера» — это разовый заезд, приложение вообще не считает время. Безлимитный вариант с таймером время считает и показывает, но не ограничивает: удобно, когда нужно видеть, сколько машина уже катается.": {
+    "en": "«No timer» is a one-off ride and the app does not count time at all. An unlimited option with a timer does count and show the time but does not limit it: handy when you need to see how long the car has already been running.",
+    "uk": "«Без таймера» — це разовий заїзд, застосунок узагалі не рахує час. Безлімітний варіант із таймером час рахує і показує, але не обмежує: зручно, коли потрібно бачити, скільки машина вже катається.",
+    "it": "«Senza timer» è una corsa singola e l'app non conta affatto il tempo. L'opzione illimitata con timer il tempo lo conta e lo mostra, ma non lo limita: comodo quando serve vedere da quanto tempo l'auto sta girando.",
+    "ro": "«Fără cronometru» este o cursă unică, aplicația nu numără deloc timpul. Varianta nelimitată cu cronometru numără și arată timpul, dar nu îl limitează: util când trebuie să vedeți de cât timp merge deja mașina."
+  },
+  "Сколько идёт прямо сейчас.": {
+    "en": "How many are running right now.",
+    "uk": "Скільки йде просто зараз.",
+    "it": "Quanti sono in corso proprio ora.",
+    "ro": "Câte sunt în desfășurare chiar acum."
+  },
+  "В списке зон под расчётной выручкой рядом с суммой стоит цветной кружок со значком человечков и числом — это сколько браслетов или пусков в этой зоне открыто в данную минуту. Например, «3» напротив «Лабиринта» значит, что там сейчас трое детей. Если в зоне никого нет, кружка просто не будет.": {
+    "en": "In the list of zones under the calculated revenue, next to the amount, there is a coloured badge with a people icon and a number — that is how many wristbands or launches are open in that zone at this minute. For example, «3» next to «Labyrinth» means there are three children there right now. If the zone is empty, the badge simply does not appear.",
+    "uk": "У списку зон під розрахунковою виручкою поруч із сумою стоїть кольоровий кружечок зі значком людей і числом — це скільки браслетів або заїздів у цій зоні відкрито цієї хвилини. Наприклад, «3» навпроти «Лабіринту» означає, що там зараз троє дітей. Якщо в зоні нікого немає, кружечка просто не буде.",
+    "it": "Nell'elenco delle aree sotto l'incasso calcolato, accanto all'importo, c'è un pallino colorato con l'icona delle persone e un numero: sono i braccialetti o le corse aperti in quell'area in questo momento. Per esempio, «3» accanto a «Labirinto» significa che lì ci sono tre bambini adesso. Se l'area è vuota, il pallino semplicemente non compare.",
+    "ro": "În lista zonelor de sub încasarea calculată, lângă sumă, se află un cerculeț colorat cu pictograma unor persoane și un număr — atâtea brățări sau curse sunt deschise în acea zonă chiar în acest minut. De exemplu, «3» în dreptul «Labirintului» înseamnă că acolo sunt acum trei copii. Dacă în zonă nu este nimeni, cerculețul pur și simplu nu apare."
+  },
+  "&#8230;в зоне кто-то есть, а выручка по ней нулевая?": {
+    "en": "&#8230;there is someone in the zone but its revenue is zero?",
+    "uk": "&#8230;у зоні хтось є, а виручка по ній нульова?",
+    "it": "&#8230;c'è qualcuno nell'area ma l'incasso è zero?",
+    "ro": "&#8230;în zonă este cineva, dar încasarea ei este zero?"
+  },
+  "Так и должно быть: зона показывается в списке, даже если денег по ней ещё нет, — например, все идущие сеансы оплачены абонементом или прибывания только что начались.": {
+    "en": "That is how it should be: the zone appears in the list even when there is no money for it yet — for example, all running sessions were paid with a pass, or the stays have only just started.",
+    "uk": "Так і має бути: зона показується в списку, навіть якщо грошей по ній ще немає, — наприклад, усі сеанси, що йдуть, оплачені абонементом або перебування щойно почалися.",
+    "it": "È corretto così: l'area compare nell'elenco anche se non ci sono ancora incassi — per esempio, tutte le sessioni in corso sono state pagate con l'abbonamento oppure i soggiorni sono appena iniziati.",
+    "ro": "Așa și trebuie: zona apare în listă chiar dacă încă nu are bani — de exemplu, toate sesiunile în desfășurare au fost plătite cu abonament sau șederile abia au început."
+  },
+  "&#8230;хочу увидеть, кто именно сейчас в зоне?": {
+    "en": "&#8230;I want to see exactly who is in the zone right now?",
+    "uk": "&#8230;хочу побачити, хто саме зараз у зоні?",
+    "it": "&#8230;voglio vedere chi esattamente è nell'area adesso?",
+    "ro": "&#8230;vreau să văd cine anume este acum în zonă?"
+  },
+  "Поимённого списка на главном экране нет намеренно: владелец видит занятость числом, а отдельные браслеты и пуски ведёт сотрудник в своём приложении. Закрыть или изменить конкретный сеанс можно только оттуда.": {
+    "en": "There is deliberately no list of names on the home screen: the owner sees occupancy as a number, while individual wristbands and launches are handled by the employee in their own app. A specific session can only be closed or changed from there.",
+    "uk": "Поіменного списку на головному екрані немає навмисно: власник бачить завантаженість числом, а окремі браслети та заїзди веде співробітник у своєму застосунку. Закрити або змінити конкретний сеанс можна тільки звідти.",
+    "it": "Sulla schermata principale non c'è di proposito un elenco nominativo: il titolare vede l'occupazione come numero, mentre i singoli braccialetti e le corse li gestisce il dipendente nella sua app. Una sessione specifica si può chiudere o modificare solo da lì.",
+    "ro": "Lista nominală de pe ecranul principal lipsește în mod intenționat: proprietarul vede ocuparea ca număr, iar brățările și cursele individuale le gestionează angajatul în aplicația lui. O sesiune anume poate fi închisă sau modificată doar de acolo."
   }
 }
