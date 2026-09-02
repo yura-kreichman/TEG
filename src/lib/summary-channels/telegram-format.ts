@@ -799,7 +799,22 @@ function collectionSources(data: CollectionAlertData, st: SummaryText): { label:
   const rows = data.zones.filter((z) => z.amount > 0).map((z) => ({ label: z.name, amount: z.amount }));
   if (data.goodsAmount > 0) rows.push({ label: st.goodsLabel, amount: data.goodsAmount });
   if (data.abonementAmount > 0) rows.push({ label: st.abonementSold, amount: data.abonementAmount });
+  // Оставленный размен — последней строкой и со знаком минус: строки выше
+  // складываются в опустошённую кассу, а забрали с точки на эту сумму
+  // меньше. Так блок сходится с итогом в шапке, а не спорит с ним.
+  if (collectionKeptChangeFund(data) > 0) {
+    rows.push({ label: st.changeFundKept, amount: -collectionKeptChangeFund(data) });
+  }
   return rows;
+}
+
+function collectionKeptChangeFund(data: CollectionAlertData): number {
+  return data.keptChangeFund ?? 0;
+}
+
+/** Сколько физически ушло с точки: касса опустошается целиком, размен возвращается. */
+function collectionNetAmount(data: CollectionAlertData): number {
+  return data.amount - collectionKeptChangeFund(data);
 }
 
 /** Push — моноширинного блока там нет: имя и сумма обычной строкой, без иконок. */
@@ -826,7 +841,7 @@ export function formatCollectionAlertTelegram(
   const lines = [
     `🏦 <b>${escapeTelegramHtml(title)}</b> — ${when}`,
     ...pointLine(data.pointName),
-    `${escapeTelegramHtml(collectionWho(data))}: <b>${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}</b>`,
+    `${escapeTelegramHtml(collectionWho(data))}: <b>${formatMoneyWithCurrency(collectionNetAmount(data), locale, currency as CurrencyCode | null)}</b>`,
   ];
   // Источники — тем же блоком, что разбивка по зонам в сводке «Касса за
   // день» (правка владельца 2026-08-18: «один в один и без иконок»):
@@ -855,7 +870,7 @@ export function formatCollectionAlertPush(
   const title = data.isAdvance ? `${st.collectionAlertTitle} (${st.advance})` : st.collectionAlertTitle;
   const when = `${formatSummaryDate(data.occurredAt, "/", timezone, false)}, ${formatLocalTime(data.occurredAt, timezone)}`;
   const bodyLines = [
-    `${collectionWho(data)}: ${formatMoneyWithCurrency(data.amount, locale, currency as CurrencyCode | null)}`,
+    `${collectionWho(data)}: ${formatMoneyWithCurrency(collectionNetAmount(data), locale, currency as CurrencyCode | null)}`,
   ];
   for (const part of collectionParts(data, st, locale, currency)) bodyLines.push(part);
   return { title: `🏦 ${title} — ${when}`, body: bodyLines.join("\n") };

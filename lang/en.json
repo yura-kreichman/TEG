@@ -1685,6 +1685,7 @@
     "collectionVoided": "Collection deleted",
     "dailyCashVoided": "No data left for this day",
     "collectionAlertTitle": "COLLECTION",
+    "changeFundKept": "Change fund left",
     "goodsLabel": "Goods",
     "instructionAckEmailWho": "Who",
     "shiftClosedSuffix": "shift closed",

@@ -145,7 +145,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     let keptChangeFund = 0;
     for (const [zoneId, fund] of fundByZone) {
       if (fund <= 0) continue;
-      await tx.moneyOperation.create({
+      const kept = await tx.moneyOperation.create({
         data: {
           tenantId: owner.tenantId,
           zoneId,
@@ -155,6 +155,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
           performedByUserId: owner.user.id,
         },
       });
+      // В том же списке, что и строки инкассации: они получают общий
+      // collectionAlertMessageId, и правка любой из них пересобирает
+      // сообщение уже с вычетом размена.
+      operationIds.push(kept.id);
       keptChangeFund += fund;
     }
     // Абонементы/товары наличными физически забраны — реальной суммой, СВОИМ
@@ -241,6 +245,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     zones: zoneShares,
     goodsAmount: breakdown.goods,
     abonementAmount: breakdown.abonement,
+    keptChangeFund,
   }).catch(() => {});
 
   return NextResponse.json({ ok: true, settledPool: poolDeficit, advance, breakdown, keptChangeFund });

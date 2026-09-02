@@ -35,6 +35,9 @@ export async function announceCollection(params: {
   zones: { name: string; emoji: string | null; amount: number }[];
   goodsAmount: number;
   abonementAmount: number;
+  // Размен, оставленный в кассе переключателем (2026-09-02). Форматтер
+  // вычитает его из суммы: физически с точки ушло на столько меньше.
+  keptChangeFund?: number;
 }): Promise<void> {
   try {
     const settings = await prisma.collectionSummarySettings.findUnique({ where: { tenantId: params.tenantId } });
@@ -50,6 +53,7 @@ export async function announceCollection(params: {
       zones: params.zones,
       goodsAmount: params.goodsAmount,
       abonementAmount: params.abonementAmount,
+      keptChangeFund: params.keptChangeFund ?? 0,
     });
 
     const messageId = results.find((r) => r.channelType === "telegram" && r.ok && r.externalMessageId)?.externalMessageId;

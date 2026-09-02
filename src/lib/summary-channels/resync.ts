@@ -166,10 +166,23 @@ export async function resyncCollectionAlert(messageId: string, tenantId: string)
       .filter((o) => o.type === "collection_pool_sweep_abonement")
       .reduce((s, o) => s + abs(o.amount), 0);
     const advanceAmount = ops.filter((o) => o.type === "collection_advance").reduce((s, o) => s + abs(o.amount), 0);
+    // Размен, возвращённый в кассу этой же инкассацией (2026-09-02): его
+    // операция помечена тем же collectionAlertMessageId, иначе правка теряла
+    // бы вычет и сообщение показывало, что забрали больше, чем на самом деле.
+    const keptChangeFund = ops.filter((o) => o.type === "change_fund").reduce((s, o) => s + abs(o.amount), 0);
     const first = ops[0];
 
     const locale: Locale = tenant?.locale && isLocale(tenant.locale) ? tenant.locale : "ru";
     const st = getDictionary(locale).summaryText;
+
+    // Строк самой инкассации не осталось — значит акт удалили, а возвращённый
+    // размен просто висит помеченным. Пересобирать нечего: сообщение уходит,
+    // как и при полностью пустом наборе выше. Без этой проверки в шапке
+    // оказался бы минус на сумму размена.
+    if (zones.length === 0 && goodsAmount === 0 && abonementAmount === 0 && advanceAmount === 0) {
+      await removeOrMarkMessage(channel.chatId, messageId, `<i>${st.collectionVoided}</i>`);
+      return;
+    }
     const data = {
       occurredAt: first.occurredAt,
       // Точка отдельной строкой, когда их несколько (правило владельца
@@ -196,6 +209,7 @@ export async function resyncCollectionAlert(messageId: string, tenantId: string)
       zones,
       goodsAmount,
       abonementAmount,
+      keptChangeFund,
       editedByOwner: true,
     };
     const text = formatCollectionAlertTelegram(data, st, locale, tenant?.timezone ?? "UTC", tenant?.currency ?? null);

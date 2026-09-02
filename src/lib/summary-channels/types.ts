@@ -198,6 +198,12 @@ export interface CollectionAlertData {
   zones: { name: string; emoji: string | null; amount: number }[];
   goodsAmount: number;
   abonementAmount: number;
+  // Размен, который владелец оставил в кассе переключателем при инкассации
+  // (2026-09-02). Из журнала касса опустошается целиком и тут же пополняется
+  // на эту сумму, поэтому ФИЗИЧЕСКИ с точки ушло amount − keptChangeFund.
+  // В сообщении показываем именно ушедшее: правило «сколько забрали сейчас»
+  // (реальный баг 2026-07-25 — push обещал 955 при физических 700).
+  keptChangeFund?: number;
   // Инкассацию правил Владелец — ♛ рядом с именем сотрудника.
   editedByOwner?: boolean;
 }

@@ -62,7 +62,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   // и тот же getZonePoolShare ДО того, как первый его "погашает", и оба
   // добавляют одну и ту же долю пула — та же точка, что уже 2026-07-25
   // закрыта для settleOutstandingCollectionAdvance/chargeSelfServiceAdvanceToZones).
-  const { poolShare, operationId, occurredAt, keptChangeFund } = await prisma.$transaction(async (tx) => {
+  const { poolShare, operationId, keptOperationId, occurredAt, keptChangeFund } = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${zone.pointId}))`;
 
     const poolShare = await getZonePoolShare(zone.pointId, zoneId, tx);
@@ -78,11 +78,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
         performedByUserId: owner.user.id,
       },
     });
+    let keptOperationId: string | null = null;
     if (fundInTill > 0) {
       // occurredAt на секунду ПОЗЖЕ инкассации, а не «сейчас»: отсечка
       // сравнивает через <=, и совпади метки до миллисекунды — свежий размен
       // сам себя отменил бы, попав ровно на границу.
-      await tx.moneyOperation.create({
+      const kept = await tx.moneyOperation.create({
         data: {
           tenantId: owner.tenantId,
           zoneId,
@@ -92,8 +93,15 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
           performedByUserId: owner.user.id,
         },
       });
+      keptOperationId = kept.id;
     }
-    return { poolShare, operationId: created.id, occurredAt: created.occurredAt, keptChangeFund: fundInTill };
+    return {
+      poolShare,
+      operationId: created.id,
+      keptOperationId,
+      occurredAt: created.occurredAt,
+      keptChangeFund: fundInTill,
+    };
   });
 
   // В уведомлении — именно введённая сумма (сколько физически забрали сейчас),
@@ -105,7 +113,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   // имени ♛ (2026-08-16).
   announceCollection({
     tenantId: owner.tenantId,
-    operationIds: [operationId],
+    // Операция возврата размена помечается тем же сообщением: иначе правка
+    // любой строки пересобирала бы сообщение без вычета, и оно снова
+    // утверждало бы, что забрали больше, чем на самом деле.
+    operationIds: keptOperationId ? [operationId, keptOperationId] : [operationId],
     occurredAt,
     operatorName: null,
     operatorColorTag: null,
@@ -114,6 +125,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     zones: [{ name: zone.name, emoji: zone.telegramEmoji, amount: amountNumber }],
     goodsAmount: 0,
     abonementAmount: 0,
+    keptChangeFund,
   }).catch(() => {});
 
   return NextResponse.json({ ok: true, settledPool: poolShare, keptChangeFund });
