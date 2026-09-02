@@ -238,7 +238,13 @@ export function formatShiftCloseSummaryEmail(
       label: data.bonusIsAccrual ? st.bonusAccrued : st.bonus,
       value: formatMoney(data.bonusAmount, locale),
     });
-  if (settings.showTotal) rows.push({ label: st.toPayOutFull, value: formatMoney(data.toPayOut, locale), bold: true });
+  if (settings.showTotal) {
+    // Ставка и начисление за смену — те же строки, что в чате: без них итог
+    // «К выдаче» нельзя проверить (запрос владельца 2026-09-03).
+    if (data.rate > 0) rows.push({ label: st.rateLabel, value: formatMoney(data.rate, locale) });
+    rows.push({ label: st.accruedForShift, value: formatMoney(data.accrued, locale) });
+    rows.push({ label: st.toPayOutFull, value: formatMoney(data.toPayOut, locale), bold: true });
+  }
 
   return {
     subject,

@@ -710,7 +710,14 @@ export function formatShiftCloseSummaryTelegram(
       parts.push(
         `🏆 ${data.bonusIsAccrual ? st.bonusAccruedCompact : st.bonusCompact}: ${formatMoney(data.bonusAmount, locale)}`
       );
-    if (settings.showTotal) parts.push(`💰 ${st.toPayOutCompact}: <b>${formatMoney(data.toPayOut, locale)}</b>`);
+    // Начисление за смену — ПЕРЕД итогом (запрос владельца 2026-09-03).
+    // Сводка показывала аванс, премию и «К выдаче», но не то, сколько смена
+    // принесла сама: итог нельзя было проверить. Ставка и начисление лежали в
+    // данных с самого начала и просто не выводились.
+    if (settings.showTotal) {
+      parts.push(`🧮 ${st.accruedCompact}: ${formatMoney(data.accrued, locale)}`);
+      parts.push(`💰 ${st.toPayOutCompact}: <b>${formatMoney(data.toPayOut, locale)}</b>`);
+    }
 
     // Не жирным (запрос пользователя 2026-07-17/18: "во всех сводках с
     // итогами... не надо имя Сотрудника и дату делать жирным") — тот же
@@ -734,7 +741,12 @@ export function formatShiftCloseSummaryTelegram(
   if (settings.showAdvance) lines.push(`💵 ${st.advance}: ${formatMoney(data.advanceAmount, locale)}`);
   if (settings.showBonus && data.bonusAmount > 0)
     lines.push(`🏆 ${data.bonusIsAccrual ? st.bonusAccrued : st.bonus}: ${formatMoney(data.bonusAmount, locale)}`);
-  if (settings.showTotal) lines.push(`💰 ${st.toPayOutFull}: <b>${formatMoney(data.toPayOut, locale)}</b>`);
+  if (settings.showTotal) {
+    // Ставка и начисление — см. комментарий в компактной ветке выше.
+    if (data.rate > 0) lines.push(`🏷 ${st.rateLabel}: ${formatMoney(data.rate, locale)}`);
+    lines.push(`🧮 ${st.accruedForShift}: ${formatMoney(data.accrued, locale)}`);
+    lines.push(`💰 ${st.toPayOutFull}: <b>${formatMoney(data.toPayOut, locale)}</b>`);
+  }
 
   return lines.join("\n");
 }
