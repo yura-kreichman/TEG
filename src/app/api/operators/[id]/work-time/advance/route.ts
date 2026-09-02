@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { chargeSelfServiceAdvanceToZones } from "@/lib/zone-balance";
+import { resyncAfterMoneyOpChange } from "@/lib/summary-channels/resync";
 import { prisma } from "@/lib/prisma";
 import { findTenantOperator, requireOwner } from "@/lib/require-owner";
 import { calcOperatorBalance } from "@/lib/work-time";
@@ -83,6 +84,21 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operators/[
       { status: 400 }
     );
   }
+
+  // Пересобираем уже отправленные сводки (жалоба владельца 2026-09-02: «внёс
+  // аванс и премию — это нигде не отобразилось»). Роуты карточки не звали
+  // resync вообще, в отличие от расходов и инкассаций: владелец выдавал
+  // деньги, а «Касса за день» в чате продолжала показывать прежний остаток.
+  // Теперь, когда выплата ещё и уменьшает кассу точки, расхождение было бы
+  // видно сразу. Тихо, через catch: сорванная отправка не повод отменять уже
+  // проведённую выплату.
+  await resyncAfterMoneyOpChange({
+    tenantId: owner.tenantId,
+    zoneId: null,
+    pointId: point.id,
+    shiftId: null,
+    occurredAt: new Date(),
+  }).catch(() => {});
 
   return NextResponse.json({ balance: await calcOperatorBalance(operator.id) });
 }

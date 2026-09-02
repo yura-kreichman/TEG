@@ -71,6 +71,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
         zoneId,
         type: "collection",
         amount: -(Math.abs(amountNumber) + poolShare),
+        // Доля пула отдельным числом (С51): уведомление показывает ВВЕДЁННУЮ
+        // сумму, и пересборка сообщения после правки обязана вычесть долю из
+        // amount — иначе в шапке снова «955 вместо 700».
+        poolShareAmount: poolShare,
         performedByUserId: owner.user.id,
       },
     });

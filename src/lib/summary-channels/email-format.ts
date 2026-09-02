@@ -161,7 +161,13 @@ export function formatDailyCashSummaryEmail(
   st: SummaryText
 ): { subject: string; html: string } {
   const subject = `${st.dailyCashSubject} · ${data.pointName} · ${formatBusinessDate(data.businessDate, ".")}`;
-  const total = data.cashAmount + data.mobileAmount - data.expenses;
+  // Расходы НЕ вычитаются (К8): с 2026-08-16 сотрудник вводит остаток кассы
+  // уже ПОСЛЕ своих трат, значит они сидят внутри cashAmount, и второе
+  // вычитание занижало «Итого» ровно на сумму дневных трат. Третья копия
+  // одной формулы: в чате и в пуше поправлено раньше, письмо осталось —
+  // у тенанта с включённым email один и тот же день приходил двумя разными
+  // числами. Строка расходов ниже остаётся справочной.
+  const total = data.cashAmount + data.mobileAmount;
   const rows: EmailRow[] = [];
 
   if (settings.showCash) {

@@ -38,6 +38,7 @@ import { prisma } from "../src/lib/prisma";
 import { getZoneBalances, chargeSelfServiceAdvanceToZones } from "../src/lib/zone-balance";
 import { resyncZoneSummaryMessage } from "../src/lib/summary-channels/zone-summary-message";
 import { resyncDailyCashForZone } from "../src/lib/summary-channels/resync";
+import { computeZoneSubmissionRevenues } from "../src/lib/reports";
 
 const APPLY = process.argv.includes("--apply");
 const MARK = "repair-2026-09-02";
@@ -112,6 +113,8 @@ async function main() {
   console.log(`Разнесём выплат: ${money(payoutTotal)}`);
   console.log(`Ожидаемая сумма остатков после починки: ${money(2425 + 70 + 450 - payoutTotal)}`);
 
+  await showDifference("Разница СЕЙЧАС", submission.submittedAt, zones);
+
   if (!APPLY) {
     console.log("\nПробный прогон окончен. Для записи — тот же вызов с --apply.");
     return;
@@ -122,6 +125,7 @@ async function main() {
 
     for (const zone of zones) {
       const amount = OVERDRAWN[zone.name]!;
+      // Выручка — чинит ОСТАТОК зоны.
       await tx.moneyOperation.create({
         data: {
           tenantId: tenant.id,
@@ -132,6 +136,14 @@ async function main() {
           occurredAt: submission.submittedAt,
           comment: `Выручка, забранная инкассацией до пересчёта (${MARK})`,
         },
+      });
+      // Поле в самой сдаче — чинит РАЗНИЦУ. Двойного счёта нет: остаток зоны
+      // считается по журналу, а Разница — по cashAmount сдачи плюс это поле,
+      // и cashAmount мы не трогаем. Ровно то, что записала бы сама сдача,
+      // пройди она уже на исправленном коде.
+      await tx.zoneSubmission.updateMany({
+        where: { resultsSubmissionId: submission.id, zoneId: zone.id },
+        data: { collectedBeforeSubmission: amount },
       });
     }
 
@@ -181,6 +193,29 @@ async function main() {
     console.error("  «Касса за день» не пересобралась:", e?.message ?? e)
   );
   console.log("\nСообщения в Telegram пересобраны.");
+
+  await showDifference("Разница ПОСЛЕ", submission.submittedAt, zones);
+}
+
+/** Разница по каждой зоне — той же функцией, что и все отчёты владельца. */
+async function showDifference(title: string, at: Date, zones: { id: string; name: string }[]) {
+  const from = new Date(at.getTime() - 24 * 60 * 60 * 1000);
+  const to = new Date(at.getTime() + 24 * 60 * 60 * 1000);
+  const rows = await computeZoneSubmissionRevenues(
+    zones.map((z) => z.id),
+    from,
+    to
+  );
+  const byZone = new Map(zones.map((z) => [z.id, z.name]));
+  console.log(`\n${title}:`);
+  let total = 0;
+  for (const r of rows) {
+    total += r.difference;
+    console.log(
+      `  ${(byZone.get(r.zoneId) ?? r.zoneId).padEnd(12)} расчётная ${money(r.calculatedRevenue)}   Разница ${money(r.difference)}`
+    );
+  }
+  console.log(`  ${"ИТОГО".padEnd(12)} ${" ".repeat(21)}${money(total)}`);
 }
 
 main()

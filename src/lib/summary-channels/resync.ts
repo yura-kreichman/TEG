@@ -158,9 +158,20 @@ export async function resyncCollectionAlert(messageId: string, tenantId: string)
     if (!channel?.chatId) return;
 
     const abs = (v: unknown) => Math.abs(Number(v));
+    // Минус доля пула (С51). В журнале у зонной инкассации лежит «введённое +
+    // доля непогашенного аванса», а уведомление всегда показывало именно
+    // ВВЕДЁННОЕ — «сколько физически забрали сейчас» (жалоба владельца
+    // 2026-07-25: «955 вместо 700»). Пересборка после правки складывала сырые
+    // суммы журнала и воскрешала тот же баг. Доля теперь хранится отдельным
+    // полем; у строк старше 2026-09-03 его нет — там остаётся сырая сумма,
+    // как и было, восстановить её задним числом нечем.
     const zones = ops
       .filter((o) => o.type === "collection" && o.zone)
-      .map((o) => ({ name: o.zone!.name, emoji: o.zone!.telegramEmoji, amount: abs(o.amount) }));
+      .map((o) => ({
+        name: o.zone!.name,
+        emoji: o.zone!.telegramEmoji,
+        amount: Math.round((abs(o.amount) - Number(o.poolShareAmount ?? 0)) * 100) / 100,
+      }));
     const goodsAmount = ops.filter((o) => o.type === "collection_pool_sweep_goods").reduce((s, o) => s + abs(o.amount), 0);
     const abonementAmount = ops
       .filter((o) => o.type === "collection_pool_sweep_abonement")

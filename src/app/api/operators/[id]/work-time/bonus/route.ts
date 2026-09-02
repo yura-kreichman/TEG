@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { chargeSelfServiceAdvanceToZones } from "@/lib/zone-balance";
+import { resyncAfterMoneyOpChange } from "@/lib/summary-channels/resync";
 import { prisma } from "@/lib/prisma";
 import { findTenantOperator, requireOwner } from "@/lib/require-owner";
 import { calcOperatorBalance } from "@/lib/work-time";
@@ -70,6 +71,16 @@ export async function POST(request: Request, ctx: RouteContext<"/api/operators/[
     // инкассации, задним числом и без понятной причины.
     await chargeSelfServiceAdvanceToZones(owner.tenantId, point.id, amountNumber, operator.id, tx);
   });
+
+  // Пересборка уже отправленных сводок — та же причина и тот же приём, что у
+  // аванса рядом (/advance/route.ts): роуты карточки не звали resync вообще.
+  await resyncAfterMoneyOpChange({
+    tenantId: owner.tenantId,
+    zoneId: null,
+    pointId: point.id,
+    shiftId: null,
+    occurredAt: new Date(),
+  }).catch(() => {});
 
   return NextResponse.json({ balance: await calcOperatorBalance(operator.id) });
 }
