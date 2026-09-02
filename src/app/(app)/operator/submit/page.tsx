@@ -591,7 +591,13 @@ export default function SubmitResultsPage() {
           }))
         )
       : calcZoneRevenue(tariffCalc, Number(form.returnsCount || 0));
-    const actualCash = parseMoneyInput(form.cashAmount) + parseMoneyInput(form.mobileAmount);
+    // revenueCashOf, а не сырой parseMoneyInput (генеральная проверка финансов
+    // 2026-09-02, К6). Вычет размена был применён только в ветке Билетов выше
+    // и в handleSubmit, а ОСНОВНАЯ ветка — «Счётчики», «Пуски», «Прибывания»,
+    // «Только касса» — считала предпросмотр с разменом внутри кассы. На сервер
+    // при этом уходила уже очищенная сумма: сотрудник видел одну «Разницу»,
+    // получал другую, и расходились они ровно на размен.
+    const actualCash = revenueCashOf(form.cashAmount, zone.changeFundAmount) + parseMoneyInput(form.mobileAmount);
     const counterAbonementAmount = counterAbonementByZone[zoneId] ?? 0;
     const paidFromBalance = countersPaidFromBalance(zone, {
       zoneSpend: counterAbonementAmount,

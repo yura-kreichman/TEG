@@ -547,7 +547,12 @@ export function formatDailyCashSummaryTelegram(
   timezone: string,
   st: SummaryText
 ): string {
-  const total = data.cashAmount + data.mobileAmount - data.expenses;
+  // Расходы НЕ вычитаются (генеральная проверка финансов 2026-09-02, К8): с
+  // 2026-08-16 сотрудник вводит остаток кассы уже ПОСЛЕ своих трат, значит
+  // они сидят внутри cashAmount, и второе вычитание занижало «Итого» ровно на
+  // сумму дневных трат. Экран «Итоги дня» считает то же число как
+  // наличные + безнал, без вычета, — теперь сводка отвечает так же.
+  const total = data.cashAmount + data.mobileAmount;
   // Одна и та же строка в обоих видах сводки: она и так короткая, укорачивать
   // её отдельно для компактного вида нечем.
   const note = pendingNote(data.pending, st, locale);

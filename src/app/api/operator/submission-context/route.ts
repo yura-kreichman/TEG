@@ -3,8 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { isModuleEnabled } from "@/lib/tenant-modules";
-import { getPointAbonementCashTotal, getPointGoodsCashTotal } from "@/lib/zone-balance";
-import { previousSubmissionBoundary } from "@/lib/game-room";
+import { getChangeFundInTillByZone, getPointAbonementCashTotal, getPointGoodsCashTotal } from "@/lib/zone-balance";
 
 export async function GET() {
   const ctx = await requireOperator();
@@ -107,24 +106,16 @@ export async function GET() {
   // арифметики мастер показывает вычитание сотруднику и отправляет уже
   // очищенную выручку. Задним числом ничего не пересчитывается — из базы
   // невозможно узнать, пересчитывал сотрудник весь ящик или только выручку.
-  const changeFundByZone = new Map<string, number>();
-  if (zones.length > 0) {
-    const boundaries = await Promise.all(
-      zones.map(async (z) => [z.id, await previousSubmissionBoundary(z.id)] as const)
-    );
-    const ops = await prisma.moneyOperation.findMany({
-      where: { zoneId: { in: zones.map((z) => z.id) }, type: "change_fund" },
-      select: { zoneId: true, amount: true, occurredAt: true },
-    });
-    const boundaryByZone = new Map(boundaries);
-    for (const op of ops) {
-      if (!op.zoneId) continue;
-      const since = boundaryByZone.get(op.zoneId);
-      // Окно то же, что у расчётной выручки: строго после прошлой сдачи.
-      if (since && op.occurredAt <= since) continue;
-      changeFundByZone.set(op.zoneId, (changeFundByZone.get(op.zoneId) ?? 0) + Number(op.amount));
-    }
-  }
+  //
+  // Считает КАНОНИЧЕСКАЯ функция, а не своё окно (генеральная проверка
+  // финансов 2026-09-02, С17). Здесь была вторая, независимая отсечка — «всё,
+  // что внесено после прошлой сдачи итогов», — и она отвечала на другой
+  // вопрос, чем касса: размен привязан к промежутку между ИНКАССАЦИЯМИ, а не
+  // между сдачами. Внесённый вчера и уже вычтенный вчерашней сдачей размен
+  // сегодня в это окно не попадал, зато оставался в кассе — и одни и те же
+  // деньги вычитались дважды, через день.
+  const changeFundByZone =
+    zones.length > 0 ? await getChangeFundInTillByZone(zones.map((z) => z.id)) : new Map<string, number>();
 
   const result = zones.map((zone) => ({
     id: zone.id,

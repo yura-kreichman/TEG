@@ -112,13 +112,18 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     const key = dateKey(s.resultsSubmission.submittedAt);
     byDay.set(key, (byDay.get(key) ?? 0) + Number(s.cashAmount) + Number(s.mobileAmount));
   }
+  // Знаковая сумма, НЕ Math.abs (генеральная проверка финансов 2026-09-02,
+  // К10). Аннулирование продажи — и абонемента, и товара — пишется
+  // компенсирующей операцией ТОГО ЖЕ типа с отрицательной суммой; модуль
+  // превращал вычитание в прибавление, и день с одной продажей на 500 и её
+  // отменой показывал в тепловой карте 1000 вместо нуля.
   for (const op of abonementOps) {
     const key = dateKey(op.occurredAt);
-    byDay.set(key, (byDay.get(key) ?? 0) + Math.abs(Number(op.amount)));
+    byDay.set(key, (byDay.get(key) ?? 0) + Number(op.amount));
   }
   for (const op of goodsOps) {
     const key = dateKey(op.occurredAt);
-    byDay.set(key, (byDay.get(key) ?? 0) + Math.abs(Number(op.amount)));
+    byDay.set(key, (byDay.get(key) ?? 0) + Number(op.amount));
   }
 
   // "Год" — 12 месяцев, а не сетка дней недели: 52 строки нечитаемы на

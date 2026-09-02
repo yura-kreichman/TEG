@@ -125,10 +125,19 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     // revenue_abonement/goods_revenue_abonement (трата) по-прежнему не
     // входят вовсе — деньги уже учтены в момент пополнения.
     if (op.type === "abonement_topup" || op.type === "abonement_topup_cashless") {
-      if (op.type === "abonement_topup") totalCash += amount;
-      else totalMobile += amount;
+      // Знаковая сумма, НЕ Math.abs — ровно по той же причине, что у Товаров
+      // ниже, где это уже было учтено (генеральная проверка финансов
+      // 2026-09-02, К9: правильный двойник лежал строкой ниже, с готовым
+      // комментарием). Аннулирование продажи абонемента пишет компенсирующую
+      // операцию ТОГО ЖЕ типа с отрицательной суммой, и модуль превращал
+      // вычитание в прибавление: отменённая продажа на 1000 давала не 0, а
+      // +2000. «Отчёты → Деньги» при этом показывали верный 0 — два экрана,
+      // два ответа.
+      const signedTopup = Number(op.amount);
+      if (op.type === "abonement_topup") totalCash += signedTopup;
+      else totalMobile += signedTopup;
       const key = dateKey(op.occurredAt);
-      byDay.set(key, (byDay.get(key) ?? 0) + amount);
+      byDay.set(key, (byDay.get(key) ?? 0) + signedTopup);
       activeDays.add(key);
     }
     if (op.type === "goods_revenue" || op.type === "goods_revenue_cashless") {
