@@ -478,6 +478,13 @@ export default function ZoneBalancesPage() {
   // остаться в тексте. На экране имя показывает единый чип сотрудника
   // (правка владельца 2026-08-17).
   function collectionEntryLabel(c: CollectionEntry, withName = false): string {
+    // Размен — ДО проверки zoneName: у зонного размена имя зоны есть, и без
+    // этой ветки строка выглядела ровно как инкассация из той же зоны
+    // (обратная связь владельца 2026-09-02: «появилась как инкассация 200»).
+    // Деньги при этом идут в противоположную сторону — в кассу, а не из неё.
+    if (c.pool === "change_fund") {
+      return c.zoneName ? `${t.money.changeFund} · ${c.zoneName}` : `${t.money.changeFund} · ${t.goods.navLabel}`;
+    }
     if (c.zoneName) return c.zoneName;
     if (c.pool === "abonement") return t.money.abonementCashLabel;
     if (c.pool === "goods") return t.goods.navLabel;
@@ -620,7 +627,17 @@ export default function ZoneBalancesPage() {
   // Самый свежий акт: группы идут от новой даты к старой, внутри группы акты
   // тоже по убыванию времени — значит это первый акт первой группы. Только у
   // него в реестре появляется кнопка печати.
-  const latestActKey = collectionGroups.length > 0 ? (splitIntoActs(collectionGroups[0]!.items)[0]?.key ?? null) : null;
+  //
+  // Размен пропускаем: слип нужен при передаче денег из рук в руки, а размен
+  // владелец кладёт себе же в кассу, передавать нечего. Без этого фильтра
+  // свежий размен перехватывал кнопку у последней инкассации и печатал слип
+  // «Инкассация» на операцию противоположного направления.
+  // Идём по группам, а не только по первой: день, в котором был один размен и
+  // ни одной инкассации, иначе оставил бы реестр вовсе без кнопки печати.
+  const latestActKey =
+    collectionGroups
+      .flatMap((g) => splitIntoActs(g.items))
+      .find((a) => a.kind !== "change_fund")?.key ?? null;
 
   if (checking) {
     return (
@@ -1116,6 +1133,11 @@ export default function ZoneBalancesPage() {
                             {c.pool === "abonement" && <Gift className="size-3 shrink-0" />}
                             {c.pool === "goods" && <ShoppingBag className="size-3 shrink-0" />}
                             {c.pool === "advance" && <PiggyBank className="size-3 shrink-0" />}
+                            {/* Та же монетка, что на кнопке «Размен» в остатках
+                                зоны выше. Размен всегда одна операция, поэтому
+                                до ветки свёрнутого акта он не доходит никогда —
+                                иконку и подпись обязана рисовать эта ветка. */}
+                            {c.pool === "change_fund" && <Coins className="size-3 shrink-0" />}
                             {(c.pool === "advance_taken" || c.pool === "bonus_taken") && (
                               <HandCoins className="size-3 shrink-0" />
                             )}
@@ -1431,7 +1453,9 @@ export default function ZoneBalancesPage() {
       <BottomSheet open={editingCollection !== null} onClose={() => setEditingCollection(null)}>
         {editingCollection && (
           <div className="flex flex-col gap-4 pt-2">
-            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">{t.operatorApp.collection}</h2>
+            <h2 className="text-[1.1875rem] font-extrabold tracking-[-0.01em]">
+              {editingCollection.pool === "change_fund" ? t.money.changeFund : t.operatorApp.collection}
+            </h2>
             <div className="flex flex-col gap-1">
               <Label htmlFor="editCollectionAmount">{t.money.amountLabel}</Label>
               <MoneyInput
@@ -1447,7 +1471,13 @@ export default function ZoneBalancesPage() {
 
             {/* Единый вид шторок правки (запрос владельца 2026-08-16): широкая
                 "Сохранить" внизу, удаление одной иконкой рядом. */}
-            {confirmDeleteCollection && <p className="text-body-airbnb">{t.money.deleteCollectionConfirm}</p>}
+            {confirmDeleteCollection && (
+              <p className="text-body-airbnb">
+                {editingCollection.pool === "change_fund"
+                  ? t.money.deleteChangeFundConfirm
+                  : t.money.deleteCollectionConfirm}
+              </p>
+            )}
             <div className="flex items-center gap-2">
               <PressableScale className="min-w-0 flex-1">
                 <SaveButton

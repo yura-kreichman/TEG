@@ -1092,6 +1092,7 @@
     "collectionSettledCannotEdit": "Bu avans tahsilatı sonuç teslimi ile zaten kapatıldı ve kapatma ile bağlantı kaydedilmedi — tutar artık düzeltilemez. Düzeltmeyi ayrı bir işlemle yapın.",
     "collectionSaveError": "Değişiklikler kaydedilemedi",
     "deleteCollectionConfirm": "Bu tahsilat silinsin mi? Bölge bakiyesi yeniden hesaplanacak. Geri alınamaz.",
+    "deleteChangeFundConfirm": "Bu bozuk para fonu silinsin mi? Kasa bakiyesi yeniden hesaplanacak. Geri alınamaz.",
     "deleteCollectionError": "Tahsilat silinemedi",
     "editExpenseAction": "Düzenle",
     "editExpenseTitle": "Gider",
