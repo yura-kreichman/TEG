@@ -110,6 +110,22 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/su
     readings: nextReadings,
   };
 
+  // Считаем ЗДЕСЬ, а не в конце транзакции: денежный блок ниже обязан знать,
+  // менялось ли хоть что-нибудь. Раньше он выполнялся всегда — и пустое
+  // «Сохранить» уводило деньги, не оставляя записи в журнале правок
+  // (генеральная проверка финансов 2026-09-02).
+  const changed = JSON.stringify(before) !== JSON.stringify(after);
+  // Насколько поменялась касса — именно ДЕЛЬТА, не новое значение. Сдача
+  // пишет в revenue не введённую сумму, а «введённое + компенсированные
+  // расходы» (submit-results/route.ts:803: сотрудник вводит остаток ПОСЛЕ
+  // своих трат). Перезапись значением стирала компенсацию, и расход
+  // вычитался второй раз: получил 1000, купил на 350, ввёл 650 → в кассе
+  // зоны 650; владелец жмёт «Сохранить» → revenue := 650 → касса 300 при
+  // 650 в ящике. Пересчитать компенсацию заново нельзя:
+  // getExpenseCompensation фильтрует resultsSubmissionId: null и для уже
+  // закрытой сдачи вернёт ноль.
+  const cashDelta = Math.round((nextCash - before.cashAmount) * 100) / 100;
+
   await prisma.$transaction(async (tx) => {
     for (const r of zoneSubmission.assetReadings) {
       const key = `${r.assetId}:${r.tariffId}`;
@@ -130,10 +146,21 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/su
         type: "revenue",
       },
     });
-    if (nextCash > 0) {
+    if (changed && cashDelta !== 0) {
       if (revenueOp) {
-        await tx.moneyOperation.update({ where: { id: revenueOp.id }, data: { amount: nextCash } });
-      } else {
+        // Сдвигаем на дельту, сохраняя компенсацию расходов внутри суммы.
+        // Удаляем, только если после сдвига не осталось положительного
+        // остатка: прежнее условие «nextCash === 0 → удалить» выбрасывало
+        // вместе с выручкой и компенсацию, уводя зону в минус на сумму трат
+        // при пустом ящике.
+        const nextAmount = Math.round((Number(revenueOp.amount) + cashDelta) * 100) / 100;
+        if (nextAmount > 0) {
+          await tx.moneyOperation.update({ where: { id: revenueOp.id }, data: { amount: nextAmount } });
+        } else {
+          await tx.moneyOperation.delete({ where: { id: revenueOp.id } });
+        }
+      } else if (nextCash > 0) {
+        // Операции не было вовсе — компенсировать нечего, пишем введённое.
         await tx.moneyOperation.create({
           data: {
             tenantId: owner.tenantId,
@@ -145,8 +172,6 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/su
           },
         });
       }
-    } else if (revenueOp) {
-      await tx.moneyOperation.delete({ where: { id: revenueOp.id } });
     }
 
     // Безнал — та же логика, отдельный тип revenue_cashless (см. submit-results/route.ts).
@@ -157,7 +182,11 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/su
         type: "revenue_cashless",
       },
     });
-    if (nextMobile > 0) {
+    // Безнал перезаписывается ЗНАЧЕНИЕМ, и это верно: компенсации расходов у
+    // него нет (расходы платят наличными), сдача пишет туда ровно введённую
+    // сумму. Под `changed` всё равно ставим — при пустом сохранении трогать
+    // журнал незачем.
+    if (changed && nextMobile > 0) {
       if (revenueCashlessOp) {
         await tx.moneyOperation.update({ where: { id: revenueCashlessOp.id }, data: { amount: nextMobile } });
       } else {
@@ -172,11 +201,10 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/su
           },
         });
       }
-    } else if (revenueCashlessOp) {
+    } else if (changed && revenueCashlessOp) {
       await tx.moneyOperation.delete({ where: { id: revenueCashlessOp.id } });
     }
 
-    const changed = JSON.stringify(before) !== JSON.stringify(after);
     if (changed) {
       // Откатываем автопогашение "Аванса инкассации", если оно было
       // привязано к этой сдаче — см. reverseResultsSubmissionAdvanceSettlement
