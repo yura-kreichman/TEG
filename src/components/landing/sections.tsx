@@ -244,10 +244,34 @@ export function VideoSection({ data, lp }: { data: LandingRenderData; lp: LP }) 
 // из эталонного файла дизайн-фикса: тот пункт эталона явно отменён
 // пользователем в тот же день, формат остаётся прежним). Лимит тарифов на
 // зону — 2 (докс 02-money.md), но join написан общим случаем на N значений.
-function formatPriceLine(tariffs: { price: number }[], lp: LP, locale: Locale): string {
-  const label = tariffs.length === 1 ? lp.priceSingleLabel : lp.pricesMultipleLabel;
-  const values = tariffs.map((t) => formatMoney(t.price, locale));
-  const joined = values.length <= 1 ? values.join("") : `${values.slice(0, -1).join(", ")} ${lp.pricesJoiner} ${values[values.length - 1]}`;
+/**
+ * Цены зоны для витрины.
+ *
+ * Берём цены ВАРИАНТОВ, если они есть, и только иначе — цену самого тарифа.
+ * У «За вход» (Прибывания) и «С таймером» (Пуски) стоимость живёт в
+ * вариантах, а Tariff.price остаётся нулевым placeholder-ом: лендинг читал
+ * только его и печатал «Цена: 0» при включённом показе цен (найдено на
+ * боевых данных 2026-09-02 у Игроленда — в зоне лежали 300 / 450 / 650).
+ *
+ * Нули отбрасываем: тариф-placeholder не должен появляться в списке рядом с
+ * настоящими ценами. Если после этого не осталось ничего — строки цен нет
+ * вовсе, что честнее нуля.
+ */
+function formatPriceLine(
+  tariffs: { price: number; optionPrices?: number[] }[],
+  lp: LP,
+  locale: Locale
+): string | null {
+  const prices = tariffs
+    .flatMap((t) => (t.optionPrices && t.optionPrices.length > 0 ? t.optionPrices : [t.price]))
+    .filter((p) => p > 0);
+  if (prices.length === 0) return null;
+  const label = prices.length === 1 ? lp.priceSingleLabel : lp.pricesMultipleLabel;
+  const values = prices.map((p) => formatMoney(p, locale));
+  const joined =
+    values.length <= 1
+      ? values.join("")
+      : `${values.slice(0, -1).join(", ")} ${lp.pricesJoiner} ${values[values.length - 1]}`;
   return `${label}: ${joined}`;
 }
 
@@ -373,11 +397,18 @@ export function RentalSection({ data, lp }: { data: LandingRenderData; lp: LP })
                     ) : (
                       <ZoneIconGlyph iconKey={zone.iconKey} className="size-11" />
                     )}
-                    {data.showPrices && zone.tariffs.length > 0 && (
-                      <span className="lt-zone-price-overlay tabular-nums">
-                        {formatPriceLine(zone.tariffs, lp, isLocale(data.tenant.locale) ? data.tenant.locale : "ru")}
-                      </span>
-                    )}
+                    {data.showPrices &&
+                      (() => {
+                        // Строка считается ЗАРАНЕЕ: она может оказаться пустой
+                        // (все цены нулевые), и тогда плашку рисовать нечем —
+                        // проверять zone.tariffs.length недостаточно.
+                        const line = formatPriceLine(
+                          zone.tariffs,
+                          lp,
+                          isLocale(data.tenant.locale) ? data.tenant.locale : "ru"
+                        );
+                        return line ? <span className="lt-zone-price-overlay tabular-nums">{line}</span> : null;
+                      })()}
                     <div className="lt-zone-name-overlay flex items-center gap-2.5 px-4 py-3.5">
                       {isValidIconKey(zone.iconKey) && (
                         <ZoneIconGlyph iconKey={zone.iconKey} className="size-5 shrink-0 text-white" />

@@ -68,7 +68,11 @@ export interface LandingRenderData {
     iconKey: string | null;
     photoUrl: string | null;
     caption: PMNode | null;
-    tariffs: { id: string; name: string; price: number }[];
+    // optionPrices — цены ВАРИАНТОВ тарифа. У «За вход» и «С таймером» цена
+    // живёт именно в них, а сам Tariff.price остаётся нулевым placeholder-ом
+    // (найдено на боевых данных 2026-09-02: у Игроленда лендинг печатал
+    // «Цена: 0» при включённом показе цен, хотя в зоне лежали 300 / 450 / 650).
+    tariffs: { id: string; name: string; price: number; optionPrices: number[] }[];
     assetsCount: number;
     fleetAssets: { id: string; name: string; photoUrl: string }[];
     fleetOverflowCount: number;
@@ -129,7 +133,11 @@ export async function getLandingRenderData(tenantId: string): Promise<LandingRen
           where: { active: true },
           orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
           include: {
-            tariffs: { where: { deletedAt: null }, orderBy: { order: "asc" } },
+            tariffs: {
+              where: { deletedAt: null },
+              orderBy: { order: "asc" },
+              include: { options: { orderBy: { order: "asc" } } },
+            },
             assets: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
           },
         },
@@ -187,7 +195,12 @@ export async function getLandingRenderData(tenantId: string): Promise<LandingRen
         iconKey: zone.iconKey,
         photoUrl: content?.photoUrl ?? null,
         caption,
-        tariffs: zone.tariffs.map((t) => ({ id: t.id, name: t.name, price: Number(t.price) })),
+        tariffs: zone.tariffs.map((t) => ({
+          id: t.id,
+          name: t.name,
+          price: Number(t.price),
+          optionPrices: t.options.map((o) => Number(o.price)),
+        })),
         assetsCount: zone.assets.length,
         fleetAssets,
         fleetOverflowCount,
