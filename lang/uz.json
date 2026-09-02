@@ -1657,6 +1657,8 @@
     "returnsCompact": "Test",
     "difference": "Farq",
     "differenceCompact": "Farq",
+    "outsideTill": "Sanashdan oldin olingan",
+    "outsideTillCompact": "Sanashdan old.",
     "calculated": "Hisoblangan tushum",
     "calculatedCompact": "Koʻrs.",
     "paidCompact": "To‘l.",

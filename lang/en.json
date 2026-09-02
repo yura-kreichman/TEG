@@ -1657,6 +1657,8 @@
     "returnsCompact": "Test",
     "difference": "Difference",
     "differenceCompact": "Diff.",
+    "outsideTill": "Taken before the count",
+    "outsideTillCompact": "Before count",
     "calculated": "Calculated revenue",
     "calculatedCompact": "Read.",
     "paidCompact": "Paid",

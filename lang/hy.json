@@ -1657,6 +1657,8 @@
     "returnsCompact": "Թեստ",
     "difference": "Տարբերություն.",
     "differenceCompact": "Տարբ.",
+    "outsideTill": "Վերցված է հաշվելուց առաջ",
+    "outsideTillCompact": "Հաշվելուց առաջ",
     "calculated": "Հաշվարկային եկամուտ.",
     "calculatedCompact": "Ցուցմ.",
     "paidCompact": "Վճար.",

@@ -247,6 +247,8 @@ export async function resyncZoneSummaryMessage(
       mobileAmount: Number(zs.mobileAmount),
       abonementAmount,
       calculatedRevenue,
+      // Ровно те слагаемые, что прибавлены к Разнице выше.
+      outsideTillAmount: Math.round(expensesInSubmission * 100) / 100,
       difference,
       returnsCount: zs.returnsCount,
       operatorName: zs.resultsSubmission.operator.name,

@@ -186,6 +186,8 @@ async function main() {
       mobileAmount: Number(zs.mobileAmount),
       abonementAmount,
       calculatedRevenue,
+      // Те же слагаемые, что вошли в difference выше.
+      outsideTillAmount: Math.round(expensesInSubmission * 100) / 100,
       difference,
       returnsCount: zs.returnsCount,
       operatorName: zs.resultsSubmission.operator.name,

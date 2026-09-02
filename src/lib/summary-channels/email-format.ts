@@ -127,6 +127,11 @@ export function formatZoneSummaryEmail(
       if (data.abonementAmount > 0) {
         rows.push({ label: st.abonement, value: formatMoney(data.abonementAmount, locale) });
       }
+      // Что ушло из кассы до пересчёта — то же слагаемое «Разницы», что и в
+      // чате (вопрос владельца 2026-09-03: «Разница −100. С чего?»).
+      if (data.outsideTillAmount > 0) {
+        rows.push({ label: st.outsideTill, value: formatMoney(data.outsideTillAmount, locale) });
+      }
     }
     if (settings.showCalc) rows.push({ label: st.calculated, value: formatMoney(data.calculatedRevenue, locale) });
     if (settings.showDiff) {

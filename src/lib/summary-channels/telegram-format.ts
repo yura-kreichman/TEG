@@ -418,11 +418,23 @@ export function formatZoneSummaryTelegram(
           // способом оплаты; в остальных остаётся прежняя "Касса" (нал+безнал),
           // потому что баланс туда сознательно не входит: эти деньги касса
           // получила раньше, при пополнении абонемента.
-          bits.push(
-            perMethodKnown
-              ? `💰 ${st.paidCompact}: <b>${formatMoney(paidTotal, locale)}</b>`
-              : `💵 ${st.cashOnly}: <b>${formatMoney(data.cashAmount + data.mobileAmount, locale)}</b>`
-          );
+          // У режимов БЕЗ пооперационного способа оплаты — нал и безнал
+          // РАЗДЕЛЬНО, а не одной «Кассой» (запрос владельца 2026-09-03:
+          // «нужно чтобы для каждой зоны писался и безнал, иначе непонятно»).
+          // Слитая сумма не давала прочитать, из чего она сложилась, и
+          // «Разница» выглядела взятой с потолка.
+          if (perMethodKnown) {
+            bits.push(`💰 ${st.paidCompact}: <b>${formatMoney(paidTotal, locale)}</b>`);
+          } else {
+            bits.push(`💵 ${st.cashCompact}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
+            bits.push(`💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`);
+          }
+        }
+        // Что ушло из кассы до пересчёта — иначе «Разница» не сходится
+        // глазами: 800 против 1250 даёт −450, а в сводке стоит −100, и
+        // недостающие 350 нигде не названы.
+        if (settings.showCash && data.outsideTillAmount > 0) {
+          bits.push(`📤 ${st.outsideTillCompact}: <b>${formatMoney(data.outsideTillAmount, locale)}</b>`);
         }
         if (settings.showCash && settings.showCalc) bits.push(cmp);
         if (settings.showCalc) bits.push(`🔢 ${st.calculatedCompact}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
@@ -513,6 +525,12 @@ export function formatZoneSummaryTelegram(
         // раньше, при пополнении абонемента (запрос пользователя 2026-07-17).
         if (data.abonementAmount > 0) {
           lines.push(`🎫 ${st.abonement}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
+        }
+        // Что ушло из кассы до пересчёта (расходы + инкассация среди дня) —
+        // без этой строки «Разница» не сходится глазами, см. комментарий у
+        // компактной ветки выше.
+        if (data.outsideTillAmount > 0) {
+          lines.push(`📤 ${st.outsideTill}: <b>${formatMoney(data.outsideTillAmount, locale)}</b>`);
         }
       }
       if (settings.showCalc) lines.push(`🔢 ${st.calculated}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);

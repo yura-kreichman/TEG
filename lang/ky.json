@@ -1657,6 +1657,8 @@
     "returnsCompact": "Тест",
     "difference": "Айырма",
     "differenceCompact": "Айырм.",
+    "outsideTill": "Эсептөөгө чейин алынган",
+    "outsideTillCompact": "Эсептөө ал.",
     "calculated": "Эсептелген түшүм",
     "calculatedCompact": "Көрс.",
     "paidCompact": "Төлөн.",

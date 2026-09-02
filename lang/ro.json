@@ -1657,6 +1657,8 @@
     "returnsCompact": "Test",
     "difference": "Diferență",
     "differenceCompact": "Dif.",
+    "outsideTill": "Retras înainte de numărare",
+    "outsideTillCompact": "Înainte",
     "calculated": "Venit calculat",
     "calculatedCompact": "Cit.",
     "paidCompact": "Plătit",

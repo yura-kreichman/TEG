@@ -1657,6 +1657,8 @@
     "returnsCompact": "Test",
     "difference": "Różnica",
     "differenceCompact": "Różn.",
+    "outsideTill": "Pobrane przed liczeniem",
+    "outsideTillCompact": "Przed licz.",
     "calculated": "Obliczony przychód",
     "calculatedCompact": "Odcz.",
     "paidCompact": "Zapł.",

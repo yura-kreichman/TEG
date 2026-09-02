@@ -1657,6 +1657,8 @@
     "returnsCompact": "Тэст",
     "difference": "Розніца",
     "differenceCompact": "Розн.",
+    "outsideTill": "Пайшло да пераліку",
+    "outsideTillCompact": "Да перал.",
     "calculated": "Разліковая выручка",
     "calculatedCompact": "Паказ.",
     "paidCompact": "Аплач.",

@@ -1657,6 +1657,8 @@
     "returnsCompact": "Test",
     "difference": "Fərq",
     "differenceCompact": "Fərq",
+    "outsideTill": "Sayımdan əvvəl götürülən",
+    "outsideTillCompact": "Sayımdan əvvəl",
     "calculated": "Hesablanmış gəlir",
     "calculatedCompact": "Göst.",
     "paidCompact": "Ödən.",

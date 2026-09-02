@@ -1657,6 +1657,8 @@
     "returnsCompact": "Тест",
     "difference": "Фарқият",
     "differenceCompact": "Фарқ",
+    "outsideTill": "Пеш аз ҳисоб гирифташуда",
+    "outsideTillCompact": "Пеш аз ҳисоб",
     "calculated": "Даромади ҳисобшуда",
     "calculatedCompact": "Нишон.",
     "paidCompact": "Пард.",

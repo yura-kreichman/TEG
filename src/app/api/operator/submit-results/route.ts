@@ -554,6 +554,10 @@ export async function POST(request: Request) {
           calculatedRevenue,
           actualCash,
           difference,
+          // Ровно то слагаемое, что вошло в difference выше: расходы плюс
+          // инкассация среди дня. В сообщение оно уходит отдельной строкой —
+          // иначе «Разницу» не прочитать (вопрос владельца 2026-09-03).
+          outsideTill: outsideTillOf(zs.zoneId),
           readingsText: "",
           readingLines: [] as { assetName: string; tariffName: string; reading: number; delta: number }[],
           returnsCount: 0,
@@ -590,6 +594,10 @@ export async function POST(request: Request) {
           calculatedRevenue,
           actualCash,
           difference,
+          // Ровно то слагаемое, что вошло в difference выше: расходы плюс
+          // инкассация среди дня. В сообщение оно уходит отдельной строкой —
+          // иначе «Разницу» не прочитать (вопрос владельца 2026-09-03).
+          outsideTill: outsideTillOf(zs.zoneId),
           readingsText: "",
           readingLines: [] as { assetName: string; tariffName: string; reading: number; delta: number }[],
           returnsCount: 0,
@@ -691,6 +699,10 @@ export async function POST(request: Request) {
         calculatedRevenue,
         actualCash,
         difference,
+        // Ровно то слагаемое, что вошло в difference выше: расходы плюс
+        // инкассация среди дня. В сообщение оно уходит отдельной строкой —
+        // иначе «Разницу» не прочитать (вопрос владельца 2026-09-03).
+        outsideTill: outsideTillOf(zs.zoneId),
         readingsText,
         readingLines,
         returnsCount: returnsCountByZone.get(zone.id) ?? 0,
@@ -955,6 +967,10 @@ export async function POST(request: Request) {
               mobileAmount: s.mobileAmount,
               abonementAmount: s.abonementAmount,
               calculatedRevenue: s.calculatedRevenue,
+              // Что ушло из кассы до пересчёта — расходы плюс инкассация
+              // среди дня. Слагаемое «Разницы», без него она не сходится
+              // глазами (вопрос владельца 2026-09-03).
+              outsideTillAmount: s.outsideTill,
               difference: s.difference,
               returnsCount: s.returnsCount,
               operatorName: operator.name,

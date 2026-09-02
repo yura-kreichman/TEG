@@ -1657,6 +1657,8 @@
     "returnsCompact": "Test",
     "difference": "Fark",
     "differenceCompact": "Fark",
+    "outsideTill": "Sayımdan önce alınan",
+    "outsideTillCompact": "Sayım öncesi",
     "calculated": "Hesaplanan gelir",
     "calculatedCompact": "Okuma",
     "paidCompact": "Öden.",

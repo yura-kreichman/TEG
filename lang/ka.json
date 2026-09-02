@@ -1657,6 +1657,8 @@
     "returnsCompact": "ტესტი",
     "difference": "სხვაობა",
     "differenceCompact": "სხვ.",
+    "outsideTill": "აღებულია დათვლამდე",
+    "outsideTillCompact": "დათვლამდე",
     "calculated": "გაანგარიშებული შემოსავალი",
     "calculatedCompact": "ჩვენ.",
     "paidCompact": "გადახ.",
