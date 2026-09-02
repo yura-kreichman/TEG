@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireOwner } from "@/lib/require-owner";
 import { voidGoodsSale } from "@/lib/goods";
+import { resyncAfterMoneyOpChange } from "@/lib/summary-channels/resync";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
 // Аннулирование продажи — только владелец (docs/spec/09-goods.md,
@@ -19,7 +20,20 @@ export async function POST(request: Request, ctx: RouteContext<"/api/goods/sale/
   const reason: string | null = typeof body.reason === "string" && body.reason.trim() ? body.reason.trim() : null;
 
   try {
-    await voidGoodsSale(id, owner.tenantId, owner.user.id, reason);
+    const voided = await voidGoodsSale(id, owner.tenantId, owner.user.id, reason);
+    // Пересобираем «Кассу за день» (генеральная проверка финансов 2026-09-02).
+    // Аннулирование пишет компенсирующую MoneyOperation с минусом, то есть
+    // меняет остаток кассы точки — а именно его сводка показывает строкой
+    // «Остаток на точке». Правка инкассации и расхода это давно делают, у
+    // аннулирования товара вызова просто не было, и сообщение в чате
+    // оставалось с прежним числом.
+    await resyncAfterMoneyOpChange({
+      tenantId: owner.tenantId,
+      zoneId: null,
+      pointId: voided.pointId,
+      shiftId: null,
+      occurredAt: voided.occurredAt,
+    }).catch(() => {});
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof Error && err.message === "SALE_NOT_FOUND") {

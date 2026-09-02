@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { editChatMessage, sendChatMessage } from "@/lib/telegram-bot";
 import { parseEmailAddresses, sendEmail } from "./email-channel";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, formatMoneyWithCurrency } from "@/lib/format";
+import type { CurrencyCode } from "@/lib/currency";
 import { isLocale, type Locale } from "@/lib/locales";
 import { getDictionary, type Dictionary } from "@/lib/i18n";
 import {
@@ -162,7 +163,14 @@ export async function dispatchZoneSummary(
     const sign = data.difference > 0 ? "+" : "";
     await sendPushToTenant(tenantId, {
       title: `${data.zoneEmoji ?? "🏁"} ${data.zoneName}`,
-      body: `${st.cashOnly}: ${formatMoney(data.cashAmount, tenant.locale)} · ${st.difference}: ${sign}${formatMoney(data.difference, tenant.locale)}`,
+      // Наличные + безнал и СО ЗНАКОМ ВАЛЮТЫ (генеральная проверка финансов
+      // 2026-09-02). Под ярлыком «Касса» здесь стояли только наличные, тогда
+      // как в Telegram-сообщении под тем же словом — наличные плюс безнал:
+      // один ярлык, два разных числа. А критерий для валюты сформулирован в
+      // этом же файле, у getTenantInfo: одинокая сумма в шторке телефона без
+      // знака не читается, в отличие от таблиц сводок, где валюта ясна из
+      // контекста. Push — ровно тот случай.
+      body: `${st.cashOnly}: ${formatMoneyWithCurrency(data.cashAmount + data.mobileAmount, tenant.locale, tenant.currency as CurrencyCode | null)} · ${st.difference}: ${sign}${formatMoneyWithCurrency(data.difference, tenant.locale, tenant.currency as CurrencyCode | null)}`,
       url: "/reports",
     }).catch((err) => console.error("push dispatch failed", { kind: "zone", tenantId, err }));
   }

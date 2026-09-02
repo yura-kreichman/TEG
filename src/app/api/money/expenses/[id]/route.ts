@@ -208,6 +208,21 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/expe
   // Плюс общие сообщения, которые эту сумму суммируют, — "Касса за день"
   // (lib/summary-channels/resync.ts).
   await resyncAfterMoneyOpChange({ ...op, zoneId, occurredAt: op.occurredAt });
+  // Если расход переехал в зону ДРУГОЙ точки, старая точка тоже обязана
+  // пересобрать свою «Кассу за день» (генеральная проверка финансов
+  // 2026-09-02). Вызов был один и только для НОВОЙ зоны — сумма оставалась
+  // показанной у обеих точек сразу. Перенос между точками разрешён: проверка
+  // выше ограничивает выбор тенантом, а не точкой.
+  if (zoneChanged && op.zoneId) {
+    const previousZone = await prisma.zone.findUnique({
+      where: { id: op.zoneId },
+      select: { pointId: true },
+    });
+    const nextZone = await prisma.zone.findUnique({ where: { id: zoneId }, select: { pointId: true } });
+    if (previousZone && nextZone && previousZone.pointId !== nextZone.pointId) {
+      await resyncAfterMoneyOpChange({ ...op, zoneId: op.zoneId, occurredAt: op.occurredAt }).catch(() => {});
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }

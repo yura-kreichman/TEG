@@ -822,7 +822,15 @@ export async function syncHeldOrderCart(params: SyncHeldOrderParams) {
     }
 
     const allGoodsIds = new Set([...currentByGoods.keys(), ...desiredByGoods.keys()]);
-    const goodsRows = await tx.goods.findMany({ where: { id: { in: [...allGoodsIds] }, tenantId } });
+    // deletedAt/active — как во всех остальных путях продажи (sellOneItemTx,
+    // sellGoodsCart, holdGoodsCart). Правка отложенного заказа была
+    // единственным путём БЕЗ этих фильтров (генеральная проверка финансов
+    // 2026-09-02): через неё в заказ дописывался архивный или снятый с
+    // продажи товар, хотя спека требует серверной проверки на всех
+    // эндпоинтах продаж (docs/spec/09-goods.md, «Каталог»/«Доступ»).
+    const goodsRows = await tx.goods.findMany({
+      where: { id: { in: [...allGoodsIds] }, tenantId, deletedAt: null, active: true },
+    });
     const goodsById = new Map(goodsRows.map((g) => [g.id, g]));
 
     for (const goodsId of allGoodsIds) {
