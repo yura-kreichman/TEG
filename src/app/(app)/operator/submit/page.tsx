@@ -90,6 +90,9 @@ interface ZoneCtx {
   // Размен, внесённый владельцем в кассу этой зоны с прошлой сдачи (разбор
   // 2026-09-02). Ноль — самый частый случай, тогда подсказки нет вовсе.
   changeFundAmount: number;
+  // Забранное владельцем инкассацией до пересчёта — сдача возвращает это в
+  // выручку, значит и предпросмотр обязан (см. getZoneCollectionOverdraw).
+  collectedBeforeAmount: number;
   tariffs: TariffCtx[];
   assets: AssetCtx[];
 }
@@ -548,6 +551,11 @@ export default function SubmitResultsPage() {
     const zoneExpenses = (expenseEventsByZone[zoneId] ?? [])
       .filter((e) => e.countedInReconciliation)
       .reduce((sum, e) => sum + e.amount, 0);
+    // Те же деньги «мимо ящика», что и расходы: владелец забрал кассу среди
+    // дня, и сотрудник их уже не пересчитывает. Прибавляются обе поправки
+    // вместе, ровно как на сервере (submit-results, outsideTillOf) — иначе
+    // сотрудник снова увидит одну «Разницу», а получит другую.
+    const outsideTill = Math.round((zoneExpenses + (zone.collectedBeforeAmount ?? 0)) * 100) / 100;
 
     // Билеты — расчёт из серверного агрегата (ticketsAggregateByZone, заказы
     // с момента предыдущей сдачи), не из tariffCalc ниже — та формула только
@@ -560,7 +568,7 @@ export default function SubmitResultsPage() {
       const abonementAmount = agg?.abonementAmount ?? 0;
       const actualCash = revenueCashOf(form.cashAmount, zone.changeFundAmount) + parseMoneyInput(form.mobileAmount);
       const difference =
-        Math.round((actualCash + zoneExpenses + abonementAmount - calculatedRevenue) * 100) / 100;
+        Math.round((actualCash + outsideTill + abonementAmount - calculatedRevenue) * 100) / 100;
       return { calculatedRevenue, netRevenue: calculatedRevenue, actualCash, difference, abonementAmount };
     }
 
@@ -603,7 +611,7 @@ export default function SubmitResultsPage() {
       zoneSpend: counterAbonementAmount,
       tapLinked: tapPaymentBreakdownByZone[zoneId]?.abonementAmount ?? 0,
     });
-    const difference = Math.round((actualCash + zoneExpenses - (netRevenue - paidFromBalance)) * 100) / 100;
+    const difference = Math.round((actualCash + outsideTill - (netRevenue - paidFromBalance)) * 100) / 100;
     return { calculatedRevenue, netRevenue, actualCash, difference, abonementAmount: counterAbonementAmount };
   }
 

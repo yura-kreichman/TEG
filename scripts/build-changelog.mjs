@@ -126,8 +126,16 @@ if (source && anchorIndex === -1 && commits.length) {
 
 // Группировка по календарным дням: один день = один релиз, сколько бы деплоев
 // в нём ни было (changelog/README.md, «Нумерация»).
+//
+// Отдельный трейлер `Release: major` поднимает MAJOR у релиза того дня, в
+// коммите которого он стоит. Тип записи для этого не годится: «мажорность» —
+// решение владельца о значимости, а не свойство отдельной строки истории, и
+// вывести её из feat/impr/fix нельзя. Метка живёт в самом коммите, поэтому
+// пересборка на сервере даёт тот же номер, что и локальная.
 const byDay = new Map();
+const majorDays = new Set();
 for (const commit of commits.slice(anchorIndex + 1)) {
+  if (/^\s*Release:\s*major\s*$/im.test(commit.body)) majorDays.add(commit.day);
   const entries = parseTrailers(commit.body);
   if (!entries.length) continue;
   const day = byDay.get(commit.day) ?? [];
@@ -138,22 +146,33 @@ for (const commit of commits.slice(anchorIndex + 1)) {
   }
   byDay.set(commit.day, day);
 }
+// Метка в день, где нет ни одной публикуемой записи, поднять номер не может:
+// релиза этого дня попросту не существует. Молчать об этом нельзя — иначе
+// «выкатили 2.0», а на странице по-прежнему 1.26.0, и никто не поймёт почему.
+for (const day of majorDays) {
+  if (!byDay.has(day)) console.warn(`  ! Release: major в дне ${day} без записей Changelog — номер не поднят`);
+}
 
 const fresh = [...byDay.entries()]
   .sort((a, b) => (a[0] < b[0] ? -1 : 1))
-  .map(([day, entries]) => ({ version: null, day, entries }));
+  .map(([day, entries]) => ({ version: null, day, entries, major: majorDays.has(day) }));
 
-// Версии считаются заново по всей истории, от старых к новым: minor — если в
-// релизе есть хоть одна запись feat, иначе patch. Номера в seed.json тоже
-// пересчитываются, а не берутся на веру, — так правило проверяется на каждой
-// сборке, и рассинхрон между seed и правилом невозможен.
+// Версии считаются заново по всей истории, от старых к новым: major — если у
+// релиза стоит метка `Release: major`, minor — если есть хоть одна запись
+// feat, иначе patch. Номера в seed.json тоже пересчитываются, а не берутся на
+// веру, — так правило проверяется на каждой сборке, и рассинхрон между seed и
+// правилом невозможен.
 const releasesAsc = [...seed.releases].reverse().concat(fresh);
 let major = 1;
 let minor = 0;
 let patch = 0;
 releasesAsc.forEach((release, i) => {
   if (i > 0) {
-    if (release.entries.some((e) => e.type === "feat")) {
+    if (release.major) {
+      major += 1;
+      minor = 0;
+      patch = 0;
+    } else if (release.entries.some((e) => e.type === "feat")) {
       minor += 1;
       patch = 0;
     } else {

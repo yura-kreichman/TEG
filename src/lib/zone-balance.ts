@@ -327,6 +327,77 @@ export async function getChangeFundInTillByZone(
   return result;
 }
 
+/**
+ * Сколько владелец забрал из зоны СВЕРХ её остатка с момента `since` — то есть
+ * сколько выручки уехало из ящика до того, как сотрудник её пересчитал.
+ *
+ * Зачем. Владелец приезжает среди дня и забирает кассу, не дожидаясь сдачи
+ * итогов. Остаток зоны на этот момент — только то, что осталось от ПРОШЛЫХ
+ * сдач: сегодняшняя выручка попадёт в журнал лишь вечером, одной записью.
+ * Значит инкассация уводит баланс в минус ровно на сегодняшние деньги, а
+ * сотрудник вечером вводит то, что физически осталось в ящике, — без них.
+ *
+ * Реальный случай КидсБурга 2026-09-02 (жалоба владельца «разницы не
+ * реальные»), зона «Батуты»:
+ *
+ *   16:26  инкассация −305    остаток   0     ← забрал вчерашнее
+ *   18:17  инкассация −2000   остаток −2000   ← забрал СЕГОДНЯШНЮЮ выручку
+ *   20:02  сдача       +70    остаток −1930   ← сотрудник ввёл, что осталось
+ *
+ * Счётчики намотали на 3675, касса показала 2135 — «недостача» 1540 из
+ * воздуха. Так было пять раз (24.07, 04.08, 05.08, 09.08, 02.09): деньги
+ * забирал сам владелец, и каждый раз сотрудник выглядел вором.
+ *
+ * Это тот же случай, что и расход, оплаченный из ящика: деньги вышли до
+ * пересчёта, и для сверки со счётчиками их надо вернуть в выручку. Поэтому
+ * число прибавляется и к revenue сдачи (баланс возвращается к тому, что
+ * реально в ящике), и к «Разнице».
+ *
+ * Окно обязательно. Полный отрицательный остаток брать нельзя: минус, не
+ * закрытый прошлой сдачей, — это деньги, ПРОШЕДШИЕ МИМО учёта навсегда, и
+ * прибавление их к сегодняшней выручке нарисовало бы завтра излишек на
+ * вчерашнюю сумму. Считаем прирост дефицита за окно: сколько его было на
+ * начало и сколько стало сейчас.
+ */
+export async function getZoneCollectionOverdraw(
+  zoneIds: string[],
+  since: Map<string, Date | null>,
+  until: Date,
+  client: Tx | typeof prisma = prisma
+): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  if (!zoneIds.length) return result;
+
+  const ops = await client.moneyOperation.findMany({
+    where: { zoneId: { in: zoneIds }, occurredAt: { lt: until } },
+    select: { zoneId: true, type: true, amount: true, occurredAt: true },
+    orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
+  });
+
+  const balance = new Map<string, number>();
+  const deficitAtStart = new Map<string, number>();
+  for (const op of ops) {
+    if (!op.zoneId || !affectsCashOnHand(op.type)) continue;
+    const from = since.get(op.zoneId) ?? null;
+    // Дефицит на начало окна фиксируем ровно один раз — на первой операции,
+    // которая в окно уже попала.
+    if (from && op.occurredAt > from && !deficitAtStart.has(op.zoneId)) {
+      deficitAtStart.set(op.zoneId, Math.max(0, -(balance.get(op.zoneId) ?? 0)));
+    }
+    balance.set(op.zoneId, Math.round(((balance.get(op.zoneId) ?? 0) + Number(op.amount)) * 100) / 100);
+  }
+
+  for (const zoneId of zoneIds) {
+    const from = since.get(zoneId) ?? null;
+    // Окно без единой операции: дефицит начала равен нынешнему, прирост ноль.
+    const start = deficitAtStart.get(zoneId) ?? (from ? Math.max(0, -(balance.get(zoneId) ?? 0)) : 0);
+    const now = Math.max(0, -(balance.get(zoneId) ?? 0));
+    const overdrawn = Math.round(Math.max(0, now - start) * 100) / 100;
+    if (overdrawn > 0) result.set(zoneId, overdrawn);
+  }
+  return result;
+}
+
 /** Размен одной зоны — для предложения «оставить размен» при её инкассации. */
 export async function getZoneChangeFundInTill(
   zoneId: string,

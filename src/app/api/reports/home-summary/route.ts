@@ -244,10 +244,13 @@ async function computeWindowSummary(
       // расход, оплаченный деньгами, которые уже уехали с инкассацией, к сдаче
       // привязан, но в её выручку не входил, и Главная показывала излишек
       // ровно на такие траты. NULL — сдача старше 2026-09-02, там числа нет.
+      // + забранное владельцем инкассацией до пересчёта: те же деньги мимо
+      // ящика, что и расходы (см. getZoneCollectionOverdraw в zone-balance).
       const expensesInSubmission =
-        zs.compensatedExpenses !== null
+        (zs.compensatedExpenses !== null
           ? Number(zs.compensatedExpenses)
-          : (expensesByZoneSubmission.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0);
+          : (expensesByZoneSubmission.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0)) +
+        Number(zs.collectedBeforeSubmission ?? 0);
 
       if (isStaysZone(zs.zone) || (isLaunchesZone(zs.zone) && zs.assetReadings.length === 0)) {
         const calculatedRevenue = liveRevenueBySubmission.get(zs.id) ?? 0;

@@ -3,7 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { requireOperator } from "@/lib/require-operator";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { isModuleEnabled } from "@/lib/tenant-modules";
-import { getChangeFundInTillByZone, getPointAbonementCashTotal, getPointGoodsCashTotal } from "@/lib/zone-balance";
+import {
+  getChangeFundInTillByZone,
+  getPointAbonementCashTotal,
+  getPointGoodsCashTotal,
+  getZoneCollectionOverdraw,
+} from "@/lib/zone-balance";
+import { previousSubmissionBoundary } from "@/lib/game-room";
 
 export async function GET() {
   const ctx = await requireOperator();
@@ -117,6 +123,22 @@ export async function GET() {
   const changeFundByZone =
     zones.length > 0 ? await getChangeFundInTillByZone(zones.map((z) => z.id)) : new Map<string, number>();
 
+  // Сколько владелец забрал из зоны инкассацией ДО пересчёта (жалоба владельца
+  // КидсБурга 2026-09-02). Сотрудник этих денег в ящике уже не застаёт, а
+  // сдача возвращает их в выручку — значит и предпросмотр «Разницы» в мастере
+  // обязан их прибавлять, иначе сотрудник видит недостачу, а сервер считает
+  // ноль. Разбор правила — у getZoneCollectionOverdraw.
+  const boundaryByZone = new Map<string, Date | null>();
+  for (const zone of zones) boundaryByZone.set(zone.id, await previousSubmissionBoundary(zone.id));
+  const collectedBeforeByZone =
+    zones.length > 0
+      ? await getZoneCollectionOverdraw(
+          zones.map((z) => z.id),
+          boundaryByZone,
+          new Date()
+        )
+      : new Map<string, number>();
+
   const result = zones.map((zone) => ({
     id: zone.id,
     name: zone.name,
@@ -125,6 +147,8 @@ export async function GET() {
     // Ноль — самый частый случай (на всей платформе разменом пользуется один
     // тенант), и при нуле экран мастера не меняется вовсе.
     changeFundAmount: changeFundByZone.get(zone.id) ?? 0,
+    // Обычно ноль: владелец забирает кассу после сдачи, а не до неё.
+    collectedBeforeAmount: collectedBeforeByZone.get(zone.id) ?? 0,
     // Модуль печати (запрос пользователя 2026-07-20) — доступна ли кнопка
     // "Печать квитанции" оператору в этой зоне (stays/launches).
     printReceiptEnabled: zone.printReceiptEnabled,

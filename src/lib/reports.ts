@@ -635,10 +635,16 @@ export async function computeZoneSubmissionRevenues(
       zs.compensatedExpenses !== null
         ? Number(zs.compensatedExpenses)
         : (expensesByZoneSubmission.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0);
+    // + то, что владелец забрал из зоны инкассацией ДО пересчёта: эти деньги
+    // тоже вышли из ящика мимо сотрудника (см. getZoneCollectionOverdraw).
+    // Число пишет сама сдача; у сдач до 2026-09-02 его нет и быть не может.
+    const collectedBefore = Number(zs.collectedBeforeSubmission ?? 0);
     const difference =
       zone.accountingMode === "cash_only"
         ? 0
-        : Math.round((actualTotal + expensesInSubmission + abonementAmount - calculatedRevenue) * 100) / 100;
+        : Math.round(
+            (actualTotal + expensesInSubmission + collectedBefore + abonementAmount - calculatedRevenue) * 100
+          ) / 100;
 
     return {
       zoneSubmissionId: zs.id,

@@ -21,6 +21,8 @@ import "dotenv/config";
 import { prisma } from "../src/lib/prisma";
 import { computeZoneSubmissionRevenues } from "../src/lib/reports";
 
+const ROLLBACK = "__rollback__";
+
 let failures = 0;
 function check(ok: boolean, what: string) {
   console.log(`  ${ok ? "ok   " : "ПЛОХО"} ${what}`);
@@ -35,6 +37,7 @@ async function main() {
       cashAmount: true,
       mobileAmount: true,
       compensatedExpenses: true,
+      collectedBeforeSubmission: true,
       resultsSubmissionId: true,
       resultsSubmission: { select: { submittedAt: true } },
       zone: { select: { name: true, accountingMode: true } },
@@ -112,8 +115,12 @@ async function main() {
     const actual = Number(zs.cashAmount) + Number(zs.mobileAmount);
     const byLink = attachedBy.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0;
     const expenses = zs.compensatedExpenses !== null ? Number(zs.compensatedExpenses) : byLink;
+    // Забранное владельцем до пересчёта — вторая половина поправки «мимо
+    // ящика» (getZoneCollectionOverdraw). У сдач до 2026-09-02 его нет.
+    const collectedBefore = Number(zs.collectedBeforeSubmission ?? 0);
     // Формула сдачи, слово в слово: submit-results/route.ts.
-    const expected = Math.round((actual + expenses + row.abonementAmount - row.calculatedRevenue) * 100) / 100;
+    const expected =
+      Math.round((actual + expenses + collectedBefore + row.abonementAmount - row.calculatedRevenue) * 100) / 100;
 
     if (Math.abs(row.difference - expected) > 0.005) {
       check(
@@ -127,6 +134,7 @@ async function main() {
   console.log(`Сверено сдач через computeZoneSubmissionRevenues: ${checked}`);
 
   await liveScenario(submissions, attachedBy);
+  await overdrawScenario();
 
   if (failures === 0) console.log("\nВСЁ СОШЛОСЬ");
   else console.log(`\nРАСХОЖДЕНИЙ: ${failures}`);
@@ -203,3 +211,81 @@ main()
     process.exitCode = 1;
   })
   .finally(() => prisma.$disconnect());
+
+/**
+ * Случай КидсБурга 2026-09-02: владелец забрал кассу среди дня, до пересчёта.
+ *
+ *   16:26  инкассация −305    остаток   0     ← вчерашнее, в поправку не идёт
+ *   18:17  инкассация −2000   остаток −2000   ← сегодняшняя выручка
+ *   20:02  сдача       +70    остаток −1930
+ *
+ * Счётчики намотали на 3675, касса показала 2135 — «недостача» 1540 из
+ * воздуха. Проверяем, что getZoneCollectionOverdraw возвращает ровно 2000:
+ * не 2305 (тогда в поправку попадёт вчерашнее) и не 1930 (тогда завтрашняя
+ * сдача унаследует сегодняшний долг).
+ */
+async function overdrawScenario() {
+  const { getZoneCollectionOverdraw } = await import("../src/lib/zone-balance");
+  const zone = await prisma.zone.findFirst({
+    where: { accountingMode: "counters" },
+    select: { id: true, name: true, pointId: true, point: { select: { tenantId: true } } },
+  });
+  if (!zone) {
+    console.log("\nСценарий пропущен: counters-зоны в базе нет.");
+    return;
+  }
+
+  console.log(`\n=== сценарий с откатом: ${zone.name}`);
+  const t0 = new Date(Date.now() - 6 * 60 * 60 * 1000);
+  const at = (minutes: number) => new Date(t0.getTime() + minutes * 60 * 1000);
+
+  await prisma
+    .$transaction(async (tx) => {
+      const tenantId = zone.point.tenantId;
+      const add = (type: string, amount: number, occurredAt: Date) =>
+        tx.moneyOperation.create({ data: { tenantId, zoneId: zone.id, type, amount, occurredAt } });
+
+      // Обнуляем то, что уже лежит в зоне, чтобы считать с чистого листа.
+      const opening = await getZoneCollectionOverdraw([zone.id], new Map([[zone.id, null]]), at(0), tx);
+      const openingDeficit = opening.get(zone.id) ?? 0;
+
+      // Вчерашняя сдача оставила в кассе 305.
+      await add("revenue", 305, at(1));
+      const boundary = at(2); // граница прошлой сдачи
+      const since = new Map([[zone.id, boundary]]);
+
+      await add("collection", -305, at(3));
+      const afterOld = await getZoneCollectionOverdraw([zone.id], since, at(4), tx);
+      check(
+        Math.abs((afterOld.get(zone.id) ?? 0) - openingDeficit) < 0.001,
+        `инкассация вчерашних денег в поправку не идёт: ${afterOld.get(zone.id) ?? 0}`
+      );
+
+      await add("collection", -2000, at(5));
+      const afterToday = await getZoneCollectionOverdraw([zone.id], since, at(6), tx);
+      check(
+        Math.abs((afterToday.get(zone.id) ?? 0) - openingDeficit - 2000) < 0.001,
+        `забранное сверх остатка учтено: ${afterToday.get(zone.id) ?? 0}`
+      );
+
+      // Сдача: сотрудник ввёл 70, сервер прибавляет поправку — остаток
+      // возвращается к тому, что физически в ящике.
+      await add("revenue", 70 + 2000, at(7));
+      const nextBoundary = at(8);
+      const nextSince = new Map([[zone.id, nextBoundary]]);
+      const tomorrow = await getZoneCollectionOverdraw([zone.id], nextSince, at(9), tx);
+      check(
+        Math.abs(tomorrow.get(zone.id) ?? 0) < 0.001,
+        `завтрашняя сдача не наследует сегодняшнюю поправку: ${tomorrow.get(zone.id) ?? 0}`
+      );
+
+      throw new Error(ROLLBACK);
+    })
+    .catch((err) => {
+      if (err instanceof Error && err.message === ROLLBACK) {
+        console.log("  транзакция откачена");
+        return;
+      }
+      throw err;
+    });
+}

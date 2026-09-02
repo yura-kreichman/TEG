@@ -211,14 +211,18 @@ export async function resyncZoneSummaryMessage(
   // выручку сдачи не входила), и правленная сводка расходилась с исходной.
   // NULL — сдача старше 2026-09-02, для неё остаётся расчёт по привязке.
   const expensesInSubmission =
-    zs.compensatedExpenses !== null
+    (zs.compensatedExpenses !== null
       ? Number(zs.compensatedExpenses)
       : (
           await prisma.moneyOperation.findMany({
             where: { type: "expense", zoneId: zs.zoneId, resultsSubmissionId: zs.resultsSubmissionId },
             select: { amount: true },
           })
-        ).reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0);
+        ).reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0)) +
+    // + забранное владельцем инкассацией до пересчёта — та же поправка, что и
+    // расходы (см. getZoneCollectionOverdraw). Без неё правленная сводка
+    // спорила бы с карточкой на «Итогах дня».
+    Number(zs.collectedBeforeSubmission ?? 0);
   const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
   const difference = isCashOnly
     ? 0

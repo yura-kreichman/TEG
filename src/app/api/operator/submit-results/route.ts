@@ -25,7 +25,7 @@ import { aggregateTicketOrders } from "@/lib/tickets";
 import { dispatchZoneSummary } from "@/lib/summary-channels/dispatch";
 import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { onResultsSubmission } from "@/lib/summary-channels/daily-cash-trigger";
-import { settleOutstandingCollectionAdvance } from "@/lib/zone-balance";
+import { getZoneCollectionOverdraw, settleOutstandingCollectionAdvance } from "@/lib/zone-balance";
 import { getExpenseCompensation } from "@/lib/expense-compensation";
 import { getBusinessDayBounds } from "@/lib/business-day";
 
@@ -524,6 +524,17 @@ export async function POST(request: Request) {
     // ничего держать в голове».
     const expensesOf = (zoneId: string) => compensation.compensatedByZone.get(zoneId) ?? 0;
 
+    // То же самое, но про деньги, которые из ящика забрал САМ ВЛАДЕЛЕЦ —
+    // инкассацией среди дня, до пересчёта (жалоба владельца КидсБурга
+    // 2026-09-02, разбор — у getZoneCollectionOverdraw). Сотрудник вводит
+    // остаток и этих денег уже не видит, поэтому для сверки со счётчиками их
+    // возвращаем в выручку ровно так же, как потраченное на расходы.
+    const overdrawByZone = await getZoneCollectionOverdraw(zoneIds, boundaryByZone, now, tx);
+    const collectedOf = (zoneId: string) => overdrawByZone.get(zoneId) ?? 0;
+    // Обе поправки всегда идут вместе — и в выручку, и в Разницу.
+    const outsideTillOf = (zoneId: string) =>
+      Math.round((expensesOf(zoneId) + collectedOf(zoneId)) * 100) / 100;
+
     const summary = zoneSubmissions.map((zs) => {
       const zone = zoneById.get(zs.zoneId)!;
 
@@ -536,7 +547,7 @@ export async function POST(request: Request) {
         // (реальный баг, найден пользователем 2026-07-18: без вычитания
         // разница ложно показывала недостачу ровно на сумму пусков,
         // оплаченных абонементом, каждый раз).
-        const difference = Math.round((actualCash + expensesOf(zs.zoneId) + agg.abonementAmount - calculatedRevenue) * 100) / 100;
+        const difference = Math.round((actualCash + outsideTillOf(zs.zoneId) + agg.abonementAmount - calculatedRevenue) * 100) / 100;
         return {
           zoneId: zs.zoneId,
           zoneName: zone.name,
@@ -572,7 +583,7 @@ export async function POST(request: Request) {
         const agg = ticketsAggregateByZone.get(zone.id)!;
         const calculatedRevenue = agg.totalAmount;
         const actualCash = zs.cashAmount + zs.mobileAmount;
-        const difference = Math.round((actualCash + expensesOf(zs.zoneId) + agg.abonementAmount - calculatedRevenue) * 100) / 100;
+        const difference = Math.round((actualCash + outsideTillOf(zs.zoneId) + agg.abonementAmount - calculatedRevenue) * 100) / 100;
         return {
           zoneId: zs.zoneId,
           zoneName: zone.name,
@@ -644,7 +655,7 @@ export async function POST(request: Request) {
       const difference =
         zone.accountingMode === "cash_only"
           ? 0
-          : Math.round((actualCash + expensesOf(zs.zoneId) - (netRevenue - paidFromBalance)) * 100) / 100;
+          : Math.round((actualCash + outsideTillOf(zs.zoneId) - (netRevenue - paidFromBalance)) * 100) / 100;
 
       const readingsText = zone.assets
         .map((asset) => {
@@ -728,6 +739,12 @@ export async function POST(request: Request) {
           // разные множества. Без этого числа сдача и четыре места чтения
           // считали «Разницу» по разным наборам.
           compensatedExpenses: expensesOf(zs.zoneId),
+          // Сколько владелец забрал из этой зоны инкассацией до пересчёта —
+          // вторая половина той же поправки. Хранится по той же причине, что
+          // и компенсация расходов: из журнала это восстанавливается только
+          // проходом с бегущим балансом по окну сдачи, а окно после следующей
+          // сдачи уже другое.
+          collectedBeforeSubmission: collectedOf(zs.zoneId),
           // Тот же now, что использован как until для всех агрегатов выше
           // (аудит 2026-07-26) — раньше здесь был умолчательный @default(now())
           // самой БД, физически чуть позже now: любой пуск/тап, закрывшийся в
@@ -807,7 +824,12 @@ export async function POST(request: Request) {
       // Проверяется на цифрах: получил 1000, купил на 350, ввёл 650.
       // revenue 1000 − expense 350 = 650 в кассе ✓. Без прибавки было бы
       // revenue 650 − 350 = 300, то есть на 350 меньше, чем в ящике.
-      const cashReceived = Math.round((zs.cashAmount + expensesOf(zs.zoneId)) * 100) / 100;
+      //
+      // Ровно так же прибавляется то, что владелец забрал инкассацией среди
+      // дня, ДО пересчёта (getZoneCollectionOverdraw): эти деньги тоже вышли
+      // из ящика мимо сотрудника. Без прибавки остаток зоны оставался в
+      // минусе навсегда — у «Батутов» КидсБурга −1930 при 70 ₽ в ящике.
+      const cashReceived = Math.round((zs.cashAmount + outsideTillOf(zs.zoneId)) * 100) / 100;
       if (cashReceived > 0) {
         await tx.moneyOperation.create({
           data: {

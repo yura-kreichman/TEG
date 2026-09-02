@@ -867,10 +867,14 @@ export async function GET(request: Request) {
         zs.compensatedExpenses !== null
           ? Number(zs.compensatedExpenses)
           : (expensesBySubmissionZone.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0);
+      // + забранное владельцем до пересчёта (см. getZoneCollectionOverdraw):
+      // деньги вышли из ящика мимо сотрудника, как и потраченное на расходы.
+      const collectedBefore = Number(zs.collectedBeforeSubmission ?? 0);
+      const outsideTill = Math.round((expensesInThisSubmission + collectedBefore) * 100) / 100;
       const difference =
         zs.zone.accountingMode === "cash_only"
           ? 0
-          : Math.round((actualCash + expensesInThisSubmission + abonementInDifference - netRevenue) * 100) / 100;
+          : Math.round((actualCash + outsideTill + abonementInDifference - netRevenue) * 100) / 100;
 
       // Держать в синхроне с getZoneSubmissionEditability (src/lib/results-submission.ts):
       // цепочка показаний есть только у counters, и пока сдача — её последнее
@@ -987,7 +991,9 @@ export async function GET(request: Request) {
         // этого числа у клиента не было вовсе, и предпросмотр показывал
         // недостачу ровно на сумму дневных трат — карточка 0, шторка −350.
         // Владелец «подгонял» кассу вверх и попадал в К1.
-        expensesInSubmission: expensesInThisSubmission,
+        // Обе поправки одним числом: шторка правки считает ту же формулу, что
+        // и карточка, и разделять их ей незачем — она только складывает.
+        expensesInSubmission: outsideTill,
         returnsCount: zs.returnsCount,
         // Построчная история к счётчику выше (см. returnEventsBySubmission).
         returnEvents: returnEventsBySubmission.get(zs.id) ?? [],
