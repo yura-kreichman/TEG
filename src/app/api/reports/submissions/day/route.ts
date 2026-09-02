@@ -8,6 +8,7 @@ import { aggregateTicketOrdersBySubmission, ticketRevenueByAssetVariant, listTic
 import { calculateGoodsCashBeforeReconciliation } from "@/lib/goods";
 import { round2 } from "@/lib/reports";
 import { dayBoundsUtc } from "@/lib/business-day";
+import { getPointCashBalance, getPointChangeFundInTill } from "@/lib/zone-balance";
 
 interface CorrectionDiff {
   cashAmount: number;
@@ -960,27 +961,35 @@ export async function GET(request: Request) {
     })
   );
 
-  // Размен за этот день (разбор с владельцем Игроленда 2026-09-02) — деньги
-  // владельца, положенные в кассу на сдачу. Отдельной строкой, потому что в
-  // выручку они не входят и входить не должны, а физически в ящике лежат — и
-  // без этой строки владелец не может свести то, что видит в кассе, с тем,
-  // что показывает программа. Ровно это число в привычной ему кассовой
-  // панели называется «на начало смены».
+  // Наличные в кассе и размен в ней — НА КОНЕЦ выбранного дня.
   //
-  // Показываем, НЕ вмешиваясь в расчёт «Разницы»: формула не меняется
-  // (решение 2026-09-02), задним числом ничего не пересчитывается.
-  // Фильтр по ЗОНЕ, а не по pointId: у зонного размена pointId пустой,
-  // заполнен только zoneId (проверено на боевых данных 2026-09-02 — запрос
-  // по точке возвращал ноль операций при реально существующих).
-  const changeFundOps = await prisma.moneyOperation.findMany({
-    where: {
-      type: "change_fund",
-      zone: { pointId },
-      occurredAt: { gte: dayStart, lt: dayEnd },
-    },
-    select: { amount: true },
-  });
-  const changeFund = round2(changeFundOps.reduce((sum, op) => sum + Number(op.amount), 0));
+  // Первая версия (2026-09-02) считала размен «внесённый за этот день». Это
+  // отвечало не на тот вопрос: размен привязан не к календарю, а к промежутку
+  // между инкассациями, и вчерашние 500 ₽ лежат в ящике сегодня, но в
+  // «сегодня» не попадают. Владельцу нужно то, что в ящике.
+  //
+  // Оба числа — из тех же функций, что питают «Остатки и инкассации» и строку
+  // «Остаток на точке» в Telegram-сводке. Своей арифметики здесь нет
+  // намеренно: до этой правки экран считал остаток по-своему («наличные дня
+  // минус расходы минус премии»), и с Telegram они расходились ровно на
+  // размен прошлых дней — два ответа на один вопрос.
+  //
+  // На «Разницу» ничего из этого не влияет: формула сверки не менялась.
+  const [cashOnHand, changeFundInTill] = await Promise.all([
+    getPointCashBalance(pointId, prisma, dayEnd),
+    getPointChangeFundInTill(pointId, prisma, dayEnd),
+  ]);
 
-  return NextResponse.json({ cards, abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales, goodsSalesTotals, expenses, payouts, changeFund });
+  return NextResponse.json({
+    cards,
+    abonementSales,
+    abonementSaleEvents,
+    goodsReconciliations,
+    goodsSales,
+    goodsSalesTotals,
+    expenses,
+    payouts,
+    cashOnHand: round2(cashOnHand),
+    changeFundInTill: round2(changeFundInTill),
+  });
 }

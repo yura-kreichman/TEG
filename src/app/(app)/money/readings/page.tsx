@@ -408,7 +408,12 @@ export default function ReadingsCalendarPage() {
   const [expenses, setExpenses] = useState<DayExpenses>({ total: 0, items: [] });
   // Размен за день — отдельной строкой в «Итогах дня», в выручку не входит
   // (разбор с владельцем Игроленда 2026-09-02).
-  const [changeFund, setChangeFund] = useState(0);
+  // Размен, ЛЕЖАЩИЙ в кассе на конец выбранного дня, и вся наличность точки на
+  // тот же момент — оба числа считает сервер теми же функциями, что питают
+  // «Остатки и инкассации» и Telegram-сводку. Своей арифметики на экране
+  // больше нет: она расходилась с Telegram ровно на размен прошлых дней.
+  const [changeFundInTill, setChangeFundInTill] = useState(0);
+  const [cashOnHand, setCashOnHand] = useState(0);
   // Премии/авансы, взятые сотрудником из кассы точки за день — тот же состав,
   // что в сводке "Касса за день" (решение владельца 2026-08-16: Итоги дня
   // показывали грязную кассу и расходились со сводкой).
@@ -543,7 +548,8 @@ export default function ReadingsCalendarPage() {
     setGoodsSalesTotals(data.goodsSalesTotals ?? null);
     setExpenses(data.expenses ?? { total: 0, items: [] });
     setPayouts(data.payouts ?? 0);
-    setChangeFund(data.changeFund ?? 0);
+    setChangeFundInTill(data.changeFundInTill ?? 0);
+    setCashOnHand(data.cashOnHand ?? 0);
   }
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -700,6 +706,16 @@ export default function ReadingsCalendarPage() {
     }),
     { cash: 0, mobile: 0, abonement: 0, abonementInCash: 0, calculatedRevenue: 0, returnsCount: 0, difference: 0 }
   );
+
+  // Доли нала и безнала в выручке (запрос владельца 2026-09-02, по образцу его
+  // привычной кассовой панели). Считается ОДИН процент, второй — остаток до
+  // ста: округли оба по отдельности, и 50,4 / 49,6 превратятся в «50 %» и
+  // «50 %», то есть подпись утверждала бы ровно сотню там, где её нет.
+  // База — только денежная выручка; оплата балансом сюда не входит, её в
+  // «Фактической выручке» тоже нет.
+  const revenueTotal = daySummary.cash + daySummary.mobile;
+  const cashPercent = revenueTotal > 0 ? Math.round((daySummary.cash / revenueTotal) * 100) : null;
+  const mobilePercent = cashPercent === null ? null : 100 - cashPercent;
 
   if (checking || !dateReady) {
     return (
@@ -977,14 +993,24 @@ export default function ReadingsCalendarPage() {
                         <PaymentMethodIcon method="cash" className="size-3.5 shrink-0" />
                         {t.operatorApp.submit.cashLabel}
                       </span>
-                      <span className="text-foreground"><Money value={daySummary.cash} /></span>
+                      <span className="flex items-center gap-1.5 text-foreground">
+                        <Money value={daySummary.cash} />
+                        {cashPercent !== null && (
+                          <span className="text-muted-foreground tabular-nums">{cashPercent}%</span>
+                        )}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-caption-airbnb">
                       <span className="flex items-center gap-1">
                         <PaymentMethodIcon method="mobile" className="size-3.5 shrink-0" />
                         {t.operatorApp.submit.mobileLabel}
                       </span>
-                      <span className="text-foreground"><Money value={daySummary.mobile} /></span>
+                      <span className="flex items-center gap-1.5 text-foreground">
+                        <Money value={daySummary.mobile} />
+                        {mobilePercent !== null && (
+                          <span className="text-muted-foreground tabular-nums">{mobilePercent}%</span>
+                        )}
+                      </span>
                     </div>
                     {daySummary.abonement > 0 && (
                       <div className="flex items-center justify-between text-caption-airbnb">
@@ -993,22 +1019,6 @@ export default function ReadingsCalendarPage() {
                           {t.operatorApp.abonement.paymentLabel}
                         </span>
                         <span className="text-foreground"><Money value={daySummary.abonement} /></span>
-                      </div>
-                    )}
-                    {/* Размен за день (разбор с владельцем Игроленда
-                        2026-09-02) — деньги владельца, положенные в кассу на
-                        сдачу. Отдельной строкой и НЕ в выручке: выручкой они
-                        не являются, но физически лежат в ящике, и без этой
-                        строки владелец не может свести кассу с программой. В
-                        привычных ему кассовых панелях это «на начало смены».
-                        На «Разницу» строка не влияет — формула не менялась. */}
-                    {changeFund > 0 && (
-                      <div className="flex items-center justify-between text-caption-airbnb">
-                        <span className="flex items-center gap-1.5">
-                          <Coins className="size-3.5 shrink-0" />
-                          {t.readings.changeFundLabel}
-                        </span>
-                        <span className="text-foreground"><Money value={changeFund} /></span>
                       </div>
                     )}
                     {/* Применимость — по режиму учёта, как у карточки
@@ -1057,9 +1067,16 @@ export default function ReadingsCalendarPage() {
                         "касса минус расчётная" на экране не сходилось бы с
                         Разницей. Само значение — касса минус разница, это
                         тождество, лишних данных не требует. */}
+                    {/* Своя подпись, а не общий ключ operatorApp.submit.actualCash
+                        (решение владельца 2026-09-02): ниже на этом же экране
+                        появилась строка «Наличных в кассе» — физические деньги
+                        в ящике. Слово «касса» в двух строках подряд в разных
+                        значениях путало бы наверняка. У Сотрудника на его
+                        экране «Фактическая касса» осталась: там он вводит
+                        именно пересчитанный ящик. */}
                     <div className="flex items-center justify-between text-body-airbnb font-bold">
                       <span className="flex items-center gap-1.5 text-foreground">
-                        {t.operatorApp.submit.actualCash}
+                        {t.readings.actualRevenueLabel}
                         <InfoTooltip text={t.readings.actualCashTooltip} />
                       </span>
                       <span className="text-foreground">
@@ -1114,48 +1131,65 @@ export default function ReadingsCalendarPage() {
                         <Money value={daySummary.difference} />
                       </span>
                     </div>
-                    {/* Что ушло из кассы за день и сколько наличных реально
-                        осталось (решение владельца 2026-08-16: "фактическая
-                        касса грязными... это портит картину Итогов дня").
-                        Считаем от НАЛИЧНЫХ, а не от Фактической кассы: в ту
-                        входят безнал и оплата балансом, которых в ящике нет.
-                        Состав вычетов — тот же, что в сводке "Касса за день",
-                        иначе два экрана про один день говорили бы разное.
-                        Сами расходы стоят выше, под Фактической кассой, —
-                        здесь они только участвуют в подсчёте остатка. */}
-                    {(expenses.total > 0 || payouts > 0) && (
-                      <>
-                        {payouts > 0 && (
-                          <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
-                            <span className="flex items-center gap-1.5">
-                              <Wallet className="size-3.5 shrink-0" />
-                              {t.summaryText.bonusesAndAdvances}
-                            </span>
-                            <span className="font-bold text-foreground">
-                              −<Money value={payouts} />
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex items-center justify-between border-t border-border pt-1.5">
-                          <span className="flex items-center gap-1.5 text-caption-airbnb">
-                            {t.readings.cashLeftLabel}
-                            <InfoTooltip text={t.readings.cashLeftTooltip} />
-                          </span>
-                          {/* size="display" — шрифт ужимается по длине числа
-                              (запрос владельца 2026-08-16: "если будет
-                              1 000 000, то не вместится"). Тот же механизм,
-                              что у заголовочных сумм в Отчётах; фиксированный
-                              размер оставлять нельзя — семизначная сумма
-                              ломает строку. */}
-                          <span className="text-[1.5625rem] font-bold leading-none text-foreground">
-                            <Money
-                              value={Math.round((daySummary.cash - expenses.total - payouts) * 100) / 100}
-                              size="display"
-                            />
-                          </span>
-                        </div>
-                      </>
+                    {payouts > 0 && (
+                      <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
+                        <span className="flex items-center gap-1.5">
+                          <Wallet className="size-3.5 shrink-0" />
+                          {t.summaryText.bonusesAndAdvances}
+                        </span>
+                        <span className="font-bold text-foreground">
+                          −<Money value={payouts} />
+                        </span>
+                      </div>
                     )}
+                    {/* Сколько наличных физически в ящике на конец дня и
+                        сколько из них — размен владельца (разбор с Игролендом
+                        2026-09-02, по образцу его привычной кассовой панели:
+                        «Наличных в кассе» и «На начало смены»; слово «смена»
+                        нам занято модулем Рабочего времени, поэтому «Размен
+                        в кассе»).
+
+                        Раньше здесь стояло «Осталось наличными» = наличные
+                        дня − расходы − премии. Это была своя арифметика по
+                        одному дню, и она расходилась со строкой «Остаток на
+                        точке» в Telegram-сводке ровно на размен, лежащий с
+                        прошлых дней: два ответа на один вопрос. Теперь оба
+                        числа считает сервер той же функцией, что и сводка.
+
+                        Показываем ВСЕГДА, а не только при расходах: старое
+                        условие прятало остаток в обычный день без трат —
+                        именно тогда, когда свести кассу проще всего.
+                        Размен — только когда он есть: нулевая строка ничего
+                        не сообщает. На «Разницу» не влияет ни то, ни другое. */}
+                    {changeFundInTill > 0 && (
+                      <div className="flex items-center justify-between border-t border-primary/20 pt-1.5 text-caption-airbnb">
+                        <span className="flex items-center gap-1.5">
+                          <Coins className="size-3.5 shrink-0" />
+                          {t.readings.changeFundInTillLabel}
+                        </span>
+                        <span className="text-foreground"><Money value={changeFundInTill} /></span>
+                      </div>
+                    )}
+                    <div
+                      className={cn(
+                        "flex items-center justify-between pt-1.5",
+                        changeFundInTill > 0 ? "border-t border-border" : "border-t border-primary/20"
+                      )}
+                    >
+                      <span className="flex items-center gap-1.5 text-caption-airbnb">
+                        {t.readings.cashInTillLabel}
+                        <InfoTooltip text={t.readings.cashInTillTooltip} />
+                      </span>
+                      {/* size="display" — шрифт ужимается по длине числа
+                          (запрос владельца 2026-08-16: "если будет
+                          1 000 000, то не вместится"). Тот же механизм,
+                          что у заголовочных сумм в Отчётах; фиксированный
+                          размер оставлять нельзя — семизначная сумма
+                          ломает строку. */}
+                      <span className="text-[1.5625rem] font-bold leading-none text-foreground">
+                        <Money value={cashOnHand} size="display" />
+                      </span>
+                    </div>
                     {/* Отдельная строка — сколько всего денег физически на
                       точке за день, включая продажи абонементов (запрос
                       пользователя 2026-07-19: "пусть будет видно Фактическая

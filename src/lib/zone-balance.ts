@@ -130,13 +130,18 @@ async function latestOccurredAt(
 async function getZoneCollectionCutoff(
   pointId: string,
   zoneIds: string[],
-  client: Tx | typeof prisma = prisma
+  client: Tx | typeof prisma = prisma,
+  asOf?: Date
 ): Promise<Date | null> {
+  const upTo = asOf ? { occurredAt: { lt: asOf } } : {};
   const [zoneAt, advanceAt] = await Promise.all([
     zoneIds.length
-      ? latestOccurredAt({ zoneId: { in: zoneIds }, type: { in: ["collection", "advance_settlement"] } }, client)
+      ? latestOccurredAt(
+          { zoneId: { in: zoneIds }, type: { in: ["collection", "advance_settlement"] }, ...upTo },
+          client
+        )
       : Promise.resolve(null),
-    latestOccurredAt({ pointId, type: "collection_advance" }, client),
+    latestOccurredAt({ pointId, type: "collection_advance", ...upTo }, client),
   ]);
   const dates = [zoneAt, advanceAt].filter((d): d is Date => d !== null);
   return dates.length ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null;
@@ -150,9 +155,10 @@ async function getZoneCollectionCutoff(
 async function getPoolSweepCutoff(
   pointId: string,
   sweepType: string,
-  client: Tx | typeof prisma = prisma
+  client: Tx | typeof prisma = prisma,
+  asOf?: Date
 ): Promise<Date | null> {
-  return latestOccurredAt({ pointId, type: sweepType }, client);
+  return latestOccurredAt({ pointId, type: sweepType, ...(asOf ? { occurredAt: { lt: asOf } } : {}) }, client);
 }
 
 // Физический остаток кассы точки в целом = сумма остатков её зон + операции,
@@ -184,33 +190,41 @@ async function getPoolSweepCutoff(
 // Используется и для отображения (docs/spec/05-work-time.md), и для
 // валидации максимального самостоятельного аванса/премии сотрудника —
 // единая цифра, на которую опираются оба места.
+//
+// asOf — «сколько было в кассе на этот момент», а не «сколько сейчас» (нужно
+// «Итогам дня»: по календарю листают назад, и текущий остаток там был бы
+// откровенной ложью). Граница односторонняя, снизу её нет и быть не может:
+// остаток — это накопленный итог с начала, обрезать его слева значит выкинуть
+// прошлые инкассации и получить чужое число. Отсечки последних инкассаций
+// тоже считаются НА ЭТОТ МОМЕНТ — иначе инкассация, сделанная уже после
+// выбранной даты, задним числом обнулила бы кассу того дня.
 export async function getPointCashBalance(
   pointId: string,
-  client: Tx | typeof prisma = prisma
+  client: Tx | typeof prisma = prisma,
+  asOf?: Date
 ): Promise<number> {
   const zones = await client.zone.findMany({ where: { pointId }, select: { id: true } });
   const zoneIds = zones.map((z) => z.id);
+  const upTo = asOf ? { occurredAt: { lt: asOf } } : {};
 
   const [zoneOps, pointOps, zoneCollectionCutoff, abonementCutoff, goodsCutoff] = await Promise.all([
     // select только нужных полей (аудит производительности 2026-08-13):
     // раньше тянулись все колонки каждой операции точки за всё время, а
-    // используются четыре. Границы по времени здесь быть не может — это
-    // остаток наличных "с начала", он и должен считаться от начала; удешевляем
-    // чтение, а не меняем смысл. Ведущий индекс [zoneId, occurredAt] добавлен
-    // той же правкой.
+    // используются четыре; удешевляем чтение, а не меняем смысл. Ведущий
+    // индекс [zoneId, occurredAt] добавлен той же правкой.
     zoneIds.length
       ? client.moneyOperation.findMany({
-          where: { zoneId: { in: zoneIds } },
+          where: { zoneId: { in: zoneIds }, ...upTo },
           select: { type: true, amount: true, occurredAt: true, performedByUserId: true },
         })
       : Promise.resolve([]),
     client.moneyOperation.findMany({
-      where: { pointId },
+      where: { pointId, ...upTo },
       select: { type: true, amount: true, occurredAt: true, performedByOperatorId: true },
     }),
-    getZoneCollectionCutoff(pointId, zoneIds, client),
-    getPoolSweepCutoff(pointId, "collection_pool_sweep_abonement", client),
-    getPoolSweepCutoff(pointId, "collection_pool_sweep_goods", client),
+    getZoneCollectionCutoff(pointId, zoneIds, client, asOf),
+    getPoolSweepCutoff(pointId, "collection_pool_sweep_abonement", client, asOf),
+    getPoolSweepCutoff(pointId, "collection_pool_sweep_goods", client, asOf),
   ]);
 
   let total = 0;
@@ -239,6 +253,107 @@ export async function getPointCashBalance(
       op.occurredAt <= goodsCutoff
     )
       continue;
+    total += Number(op.amount);
+  }
+  return total;
+}
+
+/**
+ * Сколько размена ЛЕЖИТ В КАССЕ на момент asOf (по умолчанию — сейчас).
+ *
+ * Не то же самое, что «размен, внесённый за день»: размен привязан не к
+ * календарю, а к промежутку между инкассациями. Вчерашние 500 ₽ физически в
+ * ящике и сегодня, но в сумму «за сегодня» не попадут — а владельцу нужно
+ * именно то, что в ящике (разбор с Игролендом 2026-09-02).
+ *
+ * Инкассация уносит размен вместе с выручкой — решение владельца 2026-09-02,
+ * модель не меняли. Поэтому отсечки те же, что в getPointCashBalance:
+ * зонный размен живёт до ближайшей зонной инкассации, товарный — до свипа
+ * товарного пула. Свою логику здесь не пишем: разойдись эти два расчёта, и
+ * «Наличных в кассе» перестало бы раскладываться на выручку плюс размен.
+ *
+ * Размен, лежащий в кассе КАЖДОЙ зоны, — основа и для строки «Размен в кассе»,
+ * и для предложения «оставить размен» при инкассации (там нужна разбивка:
+ * «Общая» инкассация собирает несколько зон разом, и вернуть надо каждой её
+ * собственную сумму, а не общий котёл).
+ */
+export async function getChangeFundInTillByZone(
+  zoneIds: string[],
+  client: Tx | typeof prisma = prisma,
+  asOf?: Date
+): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  if (!zoneIds.length) return result;
+  const upTo = asOf ? { occurredAt: { lt: asOf } } : {};
+
+  const [zoneOps, lastCollections] = await Promise.all([
+    zoneIds.length
+      ? client.moneyOperation.findMany({
+          // Фильтр по ЗОНЕ, не по точке: у зонного размена pointId пустой
+          // (проверено на боевых данных 2026-09-02 — запрос по точке вернул
+          // ноль операций при реально существующих).
+          where: { zoneId: { in: zoneIds }, type: "change_fund", ...upTo },
+          select: { zoneId: true, amount: true, occurredAt: true },
+        })
+      : Promise.resolve([]),
+    // Отсечка СВОЯ У КАЖДОЙ ЗОНЫ, а не общая по точке. Общая (максимум по
+    // всем зонам, как в getZoneCollectionCutoff) здесь неверна: инкассация
+    // одной зоны не трогает деньги другой, и размен неинкассированной зоны
+    // молча исчезал бы, стоило собрать соседнюю.
+    zoneIds.length
+      ? client.moneyOperation.groupBy({
+          by: ["zoneId"],
+          where: { zoneId: { in: zoneIds }, type: { in: ["collection", "advance_settlement"] }, ...upTo },
+          _max: { occurredAt: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const cutoffByZone = new Map<string, Date>();
+  for (const row of lastCollections) {
+    if (row.zoneId && row._max.occurredAt) cutoffByZone.set(row.zoneId, row._max.occurredAt);
+  }
+
+  for (const op of zoneOps) {
+    if (!op.zoneId) continue;
+    const cutoff = cutoffByZone.get(op.zoneId);
+    if (cutoff && op.occurredAt <= cutoff) continue;
+    result.set(op.zoneId, (result.get(op.zoneId) ?? 0) + Number(op.amount));
+  }
+  return result;
+}
+
+/** Размен одной зоны — для предложения «оставить размен» при её инкассации. */
+export async function getZoneChangeFundInTill(
+  zoneId: string,
+  client: Tx | typeof prisma = prisma,
+  asOf?: Date
+): Promise<number> {
+  return (await getChangeFundInTillByZone([zoneId], client, asOf)).get(zoneId) ?? 0;
+}
+
+/** Весь размен точки: зонный плюс товарный (у товарного своя отсечка — свип). */
+export async function getPointChangeFundInTill(
+  pointId: string,
+  client: Tx | typeof prisma = prisma,
+  asOf?: Date
+): Promise<number> {
+  const upTo = asOf ? { occurredAt: { lt: asOf } } : {};
+  const zones = await client.zone.findMany({ where: { pointId }, select: { id: true } });
+
+  const [byZone, goodsOps, goodsCutoff] = await Promise.all([
+    getChangeFundInTillByZone(zones.map((z) => z.id), client, asOf),
+    client.moneyOperation.findMany({
+      where: { pointId, type: "goods_change_fund", ...upTo },
+      select: { amount: true, occurredAt: true },
+    }),
+    getPoolSweepCutoff(pointId, "collection_pool_sweep_goods", client, asOf),
+  ]);
+
+  let total = 0;
+  for (const amount of byZone.values()) total += amount;
+  for (const op of goodsOps) {
+    if (goodsCutoff && op.occurredAt <= goodsCutoff) continue;
     total += Number(op.amount);
   }
   return total;

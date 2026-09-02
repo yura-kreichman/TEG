@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantZone, requireOwner } from "@/lib/require-owner";
-import { getZonePoolShare, settleOutstandingCollectionAdvance } from "@/lib/zone-balance";
+import { getZoneChangeFundInTill, getZonePoolShare, settleOutstandingCollectionAdvance } from "@/lib/zone-balance";
 import { announceCollection } from "@/lib/collection-alert";
 
 // Инкассация по конкретной зоне, но вносит владелец (запрос пользователя
@@ -33,7 +33,13 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     return NextResponse.json({ error: "Зона не найдена" }, { status: 404 });
   }
 
-  const { amount } = await request.json();
+  // keepChangeFund — «оставить размен в кассе» (решение владельца 2026-09-02).
+  // Модель не меняли: инкассация по-прежнему забирает ВСЁ, включая размен.
+  // Флаг лишь избавляет от четырёх экранов вручную после каждой инкассации —
+  // сервер тут же кладёт размен обратно отдельной операцией. В «Движении
+  // денег» видны обе строки, и это честно: деньги действительно вынули и
+  // положили назад.
+  const { amount, keepChangeFund } = await request.json();
   const amountNumber = Number(amount);
   // < 0, не <= 0 — 0 допустим: способ вручную запустить погашение
   // накопленного аванса/пула "Общей" инкассации, когда физически новых денег
@@ -56,10 +62,13 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
   // и тот же getZonePoolShare ДО того, как первый его "погашает", и оба
   // добавляют одну и ту же долю пула — та же точка, что уже 2026-07-25
   // закрыта для settleOutstandingCollectionAdvance/chargeSelfServiceAdvanceToZones).
-  const { poolShare, operationId, occurredAt } = await prisma.$transaction(async (tx) => {
+  const { poolShare, operationId, occurredAt, keptChangeFund } = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${zone.pointId}))`;
 
     const poolShare = await getZonePoolShare(zone.pointId, zoneId, tx);
+    // Размен читаем ДО инкассации: после неё отсечка сдвинется и он станет
+    // нулём — читать позже значит всегда получать ноль.
+    const fundInTill = keepChangeFund ? await getZoneChangeFundInTill(zoneId, tx) : 0;
     const created = await tx.moneyOperation.create({
       data: {
         tenantId: owner.tenantId,
@@ -69,7 +78,22 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
         performedByUserId: owner.user.id,
       },
     });
-    return { poolShare, operationId: created.id, occurredAt: created.occurredAt };
+    if (fundInTill > 0) {
+      // occurredAt на секунду ПОЗЖЕ инкассации, а не «сейчас»: отсечка
+      // сравнивает через <=, и совпади метки до миллисекунды — свежий размен
+      // сам себя отменил бы, попав ровно на границу.
+      await tx.moneyOperation.create({
+        data: {
+          tenantId: owner.tenantId,
+          zoneId,
+          type: "change_fund",
+          amount: fundInTill,
+          occurredAt: new Date(created.occurredAt.getTime() + 1000),
+          performedByUserId: owner.user.id,
+        },
+      });
+    }
+    return { poolShare, operationId: created.id, occurredAt: created.occurredAt, keptChangeFund: fundInTill };
   });
 
   // В уведомлении — именно введённая сумма (сколько физически забрали сейчас),
@@ -92,5 +116,5 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     abonementAmount: 0,
   }).catch(() => {});
 
-  return NextResponse.json({ ok: true, settledPool: poolShare });
+  return NextResponse.json({ ok: true, settledPool: poolShare, keptChangeFund });
 }

@@ -11,6 +11,7 @@ import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { Switch } from "@/components/ui/switch";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { IconActionButton } from "@/components/kebab-menu";
 import { OwnerShell } from "@/components/owner-shell";
@@ -44,6 +45,9 @@ interface ZoneBalance {
   pointId: string;
   pointName: string;
   balance: number;
+  // Часть balance, которую владелец положил как размен. Нужна экрану
+  // инкассации: он предлагает оставить эту сумму в кассе (2026-09-02).
+  changeFundInTill: number;
 }
 
 interface PointTotal {
@@ -141,6 +145,12 @@ export default function ZoneBalancesPage() {
   const [collectionOpen, setCollectionOpen] = useState(false);
   const [collectionPointId, setCollectionPointId] = useState("");
   const [collectionMode, setCollectionMode] = useState<CollectionMode>("zone");
+  // «Оставить размен в кассе» при инкассации (решение владельца 2026-09-02).
+  // По умолчанию включено: в общепринятой кассовой практике разменный фонд
+  // остаётся в ящике, и это ожидаемое поведение. Модель мы не меняли —
+  // инкассация всё так же забирает всё, сервер просто кладёт размен обратно
+  // отдельной операцией, и обе строки видны в «Движении денег».
+  const [keepChangeFund, setKeepChangeFund] = useState(true);
   const [collectionZoneId, setCollectionZoneId] = useState("");
   const [collectionAmount, setCollectionAmount] = useState("");
   const [collectionError, setCollectionError] = useState<string | null>(null);
@@ -353,12 +363,26 @@ export default function ZoneBalancesPage() {
   const showAbonementPoolOption = clientsEnabled && (collectionPointTotal?.abonementCashTotal ?? 0) > 0;
   const showGoodsPoolOption = goodsEnabled && (collectionPointTotal?.goodsCashTotal ?? 0) > 0;
 
+  // Сколько размена уйдёт этой инкассацией — по тому, что именно собирают.
+  // У касс Абонементов и Товаров предложения нет: их забирает отдельный
+  // /collection/pool, который размен не возвращает, и обещать там было бы
+  // враньём.
+  const collectionChangeFund =
+    collectionMode === "general"
+      ? Math.round(zonesForCollectionPoint.reduce((sum, z) => sum + z.changeFundInTill, 0) * 100) / 100
+      : collectionZoneId === ABONEMENT_POOL_ID || collectionZoneId === GOODS_POOL_ID
+        ? 0
+        : (zonesForCollectionPoint.find((z) => z.zoneId === collectionZoneId)?.changeFundInTill ?? 0);
+
   function openCollection() {
     setCollectionPointId(pointId ?? points[0]?.id ?? "");
     setCollectionMode("zone");
     setCollectionZoneId("");
     setCollectionAmount("");
     setCollectionError(null);
+    // Возвращаем к «оставить» на каждое открытие: разовое решение забрать
+    // размен не должно тихо переноситься на следующую инкассацию.
+    setKeepChangeFund(true);
     setCollectionOpen(true);
   }
 
@@ -379,7 +403,7 @@ export default function ZoneBalancesPage() {
         res = await fetch(`/api/points/${collectionPointId}/collection/general`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: parseMoneyInput(collectionAmount) }),
+          body: JSON.stringify({ amount: parseMoneyInput(collectionAmount), keepChangeFund }),
         });
       } else if (collectionZoneId === ABONEMENT_POOL_ID || collectionZoneId === GOODS_POOL_ID) {
         res = await fetch(`/api/points/${collectionPointId}/collection/pool`, {
@@ -394,7 +418,7 @@ export default function ZoneBalancesPage() {
         res = await fetch(`/api/zones/${collectionZoneId}/collection`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: parseMoneyInput(collectionAmount) }),
+          body: JSON.stringify({ amount: parseMoneyInput(collectionAmount), keepChangeFund }),
         });
       }
 
@@ -1419,6 +1443,21 @@ export default function ZoneBalancesPage() {
                   </PressableScale>
                 </div>
               </div>
+              {/* «Оставить размен в кассе» — показываем только когда размен
+                  там реально лежит: переключатель с нулём ничего не решает,
+                  а объяснять его пришлось бы. Сумма прямо в подписи, чтобы
+                  не приходилось помнить, сколько именно вернётся. */}
+              {collectionChangeFund > 0 && (
+                <div className="flex items-center justify-between gap-3 rounded-control border border-border p-3">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Coins className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 text-body-airbnb">
+                      {t.money.keepChangeFundLabel} <Money value={collectionChangeFund} />
+                    </span>
+                  </span>
+                  <Switch checked={keepChangeFund} onCheckedChange={setKeepChangeFund} className="shrink-0" />
+                </div>
+              )}
               {collectionError && <p className="text-sm text-destructive">{collectionError}</p>}
         </form>
       </BottomSheet>

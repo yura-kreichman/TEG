@@ -12,6 +12,7 @@ import {
 import { businessDayOf, parseBoundary, zonedWallTimeToUtc } from "@/lib/business-day";
 import {
   affectsCashOnHand,
+  getChangeFundInTillByZone,
   getOutstandingCollectionAdvance,
   getPointAbonementCashTotal,
   getPointCashBalance,
@@ -163,6 +164,11 @@ export async function GET(request: Request) {
   const totalDifference = revenueEntries.reduce((sum, e) => sum + e.difference, 0);
   const totalReturns = revenueEntries.reduce((sum, e) => sum + e.returnsCount, 0);
 
+  // Сколько из остатка зоны — размен владельца (решение 2026-09-02): экран
+  // инкассации предлагает оставить его в кассе, и без этого числа предлагать
+  // было бы нечего. Часть balance, а не добавка к нему — размен и так внутри.
+  const changeFundByZone = await getChangeFundInTillByZone(zones.map((z) => z.id));
+
   const zoneBalances = zones.map((zone) => ({
     zoneId: zone.id,
     zoneName: zone.name,
@@ -170,6 +176,7 @@ export async function GET(request: Request) {
     pointId: zone.pointId,
     pointName: zone.point.name,
     balance: Math.round((balanceByZone.get(zone.id) ?? 0) * 100) / 100,
+    changeFundInTill: Math.round((changeFundByZone.get(zone.id) ?? 0) * 100) / 100,
   }));
 
   // Остаток по точке в целом — единый расчёт с getPointCashBalance
