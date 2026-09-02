@@ -59,7 +59,7 @@ async function main() {
     try {
       await resyncZoneSummaryMessage(zs.id, tenant.id, { editedByOwner: true });
       console.log(
-        `  ${tag} сообщение ${zs.telegramSummaryMessageId} переписано (поправка ${zs.collectedBeforeSubmission ?? 0})`
+        `  ${tag} id ${zs.telegramSummaryMessageId}, поправка ${zs.collectedBeforeSubmission ?? 0} — вызвана пересборка`
       );
     } catch (e) {
       console.log(`  ${tag} ОШИБКА: ${e instanceof Error ? e.message : String(e)}`);

@@ -273,7 +273,25 @@ export async function resyncZoneSummaryMessage(
     // удалить не дал (решение владельца 2026-08-16).
     await removeOrMarkMessage(channel.chatId, zs.telegramSummaryMessageId, finalText);
   } else {
-    await editChatMessage(channel.chatId, zs.telegramSummaryMessageId, text).catch(() => {});
+    // Ответ Telegram НЕ глушим (2026-09-03). Раньше стояло `.catch(() => {})`,
+    // и правка, которая не доехала, была неотличима от доехавшей: функция
+    // возвращалась без исключения в обоих случаях. Ровно этим сегодня и
+    // обернулось — «сводки пересобраны» в логе при неизменившемся чате.
+    // Отправку это по-прежнему не роняет: сообщение могли удалить вручную,
+    // бот мог потерять права — но теперь такое видно в логе.
+    const edited = await editChatMessage(channel.chatId, zs.telegramSummaryMessageId, text).catch((err) => ({
+      ok: false as const,
+      status: 0,
+      description: err instanceof Error ? err.message : String(err),
+    }));
+    if (!edited.ok) {
+      console.error("zone summary edit failed", {
+        zoneSubmissionId,
+        messageId: zs.telegramSummaryMessageId,
+        status: edited.status,
+        description: edited.description,
+      });
+    }
   }
   // Push с уже поправленными цифрами: сообщение в чате исправлено, но у
   // владельца в шторке телефона всё ещё висит старое (требование владельца
