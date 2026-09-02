@@ -41,6 +41,14 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/abonement-
         { status: 409 }
       );
     }
+    if (err instanceof Error && err.message === "LEGACY_PLAN_PRICE") {
+      // Уплаченную сумму по такой продаже восстановить неоткуда, а снимать из
+      // кассы нынешнюю цену плана нельзя — она могла измениться.
+      return NextResponse.json(
+        { error: "Продажу абонемента, сделанную до 16.08.2026, аннулировать нельзя — сумма оплаты не сохранена" },
+        { status: 409 }
+      );
+    }
     throw err;
   }
 

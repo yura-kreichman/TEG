@@ -110,6 +110,10 @@ async function sellOneItemTx(
       quantity,
       priceSnapshot: goods.price,
       amount,
+      // Запоминаем, списывался ли остаток — аннулирование обязано вернуть
+      // ровно столько, сколько сняла эта продажа, а не столько, сколько
+      // положено по нынешним настройкам товара (см. схему).
+      stockTracked: goods.trackStock,
       paymentMethod,
       walletId: paymentMethod === "abonement" ? walletId : null,
       performedByOperatorId: actor.operatorId,
@@ -216,41 +220,57 @@ async function settleSaleLegsTx(
 
 /**
  * Распределяет доли разбивки (посчитанные на сумму ВСЕЙ корзины) по
- * отдельным позициям пропорционально их сумме — каждая позиция остаётся
- * собственной GoodsSale со своим amount, поэтому и её доли должны в сумме
- * давать ровно её amount (иначе аннулирование одной позиции не сможет
- * корректно вернуть именно её часть баланса/кассы). Копеечный остаток
- * округления — на последнюю долю последней позиции, чтобы сумма по каждому
- * методу в точности совпадала с введённой владельцем/оператором.
+ * отдельным позициям пропорционально их сумме. Требований ДВА, и оба
+ * обязательные:
+ *
+ *   по строкам — доли каждой позиции в сумме дают ровно её amount (иначе
+ *     аннулирование одной позиции не вернёт именно её часть кассы/баланса,
+ *     ради чего функция и написана);
+ *   по столбцам — доли каждого метода в сумме дают ровно то, что ввёл
+ *     оператор (иначе с кошелька клиента спишется не введённая сумма).
+ *
+ * Прежняя версия гасила остаток только внутри позиции и держала лишь первое:
+ * копейка, отобранная у безнала в одной позиции, никому не возвращалась, и
+ * суммарное списание с баланса расходилось с введённым (генеральная проверка
+ * финансов 2026-09-02). Обратная ошибка — гасить остаток в последней позиции
+ * — уже была багом, найденным аудитом 2026-07-26; чинить одно за счёт
+ * другого нельзя, нужны оба.
+ *
+ * Поэтому раскладка целочисленная, в копейках, наибольшими остатками сразу по
+ * двум измерениям: пол от пропорции, затем недостающие копейки раздаются
+ * так, чтобы каждая строка и каждый столбец добрали ровно свой дефицит.
+ * Суммы дефицитов по строкам и по столбцам равны по построению (обе равны
+ * общему остатку), поэтому раздача всегда сходится.
  */
-function allocateLegsAcrossItems(
+export function allocateLegsAcrossItems(
   legs: PaymentLegInput[],
   itemAmounts: number[]
 ): PaymentLegInput[][] {
-  const total = itemAmounts.reduce((s, a) => s + a, 0);
-  const perItem: PaymentLegInput[][] = itemAmounts.map(() => []);
-  // Остаток округления — на последнюю долю КАЖДОЙ позиции, не только
-  // последней позиции последней доли (реальный баг, найден аудитом
-  // 2026-07-26: при 3+ позициях и 2+ долях старая версия копила погрешность
-  // по всем позициям кроме последней, из-за чего сумма долей могла не
-  // совпасть с итогом на копейку, а деньги "перетекали" между позициями —
-  // ломая точный возврат доли при аннулировании ОДНОЙ позиции, ради чего эта
-  // функция и написана, см. докстринг). Гарантия теперь: сумма долей КАЖДОЙ
-  // позиции ТОЧНО равна её amount — остаток гасится внутри самой позиции.
-  itemAmounts.forEach((itemAmount, itemIndex) => {
-    let allocated = 0;
-    legs.forEach((leg, legIndex) => {
-      const isLastLeg = legIndex === legs.length - 1;
-      const share = isLastLeg
-        ? Math.round((itemAmount - allocated) * 100) / 100
-        : Math.round(((leg.amount * itemAmount) / total) * 100) / 100;
-      allocated += share;
-      if (share > 0) {
-        perItem[itemIndex]!.push({ method: leg.method, amount: share, walletId: leg.walletId });
-      }
-    });
-  });
-  return perItem;
+  const cents = (v: number) => Math.round(v * 100);
+  const itemCents = itemAmounts.map(cents);
+  const legCents = legs.map((l) => cents(l.amount));
+  const total = itemCents.reduce((s, a) => s + a, 0);
+
+  const grid = itemCents.map((item) => legCents.map((leg) => (total > 0 ? Math.floor((item * leg) / total) : 0)));
+
+  const rowGap = itemCents.map((item, i) => item - grid[i]!.reduce((s, v) => s + v, 0));
+  const colGap = legCents.map((leg, j) => leg - grid.reduce((s, row) => s + row[j]!, 0));
+
+  for (let i = 0; i < grid.length; i++) {
+    for (let j = 0; j < legCents.length && rowGap[i]! > 0; j++) {
+      if (colGap[j]! <= 0) continue;
+      const add = Math.min(rowGap[i]!, colGap[j]!);
+      grid[i]![j]! += add;
+      rowGap[i]! -= add;
+      colGap[j]! -= add;
+    }
+  }
+
+  return grid.map((row) =>
+    row
+      .map((value, j) => ({ method: legs[j]!.method, amount: value / 100, walletId: legs[j]!.walletId }))
+      .filter((leg) => leg.amount > 0)
+  );
 }
 
 export async function sellGoods(params: SellParams) {
@@ -484,7 +504,11 @@ export async function voidGoodsSale(saleId: string, tenantId: string, userId: st
     const goods = await tx.goods.findUniqueOrThrow({ where: { id: sale.goodsId } });
     const amount = Number(sale.amount);
 
-    if (goods.trackStock) {
+    // Флаг НА МОМЕНТ ПРОДАЖИ, не нынешний (генеральная проверка финансов
+    // 2026-09-02): у товара, которому учёт остатка включили уже после
+    // продажи, возврат прибавлял штуки, которые никогда не списывались.
+    // NULL — продажа старше миграции, там взять неоткуда, берём текущий.
+    if (sale.stockTracked ?? goods.trackStock) {
       // Тот же лок, что у продажи/довоза/ревизии (аудит 2026-07-26) — тот
       // же класс потерянного обновления против конкурентной ревизии.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${sale.goodsId}:${sale.pointId}`}))`;
@@ -628,7 +652,14 @@ export async function holdGoodsCart(params: HoldCartParams) {
       }
 
       await tx.goodsHeldOrderLine.create({
-        data: { orderId: order.id, goodsId: item.goodsId, quantity: item.quantity, priceSnapshot: goods.price },
+        data: {
+          orderId: order.id,
+          goodsId: item.goodsId,
+          quantity: item.quantity,
+          priceSnapshot: goods.price,
+          // Как и у продажи: отмена обязана вернуть ровно то, что списала.
+          stockTracked: goods.trackStock,
+        },
       });
     }
 
@@ -756,7 +787,8 @@ export async function cancelGoodsHeldOrder(orderId: string, tenantId: string, po
 
     for (const line of order.lines) {
       const goods = await tx.goods.findUnique({ where: { id: line.goodsId }, select: { trackStock: true } });
-      if (goods?.trackStock) {
+      // Флаг на момент откладывания, а не нынешний — см. GoodsSale выше.
+      if (line.stockTracked ?? goods?.trackStock) {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${line.goodsId}:${pointId}`}))`;
         await tx.goodsStock.upsert({
           where: { goodsId_pointId: { goodsId: line.goodsId, pointId } },
@@ -852,31 +884,40 @@ export async function syncHeldOrderCart(params: SyncHeldOrderParams) {
           });
         }
         await tx.goodsHeldOrderLine.create({
-          data: { orderId, goodsId, quantity: delta, priceSnapshot: goods.price },
+          data: { orderId, goodsId, quantity: delta, priceSnapshot: goods.price, stockTracked: goods.trackStock },
         });
       } else {
         let toRemove = -delta;
-        // trackStock читаем из уже удалённого/приостановленного товара тоже
-        // (goods может быть undefined, если товар исчез из каталога, пока
-        // заказ был открыт) — тогда просто срезаем строки без движения
-        // остатка, восстанавливать нечего.
-        if (goods?.trackStock) {
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${goodsId}:${pointId}`}))`;
-          await tx.goodsStock.upsert({
-            where: { goodsId_pointId: { goodsId, pointId } },
-            create: { goodsId, pointId, quantity: toRemove },
-            update: { quantity: { increment: toRemove } },
-          });
-        }
+        // Сначала срезаем строки, считая по дороге, сколько штук РЕАЛЬНО было
+        // списано с остатка: у строк, отложенных при выключенном учёте,
+        // возвращать нечего (генеральная проверка финансов 2026-09-02 —
+        // прежде возврат считался по нынешнему флагу товара сразу на всё
+        // количество, и включённый после откладывания учёт дорисовывал
+        // остаток из ничего). NULL у строк старше миграции — берём текущий
+        // флаг, как было. trackStock читаем и у исчезнувшего из каталога
+        // товара: goods может быть undefined, если его удалили, пока заказ
+        // был открыт.
+        let trackedBack = 0;
         for (const line of order.lines.filter((l) => l.goodsId === goodsId)) {
           if (toRemove <= 0) break;
+          const wasTracked = line.stockTracked ?? goods?.trackStock ?? false;
           if (line.quantity <= toRemove) {
             await tx.goodsHeldOrderLine.delete({ where: { id: line.id } });
+            if (wasTracked) trackedBack += line.quantity;
             toRemove -= line.quantity;
           } else {
             await tx.goodsHeldOrderLine.update({ where: { id: line.id }, data: { quantity: { decrement: toRemove } } });
+            if (wasTracked) trackedBack += toRemove;
             toRemove = 0;
           }
+        }
+        if (trackedBack > 0) {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${goodsId}:${pointId}`}))`;
+          await tx.goodsStock.upsert({
+            where: { goodsId_pointId: { goodsId, pointId } },
+            create: { goodsId, pointId, quantity: trackedBack },
+            update: { quantity: { increment: trackedBack } },
+          });
         }
       }
     }

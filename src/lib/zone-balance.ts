@@ -43,10 +43,16 @@ import { distributeCollectionWhole } from "@/lib/collection-split";
 // Реестре инкассаций). Два РАЗНЫХ типа, не один общий (тот же день, второй
 // запрос пользователя: "могут быть и 2 пачки — Сотрудник продавал
 // абонементы, а продавец Поп-корн" — это физически разные деньги, инкассация
-// одной пачки не должна молча "решать", что вторая тоже забрана). Исключены
-// из affectsCashOnHand по той же причине, что и collection_advance —
-// getPointAbonementCashTotal/getPointGoodsCashTotal уже вычитают эти деньги
-// своей отсечкой по времени, повторный учёт здесь задвоил бы вычитание.
+// одной пачки не должна молча "решать", что вторая тоже забрана).
+//
+// Сами свипы (collection_pool_sweep_abonement/_goods) в этом списке БОЛЬШЕ НЕ
+// СТОЯТ — генеральная проверка финансов 2026-09-02. Раньше пулы вычитались
+// отсечкой по времени: свип помечал момент, и всё, что собрано до него,
+// считалось забранным целиком. Но забрать можно и ЧАСТЬ: инкассация товарной
+// кассы на 100 из 500 стирала все 500 — четыреста рублей пропадали с экрана,
+// хотя физически лежали в ящике. Теперь свип — обычная отрицательная
+// операция кассы: вычитается ровно на свою сумму, и «частично» получается
+// само собой, без единой отсечки.
 const CASH_EXCLUDED_TYPES = new Set([
   "revenue_cashless",
   "abonement_topup_cashless",
@@ -54,8 +60,6 @@ const CASH_EXCLUDED_TYPES = new Set([
   "goods_revenue_cashless",
   "goods_revenue_abonement",
   "collection_advance",
-  "collection_pool_sweep_abonement",
-  "collection_pool_sweep_goods",
   // bonus_accrual (запрос пользователя 2026-08-12, режим "Только начисление"
   // в Настройки → Система) — единственный тип здесь, который вообще не
   // движение денег: премия начислена сотруднику в баланс "к выдаче", но
@@ -147,19 +151,11 @@ async function getZoneCollectionCutoff(
   return dates.length ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null;
 }
 
-// Отсечка конкретного пула (абонементы ИЛИ товары наличными, не обеих сразу) —
-// момент, когда ИМЕННО этот пул последний раз физически забирался
-// инкассацией (collection_pool_sweep_abonement/_goods). Независима от
-// getZoneCollectionCutoff выше и от отсечки другого пула — см. комментарий
-// там же про "2 пачки".
-async function getPoolSweepCutoff(
-  pointId: string,
-  sweepType: string,
-  client: Tx | typeof prisma = prisma,
-  asOf?: Date
-): Promise<Date | null> {
-  return latestOccurredAt({ pointId, type: sweepType, ...(asOf ? { occurredAt: { lt: asOf } } : {}) }, client);
-}
+// Отсечки по свипу пула здесь больше нет (генеральная проверка финансов
+// 2026-09-02): пулы абонементов и товаров вычитаются суммой самих свипов, а
+// не датой последнего из них. Разделение на две независимые пачки (решение
+// 2026-07-22, комментарий про «2 пачки» выше) при этом сохраняется — просто
+// теперь оно держится на типе операции, а не на двух отдельных отсечках.
 
 // Физический остаток кассы точки в целом = сумма остатков её зон + операции,
 // привязанные к точке целиком (аванс/премия — из общей кассы точки, не
@@ -207,7 +203,7 @@ export async function getPointCashBalance(
   const zoneIds = zones.map((z) => z.id);
   const upTo = asOf ? { occurredAt: { lt: asOf } } : {};
 
-  const [zoneOps, pointOps, zoneCollectionCutoff, abonementCutoff, goodsCutoff] = await Promise.all([
+  const [zoneOps, pointOps, zoneCollectionCutoff] = await Promise.all([
     // select только нужных полей (аудит производительности 2026-08-13):
     // раньше тянулись все колонки каждой операции точки за всё время, а
     // используются четыре; удешевляем чтение, а не меняем смысл. Ведущий
@@ -223,8 +219,6 @@ export async function getPointCashBalance(
       select: { type: true, amount: true, occurredAt: true, performedByOperatorId: true },
     }),
     getZoneCollectionCutoff(pointId, zoneIds, client, asOf),
-    getPoolSweepCutoff(pointId, "collection_pool_sweep_abonement", client, asOf),
-    getPoolSweepCutoff(pointId, "collection_pool_sweep_goods", client, asOf),
   ]);
 
   let total = 0;
@@ -238,21 +232,13 @@ export async function getPointCashBalance(
       if (!op.performedByOperatorId) continue;
       if (zoneCollectionCutoff && op.occurredAt <= zoneCollectionCutoff) continue;
     }
-    // Абонементные/товарные наличные, собранные ДО СВОЕЙ ПОСЛЕДНЕЙ инкассации
-    // (не общей — см. getPoolSweepCutoff), считаются уже забранными
-    // (запрос пользователя 2026-07-18, разделено на два независимых пула
-    // 2026-07-22 — docs/spec/09-goods.md, "Деньги"). goods_change_fund —
-    // "Размен" Товаров (запрос пользователя 2026-07-25) — та же отсечка, что
-    // и goods_revenue: это тоже реальные наличные в товарной кассе, без этой
-    // строки они бы после свипа продолжали учитываться в общем остатке точки
-    // навсегда, хотя getPointGoodsCashTotal их уже честно обнулил своим окном.
-    if (op.type === "abonement_topup" && abonementCutoff && op.occurredAt <= abonementCutoff) continue;
-    if (
-      (op.type === "goods_revenue" || op.type === "goods_change_fund") &&
-      goodsCutoff &&
-      op.occurredAt <= goodsCutoff
-    )
-      continue;
+    // Абонементные и товарные наличные (abonement_topup, goods_revenue,
+    // goods_change_fund — «Размен» Товаров, запрос пользователя 2026-07-25)
+    // складываются как есть, а забранное вычитают сами свипы своей
+    // отрицательной суммой. Прежде здесь стояли две отсечки по времени, и
+    // частичная инкассация пула списывала его ЦЕЛИКОМ (docs/spec/09-goods.md,
+    // «Деньги»; два независимых пула — решение 2026-07-22, оно сохраняется:
+    // свип абонементов не трогает товарные деньги и наоборот).
     total += Number(op.amount);
   }
   return total;
@@ -359,22 +345,37 @@ export async function getPointChangeFundInTill(
   const upTo = asOf ? { occurredAt: { lt: asOf } } : {};
   const zones = await client.zone.findMany({ where: { pointId }, select: { id: true } });
 
-  const [byZone, goodsOps, goodsCutoff] = await Promise.all([
+  const [byZone, goodsOps] = await Promise.all([
     getChangeFundInTillByZone(zones.map((z) => z.id), client, asOf),
     client.moneyOperation.findMany({
-      where: { pointId, type: "goods_change_fund", ...upTo },
-      select: { amount: true, occurredAt: true },
+      where: {
+        pointId,
+        type: { in: ["goods_revenue", "goods_change_fund", "collection_pool_sweep_goods"] },
+        ...upTo,
+      },
+      select: { type: true, amount: true },
+      orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
     }),
-    getPoolSweepCutoff(pointId, "collection_pool_sweep_goods", client, asOf),
   ]);
 
   let total = 0;
   for (const amount of byZone.values()) total += amount;
+
+  // Товарный размен — тем же проходом с бегущим остатком, что и зонный
+  // (getChangeFundInTillByZone): размен лежит в товарной кассе, пока её не
+  // забрали, и не может быть больше того, что в ней осталось. Раньше стояла
+  // отсечка по свипу — частичная инкассация товарной кассы стирала весь
+  // размен, а полная не отличалась от частичной вовсе.
+  let goodsBalance = 0;
+  let goodsFund = 0;
   for (const op of goodsOps) {
-    if (goodsCutoff && op.occurredAt <= goodsCutoff) continue;
-    total += Number(op.amount);
+    goodsBalance = Math.round((goodsBalance + Number(op.amount)) * 100) / 100;
+    if (op.type === "goods_change_fund") {
+      goodsFund = Math.round((goodsFund + Number(op.amount)) * 100) / 100;
+    }
+    if (goodsFund > goodsBalance) goodsFund = Math.max(0, goodsBalance);
   }
-  return total;
+  return Math.round((total + goodsFund) * 100) / 100;
 }
 
 // Немедленное разнесение самообслуживаемого аванса/премии по зонам точки
@@ -494,16 +495,16 @@ export async function getPointAbonementCashTotal(
   pointId: string,
   client: Tx | typeof prisma = prisma
 ): Promise<number> {
-  const cutoff = await getPoolSweepCutoff(pointId, "collection_pool_sweep_abonement", client);
   const ops = await client.moneyOperation.findMany({
-    where: {
-      pointId,
-      type: "abonement_topup",
-      ...(cutoff ? { occurredAt: { gt: cutoff } } : {}),
-    },
+    where: { pointId, type: { in: ["abonement_topup", "collection_pool_sweep_abonement"] } },
     select: { amount: true },
   });
-  return ops.reduce((sum, op) => sum + Number(op.amount), 0);
+  // Пополнения плюс свипы (они отрицательные) — не отсечка по времени.
+  // Отсечка списывала пул ЦЕЛИКОМ при инкассации на любую часть его суммы.
+  // Ниже нуля пул не опускается: свип больше пула сюда не пройдёт (роут
+  // сверяет сумму под локом), а отрицательный остаток означал бы, что
+  // забрали денег больше, чем было.
+  return Math.max(0, Math.round(ops.reduce((sum, op) => sum + Number(op.amount), 0) * 100) / 100);
 }
 
 // Товарные наличные (docs/spec/09-goods.md, "Деньги") — тот же принцип, что
@@ -521,16 +522,13 @@ export async function getPointGoodsCashTotal(
   pointId: string,
   client: Tx | typeof prisma = prisma
 ): Promise<number> {
-  const cutoff = await getPoolSweepCutoff(pointId, "collection_pool_sweep_goods", client);
   const ops = await client.moneyOperation.findMany({
-    where: {
-      pointId,
-      type: { in: ["goods_revenue", "goods_change_fund"] },
-      ...(cutoff ? { occurredAt: { gt: cutoff } } : {}),
-    },
+    where: { pointId, type: { in: ["goods_revenue", "goods_change_fund", "collection_pool_sweep_goods"] } },
     select: { amount: true },
   });
-  return ops.reduce((sum, op) => sum + Number(op.amount), 0);
+  // Как и у абонементного пула выше: выручка и размен плюс свипы со своим
+  // минусом, вместо отсечки, стиравшей весь пул при частичной инкассации.
+  return Math.max(0, Math.round(ops.reduce((sum, op) => sum + Number(op.amount), 0) * 100) / 100);
 }
 
 // "Пул" — деньги, которые сотрудник уже физически забрал с точки (аванс/
@@ -905,8 +903,11 @@ export async function reverseCollectionAdvanceSettlement(tx: Tx, advanceOperatio
 // (аванс снова считается непогашенным) и дать ему естественно
 // пересчитаться на следующей сдаче/инкассации, чем пытаться пересчитать его
 // частично здесь же. Вызывающая сторона сама решает, в той же транзакции
-// или нет — здесь только удаление, без advisory-lock (нет risk gonki: это
-// вызывается изнутри уже locked транзакции удаления/правки самой сдачи).
+// или нет — здесь только удаление, без advisory-lock: гонки нет, потому что
+// вызывается изнутри уже залоченной транзакции удаления/правки самой сдачи.
+// Условие это до 2026-09-02 держалось на честном слове — ни PATCH, ни DELETE
+// в /api/reports/submissions/zone-submission/[id] лока не брали вовсе. Теперь
+// берут; при добавлении нового вызывающего лок обязателен.
 export async function reverseResultsSubmissionAdvanceSettlement(
   tx: Tx,
   resultsSubmissionId: string

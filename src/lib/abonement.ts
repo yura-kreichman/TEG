@@ -245,6 +245,11 @@ export async function notifyWalletBalanceChange(
   // проактивный пуш, а не ответ на сообщение клиента.
   for (const link of links) {
     const s = BOT_STRINGS[link.language as Locale] ?? BOT_STRINGS.en;
+    // Тот же язык и для сумм (генеральная проверка финансов 2026-09-02).
+    // Текст сообщения переведён на все языки бота, а formatMoneyWithCurrency
+    // ниже стоял с жёстким "ru": румын получал перевод с русской группировкой
+    // разрядов и русским форматом. Запасной — "en", как и у строк.
+    const moneyLocale: Locale = BOT_STRINGS[link.language as Locale] ? (link.language as Locale) : "en";
     // Название компании — только если у ЭТОГО чата есть привязка ещё к
     // какому-то другому тенанту (запрос пользователя 2026-07-26: "если у
     // клиента в боте подключено больше одной компании... чтобы было понятно,
@@ -256,8 +261,8 @@ export async function notifyWalletBalanceChange(
       greetingLine(wallet.name, s),
       ...(isMultiTenant ? [s.companyLine(tenant.name)] : []),
       ...(detail ? [detail] : []),
-      `${sign}${formatMoneyWithCurrency(Math.abs(amount), "ru", currency)}`,
-      `${s.balanceWord}: <b>${formatMoneyWithCurrency(Number(wallet.balance), "ru", currency)}</b>`,
+      `${sign}${formatMoneyWithCurrency(Math.abs(amount), moneyLocale, currency)}`,
+      `${s.balanceWord}: <b>${formatMoneyWithCurrency(Number(wallet.balance), moneyLocale, currency)}</b>`,
     ].join("\n");
     await sendChatMessage(link.chatId, text).catch(() => {});
   }
@@ -1195,12 +1200,22 @@ export async function voidAbonementSale(transactionId: string, tenantId: string,
       // достаточно возврата баланса выше.
     } else {
       // Продажа старше 2026-08-16 и не попала в бэкфилл миграции: связи с
-      // деньгами нет. Восстанавливаем сумму по прайсу плана (для
-      // произвольного пополнения оплата равна зачислению) и снимаем её тем
-      // способом, которым платили. Разбивку оплаты так не восстановить —
-      // такие продажи аннулировать нельзя, иначе доли разъедутся.
+      // деньгами нет. Разбивку оплаты так не восстановить — такие продажи
+      // аннулировать нельзя, иначе доли разъедутся.
       if (sale.paymentMethod === PAYMENT_SPLIT_METHOD) throw new Error("LEGACY_SPLIT");
-      const paid = sale.abonement ? Number(sale.abonement.price) : credited;
+      // Продажу ПЛАНА тоже нельзя (генеральная проверка финансов 2026-09-02).
+      // Раньше сумма бралась по ТЕКУЩЕЙ цене плана — а она с тех пор могла
+      // измениться, и из кассы снималось не то, что клиент когда-то заплатил.
+      // У плана с бонусом цена вдобавок не равна зачислению, так что и
+      // credited не подходит. Восстановить уплаченное неоткуда, поэтому
+      // честнее отказать, чем молча увести из кассы придуманное число — тот
+      // же принцип, что строкой выше у разбивки. На проде таких продаж нет ни
+      // одной (проверено 2026-09-02: все 20 записей без денежной связи —
+      // списания, не продажи).
+      if (sale.abonement) throw new Error("LEGACY_PLAN_PRICE");
+      // Осталось произвольное пополнение: у него оплата равна зачислению по
+      // определению, гадать не о чем.
+      const paid = credited;
       if (paid > 0) {
         await tx.moneyOperation.create({
           data: {

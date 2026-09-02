@@ -108,12 +108,18 @@ export async function GET(request: Request) {
       mobileCount: 0,
     };
     const amount = Number(op.amount);
+    // Аннулирование пишет компенсацию ТЕМ ЖЕ типом с минусом. Сумма от этого
+    // сходится в ноль сама, а счётчик прибавлял по единице на каждую строку и
+    // показывал «продаж 2» на сумму 0 (генеральная проверка финансов
+    // 2026-09-02). Минусовая строка счётчик уменьшает — тогда отменённая
+    // продажа исчезает из обеих цифр разом.
+    const countDelta = amount >= 0 ? 1 : -1;
     if (op.type === "abonement_topup_cashless") {
       existing.mobileAmount += amount;
-      existing.mobileCount += 1;
+      existing.mobileCount += countDelta;
     } else {
       existing.cashAmount += amount;
-      existing.cashCount += 1;
+      existing.cashCount += countDelta;
     }
     abonementSaleItemsByPlan.set(op.abonementId, existing);
   }

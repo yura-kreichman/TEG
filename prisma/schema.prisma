@@ -1173,6 +1173,15 @@ model CounterTapEvent {
   // Только paymentMethod="abonement" — какой кошелёк был списан, тот же
   // принцип, что Launch.abonementWalletId.
   abonementWalletId String?
+
+  // Цена тарифа в момент тапа — тот же приём, что Launch.priceSnapshot и
+  // GoodsSale.priceSnapshot (генеральная проверка финансов 2026-09-02).
+  // Удаление тапа возвращало клиенту ТЕКУЩУЮ цену тарифа: подняли цену с 35
+  // до 50, старый ошибочный тап удалили — на кошелёк вернулось 50 вместо
+  // списанных 35. У разбивки оплаты суммы долей хранятся и возврат был верен,
+  // а у оплаты целиком балансом хранить было нечего.
+  // NULL — тапы до 2026-09-02, для них остаётся чтение текущей цены.
+  priceSnapshot Decimal? @db.Decimal(10, 2)
   abonementWallet   AbonementWallet? @relation(fields: [abonementWalletId], references: [id], onDelete: SetNull)
 
   // "Возврат/тест" привязан к КОНКРЕТНОМУ тапу (запрос пользователя
@@ -1676,6 +1685,15 @@ model GoodsSale {
   priceSnapshot Decimal @db.Decimal(10, 2)
   amount        Decimal @db.Decimal(10, 2) // = priceSnapshot * quantity, хранится, не пересчитывается
 
+  // Снапшот того, вёлся ли учёт остатка в момент продажи (генеральная
+  // проверка финансов 2026-09-02). Аннулирование возвращало остаток по
+  // ТЕКУЩЕМУ Goods.trackStock: у товара, которому учёт включили уже ПОСЛЕ
+  // продажи, возврат прибавлял штуки, которые никогда не списывались, — и
+  // остаток рос из ничего. Тот же принцип, что priceSnapshot строкой выше:
+  // прошлая продажа не должна зависеть от нынешних настроек товара.
+  // NULL — продажи до 2026-09-02, для них остаётся чтение текущего флага.
+  stockTracked  Boolean?
+
   paymentMethod String // "cash" | "mobile" | "abonement"
   walletId      String?
   wallet        AbonementWallet? @relation(fields: [walletId], references: [id])
@@ -1795,6 +1813,11 @@ model GoodsHeldOrderLine {
   // Снапшот цены на момент добавления в заказ (паттерн GoodsSale.priceSnapshot) —
   // смена цены товара, пока заказ открыт, не задевает уже добавленные позиции.
   priceSnapshot Decimal @db.Decimal(10, 2)
+  // Вёлся ли учёт остатка, когда позицию отложили — то же, что
+  // GoodsSale.stockTracked, и по той же причине: отмена заказа возвращала
+  // штуки по нынешнему флагу товара, а не по тому, при котором их списали.
+  // NULL — позиции, отложенные до 2026-09-02.
+  stockTracked  Boolean?
 
   @@index([orderId])
   @@index([goodsId])

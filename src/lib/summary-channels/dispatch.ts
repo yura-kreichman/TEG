@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { editChatMessage, sendChatMessage } from "@/lib/telegram-bot";
 import { parseEmailAddresses, sendEmail } from "./email-channel";
-import { formatMoney, formatMoneyWithCurrency } from "@/lib/format";
+import { formatMoneyWithCurrency } from "@/lib/format";
 import type { CurrencyCode } from "@/lib/currency";
 import { isLocale, type Locale } from "@/lib/locales";
 import { getDictionary, type Dictionary } from "@/lib/i18n";
@@ -209,7 +209,8 @@ export async function dispatchShiftCloseSummary(
     const mark = colorTagToEmoji(data.operatorColorTag);
     await sendPushToTenant(tenantId, {
       title: `⏹ ${mark ? `${mark} ` : ""}${data.operatorName} · ${st.shiftClosedSuffix}`,
-      body: `${st.toPayOutCompact}: ${formatMoney(data.toPayOut, tenant.locale)}`,
+      // Со знаком валюты — та же причина, что у сводки по зоне выше.
+      body: `${st.toPayOutCompact}: ${formatMoneyWithCurrency(data.toPayOut, tenant.locale, tenant.currency as CurrencyCode | null)}`,
       url: "/operators",
     }).catch((err) => console.error("push dispatch failed", { kind: "shiftClose", tenantId, err }));
   }
@@ -265,12 +266,20 @@ export async function dispatchDailyCashSummary(
   // расходились с чатом, и это оказалось хуже лишнего уведомления.
   const isUpdate = !!existingMessageIds.telegram || !!existingMessageIds.email;
   if (await pushEnabledFor(tenantId, "dailyCashSummary")) {
-    const total = data.cashAmount + data.mobileAmount - data.expenses;
+    // Расходы НЕ вычитаются — то же исправление, что в самой сводке
+    // (telegram-format.ts, К8): с 2026-08-16 сотрудник вводит остаток кассы
+    // уже ПОСЛЕ своих трат, они сидят внутри cashAmount, и второе вычитание
+    // занижало «Итого» ровно на сумму дневных трат. Здесь эта копия формулы
+    // осталась незамеченной при первой правке — шторка телефона показывала
+    // одно число, открытая следом сводка в чате другое.
+    const total = data.cashAmount + data.mobileAmount;
     // 💰 — тот же значок, что в шапке самой сводки в Telegram.
     const subject = data.showPointName ? `💰 ${st.dailyCashSubject} · ${data.pointName}` : `💰 ${st.dailyCashSubject}`;
     await sendPushToTenant(tenantId, {
       title: isUpdate ? `${subject} 🔄` : subject,
-      body: `${st.totalCompact}: ${formatMoney(total, tenant.locale)}`,
+      // Со знаком валюты — одинокая сумма в шторке без него не читается
+      // (правило сформулировано у getTenantInfo в этом же файле).
+      body: `${st.totalCompact}: ${formatMoneyWithCurrency(total, tenant.locale, tenant.currency as CurrencyCode | null)}`,
       url: "/money",
     }).catch((err) => console.error("push dispatch failed", { kind: "dailyCash", tenantId, err }));
   }

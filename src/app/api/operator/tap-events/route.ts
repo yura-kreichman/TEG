@@ -251,7 +251,17 @@ export async function POST(request: Request) {
     try {
       const event = await prisma.$transaction(async (tx) => {
         const created = await tx.counterTapEvent.create({
-          data: { zoneId: zone.id, pointId: point.id, assetId, tariffId, operatorId: operator.id, paymentMethod: PAYMENT_SPLIT_METHOD },
+          data: {
+            zoneId: zone.id,
+            pointId: point.id,
+            assetId,
+            tariffId,
+            operatorId: operator.id,
+            paymentMethod: PAYMENT_SPLIT_METHOD,
+            // Цена на момент тапа — чтобы удаление вернуло списанное, а не
+            // нынешнее (см. схему).
+            priceSnapshot: zone.tariffs[0]!.price,
+          },
         });
         for (const leg of legs) {
           if (leg.method === "abonement") {
@@ -318,7 +328,17 @@ export async function POST(request: Request) {
   }
 
   const event = await prisma.counterTapEvent.create({
-    data: { zoneId: zone.id, pointId: point.id, assetId, tariffId, operatorId: operator.id, paymentMethod, abonementWalletId },
+    data: {
+      zoneId: zone.id,
+      pointId: point.id,
+      assetId,
+      tariffId,
+      operatorId: operator.id,
+      paymentMethod,
+      abonementWalletId,
+      // Цена на момент тапа — см. схему.
+      priceSnapshot: zone.tariffs[0]!.price,
+    },
   });
   return NextResponse.json({ id: event.id, zoneId: event.zoneId, assetId: event.assetId, tariffId: event.tariffId, createdAt: event.createdAt });
 }

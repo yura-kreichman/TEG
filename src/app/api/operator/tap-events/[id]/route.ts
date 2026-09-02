@@ -31,7 +31,14 @@ function isRecordNotFound(err: unknown): boolean {
  */
 async function refundTapPayment(
   tx: Prisma.TransactionClient,
-  event: { id: string; zoneId: string; tariffId: string; paymentMethod: string | null; abonementWalletId: string | null },
+  event: {
+    id: string;
+    zoneId: string;
+    tariffId: string;
+    paymentMethod: string | null;
+    abonementWalletId: string | null;
+    priceSnapshot: Prisma.Decimal | null;
+  },
   point: { id: string; tenantId: string },
   operatorId: string
 ): Promise<{ walletId: string | null; amount: number }> {
@@ -73,8 +80,17 @@ async function refundTapPayment(
       await credit(leg.walletId, Number(leg.amount));
     }
   } else if (event.paymentMethod === "abonement" && event.abonementWalletId) {
-    const tariff = await tx.tariff.findUnique({ where: { id: event.tariffId }, select: { price: true } });
-    await credit(event.abonementWalletId, Number(tariff?.price ?? 0));
+    // Цена НА МОМЕНТ ТАПА (генеральная проверка финансов 2026-09-02). Раньше
+    // читалась текущая цена тарифа: подняли её с 35 до 50, удалили старый
+    // ошибочный тап — клиенту вернулось 50 вместо списанных 35. У разбивки
+    // (ветка выше) суммы долей хранятся, и там возврат был верен с самого
+    // начала — а рядом стоял этот же случай без снапшота.
+    // NULL — тап старше миграции, там взять неоткуда, берём текущую.
+    const price =
+      event.priceSnapshot ??
+      (await tx.tariff.findUnique({ where: { id: event.tariffId }, select: { price: true } }))?.price ??
+      0;
+    await credit(event.abonementWalletId, Number(price));
   }
 
   return { walletId, amount };

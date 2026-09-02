@@ -127,6 +127,16 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/reports/su
   const cashDelta = Math.round((nextCash - before.cashAmount) * 100) / 100;
 
   await prisma.$transaction(async (tx) => {
+    // Лок точки на всю правку. Его здесь не было вовсе, хотя
+    // reverseResultsSubmissionAdvanceSettlement в собственной документации
+    // требует вызывать себя «изнутри уже залоченной транзакции» — и правка, и
+    // удаление сдачи молча нарушали это условие (генеральная проверка
+    // финансов 2026-09-02). Параллельная инкассация той же точки читала
+    // остатки зон между откатом погашения аванса и записью новой суммы и
+    // списывала одни деньги дважды — тот же класс гонки, что уже закрыт для
+    // всех роутов инкассации и авансов.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${zoneSubmission.zone.pointId}))`;
+
     for (const r of zoneSubmission.assetReadings) {
       const key = `${r.assetId}:${r.tariffId}`;
       if (nextReadings[key] !== r.reading) {
@@ -281,6 +291,11 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/reports/
 
   try {
     await prisma.$transaction(async (tx) => {
+      // Тот же лок точки, что и в PATCH выше, и по той же причине: ниже
+      // вызывается reverseResultsSubmissionAdvanceSettlement, требующий
+      // залоченной транзакции.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${zoneSubmission.zone.pointId}))`;
+
       // Расходы удаление сдачи НЕ уносит, а отвязывает (2026-08-15): сдача их
       // больше не создаёт — Сотрудник внёс их сам, ещё до неё, и деньги из
       // кассы вынуты по-настоящему. Удалять их вместе со сдачей значило бы
