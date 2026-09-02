@@ -854,7 +854,7 @@
     "ticketVariantsEmptyError": "Aggiungi almeno una variante con nome",
     "ticketVariantsSaveError": "Impossibile salvare le varianti di prezzo",
     "gameRoomPricingModeFixed": "Per ingresso",
-    "gameRoomPricingModePerMinute": "Reale",
+    "gameRoomPricingModePerMinute": "A consuntivo",
     "gameRoomRateLabel": "Prezzo al minuto di permanenza",
     "gameRoomRateHint": "Esempio: 1 ₽ — 45 minuti di permanenza costeranno 45 ₽.",
     "gameRoomOptionsLabel": "Opzioni",

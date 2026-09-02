@@ -854,7 +854,7 @@
     "ticketVariantsEmptyError": "Adăugați cel puțin o variantă cu nume",
     "ticketVariantsSaveError": "Nu s-au putut salva variantele de preț",
     "gameRoomPricingModeFixed": "Pe intrare",
-    "gameRoomPricingModePerMinute": "Real",
+    "gameRoomPricingModePerMinute": "Pe timp efectiv",
     "gameRoomRateLabel": "Preț pe minut de ședere",
     "gameRoomRateHint": "De exemplu: 1 ₽ — 45 de minute de ședere vor costa 45 ₽.",
     "gameRoomOptionsLabel": "Variante",

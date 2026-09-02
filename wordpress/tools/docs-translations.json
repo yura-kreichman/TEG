@@ -631,10 +631,10 @@
     "ro": "Unde se găsește"
   },
   "Везде, где приложение спрашивает способ оплаты: Товары, Билеты, Прибывания (и на запуске «За вход», и на завершении «По факту»), Пуски, Счётчики. Кнопка называется одинаково —": {
-    "en": "Everywhere the app asks for a payment method: Products, Tickets, Stays (both when starting «Per entry» and when finishing «Actual time»), Launches, Counters. The button is called the same everywhere —",
+    "en": "Everywhere the app asks for a payment method: Products, Tickets, Stays (both when starting «Per entry» and when finishing «By actual time»), Launches, Counters. The button is called the same everywhere —",
     "uk": "Скрізь, де застосунок питає спосіб оплати: Товари, Квитки, Перебування (і на запуску «За вхід», і на завершенні «За фактом»), Заїзди, Лічильники. Кнопка називається однаково —",
     "it": "Ovunque l'app chieda il metodo di pagamento: Prodotti, Biglietti, Soggiorni (sia all'avvio «Per ingresso» sia alla chiusura «A consuntivo»), Corse, Contatori. Il pulsante ha sempre lo stesso nome —",
-    "ro": "Peste tot unde aplicația întreabă metoda de plată: Produse, Bilete, Șederi (și la pornirea «Per intrare», și la finalizarea «După timpul efectiv»), Curse, Contoare. Butonul se numește la fel —"
+    "ro": "Peste tot unde aplicația întreabă metoda de plată: Produse, Bilete, Șederi (și la pornirea «Pe intrare», și la finalizarea «Pe timp efectiv»), Curse, Contoare. Butonul se numește la fel —"
   },
   "«Разбить оплату»": {
     "en": "«Split the payment»",
@@ -2401,10 +2401,10 @@
     "ro": "&#8230;prețul nelimitatului trebuie să crească odată cu timpul?"
   },
   "Тогда это не безлимит, а тариф «По факту»: там сумма считается по цене за минуту.": {
-    "en": "Then it is not unlimited but the «Actual time» rate: there the amount is calculated from the price per minute.",
+    "en": "Then it is not unlimited but the «By actual time» rate: there the amount is calculated from the price per minute.",
     "uk": "Тоді це не безліміт, а тариф «За фактом»: там сума рахується за ціною за хвилину.",
     "it": "Allora non è illimitato ma la tariffa «A consuntivo»: lì l'importo si calcola sul prezzo al minuto.",
-    "ro": "Atunci nu este nelimitat, ci tariful «După timpul efectiv»: acolo suma se calculează după prețul pe minut."
+    "ro": "Atunci nu este nelimitat, ci tariful «Pe timp efectiv»: acolo suma se calculează după prețul pe minut."
   },
   "&#8230;раньше оставляли длительность пустой?": {
     "en": "&#8230;you used to leave the duration empty?",
