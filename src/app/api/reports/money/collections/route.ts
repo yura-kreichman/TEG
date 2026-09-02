@@ -67,7 +67,7 @@ export async function GET(request: Request) {
   const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
   const monthEnd = dayBoundsUtc(nextMonth.year, nextMonth.month, 1, timezone, boundary).start;
 
-  const [zoneOps, poolOps, advanceOps, takenOps] = await Promise.all([
+  const [zoneOps, poolOps, advanceOps, takenOps, changeFundOps] = await Promise.all([
     prisma.moneyOperation.findMany({
       where: {
         tenantId: owner.tenantId,
@@ -117,6 +117,27 @@ export async function GET(request: Request) {
         ...(pointId ? { pointId } : {}),
       },
       include: { point: true, beneficiaryOperator: true, performedByOperator: true },
+      orderBy: { occurredAt: "desc" },
+    }),
+    // Размен (запрос владельца 2026-09-02: «внёс тестовый и удалить не
+    // могу»). До этого размен нигде не показывался списком: создать можно
+    // было, увидеть и снять — нет, кроме массовой «Очистки данных», которая
+    // стирает все размены тенанта разом.
+    //
+    // Зонный (change_fund) и товарный (goods_change_fund) сразу: у первого
+    // заполнен zoneId, у второго pointId — отсюда OR в фильтре по точке.
+    prisma.moneyOperation.findMany({
+      where: {
+        tenantId: owner.tenantId,
+        type: { in: ["change_fund", "goods_change_fund"] },
+        occurredAt: { gte: monthStart, lt: monthEnd },
+        ...(pointId ? { OR: [{ zone: { pointId } }, { pointId }] } : {}),
+      },
+      include: {
+        zone: { include: { point: true } },
+        point: true,
+        performedByOperator: { select: { name: true, colorTag: true } },
+      },
       orderBy: { occurredAt: "desc" },
     }),
   ]);
@@ -210,6 +231,22 @@ export async function GET(request: Request) {
         ...performer(op),
         actKey: actKey(op, op.zone!.point.name),
         aheadAmount: aheadByOpId.get(op.id) ?? 0,
+      })),
+    ...changeFundOps
+      .filter((op) => op.zone !== null || op.point !== null)
+      .map((op) => ({
+        id: op.id,
+        occurredAt: op.occurredAt.toISOString(),
+        // У товарного размена зоны нет — клиент подставит подпись по pool.
+        zoneName: op.zone?.name ?? null,
+        pointName: op.zone?.point.name ?? op.point!.name,
+        amount: Math.abs(Number(op.amount)),
+        pool: "change_fund" as const,
+        comment: op.comment,
+        ...performer(op),
+        // Своя строка, не склеивается с инкассациями в один «акт»: это
+        // движение в кассу, а не из неё.
+        actKey: `change_fund:${op.id}`,
       })),
     ...poolOps
       .filter((op) => op.point !== null)

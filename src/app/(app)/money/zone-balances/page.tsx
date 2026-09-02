@@ -66,7 +66,8 @@ interface CollectionEntry {
   zoneName: string | null;
   pointName: string;
   amount: number;
-  pool: "abonement" | "goods" | "advance" | "advance_taken" | "bonus_taken" | null;
+  // "change_fund" — размен, деньги В кассу (запрос владельца 2026-09-02).
+  pool: "abonement" | "goods" | "advance" | "advance_taken" | "bonus_taken" | "change_fund" | null;
   // Только у advance_taken/bonus_taken — кто забрал.
   operatorName?: string | null;
   operatorColorTag?: string | null;
@@ -210,7 +211,10 @@ export default function ZoneBalancesPage() {
     setEditCollectionSubmitting(true);
     setEditCollectionError(null);
     try {
-      const res = await fetch(`/api/money/collections/${editingCollection.id}`, {
+      // Размен правится своим роутом: у него нет ни погашающих строк, ни
+      // связи со сдачей итогов, поэтому и проверок editable там нет.
+      const base = editingCollection.pool === "change_fund" ? "change-fund" : "collections";
+      const res = await fetch(`/api/money/${base}/${editingCollection.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: parseMoneyInput(editCollectionAmount) }),
@@ -230,7 +234,8 @@ export default function ZoneBalancesPage() {
   async function deleteCollection() {
     if (!editingCollection) return;
     setEditCollectionError(null);
-    const res = await fetch(`/api/money/collections/${editingCollection.id}`, { method: "DELETE" });
+    const base = editingCollection.pool === "change_fund" ? "change-fund" : "collections";
+    const res = await fetch(`/api/money/${base}/${editingCollection.id}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json();
       setEditCollectionError(collectionErrorText(data, t.money.deleteCollectionError));
@@ -540,11 +545,24 @@ export default function ZoneBalancesPage() {
   // дораспределит его этими же строками — тогда сумма акта окажется больше
   // физически взятого на величину такого хвоста. Отдельного поля с
   // "введённой суммой" в журнале нет, восстановить её задним числом нельзя.
-  type CollectionAct = { key: string; kind: "collection" | "advance"; items: CollectionEntry[]; total: number };
+  type CollectionAct = {
+    key: string;
+    // "change_fund" — деньги, положенные В кассу, а не изъятые из неё
+    // (запрос владельца 2026-09-02). Отдельный вид, потому что подпись и
+    // знак у него противоположны инкассации.
+    kind: "collection" | "advance" | "change_fund";
+    items: CollectionEntry[];
+    total: number;
+  };
   function splitIntoActs(items: CollectionEntry[]): CollectionAct[] {
     const acts: CollectionAct[] = [];
     const byKey = new Map<string, CollectionAct>();
     for (const item of items) {
+      // Размен — всегда собственная строка, ни с чем не склеивается.
+      if (item.pool === "change_fund") {
+        acts.push({ key: item.id, kind: "change_fund", items: [item], total: item.amount });
+        continue;
+      }
       // Без actKey (самообслуживание сотрудника) — всегда собственная строка.
       if (!item.actKey) {
         acts.push({ key: item.id, kind: "collection", items: [item], total: item.amount });
@@ -985,12 +1003,22 @@ export default function ZoneBalancesPage() {
                                 )}
                               >
                                 {formatTime(act.items[0]!.occurredAt)} ·
-                                {act.kind === "advance" ? (
+                                {/* Размен — та же монетка Coins, что на кнопке
+                                    «Размен» в остатках зоны (просьба владельца
+                                    2026-09-02): один значок на одно понятие,
+                                    где бы оно ни встретилось. */}
+                                {act.kind === "change_fund" ? (
+                                  <Coins className="size-3 shrink-0" />
+                                ) : act.kind === "advance" ? (
                                   <PiggyBank className="size-3 shrink-0" />
                                 ) : (
                                   <Banknote className="size-3 shrink-0" />
                                 )}
-                                {act.kind === "advance" ? t.money.collectionAdvanceLabel : t.money.collectionActLabel}
+                                {act.kind === "change_fund"
+                                  ? t.money.changeFund
+                                  : act.kind === "advance"
+                                    ? t.money.collectionAdvanceLabel
+                                    : t.money.collectionActLabel}
                                 {/* Единый чип сотрудника проекта (решение
                                     владельца 2026-08-16). */}
                                 <PerformedByTag
