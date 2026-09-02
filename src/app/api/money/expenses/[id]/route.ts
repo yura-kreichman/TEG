@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
 import { removeExpenseAlert, resyncExpenseAlert } from "@/lib/expense-alert";
 import { resyncAfterMoneyOpChange } from "@/lib/summary-channels/resync";
+import { resyncZoneSummaryMessage } from "@/lib/summary-channels/zone-summary-message";
 
 /**
  * Правка/удаление расхода владельцем прямо в реестре (запрос пользователя
@@ -223,8 +224,37 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/expe
       await resyncAfterMoneyOpChange({ ...op, zoneId: op.zoneId, occurredAt: op.occurredAt }).catch(() => {});
     }
   }
+  // Сводка по зоне — на её «Разнице» этот расход тоже стоит (С68). Если он
+  // переехал, пересобрать надо обе: старую и новую.
+  await resyncZoneSummaryForExpense(op.resultsSubmissionId, zoneId, owner.tenantId);
+  if (zoneChanged) await resyncZoneSummaryForExpense(op.resultsSubmissionId, op.zoneId, owner.tenantId);
 
   return NextResponse.json({ ok: true });
+}
+
+
+/**
+ * Сводка по зоне, к которой расход привязан, тоже строится на его сумме —
+ * значит правка и удаление обязаны её пересобрать (С68). Раньше не звалось
+ * вовсе, и в чате оставалась прежняя «Разница». Масштаб уменьшился после С4
+ * (новые сдачи хранят компенсацию отдельным числом), но у сдач старше
+ * 2026-09-02 Разница в сводке по-прежнему считается по привязанным расходам —
+ * там правка меняет её напрямую.
+ *
+ * Best-effort: сообщение могло быть удалено, чат отвязан, бот заблокирован —
+ * это не повод отменять уже сохранённую правку.
+ */
+async function resyncZoneSummaryForExpense(
+  resultsSubmissionId: string | null,
+  zoneId: string | null,
+  tenantId: string
+) {
+  if (!resultsSubmissionId || !zoneId) return;
+  const zs = await prisma.zoneSubmission.findFirst({
+    where: { resultsSubmissionId, zoneId },
+    select: { id: true },
+  });
+  if (zs) await resyncZoneSummaryMessage(zs.id, tenantId, { editedByOwner: true }).catch(() => {});
 }
 
 export async function DELETE(_request: Request, ctx: RouteContext<"/api/money/expenses/[id]">) {
@@ -262,6 +292,8 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/money/ex
   await removeExpenseAlert(op.expenseAlertMessageId, owner.tenantId);
 
   await resyncAfterMoneyOpChange(op);
+  // Сводка по зоне — та же причина, что и у правки выше (С68).
+  await resyncZoneSummaryForExpense(op.resultsSubmissionId, op.zoneId, owner.tenantId);
 
   return NextResponse.json({ ok: true });
 }

@@ -4,7 +4,7 @@ import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOwner, findTenantPoint } from "@/lib/require-owner";
 import { reviseGoodsStockBatch } from "@/lib/goods";
 import { getPeriodRange, isPeriodGranularity, parseDateParam } from "@/lib/reports";
-import { parseBoundary, zonedWallTimeToUtc } from "@/lib/business-day";
+import { parseBoundary, periodBoundsUtc, zonedWallTimeToUtc } from "@/lib/business-day";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 
 interface RevisionLineOut {
@@ -48,7 +48,6 @@ export async function GET(request: Request) {
   // Часовой пояс тенанта (аудит 2026-07-25, повторная проверка) — см.
   // комментарий у getPeriodRange в lib/reports.ts.
   const { timezone, boundary } = await getTenantDayContext(owner.tenantId);
-  const { hours: bh, minutes: bm } = parseBoundary(boundary);
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
   const granularityParam = searchParams.get("granularity");
@@ -57,9 +56,13 @@ export async function GET(request: Request) {
   let start: Date;
   let end: Date;
   if (fromParts && toParts) {
-    start = zonedWallTimeToUtc(fromParts.year, fromParts.month, fromParts.day, bh, bm, timezone);
-    const nextDay = new Date(Date.UTC(toParts.year, toParts.month - 1, toParts.day + 1));
-    end = zonedWallTimeToUtc(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate(), bh, bm, timezone);
+    // Через periodBoundsUtc (то есть dayBoundsUtc), а не пересчётом «эта дата
+    // в час границы»: при ВЕЧЕРНЕЙ границе день начинается накануне, и ручное
+    // окно уезжало на сутки относительно ярлыков клеток, которые этот же роут
+    // считает через businessDayOf (генеральная проверка финансов, С38/С39/С45).
+    const custom = periodBoundsUtc(fromParam!, toParam!, timezone, boundary);
+    start = custom.from;
+    end = custom.to;
   } else {
     const granularity = isPeriodGranularity(granularityParam) ? granularityParam : "month";
     const anchorParam = searchParams.get("anchor");

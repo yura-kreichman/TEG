@@ -9,7 +9,7 @@ import {
   parseDateParam,
   type PeriodGranularity,
 } from "@/lib/reports";
-import { businessDayOf, parseBoundary, zonedWallTimeToUtc } from "@/lib/business-day";
+import { businessDayOf, parseBoundary, periodBoundsUtc, zonedWallTimeToUtc } from "@/lib/business-day";
 import {
   affectsCashOnHand,
   getChangeFundInTillByZone,
@@ -68,14 +68,17 @@ export async function GET(request: Request) {
   let granularity: PeriodGranularity | "custom";
   if (fromParts && toParts) {
     granularity = "custom";
-    start = zonedWallTimeToUtc(fromParts.year, fromParts.month, fromParts.day, bh, bm, timezone);
-    const nextDay = new Date(Date.UTC(toParts.year, toParts.month - 1, toParts.day + 1));
-    // bh/bm с ОБЕИХ сторон — как во всех остальных роутах
-    // (resolvePeriodFromParams, goods/sales, revisions). Раньше конец
-    // произвольного диапазона резался полуночью, и сдача, сделанная после
-    // местной полуночи, но до границы дня, выпадала и из выбранного периода,
-    // и из следующего.
-    end = zonedWallTimeToUtc(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate(), bh, bm, timezone);
+    // Через periodBoundsUtc (то есть dayBoundsUtc), а не пересчётом «эта дата
+    // в час границы». Граница дня с ОБЕИХ сторон окна — как во всех остальных
+    // роутах: раньше конец произвольного диапазона резался полуночью, и сдача,
+    // сделанная после местной полуночи, но до границы дня, выпадала и из
+    // выбранного периода, и из следующего. А при ВЕЧЕРНЕЙ границе (у Керен
+    // Центра 21:00) день начинается накануне, и прямой пересчёт уводил всё
+    // окно на сутки от ярлыков клеток, которые этот же роут считает через
+    // businessDayOf (генеральная проверка финансов, С38/С39/С45).
+    const custom = periodBoundsUtc(fromParam!, toParam!, timezone, boundary);
+    start = custom.from;
+    end = custom.to;
     if (end > todayEnd) end = todayEnd;
     if (start > end) start = end;
   } else {

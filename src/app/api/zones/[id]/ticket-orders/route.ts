@@ -264,21 +264,29 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
       throw err;
     }
   }
-  const now = new Date();
-  // Срок жизни — только при включённом гашении (докс, "СРОК ЖИЗНИ"); при
-  // выключенном гашении или ticketLifetimeDays=null — бессрочно.
   // Пояс ТЕНАНТА, не сервера (генеральная проверка финансов 2026-09-02, С16):
   // дата сгорания печатается на билете и должна совпадать с местной полночью.
+  // Читается ДО транзакции — это единственное, что тут можно взять заранее.
   const { timezone } = await getTenantDayContext(point.tenantId);
-  const expiresAt =
-    zone.ticketRedemptionEnabled && zone.ticketLifetimeDays != null
-      ? computeTicketExpiresAt(now, zone.ticketLifetimeDays, timezone)
-      : null;
 
   let result;
   try {
     result = await prisma.$transaction(async (tx) => {
       const number = await nextTicketOrderNumber(tx, zone.id);
+      // Момент продажи берётся ЗДЕСЬ, после лока зоны внутри
+      // nextTicketOrderNumber (генеральная проверка финансов, С60). Раньше он
+      // снимался до транзакции, и между ним и коммитом успевала пройти сдача
+      // итогов: её окно закрывалось моментом ПОЗЖЕ soldAt, но заказа тогда
+      // ещё не было видно, а следующее окно начиналось с since больше soldAt.
+      // Заказ не попадал ни в одно окно и выпадал из выручки навсегда.
+      const soldAt = new Date();
+      // Срок жизни — только при включённом гашении (докс, «СРОК ЖИЗНИ»); при
+      // выключенном гашении или ticketLifetimeDays=null — бессрочно. Считаем
+      // от того же soldAt, иначе билет сгорал бы не от даты своей продажи.
+      const expiresAt =
+        zone.ticketRedemptionEnabled && zone.ticketLifetimeDays != null
+          ? computeTicketExpiresAt(soldAt, zone.ticketLifetimeDays, timezone)
+          : null;
       const created = await tx.ticketOrder.create({
         data: {
           zoneId: zone.id,
@@ -289,7 +297,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
           expiresAt,
           openTicketsCount: ticketsToCreate.length,
           soldByOperatorId: operator.id,
-          soldAt: now,
+          soldAt,
         },
       });
 

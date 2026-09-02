@@ -143,15 +143,37 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       // "Начислено" разницы нет, сотрудник заработал и то и другое
       // (запрос пользователя 2026-08-12).
       type: { in: ["bonus_payout", "bonus_accrual"] },
-      occurredAt: { gte: start, lt: end },
+      // Окно шире периода на сутки в каждую сторону (С67): премия, выданная
+      // при закрытии ночной смены, лежит в журнале моментом check-out, а
+      // относится к смене — той, что началась накануне. Отбор по периоду
+      // делаем ниже, уже по attributedAt.
+      occurredAt: { gte: new Date(start.getTime() - 86400000), lt: new Date(end.getTime() + 86400000) },
       beneficiaryOperatorId: { not: null },
       ...(isAllPoints ? { tenantId: owner.tenantId } : { pointId }),
     },
-    select: { beneficiaryOperatorId: true, amount: true },
+    select: { beneficiaryOperatorId: true, amount: true, occurredAt: true, shiftId: true },
   });
+  // Начало смены для премий, к ней привязанных, — тот же приём, что уже
+  // применён в calcOperatorBalance (lib/work-time.ts): начисление по ставке
+  // относится к смене, и премия обязана попасть в тот же период, иначе отчёт
+  // спорит сам с собой на ночных сменах. Премия без смены (владелец выдал
+  // отдельно) относится к периоду по своему occurredAt — другой даты у неё нет.
+  const bonusShiftIds = [...new Set(bonusOps.map((op) => op.shiftId).filter((v): v is string => !!v))];
+  const shiftStartById = new Map<string, Date>(
+    bonusShiftIds.length
+      ? (
+          await prisma.shift.findMany({
+            where: { id: { in: bonusShiftIds } },
+            select: { id: true, startAt: true },
+          })
+        ).map((s) => [s.id, s.startAt])
+      : []
+  );
   const bonusByOperator = new Map<string, number>();
   for (const op of bonusOps) {
     if (!op.beneficiaryOperatorId) continue;
+    const attributedAt = (op.shiftId ? shiftStartById.get(op.shiftId) : undefined) ?? op.occurredAt;
+    if (attributedAt < start || attributedAt >= end) continue;
     operatorIds.add(op.beneficiaryOperatorId);
     bonusByOperator.set(op.beneficiaryOperatorId, (bonusByOperator.get(op.beneficiaryOperatorId) ?? 0) + Math.abs(Number(op.amount)));
   }

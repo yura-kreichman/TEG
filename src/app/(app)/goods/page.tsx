@@ -30,7 +30,7 @@ import { useActionToast } from "@/hooks/use-action-toast";
 import { reconcilePointId, usePersistedPointId } from "@/hooks/use-persisted-point-id";
 import { compressImageFile } from "@/lib/client-image";
 import { formatMoneyCompact, parseMoneyInput } from "@/lib/format";
-import { formatTime } from "@/lib/datetime-format";
+import { formatTime, localDayKey } from "@/lib/datetime-format";
 import { playSaveDing } from "@/lib/beep";
 import { cn } from "@/lib/utils";
 
@@ -806,7 +806,11 @@ export default function GoodsCabinetPage() {
   // владельца 2026-08-16 о едином виде списков).
   const saleGroups: { date: string; items: SaleEntry[] }[] = [];
   for (const s of sales) {
-    const dateKey = String(s.occurredAt).slice(0, 10);
+    // Ключ дня — по МЕСТНОМУ времени, не срезом UTC-строки (С72). Продажа в
+    // 02:00 по Кишинёву вставала под вчерашний заголовок, хотя время в самой
+    // строке рядом показано сегодняшнее. formatSaleGroupDate ниже разбирает
+    // уже готовый ключ, ему всё равно, откуда он взялся.
+    const dateKey = localDayKey(String(s.occurredAt));
     const lastGroup = saleGroups[saleGroups.length - 1];
     if (lastGroup && lastGroup.date === dateKey) lastGroup.items.push(s);
     else saleGroups.push({ date: dateKey, items: [s] });

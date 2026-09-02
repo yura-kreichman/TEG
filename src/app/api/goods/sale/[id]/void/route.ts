@@ -27,13 +27,22 @@ export async function POST(request: Request, ctx: RouteContext<"/api/goods/sale/
     // «Остаток на точке». Правка инкассации и расхода это давно делают, у
     // аннулирования товара вызова просто не было, и сообщение в чате
     // оставалось с прежним числом.
-    await resyncAfterMoneyOpChange({
-      tenantId: owner.tenantId,
-      zoneId: null,
-      pointId: voided.pointId,
-      shiftId: null,
-      occurredAt: voided.occurredAt,
-    }).catch(() => {});
+    //
+    // Пересобирать надо ОБА дня, когда они разные: компенсирующая операция
+    // пишется без occurredAt, то есть датой аннулирования, а не датой самой
+    // продажи. При отмене вчерашней продажи менялся остаток и вчерашней
+    // сводки (ушла выручка), и сегодняшней (пришёл минус) — а звался только
+    // день продажи.
+    const voidedAtDay = new Date();
+    for (const at of [voided.occurredAt, voidedAtDay]) {
+      await resyncAfterMoneyOpChange({
+        tenantId: owner.tenantId,
+        zoneId: null,
+        pointId: voided.pointId,
+        shiftId: null,
+        occurredAt: at,
+      }).catch(() => {});
+    }
     return NextResponse.json({ ok: true });
   } catch (err) {
     if (err instanceof Error && err.message === "SALE_NOT_FOUND") {
