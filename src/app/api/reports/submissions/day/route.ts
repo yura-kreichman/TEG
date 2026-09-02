@@ -853,8 +853,14 @@ export async function GET(request: Request) {
       // 2026-07-22: касса cash_only-зоны просачивалась в итоговую "Разницу"
       // дня, искажая её на точках, где есть и cash_only, и другие зоны.
       // + расходы этой сдачи: в кассу введён остаток после трат (2026-08-16).
+      // Берём число из самой сдачи (С4): привязка расходов шире компенсации —
+      // трата, деньги на которую уже уехали с инкассацией, привязана к сдаче,
+      // но в её выручку не входила, и «Итоги дня» показывали излишек на неё.
+      // NULL — сдача старше 2026-09-02, для неё остаётся расчёт по привязке.
       const expensesInThisSubmission =
-        expensesBySubmissionZone.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0;
+        zs.compensatedExpenses !== null
+          ? Number(zs.compensatedExpenses)
+          : (expensesBySubmissionZone.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0);
       const difference =
         zs.zone.accountingMode === "cash_only"
           ? 0

@@ -206,12 +206,19 @@ export async function resyncZoneSummaryMessage(
   // трат (решение владельца 2026-08-16), поэтому для сверки со счётчиками их
   // возвращаем обратно — иначе сводка после правки показала бы недостачу на
   // сумму расходов там, где касса сошлась.
-  const expensesInSubmission = (
-    await prisma.moneyOperation.findMany({
-      where: { type: "expense", zoneId: zs.zoneId, resultsSubmissionId: zs.resultsSubmissionId },
-      select: { amount: true },
-    })
-  ).reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0);
+  // Сумма — из самой сдачи (С4): «привязанные» расходы шире «компенсируемых»
+  // (трата, деньги на которую уже уехали с инкассацией, привязана, но в
+  // выручку сдачи не входила), и правленная сводка расходилась с исходной.
+  // NULL — сдача старше 2026-09-02, для неё остаётся расчёт по привязке.
+  const expensesInSubmission =
+    zs.compensatedExpenses !== null
+      ? Number(zs.compensatedExpenses)
+      : (
+          await prisma.moneyOperation.findMany({
+            where: { type: "expense", zoneId: zs.zoneId, resultsSubmissionId: zs.resultsSubmissionId },
+            select: { amount: true },
+          })
+        ).reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0);
   const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
   const difference = isCashOnly
     ? 0

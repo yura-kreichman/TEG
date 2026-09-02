@@ -620,7 +620,16 @@ export async function computeZoneSubmissionRevenues(
     // 2026-07-22, исправление отложено и забыто).
     // + расходы этой сдачи: в кассу введён остаток ПОСЛЕ трат, а сверять со
     // счётчиками надо всё, что через кассу прошло (см. загрузку выше).
-    const expensesInSubmission = expensesByZoneSubmission.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0;
+    // Компенсация берётся из САМОЙ сдачи, если она там записана (С4).
+    // «Привязанные» расходы (resultsSubmissionId) и «компенсируемые» —
+    // намеренно разные множества, и по привязанным сдачу не воспроизвести:
+    // расход, оплаченный деньгами, которые уже уехали с дневной инкассацией,
+    // привязан к сдаче, но в её выручку не входил. Для сдач до 2026-09-02
+    // поля нет — там остаётся прежний расчёт по привязанным.
+    const expensesInSubmission =
+      zs.compensatedExpenses !== null
+        ? Number(zs.compensatedExpenses)
+        : (expensesByZoneSubmission.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0);
     const difference =
       zone.accountingMode === "cash_only"
         ? 0

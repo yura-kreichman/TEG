@@ -240,8 +240,14 @@ async function computeWindowSummary(
       if (zs.zone.accountingMode === "cash_only") continue;
       totalReturns += zs.returnsCount;
       const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
+      // Компенсация — из самой сдачи (С4). По привязке её не воспроизвести:
+      // расход, оплаченный деньгами, которые уже уехали с инкассацией, к сдаче
+      // привязан, но в её выручку не входил, и Главная показывала излишек
+      // ровно на такие траты. NULL — сдача старше 2026-09-02, там числа нет.
       const expensesInSubmission =
-        expensesByZoneSubmission.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0;
+        zs.compensatedExpenses !== null
+          ? Number(zs.compensatedExpenses)
+          : (expensesByZoneSubmission.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0);
 
       if (isStaysZone(zs.zone) || (isLaunchesZone(zs.zone) && zs.assetReadings.length === 0)) {
         const calculatedRevenue = liveRevenueBySubmission.get(zs.id) ?? 0;
