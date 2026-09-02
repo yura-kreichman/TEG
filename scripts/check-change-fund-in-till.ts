@@ -122,6 +122,21 @@ async function rollbackPass() {
       });
       check(Math.abs((await fund()) - 300) < 0.001, `новый размен не суммируется со старым: ${await fund()}`);
 
+      // 6. Обрезанный размен НЕ восстанавливается назавтрашней выручкой.
+      //    Жалоба Игроленда 2026-09-02: «внесли 1350, пишет 1850». Обрезка
+      //    стояла в конце прохода и сравнивала размен с ИТОГОВЫМ остатком —
+      //    выручка следующего дня поднимала кассу, и уехавший размен
+      //    возвращался на экран. Сейчас: касса 300, забрали 200 → размен 100,
+      //    и выручка 10000 его не поднимает.
+      await tx.moneyOperation.create({
+        data: { tenantId, zoneId: zone.id, type: "collection", amount: -200 },
+      });
+      check(Math.abs((await fund()) - 100) < 0.001, `после просадки размен обрезан: ${await fund()}`);
+      await tx.moneyOperation.create({
+        data: { tenantId, zoneId: zone.id, type: "revenue", amount: 10000 },
+      });
+      check(Math.abs((await fund()) - 100) < 0.001, `выручка не воскрешает уехавший размен: ${await fund()}`);
+
       throw new Error(ROLLBACK);
     })
     .catch((err) => {
