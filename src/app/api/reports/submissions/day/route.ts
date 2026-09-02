@@ -7,6 +7,7 @@ import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateTicketOrdersBySubmission, ticketRevenueByAssetVariant, listTicketOrdersForWindow, type TicketOrderWindowItem } from "@/lib/tickets";
 import { calculateGoodsCashBeforeReconciliation } from "@/lib/goods";
 import { round2 } from "@/lib/reports";
+import { PAYMENT_SPLIT_METHOD } from "@/lib/payment-split";
 import { dayBoundsUtc } from "@/lib/business-day";
 import { getPointCashBalance, getPointChangeFundInTill } from "@/lib/zone-balance";
 
@@ -432,12 +433,35 @@ export async function GET(request: Request) {
       performedByColorTag: string | null;
     }[]
   >();
+  // Абонементная часть «живых» зон — из САМИХ пусков, а не из журнала по
+  // временному окну (генеральная проверка финансов 2026-09-02, С7).
+  // liveLaunches уже отфильтрованы по voidedAt: null, то есть аннулирование
+  // убирает пуск из обеих сумм разом. Через MoneyOperation это ломалось:
+  // компенсация аннулирования получает occurredAt в момент отмены, и если
+  // владелец отменяет пуск на следующий день, минус падает в окно ЧУЖОЙ,
+  // ещё не закрытой сдачи, а в закрытой остаётся плюс. Из воздуха возникали
+  // +200 в одном дне и −200 в другом, при том что отчёт по сотрудникам
+  // (единственное другое место, где difference отдаётся наружу) показывал 0.
+  //
+  // Тот же источник, что в lib/reports.ts:341-352 — канон кодовой базы:
+  // revenue_abonement остаётся источником только для counters/cash_only, где
+  // своих строк-пусков нет.
+  const liveAbonementBySubmission = new Map<string, number>();
+  const splitLaunchIds: string[] = [];
   for (const l of liveLaunches) {
     if (!l.zoneSubmissionId) continue;
     liveRevenueBySubmission.set(
       l.zoneSubmissionId,
       (liveRevenueBySubmission.get(l.zoneSubmissionId) ?? 0) + Number(l.amount ?? 0)
     );
+    if (l.paymentMethod === "abonement") {
+      liveAbonementBySubmission.set(
+        l.zoneSubmissionId,
+        (liveAbonementBySubmission.get(l.zoneSubmissionId) ?? 0) + Number(l.amount ?? 0)
+      );
+    } else if (l.paymentMethod === PAYMENT_SPLIT_METHOD) {
+      splitLaunchIds.push(l.id);
+    }
     const details = liveLaunchDetailsBySubmission.get(l.zoneSubmissionId) ?? [];
     details.push({
       id: l.id,
@@ -457,6 +481,25 @@ export async function GET(request: Request) {
     bucket.amount += Number(l.amount ?? 0);
     bySubmission.set(l.assetId, bucket);
     liveAssetsBySubmission.set(l.zoneSubmissionId, bySubmission);
+  }
+
+  // Доля «Баланс» у пусков с разбивкой оплаты — тем же приёмом, что в
+  // lib/reports.ts: у сплита paymentMethod === "split", и без этого шага
+  // абонементная часть таких пусков потерялась бы целиком.
+  if (splitLaunchIds.length) {
+    const legs = await prisma.launchPaymentLeg.findMany({
+      where: { launchId: { in: splitLaunchIds }, method: "abonement" },
+      select: { launchId: true, amount: true },
+    });
+    const submissionByLaunch = new Map(liveLaunches.map((l) => [l.id, l.zoneSubmissionId]));
+    for (const leg of legs) {
+      const submissionId = submissionByLaunch.get(leg.launchId);
+      if (!submissionId) continue;
+      liveAbonementBySubmission.set(
+        submissionId,
+        (liveAbonementBySubmission.get(submissionId) ?? 0) + Number(leg.amount)
+      );
+    }
   }
 
   // Sessions/previous-value are always computed from the immediately preceding
@@ -781,11 +824,17 @@ export async function GET(request: Request) {
       // Механический счётчик крутится от самой поездки и способа оплаты не
       // знает, значит оплата балансом уже сидит в расчётной выручке. У
       // "Только касса" Разницы нет вовсе — там вычитать не из чего.
+      // stays/launches — из самих пусков (см. liveAbonementBySubmission выше,
+      // С7). Журнал по временному окну оставлен только counters/cash_only, где
+      // строк-пусков нет вовсе: там revenue_abonement и есть единственный
+      // источник, и это канон кодовой базы.
       const abonementAmount = isTickets
         ? (ticketData?.abonementAmount ?? 0)
-        : ["stays", "launches", "counters", "cash_only"].includes(zs.zone.accountingMode)
-          ? abonementAmountFor(zs.zoneId, zs.createdAt)
-          : 0;
+        : isLiveZone
+          ? (liveAbonementBySubmission.get(zs.id) ?? 0)
+          : ["counters", "cash_only"].includes(zs.zone.accountingMode)
+            ? abonementAmountFor(zs.zoneId, zs.createdAt)
+            : 0;
       const abonementInDifference = isCountersZone(zs.zone)
         ? countersPaidFromBalance(zs.zone, {
             zoneSpend: abonementAmount,
