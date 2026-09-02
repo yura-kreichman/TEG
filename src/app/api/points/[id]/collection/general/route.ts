@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
-import {
-  getChangeFundInTillByZone,
+import {
   getPointAbonementCashTotal,
   getPointGoodsCashTotal,
   getPointPoolDeficit,
@@ -34,11 +33,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     return NextResponse.json({ error: "Точка не найдена" }, { status: 404 });
   }
 
-  // keepChangeFund — «оставить размен в кассе» (решение владельца 2026-09-02),
-  // то же, что в /api/zones/[id]/collection. Здесь разница в том, что зон
-  // несколько: каждой возвращается ЕЁ собственный размен, а не общая сумма,
-  // размазанная пропорционально остаткам, — размен клали в конкретную кассу.
-  const { amount, keepChangeFund } = await request.json();
+  const { amount } = await request.json();
   // Округление до копеек, не до целого рубля (аудит 2026-07-24, реальный
   // баг: Math.round(2500.75) съедал/добавлял лишние копейки — "По зонам"
   // рядом (/api/zones/[id]/collection) не округляет вовсе, оба режима
@@ -74,7 +69,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
   // списывали пересекающуюся долю, уводя зону в минус больше, чем реально
   // забрано наличных — тот же класс гонки, что уже закрыт для
   // chargeSelfServiceAdvanceToZones/settleOutstandingCollectionAdvance).
-  const { poolDeficit, advance, breakdown, operationIds, zoneShares, keptChangeFund } = await prisma.$transaction(async (tx) => {
+  const { poolDeficit, advance, breakdown, operationIds, zoneShares } = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pointId}))`;
 
     const balanceByZone = await getZoneBalances(
@@ -123,43 +118,20 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     // По одной create вместо createMany — нужны id созданных строк: им всем
     // проставляется общий collectionAlertMessageId, по которому правка любой
     // из них пересобирает сообщение об инкассации (2026-08-16).
-    // Размен каждой зоны — ДО проводок инкассации: после них отсечка
-    // сдвинется и все суммы станут нулём.
-    const fundByZone = keepChangeFund
-      ? await getChangeFundInTillByZone(zones.map((z) => z.id), tx)
-      : new Map<string, number>();
-
+    // Возврата размена здесь больше нет (генеральная проверка финансов
+    // 2026-09-02). Он писал `change_fund: +fund` КАЖДОЙ зоне с разменом — в
+    // том числе тем, по которым проводки не было вовсе: дебет отфильтрован
+    // по `row.amount !== 0`, а кредит не был. У такой зоны отсечка не
+    // двигалась, и на следующей инкассации возврат считал сам себя:
+    // 500 → 1000 → 2000. Триггером хватало зоны в минусе после расхода или
+    // доли, округлённой в ноль по NICE_UNIT.
+    //
+    // Теперь размен остаётся в кассе сам, пока её не забрали целиком, — см.
+    // getChangeFundInTillByZone. Оставить его = ввести на его сумму меньше.
     const operationIds: string[] = [];
-    let lastCollectionAt: Date | null = null;
     for (const row of rows) {
       const created = await tx.moneyOperation.create({ data: row });
       operationIds.push(created.id);
-      if (!lastCollectionAt || created.occurredAt > lastCollectionAt) lastCollectionAt = created.occurredAt;
-    }
-    // Кладём размен обратно — на секунду позже САМОЙ ПОЗДНЕЙ проводки
-    // инкассации, а не «сейчас»: отсечка сравнивает через <=, и совпади метки
-    // до миллисекунды, свежий размен сам себя отменил бы на границе. От метки
-    // созданной операции, а не от Date.now(), чтобы не поставить будущее
-    // время, если часы приложения и базы разошлись. В «Движении денег» видны
-    // обе операции: забрали всё и вернули размен.
-    let keptChangeFund = 0;
-    for (const [zoneId, fund] of fundByZone) {
-      if (fund <= 0) continue;
-      const kept = await tx.moneyOperation.create({
-        data: {
-          tenantId: owner.tenantId,
-          zoneId,
-          type: "change_fund",
-          amount: fund,
-          ...(lastCollectionAt ? { occurredAt: new Date(lastCollectionAt.getTime() + 1000) } : {}),
-          performedByUserId: owner.user.id,
-        },
-      });
-      // В том же списке, что и строки инкассации: они получают общий
-      // collectionAlertMessageId, и правка любой из них пересобирает
-      // сообщение уже с вычетом размена.
-      operationIds.push(kept.id);
-      keptChangeFund += fund;
     }
     // Абонементы/товары наличными физически забраны — реальной суммой, СВОИМ
     // типом каждый (не "collection_advance": та копится как ЖДУЩИЙ будущей
@@ -219,8 +191,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
       poolDeficit,
       advance,
       operationIds,
-      zoneShares,
-      keptChangeFund,
+      zoneShares,
       breakdown: {
         zones: zoneShares.map(({ name, amount }) => ({ name, amount })),
         abonement: abonementSweepPortion,
@@ -244,9 +215,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     isAdvance: advance > 0,
     zones: zoneShares,
     goodsAmount: breakdown.goods,
-    abonementAmount: breakdown.abonement,
-    keptChangeFund,
+    abonementAmount: breakdown.abonement,
   }).catch(() => {});
 
-  return NextResponse.json({ ok: true, settledPool: poolDeficit, advance, breakdown, keptChangeFund });
+  return NextResponse.json({ ok: true, settledPool: poolDeficit, advance, breakdown });
 }

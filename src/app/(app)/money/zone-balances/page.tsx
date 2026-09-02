@@ -11,7 +11,6 @@ import { MoneyInput } from "@/components/money-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
-import { Switch } from "@/components/ui/switch";
 import { AssetOrZoneIcon } from "@/components/icon-picker";
 import { IconActionButton } from "@/components/kebab-menu";
 import { OwnerShell } from "@/components/owner-shell";
@@ -145,12 +144,6 @@ export default function ZoneBalancesPage() {
   const [collectionOpen, setCollectionOpen] = useState(false);
   const [collectionPointId, setCollectionPointId] = useState("");
   const [collectionMode, setCollectionMode] = useState<CollectionMode>("zone");
-  // «Оставить размен в кассе» при инкассации (решение владельца 2026-09-02).
-  // По умолчанию включено: в общепринятой кассовой практике разменный фонд
-  // остаётся в ящике, и это ожидаемое поведение. Модель мы не меняли —
-  // инкассация всё так же забирает всё, сервер просто кладёт размен обратно
-  // отдельной операцией, и обе строки видны в «Движении денег».
-  const [keepChangeFund, setKeepChangeFund] = useState(true);
   const [collectionZoneId, setCollectionZoneId] = useState("");
   const [collectionAmount, setCollectionAmount] = useState("");
   const [collectionError, setCollectionError] = useState<string | null>(null);
@@ -374,15 +367,22 @@ export default function ZoneBalancesPage() {
         ? 0
         : (zonesForCollectionPoint.find((z) => z.zoneId === collectionZoneId)?.changeFundInTill ?? 0);
 
+  // Сколько всего можно забрать — от этого считается «забрать всё, кроме
+  // размена». У «Общей» это остаток точки, у зонной — остаток самой зоны.
+  // null означает «цель ещё не выбрана»: предлагать сумму не от чего.
+  const collectionAvailable =
+    collectionMode === "general"
+      ? Math.round(zonesForCollectionPoint.reduce((sum, z) => sum + Math.max(0, z.balance), 0) * 100) / 100
+      : collectionZoneId === ABONEMENT_POOL_ID || collectionZoneId === GOODS_POOL_ID || !collectionZoneId
+        ? null
+        : (zonesForCollectionPoint.find((z) => z.zoneId === collectionZoneId)?.balance ?? null);
+
   function openCollection() {
     setCollectionPointId(pointId ?? points[0]?.id ?? "");
     setCollectionMode("zone");
     setCollectionZoneId("");
     setCollectionAmount("");
     setCollectionError(null);
-    // Возвращаем к «оставить» на каждое открытие: разовое решение забрать
-    // размен не должно тихо переноситься на следующую инкассацию.
-    setKeepChangeFund(true);
     setCollectionOpen(true);
   }
 
@@ -403,7 +403,7 @@ export default function ZoneBalancesPage() {
         res = await fetch(`/api/points/${collectionPointId}/collection/general`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: parseMoneyInput(collectionAmount), keepChangeFund }),
+          body: JSON.stringify({ amount: parseMoneyInput(collectionAmount) }),
         });
       } else if (collectionZoneId === ABONEMENT_POOL_ID || collectionZoneId === GOODS_POOL_ID) {
         res = await fetch(`/api/points/${collectionPointId}/collection/pool`, {
@@ -418,7 +418,7 @@ export default function ZoneBalancesPage() {
         res = await fetch(`/api/zones/${collectionZoneId}/collection`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: parseMoneyInput(collectionAmount), keepChangeFund }),
+          body: JSON.stringify({ amount: parseMoneyInput(collectionAmount) }),
         });
       }
 
@@ -1443,19 +1443,35 @@ export default function ZoneBalancesPage() {
                   </PressableScale>
                 </div>
               </div>
-              {/* «Оставить размен в кассе» — показываем только когда размен
-                  там реально лежит: переключатель с нулём ничего не решает,
-                  а объяснять его пришлось бы. Сумма прямо в подписи, чтобы
-                  не приходилось помнить, сколько именно вернётся. */}
-              {collectionChangeFund > 0 && (
-                <div className="flex items-center justify-between gap-3 rounded-control border border-border p-3">
+              {/* Переключателя «оставить размен» больше нет (генеральная
+                  проверка финансов 2026-09-02): он возвращал размен парной
+                  операцией целиком, сколько бы ни забрали, и дорисовывал
+                  деньги в журнал. Теперь размен остаётся в кассе сам, пока её
+                  не забрали целиком, — оставить его значит просто ввести
+                  сумму поменьше. Кнопка подставляет её, чтобы не считать в
+                  уме и не помнить, сколько размена лежит. */}
+              {collectionChangeFund > 0 && collectionAvailable !== null && (
+                <div className="flex flex-col gap-2 rounded-control border border-border p-3">
                   <span className="flex min-w-0 items-center gap-2">
                     <Coins className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="min-w-0 text-body-airbnb">
-                      {t.money.keepChangeFundLabel} <Money value={collectionChangeFund} />
+                    <span className="min-w-0 text-caption-airbnb text-muted-foreground">
+                      {t.money.changeFundInTillHintPrefix} <Money value={collectionChangeFund} />
                     </span>
                   </span>
-                  <Switch checked={keepChangeFund} onCheckedChange={setKeepChangeFund} className="shrink-0" />
+                  <PressableScale className="w-fit">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setCollectionAmount(
+                          String(Math.max(0, Math.round((collectionAvailable - collectionChangeFund) * 100) / 100))
+                        )
+                      }
+                    >
+                      {t.money.collectExceptChangeFundButton}
+                    </Button>
+                  </PressableScale>
                 </div>
               )}
               {collectionError && <p className="text-sm text-destructive">{collectionError}</p>}

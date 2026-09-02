@@ -266,16 +266,26 @@ export async function getPointCashBalance(
  * ящике и сегодня, но в сумму «за сегодня» не попадут — а владельцу нужно
  * именно то, что в ящике (разбор с Игролендом 2026-09-02).
  *
- * Инкассация уносит размен вместе с выручкой — решение владельца 2026-09-02,
- * модель не меняли. Поэтому отсечки те же, что в getPointCashBalance:
- * зонный размен живёт до ближайшей зонной инкассации, товарный — до свипа
- * товарного пула. Свою логику здесь не пишем: разойдись эти два расчёта, и
- * «Наличных в кассе» перестало бы раскладываться на выручку плюс размен.
+ * ПРАВИЛО (решение владельца 2026-09-02, после генеральной проверки финансов):
+ * **размен лежит в кассе, пока кассу не забрали целиком.**
  *
- * Размен, лежащий в кассе КАЖДОЙ зоны, — основа и для строки «Размен в кассе»,
- * и для предложения «оставить размен» при инкассации (там нужна разбивка:
- * «Общая» инкассация собирает несколько зон разом, и вернуть надо каждой её
- * собственную сумму, а не общий котёл).
+ *   касса 7045, из них размен 470
+ *   забрали 1000  → в кассе 6045, размен 470   (лежит, как лежал)
+ *   забрали 6575  → в кассе  470, размен 470
+ *   забрали 6800  → в кассе  245, размен 245   (больше кассы размена не бывает)
+ *   забрали всё   → в кассе    0, размен   0   (унесли вместе с выручкой)
+ *
+ * Утренняя версия отсекала размен ЛЮБОЙ инкассацией — и это породило три
+ * находки проверки разом. Частичная инкассация обнуляла показанный размен,
+ * хотя деньги физически оставались в ящике; чтобы это скрыть, роуты писали
+ * парную операцию возврата, а она возвращала размен ЦЕЛИКОМ, сколько бы ни
+ * забрали, дорисовывая деньги в журнал.
+ *
+ * Отсюда и нынешняя отсечка: не «последняя инкассация», а последний момент,
+ * когда баланс зоны опустился до нуля. Считается проходом по журналу — из
+ * отдельных операций этого не видно, нужен бегущий итог. Заодно отпадают
+ * парные операции: «оставить размен» = забрать на его сумму меньше, и он
+ * останется сам, без единой записи в журнале.
  */
 export async function getChangeFundInTillByZone(
   zoneIds: string[],
@@ -286,39 +296,36 @@ export async function getChangeFundInTillByZone(
   if (!zoneIds.length) return result;
   const upTo = asOf ? { occurredAt: { lt: asOf } } : {};
 
-  const [zoneOps, lastCollections] = await Promise.all([
-    zoneIds.length
-      ? client.moneyOperation.findMany({
-          // Фильтр по ЗОНЕ, не по точке: у зонного размена pointId пустой
-          // (проверено на боевых данных 2026-09-02 — запрос по точке вернул
-          // ноль операций при реально существующих).
-          where: { zoneId: { in: zoneIds }, type: "change_fund", ...upTo },
-          select: { zoneId: true, amount: true, occurredAt: true },
-        })
-      : Promise.resolve([]),
-    // Отсечка СВОЯ У КАЖДОЙ ЗОНЫ, а не общая по точке. Общая (максимум по
-    // всем зонам, как в getZoneCollectionCutoff) здесь неверна: инкассация
-    // одной зоны не трогает деньги другой, и размен неинкассированной зоны
-    // молча исчезал бы, стоило собрать соседнюю.
-    zoneIds.length
-      ? client.moneyOperation.groupBy({
-          by: ["zoneId"],
-          where: { zoneId: { in: zoneIds }, type: { in: ["collection", "advance_settlement"] }, ...upTo },
-          _max: { occurredAt: true },
-        })
-      : Promise.resolve([]),
-  ]);
+  // Весь журнал зон, а не только размен: без бегущего баланса не видно, где
+  // касса обнулялась. Фильтр по ЗОНЕ, не по точке — у зонных операций pointId
+  // пуст всегда (CHECK MoneyOperation_zone_xor_point_check).
+  const ops = await client.moneyOperation.findMany({
+    where: { zoneId: { in: zoneIds }, ...upTo },
+    select: { zoneId: true, type: true, amount: true, occurredAt: true },
+    orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
+  });
 
-  const cutoffByZone = new Map<string, Date>();
-  for (const row of lastCollections) {
-    if (row.zoneId && row._max.occurredAt) cutoffByZone.set(row.zoneId, row._max.occurredAt);
+  const running = new Map<string, number>();
+  for (const op of ops) {
+    if (!op.zoneId) continue;
+    if (!affectsCashOnHand(op.type)) continue;
+    const balance = Math.round(((running.get(op.zoneId) ?? 0) + Number(op.amount)) * 100) / 100;
+    running.set(op.zoneId, balance);
+
+    if (op.type === "change_fund") {
+      result.set(op.zoneId, Math.round(((result.get(op.zoneId) ?? 0) + Number(op.amount)) * 100) / 100);
+    }
+    // Касса опустела — вместе с ней ушёл и весь размен, что в ней лежал.
+    // Сравнение с нулём, а не строго с ним: в минус касса уходит от аванса
+    // сотрудника, и это тоже значит «в ящике не осталось ничего».
+    if (balance <= 0) result.set(op.zoneId, 0);
   }
 
-  for (const op of zoneOps) {
-    if (!op.zoneId) continue;
-    const cutoff = cutoffByZone.get(op.zoneId);
-    if (cutoff && op.occurredAt <= cutoff) continue;
-    result.set(op.zoneId, (result.get(op.zoneId) ?? 0) + Number(op.amount));
+  // Размен не может быть больше того, что физически в кассе: инкассация на
+  // 6800 из 7045 оставляет 245 — и все они размен, а не 470.
+  for (const [zoneId, fund] of result) {
+    const balance = running.get(zoneId) ?? 0;
+    if (fund > balance) result.set(zoneId, Math.max(0, Math.round(balance * 100) / 100));
   }
   return result;
 }

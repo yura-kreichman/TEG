@@ -1,33 +1,27 @@
 /**
- * Проверка расчётов «Наличных в кассе» / «Размен в кассе» и того, что сборка
- * данных Telegram-сводки «Касса за день» не сломалась после правок 2026-09-02.
+ * Проверка правила «размен лежит в кассе, пока кассу не забрали целиком»
+ * (решение владельца 2026-09-02 после генеральной проверки финансов).
  *
  * Запуск: npx tsx scripts/check-change-fund-in-till.ts
  *
- * Первая часть только читает боевую картину. Вторая создаёт размен и
- * инкассацию внутри транзакции и ОТКАТЫВАЕТ её — иначе отсечки проверить
- * нечем: на пустой базе они всегда возвращают ноль и «сходится» ничего не
- * значит. Ошибка в отсечке видна только на данных, типы её не ловят.
+ * Первая часть читает боевую картину. Вторая прогоняет сценарий внутри
+ * транзакции и ОТКАТЫВАЕТ её: на пустой базе отсечка всегда возвращает ноль,
+ * и «сходится» ничего не значит. Ошибка в отсечке видна только на данных.
  */
 import "dotenv/config";
 import { prisma } from "../src/lib/prisma";
-import {
-  getChangeFundInTillByZone,
-  getPointCashBalance,
-  getPointChangeFundInTill,
-  getZoneChangeFundInTill,
-} from "../src/lib/zone-balance";
+import { getChangeFundInTillByZone, getPointCashBalance, getPointChangeFundInTill, getZoneBalances } from "../src/lib/zone-balance";
 import { buildDailyCashSummaryData } from "../src/lib/summary-channels/daily-cash-data";
 import { dayBoundsUtc } from "../src/lib/business-day";
 import { getTenantDayContext } from "../src/lib/tenant-day";
 
 function money(n: number) {
-  return n.toFixed(2).padStart(12);
+  return n.toFixed(2).padStart(10);
 }
 
 let failures = 0;
 function check(ok: boolean, what: string) {
-  console.log(`  ${ok ? "ok  " : "ПЛОХО"} ${what}`);
+  console.log(`  ${ok ? "ok   " : "ПЛОХО"} ${what}`);
   if (!ok) failures++;
 }
 
@@ -42,47 +36,28 @@ async function readOnlyPass() {
 
   for (const point of points) {
     const zones = await prisma.zone.findMany({ where: { pointId: point.id }, select: { id: true, name: true } });
-    const [cashNow, fundNow, byZone] = await Promise.all([
+    const [cashNow, fundNow] = await Promise.all([
       getPointCashBalance(point.id),
       getPointChangeFundInTill(point.id),
-      getChangeFundInTillByZone(zones.map((z) => z.id)),
     ]);
-
-    // Часовой пояс и границу суток берём тем же помощником, что и сам роут,
-    // а не своим чтением тенанта: разойдись они, проверка сверяла бы другой
-    // день, и «сходится» ничего бы не значило.
     const { timezone, boundary } = await getTenantDayContext(point.tenantId);
     const bounds = dayBoundsUtc(now.getFullYear(), now.getMonth() + 1, now.getDate(), timezone, boundary);
-    const [cashAsOf, fundAsOf] = await Promise.all([
-      getPointCashBalance(point.id, prisma, bounds.end),
-      getPointChangeFundInTill(point.id, prisma, bounds.end),
-    ]);
 
     console.log(`\n=== ${point.tenant.name} · ${point.name}`);
-    console.log(`  касса ${money(cashNow)} / на конец дня ${money(cashAsOf)}`);
-    console.log(`  размен ${money(fundNow)} / на конец дня ${money(fundAsOf)}`);
-    for (const zone of zones) {
-      const fund = byZone.get(zone.id) ?? 0;
-      if (fund !== 0) console.log(`    · ${zone.name}: ${money(fund)}`);
-    }
+    console.log(`  касса ${money(cashNow)}   размен ${money(fundNow)}`);
 
-    // Сборка данных сводки — самое хрупкое место: она ходит в
-    // getPointCashBalance и сломалась бы, разъедься сигнатура.
+    check(fundNow <= Math.max(0, cashNow) + 0.001, `размен не превышает кассу`);
+
     const data = await buildDailyCashSummaryData(point.id, bounds, []);
-    if (!data) {
-      console.log(`  сводка: точка не найдена`);
-      continue;
+    if (data) {
+      check(Math.abs(data.cashOnHand - cashNow) < 0.001, `сводка и остаток сходятся (${data.cashOnHand})`);
     }
-    check(
-      Math.abs(data.cashOnHand - cashNow) < 0.001,
-      `сводка и остаток сходятся (${data.cashOnHand} = ${cashNow})`
-    );
+    void zones;
   }
 }
 
 async function rollbackPass() {
   const zone = await prisma.zone.findFirst({
-    where: { point: { is: {} } },
     // tenantId у зоны нет — он живёт на точке.
     select: { id: true, name: true, pointId: true, point: { select: { name: true, tenantId: true } } },
   });
@@ -92,74 +67,73 @@ async function rollbackPass() {
   }
 
   console.log(`\n=== сценарий с откатом: ${zone.point.name} · ${zone.name}`);
+  const tenantId = zone.point.tenantId;
 
   await prisma
     .$transaction(async (tx) => {
-      const cashBefore = await getPointCashBalance(zone.pointId, tx);
-      const fundBefore = await getZoneChangeFundInTill(zone.id, tx);
+      const fund = async () => (await getChangeFundInTillByZone([zone.id], tx)).get(zone.id) ?? 0;
+      // Остаток именно ЗОНЫ, не точки. Первая версия проверки обнуляла зону на
+      // сумму остатка точки — зона уходила в минус, и все дальнейшие ожидания
+      // разъезжались. Сама функция при этом работала верно: ужимала размен до
+      // реального (отрицательного) остатка.
+      const zoneCash = async () => (await getZoneBalances([zone.id], tx)).get(zone.id) ?? 0;
 
-      // 1. Владелец кладёт размен.
+      const cashBefore = await zoneCash();
+      const fundBefore = await fund();
+
+      if (cashBefore !== 0) {
+        await tx.moneyOperation.create({
+          data: { tenantId, zoneId: zone.id, type: "collection", amount: -cashBefore },
+        });
+      }
+      check(Math.abs((await fund()) - 0) < 0.001, `после обнуления кассы размен = 0 (был ${fundBefore})`);
+
+      // 1. Владелец кладёт размен, затем набегает выручка.
       await tx.moneyOperation.create({
-        data: { tenantId: zone.point.tenantId, zoneId: zone.id, type: "change_fund", amount: 500 },
+        data: { tenantId, zoneId: zone.id, type: "change_fund", amount: 500 },
       });
-      const cashWithFund = await getPointCashBalance(zone.pointId, tx);
-      const fundWithFund = await getZoneChangeFundInTill(zone.id, tx);
-      check(Math.abs(fundWithFund - (fundBefore + 500)) < 0.001, `размен виден: ${fundWithFund}`);
-      check(Math.abs(cashWithFund - (cashBefore + 500)) < 0.001, `размен вошёл в кассу: ${cashWithFund}`);
-
-      // 2. Инкассация БЕЗ возврата размена — он должен исчезнуть.
-      const collected = await tx.moneyOperation.create({
-        data: { tenantId: zone.point.tenantId, zoneId: zone.id, type: "collection", amount: -cashWithFund },
-      });
-      const fundAfterPlain = await getZoneChangeFundInTill(zone.id, tx);
-      check(Math.abs(fundAfterPlain) < 0.001, `инкассация унесла размен: ${fundAfterPlain}`);
-
-      // 3. Возврат размена «на секунду позже» — как это делает роут. Главное,
-      //    что тут проверяется: метка не совпадает с инкассацией и размен не
-      //    отменяет сам себя на границе отсечки (сравнение через <=).
       await tx.moneyOperation.create({
-        data: {
-          tenantId: zone.point.tenantId,
-          zoneId: zone.id,
-          type: "change_fund",
-          amount: 500,
-          occurredAt: new Date(collected.occurredAt.getTime() + 1000),
-        },
+        data: { tenantId, zoneId: zone.id, type: "revenue", amount: 1000 },
       });
-      const fundKept = await getZoneChangeFundInTill(zone.id, tx);
-      check(Math.abs(fundKept - 500) < 0.001, `«оставить размен» вернул его: ${fundKept}`);
+      check(Math.abs((await fund()) - 500) < 0.001, `размен виден: ${await fund()}`);
 
-      // 4. И тот же размен, но метка В ТУ ЖЕ миллисекунду — так было бы без
-      //    сдвига. Ожидаем, что он пропадёт: это и есть та ловушка, ради
-      //    которой сдвиг сделан.
+      // 2. ЧАСТИЧНАЯ инкассация — размен обязан остаться. Раньше обнулялся.
       await tx.moneyOperation.create({
-        data: {
-          tenantId: zone.point.tenantId,
-          zoneId: zone.id,
-          type: "change_fund",
-          amount: 700,
-          occurredAt: collected.occurredAt,
-        },
+        data: { tenantId, zoneId: zone.id, type: "collection", amount: -1000 },
       });
-      const fundSameMs = await getZoneChangeFundInTill(zone.id, tx);
-      check(
-        Math.abs(fundSameMs - 500) < 0.001,
-        `размен с меткой инкассации отсекается, сдвиг на секунду обязателен: ${fundSameMs}`
-      );
+      check(Math.abs((await fund()) - 500) < 0.001, `частичная инкассация размен не трогает: ${await fund()}`);
+
+      // 3. Забрали больше, чем выручка: размена не может остаться больше,
+      //    чем денег в кассе.
+      await tx.moneyOperation.create({
+        data: { tenantId, zoneId: zone.id, type: "collection", amount: -400 },
+      });
+      check(Math.abs((await fund()) - 100) < 0.001, `размен ужат до остатка кассы: ${await fund()}`);
+
+      // 4. Забрали всё — размен ушёл вместе с выручкой.
+      await tx.moneyOperation.create({
+        data: { tenantId, zoneId: zone.id, type: "collection", amount: -100 },
+      });
+      check(Math.abs(await fund()) < 0.001, `полная инкассация уносит размен: ${await fund()}`);
+
+      // 5. Новый размен после опустошения виден снова и не тянет старый.
+      await tx.moneyOperation.create({
+        data: { tenantId, zoneId: zone.id, type: "change_fund", amount: 300 },
+      });
+      check(Math.abs((await fund()) - 300) < 0.001, `новый размен не суммируется со старым: ${await fund()}`);
 
       throw new Error(ROLLBACK);
     })
     .catch((err) => {
       if (err instanceof Error && err.message === ROLLBACK) {
-        console.log("  транзакция откачена, в базе ничего не осталось");
+        console.log("  транзакция откачена");
         return;
       }
       throw err;
     });
 
-  // Убеждаемся, что откат действительно случился.
   const leftovers = await prisma.moneyOperation.count({
-    where: { zoneId: zone.id, type: "change_fund", amount: { in: [500, 700] } },
+    where: { zoneId: zone.id, type: "change_fund", amount: { in: [500, 300] } },
   });
   check(leftovers === 0, `следов тестовых операций нет (найдено ${leftovers})`);
 }
