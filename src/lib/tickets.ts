@@ -143,7 +143,14 @@ export async function aggregateTicketOrders(
 ): Promise<TicketOrderAggregate> {
   const tickets = await tx.ticket.findMany({
     where: {
-      status: { not: "voided" },
+      // Аннулирование НЕ переписывает уже закрытую сдачу (генеральная
+      // проверка финансов 2026-09-02, С8). docs/spec/10-tickets.md:43 прямо
+      // говорит: «если сдача уже прошла — аннулирование корректирующей роли в
+      // прошлых сдачах не играет (они неизменны), возврат — текущее событие
+      // кассы». Фильтр по статусу не смотрел на ВРЕМЯ отмены и задним числом
+      // менял расчётную выручку закрытого дня. Поле Ticket.voidedAt писалось
+      // с самого начала, но не читалось нигде.
+      OR: [{ voidedAt: null }, { voidedAt: { gt: until } }],
       order: {
         zoneId,
         soldAt: { lte: until, ...(since ? { gt: since } : {}) },
@@ -235,7 +242,14 @@ export async function aggregateTicketOrdersBySubmission(
   const until = new Date(Math.max(...windows.map((w) => w.until.getTime())));
   const tickets = await tx.ticket.findMany({
     where: {
-      status: { not: "voided" },
+      // Аннулирование НЕ переписывает уже закрытую сдачу (генеральная
+      // проверка финансов 2026-09-02, С8). docs/spec/10-tickets.md:43 прямо
+      // говорит: «если сдача уже прошла — аннулирование корректирующей роли в
+      // прошлых сдачах не играет (они неизменны), возврат — текущее событие
+      // кассы». Фильтр по статусу не смотрел на ВРЕМЯ отмены и задним числом
+      // менял расчётную выручку закрытого дня. Поле Ticket.voidedAt писалось
+      // с самого начала, но не читалось нигде.
+      OR: [{ voidedAt: null }, { voidedAt: { gt: until } }],
       order: { zoneId: { in: [...new Set(windows.map((w) => w.zoneId))] }, soldAt: { lte: until } },
     },
     select: {
@@ -333,7 +347,14 @@ export async function ticketRevenueByAssetVariant(
 ): Promise<TicketAssetVariantBreakdown[]> {
   const tickets = await tx.ticket.findMany({
     where: {
-      status: { not: "voided" },
+      // Аннулирование НЕ переписывает уже закрытую сдачу (генеральная
+      // проверка финансов 2026-09-02, С8). docs/spec/10-tickets.md:43 прямо
+      // говорит: «если сдача уже прошла — аннулирование корректирующей роли в
+      // прошлых сдачах не играет (они неизменны), возврат — текущее событие
+      // кассы». Фильтр по статусу не смотрел на ВРЕМЯ отмены и задним числом
+      // менял расчётную выручку закрытого дня. Поле Ticket.voidedAt писалось
+      // с самого начала, но не читалось нигде.
+      OR: [{ voidedAt: null }, { voidedAt: { gt: until } }],
       order: { zoneId, soldAt: { lte: until, ...(since ? { gt: since } : {}) } },
     },
     select: { assetId: true, variantNameSnapshot: true, priceSnapshot: true },

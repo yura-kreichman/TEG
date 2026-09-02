@@ -856,7 +856,7 @@
     "gameRoomPricingModeFixed": "За вхід",
     "gameRoomPricingModePerMinute": "За фактом",
     "gameRoomRateLabel": "Ціна за хвилину перебування",
-    "gameRoomRateHint": "Наприклад: 1 ₽ — 45 хвилин перебування коштуватимуть 45 ₽.",
+    "gameRoomRateHint": "Наприклад: ставка 1 — 45 хвилин перебування коштуватимуть 45.",
     "gameRoomOptionsLabel": "Варіанти",
     "gameRoomOptionNamePlaceholder": "Назва (наприклад, 1 година)",
     "gameRoomOptionDurationPlaceholder": "Хвилин",

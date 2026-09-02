@@ -856,7 +856,7 @@
     "gameRoomPricingModeFixed": "Giriş başına",
     "gameRoomPricingModePerMinute": "Fiili",
     "gameRoomRateLabel": "Kalış dakikası fiyatı",
-    "gameRoomRateHint": "Örneğin: 1 ₽ — 45 dakika kalış 45 ₽'ye mal olur.",
+    "gameRoomRateHint": "Örnek: 1 birim ücret — 45 dakikalık kalış 45 tutar.",
     "gameRoomOptionsLabel": "Seçenekler",
     "gameRoomOptionNamePlaceholder": "Ad (örn. 1 saat)",
     "gameRoomOptionDurationPlaceholder": "Dakika",

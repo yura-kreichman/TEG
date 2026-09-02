@@ -856,7 +856,7 @@
     "gameRoomPricingModeFixed": "Kirish bo'yicha",
     "gameRoomPricingModePerMinute": "Fakt bo'yicha",
     "gameRoomRateLabel": "Bo'lish daqiqasining narxi",
-    "gameRoomRateHint": "Masalan: 1 ₽ — 45 daqiqa bo'lish 45 ₽ turadi.",
+    "gameRoomRateHint": "Masalan: tarif 1 — 45 daqiqalik qolish 45 turadi.",
     "gameRoomOptionsLabel": "Variantlar",
     "gameRoomOptionNamePlaceholder": "Nomi (masalan, 1 soat)",
     "gameRoomOptionDurationPlaceholder": "Daqiqa",

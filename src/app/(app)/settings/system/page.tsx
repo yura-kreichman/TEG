@@ -9,7 +9,9 @@ import { SpringCard } from "@/components/spring-card";
 import { StaggerList, StaggerItem } from "@/components/motion/stagger-list";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { useI18n } from "@/components/i18n-provider";
+import { useI18n, useCurrency } from "@/components/i18n-provider";
+import { formatMoneyWithCurrency } from "@/lib/format";
+import type { CurrencyCode } from "@/lib/currency";
 import type { Dictionary } from "@/lib/i18n";
 import { OwnerShell } from "@/components/owner-shell";
 import { useOwnerHasPrinterLocal, useOwnerPaperWidthLocal } from "@/hooks/use-print";
@@ -77,7 +79,13 @@ const DEFAULTS: SystemSettings = {
 // "должно быть превью квитанции (шапка и футер) настраиваются") — те же
 // данные и та же buildReceiptHtml(), что и у реальной печати, чтобы превью
 // гарантированно не разъезжалось с тем, что реально напечатается.
-function samplePrintData(t: ReturnType<typeof useI18n>): PrintDocumentData {
+// Валюта тенанта, не зашитый рубль (генеральная проверка финансов
+// 2026-09-02). Эти данные уходят не только в живое превью, но и в кнопку
+// «Тестовая печать» — то есть «500 ₽» печаталось на бумаге у любого тенанта,
+// вопреки правилу docs/spec/03-design-system.md о запрете прямых вставок
+// знаков валют.
+function samplePrintData(t: ReturnType<typeof useI18n>, currency: CurrencyCode | null): PrintDocumentData {
+  const sample = formatMoneyWithCurrency(500, "ru", currency);
   return {
     title: t.settings.systemReceiptPreviewTitle,
     subtitle: `20.07.2026 · 14:32 · ${t.common.ownerLabel}`,
@@ -85,11 +93,11 @@ function samplePrintData(t: ReturnType<typeof useI18n>): PrintDocumentData {
       {
         lines: [
           { label: t.settings.systemReceiptPreviewLine1, value: "1" },
-          { label: t.settings.systemReceiptPreviewLine2, value: "500 ₽" },
+          { label: t.settings.systemReceiptPreviewLine2, value: sample },
         ],
       },
     ],
-    totalLine: { label: t.settings.systemReceiptPreviewTotal, value: "500 ₽" },
+    totalLine: { label: t.settings.systemReceiptPreviewTotal, value: sample },
   };
 }
 
@@ -109,6 +117,7 @@ function samplePrintData(t: ReturnType<typeof useI18n>): PrintDocumentData {
  */
 export default function SystemSettingsPage() {
   const t = useI18n();
+  const currency = useCurrency();
   const previewFrameRef = useRef<HTMLIFrameElement>(null);
   const [previewFrameHeight, setPreviewFrameHeight] = useState(384);
   const [checking, setChecking] = useState(true);
@@ -207,7 +216,7 @@ export default function SystemSettingsPage() {
   // превью здесь строится через srcDoc.
   const absoluteLogoUrl =
     logoUrl && typeof window !== "undefined" ? `${window.location.origin}${logoUrl}` : logoUrl;
-  const previewHtml = buildReceiptHtml(samplePrintData(t), {
+  const previewHtml = buildReceiptHtml(samplePrintData(t, currency), {
     tenantName,
     logoUrl: absoluteLogoUrl,
     showLogo,
@@ -506,7 +515,7 @@ export default function SystemSettingsPage() {
                     <div className="mt-3 flex justify-center">
                       <PrintButton
                         label={t.settings.systemReceiptTestPrintButton}
-                        data={samplePrintData(t)}
+                        data={samplePrintData(t, currency)}
                         branding={{ tenantName, logoUrl, showLogo, showTenantName, compactHeader, paperWidth, footerContent }}
                         className="gap-1.5 rounded-lg"
                       />

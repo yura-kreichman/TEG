@@ -856,7 +856,7 @@
     "gameRoomPricingModeFixed": "Za wejście",
     "gameRoomPricingModePerMinute": "Rzeczywisty",
     "gameRoomRateLabel": "Cena za minutę pobytu",
-    "gameRoomRateHint": "Na przykład: 1 ₽ — 45 minut pobytu będzie kosztować 45 ₽.",
+    "gameRoomRateHint": "Na przykład: stawka 1 — 45 minut pobytu będzie kosztować 45.",
     "gameRoomOptionsLabel": "Warianty",
     "gameRoomOptionNamePlaceholder": "Nazwa (np. 1 godzina)",
     "gameRoomOptionDurationPlaceholder": "Minut",

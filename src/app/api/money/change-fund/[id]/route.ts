@@ -22,7 +22,10 @@ import { resyncAfterMoneyOpChange } from "@/lib/summary-channels/resync";
 const CHANGE_FUND_TYPES = ["change_fund", "goods_change_fund"];
 
 async function findOwnOperation(id: string, tenantId: string) {
-  const op = await prisma.moneyOperation.findUnique({ where: { id } });
+  const op = await prisma.moneyOperation.findUnique({
+    where: { id },
+    include: { zone: { select: { pointId: true } } },
+  });
   if (!op || op.tenantId !== tenantId || !CHANGE_FUND_TYPES.includes(op.type)) return null;
   return op;
 }
@@ -49,7 +52,13 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/chan
     // Тот же advisory-lock по точке, что у правки инкассации: остатки кассы
     // считаются суммой операций, и параллельная правка двух строк одной точки
     // может разъехаться.
-    if (op.pointId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${op.pointId}))`;
+    // Точка берётся ЧЕРЕЗ ЗОНУ (генеральная проверка финансов
+    // 2026-09-02). Прежнее условие `if (op.pointId)` не срабатывало НИКОГДА:
+    // CHECK MoneyOperation_zone_xor_point гарантирует, что у зонной операции
+    // pointId пуст, а размен и инкассация — зонные. То есть лок, о котором
+    // соседний комментарий уверял, что он взят, не брался ни разу.
+    const lockPointId = op.pointId ?? op.zone?.pointId ?? null;
+    if (lockPointId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockPointId}))`;
     await tx.correctionLog.create({
       data: {
         entityType: "MoneyOperation",
@@ -80,7 +89,13 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/money/ch
   }
 
   await prisma.$transaction(async (tx) => {
-    if (op.pointId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${op.pointId}))`;
+    // Точка берётся ЧЕРЕЗ ЗОНУ (генеральная проверка финансов
+    // 2026-09-02). Прежнее условие `if (op.pointId)` не срабатывало НИКОГДА:
+    // CHECK MoneyOperation_zone_xor_point гарантирует, что у зонной операции
+    // pointId пуст, а размен и инкассация — зонные. То есть лок, о котором
+    // соседний комментарий уверял, что он взят, не брался ни разу.
+    const lockPointId = op.pointId ?? op.zone?.pointId ?? null;
+    if (lockPointId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockPointId}))`;
     await tx.correctionLog.create({
       data: {
         entityType: "MoneyOperation",

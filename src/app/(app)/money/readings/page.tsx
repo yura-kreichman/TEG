@@ -92,6 +92,9 @@ interface DayCard {
   // Часть abonementAmount, которая участвует в Разнице — правило выбора живёт
   // на сервере (countersPaidFromBalance), клиент его больше не повторяет.
   abonementInDifference: number;
+  // Расходы, которые эта сдача забрала себе — слагаемое Разницы, считает
+  // сервер (С18).
+  expensesInSubmission: number;
   returnsCount: number;
   // Отдельные события тестовых прогонов, из которых сложился returnsCount
   // выше (см. returnEventsBySubmission в /api/reports/submissions/day).
@@ -807,7 +810,15 @@ export default function ReadingsCalendarPage() {
     // Какая часть баланса участвует в Разнице — решено на сервере
     // (countersPaidFromBalance); тут только применяем. Своя копия этого
     // правила жила здесь до 2026-08-13 и разошлась с сервером.
-    const difference = Math.round((actualCash + card.abonementInDifference - netRevenue) * 100) / 100;
+    // + расходы сдачи: в кассу введён остаток ПОСЛЕ трат (правило 2026-08-16),
+    // и сервер их прибавляет. Клиент этого слагаемого не имел вовсе — своего
+    // источника не было, и предпросмотр показывал недостачу ровно на сумму
+    // дневных трат при верном нуле в карточке (С18). Теперь число приходит
+    // готовым, как abonementInDifference рядом.
+    const difference =
+      Math.round(
+        (actualCash + card.expensesInSubmission + card.abonementInDifference - netRevenue) * 100
+      ) / 100;
     return { calculatedRevenue, difference };
   }
 

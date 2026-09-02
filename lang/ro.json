@@ -856,7 +856,7 @@
     "gameRoomPricingModeFixed": "Pe intrare",
     "gameRoomPricingModePerMinute": "Pe timp efectiv",
     "gameRoomRateLabel": "Preț pe minut de ședere",
-    "gameRoomRateHint": "De exemplu: 1 ₽ — 45 de minute de ședere vor costa 45 ₽.",
+    "gameRoomRateHint": "De exemplu: tariful 1 — 45 de minute de ședere vor costa 45.",
     "gameRoomOptionsLabel": "Variante",
     "gameRoomOptionNamePlaceholder": "Nume (de ex., 1 oră)",
     "gameRoomOptionDurationPlaceholder": "Minute",

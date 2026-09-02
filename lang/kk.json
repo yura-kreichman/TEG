@@ -856,7 +856,7 @@
     "gameRoomPricingModeFixed": "Кіру бойынша",
     "gameRoomPricingModePerMinute": "Нақты бойынша",
     "gameRoomRateLabel": "Болу минутының бағасы",
-    "gameRoomRateHint": "Мысалы: 1 ₽ — 45 минут болу 45 ₽ тұрады.",
+    "gameRoomRateHint": "Мысалы: тариф 1 — 45 минут болу 45 тұрады.",
     "gameRoomOptionsLabel": "Нұсқалар",
     "gameRoomOptionNamePlaceholder": "Атауы (мысалы, 1 сағат)",
     "gameRoomOptionDurationPlaceholder": "Минут",

@@ -856,7 +856,7 @@
     "gameRoomPricingModeFixed": "შესვლით",
     "gameRoomPricingModePerMinute": "ფაქტობრივად",
     "gameRoomRateLabel": "ყოფნის ერთი წუთის ფასი",
-    "gameRoomRateHint": "მაგალითად: 1 ₽ — 45 წუთი ყოფნა დაჯდება 45 ₽.",
+    "gameRoomRateHint": "მაგალითად: ტარიფი 1 — 45 წუთიანი ყოფნა დაჯდება 45.",
     "gameRoomOptionsLabel": "ვარიანტები",
     "gameRoomOptionNamePlaceholder": "სახელი (მაგ., 1 საათი)",
     "gameRoomOptionDurationPlaceholder": "წუთი",

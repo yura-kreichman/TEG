@@ -47,7 +47,12 @@ export function parseMoneyInput(raw: string | null | undefined): number {
 }
 
 export function formatMoney(value: number, locale: Locale = "ru"): string {
-  const rounded = Math.round(value * 100) / 100;
+  // `|| 0` гасит отрицательный ноль (генеральная проверка финансов
+  // 2026-09-02). Math.round(value * 100) / 100 при value из (−0.005, 0) даёт
+  // −0; hasFraction ниже для него ложно (−0 % 1 === −0, а −0 !== 0 — false),
+  // дробей нет, и Intl печатает «−0». Владелец видел минус там, где касса
+  // сошлась копейка в копейку.
+  const rounded = Math.round(value * 100) / 100 || 0;
   const hasFraction = rounded % 1 !== 0;
   return new Intl.NumberFormat(LOCALE_TO_INTL[locale], {
     minimumFractionDigits: hasFraction ? 2 : 0,
@@ -81,6 +86,11 @@ export function formatMoneyCompact(
 ): string {
   const abs = Math.abs(value);
   const sign = value < 0 ? "-" : "";
+  // Суммы меньше тысячи показываем как есть (генеральная проверка финансов
+  // 2026-09-02): делитель выбирался только между миллионом и тысячей, ветки
+  // «без сокращения» не было вовсе, и 49 ₽ превращались в «0к», а −49 ₽ в
+  // «−0к». Сокращать то, что и так короткое, незачем.
+  if (abs < 1_000) return formatMoney(value, locale);
   const unit = abs >= 1_000_000 ? 1_000_000 : 1_000;
   const suffix = abs >= 1_000_000 ? millionSuffix : thousandSuffix;
   const scaled = Math.round((abs / unit) * 10) / 10;

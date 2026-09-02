@@ -856,7 +856,7 @@
     "gameRoomPricingModeFixed": "Кирүү боюнча",
     "gameRoomPricingModePerMinute": "Факт боюнча",
     "gameRoomRateLabel": "Болуунун бир мүнөтүнүн баасы",
-    "gameRoomRateHint": "Мисалы: 1 ₽ — 45 мүнөт болуу 45 ₽ турат.",
+    "gameRoomRateHint": "Мисалы: тариф 1 — 45 мүнөт болуу 45 турат.",
     "gameRoomOptionsLabel": "Варианттар",
     "gameRoomOptionNamePlaceholder": "Аты (мисалы, 1 саат)",
     "gameRoomOptionDurationPlaceholder": "Мүнөт",

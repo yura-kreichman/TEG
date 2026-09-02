@@ -856,7 +856,7 @@
     "gameRoomPricingModeFixed": "Մուտքով",
     "gameRoomPricingModePerMinute": "Փաստացի",
     "gameRoomRateLabel": "Մեկ րոպե մնալու գինը",
-    "gameRoomRateHint": "Օրինակ՝ 1 ₽ — 45 րոպե մնալը կարժենա 45 ₽։",
+    "gameRoomRateHint": "Օրինակ՝ սակագին 1 — 45 րոպե գտնվելը կարժենա 45։",
     "gameRoomOptionsLabel": "Տարբերակներ",
     "gameRoomOptionNamePlaceholder": "Անվանում (օր.՝ 1 ժամ)",
     "gameRoomOptionDurationPlaceholder": "Րոպե",

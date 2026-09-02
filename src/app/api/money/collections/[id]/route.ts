@@ -29,7 +29,10 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/coll
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
   const { id } = await ctx.params;
-  const op = await prisma.moneyOperation.findUnique({ where: { id } });
+  const op = await prisma.moneyOperation.findUnique({
+    where: { id },
+    include: { zone: { select: { pointId: true } } },
+  });
   if (
     !op ||
     op.tenantId !== owner.tenantId ||
@@ -54,7 +57,13 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/coll
     // погашение (lib/zone-balance.ts): иначе сдача итогов, совпавшая по
     // времени, погасит инкассацию по старой сумме между откатом и правкой.
     await prisma.$transaction(async (tx) => {
-      if (op.pointId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${op.pointId}))`;
+      // Точка берётся ЧЕРЕЗ ЗОНУ (генеральная проверка финансов
+    // 2026-09-02). Прежнее условие `if (op.pointId)` не срабатывало НИКОГДА:
+    // CHECK MoneyOperation_zone_xor_point гарантирует, что у зонной операции
+    // pointId пуст, а размен и инкассация — зонные. То есть лок, о котором
+    // соседний комментарий уверял, что он взят, не брался ни разу.
+    const lockPointId = op.pointId ?? op.zone?.pointId ?? null;
+    if (lockPointId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockPointId}))`;
       // Снимаем автопогашение до правки — непогашенный остаток пересчитается
       // из истории сам, и следующая сдача погасит уже новую сумму.
       if (op.type === "collection_advance") await reverseCollectionAdvanceSettlement(tx, id);
@@ -84,7 +93,10 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/money/co
     return NextResponse.json({ error: "Требуется вход владельца" }, { status: 401 });
   }
   const { id } = await ctx.params;
-  const op = await prisma.moneyOperation.findUnique({ where: { id } });
+  const op = await prisma.moneyOperation.findUnique({
+    where: { id },
+    include: { zone: { select: { pointId: true } } },
+  });
   if (
     !op ||
     op.tenantId !== owner.tenantId ||
@@ -98,7 +110,13 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/money/co
   if (editable === "settled_unlinked") return NextResponse.json(SETTLED_UNLINKED, { status: 409 });
 
   await prisma.$transaction(async (tx) => {
-    if (op.pointId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${op.pointId}))`;
+    // Точка берётся ЧЕРЕЗ ЗОНУ (генеральная проверка финансов
+    // 2026-09-02). Прежнее условие `if (op.pointId)` не срабатывало НИКОГДА:
+    // CHECK MoneyOperation_zone_xor_point гарантирует, что у зонной операции
+    // pointId пуст, а размен и инкассация — зонные. То есть лок, о котором
+    // соседний комментарий уверял, что он взят, не брался ни разу.
+    const lockPointId = op.pointId ?? op.zone?.pointId ?? null;
+    if (lockPointId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockPointId}))`;
     // См. тот же комментарий в PATCH выше: погашающие строки уходят вместе с
     // инкассацией, иначе они навсегда занижают остатки зон.
     if (op.type === "collection_advance") await reverseCollectionAdvanceSettlement(tx, id);

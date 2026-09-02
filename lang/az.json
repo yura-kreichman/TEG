@@ -856,7 +856,7 @@
     "gameRoomPricingModeFixed": "Giriş üzrə",
     "gameRoomPricingModePerMinute": "Faktiki",
     "gameRoomRateLabel": "Qalma dəqiqəsinin qiyməti",
-    "gameRoomRateHint": "Məsələn: 1 ₽ — 45 dəqiqə qalma 45 ₽-ə başa gələcək.",
+    "gameRoomRateHint": "Məsələn: 1 tarif — 45 dəqiqəlik qalma 45 olacaq.",
     "gameRoomOptionsLabel": "Variantlar",
     "gameRoomOptionNamePlaceholder": "Ad (məsələn, 1 saat)",
     "gameRoomOptionDurationPlaceholder": "Dəqiqə",
