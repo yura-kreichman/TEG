@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { getTenantDayContext } from "@/lib/tenant-day";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
 import {
-  computeZoneSubmissionRevenues,
   getPreviousCustomRange,
   getPreviousPeriodRange,
   resolvePeriodFromParams,
@@ -55,35 +54,37 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   });
   const zoneIds = zones.map((z) => z.id);
 
-  const entries = await computeZoneSubmissionRevenues(zoneIds, start, end);
+  // ВЫРУЧКА СЧИТАЕТСЯ ПО ЖУРНАЛУ, как в «Деньгах» (решение владельца
+  // 2026-09-02, генеральная проверка финансов, К7 + С4).
+  //
+  // Раньше базой был ZoneSubmission.cashAmount, а он с 2026-08-16 — остаток
+  // кассы уже ПОСЛЕ трат сотрудника. Прибыль ниже вычитала расходы ещё раз,
+  // и «Деньги» с «Динамикой» давали разную прибыль за один и тот же месяц.
+  // Лечить прибавкой компенсации нельзя: какие именно расходы вошли внутрь
+  // сданной суммы, из ZoneSubmission не видно.
+  //
+  // В журнале операция revenue уже валовая — сдача пишет туда «введённое плюс
+  // компенсированные расходы» (submit-results/route.ts). Поэтому здесь не
+  // добавляется второе место правды, а убирается лишнее: обе страницы теперь
+  // читают одни и те же строки одним и тем же способом.
+  const submissionIds = new Set<string>();
+  // Дни/месяцы, где реально что-то произошло — запрос пользователя
+  // 2026-07-18: "на графике не нужно отображать день, когда не было сдачи
+  // итогов, как сегодня" — линия не должна тянуться через пустые дни.
+  const activeDays = new Set<string>();
+  // Нужен только для счётчика сдач в шапке: сама выручка больше отсюда не
+  // берётся.
+  const submissions = zoneIds.length
+    ? await prisma.zoneSubmission.findMany({
+        where: { zoneId: { in: zoneIds }, resultsSubmission: { submittedAt: { gte: start, lt: end } } },
+        select: { resultsSubmission: { select: { id: true } } },
+      })
+    : [];
+  for (const s of submissions) submissionIds.add(s.resultsSubmission.id);
 
   let totalCash = 0;
   let totalMobile = 0;
   const byDay = new Map<string, number>();
-  for (const e of entries) {
-    totalCash += e.actualCash;
-    totalMobile += e.actualMobile;
-  }
-
-  const submissions = zoneIds.length
-    ? await prisma.zoneSubmission.findMany({
-        where: { zoneId: { in: zoneIds }, resultsSubmission: { submittedAt: { gte: start, lt: end } } },
-        select: { cashAmount: true, mobileAmount: true, resultsSubmission: { select: { id: true, submittedAt: true } } },
-      })
-    : [];
-  const submissionIds = new Set<string>();
-  // Дни/месяцы, где реально что-то произошло (сдача итогов, абонемент,
-  // расход/аванс/премия) — запрос пользователя 2026-07-18: "на графике не
-  // нужно отображать день, когда не было сдачи итогов, как сегодня" — линия
-  // не должна тянуться через дни без единого события, включая сегодняшний
-  // ещё не сданный день.
-  const activeDays = new Set<string>();
-  for (const s of submissions) {
-    submissionIds.add(s.resultsSubmission.id);
-    const dayKey = dateKey(s.resultsSubmission.submittedAt);
-    byDay.set(dayKey, (byDay.get(dayKey) ?? 0) + Number(s.cashAmount) + Number(s.mobileAmount));
-    activeDays.add(dayKey);
-  }
 
   const moneyOps = await prisma.moneyOperation.findMany({
     where: {
@@ -114,6 +115,17 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     if (op.type === "expense" || op.type === "advance" || op.type === "bonus_payout") {
       const key = dateKey(op.occurredAt);
       deductionsByDay.set(key, (deductionsByDay.get(key) ?? 0) + amount);
+      activeDays.add(key);
+    }
+    // Зонная выручка — из журнала, теми же типами и тем же знаком, что в
+    // /api/reports/money. Знаковая сумма, не Math.abs: правка сдачи и
+    // аннулирование пишут отрицательные компенсации того же типа.
+    if (op.type === "revenue" || op.type === "revenue_cashless") {
+      const signed = Number(op.amount);
+      if (op.type === "revenue") totalCash += signed;
+      else totalMobile += signed;
+      const key = dateKey(op.occurredAt);
+      byDay.set(key, (byDay.get(key) ?? 0) + signed);
       activeDays.add(key);
     }
     // Абонементы (пересмотрено 2026-07-25 дважды — сперва отдельной строкой
@@ -155,12 +167,17 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
 
   // Previous period: only need the actual total for the delta%, no chain-walk needed.
   const [prevSubmissions, prevAbonementOps, prevGoodsOps] = await Promise.all([
-    zoneIds.length
-      ? prisma.zoneSubmission.findMany({
-          where: { zoneId: { in: zoneIds }, resultsSubmission: { submittedAt: { gte: prevStart, lt: prevEnd } } },
-          select: { cashAmount: true, mobileAmount: true },
-        })
-      : Promise.resolve([]),
+    // Прошлый период — тоже по журналу, иначе сравнение шло бы валовой
+    // выручки с чистой и delta% врал бы на сумму расходов.
+    prisma.moneyOperation.findMany({
+      where: {
+        tenantId: owner.tenantId,
+        type: { in: ["revenue", "revenue_cashless"] },
+        occurredAt: { gte: prevStart, lt: prevEnd },
+        ...(isAllPoints ? {} : { OR: [{ zone: { pointId } }, { pointId }] }),
+      },
+      select: { amount: true },
+    }),
     prisma.moneyOperation.findMany({
       where: {
         tenantId: owner.tenantId,
@@ -180,10 +197,11 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       select: { amount: true },
     }),
   ]);
+  // Везде знаковая сумма: аннулирование и правки пишут компенсации того же
+  // типа с минусом, Math.abs превращал бы вычитание в прибавление.
   const prevTotal =
-    prevSubmissions.reduce((sum, s) => sum + Number(s.cashAmount) + Number(s.mobileAmount), 0) +
-    prevAbonementOps.reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0) +
-    // Знаковая сумма — тот же принцип, что и totalGoods выше.
+    prevSubmissions.reduce((sum, op) => sum + Number(op.amount), 0) +
+    prevAbonementOps.reduce((sum, op) => sum + Number(op.amount), 0) +
     prevGoodsOps.reduce((sum, op) => sum + Number(op.amount), 0);
 
   const total = totalCash + totalMobile + totalGoods;
