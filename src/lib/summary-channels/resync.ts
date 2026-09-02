@@ -224,7 +224,13 @@ export async function resyncCollectionAlert(messageId: string, tenantId: string)
       editedByOwner: true,
     };
     const text = formatCollectionAlertTelegram(data, st, locale, tenant?.timezone ?? "UTC", tenant?.currency ?? null);
-    await editChatMessage(channel.chatId, messageId, text);
+    const edited = await editChatMessage(channel.chatId, messageId, text);
+    // Ответ Telegram проверяем: editChatMessage не бросает на отказ API, а
+    // возвращает результат — и внешний try/catch его не видит. Без этого
+    // «пересобрано» в логе означало лишь «не упало» (2026-09-03).
+    if (!edited.ok) {
+      console.error("collection alert edit failed", { messageId, status: edited.status, description: edited.description });
+    }
     await sendUpdatedPush(tenantId, "collection", getDictionary(locale).pushSettings.collectionLabel, text);
   } catch (err) {
     console.error("collection alert resync failed", { messageId, err });
@@ -329,7 +335,16 @@ export async function resyncShiftCloseMessage(
     if (options.voided) {
       await removeOrMarkMessage(channel.chatId, shift.telegramSummaryMessageId, finalText);
     } else {
-      await editChatMessage(channel.chatId, shift.telegramSummaryMessageId, finalText);
+      const edited = await editChatMessage(channel.chatId, shift.telegramSummaryMessageId, finalText);
+      // Ответ Telegram проверяем — см. комментарий у инкассации выше.
+      if (!edited.ok) {
+        console.error("shift close edit failed", {
+          shiftId,
+          messageId: shift.telegramSummaryMessageId,
+          status: edited.status,
+          description: edited.description,
+        });
+      }
     }
     await sendUpdatedPush(tenantId, "shiftCloseSummary", getDictionary(locale).pushSettings.shiftCloseLabel, finalText);
   } catch (err) {
