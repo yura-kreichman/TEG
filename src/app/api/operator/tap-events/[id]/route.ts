@@ -11,6 +11,76 @@ function isRecordNotFound(err: unknown): boolean {
 }
 
 /**
+ * Вернуть клиенту деньги, списанные с баланса за этот тап.
+ *
+ * Один помощник на два пути — удаление тапа и пометку «Возврат/тест»
+ * (генеральная проверка финансов 2026-09-02, С6). До этого возврат жил только
+ * в DELETE: пометка ставила voidedAt и на этом всё, деньги клиенту не
+ * возвращались, строки «Возврат» в его выписке не появлялось, пуша не было.
+ * Исход зависел от того, какую из двух кнопок нажал сотрудник — при том что
+ * спека (docs/spec/04-game-room.md:51) требует возврата, и у Пусков он давно
+ * реализован.
+ *
+ * Сумма реконструируется из ТЕКУЩЕЙ цены тарифа: на самом тапе она не
+ * хранится (см. schema.prisma) — тем же способом, что и списание при создании
+ * (spendWalletForZone, quantity: 1). cash/mobile здесь чисто справочная
+ * пометка, отдельной MoneyOperation не журналируется, возвращать нечего.
+ *
+ * Возвращает кошелёк и сумму для пуша о смене баланса — либо нули, если
+ * возвращать было нечего.
+ */
+async function refundTapPayment(
+  tx: Prisma.TransactionClient,
+  event: { id: string; zoneId: string; tariffId: string; paymentMethod: string | null; abonementWalletId: string | null },
+  point: { id: string; tenantId: string },
+  operatorId: string
+): Promise<{ walletId: string | null; amount: number }> {
+  let walletId: string | null = null;
+  let amount = 0;
+
+  const credit = async (targetWalletId: string, value: number) => {
+    if (value <= 0) return;
+    await tx.abonementWallet.update({ where: { id: targetWalletId }, data: { balance: { increment: value } } });
+    await tx.abonementTransaction.create({
+      data: {
+        walletId: targetWalletId,
+        type: "refund",
+        amount: value,
+        tariffId: event.tariffId,
+        pointId: point.id,
+        operatorId,
+      },
+    });
+    await tx.moneyOperation.create({
+      data: {
+        tenantId: point.tenantId,
+        zoneId: event.zoneId,
+        type: "revenue_abonement",
+        amount: -value,
+        performedByOperatorId: operatorId,
+      },
+    });
+    walletId = targetWalletId;
+    amount += value;
+  };
+
+  if (event.paymentMethod === PAYMENT_SPLIT_METHOD) {
+    const abonementLegs = await tx.counterTapEventPaymentLeg.findMany({
+      where: { tapId: event.id, method: "abonement" },
+    });
+    for (const leg of abonementLegs) {
+      if (!leg.walletId) continue;
+      await credit(leg.walletId, Number(leg.amount));
+    }
+  } else if (event.paymentMethod === "abonement" && event.abonementWalletId) {
+    const tariff = await tx.tariff.findUnique({ where: { id: event.tariffId }, select: { price: true } });
+    await credit(event.abonementWalletId, Number(tariff?.price ?? 0));
+  }
+
+  return { walletId, amount };
+}
+
+/**
  * Отменить случайный тап — та же логика, что у /api/operator/zone-return-
  * events/[id]: обычная отмена опечатки в моменте ("раз не внёс — проехали"
  * при сдаче итогов), не ретроактивная правка. Только события ТЕКУЩЕГО
@@ -41,74 +111,17 @@ export async function DELETE(request: Request, ctx: RouteContext<"/api/operator/
   // POST выше). cash/mobile тут — чисто справочная пометка (никогда не
   // журналируется отдельной MoneyOperation, см. комментарий у
   // CounterTapEvent.paymentMethod в schema.prisma), возвращать нечего.
+  // Возврат — тем же помощником, что и пометка «Возврат/тест» ниже (С6).
+  // Раньше эта логика жила здесь единственным экземпляром, и PATCH её просто
+  // не имел: деньги возвращались или нет в зависимости от того, какую кнопку
+  // нажал сотрудник.
   let refundedWalletId: string | null = null;
   let refundedAmount = 0;
   try {
     await prisma.$transaction(async (tx) => {
-    if (event.paymentMethod === PAYMENT_SPLIT_METHOD) {
-      const abonementLegs = await tx.counterTapEventPaymentLeg.findMany({
-        where: { tapId: event.id, method: "abonement" },
-      });
-      for (const leg of abonementLegs) {
-        if (!leg.walletId) continue;
-        const legAmount = Number(leg.amount);
-        await tx.abonementWallet.update({ where: { id: leg.walletId }, data: { balance: { increment: legAmount } } });
-        await tx.abonementTransaction.create({
-          data: {
-            walletId: leg.walletId,
-            type: "refund",
-            amount: legAmount,
-            tariffId: event.tariffId,
-            pointId: point.id,
-            operatorId: operator.id,
-          },
-        });
-        await tx.moneyOperation.create({
-          data: {
-            tenantId: point.tenantId,
-            zoneId: event.zoneId,
-            type: "revenue_abonement",
-            amount: -legAmount,
-            performedByOperatorId: operator.id,
-          },
-        });
-        refundedWalletId = leg.walletId;
-        refundedAmount = legAmount;
-      }
-    } else if (event.paymentMethod === "abonement" && event.abonementWalletId) {
-      // Сумма на самом тапе не хранится (см. schema.prisma) — реконструируем
-      // из текущей цены тарифа, тем же способом, что и сама трата при
-      // создании тапа (spendWalletForZone, quantity:1).
-      const tariff = await tx.tariff.findUnique({ where: { id: event.tariffId }, select: { price: true } });
-      const amount = Number(tariff?.price ?? 0);
-      if (amount > 0) {
-        await tx.abonementWallet.update({
-          where: { id: event.abonementWalletId },
-          data: { balance: { increment: amount } },
-        });
-        await tx.abonementTransaction.create({
-          data: {
-            walletId: event.abonementWalletId,
-            type: "refund",
-            amount,
-            tariffId: event.tariffId,
-            pointId: point.id,
-            operatorId: operator.id,
-          },
-        });
-        await tx.moneyOperation.create({
-          data: {
-            tenantId: point.tenantId,
-            zoneId: event.zoneId,
-            type: "revenue_abonement",
-            amount: -amount,
-            performedByOperatorId: operator.id,
-          },
-        });
-        refundedWalletId = event.abonementWalletId;
-        refundedAmount = amount;
-      }
-    }
+      const refund = await refundTapPayment(tx, event, { id: point.id, tenantId: point.tenantId }, operator.id);
+      refundedWalletId = refund.walletId;
+      refundedAmount = refund.amount;
     await tx.counterTapEvent.delete({ where: { id } });
     });
   } catch (err) {
@@ -145,7 +158,7 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operator/t
   if (!opCtx) {
     return NextResponse.json({ error: "Требуется вход оператора" }, { status: 401 });
   }
-  const { point } = opCtx;
+  const { point, operator } = opCtx;
   const { id } = await ctx.params;
   const body = await request.json().catch(() => null);
   if (typeof body?.voided !== "boolean") {
@@ -163,10 +176,33 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operator/t
   }
 
   try {
-    const updated = await prisma.counterTapEvent.update({
-      where: { id },
-      data: { voidedAt: body.voided ? new Date() : null },
+    // Пометка «Возврат/тест» ВОЗВРАЩАЕТ деньги, списанные с баланса, — ровно
+    // как удаление тапа (С6). Смена состояния через updateMany с условием на
+    // текущее значение: без неё двойной клик вернул бы деньги дважды.
+    //
+    // Снятие пометки деньги обратно НЕ списывает намеренно. Симметричное
+    // повторное списание могло бы упереться в нехватку баланса и оставить
+    // систему в состоянии «тап учтён, а денег нет»; вместо этого возврат
+    // остаётся отдельным честным событием в выписке клиента, а сотрудник,
+    // передумав, оформляет новый тап. Это тот же принцип, что у аннулирования
+    // Билетов: возврат — текущее событие кассы, а не откат прошлого.
+    const refundResult = await prisma.$transaction(async (tx) => {
+      const changed = await tx.counterTapEvent.updateMany({
+        where: { id, voidedAt: body.voided ? null : { not: null } },
+        data: { voidedAt: body.voided ? new Date() : null },
+      });
+      if (changed.count === 0) return null;
+      if (!body.voided) return { walletId: null, amount: 0 };
+      return refundTapPayment(tx, event, { id: point.id, tenantId: point.tenantId }, operator.id);
     });
+
+    const updated = await prisma.counterTapEvent.findUnique({ where: { id }, select: { id: true, voidedAt: true } });
+    if (!updated) {
+      return NextResponse.json({ error: "Запись уже удалена" }, { status: 409 });
+    }
+    if (refundResult?.walletId && refundResult.amount > 0) {
+      notifyWalletBalanceChange(point.tenantId, refundResult.walletId, refundResult.amount).catch(() => {});
+    }
     return NextResponse.json({ id: updated.id, voidedAt: updated.voidedAt });
   } catch (err) {
     // Та же гонка, что в DELETE выше — тап мог быть удалён параллельным
