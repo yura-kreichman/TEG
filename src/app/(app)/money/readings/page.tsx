@@ -15,6 +15,7 @@ import {
   Minus,
   Pencil,
   Plus,
+  Coins,
   RefreshCcw,
   ShoppingBag,
   ShoppingCart,
@@ -405,6 +406,9 @@ export default function ReadingsCalendarPage() {
   // не по привязке к сдаче итогов, поэтому приходят отдельным полем, а не
   // внутри карточек зон.
   const [expenses, setExpenses] = useState<DayExpenses>({ total: 0, items: [] });
+  // Размен за день — отдельной строкой в «Итогах дня», в выручку не входит
+  // (разбор с владельцем Игроленда 2026-09-02).
+  const [changeFund, setChangeFund] = useState(0);
   // Премии/авансы, взятые сотрудником из кассы точки за день — тот же состав,
   // что в сводке "Касса за день" (решение владельца 2026-08-16: Итоги дня
   // показывали грязную кассу и расходились со сводкой).
@@ -539,6 +543,7 @@ export default function ReadingsCalendarPage() {
     setGoodsSalesTotals(data.goodsSalesTotals ?? null);
     setExpenses(data.expenses ?? { total: 0, items: [] });
     setPayouts(data.payouts ?? 0);
+    setChangeFund(data.changeFund ?? 0);
   }
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -988,6 +993,22 @@ export default function ReadingsCalendarPage() {
                           {t.operatorApp.abonement.paymentLabel}
                         </span>
                         <span className="text-foreground"><Money value={daySummary.abonement} /></span>
+                      </div>
+                    )}
+                    {/* Размен за день (разбор с владельцем Игроленда
+                        2026-09-02) — деньги владельца, положенные в кассу на
+                        сдачу. Отдельной строкой и НЕ в выручке: выручкой они
+                        не являются, но физически лежат в ящике, и без этой
+                        строки владелец не может свести кассу с программой. В
+                        привычных ему кассовых панелях это «на начало смены».
+                        На «Разницу» строка не влияет — формула не менялась. */}
+                    {changeFund > 0 && (
+                      <div className="flex items-center justify-between text-caption-airbnb">
+                        <span className="flex items-center gap-1.5">
+                          <Coins className="size-3.5 shrink-0" />
+                          {t.readings.changeFundLabel}
+                        </span>
+                        <span className="text-foreground"><Money value={changeFund} /></span>
                       </div>
                     )}
                     {/* Применимость — по режиму учёта, как у карточки

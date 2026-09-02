@@ -4,6 +4,7 @@ import { requireOperator } from "@/lib/require-operator";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 import { getPointAbonementCashTotal, getPointGoodsCashTotal } from "@/lib/zone-balance";
+import { previousSubmissionBoundary } from "@/lib/game-room";
 
 export async function GET() {
   const ctx = await requireOperator();
@@ -97,11 +98,42 @@ export async function GET() {
     select: { id: true, name: true },
   });
 
+  // Размен, внесённый владельцем в кассу зоны с прошлой сдачи итогов (разбор
+  // с владельцем Игроленда 2026-09-02). Эти деньги физически лежат в ящике,
+  // но выручкой не являются — сотрудник, пересчитывая ящик, включает их в
+  // сумму, и без явного вычитания «Разница» показывает ложный излишек.
+  //
+  // Формула сверки НЕ меняется (решение того же дня): вместо тихой
+  // арифметики мастер показывает вычитание сотруднику и отправляет уже
+  // очищенную выручку. Задним числом ничего не пересчитывается — из базы
+  // невозможно узнать, пересчитывал сотрудник весь ящик или только выручку.
+  const changeFundByZone = new Map<string, number>();
+  if (zones.length > 0) {
+    const boundaries = await Promise.all(
+      zones.map(async (z) => [z.id, await previousSubmissionBoundary(z.id)] as const)
+    );
+    const ops = await prisma.moneyOperation.findMany({
+      where: { zoneId: { in: zones.map((z) => z.id) }, type: "change_fund" },
+      select: { zoneId: true, amount: true, occurredAt: true },
+    });
+    const boundaryByZone = new Map(boundaries);
+    for (const op of ops) {
+      if (!op.zoneId) continue;
+      const since = boundaryByZone.get(op.zoneId);
+      // Окно то же, что у расчётной выручки: строго после прошлой сдачи.
+      if (since && op.occurredAt <= since) continue;
+      changeFundByZone.set(op.zoneId, (changeFundByZone.get(op.zoneId) ?? 0) + Number(op.amount));
+    }
+  }
+
   const result = zones.map((zone) => ({
     id: zone.id,
     name: zone.name,
     iconKey: zone.iconKey,
     accountingMode: zone.accountingMode,
+    // Ноль — самый частый случай (на всей платформе разменом пользуется один
+    // тенант), и при нуле экран мастера не меняется вовсе.
+    changeFundAmount: changeFundByZone.get(zone.id) ?? 0,
     // Модуль печати (запрос пользователя 2026-07-20) — доступна ли кнопка
     // "Печать квитанции" оператору в этой зоне (stays/launches).
     printReceiptEnabled: zone.printReceiptEnabled,

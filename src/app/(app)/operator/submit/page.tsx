@@ -68,6 +68,9 @@ interface ZoneCtx {
   // Показания по тапам вместо ручного ввода (запрос пользователя 2026-07-25) —
   // см. isCountersTapAssistZone в results-calc.ts.
   countersTapAssistEnabled: boolean;
+  // Размен, внесённый владельцем в кассу этой зоны с прошлой сдачи (разбор
+  // 2026-09-02). Ноль — самый частый случай, тогда подсказки нет вовсе.
+  changeFundAmount: number;
   tariffs: TariffCtx[];
   assets: AssetCtx[];
 }
@@ -1224,6 +1227,25 @@ export default function SubmitResultsPage() {
                           </p>
                         );
                       })()}
+                      {/* Размен в кассе (разбор с владельцем Игроленда
+                          2026-09-02) — деньги владельца, положенные на сдачу.
+                          Физически они в ящике, но выручкой не являются, и
+                          сверка их не вычитает: если включить их в сумму,
+                          «Разница» покажет излишек ровно на размен.
+                          Раньше об этом не говорилось нигде — сам размен живёт
+                          в «Остатках и инкассациях», куда сотрудник не ходит.
+                          Подсказка, а НЕ автоматическое вычитание: из данных
+                          невозможно узнать, пересчитывает сотрудник весь ящик
+                          или уже отложил размен, и вычесть вслепую значило бы
+                          выдумать недостачу. */}
+                      {activeZone.changeFundAmount > 0 && (
+                        <p className="text-caption-airbnb text-muted-foreground">
+                          {t.operatorApp.submit.changeFundInTillHint}{" "}
+                          <span className="font-semibold tabular-nums text-foreground">
+                            <Money value={activeZone.changeFundAmount} />
+                          </span>
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-col gap-1">
                       <Label htmlFor="mobile" className="flex items-center gap-1.5">

@@ -960,5 +960,27 @@ export async function GET(request: Request) {
     })
   );
 
-  return NextResponse.json({ cards, abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales, goodsSalesTotals, expenses, payouts });
+  // Размен за этот день (разбор с владельцем Игроленда 2026-09-02) — деньги
+  // владельца, положенные в кассу на сдачу. Отдельной строкой, потому что в
+  // выручку они не входят и входить не должны, а физически в ящике лежат — и
+  // без этой строки владелец не может свести то, что видит в кассе, с тем,
+  // что показывает программа. Ровно это число в привычной ему кассовой
+  // панели называется «на начало смены».
+  //
+  // Показываем, НЕ вмешиваясь в расчёт «Разницы»: формула не меняется
+  // (решение 2026-09-02), задним числом ничего не пересчитывается.
+  // Фильтр по ЗОНЕ, а не по pointId: у зонного размена pointId пустой,
+  // заполнен только zoneId (проверено на боевых данных 2026-09-02 — запрос
+  // по точке возвращал ноль операций при реально существующих).
+  const changeFundOps = await prisma.moneyOperation.findMany({
+    where: {
+      type: "change_fund",
+      zone: { pointId },
+      occurredAt: { gte: dayStart, lt: dayEnd },
+    },
+    select: { amount: true },
+  });
+  const changeFund = round2(changeFundOps.reduce((sum, op) => sum + Number(op.amount), 0));
+
+  return NextResponse.json({ cards, abonementSales, abonementSaleEvents, goodsReconciliations, goodsSales, goodsSalesTotals, expenses, payouts, changeFund });
 }
