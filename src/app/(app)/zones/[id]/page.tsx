@@ -1432,7 +1432,9 @@ export default function ZoneDetailPage() {
                     {isTicketsZone(zone) && (
                       <p className="text-caption-airbnb text-muted-foreground">
                         {asset.ticketVariants.length > 0
-                          ? asset.ticketVariants.map((v) => `${v.name}: ${formatMoney(Number(v.price), locale)}`).join(" · ")
+                          ? asset.ticketVariants
+                              .map((v) => `${v.name}: ${formatMoney(Number(v.price), locale)}${currencySign ?? ""}`)
+                              .join(" · ")
                           : t.tickets.noPriceLabel}
                       </p>
                     )}

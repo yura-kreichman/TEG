@@ -80,15 +80,52 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       occurredAt: { gte: start, lt: end },
       ...(isAllPoints ? { tenantId: owner.tenantId } : { pointId }),
     },
-    select: { performedByOperatorId: true, amount: true },
+    select: { performedByOperatorId: true, amount: true, abonementTransactionId: true },
   });
+  // Аннулирование продажи создаёт компенсирующую операцию ТОГО ЖЕ типа с
+  // минусом, но проводит её ВЛАДЕЛЕЦ — значит performedByOperatorId у неё
+  // пуст, и прежнее `continue` выбрасывало её целиком: продавец навсегда
+  // оставался с выручкой за отменённую продажу (генеральная проверка
+  // финансов 2026-09-02). Привязываем минус к тому же сотруднику, что и
+  // исходная продажа, через общую ссылку на транзакцию абонемента.
+  const sellerByTransaction = new Map<string, string>();
   for (const op of abonementOps) {
-    if (!op.performedByOperatorId) continue;
-    operatorIds.add(op.performedByOperatorId);
-    revenueByOperator.set(
-      op.performedByOperatorId,
-      (revenueByOperator.get(op.performedByOperatorId) ?? 0) + Number(op.amount)
-    );
+    if (op.performedByOperatorId && op.abonementTransactionId && Number(op.amount) > 0) {
+      sellerByTransaction.set(op.abonementTransactionId, op.performedByOperatorId);
+    }
+  }
+  // Отмена могла случиться в другом периоде, чем продажа, — тогда исходной
+  // операции в выборке нет, и продавца надо добрать запросом.
+  const orphanTransactionIds = [
+    ...new Set(
+      abonementOps
+        .filter((op) => !op.performedByOperatorId && op.abonementTransactionId)
+        .map((op) => op.abonementTransactionId!)
+        .filter((id) => !sellerByTransaction.has(id))
+    ),
+  ];
+  if (orphanTransactionIds.length > 0) {
+    const originals = await prisma.moneyOperation.findMany({
+      where: {
+        abonementTransactionId: { in: orphanTransactionIds },
+        performedByOperatorId: { not: null },
+        amount: { gt: 0 },
+      },
+      select: { abonementTransactionId: true, performedByOperatorId: true },
+    });
+    for (const o of originals) {
+      if (o.abonementTransactionId && o.performedByOperatorId) {
+        sellerByTransaction.set(o.abonementTransactionId, o.performedByOperatorId);
+      }
+    }
+  }
+  for (const op of abonementOps) {
+    const operatorId =
+      op.performedByOperatorId ??
+      (op.abonementTransactionId ? (sellerByTransaction.get(op.abonementTransactionId) ?? null) : null);
+    if (!operatorId) continue;
+    operatorIds.add(operatorId);
+    revenueByOperator.set(operatorId, (revenueByOperator.get(operatorId) ?? 0) + Number(op.amount));
   }
   for (const sh of shifts) operatorIds.add(sh.operatorId);
 
@@ -128,7 +165,10 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
       where: { id: { in: [...operatorIds] } },
       select: { id: true, name: true, colorTag: true, avatarUrl: true, iconKey: true },
     }),
-    prisma.operatorRate.findMany({ where: { operatorId: { in: [...operatorIds] } }, orderBy: { effectiveFrom: "asc" } }),
+    prisma.operatorRate.findMany({ where: { operatorId: { in: [...operatorIds] } }, // createdAt вторым ключом (генеральная проверка финансов 2026-09-02): при
+      // равных effectiveFrom порядок строк был недетерминирован, и отчёт мог
+      // взять не ту ставку, что карточка сотрудника (getRateForDate).
+      orderBy: [{ effectiveFrom: "asc" }, { createdAt: "asc" }] }),
   ]);
 
   const ratesByOperator = new Map<string, { rate: number; effectiveFrom: Date }[]>();

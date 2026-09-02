@@ -51,7 +51,18 @@ export function distributeCollectionWhole(total: number, weights: number[]): num
 
   const result = units.map((u) => u * NICE_UNIT);
   if (oddLeftover > 0) {
-    const biggestIdx = result.reduce((best, v, i) => (v > result[best] ? i : best), 0);
+    // Хвост уходит зоне с наибольшей ДОЛЕЙ, а не с наибольшим уже
+    // разложенным числом (генеральная проверка финансов 2026-09-02). При
+    // сумме меньше NICE_UNIT (5) весь result нулевой, reduce возвращал первый
+    // индекс — и весь хвост доставался зоне №0 независимо от весов, даже если
+    // её вес ноль или отрицателен, а вся касса лежит в соседней.
+    const bestByWeight = weights.reduce(
+      (best, w, i) => (w > (weights[best] ?? Number.NEGATIVE_INFINITY) ? i : best),
+      0
+    );
+    const biggestIdx = result.some((v) => v > 0)
+      ? result.reduce((best, v, i) => (v > result[best] ? i : best), 0)
+      : bestByWeight;
     result[biggestIdx] += oddLeftover;
   }
   return result;

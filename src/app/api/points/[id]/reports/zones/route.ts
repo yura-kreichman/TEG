@@ -41,7 +41,12 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     where: isAllPoints ? { point: { tenantId: owner.tenantId } } : { pointId },
     include: {
       assets: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
-      tariffs: { where: { deletedAt: null } },
+      // БЕЗ фильтра deletedAt (генеральная проверка финансов 2026-09-02):
+      // computeZoneSubmissionRevenues раскладывает выручку по ВСЕМ тарифам
+      // сдачи, включая удалённые после неё, а здесь подтягивались только
+      // живые — и выручка удалённого тарифа молча пропадала из разбивки,
+      // хотя в итоге зоны она есть.
+      tariffs: {},
       // Имя точки — нужно только в режиме "Все точки", чтобы отличать
       // одноимённые зоны разных точек в списке (запрос пользователя
       // 2026-07-16) и группировать по точке (запрос пользователя
