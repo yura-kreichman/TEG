@@ -32,7 +32,6 @@ import { Money } from "@/components/money";
 import { PerformedByTag } from "@/components/performed-by-tag";
 import { PaymentMethodIcon } from "@/components/payment-method-icon";
 import { formatMoneyWithCurrency, parseMoneyInput } from "@/lib/format";
-import { distributeCollectionWhole } from "@/lib/collection-split";
 import { useSavePulse } from "@/hooks/use-save-pulse";
 import { useOwnerPrintAvailable } from "@/hooks/use-print";
 import type { PrintDocumentData } from "@/lib/print/receipt-document";
@@ -47,6 +46,9 @@ interface ZoneBalance {
   // Часть balance, которую владелец положил как размен. Нужна экрану
   // инкассации: он предлагает оставить эту сумму в кассе (2026-09-02).
   changeFundInTill: number;
+  // Доля пула — аванс/премия сотрудника, ещё не списанные с журнала зоны.
+  // Считает сервер (С3), экран только вычитает из отображаемого остатка.
+  poolShare: number;
 }
 
 interface PointTotal {
@@ -837,37 +839,17 @@ export default function ZoneBalancesPage() {
               // 2026-07-16: "после того, как Женя забрал остатки, по точке
               // должны быть 0" — должны обнулиться сами цифры зон, а не только
               // невидимый общий итог).
-              const zonesRawSum = currentZoneBalances.reduce((sum, z) => sum + z.balance, 0);
-              // Абонементные и товарные продажи наличными выделены в свои
-              // строки ниже (запрос пользователя 2026-07-18 и 2026-07-25) —
-              // вычитаем обе из pool, иначе они продолжали бы молча
-              // размазываться по остаткам зон как будто это аванс/премия,
-              // которую забрал сотрудник (goodsCashTotal раньше тут не
-              // вычитался вообще — реальный баг, товарные деньги искажали
-              // отображаемые остатки зон, просто раньше это было незаметно,
-              // потому что сама сумма нигде не показывалась).
-              const pool = currentPointTotal
-                ? Math.round(
-                    (currentPointTotal.total -
-                      zonesRawSum -
-                      currentPointTotal.abonementCashTotal -
-                      currentPointTotal.goodsCashTotal) *
-                      100
-                  ) / 100
-                : 0;
-              const allocation =
-                pool !== 0
-                  ? distributeCollectionWhole(
-                      Math.abs(pool),
-                      currentZoneBalances.map((z) => z.balance)
-                    )
-                  : currentZoneBalances.map(() => 0);
-              const poolSign = Math.sign(pool);
-
+              // Доля пула приходит С СЕРВЕРА (генеральная проверка финансов
+              // 2026-09-02, С3). Раньше экран считал её своей копией формулы —
+              // и копии разошлись: здесь абонементные и товарные наличные
+              // вычитались (правильно), а в серверном computeZonePool нет, из-за
+              // чего механизм довзыскания молча выключался. Экран рисовал одни
+              // остатки, а проводки писались по другим. Формула теперь одна.
               return (
               <>
-                {currentZoneBalances.map((zb, i) => {
-                  const displayBalance = Math.round((zb.balance + poolSign * allocation[i]) * 100) / 100;
+                {currentZoneBalances.map((zb) => {
+                  const displayBalance =
+                    Math.round((zb.balance - (zb.poolShare ?? 0)) * 100) / 100;
                   return (
                   <div
                     key={zb.zoneId}

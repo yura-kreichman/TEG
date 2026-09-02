@@ -540,13 +540,30 @@ async function computeZonePool(
 ): Promise<{ zoneIds: string[]; weights: number[]; deficit: number }> {
   const zones = await client.zone.findMany({ where: { pointId }, select: { id: true } });
   const zoneIds = zones.map((z) => z.id);
-  const [balances, pointTotal] = await Promise.all([
+  const [balances, pointTotal, abonementCash, goodsCash] = await Promise.all([
     getZoneBalances(zoneIds, client),
     getPointCashBalance(pointId, client),
+    getPointAbonementCashTotal(pointId, client),
+    getPointGoodsCashTotal(pointId, client),
   ]);
   const weights = zoneIds.map((id) => balances.get(id) ?? 0);
   const zonesRawSum = weights.reduce((a, b) => a + b, 0);
-  const deficit = Math.max(0, Math.round((zonesRawSum - pointTotal) * 100) / 100);
+  // Абонементные и товарные наличные ВЫЧИТАЮТСЯ (генеральная проверка
+  // финансов 2026-09-02, С3). Остаток точки включает их наравне с зонными
+  // деньгами, поэтому без этих двух слагаемых дефицит схлопывался в ноль, и
+  // механизм довзыскания молча выключался: A 600 + B 400, пополнение
+  // абонемента 500, аванс 300 → остаток точки 1200, и
+  // max(0, 1000 − 1200) = 0 вместо верных 300.
+  //
+  // Экран «Остатки и инкассации» считал ПРАВИЛЬНО и своей копией формулы, с
+  // комментарием, что невычитание товарных денег было реальным багом.
+  // Серверный двойник тогда не поправили — классический случай «правку
+  // сделали в одном экземпляре». Теперь формула одна, и экран берёт её
+  // результат с сервера, а не пересчитывает сам.
+  const deficit = Math.max(
+    0,
+    Math.round((zonesRawSum + abonementCash + goodsCash - pointTotal) * 100) / 100
+  );
   return { zoneIds, weights, deficit };
 }
 
@@ -556,6 +573,28 @@ async function computeZonePool(
 // экран.
 export async function getPointPoolDeficit(pointId: string, client: Tx | typeof prisma = prisma): Promise<number> {
   return (await computeZonePool(pointId, client)).deficit;
+}
+
+/**
+ * Доля пула по КАЖДОЙ зоне — для экрана «Остатки и инкассации».
+ *
+ * Раньше экран считал это сам, своей копией формулы, и копии разошлись (С3).
+ * Теперь число приходит с сервера: одно место правды, и правка формулы больше
+ * не может задеть только одну сторону. Величина положительная и означает
+ * «столько ещё предстоит списать с зоны» — экран вычитает её из остатка.
+ */
+export async function getZonePoolAllocation(
+  pointId: string,
+  client: Tx | typeof prisma = prisma
+): Promise<Map<string, number>> {
+  const { zoneIds, weights, deficit } = await computeZonePool(pointId, client);
+  const result = new Map<string, number>();
+  if (deficit === 0) return result;
+  const shares = distributeCollectionWhole(deficit, weights);
+  zoneIds.forEach((id, i) => {
+    if (shares[i]) result.set(id, shares[i]);
+  });
+  return result;
 }
 
 // Доля пула конкретной зоны — для инкассации ОДНОЙ зоны: та же пропорция,

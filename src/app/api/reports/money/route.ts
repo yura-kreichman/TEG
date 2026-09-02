@@ -17,6 +17,7 @@ import {
   getPointAbonementCashTotal,
   getPointCashBalance,
   getPointGoodsCashTotal,
+  getZonePoolAllocation,
 } from "@/lib/zone-balance";
 import { getTenantModuleFlags } from "@/lib/tenant-modules";
 
@@ -179,6 +180,13 @@ export async function GET(request: Request) {
   // инкассации предлагает оставить его в кассе, и без этого числа предлагать
   // было бы нечего. Часть balance, а не добавка к нему — размен и так внутри.
   const changeFundByZone = await getChangeFundInTillByZone(zones.map((z) => z.id));
+  // Доля пула по зонам — считает сервер, экран её больше не пересчитывает
+  // (С3): формула жила в двух экземплярах и они разошлись.
+  const poolByZone = new Map<string, number>();
+  for (const point of points) {
+    const alloc = await getZonePoolAllocation(point.id);
+    for (const [zoneId, share] of alloc) poolByZone.set(zoneId, share);
+  }
 
   const zoneBalances = zones.map((zone) => ({
     zoneId: zone.id,
@@ -188,6 +196,7 @@ export async function GET(request: Request) {
     pointName: zone.point.name,
     balance: Math.round((balanceByZone.get(zone.id) ?? 0) * 100) / 100,
     changeFundInTill: Math.round((changeFundByZone.get(zone.id) ?? 0) * 100) / 100,
+    poolShare: Math.round((poolByZone.get(zone.id) ?? 0) * 100) / 100,
   }));
 
   // Остаток по точке в целом — единый расчёт с getPointCashBalance
