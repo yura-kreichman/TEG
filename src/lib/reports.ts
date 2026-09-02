@@ -278,6 +278,8 @@ export async function computeZoneSubmissionRevenues(
     ...new Set(zoneSubmissions.filter((zs) => zoneById.get(zs.zoneId)?.accountingMode === "counters").map((zs) => zs.zoneId)),
   ];
   const balanceByZoneSubmission = new Map<string, number>();
+  // Аннулированные тапы по тарифам — для точного вычета (С5, см. ниже).
+  const voidedTapsBySubmission = new Map<string, Map<string, number>>();
   if (balanceZoneIds.length > 0) {
     // Граница сверху (аудит 2026-08-14): цепочка нужна только чтобы найти
     // предшественника каждой сдачи ОКНА — всё, что позже самой поздней из
@@ -309,6 +311,51 @@ export async function computeZoneSubmissionRevenues(
       zoneById
     );
     for (const [id, spend] of spendBySubmission) balanceByZoneSubmission.set(id, spend);
+
+    // ТОЧНЫЙ вычет возвратов/тестов у тап-Счётчиков (генеральная проверка
+    // финансов 2026-09-02, С5). Сдача вычитает аннулированные тапы по их
+    // КОНКРЕТНОМУ тарифу (voidedCountByZoneTariff в submit-results), а отчёты
+    // считали пропорционально, через returnsCount:
+    //
+    //   тарифы 50 и 100, по 10 сеансов, два теста по 100, сдано 1300
+    //   сдача:  500 + 800 = 1300  → Разница 0   ✔
+    //   отчёты: 1500 × 18/20 = 1350 → Разница −50 ✘
+    //
+    // Ошибка равна количеству возвратов, умноженному на разницу средних цен,
+    // и для tap-зон returnsCount в сдаче всегда 0 — доверять ему тут нельзя
+    // вовсе. Первичная сводка уходит с точными числами, а вот ПЕРЕСБОРКА
+    // после любой правки кассы считала по-другому, и цифра в чате менялась,
+    // даже когда выручка не менялась.
+    const tapZoneIds = balanceZoneIds.filter((id) => zoneById.get(id)?.countersTapAssistEnabled);
+    if (tapZoneIds.length > 0) {
+      const earliest = new Date(
+        Math.min(
+          ...zoneSubmissions
+            .filter((zs) => tapZoneIds.includes(zs.zoneId))
+            .map((zs) => previousByZoneSubmission.get(zs.id)?.getTime() ?? 0)
+        )
+      );
+      const voidedTaps = await prisma.counterTapEvent.findMany({
+        where: {
+          zoneId: { in: tapZoneIds },
+          voidedAt: { not: null },
+          createdAt: { gt: earliest, lte: latestInWindow },
+        },
+        select: { zoneId: true, tariffId: true, createdAt: true },
+      });
+      for (const zs of zoneSubmissions) {
+        if (!tapZoneIds.includes(zs.zoneId)) continue;
+        const since = previousByZoneSubmission.get(zs.id) ?? null;
+        const byTariff = new Map<string, number>();
+        for (const tap of voidedTaps) {
+          if (tap.zoneId !== zs.zoneId) continue;
+          if (tap.createdAt > zs.createdAt) continue;
+          if (since && tap.createdAt <= since) continue;
+          byTariff.set(tap.tariffId, (byTariff.get(tap.tariffId) ?? 0) + 1);
+        }
+        if (byTariff.size > 0) voidedTapsBySubmission.set(zs.id, byTariff);
+      }
+    }
   }
 
   const runningPrevious = new Map<string, number>(initialByKey);
@@ -527,7 +574,16 @@ export async function computeZoneSubmissionRevenues(
         price: Number(tariff.price),
         sessions: zs.assetReadings.filter((r) => r.tariffId === tariff.id).reduce((sum, r) => sum + sessionsFor(r), 0),
       }));
-      calculatedRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
+      // Тап-зона — ТОЧНЫЙ вычет по тарифу, как в сдаче итогов (С5). Для неё
+      // returnsCount в сдаче всегда 0, и пропорциональный calcZoneRevenue
+      // давал другую Разницу, чем сама сдача.
+      const voidedByTariff = voidedTapsBySubmission.get(zs.id);
+      calculatedRevenue = voidedByTariff
+        ? tariffCalc.reduce(
+            (sum, tc) => sum + Math.max(tc.sessions - (voidedByTariff.get(tc.tariffId) ?? 0), 0) * tc.price,
+            0
+          )
+        : calcZoneRevenue(tariffCalc, zs.returnsCount);
       // Уже нужного вида: какой источник брать для этой зоны (тапы или весь
       // зонный расход), решено выше при заполнении balanceByZoneSubmission —
       // по тому же правилу, что countersPaidFromBalance применяет на стороне
