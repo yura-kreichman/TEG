@@ -107,6 +107,34 @@ export function calcZoneGrossRevenue(tariffs: TariffCalcInput[]): number {
   return Math.round(total * 100) / 100;
 }
 
+/**
+ * Расчётная выручка ТАП-зоны — точный вычет по конкретному тарифу, а не
+ * пропорциональный (генеральная проверка финансов, С5/С17/С83).
+ *
+ * У зоны с включённым countersTapAssistEnabled возвраты отмечаются тапами, и
+ * известно, ПО КАКОМУ тарифу отменён каждый. returnsCount у таких сдач всегда
+ * 0, поэтому пропорциональная формула ниже им не подходит вовсе:
+ *
+ *   тарифы 50 и 100, по 10 сеансов, два теста по 100, сдано 1300
+ *   точно:           500 + 800 = 1300     → Разница 0    ✔
+ *   пропорционально: 1500 × 18/20 = 1350  → Разница −50  ✘
+ *
+ * Ошибка равна числу возвратов, умноженному на разброс цен. Сдача итогов и
+ * Отчёты считали точно, а «Итоги дня», Главная и предпросмотр правки кассы —
+ * пропорционально, и одна и та же сдача показывала разную Разницу на соседних
+ * экранах владельца.
+ */
+export function calcZoneRevenueExactVoids(
+  tariffs: TariffCalcInput[],
+  voidedByTariff: Map<string, number>
+): number {
+  const total = tariffs.reduce(
+    (sum, t) => sum + Math.max(t.sessions - (voidedByTariff.get(t.tariffId) ?? 0), 0) * t.price,
+    0
+  );
+  return Math.round(total * 100) / 100;
+}
+
 /** Расчётная выручка зоны = Σ по тарифам: (сеансы − возвраты/тесты) × цена. */
 export function calcZoneRevenue(tariffs: TariffCalcInput[], returnsCount: number): number {
   // Возвраты/тесты — общее число на зону, а не на тариф; вычитаем один раз из

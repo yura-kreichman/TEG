@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOwner } from "@/lib/require-owner";
-import { calcSessions, calcZoneRevenue, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
+import { calcSessions, calcZoneRevenue, calcZoneRevenueExactVoids, isCountersTapAssistZone, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { getCountersBalanceBySubmission } from "@/lib/abonement";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateTicketOrdersBySubmission } from "@/lib/tickets";
+import { getVoidedTapsBySubmission } from "@/lib/reports";
 import { businessDayOf, dayBoundsUtc } from "@/lib/business-day";
 import { PAYMENT_SPLIT_METHOD } from "@/lib/payment-split";
 
@@ -197,6 +198,14 @@ async function computeWindowSummary(
     for (const [id, spend] of spendBySubmission) balanceBySubmission.set(id, spend);
   }
 
+  // Аннулированные тапы по тарифам — для ТОЧНОГО вычета у тап-зон (С17/С83).
+  // Общий загрузчик, тот же, что у Отчётов и «Итогов дня».
+  const allZoneSubmissions = submissions.flatMap((s) => s.zoneSubmissions);
+  const voidedTapsBySubmission = await getVoidedTapsBySubmission(
+    allZoneSubmissions.map((zs) => ({ id: zs.id, zoneId: zs.zoneId, createdAt: zs.createdAt })),
+    [...new Set(allZoneSubmissions.filter((zs) => isCountersTapAssistZone(zs.zone)).map((zs) => zs.zoneId))]
+  );
+
   const ticketRevenueBySubmission = new Map<string, { totalAmount: number; abonementAmount: number }>();
   // Одним чтением на все сдачи дня (аудит 2026-08-14).
   const ticketAggregates = await aggregateTicketOrdersBySubmission(
@@ -275,7 +284,13 @@ async function computeWindowSummary(
           .filter((r) => r.tariffId === tariff.id)
           .reduce((sum, r) => sum + (isLaunches ? r.reading : (sessionsById.get(r.id) ?? 0)), 0),
       }));
-      const calculatedRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
+      // Тап-зона — ТОЧНЫЙ вычет по тарифу (С17/С83), как в сдаче, Отчётах и
+      // «Итогах дня». Пропорциональная формула ей не подходит: returnsCount у
+      // таких сдач всегда 0, а отменённые тапы известны поимённо.
+      const voidedByTariff = voidedTapsBySubmission.get(zs.id);
+      const calculatedRevenue = voidedByTariff
+        ? calcZoneRevenueExactVoids(tariffCalc, voidedByTariff)
+        : calcZoneRevenue(tariffCalc, zs.returnsCount);
       // Источник уже выбран по типу зоны выше (см. balanceBySubmission).
       totalDifference +=
         actualCash + expensesInSubmission - (calculatedRevenue - (balanceBySubmission.get(zs.id) ?? 0));

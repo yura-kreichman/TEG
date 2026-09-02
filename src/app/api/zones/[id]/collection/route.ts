@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantZone, requireOwner } from "@/lib/require-owner";
-import { getZonePoolShare, settleOutstandingCollectionAdvance } from "@/lib/zone-balance";
+import { getZonePoolShare, settleOutstandingCollectionAdvance, settleZonePoolRemainder } from "@/lib/zone-balance";
 import { announceCollection } from "@/lib/collection-alert";
 
 // Инкассация по конкретной зоне, но вносит владелец (запрос пользователя
@@ -78,6 +78,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
         performedByUserId: owner.user.id,
       },
     });
+    // Доли ОСТАЛЬНЫХ зон — той же транзакцией (С21/С23). Иначе после этой
+    // инкассации отсечка аванса сдвигается, дефицит схлопывается в ноль, и
+    // долг соседних зон не спишется уже никогда. Разбор — у самой функции.
+    await settleZonePoolRemainder(owner.tenantId, zone.pointId, zoneId, null, tx);
     return { poolShare, operationId: created.id, occurredAt: created.occurredAt };
   });
 

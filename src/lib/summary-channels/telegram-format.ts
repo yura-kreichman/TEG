@@ -315,7 +315,11 @@ export function formatZoneSummaryTelegram(
     const parts: string[] = [...pointPrefix, zoneHeader(data, settings.showOperator, timezone)];
 
     if (data.accountingMode === "cash_only") {
-      parts.push(`💵 ${st.cashOnly}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
+      // Наличные + безнал под ярлыком «Касса» — как в общей ветке ниже и в
+      // push-уведомлении (С82). У cash_only показывались ТОЛЬКО наличные, и
+      // один ярлык давал два разных числа в чате и в шторке телефона. Безнал
+      // у такой зоны сотрудник вводит наравне с наличными.
+      parts.push(`💵 ${st.cashOnly}: <b>${formatMoney(data.cashAmount + data.mobileAmount, locale)}</b>`);
       // Справочно (аудит 2026-07-25) — cash_only тоже поддерживает оплату
       // балансом, но раньше эта ветка её нигде не показывала, в отличие от
       // веб-кабинета ("Итоги дня"), где строка "Баланс" была всегда.
@@ -453,7 +457,8 @@ export function formatZoneSummaryTelegram(
   const lines: string[] = [...pointPrefix, zoneHeader(data, settings.showOperator, timezone)];
 
   if (data.accountingMode === "cash_only") {
-    lines.push("", `💵 ${st.cashOnly}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
+    // Наличные + безнал — см. комментарий в компактной ветке выше (С82).
+    lines.push("", `💵 ${st.cashOnly}: <b>${formatMoney(data.cashAmount + data.mobileAmount, locale)}</b>`);
     if (data.abonementAmount > 0) {
       lines.push(`🎫 ${st.abonement}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
     }

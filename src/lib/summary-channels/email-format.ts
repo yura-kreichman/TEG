@@ -74,7 +74,8 @@ export function formatZoneSummaryEmail(
   const rows: EmailRow[] = [];
 
   if (data.accountingMode === "cash_only") {
-    rows.push({ label: st.cashOnly, value: formatMoney(data.cashAmount, locale), bold: true });
+    // Наличные + безнал — как в чате и в уведомлении (С82).
+    rows.push({ label: st.cashOnly, value: formatMoney(data.cashAmount + data.mobileAmount, locale), bold: true });
   } else {
     if (data.isGameRoom) {
       if (settings.showReadings) {

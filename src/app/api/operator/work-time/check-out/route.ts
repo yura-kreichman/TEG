@@ -22,6 +22,22 @@ import { formatMoney } from "@/lib/format";
 // (endAt=now). Аванс/премия — тот же bottom sheet, что подтверждает check-out
 // на главном экране PWA, необязательны (по умолчанию 0), проверка овердрафта
 // как в ручном вводе смены (POST /api/operator/work-time/shifts).
+/**
+ * Отказ денежной части — БРОСАЕТСЯ, а не возвращается (генеральная проверка
+ * финансов, С49). Обычный возврат из prisma.$transaction её коммитит: смена
+ * оставалась закрытой/созданной без аванса и премии, а повторить было нельзя —
+ * второй заход упирался в «уже закрыта» / «пересекается». Касса точки и
+ * «к выдаче» сотрудника расходились навсегда. Бросок откатывает всё разом.
+ */
+class CashOutRefused extends Error {
+  constructor(
+    public reason: "closed" | "point" | "personal",
+    public amount = 0
+  ) {
+    super("cash out refused");
+  }
+}
+
 export async function POST(request: Request) {
   const ctx = await requireOperator();
   if (!ctx) {
@@ -136,7 +152,7 @@ export async function POST(request: Request) {
       where: { id: openShift.id, isOpen: true },
       data: { endAt, isOpen: false },
     });
-    if (closeResult.count === 0) return { ok: false as const, reason: "closed" as const };
+    if (closeResult.count === 0) throw new CashOutRefused("closed");
 
     if (advanceAmount + bonusAmount > 0) {
       const freshBalance = await getPointCashBalance(shiftPointId, tx);
@@ -148,7 +164,7 @@ export async function POST(request: Request) {
       // повторить было нельзя: смена уже закрыта, второй заход даёт 409.
       // Оптимистичная проверка выше такую обёртку имеет с самого начала.
       if (cashOutAmount > 0 && cashOutAmount > freshBalance) {
-        return { ok: false as const, reason: "point" as const, freshBalance };
+        throw new CashOutRefused("point", freshBalance);
       }
       if (advanceAmount > 0) {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${operator.id}))`;
@@ -162,7 +178,7 @@ export async function POST(request: Request) {
         // Эталон — work-time/shifts/[id]/route.ts.
         const projectedToPayOut = freshOperatorBalance.toPayOut;
         if (!operator.overdraftAllowed && advanceAmount > projectedToPayOut) {
-          return { ok: false as const, reason: "personal" as const, projectedToPayOut };
+          throw new CashOutRefused("personal", projectedToPayOut);
         }
         await tx.moneyOperation.create({
           data: {
@@ -201,18 +217,25 @@ export async function POST(request: Request) {
         await chargeSelfServiceAdvanceToZones(point.tenantId, shiftPointId, cashOutAmount, operator.id, tx);
       }
     }
-    return { ok: true as const };
-  });
+      return { ok: true as const };
+    })
+    // Отказ приходит БРОСКОМ, не значением (С49) — только так транзакция
+    // откатывается вместе с уже закрытой сменой. Ловим свой тип, чужие
+    // ошибки пропускаем наверх как раньше.
+    .catch((err: unknown) => {
+      if (err instanceof CashOutRefused) return { ok: false as const, refused: err };
+      throw err;
+    });
 
   if (!closed.ok) {
-    if (closed.reason === "closed") {
+    if (closed.refused.reason === "closed") {
       return NextResponse.json({ error: "Смена уже закрыта" }, { status: 409 });
     }
     const locale = await resolveLocale();
     const error =
-      closed.reason === "point"
-        ? `Сумма превышает остаток кассы точки (${formatMoney(closed.freshBalance, locale)})`
-        : `Аванс превышает доступный баланс к выдаче (${formatMoney(closed.projectedToPayOut, locale)})`;
+      closed.refused.reason === "point"
+        ? `Сумма превышает остаток кассы точки (${formatMoney(closed.refused.amount, locale)})`
+        : `Аванс превышает доступный баланс к выдаче (${formatMoney(closed.refused.amount, locale)})`;
     return NextResponse.json({ error }, { status: 400 });
   }
 

@@ -46,7 +46,7 @@ import { useI18n, useLocale } from "@/components/i18n-provider";
 import type { Dictionary } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { PerformedByTag } from "@/components/performed-by-tag";
-import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, type ZoneAccountingMode } from "@/lib/results-calc";
+import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, calcZoneRevenueExactVoids, type ZoneAccountingMode } from "@/lib/results-calc";
 import { formatMoney, parseMoneyInput } from "@/lib/format";
 import { Money } from "@/components/money";
 import { MoneyInput } from "@/components/money-input";
@@ -95,6 +95,8 @@ interface DayCard {
   // Расходы, которые эта сдача забрала себе — слагаемое Разницы, считает
   // сервер (С18).
   expensesInSubmission: number;
+  // Отменённые тапы по тарифам — для точного вычета у тап-зон (С83).
+  voidedTapsByTariff?: Record<string, number>;
   returnsCount: number;
   // Отдельные события тестовых прогонов, из которых сложился returnsCount
   // выше (см. returnEventsBySubmission в /api/reports/submissions/day).
@@ -805,7 +807,16 @@ export default function ReadingsCalendarPage() {
     // без поправки разница ложно показывала недостачу ровно на сумму пусков,
     // оплаченных абонементом).
     const calculatedRevenue = isLiveZone ? card.calculatedRevenue : calcZoneGrossRevenue(tariffCalc);
-    const netRevenue = isLiveZone ? card.netRevenue : calcZoneRevenue(tariffCalc, Number(editReturns || 0));
+    // Тап-зона — ТОЧНЫЙ вычет по тарифу, как на сервере (С83). Своего
+    // источника отменённых тапов у клиента не было, и он применял
+    // пропорциональную формулу с returnsCount = 0, то есть показывал валовую
+    // выручку там, где карточка рядом показывала чистую.
+    const voidedTaps = card.voidedTapsByTariff;
+    const netRevenue = isLiveZone
+      ? card.netRevenue
+      : voidedTaps && Object.keys(voidedTaps).length > 0
+        ? calcZoneRevenueExactVoids(tariffCalc, new Map(Object.entries(voidedTaps)))
+        : calcZoneRevenue(tariffCalc, Number(editReturns || 0));
     const actualCash = parseMoneyInput(editCash) + parseMoneyInput(editMobile);
     // Какая часть баланса участвует в Разнице — решено на сервере
     // (countersPaidFromBalance); тут только применяем. Своя копия этого

@@ -213,6 +213,63 @@ export interface ZoneSubmissionRevenue {
  * Walks each asset+tariff's FULL history (not just the window) so sessions at
  * the window's start are still diffed against the correct previous reading.
  */
+/**
+ * Аннулированные тапы, разложенные по сдаче и тарифу — для точного вычета
+ * (calcZoneRevenueExactVoids). Вынесено сюда из тела computeZoneSubmissionRevenues,
+ * чтобы «Итоги дня» и Главная считали ту же выручку тап-зоны, что Отчёты и
+ * сама сдача, а не пропорциональную (С17/С83).
+ *
+ * Окно каждой сдачи — от ПРЕДЫДУЩЕЙ сдачи той же зоны до неё самой, поэтому
+ * нужна вся цепочка сдач, а не только те, что попали в период.
+ */
+export async function getVoidedTapsBySubmission(
+  submissions: { id: string; zoneId: string; createdAt: Date }[],
+  tapZoneIds: string[]
+): Promise<Map<string, Map<string, number>>> {
+  const result = new Map<string, Map<string, number>>();
+  const inScope = submissions.filter((zs) => tapZoneIds.includes(zs.zoneId));
+  if (inScope.length === 0 || tapZoneIds.length === 0) return result;
+
+  // Граница сверху: цепочка нужна только чтобы найти предшественника каждой
+  // сдачи окна — всё, что позже самой поздней из них, бесполезно. Без границы
+  // запрос рос бы вместе с историей вечно (аудит 2026-08-14).
+  const latestInWindow = new Date(Math.max(...inScope.map((zs) => zs.createdAt.getTime())));
+  const chain = await prisma.zoneSubmission.findMany({
+    where: { zoneId: { in: tapZoneIds }, createdAt: { lte: latestInWindow } },
+    select: { id: true, zoneId: true, createdAt: true },
+    orderBy: { createdAt: "asc" },
+  });
+  const previousBySubmission = new Map<string, Date | null>();
+  const lastSeenByZone = new Map<string, Date>();
+  for (const row of chain) {
+    previousBySubmission.set(row.id, lastSeenByZone.get(row.zoneId) ?? null);
+    lastSeenByZone.set(row.zoneId, row.createdAt);
+  }
+
+  const earliest = new Date(Math.min(...inScope.map((zs) => previousBySubmission.get(zs.id)?.getTime() ?? 0)));
+  const voidedTaps = await prisma.counterTapEvent.findMany({
+    where: {
+      zoneId: { in: tapZoneIds },
+      voidedAt: { not: null },
+      createdAt: { gt: earliest, lte: latestInWindow },
+    },
+    select: { zoneId: true, tariffId: true, createdAt: true },
+  });
+
+  for (const zs of inScope) {
+    const since = previousBySubmission.get(zs.id) ?? null;
+    const byTariff = new Map<string, number>();
+    for (const tap of voidedTaps) {
+      if (tap.zoneId !== zs.zoneId) continue;
+      if (tap.createdAt > zs.createdAt) continue;
+      if (since && tap.createdAt <= since) continue;
+      byTariff.set(tap.tariffId, (byTariff.get(tap.tariffId) ?? 0) + 1);
+    }
+    if (byTariff.size > 0) result.set(zs.id, byTariff);
+  }
+  return result;
+}
+
 export async function computeZoneSubmissionRevenues(
   zoneIds: string[],
   start: Date,

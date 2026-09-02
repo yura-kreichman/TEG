@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@/generated/prisma/client";
 import { requireOperator } from "@/lib/require-operator";
 import {
   calcOperatorBalance,
@@ -22,6 +23,93 @@ import { notifyDailyCashLateSubmission, onShiftClosed } from "@/lib/summary-chan
 import { rememberShiftSummaryMessage } from "@/lib/summary-channels/resync";
 
 class ShiftOverlapError extends Error {}
+
+/**
+ * Отказ денежной части — БРОСАЕТСЯ, а не возвращается (С49). Обычный возврат
+ * из prisma.$transaction её коммитит: смена оставалась созданной без аванса и
+ * премии, а повторить было нельзя — вторая попытка упиралась в пересечение.
+ */
+class CashOutRefused extends Error {
+  constructor(
+    public reason: "point" | "personal",
+    public amount: number
+  ) {
+    super("cash out refused");
+  }
+}
+
+/**
+ * Денежная часть ручного ввода смены — аванс, премия и их разнесение по
+ * зонам. Вынесено, чтобы вызываться ВНУТРИ той же транзакции, что создаёт
+ * саму смену (С49): раньше это была отдельная транзакция после коммита
+ * смены, и её отказ оставлял смену без денег, без возможности повторить.
+ *
+ * Отказы — броском CashOutRefused: обычный возврат из prisma.$transaction её
+ * коммитит, то есть откатить уже созданную смену было бы нечем.
+ */
+async function writeShiftCashOut(
+  tx: Prisma.TransactionClient,
+  p: {
+    tenantId: string;
+    pointId: string;
+    operator: { id: string; overdraftAllowed: boolean };
+    shiftId: string;
+    advanceAmount: number;
+    bonusAmount: number;
+    cashOutAmount: number;
+    bonusIsAccrual: boolean;
+  }
+) {
+  // С tx, а не мимо него: авторитетная проверка под локом обязана читать
+  // данные ТОЙ ЖЕ транзакции, иначе лок защищает не то, что проверяется.
+  const freshBalance = await getPointCashBalance(p.pointId, tx);
+  // cashOutAmount > 0 — см. С11 в check-out: в режиме «Только начисление» из
+  // кассы не уходит ничего, и без обёртки премия терялась при отрицательной
+  // кассе точки.
+  if (p.cashOutAmount > 0 && p.cashOutAmount > freshBalance) {
+    throw new CashOutRefused("point", freshBalance);
+  }
+  if (p.advanceAmount > 0) {
+    const freshOperatorBalance = await calcOperatorBalance(p.operator.id, undefined, tx);
+    // БЕЗ прибавки accrued (С10): смена создана этой же транзакцией и уже
+    // закрыта — её начисление внутри toPayOut.
+    const projectedToPayOut = freshOperatorBalance.toPayOut;
+    if (!p.operator.overdraftAllowed && p.advanceAmount > projectedToPayOut) {
+      throw new CashOutRefused("personal", projectedToPayOut);
+    }
+    await tx.moneyOperation.create({
+      data: {
+        tenantId: p.tenantId,
+        pointId: p.pointId,
+        type: "advance",
+        amount: -p.advanceAmount,
+        performedByOperatorId: p.operator.id,
+        beneficiaryOperatorId: p.operator.id,
+        shiftId: p.shiftId,
+      },
+    });
+  }
+  if (p.bonusAmount > 0) {
+    await tx.moneyOperation.create({
+      data: {
+        tenantId: p.tenantId,
+        pointId: p.pointId,
+        // Начисленная премия — положительной суммой и другим типом: кассу не
+        // трогает, увеличивает долг компании (см. MoneyOperation в схеме).
+        type: p.bonusIsAccrual ? "bonus_accrual" : "bonus_payout",
+        amount: p.bonusIsAccrual ? p.bonusAmount : -p.bonusAmount,
+        performedByOperatorId: p.operator.id,
+        beneficiaryOperatorId: p.operator.id,
+        shiftId: p.shiftId,
+      },
+    });
+  }
+  // Разнесение по зонам — той же транзакцией и под тем же локом (С19).
+  // cashOutAmount: начисленная премия из кассы не уходила, разносить нечего.
+  if (p.cashOutAmount > 0) {
+    await chargeSelfServiceAdvanceToZones(p.tenantId, p.pointId, p.cashOutAmount, p.operator.id, tx);
+  }
+}
 
 export async function GET(request: Request) {
   const ctx = await requireOperator();
@@ -156,110 +244,60 @@ export async function POST(request: Request) {
   // два почти одновременных ручных ввода смены (двойной клик, две вкладки)
   // могли оба пройти её на одном и том же устаревшем состоянии и оба
   // создать реально пересекающиеся смены.
+  // СМЕНА И ДЕНЬГИ — ОДНОЙ ТРАНЗАКЦИЕЙ (генеральная проверка финансов, С49).
+  // Раньше их было две: смена создавалась первой и коммитилась, а при отказе
+  // денежной (превышен остаток кассы или личный баланс) оставалась в базе БЕЗ
+  // аванса и премии. Повторить ввод было нельзя — вторая попытка упиралась в
+  // «Смена пересекается с другой вашей сменой», и касса с «к выдаче»
+  // расходились навсегда. Ровно тот же сбой, что чинили в check-out.
+  //
+  // Порядок локов — pointId, затем operatorId: тот же во всём проекте, чтобы
+  // ни одна пара транзакций не встретилась в обратном.
   let shift;
   try {
     shift = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${point.id}))`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${operator.id}))`;
+      // Авторитетная проверка пересечения под локом (аудит 2026-07-25):
+      // оптимистичная выше гонку не закрывает — два почти одновременных ввода
+      // читали одно устаревшее состояние и оба создавали пересекающиеся смены.
       if (await hasOverlappingShift(operator.id, startAt, endAt, undefined, tx)) {
         throw new ShiftOverlapError();
       }
-      return tx.shift.create({
+      const created = await tx.shift.create({
         data: { tenantId: point.tenantId, operatorId: operator.id, pointId: point.id, startAt, endAt },
       });
+
+      if (advanceAmount + bonusAmount > 0) {
+        await writeShiftCashOut(tx, {
+          tenantId: point.tenantId,
+          pointId: point.id,
+          operator,
+          shiftId: created.id,
+          advanceAmount,
+          bonusAmount,
+          cashOutAmount,
+          bonusIsAccrual,
+        });
+      }
+      return created;
     });
   } catch (err) {
     if (err instanceof ShiftOverlapError) {
       return NextResponse.json({ error: "Смена пересекается с другой вашей сменой" }, { status: 409 });
     }
+    // Отказ денежной части — броском, чтобы транзакция откатила и смену.
+    if (err instanceof CashOutRefused) {
+      const locale = await resolveLocale();
+      const error =
+        err.reason === "point"
+          ? `Сумма превышает остаток кассы точки (${formatMoney(err.amount, locale)})`
+          : `Аванс превышает доступный баланс к выдаче (${formatMoney(err.amount, locale)})`;
+      return NextResponse.json({ error }, { status: 400 });
+    }
     throw err;
   }
 
-  // Авторитетная, атомарная проверка потолка под локом по pointId — см.
-  // тот же паттерн и комментарий в /api/operator/work-time/check-out.
-  // Проверка выше — только быстрый оптимистичный отказ, не закрывает гонку
-  // сама по себе.
-  //
-  // Личный баланс "к выдаче" (аудит 2026-07-31) — раньше был только
-  // оптимистичной проверкой ВЫШЕ (строки 90-108), без авторитетного повтора
-  // под локом, в отличие от кассы точки рядом. Реальная гонка: Владелец
-  // выдаёт ручной аванс с карточки оператора (тоже под локом по operatorId,
-  // см. /api/operators/[id]/work-time/advance) почти одновременно с тем, как
-  // сотрудник сам вводит смену с авансом — обе транзакции читали баланс ДО
-  // списания другой и обе проходили проверку, суммарно пробивая
-  // overdraftAllowed=false. Лок по operatorId — тем же порядком (сначала
-  // pointId, потом operatorId), что и везде в этом файле, чтобы не
-  // столкнуться в обратном порядке ни с одной другой транзакцией проекта.
-  if (advanceAmount + bonusAmount > 0) {
-    const result = await prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${point.id}))`;
-      // С tx, а не мимо него: авторитетная проверка под локом обязана читать
-      // данные ТОЙ ЖЕ транзакции, иначе лок защищает не то, что проверяется.
-      const freshBalance = await getPointCashBalance(point.id, tx);
-      // cashOutAmount > 0 — см. С11 в check-out: в режиме «Только начисление»
-      // из кассы не уходит ничего, и без обёртки премия терялась при
-      // отрицательной кассе точки.
-      if (cashOutAmount > 0 && cashOutAmount > freshBalance) {
-        return { ok: false as const, reason: "point" as const, freshBalance };
-      }
-      if (advanceAmount > 0) {
-        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${operator.id}))`;
-        const freshOperatorBalance = await calcOperatorBalance(operator.id, undefined, tx);
-        // БЕЗ прибавки accrued (С10): смена создана выше, строкой 166, и уже
-        // закрыта — её начисление внутри toPayOut. Прибавка считала его
-        // дважды и делала авторитетную проверку мягче оптимистичной ровно на
-        // смену зарплаты, при том что существует она именно ради строгости.
-        const projectedToPayOut = freshOperatorBalance.toPayOut;
-        if (!operator.overdraftAllowed && advanceAmount > projectedToPayOut) {
-          return { ok: false as const, reason: "personal" as const, projectedToPayOut };
-        }
-        await tx.moneyOperation.create({
-          data: {
-            tenantId: point.tenantId,
-            pointId: point.id,
-            type: "advance",
-            amount: -advanceAmount,
-            performedByOperatorId: operator.id,
-            beneficiaryOperatorId: operator.id,
-            shiftId: shift.id,
-          },
-        });
-      }
-      if (bonusAmount > 0) {
-        await tx.moneyOperation.create({
-          data: {
-            tenantId: point.tenantId,
-            pointId: point.id,
-            // Начисленная премия — положительной суммой и другим типом:
-            // кассу не трогает, увеличивает долг компании (см. комментарий
-            // у MoneyOperation в schema.prisma).
-            type: bonusIsAccrual ? "bonus_accrual" : "bonus_payout",
-            amount: bonusIsAccrual ? bonusAmount : -bonusAmount,
-            performedByOperatorId: operator.id,
-            beneficiaryOperatorId: operator.id,
-            shiftId: shift.id,
-          },
-        });
-      }
-      // Разнесение по зонам — ТОЙ ЖЕ транзакцией и под тем же локом
-      // (генеральная проверка финансов 2026-09-02, С19). Раньше вызывалось
-      // после коммита и открывало свою: в зазор успевала инкассация, списывала
-      // те же деньги через poolDeficit, и запоздавшее разнесение списывало их
-      // второй раз — зона уходила в минус при пустом ящике, необратимо.
-      // cashOutAmount: начисленная премия из кассы не уходила, разносить нечего.
-      if (cashOutAmount > 0) {
-        await chargeSelfServiceAdvanceToZones(point.tenantId, point.id, cashOutAmount, operator.id, tx);
-      }
-      return { ok: true as const };
-    });
-    if (!result.ok) {
-      const locale = await resolveLocale();
-      const error =
-        result.reason === "point"
-          ? `Сумма превышает остаток кассы точки (${formatMoney(result.freshBalance, locale)})`
-          : `Аванс превышает доступный баланс к выдаче (${formatMoney(result.projectedToPayOut, locale)})`;
-      return NextResponse.json({ error }, { status: 400 });
-    }
-  }
 
   const balance = await calcOperatorBalance(operator.id);
   const tenantForTz = await prisma.tenant.findUnique({

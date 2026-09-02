@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireOwner } from "@/lib/require-owner";
-import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, countersPaidFromBalance, isCountersTapAssistZone, isCountersZone, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
+import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, calcZoneRevenueExactVoids, countersPaidFromBalance, isCountersTapAssistZone, isCountersZone, isLaunchesZone, isStaysZone, isTicketsZone } from "@/lib/results-calc";
 import { getZoneTapAbonementAmount } from "@/lib/abonement";
 import { getInitialReadingsMap } from "@/lib/asset-initial-readings";
 import { aggregateTicketOrdersBySubmission, ticketRevenueByAssetVariant, listTicketOrdersForWindow, type TicketOrderWindowItem } from "@/lib/tickets";
 import { calculateGoodsCashBeforeReconciliation } from "@/lib/goods";
-import { round2 } from "@/lib/reports";
+import { getVoidedTapsBySubmission, round2 } from "@/lib/reports";
 import { PAYMENT_SPLIT_METHOD } from "@/lib/payment-split";
 import { dayBoundsUtc } from "@/lib/business-day";
 import { getPointCashBalance, getPointChangeFundInTill } from "@/lib/zone-balance";
@@ -531,6 +531,15 @@ export async function GET(request: Request) {
       })
     : [];
 
+  // Аннулированные тапы по тарифам — для ТОЧНОГО вычета у тап-зон (С17/С83).
+  // Тот же общий загрузчик, что и в Отчётах: три копии одного запроса и одной
+  // формулы — как раз то, из-за чего соседние экраны и разошлись.
+  const allZoneSubmissions = submissions.flatMap((s) => s.zoneSubmissions);
+  const voidedTapsBySubmission = await getVoidedTapsBySubmission(
+    allZoneSubmissions.map((zs) => ({ id: zs.id, zoneId: zs.zoneId, createdAt: zs.createdAt })),
+    [...new Set(allZoneSubmissions.filter((zs) => isCountersTapAssistZone(zs.zone)).map((zs) => zs.zoneId))]
+  );
+
   const initialByKey = await getInitialReadingsMap([...assetIds]);
   const runningPrevious = new Map<string, number>(initialByKey);
   const previousById = new Map<string, number>();
@@ -809,11 +818,18 @@ export async function GET(request: Request) {
         : isLiveZone
           ? (liveRevenueBySubmission.get(zs.id) ?? 0)
           : calcZoneGrossRevenue(tariffCalc);
+      // Тап-зона — ТОЧНЫЙ вычет по тарифу, как в самой сдаче и в Отчётах
+      // (С17/С83). Пропорциональная формула для неё неверна в принципе:
+      // returnsCount у таких сдач всегда 0, а отменённые тапы известны
+      // поимённо. Разбор — у calcZoneRevenueExactVoids.
+      const voidedByTariff = voidedTapsBySubmission.get(zs.id);
       const netRevenue = isTickets
         ? (ticketData?.totalAmount ?? 0)
         : isLiveZone
           ? (liveRevenueBySubmission.get(zs.id) ?? 0)
-          : calcZoneRevenue(tariffCalc, zs.returnsCount);
+          : voidedByTariff
+            ? calcZoneRevenueExactVoids(tariffCalc, voidedByTariff)
+            : calcZoneRevenue(tariffCalc, zs.returnsCount);
       const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
       // Справочно, рядом с cashAmount/mobileAmount — сумма реальна, но касса
       // точки её уже получила раньше, при пополнении, поэтому она намеренно
@@ -994,6 +1010,11 @@ export async function GET(request: Request) {
         // Обе поправки одним числом: шторка правки считает ту же формулу, что
         // и карточка, и разделять их ей незачем — она только складывает.
         expensesInSubmission: outsideTill,
+        // Отменённые тапы по тарифам (С83) — чтобы шторка правки считала ту же
+        // выручку тап-зоны, что и карточка. Своего источника у клиента не
+        // было, и он применял пропорциональную формулу с returnsCount = 0,
+        // то есть показывал ВАЛОВУЮ выручку там, где сервер считал чистую.
+        voidedTapsByTariff: Object.fromEntries(voidedByTariff ?? []),
         returnsCount: zs.returnsCount,
         // Построчная история к счётчику выше (см. returnEventsBySubmission).
         returnEvents: returnEventsBySubmission.get(zs.id) ?? [],

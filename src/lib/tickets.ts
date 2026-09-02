@@ -240,6 +240,9 @@ export async function aggregateTicketOrdersBySubmission(
   if (windows.length === 0) return result;
 
   const until = new Date(Math.max(...windows.map((w) => w.until.getTime())));
+  // Нижняя граница — по самому раннему началу окон: то, что отменили ещё до
+  // него, не нужно ни одному окну. Нужна только чтобы ограничить выборку.
+  const earliestSince = new Date(Math.min(...windows.map((w) => w.since?.getTime() ?? 0)));
   const tickets = await tx.ticket.findMany({
     where: {
       // Аннулирование НЕ переписывает уже закрытую сдачу (генеральная
@@ -249,14 +252,21 @@ export async function aggregateTicketOrdersBySubmission(
       // кассы». Фильтр по статусу не смотрел на ВРЕМЯ отмены и задним числом
       // менял расчётную выручку закрытого дня. Поле Ticket.voidedAt писалось
       // с самого начала, но не читалось нигде.
-      OR: [{ voidedAt: null }, { voidedAt: { gt: until } }],
+      // Верхняя граница здесь — по САМОМУ ПОЗДНЕМУ окну, и только чтобы не
+      // тянуть историю целиком. Сравнение с границей КОНКРЕТНОГО окна идёт
+      // ниже, в цикле (генеральная проверка финансов, С26): билет, отменённый
+      // после своей сдачи, но до самой поздней сдачи списка, этот общий фильтр
+      // выбрасывал отовсюду — в том числе из своей уже закрытой сдачи, то есть
+      // ровно тот сбой, который С8 и чинил.
+      OR: [{ voidedAt: null }, { voidedAt: { gt: earliestSince } }],
       order: { zoneId: { in: [...new Set(windows.map((w) => w.zoneId))] }, soldAt: { lte: until } },
     },
     select: {
       priceSnapshot: true,
       status: true,
       orderId: true,
-      order: { select: { paymentMethod: true, expiresAt: true, zoneId: true, soldAt: true } },
+      voidedAt: true,
+      order: { select: { paymentMethod: true, expiresAt: true, zoneId: true, soldAt: true, totalSnapshot: true } },
     },
   });
 
@@ -282,11 +292,19 @@ export async function aggregateTicketOrdersBySubmission(
 
   const now = new Date();
   for (const w of windows) {
+    // Отмена сравнивается с границей ЭТОГО окна (С26): билет, отменённый уже
+    // после своей сдачи, для неё остаётся проданным — «сдача неизменна,
+    // возврат это текущее событие кассы» (docs/spec/10-tickets.md:43).
     const inWindow = (byZone.get(w.zoneId) ?? []).filter(
-      (t) => t.order.soldAt <= w.until && (!w.since || t.order.soldAt > w.since)
+      (t) =>
+        t.order.soldAt <= w.until &&
+        (!w.since || t.order.soldAt > w.since) &&
+        (t.voidedAt == null || t.voidedAt > w.until)
     );
     const orderIds = new Set<string>();
     const splitInWindow = new Set<string>();
+    // Сколько денег заказа реально попало в окно — для пропорции долей (С27).
+    const countedByOrder = new Map<string, number>();
     let totalAmount = 0;
     let cashAmount = 0;
     let mobileAmount = 0;
@@ -301,18 +319,39 @@ export async function aggregateTicketOrdersBySubmission(
       if (t.order.paymentMethod === "cash") cashAmount += amount;
       else if (t.order.paymentMethod === "mobile") mobileAmount += amount;
       else if (t.order.paymentMethod === "abonement") abonementAmount += amount;
-      else if (t.order.paymentMethod === PAYMENT_SPLIT_METHOD) splitInWindow.add(t.orderId);
+      else if (t.order.paymentMethod === PAYMENT_SPLIT_METHOD) {
+        splitInWindow.add(t.orderId);
+        countedByOrder.set(t.orderId, (countedByOrder.get(t.orderId) ?? 0) + amount);
+      }
 
       if (t.status === "redeemed") redeemedCount += 1;
       else if (isTicketExpired({ status: t.status }, t.order, now)) expiredCount += 1;
     }
 
+    // Доли разбитой оплаты — ПРОПОРЦИОНАЛЬНО тому, сколько билетов заказа
+    // реально попало в окно (С27). Раньше при любом попавшем билете к окну
+    // прибавлялись доли ЗАКАЗА ЦЕЛИКОМ: если часть билетов отменена, итог
+    // считался по уцелевшим, а разбивка — по всем, и «нал + безнал + баланс»
+    // переставало сходиться с «Итого». Остаток округления — на последнюю
+    // долю, тем же приёмом, что у долей корзины Товаров.
+    const totalByOrder = new Map<string, number>();
+    for (const t of inWindow) totalByOrder.set(t.orderId, Number(t.order.totalSnapshot));
     for (const orderId of splitInWindow) {
-      for (const leg of legsByOrder.get(orderId) ?? []) {
-        if (leg.method === "cash") cashAmount += leg.amount;
-        else if (leg.method === "mobile") mobileAmount += leg.amount;
-        else if (leg.method === "abonement") abonementAmount += leg.amount;
-      }
+      const legs = legsByOrder.get(orderId) ?? [];
+      const counted = countedByOrder.get(orderId) ?? 0;
+      const orderTotal = totalByOrder.get(orderId) ?? 0;
+      const ratio = orderTotal > 0 ? counted / orderTotal : 0;
+      let allocated = 0;
+      legs.forEach((leg, i) => {
+        const share =
+          i === legs.length - 1
+            ? Math.round((counted - allocated) * 100) / 100
+            : Math.round(leg.amount * ratio * 100) / 100;
+        allocated += share;
+        if (leg.method === "cash") cashAmount += share;
+        else if (leg.method === "mobile") mobileAmount += share;
+        else if (leg.method === "abonement") abonementAmount += share;
+      });
     }
 
     result.set(w.id, {
