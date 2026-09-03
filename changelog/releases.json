@@ -1,11 +1,746 @@
 {
   "note": "СГЕНЕРИРОВАННЫЙ ФАЙЛ. Правьте changelog/seed.json или трейлер Changelog: в коммите — см. changelog/README.md.",
-  "version": "1.24.0",
+  "version": "2.0.0",
   "anchor": {
-    "sha": "945990af3855ab762941563e45861e227d086074",
-    "day": "2026-08-26"
+    "sha": "e97a37a9641a3b0f3f82d478b1eb5e1493f9079d",
+    "day": "2026-09-03"
   },
   "releases": [
+    {
+      "version": "2.0.0",
+      "day": "2026-09-03",
+      "entries": [
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Произвольный период в Деньгах и Товарах больше не сдвигается на сутки у точек с вечерней границей дня",
+            "en": "A custom date range in Money and Goods is no longer shifted by a day for venues with an evening business-day boundary"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Заказ билетов, проданный в момент сдачи итогов, больше не может выпасть из выручки",
+            "en": "A ticket order sold at the moment of a results submission can no longer fall out of the revenue"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Правка расхода и аннулирование продажи товара обновляют сводки в чате",
+            "en": "Editing an expense or voiding a goods sale now updates the chat summaries"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Премия за ночную смену попадает в тот же период отчёта, что и сама смена",
+            "en": "A night shift's bonus now lands in the same report period as the shift itself"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Отказ при закрытии или вводе смены больше не оставляет смену без аванса и премии — раньше повторить было нельзя",
+            "en": "A refusal when closing or entering a shift no longer leaves the shift without its advance and bonus — it used to be impossible to retry"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Инкассация одной зоны гасит непогашенный аванс целиком — долг остальных зон больше не зависает навсегда",
+            "en": "Collecting one zone now settles the outstanding advance in full — the other zones' debt no longer hangs forever"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "«Итоги дня» и Главная считают выручку тап-зон так же, как сдача итогов и Отчёты",
+            "en": "Daily results and Home now compute tap-zone revenue the same way as the results submission and Reports"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Аннулированный билет больше не исчезает из уже закрытой сдачи",
+            "en": "A voided ticket no longer disappears from an already closed submission"
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Генеральная проверка финансов: девяносто находок разобраны поштучно, расчёты кассы, разницы и сводок приведены к одной формуле во всех местах сразу",
+            "en": "A full financial audit: ninety findings worked through one by one, and the cash, difference and summary calculations brought to a single formula everywhere at once"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Удаление тапа после пометки «Возврат» больше не зачисляет клиенту деньги второй раз",
+            "en": "Deleting a tap after marking it as a return no longer credits the client twice"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Правка и удаление аванса из карточки сотрудника пересчитывают остатки зон — раньше деньги зависали в журнале",
+            "en": "Editing or deleting an advance from an employee card now recalculates zone balances — the money used to hang in the journal"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Билет действует весь напечатанный на нём день, включая последнюю минуту",
+            "en": "A ticket is now valid for the whole day printed on it, including the last minute"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Если сводку в чате не удалось обновить, это больше не остаётся незамеченным",
+            "en": "A summary that could not be updated in the chat no longer fails silently"
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "В сводке по зоне наличные и безнал показаны раздельно, а «Разница» теперь сходится: добавлена строка «Ушло до пересчёта»",
+            "en": "The zone summary now shows cash and card separately, and the difference adds up — a \"taken before the count\" line was added"
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "В сводке закрытия смены видно ставку и начисление за смену — раньше был только итог «К выдаче», и проверить его было нельзя",
+            "en": "The shift close summary now shows the rate and what the shift earned — previously only the payout total was shown, with no way to check it"
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Строка сводки «Ушло из кассы» вместо непонятного «До пересчёта»",
+            "en": "The summary line now reads \"Left the till\" instead of the unclear \"Before count\""
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Неудачное обновление сводки смены или инкассации в чате больше не остаётся незамеченным",
+            "en": "A failed update of a shift or collection message in the chat no longer goes unnoticed"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Расход из кассы больше не удваивается в выручке и «Разнице» при сдаче итогов",
+            "en": "A cash expense is no longer double-counted in revenue and the difference at results submission"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Правка аванса, премии и кассы сдачи не дублирует деньги при повторной отправке формы",
+            "en": "Editing an advance, bonus or submission cash no longer duplicates money when the form is submitted twice"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Уведомление об инкассации сверх остатка называется «Авансовая инкассация», как в кабинете, а не «Инкассация (Аванс)»",
+            "en": "The alert for a collection above the balance is now titled \"Advance collection\", matching the cabinet, instead of \"Collection (Advance)\""
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "В сводке зоны расходы и инкассация показаны отдельными числами вместо общего «Ушло из кассы»",
+            "en": "The zone summary now shows expenses and collection as separate figures instead of a single \"Left the till\""
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Удаление инкассации из реестра больше не оставляет соседним зонам списания, которые она вызвала",
+            "en": "Deleting a collection from the registry no longer leaves neighbouring zones with the deductions it caused"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Правка суммы инкассации вниз больше не даёт отрицательное число в уведомлении",
+            "en": "Editing a collection down no longer produces a negative figure in the alert"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "На печатном билете стоит настоящий последний день срока, а не сутки спустя",
+            "en": "A printed ticket now shows the real last valid day instead of one day later"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "В сводке смены ставка подписана «Ставка/час» — раньше единицы не было",
+            "en": "The shift summary now labels the rate as \"Rate (per hour)\" instead of leaving the unit out"
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "«Безнал» в сводке зоны печатается, только когда картой действительно платили",
+            "en": "The zone summary shows the card line only when card payments actually occurred"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Снятие пометки «Возврат/тест» больше не позволяет вернуть деньги на баланс клиента дважды",
+            "en": "Un-marking a tap as \"Return/test\" can no longer refund the client's balance twice"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Инкассация, сделанная во время сдачи итогов, больше не теряется из расчёта выручки",
+            "en": "A collection made while results are being submitted is no longer lost from the revenue calculation"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Удаление аванса возвращает в зоны ровно ту сумму, что была списана",
+            "en": "Deleting an advance returns to the zones exactly the amount that was charged"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Импорт абонементов больше не обрывается целиком на первом дубле телефона",
+            "en": "Abonement import no longer aborts the whole batch on the first duplicate phone"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Вторая инкассация за день снова возвращается в выручку и «Разницу» сдачи итогов",
+            "en": "A second collection on the same day is once again returned to revenue and the submission difference"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Графики Динамики и Товаров больше не рисуют лишний пустой столбец при вечерней границе дня",
+            "en": "The dynamics and goods charts no longer draw an extra empty column when the business day starts in the evening"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Разбивка оплаты билетов совпадает по копейке между сводкой и отчётом",
+            "en": "The ticket payment breakdown now matches to the penny between the summary and the report"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "В уведомлении об общей инкассации суммы по зонам сходятся с общей суммой",
+            "en": "In the general collection alert, the per-zone figures now add up to the total"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Инкассация по точке среди дня больше не даёт ложную недостачу в вечерней сдаче итогов",
+            "en": "A point-wide collection during the day no longer causes a false shortfall in the evening submission"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Размен не уменьшается, когда владелец забирает из кассы ещё не сданную выручку",
+            "en": "The change fund is no longer reduced when the owner takes revenue that has not been submitted yet"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Размен больше не завышается из-за выручки, заработанной уже после инкассации",
+            "en": "The change fund is no longer inflated by revenue earned after the collection took place"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Размен считается одинаково во всех отчётах — «Итоги дня» больше не расходятся с «Остатками по зонам»",
+            "en": "The change fund is now computed identically across reports — the day summary no longer disagrees with zone balances"
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "В итогах дня видно, сколько владелец забрал инкассацией — выручка дня больше не занижается на эту сумму",
+            "en": "The day summary now shows how much the owner collected, so the day's revenue is no longer understated by that amount"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "В итогах дня «Наличные» и проценты считаются от всей выручки дня, а не только от донесённого до пересчёта",
+            "en": "In the day summary, the cash line and its percentage now cover the whole day's revenue, not only what reached the count"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Календарь показывает ту же выручку дня, что и «Итоги дня» — раньше он занижал день на дневную инкассацию",
+            "en": "The calendar now shows the same daily revenue as the day summary — it used to understate a day by the owner's collection"
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "В подсказке календаря видна дата, а не только сумма",
+            "en": "The calendar tooltip now shows the date, not just the amount"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Выручка на вкладках «Кассы» и «Сотрудники» учитывает деньги, забранные инкассацией среди дня",
+            "en": "Revenue on the tills and staff tabs now counts money collected during the day"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Удалённый тариф больше не занимает строку в разбивке, если он ничего не заработал",
+            "en": "A deleted tariff no longer takes up a row in the breakdown when it earned nothing"
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Тариф, которым ни разу не пользовались, при удалении убирается полностью и не остаётся в отчётах",
+            "en": "A tariff that was never used is now removed completely on delete instead of lingering in reports"
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Очистка данных убирает тарифы, от которых после неё не осталось ни одной записи",
+            "en": "Data cleanup now removes tariffs left without a single record after it"
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Расходы и смены сотрудников нельзя править задним числом старше недели — как «позапрошлые итоги» под замочком",
+            "en": "Expenses and staff shifts can no longer be edited more than a week back, the same way older submissions are locked"
+          }
+        }
+      ],
+      "major": true
+    },
+    {
+      "version": "1.26.0",
+      "day": "2026-09-02",
+      "entries": [
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Деньги — размен виден отдельной строкой в итогах дня",
+            "en": "Money — the change float now has its own line in the daily totals"
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Сдача итогов — размен, который положил владелец, вычитается из кассы автоматически: сотрудник просто пересчитывает ящик, а приложение показывает, сколько из этого выручка",
+            "en": "Results submission — the change float the owner put in is now subtracted automatically: staff simply count the drawer and the app shows how much of it is revenue"
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Деньги — размен виден в реестре наравне с инкассациями, его можно исправить или удалить; сам реестр назван «Движение денег», потому что показывает не только инкассации",
+            "en": "Money — the change float now appears in the register alongside collections and can be corrected or deleted; the register is renamed to \"Cash movements\" since it shows more than collections"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Деньги — в румынском и казахском интерфейсе размен назван правильным термином",
+            "en": "Money — the change fund is now named correctly in the Romanian and Kazakh interface"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Прибывания — тариф «По факту» в итальянском и румынском интерфейсе назван принятым термином, тем же, что в документации",
+            "en": "Stays — the «By actual time» rate is named with the accepted term in the Italian and Romanian interface, matching the documentation"
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Итоги дня — видно, сколько наличных физически в кассе и сколько из них размен владельца; у наличных и безнала появились доли в выручке",
+            "en": "Day summary — you can now see how much cash is physically in the till and how much of it is the owner's change fund; cash and card now show their share of revenue"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Инкассация — в сводке видно, сколько денег реально ушло с точки, и отдельной строкой оставленный в кассе размен",
+            "en": "Cash collection — the summary now shows how much money actually left the location, with the change fund left in the till on its own line"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Абонементы — закрыта возможность изменить баланс клиента в обход оплаты",
+            "en": "Subscriptions — closed a way to alter a client's balance bypassing payment"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Итоги дня — правка сдачи больше не занижает кассу зоны на сумму дневных расходов",
+            "en": "Day summary — editing a submission no longer understates the zone till by the day's expenses"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Инкассация — размен остаётся в кассе, если забрали не всё; раньше он мог задвоиться в остатке",
+            "en": "Cash collection — the change fund stays in the till on a partial collection; it could previously be double-counted in the balance"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Рабочее время — аванс и премия смены больше не могут списаться дважды при одновременной инкассации",
+            "en": "Work time — a shift's advance and bonus can no longer be charged twice when a cash collection runs at the same time"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Отчёты — аннулированная продажа абонемента больше не увеличивает выручку в Динамике и в тепловой карте",
+            "en": "Reports — a voided subscription sale no longer inflates revenue in Dynamics and the heat map"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Сдача итогов — сотрудник и сервер считают «Разницу» одинаково: размен вычитается во всех режимах учёта",
+            "en": "Results submission — staff and server now compute the difference identically: the change fund is subtracted in every accounting mode"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Отчёты — Динамика и Деньги показывают одну и ту же выручку и прибыль за период",
+            "en": "Reports — Dynamics and Money now show the same revenue and profit for a period"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Билеты — срок жизни билета истекает в конце дня по времени точки, а не сервера",
+            "en": "Tickets — a ticket now expires at the end of the day in the location's timezone, not the server's"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Отчёты и Клиенты — произвольный период и реестр продаж больше не теряют операции ночных часов",
+            "en": "Reports and Clients — custom periods and the sales registry no longer drop late-night operations"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Остатки и инкассации — аванс сотрудника снова довзыскивается с зон, если на точке есть продажи абонементов или товаров",
+            "en": "Balances — a staff advance is charged back to zones again when the location has subscription or goods sales"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Итоги дня — аннулированный пуск больше не создаёт излишек в уже закрытой сдаче",
+            "en": "Day summary — a voided launch no longer creates a phantom surplus in an already closed submission"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Лендинг — цены показываются для тарифов с вариантами: «За вход» и «С таймером» больше не выводят ноль",
+            "en": "Landing — prices now show for tariffs with variants: per-entry and timed rates no longer display zero"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Рабочее время — аванс сверх доступного баланса больше не проходит, а начисленная премия не теряется при отрицательной кассе точки",
+            "en": "Work time — an advance over the available balance no longer slips through, and an accrued bonus is not lost when the till is negative"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Деньги — перенос расхода в другую зону больше не меняет общую выручку сдачи",
+            "en": "Money — moving an expense to another zone no longer changes the submission's total revenue"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Товары — итоги и график вкладки «Продажи» считаются по всему периоду, а не по первым 300 продажам",
+            "en": "Goods — the Sales tab totals and chart now cover the whole period instead of the first 300 sales"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Билеты — аннулирование больше не меняет расчётную выручку уже закрытой сдачи",
+            "en": "Tickets — voiding no longer alters the calculated revenue of an already closed submission"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Итоги дня — окно правки показывает ту же «Разницу», что и карточка",
+            "en": "Day summary — the edit sheet now shows the same difference as the card"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Печать и тарифы — суммы показываются в валюте точки, а не всегда в рублях",
+            "en": "Printing and rates — amounts now use the location's currency instead of always rubles"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Счётчики — пометка тапа «Возврат/тест» возвращает клиенту деньги, списанные с баланса",
+            "en": "Counters — marking a tap as returned now refunds the client's balance"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Счётчики — возвраты и тесты вычитаются по своему тарифу во всех отчётах, как и при сдаче итогов",
+            "en": "Counters — returns and test taps are deducted at their own rate across all reports, matching the results submission"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Уведомления — в push по зоне «Касса» считается так же, как в сводке, и показывается со знаком валюты",
+            "en": "Notifications — the zone push now computes the till the same way as the summary and shows the currency sign"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Товары — аннулирование продажи обновляет сводку кассы за день, а архивный товар нельзя дописать в отложенный заказ",
+            "en": "Goods — voiding a sale refreshes the daily cash summary, and an archived item can no longer be added to a held order"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Сводки — остаток кассы за прошлый день и вычет возвратов считаются так же, как на экранах кабинета",
+            "en": "Summaries — the past-day till balance and return deductions are computed the same way as in the owner's screens"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Отчёты по сотрудникам — аннулированная продажа абонемента больше не остаётся в выручке продавца",
+            "en": "Staff reports — a voided subscription sale no longer stays in the seller's revenue"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Рабочее время — аванс смены попадает в тот же период, что и сама смена",
+            "en": "Work time — a shift's advance now falls into the same period as the shift itself"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Клиенты — импорт абонементов больше не приписывает стартовый баланс чужому кошельку при одновременной продаже",
+            "en": "Clients — subscription import no longer credits the starting balance to someone else's wallet during a concurrent sale"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Размен в кассе больше не «воскресает» после инкассации, которая его частично унесла — выручка следующего дня поднимала кассу, и размен показывался прежним",
+            "en": "Cash float no longer reappears after a collection that partly took it — the next day's revenue raised the till and the float was shown unchanged"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Разница в отчётах и сводках считается по тем же расходам, что и сдача итогов — раньше владелец видел излишек на траты, оплаченные до инкассации",
+            "en": "Difference in reports and summaries now uses the same expenses as the results submission — the owner used to see a false surplus for spending paid before a collection"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "У точек с вечерней границей дня «Итоги дня», Главная, календари и периоды показывали данные не за тот день — окно дня было сдвинуто на сутки",
+            "en": "For venues with an evening business-day boundary, daily results, home, calendars and periods showed the wrong day — the day window was shifted by 24 hours"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Инкассация части товарной или абонементной кассы больше не списывает её целиком — остаток оставался в ящике, а с экрана исчезал",
+            "en": "Collecting part of the goods or subscription till no longer wipes all of it — the remainder stayed in the drawer but vanished from the screen"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Оплата корзины несколькими способами списывает с абонемента ровно введённую сумму — раньше расходилось на копейку",
+            "en": "Paying a cart with several methods now charges the subscription exactly the entered amount — it used to differ by a cent"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Возврат товара и отмена отложенного заказа возвращают на склад ровно то, что списали, даже если учёт остатка потом включили",
+            "en": "Voiding a sale or a held order returns exactly what was deducted, even if stock tracking was switched on afterwards"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Удаление тапа возвращает клиенту списанную сумму, а не нынешнюю цену тарифа",
+            "en": "Deleting a tap refunds the amount actually charged, not the tariff's current price"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Уведомление «Касса за день» показывает то же «Итого», что и сводка в чате, и со знаком валюты",
+            "en": "The daily cash push now shows the same total as the chat summary, with the currency sign"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Аннулированная продажа абонемента больше не удваивает счётчик продаж в «Итогах дня»",
+            "en": "A voided subscription sale no longer doubles the sales counter in the daily results"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Суммы в Telegram-боте клиента печатаются на его языке, а не всегда по-русски",
+            "en": "Amounts in the client Telegram bot are printed in the client's language instead of always Russian"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Инкассация среди дня больше не превращается в недостачу: деньги, забранные владельцем до пересчёта, учитываются в «Разнице» и в выручке зоны",
+            "en": "A mid-day collection no longer shows up as a shortfall — money the owner took before the count is now included in the difference and the zone's revenue"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Аванс и премия, внесённые владельцем из карточки сотрудника, уменьшают остаток кассы точки — раньше выданные из ящика деньги в кассе так и оставались",
+            "en": "An advance or bonus entered by the owner from an employee card now reduces the venue's cash on hand — money handed out of the drawer used to stay in the till"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Аванс и премия из карточки сотрудника пересобирают сводку «Касса за день» — раньше в чате оставались прежние цифры",
+            "en": "An advance or bonus from an employee card now rebuilds the daily cash summary — the chat used to keep the old figures"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Отредактированное сообщение об инкассации снова показывает введённую сумму, а не сумму с долей непогашенного аванса",
+            "en": "An edited collection message shows the entered amount again, not the amount plus the outstanding advance share"
+          }
+        },
+        {
+          "type": "fix",
+          "text": {
+            "ru": "«Итого за день» в письме считается так же, как в чате и в уведомлении — расходы больше не вычитаются дважды",
+            "en": "The daily total in the email now matches the chat and the push — expenses are no longer subtracted twice"
+          }
+        }
+      ],
+      "major": false
+    },
+    {
+      "version": "1.25.0",
+      "day": "2026-09-01",
+      "entries": [
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Клиенты — сотрудник находит клиента по последним четырём цифрам номера или по имени, не набирая телефон целиком",
+            "en": "Clients — staff can find a client by the last four digits of the phone or by name, without typing the full number"
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Прибывания — браслету можно дать свою подпись, например «Максим в зелёной футболке», не заводя клиента; она видна прямо на тайле",
+            "en": "Stays — a wristband can be given its own label, for example \"Max in a green T-shirt\", without registering a client; it shows right on the tile"
+          }
+        },
+        {
+          "type": "impr",
+          "text": {
+            "ru": "Интерфейс — во всплывающих окнах кнопка закрытия встала в шапку, а поля и кнопки занимают всю ширину окна",
+            "en": "Interface — in pop-up sheets the close button moved into the header, and fields and buttons now span the full width"
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Прибывания и Пуски — у тарифа «За вход» длительность можно не задавать: кнопка ∞ делает вариант безлимитным, время на плашке идёт вверх и сеанс закрывает только сотрудник",
+            "en": "Stays and Launches — the per-entry tariff no longer needs a duration: the ∞ button makes a variant unlimited, the tile counts time up and only staff can close the session"
+          }
+        },
+        {
+          "type": "feat",
+          "text": {
+            "ru": "Главная — рядом с расчётной выручкой видно, сколько браслетов и пусков идёт в зоне прямо сейчас",
+            "en": "Home — next to the calculated revenue you can now see how many wristbands and launches are running in a zone right now"
+          }
+        }
+      ],
+      "major": false
+    },
+    {
+      "version": "1.24.1",
+      "day": "2026-08-31",
+      "entries": [
+        {
+          "type": "fix",
+          "text": {
+            "ru": "Рабочее время — аванс, который владелец дописывает в закрытую смену, теперь уменьшает кассу точки и попадает в сводку за тот день, а не за день правки",
+            "en": "Work time — an advance the owner adds to a closed shift now reduces the point's cash and lands in that day's summary instead of the day it was entered"
+          }
+        }
+      ],
+      "major": false
+    },
     {
       "version": "1.24.0",
       "day": "2026-08-26",
@@ -38,7 +773,8 @@
             "en": "Landing — visit statistics now show in browsers with an ad blocker enabled."
           }
         }
-      ]
+      ],
+      "major": false
     },
     {
       "version": "1.23.0",
@@ -51,7 +787,8 @@
             "en": "Settings — the app version and a link to the changelog now sit at the bottom of the screen."
           }
         }
-      ]
+      ],
+      "major": false
     },
     {
       "version": "1.22.1",
@@ -916,13 +1653,6 @@
             "ru": "Владелец отмечен единой иконкой-короной вместо подписи.",
             "en": "The owner is marked with a single crown icon instead of a text label."
           }
-        },
-        {
-          "type": "impr",
-          "text": {
-            "ru": "Печать: тихая печать на Windows настраивается через реестр и запускается вместе с системой.",
-            "en": "Printing: silent printing on Windows is configured through the registry and starts with the system."
-          }
         }
       ]
     },
@@ -1071,13 +1801,6 @@
           "text": {
             "ru": "Прибывания: пуски в реальном времени — старт и стоп в один-два тапа, живой таймер, свой тариф с историей у каждого актива.",
             "en": "Stays: launches in real time — start and stop in one or two taps, a live timer, and each asset with its own rate and rate history."
-          }
-        },
-        {
-          "type": "feat",
-          "text": {
-            "ru": "Прибывания: экран «Сейчас на точке» в кабинете и список пусков с правкой времени и аннулированием.",
-            "en": "Stays: a Currently on site screen in the owner's account, plus a list of launches with time editing and voiding."
           }
         },
         {
