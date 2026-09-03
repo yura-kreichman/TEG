@@ -1673,7 +1673,7 @@
     "cashOnHandCompact": "Bal.",
     "period": "Period",
     "hoursWorked": "Hours worked",
-    "rateLabel": "Rate",
+    "rateLabel": "Rate (per hour)",
     "accruedForShift": "Earned this shift",
     "accruedCompact": "Earned",
     "operatorLabel": "Employee",

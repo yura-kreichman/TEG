@@ -410,7 +410,12 @@ export function formatZoneSummaryTelegram(
             bits.push(`💰 ${st.paidCompact}: <b>${formatMoney(paidTotal, locale)}</b>`);
           } else {
             bits.push(`💵 ${st.cashCompact}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
-            bits.push(`💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`);
+            // Безнал — только когда он есть: в зоне, где карту не принимают,
+            // «Безнал: 0» стояло бы в каждой сводке навсегда. Наличные
+            // печатаются всегда, поэтому одна цифра тоже читается однозначно.
+            if (data.mobileAmount > 0) {
+              bits.push(`💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`);
+            }
           }
         }
         // Что ушло из кассы до пересчёта — иначе «Разница» не сходится

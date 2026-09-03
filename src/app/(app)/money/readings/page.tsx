@@ -2354,7 +2354,8 @@ function TicketOrderVoidList({
 
   function statusOf(tk: (typeof visibleTickets)[number]): { text: string; cls: string } | null {
     if (tk.status === "voided") return { text: t.tickets.voidedStatusLabel, cls: "text-destructive" };
-    if (order.expiresAt != null && new Date(order.expiresAt) < now) {
+    // `<=` — expiresAt это начало следующего дня, см. isTicketOrderExpired.
+    if (order.expiresAt != null && new Date(order.expiresAt) <= now) {
       return { text: t.tickets.expiredStatusLabel, cls: "text-destructive" };
     }
     return null;

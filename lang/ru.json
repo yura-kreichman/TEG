@@ -1711,7 +1711,7 @@
     "cashOnHandCompact": "Остат.",
     "period": "Период",
     "hoursWorked": "Отработано",
-    "rateLabel": "Ставка",
+    "rateLabel": "Ставка/час",
     "accruedForShift": "Начислено за смену",
     "accruedCompact": "Начисл.",
     "operatorLabel": "Сотрудник",

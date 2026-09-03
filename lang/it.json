@@ -1673,7 +1673,7 @@
     "cashOnHandCompact": "Saldo",
     "period": "Periodo",
     "hoursWorked": "Ore lavorate",
-    "rateLabel": "Tariffa",
+    "rateLabel": "Tariffa (all'ora)",
     "accruedForShift": "Maturato nel turno",
     "accruedCompact": "Maturato",
     "operatorLabel": "Dipendente",

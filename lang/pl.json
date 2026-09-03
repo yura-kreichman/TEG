@@ -1673,7 +1673,7 @@
     "cashOnHandCompact": "Saldo",
     "period": "Okres",
     "hoursWorked": "Przepracowano",
-    "rateLabel": "Stawka",
+    "rateLabel": "Stawka (za godzinę)",
     "accruedForShift": "Naliczone za zmianę",
     "accruedCompact": "Naliczone",
     "operatorLabel": "Pracownik",

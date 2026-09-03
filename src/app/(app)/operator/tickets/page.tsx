@@ -111,8 +111,24 @@ function assetLockKey(zoneId: string) {
   return `ticketsAssetLock:${zoneId}`;
 }
 
+// `<=`, как на сервере (isTicketOrderExpired в lib/tickets.ts): expiresAt —
+// НАЧАЛО следующего местного дня, и ровно в эту миллисекунду билет уже
+// недействителен. С `<` экран одну миллисекунду показывал бы годным то,
+// что сервер гасить откажется.
 function isOrderExpired(order: { expiresAt: string | null }, now: Date): boolean {
-  return order.expiresAt != null && new Date(order.expiresAt) < now;
+  return order.expiresAt != null && new Date(order.expiresAt) <= now;
+}
+
+/**
+ * Последний день, когда билет ещё действителен, — для печати.
+ *
+ * expiresAt хранит НАЧАЛО следующего местного дня (computeTicketExpiresAt),
+ * поэтому печатать его как есть значило поставить клиенту на бумагу дату на
+ * сутки позже настоящего срока (закрывающий аудит 2026-09-03). Отступаем на
+ * миллисекунду назад — попадаем в 23:59:59.999 последнего годного дня.
+ */
+function formatTicketValidThrough(expiresAt: string, locale: string): string {
+  return new Date(new Date(expiresAt).getTime() - 1).toLocaleDateString(locale);
 }
 
 /**
@@ -386,7 +402,7 @@ export default function TicketsZonePage() {
             { label: t.tickets.receiptOrderLabel, value: `№${order.number}`, large: true },
             { label: `${ticket.assetName} · ${ticket.variantName}`, value: formatMoneyWithCurrency(ticket.price, locale, currency) },
             ...(order.expiresAt
-              ? [{ label: t.tickets.receiptExpiresLabel, value: new Date(order.expiresAt).toLocaleDateString(locale) }]
+              ? [{ label: t.tickets.receiptExpiresLabel, value: formatTicketValidThrough(order.expiresAt, locale) }]
               : []),
           ],
           cutLineAfter: i < order.tickets.length - 1,
