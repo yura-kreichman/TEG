@@ -662,9 +662,24 @@ export async function computeZoneSubmissionRevenues(
       }
     }
 
+    // То, что владелец забрал из зоны инкассацией ДО пересчёта: эти деньги
+    // тоже вышли из ящика мимо сотрудника (см. getZoneCollectionOverdraw).
+    // Число пишет сама сдача; у сдач до 2026-09-02 его нет и быть не может.
+    const collectedBefore = Number(zs.collectedBeforeSubmission ?? 0);
     const actualCash = Number(zs.cashAmount);
     const actualMobile = Number(zs.mobileAmount);
-    const actualTotal = actualCash + actualMobile;
+    // actualTotal — ВЫРУЧКА зоны за сдачу, а не то, что сотрудник донёс до
+    // пересчёта: сюда входит забранное владельцем инкассацией среди дня
+    // (collectedBefore ниже). Замечание владельца 2026-09-03: один и тот же
+    // вопрос «сколько заработали» имел в приложении ЧЕТЫРЕ разных ответа.
+    //
+    // Это число читают ровно две вкладки Отчётов — «Кассы» (points/[id]/
+    // reports/zones) и «Сотрудники» (там же /operators), и обе занижали
+    // выручку ровно на дневную инкассацию: у КидсБурга за 2 сентября 13 130
+    // вместо 18 480, а «выручка в час» сотрудника — следом за ней.
+    // /api/reports/money берёт отсюда только difference и returnsCount, свою
+    // выручку он и так считает по журналу.
+    const actualTotal = actualCash + actualMobile + collectedBefore;
     // abonementAmount вычитается из calculatedRevenue здесь — эта касса уже
     // получила эти деньги раньше, при пополнении абонемента, не сейчас
     // (реальный баг, найден пользователем 2026-07-18: без вычитания разница
@@ -692,10 +707,6 @@ export async function computeZoneSubmissionRevenues(
       zs.compensatedExpenses !== null
         ? Number(zs.compensatedExpenses)
         : (expensesByZoneSubmission.get(`${zs.resultsSubmissionId}:${zs.zoneId}`) ?? 0);
-    // + то, что владелец забрал из зоны инкассацией ДО пересчёта: эти деньги
-    // тоже вышли из ящика мимо сотрудника (см. getZoneCollectionOverdraw).
-    // Число пишет сама сдача; у сдач до 2026-09-02 его нет и быть не может.
-    const collectedBefore = Number(zs.collectedBeforeSubmission ?? 0);
     const difference =
       zone.accountingMode === "cash_only"
         ? 0
