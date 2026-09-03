@@ -25,6 +25,10 @@ function check(ok: boolean, what: string) {
   if (!ok) failures++;
 }
 
+// Метка строк, которые создаёт сценарий ниже: только по ней можно отличить
+// их от настоящих операций тенанта при проверке следов после отката.
+const TEST_MARK = "__check-change-fund-in-till__";
+
 const ROLLBACK = "__rollback__";
 
 async function readOnlyPass() {
@@ -83,42 +87,42 @@ async function rollbackPass() {
 
       if (cashBefore !== 0) {
         await tx.moneyOperation.create({
-          data: { tenantId, zoneId: zone.id, type: "collection", amount: -cashBefore },
+          data: { tenantId, zoneId: zone.id, type: "collection", amount: -cashBefore, comment: TEST_MARK },
         });
       }
       check(Math.abs((await fund()) - 0) < 0.001, `после обнуления кассы размен = 0 (был ${fundBefore})`);
 
       // 1. Владелец кладёт размен, затем набегает выручка.
       await tx.moneyOperation.create({
-        data: { tenantId, zoneId: zone.id, type: "change_fund", amount: 500 },
+        data: { tenantId, zoneId: zone.id, type: "change_fund", amount: 500, comment: TEST_MARK },
       });
       await tx.moneyOperation.create({
-        data: { tenantId, zoneId: zone.id, type: "revenue", amount: 1000 },
+        data: { tenantId, zoneId: zone.id, type: "revenue", amount: 1000, comment: TEST_MARK },
       });
       check(Math.abs((await fund()) - 500) < 0.001, `размен виден: ${await fund()}`);
 
       // 2. ЧАСТИЧНАЯ инкассация — размен обязан остаться. Раньше обнулялся.
       await tx.moneyOperation.create({
-        data: { tenantId, zoneId: zone.id, type: "collection", amount: -1000 },
+        data: { tenantId, zoneId: zone.id, type: "collection", amount: -1000, comment: TEST_MARK },
       });
       check(Math.abs((await fund()) - 500) < 0.001, `частичная инкассация размен не трогает: ${await fund()}`);
 
       // 3. Забрали больше, чем выручка: размена не может остаться больше,
       //    чем денег в кассе.
       await tx.moneyOperation.create({
-        data: { tenantId, zoneId: zone.id, type: "collection", amount: -400 },
+        data: { tenantId, zoneId: zone.id, type: "collection", amount: -400, comment: TEST_MARK },
       });
       check(Math.abs((await fund()) - 100) < 0.001, `размен ужат до остатка кассы: ${await fund()}`);
 
       // 4. Забрали всё — размен ушёл вместе с выручкой.
       await tx.moneyOperation.create({
-        data: { tenantId, zoneId: zone.id, type: "collection", amount: -100 },
+        data: { tenantId, zoneId: zone.id, type: "collection", amount: -100, comment: TEST_MARK },
       });
       check(Math.abs(await fund()) < 0.001, `полная инкассация уносит размен: ${await fund()}`);
 
       // 5. Новый размен после опустошения виден снова и не тянет старый.
       await tx.moneyOperation.create({
-        data: { tenantId, zoneId: zone.id, type: "change_fund", amount: 300 },
+        data: { tenantId, zoneId: zone.id, type: "change_fund", amount: 300, comment: TEST_MARK },
       });
       check(Math.abs((await fund()) - 300) < 0.001, `новый размен не суммируется со старым: ${await fund()}`);
 
@@ -129,11 +133,11 @@ async function rollbackPass() {
       //    возвращался на экран. Сейчас: касса 300, забрали 200 → размен 100,
       //    и выручка 10000 его не поднимает.
       await tx.moneyOperation.create({
-        data: { tenantId, zoneId: zone.id, type: "collection", amount: -200 },
+        data: { tenantId, zoneId: zone.id, type: "collection", amount: -200, comment: TEST_MARK },
       });
       check(Math.abs((await fund()) - 100) < 0.001, `после просадки размен обрезан: ${await fund()}`);
       await tx.moneyOperation.create({
-        data: { tenantId, zoneId: zone.id, type: "revenue", amount: 10000 },
+        data: { tenantId, zoneId: zone.id, type: "revenue", amount: 10000, comment: TEST_MARK },
       });
       check(Math.abs((await fund()) - 100) < 0.001, `выручка не воскрешает уехавший размен: ${await fund()}`);
 
@@ -147,9 +151,12 @@ async function rollbackPass() {
       throw err;
     });
 
-  const leftovers = await prisma.moneyOperation.count({
-    where: { zoneId: zone.id, type: "change_fund", amount: { in: [500, 300] } },
-  });
+  // По МЕТКЕ, а не по сумме, и по всей базе, а не по одной зоне. Прежняя
+  // проверка искала change_fund на 500 или 300 — и на боевой базе нашла
+  // настоящий размен Игроленда от 23 августа, закричав об утечке, которой не
+  // было. Хуже обратное: тем же способом она пропустила бы настоящую утечку с
+  // любой другой суммой. Метка отвечает однозначно.
+  const leftovers = await prisma.moneyOperation.count({ where: { comment: TEST_MARK } });
   check(leftovers === 0, `следов тестовых операций нет (найдено ${leftovers})`);
 }
 
