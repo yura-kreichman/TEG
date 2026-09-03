@@ -28,7 +28,7 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): Dai
   const zoneNames = ctx && ctx.zoneNames.length > 0 ? ctx.zoneNames : [t.summaries.previewNoZone];
   const zoneBreakdown = zoneNames
     .slice(0, 3)
-    .map((zoneName, i) => ({ zoneName, revenue: SAMPLE_ZONE_REVENUE[i] ?? 0, abonementAmount: 0 }));
+    .map((zoneName, i) => ({ zoneName, zoneEmoji: null, revenue: SAMPLE_ZONE_REVENUE[i] ?? 0, abonementAmount: 0 }));
 
   return {
     pointName: ctx?.pointName ?? t.summaries.previewNoPoint,

@@ -87,6 +87,11 @@ export interface ZoneSummaryData {
 
 export interface DailyCashZoneBreakdownLine {
   zoneName: string;
+  // Zone.telegramEmoji — тот же значок, что владелец выбрал зоне и который
+  // стоит в заголовке её собственной сводки (запрос владельца 2026-09-03:
+  // «плюс для зон у нас выбраны тоже emodji»). null — зона без значка,
+  // подставляется 🏁, как в zoneHeader.
+  zoneEmoji: string | null;
   revenue: number;
   // Справочно, не входит в revenue выше (запрос пользователя 2026-07-17—
   // см. abonementAmount в DailyCashSummaryData ниже).

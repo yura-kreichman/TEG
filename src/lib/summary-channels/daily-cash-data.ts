@@ -63,7 +63,7 @@ export async function buildDailyCashSummaryData(
   // идти в порядке, который владелец задал кнопками вверх/вниз (запрос
   // 2026-08-16). Раньше порядок был случайным — какой зоне досталось первое
   // место в Map, то есть по времени сдач.
-  const zoneRevenueById = new Map<string, { zoneName: string; revenue: number; sortOrder: number }>();
+  const zoneRevenueById = new Map<string, { zoneName: string; zoneEmoji: string | null; revenue: number; sortOrder: number }>();
 
   for (const submission of submissions) {
     for (const zs of submission.zoneSubmissions) {
@@ -76,6 +76,7 @@ export async function buildDailyCashSummaryData(
 
       const entry = zoneRevenueById.get(zs.zoneId) ?? {
         zoneName: zs.zone.name,
+        zoneEmoji: zs.zone.telegramEmoji,
         revenue: 0,
         sortOrder: zs.zone.sortOrder,
       };
@@ -104,7 +105,7 @@ export async function buildDailyCashSummaryData(
   // без per-submission "предыдущая сдача" привязки.
   const abonementOps = await prisma.moneyOperation.findMany({
     where: { type: "revenue_abonement", occurredAt: { gte: bounds.start, lt: bounds.end }, zone: { pointId } },
-    select: { zoneId: true, amount: true, zone: { select: { name: true, sortOrder: true } } },
+    select: { zoneId: true, amount: true, zone: { select: { name: true, telegramEmoji: true, sortOrder: true } } },
   });
   let abonementAmount = 0;
   const zoneAbonementById = new Map<string, number>();
@@ -117,7 +118,12 @@ export async function buildDailyCashSummaryData(
     // итогов (список breakdown иначе строился бы только из ZoneSubmission) —
     // добавляем такую зону в разбивку сразу с нулевой "кассовой" выручкой.
     if (!zoneRevenueById.has(op.zoneId)) {
-      zoneRevenueById.set(op.zoneId, { zoneName: op.zone?.name ?? "", revenue: 0, sortOrder: op.zone?.sortOrder ?? 0 });
+      zoneRevenueById.set(op.zoneId, {
+        zoneName: op.zone?.name ?? "",
+        zoneEmoji: op.zone?.telegramEmoji ?? null,
+        revenue: 0,
+        sortOrder: op.zone?.sortOrder ?? 0,
+      });
     }
   }
 
@@ -189,6 +195,7 @@ export async function buildDailyCashSummaryData(
       .sort((a, b) => a[1].sortOrder - b[1].sortOrder)
       .map(([zoneId, z]) => ({
       zoneName: z.zoneName,
+      zoneEmoji: z.zoneEmoji,
       revenue: round2(z.revenue),
       abonementAmount: round2(zoneAbonementById.get(zoneId) ?? 0),
     })),

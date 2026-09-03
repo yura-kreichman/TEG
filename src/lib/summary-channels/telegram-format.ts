@@ -161,9 +161,27 @@ function pendingNote(pending: DailyCashPending[], st: SummaryText, locale: Local
  *
  * Пустая строка в items разрывает таблицу на смысловые части.
  */
-function formatMoneyRows(items: ({ label: string; value: string } | null)[]): string {
-  const rows = items.filter((it): it is { label: string; value: string } => it !== null);
+interface MoneyRow {
+  /** Значок строки. Обязателен у КАЖДОЙ — см. разбор выравнивания ниже. */
+  icon: string;
+  label: string;
+  value: string;
+}
+
+function formatMoneyRows(items: (MoneyRow | null)[]): string {
+  const rows = items.filter((it): it is MoneyRow => it !== null);
   if (rows.length === 0) return "";
+  // Ширины считаются ПО ТЕКСТУ, без значка (возврат значков — запрос владельца
+  // 2026-09-03: «я бы добавил значки Emodji, как и были у наличные/безналичные»).
+  // Иначе выравнивание сломалось бы на ровном месте: в JS длина строки
+  // считается в кодовых единицах UTF-16, и 💵 это 2, а 🗓️ — уже 3 из-за
+  // вариационного селектора. Поэтому внутрь блока берём только значки БЕЗ
+  // селектора, а padEnd применяем к чистой подписи.
+  //
+  // САМО ВЫРАВНИВАНИЕ ДЕРЖИТСЯ НА ТОМ, ЧТО ЗНАЧОК ЕСТЬ У КАЖДОЙ СТРОКИ: все
+  // они сдвигаются на одну и ту же ширину, и колонка чисел остаётся колонкой.
+  // Строка без значка развалила бы блок — потому icon и обязателен в типе, а
+  // не необязателен.
   const labelWidth = Math.max(...rows.map((it) => it.label.length));
   const valueWidth = Math.max(...rows.map((it) => it.value.length));
   // escapeTelegramHtml — ПОСЛЕДНИМ шагом, уже после padEnd/padStart: см. тот
@@ -172,13 +190,13 @@ function formatMoneyRows(items: ({ label: string; value: string } | null)[]): st
     .map((it) =>
       it === null
         ? ""
-        : escapeTelegramHtml(`${it.label.padEnd(labelWidth)}  ${it.value.padStart(valueWidth)}`)
+        : `${it.icon} ${escapeTelegramHtml(`${it.label.padEnd(labelWidth)}  ${it.value.padStart(valueWidth)}`)}`
     )
     .join("\n");
 }
 
 /** Тот же блок, но уже завёрнутый в цитату — как у показаний. */
-function moneyBlock(items: ({ label: string; value: string } | null)[]): string {
+function moneyBlock(items: (MoneyRow | null)[]): string {
   const body = formatMoneyRows(items);
   return body ? `<blockquote><code>${body}</code></blockquote>` : "";
 }
@@ -442,7 +460,7 @@ export function formatZoneSummaryTelegram(
         // (замечание владельца 2026-09-03: «то что счётчики в цитате —
         // удобно… может и деньги как-то красиво оформить»). Разбор ширин и
         // почему эмодзи внутрь нельзя — у formatMoneyRows.
-        const rows: ({ label: string; value: string } | null)[] = [];
+        const rows: (MoneyRow | null)[] = [];
         if (settings.showCash) {
           // Разбивку по способам показываем, только когда их БОЛЬШЕ ОДНОГО:
           // при единственном способе строка дословно повторяла бы «Оплачено»
@@ -451,29 +469,29 @@ export function formatZoneSummaryTelegram(
           // сообщает.
           if (perMethodKnown) {
             if (usedMethods > 1) {
-              if (data.cashAmount > 0) rows.push({ label: st.cash, value: formatMoney(data.cashAmount, locale) });
-              if (data.mobileAmount > 0) rows.push({ label: st.mobile, value: formatMoney(data.mobileAmount, locale) });
+              if (data.cashAmount > 0) rows.push({ icon: "💵", label: st.cashCompact, value: formatMoney(data.cashAmount, locale) });
+              if (data.mobileAmount > 0) rows.push({ icon: "💳", label: st.mobile, value: formatMoney(data.mobileAmount, locale) });
               if (data.abonementAmount > 0)
-                rows.push({ label: st.abonement, value: formatMoney(data.abonementAmount, locale) });
+                rows.push({ icon: "🎫", label: st.abonementCompact, value: formatMoney(data.abonementAmount, locale) });
             }
-            rows.push({ label: st.paidCompact, value: formatMoney(paidTotal, locale) });
+            rows.push({ icon: "💰", label: st.paidCompact, value: formatMoney(paidTotal, locale) });
           } else {
-            rows.push({ label: st.cash, value: formatMoney(data.cashAmount, locale) });
-            if (data.mobileAmount > 0) rows.push({ label: st.mobile, value: formatMoney(data.mobileAmount, locale) });
+            rows.push({ icon: "💵", label: st.cashCompact, value: formatMoney(data.cashAmount, locale) });
+            if (data.mobileAmount > 0) rows.push({ icon: "💳", label: st.mobile, value: formatMoney(data.mobileAmount, locale) });
             // Баланс справочно, НЕ в кассе: она получила эти деньги раньше,
             // при пополнении абонемента (запрос пользователя 2026-07-17).
             if (data.abonementAmount > 0)
-              rows.push({ label: st.abonement, value: formatMoney(data.abonementAmount, locale) });
+              rows.push({ icon: "🎫", label: st.abonementCompact, value: formatMoney(data.abonementAmount, locale) });
           }
           // Что ушло из кассы ДО пересчёта — двумя числами (решение владельца
           // 2026-09-03). Слитые в одно «Ушло» они читались как одна
           // непонятная убыль, а такого слова владелец не знает.
-          if (data.expensesAmount > 0) rows.push({ label: st.expenses, value: formatMoney(data.expensesAmount, locale) });
+          if (data.expensesAmount > 0) rows.push({ icon: "🧾", label: st.expensesCompact, value: formatMoney(data.expensesAmount, locale) });
           if (data.collectedAmount > 0)
-            rows.push({ label: st.collectionLabel, value: formatMoney(data.collectedAmount, locale) });
+            rows.push({ icon: "🏦", label: st.collectionCompact, value: formatMoney(data.collectedAmount, locale) });
         }
         if (settings.showCalc) {
-          rows.push({ label: st.calculated, value: formatMoney(data.calculatedRevenue, locale) });
+          rows.push({ icon: "🔢", label: st.calculatedCompact, value: formatMoney(data.calculatedRevenue, locale) });
         }
         const block = moneyBlock(rows);
         if (block) parts.push(block);
@@ -563,20 +581,20 @@ export function formatZoneSummaryTelegram(
       // чтобы было красиво»). Раньше здесь была строка на каждое число с
       // эмодзи впереди: числа не выравнивались, и сравнивать их приходилось
       // глазами по разной длине.
-      const rows: ({ label: string; value: string } | null)[] = [];
+      const rows: (MoneyRow | null)[] = [];
       if (settings.showCash) {
-        rows.push({ label: st.cash, value: formatMoney(data.cashAmount, locale) });
-        rows.push({ label: st.mobile, value: formatMoney(data.mobileAmount, locale) });
+        rows.push({ icon: "💵", label: st.cash, value: formatMoney(data.cashAmount, locale) });
+        rows.push({ icon: "💳", label: st.mobile, value: formatMoney(data.mobileAmount, locale) });
         // Баланс справочно, НЕ в кассе выше — деньги получены раньше, при
         // пополнении абонемента (запрос пользователя 2026-07-17).
-        if (data.abonementAmount > 0) rows.push({ label: st.abonement, value: formatMoney(data.abonementAmount, locale) });
+        if (data.abonementAmount > 0) rows.push({ icon: "🎫", label: st.abonement, value: formatMoney(data.abonementAmount, locale) });
         // Что ушло из кассы до пересчёта — без этих строк «Разница» не
         // сходится глазами, см. разбор у компактной ветки выше.
-        if (data.expensesAmount > 0) rows.push({ label: st.expenses, value: formatMoney(data.expensesAmount, locale) });
+        if (data.expensesAmount > 0) rows.push({ icon: "🧾", label: st.expenses, value: formatMoney(data.expensesAmount, locale) });
         if (data.collectedAmount > 0)
-          rows.push({ label: st.collectionLabel, value: formatMoney(data.collectedAmount, locale) });
+          rows.push({ icon: "🏦", label: st.collectionLabel, value: formatMoney(data.collectedAmount, locale) });
       }
-      if (settings.showCalc) rows.push({ label: st.calculated, value: formatMoney(data.calculatedRevenue, locale) });
+      if (settings.showCalc) rows.push({ icon: "🔢", label: st.calculatedCompact, value: formatMoney(data.calculatedRevenue, locale) });
       // Возвраты — СНАРУЖИ блока, рядом с «Разницей», как и в компактном
       // виде: это не деньги, а проверочное число, и подпись «Возвраты/тестовые
       // пуски» в 23 символа раздувала бы всю денежную колонку под себя.
@@ -606,6 +624,10 @@ export function formatZoneSummaryTelegram(
 // имена короче, обрезка/упаковка в колонки тут не нужна даже в compact;
 // теперь этот блок буквально одинаков в обоих режимах.
 function formatZoneBreakdownRows(zoneBreakdown: DailyCashSummaryData["zoneBreakdown"], locale: Locale): string {
+  // Значок зоны перед именем — тот же, что в заголовке её собственной сводки
+  // (запрос владельца 2026-09-03). Выравнивание держится на том, что значок
+  // есть у КАЖДОЙ строки: без него строка сдвинулась бы, и колонка чисел
+  // развалилась — потому у зон без значка подставляется 🏁, как в zoneHeader.
   const labelWidth = Math.max(...zoneBreakdown.map((z) => `${z.zoneName}:`.length));
   // "(+X)" абонементом убран (запрос пользователя 2026-07-25) — дублировал
   // отдельную строку "Баланс" ниже и визуально намекал, что баланс
@@ -613,7 +635,11 @@ function formatZoneBreakdownRows(zoneBreakdown: DailyCashSummaryData["zoneBreakd
   // то, что баланс у Счётчиков — отдельная, не смешивается с кассой).
   // escapeTelegramHtml — после padEnd, см. комментарий в formatCompactGrid.
   return zoneBreakdown
-    .map((z) => escapeTelegramHtml(`${z.zoneName}:`.padEnd(labelWidth + 1) + formatMoney(z.revenue, locale)))
+    .map(
+      (z) =>
+        `${z.zoneEmoji ?? "🏁"} ` +
+        escapeTelegramHtml(`${z.zoneName}:`.padEnd(labelWidth + 1) + formatMoney(z.revenue, locale))
+    )
     .join("\n");
 }
 
@@ -657,20 +683,20 @@ export function formatDailyCashSummaryTelegram(
     // касаться и этих двух сводок»). Раньше это была строка на каждое число
     // с эмодзи впереди: числа не выравнивались, и «Итог · Остаток» в одной
     // строке переносился на длинных суммах.
-    const rows: ({ label: string; value: string } | null)[] = [];
+    const rows: (MoneyRow | null)[] = [];
     if (settings.showCash) {
-      rows.push({ label: st.cash, value: formatMoney(cashRevenue, locale) });
-      rows.push({ label: st.mobile, value: formatMoney(data.mobileAmount, locale) });
-      if (data.abonementAmount > 0) rows.push({ label: st.abonement, value: formatMoney(data.abonementAmount, locale) });
+      rows.push({ icon: "💵", label: st.cashCompact, value: formatMoney(cashRevenue, locale) });
+      rows.push({ icon: "💳", label: st.mobile, value: formatMoney(data.mobileAmount, locale) });
+      if (data.abonementAmount > 0) rows.push({ icon: "🎫", label: st.abonementCompact, value: formatMoney(data.abonementAmount, locale) });
       if (data.abonementSold.cash + data.abonementSold.mobile > 0)
         rows.push({
-          label: st.abonementSold,
+          icon: "🎫", label: st.abonementSoldCompact,
           value: formatMoney(data.abonementSold.cash + data.abonementSold.mobile, locale),
         });
     }
     // «Итого» — последней строкой блока выручки: это сумма строк над ней, и
     // читается как сложение. Пустая строка отделяет то, что из кассы УШЛО.
-    rows.push({ label: st.totalFull, value: formatMoney(total, locale) });
+    rows.push({ icon: "📅", label: st.totalCompact, value: formatMoney(total, locale) });
     if (settings.showExpenses) {
       rows.push(null);
       // Инкассация — В ГРУППЕ ВЫБЫТИЙ, а не рядом с наличными: тогда остаток
@@ -678,9 +704,10 @@ export function formatDailyCashSummaryTelegram(
       // выше её уже содержат (cashRevenue), второй раз она не прибавляется.
       // Только когда не ноль: в обычный день инкассации среди дня нет.
       if (data.collectedDuringDay > 0)
-        rows.push({ label: st.collectionLabel, value: formatMoney(data.collectedDuringDay, locale) });
-      rows.push({ label: st.expenses, value: formatMoney(data.expenses, locale) });
-      rows.push({ label: st.bonusesAndAdvances, value: formatMoney(data.bonusesAndAdvances, locale) });
+        rows.push({ icon: "🏦", label: st.collectionCompact, value: formatMoney(data.collectedDuringDay, locale) });
+      // Ноль не печатаем (владелец 2026-09-03: «если Расходы равны 0, то их и не надо писать») — та же логика, что у Безнала и Инкассации.
+      if (data.expenses > 0) rows.push({ icon: "🧾", label: st.expensesCompact, value: formatMoney(data.expenses, locale) });
+      rows.push({ icon: "💰", label: st.bonusesAndAdvancesCompact, value: formatMoney(data.bonusesAndAdvances, locale) });
     }
     const block = moneyBlock(rows);
     if (block) parts.push(block);
@@ -707,20 +734,20 @@ export function formatDailyCashSummaryTelegram(
   lines.push("");
   // Та же таблица, что и в компактном виде (владелец 2026-09-03: «изменяй не
   // только компактный вид, но и полный, чтобы было красиво»).
-  const rows: ({ label: string; value: string } | null)[] = [];
+  const rows: (MoneyRow | null)[] = [];
   if (settings.showCash) {
-    rows.push({ label: st.cash, value: formatMoney(cashRevenue, locale) });
-    rows.push({ label: st.mobile, value: formatMoney(data.mobileAmount, locale) });
-    if (data.abonementAmount > 0) rows.push({ label: st.abonement, value: formatMoney(data.abonementAmount, locale) });
+    rows.push({ icon: "💵", label: st.cash, value: formatMoney(cashRevenue, locale) });
+    rows.push({ icon: "💳", label: st.mobile, value: formatMoney(data.mobileAmount, locale) });
+    if (data.abonementAmount > 0) rows.push({ icon: "🎫", label: st.abonement, value: formatMoney(data.abonementAmount, locale) });
     if (data.abonementSold.cash + data.abonementSold.mobile > 0)
       rows.push({
-        label: st.abonementSold,
+        icon: "🎫", label: st.abonementSold,
         value: formatMoney(data.abonementSold.cash + data.abonementSold.mobile, locale),
       });
   }
   // «Итого» — последней строкой блока выручки: это сумма строк над ней, и
   // читается как сложение. Пустая строка отделяет то, что из кассы УШЛО.
-  rows.push({ label: st.totalFull, value: formatMoney(total, locale) });
+  rows.push({ icon: "📅", label: st.totalFull, value: formatMoney(total, locale) });
   if (settings.showExpenses) {
     rows.push(null);
     // Инкассация — В ГРУППЕ ВЫБЫТИЙ, а не рядом с наличными: тогда остаток
@@ -728,9 +755,10 @@ export function formatDailyCashSummaryTelegram(
     // выше её уже содержат (cashRevenue), второй раз она не прибавляется.
     // Только когда не ноль: в обычный день инкассации среди дня нет.
     if (data.collectedDuringDay > 0)
-      rows.push({ label: st.collectionLabel, value: formatMoney(data.collectedDuringDay, locale) });
-    rows.push({ label: st.expenses, value: formatMoney(data.expenses, locale) });
-    rows.push({ label: st.bonusesAndAdvances, value: formatMoney(data.bonusesAndAdvances, locale) });
+      rows.push({ icon: "🏦", label: st.collectionLabel, value: formatMoney(data.collectedDuringDay, locale) });
+    // Ноль не печатаем (владелец 2026-09-03: «если Расходы равны 0, то их и не надо писать») — та же логика, что у Безнала и Инкассации.
+    if (data.expenses > 0) rows.push({ icon: "🧾", label: st.expenses, value: formatMoney(data.expenses, locale) });
+    rows.push({ icon: "💰", label: st.bonusesAndAdvances, value: formatMoney(data.bonusesAndAdvances, locale) });
   }
   const block = moneyBlock(rows);
   if (block) lines.push(block);
@@ -772,20 +800,23 @@ export function formatShiftCloseSummaryTelegram(
       head.push(`🕐 ${formatLocalTime(data.startAt, timezone)}–${formatLocalTime(data.endAt, timezone)}`);
     if (settings.showHours) head.push(`▶️ ${formatDuration(data.minutes, true)}`);
 
+    // СТАВКИ ЗДЕСЬ НЕТ НАМЕРЕННО (решение владельца 2026-09-03: «у сотрудника
+    // не надо писать ставку в час»). Она есть в данных и выводилась до этого
+    // дня — не возвращать: сводка уходит в общий чат, и час работы стоит
+    // называть только в кабинете владельца.
     // Деньги — колонкой в цитате, как в сводке зоны и «Кассе за день»
     // (владелец 2026-09-03: «красивое оформление должно касаться и этих двух
     // сводок»). Раньше поля шли по два в строку через « · », и числа двух
     // сотрудников подряд не выравнивались — сравнить их глазами было нельзя.
-    const rows: ({ label: string; value: string } | null)[] = [];
-    if (settings.showTotal && data.rate > 0) rows.push({ label: st.rateLabel, value: formatMoney(data.rate, locale) });
-    if (settings.showTotal) rows.push({ label: st.accruedForShift, value: formatMoney(data.accrued, locale) });
+    const rows: (MoneyRow | null)[] = [];
+    if (settings.showTotal) rows.push({ icon: "🧮", label: st.accruedCompact, value: formatMoney(data.accrued, locale) });
     // «Аванс: 0» показывается всегда при включённом тумблере (запрос
     // пользователя 2026-07-18: «если сотрудник не брал Аванс, надо выводить
     // Аванс: 0») — в отличие от Премии, которая при нуле скрывается.
-    if (settings.showAdvance) rows.push({ label: st.advance, value: formatMoney(data.advanceAmount, locale) });
+    if (settings.showAdvance) rows.push({ icon: "💵", label: st.advance, value: formatMoney(data.advanceAmount, locale) });
     if (settings.showBonus && data.bonusAmount > 0)
       rows.push({
-        label: data.bonusIsAccrual ? st.bonusAccrued : st.bonus,
+        icon: "🏆", label: data.bonusIsAccrual ? st.bonusAccruedCompact : st.bonusCompact,
         value: formatMoney(data.bonusAmount, locale),
       });
 
@@ -814,12 +845,11 @@ export function formatShiftCloseSummaryTelegram(
     lines.push(`🕐 ${st.period}: ${formatLocalTime(data.startAt, timezone)} – ${formatLocalTime(data.endAt, timezone)}`);
   if (settings.showHours) lines.push(`▶️ ${st.hoursWorked}: ${formatDuration(data.minutes)}`);
 
-  const rows: ({ label: string; value: string } | null)[] = [];
-  if (settings.showTotal && data.rate > 0) rows.push({ label: st.rateLabel, value: formatMoney(data.rate, locale) });
-  if (settings.showTotal) rows.push({ label: st.accruedForShift, value: formatMoney(data.accrued, locale) });
-  if (settings.showAdvance) rows.push({ label: st.advance, value: formatMoney(data.advanceAmount, locale) });
+  const rows: (MoneyRow | null)[] = [];
+  if (settings.showTotal) rows.push({ icon: "🧮", label: st.accruedCompact, value: formatMoney(data.accrued, locale) });
+  if (settings.showAdvance) rows.push({ icon: "💵", label: st.advance, value: formatMoney(data.advanceAmount, locale) });
   if (settings.showBonus && data.bonusAmount > 0)
-    rows.push({ label: data.bonusIsAccrual ? st.bonusAccrued : st.bonus, value: formatMoney(data.bonusAmount, locale) });
+    rows.push({ icon: "🏆", label: data.bonusIsAccrual ? st.bonusAccrued : st.bonus, value: formatMoney(data.bonusAmount, locale) });
   const block = moneyBlock(rows);
   if (block) lines.push(block);
   if (settings.showTotal) lines.push(`💰 ${st.toPayOutFull}: <b>${formatMoney(data.toPayOut, locale)}</b>`);

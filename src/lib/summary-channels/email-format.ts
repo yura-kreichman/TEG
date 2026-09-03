@@ -250,7 +250,9 @@ export function formatShiftCloseSummaryEmail(
   if (settings.showTotal) {
     // Ставка и начисление за смену — те же строки, что в чате: без них итог
     // «К выдаче» нельзя проверить (запрос владельца 2026-09-03).
-    if (data.rate > 0) rows.push({ label: st.rateLabel, value: formatMoney(data.rate, locale) });
+    // Ставки в сводке смены нет намеренно (решение владельца 2026-09-03: «у
+    // сотрудника не надо писать ставку в час»). Убрана и здесь, а не только в
+    // Telegram: одна и та же сводка не должна отличаться по каналам.
     rows.push({ label: st.accruedForShift, value: formatMoney(data.accrued, locale) });
     rows.push({ label: st.toPayOutFull, value: formatMoney(data.toPayOut, locale), bold: true });
   }
