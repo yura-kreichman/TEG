@@ -593,7 +593,8 @@ export function formatDailyCashSummaryTelegram(
   // (вопрос владельца 2026-09-03). Раньше складывались только сданные
   // сотрудником наличные и безнал, и итог дня занижался ровно на
   // инкассацию: у КидсБурга 2945 вместо 8295.
-  const total = data.cashAmount + data.collectedDuringDay + data.mobileAmount;
+  const cashRevenue = Math.round((data.cashAmount + data.collectedDuringDay) * 100) / 100;
+  const total = Math.round((cashRevenue + data.mobileAmount) * 100) / 100;
   // Одна и та же строка в обоих видах сводки: она и так короткая, укорачивать
   // её отдельно для компактного вида нечем.
   const note = pendingNote(data.pending, st, locale);
@@ -616,7 +617,7 @@ export function formatDailyCashSummaryTelegram(
       // 2026-07-27: "и в компактной сводке тоже" — та же правка, что уже
       // сделали в full-режиме, объединённая строка через " · " переносилась
       // посередине суммы на длинных значениях, читалось коряво).
-      parts.push(`💵 ${st.cashCompact}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
+      parts.push(`💵 ${st.cashCompact}: <b>${formatMoney(cashRevenue, locale)}</b>`);
       // 🏦 — тот же значок, что у уведомления об инкассации и у строки в
       // сводке зоны. Только когда не ноль: в обычный день её нет.
       if (data.collectedDuringDay > 0) {
@@ -670,7 +671,7 @@ export function formatDailyCashSummaryTelegram(
     // Наличные и Безнал раздельными строками, не через " · " (запрос
     // пользователя 2026-07-27) — в отличие от compact-режима, где место в
     // дефиците и разделитель оправдан, здесь строк не жалко.
-    lines.push(`💵 ${st.cash}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
+    lines.push(`💵 ${st.cash}: <b>${formatMoney(cashRevenue, locale)}</b>`);
     // 🏦 — тот же значок, что у уведомления об инкассации и у сводки зоны.
     if (data.collectedDuringDay > 0) {
       lines.push(`🏦 ${st.collectionLabel}: <b>${formatMoney(data.collectedDuringDay, locale)}</b>`);

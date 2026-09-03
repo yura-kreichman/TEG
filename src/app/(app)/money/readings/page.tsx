@@ -725,8 +725,16 @@ export default function ReadingsCalendarPage() {
   // «50 %», то есть подпись утверждала бы ровно сотню там, где её нет.
   // База — только денежная выручка; оплата балансом сюда не входит, её в
   // «Фактической выручке» тоже нет.
-  const revenueTotal = daySummary.cash + daySummary.mobile;
-  const cashPercent = revenueTotal > 0 ? Math.round((daySummary.cash / revenueTotal) * 100) : null;
+  // Наличная выручка ДНЯ, а не то, что сотрудник донёс до пересчёта: сюда
+  // входит забранное владельцем среди дня (замечание владельца 2026-09-03 по
+  // скриншоту). Без этого строки «Наличные» и «Безнал» не складывались в
+  // «Фактическую выручку», которая стоит прямо под ними, а проценты считались
+  // от неполной базы: 2945 + 10185 = 13130 против показанных 18480, и доли
+  // выходили 22/78 вместо настоящих 45/55. Сколько из этих наличных владелец
+  // уже забрал, названо отдельной строкой «Инкассация» ниже.
+  const cashRevenue = Math.round((daySummary.cash + daySummary.collected) * 100) / 100;
+  const revenueTotal = cashRevenue + daySummary.mobile;
+  const cashPercent = revenueTotal > 0 ? Math.round((cashRevenue / revenueTotal) * 100) : null;
   const mobilePercent = cashPercent === null ? null : 100 - cashPercent;
 
   if (checking || !dateReady) {
@@ -1023,7 +1031,7 @@ export default function ReadingsCalendarPage() {
                         {t.operatorApp.submit.cashLabel}
                       </span>
                       <span className="flex items-center gap-1.5 text-foreground">
-                        <Money value={daySummary.cash} />
+                        <Money value={cashRevenue} />
                         {cashPercent !== null && (
                           <span className="text-muted-foreground tabular-nums">{cashPercent}%</span>
                         )}
@@ -1115,7 +1123,7 @@ export default function ReadingsCalendarPage() {
                             себе: Разница ниже считается ВМЕСТЕ с ним, и
                             обещанное тождество «фактическая − расчётная = Разница»
                             не выполнялось ровно на сумму дневной инкассации. */}
-                        <Money value={daySummary.cash + daySummary.collected + daySummary.mobile} size="display" />
+                        <Money value={revenueTotal} size="display" />
                       </span>
                     </div>
                     {/* Сколько из этой суммы владелец забрал сам, не дожидаясь
@@ -1261,7 +1269,7 @@ export default function ReadingsCalendarPage() {
                           <Money
                             size="display"
                             value={
-                              daySummary.cash +
+                              cashRevenue +
                               daySummary.mobile +
                               daySummary.abonementInCash +
                               (abonementSales?.cash ?? 0) +

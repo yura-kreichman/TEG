@@ -178,13 +178,14 @@ export function formatDailyCashSummaryEmail(
   // числами. Строка расходов ниже остаётся справочной.
   // Итог дня включает забранное владельцем ДО пересчёта — см. тот же
   // комментарий в telegram-format (вопрос владельца 2026-09-03).
-  const total = data.cashAmount + data.collectedDuringDay + data.mobileAmount;
+  const cashRevenue = Math.round((data.cashAmount + data.collectedDuringDay) * 100) / 100;
+  const total = Math.round((cashRevenue + data.mobileAmount) * 100) / 100;
   const rows: EmailRow[] = [];
 
   if (settings.showCash) {
     rows.push({
       label: `${st.cash} / ${st.mobile}`,
-      value: `${formatMoney(data.cashAmount, locale)} / ${formatMoney(data.mobileAmount, locale)}`,
+      value: `${formatMoney(cashRevenue, locale)} / ${formatMoney(data.mobileAmount, locale)}`,
     });
     if (data.collectedDuringDay > 0) {
       rows.push({ label: st.collectionLabel, value: formatMoney(data.collectedDuringDay, locale) });
