@@ -168,6 +168,27 @@ interface MoneyRow {
   value: string;
 }
 
+/**
+ * Разделитель тысяч — ОБЫЧНЫМ пробелом внутри моноширинного блока.
+ *
+ * Intl отдаёт U+00A0 (неразрывный пробел), и вне блока это правильно: число
+ * не разорвётся переносом строки. Но ВНУТРИ <code> Samsung рисует U+00A0 не в
+ * одну клетку, и «1 305» занимает меньше пяти клеток, тогда как «  540» —
+ * ровно пять. Строки с четырёхзначными суммами съезжали относительно
+ * трёхзначных.
+ *
+ * Это и была настоящая причина, а не эмодзи (скриншоты владельца 2026-09-03:
+ * сперва грешили на значки в начале строки, перенесли в конец — не помогло).
+ * Блок показаний не ломался никогда именно потому, что там целые числа без
+ * разделителей.
+ *
+ * Внутри блока перенос невозможен по построению, так что неразрывность здесь
+ * не нужна вовсе.
+ */
+function monospaceDigits(value: string): string {
+  return value.split(String.fromCharCode(0x00a0)).join(" ");
+}
+
 function formatMoneyRows(items: (MoneyRow | null)[]): string {
   const rows = items.filter((it): it is MoneyRow => it !== null);
   if (rows.length === 0) return "";
@@ -193,14 +214,14 @@ function formatMoneyRows(items: (MoneyRow | null)[]): string {
   // содержаться в чём угодно, КРОМЕ pre и code. Пробовать не надо — проверено
   // по докам 2026-09-03, и владелец решил оставить выравнивание.
   const labelWidth = Math.max(...rows.map((it) => it.label.length));
-  const valueWidth = Math.max(...rows.map((it) => it.value.length));
+  const valueWidth = Math.max(...rows.map((it) => monospaceDigits(it.value).length));
   // escapeTelegramHtml — ПОСЛЕДНИМ шагом, уже после padEnd/padStart: см. тот
   // же разбор у formatCompactGrid ниже.
   return items
     .map((it) =>
       it === null
         ? ""
-        : `${escapeTelegramHtml(`${it.label.padEnd(labelWidth)}  ${it.value.padStart(valueWidth)}`)} ${it.icon}`
+        : `${it.icon} ${escapeTelegramHtml(`${it.label.padEnd(labelWidth)}  ${monospaceDigits(it.value).padStart(valueWidth)}`)}`
     )
     .join("\n");
 }
@@ -213,7 +234,7 @@ function moneyBlock(items: (MoneyRow | null)[]): string {
 
 function formatCompactGrid(items: { label: string; value: string }[], fullNames = false): string {
   if (items.length === 0) return "";
-  const valueWidth = Math.max(4, ...items.map((it) => it.value.length));
+  const valueWidth = Math.max(4, ...items.map((it) => monospaceDigits(it.value).length));
   const cellWidth = COMPACT_NAME_WIDTH + 2 + valueWidth; // +2 — ": "
   const cols = Math.max(
     1,
@@ -239,7 +260,7 @@ function formatCompactGrid(items: { label: string; value: string }[], fullNames 
     : COMPACT_NAME_WIDTH;
 
   const cells = items.map((it) =>
-    escapeTelegramHtml(`${truncateLabel(it.label, nameWidth).padEnd(nameWidth)}: ${it.value.padStart(valueWidth)}`)
+    escapeTelegramHtml(`${truncateLabel(it.label, nameWidth).padEnd(nameWidth)}: ${monospaceDigits(it.value).padStart(valueWidth)}`)
   );
   const rows: string[] = [];
   for (let i = 0; i < cells.length; i += cols) {
@@ -641,7 +662,7 @@ function formatZoneBreakdownRows(zoneBreakdown: DailyCashSummaryData["zoneBreakd
   const labelWidth = Math.max(...zoneBreakdown.map((z) => `${z.zoneName}:`.length));
   // Суммы по правому краю — как в денежных таблицах рядом. Раньше их не
   // выравнивали вовсе, и числа шли рваным краем.
-  const valueWidth = Math.max(...zoneBreakdown.map((z) => formatMoney(z.revenue, locale).length));
+  const valueWidth = Math.max(...zoneBreakdown.map((z) => monospaceDigits(formatMoney(z.revenue, locale)).length));
   // "(+X)" абонементом убран (запрос пользователя 2026-07-25) — дублировал
   // отдельную строку "Баланс" ниже и визуально намекал, что баланс
   // складывается с кассой зоны, хотя это не так (весь вечерний разбор про
@@ -650,9 +671,11 @@ function formatZoneBreakdownRows(zoneBreakdown: DailyCashSummaryData["zoneBreakd
   return zoneBreakdown
     .map(
       (z) =>
+        `${z.zoneEmoji ?? "🏁"} ` +
         escapeTelegramHtml(
-          `${z.zoneName}:`.padEnd(labelWidth + 1) + formatMoney(z.revenue, locale).padStart(valueWidth)
-        ) + ` ${z.zoneEmoji ?? "🏁"}`
+          `${z.zoneName}:`.padEnd(labelWidth + 1) +
+            monospaceDigits(formatMoney(z.revenue, locale)).padStart(valueWidth)
+        )
     )
     .join("\n");
 }
