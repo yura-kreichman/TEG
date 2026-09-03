@@ -1917,5 +1917,9 @@
     "typeFeat": "Novità",
     "typeImpr": "Migliorato",
     "typeFix": "Corretto"
+  },
+  "editLock": {
+    "tooOld": "È passata più di una settimana: le modifiche retroattive sono chiuse.",
+    "submissionClosed": "La chiusura che ha assorbito questa spesa è già chiusa da una successiva."
   }
 }

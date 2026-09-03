@@ -4,6 +4,7 @@ import { requireOwner } from "@/lib/require-owner";
 import { removeExpenseAlert, resyncExpenseAlert } from "@/lib/expense-alert";
 import { resyncAfterMoneyOpChange } from "@/lib/summary-channels/resync";
 import { resyncZoneSummaryMessage } from "@/lib/summary-channels/zone-summary-message";
+import { getExpenseEditWindow } from "@/lib/edit-window";
 
 /**
  * Правка/удаление расхода владельцем прямо в реестре (запрос пользователя
@@ -31,6 +32,14 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/expe
   const op = await loadExpense(id, owner.tenantId);
   if (!op) {
     return NextResponse.json({ error: "Расход не найден" }, { status: 404 });
+  }
+  // Замок на старое (решение владельца 2026-09-03). Правка расхода задним
+  // числом молча меняет сегодняшний остаток кассы и «Разницу» закрытого дня —
+  // разбор у getExpenseEditWindow. Код причины уходит наружу, чтобы экран
+  // сказал человеку, ПОЧЕМУ нельзя, а не просто отказал.
+  const window = await getExpenseEditWindow(op);
+  if (!window.editable) {
+    return NextResponse.json({ error: "Этот расход больше не редактируется", reason: window.reason }, { status: 409 });
   }
 
   const body = await request.json().catch(() => null);
@@ -266,6 +275,14 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/money/ex
   const op = await loadExpense(id, owner.tenantId);
   if (!op) {
     return NextResponse.json({ error: "Расход не найден" }, { status: 404 });
+  }
+  // Замок на старое (решение владельца 2026-09-03). Правка расхода задним
+  // числом молча меняет сегодняшний остаток кассы и «Разницу» закрытого дня —
+  // разбор у getExpenseEditWindow. Код причины уходит наружу, чтобы экран
+  // сказал человеку, ПОЧЕМУ нельзя, а не просто отказал.
+  const window = await getExpenseEditWindow(op);
+  if (!window.editable) {
+    return NextResponse.json({ error: "Этот расход больше не редактируется", reason: window.reason }, { status: 409 });
   }
 
   await prisma.$transaction(async (tx) => {

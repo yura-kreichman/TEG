@@ -1917,5 +1917,9 @@
     "typeFeat": "Yeni",
     "typeImpr": "İyileştirildi",
     "typeFix": "Düzeltildi"
+  },
+  "editLock": {
+    "tooOld": "Bir haftadan fazla geçti — geriye dönük düzenlemeler kapalı.",
+    "submissionClosed": "Bu gideri kapsayan gün sonu kapanışı, sonraki bir kapanışla kapatıldı."
   }
 }

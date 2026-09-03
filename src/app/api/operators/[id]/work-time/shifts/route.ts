@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getShiftEditWindow } from "@/lib/edit-window";
 import { findTenantOperator, requireOwner } from "@/lib/require-owner";
 import { listShiftDetails, listStandaloneMoneyOps } from "@/lib/work-time";
 import { periodBoundsUtc } from "@/lib/business-day";
@@ -39,7 +40,14 @@ export async function GET(request: Request, ctx: RouteContext<"/api/operators/[i
     ).map((c) => c.entityId)
   );
 
-  const rows = shifts.map((s) => ({ ...s, edited: editedIds.has(s.id) }));
+  // Замок на старое (решение владельца 2026-09-03) — считает сервер, тем же
+  // помощником, что проверяет правку. Экран правило не повторяет: в этом коде
+  // формула в двух копиях расходилась не раз.
+  const now = new Date();
+  const rows = shifts.map((s) => {
+    const window = getShiftEditWindow(s, now);
+    return { ...s, edited: editedIds.has(s.id), editable: window.editable, lockReason: window.reason };
+  });
 
   // Та же отметка правки для отдельных авансов/премий (2026-08-14): у смен
   // корона была с самого начала, у этих строк — нет, хотя правятся они так же

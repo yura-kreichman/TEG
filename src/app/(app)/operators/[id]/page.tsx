@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Crown, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown, Lock, Pencil, Plus, Trash2 } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { SaveButton } from "@/components/ui/save-button";
@@ -71,6 +71,8 @@ interface ShiftRow {
   bonusAmount: number;
   bonusAccruedAmount: number;
   edited: boolean;
+  editable: boolean;
+  lockReason: "tooOld" | "submissionClosed" | null;
   open: boolean;
   requiresEdit: boolean;
 }
@@ -512,6 +514,11 @@ export default function OperatorCardPage() {
   }
 
   function openShiftEdit(shift: ShiftRow) {
+    // Заперта по сроку — шторку не открываем вовсе (решение владельца
+    // 2026-09-03). Суммы аванса и премии в строке тоже кликабельны и ведут
+    // сюда же, поэтому проверка стоит ЗДЕСЬ, а не только у карандаша: иначе
+    // форма открылась бы и упала на сохранении.
+    if (!shift.editable) return;
     setEditingShift(shift);
     setEditStartTime(timeInputValue(shift.startAt));
     // Открытая смена (docs/spec/05-work-time.md) — endAt ещё не задан;
@@ -901,7 +908,11 @@ export default function OperatorCardPage() {
                             )}
                           </div>
                         </div>
-                        <IconActionButton icon={Pencil} onClick={() => openShiftEdit(item.shift)} label={t.common.edit} />
+                        {item.shift.editable ? (
+                          <IconActionButton icon={Pencil} onClick={() => openShiftEdit(item.shift)} label={t.common.edit} />
+                        ) : (
+                          <Lock className="size-4 shrink-0 text-muted-foreground" aria-label={t.editLock.tooOld} />
+                        )}
                       </div>
                     ) : item.kind === "op" ? (
                       <div

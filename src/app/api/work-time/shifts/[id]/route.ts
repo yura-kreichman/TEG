@@ -14,6 +14,7 @@ import { getDictionary, resolveLocale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
 import { chargeSelfServiceAdvanceToZones } from "@/lib/zone-balance";
 import { resyncDailyCashForPoint, resyncShiftCloseMessage } from "@/lib/summary-channels/resync";
+import { getShiftEditWindow } from "@/lib/edit-window";
 
 // Аудит 2026-07-27, второй раунд — см. комментарий у повторной проверки
 // овердрафта внутри транзакции ниже.
@@ -64,6 +65,15 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/work-time/
   const shift = await loadShift(id, owner.tenantId);
   if (!shift) {
     return NextResponse.json({ error: "Смена не найдена" }, { status: 404 });
+  }
+  // Замок на старое (решение владельца 2026-09-03: «их тоже можно
+  // редактировать неограниченно назад, это не имеет смысла по определению»).
+  // Правка старой смены меняет начисленное, а через него — баланс «к выдаче»
+  // сотрудника СЕГОДНЯ; если аванс разносился по зонам, то и их остатки.
+  // Срок и его обоснование — у getShiftEditWindow.
+  const window = getShiftEditWindow(shift);
+  if (!window.editable) {
+    return NextResponse.json({ error: "Эта смена больше не редактируется", reason: window.reason }, { status: 409 });
   }
 
   const linkedOps = await loadLinkedMoneyOps(id);
@@ -447,6 +457,15 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
   const shift = await loadShift(id, owner.tenantId);
   if (!shift) {
     return NextResponse.json({ error: "Смена не найдена" }, { status: 404 });
+  }
+  // Замок на старое (решение владельца 2026-09-03: «их тоже можно
+  // редактировать неограниченно назад, это не имеет смысла по определению»).
+  // Правка старой смены меняет начисленное, а через него — баланс «к выдаче»
+  // сотрудника СЕГОДНЯ; если аванс разносился по зонам, то и их остатки.
+  // Срок и его обоснование — у getShiftEditWindow.
+  const window = getShiftEditWindow(shift);
+  if (!window.editable) {
+    return NextResponse.json({ error: "Эта смена больше не редактируется", reason: window.reason }, { status: 409 });
   }
 
   const laterShift = await prisma.shift.findFirst({

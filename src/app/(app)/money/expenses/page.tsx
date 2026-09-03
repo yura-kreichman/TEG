@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Crown, MessageSquareMore, Pencil, Plus, Settings2, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown, Lock, MessageSquareMore, Pencil, Plus, Settings2, Trash2, X } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { OwnerShell } from "@/components/owner-shell";
 import { SpringCard } from "@/components/spring-card";
@@ -38,6 +38,8 @@ interface ExpenseEntry {
   operatorName: string | null;
   operatorColorTag: string | null;
   editedByOwner: boolean;
+  editable: boolean;
+  lockReason: "tooOld" | "submissionClosed" | null;
 }
 
 interface ExpenseCategory {
@@ -376,7 +378,18 @@ export default function ExpensesRegisterPage() {
                             </span>
                           </span>
                           <span className="shrink-0 text-xs font-bold tabular-nums"><Money value={e.amount} /></span>
-                          <IconActionButton icon={Pencil} onClick={() => openEdit(e)} label={t.money.editExpenseAction} />
+                          {/* Заперто — замочек с причиной, а не пропавшая кнопка:
+                              человек должен понимать, почему нельзя (тот же приём,
+                              что у «позапрошлых итогов»). Правило считает сервер,
+                              экран его не повторяет. */}
+                          {e.editable ? (
+                            <IconActionButton icon={Pencil} onClick={() => openEdit(e)} label={t.money.editExpenseAction} />
+                          ) : (
+                            <Lock
+                              className="size-4 shrink-0 text-muted-foreground"
+                              aria-label={e.lockReason === "submissionClosed" ? t.editLock.submissionClosed : t.editLock.tooOld}
+                            />
+                          )}
                         </div>
                       ))}
                     </div>

@@ -1917,5 +1917,9 @@
     "typeFeat": "Nou",
     "typeImpr": "Îmbunătățit",
     "typeFix": "Corectat"
+  },
+  "editLock": {
+    "tooOld": "A trecut mai mult de o săptămână — editările retroactive sunt închise.",
+    "submissionClosed": "Predarea rezultatelor care a preluat această cheltuială este deja închisă de una ulterioară."
   }
 }

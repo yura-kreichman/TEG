@@ -1917,5 +1917,9 @@
     "typeFeat": "New",
     "typeImpr": "Improved",
     "typeFix": "Fixed"
+  },
+  "editLock": {
+    "tooOld": "More than a week has passed — backdated edits are closed.",
+    "submissionClosed": "The results submission that absorbed this expense is already closed by a later one."
   }
 }

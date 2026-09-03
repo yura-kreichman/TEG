@@ -1917,5 +1917,9 @@
     "typeFeat": "Nowe",
     "typeImpr": "Ulepszone",
     "typeFix": "Poprawione"
+  },
+  "editLock": {
+    "tooOld": "Minęło ponad tydzień — edycja wstecz jest zamknięta.",
+    "submissionClosed": "Rozliczenie, które przejęło ten wydatek, zostało już zamknięte przez kolejne."
   }
 }

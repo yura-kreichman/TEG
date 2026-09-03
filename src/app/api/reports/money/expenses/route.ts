@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getExpenseEditWindow } from "@/lib/edit-window";
 import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOwner } from "@/lib/require-owner";
 import { dayBoundsUtc } from "@/lib/business-day";
@@ -64,6 +65,21 @@ export async function GET(request: Request) {
     ).map((c) => c.entityId)
   );
 
+  // Замок на старое (решение владельца 2026-09-03) — считаем ЗДЕСЬ, а не на
+  // клиенте: правило живёт в одном месте с тем, что проверяет сервер при
+  // самой правке, иначе экран и маршрут разошлись бы (в этом коде такое
+  // случалось трижды за два дня).
+  //
+  // Проверку сдачи делаем только для тех расходов, что ещё в сроке: всё
+  // старше недели заперто и так, и лишние запросы к базе там ни к чему.
+  const now = new Date();
+  const windows = new Map();
+  await Promise.all(
+    operations.map(async (op) => {
+      windows.set(op.id, await getExpenseEditWindow(op, now));
+    })
+  );
+
   const expenses = operations.map((op) => ({
     id: op.id,
     occurredAt: op.occurredAt.toISOString(),
@@ -79,6 +95,10 @@ export async function GET(request: Request) {
     // 2026-08-16: одинаковое представление во всех реестрах проекта).
     operatorColorTag: op.performedByOperator?.colorTag ?? null,
     editedByOwner: correctedIds.has(op.id),
+    // editable/lockReason — чтобы экран показал замочек с причиной, а не
+    // отдал форму, которую сервер всё равно отвергнет.
+    editable: windows.get(op.id)?.editable ?? true,
+    lockReason: windows.get(op.id)?.reason ?? null,
   }));
 
   // Название точки в строке имеет смысл, только если точек больше одной

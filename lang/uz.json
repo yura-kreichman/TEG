@@ -1917,5 +1917,9 @@
     "typeFeat": "Yangi",
     "typeImpr": "Yaxshilandi",
     "typeFix": "Tuzatildi"
+  },
+  "editLock": {
+    "tooOld": "Bir haftadan ko‘p vaqt o‘tdi — orqaga qaytib tahrirlash yopiq.",
+    "submissionClosed": "Bu xarajatni qamrab olgan yakuniy topshiruv keyingisi bilan yopilgan."
   }
 }
