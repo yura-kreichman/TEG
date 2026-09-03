@@ -18,6 +18,7 @@ import {
   Coins,
   RefreshCcw,
   ShoppingBag,
+  Landmark,
   ShoppingCart,
   TicketCheck,
   Trash2,
@@ -95,6 +96,7 @@ interface DayCard {
   // Расходы, которые эта сдача забрала себе — слагаемое Разницы, считает
   // сервер (С18).
   expensesInSubmission: number;
+  collectedBefore: number;
   // Отменённые тапы по тарифам — для точного вычета у тап-зон (С83).
   voidedTapsByTariff?: Record<string, number>;
   returnsCount: number;
@@ -699,6 +701,11 @@ export default function ReadingsCalendarPage() {
   const daySummary = (cards ?? []).reduce(
     (acc, card) => ({
       cash: acc.cash + card.cashAmount,
+      // Забранное владельцем до пересчёта — деньги дня, которых сотрудник в
+      // ящике уже не застал (вопрос владельца 2026-09-03). Без него итог дня
+      // занижался ровно на инкассацию, и экран спорил со сводкой зоны, где
+      // «Инкасс.» показана с утра.
+      collected: acc.collected + card.collectedBefore,
       mobile: acc.mobile + card.mobileAmount,
       abonement: acc.abonement + card.abonementAmount,
       // Баланс прибавляется к "Фактической кассе" ровно там, где он учтён и
@@ -709,7 +716,7 @@ export default function ReadingsCalendarPage() {
       returnsCount: acc.returnsCount + card.returnsCount,
       difference: Math.round((acc.difference + card.difference) * 100) / 100,
     }),
-    { cash: 0, mobile: 0, abonement: 0, abonementInCash: 0, calculatedRevenue: 0, returnsCount: 0, difference: 0 }
+    { cash: 0, collected: 0, mobile: 0, abonement: 0, abonementInCash: 0, calculatedRevenue: 0, returnsCount: 0, difference: 0 }
   );
 
   // Доли нала и безнала в выручке (запрос владельца 2026-09-02, по образцу его
@@ -1102,9 +1109,31 @@ export default function ReadingsCalendarPage() {
                         <InfoTooltip text={t.readings.actualCashTooltip} />
                       </span>
                       <span className="text-foreground">
-                        <Money value={daySummary.cash + daySummary.mobile} size="display" />
+                        {/* + забранное владельцем ДО пересчёта (вопрос владельца
+                            2026-09-03: «в итогах дня 2945, хотя по факту было
+                            больше»). Без этого слагаемого экран противоречил сам
+                            себе: Разница ниже считается ВМЕСТЕ с ним, и
+                            обещанное тождество «фактическая − расчётная = Разница»
+                            не выполнялось ровно на сумму дневной инкассации. */}
+                        <Money value={daySummary.cash + daySummary.collected + daySummary.mobile} size="display" />
                       </span>
                     </div>
+                    {/* Сколько из этой суммы владелец забрал сам, не дожидаясь
+                        пересчёта. Названо строкой, а не спрятано в итог: иначе
+                        владелец видит число больше сданного сотрудником и не
+                        понимает, откуда оно. Тот же значок, что у уведомления об
+                        инкассации и у строки в сводке зоны. */}
+                    {daySummary.collected > 0 && (
+                      <div className="flex items-center justify-between text-caption-airbnb">
+                        <span className="flex items-center gap-1.5">
+                          <Landmark className="size-3.5 shrink-0" />
+                          {t.summaryText.collectionLabel}
+                        </span>
+                        <span className="font-bold text-foreground">
+                          <Money value={daySummary.collected} />
+                        </span>
+                      </div>
+                    )}
                     {/* Расходы дня — сразу под Фактической кассой (решение
                         владельца 2026-08-16): деньги вынули из неё же, и
                         читать это надо рядом, а не через Разницу. В саму

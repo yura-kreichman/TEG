@@ -589,7 +589,11 @@ export function formatDailyCashSummaryTelegram(
   // они сидят внутри cashAmount, и второе вычитание занижало «Итого» ровно на
   // сумму дневных трат. Экран «Итоги дня» считает то же число как
   // наличные + безнал, без вычета, — теперь сводка отвечает так же.
-  const total = data.cashAmount + data.mobileAmount;
+  // «Итого» — вся выручка дня, включая забранное владельцем ДО пересчёта
+  // (вопрос владельца 2026-09-03). Раньше складывались только сданные
+  // сотрудником наличные и безнал, и итог дня занижался ровно на
+  // инкассацию: у КидсБурга 2945 вместо 8295.
+  const total = data.cashAmount + data.collectedDuringDay + data.mobileAmount;
   // Одна и та же строка в обоих видах сводки: она и так короткая, укорачивать
   // её отдельно для компактного вида нечем.
   const note = pendingNote(data.pending, st, locale);
@@ -613,6 +617,11 @@ export function formatDailyCashSummaryTelegram(
       // сделали в full-режиме, объединённая строка через " · " переносилась
       // посередине суммы на длинных значениях, читалось коряво).
       parts.push(`💵 ${st.cashCompact}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
+      // 🏦 — тот же значок, что у уведомления об инкассации и у строки в
+      // сводке зоны. Только когда не ноль: в обычный день её нет.
+      if (data.collectedDuringDay > 0) {
+        parts.push(`🏦 ${st.collectionCompact}: <b>${formatMoney(data.collectedDuringDay, locale)}</b>`);
+      }
       parts.push(`💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`);
       if (data.abonementAmount > 0) {
         parts.push(`🎫 ${st.abonementCompact}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);
@@ -662,6 +671,10 @@ export function formatDailyCashSummaryTelegram(
     // пользователя 2026-07-27) — в отличие от compact-режима, где место в
     // дефиците и разделитель оправдан, здесь строк не жалко.
     lines.push(`💵 ${st.cash}: <b>${formatMoney(data.cashAmount, locale)}</b>`);
+    // 🏦 — тот же значок, что у уведомления об инкассации и у сводки зоны.
+    if (data.collectedDuringDay > 0) {
+      lines.push(`🏦 ${st.collectionLabel}: <b>${formatMoney(data.collectedDuringDay, locale)}</b>`);
+    }
     lines.push(`💳 ${st.mobile}: <b>${formatMoney(data.mobileAmount, locale)}</b>`);
     if (data.abonementAmount > 0) {
       lines.push(`🎫 ${st.abonement}: <b>${formatMoney(data.abonementAmount, locale)}</b>`);

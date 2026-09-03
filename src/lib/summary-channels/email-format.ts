@@ -176,7 +176,9 @@ export function formatDailyCashSummaryEmail(
   // одной формулы: в чате и в пуше поправлено раньше, письмо осталось —
   // у тенанта с включённым email один и тот же день приходил двумя разными
   // числами. Строка расходов ниже остаётся справочной.
-  const total = data.cashAmount + data.mobileAmount;
+  // Итог дня включает забранное владельцем ДО пересчёта — см. тот же
+  // комментарий в telegram-format (вопрос владельца 2026-09-03).
+  const total = data.cashAmount + data.collectedDuringDay + data.mobileAmount;
   const rows: EmailRow[] = [];
 
   if (settings.showCash) {
@@ -184,6 +186,9 @@ export function formatDailyCashSummaryEmail(
       label: `${st.cash} / ${st.mobile}`,
       value: `${formatMoney(data.cashAmount, locale)} / ${formatMoney(data.mobileAmount, locale)}`,
     });
+    if (data.collectedDuringDay > 0) {
+      rows.push({ label: st.collectionLabel, value: formatMoney(data.collectedDuringDay, locale) });
+    }
     if (data.abonementAmount > 0) {
       rows.push({ label: st.abonement, value: formatMoney(data.abonementAmount, locale) });
     }

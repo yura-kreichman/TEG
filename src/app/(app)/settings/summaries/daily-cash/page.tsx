@@ -42,6 +42,7 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary): Dai
     abonementAmount: 0,
     // Демо не показывает строку продажи абонементов (0) — тот же принцип.
     abonementSold: { cash: 0, mobile: 0 },
+    collectedDuringDay: 1200,
     expenses: 120,
     // Демо не показывает строку "Премии и Авансы" (0) — тот же принцип, что
     // и у abonementAmount выше.

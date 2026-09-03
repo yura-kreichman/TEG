@@ -56,6 +56,9 @@ export async function buildDailyCashSummaryData(
 
   let cashAmount = 0;
   let mobileAmount = 0;
+  // Забранное владельцем ДО пересчёта — деньги дня, которых сотрудник в
+  // ящике уже не застал. Разбор — у DailyCashSummaryData.collectedDuringDay.
+  let collectedDuringDay = 0;
   // sortOrder хранится рядом с выручкой: разбивка по зонам в сводке должна
   // идти в порядке, который владелец задал кнопками вверх/вниз (запрос
   // 2026-08-16). Раньше порядок был случайным — какой зоне досталось первое
@@ -66,15 +69,20 @@ export async function buildDailyCashSummaryData(
     for (const zs of submission.zoneSubmissions) {
       const cash = Number(zs.cashAmount);
       const mobile = Number(zs.mobileAmount);
+      const collected = Number(zs.collectedBeforeSubmission ?? 0);
       cashAmount += cash;
       mobileAmount += mobile;
+      collectedDuringDay += collected;
 
       const entry = zoneRevenueById.get(zs.zoneId) ?? {
         zoneName: zs.zone.name,
         revenue: 0,
         sortOrder: zs.zone.sortOrder,
       };
-      entry.revenue += cash + mobile;
+      // + забранное до пересчёта: иначе строки зон не сложатся в «Итого»
+      // ниже, а разбивка по зонам заспорит с собственной сводкой зоны, где
+      // «Инкасс.» уже показана (закрывающий аудит 2026-09-03).
+      entry.revenue += cash + mobile + collected;
       zoneRevenueById.set(zs.zoneId, entry);
     }
   }
@@ -174,6 +182,7 @@ export async function buildDailyCashSummaryData(
     // "во всех отчётах и сводках должны быть правильные цифры").
     abonementAmount: round2(abonementAmount),
     abonementSold: { cash: round2(abonementSold.cash), mobile: round2(abonementSold.mobile) },
+    collectedDuringDay: round2(collectedDuringDay),
     expenses: round2(expenses),
     bonusesAndAdvances: round2(bonusesAndAdvances),
     zoneBreakdown: [...zoneRevenueById.entries()]
