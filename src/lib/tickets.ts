@@ -302,7 +302,14 @@ export async function aggregateTicketOrdersBySubmission(
   ];
   const legsByOrder = new Map<string, { method: string; amount: number }[]>();
   if (splitOrderIds.length > 0) {
-    const legs = await tx.ticketOrderPaymentLeg.findMany({ where: { orderId: { in: splitOrderIds } } });
+    // orderBy — как у первой копии этого же агрегата выше (закрывающий
+    // аудит 2026-09-03): остаток округления достаётся ПОСЛЕДНЕЙ доле, и без
+    // явного порядка две копии отдавали копейку разным способам оплаты —
+    // «нал» в сводке расходился с «налом» в отчёте на 0,01.
+    const legs = await tx.ticketOrderPaymentLeg.findMany({
+      where: { orderId: { in: splitOrderIds } },
+      orderBy: { order: "asc" },
+    });
     for (const leg of legs) {
       const list = legsByOrder.get(leg.orderId) ?? [];
       list.push({ method: leg.method, amount: Number(leg.amount) });

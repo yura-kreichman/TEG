@@ -8,7 +8,7 @@ import {
   resolvePeriodFromParams,
   round2,
 } from "@/lib/reports";
-import { businessDayOf, dayBoundsUtc, localDateParts } from "@/lib/business-day";
+import { businessDayOf, dayBoundsUtc } from "@/lib/business-day";
 
 export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/reports/dynamics">) {
   const owner = await requireOwner();
@@ -227,7 +227,12 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     // getUTCFullYear()/getUTCMonth() (аудит 2026-07-24: start — момент
     // тенант-таймзонной полуночи 1 января, для тенанта восточнее UTC это
     // ещё 31 декабря по UTC — старый цикл начинал бы с декабря прошлого года).
-    let { year: mYear, month: mMonth } = localDateParts(start, timezone);
+    // Ярлык дня — через businessDayOf, а не localDateParts (закрывающий
+    // аудит 2026-09-03). start — это НАЧАЛО бизнес-дня, а при вечерней границе
+    // оно лежит в предыдущих календарных сутках: у границы 21:00 август
+    // начинался 31.07 в 21:00, и цикл строил 32 столбца, первый всегда пустой.
+    // Тот же пересчёт уже применён в getPeriodRange/getPreviousPeriodRange.
+    let { year: mYear, month: mMonth } = businessDayOf(start, timezone, boundary);
     while (dayBoundsUtc(mYear, mMonth, 1, timezone, boundary).start < end) {
       const key = `${mYear}-${String(mMonth).padStart(2, "0")}`;
       const revenueForBar = byMonth.get(key) ?? 0;
@@ -253,7 +258,8 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
     // прибавление 24ч давало dateKey(d) дважды одну и ту же локальную дату
     // (дубликат бара) либо пропускало последний день диапазона. Тот же
     // приём, что уже используется в ветке "year" чуть выше.
-    let { year: dYear, month: dMonth, day: dDay } = localDateParts(start, timezone);
+    // См. тот же разбор у месячной ветки выше.
+    let { year: dYear, month: dMonth, day: dDay } = businessDayOf(start, timezone, boundary);
     while (dayBoundsUtc(dYear, dMonth, dDay, timezone, boundary).start < end) {
       const key = `${dYear}-${String(dMonth).padStart(2, "0")}-${String(dDay).padStart(2, "0")}`;
       const revenueForBar = byDay.get(key) ?? 0;

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getTenantDayContext } from "@/lib/tenant-day";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
 import { resolvePeriodFromParams, round2 } from "@/lib/reports";
-import { businessDayOf, dayBoundsUtc, localDateParts } from "@/lib/business-day";
+import { businessDayOf, dayBoundsUtc } from "@/lib/business-day";
 
 export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/reports/calendar">) {
   const owner = await requireOwner();
@@ -130,7 +130,12 @@ export async function GET(request: Request, ctx: RouteContext<"/api/points/[id]/
   // телефоне, и сезонность за год показательнее по месяцам, чем по дням
   // недели (запрос пользователя 2026-07-15).
   if (granularity === "year") {
-    const year = localDateParts(start, timezone).year;
+    // Ярлык дня — через businessDayOf, а не localDateParts (закрывающий
+    // аудит 2026-09-03). start — это НАЧАЛО бизнес-дня, а при вечерней границе
+    // оно лежит в предыдущих календарных сутках: у границы 21:00 август
+    // начинался 31.07 в 21:00, и цикл строил 32 столбца, первый всегда пустой.
+    // Тот же пересчёт уже применён в getPeriodRange/getPreviousPeriodRange.
+    const year = businessDayOf(start, timezone, boundary).year;
     const monthTotals = Array.from({ length: 12 }, () => 0);
     for (const [key, val] of byDay) {
       const m = Number(key.slice(5, 7)) - 1;

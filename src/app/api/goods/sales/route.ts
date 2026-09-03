@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getTenantDayContext } from "@/lib/tenant-day";
 import { requireOwner } from "@/lib/require-owner";
 import { getPeriodRange, isPeriodGranularity, parseDateParam, round2 } from "@/lib/reports";
-import { businessDayOf, dayBoundsUtc, localDateParts, parseBoundary, periodBoundsUtc, zonedWallTimeToUtc } from "@/lib/business-day";
+import { businessDayOf, dayBoundsUtc, parseBoundary, periodBoundsUtc, zonedWallTimeToUtc } from "@/lib/business-day";
 import { isModuleEnabled } from "@/lib/tenant-modules";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -173,7 +173,12 @@ export async function GET(request: Request) {
       byMonth.set(monthKey, (byMonth.get(monthKey) ?? 0) + value);
     }
     for (const dayKey of activeDays) activeMonths.add(dayKey.slice(0, 7));
-    let { year: mYear, month: mMonth } = localDateParts(start, timezone);
+    // Ярлык дня — через businessDayOf, а не localDateParts (закрывающий
+    // аудит 2026-09-03). start — это НАЧАЛО бизнес-дня, а при вечерней границе
+    // оно лежит в предыдущих календарных сутках: у границы 21:00 август
+    // начинался 31.07 в 21:00, и цикл строил 32 столбца, первый всегда пустой.
+    // Тот же пересчёт уже применён в getPeriodRange/getPreviousPeriodRange.
+    let { year: mYear, month: mMonth } = businessDayOf(start, timezone, boundary);
     while (dayBoundsUtc(mYear, mMonth, 1, timezone, boundary).start < end) {
       const key = `${mYear}-${String(mMonth).padStart(2, "0")}`;
       bars.push({ date: `${key}-01`, total: round2(byMonth.get(key) ?? 0), hasData: activeMonths.has(key) });

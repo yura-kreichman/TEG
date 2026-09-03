@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { findTenantPoint, requireOwner } from "@/lib/require-owner";
-import {
+import {
   getPointAbonementCashTotal,
   getPointGoodsCashTotal,
   getPointPoolDeficit,
@@ -193,14 +193,21 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     // Товаров и превращается в «Аванс инкассации», и на бумажке должно быть
     // видно, из чего она сложилась. Ничего дополнительно не считаем — всё
     // это уже посчитано выше для самих проводок.
+    // В строках уведомления — доли БЕЗ пула, ровно те же числа, что пересобирает
+    // resync из poolShareAmount (закрывающий аудит 2026-09-03). Раньше строки
+    // брали shares[i] — вместе с пулом, и тело было больше шапки ровно на него:
+    // остатки 6/6/2, введено 50, пул 5 → шапка 50, строки 25+25+5 = 55. Это тот
+    // же «955 вместо 700», от которого шапку уже вылечили, а строки нет. Хуже,
+    // что после ЛЮБОЙ правки resync пересобирал их как 20+20+10 — и владелец
+    // видел, что числа в чате поменялись сами собой.
     const zoneShares = zones
-      .map((zone, i) => ({ name: zone.name, emoji: zone.telegramEmoji, amount: Math.abs(shares[i]) }))
+      .map((zone, i) => ({ name: zone.name, emoji: zone.telegramEmoji, amount: Math.abs(sharesWithoutPool[i] ?? 0) }))
       .filter((z) => z.amount > 0);
     return {
       poolDeficit,
       advance,
       operationIds,
-      zoneShares,
+      zoneShares,
       breakdown: {
         zones: zoneShares.map(({ name, amount }) => ({ name, amount })),
         abonement: abonementSweepPortion,
@@ -224,7 +231,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/points/[id]
     isAdvance: advance > 0,
     zones: zoneShares,
     goodsAmount: breakdown.goods,
-    abonementAmount: breakdown.abonement,
+    abonementAmount: breakdown.abonement,
   }).catch(() => {});
 
   return NextResponse.json({ ok: true, settledPool: poolDeficit, advance, breakdown });

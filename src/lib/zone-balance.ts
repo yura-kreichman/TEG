@@ -377,18 +377,53 @@ export async function getZoneCollectionOverdraw(
 
   const ops = await client.moneyOperation.findMany({
     where: { zoneId: { in: zoneIds }, occurredAt: { lt: until } },
-    select: { zoneId: true, type: true, amount: true, occurredAt: true },
+    select: { zoneId: true, type: true, amount: true, occurredAt: true, resultsSubmissionId: true },
     orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
   });
+
+  // Чем закрылась ПРЕДЫДУЩАЯ сдача каждой зоны (закрывающий аудит
+  // 2026-09-03). Без этого вторая подряд инкассация среди дня давала ноль
+  // поправки — то есть ровно тот сбой, ради которого функция и написана.
+  //
+  // Причина тонкая: граница окна — ZoneSubmission.createdAt, а строки выручки
+  // той же сдачи пишутся в той же транзакции НЕСКОЛЬКИМИ МИКРОСЕКУНДАМИ
+  // ПОЗЖЕ. Формально их occurredAt больше границы, и они попадали не в
+  // закрытое окно, а в следующее — значит дефицит «на начало» снимался ДО
+  // того, как выручка закрытой сдачи его погасила:
+  //
+  //   день A: остаток 0, владелец забрал 2000 → −2000; сдача, касса 70:
+  //           overdraw 2000, revenue 2070, остаток 70 ✓
+  //   день B: владелец забрал 1500 → 70 − 1500 = −1430; сдача, касса 0.
+  //           было:  start = 2000 (баланс ПЕРЕД выручкой дня A),
+  //                  overdraw = max(0, 1430 − 2000) = 0 — не вернулось ничего,
+  //                  «Разница» −1430 и остаток зоны в минусе навсегда
+  //           стало: строки сдачи A признаны довоконными, start = 0,
+  //                  overdraw = 1430 ✓
+  //
+  // Признак — resultsSubmissionId строки, а не её время: он точен и на старых
+  // записях, тогда как игра с миллисекундами границы гадала бы.
+  const boundarySubmission = new Map<string, string>();
+  const withBoundary = zoneIds.filter((z) => since.get(z));
+  if (withBoundary.length > 0) {
+    const marks = await client.zoneSubmission.findMany({
+      where: { OR: withBoundary.map((zoneId) => ({ zoneId, createdAt: since.get(zoneId)! })) },
+      select: { zoneId: true, resultsSubmissionId: true },
+    });
+    for (const m of marks) boundarySubmission.set(m.zoneId, m.resultsSubmissionId);
+  }
 
   const balance = new Map<string, number>();
   const deficitAtStart = new Map<string, number>();
   for (const op of ops) {
     if (!op.zoneId || !affectsCashOnHand(op.type)) continue;
     const from = since.get(op.zoneId) ?? null;
+    // Строка, закрывшая прошлую сдачу, относится к ПРОШЛОМУ окну, даже если
+    // её occurredAt на микросекунду позже границы — см. разбор выше.
+    const closesPreviousWindow =
+      op.resultsSubmissionId != null && op.resultsSubmissionId === boundarySubmission.get(op.zoneId);
     // Дефицит на начало окна фиксируем ровно один раз — на первой операции,
     // которая в окно уже попала.
-    if (from && op.occurredAt > from && !deficitAtStart.has(op.zoneId)) {
+    if (from && op.occurredAt > from && !closesPreviousWindow && !deficitAtStart.has(op.zoneId)) {
       deficitAtStart.set(op.zoneId, Math.max(0, -(balance.get(op.zoneId) ?? 0)));
     }
     balance.set(op.zoneId, Math.round(((balance.get(op.zoneId) ?? 0) + Number(op.amount)) * 100) / 100);
