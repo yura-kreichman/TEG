@@ -65,9 +65,19 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/money/coll
     const lockPointId = op.pointId ?? op.zone?.pointId ?? null;
     if (lockPointId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockPointId}))`;
       // Снимаем автопогашение до правки — непогашенный остаток пересчитается
-      // из истории сам, и следующая сдача погасит уже новую сумму.
-      if (op.type === "collection_advance") await reverseCollectionAdvanceSettlement(tx, id);
-      await tx.moneyOperation.update({ where: { id }, data: { amount: -amountNumber } });
+      // из истории сам, и следующая сдача погасит уже новую сумму. У обычной
+      // зонной инкассации снимаем её доразноску пула по соседним зонам:
+      // она рассчитана от прежней суммы, и после правки соседи считались бы
+      // по несуществующему числу (закрывающий аудит 2026-09-03).
+      await reverseCollectionAdvanceSettlement(tx, id);
+      // Доля пула не может быть больше того, что забрали: владелец урезал
+      // сумму до 100 при доле 255 — и сводка печатала «−155». Обрезаем, а не
+      // обнуляем: при правке 955 → 900 доля в 255 остаётся честной.
+      const poolShare = Math.min(Number(op.poolShareAmount ?? 0), amountNumber);
+      await tx.moneyOperation.update({
+        where: { id },
+        data: { amount: -amountNumber, poolShareAmount: poolShare },
+      });
       await tx.correctionLog.create({
         data: {
           entityType: "MoneyOperation",
@@ -118,8 +128,10 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/money/co
     const lockPointId = op.pointId ?? op.zone?.pointId ?? null;
     if (lockPointId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockPointId}))`;
     // См. тот же комментарий в PATCH выше: погашающие строки уходят вместе с
-    // инкассацией, иначе они навсегда занижают остатки зон.
-    if (op.type === "collection_advance") await reverseCollectionAdvanceSettlement(tx, id);
+    // инкассацией, иначе они навсегда занижают остатки зон. Это верно и для
+    // доразноски пула по соседним зонам у обычной зонной инкассации — её
+    // связь заведена тем же полем settlesOperationId.
+    await reverseCollectionAdvanceSettlement(tx, id);
     await tx.correctionLog.create({
       data: {
         entityType: "MoneyOperation",

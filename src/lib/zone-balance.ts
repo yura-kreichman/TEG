@@ -729,7 +729,14 @@ export async function settleZonePoolRemainder(
   allocation: Map<string, number>,
   collectedZoneId: string,
   performedByOperatorId: string | null,
-  tx: Tx
+  tx: Tx,
+  // id инкассации, породившей эту доразноску (закрывающий аудит
+  // 2026-09-03). Без связи строки оставались сиротами: удаление
+  // инкассации в реестре забирало её саму, а списания, которые она
+  // вызвала у СОСЕДНИХ зон, оставались в журнале навсегда и занижали их
+  // остатки — ровно тот класс, для которого settlesOperationId и заведён
+  // у «Авансовой инкассации» (reverseCollectionAdvanceSettlement).
+  settlesOperationId: string | null = null
 ): Promise<void> {
   const rows = [...allocation.entries()]
     .filter(([zoneId, amount]) => zoneId !== collectedZoneId && amount > 0)
@@ -739,6 +746,7 @@ export async function settleZonePoolRemainder(
       type: "advance_settlement",
       amount: -amount,
       ...(performedByOperatorId ? { performedByOperatorId } : {}),
+      ...(settlesOperationId ? { settlesOperationId } : {}),
     }));
   if (rows.length > 0) await tx.moneyOperation.createMany({ data: rows });
 }

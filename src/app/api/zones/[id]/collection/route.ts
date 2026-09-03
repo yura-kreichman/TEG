@@ -85,7 +85,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/zones/[id]/
     // Доли ОСТАЛЬНЫХ зон — той же транзакцией (С21/С23). Иначе после этой
     // инкассации отсечка аванса сдвигается, дефицит схлопывается в ноль, и
     // долг соседних зон не спишется уже никогда. Разбор — у самой функции.
-    await settleZonePoolRemainder(owner.tenantId, poolAllocation, zoneId, null, tx);
+    await settleZonePoolRemainder(owner.tenantId, poolAllocation, zoneId, null, tx, created.id);
     return { poolShare, operationId: created.id, occurredAt: created.occurredAt };
   });
 
