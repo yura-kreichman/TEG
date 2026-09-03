@@ -136,6 +136,46 @@ const CLEANUP_RUNNERS: Record<Exclude<CleanupCategory, "all">, (tenantId: string
   clients: cleanupClients,
 };
 
+/**
+ * Убрать из базы тарифы, помеченные удалёнными, от которых после очистки не
+ * осталось ни одного следа.
+ *
+ * Запрос владельца 2026-09-03: «Игроленд сделал такой тариф, потом почистил
+ * всю базу, и он освободился». Ровно так и было: тариф удаляют, пока по нему
+ * есть история, — он помечается удалённым и остаётся строкой в разбивке
+ * отчёта. Потом владелец чистит данные, история исчезает, а тариф продолжает
+ * висеть «0 ₽ · 0%» уже навсегда: сам по себе он больше никогда не проверится.
+ *
+ * Удаление тарифа (api/tariffs/[id]) закрывает только момент удаления. Этот
+ * проход закрывает вторую половину — момент, когда тариф стал чистым ПОЗЖЕ.
+ *
+ * Что считается следом — тот же список, что и при удалении тарифа:
+ * показания, начальные показания, тапы, пуски, операции абонемента и тариф,
+ * назначенный активу по умолчанию. TariffOption не в счёт: варианты
+ * «длительность+цена» — части самого тарифа и уходят вместе с ним.
+ *
+ * Живые тарифы не трогаются вообще: только те, что владелец уже удалил.
+ */
+async function purgeOrphanedDeletedTariffs(tenantId: string) {
+  const deleted = await prisma.tariff.findMany({
+    where: { deletedAt: { not: null }, zone: { point: { tenantId } } },
+    select: { id: true },
+  });
+  for (const { id } of deleted) {
+    const [readings, initialReadings, taps, launches, abonementOps, assets] = await Promise.all([
+      prisma.assetReading.count({ where: { tariffId: id } }),
+      prisma.assetInitialReading.count({ where: { tariffId: id } }),
+      prisma.counterTapEvent.count({ where: { tariffId: id } }),
+      prisma.launch.count({ where: { tariffId: id } }),
+      prisma.abonementTransaction.count({ where: { tariffId: id } }),
+      prisma.asset.count({ where: { tariffId: id } }),
+    ]);
+    if (readings + initialReadings + taps + launches + abonementOps + assets === 0) {
+      await prisma.tariff.delete({ where: { id } });
+    }
+  }
+}
+
 export async function GET() {
   const owner = await requireOwner();
   if (!owner) {
@@ -183,6 +223,10 @@ export async function POST(request: Request) {
   } else {
     await CLEANUP_RUNNERS[category](owner.tenantId);
   }
+
+  // После ЛЮБОЙ очистки: тариф, который был удалён с историей, мог стать
+  // чистым только что — и сам по себе больше никогда бы не проверился.
+  await purgeOrphanedDeletedTariffs(owner.tenantId);
 
   return NextResponse.json({ ok: true });
 }
