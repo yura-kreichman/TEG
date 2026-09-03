@@ -752,7 +752,9 @@ export function formatDailyCashSummaryTelegram(
     // сверяют с реальным ящиком. Внутри code выделить его нельзя (доки Bot
     // API: вложенные сущности в code не работают).
     if (settings.showCashOnHand) {
-      parts.push(`🛃 ${st.cashOnHandCompact}: <b>${formatMoney(data.cashOnHand, locale)}</b>`);
+      // Полным словом даже в компактном виде (владелец 2026-09-03: «для него
+      // целая строчка и сокращать не надо») — строка своя, за место не борется.
+      parts.push(`🛃 ${st.cashOnHand}: <b>${formatMoney(data.cashOnHand, locale)}</b>`);
     }
 
     return parts.join("\n");
