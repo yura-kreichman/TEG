@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, countersPaidFromBalance } from "../src/lib/results-calc";
+import { calcSessions, calcZoneGrossRevenue, calcZoneRevenue, calcZoneRevenueExactVoids, countersPaidFromBalance } from "../src/lib/results-calc";
 import type { ZoneAccountingMode } from "../src/lib/results-calc";
 import { getInitialReadingsMap } from "../src/lib/asset-initial-readings";
 import { getZoneAbonementSpendAmount, getZoneTapAbonementAmount } from "../src/lib/abonement";
@@ -122,7 +122,27 @@ async function main() {
       return { tariffId: tariff.id, price: Number(tariff.price), sessions };
     });
     calculatedRevenue = calcZoneGrossRevenue(tariffCalc);
-    netRevenue = calcZoneRevenue(tariffCalc, zs.returnsCount);
+    // Тап-зона — ТОЧНЫЙ вычет по тарифу, как в самой сдаче, в Отчётах и в
+    // zone-summary-message.ts (С17/С83). Пропорциональная формула ей не
+    // подходит в принципе: returnsCount у таких сдач всегда 0, поэтому
+    // calcZoneRevenue вернул бы ВАЛОВУЮ выручку, и досланная сводка показала
+    // бы недостачу ровно на сумму отменённых тапов — при сошедшейся кассе.
+    const voidedTaps = zs.zone.countersTapAssistEnabled
+      ? await prisma.counterTapEvent.groupBy({
+          by: ["tariffId"],
+          where: {
+            zoneId: zs.zoneId,
+            voidedAt: { not: null },
+            createdAt: { gt: boundary ?? new Date(0), lte: zs.createdAt },
+          },
+          _count: { _all: true },
+        })
+      : [];
+    const voidedByTariff = new Map(voidedTaps.map((v) => [v.tariffId, v._count._all]));
+    netRevenue =
+      voidedByTariff.size > 0
+        ? calcZoneRevenueExactVoids(tariffCalc, voidedByTariff)
+        : calcZoneRevenue(tariffCalc, zs.returnsCount);
 
     readingLines = zs.zone.assets.flatMap((asset) =>
       zs.zone.tariffs
@@ -154,12 +174,21 @@ async function main() {
         )
       : 0,
   });
-  const expensesPart = (
-    await prisma.moneyOperation.findMany({
-      where: { type: "expense", zoneId: zs.zoneId, resultsSubmissionId: zs.resultsSubmissionId },
-      select: { amount: true },
-    })
-  ).reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0);
+  // Сумма — из самой сдачи (С4), как во всех остальных читателях (reports.ts,
+  // «Итоги дня», Главная, zone-summary-message): «привязанные» расходы шире
+  // «компенсируемых» — трата, деньги на которую уже уехали с инкассацией, к
+  // сдаче привязана, но в её выручку не входила, и досланная сводка показала
+  // бы излишек ровно на неё.
+  // NULL — сдача старше 2026-09-02, для неё остаётся расчёт по привязке.
+  const expensesPart =
+    zs.compensatedExpenses !== null
+      ? Number(zs.compensatedExpenses)
+      : (
+          await prisma.moneyOperation.findMany({
+            where: { type: "expense", zoneId: zs.zoneId, resultsSubmissionId: zs.resultsSubmissionId },
+            select: { amount: true },
+          })
+        ).reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0);
   // Забранное инкассацией до пересчёта — как в zone-summary-message.ts.
   // Без него переотправленная сводка спорила бы с исходной.
   const collectedPart = Number(zs.collectedBeforeSubmission ?? 0);

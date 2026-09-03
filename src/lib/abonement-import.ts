@@ -1,5 +1,4 @@
 import readXlsxFile from "read-excel-file/node";
-import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { normalizePhone, phoneMatchKey } from "@/lib/abonement";
 
@@ -233,36 +232,40 @@ export async function commitImport(
       const toCreate = chunk.filter((r) => !taken.has(r.phone));
       if (toCreate.length === 0) return 0;
 
-      // ПОШТУЧНОЕ создание вместо createMany + skipDuplicates (генеральная
-      // проверка финансов 2026-09-02). createMany не возвращает id, поэтому
-      // кошельки добирались запросом ПО ТЕЛЕФОНАМ — и в выборку попадали
-      // чужие, созданные параллельным импортом или продажей в те же
-      // миллисекунды. Стартовый баланс тогда приписывался чужому кошельку,
-      // своему не начислялся вовсе, а счётчик «создано» всё равно считал
-      // строку своей.
+      // createManyAndReturn, а НЕ поштучный create с «catch P2002 → continue»
+      // (перепроверка 2026-09-03). Пропустить конфликтную строку внутри
+      // транзакции нельзя в принципе: в PostgreSQL первый же упавший INSERT
+      // переводит транзакцию в aborted, и следующий запрос отвечает уже не
+      // P2002, а 25P02 «current transaction is aborted» — эта ошибка проходит
+      // мимо проверки кода и уходит наверх, роняя ВСЮ порцию в 200 строк.
+      // Савепойнт на каждый запрос Prisma не ставит: createSavepoint в
+      // рантайме вызывается только для вложенных транзакций.
       //
-      // Здесь мы точно знаем, что создали: конфликт уникального индекса
-      // (tenantId, phone) означает «кошелёк уже есть» — такую строку
-      // пропускаем, как и раньше, но из счётчика тоже.
-      const created: { walletId: string; amount: number }[] = [];
-      for (const r of toCreate) {
-        try {
-          const wallet = await tx.abonementWallet.create({
-            data: {
-              tenantId,
-              phone: r.phone,
-              phoneKey: phoneMatchKey(r.phone),
-              name: r.name,
-              balance: r.balance,
-            },
-            select: { id: true },
-          });
-          created.push({ walletId: wallet.id, amount: r.balance });
-        } catch (err) {
-          if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") continue;
-          throw err;
-        }
-      }
+      // При этом урок генеральной проверки 2026-09-02 остаётся в силе:
+      // добирать кошельки отдельным запросом ПО ТЕЛЕФОНАМ нельзя — в выборку
+      // попадут чужие, созданные параллельным импортом или продажей в те же
+      // миллисекунды, и стартовый баланс уехал бы на чужой кошелёк. Поэтому
+      // именно createManyAndReturn: один оператор INSERT ... ON CONFLICT DO
+      // NOTHING RETURNING, конфликт (tenantId, phone) гасит сама БД, а
+      // вернувшиеся строки — ровно те, что создали мы, и только они идут в
+      // историю и в счётчик «создано».
+      //
+      // Сопоставление по телефону однозначно: телефоны в порции уникальны,
+      // повтор внутри файла отсеян в analyzeImportRows как duplicateInFile.
+      const balanceByPhone = new Map(toCreate.map((r) => [r.phone, r.balance]));
+      const created = (
+        await tx.abonementWallet.createManyAndReturn({
+          data: toCreate.map((r) => ({
+            tenantId,
+            phone: r.phone,
+            phoneKey: phoneMatchKey(r.phone),
+            name: r.name,
+            balance: r.balance,
+          })),
+          skipDuplicates: true,
+          select: { id: true, phone: true },
+        })
+      ).map((w) => ({ walletId: w.id, amount: balanceByPhone.get(w.phone) ?? 0 }));
 
       const historyRows = created
         // Нулевой стартовый баланс — клиент переехал, но денег на нём не
@@ -272,8 +275,13 @@ export async function commitImport(
 
       if (historyRows.length > 0) await tx.abonementTransaction.createMany({ data: historyRows });
 
+      // Возвращаем ровно то, что создали САМИ: строка, отбитая уникальным
+      // индексом (tenantId, phone), в счётчик «создано» не идёт — иначе
+      // владелец увидит «перенесено 500» при 480 залитых кошельках.
+      // (Прежний `return toCreate.length` от createMany-варианта остался
+      // ниже недостижимым и потому удалён: следующая строка, дописанная
+      // между двумя return, молча не работала бы.)
       return created.length;
-      return toCreate.length;
     });
 
     created += createdInChunk;

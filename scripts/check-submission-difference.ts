@@ -138,6 +138,12 @@ async function main() {
 
   if (failures === 0) console.log("\nВСЁ СОШЛОСЬ");
   else console.log(`\nРАСХОЖДЕНИЙ: ${failures}`);
+  // Найденное расхождение — это провал сверки, а не заметка в логе. Без
+  // ненулевого кода возврата цепочка вида «сверка && деплой» уедет на прод
+  // зелёной: строка в CI-логе есть, но пайплайн её не видит. Ровно так же
+  // заканчивается check-change-fund-in-till.ts, на который ссылается
+  // комментарий ниже.
+  if (failures) process.exitCode = 1;
 }
 
 /**
@@ -225,6 +231,20 @@ main()
  * сдача унаследует сегодняшний долг).
  */
 async function overdrawScenario() {
+  // Сценарий СОЗДАЁТ денежные операции в живой зоне (revenue и collection
+  // с occurredAt «шесть часов назад», то есть внутрь текущего бизнес-дня),
+  // а вся его безопасность держится на одном throw ROLLBACK в конце. Ctrl+C
+  // между add() и throw, падение процесса или таймаут интерактивной
+  // транзакции оставят эти суммы в боевом журнале — причём в зоне, которую
+  // findFirst выбрал вслепую и которую вывод даже не назвал по тенанту.
+  // Поэтому та же защита, что у liveScenario выше: пишем только в локальную
+  // базу. Соседние скрипты этой папки запускают с боевым DATABASE_URL.
+  const url = process.env.DATABASE_URL ?? "";
+  if (!/@(localhost|127\.0\.0\.1)[:/]/.test(url)) {
+    console.log("\nСценарий пропущен: база не локальная, писать в неё нельзя.");
+    return;
+  }
+
   const { getZoneCollectionOverdraw } = await import("../src/lib/zone-balance");
   const zone = await prisma.zone.findFirst({
     where: { accountingMode: "counters" },

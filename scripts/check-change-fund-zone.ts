@@ -75,9 +75,13 @@ async function main() {
   ]);
   console.log(`\nПроход выше даёт:      размен ${fund.toFixed(2)}, касса ${balance.toFixed(2)}`);
   console.log(`Функция приложения:    размен ${fromFunction.toFixed(2)}, касса ${(balances.get(zone.id) ?? 0).toFixed(2)}`);
-  console.log(
-    Math.abs(fromFunction - fund) < 0.005 ? "\nСОШЛОСЬ" : "\nРАСХОЖДЕНИЕ — функция считает не так, как проход выше"
-  );
+  // Вердикт вычислялся прямо в аргументе console.log и наружу не выходил:
+  // «РАСХОЖДЕНИЕ» печаталось, а процесс завершался нулём, и вызов в цепочке
+  // принимал молчаливое «не сошлось» за успех. Кладём результат в переменную
+  // ради кода возврата — как в check-change-fund-in-till.ts.
+  const matches = Math.abs(fromFunction - fund) < 0.005;
+  console.log(matches ? "\nСОШЛОСЬ" : "\nРАСХОЖДЕНИЕ — функция считает не так, как проход выше");
+  if (!matches) process.exitCode = 1;
 }
 
 main()

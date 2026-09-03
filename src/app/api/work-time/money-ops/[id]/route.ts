@@ -139,12 +139,23 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
 
   await prisma.$transaction(async (tx) => {
     if (op.pointId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${op.pointId}))`;
+    // Сумму удаляемой записи перечитываем ПОД ЛОКОМ, а не берём из снимка
+    // `before`: он снят до транзакции, и параллельный PATCH из соседней
+    // вкладки успевает сменить сумму в зазоре. Тогда в зоны вернулась бы
+    // старая величина, а разница осталась бы висеть на них навсегда —
+    // операции уже нет, добрать нечем. Ровно так же поступает DELETE смены
+    // (work-time/shifts/[id]) и PATCH выше в этом же файле.
+    const freshAmount = Math.abs(
+      Number((await tx.moneyOperation.findUniqueOrThrow({ where: { id }, select: { amount: true } })).amount)
+    );
     await tx.correctionLog.create({
       data: {
         entityType: "MoneyOperation",
         entityId: id,
         correctedByUserId: owner.user.id,
-        beforeJson: before,
+        // В след правки пишем то, что реально удалено (свежая сумма под
+        // локом), а не то, что владелец видел на экране до гонки.
+        beforeJson: { type: before.type, amount: freshAmount },
         afterJson: { deleted: true },
         comment: null,
       },
@@ -156,7 +167,7 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/work-tim
     // разнесение, ровно как это делает удаление смены.
     // Только если деньги уходили из кассы — см. комментарий в PATCH выше.
     if (op.pointId && beneficiaryOperatorId && op.performedByOperatorId && op.type !== "bonus_accrual") {
-      await chargeSelfServiceAdvanceToZones(owner.tenantId, op.pointId, -before.amount, beneficiaryOperatorId, tx);
+      await chargeSelfServiceAdvanceToZones(owner.tenantId, op.pointId, -freshAmount, beneficiaryOperatorId, tx);
     }
   });
 

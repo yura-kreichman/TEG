@@ -144,12 +144,27 @@ export async function DELETE(request: Request, ctx: RouteContext<"/api/operator/
       // (закрывающий аудит 2026-09-03): между чтением и удалением параллельный
       // PATCH мог поставить пометку «Возврат» и вернуть деньги — тогда мы
       // вернули бы их второй раз, ровно тот сбой, который проверка и закрывает.
-      const fresh = await tx.counterTapEvent.findUnique({ where: { id }, select: { voidedAt: true } });
-      if (!fresh) throw new Error("ALREADY_GONE");
-      if (!fresh.voidedAt) {
+      // Одного перечитывания для этого мало: транзакция идёт на уровне по
+      // умолчанию (Read Committed), обычный SELECT строку не держит, и PATCH
+      // успевает закоммитить свой возврат уже ПОСЛЕ проверки. Поэтому право на
+      // возврат забираем тем же CAS, что и PATCH ниже: кто первым проставил
+      // voidedAt, тот один и возвращает деньги (сама пометка тут живёт мгновение
+      // — строку всё равно удаляет следующий запрос). Заодно порядок захвата
+      // строк совпадает с PATCH — сначала тап, потом кошелёк; в обратном порядке
+      // два запроса ловили взаимную блокировку и отдавали 500.
+      const claimed = await tx.counterTapEvent.updateMany({
+        where: { id, voidedAt: null },
+        data: { voidedAt: new Date() },
+      });
+      if (claimed.count === 1) {
         const refund = await refundTapPayment(tx, event, { id: point.id, tenantId: point.tenantId }, operator.id);
         refundedWalletId = refund.walletId;
         refundedAmount = refund.amount;
+      } else {
+        // count === 0 — либо возврат уже сделал PATCH (тогда просто удаляем
+        // тап молча), либо тапа уже нет: второе отдаём тем же 409, что и раньше.
+        const stillThere = await tx.counterTapEvent.findUnique({ where: { id }, select: { id: true } });
+        if (!stillThere) throw new Error("ALREADY_GONE");
       }
       await tx.counterTapEvent.delete({ where: { id } });
     });
@@ -204,6 +219,33 @@ export async function PATCH(request: Request, ctx: RouteContext<"/api/operator/t
   const boundary = await previousSubmissionBoundary(event.zoneId);
   if (boundary && event.createdAt <= boundary) {
     return NextResponse.json({ error: "Эта запись уже учтена в сдаче итогов" }, { status: 409 });
+  }
+
+  // Снять пометку с тапа, за который деньги УЖЕ вернули на баланс, нельзя
+  // (закрывающий аудит 2026-09-03). Пометка «Возврат/тест» кредитует кошелёк
+  // (С6), а снятие деньги обратно НЕ списывает — намеренно, см. комментарий
+  // ниже. Значит цикл «пометить → снять → пометить» проходил условие
+  // updateMany и возвращал цену ВТОРОЙ раз (у разбивки — все abonement-доли
+  // заново): за тап на 50 ₽ клиент получал 100 ₽, а в журнале зоны копились
+  // минусовые revenue_abonement, по одному на каждый круг.
+  // Признака «возврат сделан» в базе нет (у CounterTapEvent только voidedAt, у
+  // AbonementTransaction нет ссылки на тап), поэтому закрываем сам круг:
+  // возврат — состоявшееся событие кассы, а не черновик, платежа после него
+  // больше нет, и вернуть тап в «оплачен» нечем. Передумав, сотрудник
+  // оформляет НОВЫЙ тап — тот же принцип, что у аннулирования Билетов.
+  // Тапы за наличные/безнал ничего не возвращали — их пометка снимается
+  // по-прежнему.
+  if (!body.voided && event.voidedAt) {
+    const refundedFromBalance =
+      (event.paymentMethod === "abonement" && !!event.abonementWalletId) ||
+      (event.paymentMethod === PAYMENT_SPLIT_METHOD &&
+        (await prisma.counterTapEventPaymentLeg.count({ where: { tapId: event.id, method: "abonement" } })) > 0);
+    if (refundedFromBalance) {
+      return NextResponse.json(
+        { error: "Деньги за этот тап уже вернули на баланс — пометку не снять. Оформите новый тап." },
+        { status: 409 }
+      );
+    }
   }
 
   try {
