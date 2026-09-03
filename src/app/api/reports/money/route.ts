@@ -9,6 +9,8 @@ import {
   parseDateParam,
   type PeriodGranularity,
 } from "@/lib/reports";
+import { getPendingCashRevenueByZone } from "@/lib/pending-revenue";
+import { previousSubmissionBoundary } from "@/lib/game-room";
 import { businessDayOf, parseBoundary, periodBoundsUtc, zonedWallTimeToUtc } from "@/lib/business-day";
 import {
   affectsCashOnHand,
@@ -182,7 +184,21 @@ export async function GET(request: Request) {
   // Сколько из остатка зоны — размен владельца (решение 2026-09-02): экран
   // инкассации предлагает оставить его в кассе, и без этого числа предлагать
   // было бы нечего. Часть balance, а не добавка к нему — размен и так внутри.
-  const changeFundByZone = await getChangeFundInTillByZone(zones.map((z) => z.id));
+  // Невнесённая наличная выручка по зонам — ею обрезка размена меряет ящик,
+  // а не журнальный остаток (закрывающий аудит 2026-09-03, разбор — у
+  // getPendingCashRevenueByZone). Оба живых экрана зовут ОДИН помощник:
+  // формула в двух копиях тут уже расходилась.
+  const nowForFund = new Date();
+  const pendingByZone = await getPendingCashRevenueByZone(zones, nowForFund);
+  const fundWindowByZone = new Map<string, Date | null>();
+  for (const z of zones) fundWindowByZone.set(z.id, await previousSubmissionBoundary(z.id));
+  const changeFundByZone = await getChangeFundInTillByZone(
+    zones.map((z) => z.id),
+    undefined,
+    undefined,
+    pendingByZone,
+    fundWindowByZone
+  );
   // Доля пула по зонам — считает сервер, экран её больше не пересчитывает
   // (С3): формула жила в двух экземплярах и они разошлись.
   const poolByZone = new Map<string, number>();

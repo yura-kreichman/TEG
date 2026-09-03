@@ -278,7 +278,15 @@ export async function getPointCashBalance(
 export async function getChangeFundInTillByZone(
   zoneIds: string[],
   client: Tx | typeof prisma = prisma,
-  asOf?: Date
+  asOf?: Date,
+  // Наличная выручка, которую сотрудник ещё не сдал, и граница окна, с
+  // которой она копится (закрывающий аудит 2026-09-03, решение владельца).
+  // Считает getPendingCashRevenueByZone — отдельным файлом, иначе импорт
+  // ходил бы по кругу через game-room/tickets. Не передали — обрезка
+  // работает по старому правилу; экраны, где число видит человек,
+  // передают всегда.
+  pendingRevenueByZone?: Map<string, number>,
+  openWindowSince?: Map<string, Date | null>
 ): Promise<Map<string, number>> {
   const result = new Map<string, number>();
   if (!zoneIds.length) return result;
@@ -320,8 +328,29 @@ export async function getChangeFundInTillByZone(
     //
     // Касса в нуле (или в минусе — от аванса сотрудника) — частный случай той
     // же обрезки: в ящике не осталось ничего, значит и размена там нет.
+    //
+    // Сравниваем с содержимым ЯЩИКА, а не с журнальным остатком (закрывающий
+    // аудит 2026-09-03). Среди дня остаток меньше ящика ровно на выручку,
+    // которую сотрудник ещё не сдавал, и обрезка отвечала не на тот вопрос:
+    //
+    //   размен 500, остаток 500, днём владелец берёт 300,
+    //   а в ящике уже 4000 сегодняшней выручки
+    //   было:  остаток 200 → размен обрезан до 200 НАВСЕГДА,
+    //          вечером подсказка считает выручку 4500 − 200 = 4300 вместо 4000
+    //   стало: 200 + 4000 = 4200 > 500 → размен цел ✓
+    //
+    // Игролендовский случай при этом остаётся верным: там инкассация шла
+    // сразу за сдачей, невнесённой выручки не было, прибавка нулевая, и
+    // размен по-прежнему обрезается с 1850 до 1400.
+    //
+    // Прибавка только для операций ПОСЛЕ последней сдачи: до неё журнал уже
+    // сведён с ящиком, и поправка там была бы выдумкой.
+    const windowStart = openWindowSince?.get(op.zoneId) ?? null;
+    const pending =
+      windowStart && op.occurredAt > windowStart ? (pendingRevenueByZone?.get(op.zoneId) ?? 0) : 0;
+    const inTill = Math.round((balance + pending) * 100) / 100;
     const fund = result.get(op.zoneId) ?? 0;
-    if (fund > balance) result.set(op.zoneId, Math.max(0, balance));
+    if (fund > inTill) result.set(op.zoneId, Math.max(0, inTill));
   }
 
   return result;

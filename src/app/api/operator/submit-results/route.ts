@@ -26,6 +26,11 @@ import { dispatchZoneSummary } from "@/lib/summary-channels/dispatch";
 import { ZONE_SUMMARY_DEFAULTS } from "@/lib/summary-settings";
 import { onResultsSubmission } from "@/lib/summary-channels/daily-cash-trigger";
 import { getZoneCollectionOverdraw, settleOutstandingCollectionAdvance } from "@/lib/zone-balance";
+import {
+  allocateAdvanceToZones,
+  getCollectionAdvanceTakenSince,
+  getPendingCashRevenueByZone,
+} from "@/lib/pending-revenue";
 import { getExpenseCompensation } from "@/lib/expense-compensation";
 import { getBusinessDayBounds } from "@/lib/business-day";
 
@@ -549,6 +554,26 @@ export async function POST(request: Request) {
     // остаток и этих денег уже не видит, поэтому для сверки со счётчиками их
     // возвращаем в выручку ровно так же, как потраченное на расходы.
     const overdrawByZone = await getZoneCollectionOverdraw(zoneIds, boundaryByZone, now, tx);
+    // Плюс забранное ОБЩЕЙ инкассацией по точке сверх учтённых остатков
+    // (решение владельца 2026-09-03). Зонная инкассация уводит зону в минус и
+    // ловится дефицитом выше; общая — обрезает зоны по остатку, а превышение
+    // кладёт строкой collection_advance, которая балансов не двигает вовсе.
+    // Дефицита нет — поправки не было, и вечером «Разница» показывала
+    // недостачу из воздуха. Разбор и раскладка — у getCollectionAdvanceTakenSince.
+    const boundaries = zoneIds.map((id) => boundaryByZone.get(id) ?? null);
+    const earliestBoundary = boundaries.some((b) => b === null)
+      ? null
+      : new Date(Math.min(...boundaries.map((b) => b!.getTime())));
+    const advanceTaken = await getCollectionAdvanceTakenSince(point.id, earliestBoundary, now, tx);
+    const advanceByZone = allocateAdvanceToZones(
+      advanceTaken,
+      zoneIds,
+      await getPendingCashRevenueByZone(
+        zoneIds.map((id) => ({ id, accountingMode: zoneById.get(id)!.accountingMode })),
+        now,
+        tx
+      )
+    );
     // ЗА ВЫЧЕТОМ уже компенсированных расходов (закрывающий аудит 2026-09-03).
     // Дефицит считается по бегущему остатку и растёт от ЛЮБОЙ операции, что
     // уводит кассу в минус, — расход в том числе. А расход уже возвращается в
@@ -566,7 +591,11 @@ export async function POST(request: Request) {
     // него уже уехали), и тогда дефицит — единственный канал возврата. Итог
     // всегда равен большему из двух, то есть каждая копейка учтена один раз.
     const collectedOf = (zoneId: string) =>
-      Math.max(0, Math.round(((overdrawByZone.get(zoneId) ?? 0) - expensesOf(zoneId)) * 100) / 100);
+      Math.round(
+        (Math.max(0, Math.round(((overdrawByZone.get(zoneId) ?? 0) - expensesOf(zoneId)) * 100) / 100) +
+          (advanceByZone.get(zoneId) ?? 0)) *
+          100
+      ) / 100;
     // Обе поправки всегда идут вместе — и в выручку, и в Разницу.
     const outsideTillOf = (zoneId: string) =>
       Math.round((expensesOf(zoneId) + collectedOf(zoneId)) * 100) / 100;

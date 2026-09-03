@@ -9,6 +9,11 @@ import {
   getPointGoodsCashTotal,
   getZoneCollectionOverdraw,
 } from "@/lib/zone-balance";
+import {
+  allocateAdvanceToZones,
+  getCollectionAdvanceTakenSince,
+  getPendingCashRevenueByZone,
+} from "@/lib/pending-revenue";
 import { previousSubmissionBoundary } from "@/lib/game-room";
 import { getExpenseCompensation } from "@/lib/expense-compensation";
 import { getBusinessDayBounds } from "@/lib/business-day";
@@ -123,8 +128,23 @@ export async function GET() {
   // между сдачами. Внесённый вчера и уже вычтенный вчерашней сдачей размен
   // сегодня в это окно не попадал, зато оставался в кассе — и одни и те же
   // деньги вычитались дважды, через день.
+  // Невнесённая наличная выручка по зонам — ею обрезка размена меряет ящик,
+  // а не журнальный остаток (закрывающий аудит 2026-09-03, разбор — у
+  // getPendingCashRevenueByZone). Оба живых экрана зовут ОДИН помощник:
+  // формула в двух копиях тут уже расходилась.
+  const nowForFund = new Date();
+  const fundWindowByZone = new Map<string, Date | null>();
+  for (const zone of zones) fundWindowByZone.set(zone.id, await previousSubmissionBoundary(zone.id));
   const changeFundByZone =
-    zones.length > 0 ? await getChangeFundInTillByZone(zones.map((z) => z.id)) : new Map<string, number>();
+    zones.length > 0
+      ? await getChangeFundInTillByZone(
+          zones.map((z) => z.id),
+          undefined,
+          undefined,
+          await getPendingCashRevenueByZone(zones, nowForFund),
+          fundWindowByZone
+        )
+      : new Map<string, number>();
 
   // Сколько владелец забрал из зоны инкассацией ДО пересчёта (жалоба владельца
   // КидсБурга 2026-09-02). Сотрудник этих денег в ящике уже не застаёт, а
@@ -150,10 +170,28 @@ export async function GET() {
   const { timezone: tz, boundary: dayBoundary } = await getTenantDayContext(point.tenantId);
   const businessDayStart = getBusinessDayBounds(dayBoundary, now, tz).start;
   const compensation = await getExpenseCompensation(point.id, businessDayStart, now);
+  // Плюс забранное ОБЩЕЙ инкассацией по точке — тем же помощником, что и на
+  // сервере сдачи (решение владельца 2026-09-03). Иначе мастер показал бы
+  // сотруднику недостачу, которой сервер не увидит, и сотрудник подгонял бы
+  // кассу под неё — та же беда, что уже была с расходами.
+  const zoneBoundaries = zones.map((z) => boundaryByZone.get(z.id) ?? null);
+  const earliestBoundary = zoneBoundaries.some((b) => b === null)
+    ? null
+    : zoneBoundaries.length > 0
+      ? new Date(Math.min(...zoneBoundaries.map((b) => b!.getTime())))
+      : null;
+  const advanceByZone = allocateAdvanceToZones(
+    await getCollectionAdvanceTakenSince(point.id, earliestBoundary, now),
+    zones.map((z) => z.id),
+    await getPendingCashRevenueByZone(zones, now)
+  );
   const collectedBeforeByZone = new Map<string, number>();
-  for (const [zoneId, raw] of rawOverdraw) {
-    const compensated = compensation.compensatedByZone.get(zoneId) ?? 0;
-    collectedBeforeByZone.set(zoneId, Math.max(0, Math.round((raw - compensated) * 100) / 100));
+  for (const zone of zones) {
+    const raw = rawOverdraw.get(zone.id) ?? 0;
+    const compensated = compensation.compensatedByZone.get(zone.id) ?? 0;
+    const net = Math.max(0, Math.round((raw - compensated) * 100) / 100);
+    const withAdvance = Math.round((net + (advanceByZone.get(zone.id) ?? 0)) * 100) / 100;
+    if (withAdvance !== 0) collectedBeforeByZone.set(zone.id, withAdvance);
   }
 
   const result = zones.map((zone) => ({
