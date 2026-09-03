@@ -85,7 +85,8 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary, mode
       mobileAmount: 0,
       abonementAmount: 0,
       calculatedRevenue: 0,
-      outsideTillAmount: 0,
+      expensesAmount: 0,
+      collectedAmount: 0,
       difference: 0,
       returnsCount: 0,
     };
@@ -106,7 +107,8 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary, mode
       mobileAmount: 200,
       abonementAmount: 100,
       calculatedRevenue: 1200,
-      outsideTillAmount: 0,
+      expensesAmount: 0,
+      collectedAmount: 0,
       difference: Math.round((900 + 200 - 1200) * 100) / 100,
       returnsCount: 0,
     };
@@ -128,7 +130,8 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary, mode
       mobileAmount: 300,
       abonementAmount: 150,
       calculatedRevenue: 1715,
-      outsideTillAmount: 0,
+      expensesAmount: 0,
+      collectedAmount: 0,
       difference: Math.round((1200 + 300 - 1715) * 100) / 100,
       returnsCount: 0,
     };
@@ -150,7 +153,8 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary, mode
       mobileAmount: 200,
       abonementAmount: 0,
       calculatedRevenue: 1200,
-      outsideTillAmount: 0,
+      expensesAmount: 0,
+      collectedAmount: 0,
       difference: Math.round((1000 + 200 - 1200) * 100) / 100,
       returnsCount: 0,
     };
@@ -188,7 +192,8 @@ function buildPreviewData(ctx: SummaryPreviewContext | null, t: Dictionary, mode
     mobileAmount: 0,
     abonementAmount: 0,
     calculatedRevenue: 1715,
-    outsideTillAmount: 0,
+    expensesAmount: 0,
+    collectedAmount: 0,
     difference: 1345 + 0 - 1715,
     returnsCount: 0,
   };

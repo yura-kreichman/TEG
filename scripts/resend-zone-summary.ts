@@ -154,12 +154,16 @@ async function main() {
         )
       : 0,
   });
-  const expensesInSubmission = (
+  const expensesPart = (
     await prisma.moneyOperation.findMany({
       where: { type: "expense", zoneId: zs.zoneId, resultsSubmissionId: zs.resultsSubmissionId },
       select: { amount: true },
     })
   ).reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0);
+  // Забранное инкассацией до пересчёта — как в zone-summary-message.ts.
+  // Без него переотправленная сводка спорила бы с исходной.
+  const collectedPart = Number(zs.collectedBeforeSubmission ?? 0);
+  const expensesInSubmission = Math.round((expensesPart + collectedPart) * 100) / 100;
   const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
   const difference = isCashOnly
     ? 0
@@ -187,7 +191,8 @@ async function main() {
       abonementAmount,
       calculatedRevenue,
       // Те же слагаемые, что вошли в difference выше.
-      outsideTillAmount: Math.round(expensesInSubmission * 100) / 100,
+      expensesAmount: Math.round(expensesPart * 100) / 100,
+      collectedAmount: Math.round(collectedPart * 100) / 100,
       difference,
       returnsCount: zs.returnsCount,
       operatorName: zs.resultsSubmission.operator.name,

@@ -129,8 +129,11 @@ export function formatZoneSummaryEmail(
       }
       // Что ушло из кассы до пересчёта — то же слагаемое «Разницы», что и в
       // чате (вопрос владельца 2026-09-03: «Разница −100. С чего?»).
-      if (data.outsideTillAmount > 0) {
-        rows.push({ label: st.outsideTill, value: formatMoney(data.outsideTillAmount, locale) });
+      if (data.expensesAmount > 0) {
+        rows.push({ label: st.expenses, value: formatMoney(data.expensesAmount, locale) });
+      }
+      if (data.collectedAmount > 0) {
+        rows.push({ label: st.collectionLabel, value: formatMoney(data.collectedAmount, locale) });
       }
     }
     if (settings.showCalc) rows.push({ label: st.calculated, value: formatMoney(data.calculatedRevenue, locale) });

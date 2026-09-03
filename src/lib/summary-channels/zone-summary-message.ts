@@ -210,19 +210,21 @@ export async function resyncZoneSummaryMessage(
   // (трата, деньги на которую уже уехали с инкассацией, привязана, но в
   // выручку сдачи не входила), и правленная сводка расходилась с исходной.
   // NULL — сдача старше 2026-09-02, для неё остаётся расчёт по привязке.
-  const expensesInSubmission =
-    (zs.compensatedExpenses !== null
+  const expensesPart =
+    zs.compensatedExpenses !== null
       ? Number(zs.compensatedExpenses)
       : (
           await prisma.moneyOperation.findMany({
             where: { type: "expense", zoneId: zs.zoneId, resultsSubmissionId: zs.resultsSubmissionId },
             select: { amount: true },
           })
-        ).reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0)) +
-    // + забранное владельцем инкассацией до пересчёта — та же поправка, что и
-    // расходы (см. getZoneCollectionOverdraw). Без неё правленная сводка
-    // спорила бы с карточкой на «Итогах дня».
-    Number(zs.collectedBeforeSubmission ?? 0);
+        ).reduce((sum, op) => sum + Math.abs(Number(op.amount)), 0);
+  // Забранное владельцем инкассацией до пересчёта — та же поправка, что и
+  // расходы (см. getZoneCollectionOverdraw). Без неё правленная сводка
+  // спорила бы с карточкой на «Итогах дня». В Разницу входит суммой, в
+  // сводку — отдельной строкой (решение владельца 2026-09-03).
+  const collectedPart = Number(zs.collectedBeforeSubmission ?? 0);
+  const expensesInSubmission = Math.round((expensesPart + collectedPart) * 100) / 100;
   const actualCash = Number(zs.cashAmount) + Number(zs.mobileAmount);
   const difference = isCashOnly
     ? 0
@@ -247,8 +249,9 @@ export async function resyncZoneSummaryMessage(
       mobileAmount: Number(zs.mobileAmount),
       abonementAmount,
       calculatedRevenue,
-      // Ровно те слагаемые, что прибавлены к Разнице выше.
-      outsideTillAmount: Math.round(expensesInSubmission * 100) / 100,
+      // Ровно те слагаемые, что прибавлены к Разнице выше, но врозь.
+      expensesAmount: Math.round(expensesPart * 100) / 100,
+      collectedAmount: Math.round(collectedPart * 100) / 100,
       difference,
       returnsCount: zs.returnsCount,
       operatorName: zs.resultsSubmission.operator.name,

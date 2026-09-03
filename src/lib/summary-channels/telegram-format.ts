@@ -366,24 +366,7 @@ export function formatZoneSummaryTelegram(
         // абонемента — деньги, полученные раньше, при пополнении. Назвать её
         // "Кассой" значило бы сломать сверку наличных.
         const paidTotal = data.cashAmount + data.mobileAmount + data.abonementAmount;
-        // HTML-сущности, не голые "<"/">" (реальный сбой отправки, найден
-        // 2026-07-18 по продовым логам: "Bad Request: can't parse entities" —
-        // Telegram с parse_mode="HTML" воспринимает голый "<" как начало
-        // тега и роняет отправку целиком, зона не приходит вообще).
-        // Знак берётся из УЖЕ ПОСЧИТАННОЙ разницы, а не из сравнения двух
-        // чисел этой строки (обратная связь пользователя 2026-08-04, скриншот
-        // Халабуды: "Касса: 184 < Счёт.: 326" при "Разн.: 0" — карточка
-        // противоречила сама себе). 142 из этих 326 клиенты заплатили
-        // балансом абонемента, недостачи не было; difference это знает, а
-        // сравнение cashAmount+mobileAmount с calculatedRevenue — нет.
-        //
-        // Третий заход на одни и те же грабли в этой строке: сперва тут
-        // забыли mobileAmount (2026-07-12), потом ту же слепоту к абонементу
-        // чинили в самом расчёте разницы (2026-07-18) — и знак остался
-        // последним местом, куда фикс не дошёл. Привязка к difference
-        // закрывает класс целиком: что бы ни появилось новым способом оплаты
-        // дальше, знак и строка "Разн." физически не смогут разойтись.
-        const cmp = data.difference < 0 ? "&lt;" : data.difference > 0 ? "&gt;" : "=";
+
         // Разбивка по способам оплаты — только там, где способ известен ПО
         // КАЖДОЙ операции: у Прибываний/Пусков он записан в самом пуске
         // (Launch.paymentMethod), у Билетов — в заказе. В "Счётчиках" его
@@ -433,12 +416,24 @@ export function formatZoneSummaryTelegram(
         // Что ушло из кассы до пересчёта — иначе «Разница» не сходится
         // глазами: 800 против 1250 даёт −450, а в сводке стоит −100, и
         // недостающие 350 нигде не названы.
-        if (settings.showCash && data.outsideTillAmount > 0) {
-          bits.push(`📤 ${st.outsideTillCompact}: <b>${formatMoney(data.outsideTillAmount, locale)}</b>`);
+        parts.push(bits.join(" · "));
+
+        // Что ушло из кассы до пересчёта — СОБСТВЕННОЙ строкой и ДВУМЯ
+        // числами (решение владельца 2026-09-03). Одним числом «Ушло» это
+        // уже пробовали в тот же день: такого слова владелец не знает, а
+        // слипшиеся расход сотрудника и инкассация владельца читались как
+        // одна непонятная убыль. 🏦 у инкассации — тот же значок, что у её
+        // собственного уведомления (решение владельца там же).
+        if (settings.showCash) {
+          const outBits: string[] = [];
+          if (data.expensesAmount > 0) {
+            outBits.push(`🧾 ${st.expensesCompact}: <b>${formatMoney(data.expensesAmount, locale)}</b>`);
+          }
+          if (data.collectedAmount > 0) {
+            outBits.push(`🏦 ${st.collectionCompact}: <b>${formatMoney(data.collectedAmount, locale)}</b>`);
+          }
+          if (outBits.length > 0) parts.push(outBits.join(" · "));
         }
-        if (settings.showCash && settings.showCalc) bits.push(cmp);
-        if (settings.showCalc) bits.push(`🔢 ${st.calculatedCompact}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
-        parts.push(bits.join("  "));
       }
       // Баланс отдельной строкой у режимов БЕЗ пооперационного способа оплаты
       // (у остальных он уже показан выше, среди способов) — справочно, не в
@@ -451,15 +446,26 @@ export function formatZoneSummaryTelegram(
       // Билетов/Прибываний/Пусков returnsCount на сервере всегда 0, строка
       // ничего не сообщала бы, см. тот же комментарий ниже в full-режиме).
       const showReturnsHere = settings.showReturns && data.accountingMode === "counters";
-      if (settings.showDiff || showReturnsHere) {
+      if (settings.showCalc || settings.showDiff || showReturnsHere) {
         const bits: string[] = [];
+        if (settings.showCalc) {
+          bits.push(`🔢 ${st.calculatedCompact}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
+        }
         if (settings.showDiff) {
+          // Направление показывают ТОЛЬКО знак и эмодзи самой разницы —
+          // никогда не сравнение кассы со «Счёт.» глазами. Отдельный знак
+          // "&lt;/&gt;" между ними тут стоял и был снят 2026-09-03, когда
+          // «Счёт.» переехал в эту же строку: до того он трижды расходился с
+          // «Разн.» — забытый mobileAmount (2026-07-12), слепота к балансу
+          // абонемента (2026-07-18) и скриншот Халабуды «Касса: 184 &lt; Счёт.:
+          // 326» при «Разн.: 0» (2026-08-04), где 142 из 326 заплатили
+          // балансом и недостачи не было. difference про все способы оплаты
+          // знает, сравнение двух чисел строки — нет.
           const sign = data.difference > 0 ? "+" : "";
           bits.push(`${diffEmoji(data.difference)} ${st.differenceCompact}: <b>${sign}${formatMoney(data.difference, locale)}</b>`);
         }
-        if (settings.showDiff && showReturnsHere) bits.push("·");
         if (showReturnsHere) bits.push(`🔄 ${st.returnsCompact}: <b>${data.returnsCount}</b>`);
-        parts.push(bits.join("  "));
+        parts.push(bits.join(" · "));
       }
     }
 
@@ -529,8 +535,11 @@ export function formatZoneSummaryTelegram(
         // Что ушло из кассы до пересчёта (расходы + инкассация среди дня) —
         // без этой строки «Разница» не сходится глазами, см. комментарий у
         // компактной ветки выше.
-        if (data.outsideTillAmount > 0) {
-          lines.push(`📤 ${st.outsideTill}: <b>${formatMoney(data.outsideTillAmount, locale)}</b>`);
+        if (data.expensesAmount > 0) {
+          lines.push(`🧾 ${st.expenses}: <b>${formatMoney(data.expensesAmount, locale)}</b>`);
+        }
+        if (data.collectedAmount > 0) {
+          lines.push(`🏦 ${st.collectionLabel}: <b>${formatMoney(data.collectedAmount, locale)}</b>`);
         }
       }
       if (settings.showCalc) lines.push(`🔢 ${st.calculated}: <b>${formatMoney(data.calculatedRevenue, locale)}</b>`);
@@ -876,7 +885,7 @@ export function formatCollectionAlertTelegram(
   timezone: string,
   currency: string | null | undefined
 ): string {
-  const title = data.isAdvance ? `${st.collectionAlertTitle} (${st.advance})` : st.collectionAlertTitle;
+  const title = data.isAdvance ? st.collectionAlertAdvanceTitle : st.collectionAlertTitle;
   const when = `${formatSummaryDate(data.occurredAt, "/", timezone, false)}, ${formatLocalTime(data.occurredAt, timezone)}`;
   const lines = [
     `🏦 <b>${escapeTelegramHtml(title)}</b> — ${when}`,
@@ -907,7 +916,7 @@ export function formatCollectionAlertPush(
   timezone: string,
   currency: string | null | undefined
 ): { title: string; body: string } {
-  const title = data.isAdvance ? `${st.collectionAlertTitle} (${st.advance})` : st.collectionAlertTitle;
+  const title = data.isAdvance ? st.collectionAlertAdvanceTitle : st.collectionAlertTitle;
   const when = `${formatSummaryDate(data.occurredAt, "/", timezone, false)}, ${formatLocalTime(data.occurredAt, timezone)}`;
   const bodyLines = [
     `${collectionWho(data)}: ${formatMoneyWithCurrency(collectionNetAmount(data), locale, currency as CurrencyCode | null)}`,

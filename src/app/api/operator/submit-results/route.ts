@@ -575,6 +575,10 @@ export async function POST(request: Request) {
           // инкассация среди дня. В сообщение оно уходит отдельной строкой —
           // иначе «Разницу» не прочитать (вопрос владельца 2026-09-03).
           outsideTill: outsideTillOf(zs.zoneId),
+          // Те же деньги, но врозь: сводка называет их двумя строками
+          // (решение владельца 2026-09-03), а Разница выше — суммой.
+          expensesPart: expensesOf(zs.zoneId),
+          collectedPart: collectedOf(zs.zoneId),
           readingsText: "",
           readingLines: [] as { assetName: string; tariffName: string; reading: number; delta: number }[],
           returnsCount: 0,
@@ -615,6 +619,10 @@ export async function POST(request: Request) {
           // инкассация среди дня. В сообщение оно уходит отдельной строкой —
           // иначе «Разницу» не прочитать (вопрос владельца 2026-09-03).
           outsideTill: outsideTillOf(zs.zoneId),
+          // Те же деньги, но врозь: сводка называет их двумя строками
+          // (решение владельца 2026-09-03), а Разница выше — суммой.
+          expensesPart: expensesOf(zs.zoneId),
+          collectedPart: collectedOf(zs.zoneId),
           readingsText: "",
           readingLines: [] as { assetName: string; tariffName: string; reading: number; delta: number }[],
           returnsCount: 0,
@@ -720,6 +728,8 @@ export async function POST(request: Request) {
         // инкассация среди дня. В сообщение оно уходит отдельной строкой —
         // иначе «Разницу» не прочитать (вопрос владельца 2026-09-03).
         outsideTill: outsideTillOf(zs.zoneId),
+        expensesPart: expensesOf(zs.zoneId),
+        collectedPart: collectedOf(zs.zoneId),
         readingsText,
         readingLines,
         returnsCount: returnsCountByZone.get(zone.id) ?? 0,
@@ -984,10 +994,13 @@ export async function POST(request: Request) {
               mobileAmount: s.mobileAmount,
               abonementAmount: s.abonementAmount,
               calculatedRevenue: s.calculatedRevenue,
-              // Что ушло из кассы до пересчёта — расходы плюс инкассация
-              // среди дня. Слагаемое «Разницы», без него она не сходится
-              // глазами (вопрос владельца 2026-09-03).
-              outsideTillAmount: s.outsideTill,
+              // Что ушло из кассы до пересчёта — расходы сотрудника и
+              // инкассация владельца среди дня, ДВУМЯ числами (решение
+              // владельца 2026-09-03). Слагаемые «Разницы»: без них она
+              // не сходится глазами, а слитые в одно «Ушло» — не
+              // читаются («что это за слово?»).
+              expensesAmount: s.expensesPart,
+              collectedAmount: s.collectedPart,
               difference: s.difference,
               returnsCount: s.returnsCount,
               operatorName: operator.name,
