@@ -190,11 +190,42 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/tariffs/
     return NextResponse.json({ error: "Тариф не найден" }, { status: 404 });
   }
 
-  // Soft-delete — AssetReading.tariffId ссылается на этот тариф без cascade,
-  // жёсткое удаление сломало бы FK-constraint для зон с историей сдач (и
-  // молча падало 500, фронт эту ошибку не проверял). Отчёты по-прежнему
-  // корректны — они читают тарифы зоны без фильтра deletedAt.
-  await prisma.tariff.update({ where: { id }, data: { deletedAt: new Date() } });
+  // Тариф, которым НИКОГДА не пользовались, удаляем НАСОВСЕМ (запрос
+  // владельца 2026-09-03: «пользователи могут плодить тестовые тарифы, и они
+  // будут зря накапливаться в базе»). У КидсБурга такой висел с 11 июля и
+  // занимал строку «0 ₽ · 0%» в разбивке отчёта.
+  //
+  // Тариф С ИСТОРИЕЙ по-прежнему только помечается удалённым, и это не
+  // осторожность ради осторожности: AssetReading, AssetInitialReading и
+  // CounterTapEvent ссылаются на тариф с ON DELETE CASCADE. Жёсткое удаление
+  // не упало бы с ошибкой FK — оно МОЛЧА унесло бы показания счётчиков и тапы,
+  // то есть историю денег. (Прежний комментарий здесь утверждал обратное —
+  // «без cascade» — и на этом основании объяснял soft-delete; проверено по
+  // информационной схеме боевой базы 2026-09-03: каскад есть.)
+  //
+  // TariffOption в проверку НЕ входит: варианты «длительность+цена» — это
+  // части самого тарифа, а не следы его использования, и уходят вместе с ним.
+  // Asset.tariffId входит: тариф, назначенный активу по умолчанию, — это
+  // настройка, которую жёсткое удаление обнулило бы молча (SET NULL).
+  const used = await prisma.$transaction(async (tx) => {
+    const [readings, initialReadings, taps, launches, abonementOps, assets] = await Promise.all([
+      tx.assetReading.count({ where: { tariffId: id } }),
+      tx.assetInitialReading.count({ where: { tariffId: id } }),
+      tx.counterTapEvent.count({ where: { tariffId: id } }),
+      tx.launch.count({ where: { tariffId: id } }),
+      tx.abonementTransaction.count({ where: { tariffId: id } }),
+      tx.asset.count({ where: { tariffId: id } }),
+    ]);
+    const total = readings + initialReadings + taps + launches + abonementOps + assets;
+    if (total === 0) {
+      await tx.tariff.delete({ where: { id } });
+    } else {
+      await tx.tariff.update({ where: { id }, data: { deletedAt: new Date() } });
+    }
+    return total;
+  });
   await revalidateLandingForTenant(owner.tenantId);
-  return NextResponse.json({ ok: true });
+  // hardDeleted — чтобы поведение было видно снаружи, а не угадывалось по
+  // тому, пропал тариф из отчётов или остался.
+  return NextResponse.json({ ok: true, hardDeleted: used === 0 });
 }
