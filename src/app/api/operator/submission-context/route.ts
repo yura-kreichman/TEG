@@ -13,6 +13,7 @@ import {
   allocateAdvanceToZones,
   getCollectionAdvanceTakenSince,
   getPendingCashRevenueByZone,
+  getPendingCashRevenueEventsByZone,
 } from "@/lib/pending-revenue";
 import { previousSubmissionBoundary } from "@/lib/game-room";
 import { getExpenseCompensation } from "@/lib/expense-compensation";
@@ -133,16 +134,13 @@ export async function GET() {
   // getPendingCashRevenueByZone). Оба живых экрана зовут ОДИН помощник:
   // формула в двух копиях тут уже расходилась.
   const nowForFund = new Date();
-  const fundWindowByZone = new Map<string, Date | null>();
-  for (const zone of zones) fundWindowByZone.set(zone.id, await previousSubmissionBoundary(zone.id));
   const changeFundByZone =
     zones.length > 0
       ? await getChangeFundInTillByZone(
           zones.map((z) => z.id),
           undefined,
           undefined,
-          await getPendingCashRevenueByZone(zones, nowForFund),
-          fundWindowByZone
+          await getPendingCashRevenueEventsByZone(zones, nowForFund)
         )
       : new Map<string, number>();
 

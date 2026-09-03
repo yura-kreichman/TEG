@@ -9,8 +9,7 @@ import {
   parseDateParam,
   type PeriodGranularity,
 } from "@/lib/reports";
-import { getPendingCashRevenueByZone } from "@/lib/pending-revenue";
-import { previousSubmissionBoundary } from "@/lib/game-room";
+import { getPendingCashRevenueEventsByZone } from "@/lib/pending-revenue";
 import { businessDayOf, parseBoundary, periodBoundsUtc, zonedWallTimeToUtc } from "@/lib/business-day";
 import {
   affectsCashOnHand,
@@ -189,15 +188,11 @@ export async function GET(request: Request) {
   // getPendingCashRevenueByZone). Оба живых экрана зовут ОДИН помощник:
   // формула в двух копиях тут уже расходилась.
   const nowForFund = new Date();
-  const pendingByZone = await getPendingCashRevenueByZone(zones, nowForFund);
-  const fundWindowByZone = new Map<string, Date | null>();
-  for (const z of zones) fundWindowByZone.set(z.id, await previousSubmissionBoundary(z.id));
   const changeFundByZone = await getChangeFundInTillByZone(
     zones.map((z) => z.id),
     undefined,
     undefined,
-    pendingByZone,
-    fundWindowByZone
+    await getPendingCashRevenueEventsByZone(zones, nowForFund)
   );
   // Доля пула по зонам — считает сервер, экран её больше не пересчитывает
   // (С3): формула жила в двух экземплярах и они разошлись.

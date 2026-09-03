@@ -280,14 +280,16 @@ export async function getChangeFundInTillByZone(
   zoneIds: string[],
   client: Tx | typeof prisma = prisma,
   asOf?: Date,
-  // Наличная выручка, которую сотрудник ещё не сдал, и граница окна, с
-  // которой она копится (закрывающий аудит 2026-09-03, решение владельца).
-  // Считает getPendingCashRevenueByZone — отдельным файлом, иначе импорт
-  // ходил бы по кругу через game-room/tickets. Не передали — обрезка
-  // работает по старому правилу; экраны, где число видит человек,
-  // передают всегда.
-  pendingRevenueByZone?: Map<string, number>,
-  openWindowSince?: Map<string, Date | null>
+  // Невнесённая наличная выручка ПО МОМЕНТАМ (решение владельца
+  // 2026-09-03). Считает getPendingCashRevenueEventsByZone — отдельным
+  // файлом, иначе импорт ходил бы по кругу через game-room/tickets.
+  // Не передали — обрезка работает по старому правилу, только по журналу.
+  //
+  // Именно СПИСКОМ, а не суммой: первая версия этой правки прожила час на
+  // проде и врала Игроленду на 750, потому что прибавляла всю сегодняшнюю
+  // выручку к каждой операции окна — включая вчерашнюю инкассацию, до
+  // которой этих денег ещё не существовало. Разбор — у самого помощника.
+  pendingEventsByZone?: Map<string, { at: Date; amount: number }[]>
 ): Promise<Map<string, number>> {
   const result = new Map<string, number>();
   if (!zoneIds.length) return result;
@@ -303,6 +305,11 @@ export async function getChangeFundInTillByZone(
   });
 
   const running = new Map<string, number>();
+  // Курсор по невнесённой выручке зоны: сколько её накопилось К МОМЕНТУ
+  // текущей операции. Журнал уже отсортирован по времени, поэтому идём
+  // одним проходом, не перебирая список заново на каждом шаге.
+  const pendingCursor = new Map<string, number>();
+  const pendingSoFar = new Map<string, number>();
   for (const op of ops) {
     if (!op.zoneId) continue;
     if (!affectsCashOnHand(op.type)) continue;
@@ -335,10 +342,15 @@ export async function getChangeFundInTillByZone(
     // которую сотрудник ещё не сдавал, и обрезка отвечала не на тот вопрос:
     //
     //   размен 500, остаток 500, днём владелец берёт 300,
-    //   а в ящике уже 4000 сегодняшней выручки
+    //   а в ящике К ЭТОМУ МОМЕНТУ уже 4000 сегодняшней выручки
     //   было:  остаток 200 → размен обрезан до 200 НАВСЕГДА,
     //          вечером подсказка считает выручку 4500 − 200 = 4300 вместо 4000
     //   стало: 200 + 4000 = 4200 > 500 → размен цел ✓
+    //
+    // «К ЭТОМУ МОМЕНТУ» — не оговорка. Прибавлять всю сегодняшнюю выручку к
+    // операциям, случившимся ДО неё, — ровно та ошибка, что прожила час на
+    // проде 3 сентября: вчерашняя инкассация Игроленда, забравшая кассу
+    // подчистую, переставала обнулять размен, и он выходил 1200 вместо 450.
     //
     // Игролендовский случай при этом остаётся верным: там инкассация шла
     // сразу за сдачей, невнесённой выручки не было, прибавка нулевая, и
@@ -346,10 +358,16 @@ export async function getChangeFundInTillByZone(
     //
     // Прибавка только для операций ПОСЛЕ последней сдачи: до неё журнал уже
     // сведён с ящиком, и поправка там была бы выдумкой.
-    const windowStart = openWindowSince?.get(op.zoneId) ?? null;
-    const pending =
-      windowStart && op.occurredAt > windowStart ? (pendingRevenueByZone?.get(op.zoneId) ?? 0) : 0;
-    const inTill = Math.round((balance + pending) * 100) / 100;
+    const events = pendingEventsByZone?.get(op.zoneId) ?? [];
+    let cursor = pendingCursor.get(op.zoneId) ?? 0;
+    let accrued = pendingSoFar.get(op.zoneId) ?? 0;
+    while (cursor < events.length && events[cursor].at <= op.occurredAt) {
+      accrued = Math.round((accrued + events[cursor].amount) * 100) / 100;
+      cursor += 1;
+    }
+    pendingCursor.set(op.zoneId, cursor);
+    pendingSoFar.set(op.zoneId, accrued);
+    const inTill = Math.round((balance + accrued) * 100) / 100;
     const fund = result.get(op.zoneId) ?? 0;
     if (fund > inTill) result.set(op.zoneId, Math.max(0, inTill));
   }

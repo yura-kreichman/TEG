@@ -1,10 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import {
-  aggregateGameRoomLaunches,
-  aggregateOpenPrepaidLaunches,
-  previousSubmissionBoundary,
-} from "@/lib/game-room";
-import { aggregateTicketOrders } from "@/lib/tickets";
+import { previousSubmissionBoundary } from "@/lib/game-room";
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -34,6 +29,25 @@ function round2(v: number): number {
  *
  * Считаем ТОЛЬКО наличные: безнал и баланс абонемента в ящик не попадают.
  *
+ * Отдаём СПИСОК МОМЕНТОВ, а не одно число, и это принципиально. Первая
+ * версия (2026-09-03, прожила час на проде) прибавляла к остатку всю
+ * невнесённую выручку на ТЕКУЩИЙ момент — и делала это для каждой операции
+ * окна, включая те, что случились раньше самой выручки. Деньги, заработанные
+ * сегодня, задним числом наполняли вчерашний ящик:
+ *
+ *   Игроленд, Детский лабиринт
+ *   02.09 18:42  инкассация −11400, касса 0 — забрали ВСЁ, размен обязан
+ *                обнулиться вместе с кассой
+ *   03.09 07:36  внесли новый размен 450
+ *   03.09        за день накапало 750 невнесённой выручки
+ *   было:  на вчерашней инкассации ящик «содержал» 0 + 750, обрезка не
+ *          сработала, и размен вышел 1200 вместо 450 — врал на 750
+ *   стало: к 02.09 18:42 накоплено 0, обрезка срабатывает, размен 450 ✓
+ *
+ * Оценка сознательно ЗАНИЖЕНА: разбитые оплаты и пуски без указанного
+ * способа не считаются. Занизив, мы возвращаемся к прежнему поведению —
+ * завысив, раздули бы размен, а это и была ошибка.
+ *
  * Режим «Счётчики» оценивается по тапам, а не по показаниям: показания зона
  * узнаёт лишь в момент сдачи, а тап — это уже состоявшаяся оплата. Оценка
  * снизу, и это правильная сторона: занизив её, мы лишь вернёмся к прежнему
@@ -42,61 +56,80 @@ function round2(v: number): number {
  * «Только касса» не оценивается вовсе (0): там нет ни счётчиков, ни пусков,
  * выручка существует только как введённая сотрудником сумма.
  */
-export async function getPendingCashRevenueByZone(
+export interface PendingCashEvent {
+  at: Date;
+  amount: number;
+}
+
+export async function getPendingCashRevenueEventsByZone(
   zones: { id: string; accountingMode: string }[],
   until: Date,
   client: Tx | typeof prisma = prisma
-): Promise<Map<string, number>> {
-  const result = new Map<string, number>();
+): Promise<Map<string, PendingCashEvent[]>> {
+  const result = new Map<string, PendingCashEvent[]>();
   if (zones.length === 0) return result;
 
   await Promise.all(
     zones.map(async (zone) => {
       const since = await previousSubmissionBoundary(zone.id, client);
-
-      if (zone.accountingMode === "tickets") {
-        const agg = await aggregateTicketOrders(zone.id, since, until, client);
-        result.set(zone.id, round2(agg.cashAmount));
-        return;
-      }
-
-      if (zone.accountingMode === "stays" || zone.accountingMode === "launches") {
-        // Идущие браслеты «За вход» — деньги за них уже в ящике: оплата
-        // берётся при старте (см. aggregateOpenPrepaidLaunches).
-        const [closed, openPrepaid] = await Promise.all([
-          aggregateGameRoomLaunches(zone.id, since, until, client),
-          aggregateOpenPrepaidLaunches(zone.id, since, until, client),
-        ]);
-        result.set(zone.id, round2(closed.cashAmount + openPrepaid.cashAmount));
-        return;
-      }
+      const window = since ? { gt: since, lt: until } : { lt: until };
+      const rows: PendingCashEvent[] = [];
 
       if (zone.accountingMode === "counters") {
-        // Тапы с наличной оплатой за то же окно. Отменённые («Возврат/тест»)
-        // не в счёт — денег за них в ящике нет. Цена берётся из снимка на
-        // момент тапа, а при его отсутствии (записи старше миграции) — из
-        // текущего тарифа, тем же порядком, что и возврат в tap-events.
         const taps = await client.counterTapEvent.findMany({
+          where: { zoneId: zone.id, voidedAt: null, paymentMethod: "cash", createdAt: window },
+          select: { createdAt: true, priceSnapshot: true, tariff: { select: { price: true } } },
+        });
+        for (const t of taps) {
+          rows.push({ at: t.createdAt, amount: Number(t.priceSnapshot ?? t.tariff?.price ?? 0) });
+        }
+      } else if (zone.accountingMode === "stays" || zone.accountingMode === "launches") {
+        // Только ЗАКРЫТЫЕ пуски с посчитанной суммой. У открытого «По факту»
+        // amount ещё null, а priceSnapshot там — ставка за МИНУТУ, не итог:
+        // подставив её, мы завысили бы ящик и не дали обрезке сработать. Это
+        // ровно тот перекос, который прожил час на проде 3 сентября, поэтому
+        // здесь сознательно занижаем: «За вход», оплаченный вперёд и ещё
+        // идущий, в оценку не попадёт, и обрезка отработает как раньше.
+        const launches = await client.launch.findMany({
           where: {
             zoneId: zone.id,
             voidedAt: null,
             paymentMethod: "cash",
-            ...(since ? { createdAt: { gt: since, lt: until } } : { createdAt: { lt: until } }),
+            amount: { not: null },
+            startedAt: window,
           },
-          select: { priceSnapshot: true, tariff: { select: { price: true } } },
+          select: { startedAt: true, endedAt: true, amount: true },
         });
-        const sum = taps.reduce(
-          (acc, t) => acc + Number(t.priceSnapshot ?? t.tariff?.price ?? 0),
-          0
-        );
-        result.set(zone.id, round2(sum));
-        return;
+        for (const l of launches) {
+          rows.push({ at: l.endedAt ?? l.startedAt, amount: Number(l.amount) });
+        }
+      } else if (zone.accountingMode === "tickets") {
+        const orders = await client.ticketOrder.findMany({
+          where: { zoneId: zone.id, paymentMethod: "cash", soldAt: window },
+          select: { soldAt: true, totalSnapshot: true },
+        });
+        for (const o of orders) rows.push({ at: o.soldAt, amount: Number(o.totalSnapshot) });
       }
 
-      result.set(zone.id, 0);
+      rows.sort((a, b) => a.at.getTime() - b.at.getTime());
+      result.set(zone.id, rows);
     })
   );
 
+  return result;
+}
+
+/** Та же выручка одним числом — когда нужен только итог, а не моменты. */
+export async function getPendingCashRevenueByZone(
+  zones: { id: string; accountingMode: string }[],
+  until: Date,
+  client: Tx | typeof prisma = prisma
+): Promise<Map<string, number>> {
+  const events = await getPendingCashRevenueEventsByZone(zones, until, client);
+  const result = new Map<string, number>();
+  for (const [zoneId, rows] of events) {
+    result.set(zoneId, round2(rows.reduce((acc, r) => acc + r.amount, 0)));
+  }
   return result;
 }
 
