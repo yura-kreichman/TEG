@@ -48,11 +48,19 @@ services:
     ports: !reset []
     volumes:
       - db_data:/var/lib/postgresql/data
+    # interval был 5s — это 17 280 запусков `docker exec` в сутки на машине с
+    # двумя ядрами (замер 3.09.2026: 173 мс и ~33 мс CPU на прогон). Проверять
+    # живость базы раз в 5 секунд смысла нет, 30 достаточно.
+    # start_interval держит быстрый опрос ТОЛЬКО пока контейнер стартует: без
+    # него app, у которого `depends_on: db: service_healthy`, ждал бы первого
+    # прогона все 30 секунд на каждом деплое и каждой перезагрузке.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U teg -d teg_saas"]
-      interval: 5s
+      interval: 30s
       timeout: 5s
       retries: 5
+      start_period: 30s
+      start_interval: 2s
 
   app:
     build:
