@@ -13,7 +13,6 @@ import {
   allocateAdvanceToZones,
   getCollectionAdvanceTakenSince,
   getPendingCashRevenueByZone,
-  getPendingCashRevenueEventsByZone,
 } from "@/lib/pending-revenue";
 import { previousSubmissionBoundary } from "@/lib/game-room";
 import { getExpenseCompensation } from "@/lib/expense-compensation";
@@ -133,15 +132,9 @@ export async function GET() {
   // а не журнальный остаток (закрывающий аудит 2026-09-03, разбор — у
   // getPendingCashRevenueByZone). Оба живых экрана зовут ОДИН помощник:
   // формула в двух копиях тут уже расходилась.
-  const nowForFund = new Date();
   const changeFundByZone =
     zones.length > 0
-      ? await getChangeFundInTillByZone(
-          zones.map((z) => z.id),
-          undefined,
-          undefined,
-          await getPendingCashRevenueEventsByZone(zones, nowForFund)
-        )
+      ? await getChangeFundInTillByZone(zones.map((z) => z.id))
       : new Map<string, number>();
 
   // Сколько владелец забрал из зоны инкассацией ДО пересчёта (жалоба владельца

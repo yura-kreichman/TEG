@@ -9,7 +9,6 @@ import {
   parseDateParam,
   type PeriodGranularity,
 } from "@/lib/reports";
-import { getPendingCashRevenueEventsByZone } from "@/lib/pending-revenue";
 import { businessDayOf, parseBoundary, periodBoundsUtc, zonedWallTimeToUtc } from "@/lib/business-day";
 import {
   affectsCashOnHand,
@@ -187,13 +186,7 @@ export async function GET(request: Request) {
   // а не журнальный остаток (закрывающий аудит 2026-09-03, разбор — у
   // getPendingCashRevenueByZone). Оба живых экрана зовут ОДИН помощник:
   // формула в двух копиях тут уже расходилась.
-  const nowForFund = new Date();
-  const changeFundByZone = await getChangeFundInTillByZone(
-    zones.map((z) => z.id),
-    undefined,
-    undefined,
-    await getPendingCashRevenueEventsByZone(zones, nowForFund)
-  );
+  const changeFundByZone = await getChangeFundInTillByZone(zones.map((z) => z.id));
   // Доля пула по зонам — считает сервер, экран её больше не пересчитывает
   // (С3): формула жила в двух экземплярах и они разошлись.
   const poolByZone = new Map<string, number>();

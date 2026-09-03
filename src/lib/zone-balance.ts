@@ -1,4 +1,7 @@
 import { prisma } from "@/lib/prisma";
+// Кольца импортов нет: pending-revenue тянет только game-room, а тот —
+// ничего из zone-balance (проверено 2026-09-03).
+import { getPendingCashRevenueEventsByZone } from "@/lib/pending-revenue";
 import type { Prisma } from "@/generated/prisma/client";
 import { distributeCollectionWhole } from "@/lib/collection-split";
 
@@ -279,17 +282,7 @@ export async function getPointCashBalance(
 export async function getChangeFundInTillByZone(
   zoneIds: string[],
   client: Tx | typeof prisma = prisma,
-  asOf?: Date,
-  // Невнесённая наличная выручка ПО МОМЕНТАМ (решение владельца
-  // 2026-09-03). Считает getPendingCashRevenueEventsByZone — отдельным
-  // файлом, иначе импорт ходил бы по кругу через game-room/tickets.
-  // Не передали — обрезка работает по старому правилу, только по журналу.
-  //
-  // Именно СПИСКОМ, а не суммой: первая версия этой правки прожила час на
-  // проде и врала Игроленду на 750, потому что прибавляла всю сегодняшнюю
-  // выручку к каждой операции окна — включая вчерашнюю инкассацию, до
-  // которой этих денег ещё не существовало. Разбор — у самого помощника.
-  pendingEventsByZone?: Map<string, { at: Date; amount: number }[]>
+  asOf?: Date
 ): Promise<Map<string, number>> {
   const result = new Map<string, number>();
   if (!zoneIds.length) return result;
@@ -303,6 +296,31 @@ export async function getChangeFundInTillByZone(
     select: { zoneId: true, type: true, amount: true, occurredAt: true },
     orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
   });
+
+  // Невнесённая наличная выручка — та, что физически в ящике, но в журнал
+  // ещё не попала. Считаем ЗДЕСЬ, а не принимаем параметром (закрывающий
+  // аудит 2026-09-03, вторая итерация): параметр значил, что каждый экран
+  // обязан не забыть его передать, а «Итоги дня» уже и не передавали —
+  // владелец увидел бы разный размен на двух экранах в один день. Теперь
+  // забыть нечего.
+  //
+  // Для ПРОШЛЫХ дней поправка выключается сама: окно событий строится от
+  // последней сдачи зоны, и при asOf раньше неё оно пустое — остаётся
+  // прежнее поведение, где журнал уже сведён с ящиком.
+  //
+  // Именно СПИСКОМ моментов, а не суммой: первая версия прожила час на
+  // проде и врала Игроленду на 750, потому что прибавляла всю сегодняшнюю
+  // выручку к каждой операции окна — включая вчерашнюю инкассацию, до
+  // которой этих денег ещё не существовало. Разбор — у самого помощника.
+  const zonesForPending = await client.zone.findMany({
+    where: { id: { in: zoneIds } },
+    select: { id: true, accountingMode: true },
+  });
+  const pendingEventsByZone = await getPendingCashRevenueEventsByZone(
+    zonesForPending,
+    asOf ?? new Date(),
+    client
+  );
 
   const running = new Map<string, number>();
   // Курсор по невнесённой выручке зоны: сколько её накопилось К МОМЕНТУ
